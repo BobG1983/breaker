@@ -27,7 +27,7 @@ fn perfect_tracking_noop_when_driver_is_not_perfect() {
         .spawn((
             ScenarioTagBreaker,
             Position2D(Vec2::new(0.0, -250.0)),
-            BreakerWidth(120.0),
+            BaseWidth(120.0),
         ))
         .id();
 
@@ -63,7 +63,7 @@ fn perfect_tracking_noop_when_driver_absent() {
         .spawn((
             ScenarioTagBreaker,
             Position2D(Vec2::new(0.0, -250.0)),
-            BreakerWidth(120.0),
+            BaseWidth(120.0),
         ))
         .id();
 
@@ -91,7 +91,7 @@ fn perfect_tracking_noop_with_no_bolt_entities() {
         .spawn((
             ScenarioTagBreaker,
             Position2D(Vec2::new(0.0, -250.0)),
-            BreakerWidth(120.0),
+            BaseWidth(120.0),
         ))
         .id();
 

@@ -4,14 +4,14 @@ use bevy::{
     math::curve::{Curve, easing::EaseFunction},
     prelude::*,
 };
-use rantzsoft_spatial2d::components::{MaxSpeed, Position2D};
+use rantzsoft_spatial2d::components::{MaxSpeed, Position2D, Velocity2D};
 
 use crate::{
     breaker::{
         components::{
-            BrakeDecel, BrakeTilt, Breaker, BreakerDeceleration, BreakerState, BreakerStateTimer,
-            BreakerTilt, BreakerVelocity, BreakerWidth, DashDuration, DashSpeedMultiplier,
-            DashTilt, DashTiltEase, DecelEasing, SettleDuration, SettleTiltEase,
+            BaseWidth, BrakeDecel, BrakeTilt, Breaker, BreakerDeceleration, BreakerTilt,
+            DashDuration, DashSpeedMultiplier, DashState, DashStateTimer, DashTilt, DashTiltEase,
+            DecelEasing, SettleDuration, SettleTiltEase,
         },
         queries::DashQuery,
     },
@@ -44,7 +44,7 @@ struct SettleContext<'a> {
     dt: f32,
     flash_step: Option<&'a FlashStepActive>,
     position: Option<&'a mut Position2D>,
-    breaker_width: Option<&'a BreakerWidth>,
+    breaker_width: Option<&'a BaseWidth>,
     playfield: &'a PlayfieldConfig,
     speed_mult: Option<&'a ActiveSpeedBoosts>,
     size_mult: Option<&'a ActiveSizeBoosts>,
@@ -111,7 +111,7 @@ pub fn update_breaker_state(
         };
 
         match *state {
-            BreakerState::Idle | BreakerState::Settling => {
+            DashState::Idle | DashState::Settling => {
                 handle_idle_or_settling(
                     &mut state,
                     &mut velocity,
@@ -121,10 +121,10 @@ pub fn update_breaker_state(
                     ctx,
                 );
             }
-            BreakerState::Dashing => {
-                handle_dashing(dt, &mut state, &velocity, &mut tilt, &mut timer, &params);
+            DashState::Dashing => {
+                handle_dashing(dt, &mut state, *velocity, &mut tilt, &mut timer, &params);
             }
-            BreakerState::Braking => {
+            DashState::Braking => {
                 handle_braking(
                     dt,
                     &mut state,
@@ -143,14 +143,14 @@ pub fn update_breaker_state(
 /// During Settling with `FlashStepActive`, a reversal dash (new direction sign
 /// equals `tilt.ease_start` sign) triggers a teleport instead of a normal dash.
 fn handle_idle_or_settling(
-    state: &mut BreakerState,
-    velocity: &mut BreakerVelocity,
+    state: &mut DashState,
+    velocity: &mut Velocity2D,
     tilt: &mut BreakerTilt,
-    timer: &mut BreakerStateTimer,
+    timer: &mut DashStateTimer,
     p: &DashParams,
     mut ctx: SettleContext,
 ) {
-    let is_settling = *state == BreakerState::Settling;
+    let is_settling = *state == DashState::Settling;
     let ease_start_before_tick = tilt.ease_start;
 
     if is_settling {
@@ -165,7 +165,7 @@ fn handle_idle_or_settling(
         tilt.angle = (tilt.ease_target - tilt.ease_start).mul_add(eased, tilt.ease_start);
 
         if timer.remaining <= 0.0 {
-            *state = BreakerState::Idle;
+            *state = DashState::Idle;
             tilt.angle = 0.0;
         }
     }
@@ -198,19 +198,19 @@ fn handle_idle_or_settling(
         pos.0.x += teleport_distance;
 
         // Clamp to playfield bounds accounting for effective half-width
-        let effective_half_width = ctx.breaker_width.map_or(0.0, BreakerWidth::half_width)
+        let effective_half_width = ctx.breaker_width.map_or(0.0, BaseWidth::half_width)
             * ctx.size_mult.map_or(1.0, ActiveSizeBoosts::multiplier);
         let min_x = ctx.playfield.left() + effective_half_width;
         let max_x = ctx.playfield.right() - effective_half_width;
         pos.0.x = pos.0.x.clamp(min_x, max_x);
 
         // Reset to clean Idle state
-        velocity.x = 0.0;
+        velocity.0.x = 0.0;
         tilt.angle = 0.0;
         tilt.ease_start = 0.0;
         tilt.ease_target = 0.0;
         timer.remaining = 0.0;
-        *state = BreakerState::Idle;
+        *state = DashState::Idle;
         return;
     }
 
@@ -221,14 +221,14 @@ fn handle_idle_or_settling(
 /// Enters the Dashing state in the given direction.
 fn start_dash(
     direction: f32,
-    state: &mut BreakerState,
-    velocity: &mut BreakerVelocity,
+    state: &mut DashState,
+    velocity: &mut Velocity2D,
     tilt: &mut BreakerTilt,
-    timer: &mut BreakerStateTimer,
+    timer: &mut DashStateTimer,
     p: &DashParams,
 ) {
-    *state = BreakerState::Dashing;
-    velocity.x = direction * p.max_speed.0 * p.dash_speed.0;
+    *state = DashState::Dashing;
+    velocity.0.x = direction * p.max_speed.0 * p.dash_speed.0;
     // Tilt starts at zero — handle_dashing eases it to full value
     tilt.angle = 0.0;
     timer.remaining = p.dash_duration.0;
@@ -237,18 +237,18 @@ fn start_dash(
 /// Dashing: count down timer, ease tilt to full angle, then transition to Braking.
 fn handle_dashing(
     dt: f32,
-    state: &mut BreakerState,
-    velocity: &BreakerVelocity,
+    state: &mut DashState,
+    velocity: Velocity2D,
     tilt: &mut BreakerTilt,
-    timer: &mut BreakerStateTimer,
+    timer: &mut DashStateTimer,
     p: &DashParams,
 ) {
     timer.remaining -= dt;
 
-    let dash_dir = velocity.x.signum();
+    let dash_dir = velocity.0.x.signum();
 
     if timer.remaining <= 0.0 {
-        *state = BreakerState::Braking;
+        *state = DashState::Braking;
         tilt.ease_start = tilt.angle;
         tilt.ease_target = -dash_dir * p.brake_tilt.angle;
         timer.remaining = p.brake_tilt.duration;
@@ -267,10 +267,10 @@ fn handle_dashing(
 /// Braking: ease tilt toward brake angle, decelerate, then transition to Settling.
 fn handle_braking(
     dt: f32,
-    state: &mut BreakerState,
-    velocity: &mut BreakerVelocity,
+    state: &mut DashState,
+    velocity: &mut Velocity2D,
     tilt: &mut BreakerTilt,
-    timer: &mut BreakerStateTimer,
+    timer: &mut DashStateTimer,
     p: &DashParams,
 ) {
     // Ease tilt toward brake angle
@@ -290,25 +290,25 @@ fn handle_braking(
     let reference_speed = p.max_speed.0 * p.dash_speed.0;
     let effective_decel = eased_decel(
         base_decel,
-        velocity.x.abs(),
+        velocity.0.x.abs(),
         reference_speed,
         p.easing.ease,
         p.easing.strength,
     );
 
-    if velocity.x > f32::EPSILON {
-        velocity.x = effective_decel.mul_add(-dt, velocity.x).max(0.0);
-    } else if velocity.x < -f32::EPSILON {
-        velocity.x = effective_decel.mul_add(dt, velocity.x).min(0.0);
+    if velocity.0.x > f32::EPSILON {
+        velocity.0.x = effective_decel.mul_add(-dt, velocity.0.x).max(0.0);
+    } else if velocity.0.x < -f32::EPSILON {
+        velocity.0.x = effective_decel.mul_add(dt, velocity.0.x).min(0.0);
     }
 
     // Speed near zero → transition to Settling
-    if velocity.x.abs() <= f32::EPSILON {
-        velocity.x = 0.0;
+    if velocity.0.x.abs() <= f32::EPSILON {
+        velocity.0.x = 0.0;
         tilt.ease_start = tilt.angle;
         tilt.ease_target = 0.0;
         timer.remaining = p.settle_duration.0;
-        *state = BreakerState::Settling;
+        *state = DashState::Settling;
     }
 }
 

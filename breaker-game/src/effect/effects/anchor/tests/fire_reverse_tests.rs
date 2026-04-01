@@ -243,8 +243,8 @@ fn register_adds_tick_anchor_system_to_fixed_update() {
                 perfect_window_multiplier: 1.5,
                 plant_delay: 0.3,
             },
-            BreakerVelocity { x: 0.0 },
-            BreakerState::Idle,
+            Velocity2D(Vec2::ZERO),
+            DashState::Idle,
         ))
         .id();
 

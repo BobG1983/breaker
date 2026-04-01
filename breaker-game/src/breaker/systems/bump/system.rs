@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use crate::{
     bolt::{components::BoltServing, messages::BoltImpactBreaker},
     breaker::{
-        components::{Breaker, BreakerState, BreakerStateTimer, SettleDuration},
+        components::{Breaker, DashState, DashStateTimer, SettleDuration},
         messages::{BumpGrade, BumpPerformed, BumpWhiffed},
         queries::{BumpGradingQuery, BumpTimingQuery},
         resources::ForceBumpGrade,
@@ -188,7 +188,7 @@ pub(crate) fn grade_bump(
 /// and the breaker is dashing, transitions directly to Settling.
 pub fn perfect_bump_dash_cancel(
     mut reader: MessageReader<BumpPerformed>,
-    mut query: Query<(&mut BreakerState, &mut BreakerStateTimer, &SettleDuration), With<Breaker>>,
+    mut query: Query<(&mut DashState, &mut DashStateTimer, &SettleDuration), With<Breaker>>,
 ) {
     for performed in reader.read() {
         if performed.grade != BumpGrade::Perfect {
@@ -196,8 +196,8 @@ pub fn perfect_bump_dash_cancel(
         }
 
         for (mut state, mut timer, settle_duration) in &mut query {
-            if *state == BreakerState::Dashing {
-                *state = BreakerState::Settling;
+            if *state == DashState::Dashing {
+                *state = DashState::Settling;
                 timer.remaining = settle_duration.0;
             }
         }

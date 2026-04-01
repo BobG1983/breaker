@@ -120,8 +120,8 @@ fn evolution_registry_update_single_upserts() {
 fn evolution_registry_asset_dir() {
     assert_eq!(
         EvolutionTemplateRegistry::asset_dir(),
-        "chips/evolution",
-        "asset_dir() should return \"chips/evolution\""
+        "chips/evolutions",
+        "asset_dir() should return \"chips/evolutions\""
     );
 }
 

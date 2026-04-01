@@ -1,4 +1,4 @@
-//! Tests for `PreviousGameState`, `map_forced_game_state`, and `map_scenario_breaker_state`.
+//! Tests for `PreviousGameState`, `map_forced_game_state`, and `map_scenario_dash_state`.
 
 use super::super::helpers::*;
 
@@ -67,24 +67,24 @@ fn map_forced_game_state_maps_all_variants_correctly() {
 }
 
 // -------------------------------------------------------------------------
-// map_scenario_breaker_state — maps all variants 1:1
+// map_scenario_dash_state — maps all variants 1:1
 // -------------------------------------------------------------------------
 
-/// Each `ScenarioBreakerState` variant must map 1:1 to the corresponding
-/// `BreakerState` variant.
+/// Each `ScenarioDashState` variant must map 1:1 to the corresponding
+/// `DashState` variant.
 #[test]
-fn map_scenario_breaker_state_maps_all_variants() {
+fn map_scenario_dash_state_maps_all_variants() {
     let mappings = [
-        (ScenarioBreakerState::Idle, BreakerState::Idle),
-        (ScenarioBreakerState::Dashing, BreakerState::Dashing),
-        (ScenarioBreakerState::Braking, BreakerState::Braking),
-        (ScenarioBreakerState::Settling, BreakerState::Settling),
+        (ScenarioDashState::Idle, DashState::Idle),
+        (ScenarioDashState::Dashing, DashState::Dashing),
+        (ScenarioDashState::Braking, DashState::Braking),
+        (ScenarioDashState::Settling, DashState::Settling),
     ];
     for (scenario, expected) in &mappings {
-        let result = map_scenario_breaker_state(*scenario);
+        let result = map_scenario_dash_state(*scenario);
         assert_eq!(
             result, *expected,
-            "map_scenario_breaker_state({scenario:?}) must return {expected:?}, got {result:?}"
+            "map_scenario_dash_state({scenario:?}) must return {expected:?}, got {result:?}"
         );
     }
 }

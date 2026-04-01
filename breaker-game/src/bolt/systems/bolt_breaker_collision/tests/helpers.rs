@@ -12,10 +12,10 @@ use crate::{
         messages::BoltImpactBreaker,
     },
     breaker::{
-        components::{Breaker, BreakerHeight, BreakerReflectionSpread, BreakerTilt, BreakerWidth},
+        components::{BaseHeight, BaseWidth, Breaker, BreakerReflectionSpread, BreakerTilt},
         resources::BreakerConfig,
     },
-    shared::{BOLT_LAYER, BREAKER_LAYER, EntityScale, GameDrawLayer},
+    shared::{BOLT_LAYER, BREAKER_LAYER, GameDrawLayer, NodeScalingFactor},
 };
 
 pub(super) fn test_app() -> App {
@@ -31,12 +31,12 @@ pub(super) fn test_app() -> App {
     app
 }
 
-pub(super) fn default_breaker_width() -> BreakerWidth {
-    BreakerWidth(120.0)
+pub(super) fn default_breaker_width() -> BaseWidth {
+    BaseWidth(120.0)
 }
 
-pub(super) fn default_breaker_height() -> BreakerHeight {
-    BreakerHeight(20.0)
+pub(super) fn default_breaker_height() -> BaseHeight {
+    BaseHeight(20.0)
 }
 
 pub(super) fn default_bolt_radius() -> BoltRadius {
@@ -155,7 +155,7 @@ pub(super) fn spawn_scaled_breaker_at(app: &mut App, x: f32, y: f32, entity_scal
         w,
         h,
         default_reflection_spread(),
-        EntityScale(entity_scale),
+        NodeScalingFactor(entity_scale),
         Aabb2D::new(Vec2::ZERO, half_extents),
         CollisionLayers::new(BREAKER_LAYER, BOLT_LAYER),
         Position2D(pos),
@@ -182,6 +182,6 @@ pub(super) fn spawn_scaled_bolt(
         .spawn(app.world_mut());
     app.world_mut()
         .entity_mut(entity)
-        .insert(EntityScale(entity_scale));
+        .insert(NodeScalingFactor(entity_scale));
     entity
 }

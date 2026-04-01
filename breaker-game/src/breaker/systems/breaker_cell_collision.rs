@@ -13,20 +13,20 @@ use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
     breaker::{
-        components::{Breaker, BreakerHeight, BreakerWidth},
+        components::{BaseHeight, BaseWidth, Breaker},
         messages::BreakerImpactCell,
     },
     cells::components::Cell,
-    shared::{BREAKER_LAYER, CELL_LAYER, EntityScale},
+    shared::{BREAKER_LAYER, CELL_LAYER, NodeScalingFactor},
 };
 
 /// Breaker query data for cell collision detection.
 type BreakerCellCollisionQuery = (
     Entity,
     &'static Position2D,
-    &'static BreakerWidth,
-    &'static BreakerHeight,
-    Option<&'static EntityScale>,
+    &'static BaseWidth,
+    &'static BaseHeight,
+    Option<&'static NodeScalingFactor>,
 );
 
 /// Cell entity lookup for narrow-phase overlap verification.
@@ -128,8 +128,8 @@ mod tests {
         app.world_mut()
             .spawn((
                 Breaker,
-                BreakerWidth(120.0),
-                BreakerHeight(20.0),
+                BaseWidth(120.0),
+                BaseHeight(20.0),
                 Position2D(pos),
                 GlobalPosition2D(pos),
                 Spatial2D,
@@ -186,7 +186,7 @@ mod tests {
 
     #[test]
     fn breaker_with_entity_scale_expands_collision_area() {
-        // B1 edge case: Breaker at (0,0) with EntityScale(2.0) => half_w=120, half_h=20.
+        // B1 edge case: Breaker at (0,0) with NodeScalingFactor(2.0) => half_w=120, half_h=20.
         // Cell at (110,0) half_extents (35,12). At scale=1.0: dx=110 > 60+35=95 (no overlap).
         // At scale=2.0: dx=110 < 120+35=155 (overlap). Verify 1 message.
         let mut app = test_app();
@@ -194,7 +194,7 @@ mod tests {
         let breaker_entity = spawn_breaker(&mut app, Vec2::new(0.0, 0.0));
         app.world_mut()
             .entity_mut(breaker_entity)
-            .insert(EntityScale(2.0));
+            .insert(NodeScalingFactor(2.0));
 
         let cell_entity = spawn_cell(&mut app, Vec2::new(110.0, 0.0), Vec2::new(35.0, 12.0));
 

@@ -1,19 +1,19 @@
-//! Visual system to set bolt [`Scale2D`] from [`BoltRadius`] and optional [`EntityScale`].
+//! Visual system to set bolt [`Scale2D`] from [`BoltRadius`] and optional [`NodeScalingFactor`].
 
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Scale2D;
 
 use crate::{
     bolt::components::{Bolt, BoltRadius},
-    shared::EntityScale,
+    shared::NodeScalingFactor,
 };
 
-/// Sets bolt [`Scale2D`] based on [`BoltRadius`] and optional [`EntityScale`].
+/// Sets bolt [`Scale2D`] based on [`BoltRadius`] and optional [`NodeScalingFactor`].
 ///
-/// When [`EntityScale`] is present, scale = `BoltRadius * EntityScale` on X and Y.
+/// When [`NodeScalingFactor`] is present, scale = `BoltRadius * NodeScalingFactor` on X and Y.
 /// Without it, scale equals `BoltRadius` (backward compatible).
 pub(crate) fn bolt_scale_visual(
-    mut query: Query<(&BoltRadius, Option<&EntityScale>, &mut Scale2D), With<Bolt>>,
+    mut query: Query<(&BoltRadius, Option<&NodeScalingFactor>, &mut Scale2D), With<Bolt>>,
 ) {
     for (radius, entity_scale, mut scale) in &mut query {
         let factor = entity_scale.map_or(1.0, |s| s.0);
@@ -66,7 +66,7 @@ mod tests {
 
     #[test]
     fn bolt_scale_visual_writes_scale2d_with_entity_scale() {
-        // Given: Bolt with BoltRadius(8.0), EntityScale(0.7), Scale2D { x: 1.0, y: 1.0 }
+        // Given: Bolt with BoltRadius(8.0), NodeScalingFactor(0.7), Scale2D { x: 1.0, y: 1.0 }
         // When: bolt_scale_visual runs
         // Then: Scale2D { x: 5.6, y: 5.6 }
         let mut app = test_app();
@@ -77,7 +77,9 @@ mod tests {
             .with_velocity(Velocity2D(Vec2::ZERO))
             .primary()
             .spawn(app.world_mut());
-        app.world_mut().entity_mut(entity).insert(EntityScale(0.7));
+        app.world_mut()
+            .entity_mut(entity)
+            .insert(NodeScalingFactor(0.7));
 
         tick(&mut app);
 
@@ -94,7 +96,7 @@ mod tests {
 
     #[test]
     fn bolt_scale_visual_without_entity_scale_defaults_to_radius() {
-        // Edge case: no EntityScale -> Scale2D { x: 8.0, y: 8.0 }
+        // Edge case: no NodeScalingFactor -> Scale2D { x: 8.0, y: 8.0 }
         let mut app = test_app();
 
         let entity = Bolt::builder()
@@ -109,7 +111,7 @@ mod tests {
         let scale = app.world().get::<Scale2D>(entity).unwrap();
         assert!(
             (scale.x - 8.0).abs() < TOLERANCE && (scale.y - 8.0).abs() < TOLERANCE,
-            "without EntityScale, Scale2D should be (8.0, 8.0), got ({}, {})",
+            "without NodeScalingFactor, Scale2D should be (8.0, 8.0), got ({}, {})",
             scale.x,
             scale.y,
         );
@@ -117,7 +119,7 @@ mod tests {
 
     #[test]
     fn bolt_scale_visual_entity_scale_one_equals_radius() {
-        // Edge case: EntityScale(1.0) -> Scale2D { x: 8.0, y: 8.0 }
+        // Edge case: NodeScalingFactor(1.0) -> Scale2D { x: 8.0, y: 8.0 }
         let mut app = test_app();
 
         let entity = Bolt::builder()
@@ -126,14 +128,16 @@ mod tests {
             .with_velocity(Velocity2D(Vec2::ZERO))
             .primary()
             .spawn(app.world_mut());
-        app.world_mut().entity_mut(entity).insert(EntityScale(1.0));
+        app.world_mut()
+            .entity_mut(entity)
+            .insert(NodeScalingFactor(1.0));
 
         tick(&mut app);
 
         let scale = app.world().get::<Scale2D>(entity).unwrap();
         assert!(
             (scale.x - 8.0).abs() < TOLERANCE && (scale.y - 8.0).abs() < TOLERANCE,
-            "with EntityScale(1.0), Scale2D should be (8.0, 8.0), got ({}, {})",
+            "with NodeScalingFactor(1.0), Scale2D should be (8.0, 8.0), got ({}, {})",
             scale.x,
             scale.y,
         );
@@ -141,7 +145,7 @@ mod tests {
 
     #[test]
     fn bolt_scale_visual_scales_multiple_bolts_independently() {
-        // Given: Bolt A with EntityScale(0.7), Bolt B with EntityScale(0.5)
+        // Given: Bolt A with NodeScalingFactor(0.7), Bolt B with NodeScalingFactor(0.5)
         // When: bolt_scale_visual runs
         // Then: A = Scale2D { x: 5.6, y: 5.6 }, B = Scale2D { x: 4.0, y: 4.0 }
         let mut app = test_app();
@@ -152,7 +156,9 @@ mod tests {
             .with_velocity(Velocity2D(Vec2::ZERO))
             .primary()
             .spawn(app.world_mut());
-        app.world_mut().entity_mut(bolt_a).insert(EntityScale(0.7));
+        app.world_mut()
+            .entity_mut(bolt_a)
+            .insert(NodeScalingFactor(0.7));
 
         let bolt_b = Bolt::builder()
             .at_position(Vec2::ZERO)
@@ -160,7 +166,9 @@ mod tests {
             .with_velocity(Velocity2D(Vec2::ZERO))
             .extra()
             .spawn(app.world_mut());
-        app.world_mut().entity_mut(bolt_b).insert(EntityScale(0.5));
+        app.world_mut()
+            .entity_mut(bolt_b)
+            .insert(NodeScalingFactor(0.5));
 
         tick(&mut app);
 

@@ -15,7 +15,7 @@ pub(crate) fn breaker_state_ui(
     last_bump: Res<LastBumpResult>,
     breaker_query: Query<BumpTelemetryQuery, With<Breaker>>,
 ) {
-    if !overlays.is_active(Overlay::BreakerState) {
+    if !overlays.is_active(Overlay::DashState) {
         return;
     }
 
@@ -27,7 +27,7 @@ pub(crate) fn breaker_state_ui(
             breaker_query.single()
         {
             ui.label(format!("State: {state:?}"));
-            ui.label(format!("Velocity X: {:.1}", velocity.x));
+            ui.label(format!("Velocity X: {:.1}", velocity.0.x));
             ui.label(format!(
                 "Tilt: {:.3} rad ({:.1} deg)",
                 tilt.angle,

@@ -33,7 +33,7 @@ pub(crate) fn debug_ui_system(
             );
             ui.checkbox(overlays.flag_mut(Overlay::State), "Game State");
             ui.checkbox(overlays.flag_mut(Overlay::BoltInfo), "Bolt Info");
-            ui.checkbox(overlays.flag_mut(Overlay::BreakerState), "Breaker State");
+            ui.checkbox(overlays.flag_mut(Overlay::DashState), "Breaker State");
             ui.checkbox(overlays.flag_mut(Overlay::InputActions), "Input Actions");
 
             ui.separator();

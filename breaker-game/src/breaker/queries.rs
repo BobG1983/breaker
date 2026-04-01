@@ -1,14 +1,16 @@
 //! Breaker domain query type aliases — clippy `type_complexity` lint.
 
-use rantzsoft_spatial2d::components::{MaxSpeed, Position2D, PreviousPosition, Scale2D};
+use rantzsoft_spatial2d::components::{
+    MaxSpeed, Position2D, PreviousPosition, Scale2D, Velocity2D,
+};
 
 use crate::{
     breaker::components::{
-        BrakeDecel, BrakeTilt, BreakerAcceleration, BreakerBaseY, BreakerDeceleration,
-        BreakerHeight, BreakerReflectionSpread, BreakerState, BreakerStateTimer, BreakerTilt,
-        BreakerVelocity, BreakerWidth, BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown,
-        BumpPerfectWindow, BumpState, BumpWeakCooldown, DashDuration, DashSpeedMultiplier,
-        DashTilt, DashTiltEase, DecelEasing, SettleDuration, SettleTiltEase,
+        BaseHeight, BaseWidth, BrakeDecel, BrakeTilt, BreakerAcceleration, BreakerBaseY,
+        BreakerDeceleration, BreakerReflectionSpread, BreakerTilt, BumpEarlyWindow, BumpLateWindow,
+        BumpPerfectCooldown, BumpPerfectWindow, BumpState, BumpWeakCooldown, DashDuration,
+        DashSpeedMultiplier, DashState, DashStateTimer, DashTilt, DashTiltEase, DecelEasing,
+        SettleDuration, SettleTiltEase,
     },
     effect::{
         AnchorActive, AnchorPlanted,
@@ -17,30 +19,30 @@ use crate::{
             speed_boost::ActiveSpeedBoosts,
         },
     },
-    shared::EntityScale,
+    shared::NodeScalingFactor,
 };
 
 /// Breaker entity data needed by bolt-breaker collision.
 pub(crate) type CollisionQueryBreaker = (
     &'static Position2D,
     &'static BreakerTilt,
-    &'static BreakerWidth,
-    &'static BreakerHeight,
+    &'static BaseWidth,
+    &'static BaseHeight,
     &'static BreakerReflectionSpread,
     Option<&'static ActiveSizeBoosts>,
-    Option<&'static EntityScale>,
+    Option<&'static NodeScalingFactor>,
 );
 
 /// Breaker movement data — position, velocity, speed limits, and playfield clamping.
 pub(crate) type MovementQuery = (
     &'static mut Position2D,
-    &'static mut BreakerVelocity,
-    &'static BreakerState,
+    &'static mut Velocity2D,
+    &'static DashState,
     &'static MaxSpeed,
     &'static BreakerAcceleration,
     &'static BreakerDeceleration,
     &'static DecelEasing,
-    &'static BreakerWidth,
+    &'static BaseWidth,
     Option<&'static ActiveSpeedBoosts>,
     Option<&'static ActiveSizeBoosts>,
 );
@@ -52,10 +54,10 @@ pub(crate) type MovementQuery = (
 /// - Group 2: flash-step optional fields
 pub(crate) type DashQuery = (
     (
-        &'static mut BreakerState,
-        &'static mut BreakerVelocity,
+        &'static mut DashState,
+        &'static mut Velocity2D,
         &'static mut BreakerTilt,
-        &'static mut BreakerStateTimer,
+        &'static mut DashStateTimer,
         &'static MaxSpeed,
         &'static BreakerDeceleration,
         &'static DecelEasing,
@@ -71,7 +73,7 @@ pub(crate) type DashQuery = (
     (
         Option<&'static FlashStepActive>,
         Option<&'static mut Position2D>,
-        Option<&'static BreakerWidth>,
+        Option<&'static BaseWidth>,
         Option<&'static ActiveSpeedBoosts>,
         Option<&'static ActiveSizeBoosts>,
     ),
@@ -80,10 +82,10 @@ pub(crate) type DashQuery = (
 /// Breaker reset data — mutable state cleared at node start.
 pub(crate) type ResetQuery = (
     &'static mut Position2D,
-    &'static mut BreakerState,
-    &'static mut BreakerVelocity,
+    &'static mut DashState,
+    &'static mut Velocity2D,
     &'static mut BreakerTilt,
-    &'static mut BreakerStateTimer,
+    &'static mut DashStateTimer,
     &'static mut BumpState,
     &'static BreakerBaseY,
     Option<&'static mut PreviousPosition>,
@@ -114,20 +116,20 @@ pub(crate) type BumpGradingQuery = (
 
 /// Breaker data needed by the width boost visual system.
 pub(crate) type WidthBoostVisualQuery = (
-    &'static BreakerWidth,
+    &'static BaseWidth,
     Option<&'static ActiveSizeBoosts>,
-    &'static BreakerHeight,
-    Option<&'static EntityScale>,
+    &'static BaseHeight,
+    Option<&'static NodeScalingFactor>,
     &'static mut Scale2D,
 );
 
 /// Breaker bump telemetry — state, bump, tilt, velocity, and window sizes.
 #[cfg(feature = "dev")]
 pub type BumpTelemetryQuery = (
-    &'static BreakerState,
+    &'static DashState,
     &'static BumpState,
     &'static BreakerTilt,
-    &'static BreakerVelocity,
+    &'static Velocity2D,
     &'static BumpPerfectWindow,
     &'static BumpEarlyWindow,
     &'static BumpLateWindow,

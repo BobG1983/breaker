@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use breaker::{
     bolt::components::Bolt,
-    breaker::components::{Breaker, BreakerState},
+    breaker::components::{Breaker, DashState},
     cells::components::Cell,
     wall::components::Wall,
 };
@@ -12,7 +12,7 @@ use crate::{
     invariants::{
         ScenarioStats, ScenarioTagBolt, ScenarioTagBreaker, ScenarioTagCell, ScenarioTagWall,
     },
-    types::ScenarioBreakerState,
+    types::ScenarioDashState,
 };
 
 /// Tags game entities with scenario marker components for invariant checking.
@@ -60,16 +60,16 @@ pub fn tag_game_entities(
     }
 }
 
-/// Maps a [`ScenarioBreakerState`] to the game crate's [`BreakerState`].
+/// Maps a [`ScenarioDashState`] to the game crate's [`DashState`].
 ///
 /// Used by [`super::frame_mutations::apply_debug_frame_mutations`] to translate the RON-serializable
 /// enum into the Bevy component enum.
 #[must_use]
-pub const fn map_scenario_breaker_state(state: ScenarioBreakerState) -> BreakerState {
+pub const fn map_scenario_dash_state(state: ScenarioDashState) -> DashState {
     match state {
-        ScenarioBreakerState::Idle => BreakerState::Idle,
-        ScenarioBreakerState::Dashing => BreakerState::Dashing,
-        ScenarioBreakerState::Braking => BreakerState::Braking,
-        ScenarioBreakerState::Settling => BreakerState::Settling,
+        ScenarioDashState::Idle => DashState::Idle,
+        ScenarioDashState::Dashing => DashState::Dashing,
+        ScenarioDashState::Braking => DashState::Braking,
+        ScenarioDashState::Settling => DashState::Settling,
     }
 }

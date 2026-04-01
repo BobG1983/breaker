@@ -2,15 +2,15 @@
 //! teleports the breaker instantly instead of doing a normal dash.
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{MaxSpeed, Position2D};
+use rantzsoft_spatial2d::components::{MaxSpeed, Position2D, Velocity2D};
 
 use super::super::super::system::update_breaker_state;
 use crate::{
     breaker::{
         components::{
-            BrakeDecel, BrakeTilt, Breaker, BreakerDeceleration, BreakerState, BreakerStateTimer,
-            BreakerTilt, BreakerVelocity, BreakerWidth, DashDuration, DashSpeedMultiplier,
-            DashTilt, DashTiltEase, DecelEasing, SettleDuration, SettleTiltEase,
+            BaseWidth, BrakeDecel, BrakeTilt, Breaker, BreakerDeceleration, BreakerTilt,
+            DashDuration, DashSpeedMultiplier, DashState, DashStateTimer, DashTilt, DashTiltEase,
+            DecelEasing, SettleDuration, SettleTiltEase,
         },
         resources::BreakerConfig,
     },
@@ -87,16 +87,16 @@ pub(super) fn spawn_settling_breaker_rightward_dash(
     let config = BreakerConfig::default();
     let mut entity_cmds = app.world_mut().spawn((
         Breaker,
-        BreakerState::Settling,
-        BreakerVelocity { x: 0.0 },
+        DashState::Settling,
+        Velocity2D(Vec2::ZERO),
         BreakerTilt {
             angle: -0.35,
             ease_start: -0.35,
             ease_target: 0.0,
         },
-        BreakerStateTimer { remaining: 0.2 },
+        DashStateTimer { remaining: 0.2 },
         Position2D(position),
-        BreakerWidth(120.0),
+        BaseWidth(120.0),
         breaker_param_bundle(&config),
     ));
     if flash_step {
@@ -117,16 +117,16 @@ pub(super) fn spawn_settling_breaker_leftward_dash(
     let config = BreakerConfig::default();
     let mut entity_cmds = app.world_mut().spawn((
         Breaker,
-        BreakerState::Settling,
-        BreakerVelocity { x: 0.0 },
+        DashState::Settling,
+        Velocity2D(Vec2::ZERO),
         BreakerTilt {
             angle: 0.35,
             ease_start: 0.35,
             ease_target: 0.0,
         },
-        BreakerStateTimer { remaining: 0.2 },
+        DashStateTimer { remaining: 0.2 },
         Position2D(position),
-        BreakerWidth(120.0),
+        BaseWidth(120.0),
         breaker_param_bundle(&config),
     ));
     if flash_step {

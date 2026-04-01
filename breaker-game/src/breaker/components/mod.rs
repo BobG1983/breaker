@@ -7,18 +7,16 @@ mod movement;
 mod state;
 
 pub use core::{
-    Breaker, BreakerBaseY, BreakerHeight, BreakerInitialized, BreakerReflectionSpread, BreakerWidth,
+    BaseHeight, BaseWidth, Breaker, BreakerBaseY, BreakerInitialized, BreakerReflectionSpread,
 };
 
 pub use bump::{
-    BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown, BumpPerfectWindow, BumpState, BumpVisual,
-    BumpVisualParams, BumpWeakCooldown,
+    BumpEarlyWindow, BumpFeedback, BumpFeedbackState, BumpLateWindow, BumpPerfectCooldown,
+    BumpPerfectWindow, BumpState, BumpWeakCooldown,
 };
 pub use dash::{
     BrakeDecel, BrakeTilt, DashDuration, DashSpeedMultiplier, DashTilt, DashTiltEase,
     SettleDuration, SettleTiltEase,
 };
-pub use movement::{
-    BreakerAcceleration, BreakerDeceleration, BreakerTilt, BreakerVelocity, DecelEasing,
-};
-pub use state::{BreakerState, BreakerStateTimer};
+pub use movement::{BreakerAcceleration, BreakerDeceleration, BreakerTilt, DecelEasing};
+pub use state::{DashState, DashStateTimer};

@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 use breaker::{
-    breaker::components::BreakerWidth,
+    breaker::components::BaseWidth,
     effect::EffectNode,
     run::{NodeLayout, node::definition::NodePool},
 };
@@ -32,7 +32,7 @@ pub type BreakerDebugQuery<'w, 's> = Query<
 pub type BreakerTrackingQuery<'w, 's> = Query<
     'w,
     's,
-    (&'static mut Position2D, &'static BreakerWidth),
+    (&'static mut Position2D, &'static BaseWidth),
     (With<ScenarioTagBreaker>, Without<ScenarioTagBolt>),
 >;
 

@@ -2,14 +2,14 @@
 
 use bevy::prelude::*;
 use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
-use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, PreviousScale, Scale2D};
+use rantzsoft_spatial2d::components::{
+    Position2D, PreviousPosition, PreviousScale, Scale2D, Velocity2D,
+};
 use tracing::debug;
 
 use crate::{
     breaker::{
-        components::{
-            Breaker, BreakerState, BreakerStateTimer, BreakerTilt, BreakerVelocity, BumpState,
-        },
+        components::{Breaker, BreakerTilt, BumpState, DashState, DashStateTimer},
         messages::BreakerSpawned,
         queries::ResetQuery,
         resources::BreakerConfig,
@@ -38,11 +38,11 @@ pub fn spawn_breaker(
         // Core breaker components
         (
             Breaker,
-            BreakerVelocity::default(),
-            BreakerState::default(),
+            Velocity2D::default(),
+            DashState::default(),
             BreakerTilt::default(),
             BumpState::default(),
-            BreakerStateTimer::default(),
+            DashStateTimer::default(),
         ),
         // Spatial2d components
         (
@@ -90,8 +90,8 @@ pub fn reset_breaker(playfield: Res<PlayfieldConfig>, mut query: Query<ResetQuer
     {
         position.0.x = center_x;
         position.0.y = base_y.0;
-        *state = BreakerState::Idle;
-        velocity.x = 0.0;
+        *state = DashState::Idle;
+        velocity.0.x = 0.0;
         tilt.angle = 0.0;
         tilt.ease_start = 0.0;
         tilt.ease_target = 0.0;

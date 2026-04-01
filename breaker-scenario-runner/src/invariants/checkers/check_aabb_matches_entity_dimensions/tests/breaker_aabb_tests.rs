@@ -3,8 +3,8 @@
 use bevy::prelude::*;
 use breaker::{
     bolt::components::BoltRadius,
-    breaker::components::{BreakerHeight, BreakerWidth},
-    shared::EntityScale,
+    breaker::components::{BaseHeight, BaseWidth},
+    shared::NodeScalingFactor,
 };
 use rantzsoft_physics2d::aabb::Aabb2D;
 
@@ -13,42 +13,42 @@ use crate::{invariants::*, types::InvariantKind};
 
 // ── Breaker Checks ──────────────────────────────────────────────
 
-/// Behavior 9: No violation when breaker `Aabb2D` `half_extents` match width/height without `EntityScale`.
+/// Behavior 9: No violation when breaker `Aabb2D` `half_extents` match width/height without `NodeScalingFactor`.
 #[test]
 fn no_violation_when_breaker_aabb_matches_without_scale() {
     let mut app = test_app();
     app.world_mut().spawn((
         ScenarioTagBreaker,
         Aabb2D::new(Vec2::ZERO, Vec2::new(40.0, 6.0)),
-        BreakerWidth(80.0),
-        BreakerHeight(12.0),
+        BaseWidth(80.0),
+        BaseHeight(12.0),
     ));
     tick(&mut app);
     let log = app.world().resource::<ViolationLog>();
     assert!(
         log.0.is_empty(),
-        "no violation expected when breaker half_extents (40.0, 6.0) match half_width/half_height with no EntityScale"
+        "no violation expected when breaker half_extents (40.0, 6.0) match half_width/half_height with no NodeScalingFactor"
     );
 }
 
-/// Behavior 10: No violation when breaker has `EntityScale` — stored `Aabb2D` is unscaled.
+/// Behavior 10: No violation when breaker has `NodeScalingFactor` — stored `Aabb2D` is unscaled.
 #[test]
 fn no_violation_when_breaker_aabb_matches_with_scale() {
     let mut app = test_app();
-    // Aabb2D stores unscaled base dimensions even when EntityScale is present.
-    // The checker ignores EntityScale because collision systems apply scale at runtime.
+    // Aabb2D stores unscaled base dimensions even when NodeScalingFactor is present.
+    // The checker ignores NodeScalingFactor because collision systems apply scale at runtime.
     app.world_mut().spawn((
         ScenarioTagBreaker,
         Aabb2D::new(Vec2::ZERO, Vec2::new(40.0, 6.0)),
-        BreakerWidth(80.0),
-        BreakerHeight(12.0),
-        EntityScale(2.0),
+        BaseWidth(80.0),
+        BaseHeight(12.0),
+        NodeScalingFactor(2.0),
     ));
     tick(&mut app);
     let log = app.world().resource::<ViolationLog>();
     assert!(
         log.0.is_empty(),
-        "no violation expected — Aabb2D stores unscaled (40.0, 6.0) regardless of EntityScale"
+        "no violation expected — Aabb2D stores unscaled (40.0, 6.0) regardless of NodeScalingFactor"
     );
 }
 
@@ -61,8 +61,8 @@ fn violation_when_breaker_aabb_does_not_match_without_scale() {
         .spawn((
             ScenarioTagBreaker,
             Aabb2D::new(Vec2::ZERO, Vec2::new(50.0, 6.0)),
-            BreakerWidth(80.0),
-            BreakerHeight(12.0),
+            BaseWidth(80.0),
+            BaseHeight(12.0),
         ))
         .id();
     tick(&mut app);
@@ -83,18 +83,18 @@ fn violation_when_breaker_aabb_does_not_match_without_scale() {
     );
 }
 
-/// Behavior 12: Violation fires when breaker `Aabb2D` doesn't match unscaled dimensions (`EntityScale` present but irrelevant).
+/// Behavior 12: Violation fires when breaker `Aabb2D` doesn't match unscaled dimensions (`NodeScalingFactor` present but irrelevant).
 #[test]
 fn violation_when_breaker_aabb_does_not_match_with_scale() {
     let mut app = test_app();
-    // EntityScale is present but the checker ignores it — expected is still (40.0, 6.0).
+    // NodeScalingFactor is present but the checker ignores it — expected is still (40.0, 6.0).
     // Aabb2D (80.0, 12.0) mismatches the unscaled expected (40.0, 6.0).
     app.world_mut().spawn((
         ScenarioTagBreaker,
         Aabb2D::new(Vec2::ZERO, Vec2::new(80.0, 12.0)),
-        BreakerWidth(80.0),
-        BreakerHeight(12.0),
-        EntityScale(2.0),
+        BaseWidth(80.0),
+        BaseHeight(12.0),
+        NodeScalingFactor(2.0),
     ));
     tick(&mut app);
     let log = app.world().resource::<ViolationLog>();
@@ -116,8 +116,8 @@ fn no_violation_when_breaker_aabb_within_epsilon() {
     app.world_mut().spawn((
         ScenarioTagBreaker,
         Aabb2D::new(Vec2::ZERO, Vec2::new(40.0005, 6.0005)),
-        BreakerWidth(80.0),
-        BreakerHeight(12.0),
+        BaseWidth(80.0),
+        BaseHeight(12.0),
     ));
     tick(&mut app);
     let log = app.world().resource::<ViolationLog>();
@@ -127,22 +127,22 @@ fn no_violation_when_breaker_aabb_within_epsilon() {
     );
 }
 
-/// Behavior 14: Breaker with `EntityScale(1.0)` behaves identically to no `EntityScale`.
+/// Behavior 14: Breaker with `NodeScalingFactor(1.0)` behaves identically to no `NodeScalingFactor`.
 #[test]
 fn no_violation_when_breaker_has_explicit_scale_one() {
     let mut app = test_app();
     app.world_mut().spawn((
         ScenarioTagBreaker,
         Aabb2D::new(Vec2::ZERO, Vec2::new(40.0, 6.0)),
-        BreakerWidth(80.0),
-        BreakerHeight(12.0),
-        EntityScale(1.0),
+        BaseWidth(80.0),
+        BaseHeight(12.0),
+        NodeScalingFactor(1.0),
     ));
     tick(&mut app);
     let log = app.world().resource::<ViolationLog>();
     assert!(
         log.0.is_empty(),
-        "no violation expected when EntityScale(1.0) is equivalent to absent scale"
+        "no violation expected when NodeScalingFactor(1.0) is equivalent to absent scale"
     );
 }
 
@@ -176,8 +176,8 @@ fn bolt_and_breaker_checked_only_incorrect_flagged() {
         .spawn((
             ScenarioTagBreaker,
             Aabb2D::new(Vec2::ZERO, Vec2::new(50.0, 6.0)),
-            BreakerWidth(80.0),
-            BreakerHeight(12.0),
+            BaseWidth(80.0),
+            BaseHeight(12.0),
         ))
         .id();
     tick(&mut app);
@@ -245,8 +245,8 @@ fn no_violation_when_breaker_delta_exactly_equals_epsilon() {
     app.world_mut().spawn((
         ScenarioTagBreaker,
         Aabb2D::new(Vec2::ZERO, Vec2::splat(AABB_EPSILON)),
-        BreakerWidth(0.0),
-        BreakerHeight(0.0),
+        BaseWidth(0.0),
+        BaseHeight(0.0),
     ));
     tick(&mut app);
     let log = app.world().resource::<ViolationLog>();
@@ -275,8 +275,8 @@ fn violations_fire_for_both_bolt_and_breaker_when_both_mismatched() {
         .spawn((
             ScenarioTagBreaker,
             Aabb2D::new(Vec2::ZERO, Vec2::new(50.0, 10.0)),
-            BreakerWidth(80.0),
-            BreakerHeight(12.0),
+            BaseWidth(80.0),
+            BaseHeight(12.0),
         ))
         .id();
     tick(&mut app);

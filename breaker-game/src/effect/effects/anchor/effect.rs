@@ -1,12 +1,10 @@
 //! Anchor effect -- breaker plants after a stationary delay, modifying bump behavior.
 
 use bevy::prelude::*;
+use rantzsoft_spatial2d::components::Velocity2D;
 
 use super::super::bump_force::ActiveBumpForces;
-use crate::{
-    breaker::components::{BreakerState, BreakerVelocity},
-    shared::playing_state::PlayingState,
-};
+use crate::{breaker::components::DashState, shared::playing_state::PlayingState};
 
 /// Configuration component for the Anchor effect on a breaker entity.
 ///
@@ -82,8 +80,8 @@ pub(crate) fn reverse(
 type AnchorTickQuery = (
     Entity,
     &'static AnchorActive,
-    &'static BreakerVelocity,
-    &'static BreakerState,
+    &'static Velocity2D,
+    &'static DashState,
     Option<&'static mut AnchorTimer>,
     Option<&'static AnchorPlanted>,
     Option<&'static mut ActiveBumpForces>,
@@ -91,7 +89,7 @@ type AnchorTickQuery = (
 
 /// Tick system for anchor planting state machine.
 ///
-/// Watches `BreakerVelocity` and `BreakerState` to manage `AnchorTimer` countdown
+/// Watches `Velocity2D` and `DashState` to manage `AnchorTimer` countdown
 /// and `AnchorPlanted` insertion/removal.
 ///
 /// - Stationary: zero velocity AND (Idle or Settling state)
@@ -103,8 +101,8 @@ pub(crate) fn tick_anchor(
 ) {
     let dt = time.delta_secs();
     for (entity, active, velocity, state, timer, planted, active_forces) in &mut query {
-        let is_stationary = velocity.x.abs() < f32::EPSILON
-            && matches!(state, BreakerState::Idle | BreakerState::Settling);
+        let is_stationary = velocity.0.x.abs() < f32::EPSILON
+            && matches!(state, DashState::Idle | DashState::Settling);
 
         if !is_stationary {
             // Movement detected -- cancel timer and planted.

@@ -4,7 +4,7 @@ use super::helpers::*;
 use crate::{
     bolt::messages::BoltImpactBreaker,
     breaker::{
-        components::{Breaker, BreakerState, BreakerStateTimer, BumpState, SettleDuration},
+        components::{Breaker, BumpState, DashState, DashStateTimer, SettleDuration},
         messages::{BumpGrade, BumpPerformed},
         resources::BreakerConfig,
     },
@@ -75,8 +75,8 @@ fn perfect_bump_cancels_dash() {
         .world_mut()
         .spawn((
             Breaker,
-            BreakerState::Dashing,
-            BreakerStateTimer { remaining: 0.1 },
+            DashState::Dashing,
+            DashStateTimer { remaining: 0.1 },
             SettleDuration(config.settle_duration),
         ))
         .id();
@@ -95,14 +95,14 @@ fn perfect_bump_cancels_dash() {
     );
     tick(&mut app);
 
-    let state = app.world().get::<BreakerState>(entity).unwrap();
+    let state = app.world().get::<DashState>(entity).unwrap();
     assert_eq!(
         *state,
-        BreakerState::Settling,
+        DashState::Settling,
         "perfect bump during dash should transition to settling"
     );
 
-    let timer = app.world().get::<BreakerStateTimer>(entity).unwrap();
+    let timer = app.world().get::<DashStateTimer>(entity).unwrap();
     assert!(
         (timer.remaining - config.settle_duration).abs() < f32::EPSILON,
         "settle timer should be set to config.settle_duration"

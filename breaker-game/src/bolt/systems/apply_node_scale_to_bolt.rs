@@ -1,13 +1,13 @@
-//! System to insert [`EntityScale`] on bolt entities from [`ActiveNodeLayout`].
+//! System to insert [`NodeScalingFactor`] on bolt entities from [`ActiveNodeLayout`].
 
 use bevy::prelude::*;
 
-use crate::{bolt::components::Bolt, run::node::ActiveNodeLayout, shared::EntityScale};
+use crate::{bolt::components::Bolt, run::node::ActiveNodeLayout, shared::NodeScalingFactor};
 
-/// Inserts [`EntityScale`] on all bolt entities from the active node layout.
+/// Inserts [`NodeScalingFactor`] on all bolt entities from the active node layout.
 ///
-/// Runs `OnEnter(GameState::Playing)`. Overwrites any existing `EntityScale`.
-pub(crate) fn apply_entity_scale_to_bolt(
+/// Runs `OnEnter(GameState::Playing)`. Overwrites any existing `NodeScalingFactor`.
+pub(crate) fn apply_node_scale_to_bolt(
     layout: Option<Res<ActiveNodeLayout>>,
     query: Query<Entity, With<Bolt>>,
     mut commands: Commands,
@@ -16,7 +16,7 @@ pub(crate) fn apply_entity_scale_to_bolt(
     for entity in &query {
         commands
             .entity(entity)
-            .insert(EntityScale(layout.0.entity_scale));
+            .insert(NodeScalingFactor(layout.0.entity_scale));
     }
 }
 
@@ -48,7 +48,7 @@ mod tests {
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
-            .add_systems(Update, apply_entity_scale_to_bolt);
+            .add_systems(Update, apply_node_scale_to_bolt);
         app
     }
 
@@ -77,8 +77,8 @@ mod tests {
     #[test]
     fn inserts_entity_scale_from_active_node_layout() {
         // Given: Bolt entity, ActiveNodeLayout with entity_scale = 0.7
-        // When: apply_entity_scale_to_bolt runs
-        // Then: Bolt has EntityScale(0.7)
+        // When: apply_node_scale_to_bolt runs
+        // Then: Bolt has NodeScalingFactor(0.7)
         let mut app = test_app();
         app.insert_resource(make_layout(0.7));
 
@@ -86,31 +86,33 @@ mod tests {
 
         app.update();
 
-        let scale = app.world().get::<EntityScale>(entity).unwrap();
+        let scale = app.world().get::<NodeScalingFactor>(entity).unwrap();
         assert!(
             (scale.0 - 0.7).abs() < f32::EPSILON,
-            "expected EntityScale(0.7), got EntityScale({})",
+            "expected NodeScalingFactor(0.7), got NodeScalingFactor({})",
             scale.0,
         );
     }
 
     #[test]
     fn overwrites_existing_entity_scale_on_node_transition() {
-        // Given: Bolt with EntityScale(0.7), ActiveNodeLayout with entity_scale = 1.0
-        // When: apply_entity_scale_to_bolt runs
-        // Then: Bolt has EntityScale(1.0)
+        // Given: Bolt with NodeScalingFactor(0.7), ActiveNodeLayout with entity_scale = 1.0
+        // When: apply_node_scale_to_bolt runs
+        // Then: Bolt has NodeScalingFactor(1.0)
         let mut app = test_app();
         app.insert_resource(make_layout(1.0));
 
         let entity = spawn_bolt(&mut app);
-        app.world_mut().entity_mut(entity).insert(EntityScale(0.7));
+        app.world_mut()
+            .entity_mut(entity)
+            .insert(NodeScalingFactor(0.7));
 
         app.update();
 
-        let scale = app.world().get::<EntityScale>(entity).unwrap();
+        let scale = app.world().get::<NodeScalingFactor>(entity).unwrap();
         assert!(
             (scale.0 - 1.0).abs() < f32::EPSILON,
-            "expected EntityScale(1.0) after overwrite, got EntityScale({})",
+            "expected NodeScalingFactor(1.0) after overwrite, got NodeScalingFactor({})",
             scale.0,
         );
     }
@@ -118,8 +120,8 @@ mod tests {
     #[test]
     fn no_panic_without_active_node_layout() {
         // Given: Bolt entity, NO ActiveNodeLayout resource
-        // When: apply_entity_scale_to_bolt runs
-        // Then: no panic, no EntityScale inserted
+        // When: apply_node_scale_to_bolt runs
+        // Then: no panic, no NodeScalingFactor inserted
         let mut app = test_app();
         // Do NOT insert ActiveNodeLayout
 
@@ -127,18 +129,18 @@ mod tests {
 
         app.update();
 
-        // Builder does not insert EntityScale, so it should still be absent.
+        // Builder does not insert NodeScalingFactor, so it should still be absent.
         assert!(
-            app.world().get::<EntityScale>(entity).is_none(),
-            "EntityScale should not be inserted without ActiveNodeLayout",
+            app.world().get::<NodeScalingFactor>(entity).is_none(),
+            "NodeScalingFactor should not be inserted without ActiveNodeLayout",
         );
     }
 
     #[test]
     fn applies_to_both_primary_and_extra_bolt() {
         // Given: Two Bolt entities (one primary, one ExtraBolt), ActiveNodeLayout(entity_scale=0.7)
-        // When: apply_entity_scale_to_bolt runs
-        // Then: BOTH have EntityScale(0.7)
+        // When: apply_node_scale_to_bolt runs
+        // Then: BOTH have NodeScalingFactor(0.7)
         let mut app = test_app();
         app.insert_resource(make_layout(0.7));
 
@@ -152,17 +154,17 @@ mod tests {
 
         app.update();
 
-        let primary_scale = app.world().get::<EntityScale>(primary).unwrap();
+        let primary_scale = app.world().get::<NodeScalingFactor>(primary).unwrap();
         assert!(
             (primary_scale.0 - 0.7).abs() < f32::EPSILON,
-            "primary bolt should have EntityScale(0.7), got EntityScale({})",
+            "primary bolt should have NodeScalingFactor(0.7), got NodeScalingFactor({})",
             primary_scale.0,
         );
 
-        let extra_scale = app.world().get::<EntityScale>(extra).unwrap();
+        let extra_scale = app.world().get::<NodeScalingFactor>(extra).unwrap();
         assert!(
             (extra_scale.0 - 0.7).abs() < f32::EPSILON,
-            "extra bolt should have EntityScale(0.7), got EntityScale({})",
+            "extra bolt should have NodeScalingFactor(0.7), got NodeScalingFactor({})",
             extra_scale.0,
         );
     }

@@ -21,7 +21,7 @@ fn perfect_tracking_moves_breaker_toward_bolt_when_bolt_descends() {
         .spawn((
             ScenarioTagBreaker,
             Position2D(Vec2::new(0.0, -250.0)),
-            BreakerWidth(120.0),
+            BaseWidth(120.0),
         ))
         .id();
 
@@ -62,7 +62,7 @@ fn perfect_tracking_moves_breaker_when_bolt_ascends() {
         .spawn((
             ScenarioTagBreaker,
             Position2D(Vec2::new(0.0, -250.0)),
-            BreakerWidth(120.0),
+            BaseWidth(120.0),
         ))
         .id();
 
@@ -103,7 +103,7 @@ fn perfect_tracking_moves_breaker_when_bolt_y_velocity_zero() {
         .spawn((
             ScenarioTagBreaker,
             Position2D(Vec2::new(0.0, -250.0)),
-            BreakerWidth(120.0),
+            BaseWidth(120.0),
         ))
         .id();
 

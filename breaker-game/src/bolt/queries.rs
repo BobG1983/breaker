@@ -17,7 +17,7 @@ use crate::{
     effect::effects::{
         damage_boost::ActiveDamageBoosts, piercing::ActivePiercings, speed_boost::ActiveSpeedBoosts,
     },
-    shared::EntityScale,
+    shared::NodeScalingFactor,
 };
 
 /// Collision-specific bolt data: radius, piercing, damage, speed boosts,
@@ -36,7 +36,7 @@ pub(crate) struct BoltCollisionParams {
     /// Active speed boost multipliers.
     pub active_speed_boosts: Option<&'static ActiveSpeedBoosts>,
     /// Visual/physics scale factor.
-    pub entity_scale: Option<&'static EntityScale>,
+    pub entity_scale: Option<&'static NodeScalingFactor>,
     /// Evolution chip that spawned this bolt (for damage attribution).
     pub spawned_by_evolution: Option<&'static SpawnedByEvolution>,
     /// Last collision impact position and side.
@@ -99,7 +99,7 @@ pub(crate) struct LostBoltData {
     /// Whether this is an extra bolt (despawned on loss, not respawned).
     pub is_extra: Has<ExtraBolt>,
     /// Visual/physics scale factor.
-    pub entity_scale: Option<&'static EntityScale>,
+    pub entity_scale: Option<&'static NodeScalingFactor>,
 }
 
 /// Applies the canonical velocity formula to spatial data with optional

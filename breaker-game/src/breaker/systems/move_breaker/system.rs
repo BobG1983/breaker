@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     breaker::{
-        components::{Breaker, BreakerState},
+        components::{Breaker, DashState},
         queries::MovementQuery,
     },
     effect::effects::{size_boost::ActiveSizeBoosts, speed_boost::ActiveSpeedBoosts},
@@ -15,7 +15,7 @@ use crate::{
 /// Reads input actions and moves the breaker horizontally.
 ///
 /// Accelerates toward max speed when movement is active, decelerates when released.
-/// Movement is allowed in [`BreakerState::Idle`] and [`BreakerState::Settling`].
+/// Movement is allowed in [`DashState::Idle`] and [`DashState::Settling`].
 /// Clamps position to playfield bounds.
 pub(crate) fn move_breaker(
     actions: Res<InputActions>,
@@ -41,7 +41,7 @@ pub(crate) fn move_breaker(
         let effective_max = max_speed.0 * speed_mult.map_or(1.0, ActiveSpeedBoosts::multiplier);
 
         // Only allow direct input movement in Idle and Settling states
-        let can_move = matches!(state, BreakerState::Idle | BreakerState::Settling);
+        let can_move = matches!(state, DashState::Idle | DashState::Settling);
 
         if can_move {
             let mut input_dir: f32 = 0.0;
@@ -54,23 +54,23 @@ pub(crate) fn move_breaker(
 
             if input_dir.abs() > f32::EPSILON {
                 // Accelerate toward input direction
-                velocity.x = (input_dir * accel.0).mul_add(dt, velocity.x);
-                velocity.x = velocity.x.clamp(-effective_max, effective_max);
+                velocity.0.x = (input_dir * accel.0).mul_add(dt, velocity.0.x);
+                velocity.0.x = velocity.0.x.clamp(-effective_max, effective_max);
             } else {
                 // Decelerate toward zero with eased speed curve
                 let effective_decel = super::super::dash::eased_decel(
                     decel.0,
-                    velocity.x.abs(),
+                    velocity.0.x.abs(),
                     effective_max,
                     easing.ease,
                     easing.strength,
                 );
-                apply_deceleration(&mut velocity.x, effective_decel, dt);
+                apply_deceleration(&mut velocity.0.x, effective_decel, dt);
             }
         }
 
         // Apply velocity to position
-        position.0.x = velocity.x.mul_add(dt, position.0.x);
+        position.0.x = velocity.0.x.mul_add(dt, position.0.x);
 
         // Clamp to playfield bounds (accounting for breaker effective half-width)
         let effective_half_w =
@@ -81,7 +81,7 @@ pub(crate) fn move_breaker(
 
         // Stop velocity if hitting a wall
         if position.0.x <= min_x || position.0.x >= max_x {
-            velocity.x = 0.0;
+            velocity.0.x = 0.0;
         }
     }
 }

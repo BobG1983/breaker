@@ -32,7 +32,7 @@ unimplemented                   = "warn"
 
 # Pedantic overrides — intentional project conventions
 needless_pass_by_value  = "allow" # Bevy systems take ownership by convention
-module_name_repetitions = "allow" # BreakerState in breaker/ is intentional domain naming
+module_name_repetitions = "allow" # DashState in breaker/ is intentional domain naming
 wildcard_imports        = "allow" # Project convention: globs for 4+ items from same path
 
 # Nursery overrides — contradicts `unreachable_pub` for pub(crate) in private modules

@@ -33,7 +33,7 @@ pub enum RunStatCounter {
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub enum MutationKind {
     /// Override the breaker's movement state.
-    SetBreakerState(ScenarioBreakerState),
+    SetDashState(ScenarioDashState),
     /// Override `NodeTimer::remaining` to this value.
     SetTimerRemaining(f32),
     /// Spawn N extra entities with `Transform` (for entity leak testing).
@@ -115,20 +115,20 @@ pub enum MutationKind {
     SpawnExtraGravityWells(usize),
 }
 
-/// Mirrors `BreakerState` for RON deserialization in the scenario runner crate.
+/// Mirrors `DashState` for RON deserialization in the scenario runner crate.
 ///
-/// The game crate's `BreakerState` derives `Component` (which brings in Bevy
+/// The game crate's `DashState` derives `Component` (which brings in Bevy
 /// dependencies). This enum carries the same variants and is mapped to
-/// `BreakerState` at runtime by
-/// [`crate::lifecycle::map_scenario_breaker_state`].
+/// `DashState` at runtime by
+/// [`crate::lifecycle::map_scenario_dash_state`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
-pub enum ScenarioBreakerState {
-    /// Corresponds to `BreakerState::Idle`.
+pub enum ScenarioDashState {
+    /// Corresponds to `DashState::Idle`.
     Idle,
-    /// Corresponds to `BreakerState::Dashing`.
+    /// Corresponds to `DashState::Dashing`.
     Dashing,
-    /// Corresponds to `BreakerState::Braking`.
+    /// Corresponds to `DashState::Braking`.
     Braking,
-    /// Corresponds to `BreakerState::Settling`.
+    /// Corresponds to `DashState::Settling`.
     Settling,
 }

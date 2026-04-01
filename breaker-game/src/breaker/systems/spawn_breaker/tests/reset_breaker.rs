@@ -2,15 +2,12 @@
 //! and full state restoration.
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{Position2D, PreviousPosition};
+use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, Velocity2D};
 
 use super::super::system::*;
 use crate::{
     breaker::{
-        components::{
-            Breaker, BreakerBaseY, BreakerState, BreakerStateTimer, BreakerTilt, BreakerVelocity,
-            BumpState,
-        },
+        components::{Breaker, BreakerBaseY, BreakerTilt, BumpState, DashState, DashStateTimer},
         resources::BreakerConfig,
     },
     shared::{CleanupOnRunEnd, PlayfieldConfig},
@@ -31,14 +28,14 @@ fn reset_breaker_writes_position2d() {
         Breaker,
         Position2D(Vec2::new(100.0, -200.0)),
         PreviousPosition(Vec2::new(100.0, -200.0)),
-        BreakerVelocity { x: 300.0 },
-        BreakerState::Dashing,
+        Velocity2D(Vec2::new(300.0, 0.0)),
+        DashState::Dashing,
         BreakerTilt {
             angle: 0.5,
             ease_start: 0.5,
             ease_target: 0.0,
         },
-        BreakerStateTimer { remaining: 0.1 },
+        DashStateTimer { remaining: 0.1 },
         BreakerBaseY(config.y_position),
         BumpState {
             active: true,
@@ -92,14 +89,14 @@ fn reset_breaker_previous_position_matches_position() {
         Breaker,
         Position2D(Vec2::new(100.0, -200.0)),
         PreviousPosition(Vec2::new(50.0, -180.0)),
-        BreakerVelocity { x: 300.0 },
-        BreakerState::Dashing,
+        Velocity2D(Vec2::new(300.0, 0.0)),
+        DashState::Dashing,
         BreakerTilt {
             angle: 0.5,
             ease_start: 0.5,
             ease_target: 0.0,
         },
-        BreakerStateTimer { remaining: 0.1 },
+        DashStateTimer { remaining: 0.1 },
         BreakerBaseY(config.y_position),
         BumpState {
             active: true,
@@ -146,14 +143,14 @@ fn reset_breaker_restores_state() {
     app.world_mut().spawn((
         Breaker,
         Position2D(Vec2::new(100.0, config.y_position + 50.0)),
-        BreakerVelocity { x: 300.0 },
-        BreakerState::Dashing,
+        Velocity2D(Vec2::new(300.0, 0.0)),
+        DashState::Dashing,
         BreakerTilt {
             angle: 0.5,
             ease_start: 0.5,
             ease_target: 0.0,
         },
-        BreakerStateTimer { remaining: 0.1 },
+        DashStateTimer { remaining: 0.1 },
         BreakerBaseY(config.y_position),
         BumpState {
             active: true,
@@ -171,18 +168,18 @@ fn reset_breaker_restores_state() {
     let (state, velocity, tilt, timer, bump) = app
         .world_mut()
         .query::<(
-            &BreakerState,
-            &BreakerVelocity,
+            &DashState,
+            &Velocity2D,
             &BreakerTilt,
-            &BreakerStateTimer,
+            &DashStateTimer,
             &BumpState,
         )>()
         .iter(app.world())
         .next()
         .expect("breaker should exist");
 
-    assert_eq!(*state, BreakerState::Idle);
-    assert!(velocity.x.abs() < f32::EPSILON);
+    assert_eq!(*state, DashState::Idle);
+    assert!(velocity.0.x.abs() < f32::EPSILON);
     assert!(tilt.angle.abs() < f32::EPSILON);
     assert!(tilt.ease_start.abs() < f32::EPSILON);
     assert!(timer.remaining.abs() < f32::EPSILON);

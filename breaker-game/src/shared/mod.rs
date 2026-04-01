@@ -15,7 +15,7 @@ pub mod rng;
 
 pub use collision_layers::{BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, WALL_LAYER};
 pub use color::color_from_rgb;
-pub use components::{CleanupOnNodeExit, CleanupOnRunEnd, EntityScale};
+pub use components::{CleanupOnNodeExit, CleanupOnRunEnd, NodeScalingFactor};
 pub use draw_layer::GameDrawLayer;
 pub use game_state::GameState;
 pub use playfield::{PlayfieldConfig, PlayfieldDefaults};

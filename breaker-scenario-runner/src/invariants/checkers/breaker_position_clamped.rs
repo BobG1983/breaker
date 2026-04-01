@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use breaker::{breaker::components::BreakerWidth, shared::PlayfieldConfig};
+use breaker::{breaker::components::BaseWidth, shared::PlayfieldConfig};
 use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{invariants::*, types::InvariantKind};
@@ -9,7 +9,7 @@ use crate::{invariants::*, types::InvariantKind};
 /// Appends a [`ViolationEntry`] with [`InvariantKind::BreakerPositionClamped`] when the
 /// breaker is outside the tight clamping bounds (with 1px tolerance).
 pub fn check_breaker_position_clamped(
-    breakers: Query<(Entity, &Position2D, &BreakerWidth), With<ScenarioTagBreaker>>,
+    breakers: Query<(Entity, &Position2D, &BaseWidth), With<ScenarioTagBreaker>>,
     playfield: Res<PlayfieldConfig>,
     frame: Res<ScenarioFrame>,
     mut log: ResMut<ViolationLog>,
@@ -68,11 +68,11 @@ mod tests {
     fn breaker_position_clamped_fires_when_outside_bounds() {
         let mut app = test_app_breaker_position_clamped();
 
-        // BreakerWidth(120.0) → half_width = 60.0; right() = 400.0 → clamped max = 340.0
+        // BaseWidth(120.0) → half_width = 60.0; right() = 400.0 → clamped max = 340.0
         app.world_mut().spawn((
             ScenarioTagBreaker,
             Position2D(Vec2::new(1000.0, -250.0)),
-            BreakerWidth(120.0),
+            BaseWidth(120.0),
         ));
 
         tick(&mut app);
@@ -95,7 +95,7 @@ mod tests {
         app.world_mut().spawn((
             ScenarioTagBreaker,
             Position2D(Vec2::new(0.0, -250.0)),
-            BreakerWidth(120.0),
+            BaseWidth(120.0),
         ));
 
         tick(&mut app);
@@ -117,7 +117,7 @@ mod tests {
         app.world_mut().spawn((
             ScenarioTagBreaker,
             Position2D(Vec2::new(340.0, -250.0)),
-            BreakerWidth(120.0),
+            BaseWidth(120.0),
         ));
 
         tick(&mut app);

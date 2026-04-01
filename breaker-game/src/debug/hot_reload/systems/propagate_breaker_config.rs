@@ -5,9 +5,9 @@ use rantzsoft_spatial2d::components::MaxSpeed;
 
 use crate::breaker::{
     components::{
-        BrakeDecel, BrakeTilt, Breaker, BreakerAcceleration, BreakerBaseY, BreakerDeceleration,
-        BreakerHeight, BreakerReflectionSpread, BreakerWidth, BumpEarlyWindow, BumpLateWindow,
-        BumpPerfectCooldown, BumpPerfectWindow, BumpVisualParams, BumpWeakCooldown, DashDuration,
+        BaseHeight, BaseWidth, BrakeDecel, BrakeTilt, Breaker, BreakerAcceleration, BreakerBaseY,
+        BreakerDeceleration, BreakerReflectionSpread, BumpEarlyWindow, BumpFeedback,
+        BumpLateWindow, BumpPerfectCooldown, BumpPerfectWindow, BumpWeakCooldown, DashDuration,
         DashSpeedMultiplier, DashTilt, DashTiltEase, DecelEasing, SettleDuration, SettleTiltEase,
     },
     resources::BreakerConfig,
@@ -27,8 +27,8 @@ pub(crate) fn propagate_breaker_config(
         commands
             .entity(entity)
             .insert((
-                BreakerWidth(config.width),
-                BreakerHeight(config.height),
+                BaseWidth(config.width),
+                BaseHeight(config.height),
                 BreakerBaseY(config.y_position),
                 MaxSpeed(config.max_speed),
                 BreakerAcceleration(config.acceleration),
@@ -57,7 +57,7 @@ pub(crate) fn propagate_breaker_config(
                 BumpLateWindow(config.late_window),
                 BumpPerfectCooldown(config.perfect_bump_cooldown),
                 BumpWeakCooldown(config.weak_bump_cooldown),
-                BumpVisualParams {
+                BumpFeedback {
                     duration: config.bump_visual_duration,
                     peak: config.bump_visual_peak,
                     peak_fraction: config.bump_visual_peak_fraction,
@@ -74,11 +74,11 @@ mod tests {
     use crate::{
         breaker::{
             components::{
-                BrakeDecel, BrakeTilt, Breaker, BreakerAcceleration, BreakerBaseY,
-                BreakerDeceleration, BreakerHeight, BreakerReflectionSpread, BreakerWidth,
-                BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown, BumpPerfectWindow,
-                BumpVisualParams, BumpWeakCooldown, DashDuration, DashSpeedMultiplier, DashTilt,
-                DashTiltEase, DecelEasing, SettleDuration, SettleTiltEase,
+                BaseHeight, BaseWidth, BrakeDecel, BrakeTilt, Breaker, BreakerAcceleration,
+                BreakerBaseY, BreakerDeceleration, BreakerReflectionSpread, BumpEarlyWindow,
+                BumpFeedback, BumpLateWindow, BumpPerfectCooldown, BumpPerfectWindow,
+                BumpWeakCooldown, DashDuration, DashSpeedMultiplier, DashTilt, DashTiltEase,
+                DecelEasing, SettleDuration, SettleTiltEase,
             },
             resources::BreakerConfig,
         },
@@ -97,8 +97,8 @@ mod tests {
         let entity = world
             .spawn((
                 Breaker,
-                BreakerWidth(config.width),
-                BreakerHeight(config.height),
+                BaseWidth(config.width),
+                BaseHeight(config.height),
                 BreakerBaseY(config.y_position),
                 MaxSpeed(config.max_speed),
                 BreakerAcceleration(config.acceleration),
@@ -128,7 +128,7 @@ mod tests {
             BumpLateWindow(config.late_window),
             BumpPerfectCooldown(config.perfect_bump_cooldown),
             BumpWeakCooldown(config.weak_bump_cooldown),
-            BumpVisualParams {
+            BumpFeedback {
                 duration: config.bump_visual_duration,
                 peak: config.bump_visual_peak,
                 peak_fraction: config.bump_visual_peak_fraction,
@@ -170,10 +170,10 @@ mod tests {
         app.world_mut().resource_mut::<BreakerConfig>().width = 200.0;
         app.update();
 
-        let width = app.world().get::<BreakerWidth>(entity).unwrap();
+        let width = app.world().get::<BaseWidth>(entity).unwrap();
         assert!(
             (width.0 - 200.0).abs() < f32::EPSILON,
-            "BreakerWidth should be 200.0 after config change, got {}",
+            "BaseWidth should be 200.0 after config change, got {}",
             width.0
         );
     }

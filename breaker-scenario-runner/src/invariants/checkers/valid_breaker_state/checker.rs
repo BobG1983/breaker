@@ -1,22 +1,22 @@
 use bevy::{platform::collections::HashMap, prelude::*};
-use breaker::{breaker::components::BreakerState, shared::GameState};
+use breaker::{breaker::components::DashState, shared::GameState};
 
 use crate::{invariants::*, types::InvariantKind};
 
-/// Checks that [`BreakerState`] transitions on the tagged breaker follow the legal path.
+/// Checks that [`DashState`] transitions on the tagged breaker follow the legal path.
 ///
 /// Legal transitions: `Idle → Dashing`, `Settling → Dashing` (re-dash),
 /// `Dashing → Braking`, `Dashing → Settling` (dash cancel),
 /// `Braking → Settling`, `Settling → Idle`. Any other change fires a [`ViolationEntry`] with
-/// [`InvariantKind::ValidBreakerState`].
+/// [`InvariantKind::ValidDashState`].
 ///
 /// Clears tracking on [`GameState`] transitions (e.g., entering `Playing` after a
 /// node change) so that forced `reset_breaker` resets to `Idle` are not flagged.
 ///
 /// Skips the first frame per entity (no previous state stored yet for that entity).
 pub fn check_valid_breaker_state(
-    breakers: Query<(Entity, &BreakerState), With<ScenarioTagBreaker>>,
-    mut previous: Local<HashMap<Entity, BreakerState>>,
+    breakers: Query<(Entity, &DashState), With<ScenarioTagBreaker>>,
+    mut previous: Local<HashMap<Entity, DashState>>,
     game_state: Res<State<GameState>>,
     mut prev_game_state: Local<Option<GameState>>,
     frame: Res<ScenarioFrame>,
@@ -39,22 +39,18 @@ pub fn check_valid_breaker_state(
         {
             let legal = matches!(
                 (prev, current),
-                (
-                    BreakerState::Idle | BreakerState::Settling,
-                    BreakerState::Dashing
-                ) | (
-                    BreakerState::Dashing,
-                    BreakerState::Braking | BreakerState::Settling
-                ) | (BreakerState::Braking, BreakerState::Settling)
-                    | (BreakerState::Settling, BreakerState::Idle)
+                (DashState::Idle | DashState::Settling, DashState::Dashing)
+                    | (DashState::Dashing, DashState::Braking | DashState::Settling)
+                    | (DashState::Braking, DashState::Settling)
+                    | (DashState::Settling, DashState::Idle)
             );
             if !legal {
                 log.0.push(ViolationEntry {
                     frame: frame.0,
-                    invariant: InvariantKind::ValidBreakerState,
+                    invariant: InvariantKind::ValidDashState,
                     entity: None,
                     message: format!(
-                        "ValidBreakerState FAIL frame={} {prev:?} → {current:?}",
+                        "ValidDashState FAIL frame={} {prev:?} → {current:?}",
                         frame.0,
                     ),
                 });

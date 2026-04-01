@@ -9,7 +9,7 @@ use crate::{
         messages::{BumpPerformed, BumpWhiffed},
         resources::BreakerConfig,
         systems::{
-            animate_bump_visual, animate_tilt_visual, apply_entity_scale_to_breaker,
+            animate_bump_visual, animate_tilt_visual, apply_node_scale_to_breaker,
             breaker_cell_collision, breaker_wall_collision, dispatch_breaker_effects, grade_bump,
             init_breaker, init_breaker_params, move_breaker, perfect_bump_dash_cancel,
             reset_breaker, spawn_breaker, spawn_bump_grade_text, spawn_whiff_text,
@@ -54,7 +54,7 @@ impl Plugin for BreakerPlugin {
             )
             .add_systems(
                 OnEnter(GameState::Playing),
-                apply_entity_scale_to_breaker
+                apply_node_scale_to_breaker
                     .after(BreakerSystems::InitParams)
                     .after(NodeSystems::Spawn),
             )

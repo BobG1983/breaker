@@ -1,13 +1,13 @@
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::MaxSpeed;
+use rantzsoft_spatial2d::components::{MaxSpeed, Velocity2D};
 
 use super::super::system::*;
 use crate::{
     breaker::{
         components::{
-            BrakeDecel, BrakeTilt, Breaker, BreakerDeceleration, BreakerState, BreakerStateTimer,
-            BreakerTilt, BreakerVelocity, DashDuration, DashSpeedMultiplier, DashTilt,
-            DashTiltEase, DecelEasing, SettleDuration, SettleTiltEase,
+            BrakeDecel, BrakeTilt, Breaker, BreakerDeceleration, BreakerTilt, DashDuration,
+            DashSpeedMultiplier, DashState, DashStateTimer, DashTilt, DashTiltEase, DecelEasing,
+            SettleDuration, SettleTiltEase,
         },
         resources::BreakerConfig,
     },
@@ -57,10 +57,10 @@ pub(super) fn spawn_test_breaker(app: &mut App) -> Entity {
     app.world_mut()
         .spawn((
             Breaker,
-            BreakerState::Idle,
-            BreakerVelocity { x: 0.0 },
+            DashState::Idle,
+            Velocity2D(Vec2::ZERO),
             BreakerTilt::default(),
-            BreakerStateTimer { remaining: 0.0 },
+            DashStateTimer { remaining: 0.0 },
             breaker_param_bundle(&config),
         ))
         .id()

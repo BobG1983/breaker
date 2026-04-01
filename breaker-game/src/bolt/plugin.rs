@@ -7,7 +7,7 @@ use crate::{
         BoltSystems,
         messages::{BoltImpactBreaker, BoltImpactCell, BoltImpactWall, BoltLost},
         systems::{
-            apply_entity_scale_to_bolt, bolt_breaker_collision, bolt_cell_collision, bolt_lost,
+            apply_node_scale_to_bolt, bolt_breaker_collision, bolt_cell_collision, bolt_lost,
             bolt_scale_visual, bolt_wall_collision, clamp_bolt_to_playfield,
             cleanup_destroyed_bolts, dispatch_bolt_effects, hover_bolt, launch_bolt, reset_bolt,
             spawn_bolt, spawn_bolt_lost_text, tick_bolt_lifespan,
@@ -38,7 +38,7 @@ impl Plugin for BoltPlugin {
                 OnEnter(GameState::Playing),
                 (
                     spawn_bolt,
-                    apply_entity_scale_to_bolt
+                    apply_node_scale_to_bolt
                         .after(spawn_bolt)
                         .after(NodeSystems::Spawn),
                     reset_bolt

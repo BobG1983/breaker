@@ -1,4 +1,4 @@
-//! Breaker state machine components.
+//! Dash state machine components.
 
 use bevy::prelude::*;
 
@@ -7,7 +7,7 @@ use bevy::prelude::*;
 /// Transitions: Idle → Dashing → Braking → Settling → Idle.
 /// Normal movement is available in Idle and Settling states.
 #[derive(Component, Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub enum BreakerState {
+pub enum DashState {
     /// Neutral state — normal horizontal movement available.
     #[default]
     Idle,
@@ -21,7 +21,7 @@ pub enum BreakerState {
 
 /// Tracks the remaining time in timed breaker states (Dashing, Settling).
 #[derive(Component, Debug, Default)]
-pub struct BreakerStateTimer {
+pub struct DashStateTimer {
     /// Remaining time in the current timed state.
     pub remaining: f32,
 }
@@ -32,6 +32,6 @@ mod tests {
 
     #[test]
     fn breaker_state_default_is_idle() {
-        assert_eq!(BreakerState::default(), BreakerState::Idle);
+        assert_eq!(DashState::default(), DashState::Idle);
     }
 }

@@ -5,9 +5,9 @@ use rantzsoft_spatial2d::components::MaxSpeed;
 
 use crate::breaker::{
     components::{
-        BrakeDecel, BrakeTilt, Breaker, BreakerAcceleration, BreakerBaseY, BreakerDeceleration,
-        BreakerHeight, BreakerReflectionSpread, BreakerWidth, BumpEarlyWindow, BumpLateWindow,
-        BumpPerfectCooldown, BumpPerfectWindow, BumpVisualParams, BumpWeakCooldown, DashDuration,
+        BaseHeight, BaseWidth, BrakeDecel, BrakeTilt, Breaker, BreakerAcceleration, BreakerBaseY,
+        BreakerDeceleration, BreakerReflectionSpread, BumpEarlyWindow, BumpFeedback,
+        BumpLateWindow, BumpPerfectCooldown, BumpPerfectWindow, BumpWeakCooldown, DashDuration,
         DashSpeedMultiplier, DashTilt, DashTiltEase, DecelEasing, SettleDuration, SettleTiltEase,
     },
     resources::BreakerConfig,
@@ -27,8 +27,8 @@ pub fn init_breaker_params(
         commands
             .entity(entity)
             .insert((
-                BreakerWidth(config.width),
-                BreakerHeight(config.height),
+                BaseWidth(config.width),
+                BaseHeight(config.height),
                 BreakerBaseY(config.y_position),
                 MaxSpeed(config.max_speed),
                 BreakerAcceleration(config.acceleration),
@@ -57,7 +57,7 @@ pub fn init_breaker_params(
                 BumpLateWindow(config.late_window),
                 BumpPerfectCooldown(config.perfect_bump_cooldown),
                 BumpWeakCooldown(config.weak_bump_cooldown),
-                BumpVisualParams {
+                BumpFeedback {
                     duration: config.bump_visual_duration,
                     peak: config.bump_visual_peak,
                     peak_fraction: config.bump_visual_peak_fraction,
@@ -70,8 +70,10 @@ pub fn init_breaker_params(
 
 #[cfg(test)]
 mod tests {
+    use rantzsoft_spatial2d::components::Velocity2D;
+
     use super::*;
-    use crate::breaker::components::{BreakerState, BreakerVelocity, BumpState};
+    use crate::breaker::components::{BumpState, DashState};
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -88,8 +90,8 @@ mod tests {
             .world_mut()
             .spawn((
                 Breaker,
-                BreakerState::default(),
-                BreakerVelocity::default(),
+                DashState::default(),
+                Velocity2D::default(),
                 BumpState::default(),
             ))
             .id();
@@ -97,8 +99,8 @@ mod tests {
         app.update();
 
         let world = app.world();
-        assert!(world.get::<BreakerWidth>(entity).is_some());
-        assert!(world.get::<BreakerHeight>(entity).is_some());
+        assert!(world.get::<BaseWidth>(entity).is_some());
+        assert!(world.get::<BaseHeight>(entity).is_some());
         assert!(world.get::<BreakerBaseY>(entity).is_some());
         assert!(world.get::<MaxSpeed>(entity).is_some());
         assert!(world.get::<BreakerAcceleration>(entity).is_some());
@@ -118,7 +120,7 @@ mod tests {
         assert!(world.get::<BumpLateWindow>(entity).is_some());
         assert!(world.get::<BumpPerfectCooldown>(entity).is_some());
         assert!(world.get::<BumpWeakCooldown>(entity).is_some());
-        assert!(world.get::<BumpVisualParams>(entity).is_some());
+        assert!(world.get::<BumpFeedback>(entity).is_some());
     }
 
     #[test]
@@ -128,8 +130,8 @@ mod tests {
             .world_mut()
             .spawn((
                 Breaker,
-                BreakerState::default(),
-                BreakerVelocity::default(),
+                DashState::default(),
+                Velocity2D::default(),
                 BumpState::default(),
             ))
             .id();
@@ -147,12 +149,12 @@ mod tests {
                 < f32::EPSILON
         );
         assert!(
-            (world.get::<BreakerWidth>(entity).unwrap().0 - config.width).abs() < f32::EPSILON,
-            "BreakerWidth should match config.width"
+            (world.get::<BaseWidth>(entity).unwrap().0 - config.width).abs() < f32::EPSILON,
+            "BaseWidth should match config.width"
         );
         assert!(
-            (world.get::<BreakerHeight>(entity).unwrap().0 - config.height).abs() < f32::EPSILON,
-            "BreakerHeight should match config.height"
+            (world.get::<BaseHeight>(entity).unwrap().0 - config.height).abs() < f32::EPSILON,
+            "BaseHeight should match config.height"
         );
         assert!(
             (world.get::<BreakerReflectionSpread>(entity).unwrap().0
@@ -161,14 +163,14 @@ mod tests {
                 < 1e-5,
             "BreakerReflectionSpread should match config (converted to radians)"
         );
-        let params = world.get::<BumpVisualParams>(entity).unwrap();
+        let params = world.get::<BumpFeedback>(entity).unwrap();
         assert!(
             (params.duration - config.bump_visual_duration).abs() < f32::EPSILON,
-            "BumpVisualParams.duration should match config"
+            "BumpFeedback.duration should match config"
         );
         assert!(
             (params.peak - config.bump_visual_peak).abs() < f32::EPSILON,
-            "BumpVisualParams.peak should match config"
+            "BumpFeedback.peak should match config"
         );
     }
 
@@ -179,8 +181,8 @@ mod tests {
             .world_mut()
             .spawn((
                 Breaker,
-                BreakerState::default(),
-                BreakerVelocity::default(),
+                DashState::default(),
+                Velocity2D::default(),
                 BumpState::default(),
                 MaxSpeed(999.0),
             ))

@@ -15,8 +15,8 @@ fn tick_anchor_inserts_timer_on_stationary_idle_breaker() {
                 perfect_window_multiplier: 1.5,
                 plant_delay: 0.3,
             },
-            BreakerVelocity { x: 0.0 },
-            BreakerState::Idle,
+            Velocity2D(Vec2::ZERO),
+            DashState::Idle,
         ))
         .id();
 
@@ -44,8 +44,8 @@ fn tick_anchor_inserts_timer_on_stationary_settling_breaker() {
                 perfect_window_multiplier: 1.5,
                 plant_delay: 0.3,
             },
-            BreakerVelocity { x: 0.0 },
-            BreakerState::Settling,
+            Velocity2D(Vec2::ZERO),
+            DashState::Settling,
         ))
         .id();
 
@@ -76,8 +76,8 @@ fn tick_anchor_timer_decrements_by_dt_while_stationary() {
                 plant_delay: 0.3,
             },
             AnchorTimer(0.3),
-            BreakerVelocity { x: 0.0 },
-            BreakerState::Idle,
+            Velocity2D(Vec2::ZERO),
+            DashState::Idle,
         ))
         .id();
 
@@ -113,8 +113,8 @@ fn tick_anchor_timer_accumulates_over_multiple_ticks() {
                 plant_delay: 0.3,
             },
             AnchorTimer(0.3),
-            BreakerVelocity { x: 0.0 },
-            BreakerState::Idle,
+            Velocity2D(Vec2::ZERO),
+            DashState::Idle,
         ))
         .id();
 
@@ -161,8 +161,8 @@ fn tick_anchor_timer_reaching_zero_inserts_planted_and_removes_timer() {
             },
             // Timer at 0.01 -- one tick at dt ~= 0.015625 will push it below zero.
             AnchorTimer(0.01),
-            BreakerVelocity { x: 0.0 },
-            BreakerState::Idle,
+            Velocity2D(Vec2::ZERO),
+            DashState::Idle,
         ))
         .id();
 
@@ -197,8 +197,8 @@ fn tick_anchor_timer_exactly_one_dt_triggers_planted() {
             },
             // Timer is exactly one dt -- after one tick it should be at or below zero.
             AnchorTimer(dt),
-            BreakerVelocity { x: 0.0 },
-            BreakerState::Idle,
+            Velocity2D(Vec2::ZERO),
+            DashState::Idle,
         ))
         .id();
 
@@ -229,8 +229,8 @@ fn tick_anchor_velocity_cancels_timer_and_planted() {
             },
             AnchorTimer(0.15),
             AnchorPlanted,
-            BreakerVelocity { x: 200.0 },
-            BreakerState::Idle,
+            Velocity2D(Vec2::new(200.0, 0.0)),
+            DashState::Idle,
         ))
         .id();
 
@@ -265,8 +265,8 @@ fn tick_anchor_dashing_cancels_timer_and_planted_even_with_zero_velocity() {
             },
             AnchorTimer(0.15),
             AnchorPlanted,
-            BreakerVelocity { x: 0.0 },
-            BreakerState::Dashing,
+            Velocity2D(Vec2::ZERO),
+            DashState::Dashing,
         ))
         .id();
 
@@ -293,7 +293,7 @@ fn tick_anchor_ignores_entity_without_anchor_active() {
     let mut app = test_app();
     let entity = app
         .world_mut()
-        .spawn((BreakerVelocity { x: 0.0 }, BreakerState::Idle))
+        .spawn((Velocity2D(Vec2::ZERO), DashState::Idle))
         .id();
 
     app.update();
@@ -322,8 +322,8 @@ fn tick_anchor_steady_state_planted_remains_planted_no_timer() {
                 plant_delay: 0.3,
             },
             AnchorPlanted,
-            BreakerVelocity { x: 0.0 },
-            BreakerState::Idle,
+            Velocity2D(Vec2::ZERO),
+            DashState::Idle,
         ))
         .id();
 
@@ -353,8 +353,8 @@ fn tick_anchor_movement_cancel_then_restop_inserts_full_delay_timer() {
                 plant_delay: 0.3,
             },
             AnchorTimer(0.15),
-            BreakerVelocity { x: 200.0 },
-            BreakerState::Idle,
+            Velocity2D(Vec2::new(200.0, 0.0)),
+            DashState::Idle,
         ))
         .id();
 
@@ -367,10 +367,7 @@ fn tick_anchor_movement_cancel_then_restop_inserts_full_delay_timer() {
     );
 
     // Now stop the breaker.
-    app.world_mut()
-        .get_mut::<BreakerVelocity>(entity)
-        .unwrap()
-        .x = 0.0;
+    app.world_mut().get_mut::<Velocity2D>(entity).unwrap().0.x = 0.0;
 
     // Second tick: breaker is stationary again, should get full plant_delay timer.
     app.update();
@@ -400,8 +397,8 @@ fn tick_anchor_settling_state_allows_timer_tick() {
                 plant_delay: 0.3,
             },
             AnchorTimer(0.3),
-            BreakerVelocity { x: 0.0 },
-            BreakerState::Settling,
+            Velocity2D(Vec2::ZERO),
+            DashState::Settling,
         ))
         .id();
 
@@ -443,8 +440,8 @@ fn tick_anchor_inserts_active_bump_forces_on_plant_when_missing() {
                 plant_delay: 0.3,
             },
             AnchorTimer(0.001), // about to expire
-            BreakerVelocity { x: 0.0 },
-            BreakerState::Idle,
+            Velocity2D(Vec2::ZERO),
+            DashState::Idle,
             // NO ActiveBumpForces
         ))
         .id();
@@ -485,8 +482,8 @@ fn tick_anchor_inserts_active_bump_forces_on_plant_when_no_active_forces() {
             },
             AnchorTimer(0.001), // about to expire
             // NO ActiveBumpForces
-            BreakerVelocity { x: 0.0 },
-            BreakerState::Idle,
+            Velocity2D(Vec2::ZERO),
+            DashState::Idle,
         ))
         .id();
 

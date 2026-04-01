@@ -10,9 +10,9 @@ pub struct Breaker;
 
 /// Full width of the breaker in world units.
 #[derive(Component, Debug)]
-pub struct BreakerWidth(pub f32);
+pub struct BaseWidth(pub f32);
 
-impl BreakerWidth {
+impl BaseWidth {
     /// Returns half the breaker width.
     #[must_use]
     pub fn half_width(&self) -> f32 {
@@ -22,9 +22,9 @@ impl BreakerWidth {
 
 /// Full height of the breaker in world units.
 #[derive(Component, Debug)]
-pub struct BreakerHeight(pub f32);
+pub struct BaseHeight(pub f32);
 
-impl BreakerHeight {
+impl BaseHeight {
     /// Returns half the breaker height.
     #[must_use]
     pub fn half_height(&self) -> f32 {
@@ -50,14 +50,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn breaker_width_half_width() {
-        let w = BreakerWidth(120.0);
+    fn base_width_half_width() {
+        let w = BaseWidth(120.0);
         assert!((w.half_width() - 60.0).abs() < f32::EPSILON);
     }
 
     #[test]
-    fn breaker_height_half_height() {
-        let h = BreakerHeight(20.0);
+    fn base_height_half_height() {
+        let h = BaseHeight(20.0);
         assert!((h.half_height() - 10.0).abs() < f32::EPSILON);
     }
 

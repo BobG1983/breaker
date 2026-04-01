@@ -2,13 +2,6 @@
 
 use bevy::{math::curve::easing::EaseFunction, prelude::*};
 
-/// The breaker's current horizontal velocity in world units per second.
-#[derive(Component, Debug, Default)]
-pub struct BreakerVelocity {
-    /// Horizontal velocity. Positive = right, negative = left.
-    pub x: f32,
-}
-
 /// The breaker's current tilt angle in radians.
 ///
 /// Positive = tilted right, negative = tilted left.
@@ -43,12 +36,6 @@ pub struct DecelEasing {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn breaker_velocity_default_is_zero() {
-        let vel = BreakerVelocity::default();
-        assert!((vel.x - 0.0).abs() < f32::EPSILON);
-    }
 
     #[test]
     fn breaker_tilt_default_is_zero() {

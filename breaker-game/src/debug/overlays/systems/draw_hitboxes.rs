@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     bolt::components::{Bolt, BoltRadius},
-    breaker::components::{Breaker, BreakerHeight, BreakerWidth},
+    breaker::components::{BaseHeight, BaseWidth, Breaker},
     cells::components::{Cell, CellHeight, CellWidth},
     debug::resources::{DebugOverlays, Overlay},
 };
@@ -18,7 +18,7 @@ pub(crate) fn draw_hitboxes(
     overlays: Res<DebugOverlays>,
     mut gizmos: Gizmos,
     bolt_query: Query<(&Transform, &BoltRadius), With<Bolt>>,
-    breaker_query: Query<(&Transform, &BreakerWidth, &BreakerHeight), With<Breaker>>,
+    breaker_query: Query<(&Transform, &BaseWidth, &BaseHeight), With<Breaker>>,
     cell_query: Query<(&Transform, &CellWidth, &CellHeight), With<Cell>>,
 ) {
     if !overlays.is_active(Overlay::Hitboxes) {

@@ -4,7 +4,7 @@ use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 use super::*;
 use crate::{
     bolt::components::{Bolt, BoltServing},
-    shared::{EntityScale, PlayfieldConfig},
+    shared::{NodeScalingFactor, PlayfieldConfig},
 };
 
 /// Local alias for the CCD epsilon used in test expected values.
@@ -285,7 +285,7 @@ fn serving_bolt_excluded() {
     );
 }
 
-// --- EntityScale clamping tests ---
+// --- NodeScalingFactor clamping tests ---
 
 #[test]
 fn scaled_bolt_uses_effective_radius_for_playfield_clamping() {
@@ -298,7 +298,9 @@ fn scaled_bolt_uses_effective_radius_for_playfield_clamping() {
         .with_velocity(Velocity2D(Vec2::new(300.0, 400.0)))
         .primary()
         .spawn(app.world_mut());
-    app.world_mut().entity_mut(entity).insert(EntityScale(0.5));
+    app.world_mut()
+        .entity_mut(entity)
+        .insert(NodeScalingFactor(0.5));
     tick(&mut app);
 
     let expected_x_scaled = 400.0 - 4.0 - CCD_EPSILON; // ~395.99
@@ -331,7 +333,7 @@ fn bolt_without_entity_scale_in_clamping_is_backward_compatible() {
         .unwrap();
     assert!(
         (pos.0.x - expected_x).abs() < TOLERANCE,
-        "bolt without EntityScale should clamp to {expected_x:.2}, got {:.2}",
+        "bolt without NodeScalingFactor should clamp to {expected_x:.2}, got {:.2}",
         pos.0.x
     );
     assert!(

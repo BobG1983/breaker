@@ -1,9 +1,10 @@
 use bevy::prelude::*;
+use rantzsoft_spatial2d::components::Velocity2D;
 
 use super::{super::system::*, helpers::*};
 use crate::{
     breaker::{
-        components::{BreakerState, BreakerStateTimer, BreakerTilt, BreakerVelocity},
+        components::{BreakerTilt, DashState, DashStateTimer},
         resources::BreakerConfig,
     },
     input::resources::{GameAction, InputActions},
@@ -15,8 +16,8 @@ fn idle_stays_idle_without_input() {
     let entity = spawn_test_breaker(&mut app);
     tick(&mut app);
 
-    let state = app.world().get::<BreakerState>(entity).unwrap();
-    assert_eq!(*state, BreakerState::Idle);
+    let state = app.world().get::<DashState>(entity).unwrap();
+    assert_eq!(*state, DashState::Idle);
 }
 
 #[test]
@@ -30,11 +31,11 @@ fn dash_left_triggers_dashing() {
         .push(GameAction::DashLeft);
     tick(&mut app);
 
-    let state = app.world().get::<BreakerState>(entity).unwrap();
-    assert_eq!(*state, BreakerState::Dashing);
+    let state = app.world().get::<DashState>(entity).unwrap();
+    assert_eq!(*state, DashState::Dashing);
 
-    let vel = app.world().get::<BreakerVelocity>(entity).unwrap();
-    assert!(vel.x < 0.0, "dash left should have negative velocity");
+    let vel = app.world().get::<Velocity2D>(entity).unwrap();
+    assert!(vel.0.x < 0.0, "dash left should have negative velocity");
 }
 
 #[test]
@@ -48,11 +49,11 @@ fn dash_right_triggers_dashing() {
         .push(GameAction::DashRight);
     tick(&mut app);
 
-    let state = app.world().get::<BreakerState>(entity).unwrap();
-    assert_eq!(*state, BreakerState::Dashing);
+    let state = app.world().get::<DashState>(entity).unwrap();
+    assert_eq!(*state, DashState::Dashing);
 
-    let vel = app.world().get::<BreakerVelocity>(entity).unwrap();
-    assert!(vel.x > 0.0, "dash right should have positive velocity");
+    let vel = app.world().get::<Velocity2D>(entity).unwrap();
+    assert!(vel.0.x > 0.0, "dash right should have positive velocity");
 }
 
 #[test]
@@ -77,20 +78,17 @@ fn dashing_transitions_to_braking() {
     let mut app = test_app();
     let entity = spawn_test_breaker(&mut app);
 
-    *app.world_mut().get_mut::<BreakerState>(entity).unwrap() = BreakerState::Dashing;
+    *app.world_mut().get_mut::<DashState>(entity).unwrap() = DashState::Dashing;
+    app.world_mut().get_mut::<Velocity2D>(entity).unwrap().0.x = 500.0;
     app.world_mut()
-        .get_mut::<BreakerVelocity>(entity)
-        .unwrap()
-        .x = 500.0;
-    app.world_mut()
-        .get_mut::<BreakerStateTimer>(entity)
+        .get_mut::<DashStateTimer>(entity)
         .unwrap()
         .remaining = 0.0;
 
     tick(&mut app);
 
-    let state = app.world().get::<BreakerState>(entity).unwrap();
-    assert_eq!(*state, BreakerState::Braking);
+    let state = app.world().get::<DashState>(entity).unwrap();
+    assert_eq!(*state, DashState::Braking);
 }
 
 #[test]
@@ -98,7 +96,7 @@ fn settling_transitions_to_idle_and_resets_tilt() {
     let mut app = test_app();
     let entity = spawn_test_breaker(&mut app);
 
-    *app.world_mut().get_mut::<BreakerState>(entity).unwrap() = BreakerState::Settling;
+    *app.world_mut().get_mut::<DashState>(entity).unwrap() = DashState::Settling;
     {
         let mut tilt = app.world_mut().get_mut::<BreakerTilt>(entity).unwrap();
         tilt.angle = 0.3;
@@ -106,16 +104,16 @@ fn settling_transitions_to_idle_and_resets_tilt() {
         tilt.ease_target = 0.0;
     }
     app.world_mut()
-        .get_mut::<BreakerStateTimer>(entity)
+        .get_mut::<DashStateTimer>(entity)
         .unwrap()
         .remaining = 0.0;
 
     tick(&mut app);
 
-    let state = app.world().get::<BreakerState>(entity).unwrap();
+    let state = app.world().get::<DashState>(entity).unwrap();
     assert_eq!(
         *state,
-        BreakerState::Idle,
+        DashState::Idle,
         "settling should transition to idle when timer expires"
     );
 
@@ -142,7 +140,7 @@ fn settling_tilt_is_frame_rate_independent() {
 
     let mut app_60 = test_app();
     let e60 = spawn_test_breaker(&mut app_60);
-    *app_60.world_mut().get_mut::<BreakerState>(e60).unwrap() = BreakerState::Settling;
+    *app_60.world_mut().get_mut::<DashState>(e60).unwrap() = DashState::Settling;
     {
         let mut tilt = app_60.world_mut().get_mut::<BreakerTilt>(e60).unwrap();
         tilt.angle = start_angle;
@@ -151,7 +149,7 @@ fn settling_tilt_is_frame_rate_independent() {
     }
     app_60
         .world_mut()
-        .get_mut::<BreakerStateTimer>(e60)
+        .get_mut::<DashStateTimer>(e60)
         .unwrap()
         .remaining = settle_dur;
     app_60
@@ -169,7 +167,7 @@ fn settling_tilt_is_frame_rate_independent() {
 
     let mut app_240 = test_app();
     let e240 = spawn_test_breaker(&mut app_240);
-    *app_240.world_mut().get_mut::<BreakerState>(e240).unwrap() = BreakerState::Settling;
+    *app_240.world_mut().get_mut::<DashState>(e240).unwrap() = DashState::Settling;
     {
         let mut tilt = app_240.world_mut().get_mut::<BreakerTilt>(e240).unwrap();
         tilt.angle = start_angle;
@@ -178,7 +176,7 @@ fn settling_tilt_is_frame_rate_independent() {
     }
     app_240
         .world_mut()
-        .get_mut::<BreakerStateTimer>(e240)
+        .get_mut::<DashStateTimer>(e240)
         .unwrap()
         .remaining = settle_dur;
     app_240
@@ -207,7 +205,7 @@ fn settling_tilt_eased_not_linear() {
     let config = BreakerConfig::default();
 
     let start_angle = 0.44;
-    *app.world_mut().get_mut::<BreakerState>(entity).unwrap() = BreakerState::Settling;
+    *app.world_mut().get_mut::<DashState>(entity).unwrap() = DashState::Settling;
     {
         let mut tilt = app.world_mut().get_mut::<BreakerTilt>(entity).unwrap();
         tilt.angle = start_angle;
@@ -215,7 +213,7 @@ fn settling_tilt_eased_not_linear() {
         tilt.ease_target = 0.0;
     }
     app.world_mut()
-        .get_mut::<BreakerStateTimer>(entity)
+        .get_mut::<DashStateTimer>(entity)
         .unwrap()
         .remaining = config.settle_duration;
 
@@ -244,16 +242,13 @@ fn braking_transitions_to_settling() {
     let mut app = test_app();
     let entity = spawn_test_breaker(&mut app);
 
-    *app.world_mut().get_mut::<BreakerState>(entity).unwrap() = BreakerState::Braking;
-    app.world_mut()
-        .get_mut::<BreakerVelocity>(entity)
-        .unwrap()
-        .x = 0.0;
+    *app.world_mut().get_mut::<DashState>(entity).unwrap() = DashState::Braking;
+    app.world_mut().get_mut::<Velocity2D>(entity).unwrap().0.x = 0.0;
 
     tick(&mut app);
 
-    let state = app.world().get::<BreakerState>(entity).unwrap();
-    assert_eq!(*state, BreakerState::Settling);
+    let state = app.world().get::<DashState>(entity).unwrap();
+    assert_eq!(*state, DashState::Settling);
 }
 
 #[test]
@@ -266,25 +261,23 @@ fn brake_tilt_eases_not_snaps() {
     let brake_tilt_angle = config.brake_tilt_angle.to_radians();
 
     // Set up mid-dash with tilt at full dash angle, timer about to expire
-    *app.world_mut().get_mut::<BreakerState>(entity).unwrap() = BreakerState::Dashing;
-    app.world_mut()
-        .get_mut::<BreakerVelocity>(entity)
-        .unwrap()
-        .x = config.max_speed * config.dash_speed_multiplier;
+    *app.world_mut().get_mut::<DashState>(entity).unwrap() = DashState::Dashing;
+    app.world_mut().get_mut::<Velocity2D>(entity).unwrap().0.x =
+        config.max_speed * config.dash_speed_multiplier;
     app.world_mut()
         .get_mut::<BreakerTilt>(entity)
         .unwrap()
         .angle = dash_tilt_angle;
     app.world_mut()
-        .get_mut::<BreakerStateTimer>(entity)
+        .get_mut::<DashStateTimer>(entity)
         .unwrap()
         .remaining = 0.0;
 
     // Tick once: transitions Dashing -> Braking (tilt unchanged)
     tick(&mut app);
     assert_eq!(
-        *app.world().get::<BreakerState>(entity).unwrap(),
-        BreakerState::Braking
+        *app.world().get::<DashState>(entity).unwrap(),
+        DashState::Braking
     );
 
     // Tick again: first frame of brake tilt easing
@@ -312,18 +305,15 @@ fn settle_timer_initialized_on_braking_end() {
     let entity = spawn_test_breaker(&mut app);
 
     // Start in Braking with zero velocity (will immediately transition)
-    *app.world_mut().get_mut::<BreakerState>(entity).unwrap() = BreakerState::Braking;
-    app.world_mut()
-        .get_mut::<BreakerVelocity>(entity)
-        .unwrap()
-        .x = 0.0;
+    *app.world_mut().get_mut::<DashState>(entity).unwrap() = DashState::Braking;
+    app.world_mut().get_mut::<Velocity2D>(entity).unwrap().0.x = 0.0;
 
     tick(&mut app);
 
-    let state = app.world().get::<BreakerState>(entity).unwrap();
-    assert_eq!(*state, BreakerState::Settling);
+    let state = app.world().get::<DashState>(entity).unwrap();
+    assert_eq!(*state, DashState::Settling);
 
-    let timer = app.world().get::<BreakerStateTimer>(entity).unwrap();
+    let timer = app.world().get::<DashStateTimer>(entity).unwrap();
     // Timer should have been initialized to settle_duration minus one dt
     assert!(
         timer.remaining > 0.0,
@@ -333,10 +323,10 @@ fn settle_timer_initialized_on_braking_end() {
 
     // Settling should NOT immediately transition to Idle
     tick(&mut app);
-    let state = app.world().get::<BreakerState>(entity).unwrap();
+    let state = app.world().get::<DashState>(entity).unwrap();
     assert_eq!(
         *state,
-        BreakerState::Settling,
+        DashState::Settling,
         "settling should persist for multiple frames, not finish instantly"
     );
 
@@ -345,8 +335,8 @@ fn settle_timer_initialized_on_braking_end() {
     for _ in 0..100 {
         tick(&mut app);
     }
-    let state = app.world().get::<BreakerState>(entity).unwrap();
-    assert_eq!(*state, BreakerState::Idle);
+    let state = app.world().get::<DashState>(entity).unwrap();
+    assert_eq!(*state, DashState::Idle);
 }
 
 // -- eased_decel unit tests ----------------------------------------

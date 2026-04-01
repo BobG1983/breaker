@@ -1,0 +1,47 @@
+// ============================================================================
+// Evolution Template — Reference
+// ============================================================================
+//
+// Reference for all available fields in a .evolution.ron file.
+// This file is NOT loaded by the game — it exists as documentation only.
+//
+// Evolutions are special chips produced by combining maxed ingredient chips.
+// They always have Rarity::Evolution.
+//
+// Required fields (no default):
+//   name, description, effects, ingredients
+//
+// Optional fields (have defaults):
+//   max_stacks  — default: 1
+//
+// Loaded from: assets/chips/evolutions/*.evolution.ron
+// Struct:      EvolutionTemplate (breaker-game/src/chips/definition/types.rs)
+// ============================================================================
+
+(
+    // REQUIRED: Display name of the evolution.
+    name: "Anchor",
+
+    // REQUIRED: Flavor text shown below the name.
+    description: "Plant the breaker for doubled bump force and a wider perfect window",
+
+    // OPTIONAL: Maximum stacks. Default: 1
+    max_stacks: 1,
+
+    // REQUIRED: Effects applied when this evolution is selected.
+    effects: [
+        On(target: Breaker, then: [
+            Do(Anchor(
+                bump_force_multiplier: 2.0,
+                perfect_window_multiplier: 1.5,
+                plant_delay: 0.3,
+            )),
+        ]),
+    ],
+
+    // REQUIRED: Ingredient chips needed to unlock this evolution.
+    ingredients: [
+        (chip_name: "Quick Stop", stacks_required: 2),
+        (chip_name: "Bump Force", stacks_required: 2),
+    ],
+)

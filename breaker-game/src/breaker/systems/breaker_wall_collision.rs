@@ -13,10 +13,10 @@ use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
     breaker::{
-        components::{Breaker, BreakerHeight, BreakerWidth},
+        components::{BaseHeight, BaseWidth, Breaker},
         messages::BreakerImpactWall,
     },
-    shared::{BREAKER_LAYER, EntityScale, WALL_LAYER},
+    shared::{BREAKER_LAYER, NodeScalingFactor, WALL_LAYER},
     wall::components::Wall,
 };
 
@@ -24,9 +24,9 @@ use crate::{
 type BreakerWallCollisionQuery = (
     Entity,
     &'static Position2D,
-    &'static BreakerWidth,
-    &'static BreakerHeight,
-    Option<&'static EntityScale>,
+    &'static BaseWidth,
+    &'static BaseHeight,
+    Option<&'static NodeScalingFactor>,
 );
 
 /// Wall entity lookup for narrow-phase overlap verification.
@@ -130,8 +130,8 @@ mod tests {
         app.world_mut()
             .spawn((
                 Breaker,
-                BreakerWidth(120.0),
-                BreakerHeight(20.0),
+                BaseWidth(120.0),
+                BaseHeight(20.0),
                 Position2D(pos),
                 GlobalPosition2D(pos),
                 Spatial2D,
@@ -189,7 +189,7 @@ mod tests {
 
     #[test]
     fn breaker_with_entity_scale_overlaps_wall() {
-        // B3 edge case: Breaker at (-460,-250) with EntityScale(2.0) => half_w=120 half_h=20.
+        // B3 edge case: Breaker at (-460,-250) with NodeScalingFactor(2.0) => half_w=120 half_h=20.
         // Wall at (-485,0) half_x=5. dx=|-460-(-485)|=25 < 120+5=125 (overlap).
         // Verify 1 message.
         let mut app = test_app();
@@ -197,7 +197,7 @@ mod tests {
         let breaker_entity = spawn_breaker(&mut app, Vec2::new(-460.0, -250.0));
         app.world_mut()
             .entity_mut(breaker_entity)
-            .insert(EntityScale(2.0));
+            .insert(NodeScalingFactor(2.0));
 
         let wall_entity = spawn_wall(&mut app, Vec2::new(-485.0, 0.0), Vec2::new(5.0, 300.0));
 
@@ -261,7 +261,7 @@ mod tests {
 
     #[test]
     fn breaker_with_entity_scale_shrink_tangent_to_wall_emits_no_message() {
-        // B4 edge case (scale shrink): Breaker at (-450,-250) with EntityScale(0.5)
+        // B4 edge case (scale shrink): Breaker at (-450,-250) with NodeScalingFactor(0.5)
         // => half_w=30 half_h=5. Wall at (-485,0) half_x=5.
         // dx=|-450-(-485)|=35, threshold=30+5=35.
         // Strict inequality: 35 < 35 is false => no message.
@@ -270,7 +270,7 @@ mod tests {
         let breaker_entity = spawn_breaker(&mut app, Vec2::new(-450.0, -250.0));
         app.world_mut()
             .entity_mut(breaker_entity)
-            .insert(EntityScale(0.5));
+            .insert(NodeScalingFactor(0.5));
 
         spawn_wall(&mut app, Vec2::new(-485.0, 0.0), Vec2::new(5.0, 300.0));
 

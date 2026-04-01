@@ -1,6 +1,6 @@
 //! Bolt systems — one file per system function.
 
-pub(crate) mod apply_entity_scale_to_bolt;
+pub(crate) mod apply_node_scale_to_bolt;
 mod bolt_breaker_collision;
 mod bolt_cell_collision;
 mod bolt_lost;
@@ -16,7 +16,7 @@ mod reset_bolt;
 mod spawn_bolt;
 mod tick_bolt_lifespan;
 
-pub(crate) use apply_entity_scale_to_bolt::apply_entity_scale_to_bolt;
+pub(crate) use apply_node_scale_to_bolt::apply_node_scale_to_bolt;
 pub(crate) use bolt_breaker_collision::bolt_breaker_collision;
 pub(crate) use bolt_cell_collision::bolt_cell_collision;
 pub(crate) use bolt_lost::bolt_lost;
