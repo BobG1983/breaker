@@ -5,8 +5,8 @@ use bevy::prelude::*;
 use super::{
     sets::HotReloadSystems,
     systems::{
-        propagate_bolt_config, propagate_breaker_changes, propagate_breaker_config,
-        propagate_cell_type_changes, propagate_node_layout_changes,
+        propagate_bolt_config, propagate_bolt_definition, propagate_breaker_changes,
+        propagate_breaker_config, propagate_cell_type_changes, propagate_node_layout_changes,
     },
 };
 use crate::{
@@ -42,6 +42,7 @@ impl Plugin for HotReloadPlugin {
                 propagate_cell_type_changes.before(propagate_node_layout_changes),
                 propagate_node_layout_changes,
                 propagate_breaker_changes,
+                propagate_bolt_definition,
                 propagate_chip_catalog,
             )
                 .in_set(HotReloadSystems::PropagateDefaults),

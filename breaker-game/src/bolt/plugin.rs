@@ -10,8 +10,8 @@ use crate::{
         systems::{
             apply_entity_scale_to_bolt, bolt_breaker_collision, bolt_cell_collision, bolt_lost,
             bolt_scale_visual, bolt_wall_collision, clamp_bolt_to_playfield,
-            cleanup_destroyed_bolts, hover_bolt, launch_bolt, reset_bolt, spawn_bolt,
-            spawn_bolt_lost_text, tick_bolt_lifespan,
+            cleanup_destroyed_bolts, dispatch_bolt_effects, hover_bolt, launch_bolt, reset_bolt,
+            spawn_bolt, spawn_bolt_lost_text, tick_bolt_lifespan,
         },
     },
     breaker::BreakerSystems,
@@ -55,6 +55,8 @@ impl Plugin for BoltPlugin {
                     launch_bolt,
                     hover_bolt.after(BreakerSystems::Move),
                     spawn_bolt_lost_text,
+                    // Dispatch bolt-definition effects to target entities
+                    dispatch_bolt_effects.before(EffectSystems::Bridge),
                     // Collision systems
                     bolt_cell_collision
                         .after(

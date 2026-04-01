@@ -189,7 +189,7 @@ fn process_explode_requests_uses_base_damage_from_request_not_global_constant() 
 fn process_explode_requests_base_damage_10_matches_old_behavior() {
     let mut app = damage_test_app();
 
-    let _cell = spawn_test_cell(&mut app, 30.0, 0.0);
+    let cell = spawn_test_cell(&mut app, 30.0, 0.0);
 
     let source = app
         .world_mut()
@@ -202,6 +202,10 @@ fn process_explode_requests_base_damage_10_matches_old_behavior() {
 
     let collector = app.world().resource::<DamageCellCollector>();
     assert_eq!(collector.0.len(), 1);
+    assert_eq!(
+        collector.0[0].cell, cell,
+        "damage should target the spawned cell"
+    );
 
     // With default fallback, base_damage=10.0 * damage_mult=2.0 = 20.0
     let expected_damage = DEFAULT_BOLT_BASE_DAMAGE * 2.0;

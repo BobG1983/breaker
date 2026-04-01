@@ -68,8 +68,9 @@ pub(crate) fn propagate_breaker_changes(mut ctx: BreakerChangeContext) {
     }
 
     // Resolve On targets to entity BoundEffects
+    // Preserve chip-sourced entries (non-empty chip name), remove definition-sourced
     for mut chains in &mut ctx.breaker_chains_query {
-        chains.0.clear();
+        chains.0.retain(|(chip_name, _)| !chip_name.is_empty());
     }
     for root in &def.effects {
         let RootEffect::On { target, then } = root;
