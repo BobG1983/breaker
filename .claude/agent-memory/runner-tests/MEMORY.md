@@ -1,2 +1,3 @@
-## Session History
-See [ephemeral/](ephemeral/) — not committed.
+# Memory
+
+No stable memories. This agent computes fresh each run.

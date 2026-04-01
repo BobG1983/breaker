@@ -1,13 +1,3 @@
-- [intentional-patterns.md](intentional-patterns.md) — Intentional patterns from Phase 1 collision refactor: inline overlap detection, near-duplicate collision systems, local test helpers
-- [phase3-stat-effects-patterns.md](phase3-stat-effects-patterns.md) — Phase 3 Active*/Effective* pair convention, map_or(1.0) pattern, stub functions, and the safe unwrap in face selection
-- [phase4-runtime-effects-patterns.md](phase4-runtime-effects-patterns.md) — Phase 4 nested tuple spawning, max_active eviction, _entity interface params, PhantomTimer removed (use BoltLifespan now), reverse() let _ = world, WallSize {}
-- [phase5-complex-effects-patterns.md](phase5-complex-effects-patterns.md) — Phase 5 TetherBeamComponent naming, cells_destroyed vocabulary (not kill_count), bolt spawn duplication, Option<Res<BoltConfig>> pattern, borrow-scope comments
-- [chain-lightning-rework-patterns.md](chain-lightning-rework-patterns.md) — Chain lightning rework: dual test-app split, ChainLightningWorld SystemParam name, pub fields on ChainLightningChain
-- [source-chip-shield-dispatch-patterns.md](source-chip-shield-dispatch-patterns.md) — Dispatch system patterns: Bolt vs AllBolts asymmetry in cell dispatch, PushBoundEffects pub(crate), const fn wall stub, BypassExtras SystemParam
-- [dispatch-systems-patterns.md](dispatch-systems-patterns.md) — Per-target clone() in dispatch systems is intentional; GravityWell pub visibility is a nit; value param in size_boost is vague; duplicate test infra in track_cells_destroyed
-- [scenario-coverage-patterns.md](scenario-coverage-patterns.md) — feature/scenario-coverage: duplicate tick/test_app helpers are intentional, chip_a.clone() is required, bolt_count_test_app naming is intentional
-- [wave1-lazy-init-fifo-patterns.md](wave1-lazy-init-fifo-patterns.md) — Wave 1 lazy-init stat-boost dual-guard is intentional; SCOPE C if-let is redundant (Nit); spawn_phantom if-let Some in loop is dead code (Nit); value in size_boost tests is vocabulary inconsistency
-- [wave3-tether-chain-spawn-bolts-patterns.md](wave3-tether-chain-spawn-bolts-patterns.md) — Wave 3: chain:bool param is accepted Debt; per-beam HashSet alloc is Debt; duplicate tick() is intentional; missing Behavior 6 in fire_inherit.rs is a real Fix gap
-- [builder-migration-patterns.md](builder-migration-patterns.md) — Builder migration: BoltBuilder missing #[must_use] on terminals; post-spawn lifespan insertion is Debt; arch doc uses new() but builders use builder(); has_explicit bool pattern is Nit; spawned_by .to_string() is intentional
-- [chip-evolution-ecosystem-patterns.md](chip-evolution-ecosystem-patterns.md) — chip-evolution-ecosystem: PoolEntry pub fields intentional; draw_offerings test-only helper not duplication; format!("{:?}") rarity display and rarity_color_* fields are Debt not Fix; FUTURE comments and b_entry.unwrap() in tests are correct
-- [wave1-wave2-definitions-builder-patterns.md](wave1-wave2-definitions-builder-patterns.md) — Wave 1+2: clone test in definition.rs uses move not .clone() (Fix); build() still lacks must_use (Fix); has_explicit bool Nit confirmed; angle unit inconsistency (Debt)
+# Memory
+
+No stable memories. This agent computes fresh each run.

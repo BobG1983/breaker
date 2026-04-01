@@ -1,12 +1,3 @@
-- [performance-baseline.md](performance-baseline.md) — Phase 1 entity scale, quadtree allocation costs, confirmed efficient/inefficient patterns, placeholder systems to watch
-- [phase3-stat-effects.md](phase3-stat-effects.md) — CACHE REMOVAL: all 6 Effective* components and recalculate_* systems REMOVED; .multiplier() called inline at ~5 hot-path sites; net win at all scales
-- [phase4-runtime-effects.md](phase4-runtime-effects.md) — Phase 4 shockwave/pulse/explode/attraction/second_wind: quadtree patterns, archetype impact, HashSet allocation timing, entity scale
-- [phase5-complex-effects.md](phase5-complex-effects.md) — Phase 5 chain_lightning/piercing_beam/tether_beam/spawn_bolts/entropy_engine: all run_if gaps FIXED; Transform vs Position2D FIXED; per-arc allocs, per-tick HashSet, archetype impact
-- [source-chip-threading.md](source-chip-threading.md) — source_chip/EffectSourceChip threading: archetype impact, chip_attribution alloc, per-DamageCell clone, DamageVisualQuery shield change, tether HashSet
-- [dispatch-effects.md](dispatch-effects.md) — dispatch_breaker/cell/chip_effects: all one-shot or event-driven, clone patterns bounded, CellEffectsDispatched archetype split is correct, scenario pending effects are single-fire
-- [trigger-bridge-systems.md](trigger-bridge-systems.md) — desugar_until/tick_time_expires missing run_if (Minor, zero heap cost), impact/* global scan bounded, impacted/* targeted lookup efficient, ~52-59 entities with BoundEffects
-- [missing-unit-tests-branch.md](missing-unit-tests-branch.md) — 58 new tests reviewed: all use minimum harness, no wasteful App usage, no fragmentation patterns; one const-fn pub(super) production change is zero-cost
-- [scenario-coverage-checkers.md](scenario-coverage-checkers.md) — feature/scenario-coverage: 2 surviving new checkers (AabbMatchesEntityDimensions, GravityWellCountReasonable) — SizeBoostInRange was removed with cache removal; two-query pattern in check_chain_arc_count_reasonable is Minor/pre-existing
-- [wave1-stat-boost-and-fifo-effects.md](wave1-stat-boost-and-fifo-effects.md) — Wave 1: stat-boost lazy init (speed/damage/size/bump_force), GravityWell FIFO, SpawnPhantom FIFO — all episodic fire(), clean; dead second is_none() check in stat-boost fire() is Minor code smell only
-- [bolt-builder-migration.md](bolt-builder-migration.md) — Bolt builder: exclusive spawn_bolt (OnEnter, one-shot = Clean), multi-insert spawn_inner (episodic = Minor/Moderate), BoltConfig clone (stack-only = Clean), nested bundle tuples (compile-time flatten = Clean), test spawn helpers (Clean)
-- [chip-evolution-ecosystem.md](chip-evolution-ecosystem.md) — Chip catalog/inventory/offering/evolution: all correctly gated to ChipSelect/Loading states; world.query::<SpatialData>() in speed_boost is episodic (Minor); per-draw weights Vec alloc is OnEnter-only (Minor); no per-frame gameplay allocations; no archetype fragmentation
+# Memory
+
+No stable memories. This agent computes fresh each run.
