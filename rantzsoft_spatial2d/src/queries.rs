@@ -4,7 +4,7 @@ use bevy::ecs::query::QueryData;
 
 use crate::components::{
     BaseSpeed, GlobalPosition2D, MaxSpeed, MinAngleHorizontal, MinAngleVertical, MinSpeed,
-    Position2D, Velocity2D,
+    Position2D, PreviousScale, Scale2D, Velocity2D,
 };
 
 /// Core spatial query data: position, velocity, global position, and velocity
@@ -35,4 +35,8 @@ pub struct SpatialData {
     pub min_angle_h: Option<&'static MinAngleHorizontal>,
     /// Optional minimum angle from vertical.
     pub min_angle_v: Option<&'static MinAngleVertical>,
+    /// Optional local scale (non-uniform 2D).
+    pub scale: Option<&'static Scale2D>,
+    /// Optional previous-frame scale for interpolation.
+    pub previous_scale: Option<&'static PreviousScale>,
 }

@@ -74,7 +74,7 @@ fn init_breaker_stamps_lives_count() {
     app.update();
 
     let lives = app.world().get::<LivesCount>(entity).unwrap();
-    assert_eq!(lives.0, 3);
+    assert_eq!(lives.0, Some(3));
 }
 
 #[test]
@@ -241,14 +241,18 @@ fn init_breaker_skips_already_initialized() {
         .spawn((
             Breaker,
             BreakerInitialized,
-            LivesCount(99),
+            LivesCount(Some(99)),
             BoundEffects::default(),
         ))
         .id();
     app.update();
 
     let lives = app.world().get::<LivesCount>(entity).unwrap();
-    assert_eq!(lives.0, 99, "should not overwrite existing LivesCount");
+    assert_eq!(
+        lives.0,
+        Some(99),
+        "should not overwrite existing LivesCount"
+    );
 }
 
 #[test]
@@ -342,7 +346,7 @@ fn apply_overrides_modifies_config() {
 }
 
 #[test]
-fn no_life_pool_no_lives_count() {
+fn life_pool_none_stamps_infinite_lives() {
     let def = BreakerDefinition {
         name: TEST_BREAKER_NAME.to_owned(),
         bolt: "Bolt".to_owned(),
@@ -358,7 +362,14 @@ fn no_life_pool_no_lives_count() {
         .id();
     app.update();
 
-    assert!(app.world().get::<LivesCount>(entity).is_none());
+    let lives = app
+        .world()
+        .get::<LivesCount>(entity)
+        .expect("breaker with life_pool: None should still have LivesCount component");
+    assert_eq!(
+        lives.0, None,
+        "breaker with life_pool: None should have LivesCount(None) for infinite lives"
+    );
 }
 
 #[test]

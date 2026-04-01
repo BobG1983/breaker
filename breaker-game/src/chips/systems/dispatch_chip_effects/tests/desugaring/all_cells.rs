@@ -99,7 +99,7 @@ fn all_cells_with_multiple_children_all_wrapped_in_single_on_node() {
                     trigger: Trigger::Died,
                     then: vec![EffectNode::Do(EffectKind::Explode {
                         range: 40.0,
-                        damage_mult: 1.0,
+                        damage: 1.0,
                     })],
                 },
             ],

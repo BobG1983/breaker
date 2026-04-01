@@ -114,13 +114,17 @@ pub(crate) type BumpGradingQuery = (
     Option<&'static AnchorActive>,
 );
 
-/// Breaker data needed by the width boost visual system.
-pub(crate) type WidthBoostVisualQuery = (
+/// Breaker data needed by the `sync_breaker_scale` system.
+pub(crate) type SyncBreakerScaleQuery = (
     &'static BaseWidth,
-    Option<&'static ActiveSizeBoosts>,
     &'static BaseHeight,
-    Option<&'static NodeScalingFactor>,
     &'static mut Scale2D,
+    Option<&'static ActiveSizeBoosts>,
+    Option<&'static NodeScalingFactor>,
+    Option<&'static crate::shared::size::MinWidth>,
+    Option<&'static crate::shared::size::MaxWidth>,
+    Option<&'static crate::shared::size::MinHeight>,
+    Option<&'static crate::shared::size::MaxHeight>,
 );
 
 /// Breaker bump telemetry — state, bump, tilt, velocity, and window sizes.

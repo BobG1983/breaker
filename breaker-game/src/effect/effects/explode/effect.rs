@@ -5,9 +5,8 @@ use rantzsoft_physics2d::{
 use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
-    bolt::{components::BoltBaseDamage, resources::DEFAULT_BOLT_BASE_DAMAGE},
     cells::messages::DamageCell,
-    effect::{core::EffectSourceChip, effects::damage_boost::ActiveDamageBoosts},
+    effect::core::EffectSourceChip,
     shared::{CELL_LAYER, CleanupOnNodeExit, playing_state::PlayingState},
 };
 
@@ -20,36 +19,15 @@ use crate::{
 pub(crate) struct ExplodeRequest {
     /// Damage radius in world units.
     pub range: f32,
-    /// Multiplicative damage factor applied to `base_damage`.
-    pub damage_mult: f32,
-    /// Snapshotted base damage from the source entity's `BoltBaseDamage`.
-    /// Falls back to `DEFAULT_BOLT_BASE_DAMAGE` when the source has no `BoltBaseDamage`.
-    pub base_damage: f32,
+    /// Flat damage dealt to each cell in range.
+    pub damage: f32,
 }
 
-pub(crate) fn fire(
-    entity: Entity,
-    range: f32,
-    damage_mult: f32,
-    source_chip: &str,
-    world: &mut World,
-) {
+pub(crate) fn fire(entity: Entity, range: f32, damage: f32, source_chip: &str, world: &mut World) {
     let position = super::super::entity_position(world, entity);
 
-    let edm = world
-        .get::<ActiveDamageBoosts>(entity)
-        .map_or(1.0, ActiveDamageBoosts::multiplier);
-
-    let base_damage = world
-        .get::<BoltBaseDamage>(entity)
-        .map_or(DEFAULT_BOLT_BASE_DAMAGE, |d| d.0);
-
     world.spawn((
-        ExplodeRequest {
-            range,
-            damage_mult: damage_mult * edm,
-            base_damage,
-        },
+        ExplodeRequest { range, damage },
         EffectSourceChip::new(source_chip),
         Position2D(position),
         CleanupOnNodeExit,
@@ -60,9 +38,9 @@ pub(crate) const fn reverse(_entity: Entity, _source_chip: &str, _world: &mut Wo
 
 /// Process all pending explode requests: query cells in range, send damage, despawn request.
 ///
-/// For each request, queries the quadtree for cells within range, computes
-/// damage as `base_damage * damage_mult`, sends [`DamageCell`]
-/// for each cell found, then despawns the request entity.
+/// For each request, queries the quadtree for cells within range, sends
+/// [`DamageCell`] with the request's flat damage for each cell found,
+/// then despawns the request entity.
 pub(crate) fn process_explode_requests(
     mut commands: Commands,
     quadtree: Res<CollisionQuadtree>,
@@ -77,7 +55,7 @@ pub(crate) fn process_explode_requests(
     let query_layers = CollisionLayers::new(0, CELL_LAYER);
     for (entity, position, request, esc) in &requests {
         let position = position.0;
-        let damage = request.base_damage * request.damage_mult;
+        let damage = request.damage;
         let candidates =
             quadtree
                 .quadtree

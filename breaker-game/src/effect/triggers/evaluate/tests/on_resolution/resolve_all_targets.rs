@@ -49,6 +49,7 @@ fn resolve_on_command_resolves_all_cells_to_cell_entities() {
             then: vec![EffectNode::Do(EffectKind::Shield { stacks: 1 })],
         }],
         permanent: true,
+        context_entity: None,
     };
     cmd.apply(&mut world);
 
@@ -103,6 +104,7 @@ fn resolve_on_command_all_cells_with_do_children_fires_immediately() {
         chip_name: "cell_damage".to_string(),
         children: vec![EffectNode::Do(EffectKind::DamageBoost(2.0))],
         permanent: true,
+        context_entity: None,
     };
     cmd.apply(&mut world);
 
@@ -149,6 +151,7 @@ fn resolve_on_command_resolves_all_bolts_to_bolt_entities() {
             })],
         }],
         permanent: true,
+        context_entity: None,
     };
     cmd.apply(&mut world);
 
@@ -182,6 +185,7 @@ fn resolve_on_command_all_bolts_with_multiple_children() {
             },
         ],
         permanent: true,
+        context_entity: None,
     };
     cmd.apply(&mut world);
 
@@ -217,6 +221,7 @@ fn resolve_on_command_resolves_all_walls_to_wall_entities() {
             then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
         }],
         permanent: true,
+        context_entity: None,
     };
     cmd.apply(&mut world);
 
@@ -244,6 +249,7 @@ fn resolve_on_command_all_walls_with_single_wall() {
             then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
         }],
         permanent: true,
+        context_entity: None,
     };
     cmd.apply(&mut world);
 
@@ -253,4 +259,114 @@ fn resolve_on_command_all_walls_with_single_wall() {
         1,
         "Single Wall should have 1 BoundEffects entry"
     );
+}
+
+// -----------------------------------------------------------------------
+// Context entity must NOT narrow AllCells/AllBolts/AllWalls
+// -----------------------------------------------------------------------
+
+#[test]
+fn all_cells_with_context_entity_still_resolves_to_all_cells() {
+    let mut world = World::new();
+    let cell_a = world
+        .spawn((Cell, BoundEffects::default(), StagedEffects::default()))
+        .id();
+    let cell_b = world
+        .spawn((Cell, BoundEffects::default(), StagedEffects::default()))
+        .id();
+    let cell_c = world
+        .spawn((Cell, BoundEffects::default(), StagedEffects::default()))
+        .id();
+
+    // context_entity points to cell_b, but AllCells should still hit all 3
+    let cmd = ResolveOnCommand {
+        target: Target::AllCells,
+        chip_name: "all_test".to_string(),
+        children: vec![EffectNode::When {
+            trigger: Trigger::Died,
+            then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
+        }],
+        permanent: false,
+        context_entity: Some(cell_b),
+    };
+    cmd.apply(&mut world);
+
+    for (label, entity) in [("cell_a", cell_a), ("cell_b", cell_b), ("cell_c", cell_c)] {
+        let staged = world.get::<StagedEffects>(entity).unwrap();
+        assert_eq!(
+            staged.0.len(),
+            1,
+            "{label} should have 1 StagedEffects entry — AllCells must not be narrowed by context_entity"
+        );
+    }
+}
+
+#[test]
+fn all_bolts_with_context_entity_still_resolves_to_all_bolts() {
+    let mut world = World::new();
+    let bolt_a = world
+        .spawn((Bolt, BoundEffects::default(), StagedEffects::default()))
+        .id();
+    let bolt_b = world
+        .spawn((Bolt, BoundEffects::default(), StagedEffects::default()))
+        .id();
+    let bolt_c = world
+        .spawn((Bolt, BoundEffects::default(), StagedEffects::default()))
+        .id();
+
+    let cmd = ResolveOnCommand {
+        target: Target::AllBolts,
+        chip_name: "all_test".to_string(),
+        children: vec![EffectNode::When {
+            trigger: Trigger::Died,
+            then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
+        }],
+        permanent: false,
+        context_entity: Some(bolt_b),
+    };
+    cmd.apply(&mut world);
+
+    for (label, entity) in [("bolt_a", bolt_a), ("bolt_b", bolt_b), ("bolt_c", bolt_c)] {
+        let staged = world.get::<StagedEffects>(entity).unwrap();
+        assert_eq!(
+            staged.0.len(),
+            1,
+            "{label} should have 1 StagedEffects entry — AllBolts must not be narrowed by context_entity"
+        );
+    }
+}
+
+#[test]
+fn all_walls_with_context_entity_still_resolves_to_all_walls() {
+    let mut world = World::new();
+    let wall_a = world
+        .spawn((Wall, BoundEffects::default(), StagedEffects::default()))
+        .id();
+    let wall_b = world
+        .spawn((Wall, BoundEffects::default(), StagedEffects::default()))
+        .id();
+    let wall_c = world
+        .spawn((Wall, BoundEffects::default(), StagedEffects::default()))
+        .id();
+
+    let cmd = ResolveOnCommand {
+        target: Target::AllWalls,
+        chip_name: "all_test".to_string(),
+        children: vec![EffectNode::When {
+            trigger: Trigger::Died,
+            then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
+        }],
+        permanent: false,
+        context_entity: Some(wall_b),
+    };
+    cmd.apply(&mut world);
+
+    for (label, entity) in [("wall_a", wall_a), ("wall_b", wall_b), ("wall_c", wall_c)] {
+        let staged = world.get::<StagedEffects>(entity).unwrap();
+        assert_eq!(
+            staged.0.len(),
+            1,
+            "{label} should have 1 StagedEffects entry — AllWalls must not be narrowed by context_entity"
+        );
+    }
 }

@@ -307,7 +307,7 @@ mod tests {
             0.001,
             EffectNode::Do(EffectKind::Explode {
                 range: 60.0,
-                damage_mult: 2.0,
+                damage: 2.0,
             }),
         );
 

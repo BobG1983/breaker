@@ -18,8 +18,15 @@ fn bridge_bump(
 ) {
     for _msg in reader.read() {
         for (entity, bound, mut staged) in &mut query {
-            evaluate_bound_effects(&Trigger::Bump, entity, bound, &mut staged, &mut commands);
-            evaluate_staged_effects(&Trigger::Bump, entity, &mut staged, &mut commands);
+            evaluate_bound_effects(
+                &Trigger::Bump,
+                entity,
+                bound,
+                &mut staged,
+                &mut commands,
+                None,
+            );
+            evaluate_staged_effects(&Trigger::Bump, entity, &mut staged, &mut commands, None);
         }
     }
 }

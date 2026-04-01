@@ -16,6 +16,7 @@ use crate::{
         components::{BaseHeight, BaseWidth, Breaker},
         messages::BreakerImpactWall,
     },
+    effect::effects::size_boost::ActiveSizeBoosts,
     shared::{BREAKER_LAYER, NodeScalingFactor, WALL_LAYER},
     wall::components::Wall,
 };
@@ -27,6 +28,7 @@ type BreakerWallCollisionQuery = (
     &'static BaseWidth,
     &'static BaseHeight,
     Option<&'static NodeScalingFactor>,
+    Option<&'static ActiveSizeBoosts>,
 );
 
 /// Wall entity lookup for narrow-phase overlap verification.
@@ -45,15 +47,16 @@ pub(crate) fn breaker_wall_collision(
     wall_lookup: WallLookup,
     mut writer: MessageWriter<BreakerImpactWall>,
 ) {
-    let Ok((breaker_entity, breaker_pos, breaker_w, breaker_h, breaker_scale)) =
+    let Ok((breaker_entity, breaker_pos, breaker_w, breaker_h, breaker_scale, size_boosts)) =
         breaker_query.single()
     else {
         return;
     };
 
+    let size_mult = size_boosts.map_or(1.0, ActiveSizeBoosts::multiplier);
     let scale = breaker_scale.map_or(1.0, |s| s.0);
-    let half_w = breaker_w.half_width() * scale;
-    let half_h = breaker_h.half_height() * scale;
+    let half_w = breaker_w.half_width() * size_mult * scale;
+    let half_h = breaker_h.half_height() * size_mult * scale;
 
     let breaker_aabb = Aabb2D::new(breaker_pos.0, Vec2::new(half_w, half_h));
     let layers = CollisionLayers::new(BREAKER_LAYER, WALL_LAYER);
@@ -282,5 +285,142 @@ mod tests {
             "scaled-down breaker tangent to wall should emit 0 messages, got {}",
             msgs.0.len()
         );
+    }
+
+    // ── Bug Fix Regression: ActiveSizeBoosts in breaker AABB ────────
+    //
+    // The bug: breaker_wall_collision computes half_w = BaseWidth.half_width() * NodeScalingFactor
+    // but ignores ActiveSizeBoosts. When size boosts are active, the collision AABB is too small.
+
+    #[test]
+    fn breaker_wall_collision_uses_active_size_boosts_in_size() {
+        // Behavior 25: Breaker at (-400,-250) with ActiveSizeBoosts([2.0]).
+        // Correct: half_w = 60.0 * 2.0 = 120.0. Wall at (-485,0) half_extents (5,300).
+        // dx = |-400 - (-485)| = 85.0. threshold = 120.0 + 5.0 = 125.0. 85.0 < 125.0 => overlap.
+        // Bug: half_w = 60.0 (ignores boost), threshold = 65.0, 85.0 > 65.0 => miss.
+        let mut app = test_app();
+
+        let breaker_entity = spawn_breaker(&mut app, Vec2::new(-400.0, -250.0));
+        app.world_mut().entity_mut(breaker_entity).insert(
+            crate::effect::effects::size_boost::ActiveSizeBoosts(vec![2.0]),
+        );
+
+        let wall_entity = spawn_wall(&mut app, Vec2::new(-485.0, 0.0), Vec2::new(5.0, 300.0));
+
+        tick(&mut app);
+
+        let msgs = app.world().resource::<BreakerWallHitMessages>();
+        assert_eq!(
+            msgs.0.len(),
+            1,
+            "breaker with ActiveSizeBoosts([2.0]) should overlap wall at dx=85 (threshold=125), got {} messages",
+            msgs.0.len(),
+        );
+        assert_eq!(msgs.0[0].breaker, breaker_entity);
+        assert_eq!(msgs.0[0].wall, wall_entity);
+    }
+
+    #[test]
+    fn breaker_wall_collision_identity_boost_still_overlaps() {
+        // Behavior 25 edge case: ActiveSizeBoosts([1.0]) => half_w = 60.0 * 1.0 = 60.0.
+        // Breaker at (-425,-250). Wall at (-485,0) half_x=5.
+        // dx = |-425 - (-485)| = 60.0 < 60.0 + 5.0 = 65.0 => overlap.
+        let mut app = test_app();
+
+        let breaker_entity = spawn_breaker(&mut app, Vec2::new(-425.0, -250.0));
+        app.world_mut().entity_mut(breaker_entity).insert(
+            crate::effect::effects::size_boost::ActiveSizeBoosts(vec![1.0]),
+        );
+
+        let wall_entity = spawn_wall(&mut app, Vec2::new(-485.0, 0.0), Vec2::new(5.0, 300.0));
+
+        tick(&mut app);
+
+        let msgs = app.world().resource::<BreakerWallHitMessages>();
+        assert_eq!(
+            msgs.0.len(),
+            1,
+            "identity boost should still overlap at dx=60 (threshold=65), got {} messages",
+            msgs.0.len(),
+        );
+        assert_eq!(msgs.0[0].breaker, breaker_entity);
+        assert_eq!(msgs.0[0].wall, wall_entity);
+    }
+
+    #[test]
+    fn breaker_wall_collision_boosted_does_not_overlap_beyond_range() {
+        // Behavior 26: ActiveSizeBoosts([1.5]) => half_w = 60.0 * 1.5 = 90.0.
+        // Breaker at (-300,-250). Wall at (-485,0) half_x=5.
+        // dx = |-300 - (-485)| = 185.0 > 90.0 + 5.0 = 95.0 => no overlap.
+        let mut app = test_app();
+
+        let breaker_entity = spawn_breaker(&mut app, Vec2::new(-300.0, -250.0));
+        app.world_mut().entity_mut(breaker_entity).insert(
+            crate::effect::effects::size_boost::ActiveSizeBoosts(vec![1.5]),
+        );
+
+        spawn_wall(&mut app, Vec2::new(-485.0, 0.0), Vec2::new(5.0, 300.0));
+
+        tick(&mut app);
+
+        let msgs = app.world().resource::<BreakerWallHitMessages>();
+        assert!(
+            msgs.0.is_empty(),
+            "boosted breaker should NOT overlap wall at dx=185 (threshold=95), got {} messages",
+            msgs.0.len(),
+        );
+    }
+
+    #[test]
+    fn breaker_wall_collision_boosted_tangent_emits_no_message() {
+        // Behavior 26 edge case: ActiveSizeBoosts([1.5]) => half_w = 90.0.
+        // Breaker at (-390,-250). Wall at (-485,0) half_x=5.
+        // dx = |-390 - (-485)| = 95.0, threshold = 90.0 + 5.0 = 95.0.
+        // Strict inequality: 95.0 < 95.0 is false => 0 messages.
+        let mut app = test_app();
+
+        let breaker_entity = spawn_breaker(&mut app, Vec2::new(-390.0, -250.0));
+        app.world_mut().entity_mut(breaker_entity).insert(
+            crate::effect::effects::size_boost::ActiveSizeBoosts(vec![1.5]),
+        );
+
+        spawn_wall(&mut app, Vec2::new(-485.0, 0.0), Vec2::new(5.0, 300.0));
+
+        tick(&mut app);
+
+        let msgs = app.world().resource::<BreakerWallHitMessages>();
+        assert!(
+            msgs.0.is_empty(),
+            "boosted breaker tangent to wall (dx == threshold=95) should emit 0 messages, got {}",
+            msgs.0.len(),
+        );
+    }
+
+    #[test]
+    fn breaker_wall_collision_boost_and_node_scale_combined() {
+        // Behavior 27: ActiveSizeBoosts([1.5]), NodeScalingFactor(2.0).
+        // half_w = 60.0 * 1.5 * 2.0 = 180.0. Breaker at (-350,-250). Wall at (-485,0) half_x=5.
+        // dx = |-350 - (-485)| = 135.0. threshold = 180.0 + 5.0 = 185.0. 135.0 < 185.0 => overlap.
+        let mut app = test_app();
+
+        let breaker_entity = spawn_breaker(&mut app, Vec2::new(-350.0, -250.0));
+        app.world_mut().entity_mut(breaker_entity).insert((
+            crate::effect::effects::size_boost::ActiveSizeBoosts(vec![1.5]),
+            NodeScalingFactor(2.0),
+        ));
+
+        let wall_entity = spawn_wall(&mut app, Vec2::new(-485.0, 0.0), Vec2::new(5.0, 300.0));
+
+        tick(&mut app);
+
+        let msgs = app.world().resource::<BreakerWallHitMessages>();
+        assert_eq!(
+            msgs.0.len(),
+            1,
+            "breaker with boost+scale should overlap wall at dx=135 (threshold=185), got {} messages",
+            msgs.0.len(),
+        );
+        assert_eq!(msgs.0[0].breaker, breaker_entity);
+        assert_eq!(msgs.0[0].wall, wall_entity);
     }
 }

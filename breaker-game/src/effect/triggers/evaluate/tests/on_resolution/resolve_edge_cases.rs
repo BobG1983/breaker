@@ -31,6 +31,7 @@ fn resolve_on_command_with_no_matching_entities_is_noop() {
             then: vec![EffectNode::Do(EffectKind::Shield { stacks: 1 })],
         }],
         permanent: true,
+        context_entity: None,
     };
     // Should not panic
     cmd.apply(&mut world);
@@ -62,6 +63,7 @@ fn resolve_on_command_all_bolts_with_no_bolts_is_noop() {
             })],
         }],
         permanent: true,
+        context_entity: None,
     };
     // Should not panic
     cmd.apply(&mut world);
@@ -81,6 +83,7 @@ fn resolve_on_command_all_walls_with_no_walls_is_noop() {
             then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
         }],
         permanent: true,
+        context_entity: None,
     };
     // Should not panic
     cmd.apply(&mut world);

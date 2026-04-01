@@ -33,12 +33,14 @@ pub(super) fn bridge_impacted_bolt_cell(
                 bound,
                 &mut staged,
                 &mut commands,
+                Some(msg.cell),
             );
             evaluate_staged_effects(
                 &Trigger::Impacted(ImpactTarget::Cell),
                 entity,
                 &mut staged,
                 &mut commands,
+                Some(msg.cell),
             );
         }
         if let Ok((entity, bound, mut staged)) = query.get_mut(msg.cell) {
@@ -48,12 +50,14 @@ pub(super) fn bridge_impacted_bolt_cell(
                 bound,
                 &mut staged,
                 &mut commands,
+                Some(msg.bolt),
             );
             evaluate_staged_effects(
                 &Trigger::Impacted(ImpactTarget::Bolt),
                 entity,
                 &mut staged,
                 &mut commands,
+                Some(msg.bolt),
             );
         }
     }
@@ -73,12 +77,14 @@ pub(super) fn bridge_impacted_bolt_wall(
                 bound,
                 &mut staged,
                 &mut commands,
+                Some(msg.wall),
             );
             evaluate_staged_effects(
                 &Trigger::Impacted(ImpactTarget::Wall),
                 entity,
                 &mut staged,
                 &mut commands,
+                Some(msg.wall),
             );
         }
         if let Ok((entity, bound, mut staged)) = query.get_mut(msg.wall) {
@@ -88,12 +94,14 @@ pub(super) fn bridge_impacted_bolt_wall(
                 bound,
                 &mut staged,
                 &mut commands,
+                Some(msg.bolt),
             );
             evaluate_staged_effects(
                 &Trigger::Impacted(ImpactTarget::Bolt),
                 entity,
                 &mut staged,
                 &mut commands,
+                Some(msg.bolt),
             );
         }
     }
@@ -113,12 +121,14 @@ pub(super) fn bridge_impacted_bolt_breaker(
                 bound,
                 &mut staged,
                 &mut commands,
+                Some(msg.breaker),
             );
             evaluate_staged_effects(
                 &Trigger::Impacted(ImpactTarget::Breaker),
                 entity,
                 &mut staged,
                 &mut commands,
+                Some(msg.breaker),
             );
         }
         if let Ok((entity, bound, mut staged)) = query.get_mut(msg.breaker) {
@@ -128,12 +138,14 @@ pub(super) fn bridge_impacted_bolt_breaker(
                 bound,
                 &mut staged,
                 &mut commands,
+                Some(msg.bolt),
             );
             evaluate_staged_effects(
                 &Trigger::Impacted(ImpactTarget::Bolt),
                 entity,
                 &mut staged,
                 &mut commands,
+                Some(msg.bolt),
             );
         }
     }
@@ -153,12 +165,14 @@ pub(super) fn bridge_impacted_breaker_cell(
                 bound,
                 &mut staged,
                 &mut commands,
+                Some(msg.cell),
             );
             evaluate_staged_effects(
                 &Trigger::Impacted(ImpactTarget::Cell),
                 entity,
                 &mut staged,
                 &mut commands,
+                Some(msg.cell),
             );
         }
         if let Ok((entity, bound, mut staged)) = query.get_mut(msg.cell) {
@@ -168,12 +182,14 @@ pub(super) fn bridge_impacted_breaker_cell(
                 bound,
                 &mut staged,
                 &mut commands,
+                Some(msg.breaker),
             );
             evaluate_staged_effects(
                 &Trigger::Impacted(ImpactTarget::Breaker),
                 entity,
                 &mut staged,
                 &mut commands,
+                Some(msg.breaker),
             );
         }
     }
@@ -193,12 +209,14 @@ pub(super) fn bridge_impacted_breaker_wall(
                 bound,
                 &mut staged,
                 &mut commands,
+                Some(msg.wall),
             );
             evaluate_staged_effects(
                 &Trigger::Impacted(ImpactTarget::Wall),
                 entity,
                 &mut staged,
                 &mut commands,
+                Some(msg.wall),
             );
         }
         if let Ok((entity, bound, mut staged)) = query.get_mut(msg.wall) {
@@ -208,12 +226,14 @@ pub(super) fn bridge_impacted_breaker_wall(
                 bound,
                 &mut staged,
                 &mut commands,
+                Some(msg.breaker),
             );
             evaluate_staged_effects(
                 &Trigger::Impacted(ImpactTarget::Breaker),
                 entity,
                 &mut staged,
                 &mut commands,
+                Some(msg.breaker),
             );
         }
     }
@@ -233,12 +253,14 @@ pub(super) fn bridge_impacted_cell_wall(
                 bound,
                 &mut staged,
                 &mut commands,
+                Some(msg.wall),
             );
             evaluate_staged_effects(
                 &Trigger::Impacted(ImpactTarget::Wall),
                 entity,
                 &mut staged,
                 &mut commands,
+                Some(msg.wall),
             );
         }
         if let Ok((entity, bound, mut staged)) = query.get_mut(msg.wall) {
@@ -248,12 +270,14 @@ pub(super) fn bridge_impacted_cell_wall(
                 bound,
                 &mut staged,
                 &mut commands,
+                Some(msg.cell),
             );
             evaluate_staged_effects(
                 &Trigger::Impacted(ImpactTarget::Cell),
                 entity,
                 &mut staged,
                 &mut commands,
+                Some(msg.cell),
             );
         }
     }

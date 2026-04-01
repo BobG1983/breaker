@@ -7,7 +7,8 @@ mod movement;
 mod state;
 
 pub use core::{
-    BaseHeight, BaseWidth, Breaker, BreakerBaseY, BreakerInitialized, BreakerReflectionSpread,
+    Breaker, BreakerBaseY, BreakerInitialized, BreakerReflectionSpread, ExtraBreaker,
+    PrimaryBreaker,
 };
 
 pub use bump::{
@@ -20,3 +21,5 @@ pub use dash::{
 };
 pub use movement::{BreakerAcceleration, BreakerDeceleration, BreakerTilt, DecelEasing};
 pub use state::{DashState, DashStateTimer};
+
+pub use crate::shared::components::{BaseHeight, BaseWidth};

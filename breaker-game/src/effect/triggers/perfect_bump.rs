@@ -30,8 +30,15 @@ fn bridge_perfect_bump(
                 bound,
                 &mut staged,
                 &mut commands,
+                None,
             );
-            evaluate_staged_effects(&Trigger::PerfectBump, entity, &mut staged, &mut commands);
+            evaluate_staged_effects(
+                &Trigger::PerfectBump,
+                entity,
+                &mut staged,
+                &mut commands,
+                None,
+            );
         }
     }
 }

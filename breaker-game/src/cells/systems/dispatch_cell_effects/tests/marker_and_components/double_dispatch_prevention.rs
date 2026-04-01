@@ -25,7 +25,7 @@ fn cell_effects_dispatched_marker_prevents_double_dispatch() {
                     trigger: Trigger::Died,
                     then: vec![EffectNode::Do(EffectKind::Explode {
                         range: 48.0,
-                        damage_mult: 1.0,
+                        damage: 1.0,
                     })],
                 }],
             }]),
@@ -46,7 +46,7 @@ fn cell_effects_dispatched_marker_prevents_double_dispatch() {
                     trigger: Trigger::Died,
                     then: vec![EffectNode::Do(EffectKind::Explode {
                         range: 48.0,
-                        damage_mult: 1.0,
+                        damage: 1.0,
                     })],
                 },
             )]),
@@ -83,7 +83,7 @@ fn marker_on_one_cell_skips_it_while_other_is_dispatched() {
                     trigger: Trigger::Died,
                     then: vec![EffectNode::Do(EffectKind::Explode {
                         range: 48.0,
-                        damage_mult: 1.0,
+                        damage: 1.0,
                     })],
                 }],
             }]),
@@ -104,7 +104,7 @@ fn marker_on_one_cell_skips_it_while_other_is_dispatched() {
                     trigger: Trigger::Died,
                     then: vec![EffectNode::Do(EffectKind::Explode {
                         range: 48.0,
-                        damage_mult: 1.0,
+                        damage: 1.0,
                     })],
                 },
             )]),

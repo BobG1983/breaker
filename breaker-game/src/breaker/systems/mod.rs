@@ -12,8 +12,8 @@ pub(crate) mod init_breaker;
 mod init_breaker_params;
 mod move_breaker;
 mod spawn_breaker;
+pub(crate) mod sync_breaker_scale;
 mod tilt_visual;
-pub(crate) mod width_boost_visual;
 
 pub(crate) use apply_node_scale_to_breaker::apply_node_scale_to_breaker;
 pub(crate) use breaker_cell_collision::breaker_cell_collision;
@@ -28,5 +28,5 @@ pub(crate) use init_breaker::init_breaker;
 pub use init_breaker_params::init_breaker_params;
 pub(crate) use move_breaker::move_breaker;
 pub use spawn_breaker::{reset_breaker, spawn_breaker};
+pub(crate) use sync_breaker_scale::sync_breaker_scale;
 pub use tilt_visual::animate_tilt_visual;
-pub(crate) use width_boost_visual::width_boost_visual;

@@ -60,11 +60,10 @@ pub(crate) fn propagate_breaker_changes(mut ctx: BreakerChangeContext) {
     }
     apply_stat_overrides(&mut ctx.config, &def.stat_overrides);
 
-    // Re-stamp consequence components and lives on breaker entities
     for entity in &ctx.breaker_query {
-        if let Some(life_pool) = def.life_pool {
-            ctx.commands.entity(entity).insert(LivesCount(life_pool));
-        }
+        ctx.commands
+            .entity(entity)
+            .insert(LivesCount(def.life_pool));
     }
 
     // Resolve On targets to entity BoundEffects

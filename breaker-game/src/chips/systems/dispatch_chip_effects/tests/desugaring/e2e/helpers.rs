@@ -20,7 +20,14 @@ pub(super) fn sys_evaluate_node_start(
             bound,
             &mut staged,
             &mut commands,
+            None,
         );
-        evaluate_staged_effects(&Trigger::NodeStart, entity, &mut staged, &mut commands);
+        evaluate_staged_effects(
+            &Trigger::NodeStart,
+            entity,
+            &mut staged,
+            &mut commands,
+            None,
+        );
     }
 }

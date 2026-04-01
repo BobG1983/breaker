@@ -2,7 +2,9 @@
 
 use bevy::prelude::*;
 
-use super::super::core::{BoundEffects, EffectKind, EffectNode, StagedEffects};
+use super::super::core::{
+    BoundEffects, EffectKind, EffectNode, RootEffect, StagedEffects, Target, Trigger,
+};
 
 /// Extension trait on [`Commands`] for queuing effect operations.
 pub trait EffectCommandsExt {
@@ -21,6 +23,10 @@ pub trait EffectCommandsExt {
     /// Queue pushing pre-built effect entries to an entity's [`BoundEffects`],
     /// inserting [`BoundEffects`] and [`StagedEffects`] if absent.
     fn push_bound_effects(&mut self, entity: Entity, effects: Vec<(String, EffectNode)>);
+    /// Queue dispatching initial effects by convention: resolve targets from the
+    /// world, fire `Do` effects immediately, store `When`/`Until`/`Once` in
+    /// `BoundEffects`, and defer `AllBolts`/`AllCells`/`AllWalls` via wrapping.
+    fn dispatch_initial_effects(&mut self, effects: Vec<RootEffect>, source_chip: Option<String>);
 }
 
 impl EffectCommandsExt for Commands<'_, '_> {
@@ -57,6 +63,13 @@ impl EffectCommandsExt for Commands<'_, '_> {
 
     fn push_bound_effects(&mut self, entity: Entity, effects: Vec<(String, EffectNode)>) {
         self.queue(PushBoundEffects { entity, effects });
+    }
+
+    fn dispatch_initial_effects(&mut self, effects: Vec<RootEffect>, source_chip: Option<String>) {
+        self.queue(DispatchInitialEffects {
+            effects,
+            source_chip,
+        });
     }
 }
 
@@ -117,6 +130,115 @@ impl Command for PushBoundEffects {
     }
 }
 
+/// Command that dispatches initial effects by convention.
+///
+/// Resolves targets from the world, fires `Do` effects immediately, stores
+/// `When`/`Until`/`Once` in `BoundEffects`, and defers `AllBolts`/`AllCells`/`AllWalls`
+/// via wrapping with `When(NodeStart, On(target, permanent: true, ...))` on the first breaker.
+pub(crate) struct DispatchInitialEffects {
+    pub(super) effects: Vec<RootEffect>,
+    pub(super) source_chip: Option<String>,
+}
+
+impl Command for DispatchInitialEffects {
+    fn apply(self, world: &mut World) {
+        let chip_name = self.source_chip.unwrap_or_default();
+
+        for root in self.effects {
+            let RootEffect::On { target, then } = root;
+
+            match target {
+                Target::Breaker => {
+                    let mut query = world.query_filtered::<Entity, With<Breaker>>();
+                    let entities: Vec<Entity> = query.iter(world).collect();
+                    for entity in entities {
+                        dispatch_children_to(entity, &then, &chip_name, world);
+                    }
+                }
+                Target::Bolt => {
+                    // Initial dispatch targets primary bolts only
+                    let mut query = world.query_filtered::<Entity, With<PrimaryBolt>>();
+                    let entities: Vec<Entity> = query.iter(world).collect();
+                    for entity in entities {
+                        dispatch_children_to(entity, &then, &chip_name, world);
+                    }
+                }
+                Target::Cell | Target::Wall => {
+                    // No entities to dispatch to at init time — skip silently
+                }
+                Target::AllBolts | Target::AllCells | Target::AllWalls => {
+                    // Deferred dispatch: wrap and push to first breaker
+                    if let Some(breaker_entity) = first_breaker(world) {
+                        let wrapped = EffectNode::When {
+                            trigger: Trigger::NodeStart,
+                            then: vec![EffectNode::On {
+                                target,
+                                permanent: true,
+                                then,
+                            }],
+                        };
+                        push_bound_to(breaker_entity, &chip_name, wrapped, world);
+                    } else {
+                        warn!(
+                            "DispatchInitialEffects: no breaker found for deferred {:?} dispatch — skipping",
+                            target
+                        );
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Returns the first breaker entity found, or `None` if no breakers exist.
+fn first_breaker(world: &mut World) -> Option<Entity> {
+    let mut query = world.query_filtered::<Entity, With<Breaker>>();
+    query.iter(world).next()
+}
+
+/// Dispatches children to an entity: fires `Do` effects immediately, pushes
+/// non-`Do` effects to `BoundEffects`.
+fn dispatch_children_to(
+    entity: Entity,
+    children: &[EffectNode],
+    chip_name: &str,
+    world: &mut World,
+) {
+    let mut do_effects = Vec::new();
+    let mut bound_children = Vec::new();
+
+    for child in children {
+        match child {
+            EffectNode::Do(effect) => do_effects.push(effect.clone()),
+            other => bound_children.push(other.clone()),
+        }
+    }
+
+    if let Ok(mut entity_ref) = world.get_entity_mut(entity) {
+        ensure_effect_components(&mut entity_ref);
+        for child in bound_children {
+            if let Some(mut bound) = entity_ref.get_mut::<BoundEffects>() {
+                bound.0.push((chip_name.to_owned(), child));
+            }
+        }
+    }
+
+    for effect in do_effects {
+        effect.fire(entity, chip_name, world);
+    }
+}
+
+/// Pushes a single effect node to an entity's `BoundEffects`, ensuring
+/// `BoundEffects` and `StagedEffects` exist.
+fn push_bound_to(entity: Entity, chip_name: &str, node: EffectNode, world: &mut World) {
+    if let Ok(mut entity_ref) = world.get_entity_mut(entity) {
+        ensure_effect_components(&mut entity_ref);
+        if let Some(mut bound) = entity_ref.get_mut::<BoundEffects>() {
+            bound.0.push((chip_name.to_owned(), node));
+        }
+    }
+}
+
 /// Command that transfers effect children to an entity's [`BoundEffects`] or [`StagedEffects`].
 ///
 /// Splits children into `Do` nodes (fired immediately) and non-`Do` nodes (stored for trigger evaluation).
@@ -160,24 +282,48 @@ impl Command for TransferCommand {
     }
 }
 
-use super::super::core::Target;
 use crate::{
-    bolt::components::Bolt, breaker::components::Breaker, cells::components::Cell,
+    bolt::components::{Bolt, PrimaryBolt},
+    breaker::components::{Breaker, PrimaryBreaker},
+    cells::components::Cell,
     wall::components::Wall,
 };
 
 /// Command that resolves an `On` node: queries entities matching the target,
 /// then transfers children to each resolved entity.
+///
+/// When `context_entity` is `Some(e)` and the entity has the marker component
+/// matching `target`, it is used directly instead of querying all entities of
+/// that type. This allows trigger chains like `When(Impacted(Cell), On(Cell, ...))`
+/// to retarget to the specific cell involved in the collision rather than every
+/// cell in the world.
 pub(crate) struct ResolveOnCommand {
     pub(crate) target: Target,
     pub(crate) chip_name: String,
     pub(crate) children: Vec<EffectNode>,
     pub(crate) permanent: bool,
+    pub(crate) context_entity: Option<Entity>,
 }
 
 impl Command for ResolveOnCommand {
     fn apply(self, world: &mut World) {
-        let entities = resolve_target_from_world(self.target, world);
+        let entities = match self.target {
+            // All* targets always resolve to every entity of that type,
+            // regardless of context_entity.
+            Target::AllBolts | Target::AllCells | Target::AllWalls => {
+                resolve_all(self.target, world)
+            }
+            // Singular targets: context_entity determines resolution.
+            _ => match self.context_entity {
+                // Context matches target type → use that specific entity.
+                Some(ctx) if entity_matches_target(ctx, self.target, world) => vec![ctx],
+                // Context present but wrong type → no-op. The chain asked for
+                // a type that wasn't involved in this trigger.
+                Some(_) => vec![],
+                // No context (non-collision trigger) → fall back to defaults.
+                None => resolve_default(self.target, world),
+            },
+        };
         for entity in entities {
             TransferCommand {
                 entity,
@@ -190,26 +336,55 @@ impl Command for ResolveOnCommand {
     }
 }
 
-/// Resolve a [`Target`] to entities using direct world queries.
-/// Used by [`ResolveOnCommand`] at command-apply time when system queries
-/// are not available.
-fn resolve_target_from_world(target: Target, world: &mut World) -> Vec<Entity> {
+/// Returns `true` if `entity` has the marker component that matches a singular target.
+fn entity_matches_target(entity: Entity, target: Target, world: &World) -> bool {
     match target {
-        Target::Breaker => {
-            let mut query = world.query_filtered::<Entity, With<Breaker>>();
-            query.iter(world).collect()
-        }
-        Target::Bolt | Target::AllBolts => {
+        Target::Breaker => world.get::<Breaker>(entity).is_some(),
+        Target::Bolt => world.get::<Bolt>(entity).is_some(),
+        Target::Cell => world.get::<Cell>(entity).is_some(),
+        Target::Wall => world.get::<Wall>(entity).is_some(),
+        // All* targets never narrow to context — handled before this is called.
+        Target::AllBolts | Target::AllCells | Target::AllWalls => false,
+    }
+}
+
+/// Resolve an `All*` target to every entity of that type.
+fn resolve_all(target: Target, world: &mut World) -> Vec<Entity> {
+    match target {
+        Target::AllBolts => {
             let mut query = world.query_filtered::<Entity, With<Bolt>>();
             query.iter(world).collect()
         }
-        Target::Cell | Target::AllCells => {
+        Target::AllCells => {
             let mut query = world.query_filtered::<Entity, With<Cell>>();
             query.iter(world).collect()
         }
-        Target::Wall | Target::AllWalls => {
+        Target::AllWalls => {
             let mut query = world.query_filtered::<Entity, With<Wall>>();
             query.iter(world).collect()
+        }
+        // Singular targets shouldn't reach here.
+        _ => vec![],
+    }
+}
+
+/// Default resolution for singular targets when no `context_entity` is available.
+///
+/// - `Bolt` → entities with both `Bolt` and `PrimaryBolt`
+/// - `Breaker` → entities with both `Breaker` and `PrimaryBreaker`
+/// - `Cell` / `Wall` → no-op (empty vec)
+fn resolve_default(target: Target, world: &mut World) -> Vec<Entity> {
+    match target {
+        Target::Bolt => {
+            let mut query = world.query_filtered::<Entity, (With<Bolt>, With<PrimaryBolt>)>();
+            query.iter(world).collect()
+        }
+        Target::Breaker => {
+            let mut query = world.query_filtered::<Entity, (With<Breaker>, With<PrimaryBreaker>)>();
+            query.iter(world).collect()
+        }
+        Target::Cell | Target::Wall | Target::AllBolts | Target::AllCells | Target::AllWalls => {
+            vec![]
         }
     }
 }

@@ -284,7 +284,9 @@ mod tests {
             let world = app.world_mut();
             spawn_breaker_with_config(world, &config)
         };
-        app.world_mut().entity_mut(entity).insert(LivesCount(2));
+        app.world_mut()
+            .entity_mut(entity)
+            .insert(LivesCount(Some(2)));
         app.world_mut().get_mut::<MaxSpeed>(entity).unwrap().0 = 999.0;
         {
             let mut c = app.world_mut().resource_mut::<BreakerConfig>();
@@ -300,8 +302,9 @@ mod tests {
         );
         let lives = app.world().get::<LivesCount>(entity).unwrap();
         assert_eq!(
-            lives.0, 2,
-            "LivesCount should remain 2 after config change, not be reset"
+            lives.0,
+            Some(2),
+            "LivesCount should remain Some(2) after config change, not be reset"
         );
     }
 

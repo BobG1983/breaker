@@ -119,7 +119,7 @@ fn cell_with_target_all_cells_dispatches_to_all_cells() {
                     trigger: Trigger::Died,
                     then: vec![EffectNode::Do(EffectKind::Explode {
                         range: 32.0,
-                        damage_mult: 0.5,
+                        damage: 0.5,
                     })],
                 }],
             }]),
@@ -184,7 +184,7 @@ fn single_cell_with_all_cells_targets_itself() {
                     trigger: Trigger::Died,
                     then: vec![EffectNode::Do(EffectKind::Explode {
                         range: 32.0,
-                        damage_mult: 0.5,
+                        damage: 0.5,
                     })],
                 }],
             }]),

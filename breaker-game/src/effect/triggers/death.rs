@@ -23,14 +23,28 @@ fn bridge_death(
 ) {
     for _msg in cell_reader.read() {
         for (entity, bound, mut staged) in &mut query {
-            evaluate_bound_effects(&Trigger::Death, entity, bound, &mut staged, &mut commands);
-            evaluate_staged_effects(&Trigger::Death, entity, &mut staged, &mut commands);
+            evaluate_bound_effects(
+                &Trigger::Death,
+                entity,
+                bound,
+                &mut staged,
+                &mut commands,
+                None,
+            );
+            evaluate_staged_effects(&Trigger::Death, entity, &mut staged, &mut commands, None);
         }
     }
     for _msg in bolt_reader.read() {
         for (entity, bound, mut staged) in &mut query {
-            evaluate_bound_effects(&Trigger::Death, entity, bound, &mut staged, &mut commands);
-            evaluate_staged_effects(&Trigger::Death, entity, &mut staged, &mut commands);
+            evaluate_bound_effects(
+                &Trigger::Death,
+                entity,
+                bound,
+                &mut staged,
+                &mut commands,
+                None,
+            );
+            evaluate_staged_effects(&Trigger::Death, entity, &mut staged, &mut commands, None);
         }
     }
 }

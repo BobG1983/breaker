@@ -241,7 +241,7 @@ fn lives_count_reset_on_breaker_change() {
     // Spawn breaker with 1 life remaining (took damage)
     let entity = app
         .world_mut()
-        .spawn((Breaker, LivesCount(1), BoundEffects::default()))
+        .spawn((Breaker, LivesCount(Some(1)), BoundEffects::default()))
         .id();
 
     // Flush Added
@@ -268,8 +268,122 @@ fn lives_count_reset_on_breaker_change() {
 
     let lives = app.world().get::<LivesCount>(entity).unwrap();
     assert_eq!(
-        lives.0, 5,
+        lives.0,
+        Some(5),
         "LivesCount should be reset to new life_pool value"
+    );
+}
+
+#[test]
+fn lives_count_reset_to_none_on_breaker_change() {
+    let mut app = test_app();
+
+    let def = BreakerDefinition {
+        name: "Test".to_owned(),
+        bolt: "Bolt".to_owned(),
+        stat_overrides: BreakerStatOverrides::default(),
+        life_pool: Some(3),
+        effects: vec![],
+    };
+
+    {
+        let mut registry = app.world_mut().resource_mut::<BreakerRegistry>();
+        registry.insert(def.name.clone(), def);
+    }
+
+    app.world_mut()
+        .insert_resource(SelectedBreaker("Test".to_owned()));
+
+    // Spawn breaker with 2 finite lives
+    let entity = app
+        .world_mut()
+        .spawn((Breaker, LivesCount(Some(2)), BoundEffects::default()))
+        .id();
+
+    // Flush Added
+    app.update();
+    app.update();
+
+    // Modify breaker to infinite lives (life_pool: None)
+    {
+        let mut registry = app.world_mut().resource_mut::<BreakerRegistry>();
+        let updated = BreakerDefinition {
+            name: "Test".to_owned(),
+            bolt: "Bolt".to_owned(),
+            stat_overrides: BreakerStatOverrides::default(),
+            life_pool: None,
+            effects: vec![],
+        };
+        registry.clear();
+        registry.insert(updated.name.clone(), updated);
+    }
+
+    app.update();
+    // Need extra update for commands to flush (insert LivesCount)
+    app.update();
+
+    let lives = app.world().get::<LivesCount>(entity).unwrap();
+    assert_eq!(
+        lives.0, None,
+        "LivesCount should be reset to None (infinite lives) when life_pool changes to None"
+    );
+}
+
+#[test]
+fn lives_count_inserted_on_entity_without_prior_lives_count() {
+    let mut app = test_app();
+
+    let def = BreakerDefinition {
+        name: "Test".to_owned(),
+        bolt: "Bolt".to_owned(),
+        stat_overrides: BreakerStatOverrides::default(),
+        life_pool: None,
+        effects: vec![],
+    };
+
+    {
+        let mut registry = app.world_mut().resource_mut::<BreakerRegistry>();
+        registry.insert(def.name.clone(), def);
+    }
+
+    app.world_mut()
+        .insert_resource(SelectedBreaker("Test".to_owned()));
+
+    // Spawn breaker WITHOUT LivesCount component
+    let entity = app
+        .world_mut()
+        .spawn((Breaker, BoundEffects::default()))
+        .id();
+
+    // Flush Added
+    app.update();
+    app.update();
+
+    // Trigger hot-reload by modifying registry
+    {
+        let mut registry = app.world_mut().resource_mut::<BreakerRegistry>();
+        let updated = BreakerDefinition {
+            name: "Test".to_owned(),
+            bolt: "Bolt".to_owned(),
+            stat_overrides: BreakerStatOverrides::default(),
+            life_pool: None,
+            effects: vec![],
+        };
+        registry.clear();
+        registry.insert(updated.name.clone(), updated);
+    }
+
+    app.update();
+    // Need extra update for commands to flush
+    app.update();
+
+    let lives = app
+        .world()
+        .get::<LivesCount>(entity)
+        .expect("LivesCount should be inserted even when entity never had it");
+    assert_eq!(
+        lives.0, None,
+        "LivesCount should be None (infinite) when life_pool is None and component was absent"
     );
 }
 

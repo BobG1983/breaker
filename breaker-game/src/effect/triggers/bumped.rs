@@ -19,8 +19,15 @@ fn bridge_bumped(
     for msg in reader.read() {
         let Some(bolt) = msg.bolt else { continue };
         if let Ok((entity, bound, mut staged)) = query.get_mut(bolt) {
-            evaluate_bound_effects(&Trigger::Bumped, entity, bound, &mut staged, &mut commands);
-            evaluate_staged_effects(&Trigger::Bumped, entity, &mut staged, &mut commands);
+            evaluate_bound_effects(
+                &Trigger::Bumped,
+                entity,
+                bound,
+                &mut staged,
+                &mut commands,
+                None,
+            );
+            evaluate_staged_effects(&Trigger::Bumped, entity, &mut staged, &mut commands, None);
         }
     }
 }

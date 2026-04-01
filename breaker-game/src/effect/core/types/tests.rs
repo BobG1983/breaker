@@ -225,7 +225,7 @@ fn effect_kind_fire_passes_source_chip_to_explode_spawned_request_has_effect_sou
 
     EffectKind::Explode {
         range: 60.0,
-        damage_mult: 2.0,
+        damage: 2.0,
     }
     .fire(entity, "explode_chip", &mut world);
 
@@ -250,7 +250,7 @@ fn effect_kind_fire_passes_empty_source_chip_to_explode_spawned_request_has_none
 
     EffectKind::Explode {
         range: 60.0,
-        damage_mult: 2.0,
+        damage: 2.0,
     }
     .fire(entity, "", &mut world);
 

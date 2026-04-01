@@ -25,7 +25,7 @@ pub(super) fn bridge_impact_bolt_cell(
     mut query: Query<(Entity, &BoundEffects, &mut StagedEffects)>,
     mut commands: Commands,
 ) {
-    for _msg in reader.read() {
+    for msg in reader.read() {
         for (entity, bound, mut staged) in &mut query {
             evaluate_bound_effects(
                 &Trigger::Impact(ImpactTarget::Cell),
@@ -33,12 +33,14 @@ pub(super) fn bridge_impact_bolt_cell(
                 bound,
                 &mut staged,
                 &mut commands,
+                Some(msg.cell),
             );
             evaluate_staged_effects(
                 &Trigger::Impact(ImpactTarget::Cell),
                 entity,
                 &mut staged,
                 &mut commands,
+                Some(msg.cell),
             );
         }
         for (entity, bound, mut staged) in &mut query {
@@ -48,12 +50,14 @@ pub(super) fn bridge_impact_bolt_cell(
                 bound,
                 &mut staged,
                 &mut commands,
+                Some(msg.bolt),
             );
             evaluate_staged_effects(
                 &Trigger::Impact(ImpactTarget::Bolt),
                 entity,
                 &mut staged,
                 &mut commands,
+                Some(msg.bolt),
             );
         }
     }
@@ -65,7 +69,7 @@ pub(super) fn bridge_impact_bolt_wall(
     mut query: Query<(Entity, &BoundEffects, &mut StagedEffects)>,
     mut commands: Commands,
 ) {
-    for _msg in reader.read() {
+    for msg in reader.read() {
         for (entity, bound, mut staged) in &mut query {
             evaluate_bound_effects(
                 &Trigger::Impact(ImpactTarget::Wall),
@@ -73,12 +77,14 @@ pub(super) fn bridge_impact_bolt_wall(
                 bound,
                 &mut staged,
                 &mut commands,
+                Some(msg.wall),
             );
             evaluate_staged_effects(
                 &Trigger::Impact(ImpactTarget::Wall),
                 entity,
                 &mut staged,
                 &mut commands,
+                Some(msg.wall),
             );
         }
         for (entity, bound, mut staged) in &mut query {
@@ -88,12 +94,14 @@ pub(super) fn bridge_impact_bolt_wall(
                 bound,
                 &mut staged,
                 &mut commands,
+                Some(msg.bolt),
             );
             evaluate_staged_effects(
                 &Trigger::Impact(ImpactTarget::Bolt),
                 entity,
                 &mut staged,
                 &mut commands,
+                Some(msg.bolt),
             );
         }
     }
@@ -105,7 +113,7 @@ pub(super) fn bridge_impact_bolt_breaker(
     mut query: Query<(Entity, &BoundEffects, &mut StagedEffects)>,
     mut commands: Commands,
 ) {
-    for _msg in reader.read() {
+    for msg in reader.read() {
         for (entity, bound, mut staged) in &mut query {
             evaluate_bound_effects(
                 &Trigger::Impact(ImpactTarget::Breaker),
@@ -113,12 +121,14 @@ pub(super) fn bridge_impact_bolt_breaker(
                 bound,
                 &mut staged,
                 &mut commands,
+                Some(msg.breaker),
             );
             evaluate_staged_effects(
                 &Trigger::Impact(ImpactTarget::Breaker),
                 entity,
                 &mut staged,
                 &mut commands,
+                Some(msg.breaker),
             );
         }
         for (entity, bound, mut staged) in &mut query {
@@ -128,12 +138,14 @@ pub(super) fn bridge_impact_bolt_breaker(
                 bound,
                 &mut staged,
                 &mut commands,
+                Some(msg.bolt),
             );
             evaluate_staged_effects(
                 &Trigger::Impact(ImpactTarget::Bolt),
                 entity,
                 &mut staged,
                 &mut commands,
+                Some(msg.bolt),
             );
         }
     }
@@ -145,7 +157,7 @@ pub(super) fn bridge_impact_breaker_cell(
     mut query: Query<(Entity, &BoundEffects, &mut StagedEffects)>,
     mut commands: Commands,
 ) {
-    for _msg in reader.read() {
+    for msg in reader.read() {
         for (entity, bound, mut staged) in &mut query {
             evaluate_bound_effects(
                 &Trigger::Impact(ImpactTarget::Cell),
@@ -153,12 +165,14 @@ pub(super) fn bridge_impact_breaker_cell(
                 bound,
                 &mut staged,
                 &mut commands,
+                Some(msg.cell),
             );
             evaluate_staged_effects(
                 &Trigger::Impact(ImpactTarget::Cell),
                 entity,
                 &mut staged,
                 &mut commands,
+                Some(msg.cell),
             );
         }
         for (entity, bound, mut staged) in &mut query {
@@ -168,12 +182,14 @@ pub(super) fn bridge_impact_breaker_cell(
                 bound,
                 &mut staged,
                 &mut commands,
+                Some(msg.breaker),
             );
             evaluate_staged_effects(
                 &Trigger::Impact(ImpactTarget::Breaker),
                 entity,
                 &mut staged,
                 &mut commands,
+                Some(msg.breaker),
             );
         }
     }
@@ -185,7 +201,7 @@ pub(super) fn bridge_impact_breaker_wall(
     mut query: Query<(Entity, &BoundEffects, &mut StagedEffects)>,
     mut commands: Commands,
 ) {
-    for _msg in reader.read() {
+    for msg in reader.read() {
         for (entity, bound, mut staged) in &mut query {
             evaluate_bound_effects(
                 &Trigger::Impact(ImpactTarget::Wall),
@@ -193,12 +209,14 @@ pub(super) fn bridge_impact_breaker_wall(
                 bound,
                 &mut staged,
                 &mut commands,
+                Some(msg.wall),
             );
             evaluate_staged_effects(
                 &Trigger::Impact(ImpactTarget::Wall),
                 entity,
                 &mut staged,
                 &mut commands,
+                Some(msg.wall),
             );
         }
         for (entity, bound, mut staged) in &mut query {
@@ -208,12 +226,14 @@ pub(super) fn bridge_impact_breaker_wall(
                 bound,
                 &mut staged,
                 &mut commands,
+                Some(msg.breaker),
             );
             evaluate_staged_effects(
                 &Trigger::Impact(ImpactTarget::Breaker),
                 entity,
                 &mut staged,
                 &mut commands,
+                Some(msg.breaker),
             );
         }
     }
@@ -225,7 +245,7 @@ pub(super) fn bridge_impact_cell_wall(
     mut query: Query<(Entity, &BoundEffects, &mut StagedEffects)>,
     mut commands: Commands,
 ) {
-    for _msg in reader.read() {
+    for msg in reader.read() {
         for (entity, bound, mut staged) in &mut query {
             evaluate_bound_effects(
                 &Trigger::Impact(ImpactTarget::Wall),
@@ -233,12 +253,14 @@ pub(super) fn bridge_impact_cell_wall(
                 bound,
                 &mut staged,
                 &mut commands,
+                Some(msg.wall),
             );
             evaluate_staged_effects(
                 &Trigger::Impact(ImpactTarget::Wall),
                 entity,
                 &mut staged,
                 &mut commands,
+                Some(msg.wall),
             );
         }
         for (entity, bound, mut staged) in &mut query {
@@ -248,12 +270,14 @@ pub(super) fn bridge_impact_cell_wall(
                 bound,
                 &mut staged,
                 &mut commands,
+                Some(msg.cell),
             );
             evaluate_staged_effects(
                 &Trigger::Impact(ImpactTarget::Cell),
                 entity,
                 &mut staged,
                 &mut commands,
+                Some(msg.cell),
             );
         }
     }

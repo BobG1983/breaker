@@ -26,7 +26,7 @@ fn bound_effects_and_staged_effects_inserted_on_cell_if_absent() {
                     trigger: Trigger::Died,
                     then: vec![EffectNode::Do(EffectKind::Explode {
                         range: 48.0,
-                        damage_mult: 1.0,
+                        damage: 1.0,
                     })],
                 }],
             }]),
@@ -65,7 +65,7 @@ fn staged_effects_inserted_when_bound_effects_already_exists() {
                     trigger: Trigger::Died,
                     then: vec![EffectNode::Do(EffectKind::Explode {
                         range: 48.0,
-                        damage_mult: 1.0,
+                        damage: 1.0,
                     })],
                 }],
             }]),

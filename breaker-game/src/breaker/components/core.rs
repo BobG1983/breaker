@@ -8,30 +8,6 @@ use rantzsoft_spatial2d::components::{InterpolateTransform2D, Spatial2D};
 #[require(Spatial2D, InterpolateTransform2D)]
 pub struct Breaker;
 
-/// Full width of the breaker in world units.
-#[derive(Component, Debug)]
-pub struct BaseWidth(pub f32);
-
-impl BaseWidth {
-    /// Returns half the breaker width.
-    #[must_use]
-    pub fn half_width(&self) -> f32 {
-        self.0 / 2.0
-    }
-}
-
-/// Full height of the breaker in world units.
-#[derive(Component, Debug)]
-pub struct BaseHeight(pub f32);
-
-impl BaseHeight {
-    /// Returns half the breaker height.
-    #[must_use]
-    pub fn half_height(&self) -> f32 {
-        self.0 / 2.0
-    }
-}
-
 /// Y position of the breaker at rest.
 #[derive(Component, Debug)]
 pub struct BreakerBaseY(pub f32);
@@ -39,6 +15,14 @@ pub struct BreakerBaseY(pub f32);
 /// Maximum reflection angle from vertical in radians.
 #[derive(Component, Debug)]
 pub struct BreakerReflectionSpread(pub f32);
+
+/// Marker: the primary breaker (persists across nodes, cleaned up on run end).
+#[derive(Component, Debug)]
+pub struct PrimaryBreaker;
+
+/// Marker: an extra breaker (cleaned up on node exit).
+#[derive(Component, Debug)]
+pub struct ExtraBreaker;
 
 /// Marker: breaker entity has been initialized by `init_breaker`.
 /// Prevents duplicate chain pushes on node re-entry.
@@ -48,18 +32,6 @@ pub struct BreakerInitialized;
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn base_width_half_width() {
-        let w = BaseWidth(120.0);
-        assert!((w.half_width() - 60.0).abs() < f32::EPSILON);
-    }
-
-    #[test]
-    fn base_height_half_height() {
-        let h = BaseHeight(20.0);
-        assert!((h.half_height() - 10.0).abs() < f32::EPSILON);
-    }
 
     // ── Breaker #[require] tests ─────────────────────────────────
 

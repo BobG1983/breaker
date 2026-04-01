@@ -346,8 +346,8 @@ pub enum EffectKind {
     Explode {
         /// Blast radius.
         range: f32,
-        /// Damage multiplier.
-        damage_mult: f32,
+        /// Flat damage dealt to each cell in range.
+        damage: f32,
     },
     /// Breaker deceleration multiplier for precise stops.
     QuickStop {

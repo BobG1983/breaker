@@ -83,8 +83,6 @@ pub(crate) fn init_breaker(
 
     for entity in &breaker_query {
         commands.entity(entity).insert(BreakerInitialized);
-        if let Some(life_pool) = def.life_pool {
-            commands.entity(entity).insert(LivesCount(life_pool));
-        }
+        commands.entity(entity).insert(LivesCount(def.life_pool));
     }
 }

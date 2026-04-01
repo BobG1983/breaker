@@ -30,8 +30,15 @@ fn bridge_early_bump(
                 bound,
                 &mut staged,
                 &mut commands,
+                None,
             );
-            evaluate_staged_effects(&Trigger::EarlyBump, entity, &mut staged, &mut commands);
+            evaluate_staged_effects(
+                &Trigger::EarlyBump,
+                entity,
+                &mut staged,
+                &mut commands,
+                None,
+            );
         }
     }
 }

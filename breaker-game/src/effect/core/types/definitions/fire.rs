@@ -220,11 +220,11 @@ impl EffectKind {
                     world,
                 );
             }
-            Self::Explode { range, damage_mult } => {
+            Self::Explode { range, damage } => {
                 super::super::super::super::effects::explode::fire(
                     entity,
                     *range,
-                    *damage_mult,
+                    *damage,
                     source_chip,
                     world,
                 );
