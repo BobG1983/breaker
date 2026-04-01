@@ -9,7 +9,7 @@ use crate::{
     input::resources::{GameAction, InputActions},
 };
 
-fn default_bump_visual_params() -> BumpFeedback {
+fn default_bump_feedback() -> BumpFeedback {
     let config = BreakerConfig::default();
     BumpFeedback {
         duration: config.bump_visual_duration,
@@ -21,7 +21,7 @@ fn default_bump_visual_params() -> BumpFeedback {
 }
 
 fn test_bump_offset(timer_fraction: f32) -> f32 {
-    let params = default_bump_visual_params();
+    let params = default_bump_feedback();
     let visual = BumpFeedbackState {
         timer: params.duration * timer_fraction,
         duration: params.duration,
@@ -50,7 +50,7 @@ fn bump_offset_positive_mid_animation() {
 
 #[test]
 fn bump_offset_at_peak_fraction_equals_peak() {
-    let params = default_bump_visual_params();
+    let params = default_bump_feedback();
     let timer = params.duration * (1.0 - params.peak_fraction);
     let visual = BumpFeedbackState {
         timer,
@@ -66,7 +66,7 @@ fn bump_offset_at_peak_fraction_equals_peak() {
 
 #[test]
 fn bump_offset_asymmetric_shape() {
-    let params = default_bump_visual_params();
+    let params = default_bump_feedback();
     let rise_mid = bump_offset(
         &BumpFeedbackState {
             timer: params.duration * (1.0 - 0.15),
@@ -126,7 +126,7 @@ fn trigger_inserts_bump_visual_on_bump_action() {
 
     let entity = app
         .world_mut()
-        .spawn((Breaker, BumpState::default(), default_bump_visual_params()))
+        .spawn((Breaker, BumpState::default(), default_bump_feedback()))
         .id();
 
     set_bump_action(&mut app);
@@ -144,7 +144,7 @@ fn trigger_skips_without_bump_action() {
 
     let entity = app
         .world_mut()
-        .spawn((Breaker, BumpState::default(), default_bump_visual_params()))
+        .spawn((Breaker, BumpState::default(), default_bump_feedback()))
         .id();
 
     // No Bump action set
@@ -168,7 +168,7 @@ fn trigger_fires_during_cooldown() {
                 cooldown: 0.5,
                 ..Default::default()
             },
-            default_bump_visual_params(),
+            default_bump_feedback(),
         ))
         .id();
 
@@ -184,7 +184,7 @@ fn trigger_fires_during_cooldown() {
 #[test]
 fn trigger_does_not_retrigger_while_animating() {
     let mut app = trigger_test_app();
-    let params = default_bump_visual_params();
+    let params = default_bump_feedback();
 
     let entity = app
         .world_mut()
@@ -230,7 +230,7 @@ fn animate_applies_position2d_y_offset_during_animation() {
 
     let mut app = animate_test_app();
     let config = BreakerConfig::default();
-    let params = default_bump_visual_params();
+    let params = default_bump_feedback();
 
     app.world_mut().spawn((
         Breaker,
@@ -267,7 +267,7 @@ fn animate_removes_bump_visual_when_done() {
 
     let mut app = animate_test_app();
     let config = BreakerConfig::default();
-    let params = default_bump_visual_params();
+    let params = default_bump_feedback();
 
     let entity = app
         .world_mut()
@@ -308,7 +308,7 @@ fn animate_snaps_position2d_to_base_after_expiry() {
 
     let mut app = animate_test_app();
     let config = BreakerConfig::default();
-    let params = default_bump_visual_params();
+    let params = default_bump_feedback();
 
     // Start with an offset Y to verify the snap overrides it
     app.world_mut().spawn((

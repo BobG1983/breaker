@@ -233,11 +233,17 @@ pub(crate) struct TransferCommand {
 impl Command for TransferCommand {
     fn apply(self, world: &mut World) {
         let mut do_effects = Vec::new();
+        let mut on_children = Vec::new();
         let mut other_children = Vec::new();
 
         for child in self.children {
             match child {
                 EffectNode::Do(effect) => do_effects.push(effect),
+                EffectNode::On {
+                    target,
+                    permanent,
+                    then,
+                } => on_children.push((target, permanent, then)),
                 other => other_children.push(other),
             }
         }
@@ -257,6 +263,19 @@ impl Command for TransferCommand {
 
         for effect in do_effects {
             effect.fire(self.entity, &self.chip_name, world);
+        }
+
+        // Recursively resolve nested On nodes, propagating the current entity
+        // as context so same-target chains fully unwrap.
+        for (target, permanent, then) in on_children {
+            ResolveOnCommand {
+                target,
+                chip_name: self.chip_name.clone(),
+                children: then,
+                permanent,
+                context_entity: Some(self.entity),
+            }
+            .apply(world);
         }
     }
 }

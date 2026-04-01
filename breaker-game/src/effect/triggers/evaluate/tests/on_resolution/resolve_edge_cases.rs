@@ -203,26 +203,32 @@ fn mixed_on_and_when_in_staged_effects_both_consumed_when_trigger_matches() {
 }
 
 // -----------------------------------------------------------------------
-// Nested On(On()) — inner On is deferred to target's StagedEffects
+// Nested On(On()) — inner On is recursively resolved during transfer
 // -----------------------------------------------------------------------
 
 #[test]
-fn nested_on_transfers_inner_on_to_target_staged_effects() {
+fn nested_on_resolves_inner_on_to_bolt_immediately() {
+    use crate::bolt::components::{Bolt, PrimaryBolt};
+
     // On(Cell, [On(Bolt, [When(Died, [Do(SpeedBoost)])])])
     // Step 1: outer On(Cell) resolves to cell_b via context
-    // Step 2: inner On(Bolt) is pushed to cell_b's StagedEffects (non-Do child)
-    // Step 3: next evaluate on cell_b consumes On(Bolt) — with no collision context,
-    //         it should resolve via resolve_default(Bolt) → PrimaryBolt
+    // Step 2: TransferCommand on cell_b recursively resolves inner On(Bolt)
+    // Step 3: inner On(Bolt) resolves to PrimaryBolt via resolve_default
+    // Step 4: When(Died) is staged on the bolt (non-permanent inner On)
     let mut world = World::new();
 
     let cell_b = world
         .spawn((Cell, BoundEffects::default(), StagedEffects::default()))
         .id();
-    let _cell_a = world
-        .spawn((Cell, BoundEffects::default(), StagedEffects::default()))
+    let _bolt = world
+        .spawn((
+            Bolt,
+            PrimaryBolt,
+            BoundEffects::default(),
+            StagedEffects::default(),
+        ))
         .id();
 
-    // Outer On: resolves to cell_b via context
     let cmd = ResolveOnCommand {
         target: Target::Cell,
         chip_name: "nested_test".to_string(),
@@ -239,22 +245,11 @@ fn nested_on_transfers_inner_on_to_target_staged_effects() {
     };
     cmd.apply(&mut world);
 
-    // After outer On resolves: cell_b should have the inner On(Bolt) in StagedEffects
-    let staged = world.get::<StagedEffects>(cell_b).unwrap();
-    assert_eq!(
-        staged.0.len(),
-        1,
-        "cell_b should have 1 staged entry — the inner On(Bolt) node"
-    );
+    // cell_b should have nothing — inner On was recursively resolved, not stored
+    let staged_cell = world.get::<StagedEffects>(cell_b).unwrap();
     assert!(
-        matches!(
-            &staged.0[0].1,
-            EffectNode::On {
-                target: Target::Bolt,
-                ..
-            }
-        ),
-        "staged entry should be On(Bolt, ...)"
+        staged_cell.0.is_empty(),
+        "cell_b should have no staged entries — inner On(Bolt) was resolved immediately"
     );
 }
 
@@ -326,5 +321,79 @@ fn nested_on_inner_resolves_to_primary_bolt_when_consumed_without_context() {
     assert!(
         secondary_staged.0.is_empty(),
         "Non-primary bolt should NOT receive the inner On(Bolt) transfer"
+    );
+}
+
+// -----------------------------------------------------------------------
+// Nested same-target On nodes must recursively unwrap with context
+// -----------------------------------------------------------------------
+// On(Cell, [On(Cell, [When(Died, [Do(SpeedBoost)])])]) with context=Some(cell_b)
+// should fully unwrap: all On(Cell) layers resolve to cell_b, and the final
+// When(Died) lands in cell_b's StagedEffects. No intermediate On node should
+// be left stranded in staged without context.
+
+#[test]
+fn nested_same_target_on_nodes_unwrap_to_final_when() {
+    let mut world = World::new();
+
+    let cell_a = world
+        .spawn((Cell, BoundEffects::default(), StagedEffects::default()))
+        .id();
+    let cell_b = world
+        .spawn((Cell, BoundEffects::default(), StagedEffects::default()))
+        .id();
+    let cell_c = world
+        .spawn((Cell, BoundEffects::default(), StagedEffects::default()))
+        .id();
+
+    // Three layers of On(Cell) wrapping When(Died, [Do(SpeedBoost)])
+    let cmd = ResolveOnCommand {
+        target: Target::Cell,
+        chip_name: "nested_same".to_string(),
+        children: vec![EffectNode::On {
+            target: Target::Cell,
+            permanent: false,
+            then: vec![EffectNode::On {
+                target: Target::Cell,
+                permanent: false,
+                then: vec![EffectNode::When {
+                    trigger: Trigger::Died,
+                    then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
+                }],
+            }],
+        }],
+        permanent: false,
+        context_entity: Some(cell_b),
+    };
+    cmd.apply(&mut world);
+
+    // cell_b should have the final When(Died) in StagedEffects — all On layers unwrapped
+    let staged_b = world.get::<StagedEffects>(cell_b).unwrap();
+    assert_eq!(
+        staged_b.0.len(),
+        1,
+        "cell_b should have exactly 1 staged entry — the final When(Died) after full unwrap"
+    );
+    assert!(
+        matches!(
+            &staged_b.0[0].1,
+            EffectNode::When {
+                trigger: Trigger::Died,
+                ..
+            }
+        ),
+        "cell_b's staged entry should be When(Died, ...), not an intermediate On node"
+    );
+
+    // cell_a and cell_c should have nothing
+    let staged_a = world.get::<StagedEffects>(cell_a).unwrap();
+    let staged_c = world.get::<StagedEffects>(cell_c).unwrap();
+    assert!(
+        staged_a.0.is_empty(),
+        "cell_a should have no staged effects"
+    );
+    assert!(
+        staged_c.0.is_empty(),
+        "cell_c should have no staged effects"
     );
 }

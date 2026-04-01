@@ -31,7 +31,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn breaker_state_default_is_idle() {
+    fn dash_state_default_is_idle() {
         assert_eq!(DashState::default(), DashState::Idle);
     }
 }
