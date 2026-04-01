@@ -1,0 +1,26 @@
+// Adversarial: Nova Lance is a multi-stage evolution chip that fires a nested 3-level trigger
+// chain: PerfectBumped → Impacted(Cell) → PiercingBeam. AlwaysPerfect input guarantees a
+// perfect bump every breaker contact, so the outer PerfectBumped trigger fires at maximum rate.
+// Each perfect bump arms the Impacted(Cell) listener, which then fires PiercingBeam on the
+// next cell impact — meaning every cell impact following a perfect bump generates a full beam
+// sweep. Dense layout maximises cell impacts per frame, so multiple beams can be active
+// simultaneously across different bolt trajectories. The adversarial risk: if the intermediate
+// Impacted(Cell) listener accumulates without being consumed (the PerfectBumped arm fires but
+// no cell impact follows before the next PerfectBumped), duplicate arm registrations stack up
+// and NoEntityLeaks fires for orphaned listener entities. BoltInBounds catches any bolt whose
+// trajectory is corrupted by simultaneous beam sweeps that modify cell positions mid-frame.
+// NoNaN guards against position NaN from a beam sweep over a cell destroyed by a simultaneous
+// earlier beam in the same frame. BoltSpeedAccurate catches speed corruption from overlapping
+// PiercingBeam damage multiplier applications.
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Perfect(AlwaysPerfect),
+    max_frames: 5000,
+    disallowed_failures: [NoEntityLeaks, BoltInBounds, NoNaN, BoltSpeedAccurate],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: 2311,
+    chip_selections: ["Nova Lance"],
+)
