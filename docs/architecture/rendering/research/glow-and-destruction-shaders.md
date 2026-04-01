@@ -1,5 +1,11 @@
 # Glow and Destruction Shaders — Bevy 0.18.1 Research
 
+> **Raw research.** Architecture decisions that differ from these findings are in `docs/architecture/rendering/`.
+> Specifically: this doc recommends `noisy_bevy` for dissolve noise and `voronator` for fracture Voronoi.
+> **Architecture decision**: custom `noise.wgsl` and `voronoi.wgsl` with no external deps (see `shaders.md`).
+> Also: this doc recommends pre-computed CPU Voronoi for fracture.
+> **Architecture decision**: shader-side Voronoi (sufficient for cell destruction VFX, no physical shard separation needed).
+
 Researched: 2026-03-30
 Version confirmed: Bevy 0.18.1 (breaker-game/Cargo.toml)
 

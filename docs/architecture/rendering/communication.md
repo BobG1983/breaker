@@ -17,8 +17,16 @@
 ### Gameplay → VFX (event VFX)
 Same `ExecuteRecipe` message. Cell death sends `ExecuteRecipe { recipe: "shatter_sparks", position }`. No separate event VFX message types.
 
-### VFX → Gameplay (completion)
-`TransitionComplete` for state transitions gated on animation.
+### VFX → Gameplay (recipe lifecycle)
+`RecipeStarted { source, recipe, execution }` — recipe begins executing.
+`PhaseStarted { source, recipe, phase_index }` — phase's primitives spawned.
+`PhaseComplete { source, recipe, phase_index }` — phase's non-anchored primitives expired.
+`RecipeComplete { source, recipe }` — all phases done, execution about to despawn.
+
+Game uses these to sequence gameplay around VFX (e.g., despawn cell husk on `RecipeComplete`, activate bolt after spawn flash). Most recipes are fire-and-forget — lifecycle messages are optional to read.
+
+### Screen → Gameplay (transition completion)
+`TransitionComplete` — owned by `screen/`, not the crate. Fired when transition In animation finishes.
 
 ### Typed Per-Primitive Messages (crate-owned)
 
@@ -169,7 +177,7 @@ cells/ determines destruction context based on recent kill rate:
 - Combo (2-4 rapid kills) → sends with `death_recipe_combo` (falls back to `death_recipe` if None)
 - Chain (5+ kills) → sends with `death_recipe_chain` (falls back to `death_recipe` if None)
 
-Context detection: cells/ tracks recent `CellDestroyedAt` messages within a time window.
+Context detection: cells/ tracks recent `CellDestroyedAt` messages within a time window. Placeholder values: combo = 2-4 kills within 0.5s, chain = 5+ kills within 1.0s. Tuned in Phase 7.
 
 ### Cell Hit VFX (cells/ domain)
 

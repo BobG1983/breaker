@@ -16,6 +16,16 @@ temperature_palette: (
 ),
 ```
 
+## Bloom
+
+```ron
+// In VfxConfig
+bloom_intensity: 0.3,                    // moderate bloom — neon glow without washing out
+bloom_low_frequency_boost: 0.5,          // wide glow (not just tight halos)
+bloom_composite_mode: EnergyConserving,  // prevents over-brightening with many HDR sources
+bloom_prefilter_threshold: 0.8,          // only values > 0.8 HDR contribute to bloom
+```
+
 ## Grid
 
 ```ron
@@ -83,6 +93,17 @@ tick_dim_intensity: 0.4,     // completed
 tick_outline_intensity: 0.1, // upcoming
 ```
 
+## Trail Ring Buffer
+
+```ron
+// ShieldEnergy trail defaults (per Trail config)
+trail_base_capacity: 32,     // ring buffer samples at TrailLength(1.0)
+trail_max_capacity: 256,     // hard cap — prevents unbounded growth
+trail_min_capacity: 2,       // minimum — need 2 points for a line
+```
+
+`TrailLength(2.0)` = 64 samples, `TrailLength(0.5)` = 16 samples. Capacity scales linearly.
+
 ## Modifier Diminishing Returns
 
 ```ron
@@ -142,4 +163,9 @@ collapse_tile_count: (8, 6),  // columns x rows
 
 ## Font
 
-Monospace font for timer readout, seed display, numeric data: **placeholder — use any monospace TTF available** (e.g., JetBrains Mono, Fira Mono, or Source Code Pro). Final font chosen in Phase 7 with the audio/polish pass. Asset path: `assets/fonts/mono.ttf`.
+**Space Mono Bold** — OFL 1.1 (SIL Open Font License), from Colophon Foundry via Google Fonts. Geometric grotesque monospace designed for display contexts. Complements Orbitron-Bold (same geometric construction). Two weights available (Regular, Bold); use Bold for all HUD/display contexts.
+
+- Source: [Google Fonts](https://fonts.google.com/specimen/Space+Mono) / [GitHub](https://github.com/googlefonts/spacemono)
+- Asset path: `assets/fonts/SpaceMono-Bold.ttf`
+- License file: bundle `OFL.txt` from the repo
+- Used by: timer readout, run seed display, chip card text, numeric data

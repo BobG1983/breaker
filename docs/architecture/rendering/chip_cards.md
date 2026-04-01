@@ -20,10 +20,11 @@ Each card is a **parent entity** with children:
 
 | Rarity | Border Color | Background | Special Effect |
 |--------|-------------|------------|----------------|
-| Common | Dim white | Dark, minimal glow | None |
-| Uncommon | Brighter border | Subtle glow | None |
-| Rare | Gold/amber border | Warm glow | None |
-| Evolution | Prismatic shifting border | `holographic.wgsl` shimmer | GlitchText on rarity label |
+| Common | Dim white/silver | Dark, minimal glow | None |
+| Rare | Electric blue | Faint blue tint | Subtle pulse animation |
+| Epic | Magenta | Faint magenta tint | Shimmer wave animation |
+| Legendary | Gold (thicker) | Warm amber tint | Particle aura around card edges |
+| Evolution | Prismatic shifting | `holographic.wgsl` shimmer | GlitchText on rarity label |
 
 ### Abstract Symbol Icons
 

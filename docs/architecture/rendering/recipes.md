@@ -48,6 +48,8 @@ pub struct Phase {
 
 Position of each step = `message.position + phase.offset.unwrap_or(Vec2::ZERO)`.
 
+**RON note:** `Vec2` deserializes from tuples in RON: `offset: (30.0, 0.0)`. The `Option` is handled by `#[serde(default)]` — omit the field entirely for no offset (don't write `offset: None`).
+
 ## Phase Triggers
 
 ```rust
@@ -77,6 +79,58 @@ RecipeExecution entity
 Cleanup: when all `PhaseGroup` children are gone, the `RecipeExecution` entity self-despawns.
 
 **Anchored primitives complete immediately.** Anchored steps (AnchoredBeam, AnchoredDistortion, etc.) count as "complete" the moment they spawn. They persist independently and don't gate phase completion. This means `AfterPhase(N)` triggers as soon as all non-anchored primitives in phase N expire.
+
+## Recipe Lifecycle Messages (crate → game)
+
+The crate emits lifecycle messages at each stage of recipe execution. The game reads these to sequence gameplay actions around VFX (e.g., activate a bolt after its spawn flash, despawn a cell husk after its death dissolve).
+
+```rust
+/// Emitted when a recipe starts executing.
+#[derive(Message, Clone)]
+pub struct RecipeStarted {
+    pub source: Option<Entity>,
+    pub recipe: String,
+    pub execution: Entity,  // the RecipeExecution entity
+}
+
+/// Emitted when a phase starts (all its steps have been spawned).
+#[derive(Message, Clone)]
+pub struct PhaseStarted {
+    pub source: Option<Entity>,
+    pub recipe: String,
+    pub phase_index: usize,
+}
+
+/// Emitted when a phase completes (all non-anchored primitives in the phase have expired).
+#[derive(Message, Clone)]
+pub struct PhaseComplete {
+    pub source: Option<Entity>,
+    pub recipe: String,
+    pub phase_index: usize,
+}
+
+/// Emitted when the entire recipe completes (all phases done, RecipeExecution about to despawn).
+#[derive(Message, Clone)]
+pub struct RecipeComplete {
+    pub source: Option<Entity>,
+    pub recipe: String,
+}
+```
+
+**Lifecycle flow:**
+1. `ExecuteRecipe` received → crate spawns `RecipeExecution` → emits `RecipeStarted`
+2. Each phase triggers → crate spawns its primitives → emits `PhaseStarted { phase_index }`
+3. Phase's non-anchored primitives expire → emits `PhaseComplete { phase_index }`
+4. All phases complete → emits `RecipeComplete` → `RecipeExecution` despawns
+
+**Repeating phases:** `PhaseStarted`/`PhaseComplete` fire on each repeat iteration. The game can count iterations if needed.
+
+**Use cases:**
+- Bolt spawn: game sends `ExecuteRecipe { recipe: "bolt_spawn" }`, waits for `RecipeComplete`, then activates bolt gameplay
+- Cell death: game strips physics components, sends death recipe, waits for `RecipeComplete`, then despawns the entity (replacing `DeferredDespawn` timer approach)
+- Phased effects: game reads `PhaseComplete { phase_index: 0 }` to trigger a gameplay action between VFX phases
+
+**Ignoring lifecycle messages is fine.** Most recipes are fire-and-forget. The game only reads these messages when it needs to sequence gameplay around VFX. Unread messages are dropped by Bevy's message system.
 
 ## Repeating Phases
 
@@ -288,6 +342,171 @@ Recipes support hot-reload through the `rantzsoft_defaults` asset watcher pipeli
 3. Next `ExecuteRecipe` picks up the new version
 
 Active VFX from the old recipe continue playing; only new fires use the updated recipe. The debug menu should include a "re-fire last recipe" button for rapid iteration.
+
+## Recipe Dispatch System
+
+The dispatch system is the core of recipe execution. It lives in `recipes/dispatch.rs` and runs in `VfxSet::RecipeDispatch`.
+
+### RecipeExecution Entity
+
+When `handle_execute_recipe` processes an `ExecuteRecipe` message, it spawns a `RecipeExecution` entity:
+
+```rust
+#[derive(Component)]
+pub struct RecipeExecution {
+    pub recipe_name: String,
+    pub source: Option<Entity>,
+    pub target: Option<Entity>,
+    pub camera: Option<Entity>,
+    pub position: Vec2,
+    pub direction: Option<Vec2>,
+    pub phase_states: Vec<PhaseState>,
+    pub elapsed: f32,               // seconds since recipe started (Time<Virtual>)
+}
+
+#[derive(Clone, Debug)]
+pub struct PhaseState {
+    pub status: PhaseStatus,
+    pub repeat_count: u32,          // how many times this phase has fired
+    pub next_repeat_at: Option<f32>, // elapsed time for next repeat
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum PhaseStatus {
+    Waiting,    // trigger condition not yet met
+    Active,     // steps spawned, waiting for non-anchored children to expire
+    Complete,   // all non-anchored children expired (or anchored-only phase — immediately complete)
+    Repeating,  // has RepeatConfig, re-fires at interval
+}
+```
+
+### Dispatch Algorithm (per frame, in VfxSet::RecipeDispatch)
+
+```
+for each RecipeExecution:
+    1. elapsed += time.delta_secs()  (Time<Virtual>)
+
+    2. Check source entity liveness:
+       if source is Some and world.get_entity(source) is None:
+           → despawn RecipeExecution and all children
+           → continue to next execution
+
+    3. For each phase (indexed):
+       evaluate trigger condition:
+         - Immediate: satisfied when elapsed > 0
+         - Delay(d): satisfied when elapsed >= d
+         - AfterPhase(i): satisfied when phase_states[i].status == Complete
+         - OnCompletion: satisfied when ALL preceding phases are Complete
+
+       if trigger satisfied AND status == Waiting:
+           → status = Active
+           → spawn_phase_steps(phase, execution)
+           → emit PhaseStarted { source, recipe, phase_index }
+
+       if status == Active:
+           check if PhaseGroup children have all despawned:
+           (query Children of PhaseGroup entity, count > 0?)
+           if no children remain:
+               → if phase has RepeatConfig:
+                   status = Repeating
+                   next_repeat_at = elapsed + repeat.interval
+               → else:
+                   status = Complete
+                   emit PhaseComplete { source, recipe, phase_index }
+
+       if status == Repeating:
+           if elapsed >= next_repeat_at:
+               → re-spawn_phase_steps(phase, execution)
+               → repeat_count += 1
+               → if repeat.count is Some(n) and repeat_count >= n:
+                   status = Complete
+                   emit PhaseComplete { source, recipe, phase_index }
+               → else:
+                   next_repeat_at = elapsed + repeat.interval
+                   emit PhaseStarted (for each repeat iteration)
+
+    4. Check recipe completion:
+       if ALL phase_states are Complete:
+           → emit RecipeComplete { source, recipe }
+           → mark RecipeExecution for despawn
+```
+
+### spawn_phase_steps Algorithm
+
+```
+fn spawn_phase_steps(phase: &Phase, exec: &RecipeExecution):
+    let base_position = exec.position + phase.offset.unwrap_or(Vec2::ZERO)
+
+    // Spawn PhaseGroup entity as child of RecipeExecution
+    let phase_group = commands.spawn(PhaseGroup(phase_index))
+        .set_parent(exec_entity)
+        .id()
+
+    for step in &phase.steps:
+        match step:
+            // ── Non-anchored spatial primitives ──
+            ExpandingRing { .. } =>
+                spawn ring entity at base_position, parent = phase_group
+
+            Beam { direction, .. } =>
+                resolve direction:
+                    Direction::Forward → read Velocity2D from source entity, normalize
+                    Direction::Backward → negate Forward
+                    Direction::N/S/E/W/etc. → fixed Vec2
+                    fallback: exec.direction if Some, else Vec2::Y
+                spawn beam entity at base_position with resolved direction, parent = phase_group
+
+            SparkBurst { .. } =>
+                spawn emitter entity at base_position, parent = phase_group
+                spray direction from exec.direction (if Some, else Radial)
+
+            // ── Screen effects (require camera) ──
+            ScreenShake { tier } =>
+                if exec.camera is Some:
+                    send TriggerScreenShake { camera, tier }
+                else:
+                    warn and skip
+                // Screen effects don't spawn child entities — they message the camera.
+                // They do NOT gate phase completion.
+
+            ScreenFlash { .. } | RadialDistortion { .. } | ... =>
+                same pattern: send trigger message if camera exists, else warn
+
+            // ── Anchored primitives (require source/target entities) ──
+            AnchoredBeam { entity_a, entity_b, .. } =>
+                let a = resolve_entity_ref(entity_a, exec)  // Source → exec.source, Target → exec.target
+                let b = resolve_entity_ref(entity_b, exec)
+                if a is None or b is None:
+                    warn and skip
+                else:
+                    spawn anchored beam entity (NOT child of phase_group — lives independently)
+                    // Anchored primitives complete immediately for phase tracking purposes
+
+            // ── Destruction primitives (require entity) ──
+            Disintegrate { entity: entity_ref, duration } =>
+                let target = resolve_entity_ref(entity_ref, exec)
+                if target is None: warn and skip
+                else: begin animating dissolve_threshold on target's EntityGlowMaterial
+                      (0.0 → 1.0 over duration). Spawns a timer entity as child of phase_group.
+
+            Split { entity: entity_ref, .. } | Fracture { entity: entity_ref, .. } =>
+                similar: resolve entity, apply destruction effect
+
+fn resolve_entity_ref(ref: EntityRef, exec: &RecipeExecution) -> Option<Entity>:
+    match ref:
+        EntityRef::Source => exec.source
+        EntityRef::Target => exec.target
+```
+
+### Phase Completion Rules
+
+| Step type | Gates phase completion? | Why |
+|-----------|----------------------|-----|
+| Spatial primitives (ring, beam, spark, etc.) | Yes — spawned as PhaseGroup children | Phase completes when all children despawn |
+| Screen effects (shake, flash, distortion) | No — sends messages, no child entity | Messages fire immediately |
+| Anchored primitives (AnchoredBeam, etc.) | No — spawned independently | They persist until source/target despawns |
+| Destruction (Disintegrate, Split, Fracture) | Yes — timer entity as PhaseGroup child | Phase completes when timer expires |
+| Text (GlitchText) | Yes — text entity as PhaseGroup child | Phase completes when text despawns |
 
 ## RON Examples
 

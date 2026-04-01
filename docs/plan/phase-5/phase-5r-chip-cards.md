@@ -21,9 +21,10 @@ All card systems live in `screen/chip_select/`.
 
 | Rarity | Border | Special Effect |
 |--------|--------|----------------|
-| Common | Dim white | None |
-| Uncommon | Brighter border | None |
-| Rare | Gold/amber | None |
+| Common | Dim white/silver | None |
+| Rare | Electric blue | Subtle pulse animation |
+| Epic | Magenta | Shimmer wave animation |
+| Legendary | Gold (thicker) | Particle aura around card edges |
 | Evolution | Prismatic shifting | `holographic.wgsl` shimmer + GlitchText on rarity label |
 
 ### 3. Abstract Symbol Icons

@@ -260,7 +260,8 @@ Each effect module (`effect/effects/<name>.rs` or `effect/effects/<name>/` direc
 pub struct ActiveSpeedBoosts(pub Vec<f32>);
 
 pub(crate) fn fire(entity: Entity, multiplier: f32, source_chip: &str, world: &mut World) {
-    // push multiplier to ActiveSpeedBoosts component
+    // push multiplier to ActiveSpeedBoosts component, then call recalculate_velocity
+    // (calls apply_velocity_formula immediately so bolt speed reflects the new boost)
     // source_chip is accepted for API uniformity but not used by stat effects
 }
 

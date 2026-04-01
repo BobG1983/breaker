@@ -1,5 +1,10 @@
 # Aura Rendering Research — Bevy 0.18.1
 
+> **Raw research.** Architecture decisions that differ from these findings are in `docs/architecture/rendering/`.
+> Specifically: this doc shows three separate `Material2d` types per aura variant.
+> **Architecture decision**: single `AuraMaterial` with `variant: u32` uniform (see `rantzsoft_vfx.md` and `types.md`).
+> The API patterns in this research (child entity spawning, SDF shaders, `specialize()` for additive blending) are still valid — only the material type count changed.
+
 Verified against docs.rs/bevy/0.18.1, Bevy GitHub (v0.18.1 tag), and external shader references.
 Date: 2026-03-30
 

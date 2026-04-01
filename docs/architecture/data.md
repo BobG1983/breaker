@@ -11,7 +11,7 @@ defaults.breaker.ron
         ↓  (asset loader)
 Res<BreakerConfig>
         ↓  (init_breaker_params — runs OnEnter(Playing))
-Entity components: BreakerWidth, BreakerHeight, MaxReflectionAngle, …
+Entity components: BreakerWidth, BreakerHeight, BreakerReflectionSpread, …
         ↓  (production systems query entities)
 move_breaker, bolt_breaker_collision, …
 ```
@@ -28,7 +28,7 @@ move_breaker, bolt_breaker_collision, …
 
 A component belongs on the entity it conceptually describes:
 
-- `MaxReflectionAngle` is a breaker surface property → lives on the **breaker** entity, even though `bolt_breaker_collision` also reads it
+- `BreakerReflectionSpread` is a breaker surface property → lives on the **breaker** entity, even though `bolt_breaker_collision` also reads it
 - `BoltRadius` is a bolt property → lives on the **bolt** entity, even though collision systems on other domains read it
 - Cross-entity queries are normal ECS — reading a component from another entity is not coupling
 
@@ -83,20 +83,20 @@ Each domain has an `init_*_params` system that runs `OnEnter(Playing)` after the
 pub fn init_breaker_params(
     mut commands: Commands,
     config: Res<BreakerConfig>,           // ← only place this is read
-    query: Query<Entity, (With<Breaker>, Without<BreakerMaxSpeed>)>,
+    query: Query<Entity, (With<Breaker>, Without<MaxSpeed>)>,
 ) {
     for entity in &query {
         commands.entity(entity).insert((
             BreakerWidth(config.width),
             BreakerHeight(config.height),
-            MaxReflectionAngle(config.max_reflection_angle),
+            BreakerReflectionSpread(config.reflection_spread.to_radians()),
             // …
         ));
     }
 }
 ```
 
-The `Without<BreakerMaxSpeed>` filter skips already-initialized entities (persisted across nodes).
+The `Without<MaxSpeed>` filter skips already-initialized entities (persisted across nodes).
 
 ---
 

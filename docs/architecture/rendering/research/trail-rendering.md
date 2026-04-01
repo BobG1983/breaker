@@ -1,5 +1,10 @@
 # Bevy 0.18.1 — 2D Motion Trail Rendering Research
 
+> **Raw research.** Architecture decisions that differ from these findings are in `docs/architecture/rendering/`.
+> Specifically: this doc recommends `ColorMaterial` with `AlphaMode2d::Blend` for ribbon trails.
+> **Architecture decision**: custom `TrailRibbonMaterial` with alpha-weighted additive blending via `specialize()` — `src_factor: SrcAlpha, dst_factor: One`. Same blend mode as ParticleMaterial. Trails add light but fade to invisible (not black). See `rantzsoft_vfx.md` — Trail Rendering section.
+> The API patterns in this research (TriangleStrip topology, ring buffer, `RenderAssetUsages::default()`, PostUpdate sampling) are still valid.
+
 Verified against docs.rs/bevy/0.18.1, official Bevy examples, and migration guides.
 Session date: 2026-03-30.
 

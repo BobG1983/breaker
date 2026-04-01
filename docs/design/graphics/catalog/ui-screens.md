@@ -112,6 +112,6 @@ Screens are not recipe-driven — they are entity compositions spawned on state 
 
 **Display/Body fonts:** Already loaded. Glitch overlay applied via GlitchText primitive where appropriate (titles, highlight labels). No recipe needed for the fonts themselves.
 
-**Data font (monospace):** Placeholder TTF at `assets/fonts/mono.ttf`. Final font chosen in Phase 7 polish pass. Used by timer readout, seed display, numeric data.
+**Data font (monospace):** Space Mono Bold (OFL 1.1) at `assets/fonts/SpaceMono-Bold.ttf`. License: `assets/fonts/SpaceMono-OFL.txt`. Used by timer readout, seed display, chip card text, numeric data.
 
 **Glitch text shader:** `glitch_text.wgsl` in `rantzsoft_vfx`. `GlitchText` PrimitiveStep + `SpawnGlitchText` message. Child overlay entity on `Text2d`. See `docs/architecture/rendering/shaders.md` — glitch_text.wgsl section.

@@ -10,10 +10,17 @@ There is **no `rendering/` or `graphics/` game domain**. All rendering primitive
 
 | Document | Contents |
 |----------|----------|
+| **Build Specs** | |
+| [Module Map](module-map.md) | rantzsoft_vfx crate module tree, lib.rs exports, prelude, naming conventions |
+| [System Scheduling](scheduling.md) | VfxSet enum, internal ordering, game integration, system-to-set mapping |
+| [Material Layouts](materials.md) | Full AsBindGroup structs, WGSL bindings, std140 layouts for all materials |
+| [Error Handling](error-handling.md) | Edge case catalog, warn-and-skip policy, per-situation behavior table |
+| [Screen Migration](screen-migration.md) | ui/ and fx/ → screen/ migration table, target module tree, plugin changes |
+| **Design** | |
 | [Composition Model](composition.md) | Two composition paths (recipe vs direct primitive), what goes where |
 | [rantzsoft_vfx Crate](rantzsoft_vfx.md) | Crate scope, what lives in the crate vs game, VfxConfig, camera-targeting API |
 | [Types](types.md) | Hue, Shape, Aura, Trail, GlowParams, typed visual parameters, VisualModifier |
-| [Recipes](recipes.md) | Recipe system: phases, primitives, ExecuteRecipe, hot-reload, RON format |
+| [Recipes](recipes.md) | Recipe system: phases, primitives, ExecuteRecipe, dispatch algorithm, hot-reload, RON format |
 | [Modifiers](modifiers.md) | Set/Add/Remove modifier messages, diminishing returns, ModifierConfig |
 | [Entity Visuals](entity_visuals.md) | AttachVisuals, EntityVisualConfig, RON rendering substructs |
 | [Shaders](shaders.md) | Concept shader catalog: entity_glow, aura, trail, primitives, post-processing, special |

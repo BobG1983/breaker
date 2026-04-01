@@ -28,9 +28,23 @@ let angle = atan2(uv.y, uv.x);
 let spike = max(0.0, sin(f32(material.spike_count) * angle));
 let d_spiked = d - spike * 0.08;        // push glow outward at spikes
 
+// Dissolve (for Disintegrate — threshold 0.0 = off, 1.0 = fully dissolved):
+if material.dissolve_threshold > 0.0 {
+    let noise = (simplex_noise_2d(uv * 8.0) + 1.0) / 2.0;
+    if noise < material.dissolve_threshold { discard; }
+    // Burning edge glow at dissolve boundary:
+    let edge = 0.05;
+    if noise < material.dissolve_threshold + edge {
+        let t = (noise - material.dissolve_threshold) / edge;
+        return vec4(2.0, 0.8, 0.2, 1.0) * (1.0 - t);  // HDR orange edge
+    }
+}
+
 let intensity = core * material.core_brightness + halo;
 return vec4(material.color.rgb * intensity, max(core, halo));
 ```
+
+**Dissolve integration:** No separate `dissolve.wgsl` shader. The `dissolve_threshold` uniform on `EntityGlowMaterial` defaults to 0.0 (off — zero cost, the `if` is not entered). When the Disintegrate primitive fires, it animates `dissolve_threshold` from 0.0→1.0 over the specified duration. Same material, no swap. On `RecipeComplete`, the game despawns the entity.
 
 SDF primitives: `sdCircle`, `sdBox`, `sdHexagon`, etc. from the [munrocket WGSL gist](https://gist.github.com/munrocket/30e645d584b5300ee69295e54674b3e4). Shape type selects which SDF to evaluate.
 
@@ -44,19 +58,23 @@ Single `aura.wgsl` shader with a `variant` uniform selecting the rendering algor
 | 1 (TimeDistortion) | Rippling time-echo afterimage | `Aura::TimeDistortion { ... }` |
 | 2 (PrismaticSplit) | Rainbow edge refractions | `Aura::PrismaticSplit { ... }` |
 
-## Trail Shaders (one per `Trail` variant)
+## Trail Rendering (three distinct techniques, NOT a single material)
 
-| Shader | Visual | Enum Variant |
-|--------|--------|--------------|
-| `trail_shield_energy.wgsl` | Solid protective wake | `Trail::ShieldEnergy { ... }` |
-| `trail_afterimage.wgsl` | Fading position copies | `Trail::Afterimage { ... }` |
-| `trail_prismatic_split.wgsl` | Spectral color separation | `Trail::PrismaticSplit { ... }` |
+Unlike auras, trail variants use **different rendering techniques**:
+
+| Trail Variant | Technique | Shader/Material |
+|--------------|-----------|----------------|
+| ShieldEnergy | Mesh ribbon (TriangleStrip), ring buffer of positions | `trail_ribbon.wgsl` + `TrailRibbonMaterial` (SrcAlpha + One additive) |
+| Afterimage | Pre-spawned sprite entity pool, repositioned each frame | Standard `Sprite` with alpha fade, no custom shader |
+| PrismaticSplit | 3 overlapping ShieldEnergy ribbons with RGB channel tint | Same `TrailRibbonMaterial` × 3 |
+
+See `docs/architecture/rendering/rantzsoft_vfx.md` — Trail Rendering section for full details.
 
 ## Primitive Shaders
 
 | Shader | Used By |
 |--------|---------|
-| `beam.wgsl` | Beam primitive |
+| `beam.wgsl` | Beam, AnchoredBeam |
 | `ring.wgsl` | ExpandingRing, EnergyRing, ExpandingDisc |
 | `glow_line.wgsl` | GlowLine (wall borders, shield barrier base) |
 | `timer_wall.wgsl` | Timer wall HUD gauge glow |
@@ -71,6 +89,29 @@ Shared shader for ExpandingRing, EnergyRing, and ExpandingDisc. SDF-based: `sdCi
 - **Disc mode** (`filled = 1`): opaque center, glowing edge. The disc interior is the bright part (`step(0.0, -d)` for solid fill inside), with exponential halo glow falloff outside.
 
 Radius animates from 0 to `max_radius` over lifetime. HDR color for bloom.
+
+### beam.wgsl — Beam Primitive
+
+SDF-on-quad approach. The beam is an `sdCapsule(uv, start, end, width)` — a line segment with rounded ends. Core brightness along the beam center, exponential glow falloff perpendicular.
+
+**Uniforms:** `direction` (normalized Vec2), `range` (beam length), `width` (current width), `max_width` (initial width), `hdr`, `color`, `shrink_progress` (0.0–1.0), `afterimage_alpha` (0.0–1.0).
+
+**Lifecycle:**
+1. Beam spawns at `max_width`. `shrink_progress = 0.0`.
+2. Over `shrink_duration` seconds: `shrink_progress` ramps 0.0→1.0. Current `width = max_width * (1.0 - shrink_progress)`. The beam narrows from full width to zero — it lingers visibly, not instant.
+3. After shrink completes: if `afterimage_duration > 0`, the beam enters afterimage phase. `afterimage_alpha` fades 1.0→0.0 over `afterimage_duration`. The beam renders as a dim ghost at final width.
+4. Despawn when afterimage fades to 0 (or immediately if no afterimage).
+
+**Fragment shader:**
+```wgsl
+let d = sdCapsule(uv, vec2(0.0), direction * range, width);
+let core = step(0.0, -d) * hdr;
+let halo = exp(-max(d, 0.0) * 3.0) * hdr * 0.5;
+let alpha = mix(1.0, afterimage_alpha, afterimage_phase);
+return vec4(color.rgb * (core + halo) * alpha, max(core, halo) * alpha);
+```
+
+Used by: `Beam` PrimitiveStep (one-shot directional beam), `AnchoredBeam` (persistent entity-tracking beam — recomputes start/end each frame from Source/Target GlobalTransform).
 
 ### glow_line.wgsl — Glowing Line Segment
 
@@ -110,7 +151,7 @@ Additive blending via `specialize()`. Placed behind the breaker on a lower z-lay
 
 | Shader | Used By | Technique |
 |--------|---------|-----------|
-| `dissolve.wgsl` | Disintegrate primitive | Noise threshold ramp: sample custom simplex noise (`noise.wgsl`), `discard` fragments below threshold. Optional burning-edge glow at boundary. Animate threshold 0→1 over duration. No external deps. |
+| `entity_glow.wgsl` (dissolve mode) | Disintegrate primitive | No separate dissolve shader. `entity_glow.wgsl` has a `dissolve_threshold` uniform (default 0.0 = off). When >0, samples noise and discards fragments below threshold. Burning-edge glow at boundary. Animated 0→1 over duration by the Disintegrate primitive handler. No material swap needed — same `EntityGlowMaterial`, just animate one uniform. |
 
 ### Dissolve Algorithm
 
@@ -152,7 +193,7 @@ let displaced_uv = in.uv + vel * material.time;
 
 | Shader | Used By | Position in Pipeline | Implementation |
 |--------|---------|---------------------|----------------|
-| `flash.wgsl` | ScreenFlash | Before Bloom | `FullscreenMaterial` with `node_edges() = [StartMainPassPostProcessing, self, Node2d::Bloom]`. Fragment: `return scene_color + flash_color * flash_alpha`. **Must use `ViewTarget::TEXTURE_FORMAT_HDR`** for the pipeline color target (not bevy_default). |
+| `flash.wgsl` | ScreenFlash | Before Tonemapping (HDR) | `FullscreenMaterial` with `node_edges() = [StartMainPassPostProcessing, FlashLabel, Tonemapping]`. **Additive blend in shader** (not GPU blend state): `return vec4(scene_color.rgb + flash.rgb, scene_color.a)`. HDR pipeline selected automatically. Do NOT use `Node2d::Bloom` as anchor. |
 | `distortion.wgsl` | RadialDistortion | After Tonemapping | FullscreenMaterial, 16-source fixed array uniform |
 | `chromatic_aberration.wgsl` | ChromaticAberration | After Tonemapping | FullscreenMaterial |
 | `desaturation.wgsl` | Desaturation | After Tonemapping | FullscreenMaterial |
@@ -196,7 +237,25 @@ Fragment: base color + prismatic overlay that shifts hue based on `uv.x + uv.y +
 The crate includes custom WGSL utility files (no external dependencies):
 
 - `noise.wgsl` — simplex noise 2D/3D (based on the [munrocket MIT-licensed WGSL gist](https://gist.github.com/munrocket/236ed5ba7e409b8bdf1ff6eca5dcdc39))
-- `sdf.wgsl` — 2D SDF primitives: circle, box, hexagon, rounded box, polygon (based on [munrocket SDF gist](https://gist.github.com/munrocket/30e645d584b5300ee69295e54674b3e4))
+- `sdf.wgsl` — 2D SDF primitives (based on [munrocket SDF gist](https://gist.github.com/munrocket/30e645d584b5300ee69295e54674b3e4) and [Inigo Quilez SDF reference](https://iquilezles.org/articles/distfunctions2d/))
 - `voronoi.wgsl` — 2D Voronoi cell ID for shader-based fracture
 
 For CPU-side Voronoi (pre-computed fracture shards), custom Rust implementation in the crate. No external crates for noise or Voronoi.
+
+### SDF Function Sources
+
+The `sdf.wgsl` file contains these functions:
+
+| Function | Source | Used By |
+|----------|--------|---------|
+| `sdCircle(p, r)` | munrocket gist | Circle shape, ExpandingRing/Disc |
+| `sdBox(p, b)` | munrocket gist | Rectangle shape |
+| `sdRoundedBox(p, b, r)` | [Inigo Quilez](https://iquilezles.org/articles/distfunctions2d/) | RoundedRectangle shape. Corners rounded by `r` (vec4 for per-corner radii, or uniform float). |
+| `sdHexagon(p, r)` | munrocket gist | Hexagon shape |
+| `sdRegularPolygon(p, r, n)` | Inigo Quilez | Octagon (n=8) |
+| `sdRhombus(p, b)` | Inigo Quilez | Diamond shape |
+| `sdSegment(p, a, b)` | munrocket gist | GlowLine, Beam |
+| `sdCapsule(p, a, b, r)` | munrocket gist | Beam with rounded ends |
+| `sdPolygon(p, verts, n)` | Custom implementation | Shield, Angular, Crystalline, Custom shapes |
+
+**`sdPolygon` implementation:** Iterates edges of a convex polygon, computing the minimum distance to any edge. For built-in shapes (Shield, Angular, Crystalline), vertex lists are `const` arrays hardcoded in WGSL within the `switch` cases — no uniform data needed. For `Custom(CustomShape)`, vertices are passed as a uniform `array<vec2<f32>, 16>` with a `vertex_count: u32` uniform. The loop iterates `vertex_count` edges (WGSL requires a compile-time loop bound, so the loop always runs 16 iterations with early-out via `if (i >= vertex_count) { break; }`).

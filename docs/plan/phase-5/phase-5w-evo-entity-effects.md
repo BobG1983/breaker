@@ -18,7 +18,7 @@
 
 ### Voltchain
 
-**Behavior**: Cell destroy → chain lightning (3 arcs, 96 range, 0.5x damage).
+**Behavior**: Cell destroy → chain lightning (6 arcs, 128 range, 0.5x damage).
 
 **VFX direction**: Enhanced chain lightning — louder than base, large max jumps.
 - Bright, vivid electric arcs from destroyed cell to 3 targets (+ large max jumps per arc)

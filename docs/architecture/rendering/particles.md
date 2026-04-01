@@ -66,10 +66,11 @@ HDR color values > 1.0 produce bloom via the Bloom post-process pass.
 ```rust
 fn update_particles(
     mut commands: Commands,
-    time: Res<Time>,
-    mut query: Query<(Entity, &mut Transform, &mut Particle, &mut Sprite)>,
+    time: Res<Time>,  // Time<Virtual> — particles slow during slow-mo
+    mut query: Query<(Entity, &mut Transform, &mut Particle, &mut MeshMaterial2d<ParticleMaterial>)>,
+    mut materials: ResMut<Assets<ParticleMaterial>>,
 ) {
-    for (entity, mut xf, mut p, mut sprite) in &mut query {
+    for (entity, mut xf, mut p, mat_handle) in &mut query {
         p.lifetime_remaining -= time.delta_secs();
         if p.lifetime_remaining <= 0.0 {
             commands.entity(entity).despawn();
@@ -79,9 +80,11 @@ fn update_particles(
         xf.translation += (p.velocity * time.delta_secs()).extend(0.0);
         xf.rotation = Quat::from_rotation_z(xf.rotation.to_euler(EulerRot::ZYX).0 + p.rotation_speed * time.delta_secs());
 
-        // Alpha fade over lifetime
+        // Alpha fade over lifetime — update material color
         let t = p.lifetime_remaining / p.lifetime_total;
-        sprite.color = sprite.color.with_alpha(t);
+        if let Some(mat) = materials.get_mut(&mat_handle.0) {
+            mat.alpha = t;
+        }
     }
 }
 ```
@@ -128,8 +131,9 @@ When the recipe system dispatches a SparkBurst step, it spawns an entity with a 
 | SparkBurst | OneShot(count) | Radial | Short lifetime, gravity, high speed, small size |
 | ShardBurst | OneShot(count) | Radial | Longer lifetime, rotation, medium speed, angular mesh |
 | GlowMotes | Continuous(rate) | Radial (slow) | Long lifetime, low speed, large size, no gravity |
-| ElectricArc | OneShot(count) | Directional | Very short lifetime, high jitter |
 | TrailBurst | OneShot(count) | Directional | Medium lifetime, elongated mesh |
+
+**Note:** `ElectricArc` is NOT a particle primitive despite appearing in the PrimitiveStep enum alongside particles. It is a **segmented line mesh** with per-frame jitter — see `rantzsoft_vfx.md` — ElectricArc Rendering section. It does not use the emitter/particle system.
 
 ## Performance Budget
 

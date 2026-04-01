@@ -4,48 +4,85 @@
 
 ```
 1. Scene render (meshes, materials, particles)
-2. Screen flash (additive HDR overlay — BEFORE bloom so it gets bloomed naturally)
-3. Bloom pass (HDR → glow halos)
-4. Tonemapping (HDR → LDR)
-5. Screen distortion (radial warp — on LDR output)
-6. Chromatic aberration (RGB offset — on LDR output)
-7. Desaturation (color → monochrome — on LDR output)
-8. Vignette (gradient from edges — on LDR output)
-9. CRT/scanline (if enabled — last shader pass)
-10. Screen shake (camera offset — not a shader, applied outside render graph)
+2. Screen flash (additive HDR overlay — BEFORE tonemapping, operates on HDR data)
+3. Tonemapping (HDR → LDR)
+4. Screen distortion (radial warp — on LDR output)
+5. Chromatic aberration (RGB offset — on LDR output)
+6. Desaturation (color → monochrome — on LDR output)
+7. Vignette (gradient from edges — on LDR output)
+8. CRT/scanline (if enabled — last shader pass)
+9. Screen shake (camera offset — not a shader, applied outside render graph)
 ```
 
-## FullscreenMaterial Implementation (Bevy 0.18)
+Note: Bloom is handled by Bevy's built-in `Bloom` component on the camera. HDR values >1.0 from scene rendering and from the screen flash shader bloom naturally. Flash is placed before tonemapping so it operates on HDR data.
 
-Each post-processing effect is a component on the camera entity implementing the `FullscreenMaterial` trait. `node_edges()` controls ordering. `ViewTarget::post_process_write()` ping-pongs textures for chaining.
+## FullscreenMaterial Implementation (Bevy 0.18.1)
+
+Each post-processing effect is a `Component` on the camera entity implementing the `FullscreenMaterial` trait. `node_edges()` controls render graph ordering. `ViewTarget::post_process_write()` ping-pongs textures for chaining between effects.
+
+**Verified by spike** (see `.claude/specs/fullscreen-material-spike.md`): Multiple FullscreenMaterial types chain correctly on one camera. No custom ViewNode fallback needed.
+
+### Core2d Render Graph (with `features = ["2d"]`)
 
 ```
-Node2d execution order:
-  MsaaWriteback → MainOpaquePass → MainTransparentPass
-    → Bloom (requires Hdr component on camera)
-    → PostProcessing
-    → Tonemapping → Fxaa → Upscaling
+StartMainPass
+  → MainOpaquePass
+  → MainTransparentPass
+  → EndMainPass
+  → StartMainPassPostProcessing
+  → [ScreenFlash — placed here via node_edges]
+  → Tonemapping
+  → [Distortion → ChromaticAberration → Desaturation → Vignette → CRT — chained here]
+  → EndMainPassPostProcessing
+  → Upscaling
 ```
 
-**Effect placement:**
+### Effect Placement
 
-| Effect | Position | Reason |
-|--------|----------|--------|
-| Screen flash | Before Bloom via `FullscreenMaterial::node_edges()` | `node_edges()` returns `[StartMainPassPostProcessing, self_label, Node2d::Bloom]`. Flash gets bloomed naturally. No custom ViewNode needed. |
-| Radial distortion | After Tonemapping | Geometric warp on LDR |
-| Chromatic aberration | After Tonemapping | RGB shift on LDR |
-| Desaturation | After Tonemapping | Color transform on LDR |
-| Vignette | After Tonemapping | Edge darkening on LDR |
-| CRT/scanlines | Last before EndMainPassPostProcessing | Final overlay |
-| Screen shake | Camera Transform offset | Not a shader pass |
+| Effect | Position | `node_edges()` anchor | Notes |
+|--------|----------|----------------------|-------|
+| Screen flash | Pre-tonemapping (HDR) | `[StartMainPassPostProcessing, FlashLabel, Tonemapping]` | Additive blend in shader (see below) |
+| Radial distortion | Post-tonemapping (LDR) | `[Tonemapping, DistortionLabel, ChromaticLabel]` | Geometric warp |
+| Chromatic aberration | Post-tonemapping | `[DistortionLabel, ChromaticLabel, DesaturationLabel]` | RGB shift |
+| Desaturation | Post-tonemapping | `[ChromaticLabel, DesaturationLabel, VignetteLabel]` | Color → monochrome |
+| Vignette | Post-tonemapping | `[DesaturationLabel, VignetteLabel, CrtLabel]` | Edge darkening |
+| CRT/scanlines | Last | `[VignetteLabel, CrtLabel, EndMainPassPostProcessing]` | Final overlay |
+| Collapse/rebuild | During transitions only | `[Tonemapping, CollapseLabel, EndMainPassPostProcessing]` | Replaces normal post chain during transitions |
+| Screen shake | Camera Transform offset | N/A | Not a shader pass |
 
-**Key details:**
-- `FullscreenMaterial` requires `Component + Copy + ShaderType + Default`
-- Disable by setting `intensity = 0.0` (removing the component does NOT remove the render node)
-- Dynamic uniforms: mutate the component on the camera entity — `ExtractComponentPlugin` handles GPU upload
-- WGSL: `@group(0) @binding(0)` screen texture, `@binding(1)` sampler, `@binding(2)` uniform struct
-- `#import bevy_core_pipeline::fullscreen_vertex_shader::FullscreenVertexOutput`
-- std140 alignment: single `f32` must pad to 16 bytes
+Each effect defines a concrete `RenderLabel` type (e.g., `struct FlashLabel;`) so other effects can reference it in their `node_edges()`. Overlapping edge declarations are safe (`EdgeAlreadyExists` is silently ignored).
+
+### Critical: No `Node2d::Bloom` in node_edges
+
+**Do NOT use `Node2d::Bloom` as an anchor.** With `features = ["2d"]` only, the Bloom node is not registered in the Core2d graph. Using it panics at startup. Use `Node2d::Tonemapping` as the downstream anchor for pre-tonemapping effects.
+
+### Critical: No Custom Blend State
+
+`FullscreenMaterial` hardcodes `blend: None` in its pipeline. There is no `specialize()` override. **Additive blending must be done in the fragment shader**, not via GPU blend state:
+
+```wgsl
+// screen_flash.wgsl — shader-side additive blend
+@fragment
+fn fragment(in: FullscreenVertexOutput) -> @location(0) vec4<f32> {
+    let scene_color = textureSample(screen_texture, texture_sampler, in.uv);
+    let flash = material.color * material.intensity;
+    return vec4(scene_color.rgb + flash.rgb, scene_color.a);
+}
+```
+
+This applies to screen flash only. All other effects (distortion, chromatic, desaturation, vignette, CRT) are replace-style operations that work with `blend: None`.
+
+### Key Details
+
+- **Trait bounds:** `Component + ExtractComponent + Clone + Copy + ShaderType + WriteInto + Default`
+- **Import path:** `bevy::core_pipeline::fullscreen_material::{FullscreenMaterial, FullscreenMaterialPlugin}`
+- **HDR support:** Plugin auto-creates both LDR and HDR pipelines, selects at runtime via `view_target.is_hdr()`. Pre-tonemapping effects get `Rgba16Float` automatically.
+- **Disable:** Set `intensity = 0.0` (removing the component does NOT remove the render node; the node's `Added<T>` trigger fires only once)
+- **Dynamic uniforms:** Mutate the component on the camera entity — `ExtractComponentPlugin` handles GPU upload
+- **WGSL bindings:** `@group(0) @binding(0)` screen texture, `@binding(1)` sampler, `@binding(2)` uniform struct
+- **WGSL import:** `#import bevy_core_pipeline::fullscreen_vertex_shader::FullscreenVertexOutput`
+- **std140 alignment:** Single `f32` must pad to 16 bytes (add `_padding: Vec3`)
+- **One-frame delay:** Node is added on `Added<T>` in `ExtractSchedule`, so the effect renders starting the frame after the component is inserted. If this causes a visible pop, consider inserting the component at startup with `intensity = 0.0`.
 
 ## Screen Shake
 

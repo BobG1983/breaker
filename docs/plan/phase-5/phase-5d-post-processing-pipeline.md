@@ -38,13 +38,20 @@ Build these FullscreenMaterial implementations:
 | Vignette | `vignette.wgsl` | After Tonemapping |
 | CRT overlay | `crt.wgsl` | Last |
 
-**Step 1 of 5d: FullscreenMaterial verification spike.** Before building all 7 effects, verify that multiple `FullscreenMaterial` types chain correctly on one camera entity. Register 2 FullscreenMaterials (one pre-bloom via `node_edges()`, one post-tonemapping), confirm they render in the correct order and that `post_process_write()` ping-pong works. If this fails, pivot to custom `ViewNode` implementations. See `docs/architecture/rendering/research/custom-render-node-pre-bloom.md` for the ViewNode fallback pattern.
+**FullscreenMaterial spike — COMPLETE.** Verified in `.claude/specs/fullscreen-material-spike.md`. Key findings:
+- Multiple FullscreenMaterial types on one camera: **works**
+- Custom blend state: **blocked** (hardcoded `blend: None`) — additive blend must be done in the fragment shader
+- `Node2d::Bloom` in node_edges: **panics** with `features = ["2d"]` — use `Node2d::Tonemapping` as the pre-tonemapping anchor
+- HDR texture format: **automatic** — pre-tonemapping effects get `Rgba16Float` via `view_target.is_hdr()`
+- No custom ViewNode fallback needed for any planned effect
 
 Key details:
-- Screen flash must use `ViewTarget::TEXTURE_FORMAT_HDR` for the pipeline color target
+- Screen flash: additive blend in shader (`scene_color.rgb + flash.rgb`), NOT GPU blend state
+- Flash placement: `node_edges() = [StartMainPassPostProcessing, FlashLabel, Tonemapping]`
+- Each effect needs a concrete `RenderLabel` type for cross-effect `node_edges()` chaining
 - Distortion buffer: 16-source fixed array uniform (see `docs/architecture/rendering/screen_effects.md`)
-- Effects disabled by setting `intensity = 0.0` (removing component does NOT remove render node)
-- std140 alignment: single `f32` must pad to 16 bytes
+- Effects disabled by setting `intensity = 0.0` (removing component does NOT remove render node; node added on first `Added<T>`)
+- std140 alignment: single `f32` must pad to 16 bytes (`_padding: Vec3`)
 - CRT off by default, configurable via `VfxConfig`
 
 ### 4. VfxConfig Integration

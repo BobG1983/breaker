@@ -13,7 +13,7 @@ pub struct RunTemperature(pub f32);
 
 **Owned by `run/` domain.** Updated on node transitions. Read by `rantzsoft_vfx` systems for grid/bloom and by game systems for wall modifiers.
 
-**Formula:** `temperature = (node_index as f32 / expected_nodes_per_act as f32).clamp(0.0, 1.0)`. The `expected_nodes_per_act` value comes from run configuration. For infinite runs, temperature cycles or caps — details TBD in run design.
+**Formula:** `temperature = (node_index as f32 / expected_nodes_per_act as f32).clamp(0.0, 1.0)`. `expected_nodes_per_act = 5` (4 normal nodes + 1 boss). For infinite runs, temperature cycles: `temperature = ((node_index % 5) as f32 / 5.0)`.
 
 **Palette endpoints** defined in `GraphicsDefaults` RON (in `shared/`):
 

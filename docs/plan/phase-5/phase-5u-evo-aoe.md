@@ -16,7 +16,7 @@
 
 ### Gravity Well (Evolution)
 
-**Behavior**: Cell destroy → gravity well (pull force, 3s duration, 128 radius, max 2 active).
+**Behavior**: Cell destroy → gravity well (strength 500, 5s duration, 160 radius, max 4 active).
 
 **VFX direction**: Larger/more intense version of base gravity well (5m).
 - Wider radius than base gravity well

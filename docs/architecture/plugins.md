@@ -110,12 +110,13 @@ Both systems use `Commands::remove::<ShieldActive>()` to despawn the component w
 
 ## Velocity2D Cross-Domain Write Exception
 
-`Velocity2D` (rantzsoft_spatial2d component) on bolt entities is written by two effect domain runtime systems as an accepted architectural exception:
+`Velocity2D` (rantzsoft_spatial2d component) on bolt entities is written by effect domain systems as an accepted architectural exception. Three write paths exist:
 
-- **effect** (`apply_gravity_pull` in `effect/effects/gravity_well.rs`): steers bolt velocity toward active gravity wells each FixedUpdate tick. Uses `SpatialData` query and calls `apply_velocity_formula` after steering to enforce speed constraints.
+- **effect** (`apply_gravity_pull` in `effect/effects/gravity_well/effect.rs`): steers bolt velocity toward active gravity wells each FixedUpdate tick. Uses `SpatialData` query and calls `apply_velocity_formula` after steering to enforce speed constraints.
 - **effect** (`apply_attraction` in `effect/effects/attraction/effect.rs`): steers bolt velocity toward the nearest attraction target each FixedUpdate tick. Uses `SpatialData` query and calls `apply_velocity_formula` after steering. Ordered `.after(PhysicsSystems::MaintainQuadtree)` for quadtree lookups.
+- **effect** (`speed_boost::fire()` / `reverse()` in `effect/effects/speed_boost.rs`): immediately recalculates bolt velocity via `recalculate_velocity` (calls `apply_velocity_formula`) when a speed boost is applied or removed. This ensures bolt speed reflects the new multiplier without waiting for the next tick.
 
-Both systems steer bolt velocity direction, then call `apply_velocity_formula` to enforce `(base_speed * boost_mult).clamp(min, max)` magnitude. This is the same velocity enforcement used by collision systems — there is no separate `prepare_bolt_velocity` step.
+All paths call `apply_velocity_formula` to enforce `(base_speed * boost_mult).clamp(min, max)` magnitude. This is the same velocity enforcement used by collision systems — there is no separate `prepare_bolt_velocity` step.
 
 ## Debug Domain — Cross-Domain Exception
 
@@ -146,14 +147,15 @@ effect/
         fire.rs        # EffectKind::fire() + 3 private helpers
         reverse.rs     # EffectKind::reverse() + 3 private helpers
   effects/             # Per-effect modules with fire(), reverse(), register()
-    mod.rs             # pub mod declarations + register() dispatcher + spawn_extra_bolt helper
+    mod.rs             # pub mod declarations + register() dispatcher
     speed_boost.rs     # ActiveSpeedBoosts, fire(), reverse(), register()
     damage_boost.rs    # fire(), reverse(), register()
     life_lost.rs       # fire(), reverse(), register()
     ramping_damage.rs  # fire(), reverse(), register()
     quick_stop.rs      # fire(), reverse(), register()
     flash_step.rs      # fire(), reverse(), register()
-    piercing.rs / size_boost.rs / bump_force.rs / shield.rs / gravity_well.rs / time_penalty.rs
+    piercing.rs / size_boost.rs / bump_force.rs / shield.rs / time_penalty.rs
+    gravity_well/          # Directory module (split for tests)
     shockwave/ chain_bolt/ chain_lightning/ explode/ tether_beam/ pulse/ piercing_beam/
     attraction/ spawn_bolts/ spawn_phantom/ entropy_engine/ second_wind/ random_effect/
     anchor/ circuit_breaker/ mirror_protocol/
@@ -190,10 +192,10 @@ impl ActiveSpeedBoosts {
     pub fn multiplier(&self) -> f32 { ... }
 }
 
-// Fire: push multiplier onto the vec (inserts component if absent)
+// Fire: push multiplier onto the vec (inserts component if absent), then recalculate_velocity
 pub(crate) fn fire(entity: Entity, multiplier: f32, _source_chip: &str, world: &mut World) { ... }
 
-// Reverse: remove matching entry from the vec
+// Reverse: remove matching entry from the vec, then recalculate_velocity
 pub(crate) fn reverse(entity: Entity, multiplier: f32, _source_chip: &str, world: &mut World) { ... }
 
 // Self-registration: wires app systems (effects with no runtime systems may be empty)

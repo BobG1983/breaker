@@ -17,7 +17,7 @@ A **separate overlay entity** spawned on top of the top wall. Uses a dedicated `
 **Game-side system** (`screen/playing/hud/timer_wall.rs`):
 - Spawns the overlay entity on `OnEnter(PlayingState::Active)`, positioned over the top wall
 - Each FixedUpdate: reads timer resource, computes `fill_level = time_remaining / time_total`
-- Sends `SetModifier` or directly mutates the material uniform (TBD during implementation)
+- Directly mutates the `TimerWallMaterial` component on the overlay entity (simpler than routing through the modifier system for a dedicated shader)
 - At <25% time: ramps pulse_speed and shifts temperature toward 1.0
 - Small monospace Text2d child entity for numeric readout
 
@@ -34,7 +34,7 @@ N energy orb entities spawned at **fixed positions** near the breaker. Each orb 
 
 **Layout:** Evenly spaced below the breaker at fixed y-offset. Orb positions: `breaker_x + (i - (n-1)/2) * spacing, breaker_y - offset_y`.
 
-**Life loss:** The lost orb plays a dissolve recipe (`Disintegrate` + `SparkBurst`) and despawns. Rightmost orb removed first (or leftmost — consistent direction).
+**Life loss:** The lost orb plays a dissolve recipe (`Disintegrate` + `SparkBurst`) and despawns. Rightmost orb removed first.
 
 **Life gain (Second Wind):** New orb materializes with a birth recipe (`ExpandingRing` + `GlowMotes` converging inward).
 

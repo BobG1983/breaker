@@ -101,7 +101,7 @@ src/effect/
 │           ├── fire.rs    # EffectKind::fire() + 3 private helpers
 │           └── reverse.rs # EffectKind::reverse() + 3 private helpers
 ├── effects/               # Per-effect modules (NOT a sub-domain — no plugin.rs)
-│   ├── mod.rs             # pub mod declarations + register() dispatcher + spawn_extra_bolt helper
+│   ├── mod.rs             # pub mod declarations + register() dispatcher
 │   ├── speed_boost.rs     # ActiveSpeedBoosts, fire(), reverse(), register()
 │   ├── damage_boost.rs    # fire(), reverse(), register()
 │   ├── life_lost.rs       # fire(), reverse(), register()
@@ -111,7 +111,7 @@ src/effect/
 │   ├── size_boost.rs      # fire(), reverse(), register()
 │   ├── bump_force.rs      # fire(), reverse(), register()
 │   ├── shield.rs          # fire(), reverse(), register()
-│   ├── gravity_well.rs    # fire(), reverse(), register()
+│   ├── gravity_well/      # Directory module (split for tests)
 │   ├── time_penalty.rs    # fire(), reverse(), register()
 │   ├── shockwave/         # Directory module (split for tests)
 │   ├── chain_bolt/        # Directory module (split for tests)

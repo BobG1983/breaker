@@ -102,7 +102,7 @@
 
 **Standard/Tough/Lock/Regen Cell:** `AttachVisuals` from cell definition RON. Each cell type has shape + color + glow in its rendering block.
 
-**Cell damage state:** No recipe. Modifier-driven. `cells/` sends on health change: `SetModifier(CoreBrightness(health_fraction), source: "cell_health")`.
+**Cell damage state:** No recipe. Modifier-driven. `cells/` sends on health change: `SetModifier(CoreBrightness(0.3 + health_fraction * 0.7), source: "cell_health")`. The 0.3 floor ensures cells are never too dim to read — a 1-HP cell at last hit is still 30% brightness before despawning.
 
 **Cell destruction — single:** Recipe `"cell_death_single"`: `Disintegrate(entity: Source, duration: 0.3) + SparkBurst(count: 6, velocity: 150.0, hdr: 0.6, color: White, gravity: 30.0, lifetime: 0.2)`.
 

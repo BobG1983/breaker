@@ -16,7 +16,7 @@ effect/
     mod.rs                — register() calling each trigger's register()
     <name>.rs or <name>/  — one per trigger: register(), bridge system (dir module when tests present)
   effects/
-    mod.rs                — register() calling each effect's register(); spawn_extra_bolt helper
+    mod.rs                — register() calling each effect's register()
     <name>.rs or <name>/  — one per effect: fire(), reverse(), register(), components, runtime systems
 ```
 

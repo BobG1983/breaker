@@ -22,31 +22,28 @@ Additionally, `BASE_BOLT_DAMAGE: f32 = 10.0` is a constant in `bolt/resources.rs
 - `angle_spread: f32` (0.524) — currently always ~30°, but remains a `BoltAngleSpread` component. Used for both initial launch and respawn angle randomization. (Replaces both `initial_angle` and `respawn_angle_spread` which were always the same value.)
 - `respawn_offset_y` is eliminated — always same as `spawn_offset_y`, so `BoltSpawnOffsetY` covers both
 
-**BoltConfig is eliminated entirely.** Per-bolt physics fields move to `BoltDefinition`. Spawn offset and angle spread remain as components initialized from default constants by `init_bolt_params`, overridable per-entity.
+**Target:** `BoltConfig` will be eliminated entirely. Per-bolt physics fields move to `BoltDefinition`. Spawn offset and angle spread remain as components inserted by the builder from `BoltConfig` fields until the full `BoltDefinition` migration is complete.
 
 ### Current Spawn Flow
 
 1. `spawn_bolt` runs on `OnEnter(GameState::Playing)`. If a `Bolt` entity exists (persists across nodes via `CleanupOnRunEnd`), it just fires `BoltSpawned` and returns.
 2. Reads breaker `Position2D` for spawn position (fallback to `BreakerConfig::y_position` if breaker hasn't spawned yet — both run on same `OnEnter`).
-3. Spawns entity with: `Bolt`, `Velocity2D`, `GameDrawLayer::Bolt`, `Position2D`, `PreviousPosition`, `Scale2D`, `PreviousScale`, `Aabb2D`, `CollisionLayers`, `Mesh2d(Circle::new(1.0))`, `MeshMaterial2d` (from `color_rgb`), `CleanupOnRunEnd`. Conditionally: `BoltServing` if `node_index == 0`.
-4. `init_bolt_params` (next frame, deferred) inserts: `BoltBaseSpeed`, `BoltMinSpeed`, `BoltMaxSpeed`, `BoltRadius`, `BoltSpawnOffsetY`, `BoltRespawnOffsetY`, `BoltRespawnAngleSpread`, `BoltInitialAngle`.
+3. Calls `Bolt::builder()` with `.at_position()`, `.config(&config)`, optionally `.serving()`, and `.primary()`. The builder inserts all components in a single `.spawn(world)` call: `Bolt`, `PrimaryBolt`, `Velocity2D`, `GameDrawLayer::Bolt`, `Position2D`, `PreviousPosition`, `Scale2D`, `PreviousScale`, `Aabb2D`, `CollisionLayers`, `BoltRadius`, `BoltSpawnOffsetY`, `BoltRespawnOffsetY`, `BoltRespawnAngleSpread`, `BoltInitialAngle`, `BaseSpeed`, `MinSpeed`, `MaxSpeed`, `MinAngleH`, `MinAngleV`, `CleanupOnRunEnd`. Conditionally: `BoltServing` if serving.
+4. Render components (`Mesh2d`, `MeshMaterial2d`) are inserted post-spawn — still from `BoltConfig.color_rgb` until the `BoltDefinition` migration.
 5. `apply_entity_scale_to_bolt` adds `EntityScale` from `ActiveNodeLayout.entity_scale`.
+
+There is no separate `init_bolt_params` step. The builder handles all parameter insertion at spawn time.
 
 ### Current Extra Bolt Spawn
 
-`spawn_extra_bolt` in `effect/effects/fire_helpers.rs` is the shared helper for `SpawnBolts`, `SpawnPhantom`, and `ChainBolt`. It:
-- Reads `BoltConfig` for radius and speed
-- Picks random angle from `GameRng`
-- Spawns with `ExtraBolt` marker + `CleanupOnNodeExit`
-- Does **NOT** insert `Mesh2d`/`MeshMaterial2d` (extra bolts are currently invisible)
-- Does NOT insert respawn components
+Effect modules that spawn extra bolts (`SpawnBolts`, `SpawnPhantom`, `ChainBolt`, `MirrorProtocol`) each call `Bolt::builder()` directly — there is no shared `spawn_extra_bolt` helper function. The builder handles component insertion uniformly. Extra bolts use `.extra()` instead of `.primary()` and carry `ExtraBolt` + `CleanupOnNodeExit`.
 
 ### Current Bolt Lost
 
 `bolt_lost` runs in `FixedUpdate`. For each bolt below playfield bottom:
-- **Shield active**: Flips Y-velocity, decrements `ShieldActive.charges`. No `BoltLost` message.
+- **Shield active**: Flips Y-velocity, calls `apply_velocity_formula`, clamps position. No `BoltLost` message.
 - **Extra bolt**: Sends `BoltLost`, writes `RequestBoltDestroyed`. Entity stays alive one frame for `OnDeath` effect evaluation, then `cleanup_destroyed_bolts` despawns.
-- **Baseline bolt**: Sends `BoltLost`. Respawns in place: randomized angle, position above breaker. Entity persists (no despawn/respawn cycle).
+- **Baseline bolt**: Sends `BoltLost`. Respawns above breaker: reads `BoltRespawnOffsetY` and `BoltRespawnAngleSpread` from the bolt entity, calls `apply_velocity_formula`. Entity persists (no despawn/respawn cycle).
 
 ### Current Breaker → Bolt Relationship
 
@@ -55,7 +52,8 @@ The breaker does NOT spawn the bolt. They spawn independently. The breaker:
 - Tracks serving bolt position (`hover_bolt`)
 - Launches bolt on `GameAction::Bump` (`launch_bolt`)
 - Reflects bolt on collision (`bolt_breaker_collision`)
-- Provides `MinAngleFromHorizontal` constraint
+
+Angle constraints (`min_angle_horizontal`, `min_angle_vertical`) come from `BoltConfig` fields embedded by the builder into the bolt entity's spatial components (`MinAngleH`, `MinAngleV`). The `apply_velocity_formula` function enforces these constraints at every velocity-modification site.
 
 ---
 
@@ -98,9 +96,9 @@ pub struct BoltDefinition {
 }
 ```
 
-**Not in BoltDefinition** (components initialized from default constants):
-- `BoltSpawnOffsetY(54.0)` — component on the bolt entity, initialized by `init_bolt_params` from a default constant. Future bolt types or effects could override it.
-- `BoltAngleSpread(0.524)` — component on the bolt entity (~30°), used for both initial launch and respawn angle randomization. Initialized from a default constant, overridable.
+**Not in BoltDefinition** (components initialized from default constants by the builder):
+- `BoltSpawnOffsetY(54.0)` — component on the bolt entity, inserted by the builder from a default constant. Future bolt types or effects could override it.
+- `BoltAngleSpread(0.524)` — component on the bolt entity (~30°), used for both initial launch and respawn angle randomization. Inserted by the builder from a default constant, overridable.
 - `BoltRespawnOffsetY` is eliminated — `BoltSpawnOffsetY` covers both spawn and respawn.
 
 ### BoltRenderingConfig

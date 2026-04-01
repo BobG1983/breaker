@@ -13,6 +13,7 @@ pub struct SetModifier {
     pub entity: Entity,
     pub modifier: VisualModifier,
     pub source: &'static str,
+    pub duration: Option<f32>,  // if Some, auto-removed after N seconds
 }
 
 /// Add a stacking modifier. Used for chip effects. Stacks with DR.
@@ -31,8 +32,8 @@ pub struct RemoveModifier {
 }
 ```
 
-- `SetModifier`: same source key overwrites. Used for per-frame dynamic state (speed → trail length).
-- `AddModifier`: stacks with diminishing returns. Used for chip effects (fired once, removed on reverse).
+- `SetModifier`: same source key overwrites. Used for per-frame dynamic state (speed → trail length). **Optional `duration`:** when `Some(seconds)`, the crate auto-removes the modifier after the duration expires. Used for brief effects like `SquashStretch` (2-3 frames ≈ 0.05s) without game-side frame counting. When `None`, the modifier persists until explicitly overwritten or removed.
+- `AddModifier`: stacks with diminishing returns. Used for chip effects (fired once, removed on reverse). No duration — always persistent until explicitly removed via `RemoveModifier`.
 - `RemoveModifier`: removes by source key. Used when chip effects reverse.
 
 **`source: &'static str`** is intentional — source keys are string literals (`"bolt_speed"`, `"speed_boost"`, etc.), not runtime-generated strings. This avoids per-frame `String` allocation for `SetModifier` messages sent every FixedUpdate. All source keys are known at compile time. If a future need arises for dynamic source keys, the type can be changed to `Cow<'static, str>`.
