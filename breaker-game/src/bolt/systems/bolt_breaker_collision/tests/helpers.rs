@@ -12,7 +12,7 @@ use crate::{
         messages::BoltImpactBreaker,
     },
     breaker::{
-        components::{Breaker, BreakerHeight, BreakerTilt, BreakerWidth, MaxReflectionAngle},
+        components::{Breaker, BreakerHeight, BreakerReflectionSpread, BreakerTilt, BreakerWidth},
         resources::BreakerConfig,
     },
     shared::{BOLT_LAYER, BREAKER_LAYER, EntityScale, GameDrawLayer},
@@ -43,8 +43,8 @@ pub(super) fn default_bolt_radius() -> BoltRadius {
     BoltRadius(BoltConfig::default().radius)
 }
 
-pub(super) fn default_max_reflection_angle() -> MaxReflectionAngle {
-    MaxReflectionAngle(BreakerConfig::default().max_reflection_angle.to_radians())
+pub(super) fn default_reflection_spread() -> BreakerReflectionSpread {
+    BreakerReflectionSpread(BreakerConfig::default().reflection_spread.to_radians())
 }
 
 /// Breaker entities use `Position2D` as canonical position.
@@ -59,7 +59,7 @@ pub(super) fn spawn_breaker_at(app: &mut App, x: f32, y: f32) -> Entity {
             BreakerTilt::default(),
             w,
             h,
-            default_max_reflection_angle(),
+            default_reflection_spread(),
             Aabb2D::new(Vec2::ZERO, half_extents),
             CollisionLayers::new(BREAKER_LAYER, BOLT_LAYER),
             Position2D(pos),
@@ -136,7 +136,7 @@ pub(super) fn spawn_scaled_breaker_at(app: &mut App, x: f32, y: f32, entity_scal
         BreakerTilt::default(),
         w,
         h,
-        default_max_reflection_angle(),
+        default_reflection_spread(),
         EntityScale(entity_scale),
         Aabb2D::new(Vec2::ZERO, half_extents),
         CollisionLayers::new(BREAKER_LAYER, BOLT_LAYER),

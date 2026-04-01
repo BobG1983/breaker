@@ -38,7 +38,7 @@ pub struct BreakerBaseY(pub f32);
 
 /// Maximum reflection angle from vertical in radians.
 #[derive(Component, Debug)]
-pub struct MaxReflectionAngle(pub f32);
+pub struct BreakerReflectionSpread(pub f32);
 
 /// Marker: breaker entity has been initialized by `init_breaker`.
 /// Prevents duplicate chain pushes on node re-entry.

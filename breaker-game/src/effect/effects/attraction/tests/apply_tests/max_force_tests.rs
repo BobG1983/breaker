@@ -4,13 +4,29 @@
 
 use bevy::prelude::*;
 use rantzsoft_physics2d::collision_layers::CollisionLayers;
-use rantzsoft_spatial2d::components::{GlobalPosition2D, Velocity2D};
+use rantzsoft_spatial2d::components::{BaseSpeed, GlobalPosition2D, Velocity2D};
 
 use super::super::{super::effect::*, *};
 use crate::{
     effect::core::AttractionType,
     shared::{CELL_LAYER, WALL_LAYER},
 };
+
+/// Computes the expected velocity after one tick of attraction steering.
+///
+/// Same math as the production system: blend direction toward target,
+/// normalize, then set magnitude to `base_speed`.
+fn expected_velocity(
+    starting_vel: Vec2,
+    direction_to_target: Vec2,
+    effective_force: f32,
+    dt: f32,
+    base_speed: f32,
+) -> Vec2 {
+    let steering = direction_to_target * effective_force * dt;
+    let new_dir = (starting_vel + steering).normalize_or_zero();
+    new_dir * base_speed
+}
 
 // ── Behavior 12: apply_attraction clamps force to max_force when Some (force exceeds cap) ──
 
@@ -19,11 +35,13 @@ fn apply_attraction_clamps_force_to_max_force_when_exceeded() {
     let mut app = test_app();
     enter_playing(&mut app);
 
+    // Start moving upward so force differences produce different steering angles.
+    let start_vel = Vec2::new(0.0, 10000.0);
     let entity_a = app
         .world_mut()
         .spawn((
             GlobalPosition2D(Vec2::new(0.0, 0.0)),
-            Velocity2D(Vec2::ZERO),
+            Velocity2D(start_vel),
             spatial_params(),
             ActiveAttractions(vec![AttractionEntry {
                 attraction_type: AttractionType::Cell,
@@ -51,18 +69,18 @@ fn apply_attraction_clamps_force_to_max_force_when_exceeded() {
     app.update();
 
     let velocity = app.world().get::<Velocity2D>(entity_a).unwrap();
-    // Effective force should be min(1000.0, 200.0) = 200.0
-    // Velocity x should be approximately 200.0 * dt
     let dt = app
         .world()
         .resource::<Time<Fixed>>()
         .timestep()
         .as_secs_f32();
-    let expected_vx = 200.0 * dt;
+    let base_speed = app.world().get::<BaseSpeed>(entity_a).unwrap().0;
+    let expected = expected_velocity(start_vel, Vec2::X, 200.0, dt, base_speed);
     assert!(
-        (velocity.x - expected_vx).abs() < 0.1,
-        "force should be clamped to max_force 200.0: expected velocity.x ~ {expected_vx}, got {}",
-        velocity.x
+        (velocity.0 - expected).length() < 1.0,
+        "force should be clamped to max_force 200.0: expected {:?}, got {:?}",
+        expected,
+        velocity.0
     );
 }
 
@@ -71,11 +89,12 @@ fn apply_attraction_at_cap_exactly_applies_unchanged() {
     let mut app = test_app();
     enter_playing(&mut app);
 
+    let start_vel = Vec2::new(0.0, 10000.0);
     let entity_a = app
         .world_mut()
         .spawn((
             GlobalPosition2D(Vec2::new(0.0, 0.0)),
-            Velocity2D(Vec2::ZERO),
+            Velocity2D(start_vel),
             spatial_params(),
             ActiveAttractions(vec![AttractionEntry {
                 attraction_type: AttractionType::Cell,
@@ -108,11 +127,13 @@ fn apply_attraction_at_cap_exactly_applies_unchanged() {
         .resource::<Time<Fixed>>()
         .timestep()
         .as_secs_f32();
-    let expected_vx = 200.0 * dt;
+    let base_speed = app.world().get::<BaseSpeed>(entity_a).unwrap().0;
+    let expected = expected_velocity(start_vel, Vec2::X, 200.0, dt, base_speed);
     assert!(
-        (velocity.x - expected_vx).abs() < 0.1,
-        "force at cap exactly should apply unchanged: expected velocity.x ~ {expected_vx}, got {}",
-        velocity.x
+        (velocity.0 - expected).length() < 1.0,
+        "force at cap exactly should match: expected {:?}, got {:?}",
+        expected,
+        velocity.0
     );
 }
 
@@ -123,11 +144,12 @@ fn apply_attraction_does_not_clamp_when_force_below_max_force() {
     let mut app = test_app();
     enter_playing(&mut app);
 
+    let start_vel = Vec2::new(0.0, 10000.0);
     let entity_a = app
         .world_mut()
         .spawn((
             GlobalPosition2D(Vec2::new(0.0, 0.0)),
-            Velocity2D(Vec2::ZERO),
+            Velocity2D(start_vel),
             spatial_params(),
             ActiveAttractions(vec![AttractionEntry {
                 attraction_type: AttractionType::Cell,
@@ -155,17 +177,18 @@ fn apply_attraction_does_not_clamp_when_force_below_max_force() {
     app.update();
 
     let velocity = app.world().get::<Velocity2D>(entity_a).unwrap();
-    // Effective force should be min(100.0, 200.0) = 100.0 (cap not triggered)
     let dt = app
         .world()
         .resource::<Time<Fixed>>()
         .timestep()
         .as_secs_f32();
-    let expected_vx = 100.0 * dt;
+    let base_speed = app.world().get::<BaseSpeed>(entity_a).unwrap().0;
+    let expected = expected_velocity(start_vel, Vec2::X, 100.0, dt, base_speed);
     assert!(
-        (velocity.x - expected_vx).abs() < 0.1,
-        "force below cap should not be clamped: expected velocity.x ~ {expected_vx}, got {}",
-        velocity.x
+        (velocity.0 - expected).length() < 1.0,
+        "force below cap should not be clamped: expected {:?}, got {:?}",
+        expected,
+        velocity.0
     );
 }
 
@@ -176,11 +199,12 @@ fn apply_attraction_does_not_clamp_when_max_force_is_none() {
     let mut app = test_app();
     enter_playing(&mut app);
 
+    let start_vel = Vec2::new(0.0, 10000.0);
     let entity_a = app
         .world_mut()
         .spawn((
             GlobalPosition2D(Vec2::new(0.0, 0.0)),
-            Velocity2D(Vec2::ZERO),
+            Velocity2D(start_vel),
             spatial_params(),
             ActiveAttractions(vec![AttractionEntry {
                 attraction_type: AttractionType::Cell,
@@ -208,17 +232,18 @@ fn apply_attraction_does_not_clamp_when_max_force_is_none() {
     app.update();
 
     let velocity = app.world().get::<Velocity2D>(entity_a).unwrap();
-    // No clamping -- force 1000.0 applied directly
     let dt = app
         .world()
         .resource::<Time<Fixed>>()
         .timestep()
         .as_secs_f32();
-    let expected_vx = 1000.0 * dt;
+    let base_speed = app.world().get::<BaseSpeed>(entity_a).unwrap().0;
+    let expected = expected_velocity(start_vel, Vec2::X, 1000.0, dt, base_speed);
     assert!(
-        (velocity.x - expected_vx).abs() < 0.1,
-        "None max_force should not clamp: expected velocity.x ~ {expected_vx}, got {}",
-        velocity.x
+        (velocity.0 - expected).length() < 1.0,
+        "None max_force should not clamp: expected {:?}, got {:?}",
+        expected,
+        velocity.0
     );
 }
 
@@ -229,11 +254,12 @@ fn apply_attraction_multiple_entries_uses_nearest_entry_max_force() {
     let mut app = test_app();
     enter_playing(&mut app);
 
+    let start_vel = Vec2::new(0.0, 10000.0);
     let entity_a = app
         .world_mut()
         .spawn((
             GlobalPosition2D(Vec2::new(0.0, 0.0)),
-            Velocity2D(Vec2::ZERO),
+            Velocity2D(start_vel),
             spatial_params(),
             ActiveAttractions(vec![
                 AttractionEntry {
@@ -283,22 +309,23 @@ fn apply_attraction_multiple_entries_uses_nearest_entry_max_force() {
     app.update();
 
     let velocity = app.world().get::<Velocity2D>(entity_a).unwrap();
-    // Nearest is wall at (50, 0) with force=500.0, max_force=None (no clamp)
     let dt = app
         .world()
         .resource::<Time<Fixed>>()
         .timestep()
         .as_secs_f32();
-    let expected_vx = 500.0 * dt;
+    let base_speed = app.world().get::<BaseSpeed>(entity_a).unwrap().0;
+    let expected = expected_velocity(start_vel, Vec2::X, 500.0, dt, base_speed);
     assert!(
         velocity.x > 0.0,
         "should steer toward nearest target (wall at 50,0), got velocity.x = {}",
         velocity.x
     );
     assert!(
-        (velocity.x - expected_vx).abs() < 0.1,
-        "nearest entry (wall) has max_force: None, so force 500.0 not clamped: expected ~ {expected_vx}, got {}",
-        velocity.x
+        (velocity.0 - expected).length() < 1.0,
+        "nearest entry (wall) has max_force: None, so force 500.0 not clamped: expected {:?}, got {:?}",
+        expected,
+        velocity.0
     );
 }
 
@@ -309,11 +336,12 @@ fn apply_attraction_max_force_zero_disables_steering() {
     let mut app = test_app();
     enter_playing(&mut app);
 
+    let start_vel = Vec2::new(0.0, 10000.0);
     let entity_a = app
         .world_mut()
         .spawn((
             GlobalPosition2D(Vec2::new(0.0, 0.0)),
-            Velocity2D(Vec2::ZERO),
+            Velocity2D(start_vel),
             spatial_params(),
             ActiveAttractions(vec![AttractionEntry {
                 attraction_type: AttractionType::Cell,
@@ -341,15 +369,14 @@ fn apply_attraction_max_force_zero_disables_steering() {
     app.update();
 
     let velocity = app.world().get::<Velocity2D>(entity_a).unwrap();
-    // max_force: Some(0.0) should clamp force to 0.0, resulting in no velocity change
+    let base_speed = app.world().get::<BaseSpeed>(entity_a).unwrap().0;
+    // max_force: Some(0.0) — zero steering, direction unchanged (still pointing up)
+    // apply_velocity_formula sets magnitude to `base_speed` in the same direction
+    let expected = Vec2::new(0.0, base_speed);
     assert!(
-        velocity.x.abs() < f32::EPSILON,
-        "max_force: Some(0.0) should disable steering, got velocity.x = {}",
-        velocity.x
-    );
-    assert!(
-        velocity.y.abs() < f32::EPSILON,
-        "max_force: Some(0.0) should disable steering, got velocity.y = {}",
-        velocity.y
+        (velocity.0 - expected).length() < 1.0,
+        "max_force: Some(0.0) should not steer, expected {:?}, got {:?}",
+        expected,
+        velocity.0
     );
 }

@@ -69,7 +69,7 @@ fn tilt_affects_reflection() {
         },
         default_breaker_width(),
         default_breaker_height(),
-        default_max_reflection_angle(),
+        default_reflection_spread(),
         Position2D(Vec2::new(0.0, y_pos)),
         rantzsoft_spatial2d::components::Spatial2D,
         GameDrawLayer::Breaker,

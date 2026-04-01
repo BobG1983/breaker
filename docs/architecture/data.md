@@ -28,7 +28,7 @@ move_breaker, bolt_breaker_collision, …
 
 A component belongs on the entity it conceptually describes:
 
-- `MaxReflectionAngle` is a breaker surface property → lives on the **breaker** entity, even though `bolt_breaker_collision` and `prepare_bolt_velocity` also read it
+- `MaxReflectionAngle` is a breaker surface property → lives on the **breaker** entity, even though `bolt_breaker_collision` also reads it
 - `BoltRadius` is a bolt property → lives on the **bolt** entity, even though collision systems on other domains read it
 - Cross-entity queries are normal ECS — reading a component from another entity is not coupling
 

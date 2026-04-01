@@ -72,7 +72,7 @@ pub struct BreakerConfig {
     /// Strength of eased deceleration (0.0 = constant decel, higher = more speed-dependent).
     pub decel_ease_strength: f32,
     /// Maximum reflection angle from vertical in degrees.
-    pub max_reflection_angle: f32,
+    pub reflection_spread: f32,
 }
 
 impl Default for BreakerConfig {
@@ -107,7 +107,7 @@ impl Default for BreakerConfig {
             settle_tilt_ease: EaseFunction::CubicOut,
             decel_ease: EaseFunction::QuadraticIn,
             decel_ease_strength: 1.0,
-            max_reflection_angle: 75.0,
+            reflection_spread: 75.0,
         }
     }
 }
@@ -156,8 +156,8 @@ mod tests {
         let result: BreakerDefaults = ron::de::from_str(ron_str).expect("breaker RON should parse");
         assert!(result.width > 0.0);
         assert!(
-            result.max_reflection_angle > 0.0,
-            "RON should include max_reflection_angle"
+            result.reflection_spread > 0.0,
+            "RON should include reflection_spread"
         );
     }
 

@@ -5,10 +5,10 @@ use rantzsoft_spatial2d::components::{MaxSpeed, Position2D, PreviousPosition, Sc
 use crate::{
     breaker::components::{
         BrakeDecel, BrakeTilt, BreakerAcceleration, BreakerBaseY, BreakerDeceleration,
-        BreakerHeight, BreakerState, BreakerStateTimer, BreakerTilt, BreakerVelocity, BreakerWidth,
-        BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown, BumpPerfectWindow, BumpState,
-        BumpWeakCooldown, DashDuration, DashSpeedMultiplier, DashTilt, DashTiltEase, DecelEasing,
-        MaxReflectionAngle, SettleDuration, SettleTiltEase,
+        BreakerHeight, BreakerReflectionSpread, BreakerState, BreakerStateTimer, BreakerTilt,
+        BreakerVelocity, BreakerWidth, BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown,
+        BumpPerfectWindow, BumpState, BumpWeakCooldown, DashDuration, DashSpeedMultiplier,
+        DashTilt, DashTiltEase, DecelEasing, SettleDuration, SettleTiltEase,
     },
     effect::{
         AnchorActive, AnchorPlanted,
@@ -26,7 +26,7 @@ pub(crate) type CollisionQueryBreaker = (
     &'static BreakerTilt,
     &'static BreakerWidth,
     &'static BreakerHeight,
-    &'static MaxReflectionAngle,
+    &'static BreakerReflectionSpread,
     Option<&'static ActiveSizeBoosts>,
     Option<&'static EntityScale>,
 );

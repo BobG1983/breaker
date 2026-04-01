@@ -87,8 +87,9 @@ pub(super) fn tick(app: &mut App) {
     app.update();
 }
 
-/// Spatial params required by `BoltSpatialData`. Permissive values so the
-/// velocity formula is effectively a no-op in attraction steering tests.
+/// Spatial params required by `SpatialData`. Permissive values so the
+/// velocity formula preserves direction unchanged — `base_speed` 10000.0
+/// with no angle clamping and no min/max speed clamping.
 pub(super) fn spatial_params() -> (
     BaseSpeed,
     MinSpeed,

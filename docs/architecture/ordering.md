@@ -25,9 +25,7 @@ Domains MAY define a `pub enum {Domain}Systems` with `#[derive(SystemSet)]` in `
 | `BreakerSystems::InitParams` | `breaker/sets.rs` | `init_breaker_params` |
 | `BreakerSystems::Reset` | `breaker/sets.rs` | `reset_breaker` (intra-domain only — no cross-domain consumers yet) |
 | `BreakerSystems::GradeBump` | `breaker/sets.rs` | `grade_bump` |
-| `BoltSystems::InitParams` | `bolt/sets.rs` | `init_bolt_params` |
-| `BoltSystems::PrepareVelocity` | `bolt/sets.rs` | `prepare_bolt_velocity` |
-| `BoltSystems::Reset` | `bolt/sets.rs` | `reset_bolt` (intra-domain only — no cross-domain consumers yet) |
+| `BoltSystems::Reset` | `bolt/sets.rs` | `reset_bolt` |
 | `BoltSystems::BreakerCollision` | `bolt/sets.rs` | `bolt_breaker_collision` |
 | `BoltSystems::BoltLost` | `bolt/sets.rs` | `bolt_lost` |
 | `rantzsoft_physics2d::PhysicsSystems::MaintainQuadtree` | `rantzsoft_physics2d/src/plugin.rs` | `maintain_quadtree` (incremental quadtree update — game collision systems order `.after` this) |
@@ -62,8 +60,7 @@ move_breaker.in_set(BreakerSystems::Move)
 init_breaker_params.in_set(BreakerSystems::InitParams)
 
 // In bolt/plugin.rs — order against it
-(hover_bolt, prepare_bolt_velocity.in_set(BoltSystems::PrepareVelocity))
-    .after(BreakerSystems::Move)
+hover_bolt.after(BreakerSystems::Move)
 ```
 
 ## Current Ordering Chain
@@ -95,9 +92,8 @@ NodeSystems::Spawn
 (spawn_walls, dispatch_wall_effects).chain()                 [wall domain]
   [dispatch_wall_effects is currently a no-op stub]
 
-spawn_bolt → init_bolt_params          [bolt domain, .after(spawn_bolt)]
-  BoltSystems::InitParams
-    <- reset_bolt .after(BoltSystems::InitParams)
+spawn_bolt                               [bolt domain — uses Bolt::builder()]
+    <- reset_bolt .after(spawn_bolt)
                   .after(BreakerSystems::Reset)
        BoltSystems::Reset              [bolt domain]
 ```
@@ -109,17 +105,14 @@ Note: `spawn_breaker` → `ApplyDeferred` → `init_breaker_params` are chained 
 ```
 rantzsoft_physics2d::PhysicsSystems::MaintainQuadtree
   (maintain_quadtree)           [rantzsoft_physics2d — incremental spatial index update]
-    <- bolt_cell_collision .after(BoltSystems::PrepareVelocity)
-                           .after(rantzsoft_physics2d::PhysicsSystems::MaintainQuadtree)
+    <- bolt_cell_collision .after(rantzsoft_physics2d::PhysicsSystems::MaintainQuadtree)
     <- shockwave_collision .after(tick_shockwave)
                            .after(rantzsoft_physics2d::PhysicsSystems::MaintainQuadtree)
 
 move_breaker .after(update_bump)
   BreakerSystems::Move
-    <- (hover_bolt, prepare_bolt_velocity) .after(BreakerSystems::Move)
-      BoltSystems::PrepareVelocity
-            <- bolt_cell_collision .after(BoltSystems::PrepareVelocity)
-                                   .after(rantzsoft_physics2d::PhysicsSystems::MaintainQuadtree)
+    <- hover_bolt .after(BreakerSystems::Move)
+            <- bolt_cell_collision .after(rantzsoft_physics2d::PhysicsSystems::MaintainQuadtree)
               BoltSystems::CellCollision
                 <- bolt_breaker_collision .after(BoltSystems::CellCollision)
                   BoltSystems::BreakerCollision
@@ -154,7 +147,7 @@ move_breaker .after(update_bump)
                [effect domain, unordered relative to physics chain]
 ```
 
-Reading: the quadtree is maintained first (incremental — only changed entities re-inserted). Consumers read `Active*` components directly via `.multiplier()` / `.total()` methods. Then breaker moves, bolt velocity is prepared, cell collisions run (reading quadtree for broad-phase, tagged `BoltSystems::CellCollision`), then breaker collision (`BoltSystems::BreakerCollision`), then bump grading (`BreakerSystems::GradeBump`), then distance constraints enforced (chain bolts), then bolt-lost detection (`BoltSystems::BoltLost`). All effect bridge systems run in `EffectSystems::Bridge` — downstream consumers order `.after(EffectSystems::Bridge)`.
+Reading: the quadtree is maintained first (incremental — only changed entities re-inserted). Consumers read `Active*` components directly via `.multiplier()` / `.total()` methods. Then breaker moves, cell collisions run (reading quadtree for broad-phase, tagged `BoltSystems::CellCollision`), then breaker collision (`BoltSystems::BreakerCollision`), then bump grading (`BreakerSystems::GradeBump`), then distance constraints enforced (chain bolts), then bolt-lost detection (`BoltSystems::BoltLost`). Velocity is enforced by `apply_velocity_formula` at each collision/steering site — there is no separate velocity preparation step. All effect bridge systems run in `EffectSystems::Bridge` — downstream consumers order `.after(EffectSystems::Bridge)`.
 
 ```
 NodeSystems::TrackCompletion

@@ -5,8 +5,11 @@ use rantzsoft_physics2d::{
 use rantzsoft_spatial2d::{components::GlobalPosition2D, queries::SpatialData};
 
 use crate::{
-    bolt::messages::{BoltImpactBreaker, BoltImpactCell, BoltImpactWall},
-    effect::core::AttractionType,
+    bolt::{
+        messages::{BoltImpactBreaker, BoltImpactCell, BoltImpactWall},
+        queries::apply_velocity_formula,
+    },
+    effect::{core::AttractionType, effects::speed_boost::ActiveSpeedBoosts},
     shared::{BREAKER_LAYER, CELL_LAYER, WALL_LAYER},
 };
 
@@ -82,11 +85,11 @@ pub(crate) fn apply_attraction(
     time: Res<Time<Fixed>>,
     quadtree: Res<CollisionQuadtree>,
     positions: Query<&GlobalPosition2D>,
-    mut attracted: Query<(SpatialData, &ActiveAttractions)>,
+    mut attracted: Query<(SpatialData, &ActiveAttractions, Option<&ActiveSpeedBoosts>)>,
 ) {
     let dt = time.timestep().as_secs_f32();
 
-    for (mut spatial, attractions) in &mut attracted {
+    for (mut spatial, attractions, speed_boosts) in &mut attracted {
         let entity_pos = spatial.global_position.0;
 
         if !attractions.0.iter().any(|e| e.active) {
@@ -128,9 +131,9 @@ pub(crate) fn apply_attraction(
             let direction = (nearest_pos - entity_pos).normalize_or_zero();
             let effective_force =
                 nearest_max_force.map_or(nearest_force, |cap| nearest_force.min(cap));
-            let delta_mag = effective_force * dt;
-            spatial.velocity.x = direction.x.mul_add(delta_mag, spatial.velocity.x);
-            spatial.velocity.y = direction.y.mul_add(delta_mag, spatial.velocity.y);
+            let steering = direction * effective_force * dt;
+            spatial.velocity.0 = (spatial.velocity.0 + steering).normalize_or_zero();
+            apply_velocity_formula(&mut spatial, speed_boosts);
         }
     }
 }

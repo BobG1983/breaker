@@ -112,10 +112,10 @@ Both systems use `Commands::remove::<ShieldActive>()` to despawn the component w
 
 `Velocity2D` (rantzsoft_spatial2d component) on bolt entities is written by two effect domain runtime systems as an accepted architectural exception:
 
-- **effect** (`apply_gravity_pull` in `effect/effects/gravity_well.rs`): writes `&mut Velocity2D` on bolt entities each FixedUpdate tick to apply gravitational pull toward active gravity wells. Ordered `.before(BoltSystems::PrepareVelocity)` so the bolt domain's speed clamping still applies.
-- **effect** (`apply_attraction` in `effect/effects/attraction/effect.rs`): writes `&mut Velocity2D` on bolt entities each FixedUpdate tick to steer bolts toward the nearest attraction target. Ordered `.after(PhysicsSystems::MaintainQuadtree)` for quadtree lookups.
+- **effect** (`apply_gravity_pull` in `effect/effects/gravity_well.rs`): steers bolt velocity toward active gravity wells each FixedUpdate tick. Uses `SpatialData` query and calls `apply_velocity_formula` after steering to enforce speed constraints.
+- **effect** (`apply_attraction` in `effect/effects/attraction/effect.rs`): steers bolt velocity toward the nearest attraction target each FixedUpdate tick. Uses `SpatialData` query and calls `apply_velocity_formula` after steering. Ordered `.after(PhysicsSystems::MaintainQuadtree)` for quadtree lookups.
 
-Both systems apply simple arithmetic forces to bolt velocity. Adding message indirection (effect writes a force message, bolt reads and applies) would add complexity without benefit. The bolt domain's `prepare_bolt_velocity` speed clamping runs after these writes, so bolt speed limits are always enforced.
+Both systems steer bolt velocity direction, then call `apply_velocity_formula` to enforce `(base_speed * boost_mult).clamp(min, max)` magnitude. This is the same velocity enforcement used by collision systems — there is no separate `prepare_bolt_velocity` step.
 
 ## Debug Domain — Cross-Domain Exception
 

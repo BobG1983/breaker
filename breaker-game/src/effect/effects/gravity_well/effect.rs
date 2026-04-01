@@ -4,7 +4,8 @@ use bevy::prelude::*;
 use rantzsoft_spatial2d::prelude::*;
 
 use crate::{
-    bolt::components::Bolt,
+    bolt::{components::Bolt, queries::apply_velocity_formula},
+    effect::effects::speed_boost::ActiveSpeedBoosts,
     shared::{CleanupOnNodeExit, playing_state::PlayingState},
 };
 
@@ -129,20 +130,20 @@ type BoltNotWell = (With<Bolt>, Without<GravityWellMarker>);
 pub(crate) fn apply_gravity_pull(
     time: Res<Time>,
     wells: Query<(&Position2D, &GravityWellConfig), With<GravityWellMarker>>,
-    mut bolts: Query<(&Position2D, &mut Velocity2D), BoltNotWell>,
+    mut bolts: Query<(SpatialData, Option<&ActiveSpeedBoosts>), BoltNotWell>,
 ) {
     let dt = time.delta_secs();
     for (well_position, config) in &wells {
         let well_pos = well_position.0;
-        for (bolt_position, mut velocity) in &mut bolts {
-            let bolt_pos = bolt_position.0;
+        for (mut spatial, speed_boosts) in &mut bolts {
+            let bolt_pos = spatial.position.0;
             let delta = well_pos - bolt_pos;
             let distance = delta.length();
             if distance > 0.0 && distance <= config.radius {
                 let direction = delta / distance;
-                let pull = config.strength * dt;
-                velocity.x = direction.x.mul_add(pull, velocity.x);
-                velocity.y = direction.y.mul_add(pull, velocity.y);
+                let steering = direction * config.strength * dt;
+                spatial.velocity.0 = (spatial.velocity.0 + steering).normalize_or_zero();
+                apply_velocity_formula(&mut spatial, speed_boosts);
             }
         }
     }

@@ -6,9 +6,9 @@ use rantzsoft_spatial2d::components::MaxSpeed;
 use crate::breaker::{
     components::{
         BrakeDecel, BrakeTilt, Breaker, BreakerAcceleration, BreakerBaseY, BreakerDeceleration,
-        BreakerHeight, BreakerWidth, BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown,
-        BumpPerfectWindow, BumpVisualParams, BumpWeakCooldown, DashDuration, DashSpeedMultiplier,
-        DashTilt, DashTiltEase, DecelEasing, MaxReflectionAngle, SettleDuration, SettleTiltEase,
+        BreakerHeight, BreakerReflectionSpread, BreakerWidth, BumpEarlyWindow, BumpLateWindow,
+        BumpPerfectCooldown, BumpPerfectWindow, BumpVisualParams, BumpWeakCooldown, DashDuration,
+        DashSpeedMultiplier, DashTilt, DashTiltEase, DecelEasing, SettleDuration, SettleTiltEase,
     },
     resources::BreakerConfig,
 };
@@ -47,7 +47,7 @@ pub fn init_breaker_params(
                     ease: config.brake_tilt_ease,
                 },
                 BrakeDecel(config.brake_decel_multiplier),
-                MaxReflectionAngle(config.max_reflection_angle.to_radians()),
+                BreakerReflectionSpread(config.reflection_spread.to_radians()),
             ))
             .insert((
                 SettleDuration(config.settle_duration),
@@ -110,7 +110,7 @@ mod tests {
         assert!(world.get::<DashTiltEase>(entity).is_some());
         assert!(world.get::<BrakeTilt>(entity).is_some());
         assert!(world.get::<BrakeDecel>(entity).is_some());
-        assert!(world.get::<MaxReflectionAngle>(entity).is_some());
+        assert!(world.get::<BreakerReflectionSpread>(entity).is_some());
         assert!(world.get::<SettleDuration>(entity).is_some());
         assert!(world.get::<SettleTiltEase>(entity).is_some());
         assert!(world.get::<BumpPerfectWindow>(entity).is_some());
@@ -155,11 +155,11 @@ mod tests {
             "BreakerHeight should match config.height"
         );
         assert!(
-            (world.get::<MaxReflectionAngle>(entity).unwrap().0
-                - config.max_reflection_angle.to_radians())
+            (world.get::<BreakerReflectionSpread>(entity).unwrap().0
+                - config.reflection_spread.to_radians())
             .abs()
                 < 1e-5,
-            "MaxReflectionAngle should match config (converted to radians)"
+            "BreakerReflectionSpread should match config (converted to radians)"
         );
         let params = world.get::<BumpVisualParams>(entity).unwrap();
         assert!(

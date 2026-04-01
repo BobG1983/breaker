@@ -6,9 +6,9 @@ use rantzsoft_spatial2d::components::MaxSpeed;
 use crate::breaker::{
     components::{
         BrakeDecel, BrakeTilt, Breaker, BreakerAcceleration, BreakerBaseY, BreakerDeceleration,
-        BreakerHeight, BreakerWidth, BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown,
-        BumpPerfectWindow, BumpVisualParams, BumpWeakCooldown, DashDuration, DashSpeedMultiplier,
-        DashTilt, DashTiltEase, DecelEasing, MaxReflectionAngle, SettleDuration, SettleTiltEase,
+        BreakerHeight, BreakerReflectionSpread, BreakerWidth, BumpEarlyWindow, BumpLateWindow,
+        BumpPerfectCooldown, BumpPerfectWindow, BumpVisualParams, BumpWeakCooldown, DashDuration,
+        DashSpeedMultiplier, DashTilt, DashTiltEase, DecelEasing, SettleDuration, SettleTiltEase,
     },
     resources::BreakerConfig,
 };
@@ -47,7 +47,7 @@ pub(crate) fn propagate_breaker_config(
                     ease: config.brake_tilt_ease,
                 },
                 BrakeDecel(config.brake_decel_multiplier),
-                MaxReflectionAngle(config.max_reflection_angle.to_radians()),
+                BreakerReflectionSpread(config.reflection_spread.to_radians()),
             ))
             .insert((
                 SettleDuration(config.settle_duration),
@@ -75,10 +75,10 @@ mod tests {
         breaker::{
             components::{
                 BrakeDecel, BrakeTilt, Breaker, BreakerAcceleration, BreakerBaseY,
-                BreakerDeceleration, BreakerHeight, BreakerWidth, BumpEarlyWindow, BumpLateWindow,
-                BumpPerfectCooldown, BumpPerfectWindow, BumpVisualParams, BumpWeakCooldown,
-                DashDuration, DashSpeedMultiplier, DashTilt, DashTiltEase, DecelEasing,
-                MaxReflectionAngle, SettleDuration, SettleTiltEase,
+                BreakerDeceleration, BreakerHeight, BreakerReflectionSpread, BreakerWidth,
+                BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown, BumpPerfectWindow,
+                BumpVisualParams, BumpWeakCooldown, DashDuration, DashSpeedMultiplier, DashTilt,
+                DashTiltEase, DecelEasing, SettleDuration, SettleTiltEase,
             },
             resources::BreakerConfig,
         },
@@ -120,7 +120,7 @@ mod tests {
                 ease: config.brake_tilt_ease,
             },
             BrakeDecel(config.brake_decel_multiplier),
-            MaxReflectionAngle(config.max_reflection_angle.to_radians()),
+            BreakerReflectionSpread(config.reflection_spread.to_radians()),
             SettleDuration(config.settle_duration),
             SettleTiltEase(config.settle_tilt_ease),
             BumpPerfectWindow(config.perfect_window),
@@ -212,20 +212,20 @@ mod tests {
             spawn_breaker_with_config(world, &config)
         };
         app.world_mut()
-            .get_mut::<MaxReflectionAngle>(entity)
+            .get_mut::<BreakerReflectionSpread>(entity)
             .unwrap()
             .0 = 999.0;
         {
             let mut c = app.world_mut().resource_mut::<BreakerConfig>();
-            c.max_reflection_angle = 75.0;
+            c.reflection_spread = 75.0;
         }
         app.update();
 
         let world = app.world();
-        let max_refl = world.get::<MaxReflectionAngle>(entity).unwrap();
+        let max_refl = world.get::<BreakerReflectionSpread>(entity).unwrap();
         assert!(
             (max_refl.0 - 75.0_f32.to_radians()).abs() < 1e-5,
-            "MaxReflectionAngle should be {} (75 degrees in radians), got {}",
+            "BreakerReflectionSpread should be {} (75 degrees in radians), got {}",
             75.0_f32.to_radians(),
             max_refl.0
         );
