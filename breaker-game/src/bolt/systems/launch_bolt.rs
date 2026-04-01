@@ -289,21 +289,14 @@ mod tests {
 
     // Behavior 30: non-serving bolts unaffected (already covered above)
 
-    // Behavior 31: launch_bolt does NOT query BoltInitialAngle
+    // Behavior 31: launch_bolt uses BoltAngleSpread (BoltInitialAngle deleted in Wave 6)
     #[test]
-    fn launch_bolt_works_without_bolt_initial_angle() {
-        // Given: Bolt built via .definition() (does NOT insert BoltInitialAngle).
+    fn launch_bolt_works_with_definition_built_bolt() {
+        // Given: Bolt built via .definition() with BoltAngleSpread.
         //        InputActions contains Bump.
         // Then: System runs without error, bolt launches.
-        //       This proves BoltInitialAngle is no longer a required query parameter.
         let mut app = test_app();
         let bolt_id = spawn_serving_bolt(&mut app);
-
-        // Verify BoltInitialAngle is NOT present on the entity
-        assert!(
-            app.world().get::<BoltInitialAngle>(bolt_id).is_none(),
-            "definition-built bolt should NOT have BoltInitialAngle"
-        );
 
         app.world_mut()
             .resource_mut::<InputActions>()
@@ -311,11 +304,9 @@ mod tests {
             .push(GameAction::Bump);
         tick(&mut app);
 
-        // If the system still queries BoltInitialAngle as required,
-        // this bolt won't be matched and BoltServing will remain.
         assert!(
             app.world().get::<BoltServing>(bolt_id).is_none(),
-            "bolt should be launched (BoltServing removed) even without BoltInitialAngle"
+            "bolt should be launched (BoltServing removed)"
         );
 
         let vel = app.world().get::<Velocity2D>(bolt_id).unwrap();

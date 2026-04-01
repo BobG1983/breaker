@@ -40,7 +40,7 @@ fn bolt_without_entity_scale_in_cell_collision_is_backward_compatible() {
     // Same as bolt_reflects_off_cell_bottom but explicitly no EntityScale.
     // Bolt should use full radius (8.0) and reflect normally.
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
 
     let cell_y = 100.0;
@@ -83,7 +83,7 @@ fn ccd_reads_cell_half_extents_from_aabb2d_not_cell_dimensions() {
     // If the system reads from Aabb2D, the bolt misses (no reflection).
     // If the system reads from CellWidth/CellHeight, the bolt hits and reflects.
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
 
     let cell_y = 100.0;
@@ -130,7 +130,7 @@ fn ccd_reads_wall_half_extents_from_aabb2d_not_wall_size() {
     // If the system reads from WallSize, the bolt hits (y=50 within range).
     // If the system reads from Aabb2D, the bolt misses (y=50 outside range).
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
 
     // Spawn wall with large WallSize but tiny Aabb2D
     app.world_mut().spawn((
@@ -229,7 +229,7 @@ fn cell_with_aabb2d_but_no_cell_dimensions_is_collision_candidate() {
         collect_cell_hits.after(super::super::system::bolt_cell_collision),
     );
 
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
 
     // Spawn a cell with ONLY Aabb2D (no CellWidth/CellHeight)
     let cell_y = 100.0;

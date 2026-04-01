@@ -34,10 +34,7 @@ mod tests {
     use rantzsoft_spatial2d::components::{Position2D, Spatial2D, Velocity2D};
 
     use super::*;
-    use crate::{
-        bolt::{components::BoltServing, resources::BoltConfig},
-        shared::GameDrawLayer,
-    };
+    use crate::{bolt::components::BoltServing, shared::GameDrawLayer};
 
     fn tick(app: &mut App) {
         let timestep = app.world().resource::<Time<Fixed>>().timestep();
@@ -56,7 +53,7 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
 
-        let config = BoltConfig::default();
+        let spawn_offset_y = 30.0;
 
         // Breaker uses Position2D as canonical position
         app.world_mut().spawn((
@@ -70,7 +67,7 @@ mod tests {
         app.world_mut().spawn((
             Bolt,
             BoltServing,
-            BoltSpawnOffsetY(config.spawn_offset_y),
+            BoltSpawnOffsetY(spawn_offset_y),
             Velocity2D(Vec2::new(0.0, 0.0)),
             Position2D(Vec2::new(0.0, 0.0)),
         ));
@@ -85,7 +82,7 @@ mod tests {
             .next()
             .expect("bolt should have Position2D");
 
-        let expected = Vec2::new(100.0, -250.0 + config.spawn_offset_y);
+        let expected = Vec2::new(100.0, -250.0 + spawn_offset_y);
         assert!(
             (position.0.x - expected.x).abs() < f32::EPSILON
                 && (position.0.y - expected.y).abs() < f32::EPSILON,

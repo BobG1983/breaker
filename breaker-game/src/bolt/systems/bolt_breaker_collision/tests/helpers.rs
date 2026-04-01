@@ -7,8 +7,8 @@ use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D, V
 use super::super::system::bolt_breaker_collision;
 use crate::{
     bolt::{
-        BoltConfig,
         components::{Bolt, BoltRadius},
+        definition::BoltDefinition,
         messages::BoltImpactBreaker,
     },
     breaker::{
@@ -40,7 +40,24 @@ pub(super) fn default_breaker_height() -> BreakerHeight {
 }
 
 pub(super) fn default_bolt_radius() -> BoltRadius {
-    BoltRadius(BoltConfig::default().radius)
+    BoltRadius(test_bolt_definition().radius)
+}
+
+/// Creates a `BoltDefinition` matching the values previously provided by
+/// `BoltConfig::default()`, so existing position calculations remain valid.
+pub(super) fn test_bolt_definition() -> BoltDefinition {
+    BoltDefinition {
+        name: "Bolt".to_string(),
+        base_speed: 400.0,
+        min_speed: 200.0,
+        max_speed: 800.0,
+        radius: 8.0,
+        base_damage: 10.0,
+        effects: vec![],
+        color_rgb: [6.0, 5.0, 0.5],
+        min_angle_horizontal: 5.0,
+        min_angle_vertical: 5.0,
+    }
 }
 
 pub(super) fn default_reflection_spread() -> BreakerReflectionSpread {
@@ -81,9 +98,10 @@ pub(super) fn tick(app: &mut App) {
 
 /// Bolt entities now use `Position2D` as canonical position.
 pub(super) fn spawn_bolt(app: &mut App, x: f32, y: f32, vx: f32, vy: f32) -> Entity {
+    let def = test_bolt_definition();
     Bolt::builder()
         .at_position(Vec2::new(x, y))
-        .config(&BoltConfig::default())
+        .definition(&def)
         .with_velocity(Velocity2D(Vec2::new(vx, vy)))
         .primary()
         .spawn(app.world_mut())
@@ -155,9 +173,10 @@ pub(super) fn spawn_scaled_bolt(
     vy: f32,
     entity_scale: f32,
 ) -> Entity {
+    let def = test_bolt_definition();
     let entity = Bolt::builder()
         .at_position(Vec2::new(x, y))
-        .config(&BoltConfig::default())
+        .definition(&def)
         .with_velocity(Velocity2D(Vec2::new(vx, vy)))
         .primary()
         .spawn(app.world_mut());

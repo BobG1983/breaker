@@ -8,12 +8,10 @@ use rantzsoft_spatial2d::components::{
 use super::super::core::*;
 use crate::bolt::{
     components::{
-        Bolt, BoltAngleSpread, BoltBaseDamage, BoltDefinitionRef, BoltInitialAngle, BoltLifespan,
-        BoltRadius, BoltRespawnAngleSpread, BoltRespawnOffsetY, BoltSpawnOffsetY,
-        SpawnedByEvolution,
+        Bolt, BoltAngleSpread, BoltBaseDamage, BoltDefinitionRef, BoltLifespan, BoltRadius,
+        BoltSpawnOffsetY, SpawnedByEvolution,
     },
     definition::BoltDefinition,
-    resources::BoltConfig,
 };
 
 /// Creates a default `BoltDefinition` for test usage.
@@ -364,115 +362,10 @@ fn from_definition_inserts_bolt_spawn_offset_y() {
     );
 }
 
-// ── Behavior 34: .definition() does NOT insert removed components ──
+// ── Behavior 34: .definition() does NOT insert config-only components ──
+// (BoltRespawnOffsetY, BoltRespawnAngleSpread, BoltInitialAngle were deleted in Wave 6)
 
-#[test]
-fn from_definition_does_not_insert_config_only_components() {
-    let def = make_bolt_definition("Bolt", 10.0);
-    let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .spawn(&mut world);
-    assert!(
-        world.get::<BoltRespawnOffsetY>(entity).is_none(),
-        "definition bolt should NOT have BoltRespawnOffsetY"
-    );
-    assert!(
-        world.get::<BoltRespawnAngleSpread>(entity).is_none(),
-        "definition bolt should NOT have BoltRespawnAngleSpread"
-    );
-    assert!(
-        world.get::<BoltInitialAngle>(entity).is_none(),
-        "definition bolt should NOT have BoltInitialAngle"
-    );
-}
-
-// ── Behavior 35: .definition() and .config() produce equivalent speed, angle, radius ──
-
-#[test]
-fn definition_and_config_produce_equivalent_speed_angle_radius() {
-    let config = BoltConfig {
-        base_speed: 720.0,
-        min_speed: 360.0,
-        max_speed: 1440.0,
-        min_angle_horizontal: 5.0,
-        min_angle_vertical: 5.0,
-        radius: 14.0,
-        ..BoltConfig::default()
-    };
-    let def = make_bolt_definition("Bolt", 10.0);
-
-    let mut world = World::new();
-    let config_entity = Bolt::builder()
-        .config(&config)
-        .at_position(Vec2::new(0.0, 50.0))
-        .serving()
-        .primary()
-        .spawn(&mut world);
-    let def_entity = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::new(0.0, 50.0))
-        .serving()
-        .primary()
-        .spawn(&mut world);
-
-    // Speed
-    let cfg_base = world.get::<BaseSpeed>(config_entity).unwrap();
-    let def_base = world.get::<BaseSpeed>(def_entity).unwrap();
-    assert!(
-        (cfg_base.0 - def_base.0).abs() < f32::EPSILON,
-        "BaseSpeed should match: config={}, definition={}",
-        cfg_base.0,
-        def_base.0
-    );
-    let cfg_min = world.get::<MinSpeed>(config_entity).unwrap();
-    let def_min = world.get::<MinSpeed>(def_entity).unwrap();
-    assert!(
-        (cfg_min.0 - def_min.0).abs() < f32::EPSILON,
-        "MinSpeed should match: config={}, definition={}",
-        cfg_min.0,
-        def_min.0
-    );
-    let cfg_max = world.get::<MaxSpeed>(config_entity).unwrap();
-    let def_max = world.get::<MaxSpeed>(def_entity).unwrap();
-    assert!(
-        (cfg_max.0 - def_max.0).abs() < f32::EPSILON,
-        "MaxSpeed should match: config={}, definition={}",
-        cfg_max.0,
-        def_max.0
-    );
-
-    // Angle
-    let cfg_h = world.get::<MinAngleHorizontal>(config_entity).unwrap();
-    let def_h = world.get::<MinAngleHorizontal>(def_entity).unwrap();
-    assert!(
-        (cfg_h.0 - def_h.0).abs() < 1e-5,
-        "MinAngleHorizontal should match: config={}, definition={}",
-        cfg_h.0,
-        def_h.0
-    );
-    let cfg_v = world.get::<MinAngleVertical>(config_entity).unwrap();
-    let def_v = world.get::<MinAngleVertical>(def_entity).unwrap();
-    assert!(
-        (cfg_v.0 - def_v.0).abs() < 1e-5,
-        "MinAngleVertical should match: config={}, definition={}",
-        cfg_v.0,
-        def_v.0
-    );
-
-    // Radius
-    let cfg_radius = world.get::<BoltRadius>(config_entity).unwrap();
-    let def_radius = world.get::<BoltRadius>(def_entity).unwrap();
-    assert!(
-        (cfg_radius.0 - def_radius.0).abs() < f32::EPSILON,
-        "BoltRadius should match: config={}, definition={}",
-        cfg_radius.0,
-        def_radius.0
-    );
-}
+// Behavior 35 was deleted in Wave 6 (.config() no longer exists)
 
 // ── Behavior 36: .definition() works with all motion/role combinations ──
 
@@ -635,85 +528,844 @@ fn from_definition_with_lifespan_both_present() {
     );
 }
 
-// ── Behavior 40: .definition() and .config() produce different bolt-param sets ──
+// Behavior 40 was deleted in Wave 6 (.config() no longer exists)
+
+// ── Section A: .with_base_damage() standalone ──────────────────────────────
+
+// ── Behavior 1: .with_base_damage() inserts BoltBaseDamage on spawned entity ──
 
 #[test]
-fn definition_and_config_produce_different_bolt_param_component_sets() {
-    let def = make_bolt_definition("Bolt", 10.0);
-    let config = BoltConfig::default();
-
+fn with_base_damage_inserts_bolt_base_damage() {
     let mut world = World::new();
+    let entity = Bolt::builder()
+        .with_speed(400.0, 200.0, 800.0)
+        .with_angle(0.087, 0.087)
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .with_base_damage(15.0)
+        .spawn(&mut world);
+    let dmg = world
+        .get::<BoltBaseDamage>(entity)
+        .expect("entity should have BoltBaseDamage");
+    assert!(
+        (dmg.0 - 15.0).abs() < f32::EPSILON,
+        "BoltBaseDamage should be 15.0, got {}",
+        dmg.0
+    );
+}
 
-    // Entity A: via definition()
-    let entity_a = Bolt::builder()
+#[test]
+fn with_base_damage_zero_is_valid() {
+    let mut world = World::new();
+    let entity = Bolt::builder()
+        .with_speed(400.0, 200.0, 800.0)
+        .with_angle(0.087, 0.087)
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .with_base_damage(0.0)
+        .spawn(&mut world);
+    let dmg = world
+        .get::<BoltBaseDamage>(entity)
+        .expect("entity should have BoltBaseDamage with zero value");
+    assert!(
+        dmg.0.abs() < f32::EPSILON,
+        "BoltBaseDamage should be 0.0, got {}",
+        dmg.0
+    );
+}
+
+// ── Behavior 2: .with_base_damage() does not insert other definition components ──
+
+#[test]
+fn with_base_damage_does_not_insert_other_definition_components() {
+    let mut world = World::new();
+    let entity = Bolt::builder()
+        .with_speed(400.0, 200.0, 800.0)
+        .with_angle(0.087, 0.087)
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .with_base_damage(15.0)
+        .spawn(&mut world);
+    assert!(
+        world.get::<BoltDefinitionRef>(entity).is_none(),
+        "entity should NOT have BoltDefinitionRef when only .with_base_damage() was called"
+    );
+    assert!(
+        world.get::<BoltAngleSpread>(entity).is_none(),
+        "entity should NOT have BoltAngleSpread when only .with_base_damage() was called"
+    );
+    assert!(
+        world.get::<BoltSpawnOffsetY>(entity).is_none(),
+        "entity should NOT have BoltSpawnOffsetY when only .with_base_damage() was called"
+    );
+}
+
+// ── Section B: .with_definition_name() standalone ──────────────────────────
+
+// ── Behavior 3: .with_definition_name() inserts BoltDefinitionRef on spawned entity ──
+
+#[test]
+fn with_definition_name_inserts_bolt_definition_ref() {
+    let mut world = World::new();
+    let entity = Bolt::builder()
+        .with_speed(400.0, 200.0, 800.0)
+        .with_angle(0.087, 0.087)
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .with_definition_name("CustomBolt".to_string())
+        .spawn(&mut world);
+    let def_ref = world
+        .get::<BoltDefinitionRef>(entity)
+        .expect("entity should have BoltDefinitionRef");
+    assert_eq!(
+        def_ref.0, "CustomBolt",
+        "BoltDefinitionRef should be 'CustomBolt', got '{}'",
+        def_ref.0
+    );
+}
+
+#[test]
+fn with_definition_name_empty_string_accepted() {
+    let mut world = World::new();
+    let entity = Bolt::builder()
+        .with_speed(400.0, 200.0, 800.0)
+        .with_angle(0.087, 0.087)
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .with_definition_name(String::new())
+        .spawn(&mut world);
+    let def_ref = world
+        .get::<BoltDefinitionRef>(entity)
+        .expect("entity should have BoltDefinitionRef with empty string");
+    assert_eq!(
+        def_ref.0, "",
+        "BoltDefinitionRef should be empty, got '{}'",
+        def_ref.0
+    );
+}
+
+// ── Behavior 4: .with_definition_name() does not insert other definition components ──
+
+#[test]
+fn with_definition_name_does_not_insert_other_definition_components() {
+    let mut world = World::new();
+    let entity = Bolt::builder()
+        .with_speed(400.0, 200.0, 800.0)
+        .with_angle(0.087, 0.087)
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .with_definition_name("CustomBolt".to_string())
+        .spawn(&mut world);
+    assert!(
+        world.get::<BoltBaseDamage>(entity).is_none(),
+        "entity should NOT have BoltBaseDamage when only .with_definition_name() was called"
+    );
+    assert!(
+        world.get::<BoltAngleSpread>(entity).is_none(),
+        "entity should NOT have BoltAngleSpread when only .with_definition_name() was called"
+    );
+    assert!(
+        world.get::<BoltSpawnOffsetY>(entity).is_none(),
+        "entity should NOT have BoltSpawnOffsetY when only .with_definition_name() was called"
+    );
+}
+
+// ── Section C: .with_angle_spread() standalone ─────────────────────────────
+
+// ── Behavior 5: .with_angle_spread() inserts BoltAngleSpread on spawned entity ──
+
+#[test]
+fn with_angle_spread_inserts_bolt_angle_spread() {
+    let mut world = World::new();
+    let entity = Bolt::builder()
+        .with_speed(400.0, 200.0, 800.0)
+        .with_angle(0.087, 0.087)
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .with_angle_spread(0.35)
+        .spawn(&mut world);
+    let spread = world
+        .get::<BoltAngleSpread>(entity)
+        .expect("entity should have BoltAngleSpread");
+    assert!(
+        (spread.0 - 0.35).abs() < f32::EPSILON,
+        "BoltAngleSpread should be 0.35, got {}",
+        spread.0
+    );
+}
+
+#[test]
+fn with_angle_spread_zero_is_valid() {
+    let mut world = World::new();
+    let entity = Bolt::builder()
+        .with_speed(400.0, 200.0, 800.0)
+        .with_angle(0.087, 0.087)
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .with_angle_spread(0.0)
+        .spawn(&mut world);
+    let spread = world
+        .get::<BoltAngleSpread>(entity)
+        .expect("entity should have BoltAngleSpread with zero value");
+    assert!(
+        spread.0.abs() < f32::EPSILON,
+        "BoltAngleSpread should be 0.0, got {}",
+        spread.0
+    );
+}
+
+// ── Behavior 6: .with_angle_spread() does not insert other definition components ──
+
+#[test]
+fn with_angle_spread_does_not_insert_other_definition_components() {
+    let mut world = World::new();
+    let entity = Bolt::builder()
+        .with_speed(400.0, 200.0, 800.0)
+        .with_angle(0.087, 0.087)
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .with_angle_spread(0.35)
+        .spawn(&mut world);
+    assert!(
+        world.get::<BoltBaseDamage>(entity).is_none(),
+        "entity should NOT have BoltBaseDamage when only .with_angle_spread() was called"
+    );
+    assert!(
+        world.get::<BoltDefinitionRef>(entity).is_none(),
+        "entity should NOT have BoltDefinitionRef when only .with_angle_spread() was called"
+    );
+    assert!(
+        world.get::<BoltSpawnOffsetY>(entity).is_none(),
+        "entity should NOT have BoltSpawnOffsetY when only .with_angle_spread() was called"
+    );
+}
+
+// ── Section D: .with_spawn_offset_y() standalone ───────────────────────────
+
+// ── Behavior 7: .with_spawn_offset_y() inserts BoltSpawnOffsetY on spawned entity ──
+
+#[test]
+fn with_spawn_offset_y_inserts_bolt_spawn_offset_y() {
+    let mut world = World::new();
+    let entity = Bolt::builder()
+        .with_speed(400.0, 200.0, 800.0)
+        .with_angle(0.087, 0.087)
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .with_spawn_offset_y(40.0)
+        .spawn(&mut world);
+    let offset = world
+        .get::<BoltSpawnOffsetY>(entity)
+        .expect("entity should have BoltSpawnOffsetY");
+    assert!(
+        (offset.0 - 40.0).abs() < f32::EPSILON,
+        "BoltSpawnOffsetY should be 40.0, got {}",
+        offset.0
+    );
+}
+
+#[test]
+fn with_spawn_offset_y_zero_is_valid() {
+    let mut world = World::new();
+    let entity = Bolt::builder()
+        .with_speed(400.0, 200.0, 800.0)
+        .with_angle(0.087, 0.087)
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .with_spawn_offset_y(0.0)
+        .spawn(&mut world);
+    let offset = world
+        .get::<BoltSpawnOffsetY>(entity)
+        .expect("entity should have BoltSpawnOffsetY with zero value");
+    assert!(
+        offset.0.abs() < f32::EPSILON,
+        "BoltSpawnOffsetY should be 0.0, got {}",
+        offset.0
+    );
+}
+
+// ── Behavior 8: .with_spawn_offset_y() does not insert other definition components ──
+
+#[test]
+fn with_spawn_offset_y_does_not_insert_other_definition_components() {
+    let mut world = World::new();
+    let entity = Bolt::builder()
+        .with_speed(400.0, 200.0, 800.0)
+        .with_angle(0.087, 0.087)
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .with_spawn_offset_y(40.0)
+        .spawn(&mut world);
+    assert!(
+        world.get::<BoltBaseDamage>(entity).is_none(),
+        "entity should NOT have BoltBaseDamage when only .with_spawn_offset_y() was called"
+    );
+    assert!(
+        world.get::<BoltDefinitionRef>(entity).is_none(),
+        "entity should NOT have BoltDefinitionRef when only .with_spawn_offset_y() was called"
+    );
+    assert!(
+        world.get::<BoltAngleSpread>(entity).is_none(),
+        "entity should NOT have BoltAngleSpread when only .with_spawn_offset_y() was called"
+    );
+}
+
+// ── Section E: Override semantics — .with_*() after .definition() ──────────
+
+// ── Behavior 9: .with_base_damage() overrides definition's base_damage ──
+
+#[test]
+fn with_base_damage_overrides_definition_base_damage() {
+    let def = make_bolt_definition("Bolt", 10.0);
+    let mut world = World::new();
+    let entity = Bolt::builder()
+        .definition(&def)
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .with_base_damage(25.0)
+        .spawn(&mut world);
+    let dmg = world
+        .get::<BoltBaseDamage>(entity)
+        .expect("entity should have BoltBaseDamage");
+    assert!(
+        (dmg.0 - 25.0).abs() < f32::EPSILON,
+        "BoltBaseDamage should be 25.0 (override), not 10.0 (definition), got {}",
+        dmg.0
+    );
+    // Other definition fields remain intact
+    let def_ref = world
+        .get::<BoltDefinitionRef>(entity)
+        .expect("entity should still have BoltDefinitionRef from definition");
+    assert_eq!(def_ref.0, "Bolt");
+    let spread = world
+        .get::<BoltAngleSpread>(entity)
+        .expect("entity should still have BoltAngleSpread from definition");
+    assert!(
+        (spread.0 - 0.524).abs() < f32::EPSILON,
+        "BoltAngleSpread should be 0.524 from definition, got {}",
+        spread.0
+    );
+    let offset = world
+        .get::<BoltSpawnOffsetY>(entity)
+        .expect("entity should still have BoltSpawnOffsetY from definition");
+    assert!(
+        (offset.0 - 54.0).abs() < f32::EPSILON,
+        "BoltSpawnOffsetY should be 54.0 from definition, got {}",
+        offset.0
+    );
+}
+
+#[test]
+fn with_base_damage_zero_overrides_definition_base_damage() {
+    let def = make_bolt_definition("Bolt", 10.0);
+    let mut world = World::new();
+    let entity = Bolt::builder()
+        .definition(&def)
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .with_base_damage(0.0)
+        .spawn(&mut world);
+    let dmg = world
+        .get::<BoltBaseDamage>(entity)
+        .expect("entity should have BoltBaseDamage");
+    assert!(
+        dmg.0.abs() < f32::EPSILON,
+        "BoltBaseDamage should be 0.0 (zero override wins), got {}",
+        dmg.0
+    );
+}
+
+// ── Behavior 10: .with_definition_name() overrides definition's name ──
+
+#[test]
+fn with_definition_name_overrides_definition_name() {
+    let def = make_bolt_definition("Bolt", 10.0);
+    let mut world = World::new();
+    let entity = Bolt::builder()
+        .definition(&def)
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .with_definition_name("OverrideName".to_string())
+        .spawn(&mut world);
+    let def_ref = world
+        .get::<BoltDefinitionRef>(entity)
+        .expect("entity should have BoltDefinitionRef");
+    assert_eq!(
+        def_ref.0, "OverrideName",
+        "BoltDefinitionRef should be 'OverrideName' (override), not 'Bolt' (definition), got '{}'",
+        def_ref.0
+    );
+    // Other definition fields remain intact
+    let dmg = world
+        .get::<BoltBaseDamage>(entity)
+        .expect("entity should still have BoltBaseDamage from definition");
+    assert!(
+        (dmg.0 - 10.0).abs() < f32::EPSILON,
+        "BoltBaseDamage should be 10.0 from definition, got {}",
+        dmg.0
+    );
+    let spread = world
+        .get::<BoltAngleSpread>(entity)
+        .expect("entity should still have BoltAngleSpread from definition");
+    assert!(
+        (spread.0 - 0.524).abs() < f32::EPSILON,
+        "BoltAngleSpread should be 0.524 from definition, got {}",
+        spread.0
+    );
+    let offset = world
+        .get::<BoltSpawnOffsetY>(entity)
+        .expect("entity should still have BoltSpawnOffsetY from definition");
+    assert!(
+        (offset.0 - 54.0).abs() < f32::EPSILON,
+        "BoltSpawnOffsetY should be 54.0 from definition, got {}",
+        offset.0
+    );
+}
+
+#[test]
+fn with_definition_name_empty_overrides_definition_name() {
+    let def = make_bolt_definition("Bolt", 10.0);
+    let mut world = World::new();
+    let entity = Bolt::builder()
+        .definition(&def)
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .with_definition_name(String::new())
+        .spawn(&mut world);
+    let def_ref = world
+        .get::<BoltDefinitionRef>(entity)
+        .expect("entity should have BoltDefinitionRef");
+    assert_eq!(
+        def_ref.0, "",
+        "BoltDefinitionRef should be '' (empty override wins), got '{}'",
+        def_ref.0
+    );
+}
+
+// ── Behavior 11: .with_angle_spread() overrides definition's default angle spread ──
+
+#[test]
+fn with_angle_spread_overrides_definition_angle_spread() {
+    let def = make_bolt_definition("Bolt", 10.0);
+    let mut world = World::new();
+    let entity = Bolt::builder()
+        .definition(&def)
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .with_angle_spread(1.0)
+        .spawn(&mut world);
+    let spread = world
+        .get::<BoltAngleSpread>(entity)
+        .expect("entity should have BoltAngleSpread");
+    assert!(
+        (spread.0 - 1.0).abs() < f32::EPSILON,
+        "BoltAngleSpread should be 1.0 (override), not 0.524 (definition), got {}",
+        spread.0
+    );
+    // Other definition fields remain intact
+    let dmg = world
+        .get::<BoltBaseDamage>(entity)
+        .expect("entity should still have BoltBaseDamage from definition");
+    assert!((dmg.0 - 10.0).abs() < f32::EPSILON);
+    let def_ref = world
+        .get::<BoltDefinitionRef>(entity)
+        .expect("entity should still have BoltDefinitionRef from definition");
+    assert_eq!(def_ref.0, "Bolt");
+    let offset = world
+        .get::<BoltSpawnOffsetY>(entity)
+        .expect("entity should still have BoltSpawnOffsetY from definition");
+    assert!((offset.0 - 54.0).abs() < f32::EPSILON);
+}
+
+#[test]
+fn with_angle_spread_zero_overrides_definition_angle_spread() {
+    let def = make_bolt_definition("Bolt", 10.0);
+    let mut world = World::new();
+    let entity = Bolt::builder()
+        .definition(&def)
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .with_angle_spread(0.0)
+        .spawn(&mut world);
+    let spread = world
+        .get::<BoltAngleSpread>(entity)
+        .expect("entity should have BoltAngleSpread");
+    assert!(
+        spread.0.abs() < f32::EPSILON,
+        "BoltAngleSpread should be 0.0 (zero override wins), got {}",
+        spread.0
+    );
+}
+
+// ── Behavior 12: .with_spawn_offset_y() overrides definition's default spawn offset ──
+
+#[test]
+fn with_spawn_offset_y_overrides_definition_spawn_offset() {
+    let def = make_bolt_definition("Bolt", 10.0);
+    let mut world = World::new();
+    let entity = Bolt::builder()
+        .definition(&def)
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .with_spawn_offset_y(30.0)
+        .spawn(&mut world);
+    let offset = world
+        .get::<BoltSpawnOffsetY>(entity)
+        .expect("entity should have BoltSpawnOffsetY");
+    assert!(
+        (offset.0 - 30.0).abs() < f32::EPSILON,
+        "BoltSpawnOffsetY should be 30.0 (override), not 54.0 (definition), got {}",
+        offset.0
+    );
+    // Other definition fields remain intact
+    let dmg = world
+        .get::<BoltBaseDamage>(entity)
+        .expect("entity should still have BoltBaseDamage from definition");
+    assert!((dmg.0 - 10.0).abs() < f32::EPSILON);
+    let def_ref = world
+        .get::<BoltDefinitionRef>(entity)
+        .expect("entity should still have BoltDefinitionRef from definition");
+    assert_eq!(def_ref.0, "Bolt");
+    let spread = world
+        .get::<BoltAngleSpread>(entity)
+        .expect("entity should still have BoltAngleSpread from definition");
+    assert!((spread.0 - 0.524).abs() < f32::EPSILON);
+}
+
+#[test]
+fn with_spawn_offset_y_zero_overrides_definition_spawn_offset() {
+    let def = make_bolt_definition("Bolt", 10.0);
+    let mut world = World::new();
+    let entity = Bolt::builder()
+        .definition(&def)
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .with_spawn_offset_y(0.0)
+        .spawn(&mut world);
+    let offset = world
+        .get::<BoltSpawnOffsetY>(entity)
+        .expect("entity should have BoltSpawnOffsetY");
+    assert!(
+        offset.0.abs() < f32::EPSILON,
+        "BoltSpawnOffsetY should be 0.0 (zero override wins), got {}",
+        offset.0
+    );
+}
+
+// ── Section F: All four .with_*() methods combined (no definition) ─────────
+
+// ── Behavior 13: All four .with_*() methods together replace .definition() for definition-related fields ──
+
+#[test]
+fn all_four_with_methods_together_without_definition() {
+    let mut world = World::new();
+    let entity = Bolt::builder()
+        .with_speed(500.0, 250.0, 1000.0)
+        .with_angle(0.1, 0.1)
+        .at_position(Vec2::new(100.0, 200.0))
+        .with_velocity(Velocity2D(Vec2::new(0.0, 500.0)))
+        .extra()
+        .with_base_damage(20.0)
+        .with_definition_name("SyntheticBolt".to_string())
+        .with_angle_spread(0.6)
+        .with_spawn_offset_y(45.0)
+        .spawn(&mut world);
+    let dmg = world
+        .get::<BoltBaseDamage>(entity)
+        .expect("entity should have BoltBaseDamage");
+    assert!(
+        (dmg.0 - 20.0).abs() < f32::EPSILON,
+        "BoltBaseDamage should be 20.0, got {}",
+        dmg.0
+    );
+    let def_ref = world
+        .get::<BoltDefinitionRef>(entity)
+        .expect("entity should have BoltDefinitionRef");
+    assert_eq!(def_ref.0, "SyntheticBolt");
+    let spread = world
+        .get::<BoltAngleSpread>(entity)
+        .expect("entity should have BoltAngleSpread");
+    assert!(
+        (spread.0 - 0.6).abs() < f32::EPSILON,
+        "BoltAngleSpread should be 0.6, got {}",
+        spread.0
+    );
+    let offset = world
+        .get::<BoltSpawnOffsetY>(entity)
+        .expect("entity should have BoltSpawnOffsetY");
+    assert!(
+        (offset.0 - 45.0).abs() < f32::EPSILON,
+        "BoltSpawnOffsetY should be 45.0, got {}",
+        offset.0
+    );
+}
+
+#[test]
+fn all_four_with_methods_plus_definition_overrides_win() {
+    let def = make_bolt_definition("Bolt", 10.0);
+    let mut world = World::new();
+    let entity = Bolt::builder()
+        .definition(&def)
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .with_base_damage(99.0)
+        .with_definition_name("AllOverride".to_string())
+        .with_angle_spread(2.0)
+        .with_spawn_offset_y(100.0)
+        .spawn(&mut world);
+    let dmg = world
+        .get::<BoltBaseDamage>(entity)
+        .expect("entity should have BoltBaseDamage");
+    assert!(
+        (dmg.0 - 99.0).abs() < f32::EPSILON,
+        "BoltBaseDamage should be 99.0 (override), got {}",
+        dmg.0
+    );
+    let def_ref = world
+        .get::<BoltDefinitionRef>(entity)
+        .expect("entity should have BoltDefinitionRef");
+    assert_eq!(
+        def_ref.0, "AllOverride",
+        "BoltDefinitionRef should be 'AllOverride' (override), got '{}'",
+        def_ref.0
+    );
+    let spread = world
+        .get::<BoltAngleSpread>(entity)
+        .expect("entity should have BoltAngleSpread");
+    assert!(
+        (spread.0 - 2.0).abs() < f32::EPSILON,
+        "BoltAngleSpread should be 2.0 (override), got {}",
+        spread.0
+    );
+    let offset = world
+        .get::<BoltSpawnOffsetY>(entity)
+        .expect("entity should have BoltSpawnOffsetY");
+    assert!(
+        (offset.0 - 100.0).abs() < f32::EPSILON,
+        "BoltSpawnOffsetY should be 100.0 (override), got {}",
+        offset.0
+    );
+}
+
+// ── Section G: Optional method ordering and typestate independence ──────────
+
+// ── Behaviors 14-17: .with_*() methods available in initial (unconfigured) typestate ──
+
+#[test]
+fn with_base_damage_available_in_initial_state() {
+    // Verifies that .with_base_damage() compiles from initial state and
+    // can continue chaining through to spawn.
+    let mut world = World::new();
+    let entity = Bolt::builder()
+        .with_base_damage(10.0)
+        .with_speed(400.0, 200.0, 800.0)
+        .with_angle(0.087, 0.087)
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .spawn(&mut world);
+    let dmg = world
+        .get::<BoltBaseDamage>(entity)
+        .expect("entity should have BoltBaseDamage when called early in chain");
+    assert!(
+        (dmg.0 - 10.0).abs() < f32::EPSILON,
+        "BoltBaseDamage should be 10.0, got {}",
+        dmg.0
+    );
+}
+
+#[test]
+fn with_definition_name_available_in_initial_state() {
+    let mut world = World::new();
+    let entity = Bolt::builder()
+        .with_definition_name("Test".to_string())
+        .with_speed(400.0, 200.0, 800.0)
+        .with_angle(0.087, 0.087)
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .spawn(&mut world);
+    let def_ref = world
+        .get::<BoltDefinitionRef>(entity)
+        .expect("entity should have BoltDefinitionRef when called early in chain");
+    assert_eq!(def_ref.0, "Test");
+}
+
+#[test]
+fn with_angle_spread_available_in_initial_state() {
+    let mut world = World::new();
+    let entity = Bolt::builder()
+        .with_angle_spread(0.5)
+        .with_speed(400.0, 200.0, 800.0)
+        .with_angle(0.087, 0.087)
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .spawn(&mut world);
+    let spread = world
+        .get::<BoltAngleSpread>(entity)
+        .expect("entity should have BoltAngleSpread when called early in chain");
+    assert!(
+        (spread.0 - 0.5).abs() < f32::EPSILON,
+        "BoltAngleSpread should be 0.5, got {}",
+        spread.0
+    );
+}
+
+#[test]
+fn with_spawn_offset_y_available_in_initial_state() {
+    let mut world = World::new();
+    let entity = Bolt::builder()
+        .with_spawn_offset_y(50.0)
+        .with_speed(400.0, 200.0, 800.0)
+        .with_angle(0.087, 0.087)
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .spawn(&mut world);
+    let offset = world
+        .get::<BoltSpawnOffsetY>(entity)
+        .expect("entity should have BoltSpawnOffsetY when called early in chain");
+    assert!(
+        (offset.0 - 50.0).abs() < f32::EPSILON,
+        "BoltSpawnOffsetY should be 50.0, got {}",
+        offset.0
+    );
+}
+
+// ── Section H: Override ordering — .with_*() before .definition() ──────────
+
+// ── Behavior 18: .with_base_damage() called before .definition() — explicit override still wins ──
+
+#[test]
+fn with_base_damage_before_definition_explicit_override_wins() {
+    let def = make_bolt_definition("Bolt", 10.0);
+    let mut world = World::new();
+    let entity = Bolt::builder()
+        .with_base_damage(25.0)
         .definition(&def)
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
         .spawn(&mut world);
+    let dmg = world
+        .get::<BoltBaseDamage>(entity)
+        .expect("entity should have BoltBaseDamage");
+    assert!(
+        (dmg.0 - 25.0).abs() < f32::EPSILON,
+        "BoltBaseDamage should be 25.0 (explicit override wins regardless of call order), got {}",
+        dmg.0
+    );
+}
 
-    // Entity B: via config()
-    let entity_b = Bolt::builder()
-        .config(&config)
-        .at_position(Vec2::new(100.0, 50.0))
+#[test]
+fn with_base_damage_before_and_after_definition_last_with_wins() {
+    let def = make_bolt_definition("Bolt", 10.0);
+    let mut world = World::new();
+    let entity = Bolt::builder()
+        .with_base_damage(25.0)
+        .definition(&def)
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .with_base_damage(42.0)
+        .spawn(&mut world);
+    let dmg = world
+        .get::<BoltBaseDamage>(entity)
+        .expect("entity should have BoltBaseDamage");
+    assert!(
+        (dmg.0 - 42.0).abs() < f32::EPSILON,
+        "BoltBaseDamage should be 42.0 (last .with_base_damage() wins), got {}",
+        dmg.0
+    );
+}
+
+// ── Behavior 19: .with_definition_name() called before .definition() — explicit override still wins ──
+
+#[test]
+fn with_definition_name_before_definition_explicit_override_wins() {
+    let def = make_bolt_definition("Bolt", 10.0);
+    let mut world = World::new();
+    let entity = Bolt::builder()
+        .with_definition_name("Override".to_string())
+        .definition(&def)
+        .at_position(Vec2::ZERO)
         .serving()
         .primary()
         .spawn(&mut world);
+    let def_ref = world
+        .get::<BoltDefinitionRef>(entity)
+        .expect("entity should have BoltDefinitionRef");
+    assert_eq!(
+        def_ref.0, "Override",
+        "BoltDefinitionRef should be 'Override' (explicit override wins regardless of call order), got '{}'",
+        def_ref.0
+    );
+}
 
-    // Entity A (definition) should NOT have config-only components
-    assert!(
-        world.get::<BoltRespawnOffsetY>(entity_a).is_none(),
-        "definition bolt should NOT have BoltRespawnOffsetY"
-    );
-    assert!(
-        world.get::<BoltRespawnAngleSpread>(entity_a).is_none(),
-        "definition bolt should NOT have BoltRespawnAngleSpread"
-    );
-    assert!(
-        world.get::<BoltInitialAngle>(entity_a).is_none(),
-        "definition bolt should NOT have BoltInitialAngle"
-    );
+// ── Behavior 20: .with_angle_spread() called before .definition() — explicit override still wins ──
 
-    // Entity B (config) should HAVE config-only components
-    let respawn_offset = world
-        .get::<BoltRespawnOffsetY>(entity_b)
-        .expect("config bolt should have BoltRespawnOffsetY");
+#[test]
+fn with_angle_spread_before_definition_explicit_override_wins() {
+    let def = make_bolt_definition("Bolt", 10.0);
+    let mut world = World::new();
+    let entity = Bolt::builder()
+        .with_angle_spread(0.8)
+        .definition(&def)
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .spawn(&mut world);
+    let spread = world
+        .get::<BoltAngleSpread>(entity)
+        .expect("entity should have BoltAngleSpread");
     assert!(
-        (respawn_offset.0 - 30.0).abs() < f32::EPSILON,
-        "BoltRespawnOffsetY should be 30.0"
+        (spread.0 - 0.8).abs() < f32::EPSILON,
+        "BoltAngleSpread should be 0.8 (explicit override wins regardless of call order), got {}",
+        spread.0
     );
-    let respawn_angle = world
-        .get::<BoltRespawnAngleSpread>(entity_b)
-        .expect("config bolt should have BoltRespawnAngleSpread");
-    assert!(
-        (respawn_angle.0 - 0.524).abs() < f32::EPSILON,
-        "BoltRespawnAngleSpread should be 0.524"
-    );
-    let initial_angle = world
-        .get::<BoltInitialAngle>(entity_b)
-        .expect("config bolt should have BoltInitialAngle");
-    assert!(
-        (initial_angle.0 - 0.26).abs() < f32::EPSILON,
-        "BoltInitialAngle should be 0.26"
-    );
+}
 
-    // Entity A (definition) should have definition-only components
-    assert!(
-        world.get::<BoltDefinitionRef>(entity_a).is_some(),
-        "definition bolt should have BoltDefinitionRef"
-    );
-    assert!(
-        world.get::<BoltBaseDamage>(entity_a).is_some(),
-        "definition bolt should have BoltBaseDamage"
-    );
+// ── Behavior 21: .with_spawn_offset_y() called before .definition() — explicit override still wins ──
 
-    // Entity B (config) should NOT have definition-only components
+#[test]
+fn with_spawn_offset_y_before_definition_explicit_override_wins() {
+    let def = make_bolt_definition("Bolt", 10.0);
+    let mut world = World::new();
+    let entity = Bolt::builder()
+        .with_spawn_offset_y(30.0)
+        .definition(&def)
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .spawn(&mut world);
+    let offset = world
+        .get::<BoltSpawnOffsetY>(entity)
+        .expect("entity should have BoltSpawnOffsetY");
     assert!(
-        world.get::<BoltDefinitionRef>(entity_b).is_none(),
-        "config bolt should NOT have BoltDefinitionRef"
-    );
-    assert!(
-        world.get::<BoltBaseDamage>(entity_b).is_none(),
-        "config bolt should NOT have BoltBaseDamage"
+        (offset.0 - 30.0).abs() < f32::EPSILON,
+        "BoltSpawnOffsetY should be 30.0 (explicit override wins regardless of call order), got {}",
+        offset.0
     );
 }

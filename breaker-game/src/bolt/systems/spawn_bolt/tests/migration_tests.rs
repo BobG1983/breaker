@@ -1,5 +1,5 @@
 //! Migration tests for `spawn_bolt` — verifying the system reads from
-//! `BoltRegistry`/`BreakerRegistry` instead of `Res<BoltConfig>`.
+//! `BoltRegistry`/`BreakerRegistry`.
 
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
@@ -190,7 +190,7 @@ fn spawn_bolt_subsequent_node_launches_with_angle_within_spread() {
         "launch angle {angle:.3} rad should be within DEFAULT_BOLT_ANGLE_SPREAD ({DEFAULT_BOLT_ANGLE_SPREAD:.3} rad)"
     );
 
-    // Speed should be approximately 720.0 (definition base_speed), not 400.0 (BoltConfig)
+    // Speed should be approximately 720.0 (definition base_speed)
     let speed = vel.speed();
     assert!(
         (speed - 720.0).abs() < 2.0,
@@ -355,18 +355,15 @@ fn spawn_bolt_uses_definition_speed_values() {
     );
 }
 
-// ── Behavior 6: spawn_bolt does NOT read Res<BoltConfig> ──
+// ── Behavior 6: spawn_bolt reads from BoltRegistry ──
 
 #[test]
-fn spawn_bolt_uses_definition_values_not_bolt_config() {
-    // Given: BoltConfig with base_speed: 400.0, spawn_offset_y: 30.0.
-    //        Registry has BoltDefinition base_speed: 720.0.
+fn spawn_bolt_uses_definition_values() {
+    // Given: Registry has BoltDefinition base_speed: 720.0.
     //        Breaker at (0.0, -250.0). node_index == 1.
-    // Then: Speed is 720.0 (from definition), NOT 400.0 (from BoltConfig).
-    //       Position Y is -196.0 (from DEFAULT_BOLT_SPAWN_OFFSET_Y 54.0), NOT -220.0 (from BoltConfig 30.0).
+    // Then: Speed is 720.0 (from definition).
+    //       Position Y is -196.0 (from DEFAULT_BOLT_SPAWN_OFFSET_Y 54.0).
     let mut app = test_app_with_registries();
-    // BoltConfig defaults: base_speed: 400.0, spawn_offset_y: 30.0
-    // These should NOT be used by the migrated system.
     app.world_mut().resource_mut::<RunState>().node_index = 1;
     app.world_mut().spawn((
         Breaker,
@@ -387,7 +384,7 @@ fn spawn_bolt_uses_definition_values_not_bolt_config() {
     let speed = vel.speed();
     assert!(
         (speed - 720.0).abs() < 2.0,
-        "speed should be 720.0 (from definition), NOT 400.0 (from BoltConfig). Got {speed:.1}"
+        "speed should be 720.0 (from definition). Got {speed:.1}"
     );
 
     let pos = app
@@ -400,9 +397,7 @@ fn spawn_bolt_uses_definition_values_not_bolt_config() {
     let expected_y = -250.0 + DEFAULT_BOLT_SPAWN_OFFSET_Y; // -196.0
     assert!(
         (pos.0.y - expected_y).abs() < f32::EPSILON,
-        "bolt y should be {expected_y} (from definition offset {DEFAULT_BOLT_SPAWN_OFFSET_Y}), \
-         NOT {} (from BoltConfig offset 30.0). Got {}",
-        -250.0 + 30.0,
+        "bolt y should be {expected_y} (from definition offset {DEFAULT_BOLT_SPAWN_OFFSET_Y}). Got {}",
         pos.0.y
     );
 }

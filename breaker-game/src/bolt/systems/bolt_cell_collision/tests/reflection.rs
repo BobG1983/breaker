@@ -5,7 +5,7 @@ use super::helpers::*;
 #[test]
 fn vertical_adjacent_cells_no_cascade() {
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
     app.insert_resource(HitCells::default()).add_systems(
         FixedUpdate,
@@ -37,7 +37,7 @@ fn vertical_adjacent_cells_no_cascade() {
 #[test]
 fn horizontal_adjacent_cells_no_cascade() {
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
     app.insert_resource(HitCells::default()).add_systems(
         FixedUpdate,
@@ -69,7 +69,7 @@ fn horizontal_adjacent_cells_no_cascade() {
 #[test]
 fn grid_entry_from_below_hits_one_cell() {
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
     app.insert_resource(HitCells::default()).add_systems(
         FixedUpdate,

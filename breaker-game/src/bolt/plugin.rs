@@ -6,7 +6,6 @@ use crate::{
     bolt::{
         BoltSystems,
         messages::{BoltImpactBreaker, BoltImpactCell, BoltImpactWall, BoltLost},
-        resources::BoltConfig,
         systems::{
             apply_entity_scale_to_bolt, bolt_breaker_collision, bolt_cell_collision, bolt_lost,
             bolt_scale_visual, bolt_wall_collision, clamp_bolt_to_playfield,
@@ -28,8 +27,7 @@ pub struct BoltPlugin;
 impl Plugin for BoltPlugin {
     fn build(&self, app: &mut App) {
         use crate::bolt::messages::{BoltSpawned, RequestBoltDestroyed};
-        app.init_resource::<BoltConfig>()
-            .init_resource::<GameRng>()
+        app.init_resource::<GameRng>()
             .add_message::<BoltSpawned>()
             .add_message::<BoltImpactBreaker>()
             .add_message::<BoltImpactCell>()

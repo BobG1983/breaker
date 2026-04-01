@@ -7,14 +7,28 @@ use rantzsoft_spatial2d::components::{
 
 use crate::{
     bolt::{
-        components::{
-            Bolt, BoltInitialAngle, BoltRadius, BoltRespawnAngleSpread, BoltRespawnOffsetY,
-            BoltServing, BoltSpawnOffsetY, ExtraBolt, PrimaryBolt,
-        },
-        resources::BoltConfig,
+        components::{Bolt, BoltRadius, BoltServing, BoltSpawnOffsetY, ExtraBolt, PrimaryBolt},
+        definition::BoltDefinition,
     },
     shared::{BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, GameDrawLayer, WALL_LAYER},
 };
+
+/// Creates a `BoltDefinition` matching the values previously provided by
+/// `BoltConfig::default()`, so existing assertions remain valid.
+fn test_bolt_definition() -> BoltDefinition {
+    BoltDefinition {
+        name: "Bolt".to_string(),
+        base_speed: 400.0,
+        min_speed: 200.0,
+        max_speed: 800.0,
+        radius: 8.0,
+        base_damage: 10.0,
+        effects: vec![],
+        color_rgb: [6.0, 5.0, 0.5],
+        min_angle_horizontal: 5.0,
+        min_angle_vertical: 5.0,
+    }
+}
 
 // ── Section H: Method Ordering Independence ─────────────────────────
 
@@ -54,11 +68,11 @@ fn dimensions_any_order_extra_velocity() {
 
 #[test]
 fn from_config_in_middle_of_chain() {
-    let config = BoltConfig::default();
+    let def = test_bolt_definition();
     let mut world = World::new();
     let bundle = Bolt::builder()
         .primary()
-        .config(&config)
+        .definition(&def)
         .at_position(Vec2::ZERO)
         .serving()
         .build();
@@ -73,13 +87,13 @@ fn from_config_in_middle_of_chain() {
 // Behavior 35: Optional methods interleaved with dimension methods
 #[test]
 fn optional_interleaved_with_dimension_methods() {
-    let config = BoltConfig::default();
+    let def = test_bolt_definition();
     let mut world = World::new();
     let bundle = Bolt::builder()
         .spawned_by("test")
         .at_position(Vec2::ZERO)
         .with_lifespan(2.0)
-        .config(&config)
+        .definition(&def)
         .with_radius(10.0)
         .serving()
         .extra()
@@ -100,7 +114,7 @@ fn optional_interleaved_with_dimension_methods() {
 fn collision_layers_primary_bolt() {
     let mut world = World::new();
     let bundle = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
@@ -116,7 +130,7 @@ fn collision_layers_primary_bolt() {
 fn collision_layers_extra_bolt_same_primary() {
     let mut world = World::new();
     let bundle = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::ZERO)
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .extra()
@@ -140,7 +154,7 @@ fn collision_layers_extra_bolt_same_primary() {
 fn game_draw_layer_primary() {
     let mut world = World::new();
     let bundle = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
@@ -155,7 +169,7 @@ fn game_draw_layer_primary() {
 fn game_draw_layer_extra() {
     let mut world = World::new();
     let bundle = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::ZERO)
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .extra()
@@ -234,9 +248,6 @@ fn manual_path_has_no_config_bolt_params() {
     let entity = world.spawn(bundle).id();
 
     assert!(world.get::<BoltSpawnOffsetY>(entity).is_none());
-    assert!(world.get::<BoltRespawnOffsetY>(entity).is_none());
-    assert!(world.get::<BoltRespawnAngleSpread>(entity).is_none());
-    assert!(world.get::<BoltInitialAngle>(entity).is_none());
 
     let radius = world.get::<BoltRadius>(entity).unwrap();
     assert!(

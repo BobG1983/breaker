@@ -340,13 +340,11 @@ fn effect_kind_fire_dispatches_mirror_protocol_spawns_mirrored_bolts() {
             components::{Bolt, ExtraBolt, ImpactSide, LastImpact},
             definition::BoltDefinition,
             registry::BoltRegistry,
-            resources::BoltConfig,
         },
         shared::rng::GameRng,
     };
 
     let mut world = World::new();
-    world.insert_resource(BoltConfig::default());
     world.insert_resource(GameRng::default());
     let mut bolt_registry = BoltRegistry::default();
     bolt_registry.insert(
@@ -404,13 +402,9 @@ fn effect_kind_fire_dispatches_mirror_protocol_spawns_mirrored_bolts() {
 
 #[test]
 fn effect_kind_reverse_dispatches_mirror_protocol_noop() {
-    use crate::{
-        bolt::{components::Bolt, resources::BoltConfig},
-        shared::rng::GameRng,
-    };
+    use crate::{bolt::components::Bolt, shared::rng::GameRng};
 
     let mut world = World::new();
-    world.insert_resource(BoltConfig::default());
     world.insert_resource(GameRng::default());
 
     let bolt_entity = world.spawn(Bolt).id();

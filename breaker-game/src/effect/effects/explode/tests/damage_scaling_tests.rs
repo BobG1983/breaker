@@ -156,7 +156,7 @@ fn process_explode_requests_uses_base_damage_from_request_not_global_constant() 
     let cell = spawn_test_cell(&mut app, 30.0, 0.0);
 
     // Spawn ExplodeRequest with base_damage=20.0, damage_mult=2.0
-    // The production code needs to use request.base_damage instead of BASE_BOLT_DAMAGE
+    // The production code uses request.base_damage from the entity
     let source = app
         .world_mut()
         .spawn((

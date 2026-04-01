@@ -15,12 +15,11 @@ use rantzsoft_spatial2d::components::{PreviousScale, Scale2D, Spatial, Velocity2
 use crate::{
     bolt::{
         components::{
-            Bolt, BoltAngleSpread, BoltBaseDamage, BoltDefinitionRef, BoltInitialAngle,
-            BoltLifespan, BoltRadius, BoltRespawnAngleSpread, BoltRespawnOffsetY, BoltServing,
-            BoltSpawnOffsetY, ExtraBolt, PrimaryBolt, SpawnedByEvolution,
+            Bolt, BoltAngleSpread, BoltBaseDamage, BoltDefinitionRef, BoltLifespan, BoltRadius,
+            BoltServing, BoltSpawnOffsetY, ExtraBolt, PrimaryBolt, SpawnedByEvolution,
         },
         definition::BoltDefinition,
-        resources::{BoltConfig, DEFAULT_BOLT_ANGLE_SPREAD, DEFAULT_BOLT_SPAWN_OFFSET_Y},
+        resources::{DEFAULT_BOLT_ANGLE_SPREAD, DEFAULT_BOLT_SPAWN_OFFSET_Y},
     },
     effect::{BoundEffects, EffectNode},
     shared::{
@@ -29,7 +28,7 @@ use crate::{
     },
 };
 
-/// Default bolt radius when neither `config()` nor `with_radius()` is called.
+/// Default bolt radius when neither `definition()` nor `with_radius()` is called.
 const DEFAULT_RADIUS: f32 = 8.0;
 
 // ── Typestate markers ───────────────────────────────────────────────────────
@@ -67,15 +66,11 @@ struct OptionalBoltData {
     radius: Option<f32>,
     inherited_effects: Option<BoundEffects>,
     with_effects: Option<Vec<(String, EffectNode)>>,
-    bolt_params: Option<BoltConfigParams>,
     definition_params: Option<BoltDefinitionParams>,
-}
-
-struct BoltConfigParams {
-    spawn_offset_y: f32,
-    respawn_offset_y: f32,
-    respawn_angle_spread: f32,
-    initial_angle: f32,
+    override_base_damage: Option<f32>,
+    override_definition_name: Option<String>,
+    override_angle_spread: Option<f32>,
+    override_spawn_offset_y: Option<f32>,
 }
 
 struct BoltDefinitionParams {
@@ -211,36 +206,6 @@ impl<P, S, A, M> BoltBuilder<P, S, A, M, NoRole> {
     }
 }
 
-// ── from_config convenience ─────────────────────────────────────────────────
-
-impl<P, M, R> BoltBuilder<P, NoSpeed, NoAngle, M, R> {
-    pub fn config(self, config: &BoltConfig) -> BoltBuilder<P, HasSpeed, HasAngle, M, R> {
-        let mut optional = self.optional;
-        optional.bolt_params = Some(BoltConfigParams {
-            spawn_offset_y: config.spawn_offset_y,
-            respawn_offset_y: config.respawn_offset_y,
-            respawn_angle_spread: config.respawn_angle_spread,
-            initial_angle: config.initial_angle,
-        });
-        optional.radius = optional.radius.or(Some(config.radius));
-        BoltBuilder {
-            position: self.position,
-            speed: HasSpeed {
-                base: config.base_speed,
-                min: config.min_speed,
-                max: config.max_speed,
-            },
-            angle: HasAngle {
-                h: config.min_angle_horizontal.to_radians(),
-                v: config.min_angle_vertical.to_radians(),
-            },
-            motion: self.motion,
-            role: self.role,
-            optional,
-        }
-    }
-}
-
 // ── from_definition convenience ──────────────────────────────────────────────
 
 impl<P, M, R> BoltBuilder<P, NoSpeed, NoAngle, M, R> {
@@ -302,6 +267,26 @@ impl<P, S, A, M, R> BoltBuilder<P, S, A, M, R> {
 
     pub fn with_effects(mut self, nodes: Vec<(String, EffectNode)>) -> Self {
         self.optional.with_effects = Some(nodes);
+        self
+    }
+
+    pub const fn with_base_damage(mut self, damage: f32) -> Self {
+        self.optional.override_base_damage = Some(damage);
+        self
+    }
+
+    pub fn with_definition_name(mut self, name: String) -> Self {
+        self.optional.override_definition_name = Some(name);
+        self
+    }
+
+    pub const fn with_angle_spread(mut self, spread: f32) -> Self {
+        self.optional.override_angle_spread = Some(spread);
+        self
+    }
+
+    pub const fn with_spawn_offset_y(mut self, offset: f32) -> Self {
+        self.optional.override_spawn_offset_y = Some(offset);
         self
     }
 }
@@ -376,16 +361,6 @@ fn spawn_inner(
         entity.insert(BoltServing);
     }
 
-    // Optional bolt params from config()
-    if let Some(params) = optional.bolt_params {
-        entity.insert((
-            BoltSpawnOffsetY(params.spawn_offset_y),
-            BoltRespawnOffsetY(params.respawn_offset_y),
-            BoltRespawnAngleSpread(params.respawn_angle_spread),
-            BoltInitialAngle(params.initial_angle),
-        ));
-    }
-
     // Optional bolt definition params from definition()
     if let Some(def_params) = optional.definition_params {
         entity.insert((
@@ -394,6 +369,20 @@ fn spawn_inner(
             BoltAngleSpread(def_params.angle_spread),
             BoltSpawnOffsetY(def_params.spawn_offset_y),
         ));
+    }
+
+    // Override individual definition-derived components if explicit .with_*() was called
+    if let Some(base_damage) = optional.override_base_damage {
+        entity.insert(BoltBaseDamage(base_damage));
+    }
+    if let Some(name) = optional.override_definition_name {
+        entity.insert(BoltDefinitionRef(name));
+    }
+    if let Some(angle_spread) = optional.override_angle_spread {
+        entity.insert(BoltAngleSpread(angle_spread));
+    }
+    if let Some(spawn_offset_y) = optional.override_spawn_offset_y {
+        entity.insert(BoltSpawnOffsetY(spawn_offset_y));
     }
 
     // Optional: spawned_by

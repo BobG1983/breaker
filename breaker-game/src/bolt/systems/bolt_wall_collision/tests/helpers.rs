@@ -8,8 +8,8 @@ use super::super::*;
 use crate::{
     bolt::{
         components::{Bolt, PiercingRemaining},
+        definition::BoltDefinition,
         messages::BoltImpactWall,
-        resources::BoltConfig,
     },
     effect::effects::piercing::ActivePiercings,
     shared::{BOLT_LAYER, GameDrawLayer, WALL_LAYER},
@@ -40,11 +40,29 @@ pub(super) fn tick(app: &mut App) {
     app.update();
 }
 
+/// Creates a `BoltDefinition` matching the values previously provided by
+/// `BoltConfig::default()`, so existing position calculations remain valid.
+fn test_bolt_definition() -> BoltDefinition {
+    BoltDefinition {
+        name: "Bolt".to_string(),
+        base_speed: 400.0,
+        min_speed: 200.0,
+        max_speed: 800.0,
+        radius: 8.0,
+        base_damage: 10.0,
+        effects: vec![],
+        color_rgb: [6.0, 5.0, 0.5],
+        min_angle_horizontal: 5.0,
+        min_angle_vertical: 5.0,
+    }
+}
+
 /// Spawns a bolt at the given position with the given velocity.
 pub(super) fn spawn_bolt(app: &mut App, x: f32, y: f32, vx: f32, vy: f32) -> Entity {
+    let def = test_bolt_definition();
     Bolt::builder()
         .at_position(Vec2::new(x, y))
-        .config(&BoltConfig::default())
+        .definition(&def)
         .with_velocity(Velocity2D(Vec2::new(vx, vy)))
         .primary()
         .spawn(app.world_mut())
@@ -60,9 +78,10 @@ pub(super) fn spawn_piercing_bolt(
     active_piercings: Vec<u32>,
     piercing_remaining: u32,
 ) -> Entity {
+    let def = test_bolt_definition();
     let entity = Bolt::builder()
         .at_position(Vec2::new(x, y))
-        .config(&BoltConfig::default())
+        .definition(&def)
         .with_velocity(Velocity2D(Vec2::new(vx, vy)))
         .primary()
         .spawn(app.world_mut());

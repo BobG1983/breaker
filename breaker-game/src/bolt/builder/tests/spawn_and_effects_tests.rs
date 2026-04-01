@@ -10,11 +10,28 @@ use crate::{
         components::{
             Bolt, BoltLifespan, BoltRadius, BoltServing, ExtraBolt, PrimaryBolt, SpawnedByEvolution,
         },
-        resources::BoltConfig,
+        definition::BoltDefinition,
     },
     effect::{BoundEffects, EffectKind, EffectNode},
     shared::{CleanupOnNodeExit, CleanupOnRunEnd, GameDrawLayer},
 };
+
+/// Creates a `BoltDefinition` matching the values previously provided by
+/// `BoltConfig::default()`, so existing assertions remain valid.
+fn test_bolt_definition() -> BoltDefinition {
+    BoltDefinition {
+        name: "Bolt".to_string(),
+        base_speed: 400.0,
+        min_speed: 200.0,
+        max_speed: 800.0,
+        radius: 8.0,
+        base_damage: 10.0,
+        effects: vec![],
+        color_rgb: [6.0, 5.0, 0.5],
+        min_angle_horizontal: 5.0,
+        min_angle_vertical: 5.0,
+    }
+}
 
 // ── Section F: spawn(&mut World) -> Entity ──────────────────────────
 
@@ -23,7 +40,7 @@ use crate::{
 fn spawn_primary_serving_creates_complete_entity() {
     let mut world = World::new();
     let entity = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::new(0.0, 50.0))
         .serving()
         .primary()
@@ -82,7 +99,7 @@ fn spawn_primary_serving_creates_complete_entity() {
 fn spawn_extra_bolt_creates_entity_with_extra_markers() {
     let mut world = World::new();
     let entity = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::new(50.0, 100.0))
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .extra()
@@ -125,7 +142,7 @@ fn spawn_extra_bolt_creates_entity_with_extra_markers() {
 fn spawn_with_spawned_by_inserts_evolution_marker() {
     let mut world = World::new();
     let entity = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::ZERO)
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .extra()
@@ -142,7 +159,7 @@ fn spawn_with_spawned_by_inserts_evolution_marker() {
 fn spawn_with_lifespan_inserts_timer() {
     let mut world = World::new();
     let entity = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::ZERO)
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .extra()
@@ -171,7 +188,7 @@ fn spawn_with_inherited_effects_inserts_bound_effects() {
 
     let mut world = World::new();
     let entity = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::ZERO)
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .extra()
@@ -196,7 +213,7 @@ fn spawn_with_empty_inherited_effects_inserts_empty_bound_effects() {
 
     let mut world = World::new();
     let entity = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::ZERO)
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .extra()
@@ -214,7 +231,7 @@ fn spawn_with_empty_inherited_effects_inserts_empty_bound_effects() {
 fn spawn_without_effects_has_no_bound_effects() {
     let mut world = World::new();
     let entity = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::ZERO)
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .extra()
@@ -239,7 +256,7 @@ fn inherited_effects_are_cloned_not_moved() {
 
     let mut world = World::new();
     let entity = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::ZERO)
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .extra()

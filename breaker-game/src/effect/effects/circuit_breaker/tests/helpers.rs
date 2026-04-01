@@ -7,7 +7,6 @@ pub(super) use crate::{
         components::{Bolt, ExtraBolt},
         definition::BoltDefinition,
         registry::BoltRegistry,
-        resources::BoltConfig,
     },
     effect::{
         BoundEffects, EffectKind, EffectNode,
@@ -17,10 +16,9 @@ pub(super) use crate::{
     shared::rng::GameRng,
 };
 
-/// Creates a World with `BoltConfig`, `BoltRegistry`, and `GameRng` resources needed for bolt spawning.
+/// Creates a World with `BoltRegistry` and `GameRng` resources needed for bolt spawning.
 pub(super) fn world_with_bolt_config() -> World {
     let mut world = World::new();
-    world.insert_resource(BoltConfig::default());
     let mut bolt_registry = BoltRegistry::default();
     bolt_registry.insert(
         "Bolt".to_string(),

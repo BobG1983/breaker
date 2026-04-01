@@ -1,5 +1,5 @@
 //! Tests for `fire()` chain bolt component setup: `ExtraBolt`, `DistanceConstraint`,
-//! `ChainBoltAnchor`, custom `BoltConfig`, and `Position2D` source.
+//! `ChainBoltAnchor`, `BoltDefinition`, and `Position2D` source.
 
 use bevy::prelude::*;
 use rantzsoft_physics2d::constraint::DistanceConstraint;

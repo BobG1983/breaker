@@ -7,17 +7,31 @@ use rantzsoft_spatial2d::components::{
 
 use crate::{
     bolt::{
-        components::{
-            Bolt, BoltInitialAngle, BoltRadius, BoltRespawnAngleSpread, BoltRespawnOffsetY,
-            BoltServing, BoltSpawnOffsetY, ExtraBolt, PrimaryBolt,
-        },
-        resources::BoltConfig,
+        components::{Bolt, BoltRadius, BoltServing, BoltSpawnOffsetY, ExtraBolt, PrimaryBolt},
+        definition::BoltDefinition,
     },
     shared::{
         BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, CleanupOnNodeExit, CleanupOnRunEnd, GameDrawLayer,
         WALL_LAYER,
     },
 };
+
+/// Creates a `BoltDefinition` matching the values previously provided by
+/// `BoltConfig::default()`, so existing assertions remain valid.
+fn test_bolt_definition() -> BoltDefinition {
+    BoltDefinition {
+        name: "Bolt".to_string(),
+        base_speed: 400.0,
+        min_speed: 200.0,
+        max_speed: 800.0,
+        radius: 8.0,
+        base_damage: 10.0,
+        effects: vec![],
+        color_rgb: [6.0, 5.0, 0.5],
+        min_angle_horizontal: 5.0,
+        min_angle_vertical: 5.0,
+    }
+}
 
 // ── Section E: build() — Component Tuple Output ─────────────────────
 
@@ -26,7 +40,7 @@ use crate::{
 fn build_primary_serving_has_bolt_marker() {
     let mut world = World::new();
     let bundle = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::new(0.0, 50.0))
         .serving()
         .primary()
@@ -51,7 +65,7 @@ fn build_primary_serving_has_bolt_marker() {
 fn build_primary_serving_has_spatial_markers() {
     let mut world = World::new();
     let bundle = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::new(0.0, 50.0))
         .serving()
         .primary()
@@ -76,7 +90,7 @@ fn build_primary_serving_has_spatial_markers() {
 fn build_primary_serving_has_position() {
     let mut world = World::new();
     let bundle = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::new(0.0, 50.0))
         .serving()
         .primary()
@@ -105,7 +119,7 @@ fn build_primary_serving_has_position() {
 fn build_primary_serving_has_zero_velocity() {
     let mut world = World::new();
     let bundle = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::new(0.0, 50.0))
         .serving()
         .primary()
@@ -131,7 +145,7 @@ fn build_primary_serving_has_zero_velocity() {
 fn build_primary_serving_has_speed_components() {
     let mut world = World::new();
     let bundle = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::new(0.0, 50.0))
         .serving()
         .primary()
@@ -159,7 +173,7 @@ fn build_primary_serving_has_speed_components() {
 fn build_primary_serving_has_angle_components() {
     let mut world = World::new();
     let bundle = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::new(0.0, 50.0))
         .serving()
         .primary()
@@ -184,7 +198,7 @@ fn build_primary_serving_has_angle_components() {
 fn build_primary_serving_has_radius_components() {
     let mut world = World::new();
     let bundle = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::new(0.0, 50.0))
         .serving()
         .primary()
@@ -220,7 +234,7 @@ fn build_primary_serving_has_radius_components() {
 fn build_primary_serving_has_cleanup_on_run_end() {
     let mut world = World::new();
     let bundle = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::new(0.0, 50.0))
         .serving()
         .primary()
@@ -237,7 +251,7 @@ fn build_primary_serving_has_cleanup_on_run_end() {
 fn build_primary_serving_has_collision_layers() {
     let mut world = World::new();
     let bundle = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::new(0.0, 50.0))
         .serving()
         .primary()
@@ -262,7 +276,7 @@ fn build_primary_serving_has_collision_layers() {
 fn build_primary_serving_has_game_draw_layer() {
     let mut world = World::new();
     let bundle = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::new(0.0, 50.0))
         .serving()
         .primary()
@@ -283,7 +297,7 @@ fn build_primary_serving_has_game_draw_layer() {
 fn build_extra_velocity_has_extra_bolt_marker() {
     let mut world = World::new();
     let bundle = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::new(200.0, 300.0))
         .with_velocity(Velocity2D(Vec2::new(102.9, 385.5)))
         .extra()
@@ -312,7 +326,7 @@ fn build_extra_velocity_has_extra_bolt_marker() {
 fn build_extra_velocity_has_explicit_velocity() {
     let mut world = World::new();
     let bundle = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::new(200.0, 300.0))
         .with_velocity(Velocity2D(Vec2::new(102.9, 385.5)))
         .extra()
@@ -331,7 +345,7 @@ fn build_extra_velocity_has_explicit_velocity() {
 fn build_extra_velocity_has_cleanup_on_node_exit() {
     let mut world = World::new();
     let bundle = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::new(200.0, 300.0))
         .with_velocity(Velocity2D(Vec2::new(102.9, 385.5)))
         .extra()
@@ -352,7 +366,7 @@ fn build_extra_velocity_has_cleanup_on_node_exit() {
 fn build_extra_velocity_has_spatial_markers() {
     let mut world = World::new();
     let bundle = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::new(200.0, 300.0))
         .with_velocity(Velocity2D(Vec2::new(102.9, 385.5)))
         .extra()
@@ -377,7 +391,7 @@ fn build_extra_velocity_has_spatial_markers() {
 fn build_extra_bolt_at_zero_pos_straight_up() {
     let mut world = World::new();
     let bundle = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::ZERO)
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .extra()
@@ -424,7 +438,7 @@ fn serving_bolt_always_zero_velocity() {
 fn primary_bolt_has_cleanup_on_run_end_not_node_exit() {
     let mut world = World::new();
     let bundle = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
@@ -446,7 +460,7 @@ fn primary_bolt_has_cleanup_on_run_end_not_node_exit() {
 fn extra_bolt_has_cleanup_on_node_exit_not_run_end() {
     let mut world = World::new();
     let bundle = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::ZERO)
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .extra()
@@ -558,19 +572,7 @@ fn build_without_from_config_has_no_bolt_params() {
 
     assert!(
         world.get::<BoltSpawnOffsetY>(entity).is_none(),
-        "Should NOT have BoltSpawnOffsetY without config()"
-    );
-    assert!(
-        world.get::<BoltRespawnOffsetY>(entity).is_none(),
-        "Should NOT have BoltRespawnOffsetY without config()"
-    );
-    assert!(
-        world.get::<BoltRespawnAngleSpread>(entity).is_none(),
-        "Should NOT have BoltRespawnAngleSpread without config()"
-    );
-    assert!(
-        world.get::<BoltInitialAngle>(entity).is_none(),
-        "Should NOT have BoltInitialAngle without config()"
+        "Should NOT have BoltSpawnOffsetY without definition()"
     );
 }
 
@@ -579,7 +581,7 @@ fn build_without_from_config_has_no_bolt_params() {
 fn build_with_radius_override_sets_physical_dimensions() {
     let mut world = World::new();
     let bundle = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
@@ -614,7 +616,7 @@ fn build_with_radius_override_sets_physical_dimensions() {
 fn build_with_radius_zero_no_panic() {
     let mut world = World::new();
     let bundle = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::ZERO)
         .serving()
         .primary()

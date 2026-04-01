@@ -23,7 +23,7 @@ fn cell_bottom_rebound_stamps_last_impact_with_bottom_side() {
     // When: bolt_cell_collision runs for one fixed tick
     // Then: Bolt has LastImpact with side: ImpactSide::Bottom
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
 
     let cell_y = 100.0;
@@ -63,7 +63,7 @@ fn cell_top_rebound_stamps_last_impact_with_top_side() {
     // When: bolt_cell_collision runs for one fixed tick
     // Then: Bolt has LastImpact with side: ImpactSide::Top
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
 
     let cell_y = 100.0;
@@ -93,7 +93,7 @@ fn cell_top_rebound_side_determined_by_normal_not_velocity() {
     // NOTE: The bolt barely moves vertically per tick (~0.31 units at 64 Hz),
     // so it must start very close to the expanded AABB top edge.
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
 
     let cell_y = 100.0;
@@ -132,7 +132,7 @@ fn cell_left_rebound_stamps_last_impact_with_left_side() {
     spawn_cell_with_health(&mut app, cell_x, cell_y, 30.0);
 
     let cc = crate::cells::resources::CellConfig::default();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let start_x = cell_x - cc.width / 2.0 - bc.radius - 2.0;
     let bolt_entity = spawn_bolt(&mut app, start_x, cell_y, 400.0, 0.0);
 
@@ -166,7 +166,7 @@ fn cell_right_rebound_stamps_last_impact_with_right_side() {
     spawn_cell_with_health(&mut app, cell_x, cell_y, 30.0);
 
     let cc = crate::cells::resources::CellConfig::default();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let start_x = cell_x + cc.width / 2.0 + bc.radius + 2.0;
     let bolt_entity = spawn_bolt(&mut app, start_x, cell_y, -400.0, 0.0);
 
@@ -194,7 +194,7 @@ fn piercing_bolt_through_destroyable_cell_does_not_stamp_last_impact() {
     // When: bolt_cell_collision runs for one fixed tick
     // Then: Bolt entity does NOT have a LastImpact component
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
 
     let cell_y = 100.0;
@@ -220,7 +220,7 @@ fn piercing_bolt_through_cell_preserves_existing_last_impact() {
     // Edge case: Bolt has a pre-existing LastImpact from a previous wall hit.
     //            Pierce-through must leave it unchanged.
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
 
     let cell_y = 100.0;
@@ -266,7 +266,7 @@ fn piercing_bolt_reflecting_off_tough_cell_stamps_last_impact() {
     // When: bolt_cell_collision runs for one fixed tick
     // Then: Bolt has LastImpact with side: ImpactSide::Bottom (reflected off bottom face)
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
 
     let cell_y = 100.0;
@@ -302,7 +302,7 @@ fn exhausted_piercing_bolt_reflecting_off_destroyable_cell_stamps_last_impact() 
     // When: bolt_cell_collision runs for one fixed tick
     // Then: Bolt has LastImpact with side: ImpactSide::Bottom (reflected)
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
 
     let cell_y = 100.0;
@@ -332,7 +332,7 @@ fn exhausted_piercing_bolt_reflecting_off_destroyable_cell_stamps_last_impact() 
 fn exhausted_piercing_zero_effective_also_reflects_and_stamps() {
     // Edge case: PiercingRemaining(0) with ActivePiercings(vec![]) — same behavior.
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
 
     let cell_y = 100.0;

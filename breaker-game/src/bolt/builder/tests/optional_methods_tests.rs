@@ -5,10 +5,27 @@ use rantzsoft_spatial2d::components::{PreviousScale, Scale2D, Velocity2D};
 use crate::{
     bolt::{
         components::{Bolt, BoltLifespan, BoltRadius, SpawnedByEvolution},
-        resources::BoltConfig,
+        definition::BoltDefinition,
     },
     effect::EffectKind,
 };
+
+/// Creates a `BoltDefinition` matching the values previously provided by
+/// `BoltConfig::default()`, so existing assertions remain valid.
+fn test_bolt_definition() -> BoltDefinition {
+    BoltDefinition {
+        name: "Bolt".to_string(),
+        base_speed: 400.0,
+        min_speed: 200.0,
+        max_speed: 800.0,
+        radius: 8.0,
+        base_damage: 10.0,
+        effects: vec![],
+        color_rgb: [6.0, 5.0, 0.5],
+        min_angle_horizontal: 5.0,
+        min_angle_vertical: 5.0,
+    }
+}
 
 // ── Section D: Optional Chainable Methods ───────────────────────────
 
@@ -17,7 +34,7 @@ use crate::{
 fn spawned_by_stores_evolution_name() {
     let mut world = World::new();
     let entity = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::ZERO)
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .extra()
@@ -36,7 +53,7 @@ fn spawned_by_stores_evolution_name() {
 fn spawned_by_empty_string_accepted() {
     let mut world = World::new();
     let entity = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::ZERO)
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .extra()
@@ -56,7 +73,7 @@ fn spawned_by_empty_string_accepted() {
 fn with_lifespan_stores_timer() {
     let mut world = World::new();
     let entity = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::ZERO)
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .extra()
@@ -76,7 +93,7 @@ fn with_lifespan_stores_timer() {
 fn with_lifespan_zero_produces_zero_duration() {
     let mut world = World::new();
     let entity = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::ZERO)
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .extra()
@@ -97,7 +114,7 @@ fn with_lifespan_zero_produces_zero_duration() {
 fn with_radius_overrides_config_radius() {
     let mut world = World::new();
     let entity = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
@@ -136,7 +153,7 @@ fn with_radius_overrides_config_radius() {
 fn with_radius_small_value() {
     let mut world = World::new();
     let entity = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
@@ -161,7 +178,7 @@ fn with_effects_stores_bound_effects() {
         crate::effect::EffectNode::Do(EffectKind::DamageBoost(5.0)),
     )];
     let entity = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::ZERO)
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .extra()
@@ -188,7 +205,7 @@ fn with_effects_empty_vec_inserts_empty_bound_effects() {
 
     let mut world = World::new();
     let entity = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::ZERO)
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .extra()
@@ -215,7 +232,7 @@ fn with_effects_and_inherited_effects_combine() {
 
     let mut world = World::new();
     let entity = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::ZERO)
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .extra()
@@ -254,7 +271,7 @@ fn inherited_effects_before_with_effects_same_result() {
     let mut world = World::new();
     // Order reversed: with_inherited_effects BEFORE with_effects
     let entity = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::ZERO)
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .extra()
@@ -274,13 +291,13 @@ fn inherited_effects_before_with_effects_same_result() {
 // Behavior 17: Optional methods can be called in any order
 #[test]
 fn optional_methods_any_order() {
-    let config = BoltConfig::default();
+    let def = test_bolt_definition();
     let mut world = World::new();
     let entity = Bolt::builder()
         .spawned_by("test")
         .with_lifespan(2.0)
         .with_radius(10.0)
-        .config(&config)
+        .definition(&def)
         .at_position(Vec2::ZERO)
         .serving()
         .extra()
@@ -306,7 +323,7 @@ fn optional_methods_any_order() {
 fn no_optional_methods_defaults() {
     let mut world = World::new();
     let entity = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::ZERO)
         .serving()
         .primary()

@@ -36,7 +36,7 @@ fn bolt_moves_full_distance_no_cells() {
 #[test]
 fn bolt_reflects_off_cell_bottom() {
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
 
     let cell_y = 100.0;
@@ -77,7 +77,7 @@ fn bolt_reflects_off_cell_bottom() {
 #[test]
 fn bolt_reflects_off_cell_side() {
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
 
     let cell_x = 100.0;
@@ -105,7 +105,7 @@ fn bolt_reflects_off_cell_side() {
 #[test]
 fn bolt_uses_remaining_distance_after_bounce() {
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
 
     let cell_y = 100.0;
@@ -139,7 +139,7 @@ fn bolt_uses_remaining_distance_after_bounce() {
 #[test]
 fn bolt_hits_only_nearest_cell() {
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
 
     app.insert_resource(HitCells::default()).add_systems(
@@ -167,7 +167,7 @@ fn bolt_hits_only_nearest_cell() {
 #[test]
 fn bolt_hit_cell_message_sent() {
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
     app.insert_resource(HitCells::default()).add_systems(
         FixedUpdate,
@@ -212,7 +212,7 @@ fn no_collision_when_far_away() {
 #[test]
 fn max_bounces_cap() {
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
     app.insert_resource(HitCells::default()).add_systems(
         FixedUpdate,
@@ -241,7 +241,7 @@ fn max_bounces_cap() {
 #[test]
 fn multiple_bolts_each_hit_different_cells() {
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
     app.insert_resource(HitCells::default()).add_systems(
         FixedUpdate,
@@ -272,7 +272,7 @@ fn serving_bolt_is_not_advanced() {
 
     let entity = Bolt::builder()
         .at_position(Vec2::ZERO)
-        .config(&crate::bolt::resources::BoltConfig::default())
+        .definition(&super::helpers::test_bolt_definition())
         .serving()
         .primary()
         .spawn(app.world_mut());
@@ -295,7 +295,7 @@ fn bolt_cell_collision_populates_bolt_entity_in_message() {
     // not Entity::PLACEHOLDER. It will FAIL until the production code is fixed
     // to capture the bolt entity from the query binding.
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
     app.insert_resource(FullHitMessages::default()).add_systems(
         FixedUpdate,

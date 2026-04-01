@@ -1,5 +1,4 @@
 mod build_tests;
-mod config_tests;
 mod definition_tests;
 mod optional_methods_tests;
 mod ordering_and_layers_tests;

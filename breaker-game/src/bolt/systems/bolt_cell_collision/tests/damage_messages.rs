@@ -9,7 +9,7 @@ use crate::{
 #[test]
 fn cell_collision_emits_damage_cell_with_base_damage() {
     let mut app = test_app_with_damage_and_wall_messages();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
 
     let cell_y = 100.0;
@@ -32,7 +32,7 @@ fn cell_collision_emits_damage_cell_with_base_damage() {
     );
     assert!(
         (msgs.0[0].damage - 10.0).abs() < f32::EPSILON,
-        "DamageCell.damage should be BASE_BOLT_DAMAGE (10.0), got {}",
+        "DamageCell.damage should be base_damage (10.0), got {}",
         msgs.0[0].damage
     );
 }
@@ -42,7 +42,7 @@ fn cell_collision_emits_damage_cell_with_base_damage() {
 #[test]
 fn cell_collision_emits_damage_cell_with_no_effective_damage_multiplier() {
     let mut app = test_app_with_damage_and_wall_messages();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
 
     let cell_y = 100.0;
@@ -72,7 +72,7 @@ fn cell_collision_emits_damage_cell_with_no_effective_damage_multiplier() {
 #[test]
 fn cell_collision_emits_damage_cell_with_boosted_damage() {
     let mut app = test_app_with_damage_and_wall_messages();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
 
     let cell_y = 100.0;
@@ -99,7 +99,7 @@ fn cell_collision_emits_damage_cell_with_boosted_damage() {
 #[test]
 fn cell_collision_emits_damage_cell_with_identity_effective_damage_multiplier() {
     let mut app = test_app_with_damage_and_wall_messages();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
 
     let cell_y = 100.0;
@@ -129,7 +129,7 @@ fn cell_collision_emits_damage_cell_with_identity_effective_damage_multiplier() 
 #[test]
 fn two_bolts_emit_damage_cell_with_correct_source_bolt() {
     let mut app = test_app_with_damage_and_wall_messages();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
 
     let cell_a = spawn_cell(&mut app, -100.0, 100.0);
@@ -159,7 +159,7 @@ fn two_bolts_emit_damage_cell_with_correct_source_bolt() {
 fn wall_hit_does_not_emit_damage_cell() {
     // A bolt hitting only a wall should produce zero DamageCell messages.
     let mut app = test_app_with_damage_and_wall_messages();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
 
     spawn_wall(&mut app, 200.0, 0.0, 50.0, 300.0);
 
@@ -179,7 +179,7 @@ fn wall_hit_does_not_emit_damage_cell() {
 #[test]
 fn piercing_bolt_emits_damage_cell_for_each_pierced_cell() {
     let mut app = test_app_with_damage_and_wall_messages();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
 
     let near_cell_y = 60.0;
     let far_cell_y = 90.0;
@@ -224,7 +224,7 @@ fn piercing_bolt_emits_damage_cell_for_each_pierced_cell() {
 #[test]
 fn cell_hit_emits_both_bolt_hit_cell_and_damage_cell() {
     let mut app = test_app_with_damage_and_wall_messages();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
 
     let cell_y = 100.0;
@@ -261,7 +261,7 @@ fn cell_hit_emits_both_bolt_hit_cell_and_damage_cell() {
 #[test]
 fn cell_collision_uses_active_damage_boosts_multiplier() {
     let mut app = test_app_with_damage_and_wall_messages();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
 
     let cell_y = 100.0;
@@ -296,7 +296,7 @@ fn cell_collision_uses_active_damage_boosts_multiplier() {
 #[test]
 fn cell_collision_ignores_stale_effective_damage_multiplier() {
     let mut app = test_app_with_damage_and_wall_messages();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
 
     let cell_y = 100.0;

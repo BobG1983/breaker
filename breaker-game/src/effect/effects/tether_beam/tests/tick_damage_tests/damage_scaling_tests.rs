@@ -119,7 +119,7 @@ fn tick_tether_beam_uses_snapshotted_base_damage_from_beam_component() {
     assert_eq!(collector.0[0].cell, cell);
 
     // Expected: base_damage (20.0) * damage_mult (2.0) * EDM (1.5) = 60.0
-    // Current code uses BASE_BOLT_DAMAGE (10.0) * 2.0 * 1.5 = 30.0 (WRONG)
+    // Code uses entity BoltBaseDamage (20.0) * 2.0 * 1.5 = 60.0
     let expected_damage = 20.0 * 2.0 * 1.5;
     assert!(
         (collector.0[0].damage - expected_damage).abs() < f32::EPSILON,

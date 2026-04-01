@@ -161,14 +161,29 @@ mod tests {
     fn fire_recalculates_velocity_to_reflect_new_boost() {
         use rantzsoft_spatial2d::components::Velocity2D;
 
-        use crate::bolt::{components::Bolt, resources::BoltConfig};
+        use crate::bolt::{components::Bolt, definition::BoltDefinition};
+
+        fn test_bolt_definition() -> BoltDefinition {
+            BoltDefinition {
+                name: "Bolt".to_string(),
+                base_speed: 400.0,
+                min_speed: 200.0,
+                max_speed: 800.0,
+                radius: 8.0,
+                base_damage: 10.0,
+                effects: vec![],
+                color_rgb: [6.0, 5.0, 0.5],
+                min_angle_horizontal: 5.0,
+                min_angle_vertical: 5.0,
+            }
+        }
 
         let mut world = World::new();
-        let config = BoltConfig::default();
+        let def = test_bolt_definition();
         let entity = Bolt::builder()
             .at_position(Vec2::ZERO)
-            .config(&config)
-            .with_velocity(Velocity2D(Vec2::new(0.0, config.base_speed)))
+            .definition(&def)
+            .with_velocity(Velocity2D(Vec2::new(0.0, def.base_speed)))
             .primary()
             .spawn(&mut world);
 
@@ -177,7 +192,7 @@ mod tests {
 
         // After boost: speed should be base_speed * 1.5
         let speed_after = world.get::<Velocity2D>(entity).unwrap().speed();
-        let expected = config.base_speed * 1.5;
+        let expected = def.base_speed * 1.5;
         assert!(
             (speed_after - expected).abs() < 1.0,
             "fire() should recalculate velocity: expected {expected}, got {speed_after}"
@@ -188,14 +203,29 @@ mod tests {
     fn reverse_recalculates_velocity_to_reflect_removed_boost() {
         use rantzsoft_spatial2d::components::Velocity2D;
 
-        use crate::bolt::{components::Bolt, resources::BoltConfig};
+        use crate::bolt::{components::Bolt, definition::BoltDefinition};
+
+        fn test_bolt_definition() -> BoltDefinition {
+            BoltDefinition {
+                name: "Bolt".to_string(),
+                base_speed: 400.0,
+                min_speed: 200.0,
+                max_speed: 800.0,
+                radius: 8.0,
+                base_damage: 10.0,
+                effects: vec![],
+                color_rgb: [6.0, 5.0, 0.5],
+                min_angle_horizontal: 5.0,
+                min_angle_vertical: 5.0,
+            }
+        }
 
         let mut world = World::new();
-        let config = BoltConfig::default();
+        let def = test_bolt_definition();
         let entity = Bolt::builder()
             .at_position(Vec2::ZERO)
-            .config(&config)
-            .with_velocity(Velocity2D(Vec2::new(0.0, config.base_speed * 1.5)))
+            .definition(&def)
+            .with_velocity(Velocity2D(Vec2::new(0.0, def.base_speed * 1.5)))
             .primary()
             .spawn(&mut world);
         world
@@ -208,9 +238,9 @@ mod tests {
         // After reverse: speed should be base_speed * 1.0
         let speed_after = world.get::<Velocity2D>(entity).unwrap().speed();
         assert!(
-            (speed_after - config.base_speed).abs() < 1.0,
+            (speed_after - def.base_speed).abs() < 1.0,
             "reverse() should recalculate velocity: expected {}, got {speed_after}",
-            config.base_speed
+            def.base_speed
         );
     }
 }

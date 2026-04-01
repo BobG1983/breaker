@@ -131,7 +131,7 @@ fn fire_reads_bolt_definition_ref_from_source_entity_and_uses_bolt_registry() {
     );
 }
 
-// ── Behavior 1 edge case: velocity magnitude comes from definition, not BoltConfig default ──
+// ── Behavior 1 edge case: velocity magnitude comes from definition ──
 
 #[test]
 fn fire_uses_definition_base_speed_not_bolt_config_default() {
@@ -157,7 +157,7 @@ fn fire_uses_definition_base_speed_not_bolt_config_default() {
     let vel = query.iter(&world).next().expect("bolt should exist");
     assert!(
         (vel.0.length() - 600.0).abs() < 1.0,
-        "velocity magnitude should be ~600.0 (not BoltConfig default 400.0), got {}",
+        "velocity magnitude should be ~600.0 (from definition base_speed), got {}",
         vel.0.length()
     );
 }
@@ -210,7 +210,7 @@ fn fire_falls_back_to_bolt_default_definition_when_no_definition_ref() {
     );
 }
 
-// ── Behavior 3: fire() no longer requires BoltConfig resource when BoltRegistry is available ──
+// ── Behavior 3: fire() uses BoltRegistry for bolt spawning ──
 
 #[test]
 fn fire_does_not_require_bolt_config_when_bolt_registry_available() {
@@ -222,8 +222,6 @@ fn fire_does_not_require_bolt_config_when_bolt_registry_available() {
     );
     world.insert_resource(registry);
     world.insert_resource(GameRng::default());
-    // Explicitly NOT inserting BoltConfig
-
     let entity = world
         .spawn((
             Position2D(Vec2::ZERO),
@@ -231,12 +229,11 @@ fn fire_does_not_require_bolt_config_when_bolt_registry_available() {
         ))
         .id();
 
-    // Should not panic from missing BoltConfig
     fire(entity, 1, None, false, "", &mut world);
 
     let mut query = world.query_filtered::<Entity, (With<Bolt>, With<ExtraBolt>)>();
     let count = query.iter(&world).count();
-    assert_eq!(count, 1, "should spawn 1 bolt without BoltConfig resource");
+    assert_eq!(count, 1, "should spawn 1 bolt from BoltRegistry");
 }
 
 // ── Behavior 4: fire() spawns multiple bolts all using the same BoltDefinition ──

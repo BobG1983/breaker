@@ -8,7 +8,7 @@ use crate::bolt::components::SpawnedByEvolution;
 #[test]
 fn damage_cell_carries_source_chip_from_bolt_spawned_by_evolution() {
     let mut app = test_app_with_damage_and_wall_messages();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
 
     let cell_y = 100.0;
@@ -42,7 +42,7 @@ fn damage_cell_carries_source_chip_from_bolt_spawned_by_evolution() {
 #[test]
 fn damage_cell_carries_source_chip_none_when_bolt_has_no_spawned_by_evolution() {
     let mut app = test_app_with_damage_and_wall_messages();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
 
     let cell_y = 100.0;
@@ -68,7 +68,7 @@ fn damage_cell_carries_source_chip_none_when_bolt_has_no_spawned_by_evolution() 
 #[test]
 fn multiple_bolts_with_different_attributions_produce_correctly_attributed_damage_cells() {
     let mut app = test_app_with_damage_and_wall_messages();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
 
     let cell_a = spawn_cell(&mut app, -200.0, 100.0);

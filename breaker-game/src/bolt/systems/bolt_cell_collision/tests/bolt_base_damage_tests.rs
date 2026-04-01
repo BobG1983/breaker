@@ -1,5 +1,5 @@
 //! Migration tests for `bolt_cell_collision` — verifying the system reads
-//! `BoltBaseDamage` from entity instead of `BASE_BOLT_DAMAGE` constant.
+//! `BoltBaseDamage` from the entity component.
 
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Velocity2D;
@@ -224,11 +224,11 @@ fn collision_piercing_low_damage_does_not_pierce() {
     );
 }
 
-// ── Behavior 23: bolt_cell_collision does NOT read BASE_BOLT_DAMAGE constant ──
+// ── Behavior 23: bolt_cell_collision reads BoltBaseDamage from entity ──
 
 #[test]
 fn collision_uses_entity_damage_not_constant() {
-    // Given: BoltBaseDamage(25.0) on entity (different from BASE_BOLT_DAMAGE 10.0)
+    // Given: BoltBaseDamage(25.0) on entity (different from default 10.0)
     // Then: damage is 25.0, NOT 10.0
     let mut app = test_app_with_damage_and_wall_messages();
     let cc = crate::cells::resources::CellConfig::default();
@@ -245,7 +245,7 @@ fn collision_uses_entity_damage_not_constant() {
     assert_eq!(msgs.0.len(), 1, "should emit one DamageCell");
     assert!(
         (msgs.0[0].damage - 25.0).abs() < f32::EPSILON,
-        "DamageCell.damage should be 25.0 (from BoltBaseDamage), NOT {} (from BASE_BOLT_DAMAGE). Got {}",
+        "DamageCell.damage should be 25.0 (from BoltBaseDamage), NOT {} (default). Got {}",
         DEFAULT_BOLT_BASE_DAMAGE,
         msgs.0[0].damage
     );
@@ -340,16 +340,16 @@ fn collision_two_bolts_different_damage_with_boosts() {
 
 #[test]
 fn collision_without_bolt_base_damage_falls_back_to_default() {
-    // Given: Bolt WITHOUT BoltBaseDamage (built via .config() path)
-    // Then: damage falls back to DEFAULT_BOLT_BASE_DAMAGE (10.0)
+    // Given: Bolt with BoltBaseDamage(10.0) (from definition)
+    // Then: damage is 10.0 (base_damage from definition)
     let mut app = test_app_with_damage_and_wall_messages();
     let cc = crate::cells::resources::CellConfig::default();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
 
     let cell_y = 100.0;
     spawn_cell(&mut app, 0.0, cell_y);
 
-    // Use the existing .config() helper which does NOT insert BoltBaseDamage
+    // The definition helper inserts BoltBaseDamage(10.0)
     let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
     spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
 
@@ -366,10 +366,10 @@ fn collision_without_bolt_base_damage_falls_back_to_default() {
 
 #[test]
 fn collision_without_bolt_base_damage_with_boost_uses_fallback() {
-    // Edge case: No BoltBaseDamage, ActiveDamageBoosts(2.0) -> 10.0 * 2.0 = 20.0
+    // Edge case: BoltBaseDamage(10.0), ActiveDamageBoosts(2.0) -> 10.0 * 2.0 = 20.0
     let mut app = test_app_with_damage_and_wall_messages();
     let cc = crate::cells::resources::CellConfig::default();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
 
     let cell_y = 100.0;
     spawn_cell(&mut app, 0.0, cell_y);
@@ -395,10 +395,10 @@ fn collision_without_bolt_base_damage_with_boost_uses_fallback() {
 
 #[test]
 fn collision_pierce_lookahead_uses_fallback_when_no_bolt_base_damage() {
-    // Given: Bolt without BoltBaseDamage (.config() path), cell HP 10.0
-    // Then: effective damage = DEFAULT_BOLT_BASE_DAMAGE (10.0). 10.0 <= 10.0 -> pierce.
+    // Given: Bolt with BoltBaseDamage(10.0) from definition, cell HP 10.0
+    // Then: effective damage = 10.0. 10.0 <= 10.0 -> pierce.
     let mut app = test_app_with_damage_and_wall_messages();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
 
     let cell_y = 100.0;
     spawn_cell_with_health(&mut app, 0.0, cell_y, 10.0);
@@ -427,9 +427,9 @@ fn collision_pierce_lookahead_uses_fallback_when_no_bolt_base_damage() {
 
 #[test]
 fn collision_pierce_lookahead_fallback_insufficient_damage() {
-    // Edge case: No BoltBaseDamage, cell HP 15.0, effective 10.0 < 15.0 -> no pierce
+    // Edge case: BoltBaseDamage(10.0), cell HP 15.0, effective 10.0 < 15.0 -> no pierce
     let mut app = test_app_with_damage_and_wall_messages();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
 
     let cell_y = 100.0;
     spawn_cell_with_health(&mut app, 0.0, cell_y, 15.0);

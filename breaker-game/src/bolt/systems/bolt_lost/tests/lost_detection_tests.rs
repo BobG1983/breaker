@@ -526,14 +526,12 @@ fn bolt_lost_respawn_previous_position_matches_new_position() {
     );
 }
 
-// Behavior 39: bolt_lost does NOT query BoltRespawnAngleSpread or BoltRespawnOffsetY
+// Behavior 39: bolt_lost respawns correctly using BoltAngleSpread and BoltSpawnOffsetY
+// (BoltRespawnAngleSpread and BoltRespawnOffsetY were deleted in Wave 6)
 #[test]
 fn bolt_lost_works_without_old_respawn_components() {
-    // Given: Bolt built via .definition() (does NOT insert BoltRespawnAngleSpread
-    //        or BoltRespawnOffsetY). Bolt is below floor.
+    // Given: Bolt built via .definition(). Bolt is below floor.
     // Then: System runs without error. Bolt respawns using BoltAngleSpread and BoltSpawnOffsetY.
-    use crate::bolt::components::{BoltRespawnAngleSpread, BoltRespawnOffsetY};
-
     let mut app = test_app();
     let playfield = PlayfieldConfig::default();
     app.world_mut().spawn((
@@ -547,16 +545,6 @@ fn bolt_lost_works_without_old_respawn_components() {
         &mut app,
         Vec2::new(0.0, playfield.bottom() - 100.0),
         Vec2::new(0.0, -400.0),
-    );
-
-    // Verify old components are NOT present
-    assert!(
-        app.world().get::<BoltRespawnAngleSpread>(entity).is_none(),
-        "definition-built bolt should NOT have BoltRespawnAngleSpread"
-    );
-    assert!(
-        app.world().get::<BoltRespawnOffsetY>(entity).is_none(),
-        "definition-built bolt should NOT have BoltRespawnOffsetY"
     );
 
     // System should run without error and respawn the bolt

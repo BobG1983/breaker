@@ -8,7 +8,7 @@ use crate::{
             Bolt, BoltAngleSpread, BoltServing, BoltSpawnOffsetY, ExtraBolt, PiercingRemaining,
         },
         definition::BoltDefinition,
-        resources::{BoltConfig, DEFAULT_BOLT_ANGLE_SPREAD, DEFAULT_BOLT_SPAWN_OFFSET_Y},
+        resources::{DEFAULT_BOLT_ANGLE_SPREAD, DEFAULT_BOLT_SPAWN_OFFSET_Y},
     },
     breaker::components::Breaker,
     effect::effects::{
@@ -36,7 +36,6 @@ fn make_default_bolt_definition() -> BoltDefinition {
 fn test_app() -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
-        .init_resource::<BoltConfig>()
         .init_resource::<RunState>()
         .init_resource::<GameRng>()
         .add_systems(Update, reset_bolt);

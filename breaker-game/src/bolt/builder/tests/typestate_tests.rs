@@ -6,8 +6,25 @@ use rantzsoft_spatial2d::components::{
 use super::super::core::*;
 use crate::bolt::{
     components::{Bolt, ExtraBolt},
-    resources::BoltConfig,
+    definition::BoltDefinition,
 };
+
+/// Creates a `BoltDefinition` matching the values previously provided by
+/// `BoltConfig::default()`, so existing assertions remain valid.
+fn test_bolt_definition() -> BoltDefinition {
+    BoltDefinition {
+        name: "Bolt".to_string(),
+        base_speed: 400.0,
+        min_speed: 200.0,
+        max_speed: 800.0,
+        radius: 8.0,
+        base_damage: 10.0,
+        effects: vec![],
+        color_rgb: [6.0, 5.0, 0.5],
+        min_angle_horizontal: 5.0,
+        min_angle_vertical: 5.0,
+    }
+}
 
 // ── Section A: Entry Point and Typestate Dimensions ──────────────────
 
@@ -38,7 +55,7 @@ fn at_position_transitions_to_has_position() {
 fn at_position_stores_position_in_spawn() {
     let mut world = World::new();
     let entity = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::new(100.0, 250.0))
         .serving()
         .primary()
@@ -57,7 +74,7 @@ fn at_position_stores_position_in_spawn() {
 fn at_position_accepts_zero() {
     let mut world = World::new();
     let entity = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
@@ -72,7 +89,7 @@ fn at_position_accepts_zero() {
 fn at_position_accepts_negative_coordinates() {
     let mut world = World::new();
     let entity = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::new(-200.0, -100.0))
         .serving()
         .primary()
@@ -222,7 +239,7 @@ fn with_velocity_transitions_to_has_velocity() {
 fn with_velocity_stores_velocity_in_spawn() {
     let mut world = World::new();
     let entity = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::new(200.0, 300.0))
         .with_velocity(Velocity2D(Vec2::new(102.9, 385.5)))
         .extra()
@@ -241,7 +258,7 @@ fn with_velocity_stores_velocity_in_spawn() {
 fn with_velocity_zero_valid() {
     let mut world = World::new();
     let entity = Bolt::builder()
-        .config(&BoltConfig::default())
+        .definition(&test_bolt_definition())
         .at_position(Vec2::ZERO)
         .with_velocity(Velocity2D(Vec2::ZERO))
         .extra()
