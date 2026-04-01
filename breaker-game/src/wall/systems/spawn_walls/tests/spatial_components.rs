@@ -157,8 +157,7 @@ fn spawned_walls_have_scale2d_matching_wall_dimensions() {
     let half_width = playfield.width / 2.0; // 400.0
     let half_height = playfield.height / 2.0; // 300.0
 
-    // We need to correlate Scale2D with position to identify which wall is which.
-    // Use Scale2D to identify walls since WallSize fields are commented out.
+    // Correlate Scale2D with position to identify which wall is which.
     let wall_data: Vec<&Scale2D> = app
         .world_mut()
         .query_filtered::<&Scale2D, With<Wall>>()

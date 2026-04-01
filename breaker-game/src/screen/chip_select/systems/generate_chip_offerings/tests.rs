@@ -342,3 +342,171 @@ fn boss_node_remaining_slots_filled_with_normal() {
         "expected 2 normal offerings to fill remaining slots, got {normal_count}"
     );
 }
+
+// --- Behavior: All slots filled by evolutions when eligible count >= offers_per_node ---
+
+/// Setup: 3 distinct evolution recipes, all with satisfied ingredients,
+/// on a Boss node with `offers_per_node`=3.
+fn app_with_3_eligible_evolutions() -> App {
+    let mut app = App::new();
+
+    // Create 3 ingredient chip definitions with templates
+    let ps_def = ChipDefinition::test("Piercing Shot", EffectNode::Do(EffectKind::Piercing(1)), 5)
+        .with_template("Piercing Shot");
+    let sb_def = ChipDefinition::test(
+        "Speed Boost",
+        EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 }),
+        5,
+    )
+    .with_template("Speed Boost");
+    let db_def = ChipDefinition::test(
+        "Damage Boost",
+        EffectNode::Do(EffectKind::DamageBoost(0.5)),
+        5,
+    )
+    .with_template("Damage Boost");
+
+    // Inventory satisfies all 3 recipes
+    let mut inventory = ChipInventory::default();
+    let _ = inventory.add_chip("Piercing Shot", &ps_def);
+    let _ = inventory.add_chip("Piercing Shot", &ps_def);
+    let _ = inventory.add_chip("Speed Boost", &sb_def);
+    let _ = inventory.add_chip("Speed Boost", &sb_def);
+    let _ = inventory.add_chip("Damage Boost", &db_def);
+    let _ = inventory.add_chip("Damage Boost", &db_def);
+
+    // Build registry with 5 normal chips + 3 evolution chips + 3 recipes
+    let mut registry = make_registry(5);
+    registry.insert(ChipDefinition {
+        name: "Barrage".into(),
+        description: "Combined piercing".into(),
+        rarity: Rarity::Evolution,
+        max_stacks: 1,
+        effects: vec![RootEffect::On {
+            target: Target::Bolt,
+            then: vec![EffectNode::Do(EffectKind::Piercing(5))],
+        }],
+        ingredients: Some(vec![EvolutionIngredient {
+            chip_name: "Piercing Shot".into(),
+            stacks_required: 2,
+        }]),
+        template_name: None,
+    });
+    registry.insert(ChipDefinition {
+        name: "Velocity".into(),
+        description: "Combined speed".into(),
+        rarity: Rarity::Evolution,
+        max_stacks: 1,
+        effects: vec![RootEffect::On {
+            target: Target::Bolt,
+            then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 2.0 })],
+        }],
+        ingredients: Some(vec![EvolutionIngredient {
+            chip_name: "Speed Boost".into(),
+            stacks_required: 2,
+        }]),
+        template_name: None,
+    });
+    registry.insert(ChipDefinition {
+        name: "Devastation".into(),
+        description: "Combined damage".into(),
+        rarity: Rarity::Evolution,
+        max_stacks: 1,
+        effects: vec![RootEffect::On {
+            target: Target::Bolt,
+            then: vec![EffectNode::Do(EffectKind::DamageBoost(2.0))],
+        }],
+        ingredients: Some(vec![EvolutionIngredient {
+            chip_name: "Damage Boost".into(),
+            stacks_required: 2,
+        }]),
+        template_name: None,
+    });
+
+    registry.insert_recipe(Recipe {
+        ingredients: vec![EvolutionIngredient {
+            chip_name: "Piercing Shot".into(),
+            stacks_required: 2,
+        }],
+        result_name: "Barrage".to_owned(),
+    });
+    registry.insert_recipe(Recipe {
+        ingredients: vec![EvolutionIngredient {
+            chip_name: "Speed Boost".into(),
+            stacks_required: 2,
+        }],
+        result_name: "Velocity".to_owned(),
+    });
+    registry.insert_recipe(Recipe {
+        ingredients: vec![EvolutionIngredient {
+            chip_name: "Damage Boost".into(),
+            stacks_required: 2,
+        }],
+        result_name: "Devastation".to_owned(),
+    });
+
+    app.add_plugins(MinimalPlugins)
+        .insert_resource(registry)
+        .insert_resource(inventory)
+        .insert_resource(ChipSelectConfig::default())
+        .insert_resource(GameRng::from_seed(42))
+        .insert_resource(make_test_layout(NodePool::Boss))
+        .add_systems(Update, generate_chip_offerings);
+    app
+}
+
+#[test]
+fn boss_node_all_slots_filled_by_evolutions_when_3_eligible() {
+    let mut app = app_with_3_eligible_evolutions();
+    app.update();
+
+    let offers = app.world().resource::<ChipOffers>();
+    assert_eq!(
+        offers.0.len(),
+        3,
+        "expected exactly 3 offers (all evolution), got {}",
+        offers.0.len()
+    );
+
+    let evo_count = offers
+        .0
+        .iter()
+        .filter(|o| matches!(o, ChipOffering::Evolution { .. }))
+        .count();
+    let normal_count = offers
+        .0
+        .iter()
+        .filter(|o| matches!(o, ChipOffering::Normal(_)))
+        .count();
+    assert_eq!(
+        evo_count, 3,
+        "all 3 slots should be evolution offers, got {evo_count}"
+    );
+    assert_eq!(
+        normal_count, 0,
+        "no normal offers expected when evolutions fill all slots, got {normal_count}"
+    );
+}
+
+#[test]
+fn boss_node_3_eligible_evolutions_has_correct_names() {
+    let mut app = app_with_3_eligible_evolutions();
+    app.update();
+
+    // Verify all 3 evolution result names are present
+    let offers = app.world().resource::<ChipOffers>();
+    let mut evo_names: Vec<&str> = offers
+        .0
+        .iter()
+        .filter_map(|o| match o {
+            ChipOffering::Evolution { result, .. } => Some(result.name.as_str()),
+            ChipOffering::Normal(_) => None,
+        })
+        .collect();
+    evo_names.sort_unstable();
+    assert_eq!(
+        evo_names,
+        vec!["Barrage", "Devastation", "Velocity"],
+        "expected all 3 evolution results, got {evo_names:?}"
+    );
+}

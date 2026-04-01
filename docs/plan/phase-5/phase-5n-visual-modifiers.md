@@ -1,85 +1,72 @@
 # 5n: Visual Modifier System
 
-**Goal**: Implement the system that modifies bolt and breaker appearance based on active chip effects, with diminishing visual returns on stacking.
+**Goal**: Implement the `ModifierStack` component and modifier computation system in `rantzsoft_vfx` that combines Set/Add modifiers with diminishing returns and updates shader uniforms.
+
+Architecture: `docs/architecture/rendering/modifiers.md`
 
 ## What to Build
 
-### 1. Visual Modifier Application System
+### 1. ModifierStack Component
 
-A rendering/ system that reads active chip effects on bolt/breaker and applies visual modifications:
-- Reads `ActiveChipEffects` (or equivalent) from gameplay components
-- Maps each active effect to its `VisualModifier` (defined in 5f)
-- Applies the combined modifier to the entity's rendering
+Crate-owned component on each entity registered via `AttachVisuals`. Stores:
+- Set entries: `HashMap<&'static str, VisualModifier>` — latest value per source key
+- Add entries: `Vec<(&'static str, VisualModifier)>` — stacked with DR
 
-### 2. Diminishing Returns Stacking
+### 2. Modifier Message Handlers
 
-Each modifier type stacks with diminishing visual returns:
-- 1st stack: full multiplier (e.g., 1.5x trail length)
-- 2nd stack: reduced multiplier (e.g., 1.35x)
-- 3rd stack: further reduced (e.g., 1.2x)
-- 4th+ stacks: minimal (e.g., 1.1x)
+Systems that process the three message types:
+- `SetModifier { entity, modifier, source }` — overwrites by source key
+- `AddModifier { entity, modifier, source }` — adds to stack
+- `RemoveModifier { entity, source }` — removes by source key
 
-Exact curve tunable per modifier type.
+### 3. Diminishing Returns Computation
 
-**IMPORTANT**: Diminishing returns apply ONLY to visual modifiers, NOT to gameplay effects. A bolt with 5 speed stacks gets the full gameplay speed multiplier — it just doesn't render with a 7.5x trail length.
+Per-modifier-type curves from `ModifierConfig` resource (game configures at startup):
+- Numeric modifiers (TrailLength, GlowIntensity, etc.): values multiply, then DR curve applied
+- Non-numeric modifiers (ColorShift, ColorCycle, AlphaOscillation, SquashStretch): latest wins, no DR
+- `AfterimageTrail(bool)`: any true = enabled
+- DR applies to `AddModifier` stacks only, NOT to `SetModifier`
 
-### 3. Bolt Visual Modifiers
+### 4. Shader Uniform Update
 
-| Effect | Visual Change |
-|--------|--------------|
-| Speed Boost | Trail length multiplier, glow intensity up, halo color warmer |
-| Damage Boost | Core brightness up, color shift toward amber/white |
-| Piercing | Angular glow, energy spikes — modifier controls intensity |
-| Size Boost | Glow scales proportionally with size — modifier controls scaling |
+Each frame (Update schedule, not FixedUpdate — for smooth interpolation):
+- Combine Set values with DR-scaled Add values per modifier kind
+- Update entity's material uniforms from computed results
+- SquashStretch modifies SDF UV coordinates (shader uniform, not Transform)
 
-Different modifier types stack independently — speed + damage = longer trail AND color shift.
+### 5. ModifierConfig Resource
 
-### 4. Breaker Visual Modifiers
+```rust
+ModifierConfig {
+    curves: HashMap<ModifierKind, Vec<f32>>,  // per-type DR curves
+    default_curve: Vec<f32>,                  // fallback: [1.0, 0.7, 0.4, 0.2]
+}
+```
 
-| Effect | Visual Change |
-|--------|--------------|
-| Speed Boost | Aura stretches in movement direction, trailing wisps, dash trail intensity — modifier controls strength |
-| Width Boost | Aura pulse on activation, stretch animation — modifier controls strength |
-| Bump Force | Front face glow, pulsing — modifier controls strength |
+Game inserts at startup. Values beyond vec length use the last entry.
 
-### 5. Modifier-Driven Rendering
+### 6. Debug Menu
 
-rendering/ systems that consume the computed modifier values:
-- Bolt shader reads `ComputedBoltModifiers { trail_length_mult, glow_intensity_mult, color_shift, particle_emitter, ... }`
-- Breaker shader reads `ComputedBreakerModifiers { ... }`
-- These are computed components maintained by the modifier system, not raw chip data
-
-### 6. Visual Modifier Debug
-
-Debug menu:
-- Display active modifiers and their stacked values
+- Display active modifiers per entity (modifier kind, source, value, DR-scaled value)
 - Override modifier values for visual tuning
-- Toggle diminishing returns on/off (for comparison)
+- Toggle diminishing returns on/off
 
 ## What NOT to Do
 
-- Do NOT implement new visual effects — this step composes existing effects from 5g-5h using modifier data
 - Do NOT change gameplay multipliers — visual-only concern
+- Do NOT implement new visual effects — this step implements the modifier computation, not the effects that send modifiers (those are 5g-5m)
 
 ## Dependencies
 
-- **Requires**: 5g (bolt visuals: trail, glow, state rendering), 5h (breaker visuals: aura, trail, state rendering), 5f (VisualModifier types)
-- **Enhanced by**: 5m (combat effects may also have visual modifiers)
-
-## What This Step Builds
-
-- Visual modifier application system (reads active chip effects, maps to visual changes)
-- Diminishing returns stacking (1st stack full, 2nd reduced, etc. — visual only, not gameplay)
-- Bolt modifiers: speed→trail length, damage→color shift, piercing→angular glow, size→glow scaling
-- Breaker modifiers: speed→aura stretch, width→aura pulse, bump force→front face glow
-- ComputedBoltModifiers / ComputedBreakerModifiers components consumed by rendering
-- Debug menu: display active modifier values, override for tuning, toggle diminishing returns
+- **Requires**: 5f (VisualModifier types), 5g/5h (entity visuals that receive modifiers)
+- **Enhanced by**: 5m (combat effects that send modifiers)
 
 ## Verification
 
-- Bolt with 1 speed stack looks visibly different from bolt with 3 stacks
-- Diminishing returns prevent extreme visual scaling
+- Entity with 1 speed stack looks visibly different from 3 stacks
+- Diminishing returns prevent extreme visual scaling (3 stacks < 3x visual change)
 - Multiple modifier types combine correctly (speed + damage = trail + color shift)
-- Gameplay multipliers are unaffected by visual diminishing returns
-- Debug menu shows modifier values
+- Gameplay multipliers are unaffected by visual DR
+- SetModifier overwrites by source key correctly
+- RemoveModifier cleans up correctly
 - All existing tests pass

@@ -15,7 +15,7 @@ fn apply_debug_setup_sets_node_timer_remaining() {
         layout: "Corridor".to_owned(),
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
-        invariants: vec![],
+        disallowed_failures: vec![],
         debug_setup: Some(DebugSetup {
             node_timer_remaining: Some(-1.0),
             ..Default::default()
@@ -54,7 +54,7 @@ fn apply_debug_setup_ignores_node_timer_remaining_when_no_resource() {
         layout: "Corridor".to_owned(),
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
-        invariants: vec![],
+        disallowed_failures: vec![],
         debug_setup: Some(DebugSetup {
             node_timer_remaining: Some(-1.0),
             ..Default::default()

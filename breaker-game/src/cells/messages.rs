@@ -40,16 +40,13 @@ pub(crate) struct CellImpactWall {
 ///
 /// A "command" message — owned by the receiving domain (cells), written by
 /// multiple senders. The `damage` field is pre-calculated by the sender
-/// (includes `EffectiveDamageMultiplier`). `source_bolt` is pass-through for VFX attachment.
+/// (includes `ActiveDamageBoosts` multiplier). `source_bolt` is pass-through for VFX attachment.
 #[derive(Message, Clone, Debug)]
 pub(crate) struct DamageCell {
     /// The cell entity to damage.
     pub cell: Entity,
     /// Pre-calculated damage amount.
     pub damage: f32,
-    // FUTURE: may be used for upcoming phases
-    // /// The bolt entity that caused this damage (for VFX attachment), if any.
-    // pub source_bolt: Option<Entity>,
     /// The chip name that originated this damage, for evolution attribution.
     pub source_chip: Option<String>,
 }

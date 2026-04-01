@@ -17,8 +17,8 @@
         actions: [],
     )),
     max_frames: 600,
-    invariants: [NoNaN, NoEntityLeaks],
-    expected_violations: None,
+    disallowed_failures: [NoNaN, NoEntityLeaks],
+    allowed_failures: None,
     debug_setup: None,
     seed: 1111,
 )

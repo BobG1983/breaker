@@ -5,8 +5,8 @@
         actions: [],
     )),
     max_frames: 120,
-    invariants: [ValidBreakerState],
-    expected_violations: [ValidBreakerState],
+    disallowed_failures: [ValidBreakerState],
+    allowed_failures: [ValidBreakerState],
     debug_setup: (
         disable_physics: true,
     ),

@@ -3,7 +3,7 @@ use rantzsoft_spatial2d::components::Position2D;
 
 use super::super::helpers::*;
 use crate::{
-    bolt::BASE_BOLT_DAMAGE,
+    bolt::resources::DEFAULT_BOLT_BASE_DAMAGE,
     effect::core::EffectSourceChip,
     shared::{CleanupOnNodeExit, GameRng},
 };
@@ -40,7 +40,7 @@ fn fire_spawns_chain_entity_with_correct_initial_state() {
         "remaining_jumps should be 2 (arcs=3 minus 1 for initial target)"
     );
 
-    let expected_damage = BASE_BOLT_DAMAGE * 1.0;
+    let expected_damage = DEFAULT_BOLT_BASE_DAMAGE * 1.0;
     assert!(
         (chain.damage - expected_damage).abs() < f32::EPSILON,
         "expected damage {expected_damage}, got {}",
@@ -140,7 +140,7 @@ fn fire_chain_entity_damage_includes_effective_damage_multiplier() {
         .world_mut()
         .spawn((
             Position2D(Vec2::ZERO),
-            crate::effect::EffectiveDamageMultiplier(2.0),
+            crate::effect::effects::damage_boost::ActiveDamageBoosts(vec![2.0]),
         ))
         .id();
 
@@ -155,8 +155,8 @@ fn fire_chain_entity_damage_includes_effective_damage_multiplier() {
     let chains: Vec<_> = query.iter(app.world()).collect();
     assert_eq!(chains.len(), 1);
 
-    // damage = BASE_BOLT_DAMAGE * 1.0 * 2.0 = 20.0
-    let expected_damage = BASE_BOLT_DAMAGE * 1.0 * 2.0;
+    // damage = DEFAULT_BOLT_BASE_DAMAGE * 1.0 * 2.0 = 20.0
+    let expected_damage = DEFAULT_BOLT_BASE_DAMAGE * 1.0 * 2.0;
     assert!(
         (chains[0].damage - expected_damage).abs() < f32::EPSILON,
         "expected chain damage {expected_damage}, got {}",

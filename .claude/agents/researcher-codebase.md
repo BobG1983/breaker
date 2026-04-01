@@ -74,6 +74,10 @@ From reading the code, identify:
 - `path/to/file.rs` — [why it matters]
 ```
 
+## Research Output
+
+Write your report to `.claude/research/<topic-slug>.md` (e.g., `.claude/research/bump-system-data-flow.md`).
+
 ## Rules
 
 - Follow the actual code, not assumptions — read every system in the chain
@@ -92,13 +96,6 @@ See `.claude/rules/project-context.md` for project overview, architecture, and t
 - Do NOT fix code — not even "obvious" fixes
 - Do NOT create helper scripts or new files
 - Do NOT delete any file for any reason
-- The ONLY files you may write/edit are your own memory files under `.claude/agent-memory/researcher-codebase/`
+- The ONLY files you may write are research output to `.claude/research/`
 If changes are needed, **describe** the exact changes in your report — but do NOT apply them.
 
-# Agent Memory
-
-See `.claude/rules/agent-memory.md` for memory conventions (stable vs ephemeral, MEMORY.md index, what NOT to save).
-
-What to save in stable memory:
-- Domain flow maps that remain stable across sessions (e.g., "the bump system chain is: input → collision → grade → speed")
-- System chain patterns that are architectural (not implementation details that change often)

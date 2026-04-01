@@ -9,7 +9,7 @@
 // ~64 Hz the bolt may contact the breaker hundreds of times: 1.05^200 ≈ 1.7 billion.
 // A secondary risk: if the bridge system iterates all entities with BoundEffects and
 // the bolt entity is processed multiple times in the same frame (duplicate query result),
-// the same boost fires N times per tick. BoltSpeedInRange fires the moment speed leaves
+// the same boost fires N times per tick. BoltSpeedAccurate fires the moment speed leaves
 // the configured envelope. NoNaN detects velocity overflow to infinity. BoltInBounds
 // catches the bolt escaping bounds after extreme velocity magnitudes.
 (
@@ -17,8 +17,8 @@
     layout: "Corridor",
     input: Chaos((action_prob: 0.3)),
     max_frames: 8000,
-    invariants: [BoltSpeedInRange, NoNaN, BoltInBounds],
-    expected_violations: None,
+    disallowed_failures: [BoltSpeedAccurate, NoNaN, BoltInBounds],
+    allowed_failures: None,
     debug_setup: None,
     allow_early_end: false,
     seed: 5003,

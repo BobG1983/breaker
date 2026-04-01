@@ -7,9 +7,9 @@ use rantzsoft_physics2d::{
 use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
-    bolt::BASE_BOLT_DAMAGE,
+    bolt::{components::BoltBaseDamage, resources::DEFAULT_BOLT_BASE_DAMAGE},
     cells::messages::DamageCell,
-    effect::{EffectiveDamageMultiplier, core::EffectSourceChip},
+    effect::{core::EffectSourceChip, effects::damage_boost::ActiveDamageBoosts},
     shared::{CELL_LAYER, CleanupOnNodeExit, playing_state::PlayingState},
 };
 
@@ -63,17 +63,24 @@ pub(crate) struct PulseSpeed(pub(crate) f32);
 pub(crate) struct PulseDamaged(pub(crate) HashSet<Entity>);
 
 /// Damage multiplier snapshotted from the emitter's captured
-/// `EffectiveDamageMultiplier` at ring-spawn time. Default `1.0`.
+/// `ActiveDamageBoosts` at ring-spawn time. Default `1.0`.
 #[derive(Component)]
 pub(crate) struct PulseRingDamageMultiplier(pub(crate) f32);
+
+/// Base damage snapshotted from the emitter's bolt entity's `BoltBaseDamage` at
+/// ring-spawn time. Falls back to `DEFAULT_BOLT_BASE_DAMAGE` if the bolt has no
+/// `BoltBaseDamage`.
+#[derive(Component)]
+pub(crate) struct PulseRingBaseDamage(pub(crate) f32);
 
 /// Query data for [`tick_pulse_emitter`].
 type EmitterQuery = (
     Entity,
     &'static mut PulseEmitter,
     &'static Position2D,
-    Option<&'static EffectiveDamageMultiplier>,
+    Option<&'static ActiveDamageBoosts>,
     Option<&'static EffectSourceChip>,
+    Option<&'static BoltBaseDamage>,
 );
 
 /// Query data for [`apply_pulse_damage`].
@@ -82,6 +89,7 @@ type PulseDamageQuery = (
     &'static PulseRadius,
     &'static mut PulseDamaged,
     Option<&'static PulseRingDamageMultiplier>,
+    Option<&'static PulseRingBaseDamage>,
     Option<&'static EffectSourceChip>,
 );
 
@@ -107,13 +115,14 @@ pub(crate) fn tick_pulse_emitter(
     mut emitters: Query<EmitterQuery>,
 ) {
     let dt = time.timestep().as_secs_f32();
-    for (_entity, mut emitter, position, edm, esc) in &mut emitters {
+    for (_entity, mut emitter, position, active_boosts, esc, bolt_base_damage) in &mut emitters {
         emitter.timer += dt;
         if emitter.timer >= emitter.interval {
             emitter.timer -= emitter.interval;
             let effective_range = emitter.effective_max_radius();
             let speed = emitter.speed;
-            let damage_multiplier = edm.map_or(1.0, |e| e.0);
+            let damage_multiplier = active_boosts.map_or(1.0, ActiveDamageBoosts::multiplier);
+            let base_dmg = bolt_base_damage.map_or(DEFAULT_BOLT_BASE_DAMAGE, |d| d.0);
             let mut ring = commands.spawn((
                 PulseRing,
                 PulseSource,
@@ -122,6 +131,7 @@ pub(crate) fn tick_pulse_emitter(
                 PulseSpeed(speed),
                 PulseDamaged(HashSet::new()),
                 PulseRingDamageMultiplier(damage_multiplier),
+                PulseRingBaseDamage(base_dmg),
                 Position2D(position.0),
                 CleanupOnNodeExit,
             ));
@@ -151,12 +161,13 @@ pub(crate) fn apply_pulse_damage(
     mut damage_writer: MessageWriter<DamageCell>,
 ) {
     let query_layers = CollisionLayers::new(0, CELL_LAYER);
-    for (position, radius, mut damaged, damage_mult, esc) in &mut rings {
+    for (position, radius, mut damaged, damage_mult, pulse_base_damage, esc) in &mut rings {
         if radius.0 <= 0.0 {
             continue;
         }
         let center = position.0;
         let multiplier = damage_mult.map_or(1.0, |m| m.0);
+        let base_damage = pulse_base_damage.map_or(DEFAULT_BOLT_BASE_DAMAGE, |d| d.0);
         let source_chip = esc.and_then(EffectSourceChip::source_chip);
         let candidates = quadtree
             .quadtree
@@ -165,7 +176,7 @@ pub(crate) fn apply_pulse_damage(
             if damaged.0.insert(cell) {
                 damage_writer.write(DamageCell {
                     cell,
-                    damage: BASE_BOLT_DAMAGE * multiplier,
+                    damage: base_damage * multiplier,
                     source_chip: source_chip.clone(),
                 });
             }

@@ -4,7 +4,7 @@
 // The adversarial risk: if the trigger bridge incorrectly fires multiple timing variants
 // for the same bump event, stacked multipliers compound and blow past BoltMaxSpeed.
 // If timing tags are never cleared between bumps, old multipliers accumulate silently.
-// BoltSpeedInRange is the primary detector — it fires the moment bolt speed leaves the
+// BoltSpeedAccurate is the primary detector — it fires the moment bolt speed leaves the
 // configured min/max envelope. 5000 frames at moderate chaos ensures enough bump events
 // to exercise the full timing spectrum including back-to-back mixed timings.
 (
@@ -12,8 +12,8 @@
     layout: "Dense",
     input: Chaos((action_prob: 0.5)),
     max_frames: 5000,
-    invariants: [BoltSpeedInRange],
-    expected_violations: None,
+    disallowed_failures: [BoltSpeedAccurate],
+    allowed_failures: None,
     debug_setup: None,
     allow_early_end: false,
     seed: 6174,

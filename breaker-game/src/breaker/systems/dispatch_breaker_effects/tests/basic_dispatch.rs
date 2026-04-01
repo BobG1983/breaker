@@ -15,6 +15,7 @@ use crate::{
 fn dispatch_pushes_breaker_targeted_when_to_breaker_bound_effects() {
     let def = BreakerDefinition {
         name: TEST_BREAKER_NAME.to_owned(),
+        bolt: "Bolt".to_owned(),
         stat_overrides: BreakerStatOverrides::default(),
         life_pool: None,
         effects: vec![RootEffect::On {
@@ -48,6 +49,7 @@ fn dispatch_pushes_breaker_targeted_when_to_breaker_bound_effects() {
 fn dispatch_empty_effects_leaves_bound_effects_empty() {
     let def = BreakerDefinition {
         name: TEST_BREAKER_NAME.to_owned(),
+        bolt: "Bolt".to_owned(),
         stat_overrides: BreakerStatOverrides::default(),
         life_pool: None,
         effects: vec![],
@@ -73,6 +75,7 @@ fn dispatch_empty_effects_leaves_bound_effects_empty() {
 fn dispatch_fires_bare_do_immediately_not_stored_in_bound_effects() {
     let def = BreakerDefinition {
         name: TEST_BREAKER_NAME.to_owned(),
+        bolt: "Bolt".to_owned(),
         stat_overrides: BreakerStatOverrides::default(),
         life_pool: None,
         effects: vec![RootEffect::On {
@@ -115,6 +118,7 @@ fn dispatch_fires_bare_do_immediately_not_stored_in_bound_effects() {
 fn dispatch_mixed_do_and_when_stores_only_when() {
     let def = BreakerDefinition {
         name: TEST_BREAKER_NAME.to_owned(),
+        bolt: "Bolt".to_owned(),
         stat_overrides: BreakerStatOverrides::default(),
         life_pool: None,
         effects: vec![RootEffect::On {
@@ -156,6 +160,7 @@ fn dispatch_mixed_do_and_when_stores_only_when() {
 fn dispatch_pushes_multiple_breaker_targeted_effects() {
     let def = BreakerDefinition {
         name: TEST_BREAKER_NAME.to_owned(),
+        bolt: "Bolt".to_owned(),
         stat_overrides: BreakerStatOverrides::default(),
         life_pool: None,
         effects: vec![

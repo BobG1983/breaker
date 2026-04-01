@@ -32,7 +32,7 @@ pub(super) fn make_chaos_definition() -> ScenarioDefinition {
         layout: "corridor".to_owned(),
         input: InputStrategy::Chaos(ChaosParams { action_prob: 0.3 }),
         max_frames: 1000,
-        invariants: vec![],
+        disallowed_failures: vec![],
         ..Default::default()
     }
 }

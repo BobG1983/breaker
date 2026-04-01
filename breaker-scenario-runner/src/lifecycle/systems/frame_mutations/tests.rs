@@ -1,8 +1,5 @@
 use bevy::prelude::*;
-use breaker::effect::effects::{
-    gravity_well::GravityWellMarker,
-    size_boost::{ActiveSizeBoosts, EffectiveSizeMultiplier},
-};
+use breaker::effect::effects::gravity_well::GravityWellMarker;
 use rantzsoft_physics2d::aabb::Aabb2D;
 
 use super::mutations::*;
@@ -104,44 +101,5 @@ fn apply_spawn_extra_gravity_wells_zero_spawns_nothing() {
     assert_eq!(
         count, 0,
         "apply_spawn_extra_gravity_wells(0) should spawn zero entities, got {count}"
-    );
-}
-
-// -------------------------------------------------------------------------
-// apply_inject_wrong_size_multiplier — behavior 27
-// -------------------------------------------------------------------------
-
-#[test]
-fn apply_inject_wrong_size_multiplier_spawns_diverged_entity() {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins);
-
-    app.add_systems(Update, |mut commands: Commands| {
-        apply_inject_wrong_size_multiplier(99.0, &mut commands);
-    });
-    app.update();
-
-    // Should have exactly one entity with both ActiveSizeBoosts and EffectiveSizeMultiplier
-    let mut query = app
-        .world_mut()
-        .query::<(&ActiveSizeBoosts, &EffectiveSizeMultiplier)>();
-    let results: Vec<_> = query.iter(app.world()).collect();
-    assert_eq!(
-        results.len(),
-        1,
-        "apply_inject_wrong_size_multiplier should spawn exactly one entity, got {}",
-        results.len()
-    );
-
-    let (active, effective) = results[0];
-    assert!(
-        (active.multiplier() - 1.5).abs() < f32::EPSILON,
-        "ActiveSizeBoosts should contain [1.5], multiplier was {}",
-        active.multiplier()
-    );
-    assert!(
-        (effective.0 - 99.0).abs() < f32::EPSILON,
-        "EffectiveSizeMultiplier should be 99.0, got {}",
-        effective.0
     );
 }

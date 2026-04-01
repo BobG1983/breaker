@@ -1,14 +1,26 @@
 use bevy::prelude::*;
+use rantzsoft_spatial2d::components::Velocity2D;
 
 use super::super::system::bolt_lost;
 use crate::{
-    bolt::{
-        components::{BoltBaseSpeed, BoltRadius, BoltRespawnAngleSpread, BoltRespawnOffsetY},
-        messages::BoltLost,
-        resources::BoltConfig,
-    },
+    bolt::{components::Bolt, definition::BoltDefinition, messages::BoltLost},
     shared::{GameRng, PlayfieldConfig},
 };
+
+pub(super) fn make_default_bolt_definition() -> BoltDefinition {
+    BoltDefinition {
+        name: "Bolt".to_string(),
+        base_speed: 720.0,
+        min_speed: 360.0,
+        max_speed: 1440.0,
+        radius: 14.0,
+        base_damage: 10.0,
+        effects: vec![],
+        color_rgb: [6.0, 5.0, 0.5],
+        min_angle_horizontal: 5.0,
+        min_angle_vertical: 5.0,
+    }
+}
 
 pub(super) fn test_app() -> App {
     let mut app = App::new();
@@ -28,19 +40,31 @@ pub(super) fn tick(app: &mut App) {
     app.update();
 }
 
-pub(super) fn bolt_lost_bundle() -> (
-    BoltBaseSpeed,
-    BoltRadius,
-    BoltRespawnOffsetY,
-    BoltRespawnAngleSpread,
-) {
-    let config = BoltConfig::default();
-    (
-        BoltBaseSpeed(config.base_speed),
-        BoltRadius(config.radius),
-        BoltRespawnOffsetY(config.respawn_offset_y),
-        BoltRespawnAngleSpread(config.respawn_angle_spread),
-    )
+/// Spawns a bolt at the given position with the given velocity using the builder
+/// with `.definition()`.
+pub(super) fn spawn_bolt(app: &mut App, pos: Vec2, vel: Vec2) -> Entity {
+    let def = make_default_bolt_definition();
+    Bolt::builder()
+        .at_position(pos)
+        .definition(&def)
+        .with_velocity(Velocity2D(vel))
+        .primary()
+        .spawn(app.world_mut())
+}
+
+/// Spawns a bolt with a custom `BoltDefinition`.
+pub(super) fn spawn_bolt_with_definition(
+    app: &mut App,
+    pos: Vec2,
+    vel: Vec2,
+    def: &BoltDefinition,
+) -> Entity {
+    Bolt::builder()
+        .at_position(pos)
+        .definition(def)
+        .with_velocity(Velocity2D(vel))
+        .primary()
+        .spawn(app.world_mut())
 }
 
 #[derive(Resource, Default)]

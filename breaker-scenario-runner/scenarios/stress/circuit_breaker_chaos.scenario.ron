@@ -1,0 +1,24 @@
+// Adversarial: CircuitBreaker chip accumulates a counter on every perfect bump, cycling
+// through power states when the counter threshold is reached. AlwaysPerfect input
+// guarantees a perfect bump on every breaker contact, so the CircuitBreaker counter
+// advances at the maximum possible rate. Dense layout ensures the bolt reaches the breaker
+// frequently, driving counter cycles as fast as the physics frame rate allows. The adversarial
+// risk: if the CircuitBreaker state machine has a fencepost error in its cycle threshold, or
+// if the power-state-change handler fires twice in a single frame during counter rollover,
+// NoEntityLeaks fires for orphaned effect entities or BoltSpeedAccurate catches stat
+// divergence from double-applied multipliers. NoNaN guards against overflow in counter or
+// speed accumulator arithmetic. max_bolt_count raised to 16 to accommodate any bolt-spawn
+// effects that CircuitBreaker's power states may trigger.
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Perfect(AlwaysPerfect),
+    max_frames: 5000,
+    disallowed_failures: [NoEntityLeaks, BoltCountReasonable, NoNaN, BoltSpeedAccurate],
+    allowed_failures: None,
+    debug_setup: None,
+    invariant_params: (max_bolt_count: 16),
+    allow_early_end: false,
+    seed: 3137,
+    chip_selections: ["Circuit Breaker"],
+)

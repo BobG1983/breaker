@@ -94,6 +94,8 @@ Do(SpawnBolts(count: 1, lifespan: 2.0, inherit: false))
     // count defaults to 1, lifespan is Option<f32> (None = no lifespan limit), inherit defaults to false
 Do(ChainBolt(tether_distance: 120.0))
 Do(TetherBeam(damage_mult: 1.5))
+    // chain field is optional, defaults to false (standard mode)
+Do(TetherBeam(damage_mult: 1.5, chain: true))
 Do(SpawnPhantom(duration: 3.0, max_active: 1))
 
 // Utility effects
@@ -106,6 +108,12 @@ Do(GravityWell(strength: 200.0, duration: 2.0, radius: 80.0, max: 1))
 Do(Attraction(attraction_type: Cell, force: 500.0))
     // max_force is optional, defaults to None
 Do(Attraction(attraction_type: Cell, force: 500.0, max_force: Some(300.0)))
+
+// Wave 3 effects
+Do(FlashStep)
+Do(MirrorProtocol(inherit: false))
+Do(Anchor(bump_force_multiplier: 2.0, perfect_window_multiplier: 1.5, plant_delay: 0.3))
+Do(CircuitBreaker(bumps_required: 3, spawn_count: 2, inherit: false, shockwave_range: 80.0, shockwave_speed: 400.0))
 
 // Complex effects
 Do(RandomEffect([

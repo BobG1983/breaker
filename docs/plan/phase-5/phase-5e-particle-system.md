@@ -1,89 +1,66 @@
 # 5e: Particle System
 
-**Goal**: Build `rantzsoft_particles` — a custom 2D GPU particle system crate — and implement the 6 core particle types that all later VFX steps will use.
+**Goal**: Build the CPU particle system in `rantzsoft_vfx` and implement the 5 core particle primitives that all later VFX steps will use.
 
-## Decision: Custom Crate (`rantzsoft_particles`)
-
-Evaluated bevy_hanabi (macOS pink screen bug), bevy_enoki (no additive blending, CPU-only), and others. All had disqualifying issues. Building a custom crate gives full control over the rendering pipeline, additive blending, HDR bloom interaction, and avoids external dependency risk.
-
-`rantzsoft_particles` follows the existing rantzsoft_* convention: game-agnostic, Bevy plugin, zero game vocabulary.
+Architecture: `docs/architecture/rendering/particles.md`
 
 ## What to Build
 
-### 1. `rantzsoft_particles` Crate
+### 1. Per-Particle Entity System
 
-New workspace member at `rantzsoft_particles/` with:
-- HDR color support (particles need to bloom)
-- License, maintenance status, binary size
+Each particle is an individual entity with:
+- `Particle` component (velocity, lifetime, rotation_speed, gravity)
+- `Mesh2d` (tiny quad) + `MeshMaterial2d<ParticleMaterial>` (additive blend)
+- `ParticleMaterial` — custom `Material2d` with additive blend via `specialize()`
+- HDR color values >1.0 produce bloom via the Bloom post-process pass
 
-If no crate meets requirements, build a lightweight custom system.
+### 2. Emitter System
 
-- `RantzParticlesPlugin` — Bevy plugin
-- GPU compute shader for particle simulation (position, velocity, lifetime, color, size)
-- Custom `Material2d` with `AlphaMode::Add` for additive blending
-- Buffer management for GPU-side particle state
-- Emitter component: configurable spawn rate, burst mode, one-shot mode
-- Color over lifetime: `Gradient<LinearRgba>` with HDR support (values >1.0 for bloom)
-- Size over lifetime: `Gradient<f32>`
-- Emission shapes: point, circle, line
-- RON-serializable configuration for all particle parameters
+`ParticleEmitter` component with `EmissionMode` and `SpawnParams`:
+- `Continuous { rate }` — particles per second
+- `Burst { count }` — spawn N immediately, then idle
+- `OneShot { count }` — spawn N, auto-despawn emitter when all particles dead
 
-### 2. Integration with rendering/
+`SpawnParams`: lifetime range, velocity shape (Radial/Cone/Directional), speed range, size range, color (Hue), HDR brightness, gravity, rotation speed range.
 
-Wire `rantzsoft_particles` into the rendering/ domain:
-- rendering/ depends on `rantzsoft_particles` (like it depends on `rantzsoft_spatial2d`)
-- Particle emitter management systems
-- Integration with the additive blending pipeline from 5d
-- Integration with temperature palette (5f) for color tinting
+### 3. Update + Cleanup System
 
-### 3. Implement 6 Particle Types
+Each tick: apply gravity, advance position, rotate, fade alpha over lifetime. Despawn on lifetime expiry. Soft cap of 8192 concurrent particles — new emitters skip spawning if cap is reached.
 
-Each particle type is a reusable building block used by many later VFX steps:
+### 4. Five Particle Primitives
 
-| Type | Shape | Behavior | Used By (later steps) |
-|------|-------|----------|----------------------|
-| **Spark** | Point/tiny streak | Burst outward, fade quickly, slight gravity | Cell destruction (5i), bump feedback (5l), impact effects |
-| **Trail** | Elongated streak | Follows emitter, fades with distance | Bolt wake (5g), dash trail (5h), beam afterimage (5m) |
-| **Shard** | Small angular fragment | Burst outward with rotation, slower fade | Cell shatter (5i), shield break (5l) |
-| **Glow mote** | Soft circle | Drifts slowly, long lifetime, ambient | Background sprites (5j), gravity well ambient (5m) |
-| **Energy ring** | Expanding circle | Expands and fades | Shockwave (5m), pulse (5m), bump feedback (5l) |
-| **Electric arc** | Jagged line segment | Flickers rapidly, short lifetime | Chain lightning (5m), electric effects (5w) |
+Each primitive has a corresponding `PrimitiveStep` variant (for recipes) and a direct message type:
 
-Each type needs:
-- Configurable color (base + temperature tint)
-- Configurable HDR intensity (for bloom interaction)
-- Configurable count, lifetime, velocity, size
-- Additive blending
+| Primitive | EmissionMode | VelocityShape | Key Params |
+|-----------|-------------|---------------|------------|
+| SparkBurst | OneShot(count) | Radial | Short lifetime, gravity, high speed, small size |
+| ShardBurst | OneShot(count) | Radial | Longer lifetime, rotation, medium speed, angular mesh |
+| GlowMotes | Continuous(rate) | Radial (slow) | Long lifetime, low speed, large size, no gravity |
+| ElectricArc | OneShot(count) | Directional | Very short lifetime, high jitter |
+| TrailBurst | OneShot(count) | Directional | Medium lifetime, elongated mesh |
 
-### 4. Debug Visualization
+### 5. Debug Visualization
 
-Add debug menu controls:
-- Particle count display
+- Particle count display in debug menu
 - Per-type spawn test buttons (fire a burst of each type)
-- Performance overlay showing active particle count
+- Performance overlay showing active particle count vs soft cap
 
 ## What NOT to Do
 
 - Do NOT implement specific VFX that use particles (those are 5i, 5l, 5m, etc.)
-- Do NOT implement particle density scaling yet (that emerges naturally from build complexity)
-- Just build the types and prove they work via debug triggers
+- Build the types and prove they work via debug triggers
 
 ## Dependencies
 
-- **Requires**: 5c (rendering/ domain exists)
-- **Independent of**: 5d (post-processing pipeline) — can be done in either order
+- **Requires**: 5c (rantzsoft_vfx crate exists)
+- **Independent of**: 5d (post-processing) — can be done in either order
 - **Enhanced by**: 5d (additive blending, bloom) — particles look better with post-processing but work without it
-
-## What This Step Builds
-
-- `rantzsoft_particles` crate (GPU compute, Material2d additive blending, HDR color, RON config)
-- 6 particle types: Spark, Trail, Shard, Glow Mote, Energy Ring, Electric Arc
-- Debug menu: particle count display, per-type test buttons, performance overlay
 
 ## Verification
 
-- All 6 particle types spawn correctly via debug menu
-- Particles use additive blending (if 5d is done)
+- All 5 particle primitives spawn correctly via debug menu
+- Particles use additive blending (light-on-dark compositing)
 - Particles bloom with HDR intensity (if 5d is done)
-- Particle count stays reasonable (no leaks)
+- Particle count stays below soft cap (no leaks)
+- OneShot emitters auto-despawn when all particles expire
 - All existing tests pass

@@ -4,7 +4,7 @@ Every sub-agent, what it does, and when to use it. Agent definitions live in `.c
 
 ## Pipeline Agents
 
-Used during the delegated implementation pipeline (see `delegated-implementation.md`).
+Used during the delegated implementation pipeline (see `delegating-to-subagents.md`).
 
 | Agent | Purpose | When to use |
 |-------|---------|-------------|
@@ -22,7 +22,7 @@ See `.claude/rules/verification-tiers.md` for which agents run in each tier (Bas
 
 ## Research Agents
 
-Used during pre-planning research (see `delegated-implementation.md` step 2) and ad-hoc investigation.
+Used during pre-planning research (see `delegating-to-subagents.md` step 2) and ad-hoc investigation.
 
 | Agent | Purpose | When to use |
 |-------|---------|-------------|

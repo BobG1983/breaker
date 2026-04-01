@@ -18,6 +18,18 @@ pub enum Rarity {
     Evolution,
 }
 
+impl std::fmt::Display for Rarity {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Common => write!(f, "Common"),
+            Self::Uncommon => write!(f, "Uncommon"),
+            Self::Rare => write!(f, "Rare"),
+            Self::Legendary => write!(f, "Legendary"),
+            Self::Evolution => write!(f, "Evolution"),
+        }
+    }
+}
+
 /// A single ingredient required for a chip evolution recipe.
 #[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct EvolutionIngredient {

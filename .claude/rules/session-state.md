@@ -6,7 +6,7 @@ Session-state is the orchestrator's single source of truth for task progress. Wi
 
 ## Location
 
-`.claude/specs/session-state.md`
+`.claude/state/session-state.md`
 
 ## Lifecycle
 
@@ -60,7 +60,7 @@ Keep under 80 lines. Use this exact structure:
 - REVISED: [old decision] → [new decision] — [why]
 
 ## Specs
-| Domain | Test Spec | Code Spec | Writer-Tests | Test Review | RED Gate | Writer-Code | GREEN | Notes |
+| Domain | Test Spec | Code Spec | Spec Review | Writer-Tests | Test Review | RED Gate | Writer-Code | GREEN | Notes |
 
 ## Verification Results
 | Agent | Status | Action Needed |
@@ -69,7 +69,7 @@ Keep under 80 lines. Use this exact structure:
 - [failure]: attempt N — [what was tried] → [result]
 
 ## Resolved
-- [failure]: fixed attempt N, verified by [agent]
+- [failure]: fixed attempt N, verified by [agent] - [what resolved the issue]
 
 ## Stuck
 - [failure]: N attempts, needs human input
@@ -101,4 +101,4 @@ When a verification failure or fix attempt reveals an earlier decision was wrong
 
 ## Circuit Breaking
 
-After **3 failed attempts** at the same failure → stop routing → move to Stuck → surface to user. See `.claude/rules/orchestration.md` for the full circuit breaking protocol.
+After **3 failed attempts** at the same failure → stop routing → move to Stuck. See `.claude/rules/routing-repeated-failures.md` for the full protocol.

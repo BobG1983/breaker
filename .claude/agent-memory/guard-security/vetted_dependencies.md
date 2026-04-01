@@ -81,3 +81,28 @@ cargo audit: same single warning (paste RUSTSEC-2024-0436, unmaintained, transit
 cargo deny: same error (paste unmaintained) + same warnings (Unicode-DFS-2016 unmatched, 40+ duplicate transitive).
 cargo machete: no unused dependencies found.
 No new external crates introduced.
+
+## Cache removal refactor audit (2026-03-30, feature/scenario-coverage — commits d6d9b80 + 2bdb81b)
+No new dependencies. Dependency baseline unchanged from prior note.
+cargo audit: same single warning (paste RUSTSEC-2024-0436, unmaintained, transitive).
+cargo machete: no unused dependencies found.
+No new external crates introduced. Removals are internal types only.
+
+## feature/chip-evolution-ecosystem (2026-03-31) — bolt builder migration audit
+No new direct dependencies added. Dependency baseline unchanged.
+cargo audit: same single warning (paste RUSTSEC-2024-0436, unmaintained, transitive via metal→wgpu).
+cargo machete: no unused dependencies found.
+New files: breaker-game/src/bolt/builder.rs, rantzsoft_spatial2d/src/builder.rs,
+rantzsoft_spatial2d/src/queries.rs. All are internal code — no external crates introduced.
+
+## feature/chip-evolution-ecosystem (2026-04-01) — chip ecosystem + new effects audit
+No new direct dependencies added. Dependency baseline unchanged from prior audit.
+cargo audit: same single warning (paste RUSTSEC-2024-0436, unmaintained, transitive via metal→wgpu).
+cargo deny: exits code 1 due to deny.toml treating paste warning as error — same as prior audits.
+  Also warns on Unicode-DFS-2016 license not encountered (harmless).
+  30+ transitive duplicate crates (bitflags, objc2, windows, thiserror, etc.) — all wgpu/Windows
+  ecosystem churn. None are direct dependencies. Normal for Bevy 0.18 ecosystem.
+cargo machete: no unused dependencies found.
+New files: all in breaker-game/src/effect/effects/ (anchor, circuit_breaker, mirror_protocol,
+  entropy_engine) and matching test files. New RON assets: 12 evolution chips, 5 template chips,
+  updated defaults.bolt.ron and defaults.breaker.ron. No external crates introduced.

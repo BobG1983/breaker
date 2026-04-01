@@ -12,8 +12,8 @@
         actions: [],
     )),
     max_frames: 120,
-    invariants: [GravityWellCountReasonable],
-    expected_violations: Some([GravityWellCountReasonable]),
+    disallowed_failures: [GravityWellCountReasonable],
+    allowed_failures: Some([GravityWellCountReasonable]),
     debug_setup: (
         disable_physics: true,
         bolt_velocity: (0.0, 0.0),

@@ -120,6 +120,7 @@ mod tests {
     fn make_breaker(name: &str, life_pool: Option<u32>) -> BreakerDefinition {
         BreakerDefinition {
             name: name.to_owned(),
+            bolt: "Bolt".to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool,
             effects: vec![],

@@ -1,1 +1,1 @@
-- [Confirmed Bevy 0.18.1 API Patterns](confirmed-patterns.md) — verified-correct patterns for message system, queries, state, SystemParam derive, Time API, and component spawning
+- [Confirmed Bevy 0.18.1 API Patterns](confirmed-patterns.md) — verified-correct patterns for Time API (Virtual/Real/Fixed), QueryData derive (read-only, mutable, nested, Has/With), Bundle trait and BundleInfo; many sections still TODO (message system, state, SystemParam derive, component spawning, World access, let-chains)

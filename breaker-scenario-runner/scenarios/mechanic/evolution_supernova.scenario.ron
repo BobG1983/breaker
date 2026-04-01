@@ -1,0 +1,15 @@
+(
+    breaker: "Aegis",
+    layout: "quick_boss",
+    input: Perfect(AlwaysPerfect),
+    max_frames: 3000,
+    disallowed_failures: [ChipOfferExpected, BoltInBounds, NoNaN, ValidStateTransitions],
+    allow_early_end: true,
+    initial_chips: Some([
+        "Basic Piercing Shot",
+        "Basic Piercing Shot",
+        "Basic Piercing Shot",
+        "Basic Surge",
+    ]),
+    expected_offerings: Some(["Supernova"]),
+)

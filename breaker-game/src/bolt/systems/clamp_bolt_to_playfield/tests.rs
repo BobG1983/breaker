@@ -3,7 +3,7 @@ use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use super::*;
 use crate::{
-    bolt::components::{Bolt, BoltRadius, BoltServing},
+    bolt::components::{Bolt, BoltServing},
     shared::{EntityScale, PlayfieldConfig},
 };
 
@@ -33,15 +33,23 @@ fn tick(app: &mut App) {
 const RADIUS: f32 = 6.0;
 const TOLERANCE: f32 = 0.001;
 
+/// Spawns a bolt with permissive spatial params for clamping tests.
+/// Uses MinSpeed(0.0) and MaxSpeed(MAX) so the velocity formula is a no-op.
+fn spawn_test_bolt(app: &mut App, x: f32, y: f32, vx: f32, vy: f32) -> Entity {
+    Bolt::builder()
+        .at_position(Vec2::new(x, y))
+        .with_speed(500.0, 0.0, f32::MAX)
+        .with_angle(0.0, 0.0)
+        .with_radius(RADIUS)
+        .with_velocity(Velocity2D(Vec2::new(vx, vy)))
+        .primary()
+        .spawn(app.world_mut())
+}
+
 #[test]
 fn bolt_inside_bounds_position2d_unchanged() {
     let mut app = test_app();
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(300.0, 400.0)),
-        BoltRadius(RADIUS),
-        Position2D(Vec2::new(100.0, 50.0)),
-    ));
+    spawn_test_bolt(&mut app, 100.0, 50.0, 300.0, 400.0);
     tick(&mut app);
 
     let (pos, vel) = app
@@ -59,12 +67,7 @@ fn bolt_inside_bounds_position2d_unchanged() {
 #[test]
 fn bolt_past_right_wall_position2d_clamped_vx_flipped() {
     let mut app = test_app();
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(300.0, 400.0)),
-        BoltRadius(RADIUS),
-        Position2D(Vec2::new(500.0, 0.0)),
-    ));
+    spawn_test_bolt(&mut app, 500.0, 0.0, 300.0, 400.0);
     tick(&mut app);
 
     let expected_x = 400.0 - RADIUS - CCD_EPSILON; // 393.99
@@ -93,12 +96,7 @@ fn bolt_past_right_wall_position2d_clamped_vx_flipped() {
 #[test]
 fn bolt_past_left_wall_position2d_clamped_vx_flipped() {
     let mut app = test_app();
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(-300.0, 400.0)),
-        BoltRadius(RADIUS),
-        Position2D(Vec2::new(-500.0, 0.0)),
-    ));
+    spawn_test_bolt(&mut app, -500.0, 0.0, -300.0, 400.0);
     tick(&mut app);
 
     let expected_x = -400.0 + RADIUS + CCD_EPSILON; // -393.99
@@ -127,12 +125,7 @@ fn bolt_past_left_wall_position2d_clamped_vx_flipped() {
 #[test]
 fn bolt_past_ceiling_position2d_clamped_vy_flipped() {
     let mut app = test_app();
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(300.0, 400.0)),
-        BoltRadius(RADIUS),
-        Position2D(Vec2::new(0.0, 400.0)),
-    ));
+    spawn_test_bolt(&mut app, 0.0, 400.0, 300.0, 400.0);
     tick(&mut app);
 
     let expected_y = 300.0 - RADIUS - CCD_EPSILON; // 293.99
@@ -161,12 +154,7 @@ fn bolt_past_ceiling_position2d_clamped_vy_flipped() {
 #[test]
 fn bolt_below_floor_position2d_not_clamped() {
     let mut app = test_app();
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(300.0, -400.0)),
-        BoltRadius(RADIUS),
-        Position2D(Vec2::new(0.0, -500.0)),
-    ));
+    spawn_test_bolt(&mut app, 0.0, -500.0, 300.0, -400.0);
     tick(&mut app);
 
     let (pos, vel) = app
@@ -190,12 +178,7 @@ fn bolt_below_floor_position2d_not_clamped() {
 #[test]
 fn velocity_already_inward_not_flipped_right_wall() {
     let mut app = test_app();
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(-300.0, 400.0)),
-        BoltRadius(RADIUS),
-        Position2D(Vec2::new(500.0, 0.0)),
-    ));
+    spawn_test_bolt(&mut app, 500.0, 0.0, -300.0, 400.0);
     tick(&mut app);
 
     let expected_x = 400.0 - RADIUS - CCD_EPSILON;
@@ -219,12 +202,7 @@ fn velocity_already_inward_not_flipped_right_wall() {
 #[test]
 fn velocity_already_inward_not_flipped_ceiling() {
     let mut app = test_app();
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(300.0, -400.0)),
-        BoltRadius(RADIUS),
-        Position2D(Vec2::new(0.0, 400.0)),
-    ));
+    spawn_test_bolt(&mut app, 0.0, 400.0, 300.0, -400.0);
     tick(&mut app);
 
     let expected_y = 300.0 - RADIUS - CCD_EPSILON;
@@ -248,12 +226,7 @@ fn velocity_already_inward_not_flipped_ceiling() {
 #[test]
 fn corner_escape_both_axes_position2d_clamped() {
     let mut app = test_app();
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(300.0, 400.0)),
-        BoltRadius(RADIUS),
-        Position2D(Vec2::new(500.0, 400.0)),
-    ));
+    spawn_test_bolt(&mut app, 500.0, 400.0, 300.0, 400.0);
     tick(&mut app);
 
     let expected_x = 400.0 - RADIUS - CCD_EPSILON;
@@ -289,13 +262,14 @@ fn corner_escape_both_axes_position2d_clamped() {
 #[test]
 fn serving_bolt_excluded() {
     let mut app = test_app();
-    app.world_mut().spawn((
-        Bolt,
-        BoltServing,
-        Velocity2D(Vec2::new(300.0, 400.0)),
-        BoltRadius(RADIUS),
-        Position2D(Vec2::new(500.0, 0.0)),
-    ));
+    let _entity = Bolt::builder()
+        .at_position(Vec2::new(500.0, 0.0))
+        .with_speed(500.0, 0.0, f32::MAX)
+        .with_angle(0.0, 0.0)
+        .with_radius(RADIUS)
+        .serving()
+        .primary()
+        .spawn(app.world_mut());
     tick(&mut app);
 
     let pos = app
@@ -316,13 +290,15 @@ fn serving_bolt_excluded() {
 #[test]
 fn scaled_bolt_uses_effective_radius_for_playfield_clamping() {
     let mut app = test_app();
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(300.0, 400.0)),
-        BoltRadius(8.0),
-        EntityScale(0.5),
-        Position2D(Vec2::new(500.0, 0.0)),
-    ));
+    let entity = Bolt::builder()
+        .at_position(Vec2::new(500.0, 0.0))
+        .with_speed(500.0, 0.0, f32::MAX)
+        .with_angle(0.0, 0.0)
+        .with_radius(8.0)
+        .with_velocity(Velocity2D(Vec2::new(300.0, 400.0)))
+        .primary()
+        .spawn(app.world_mut());
+    app.world_mut().entity_mut(entity).insert(EntityScale(0.5));
     tick(&mut app);
 
     let expected_x_scaled = 400.0 - 4.0 - CCD_EPSILON; // ~395.99
@@ -343,13 +319,7 @@ fn scaled_bolt_uses_effective_radius_for_playfield_clamping() {
 #[test]
 fn bolt_without_entity_scale_in_clamping_is_backward_compatible() {
     let mut app = test_app();
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(300.0, 400.0)),
-        BoltRadius(RADIUS),
-        // No EntityScale
-        Position2D(Vec2::new(500.0, 0.0)),
-    ));
+    spawn_test_bolt(&mut app, 500.0, 0.0, 300.0, 400.0);
     tick(&mut app);
 
     let expected_x = 400.0 - RADIUS - CCD_EPSILON;

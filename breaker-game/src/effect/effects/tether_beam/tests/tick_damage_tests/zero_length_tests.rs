@@ -1,6 +1,6 @@
 //! Tests for zero-length beam edge cases in `tick_tether_beam`.
 
-use super::super::*;
+use super::super::helpers::*;
 
 #[test]
 fn tick_tether_beam_zero_length_segment_damages_cell_containing_point() {

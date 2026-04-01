@@ -6,8 +6,10 @@ type: project
 
 **Fully resolved as of full-verification-fixes branch (2026-03-30).**
 
-The production functions `effective_range`, `entity_position`, and `spawn_extra_bolt` were extracted from `effect/effects/mod.rs` into `effect/effects/fire_helpers.rs`. The mod.rs routing-only violation is fixed, and `fire_helpers.rs` is a descriptive name (not the banned `helpers.rs`).
+The production functions `effective_range`, `entity_position`, and `spawn_extra_bolt` were extracted from `effect/effects/mod.rs` into `effect/effects/fire_helpers.rs`. The mod.rs routing-only violation was fixed.
 
-`effect/effects/mod.rs` now only re-exports via `pub(crate) use fire_helpers::{...}`. No production logic in mod.rs.
+**NOTE (builder migration, 2026-03-31)**: `spawn_extra_bolt` was subsequently REMOVED from `fire_helpers.rs` — each effect module now calls `Bolt::builder()` directly. `fire_helpers.rs` now only contains `entity_position` (and possibly `effective_range`).
+
+`effect/effects/mod.rs` re-exports via `pub(crate) use fire_helpers::{...}`. No production logic in mod.rs.
 
 No open gaps remaining for this item. When reviewing new effects, flag any production logic added directly to `effects/mod.rs`.

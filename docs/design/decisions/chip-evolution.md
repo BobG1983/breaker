@@ -31,14 +31,12 @@ Evolution recipes create a discovery layer: players experiment to find which chi
 
 ## Evolution Recipes
 
-### Chain Reaction
-**Ingredients**: Cascade x3 + Splinter x2 + Piercing x3
+### Shock Chain
+**Ingredients**: Chain Reaction x1 + Aftershock x2 + Cascade x2
 
-**Design notes**: The most ingredient-heavy evolution — requires investment across three chip types. The payoff is proportional: recursive bolt spawning with effect inheritance creates exponential chain reactions. Cascade provides the trigger (cell destruction), Splinter provides the bolt-spawning mechanic, and Piercing ensures spawned bolts cut through multiple cells rather than stopping at one.
+**Design notes**: Destroyed cells trigger recursive shockwaves — each shockwave kill spawns another shockwave. Combines the Chain Reaction template's destruction-chaining with Aftershock's area damage and Cascade's propagation.
 
-The `inherit: true` flag on `SpawnBolts` means spawned bolts carry the parent's effects, including piercing and cascade shockwaves. This creates genuine chain reactions where destroying one cell can clear a cluster.
-
-**Effect**: `When(OnCellDestroyed, [Do(SpawnBolts { count: 2, lifespan: Some(3.0), inherit: true })])`
+**Effect**: `On(Bolt) → When(CellDestroyed) → Do(Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 400.0))`
 
 ### Feedback Loop
 **Ingredients**: TBD

@@ -9,7 +9,7 @@ use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D};
 
 use super::helpers::*;
 use crate::{
-    bolt::BASE_BOLT_DAMAGE,
+    bolt::resources::DEFAULT_BOLT_BASE_DAMAGE,
     cells::components::Cell,
     shared::{BOLT_LAYER, CELL_LAYER, WALL_LAYER},
 };
@@ -34,7 +34,7 @@ fn process_explode_requests_damages_cell_in_range() {
     );
     assert_eq!(collector.0[0].cell, cell);
 
-    let expected_damage = BASE_BOLT_DAMAGE * 2.0;
+    let expected_damage = DEFAULT_BOLT_BASE_DAMAGE * 2.0;
     assert!(
         (collector.0[0].damage - expected_damage).abs() < f32::EPSILON,
         "expected damage {}, got {}",
@@ -81,8 +81,8 @@ fn process_explode_requests_damages_multiple_cells_in_range() {
 
     for msg in &collector.0 {
         assert!(
-            (msg.damage - BASE_BOLT_DAMAGE).abs() < f32::EPSILON,
-            "damage should be BASE_BOLT_DAMAGE * 1.0 = 10.0"
+            (msg.damage - DEFAULT_BOLT_BASE_DAMAGE).abs() < f32::EPSILON,
+            "damage should be DEFAULT_BOLT_BASE_DAMAGE * 1.0 = 10.0"
         );
     }
 

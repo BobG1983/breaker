@@ -5,18 +5,37 @@ use rantzsoft_physics2d::constraint::DistanceConstraint;
 use rantzsoft_spatial2d::components::Position2D;
 
 use super::super::effect::*;
-use crate::{bolt::resources::BoltConfig, shared::rng::GameRng};
+use crate::{
+    bolt::{definition::BoltDefinition, registry::BoltRegistry},
+    shared::rng::GameRng,
+};
 
-fn world_with_bolt_config() -> World {
+fn world_with_bolt_registry() -> World {
     let mut world = World::new();
-    world.insert_resource(BoltConfig::default());
+    let mut registry = BoltRegistry::default();
+    registry.insert(
+        "Bolt".to_string(),
+        BoltDefinition {
+            name: "Bolt".to_owned(),
+            base_speed: 400.0,
+            min_speed: 200.0,
+            max_speed: 800.0,
+            radius: 8.0,
+            base_damage: 10.0,
+            effects: vec![],
+            color_rgb: [6.0, 5.0, 0.5],
+            min_angle_horizontal: 5.0,
+            min_angle_vertical: 5.0,
+        },
+    );
+    world.insert_resource(registry);
     world.insert_resource(GameRng::default());
     world
 }
 
 #[test]
 fn reverse_despawns_chain_bolt_and_constraint_and_removes_anchor_marker() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let anchor = world.spawn((Position2D(Vec2::ZERO), ChainBoltAnchor)).id();
 
     // Manually spawn a chain bolt with a constraint entity
@@ -64,7 +83,7 @@ fn reverse_despawns_chain_bolt_and_constraint_and_removes_anchor_marker() {
 
 #[test]
 fn reverse_despawns_multiple_chain_bolts_and_constraints() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let anchor = world.spawn((Position2D(Vec2::ZERO), ChainBoltAnchor)).id();
 
     // Spawn two chain bolts with their constraint entities
@@ -121,7 +140,7 @@ fn reverse_despawns_multiple_chain_bolts_and_constraints() {
 
 #[test]
 fn reverse_when_no_chain_bolts_is_noop() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let anchor = world.spawn(Position2D(Vec2::ZERO)).id();
 
     // reverse with no chain bolts and no anchor marker should not panic.

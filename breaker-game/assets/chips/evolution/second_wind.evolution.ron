@@ -9,7 +9,7 @@
         ]),
     ],
     ingredients: [
-        (chip_name: "Wide Breaker", stacks_required: 3),
-        (chip_name: "Breaker Speed", stacks_required: 3),
+        (chip_name: "Wide Breaker", stacks_required: 2),
+        (chip_name: "Last Stand", stacks_required: 1),
     ],
 )

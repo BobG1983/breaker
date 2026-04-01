@@ -308,6 +308,8 @@ pub enum EffectKind {
     },
     /// Invisible bottom wall that bounces bolt once.
     SecondWind,
+    /// Breaker dash teleport on reverse-direction input.
+    FlashStep,
     /// Temporary phantom bolt with infinite piercing.
     SpawnPhantom {
         /// Lifespan in seconds.
@@ -356,6 +358,39 @@ pub enum EffectKind {
     TetherBeam {
         /// Damage multiplier for beam contact (1.x format).
         damage_mult: f32,
+        /// If true, chain mode connects all existing bolts instead of spawning new ones.
+        #[serde(default)]
+        chain: bool,
+    },
+    /// Spawn a mirrored bolt reflected across the last impact surface.
+    MirrorProtocol {
+        /// If true, spawned bolt inherits parent's `BoundEffects`.
+        #[serde(default)]
+        inherit: bool,
+    },
+    /// Breaker plants after stationary delay, modifying bump behavior.
+    Anchor {
+        /// Bump force multiplier when planted.
+        bump_force_multiplier: f32,
+        /// Perfect window multiplier when planted.
+        perfect_window_multiplier: f32,
+        /// Seconds breaker must remain stationary before planting.
+        plant_delay: f32,
+    },
+    /// Charge-and-release: count bumps, then spawn bolts + shockwave.
+    CircuitBreaker {
+        /// Number of bumps required per cycle.
+        bumps_required: u32,
+        /// Number of extra bolts to spawn on reward.
+        #[serde(default = "one")]
+        spawn_count: u32,
+        /// Whether spawned bolts inherit parent's `BoundEffects`.
+        #[serde(default)]
+        inherit: bool,
+        /// Shockwave maximum radius.
+        shockwave_range: f32,
+        /// Shockwave expansion speed.
+        shockwave_speed: f32,
     },
 }
 
@@ -435,5 +470,43 @@ mod tests {
             },
             "From<RootEffect> with Breaker should preserve nested children with permanent=false"
         );
+    }
+
+    // -- TetherBeam chain field serde tests --
+
+    #[test]
+    fn tether_beam_serde_with_chain_true() {
+        let ron_str = "TetherBeam(damage_mult: 1.5, chain: true)";
+        let effect: EffectKind =
+            ron::from_str(ron_str).expect("should deserialize TetherBeam with chain: true");
+
+        match &effect {
+            EffectKind::TetherBeam { damage_mult, chain } => {
+                assert!(
+                    (*damage_mult - 1.5).abs() < f32::EPSILON,
+                    "expected damage_mult 1.5, got {damage_mult}"
+                );
+                assert!(*chain, "expected chain true, got {chain}");
+            }
+            other => panic!("expected TetherBeam variant, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn tether_beam_serde_defaults_chain_to_false_when_omitted() {
+        let ron_str = "TetherBeam(damage_mult: 2.0)";
+        let effect: EffectKind =
+            ron::from_str(ron_str).expect("should deserialize TetherBeam with omitted chain");
+
+        match &effect {
+            EffectKind::TetherBeam { damage_mult, chain } => {
+                assert!(
+                    (*damage_mult - 2.0).abs() < f32::EPSILON,
+                    "expected damage_mult 2.0, got {damage_mult}"
+                );
+                assert!(!*chain, "expected chain false (serde default), got {chain}");
+            }
+            other => panic!("expected TetherBeam variant, got {other:?}"),
+        }
     }
 }

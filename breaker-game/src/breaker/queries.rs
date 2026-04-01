@@ -1,17 +1,22 @@
 //! Breaker domain query type aliases — clippy `type_complexity` lint.
 
-use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, Scale2D};
+use rantzsoft_spatial2d::components::{MaxSpeed, Position2D, PreviousPosition, Scale2D};
 
 use crate::{
     breaker::components::{
         BrakeDecel, BrakeTilt, BreakerAcceleration, BreakerBaseY, BreakerDeceleration,
-        BreakerHeight, BreakerMaxSpeed, BreakerState, BreakerStateTimer, BreakerTilt,
+        BreakerHeight, BreakerReflectionSpread, BreakerState, BreakerStateTimer, BreakerTilt,
         BreakerVelocity, BreakerWidth, BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown,
         BumpPerfectWindow, BumpState, BumpWeakCooldown, DashDuration, DashSpeedMultiplier,
-        DashTilt, DashTiltEase, DecelEasing, MaxReflectionAngle, MinAngleFromHorizontal,
-        SettleDuration, SettleTiltEase,
+        DashTilt, DashTiltEase, DecelEasing, SettleDuration, SettleTiltEase,
     },
-    effect::{EffectiveSizeMultiplier, EffectiveSpeedMultiplier},
+    effect::{
+        AnchorActive, AnchorPlanted,
+        effects::{
+            flash_step::FlashStepActive, size_boost::ActiveSizeBoosts,
+            speed_boost::ActiveSpeedBoosts,
+        },
+    },
     shared::EntityScale,
 };
 
@@ -21,9 +26,8 @@ pub(crate) type CollisionQueryBreaker = (
     &'static BreakerTilt,
     &'static BreakerWidth,
     &'static BreakerHeight,
-    &'static MaxReflectionAngle,
-    &'static MinAngleFromHorizontal,
-    Option<&'static EffectiveSizeMultiplier>,
+    &'static BreakerReflectionSpread,
+    Option<&'static ActiveSizeBoosts>,
     Option<&'static EntityScale>,
 );
 
@@ -32,32 +36,45 @@ pub(crate) type MovementQuery = (
     &'static mut Position2D,
     &'static mut BreakerVelocity,
     &'static BreakerState,
-    &'static BreakerMaxSpeed,
+    &'static MaxSpeed,
     &'static BreakerAcceleration,
     &'static BreakerDeceleration,
     &'static DecelEasing,
     &'static BreakerWidth,
-    Option<&'static EffectiveSpeedMultiplier>,
-    Option<&'static EffectiveSizeMultiplier>,
+    Option<&'static ActiveSpeedBoosts>,
+    Option<&'static ActiveSizeBoosts>,
 );
 
 /// Breaker dash state machine data — full state, velocity, tilt, and all timing params.
+///
+/// Split into nested tuples to stay within Bevy's `QueryData` tuple element limit:
+/// - Group 1: core dash state (mutable state + read-only config)
+/// - Group 2: flash-step optional fields
 pub(crate) type DashQuery = (
-    &'static mut BreakerState,
-    &'static mut BreakerVelocity,
-    &'static mut BreakerTilt,
-    &'static mut BreakerStateTimer,
-    &'static BreakerMaxSpeed,
-    &'static BreakerDeceleration,
-    &'static DecelEasing,
-    &'static DashSpeedMultiplier,
-    &'static DashDuration,
-    &'static DashTilt,
-    &'static DashTiltEase,
-    &'static BrakeTilt,
-    &'static BrakeDecel,
-    &'static SettleDuration,
-    &'static SettleTiltEase,
+    (
+        &'static mut BreakerState,
+        &'static mut BreakerVelocity,
+        &'static mut BreakerTilt,
+        &'static mut BreakerStateTimer,
+        &'static MaxSpeed,
+        &'static BreakerDeceleration,
+        &'static DecelEasing,
+        &'static DashSpeedMultiplier,
+        &'static DashDuration,
+        &'static DashTilt,
+        &'static DashTiltEase,
+        &'static BrakeTilt,
+        &'static BrakeDecel,
+        &'static SettleDuration,
+        &'static SettleTiltEase,
+    ),
+    (
+        Option<&'static FlashStepActive>,
+        Option<&'static mut Position2D>,
+        Option<&'static BreakerWidth>,
+        Option<&'static ActiveSpeedBoosts>,
+        Option<&'static ActiveSizeBoosts>,
+    ),
 );
 
 /// Breaker reset data — mutable state cleared at node start.
@@ -80,6 +97,8 @@ pub(crate) type BumpTimingQuery = (
     &'static BumpLateWindow,
     &'static BumpPerfectCooldown,
     &'static BumpWeakCooldown,
+    Option<&'static AnchorPlanted>,
+    Option<&'static AnchorActive>,
 );
 
 /// Bump grading data — state, timing windows, and cooldowns for `grade_bump`.
@@ -89,12 +108,14 @@ pub(crate) type BumpGradingQuery = (
     &'static BumpLateWindow,
     &'static BumpPerfectCooldown,
     &'static BumpWeakCooldown,
+    Option<&'static AnchorPlanted>,
+    Option<&'static AnchorActive>,
 );
 
 /// Breaker data needed by the width boost visual system.
 pub(crate) type WidthBoostVisualQuery = (
     &'static BreakerWidth,
-    Option<&'static EffectiveSizeMultiplier>,
+    Option<&'static ActiveSizeBoosts>,
     &'static BreakerHeight,
     Option<&'static EntityScale>,
     &'static mut Scale2D,

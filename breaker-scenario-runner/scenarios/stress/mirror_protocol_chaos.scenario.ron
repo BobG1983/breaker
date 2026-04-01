@@ -1,0 +1,25 @@
+// Adversarial: Mirror Protocol spawns a mirrored bolt on bump, reflected across the last
+// impact geometry. Scatter layout produces highly varied LastImpact angles — each run at
+// a different seed explores a distinct distribution of reflection geometries, including
+// near-horizontal grazes, steep corner bounces, and edge-case normal vectors that approach
+// zero length. The adversarial risk: if mirror reflection normalises against a near-zero
+// impact normal (degenerate angle), the reflected velocity becomes NaN; if the spawned bolt
+// entity is not cleaned up when the source bolt is lost, NoEntityLeaks fires. BoltInBounds
+// catches any reflected bolt that escapes the playfield due to a reflection vector computed
+// in the wrong coordinate frame. BoltSpeedAccurate detects speed drift if the mirror inherits
+// a corrupted multiplier from the source bolt. Stress: 32 runs at varied seeds to fully
+// explore the reflection geometry distribution.
+(
+    breaker: "Aegis",
+    layout: "Scatter",
+    input: Chaos((action_prob: 0.5)),
+    max_frames: 5000,
+    disallowed_failures: [NoEntityLeaks, BoltCountReasonable, BoltInBounds, NoNaN, BoltSpeedAccurate],
+    allowed_failures: None,
+    debug_setup: None,
+    invariant_params: (max_bolt_count: 16),
+    allow_early_end: false,
+    stress: (),
+    seed: 8191,
+    chip_selections: ["Mirror Protocol"],
+)

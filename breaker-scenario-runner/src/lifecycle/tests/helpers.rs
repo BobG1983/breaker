@@ -36,7 +36,7 @@ pub(super) fn make_scenario(max_frames: u32) -> ScenarioDefinition {
         layout: "corridor".to_owned(),
         input: InputStrategy::Chaos(ChaosParams { action_prob: 0.3 }),
         max_frames,
-        invariants: vec![InvariantKind::BoltInBounds],
+        disallowed_failures: vec![InvariantKind::BoltInBounds],
         ..Default::default()
     }
 }
@@ -49,7 +49,7 @@ pub(super) fn make_lifecycle_test_scenario() -> ScenarioDefinition {
         layout: "Corridor".to_owned(),
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
-        invariants: vec![],
+        disallowed_failures: vec![],
         ..Default::default()
     }
 }

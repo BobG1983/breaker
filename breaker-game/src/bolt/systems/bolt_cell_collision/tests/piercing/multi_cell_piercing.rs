@@ -2,13 +2,10 @@
 //! exhausted piercing, and grid-adjacent spacing.
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
+use rantzsoft_spatial2d::components::Velocity2D;
 
 use super::super::helpers::*;
-use crate::{
-    bolt::components::{Bolt, PiercingRemaining},
-    effect::EffectivePiercing,
-};
+use crate::{bolt::components::PiercingRemaining, effect::effects::piercing::ActivePiercings};
 
 #[test]
 fn two_stacked_cells_both_pierced_in_one_frame() {
@@ -17,7 +14,7 @@ fn two_stacked_cells_both_pierced_in_one_frame() {
     // Cell A at (0.0, 60.0), Cell B at (0.0, 90.0), both CellHealth(10).
     // Two BoltImpactCell messages. PiercingRemaining goes from 2 to 0.
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::super::helpers::test_bolt_definition();
     app.insert_resource(FullHitMessages::default()).add_systems(
         FixedUpdate,
         collect_full_hits.after(super::super::super::system::bolt_cell_collision),
@@ -30,17 +27,10 @@ fn two_stacked_cells_both_pierced_in_one_frame() {
     spawn_cell_with_health(&mut app, 0.0, far_cell_y, 10.0);
 
     let start_y = near_cell_y - bc.radius - 25.0; // well below cell A
-    let bolt_entity = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            bolt_param_bundle(),
-            Velocity2D(Vec2::new(0.0, 10000.0)), // 10000/64 ~ 156 units/frame -- covers both cells
-            EffectivePiercing(2),
-            PiercingRemaining(2),
-            Position2D(Vec2::new(0.0, start_y)),
-        ))
-        .id();
+    let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 10000.0);
+    app.world_mut()
+        .entity_mut(bolt_entity)
+        .insert((ActivePiercings(vec![2]), PiercingRemaining(2)));
 
     tick(&mut app);
 
@@ -63,7 +53,7 @@ fn skip_set_is_per_bolt_two_bolts_pierce_independently() {
     // Two bolts each with PiercingRemaining(1), one cell in each bolt's path.
     // Each bolt pierces its cell independently. Two BoltImpactCell messages total.
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
     app.insert_resource(FullHitMessages::default()).add_systems(
         FixedUpdate,
@@ -78,30 +68,16 @@ fn skip_set_is_per_bolt_two_bolts_pierce_independently() {
     let start_y = left_cell_y - cc.height / 2.0 - bc.radius - 2.0;
 
     // Bolt A targets cell A (left side)
-    let bolt_a = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            bolt_param_bundle(),
-            Velocity2D(Vec2::new(0.0, 400.0)),
-            EffectivePiercing(1),
-            PiercingRemaining(1),
-            Position2D(Vec2::new(-100.0, start_y)),
-        ))
-        .id();
+    let bolt_a = spawn_bolt(&mut app, -100.0, start_y, 0.0, 400.0);
+    app.world_mut()
+        .entity_mut(bolt_a)
+        .insert((ActivePiercings(vec![1]), PiercingRemaining(1)));
 
     // Bolt B targets cell B (right side)
-    let bolt_b = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            bolt_param_bundle(),
-            Velocity2D(Vec2::new(0.0, 400.0)),
-            EffectivePiercing(1),
-            PiercingRemaining(1),
-            Position2D(Vec2::new(100.0, start_y)),
-        ))
-        .id();
+    let bolt_b = spawn_bolt(&mut app, 100.0, start_y, 0.0, 400.0);
+    app.world_mut()
+        .entity_mut(bolt_b)
+        .insert((ActivePiercings(vec![1]), PiercingRemaining(1)));
 
     tick(&mut app);
 
@@ -127,10 +103,10 @@ fn skip_set_is_per_bolt_two_bolts_pierce_independently() {
 
 #[test]
 fn bolt_with_exhausted_piercing_reflects_normally() {
-    // Bolt has EffectivePiercing(2) but PiercingRemaining(0) — all pierces used up.
+    // Bolt has ActivePiercings(vec![2]) but PiercingRemaining(0) — all pierces used up.
     // It should reflect off a destroyable cell, not pierce through it.
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
 
     let cell_y = 100.0;
@@ -138,17 +114,10 @@ fn bolt_with_exhausted_piercing_reflects_normally() {
     spawn_cell_with_health(&mut app, 0.0, cell_y, 10.0);
 
     let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
-    let bolt_entity = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            bolt_param_bundle(),
-            Velocity2D(Vec2::new(0.0, 400.0)),
-            EffectivePiercing(2),
-            PiercingRemaining(0),
-            Position2D(Vec2::new(0.0, start_y)),
-        ))
-        .id();
+    let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
+    app.world_mut()
+        .entity_mut(bolt_entity)
+        .insert((ActivePiercings(vec![2]), PiercingRemaining(0)));
 
     tick(&mut app);
 
@@ -174,10 +143,10 @@ fn bolt_with_exhausted_piercing_reflects_normally() {
 
 #[test]
 fn piercing_bolt_hits_grid_adjacent_cells() {
-    // Bolt with EffectivePiercing(2), PiercingRemaining(2) should pierce through
+    // Bolt with ActivePiercings(vec![2]), PiercingRemaining(2) should pierce through
     // both grid-adjacent cells (spaced GRID_STEP_Y=28 apart) in one frame.
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::super::helpers::test_bolt_definition();
     app.insert_resource(HitCells::default()).add_systems(
         FixedUpdate,
         collect_cell_hits.after(super::super::super::system::bolt_cell_collision),
@@ -191,14 +160,10 @@ fn piercing_bolt_hits_grid_adjacent_cells() {
     // Place bolt well below both cells, moving upward at high speed
     // to ensure it reaches both within one frame.
     let start_y = lower_cell_y - bc.radius - 30.0;
-    app.world_mut().spawn((
-        Bolt,
-        bolt_param_bundle(),
-        Velocity2D(Vec2::new(0.0, 10000.0)), // very fast to cover both cells in one frame
-        EffectivePiercing(2),
-        PiercingRemaining(2),
-        Position2D(Vec2::new(0.0, start_y)),
-    ));
+    let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 10000.0);
+    app.world_mut()
+        .entity_mut(bolt_entity)
+        .insert((ActivePiercings(vec![2]), PiercingRemaining(2)));
 
     tick(&mut app);
 

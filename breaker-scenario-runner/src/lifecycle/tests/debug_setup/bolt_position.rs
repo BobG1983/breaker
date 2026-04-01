@@ -16,7 +16,7 @@ fn apply_debug_setup_teleports_bolt_to_bolt_position() {
         layout: "Corridor".to_owned(),
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
-        invariants: vec![],
+        disallowed_failures: vec![],
         debug_setup: Some(DebugSetup {
             bolt_position: Some((0.0, -500.0)),
             breaker_position: None,
@@ -69,7 +69,7 @@ fn apply_debug_setup_inserts_scenario_physics_frozen_when_disable_physics_true()
         layout: "Corridor".to_owned(),
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
-        invariants: vec![],
+        disallowed_failures: vec![],
         debug_setup: Some(DebugSetup {
             bolt_position: Some((0.0, -400.0)),
             breaker_position: None,

@@ -7,9 +7,9 @@ use rantzsoft_physics2d::{
 use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
-    bolt::BASE_BOLT_DAMAGE,
+    bolt::{components::BoltBaseDamage, resources::DEFAULT_BOLT_BASE_DAMAGE},
     cells::messages::DamageCell,
-    effect::{EffectiveDamageMultiplier, core::EffectSourceChip},
+    effect::{core::EffectSourceChip, effects::damage_boost::ActiveDamageBoosts},
     shared::{CELL_LAYER, CleanupOnNodeExit, playing_state::PlayingState},
 };
 
@@ -35,9 +35,14 @@ pub(crate) struct ShockwaveSpeed(pub(crate) f32);
 pub(crate) struct ShockwaveDamaged(pub(crate) HashSet<Entity>);
 
 /// Damage multiplier snapshotted from the source entity's
-/// `EffectiveDamageMultiplier` at fire-time. Default `1.0`.
+/// `ActiveDamageBoosts` at fire-time. Default `1.0`.
 #[derive(Component)]
 pub(crate) struct ShockwaveDamageMultiplier(pub(crate) f32);
+
+/// Base damage snapshotted from the source entity's `BoltBaseDamage` at fire-time.
+/// Falls back to `DEFAULT_BOLT_BASE_DAMAGE` if the source has no `BoltBaseDamage`.
+#[derive(Component)]
+pub(crate) struct ShockwaveBaseDamage(pub(crate) f32);
 
 /// Query data for [`apply_shockwave_damage`].
 type ShockwaveDamageQuery = (
@@ -45,6 +50,7 @@ type ShockwaveDamageQuery = (
     &'static ShockwaveRadius,
     &'static mut ShockwaveDamaged,
     Option<&'static ShockwaveDamageMultiplier>,
+    Option<&'static ShockwaveBaseDamage>,
     Option<&'static EffectSourceChip>,
 );
 
@@ -62,8 +68,12 @@ pub(crate) fn fire(
     let position = super::super::entity_position(world, entity);
 
     let edm = world
-        .get::<EffectiveDamageMultiplier>(entity)
-        .map_or(1.0, |e| e.0);
+        .get::<ActiveDamageBoosts>(entity)
+        .map_or(1.0, ActiveDamageBoosts::multiplier);
+
+    let base_damage = world
+        .get::<BoltBaseDamage>(entity)
+        .map_or(DEFAULT_BOLT_BASE_DAMAGE, |d| d.0);
 
     world.spawn((
         ShockwaveSource,
@@ -72,6 +82,7 @@ pub(crate) fn fire(
         ShockwaveSpeed(speed),
         ShockwaveDamaged::default(),
         ShockwaveDamageMultiplier(edm),
+        ShockwaveBaseDamage(base_damage),
         EffectSourceChip::new(source_chip),
         Position2D(position),
         CleanupOnNodeExit,
@@ -113,12 +124,14 @@ pub(crate) fn apply_shockwave_damage(
     mut damage_writer: MessageWriter<DamageCell>,
 ) {
     let query_layers = CollisionLayers::new(0, CELL_LAYER);
-    for (position, radius, mut damaged, damage_mult, esc) in &mut shockwaves {
+    for (position, radius, mut damaged, damage_mult, shockwave_base_damage, esc) in &mut shockwaves
+    {
         if radius.0 <= 0.0 {
             continue;
         }
         let center = position.0;
         let multiplier = damage_mult.map_or(1.0, |m| m.0);
+        let base_damage = shockwave_base_damage.map_or(DEFAULT_BOLT_BASE_DAMAGE, |d| d.0);
         let source_chip = esc.and_then(EffectSourceChip::source_chip);
         let candidates = quadtree
             .quadtree
@@ -127,7 +140,7 @@ pub(crate) fn apply_shockwave_damage(
             if damaged.0.insert(cell) {
                 damage_writer.write(DamageCell {
                     cell,
-                    damage: BASE_BOLT_DAMAGE * multiplier,
+                    damage: base_damage * multiplier,
                     source_chip: source_chip.clone(),
                 });
             }

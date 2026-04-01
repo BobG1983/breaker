@@ -3,10 +3,8 @@
 // message is dropped, ActiveSpeedBoosts retains the 1.3x entry and the next NodeStart
 // fires another Until, stacking multipliers to 1.69x, 2.197x, etc. within a few nodes.
 // allow_early_end: false and 20000 frames drive many full node cycles (Scatter clears
-// in ~5–8 seconds at 64 Hz), exercising the NodeStart/NodeEnd boundary repeatedly.
-// EffectiveSpeedConsistent is the primary detector: it fires the moment
-// EffectiveSpeedMultiplier diverges from the product of ActiveSpeedBoosts entries.
-// BoltSpeedInRange detects the downstream effect of unbounded stacking on physics.
+// in ~5-8 seconds at 64 Hz), exercising the NodeStart/NodeEnd boundary repeatedly.
+// BoltSpeedAccurate detects unbounded stacking on physics.
 // ValidStateTransitions guards against state machine corruption during rapid restarts.
 // NoNaN ensures no velocity component becomes degenerate after repeated node transitions.
 (
@@ -14,8 +12,8 @@
     layout: "Scatter",
     input: Chaos((action_prob: 0.5)),
     max_frames: 20000,
-    invariants: [BoltSpeedInRange, EffectiveSpeedConsistent, ValidStateTransitions, NoNaN],
-    expected_violations: None,
+    disallowed_failures: [BoltSpeedAccurate, ValidStateTransitions, NoNaN],
+    allowed_failures: None,
     debug_setup: None,
     allow_early_end: false,
     seed: 1301,

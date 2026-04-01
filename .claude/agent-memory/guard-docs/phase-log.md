@@ -233,3 +233,129 @@ type: project
 - `docs/plan/index.md` — phase completion status accurate; no new phases
 - `docs/design/graphics/index.md` modification — references catalog/ which exists on disk; consistent
 - `docs/design/graphics/effects-particles.md` modification — working-tree change; design doc (forward-looking Phase 5 content), not architecture drift
+
+## 2026-03-30 — feature/scenario-coverage Effective* cache removal review
+
+**Branch:** feature/scenario-coverage
+
+**Scope:** Checked all docs for references to deleted Effective* cache components and EffectSystems::Recalculate after the refactor that removed all 6 Effective* cache components, their recalculate systems, and 2 invariant checkers (SizeBoostInRange + InjectWrongSizeMultiplier).
+
+**Files reviewed:**
+- `breaker-game/src/effect/sets.rs` — confirmed only Bridge variant remains
+- `breaker-game/src/effect/effects/speed_boost.rs`, `damage_boost.rs`, `size_boost.rs`, `piercing.rs` — confirmed no Effective* types, no recalculate_* systems
+- `breaker-scenario-runner/src/types/definitions/invariants.rs` — confirmed 23 variants (SizeBoostInRange removed)
+- `breaker-scenario-runner/src/types/definitions/mutations.rs` — confirmed InjectWrongSizeMultiplier removed
+- `docs/architecture/data.md`, `docs/architecture/plugins.md`, `docs/architecture/ordering.md`
+
+**Drifts found and fixed:**
+- `docs/architecture/data.md` — "Active/Effective Component Pattern" section rewrote to "Active Component Pattern" (removed Effective* cache description, EffectSystems::Recalculate reference, EffectivePiercing as cap; updated to direct-read model with .multiplier()/.total())
+- `docs/architecture/plugins.md` — Effect File Pattern code snippet: removed `recalculate_speed` from register(); added `_source_chip: &str` to fire()/reverse() signatures; added `.multiplier()` method; updated comment from "adds recalculation system" to "wires app systems"
+- `docs/architecture/effects/core_types.md` — Per-Effect Modules section: replaced `app.add_systems(FixedUpdate, recalculate_speed)` in register() body with a comment explaining simple stat effects have no runtime systems
+
+**Items confirmed no-drift (already updated by team before this session):**
+- `docs/architecture/ordering.md` — EffectSystems::Recalculate already removed from Defined Sets table; Reading paragraph already says "Consumers read Active* components directly via .multiplier()/.total() methods"
+- `docs/architecture/plugins.md` — EffectSystems variants entry already shows `Bridge` only (no Recalculate)
+- `docs/architecture/standards.md` — invariant list already correct (23 invariants, no SizeBoostInRange)
+- `docs/architecture/plugins.md` — Cross-Domain Read Access section already references ActiveDamageBoosts/ActiveSpeedBoosts/ActiveSizeBoosts/ActivePiercings (not Effective* types)
+
+## 2026-03-30 — feature/scenario-coverage Wave 3 review
+
+**Branch:** feature/scenario-coverage
+
+**Files reviewed:**
+- `breaker-game/src/effect/effects/tether_beam/effect.rs` — confirmed chain: bool field, TetherChainBeam, TetherChainActive, maintain_tether_chain
+- `breaker-game/src/effect/core/types/definitions/enums.rs` — full EffectKind enum (all variants incl. Wave 3)
+- `breaker-game/src/effect/core/types/definitions/fire.rs` — 4 fire methods
+- `breaker-game/src/effect/core/types/definitions/reverse.rs` — 4 reverse methods
+- `breaker-game/src/effect/effects/mod.rs` — confirmed anchor, circuit_breaker, mirror_protocol, flash_step registered
+- `breaker-game/src/effect/effects/flash_step.rs` — single file
+- `breaker-game/src/effect/effects/anchor/mod.rs` — directory module
+- `breaker-game/src/effect/effects/circuit_breaker/mod.rs` — directory module
+- `breaker-game/src/effect/effects/mirror_protocol/mod.rs` — directory module
+- `breaker-game/src/effect/effects/spawn_bolts/effect.rs` — confirmed inherit copies from primary bolt
+- `docs/design/effects/tether_beam.md` — chain field and chain mode documented correctly
+- `docs/design/effects/flash_step.md`, `mirror_protocol.md`, `anchor.md`, `circuit_breaker.md`, `spawn_bolts.md` — confirmed correct
+- `breaker-scenario-runner/src/types/definitions/invariants.rs` — confirmed 25 variants (no new ones in Wave 3)
+
+**Drifts found and fixed:**
+- `docs/architecture/effects/core_types.md` — TetherBeam variant: `{ damage_mult: f32 }` → added `chain: bool` field
+- `docs/architecture/effects/core_types.md` — EffectKind block: added FlashStep, MirrorProtocol, Anchor, CircuitBreaker variants
+- `docs/architecture/effects/core_types.md` — fire/reverse method count: "3 fire / 2 reverse" → "4 fire / 4 reverse" (fire_breaker_effects and reverse_utility/reverse_breaker_effects added)
+- `docs/architecture/effects/core_types.md` — opening line: `definitions.rs` → `definitions/enums.rs`; EffectSourceChip location updated
+- `docs/architecture/effects/structure.md` — `definitions.rs` → `definitions/` directory module with enums.rs/fire.rs/reverse.rs
+- `docs/architecture/effects/adding_effects.md` — `definitions.rs` → `definitions/enums.rs`; step 3 updated to name fire.rs/reverse.rs
+- `docs/architecture/effects/adding_triggers.md` — `definitions.rs` → `definitions/enums.rs`
+- `docs/architecture/layout.md` — types/ tree updated: definitions.rs → definitions/ directory; flash_step.rs + anchor/circuit_breaker/mirror_protocol/ added; rule updated
+- `docs/architecture/plugins.md` — Actual Structure block: definitions.rs → definitions/ directory; flash_step.rs + anchor/circuit_breaker/mirror_protocol/ added
+- `docs/architecture/content.md` — TetherBeam variant: added chain field; added FlashStep/MirrorProtocol/Anchor/CircuitBreaker variants; both definitions.rs references → definitions/enums.rs
+- `docs/design/terminology/chips.md` — BoundEffects/StagedEffects/RootEffect: `definitions.rs` → `definitions/enums.rs`
+
+**Items confirmed no-drift:**
+- `docs/design/effects/tether_beam.md` — chain field and chain/standard mode sections already present (correct)
+- `docs/design/effects/spawn_bolts.md` — inherit field already documented
+- InvariantKind count — still 25 (no new invariants in Wave 3)
+- `docs/architecture/ordering.md` — maintain_tether_chain is effect-internal (no cross-domain ordering); no update needed
+- `docs/plan/index.md` — no plan entry for Wave 3 scenario coverage; no update needed
+
+## 2026-04-01 — feature/chip-evolution-ecosystem steering model + gravity_well split review
+
+**Branch:** feature/chip-evolution-ecosystem (commits: c007143 attraction/gravity-well steering, 9e7f476 bolt typestate builder)
+
+**Files reviewed:**
+- `breaker-game/src/effect/effects/speed_boost.rs` — recalculate_velocity added to fire/reverse
+- `breaker-game/src/effect/effects/attraction/effect.rs` — apply_attraction with apply_velocity_formula
+- `breaker-game/src/effect/effects/gravity_well/effect.rs` — apply_gravity_pull, confirmed directory module
+- `breaker-scenario-runner/src/types/definitions/invariants.rs` — 23 variants, BoltSpeedAccurate
+- `breaker-scenario-runner/src/types/definitions/mutations.rs` — 16 variants confirmed
+- `docs/architecture/rendering/` — all forward-looking Phase 5 design docs
+- `docs/plan/phase-5/` — planning docs, not yet implemented
+
+**Drifts found and fixed:**
+- `docs/architecture/layout.md` — `gravity_well.rs` → `gravity_well/` (directory module)
+- `docs/architecture/plugins.md` — `gravity_well.rs` in two places → `gravity_well/` and path to `effect.rs`
+- `docs/architecture/plugins.md` — Velocity2D exception: "two systems" → "three write paths"; added speed_boost::fire()/reverse() path
+- `docs/architecture/plugins.md` — Effect File Pattern: fire/reverse comments updated to mention recalculate_velocity
+- `docs/architecture/effects/core_types.md` — Per-Effect Modules fire() comment: added recalculate_velocity note
+- `docs/architecture/standards.md` — `BoltSpeedInRange` → `BoltSpeedAccurate` (×2: invariant list and scenario runner list)
+- `docs/design/terminology/scenarios.md` — MutationKind: removed `InjectWrongEffectiveSpeed` and `InjectWrongSizeMultiplier` (both deleted from code)
+
+**Items confirmed no-drift:**
+- InvariantKind total: 23 (unchanged)
+- `docs/plan/index.md` — no phase completion changes needed
+- All Phase 5 rendering docs — intentionally forward-looking
+- `docs/architecture/bolt-definitions.md` — forward-looking sections unchanged
+
+## 2026-03-31 — feature/chip-evolution-ecosystem bolt builder migration review
+
+**Branch:** feature/chip-evolution-ecosystem
+
+**Scope:** Checked all docs for drift from bolt builder migration: `init_bolt_params` deleted, `spawn_extra_bolt` removed from `fire_helpers.rs`, `prepare_bolt_velocity` deleted, `BoltSystems::InitParams` removed, `MaxReflectionAngle` → `BreakerReflectionSpread`.
+
+**Files reviewed:**
+- `breaker-game/src/bolt/sets.rs` — confirmed no InitParams variant
+- `breaker-game/src/bolt/systems/mod.rs` — confirmed no init_bolt_params, no prepare_bolt_velocity
+- `breaker-game/src/bolt/builder.rs` — confirmed Bolt::builder() typestate, 5 dimensions, config() method
+- `breaker-game/src/bolt/plugin.rs` — confirmed spawn_bolt + reset_bolt only (no init_bolt_params)
+- `breaker-game/src/bolt/resources.rs` — confirmed BoltConfig still exists
+- `breaker-game/src/bolt/components/definitions.rs` — confirmed PrimaryBolt new, BoltRespawnOffsetY/BoltRespawnAngleSpread/BoltInitialAngle still exist
+- `breaker-game/src/bolt/queries.rs` — confirmed apply_velocity_formula, no separate prepare step
+- `breaker-game/src/bolt/systems/spawn_bolt/system.rs` — confirmed Bolt::builder() usage
+- `breaker-game/src/bolt/systems/bolt_lost/system.rs` — confirmed reads BoltRespawnOffsetY/BoltRespawnAngleSpread from entity
+- `breaker-game/src/bolt/systems/launch_bolt.rs` — confirmed reads BoltInitialAngle component
+- `breaker-game/src/breaker/components/core.rs` — confirmed BreakerReflectionSpread (was MaxReflectionAngle)
+- `breaker-game/src/effect/effects/fire_helpers.rs` — confirmed spawn_extra_bolt removed; only entity_position + effective_range
+- `breaker-game/src/effect/effects/mod.rs` — confirmed no spawn_extra_bolt export
+- `breaker-game/src/effect/effects/spawn_bolts/effect.rs` — confirmed direct Bolt::builder() call
+
+**Drifts found and fixed:**
+- `docs/architecture/data.md` — `MaxReflectionAngle` → `BreakerReflectionSpread` (x3); `Without<BreakerMaxSpeed>` → `Without<MaxSpeed>`
+- `docs/architecture/layout.md` — `effects/mod.rs` description: removed stale `spawn_extra_bolt helper`
+- `docs/architecture/plugins.md` — `effects/mod.rs` description: removed stale `spawn_extra_bolt helper`
+- `docs/architecture/effects/structure.md` — `effects/mod.rs` line: removed stale `spawn_extra_bolt helper`
+- `docs/architecture/bolt-definitions.md` — "Current State" section: spawn flow, extra bolt spawn, bolt-lost, breaker→bolt relationship all updated for builder migration; "Not in BoltDefinition" `init_bolt_params` → builder; misleading "BoltConfig is eliminated entirely" → "Target:"
+
+**Items confirmed no-drift:**
+- `docs/architecture/ordering.md` — `spawn_bolt [uses Bolt::builder()]` already correct; no BoltSystems::InitParams
+- `docs/architecture/type_state_builder_pattern.md` — already documents Bolt::builder() correctly
+- `docs/plan/index.md` — no plan entry needed (internal refactor, not a phase milestone)
+- `docs/architecture/bolt-definitions.md` Target State section — forward-looking, all `init_bolt_params` references there are planned target code

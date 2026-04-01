@@ -1,0 +1,26 @@
+// Adversarial: Split Decision fires a SpawnBolts effect on cell destruction, splitting
+// the bolt count each time a cell is cleared. Dense layout guarantees a high rate of cell
+// destruction events — multiple cells can be destroyed in the same frame when the bolt clips
+// a cluster, firing multiple simultaneous SpawnBolts requests. The adversarial risk: if
+// simultaneous SpawnBolts requests from the same frame each spawn independently without
+// respecting the bolt count ceiling, BoltCountReasonable fires. Prism breaker starts with
+// multiple bolts, compounding the bolt-count pressure from Split Decision spawns — Prism's
+// native bolt count plus Split Decision cascades must stay under max_bolt_count 32. Chaos 0.3
+// keeps breaker movement moderate so the bolt reliably hits cell clusters. If spawned bolts
+// from simultaneous destructions are not properly sequenced through the spawn queue, entity
+// lifecycle corruption causes NoEntityLeaks or NaN propagation from uninitialized bolt state.
+// Stress: 32 runs to explore different Dense layout destruction cluster orderings.
+(
+    breaker: "Prism",
+    layout: "Dense",
+    input: Chaos((action_prob: 0.3)),
+    max_frames: 3000,
+    disallowed_failures: [BoltCountReasonable, NoEntityLeaks, BoltInBounds, NoNaN],
+    allowed_failures: None,
+    debug_setup: None,
+    invariant_params: (max_bolt_count: 32),
+    allow_early_end: false,
+    stress: (),
+    seed: 4507,
+    chip_selections: ["Split Decision"],
+)

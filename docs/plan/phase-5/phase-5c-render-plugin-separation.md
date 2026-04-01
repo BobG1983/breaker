@@ -1,73 +1,82 @@
-# 5c: Render Plugin Separation
+# 5c: Crate Setup + Plugin Separation
 
-**Goal**: Extract visual-only concerns from gameplay plugins and establish the `rendering/` domain as the single owner of all rendering code (shaders, materials, post-processing, particles, VFX).
+**Goal**: Create the `rantzsoft_vfx` crate, extract visual concerns from gameplay plugins, eliminate `ui/` and `fx/` domains, and wire up `RantzVfxPlugin` in `game.rs`.
 
 ## Current State
 
 Visual code is scattered across gameplay domains:
 - `fx/` owns transitions, fade-out animations, punch scale animations
+- `ui/` owns chip select, menus, pause, HUD, side panels
 - Entity spawning systems (bolt, breaker, cells) directly attach `Mesh2d`, `MeshMaterial2d`, and color components
 - No dedicated rendering infrastructure exists
 
 ## What to Build
 
-### 1. Create `rendering/` Domain
+### 1. Create `rantzsoft_vfx` Crate
 
-New domain at `src/rendering/` with standard plugin structure:
-- `RenderingPlugin` — registered in `game.rs`
-- Owns all shader/material definitions, post-processing systems, particle systems, VFX spawning
-- Reads render state components and render event messages from other domains
+New workspace member at `rantzsoft_vfx/` following rantzsoft_* conventions:
+- `RantzVfxPlugin` — main Bevy plugin with `default()` and `headless()` constructors
+- Takes a `VfxLayer` trait impl for z-ordering (game provides its draw layer mapping)
+- `VfxConfig` resource (crate defines type, game inserts and mutates)
+- Zero game vocabulary — game-agnostic, usable by any 2D Bevy game
+- See `docs/architecture/rendering/rantzsoft_vfx.md` for full scope
 
-### 2. Absorb fx/ into rendering/
+### 2. Stub Core Systems
 
-Merge the current fx/ domain (transitions, fade-out, punch scale) into rendering/:
-- `rendering/transition/` — existing transition code
-- `rendering/animation/` — fade-out, punch scale, future animation systems
-- Remove fx/ as a standalone domain
-- Update `game.rs` plugin registration
+Register the infrastructure that later steps will build on:
+- Message types (AttachVisuals, ExecuteRecipe, SetModifier, AddModifier, RemoveModifier, all per-primitive messages)
+- RecipeStore resource + SeedableRegistry loading pipeline
+- ModifierStack component + modifier computation system (stub)
+- Particle system infrastructure (emitter, update, cleanup systems)
 
-### 3. Establish Render Communication Interfaces
+### 3. Absorb fx/ and ui/ Domains
 
-Define the interface contracts (traits or component types) that gameplay domains will implement:
+- Transitions → `screen/transition/`
+- Fade-out, punch scale → `rantzsoft_vfx` (generic animation primitives)
+- Per-screen UI → `screen/<screen_name>/`
+- HUD → `screen/playing/hud/`
+- Remove `FxPlugin` and `UiPlugin` from `game.rs`
+- See `docs/architecture/rendering/communication.md` for the full domain restructuring
 
-**Render state components** (defined in rendering/, used by gameplay domains):
-- Marker trait or convention for `*RenderState` components
-- These will be populated in later steps (5g-5j) when entity visuals are implemented
+### 4. Wire Game Plugin
 
-**Render event messages** (each VFX module defines its own):
-- Module-owned message types: `SpawnShockwaveVfx`, `SpawnChainLightningVfx`, `PlayBumpFeedbackVfx`, etc.
-- Standard Bevy messages (not observers) — systems run in parallel via the scheduler
-- `VfxKind` enum for RON data authoring — dispatch system translates enum → module message
-- Completion messages: module-owned (`ChainLightningVfxComplete`, etc.) — gameplay reads these
+- Register `RantzVfxPlugin` in `game.rs`
+- Implement `VfxLayer` on a game type for z-ordering
+- Insert `VfxConfig` from `GraphicsDefaults` RON via `rantzsoft_defaults`
+- Configure recipe asset path (`assets/recipes/*.recipe.ron`)
 
-### 4. Extract Visual Spawning from Gameplay
+### 5. Extract Visual Spawning from Gameplay
 
-Current entity spawn systems (e.g., `spawn_bolt`, `spawn_breaker`, `spawn_cells`) directly create meshes and materials. Refactor so that:
-- Gameplay spawn systems create the entity with gameplay components + visual identity components
-- rendering/ observes new entities (via `Added<BoltVisualIdentity>` etc.) and attaches visual components (mesh, material, shader)
-- This decouples gameplay from rendering details
+Entity spawn systems currently create `Mesh2d`/`MeshMaterial2d` directly. Refactor to:
+- Gameplay spawns entity with gameplay components only (no Mesh2d)
+- Gameplay sends `AttachVisuals { entity, config }` message
+- Crate handles mesh/material/shader attachment
+
+This is a stub at this step — `AttachVisuals` handler is a no-op or minimal. Full entity visuals come in 5g-5j.
 
 ## What NOT to Do
 
-- Do NOT implement any new shaders or materials yet — that's 5d+
-- Do NOT implement render state sync yet — that's per-entity in 5g-5j
-- Do NOT change any visual appearance — the game should look identical after this step
-- Do NOT add audio hooks
+- Do NOT implement shaders or materials yet — that's 5d+
+- Do NOT implement entity visual rendering yet — that's 5g-5j
+- Do NOT change visual appearance — the game should look identical after this step (visual spawning extraction can use passthrough to current Mesh2d approach temporarily)
 
 ## Dependencies
 
-- None — this is the first Phase 5 step
+- None — this is the first implementation step
 
 ## Files Affected
 
-- New: `src/rendering/` (mod.rs, plugin.rs, messages.rs, animation/, transition/)
-- Modified: `src/game.rs` (replace FxPlugin with RenderingPlugin)
-- Modified: entity spawn systems in bolt/, breaker/, cells/ (extract mesh/material creation)
-- Removed: `src/fx/` (absorbed into rendering/)
+- New: `rantzsoft_vfx/` crate (Cargo.toml, lib.rs, plugin.rs, types, messages, stubs)
+- Modified: `Cargo.toml` (workspace member)
+- Modified: `src/game.rs` (replace FxPlugin/UiPlugin with RantzVfxPlugin + ScreenPlugin changes)
+- Modified: `screen/` (absorbs transition and per-screen UI code from fx/ and ui/)
+- Removed: `src/fx/` (absorbed into screen/transition/ and rantzsoft_vfx)
+- Removed: `src/ui/` (absorbed into screen/<screen_name>/)
 
 ## Verification
 
-- Game looks and plays identically to before
+- Game compiles with the new crate
 - All existing tests pass
-- rendering/ is the only domain that creates Mesh2d/MeshMaterial2d components
-- Gameplay domains have no direct rendering dependencies (no Mesh2d imports)
+- Game looks and plays identically (visual spawning passthrough)
+- `RantzVfxPlugin::headless()` works in scenario runner
+- Message types are registered (game code can send VFX messages without panics)

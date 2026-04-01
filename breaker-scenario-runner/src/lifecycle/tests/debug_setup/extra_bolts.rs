@@ -9,17 +9,17 @@ use super::super::helpers::*;
 /// When `extra_tagged_bolts: Some(5)`, `apply_debug_setup` must spawn 5 extra
 /// `ScenarioTagBolt` entities. Combined with the 1 existing tagged bolt, the
 /// total must be 6. The extra entities must NOT have `Bolt`, `BoltVelocity`,
-/// `BoltMinSpeed`, or `BoltMaxSpeed` components.
+/// `MinSpeed`, or `MaxSpeed` components.
 #[test]
 fn apply_debug_setup_spawns_extra_tagged_bolts() {
-    use breaker::bolt::components::{BoltMaxSpeed, BoltMinSpeed};
+    use rantzsoft_spatial2d::components::{MaxSpeed, MinSpeed};
 
     let definition = ScenarioDefinition {
         breaker: "Aegis".to_owned(),
         layout: "Corridor".to_owned(),
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
-        invariants: vec![],
+        disallowed_failures: vec![],
         debug_setup: Some(DebugSetup {
             extra_tagged_bolts: Some(5),
             ..Default::default()
@@ -72,22 +72,22 @@ fn apply_debug_setup_spawns_extra_tagged_bolts() {
 
     let bolts_with_min_speed = app
         .world_mut()
-        .query_filtered::<Entity, (With<ScenarioTagBolt>, With<BoltMinSpeed>)>()
+        .query_filtered::<Entity, (With<ScenarioTagBolt>, With<MinSpeed>)>()
         .iter(app.world())
         .count();
     assert_eq!(
         bolts_with_min_speed, 0,
-        "extra tagged bolts must NOT have BoltMinSpeed component, found {bolts_with_min_speed}"
+        "extra tagged bolts must NOT have MinSpeed component, found {bolts_with_min_speed}"
     );
 
     let bolts_with_max_speed = app
         .world_mut()
-        .query_filtered::<Entity, (With<ScenarioTagBolt>, With<BoltMaxSpeed>)>()
+        .query_filtered::<Entity, (With<ScenarioTagBolt>, With<MaxSpeed>)>()
         .iter(app.world())
         .count();
     assert_eq!(
         bolts_with_max_speed, 0,
-        "extra tagged bolts must NOT have BoltMaxSpeed component, found {bolts_with_max_speed}"
+        "extra tagged bolts must NOT have MaxSpeed component, found {bolts_with_max_speed}"
     );
 }
 
@@ -104,7 +104,7 @@ fn apply_debug_setup_spawns_zero_extra_bolts_when_some_zero() {
         layout: "Corridor".to_owned(),
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
-        invariants: vec![],
+        disallowed_failures: vec![],
         debug_setup: Some(DebugSetup {
             extra_tagged_bolts: Some(0),
             ..Default::default()

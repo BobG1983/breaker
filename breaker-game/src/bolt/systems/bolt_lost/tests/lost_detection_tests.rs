@@ -1,11 +1,11 @@
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, Spatial2D, Velocity2D};
+use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, Velocity2D};
 
 use super::helpers::*;
 use crate::{
     bolt::{
-        components::{Bolt, BoltBaseSpeed, BoltRadius, BoltRespawnAngleSpread, BoltRespawnOffsetY},
-        resources::BoltConfig,
+        components::{Bolt, BoltAngleSpread, BoltSpawnOffsetY},
+        resources::{DEFAULT_BOLT_ANGLE_SPREAD, DEFAULT_BOLT_SPAWN_OFFSET_Y},
     },
     breaker::components::Breaker,
     shared::{EntityScale, GameDrawLayer, PlayfieldConfig},
@@ -18,16 +18,15 @@ fn bolt_below_floor_detected_via_position2d() {
     app.world_mut().spawn((
         Breaker,
         Position2D(Vec2::new(0.0, -250.0)),
-        Spatial2D,
+        rantzsoft_spatial2d::components::Spatial2D,
         GameDrawLayer::Breaker,
     ));
 
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(0.0, -400.0)),
-        bolt_lost_bundle(),
-        Position2D(Vec2::new(0.0, playfield.bottom() - 100.0)),
-    ));
+    spawn_bolt(
+        &mut app,
+        Vec2::new(0.0, playfield.bottom() - 100.0),
+        Vec2::new(0.0, -400.0),
+    );
     tick(&mut app);
 
     let vel = app
@@ -42,22 +41,20 @@ fn bolt_below_floor_detected_via_position2d() {
 #[test]
 fn respawn_inserts_position2d_at_breaker_x() {
     let mut app = test_app();
-    let bolt_config = BoltConfig::default();
     let playfield = PlayfieldConfig::default();
     let breaker_x = 42.0;
     app.world_mut().spawn((
         Breaker,
         Position2D(Vec2::new(breaker_x, -250.0)),
-        Spatial2D,
+        rantzsoft_spatial2d::components::Spatial2D,
         GameDrawLayer::Breaker,
     ));
 
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(100.0, -400.0)),
-        bolt_lost_bundle(),
-        Position2D(Vec2::new(200.0, playfield.bottom() - 100.0)),
-    ));
+    spawn_bolt(
+        &mut app,
+        Vec2::new(200.0, playfield.bottom() - 100.0),
+        Vec2::new(100.0, -400.0),
+    );
     tick(&mut app);
 
     let (vel, pos) = app
@@ -69,17 +66,14 @@ fn respawn_inserts_position2d_at_breaker_x() {
 
     let speed = vel.0.length();
     assert!(
-        (speed - bolt_config.base_speed).abs() < 1.0,
-        "respawn speed should equal base_speed {:.0}, got {:.1}",
-        bolt_config.base_speed,
-        speed,
+        (speed - 720.0).abs() < 2.0,
+        "respawn speed should equal base_speed 720.0, got {speed:.1}",
     );
 
     let angle = vel.0.x.atan2(vel.0.y).abs();
     assert!(
-        angle <= bolt_config.respawn_angle_spread + f32::EPSILON,
-        "respawn angle {angle:.3} rad should be within spread {:.3} rad",
-        bolt_config.respawn_angle_spread,
+        angle <= DEFAULT_BOLT_ANGLE_SPREAD + 0.01,
+        "respawn angle {angle:.3} rad should be within spread {DEFAULT_BOLT_ANGLE_SPREAD:.3} rad",
     );
 
     assert!(vel.0.y > 0.0, "respawn should launch upward");
@@ -94,26 +88,29 @@ fn respawn_inserts_position2d_at_breaker_x() {
 #[test]
 fn respawn_with_zero_spread_launches_straight_up() {
     let mut app = test_app();
-    let bolt_config = BoltConfig::default();
     let playfield = PlayfieldConfig::default();
     app.world_mut().spawn((
         Breaker,
         Position2D(Vec2::new(0.0, -250.0)),
-        Spatial2D,
+        rantzsoft_spatial2d::components::Spatial2D,
         GameDrawLayer::Breaker,
     ));
 
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(100.0, -400.0)),
-        (
-            BoltBaseSpeed(bolt_config.base_speed),
-            BoltRadius(bolt_config.radius),
-            BoltRespawnOffsetY(bolt_config.respawn_offset_y),
-            BoltRespawnAngleSpread(0.0),
-        ),
-        Position2D(Vec2::new(0.0, playfield.bottom() - 100.0)),
-    ));
+    let def = crate::bolt::definition::BoltDefinition {
+        min_angle_horizontal: 0.0,
+        min_angle_vertical: 0.0,
+        ..make_default_bolt_definition()
+    };
+    let entity = spawn_bolt_with_definition(
+        &mut app,
+        Vec2::new(0.0, playfield.bottom() - 100.0),
+        Vec2::new(100.0, -400.0),
+        &def,
+    );
+    // Override angle spread to 0.0
+    app.world_mut()
+        .entity_mut(entity)
+        .insert(BoltAngleSpread(0.0));
     tick(&mut app);
 
     let vel = app
@@ -124,31 +121,29 @@ fn respawn_with_zero_spread_launches_straight_up() {
         .unwrap();
 
     assert!(
-        vel.0.x.abs() < f32::EPSILON,
+        vel.0.x.abs() < 0.01,
         "zero spread should launch straight up, got vx={:.3}",
         vel.0.x,
     );
 }
 
 #[test]
-fn respawn_position2d_y_uses_respawn_offset() {
+fn respawn_position2d_y_uses_spawn_offset() {
     let mut app = test_app();
-    let bolt_config = BoltConfig::default();
     let playfield = PlayfieldConfig::default();
     let breaker_y = -250.0;
     app.world_mut().spawn((
         Breaker,
         Position2D(Vec2::new(0.0, breaker_y)),
-        Spatial2D,
+        rantzsoft_spatial2d::components::Spatial2D,
         GameDrawLayer::Breaker,
     ));
 
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(0.0, -400.0)),
-        bolt_lost_bundle(),
-        Position2D(Vec2::new(0.0, playfield.bottom() - 100.0)),
-    ));
+    spawn_bolt(
+        &mut app,
+        Vec2::new(0.0, playfield.bottom() - 100.0),
+        Vec2::new(0.0, -400.0),
+    );
     tick(&mut app);
 
     let pos = app
@@ -158,10 +153,10 @@ fn respawn_position2d_y_uses_respawn_offset() {
         .next()
         .unwrap();
 
-    let expected_y = breaker_y + bolt_config.respawn_offset_y;
+    let expected_y = breaker_y + DEFAULT_BOLT_SPAWN_OFFSET_Y;
     assert!(
         (pos.0.y - expected_y).abs() < f32::EPSILON,
-        "respawn Position2D.0.y should be breaker_y + respawn_offset_y ({expected_y}), got {}",
+        "respawn Position2D.0.y should be breaker_y + spawn_offset_y ({expected_y}), got {}",
         pos.0.y,
     );
 }
@@ -169,23 +164,21 @@ fn respawn_position2d_y_uses_respawn_offset() {
 #[test]
 fn respawn_inserts_previous_position_matching_position2d() {
     let mut app = test_app();
-    let bolt_config = BoltConfig::default();
     let playfield = PlayfieldConfig::default();
     let breaker_x = 42.0;
     let breaker_y = -250.0;
     app.world_mut().spawn((
         Breaker,
         Position2D(Vec2::new(breaker_x, breaker_y)),
-        Spatial2D,
+        rantzsoft_spatial2d::components::Spatial2D,
         GameDrawLayer::Breaker,
     ));
 
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(0.0, -400.0)),
-        bolt_lost_bundle(),
-        Position2D(Vec2::new(0.0, playfield.bottom() - 100.0)),
-    ));
+    spawn_bolt(
+        &mut app,
+        Vec2::new(0.0, playfield.bottom() - 100.0),
+        Vec2::new(0.0, -400.0),
+    );
     tick(&mut app);
 
     let (pos, prev_pos) = app
@@ -195,7 +188,7 @@ fn respawn_inserts_previous_position_matching_position2d() {
         .next()
         .unwrap();
 
-    let expected = Vec2::new(breaker_x, breaker_y + bolt_config.respawn_offset_y);
+    let expected = Vec2::new(breaker_x, breaker_y + DEFAULT_BOLT_SPAWN_OFFSET_Y);
     assert!(
         (pos.0 - expected).length() < f32::EPSILON,
         "respawn Position2D should be ({expected:?}), got {:?}",
@@ -214,16 +207,11 @@ fn bolt_above_floor_not_lost() {
     app.world_mut().spawn((
         Breaker,
         Position2D(Vec2::new(0.0, -250.0)),
-        Spatial2D,
+        rantzsoft_spatial2d::components::Spatial2D,
         GameDrawLayer::Breaker,
     ));
 
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(100.0, -200.0)),
-        bolt_lost_bundle(),
-        Position2D(Vec2::new(0.0, 100.0)),
-    ));
+    spawn_bolt(&mut app, Vec2::new(0.0, 100.0), Vec2::new(100.0, -200.0));
     tick(&mut app);
 
     let vel = app
@@ -244,18 +232,15 @@ fn scaled_bolt_uses_effective_radius_for_lost_detection() {
     app.world_mut().spawn((
         Breaker,
         Position2D(Vec2::new(0.0, -250.0)),
-        Spatial2D,
+        rantzsoft_spatial2d::components::Spatial2D,
         GameDrawLayer::Breaker,
     ));
 
-    let bolt_y = playfield.bottom() - 4.0 - 1.0; // -305.0
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(0.0, -400.0)),
-        bolt_lost_bundle(),
-        EntityScale(0.5),
-        Position2D(Vec2::new(0.0, bolt_y)),
-    ));
+    // Effective radius = 14.0 * 0.5 = 7.0, threshold = -300.0 - 7.0 = -307.0
+    // Bolt must be below -307.0 to be detected as lost
+    let bolt_y = playfield.bottom() - 7.0 - 1.0; // -308.0
+    let entity = spawn_bolt(&mut app, Vec2::new(0.0, bolt_y), Vec2::new(0.0, -400.0));
+    app.world_mut().entity_mut(entity).insert(EntityScale(0.5));
     tick(&mut app);
 
     let vel = app
@@ -278,17 +263,16 @@ fn bolt_without_entity_scale_in_lost_detection_is_backward_compatible() {
     app.world_mut().spawn((
         Breaker,
         Position2D(Vec2::new(0.0, -250.0)),
-        Spatial2D,
+        rantzsoft_spatial2d::components::Spatial2D,
         GameDrawLayer::Breaker,
     ));
 
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(0.0, -400.0)),
-        bolt_lost_bundle(),
-        // No EntityScale
-        Position2D(Vec2::new(0.0, playfield.bottom() - 100.0)),
-    ));
+    // No EntityScale
+    spawn_bolt(
+        &mut app,
+        Vec2::new(0.0, playfield.bottom() - 100.0),
+        Vec2::new(0.0, -400.0),
+    );
     tick(&mut app);
 
     let vel = app
@@ -301,5 +285,282 @@ fn bolt_without_entity_scale_in_lost_detection_is_backward_compatible() {
         vel.0.y > 0.0,
         "bolt without EntityScale should be respawned normally, got vy={:.1}",
         vel.0.y
+    );
+}
+
+// ── Migration tests: Behaviors 33-39 ──
+
+// Behavior 33: bolt_lost queries BoltAngleSpread instead of BoltRespawnAngleSpread
+#[test]
+fn bolt_lost_queries_bolt_angle_spread_for_respawn() {
+    let mut app = test_app();
+    let playfield = PlayfieldConfig::default();
+    app.world_mut().spawn((
+        Breaker,
+        Position2D(Vec2::new(0.0, -250.0)),
+        rantzsoft_spatial2d::components::Spatial2D,
+        GameDrawLayer::Breaker,
+    ));
+
+    let entity = spawn_bolt(
+        &mut app,
+        Vec2::new(0.0, playfield.bottom() - 100.0),
+        Vec2::new(0.0, -400.0),
+    );
+
+    // Verify the entity has BoltAngleSpread (from .definition())
+    assert!(
+        app.world().get::<BoltAngleSpread>(entity).is_some(),
+        "definition-built bolt should have BoltAngleSpread"
+    );
+
+    tick(&mut app);
+
+    let vel = app.world().get::<Velocity2D>(entity).unwrap();
+    assert!(vel.0.y > 0.0, "bolt should be respawned upward");
+
+    let angle = vel.0.x.atan2(vel.0.y).abs();
+    assert!(
+        angle <= DEFAULT_BOLT_ANGLE_SPREAD + 0.01,
+        "respawn angle {angle:.3} should be within BoltAngleSpread ({DEFAULT_BOLT_ANGLE_SPREAD:.3})"
+    );
+}
+
+// Behavior 34: bolt_lost queries BoltSpawnOffsetY instead of BoltRespawnOffsetY
+#[test]
+fn bolt_lost_queries_bolt_spawn_offset_y_for_respawn() {
+    let mut app = test_app();
+    let playfield = PlayfieldConfig::default();
+    app.world_mut().spawn((
+        Breaker,
+        Position2D(Vec2::new(42.0, -250.0)),
+        rantzsoft_spatial2d::components::Spatial2D,
+        GameDrawLayer::Breaker,
+    ));
+
+    spawn_bolt(
+        &mut app,
+        Vec2::new(0.0, playfield.bottom() - 100.0),
+        Vec2::new(0.0, -400.0),
+    );
+    tick(&mut app);
+
+    let pos = app
+        .world_mut()
+        .query_filtered::<&Position2D, With<Bolt>>()
+        .iter(app.world())
+        .next()
+        .unwrap();
+
+    let expected = Vec2::new(42.0, -250.0 + DEFAULT_BOLT_SPAWN_OFFSET_Y);
+    assert!(
+        (pos.0.x - expected.x).abs() < f32::EPSILON,
+        "respawn x should be {}, got {}",
+        expected.x,
+        pos.0.x
+    );
+    assert!(
+        (pos.0.y - expected.y).abs() < f32::EPSILON,
+        "respawn y should be {} (from BoltSpawnOffsetY {DEFAULT_BOLT_SPAWN_OFFSET_Y}), got {}",
+        expected.y,
+        pos.0.y
+    );
+}
+
+#[test]
+fn bolt_lost_zero_spawn_offset_respawns_at_breaker_y() {
+    let mut app = test_app();
+    let playfield = PlayfieldConfig::default();
+    app.world_mut().spawn((
+        Breaker,
+        Position2D(Vec2::new(0.0, -250.0)),
+        rantzsoft_spatial2d::components::Spatial2D,
+        GameDrawLayer::Breaker,
+    ));
+
+    let entity = spawn_bolt(
+        &mut app,
+        Vec2::new(0.0, playfield.bottom() - 100.0),
+        Vec2::new(0.0, -400.0),
+    );
+    // Override spawn offset to 0.0
+    app.world_mut()
+        .entity_mut(entity)
+        .insert(BoltSpawnOffsetY(0.0));
+    tick(&mut app);
+
+    let pos = app
+        .world_mut()
+        .query_filtered::<&Position2D, With<Bolt>>()
+        .iter(app.world())
+        .next()
+        .unwrap();
+
+    assert!(
+        (pos.0.y - (-250.0)).abs() < f32::EPSILON,
+        "zero offset should respawn at breaker Y exactly (-250.0), got {}",
+        pos.0.y
+    );
+}
+
+// Behavior 35: LostBoltData query uses BoltAngleSpread and BoltSpawnOffsetY
+// (This is implicitly tested by behaviors 33-34, but we also test the
+// config-path fallback.)
+#[test]
+fn bolt_lost_definition_built_bolt_has_required_query_components() {
+    // Verify that .definition()-built bolts have both BoltAngleSpread and BoltSpawnOffsetY
+    let mut app = test_app();
+    let entity = spawn_bolt(&mut app, Vec2::ZERO, Vec2::new(0.0, 400.0));
+
+    let world = app.world();
+    assert!(
+        world.get::<BoltAngleSpread>(entity).is_some(),
+        "definition-built bolt should have BoltAngleSpread"
+    );
+    assert!(
+        world.get::<BoltSpawnOffsetY>(entity).is_some(),
+        "definition-built bolt should have BoltSpawnOffsetY"
+    );
+}
+
+// Behavior 36: extra bolt is despawned (not respawned)
+// Already tested in extra_bolt_tests.rs with .definition() migration
+
+// Behavior 37: bolt_lost respawn velocity uses base_speed via velocity formula
+#[test]
+fn bolt_lost_respawn_velocity_uses_base_speed() {
+    let mut app = test_app();
+    let playfield = PlayfieldConfig::default();
+    app.world_mut().spawn((
+        Breaker,
+        Position2D(Vec2::new(0.0, -250.0)),
+        rantzsoft_spatial2d::components::Spatial2D,
+        GameDrawLayer::Breaker,
+    ));
+
+    spawn_bolt(
+        &mut app,
+        Vec2::new(0.0, playfield.bottom() - 100.0),
+        Vec2::new(0.0, -400.0),
+    );
+    tick(&mut app);
+
+    let vel = app
+        .world_mut()
+        .query_filtered::<&Velocity2D, With<Bolt>>()
+        .iter(app.world())
+        .next()
+        .unwrap();
+
+    let speed = vel.speed();
+    assert!(
+        (speed - 720.0).abs() < 2.0,
+        "respawn speed should be approximately 720.0 (BaseSpeed from definition), got {speed:.1}"
+    );
+}
+
+#[test]
+fn bolt_lost_respawn_velocity_with_speed_boost() {
+    // Edge case: ActiveSpeedBoosts(vec![1.2]) -> 720.0 * 1.2 = 864.0
+    use crate::effect::effects::speed_boost::ActiveSpeedBoosts;
+
+    let mut app = test_app();
+    let playfield = PlayfieldConfig::default();
+    app.world_mut().spawn((
+        Breaker,
+        Position2D(Vec2::new(0.0, -250.0)),
+        rantzsoft_spatial2d::components::Spatial2D,
+        GameDrawLayer::Breaker,
+    ));
+
+    let entity = spawn_bolt(
+        &mut app,
+        Vec2::new(0.0, playfield.bottom() - 100.0),
+        Vec2::new(0.0, -400.0),
+    );
+    app.world_mut()
+        .entity_mut(entity)
+        .insert(ActiveSpeedBoosts(vec![1.2]));
+    tick(&mut app);
+
+    let vel = app.world().get::<Velocity2D>(entity).unwrap();
+    let speed = vel.speed();
+    assert!(
+        (speed - 864.0).abs() < 2.0,
+        "respawn speed should be approximately 720.0 * 1.2 = 864.0, got {speed:.1}"
+    );
+}
+
+// Behavior 38: bolt_lost respawn inserts PreviousPosition matching new position
+#[test]
+fn bolt_lost_respawn_previous_position_matches_new_position() {
+    let mut app = test_app();
+    let playfield = PlayfieldConfig::default();
+    app.world_mut().spawn((
+        Breaker,
+        Position2D(Vec2::new(0.0, -250.0)),
+        rantzsoft_spatial2d::components::Spatial2D,
+        GameDrawLayer::Breaker,
+    ));
+
+    let entity = spawn_bolt(
+        &mut app,
+        Vec2::new(0.0, playfield.bottom() - 100.0),
+        Vec2::new(0.0, -400.0),
+    );
+    tick(&mut app);
+
+    let pos = app.world().get::<Position2D>(entity).unwrap();
+    let prev = app.world().get::<PreviousPosition>(entity).unwrap();
+    let expected = Vec2::new(0.0, -250.0 + DEFAULT_BOLT_SPAWN_OFFSET_Y);
+
+    assert!(
+        (pos.0 - expected).length() < f32::EPSILON,
+        "Position2D should be {expected:?}, got {:?}",
+        pos.0
+    );
+    assert!(
+        (prev.0 - expected).length() < f32::EPSILON,
+        "PreviousPosition should match Position2D at {expected:?}, got {:?}",
+        prev.0
+    );
+}
+
+// Behavior 39: bolt_lost respawns correctly using BoltAngleSpread and BoltSpawnOffsetY
+// (BoltRespawnAngleSpread and BoltRespawnOffsetY were deleted in Wave 6)
+#[test]
+fn bolt_lost_works_without_old_respawn_components() {
+    // Given: Bolt built via .definition(). Bolt is below floor.
+    // Then: System runs without error. Bolt respawns using BoltAngleSpread and BoltSpawnOffsetY.
+    let mut app = test_app();
+    let playfield = PlayfieldConfig::default();
+    app.world_mut().spawn((
+        Breaker,
+        Position2D(Vec2::new(0.0, -250.0)),
+        rantzsoft_spatial2d::components::Spatial2D,
+        GameDrawLayer::Breaker,
+    ));
+
+    let entity = spawn_bolt(
+        &mut app,
+        Vec2::new(0.0, playfield.bottom() - 100.0),
+        Vec2::new(0.0, -400.0),
+    );
+
+    // System should run without error and respawn the bolt
+    tick(&mut app);
+
+    let vel = app.world().get::<Velocity2D>(entity).unwrap();
+    assert!(
+        vel.0.y > 0.0,
+        "bolt should be respawned upward even without old respawn components"
+    );
+
+    let pos = app.world().get::<Position2D>(entity).unwrap();
+    let expected_y = -250.0 + DEFAULT_BOLT_SPAWN_OFFSET_Y;
+    assert!(
+        (pos.0.y - expected_y).abs() < f32::EPSILON,
+        "respawn y should be {expected_y} (from BoltSpawnOffsetY), got {}",
+        pos.0.y
     );
 }

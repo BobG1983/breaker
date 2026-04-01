@@ -5,8 +5,8 @@
         actions: [],
     )),
     max_frames: 120,
-    invariants: [BoltCountReasonable],
-    expected_violations: [BoltCountReasonable],
+    disallowed_failures: [BoltCountReasonable],
+    allowed_failures: [BoltCountReasonable],
     debug_setup: (
         extra_tagged_bolts: 12,
         disable_physics: true,

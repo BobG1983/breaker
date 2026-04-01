@@ -240,4 +240,31 @@ mod tests {
             "Evolution offering 'B+' should NOT have decay applied (expected 1.0), got {decay_b_plus}"
         );
     }
+
+    // --- Missing-resources path tests ---
+
+    #[test]
+    fn timer_expiry_transitions_without_chip_offers_resource() {
+        // When the timer expires but ChipOffers, ChipInventory, and
+        // ChipSelectConfig are all absent (Option<Res<...>> = None), the
+        // system should still transition to TransitionIn without panicking.
+        // This exercises the defensive `if let (Some(...), Some(...), Some(...))` guard.
+        let mut app = test_app(0.0);
+        // test_app does NOT insert ChipOffers, ChipInventory, or ChipSelectConfig.
+        // The system receives None for all three Option parameters.
+        app.update();
+
+        let next = app.world().resource::<NextState<GameState>>();
+        assert!(
+            format!("{next:?}").contains("TransitionIn"),
+            "expected TransitionIn even without ChipOffers resource, got: {next:?}"
+        );
+
+        let timer = app.world().resource::<ChipSelectTimer>();
+        assert!(
+            timer.remaining.abs() < f32::EPSILON,
+            "timer should be clamped to 0.0 on expiry, got: {}",
+            timer.remaining
+        );
+    }
 }

@@ -16,7 +16,7 @@ fn apply_debug_setup_teleports_breaker_to_breaker_position() {
         layout: "Corridor".to_owned(),
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
-        invariants: vec![],
+        disallowed_failures: vec![],
         debug_setup: Some(DebugSetup {
             bolt_position: None,
             breaker_position: Some((100.0, -50.0)),

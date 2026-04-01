@@ -1,97 +1,66 @@
 # 5s: Screens
 
-**Goal**: Overhaul all non-gameplay screens to match the visual identity. Main menu, run-end, breaker select, pause, and loading screens.
+**Goal**: Overhaul all non-gameplay screens to match the visual identity.
 
-## Run-End Style: Hybrid (Context-Sensitive)
+Architecture: `docs/architecture/rendering/screens.md`
 
-- **Victory**: Splash treatment — stats slam in with energy effects, screen shake per reveal, celebratory
-- **Defeat**: Hologram treatment — floating holographic display, stats appear one by one, calm/contemplative, includes "almost unlocked" teases
+## Shared Principles
+
+- Each screen is a module in `screen/`
+- Entity lifecycle: spawn on `OnEnter`, despawn on `OnExit` via cleanup markers
+- VFX via `rantzsoft_vfx` primitives (ExecuteRecipe, AttachVisuals, modifiers)
+- Text rendering: Bevy `Text2d` with monospace font, GlitchText overlay where appropriate
+- Input handling is per-screen — menus may use Bevy UI (Node, Button, Interaction) or world-space entities with cursor-to-world input, whichever fits
 
 ## What to Build
 
 ### 1. Main Menu — Interactive Idle
 
-Current: Orbitron title + menu items. No interactive idle.
-
-Target:
-- Playfield visible with grid background, walls present, no cells
+- Playfield visible with grid background, walls, no cells
 - Breaker + bolt fully interactive (player can move and bump casually)
-- Menu options as holographic/projected text, positioned to not interfere with play area
+- Menu options as world-space text entities with glow effects
 - Cool palette (early-run temperature), low particle density
-- Relaxed "exhale" mood (Pillar 1)
 
-### 2. Run-End Screen (Hybrid)
+### 2. Run-End Screen (Hybrid, DR-2)
 
-Victory gets the splash treatment, defeat gets the hologram treatment. Both share these elements:
-- Run outcome (victory/defeat)
-- Nodes cleared
-- Highlight moments from the run
-- Flux earned
-- Notable build milestones
-- Run seed (monospace Data typography, prominent, copy-to-clipboard affordance)
+**Victory**: Splash treatment — stats slam in with energy effects, screen shake per reveal
+**Defeat**: Hologram treatment — floating holographic display, stats appear one by one, calm/contemplative
 
-**Defeat presentation** is context-sensitive:
-- Early death (nodes 1-3): minimal fanfare, quick summary, fast "try again"
-- Late death (nodes 6+): show what was forming — "almost unlocked" evolution teases
+Both display: run outcome, nodes cleared, highlights, flux earned, run seed.
+
+Context-sensitive defeat:
+- Early death (nodes 1-3): minimal fanfare, quick summary
+- Late death (nodes 6+): show what was forming, "almost unlocked" evolution teases
 - Spectacular death (high highlight count): highlight reel of peak moments
 
-### 3. Run-End "Almost Unlocked" Teases
+### 3. Breaker Select (Run Setup)
 
-On defeat:
-- Evolutions 1 chip away: show evolution name + icon (description hidden)
-- Achievements close to triggering: show name + progress bar
-- Turns defeat into discovery (Pillar 7)
+- Per-archetype visual preview via `AttachVisuals` (shape, color, aura, trail visible)
+- Selection highlights with glow modifiers
+- Bolt type preview alongside breaker
 
-### 4. Breaker Select Screen
+### 4. Pause Menu
 
-Current: Text-only cards.
+- `TriggerDesaturation` on camera to dim the game
+- GlitchText treatment on "PAUSED"
+- Menu options as world-space text
+- Game entities visible but dimmed beneath
 
-Target:
-- Per-archetype visual preview (shape, color, aura visible)
-- Color coding per archetype
-- Selection animation (archetype activates on hover)
+### 5. Loading Screen
 
-### 5. Pause Menu
-
-Current: "PAUSED" text + options.
-
-Target:
-- Desaturation overlay on gameplay behind pause
-- Glitch text treatment on "PAUSED" (from 5o shader)
-- Menu options in Body typography
-
-### 6. Loading Screen
-
-Current: "Loading..." + cyan progress bar.
-
-Target:
-- Style-consistent loading indicator
-- Background uses void color with subtle grid
-- Temperature-appropriate color (cool, since it's pre-run)
+- Minimal: styled progress indicator + game logo
+- Void background with subtle grid, cool temperature
 
 ## Dependencies
 
-- **Requires**: 5c (rendering/), 5d (post-processing: desaturation for pause), 5f (temperature palette), 5h (breaker visuals for archetype previews), 5o (glitch text shader), 5q (HUD typography established)
-- **Enhanced by**: 5k (screen effects for run-end dramatic moments)
-- DR-2 resolved: hybrid (victory=splash, defeat=hologram)
-
-## What This Step Builds
-
-- Main menu interactive idle (playfield + breaker + bolt, no cells, cool palette)
-- Run-end screen: victory = splash (stats slam in), defeat = hologram (stats appear calmly)
-- Context-sensitive defeat presentation (early/late/spectacular)
-- "Almost unlocked" teases on defeat (evolution name + icon)
-- Breaker select screen with archetype visual previews
-- Pause menu with desaturation overlay + glitch text
-- Loading screen with styled indicator + void + grid
-- Full glitch treatment on Display font (Orbitron-Bold)
-- Scan line treatment on Body font (Rajdhani-Medium)
+- **Requires**: 5c (crate), 5d (post-processing: desaturation for pause), 5f (temperature), 5h (breaker visuals for select screen), 5o (GlitchText), 5q (HUD typography)
+- DR-2 resolved: hybrid run-end
 
 ## Verification
 
 - Main menu is interactive (bolt bounces, breaker moves)
-- Run-end shows correct content with chosen style
+- Run-end shows correct content with chosen style per outcome
 - Defeat shows "almost unlocked" teases when applicable
-- Breaker select shows archetype visual previews
+- Breaker select shows archetype visual previews with aura/trail
 - Pause overlays desaturation on gameplay
 - All existing tests pass

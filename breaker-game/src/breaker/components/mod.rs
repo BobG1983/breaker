@@ -7,8 +7,7 @@ mod movement;
 mod state;
 
 pub use core::{
-    Breaker, BreakerBaseY, BreakerHeight, BreakerInitialized, BreakerWidth, MaxReflectionAngle,
-    MinAngleFromHorizontal,
+    Breaker, BreakerBaseY, BreakerHeight, BreakerInitialized, BreakerReflectionSpread, BreakerWidth,
 };
 
 pub use bump::{
@@ -20,7 +19,6 @@ pub use dash::{
     SettleDuration, SettleTiltEase,
 };
 pub use movement::{
-    BreakerAcceleration, BreakerDeceleration, BreakerMaxSpeed, BreakerTilt, BreakerVelocity,
-    DecelEasing,
+    BreakerAcceleration, BreakerDeceleration, BreakerTilt, BreakerVelocity, DecelEasing,
 };
 pub use state::{BreakerState, BreakerStateTimer};

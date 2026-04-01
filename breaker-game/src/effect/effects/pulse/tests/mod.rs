@@ -7,7 +7,7 @@ use rantzsoft_physics2d::{
 use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D};
 
 use crate::{
-    bolt::BASE_BOLT_DAMAGE,
+    bolt::resources::DEFAULT_BOLT_BASE_DAMAGE,
     cells::{components::Cell, messages::DamageCell},
     effect::effects::pulse::*,
     shared::{BOLT_LAYER, CELL_LAYER, WALL_LAYER},

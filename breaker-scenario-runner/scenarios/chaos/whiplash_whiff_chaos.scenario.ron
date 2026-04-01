@@ -6,7 +6,7 @@
 // silently and the Shockwave spawns duplicate rings that are never cleaned up.
 // If BumpWhiff fires even when no bump input was registered, the Once is consumed
 // prematurely and the effect is lost. NoEntityLeaks detects leaked Shockwave ring
-// entities that fail to expand and despawn. BoltSpeedInRange catches indirect
+// entities that fail to expand and despawn. BoltSpeedAccurate catches indirect
 // speed corruption from a runaway DamageBoost multiplier. NoNaN guards against
 // uninitialized velocity in spawned Shockwave entities. 5000 frames at moderate
 // chaos ensures many whiff events without exhausting the node prematurely.
@@ -15,8 +15,8 @@
     layout: "Dense",
     input: Chaos((action_prob: 0.5)),
     max_frames: 5000,
-    invariants: [BoltSpeedInRange, NoNaN, NoEntityLeaks, BoltInBounds],
-    expected_violations: None,
+    disallowed_failures: [BoltSpeedAccurate, NoNaN, NoEntityLeaks, BoltInBounds],
+    allowed_failures: None,
     debug_setup: None,
     allow_early_end: false,
     seed: 2311,

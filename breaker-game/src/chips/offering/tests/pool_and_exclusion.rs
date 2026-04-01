@@ -68,23 +68,23 @@ fn build_active_pool_applies_weights_and_decay() {
 
     // A is maxed, should not be in pool
     assert!(
-        !pool.iter().any(|(name, _)| name == "A"),
+        !pool.iter().any(|e| e.name == "A"),
         "maxed chip A should be excluded from pool"
     );
 
     // B is Rare (base=15.0), decay=0.8 => effective=12.0
-    let b_entry = pool.iter().find(|(name, _)| name == "B");
+    let b_entry = pool.iter().find(|e| e.name == "B");
     assert!(b_entry.is_some(), "B should be in pool");
-    let b_weight = b_entry.unwrap().1;
+    let b_weight = b_entry.unwrap().weight;
     assert!(
         (b_weight - 12.0).abs() < f32::EPSILON,
         "B weight: expected 12.0 (15.0*0.8), got {b_weight}"
     );
 
     // C is Legendary (base=3.0), no decay => effective=3.0
-    let c_entry = pool.iter().find(|(name, _)| name == "C");
+    let c_entry = pool.iter().find(|e| e.name == "C");
     assert!(c_entry.is_some(), "C should be in pool");
-    let c_weight = c_entry.unwrap().1;
+    let c_weight = c_entry.unwrap().weight;
     assert!(
         (c_weight - 3.0).abs() < f32::EPSILON,
         "C weight: expected 3.0 (3.0*1.0), got {c_weight}"
@@ -96,9 +96,21 @@ fn build_active_pool_applies_weights_and_decay() {
 #[test]
 fn draw_offerings_returns_all_distinct_names() {
     let pool = vec![
-        ("A".to_owned(), 100.0),
-        ("B".to_owned(), 100.0),
-        ("C".to_owned(), 100.0),
+        PoolEntry {
+            name: "A".to_owned(),
+            weight: 100.0,
+            template_name: None,
+        },
+        PoolEntry {
+            name: "B".to_owned(),
+            weight: 100.0,
+            template_name: None,
+        },
+        PoolEntry {
+            name: "C".to_owned(),
+            weight: 100.0,
+            template_name: None,
+        },
     ];
     let mut rng = GameRng::from_seed(42);
     let result = draw_offerings(&pool, 3, &mut rng.0);
@@ -123,7 +135,7 @@ fn build_active_pool_excludes_evolution_rarity_chips() {
 
     let pool = build_active_pool(&registry, &inventory, &config);
 
-    let pool_names: Vec<&str> = pool.iter().map(|(name, _)| name.as_str()).collect();
+    let pool_names: Vec<&str> = pool.iter().map(|e| e.name.as_str()).collect();
     assert!(
         pool_names.contains(&"Normal Chip"),
         "Common chip should be in pool"

@@ -1,2 +1,3 @@
-- [Current lint state](lint_state_current.md) — develop 2026-03-30: ALL PASS — fmt, all clippy, all tests clean after split-fix wave
-- [Core lint patterns](lint_patterns_core.md) — Historical: Wave 8 stub warning patterns and source-marker dead_code (all resolved); see lint_state_current.md for current state
+# Memory
+
+No stable memories. This agent computes fresh each run.

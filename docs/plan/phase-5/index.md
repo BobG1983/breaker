@@ -2,56 +2,60 @@
 
 **Goal**: Establish the stylized, shader-driven aesthetic. Not polish — identity. Every entity, effect, and screen should communicate through light, geometry, and motion — no floating text, no damage numbers, no UI overlays where visual feedback serves better.
 
-## Architecture Decision: rendering/ Domain
+## Architecture: rantzsoft_vfx Crate + Dispersed Game Domains
 
-Phase 5 introduces a new `rendering/` domain that owns all visual rendering code (shaders, materials, post-processing, particles, VFX). Visual configuration data (shapes, colors, aura types) lives in the owning domain as components; rendering/ reads these through curated interfaces.
+**There is no `rendering/` or `graphics/` game domain.** All rendering primitives, shaders, recipes, modifiers, and entity visual attachment live in `rantzsoft_vfx` — a game-agnostic VFX crate at workspace root. Game-specific visual concerns are dispersed to the domains that own the relevant game state.
+
+The full architecture is documented in `docs/architecture/rendering/` (written as part of step 5a). Key documents:
+
+| Document | What it covers |
+|----------|---------------|
+| [rendering/index.md](../../architecture/rendering/index.md) | Top-level overview, links to all sub-documents |
+| [rendering/composition.md](../../architecture/rendering/composition.md) | Two composition paths: recipe (RON) vs direct primitive (code) |
+| [rendering/rantzsoft_vfx.md](../../architecture/rendering/rantzsoft_vfx.md) | Crate scope, VfxConfig resource, camera-targeting API |
+| [rendering/recipes.md](../../architecture/rendering/recipes.md) | Recipe system: phases, primitives, ExecuteRecipe, hot-reload |
+| [rendering/modifiers.md](../../architecture/rendering/modifiers.md) | SetModifier/AddModifier/RemoveModifier, diminishing returns |
+| [rendering/communication.md](../../architecture/rendering/communication.md) | All message types, system ordering, domain restructuring |
 
 ### Communication Pattern
 
 | Direction | Mechanism | Examples |
 |-----------|-----------|---------|
-| Gameplay → Rendering (continuous) | 1+ `*RenderState` components on entities | `BoltRenderState { speed, direction }`, `CellRenderState { health_fraction }` |
-| Gameplay → Rendering (identity) | Separate visual components set at spawn | `Shape`, `Color`, `AuraType`, `TrailType`, `DamageDisplay`, `DeathEffect` — entities get only the ones that apply |
-| Gameplay → Rendering (events) | Module-owned messages (Bevy `Message`, not observers) | `SpawnShockwaveVfx { pos, radius }`, `PlayBumpFeedbackVfx { grade, pos }` |
-| Rendering → Gameplay (completion) | Module-owned completion messages | `ChainLightningVfxComplete { .. }`, `TransitionAnimationComplete` |
+| Gameplay → VFX (entity identity) | `AttachVisuals { entity, config }` message | shape, color, glow, aura, trail |
+| Gameplay → VFX (dynamic state) | `SetModifier` messages (per-frame overwrites) | speed → trail length, piercing → spikes |
+| Gameplay → VFX (chip effects) | `AddModifier` / `RemoveModifier` messages | stacking with diminishing returns |
+| Gameplay → VFX (event VFX) | `ExecuteRecipe` message or typed per-primitive messages | cell death recipe, bolt lost recipe |
+| VFX → Gameplay (completion) | `TransitionComplete` (owned by screen/, not crate) | transition animation done |
 
-rendering/ never imports gameplay internals directly — only reads curated render state components and dedicated render messages.
+No `*RenderState` bridge components. No `VfxKind` dispatch enum. No per-effect rendering modules.
 
 ### Domain Ownership
 
-| Concern | Owner | Example |
-|---------|-------|---------|
-| Visual config data | Owning domain | Definitions of what's available live in Rendering/, setup lives in Breaker/ Chip/ etc. |
-| Render state sync | Owning domain | breaker/ maintains 1+ `RenderState` style components|
-| Shader/material code | rendering/ | Bolt glow shader, cell shape meshes |
-| Post-processing | rendering/ | Screen distortion, bloom tuning, chromatic aberration |
-| Particles | rendering/ | All particle emitters and systems |
-| VFX spawning | rendering/ | Observes render events, spawns VFX entities |
-| Animation completion | rendering/ | Emits completion messages back to gameplay |
+| Concern | Owner |
+|---------|-------|
+| All rendering primitives, shaders, recipes, modifiers | `rantzsoft_vfx` crate |
+| VfxConfig resource (type definition) | `rantzsoft_vfx` crate |
+| VfxConfig values (insert + mutation) | Game (`shared/`, debug menu, settings) |
+| Temperature palette + danger vignette | `run/` domain |
+| Transitions, PlayingState substates | `screen/transition/` |
+| Per-screen UI (chip select, menus, pause, HUD) | `screen/<screen_name>/` |
+| Diegetic HUD (timer wall, life orbs, node progress) | `screen/playing/hud/` |
+| GraphicsConfig resource | `shared/` |
 
-### Render Message Pattern
+### Eliminated Domains
 
-Each VFX module (`rendering/vfx/shockwave/`, `rendering/vfx/chain_lightning/`, etc.) defines its own message type and systems. A `VfxKind` enum exists for RON data authoring — a single dispatch system in the effect/ domain translates `VfxKind` → the correct module message when data-driven effects fire. Gameplay domains that know the specific effect can also send the module message directly.
+| Domain | Absorbed Into |
+|--------|--------------|
+| `ui/` | Per-screen UI → `screen/<screen_name>/`. Diegetic HUD → `screen/playing/hud/`. |
+| `fx/` | Transitions → `screen/transition/`. Fade-out, punch scale → `rantzsoft_vfx`. |
 
-- **Module-owned messages**: `SpawnShockwaveVfx`, `SpawnChainLightningVfx`, `PlayBumpFeedbackVfx`, etc.
-- **Standard Bevy systems** (not observers): systems read messages and run in parallel via the scheduler
-- **RON enum**: `VfxKind { Shockwave, ChainLightning, ... }` for data-driven dispatch only
-- **Completion messages**: Module-owned (`ChainLightningVfxComplete`, etc.) — gameplay systems read these to sequence dependent behavior
+## Prerequisites
 
-### Architecture Documentation
-
-`docs/architecture/rendering.md` must be written as part of step 5a, **before** any VFX implementation. It documents:
-- How to create a new VFX module (directory structure, message type, system registration)
-- How to create a new screen effect
-- The render state component pattern
-- The visual identity component pattern
-- The RON `VfxKind` dispatch pattern
-
-This follows the precedent set by `docs/architecture/effects.md` for the chip effect system.
+**Bolt definitions** must be implemented before bolt visual work (step 5g). See `.claude/specs/bolt-definitions-code.md` and `docs/architecture/rendering/bolt-graphics-migration.md`.
 
 ## Design Decisions
 
-Several open design decisions (DR-1 through DR-10 in `docs/design/graphics/decisions-required.md`) must be resolved before implementing the steps that depend on them. Step 5b is a dedicated decision resolution step.
+All design decisions (DR-1 through DR-10) have been resolved. See `docs/design/graphics/decisions-required.md`.
 
 ## Audio
 
@@ -59,42 +63,42 @@ Phase 5 is purely visual. All audio work (SFX, music, heartbeat timer, layered i
 
 ## Subphases
 
-Steps are ordered by dependency. Architecture and decisions (5a-5b) come first. Infrastructure steps (5c-5f) establish foundations. Entity visuals (5g-5j) build the core look. Effects and feedback (5k-5o) add juice. UI and screens (5p-5s) complete the experience. Evolution VFX (5t-5w) are the crown jewels.
+Steps are ordered by dependency. Architecture and decisions (5a-5b) come first. Infrastructure steps (5c-5f, 5p) establish foundations — note that 5p (PlayingState expansion + transition styles) is infrastructure because all subsequent steps need the final state machine. Entity visuals (5g-5j) build the core look. Effects and feedback (5k-5o) add juice. UI and screens (5q-5s) complete the experience. Evolution VFX (5t-5w) are the crown jewels.
 
-Steps 5d and 5e are independent and can be done in either order.
+Steps 5d and 5e are independent and can be done in either order. 5p can run in parallel with 5d-5f.
 
 ### Architecture & Decisions
 
-- [5a: Rendering Architecture](phase-5a-rendering-architecture.md) — Write `docs/architecture/rendering.md` — the contract all subsequent steps implement against
-- [5b: Design Decisions](phase-5b-design-decisions.md) — Resolve DR-1 through DR-10 **DECISION REQUIRED**
+- [5a: Rendering Architecture](phase-5a-rendering-architecture.md) — Write `docs/architecture/rendering/` — **COMPLETE**
+- [5b: Design Decisions](phase-5b-design-decisions.md) — Resolve DR-1 through DR-10 — **COMPLETE**
 
 ### Infrastructure
 
-- [5c: Render Plugin Separation](phase-5c-render-plugin-separation.md) — Extract visual concerns from gameplay plugins, establish rendering/ domain
-- [5d: Post-Processing Pipeline](phase-5d-post-processing-pipeline.md) — Bloom tuning, screen distortion shader, chromatic aberration, additive blending
-- [5e: Particle System](phase-5e-particle-system.md) — Evaluate crates, integrate, implement 6 particle types
-- [5f: Temperature Palette & Data-Driven Enums](phase-5f-temperature-and-enums.md) — Temperature resource, visual composition enums, RON integration
+- [5c: Crate Setup + Plugin Separation](phase-5c-render-plugin-separation.md) — Create `rantzsoft_vfx` crate, extract visual concerns from gameplay plugins, eliminate ui/ and fx/ domains
+- [5d: Post-Processing Pipeline](phase-5d-post-processing-pipeline.md) — Bloom tuning, FullscreenMaterial effects, screen distortion, chromatic aberration, additive blending via specialize()
+- [5e: Particle System](phase-5e-particle-system.md) — CPU particle system in rantzsoft_vfx, emitter modes, per-primitive mapping
+- [5f: Temperature Palette & Data-Driven Enums](phase-5f-temperature-and-enums.md) — RunTemperature resource, Hue/Shape/Aura/Trail enums, RON integration
+- [5p: Transitions & PlayingState](phase-5p-transitions.md) — PlayingState substate expansion, 4 transition styles (Flash, Sweep, Glitch, Collapse/Rebuild)
 
 ### Entity Visuals
 
-- [5g: Bolt Visuals](phase-5g-bolt-visuals.md) — Bolt shader, wake/trail, state communication, extra bolt distinction
-- [5h: Breaker Visuals](phase-5h-breaker-visuals.md) — Per-archetype shapes, colors, auras, dash trails, states
-- [5i: Cell Visuals](phase-5i-cell-visuals.md) — Per-type shapes/colors, damage states, destruction effects, special cell VFX
-- [5j: Walls & Background](phase-5j-walls-and-background.md) — Wall meshes, impact flash, shield barrier, background grid
+- [5g: Bolt Visuals](phase-5g-bolt-visuals.md) — SDF entity_glow, wake/trail via AttachVisuals, modifier messages for dynamic state
+- [5h: Breaker Visuals](phase-5h-breaker-visuals.md) — Per-archetype shapes, colors, auras, trails via AttachVisuals
+- [5i: Cell Visuals](phase-5i-cell-visuals.md) — Per-type shapes/colors, damage recipes, destruction recipes (dissolve/split/fracture)
+- [5j: Walls & Background](phase-5j-walls-and-background.md) — Wall SDF entities, impact flash, background grid shader, shield barrier energy field
 
 ### Effects & Feedback
 
-- [5k: Screen Effects & Feedback](phase-5k-screen-effects.md) — Screen shake, flash, desaturation, slow-mo, vignette
-- [5l: Bump Grade & Failure State VFX](phase-5l-bump-and-failure-vfx.md) — Bump feedback, bolt lost, shield absorption, run end states
-- [5m: Combat Effect VFX](phase-5m-combat-effect-vfx.md) — Shockwave, chain lightning, piercing beam, pulse, explode, gravity well, and more
-- [5n: Visual Modifier System](phase-5n-visual-modifiers.md) — Chip effect appearance changes on bolt/breaker, diminishing returns
-- [5o: Highlight Moments](phase-5o-highlight-moments.md) — Glitch text shader, per-highlight visual treatments
+- [5k: Screen Effects & Feedback](phase-5k-screen-effects.md) — Screen shake, flash, desaturation, slow-mo, vignette, distortion buffer
+- [5l: Bump Grade & Failure State VFX](phase-5l-bump-and-failure-vfx.md) — Bump recipes, bolt lost recipes, life lost VFX, run end states
+- [5m: Combat Effect VFX](phase-5m-combat-effect-vfx.md) — Recipe authoring for all chip effects
+- [5n: Visual Modifier System](phase-5n-visual-modifiers.md) — ModifierStack, DR curves, SetModifier/AddModifier handlers
+- [5o: Highlight Moments](phase-5o-highlight-moments.md) — GlitchText overlay (Text2d + child GlitchMaterial), per-highlight recipes
 
 ### UI & Screens
 
-- [5p: Transitions](phase-5p-transitions.md) — Glitch, collapse/rebuild, random selection, upgrade existing
-- [5q: HUD & Gameplay UI](phase-5q-hud-ui.md) — Diegetic HUD: timer in wall glow, lives as orbs, node progress in frame
-- [5r: Chip Cards](phase-5r-chip-cards.md) — Card shape, rarity treatments, abstract symbol icons, timer pressure
+- [5q: HUD & Gameplay UI](phase-5q-hud-ui.md) — Timer wall gauge shader, life orbs, node progress ticks (count to next boss)
+- [5r: Chip Cards](phase-5r-chip-cards.md) — Entity composition, rarity treatments, holographic shader, abstract symbol icons
 - [5s: Screens](phase-5s-screens.md) — Main menu, run-end (hybrid: victory=splash, defeat=hologram), breaker select, pause, loading
 
 ### Evolution VFX
@@ -106,4 +110,4 @@ Steps 5d and 5e are independent and can be done in either order.
 
 ## Build Order Rationale
 
-Infrastructure first because everything else depends on the rendering domain, post-processing pipeline, particle system, and visual composition enums. Entity visuals before effects because entities are the canvas that effects paint on. Screen effects before combat VFX because combat VFX use screen shake/flash/distortion. UI last because it benefits from having the full visual language established. Evolution VFX last because they're the most complex individual effects and benefit from a mature rendering pipeline.
+Infrastructure first because everything else depends on the VFX crate, post-processing pipeline, particle system, and visual composition enums. Entity visuals before effects because entities are the canvas that effects paint on. Screen effects before combat VFX because combat VFX use screen shake/flash/distortion. UI last because it benefits from having the full visual language established. Evolution VFX last because they're the most complex individual effects and benefit from a mature rendering pipeline.

@@ -7,15 +7,12 @@ use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D, V
 use super::super::system::bolt_breaker_collision;
 use crate::{
     bolt::{
-        BoltConfig,
-        components::{Bolt, BoltBaseSpeed, BoltRadius},
+        components::{Bolt, BoltRadius},
+        definition::BoltDefinition,
         messages::BoltImpactBreaker,
     },
     breaker::{
-        components::{
-            Breaker, BreakerHeight, BreakerTilt, BreakerWidth, MaxReflectionAngle,
-            MinAngleFromHorizontal,
-        },
+        components::{Breaker, BreakerHeight, BreakerReflectionSpread, BreakerTilt, BreakerWidth},
         resources::BreakerConfig,
     },
     shared::{BOLT_LAYER, BREAKER_LAYER, EntityScale, GameDrawLayer},
@@ -43,27 +40,28 @@ pub(super) fn default_breaker_height() -> BreakerHeight {
 }
 
 pub(super) fn default_bolt_radius() -> BoltRadius {
-    BoltRadius(BoltConfig::default().radius)
+    BoltRadius(test_bolt_definition().radius)
 }
 
-pub(super) fn default_max_reflection_angle() -> MaxReflectionAngle {
-    MaxReflectionAngle(BreakerConfig::default().max_reflection_angle.to_radians())
+/// Creates a `BoltDefinition` matching the values previously provided by
+/// `BoltConfig::default()`, so existing position calculations remain valid.
+pub(super) fn test_bolt_definition() -> BoltDefinition {
+    BoltDefinition {
+        name: "Bolt".to_string(),
+        base_speed: 400.0,
+        min_speed: 200.0,
+        max_speed: 800.0,
+        radius: 8.0,
+        base_damage: 10.0,
+        effects: vec![],
+        color_rgb: [6.0, 5.0, 0.5],
+        min_angle_horizontal: 5.0,
+        min_angle_vertical: 5.0,
+    }
 }
 
-pub(super) fn default_min_angle() -> MinAngleFromHorizontal {
-    MinAngleFromHorizontal(
-        BreakerConfig::default()
-            .min_angle_from_horizontal
-            .to_radians(),
-    )
-}
-
-pub(super) fn bolt_param_bundle() -> (BoltBaseSpeed, BoltRadius) {
-    let bolt_config = BoltConfig::default();
-    (
-        BoltBaseSpeed(bolt_config.base_speed),
-        BoltRadius(bolt_config.radius),
-    )
+pub(super) fn default_reflection_spread() -> BreakerReflectionSpread {
+    BreakerReflectionSpread(BreakerConfig::default().reflection_spread.to_radians())
 }
 
 /// Breaker entities use `Position2D` as canonical position.
@@ -78,8 +76,7 @@ pub(super) fn spawn_breaker_at(app: &mut App, x: f32, y: f32) -> Entity {
             BreakerTilt::default(),
             w,
             h,
-            default_max_reflection_angle(),
-            default_min_angle(),
+            default_reflection_spread(),
             Aabb2D::new(Vec2::ZERO, half_extents),
             CollisionLayers::new(BREAKER_LAYER, BOLT_LAYER),
             Position2D(pos),
@@ -101,14 +98,13 @@ pub(super) fn tick(app: &mut App) {
 
 /// Bolt entities now use `Position2D` as canonical position.
 pub(super) fn spawn_bolt(app: &mut App, x: f32, y: f32, vx: f32, vy: f32) -> Entity {
-    app.world_mut()
-        .spawn((
-            Bolt,
-            Velocity2D(Vec2::new(vx, vy)),
-            bolt_param_bundle(),
-            Position2D(Vec2::new(x, y)),
-        ))
-        .id()
+    let def = test_bolt_definition();
+    Bolt::builder()
+        .at_position(Vec2::new(x, y))
+        .definition(&def)
+        .with_velocity(Velocity2D(Vec2::new(vx, vy)))
+        .primary()
+        .spawn(app.world_mut())
 }
 
 #[derive(Resource, Default)]
@@ -158,8 +154,7 @@ pub(super) fn spawn_scaled_breaker_at(app: &mut App, x: f32, y: f32, entity_scal
         BreakerTilt::default(),
         w,
         h,
-        default_max_reflection_angle(),
-        default_min_angle(),
+        default_reflection_spread(),
         EntityScale(entity_scale),
         Aabb2D::new(Vec2::ZERO, half_extents),
         CollisionLayers::new(BREAKER_LAYER, BOLT_LAYER),
@@ -178,13 +173,15 @@ pub(super) fn spawn_scaled_bolt(
     vy: f32,
     entity_scale: f32,
 ) -> Entity {
+    let def = test_bolt_definition();
+    let entity = Bolt::builder()
+        .at_position(Vec2::new(x, y))
+        .definition(&def)
+        .with_velocity(Velocity2D(Vec2::new(vx, vy)))
+        .primary()
+        .spawn(app.world_mut());
     app.world_mut()
-        .spawn((
-            Bolt,
-            Velocity2D(Vec2::new(vx, vy)),
-            bolt_param_bundle(),
-            EntityScale(entity_scale),
-            Position2D(Vec2::new(x, y)),
-        ))
-        .id()
+        .entity_mut(entity)
+        .insert(EntityScale(entity_scale));
+    entity
 }

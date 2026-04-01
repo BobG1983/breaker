@@ -7,21 +7,38 @@ use super::super::effect::*;
 use crate::{
     bolt::{
         components::{Bolt, BoltLifespan, ExtraBolt},
-        resources::BoltConfig,
+        definition::BoltDefinition,
+        registry::BoltRegistry,
     },
     shared::rng::GameRng,
 };
 
-fn world_with_bolt_config() -> World {
+fn world_with_bolt_registry() -> World {
     let mut world = World::new();
-    world.insert_resource(BoltConfig::default());
+    let mut registry = BoltRegistry::default();
+    registry.insert(
+        "Bolt".to_string(),
+        BoltDefinition {
+            name: "Bolt".to_owned(),
+            base_speed: 720.0,
+            min_speed: 360.0,
+            max_speed: 1440.0,
+            radius: 14.0,
+            base_damage: 10.0,
+            effects: vec![],
+            color_rgb: [6.0, 5.0, 0.5],
+            min_angle_horizontal: 5.0,
+            min_angle_vertical: 5.0,
+        },
+    );
+    world.insert_resource(registry);
     world.insert_resource(GameRng::default());
     world
 }
 
 #[test]
 fn fire_with_lifespan_adds_bolt_lifespan_timer() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
     fire(entity, 1, Some(5.0), false, "", &mut world);
@@ -41,7 +58,7 @@ fn fire_with_lifespan_adds_bolt_lifespan_timer() {
 
 #[test]
 fn fire_with_very_short_lifespan_creates_valid_timer() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
     fire(entity, 1, Some(0.01), false, "", &mut world);
@@ -61,7 +78,7 @@ fn fire_with_very_short_lifespan_creates_valid_timer() {
 
 #[test]
 fn fire_with_no_lifespan_does_not_add_bolt_lifespan() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
     fire(entity, 1, None, false, "", &mut world);

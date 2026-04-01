@@ -5,7 +5,7 @@
    - Define the bridge system — reads the appropriate game message, walks chains, queues commands
    - Determine scope (global or targeted) and On target resolution
 
-2. **Add variant** to the `Trigger` enum in `effect/core/types/definitions.rs`.
+2. **Add variant** to the `Trigger` enum in `effect/core/types/definitions/enums.rs`.
 
 3. **Call** `new_trigger::register(app)` in `effect/triggers/mod.rs`.
 

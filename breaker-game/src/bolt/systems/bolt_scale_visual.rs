@@ -25,9 +25,25 @@ pub(crate) fn bolt_scale_visual(
 
 #[cfg(test)]
 mod tests {
-    use rantzsoft_spatial2d::components::Scale2D;
+    use rantzsoft_spatial2d::components::Velocity2D;
 
     use super::*;
+    use crate::bolt::definition::BoltDefinition;
+
+    fn test_bolt_definition() -> BoltDefinition {
+        BoltDefinition {
+            name: "Bolt".to_string(),
+            base_speed: 400.0,
+            min_speed: 200.0,
+            max_speed: 800.0,
+            radius: 8.0,
+            base_damage: 10.0,
+            effects: vec![],
+            color_rgb: [6.0, 5.0, 0.5],
+            min_angle_horizontal: 5.0,
+            min_angle_vertical: 5.0,
+        }
+    }
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -55,10 +71,13 @@ mod tests {
         // Then: Scale2D { x: 5.6, y: 5.6 }
         let mut app = test_app();
 
-        let entity = app
-            .world_mut()
-            .spawn((Bolt, BoltRadius(8.0), EntityScale(0.7), Scale2D::default()))
-            .id();
+        let entity = Bolt::builder()
+            .at_position(Vec2::ZERO)
+            .definition(&test_bolt_definition())
+            .with_velocity(Velocity2D(Vec2::ZERO))
+            .primary()
+            .spawn(app.world_mut());
+        app.world_mut().entity_mut(entity).insert(EntityScale(0.7));
 
         tick(&mut app);
 
@@ -78,10 +97,12 @@ mod tests {
         // Edge case: no EntityScale -> Scale2D { x: 8.0, y: 8.0 }
         let mut app = test_app();
 
-        let entity = app
-            .world_mut()
-            .spawn((Bolt, BoltRadius(8.0), Scale2D::default()))
-            .id();
+        let entity = Bolt::builder()
+            .at_position(Vec2::ZERO)
+            .definition(&test_bolt_definition())
+            .with_velocity(Velocity2D(Vec2::ZERO))
+            .primary()
+            .spawn(app.world_mut());
 
         tick(&mut app);
 
@@ -99,10 +120,13 @@ mod tests {
         // Edge case: EntityScale(1.0) -> Scale2D { x: 8.0, y: 8.0 }
         let mut app = test_app();
 
-        let entity = app
-            .world_mut()
-            .spawn((Bolt, BoltRadius(8.0), EntityScale(1.0), Scale2D::default()))
-            .id();
+        let entity = Bolt::builder()
+            .at_position(Vec2::ZERO)
+            .definition(&test_bolt_definition())
+            .with_velocity(Velocity2D(Vec2::ZERO))
+            .primary()
+            .spawn(app.world_mut());
+        app.world_mut().entity_mut(entity).insert(EntityScale(1.0));
 
         tick(&mut app);
 
@@ -122,15 +146,21 @@ mod tests {
         // Then: A = Scale2D { x: 5.6, y: 5.6 }, B = Scale2D { x: 4.0, y: 4.0 }
         let mut app = test_app();
 
-        let bolt_a = app
-            .world_mut()
-            .spawn((Bolt, BoltRadius(8.0), EntityScale(0.7), Scale2D::default()))
-            .id();
+        let bolt_a = Bolt::builder()
+            .at_position(Vec2::ZERO)
+            .definition(&test_bolt_definition())
+            .with_velocity(Velocity2D(Vec2::ZERO))
+            .primary()
+            .spawn(app.world_mut());
+        app.world_mut().entity_mut(bolt_a).insert(EntityScale(0.7));
 
-        let bolt_b = app
-            .world_mut()
-            .spawn((Bolt, BoltRadius(8.0), EntityScale(0.5), Scale2D::default()))
-            .id();
+        let bolt_b = Bolt::builder()
+            .at_position(Vec2::ZERO)
+            .definition(&test_bolt_definition())
+            .with_velocity(Velocity2D(Vec2::ZERO))
+            .extra()
+            .spawn(app.world_mut());
+        app.world_mut().entity_mut(bolt_b).insert(EntityScale(0.5));
 
         tick(&mut app);
 

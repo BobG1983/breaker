@@ -10,6 +10,7 @@ use crate::{
         queries::{BumpGradingQuery, BumpTimingQuery},
         resources::ForceBumpGrade,
     },
+    effect::{AnchorActive, AnchorPlanted},
     input::resources::{GameAction, InputActions},
 };
 
@@ -36,6 +37,18 @@ pub(super) fn retroactive_grade(time_since_hit: f32, perfect_window: f32) -> Bum
     }
 }
 
+/// Computes the effective perfect window, widened by the anchor multiplier when planted.
+fn effective_perfect_window(
+    base: f32,
+    planted: Option<&AnchorPlanted>,
+    active: Option<&AnchorActive>,
+) -> f32 {
+    match (planted, active) {
+        (Some(_), Some(a)) => base * a.perfect_window_multiplier,
+        _ => base,
+    }
+}
+
 /// Returns the grade-dependent cooldown duration.
 const fn cooldown_for_grade(grade: BumpGrade, perfect_cooldown: f32, weak_cooldown: f32) -> f32 {
     match grade {
@@ -59,9 +72,20 @@ pub(crate) fn update_bump(
     let bolt_serving = !serving_query.is_empty();
     let dt = time.delta_secs();
 
-    for (mut bump, perfect_window, early_window, late_window, perfect_cooldown, weak_cooldown) in
-        &mut query
+    for (
+        mut bump,
+        perfect_window,
+        early_window,
+        late_window,
+        perfect_cooldown,
+        weak_cooldown,
+        anchor_planted,
+        anchor_active,
+    ) in &mut query
     {
+        let effective_pw =
+            effective_perfect_window(perfect_window.0, anchor_planted, anchor_active);
+
         // Tick cooldown
         if bump.cooldown > 0.0 {
             bump.cooldown = (bump.cooldown - dt).max(0.0);
@@ -81,8 +105,8 @@ pub(crate) fn update_bump(
         if actions.active(GameAction::Bump) && bump.cooldown <= 0.0 && !bolt_serving {
             if bump.post_hit_timer > 0.0 {
                 // Retroactive path: bolt already hit, player pressing after
-                let time_since_hit = (perfect_window.0 + late_window.0) - bump.post_hit_timer;
-                let grade = retroactive_grade(time_since_hit, perfect_window.0);
+                let time_since_hit = (effective_pw + late_window.0) - bump.post_hit_timer;
+                let grade = retroactive_grade(time_since_hit, effective_pw);
                 writer.write(BumpPerformed {
                     grade,
                     bolt: bump.last_hit_bolt,
@@ -94,7 +118,7 @@ pub(crate) fn update_bump(
             } else if !bump.active {
                 // Forward path: no recent hit, open the window
                 bump.active = true;
-                bump.timer = early_window.0 + perfect_window.0;
+                bump.timer = early_window.0 + effective_pw;
             }
         }
     }
@@ -116,16 +140,25 @@ pub(crate) fn grade_bump(
     force_grade: Option<Res<ForceBumpGrade>>,
 ) {
     let forced = force_grade.as_ref().and_then(|fg| fg.0);
-    let Ok((mut bump, perfect_window, late_window, perfect_cooldown, weak_cooldown)) =
-        bump_query.single_mut()
+    let Ok((
+        mut bump,
+        perfect_window,
+        late_window,
+        perfect_cooldown,
+        weak_cooldown,
+        anchor_planted,
+        anchor_active,
+    )) = bump_query.single_mut()
     else {
         return;
     };
 
+    let effective_pw = effective_perfect_window(perfect_window.0, anchor_planted, anchor_active);
+
     for hit in hit_reader.read() {
         if bump.active {
             // Forward path: grade based on timer position, with optional override
-            let natural_grade = forward_grade(bump.timer, perfect_window.0);
+            let natural_grade = forward_grade(bump.timer, effective_pw);
             let grade = forced.unwrap_or(natural_grade);
             writer.write(BumpPerformed {
                 grade,
@@ -135,7 +168,7 @@ pub(crate) fn grade_bump(
             bump.cooldown = cooldown_for_grade(grade, perfect_cooldown.0, weak_cooldown.0);
         } else {
             // No active bump — open retroactive window for update_bump
-            bump.post_hit_timer = perfect_window.0 + late_window.0;
+            bump.post_hit_timer = effective_pw + late_window.0;
             bump.last_hit_bolt = Some(hit.bolt);
         }
     }

@@ -21,6 +21,7 @@ use crate::{
 fn dispatch_pushes_bolt_targeted_effects_to_all_bolt_entities() {
     let def = BreakerDefinition {
         name: TEST_BREAKER_NAME.to_owned(),
+        bolt: "Bolt".to_owned(),
         stat_overrides: BreakerStatOverrides::default(),
         life_pool: None,
         effects: vec![RootEffect::On {
@@ -62,6 +63,7 @@ fn dispatch_pushes_bolt_targeted_effects_to_all_bolt_entities() {
 fn dispatch_bolt_targeted_with_zero_bolts_no_panic() {
     let def = BreakerDefinition {
         name: TEST_BREAKER_NAME.to_owned(),
+        bolt: "Bolt".to_owned(),
         stat_overrides: BreakerStatOverrides::default(),
         life_pool: None,
         effects: vec![RootEffect::On {
@@ -85,6 +87,7 @@ fn dispatch_bolt_targeted_with_zero_bolts_no_panic() {
 fn dispatch_pushes_all_bolts_targeted_effects_to_all_bolt_entities() {
     let def = BreakerDefinition {
         name: TEST_BREAKER_NAME.to_owned(),
+        bolt: "Bolt".to_owned(),
         stat_overrides: BreakerStatOverrides::default(),
         life_pool: None,
         effects: vec![RootEffect::On {
@@ -121,6 +124,7 @@ fn dispatch_pushes_all_bolts_targeted_effects_to_all_bolt_entities() {
 fn dispatch_pushes_cell_targeted_effects_to_all_cell_entities() {
     let def = BreakerDefinition {
         name: TEST_BREAKER_NAME.to_owned(),
+        bolt: "Bolt".to_owned(),
         stat_overrides: BreakerStatOverrides::default(),
         life_pool: None,
         effects: vec![RootEffect::On {
@@ -165,6 +169,7 @@ fn dispatch_pushes_cell_targeted_effects_to_all_cell_entities() {
 fn dispatch_pushes_all_cells_targeted_effects_to_all_cell_entities() {
     let def = BreakerDefinition {
         name: TEST_BREAKER_NAME.to_owned(),
+        bolt: "Bolt".to_owned(),
         stat_overrides: BreakerStatOverrides::default(),
         life_pool: None,
         effects: vec![RootEffect::On {
@@ -206,6 +211,7 @@ fn dispatch_pushes_all_cells_targeted_effects_to_all_cell_entities() {
 fn dispatch_pushes_wall_targeted_effects_to_all_wall_entities() {
     let def = BreakerDefinition {
         name: TEST_BREAKER_NAME.to_owned(),
+        bolt: "Bolt".to_owned(),
         stat_overrides: BreakerStatOverrides::default(),
         life_pool: None,
         effects: vec![RootEffect::On {
@@ -250,6 +256,7 @@ fn dispatch_pushes_wall_targeted_effects_to_all_wall_entities() {
 fn dispatch_pushes_all_walls_targeted_effects_to_all_wall_entities() {
     let def = BreakerDefinition {
         name: TEST_BREAKER_NAME.to_owned(),
+        bolt: "Bolt".to_owned(),
         stat_overrides: BreakerStatOverrides::default(),
         life_pool: None,
         effects: vec![RootEffect::On {

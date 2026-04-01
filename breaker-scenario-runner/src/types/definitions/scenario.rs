@@ -168,10 +168,10 @@ pub struct ScenarioDefinition {
     /// Maximum number of fixed-update frames before the runner exits.
     pub max_frames: u32,
     /// Invariants to check continuously during the run.
-    pub invariants: Vec<InvariantKind>,
+    pub disallowed_failures: Vec<InvariantKind>,
     /// If `Some`, the scenario expects exactly these invariant violations to fire
     /// (used for self-test scenarios that intentionally trigger invariants).
-    pub expected_violations: Option<Vec<InvariantKind>>,
+    pub allowed_failures: Option<Vec<InvariantKind>>,
     /// Optional debug overrides for self-test scenarios.
     pub debug_setup: Option<DebugSetup>,
     /// Tunable thresholds for invariant checkers.
@@ -235,8 +235,8 @@ impl Default for ScenarioDefinition {
             layout: String::new(),
             input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
             max_frames: 1000,
-            invariants: vec![],
-            expected_violations: None,
+            disallowed_failures: vec![],
+            allowed_failures: None,
             debug_setup: None,
             invariant_params: InvariantParams::default(),
             allow_early_end: true,

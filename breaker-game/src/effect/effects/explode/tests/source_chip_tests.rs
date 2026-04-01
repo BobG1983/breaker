@@ -60,6 +60,7 @@ fn process_explode_requests_populates_source_chip_from_effect_source_chip() {
         ExplodeRequest {
             range: 50.0,
             damage_mult: 1.0,
+            base_damage: crate::bolt::resources::DEFAULT_BOLT_BASE_DAMAGE,
         },
         EffectSourceChip(Some("blast".to_string())),
         Position2D(Vec2::new(0.0, 0.0)),
@@ -88,6 +89,7 @@ fn process_explode_requests_source_chip_none_when_no_effect_source_chip() {
         ExplodeRequest {
             range: 50.0,
             damage_mult: 1.0,
+            base_damage: crate::bolt::resources::DEFAULT_BOLT_BASE_DAMAGE,
         },
         Position2D(Vec2::new(0.0, 0.0)),
     ));
@@ -113,6 +115,7 @@ fn multiple_explode_requests_with_different_source_chips_produce_correctly_attri
         ExplodeRequest {
             range: 50.0,
             damage_mult: 1.0,
+            base_damage: crate::bolt::resources::DEFAULT_BOLT_BASE_DAMAGE,
         },
         EffectSourceChip(Some("alpha".to_string())),
         Position2D(Vec2::new(0.0, 0.0)),
@@ -122,6 +125,7 @@ fn multiple_explode_requests_with_different_source_chips_produce_correctly_attri
         ExplodeRequest {
             range: 50.0,
             damage_mult: 1.0,
+            base_damage: crate::bolt::resources::DEFAULT_BOLT_BASE_DAMAGE,
         },
         EffectSourceChip(Some("beta".to_string())),
         Position2D(Vec2::new(200.0, 0.0)),
@@ -269,6 +273,7 @@ fn process_explode_requests_uses_position2d_not_transform_when_both_present() {
         ExplodeRequest {
             range: 50.0,
             damage_mult: 1.0,
+            base_damage: crate::bolt::resources::DEFAULT_BOLT_BASE_DAMAGE,
         },
         Position2D(Vec2::new(0.0, 0.0)),
         Transform::from_xyz(500.0, 500.0, 0.0),

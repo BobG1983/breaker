@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use super::helpers::*;
-use crate::bolt::components::{Bolt, BoltServing};
+use crate::bolt::components::Bolt;
 
 #[test]
 fn bolt_moves_full_distance_no_cells() {
@@ -15,12 +15,7 @@ fn bolt_moves_full_distance_no_cells() {
 
     let start_y = 0.0;
     let speed = 400.0;
-    app.world_mut().spawn((
-        Bolt,
-        bolt_param_bundle(),
-        Velocity2D(Vec2::new(0.0, speed)),
-        Position2D(Vec2::new(0.0, start_y)),
-    ));
+    spawn_bolt(&mut app, 0.0, start_y, 0.0, speed);
 
     tick(&mut app);
 
@@ -41,7 +36,7 @@ fn bolt_moves_full_distance_no_cells() {
 #[test]
 fn bolt_reflects_off_cell_bottom() {
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
 
     let cell_y = 100.0;
@@ -49,12 +44,7 @@ fn bolt_reflects_off_cell_bottom() {
 
     // Place bolt below the cell's expanded AABB, moving upward
     let start_y = cell_y - cc.height / 2.0 - bc.radius - 5.0;
-    app.world_mut().spawn((
-        Bolt,
-        bolt_param_bundle(),
-        Velocity2D(Vec2::new(0.0, 400.0)),
-        Position2D(Vec2::new(0.0, start_y)),
-    ));
+    spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
 
     tick(&mut app);
 
@@ -87,7 +77,7 @@ fn bolt_reflects_off_cell_bottom() {
 #[test]
 fn bolt_reflects_off_cell_side() {
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
 
     let cell_x = 100.0;
@@ -95,12 +85,7 @@ fn bolt_reflects_off_cell_side() {
 
     // Place bolt left of cell, moving right
     let start_x = cell_x - cc.width / 2.0 - bc.radius - 5.0;
-    app.world_mut().spawn((
-        Bolt,
-        bolt_param_bundle(),
-        Velocity2D(Vec2::new(400.0, 0.1)), // mostly horizontal
-        Position2D(Vec2::new(start_x, 0.0)),
-    ));
+    spawn_bolt(&mut app, start_x, 0.0, 400.0, 0.1);
 
     tick(&mut app);
 
@@ -120,7 +105,7 @@ fn bolt_reflects_off_cell_side() {
 #[test]
 fn bolt_uses_remaining_distance_after_bounce() {
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
 
     let cell_y = 100.0;
@@ -130,12 +115,7 @@ fn bolt_uses_remaining_distance_after_bounce() {
     // It will hit quickly and have most of its movement remaining.
     let cell_bottom = cell_y - cc.height / 2.0 - bc.radius;
     let start_y = cell_bottom - 1.0;
-    app.world_mut().spawn((
-        Bolt,
-        bolt_param_bundle(),
-        Velocity2D(Vec2::new(0.0, 400.0)),
-        Position2D(Vec2::new(0.0, start_y)),
-    ));
+    spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
 
     tick(&mut app);
 
@@ -159,7 +139,7 @@ fn bolt_uses_remaining_distance_after_bounce() {
 #[test]
 fn bolt_hits_only_nearest_cell() {
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
 
     app.insert_resource(HitCells::default()).add_systems(
@@ -174,12 +154,7 @@ fn bolt_hits_only_nearest_cell() {
     spawn_cell(&mut app, 0.0, far_y);
 
     let start_y = near_y - cc.height / 2.0 - bc.radius - 2.0;
-    app.world_mut().spawn((
-        Bolt,
-        bolt_param_bundle(),
-        Velocity2D(Vec2::new(0.0, 400.0)),
-        Position2D(Vec2::new(0.0, start_y)),
-    ));
+    spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
 
     tick(&mut app);
 
@@ -192,7 +167,7 @@ fn bolt_hits_only_nearest_cell() {
 #[test]
 fn bolt_hit_cell_message_sent() {
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
     app.insert_resource(HitCells::default()).add_systems(
         FixedUpdate,
@@ -203,12 +178,7 @@ fn bolt_hit_cell_message_sent() {
     let cell_entity = spawn_cell(&mut app, 0.0, cell_y);
 
     let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
-    app.world_mut().spawn((
-        Bolt,
-        bolt_param_bundle(),
-        Velocity2D(Vec2::new(0.0, 400.0)),
-        Position2D(Vec2::new(0.0, start_y)),
-    ));
+    spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
 
     tick(&mut app);
 
@@ -226,12 +196,7 @@ fn no_collision_when_far_away() {
 
     spawn_cell(&mut app, 0.0, 200.0);
 
-    app.world_mut().spawn((
-        Bolt,
-        bolt_param_bundle(),
-        Velocity2D(Vec2::new(0.0, 300.0)),
-        Position2D(Vec2::new(0.0, -100.0)),
-    ));
+    spawn_bolt(&mut app, 0.0, -100.0, 0.0, 300.0);
 
     tick(&mut app);
 
@@ -247,7 +212,7 @@ fn no_collision_when_far_away() {
 #[test]
 fn max_bounces_cap() {
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
     app.insert_resource(HitCells::default()).add_systems(
         FixedUpdate,
@@ -261,12 +226,7 @@ fn max_bounces_cap() {
     spawn_cell(&mut app, 0.0, -(gap / 2.0 + cc.height / 2.0 + bc.radius));
 
     // Bolt in the channel, moving up very fast
-    app.world_mut().spawn((
-        Bolt,
-        bolt_param_bundle(),
-        Velocity2D(Vec2::new(0.1, 800.0)),
-        Position2D(Vec2::new(0.0, 0.0)),
-    ));
+    spawn_bolt(&mut app, 0.0, 0.0, 0.1, 800.0);
 
     tick(&mut app);
 
@@ -281,7 +241,7 @@ fn max_bounces_cap() {
 #[test]
 fn multiple_bolts_each_hit_different_cells() {
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
     app.insert_resource(HitCells::default()).add_systems(
         FixedUpdate,
@@ -294,19 +254,9 @@ fn multiple_bolts_each_hit_different_cells() {
     let start_y = 100.0 - cc.height / 2.0 - bc.radius - 2.0;
 
     // Bolt A near cell A
-    app.world_mut().spawn((
-        Bolt,
-        bolt_param_bundle(),
-        Velocity2D(Vec2::new(0.0, 400.0)),
-        Position2D(Vec2::new(-100.0, start_y)),
-    ));
+    spawn_bolt(&mut app, -100.0, start_y, 0.0, 400.0);
     // Bolt B near cell B
-    app.world_mut().spawn((
-        Bolt,
-        bolt_param_bundle(),
-        Velocity2D(Vec2::new(0.0, 400.0)),
-        Position2D(Vec2::new(100.0, start_y)),
-    ));
+    spawn_bolt(&mut app, 100.0, start_y, 0.0, 400.0);
 
     tick(&mut app);
 
@@ -320,16 +270,12 @@ fn multiple_bolts_each_hit_different_cells() {
 fn serving_bolt_is_not_advanced() {
     let mut app = test_app();
 
-    let entity = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            BoltServing,
-            bolt_param_bundle(),
-            Velocity2D(Vec2::new(0.0, 400.0)),
-            Position2D(Vec2::new(0.0, 0.0)),
-        ))
-        .id();
+    let entity = Bolt::builder()
+        .at_position(Vec2::ZERO)
+        .definition(&super::helpers::test_bolt_definition())
+        .serving()
+        .primary()
+        .spawn(app.world_mut());
 
     tick(&mut app);
 
@@ -349,7 +295,7 @@ fn bolt_cell_collision_populates_bolt_entity_in_message() {
     // not Entity::PLACEHOLDER. It will FAIL until the production code is fixed
     // to capture the bolt entity from the query binding.
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
     app.insert_resource(FullHitMessages::default()).add_systems(
         FixedUpdate,
@@ -360,15 +306,7 @@ fn bolt_cell_collision_populates_bolt_entity_in_message() {
     spawn_cell(&mut app, 0.0, cell_y);
 
     let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
-    let bolt_entity = app
-        .world_mut()
-        .spawn((
-            Bolt,
-            bolt_param_bundle(),
-            Velocity2D(Vec2::new(0.0, 400.0)),
-            Position2D(Vec2::new(0.0, start_y)),
-        ))
-        .id();
+    let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
 
     tick(&mut app);
 

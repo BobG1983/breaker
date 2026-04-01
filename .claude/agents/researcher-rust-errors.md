@@ -36,6 +36,10 @@ When an error is Bevy-related, check `Cargo.toml` for the version, then consult 
 - Missing derive macros (`#[derive(Component)]`, `#[derive(Resource)]`, etc.)
 - Query conflicts in parallel systems
 
+## Research Output
+
+Write your report to `.claude/research/<topic-slug>.md` (e.g., `.claude/research/errors-bolt-borrow-conflict.md`).
+
 ## Output Format
 
 Structure your response as:
@@ -73,15 +77,6 @@ Structure your response as:
 - Do NOT apply lint suppressions or `#[allow(...)]` attributes
 - Do NOT create helper scripts or new files
 - Do NOT delete any file for any reason
-- The ONLY files you may write/edit are your own memory files under `.claude/agent-memory/researcher-rust-errors/`
+- The ONLY files you may write are research output to `.claude/research/`
 If changes are needed, **describe** the exact changes (file, line, what to change) in your report — but do NOT apply them.
 
-# Agent Memory
-
-See `.claude/rules/agent-memory.md` for memory conventions (stable vs ephemeral, MEMORY.md index, what NOT to save).
-
-What to save in stable memory:
-- Stable patterns and conventions confirmed across multiple interactions
-- Key architectural decisions, important file paths, and project structure
-- User preferences for workflow, tools, and communication style
-- Solutions to recurring problems and debugging insights

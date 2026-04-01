@@ -4,15 +4,17 @@ description: Effect system patterns (Active*/Effective*, Phase 4 runtime effects
 type: project
 ---
 
-## Active*/Effective* pattern: silent no-op is intentional
+## Active* pattern: silent no-op is intentional (post Effective* cache removal)
 
 `fire()` functions check `world.get_mut::<Active*>()` and silently do nothing if
-the component isn't present. `recalculate_*` systems only match entities with both
-`Active*` AND `Effective*`. `dispatch_chip_effects` is a real system (not a stub) that
-fires chip effects via `BoundEffects`/`StagedEffects` — but `Active*` components are only
-inserted when an effect's `fire()` actually runs on a bolt or breaker entity.
-Consumers use `Option<&Effective*>` with `map_or(1.0)` fallback. The entire system
-is structurally correct and connected end-to-end.
+the component isn't present. There are NO `recalculate_*` systems and NO `Effective*`
+components — these were all removed in the Effective* cache-removal refactor (2026-03-30).
+`dispatch_chip_effects` is a real system (not a stub) that fires chip effects via
+`BoundEffects`/`StagedEffects` — but `Active*` components are only inserted when an
+effect's `fire()` actually runs on a bolt or breaker entity.
+Consumers call `Active*.multiplier()` / `Active*.total()` on demand. The entire system
+is structurally correct and connected end-to-end. Do NOT flag absence of `Effective*`
+components or `recalculate_*` systems — they were intentionally removed.
 
 ## Multiplicative stacking in Active*/Effective* — correct by design
 
@@ -107,6 +109,89 @@ after `tag_game_entities`. Both bugs from the prior review are fixed.
 `apply_pending_bolt_effects` (scenario-runner) now uses `insert_if_new((BoundEffects, StagedEffects))`
 before extending, matching the cell/wall variants. Previously it queried `&mut BoundEffects` directly
 and silently dropped effects if the component was absent.
+
+## Stat-boost lazy-init: Effective* cache removed in cache-removal refactor
+
+After the cache-removal refactor, `speed_boost`, `damage_boost`, `size_boost`, `bump_force`,
+and `piercing` `fire()` functions no longer insert `Effective*` components (they were removed).
+They now only lazy-init `Active*` with `insert(Active*::default())` if absent, then push
+the value. The old two-step guard is now a single-step guard. Do NOT re-flag the absence
+of `Effective*` insertion — it is correct post-refactor.
+
+`quick_stop::fire()` DIFFERS: it does NOT lazy-init `ActiveQuickStops` if absent — it silently
+no-ops. This is intentional: QuickStop only applies to entities that already have the component
+(breaker spawned with `ActiveQuickStops`). However, no gameplay system reads
+`ActiveQuickStops.multiplier()` for actual deceleration — confirmed open gap.
+
+## TetherBeam chain mode: collect-before-despawn in fire_chain is correct
+
+`fire_chain` (tether_beam/effect.rs line 105-111) collects existing `TetherChainBeam` entities
+into a `Vec<Entity>` first, then iterates the vec calling `world.despawn()`. This is the
+correct collect-before-despawn pattern for direct `&mut World` access. No aliasing issue.
+
+## TetherBeam maintain_tether_chain: deferred despawn during query iteration is safe
+
+`maintain_tether_chain` (tether_beam/effect.rs lines 274-276) iterates `chain_beams` query
+and calls `commands.entity(beam_entity).despawn()`. In Bevy 0.18, `Commands` are deferred —
+no execution happens during iteration. This is safe.
+
+## TetherBeam chain mode: With<Bolt> query intentionally includes standard tether bolts
+
+`fire_chain` (line 119) and `maintain_tether_chain` (line 265) both query `With<Bolt>` to
+find all bolts for chain connection — including standard-mode tether bolts (which also have Bolt+ExtraBolt).
+This is the intended design: chain mode connects ALL active bolts.
+
+## SpawnBolts inherit: query_filtered (With<Bolt>, Without<ExtraBolt>) correctly finds primary bolt
+
+`spawn_bolts/effect.rs:27` uses `query_filtered::<&BoundEffects, (With<Bolt>, Without<ExtraBolt>)>()`.
+This correctly matches only the primary bolt (has Bolt, does NOT have ExtraBolt). The `.next()`
+pick is intentional for the degenerate multi-primary-bolt case.
+
+## BoltBuilder typestate: build() silent OptionalBoltData drop is NOT a production bug
+
+`build()` terminals in `bolt/builder.rs` silently drop `spawned_by`, `lifespan`, `with_effects`,
+`inherited_effects`. But `bolt_params` IS captured in the returned tuple via `build_core()`.
+Actually: `build_core()` reads `optional.radius` — so radius IS preserved in `build()`.
+But `bolt_params` is only inserted via `spawn_inner()` — so `BoltSpawnOffsetY` etc. are absent
+from `build()` output even when `config()` was called.
+
+The test `build_without_from_config_has_no_bolt_params` is NOT a vacuous test — it tests the
+no-config path which genuinely has no bolt_params. The with-config `build()` path (lifespan dropped)
+has no test, but `build()` has zero production callers. Do NOT flag as active bug.
+
+## BoltBuilder config() radius ordering: .or() semantics are correct
+
+`config()` uses `optional.radius = optional.radius.or(Some(config.radius))`. This preserves
+any radius set via `.with_radius()` called BEFORE `.config()`. When `.with_radius()` is called
+AFTER `.config()`, it overwrites `optional.radius` (since `with_radius` does `self.optional.radius = Some(r)`
+unconditionally). Both orderings are correct and tested.
+
+## BoltBuilder: spawn() sends BoltSpawned even when bolt already exists — intentional
+
+`spawn_bolt` system returns early (sending `BoltSpawned`) when `existing_count > 0`. This is
+intentional and tested: `check_spawn_complete` consumes `BoltSpawned` as a spawn-complete
+signal regardless of whether a new entity was created.
+
+## attraction::apply_attraction and gravity_well::apply_gravity_pull steering model — CONFIRMED CORRECT (2026-04-01)
+
+Both systems use: `spatial.velocity.0 = (velocity + steering).normalize_or_zero(); apply_velocity_formula(...)`.
+Intentional steering model: blend direction then normalize, then scale to base_speed via formula.
+Commit "fix: attraction and gravity well use steering model with velocity formula" introduced this intentionally.
+
+`apply_gravity_pull` uses `Res<Time>` in FixedUpdate: correct (acts as Time<Fixed> per confirmed-patterns.md).
+`apply_gravity_pull` uses `spatial.position.0` (Position2D) not `global_position.0`: correct for bolts
+(root entities, no parent hierarchy). Do NOT re-flag.
+
+## f32::EPSILON matching in reverse() — CONFIRMED CORRECT pattern (2026-04-01)
+
+`(v - value).abs() < f32::EPSILON` in `attraction::reverse()`, `speed_boost::reverse()`,
+`anchor/tick_anchor` un-plant. Values pushed verbatim from caller-provided f32 constants —
+no arithmetic transformation between push and pop — same bit-pattern guaranteed. Do NOT re-flag.
+
+## circuit_breaker bumps_required=1 immediate reward path — CONFIRMED CORRECT (2026-04-01)
+
+`bumps_required=1`: first call inserts counter with remaining=0, fires reward immediately, resets to 1.
+Subsequent calls decrement from 1 to 0, fire reward, reset to 1. Fires on EVERY call. Tested. Correct.
 
 ## ShieldActive charge-decrement: deferred remove + eager in-memory decrement is intentional
 

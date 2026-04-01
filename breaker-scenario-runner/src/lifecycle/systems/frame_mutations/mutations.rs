@@ -6,17 +6,12 @@ use bevy::{ecs::system::SystemParam, prelude::*};
 use breaker::{
     breaker::components::BreakerState,
     chips::inventory::ChipInventory,
-    effect::{
-        EffectiveSpeedMultiplier,
-        effects::{
-            chain_lightning::{ChainLightningArc, ChainLightningChain, ChainState},
-            gravity_well::{GravityWellConfig, GravityWellMarker},
-            pulse::PulseRing,
-            second_wind::SecondWindWall,
-            shield::ShieldActive,
-            size_boost::{ActiveSizeBoosts, EffectiveSizeMultiplier},
-            speed_boost::ActiveSpeedBoosts,
-        },
+    effect::effects::{
+        chain_lightning::{ChainLightningArc, ChainLightningChain, ChainState},
+        gravity_well::{GravityWellConfig, GravityWellMarker},
+        pulse::PulseRing,
+        second_wind::SecondWindWall,
+        shield::ShieldActive,
     },
     run::{RunStats, node::resources::NodeTimer},
     screen::chip_select::{ChipOffering, ChipOffers},
@@ -155,9 +150,6 @@ pub fn apply_debug_frame_mutations(
                     targets.commands.spawn(PulseRing);
                 }
             }
-            MutationKind::InjectWrongEffectiveSpeed { wrong_value } => {
-                apply_inject_wrong_effective_speed(*wrong_value, &mut targets.commands);
-            }
             MutationKind::SpawnExtraChainArcs(count) => {
                 apply_spawn_extra_chain_arcs(*count, &mut targets.commands);
             }
@@ -166,9 +158,6 @@ pub fn apply_debug_frame_mutations(
             }
             MutationKind::SpawnExtraGravityWells(count) => {
                 apply_spawn_extra_gravity_wells(*count, &mut targets.commands);
-            }
-            MutationKind::InjectWrongSizeMultiplier { wrong_value } => {
-                apply_inject_wrong_size_multiplier(*wrong_value, &mut targets.commands);
             }
         }
     }
@@ -307,19 +296,6 @@ pub fn apply_inject_maxed_chip_offer(
     }
 }
 
-/// Spawns an entity with `ActiveSpeedBoosts([1.5])` and `EffectiveSpeedMultiplier(wrong_value)`.
-///
-/// Since `1.5 != wrong_value`, `check_effective_speed_consistent` will detect the
-/// divergence and fire a [`InvariantKind::EffectiveSpeedConsistent`] violation.
-///
-/// Used exclusively by the `effective_speed_consistent` self-test scenario.
-pub fn apply_inject_wrong_effective_speed(wrong_value: f32, commands: &mut Commands) {
-    commands.spawn((
-        ActiveSpeedBoosts(vec![1.5]),
-        EffectiveSpeedMultiplier(wrong_value),
-    ));
-}
-
 /// Sets the first tagged bolt's `Aabb2D.half_extents` to `Vec2::splat(999.0)`.
 ///
 /// No-op if no bolts exist. Used exclusively by the `aabb_matches_entity_dimensions`
@@ -346,14 +322,4 @@ pub fn apply_spawn_extra_gravity_wells(count: usize, commands: &mut Commands) {
             CleanupOnNodeExit,
         ));
     }
-}
-
-/// Spawns one entity with `ActiveSizeBoosts([1.5])` and `EffectiveSizeMultiplier(wrong_value)`.
-///
-/// Used exclusively by the `size_boost_in_range` self-test scenario.
-pub fn apply_inject_wrong_size_multiplier(wrong_value: f32, commands: &mut Commands) {
-    commands.spawn((
-        ActiveSizeBoosts(vec![1.5]),
-        EffectiveSizeMultiplier(wrong_value),
-    ));
 }

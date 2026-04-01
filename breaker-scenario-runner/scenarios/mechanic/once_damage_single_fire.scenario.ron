@@ -2,10 +2,10 @@
 // on the very first cell impact. The Once node must be consumed and must never re-arm.
 // Dense layout under chaos 0.5 drives hundreds of cell impacts across 5000 frames — if Once
 // re-fires on subsequent impacts, DamageBoost(3.0) stacks permanently and the multiplier
-// diverges. EffectiveSpeedConsistent is the primary signal: a corrupted ActiveSpeedBoosts
-// calculation from runaway DamageBoost stacks can flow back into speed state. NoEntityLeaks
+// diverges. A corrupted ActiveSpeedBoosts calculation from runaway DamageBoost stacks
+// can flow back into speed state. NoEntityLeaks
 // catches leaked OnceConsumed or sentinel entities left behind by the Once bookkeeping system.
-// NoNaN catches any f32 overflow from an unbounded stacking multiplier. BoltSpeedInRange is
+// NoNaN catches any f32 overflow from an unbounded stacking multiplier. BoltSpeedAccurate is
 // a secondary signal that speed-boosting side effects of damage overflow are caught at the
 // physics boundary. 5000 frames gives hundreds of re-trigger opportunities.
 (
@@ -13,8 +13,8 @@
     layout: "Dense",
     input: Chaos((action_prob: 0.5)),
     max_frames: 5000,
-    invariants: [BoltSpeedInRange, NoEntityLeaks, NoNaN],
-    expected_violations: None,
+    disallowed_failures: [BoltSpeedAccurate, NoEntityLeaks, NoNaN],
+    allowed_failures: None,
     debug_setup: None,
     allow_early_end: false,
     seed: 1337,

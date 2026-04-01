@@ -5,8 +5,8 @@
         actions: [],
     )),
     max_frames: 120,
-    invariants: [OfferingNoDuplicates],
-    expected_violations: [OfferingNoDuplicates],
+    disallowed_failures: [OfferingNoDuplicates],
+    allowed_failures: [OfferingNoDuplicates],
     debug_setup: (
         disable_physics: true,
     ),

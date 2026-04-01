@@ -1,15 +1,30 @@
 use bevy::prelude::*;
+use rantzsoft_spatial2d::queries::SpatialData;
+
+use crate::bolt::queries::apply_velocity_formula;
 
 /// Tracks active speed boost multipliers on an entity.
 ///
-/// Recalculation: `base_speed * product(all_boosts)`, clamped to [min, max].
+/// Formula: `base_speed * product(all_boosts)`, clamped to [min, max]. Computed on demand via `multiplier()`.
 #[derive(Component, Debug, Default, Clone)]
 pub struct ActiveSpeedBoosts(pub Vec<f32>);
 
 pub(crate) fn fire(entity: Entity, multiplier: f32, _source_chip: &str, world: &mut World) {
+    if world.get_entity(entity).is_err() {
+        return;
+    }
+
+    if world.get::<ActiveSpeedBoosts>(entity).is_none() {
+        world
+            .entity_mut(entity)
+            .insert(ActiveSpeedBoosts::default());
+    }
+
     if let Some(mut active) = world.get_mut::<ActiveSpeedBoosts>(entity) {
         active.0.push(multiplier);
     }
+
+    recalculate_velocity(entity, world);
 }
 
 pub(crate) fn reverse(entity: Entity, multiplier: f32, _source_chip: &str, world: &mut World) {
@@ -21,23 +36,21 @@ pub(crate) fn reverse(entity: Entity, multiplier: f32, _source_chip: &str, world
     {
         active.0.swap_remove(pos);
     }
+
+    recalculate_velocity(entity, world);
 }
 
-/// Effective speed multiplier computed by `recalculate_speed`.
-#[derive(Component, Debug, Clone, Copy, PartialEq)]
-pub struct EffectiveSpeedMultiplier(pub f32);
-
-impl Default for EffectiveSpeedMultiplier {
-    fn default() -> Self {
-        Self(1.0)
-    }
-}
-
-pub(crate) fn register(app: &mut App) {
-    app.add_systems(
-        FixedUpdate,
-        recalculate_speed.in_set(crate::effect::sets::EffectSystems::Recalculate),
-    );
+/// Recalculates bolt velocity after a speed boost change.
+///
+/// Queries `SpatialData` and calls `apply_velocity_formula` — the same
+/// function used by collision systems.
+fn recalculate_velocity(entity: Entity, world: &mut World) {
+    let boosts = world.get::<ActiveSpeedBoosts>(entity).cloned();
+    let mut query = world.query::<SpatialData>();
+    let Ok(mut spatial) = query.get_mut(world, entity) else {
+        return;
+    };
+    apply_velocity_formula(&mut spatial, boosts.as_ref());
 }
 
 impl ActiveSpeedBoosts {
@@ -49,12 +62,6 @@ impl ActiveSpeedBoosts {
         } else {
             self.0.iter().product()
         }
-    }
-}
-
-fn recalculate_speed(mut query: Query<(&ActiveSpeedBoosts, &mut EffectiveSpeedMultiplier)>) {
-    for (active, mut effective) in &mut query {
-        effective.0 = active.multiplier();
     }
 }
 
@@ -72,11 +79,30 @@ mod tests {
     }
 
     #[test]
-    fn fire_without_component_is_noop() {
+    fn fire_on_bare_entity_inserts_and_populates() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
         fire(entity, 1.5, "", &mut world);
+        let active = world.get::<ActiveSpeedBoosts>(entity).unwrap();
+        assert_eq!(active.0, vec![1.5]);
+    }
+
+    #[test]
+    fn reverse_on_bare_entity_double_call_no_panic() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+        reverse(entity, 1.5, "", &mut world);
+        reverse(entity, 1.5, "", &mut world);
         assert!(world.get::<ActiveSpeedBoosts>(entity).is_none());
+    }
+
+    #[test]
+    fn reverse_with_non_matching_value_is_noop() {
+        let mut world = World::new();
+        let entity = world.spawn(ActiveSpeedBoosts(vec![1.5, 2.0])).id();
+        reverse(entity, 999.0, "", &mut world);
+        let active = world.get::<ActiveSpeedBoosts>(entity).unwrap();
+        assert_eq!(active.0, vec![1.5, 2.0]);
     }
 
     #[test]
@@ -132,47 +158,89 @@ mod tests {
     }
 
     #[test]
-    fn recalculate_speed_single_boost() {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_systems(Update, recalculate_speed);
-        let entity = app
-            .world_mut()
-            .spawn((ActiveSpeedBoosts(vec![1.5]), EffectiveSpeedMultiplier(1.0)))
-            .id();
-        app.update();
-        let effective = app.world().get::<EffectiveSpeedMultiplier>(entity).unwrap();
-        assert!((effective.0 - 1.5).abs() < f32::EPSILON);
+    fn fire_recalculates_velocity_to_reflect_new_boost() {
+        use rantzsoft_spatial2d::components::Velocity2D;
+
+        use crate::bolt::{components::Bolt, definition::BoltDefinition};
+
+        fn test_bolt_definition() -> BoltDefinition {
+            BoltDefinition {
+                name: "Bolt".to_string(),
+                base_speed: 400.0,
+                min_speed: 200.0,
+                max_speed: 800.0,
+                radius: 8.0,
+                base_damage: 10.0,
+                effects: vec![],
+                color_rgb: [6.0, 5.0, 0.5],
+                min_angle_horizontal: 5.0,
+                min_angle_vertical: 5.0,
+            }
+        }
+
+        let mut world = World::new();
+        let def = test_bolt_definition();
+        let entity = Bolt::builder()
+            .at_position(Vec2::ZERO)
+            .definition(&def)
+            .with_velocity(Velocity2D(Vec2::new(0.0, def.base_speed)))
+            .primary()
+            .spawn(&mut world);
+
+        // Apply speed boost of 1.5x
+        fire(entity, 1.5, "test_chip", &mut world);
+
+        // After boost: speed should be base_speed * 1.5
+        let speed_after = world.get::<Velocity2D>(entity).unwrap().speed();
+        let expected = def.base_speed * 1.5;
+        assert!(
+            (speed_after - expected).abs() < 1.0,
+            "fire() should recalculate velocity: expected {expected}, got {speed_after}"
+        );
     }
 
     #[test]
-    fn recalculate_speed_multiple_boosts_multiplicative() {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_systems(Update, recalculate_speed);
-        let entity = app
-            .world_mut()
-            .spawn((
-                ActiveSpeedBoosts(vec![1.5, 2.0]),
-                EffectiveSpeedMultiplier(1.0),
-            ))
-            .id();
-        app.update();
-        let effective = app.world().get::<EffectiveSpeedMultiplier>(entity).unwrap();
-        assert!((effective.0 - 3.0).abs() < f32::EPSILON);
-    }
+    fn reverse_recalculates_velocity_to_reflect_removed_boost() {
+        use rantzsoft_spatial2d::components::Velocity2D;
 
-    #[test]
-    fn recalculate_speed_empty_boosts_resets_to_default() {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_systems(Update, recalculate_speed);
-        let entity = app
-            .world_mut()
-            .spawn((ActiveSpeedBoosts(vec![]), EffectiveSpeedMultiplier(3.0)))
-            .id();
-        app.update();
-        let effective = app.world().get::<EffectiveSpeedMultiplier>(entity).unwrap();
-        assert!((effective.0 - 1.0).abs() < f32::EPSILON);
+        use crate::bolt::{components::Bolt, definition::BoltDefinition};
+
+        fn test_bolt_definition() -> BoltDefinition {
+            BoltDefinition {
+                name: "Bolt".to_string(),
+                base_speed: 400.0,
+                min_speed: 200.0,
+                max_speed: 800.0,
+                radius: 8.0,
+                base_damage: 10.0,
+                effects: vec![],
+                color_rgb: [6.0, 5.0, 0.5],
+                min_angle_horizontal: 5.0,
+                min_angle_vertical: 5.0,
+            }
+        }
+
+        let mut world = World::new();
+        let def = test_bolt_definition();
+        let entity = Bolt::builder()
+            .at_position(Vec2::ZERO)
+            .definition(&def)
+            .with_velocity(Velocity2D(Vec2::new(0.0, def.base_speed * 1.5)))
+            .primary()
+            .spawn(&mut world);
+        world
+            .entity_mut(entity)
+            .insert(ActiveSpeedBoosts(vec![1.5]));
+
+        // Remove the boost
+        reverse(entity, 1.5, "test_chip", &mut world);
+
+        // After reverse: speed should be base_speed * 1.0
+        let speed_after = world.get::<Velocity2D>(entity).unwrap().speed();
+        assert!(
+            (speed_after - def.base_speed).abs() < 1.0,
+            "reverse() should recalculate velocity: expected {}, got {speed_after}",
+            def.base_speed
+        );
     }
 }

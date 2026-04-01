@@ -1,64 +1,81 @@
 # 5p: Transitions
 
-**Goal**: Add new transition styles and random selection, upgrading the existing flash/sweep transitions to match the visual identity.
+**Goal**: Implement 4 transition styles with random selection and PlayingState substate expansion.
+
+Architecture: `docs/architecture/rendering/transitions.md`
 
 ## What to Build
 
-### 1. Upgrade Existing Transitions
+### 1. PlayingState Substate Expansion
 
-**Flash transition** (PLACEHOLDER):
-- Current: Full-screen alpha fade
-- Target: Bloom spike + temperature-tinted color (not just white). Brief but impactful.
+Move `TransitionOut`, `ChipSelect`, `TransitionIn` from `GameState` to `PlayingState` substates:
+```
+GameState: Loading, MainMenu, RunSetup, Playing, RunEnd, MetaProgression
+PlayingState: Active, Paused, TransitionOut, ChipSelect, TransitionIn
+```
 
-**Sweep transition** (PLACEHOLDER):
-- Current: Full-screen rect sweep with solid color
-- Target: Energy beam edge instead of hard color boundary. Beam sweeps with glow and Spark particles trailing the edge.
+This means `OnEnter(PlayingState::Active)` fires on return from chip select — node spawning works naturally.
 
-### 2. Glitch Transition (New)
+### 2. Flash Transition
 
-- Screen corrupts with static/distortion
-- Scan line distortion intensifies
-- Chromatic aberration splits
-- Brief static noise overlay
-- Then resolves (In) or blacks out (Out)
+- Out: bloom spike + temperature-tinted flash, then black
+- In: bloom spike reveals scene
+- Uses `TriggerScreenFlash` via `rantzsoft_vfx`
 
-### 3. Collapse/Rebuild Transition (New)
+### 3. Sweep Transition
 
-- **In (entering node)**: Elements build outward from center point. Grid appears first, then walls, then cells materialize.
-- **Out (leaving node)**: Elements collapse inward to center. Cells dissolve, walls retract, grid folds in.
+- Out: energy beam sweeps across screen, concealing
+- In: energy beam sweeps, revealing
+- Uses `SpawnBeam` + `SpawnSparkBurst` trailing the beam edge
 
-### 4. Random Transition Selection
+### 4. Glitch Transition
 
-- System randomly selects one In-style and one Out-style per node transition
-- In and Out styles can be different (e.g., Glitch out, Sweep in)
-- Selection driven by run seed for deterministic replay
-- Pool: Flash, Sweep, Glitch, Collapse/Rebuild (expandable)
+- Out: chromatic aberration intensifies, scan line distortion, static noise → blackout
+- In: resolves from corruption
+- Uses `TriggerChromaticAberration` + `TriggerRadialDistortion` + `TriggerScreenFlash`
 
-### 5. Transition Speed and Pool
+### 5. Collapse/Rebuild Transition
 
-All transitions take ~0.3-0.5s. Transitions are fast — Pillar 1 says tension never stops, so transitions should not be rest moments.
+Tile-based screen effect via `collapse_rebuild.wgsl` FullscreenMaterial:
+- Out: tiles shrink + slide toward center in radial wave (edges first, center last), slight rotation per tile
+- In: tiles expand outward from center (center first, edges last)
+- Uniforms: `progress` (0.0–1.0), `direction` (in/out), `tile_count`, `tile_seed`
+- Purely screen-space — doesn't touch game entities
 
-Ship with 4 styles. System is **extensible** — adding a new transition means adding an enum variant and defining `rendering/transition/<name>/*`. More can be added in Phase 11 polish if playtesting reveals repetition.
+### 6. Random Selection
+
+`TransitionStyle` enum: Flash, Sweep, Glitch, CollapseRebuild. Random selection via `GameRng` (seeded for deterministic replay). In and Out styles can differ.
+
+### 7. Transition Flow
+
+```
+PlayingState::Active → NodeCleared → set TransitionOut
+    → screen/ plays Out animation → on completion: set ChipSelect
+    → player selects chip → set TransitionIn
+    → screen/ plays In animation → on completion: set Active
+    → OnEnter(Active) fires → node spawns
+```
+
+`TransitionComplete` message sent by `screen/` when In animation finishes.
+
+~0.3–0.5s each. All transitions live in `screen/transition/`.
+
+## Sequencing
+
+**This step is infrastructure** — it runs alongside 5d-5f, before entity visuals (5g-5j). The PlayingState substate expansion must be in place before any step writes code that references transition states. Transition style implementation (the visual effects) can happen in parallel with 5d-5f since it needs the post-processing pipeline.
 
 ## Dependencies
 
-- **Requires**: 5c (rendering/ absorbed fx/transition code), 5d (post-processing for distortion/chromatic in Glitch transition), 5e (particles for Sweep beam edge), 5f (temperature palette for flash tinting)
+- **Requires**: 5c (crate, screen/transition/ exists)
+- **Enhanced by**: 5d (post-processing for flash/chromatic/distortion in Glitch style), 5e (particles for Sweep sparks)
+- **Blocks**: 5g-5w (all subsequent steps use the final PlayingState machine)
 - DR-8 resolved: 4 + extensible
-
-## What This Step Builds
-
-- Upgraded Flash transition (bloom spike + temperature tint, replacing plain alpha fade)
-- Upgraded Sweep transition (energy beam edge, replacing solid color rect)
-- New Glitch transition (static/distortion → resolve or blackout)
-- New Collapse/Rebuild transition (elements build outward / collapse inward)
-- Random transition selection system (seed-driven, In and Out styles can differ)
-- Extensible transition pool (enum + module pattern: rendering/transition/<name>/*)
 
 ## Verification
 
 - All 4 transition styles work for both In and Out
 - Random selection produces different combinations across nodes
-- Transitions complete within 0.3-0.5t
-- Glitch transition uses screen distortion and chromatic aberration
-- Collapse/Rebuild materializes/dematerializes elements smoothly
+- Transitions complete within 0.3-0.5s
+- PlayingState substate expansion works (OnEnter/OnExit fire correctly)
+- `TransitionComplete` fires on In animation completion
 - All existing tests pass

@@ -1,4 +1,4 @@
-//! Tests for `EffectiveSizeMultiplier` (width boost) and `EntityScale` collision
+//! Tests for `ActiveSizeBoosts` (width boost) and `EntityScale` collision
 //! behavior on the breaker.
 
 use bevy::prelude::*;
@@ -7,14 +7,14 @@ use rantzsoft_spatial2d::components::{Position2D, Spatial2D, Velocity2D};
 use super::super::helpers::*;
 use crate::{
     breaker::components::{Breaker, BreakerTilt},
-    effect::EffectiveSizeMultiplier,
+    effect::effects::size_boost::ActiveSizeBoosts,
     shared::{EntityScale, GameDrawLayer},
 };
 
 // --- WidthBoost tests ---
 
 #[test]
-fn effective_size_multiplier_widens_breaker_collision_width() {
+fn active_size_boosts_widens_breaker_collision_width() {
     let mut app = test_app();
     let hh = default_breaker_height();
     let y_pos = -250.0;
@@ -24,9 +24,8 @@ fn effective_size_multiplier_widens_breaker_collision_width() {
         BreakerTilt::default(),
         default_breaker_width(),
         default_breaker_height(),
-        default_max_reflection_angle(),
-        default_min_angle(),
-        EffectiveSizeMultiplier(4.0_f32 / 3.0),
+        default_reflection_spread(),
+        ActiveSizeBoosts(vec![4.0_f32 / 3.0]),
         Position2D(Vec2::new(0.0, y_pos)),
         Spatial2D,
         GameDrawLayer::Breaker,
@@ -86,7 +85,7 @@ fn bolt_outside_scaled_breaker_width_misses() {
 }
 
 #[test]
-fn effective_size_multiplier_stacks_with_entity_scale_in_collision() {
+fn active_size_boosts_stacks_with_entity_scale_in_collision() {
     let mut app = test_app();
     let hh = default_breaker_height();
     let y_pos = -250.0;
@@ -96,9 +95,8 @@ fn effective_size_multiplier_stacks_with_entity_scale_in_collision() {
         BreakerTilt::default(),
         default_breaker_width(),
         default_breaker_height(),
-        default_max_reflection_angle(),
-        default_min_angle(),
-        EffectiveSizeMultiplier(4.0_f32 / 3.0),
+        default_reflection_spread(),
+        ActiveSizeBoosts(vec![4.0_f32 / 3.0]),
         EntityScale(0.7),
         Position2D(Vec2::new(0.0, y_pos)),
         Spatial2D,

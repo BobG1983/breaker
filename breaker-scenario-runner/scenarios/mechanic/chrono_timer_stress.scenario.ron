@@ -3,8 +3,8 @@
     layout: "Corridor",
     input: Chaos((action_prob: 0.05)),
     max_frames: 10000,
-    invariants: [TimerNonNegative, BoltInBounds, ValidStateTransitions],
-    expected_violations: None,
+    disallowed_failures: [TimerNonNegative, BoltInBounds, ValidStateTransitions],
+    allowed_failures: None,
     debug_setup: None,
     seed: 55,
 )

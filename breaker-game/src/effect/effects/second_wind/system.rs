@@ -8,7 +8,7 @@ use rantzsoft_spatial2d::components::{Position2D, Scale2D};
 
 use crate::{
     bolt::messages::BoltImpactWall,
-    shared::{BOLT_LAYER, PlayfieldConfig, WALL_LAYER},
+    shared::{BOLT_LAYER, CleanupOnNodeExit, PlayfieldConfig, WALL_LAYER},
     wall::components::{Wall, WallSize},
 };
 
@@ -47,6 +47,7 @@ pub(crate) fn fire(_entity: Entity, _source_chip: &str, world: &mut World) {
             },
             Aabb2D::new(Vec2::ZERO, Vec2::new(half_width, wall_ht)),
             CollisionLayers::new(WALL_LAYER, BOLT_LAYER),
+            CleanupOnNodeExit,
         ))
         .id();
 

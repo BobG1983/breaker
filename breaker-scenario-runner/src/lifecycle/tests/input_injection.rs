@@ -113,7 +113,7 @@ fn init_scenario_input_creates_driver_resource() {
             layout: "corridor".to_owned(),
             input: InputStrategy::Chaos(ChaosParams { action_prob: 0.3 }),
             max_frames: 1000,
-            invariants: vec![],
+            disallowed_failures: vec![],
             ..Default::default()
         },
     });

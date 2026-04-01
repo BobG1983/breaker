@@ -4,7 +4,7 @@
     effects: [
         On(target: Bolt, then: [
             When(trigger: CellDestroyed, then: [
-                Do(GravityWell(strength: 500.0, duration: 3.0, radius: 128.0, max: 2)),
+                Do(GravityWell(strength: 500.0, duration: 5.0, radius: 160.0, max: 4)),
             ]),
         ]),
     ],

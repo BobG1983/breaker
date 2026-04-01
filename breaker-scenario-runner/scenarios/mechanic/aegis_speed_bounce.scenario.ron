@@ -3,8 +3,8 @@
     layout: "Fortress",
     input: Chaos((action_prob: 0.5)),
     max_frames: 10000,
-    invariants: [BoltSpeedInRange, BoltInBounds, NoNaN],
-    expected_violations: None,
+    disallowed_failures: [BoltSpeedAccurate, BoltInBounds, NoNaN],
+    allowed_failures: None,
     debug_setup: None,
     seed: 400,
 )

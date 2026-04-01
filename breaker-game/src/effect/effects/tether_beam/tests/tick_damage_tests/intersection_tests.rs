@@ -1,6 +1,6 @@
 //! Tests for beam-cell intersection geometry: segment vs AABB, multiple cells, dedup.
 
-use super::super::*;
+use super::super::helpers::*;
 
 #[test]
 fn tick_tether_beam_damages_cell_intersecting_beam_segment() {
@@ -20,7 +20,7 @@ fn tick_tether_beam_damages_cell_intersecting_beam_segment() {
         collector.0.len()
     );
     assert_eq!(collector.0[0].cell, cell);
-    let expected_damage = BASE_BOLT_DAMAGE * 2.0;
+    let expected_damage = DEFAULT_BOLT_BASE_DAMAGE * 2.0;
     assert!(
         (collector.0[0].damage - expected_damage).abs() < f32::EPSILON,
         "expected damage {expected_damage}, got {}",
@@ -113,8 +113,8 @@ fn tick_tether_beam_damages_multiple_cells_along_beam() {
 
     for msg in &collector.0 {
         assert!(
-            (msg.damage - BASE_BOLT_DAMAGE).abs() < f32::EPSILON,
-            "each cell damage should be BASE_BOLT_DAMAGE * 1.0 = 10.0, got {}",
+            (msg.damage - DEFAULT_BOLT_BASE_DAMAGE).abs() < f32::EPSILON,
+            "each cell damage should be DEFAULT_BOLT_BASE_DAMAGE * 1.0 = 10.0, got {}",
             msg.damage
         );
     }

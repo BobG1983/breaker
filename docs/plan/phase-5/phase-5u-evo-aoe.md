@@ -16,7 +16,7 @@
 
 ### Gravity Well (Evolution)
 
-**Behavior**: Cell destroy → gravity well (pull force, 3s duration, 128 radius, max 2 active).
+**Behavior**: Cell destroy → gravity well (strength 500, 5s duration, 160 radius, max 4 active).
 
 **VFX direction**: Larger/more intense version of base gravity well (5m).
 - Wider radius than base gravity well
@@ -38,7 +38,7 @@
 
 ## Dependencies
 
-- **Requires**: 5c (rendering/), 5d (post-processing: bloom, distortion), 5e (particles: Spark, Glow Mote, Energy Ring), 5k (screen effects: shake, flash, slow-mo), 5m (base Shockwave and Gravity Well VFX as reference)
+- **Requires**: 5c (rantzsoft_vfx crate), 5d (post-processing: bloom, distortion), 5e (particles: Spark, Glow Mote, Energy Ring), 5k (screen effects: shake, flash, slow-mo), 5m (base Shockwave and Gravity Well VFX as reference)
 - DR-9 resolved: Supernova corrected (cascade, not single blast), Dead Man's Hand pending mechanic rework
 
 ## Verification

@@ -31,13 +31,17 @@ pub(crate) const MAX_BOUNCES: u32 = 4;
 
 use crate::{
     bolt::{
-        BASE_BOLT_DAMAGE, components::Bolt, filters::ActiveFilter, messages::BoltImpactCell,
-        queries::CollisionQueryBolt,
+        components::{Bolt, LastImpact, ccd_normal_to_impact_side},
+        filters::ActiveFilter,
+        messages::BoltImpactCell,
+        queries::{BoltCollisionData, apply_velocity_formula},
+        resources::DEFAULT_BOLT_BASE_DAMAGE,
     },
     cells::{
         components::{Cell, CellHealth},
         messages::DamageCell,
     },
+    effect::effects::damage_boost::ActiveDamageBoosts,
     shared::CELL_LAYER,
 };
 
@@ -85,9 +89,10 @@ fn find_first_non_pierced<'a>(
 /// continues with the remaining movement distance. Sends [`BoltImpactCell`]
 /// and [`DamageCell`] messages for each cell hit.
 pub(crate) fn bolt_cell_collision(
+    mut commands: Commands,
     time: Res<Time<Fixed>>,
     quadtree: Res<CollisionQuadtree>,
-    mut bolt_query: Query<CollisionQueryBolt, ActiveFilter>,
+    mut bolt_query: Query<BoltCollisionData, ActiveFilter>,
     candidate_lookup: CandidateLookup,
     mut writers: CollisionWriters,
     mut pierced_this_frame: Local<Vec<Entity>>,
@@ -95,28 +100,24 @@ pub(crate) fn bolt_cell_collision(
     let (ref mut hit_writer, ref mut damage_writer) = writers;
     let dt = time.delta_secs();
 
-    for (
-        bolt_entity,
-        mut bolt_position,
-        mut bolt_vel,
-        _,
-        bolt_radius,
-        mut piercing_remaining,
-        _effective_piercing,
-        damage_mult,
-        bolt_entity_scale,
-        spawned_by_evo,
-    ) in &mut bolt_query
-    {
-        let bolt_scale = bolt_entity_scale.map_or(1.0, |s| s.0);
-        let r = bolt_radius.0 * bolt_scale;
-        let mut position = bolt_position.0;
-        let mut velocity = bolt_vel.0;
+    for mut bolt in &mut bolt_query {
+        let bolt_scale = bolt.collision.entity_scale.map_or(1.0, |s| s.0);
+        let r = bolt.collision.radius.0 * bolt_scale;
+        let mut position = bolt.spatial.position.0;
+        let mut velocity = bolt.spatial.velocity.0;
         let mut remaining = velocity.length() * dt;
 
         // Effective damage for pierce lookahead (compared against cell HP).
         // must match `handle_cell_hit` damage formula
-        let effective_damage = BASE_BOLT_DAMAGE * damage_mult.map_or(1.0, |e| e.0);
+        let base_damage = bolt
+            .collision
+            .base_damage
+            .map_or(DEFAULT_BOLT_BASE_DAMAGE, |d| d.0);
+        let effective_damage = base_damage
+            * bolt
+                .collision
+                .active_damage_boosts
+                .map_or(1.0, ActiveDamageBoosts::multiplier);
 
         // Clear per-bolt pierce skip set
         pierced_this_frame.clear();
@@ -165,13 +166,18 @@ pub(crate) fn bolt_cell_collision(
             }
 
             // Check if this bolt can pierce this cell
-            let can_pierce = piercing_remaining.as_deref().is_some_and(|pr| pr.0 > 0);
+            let can_pierce = bolt
+                .collision
+                .piercing_remaining
+                .as_deref()
+                .is_some_and(|pr| pr.0 > 0);
             let cell_hp = cell_health.map(|h| h.current);
             let would_destroy = cell_hp.is_some_and(|hp| hp <= effective_damage);
 
             if can_pierce && would_destroy {
                 // PIERCE: do NOT reflect; decrement remaining pierces
-                if let Some(ref mut pr) = piercing_remaining {
+                // Do NOT stamp LastImpact on pierce-through.
+                if let Some(ref mut pr) = bolt.collision.piercing_remaining {
                     pr.0 = pr.0.saturating_sub(1);
                 }
                 pierced_this_frame.push(hit.entity);
@@ -179,19 +185,33 @@ pub(crate) fn bolt_cell_collision(
             } else {
                 // NORMAL: reflect
                 velocity = reflect(velocity, hit.normal);
+                // Stamp LastImpact on reflect only
+                let side = ccd_normal_to_impact_side(hit.normal);
+                if let Some(li) = bolt.collision.last_impact.as_mut() {
+                    li.position = hit.position;
+                    li.side = side;
+                } else {
+                    commands.entity(bolt.entity).insert(LastImpact {
+                        position: hit.position,
+                        side,
+                    });
+                }
             }
             hit_writer.write(BoltImpactCell {
                 cell: hit.entity,
-                bolt: bolt_entity,
+                bolt: bolt.entity,
             });
             damage_writer.write(DamageCell {
                 cell: hit.entity,
                 damage: effective_damage,
-                source_chip: spawned_by_evo.map(|s| s.0.clone()),
+                source_chip: bolt.collision.spawned_by_evolution.map(|s| s.0.clone()),
             });
         }
 
-        bolt_position.0 = position;
-        bolt_vel.0 = velocity;
+        bolt.spatial.position.0 = position;
+        bolt.spatial.velocity.0 = velocity;
+
+        // Apply the canonical velocity formula after all CCD bounces are resolved
+        apply_velocity_formula(&mut bolt.spatial, bolt.collision.active_speed_boosts);
     }
 }

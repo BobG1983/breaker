@@ -80,20 +80,41 @@ pub(super) fn select_chip(app: &mut App, name: &str) {
 
 /// Spawn a Bolt entity with effect components.
 pub(super) fn spawn_bolt(app: &mut App) -> Entity {
+    use rantzsoft_spatial2d::components::Velocity2D;
+
     use crate::{
-        bolt::components::Bolt,
+        bolt::{components::Bolt, definition::BoltDefinition},
         effect::effects::{damage_boost::ActiveDamageBoosts, speed_boost::ActiveSpeedBoosts},
     };
 
-    app.world_mut()
-        .spawn((
-            Bolt,
-            BoundEffects::default(),
-            StagedEffects::default(),
-            ActiveDamageBoosts::default(),
-            ActiveSpeedBoosts::default(),
-        ))
-        .id()
+    let def = BoltDefinition {
+        name: "Bolt".to_string(),
+        base_speed: 400.0,
+        min_speed: 200.0,
+        max_speed: 800.0,
+        radius: 8.0,
+        base_damage: 10.0,
+        effects: vec![],
+        color_rgb: [6.0, 5.0, 0.5],
+        min_angle_horizontal: 5.0,
+        min_angle_vertical: 5.0,
+    };
+    let entity = Bolt::builder()
+        .at_position(Vec2::ZERO)
+        .definition(&def)
+        .with_velocity(Velocity2D(Vec2::ZERO))
+        .primary()
+        .spawn(app.world_mut());
+
+    // Test-specific effect components not handled by builder
+    app.world_mut().entity_mut(entity).insert((
+        BoundEffects::default(),
+        StagedEffects::default(),
+        ActiveDamageBoosts::default(),
+        ActiveSpeedBoosts::default(),
+    ));
+
+    entity
 }
 
 /// Spawn a Breaker entity with effect components.

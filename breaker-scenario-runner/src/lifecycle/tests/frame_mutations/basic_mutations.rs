@@ -15,7 +15,7 @@ fn apply_debug_frame_mutations_noop_when_none() {
         layout: "Corridor".to_owned(),
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
-        invariants: vec![],
+        disallowed_failures: vec![],
         ..Default::default()
     };
 
@@ -43,7 +43,7 @@ fn apply_debug_frame_mutations_set_breaker_state_at_matching_frame() {
         layout: "Corridor".to_owned(),
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
-        invariants: vec![],
+        disallowed_failures: vec![],
         frame_mutations: Some(vec![FrameMutation {
             frame: 3,
             mutation: MutationKind::SetBreakerState(ScenarioBreakerState::Braking),
@@ -89,7 +89,7 @@ fn apply_debug_frame_mutations_set_breaker_state_skips_non_matching_frame() {
         layout: "Corridor".to_owned(),
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
-        invariants: vec![],
+        disallowed_failures: vec![],
         frame_mutations: Some(vec![FrameMutation {
             frame: 3,
             mutation: MutationKind::SetBreakerState(ScenarioBreakerState::Braking),
@@ -135,7 +135,7 @@ fn apply_debug_frame_mutations_set_timer_remaining_at_matching_frame() {
         layout: "Corridor".to_owned(),
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
-        invariants: vec![],
+        disallowed_failures: vec![],
         frame_mutations: Some(vec![FrameMutation {
             frame: 5,
             mutation: MutationKind::SetTimerRemaining(61.0),
@@ -176,7 +176,7 @@ fn apply_debug_frame_mutations_set_timer_remaining_noop_when_no_timer() {
         layout: "Corridor".to_owned(),
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
-        invariants: vec![],
+        disallowed_failures: vec![],
         frame_mutations: Some(vec![FrameMutation {
             frame: 5,
             mutation: MutationKind::SetTimerRemaining(61.0),

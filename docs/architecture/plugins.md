@@ -86,15 +86,15 @@ src/
 
 **Nested sub-domain plugins** — a domain may contain child plugins for cohesive subsets of functionality (e.g., breaker archetypes). The parent plugin adds child plugins via `app.add_plugins()`. `game.rs` only knows about top-level plugins. See [layout.md](layout.md) for the full nesting rules and folder structure.
 
-**Cross-domain SystemSet exports** — domains that expose ordering anchors for other domains define a `pub enum {Domain}Systems` in `sets.rs`. Current exported sets: `BreakerSystems` (`breaker/sets.rs`), `BoltSystems` (`bolt/sets.rs`), `EffectSystems` (`effect/sets.rs`, variants: `Bridge`, `Recalculate`), `UiSystems` (`ui/sets.rs`), `NodeSystems` (`run/node/sets.rs`). The external crates also export ordering sets: `rantzsoft_physics2d::PhysicsSystems` (`MaintainQuadtree`, `EnforceDistanceConstraints`) for ordering against the quadtree; `rantzsoft_spatial2d::SpatialSystems` (`SavePrevious`, `ApplyVelocity`, `ComputeGlobals`, `DeriveTransform`) for ordering against the spatial pipeline stages; `rantzsoft_defaults::DefaultsSystems` (`Seed`, `PropagateDefaults`) for ordering config-seeding systems via `RantzDefaultsPlugin`. See [ordering.md](ordering.md) for the full table and usage rules.
+**Cross-domain SystemSet exports** — domains that expose ordering anchors for other domains define a `pub enum {Domain}Systems` in `sets.rs`. Current exported sets: `BreakerSystems` (`breaker/sets.rs`), `BoltSystems` (`bolt/sets.rs`), `EffectSystems` (`effect/sets.rs`, variants: `Bridge`), `UiSystems` (`ui/sets.rs`), `NodeSystems` (`run/node/sets.rs`). The external crates also export ordering sets: `rantzsoft_physics2d::PhysicsSystems` (`MaintainQuadtree`, `EnforceDistanceConstraints`) for ordering against the quadtree; `rantzsoft_spatial2d::SpatialSystems` (`SavePrevious`, `ApplyVelocity`, `ComputeGlobals`, `DeriveTransform`) for ordering against the spatial pipeline stages; `rantzsoft_defaults::DefaultsSystems` (`Seed`, `PropagateDefaults`) for ordering config-seeding systems via `RantzDefaultsPlugin`. See [ordering.md](ordering.md) for the full table and usage rules.
 
 ## Cross-Domain Read Access
 
 The architectural boundary is about **writes** (mutations), not reads. Domains freely **read** other domains' types — components, message types, resources — via standard ECS queries. This is normal Bevy and not a violation:
 
-- **bolt** (collision systems) reads `PiercingRemaining` (bolt domain — bolt gameplay state), `EffectivePiercing`, `EffectiveDamageMultiplier` (effect domain) from bolt entities, `CellHealth` (cells domain) from cell entities, and `BreakerWidth`, `BreakerHeight` (breaker domain) from the breaker entity. The bolt collision systems also write message types owned by other domains (e.g., writing a cells-domain `DamageCell` message). This is expected — collision is a cross-cutting concern now hosted in the bolt domain.
-- **cells** receives pre-computed damage via the `DamageCell` message — it does not read `EffectiveDamageMultiplier` directly. The bolt domain's `bolt_cell_collision` applies the multiplier when writing the message.
-- **breaker** reads `EffectiveSpeedMultiplier`, `EffectiveSizeMultiplier` (effect domain) from its own entity.
+- **bolt** (collision systems) reads `PiercingRemaining` (bolt domain — bolt gameplay state), `ActivePiercings`, `ActiveDamageBoosts` (effect domain) from bolt entities, `CellHealth` (cells domain) from cell entities, and `BreakerWidth`, `BreakerHeight` (breaker domain) from the breaker entity. The bolt collision systems also write message types owned by other domains (e.g., writing a cells-domain `DamageCell` message). This is expected — collision is a cross-cutting concern now hosted in the bolt domain.
+- **cells** receives pre-computed damage via the `DamageCell` message — it does not read `ActiveDamageBoosts` directly. The bolt domain's `bolt_cell_collision` applies the multiplier when writing the message.
+- **breaker** reads `ActiveSpeedBoosts`, `ActiveSizeBoosts` (effect domain) from its own entity.
 - **effect** reads `BumpPerformed`, `BumpWhiffed` (breaker domain), `BoltImpactCell`, `BoltImpactBreaker`, `BoltImpactWall`, `BreakerImpactCell`, `BreakerImpactWall`, `BoltLost` (bolt/breaker domains), and `RequestCellDestroyed` / `CellDestroyedAt` (cells domain) messages in bridge systems.
 
 **The rule**: any domain may `use crate::other_domain::*` for read-only queries and message consumption. No domain writes to another domain's canonical components or resources directly — that flows through messages. The `debug/` domain is the accepted exception (read AND write, compiled out of release builds). There is one additional narrow production exception — see "ShieldActive Cross-Domain Write" below.
@@ -110,12 +110,13 @@ Both systems use `Commands::remove::<ShieldActive>()` to despawn the component w
 
 ## Velocity2D Cross-Domain Write Exception
 
-`Velocity2D` (rantzsoft_spatial2d component) on bolt entities is written by two effect domain runtime systems as an accepted architectural exception:
+`Velocity2D` (rantzsoft_spatial2d component) on bolt entities is written by effect domain systems as an accepted architectural exception. Three write paths exist:
 
-- **effect** (`apply_gravity_pull` in `effect/effects/gravity_well.rs`): writes `&mut Velocity2D` on bolt entities each FixedUpdate tick to apply gravitational pull toward active gravity wells. Ordered `.before(BoltSystems::PrepareVelocity)` so the bolt domain's speed clamping still applies.
-- **effect** (`apply_attraction` in `effect/effects/attraction/effect.rs`): writes `&mut Velocity2D` on bolt entities each FixedUpdate tick to steer bolts toward the nearest attraction target. Ordered `.after(PhysicsSystems::MaintainQuadtree)` for quadtree lookups.
+- **effect** (`apply_gravity_pull` in `effect/effects/gravity_well/effect.rs`): steers bolt velocity toward active gravity wells each FixedUpdate tick. Uses `SpatialData` query and calls `apply_velocity_formula` after steering to enforce speed constraints.
+- **effect** (`apply_attraction` in `effect/effects/attraction/effect.rs`): steers bolt velocity toward the nearest attraction target each FixedUpdate tick. Uses `SpatialData` query and calls `apply_velocity_formula` after steering. Ordered `.after(PhysicsSystems::MaintainQuadtree)` for quadtree lookups.
+- **effect** (`speed_boost::fire()` / `reverse()` in `effect/effects/speed_boost.rs`): immediately recalculates bolt velocity via `recalculate_velocity` (calls `apply_velocity_formula`) when a speed boost is applied or removed. This ensures bolt speed reflects the new multiplier without waiting for the next tick.
 
-Both systems apply simple arithmetic forces to bolt velocity. Adding message indirection (effect writes a force message, bolt reads and applies) would add complexity without benefit. The bolt domain's `prepare_bolt_velocity` speed clamping runs after these writes, so bolt speed limits are always enforced.
+All paths call `apply_velocity_formula` to enforce `(base_speed * boost_mult).clamp(min, max)` magnitude. This is the same velocity enforcement used by collision systems — there is no separate `prepare_bolt_velocity` step.
 
 ## Debug Domain — Cross-Domain Exception
 
@@ -139,19 +140,25 @@ effect/
   core/
     mod.rs             # Re-exports from types/
     types/             # Directory module (split from types.rs)
-      mod.rs           # Re-exports from definitions.rs
-      definitions.rs   # All core types: Trigger, ImpactTarget, Target, AttractionType,
+      mod.rs           # Re-exports from definitions/
+      definitions/     # Directory module (split from definitions.rs for fire/reverse line count)
+        enums.rs       # All core types: Trigger, ImpactTarget, Target, AttractionType,
                        #   RootEffect, EffectNode, EffectKind, BoundEffects, StagedEffects, EffectSourceChip
+        fire.rs        # EffectKind::fire() + 3 private helpers
+        reverse.rs     # EffectKind::reverse() + 3 private helpers
   effects/             # Per-effect modules with fire(), reverse(), register()
-    mod.rs             # pub mod declarations + register() dispatcher + spawn_extra_bolt helper
+    mod.rs             # pub mod declarations + register() dispatcher
     speed_boost.rs     # ActiveSpeedBoosts, fire(), reverse(), register()
     damage_boost.rs    # fire(), reverse(), register()
     life_lost.rs       # fire(), reverse(), register()
     ramping_damage.rs  # fire(), reverse(), register()
     quick_stop.rs      # fire(), reverse(), register()
-    piercing.rs / size_boost.rs / bump_force.rs / shield.rs / gravity_well.rs / time_penalty.rs
+    flash_step.rs      # fire(), reverse(), register()
+    piercing.rs / size_boost.rs / bump_force.rs / shield.rs / time_penalty.rs
+    gravity_well/          # Directory module (split for tests)
     shockwave/ chain_bolt/ chain_lightning/ explode/ tether_beam/ pulse/ piercing_beam/
     attraction/ spawn_bolts/ spawn_phantom/ entropy_engine/ second_wind/ random_effect/
+    anchor/ circuit_breaker/ mirror_protocol/
     ... (directory modules — split per System File Split Convention when tests exceed ~400 lines)
   triggers/            # Bridge systems (one file or dir per trigger type)
     mod.rs             # pub mod declarations + register() dispatcher
@@ -167,7 +174,7 @@ effect/
   commands.rs          # EffectCommandsExt trait (fire_effect, reverse_effect, transfer_effect)
   mod.rs               # Re-exports + pub mod declarations
   plugin.rs            # EffectPlugin — calls effects::register() and triggers::register()
-  sets.rs              # EffectSystems::Bridge, EffectSystems::Recalculate sets
+  sets.rs              # EffectSystems::Bridge set
 ```
 
 ### Effect File Pattern
@@ -180,16 +187,19 @@ Each effect module provides three free functions and any active-state components
 // Active state (vec of applied multipliers on the entity)
 pub struct ActiveSpeedBoosts(pub Vec<f32>);
 
-// Fire: push multiplier onto the vec
-pub(crate) fn fire(entity: Entity, multiplier: f32, world: &mut World) { ... }
-
-// Reverse: remove matching entry from the vec
-pub(crate) fn reverse(entity: Entity, multiplier: f32, world: &mut World) { ... }
-
-// Self-registration: adds recalculation system
-pub(crate) fn register(app: &mut App) {
-    app.add_systems(FixedUpdate, recalculate_speed);
+impl ActiveSpeedBoosts {
+    // Consumers call this inline — no separate cache component
+    pub fn multiplier(&self) -> f32 { ... }
 }
+
+// Fire: push multiplier onto the vec (inserts component if absent), then recalculate_velocity
+pub(crate) fn fire(entity: Entity, multiplier: f32, _source_chip: &str, world: &mut World) { ... }
+
+// Reverse: remove matching entry from the vec, then recalculate_velocity
+pub(crate) fn reverse(entity: Entity, multiplier: f32, _source_chip: &str, world: &mut World) { ... }
+
+// Self-registration: wires app systems (effects with no runtime systems may be empty)
+pub(crate) fn register(app: &mut App) { ... }
 ```
 
 `EffectKind` dispatches to each module via exhaustive match arms. `EffectPlugin::build()` calls `effects::register(app)` and `triggers::register(app)`.

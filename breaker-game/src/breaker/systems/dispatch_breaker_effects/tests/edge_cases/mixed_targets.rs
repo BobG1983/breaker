@@ -15,6 +15,7 @@ use crate::{
 fn dispatch_handles_mixed_targets_aegis_style() {
     let def = crate::breaker::definition::BreakerDefinition {
         name: TEST_BREAKER_NAME.to_owned(),
+        bolt: "Bolt".to_owned(),
         stat_overrides: crate::breaker::definition::BreakerStatOverrides::default(),
         life_pool: Some(3),
         effects: vec![
@@ -85,6 +86,7 @@ fn dispatch_handles_mixed_targets_aegis_style() {
 fn dispatch_preserves_existing_bound_effects_on_target_entities() {
     let def = crate::breaker::definition::BreakerDefinition {
         name: TEST_BREAKER_NAME.to_owned(),
+        bolt: "Bolt".to_owned(),
         stat_overrides: crate::breaker::definition::BreakerStatOverrides::default(),
         life_pool: None,
         effects: vec![RootEffect::On {
@@ -149,6 +151,7 @@ fn dispatch_preserves_existing_bound_effects_on_target_entities() {
 fn dispatch_inserts_bound_effects_and_staged_effects_when_absent() {
     let def = crate::breaker::definition::BreakerDefinition {
         name: TEST_BREAKER_NAME.to_owned(),
+        bolt: "Bolt".to_owned(),
         stat_overrides: crate::breaker::definition::BreakerStatOverrides::default(),
         life_pool: None,
         effects: vec![RootEffect::On {
@@ -186,6 +189,7 @@ fn dispatch_inserts_bound_effects_and_staged_effects_when_absent() {
 fn dispatch_inserts_staged_effects_when_bound_effects_present_but_staged_absent() {
     let def = crate::breaker::definition::BreakerDefinition {
         name: TEST_BREAKER_NAME.to_owned(),
+        bolt: "Bolt".to_owned(),
         stat_overrides: crate::breaker::definition::BreakerStatOverrides::default(),
         life_pool: None,
         effects: vec![RootEffect::On {

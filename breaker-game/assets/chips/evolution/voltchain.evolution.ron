@@ -4,12 +4,12 @@
     effects: [
         On(target: Bolt, then: [
             When(trigger: CellDestroyed, then: [
-                Do(ChainLightning(arcs: 3, range: 96.0, damage_mult: 0.5)),
+                Do(ChainLightning(arcs: 6, range: 128.0, damage_mult: 0.5)),
             ]),
         ]),
     ],
     ingredients: [
         (chip_name: "Chain Reaction", stacks_required: 1),
-        (chip_name: "Damage Boost", stacks_required: 2),
+        (chip_name: "Aftershock", stacks_required: 2),
     ],
 )

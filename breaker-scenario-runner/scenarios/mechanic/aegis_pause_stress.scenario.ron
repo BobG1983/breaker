@@ -46,7 +46,7 @@
         ],
     )),
     max_frames: 5000,
-    invariants: [BoltInBounds, BreakerInBounds, NoNaN, ValidStateTransitions, PhysicsFrozenDuringPause],
-    expected_violations: None,
+    disallowed_failures: [BoltInBounds, BreakerInBounds, NoNaN, ValidStateTransitions, PhysicsFrozenDuringPause],
+    allowed_failures: None,
     debug_setup: None,
 )

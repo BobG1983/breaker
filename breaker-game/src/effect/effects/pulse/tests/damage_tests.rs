@@ -28,9 +28,9 @@ fn pulse_ring_damages_cell_within_radius() {
     );
     assert_eq!(collector.0[0].cell, cell);
     assert!(
-        (collector.0[0].damage - BASE_BOLT_DAMAGE).abs() < f32::EPSILON,
+        (collector.0[0].damage - DEFAULT_BOLT_BASE_DAMAGE).abs() < f32::EPSILON,
         "expected damage {}, got {}",
-        BASE_BOLT_DAMAGE,
+        DEFAULT_BOLT_BASE_DAMAGE,
         collector.0[0].damage
     );
     assert!(
@@ -218,10 +218,10 @@ fn pulse_ring_damage_scales_by_effective_damage_multiplier() {
     );
     assert_eq!(collector.0[0].cell, cell);
 
-    let expected_damage = BASE_BOLT_DAMAGE * 1.5;
+    let expected_damage = DEFAULT_BOLT_BASE_DAMAGE * 1.5;
     assert!(
         (collector.0[0].damage - expected_damage).abs() < f32::EPSILON,
-        "expected damage {} (BASE_BOLT_DAMAGE * 1.5), got {}",
+        "expected damage {} (DEFAULT_BOLT_BASE_DAMAGE * 1.5), got {}",
         expected_damage,
         collector.0[0].damage
     );

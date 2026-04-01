@@ -5,8 +5,8 @@
         actions: [],
     )),
     max_frames: 120,
-    invariants: [TimerNonNegative],
-    expected_violations: [TimerNonNegative],
+    disallowed_failures: [TimerNonNegative],
+    allowed_failures: [TimerNonNegative],
     debug_setup: (
         node_timer_remaining: -1.0,
         disable_physics: true,

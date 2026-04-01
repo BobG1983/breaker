@@ -105,7 +105,7 @@ Random effect from weighted pool fires on every cell destroyed. Prismatic flash 
 
 Destroyed cells spawn 2 permanent inheriting bolts. Fission visual — cell splits into bolt orbs.
 
-### Chain Reaction
+### Shock Chain
 **Ingredients**: Chain Reaction x1 + Aftershock x2 + Cascade x2
 
 Destroyed cells trigger recursive shockwaves — each shockwave kill spawns another shockwave. Escalating intensity per generation depth.
@@ -118,7 +118,7 @@ Destroyed cells trigger recursive shockwaves — each shockwave kill spawns anot
 ### Mirror Protocol
 **Ingredients**: Reflex x1 + Piercing Shot x2
 
-Perfect bumps spawn 2 mirrored bolts that inherit the PRIMARY BOLT's effects (not the breaker's). Spread controlled by bump angle.
+Bolt impacts spawn a mirrored bolt at the geometric reflection point. Mirror axis depends on which side was hit (top/bottom flips X, left/right flips Y). Inherits the source bolt's effects.
 
 ### Anchor
 **Ingredients**: Quick Stop x2 + Bump Force x2

@@ -1,113 +1,77 @@
 # 5g: Bolt Visuals
 
-**Goal**: Transform the bolt from a flat colored circle into an energy orb with glow, wake trail, and state-driven visual communication.
+**Goal**: Transform the bolt from a flat colored circle into an SDF energy orb with glow, wake trail, and modifier-driven visual state.
+
+**Prerequisite**: Bolt definitions spec (`.claude/specs/bolt-definitions-code.md`) must be implemented first. See `docs/architecture/rendering/bolt-graphics-migration.md` for the migration delta.
+
+Architecture: `docs/architecture/rendering/entity_visuals.md`, `docs/architecture/rendering/bolt-graphics-migration.md`
 
 ## What to Build
 
-### 1. Bolt Base Shader
+### 1. Bolt Entity Rendering via AttachVisuals
 
-Replace the flat `Circle::new(1.0)` with a custom Material2d:
-- Bright white/warm core (HDR >1.0 for bloom)
-- Softer glow halo around the core
-- Additive blending (from 5d pipeline)
+Replace `Mesh2d`/`MeshMaterial2d` in `spawn_bolt` with `AttachVisuals` message:
+- `EntityVisualConfig { shape: Circle, color: [from bolt RON], glow: [from bolt RON], trail: [from bolt RON] }`
+- Crate's AttachVisuals handler creates SDF quad with `entity_glow.wgsl`, attaches trail entity
+- Remove `ResMut<Assets<Mesh>>` and `ResMut<Assets<ColorMaterial>>` from spawn systems
 
-### 2. Bolt Wake/Trail
+### 2. Bolt Dynamic State via Modifiers
 
-Trailing energy wake showing direction and recent path:
-- Trail particle emitter (using Trail particle type from 5e)
-- Wake length scales with speed (read from `BoltRenderState`)
-- Wake brightness scales with speed
-- Fast bolt = long vivid trail, slow bolt = short dim trail
+New `sync_bolt_visual_modifiers` system in bolt/ domain sends `SetModifier` each FixedUpdate:
+- Speed → `TrailLength(speed_fraction * 2.0)`, source: `"bolt_speed"`
+- Piercing → `SpikeCount(piercing_count)`, source: `"bolt_piercing"`
+- Serving → `CoreBrightness(0.7)`, source: `"bolt_serving"` (dimmer while hovering)
 
-### 3. Bolt State Communication
+Chip effects send `AddModifier`/`RemoveModifier` in their fire/reverse functions (speed boost, damage boost, size boost, etc.).
 
-Visual changes driven by `BoltRenderState`:
+### 3. Bolt Event VFX via Recipes
 
-| State | Visual Change |
-|-------|--------------|
-| Speed | Wake length + core brightness scale with speed |
-| Piercing active | Sharper angular glow, energy spikes on halo |
-| Damage boosted | Core shifts amber/white, halo brightens |
-| Shield on bolt | Additional aura ring around bolt (distinct from halo) |
-| Size boosted | Glow scales proportionally with size |
+Bolt RON has recipe names for event VFX:
+- `spawn_recipe` — fired on bolt spawn (brief energy ring + flash)
+- `death_recipe` — fired on bolt lost (exit streak)
+- `expiry_recipe` — fired on lifespan expiry (inward implosion)
 
-### 4. BoltRenderState Component
+Game sends `ExecuteRecipe` at event time. Recipes authored in `assets/recipes/`.
 
-Defined in bolt/ domain, synced each frame:
-- `speed: f32` — current velocity magnitude
-- `direction: Vec2` — normalized velocity direction
-- `has_piercing: bool`
-- `damage_multiplier: f32`
-- `has_shield: bool`
-- `lifespan_fraction: f32` — remaining lifespan as 0.0-1.0 (for lifespan indicator)
+### 4. ExtraBolt Distinction
 
-### 5. Bolt Serving (Hover) State
+Extra bolts (from multi-bolt effects) also get `AttachVisuals` from their `BoltDefinitionRef`. Visual distinction via modifiers:
+- `AddModifier(GlowIntensity(0.7))` — slightly dimmer
+- `AddModifier(TrailLength(0.6))` — shorter trail
 
-When bolt is being served (pre-launch):
-- Pulsing orb at ~70% brightness
-- No wake trail
-- Halo breathes on 1.5t sine wave
-- Snaps to full brightness on launch
+### 5. PhantomBolt Visual
 
-### 6. ExtraBolt Distinction
+Phantom bolts get modifiers for spectral appearance:
+- `AddModifier(AlphaOscillation { min: 0.3, max: 0.8, frequency: 3.0 })`
+- `AddModifier(AfterimageTrail(true))`
+- Different color in the bolt definition RON
 
-Extra bolts (from multi-bolt effects) look subtly different:
-- Same white core but halo tinted with archetype accent (~40% saturation)
-- Shorter/thinner wake trail
-- Dissolves into dim sparks on loss (instead of standard bolt-lost VFX)
+### 6. Bolt Serving (Hover) State
 
-### 7. ChainBolt + Tether Visual
+When `BoltServing` component is present:
+- `SetModifier(CoreBrightness(0.7))` — dimmer
+- No trail (trail doesn't spawn until launch, or use `SetModifier(TrailLength(0.0))`)
+- Pulsing glow via recipe or modifier oscillation
 
-Chain bolts have an energy filament to their anchor:
-- Thin energy line (~0.4 HDR) connecting chain bolt to anchor bolt
-- Line brightens at max stretch distance
-- Simpler than evolution TetherBeam (5m)
-- Flash + sparks when tether snaps
+### 7. Bolt Lifespan Indicator
 
-### 8. PhantomBolt Visual
-
-Phantom bolts (from SpawnPhantom effect) have spectral appearance:
-- Translucent/phasing visual — alpha oscillation
-- Non-white core color (distinct from normal bolts)
-- Spectral shader (flickering, afterimage trail)
-
-### 9. Bolt Lifespan Indicator
-
-Bolts with limited lifespan communicate remaining time:
-- Below 30%: brightness/halo diminish
-- Below 15%: flicker with increasing frequency, wake shortens
-- At expiry: soft inward implosion of sparks (Spark particle type from 5e)
-
-### 10. Bolt Spawn Moment
-
-When a bolt spawns:
-- Brief energy ring at spawn point (~0.1s, Energy Ring particle from 5e)
-- Bolt materializes from point-source flash
-- Multi-spawns overlap additively
+For bolts with `BoltLifespan`:
+- Below 30%: `SetModifier(CoreBrightness(fraction * 2.0))` — dims
+- Below 15%: `SetModifier(AlphaOscillation { ... })` — flicker
+- At expiry: `ExecuteRecipe` with `expiry_recipe`
 
 ## Dependencies
 
-- **Requires**: 5c (rendering/ domain), 5d (post-processing for bloom/additive), 5e (particle system for trail/sparks), 5f (BoltVisualIdentity component)
-- **Independent of**: 5h, 5i, 5j (other entity visuals)
-
-## What This Step Builds
-
-- Bolt base shader (energy orb with HDR core + halo + additive blending)
-- Wake/trail particle emitter (Trail type, length scales with speed)
-- State-driven visuals (speed, piercing, damage, shield, size — all reflected in appearance)
-- BoltRenderState component (synced each frame by bolt/ domain)
-- Serving/hover state (pulsing orb, no trail, halo breathes)
-- ExtraBolt visual distinction (archetype-tinted halo, shorter trail)
-- ChainBolt tether visual (energy filament to anchor bolt)
-- PhantomBolt spectral visual (translucent, non-white core, afterimage trail)
-- Lifespan indicator (dim/flicker below thresholds, implosion at expiry)
-- Spawn moment VFX (energy ring + point-source flash)
+- **Requires**: Bolt definitions spec (implemented), 5c (crate), 5d (bloom/additive), 5e (particles for trail/sparks), 5f (types + AttachVisuals)
+- **Independent of**: 5h, 5i, 5j
 
 ## Verification
 
-- Bolt renders as energy orb with glow and bloom
-- Wake trail visible and scales with speed
-- Each bolt state (piercing, damage, shield) is visually distinct
-- ExtraBolt, ChainBolt, PhantomBolt each look different from base bolt
-- Lifespan indicator visible on time-limited bolts
+- Bolt renders as SDF energy orb with glow and bloom
+- Trail visible and scales with speed via modifier
+- Piercing bolts have visible spikes
+- ExtraBolt, PhantomBolt look distinct
+- Serving bolt is dimmer with no trail
+- Lifespan indicator dims and flickers
+- Event VFX (spawn, death, expiry) fire correctly
 - All existing tests pass

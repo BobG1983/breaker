@@ -4,15 +4,15 @@
 // oscillate unpredictably. High action_prob (0.5) drives rapid breaker movement that
 // compounds gravity-well steering with bump impulse. If well entities aren't despawned
 // after their duration, NoEntityLeaks fires. If overlapping attraction forces produce NaN
-// or push bolt speed outside bounds, NoNaN and BoltSpeedInRange fire.
+// or push bolt speed outside bounds, NoNaN and BoltSpeedAccurate fire.
 // Stress: 16 runs to explore different destruction orderings and well overlap patterns.
 (
     breaker: "Aegis",
     layout: "Scatter",
     input: Chaos((action_prob: 0.5)),
     max_frames: 8000,
-    invariants: [NoEntityLeaks, NoNaN, BoltSpeedInRange],
-    expected_violations: None,
+    disallowed_failures: [NoEntityLeaks, NoNaN, BoltSpeedAccurate],
+    allowed_failures: None,
     debug_setup: None,
     allow_early_end: false,
     stress: (runs: 16, parallelism: 16),

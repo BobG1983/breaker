@@ -54,6 +54,7 @@ fn dispatch_with_missing_breaker_in_registry_is_noop() {
 fn dispatch_with_no_breaker_entity_is_noop() {
     let def = BreakerDefinition {
         name: TEST_BREAKER_NAME.to_owned(),
+        bolt: "Bolt".to_owned(),
         stat_overrides: BreakerStatOverrides::default(),
         life_pool: None,
         effects: vec![RootEffect::On {
@@ -83,6 +84,7 @@ fn dispatch_with_no_breaker_entity_is_noop() {
 fn dispatch_pushes_all_children_of_on_node() {
     let def = BreakerDefinition {
         name: TEST_BREAKER_NAME.to_owned(),
+        bolt: "Bolt".to_owned(),
         stat_overrides: BreakerStatOverrides::default(),
         life_pool: None,
         effects: vec![RootEffect::On {
@@ -134,6 +136,7 @@ fn dispatch_pushes_all_children_of_on_node() {
 fn dispatch_uses_empty_string_as_chip_name_for_all_targets() {
     let def = BreakerDefinition {
         name: TEST_BREAKER_NAME.to_owned(),
+        bolt: "Bolt".to_owned(),
         stat_overrides: BreakerStatOverrides::default(),
         life_pool: None,
         effects: vec![

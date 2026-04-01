@@ -13,8 +13,10 @@ use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
     bolt::{
-        components::Bolt, filters::ActiveFilter, messages::BoltImpactWall,
-        queries::CollisionQueryBolt,
+        components::{Bolt, LastImpact, wall_normal_to_impact_side},
+        filters::ActiveFilter,
+        messages::BoltImpactWall,
+        queries::{BoltCollisionData, apply_velocity_formula},
     },
     shared::WALL_LAYER,
     wall::components::Wall,
@@ -29,32 +31,21 @@ type WallLookup<'w, 's> =
 /// For each active bolt, queries the quadtree for walls within the bolt's radius.
 /// If a wall overlap is confirmed, the bolt is pushed out to a safe position,
 /// its velocity is reflected off the nearest wall face, and `PiercingRemaining`
-/// is reset to `EffectivePiercing.0`.
+/// is reset to `ActivePiercings.total()`.
 pub(crate) fn bolt_wall_collision(
+    mut commands: Commands,
     quadtree: Res<CollisionQuadtree>,
-    mut bolt_query: Query<CollisionQueryBolt, ActiveFilter>,
+    mut bolt_query: Query<BoltCollisionData, ActiveFilter>,
     wall_lookup: WallLookup,
     mut writer: MessageWriter<BoltImpactWall>,
 ) {
     let query_layers = CollisionLayers::new(0, WALL_LAYER);
 
-    for (
-        bolt_entity,
-        mut bolt_position,
-        mut bolt_vel,
-        _,
-        bolt_radius,
-        mut piercing_remaining,
-        effective_piercing,
-        _,
-        bolt_entity_scale,
-        _,
-    ) in &mut bolt_query
-    {
-        let bolt_scale = bolt_entity_scale.map_or(1.0, |s| s.0);
-        let r = bolt_radius.0 * bolt_scale;
-        let position = bolt_position.0;
-        let velocity = bolt_vel.0;
+    for mut bolt in &mut bolt_query {
+        let bolt_scale = bolt.collision.entity_scale.map_or(1.0, |s| s.0);
+        let r = bolt.collision.radius.0 * bolt_scale;
+        let position = bolt.spatial.position.0;
+        let velocity = bolt.spatial.velocity.0;
 
         let candidates = quadtree
             .quadtree
@@ -115,16 +106,35 @@ pub(crate) fn bolt_wall_collision(
             };
 
             // Push bolt to the nearest face and reflect velocity
-            bolt_position.0 = push_pos;
-            bolt_vel.0 = reflect(velocity, normal);
+            bolt.spatial.position.0 = push_pos;
+            bolt.spatial.velocity.0 = reflect(velocity, normal);
 
-            // Reset PiercingRemaining to EffectivePiercing.0
-            if let (Some(pr), Some(ep)) = (&mut piercing_remaining, effective_piercing) {
-                pr.0 = ep.0;
+            // Apply the canonical velocity formula after reflection
+            apply_velocity_formula(&mut bolt.spatial, bolt.collision.active_speed_boosts);
+
+            // Stamp LastImpact at the push-out position with the side
+            // derived from the wall push-out normal (inverted mapping).
+            let side = wall_normal_to_impact_side(normal);
+            if let Some(li) = bolt.collision.last_impact.as_mut() {
+                li.position = push_pos;
+                li.side = side;
+            } else {
+                commands.entity(bolt.entity).insert(LastImpact {
+                    position: push_pos,
+                    side,
+                });
+            }
+
+            // Reset PiercingRemaining to ActivePiercings.total()
+            if let (Some(pr), Some(ap)) = (
+                &mut bolt.collision.piercing_remaining,
+                bolt.collision.active_piercings,
+            ) {
+                pr.0 = ap.total();
             }
 
             writer.write(BoltImpactWall {
-                bolt: bolt_entity,
+                bolt: bolt.entity,
                 wall: wall_entity,
             });
 

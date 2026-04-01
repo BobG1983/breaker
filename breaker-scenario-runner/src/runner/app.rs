@@ -419,7 +419,7 @@ mod tests {
             layout: "test".into(),
             input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
             max_frames: 100,
-            invariants: vec![],
+            disallowed_failures: vec![],
             ..Default::default()
         };
         let stats = ScenarioStats {

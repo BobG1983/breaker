@@ -5,8 +5,8 @@
         actions: [],
     )),
     max_frames: 120,
-    invariants: [ChainArcCountReasonable],
-    expected_violations: Some([ChainArcCountReasonable]),
+    disallowed_failures: [ChainArcCountReasonable],
+    allowed_failures: Some([ChainArcCountReasonable]),
     debug_setup: (
         disable_physics: true,
     ),

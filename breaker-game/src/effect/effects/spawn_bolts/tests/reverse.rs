@@ -7,21 +7,38 @@ use super::super::effect::*;
 use crate::{
     bolt::{
         components::{Bolt, ExtraBolt},
-        resources::BoltConfig,
+        definition::BoltDefinition,
+        registry::BoltRegistry,
     },
     shared::rng::GameRng,
 };
 
-fn world_with_bolt_config() -> World {
+fn world_with_bolt_registry() -> World {
     let mut world = World::new();
-    world.insert_resource(BoltConfig::default());
+    let mut registry = BoltRegistry::default();
+    registry.insert(
+        "Bolt".to_string(),
+        BoltDefinition {
+            name: "Bolt".to_owned(),
+            base_speed: 720.0,
+            min_speed: 360.0,
+            max_speed: 1440.0,
+            radius: 14.0,
+            base_damage: 10.0,
+            effects: vec![],
+            color_rgb: [6.0, 5.0, 0.5],
+            min_angle_horizontal: 5.0,
+            min_angle_vertical: 5.0,
+        },
+    );
+    world.insert_resource(registry);
     world.insert_resource(GameRng::default());
     world
 }
 
 #[test]
 fn reverse_does_not_despawn_previously_spawned_bolts() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
     fire(entity, 2, None, false, "", &mut world);
@@ -40,7 +57,7 @@ fn reverse_does_not_despawn_previously_spawned_bolts() {
 
 #[test]
 fn reverse_with_no_prior_spawned_bolts_does_not_panic() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
     // Should not panic

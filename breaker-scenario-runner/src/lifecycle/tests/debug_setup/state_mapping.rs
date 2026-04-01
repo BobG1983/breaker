@@ -15,7 +15,7 @@ fn apply_debug_setup_sets_previous_game_state_from_forced() {
         layout: "Corridor".to_owned(),
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
-        invariants: vec![],
+        disallowed_failures: vec![],
         debug_setup: Some(DebugSetup {
             force_previous_game_state: Some(ForcedGameState::Loading),
             ..Default::default()

@@ -16,7 +16,7 @@
         ],
     )),
     max_frames: 10000,
-    invariants: [BoltSpeedInRange, BoltInBounds, NoNaN],
-    expected_violations: None,
+    disallowed_failures: [BoltSpeedAccurate, BoltInBounds, NoNaN],
+    allowed_failures: None,
     debug_setup: None,
 )

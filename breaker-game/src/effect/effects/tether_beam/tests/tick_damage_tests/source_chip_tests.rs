@@ -1,6 +1,6 @@
 //! Tests for `EffectSourceChip` attribution on `tick_tether_beam` damage messages.
 
-use super::super::*;
+use super::super::helpers::*;
 use crate::effect::core::EffectSourceChip;
 
 #[test]
@@ -33,6 +33,7 @@ fn tick_tether_beam_populates_source_chip_from_effect_source_chip() {
                 bolt_b,
                 damage_mult: 2.0,
                 effective_damage_multiplier: 1.0,
+                base_damage: DEFAULT_BOLT_BASE_DAMAGE,
             },
             EffectSourceChip(Some("tether".to_string())),
             CleanupOnNodeExit,
@@ -90,6 +91,7 @@ fn tick_tether_beam_source_chip_none_when_effect_source_chip_none() {
                 bolt_b,
                 damage_mult: 2.0,
                 effective_damage_multiplier: 1.0,
+                base_damage: DEFAULT_BOLT_BASE_DAMAGE,
             },
             EffectSourceChip(None),
             CleanupOnNodeExit,
@@ -140,6 +142,7 @@ fn tick_tether_beam_defaults_to_none_when_no_effect_source_chip() {
                 bolt_b,
                 damage_mult: 2.0,
                 effective_damage_multiplier: 1.0,
+                base_damage: DEFAULT_BOLT_BASE_DAMAGE,
             },
             CleanupOnNodeExit,
         ))
@@ -190,6 +193,7 @@ fn multiple_tether_beams_with_different_source_chips_produce_correctly_attribute
                 bolt_b: alpha_right,
                 damage_mult: 1.0,
                 effective_damage_multiplier: 1.0,
+                base_damage: DEFAULT_BOLT_BASE_DAMAGE,
             },
             EffectSourceChip(Some("alpha".to_string())),
             CleanupOnNodeExit,
@@ -229,6 +233,7 @@ fn multiple_tether_beams_with_different_source_chips_produce_correctly_attribute
                 bolt_b: beta_right,
                 damage_mult: 1.0,
                 effective_damage_multiplier: 1.0,
+                base_damage: DEFAULT_BOLT_BASE_DAMAGE,
             },
             EffectSourceChip(Some("beta".to_string())),
             CleanupOnNodeExit,

@@ -53,6 +53,7 @@ pub fn bypass_menu_to_playing(
             "Godmode".to_owned(),
             BreakerDefinition {
                 name: "Godmode".to_owned(),
+                bolt: "Bolt".to_owned(),
                 stat_overrides: BreakerStatOverrides::default(),
                 life_pool: None,
                 effects: vec![],

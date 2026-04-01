@@ -1,17 +1,14 @@
 //! Behavior 12: Shield protects `ExtraBolt` equally.
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
+use rantzsoft_spatial2d::components::Velocity2D;
 
 use super::{
     super::{super::system::bolt_lost, helpers::*},
     helpers::spawn_shielded_breaker,
 };
 use crate::{
-    bolt::{
-        components::{Bolt, ExtraBolt},
-        messages::BoltLost,
-    },
+    bolt::{components::Bolt, messages::BoltLost},
     effect::effects::shield::ShieldActive,
     shared::{GameRng, PlayfieldConfig},
 };
@@ -44,20 +41,16 @@ fn shield_protects_extra_bolt_consuming_one_charge() {
     let breaker = spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 2);
 
     // Baseline bolt
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(100.0, -400.0)),
-        bolt_lost_bundle(),
-        Position2D(Vec2::new(-50.0, -309.0)),
-    ));
+    spawn_bolt(&mut app, Vec2::new(-50.0, -315.0), Vec2::new(100.0, -400.0));
     // Extra bolt
-    app.world_mut().spawn((
-        Bolt,
-        ExtraBolt,
-        Velocity2D(Vec2::new(-100.0, -400.0)),
-        bolt_lost_bundle(),
-        Position2D(Vec2::new(50.0, -309.0)),
-    ));
+    let def = make_default_bolt_definition();
+    let extra = Bolt::builder()
+        .at_position(Vec2::new(50.0, -315.0))
+        .definition(&def)
+        .with_velocity(Velocity2D(Vec2::new(-100.0, -400.0)))
+        .extra()
+        .spawn(app.world_mut());
+    let _ = extra;
     tick(&mut app);
 
     // Both bolts should still exist
@@ -125,20 +118,15 @@ fn shield_protects_only_extra_bolt_below_floor() {
     let breaker = spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 2);
 
     // ExtraBolt below floor
-    app.world_mut().spawn((
-        Bolt,
-        ExtraBolt,
-        Velocity2D(Vec2::new(0.0, -400.0)),
-        bolt_lost_bundle(),
-        Position2D(Vec2::new(50.0, -309.0)),
-    ));
+    let def = make_default_bolt_definition();
+    Bolt::builder()
+        .at_position(Vec2::new(50.0, -315.0))
+        .definition(&def)
+        .with_velocity(Velocity2D(Vec2::new(0.0, -400.0)))
+        .extra()
+        .spawn(app.world_mut());
     // Baseline bolt above floor
-    app.world_mut().spawn((
-        Bolt,
-        Velocity2D(Vec2::new(100.0, -200.0)),
-        bolt_lost_bundle(),
-        Position2D(Vec2::new(0.0, 100.0)),
-    ));
+    spawn_bolt(&mut app, Vec2::new(0.0, 100.0), Vec2::new(100.0, -200.0));
     tick(&mut app);
 
     // No messages

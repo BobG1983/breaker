@@ -2,6 +2,9 @@ use bevy::prelude::*;
 use rantzsoft_physics2d::{
     aabb::Aabb2D, collision_layers::CollisionLayers, resources::CollisionQuadtree,
 };
+use rantzsoft_spatial2d::components::{
+    BaseSpeed, MaxSpeed, MinAngleHorizontal, MinAngleVertical, MinSpeed, Position2D,
+};
 
 use crate::bolt::messages::{BoltImpactBreaker, BoltImpactCell, BoltImpactWall};
 
@@ -82,6 +85,27 @@ pub(super) fn tick(app: &mut App) {
         .resource_mut::<Time<Fixed>>()
         .accumulate_overstep(timestep);
     app.update();
+}
+
+/// Spatial params required by `SpatialData`. Permissive values so the
+/// velocity formula preserves direction unchanged — `base_speed` 10000.0
+/// with no angle clamping and no min/max speed clamping.
+pub(super) fn spatial_params() -> (
+    BaseSpeed,
+    MinSpeed,
+    MaxSpeed,
+    MinAngleHorizontal,
+    MinAngleVertical,
+    Position2D,
+) {
+    (
+        BaseSpeed(10000.0),
+        MinSpeed(0.0),
+        MaxSpeed(f32::MAX),
+        MinAngleHorizontal(0.0),
+        MinAngleVertical(0.0),
+        Position2D(Vec2::ZERO),
+    )
 }
 
 mod apply_tests;

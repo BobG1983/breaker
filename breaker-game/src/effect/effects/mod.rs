@@ -2,8 +2,10 @@
 
 pub(crate) mod fire_helpers;
 
-pub(crate) use fire_helpers::{effective_range, entity_position, spawn_extra_bolt};
+pub(crate) use fire_helpers::{effective_range, entity_position};
 
+/// Breaker plants after stationary delay, modifying bump behavior.
+pub mod anchor;
 /// Steer toward nearest entity of a type.
 pub mod attraction;
 /// Flat bump force increase.
@@ -12,16 +14,22 @@ pub mod bump_force;
 pub mod chain_bolt;
 /// Arc damage jumping between cells.
 pub mod chain_lightning;
+/// Reward bolts and shockwave on perfect bump countdown.
+pub mod circuit_breaker;
 /// Multiplicative damage bonus.
 pub mod damage_boost;
 /// Escalating chaos — fires multiple random effects per cell destroyed.
 pub mod entropy_engine;
 /// Instant area damage burst.
 pub mod explode;
+/// Breaker dash teleport on reverse-direction input.
+pub mod flash_step;
 /// Gravity well that attracts bolts within radius.
 pub mod gravity_well;
 /// Decrement lives.
 pub mod life_lost;
+/// Spawn mirrored bolts reflected across the last impact surface.
+pub mod mirror_protocol;
 /// Pass through cells instead of bouncing.
 pub mod piercing;
 /// Beam through cells in velocity direction.
@@ -55,11 +63,6 @@ pub mod time_penalty;
 
 /// Register all effect runtime systems.
 pub(crate) fn register(app: &mut bevy::prelude::App) {
-    speed_boost::register(app);
-    damage_boost::register(app);
-    piercing::register(app);
-    size_boost::register(app);
-    bump_force::register(app);
     shockwave::register(app);
     chain_lightning::register(app);
     piercing_beam::register(app);
@@ -70,13 +73,16 @@ pub(crate) fn register(app: &mut bevy::prelude::App) {
     entropy_engine::register(app);
     ramping_damage::register(app);
     explode::register(app);
+    flash_step::register(app);
+    mirror_protocol::register(app);
     spawn_bolts::register(app);
     chain_bolt::register(app);
     attraction::register(app);
-    quick_stop::register(app);
     tether_beam::register(app);
     life_lost::register(app);
     time_penalty::register(app);
     second_wind::register(app);
     random_effect::register(app);
+    anchor::register(app);
+    circuit_breaker::register(app);
 }

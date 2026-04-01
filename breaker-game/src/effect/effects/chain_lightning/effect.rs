@@ -13,9 +13,9 @@ use rantzsoft_physics2d::{
 use rantzsoft_spatial2d::components::GlobalPosition2D;
 
 use crate::{
-    bolt::BASE_BOLT_DAMAGE,
+    bolt::{components::BoltBaseDamage, resources::DEFAULT_BOLT_BASE_DAMAGE},
     cells::{components::Cell, messages::DamageCell},
-    effect::{EffectiveDamageMultiplier, core::EffectSourceChip},
+    effect::{core::EffectSourceChip, effects::damage_boost::ActiveDamageBoosts},
     shared::{CELL_LAYER, CleanupOnNodeExit, playing_state::PlayingState, rng::GameRng},
 };
 
@@ -86,10 +86,14 @@ pub(crate) fn fire(
     let position = super::super::entity_position(world, entity);
 
     let edm = world
-        .get::<EffectiveDamageMultiplier>(entity)
-        .map_or(1.0, |e| e.0);
+        .get::<ActiveDamageBoosts>(entity)
+        .map_or(1.0, ActiveDamageBoosts::multiplier);
 
-    let damage = BASE_BOLT_DAMAGE * damage_mult * edm;
+    let base_damage = world
+        .get::<BoltBaseDamage>(entity)
+        .map_or(DEFAULT_BOLT_BASE_DAMAGE, |d| d.0);
+
+    let damage = base_damage * damage_mult * edm;
 
     let query_layers = CollisionLayers::new(0, CELL_LAYER);
     let candidates = world
@@ -175,7 +179,7 @@ pub(crate) fn tick_chain_lightning(
         match current_state {
             ChainState::Idle => {
                 if chain.remaining_jumps == 0 {
-                    commands.entity(chain_entity).despawn();
+                    commands.entity(chain_entity).try_despawn();
                     continue;
                 }
 
@@ -191,12 +195,12 @@ pub(crate) fn tick_chain_lightning(
                     .collect();
 
                 if valid.is_empty() {
-                    commands.entity(chain_entity).despawn();
+                    commands.entity(chain_entity).try_despawn();
                     continue;
                 }
 
                 let Some(&target) = valid.choose(&mut world.rng.0) else {
-                    commands.entity(chain_entity).despawn();
+                    commands.entity(chain_entity).try_despawn();
                     continue;
                 };
 
@@ -250,10 +254,10 @@ pub(crate) fn tick_chain_lightning(
                     chain.source = target_gp.map_or(target_pos, |gp| gp.0);
 
                     chain.remaining_jumps -= 1;
-                    commands.entity(arc_entity).despawn();
+                    commands.entity(arc_entity).try_despawn();
 
                     if chain.remaining_jumps == 0 {
-                        commands.entity(chain_entity).despawn();
+                        commands.entity(chain_entity).try_despawn();
                     } else {
                         chain.state = ChainState::Idle;
                     }

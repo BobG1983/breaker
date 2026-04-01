@@ -18,7 +18,7 @@
 
 ### Voltchain
 
-**Behavior**: Cell destroy → chain lightning (3 arcs, 96 range, 0.5x damage).
+**Behavior**: Cell destroy → chain lightning (6 arcs, 128 range, 0.5x damage).
 
 **VFX direction**: Enhanced chain lightning — louder than base, large max jumps.
 - Bright, vivid electric arcs from destroyed cell to 3 targets (+ large max jumps per arc)
@@ -81,7 +81,7 @@ Both use afterimage/ghosting:
 
 ## Dependencies
 
-- **Requires**: 5c (rendering/), 5d (post-processing: bloom, distortion), 5e (particles: Electric Arc, Spark, Trail), 5g (bolt visuals for corona layer), 5h (breaker visuals for FlashStep disintegration), 5k (screen effects: shake, slow-mo, flash)
+- **Requires**: 5c (rantzsoft_vfx crate), 5d (post-processing: bloom, distortion), 5e (particles: Electric Arc, Spark, Trail), 5g (bolt visuals for corona layer), 5h (breaker visuals for FlashStep disintegration), 5k (screen effects: shake, slow-mo, flash)
 - **Enhanced by**: 5m (base Chain Lightning and TetherBeam VFX as reference for Voltchain/ArcWelder)
 - DR-9 resolved: ArcWelder corrected (tether, not Tesla coil), Phantom Breaker clarified (ghost bolt, not ghost breaker)
 

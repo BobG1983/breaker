@@ -6,6 +6,11 @@ type: reference
 
 # Confirmed Correct Patterns for Bevy 0.18.1
 
+## Asset Types
+- `#[derive(Asset, TypePath, Deserialize, Clone, Debug)]` — correct derive combo for RON-loadable assets in Bevy 0.18.1; `Asset` requires `TypePath`; `Deserialize` satisfies `DeserializeOwned` bound on `SeedableRegistry::Asset`; consistent across all project asset types (BoltDefinition, CellDefinition, BreakerDefinition, etc.)
+- `app.init_asset::<T>()` — correct registration call for custom asset types in Bevy 0.18.1
+- `#[derive(Resource, Debug, Default)]` on a registry struct — correct; `SeedableRegistry` bounds require `Resource + Default + Send + Sync + 'static`
+
 ## Message System
 - `#[derive(Message, Clone, Debug)]` — correct derive for Bevy 0.18 message types
 - `app.add_message::<T>()` — correct registration call (NOT add_event)
@@ -19,7 +24,7 @@ type: reference
 
 ## Query API
 - `query.single()` returns `Result` in Bevy 0.15+ — use `let Ok(x) = query.single() else { return; }`
-- `Query<CollisionQueryBolt, ActiveFilter>` — type alias as query data, filter type alias — both valid
+- `Query<BoltCollisionData, ActiveFilter>` — `#[derive(QueryData)]` named struct as query data, filter type alias — both valid (formerly `CollisionQueryBolt` tuple alias; same API fact applies)
 - `type WallLookup<'w, 's> = Query<'w, 's, (...), (With<Wall>, Without<Bolt>)>` — valid lifetime-annotated query alias
 - `Query<(Has<Cell>, Option<&'static CellHealth>), Without<Bolt>>` — Has<T> and Option<&T> as query data correct
 - `candidate_lookup.get(hit.entity)` — valid query get by entity
@@ -63,6 +68,10 @@ type: reference
 - `Res<Time>` + `.delta_secs()` — also correct in FixedUpdate (resolves to Time<Fixed> automatically)
 - Both patterns are functionally equivalent inside FixedUpdate; style inconsistency is NOT a bug
 - `Res<Time<Fixed>>` + `.timestep()` used for emitter timer accumulation (distinct from expansion dt)
+
+## World Query + get_mut Pattern (speed_boost.rs — confirmed correct)
+- `let boosts = world.get::<T>(entity).cloned();` then `let mut query = world.query::<SpatialData>(); query.get_mut(world, entity)` — valid; `.cloned()` releases the immutable borrow before the mutable query borrow starts; `QueryState::get_mut(&mut self, &'w mut World, Entity)` is the correct exclusive World accessor API; confirmed in `speed_boost.rs:47-53`
+- `world.query::<SpatialDataMutableType>()` returns an owned `QueryState`; calling `.get_mut(world, entity)` on it is the correct pattern for per-entity exclusive World access in World-access functions
 
 ## Other
 - `Bloom` from `bevy::post_process::bloom::Bloom` — correct 0.18 path
@@ -180,6 +189,17 @@ type: reference
 - `chain_lightning/effect.rs` arc_transforms — CORRECT: ChainLightningArc entities are pure rendering objects; using Transform on them is right
 - `pulse/effect.rs` — CORRECT: emitter reads `&Position2D` from emitter entity; ring carries `Position2D`; `apply_pulse_damage` reads `&Position2D` from ring entity. No Transform. Correct.
 
+## Typestate Builder + World Spawn Patterns (feature/chip-evolution-ecosystem — confirmed correct)
+- `fn build_core(...) -> impl Bundle + use<>` — valid Rust 2024 edition precise-capturing syntax; `use<>` captures nothing (no lifetime/type params); prevents overcapturing in RPIT; correct in edition 2024
+- `world.spawn(core)` returns `EntityWorldMut`; calling `.insert(...)` multiple times on the returned `EntityWorldMut` (without releasing it) is valid; `EntityWorldMut` holds the `&mut World` borrow
+- `world.entity_mut(entity).insert(...)` after `world.spawn(bundle)` in a fire() function — entity existence guaranteed by just spawning; panicking `entity_mut` is correct here
+- `#[query_data(mutable)]` attribute on `#[derive(QueryData)]` — valid Bevy 0.18.1; generates both mutable (`SpatialData`) and read-only (`SpatialDataReadOnly`) variants; mutable struct uses `&'static mut` fields
+- `world.query_filtered::<&Position2D, With<Breaker>>().iter(world).next().map(|p| p.0)` — correct one-liner in exclusive system; QueryState temporary is live for the whole expression; `.map(|p| p.0)` copies `Vec2` (Copy) before borrow ends
+- `fn spawn_bolt(world: &mut World)` registered via `add_systems(OnEnter(...), spawn_bolt)` — valid exclusive system registration; Bevy 0.18 implements `IntoSystem` for `fn(&mut World)`
+- `world.resource_mut::<Messages<BoltSpawned>>().write(BoltSpawned)` — correct write to message resource from exclusive system; `Messages` is in `bevy::prelude` for 0.18.1
+- `Bolt::builder().at_position(...).config(&config).with_velocity(vel).extra().spawn(world)` — correct chained builder + World spawn in fire() functions; returns `Entity`
+- `const fn with_lifespan(mut self, duration: f32) -> Self` / `const fn with_radius(mut self, r: f32) -> Self` — valid `const fn` for methods that only assign `f32` into `Option<f32>` fields (Copy types)
+
 ## Invariant Checker Query Patterns (feature/scenario-coverage — confirmed correct)
 - Two queries with overlapping components but disjoint filters are NOT a conflict: `Query<..., With<ScenarioTagBolt>>` + `Query<..., With<ScenarioTagBreaker>>` both reading `&Aabb2D` — valid in Bevy 0.18; disjoint filters on different tags prevent archetype overlap
 - `type BreakerAabbQuery<'w, 's> = Query<'w, 's, (Entity, &'static Aabb2D, &'static BreakerWidth, &'static BreakerHeight, Option<&'static EntityScale>), With<ScenarioTagBreaker>>` — correct Bevy 0.18 lifetime-annotated query alias with static component refs
@@ -192,3 +212,35 @@ type: reference
 
 ## apply_gravity_pull Query Analysis (confirmed correct in Bevy 0.18)
 - `wells: Query<(&Position2D, &GravityWellConfig), With<GravityWellMarker>>` + `bolts: Query<(&Position2D, &mut Velocity2D), With<Bolt>>` — safe because Bolt and GravityWellMarker are disjoint tags; no entity can have both; Position2D read-only in wells, Position2D read-only in bolts — no write conflict
+
+## resource_exists + .and() Condition Combinator (confirmed for Bevy 0.18)
+- `resource_exists::<T>.and(in_state(S::Variant))` — valid; `resource_exists` is a function that implements `Condition`; the `Condition` trait provides `.and()` / `.or()` / `.nand()` / etc. as combinator methods
+- This pattern is the correct way to gate a system on BOTH a resource existing AND a state predicate
+- Used in `tether_beam/effect.rs` register(): `maintain_tether_chain.run_if(resource_exists::<TetherChainActive>.and(in_state(PlayingState::Active)))` — CORRECT
+- `world.remove_resource::<T>()` — confirmed present in Bevy 0.18 World API
+- `world.insert_resource(value)` — confirmed present in Bevy 0.18 World API
+
+## Entity::index() Return Type (Bevy 0.18)
+- `Entity::index()` returns `EntityIndex` (NOT `u32`) in Bevy 0.18
+- `EntityIndex` implements `Ord`, `PartialOrd`, `Eq`, `PartialEq`, `Hash`, `Copy`
+- `sort_by_key(|e| e.index())` is valid because `EntityIndex: Ord`
+- `Entity::index_u32()` is the companion method returning `u32` directly (equivalent to `self.index().index()`)
+- Used in `tether_beam/effect.rs` fire_chain() and maintain_tether_chain() — CORRECT
+
+## world.query_filtered in fire()/reverse() World Functions
+- `world.query_filtered::<Entity, With<T>>().iter(world).collect::<Vec<_>>()` — correct pattern for collecting entities matching a filter in a World-access function
+- Confirmed in `tether_beam/effect.rs` fire_chain() and reverse() — CORRECT
+
+## spawn_bolts/effect.rs query_filtered Pattern
+- `world.query_filtered::<&BoundEffects, (With<Bolt>, Without<ExtraBolt>)>()` — correct compound filter tuple in world.query_filtered; returns QueryState which is then iterated
+- `.iter(world).next().cloned()` — correct; QueryState::iter takes &World, then next() and cloned() on Option<&BoundEffects> yield Option<BoundEffects>
+- This pattern is safe: query is created (mut borrow), then iterated (immutable borrow) after the exclusive borrow ends via the temporary scope
+
+## Active* Component Query Tuple Size and Method Access (cache-removal refactor — confirmed correct)
+- `BoltCollisionData` (formerly `CollisionQueryBolt`) — `#[derive(QueryData)]` named struct with many optional fields — within limits; CORRECT
+- `DashQuery` nested tuple with 15 elements in group 1 and 5 in group 2 — outer tuple wraps two inner tuples to avoid exceeding the per-tuple limit; both correct
+- `Option<&'static ActiveSpeedBoosts>` / `Option<&'static ActiveSizeBoosts>` / `Option<&'static ActiveDamageBoosts>` as Optional query data — correct Bevy 0.18 pattern
+- `.map_or(1.0, ActiveSpeedBoosts::multiplier)` on `Option<&ActiveSpeedBoosts>` — function reference form; passes `&ActiveSpeedBoosts` to `fn multiplier(&self) -> f32`; CORRECT Rust
+- Same pattern for `ActiveSizeBoosts::multiplier`, `ActiveDamageBoosts::multiplier`, `ActivePiercings::total` — all correct
+- All three Active* types are `#[derive(Component)]` with a `Vec<f32>` / `Vec<u32>` inner field and a `.multiplier()` / `.total()` method — no tuple struct `.0` field access anywhere in systems
+- Bevy 0.18 QueryData tuple limit is 15 elements per tuple level; nested tuples each count independently

@@ -1,13 +1,11 @@
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use super::helpers::*;
-use crate::bolt::components::Bolt;
 
 #[test]
 fn vertical_adjacent_cells_no_cascade() {
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
     app.insert_resource(HitCells::default()).add_systems(
         FixedUpdate,
@@ -21,12 +19,7 @@ fn vertical_adjacent_cells_no_cascade() {
 
     // Bolt below the upper cell, moving up
     let start_y = upper_y - cc.height / 2.0 - bc.radius - 2.0;
-    app.world_mut().spawn((
-        Bolt,
-        bolt_param_bundle(),
-        Velocity2D(Vec2::new(0.0, 400.0)),
-        Position2D(Vec2::new(0.0, start_y)),
-    ));
+    spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
 
     // Two frames -- CCD should prevent cascade
     tick(&mut app);
@@ -44,7 +37,7 @@ fn vertical_adjacent_cells_no_cascade() {
 #[test]
 fn horizontal_adjacent_cells_no_cascade() {
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
     app.insert_resource(HitCells::default()).add_systems(
         FixedUpdate,
@@ -59,12 +52,7 @@ fn horizontal_adjacent_cells_no_cascade() {
 
     // Bolt left of right cell, moving right
     let start_x = right_x - cc.width / 2.0 - bc.radius - 2.0;
-    app.world_mut().spawn((
-        Bolt,
-        bolt_param_bundle(),
-        Velocity2D(Vec2::new(400.0, 10.0)),
-        Position2D(Vec2::new(start_x, cell_y)),
-    ));
+    spawn_bolt(&mut app, start_x, cell_y, 400.0, 10.0);
 
     tick(&mut app);
     tick(&mut app);
@@ -81,7 +69,7 @@ fn horizontal_adjacent_cells_no_cascade() {
 #[test]
 fn grid_entry_from_below_hits_one_cell() {
     let mut app = test_app();
-    let bc = crate::bolt::resources::BoltConfig::default();
+    let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
     app.insert_resource(HitCells::default()).add_systems(
         FixedUpdate,
@@ -99,12 +87,7 @@ fn grid_entry_from_below_hits_one_cell() {
     }
 
     let start_y = base_y - cc.height / 2.0 - bc.radius - 2.0;
-    app.world_mut().spawn((
-        Bolt,
-        bolt_param_bundle(),
-        Velocity2D(Vec2::new(30.0, 400.0)),
-        Position2D(Vec2::new(0.0, start_y)),
-    ));
+    spawn_bolt(&mut app, 0.0, start_y, 30.0, 400.0);
 
     tick(&mut app);
     tick(&mut app);

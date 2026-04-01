@@ -5,7 +5,7 @@
 // bolt count and entity lifecycle under Dense layout. Chaos 0.5 keeps breaker movement
 // unpredictable, maximising simultaneous cell destruction events across 10000 frames.
 // BoltCountReasonable (max 20) catches runaway bolt accumulation if Supernova's spawn cleanup
-// fails. NoEntityLeaks detects orphaned shockwave request or bolt entities. BoltSpeedInRange
+// fails. NoEntityLeaks detects orphaned shockwave request or bolt entities. BoltSpeedAccurate
 // catches bolt physics corruption from simultaneous spawn events. NoNaN guards against
 // position corruption from overlapping spawn origins. Max bolt count raised to 20 to
 // accommodate Prism + Supernova spawns without false-positive BoltCountReasonable fires.
@@ -14,8 +14,8 @@
     layout: "Dense",
     input: Chaos((action_prob: 0.5)),
     max_frames: 10000,
-    invariants: [NoEntityLeaks, BoltCountReasonable, BoltSpeedInRange, NoNaN],
-    expected_violations: None,
+    disallowed_failures: [NoEntityLeaks, BoltCountReasonable, BoltSpeedAccurate, NoNaN],
+    allowed_failures: None,
     debug_setup: None,
     invariant_params: (max_bolt_count: 20),
     allow_early_end: false,

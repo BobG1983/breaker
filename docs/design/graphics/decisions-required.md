@@ -73,14 +73,14 @@ All evolution VFX directions reviewed against actual RON behaviors. Key changes 
 **VFX directions confirmed as-is:**
 - Gravity Well (evolution) — larger/more intense distortion lens
 - Split Decision — cell fission effect, energy filaments, prismatic birth trails
-- Chain Reaction — recursive shockwaves with escalating light rings (mechanic: cell destroy → small shockwave, shockwave kills → more shockwaves)
+- Shock Chain — recursive shockwaves with escalating light rings (mechanic: cell destroy → small shockwave, shockwave kills → more shockwaves)
 - Feedback Loop — three-node triangle charge indicator (mechanic: track 3 perfect bumps → spawn bolt + large shockwave)
 - Entropy Engine — prismatic flash per trigger (see correction above)
 - FlashStep — breaker teleport on dash (disintegrate → streak → rematerialize)
 - Second Wind — invisible wall materialization salvation moment
 
 **Unimplemented evolutions (no RON file, need mechanic + RON in Phase 7):**
-- Chain Reaction, Feedback Loop, FlashStep
+- Shock Chain, Feedback Loop, FlashStep
 
 **Evolutions needing mechanic changes (Phase 7):**
 - Nova Lance (Shockwave → PiercingBeam)
@@ -100,20 +100,20 @@ Define the visual treatment vocabulary now; build the screen in Phase 10.
 
 ## Architecture Decisions (Phase 5 specific)
 
-### Visual Identity Components — RESOLVED: Separate Components
+> **Note:** These decisions were revised during architecture design. The resolutions below reflect the final architecture documented in `docs/architecture/rendering/`.
 
-Each visual property is its own component (`Shape`, `Color`, `AuraType`, `TrailType`, `DamageDisplay`, `DeathEffect`). Entities only get the components that apply to them. Enum types defined in rendering/, attached by owning domain at spawn.
+### Visual Identity — RESOLVED: AttachVisuals + EntityVisualConfig
 
-### Render Messages — RESOLVED: Module-Owned Messages
+~~Separate components per visual property.~~ **Revised:** Single `AttachVisuals { entity, config }` message carries an `EntityVisualConfig` struct (shape, color, glow, aura, trail). The crate receives the message and attaches all rendering components. No separate per-property components on gameplay entities. See `docs/architecture/rendering/entity_visuals.md`.
 
-Each VFX module defines its own Bevy message type. Standard systems (not observers) read messages in parallel. A `VfxKind` enum exists for RON data authoring only — the effect/ domain dispatches enum → module message.
+### Render Messages — RESOLVED: Compositional Primitives + Recipes
 
-### Particle System — RESOLVED: Custom `rantzsoft_particles` Crate
+~~Per-VFX-module messages with VfxKind dispatch enum.~~ **Revised:** No per-effect rendering modules. The crate provides generic primitives (ExpandingRing, Beam, SparkBurst, etc.) with typed messages. Complex effects are composed via RON visual recipes (`ExecuteRecipe`). No `VfxKind` enum. Dynamic visuals via `SetModifier`/`AddModifier`/`RemoveModifier`. See `docs/architecture/rendering/composition.md` and `docs/architecture/rendering/recipes.md`.
 
-Evaluated bevy_hanabi (macOS pink screen bug #523), bevy_enoki (no additive blending, CPU-only, broken docs), bevy_firework/bevy_sprinkles (3D only), bevy_particle_systems (Bevy 0.14 era). All had disqualifying issues.
+### Particle System — RESOLVED: CPU Particles in rantzsoft_vfx
 
-Building `rantzsoft_particles` as a new workspace crate. GPU compute shader particle simulation, `Material2d` with additive blending, HDR color support, RON-configurable emitters. Follows rantzsoft_* conventions (game-agnostic, zero game vocabulary).
+~~Custom `rantzsoft_particles` GPU compute crate.~~ **Revised:** CPU particle system built into `rantzsoft_vfx` (not a separate crate). Individual entity per particle with custom `Material2d` (additive blending via `specialize()`). Soft cap of 8192 concurrent particles (typically <500). No pre-spawned pool — spawn on demand, despawn on lifetime expiry. GPU compute is overkill at our scale. See `docs/architecture/rendering/particles.md`.
 
-### Rendering Config — RESOLVED: New RenderingDefaults
+### Rendering Config — RESOLVED: VfxConfig in Crate + GraphicsConfig in shared/
 
-New `rendering_defaults.ron` file and `RenderingConfig` resource via the `rantzsoft_defaults` pipeline. Stores CRT toggle, grid density, bloom settings, and other rendering tuning values. rendering/ domain owns it.
+~~`RenderingConfig` resource owned by rendering/ domain.~~ **Revised:** `VfxConfig` resource defined by `rantzsoft_vfx` crate, inserted and mutated by the game (shared/, debug menu, settings). `GraphicsConfig`/`GraphicsDefaults` in `shared/` via `rantzsoft_defaults`. No rendering/ or graphics/ game domain. See `docs/architecture/rendering/rantzsoft_vfx.md`.

@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Position2D;
 
 use super::super::helpers::*;
-use crate::{bolt::BASE_BOLT_DAMAGE, cells::messages::DamageCell};
+use crate::{bolt::resources::DEFAULT_BOLT_BASE_DAMAGE, cells::messages::DamageCell};
 
 // ── Behavior 1: fire() damages the first valid target cell immediately via DamageCell ──
 
@@ -37,7 +37,7 @@ fn fire_damages_first_target_immediately_via_damage_cell() {
         "DamageCell should target the spawned cell"
     );
 
-    let expected_damage = BASE_BOLT_DAMAGE * 1.5;
+    let expected_damage = DEFAULT_BOLT_BASE_DAMAGE * 1.5;
     assert!(
         (written[0].damage - expected_damage).abs() < f32::EPSILON,
         "expected damage {expected_damage}, got {}",
@@ -57,7 +57,7 @@ fn fire_scales_damage_by_effective_damage_multiplier() {
         .world_mut()
         .spawn((
             Position2D(Vec2::new(100.0, 200.0)),
-            crate::effect::EffectiveDamageMultiplier(2.0),
+            crate::effect::effects::damage_boost::ActiveDamageBoosts(vec![2.0]),
         ))
         .id();
 
@@ -72,8 +72,8 @@ fn fire_scales_damage_by_effective_damage_multiplier() {
 
     assert_eq!(written.len(), 1, "expected 1 DamageCell");
 
-    // damage = BASE_BOLT_DAMAGE * 1.5 * 2.0 = 30.0
-    let expected_damage = BASE_BOLT_DAMAGE * 1.5 * 2.0;
+    // damage = DEFAULT_BOLT_BASE_DAMAGE * 1.5 * 2.0 = 30.0
+    let expected_damage = DEFAULT_BOLT_BASE_DAMAGE * 1.5 * 2.0;
     assert!(
         (written[0].damage - expected_damage).abs() < f32::EPSILON,
         "expected damage {expected_damage} (10.0 * 1.5 * 2.0), got {}",
@@ -151,7 +151,7 @@ fn fire_damage_cell_includes_source_chip() {
     let written: Vec<&DamageCell> = messages.iter_current_update_messages().collect();
     assert_eq!(written.len(), 1);
 
-    let expected_damage = BASE_BOLT_DAMAGE * 1.5;
+    let expected_damage = DEFAULT_BOLT_BASE_DAMAGE * 1.5;
     assert!(
         (written[0].damage - expected_damage).abs() < f32::EPSILON,
         "expected damage {expected_damage}"
@@ -160,5 +160,143 @@ fn fire_damage_cell_includes_source_chip() {
         written[0].source_chip,
         Some("zapper".to_string()),
         "DamageCell should include source_chip"
+    );
+}
+
+// ── Behavior 25: fire() snapshots BoltBaseDamage from source entity into chain damage ──
+
+#[test]
+fn fire_snapshots_bolt_base_damage_from_source_entity() {
+    let mut app = chain_lightning_test_app();
+
+    let entity = app
+        .world_mut()
+        .spawn((
+            Position2D(Vec2::new(100.0, 200.0)),
+            crate::bolt::components::BoltBaseDamage(20.0),
+        ))
+        .id();
+
+    let _cell = spawn_test_cell(&mut app, 120.0, 200.0);
+
+    tick(&mut app);
+
+    fire(entity, 3, 50.0, 1.5, 200.0, "", app.world_mut());
+
+    let messages = app.world().resource::<Messages<DamageCell>>();
+    let written: Vec<&DamageCell> = messages.iter_current_update_messages().collect();
+
+    assert_eq!(written.len(), 1, "expected 1 DamageCell");
+
+    // damage = BoltBaseDamage(20.0) * damage_mult(1.5) = 30.0
+    let expected_damage = 20.0 * 1.5;
+    assert!(
+        (written[0].damage - expected_damage).abs() < f32::EPSILON,
+        "expected damage {} (20.0 * 1.5), got {}",
+        expected_damage,
+        written[0].damage
+    );
+}
+
+// ── Behavior 25 edge case: source has no BoltBaseDamage -- falls back to DEFAULT ──
+
+#[test]
+fn fire_falls_back_to_default_bolt_base_damage_for_chain_damage() {
+    let mut app = chain_lightning_test_app();
+
+    let entity = app
+        .world_mut()
+        .spawn(Position2D(Vec2::new(100.0, 200.0)))
+        .id();
+
+    let _cell = spawn_test_cell(&mut app, 120.0, 200.0);
+
+    tick(&mut app);
+
+    fire(entity, 3, 50.0, 1.5, 200.0, "", app.world_mut());
+
+    let messages = app.world().resource::<Messages<DamageCell>>();
+    let written: Vec<&DamageCell> = messages.iter_current_update_messages().collect();
+
+    assert_eq!(written.len(), 1);
+
+    // damage = DEFAULT_BOLT_BASE_DAMAGE(10.0) * 1.5 = 15.0
+    let expected_damage = DEFAULT_BOLT_BASE_DAMAGE * 1.5;
+    assert!(
+        (written[0].damage - expected_damage).abs() < f32::EPSILON,
+        "expected damage {} (10.0 * 1.5), got {}",
+        expected_damage,
+        written[0].damage
+    );
+}
+
+// ── Behavior 26: fire() chain lightning with BoltBaseDamage and ActiveDamageBoosts stacks ──
+
+#[test]
+fn fire_chain_lightning_with_bolt_base_damage_and_active_damage_boosts() {
+    let mut app = chain_lightning_test_app();
+
+    let entity = app
+        .world_mut()
+        .spawn((
+            Position2D(Vec2::new(100.0, 200.0)),
+            crate::bolt::components::BoltBaseDamage(15.0),
+            crate::effect::effects::damage_boost::ActiveDamageBoosts(vec![2.0]),
+        ))
+        .id();
+
+    let _cell = spawn_test_cell(&mut app, 120.0, 200.0);
+
+    tick(&mut app);
+
+    fire(entity, 3, 50.0, 1.0, 200.0, "", app.world_mut());
+
+    let messages = app.world().resource::<Messages<DamageCell>>();
+    let written: Vec<&DamageCell> = messages.iter_current_update_messages().collect();
+
+    assert_eq!(written.len(), 1);
+
+    // damage = BoltBaseDamage(15.0) * damage_mult(1.0) * EDM(2.0) = 30.0
+    let expected_damage = 15.0 * 1.0 * 2.0;
+    assert!(
+        (written[0].damage - expected_damage).abs() < f32::EPSILON,
+        "expected damage {} (15.0 * 1.0 * 2.0), got {}",
+        expected_damage,
+        written[0].damage
+    );
+}
+
+// ── Behavior 26 edge case: BoltBaseDamage(10.0) + no boosts -- identical to old behavior ──
+
+#[test]
+fn fire_chain_lightning_bolt_base_damage_10_no_boosts_identical_to_old() {
+    let mut app = chain_lightning_test_app();
+
+    let entity = app
+        .world_mut()
+        .spawn((
+            Position2D(Vec2::ZERO),
+            crate::bolt::components::BoltBaseDamage(10.0),
+        ))
+        .id();
+
+    let _cell = spawn_test_cell(&mut app, 10.0, 0.0);
+
+    tick(&mut app);
+
+    fire(entity, 1, 50.0, 1.5, 200.0, "", app.world_mut());
+
+    let messages = app.world().resource::<Messages<DamageCell>>();
+    let written: Vec<&DamageCell> = messages.iter_current_update_messages().collect();
+
+    assert_eq!(written.len(), 1);
+
+    // damage = 10.0 * 1.5 = 15.0
+    let expected_damage = 10.0 * 1.5;
+    assert!(
+        (written[0].damage - expected_damage).abs() < f32::EPSILON,
+        "expected damage {} (identical to old behavior), got {}",
+        expected_damage,
+        written[0].damage
     );
 }

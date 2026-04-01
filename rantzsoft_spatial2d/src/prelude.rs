@@ -5,4 +5,5 @@ pub use crate::{
     draw_layer::DrawLayer,
     plugin::{RantzSpatial2dPlugin, SpatialSystems},
     propagation::*,
+    queries::*,
 };

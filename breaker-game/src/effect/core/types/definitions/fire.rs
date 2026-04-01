@@ -229,6 +229,13 @@ impl EffectKind {
                     world,
                 );
             }
+            _ => self.fire_breaker_effects(entity, source_chip, world),
+        }
+    }
+
+    /// Fire breaker-targeted utility effects -- extracted from [`fire_utility_and_spawn`] for line count.
+    fn fire_breaker_effects(&self, entity: Entity, source_chip: &str, world: &mut World) {
+        match self {
             Self::QuickStop { multiplier } => {
                 super::super::super::super::effects::quick_stop::fire(
                     entity,
@@ -237,13 +244,56 @@ impl EffectKind {
                     world,
                 );
             }
-            Self::TetherBeam { damage_mult } => {
+            Self::TetherBeam { damage_mult, chain } => {
                 super::super::super::super::effects::tether_beam::fire(
                     entity,
                     *damage_mult,
+                    *chain,
                     source_chip,
                     world,
                 );
+            }
+            Self::MirrorProtocol { inherit } => {
+                super::super::super::super::effects::mirror_protocol::fire(
+                    entity,
+                    *inherit,
+                    source_chip,
+                    world,
+                );
+            }
+            Self::Anchor {
+                bump_force_multiplier,
+                perfect_window_multiplier,
+                plant_delay,
+            } => {
+                super::super::super::super::effects::anchor::fire(
+                    entity,
+                    *bump_force_multiplier,
+                    *perfect_window_multiplier,
+                    *plant_delay,
+                    source_chip,
+                    world,
+                );
+            }
+            Self::FlashStep => {
+                super::super::super::super::effects::flash_step::fire(entity, source_chip, world);
+            }
+            Self::CircuitBreaker {
+                bumps_required,
+                spawn_count,
+                inherit,
+                shockwave_range,
+                shockwave_speed,
+            } => {
+                use super::super::super::super::effects::circuit_breaker;
+                let config = circuit_breaker::CircuitBreakerConfig {
+                    bumps_required: *bumps_required,
+                    spawn_count: *spawn_count,
+                    inherit: *inherit,
+                    shockwave_range: *shockwave_range,
+                    shockwave_speed: *shockwave_speed,
+                };
+                circuit_breaker::fire(entity, &config, source_chip, world);
             }
             _ => {
                 // Stat effects (SpeedBoost, DamageBoost, etc.) handled in primary fire() match.

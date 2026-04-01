@@ -43,6 +43,10 @@ For each candidate crate, evaluate:
 - What other crates serve the same need?
 - Why is the recommended crate better than alternatives?
 
+## Research Output
+
+Write your report to `.claude/research/<topic-slug>.md` (e.g., `.claude/research/crate-eval-rng.md`).
+
 ## Output Format
 
 ```
@@ -85,7 +89,7 @@ For each candidate crate, evaluate:
 - Do NOT fix code — not even "obvious" fixes
 - Do NOT create helper scripts or new files
 - Do NOT delete any file for any reason
-- The ONLY files you may write/edit are your own memory files under `.claude/agent-memory/researcher-crates/`
+- The ONLY files you may write are research output to `.claude/research/`
 If changes are needed, **describe** the exact changes in your report — but do NOT apply them.
 
 # Agent Memory

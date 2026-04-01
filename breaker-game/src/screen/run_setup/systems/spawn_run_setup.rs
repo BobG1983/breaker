@@ -135,6 +135,7 @@ mod tests {
     fn make_breaker(name: &str) -> BreakerDefinition {
         BreakerDefinition {
             name: name.to_owned(),
+            bolt: "Bolt".to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: None,
             effects: vec![],

@@ -1,5 +1,9 @@
 /target
 .claude/agent-memory/**/ephemeral/
 .claude/specs/
+.claude/research/
+.claude/worktrees/
+.claude/fixes/
+.claude/state/
 /logs/
 /recordings/

@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 /// Tracks active quick stop multipliers on an entity.
 ///
-/// Recalculation: `base_decel * product(all_boosts)`.
+/// Formula: `base_decel * product(all_boosts)`. Computed on demand via `multiplier()`.
 #[derive(Component, Debug, Default, Clone)]
 pub struct ActiveQuickStops(pub Vec<f32>);
 
@@ -36,30 +36,6 @@ pub(crate) fn reverse(entity: Entity, multiplier: f32, _source_chip: &str, world
             .position(|&v| (v - multiplier).abs() < f32::EPSILON)
     {
         active.0.swap_remove(pos);
-    }
-}
-
-/// Effective quick stop multiplier computed by `recalculate_quick_stop`.
-#[derive(Component, Debug, Clone, Copy, PartialEq)]
-pub struct EffectiveQuickStop(pub f32);
-
-impl Default for EffectiveQuickStop {
-    fn default() -> Self {
-        Self(1.0)
-    }
-}
-
-/// Registers systems for `QuickStop` effect.
-pub(crate) fn register(app: &mut App) {
-    app.add_systems(
-        FixedUpdate,
-        recalculate_quick_stop.in_set(crate::effect::sets::EffectSystems::Recalculate),
-    );
-}
-
-fn recalculate_quick_stop(mut query: Query<(&ActiveQuickStops, &mut EffectiveQuickStop)>) {
-    for (active, mut effective) in &mut query {
-        effective.0 = active.multiplier();
     }
 }
 
@@ -134,47 +110,5 @@ mod tests {
     fn multiplier_returns_one_for_empty() {
         let boosts = ActiveQuickStops(vec![]);
         assert!((boosts.multiplier() - 1.0).abs() < f32::EPSILON);
-    }
-
-    #[test]
-    fn recalculate_quick_stop_single_boost() {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_systems(Update, recalculate_quick_stop);
-        let entity = app
-            .world_mut()
-            .spawn((ActiveQuickStops(vec![2.0]), EffectiveQuickStop(1.0)))
-            .id();
-        app.update();
-        let effective = app.world().get::<EffectiveQuickStop>(entity).unwrap();
-        assert!((effective.0 - 2.0).abs() < f32::EPSILON);
-    }
-
-    #[test]
-    fn recalculate_quick_stop_multiple_boosts_multiplicative() {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_systems(Update, recalculate_quick_stop);
-        let entity = app
-            .world_mut()
-            .spawn((ActiveQuickStops(vec![2.0, 1.5]), EffectiveQuickStop(1.0)))
-            .id();
-        app.update();
-        let effective = app.world().get::<EffectiveQuickStop>(entity).unwrap();
-        assert!((effective.0 - 3.0).abs() < f32::EPSILON);
-    }
-
-    #[test]
-    fn recalculate_quick_stop_empty_boosts_resets_to_default() {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_systems(Update, recalculate_quick_stop);
-        let entity = app
-            .world_mut()
-            .spawn((ActiveQuickStops(vec![]), EffectiveQuickStop(3.0)))
-            .id();
-        app.update();
-        let effective = app.world().get::<EffectiveQuickStop>(entity).unwrap();
-        assert!((effective.0 - 1.0).abs() < f32::EPSILON);
     }
 }

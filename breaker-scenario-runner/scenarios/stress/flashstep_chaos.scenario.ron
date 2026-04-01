@@ -1,0 +1,23 @@
+// Adversarial: FlashStep teleports the breaker to the bolt's current position when the
+// dash action fires. Chaos 0.9 action probability is the highest available, triggering
+// dash events at near every frame — this maximises teleport events before the breaker
+// physics has finished settling from the previous teleport. The adversarial risk: if
+// FlashStep reads the bolt position before it has been updated this frame (read-before-write
+// ordering hazard), the breaker teleports to a stale position and BreakerInBounds catches
+// the out-of-bounds result. If the teleport lands the breaker outside the playfield edge
+// (bolt was near-wall and the FlashStep destination calculation doesn't clamp), BreakerInBounds
+// fires. BoltInBounds catches any reactive physics correction to the bolt triggered by the
+// breaker teleport landing on top of it. NoNaN guards against NaN propagation from a
+// teleport target computed from a mid-frame bolt position during physics integration.
+(
+    breaker: "Aegis",
+    layout: "Scatter",
+    input: Chaos((action_prob: 0.9)),
+    max_frames: 5000,
+    disallowed_failures: [BreakerInBounds, NoNaN, BoltInBounds],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: 6029,
+    chip_selections: ["FlashStep"],
+)

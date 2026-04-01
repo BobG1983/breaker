@@ -5,8 +5,8 @@
         actions: [],
     )),
     max_frames: 120,
-    invariants: [BreakerInBounds, BreakerPositionClamped],
-    expected_violations: [BreakerInBounds, BreakerPositionClamped],
+    disallowed_failures: [BreakerInBounds, BreakerPositionClamped],
+    allowed_failures: [BreakerInBounds, BreakerPositionClamped],
     debug_setup: (
         bolt_position: None,
         breaker_position: (2000.0, 0.0),

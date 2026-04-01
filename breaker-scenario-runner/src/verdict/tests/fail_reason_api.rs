@@ -15,7 +15,7 @@ fn logs_cause_failure_even_when_violations_match() {
     let logs = vec![make_log_entry("bad thing")];
     let stats = make_healthy_stats();
     let mut definition = make_chaos_definition();
-    definition.expected_violations = Some(vec![InvariantKind::BoltInBounds]);
+    definition.allowed_failures = Some(vec![InvariantKind::BoltInBounds]);
 
     verdict.evaluate(&violations, &logs, &stats, &definition);
 

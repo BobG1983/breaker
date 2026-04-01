@@ -29,14 +29,13 @@ use super::{
 use crate::invariants::{
     EntityLeakBaseline, PreviousGameState, ScenarioFrame, ScenarioStats, ViolationLog,
     check_aabb_matches_entity_dimensions, check_bolt_count_reasonable, check_bolt_in_bounds,
-    check_bolt_speed_in_range, check_breaker_in_bounds, check_breaker_position_clamped,
+    check_bolt_speed_accurate, check_breaker_in_bounds, check_breaker_position_clamped,
     check_chain_arc_count_reasonable, check_chip_offer_expected, check_chip_stacks_consistent,
-    check_effective_speed_consistent, check_gravity_well_count_reasonable,
-    check_maxed_chip_never_offered, check_no_entity_leaks, check_no_nan,
-    check_offering_no_duplicates, check_physics_frozen_during_pause, check_pulse_ring_accumulation,
-    check_run_stats_monotonic, check_second_wind_wall_at_most_one, check_shield_charges_consistent,
-    check_size_boost_in_range, check_timer_monotonically_decreasing, check_timer_non_negative,
-    check_valid_breaker_state, check_valid_state_transitions,
+    check_gravity_well_count_reasonable, check_maxed_chip_never_offered, check_no_entity_leaks,
+    check_no_nan, check_offering_no_duplicates, check_physics_frozen_during_pause,
+    check_pulse_ring_accumulation, check_run_stats_monotonic, check_second_wind_wall_at_most_one,
+    check_shield_charges_consistent, check_timer_monotonically_decreasing,
+    check_timer_non_negative, check_valid_breaker_state, check_valid_state_transitions,
 };
 
 /// Plugin that drives the scenario lifecycle.
@@ -85,7 +84,7 @@ fn register_scenario_systems(app: &mut App) {
     // `ResMut<ViolationLog>`, so Bevy serialises them automatically within each batch.
     let checkers_a = (
         check_bolt_in_bounds,
-        check_bolt_speed_in_range,
+        check_bolt_speed_accurate,
         check_bolt_count_reasonable,
         check_breaker_in_bounds,
         check_no_nan,
@@ -106,14 +105,12 @@ fn register_scenario_systems(app: &mut App) {
         check_second_wind_wall_at_most_one,
         check_shield_charges_consistent,
         check_pulse_ring_accumulation,
-        check_effective_speed_consistent,
         check_chain_arc_count_reasonable,
     )
         .chain();
     let checkers_c = (
         check_aabb_matches_entity_dimensions,
         check_gravity_well_count_reasonable,
-        check_size_boost_in_range,
     )
         .chain();
     app.add_systems(OnEnter(GameState::MainMenu), bypass_menu_to_playing)
@@ -136,7 +133,7 @@ fn register_scenario_systems(app: &mut App) {
                 apply_debug_setup,
             )
                 .chain()
-                .after(BoltSystems::InitParams)
+                .after(BoltSystems::Reset)
                 .after(BreakerSystems::Reset)
                 .after(NodeSystems::InitTimer),
         )
@@ -154,7 +151,7 @@ fn register_scenario_systems(app: &mut App) {
                 (tick_scenario_frame, check_frame_limit)
                     .chain()
                     .run_if(entered_playing)
-                    .before(breaker::breaker::sets::BreakerSystems::Move),
+                    .before(BreakerSystems::Move),
                 (
                     enforce_frozen_positions,
                     apply_debug_frame_mutations,
@@ -167,7 +164,7 @@ fn register_scenario_systems(app: &mut App) {
                     .after(deferred_debug_setup)
                     .after(tag_game_entities)
                     .after(BreakerSystems::UpdateState)
-                    .before(breaker::bolt::BoltSystems::BoltLost),
+                    .before(BoltSystems::BoltLost),
                 tag_game_entities,
                 deferred_debug_setup.after(tag_game_entities),
                 apply_pending_bolt_effects.after(tag_game_entities),

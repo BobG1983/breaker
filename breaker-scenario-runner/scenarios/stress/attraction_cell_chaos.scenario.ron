@@ -3,7 +3,7 @@
 // interacts with every reflection, potentially amplifying velocity to unsafe magnitudes or
 // corrupting direction after a cell is destroyed mid-attraction. High action_prob (0.6)
 // drives rapid breaker movement and bumps that compete with the attraction force.
-// BoltSpeedInRange catches runaway speed if attraction bypasses clamping.
+// BoltSpeedAccurate catches runaway speed if attraction bypasses clamping.
 // NoNaN catches direction corruption when the nearest-cell query returns a despawned entity.
 // Stress: 32 runs to explore different cell destruction orderings.
 (
@@ -11,8 +11,8 @@
     layout: "Dense",
     input: Chaos((action_prob: 0.6)),
     max_frames: 8000,
-    invariants: [BoltInBounds, NoNaN, BoltSpeedInRange],
-    expected_violations: None,
+    disallowed_failures: [BoltInBounds, NoNaN, BoltSpeedAccurate],
+    allowed_failures: None,
     debug_setup: None,
     allow_early_end: false,
     stress: (runs: 32, parallelism: 32),

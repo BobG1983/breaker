@@ -15,7 +15,7 @@ fn apply_debug_frame_mutations_move_bolt_at_matching_frame() {
         layout: "Corridor".to_owned(),
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
-        invariants: vec![],
+        disallowed_failures: vec![],
         frame_mutations: Some(vec![FrameMutation {
             frame: 5,
             mutation: MutationKind::MoveBolt(999.0, 999.0),
@@ -63,7 +63,7 @@ fn apply_debug_frame_mutations_toggle_pause_sets_paused() {
         layout: "Corridor".to_owned(),
         input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
         max_frames: 1000,
-        invariants: vec![],
+        disallowed_failures: vec![],
         frame_mutations: Some(vec![FrameMutation {
             frame: 3,
             mutation: MutationKind::TogglePause,

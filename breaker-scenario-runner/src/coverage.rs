@@ -33,7 +33,7 @@ pub fn check_coverage(
             !scenarios.iter().any(|(name, def)| {
                 self_test_names.contains(name)
                     && def
-                        .expected_violations
+                        .allowed_failures
                         .as_ref()
                         .is_some_and(|violations| violations.contains(variant))
             })
@@ -87,10 +87,6 @@ pub fn print_coverage_report(report: &CoverageReport) -> bool {
         }
     }
 
-    if !has_gaps {
-        println!("\nAll invariants have self-test coverage. All layouts are referenced.");
-    }
-
     has_gaps
 }
 
@@ -107,15 +103,15 @@ mod tests {
     /// Override fields after construction for test-specific values.
     fn minimal_scenario(
         layout: &str,
-        expected_violations: Option<Vec<InvariantKind>>,
+        allowed_failures: Option<Vec<InvariantKind>>,
     ) -> ScenarioDefinition {
         ScenarioDefinition {
             breaker: "aegis".to_owned(),
             layout: layout.to_owned(),
             input: InputStrategy::Chaos(ChaosParams { action_prob: 0.1 }),
             max_frames: 100,
-            invariants: vec![],
-            expected_violations,
+            disallowed_failures: vec![],
+            allowed_failures,
             ..Default::default()
         }
     }
@@ -169,8 +165,8 @@ mod tests {
     }
 
     #[test]
-    fn non_self_test_scenario_with_expected_violations_does_not_count_as_coverage() {
-        // A scenario NOT in self_test_names has expected_violations for BoltInBounds,
+    fn non_self_test_scenario_with_allowed_failures_does_not_count_as_coverage() {
+        // A scenario NOT in self_test_names has allowed_failures for BoltInBounds,
         // but it should NOT count as coverage.
         let scenarios = vec![(
             "some_mechanic_test".to_owned(),

@@ -5,14 +5,11 @@ use bevy::prelude::*;
 use super::{
     sets::HotReloadSystems,
     systems::{
-        propagate_bolt_config, propagate_breaker_changes, propagate_breaker_config,
+        propagate_bolt_definition, propagate_breaker_changes, propagate_breaker_config,
         propagate_cell_type_changes, propagate_node_layout_changes,
     },
 };
-use crate::{
-    bolt::BoltConfig, breaker::BreakerConfig, chips::systems::propagate_chip_catalog,
-    shared::GameState,
-};
+use crate::{breaker::BreakerConfig, chips::systems::propagate_chip_catalog, shared::GameState};
 
 /// Plugin that enables live hot-reload of RON configuration and content files.
 ///
@@ -42,6 +39,7 @@ impl Plugin for HotReloadPlugin {
                 propagate_cell_type_changes.before(propagate_node_layout_changes),
                 propagate_node_layout_changes,
                 propagate_breaker_changes,
+                propagate_bolt_definition,
                 propagate_chip_catalog,
             )
                 .in_set(HotReloadSystems::PropagateDefaults),
@@ -50,10 +48,8 @@ impl Plugin for HotReloadPlugin {
         // Layer 3: Config → Components (PropagateConfig set)
         app.add_systems(
             Update,
-            (
-                propagate_bolt_config.run_if(resource_changed::<BoltConfig>),
-                propagate_breaker_config.run_if(resource_changed::<BreakerConfig>),
-            )
+            propagate_breaker_config
+                .run_if(resource_changed::<BreakerConfig>)
                 .in_set(HotReloadSystems::PropagateConfig),
         );
     }

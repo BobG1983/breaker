@@ -1,6 +1,6 @@
 //! Tests for collision layer filtering in `tick_tether_beam`.
 
-use super::super::*;
+use super::super::helpers::*;
 
 #[test]
 fn tick_tether_beam_skips_entities_outside_cell_layer() {
