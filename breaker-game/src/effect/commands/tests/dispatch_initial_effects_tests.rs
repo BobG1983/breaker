@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use super::super::ext::*;
 use crate::{
     bolt::components::{Bolt, ExtraBolt, PrimaryBolt},
-    breaker::components::Breaker,
+    breaker::components::{Breaker, PrimaryBreaker},
     cells::components::Cell,
     effect::{core::*, effects::damage_boost::ActiveDamageBoosts},
     wall::components::Wall,
@@ -16,7 +16,9 @@ use crate::{
 #[test]
 fn breaker_target_do_effect_fires_immediately() {
     let mut world = World::new();
-    let breaker = world.spawn((Breaker, ActiveDamageBoosts(vec![]))).id();
+    let breaker = world
+        .spawn((Breaker, PrimaryBreaker, ActiveDamageBoosts(vec![])))
+        .id();
 
     DispatchInitialEffects {
         effects: vec![RootEffect::On {
@@ -40,7 +42,9 @@ fn breaker_target_do_effect_fires_immediately() {
 #[test]
 fn breaker_target_multiple_bare_do_children_all_fire() {
     let mut world = World::new();
-    let breaker = world.spawn((Breaker, ActiveDamageBoosts(vec![]))).id();
+    let breaker = world
+        .spawn((Breaker, PrimaryBreaker, ActiveDamageBoosts(vec![])))
+        .id();
 
     DispatchInitialEffects {
         effects: vec![RootEffect::On {
@@ -70,7 +74,12 @@ fn breaker_target_multiple_bare_do_children_all_fire() {
 fn breaker_target_when_effect_pushes_to_bound_effects() {
     let mut world = World::new();
     let breaker = world
-        .spawn((Breaker, BoundEffects::default(), StagedEffects::default()))
+        .spawn((
+            Breaker,
+            PrimaryBreaker,
+            BoundEffects::default(),
+            StagedEffects::default(),
+        ))
         .id();
 
     DispatchInitialEffects {
@@ -113,6 +122,7 @@ fn breaker_target_mixed_do_and_when_fires_do_stores_when() {
     let breaker = world
         .spawn((
             Breaker,
+            PrimaryBreaker,
             BoundEffects::default(),
             StagedEffects::default(),
             ActiveDamageBoosts(vec![]),
@@ -223,7 +233,12 @@ fn bolt_target_no_primary_bolt_but_breaker_still_processed() {
         ))
         .id();
     let breaker = world
-        .spawn((Breaker, BoundEffects::default(), StagedEffects::default()))
+        .spawn((
+            Breaker,
+            PrimaryBreaker,
+            BoundEffects::default(),
+            StagedEffects::default(),
+        ))
         .id();
 
     DispatchInitialEffects {
@@ -269,6 +284,7 @@ fn cell_target_is_noop_but_breaker_target_processes() {
     let breaker = world
         .spawn((
             Breaker,
+            PrimaryBreaker,
             BoundEffects::default(),
             StagedEffects::default(),
             ActiveDamageBoosts(vec![]),
@@ -318,7 +334,12 @@ fn cell_target_when_children_noop_with_breaker_processed() {
     let mut world = World::new();
     let cell = world.spawn((Cell, BoundEffects::default())).id();
     let breaker = world
-        .spawn((Breaker, BoundEffects::default(), StagedEffects::default()))
+        .spawn((
+            Breaker,
+            PrimaryBreaker,
+            BoundEffects::default(),
+            StagedEffects::default(),
+        ))
         .id();
 
     DispatchInitialEffects {
@@ -368,6 +389,7 @@ fn wall_target_is_noop_but_breaker_target_processes() {
     let breaker = world
         .spawn((
             Breaker,
+            PrimaryBreaker,
             BoundEffects::default(),
             StagedEffects::default(),
             ActiveDamageBoosts(vec![]),
@@ -424,7 +446,12 @@ fn wall_target_do_children_noop_with_breaker_processed() {
     let mut world = World::new();
     let wall = world.spawn((Wall, BoundEffects::default())).id();
     let breaker = world
-        .spawn((Breaker, BoundEffects::default(), StagedEffects::default()))
+        .spawn((
+            Breaker,
+            PrimaryBreaker,
+            BoundEffects::default(),
+            StagedEffects::default(),
+        ))
         .id();
 
     DispatchInitialEffects {
@@ -467,7 +494,12 @@ fn wall_target_do_children_noop_with_breaker_processed() {
 fn all_bolts_target_deferred_wrapped_on_first_breaker() {
     let mut world = World::new();
     let breaker = world
-        .spawn((Breaker, BoundEffects::default(), StagedEffects::default()))
+        .spawn((
+            Breaker,
+            PrimaryBreaker,
+            BoundEffects::default(),
+            StagedEffects::default(),
+        ))
         .id();
     let _bolt_a = world.spawn(Bolt).id();
     let _bolt_b = world.spawn(Bolt).id();
@@ -518,7 +550,12 @@ fn all_bolts_target_deferred_wrapped_on_first_breaker() {
 fn all_bolts_do_children_still_deferred_not_fired() {
     let mut world = World::new();
     let breaker = world
-        .spawn((Breaker, BoundEffects::default(), StagedEffects::default()))
+        .spawn((
+            Breaker,
+            PrimaryBreaker,
+            BoundEffects::default(),
+            StagedEffects::default(),
+        ))
         .id();
     let bolt = world.spawn((Bolt, ActiveDamageBoosts(vec![]))).id();
 
@@ -556,7 +593,12 @@ fn all_bolts_do_children_still_deferred_not_fired() {
 fn all_cells_target_deferred_wrapped_on_first_breaker() {
     let mut world = World::new();
     let breaker = world
-        .spawn((Breaker, BoundEffects::default(), StagedEffects::default()))
+        .spawn((
+            Breaker,
+            PrimaryBreaker,
+            BoundEffects::default(),
+            StagedEffects::default(),
+        ))
         .id();
     let cell_a = world.spawn(Cell).id();
     let cell_b = world.spawn(Cell).id();
@@ -622,7 +664,12 @@ fn all_cells_target_deferred_wrapped_on_first_breaker() {
 fn all_cells_multiple_children_wrapped_in_single_on() {
     let mut world = World::new();
     let breaker = world
-        .spawn((Breaker, BoundEffects::default(), StagedEffects::default()))
+        .spawn((
+            Breaker,
+            PrimaryBreaker,
+            BoundEffects::default(),
+            StagedEffects::default(),
+        ))
         .id();
 
     let children = vec![
@@ -674,7 +721,12 @@ fn all_cells_multiple_children_wrapped_in_single_on() {
 fn all_walls_target_deferred_wrapped_on_first_breaker() {
     let mut world = World::new();
     let breaker = world
-        .spawn((Breaker, BoundEffects::default(), StagedEffects::default()))
+        .spawn((
+            Breaker,
+            PrimaryBreaker,
+            BoundEffects::default(),
+            StagedEffects::default(),
+        ))
         .id();
     let wall_a = world.spawn(Wall).id();
     let wall_b = world.spawn(Wall).id();
@@ -737,7 +789,12 @@ fn all_walls_target_deferred_wrapped_on_first_breaker() {
 fn all_walls_empty_then_still_creates_wrapper() {
     let mut world = World::new();
     let breaker = world
-        .spawn((Breaker, BoundEffects::default(), StagedEffects::default()))
+        .spawn((
+            Breaker,
+            PrimaryBreaker,
+            BoundEffects::default(),
+            StagedEffects::default(),
+        ))
         .id();
 
     DispatchInitialEffects {
@@ -914,7 +971,12 @@ fn no_breaker_all_walls_graceful_noop_bolt_still_processed() {
 fn source_chip_some_passes_through_to_bound_effects() {
     let mut world = World::new();
     let breaker = world
-        .spawn((Breaker, BoundEffects::default(), StagedEffects::default()))
+        .spawn((
+            Breaker,
+            PrimaryBreaker,
+            BoundEffects::default(),
+            StagedEffects::default(),
+        ))
         .id();
 
     DispatchInitialEffects {
@@ -943,7 +1005,12 @@ fn source_chip_some_passes_through_to_bound_effects() {
 fn source_chip_special_characters_stored_as_is() {
     let mut world = World::new();
     let breaker = world
-        .spawn((Breaker, BoundEffects::default(), StagedEffects::default()))
+        .spawn((
+            Breaker,
+            PrimaryBreaker,
+            BoundEffects::default(),
+            StagedEffects::default(),
+        ))
         .id();
 
     DispatchInitialEffects {
@@ -974,7 +1041,12 @@ fn source_chip_special_characters_stored_as_is() {
 fn source_chip_none_maps_to_empty_string() {
     let mut world = World::new();
     let breaker = world
-        .spawn((Breaker, BoundEffects::default(), StagedEffects::default()))
+        .spawn((
+            Breaker,
+            PrimaryBreaker,
+            BoundEffects::default(),
+            StagedEffects::default(),
+        ))
         .id();
 
     DispatchInitialEffects {
@@ -1003,7 +1075,12 @@ fn source_chip_none_maps_to_empty_string() {
 fn source_chip_some_empty_string_same_as_none() {
     let mut world = World::new();
     let breaker = world
-        .spawn((Breaker, BoundEffects::default(), StagedEffects::default()))
+        .spawn((
+            Breaker,
+            PrimaryBreaker,
+            BoundEffects::default(),
+            StagedEffects::default(),
+        ))
         .id();
 
     DispatchInitialEffects {
@@ -1037,7 +1114,12 @@ fn source_chip_some_empty_string_same_as_none() {
 fn empty_effects_list_alongside_real_effect() {
     let mut world = World::new();
     let breaker = world
-        .spawn((Breaker, BoundEffects::default(), StagedEffects::default()))
+        .spawn((
+            Breaker,
+            PrimaryBreaker,
+            BoundEffects::default(),
+            StagedEffects::default(),
+        ))
         .id();
 
     // First call: empty list (should be a no-op)
@@ -1082,7 +1164,12 @@ fn empty_effects_list_alongside_real_effect() {
 fn on_with_empty_then_alongside_real_effect() {
     let mut world = World::new();
     let breaker = world
-        .spawn((Breaker, BoundEffects::default(), StagedEffects::default()))
+        .spawn((
+            Breaker,
+            PrimaryBreaker,
+            BoundEffects::default(),
+            StagedEffects::default(),
+        ))
         .id();
 
     DispatchInitialEffects {
@@ -1121,6 +1208,7 @@ fn multiple_root_effects_different_targets_all_processed() {
     let breaker = world
         .spawn((
             Breaker,
+            PrimaryBreaker,
             BoundEffects::default(),
             StagedEffects::default(),
             ActiveDamageBoosts(vec![]),
@@ -1211,6 +1299,7 @@ fn three_root_effects_breaker_bolt_all_bolts() {
     let breaker = world
         .spawn((
             Breaker,
+            PrimaryBreaker,
             BoundEffects::default(),
             StagedEffects::default(),
             ActiveDamageBoosts(vec![]),
@@ -1282,7 +1371,7 @@ fn three_root_effects_breaker_bolt_all_bolts() {
 fn bound_effects_and_staged_effects_inserted_if_absent() {
     let mut world = World::new();
     // Spawn breaker with ONLY the marker -- no BoundEffects/StagedEffects
-    let breaker = world.spawn(Breaker).id();
+    let breaker = world.spawn((Breaker, PrimaryBreaker)).id();
 
     DispatchInitialEffects {
         effects: vec![RootEffect::On {
@@ -1324,7 +1413,9 @@ fn prior_bound_effects_preserved_new_entry_appended() {
             then: vec![EffectNode::Do(EffectKind::DamageBoost(0.5))],
         },
     );
-    let breaker = world.spawn((Breaker, BoundEffects(vec![prior_entry]))).id();
+    let breaker = world
+        .spawn((Breaker, PrimaryBreaker, BoundEffects(vec![prior_entry])))
+        .id();
 
     DispatchInitialEffects {
         effects: vec![RootEffect::On {
@@ -1437,6 +1528,7 @@ fn bolt_target_do_no_bolts_alongside_breaker() {
     let breaker = world
         .spawn((
             Breaker,
+            PrimaryBreaker,
             BoundEffects::default(),
             StagedEffects::default(),
             ActiveDamageBoosts(vec![]),

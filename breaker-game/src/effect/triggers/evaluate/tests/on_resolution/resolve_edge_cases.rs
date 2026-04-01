@@ -5,6 +5,7 @@ use bevy::prelude::*;
 
 use super::helpers::*;
 use crate::{
+    bolt::components::{Bolt, PrimaryBolt},
     breaker::components::Breaker,
     cells::components::Cell,
     effect::{commands::ResolveOnCommand, core::*},
@@ -198,5 +199,132 @@ fn mixed_on_and_when_in_staged_effects_both_consumed_when_trigger_matches() {
             }
         ),
         "Remaining entry should be the When(Death, ...) addition from the consumed When(Bump)"
+    );
+}
+
+// -----------------------------------------------------------------------
+// Nested On(On()) — inner On is deferred to target's StagedEffects
+// -----------------------------------------------------------------------
+
+#[test]
+fn nested_on_transfers_inner_on_to_target_staged_effects() {
+    // On(Cell, [On(Bolt, [When(Died, [Do(SpeedBoost)])])])
+    // Step 1: outer On(Cell) resolves to cell_b via context
+    // Step 2: inner On(Bolt) is pushed to cell_b's StagedEffects (non-Do child)
+    // Step 3: next evaluate on cell_b consumes On(Bolt) — with no collision context,
+    //         it should resolve via resolve_default(Bolt) → PrimaryBolt
+    let mut world = World::new();
+
+    let cell_b = world
+        .spawn((Cell, BoundEffects::default(), StagedEffects::default()))
+        .id();
+    let _cell_a = world
+        .spawn((Cell, BoundEffects::default(), StagedEffects::default()))
+        .id();
+
+    // Outer On: resolves to cell_b via context
+    let cmd = ResolveOnCommand {
+        target: Target::Cell,
+        chip_name: "nested_test".to_string(),
+        children: vec![EffectNode::On {
+            target: Target::Bolt,
+            permanent: false,
+            then: vec![EffectNode::When {
+                trigger: Trigger::Died,
+                then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
+            }],
+        }],
+        permanent: false,
+        context_entity: Some(cell_b),
+    };
+    cmd.apply(&mut world);
+
+    // After outer On resolves: cell_b should have the inner On(Bolt) in StagedEffects
+    let staged = world.get::<StagedEffects>(cell_b).unwrap();
+    assert_eq!(
+        staged.0.len(),
+        1,
+        "cell_b should have 1 staged entry — the inner On(Bolt) node"
+    );
+    assert!(
+        matches!(
+            &staged.0[0].1,
+            EffectNode::On {
+                target: Target::Bolt,
+                ..
+            }
+        ),
+        "staged entry should be On(Bolt, ...)"
+    );
+}
+
+#[test]
+fn nested_on_inner_resolves_to_primary_bolt_when_consumed_without_context() {
+    // Full chain: outer On(Cell) → inner On(Bolt) deferred to cell's staged.
+    // When cell's staged is evaluated (with context=None), inner On(Bolt)
+    // should resolve to PrimaryBolt via resolve_default.
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins);
+
+    let primary_bolt = app
+        .world_mut()
+        .spawn((
+            Bolt,
+            PrimaryBolt,
+            BoundEffects::default(),
+            StagedEffects::default(),
+        ))
+        .id();
+    let secondary_bolt = app
+        .world_mut()
+        .spawn((Bolt, BoundEffects::default(), StagedEffects::default()))
+        .id();
+
+    let cell = app
+        .world_mut()
+        .spawn((
+            Cell,
+            BoundEffects::default(),
+            // Pre-load staged with On(Bolt) — simulates the result of outer On(Cell)
+            // having already resolved and transferred this to the cell.
+            StagedEffects(vec![(
+                "nested_test".into(),
+                EffectNode::On {
+                    target: Target::Bolt,
+                    permanent: false,
+                    then: vec![EffectNode::When {
+                        trigger: Trigger::Died,
+                        then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
+                    }],
+                },
+            )]),
+        ))
+        .id();
+
+    // Evaluate staged on cell with context=None (simulates a non-collision trigger like Died).
+    // The On(Bolt) should be consumed and resolve to PrimaryBolt.
+    app.add_systems(Update, sys_evaluate_staged_for_bump);
+    app.update();
+
+    // Cell's staged should be empty — On was consumed
+    let cell_staged = app.world().get::<StagedEffects>(cell).unwrap();
+    assert!(
+        cell_staged.0.is_empty(),
+        "On(Bolt) should be consumed from cell's StagedEffects"
+    );
+
+    // PrimaryBolt should have the When(Died) in its StagedEffects
+    let primary_staged = app.world().get::<StagedEffects>(primary_bolt).unwrap();
+    assert_eq!(
+        primary_staged.0.len(),
+        1,
+        "PrimaryBolt should have 1 staged entry from resolved inner On(Bolt)"
+    );
+
+    // Secondary bolt should have nothing — not PrimaryBolt
+    let secondary_staged = app.world().get::<StagedEffects>(secondary_bolt).unwrap();
+    assert!(
+        secondary_staged.0.is_empty(),
+        "Non-primary bolt should NOT receive the inner On(Bolt) transfer"
     );
 }

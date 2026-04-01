@@ -564,3 +564,81 @@ fn impacted_cell_wall_context_resolves_to_specific_cell() {
         "cell_c should have no staged effects — not the impacted cell"
     );
 }
+
+// -----------------------------------------------------------------------
+// Guard: On nodes must not linger in StagedEffects across evaluations.
+// walk_staged_node consumes On nodes unconditionally, so this should always
+// pass. If that invariant is ever broken, this test catches it.
+// -----------------------------------------------------------------------
+
+#[test]
+fn on_node_does_not_linger_across_sequential_collisions() {
+    let mut app = test_app_bolt_cell();
+
+    let bolt = app
+        .world_mut()
+        .spawn((
+            Bolt,
+            retarget_on_impacted(ImpactTarget::Cell, Target::Cell),
+            StagedEffects::default(),
+        ))
+        .id();
+
+    let cell_a = app.world_mut().spawn((Cell, StagedEffects::default())).id();
+    let cell_b = app.world_mut().spawn((Cell, StagedEffects::default())).id();
+    let cell_c = app.world_mut().spawn((Cell, StagedEffects::default())).id();
+
+    // First collision: bolt hits cell_b
+    app.insert_resource(TestBoltImpactCellMsg(Some(BoltImpactCell {
+        bolt,
+        cell: cell_b,
+    })));
+    tick(&mut app);
+
+    assert_eq!(
+        app.world().get::<StagedEffects>(cell_b).unwrap().0.len(),
+        1,
+        "cell_b should have exactly 1 staged entry from first collision"
+    );
+    assert!(
+        app.world()
+            .get::<StagedEffects>(cell_a)
+            .unwrap()
+            .0
+            .is_empty(),
+        "cell_a should have nothing after first collision"
+    );
+
+    // Second collision: bolt hits cell_a
+    app.insert_resource(TestBoltImpactCellMsg(Some(BoltImpactCell {
+        bolt,
+        cell: cell_a,
+    })));
+    tick(&mut app);
+
+    assert_eq!(
+        app.world().get::<StagedEffects>(cell_a).unwrap().0.len(),
+        1,
+        "cell_a should have exactly 1 staged entry from second collision"
+    );
+    assert_eq!(
+        app.world().get::<StagedEffects>(cell_b).unwrap().0.len(),
+        1,
+        "cell_b should STILL have exactly 1 — no duplicate from lingering On node"
+    );
+    assert!(
+        app.world()
+            .get::<StagedEffects>(cell_c)
+            .unwrap()
+            .0
+            .is_empty(),
+        "cell_c should have nothing — never involved in a collision"
+    );
+
+    // Bolt's own StagedEffects must be clean
+    let bolt_staged = app.world().get::<StagedEffects>(bolt).unwrap();
+    assert!(
+        bolt_staged.0.is_empty(),
+        "bolt's StagedEffects should be empty — On nodes must be consumed immediately"
+    );
+}

@@ -144,23 +144,40 @@ impl Command for DispatchInitialEffects {
     fn apply(self, world: &mut World) {
         let chip_name = self.source_chip.unwrap_or_default();
 
+        // Hoist entity resolution — avoid repeated QueryState creation per root effect
+        let primary_breakers: Vec<Entity> = {
+            let mut q = world.query_filtered::<Entity, (With<Breaker>, With<PrimaryBreaker>)>();
+            q.iter(world).collect()
+        };
+        let primary_bolts: Vec<Entity> = {
+            let mut q = world.query_filtered::<Entity, With<PrimaryBolt>>();
+            q.iter(world).collect()
+        };
+
         for root in self.effects {
             let RootEffect::On { target, then } = root;
 
             match target {
                 Target::Breaker => {
-                    let mut query = world.query_filtered::<Entity, With<Breaker>>();
-                    let entities: Vec<Entity> = query.iter(world).collect();
-                    for entity in entities {
-                        dispatch_children_to(entity, &then, &chip_name, world);
+                    for &entity in &primary_breakers {
+                        TransferCommand {
+                            entity,
+                            chip_name: chip_name.clone(),
+                            children: then.clone(),
+                            permanent: true,
+                        }
+                        .apply(world);
                     }
                 }
                 Target::Bolt => {
-                    // Initial dispatch targets primary bolts only
-                    let mut query = world.query_filtered::<Entity, With<PrimaryBolt>>();
-                    let entities: Vec<Entity> = query.iter(world).collect();
-                    for entity in entities {
-                        dispatch_children_to(entity, &then, &chip_name, world);
+                    for &entity in &primary_bolts {
+                        TransferCommand {
+                            entity,
+                            chip_name: chip_name.clone(),
+                            children: then.clone(),
+                            permanent: true,
+                        }
+                        .apply(world);
                     }
                 }
                 Target::Cell | Target::Wall => {
@@ -168,7 +185,7 @@ impl Command for DispatchInitialEffects {
                 }
                 Target::AllBolts | Target::AllCells | Target::AllWalls => {
                     // Deferred dispatch: wrap and push to first breaker
-                    if let Some(breaker_entity) = first_breaker(world) {
+                    if let Some(&breaker_entity) = primary_breakers.first() {
                         let wrapped = EffectNode::When {
                             trigger: Trigger::NodeStart,
                             then: vec![EffectNode::On {
@@ -180,51 +197,13 @@ impl Command for DispatchInitialEffects {
                         push_bound_to(breaker_entity, &chip_name, wrapped, world);
                     } else {
                         warn!(
-                            "DispatchInitialEffects: no breaker found for deferred {:?} dispatch — skipping",
+                            "DispatchInitialEffects: no primary breaker found for deferred {:?} dispatch — skipping",
                             target
                         );
                     }
                 }
             }
         }
-    }
-}
-
-/// Returns the first breaker entity found, or `None` if no breakers exist.
-fn first_breaker(world: &mut World) -> Option<Entity> {
-    let mut query = world.query_filtered::<Entity, With<Breaker>>();
-    query.iter(world).next()
-}
-
-/// Dispatches children to an entity: fires `Do` effects immediately, pushes
-/// non-`Do` effects to `BoundEffects`.
-fn dispatch_children_to(
-    entity: Entity,
-    children: &[EffectNode],
-    chip_name: &str,
-    world: &mut World,
-) {
-    let mut do_effects = Vec::new();
-    let mut bound_children = Vec::new();
-
-    for child in children {
-        match child {
-            EffectNode::Do(effect) => do_effects.push(effect.clone()),
-            other => bound_children.push(other.clone()),
-        }
-    }
-
-    if let Ok(mut entity_ref) = world.get_entity_mut(entity) {
-        ensure_effect_components(&mut entity_ref);
-        for child in bound_children {
-            if let Some(mut bound) = entity_ref.get_mut::<BoundEffects>() {
-                bound.0.push((chip_name.to_owned(), child));
-            }
-        }
-    }
-
-    for effect in do_effects {
-        effect.fire(entity, chip_name, world);
     }
 }
 
