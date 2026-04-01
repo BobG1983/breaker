@@ -7,7 +7,7 @@ use super::super::helpers::*;
 // Behavior 17: reverse() with chain=false is still a no-op
 #[test]
 fn reverse_chain_false_is_still_a_noop() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
     fire(entity, 1.5, false, "", &mut world);
@@ -46,6 +46,7 @@ fn reverse_chain_true_removes_tether_chain_active_resource() {
     world.insert_resource(TetherChainActive {
         damage_mult: 1.0,
         effective_damage_multiplier: 1.0,
+        base_damage: DEFAULT_BOLT_BASE_DAMAGE,
         source_chip: None,
         last_bolt_count: 2,
     });
@@ -66,6 +67,7 @@ fn reverse_chain_true_despawns_all_chain_beam_entities() {
     world.insert_resource(TetherChainActive {
         damage_mult: 1.0,
         effective_damage_multiplier: 1.0,
+        base_damage: DEFAULT_BOLT_BASE_DAMAGE,
         source_chip: None,
         last_bolt_count: 3,
     });
@@ -115,6 +117,7 @@ fn reverse_chain_true_does_not_despawn_standard_tether_beams() {
     world.insert_resource(TetherChainActive {
         damage_mult: 1.0,
         effective_damage_multiplier: 1.0,
+        base_damage: DEFAULT_BOLT_BASE_DAMAGE,
         source_chip: None,
         last_bolt_count: 2,
     });
@@ -125,6 +128,7 @@ fn reverse_chain_true_does_not_despawn_standard_tether_beams() {
             bolt_b: Entity::PLACEHOLDER,
             damage_mult: 1.0,
             effective_damage_multiplier: 1.0,
+            base_damage: DEFAULT_BOLT_BASE_DAMAGE,
         })
         .id();
     // 2 chain beams (with TetherChainBeam marker)
@@ -134,6 +138,7 @@ fn reverse_chain_true_does_not_despawn_standard_tether_beams() {
             bolt_b: Entity::PLACEHOLDER,
             damage_mult: 1.0,
             effective_damage_multiplier: 1.0,
+            base_damage: DEFAULT_BOLT_BASE_DAMAGE,
         },
         TetherChainBeam,
     ));
@@ -143,6 +148,7 @@ fn reverse_chain_true_does_not_despawn_standard_tether_beams() {
             bolt_b: Entity::PLACEHOLDER,
             damage_mult: 1.0,
             effective_damage_multiplier: 1.0,
+            base_damage: DEFAULT_BOLT_BASE_DAMAGE,
         },
         TetherChainBeam,
     ));

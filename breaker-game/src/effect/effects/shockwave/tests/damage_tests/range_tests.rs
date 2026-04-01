@@ -9,7 +9,7 @@ use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D};
 
 use super::super::*;
-use crate::{bolt::BASE_BOLT_DAMAGE, shared::WALL_LAYER};
+use crate::{bolt::resources::DEFAULT_BOLT_BASE_DAMAGE, shared::WALL_LAYER};
 
 // -- Behavior 1: Shockwave damages a cell within its current radius ──
 
@@ -32,9 +32,9 @@ fn shockwave_damages_cell_within_radius() {
     );
     assert_eq!(collector.0[0].cell, cell);
     assert!(
-        (collector.0[0].damage - BASE_BOLT_DAMAGE).abs() < f32::EPSILON,
+        (collector.0[0].damage - DEFAULT_BOLT_BASE_DAMAGE).abs() < f32::EPSILON,
         "expected damage {}, got {}",
-        BASE_BOLT_DAMAGE,
+        DEFAULT_BOLT_BASE_DAMAGE,
         collector.0[0].damage
     );
     assert!(
@@ -145,8 +145,8 @@ fn shockwave_damages_multiple_cells_in_range() {
 
     for msg in &collector.0 {
         assert!(
-            (msg.damage - BASE_BOLT_DAMAGE).abs() < f32::EPSILON,
-            "each cell damage should be BASE_BOLT_DAMAGE (10.0)"
+            (msg.damage - DEFAULT_BOLT_BASE_DAMAGE).abs() < f32::EPSILON,
+            "each cell damage should be DEFAULT_BOLT_BASE_DAMAGE (10.0)"
         );
     }
 

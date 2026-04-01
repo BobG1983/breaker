@@ -10,7 +10,8 @@ use super::super::effect::*;
 use crate::{
     bolt::{
         components::{Bolt, BoltRadius, ExtraBolt},
-        resources::BoltConfig,
+        definition::BoltDefinition,
+        registry::BoltRegistry,
     },
     shared::{
         BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, CleanupOnNodeExit, CleanupOnRunEnd, GameDrawLayer,
@@ -18,16 +19,32 @@ use crate::{
     },
 };
 
-fn world_with_bolt_config() -> World {
+fn world_with_bolt_registry() -> World {
     let mut world = World::new();
-    world.insert_resource(BoltConfig::default());
+    let mut registry = BoltRegistry::default();
+    registry.insert(
+        "Bolt".to_string(),
+        BoltDefinition {
+            name: "Bolt".to_owned(),
+            base_speed: 400.0,
+            min_speed: 200.0,
+            max_speed: 800.0,
+            radius: 8.0,
+            base_damage: 10.0,
+            effects: vec![],
+            color_rgb: [6.0, 5.0, 0.5],
+            min_angle_horizontal: 5.0,
+            min_angle_vertical: 5.0,
+        },
+    );
+    world.insert_resource(registry);
     world.insert_resource(GameRng::default());
     world
 }
 
 #[test]
 fn fire_spawns_requested_count_with_full_physics_components() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let entity = world.spawn(Position2D(Vec2::new(50.0, 100.0))).id();
 
     fire(entity, 3, None, false, "", &mut world);
@@ -115,7 +132,7 @@ fn fire_spawns_requested_count_with_full_physics_components() {
 
 #[test]
 fn fire_count_one_spawns_exactly_one_bolt() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
     fire(entity, 1, None, false, "", &mut world);
@@ -130,7 +147,7 @@ fn fire_count_one_spawns_exactly_one_bolt() {
 
 #[test]
 fn fire_count_zero_spawns_no_bolts() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
     fire(entity, 0, None, false, "", &mut world);
@@ -142,7 +159,7 @@ fn fire_count_zero_spawns_no_bolts() {
 
 #[test]
 fn fire_spawns_bolts_with_randomized_velocity_at_base_speed() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
     fire(entity, 1, None, false, "", &mut world);
@@ -158,7 +175,7 @@ fn fire_spawns_bolts_with_randomized_velocity_at_base_speed() {
 
 #[test]
 fn fire_spawns_bolt_at_owner_position2d_not_transform() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let entity = world
         .spawn((
             Position2D(Vec2::new(50.0, 75.0)),
@@ -179,7 +196,7 @@ fn fire_spawns_bolt_at_owner_position2d_not_transform() {
 
 #[test]
 fn fire_spawns_bolt_at_zero_when_owner_has_no_position2d() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let entity = world.spawn_empty().id();
 
     fire(entity, 1, None, false, "", &mut world);
@@ -195,7 +212,7 @@ fn fire_spawns_bolt_at_zero_when_owner_has_no_position2d() {
 
 #[test]
 fn fire_marks_bolts_with_extra_bolt_and_cleanup_on_node_exit() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
     fire(entity, 1, None, false, "", &mut world);

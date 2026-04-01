@@ -7,20 +7,36 @@ use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use super::super::effect::*;
 use crate::{
-    bolt::{components::ExtraBolt, resources::BoltConfig},
+    bolt::{components::ExtraBolt, definition::BoltDefinition, registry::BoltRegistry},
     shared::{CleanupOnNodeExit, CleanupOnRunEnd, rng::GameRng},
 };
 
-fn world_with_bolt_config() -> World {
+fn world_with_bolt_registry() -> World {
     let mut world = World::new();
-    world.insert_resource(BoltConfig::default());
+    let mut registry = BoltRegistry::default();
+    registry.insert(
+        "Bolt".to_string(),
+        BoltDefinition {
+            name: "Bolt".to_owned(),
+            base_speed: 400.0,
+            min_speed: 200.0,
+            max_speed: 800.0,
+            radius: 8.0,
+            base_damage: 10.0,
+            effects: vec![],
+            color_rgb: [6.0, 5.0, 0.5],
+            min_angle_horizontal: 5.0,
+            min_angle_vertical: 5.0,
+        },
+    );
+    world.insert_resource(registry);
     world.insert_resource(GameRng::default());
     world
 }
 
 #[test]
 fn fire_spawns_chain_bolt_with_extra_bolt_and_cleanup_on_node_exit() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let anchor = world.spawn(Position2D(Vec2::ZERO)).id();
 
     fire(anchor, 150.0, "", &mut world);
@@ -44,7 +60,7 @@ fn fire_spawns_chain_bolt_with_extra_bolt_and_cleanup_on_node_exit() {
 
 #[test]
 fn fire_spawns_distance_constraint_entity() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let anchor = world.spawn(Position2D(Vec2::ZERO)).id();
 
     fire(anchor, 150.0, "", &mut world);
@@ -93,7 +109,7 @@ fn fire_spawns_distance_constraint_entity() {
 
 #[test]
 fn fire_stores_constraint_reference_on_chain_bolt() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let anchor = world.spawn(Position2D(Vec2::ZERO)).id();
 
     fire(anchor, 150.0, "", &mut world);
@@ -120,7 +136,7 @@ fn fire_stores_constraint_reference_on_chain_bolt() {
 
 #[test]
 fn fire_chain_bolt_velocity_magnitude_at_base_speed() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let anchor = world.spawn(Position2D(Vec2::ZERO)).id();
 
     fire(anchor, 150.0, "", &mut world);
@@ -141,10 +157,23 @@ fn fire_chain_bolt_velocity_magnitude_at_base_speed() {
 #[test]
 fn fire_chain_bolt_custom_base_speed() {
     let mut world = World::new();
-    world.insert_resource(BoltConfig {
-        base_speed: 600.0,
-        ..BoltConfig::default()
-    });
+    let mut registry = BoltRegistry::default();
+    registry.insert(
+        "Bolt".to_string(),
+        BoltDefinition {
+            name: "Bolt".to_owned(),
+            base_speed: 600.0,
+            min_speed: 300.0,
+            max_speed: 1200.0,
+            radius: 8.0,
+            base_damage: 10.0,
+            effects: vec![],
+            color_rgb: [6.0, 5.0, 0.5],
+            min_angle_horizontal: 5.0,
+            min_angle_vertical: 5.0,
+        },
+    );
+    world.insert_resource(registry);
     world.insert_resource(GameRng::default());
 
     let anchor = world.spawn(Position2D(Vec2::ZERO)).id();
@@ -166,7 +195,7 @@ fn fire_chain_bolt_custom_base_speed() {
 
 #[test]
 fn fire_marks_anchor_with_chain_bolt_anchor() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let anchor = world.spawn(Position2D(Vec2::ZERO)).id();
 
     assert!(
@@ -184,7 +213,7 @@ fn fire_marks_anchor_with_chain_bolt_anchor() {
 
 #[test]
 fn fire_anchor_already_has_chain_bolt_anchor_no_panic() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let anchor = world.spawn((Position2D(Vec2::ZERO), ChainBoltAnchor)).id();
 
     // Should not panic when anchor already has ChainBoltAnchor
@@ -198,7 +227,7 @@ fn fire_anchor_already_has_chain_bolt_anchor_no_panic() {
 
 #[test]
 fn fire_zero_tether_distance_spawns_constraint() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let anchor = world.spawn(Position2D(Vec2::ZERO)).id();
 
     fire(anchor, 0.0, "", &mut world);
@@ -218,7 +247,7 @@ fn fire_zero_tether_distance_spawns_constraint() {
 
 #[test]
 fn fire_reads_position_from_position2d_not_transform() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let anchor = world
         .spawn((
             Position2D(Vec2::new(50.0, 75.0)),

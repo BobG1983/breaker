@@ -11,7 +11,12 @@ use rantzsoft_physics2d::{
 use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Velocity2D};
 
 use crate::{
-    bolt::{BASE_BOLT_DAMAGE, components::Bolt, resources::BoltConfig},
+    bolt::{
+        components::{Bolt, BoltBaseDamage, BoltDefinitionRef, BoltRadius},
+        definition::BoltDefinition,
+        registry::BoltRegistry,
+        resources::DEFAULT_BOLT_BASE_DAMAGE,
+    },
     cells::{components::Cell, messages::DamageCell},
     effect::{
         core::{EffectSourceChip, chip_attribution},
@@ -33,6 +38,7 @@ pub(crate) struct TetherChainBeam;
 pub(crate) struct TetherChainActive {
     pub damage_mult: f32,
     pub effective_damage_multiplier: f32,
+    pub base_damage: f32,
     pub source_chip: Option<String>,
     /// Bolt count from the last rebuild — compared against the current count to detect changes.
     pub last_bolt_count: usize,
@@ -45,11 +51,14 @@ pub(crate) struct TetherBeamComponent {
     pub bolt_a: Entity,
     /// Second tether bolt entity.
     pub bolt_b: Entity,
-    /// Damage multiplier applied to `BASE_BOLT_DAMAGE`.
+    /// Damage multiplier applied to `base_damage`.
     pub damage_mult: f32,
     /// Effective damage multiplier snapshotted from the source entity's
     /// `ActiveDamageBoosts` at fire-time. Default `1.0`.
     pub effective_damage_multiplier: f32,
+    /// Snapshotted base damage from the source entity's `BoltBaseDamage`.
+    /// Falls back to `DEFAULT_BOLT_BASE_DAMAGE` when the source has no `BoltBaseDamage`.
+    pub base_damage: f32,
 }
 
 /// Spawns two tethered bolts with a damaging beam between them (standard mode),
@@ -72,16 +81,16 @@ pub(crate) fn fire(
 }
 
 /// Spawns a single extra bolt with a random velocity direction at the given position.
-fn spawn_tether_bolt(world: &mut World, spawn_pos: Vec2, config: &BoltConfig) -> Entity {
+fn spawn_tether_bolt(world: &mut World, spawn_pos: Vec2, bolt_def: &BoltDefinition) -> Entity {
     let angle = {
         let mut rng = world.resource_mut::<GameRng>();
         rng.0.random_range(0.0..std::f32::consts::TAU)
     };
     let direction = Vec2::new(angle.cos(), angle.sin());
-    let velocity = Velocity2D(direction * config.base_speed);
+    let velocity = Velocity2D(direction * bolt_def.base_speed);
     Bolt::builder()
         .at_position(spawn_pos)
-        .config(config)
+        .definition(bolt_def)
         .with_velocity(velocity)
         .extra()
         .spawn(world)
@@ -90,14 +99,30 @@ fn spawn_tether_bolt(world: &mut World, spawn_pos: Vec2, config: &BoltConfig) ->
 /// Standard mode: spawn two tethered bolts with a beam between them.
 fn fire_standard(entity: Entity, damage_mult: f32, source_chip: &str, world: &mut World) {
     let spawn_pos = super::super::entity_position(world, entity);
-    let config = world.resource::<BoltConfig>().clone();
 
-    let bolt_a = spawn_tether_bolt(world, spawn_pos, &config);
-    let bolt_b = spawn_tether_bolt(world, spawn_pos, &config);
+    let def_ref = world
+        .get::<BoltDefinitionRef>(entity)
+        .map_or_else(|| "Bolt".to_owned(), |r| r.0.clone());
+    let Some(bolt_def) = world
+        .resource::<BoltRegistry>()
+        .get(&def_ref)
+        .cloned()
+        .or_else(|| world.resource::<BoltRegistry>().get("Bolt").cloned())
+    else {
+        warn!("default Bolt definition missing");
+        return;
+    };
+
+    let bolt_a = spawn_tether_bolt(world, spawn_pos, &bolt_def);
+    let bolt_b = spawn_tether_bolt(world, spawn_pos, &bolt_def);
 
     let edm = world
         .get::<ActiveDamageBoosts>(entity)
         .map_or(1.0, ActiveDamageBoosts::multiplier);
+
+    let base_damage = world
+        .get::<BoltBaseDamage>(entity)
+        .map_or(DEFAULT_BOLT_BASE_DAMAGE, |d| d.0);
 
     // Spawn the beam entity linking both bolts
     let _beam = world
@@ -107,6 +132,7 @@ fn fire_standard(entity: Entity, damage_mult: f32, source_chip: &str, world: &mu
                 bolt_b,
                 damage_mult,
                 effective_damage_multiplier: edm,
+                base_damage,
             },
             EffectSourceChip::new(source_chip),
             CleanupOnNodeExit,
@@ -134,6 +160,10 @@ fn fire_chain(entity: Entity, damage_mult: f32, source_chip: &str, world: &mut W
         .get::<ActiveDamageBoosts>(entity)
         .map_or(1.0, ActiveDamageBoosts::multiplier);
 
+    let base_damage = world
+        .get::<BoltBaseDamage>(entity)
+        .map_or(DEFAULT_BOLT_BASE_DAMAGE, |d| d.0);
+
     // Query all bolt entities and sort by index (ascending spawn order)
     let mut bolts: Vec<Entity> = world
         .query_filtered::<Entity, With<Bolt>>()
@@ -149,6 +179,7 @@ fn fire_chain(entity: Entity, damage_mult: f32, source_chip: &str, world: &mut W
                 bolt_b: pair[1],
                 damage_mult,
                 effective_damage_multiplier: edm,
+                base_damage,
             },
             TetherChainBeam,
             EffectSourceChip::new(source_chip),
@@ -160,6 +191,7 @@ fn fire_chain(entity: Entity, damage_mult: f32, source_chip: &str, world: &mut W
     world.insert_resource(TetherChainActive {
         damage_mult,
         effective_damage_multiplier: edm,
+        base_damage,
         source_chip: chip_attribution(source_chip),
         last_bolt_count: bolts.len(),
     });
@@ -186,6 +218,17 @@ pub(crate) fn reverse(
     }
 }
 
+type TetherBoltQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        &'static Position2D,
+        Has<TetherBoltMarker>,
+        Option<&'static BoltRadius>,
+    ),
+    With<Bolt>,
+>;
+
 /// Tick system: damages cells whose AABB intersects each tether beam segment.
 ///
 /// For each beam, looks up the positions of `bolt_a` and `bolt_b`. If either bolt
@@ -194,36 +237,34 @@ pub(crate) fn reverse(
 /// for each cell hit by the beam segment.
 ///
 /// The beam has an effective half-width equal to the bolt radius (from
-/// `BoltConfig`), so cells whose AABBs are within the bolt radius of the beam
+/// `BoltRadius`), so cells whose AABBs are within the bolt radius of the beam
 /// line segment are considered intersecting.
 pub(crate) fn tick_tether_beam(
     mut commands: Commands,
     beams: Query<(Entity, &TetherBeamComponent, Option<&EffectSourceChip>)>,
-    bolts: Query<(&Position2D, Has<TetherBoltMarker>), With<Bolt>>,
+    bolts: TetherBoltQuery,
     quadtree: Res<CollisionQuadtree>,
     cell_aabbs: Query<(&Aabb2D, &GlobalPosition2D), With<Cell>>,
-    bolt_config: Option<Res<BoltConfig>>,
     mut damage_writer: MessageWriter<DamageCell>,
 ) {
     let query_layers = CollisionLayers::new(0, CELL_LAYER);
-    let beam_half_width = bolt_config
-        .as_ref()
-        .map_or_else(|| BoltConfig::default().radius, |c| c.radius);
 
     for (beam_entity, component, esc) in &beams {
-        // Look up both bolt positions; despawn beam if either is missing
-        let pos_a = if let Ok((p, _)) = bolts.get(component.bolt_a) {
+        // Look up both bolt positions; despawn beam if either is missing.
+        // Extract radius from bolt_a; bolt_b discards that field.
+        let (pos_a, bolt_radius) = if let Ok((p, _, radius)) = bolts.get(component.bolt_a) {
+            (p.0, radius.map_or(8.0, |r| r.0))
+        } else {
+            commands.entity(beam_entity).despawn();
+            continue;
+        };
+        let pos_b = if let Ok((p, ..)) = bolts.get(component.bolt_b) {
             p.0
         } else {
             commands.entity(beam_entity).despawn();
             continue;
         };
-        let pos_b = if let Ok((p, _)) = bolts.get(component.bolt_b) {
-            p.0
-        } else {
-            commands.entity(beam_entity).despawn();
-            continue;
-        };
+        let beam_half_width = bolt_radius;
 
         // Broadphase: compute beam bounding box expanded by beam half-width and
         // query quadtree. The expansion ensures cells near (but not exactly on)
@@ -239,7 +280,7 @@ pub(crate) fn tick_tether_beam(
         let max_dist = beam_vec.length();
         let direction = beam_vec.normalize_or_zero();
         let damage =
-            BASE_BOLT_DAMAGE * component.damage_mult * component.effective_damage_multiplier;
+            component.base_damage * component.damage_mult * component.effective_damage_multiplier;
 
         let mut damaged_this_tick: HashSet<Entity> = HashSet::new();
 
@@ -307,6 +348,7 @@ pub(crate) fn maintain_tether_chain(
                 bolt_b: pair[1],
                 damage_mult: chain_active.damage_mult,
                 effective_damage_multiplier: chain_active.effective_damage_multiplier,
+                base_damage: chain_active.base_damage,
             },
             TetherChainBeam,
             esc.clone(),

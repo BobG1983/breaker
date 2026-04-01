@@ -8,7 +8,7 @@ use crate::effect::{core::EffectSourceChip, effects::damage_boost::ActiveDamageB
 // Behavior 4: fire() with chain=false does not insert TetherChainActive resource
 #[test]
 fn fire_chain_false_does_not_insert_tether_chain_active_resource() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
     fire(entity, 1.5, false, "", &mut world);
@@ -22,7 +22,7 @@ fn fire_chain_false_does_not_insert_tether_chain_active_resource() {
 // Behavior 5: fire() with chain=false does not spawn TetherChainBeam entities
 #[test]
 fn fire_chain_false_does_not_spawn_tether_chain_beam_entities() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
     // Pre-spawn 3 bolt entities
     world.spawn(Bolt);
@@ -360,6 +360,7 @@ fn fire_chain_true_overwrites_existing_tether_chain_active() {
     world.insert_resource(TetherChainActive {
         damage_mult: 1.0,
         effective_damage_multiplier: 1.0,
+        base_damage: DEFAULT_BOLT_BASE_DAMAGE,
         source_chip: None,
         last_bolt_count: 3,
     });

@@ -13,7 +13,7 @@ use rantzsoft_physics2d::{
 use rantzsoft_spatial2d::components::GlobalPosition2D;
 
 use crate::{
-    bolt::BASE_BOLT_DAMAGE,
+    bolt::{components::BoltBaseDamage, resources::DEFAULT_BOLT_BASE_DAMAGE},
     cells::{components::Cell, messages::DamageCell},
     effect::{core::EffectSourceChip, effects::damage_boost::ActiveDamageBoosts},
     shared::{CELL_LAYER, CleanupOnNodeExit, playing_state::PlayingState, rng::GameRng},
@@ -89,7 +89,11 @@ pub(crate) fn fire(
         .get::<ActiveDamageBoosts>(entity)
         .map_or(1.0, ActiveDamageBoosts::multiplier);
 
-    let damage = BASE_BOLT_DAMAGE * damage_mult * edm;
+    let base_damage = world
+        .get::<BoltBaseDamage>(entity)
+        .map_or(DEFAULT_BOLT_BASE_DAMAGE, |d| d.0);
+
+    let damage = base_damage * damage_mult * edm;
 
     let query_layers = CollisionLayers::new(0, CELL_LAYER);
     let candidates = world

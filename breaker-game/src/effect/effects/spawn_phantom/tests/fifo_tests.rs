@@ -5,12 +5,31 @@ use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Position2D;
 
 use super::super::effect::*;
-use crate::{bolt::resources::BoltConfig, shared::rng::GameRng};
+use crate::{
+    bolt::{definition::BoltDefinition, registry::BoltRegistry},
+    shared::rng::GameRng,
+};
 
-/// Creates a bare World with `BoltConfig::default()` and `GameRng` seeded at 42.
+/// Creates a bare World with `BoltRegistry` (default Bolt definition) and `GameRng` seeded at 42.
 fn world_with_seed_42() -> World {
     let mut world = World::new();
-    world.insert_resource(BoltConfig::default());
+    let mut registry = BoltRegistry::default();
+    registry.insert(
+        "Bolt".to_string(),
+        BoltDefinition {
+            name: "Bolt".to_owned(),
+            base_speed: 400.0,
+            min_speed: 200.0,
+            max_speed: 800.0,
+            radius: 8.0,
+            base_damage: 10.0,
+            effects: vec![],
+            color_rgb: [6.0, 5.0, 0.5],
+            min_angle_horizontal: 5.0,
+            min_angle_vertical: 5.0,
+        },
+    );
+    world.insert_resource(registry);
     world.insert_resource(GameRng::from_seed(42));
     world
 }

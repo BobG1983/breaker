@@ -9,8 +9,9 @@ use rantzsoft_spatial2d::components::{
 use super::super::effect::*;
 use crate::{
     bolt::{
-        components::{Bolt, BoltRadius, ExtraBolt, ImpactSide, LastImpact},
-        resources::BoltConfig,
+        components::{Bolt, BoltDefinitionRef, BoltRadius, ExtraBolt, ImpactSide, LastImpact},
+        definition::BoltDefinition,
+        registry::BoltRegistry,
     },
     shared::{
         BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, CleanupOnNodeExit, GameDrawLayer, WALL_LAYER,
@@ -18,9 +19,26 @@ use crate::{
     },
 };
 
-fn world_with_bolt_config() -> World {
+fn make_bolt_definition(name: &str, base_speed: f32, radius: f32) -> BoltDefinition {
+    BoltDefinition {
+        name: name.to_owned(),
+        base_speed,
+        min_speed: base_speed / 2.0,
+        max_speed: base_speed * 2.0,
+        radius,
+        base_damage: 10.0,
+        effects: vec![],
+        color_rgb: [6.0, 5.0, 0.5],
+        min_angle_horizontal: 5.0,
+        min_angle_vertical: 5.0,
+    }
+}
+
+fn world_with_bolt_registry() -> World {
     let mut world = World::new();
-    world.insert_resource(BoltConfig::default());
+    let mut registry = BoltRegistry::default();
+    registry.insert("Bolt".to_string(), make_bolt_definition("Bolt", 400.0, 8.0));
+    world.insert_resource(registry);
     world.insert_resource(GameRng::default());
     world
 }
@@ -29,7 +47,7 @@ fn world_with_bolt_config() -> World {
 
 #[test]
 fn spawned_bolt_has_full_physics_components_from_spawn_extra_bolt() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let bolt_entity = world
         .spawn((
             Bolt,
@@ -134,7 +152,7 @@ fn spawned_bolt_has_full_physics_components_from_spawn_extra_bolt() {
 
 #[test]
 fn fire_overwrites_spawn_extra_bolt_random_velocity_with_mirror_velocity() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let bolt_entity = world
         .spawn((
             Bolt,
@@ -156,5 +174,123 @@ fn fire_overwrites_spawn_extra_bolt_random_velocity_with_mirror_velocity() {
         vel.0,
         Vec2::new(-100.0, 400.0),
         "velocity must be deterministic mirror value, not random from spawn_extra_bolt"
+    );
+}
+
+// ── Behavior 7: fire() reads BoltDefinitionRef from source bolt for mirrored bolt construction ──
+
+#[test]
+fn fire_reads_bolt_definition_ref_from_source_bolt_for_mirrored_construction() {
+    let mut world = World::new();
+    let mut registry = BoltRegistry::default();
+    registry.insert(
+        "Heavy".to_string(),
+        make_bolt_definition("Heavy", 600.0, 12.0),
+    );
+    registry.insert(
+        "Bolt".to_string(),
+        make_bolt_definition("Bolt", 720.0, 14.0),
+    );
+    world.insert_resource(registry);
+    world.insert_resource(GameRng::default());
+
+    let bolt_entity = world
+        .spawn((
+            Bolt,
+            Position2D(Vec2::new(60.0, 250.0)),
+            Velocity2D(Vec2::new(100.0, 400.0)),
+            LastImpact {
+                position: Vec2::new(50.0, 200.0),
+                side: ImpactSide::Top,
+            },
+            BoltDefinitionRef("Heavy".to_string()),
+        ))
+        .id();
+
+    fire(bolt_entity, false, "mirror_protocol", &mut world);
+
+    let mut query = world.query_filtered::<Entity, (With<Bolt>, With<ExtraBolt>)>();
+    let mirrored = query
+        .iter(&world)
+        .next()
+        .expect("mirrored bolt should exist");
+
+    let radius = world
+        .get::<BoltRadius>(mirrored)
+        .expect("mirrored bolt should have BoltRadius");
+    assert!(
+        (radius.0 - 12.0).abs() < f32::EPSILON,
+        "BoltRadius should be 12.0 from Heavy definition, got {}",
+        radius.0
+    );
+
+    let scale = world
+        .get::<Scale2D>(mirrored)
+        .expect("mirrored bolt should have Scale2D");
+    assert!(
+        (scale.x - 12.0).abs() < f32::EPSILON,
+        "Scale2D.x should be 12.0 from Heavy definition, got {}",
+        scale.x
+    );
+
+    let base_speed = world
+        .get::<BaseSpeed>(mirrored)
+        .expect("mirrored bolt should have BaseSpeed");
+    assert!(
+        (base_speed.0 - 600.0).abs() < f32::EPSILON,
+        "BaseSpeed should be 600.0 from Heavy definition, got {}",
+        base_speed.0
+    );
+}
+
+// ── Behavior 8: fire() falls back to "Bolt" default definition when source has no BoltDefinitionRef ──
+
+#[test]
+fn fire_falls_back_to_bolt_default_definition_when_source_bolt_has_no_definition_ref() {
+    let mut world = World::new();
+    let mut registry = BoltRegistry::default();
+    registry.insert(
+        "Bolt".to_string(),
+        make_bolt_definition("Bolt", 720.0, 14.0),
+    );
+    world.insert_resource(registry);
+    world.insert_resource(GameRng::default());
+
+    let bolt_entity = world
+        .spawn((
+            Bolt,
+            Position2D(Vec2::new(60.0, 250.0)),
+            Velocity2D(Vec2::new(100.0, 400.0)),
+            LastImpact {
+                position: Vec2::new(50.0, 200.0),
+                side: ImpactSide::Top,
+            },
+        ))
+        .id();
+
+    fire(bolt_entity, false, "", &mut world);
+
+    let mut query = world.query_filtered::<Entity, (With<Bolt>, With<ExtraBolt>)>();
+    let mirrored = query
+        .iter(&world)
+        .next()
+        .expect("mirrored bolt should exist");
+
+    let radius = world
+        .get::<BoltRadius>(mirrored)
+        .expect("mirrored bolt should have BoltRadius");
+    assert!(
+        (radius.0 - 14.0).abs() < f32::EPSILON,
+        "BoltRadius should be 14.0 from Bolt default definition, got {}",
+        radius.0
+    );
+
+    let base_speed = world
+        .get::<BaseSpeed>(mirrored)
+        .expect("mirrored bolt should have BaseSpeed");
+    assert!(
+        (base_speed.0 - 720.0).abs() < f32::EPSILON,
+        "BaseSpeed should be 720.0 from Bolt default definition, got {}",
+        base_speed.0
     );
 }

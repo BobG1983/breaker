@@ -7,15 +7,32 @@ use super::super::effect::*;
 use crate::{
     bolt::{
         components::{Bolt, ExtraBolt, ImpactSide, LastImpact},
-        resources::BoltConfig,
+        definition::BoltDefinition,
+        registry::BoltRegistry,
     },
     effect::{BoundEffects, EffectKind, EffectNode},
     shared::rng::GameRng,
 };
 
-fn world_with_bolt_config() -> World {
+fn world_with_bolt_registry() -> World {
     let mut world = World::new();
-    world.insert_resource(BoltConfig::default());
+    let mut registry = BoltRegistry::default();
+    registry.insert(
+        "Bolt".to_string(),
+        BoltDefinition {
+            name: "Bolt".to_owned(),
+            base_speed: 400.0,
+            min_speed: 200.0,
+            max_speed: 800.0,
+            radius: 8.0,
+            base_damage: 10.0,
+            effects: vec![],
+            color_rgb: [6.0, 5.0, 0.5],
+            min_angle_horizontal: 5.0,
+            min_angle_vertical: 5.0,
+        },
+    );
+    world.insert_resource(registry);
     world.insert_resource(GameRng::default());
     world
 }
@@ -36,7 +53,7 @@ fn bolt_bundle() -> (Bolt, Position2D, Velocity2D, LastImpact) {
 
 #[test]
 fn fire_with_inherit_true_copies_bound_effects() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let bound = BoundEffects(vec![
         (
             "piercing_chip".to_string(),
@@ -83,7 +100,7 @@ fn fire_with_inherit_true_copies_bound_effects() {
 
 #[test]
 fn fire_with_inherit_true_and_empty_bound_effects_spawns_bolt() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let bolt_entity = world.spawn((bolt_bundle(), BoundEffects::default())).id();
 
     fire(bolt_entity, true, "mirror_protocol", &mut world);
@@ -105,7 +122,7 @@ fn fire_with_inherit_true_and_empty_bound_effects_spawns_bolt() {
 
 #[test]
 fn fire_with_inherit_false_does_not_copy_bound_effects() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let bound = BoundEffects(vec![(
         "chip".to_string(),
         EffectNode::Do(EffectKind::DamageBoost(2.0)),
@@ -131,7 +148,7 @@ fn fire_with_inherit_false_does_not_copy_bound_effects() {
 
 #[test]
 fn fire_with_inherit_false_and_no_bound_effects_still_spawns_bolt() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let bolt_entity = world.spawn(bolt_bundle()).id();
 
     fire(bolt_entity, false, "mirror_protocol", &mut world);
@@ -148,7 +165,7 @@ fn fire_with_inherit_false_and_no_bound_effects_still_spawns_bolt() {
 
 #[test]
 fn fire_with_inherit_true_and_no_bound_effects_component_does_not_panic() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let bolt_entity = world.spawn(bolt_bundle()).id();
 
     // Should not panic

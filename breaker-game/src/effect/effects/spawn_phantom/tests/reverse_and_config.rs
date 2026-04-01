@@ -5,14 +5,11 @@ use rantzsoft_physics2d::aabb::Aabb2D;
 use rantzsoft_spatial2d::components::{Position2D, Scale2D};
 
 use super::{super::effect::*, helpers::*};
-use crate::{
-    bolt::{components::BoltLifespan, resources::BoltConfig},
-    shared::rng::GameRng,
-};
+use crate::bolt::components::BoltLifespan;
 
 #[test]
 fn reverse_is_noop_phantoms_self_despawn() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let owner = world.spawn(Position2D(Vec2::ZERO)).id();
 
     fire(owner, 5.0, 10, "", &mut world);
@@ -31,7 +28,7 @@ fn reverse_is_noop_phantoms_self_despawn() {
 
 #[test]
 fn fire_short_duration_creates_valid_lifespan() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
     fire(entity, 0.01, 3, "", &mut world);
@@ -50,15 +47,52 @@ fn fire_short_duration_creates_valid_lifespan() {
 }
 
 #[test]
-fn fire_custom_radius_in_bolt_config() {
+fn fire_custom_radius_from_bolt_definition_ref() {
+    use crate::{
+        bolt::{components::BoltDefinitionRef, definition::BoltDefinition, registry::BoltRegistry},
+        shared::rng::GameRng,
+    };
     let mut world = World::new();
-    world.insert_resource(BoltConfig {
-        radius: 6.0,
-        ..BoltConfig::default()
-    });
+    let mut registry = BoltRegistry::default();
+    registry.insert(
+        "Small".to_string(),
+        BoltDefinition {
+            name: "Small".to_owned(),
+            base_speed: 400.0,
+            min_speed: 200.0,
+            max_speed: 800.0,
+            radius: 6.0,
+            base_damage: 10.0,
+            effects: vec![],
+            color_rgb: [6.0, 5.0, 0.5],
+            min_angle_horizontal: 5.0,
+            min_angle_vertical: 5.0,
+        },
+    );
+    registry.insert(
+        "Bolt".to_string(),
+        BoltDefinition {
+            name: "Bolt".to_owned(),
+            base_speed: 400.0,
+            min_speed: 200.0,
+            max_speed: 800.0,
+            radius: 8.0,
+            base_damage: 10.0,
+            effects: vec![],
+            color_rgb: [6.0, 5.0, 0.5],
+            min_angle_horizontal: 5.0,
+            min_angle_vertical: 5.0,
+        },
+    );
+    world.insert_resource(registry);
     world.insert_resource(GameRng::default());
 
-    let entity = world.spawn(Position2D(Vec2::ZERO)).id();
+    let entity = world
+        .spawn((
+            Position2D(Vec2::ZERO),
+            BoltDefinitionRef("Small".to_string()),
+        ))
+        .id();
 
     fire(entity, 5.0, 3, "", &mut world);
 
@@ -70,7 +104,7 @@ fn fire_custom_radius_in_bolt_config() {
         .expect("phantom should have Scale2D");
     assert!(
         (scale.x - 6.0).abs() < f32::EPSILON,
-        "Scale2D.x should use custom radius (6.0), got {}",
+        "Scale2D.x should use definition radius (6.0), got {}",
         scale.x
     );
 
@@ -80,7 +114,7 @@ fn fire_custom_radius_in_bolt_config() {
     assert_eq!(
         aabb.half_extents,
         Vec2::new(6.0, 6.0),
-        "Aabb2D half_extents should use custom radius (6.0), got {:?}",
+        "Aabb2D half_extents should use definition radius (6.0), got {:?}",
         aabb.half_extents
     );
 }

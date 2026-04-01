@@ -7,7 +7,7 @@ use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Position2D;
 
 use super::super::*;
-use crate::bolt::BASE_BOLT_DAMAGE;
+use crate::bolt::resources::DEFAULT_BOLT_BASE_DAMAGE;
 
 // -- Damage scaling: Shockwave damage scales by ShockwaveDamageMultiplier ──
 
@@ -39,10 +39,10 @@ fn shockwave_damage_scales_by_effective_damage_multiplier() {
     );
     assert_eq!(collector.0[0].cell, cell);
 
-    let expected_damage = BASE_BOLT_DAMAGE * 2.0;
+    let expected_damage = DEFAULT_BOLT_BASE_DAMAGE * 2.0;
     assert!(
         (collector.0[0].damage - expected_damage).abs() < f32::EPSILON,
-        "expected damage {} (BASE_BOLT_DAMAGE * 2.0), got {}",
+        "expected damage {} (DEFAULT_BOLT_BASE_DAMAGE * 2.0), got {}",
         expected_damage,
         collector.0[0].damage
     );
@@ -83,11 +83,11 @@ fn shockwave_damage_scales_with_high_multiplier_across_multiple_cells() {
     assert!(damaged_cells.contains(&cell2), "cell2 should be damaged");
     assert!(damaged_cells.contains(&cell3), "cell3 should be damaged");
 
-    let expected_damage = BASE_BOLT_DAMAGE * 3.5;
+    let expected_damage = DEFAULT_BOLT_BASE_DAMAGE * 3.5;
     for msg in &collector.0 {
         assert!(
             (msg.damage - expected_damage).abs() < f32::EPSILON,
-            "each cell damage should be BASE_BOLT_DAMAGE * 3.5 = {}, got {}",
+            "each cell damage should be DEFAULT_BOLT_BASE_DAMAGE * 3.5 = {}, got {}",
             expected_damage,
             msg.damage
         );

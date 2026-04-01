@@ -49,7 +49,7 @@ fn fire_spawns_request_with_correct_upward_beam_geometry() {
         "half_width should be 10.0 (width/2), got {}",
         request.half_width
     );
-    let expected_damage = BASE_BOLT_DAMAGE * 1.0;
+    let expected_damage = DEFAULT_BOLT_BASE_DAMAGE * 1.0;
     assert!(
         (request.damage - expected_damage).abs() < f32::EPSILON,
         "damage should be {}, got {}",

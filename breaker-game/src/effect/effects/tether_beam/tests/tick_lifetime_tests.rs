@@ -128,18 +128,18 @@ fn multiple_tether_beams_operate_independently() {
     assert!(cell2_damage.is_some(), "cell2 should be damaged by beam 2");
 
     assert!(
-        BASE_BOLT_DAMAGE
+        DEFAULT_BOLT_BASE_DAMAGE
             .mul_add(-1.0, cell1_damage.unwrap().damage)
             .abs()
             < f32::EPSILON,
-        "cell1 damage should be BASE_BOLT_DAMAGE * 1.0 = 10.0"
+        "cell1 damage should be DEFAULT_BOLT_BASE_DAMAGE * 1.0 = 10.0"
     );
     assert!(
-        BASE_BOLT_DAMAGE
+        DEFAULT_BOLT_BASE_DAMAGE
             .mul_add(-2.0, cell2_damage.unwrap().damage)
             .abs()
             < f32::EPSILON,
-        "cell2 damage should be BASE_BOLT_DAMAGE * 2.0 = 20.0"
+        "cell2 damage should be DEFAULT_BOLT_BASE_DAMAGE * 2.0 = 20.0"
     );
 }
 

@@ -5,8 +5,8 @@ use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use crate::{
     bolt::{
-        components::{Bolt, ImpactSide, LastImpact},
-        resources::BoltConfig,
+        components::{Bolt, BoltDefinitionRef, ImpactSide, LastImpact},
+        registry::BoltRegistry,
     },
     effect::BoundEffects,
 };
@@ -66,11 +66,24 @@ pub(crate) fn fire(entity: Entity, inherit: bool, _source_chip: &str, world: &mu
         None
     };
 
+    // Look up bolt definition from entity's BoltDefinitionRef, falling back to "Bolt"
+    let def_ref = world
+        .get::<BoltDefinitionRef>(entity)
+        .map_or_else(|| "Bolt".to_owned(), |r| r.0.clone());
+    let Some(bolt_def) = world
+        .resource::<BoltRegistry>()
+        .get(&def_ref)
+        .cloned()
+        .or_else(|| world.resource::<BoltRegistry>().get("Bolt").cloned())
+    else {
+        warn!("default Bolt definition missing");
+        return;
+    };
+
     // Spawn the mirrored bolt with the deterministic mirror velocity
-    let config = world.resource::<BoltConfig>().clone();
     let bolt_id = Bolt::builder()
         .at_position(mirror_pos)
-        .config(&config)
+        .definition(&bolt_def)
         .with_velocity(Velocity2D(mirror_vel))
         .extra()
         .spawn(world);

@@ -7,14 +7,31 @@ use super::super::effect::*;
 use crate::{
     bolt::{
         components::{Bolt, ExtraBolt, ImpactSide, LastImpact},
-        resources::BoltConfig,
+        definition::BoltDefinition,
+        registry::BoltRegistry,
     },
     shared::rng::GameRng,
 };
 
-fn world_with_bolt_config() -> World {
+fn world_with_bolt_registry() -> World {
     let mut world = World::new();
-    world.insert_resource(BoltConfig::default());
+    let mut registry = BoltRegistry::default();
+    registry.insert(
+        "Bolt".to_string(),
+        BoltDefinition {
+            name: "Bolt".to_owned(),
+            base_speed: 400.0,
+            min_speed: 200.0,
+            max_speed: 800.0,
+            radius: 8.0,
+            base_damage: 10.0,
+            effects: vec![],
+            color_rgb: [6.0, 5.0, 0.5],
+            min_angle_horizontal: 5.0,
+            min_angle_vertical: 5.0,
+        },
+    );
+    world.insert_resource(registry);
     world.insert_resource(GameRng::default());
     world
 }
@@ -23,7 +40,7 @@ fn world_with_bolt_config() -> World {
 
 #[test]
 fn reverse_does_not_despawn_previously_spawned_mirrored_bolts() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let bolt_entity = world
         .spawn((
             Bolt,
@@ -55,7 +72,7 @@ fn reverse_does_not_despawn_previously_spawned_mirrored_bolts() {
 
 #[test]
 fn reverse_without_prior_fire_does_not_panic() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let bolt_entity = world
         .spawn((
             Bolt,

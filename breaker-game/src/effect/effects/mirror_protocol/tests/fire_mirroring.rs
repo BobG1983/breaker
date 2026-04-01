@@ -7,14 +7,31 @@ use super::super::effect::*;
 use crate::{
     bolt::{
         components::{Bolt, ExtraBolt, ImpactSide, LastImpact},
-        resources::BoltConfig,
+        definition::BoltDefinition,
+        registry::BoltRegistry,
     },
     shared::rng::GameRng,
 };
 
-fn world_with_bolt_config() -> World {
+fn world_with_bolt_registry() -> World {
     let mut world = World::new();
-    world.insert_resource(BoltConfig::default());
+    let mut registry = BoltRegistry::default();
+    registry.insert(
+        "Bolt".to_string(),
+        BoltDefinition {
+            name: "Bolt".to_owned(),
+            base_speed: 400.0,
+            min_speed: 200.0,
+            max_speed: 800.0,
+            radius: 8.0,
+            base_damage: 10.0,
+            effects: vec![],
+            color_rgb: [6.0, 5.0, 0.5],
+            min_angle_horizontal: 5.0,
+            min_angle_vertical: 5.0,
+        },
+    );
+    world.insert_resource(registry);
     world.insert_resource(GameRng::default());
     world
 }
@@ -23,7 +40,7 @@ fn world_with_bolt_config() -> World {
 
 #[test]
 fn fire_spawns_mirrored_bolts_at_reflected_position_top_impact() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let bolt_entity = world
         .spawn((
             Bolt,
@@ -75,7 +92,7 @@ fn fire_spawns_mirrored_bolts_at_reflected_position_top_impact() {
 
 #[test]
 fn top_impact_mirrors_x_position_and_negates_x_velocity() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let bolt_entity = world
         .spawn((
             Bolt,
@@ -110,7 +127,7 @@ fn top_impact_mirrors_x_position_and_negates_x_velocity() {
 
 #[test]
 fn bottom_impact_mirrors_x_position_and_negates_x_velocity() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let bolt_entity = world
         .spawn((
             Bolt,
@@ -149,7 +166,7 @@ fn bottom_impact_mirrors_x_position_and_negates_x_velocity() {
 
 #[test]
 fn left_impact_mirrors_y_position_and_negates_y_velocity() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let bolt_entity = world
         .spawn((
             Bolt,
@@ -184,7 +201,7 @@ fn left_impact_mirrors_y_position_and_negates_y_velocity() {
 
 #[test]
 fn right_impact_mirrors_y_position_and_negates_y_velocity() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let bolt_entity = world
         .spawn((
             Bolt,
@@ -223,7 +240,7 @@ fn right_impact_mirrors_y_position_and_negates_y_velocity() {
 
 #[test]
 fn spawned_bolt_has_deterministic_mirror_velocity_not_random() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let bolt_entity = world
         .spawn((
             Bolt,
@@ -255,7 +272,7 @@ fn spawned_bolt_has_deterministic_mirror_velocity_not_random() {
 
 #[test]
 fn straight_up_velocity_with_top_impact_mirrors_to_same_position() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let bolt_entity = world
         .spawn((
             Bolt,
@@ -294,7 +311,7 @@ fn straight_up_velocity_with_top_impact_mirrors_to_same_position() {
 
 #[test]
 fn straight_right_velocity_with_left_impact_mirrors_to_same_position() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let bolt_entity = world
         .spawn((
             Bolt,

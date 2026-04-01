@@ -9,8 +9,8 @@ use rantzsoft_spatial2d::components::Velocity2D;
 
 use crate::{
     bolt::{
-        components::{Bolt, BoltLifespan, PiercingRemaining},
-        resources::BoltConfig,
+        components::{Bolt, BoltDefinitionRef, BoltLifespan, PiercingRemaining},
+        registry::BoltRegistry,
     },
     shared::rng::GameRng,
 };
@@ -88,16 +88,28 @@ pub(crate) fn fire(
 
     let spawn_pos = super::super::entity_position(world, entity);
 
-    let config = world.resource::<BoltConfig>().clone();
+    let def_ref = world
+        .get::<BoltDefinitionRef>(entity)
+        .map_or_else(|| "Bolt".to_owned(), |r| r.0.clone());
+    let Some(bolt_def) = world
+        .resource::<BoltRegistry>()
+        .get(&def_ref)
+        .cloned()
+        .or_else(|| world.resource::<BoltRegistry>().get("Bolt").cloned())
+    else {
+        warn!("default Bolt definition missing");
+        return;
+    };
+
     let angle = {
         let mut rng = world.resource_mut::<GameRng>();
         rng.0.random_range(0.0..std::f32::consts::TAU)
     };
     let direction = Vec2::new(angle.cos(), angle.sin());
-    let velocity = Velocity2D(direction * config.base_speed);
+    let velocity = Velocity2D(direction * bolt_def.base_speed);
     let phantom = Bolt::builder()
         .at_position(spawn_pos)
-        .config(&config)
+        .definition(&bolt_def)
         .with_velocity(velocity)
         .extra()
         .spawn(world);

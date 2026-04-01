@@ -11,9 +11,10 @@ pub(super) use rantzsoft_spatial2d::components::{
 pub(super) use super::super::*;
 pub(super) use crate::{
     bolt::{
-        BASE_BOLT_DAMAGE,
+        DEFAULT_BOLT_BASE_DAMAGE,
         components::{Bolt, BoltRadius, ExtraBolt},
-        resources::BoltConfig,
+        definition::BoltDefinition,
+        registry::BoltRegistry,
     },
     cells::{components::Cell, messages::DamageCell},
     shared::{
@@ -22,9 +23,25 @@ pub(super) use crate::{
     },
 };
 
-pub(super) fn world_with_bolt_config() -> World {
+pub(super) fn world_with_bolt_registry() -> World {
     let mut world = World::new();
-    world.insert_resource(BoltConfig::default());
+    let mut registry = BoltRegistry::default();
+    registry.insert(
+        "Bolt".to_string(),
+        BoltDefinition {
+            name: "Bolt".to_owned(),
+            base_speed: 400.0,
+            min_speed: 200.0,
+            max_speed: 800.0,
+            radius: 8.0,
+            base_damage: 10.0,
+            effects: vec![],
+            color_rgb: [6.0, 5.0, 0.5],
+            min_angle_horizontal: 5.0,
+            min_angle_vertical: 5.0,
+        },
+    );
+    world.insert_resource(registry);
     world.insert_resource(GameRng::default());
     world
 }
@@ -119,6 +136,7 @@ pub(super) fn spawn_tether_beam_with_edm(
                 bolt_b,
                 damage_mult,
                 effective_damage_multiplier,
+                base_damage: DEFAULT_BOLT_BASE_DAMAGE,
             },
             CleanupOnNodeExit,
         ))

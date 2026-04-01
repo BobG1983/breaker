@@ -8,7 +8,7 @@ use crate::effect::EffectKind;
 // Behavior 30: EffectKind::fire dispatches chain=false to tether_beam::fire with chain=false
 #[test]
 fn dispatch_fire_chain_false_spawns_standard_tether_bolts() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
     let effect = EffectKind::TetherBeam {
@@ -28,7 +28,7 @@ fn dispatch_fire_chain_false_spawns_standard_tether_bolts() {
 // Behavior 31: EffectKind::fire dispatches chain=true to tether_beam::fire with chain=true
 #[test]
 fn dispatch_fire_chain_true_spawns_chain_beams() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     // 3 existing bolts
     world.spawn(Bolt);
     world.spawn(Bolt);
@@ -68,6 +68,7 @@ fn dispatch_reverse_chain_true_removes_chain_state() {
     world.insert_resource(TetherChainActive {
         damage_mult: 1.5,
         effective_damage_multiplier: 1.0,
+        base_damage: DEFAULT_BOLT_BASE_DAMAGE,
         source_chip: None,
         last_bolt_count: 2,
     });
@@ -97,7 +98,7 @@ fn dispatch_reverse_chain_true_removes_chain_state() {
 // Behavior 33: EffectKind::reverse dispatches chain=false — still a no-op
 #[test]
 fn dispatch_reverse_chain_false_is_noop() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
     // Fire standard mode first

@@ -2,7 +2,7 @@ use super::super::helpers::*;
 
 #[test]
 fn fire_spawns_two_tether_bolts_with_full_physics_components() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let entity = world.spawn(Position2D(Vec2::new(100.0, 200.0))).id();
 
     fire(entity, 1.5, false, "", &mut world);
@@ -82,7 +82,7 @@ fn fire_spawns_two_tether_bolts_with_full_physics_components() {
 
 #[test]
 fn fire_spawns_tether_bolt_marker_storing_beam_entity() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
     fire(entity, 1.5, false, "", &mut world);
@@ -103,7 +103,7 @@ fn fire_spawns_tether_bolt_marker_storing_beam_entity() {
 
 #[test]
 fn fire_spawns_two_bolts_with_different_velocity_directions() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
     fire(entity, 1.5, false, "", &mut world);
@@ -132,7 +132,7 @@ fn fire_spawns_two_bolts_with_different_velocity_directions() {
 
 #[test]
 fn fire_does_not_spawn_distance_constraint() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
     fire(entity, 1.5, false, "", &mut world);
@@ -156,7 +156,7 @@ fn fire_does_not_spawn_distance_constraint() {
 
 #[test]
 fn fire_spawns_tether_beam_component_linking_both_bolts() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let entity = world.spawn(Position2D(Vec2::new(50.0, 50.0))).id();
 
     fire(entity, 1.5, false, "", &mut world);
@@ -196,7 +196,7 @@ fn fire_spawns_tether_beam_component_linking_both_bolts() {
 
 #[test]
 fn fire_with_zero_damage_mult_spawns_beam() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
     fire(entity, 0.0, false, "", &mut world);
@@ -212,7 +212,7 @@ fn fire_with_zero_damage_mult_spawns_beam() {
 
 #[test]
 fn fire_spawns_bolts_with_extra_bolt_and_cleanup_on_node_exit() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
     fire(entity, 1.5, false, "", &mut world);
@@ -236,7 +236,7 @@ fn fire_spawns_bolts_with_extra_bolt_and_cleanup_on_node_exit() {
 
 #[test]
 fn fire_reads_position_from_position2d_not_transform() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let entity = world
         .spawn((
             Position2D(Vec2::new(30.0, 40.0)),
@@ -258,7 +258,7 @@ fn fire_reads_position_from_position2d_not_transform() {
 
 #[test]
 fn fire_spawns_bolts_at_zero_when_owner_has_no_position2d() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let entity = world.spawn_empty().id();
 
     fire(entity, 1.5, false, "", &mut world);
@@ -285,7 +285,7 @@ fn fire_spawns_bolts_at_zero_when_owner_has_no_position2d() {
 
 #[test]
 fn reverse_does_not_despawn_tether_entities() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
     fire(entity, 1.5, false, "", &mut world);
@@ -311,7 +311,7 @@ fn reverse_does_not_despawn_tether_entities() {
 
 #[test]
 fn reverse_with_no_tether_entities_does_not_panic() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
     // Should not panic
@@ -324,7 +324,7 @@ use crate::effect::core::EffectSourceChip;
 
 #[test]
 fn fire_stores_effect_source_chip_with_non_empty_chip_name() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let entity = world.spawn(Position2D(Vec2::new(0.0, 0.0))).id();
 
     fire(entity, 2.0, false, "tether", &mut world);
@@ -345,7 +345,7 @@ fn fire_stores_effect_source_chip_with_non_empty_chip_name() {
 
 #[test]
 fn fire_stores_effect_source_chip_none_with_empty_chip_name() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
     let entity = world.spawn(Position2D(Vec2::new(0.0, 0.0))).id();
 
     fire(entity, 2.0, false, "", &mut world);
@@ -361,4 +361,145 @@ fn fire_stores_effect_source_chip_none_with_empty_chip_name() {
         results[0].0, None,
         "empty source_chip should produce EffectSourceChip(None)"
     );
+}
+
+// ── Behavior 11: fire_standard() reads BoltDefinitionRef from source entity ──
+
+#[test]
+fn fire_standard_reads_bolt_definition_ref_from_source_entity() {
+    let mut world = World::new();
+    let mut registry = BoltRegistry::default();
+    registry.insert(
+        "Heavy".to_string(),
+        BoltDefinition {
+            name: "Heavy".to_owned(),
+            base_speed: 600.0,
+            min_speed: 300.0,
+            max_speed: 1200.0,
+            radius: 12.0,
+            base_damage: 10.0,
+            effects: vec![],
+            color_rgb: [6.0, 5.0, 0.5],
+            min_angle_horizontal: 5.0,
+            min_angle_vertical: 5.0,
+        },
+    );
+    registry.insert(
+        "Bolt".to_string(),
+        BoltDefinition {
+            name: "Bolt".to_owned(),
+            base_speed: 720.0,
+            min_speed: 360.0,
+            max_speed: 1440.0,
+            radius: 14.0,
+            base_damage: 10.0,
+            effects: vec![],
+            color_rgb: [6.0, 5.0, 0.5],
+            min_angle_horizontal: 5.0,
+            min_angle_vertical: 5.0,
+        },
+    );
+    world.insert_resource(registry);
+    world.insert_resource(GameRng::default());
+
+    let entity = world
+        .spawn((
+            Position2D(Vec2::new(100.0, 200.0)),
+            crate::bolt::components::BoltDefinitionRef("Heavy".to_string()),
+        ))
+        .id();
+
+    fire(entity, 1.5, false, "", &mut world);
+
+    let mut query = world.query_filtered::<Entity, With<TetherBoltMarker>>();
+    let bolts: Vec<Entity> = query.iter(&world).collect();
+    assert_eq!(bolts.len(), 2, "should spawn 2 tether bolts");
+
+    for bolt in &bolts {
+        let vel = world
+            .get::<Velocity2D>(*bolt)
+            .expect("bolt should have Velocity2D");
+        assert!(
+            (vel.0.length() - 600.0).abs() < 1.0,
+            "tether bolt velocity should be ~600.0 from Heavy definition, got {}",
+            vel.0.length()
+        );
+
+        let scale = world
+            .get::<Scale2D>(*bolt)
+            .expect("bolt should have Scale2D");
+        assert!(
+            (scale.x - 12.0).abs() < f32::EPSILON,
+            "Scale2D.x should be 12.0 from Heavy definition, got {}",
+            scale.x
+        );
+
+        let radius = world
+            .get::<BoltRadius>(*bolt)
+            .expect("bolt should have BoltRadius");
+        assert!(
+            (radius.0 - 12.0).abs() < f32::EPSILON,
+            "BoltRadius should be 12.0 from Heavy definition, got {}",
+            radius.0
+        );
+
+        let base_speed = world
+            .get::<BaseSpeed>(*bolt)
+            .expect("bolt should have BaseSpeed");
+        assert!(
+            (base_speed.0 - 600.0).abs() < f32::EPSILON,
+            "BaseSpeed should be 600.0 from Heavy definition, got {}",
+            base_speed.0
+        );
+    }
+}
+
+// ── Behavior 12: fire_standard() tether beam falls back to "Bolt" default ──
+
+#[test]
+fn fire_standard_falls_back_to_bolt_default_definition() {
+    let mut world = World::new();
+    let mut registry = BoltRegistry::default();
+    registry.insert(
+        "Bolt".to_string(),
+        BoltDefinition {
+            name: "Bolt".to_owned(),
+            base_speed: 720.0,
+            min_speed: 360.0,
+            max_speed: 1440.0,
+            radius: 14.0,
+            base_damage: 10.0,
+            effects: vec![],
+            color_rgb: [6.0, 5.0, 0.5],
+            min_angle_horizontal: 5.0,
+            min_angle_vertical: 5.0,
+        },
+    );
+    world.insert_resource(registry);
+    world.insert_resource(GameRng::default());
+
+    let entity = world.spawn(Position2D(Vec2::ZERO)).id();
+
+    fire(entity, 1.5, false, "", &mut world);
+
+    let mut query = world.query_filtered::<Entity, With<TetherBoltMarker>>();
+    for bolt in query.iter(&world) {
+        let vel = world
+            .get::<Velocity2D>(bolt)
+            .expect("bolt should have Velocity2D");
+        assert!(
+            (vel.0.length() - 720.0).abs() < 1.0,
+            "tether bolt velocity should be ~720.0 from Bolt default definition, got {}",
+            vel.0.length()
+        );
+
+        let radius = world
+            .get::<BoltRadius>(bolt)
+            .expect("bolt should have BoltRadius");
+        assert!(
+            (radius.0 - 14.0).abs() < f32::EPSILON,
+            "BoltRadius should be 14.0 from Bolt default definition, got {}",
+            radius.0
+        );
+    }
 }

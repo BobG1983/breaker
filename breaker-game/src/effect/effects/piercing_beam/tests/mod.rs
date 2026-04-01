@@ -7,7 +7,7 @@ use rantzsoft_physics2d::{
 use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D, Velocity2D};
 
 use crate::{
-    bolt::BASE_BOLT_DAMAGE,
+    bolt::resources::DEFAULT_BOLT_BASE_DAMAGE,
     cells::{components::Cell, messages::DamageCell},
     effect::effects::piercing_beam::{
         PiercingBeamRequest, fire, process_piercing_beam, register, reverse,

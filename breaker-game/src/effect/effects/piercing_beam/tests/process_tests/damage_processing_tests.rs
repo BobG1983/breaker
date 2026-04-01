@@ -454,8 +454,8 @@ fn piercing_beam_end_to_end_damage_includes_effective_damage_multiplier() {
     );
     assert_eq!(collector.0[0].cell, cell);
 
-    // damage = BASE_BOLT_DAMAGE * damage_mult * EDM = 10.0 * 1.5 * 2.0 = 30.0
-    let expected_damage = BASE_BOLT_DAMAGE * 1.5 * 2.0;
+    // damage = DEFAULT_BOLT_BASE_DAMAGE * damage_mult * EDM = 10.0 * 1.5 * 2.0 = 30.0
+    let expected_damage = DEFAULT_BOLT_BASE_DAMAGE * 1.5 * 2.0;
     assert!(
         (collector.0[0].damage - expected_damage).abs() < f32::EPSILON,
         "end-to-end damage should be {} (10.0 * 1.5 * 2.0), got {}",

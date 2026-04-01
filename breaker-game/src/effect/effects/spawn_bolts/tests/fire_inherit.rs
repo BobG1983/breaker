@@ -9,15 +9,32 @@ use super::super::effect::*;
 use crate::{
     bolt::{
         components::{Bolt, ExtraBolt},
-        resources::BoltConfig,
+        definition::BoltDefinition,
+        registry::BoltRegistry,
     },
     effect::{BoundEffects, EffectKind, EffectNode},
     shared::rng::GameRng,
 };
 
-fn world_with_bolt_config() -> World {
+fn world_with_bolt_registry() -> World {
     let mut world = World::new();
-    world.insert_resource(BoltConfig::default());
+    let mut registry = BoltRegistry::default();
+    registry.insert(
+        "Bolt".to_string(),
+        BoltDefinition {
+            name: "Bolt".to_owned(),
+            base_speed: 720.0,
+            min_speed: 360.0,
+            max_speed: 1440.0,
+            radius: 14.0,
+            base_damage: 10.0,
+            effects: vec![],
+            color_rgb: [6.0, 5.0, 0.5],
+            min_angle_horizontal: 5.0,
+            min_angle_vertical: 5.0,
+        },
+    );
+    world.insert_resource(registry);
     world.insert_resource(GameRng::default());
     world
 }
@@ -26,7 +43,7 @@ fn world_with_bolt_config() -> World {
 /// from the fire entity (breaker). The breaker has no `BoundEffects`.
 #[test]
 fn inherit_true_copies_bound_effects_from_primary_bolt_not_fire_entity() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
 
     // Primary bolt — has Bolt (no ExtraBolt) with BoundEffects
     let _primary = world
@@ -63,7 +80,7 @@ fn inherit_true_copies_bound_effects_from_primary_bolt_not_fire_entity() {
 /// the spawned bolt must still get the primary bolt's effects, not the breaker's.
 #[test]
 fn inherit_true_uses_primary_bolt_effects_not_breaker_effects() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
 
     // Primary bolt
     let _primary = world
@@ -114,7 +131,7 @@ fn inherit_true_uses_primary_bolt_effects_not_breaker_effects() {
 /// entity is an `ExtraBolt` with its own different `BoundEffects`.
 #[test]
 fn inherit_true_copies_from_primary_bolt_when_fire_entity_is_extra_bolt() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
 
     // Primary bolt — Bolt, no ExtraBolt
     let _primary = world
@@ -171,7 +188,7 @@ fn inherit_true_copies_from_primary_bolt_when_fire_entity_is_extra_bolt() {
 /// `BoundEffects` on the spawned bolt (graceful degradation, no panic).
 #[test]
 fn inherit_true_with_no_primary_bolt_produces_no_bound_effects() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
 
     // Only an ExtraBolt — no entity has Bolt without ExtraBolt
     let extra = world
@@ -207,7 +224,7 @@ fn inherit_true_with_no_primary_bolt_produces_no_bound_effects() {
 /// the fire entity (breaker) has its own `BoundEffects`.
 #[test]
 fn inherit_true_with_primary_bolt_without_bound_effects_does_not_panic() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
 
     // Primary bolt — has Bolt but NO BoundEffects
     let _primary = world.spawn((Bolt, Position2D(Vec2::ZERO))).id();
@@ -240,7 +257,7 @@ fn inherit_true_with_primary_bolt_without_bound_effects_does_not_panic() {
 /// does not panic — spawns bolt with `BoundEffects` from one of them.
 #[test]
 fn inherit_true_with_multiple_primary_bolts_does_not_panic() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
 
     // Two primary bolts (both Bolt, no ExtraBolt) with different effects
     let _primary_a = world
@@ -292,7 +309,7 @@ fn inherit_true_with_multiple_primary_bolts_does_not_panic() {
 /// `BoundEffects` from the primary bolt.
 #[test]
 fn inherit_true_spawns_multiple_bolts_each_with_primary_bound_effects() {
-    let mut world = world_with_bolt_config();
+    let mut world = world_with_bolt_registry();
 
     // Primary bolt
     let _primary = world

@@ -34,6 +34,7 @@ fn maintain_tether_chain_rebuilds_when_bolt_lost() {
     app.world_mut().insert_resource(TetherChainActive {
         damage_mult: 1.5,
         effective_damage_multiplier: 1.0,
+        base_damage: DEFAULT_BOLT_BASE_DAMAGE,
         source_chip: None,
         last_bolt_count: 3,
     });
@@ -75,6 +76,7 @@ fn maintain_tether_chain_rebuilds_when_bolt_spawns() {
     app.world_mut().insert_resource(TetherChainActive {
         damage_mult: 1.0,
         effective_damage_multiplier: 1.0,
+        base_damage: DEFAULT_BOLT_BASE_DAMAGE,
         source_chip: None,
         last_bolt_count: 2,
     });
@@ -118,6 +120,7 @@ fn maintain_tether_chain_does_nothing_when_bolt_count_unchanged() {
     app.world_mut().insert_resource(TetherChainActive {
         damage_mult: 1.0,
         effective_damage_multiplier: 1.0,
+        base_damage: DEFAULT_BOLT_BASE_DAMAGE,
         source_chip: None,
         last_bolt_count: 3,
     });
@@ -196,6 +199,7 @@ fn maintain_tether_chain_creates_beams_with_correct_properties() {
     app.world_mut().insert_resource(TetherChainActive {
         damage_mult: 2.5,
         effective_damage_multiplier: 1.5,
+        base_damage: DEFAULT_BOLT_BASE_DAMAGE,
         source_chip: Some("arcwelder".to_string()),
         last_bolt_count: 2,
     });
@@ -251,6 +255,7 @@ fn maintain_tether_chain_handles_all_bolts_dying() {
     app.world_mut().insert_resource(TetherChainActive {
         damage_mult: 1.0,
         effective_damage_multiplier: 1.0,
+        base_damage: DEFAULT_BOLT_BASE_DAMAGE,
         source_chip: None,
         last_bolt_count: 2,
     });
@@ -292,6 +297,7 @@ fn maintain_tether_chain_handles_repair_from_zero_one_bolt() {
     app.world_mut().insert_resource(TetherChainActive {
         damage_mult: 1.0,
         effective_damage_multiplier: 1.0,
+        base_damage: DEFAULT_BOLT_BASE_DAMAGE,
         source_chip: None,
         last_bolt_count: 0,
     });
@@ -326,6 +332,7 @@ fn maintain_tether_chain_handles_repair_from_zero_two_bolts() {
     app.world_mut().insert_resource(TetherChainActive {
         damage_mult: 1.0,
         effective_damage_multiplier: 1.0,
+        base_damage: DEFAULT_BOLT_BASE_DAMAGE,
         source_chip: None,
         last_bolt_count: 0,
     });
