@@ -167,9 +167,9 @@ impl ChipInventory {
 
     /// Remove `count` stacks of chips belonging to the given template.
     ///
-    /// Removes stacks from whichever held chips have a matching `template_name`,
-    /// consuming lower-rarity variants first (by iteration order). Returns the
-    /// number of stacks actually removed.
+    /// Removes stacks from whichever held chips have a matching `template_name`
+    /// in `HashMap` iteration order (nondeterministic). Returns the number of
+    /// stacks actually removed.
     pub fn remove_by_template(&mut self, template_name: &str, count: u32) -> u32 {
         let mut removed = 0;
         let names: Vec<String> = self
@@ -180,7 +180,10 @@ impl ChipInventory {
             .collect();
 
         for name in names {
-            while removed < count && self.remove_chip(&name) {
+            while removed < count {
+                if !self.remove_chip(&name) {
+                    break;
+                }
                 removed += 1;
             }
             if removed >= count {

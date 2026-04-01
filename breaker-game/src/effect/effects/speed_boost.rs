@@ -1,4 +1,7 @@
 use bevy::prelude::*;
+use rantzsoft_spatial2d::queries::SpatialData;
+
+use crate::bolt::queries::apply_velocity_formula;
 
 /// Tracks active speed boost multipliers on an entity.
 ///
@@ -20,6 +23,8 @@ pub(crate) fn fire(entity: Entity, multiplier: f32, _source_chip: &str, world: &
     if let Some(mut active) = world.get_mut::<ActiveSpeedBoosts>(entity) {
         active.0.push(multiplier);
     }
+
+    recalculate_velocity(entity, world);
 }
 
 pub(crate) fn reverse(entity: Entity, multiplier: f32, _source_chip: &str, world: &mut World) {
@@ -31,6 +36,21 @@ pub(crate) fn reverse(entity: Entity, multiplier: f32, _source_chip: &str, world
     {
         active.0.swap_remove(pos);
     }
+
+    recalculate_velocity(entity, world);
+}
+
+/// Recalculates bolt velocity after a speed boost change.
+///
+/// Queries `SpatialData` and calls `apply_velocity_formula` — the same
+/// function used by collision systems.
+fn recalculate_velocity(entity: Entity, world: &mut World) {
+    let boosts = world.get::<ActiveSpeedBoosts>(entity).cloned();
+    let mut query = world.query::<SpatialData>();
+    let Ok(mut spatial) = query.get_mut(world, entity) else {
+        return;
+    };
+    apply_velocity_formula(&mut spatial, boosts.as_ref());
 }
 
 impl ActiveSpeedBoosts {
@@ -135,5 +155,62 @@ mod tests {
     fn multiplier_returns_one_for_empty() {
         let boosts = ActiveSpeedBoosts(vec![]);
         assert!((boosts.multiplier() - 1.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn fire_recalculates_velocity_to_reflect_new_boost() {
+        use rantzsoft_spatial2d::components::Velocity2D;
+
+        use crate::bolt::{components::Bolt, resources::BoltConfig};
+
+        let mut world = World::new();
+        let config = BoltConfig::default();
+        let entity = Bolt::builder()
+            .at_position(Vec2::ZERO)
+            .config(&config)
+            .with_velocity(Velocity2D(Vec2::new(0.0, config.base_speed)))
+            .primary()
+            .spawn(&mut world);
+
+        // Apply speed boost of 1.5x
+        fire(entity, 1.5, "test_chip", &mut world);
+
+        // After boost: speed should be base_speed * 1.5
+        let speed_after = world.get::<Velocity2D>(entity).unwrap().speed();
+        let expected = config.base_speed * 1.5;
+        assert!(
+            (speed_after - expected).abs() < 1.0,
+            "fire() should recalculate velocity: expected {expected}, got {speed_after}"
+        );
+    }
+
+    #[test]
+    fn reverse_recalculates_velocity_to_reflect_removed_boost() {
+        use rantzsoft_spatial2d::components::Velocity2D;
+
+        use crate::bolt::{components::Bolt, resources::BoltConfig};
+
+        let mut world = World::new();
+        let config = BoltConfig::default();
+        let entity = Bolt::builder()
+            .at_position(Vec2::ZERO)
+            .config(&config)
+            .with_velocity(Velocity2D(Vec2::new(0.0, config.base_speed * 1.5)))
+            .primary()
+            .spawn(&mut world);
+        world
+            .entity_mut(entity)
+            .insert(ActiveSpeedBoosts(vec![1.5]));
+
+        // Remove the boost
+        reverse(entity, 1.5, "test_chip", &mut world);
+
+        // After reverse: speed should be base_speed * 1.0
+        let speed_after = world.get::<Velocity2D>(entity).unwrap().speed();
+        assert!(
+            (speed_after - config.base_speed).abs() < 1.0,
+            "reverse() should recalculate velocity: expected {}, got {speed_after}",
+            config.base_speed
+        );
     }
 }

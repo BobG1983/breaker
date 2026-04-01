@@ -103,6 +103,133 @@ fn bolt_does_not_insert_cleanup_on_node_exit() {
     );
 }
 
+// ── BoltBaseDamage component tests ─────────────────────────────
+
+// Behavior 16: BoltBaseDamage stores f32 damage value
+#[test]
+fn bolt_base_damage_stores_value() {
+    let dmg = BoltBaseDamage(10.0);
+    assert!(
+        (dmg.0 - 10.0).abs() < f32::EPSILON,
+        "BoltBaseDamage(10.0) should store 10.0, got {}",
+        dmg.0
+    );
+}
+
+#[test]
+fn bolt_base_damage_zero_is_valid() {
+    let dmg = BoltBaseDamage(0.0);
+    assert!(
+        dmg.0.abs() < f32::EPSILON,
+        "BoltBaseDamage(0.0) should be valid, got {}",
+        dmg.0
+    );
+}
+
+// Behavior 17: BoltBaseDamage implements Debug
+#[test]
+fn bolt_base_damage_debug_contains_value() {
+    let dmg = BoltBaseDamage(10.0);
+    let debug_str = format!("{dmg:?}");
+    assert!(
+        !debug_str.is_empty(),
+        "BoltBaseDamage Debug should produce non-empty string"
+    );
+    assert!(
+        debug_str.contains("10"),
+        "BoltBaseDamage Debug should contain '10', got: {debug_str}"
+    );
+}
+
+// Behavior 18: BoltBaseDamage implements Clone and Copy
+#[test]
+fn bolt_base_damage_clone_and_copy() {
+    let component = BoltBaseDamage(10.0);
+    let a = component; // Copy
+    let b = a; // Copy again (a is still valid because Copy)
+    let c = component; // Copy (same as Clone for Copy types)
+    assert!(
+        (b.0 - 10.0).abs() < f32::EPSILON,
+        "copied BoltBaseDamage should be 10.0"
+    );
+    assert!(
+        (c.0 - 10.0).abs() < f32::EPSILON,
+        "cloned BoltBaseDamage should be 10.0"
+    );
+}
+
+// ── BoltDefinitionRef component tests ──────────────────────────
+
+// Behavior 19: BoltDefinitionRef stores String reference to definition name
+#[test]
+fn bolt_definition_ref_stores_name() {
+    let def_ref = BoltDefinitionRef("Bolt".to_string());
+    assert_eq!(def_ref.0, "Bolt", "BoltDefinitionRef should store 'Bolt'");
+}
+
+#[test]
+fn bolt_definition_ref_empty_string_is_valid() {
+    let def_ref = BoltDefinitionRef(String::new());
+    assert_eq!(
+        def_ref.0, "",
+        "BoltDefinitionRef with empty string should be constructible"
+    );
+}
+
+// Behavior 20: BoltDefinitionRef implements Debug and Clone
+#[test]
+fn bolt_definition_ref_debug_and_clone() {
+    let def_ref = BoltDefinitionRef("Heavy".to_string());
+    let debug_str = format!("{def_ref:?}");
+    assert!(
+        debug_str.contains("Heavy"),
+        "Debug should contain 'Heavy', got: {debug_str}"
+    );
+    let cloned = def_ref;
+    assert_eq!(
+        cloned.0, "Heavy",
+        "cloned BoltDefinitionRef should be 'Heavy'"
+    );
+}
+
+// ── BoltAngleSpread component tests ────────────────────────────
+
+// Behavior 21: BoltAngleSpread stores f32 angle in radians
+#[test]
+fn bolt_angle_spread_stores_value() {
+    let spread = BoltAngleSpread(0.524);
+    assert!(
+        (spread.0 - 0.524).abs() < f32::EPSILON,
+        "BoltAngleSpread(0.524) should store 0.524, got {}",
+        spread.0
+    );
+}
+
+#[test]
+fn bolt_angle_spread_zero_is_valid() {
+    let spread = BoltAngleSpread(0.0);
+    assert!(
+        spread.0.abs() < f32::EPSILON,
+        "BoltAngleSpread(0.0) should be valid, got {}",
+        spread.0
+    );
+}
+
+// Behavior 22: BoltAngleSpread implements Debug
+#[test]
+fn bolt_angle_spread_debug_contains_type_name() {
+    let spread = BoltAngleSpread(0.524);
+    let debug_str = format!("{spread:?}");
+    assert!(
+        !debug_str.is_empty(),
+        "BoltAngleSpread Debug should produce non-empty string"
+    );
+    assert!(
+        debug_str.contains("BoltAngleSpread"),
+        "Debug should contain 'BoltAngleSpread', got: {debug_str}"
+    );
+}
+
 // ── PrimaryBolt component tests ───────────────────────────────
 
 #[test]

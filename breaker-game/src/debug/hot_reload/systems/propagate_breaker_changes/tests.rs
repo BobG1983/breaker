@@ -32,6 +32,7 @@ fn registry_rebuilt_on_modified() {
 
     let def = BreakerDefinition {
         name: "Test".to_owned(),
+        bolt: "Bolt".to_owned(),
         stat_overrides: BreakerStatOverrides::default(),
         life_pool: Some(3),
         effects: vec![],
@@ -55,6 +56,7 @@ fn registry_rebuilt_on_modified() {
         let mut registry = app.world_mut().resource_mut::<BreakerRegistry>();
         let updated = BreakerDefinition {
             name: "Test".to_owned(),
+            bolt: "Bolt".to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: Some(5),
             effects: vec![],
@@ -76,6 +78,7 @@ fn config_reset_with_overrides_on_breaker_change() {
 
     let def = BreakerDefinition {
         name: "Wide".to_owned(),
+        bolt: "Bolt".to_owned(),
         stat_overrides: BreakerStatOverrides {
             width: Some(200.0),
             ..default()
@@ -104,6 +107,7 @@ fn config_reset_with_overrides_on_breaker_change() {
         let mut registry = app.world_mut().resource_mut::<BreakerRegistry>();
         let updated = BreakerDefinition {
             name: "Wide".to_owned(),
+            bolt: "Bolt".to_owned(),
             stat_overrides: BreakerStatOverrides {
                 width: Some(250.0),
                 ..default()
@@ -131,6 +135,7 @@ fn active_chains_rebuilt_on_breaker_change() {
 
     let def = BreakerDefinition {
         name: "Test".to_owned(),
+        bolt: "Bolt".to_owned(),
         stat_overrides: BreakerStatOverrides::default(),
         life_pool: None,
         effects: vec![RootEffect::On {
@@ -164,6 +169,7 @@ fn active_chains_rebuilt_on_breaker_change() {
         let mut registry = app.world_mut().resource_mut::<BreakerRegistry>();
         let updated = BreakerDefinition {
             name: "Test".to_owned(),
+            bolt: "Bolt".to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: None,
             effects: vec![
@@ -218,6 +224,7 @@ fn lives_count_reset_on_breaker_change() {
 
     let def = BreakerDefinition {
         name: "Test".to_owned(),
+        bolt: "Bolt".to_owned(),
         stat_overrides: BreakerStatOverrides::default(),
         life_pool: Some(3),
         effects: vec![],
@@ -246,6 +253,7 @@ fn lives_count_reset_on_breaker_change() {
         let mut registry = app.world_mut().resource_mut::<BreakerRegistry>();
         let updated = BreakerDefinition {
             name: "Test".to_owned(),
+            bolt: "Bolt".to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: Some(5),
             effects: vec![],
@@ -271,6 +279,7 @@ fn speed_boost_chains_appear_in_effect_chains_on_breaker_change() {
 
     let def = BreakerDefinition {
         name: "Test".to_owned(),
+        bolt: "Bolt".to_owned(),
         stat_overrides: BreakerStatOverrides::default(),
         life_pool: None,
         effects: vec![RootEffect::On {
@@ -304,6 +313,7 @@ fn speed_boost_chains_appear_in_effect_chains_on_breaker_change() {
         let mut registry = app.world_mut().resource_mut::<BreakerRegistry>();
         let updated = BreakerDefinition {
             name: "Test".to_owned(),
+            bolt: "Bolt".to_owned(),
             stat_overrides: BreakerStatOverrides::default(),
             life_pool: None,
             effects: vec![RootEffect::On {

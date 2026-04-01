@@ -15,13 +15,7 @@ pub struct Wall;
 /// Walls are invisible collision boundaries, so they carry their own size
 /// rather than relying on cell config.
 #[derive(Component, Debug)]
-pub(crate) struct WallSize {
-    // FUTURE: may be used for upcoming phases
-    // /// Half-width in world units.
-    // pub half_width: f32,
-    // /// Half-height in world units.
-    // pub half_height: f32,
-}
+pub(crate) struct WallSize {}
 
 #[cfg(test)]
 mod tests {

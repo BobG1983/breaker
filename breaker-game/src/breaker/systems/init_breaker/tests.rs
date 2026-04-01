@@ -17,6 +17,7 @@ const TEST_BREAKER_NAME: &str = "TestBreaker";
 fn make_test_breaker() -> BreakerDefinition {
     BreakerDefinition {
         name: TEST_BREAKER_NAME.to_owned(),
+        bolt: "Bolt".to_owned(),
         stat_overrides: BreakerStatOverrides::default(),
         life_pool: Some(3),
         effects: vec![
@@ -114,6 +115,7 @@ fn init_breaker_does_not_push_effects() {
 fn init_breaker_does_not_push_effects_mixed_targets() {
     let def = BreakerDefinition {
         name: TEST_BREAKER_NAME.to_owned(),
+        bolt: "Bolt".to_owned(),
         stat_overrides: BreakerStatOverrides::default(),
         life_pool: None,
         effects: vec![
@@ -159,6 +161,7 @@ fn init_breaker_does_not_push_effects_mixed_targets() {
 fn init_breaker_does_not_push_effects_chrono_style() {
     let def = BreakerDefinition {
         name: TEST_BREAKER_NAME.to_owned(),
+        bolt: "Bolt".to_owned(),
         stat_overrides: BreakerStatOverrides::default(),
         life_pool: None,
         effects: vec![
@@ -201,6 +204,7 @@ fn init_breaker_does_not_push_effects_chrono_style() {
 fn init_breaker_does_not_push_nested_chains() {
     let def = BreakerDefinition {
         name: TEST_BREAKER_NAME.to_owned(),
+        bolt: "Bolt".to_owned(),
         stat_overrides: BreakerStatOverrides::default(),
         life_pool: None,
         effects: vec![RootEffect::On {
@@ -315,6 +319,7 @@ fn apply_overrides_modifies_config() {
 
     let def = BreakerDefinition {
         name: "Wide".to_owned(),
+        bolt: "Bolt".to_owned(),
         stat_overrides: BreakerStatOverrides {
             width: Some(200.0),
             ..default()
@@ -340,6 +345,7 @@ fn apply_overrides_modifies_config() {
 fn no_life_pool_no_lives_count() {
     let def = BreakerDefinition {
         name: TEST_BREAKER_NAME.to_owned(),
+        bolt: "Bolt".to_owned(),
         stat_overrides: BreakerStatOverrides::default(),
         life_pool: None,
         effects: vec![],
@@ -359,6 +365,7 @@ fn no_life_pool_no_lives_count() {
 fn init_breaker_no_duplicate_init_on_reentry() {
     let def = BreakerDefinition {
         name: TEST_BREAKER_NAME.to_owned(),
+        bolt: "Bolt".to_owned(),
         stat_overrides: BreakerStatOverrides::default(),
         life_pool: None,
         effects: vec![RootEffect::On {

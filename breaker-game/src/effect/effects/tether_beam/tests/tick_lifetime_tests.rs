@@ -1,4 +1,4 @@
-use super::*;
+use super::helpers::*;
 
 #[test]
 fn tick_tether_beam_damages_every_tick_no_cooldown() {

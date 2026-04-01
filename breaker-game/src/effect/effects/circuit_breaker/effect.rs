@@ -70,7 +70,7 @@ pub(crate) fn fire(
         }
     } else {
         // First call: insert counter with remaining = bumps_required - 1.
-        let remaining = config.bumps_required - 1;
+        let remaining = config.bumps_required.saturating_sub(1);
         world.entity_mut(entity).insert(CircuitBreakerCounter {
             remaining,
             bumps_required: config.bumps_required,

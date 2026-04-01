@@ -1,4 +1,4 @@
-use super::*;
+use super::helpers::*;
 use crate::effect::core::EffectSourceChip;
 
 fn maintain_chain_app() -> App {

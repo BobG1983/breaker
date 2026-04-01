@@ -66,6 +66,19 @@ pub struct PiercingRemaining(pub u32);
 #[derive(Component, Debug)]
 pub struct BoltLifespan(pub Timer);
 
+/// Base damage per hit for this bolt.
+#[derive(Component, Debug, Clone, Copy)]
+pub struct BoltBaseDamage(pub f32);
+
+/// Name of the `BoltDefinition` this bolt was created from.
+/// Used to look up the bolt's definition in `BoltRegistry`.
+#[derive(Component, Debug, Clone)]
+pub struct BoltDefinitionRef(pub String);
+
+/// Angle spread from vertical in radians for launch and respawn.
+#[derive(Component, Debug, Clone, Copy)]
+pub struct BoltAngleSpread(pub f32);
+
 /// Which side of a surface the bolt last rebounded from.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ImpactSide {

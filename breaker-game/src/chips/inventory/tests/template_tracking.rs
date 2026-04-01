@@ -297,3 +297,43 @@ fn is_chip_available_true_for_unheld_chip_with_non_maxed_template() {
         "unheld chip with non-maxed template should be available"
     );
 }
+
+// --- Behavior: remove_by_template removes correct total across multiple variants ---
+
+#[test]
+fn remove_by_template_correct_total_removed_across_multiple_variants() {
+    // Setup: 3 different chip variants sharing template "Piercing", each with
+    // some stacks. remove_by_template(3) should remove exactly 3 total stacks
+    // regardless of which specific variants they come from (HashMap iteration
+    // order is nondeterministic).
+    let mut inv = ChipInventory::default();
+    let basic = template_chip_def("Basic Piercing", "Piercing", 6);
+    let keen = template_chip_def("Keen Piercing", "Piercing", 6);
+    let brutal = template_chip_def("Brutal Piercing", "Piercing", 6);
+
+    // Add 2 Basic, 2 Keen, 2 Brutal = 6 total template stacks
+    let _ = inv.add_chip("Basic Piercing", &basic);
+    let _ = inv.add_chip("Basic Piercing", &basic);
+    let _ = inv.add_chip("Keen Piercing", &keen);
+    let _ = inv.add_chip("Keen Piercing", &keen);
+    let _ = inv.add_chip("Brutal Piercing", &brutal);
+    let _ = inv.add_chip("Brutal Piercing", &brutal);
+    assert_eq!(inv.template_taken("Piercing"), 6);
+
+    // Remove 3 stacks from the template
+    let removed = inv.remove_by_template("Piercing", 3);
+    assert_eq!(removed, 3, "should remove exactly 3 stacks");
+
+    // Verify total remaining is 3 (6 - 3), regardless of which variants lost stacks
+    let remaining_total =
+        inv.stacks("Basic Piercing") + inv.stacks("Keen Piercing") + inv.stacks("Brutal Piercing");
+    assert_eq!(
+        remaining_total, 3,
+        "expected 3 total stacks remaining across all variants, got {remaining_total}"
+    );
+    assert_eq!(
+        inv.template_taken("Piercing"),
+        3,
+        "template_taken should reflect 3 remaining"
+    );
+}

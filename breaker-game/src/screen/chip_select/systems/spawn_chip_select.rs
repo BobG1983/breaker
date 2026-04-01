@@ -3,7 +3,7 @@
 use bevy::{ecs::hierarchy::ChildSpawnerCommands, prelude::*};
 
 use crate::screen::chip_select::{
-    ChipOffering, ChipSelectConfig,
+    ChipOffering, ChipSelectConfig, color_from_rgb,
     components::{ChipCard, ChipSelectScreen, ChipTimerText},
     resources::{ChipOffers, ChipSelectSelection, ChipSelectTimer},
 };
@@ -77,16 +77,8 @@ fn spawn_card_row(
     config: &ChipSelectConfig,
     offers: &[ChipOffering],
 ) {
-    let selected_color = Color::srgb(
-        config.selected_color_rgb[0],
-        config.selected_color_rgb[1],
-        config.selected_color_rgb[2],
-    );
-    let normal_color = Color::srgb(
-        config.normal_color_rgb[0],
-        config.normal_color_rgb[1],
-        config.normal_color_rgb[2],
-    );
+    let selected_color = color_from_rgb(config.selected_color_rgb);
+    let normal_color = color_from_rgb(config.normal_color_rgb);
 
     parent
         .spawn(Node {
@@ -129,7 +121,7 @@ fn spawn_card_row(
                     ));
 
                     card.spawn((
-                        Text::new(format!("{:?}", def.rarity)),
+                        Text::new(def.rarity.to_string()),
                         TextFont {
                             font_size: config.card_description_font_size,
                             ..default()

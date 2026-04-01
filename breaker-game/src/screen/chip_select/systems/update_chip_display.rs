@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use crate::screen::chip_select::{
-    ChipSelectConfig,
+    ChipSelectConfig, color_from_rgb,
     components::{ChipCard, ChipTimerText},
     resources::{ChipSelectSelection, ChipSelectTimer},
 };
@@ -23,16 +23,8 @@ pub(crate) fn update_chip_display(
     }
 
     // Update card border colors
-    let selected_color = Color::srgb(
-        config.selected_color_rgb[0],
-        config.selected_color_rgb[1],
-        config.selected_color_rgb[2],
-    );
-    let normal_color = Color::srgb(
-        config.normal_color_rgb[0],
-        config.normal_color_rgb[1],
-        config.normal_color_rgb[2],
-    );
+    let selected_color = color_from_rgb(config.selected_color_rgb);
+    let normal_color = color_from_rgb(config.normal_color_rgb);
 
     for (card, mut border) in &mut cards {
         *border = if card.index == selection.index {
@@ -92,11 +84,7 @@ mod tests {
     #[test]
     fn selected_card_gets_selected_border() {
         let config = ChipSelectConfig::default();
-        let expected = Color::srgb(
-            config.selected_color_rgb[0],
-            config.selected_color_rgb[1],
-            config.selected_color_rgb[2],
-        );
+        let expected = color_from_rgb(config.selected_color_rgb);
 
         let mut app = test_app(10.0, 1);
         let card = app
@@ -112,11 +100,7 @@ mod tests {
     #[test]
     fn unselected_card_gets_normal_border() {
         let config = ChipSelectConfig::default();
-        let expected = Color::srgb(
-            config.normal_color_rgb[0],
-            config.normal_color_rgb[1],
-            config.normal_color_rgb[2],
-        );
+        let expected = color_from_rgb(config.normal_color_rgb);
 
         let mut app = test_app(10.0, 0);
         let card = app

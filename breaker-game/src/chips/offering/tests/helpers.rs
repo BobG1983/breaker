@@ -17,26 +17,22 @@ use crate::{
 ///
 /// Draws `count` chip names from the weighted pool without replacement.
 #[must_use]
-pub(super) fn draw_offerings(
-    pool: &[(String, f32)],
-    count: usize,
-    rng: &mut impl Rng,
-) -> Vec<String> {
+pub(super) fn draw_offerings(pool: &[PoolEntry], count: usize, rng: &mut impl Rng) -> Vec<String> {
     if pool.is_empty() {
         return Vec::new();
     }
 
     let draws = count.min(pool.len());
-    let mut remaining: Vec<(String, f32)> = pool.to_vec();
+    let mut remaining: Vec<PoolEntry> = pool.to_vec();
     let mut results = Vec::with_capacity(draws);
 
     for _ in 0..draws {
-        let weights: Vec<f32> = remaining.iter().map(|(_, w)| *w).collect();
+        let weights: Vec<f32> = remaining.iter().map(|e| e.weight).collect();
         let Ok(dist) = WeightedIndex::new(&weights) else {
             break;
         };
         let idx = dist.sample(rng);
-        results.push(remaining[idx].0.clone());
+        results.push(remaining[idx].name.clone());
         remaining.swap_remove(idx);
     }
 

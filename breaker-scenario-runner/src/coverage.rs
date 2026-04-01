@@ -87,10 +87,6 @@ pub fn print_coverage_report(report: &CoverageReport) -> bool {
         }
     }
 
-    if !has_gaps {
-        println!("\nAll invariants have self-test coverage. All layouts are referenced.");
-    }
-
     has_gaps
 }
 

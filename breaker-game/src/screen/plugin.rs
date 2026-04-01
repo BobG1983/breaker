@@ -54,6 +54,7 @@ impl Plugin for ScreenPlugin {
                     // Registries
                     .add_registry::<crate::cells::CellTypeRegistry>()
                     .add_registry::<crate::breaker::BreakerRegistry>()
+                    .add_registry::<crate::bolt::BoltRegistry>()
                     .add_registry::<crate::run::NodeLayoutRegistry>()
                     .add_registry::<crate::chips::ChipTemplateRegistry>()
                     .add_registry::<crate::chips::EvolutionTemplateRegistry>()

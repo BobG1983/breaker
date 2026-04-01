@@ -40,13 +40,14 @@ pub(crate) fn compute_weight(base_weight: f32, decay: f32) -> f32 {
     base_weight * decay
 }
 
-/// Builds the active pool: all chips minus maxed, with effective weights.
+/// Builds the active pool: all chips minus maxed, with effective weights and
+/// template metadata for deduplication.
 #[must_use]
 pub(crate) fn build_active_pool(
     registry: &ChipCatalog,
     inventory: &ChipInventory,
     config: &OfferingConfig,
-) -> Vec<(String, f32)> {
+) -> Vec<PoolEntry> {
     let mut pool = Vec::new();
     for chip in registry.ordered_values() {
         if chip.rarity == Rarity::Evolution {
@@ -62,7 +63,11 @@ pub(crate) fn build_active_pool(
             .unwrap_or(0.0);
         let decay = inventory.weight_decay(&chip.name);
         let effective_weight = compute_weight(base_weight, decay);
-        pool.push((chip.name.clone(), effective_weight));
+        pool.push(PoolEntry {
+            name: chip.name.clone(),
+            weight: effective_weight,
+            template_name: chip.template_name.clone(),
+        });
     }
     pool
 }
@@ -80,20 +85,7 @@ pub(crate) fn generate_offerings(
     config: &OfferingConfig,
     rng: &mut impl Rng,
 ) -> Vec<ChipDefinition> {
-    let base_pool = build_active_pool(registry, inventory, config);
-
-    // Build pool entries with template info from the registry
-    let mut pool: Vec<PoolEntry> = base_pool
-        .into_iter()
-        .filter_map(|(name, weight)| {
-            let def = registry.get(&name)?;
-            Some(PoolEntry {
-                name,
-                weight,
-                template_name: def.template_name.clone(),
-            })
-        })
-        .collect();
+    let mut pool = build_active_pool(registry, inventory, config);
 
     let draws = config.offers_per_node.min(pool.len());
     let mut results = Vec::with_capacity(draws);

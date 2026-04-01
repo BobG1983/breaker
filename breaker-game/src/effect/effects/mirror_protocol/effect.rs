@@ -1,7 +1,6 @@
 //! `MirrorProtocol` effect -- spawns mirrored bolts reflected across the last impact surface.
 
 use bevy::prelude::*;
-use rand::Rng;
 use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use crate::{
@@ -10,7 +9,6 @@ use crate::{
         resources::BoltConfig,
     },
     effect::BoundEffects,
-    shared::rng::GameRng,
 };
 
 /// Spawns a mirrored bolt reflected across the bolt's last impact surface.
@@ -68,21 +66,14 @@ pub(crate) fn fire(entity: Entity, inherit: bool, _source_chip: &str, world: &mu
         None
     };
 
-    // Spawn the mirrored bolt and override its velocity
+    // Spawn the mirrored bolt with the deterministic mirror velocity
     let config = world.resource::<BoltConfig>().clone();
-    let angle = {
-        let mut rng = world.resource_mut::<GameRng>();
-        rng.0.random_range(0.0..std::f32::consts::TAU)
-    };
-    let direction = Vec2::new(angle.cos(), angle.sin());
-    let random_velocity = Velocity2D(direction * config.base_speed);
     let bolt_id = Bolt::builder()
         .at_position(mirror_pos)
         .config(&config)
-        .with_velocity(random_velocity)
+        .with_velocity(Velocity2D(mirror_vel))
         .extra()
         .spawn(world);
-    world.entity_mut(bolt_id).insert(Velocity2D(mirror_vel));
 
     // Inherit BoundEffects if requested
     if let Some(effects) = bound_effects {

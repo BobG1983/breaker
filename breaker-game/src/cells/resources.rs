@@ -66,41 +66,11 @@ impl CellTypeRegistry {
         self.types.insert(alias, def)
     }
 
-    // FUTURE: may be used for upcoming phases
-    // /// Returns an iterator over all cell type definitions.
-    // pub(crate) fn values(&self) -> impl Iterator<Item = &CellTypeDefinition> {
-    //     self.types.values()
-    // }
-
-    // FUTURE: may be used for upcoming phases
-    // /// Returns an iterator over `(alias, definition)` pairs.
-    // pub(crate) fn iter(&self) -> impl Iterator<Item = (&char, &CellTypeDefinition)> {
-    //     self.types.iter()
-    // }
-
-    // FUTURE: may be used for upcoming phases
-    // /// Returns an iterator over all registered alias chars.
-    // pub(crate) fn aliases(&self) -> impl Iterator<Item = &char> {
-    //     self.types.keys()
-    // }
-
     /// Returns the number of registered cell types.
     #[cfg(test)]
     pub(crate) fn len(&self) -> usize {
         self.types.len()
     }
-
-    // FUTURE: may be used for upcoming phases
-    // /// Returns `true` if the registry contains no cell types.
-    // pub(crate) fn is_empty(&self) -> bool {
-    //     self.types.is_empty()
-    // }
-
-    // FUTURE: may be used for upcoming phases
-    // /// Removes all entries from the registry.
-    // pub(crate) fn clear(&mut self) {
-    //     self.types.clear();
-    // }
 }
 
 impl SeedableRegistry for CellTypeRegistry {

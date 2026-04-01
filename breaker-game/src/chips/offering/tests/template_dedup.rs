@@ -34,7 +34,7 @@ fn build_active_pool_excludes_template_maxed_chips() {
     let pool = build_active_pool(&registry, &inventory, &config);
 
     // Pool should only contain Damage Up
-    let pool_names: Vec<&str> = pool.iter().map(|(name, _)| name.as_str()).collect();
+    let pool_names: Vec<&str> = pool.iter().map(|e| e.name.as_str()).collect();
     assert!(
         !pool_names.contains(&"Basic Piercing"),
         "template-maxed Basic Piercing should be excluded"
@@ -62,7 +62,7 @@ fn build_active_pool_excludes_none_template_only_when_individually_maxed() {
     let pool = build_active_pool(&registry, &inventory, &config);
 
     assert!(
-        !pool.iter().any(|(name, _)| name == "Solo"),
+        !pool.iter().any(|e| e.name == "Solo"),
         "individually maxed None-template chip should be excluded"
     );
 }

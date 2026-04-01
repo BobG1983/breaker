@@ -42,6 +42,11 @@ impl ChipCatalog {
     }
 
     /// Insert a chip definition, keyed by its name.
+    ///
+    /// If a definition with the same name already exists, the `chips` map is
+    /// overwritten but the `order` vec grows a duplicate entry. This means
+    /// `ordered_values()` will yield the definition twice. Callers that need
+    /// deduplication should check `get()` before inserting.
     pub fn insert(&mut self, def: ChipDefinition) {
         let name = def.name.clone();
         self.chips.insert(name.clone(), def);
@@ -102,12 +107,6 @@ impl ChipTemplateRegistry {
         self.templates.len()
     }
 
-    // FUTURE: may be used for upcoming phases
-    // /// Returns `true` if the registry contains no templates.
-    // pub(crate) fn is_empty(&self) -> bool {
-    //     self.templates.is_empty()
-    // }
-
     /// Iterate all chip templates.
     pub(crate) fn templates(&self) -> impl Iterator<Item = &ChipTemplate> {
         self.templates.values().map(|(_, t)| t)
@@ -162,12 +161,6 @@ impl EvolutionTemplateRegistry {
     pub(crate) fn len(&self) -> usize {
         self.evolutions.len()
     }
-
-    // FUTURE: may be used for upcoming phases
-    // /// Returns `true` if the registry contains no evolution templates.
-    // pub(crate) fn is_empty(&self) -> bool {
-    //     self.evolutions.is_empty()
-    // }
 
     /// Iterate all evolution templates.
     pub(crate) fn templates(&self) -> impl Iterator<Item = &EvolutionTemplate> {
