@@ -6,6 +6,11 @@ type: reference
 
 # Confirmed Correct Patterns for Bevy 0.18.1
 
+## Asset Types
+- `#[derive(Asset, TypePath, Deserialize, Clone, Debug)]` — correct derive combo for RON-loadable assets in Bevy 0.18.1; `Asset` requires `TypePath`; `Deserialize` satisfies `DeserializeOwned` bound on `SeedableRegistry::Asset`; consistent across all project asset types (BoltDefinition, CellDefinition, BreakerDefinition, etc.)
+- `app.init_asset::<T>()` — correct registration call for custom asset types in Bevy 0.18.1
+- `#[derive(Resource, Debug, Default)]` on a registry struct — correct; `SeedableRegistry` bounds require `Resource + Default + Send + Sync + 'static`
+
 ## Message System
 - `#[derive(Message, Clone, Debug)]` — correct derive for Bevy 0.18 message types
 - `app.add_message::<T>()` — correct registration call (NOT add_event)
@@ -19,7 +24,7 @@ type: reference
 
 ## Query API
 - `query.single()` returns `Result` in Bevy 0.15+ — use `let Ok(x) = query.single() else { return; }`
-- `Query<CollisionQueryBolt, ActiveFilter>` — type alias as query data, filter type alias — both valid
+- `Query<BoltCollisionData, ActiveFilter>` — `#[derive(QueryData)]` named struct as query data, filter type alias — both valid (formerly `CollisionQueryBolt` tuple alias; same API fact applies)
 - `type WallLookup<'w, 's> = Query<'w, 's, (...), (With<Wall>, Without<Bolt>)>` — valid lifetime-annotated query alias
 - `Query<(Has<Cell>, Option<&'static CellHealth>), Without<Bolt>>` — Has<T> and Option<&T> as query data correct
 - `candidate_lookup.get(hit.entity)` — valid query get by entity
@@ -63,6 +68,10 @@ type: reference
 - `Res<Time>` + `.delta_secs()` — also correct in FixedUpdate (resolves to Time<Fixed> automatically)
 - Both patterns are functionally equivalent inside FixedUpdate; style inconsistency is NOT a bug
 - `Res<Time<Fixed>>` + `.timestep()` used for emitter timer accumulation (distinct from expansion dt)
+
+## World Query + get_mut Pattern (speed_boost.rs — confirmed correct)
+- `let boosts = world.get::<T>(entity).cloned();` then `let mut query = world.query::<SpatialData>(); query.get_mut(world, entity)` — valid; `.cloned()` releases the immutable borrow before the mutable query borrow starts; `QueryState::get_mut(&mut self, &'w mut World, Entity)` is the correct exclusive World accessor API; confirmed in `speed_boost.rs:47-53`
+- `world.query::<SpatialDataMutableType>()` returns an owned `QueryState`; calling `.get_mut(world, entity)` on it is the correct pattern for per-entity exclusive World access in World-access functions
 
 ## Other
 - `Bloom` from `bevy::post_process::bloom::Bloom` — correct 0.18 path
@@ -180,6 +189,17 @@ type: reference
 - `chain_lightning/effect.rs` arc_transforms — CORRECT: ChainLightningArc entities are pure rendering objects; using Transform on them is right
 - `pulse/effect.rs` — CORRECT: emitter reads `&Position2D` from emitter entity; ring carries `Position2D`; `apply_pulse_damage` reads `&Position2D` from ring entity. No Transform. Correct.
 
+## Typestate Builder + World Spawn Patterns (feature/chip-evolution-ecosystem — confirmed correct)
+- `fn build_core(...) -> impl Bundle + use<>` — valid Rust 2024 edition precise-capturing syntax; `use<>` captures nothing (no lifetime/type params); prevents overcapturing in RPIT; correct in edition 2024
+- `world.spawn(core)` returns `EntityWorldMut`; calling `.insert(...)` multiple times on the returned `EntityWorldMut` (without releasing it) is valid; `EntityWorldMut` holds the `&mut World` borrow
+- `world.entity_mut(entity).insert(...)` after `world.spawn(bundle)` in a fire() function — entity existence guaranteed by just spawning; panicking `entity_mut` is correct here
+- `#[query_data(mutable)]` attribute on `#[derive(QueryData)]` — valid Bevy 0.18.1; generates both mutable (`SpatialData`) and read-only (`SpatialDataReadOnly`) variants; mutable struct uses `&'static mut` fields
+- `world.query_filtered::<&Position2D, With<Breaker>>().iter(world).next().map(|p| p.0)` — correct one-liner in exclusive system; QueryState temporary is live for the whole expression; `.map(|p| p.0)` copies `Vec2` (Copy) before borrow ends
+- `fn spawn_bolt(world: &mut World)` registered via `add_systems(OnEnter(...), spawn_bolt)` — valid exclusive system registration; Bevy 0.18 implements `IntoSystem` for `fn(&mut World)`
+- `world.resource_mut::<Messages<BoltSpawned>>().write(BoltSpawned)` — correct write to message resource from exclusive system; `Messages` is in `bevy::prelude` for 0.18.1
+- `Bolt::builder().at_position(...).config(&config).with_velocity(vel).extra().spawn(world)` — correct chained builder + World spawn in fire() functions; returns `Entity`
+- `const fn with_lifespan(mut self, duration: f32) -> Self` / `const fn with_radius(mut self, r: f32) -> Self` — valid `const fn` for methods that only assign `f32` into `Option<f32>` fields (Copy types)
+
 ## Invariant Checker Query Patterns (feature/scenario-coverage — confirmed correct)
 - Two queries with overlapping components but disjoint filters are NOT a conflict: `Query<..., With<ScenarioTagBolt>>` + `Query<..., With<ScenarioTagBreaker>>` both reading `&Aabb2D` — valid in Bevy 0.18; disjoint filters on different tags prevent archetype overlap
 - `type BreakerAabbQuery<'w, 's> = Query<'w, 's, (Entity, &'static Aabb2D, &'static BreakerWidth, &'static BreakerHeight, Option<&'static EntityScale>), With<ScenarioTagBreaker>>` — correct Bevy 0.18 lifetime-annotated query alias with static component refs
@@ -217,7 +237,7 @@ type: reference
 - This pattern is safe: query is created (mut borrow), then iterated (immutable borrow) after the exclusive borrow ends via the temporary scope
 
 ## Active* Component Query Tuple Size and Method Access (cache-removal refactor — confirmed correct)
-- `CollisionQueryBolt` with 12 elements (including `Option<&'static ActiveSpeedBoosts>`) — within the 15-element QueryData limit; CORRECT
+- `BoltCollisionData` (formerly `CollisionQueryBolt`) — `#[derive(QueryData)]` named struct with many optional fields — within limits; CORRECT
 - `DashQuery` nested tuple with 15 elements in group 1 and 5 in group 2 — outer tuple wraps two inner tuples to avoid exceeding the per-tuple limit; both correct
 - `Option<&'static ActiveSpeedBoosts>` / `Option<&'static ActiveSizeBoosts>` / `Option<&'static ActiveDamageBoosts>` as Optional query data — correct Bevy 0.18 pattern
 - `.map_or(1.0, ActiveSpeedBoosts::multiplier)` on `Option<&ActiveSpeedBoosts>` — function reference form; passes `&ActiveSpeedBoosts` to `fn multiplier(&self) -> f32`; CORRECT Rust

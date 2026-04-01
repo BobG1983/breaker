@@ -296,3 +296,66 @@ type: project
 - InvariantKind count — still 25 (no new invariants in Wave 3)
 - `docs/architecture/ordering.md` — maintain_tether_chain is effect-internal (no cross-domain ordering); no update needed
 - `docs/plan/index.md` — no plan entry for Wave 3 scenario coverage; no update needed
+
+## 2026-04-01 — feature/chip-evolution-ecosystem steering model + gravity_well split review
+
+**Branch:** feature/chip-evolution-ecosystem (commits: c007143 attraction/gravity-well steering, 9e7f476 bolt typestate builder)
+
+**Files reviewed:**
+- `breaker-game/src/effect/effects/speed_boost.rs` — recalculate_velocity added to fire/reverse
+- `breaker-game/src/effect/effects/attraction/effect.rs` — apply_attraction with apply_velocity_formula
+- `breaker-game/src/effect/effects/gravity_well/effect.rs` — apply_gravity_pull, confirmed directory module
+- `breaker-scenario-runner/src/types/definitions/invariants.rs` — 23 variants, BoltSpeedAccurate
+- `breaker-scenario-runner/src/types/definitions/mutations.rs` — 16 variants confirmed
+- `docs/architecture/rendering/` — all forward-looking Phase 5 design docs
+- `docs/plan/phase-5/` — planning docs, not yet implemented
+
+**Drifts found and fixed:**
+- `docs/architecture/layout.md` — `gravity_well.rs` → `gravity_well/` (directory module)
+- `docs/architecture/plugins.md` — `gravity_well.rs` in two places → `gravity_well/` and path to `effect.rs`
+- `docs/architecture/plugins.md` — Velocity2D exception: "two systems" → "three write paths"; added speed_boost::fire()/reverse() path
+- `docs/architecture/plugins.md` — Effect File Pattern: fire/reverse comments updated to mention recalculate_velocity
+- `docs/architecture/effects/core_types.md` — Per-Effect Modules fire() comment: added recalculate_velocity note
+- `docs/architecture/standards.md` — `BoltSpeedInRange` → `BoltSpeedAccurate` (×2: invariant list and scenario runner list)
+- `docs/design/terminology/scenarios.md` — MutationKind: removed `InjectWrongEffectiveSpeed` and `InjectWrongSizeMultiplier` (both deleted from code)
+
+**Items confirmed no-drift:**
+- InvariantKind total: 23 (unchanged)
+- `docs/plan/index.md` — no phase completion changes needed
+- All Phase 5 rendering docs — intentionally forward-looking
+- `docs/architecture/bolt-definitions.md` — forward-looking sections unchanged
+
+## 2026-03-31 — feature/chip-evolution-ecosystem bolt builder migration review
+
+**Branch:** feature/chip-evolution-ecosystem
+
+**Scope:** Checked all docs for drift from bolt builder migration: `init_bolt_params` deleted, `spawn_extra_bolt` removed from `fire_helpers.rs`, `prepare_bolt_velocity` deleted, `BoltSystems::InitParams` removed, `MaxReflectionAngle` → `BreakerReflectionSpread`.
+
+**Files reviewed:**
+- `breaker-game/src/bolt/sets.rs` — confirmed no InitParams variant
+- `breaker-game/src/bolt/systems/mod.rs` — confirmed no init_bolt_params, no prepare_bolt_velocity
+- `breaker-game/src/bolt/builder.rs` — confirmed Bolt::builder() typestate, 5 dimensions, config() method
+- `breaker-game/src/bolt/plugin.rs` — confirmed spawn_bolt + reset_bolt only (no init_bolt_params)
+- `breaker-game/src/bolt/resources.rs` — confirmed BoltConfig still exists
+- `breaker-game/src/bolt/components/definitions.rs` — confirmed PrimaryBolt new, BoltRespawnOffsetY/BoltRespawnAngleSpread/BoltInitialAngle still exist
+- `breaker-game/src/bolt/queries.rs` — confirmed apply_velocity_formula, no separate prepare step
+- `breaker-game/src/bolt/systems/spawn_bolt/system.rs` — confirmed Bolt::builder() usage
+- `breaker-game/src/bolt/systems/bolt_lost/system.rs` — confirmed reads BoltRespawnOffsetY/BoltRespawnAngleSpread from entity
+- `breaker-game/src/bolt/systems/launch_bolt.rs` — confirmed reads BoltInitialAngle component
+- `breaker-game/src/breaker/components/core.rs` — confirmed BreakerReflectionSpread (was MaxReflectionAngle)
+- `breaker-game/src/effect/effects/fire_helpers.rs` — confirmed spawn_extra_bolt removed; only entity_position + effective_range
+- `breaker-game/src/effect/effects/mod.rs` — confirmed no spawn_extra_bolt export
+- `breaker-game/src/effect/effects/spawn_bolts/effect.rs` — confirmed direct Bolt::builder() call
+
+**Drifts found and fixed:**
+- `docs/architecture/data.md` — `MaxReflectionAngle` → `BreakerReflectionSpread` (x3); `Without<BreakerMaxSpeed>` → `Without<MaxSpeed>`
+- `docs/architecture/layout.md` — `effects/mod.rs` description: removed stale `spawn_extra_bolt helper`
+- `docs/architecture/plugins.md` — `effects/mod.rs` description: removed stale `spawn_extra_bolt helper`
+- `docs/architecture/effects/structure.md` — `effects/mod.rs` line: removed stale `spawn_extra_bolt helper`
+- `docs/architecture/bolt-definitions.md` — "Current State" section: spawn flow, extra bolt spawn, bolt-lost, breaker→bolt relationship all updated for builder migration; "Not in BoltDefinition" `init_bolt_params` → builder; misleading "BoltConfig is eliminated entirely" → "Target:"
+
+**Items confirmed no-drift:**
+- `docs/architecture/ordering.md` — `spawn_bolt [uses Bolt::builder()]` already correct; no BoltSystems::InitParams
+- `docs/architecture/type_state_builder_pattern.md` — already documents Bolt::builder() correctly
+- `docs/plan/index.md` — no plan entry needed (internal refactor, not a phase milestone)
+- `docs/architecture/bolt-definitions.md` Target State section — forward-looking, all `init_bolt_params` references there are planned target code

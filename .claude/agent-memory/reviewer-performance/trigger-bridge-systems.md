@@ -57,7 +57,7 @@ Systems WITH run_if(in_state(PlayingState::Active)):
 - All bridge systems in EffectSystems::Bridge set (impact, bumped, bump, etc.)
 - tick_gravity_well + apply_gravity_pull
 - despawn_second_wind_on_contact
-- All EffectSystems::Recalculate systems
+- [REMOVED] EffectSystems::Recalculate systems — eliminated in Effective* cache removal refactor (2026-03-30)
 - desugar_until (fixed in feature/full-verification-fixes)
 - tick_time_expires (fixed in feature/full-verification-fixes)
 - process_piercing_beam (fixed in feature/full-verification-fixes)

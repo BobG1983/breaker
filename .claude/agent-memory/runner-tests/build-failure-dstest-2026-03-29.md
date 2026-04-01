@@ -1,7 +1,7 @@
 ---
-name: Build failure dstest 2026-03-29 (DELETED)
-description: DELETED — resolved and removed from index; file kept as placeholder
+name: build-failure-dstest-2026-03-29 (TOMBSTONE)
+description: DELETED — resolved; file is a tombstone placeholder safe to remove
 type: project
 ---
 
-Resolved. Removed from MEMORY.md. This file can be deleted from the filesystem.
+Tombstone. Content deleted. Safe to remove from filesystem.

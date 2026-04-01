@@ -1,11 +1,11 @@
 ---
 name: dependency-snapshot
-description: Crate versions at last audit (2026-03-30) — diff against this on next run to detect changes
+description: Crate versions at last audit (2026-04-01) — diff against this on next run to detect changes
 type: project
 ---
 
-Audit date: 2026-03-30 (updated 2026-03-30, Wave 3 / feature/scenario-coverage — no new deps)
-Branch: feature/scenario-coverage
+Audit date: 2026-04-01
+Branch: feature/chip-evolution-ecosystem
 
 ## Direct Dependencies
 
@@ -56,7 +56,7 @@ Branch: feature/scenario-coverage
 - quote 1
 - proc-macro2 1 (ignored by machete — required for proc-macro crates)
 
-## Resolved versions (from cargo tree — verified 2026-03-30)
+## Resolved versions (from cargo tree — verified 2026-03-31)
 - rand 0.9.2, rand_chacha 0.9.0
 - bevy_egui 0.39.1
 - iyes_progress 0.16.0
@@ -65,15 +65,17 @@ Branch: feature/scenario-coverage
 - bitflags v1.3.2 + v2.11.0 (dual — known wontfix)
 - getrandom v0.3.4 + v0.4.2 (dual — known wontfix)
 - foldhash v0.1.5 + v0.2.0 (dual — known wontfix)
-- read-fonts v0.35.0 + v0.36.0 (dual — known wontfix; versions bumped within same pattern)
-- skrifa v0.37.0 + v0.39.0 (dual — known wontfix; versions bumped within same pattern)
+- read-fonts v0.35.0 + v0.36.0 (dual — known wontfix)
+- skrifa v0.37.0 + v0.39.0 (dual — known wontfix)
 
-## Changes since prior audit (2026-03-30 develop audit)
-- No new direct dependencies added in Wave 3 / feature/scenario-coverage branch.
-- quick-error v1.2.3 + v2.0.1 duplicate is GONE (proptest likely removed or tree changed).
-- read-fonts: versions bumped from previous audit values — pattern unchanged (still wontfix).
-- skrifa: versions bumped from previous audit values — pattern unchanged (still wontfix).
-- All Cargo.toml files confirmed unchanged from develop snapshot.
+## Changes since prior audit (2026-03-31 feature/chip-evolution-ecosystem)
+- Two commits since last audit: "feat: bolt typestate builder pattern + migrate all bolt construction"
+  and "fix: attraction and gravity well use steering model with velocity formula".
+- No new direct dependencies. No Cargo.toml files changed.
+- cargo tree -d: identical set of duplicates — no new entries, no new pairs.
+- cargo-machete: CLEAN (no unused deps)
+- cargo deny check licenses: PASS (same Unicode-DFS-2016 harmless pre-approval warning)
+- cargo outdated -R: identical results to prior audit (rand 0.9→0.10 deferred, ron 0.12.0→0.12.1 eligible)
 
 ## Known Outdated (as of audit)
 - rand: 0.9.2 → 0.10.0 (BREAKING — semver major; deferred, see known-findings.md)
@@ -90,6 +92,7 @@ Branch: feature/scenario-coverage
 - One harmless warning: Unicode-DFS-2016 pre-allowlisted but not currently matched by any dep
 - r-efi (LGPL-2.1-or-later): deny.toml exception present; platform-target-only (Android/WASM)
 - self_cell (GPL-2.0-only): deny.toml exception present; runtime dep via cosmic-text → bevy_text
+- SpaceMono font (OFL-1.1): bundled asset, not a crate dep; OFL-1.1 already in deny.toml allowlist
 
 ## Feature Flag Audit (as of audit)
 - bevy/dynamic_linking: ONLY in .cargo/config.toml aliases; NOT in any Cargo.toml or release profile. CLEAN.

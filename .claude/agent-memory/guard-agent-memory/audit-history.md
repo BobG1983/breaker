@@ -4,6 +4,167 @@ description: Recurring staleness patterns and duplication issues found in agent 
 type: project
 ---
 
+## Full Audit — 2026-04-01 (feature/chip-evolution-ecosystem branch, speed_boost inline + InvariantKind renames)
+
+**Scope:** All agent memory directories (full audit)
+
+**Context:** feature/chip-evolution-ecosystem. Recent commits include bolt typestate builder pattern
+(48766c5) and attraction/gravity_well steering model fix (c007143). This audit focused on
+staleness introduced by: (1) speed_boost.rs `recalculate_velocity` becoming an inline helper
+(not a registered ECS system); (2) InvariantKind variant removals/renames (`EffectiveSpeedConsistent`
+and `SizeBoostInRange` removed, `BoltSpeedInRange` renamed to `BoltSpeedAccurate`); (3) chain_reaction
+evolution rename to "Shock Chain"; (4) `prepare_bolt_velocity` ordering references.
+
+**Issues found and fixed (15):**
+
+1. **researcher-codebase/effect-domain-inventory.md** — Table rows for SpeedBoost/DamageBoost/
+   Piercing/SizeBoost/BumpForce listed `recalculate_speed`/`recalculate_damage` etc as `(REAL)`
+   runtime ECS systems. These were eliminated in the Effective* cache removal. Also: stale key
+   file path `src/effect/core/types.rs` → `src/effect/core/types/definitions/enums.rs`. Fixed.
+
+2. **researcher-codebase/collision-system-map.md** — Line 29: `**Ordering:** after BoltSystems::PrepareVelocity`
+   — `PrepareVelocity` was eliminated in bolt builder migration. Fixed: updated ordering note.
+
+3. **reviewer-correctness/known-correct-effects.md** — Top section referenced `recalculate_*` systems
+   and `Effective*` components that no longer exist; did not explicitly warn against re-flagging
+   their absence. Fixed: rewrote section to reflect direct-read model and warn against re-flagging.
+
+4. **reviewer-architecture/known_gap_velocity_cross_domain_write.md** — Said both attraction and
+   gravity_well `run .before(BoltSystems::PrepareVelocity)` — PrepareVelocity was eliminated.
+   Fixed: updated to reference `apply_velocity_formula()` inline and note elimination.
+
+5. **reviewer-architecture/pattern_bolt_builder_migration.md** — Open item listed bolt/builder.rs
+   at stale 2511 lines. Fixed: updated to ~2700 lines per vetted_dependencies.md 2026-03-31.
+
+6. **reviewer-bevy-api/MEMORY.md** — Description overstated confirmed-patterns.md coverage claiming
+   "message system, queries, state, SystemParam derive, Time API, and component spawning" all covered,
+   when many sections are still TODO. Fixed: updated description to reflect actual coverage.
+
+7. **planner-review/MEMORY.md** — Missing Session History line for ephemeral files. Fixed: added
+   `## Session History / See ephemeral/ — not committed.`
+
+8. **planner-review/effect-domain-patterns.md** — Push/Pop section referenced `EffectiveBumpForce`
+   (removed in cache removal). Fixed: added NOTE about removal and correct on-demand path
+   (`ActiveBumpForces.total()`).
+
+9. **writer-scenarios/pattern_invariant_substitution.md** — Listed 25 variants including removed
+   `EffectiveSpeedConsistent` and `SizeBoostInRange`; named `BoltSpeedInRange` (renamed to
+   `BoltSpeedAccurate`); also included stale `InjectWrongSizeMultiplier` mutation. Fixed: updated
+   to 23 variants, added REMOVED section, corrected self-test mutations.
+
+10. **guard-docs/known-state.md** — InvariantKind total listed as 25 with removed variants still
+    present. Fixed: updated to 23 variants with explanation of removals and rename.
+
+11. **runner-scenarios/bug_chain_reaction_collision.md** — Bug marked as still open. Verified
+    `chain_reaction.evolution.ron` now has `name: "Shock Chain"` — collision is RESOLVED. Fixed:
+    added RESOLVED header and moved original content to historical record.
+
+12. **runner-scenarios/MEMORY.md** — chain_reaction entry showed no RESOLVED status. Fixed: updated
+    to show RESOLVED status matching the bug file.
+
+13. **runner-scenarios/bug_tether_beam_bolt_accumulation.md** — Referenced `spawn_extra_bolt()` which
+    was removed in the bolt builder migration. Fixed: updated to `Bolt::builder()` with note.
+
+14. **researcher-system-dependencies/speed-boost-checker-ordering.md** — Did not mention that
+    `recalculate_velocity()` is now inline in `fire()`/`reverse()` (Option B fix implemented).
+    Fixed: added inline recalculation description and Option B resolution note.
+
+15. **researcher-system-dependencies/MEMORY.md** — Description for speed-boost-checker-ordering.md
+    did not reflect Option B resolution. Fixed: updated description.
+
+**Additional fix from previous session (reviewer-performance/phase3-stat-effects.md):**
+- Listed `prepare_bolt_velocity` as a hot-path `.multiplier()` call site (eliminated in builder
+  migration). Fixed: updated to `apply_velocity_formula()` with note about elimination.
+
+**No new cross-agent duplication found.**
+**No broken MEMORY.md links found.**
+
+**New staleness patterns detected this audit:**
+- **InvariantKind variant lifecycle**: When InvariantKind variants are removed or renamed,
+  these files ALL need updates: writer-scenarios/pattern_invariant_substitution.md (full list),
+  guard-docs/known-state.md (total count), runner-scenarios/bug_* files (if variant was the bug
+  trigger). Also check: planner-spec/bolt-domain-inventory.md if it lists scenario coverage.
+- **Inline helper vs registered ECS system**: When a system is converted to an inline helper
+  (not registered via `app.add_systems`), memory files describing "runtime systems" go stale.
+  researcher-codebase/effect-domain-inventory.md runtime systems column is primary risk file.
+- **evolution RON renames**: When an evolution chip's `name:` field changes, runner-scenarios
+  bug files documenting name-collision bugs should be checked for RESOLVED status.
+
+---
+
+## Full Audit — 2026-03-31 (feature/chip-evolution-ecosystem branch, bolt builder migration)
+
+**Scope:** All agent memory directories (full audit)
+
+**Context:** feature/chip-evolution-ecosystem. Bolt builder migration eliminated `init_bolt_params`,
+`prepare_bolt_velocity`, `BoltSystems::PrepareVelocity`, `BoltSystems::InitParams`, `spawn_extra_bolt`,
+`CollisionQueryBolt`, and all `Effective*` components. Multiple memory files had stale references.
+
+**Issues found and fixed (14):**
+
+1. **researcher-codebase/bolt-spawn-component-map.md** — Referenced `init_bolt_params`, `CollisionQueryBolt`,
+   `EffectivePiercing`, `EffectiveDamageMultiplier` — all eliminated. Fixed: rewrote component inventory and
+   query section for current builder-based spawn and `BoltCollisionData` named struct.
+
+2. **planner-spec/bolt-domain-inventory.md** — Listed `BoltBaseSpeed`/`BoltMinSpeed`/`BoltMaxSpeed`
+   as components (now fields on `BoltConfig` + spatial crate types), `CollisionQueryBolt` (replaced by
+   `BoltCollisionData`), `InitParams`/`PrepareVelocity` set variants (eliminated). Fixed.
+
+3. **researcher-system-dependencies/system-map-bolt-velocity2d.md** — Listed `prepare_bolt_velocity`
+   and `BoltSystems::PrepareVelocity` as active. Fixed: updated table and ordering section; added WARNING
+   about stale gravity_well/attraction ordering anchors.
+
+4. **runner-scenarios/bug_effective_speed_state_gate.md** — Bug is moot; Effective* cache removal
+   eliminated all types involved. Fixed: added RESOLVED header with rationale; updated MEMORY.md entry.
+
+5. **guard-docs/known-state.md** — "Confirmed Correct (stat-effects merge)" section described
+   `EffectivePiercing`/`EffectiveDamageMultiplier` in plugins.md as correct; "Key Architectural Fact"
+   still mentioned `EffectiveDamageMultiplier` as active. Fixed: marked stat-effects section as
+   SUPERSEDED; updated key fact section to use `ActiveDamageBoosts`.
+
+6. **researcher-codebase/scenario-failure-trace.md** — Failures 2+3 described Effective*-based bugs
+   now fixed. Fixed: added RESOLVED note at top; updated MEMORY.md description.
+
+7. **researcher-codebase/effect-domain-inventory.md** — Two rows referenced `spawn_extra_bolt` (removed);
+   `recalculate_*` pattern section described removed systems. Fixed: updated spawn references; rewrote
+   stat model note section.
+
+8. **researcher-codebase/entity-leak-analysis.md** — Two references to `spawn_extra_bolt` (removed).
+   Fixed: replaced with `Bolt::builder()` attribution.
+
+9. **researcher-codebase/collision-system-map.md** — Wall collision section said "resets PiercingRemaining
+   to `EffectivePiercing.0`" — `EffectivePiercing` removed. Fixed.
+
+10. **reviewer-performance/phase3-stat-effects.md** — Two references to `CollisionQueryBolt` (replaced
+    by `BoltCollisionData`). Fixed: updated to new query type name with clarifying note.
+
+11. **planner-spec/effect-spawn-bolts-inventory.md** — Listed `spawn_extra_bolt` as key helper (removed).
+    Fixed: replaced with builder call pattern.
+
+12. **reviewer-architecture/known_gap_effects_mod_production_logic.md** — Said `spawn_extra_bolt` lives
+    in fire_helpers.rs; it was subsequently removed. Fixed.
+
+13. **reviewer-architecture/pattern_bolt_builder_migration.md** — Open item about arch docs partially
+    resolved; updated to reflect guard-docs/known-state.md 2026-03-31 additions.
+
+14. **researcher-bevy-api/MEMORY.md** — Description overstated coverage of confirmed-patterns.md
+    (many sections still TODO). Fixed: updated description to be accurate.
+
+**No new cross-agent duplication found.**
+**No broken MEMORY.md links found.**
+
+**New staleness patterns detected this audit:**
+- **Bolt builder migration scope**: init_bolt_params, prepare_bolt_velocity, BoltBaseSpeed/Min/Max,
+  CollisionQueryBolt, spawn_extra_bolt, EffectivePiercing, EffectiveDamageMultiplier all eliminated in
+  one branch. At least 10 memory files had stale references. After any bolt domain refactor, audit:
+  researcher-codebase (bolt-spawn, collision, entity-leak, effect-domain, scenario-failure-trace),
+  planner-spec (bolt-inventory, effect-spawn-bolts), researcher-system-dependencies, reviewer-performance,
+  reviewer-architecture.
+- **`EffectiveSpeedConsistent` and `SizeBoostInRange` bug files**: After cache removal, any runner-scenarios
+  bug file referencing Effective* should be marked RESOLVED — the architectural cause no longer exists.
+
+---
+
 ## Full Audit — 2026-03-30 (feature/scenario-coverage branch, Wave 3 review)
 
 **Scope:** All agent memory directories (full audit)
@@ -141,6 +302,9 @@ See [audit-history-archive.md](audit-history-archive.md) for audits prior to 202
 - **MEDIUM carry-forward list in phase4_findings.md**: After any refactor/file-splits merge, the entire "MEDIUM priority still open" section may be stale. Clear and re-run reviewer-file-length.
 - **Cross-agent performance/quality disagreements**: reviewer-performance may mark code patterns as "dead code" that reviewer-quality correctly identifies as reachable. On disagreement, verify against the actual code.
 - **Directory module refactors change file paths**: After any refactor/file-splits merge, file-path references in reviewer-architecture gap files may point to .rs files that are now directory modules. Check reviewer-architecture path references after any split refactor.
+- **InvariantKind variant removals/renames**: When variants are removed or renamed, update: writer-scenarios/pattern_invariant_substitution.md, guard-docs/known-state.md (count), and any runner-scenarios bug files tied to the removed variant.
+- **Inline helper vs registered ECS system**: When a `pub(crate)` system is refactored to a private inline helper (not registered via `add_systems`), researcher-codebase/effect-domain-inventory.md "Runtime systems" column goes stale. Verify after any recalculate_* or similar cleanup.
+- **Evolution RON name renames**: When evolution chip `name:` changes, check runner-scenarios bug files for name-collision bugs — they may be RESOLVED.
 
 ## Agents Accumulating Memory Fastest
 
@@ -149,3 +313,6 @@ See [audit-history-archive.md](audit-history-archive.md) for audits prior to 202
 3. **reviewer-correctness** — bug-patterns.md OPEN items lag behind fixes; cross-check known-correct-effects.md.
 4. **runner-linting** — lint_state_current.md is point-in-time; description drift is likely.
 5. **reviewer-architecture** — known_gap_cleanup_markers.md tracks open gaps that close over time.
+6. **writer-scenarios** — InvariantKind variant list must be updated whenever variants are added, removed, or renamed.
+7. **runner-scenarios** — Bug files for resolved bugs (name collisions, Effective* state-gate issues) linger as "open" without RESOLVED markers.
+8. **researcher-system-dependencies** — System ordering files go stale when system sets are eliminated or systems become inline helpers.

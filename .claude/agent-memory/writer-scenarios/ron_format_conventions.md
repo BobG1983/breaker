@@ -12,16 +12,22 @@ type: reference
     layout: "Dense",
     input: Chaos((action_prob: 0.6)),
     max_frames: 8000,
-    invariants: [NoEntityLeaks, NoNaN, BoltInBounds],
-    expected_violations: None,
+    disallowed_failures: [NoEntityLeaks, NoNaN, BoltInBounds],
+    allowed_failures: None,
     debug_setup: None,
     invariant_params: (max_bolt_count: 12),   // only include if overriding default of 8
     allow_early_end: false,
-    stress: (runs: 16, parallelism: 16),       // only for stress scenarios
+    stress: (),                                // only for stress scenarios (32 runs, 32 parallelism default)
     seed: 1234,
-    initial_effects: [...],
+    chip_selections: ["ChipName"],             // for chip-based scenarios
+    initial_effects: [...],                    // for raw effect injection scenarios
 )
 ```
+
+NOTE: The field names in ScenarioDefinition are `disallowed_failures` and `allowed_failures`
+(not `invariants` / `expected_violations` — those are the old names). Self-test scenarios
+with intentional violations use `expected_violations` in comments but the RON field is
+`allowed_failures: Some([VariantName])`.
 
 ## What to omit
 
@@ -45,7 +51,12 @@ stress: Some(())                     // 32 runs, 32 parallelism (both default to
 stress: (runs: 16, parallelism: 16)  // explicit — use this form
 ```
 
-Note: stress scenarios use the non-`Some()` form in practice (see existing scenarios). The `Some()` form is the typed RON; in practice the runner accepts `(runs: 16, parallelism: 16)` directly because the field is `Option<StressConfig>` with RON's implicit unwrapping for structs.
+Confirmed working forms (verified against running scenarios):
+- `stress: ()` — 32 runs, 32 parallelism (all defaults, shortest form)
+- `stress: (runs: 16, parallelism: 16)` — explicit counts
+- `stress: Some(())` is the typed RON form but NOT used in practice — use `()` bare form
+
+RON implicitly unwraps `Option<StressConfig>` when the struct form is present.
 
 ## Available layouts (confirmed from existing scenarios)
 

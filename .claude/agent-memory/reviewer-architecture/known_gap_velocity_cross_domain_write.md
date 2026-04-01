@@ -12,6 +12,6 @@ These are FixedUpdate systems (not fire() functions), running each tick to conti
 
 **Why this matters:** `docs/architecture/plugins.md` says "Writes to other domains only through messages — no direct mutation of another domain's components or resources." The documented exceptions are ShieldActive (bolt and cells) and the debug domain. These velocity writes are not documented as exceptions.
 
-**Why it's acceptable (pattern rationale):** The purpose of GravityWell and Attraction effects is to apply forces to bolts. Adding message indirection (effect writes `GravityForce`, bolt reads and applies) would add complexity without benefit — the force application is simple arithmetic on velocity. Both systems run `.before(BoltSystems::PrepareVelocity)` so the bolt domain's speed clamping still applies.
+**Why it's acceptable (pattern rationale):** The purpose of GravityWell and Attraction effects is to apply forces to bolts. Adding message indirection (effect writes `GravityForce`, bolt reads and applies) would add complexity without benefit — the force application is simple arithmetic on velocity. These systems run in FixedUpdate before collision systems so `apply_velocity_formula()` (called inline at each collision site) still applies speed clamping. NOTE: `BoltSystems::PrepareVelocity` was eliminated in builder migration — the ordering anchor is now the collision system sets directly.
 
 **How to apply:** Accept as a pragmatic exception. If documenting, add to `docs/architecture/plugins.md` alongside the ShieldActive exception.

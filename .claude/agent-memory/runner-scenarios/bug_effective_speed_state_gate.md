@@ -1,8 +1,17 @@
 ---
-name: EffectiveSpeedConsistent / SizeBoostInRange state-gate mismatch
-description: recalculate_speed and recalculate_size run only in PlayingState::Active, but fire()/reverse() can update Active* components in any state (e.g. node transitions). Invariant checkers see a one-frame divergence between Active* and Effective* whenever a boost changes state outside PlayingState::Active.
+name: EffectiveSpeedConsistent / SizeBoostInRange state-gate mismatch (RESOLVED)
+description: RESOLVED by Effective* cache-removal refactor (feature/scenario-coverage, 2026-03-30). All Effective* components and recalculate_* systems eliminated; consumers call Active*.multiplier() directly. Kept for historical context.
 type: project
 ---
+
+**RESOLVED**: The Effective* cache removal eliminated all `EffectiveSpeedMultiplier`,
+`EffectiveSizeMultiplier`, `recalculate_speed`, and `recalculate_size`. The
+`EffectiveSpeedConsistent` and `SizeBoostInRange` invariant checkers no longer exist.
+This bug cannot recur in the current architecture.
+
+**Historical record below:**
+
+
 
 `recalculate_speed` and `recalculate_size` are registered with:
 ```rust

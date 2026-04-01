@@ -55,3 +55,18 @@ production code (prepare_bolt_velocity, bolt_breaker_collision, move_breaker, da
 now reads ActiveSpeedBoosts.multiplier() / ActiveSizeBoosts.multiplier() on-demand.
 EffectiveSpeedMultiplier and EffectiveSizeMultiplier types no longer exist in the codebase.
 No unsafe blocks in any new or changed code. Grep confirmed zero matches.
+
+Still confirmed after feature/chip-evolution-ecosystem (2026-03-31) — bolt builder migration:
+New files: bolt/builder.rs (2700+ lines), rantzsoft_spatial2d/src/builder.rs (499 lines),
+rantzsoft_spatial2d/src/queries.rs (38 lines). All are pure safe Rust — typestate
+generics, Bevy Bundle impls, ECS QueryData derive. No unsafe anywhere. World access
+in spawn_bolt/system.rs and effect systems (spawn_phantom, spawn_bolts, chain_bolt,
+mirror_protocol, tether_beam) uses Bevy's safe World API exclusively.
+Workspace lint unsafe_code = "deny" remains in force.
+
+Still confirmed after feature/chip-evolution-ecosystem (2026-04-01) — chip ecosystem + new effects:
+New effect modules: anchor/effect.rs, circuit_breaker/effect.rs, mirror_protocol/effect.rs,
+entropy_engine/effect.rs. All use Bevy's safe World API (world.get, world.get_mut,
+world.entity_mut, world.resource_mut). No unsafe anywhere.
+speed_boost.rs modified to add recalculate_velocity() using world.query::<SpatialData>() — safe.
+Grep confirmed zero "unsafe" matches across all workspace .rs files.

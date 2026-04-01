@@ -118,7 +118,7 @@ When a code spec proposes push/pop into a `Vec<f32>` component (e.g., `ActiveBum
 
 1. **The system cannot use `world.get_mut()` directly** — systems don't take `&mut World` as a parameter.
 2. **Commands cannot push/pop** — `commands.entity(e).insert(ActiveBumpForces(...))` REPLACES the component, destroying existing entries from other effects.
-3. **The correct approach** is to add `Option<&'static mut ActiveBumpForces>` (and `Option<&'static mut EffectiveBumpForce>`) to the system's query tuple, then mutate the `Vec` in-place via the query field.
+3. **The correct approach** is to add `Option<&'static mut ActiveBumpForces>` to the system's query tuple, then mutate the `Vec` in-place via the query field. NOTE: `EffectiveBumpForce` was removed in the Effective* cache-removal refactor — use `ActiveBumpForces.total()` on demand instead.
 4. **Lazy-insert when absent**: If the query field is `None`, use `commands.entity(e).insert(ActiveBumpForces(vec![value]))` only when no other effects have contributed — but this still loses existing values. The robust approach is to require `ActiveBumpForces` be always present on breaker entities (initialized at spawn), avoiding the conditional insert entirely.
 
 Any code spec that says "push into `ActiveBumpForces` in `tick_anchor`" MUST specify that `AnchorTickQuery` is extended to include `Option<&'static mut ActiveBumpForces>`. Without this, the implementation has no way to read-modify-write the vec. Flag as BLOCKING if missing.

@@ -45,4 +45,4 @@ Every quadtree query allocates. Specific costs:
 ## Archetype Notes
 
 - Cell archetypes are intentionally varied: base `Cell`, `Cell + Locked + LockAdjacents`, `Cell + CellRegen`, `Cell + ShieldParent`, `Cell + OrbitCell + OrbitAngle + OrbitConfig`. This is correct domain modeling. `LockAdjacents(Vec<Entity>)` allocates a Vec per locked cell — acceptable at current scale, note if lock count grows large.
-- `CollisionQueryBolt` has three `Option<>` fields (`PiercingRemaining`, `Piercing`, `DamageBoost`). These create multiple archetypes for bolts. With only 1-4 bolts active at a time, this is not a fragmentation concern. Do not change.
+- `BoltCollisionData` (replaced `CollisionQueryBolt` in builder migration) has multiple `Option<>` fields (`PiercingRemaining`, `ActivePiercings`, `ActiveDamageBoosts`, `ActiveSpeedBoosts`, `EntityScale`, etc.). These create multiple archetypes for bolts. With only 1-4 bolts active at a time, this is not a fragmentation concern. Do not change.

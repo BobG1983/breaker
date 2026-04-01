@@ -55,7 +55,7 @@ type: project
 
 ### Semantic bug: negative damage (Warning-level)
 - `handle_cell_hit/system.rs:45` — `health.take_damage(msg.damage)` with no sign guard
-- `effective_damage = BASE_BOLT_DAMAGE * EffectiveDamageMultiplier`
+- `effective_damage = BASE_BOLT_DAMAGE * ActiveDamageBoosts::multiplier()` (EffectiveDamageMultiplier removed; multiplier computed on demand)
 - `gauntlet.chip.ron` uses `DamageBoost(-0.5)` — a negative multiplier factor
 - Product of two `DamageBoost(-0.5)` stacks = 0.25 (fine); product with `DamageBoost(-0.5)`
   and `DamageBoost(0.1)` could produce negative effective damage
@@ -241,17 +241,78 @@ in production code.
 ### Confirmed safe: on-demand multiplier computation now used everywhere (Safe)
 - All systems that previously may have used EffectiveSpeedMultiplier / EffectiveSizeMultiplier
   components now call ActiveSpeedBoosts::multiplier() / ActiveSizeBoosts::multiplier() on demand.
-- Specifically: prepare_bolt_velocity (line 37), bolt_breaker_collision (line 323, 353),
-  move_breaker (line 41, 77), dash/system.rs.
+- Specifically: apply_velocity_formula() in bolt/queries.rs (replace for prepare_bolt_velocity, which was DELETED),
+  bolt_breaker_collision, move_breaker, dash/system.rs.
 - Both multiplier() methods use if self.0.is_empty() { 1.0 } else { self.0.iter().product() }
   — no division, no panic surface.
 
-### Stale BUG comment in prepare_bolt_velocity tests (Info-level)
-- `src/bolt/systems/prepare_bolt_velocity/tests.rs:288` contains a doc comment
-  "BUG: current implementation sees no EffectiveSpeedMultiplier, defaults to mult=1.0"
-  describing the OLD pre-refactor behavior. The implementation now reads ActiveSpeedBoosts
-  directly, so this test passes. The comment is misleading but harmless — it's in test
-  doc only, not runtime code.
+### Stale BUG comment (MOOT — file deleted)
+- `src/bolt/systems/prepare_bolt_velocity/tests.rs:288` — this file and its tests were
+  DELETED in the bolt builder migration (feature/chip-evolution-ecosystem). The stale BUG
+  comment no longer exists. No action needed.
+
+## feature/chip-evolution-ecosystem (2026-03-31) — bolt builder migration
+
+### No new RON deserialization sites (Safe)
+- defaults.bolt.ron: unchanged schema — all existing fields, no new fields added.
+- defaults.breaker.ron: added reflection_spread field. Tested in
+  breaker/resources.rs::tests::breaker_defaults_ron_parses with .expect() inside
+  #[cfg(test)] — not production panic surface. The serde field has no default
+  attribute, so a malformed breaker RON omitting reflection_spread would fail
+  deserialization. Since the RON is include_str! at compile time in tests and loaded
+  via Bevy's asset pipeline at runtime (returns error, not panic), this is safe.
+- BreakerConfig: new `reflection_spread: f32` field has no bounds validation.
+  Values <= 0.0 or > 360.0 are not rejected. However, reflection_spread is used
+  in bolt_breaker_collision/system.rs — an invalid value (zero or negative) would
+  produce degenerate angle ranges. Since this is a compile-time asset, not
+  user-controlled input, risk is Info-level only.
+
+### OptionalBoltData::radius uses unwrap_or(DEFAULT_RADIUS) in production (Safe)
+- build_core() at builder.rs:281 — `optional.radius.unwrap_or(DEFAULT_RADIUS)`.
+  This is Option::unwrap_or, not .unwrap() — the default (8.0) is always returned
+  if radius is None. No panic path. Safe.
+
+### All .unwrap()/.expect() in bolt/builder.rs are inside #[cfg(test)] (Safe)
+- 100+ unwrap/expect calls in builder.rs are test assertions on world.get::<T>(entity).
+  All enclosed in #[cfg(test)] mod tests block. Not production panic surface.
+
+## feature/chip-evolution-ecosystem (2026-04-01) — chip ecosystem + new effects
+
+### New evolution and template RON files — no new panic risk (Safe)
+- 12 new .evolution.ron files and 5 modified .chip.ron files. All loaded via Bevy
+  asset pipeline. No new user-controlled input reaches any deserializer.
+- All numeric fields are bounded literals. No injection risk.
+- New EffectKind variants in RON: Anchor, CircuitBreaker, MirrorProtocol, EntropyEngine.
+  All well-formed in shipped files.
+
+### circuit_breaker.evolution.ron bumps_required: 3 (Safe as-is; Warning at code layer)
+- The current RON sets bumps_required: 3. Safe.
+- However: circuit_breaker/effect.rs:73 computes `config.bumps_required - 1` as bare u32
+  subtraction with no guard. If a RON file ever sets bumps_required: 0, this underflows
+  in debug mode (panic) and wraps in release (u32::MAX → immediate "reward" on first bump,
+  gameplay nonsense). See Warning finding below.
+- The only production RON file uses bumps_required: 3. Risk is theoretical but real.
+
+### EntropyEngine pool: empty pool and all-zero weights guarded (Safe)
+- entropy_engine/effect.rs:47 — `if pool.is_empty() { warn!(...); return; }` guards empty pool.
+- entropy_engine/effect.rs:60-62 — `let Ok(dist) = WeightedIndex::new(...) else { warn!(...); return; }` guards all-zero weights.
+- No panic surface. Both edge cases produce a `warn!` log and silent no-op.
+
+### EntropyEngine max_effects: 0 is a silent no-op (Info-level)
+- effects_to_fire = cells_destroyed.min(max_effects). If max_effects = 0, effects_to_fire = 0
+  and the function returns early at line 52. No panic, no behavior.
+
+### Anchor plant_delay: 0.0 is a silent instant-plant (Info-level)
+- AnchorTimer(0.0) is inserted on first stationary frame; the `t.0 <= 0.0` check fires
+  on the next tick. Instant plant. Not a panic, not harmful.
+
+### All new .expect()/.unwrap() in production code — Safe
+- bolt/builder.rs:281 — `unwrap_or(DEFAULT_RADIUS)` — not a panic path.
+- All other .expect()/.unwrap() in changed files are inside #[cfg(test)] blocks.
+  Verified by checking #[cfg(test)] block start lines vs. first .expect() line.
+
+### defaults.breaker.ron: new reflection_spread field (Info-level, carry-forward)
+- Confirmed in prior audit note (2026-03-31). No new findings.
 
 ## feature/scenario-coverage (2026-03-30)
 

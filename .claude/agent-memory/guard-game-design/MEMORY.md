@@ -7,6 +7,7 @@
 - [Full Verification 2026-03-30](evaluation-full-verification-2026-03-30.md) — 2 blockers (BASE_BOLT_DAMAGE, catalog drift), 3 concerns (breaker diff, Surge stacking, Attraction gate)
 
 - [Wave 3 TetherBeam Chain + Inherit Fix](evaluation-wave3-tetherbeam-inherit.md) — Chain mode approved with spawn governor; inherit fix approved as correctness; bolt-proliferation archetype validated
+- [Bolt Builder Migration](evaluation-bolt-builder-migration.md) — Directional steering, BreakerReflectionSpread rename, PrimaryBolt marker all approved
 
 ## Audits
 - [Chip/Evolution Coherence Audit](audit-chip-evolution-coherence.md) — 3 critical overlaps, 6 orphan chips, 5 missing RON files, power curve issues

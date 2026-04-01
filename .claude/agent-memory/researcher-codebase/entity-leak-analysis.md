@@ -14,7 +14,7 @@ type: project
 
 - File: `breaker-game/src/effect/effects/chain_bolt/effect.rs` lines 22-28
 - `world.spawn(DistanceConstraint { ... })` — NO `CleanupOnNodeExit` on spawned entity
-- The chain bolt (spawned via `spawn_extra_bolt`) HAS `CleanupOnNodeExit` → despawned on `OnExit(Playing)`
+- The chain bolt (spawned via `Bolt::builder()` — `spawn_extra_bolt` removed in builder migration) HAS `CleanupOnNodeExit` → despawned on `OnExit(Playing)`
 - The `DistanceConstraint` entity does NOT → survives across node transitions and run restarts
 - `reverse()` cleans it up correctly, but `reverse()` only fires when the `Until` trigger resolves
 - In chaos runs with rapid cell destruction, the node clears before the `Until` trigger, so `reverse()` is never called
@@ -40,7 +40,7 @@ The "Entity despawned: invalid; generation X" warnings come from stale Entity ID
 ### Cleanup architecture summary
 
 - `cleanup_entities::<CleanupOnNodeExit>` runs on `OnExit(GameState::Playing)` — registered in `ScreenPlugin`
-- `CleanupOnNodeExit` is added by: `spawn_extra_bolt` (covers: ChainBolt, SpawnPhantom, TetherBolt, SpawnBolts, MirrorProtocol), all effect spawn sites (ShockwaveSource, ChainLightningChain, ChainLightningArc, PulseRing, GravityWellMarker, TetherBeamComponent, ExplodeRequest, PiercingBeamRequest)
+- `CleanupOnNodeExit` is added by: `Bolt::builder()` via `.extra()` path (covers: ChainBolt, SpawnPhantom, TetherBolt, SpawnBolts, MirrorProtocol — `spawn_extra_bolt` was removed in builder migration), all effect spawn sites (ShockwaveSource, ChainLightningChain, ChainLightningArc, PulseRing, GravityWellMarker, TetherBeamComponent, ExplodeRequest, PiercingBeamRequest)
 - Missing `CleanupOnNodeExit`: `DistanceConstraint` in `chain_bolt::fire()` and `SecondWindWall` in `second_wind::fire()`
 
 **Why:** Per project investigation into NoEntityLeaks invariant failures on feature/scenario-coverage branch (2026-03-30).

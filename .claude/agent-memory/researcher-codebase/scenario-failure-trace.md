@@ -1,8 +1,16 @@
 ---
 name: scenario-failure-trace
-description: Root cause trace for 5 systemic scenario failures appearing across 111 scenarios (feature/scenario-coverage branch)
+description: Root cause trace for 5 systemic scenario failures (feature/scenario-coverage). Failures 2+3 are RESOLVED by Effective* cache removal. Historical record only.
 type: project
 ---
+
+**NOTE: Failures 2 (EffectiveSpeedConsistent) and 3 (BoltSpeedInRange) are RESOLVED.**
+The Effective* cache removal (2026-03-30) eliminated `EffectiveSpeedMultiplier`,
+`recalculate_speed`, `BoltMinSpeed`/`BoltMaxSpeed` components, and `prepare_bolt_velocity`.
+The `bolt_speed_in_range.rs` checker was renamed/rewritten as `bolt_speed_accurate.rs`,
+which uses `BaseSpeed`, `MinSpeed`, `MaxSpeed` (from rantzsoft_spatial2d) and
+`ActiveSpeedBoosts::multiplier()` directly. The chain_arc entity lifecycle bug (Failure 4
+subset) was fixed in commit 48766c5.
 
 # Scenario Failure Root Cause Trace
 

@@ -32,8 +32,10 @@ All test files reviewed. No critical or moderate issues found. One minor observa
 - Uses `MinimalPlugins` + `FixedUpdate`. Correct; `PlayfieldConfig` is a plain resource. No App overhead beyond minimum.
 - `tick()` helper pattern using `accumulate_overstep` — correct Bevy 0.18 pattern for FixedUpdate tests.
 
-### `prepare_bolt_velocity/tests.rs`
-- One test (`no_breaker_leaves_velocity_unchanged`) creates its own `App::new()` without the shared `test_app()` helper to deliberately omit the breaker. This is intentional and correct.
+### `prepare_bolt_velocity/tests.rs` (DELETED — builder migration)
+- This file was reviewed on feature/missing-unit-tests (2026-03-30). The `prepare_bolt_velocity`
+  system and its tests were subsequently DELETED in the bolt builder migration (feature/chip-evolution-ecosystem).
+  Historical note only.
 
 ### `reset_bolt/tests.rs`
 - Spawns multiple component bundles per test entity but no overlap or fragmentation concern — tests spawn 1-3 entities per test.

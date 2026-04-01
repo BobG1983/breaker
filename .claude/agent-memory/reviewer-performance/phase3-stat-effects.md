@@ -25,7 +25,7 @@ Consumers now call `.multiplier()` inline at point of use. EffectPlugin no longe
 
 These are the FixedUpdate call sites (all confirmed by code inspection):
 
-- `prepare_bolt_velocity` — `active_boosts.map_or(1.0, ActiveSpeedBoosts::multiplier)` — once per bolt
+- `apply_velocity_formula()` (inline at each collision/event site) — `active_boosts.map_or(1.0, ActiveSpeedBoosts::multiplier)` — once per bolt per mutation site (NOTE: `prepare_bolt_velocity` was ELIMINATED in builder migration; velocity formula is now inline)
 - `bolt_cell_collision` — `damage_mult.map_or(1.0, ActiveDamageBoosts::multiplier)` — once per bolt BEFORE the CCD bounce loop (not inside it)
 - `bolt_breaker_collision` — `active_speed_boosts.map_or(1.0, ActiveSpeedBoosts::multiplier)` — once per bolt; `size_mult.map_or(1.0, ActiveSizeBoosts::multiplier)` — once per breaker
 - `move_breaker` — `ActiveSpeedBoosts::multiplier` once, `ActiveSizeBoosts::multiplier` once — 1 breaker entity
@@ -47,12 +47,13 @@ prior round-trip through the scheduler and component table. Net win at all scale
 
 Removing 6 `Effective*` components strictly reduces fragmentation:
 - Bolt entities no longer straddle archetypes based on which Effective* they have
-- `CollisionQueryBolt` and `MovementQuery` already used `Option<&Active*>` — these queries are
-  unchanged since Effective* was never in them
+- `BoltCollisionData` (the `#[derive(QueryData)]` replacement for old `CollisionQueryBolt`) and `MovementQuery` already used `Option<&Active*>` — these queries are unchanged since Effective* was never in them
 
-The only remaining Optional component pattern: `CollisionQueryBolt` has
+The only remaining Optional component pattern: `BoltCollisionData` (formerly `CollisionQueryBolt`) has
 `Option<&ActiveDamageBoosts>`, `Option<&ActivePiercings>`, `Option<&ActiveSpeedBoosts>` plus
 existing optional fields. At 1-4 bolts, this is not a fragmentation concern.
+
+**NOTE**: `CollisionQueryBolt` (old tuple type alias) was replaced by `BoltCollisionData` (#[derive(QueryData)]) in the bolt builder migration. All archetype analysis above remains valid — the query field composition is the same.
 
 ## Vec<f32> Allocation Pattern
 

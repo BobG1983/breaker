@@ -86,8 +86,10 @@ The `-v` flag is forwarded to each subprocess via `cmd.arg("-v")` in `spawn_batc
 So verbose output still works in parallel mode, but it appears after ALL batch processes
 complete, interleaved in scenario order.
 
-## Why: stale memory note
+## Why: stale memory note (updated 2026-03-31)
 
 Prior memory entry `scenario-failure-trace.md` said BoltSpeedInRange checker was missing
-the `EffectiveSpeedMultiplier`. As of current code the checker NOW includes
-`Option<&EffectiveSpeedMultiplier>` and multiplies bounds correctly. That fix was applied.
+`EffectiveSpeedMultiplier`. The checker was subsequently renamed to `bolt_speed_accurate.rs`
+and rewritten to use `ActiveSpeedBoosts::multiplier()` + `BaseSpeed`/`MinSpeed`/`MaxSpeed`
+from `rantzsoft_spatial2d`. `EffectiveSpeedMultiplier` no longer exists (Effective* cache removal).
+The checker now verifies exact speed `(base * mult).clamp(min, max)` rather than a range check.

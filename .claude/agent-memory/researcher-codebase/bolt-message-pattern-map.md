@@ -21,9 +21,9 @@ Effect `fire()` functions spawn bolt entities directly (direct-spawn pattern).
 
 ## Phantom Bolt — Status: REAL (feature/runtime-effects)
 
-`src/effect/effects/spawn_phantom/effect.rs` uses the real bolt approach via `spawn_extra_bolt`:
-- Calls `spawn_extra_bolt(world, spawn_pos)` which spawns a full bolt entity with all physics components
-- Then inserts `(PhantomBoltMarker, PhantomOwner(entity), BoltLifespan(Timer), PiercingRemaining(u32::MAX))`
+`src/effect/effects/spawn_phantom/effect.rs` uses the real bolt approach via `Bolt::builder()` (not `spawn_extra_bolt` — removed in builder migration):
+- Calls `Bolt::builder().at_position(spawn_pos).config(&config).extra().spawn(world)` to spawn the full ExtraBolt entity with all physics components
+- Then inserts `(PhantomBoltMarker, PhantomOwner(entity), BoltLifespan(Timer), PiercingRemaining(u32::MAX))` post-spawn
 - Uses `Position2D` (not `Transform`) for spawn position
 - `PhantomTimer` component is gone — replaced by `BoltLifespan`
 

@@ -26,7 +26,7 @@ Bolt entity spawns with: `CollisionLayers::new(BOLT_LAYER, CELL_LAYER | WALL_LAY
 **File:** `src/bolt/systems/bolt_cell_collision/system.rs`
 **Schedule:** `FixedUpdate`, run_if `PlayingState::Active`
 **Set:** `BoltSystems::CellCollision`
-**Ordering:** after `BoltSystems::PrepareVelocity`, after `PhysicsSystems::MaintainQuadtree`
+**Ordering:** after `PhysicsSystems::MaintainQuadtree` (NOTE: `BoltSystems::PrepareVelocity` was eliminated in builder migration; velocity clamping is now inline via `apply_velocity_formula()`)
 
 **Detection method:** Swept circle CCD via `CollisionQuadtree::cast_circle`. Loops up to `MAX_BOUNCES = 4` per bolt per frame. Uses `CollisionLayers::new(0, CELL_LAYER | WALL_LAYER)` for the sweep — handles BOTH cell and wall hits in a single unified loop.
 
@@ -54,7 +54,7 @@ Bolt entity spawns with: `CollisionLayers::new(BOLT_LAYER, CELL_LAYER | WALL_LAY
 Fully implemented overlap resolver. After `bolt_cell_collision` moves the bolt via CCD,
 this system checks whether the bolt center lies inside any wall's `Aabb2D` expanded by
 `bolt_radius * EntityScale`. On overlap: finds nearest face, pushes bolt to face boundary,
-reflects velocity off that face, resets `PiercingRemaining` to `EffectivePiercing.0`.
+reflects velocity off that face, resets `PiercingRemaining` to `ActivePiercings::total()` (not `EffectivePiercing` — that type was removed in cache-removal refactor).
 Only resolves the first wall overlap per bolt per frame (breaks after first hit).
 
 **Messages fired:** `BoltImpactWall { bolt: Entity, wall: Entity }`

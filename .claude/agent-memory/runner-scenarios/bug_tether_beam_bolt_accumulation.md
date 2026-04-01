@@ -11,7 +11,7 @@ type: project
 
 **Root cause:**
 
-`fire_standard()` in `breaker-game/src/effect/effects/tether_beam/effect.rs` calls `spawn_extra_bolt()` twice, inserting `TetherBoltMarker` on both. These bolts have `CleanupOnNodeExit` so they are removed at node end, but there is **no system that despawns tether bolts mid-node**.
+`fire_standard()` in `breaker-game/src/effect/effects/tether_beam/effect.rs` spawns two tether bolts via `Bolt::builder()` (NOTE: `spawn_extra_bolt` was removed in builder migration), inserting `TetherBoltMarker` on both. These bolts have `CleanupOnNodeExit` so they are removed at node end, but there is **no system that despawns tether bolts mid-node**.
 
 `tick_tether_beam` despawns the beam entity when `bolt_a` or `bolt_b` goes missing — but it does NOT despawn the surviving bolt. The beam is linked to two specific entity IDs; if one bolt falls out of bounds (BoltLost), the other persists permanently as an orphan.
 

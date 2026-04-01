@@ -48,11 +48,11 @@ Note: `NodeTimerThreshold(f32)` variant exists in `Trigger` enum. Bridge system 
 
 | Effect | Component(s) | fire() | reverse() | Runtime systems | Tests |
 |---|---|---|---|---|---|
-| SpeedBoost | `ActiveSpeedBoosts(Vec<f32>)` | push multiplier | remove matching | `recalculate_speed` (REAL) | 7 |
-| DamageBoost | `ActiveDamageBoosts(Vec<f32>)` | push multiplier | remove matching | `recalculate_damage` (REAL) | 7 |
-| Piercing | `ActivePiercings(Vec<u32>)` | push count | remove matching | `recalculate_piercing` (REAL) | 7 |
-| SizeBoost | `ActiveSizeBoosts(Vec<f32>)` | push value | remove matching | `recalculate_size` (REAL) | 7 |
-| BumpForce | `ActiveBumpForces(Vec<f32>)` | push force | remove matching | `recalculate_bump_force` (REAL) | 7 |
+| SpeedBoost | `ActiveSpeedBoosts(Vec<f32>)` | push multiplier + inline velocity recalc | remove matching + inline velocity recalc | none (velocity inline in fire/reverse; no ECS system) | 7 |
+| DamageBoost | `ActiveDamageBoosts(Vec<f32>)` | push multiplier | remove matching | none (multiplier on-demand at call site) | 7 |
+| Piercing | `ActivePiercings(Vec<u32>)` | push count | remove matching | none (total on-demand at call site) | 7 |
+| SizeBoost | `ActiveSizeBoosts(Vec<f32>)` | push value | remove matching | none (multiplier on-demand at call site) | 7 |
+| BumpForce | `ActiveBumpForces(Vec<f32>)` | push force | remove matching | none (total on-demand at call site) | 7 |
 | QuickStop | `ActiveQuickStops(Vec<f32>)` | push multiplier | remove matching | none registered | 7 |
 | LoseLife | `LivesCount(u32)` | decrement | increment | none | 3 |
 | Shockwave | `ShockwaveSource`, `ShockwaveRadius`, `ShockwaveMaxRadius`, `ShockwaveSpeed` | spawns entity | noop | tick+despawn in FixedUpdate, run_if Active | 5 |
@@ -63,11 +63,11 @@ Note: `NodeTimerThreshold(f32)` variant exists in `Trigger` enum. Bridge system 
 | ChainBolt | `ChainBoltMarker`, `ChainBoltAnchor` | spawn 2 entities | despawn all + remove anchor | none | 3 |
 | SecondWind | `SecondWindWall` | spawn wall entity | despawn all SecondWindWall | none | 2 |
 | Pulse | `PulseEmitter`, `PulseRing`, `PulseSource`, `PulseRadius`, `PulseMaxRadius`, `PulseSpeed`, `PulseDamaged` | adds PulseEmitter to entity | removes PulseEmitter | tick_pulse_emitter + tick_pulse_ring + apply_pulse_damage in FixedUpdate, run_if Active | 18 |
-| SpawnPhantom | `PhantomBoltMarker`, `PhantomOwner` | spawns full bolt via spawn_extra_bolt + inserts PhantomBoltMarker, BoltLifespan(Timer), PiercingRemaining(u32::MAX); cap enforcement | noop | none (lifespan via tick_bolt_lifespan in bolt domain) | 10+ |
+| SpawnPhantom | `PhantomBoltMarker`, `PhantomOwner` | spawns full bolt via `Bolt::builder()` (spawn_extra_bolt removed) + inserts PhantomBoltMarker, BoltLifespan(Timer), PiercingRemaining(u32::MAX); cap enforcement | noop | none (lifespan via tick_bolt_lifespan in bolt domain) | 10+ |
 | ChainLightning | `ChainLightningChain` (sequential arc model), `ChainLightningArc` | spawns ChainLightningChain entity; DamageCell to first target | noop | tick_chain_lightning in FixedUpdate, run_if Active | 20+ |
 | PiercingBeam | `PiercingBeamRequest` (deferred) | spawns PiercingBeamRequest with pre-computed geometry | noop | process_piercing_beam in FixedUpdate | 10+ |
 | TetherBeam | `TetherBeamComponent`, `TetherBoltMarker` | spawns 2 tether bolts + beam entity | despawns beam + tether bolts | tick_tether_beam in FixedUpdate, run_if Active | 15+ |
-| SpawnBolts | (no persistent component) | spawns N full bolt entities via spawn_extra_bolt | noop | none | 15+ |
+| SpawnBolts | (no persistent component) | spawns N full bolt entities via `Bolt::builder()` (spawn_extra_bolt removed) | noop | none | 15+ |
 | EntropyEngine | `EntropyEngineState { cells_destroyed: u32 }` | increments cells_destroyed, fires N random effects | noop | reset_entropy_engine on OnEnter(PlayingState::Active) | 20+ |
 | Explode | `ExplodeRequest` (deferred, CleanupOnNodeExit) | spawns ExplodeRequest entity | noop | process_explode in FixedUpdate | 5+ |
 
@@ -78,19 +78,19 @@ Note: `NodeTimerThreshold(f32)` variant exists in `Trigger` enum. Bridge system 
 
 No known placeholder effect implementations remain as of feature/runtime-effects.
 
-### "Recalculate" systems pattern note
+### Stat model note (CURRENT STATE — post Effective* cache removal)
 
-SpeedBoost/DamageBoost/Piercing/SizeBoost/BumpForce all register `recalculate_*` systems
-in FixedUpdate. These systems are REAL — they query `(&ActiveXxx, &mut EffectiveXxx)` and
-propagate the stacked multiplier/total into the `Effective*` component.
+**`recalculate_*` systems and `Effective*` components are GONE** (removed in feature/scenario-coverage,
+commits d6d9b80 + 2bdb81b). SpeedBoost/DamageBoost/Piercing/SizeBoost/BumpForce use the
+direct-read model: consumers call `Active*.multiplier()` / `Active*.total()` on demand.
 
-The `Active*` → `Effective*` propagation is wired. However, the bolt domain's consumer systems
-(`prepare_bolt_velocity`, `bolt_cell_collision`) may still have the 1-frame-stale issue
-(see reviewer-correctness/bug-patterns.md for ordering gap details).
+`EffectSystems::Recalculate` set no longer exists — only `EffectSystems::Bridge` remains.
+`prepare_bolt_velocity` system is also GONE (bolt builder migration).
+Consumer sites: `apply_velocity_formula()` in bolt/queries.rs, bolt_breaker_collision, move_breaker, dash/system.rs.
 
 ### Key File Paths
 
-- `src/effect/core/types.rs` — all types: Trigger, Target, EffectNode, EffectKind, BoundEffects, StagedEffects
+- `src/effect/core/types/definitions/enums.rs` — all types: Trigger, Target, EffectNode, EffectKind, BoundEffects, StagedEffects
 - `src/effect/commands.rs` — EffectCommandsExt trait + FireEffectCommand/ReverseEffectCommand/TransferCommand
 - `src/effect/triggers/evaluate.rs` — evaluate_bound_effects / evaluate_staged_effects helpers (REAL + tested)
 - `src/effect/triggers/timer.rs` — tick_time_expires (REAL + tested)

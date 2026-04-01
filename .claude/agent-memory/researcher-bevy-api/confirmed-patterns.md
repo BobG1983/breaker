@@ -158,17 +158,43 @@ struct MyQuery { ... }
 
 ### Nesting QueryData structs
 
-Fields can themselves be another `#[derive(QueryData)]` struct — no special syntax needed:
+Fields can themselves be another `#[derive(QueryData)]` struct — no special syntax needed.
+
+**Nesting a mutable QueryData inside another mutable QueryData:**
 
 ```rust
 #[derive(QueryData)]
-struct Inner { c: &'static ComponentC }
+#[query_data(mutable)]
+struct Inner {
+    a: &'static mut ComponentA,
+}
+
+#[derive(QueryData)]
+#[query_data(mutable)]
+struct Outer {
+    b: &'static mut ComponentB,
+    inner: Inner,  // nested mutable QueryData — no annotation needed
+}
+```
+
+**How mutable nesting resolves** (verified from macro source `query_data.rs` at v0.18.0):
+
+- Mutable item struct (`OuterItem`): macro uses field types directly. `inner` field resolves to `InnerItem` — which **has `Mut<T>` fields**. Mutable access cascades automatically.
+- Read-only item struct (`OuterReadOnlyItem`): macro applies `<Inner as QueryData>::ReadOnly`, resolving to `InnerReadOnly` → `InnerReadOnlyItem`. All fields become `&T`.
+
+No special syntax on the nested field. The outer struct's mutable/read-only context automatically determines which generated type the nested field resolves to.
+
+**Nesting a read-only struct inside a mutable one** (also valid):
+
+```rust
+#[derive(QueryData)]
+struct Inner { c: &'static ComponentC }  // no mutable attribute
 
 #[derive(QueryData)]
 #[query_data(mutable)]
 struct Outer {
     a: &'static mut ComponentA,
-    inner: Inner,  // nested read-only QueryData
+    inner: Inner,  // nested read-only QueryData — always read-only regardless of outer context
 }
 ```
 
@@ -199,6 +225,52 @@ use bevy::ecs::query::QueryData;
 // or via prelude if re-exported (verify — safe to use full path)
 ```
 
+### `With<T>` CANNOT be a QueryData field — filter only
+
+`With<T>` implements `QueryFilter` (and `WorldQuery`) but does NOT implement `QueryData`.
+Using `With<T>` as a field in a `#[derive(QueryData)]` struct is a compile error.
+
+```rust
+// WRONG — does not compile:
+#[derive(QueryData)]
+struct SpatialData {
+    position: &'static mut Position2D,
+    _marker: With<Spatial>,  // ERROR: With<T> does not implement QueryData
+}
+```
+
+Filters must always be applied at the `Query<>` level as the second generic parameter:
+
+```rust
+// CORRECT — filter at the Query level:
+fn my_system(query: Query<SpatialData, With<Spatial>>) { ... }
+```
+
+### `Has<T>` — presence check that IS valid inside QueryData
+
+`Has<T>` implements `QueryData` (not `QueryFilter`). It resolves to `bool` — true if the
+entity has component `T`, false otherwise. Does not conflict with mutable access unlike `Option<&T>`.
+
+```rust
+#[derive(QueryData)]
+#[query_data(mutable)]
+struct MyQuery {
+    position: &'static mut Transform,
+    has_boost: Has<SpeedBoost>,  // resolves to bool — valid QueryData field
+}
+
+fn my_system(mut query: Query<MyQuery>) {
+    for mut item in &mut query {
+        if item.has_boost {
+            // ...
+        }
+    }
+}
+```
+
+Use `Has<T>` when you want to check component presence in the data struct itself.
+Use `With<T>` / `Without<T>` as a filter when you only want to match entities that have/lack the component.
+
 ### Key rules summary
 
 1. Any `&'static mut` field → **requires** `#[query_data(mutable)]` on the struct
@@ -206,6 +278,8 @@ use bevy::ecs::query::QueryData;
 3. Field type is always `&'static T` or `&'static mut T` (with the `'static` lifetime) in the struct definition
 4. The actual item type in system iteration uses short lifetimes (`'w`) — Bevy handles this
 5. Tuple fields work: `Option<(&'static ComponentB, &'static ComponentZ)>`
+6. `With<T>` is a filter ONLY — not valid as a QueryData field. Use `Query<D, With<T>>` instead.
+7. `Has<T>` IS valid as a QueryData field — resolves to `bool` at query time.
 
 ---
 
@@ -236,3 +310,130 @@ TODO: add from next research session.
 ## Let-chains
 
 TODO: add from next research session.
+
+---
+
+## Bundle trait — introspection and iteration (Bevy 0.18.1)
+
+Verified against docs.rs/bevy/0.18.1/bevy/ecs/bundle/.
+
+### Trait definition
+
+```rust
+pub unsafe trait Bundle: DynamicBundle + Send + Sync + 'static {
+    // Required method — returns None for each component not yet registered
+    fn get_component_ids(
+        components: &Components,
+    ) -> impl Iterator<Item = Option<ComponentId>>;
+}
+```
+
+- `unsafe trait` — manual impls are unsupported; always use `#[derive(Bundle)]`
+- NOT dyn-compatible (cannot use as trait object)
+- Supertrait `DynamicBundle` is where `get_components` (low-level pointer-based extraction) lives
+
+### DynamicBundle supertrait
+
+```rust
+pub trait DynamicBundle: Sized {
+    type Effect;
+
+    // Low-level: moves component pointers out, calling func per component in
+    // the same order as get_component_ids — requires unsafe, raw pointer work
+    unsafe fn get_components(
+        ptr: MovingPtr<'_, Self>,
+        func: &mut impl FnMut(StorageType, OwningPtr<'_>),
+    );
+
+    // Runs post-insertion effects on the entity
+    unsafe fn apply_effect(
+        ptr: MovingPtr<'_, MaybeUninit<Self>>,
+        entity: &mut EntityWorldMut<'_>,
+    );
+}
+```
+
+### Tuple impls
+
+- `()` implements Bundle (empty set)
+- Tuples of up to 16 items where each item: Bundle → impl Bundle
+- Nest tuples for >15 components: `((A, B, C, ..., O), P, Q)`
+
+### BundleInfo — inspection after World registration
+
+Obtained only via `World::bundles()` — cannot be constructed directly.
+
+```rust
+// world.bundles() returns &Bundles
+let bundles: &Bundles = world.bundles();
+let bundle_id: Option<BundleId> = bundles.get_id(TypeId::of::<MyBundle>());
+let info: Option<&BundleInfo> = bundle_id.and_then(|id| bundles.get(id));
+
+// BundleInfo methods:
+info.id() -> BundleId
+info.explicit_components() -> &[ComponentId]   // defined in the bundle struct
+info.required_components() -> &[ComponentId]   // pulled in by #[require(...)]
+info.contributed_components() -> &[ComponentId] // explicit + required combined
+info.iter_explicit_components() -> impl Iterator<Item = ComponentId>
+info.iter_contributed_components() -> impl Iterator<Item = ComponentId>
+info.iter_required_components() -> impl Iterator<Item = ComponentId>
+```
+
+BundleInfo is only populated after the bundle type has been registered (i.e., spawned or
+explicitly registered). Before that, `bundles.get_id(TypeId::of::<MyBundle>())` returns `None`.
+
+### get_component_ids with a standalone Components
+
+`Components` implements `Default`, so you CAN construct one without a World:
+
+```rust
+let mut components = Components::default();
+// But: component IDs are only registered when you call components.register_component::<T>()
+// A fresh Components is empty, so get_component_ids yields None for everything
+```
+
+For practical use, `Components` must be populated (via `World`) before IDs exist.
+
+### Answers to the five common questions
+
+1. **Can you destructure `impl Bundle`?**
+   No. `impl Bundle` is an opaque return type — you cannot pattern-match or destructure it.
+   A concrete bundle struct can be destructured normally if its fields are public.
+
+2. **What methods does Bundle provide?**
+   Only `get_component_ids(components: &Components) -> impl Iterator<Item = Option<ComponentId>>`.
+   The `DynamicBundle` supertrait provides `get_components` and `apply_effect`, but those
+   are low-level unsafe pointer operations intended for ECS internals, not user code.
+
+3. **Can you iterate over components in a Bundle?**
+   Not safely outside the ECS. `DynamicBundle::get_components` consumes the bundle via
+   `MovingPtr` (moves component data out via raw pointers) — it is unsafe internals.
+   The only user-facing iteration is `BundleInfo::iter_explicit_components()`, which gives
+   `ComponentId`s only (not the actual component values), and requires a World.
+
+4. **Inspect bundle contents without spawning into a World?**
+   Limited. `Bundle::get_component_ids` accepts a `&Components` and yields
+   `Option<ComponentId>` per component. You can construct a `Components::default()` and
+   register components into it manually, then call this — but it is awkward and not the
+   intended usage. There is NO way to get the actual component VALUES out of a bundle
+   without spawning into a World.
+
+5. **How to test bundle contains right components without World?**
+   The idiomatic approach IS to use a World. Create a minimal `World::default()`, spawn
+   the bundle, then query for expected components. This is the standard Bevy test pattern.
+   There is no reflection-based "inspect without spawning" API.
+
+### Testing bundles — the correct Bevy pattern
+
+```rust
+#[test]
+fn my_bundle_has_expected_components() {
+    let mut world = World::default();
+    let entity = world.spawn(MyBundle { ... }).id();
+
+    // Assert presence of expected components
+    assert!(world.get::<ComponentA>(entity).is_some());
+    assert!(world.get::<ComponentB>(entity).is_some());
+    assert_eq!(*world.get::<ComponentA>(entity).unwrap(), expected_value);
+}
+```

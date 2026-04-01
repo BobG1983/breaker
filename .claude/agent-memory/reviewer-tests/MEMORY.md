@@ -3,5 +3,7 @@
 - [No-op stub satisfies negative behavior assertions](pattern_noop_stub_satisfies_negative_assertions.md) — tests for "no change" outcomes pass trivially against no-op stubs, breaking the RED gate for those behaviors
 - [Design change without backing spec — contradicts existing spec-backed test](pattern_design_change_without_spec.md) — new types (PendingBreakerEffects) appear in tests with no spec, and contradict an existing passing test for the same behavior
 
+- [Bolt #[require] causes false passes for zero-velocity and Spatial2D tests](pattern_require_component_false_pass.md) — stubs that spawn `(Bolt,)` auto-insert Velocity2D(Vec2::ZERO), Spatial2D, InterpolateTransform2D — zero-velocity assertions and spatial marker assertions pass at RED
+
 ## Session History
 See [ephemeral/](ephemeral/) — not committed.

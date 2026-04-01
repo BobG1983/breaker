@@ -6,15 +6,18 @@ type: feedback
 
 The spec may request invariants that don't exist in `InvariantKind`. Only use variants listed in `InvariantKind::ALL`.
 
-As of 2026-03-30, the available invariants are (25 total):
-`BoltInBounds`, `BoltSpeedInRange`, `BoltCountReasonable`, `BreakerInBounds`,
+As of 2026-04-01 (feature/chip-evolution-ecosystem), the available invariants are (23 total):
+`BoltInBounds`, `BoltSpeedAccurate`, `BoltCountReasonable`, `BreakerInBounds`,
 `NoEntityLeaks`, `NoNaN`, `TimerNonNegative`, `ValidStateTransitions`,
 `ValidBreakerState`, `TimerMonotonicallyDecreasing`, `BreakerPositionClamped`,
 `PhysicsFrozenDuringPause`, `OfferingNoDuplicates`, `MaxedChipNeverOffered`,
 `ChipStacksConsistent`, `RunStatsMonotonic`, `ChipOfferExpected`,
 `SecondWindWallAtMostOne`, `ShieldChargesConsistent`, `PulseRingAccumulation`,
-`EffectiveSpeedConsistent`, `ChainArcCountReasonable`,
-`AabbMatchesEntityDimensions`, `GravityWellCountReasonable`, `SizeBoostInRange`
+`ChainArcCountReasonable`, `AabbMatchesEntityDimensions`, `GravityWellCountReasonable`
+
+**REMOVED**: `BoltSpeedInRange` (renamed to `BoltSpeedAccurate`),
+`EffectiveSpeedConsistent` (removed with Effective* cache removal),
+`SizeBoostInRange` (removed with Effective* cache removal)
 
 **Why:** The spec may be written before invariants are implemented. Using a non-existent variant causes a RON parse error.
 
@@ -24,6 +27,8 @@ As of 2026-03-30, the available invariants are (25 total):
 Their self-test mutation kinds:
 - `AabbMatchesEntityDimensions` → `InjectMismatchedBoltAabb` (no fields)
 - `GravityWellCountReasonable` → `SpawnExtraGravityWells(N)` — also requires `invariant_params: (max_gravity_well_count: M)` when lowering threshold below default 10
-- `SizeBoostInRange` → `InjectWrongSizeMultiplier(wrong_value: 99.0)` (named field)
+- `BoltSpeedAccurate` → `InjectWrongBoltSpeed` (verify exact variant name in MutationKind)
+
+**REMOVED mutations**: `InjectWrongSizeMultiplier` and `InjectWrongEffectiveSpeed` were removed with the Effective* cache removal. Do NOT reference these variants.
 
 `InvariantParams` now has 4 fields: `max_bolt_count`, `max_pulse_ring_count`, `max_chain_arc_count`, `max_gravity_well_count` (defaults: 8, 20, 50, 10).

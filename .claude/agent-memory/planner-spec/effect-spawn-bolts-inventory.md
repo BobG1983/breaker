@@ -18,7 +18,7 @@ pub(crate) fn fire(entity: Entity, count: u32, lifespan: Option<f32>, inherit: b
 
 ### Key Helpers Used
 - `super::super::entity_position(world, entity)` — from `fire_helpers.rs`, returns Position2D or Vec2::ZERO
-- `super::super::spawn_extra_bolt(world, spawn_pos)` — from `fire_helpers.rs`, spawns full ExtraBolt with physics
+- `Bolt::builder().at_position(...).config(...).extra().spawn(world)` — **`spawn_extra_bolt` was removed** in builder migration; each effect site calls the builder directly
 
 ### Test Pattern
 - Each test file defines `fn world_with_bolt_config() -> World` inserting `BoltConfig::default()` + `GameRng::default()`

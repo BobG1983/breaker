@@ -1,6 +1,6 @@
 ---
 name: bolt-spawn-component-map
-description: Complete bolt entity component inventory, CollisionLayers setup, and CCD participation requirements
+description: Complete bolt entity component inventory, CollisionLayers setup, and CCD participation requirements — updated for builder migration (feature/chip-evolution-ecosystem)
 type: reference
 ---
 
@@ -8,22 +8,30 @@ type: reference
 
 ## Full Component Set on a Normal Bolt (spawned by `spawn_bolt`)
 
-### Inserted directly by `spawn_bolt` in `commands.spawn((...))`:
-- `Bolt` — marker (also `#[require]`s `Spatial2D`, `InterpolateTransform2D`, `Velocity2D`)
-- `Velocity2D(Vec2)` — zero if serving (node 0), initial_velocity() otherwise
-- `GameDrawLayer::Bolt`
-- `Position2D(Vec2)` — spawn position (breaker.y + spawn_offset_y, breaker.x)
-- `PreviousPosition(Vec2)` — same as Position2D to prevent interpolation teleport
-- `Scale2D { x: radius, y: radius }`
-- `PreviousScale { x: radius, y: radius }`
-- `Aabb2D::new(Vec2::ZERO, Vec2::new(radius, radius))` — local-space AABB
-- `CollisionLayers::new(BOLT_LAYER, CELL_LAYER | WALL_LAYER | BREAKER_LAYER)`
-- `Mesh2d(circle_handle)`
-- `MeshMaterial2d(color_material_handle)`
-- `CleanupOnRunEnd` — persists across nodes; cleaned only on run end
+**NOTE: As of feature/chip-evolution-ecosystem, `spawn_bolt` is an exclusive system
+(`fn(world: &mut World)`) using `Bolt::builder()`. `init_bolt_params` is ELIMINATED —
+the builder inserts all config components at spawn time.**
 
-### Conditionally inserted by `spawn_bolt`:
-- `BoltServing` — only on node_index == 0 (serving bolt, zero velocity, waits for launch)
+### Inserted by `Bolt::builder().from_config(&config).primary().spawn(world)`:
+- `Bolt` — marker (also `#[require]`s `Spatial2D`, `InterpolateTransform2D`, `Velocity2D`)
+- `PrimaryBolt` — marker (exclusive to the single primary bolt)
+- `CleanupOnRunEnd` — persists across nodes; cleaned only on run end
+- `Velocity2D(Vec2)` — zero if serving (node 0), `config.initial_velocity()` otherwise
+- `Position2D(Vec2)` — spawn position (breaker.y + spawn_offset_y, breaker.x)
+- From `.config(&config)`: `BoltRadius`, `BoltSpawnOffsetY`, `BoltRespawnOffsetY`,
+  `BoltRespawnAngleSpread`, `BoltInitialAngle` — bolt-specific gameplay state components
+- From `.config(&config)`: `BaseSpeed`, `MinSpeed`, `MaxSpeed`, `MinAngleH`, `MinAngleV`
+  from `rantzsoft_spatial2d` — the spatial speed clamp parameters
+
+### Conditionally inserted by builder:
+- `BoltServing` — only on node_index == 0 (`.serving()` method)
+- `BoundEffects` — when `.with_effects()` called
+- `BoltLifespan(Timer)` — when `.with_lifespan(f32)` called
+- `SpawnedByEvolution(String)` — when `.spawned_by(&str)` called
+
+### Post-spawn inserts by `spawn_bolt`:
+- `Mesh2d(handle)`, `MeshMaterial2d(handle)` — render components added after builder.spawn()
+- `EntityScale` — added by `apply_entity_scale_to_bolt` after `spawn_bolt`
 
 ### Auto-inserted via `Bolt #[require]` (in `components.rs`):
 - `Spatial2D` — triggers insertion of its own `#[require]` set (see below)
@@ -31,31 +39,11 @@ type: reference
 - `Velocity2D` (default Vec2::ZERO, overridden by explicit value)
 
 ### Auto-inserted via `Spatial2D #[require]`:
-- `Position2D` (default)
-- `Rotation2D` (default)
-- `Scale2D` (default, overridden by explicit)
-- `PreviousPosition` (default, overridden by explicit)
-- `PreviousRotation` (default)
-- `PreviousScale` (default, overridden by explicit)
-- `GlobalPosition2D` (default) — REQUIRED by quadtree `maintain_quadtree`
-- `GlobalRotation2D` (default)
-- `GlobalScale2D` (default)
-- `PositionPropagation` (default)
-- `RotationPropagation` (default)
-- `ScalePropagation` (default)
+- `Position2D`, `Rotation2D`, `Scale2D`, `PreviousPosition`, `PreviousRotation`, `PreviousScale`
+- `GlobalPosition2D` — REQUIRED by quadtree `maintain_quadtree`
+- `GlobalRotation2D`, `GlobalScale2D`
+- `PositionPropagation`, `RotationPropagation`, `ScalePropagation`
 - `Transform` (derived by spatial plugin)
-
-### Inserted by `init_bolt_params` (OnEnter(Playing), after spawn_bolt):
-- `BoltBaseSpeed(f32)`
-- `BoltMinSpeed(f32)`
-- `BoltMaxSpeed(f32)`
-- `BoltRadius(f32)`
-- `BoltSpawnOffsetY(f32)`
-- `BoltRespawnOffsetY(f32)`
-- `BoltRespawnAngleSpread(f32)`
-- `BoltInitialAngle(f32)`
-
-Guard: `Without<BoltBaseSpeed>` — skips already-initialized bolts.
 
 ## CollisionLayers Setup
 
@@ -79,16 +67,21 @@ A bolt must have ALL of:
 - `GlobalPosition2D` — world-space position (comes free from `Spatial2D #[require]`)
 - `CollisionLayers` — layer membership + mask
 
-`bolt_cell_collision` queries `CollisionQueryBolt` (see `src/bolt/queries.rs`):
-- `Entity`
-- `&mut Position2D`
-- `&mut Velocity2D`
-- `&BoltBaseSpeed`
-- `&BoltRadius`
-- `Option<&mut PiercingRemaining>`
-- `Option<&EffectivePiercing>`
-- `Option<&EffectiveDamageMultiplier>`
-- `Option<&EntityScale>`
-- `Option<&SpawnedByEvolution>`
+## Bolt collision query type: `BoltCollisionData` (see `src/bolt/queries.rs`)
 
-ActiveFilter = `(With<Bolt>, Without<BoltServing>)`.
+As of cache-removal refactor, uses `#[derive(QueryData)]` named structs (NOT `CollisionQueryBolt`):
+- `entity: Entity`
+- `spatial: SpatialData` — from rantzsoft_spatial2d (Position2D + Velocity2D + speed fields)
+- `collision: BoltCollisionParams`:
+  - `radius: &BoltRadius`
+  - `piercing_remaining: Option<&mut PiercingRemaining>`
+  - `active_piercings: Option<&ActivePiercings>` — NOT `EffectivePiercing`
+  - `active_damage_boosts: Option<&ActiveDamageBoosts>` — NOT `EffectiveDamageMultiplier`
+  - `active_speed_boosts: Option<&ActiveSpeedBoosts>`
+  - `entity_scale: Option<&EntityScale>`
+  - `spawned_by_evolution: Option<&SpawnedByEvolution>`
+  - `last_impact: Option<&mut LastImpact>`
+
+**`EffectivePiercing` and `EffectiveDamageMultiplier` do NOT exist** — both were removed
+in the Effective* cache-removal refactor. Use `ActivePiercings::total()` and
+`ActiveDamageBoosts::multiplier()` instead.

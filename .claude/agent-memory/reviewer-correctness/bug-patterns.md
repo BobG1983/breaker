@@ -28,18 +28,13 @@ correct IF `breaker_pos` is already world-space. Confirmed correct — no bug.
 Old notes referred to `query_circle_filtered` — current code uses `query_aabb_filtered`.
 The stale memory was corrected. Always verify which query function is actually used.
 
-## gravity_well::fire() infinite loop when max == 0
+## gravity_well::fire() infinite loop when max == 0 — FIXED
 
-`gravity_well::fire()` does `while owned.len() >= max as usize` to cap active wells.
-When `max == 0`, `owned.len() >= 0` is always true. After draining `owned`, `owned.first()`
-returns `None` → the inner `if let` never executes → infinite loop.
+`gravity_well::fire()` was previously missing the `max == 0` guard. Now has both
+`if world.get_entity(entity).is_err() { return; }` AND `if max == 0 { return; }` guards
+at lines 47-53. `spawn_phantom::fire()` also has the despawned-entity guard at line 46.
 
-`spawn_phantom::fire()` has `if max_active == 0 { return; }` guard. `gravity_well` does not.
-
-The RON file (`gravity_well.evolution.ron`) always uses `max: 2`, so this is not triggered in
-production today. But it is a confirmed logic bug.
-
-**Status**: FIXED in scenario-coverage branch — `fire()` now has `if max == 0 { return; }` guard at line 35-37.
+**Status**: FIXED — confirmed on feature/chip-evolution-ecosystem branch 2026-03-31.
 
 ## Phase 4 effect systems: shockwave/pulse migrated to Position2D (FIXED in full-verification-fixes)
 
@@ -111,33 +106,19 @@ are always scale-1.0 semantics. This means bolt invariant is wrong for scaled la
 Scenarios using Corridor (entity_scale=1.0) are not affected. Affects any scenario that adds
 `AabbMatchesEntityDimensions` invariant to a non-1.0-scale layout.
 
-## gravity_well and spawn_phantom fire(): missing despawned-entity guard — OPEN as of 2026-03-30
+## TetherChainActive resource lifecycle — RESOLVED as of 2026-03-31
 
-All 5 stat-boost `fire()` functions (speed_boost, damage_boost, size_boost, bump_force, piercing)
-have `if world.get_entity(entity).is_err() { return; }` as the first guard.
+Previously flagged as OPEN: resource could leak across node boundaries.
 
-`gravity_well/effect.rs::fire()` and `spawn_phantom/effect.rs::fire()` do NOT have this guard.
-If fired on a despawned entity: spawns a ghost well/phantom with `owner: dead_entity`, pollutes
-`GravityWellSpawnCounter`/`PhantomSpawnCounter` with a dead entity key, and the ghost takes up
-a FIFO slot that can never be reclaimed for the same owner.
+Analysis on feature/chip-evolution-ecosystem branch: `reverse(chain=true)` correctly calls
+`world.remove_resource::<TetherChainActive>()` when the chip effect expires. `cleanup_tether_chain_resource`
+runs `OnExit(GameState::Playing)` as a safety net. `TetherChainBeam` entities have `CleanupOnNodeExit`.
 
-**Status**: OPEN — filed as regression spec hints in Wave 1 review 2026-03-30.
+Within a run, the resource intentionally persists across nodes so `maintain_tether_chain` can
+rebuild beams each time bolt count changes. The primary bolt's `BoundEffects` is `CleanupOnRunEnd`
+so chain mode re-fires on each node start, which is correct behavior.
 
-## TetherChainActive resource leaks across node boundaries — OPEN as of 2026-03-30
-
-`TetherChainActive` is a `Resource` inserted by `fire_chain`. It is only removed by
-`reverse(chain=true)`. On node exit, `cleanup_entities::<CleanupOnNodeExit>` despawns the
-`TetherChainBeam` entities (they have `CleanupOnNodeExit`) but does NOT remove the resource.
-If a node ends while chain mode is active (cleared, timer expired, etc.), `TetherChainActive`
-persists into the next node. On the next node, `maintain_tether_chain` runs immediately
-(guarded only by `resource_exists::<TetherChainActive>`), sees `bolt_count != last_bolt_count`,
-and spawns spurious chain beams on a node that never fired chain mode.
-
-**Fix needed**: Remove `TetherChainActive` in an `OnExit(GameState::Playing)` system,
-or add `CleanupOnNodeExit` marker to a dedicated entity that removes the resource when despawned,
-or remove it alongside the chain beams in the same cleanup path.
-
-**Status**: OPEN — filed as regression spec hint in Wave 3 review 2026-03-30.
+**Status**: RESOLVED — no leak. The open concern was based on incomplete analysis of the `reverse()` path.
 
 ## Missing cross-domain ordering: EffectSystems::Recalculate — RESOLVED by cache removal
 
@@ -156,3 +137,60 @@ The `QuickStop` effect fires but its multiplier is never applied to actual decel
 **Status**: OPEN — confirmed in cache-removal refactor review 2026-03-30.
 Location: `effect/effects/quick_stop.rs` (fire fn), `breaker/queries.rs` (MovementQuery),
 `breaker/systems/move_breaker.rs`, `breaker/systems/dash/system.rs`.
+
+## circuit_breaker::fire() u32 underflow when bumps_required == 0 — OPEN latent bug
+
+`circuit_breaker/effect.rs:73`: `let remaining = config.bumps_required - 1` where `bumps_required`
+is `u32`. If `bumps_required == 0`, this panics in debug or wraps to `u32::MAX` in release.
+Current production RON (`circuit_breaker.evolution.ron`) uses `bumps_required: 3` so no current
+trigger. No guard against 0 exists. No test covers this case.
+
+**Status**: OPEN — latent. Not triggered by current data. Needs `bumps_required == 0` guard.
+Location: `breaker-game/src/effect/effects/circuit_breaker/effect.rs:73`
+
+## MirrorProtocol::fire() wastes RNG call with dead random velocity — latent design issue
+
+`mirror_protocol/effect.rs:73-78`: generates `random_velocity` via `rng.random_range(0..TAU)` and
+passes it to bolt builder, but line 85 immediately overwrites with `mirror_vel`. The random call
+advances RNG state for no observable effect. Other systems sharing `GameRng` will see different
+values if MirrorProtocol fires. Not a correctness bug for the mirror bolt itself, but affects
+RNG determinism for other game systems.
+
+**Status**: OPEN design issue — the extra RNG call has no gameplay effect on the mirror bolt.
+
+## BoltBuilder::build() silently drops OptionalBoltData — latent API hazard, not active bug
+
+The four `build()` terminal impls in `breaker-game/src/bolt/builder.rs` (lines 376, 408, 440, 472)
+include role+cleanup+serving markers in the returned tuple but silently drop: `bolt_params`,
+`spawned_by`, `lifespan`, `with_effects`, `inherited_effects`.
+
+**This is NOT an active bug**: grep confirms `build()` has zero callers in production code.
+All production sites use `spawn()` which processes `OptionalBoltData` via `spawn_inner()`.
+
+Tests in builder.rs section E test `build()` but only test paths where `optional.bolt_params`
+is either None (no-config path tested in `build_without_from_config_has_no_bolt_params`) or set
+via `config()` (which does populate `bolt_params`). No test calls `.with_lifespan(x).build()`
+to verify lifespan is (or isn't) on the entity — this test gap is acceptable since `build()`
+is unused in production.
+
+**Status**: Latent hazard — safe to leave as-is unless `build()` gains production callers.
+
+## .definition() builder omits BoltRespawnOffsetY and BoltRespawnAngleSpread — LATENT BUG
+
+`spawn_inner` (core.rs:390-397) inserts `BoltAngleSpread` + `BoltSpawnOffsetY` from `definition_params`
+but does NOT insert `BoltRespawnOffsetY` or `BoltRespawnAngleSpread`. The `LostBoltData` query
+(queries.rs:90-92) requires BOTH `BoltRespawnOffsetY` and `BoltRespawnAngleSpread` as non-optional
+components. Bolts built via `.definition()` would be silently excluded from `bolt_lost` query
+and never detected as lost.
+
+**Current status**: LATENT — `.definition()` is not yet wired into `spawn_bolt`. All production
+bolt spawns use `.config()`. `BASE_BOLT_DAMAGE` comment in resources.rs:9 confirms wiring is
+deferred to Wave 6. If wave 6 wires `spawn_bolt` to use `.definition()`, this will become an
+active bug: primary bolt falls below playfield but no BoltLost is ever emitted.
+
+**Location**: `breaker-game/src/bolt/builder/core.rs:390-396` (spawn_inner, definition_params block)
+**Also affected**: `breaker-game/src/bolt/queries.rs:90-92` (LostBoltData requires BoltRespawnOffsetY, BoltRespawnAngleSpread)
+
+**Fix**: Add `BoltRespawnOffsetY` and `BoltRespawnAngleSpread` to the `definition_params` insertion block,
+using values from the definition or falling back to constants (e.g., `DEFAULT_BOLT_SPAWN_OFFSET_Y`
+and `DEFAULT_BOLT_ANGLE_SPREAD`).

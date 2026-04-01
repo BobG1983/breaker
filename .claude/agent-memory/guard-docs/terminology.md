@@ -77,6 +77,28 @@ Do NOT flag absence of `EffectiveDamageMultiplier`, `EffectiveSpeedMultiplier`, 
 - `ShieldActive { charges: u32 }` — only field. No `remaining`, no `owner`, no duration fields.
 - Charge decrement: handled in `bolt_lost` (breaker shield) and `handle_cell_hit` (cell shield) — NOT in a dedicated shield tick system.
 
+## InvariantKind Names (2026-04-01 verified)
+
+- `BoltSpeedAccurate` — correct name (NOT `BoltSpeedInRange`); `standards.md` was stale, now fixed.
+- Total: 23 variants as of feature/chip-evolution-ecosystem.
+
+## MutationKind Count (2026-04-01 verified)
+
+- 16 variants in code (NOT 18). `InjectWrongSizeMultiplier` and `InjectWrongEffectiveSpeed` removed with Effective* cache removal.
+- `terminology/scenarios.md` corrected to remove those two.
+
+## speed_boost Velocity Recalculation (2026-04-01)
+
+- `ActiveSpeedBoosts::fire()` and `reverse()` now call `recalculate_velocity(entity, world)` immediately after push/pop.
+- `recalculate_velocity` calls `apply_velocity_formula` — same as collision sites.
+- This is a third Velocity2D write path in the effect domain (alongside `apply_gravity_pull` and `apply_attraction`).
+- `plugins.md` Velocity2D exception section documents all three paths.
+
+## gravity_well Directory Module (2026-04-01)
+
+- `effect/effects/gravity_well/` — directory module. `apply_gravity_pull` is in `gravity_well/effect.rs`.
+- Do NOT reference `gravity_well.rs` as a file path — it's a directory module.
+
 ## Intentional Shorthand in Docs (not drift)
 
 - chip-catalog.md trigger notation: `When(PerfectBumped)`, `When(OnBump)`, `When(OnBoltLost)` — authoring shorthand matching Trigger enum variants loosely. These are design docs, not RON syntax specs.

@@ -1,10 +1,16 @@
 ---
-name: Chain Reaction name collision — universal scenario failure
-description: chain_reaction.chip.ron and chain_reaction.evolution.ron share the same name "Chain Reaction", causing the template chip to be overwritten in ChipCatalog. validate_recipe_ingredients then fires WARN for both Chain Reaction and Voltchain recipes at frame 0, causing every scenario to fail.
+name: Chain Reaction name collision — universal scenario failure (RESOLVED)
+description: RESOLVED — chain_reaction.evolution.ron was renamed to "Shock Chain", eliminating the name collision with the chain_reaction.chip.ron template.
 type: project
 ---
 
-Both `breaker-game/assets/chips/templates/chain_reaction.chip.ron` and `breaker-game/assets/chips/evolution/chain_reaction.evolution.ron` have `name: "Chain Reaction"`.
+**RESOLVED**: `chain_reaction.evolution.ron` was renamed from `"Chain Reaction"` to `"Shock Chain"` (feature/chip-evolution-ecosystem). The name collision no longer exists. `validate_recipe_ingredients` no longer fires spurious WARNs for this reason.
+
+Historical record below.
+
+---
+
+Both `breaker-game/assets/chips/templates/chain_reaction.chip.ron` and `breaker-game/assets/chips/evolution/chain_reaction.evolution.ron` previously had `name: "Chain Reaction"`.
 
 In `populate_catalog` (`breaker-game/src/chips/systems/build_chip_catalog/system.rs`):
 1. Template chips are inserted first: `catalog.insert(def)` with `name="Chain Reaction"`, `template_name: Some("Chain Reaction")`
