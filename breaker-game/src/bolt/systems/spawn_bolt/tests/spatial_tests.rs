@@ -8,7 +8,7 @@ use rantzsoft_spatial2d::{
 
 use super::{super::*, helpers::*};
 use crate::{
-    bolt::{components::Bolt, resources::BoltConfig},
+    bolt::{components::Bolt, registry::BoltRegistry, resources::DEFAULT_BOLT_SPAWN_OFFSET_Y},
     breaker::{BreakerConfig, components::Breaker},
     shared::GameDrawLayer,
 };
@@ -26,9 +26,9 @@ fn spawn_bolt_creates_entity() {
 #[test]
 fn spawned_bolt_has_position2d_at_spawn_position() {
     // Given: no existing bolt, breaker at default y_position (-250.0),
-    //        BoltConfig default spawn_offset_y = 30.0
+    //        DEFAULT_BOLT_SPAWN_OFFSET_Y = 54.0 (from definition path)
     // When: spawn_bolt runs
-    // Then: Bolt has Position2D(Vec2::new(0.0, -220.0))
+    // Then: Bolt has Position2D(Vec2::new(0.0, -196.0))
     let mut app = test_app();
     app.add_systems(Startup, spawn_bolt);
     app.update();
@@ -40,8 +40,8 @@ fn spawned_bolt_has_position2d_at_spawn_position() {
         .next()
         .expect("bolt should exist with Position2D");
     let breaker_y = BreakerConfig::default().y_position; // -250.0
-    let spawn_offset_y = BoltConfig::default().spawn_offset_y; // 30.0
-    let expected = Vec2::new(0.0, breaker_y + spawn_offset_y); // (0.0, -220.0)
+    let spawn_offset_y = DEFAULT_BOLT_SPAWN_OFFSET_Y; // 54.0
+    let expected = Vec2::new(0.0, breaker_y + spawn_offset_y); // (0.0, -196.0)
     assert!(
         (position.0.x - expected.x).abs() < f32::EPSILON
             && (position.0.y - expected.y).abs() < f32::EPSILON,
@@ -63,7 +63,7 @@ fn spawned_bolt_has_position2d_without_breaker_entity() {
         .iter(app.world())
         .next()
         .expect("bolt should exist with Position2D even without breaker");
-    let expected_y = BreakerConfig::default().y_position + BoltConfig::default().spawn_offset_y;
+    let expected_y = BreakerConfig::default().y_position + DEFAULT_BOLT_SPAWN_OFFSET_Y;
     assert!(
         (position.0.y - expected_y).abs() < f32::EPSILON,
         "bolt y should use BreakerConfig default, expected {expected_y}, got {}",
@@ -169,12 +169,9 @@ fn spawned_bolt_previous_position_matches_initial_position() {
 
 #[test]
 fn spawned_bolt_has_scale2d_matching_radius() {
-    // Given: BoltConfig default radius = 8.0 (from BoltDefaults)
-    // When: spawn_bolt runs
-    // Then: Scale2D { x: 8.0, y: 8.0 }
+    let def = make_default_bolt_definition();
+    let expected_radius = def.radius;
     let mut app = test_app();
-    // Use radius = 6.0 from spec for concreteness
-    app.world_mut().resource_mut::<BoltConfig>().radius = 6.0;
     app.add_systems(Startup, spawn_bolt);
     app.update();
 
@@ -185,8 +182,9 @@ fn spawned_bolt_has_scale2d_matching_radius() {
         .next()
         .expect("bolt should have Scale2D");
     assert!(
-        (scale.x - 6.0).abs() < f32::EPSILON && (scale.y - 6.0).abs() < f32::EPSILON,
-        "Scale2D should be (6.0, 6.0), got ({}, {})",
+        (scale.x - expected_radius).abs() < f32::EPSILON
+            && (scale.y - expected_radius).abs() < f32::EPSILON,
+        "Scale2D should be ({expected_radius}, {expected_radius}), got ({}, {})",
         scale.x,
         scale.y,
     );
@@ -194,9 +192,9 @@ fn spawned_bolt_has_scale2d_matching_radius() {
 
 #[test]
 fn bolt_spawns_above_moved_breaker() {
-    // Given: breaker at (50.0, -100.0, 0.0), spawn_offset_y = 30.0
+    // Given: breaker at (50.0, -100.0), DEFAULT_BOLT_SPAWN_OFFSET_Y = 54.0
     // When: spawn_bolt runs
-    // Then: Position2D(Vec2::new(50.0, -70.0))
+    // Then: Position2D(Vec2::new(50.0, -46.0))
     let moved_y = -100.0;
     let mut app = test_app();
     app.world_mut().spawn((
@@ -208,14 +206,13 @@ fn bolt_spawns_above_moved_breaker() {
     app.add_systems(Startup, spawn_bolt);
     app.update();
 
-    let config = BoltConfig::default();
     let position = app
         .world_mut()
         .query_filtered::<&Position2D, With<Bolt>>()
         .iter(app.world())
         .next()
         .expect("bolt should exist with Position2D");
-    let expected = Vec2::new(50.0, moved_y + config.spawn_offset_y);
+    let expected = Vec2::new(50.0, moved_y + DEFAULT_BOLT_SPAWN_OFFSET_Y);
     assert!(
         (position.0.x - expected.x).abs() < f32::EPSILON
             && (position.0.y - expected.y).abs() < f32::EPSILON,
@@ -226,11 +223,10 @@ fn bolt_spawns_above_moved_breaker() {
 
 #[test]
 fn spawned_bolt_has_aabb2d_with_half_extents_matching_radius() {
-    // Given: BoltConfig default radius = 8.0
-    // When: spawn_bolt runs
-    // Then: bolt entity has Aabb2D { center: Vec2::ZERO, half_extents: Vec2::new(8.0, 8.0) }
     use rantzsoft_physics2d::aabb::Aabb2D;
 
+    let def = make_default_bolt_definition();
+    let expected_radius = def.radius;
     let mut app = test_app();
     app.add_systems(Startup, spawn_bolt);
     app.update();
@@ -245,18 +241,15 @@ fn spawned_bolt_has_aabb2d_with_half_extents_matching_radius() {
         .world()
         .get::<Aabb2D>(entity)
         .expect("bolt should have Aabb2D");
-    let config = BoltConfig::default();
     assert_eq!(
         aabb.center,
         Vec2::ZERO,
         "bolt Aabb2D center should be ZERO (local space)"
     );
     assert!(
-        (aabb.half_extents.x - config.radius).abs() < f32::EPSILON
-            && (aabb.half_extents.y - config.radius).abs() < f32::EPSILON,
-        "bolt Aabb2D half_extents should be ({}, {}), got ({}, {})",
-        config.radius,
-        config.radius,
+        (aabb.half_extents.x - expected_radius).abs() < f32::EPSILON
+            && (aabb.half_extents.y - expected_radius).abs() < f32::EPSILON,
+        "bolt Aabb2D half_extents should be ({expected_radius}, {expected_radius}), got ({}, {})",
         aabb.half_extents.x,
         aabb.half_extents.y,
     );
@@ -264,11 +257,16 @@ fn spawned_bolt_has_aabb2d_with_half_extents_matching_radius() {
 
 #[test]
 fn spawned_bolt_aabb2d_uses_configured_radius() {
-    // Edge case: BoltConfig.radius = 6.0 → Aabb2D half_extents = (6.0, 6.0)
+    // Edge case: BoltDefinition radius = 6.0 in registry → Aabb2D half_extents = (6.0, 6.0)
     use rantzsoft_physics2d::aabb::Aabb2D;
 
     let mut app = test_app();
-    app.world_mut().resource_mut::<BoltConfig>().radius = 6.0;
+    // Override registry with a bolt definition that has radius 6.0
+    let mut custom_def = make_default_bolt_definition();
+    custom_def.radius = 6.0;
+    let mut bolt_registry = BoltRegistry::default();
+    bolt_registry.insert("Bolt".to_string(), custom_def);
+    app.insert_resource(bolt_registry);
     app.add_systems(Startup, spawn_bolt);
     app.update();
 

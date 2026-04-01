@@ -6,7 +6,6 @@ use crate::{
     bolt::{
         components::{Bolt, ExtraBolt},
         messages::BoltLost,
-        resources::BoltConfig,
     },
     breaker::components::Breaker,
     shared::{GameDrawLayer, GameRng, PlayfieldConfig},
@@ -23,9 +22,10 @@ fn extra_bolt_below_floor_is_despawned() {
         GameDrawLayer::Breaker,
     ));
 
+    let def = make_default_bolt_definition();
     let entity = Bolt::builder()
         .at_position(Vec2::new(0.0, playfield.bottom() - 100.0))
-        .config(&BoltConfig::default())
+        .definition(&def)
         .with_velocity(Velocity2D(Vec2::new(0.0, -400.0)))
         .extra()
         .spawn(app.world_mut());
@@ -51,9 +51,10 @@ fn extra_bolt_sends_bolt_lost_on_despawn() {
     app.init_resource::<BoltLostCount>();
     app.add_systems(FixedUpdate, count_bolt_lost.after(bolt_lost));
 
+    let def = make_default_bolt_definition();
     Bolt::builder()
         .at_position(Vec2::new(0.0, playfield.bottom() - 100.0))
-        .config(&BoltConfig::default())
+        .definition(&def)
         .with_velocity(Velocity2D(Vec2::new(0.0, -400.0)))
         .extra()
         .spawn(app.world_mut());
@@ -81,9 +82,10 @@ fn baseline_bolt_still_respawns_with_extra_present() {
         Vec2::new(0.0, -400.0),
     );
     // Extra bolt
+    let def = make_default_bolt_definition();
     Bolt::builder()
         .at_position(Vec2::new(50.0, playfield.bottom() - 100.0))
-        .config(&BoltConfig::default())
+        .definition(&def)
         .with_velocity(Velocity2D(Vec2::new(0.0, -400.0)))
         .extra()
         .spawn(app.world_mut());
@@ -133,9 +135,10 @@ fn extra_bolt_writes_request_bolt_destroyed_instead_of_despawning() {
         GameDrawLayer::Breaker,
     ));
 
+    let def = make_default_bolt_definition();
     let entity = Bolt::builder()
         .at_position(Vec2::new(50.0, playfield.bottom() - 100.0))
-        .config(&BoltConfig::default())
+        .definition(&def)
         .with_velocity(Velocity2D(Vec2::new(0.0, -400.0)))
         .extra()
         .spawn(app.world_mut());

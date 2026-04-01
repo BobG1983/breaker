@@ -1,16 +1,18 @@
 //! System to reset the bolt's position and velocity at the start of each node.
 
 use bevy::prelude::*;
+use rand::Rng;
 use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
     bolt::{
         components::{Bolt, BoltServing, ExtraBolt},
         queries::{ResetBoltData, apply_velocity_formula},
-        resources::BoltConfig,
+        resources::DEFAULT_BOLT_ANGLE_SPREAD,
     },
     breaker::components::Breaker,
     run::RunState,
+    shared::GameRng,
 };
 
 /// Resets the bolt's position above the breaker and adjusts velocity for the
@@ -18,15 +20,16 @@ use crate::{
 ///
 /// On the first node (`RunState.node_index == 0`), the bolt spawns with zero
 /// velocity and a [`BoltServing`] marker. On subsequent nodes it launches
-/// immediately at base speed.
+/// immediately at base speed with a random angle within the bolt's
+/// [`BoltAngleSpread`] component.
 ///
 /// Effect components (e.g. `ActivePiercings`, `ActiveDamageBoosts`)
 /// are NOT touched -- they persist across nodes. Only positional and velocity
 /// state is reset. [`PiercingRemaining`] is reset to `ActivePiercings.total()`.
 pub(crate) fn reset_bolt(
     mut commands: Commands,
-    config: Res<BoltConfig>,
     run_state: Res<RunState>,
+    mut rng: ResMut<GameRng>,
     breaker_query: Query<&Position2D, (With<Breaker>, Without<Bolt>)>,
     mut bolt_query: Query<ResetBoltData, (With<Bolt>, Without<ExtraBolt>)>,
 ) {
@@ -40,7 +43,7 @@ pub(crate) fn reset_bolt(
     let serving = run_state.node_index == 0;
 
     for mut bolt in &mut bolt_query {
-        let new_pos = Vec2::new(breaker_x, breaker_y + config.spawn_offset_y);
+        let new_pos = Vec2::new(breaker_x, breaker_y + bolt.spawn_offset.0);
         bolt.spatial.position.0 = new_pos;
 
         if let Some(ref mut prev) = bolt.previous_position {
@@ -51,8 +54,9 @@ pub(crate) fn reset_bolt(
             bolt.spatial.velocity.0 = Vec2::ZERO;
             commands.entity(bolt.entity).insert(BoltServing);
         } else {
-            let v = config.initial_velocity();
-            bolt.spatial.velocity.0 = Vec2::new(v.x, v.y);
+            let spread = bolt.angle_spread.map_or(DEFAULT_BOLT_ANGLE_SPREAD, |a| a.0);
+            let angle = rng.0.random_range(-spread..=spread);
+            bolt.spatial.velocity.0 = Vec2::new(angle.sin(), angle.cos());
 
             // Apply the canonical velocity formula after setting launch velocity
             apply_velocity_formula(&mut bolt.spatial, bolt.active_speed_boosts);

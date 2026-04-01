@@ -1,27 +1,31 @@
 //! System to launch a serving bolt when the player presses the bump button.
 
 use bevy::prelude::*;
+use rand::Rng;
 use rantzsoft_spatial2d::queries::SpatialData;
 
 use crate::{
     bolt::{components::*, filters::ServingFilter, queries::apply_velocity_formula},
     effect::effects::speed_boost::ActiveSpeedBoosts,
     input::resources::{GameAction, InputActions},
+    shared::GameRng,
 };
 
 /// Launches the bolt when the player activates bump.
 ///
-/// Removes [`BoltServing`] and sets the launch velocity. Only affects
-/// bolts that are currently serving.
+/// Removes [`BoltServing`] and sets the launch velocity using a random
+/// angle within the bolt's [`BoltAngleSpread`]. Only affects bolts that
+/// are currently serving.
 pub(crate) fn launch_bolt(
     actions: Res<InputActions>,
     mut commands: Commands,
+    mut rng: ResMut<GameRng>,
     mut query: Query<
         (
             Entity,
             SpatialData,
             Option<&ActiveSpeedBoosts>,
-            &BoltInitialAngle,
+            &BoltAngleSpread,
         ),
         ServingFilter,
     >,
@@ -30,9 +34,10 @@ pub(crate) fn launch_bolt(
         return;
     }
 
-    for (entity, mut spatial, boosts, initial_angle) in &mut query {
+    for (entity, mut spatial, boosts, angle_spread) in &mut query {
+        let angle = rng.0.random_range(-angle_spread.0..=angle_spread.0);
         // Set direction only; speed is applied by the velocity formula
-        spatial.velocity.0 = Vec2::new(initial_angle.0.sin(), initial_angle.0.cos());
+        spatial.velocity.0 = Vec2::new(angle.sin(), angle.cos());
 
         // Apply the canonical velocity formula
         apply_velocity_formula(&mut spatial, boosts);
@@ -46,12 +51,31 @@ mod tests {
     use rantzsoft_spatial2d::components::Velocity2D;
 
     use super::*;
-    use crate::bolt::resources::BoltConfig;
+    use crate::{
+        bolt::{definition::BoltDefinition, resources::DEFAULT_BOLT_ANGLE_SPREAD},
+        shared::GameRng,
+    };
+
+    fn make_default_bolt_definition() -> BoltDefinition {
+        BoltDefinition {
+            name: "Bolt".to_string(),
+            base_speed: 720.0,
+            min_speed: 360.0,
+            max_speed: 1440.0,
+            radius: 14.0,
+            base_damage: 10.0,
+            effects: vec![],
+            color_rgb: [6.0, 5.0, 0.5],
+            min_angle_horizontal: 5.0,
+            min_angle_vertical: 5.0,
+        }
+    }
 
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .init_resource::<InputActions>()
+            .init_resource::<GameRng>()
             .add_systems(FixedUpdate, launch_bolt);
         app
     }
@@ -64,15 +88,18 @@ mod tests {
         app.update();
     }
 
-    /// Spawns a serving bolt using the builder.
+    /// Spawns a serving bolt using the builder with `.definition()`.
     fn spawn_serving_bolt(app: &mut App) -> Entity {
+        let def = make_default_bolt_definition();
         Bolt::builder()
             .at_position(Vec2::ZERO)
-            .config(&BoltConfig::default())
+            .definition(&def)
             .serving()
             .primary()
             .spawn(app.world_mut())
     }
+
+    // ── Existing behavioral tests (migrated to .definition()) ──
 
     #[test]
     fn bump_launches_serving_bolt() {
@@ -86,7 +113,6 @@ mod tests {
             .push(GameAction::Bump);
         tick(&mut app);
 
-        // BoltServing should be removed
         let serving_count = app
             .world_mut()
             .query_filtered::<Entity, (With<Bolt>, With<BoltServing>)>()
@@ -97,7 +123,6 @@ mod tests {
             "BoltServing should be removed after launch"
         );
 
-        // Velocity should be non-zero and upward
         let velocity = app
             .world_mut()
             .query::<&Velocity2D>()
@@ -139,40 +164,6 @@ mod tests {
     }
 
     #[test]
-    fn launch_velocity_matches_base_speed_and_angle() {
-        let mut app = test_app();
-        let config = BoltConfig::default();
-
-        spawn_serving_bolt(&mut app);
-
-        app.world_mut()
-            .resource_mut::<InputActions>()
-            .0
-            .push(GameAction::Bump);
-        tick(&mut app);
-
-        let velocity = app
-            .world_mut()
-            .query::<&Velocity2D>()
-            .iter(app.world())
-            .next()
-            .expect("bolt should have velocity");
-
-        let expect_x = config.base_speed * config.initial_angle.sin();
-        let expect_y = config.base_speed * config.initial_angle.cos();
-        assert!(
-            (velocity.0.x - expect_x).abs() < 1e-4,
-            "vx should be base_speed * sin(angle), got {} expected {expect_x}",
-            velocity.0.x
-        );
-        assert!(
-            (velocity.0.y - expect_y).abs() < 1e-4,
-            "vy should be base_speed * cos(angle), got {} expected {expect_y}",
-            velocity.0.y
-        );
-    }
-
-    #[test]
     fn non_serving_bolt_unaffected() {
         let mut app = test_app();
 
@@ -195,6 +186,222 @@ mod tests {
         assert!(
             (velocity.0.x - 100.0).abs() < f32::EPSILON,
             "non-serving bolt velocity should be unchanged"
+        );
+    }
+
+    // ── Migration tests: Behaviors 27-33 ──
+
+    // Behavior 27: launch_bolt queries BoltAngleSpread instead of BoltInitialAngle
+    #[test]
+    fn launch_bolt_uses_angle_spread_not_initial_angle() {
+        // Given: Serving bolt built via .definition() with BoltAngleSpread(0.524).
+        //        InputActions contains Bump.
+        // Then: BoltServing removed. Velocity non-zero, upward. Angle within 0.524 rad.
+        let mut app = test_app();
+
+        let bolt_id = spawn_serving_bolt(&mut app);
+
+        app.world_mut()
+            .resource_mut::<InputActions>()
+            .0
+            .push(GameAction::Bump);
+        tick(&mut app);
+
+        assert!(
+            app.world().get::<BoltServing>(bolt_id).is_none(),
+            "BoltServing should be removed after launch"
+        );
+
+        let vel = app.world().get::<Velocity2D>(bolt_id).unwrap();
+        assert!(vel.0.y > 0.0, "bolt should launch upward");
+
+        let angle = vel.0.x.atan2(vel.0.y).abs();
+        assert!(
+            angle <= DEFAULT_BOLT_ANGLE_SPREAD + 0.01,
+            "launch angle {angle:.3} should be within BoltAngleSpread ({DEFAULT_BOLT_ANGLE_SPREAD:.3})"
+        );
+    }
+
+    #[test]
+    fn launch_bolt_zero_angle_spread_launches_straight_up() {
+        // Edge case: BoltAngleSpread(0.0) -> bolt launches straight up
+        let mut app = test_app();
+        let def = BoltDefinition {
+            min_angle_horizontal: 0.0,
+            min_angle_vertical: 0.0,
+            ..make_default_bolt_definition()
+        };
+        let bolt_id = Bolt::builder()
+            .at_position(Vec2::ZERO)
+            .definition(&def)
+            .serving()
+            .primary()
+            .spawn(app.world_mut());
+        app.world_mut()
+            .entity_mut(bolt_id)
+            .insert(BoltAngleSpread(0.0));
+
+        app.world_mut()
+            .resource_mut::<InputActions>()
+            .0
+            .push(GameAction::Bump);
+        tick(&mut app);
+
+        let vel = app.world().get::<Velocity2D>(bolt_id).unwrap();
+        assert!(
+            vel.0.x.abs() < 0.01,
+            "zero angle spread should launch straight up, got vx={:.3}",
+            vel.0.x
+        );
+    }
+
+    // Behavior 28: launch_bolt uses random angle from GameRng within spread
+    #[test]
+    fn launch_bolt_uses_random_angle_within_spread() {
+        let mut app = test_app();
+        let def = make_default_bolt_definition();
+        let bolt_id = Bolt::builder()
+            .at_position(Vec2::ZERO)
+            .definition(&def)
+            .serving()
+            .primary()
+            .spawn(app.world_mut());
+        app.world_mut()
+            .entity_mut(bolt_id)
+            .insert(BoltAngleSpread(0.3));
+
+        app.world_mut()
+            .resource_mut::<InputActions>()
+            .0
+            .push(GameAction::Bump);
+        tick(&mut app);
+
+        let vel = app.world().get::<Velocity2D>(bolt_id).unwrap();
+        assert!(vel.0.y > 0.0, "bolt should launch upward");
+        let angle = vel.0.x.atan2(vel.0.y).abs();
+        assert!(
+            angle <= 0.3 + 0.01,
+            "launch angle {angle:.3} should be within BoltAngleSpread (0.3 rad)"
+        );
+    }
+
+    // Behavior 29: no bump input does not launch (already covered above)
+
+    // Behavior 30: non-serving bolts unaffected (already covered above)
+
+    // Behavior 31: launch_bolt does NOT query BoltInitialAngle
+    #[test]
+    fn launch_bolt_works_without_bolt_initial_angle() {
+        // Given: Bolt built via .definition() (does NOT insert BoltInitialAngle).
+        //        InputActions contains Bump.
+        // Then: System runs without error, bolt launches.
+        //       This proves BoltInitialAngle is no longer a required query parameter.
+        let mut app = test_app();
+        let bolt_id = spawn_serving_bolt(&mut app);
+
+        // Verify BoltInitialAngle is NOT present on the entity
+        assert!(
+            app.world().get::<BoltInitialAngle>(bolt_id).is_none(),
+            "definition-built bolt should NOT have BoltInitialAngle"
+        );
+
+        app.world_mut()
+            .resource_mut::<InputActions>()
+            .0
+            .push(GameAction::Bump);
+        tick(&mut app);
+
+        // If the system still queries BoltInitialAngle as required,
+        // this bolt won't be matched and BoltServing will remain.
+        assert!(
+            app.world().get::<BoltServing>(bolt_id).is_none(),
+            "bolt should be launched (BoltServing removed) even without BoltInitialAngle"
+        );
+
+        let vel = app.world().get::<Velocity2D>(bolt_id).unwrap();
+        assert!(
+            vel.speed() > 0.0,
+            "bolt should have non-zero velocity after launch"
+        );
+    }
+
+    // Behavior 32: launch_bolt velocity matches base_speed after velocity formula
+    #[test]
+    fn launch_bolt_velocity_matches_base_speed() {
+        // Given: BaseSpeed(720.0), BoltAngleSpread(0.0), no ActiveSpeedBoosts.
+        // Then: Velocity magnitude is 720.0, direction straight up.
+        let mut app = test_app();
+        let def = BoltDefinition {
+            min_angle_horizontal: 0.0,
+            min_angle_vertical: 0.0,
+            ..make_default_bolt_definition()
+        };
+        let bolt_id = Bolt::builder()
+            .at_position(Vec2::ZERO)
+            .definition(&def)
+            .serving()
+            .primary()
+            .spawn(app.world_mut());
+        app.world_mut()
+            .entity_mut(bolt_id)
+            .insert(BoltAngleSpread(0.0));
+
+        app.world_mut()
+            .resource_mut::<InputActions>()
+            .0
+            .push(GameAction::Bump);
+        tick(&mut app);
+
+        let vel = app.world().get::<Velocity2D>(bolt_id).unwrap();
+        assert!(
+            (vel.speed() - 720.0).abs() < 2.0,
+            "velocity magnitude should be ~720.0 (BaseSpeed), got {}",
+            vel.speed()
+        );
+        assert!(
+            vel.0.x.abs() < 1.0,
+            "vx should be ~0.0 (straight up), got {}",
+            vel.0.x
+        );
+        assert!(
+            (vel.0.y - 720.0).abs() < 2.0,
+            "vy should be ~720.0, got {}",
+            vel.0.y
+        );
+    }
+
+    #[test]
+    fn launch_bolt_velocity_with_speed_boost() {
+        // Edge case: ActiveSpeedBoosts(vec![1.5]) -> speed = 720.0 * 1.5 = 1080.0
+        use crate::effect::effects::speed_boost::ActiveSpeedBoosts;
+
+        let mut app = test_app();
+        let def = BoltDefinition {
+            min_angle_horizontal: 0.0,
+            min_angle_vertical: 0.0,
+            ..make_default_bolt_definition()
+        };
+        let bolt_id = Bolt::builder()
+            .at_position(Vec2::ZERO)
+            .definition(&def)
+            .serving()
+            .primary()
+            .spawn(app.world_mut());
+        app.world_mut()
+            .entity_mut(bolt_id)
+            .insert((BoltAngleSpread(0.0), ActiveSpeedBoosts(vec![1.5])));
+
+        app.world_mut()
+            .resource_mut::<InputActions>()
+            .0
+            .push(GameAction::Bump);
+        tick(&mut app);
+
+        let vel = app.world().get::<Velocity2D>(bolt_id).unwrap();
+        assert!(
+            (vel.speed() - 1080.0).abs() < 2.0,
+            "velocity magnitude should be ~1080.0 (720.0 * 1.5), got {}",
+            vel.speed()
         );
     }
 }

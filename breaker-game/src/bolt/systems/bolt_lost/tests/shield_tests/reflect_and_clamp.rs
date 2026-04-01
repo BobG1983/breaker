@@ -4,27 +4,26 @@ use bevy::prelude::*;
 use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use super::{super::helpers::*, helpers::spawn_shielded_breaker};
-use crate::{
-    bolt::{components::Bolt, resources::BoltConfig},
-    shared::PlayfieldConfig,
-};
+use crate::{bolt::components::Bolt, shared::PlayfieldConfig};
 
 // ── Behavior 11: Shield reflects velocity and clamps position ──
 
 #[test]
 fn shield_reflects_velocity_and_clamps_position() {
-    // Given: Bolt at (50.0, -310.0) with velocity (200.0, -346.4) (magnitude ~400.0).
+    // Given: Bolt at (50.0, -316.0) with velocity (360.0, -623.5) (magnitude ~720.0,
+    //        matching BaseSpeed from the definition so apply_velocity_formula is a no-op).
+    //        Definition bolt has radius 14.0.
     // When: bolt_lost runs
-    // Then: Velocity becomes (200.0, 346.4) — Y abs(), X preserved.
-    //       Position Y clamped to bottom() + radius = -300.0 + 8.0 = -292.0.
+    // Then: Velocity becomes (360.0, 623.5) — Y abs(), X preserved.
+    //       Position Y clamped to bottom() + radius = -300.0 + 14.0 = -286.0.
     //       Position X preserved at 50.0.
     let mut app = test_app();
     spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 5);
 
-    let original_vel = Vec2::new(200.0, -346.4);
+    let original_vel = Vec2::new(360.0, -623.5);
     let original_magnitude = original_vel.length();
 
-    spawn_bolt(&mut app, Vec2::new(50.0, -310.0), original_vel);
+    spawn_bolt(&mut app, Vec2::new(50.0, -316.0), original_vel);
     tick(&mut app);
 
     let vel = app
@@ -34,8 +33,8 @@ fn shield_reflects_velocity_and_clamps_position() {
         .next()
         .unwrap();
     assert!(
-        (vel.0.x - 200.0).abs() < 1.0,
-        "shield reflect should preserve X component (200.0), got {:.1}",
+        (vel.0.x - 360.0).abs() < 1.0,
+        "shield reflect should preserve X component (360.0), got {:.1}",
         vel.0.x
     );
     assert!(
@@ -56,8 +55,8 @@ fn shield_reflects_velocity_and_clamps_position() {
         .next()
         .unwrap();
     let playfield = PlayfieldConfig::default();
-    let bolt_config = BoltConfig::default();
-    let expected_y = playfield.bottom() + bolt_config.radius;
+    // Definition bolt has radius 14.0
+    let expected_y = playfield.bottom() + 14.0;
     assert!(
         (pos.0.x - 50.0).abs() < f32::EPSILON,
         "shield-saved bolt X should be preserved at 50.0, got {:.1}",
@@ -79,7 +78,7 @@ fn shield_reflects_zero_velocity_unchanged() {
     let mut app = test_app();
     spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 5);
 
-    spawn_bolt(&mut app, Vec2::new(0.0, -309.0), Vec2::new(0.0, 0.0));
+    spawn_bolt(&mut app, Vec2::new(0.0, -315.0), Vec2::new(0.0, 0.0));
     tick(&mut app);
 
     let vel = app

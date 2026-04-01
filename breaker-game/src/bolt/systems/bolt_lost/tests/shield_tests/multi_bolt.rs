@@ -27,11 +27,11 @@ fn three_bolts_lost_consume_three_charges() {
     let breaker = spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 3);
 
     // Bolt A
-    spawn_bolt(&mut app, Vec2::new(-100.0, -309.0), Vec2::new(0.0, -400.0));
+    spawn_bolt(&mut app, Vec2::new(-100.0, -315.0), Vec2::new(0.0, -400.0));
     // Bolt B
-    spawn_bolt(&mut app, Vec2::new(0.0, -309.0), Vec2::new(0.0, -400.0));
+    spawn_bolt(&mut app, Vec2::new(0.0, -315.0), Vec2::new(0.0, -400.0));
     // Bolt C
-    spawn_bolt(&mut app, Vec2::new(100.0, -309.0), Vec2::new(0.0, -400.0));
+    spawn_bolt(&mut app, Vec2::new(100.0, -315.0), Vec2::new(0.0, -400.0));
     tick(&mut app);
 
     // All three reflected upward
@@ -79,7 +79,7 @@ fn four_bolts_lost_but_only_three_charges_fourth_falls_through() {
 
     // Four bolts below floor
     for x in [-150.0, -50.0, 50.0, 150.0] {
-        spawn_bolt(&mut app, Vec2::new(x, -309.0), Vec2::new(0.0, -400.0));
+        spawn_bolt(&mut app, Vec2::new(x, -315.0), Vec2::new(0.0, -400.0));
     }
     tick(&mut app);
 

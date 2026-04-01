@@ -8,7 +8,7 @@ use super::{
     helpers::spawn_shielded_breaker,
 };
 use crate::{
-    bolt::{components::Bolt, messages::BoltLost, resources::BoltConfig},
+    bolt::{components::Bolt, messages::BoltLost},
     effect::effects::shield::ShieldActive,
     shared::{GameRng, PlayfieldConfig},
 };
@@ -41,11 +41,12 @@ fn shield_protects_extra_bolt_consuming_one_charge() {
     let breaker = spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 2);
 
     // Baseline bolt
-    spawn_bolt(&mut app, Vec2::new(-50.0, -309.0), Vec2::new(100.0, -400.0));
+    spawn_bolt(&mut app, Vec2::new(-50.0, -315.0), Vec2::new(100.0, -400.0));
     // Extra bolt
+    let def = make_default_bolt_definition();
     let extra = Bolt::builder()
-        .at_position(Vec2::new(50.0, -309.0))
-        .config(&BoltConfig::default())
+        .at_position(Vec2::new(50.0, -315.0))
+        .definition(&def)
         .with_velocity(Velocity2D(Vec2::new(-100.0, -400.0)))
         .extra()
         .spawn(app.world_mut());
@@ -117,9 +118,10 @@ fn shield_protects_only_extra_bolt_below_floor() {
     let breaker = spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 2);
 
     // ExtraBolt below floor
+    let def = make_default_bolt_definition();
     Bolt::builder()
-        .at_position(Vec2::new(50.0, -309.0))
-        .config(&BoltConfig::default())
+        .at_position(Vec2::new(50.0, -315.0))
+        .definition(&def)
         .with_velocity(Velocity2D(Vec2::new(0.0, -400.0)))
         .extra()
         .spawn(app.world_mut());

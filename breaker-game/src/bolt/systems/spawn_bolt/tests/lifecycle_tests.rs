@@ -6,7 +6,6 @@ use crate::{
     bolt::{
         components::{Bolt, BoltServing},
         messages::BoltSpawned,
-        resources::BoltConfig,
     },
     run::RunState,
 };
@@ -78,9 +77,10 @@ fn spawn_bolt_sends_bolt_spawned_message() {
 #[test]
 fn existing_bolt_is_not_double_spawned() {
     let mut app = test_app();
+    let def = make_default_bolt_definition();
     Bolt::builder()
         .at_position(Vec2::ZERO)
-        .config(&BoltConfig::default())
+        .definition(&def)
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .primary()
         .spawn(app.world_mut());
@@ -97,9 +97,10 @@ fn existing_bolt_is_not_double_spawned() {
 #[test]
 fn existing_bolt_still_triggers_bolt_spawned_message() {
     let mut app = test_app();
+    let def = make_default_bolt_definition();
     Bolt::builder()
         .at_position(Vec2::ZERO)
-        .config(&BoltConfig::default())
+        .definition(&def)
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .primary()
         .spawn(app.world_mut());

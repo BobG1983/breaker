@@ -32,7 +32,7 @@ pub(crate) struct BoltLostWriters<'w> {
 #[derive(Clone, Copy)]
 pub(crate) struct LostBoltEntry {
     entity: Entity,
-    respawn_offset: f32,
+    spawn_offset: f32,
     angle_spread: f32,
     is_extra: bool,
     effective_radius: f32,
@@ -78,8 +78,10 @@ pub(crate) fn bolt_lost(
             })
             .map(|bolt| LostBoltEntry {
                 entity: bolt.entity,
-                respawn_offset: bolt.respawn_offset.0,
-                angle_spread: bolt.angle_spread.0,
+                spawn_offset: bolt.spawn_offset.0,
+                angle_spread: bolt
+                    .angle_spread
+                    .map_or(crate::bolt::resources::DEFAULT_BOLT_ANGLE_SPREAD, |a| a.0),
                 is_extra: bolt.is_extra,
                 effective_radius: bolt.radius.0 * bolt.entity_scale.map_or(1.0, |s| s.0),
                 current_velocity: bolt.spatial.velocity.0,
@@ -130,7 +132,7 @@ pub(crate) fn bolt_lost(
             if let Ok(mut bolt) = bolt_query.get_mut(entry.entity) {
                 bolt.spatial.velocity.0 = Vec2::new(angle.sin(), angle.cos());
                 apply_velocity_formula(&mut bolt.spatial, bolt.active_speed_boosts);
-                let new_pos = Vec2::new(breaker_pos.x, breaker_pos.y + entry.respawn_offset);
+                let new_pos = Vec2::new(breaker_pos.x, breaker_pos.y + entry.spawn_offset);
                 bolt.spatial.position.0 = new_pos;
                 commands
                     .entity(entry.entity)

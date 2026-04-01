@@ -31,11 +31,11 @@ pub(crate) const MAX_BOUNCES: u32 = 4;
 
 use crate::{
     bolt::{
-        BASE_BOLT_DAMAGE,
         components::{Bolt, LastImpact, ccd_normal_to_impact_side},
         filters::ActiveFilter,
         messages::BoltImpactCell,
         queries::{BoltCollisionData, apply_velocity_formula},
+        resources::DEFAULT_BOLT_BASE_DAMAGE,
     },
     cells::{
         components::{Cell, CellHealth},
@@ -109,7 +109,11 @@ pub(crate) fn bolt_cell_collision(
 
         // Effective damage for pierce lookahead (compared against cell HP).
         // must match `handle_cell_hit` damage formula
-        let effective_damage = BASE_BOLT_DAMAGE
+        let base_damage = bolt
+            .collision
+            .base_damage
+            .map_or(DEFAULT_BOLT_BASE_DAMAGE, |d| d.0);
+        let effective_damage = base_damage
             * bolt
                 .collision
                 .active_damage_boosts

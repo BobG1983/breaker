@@ -69,8 +69,8 @@ fn bolt_above_floor_does_not_consume_charges() {
 
 #[test]
 fn bolt_at_exactly_threshold_is_not_lost() {
-    // Given: Bolt at (0.0, -308.0) which is exactly bottom() - radius = -300.0 - 8.0 = -308.0.
-    //        Condition is strict `<`, so -308.0 is NOT below threshold.
+    // Given: Bolt at (0.0, -314.0) which is exactly bottom() - radius = -300.0 - 14.0 = -314.0.
+    //        Condition is strict `<`, so -314.0 is NOT below threshold.
     // Then: Bolt NOT considered lost, velocity unchanged, charges remain 3.
     let mut app = test_app();
     app.init_resource::<BoltLostCount>();
@@ -78,7 +78,7 @@ fn bolt_at_exactly_threshold_is_not_lost() {
 
     let breaker = spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 3);
 
-    spawn_bolt(&mut app, Vec2::new(0.0, -308.0), Vec2::new(0.0, -400.0));
+    spawn_bolt(&mut app, Vec2::new(0.0, -314.0), Vec2::new(0.0, -400.0));
     tick(&mut app);
 
     let vel = app
@@ -106,11 +106,11 @@ fn bolt_at_exactly_threshold_is_not_lost() {
 
 #[test]
 fn bolt_barely_below_threshold_is_absorbed_by_shield() {
-    // Edge case: Bolt at (0.0, -308.001) — IS below threshold, shield absorbs, charges 3→2.
+    // Edge case: Bolt at (0.0, -314.001) — IS below threshold, shield absorbs, charges 3->2.
     let mut app = test_app();
     let breaker = spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 3);
 
-    spawn_bolt(&mut app, Vec2::new(0.0, -308.001), Vec2::new(0.0, -400.0));
+    spawn_bolt(&mut app, Vec2::new(0.0, -314.001), Vec2::new(0.0, -400.0));
     tick(&mut app);
 
     let vel = app
@@ -137,8 +137,8 @@ fn bolt_barely_below_threshold_is_absorbed_by_shield() {
 
 #[test]
 fn shield_absorbs_barely_below_floor_bolt_and_removes_on_last_charge() {
-    // Given: Breaker with ShieldActive { charges: 1 }. Bolt at (0.0, -308.5).
-    //        Floor threshold = -308.0. Bolt Y below threshold.
+    // Given: Breaker with ShieldActive { charges: 1 }. Bolt at (0.0, -314.5).
+    //        Floor threshold = -314.0. Bolt Y below threshold.
     // Then: Bolt reflected. ShieldActive removed (charges was 1, now 0).
     let mut app = test_app();
     app.init_resource::<BoltLostCount>();
@@ -146,7 +146,7 @@ fn shield_absorbs_barely_below_floor_bolt_and_removes_on_last_charge() {
 
     let breaker = spawn_shielded_breaker(&mut app, Vec2::new(0.0, -250.0), 1);
 
-    spawn_bolt(&mut app, Vec2::new(0.0, -308.5), Vec2::new(0.0, -400.0));
+    spawn_bolt(&mut app, Vec2::new(0.0, -314.5), Vec2::new(0.0, -400.0));
     tick(&mut app);
 
     let vel = app

@@ -11,7 +11,7 @@ use rantzsoft_spatial2d::{
 
 use crate::{
     bolt::components::{
-        BoltRadius, BoltRespawnAngleSpread, BoltRespawnOffsetY, ExtraBolt, LastImpact,
+        BoltAngleSpread, BoltBaseDamage, BoltRadius, BoltSpawnOffsetY, ExtraBolt, LastImpact,
         PiercingRemaining, SpawnedByEvolution,
     },
     effect::effects::{
@@ -41,6 +41,8 @@ pub(crate) struct BoltCollisionParams {
     pub spawned_by_evolution: Option<&'static SpawnedByEvolution>,
     /// Last collision impact position and side.
     pub last_impact: Option<&'static mut LastImpact>,
+    /// Per-bolt base damage (from definition). Falls back to `DEFAULT_BOLT_BASE_DAMAGE` if absent.
+    pub base_damage: Option<&'static BoltBaseDamage>,
 }
 
 /// Full collision data for bolt entities. Composes [`SpatialData`] from the
@@ -72,6 +74,10 @@ pub(crate) struct ResetBoltData {
     pub active_piercings: Option<&'static ActivePiercings>,
     /// Previous position snapshot (reset to prevent interpolation teleport).
     pub previous_position: Option<&'static mut PreviousPosition>,
+    /// Angle spread from vertical for launch/respawn (from definition).
+    pub angle_spread: Option<&'static BoltAngleSpread>,
+    /// Vertical offset above breaker for spawn position (from definition).
+    pub spawn_offset: &'static BoltSpawnOffsetY,
 }
 
 /// Bolt entity data needed by the bolt-lost detection system.
@@ -87,9 +93,9 @@ pub(crate) struct LostBoltData {
     /// Bolt radius for below-playfield detection.
     pub radius: &'static BoltRadius,
     /// Vertical offset above breaker for respawn.
-    pub respawn_offset: &'static BoltRespawnOffsetY,
-    /// Maximum respawn angle spread from vertical.
-    pub angle_spread: &'static BoltRespawnAngleSpread,
+    pub spawn_offset: &'static BoltSpawnOffsetY,
+    /// Maximum respawn angle spread from vertical (from definition, optional with fallback).
+    pub angle_spread: Option<&'static BoltAngleSpread>,
     /// Whether this is an extra bolt (despawned on loss, not respawned).
     pub is_extra: Has<ExtraBolt>,
     /// Visual/physics scale factor.
