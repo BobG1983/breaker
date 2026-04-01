@@ -70,6 +70,10 @@ Identify:
 - Ripple risk: [low/medium/high — based on how many dependents would need updating]
 ```
 
+## Research Output
+
+Write your report to `.claude/research/<topic-slug>.md` (e.g., `.claude/research/impact-bolt-velocity.md`).
+
 ## Rules
 
 - Search exhaustively — check ALL file types, not just `.rs`
@@ -85,12 +89,6 @@ Identify:
 - Do NOT fix code — not even "obvious" fixes
 - Do NOT create helper scripts or new files
 - Do NOT delete any file for any reason
-- The ONLY files you may write/edit are your own memory files under `.claude/agent-memory/researcher-impact/`
+- The ONLY files you may write are research output to `.claude/research/`
 If changes are needed, **describe** the exact changes in your report — but do NOT apply them.
 
-# Agent Memory
-
-See `.claude/rules/agent-memory.md` for memory conventions (stable vs ephemeral, MEMORY.md index, what NOT to save).
-
-What to save in stable memory:
-- Nothing stable — impact maps go stale as code changes

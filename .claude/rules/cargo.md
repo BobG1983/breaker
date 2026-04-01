@@ -2,7 +2,7 @@
 
 **NEVER** use bare `cargo build`, `cargo check`, `cargo clippy`, or `cargo test` — these produce non-dynamic-linked artifacts that conflict with the dynamic-linked build and cause slow rebuilds.
 
-**Only runner agents execute cargo commands.** The main agent, writer-tests, and writer-code must NEVER run cargo. Delegate to **runner-tests**, **runner-linting**, or **runner-scenarios**, which produce standardized hint output for downstream agents. See `.claude/rules/tdd.md` for the full cargo boundary rule.
+**Only runner agents execute cargo commands.** See `.claude/rules/tdd.md` Hard Rules for the cargo boundary rule.
 
 ## Game crate (`breaker-game`)
 

@@ -1,6 +1,6 @@
 # Hint Formats
 
-Standardized output formats that verification agents produce and failure routing consumes. Each agent emits a specific block; the main agent passes these verbatim when launching fix agents.
+Standardized output formats that verification agents produce and failure routing consumes. See `.claude/rules/routing-failures.md` Hint Passthrough Rule for how the main agent handles these.
 
 ## Fix spec hint (runner-linting)
 

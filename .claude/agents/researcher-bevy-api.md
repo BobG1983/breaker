@@ -42,6 +42,10 @@ You MUST verify your answers against authoritative sources. Do NOT rely on train
 
 If sources conflict, prefer docs.rs (actual compiled API) over all others.
 
+## Research Output
+
+Write your report to `.claude/research/<topic-slug>.md` (e.g., `.claude/research/bevy-api-sprite-spawning.md`).
+
 ## Response Format
 
 When answering API questions, provide:
@@ -71,7 +75,7 @@ Read `docs/architecture/` for project-specific Bevy conventions (message pattern
 - Do NOT fix code — not even "obvious" fixes
 - Do NOT create helper scripts or new files
 - Do NOT delete any file for any reason
-- The ONLY files you may write/edit are your own memory files under `.claude/agent-memory/researcher-bevy-api/`
+- The ONLY files you may write are research output to `.claude/research/`
 If changes are needed, **describe** the exact changes in your report — but do NOT apply them.
 
 ## Error Handling

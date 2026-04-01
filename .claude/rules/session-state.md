@@ -6,7 +6,7 @@ Session-state is the orchestrator's single source of truth for task progress. Wi
 
 ## Location
 
-`.claude/specs/session-state.md`
+`.claude/state/session-state.md`
 
 ## Lifecycle
 
@@ -101,4 +101,4 @@ When a verification failure or fix attempt reveals an earlier decision was wrong
 
 ## Circuit Breaking
 
-After **3 failed attempts** at the same failure → stop routing → move to Stuck → surface to user. See `.claude/rules/orchestration.md` for the full circuit breaking protocol.
+After **3 failed attempts** at the same failure → stop routing → move to Stuck. See `.claude/rules/routing-repeated-failures.md` for the full protocol.

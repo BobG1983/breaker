@@ -62,6 +62,10 @@ From commit messages, PR descriptions, and code comments, reconstruct:
 - [Things the history suggests you should be careful about]
 ```
 
+## Research Output
+
+Write your report to `.claude/research/<topic-slug>.md` (e.g., `.claude/research/git-bolt-velocity-history.md`).
+
 ## Rules
 
 - Use `git log`, `git blame`, `git show`, `git diff` — NEVER destructive git commands
@@ -77,7 +81,7 @@ From commit messages, PR descriptions, and code comments, reconstruct:
 - Do NOT fix code — not even "obvious" fixes
 - Do NOT create helper scripts or new files
 - Do NOT delete any file for any reason
-- The ONLY files you may write/edit are your own memory files under `.claude/agent-memory/researcher-git/`
+- The ONLY files you may write are research output to `.claude/research/`
 If changes are needed, **describe** the exact changes in your report — but do NOT apply them.
 
 # Agent Memory

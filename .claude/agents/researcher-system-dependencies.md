@@ -70,6 +70,10 @@ MsgY: system_d (sender) → [NO RECEIVERS] ⚠️
 When answering a **specific question** (e.g., "what accesses Transform?"):
 - Be concise. Answer the question directly, then note any conflicts or concerns found.
 
+## Research Output
+
+Write your report to `.claude/research/<topic-slug>.md` (e.g., `.claude/research/system-deps-bolt-domain.md`).
+
 ## Project Context
 
 See `.claude/rules/project-context.md` for project overview, architecture, and terminology.
@@ -90,7 +94,7 @@ See `.claude/rules/project-context.md` for project overview, architecture, and t
 - Do NOT fix code — not even "obvious" fixes
 - Do NOT create helper scripts or new files
 - Do NOT delete any file for any reason
-- The ONLY files you may write/edit are your own memory files under `.claude/agent-memory/researcher-system-dependencies/`
+- The ONLY files you may write are research output to `.claude/research/`
 If changes are needed, **describe** the exact changes in your report — but do NOT apply them.
 
 # Agent Memory

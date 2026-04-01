@@ -1,15 +1,16 @@
-# Delegated Implementation
+# Delegating to Sub-Agents
 
 All implementation goes through the delegated pipeline. The main agent is the orchestrator — it describes features, reviews outputs, and routes failures. The **planning-writer-specs** → **planning-reviewer-specs** → **writer-tests** → **writer-code** pipeline produces the code. Spec agents write to `.claude/specs/`; writers read from there.
 
 ## The Flow
 
-See `.claude/rules/tdd.md` for the TDD cycle definition and when to commit.
-See `.claude/rules/spec-workflow.md` for the spec revision loop (steps 3-6).
-See `.claude/rules/spec-format-tests.md` and `.claude/rules/spec-format-code.md` for spec templates and quality rules.
+See `.claude/rules/tdd.md` for the TDD cycle definition, RED/GREEN gate procedures, and when to commit.
+See `.claude/rules/spec-workflow.md` for the spec revision loop (steps 3-6) and briefing requirements.
+See `.claude/rules/spec-format-tests.md` and `.claude/rules/spec-format-code.md` for spec templates.
+See `.claude/rules/routing-failures.md` for routing failures to fix agents.
+See `.claude/rules/routing-repeated-failures.md` for when to stop retrying and escalate.
+See `.claude/rules/verification-tiers.md` for Basic, Standard, and Full verification tier definitions.
 See `.claude/rules/git.md` for git usage and rules.
-
-Verification tiers are defined in `.claude/rules/verification-tiers.md`.
 
 ```
 1. Main agent describes the feature, identifies parallel waves
@@ -19,17 +20,12 @@ Verification tiers are defined in `.claude/rules/verification-tiers.md`.
 4. Launch planning-reviewer-specs-tests + planning-reviewer-specs-code         ── SPEC REVIEW
    as each spec completes (in parallel)
 5. Main agent triages reviews, sends revisions back to spec writers
-   ── UPDATE session-state Specs table after each agent notification
 6. Repeat 4–5 until both reviewers confirm specs are clean
 7. Main agent reviews final spec summaries, creates shared prerequisites
 8. Launch writer-tests per wave (reads spec from .claude/specs/)               ── RED phase
-   ── UPDATE session-state Writer-Tests column
 9. Launch reviewer-tests as each writer-tests completes (in parallel)
-   ── UPDATE session-state Test Review column
 10. After ALL reviewer-tests pass: single runner-tests                         ── RED gate
-    ── UPDATE session-state RED Gate column
 11. Launch ALL writer-codes in parallel (reads spec from .claude/specs/)       ── GREEN phase
-    ── UPDATE session-state Writer-Code column
 12. After ALL writer-codes complete: single runner-tests                       ── GREEN gate
 13. Basic Verification Tier                                                   ─┐
 14. Route failures → fix agents → Basic Verification Tier after each fix       │ REFACTOR
@@ -44,6 +40,8 @@ Verification tiers are defined in `.claude/rules/verification-tiers.md`.
 23. Merge according to git rules
 ```
 
+Update session-state after every agent notification — see `.claude/rules/session-state.md`.
+
 ### Key principle: maximize parallelism, serialize only cargo
 
 - **Spec writers**: planning-writer-specs-tests + planning-writer-specs-code run in parallel (no cargo)
@@ -53,9 +51,7 @@ Verification tiers are defined in `.claude/rules/verification-tiers.md`.
 - **RED gate**: single `runner-tests` after ALL reviewer-tests pass (cargo — serialized)
 - **Writer-codes**: run in parallel after RED gate (no cargo)
 - **GREEN gate**: single `runner-tests` after ALL writer-codes complete (cargo — serialized)
-- **Basic → Standard → Full Verification Tiers**: see `.claude/rules/verification-tiers.md`
 - **Planning ahead**: launch spec writers for upcoming phases while current implementation is in flight
-- **Session-state**: update BEFORE any other action after every agent notification — see `.claude/rules/session-state.md`
 
 ## Parallel Waves
 
@@ -63,7 +59,7 @@ When producing a plan, the main agent **MUST** identify which parts of the work 
 
 **How to identify waves:**
 - Work that touches **different files** can run in parallel
-- Work that touches **different domains** can usually run in parallel 
+- Work that touches **different domains** can usually run in parallel
 - Work with **no data dependencies** can run in parallel
 - Cross-domain types (queries, filters, messages) are **shared prerequisites** — create in a prerequisite wave or refactor in a final wave
 
@@ -95,4 +91,9 @@ Before spec writers run, launch research agents in parallel to surface conflicts
 
 When background agents are running, the main agent must **not** fill time with unnecessary analysis or speculation. End your turn with at most one brief status sentence and wait for notifications. Don't read files, don't plan ahead, don't analyze speculatively while waiting.
 
+## Context Pruning
 
+When launching fix agents, provide only:
+- The specific hint block or regression spec
+- The relevant session-state row (domain + failure entry)
+- NOT the full output of every verification agent
