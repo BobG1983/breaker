@@ -1,7 +1,6 @@
-/* @[brickbreaker::effect::definition::BreakerDefinition] */
+/* @[brickbreaker::breaker::definition::BreakerDefinition] */
 (
     name: "Prism",
-    stat_overrides: (),
     life_pool: None,
     effects: [
         On(target: Breaker, then: [When(trigger: BoltLost, then: [Do(TimePenalty(seconds: 7.0))])]),

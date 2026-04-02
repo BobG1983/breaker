@@ -17,11 +17,8 @@ use crate::{
         resources::{DEFAULT_BOLT_ANGLE_SPREAD, DEFAULT_BOLT_SPAWN_OFFSET_Y},
     },
     breaker::{
-        BreakerConfig,
-        components::Breaker,
-        definition::{BreakerDefinition, BreakerStatOverrides},
-        registry::BreakerRegistry,
-        resources::SelectedBreaker,
+        BreakerConfig, components::Breaker, definition::BreakerDefinition,
+        registry::BreakerRegistry, resources::SelectedBreaker,
     },
     run::RunState,
     shared::GameDrawLayer,
@@ -450,13 +447,9 @@ fn spawn_bolt_uses_breaker_registry_for_bolt_lookup() {
         .resource_mut::<BoltRegistry>()
         .insert("HeavyBolt".to_string(), heavy_def);
 
-    let chrono_def = BreakerDefinition {
-        name: "Chrono".to_string(),
-        bolt: "HeavyBolt".to_string(),
-        stat_overrides: BreakerStatOverrides::default(),
-        life_pool: None,
-        effects: vec![],
-    };
+    let chrono_def: BreakerDefinition =
+        ron::de::from_str(r#"(name: "Chrono", bolt: "HeavyBolt", life_pool: None, effects: [])"#)
+            .expect("test RON should parse");
     app.world_mut()
         .resource_mut::<BreakerRegistry>()
         .insert("Chrono".to_string(), chrono_def);

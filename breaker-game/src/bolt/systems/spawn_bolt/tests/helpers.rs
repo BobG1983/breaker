@@ -3,9 +3,7 @@ use bevy::prelude::*;
 use crate::{
     bolt::{definition::BoltDefinition, messages::BoltSpawned, registry::BoltRegistry},
     breaker::{
-        BreakerConfig,
-        definition::{BreakerDefinition, BreakerStatOverrides},
-        registry::BreakerRegistry,
+        BreakerConfig, definition::BreakerDefinition, registry::BreakerRegistry,
         resources::SelectedBreaker,
     },
     run::RunState,
@@ -60,11 +58,6 @@ pub(super) fn make_default_bolt_definition() -> BoltDefinition {
 }
 
 pub(super) fn make_default_breaker_definition() -> BreakerDefinition {
-    BreakerDefinition {
-        name: "Aegis".to_string(),
-        bolt: "Bolt".to_string(),
-        stat_overrides: BreakerStatOverrides::default(),
-        life_pool: Some(3),
-        effects: vec![],
-    }
+    ron::de::from_str(r#"(name: "Aegis", life_pool: Some(3), effects: [])"#)
+        .expect("test RON should parse")
 }

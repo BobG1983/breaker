@@ -1,11 +1,8 @@
 use bevy::prelude::*;
 
-use super::helpers::{TEST_BREAKER_NAME, test_app_with_dispatch};
+use super::helpers::{TEST_BREAKER_NAME, make_test_definition, test_app_with_dispatch};
 use crate::{
-    breaker::{
-        components::Breaker,
-        definition::{BreakerDefinition, BreakerStatOverrides},
-    },
+    breaker::components::Breaker,
     effect::{BoundEffects, EffectKind, EffectNode, RootEffect, Target, Trigger},
 };
 
@@ -13,19 +10,14 @@ use crate::{
 
 #[test]
 fn dispatch_pushes_breaker_targeted_when_to_breaker_bound_effects() {
-    let def = BreakerDefinition {
-        name: TEST_BREAKER_NAME.to_owned(),
-        bolt: "Bolt".to_owned(),
-        stat_overrides: BreakerStatOverrides::default(),
-        life_pool: None,
-        effects: vec![RootEffect::On {
-            target: Target::Breaker,
-            then: vec![EffectNode::When {
-                trigger: Trigger::BoltLost,
-                then: vec![EffectNode::Do(EffectKind::LoseLife)],
-            }],
+    let mut def = make_test_definition(TEST_BREAKER_NAME, None);
+    def.effects = vec![RootEffect::On {
+        target: Target::Breaker,
+        then: vec![EffectNode::When {
+            trigger: Trigger::BoltLost,
+            then: vec![EffectNode::Do(EffectKind::LoseLife)],
         }],
-    };
+    }];
     let mut app = test_app_with_dispatch(def);
     let breaker = app
         .world_mut()
@@ -47,13 +39,7 @@ fn dispatch_pushes_breaker_targeted_when_to_breaker_bound_effects() {
 
 #[test]
 fn dispatch_empty_effects_leaves_bound_effects_empty() {
-    let def = BreakerDefinition {
-        name: TEST_BREAKER_NAME.to_owned(),
-        bolt: "Bolt".to_owned(),
-        stat_overrides: BreakerStatOverrides::default(),
-        life_pool: None,
-        effects: vec![],
-    };
+    let def = make_test_definition(TEST_BREAKER_NAME, None);
     let mut app = test_app_with_dispatch(def);
     let breaker = app
         .world_mut()
@@ -73,22 +59,17 @@ fn dispatch_empty_effects_leaves_bound_effects_empty() {
 
 #[test]
 fn dispatch_fires_bare_do_immediately_not_stored_in_bound_effects() {
-    let def = BreakerDefinition {
-        name: TEST_BREAKER_NAME.to_owned(),
-        bolt: "Bolt".to_owned(),
-        stat_overrides: BreakerStatOverrides::default(),
-        life_pool: None,
-        effects: vec![RootEffect::On {
-            target: Target::Breaker,
-            then: vec![
-                EffectNode::Do(EffectKind::DamageBoost(2.0)),
-                EffectNode::When {
-                    trigger: Trigger::BoltLost,
-                    then: vec![EffectNode::Do(EffectKind::LoseLife)],
-                },
-            ],
-        }],
-    };
+    let mut def = make_test_definition(TEST_BREAKER_NAME, None);
+    def.effects = vec![RootEffect::On {
+        target: Target::Breaker,
+        then: vec![
+            EffectNode::Do(EffectKind::DamageBoost(2.0)),
+            EffectNode::When {
+                trigger: Trigger::BoltLost,
+                then: vec![EffectNode::Do(EffectKind::LoseLife)],
+            },
+        ],
+    }];
     let mut app = test_app_with_dispatch(def);
     let breaker = app
         .world_mut()
@@ -116,22 +97,17 @@ fn dispatch_fires_bare_do_immediately_not_stored_in_bound_effects() {
 
 #[test]
 fn dispatch_mixed_do_and_when_stores_only_when() {
-    let def = BreakerDefinition {
-        name: TEST_BREAKER_NAME.to_owned(),
-        bolt: "Bolt".to_owned(),
-        stat_overrides: BreakerStatOverrides::default(),
-        life_pool: None,
-        effects: vec![RootEffect::On {
-            target: Target::Breaker,
-            then: vec![
-                EffectNode::Do(EffectKind::DamageBoost(2.0)),
-                EffectNode::When {
-                    trigger: Trigger::BoltLost,
-                    then: vec![EffectNode::Do(EffectKind::LoseLife)],
-                },
-            ],
-        }],
-    };
+    let mut def = make_test_definition(TEST_BREAKER_NAME, None);
+    def.effects = vec![RootEffect::On {
+        target: Target::Breaker,
+        then: vec![
+            EffectNode::Do(EffectKind::DamageBoost(2.0)),
+            EffectNode::When {
+                trigger: Trigger::BoltLost,
+                then: vec![EffectNode::Do(EffectKind::LoseLife)],
+            },
+        ],
+    }];
     let mut app = test_app_with_dispatch(def);
     let breaker = app
         .world_mut()
@@ -158,42 +134,37 @@ fn dispatch_mixed_do_and_when_stores_only_when() {
 
 #[test]
 fn dispatch_pushes_multiple_breaker_targeted_effects() {
-    let def = BreakerDefinition {
-        name: TEST_BREAKER_NAME.to_owned(),
-        bolt: "Bolt".to_owned(),
-        stat_overrides: BreakerStatOverrides::default(),
-        life_pool: None,
-        effects: vec![
-            RootEffect::On {
-                target: Target::Breaker,
-                then: vec![EffectNode::When {
-                    trigger: Trigger::BoltLost,
-                    then: vec![EffectNode::Do(EffectKind::LoseLife)],
-                }],
-            },
-            RootEffect::On {
-                target: Target::Breaker,
-                then: vec![EffectNode::When {
-                    trigger: Trigger::PerfectBump,
-                    then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
-                }],
-            },
-            RootEffect::On {
-                target: Target::Breaker,
-                then: vec![EffectNode::When {
-                    trigger: Trigger::EarlyBump,
-                    then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.1 })],
-                }],
-            },
-            RootEffect::On {
-                target: Target::Breaker,
-                then: vec![EffectNode::When {
-                    trigger: Trigger::LateBump,
-                    then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.1 })],
-                }],
-            },
-        ],
-    };
+    let mut def = make_test_definition(TEST_BREAKER_NAME, None);
+    def.effects = vec![
+        RootEffect::On {
+            target: Target::Breaker,
+            then: vec![EffectNode::When {
+                trigger: Trigger::BoltLost,
+                then: vec![EffectNode::Do(EffectKind::LoseLife)],
+            }],
+        },
+        RootEffect::On {
+            target: Target::Breaker,
+            then: vec![EffectNode::When {
+                trigger: Trigger::PerfectBump,
+                then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
+            }],
+        },
+        RootEffect::On {
+            target: Target::Breaker,
+            then: vec![EffectNode::When {
+                trigger: Trigger::EarlyBump,
+                then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.1 })],
+            }],
+        },
+        RootEffect::On {
+            target: Target::Breaker,
+            then: vec![EffectNode::When {
+                trigger: Trigger::LateBump,
+                then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.1 })],
+            }],
+        },
+    ];
     let mut app = test_app_with_dispatch(def);
     let breaker = app
         .world_mut()

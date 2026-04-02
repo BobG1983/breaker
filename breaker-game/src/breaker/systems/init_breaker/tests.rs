@@ -5,9 +5,8 @@ use crate::{
     breaker::{
         SelectedBreaker,
         components::{Breaker, BreakerInitialized},
-        definition::{BreakerDefinition, BreakerStatOverrides},
+        definition::BreakerDefinition,
         registry::BreakerRegistry,
-        resources::{BreakerConfig, BreakerDefaults},
     },
     effect::{effects::life_lost::LivesCount, *},
 };
@@ -15,42 +14,15 @@ use crate::{
 const TEST_BREAKER_NAME: &str = "TestBreaker";
 
 fn make_test_breaker() -> BreakerDefinition {
-    BreakerDefinition {
-        name: TEST_BREAKER_NAME.to_owned(),
-        bolt: "Bolt".to_owned(),
-        stat_overrides: BreakerStatOverrides::default(),
-        life_pool: Some(3),
-        effects: vec![
-            RootEffect::On {
-                target: Target::Breaker,
-                then: vec![EffectNode::When {
-                    trigger: Trigger::BoltLost,
-                    then: vec![EffectNode::Do(EffectKind::LoseLife)],
-                }],
-            },
-            RootEffect::On {
-                target: Target::Breaker,
-                then: vec![EffectNode::When {
-                    trigger: Trigger::PerfectBump,
-                    then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
-                }],
-            },
-            RootEffect::On {
-                target: Target::Breaker,
-                then: vec![EffectNode::When {
-                    trigger: Trigger::EarlyBump,
-                    then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.1 })],
-                }],
-            },
-            RootEffect::On {
-                target: Target::Breaker,
-                then: vec![EffectNode::When {
-                    trigger: Trigger::LateBump,
-                    then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.1 })],
-                }],
-            },
-        ],
-    }
+    ron::de::from_str(&format!(
+        r#"(name: "{TEST_BREAKER_NAME}", life_pool: Some(3), effects: [
+            On(target: Breaker, then: [When(trigger: BoltLost, then: [Do(LoseLife)])]),
+            On(target: Breaker, then: [When(trigger: PerfectBump, then: [Do(SpeedBoost(multiplier: 1.5))])]),
+            On(target: Breaker, then: [When(trigger: EarlyBump, then: [Do(SpeedBoost(multiplier: 1.1))])]),
+            On(target: Breaker, then: [When(trigger: LateBump, then: [Do(SpeedBoost(multiplier: 1.1))])]),
+        ])"#
+    ))
+    .expect("test RON should parse")
 }
 
 fn test_app_with_breaker(def: BreakerDefinition) -> App {
@@ -113,35 +85,14 @@ fn init_breaker_does_not_push_effects() {
 
 #[test]
 fn init_breaker_does_not_push_effects_mixed_targets() {
-    let def = BreakerDefinition {
-        name: TEST_BREAKER_NAME.to_owned(),
-        bolt: "Bolt".to_owned(),
-        stat_overrides: BreakerStatOverrides::default(),
-        life_pool: None,
-        effects: vec![
-            RootEffect::On {
-                target: Target::Breaker,
-                then: vec![EffectNode::When {
-                    trigger: Trigger::BoltLost,
-                    then: vec![EffectNode::Do(EffectKind::LoseLife)],
-                }],
-            },
-            RootEffect::On {
-                target: Target::Bolt,
-                then: vec![EffectNode::When {
-                    trigger: Trigger::PerfectBumped,
-                    then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
-                }],
-            },
-            RootEffect::On {
-                target: Target::AllCells,
-                then: vec![EffectNode::When {
-                    trigger: Trigger::Impacted(ImpactTarget::Bolt),
-                    then: vec![EffectNode::Do(EffectKind::test_shockwave(32.0))],
-                }],
-            },
-        ],
-    };
+    let def: BreakerDefinition = ron::de::from_str(&format!(
+        r#"(name: "{TEST_BREAKER_NAME}", life_pool: None, effects: [
+            On(target: Breaker, then: [When(trigger: BoltLost, then: [Do(LoseLife)])]),
+            On(target: Bolt, then: [When(trigger: PerfectBumped, then: [Do(SpeedBoost(multiplier: 1.5))])]),
+            On(target: AllCells, then: [When(trigger: Impacted(Bolt), then: [Do(Shockwave(base_range: 32.0, range_per_level: 0.0, stacks: 1, speed: 400.0))])]),
+        ])"#
+    ))
+    .expect("test RON should parse");
     let mut app = test_app_with_breaker(def);
     let entity = app
         .world_mut()
@@ -159,32 +110,13 @@ fn init_breaker_does_not_push_effects_mixed_targets() {
 
 #[test]
 fn init_breaker_does_not_push_effects_chrono_style() {
-    let def = BreakerDefinition {
-        name: TEST_BREAKER_NAME.to_owned(),
-        bolt: "Bolt".to_owned(),
-        stat_overrides: BreakerStatOverrides::default(),
-        life_pool: None,
-        effects: vec![
-            RootEffect::On {
-                target: Target::Breaker,
-                then: vec![EffectNode::When {
-                    trigger: Trigger::BoltLost,
-                    then: vec![EffectNode::Do(EffectKind::TimePenalty { seconds: 5.0 })],
-                }],
-            },
-            RootEffect::On {
-                target: Target::Breaker,
-                then: vec![EffectNode::When {
-                    trigger: Trigger::PerfectBump,
-                    then: vec![EffectNode::Do(EffectKind::SpawnBolts {
-                        count: 1,
-                        lifespan: None,
-                        inherit: false,
-                    })],
-                }],
-            },
-        ],
-    };
+    let def: BreakerDefinition = ron::de::from_str(&format!(
+        r#"(name: "{TEST_BREAKER_NAME}", life_pool: None, effects: [
+            On(target: Breaker, then: [When(trigger: BoltLost, then: [Do(TimePenalty(seconds: 5.0))])]),
+            On(target: Breaker, then: [When(trigger: PerfectBump, then: [Do(SpawnBolts())])]),
+        ])"#
+    ))
+    .expect("test RON should parse");
     let mut app = test_app_with_breaker(def);
     let entity = app
         .world_mut()
@@ -202,22 +134,14 @@ fn init_breaker_does_not_push_effects_chrono_style() {
 
 #[test]
 fn init_breaker_does_not_push_nested_chains() {
-    let def = BreakerDefinition {
-        name: TEST_BREAKER_NAME.to_owned(),
-        bolt: "Bolt".to_owned(),
-        stat_overrides: BreakerStatOverrides::default(),
-        life_pool: None,
-        effects: vec![RootEffect::On {
-            target: Target::Breaker,
-            then: vec![EffectNode::When {
-                trigger: Trigger::PerfectBump,
-                then: vec![EffectNode::When {
-                    trigger: Trigger::Impact(ImpactTarget::Cell),
-                    then: vec![EffectNode::Do(EffectKind::test_shockwave(64.0))],
-                }],
-            }],
-        }],
-    };
+    let def: BreakerDefinition = ron::de::from_str(&format!(
+        r#"(name: "{TEST_BREAKER_NAME}", life_pool: None, effects: [
+            On(target: Breaker, then: [When(trigger: PerfectBump, then: [
+                When(trigger: Impact(Cell), then: [Do(Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 400.0))])
+            ])]),
+        ])"#
+    ))
+    .expect("test RON should parse");
     let mut app = test_app_with_breaker(def);
     let entity = app
         .world_mut()
@@ -256,104 +180,11 @@ fn init_breaker_skips_already_initialized() {
 }
 
 #[test]
-fn apply_stat_overrides_partial() {
-    let mut config = BreakerConfig::default();
-    let original_max_speed = config.max_speed;
-    let original_accel = config.acceleration;
-
-    let overrides = BreakerStatOverrides {
-        width: Some(200.0),
-        height: Some(30.0),
-        ..default()
-    };
-
-    apply_stat_overrides(&mut config, &overrides);
-
-    assert!((config.width - 200.0).abs() < f32::EPSILON);
-    assert!((config.height - 30.0).abs() < f32::EPSILON);
-    assert!(
-        (config.max_speed - original_max_speed).abs() < f32::EPSILON,
-        "unset fields should remain unchanged"
-    );
-    assert!(
-        (config.acceleration - original_accel).abs() < f32::EPSILON,
-        "unset fields should remain unchanged"
-    );
-}
-
-#[test]
-fn apply_stat_overrides_all_fields() {
-    let mut config = BreakerConfig::default();
-    let overrides = BreakerStatOverrides {
-        width: Some(100.0),
-        height: Some(20.0),
-        max_speed: Some(500.0),
-        acceleration: Some(1000.0),
-        deceleration: Some(2000.0),
-    };
-
-    apply_stat_overrides(&mut config, &overrides);
-
-    assert!((config.width - 100.0).abs() < f32::EPSILON);
-    assert!((config.height - 20.0).abs() < f32::EPSILON);
-    assert!((config.max_speed - 500.0).abs() < f32::EPSILON);
-    assert!((config.acceleration - 1000.0).abs() < f32::EPSILON);
-    assert!((config.deceleration - 2000.0).abs() < f32::EPSILON);
-}
-
-#[test]
-fn apply_stat_overrides_empty_is_noop() {
-    let original = BreakerConfig::default();
-    let mut config = BreakerConfig::default();
-    let overrides = BreakerStatOverrides::default();
-
-    apply_stat_overrides(&mut config, &overrides);
-
-    assert!((config.width - original.width).abs() < f32::EPSILON);
-    assert!((config.height - original.height).abs() < f32::EPSILON);
-    assert!((config.max_speed - original.max_speed).abs() < f32::EPSILON);
-}
-
-#[test]
-fn apply_overrides_modifies_config() {
-    let mut app = App::new();
-    app.add_plugins((MinimalPlugins, AssetPlugin::default()))
-        .init_asset::<BreakerDefaults>()
-        .init_resource::<BreakerConfig>();
-
-    let def = BreakerDefinition {
-        name: "Wide".to_owned(),
-        bolt: "Bolt".to_owned(),
-        stat_overrides: BreakerStatOverrides {
-            width: Some(200.0),
-            ..default()
-        },
-        life_pool: None,
-        effects: vec![],
-    };
-
-    let mut registry = BreakerRegistry::default();
-    registry.insert("Wide".to_owned(), def);
-    app.insert_resource(registry)
-        .insert_resource(SelectedBreaker("Wide".to_owned()))
-        .add_systems(Update, apply_breaker_config_overrides);
-    app.update();
-
-    let config = app.world().resource::<BreakerConfig>();
-    assert!((config.width - 200.0).abs() < f32::EPSILON);
-    let default_config = BreakerConfig::default();
-    assert!((config.max_speed - default_config.max_speed).abs() < f32::EPSILON);
-}
-
-#[test]
 fn life_pool_none_stamps_infinite_lives() {
-    let def = BreakerDefinition {
-        name: TEST_BREAKER_NAME.to_owned(),
-        bolt: "Bolt".to_owned(),
-        stat_overrides: BreakerStatOverrides::default(),
-        life_pool: None,
-        effects: vec![],
-    };
+    let def: BreakerDefinition = ron::de::from_str(&format!(
+        r#"(name: "{TEST_BREAKER_NAME}", life_pool: None, effects: [])"#
+    ))
+    .expect("test RON should parse");
 
     let mut app = test_app_with_breaker(def);
     let entity = app
@@ -374,19 +205,12 @@ fn life_pool_none_stamps_infinite_lives() {
 
 #[test]
 fn init_breaker_no_duplicate_init_on_reentry() {
-    let def = BreakerDefinition {
-        name: TEST_BREAKER_NAME.to_owned(),
-        bolt: "Bolt".to_owned(),
-        stat_overrides: BreakerStatOverrides::default(),
-        life_pool: None,
-        effects: vec![RootEffect::On {
-            target: Target::Breaker,
-            then: vec![EffectNode::When {
-                trigger: Trigger::PerfectBump,
-                then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
-            }],
-        }],
-    };
+    let def: BreakerDefinition = ron::de::from_str(&format!(
+        r#"(name: "{TEST_BREAKER_NAME}", life_pool: None, effects: [
+            On(target: Breaker, then: [When(trigger: PerfectBump, then: [Do(SpeedBoost(multiplier: 1.5))])]),
+        ])"#
+    ))
+    .expect("test RON should parse");
     let mut app = test_app_with_breaker(def);
     let entity = app
         .world_mut()

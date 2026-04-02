@@ -2,9 +2,7 @@
 
 use bevy::{ecs::system::SystemParam, prelude::*};
 use breaker::{
-    breaker::{
-        BreakerDefinition, BreakerRegistry, SelectedBreaker, definition::BreakerStatOverrides,
-    },
+    breaker::{BreakerDefinition, BreakerRegistry, SelectedBreaker},
     chips::{ChipCatalog, inventory::ChipInventory},
     effect::{EffectNode, RootEffect, Target},
     run::{
@@ -54,9 +52,9 @@ pub fn bypass_menu_to_playing(
             BreakerDefinition {
                 name: "Godmode".to_owned(),
                 bolt: "Bolt".to_owned(),
-                stat_overrides: BreakerStatOverrides::default(),
                 life_pool: None,
                 effects: vec![],
+                ..BreakerDefinition::default()
             },
         );
         "Godmode".clone_into(&mut selected.0);

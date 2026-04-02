@@ -3,11 +3,8 @@ use bevy::prelude::*;
 use super::system::*;
 use crate::{
     breaker::{
-        SelectedBreaker,
-        components::Breaker,
-        definition::{BreakerDefinition, BreakerStatOverrides},
-        registry::BreakerRegistry,
-        resources::BreakerConfig,
+        SelectedBreaker, components::Breaker, definition::BreakerDefinition,
+        registry::BreakerRegistry, resources::BreakerConfig,
     },
     effect::{
         BoundEffects, EffectKind, EffectNode, RootEffect, Target, Trigger,
@@ -26,17 +23,19 @@ fn test_app() -> App {
     app
 }
 
+fn make_test_def(name: &str, life_pool: Option<u32>) -> BreakerDefinition {
+    ron::de::from_str(&format!(
+        r#"(name: "{name}", life_pool: {lp}, effects: [])"#,
+        lp = life_pool.map_or_else(|| "None".to_string(), |n| format!("Some({n})")),
+    ))
+    .expect("test RON should parse")
+}
+
 #[test]
 fn registry_rebuilt_on_modified() {
     let mut app = test_app();
 
-    let def = BreakerDefinition {
-        name: "Test".to_owned(),
-        bolt: "Bolt".to_owned(),
-        stat_overrides: BreakerStatOverrides::default(),
-        life_pool: Some(3),
-        effects: vec![],
-    };
+    let def = make_test_def("Test", Some(3));
 
     // Seed registry with initial definition
     {
@@ -54,13 +53,7 @@ fn registry_rebuilt_on_modified() {
     // Mutate registry directly — simulates propagate_registry rebuild
     {
         let mut registry = app.world_mut().resource_mut::<BreakerRegistry>();
-        let updated = BreakerDefinition {
-            name: "Test".to_owned(),
-            bolt: "Bolt".to_owned(),
-            stat_overrides: BreakerStatOverrides::default(),
-            life_pool: Some(5),
-            effects: vec![],
-        };
+        let updated = make_test_def("Test", Some(5));
         registry.clear();
         registry.insert(updated.name.clone(), updated);
     }
@@ -73,19 +66,10 @@ fn registry_rebuilt_on_modified() {
 }
 
 #[test]
-fn config_reset_with_overrides_on_breaker_change() {
+fn config_reset_on_breaker_change() {
     let mut app = test_app();
 
-    let def = BreakerDefinition {
-        name: "Wide".to_owned(),
-        bolt: "Bolt".to_owned(),
-        stat_overrides: BreakerStatOverrides {
-            width: Some(200.0),
-            ..default()
-        },
-        life_pool: None,
-        effects: vec![],
-    };
+    let def = make_test_def("Test", None);
 
     {
         let mut registry = app.world_mut().resource_mut::<BreakerRegistry>();
@@ -93,7 +77,7 @@ fn config_reset_with_overrides_on_breaker_change() {
     }
 
     app.world_mut()
-        .insert_resource(SelectedBreaker("Wide".to_owned()));
+        .insert_resource(SelectedBreaker("Test".to_owned()));
 
     // Manually set config to something different to detect change
     app.world_mut().resource_mut::<BreakerConfig>().width = 999.0;
@@ -102,19 +86,10 @@ fn config_reset_with_overrides_on_breaker_change() {
     app.update();
     app.update();
 
-    // Modify breaker override to 250
+    // Modify breaker
     {
         let mut registry = app.world_mut().resource_mut::<BreakerRegistry>();
-        let updated = BreakerDefinition {
-            name: "Wide".to_owned(),
-            bolt: "Bolt".to_owned(),
-            stat_overrides: BreakerStatOverrides {
-                width: Some(250.0),
-                ..default()
-            },
-            life_pool: None,
-            effects: vec![],
-        };
+        let updated = make_test_def("Test", None);
         registry.clear();
         registry.insert(updated.name.clone(), updated);
     }
@@ -122,9 +97,11 @@ fn config_reset_with_overrides_on_breaker_change() {
     app.update();
 
     let config = app.world().resource::<BreakerConfig>();
+    // Without loaded defaults asset, config resets to code default
+    let default_config = BreakerConfig::default();
     assert!(
-        (config.width - 250.0).abs() < f32::EPSILON,
-        "BreakerConfig.width should be 250.0 after breaker override change, got {}",
+        (config.width - default_config.width).abs() < f32::EPSILON,
+        "BreakerConfig.width should be reset to default after breaker change, got {}",
         config.width
     );
 }
@@ -133,19 +110,14 @@ fn config_reset_with_overrides_on_breaker_change() {
 fn active_chains_rebuilt_on_breaker_change() {
     let mut app = test_app();
 
-    let def = BreakerDefinition {
-        name: "Test".to_owned(),
-        bolt: "Bolt".to_owned(),
-        stat_overrides: BreakerStatOverrides::default(),
-        life_pool: None,
-        effects: vec![RootEffect::On {
-            target: Target::Breaker,
-            then: vec![EffectNode::When {
-                trigger: Trigger::PerfectBump,
-                then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
-            }],
+    let mut def = make_test_def("Test", None);
+    def.effects = vec![RootEffect::On {
+        target: Target::Breaker,
+        then: vec![EffectNode::When {
+            trigger: Trigger::PerfectBump,
+            then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
         }],
-    };
+    }];
 
     {
         let mut registry = app.world_mut().resource_mut::<BreakerRegistry>();
@@ -167,42 +139,37 @@ fn active_chains_rebuilt_on_breaker_change() {
     // Modify: rebuild with 4 effects
     {
         let mut registry = app.world_mut().resource_mut::<BreakerRegistry>();
-        let updated = BreakerDefinition {
-            name: "Test".to_owned(),
-            bolt: "Bolt".to_owned(),
-            stat_overrides: BreakerStatOverrides::default(),
-            life_pool: None,
-            effects: vec![
-                RootEffect::On {
-                    target: Target::Breaker,
-                    then: vec![EffectNode::When {
-                        trigger: Trigger::BoltLost,
-                        then: vec![EffectNode::Do(EffectKind::LoseLife)],
-                    }],
-                },
-                RootEffect::On {
-                    target: Target::Breaker,
-                    then: vec![EffectNode::When {
-                        trigger: Trigger::PerfectBump,
-                        then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
-                    }],
-                },
-                RootEffect::On {
-                    target: Target::Breaker,
-                    then: vec![EffectNode::When {
-                        trigger: Trigger::EarlyBump,
-                        then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.1 })],
-                    }],
-                },
-                RootEffect::On {
-                    target: Target::Breaker,
-                    then: vec![EffectNode::When {
-                        trigger: Trigger::LateBump,
-                        then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.1 })],
-                    }],
-                },
-            ],
-        };
+        let mut updated = make_test_def("Test", None);
+        updated.effects = vec![
+            RootEffect::On {
+                target: Target::Breaker,
+                then: vec![EffectNode::When {
+                    trigger: Trigger::BoltLost,
+                    then: vec![EffectNode::Do(EffectKind::LoseLife)],
+                }],
+            },
+            RootEffect::On {
+                target: Target::Breaker,
+                then: vec![EffectNode::When {
+                    trigger: Trigger::PerfectBump,
+                    then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
+                }],
+            },
+            RootEffect::On {
+                target: Target::Breaker,
+                then: vec![EffectNode::When {
+                    trigger: Trigger::EarlyBump,
+                    then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.1 })],
+                }],
+            },
+            RootEffect::On {
+                target: Target::Breaker,
+                then: vec![EffectNode::When {
+                    trigger: Trigger::LateBump,
+                    then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.1 })],
+                }],
+            },
+        ];
         registry.clear();
         registry.insert(updated.name.clone(), updated);
     }
@@ -222,13 +189,7 @@ fn active_chains_rebuilt_on_breaker_change() {
 fn lives_count_reset_on_breaker_change() {
     let mut app = test_app();
 
-    let def = BreakerDefinition {
-        name: "Test".to_owned(),
-        bolt: "Bolt".to_owned(),
-        stat_overrides: BreakerStatOverrides::default(),
-        life_pool: Some(3),
-        effects: vec![],
-    };
+    let def = make_test_def("Test", Some(3));
 
     {
         let mut registry = app.world_mut().resource_mut::<BreakerRegistry>();
@@ -251,13 +212,7 @@ fn lives_count_reset_on_breaker_change() {
     // Modify breaker to 5 lives
     {
         let mut registry = app.world_mut().resource_mut::<BreakerRegistry>();
-        let updated = BreakerDefinition {
-            name: "Test".to_owned(),
-            bolt: "Bolt".to_owned(),
-            stat_overrides: BreakerStatOverrides::default(),
-            life_pool: Some(5),
-            effects: vec![],
-        };
+        let updated = make_test_def("Test", Some(5));
         registry.clear();
         registry.insert(updated.name.clone(), updated);
     }
@@ -278,13 +233,7 @@ fn lives_count_reset_on_breaker_change() {
 fn lives_count_reset_to_none_on_breaker_change() {
     let mut app = test_app();
 
-    let def = BreakerDefinition {
-        name: "Test".to_owned(),
-        bolt: "Bolt".to_owned(),
-        stat_overrides: BreakerStatOverrides::default(),
-        life_pool: Some(3),
-        effects: vec![],
-    };
+    let def = make_test_def("Test", Some(3));
 
     {
         let mut registry = app.world_mut().resource_mut::<BreakerRegistry>();
@@ -307,13 +256,7 @@ fn lives_count_reset_to_none_on_breaker_change() {
     // Modify breaker to infinite lives (life_pool: None)
     {
         let mut registry = app.world_mut().resource_mut::<BreakerRegistry>();
-        let updated = BreakerDefinition {
-            name: "Test".to_owned(),
-            bolt: "Bolt".to_owned(),
-            stat_overrides: BreakerStatOverrides::default(),
-            life_pool: None,
-            effects: vec![],
-        };
+        let updated = make_test_def("Test", None);
         registry.clear();
         registry.insert(updated.name.clone(), updated);
     }
@@ -333,13 +276,7 @@ fn lives_count_reset_to_none_on_breaker_change() {
 fn lives_count_inserted_on_entity_without_prior_lives_count() {
     let mut app = test_app();
 
-    let def = BreakerDefinition {
-        name: "Test".to_owned(),
-        bolt: "Bolt".to_owned(),
-        stat_overrides: BreakerStatOverrides::default(),
-        life_pool: None,
-        effects: vec![],
-    };
+    let def = make_test_def("Test", None);
 
     {
         let mut registry = app.world_mut().resource_mut::<BreakerRegistry>();
@@ -362,13 +299,7 @@ fn lives_count_inserted_on_entity_without_prior_lives_count() {
     // Trigger hot-reload by modifying registry
     {
         let mut registry = app.world_mut().resource_mut::<BreakerRegistry>();
-        let updated = BreakerDefinition {
-            name: "Test".to_owned(),
-            bolt: "Bolt".to_owned(),
-            stat_overrides: BreakerStatOverrides::default(),
-            life_pool: None,
-            effects: vec![],
-        };
+        let updated = make_test_def("Test", None);
         registry.clear();
         registry.insert(updated.name.clone(), updated);
     }
@@ -391,19 +322,14 @@ fn lives_count_inserted_on_entity_without_prior_lives_count() {
 fn speed_boost_chains_appear_in_effect_chains_on_breaker_change() {
     let mut app = test_app();
 
-    let def = BreakerDefinition {
-        name: "Test".to_owned(),
-        bolt: "Bolt".to_owned(),
-        stat_overrides: BreakerStatOverrides::default(),
-        life_pool: None,
-        effects: vec![RootEffect::On {
-            target: Target::Breaker,
-            then: vec![EffectNode::When {
-                trigger: Trigger::PerfectBump,
-                then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
-            }],
+    let mut def = make_test_def("Test", None);
+    def.effects = vec![RootEffect::On {
+        target: Target::Breaker,
+        then: vec![EffectNode::When {
+            trigger: Trigger::PerfectBump,
+            then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
         }],
-    };
+    }];
 
     {
         let mut registry = app.world_mut().resource_mut::<BreakerRegistry>();
@@ -425,19 +351,14 @@ fn speed_boost_chains_appear_in_effect_chains_on_breaker_change() {
     // Modify multiplier
     {
         let mut registry = app.world_mut().resource_mut::<BreakerRegistry>();
-        let updated = BreakerDefinition {
-            name: "Test".to_owned(),
-            bolt: "Bolt".to_owned(),
-            stat_overrides: BreakerStatOverrides::default(),
-            life_pool: None,
-            effects: vec![RootEffect::On {
-                target: Target::Breaker,
-                then: vec![EffectNode::When {
-                    trigger: Trigger::PerfectBump,
-                    then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 2.0 })],
-                }],
+        let mut updated = make_test_def("Test", None);
+        updated.effects = vec![RootEffect::On {
+            target: Target::Breaker,
+            then: vec![EffectNode::When {
+                trigger: Trigger::PerfectBump,
+                then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 2.0 })],
             }],
-        };
+        }];
         registry.clear();
         registry.insert(updated.name.clone(), updated);
     }

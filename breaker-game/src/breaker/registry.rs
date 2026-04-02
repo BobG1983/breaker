@@ -73,7 +73,7 @@ impl SeedableRegistry for BreakerRegistry {
     }
 
     fn extensions() -> &'static [&'static str] {
-        &["bdef.ron"]
+        &["breaker.ron"]
     }
 
     fn seed(&mut self, assets: &[(AssetId<BreakerDefinition>, BreakerDefinition)]) {
@@ -96,8 +96,6 @@ impl SeedableRegistry for BreakerRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::breaker::definition::BreakerStatOverrides;
-
     #[test]
     fn default_registry_is_empty() {
         let registry = BreakerRegistry::default();
@@ -107,7 +105,7 @@ mod tests {
     #[test]
     fn insert_and_lookup() {
         let mut registry = BreakerRegistry::default();
-        let ron_str = include_str!("../../assets/breakers/aegis.bdef.ron");
+        let ron_str = include_str!("../../assets/breakers/aegis.breaker.ron");
         let def: BreakerDefinition = ron::de::from_str(ron_str).expect("aegis RON should parse");
         registry.insert(def.name.clone(), def);
         assert!(registry.contains("Aegis"));
@@ -118,13 +116,11 @@ mod tests {
     /// Creates a `BreakerDefinition` for testing with the given name and
     /// optional `life_pool`.
     fn make_breaker(name: &str, life_pool: Option<u32>) -> BreakerDefinition {
-        BreakerDefinition {
-            name: name.to_owned(),
-            bolt: "Bolt".to_owned(),
-            stat_overrides: BreakerStatOverrides::default(),
-            life_pool,
-            effects: vec![],
-        }
+        ron::de::from_str(&format!(
+            r#"(name: "{name}", life_pool: {lp}, effects: [])"#,
+            lp = life_pool.map_or_else(|| "None".to_string(), |n| format!("Some({n})")),
+        ))
+        .expect("test RON should parse")
     }
 
     /// Helper: creates an `App` with `AssetPlugin` and returns `AssetId`s for
@@ -293,13 +289,13 @@ mod tests {
         );
     }
 
-    /// `extensions()` returns `&["bdef.ron"]`.
+    /// `extensions()` returns `&["breaker.ron"]`.
     #[test]
-    fn extensions_returns_bdef_ron() {
+    fn extensions_returns_breaker_ron() {
         assert_eq!(
             BreakerRegistry::extensions(),
-            &["bdef.ron"],
-            "extensions() should return [\"bdef.ron\"]"
+            &["breaker.ron"],
+            "extensions() should return [\"breaker.ron\"]"
         );
     }
 }

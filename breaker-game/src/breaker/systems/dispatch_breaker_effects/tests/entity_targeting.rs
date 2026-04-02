@@ -1,12 +1,9 @@
 use bevy::prelude::*;
 
-use super::helpers::{TEST_BREAKER_NAME, test_app_with_dispatch};
+use super::helpers::{TEST_BREAKER_NAME, make_test_definition, test_app_with_dispatch};
 use crate::{
     bolt::components::Bolt,
-    breaker::{
-        components::Breaker,
-        definition::{BreakerDefinition, BreakerStatOverrides},
-    },
+    breaker::components::Breaker,
     cells::components::Cell,
     effect::{
         BoundEffects, EffectKind, EffectNode, ImpactTarget, RootEffect, StagedEffects, Target,
@@ -19,19 +16,14 @@ use crate::{
 
 #[test]
 fn dispatch_pushes_bolt_targeted_effects_to_all_bolt_entities() {
-    let def = BreakerDefinition {
-        name: TEST_BREAKER_NAME.to_owned(),
-        bolt: "Bolt".to_owned(),
-        stat_overrides: BreakerStatOverrides::default(),
-        life_pool: None,
-        effects: vec![RootEffect::On {
-            target: Target::Bolt,
-            then: vec![EffectNode::When {
-                trigger: Trigger::PerfectBumped,
-                then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
-            }],
+    let mut def = make_test_definition(TEST_BREAKER_NAME, None);
+    def.effects = vec![RootEffect::On {
+        target: Target::Bolt,
+        then: vec![EffectNode::When {
+            trigger: Trigger::PerfectBumped,
+            then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
         }],
-    };
+    }];
     let mut app = test_app_with_dispatch(def);
     app.world_mut().spawn((Breaker, BoundEffects::default()));
     let bolt1 = app.world_mut().spawn(Bolt).id();
@@ -61,19 +53,14 @@ fn dispatch_pushes_bolt_targeted_effects_to_all_bolt_entities() {
 
 #[test]
 fn dispatch_bolt_targeted_with_zero_bolts_no_panic() {
-    let def = BreakerDefinition {
-        name: TEST_BREAKER_NAME.to_owned(),
-        bolt: "Bolt".to_owned(),
-        stat_overrides: BreakerStatOverrides::default(),
-        life_pool: None,
-        effects: vec![RootEffect::On {
-            target: Target::Bolt,
-            then: vec![EffectNode::When {
-                trigger: Trigger::PerfectBumped,
-                then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
-            }],
+    let mut def = make_test_definition(TEST_BREAKER_NAME, None);
+    def.effects = vec![RootEffect::On {
+        target: Target::Bolt,
+        then: vec![EffectNode::When {
+            trigger: Trigger::PerfectBumped,
+            then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
         }],
-    };
+    }];
     let mut app = test_app_with_dispatch(def);
     app.world_mut().spawn((Breaker, BoundEffects::default()));
     // No bolt entities spawned
@@ -85,19 +72,14 @@ fn dispatch_bolt_targeted_with_zero_bolts_no_panic() {
 
 #[test]
 fn dispatch_pushes_all_bolts_targeted_effects_to_all_bolt_entities() {
-    let def = BreakerDefinition {
-        name: TEST_BREAKER_NAME.to_owned(),
-        bolt: "Bolt".to_owned(),
-        stat_overrides: BreakerStatOverrides::default(),
-        life_pool: None,
-        effects: vec![RootEffect::On {
-            target: Target::AllBolts,
-            then: vec![EffectNode::When {
-                trigger: Trigger::PerfectBumped,
-                then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
-            }],
+    let mut def = make_test_definition(TEST_BREAKER_NAME, None);
+    def.effects = vec![RootEffect::On {
+        target: Target::AllBolts,
+        then: vec![EffectNode::When {
+            trigger: Trigger::PerfectBumped,
+            then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
         }],
-    };
+    }];
     let mut app = test_app_with_dispatch(def);
     app.world_mut().spawn((Breaker, BoundEffects::default()));
     let bolt1 = app.world_mut().spawn(Bolt).id();
@@ -122,24 +104,19 @@ fn dispatch_pushes_all_bolts_targeted_effects_to_all_bolt_entities() {
 
 #[test]
 fn dispatch_pushes_cell_targeted_effects_to_all_cell_entities() {
-    let def = BreakerDefinition {
-        name: TEST_BREAKER_NAME.to_owned(),
-        bolt: "Bolt".to_owned(),
-        stat_overrides: BreakerStatOverrides::default(),
-        life_pool: None,
-        effects: vec![RootEffect::On {
-            target: Target::Cell,
-            then: vec![EffectNode::When {
-                trigger: Trigger::Impacted(ImpactTarget::Bolt),
-                then: vec![EffectNode::Do(EffectKind::Shockwave {
-                    base_range: 32.0,
-                    range_per_level: 8.0,
-                    stacks: 1,
-                    speed: 400.0,
-                })],
-            }],
+    let mut def = make_test_definition(TEST_BREAKER_NAME, None);
+    def.effects = vec![RootEffect::On {
+        target: Target::Cell,
+        then: vec![EffectNode::When {
+            trigger: Trigger::Impacted(ImpactTarget::Bolt),
+            then: vec![EffectNode::Do(EffectKind::Shockwave {
+                base_range: 32.0,
+                range_per_level: 8.0,
+                stacks: 1,
+                speed: 400.0,
+            })],
         }],
-    };
+    }];
     let mut app = test_app_with_dispatch(def);
     app.world_mut().spawn((Breaker, BoundEffects::default()));
     let cell1 = app.world_mut().spawn(Cell).id();
@@ -167,24 +144,19 @@ fn dispatch_pushes_cell_targeted_effects_to_all_cell_entities() {
 
 #[test]
 fn dispatch_pushes_all_cells_targeted_effects_to_all_cell_entities() {
-    let def = BreakerDefinition {
-        name: TEST_BREAKER_NAME.to_owned(),
-        bolt: "Bolt".to_owned(),
-        stat_overrides: BreakerStatOverrides::default(),
-        life_pool: None,
-        effects: vec![RootEffect::On {
-            target: Target::AllCells,
-            then: vec![EffectNode::When {
-                trigger: Trigger::Impacted(ImpactTarget::Bolt),
-                then: vec![EffectNode::Do(EffectKind::Shockwave {
-                    base_range: 32.0,
-                    range_per_level: 8.0,
-                    stacks: 1,
-                    speed: 400.0,
-                })],
-            }],
+    let mut def = make_test_definition(TEST_BREAKER_NAME, None);
+    def.effects = vec![RootEffect::On {
+        target: Target::AllCells,
+        then: vec![EffectNode::When {
+            trigger: Trigger::Impacted(ImpactTarget::Bolt),
+            then: vec![EffectNode::Do(EffectKind::Shockwave {
+                base_range: 32.0,
+                range_per_level: 8.0,
+                stacks: 1,
+                speed: 400.0,
+            })],
         }],
-    };
+    }];
     let mut app = test_app_with_dispatch(def);
     app.world_mut().spawn((Breaker, BoundEffects::default()));
     let cell1 = app.world_mut().spawn(Cell).id();
@@ -209,24 +181,19 @@ fn dispatch_pushes_all_cells_targeted_effects_to_all_cell_entities() {
 
 #[test]
 fn dispatch_pushes_wall_targeted_effects_to_all_wall_entities() {
-    let def = BreakerDefinition {
-        name: TEST_BREAKER_NAME.to_owned(),
-        bolt: "Bolt".to_owned(),
-        stat_overrides: BreakerStatOverrides::default(),
-        life_pool: None,
-        effects: vec![RootEffect::On {
-            target: Target::Wall,
-            then: vec![EffectNode::When {
-                trigger: Trigger::Impacted(ImpactTarget::Bolt),
-                then: vec![EffectNode::Do(EffectKind::Shockwave {
-                    base_range: 32.0,
-                    range_per_level: 8.0,
-                    stacks: 1,
-                    speed: 400.0,
-                })],
-            }],
+    let mut def = make_test_definition(TEST_BREAKER_NAME, None);
+    def.effects = vec![RootEffect::On {
+        target: Target::Wall,
+        then: vec![EffectNode::When {
+            trigger: Trigger::Impacted(ImpactTarget::Bolt),
+            then: vec![EffectNode::Do(EffectKind::Shockwave {
+                base_range: 32.0,
+                range_per_level: 8.0,
+                stacks: 1,
+                speed: 400.0,
+            })],
         }],
-    };
+    }];
     let mut app = test_app_with_dispatch(def);
     app.world_mut().spawn((Breaker, BoundEffects::default()));
     let wall1 = app.world_mut().spawn(Wall).id();
@@ -254,24 +221,19 @@ fn dispatch_pushes_wall_targeted_effects_to_all_wall_entities() {
 
 #[test]
 fn dispatch_pushes_all_walls_targeted_effects_to_all_wall_entities() {
-    let def = BreakerDefinition {
-        name: TEST_BREAKER_NAME.to_owned(),
-        bolt: "Bolt".to_owned(),
-        stat_overrides: BreakerStatOverrides::default(),
-        life_pool: None,
-        effects: vec![RootEffect::On {
-            target: Target::AllWalls,
-            then: vec![EffectNode::When {
-                trigger: Trigger::Impacted(ImpactTarget::Bolt),
-                then: vec![EffectNode::Do(EffectKind::Shockwave {
-                    base_range: 32.0,
-                    range_per_level: 8.0,
-                    stacks: 1,
-                    speed: 400.0,
-                })],
-            }],
+    let mut def = make_test_definition(TEST_BREAKER_NAME, None);
+    def.effects = vec![RootEffect::On {
+        target: Target::AllWalls,
+        then: vec![EffectNode::When {
+            trigger: Trigger::Impacted(ImpactTarget::Bolt),
+            then: vec![EffectNode::Do(EffectKind::Shockwave {
+                base_range: 32.0,
+                range_per_level: 8.0,
+                stacks: 1,
+                speed: 400.0,
+            })],
         }],
-    };
+    }];
     let mut app = test_app_with_dispatch(def);
     app.world_mut().spawn((Breaker, BoundEffects::default()));
     let wall1 = app.world_mut().spawn(Wall).id();

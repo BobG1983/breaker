@@ -1,5 +1,6 @@
 //! Breaker domain plugin — breaker mechanics, state machine, bump system.
 
+pub(crate) mod builder;
 pub mod components;
 pub mod definition;
 pub mod filters;

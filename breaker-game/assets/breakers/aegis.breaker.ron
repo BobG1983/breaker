@@ -1,7 +1,6 @@
-/* @[brickbreaker::effect::definition::BreakerDefinition] */
+/* @[brickbreaker::breaker::definition::BreakerDefinition] */
 (
     name: "Aegis",
-    stat_overrides: (),
     life_pool: Some(3),
     effects: [
         On(target: Breaker, then: [When(trigger: BoltLost, then: [Do(LoseLife)])]),

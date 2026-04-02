@@ -8,7 +8,6 @@ use crate::{
         BreakerRegistry, SelectedBreaker,
         components::Breaker,
         resources::{BreakerConfig, BreakerDefaults},
-        systems::init_breaker::apply_stat_overrides,
     },
     effect::{BoundEffects, RootEffect, Target, effects::life_lost::LivesCount},
 };
@@ -36,7 +35,7 @@ pub(crate) struct BreakerChangeContext<'w, 's> {
 
 /// Detects when `propagate_registry` has rebuilt the `BreakerRegistry`
 /// and if the selected breaker was modified:
-/// 1. Resets `BreakerConfig` from defaults + re-applies stat overrides
+/// 1. Resets `BreakerConfig` from defaults
 /// 2. Resets `LivesCount` if breaker has `life_pool`
 /// 3. Rebuilds breaker entity `BoundEffects`
 pub(crate) fn propagate_breaker_changes(mut ctx: BreakerChangeContext) {
@@ -50,15 +49,16 @@ pub(crate) fn propagate_breaker_changes(mut ctx: BreakerChangeContext) {
     };
     let def = def.clone();
 
-    // Reset BreakerConfig from defaults + re-apply stat overrides
+    // Reset BreakerConfig from defaults (or code default if no asset loaded)
     if let Some(loaded) = ctx
         .defaults_handle
         .as_ref()
         .and_then(|h| ctx.defaults_assets.get(h.0.id()))
     {
         *ctx.config = BreakerConfig::from(loaded.clone());
+    } else {
+        *ctx.config = BreakerConfig::default();
     }
-    apply_stat_overrides(&mut ctx.config, &def.stat_overrides);
 
     for entity in &ctx.breaker_query {
         ctx.commands
