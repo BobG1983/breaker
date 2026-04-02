@@ -184,14 +184,21 @@ The file contains only a doc comment explaining legacy stat components were remo
 - `docs/architecture/bolt-definitions.md` — "Current State" section updated: spawn flow (builder, no init_bolt_params), extra bolt spawn (direct builder calls), bolt-lost (component reads), breaker→bolt relationship (angle constraints).
 
 **Intentionally forward-looking in bolt-definitions.md (do NOT flag as drift):**
-- Target State / BoltDefinition struct, BoltRegistry, BoltRenderingConfig — not yet implemented
-- Migration Checklist steps — planned work; `init_bolt_params` references there describe planned target code
-- `BoltAngleSpread` unification — still target; code still has `BoltInitialAngle` + `BoltRespawnAngleSpread` separate
+- Target State / BoltRenderingConfig, AttachVisuals, sync_bolt_visual_modifiers — not yet implemented (requires rantzsoft_vfx)
+- Dynamic Visual Modifier System section — future phase
 
-**Still accurate in code (do NOT flag as missing):**
-- `BoltConfig` still exists with all fields including `spawn_offset_y`, `respawn_angle_spread`, `initial_angle`
-- `BoltRespawnOffsetY`, `BoltRespawnAngleSpread`, `BoltInitialAngle` components still exist
-- `defaults.bolt.ron` still exists
+**State after Waves 1-8 (feature/breaker-builder-pattern, 2026-04-01):**
+- `BoltConfig` ELIMINATED. `BoltRegistry` + `BoltDefinition` are the production types.
+- `BoltRespawnOffsetY`, `BoltRespawnAngleSpread`, `BoltInitialAngle` ELIMINATED. Replaced by `BoltSpawnOffsetY` + `BoltAngleSpread` (single component each, initialized from constants).
+- `defaults.bolt.ron` deleted. `assets/bolts/default.bolt.ron` is the bolt definition RON.
+- `BoltRadius` is now a type alias for `BaseRadius` from `shared/size.rs`.
+- `BreakerConfig`, `BreakerStatOverrides`, `BreakerDefaults` ELIMINATED. `BreakerDefinition` has all 36+ fields.
+- Registry extensions: `BreakerRegistry` uses `&["breaker.ron"]` (NOT `bdef.ron`).
+- Builder: `BreakerBuilder<D, Mv, Da, Sp, Bm, V, R>` has 7 dimensions including Role.
+- `.definition()` replaces `.config()` on both bolt and breaker builders.
+- `spawn_or_reuse_breaker` replaces 4 init systems (`spawn_breaker`, `init_breaker_params`, `init_breaker`, `dispatch_breaker_effects`).
+- `BreakerSystems::InitParams` variant does NOT exist.
+- Component renames: `BreakerVelocity` → `Velocity2D`, `BreakerState` → `DashState`, `BreakerWidth/Height` → `BaseWidth/BaseHeight`, `EntityScale` → `NodeScalingFactor`, `BumpVisualParams` → `BumpFeedback`, `BumpVisual` → `BumpFeedbackState`.
 
 ## Confirmed Correct / Fixed (steering model + gravity_well split, feature/chip-evolution-ecosystem, 2026-04-01)
 

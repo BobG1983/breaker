@@ -22,7 +22,6 @@ Domains MAY define a `pub enum {Domain}Systems` with `#[derive(SystemSet)]` in `
 | Set | Domain | Tags |
 |-----|--------|------|
 | `BreakerSystems::Move` | `breaker/sets.rs` | `move_breaker` |
-| `BreakerSystems::InitParams` | `breaker/sets.rs` | `init_breaker_params` |
 | `BreakerSystems::Reset` | `breaker/sets.rs` | `reset_breaker` (intra-domain only — no cross-domain consumers yet) |
 | `BreakerSystems::GradeBump` | `breaker/sets.rs` | `grade_bump` |
 | `BoltSystems::Reset` | `bolt/sets.rs` | `reset_bolt` |
@@ -51,13 +50,13 @@ Domains MAY define a `pub enum {Domain}Systems` with `#[derive(SystemSet)]` in `
 // In breaker/sets.rs
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum BreakerSystems {
-    Move,        // The move_breaker system
-    InitParams,  // The init_breaker_params system
+    Move,   // The move_breaker system
+    Reset,  // The reset_breaker system
 }
 
 // In breaker/plugin.rs — tag the system
 move_breaker.in_set(BreakerSystems::Move)
-init_breaker_params.in_set(BreakerSystems::InitParams)
+reset_breaker.in_set(BreakerSystems::Reset)
 
 // In bolt/plugin.rs — order against it
 hover_bolt.after(BreakerSystems::Move)
@@ -70,35 +69,31 @@ The actual cross-domain ordering constraints in the codebase:
 ### OnEnter(GameState::Playing)
 
 ```
-apply_breaker_config_overrides         [effect domain]
-  .before(BreakerSystems::InitParams)
-    BreakerSystems::InitParams
-    (init_breaker_params)              [breaker domain]
-      <- init_breaker .after(BreakerSystems::InitParams)     [effect domain]
-         (init_breaker, dispatch_breaker_effects).chain()
-           .after(BreakerSystems::InitParams)
-           .after(NodeSystems::Spawn)                        [breaker domain]
-      <- reset_breaker .after(BreakerSystems::InitParams)
-         BreakerSystems::Reset                                [breaker domain]
-      <- UiSystems::SpawnTimerHud
-         (spawn_timer_hud)             [ui domain]
-           <- spawn_lives_display .after(init_breaker)
-                                  .after(UiSystems::SpawnTimerHud)  [effect domain]
+spawn_or_reuse_breaker                   [breaker domain — Breaker::builder() via registry]
+  <- apply_node_scale_to_breaker
+       .after(spawn_or_reuse_breaker)
+       .after(NodeSystems::Spawn)        [breaker domain]
+  <- reset_breaker .after(spawn_or_reuse_breaker)
+       BreakerSystems::Reset             [breaker domain]
+  <- UiSystems::SpawnTimerHud
+       (spawn_timer_hud)                 [ui domain]
+         <- spawn_lives_display .after(spawn_or_reuse_breaker)
+                                .after(UiSystems::SpawnTimerHud)  [effect domain]
 
 NodeSystems::Spawn
-  (spawn_cells_from_layout)           [run/node domain — OnEnter]
+  (spawn_cells_from_layout)             [run/node domain — OnEnter]
     <- dispatch_cell_effects .after(NodeSystems::Spawn)      [cells domain]
 
 (spawn_walls, dispatch_wall_effects).chain()                 [wall domain]
   [dispatch_wall_effects is currently a no-op stub]
 
-spawn_bolt                               [bolt domain — uses Bolt::builder()]
+spawn_bolt                               [bolt domain — uses Bolt::builder() + BoltRegistry]
     <- reset_bolt .after(spawn_bolt)
                   .after(BreakerSystems::Reset)
        BoltSystems::Reset              [bolt domain]
 ```
 
-Note: `spawn_breaker` → `ApplyDeferred` → `init_breaker_params` are chained inside the breaker plugin. `spawn_side_panels` + `ApplyDeferred` + `spawn_timer_hud` are chained inside the UI plugin, so `UiSystems::SpawnTimerHud` is the externally-visible anchor. `reset_bolt` is the last OnEnter system — it waits for both breaker reset and bolt init. `dispatch_cell_effects` and `dispatch_breaker_effects` run after `NodeSystems::Spawn` to ensure cells and the breaker entity are present before effects are dispatched. `dispatch_wall_effects` is a no-op stub (walls have no RON-defined effects yet) but is registered for consistency.
+Note: `spawn_or_reuse_breaker` is a single system that replaces the old 4-system chain (`spawn_breaker` → `init_breaker_params` → `init_breaker` → `dispatch_breaker_effects`). All components are emitted by `Breaker::builder()` in one call; effects are dispatched via `dispatch_initial_effects` command. `reset_bolt` is the last OnEnter system — it waits for both breaker reset and bolt init. `dispatch_cell_effects` runs after `NodeSystems::Spawn` to ensure cells are present before effects are dispatched. `dispatch_wall_effects` is a no-op stub (walls have no RON-defined effects yet).
 
 ### FixedUpdate
 

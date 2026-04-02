@@ -1,10 +1,10 @@
-# Entity Scale
+# Node Scaling Factor
 
-**Decision**: Per-layout breaker/bolt scaling via `entity_scale` (0.5..=1.0).
+**Decision**: Per-layout breaker/bolt scaling via `entity_scale` / `NodeScalingFactor` (0.5..=1.0).
 
 ## Mechanic
 
-Any node layout can optionally specify `entity_scale` to shrink the breaker and bolt proportionally. Both visual size (`Transform.scale`) AND collision hitboxes (`BreakerWidth`, `BreakerHeight`, `BoltRadius`) scale together — no visual-only tricks.
+Any node layout can optionally specify `entity_scale` to shrink the breaker and bolt proportionally. Both visual size (`Transform.scale`) AND collision hitboxes (`BaseWidth`, `BaseHeight`, `BaseRadius`) scale together — no visual-only tricks.
 
 - Defaults to `1.0` (no scaling) for all layouts
 - Minimum floor at `0.5` — below this, the bolt becomes visually illegible (~4px) and gameplay becomes "cheap" not "hard"
@@ -18,8 +18,8 @@ Bolt speed and breaker movement speed are **NOT** affected by entity scale. This
 Entity scale applies as a final multiplier on the total (base + boost):
 
 ```
-effective_width = (base_width + width_boost) * entity_scale
-effective_radius = bolt_radius * entity_scale
+effective_width = (base_width + width_boost) * node_scaling_factor
+effective_radius = base_radius * node_scaling_factor
 ```
 
 This creates emergent chip synergies:

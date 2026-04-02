@@ -297,6 +297,35 @@ type: project
 - `docs/architecture/ordering.md` — maintain_tether_chain is effect-internal (no cross-domain ordering); no update needed
 - `docs/plan/index.md` — no plan entry for Wave 3 scenario coverage; no update needed
 
+## 2026-04-01 — feature/breaker-builder-pattern Wave 9 doc update
+
+**Branch:** feature/breaker-builder-pattern (Waves 1-8 complete)
+
+**Files reviewed:**
+- `breaker-game/src/breaker/builder/core.rs` — 7 typestate dimensions, 4 terminal impls
+- `breaker-game/src/breaker/plugin.rs` — spawn_or_reuse_breaker, no BreakerConfig
+- `breaker-game/src/breaker/definition.rs` — 36+ fields with serde defaults
+- `breaker-game/src/bolt/builder/core.rs` — 6 dimensions, BaseRadius/MinRadius/MaxRadius
+- `breaker-game/src/bolt/definition.rs` — BoltDefinition with min_radius/max_radius
+- `breaker-game/src/bolt/components/definitions.rs` — BoltRadius = type alias for BaseRadius
+- `breaker-game/assets/breakers/breaker.example.ron` — confirmed exists (plan called for .template.ron)
+- `breaker-game/assets/bolts/bolt.example.ron` — confirmed exists
+
+**Docs updated:**
+- `docs/architecture/builders/pattern.md` — 7 changes: BreakerBuilder 7th R param, transition method signatures, `.config` → `.definition`, terminal impl, 4 terminal blocks note, conventions, current implementations table
+- `docs/architecture/builders/breaker.md` — full rewrite: 7 dimensions, eliminated renames, correct component names, 4 terminal blocks, spawn_or_reuse_breaker, retained systems updated
+- `docs/architecture/builders/bolt.md` — 4 changes: BaseRadius+MinRadius+MaxRadius in build() output, BoltRadius alias note, `.config` → `.definition`, key files updated
+- `docs/architecture/data.md` — 6 changes: pipeline rewrite (Registry→Builder→Entity), BreakerConfig eliminated section, BumpVisualParams → BumpFeedback example, init_breaker_params→builder pattern, extensions bdef.ron→breaker.ron (x2)
+- `docs/architecture/plugins.md` — 1 change: BreakerWidth/BreakerHeight → BaseWidth/BaseHeight in cross-domain read access
+- `docs/architecture/bolt-definitions.md` — 5 changes: status banner added, "BoltConfig eliminated" section, spawn flow updated, bolt-lost updated, RON filenames .bdef.ron → .breaker.ron, Breaker Definition Changes rewritten
+- `docs/design/graphics/gameplay-elements.md` — 1 change: EntityScale → NodeScalingFactor
+
+**Items confirmed no-drift:**
+- `docs/architecture/layout.md` — no EntityScale references remain
+- `docs/architecture/content.md` — no BreakerConfig or .bdef.ron references
+- `plan/index.md` — active work tracked in todos, no phase entry needed
+- RON templates: `breaker.example.ron` and `bolt.example.ron` already exist with correct content; plan called for `.template.ron` but `.example.ron` was implemented — names differ but content is correct
+
 ## 2026-04-01 — feature/chip-evolution-ecosystem steering model + gravity_well split review
 
 **Branch:** feature/chip-evolution-ecosystem (commits: c007143 attraction/gravity-well steering, 9e7f476 bolt typestate builder)
