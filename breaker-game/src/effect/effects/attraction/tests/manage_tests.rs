@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::{super::effect::*, *};
+use super::{super::effect::*, helpers::*};
 use crate::{
     bolt::messages::{BoltImpactBreaker, BoltImpactCell, BoltImpactWall},
     effect::core::AttractionType,

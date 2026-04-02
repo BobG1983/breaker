@@ -1,4 +1,4 @@
-use super::super::*;
+use super::super::helpers::*;
 
 // ── Behavior 19: fire() applies damage_mult ──
 

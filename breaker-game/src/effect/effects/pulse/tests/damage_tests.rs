@@ -1,4 +1,4 @@
-use super::*;
+use super::helpers::*;
 
 // ── Behavior 16: apply_pulse_damage damages cells within radius ──
 

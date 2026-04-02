@@ -3,7 +3,7 @@
 
 use bevy::prelude::*;
 
-use super::*;
+use super::helpers::*;
 use crate::effect::effects::speed_boost::ActiveSpeedBoosts;
 
 #[test]

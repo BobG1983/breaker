@@ -4,7 +4,7 @@
 
 use bevy::prelude::*;
 
-use super::*;
+use super::helpers::*;
 
 #[test]
 fn until_in_bound_removed_and_desugared() {

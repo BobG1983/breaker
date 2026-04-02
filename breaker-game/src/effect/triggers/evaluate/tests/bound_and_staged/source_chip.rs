@@ -3,7 +3,7 @@
 
 use bevy::prelude::*;
 
-use super::*;
+use super::helpers::*;
 use crate::effect::{core::EffectSourceChip, effects::explode::ExplodeRequest};
 
 fn evaluate_source_chip_test_app() -> App {

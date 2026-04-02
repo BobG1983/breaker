@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use rantzsoft_physics2d::collision_layers::CollisionLayers;
 use rantzsoft_spatial2d::components::{BaseSpeed, GlobalPosition2D, Velocity2D};
 
-use super::super::{super::effect::*, *};
+use super::super::{super::effect::*, helpers::*};
 use crate::{
     effect::core::AttractionType,
     shared::{CELL_LAYER, WALL_LAYER},
