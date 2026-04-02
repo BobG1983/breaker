@@ -4,13 +4,13 @@ use super::*;
 use crate::{
     breaker::{
         components::{Breaker, BreakerBaseY, BumpFeedback, BumpFeedbackState, BumpState},
-        resources::BreakerConfig,
+        definition::BreakerDefinition,
     },
     input::resources::{GameAction, InputActions},
 };
 
 fn default_bump_feedback() -> BumpFeedback {
-    let config = BreakerConfig::default();
+    let config = BreakerDefinition::default();
     BumpFeedback {
         duration: config.bump_visual_duration,
         peak: config.bump_visual_peak,
@@ -229,7 +229,7 @@ fn animate_applies_position2d_y_offset_during_animation() {
     use rantzsoft_spatial2d::components::Position2D;
 
     let mut app = animate_test_app();
-    let config = BreakerConfig::default();
+    let config = BreakerDefinition::default();
     let params = default_bump_feedback();
 
     app.world_mut().spawn((
@@ -266,7 +266,7 @@ fn animate_removes_bump_visual_when_done() {
     use rantzsoft_spatial2d::components::Position2D;
 
     let mut app = animate_test_app();
-    let config = BreakerConfig::default();
+    let config = BreakerDefinition::default();
     let params = default_bump_feedback();
 
     let entity = app
@@ -307,7 +307,7 @@ fn animate_snaps_position2d_to_base_after_expiry() {
     use rantzsoft_spatial2d::components::Position2D;
 
     let mut app = animate_test_app();
-    let config = BreakerConfig::default();
+    let config = BreakerDefinition::default();
     let params = default_bump_feedback();
 
     // Start with an offset Y to verify the snap overrides it

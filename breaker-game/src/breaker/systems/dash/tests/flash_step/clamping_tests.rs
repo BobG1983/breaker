@@ -5,7 +5,7 @@ use super::helpers::*;
 use crate::{
     breaker::{
         components::{BaseWidth, Breaker, BreakerTilt, DashState, DashStateTimer},
-        resources::BreakerConfig,
+        definition::BreakerDefinition,
     },
     effect::effects::{flash_step::FlashStepActive, size_boost::ActiveSizeBoosts},
     input::resources::{GameAction, InputActions},
@@ -137,7 +137,7 @@ fn flash_step_teleport_with_size_multiplier_adjusts_clamp_half_width() {
     // When: DashRight
     // Then: Position2D.x == 280 (400 - 120 effective half-width from 60*2.0), NOT 600
     let mut app = test_app();
-    let config = BreakerConfig::default();
+    let config = BreakerDefinition::default();
     let entity = app
         .world_mut()
         .spawn((
@@ -176,7 +176,7 @@ fn flash_step_teleport_with_size_multiplier_adjusts_clamp_half_width() {
 fn flash_step_teleport_with_size_multiplier_one_matches_no_multiplier() {
     // Edge case: ActiveSizeBoosts(vec![1.0]) behaves same as no multiplier
     let mut app = test_app();
-    let config = BreakerConfig::default();
+    let config = BreakerDefinition::default();
     let entity = app
         .world_mut()
         .spawn((

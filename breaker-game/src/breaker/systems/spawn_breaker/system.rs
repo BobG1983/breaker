@@ -1,29 +1,28 @@
 //! System to spawn the breaker entity.
 
 use bevy::prelude::*;
-use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
-use rantzsoft_spatial2d::components::{
-    Position2D, PreviousPosition, PreviousScale, Scale2D, Velocity2D,
-};
-use tracing::debug;
+use rantzsoft_spatial2d::components::PreviousPosition;
 
 use crate::{
     breaker::{
-        components::{Breaker, BreakerTilt, BumpState, DashState, DashStateTimer},
+        BreakerRegistry, SelectedBreaker,
+        components::{Breaker, DashState},
         messages::BreakerSpawned,
         queries::BreakerResetData,
-        resources::BreakerConfig,
     },
-    shared::{BOLT_LAYER, BREAKER_LAYER, CleanupOnRunEnd, GameDrawLayer, PlayfieldConfig},
+    shared::PlayfieldConfig,
 };
 
-/// Spawns the breaker entity with all required components.
+/// Spawns or reuses the breaker entity using the builder.
 ///
 /// Runs when entering [`GameState::Playing`]. If a breaker already exists
-/// (persisted from a previous node), this is a no-op.
-pub fn spawn_breaker(
+/// (persisted from a previous node), this sends `BreakerSpawned` without
+/// spawning a new one. Otherwise, looks up the selected breaker in the
+/// registry and spawns via `Breaker::builder().definition(def)`.
+pub fn spawn_or_reuse_breaker(
     mut commands: Commands,
-    config: Res<BreakerConfig>,
+    selected: Res<SelectedBreaker>,
+    registry: Res<BreakerRegistry>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     existing: Query<Entity, With<Breaker>>,
@@ -33,47 +32,15 @@ pub fn spawn_breaker(
         breaker_spawned.write(BreakerSpawned);
         return;
     }
-
-    let entity = commands.spawn((
-        // Core breaker components
-        (
-            Breaker,
-            Velocity2D::default(),
-            DashState::default(),
-            BreakerTilt::default(),
-            BumpState::default(),
-            DashStateTimer::default(),
-        ),
-        // Spatial2d components
-        (
-            GameDrawLayer::Breaker,
-            Position2D(Vec2::new(0.0, config.y_position)),
-            PreviousPosition(Vec2::new(0.0, config.y_position)),
-            Scale2D {
-                x: config.width,
-                y: config.height,
-            },
-            PreviousScale {
-                x: config.width,
-                y: config.height,
-            },
-        ),
-        // Physics
-        (
-            Aabb2D::new(
-                Vec2::ZERO,
-                Vec2::new(config.width / 2.0, config.height / 2.0),
-            ),
-            CollisionLayers::new(BREAKER_LAYER, BOLT_LAYER),
-        ),
-        // Rendering + cleanup
-        (
-            Mesh2d(meshes.add(Rectangle::new(1.0, 1.0))),
-            MeshMaterial2d(materials.add(ColorMaterial::from_color(config.color()))),
-            CleanupOnRunEnd,
-        ),
-    ));
-    debug!("breaker spawned entity={:?}", entity.id());
+    let Some(def) = registry.get(&selected.0) else {
+        warn!("Breaker '{}' not found in registry", selected.0);
+        return;
+    };
+    Breaker::builder()
+        .definition(def)
+        .rendered(&mut meshes, &mut materials)
+        .primary()
+        .spawn(&mut commands);
     breaker_spawned.write(BreakerSpawned);
 }
 

@@ -9,7 +9,7 @@ use crate::{
             DashDuration, DashSpeedMultiplier, DashState, DashStateTimer, DashTilt, DashTiltEase,
             DecelEasing, SettleDuration, SettleTiltEase,
         },
-        resources::BreakerConfig,
+        definition::BreakerDefinition,
     },
     effect::effects::flash_step::FlashStepActive,
     input::resources::{GameAction, InputActions},
@@ -98,7 +98,7 @@ fn reversal_dash_right_with_custom_dash_params_uses_entity_values() {
     // Edge case: DashSpeedMultiplier(2.0), DashDuration(0.1) at position 0.0 dashing right
     //            teleports to 100.0 (500.0 * 2.0 * 0.1)
     let mut app = test_app();
-    let config = BreakerConfig::default();
+    let config = BreakerDefinition::default();
     let entity = app
         .world_mut()
         .spawn((
@@ -256,7 +256,7 @@ fn dash_from_idle_with_flash_step_does_normal_dash() {
     // When: DashLeft
     // Then: DashState == Dashing, velocity.x == -2000, position unchanged
     let mut app = test_app();
-    let config = BreakerConfig::default();
+    let config = BreakerDefinition::default();
     let entity = app
         .world_mut()
         .spawn((

@@ -3,8 +3,7 @@ use bevy::prelude::*;
 use crate::{
     bolt::{definition::BoltDefinition, messages::BoltSpawned, registry::BoltRegistry},
     breaker::{
-        BreakerConfig, definition::BreakerDefinition, registry::BreakerRegistry,
-        resources::SelectedBreaker,
+        definition::BreakerDefinition, registry::BreakerRegistry, resources::SelectedBreaker,
     },
     run::RunState,
     shared::GameRng,
@@ -14,7 +13,6 @@ pub(super) fn test_app() -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .add_message::<BoltSpawned>()
-        .init_resource::<BreakerConfig>()
         .init_resource::<RunState>()
         .init_resource::<Assets<Mesh>>()
         .init_resource::<Assets<ColorMaterial>>()

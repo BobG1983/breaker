@@ -15,5 +15,5 @@ pub mod systems;
 pub use definition::BreakerDefinition;
 pub use plugin::BreakerPlugin;
 pub use registry::BreakerRegistry;
-pub use resources::{BreakerConfig, BreakerDefaults, ForceBumpGrade, SelectedBreaker};
+pub use resources::{ForceBumpGrade, SelectedBreaker};
 pub use sets::BreakerSystems;

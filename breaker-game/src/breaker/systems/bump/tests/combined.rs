@@ -5,15 +5,15 @@ use crate::{
     bolt::messages::BoltImpactBreaker,
     breaker::{
         components::{Breaker, BumpState, DashState, DashStateTimer, SettleDuration},
+        definition::BreakerDefinition,
         messages::{BumpGrade, BumpPerformed},
-        resources::BreakerConfig,
     },
 };
 
 #[test]
 fn same_frame_hit_and_expiry_grades_not_whiffs() {
     let mut app = combined_bump_test_app();
-    let config = app.world().resource::<BreakerConfig>().clone();
+    let config = BreakerDefinition::default();
 
     let entity = app
         .world_mut()
@@ -67,9 +67,8 @@ fn same_frame_hit_and_expiry_grades_not_whiffs() {
 fn perfect_bump_cancels_dash() {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
-        .init_resource::<BreakerConfig>()
         .add_message::<BumpPerformed>();
-    let config = app.world().resource::<BreakerConfig>().clone();
+    let config = BreakerDefinition::default();
 
     let entity = app
         .world_mut()

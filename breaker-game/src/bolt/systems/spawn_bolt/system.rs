@@ -12,7 +12,7 @@ use crate::{
         registry::BoltRegistry,
         resources::{DEFAULT_BOLT_ANGLE_SPREAD, DEFAULT_BOLT_SPAWN_OFFSET_Y},
     },
-    breaker::{BreakerConfig, BreakerRegistry, SelectedBreaker, components::Breaker},
+    breaker::{BreakerRegistry, SelectedBreaker, components::Breaker},
     run::RunState,
     shared::GameRng,
 };
@@ -21,7 +21,7 @@ use crate::{
 ///
 /// Looks up the bolt definition from [`BoltRegistry`] via the
 /// [`SelectedBreaker`] -> [`BreakerRegistry`] chain. Falls back to
-/// [`BreakerConfig::y_position`] when the breaker entity does not exist
+/// [`BreakerDefinition::y_position`] when the breaker entity does not exist
 /// yet (both systems run on `OnEnter(Playing)` and deferred commands
 /// mean the breaker entity may not exist yet).
 ///
@@ -63,7 +63,7 @@ pub(crate) fn spawn_bolt(world: &mut World) {
         warn!("Bolt '{bolt_name}' (from breaker '{selected_name}') not found in BoltRegistry");
         return;
     };
-    let breaker_default_y = world.resource::<BreakerConfig>().y_position;
+    let breaker_default_y = breaker_def.y_position;
     let run_state_node_index = world.resource::<RunState>().node_index;
 
     let breaker_pos = world

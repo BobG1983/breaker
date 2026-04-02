@@ -1,14 +1,14 @@
 use super::helpers::*;
 use crate::breaker::{
     components::{Breaker, BumpState},
+    definition::BreakerDefinition,
     messages::BumpGrade,
-    resources::BreakerConfig,
 };
 
 #[test]
 fn retroactive_perfect_grades_and_sets_zero_cooldown() {
     let mut app = update_bump_test_app();
-    let config = app.world().resource::<BreakerConfig>().clone();
+    let config = BreakerDefinition::default();
 
     // post_hit_timer at max — just hit, pressing immediately
     let entity = app
@@ -43,7 +43,7 @@ fn retroactive_perfect_grades_and_sets_zero_cooldown() {
 #[test]
 fn retroactive_late_grades_correctly() {
     let mut app = update_bump_test_app();
-    let config = app.world().resource::<BreakerConfig>().clone();
+    let config = BreakerDefinition::default();
 
     // post_hit_timer low — hit happened a while ago, pressing late
     let remaining = config.late_window * 0.5; // some time left but past perfect
@@ -70,7 +70,7 @@ fn update_bump_retroactive_uses_last_hit_bolt() {
     // When: update_bump runs with Bump input (retroactive path)
     // Then: BumpPerformed.bolt matches last_hit_bolt
     let mut app = update_bump_test_app();
-    let config = app.world().resource::<BreakerConfig>().clone();
+    let config = BreakerDefinition::default();
 
     let bolt_entity = app.world_mut().spawn_empty().id();
 

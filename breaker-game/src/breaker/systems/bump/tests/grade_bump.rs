@@ -5,15 +5,16 @@ use crate::{
     bolt::messages::BoltImpactBreaker,
     breaker::{
         components::{Breaker, BumpState},
+        definition::BreakerDefinition,
         messages::BumpGrade,
-        resources::{BreakerConfig, ForceBumpGrade},
+        resources::ForceBumpGrade,
     },
 };
 
 #[test]
 fn bolt_hit_with_active_forward_perfect() {
     let mut app = grade_bump_test_app();
-    let config = app.world().resource::<BreakerConfig>().clone();
+    let config = BreakerDefinition::default();
 
     let entity = app
         .world_mut()
@@ -52,7 +53,7 @@ fn bolt_hit_with_active_forward_perfect() {
 #[test]
 fn bolt_hit_with_active_forward_early() {
     let mut app = grade_bump_test_app();
-    let config = app.world().resource::<BreakerConfig>().clone();
+    let config = BreakerDefinition::default();
 
     let entity = app
         .world_mut()
@@ -89,7 +90,7 @@ fn bolt_hit_with_active_forward_early() {
 #[test]
 fn bolt_hit_without_active_sets_post_hit_timer_no_message() {
     let mut app = grade_bump_test_app();
-    let config = app.world().resource::<BreakerConfig>().clone();
+    let config = BreakerDefinition::default();
 
     let entity = app
         .world_mut()
@@ -117,7 +118,7 @@ fn bolt_hit_without_active_sets_post_hit_timer_no_message() {
 #[test]
 fn no_hit_no_change() {
     let mut app = grade_bump_test_app();
-    let config = app.world().resource::<BreakerConfig>().clone();
+    let config = BreakerDefinition::default();
 
     let entity = app
         .world_mut()
@@ -144,13 +145,12 @@ fn grade_bump_forward_sends_bolt_entity() {
     // Then: BumpPerformed.bolt matches the bolt from BoltImpactBreaker
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
-        .init_resource::<BreakerConfig>()
         .add_message::<BoltImpactBreaker>()
         .add_message::<crate::breaker::messages::BumpPerformed>()
         .add_message::<crate::breaker::messages::BumpWhiffed>()
         .init_resource::<CapturedBumps>();
 
-    let config = app.world().resource::<BreakerConfig>().clone();
+    let config = BreakerDefinition::default();
 
     // Spawn a bolt entity to reference
     let bolt_entity = app.world_mut().spawn_empty().id();
@@ -197,13 +197,12 @@ fn grade_bump_sets_last_hit_bolt_when_no_active_bump() {
     // Then: BumpState.last_hit_bolt == Some(bolt_entity)
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
-        .init_resource::<BreakerConfig>()
         .add_message::<BoltImpactBreaker>()
         .add_message::<crate::breaker::messages::BumpPerformed>()
         .add_message::<crate::breaker::messages::BumpWhiffed>()
         .init_resource::<CapturedBumps>();
 
-    let config = app.world().resource::<BreakerConfig>().clone();
+    let config = BreakerDefinition::default();
 
     let bolt_entity = app.world_mut().spawn_empty().id();
 
@@ -243,7 +242,7 @@ fn grade_bump_uses_force_grade_when_some() {
     // When: grade_bump runs with a BoltImpactBreaker
     // Then: BumpPerformed.grade should be Late (overridden), not Perfect (calculated)
     let mut app = grade_bump_test_app();
-    let config = app.world().resource::<BreakerConfig>().clone();
+    let config = BreakerDefinition::default();
 
     app.insert_resource(ForceBumpGrade(Some(BumpGrade::Late)));
 
@@ -278,7 +277,7 @@ fn grade_bump_ignores_force_grade_when_none() {
     // When: grade_bump runs with a BoltImpactBreaker
     // Then: BumpPerformed.grade should be Perfect (normal calculation)
     let mut app = grade_bump_test_app();
-    let config = app.world().resource::<BreakerConfig>().clone();
+    let config = BreakerDefinition::default();
 
     app.insert_resource(ForceBumpGrade(None));
 
@@ -313,7 +312,7 @@ fn grade_bump_works_without_force_grade_resource() {
     // When: grade_bump runs with a BoltImpactBreaker
     // Then: BumpPerformed.grade should be Perfect (backward compatible)
     let mut app = grade_bump_test_app();
-    let config = app.world().resource::<BreakerConfig>().clone();
+    let config = BreakerDefinition::default();
 
     // Intentionally do NOT insert ForceBumpGrade resource
 

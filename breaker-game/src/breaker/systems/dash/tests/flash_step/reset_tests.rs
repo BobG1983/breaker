@@ -5,7 +5,7 @@ use super::helpers::*;
 use crate::{
     breaker::{
         components::{BaseWidth, Breaker, BreakerTilt, DashState, DashStateTimer},
-        resources::BreakerConfig,
+        definition::BreakerDefinition,
     },
     effect::effects::flash_step::FlashStepActive,
     input::resources::{GameAction, InputActions},
@@ -21,7 +21,7 @@ fn flash_step_teleport_resets_tilt_and_timer_to_idle() {
     // Then: tilt.angle == 0.0, tilt.ease_start == 0.0, tilt.ease_target == 0.0,
     //       timer.remaining == 0.0, DashState == Idle
     let mut app = test_app();
-    let config = BreakerConfig::default();
+    let config = BreakerDefinition::default();
     let entity = app
         .world_mut()
         .spawn((
@@ -80,7 +80,7 @@ fn flash_step_teleport_resets_tilt_and_timer_to_idle() {
 fn flash_step_teleport_resets_cleanly_with_nearly_expired_timer() {
     // Edge case: timer nearly expired (0.001) still resets cleanly
     let mut app = test_app();
-    let config = BreakerConfig::default();
+    let config = BreakerDefinition::default();
     let entity = app
         .world_mut()
         .spawn((

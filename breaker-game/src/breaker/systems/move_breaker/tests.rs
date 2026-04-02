@@ -7,7 +7,7 @@ use crate::{
         components::{
             BaseWidth, Breaker, BreakerAcceleration, BreakerDeceleration, DashState, DecelEasing,
         },
-        resources::BreakerConfig,
+        definition::BreakerDefinition,
     },
     effect::effects::{size_boost::ActiveSizeBoosts, speed_boost::ActiveSpeedBoosts},
     input::resources::{GameAction, InputActions},
@@ -54,28 +54,28 @@ fn tick(app: &mut App) {
 }
 
 fn spawn_breaker_at(app: &mut App, state: DashState, position: Vec2) -> Entity {
-    let config = BreakerConfig::default();
+    let def = BreakerDefinition::default();
     app.world_mut()
         .spawn((
             Breaker,
             state,
             Velocity2D(Vec2::ZERO),
-            MaxSpeed(config.max_speed),
-            BreakerAcceleration(config.acceleration),
-            BreakerDeceleration(config.deceleration),
+            MaxSpeed(def.max_speed),
+            BreakerAcceleration(def.acceleration),
+            BreakerDeceleration(def.deceleration),
             DecelEasing {
-                ease: config.decel_ease,
-                strength: config.decel_ease_strength,
+                ease: def.decel_ease,
+                strength: def.decel_ease_strength,
             },
-            BaseWidth(config.width),
+            BaseWidth(def.width),
             Position2D(position),
         ))
         .id()
 }
 
 fn spawn_breaker(app: &mut App, state: DashState) -> Entity {
-    let config = BreakerConfig::default();
-    spawn_breaker_at(app, state, Vec2::new(0.0, config.y_position))
+    let def = BreakerDefinition::default();
+    spawn_breaker_at(app, state, Vec2::new(0.0, def.y_position))
 }
 
 #[test]
@@ -128,12 +128,8 @@ fn position_clamped_to_playfield_bounds() {
     // When: move_breaker runs
     // Then: Position2D.0.x <= 340.0 (400 - 60)
     let mut app = integration_app();
-    let config = BreakerConfig::default();
-    let entity = spawn_breaker_at(
-        &mut app,
-        DashState::Idle,
-        Vec2::new(9999.0, config.y_position),
-    );
+    let def = BreakerDefinition::default();
+    let entity = spawn_breaker_at(&mut app, DashState::Idle, Vec2::new(9999.0, def.y_position));
     let playfield = app.world().resource::<PlayfieldConfig>().clone();
     let half_width = app.world().get::<BaseWidth>(entity).unwrap().half_width();
 
@@ -156,7 +152,7 @@ fn speed_multiplier_raises_effective_max_speed() {
     // When: move_breaker system runs
     // Then: velocity.x > 500 AND velocity.x <= 600 (effective max = 500 * 1.2 = 600)
     let mut app = integration_app();
-    let config = BreakerConfig::default();
+    let def = BreakerDefinition::default();
     let entity = app
         .world_mut()
         .spawn((
@@ -164,15 +160,15 @@ fn speed_multiplier_raises_effective_max_speed() {
             DashState::Idle,
             Velocity2D(Vec2::new(590.0, 0.0)),
             MaxSpeed(500.0),
-            BreakerAcceleration(config.acceleration),
-            BreakerDeceleration(config.deceleration),
+            BreakerAcceleration(def.acceleration),
+            BreakerDeceleration(def.deceleration),
             DecelEasing {
-                ease: config.decel_ease,
-                strength: config.decel_ease_strength,
+                ease: def.decel_ease,
+                strength: def.decel_ease_strength,
             },
-            BaseWidth(config.width),
+            BaseWidth(def.width),
             ActiveSpeedBoosts(vec![1.2]),
-            Position2D(Vec2::new(0.0, config.y_position)),
+            Position2D(Vec2::new(0.0, def.y_position)),
         ))
         .id();
 
@@ -199,7 +195,7 @@ fn speed_multiplier_raises_effective_max_speed() {
 fn no_speed_boost_base_max_speed_clamps_velocity() {
     // Regression guard: without BreakerSpeedBoost, velocity above max_speed IS clamped.
     let mut app = integration_app();
-    let config = BreakerConfig::default();
+    let def = BreakerDefinition::default();
     let entity = app
         .world_mut()
         .spawn((
@@ -210,11 +206,11 @@ fn no_speed_boost_base_max_speed_clamps_velocity() {
             BreakerAcceleration(0.0),
             BreakerDeceleration(0.0),
             DecelEasing {
-                ease: config.decel_ease,
-                strength: config.decel_ease_strength,
+                ease: def.decel_ease,
+                strength: def.decel_ease_strength,
             },
-            BaseWidth(config.width),
-            Position2D(Vec2::new(0.0, config.y_position)),
+            BaseWidth(def.width),
+            Position2D(Vec2::new(0.0, def.y_position)),
         ))
         .id();
 
@@ -240,7 +236,7 @@ fn size_multiplier_increases_effective_half_width_for_clamping() {
     // When: move_breaker runs
     // Then: Position2D.0.x clamped to max_x = 400 - 80 = 320
     let mut app = integration_app();
-    let config = BreakerConfig::default();
+    let def = BreakerDefinition::default();
 
     let playfield = app.world().resource::<PlayfieldConfig>().clone();
     assert!(
@@ -255,16 +251,16 @@ fn size_multiplier_increases_effective_half_width_for_clamping() {
             Breaker,
             DashState::Idle,
             Velocity2D(Vec2::ZERO),
-            MaxSpeed(config.max_speed),
+            MaxSpeed(def.max_speed),
             BreakerAcceleration(0.0),
             BreakerDeceleration(0.0),
             DecelEasing {
-                ease: config.decel_ease,
-                strength: config.decel_ease_strength,
+                ease: def.decel_ease,
+                strength: def.decel_ease_strength,
             },
             BaseWidth(120.0),
             ActiveSizeBoosts(vec![4.0_f32 / 3.0]),
-            Position2D(Vec2::new(9999.0, config.y_position)),
+            Position2D(Vec2::new(9999.0, def.y_position)),
         ))
         .id();
 

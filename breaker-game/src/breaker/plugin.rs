@@ -7,13 +7,12 @@ use crate::{
     breaker::{
         BreakerSystems, ForceBumpGrade, SelectedBreaker,
         messages::{BumpPerformed, BumpWhiffed},
-        resources::BreakerConfig,
         systems::{
             animate_bump_visual, animate_tilt_visual, apply_node_scale_to_breaker,
-            breaker_cell_collision, breaker_wall_collision, dispatch_breaker_effects, grade_bump,
-            init_breaker, init_breaker_params, move_breaker, perfect_bump_dash_cancel,
-            reset_breaker, spawn_breaker, spawn_bump_grade_text, spawn_whiff_text,
-            sync_breaker_scale, trigger_bump_visual, update_breaker_state, update_bump,
+            breaker_cell_collision, breaker_wall_collision, grade_bump, move_breaker,
+            perfect_bump_dash_cancel, reset_breaker, spawn_bump_grade_text, spawn_or_reuse_breaker,
+            spawn_whiff_text, sync_breaker_scale, trigger_bump_visual, update_breaker_state,
+            update_bump,
         },
     },
     run::node::sets::NodeSystems,
@@ -33,35 +32,19 @@ impl Plugin for BreakerPlugin {
             .add_message::<BreakerSpawned>()
             .add_message::<BreakerImpactCell>()
             .add_message::<BreakerImpactWall>()
-            .init_resource::<BreakerConfig>()
             .init_resource::<SelectedBreaker>()
             .init_resource::<ForceBumpGrade>()
-            .add_systems(
-                OnEnter(GameState::Playing),
-                (
-                    spawn_breaker,
-                    ApplyDeferred,
-                    init_breaker_params.in_set(BreakerSystems::InitParams),
-                )
-                    .chain(),
-            )
-            .add_systems(
-                OnEnter(GameState::Playing),
-                (init_breaker, dispatch_breaker_effects)
-                    .chain()
-                    .after(BreakerSystems::InitParams)
-                    .after(NodeSystems::Spawn),
-            )
+            .add_systems(OnEnter(GameState::Playing), spawn_or_reuse_breaker)
             .add_systems(
                 OnEnter(GameState::Playing),
                 apply_node_scale_to_breaker
-                    .after(BreakerSystems::InitParams)
+                    .after(spawn_or_reuse_breaker)
                     .after(NodeSystems::Spawn),
             )
             .add_systems(
                 OnEnter(GameState::Playing),
                 reset_breaker
-                    .after(BreakerSystems::InitParams)
+                    .after(spawn_or_reuse_breaker)
                     .in_set(BreakerSystems::Reset),
             )
             .add_systems(
@@ -110,10 +93,13 @@ mod tests {
             .add_plugins(MinimalPlugins)
             .add_plugins(bevy::state::app::StatesPlugin)
             .add_plugins(bevy::asset::AssetPlugin::default())
-            .init_asset::<crate::breaker::BreakerDefaults>()
+            .init_asset::<Mesh>()
+            .init_asset::<ColorMaterial>()
             .init_state::<GameState>()
             .add_sub_state::<PlayingState>()
             .init_resource::<crate::shared::PlayfieldConfig>()
+            .init_resource::<crate::breaker::BreakerRegistry>()
+            .init_resource::<SelectedBreaker>()
             // InputPlugin owns InputActions — init resources it provides
             .init_resource::<ButtonInput<KeyCode>>()
             .add_message::<bevy::input::keyboard::KeyboardInput>()

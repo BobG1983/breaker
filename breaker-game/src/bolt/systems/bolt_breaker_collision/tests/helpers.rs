@@ -13,7 +13,7 @@ use crate::{
     },
     breaker::{
         components::{BaseHeight, BaseWidth, Breaker, BreakerReflectionSpread, BreakerTilt},
-        resources::BreakerConfig,
+        definition::BreakerDefinition,
     },
     shared::{BOLT_LAYER, BREAKER_LAYER, GameDrawLayer, NodeScalingFactor},
 };
@@ -61,7 +61,7 @@ pub(super) fn test_bolt_definition() -> BoltDefinition {
 }
 
 pub(super) fn default_reflection_spread() -> BreakerReflectionSpread {
-    BreakerReflectionSpread(BreakerConfig::default().reflection_spread.to_radians())
+    BreakerReflectionSpread(BreakerDefinition::default().reflection_spread.to_radians())
 }
 
 /// Breaker entities use `Position2D` as canonical position.

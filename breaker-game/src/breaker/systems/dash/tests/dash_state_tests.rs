@@ -5,7 +5,7 @@ use super::{super::system::*, helpers::*};
 use crate::{
     breaker::{
         components::{BreakerTilt, DashState, DashStateTimer},
-        resources::BreakerConfig,
+        definition::BreakerDefinition,
     },
     input::resources::{GameAction, InputActions},
 };
@@ -130,7 +130,7 @@ fn settling_tilt_is_frame_rate_independent() {
     use std::time::Duration;
 
     let start_angle = 0.44;
-    let config = BreakerConfig::default();
+    let config = BreakerDefinition::default();
     let settle_dur = config.settle_duration;
 
     let dt_60 = Duration::from_secs_f64(1.0 / 60.0);
@@ -202,7 +202,7 @@ fn settling_tilt_is_frame_rate_independent() {
 fn settling_tilt_eased_not_linear() {
     let mut app = test_app();
     let entity = spawn_test_breaker(&mut app);
-    let config = BreakerConfig::default();
+    let config = BreakerDefinition::default();
 
     let start_angle = 0.44;
     *app.world_mut().get_mut::<DashState>(entity).unwrap() = DashState::Settling;
@@ -255,7 +255,7 @@ fn braking_transitions_to_settling() {
 fn brake_tilt_eases_not_snaps() {
     let mut app = test_app();
     let entity = spawn_test_breaker(&mut app);
-    let config = BreakerConfig::default();
+    let config = BreakerDefinition::default();
 
     let dash_tilt_angle = config.dash_tilt_angle.to_radians();
     let brake_tilt_angle = config.brake_tilt_angle.to_radians();

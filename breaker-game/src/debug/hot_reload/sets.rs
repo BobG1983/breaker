@@ -4,12 +4,10 @@ use bevy::prelude::*;
 
 /// System sets for hot-reload propagation ordering.
 ///
-/// `PropagateDefaults` runs first (RON asset → Config resource),
-/// then `PropagateConfig` (Config resource → entity components).
+/// `PropagateDefaults` runs when registry or content changes need to be
+/// propagated to live game state.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub(crate) enum HotReloadSystems {
-    /// Defaults asset changed → re-seed Config resource.
+    /// Defaults asset changed → re-seed Config resource / re-stamp entity components.
     PropagateDefaults,
-    /// Config resource changed → force-overwrite entity components.
-    PropagateConfig,
 }

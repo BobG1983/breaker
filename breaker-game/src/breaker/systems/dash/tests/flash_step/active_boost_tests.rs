@@ -5,7 +5,7 @@ use super::helpers::*;
 use crate::{
     breaker::{
         components::{BaseWidth, Breaker, BreakerTilt, DashState, DashStateTimer},
-        resources::BreakerConfig,
+        definition::BreakerDefinition,
     },
     effect::effects::{
         flash_step::FlashStepActive, size_boost::ActiveSizeBoosts, speed_boost::ActiveSpeedBoosts,
@@ -23,7 +23,7 @@ fn flash_step_teleport_respects_speed_multiplier_for_distance() {
     // When: DashLeft
     // Then: Position2D.x == -250.0 (200 + (-1)*500*1.5*4*0.15 = 200 - 450)
     let mut app = test_app();
-    let config = BreakerConfig::default();
+    let config = BreakerDefinition::default();
     let entity = app
         .world_mut()
         .spawn((
@@ -62,7 +62,7 @@ fn flash_step_teleport_respects_speed_multiplier_for_distance() {
 fn flash_step_teleport_with_speed_multiplier_one_matches_no_multiplier() {
     // Edge case: ActiveSpeedBoosts(vec![1.0]) same result as no multiplier (300 distance)
     let mut app = test_app();
-    let config = BreakerConfig::default();
+    let config = BreakerDefinition::default();
     let entity = app
         .world_mut()
         .spawn((
@@ -107,7 +107,7 @@ fn flash_step_teleport_reads_active_speed_boosts_for_distance() {
     // When: DashLeft
     // Then: Position2D.x = 200.0 + (-1) * 500.0 * 1.5 * 4.0 * 0.15 = 200.0 - 450.0 = -250.0
     let mut app = test_app();
-    let config = BreakerConfig::default();
+    let config = BreakerDefinition::default();
     let entity = app
         .world_mut()
         .spawn((
@@ -153,7 +153,7 @@ fn flash_step_teleport_reads_active_size_boosts_for_clamp_half_width() {
     // When: dash system clamps after flash step teleport
     // Then: effective_half_w = 60.0 * 2.0 = 120.0 -> max_x = 400.0 - 120.0 = 280.0
     let mut app = test_app();
-    let config = BreakerConfig::default();
+    let config = BreakerDefinition::default();
     let entity = app
         .world_mut()
         .spawn((

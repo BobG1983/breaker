@@ -8,8 +8,8 @@ use crate::{
             BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown, BumpPerfectWindow,
             BumpWeakCooldown, SettleDuration,
         },
+        definition::BreakerDefinition,
         messages::{BumpPerformed, BumpWhiffed},
-        resources::BreakerConfig,
     },
     input::resources::{GameAction, InputActions},
 };
@@ -48,7 +48,7 @@ pub(super) fn capture_whiffs(
 }
 
 pub(super) fn bump_param_bundle(
-    config: &BreakerConfig,
+    def: &BreakerDefinition,
 ) -> (
     BumpPerfectWindow,
     BumpEarlyWindow,
@@ -58,19 +58,18 @@ pub(super) fn bump_param_bundle(
     SettleDuration,
 ) {
     (
-        BumpPerfectWindow(config.perfect_window),
-        BumpEarlyWindow(config.early_window),
-        BumpLateWindow(config.late_window),
-        BumpPerfectCooldown(config.perfect_bump_cooldown),
-        BumpWeakCooldown(config.weak_bump_cooldown),
-        SettleDuration(config.settle_duration),
+        BumpPerfectWindow(def.perfect_window),
+        BumpEarlyWindow(def.early_window),
+        BumpLateWindow(def.late_window),
+        BumpPerfectCooldown(def.perfect_bump_cooldown),
+        BumpWeakCooldown(def.weak_bump_cooldown),
+        SettleDuration(def.settle_duration),
     )
 }
 
 pub(super) fn update_bump_test_app() -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
-        .init_resource::<BreakerConfig>()
         .init_resource::<InputActions>()
         .add_message::<BumpPerformed>()
         .add_message::<BumpWhiffed>()
@@ -112,7 +111,6 @@ pub(super) fn enqueue_hit(
 pub(super) fn grade_bump_test_app() -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
-        .init_resource::<BreakerConfig>()
         .add_message::<BoltImpactBreaker>()
         .add_message::<BumpPerformed>()
         .add_message::<BumpWhiffed>()
@@ -134,7 +132,6 @@ pub(super) fn grade_bump_test_app() -> App {
 pub(super) fn combined_bump_test_app() -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
-        .init_resource::<BreakerConfig>()
         .init_resource::<InputActions>()
         .add_message::<BoltImpactBreaker>()
         .add_message::<BumpPerformed>()

@@ -2,7 +2,7 @@ use bevy::math::curve::easing::EaseFunction;
 
 use crate::breaker::definition::BreakerDefinition;
 
-/// Creates a `BreakerDefinition` matching `BreakerConfig::default()` values,
+/// Creates a `BreakerDefinition` matching `BreakerDefinition::default()` values,
 /// so existing component assertions remain valid.
 pub(super) fn test_breaker_definition() -> BreakerDefinition {
     ron::de::from_str(
