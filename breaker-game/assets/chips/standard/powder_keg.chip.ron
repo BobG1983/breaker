@@ -8,7 +8,7 @@
                 When(trigger: Impacted(Cell), then: [
                     On(target: Cell, then: [
                         When(trigger: Died, then: [
-                            Do(Explode(range: 48.0, damage_mult: 1.0)),
+                            Do(Explode(range: 48.0, damage: 10.0)),
                         ]),
                     ]),
                 ]),
