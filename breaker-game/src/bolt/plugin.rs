@@ -84,7 +84,7 @@ impl Plugin for BoltPlugin {
                     .run_if(in_state(PlayingState::Active)),
             )
             .add_systems(
-                FixedUpdate,
+                Update,
                 sync_bolt_scale.run_if(in_state(PlayingState::Active)),
             );
     }

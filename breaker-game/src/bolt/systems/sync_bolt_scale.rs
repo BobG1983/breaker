@@ -45,16 +45,12 @@ mod tests {
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
-            .add_systems(FixedUpdate, sync_bolt_scale);
+            .add_systems(Update, sync_bolt_scale);
         app
     }
 
-    /// Accumulates one fixed timestep then runs one update.
+    /// Runs one update tick.
     fn tick(app: &mut App) {
-        let timestep = app.world().resource::<Time<Fixed>>().timestep();
-        app.world_mut()
-            .resource_mut::<Time<Fixed>>()
-            .accumulate_overstep(timestep);
         app.update();
     }
 
