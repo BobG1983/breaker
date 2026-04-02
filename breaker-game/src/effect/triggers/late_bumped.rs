@@ -138,14 +138,33 @@ mod tests {
 
         let mut app = test_app();
 
+        let def = crate::breaker::definition::BreakerDefinition::default();
         let breaker_a = app
             .world_mut()
-            .spawn((Breaker, StagedEffects::default()))
+            .spawn(
+                Breaker::builder()
+                    .definition(&def)
+                    .headless()
+                    .primary()
+                    .build(),
+            )
             .id();
+        app.world_mut()
+            .entity_mut(breaker_a)
+            .insert(StagedEffects::default());
         let breaker_b = app
             .world_mut()
-            .spawn((Breaker, StagedEffects::default()))
+            .spawn(
+                Breaker::builder()
+                    .definition(&def)
+                    .headless()
+                    .extra()
+                    .build(),
+            )
             .id();
+        app.world_mut()
+            .entity_mut(breaker_b)
+            .insert(StagedEffects::default());
 
         let bolt = app
             .world_mut()

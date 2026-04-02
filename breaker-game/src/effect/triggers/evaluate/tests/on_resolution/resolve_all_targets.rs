@@ -29,9 +29,19 @@ fn resolve_on_command_resolves_all_cells_to_cell_entities() {
         .id();
 
     // Also spawn non-target entities to ensure they are not affected
+    let def = crate::breaker::definition::BreakerDefinition::default();
     let breaker = world
-        .spawn((Breaker, BoundEffects::default(), StagedEffects::default()))
+        .spawn(
+            Breaker::builder()
+                .definition(&def)
+                .headless()
+                .primary()
+                .build(),
+        )
         .id();
+    world
+        .entity_mut(breaker)
+        .insert((BoundEffects::default(), StagedEffects::default()));
     let bolt = world
         .spawn((
             Bolt,

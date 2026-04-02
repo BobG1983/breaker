@@ -123,45 +123,63 @@ pub(super) fn spawn_bolt(app: &mut App) -> Entity {
 /// Spawn a Breaker entity with effect components.
 pub(super) fn spawn_breaker(app: &mut App) -> Entity {
     use crate::{
-        breaker::components::Breaker,
+        breaker::{components::Breaker, definition::BreakerDefinition},
         effect::effects::{
             bump_force::ActiveBumpForces, damage_boost::ActiveDamageBoosts,
             size_boost::ActiveSizeBoosts, speed_boost::ActiveSpeedBoosts,
         },
     };
 
-    app.world_mut()
-        .spawn((
-            Breaker,
-            BoundEffects::default(),
-            StagedEffects::default(),
-            ActiveBumpForces::default(),
-            ActiveSizeBoosts::default(),
-            ActiveDamageBoosts::default(),
-            ActiveSpeedBoosts::default(),
-        ))
-        .id()
+    let def = BreakerDefinition::default();
+    let entity = app
+        .world_mut()
+        .spawn(
+            Breaker::builder()
+                .definition(&def)
+                .headless()
+                .primary()
+                .build(),
+        )
+        .id();
+    app.world_mut().entity_mut(entity).insert((
+        BoundEffects::default(),
+        StagedEffects::default(),
+        ActiveBumpForces::default(),
+        ActiveSizeBoosts::default(),
+        ActiveDamageBoosts::default(),
+        ActiveSpeedBoosts::default(),
+    ));
+    entity
 }
 
 /// Spawn a Breaker entity without `BoundEffects` or `StagedEffects`.
 pub(super) fn spawn_breaker_bare(app: &mut App) -> Entity {
     use crate::{
-        breaker::components::Breaker,
+        breaker::{components::Breaker, definition::BreakerDefinition},
         effect::effects::{
             bump_force::ActiveBumpForces, damage_boost::ActiveDamageBoosts,
             size_boost::ActiveSizeBoosts, speed_boost::ActiveSpeedBoosts,
         },
     };
 
-    app.world_mut()
-        .spawn((
-            Breaker,
-            ActiveBumpForces::default(),
-            ActiveSizeBoosts::default(),
-            ActiveDamageBoosts::default(),
-            ActiveSpeedBoosts::default(),
-        ))
-        .id()
+    let def = BreakerDefinition::default();
+    let entity = app
+        .world_mut()
+        .spawn(
+            Breaker::builder()
+                .definition(&def)
+                .headless()
+                .primary()
+                .build(),
+        )
+        .id();
+    app.world_mut().entity_mut(entity).insert((
+        ActiveBumpForces::default(),
+        ActiveSizeBoosts::default(),
+        ActiveDamageBoosts::default(),
+        ActiveSpeedBoosts::default(),
+    ));
+    entity
 }
 
 /// Spawn a Cell entity with effect components.

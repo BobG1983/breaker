@@ -745,7 +745,14 @@ fn existing_breaker_is_reused_no_new_spawn() {
     // Given: one breaker already exists
     let mut app = test_app();
     // Pre-spawn a breaker entity
-    app.world_mut().spawn(Breaker);
+    let def = BreakerDefinition::default();
+    app.world_mut().spawn(
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .build(),
+    );
     app.update();
 
     let count = app
@@ -763,7 +770,14 @@ fn existing_breaker_is_reused_no_new_spawn() {
 fn existing_breaker_still_sends_breaker_spawned() {
     let mut app = test_app();
     // Pre-spawn a breaker entity
-    app.world_mut().spawn(Breaker);
+    let def = BreakerDefinition::default();
+    app.world_mut().spawn(
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .build(),
+    );
     app.update();
 
     let messages = app.world().resource::<Messages<BreakerSpawned>>();
@@ -777,8 +791,21 @@ fn existing_breaker_still_sends_breaker_spawned() {
 fn two_existing_breakers_both_preserved() {
     // Edge case: two breakers exist already
     let mut app = test_app();
-    app.world_mut().spawn(Breaker);
-    app.world_mut().spawn(Breaker);
+    let def = BreakerDefinition::default();
+    app.world_mut().spawn(
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .build(),
+    );
+    app.world_mut().spawn(
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .build(),
+    );
     app.update();
 
     let count = app

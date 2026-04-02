@@ -20,9 +20,19 @@ fn resolve_on_command_with_no_matching_entities_is_noop() {
     let mut world = World::new();
 
     // Spawn a Breaker but target AllCells -- no Cell entities exist
+    let def = crate::breaker::definition::BreakerDefinition::default();
     let breaker = world
-        .spawn((Breaker, BoundEffects::default(), StagedEffects::default()))
+        .spawn(
+            Breaker::builder()
+                .definition(&def)
+                .headless()
+                .primary()
+                .build(),
+        )
         .id();
+    world
+        .entity_mut(breaker)
+        .insert((BoundEffects::default(), StagedEffects::default()));
 
     let cmd = ResolveOnCommand {
         target: Target::AllCells,

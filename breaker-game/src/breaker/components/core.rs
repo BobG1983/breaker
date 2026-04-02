@@ -32,6 +32,7 @@ pub struct BreakerInitialized;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::breaker::definition::BreakerDefinition;
 
     // ── Breaker #[require] tests ─────────────────────────────────
 
@@ -40,7 +41,17 @@ mod tests {
         use rantzsoft_spatial2d::components::Spatial2D;
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        let entity = app.world_mut().spawn(Breaker).id();
+        let def = BreakerDefinition::default();
+        let entity = app
+            .world_mut()
+            .spawn(
+                Breaker::builder()
+                    .definition(&def)
+                    .headless()
+                    .primary()
+                    .build(),
+            )
+            .id();
         app.update();
         assert!(
             app.world().get::<Spatial2D>(entity).is_some(),
@@ -53,7 +64,17 @@ mod tests {
         use rantzsoft_spatial2d::components::InterpolateTransform2D;
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        let entity = app.world_mut().spawn(Breaker).id();
+        let def = BreakerDefinition::default();
+        let entity = app
+            .world_mut()
+            .spawn(
+                Breaker::builder()
+                    .definition(&def)
+                    .headless()
+                    .primary()
+                    .build(),
+            )
+            .id();
         app.update();
         assert!(
             app.world().get::<InterpolateTransform2D>(entity).is_some(),
@@ -62,15 +83,25 @@ mod tests {
     }
 
     #[test]
-    fn breaker_require_does_not_insert_cleanup_on_run_end() {
+    fn primary_builder_inserts_cleanup_on_run_end() {
         use crate::shared::CleanupOnRunEnd;
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        let entity = app.world_mut().spawn(Breaker).id();
+        let def = BreakerDefinition::default();
+        let entity = app
+            .world_mut()
+            .spawn(
+                Breaker::builder()
+                    .definition(&def)
+                    .headless()
+                    .primary()
+                    .build(),
+            )
+            .id();
         app.update();
         assert!(
-            app.world().get::<CleanupOnRunEnd>(entity).is_none(),
-            "Breaker #[require] should NOT auto-insert CleanupOnRunEnd"
+            app.world().get::<CleanupOnRunEnd>(entity).is_some(),
+            "Primary builder should insert CleanupOnRunEnd"
         );
     }
 
@@ -79,7 +110,17 @@ mod tests {
         use crate::shared::CleanupOnNodeExit;
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        let entity = app.world_mut().spawn(Breaker).id();
+        let def = BreakerDefinition::default();
+        let entity = app
+            .world_mut()
+            .spawn(
+                Breaker::builder()
+                    .definition(&def)
+                    .headless()
+                    .primary()
+                    .build(),
+            )
+            .id();
         app.update();
         assert!(
             app.world().get::<CleanupOnNodeExit>(entity).is_none(),
@@ -96,9 +137,16 @@ mod tests {
         use crate::shared::{BOLT_LAYER, BREAKER_LAYER};
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
+        let def = BreakerDefinition::default();
         let entity = app
             .world_mut()
-            .spawn((Breaker, CollisionLayers::new(BREAKER_LAYER, BOLT_LAYER)))
+            .spawn(
+                Breaker::builder()
+                    .definition(&def)
+                    .headless()
+                    .primary()
+                    .build(),
+            )
             .id();
         app.update();
         let layers = app

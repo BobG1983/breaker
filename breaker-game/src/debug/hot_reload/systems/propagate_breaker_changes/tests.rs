@@ -5,7 +5,7 @@ use super::system::*;
 use crate::{
     breaker::{
         SelectedBreaker,
-        components::{BaseWidth, Breaker, BreakerBaseY, BreakerReflectionSpread, DashTilt},
+        components::{Breaker, BreakerBaseY, BreakerReflectionSpread, DashTilt},
         definition::BreakerDefinition,
         registry::BreakerRegistry,
     },
@@ -13,7 +13,6 @@ use crate::{
         BoundEffects, EffectKind, EffectNode, RootEffect, Target, Trigger,
         effects::life_lost::LivesCount,
     },
-    shared::BaseHeight,
 };
 
 fn test_app() -> App {
@@ -84,17 +83,20 @@ fn hot_reload_stamps_max_speed_from_definition() {
         .insert_resource(SelectedBreaker("Test".to_owned()));
 
     // Spawn breaker with old MaxSpeed
+    let def = BreakerDefinition::default();
     let entity = app
         .world_mut()
-        .spawn((
-            Breaker,
-            MaxSpeed(500.0),
-            BaseWidth(120.0),
-            BaseHeight(20.0),
-            BreakerBaseY(-250.0),
-            BoundEffects::default(),
-        ))
+        .spawn(
+            Breaker::builder()
+                .definition(&def)
+                .headless()
+                .primary()
+                .build(),
+        )
         .id();
+    app.world_mut()
+        .entity_mut(entity)
+        .insert(BoundEffects::default());
 
     // Flush Added
     app.update();
@@ -135,15 +137,22 @@ fn hot_reload_updates_reflection_spread_in_radians() {
     app.world_mut()
         .insert_resource(SelectedBreaker("Test".to_owned()));
 
+    let def = BreakerDefinition::default();
     let entity = app
         .world_mut()
-        .spawn((
-            Breaker,
-            BreakerReflectionSpread(999.0),
-            DashTilt(999.0),
-            BoundEffects::default(),
-        ))
+        .spawn(
+            Breaker::builder()
+                .definition(&def)
+                .headless()
+                .primary()
+                .build(),
+        )
         .id();
+    app.world_mut().entity_mut(entity).insert((
+        BreakerReflectionSpread(999.0),
+        DashTilt(999.0),
+        BoundEffects::default(),
+    ));
 
     // Flush Added
     app.update();
@@ -193,10 +202,20 @@ fn lives_count_reset_on_breaker_change() {
         .insert_resource(SelectedBreaker("Test".to_owned()));
 
     // Spawn breaker with 1 life remaining (took damage)
+    let def = BreakerDefinition::default();
     let entity = app
         .world_mut()
-        .spawn((Breaker, LivesCount(Some(1)), BoundEffects::default()))
+        .spawn(
+            Breaker::builder()
+                .definition(&def)
+                .headless()
+                .primary()
+                .build(),
+        )
         .id();
+    app.world_mut()
+        .entity_mut(entity)
+        .insert((LivesCount(Some(1)), BoundEffects::default()));
 
     // Flush Added
     app.update();
@@ -237,10 +256,20 @@ fn lives_count_reset_to_none_on_breaker_change() {
         .insert_resource(SelectedBreaker("Test".to_owned()));
 
     // Spawn breaker with 2 finite lives
+    let def = BreakerDefinition::default();
     let entity = app
         .world_mut()
-        .spawn((Breaker, LivesCount(Some(2)), BoundEffects::default()))
+        .spawn(
+            Breaker::builder()
+                .definition(&def)
+                .headless()
+                .primary()
+                .build(),
+        )
         .id();
+    app.world_mut()
+        .entity_mut(entity)
+        .insert((LivesCount(Some(2)), BoundEffects::default()));
 
     // Flush Added
     app.update();
@@ -288,10 +317,20 @@ fn active_chains_rebuilt_on_breaker_change() {
     app.world_mut()
         .insert_resource(SelectedBreaker("Test".to_owned()));
 
+    let def = BreakerDefinition::default();
     let breaker_entity = app
         .world_mut()
-        .spawn((Breaker, BoundEffects::default()))
+        .spawn(
+            Breaker::builder()
+                .definition(&def)
+                .headless()
+                .primary()
+                .build(),
+        )
         .id();
+    app.world_mut()
+        .entity_mut(breaker_entity)
+        .insert(BoundEffects::default());
 
     // Flush Added
     app.update();
@@ -352,13 +391,21 @@ fn active_chains_rebuilt_on_breaker_change() {
 fn registry_is_added_guard_prevents_stamping() {
     let mut app = test_app();
 
-    let def = make_test_def("Test", Some(3));
-
     // Spawn breaker with MaxSpeed(500.0)
+    let def = make_test_def("Test", Some(3));
     let entity = app
         .world_mut()
-        .spawn((Breaker, MaxSpeed(500.0), BoundEffects::default()))
+        .spawn(
+            Breaker::builder()
+                .definition(&def)
+                .headless()
+                .primary()
+                .build(),
+        )
         .id();
+    app.world_mut()
+        .entity_mut(entity)
+        .insert(BoundEffects::default());
 
     // Insert registry for the first time — this is an "add", not a "change"
     {
@@ -396,10 +443,20 @@ fn hot_reload_updates_breaker_base_y_from_definition() {
     app.world_mut()
         .insert_resource(SelectedBreaker("Test".to_owned()));
 
+    let def = BreakerDefinition::default();
     let entity = app
         .world_mut()
-        .spawn((Breaker, BreakerBaseY(-250.0), BoundEffects::default()))
+        .spawn(
+            Breaker::builder()
+                .definition(&def)
+                .headless()
+                .primary()
+                .build(),
+        )
         .id();
+    app.world_mut()
+        .entity_mut(entity)
+        .insert(BoundEffects::default());
 
     // Flush Added
     app.update();
@@ -441,10 +498,20 @@ fn lives_count_inserted_on_entity_without_prior_lives_count() {
         .insert_resource(SelectedBreaker("Test".to_owned()));
 
     // Spawn breaker WITHOUT LivesCount component
+    let def = BreakerDefinition::default();
     let entity = app
         .world_mut()
-        .spawn((Breaker, BoundEffects::default()))
+        .spawn(
+            Breaker::builder()
+                .definition(&def)
+                .headless()
+                .primary()
+                .build(),
+        )
         .id();
+    app.world_mut()
+        .entity_mut(entity)
+        .insert(BoundEffects::default());
 
     // Flush Added
     app.update();
@@ -493,10 +560,20 @@ fn speed_boost_chains_appear_in_effect_chains_on_breaker_change() {
     app.world_mut()
         .insert_resource(SelectedBreaker("Test".to_owned()));
 
+    let def = BreakerDefinition::default();
     let breaker_entity = app
         .world_mut()
-        .spawn((Breaker, BoundEffects::default()))
+        .spawn(
+            Breaker::builder()
+                .definition(&def)
+                .headless()
+                .primary()
+                .build(),
+        )
         .id();
+    app.world_mut()
+        .entity_mut(breaker_entity)
+        .insert(BoundEffects::default());
 
     // Flush Added
     app.update();

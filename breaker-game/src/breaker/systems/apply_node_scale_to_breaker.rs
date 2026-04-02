@@ -28,7 +28,10 @@ pub(crate) fn apply_node_scale_to_breaker(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::run::node::{NodeLayout, definition::NodePool};
+    use crate::{
+        breaker::definition::BreakerDefinition,
+        run::node::{NodeLayout, definition::NodePool},
+    };
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -59,7 +62,17 @@ mod tests {
 
         app.insert_resource(ActiveNodeLayout(make_layout(0.7)));
 
-        let entity = app.world_mut().spawn(Breaker).id();
+        let def = BreakerDefinition::default();
+        let entity = app
+            .world_mut()
+            .spawn(
+                Breaker::builder()
+                    .definition(&def)
+                    .headless()
+                    .primary()
+                    .build(),
+            )
+            .id();
 
         app.update();
 
@@ -84,10 +97,20 @@ mod tests {
 
         app.insert_resource(ActiveNodeLayout(make_layout(0.9)));
 
+        let def = BreakerDefinition::default();
         let entity = app
             .world_mut()
-            .spawn((Breaker, NodeScalingFactor(0.7)))
+            .spawn(
+                Breaker::builder()
+                    .definition(&def)
+                    .headless()
+                    .primary()
+                    .build(),
+            )
             .id();
+        app.world_mut()
+            .entity_mut(entity)
+            .insert(NodeScalingFactor(0.7));
 
         app.update();
 
@@ -109,7 +132,17 @@ mod tests {
         // Then: no panic, no NodeScalingFactor inserted
         let mut app = test_app();
 
-        let entity = app.world_mut().spawn(Breaker).id();
+        let def = BreakerDefinition::default();
+        let entity = app
+            .world_mut()
+            .spawn(
+                Breaker::builder()
+                    .definition(&def)
+                    .headless()
+                    .primary()
+                    .build(),
+            )
+            .id();
 
         app.update();
 

@@ -11,7 +11,7 @@ use bevy::prelude::*;
 
 use crate::{
     bolt::components::{Bolt, PrimaryBolt},
-    breaker::components::{Breaker, PrimaryBreaker},
+    breaker::components::Breaker,
     cells::components::Cell,
     effect::{commands::ResolveOnCommand, core::*, effects::speed_boost::ActiveSpeedBoosts},
     wall::components::Wall,
@@ -99,17 +99,31 @@ fn bolt_without_context_and_no_primary_bolt_is_noop() {
 #[test]
 fn breaker_without_context_resolves_to_primary_breaker_only() {
     let mut world = World::new();
+    let def = crate::breaker::definition::BreakerDefinition::default();
     let primary = world
-        .spawn((
-            Breaker,
-            PrimaryBreaker,
-            BoundEffects::default(),
-            StagedEffects::default(),
-        ))
+        .spawn(
+            Breaker::builder()
+                .definition(&def)
+                .headless()
+                .primary()
+                .build(),
+        )
         .id();
+    world
+        .entity_mut(primary)
+        .insert((BoundEffects::default(), StagedEffects::default()));
     let secondary = world
-        .spawn((Breaker, BoundEffects::default(), StagedEffects::default()))
+        .spawn(
+            Breaker::builder()
+                .definition(&def)
+                .headless()
+                .extra()
+                .build(),
+        )
         .id();
+    world
+        .entity_mut(secondary)
+        .insert((BoundEffects::default(), StagedEffects::default()));
 
     let cmd = ResolveOnCommand {
         target: Target::Breaker,
@@ -340,17 +354,31 @@ fn wall_with_context_resolves_to_specific_wall() {
 #[test]
 fn breaker_with_context_resolves_to_specific_breaker() {
     let mut world = World::new();
+    let def = crate::breaker::definition::BreakerDefinition::default();
     let breaker_a = world
-        .spawn((
-            Breaker,
-            PrimaryBreaker,
-            BoundEffects::default(),
-            StagedEffects::default(),
-        ))
+        .spawn(
+            Breaker::builder()
+                .definition(&def)
+                .headless()
+                .primary()
+                .build(),
+        )
         .id();
+    world
+        .entity_mut(breaker_a)
+        .insert((BoundEffects::default(), StagedEffects::default()));
     let breaker_b = world
-        .spawn((Breaker, BoundEffects::default(), StagedEffects::default()))
+        .spawn(
+            Breaker::builder()
+                .definition(&def)
+                .headless()
+                .extra()
+                .build(),
+        )
         .id();
+    world
+        .entity_mut(breaker_b)
+        .insert((BoundEffects::default(), StagedEffects::default()));
 
     let cmd = ResolveOnCommand {
         target: Target::Breaker,

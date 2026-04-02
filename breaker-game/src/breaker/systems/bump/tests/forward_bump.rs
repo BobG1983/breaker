@@ -17,7 +17,13 @@ fn input_opens_forward_window() {
 
     let entity = app
         .world_mut()
-        .spawn((Breaker, BumpState::default(), bump_param_bundle(&config)))
+        .spawn(
+            Breaker::builder()
+                .definition(&config)
+                .headless()
+                .primary()
+                .build(),
+        )
         .id();
 
     app.insert_resource(TestInputActive(true));
@@ -39,15 +45,18 @@ fn input_on_cooldown_ignored() {
 
     let entity = app
         .world_mut()
-        .spawn((
-            Breaker,
-            BumpState {
-                cooldown: 0.5,
-                ..Default::default()
-            },
-            bump_param_bundle(&config),
-        ))
+        .spawn(
+            Breaker::builder()
+                .definition(&config)
+                .headless()
+                .primary()
+                .build(),
+        )
         .id();
+    app.world_mut().entity_mut(entity).insert(BumpState {
+        cooldown: 0.5,
+        ..Default::default()
+    });
 
     app.insert_resource(TestInputActive(true));
     tick(&mut app);
@@ -63,16 +72,19 @@ fn input_while_active_ignored() {
 
     let entity = app
         .world_mut()
-        .spawn((
-            Breaker,
-            BumpState {
-                active: true,
-                timer: config.early_window, // mid-window
-                ..Default::default()
-            },
-            bump_param_bundle(&config),
-        ))
+        .spawn(
+            Breaker::builder()
+                .definition(&config)
+                .headless()
+                .primary()
+                .build(),
+        )
         .id();
+    app.world_mut().entity_mut(entity).insert(BumpState {
+        active: true,
+        timer: config.early_window, // mid-window
+        ..Default::default()
+    });
 
     let timer_before = config.early_window;
     app.insert_resource(TestInputActive(true));
@@ -94,16 +106,19 @@ fn forward_window_expiry_sends_whiff_and_sets_cooldown() {
 
     let entity = app
         .world_mut()
-        .spawn((
-            Breaker,
-            BumpState {
-                active: true,
-                timer: 0.001, // about to expire
-                ..Default::default()
-            },
-            bump_param_bundle(&config),
-        ))
+        .spawn(
+            Breaker::builder()
+                .definition(&config)
+                .headless()
+                .primary()
+                .build(),
+        )
         .id();
+    app.world_mut().entity_mut(entity).insert(BumpState {
+        active: true,
+        timer: 0.001, // about to expire
+        ..Default::default()
+    });
 
     app.insert_resource(TestInputActive(false));
     tick(&mut app);
@@ -130,15 +145,18 @@ fn post_hit_timer_ticks_down() {
 
     let entity = app
         .world_mut()
-        .spawn((
-            Breaker,
-            BumpState {
-                post_hit_timer: 0.1,
-                ..Default::default()
-            },
-            bump_param_bundle(&config),
-        ))
+        .spawn(
+            Breaker::builder()
+                .definition(&config)
+                .headless()
+                .primary()
+                .build(),
+        )
         .id();
+    app.world_mut().entity_mut(entity).insert(BumpState {
+        post_hit_timer: 0.1,
+        ..Default::default()
+    });
 
     app.insert_resource(TestInputActive(false));
     tick(&mut app);
@@ -154,15 +172,18 @@ fn cooldown_ticks_down() {
 
     let entity = app
         .world_mut()
-        .spawn((
-            Breaker,
-            BumpState {
-                cooldown: 0.1,
-                ..Default::default()
-            },
-            bump_param_bundle(&config),
-        ))
+        .spawn(
+            Breaker::builder()
+                .definition(&config)
+                .headless()
+                .primary()
+                .build(),
+        )
         .id();
+    app.world_mut().entity_mut(entity).insert(BumpState {
+        cooldown: 0.1,
+        ..Default::default()
+    });
 
     app.insert_resource(TestInputActive(false));
     tick(&mut app);
@@ -182,7 +203,13 @@ fn bump_while_serving_does_not_open_forward_window() {
 
     let entity = app
         .world_mut()
-        .spawn((Breaker, BumpState::default(), bump_param_bundle(&config)))
+        .spawn(
+            Breaker::builder()
+                .definition(&config)
+                .headless()
+                .primary()
+                .build(),
+        )
         .id();
 
     // Spawn a serving bolt
@@ -206,7 +233,13 @@ fn bump_without_serving_bolt_opens_forward_window() {
 
     let entity = app
         .world_mut()
-        .spawn((Breaker, BumpState::default(), bump_param_bundle(&config)))
+        .spawn(
+            Breaker::builder()
+                .definition(&config)
+                .headless()
+                .primary()
+                .build(),
+        )
         .id();
 
     // No BoltServing entity
@@ -258,7 +291,13 @@ fn bump_not_lost_when_fixed_update_skips_frame() {
 
     let entity = app
         .world_mut()
-        .spawn((Breaker, BumpState::default(), bump_param_bundle(&config)))
+        .spawn(
+            Breaker::builder()
+                .definition(&config)
+                .headless()
+                .primary()
+                .build(),
+        )
         .id();
 
     // Frame 1: bump input active, but FixedUpdate won't run (no overstep).

@@ -77,6 +77,37 @@ mod tests {
         app.update();
     }
 
+    /// Spawns a breaker entity via the builder with `StagedEffects`.
+    fn spawn_test_breaker(app: &mut App, primary: bool) -> Entity {
+        use crate::breaker::{components::Breaker, definition::BreakerDefinition};
+        let def = BreakerDefinition::default();
+        let entity = if primary {
+            app.world_mut()
+                .spawn(
+                    Breaker::builder()
+                        .definition(&def)
+                        .headless()
+                        .primary()
+                        .build(),
+                )
+                .id()
+        } else {
+            app.world_mut()
+                .spawn(
+                    Breaker::builder()
+                        .definition(&def)
+                        .headless()
+                        .extra()
+                        .build(),
+                )
+                .id()
+        };
+        app.world_mut()
+            .entity_mut(entity)
+            .insert(StagedEffects::default());
+        entity
+    }
+
     #[test]
     fn bridge_bump_fires_on_any_grade() {
         let mut app = test_app();
@@ -229,20 +260,14 @@ mod tests {
 
     #[test]
     fn bump_dual_retarget_resolves_both_bolt_and_breaker() {
-        use crate::{bolt::components::Bolt, breaker::components::Breaker};
+        use crate::bolt::components::Bolt;
 
         let mut app = test_app();
 
         let bolt_a = app.world_mut().spawn((Bolt, StagedEffects::default())).id();
         let bolt_b = app.world_mut().spawn((Bolt, StagedEffects::default())).id();
-        let breaker_a = app
-            .world_mut()
-            .spawn((Breaker, StagedEffects::default()))
-            .id();
-        let breaker_b = app
-            .world_mut()
-            .spawn((Breaker, StagedEffects::default()))
-            .id();
+        let breaker_a = spawn_test_breaker(&mut app, true);
+        let breaker_b = spawn_test_breaker(&mut app, false);
 
         // Observer: When(Bump, [On(Bolt, ...), On(Breaker, ...)])
         app.world_mut().spawn((
@@ -336,14 +361,33 @@ mod tests {
 
         let mut app = test_app();
 
+        let def = crate::breaker::definition::BreakerDefinition::default();
         let breaker_a = app
             .world_mut()
-            .spawn((Breaker, StagedEffects::default()))
+            .spawn(
+                Breaker::builder()
+                    .definition(&def)
+                    .headless()
+                    .primary()
+                    .build(),
+            )
             .id();
+        app.world_mut()
+            .entity_mut(breaker_a)
+            .insert(StagedEffects::default());
         let breaker_b = app
             .world_mut()
-            .spawn((Breaker, StagedEffects::default()))
+            .spawn(
+                Breaker::builder()
+                    .definition(&def)
+                    .headless()
+                    .extra()
+                    .build(),
+            )
             .id();
+        app.world_mut()
+            .entity_mut(breaker_b)
+            .insert(StagedEffects::default());
 
         app.world_mut().spawn((
             BoundEffects(vec![(

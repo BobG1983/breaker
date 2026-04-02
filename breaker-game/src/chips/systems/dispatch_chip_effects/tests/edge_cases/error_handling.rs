@@ -106,10 +106,22 @@ fn missing_chip_catalog_resource_does_not_panic() {
 
     // Spawn a breaker and send a message — system should handle missing catalog gracefully
     let breaker = {
-        use crate::breaker::components::Breaker;
+        use crate::breaker::{components::Breaker, definition::BreakerDefinition};
+        let def = BreakerDefinition::default();
+        let entity = app
+            .world_mut()
+            .spawn(
+                Breaker::builder()
+                    .definition(&def)
+                    .headless()
+                    .primary()
+                    .build(),
+            )
+            .id();
         app.world_mut()
-            .spawn((Breaker, BoundEffects::default(), StagedEffects::default()))
-            .id()
+            .entity_mut(entity)
+            .insert((BoundEffects::default(), StagedEffects::default()));
+        entity
     };
 
     select_chip(&mut app, "Any Chip");
@@ -192,17 +204,27 @@ fn missing_chip_inventory_resource_does_not_panic() {
     // Spawn a breaker so dispatch has targets
     let breaker = {
         use crate::{
-            breaker::components::Breaker, effect::effects::speed_boost::ActiveSpeedBoosts,
+            breaker::{components::Breaker, definition::BreakerDefinition},
+            effect::effects::speed_boost::ActiveSpeedBoosts,
         };
-        app.world_mut()
-            .spawn((
-                Breaker,
-                BoundEffects::default(),
-                StagedEffects::default(),
-                ActiveDamageBoosts::default(),
-                ActiveSpeedBoosts::default(),
-            ))
-            .id()
+        let def = BreakerDefinition::default();
+        let entity = app
+            .world_mut()
+            .spawn(
+                Breaker::builder()
+                    .definition(&def)
+                    .headless()
+                    .primary()
+                    .build(),
+            )
+            .id();
+        app.world_mut().entity_mut(entity).insert((
+            BoundEffects::default(),
+            StagedEffects::default(),
+            ActiveDamageBoosts::default(),
+            ActiveSpeedBoosts::default(),
+        ));
+        entity
     };
 
     select_chip(&mut app, "Any Chip");
