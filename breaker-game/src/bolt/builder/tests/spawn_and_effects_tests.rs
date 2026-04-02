@@ -258,6 +258,43 @@ fn spawn_without_effects_has_no_bound_effects() {
     );
 }
 
+// Behavior: explicit effects appear before inherited in BoundEffects
+#[test]
+fn spawn_with_both_effects_orders_explicit_before_inherited() {
+    let explicit = vec![(
+        "explicit_chip".to_string(),
+        EffectNode::Do(EffectKind::DamageBoost(2.0)),
+    )];
+    let inherited = BoundEffects(vec![(
+        "inherited_chip".to_string(),
+        EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 }),
+    )]);
+
+    let mut world = World::new();
+    let entity = Bolt::builder()
+        .definition(&test_bolt_definition())
+        .at_position(Vec2::ZERO)
+        .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
+        .extra()
+        .with_effects(explicit)
+        .with_inherited_effects(&inherited)
+        .headless()
+        .spawn(&mut world);
+
+    let bound = world
+        .get::<BoundEffects>(entity)
+        .expect("should have BoundEffects");
+    assert_eq!(bound.0.len(), 2, "should have 2 entries total");
+    assert_eq!(
+        bound.0[0].0, "explicit_chip",
+        "explicit effects should come first"
+    );
+    assert_eq!(
+        bound.0[1].0, "inherited_chip",
+        "inherited effects should come second"
+    );
+}
+
 // Behavior 33: with_inherited_effects() clones effects
 #[test]
 fn inherited_effects_are_cloned_not_moved() {

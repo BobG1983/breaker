@@ -89,11 +89,11 @@ fn build_headless_primary_has_default_state_components() {
         "DashStateTimer.remaining should be 0.0"
     );
 
+    // Headless builds do NOT include GameDrawLayer (only Rendered builds do)
     let layer = world.get::<GameDrawLayer>(entity);
-    assert!(layer.is_some(), "should have GameDrawLayer");
     assert!(
-        matches!(layer.unwrap(), GameDrawLayer::Breaker),
-        "GameDrawLayer should be Breaker"
+        layer.is_none(),
+        "headless build should NOT have GameDrawLayer"
     );
 
     let lives = world.get::<LivesCount>(entity);

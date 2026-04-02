@@ -148,4 +148,12 @@ fn rendered_build_has_mesh_and_material() {
         app.world().get::<PrimaryBreaker>(entity).is_some(),
         "should have PrimaryBreaker (guard against stub false pass)"
     );
+    // Rendered builds include GameDrawLayer
+    assert!(
+        matches!(
+            app.world().get::<crate::shared::GameDrawLayer>(entity),
+            Some(crate::shared::GameDrawLayer::Breaker)
+        ),
+        "rendered build should have GameDrawLayer::Breaker"
+    );
 }

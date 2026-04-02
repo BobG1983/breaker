@@ -672,11 +672,10 @@ fn build_core(params: &CoreParams, optional: &OptionalBreakerData) -> impl Bundl
         LivesSetting::Count(n) => Some(*n),
     };
 
-    // Core identity + state
+    // Core identity + state (does NOT include GameDrawLayer — added by Rendered builds only)
     let core = (
         Breaker,
         BreakerInitialized,
-        GameDrawLayer::Breaker,
         Velocity2D::default(),
         DashState::default(),
         BreakerTilt::default(),
@@ -804,6 +803,7 @@ impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, 
             core,
             PrimaryBreaker,
             CleanupOnRunEnd,
+            GameDrawLayer::Breaker,
             Mesh2d(self.visual.mesh),
             MeshMaterial2d(self.visual.material),
         )
@@ -837,6 +837,7 @@ impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, 
             core,
             ExtraBreaker,
             CleanupOnNodeExit,
+            GameDrawLayer::Breaker,
             Mesh2d(self.visual.mesh),
             MeshMaterial2d(self.visual.material),
         )
