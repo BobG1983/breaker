@@ -33,6 +33,8 @@ pub(super) fn world_with_bolt_config() -> World {
             color_rgb: [6.0, 5.0, 0.5],
             min_angle_horizontal: 5.0,
             min_angle_vertical: 5.0,
+            min_radius: None,
+            max_radius: None,
         },
     );
     world.insert_resource(bolt_registry);

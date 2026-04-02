@@ -3,7 +3,7 @@ pub(super) use breaker::{
     bolt::components::Bolt,
     breaker::{
         BreakerRegistry,
-        components::{Breaker, BreakerState, BreakerWidth},
+        components::{BaseWidth, Breaker, DashState},
         messages::BumpGrade,
         resources::ForceBumpGrade,
     },
@@ -26,7 +26,7 @@ pub(super) use crate::{
     },
     types::{
         BumpMode, ChaosParams, DebugSetup, ForcedGameState, FrameMutation, InputStrategy,
-        InvariantKind, MutationKind, ScenarioBreakerState, ScenarioDefinition, ScriptedParams,
+        InvariantKind, MutationKind, ScenarioDashState, ScenarioDefinition, ScriptedParams,
     },
 };
 

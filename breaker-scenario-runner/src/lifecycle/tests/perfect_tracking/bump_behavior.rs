@@ -16,7 +16,7 @@ fn perfect_tracking_writes_bump_when_bolt_within_threshold() {
     app.world_mut().spawn((
         ScenarioTagBreaker,
         Position2D(Vec2::new(0.0, -250.0)),
-        BreakerWidth(120.0),
+        BaseWidth(120.0),
     ));
 
     app.update();
@@ -44,7 +44,7 @@ fn perfect_tracking_does_not_write_bump_when_bolt_beyond_threshold() {
     app.world_mut().spawn((
         ScenarioTagBreaker,
         Position2D(Vec2::new(0.0, -250.0)),
-        BreakerWidth(120.0),
+        BaseWidth(120.0),
     ));
 
     app.update();
@@ -70,14 +70,14 @@ fn perfect_tracking_never_bump_mode_does_not_write_bump() {
         Velocity2D(Vec2::new(0.0, -400.0)),
     ));
     // Initial x = 200.0 is well outside the expected repositioning range
-    // [-48.0, 48.0] for bolt at x=0.0 with BreakerWidth(120.0) and
+    // [-48.0, 48.0] for bolt at x=0.0 with BaseWidth(120.0) and
     // PERFECT_TRACKING_WIDTH_FACTOR = 0.8.
     let breaker = app
         .world_mut()
         .spawn((
             ScenarioTagBreaker,
             Position2D(Vec2::new(200.0, -250.0)),
-            BreakerWidth(120.0),
+            BaseWidth(120.0),
         ))
         .id();
 
@@ -114,14 +114,14 @@ fn perfect_tracking_always_whiff_mode_writes_bump() {
         Velocity2D(Vec2::new(0.0, -400.0)),
     ));
     // Initial x = 200.0 is well outside the expected repositioning range
-    // [-48.0, 48.0] for bolt at x=0.0 with BreakerWidth(120.0) and
+    // [-48.0, 48.0] for bolt at x=0.0 with BaseWidth(120.0) and
     // PERFECT_TRACKING_WIDTH_FACTOR = 0.8.
     let breaker = app
         .world_mut()
         .spawn((
             ScenarioTagBreaker,
             Position2D(Vec2::new(200.0, -250.0)),
-            BreakerWidth(120.0),
+            BaseWidth(120.0),
         ))
         .id();
 

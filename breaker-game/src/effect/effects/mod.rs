@@ -60,6 +60,8 @@ pub mod speed_boost;
 pub mod tether_beam;
 /// Subtract time from node timer.
 pub mod time_penalty;
+/// Mark entity to take increased damage.
+pub mod vulnerable;
 
 /// Register all effect runtime systems.
 pub(crate) fn register(app: &mut bevy::prelude::App) {

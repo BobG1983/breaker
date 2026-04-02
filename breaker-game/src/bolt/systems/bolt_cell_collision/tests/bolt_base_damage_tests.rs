@@ -26,6 +26,8 @@ fn make_default_bolt_definition() -> BoltDefinition {
         color_rgb: [6.0, 5.0, 0.5],
         min_angle_horizontal: 5.0,
         min_angle_vertical: 5.0,
+        min_radius: None,
+        max_radius: None,
     }
 }
 
@@ -37,6 +39,7 @@ fn spawn_bolt_from_definition(app: &mut App, x: f32, y: f32, vx: f32, vy: f32) -
         .definition(&def)
         .with_velocity(Velocity2D(Vec2::new(vx, vy)))
         .primary()
+        .headless()
         .spawn(app.world_mut())
 }
 
@@ -51,6 +54,7 @@ fn spawn_bolt_with_damage(app: &mut App, x: f32, y: f32, vx: f32, vy: f32, damag
         .definition(&def)
         .with_velocity(Velocity2D(Vec2::new(vx, vy)))
         .primary()
+        .headless()
         .spawn(app.world_mut())
 }
 

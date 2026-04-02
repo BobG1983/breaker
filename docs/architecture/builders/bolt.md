@@ -25,19 +25,19 @@ The builder ensures every bolt is complete — compile-time verification that po
 - **Role**: `Primary` (persists across nodes, `CleanupOnRunEnd`) vs `Extra` (cleaned up on node exit, `CleanupOnNodeExit`). Can't be both.
 - **Visual**: `Rendered` (includes `Mesh2d` + `MeshMaterial2d`) vs `Headless` (omits them).
 
-### Config Shortcut
+### Definition Shortcut
 
-`.config(&BoltConfig)` transitions **S + A** simultaneously from the config resource. Also stores config-derived optional values (spawn offsets, initial angle, respawn spread).
+`.definition(&BoltDefinition)` transitions **S + A** simultaneously. Also stores radius, min/max radius constraints, base damage, angle spread, spawn offset, and color in optional data.
 
-### Config Overrides
+### Overrides
 
-After `.config()`, individual values can be overridden:
-- `.with_base_speed(f32)`, `.with_min_speed(f32)`, `.with_max_speed(f32)`
-- `.with_min_angle_h(f32)`, `.with_min_angle_v(f32)`
+After `.definition()` or after manually satisfying S/A, individual values can be overridden:
+- `.with_radius(f32)` — overrides the radius set by `.definition()`
+- `.with_lifespan(f32)` — adds bolt expiry timer
 
 ## Optional Methods (any typestate)
 
-- `.with_radius(f32)` — override bolt radius (default from config)
+- `.with_radius(f32)` — override bolt radius (default 8.0; `BoltDefinition.radius` overrides this when `.definition()` is called)
 - `.with_lifespan(f32)` — bolt expires after N seconds
 - `.with_effects(Vec<(String, EffectNode)>)` — attach effect nodes
 - `.with_inherited_effects(&BoundEffects)` — clone effects from another bolt
@@ -45,16 +45,23 @@ After `.config()`, individual values can be overridden:
 
 ## build() Output
 
-Returns `impl Bundle` with: `Bolt`, spatial components (via `Spatial::builder()`), `Velocity2D`, `Scale2D`, `PreviousScale`, `Aabb2D`, `BoltRadius`, `CollisionLayers`, `GameDrawLayer::Bolt`, cleanup marker (`CleanupOnRunEnd` or `CleanupOnNodeExit`), role marker (`PrimaryBolt` or `ExtraBolt`), and optionally `Mesh2d` + `MeshMaterial2d` (if rendered).
+Returns `impl Bundle` with: `Bolt`, spatial components (via `Spatial::builder()`), `Velocity2D`, `Scale2D`, `PreviousScale`, `Aabb2D`, `BaseRadius` (aliased as `BoltRadius`), `MinRadius`, `MaxRadius`, `CollisionLayers`, `GameDrawLayer::Bolt`, cleanup marker (`CleanupOnRunEnd` or `CleanupOnNodeExit`), role marker (`PrimaryBolt` or `ExtraBolt`), and optionally `Mesh2d` + `MeshMaterial2d` (if rendered).
+
+`BoltRadius` is a type alias for `BaseRadius` from `shared/size.rs` — the same shared radius component used by all round entities.
 
 ## spawn() Behavior
 
-1. `commands.spawn(self.build())`
-2. Conditionally inserts via commands: `BoltLifespan`, `BoundEffects`, `SpawnedByEvolution`, config params
-3. If effects provided, queues `commands.dispatch_initial_effects(effects, source_chip)` — no entity parameter, resolves targets from world by convention
+The bolt builder's `spawn()` takes `&mut World` (not `&mut Commands`) because effect modules spawn extra bolts inside `fire()` which already holds `&mut World`.
+
+1. `world.spawn(self.build())` — spawns core bundle
+2. Conditionally inserts onto the spawned entity: `BoltLifespan`, `BoundEffects` (from `with_effects` or `with_inherited_effects`), `SpawnedByEvolution`, definition-derived params
+3. Bolt-definition effects are **not** dispatched here. The separate `dispatch_bolt_effects` system processes `Added<BoltDefinitionRef>` each FixedUpdate tick and dispatches effects from the definition.
 
 ## Key Files
 
-- `breaker-game/src/bolt/builder/builder.rs` — implementation
+- `breaker-game/src/bolt/builder/core.rs` — implementation
 - `breaker-game/src/bolt/queries.rs` — QueryData structs for bolt systems
+- `breaker-game/src/bolt/definition.rs` — `BoltDefinition` fields
+- `breaker-game/src/shared/size.rs` — `BaseRadius`, `MinRadius`, `MaxRadius`, `effective_radius()`
 - `rantzsoft_spatial2d/src/builder.rs` — nested Spatial builder used internally
+- `breaker-game/assets/bolts/bolt.example.ron` — annotated reference showing all fields with defaults

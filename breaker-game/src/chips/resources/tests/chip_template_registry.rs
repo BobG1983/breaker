@@ -146,8 +146,8 @@ fn chip_template_registry_update_single_inserts_new() {
 fn chip_template_registry_asset_dir() {
     assert_eq!(
         ChipTemplateRegistry::asset_dir(),
-        "chips/templates",
-        "asset_dir() should return \"chips/templates\""
+        "chips/standard",
+        "asset_dir() should return \"chips/standard\""
     );
 }
 

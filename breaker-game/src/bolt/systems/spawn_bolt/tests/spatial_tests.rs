@@ -9,7 +9,7 @@ use rantzsoft_spatial2d::{
 use super::{super::*, helpers::*};
 use crate::{
     bolt::{components::Bolt, registry::BoltRegistry, resources::DEFAULT_BOLT_SPAWN_OFFSET_Y},
-    breaker::{BreakerConfig, components::Breaker},
+    breaker::{BreakerDefinition, components::Breaker},
     shared::GameDrawLayer,
 };
 
@@ -39,7 +39,7 @@ fn spawned_bolt_has_position2d_at_spawn_position() {
         .iter(app.world())
         .next()
         .expect("bolt should exist with Position2D");
-    let breaker_y = BreakerConfig::default().y_position; // -250.0
+    let breaker_y = BreakerDefinition::default().y_position; // -250.0
     let spawn_offset_y = DEFAULT_BOLT_SPAWN_OFFSET_Y; // 54.0
     let expected = Vec2::new(0.0, breaker_y + spawn_offset_y); // (0.0, -196.0)
     assert!(
@@ -52,7 +52,7 @@ fn spawned_bolt_has_position2d_at_spawn_position() {
 
 #[test]
 fn spawned_bolt_has_position2d_without_breaker_entity() {
-    // Edge case: no breaker entity — uses BreakerConfig default y_position
+    // Edge case: no breaker entity — uses BreakerDefinition default y_position
     let mut app = test_app();
     app.add_systems(Startup, spawn_bolt);
     app.update();
@@ -63,10 +63,10 @@ fn spawned_bolt_has_position2d_without_breaker_entity() {
         .iter(app.world())
         .next()
         .expect("bolt should exist with Position2D even without breaker");
-    let expected_y = BreakerConfig::default().y_position + DEFAULT_BOLT_SPAWN_OFFSET_Y;
+    let expected_y = BreakerDefinition::default().y_position + DEFAULT_BOLT_SPAWN_OFFSET_Y;
     assert!(
         (position.0.y - expected_y).abs() < f32::EPSILON,
-        "bolt y should use BreakerConfig default, expected {expected_y}, got {}",
+        "bolt y should use BreakerDefinition default, expected {expected_y}, got {}",
         position.0.y,
     );
 }

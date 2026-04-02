@@ -7,7 +7,7 @@ use super::super::helpers::*;
 // -------------------------------------------------------------------------
 
 /// When two mutations are scheduled for the same frame, both must apply.
-/// Given `SetBreakerState(Braking)` and `MoveBolt(100.0, 200.0)` both at
+/// Given `SetDashState(Braking)` and `MoveBolt(100.0, 200.0)` both at
 /// frame 5, the breaker state must change AND the bolt must move.
 #[test]
 fn apply_debug_frame_mutations_multiple_mutations_on_same_frame() {
@@ -20,7 +20,7 @@ fn apply_debug_frame_mutations_multiple_mutations_on_same_frame() {
         frame_mutations: Some(vec![
             FrameMutation {
                 frame: 5,
-                mutation: MutationKind::SetBreakerState(ScenarioBreakerState::Braking),
+                mutation: MutationKind::SetDashState(ScenarioDashState::Braking),
             },
             FrameMutation {
                 frame: 5,
@@ -38,7 +38,7 @@ fn apply_debug_frame_mutations_multiple_mutations_on_same_frame() {
 
     let breaker_entity = app
         .world_mut()
-        .spawn((ScenarioTagBreaker, BreakerState::Idle))
+        .spawn((ScenarioTagBreaker, DashState::Idle))
         .id();
     let bolt_entity = app
         .world_mut()
@@ -50,12 +50,12 @@ fn apply_debug_frame_mutations_multiple_mutations_on_same_frame() {
     let state = app
         .world()
         .entity(breaker_entity)
-        .get::<BreakerState>()
-        .expect("breaker entity must still have BreakerState");
+        .get::<DashState>()
+        .expect("breaker entity must still have DashState");
     assert_eq!(
         *state,
-        BreakerState::Braking,
-        "expected BreakerState::Braking from first mutation, got {state:?}"
+        DashState::Braking,
+        "expected DashState::Braking from first mutation, got {state:?}"
     );
 
     let position = app

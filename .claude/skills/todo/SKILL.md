@@ -1,6 +1,6 @@
 ---
 name: todo
-description: Manage a prioritized todo list in .claude/todos/. Add items with conversation context, reorder by development priority, interrogate for missing details. Use when the user wants to capture work for later.
+description: Manage the development todo list in .claude/todos/. Add, complete, reorder, detail, research, or interrogate items. Use when the user wants to view, modify, or add to the todo list, or research and add details to existing items.
 ---
 
 # Todo

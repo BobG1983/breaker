@@ -18,7 +18,7 @@ pub(crate) enum Overlay {
     /// Bolt telemetry window.
     BoltInfo,
     /// Breaker state telemetry window.
-    BreakerState,
+    DashState,
     /// Input actions debug window.
     InputActions,
 }
@@ -83,7 +83,7 @@ mod tests {
         assert!(!overlays.is_active(Overlay::VelocityVectors));
         assert!(!overlays.is_active(Overlay::State));
         assert!(!overlays.is_active(Overlay::BoltInfo));
-        assert!(!overlays.is_active(Overlay::BreakerState));
+        assert!(!overlays.is_active(Overlay::DashState));
         assert!(!overlays.is_active(Overlay::InputActions));
     }
 

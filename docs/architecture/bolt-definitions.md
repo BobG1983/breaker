@@ -2,11 +2,13 @@
 
 Bolt entities should be fully data-driven with their own RON definitions, registry, effect dispatch, and rendering substruct — matching the existing pattern for breakers and cells.
 
-## Current State (What Exists Today)
+> **Implementation status**: `BoltDefinition`, `BoltRegistry`, `BoltDefinitionRef`, `BoltBaseDamage`, and `dispatch_bolt_effects` have been implemented (Waves 6-8 of the breaker-builder-pattern feature). `BoltConfig` has been eliminated. The `BoltRenderingConfig` substruct, `AttachVisuals` message, and `sync_bolt_visual_modifiers` system described in the Target State section are **not yet implemented** — they depend on `rantzsoft_vfx` which is a future phase.
 
-### BoltConfig (GameConfig pattern)
+## Prior State (Before Implementation)
 
-`BoltConfig` is a `Resource` in `bolt/resources.rs`, loaded from `assets/config/defaults.bolt.ron` via the `GameConfig` derive macro.
+### BoltConfig (GameConfig pattern — eliminated)
+
+`BoltConfig` was a `Resource` in `bolt/resources.rs`, loaded from `assets/config/defaults.bolt.ron` via the `GameConfig` derive macro.
 
 **Fields that become BoltDefinition fields:**
 - `base_speed: f32` (720.0) — base speed in world units/second
@@ -24,13 +26,13 @@ Additionally, `BASE_BOLT_DAMAGE: f32 = 10.0` is a constant in `bolt/resources.rs
 
 **Target:** `BoltConfig` will be eliminated entirely. Per-bolt physics fields move to `BoltDefinition`. Spawn offset and angle spread remain as components inserted by the builder from `BoltConfig` fields until the full `BoltDefinition` migration is complete.
 
-### Current Spawn Flow
+### Current Spawn Flow (Implemented)
 
 1. `spawn_bolt` runs on `OnEnter(GameState::Playing)`. If a `Bolt` entity exists (persists across nodes via `CleanupOnRunEnd`), it just fires `BoltSpawned` and returns.
-2. Reads breaker `Position2D` for spawn position (fallback to `BreakerConfig::y_position` if breaker hasn't spawned yet — both run on same `OnEnter`).
-3. Calls `Bolt::builder()` with `.at_position()`, `.config(&config)`, optionally `.serving()`, and `.primary()`. The builder inserts all components in a single `.spawn(world)` call: `Bolt`, `PrimaryBolt`, `Velocity2D`, `GameDrawLayer::Bolt`, `Position2D`, `PreviousPosition`, `Scale2D`, `PreviousScale`, `Aabb2D`, `CollisionLayers`, `BoltRadius`, `BoltSpawnOffsetY`, `BoltRespawnOffsetY`, `BoltRespawnAngleSpread`, `BoltInitialAngle`, `BaseSpeed`, `MinSpeed`, `MaxSpeed`, `MinAngleH`, `MinAngleV`, `CleanupOnRunEnd`. Conditionally: `BoltServing` if serving.
-4. Render components (`Mesh2d`, `MeshMaterial2d`) are inserted post-spawn — still from `BoltConfig.color_rgb` until the `BoltDefinition` migration.
-5. `apply_entity_scale_to_bolt` adds `EntityScale` from `ActiveNodeLayout.entity_scale`.
+2. Looks up `BoltDefinition` from `BoltRegistry` via `SelectedBreaker` → `BreakerRegistry` chain. Falls back to `BreakerDefinition::y_position` for spawn position.
+3. Calls `Bolt::builder()` with `.definition(&bolt_def)`, `.at_position()`, `.rendered(...)` or `.headless()`, optionally `.serving()`, and `.primary()`. The builder inserts all components in a single `.spawn(world)` call: `Bolt`, `PrimaryBolt`, `Velocity2D`, `GameDrawLayer::Bolt`, `Position2D`, `PreviousPosition`, `Scale2D`, `PreviousScale`, `Aabb2D`, `CollisionLayers`, `BaseRadius`, `MinRadius`, `MaxRadius`, `BoltSpawnOffsetY`, `BoltAngleSpread`, `BoltBaseDamage`, `BoltDefinitionRef`, `BaseSpeed`, `MinSpeed`, `MaxSpeed`, `MinAngleH`, `MinAngleV`, `CleanupOnRunEnd`. Conditionally: `BoltServing` if serving.
+4. `apply_node_scale_to_bolt` adds `NodeScalingFactor` from `ActiveNodeLayout.entity_scale`.
+5. `dispatch_bolt_effects` runs in FixedUpdate, not OnEnter. It processes `Added<BoltDefinitionRef>` each tick and dispatches effects from the definition. Effects are dispatched on the first FixedUpdate tick after spawning, not synchronously during OnEnter.
 
 There is no separate `init_bolt_params` step. The builder handles all parameter insertion at spawn time.
 
@@ -38,12 +40,12 @@ There is no separate `init_bolt_params` step. The builder handles all parameter 
 
 Effect modules that spawn extra bolts (`SpawnBolts`, `SpawnPhantom`, `ChainBolt`, `MirrorProtocol`) each call `Bolt::builder()` directly — there is no shared `spawn_extra_bolt` helper function. The builder handles component insertion uniformly. Extra bolts use `.extra()` instead of `.primary()` and carry `ExtraBolt` + `CleanupOnNodeExit`.
 
-### Current Bolt Lost
+### Current Bolt Lost (Implemented)
 
 `bolt_lost` runs in `FixedUpdate`. For each bolt below playfield bottom:
 - **Shield active**: Flips Y-velocity, calls `apply_velocity_formula`, clamps position. No `BoltLost` message.
 - **Extra bolt**: Sends `BoltLost`, writes `RequestBoltDestroyed`. Entity stays alive one frame for `OnDeath` effect evaluation, then `cleanup_destroyed_bolts` despawns.
-- **Baseline bolt**: Sends `BoltLost`. Respawns above breaker: reads `BoltRespawnOffsetY` and `BoltRespawnAngleSpread` from the bolt entity, calls `apply_velocity_formula`. Entity persists (no despawn/respawn cycle).
+- **Baseline bolt**: Sends `BoltLost`. Respawns above breaker: reads `BoltSpawnOffsetY` and `BoltAngleSpread` from the bolt entity (constants-initialized components), calls `apply_velocity_formula`. Entity persists (no despawn/respawn cycle). `BoltRespawnOffsetY` was eliminated — `BoltSpawnOffsetY` covers both.
 
 ### Current Breaker → Bolt Relationship
 
@@ -207,43 +209,43 @@ impl SeedableRegistry for BoltRegistry {
 
 Methods: `get`, `contains`, `insert`, `names`, `iter`, `values`, `clear`, `len`, `is_empty` — identical API surface to `BreakerRegistry`.
 
-### Breaker Definition Changes
+### Breaker Definition Changes (Implemented)
 
-Add a `bolt` field to `BreakerDefinition`:
+`BreakerDefinition` was expanded with all gameplay fields (previously in `BreakerConfig`) and a `bolt` field linking to the bolt archetype. `BreakerStatOverrides` and `BreakerConfig` were eliminated — the definition is the single source of truth.
 
 ```rust
-// breaker/definition.rs — ADD FIELD
+// breaker/definition.rs — current shape (abbreviated)
 
 #[derive(Asset, TypePath, Deserialize, Clone, Debug)]
 pub struct BreakerDefinition {
-    pub name: String,
-    pub stat_overrides: BreakerStatOverrides,
-    pub life_pool: Option<u32>,
-    pub effects: Vec<RootEffect>,
-    /// Name of the bolt definition this breaker uses. References BoltRegistry.
+    pub name: String,                    // required, no default
     #[serde(default = "default_bolt_name")]
-    pub bolt: String,
-}
-
-fn default_bolt_name() -> String {
-    "Bolt".to_owned()
+    pub bolt: String,                    // default: "Bolt"
+    #[serde(default)]
+    pub life_pool: Option<u32>,          // default: None (infinite)
+    #[serde(default)]
+    pub effects: Vec<RootEffect>,        // default: []
+    // 29+ gameplay fields with #[serde(default)]:
+    pub width: f32, pub height: f32, pub y_position: f32,
+    pub min_w: Option<f32>, pub max_w: Option<f32>,
+    pub min_h: Option<f32>, pub max_h: Option<f32>,
+    pub max_speed: f32, pub acceleration: f32, pub deceleration: f32,
+    // ... dash, brake, settle, bump timing, spread, color_rgb
 }
 ```
 
-RON files updated:
+RON files use `.breaker.ron` extension and only specify overrides (defaults apply to omitted fields):
 
 ```ron
-// assets/breakers/aegis.bdef.ron
+// assets/breakers/aegis.breaker.ron
 (
     name: "Aegis",
-    bolt: "Bolt",
-    stat_overrides: (),
     life_pool: Some(3),
     effects: [ ... ],
 )
 ```
 
-The `#[serde(default)]` ensures backwards compatibility — existing RON files without `bolt` use "Bolt".
+See `breaker-game/assets/breakers/breaker.example.ron` for the full annotated field list.
 
 ---
 
@@ -625,9 +627,9 @@ The scenario runner (`breaker-scenario-runner`) accesses bolt components for inv
 
 | File | Change |
 |------|--------|
-| `assets/breakers/aegis.bdef.ron` | Add `bolt: "Bolt"` |
-| `assets/breakers/chrono.bdef.ron` | Add `bolt: "Bolt"` |
-| `assets/breakers/prism.bdef.ron` | Add `bolt: "Bolt"` |
+| `assets/breakers/aegis.breaker.ron` | Has `bolt` field (defaulted to "Bolt") |
+| `assets/breakers/chrono.breaker.ron` | Has `bolt` field (defaulted to "Bolt") |
+| `assets/breakers/prism.breaker.ron` | Has `bolt` field (defaulted to "Bolt") |
 
 ### Deleted Files
 

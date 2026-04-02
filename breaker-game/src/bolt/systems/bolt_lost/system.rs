@@ -73,7 +73,7 @@ pub(crate) fn bolt_lost(
         bolt_query
             .iter()
             .filter(|bolt| {
-                let r = bolt.radius.0 * bolt.entity_scale.map_or(1.0, |s| s.0);
+                let r = bolt.radius.0 * bolt.node_scale.map_or(1.0, |s| s.0);
                 bolt.spatial.position.0.y < playfield.bottom() - r
             })
             .map(|bolt| LostBoltEntry {
@@ -83,7 +83,7 @@ pub(crate) fn bolt_lost(
                     .angle_spread
                     .map_or(crate::bolt::resources::DEFAULT_BOLT_ANGLE_SPREAD, |a| a.0),
                 is_extra: bolt.is_extra,
-                effective_radius: bolt.radius.0 * bolt.entity_scale.map_or(1.0, |s| s.0),
+                effective_radius: bolt.radius.0 * bolt.node_scale.map_or(1.0, |s| s.0),
                 current_velocity: bolt.spatial.velocity.0,
                 current_position: bolt.spatial.position.0,
             }),

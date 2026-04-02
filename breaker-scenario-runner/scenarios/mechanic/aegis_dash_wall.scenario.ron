@@ -44,7 +44,7 @@
         ],
     )),
     max_frames: 5000,
-    disallowed_failures: [BreakerPositionClamped, BreakerInBounds, NoNaN, ValidBreakerState],
+    disallowed_failures: [BreakerPositionClamped, BreakerInBounds, NoNaN, ValidDashState],
     allowed_failures: None,
     debug_setup: None,
 )

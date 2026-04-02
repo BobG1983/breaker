@@ -24,8 +24,15 @@ fn bridge_bump_whiff(
                 bound,
                 &mut staged,
                 &mut commands,
+                TriggerContext::default(),
             );
-            evaluate_staged_effects(&Trigger::BumpWhiff, entity, &mut staged, &mut commands);
+            evaluate_staged_effects(
+                &Trigger::BumpWhiff,
+                entity,
+                &mut staged,
+                &mut commands,
+                TriggerContext::default(),
+            );
         }
     }
 }

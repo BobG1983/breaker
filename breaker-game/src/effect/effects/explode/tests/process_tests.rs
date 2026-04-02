@@ -9,7 +9,6 @@ use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D};
 
 use super::helpers::*;
 use crate::{
-    bolt::resources::DEFAULT_BOLT_BASE_DAMAGE,
     cells::components::Cell,
     shared::{BOLT_LAYER, CELL_LAYER, WALL_LAYER},
 };
@@ -21,7 +20,7 @@ fn process_explode_requests_damages_cell_in_range() {
     let mut app = damage_test_app();
 
     let cell = spawn_test_cell(&mut app, 30.0, 0.0);
-    let request = spawn_explode_request(&mut app, 0.0, 0.0, 50.0, 2.0);
+    let request = spawn_explode_request(&mut app, 0.0, 0.0, 50.0, 20.0);
 
     tick(&mut app);
 
@@ -34,11 +33,9 @@ fn process_explode_requests_damages_cell_in_range() {
     );
     assert_eq!(collector.0[0].cell, cell);
 
-    let expected_damage = DEFAULT_BOLT_BASE_DAMAGE * 2.0;
     assert!(
-        (collector.0[0].damage - expected_damage).abs() < f32::EPSILON,
-        "expected damage {}, got {}",
-        expected_damage,
+        (collector.0[0].damage - 20.0).abs() < f32::EPSILON,
+        "expected damage 20.0, got {}",
         collector.0[0].damage
     );
     assert!(
@@ -62,7 +59,7 @@ fn process_explode_requests_damages_multiple_cells_in_range() {
     let cell1 = spawn_test_cell(&mut app, 10.0, 0.0);
     let cell2 = spawn_test_cell(&mut app, 0.0, 20.0);
     let cell3 = spawn_test_cell(&mut app, -15.0, 0.0);
-    let request = spawn_explode_request(&mut app, 0.0, 0.0, 30.0, 1.0);
+    let request = spawn_explode_request(&mut app, 0.0, 0.0, 30.0, 10.0);
 
     tick(&mut app);
 
@@ -81,8 +78,8 @@ fn process_explode_requests_damages_multiple_cells_in_range() {
 
     for msg in &collector.0 {
         assert!(
-            (msg.damage - DEFAULT_BOLT_BASE_DAMAGE).abs() < f32::EPSILON,
-            "damage should be DEFAULT_BOLT_BASE_DAMAGE * 1.0 = 10.0"
+            (msg.damage - 10.0).abs() < f32::EPSILON,
+            "damage should be flat 10.0"
         );
     }
 
@@ -101,7 +98,7 @@ fn process_explode_requests_does_not_damage_cell_outside_range() {
     // Cell at (100, 0) -- outside range of 30
     spawn_test_cell(&mut app, 100.0, 0.0);
 
-    spawn_explode_request(&mut app, 0.0, 0.0, 30.0, 1.0);
+    spawn_explode_request(&mut app, 0.0, 0.0, 30.0, 10.0);
 
     tick(&mut app);
 
@@ -121,7 +118,7 @@ fn process_explode_requests_sends_no_damage_for_distant_cell() {
     let mut app = damage_test_app();
 
     spawn_test_cell(&mut app, 200.0, 0.0);
-    let request = spawn_explode_request(&mut app, 0.0, 0.0, 50.0, 1.0);
+    let request = spawn_explode_request(&mut app, 0.0, 0.0, 50.0, 10.0);
 
     tick(&mut app);
 
@@ -144,7 +141,7 @@ fn process_explode_requests_sends_no_damage_for_distant_cell() {
 fn process_explode_requests_despawns_request_with_no_cells_in_range() {
     let mut app = damage_test_app();
 
-    let request = spawn_explode_request(&mut app, 0.0, 0.0, 50.0, 1.0);
+    let request = spawn_explode_request(&mut app, 0.0, 0.0, 50.0, 10.0);
 
     tick(&mut app);
 
@@ -162,8 +159,8 @@ fn process_explode_requests_handles_multiple_requests_in_same_frame() {
     let mut app = damage_test_app();
 
     let _cell = spawn_test_cell(&mut app, 10.0, 0.0);
-    let req1 = spawn_explode_request(&mut app, 0.0, 0.0, 30.0, 1.0);
-    let req2 = spawn_explode_request(&mut app, 0.0, 0.0, 30.0, 2.0);
+    let req1 = spawn_explode_request(&mut app, 0.0, 0.0, 30.0, 10.0);
+    let req2 = spawn_explode_request(&mut app, 0.0, 0.0, 30.0, 20.0);
 
     tick(&mut app);
 
@@ -195,11 +192,11 @@ fn process_explode_requests_handles_multiple_requests_in_same_frame() {
     damages.dedup();
     assert!(
         damages.iter().any(|&d| (d - 100.0).abs() < f32::EPSILON),
-        "should have damage 10.0 from mult 1.0"
+        "should have flat damage 10.0"
     );
     assert!(
         damages.iter().any(|&d| (d - 200.0).abs() < f32::EPSILON),
-        "should have damage 20.0 from mult 2.0"
+        "should have flat damage 20.0"
     );
 }
 
@@ -229,7 +226,7 @@ fn process_explode_requests_only_damages_cell_layer() {
         Spatial2D,
     ));
 
-    spawn_explode_request(&mut app, 0.0, 0.0, 50.0, 1.0);
+    spawn_explode_request(&mut app, 0.0, 0.0, 50.0, 10.0);
 
     tick(&mut app);
 
@@ -258,7 +255,7 @@ fn process_explode_requests_damages_entity_with_cell_layer_in_combined_mask() {
         ))
         .id();
 
-    spawn_explode_request(&mut app, 0.0, 0.0, 50.0, 1.0);
+    spawn_explode_request(&mut app, 0.0, 0.0, 50.0, 10.0);
 
     tick(&mut app);
 

@@ -68,6 +68,8 @@ mod tests {
             color_rgb: [6.0, 5.0, 0.5],
             min_angle_horizontal: 5.0,
             min_angle_vertical: 5.0,
+            min_radius: None,
+            max_radius: None,
         }
     }
 
@@ -96,6 +98,7 @@ mod tests {
             .definition(&def)
             .serving()
             .primary()
+            .headless()
             .spawn(app.world_mut())
     }
 
@@ -236,6 +239,7 @@ mod tests {
             .definition(&def)
             .serving()
             .primary()
+            .headless()
             .spawn(app.world_mut());
         app.world_mut()
             .entity_mut(bolt_id)
@@ -265,6 +269,7 @@ mod tests {
             .definition(&def)
             .serving()
             .primary()
+            .headless()
             .spawn(app.world_mut());
         app.world_mut()
             .entity_mut(bolt_id)
@@ -332,6 +337,7 @@ mod tests {
             .definition(&def)
             .serving()
             .primary()
+            .headless()
             .spawn(app.world_mut());
         app.world_mut()
             .entity_mut(bolt_id)
@@ -377,6 +383,7 @@ mod tests {
             .definition(&def)
             .serving()
             .primary()
+            .headless()
             .spawn(app.world_mut());
         app.world_mut()
             .entity_mut(bolt_id)

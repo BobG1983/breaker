@@ -20,7 +20,7 @@ Messages are defined in the domain that **conceptually owns the event**. Usually
 | `DamageCell { cell, damage, source_chip }` | bolt (bolt_cell_collision), effect/effects (shockwave, explode, pulse, chain_lightning, piercing_beam, tether_beam) | cells (handle_cell_hit) |
 | `BumpPerformed { grade, bolt }` | breaker | breaker (spawn_bump_grade_text, perfect_bump_dash_cancel), effect (bridge_bump) |
 | `BumpWhiffed` | breaker | breaker (spawn_whiff_text), effect (bridge_bump_whiff) |
-| `BreakerSpawned` | breaker (spawn_breaker) | run/node (check_spawn_complete) |
+| `BreakerSpawned` | breaker (spawn_or_reuse_breaker) | run/node (check_spawn_complete) |
 | `CellDestroyedAt { position, was_required_to_clear }` | cells (cleanup_cell) | run (track_node_completion), effect (bridge_cell_death evaluates trigger on remaining alive cell via RequestCellDestroyed) |
 | `CellsSpawned` | run/node (spawn_cells_from_layout) | run/node (check_spawn_complete) |
 | `BoltSpawned` | bolt (spawn_bolt) | run/node (check_spawn_complete) |
@@ -43,7 +43,7 @@ Effect firing does not use `#[derive(Message)]` or `commands.trigger()`. Instead
 |--------|-----------|-------------|
 | `commands.fire_effect(entity, effect, source_chip)` | trigger bridge systems evaluating `Do(effect)` nodes | `FireEffectCommand::apply` → `effect.fire(entity, &source_chip, world)` |
 | `commands.reverse_effect(entity, effect, source_chip)` | `Reverse` node unwinding | `ReverseEffectCommand::apply` → `effect.reverse(entity, &source_chip, world)` |
-| `commands.transfer_effect(entity, name, children, permanent)` | `On` node redirect | `TransferCommand::apply` → pushes to `BoundEffects` or `StagedEffects` |
+| `commands.transfer_effect(entity, name, children, permanent, context)` | `On` node redirect | `TransferCommand::apply` → pushes to `BoundEffects` or `StagedEffects`; `context` carries trigger entity references for targeted `On` resolution |
 | `commands.push_bound_effects(entity, effects)` | `dispatch_cell_effects`, `dispatch_breaker_effects` dispatch systems | `PushBoundEffects::apply` → inserts `BoundEffects`/`StagedEffects` if absent, then appends entries |
 
 Each effect module in `effect/effects/` provides `fire()`, `reverse()`, and `register()`. The enum match in `EffectKind` is mechanical dispatch only.

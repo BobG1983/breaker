@@ -5,12 +5,12 @@
         actions: [],
     )),
     max_frames: 120,
-    disallowed_failures: [ValidBreakerState],
-    allowed_failures: [ValidBreakerState],
+    disallowed_failures: [ValidDashState],
+    allowed_failures: [ValidDashState],
     debug_setup: (
         disable_physics: true,
     ),
     frame_mutations: [
-        (frame: 30, mutation: SetBreakerState(Braking)),
+        (frame: 30, mutation: SetDashState(Braking)),
     ],
 )

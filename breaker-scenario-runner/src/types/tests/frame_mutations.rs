@@ -6,13 +6,13 @@ use super::super::*;
 
 #[test]
 fn frame_mutation_set_breaker_state_parses_from_ron() {
-    let ron = "(frame: 3, mutation: SetBreakerState(Braking))";
+    let ron = "(frame: 3, mutation: SetDashState(Braking))";
     let result: FrameMutation =
-        ron::de::from_str(ron).expect("FrameMutation SetBreakerState should parse");
+        ron::de::from_str(ron).expect("FrameMutation SetDashState should parse");
     assert_eq!(result.frame, 3);
     assert_eq!(
         result.mutation,
-        MutationKind::SetBreakerState(ScenarioBreakerState::Braking)
+        MutationKind::SetDashState(ScenarioDashState::Braking)
     );
 }
 
@@ -236,23 +236,23 @@ fn frame_mutation_spawn_extra_gravity_wells_zero_parses_from_ron() {
 }
 
 // -------------------------------------------------------------------------
-// ScenarioBreakerState — all variants parse from RON
+// ScenarioDashState — all variants parse from RON
 // -------------------------------------------------------------------------
 
 #[test]
 fn scenario_breaker_state_all_variants_parse_from_ron() {
     let variants = [
-        ("Idle", ScenarioBreakerState::Idle),
-        ("Dashing", ScenarioBreakerState::Dashing),
-        ("Braking", ScenarioBreakerState::Braking),
-        ("Settling", ScenarioBreakerState::Settling),
+        ("Idle", ScenarioDashState::Idle),
+        ("Dashing", ScenarioDashState::Dashing),
+        ("Braking", ScenarioDashState::Braking),
+        ("Settling", ScenarioDashState::Settling),
     ];
     for (ron_str, expected) in &variants {
-        let result: ScenarioBreakerState = ron::de::from_str(ron_str)
-            .unwrap_or_else(|e| panic!("ScenarioBreakerState::{ron_str} should parse: {e}"));
+        let result: ScenarioDashState = ron::de::from_str(ron_str)
+            .unwrap_or_else(|e| panic!("ScenarioDashState::{ron_str} should parse: {e}"));
         assert_eq!(
             result, *expected,
-            "ScenarioBreakerState::{ron_str} must parse to {expected:?}"
+            "ScenarioDashState::{ron_str} must parse to {expected:?}"
         );
     }
 }

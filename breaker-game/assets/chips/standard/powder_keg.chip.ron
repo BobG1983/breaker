@@ -1,0 +1,18 @@
+(
+    name: "Powder Keg",
+    max_taken: 1,
+    legendary: (
+        prefix: "",
+        effects: [
+            On(target: Bolt, then: [
+                When(trigger: Impacted(Cell), then: [
+                    On(target: Cell, then: [
+                        When(trigger: Died, then: [
+                            Do(Explode(range: 48.0, damage: 10.0)),
+                        ]),
+                    ]),
+                ]),
+            ]),
+        ],
+    ),
+)

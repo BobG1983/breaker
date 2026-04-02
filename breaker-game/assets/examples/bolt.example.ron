@@ -1,0 +1,58 @@
+// ============================================================================
+// Bolt Definition Template
+// ============================================================================
+//
+// Reference for all available fields in a .bolt.ron file.
+// This file is NOT loaded by the game — it exists as documentation only.
+//
+// Required fields (no default):
+//   name, base_damage, effects
+//
+// Optional fields (shown with their defaults):
+//   base_speed             — 720.0
+//   min_speed              — 360.0
+//   max_speed              — 1440.0
+//   radius                 — 14.0
+//   color_rgb              — (6.0, 5.0, 0.5)
+//   min_angle_horizontal   — 5.0
+//   min_angle_vertical     — 5.0
+//
+// Loaded from: assets/bolts/*.bolt.ron
+// Struct:      BoltDefinition (breaker-game/src/bolt/definition.rs)
+// ============================================================================
+
+(
+    // REQUIRED: Display name of the bolt archetype.
+    name: "MyBolt",
+
+    // REQUIRED: Base damage dealt per cell hit.
+    base_damage: 10.0,
+
+    // REQUIRED: Effect chains bound to this bolt archetype.
+    // Each entry is On(target: <Target>, then: [<EffectNode>, ...]).
+    // Use [] for no effects.
+    effects: [],
+
+    // OPTIONAL: Base movement speed in world units per second. Default: 720.0
+    base_speed: 720.0,
+
+    // OPTIONAL: Minimum speed cap — bolt won't go slower than this. Default: 360.0
+    min_speed: 360.0,
+
+    // OPTIONAL: Maximum speed cap — bolt won't go faster than this. Default: 1440.0
+    max_speed: 1440.0,
+
+    // OPTIONAL: Collision radius in world units. Also controls visual scale. Default: 14.0
+    radius: 14.0,
+
+    // OPTIONAL: HDR color as (R, G, B). Values above 1.0 produce bloom. Default: (6.0, 5.0, 0.5)
+    color_rgb: (6.0, 5.0, 0.5),
+
+    // OPTIONAL: Minimum angle from horizontal in degrees.
+    // Prevents the bolt from traveling nearly flat. Default: 5.0
+    min_angle_horizontal: 5.0,
+
+    // OPTIONAL: Minimum angle from vertical in degrees.
+    // Prevents the bolt from traveling nearly straight up/down. Default: 5.0
+    min_angle_vertical: 5.0,
+)

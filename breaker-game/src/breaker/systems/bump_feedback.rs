@@ -119,8 +119,21 @@ mod tests {
     }
 
     fn spawn_breaker(app: &mut App) {
+        use crate::breaker::definition::BreakerDefinition;
+        let def = BreakerDefinition::default();
+        let entity = app
+            .world_mut()
+            .spawn(
+                Breaker::builder()
+                    .definition(&def)
+                    .headless()
+                    .primary()
+                    .build(),
+            )
+            .id();
         app.world_mut()
-            .spawn((Breaker, Transform::from_xyz(0.0, -450.0, 0.0)));
+            .entity_mut(entity)
+            .insert(Transform::from_xyz(0.0, -450.0, 0.0));
     }
 
     #[test]
@@ -130,6 +143,7 @@ mod tests {
         app.insert_resource(TestBumpMsg(Some(BumpPerformed {
             grade: BumpGrade::Perfect,
             bolt: None,
+            breaker: Entity::PLACEHOLDER,
         })));
         tick(&mut app);
 
@@ -148,6 +162,7 @@ mod tests {
         app.insert_resource(TestBumpMsg(Some(BumpPerformed {
             grade: BumpGrade::Early,
             bolt: None,
+            breaker: Entity::PLACEHOLDER,
         })));
         tick(&mut app);
 
@@ -166,6 +181,7 @@ mod tests {
         app.insert_resource(TestBumpMsg(Some(BumpPerformed {
             grade: BumpGrade::Late,
             bolt: None,
+            breaker: Entity::PLACEHOLDER,
         })));
         tick(&mut app);
 

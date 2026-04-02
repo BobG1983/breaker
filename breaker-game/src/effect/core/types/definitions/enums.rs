@@ -115,6 +115,23 @@ pub enum Target {
     AllWalls,
 }
 
+/// Context entities from the trigger event that caused effect evaluation.
+///
+/// Bridges populate the fields they know about. `On(Cell)` reads `context.cell`,
+/// `On(Bolt)` reads `context.bolt`, etc. Fields are `None` when the trigger
+/// doesn't involve that entity type.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct TriggerContext {
+    /// The bolt entity involved in this trigger, if any.
+    pub bolt: Option<Entity>,
+    /// The breaker entity involved in this trigger, if any.
+    pub breaker: Option<Entity>,
+    /// The cell entity involved in this trigger, if any.
+    pub cell: Option<Entity>,
+    /// The wall entity involved in this trigger, if any.
+    pub wall: Option<Entity>,
+}
+
 /// Type of entity to attract toward, used by [`EffectKind::Attraction`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
 pub enum AttractionType {
@@ -346,8 +363,8 @@ pub enum EffectKind {
     Explode {
         /// Blast radius.
         range: f32,
-        /// Damage multiplier.
-        damage_mult: f32,
+        /// Flat damage dealt to each cell in range.
+        damage: f32,
     },
     /// Breaker deceleration multiplier for precise stops.
     QuickStop {
@@ -376,6 +393,14 @@ pub enum EffectKind {
         perfect_window_multiplier: f32,
         /// Seconds breaker must remain stationary before planting.
         plant_delay: f32,
+    },
+    /// Marks an entity as vulnerable, increasing damage taken.
+    ///
+    /// Applied to cells. The damage system multiplies incoming damage by
+    /// `multiplier` when the cell has an active vulnerability.
+    Vulnerable {
+        /// Damage multiplier applied to incoming hits (e.g., 2.0 = double damage).
+        multiplier: f32,
     },
     /// Charge-and-release: count bumps, then spawn bolts + shockwave.
     CircuitBreaker {

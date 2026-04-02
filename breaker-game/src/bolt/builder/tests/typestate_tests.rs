@@ -23,6 +23,8 @@ fn test_bolt_definition() -> BoltDefinition {
         color_rgb: [6.0, 5.0, 0.5],
         min_angle_horizontal: 5.0,
         min_angle_vertical: 5.0,
+        min_radius: None,
+        max_radius: None,
     }
 }
 
@@ -31,7 +33,8 @@ fn test_bolt_definition() -> BoltDefinition {
 // Behavior 1: Bolt::builder() returns a builder in the fully-unconfigured state
 #[test]
 fn bolt_new_returns_unconfigured_builder() {
-    let _builder: BoltBuilder<NoPosition, NoSpeed, NoAngle, NoMotion, NoRole> = Bolt::builder();
+    let _builder: BoltBuilder<NoPosition, NoSpeed, NoAngle, NoMotion, NoRole, Unvisual> =
+        Bolt::builder();
     // Type annotation compiles successfully — that is the assertion.
 }
 
@@ -47,7 +50,7 @@ fn bolt_new_twice_produces_independent_builders() {
 // Behavior 2: .at_position() transitions Position dimension
 #[test]
 fn at_position_transitions_to_has_position() {
-    let _builder: BoltBuilder<HasPosition, NoSpeed, NoAngle, NoMotion, NoRole> =
+    let _builder: BoltBuilder<HasPosition, NoSpeed, NoAngle, NoMotion, NoRole, Unvisual> =
         Bolt::builder().at_position(Vec2::new(100.0, 250.0));
 }
 
@@ -59,6 +62,7 @@ fn at_position_stores_position_in_spawn() {
         .at_position(Vec2::new(100.0, 250.0))
         .serving()
         .primary()
+        .headless()
         .spawn(&mut world);
     let pos = world
         .get::<Position2D>(entity)
@@ -78,6 +82,7 @@ fn at_position_accepts_zero() {
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
+        .headless()
         .spawn(&mut world);
     let pos = world
         .get::<Position2D>(entity)
@@ -93,6 +98,7 @@ fn at_position_accepts_negative_coordinates() {
         .at_position(Vec2::new(-200.0, -100.0))
         .serving()
         .primary()
+        .headless()
         .spawn(&mut world);
     let pos = world
         .get::<Position2D>(entity)
@@ -107,7 +113,7 @@ fn at_position_accepts_negative_coordinates() {
 // Behavior 3: .with_speed() transitions Speed dimension
 #[test]
 fn with_speed_transitions_to_has_speed() {
-    let _builder: BoltBuilder<NoPosition, HasSpeed, NoAngle, NoMotion, NoRole> =
+    let _builder: BoltBuilder<NoPosition, HasSpeed, NoAngle, NoMotion, NoRole, Unvisual> =
         Bolt::builder().with_speed(400.0, 200.0, 800.0);
 }
 
@@ -120,6 +126,7 @@ fn with_speed_stores_values_in_spawn() {
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
+        .headless()
         .spawn(&mut world);
     let base = world
         .get::<BaseSpeed>(entity)
@@ -156,6 +163,7 @@ fn with_speed_equal_min_max_base_fixed_speed() {
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
+        .headless()
         .spawn(&mut world);
     let base = world.get::<BaseSpeed>(entity).unwrap();
     let min = world.get::<MinSpeed>(entity).unwrap();
@@ -171,7 +179,7 @@ fn with_speed_equal_min_max_base_fixed_speed() {
 // Behavior 4: .with_angle() transitions Angle dimension
 #[test]
 fn with_angle_transitions_to_has_angle() {
-    let _builder: BoltBuilder<NoPosition, NoSpeed, HasAngle, NoMotion, NoRole> =
+    let _builder: BoltBuilder<NoPosition, NoSpeed, HasAngle, NoMotion, NoRole, Unvisual> =
         Bolt::builder().with_angle(0.087, 0.087);
 }
 
@@ -184,6 +192,7 @@ fn with_angle_stores_values_in_spawn() {
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
+        .headless()
         .spawn(&mut world);
     let h = world
         .get::<MinAngleHorizontal>(entity)
@@ -212,6 +221,7 @@ fn with_angle_zero_valid() {
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
+        .headless()
         .spawn(&mut world);
     let h = world.get::<MinAngleHorizontal>(entity).unwrap();
     let v = world.get::<MinAngleVertical>(entity).unwrap();
@@ -224,14 +234,14 @@ fn with_angle_zero_valid() {
 // Behavior 5: .serving() transitions Motion dimension
 #[test]
 fn serving_transitions_to_serving() {
-    let _builder: BoltBuilder<NoPosition, NoSpeed, NoAngle, Serving, NoRole> =
+    let _builder: BoltBuilder<NoPosition, NoSpeed, NoAngle, Serving, NoRole, Unvisual> =
         Bolt::builder().serving();
 }
 
 // Behavior 6: .with_velocity() transitions Motion dimension
 #[test]
 fn with_velocity_transitions_to_has_velocity() {
-    let _builder: BoltBuilder<NoPosition, NoSpeed, NoAngle, HasVelocity, NoRole> =
+    let _builder: BoltBuilder<NoPosition, NoSpeed, NoAngle, HasVelocity, NoRole, Unvisual> =
         Bolt::builder().with_velocity(Velocity2D(Vec2::new(102.9, 385.5)));
 }
 
@@ -243,6 +253,7 @@ fn with_velocity_stores_velocity_in_spawn() {
         .at_position(Vec2::new(200.0, 300.0))
         .with_velocity(Velocity2D(Vec2::new(102.9, 385.5)))
         .extra()
+        .headless()
         .spawn(&mut world);
     let vel = world
         .get::<Velocity2D>(entity)
@@ -262,6 +273,7 @@ fn with_velocity_zero_valid() {
         .at_position(Vec2::ZERO)
         .with_velocity(Velocity2D(Vec2::ZERO))
         .extra()
+        .headless()
         .spawn(&mut world);
     // Must also check a non-#[require] component to avoid false pass from stub
     assert!(
@@ -279,13 +291,13 @@ fn with_velocity_zero_valid() {
 // Behavior 7: .primary() transitions Role dimension
 #[test]
 fn as_primary_transitions_to_primary() {
-    let _builder: BoltBuilder<NoPosition, NoSpeed, NoAngle, NoMotion, Primary> =
+    let _builder: BoltBuilder<NoPosition, NoSpeed, NoAngle, NoMotion, Primary, Unvisual> =
         Bolt::builder().primary();
 }
 
 // Behavior 8: .extra() transitions Role dimension
 #[test]
 fn as_extra_transitions_to_extra() {
-    let _builder: BoltBuilder<NoPosition, NoSpeed, NoAngle, NoMotion, Extra> =
+    let _builder: BoltBuilder<NoPosition, NoSpeed, NoAngle, NoMotion, Extra, Unvisual> =
         Bolt::builder().extra();
 }

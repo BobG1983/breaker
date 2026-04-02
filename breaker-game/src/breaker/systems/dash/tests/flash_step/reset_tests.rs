@@ -1,13 +1,11 @@
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::Position2D;
+use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use super::helpers::*;
 use crate::{
     breaker::{
-        components::{
-            Breaker, BreakerState, BreakerStateTimer, BreakerTilt, BreakerVelocity, BreakerWidth,
-        },
-        resources::BreakerConfig,
+        components::{BaseWidth, Breaker, BreakerTilt, DashState, DashStateTimer},
+        definition::BreakerDefinition,
     },
     effect::effects::flash_step::FlashStepActive,
     input::resources::{GameAction, InputActions},
@@ -21,23 +19,23 @@ fn flash_step_teleport_resets_tilt_and_timer_to_idle() {
     //        timer remaining=0.15, FlashStepActive, reversal dash input
     // When: update_breaker_state runs
     // Then: tilt.angle == 0.0, tilt.ease_start == 0.0, tilt.ease_target == 0.0,
-    //       timer.remaining == 0.0, BreakerState == Idle
+    //       timer.remaining == 0.0, DashState == Idle
     let mut app = test_app();
-    let config = BreakerConfig::default();
+    let config = BreakerDefinition::default();
     let entity = app
         .world_mut()
         .spawn((
             Breaker,
-            BreakerState::Settling,
-            BreakerVelocity { x: 0.0 },
+            DashState::Settling,
+            Velocity2D(Vec2::ZERO),
             BreakerTilt {
                 angle: -0.25,
                 ease_start: -0.35,
                 ease_target: 0.0,
             },
-            BreakerStateTimer { remaining: 0.15 },
+            DashStateTimer { remaining: 0.15 },
             Position2D(Vec2::new(0.0, -250.0)),
-            BreakerWidth(120.0),
+            BaseWidth(120.0),
             FlashStepActive,
             breaker_param_bundle(&config),
         ))
@@ -50,8 +48,8 @@ fn flash_step_teleport_resets_tilt_and_timer_to_idle() {
         .push(GameAction::DashLeft);
     tick(&mut app);
 
-    let state = app.world().get::<BreakerState>(entity).unwrap();
-    assert_eq!(*state, BreakerState::Idle, "teleport should reset to Idle");
+    let state = app.world().get::<DashState>(entity).unwrap();
+    assert_eq!(*state, DashState::Idle, "teleport should reset to Idle");
 
     let tilt = app.world().get::<BreakerTilt>(entity).unwrap();
     assert!(
@@ -70,7 +68,7 @@ fn flash_step_teleport_resets_tilt_and_timer_to_idle() {
         tilt.ease_target
     );
 
-    let timer = app.world().get::<BreakerStateTimer>(entity).unwrap();
+    let timer = app.world().get::<DashStateTimer>(entity).unwrap();
     assert!(
         timer.remaining.abs() < f32::EPSILON,
         "teleport should reset timer.remaining to 0.0, got {}",
@@ -82,21 +80,21 @@ fn flash_step_teleport_resets_tilt_and_timer_to_idle() {
 fn flash_step_teleport_resets_cleanly_with_nearly_expired_timer() {
     // Edge case: timer nearly expired (0.001) still resets cleanly
     let mut app = test_app();
-    let config = BreakerConfig::default();
+    let config = BreakerDefinition::default();
     let entity = app
         .world_mut()
         .spawn((
             Breaker,
-            BreakerState::Settling,
-            BreakerVelocity { x: 0.0 },
+            DashState::Settling,
+            Velocity2D(Vec2::ZERO),
             BreakerTilt {
                 angle: -0.25,
                 ease_start: -0.35,
                 ease_target: 0.0,
             },
-            BreakerStateTimer { remaining: 0.001 },
+            DashStateTimer { remaining: 0.001 },
             Position2D(Vec2::new(0.0, -250.0)),
-            BreakerWidth(120.0),
+            BaseWidth(120.0),
             FlashStepActive,
             breaker_param_bundle(&config),
         ))
@@ -108,10 +106,10 @@ fn flash_step_teleport_resets_cleanly_with_nearly_expired_timer() {
         .push(GameAction::DashLeft);
     tick(&mut app);
 
-    let state = app.world().get::<BreakerState>(entity).unwrap();
+    let state = app.world().get::<DashState>(entity).unwrap();
     assert_eq!(
         *state,
-        BreakerState::Idle,
+        DashState::Idle,
         "nearly expired timer should still produce clean Idle reset"
     );
 
@@ -122,7 +120,7 @@ fn flash_step_teleport_resets_cleanly_with_nearly_expired_timer() {
         tilt.angle
     );
 
-    let timer = app.world().get::<BreakerStateTimer>(entity).unwrap();
+    let timer = app.world().get::<DashStateTimer>(entity).unwrap();
     assert!(
         timer.remaining.abs() < f32::EPSILON,
         "timer.remaining should be 0.0, got {}",

@@ -8,7 +8,7 @@ use crate::{
         resources::{DEFAULT_BOLT_ANGLE_SPREAD, DEFAULT_BOLT_SPAWN_OFFSET_Y},
     },
     breaker::components::Breaker,
-    shared::{EntityScale, GameDrawLayer, PlayfieldConfig},
+    shared::{GameDrawLayer, NodeScalingFactor, PlayfieldConfig},
 };
 
 #[test]
@@ -223,7 +223,7 @@ fn bolt_above_floor_not_lost() {
     assert!(vel.0.y < 0.0, "bolt above floor should keep going down");
 }
 
-// --- EntityScale lost detection tests ---
+// --- NodeScalingFactor lost detection tests ---
 
 #[test]
 fn scaled_bolt_uses_effective_radius_for_lost_detection() {
@@ -240,7 +240,9 @@ fn scaled_bolt_uses_effective_radius_for_lost_detection() {
     // Bolt must be below -307.0 to be detected as lost
     let bolt_y = playfield.bottom() - 7.0 - 1.0; // -308.0
     let entity = spawn_bolt(&mut app, Vec2::new(0.0, bolt_y), Vec2::new(0.0, -400.0));
-    app.world_mut().entity_mut(entity).insert(EntityScale(0.5));
+    app.world_mut()
+        .entity_mut(entity)
+        .insert(NodeScalingFactor(0.5));
     tick(&mut app);
 
     let vel = app
@@ -267,7 +269,7 @@ fn bolt_without_entity_scale_in_lost_detection_is_backward_compatible() {
         GameDrawLayer::Breaker,
     ));
 
-    // No EntityScale
+    // No NodeScalingFactor
     spawn_bolt(
         &mut app,
         Vec2::new(0.0, playfield.bottom() - 100.0),
@@ -283,7 +285,7 @@ fn bolt_without_entity_scale_in_lost_detection_is_backward_compatible() {
         .unwrap();
     assert!(
         vel.0.y > 0.0,
-        "bolt without EntityScale should be respawned normally, got vy={:.1}",
+        "bolt without NodeScalingFactor should be respawned normally, got vy={:.1}",
         vel.0.y
     );
 }

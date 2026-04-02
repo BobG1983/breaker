@@ -4,21 +4,25 @@ How game data flows from RON config files to runtime systems via the ECS.
 
 ---
 
-## Pipeline: RON → Config Resource → Init System → Entity Component
+## Pipeline: RON → Registry → Builder → Entity Component
 
 ```
-defaults.breaker.ron
-        ↓  (asset loader)
-Res<BreakerConfig>
-        ↓  (init_breaker_params — runs OnEnter(Playing))
-Entity components: BreakerWidth, BreakerHeight, BreakerReflectionSpread, …
+assets/breakers/*.breaker.ron
+        ↓  (RonAssetLoader via SeedableRegistry)
+Res<BreakerRegistry>
+        ↓  (spawn_or_reuse_breaker — runs OnEnter(Playing))
+        ↓  BreakerRegistry.get(name) → &BreakerDefinition
+        ↓  Breaker::builder().definition(&def).rendered(...).primary().spawn(commands)
+Entity components: BaseWidth, BaseHeight, BreakerReflectionSpread, …
         ↓  (production systems query entities)
 move_breaker, bolt_breaker_collision, …
 ```
 
-**Config resources** (e.g., `Res<BreakerConfig>`, `Res<BoltConfig>`, `Res<CellConfig>`, `Res<PlayfieldConfig>`, etc.) are the bridge between RON data files and entity components. They exist so the asset pipeline has somewhere to deposit loaded values.
+**Registries** (e.g., `Res<BreakerRegistry>`, `Res<BoltRegistry>`, `Res<CellTypeRegistry>`) are the bridge between RON data files and builders. The builder reads from a definition struct and emits all entity components in a single `build()` call.
 
-**Only init and spawn systems read config resources.** Every other system reads entity components. This keeps production systems decoupled from the config pipeline — they don't care whether a value came from RON, was overridden by an upgrade, or was injected in a test.
+**`BreakerConfig` was eliminated.** All per-breaker gameplay fields moved into `BreakerDefinition` with `#[serde(default)]`. The RON files specify only overrides from the defaults. `BoltConfig` was similarly eliminated — all fields moved into `BoltDefinition`.
+
+**Only builders read definition structs.** Every other system reads entity components directly. This keeps production systems decoupled from the data pipeline.
 
 ---
 
@@ -36,8 +40,8 @@ A component belongs on the entity it conceptually describes:
 
 If a value belongs to a domain, its config field and RON entry live in that domain's `*Defaults`:
 
-- Breaker surface angles (`max_reflection_angle`, `min_angle_from_horizontal`) → `BreakerDefaults` / `defaults.breaker.ron`
-- Bolt speed/radius → `BoltDefaults` / `defaults.bolt.ron`
+- Breaker surface angles (`reflection_spread`), movement, dash, bump params → `BreakerDefinition` / `assets/breakers/*.breaker.ron`
+- Bolt speed/radius → `BoltDefinition` / `assets/bolts/*.bolt.ron`
 
 Don't leave empty config resources — if all fields move elsewhere, delete the resource.
 
@@ -47,9 +51,9 @@ Config files and components store the **full, intuitive value** (width, height).
 
 ```rust
 #[derive(Component, Debug)]
-pub struct BreakerWidth(pub f32);
+pub struct BaseWidth(pub f32);
 
-impl BreakerWidth {
+impl BaseWidth {
     pub fn half_width(&self) -> f32 {
         self.0 / 2.0
     }
@@ -64,7 +68,7 @@ When multiple values are **always accessed together** in the same systems, group
 
 ```rust
 #[derive(Component, Debug, Clone)]
-pub struct BumpVisualParams {
+pub struct BumpFeedback {
     pub duration: f32,
     pub peak: f32,
     pub peak_fraction: f32,
@@ -73,30 +77,35 @@ pub struct BumpVisualParams {
 }
 ```
 
-When values are **independently accessed** across different systems, keep them as separate newtypes (`BoltBaseSpeed(f32)`, `BoltRadius(f32)`).
+When values are **independently accessed** across different systems, keep them as separate newtypes (e.g., `BoltBaseDamage(f32)`, `BoltSpawnOffsetY(f32)`). Note: `BoltRadius` is a type alias for `BaseRadius` — the component is still individually accessed, but it uses the shared spatial type rather than a bolt-specific newtype.
 
-### 5. Init systems materialize components from config
+### 5. Builders materialize components from definitions
 
-Each domain has an `init_*_params` system that runs `OnEnter(Playing)` after the spawn system. It reads the config resource once and inserts all components:
+The builder pattern replaces the old `init_*_params` systems. The `spawn_or_reuse_breaker` system reads from the registry, builds the entity with all components at once, and only does so for new (not persisted) entities:
 
 ```rust
-pub fn init_breaker_params(
+pub fn spawn_or_reuse_breaker(
+    query: Query<(), With<Breaker>>,
+    registry: Res<BreakerRegistry>,
+    selected: Res<SelectedBreaker>,
     mut commands: Commands,
-    config: Res<BreakerConfig>,           // ← only place this is read
-    query: Query<Entity, (With<Breaker>, Without<MaxSpeed>)>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    for entity in &query {
-        commands.entity(entity).insert((
-            BreakerWidth(config.width),
-            BreakerHeight(config.height),
-            BreakerReflectionSpread(config.reflection_spread.to_radians()),
-            // …
-        ));
+    if query.is_empty() {
+        // No existing breaker — spawn fresh
+        let def = registry.get(&selected.name).unwrap();
+        Breaker::builder()
+            .definition(def)
+            .rendered(&mut meshes, &mut materials)
+            .primary()
+            .spawn(&mut commands);
     }
+    // Otherwise reuse the existing entity (persisted across nodes via CleanupOnRunEnd)
 }
 ```
 
-The `Without<MaxSpeed>` filter skips already-initialized entities (persisted across nodes).
+All 22+ stat components are now produced by `build()` in a single call. The `Without<MaxSpeed>` guard pattern is no longer needed.
 
 ---
 
@@ -123,9 +132,9 @@ bolt_cell_collision: effective_damage = BASE_BOLT_DAMAGE * active.multiplier()
 
 ## Testing
 
-- **Init system tests** use `init_resource::<*Config>()` — they test the config→component bridge
-- **Production system tests** spawn entities with component values directly — no config resource needed
-- Tests may use `*Config::default()` to source component values, but never inject the config as a resource for the system under test
+- **Builder tests** use `Breaker::builder().definition(&def).headless().primary().build()` — they test the definition→component bridge
+- **Production system tests** spawn entities with component values directly — no registry or definition needed
+- Tests that need a breaker entity use `Breaker::builder()` directly with test values, not the registry
 
 ---
 
@@ -147,7 +156,7 @@ impl SeedableRegistry for BreakerRegistry {
     type Asset = BreakerDefinition;
 
     fn asset_dir() -> &'static str { "breakers" }
-    fn extensions() -> &'static [&'static str] { &["bdef.ron"] }
+    fn extensions() -> &'static [&'static str] { &["breaker.ron"] }
 
     fn seed(&mut self, assets: &[(AssetId<BreakerDefinition>, BreakerDefinition)]) {
         self.breakers.clear();
@@ -168,9 +177,9 @@ Fields are **private** — all access goes through methods. This lets internals 
 
 | Registry | Asset type | Key | Notes |
 |----------|-----------|-----|-------|
-| `BreakerRegistry` | `BreakerDefinition` (`bdef.ron`) | `String` (name) | Implements `SeedableRegistry`. Folder: `assets/breakers/`. Re-exported from `effect/` for historical reasons. |
-| `ChipTemplateRegistry` | `ChipTemplate` (`chip.ron`) | `String` (name) | Implements `SeedableRegistry`. Folder: `assets/chips/templates/`. Stores `(AssetId, ChipTemplate)` pairs for hot-reload. |
-| `EvolutionTemplateRegistry` | `EvolutionTemplate` (`evolution.ron`) | `String` (name) | Implements `SeedableRegistry`. Folder: `assets/chips/evolution/`. Stores `(AssetId, EvolutionTemplate)` pairs. |
+| `BreakerRegistry` | `BreakerDefinition` (`breaker.ron`) | `String` (name) | Implements `SeedableRegistry`. Folder: `assets/breakers/`. Re-exported from `breaker/`. |
+| `ChipTemplateRegistry` | `ChipTemplate` (`chip.ron`) | `String` (name) | Implements `SeedableRegistry`. Folder: `assets/chips/standard/`. Stores `(AssetId, ChipTemplate)` pairs for hot-reload. |
+| `EvolutionTemplateRegistry` | `EvolutionTemplate` (`evolution.ron`) | `String` (name) | Implements `SeedableRegistry`. Folder: `assets/chips/evolutions/`. Stores `(AssetId, EvolutionTemplate)` pairs. |
 | `ChipCatalog` | *(built from templates)* | `String` (name) | NOT a `SeedableRegistry` — built at runtime by expanding `ChipTemplate`s and `EvolutionTemplate`s via `populate_catalog`. Paired `Vec<String>` preserves insertion order for deterministic chip offers. Also holds `Vec<Recipe>` for in-catalog evolution recipes. |
 | `NodeLayoutRegistry` | `NodeLayout` | `String` (name) | Paired `Vec<String>` preserves insertion order for index-based node progression. |
 | `CellTypeRegistry` | `CellTypeDefinition` | `char` (alias) | Exception: keyed by grid alias char, not name. `CellTypeDefinition.hp` is `f32`. Has optional `behavior: CellBehavior` field (locked, regen_rate). |
@@ -192,7 +201,7 @@ Res<FooRegistry>
 For `ChipCatalog` (template-expanded):
 
 ```
-assets/chips/templates/*.chip.ron
+assets/chips/standard/*.chip.ron
     ↓  (ChipTemplateRegistry seeded via SeedableRegistry)
 Res<ChipTemplateRegistry>
     ↓  (expand_template — called at load time to expand each template into ChipDefinitions)

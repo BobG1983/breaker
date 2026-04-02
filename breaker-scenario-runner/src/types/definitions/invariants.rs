@@ -22,7 +22,7 @@ pub enum InvariantKind {
     /// Breaker state machine only takes valid transitions.
     ValidStateTransitions,
     /// Breaker movement state machine only takes legal transitions.
-    ValidBreakerState,
+    ValidDashState,
     /// Node timer decreases monotonically (never increases mid-node).
     TimerMonotonicallyDecreasing,
     /// Breaker x position stays within playfield bounds minus half-width.
@@ -71,7 +71,7 @@ impl InvariantKind {
         Self::NoNaN,
         Self::TimerNonNegative,
         Self::ValidStateTransitions,
-        Self::ValidBreakerState,
+        Self::ValidDashState,
         Self::TimerMonotonicallyDecreasing,
         Self::BreakerPositionClamped,
         Self::PhysicsFrozenDuringPause,
@@ -103,7 +103,7 @@ impl InvariantKind {
             Self::NoNaN => "NaN detected in transform or velocity",
             Self::TimerNonNegative => "node timer went negative",
             Self::ValidStateTransitions => "invalid game state transition",
-            Self::ValidBreakerState => "invalid breaker movement state transition",
+            Self::ValidDashState => "invalid breaker movement state transition",
             Self::TimerMonotonicallyDecreasing => "node timer increased mid-node",
             Self::BreakerPositionClamped => "breaker position not clamped to playfield",
             Self::PhysicsFrozenDuringPause => "physics entity moved while paused",

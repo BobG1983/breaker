@@ -18,8 +18,9 @@ pub struct PrimaryBolt;
 pub struct BoltServing;
 
 /// Bolt radius in world units.
-#[derive(Component, Debug)]
-pub struct BoltRadius(pub f32);
+///
+/// Alias for `BaseRadius` -- bolt uses the shared radius component.
+pub type BoltRadius = crate::shared::size::BaseRadius;
 
 /// Vertical offset above the breaker where the bolt spawns.
 #[derive(Component, Debug)]

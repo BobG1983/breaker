@@ -175,22 +175,73 @@ is unused in production.
 
 **Status**: Latent hazard — safe to leave as-is unless `build()` gains production callers.
 
-## .definition() builder omits BoltRespawnOffsetY and BoltRespawnAngleSpread — LATENT BUG
+## .definition() builder omits BoltRespawnOffsetY and BoltRespawnAngleSpread — RESOLVED (Wave 6)
 
-`spawn_inner` (core.rs:390-397) inserts `BoltAngleSpread` + `BoltSpawnOffsetY` from `definition_params`
-but does NOT insert `BoltRespawnOffsetY` or `BoltRespawnAngleSpread`. The `LostBoltData` query
-(queries.rs:90-92) requires BOTH `BoltRespawnOffsetY` and `BoltRespawnAngleSpread` as non-optional
-components. Bolts built via `.definition()` would be silently excluded from `bolt_lost` query
-and never detected as lost.
+**RESOLVED** as of Wave 6 of feature/breaker-builder-pattern (2026-04-02).
 
-**Current status**: LATENT — `.definition()` is not yet wired into `spawn_bolt`. All production
-bolt spawns use `.config()`. `BASE_BOLT_DAMAGE` comment in resources.rs:9 confirms wiring is
-deferred to Wave 6. If wave 6 wires `spawn_bolt` to use `.definition()`, this will become an
-active bug: primary bolt falls below playfield but no BoltLost is ever emitted.
+`BoltRespawnOffsetY`, `BoltRespawnAngleSpread`, and `BoltInitialAngle` were **deleted** from the
+codebase in Wave 6. `LostBoltData` now queries `BoltSpawnOffsetY` and `BoltAngleSpread` (single
+components, no respawn variants). The original latent bug was eliminated by removing the
+component split. Do NOT re-flag.
 
-**Location**: `breaker-game/src/bolt/builder/core.rs:390-396` (spawn_inner, definition_params block)
-**Also affected**: `breaker-game/src/bolt/queries.rs:90-92` (LostBoltData requires BoltRespawnOffsetY, BoltRespawnAngleSpread)
+## PrimaryBreaker marker never inserted on spawned breaker — RESOLVED (Breaker Builder Pattern)
 
-**Fix**: Add `BoltRespawnOffsetY` and `BoltRespawnAngleSpread` to the `definition_params` insertion block,
-using values from the definition or falling back to constants (e.g., `DEFAULT_BOLT_SPAWN_OFFSET_Y`
-and `DEFAULT_BOLT_ANGLE_SPREAD`).
+**RESOLVED** as of feature/breaker-builder-pattern (2026-04-02).
+
+`spawn_or_reuse_breaker` calls `Breaker::builder()...primary()...spawn(&mut commands)`.
+The builder's `.primary()` method inserts `PrimaryBreaker` and `CleanupOnRunEnd` alongside `Breaker`.
+`DispatchInitialEffects` and `resolve_default` queries for `(With<Breaker>, With<PrimaryBreaker>)`
+will now find the breaker entity correctly. Do NOT re-flag.
+
+## BreakerBuilder: with_width() does not recompute min_w/max_w — LATENT BUG
+
+`core_params_from` reads `min_w: dims.min_w` always from `HasDimensions`, not from the
+overridden width. When `.with_width(200.0)` is called on a builder whose `.definition()`
+computed `min_w = 60.0` (= 120.0 * 0.5), the entity gets `BaseWidth=200.0`, `MinWidth=60.0`,
+`MaxWidth=600.0`. The min/max are stale relative to the new base width.
+
+No test checks `MinWidth`/`MaxWidth` after `.with_width()`. Same issue applies to `.with_height()`.
+
+**Status**: LATENT — no production callers of `.with_width()` in current RON-driven flow.
+**Location**: `breaker-game/src/breaker/builder/core.rs` (core_params_from)
+
+## BreakerBuilder: with_lives()/with_color() before definition() are silently overwritten — LATENT BUG
+
+`.definition()` unconditionally overwrites `optional.lives` and `optional.color_rgb`:
+- `self.optional.lives = def.life_pool.map_or(...)` always executes
+- `self.optional.color_rgb = Some(def.color_rgb)` always executes
+
+So `.with_lives(Some(5)).definition(...)` silently ignores the `with_lives` call.
+Same for `.with_color([...]).definition(...)`.
+
+`with_effects` is partially guarded: `definition()` only overwrites if `def.effects` is non-empty.
+
+**Status**: LATENT — valid call order is `.definition()` FIRST, then `.with_*()`.
+Production spawns follow this order (`spawn_or_reuse_breaker` calls `.definition(def)` before `.rendered(...).primary()`).
+**Location**: `breaker-game/src/breaker/builder/core.rs` (definition method)
+
+## BreakerBuilder: rendered() before definition() uses wrong color — LATENT BUG
+
+`.rendered(meshes, materials)` reads `self.optional.color_rgb` to create the material handle.
+If called before `.definition()`, `color_rgb` is `None` at call time and falls back to
+`BreakerDefinition::default().color_rgb`. Then `.definition()` sets `optional.color_rgb`
+to the definition's color — but the material was already created with the wrong color.
+
+**Status**: LATENT — production call order is `.definition(def).rendered(...).primary()`, which is correct.
+**Location**: `breaker-game/src/breaker/builder/core.rs` (rendered method)
+
+## Scale2D stores absolute pixel dimensions, not scale ratios — confirmed design pattern
+
+`spawn_breaker` initializes `Scale2D { x: config.width, y: config.height }` (e.g., 120.0 × 20.0).
+`sync_breaker_scale` writes `effective_size()` result (absolute dimensions) to `Scale2D`.
+`compute_globals` copies `Scale2D → GlobalScale2D`, `derive_transform` puts these into
+`Transform.scale`. Breaker sprite is `Rectangle::new(1.0, 1.0)` — scaled to pixel dimensions.
+This is an absolute-dimension semantic for `Scale2D`, intentionally different from the usual
+ratio-multiplier usage. Do NOT re-flag as "incorrect use of Scale2D".
+
+## sync_breaker_scale in Update vs collision systems in FixedUpdate — CONFIRMED CORRECT
+
+`sync_breaker_scale` (Update) writes `Scale2D` (visual only). Collision systems (`breaker_cell_collision`,
+`breaker_wall_collision`) in FixedUpdate read `BaseWidth`/`BaseHeight`/`ActiveSizeBoosts`/
+`NodeScalingFactor` DIRECTLY — they do not read `Scale2D`. No ordering dependency. Intentional split.
+Do NOT re-flag the Update/FixedUpdate mismatch.

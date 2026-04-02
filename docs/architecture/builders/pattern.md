@@ -13,7 +13,7 @@ Entity construction in an ECS is error-prone. A breaker needs ~40 components to 
 The typestate builder solves this by:
 1. **Compile-time completeness** — you can't build an entity without providing all required data.
 2. **Single source of truth** — one `build()` function produces the complete component set. No scattered init systems.
-3. **Convenience shortcuts** — `.config(&BreakerConfig)` fills many dimensions at once from a config resource.
+3. **Convenience shortcuts** — `.definition(&BreakerDefinition)` fills many dimensions at once from a definition struct.
 4. **Override flexibility** — `.with_max_speed(600.0)` overrides a single value after config.
 5. **Test ergonomics** — tests use the same builder as production. No divergent test helpers.
 
@@ -33,13 +33,14 @@ pub struct HasDimensions { w: f32, h: f32, y: f32 }  // configured
 The builder carries one type parameter per dimension:
 
 ```rust
-pub struct BreakerBuilder<D, Mv, Da, Sp, Bm, V> {
+pub struct BreakerBuilder<D, Mv, Da, Sp, Bm, V, R> {
     dimensions: D,
     movement: Mv,
     dashing: Da,
     spread: Sp,
     bump: Bm,
     visual: V,
+    role: R,
     optional: OptionalData,
 }
 ```
@@ -49,20 +50,20 @@ pub struct BreakerBuilder<D, Mv, Da, Sp, Bm, V> {
 Each method transitions one dimension, consuming the builder and returning a new one:
 
 ```rust
-impl<Mv, Da, Sp, Bm, V> BreakerBuilder<NoDimensions, Mv, Da, Sp, Bm, V> {
+impl<Mv, Da, Sp, Bm, V, R> BreakerBuilder<NoDimensions, Mv, Da, Sp, Bm, V, R> {
     pub fn dimensions(self, w: f32, h: f32, y: f32)
-        -> BreakerBuilder<HasDimensions, Mv, Da, Sp, Bm, V> { ... }
+        -> BreakerBuilder<HasDimensions, Mv, Da, Sp, Bm, V, R> { ... }
 }
 ```
 
 ### Convenience Methods
 
-A config shortcut transitions multiple dimensions at once:
+A definition shortcut transitions multiple dimensions at once:
 
 ```rust
-impl<V> BreakerBuilder<NoDimensions, NoMovement, NoDashing, NoSpread, NoBump, V> {
-    pub fn config(self, cfg: &BreakerConfig)
-        -> BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, V> { ... }
+impl<V, R> BreakerBuilder<NoDimensions, NoMovement, NoDashing, NoSpread, NoBump, V, R> {
+    pub fn definition(self, def: &BreakerDefinition)
+        -> BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, V, R> { ... }
 }
 ```
 
@@ -71,7 +72,7 @@ impl<V> BreakerBuilder<NoDimensions, NoMovement, NoDashing, NoSpread, NoBump, V>
 `build()` is only available when all dimensions are satisfied:
 
 ```rust
-impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, Headless> {
+impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, Headless, Primary> {
     pub fn build(self) -> impl Bundle { ... }
 }
 ```
@@ -80,16 +81,16 @@ One `impl` block per valid combination of exclusive states (e.g., `Rendered` vs 
 
 ### Optional Fields
 
-Things that don't affect entity validity (lives count, effects) live in an `OptionalData` struct with `Option<T>` fields. Optional methods are available at any typestate via a blanket impl.
+Things that don't affect entity validity (lives count, effects, color overrides) live in an `OptionalData` struct with `Option<T>` fields. Optional methods are available at any typestate via a blanket impl.
 
 ### Output Paths
 
 | Method | Input | Returns | Use case |
 |--------|-------|---------|----------|
 | `build()` | nothing | `impl Bundle` | Tests (headless), deferred spawning |
-| `spawn()` | `&mut Commands` | `Entity` | Production — spawns entity + queues effect dispatch |
+| `spawn()` | `&mut Commands` (Breaker) / `&mut World` (Bolt) | `Entity` | Production — spawns entity + queues/dispatches effects |
 
-`build()` returns **every component** needed for a valid entity. `spawn()` calls `build()`, spawns via commands, then queues `dispatch_initial_effects` (no entity parameter — resolves targets from world by convention).
+`build()` returns **every component** needed for a valid entity. For the breaker builder, `spawn()` calls `build()` via commands and queues `dispatch_initial_effects` (resolves targets from world by convention). For the bolt builder, `spawn()` takes `&mut World` directly — effect modules call it inside `fire()` functions which already hold `&mut World`. Bolt-definition effects are dispatched by the separate `dispatch_bolt_effects` system on `Added<BoltDefinitionRef>`.
 
 ## Mutually Exclusive States
 
@@ -98,10 +99,10 @@ Some dimensions have multiple configured states that are mutually exclusive:
 | Dimension | States | Meaning |
 |-----------|--------|---------|
 | Motion (Bolt) | `Serving` / `HasVelocity` | Serving bolt is stationary; launched bolt has velocity |
-| Role (Bolt) | `Primary` / `Extra` | Primary = persists across nodes; Extra = cleaned up on node exit |
-| Visual | `Rendered` / `Headless` | Rendered includes mesh/material; Headless omits them |
+| Role (Breaker + Bolt) | `Primary` / `Extra` | Primary = persists across nodes; Extra = cleaned up on node exit |
+| Visual (Breaker + Bolt) | `Rendered` / `Headless` | Rendered includes mesh/material; Headless omits them |
 
-Each exclusive pair shares the same dimension but produces different terminal impl blocks.
+Each exclusive pair shares the same dimension but produces different terminal impl blocks. With two binary exclusive dimensions (Visual × Role), the breaker builder has **4 terminal `impl` blocks**: Rendered+Primary, Rendered+Extra, Headless+Primary, Headless+Extra.
 
 ## Conventions
 
@@ -111,11 +112,12 @@ Each exclusive pair shares the same dimension but produces different terminal im
 - `build()` returns `impl Bundle` — test via `World::spawn()` + `world.get()`
 - Settings structs group related config values (e.g., `MovementSettings`, `DashSettings`)
 - Rendering is outside the builder for `headless()` — only `rendered()` includes mesh/material
+- `.definition()` (not `.config()`) is the production convenience shortcut — reads from `BreakerDefinition` or `BoltDefinition`, not a config resource
 
 ## Current Implementations
 
 | Entity | Builder | Dimensions | Location |
 |--------|---------|-----------|----------|
 | **Bolt** | `Bolt::builder()` | P, S, A, M, R, V | `breaker-game/src/bolt/builder/` |
-| **Breaker** | `Breaker::builder()` | D, Mv, Da, Sp, Bm, V | `breaker-game/src/breaker/builder/` |
+| **Breaker** | `Breaker::builder()` | D, Mv, Da, Sp, Bm, V, R | `breaker-game/src/breaker/builder/` |
 | **Spatial** | `Spatial::builder()` | Position, Speed, Angle | `rantzsoft_spatial2d/src/builder.rs` |

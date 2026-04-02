@@ -70,3 +70,9 @@ entropy_engine/effect.rs. All use Bevy's safe World API (world.get, world.get_mu
 world.entity_mut, world.resource_mut). No unsafe anywhere.
 speed_boost.rs modified to add recalculate_velocity() using world.query::<SpatialData>() — safe.
 Grep confirmed zero "unsafe" matches across all workspace .rs files.
+
+Still confirmed after feature/breaker-builder-pattern (2026-04-02) — breaker builder migration:
+New files: breaker/builder/core.rs (908 lines) — pure typestate Rust, no unsafe.
+New system: spawn_bolt/system.rs uses remove_resource/insert_resource (Bevy World safe API).
+DispatchInitialEffects command in effect/commands/ext.rs — pure safe Rust, Bevy World API only.
+Grep confirmed zero "unsafe" matches across all workspace .rs files.

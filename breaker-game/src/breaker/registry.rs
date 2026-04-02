@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 use rantzsoft_defaults::prelude::SeedableRegistry;
+use tracing::warn;
 
 use super::definition::BreakerDefinition;
 
@@ -73,17 +74,16 @@ impl SeedableRegistry for BreakerRegistry {
     }
 
     fn extensions() -> &'static [&'static str] {
-        &["bdef.ron"]
+        &["breaker.ron"]
     }
 
     fn seed(&mut self, assets: &[(AssetId<BreakerDefinition>, BreakerDefinition)]) {
         self.breakers.clear();
         for (_id, def) in assets {
-            assert!(
-                !self.breakers.contains_key(&def.name),
-                "duplicate breaker name '{}'",
-                def.name
-            );
+            if self.breakers.contains_key(&def.name) {
+                warn!("duplicate breaker name '{}' — skipping", def.name);
+                continue;
+            }
             self.breakers.insert(def.name.clone(), def.clone());
         }
     }
@@ -96,8 +96,6 @@ impl SeedableRegistry for BreakerRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::breaker::definition::BreakerStatOverrides;
-
     #[test]
     fn default_registry_is_empty() {
         let registry = BreakerRegistry::default();
@@ -107,7 +105,7 @@ mod tests {
     #[test]
     fn insert_and_lookup() {
         let mut registry = BreakerRegistry::default();
-        let ron_str = include_str!("../../assets/breakers/aegis.bdef.ron");
+        let ron_str = include_str!("../../assets/breakers/aegis.breaker.ron");
         let def: BreakerDefinition = ron::de::from_str(ron_str).expect("aegis RON should parse");
         registry.insert(def.name.clone(), def);
         assert!(registry.contains("Aegis"));
@@ -118,13 +116,11 @@ mod tests {
     /// Creates a `BreakerDefinition` for testing with the given name and
     /// optional `life_pool`.
     fn make_breaker(name: &str, life_pool: Option<u32>) -> BreakerDefinition {
-        BreakerDefinition {
-            name: name.to_owned(),
-            bolt: "Bolt".to_owned(),
-            stat_overrides: BreakerStatOverrides::default(),
-            life_pool,
-            effects: vec![],
-        }
+        ron::de::from_str(&format!(
+            r#"(name: "{name}", life_pool: {lp}, effects: [])"#,
+            lp = life_pool.map_or_else(|| "None".to_string(), |n| format!("Some({n})")),
+        ))
+        .expect("test RON should parse")
     }
 
     /// Helper: creates an `App` with `AssetPlugin` and returns `AssetId`s for
@@ -208,18 +204,25 @@ mod tests {
         );
     }
 
-    // ── Behavior 3: seed() panics on duplicate name ─────────────────
+    // ── Behavior 3: seed() skips duplicate name with warning ────────
 
-    /// `seed()` panics when two definitions share the same name.
+    /// `seed()` skips the second definition when two share the same name,
+    /// keeping the first occurrence.
     #[test]
-    #[should_panic(expected = "duplicate breaker name")]
-    fn seed_panics_on_duplicate_breaker_name() {
+    fn seed_skips_duplicate_breaker_name() {
         let aegis1 = make_breaker("Aegis", Some(3));
         let aegis2 = make_breaker("Aegis", Some(5));
         let (_app, pairs) = asset_ids_for(&[aegis1, aegis2]);
 
         let mut registry = BreakerRegistry::default();
         registry.seed(&pairs);
+
+        assert_eq!(registry.len(), 1, "duplicate should be skipped");
+        assert_eq!(
+            registry.get("Aegis").unwrap().life_pool,
+            Some(3),
+            "first occurrence (life_pool=3) should win"
+        );
     }
 
     // ── Behavior 4: update_single() upserts by name ─────────────────
@@ -293,13 +296,13 @@ mod tests {
         );
     }
 
-    /// `extensions()` returns `&["bdef.ron"]`.
+    /// `extensions()` returns `&["breaker.ron"]`.
     #[test]
-    fn extensions_returns_bdef_ron() {
+    fn extensions_returns_breaker_ron() {
         assert_eq!(
             BreakerRegistry::extensions(),
-            &["bdef.ron"],
-            "extensions() should return [\"bdef.ron\"]"
+            &["breaker.ron"],
+            "extensions() should return [\"breaker.ron\"]"
         );
     }
 }

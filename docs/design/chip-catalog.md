@@ -334,7 +334,7 @@ Speed ramps on consecutive bumps, whiff removes all boosts.
 
 ## Evolutions
 
-See `docs/design/evolutions.md` for evolution design principles. Evolution RON files are in `assets/chips/evolution/`.
+See `docs/design/evolutions.md` for evolution design principles. Evolution RON files are in `assets/chips/evolutions/`.
 
 ### Entropy Engine
 **Ingredients**: Cascade x2 + Flux x2

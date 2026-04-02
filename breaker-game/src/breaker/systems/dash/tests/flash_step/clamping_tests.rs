@@ -1,13 +1,11 @@
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::Position2D;
+use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use super::helpers::*;
 use crate::{
     breaker::{
-        components::{
-            Breaker, BreakerState, BreakerStateTimer, BreakerTilt, BreakerVelocity, BreakerWidth,
-        },
-        resources::BreakerConfig,
+        components::{BaseWidth, Breaker, BreakerTilt, DashState, DashStateTimer},
+        definition::BreakerDefinition,
     },
     effect::effects::{flash_step::FlashStepActive, size_boost::ActiveSizeBoosts},
     input::resources::{GameAction, InputActions},
@@ -39,7 +37,7 @@ fn reversal_dash_left_clamps_to_playfield_left_bound() {
 #[test]
 fn flash_step_teleport_clamps_to_playfield_right_boundary() {
     // Given: Breaker at (350, -250), Settling from leftward dash (ease_start=0.35),
-    //        FlashStepActive, BreakerWidth(120), playfield right=400
+    //        FlashStepActive, BaseWidth(120), playfield right=400
     // When: DashRight
     // Then: Position2D.x == 340 (400 - 60 half-width), NOT 650
     let mut app = test_app();
@@ -58,8 +56,8 @@ fn flash_step_teleport_clamps_to_playfield_right_boundary() {
         pos.0.x
     );
 
-    let state = app.world().get::<BreakerState>(entity).unwrap();
-    assert_eq!(*state, BreakerState::Idle);
+    let state = app.world().get::<DashState>(entity).unwrap();
+    assert_eq!(*state, DashState::Idle);
 }
 
 #[test]
@@ -87,7 +85,7 @@ fn flash_step_teleport_at_right_boundary_stays_at_boundary() {
 #[test]
 fn flash_step_teleport_clamps_to_playfield_left_boundary() {
     // Given: Breaker at (-350, -250), Settling from rightward dash (ease_start=-0.35),
-    //        FlashStepActive, BreakerWidth(120), playfield left=-400
+    //        FlashStepActive, BaseWidth(120), playfield left=-400
     // When: DashLeft
     // Then: Position2D.x == -340 (-400 + 60 half-width), NOT -650
     let mut app = test_app();
@@ -106,8 +104,8 @@ fn flash_step_teleport_clamps_to_playfield_left_boundary() {
         pos.0.x
     );
 
-    let state = app.world().get::<BreakerState>(entity).unwrap();
-    assert_eq!(*state, BreakerState::Idle);
+    let state = app.world().get::<DashState>(entity).unwrap();
+    assert_eq!(*state, DashState::Idle);
 }
 
 #[test]
@@ -135,25 +133,25 @@ fn flash_step_teleport_at_left_boundary_stays_at_boundary() {
 #[test]
 fn flash_step_teleport_with_size_multiplier_adjusts_clamp_half_width() {
     // Given: Breaker at (300, -250), Settling from leftward dash, FlashStepActive,
-    //        BreakerWidth(120), ActiveSizeBoosts(vec![2.0]), playfield right=400
+    //        BaseWidth(120), ActiveSizeBoosts(vec![2.0]), playfield right=400
     // When: DashRight
     // Then: Position2D.x == 280 (400 - 120 effective half-width from 60*2.0), NOT 600
     let mut app = test_app();
-    let config = BreakerConfig::default();
+    let config = BreakerDefinition::default();
     let entity = app
         .world_mut()
         .spawn((
             Breaker,
-            BreakerState::Settling,
-            BreakerVelocity { x: 0.0 },
+            DashState::Settling,
+            Velocity2D(Vec2::ZERO),
             BreakerTilt {
                 angle: 0.35,
                 ease_start: 0.35,
                 ease_target: 0.0,
             },
-            BreakerStateTimer { remaining: 0.2 },
+            DashStateTimer { remaining: 0.2 },
             Position2D(Vec2::new(300.0, -250.0)),
-            BreakerWidth(120.0),
+            BaseWidth(120.0),
             FlashStepActive,
             ActiveSizeBoosts(vec![2.0]),
             breaker_param_bundle(&config),
@@ -178,21 +176,21 @@ fn flash_step_teleport_with_size_multiplier_adjusts_clamp_half_width() {
 fn flash_step_teleport_with_size_multiplier_one_matches_no_multiplier() {
     // Edge case: ActiveSizeBoosts(vec![1.0]) behaves same as no multiplier
     let mut app = test_app();
-    let config = BreakerConfig::default();
+    let config = BreakerDefinition::default();
     let entity = app
         .world_mut()
         .spawn((
             Breaker,
-            BreakerState::Settling,
-            BreakerVelocity { x: 0.0 },
+            DashState::Settling,
+            Velocity2D(Vec2::ZERO),
             BreakerTilt {
                 angle: 0.35,
                 ease_start: 0.35,
                 ease_target: 0.0,
             },
-            BreakerStateTimer { remaining: 0.2 },
+            DashStateTimer { remaining: 0.2 },
             Position2D(Vec2::new(350.0, -250.0)),
-            BreakerWidth(120.0),
+            BaseWidth(120.0),
             FlashStepActive,
             ActiveSizeBoosts(vec![1.0]),
             breaker_param_bundle(&config),

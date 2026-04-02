@@ -1,29 +1,79 @@
-# spawn_bolt → setup_run Migration
+# Run Lifecycle & State Machine Refactor
 
 ## Summary
-Eliminate `spawn_bolt` system. Primary bolt should spawn once at run start in `setup_run`, not on every `OnEnter(GameState::Playing)`.
+Refactor GameState to introduce hierarchical RunState/NodeState, move breaker+bolt spawning to a single `setup_run` system, and align cleanup markers with the new state boundaries.
 
 ## Context
-The current flow re-spawns the bolt on every state entry (including returning from chip select), requiring guards against duplicate bolts. The bolt is conceptually per-run, not per-node — `reset_bolt` already handles repositioning between nodes. This is a lifecycle correctness issue that makes the bolt spawn path unnecessarily complex.
+Originally scoped as "move spawn_bolt into setup_run." During interrogation, expanded to include breaker (which now has a builder pattern too) and revealed the need for a proper hierarchical state machine. The current flat `GameState` conflates run-level and node-level concerns — `OnEnter(Playing)` fires on every node entry, forcing guard patterns for run-scoped entities.
+
+## Design Decisions
+
+### State Machine
+Current flat `GameState`:
+```
+Loading → MainMenu → RunSetup → Playing → TransitionOut → ChipSelect → TransitionIn → (Playing again) → RunEnd → MetaProgression
+```
+
+New hierarchical states:
+```
+GameState: Loading | MainMenu | Run | MetaProgression
+  RunState (sub-state of GameState::Run): Setup | Node | ChipSelect | RunEnd | Teardown
+    NodeState (sub-state of RunState::Node): Setup | Playing | Teardown
+```
+
+- `GameState::Run` replaces `GameState::Playing` (and subsumes TransitionOut/TransitionIn/ChipSelect/RunEnd)
+- `RunState::Setup` — one-time run initialization (spawn breaker, bolt, run-scoped resources)
+- `RunState::Node` — active node (has NodeState sub-state)
+- `RunState::ChipSelect` — between nodes
+- `RunState::RunEnd` — win/lose screen
+- `RunState::Teardown` — cleanup `CleanupOnRunEnd` entities
+- `NodeState::Setup` — per-node init (reset_bolt, reset_breaker, spawn cells/walls)
+- `NodeState::Playing` — active gameplay (physics, input, collisions)
+- `NodeState::Teardown` — cleanup `CleanupOnNodeExit` entities, transition effects
+
+### Entity Lifecycle
+- `setup_run` (new system in `run` domain): Runs on `OnEnter(RunState::Setup)`. Spawns primary breaker + primary bolt via builders with `CleanupOnRunEnd`. Single system owns all run-scoped entity creation.
+- `reset_bolt`: Runs on `OnEnter(NodeState::Setup)`. Repositions bolt, sends `BoltSpawned`.
+- `reset_breaker`: Runs on `OnEnter(NodeState::Setup)`. Repositions breaker, sends `BreakerSpawned`.
+- `spawn_bolt` system: Deleted entirely.
+- `spawn_or_reuse_breaker` system: Deleted entirely.
+
+### Cleanup
+- `CleanupOnRunEnd` entities despawned on `OnEnter(RunState::Teardown)` (was `OnExit(GameState::RunEnd)`)
+- `CleanupOnNodeExit` entities despawned on `OnEnter(NodeState::Teardown)` (was `OnExit(GameState::Playing)`)
+
+### Messages
+- `reset_bolt` sends `BoltSpawned` on every node entry (semantics: "bolt is ready")
+- `reset_breaker` sends `BreakerSpawned` on every node entry (semantics: "breaker is ready")
+- `check_spawn_complete` continues to use all 4 signals (Bolt, Breaker, Cells, Walls)
 
 ## Scope
-- In: `setup_run` spawns primary bolt once with `CleanupOnRunEnd`, `reset_bolt` repositions at node transitions, delete `spawn_bolt` system entirely, render assets (Mesh2d, MeshMaterial2d) inserted during setup_run
-- Out: Effect-spawned bolts (those use the builder, not this system)
+- In:
+  - New `RunState` and `NodeState` sub-states
+  - `setup_run` system spawning primary breaker + bolt
+  - Migrate all systems from `OnEnter(GameState::Playing)` to appropriate new state
+  - Migrate all systems from `OnExit(GameState::Playing)` to appropriate new state
+  - Migrate `FixedUpdate` `run_if(in_state(PlayingState::Active))` to `run_if(in_state(NodeState::Playing))`
+  - Delete `spawn_bolt`, `spawn_or_reuse_breaker`
+  - Update cleanup systems to new state boundaries
+  - `reset_bolt` and `reset_breaker` send spawned messages
+  - Remove `PlayingState` (replaced by `NodeState`)
+- Out:
+  - Effect-spawned bolts (use builder directly, not this system)
+  - Wall/cell builder patterns (separate todos)
+  - Gameplay behavior changes (pure refactor)
 
 ## Dependencies
-- Depends on: Bolt builder being stable (it is — already migrated)
-- Blocks: Bolt birthing animation (needs spawn lifecycle clarity first)
+- Depends on: Bolt builder (done), Breaker builder (done)
+- Blocks: Wall builder pattern, Cell builder pattern, Bolt birthing animation, all Phase 5+ work that touches state transitions
 
 ## Notes
-Current wrong flow:
-- `spawn_bolt` runs on `OnEnter(GameState::Playing)` — re-enters after chip select
-- Needs guards to avoid duplicate bolts
-- Conceptually spawning per-node when the bolt is per-run
-
-Target flow:
-- `setup_run` spawns primary bolt once with `CleanupOnRunEnd`
-- `reset_bolt` repositions at each node transition
-- `spawn_bolt` system deleted entirely
+This is a large refactor touching every plugin that references `GameState::Playing`, `PlayingState`, `OnEnter(GameState::Playing)`, or `OnExit(GameState::Playing)`. Should be broken into waves:
+1. State machine types + new states (shared domain)
+2. `setup_run` system + delete spawn systems (run/bolt/breaker domains)
+3. Migrate OnEnter/OnExit systems to new states (all domains)
+4. Migrate FixedUpdate run_if guards (all domains)
+5. Cleanup systems to new teardown states (screen domain)
 
 ## Status
 `ready`

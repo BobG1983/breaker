@@ -38,6 +38,14 @@ impl EffectKind {
                     world,
                 );
             }
+            Self::Vulnerable { multiplier } => {
+                super::super::super::super::effects::vulnerable::fire(
+                    entity,
+                    *multiplier,
+                    source_chip,
+                    world,
+                );
+            }
             Self::Piercing(v) => {
                 super::super::super::super::effects::piercing::fire(entity, *v, source_chip, world);
             }
@@ -82,6 +90,13 @@ impl EffectKind {
                     world,
                 );
             }
+            _ => self.fire_aoe_and_spawn(entity, source_chip, world),
+        }
+    }
+
+    /// Fire AOE, spawn, and utility effects -- extracted from [`fire`] for line count.
+    fn fire_aoe_and_spawn(&self, entity: Entity, source_chip: &str, world: &mut World) {
+        match self {
             Self::SpawnBolts {
                 count,
                 lifespan,
@@ -104,13 +119,6 @@ impl EffectKind {
                     world,
                 );
             }
-            _ => self.fire_aoe_and_spawn(entity, source_chip, world),
-        }
-    }
-
-    /// Fire AOE, spawn, and utility effects -- extracted from [`fire`] for line count.
-    fn fire_aoe_and_spawn(&self, entity: Entity, source_chip: &str, world: &mut World) {
-        match self {
             Self::Shield { stacks } => {
                 super::super::super::super::effects::shield::fire(
                     entity,
@@ -220,11 +228,11 @@ impl EffectKind {
                     world,
                 );
             }
-            Self::Explode { range, damage_mult } => {
+            Self::Explode { range, damage } => {
                 super::super::super::super::effects::explode::fire(
                     entity,
                     *range,
-                    *damage_mult,
+                    *damage,
                     source_chip,
                     world,
                 );

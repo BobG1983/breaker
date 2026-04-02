@@ -11,7 +11,7 @@ type: project
 - `PrimaryBolt` — marker for the single primary bolt (set by builder `.primary()`)
 - `BoltServing` — marker for serving state
 - `BoltRadius(f32)` — collision radius (inserted by builder `.config(&config)`)
-- `BoltSpawnOffsetY`, `BoltRespawnOffsetY`, `BoltRespawnAngleSpread`, `BoltInitialAngle` — bolt gameplay state, inserted by builder
+- `BoltSpawnOffsetY`, `BoltAngleSpread` — bolt spawn config, inserted by builder (NOTE: `BoltRespawnOffsetY`, `BoltRespawnAngleSpread`, `BoltInitialAngle` were DELETED in Wave 6 of feature/breaker-builder-pattern)
 - Speed params are NOW `BaseSpeed`, `MinSpeed`, `MaxSpeed`, `MinAngleH`, `MinAngleV` from `rantzsoft_spatial2d` — NOT `BoltBaseSpeed`/`BoltMinSpeed`/`BoltMaxSpeed`
 - `PiercingRemaining(u32)` — decremented per pierce, reset on wall/breaker contact
 - `ExtraBolt` — marker for non-baseline bolts (despawned on loss, not respawned)

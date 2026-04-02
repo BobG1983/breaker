@@ -106,6 +106,7 @@ fn transfer_command_passes_chip_name_to_fire_for_do_children() {
         chip_name: "transfer_chip".to_string(),
         children: vec![EffectNode::Do(EffectKind::DamageBoost(2.0))],
         permanent: true,
+        context: TriggerContext::default(),
     };
     cmd.apply(&mut world);
 

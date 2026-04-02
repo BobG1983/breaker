@@ -69,10 +69,10 @@ The file contains only a doc comment explaining legacy stat components were remo
 
 - Effect dispatch: `EffectKind::fire(entity, source_chip: &str, world)` / `reverse(entity, source_chip: &str, world)` — source_chip added to ALL fire/reverse signatures
 - `EffectCommandsExt` methods: `fire_effect(entity, effect, source_chip: String)`, `reverse_effect(entity, effect, source_chip: String)`, `transfer_effect(entity, chip_name: String, children, permanent)`, `push_bound_effects(entity, effects: Vec<(String, EffectNode)>)`
-- `PushBoundEffects` — custom `Command` struct in `effect/commands.rs`; inserts `BoundEffects`+`StagedEffects` if absent, appends entries. Used by `dispatch_cell_effects` and `dispatch_breaker_effects`.
+- `PushBoundEffects` — custom `Command` struct in `effect/commands.rs`; inserts `BoundEffects`+`StagedEffects` if absent, appends entries. Used by `dispatch_cell_effects` (cells still uses it); `dispatch_breaker_effects` is SUPERSEDED by `spawn_or_reuse_breaker` builder path.
 - `CellEffectsDispatched` — marker component in `cells/components/types.rs`; prevents double-dispatch by `dispatch_cell_effects`
 - `dispatch_cell_effects` — cells system; `OnEnter(GameState::Playing)` after `NodeSystems::Spawn`; skips cells with `CellEffectsDispatched`
-- `dispatch_breaker_effects` — breaker system; `OnEnter(GameState::Playing)` chained after `init_breaker`, both after `BreakerSystems::InitParams` and `NodeSystems::Spawn`
+- `dispatch_breaker_effects` — **SUPERSEDED** in feature/breaker-builder-pattern: replaced by `spawn_or_reuse_breaker` which uses `Breaker::builder()` and fires effects inline. See line ~199 (State after Waves 1-8).
 - `dispatch_wall_effects` — wall system; `OnEnter(GameState::Playing)` chained after `spawn_walls`; currently a no-op stub (walls have no RON-defined effects)
 - `ChainArcCountReasonable` — new `InvariantKind` variant; checks combined `ChainLightningChain` + `ChainLightningArc` entity count against `invariant_params.max_chain_arc_count` (default 50)
 - `SpawnExtraChainArcs(usize)` — new `MutationKind` variant; spawns N chain + N arc entities for self-test
@@ -184,14 +184,21 @@ The file contains only a doc comment explaining legacy stat components were remo
 - `docs/architecture/bolt-definitions.md` — "Current State" section updated: spawn flow (builder, no init_bolt_params), extra bolt spawn (direct builder calls), bolt-lost (component reads), breaker→bolt relationship (angle constraints).
 
 **Intentionally forward-looking in bolt-definitions.md (do NOT flag as drift):**
-- Target State / BoltDefinition struct, BoltRegistry, BoltRenderingConfig — not yet implemented
-- Migration Checklist steps — planned work; `init_bolt_params` references there describe planned target code
-- `BoltAngleSpread` unification — still target; code still has `BoltInitialAngle` + `BoltRespawnAngleSpread` separate
+- Target State / BoltRenderingConfig, AttachVisuals, sync_bolt_visual_modifiers — not yet implemented (requires rantzsoft_vfx)
+- Dynamic Visual Modifier System section — future phase
 
-**Still accurate in code (do NOT flag as missing):**
-- `BoltConfig` still exists with all fields including `spawn_offset_y`, `respawn_angle_spread`, `initial_angle`
-- `BoltRespawnOffsetY`, `BoltRespawnAngleSpread`, `BoltInitialAngle` components still exist
-- `defaults.bolt.ron` still exists
+**State after Waves 1-8 (feature/breaker-builder-pattern, 2026-04-01):**
+- `BoltConfig` ELIMINATED. `BoltRegistry` + `BoltDefinition` are the production types.
+- `BoltRespawnOffsetY`, `BoltRespawnAngleSpread`, `BoltInitialAngle` ELIMINATED. Replaced by `BoltSpawnOffsetY` + `BoltAngleSpread` (single component each, initialized from constants).
+- `defaults.bolt.ron` deleted. `assets/bolts/default.bolt.ron` is the bolt definition RON.
+- `BoltRadius` is now a type alias for `BaseRadius` from `shared/size.rs`.
+- `BreakerConfig`, `BreakerStatOverrides`, `BreakerDefaults` ELIMINATED. `BreakerDefinition` has all 36+ fields.
+- Registry extensions: `BreakerRegistry` uses `&["breaker.ron"]` (NOT `bdef.ron`).
+- Builder: `BreakerBuilder<D, Mv, Da, Sp, Bm, V, R>` has 7 dimensions including Role.
+- `.definition()` replaces `.config()` on both bolt and breaker builders.
+- `spawn_or_reuse_breaker` replaces 4 init systems (`spawn_breaker`, `init_breaker_params`, `init_breaker`, `dispatch_breaker_effects`).
+- `BreakerSystems::InitParams` variant does NOT exist.
+- Component renames: `BreakerVelocity` → `Velocity2D`, `BreakerState` → `DashState`, `BreakerWidth/Height` → `BaseWidth/BaseHeight`, `EntityScale` → `NodeScalingFactor`, `BumpVisualParams` → `BumpFeedback`, `BumpVisual` → `BumpFeedbackState`.
 
 ## Confirmed Correct / Fixed (steering model + gravity_well split, feature/chip-evolution-ecosystem, 2026-04-01)
 
@@ -220,3 +227,42 @@ The file contains only a doc comment explaining legacy stat components were remo
 - `module-map.md`, `scheduling.md`, `materials.md`, `error-handling.md`, `screen-migration.md`, `chip_cards.md`, `hud.md`, `screen_effects.md`, `communication.md`, etc.
 - `rantzsoft_vfx` crate does NOT YET EXIST in code. Do NOT flag as drift.
 - Phase 5 plan docs (5d, 5r, 5u, 5w, etc.) are also all planning docs, not yet implemented.
+
+## Confirmed Correct / Fixed (breaker-builder-pattern Wave 9, feature/breaker-builder-pattern, 2026-04-02)
+
+**`TriggerContext` added to `transfer_effect` signature:**
+- `EffectCommandsExt::transfer_effect` now takes 5 params: `(entity, chip_name, children, permanent, context: TriggerContext)`.
+- `TriggerContext { bolt, breaker, cell, wall: Option<Entity> }` — bridge systems populate fields they know about.
+- Fixed in `docs/architecture/messages.md` and `docs/architecture/plugins.md`.
+
+**Bolt builder `spawn()` takes `&mut World`, not `&mut Commands`:**
+- Bolt builder's `spawn()` signature is `fn spawn(self, world: &mut World) -> Entity`.
+- Breaker builder's `spawn()` still takes `&mut Commands` — the two builders differ.
+- `spawn_bolt` system signature is `fn spawn_bolt(world: &mut World)` (exclusive world access).
+- Fixed in `docs/architecture/builders/bolt.md` (spawn() Behavior section) and `docs/architecture/builders/pattern.md`.
+
+**`dispatch_bolt_effects` runs in FixedUpdate, NOT OnEnter:**
+- System runs in FixedUpdate with `Added<BoltDefinitionRef>` filter, `.before(EffectSystems::Bridge)`.
+- Effects dispatch on first FixedUpdate tick after bolt spawns (not synchronously in OnEnter).
+- `docs/architecture/ordering.md` updated: added to FixedUpdate chain; noted in OnEnter description.
+
+**`spawn_lives_display` does NOT exist in code:**
+- Was listed in ordering.md's OnEnter chain — removed.
+- `LivesCount` is a component on the breaker entity (not a UI system in effect domain).
+
+**Breaker QueryData struct names:**
+- `BreakerBumpData` does not exist. Actual structs: `BreakerBumpTimingData`, `BreakerBumpGradingData`, `SyncBreakerScaleData`.
+- Fixed in `docs/architecture/builders/breaker.md` Key Files list.
+
+**Ordering chain additions:**
+- `apply_node_scale_to_bolt` added to OnEnter chain.
+- `cleanup_destroyed_bolts.after(EffectSystems::Bridge)` added to FixedUpdate chain.
+- `bolt_cell_collision` now shows `.after(EnforceDistanceConstraints)` in the MaintainQuadtree section.
+
+**`BreakerState` renamed to `DashState`; `BoltSpeed` never existed:**
+- `docs/design/terminology/core.md` code examples updated.
+
+**`bolt-definitions.md` Target State / planning sections (do NOT flag as drift):**
+- All sections 4-16 under "System Changes Required" are planning docs for future bolt visuals phase.
+- `BoltRenderingConfig`, `AttachVisuals`, `sync_bolt_visual_modifiers` — not yet implemented.
+- Pseudo-code uses `BoltRadius(def.radius)` as shorthand even though it's a type alias — intentional planning notation.

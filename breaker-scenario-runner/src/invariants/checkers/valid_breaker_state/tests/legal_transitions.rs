@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use breaker::breaker::components::BreakerState;
+use breaker::breaker::components::DashState;
 
 use super::helpers::*;
 use crate::invariants::*;
@@ -11,7 +11,7 @@ fn valid_breaker_state_does_not_fire_on_idle_to_dashing() {
 
     let entity = app
         .world_mut()
-        .spawn((ScenarioTagBreaker, BreakerState::Idle))
+        .spawn((ScenarioTagBreaker, DashState::Idle))
         .id();
 
     // Tick 1: seeds Local with Idle
@@ -20,8 +20,8 @@ fn valid_breaker_state_does_not_fire_on_idle_to_dashing() {
     // Change to Dashing (legal: Idle → Dashing)
     *app.world_mut()
         .entity_mut(entity)
-        .get_mut::<BreakerState>()
-        .unwrap() = BreakerState::Dashing;
+        .get_mut::<DashState>()
+        .unwrap() = DashState::Dashing;
 
     // Tick 2: should NOT fire
     tick(&mut app);
@@ -42,7 +42,7 @@ fn valid_breaker_state_does_not_fire_on_settling_to_dashing() {
 
     let entity = app
         .world_mut()
-        .spawn((ScenarioTagBreaker, BreakerState::Settling))
+        .spawn((ScenarioTagBreaker, DashState::Settling))
         .id();
 
     // Tick 1: seeds Local with Settling
@@ -51,8 +51,8 @@ fn valid_breaker_state_does_not_fire_on_settling_to_dashing() {
     // Transition to Dashing (legal: Settling → Dashing)
     *app.world_mut()
         .entity_mut(entity)
-        .get_mut::<BreakerState>()
-        .unwrap() = BreakerState::Dashing;
+        .get_mut::<DashState>()
+        .unwrap() = DashState::Dashing;
 
     // Tick 2: Settling → Dashing is legal → no violation
     tick(&mut app);
@@ -70,8 +70,7 @@ fn valid_breaker_state_does_not_fire_on_settling_to_dashing() {
 fn valid_breaker_state_does_not_fire_on_no_state_change() {
     let mut app = test_app_valid_breaker_state();
 
-    app.world_mut()
-        .spawn((ScenarioTagBreaker, BreakerState::Idle));
+    app.world_mut().spawn((ScenarioTagBreaker, DashState::Idle));
 
     // Tick 1: seeds Local
     tick(&mut app);
@@ -93,7 +92,7 @@ fn valid_breaker_state_skips_first_frame_with_no_previous() {
 
     // Start directly in Dashing (would be illegal from Idle, but first frame only)
     app.world_mut()
-        .spawn((ScenarioTagBreaker, BreakerState::Dashing));
+        .spawn((ScenarioTagBreaker, DashState::Dashing));
 
     // Only one tick — Local starts empty, no comparison possible
     tick(&mut app);
@@ -113,7 +112,7 @@ fn valid_breaker_state_does_not_fire_on_braking_to_settling() {
 
     let entity = app
         .world_mut()
-        .spawn((ScenarioTagBreaker, BreakerState::Braking))
+        .spawn((ScenarioTagBreaker, DashState::Braking))
         .id();
 
     // Tick 1: seeds Local with Braking
@@ -122,8 +121,8 @@ fn valid_breaker_state_does_not_fire_on_braking_to_settling() {
     // Transition to Settling (legal: Braking → Settling)
     *app.world_mut()
         .entity_mut(entity)
-        .get_mut::<BreakerState>()
-        .unwrap() = BreakerState::Settling;
+        .get_mut::<DashState>()
+        .unwrap() = DashState::Settling;
 
     // Tick 2: Braking → Settling should be legal
     tick(&mut app);

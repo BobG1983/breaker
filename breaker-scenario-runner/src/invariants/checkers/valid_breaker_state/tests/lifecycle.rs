@@ -1,14 +1,14 @@
 use bevy::prelude::*;
-use breaker::{breaker::components::BreakerState, shared::GameState};
+use breaker::{breaker::components::DashState, shared::GameState};
 
 use super::helpers::*;
 use crate::{invariants::*, types::InvariantKind};
 
-/// Spawn a breaker with `BreakerState::Braking`, tick once to seed the Local
+/// Spawn a breaker with `DashState::Braking`, tick once to seed the Local
 /// `HashMap`, despawn the entity, then spawn a new breaker with
-/// `BreakerState::Idle`. If the `HashMap` is not cleaned up on despawn, the
+/// `DashState::Idle`. If the `HashMap` is not cleaned up on despawn, the
 /// new entity (which may recycle the ID) will be compared against the stale
-/// `Braking` entry and fire a false `ValidBreakerState` violation.
+/// `Braking` entry and fire a false `ValidDashState` violation.
 ///
 /// After the despawn+respawn cycle, no violation must fire.
 #[test]
@@ -18,10 +18,10 @@ fn valid_breaker_state_no_violation_after_despawn_and_respawn() {
     // Spawn first breaker in Braking state
     let entity = app
         .world_mut()
-        .spawn((ScenarioTagBreaker, BreakerState::Braking))
+        .spawn((ScenarioTagBreaker, DashState::Braking))
         .id();
 
-    // Tick 1: system inserts entity → BreakerState::Braking into Local HashMap
+    // Tick 1: system inserts entity → DashState::Braking into Local HashMap
     tick(&mut app);
 
     assert!(
@@ -41,8 +41,7 @@ fn valid_breaker_state_no_violation_after_despawn_and_respawn() {
     );
 
     // Spawn a new breaker with Idle state — may receive a recycled entity ID
-    app.world_mut()
-        .spawn((ScenarioTagBreaker, BreakerState::Idle));
+    app.world_mut().spawn((ScenarioTagBreaker, DashState::Idle));
 
     // Tick 3: new entity appears for first time — no previous state in HashMap → no violation
     tick(&mut app);
@@ -51,12 +50,12 @@ fn valid_breaker_state_no_violation_after_despawn_and_respawn() {
     assert!(
         !log.0
             .iter()
-            .any(|v| v.invariant == InvariantKind::ValidBreakerState),
-        "expected no ValidBreakerState violation after despawn+respawn cycle, \
+            .any(|v| v.invariant == InvariantKind::ValidDashState),
+        "expected no ValidDashState violation after despawn+respawn cycle, \
         got: {:?}",
         log.0
             .iter()
-            .filter(|v| v.invariant == InvariantKind::ValidBreakerState)
+            .filter(|v| v.invariant == InvariantKind::ValidDashState)
             .map(|e| &e.message)
             .collect::<Vec<_>>()
     );
@@ -70,7 +69,7 @@ fn valid_breaker_state_does_not_fire_on_dashing_to_settling_dash_cancel() {
 
     let entity = app
         .world_mut()
-        .spawn((ScenarioTagBreaker, BreakerState::Dashing))
+        .spawn((ScenarioTagBreaker, DashState::Dashing))
         .id();
 
     // Tick 1: seeds Local with Dashing
@@ -79,8 +78,8 @@ fn valid_breaker_state_does_not_fire_on_dashing_to_settling_dash_cancel() {
     // Transition to Settling (dash cancel — legal)
     *app.world_mut()
         .entity_mut(entity)
-        .get_mut::<BreakerState>()
-        .unwrap() = BreakerState::Settling;
+        .get_mut::<DashState>()
+        .unwrap() = DashState::Settling;
 
     // Tick 2: Dashing → Settling should be legal
     tick(&mut app);
@@ -102,7 +101,7 @@ fn valid_breaker_state_clears_tracking_on_game_state_transition() {
 
     let entity = app
         .world_mut()
-        .spawn((ScenarioTagBreaker, BreakerState::Braking))
+        .spawn((ScenarioTagBreaker, DashState::Braking))
         .id();
 
     // Tick 1: seeds tracking with Braking (GameState starts at Loading)
@@ -119,8 +118,8 @@ fn valid_breaker_state_clears_tracking_on_game_state_transition() {
     // Change breaker to Idle (what reset_breaker does)
     *app.world_mut()
         .entity_mut(entity)
-        .get_mut::<BreakerState>()
-        .unwrap() = BreakerState::Idle;
+        .get_mut::<DashState>()
+        .unwrap() = DashState::Idle;
 
     // Tick 2: GameState changed Loading→MainMenu → tracking was cleared
     // → Idle is treated as first frame, no comparison → no violation

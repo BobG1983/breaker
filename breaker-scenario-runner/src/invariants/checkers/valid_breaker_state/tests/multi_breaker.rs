@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use breaker::breaker::components::BreakerState;
+use breaker::breaker::components::DashState;
 
 use super::helpers::*;
 use crate::{invariants::*, types::InvariantKind};
@@ -14,11 +14,11 @@ fn valid_breaker_state_tracks_two_breakers_independently_one_illegal() {
     // Spawn entity A and entity B, both starting Idle
     let entity_a = app
         .world_mut()
-        .spawn((ScenarioTagBreaker, BreakerState::Idle))
+        .spawn((ScenarioTagBreaker, DashState::Idle))
         .id();
     let entity_b = app
         .world_mut()
-        .spawn((ScenarioTagBreaker, BreakerState::Idle))
+        .spawn((ScenarioTagBreaker, DashState::Idle))
         .id();
 
     // Tick 1: seeds Local for both A (Idle) and B (Idle)
@@ -32,14 +32,14 @@ fn valid_breaker_state_tracks_two_breakers_independently_one_illegal() {
     // Entity A: Idle → Dashing (legal)
     *app.world_mut()
         .entity_mut(entity_a)
-        .get_mut::<BreakerState>()
-        .unwrap() = BreakerState::Dashing;
+        .get_mut::<DashState>()
+        .unwrap() = DashState::Dashing;
 
     // Entity B: Idle → Braking (illegal — skips Dashing)
     *app.world_mut()
         .entity_mut(entity_b)
-        .get_mut::<BreakerState>()
-        .unwrap() = BreakerState::Braking;
+        .get_mut::<DashState>()
+        .unwrap() = DashState::Braking;
 
     // Tick 2: A is legal, B is illegal → exactly 1 violation
     tick(&mut app);
@@ -48,10 +48,10 @@ fn valid_breaker_state_tracks_two_breakers_independently_one_illegal() {
     assert_eq!(
         log.0.len(),
         1,
-        "expected exactly 1 ValidBreakerState violation (entity B's Idle->Braking is illegal), got {}",
+        "expected exactly 1 ValidDashState violation (entity B's Idle->Braking is illegal), got {}",
         log.0.len()
     );
-    assert_eq!(log.0[0].invariant, InvariantKind::ValidBreakerState);
+    assert_eq!(log.0[0].invariant, InvariantKind::ValidDashState);
 }
 
 /// When both [`ScenarioTagBreaker`] entities make legal transitions
@@ -63,11 +63,11 @@ fn valid_breaker_state_produces_no_violation_when_both_breakers_transition_legal
     // Spawn two breakers, both Idle
     let entity_a = app
         .world_mut()
-        .spawn((ScenarioTagBreaker, BreakerState::Idle))
+        .spawn((ScenarioTagBreaker, DashState::Idle))
         .id();
     let entity_b = app
         .world_mut()
-        .spawn((ScenarioTagBreaker, BreakerState::Idle))
+        .spawn((ScenarioTagBreaker, DashState::Idle))
         .id();
 
     // Tick 1: seeds Local for A=Idle, B=Idle
@@ -81,12 +81,12 @@ fn valid_breaker_state_produces_no_violation_when_both_breakers_transition_legal
     // Both transition Idle → Dashing (legal)
     *app.world_mut()
         .entity_mut(entity_a)
-        .get_mut::<BreakerState>()
-        .unwrap() = BreakerState::Dashing;
+        .get_mut::<DashState>()
+        .unwrap() = DashState::Dashing;
     *app.world_mut()
         .entity_mut(entity_b)
-        .get_mut::<BreakerState>()
-        .unwrap() = BreakerState::Dashing;
+        .get_mut::<DashState>()
+        .unwrap() = DashState::Dashing;
 
     // Tick 2: both legal → no violation
     tick(&mut app);
@@ -94,7 +94,7 @@ fn valid_breaker_state_produces_no_violation_when_both_breakers_transition_legal
     let log = app.world().resource::<ViolationLog>();
     assert!(
         log.0.is_empty(),
-        "expected no ValidBreakerState violation when both breakers transition Idle->Dashing (legal), got: {:?}",
+        "expected no ValidDashState violation when both breakers transition Idle->Dashing (legal), got: {:?}",
         log.0.iter().map(|e| &e.message).collect::<Vec<_>>()
     );
 }

@@ -27,33 +27,45 @@ pub(super) fn bridge_impacted_bolt_cell(
 ) {
     for msg in reader.read() {
         if let Ok((entity, bound, mut staged)) = query.get_mut(msg.bolt) {
+            let context = TriggerContext {
+                cell: Some(msg.cell),
+                ..default()
+            };
             evaluate_bound_effects(
                 &Trigger::Impacted(ImpactTarget::Cell),
                 entity,
                 bound,
                 &mut staged,
                 &mut commands,
+                context,
             );
             evaluate_staged_effects(
                 &Trigger::Impacted(ImpactTarget::Cell),
                 entity,
                 &mut staged,
                 &mut commands,
+                context,
             );
         }
         if let Ok((entity, bound, mut staged)) = query.get_mut(msg.cell) {
+            let context = TriggerContext {
+                bolt: Some(msg.bolt),
+                ..default()
+            };
             evaluate_bound_effects(
                 &Trigger::Impacted(ImpactTarget::Bolt),
                 entity,
                 bound,
                 &mut staged,
                 &mut commands,
+                context,
             );
             evaluate_staged_effects(
                 &Trigger::Impacted(ImpactTarget::Bolt),
                 entity,
                 &mut staged,
                 &mut commands,
+                context,
             );
         }
     }
@@ -67,33 +79,45 @@ pub(super) fn bridge_impacted_bolt_wall(
 ) {
     for msg in reader.read() {
         if let Ok((entity, bound, mut staged)) = query.get_mut(msg.bolt) {
+            let context = TriggerContext {
+                wall: Some(msg.wall),
+                ..default()
+            };
             evaluate_bound_effects(
                 &Trigger::Impacted(ImpactTarget::Wall),
                 entity,
                 bound,
                 &mut staged,
                 &mut commands,
+                context,
             );
             evaluate_staged_effects(
                 &Trigger::Impacted(ImpactTarget::Wall),
                 entity,
                 &mut staged,
                 &mut commands,
+                context,
             );
         }
         if let Ok((entity, bound, mut staged)) = query.get_mut(msg.wall) {
+            let context = TriggerContext {
+                bolt: Some(msg.bolt),
+                ..default()
+            };
             evaluate_bound_effects(
                 &Trigger::Impacted(ImpactTarget::Bolt),
                 entity,
                 bound,
                 &mut staged,
                 &mut commands,
+                context,
             );
             evaluate_staged_effects(
                 &Trigger::Impacted(ImpactTarget::Bolt),
                 entity,
                 &mut staged,
                 &mut commands,
+                context,
             );
         }
     }
@@ -107,33 +131,45 @@ pub(super) fn bridge_impacted_bolt_breaker(
 ) {
     for msg in reader.read() {
         if let Ok((entity, bound, mut staged)) = query.get_mut(msg.bolt) {
+            let context = TriggerContext {
+                breaker: Some(msg.breaker),
+                ..default()
+            };
             evaluate_bound_effects(
                 &Trigger::Impacted(ImpactTarget::Breaker),
                 entity,
                 bound,
                 &mut staged,
                 &mut commands,
+                context,
             );
             evaluate_staged_effects(
                 &Trigger::Impacted(ImpactTarget::Breaker),
                 entity,
                 &mut staged,
                 &mut commands,
+                context,
             );
         }
         if let Ok((entity, bound, mut staged)) = query.get_mut(msg.breaker) {
+            let context = TriggerContext {
+                bolt: Some(msg.bolt),
+                ..default()
+            };
             evaluate_bound_effects(
                 &Trigger::Impacted(ImpactTarget::Bolt),
                 entity,
                 bound,
                 &mut staged,
                 &mut commands,
+                context,
             );
             evaluate_staged_effects(
                 &Trigger::Impacted(ImpactTarget::Bolt),
                 entity,
                 &mut staged,
                 &mut commands,
+                context,
             );
         }
     }
@@ -147,33 +183,45 @@ pub(super) fn bridge_impacted_breaker_cell(
 ) {
     for msg in reader.read() {
         if let Ok((entity, bound, mut staged)) = query.get_mut(msg.breaker) {
+            let context = TriggerContext {
+                cell: Some(msg.cell),
+                ..default()
+            };
             evaluate_bound_effects(
                 &Trigger::Impacted(ImpactTarget::Cell),
                 entity,
                 bound,
                 &mut staged,
                 &mut commands,
+                context,
             );
             evaluate_staged_effects(
                 &Trigger::Impacted(ImpactTarget::Cell),
                 entity,
                 &mut staged,
                 &mut commands,
+                context,
             );
         }
         if let Ok((entity, bound, mut staged)) = query.get_mut(msg.cell) {
+            let context = TriggerContext {
+                breaker: Some(msg.breaker),
+                ..default()
+            };
             evaluate_bound_effects(
                 &Trigger::Impacted(ImpactTarget::Breaker),
                 entity,
                 bound,
                 &mut staged,
                 &mut commands,
+                context,
             );
             evaluate_staged_effects(
                 &Trigger::Impacted(ImpactTarget::Breaker),
                 entity,
                 &mut staged,
                 &mut commands,
+                context,
             );
         }
     }
@@ -187,33 +235,45 @@ pub(super) fn bridge_impacted_breaker_wall(
 ) {
     for msg in reader.read() {
         if let Ok((entity, bound, mut staged)) = query.get_mut(msg.breaker) {
+            let context = TriggerContext {
+                wall: Some(msg.wall),
+                ..default()
+            };
             evaluate_bound_effects(
                 &Trigger::Impacted(ImpactTarget::Wall),
                 entity,
                 bound,
                 &mut staged,
                 &mut commands,
+                context,
             );
             evaluate_staged_effects(
                 &Trigger::Impacted(ImpactTarget::Wall),
                 entity,
                 &mut staged,
                 &mut commands,
+                context,
             );
         }
         if let Ok((entity, bound, mut staged)) = query.get_mut(msg.wall) {
+            let context = TriggerContext {
+                breaker: Some(msg.breaker),
+                ..default()
+            };
             evaluate_bound_effects(
                 &Trigger::Impacted(ImpactTarget::Breaker),
                 entity,
                 bound,
                 &mut staged,
                 &mut commands,
+                context,
             );
             evaluate_staged_effects(
                 &Trigger::Impacted(ImpactTarget::Breaker),
                 entity,
                 &mut staged,
                 &mut commands,
+                context,
             );
         }
     }
@@ -227,33 +287,45 @@ pub(super) fn bridge_impacted_cell_wall(
 ) {
     for msg in reader.read() {
         if let Ok((entity, bound, mut staged)) = query.get_mut(msg.cell) {
+            let context = TriggerContext {
+                wall: Some(msg.wall),
+                ..default()
+            };
             evaluate_bound_effects(
                 &Trigger::Impacted(ImpactTarget::Wall),
                 entity,
                 bound,
                 &mut staged,
                 &mut commands,
+                context,
             );
             evaluate_staged_effects(
                 &Trigger::Impacted(ImpactTarget::Wall),
                 entity,
                 &mut staged,
                 &mut commands,
+                context,
             );
         }
         if let Ok((entity, bound, mut staged)) = query.get_mut(msg.wall) {
+            let context = TriggerContext {
+                cell: Some(msg.cell),
+                ..default()
+            };
             evaluate_bound_effects(
                 &Trigger::Impacted(ImpactTarget::Cell),
                 entity,
                 bound,
                 &mut staged,
                 &mut commands,
+                context,
             );
             evaluate_staged_effects(
                 &Trigger::Impacted(ImpactTarget::Cell),
                 entity,
                 &mut staged,
                 &mut commands,
+                context,
             );
         }
     }

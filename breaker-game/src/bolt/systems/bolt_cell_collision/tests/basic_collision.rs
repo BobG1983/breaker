@@ -275,6 +275,7 @@ fn serving_bolt_is_not_advanced() {
         .definition(&super::helpers::test_bolt_definition())
         .serving()
         .primary()
+        .headless()
         .spawn(app.world_mut());
 
     tick(&mut app);

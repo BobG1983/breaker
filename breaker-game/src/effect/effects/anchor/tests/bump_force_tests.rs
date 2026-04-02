@@ -21,8 +21,8 @@ fn planted_breaker_has_anchor_force_in_active_bump_forces() {
                 plant_delay: 0.3,
             },
             ActiveBumpForces(vec![]),
-            BreakerVelocity { x: 0.0 },
-            BreakerState::Idle,
+            Velocity2D(Vec2::ZERO),
+            DashState::Idle,
         ))
         .id();
 
@@ -72,8 +72,8 @@ fn planted_breaker_appends_force_to_existing_entries() {
                 plant_delay: 0.3,
             },
             ActiveBumpForces(vec![1.5]),
-            BreakerVelocity { x: 0.0 },
-            BreakerState::Idle,
+            Velocity2D(Vec2::ZERO),
+            DashState::Idle,
         ))
         .id();
 
@@ -104,7 +104,7 @@ fn planted_breaker_appends_force_to_existing_entries() {
 #[test]
 fn movement_removes_planted_and_pops_force_multiplier() {
     // Given: Planted with ActiveBumpForces [1.5, 2.0] (2.0 from anchor).
-    // When: BreakerVelocity.x set to 200.0, tick_anchor runs.
+    // When: Velocity2D.0.x set to 200.0, tick_anchor runs.
     // Then: AnchorPlanted removed. ActiveBumpForces is [1.5].
     let mut app = test_app();
 
@@ -119,8 +119,8 @@ fn movement_removes_planted_and_pops_force_multiplier() {
             },
             AnchorPlanted,
             ActiveBumpForces(vec![1.5, 2.0]),
-            BreakerVelocity { x: 200.0 },
-            BreakerState::Idle,
+            Velocity2D(Vec2::new(200.0, 0.0)),
+            DashState::Idle,
         ))
         .id();
 
@@ -156,8 +156,8 @@ fn movement_pops_force_from_single_entry_forces() {
             },
             AnchorPlanted,
             ActiveBumpForces(vec![2.0]),
-            BreakerVelocity { x: 200.0 },
-            BreakerState::Idle,
+            Velocity2D(Vec2::new(200.0, 0.0)),
+            DashState::Idle,
         ))
         .id();
 
@@ -193,8 +193,8 @@ fn no_planted_means_active_bump_forces_unchanged() {
                 plant_delay: 0.3,
             },
             ActiveBumpForces(vec![1.5]),
-            BreakerVelocity { x: 200.0 },
-            BreakerState::Idle,
+            Velocity2D(Vec2::new(200.0, 0.0)),
+            DashState::Idle,
         ))
         .id();
 
@@ -219,8 +219,8 @@ fn no_anchor_active_means_active_bump_forces_unchanged() {
         .spawn((
             Breaker,
             ActiveBumpForces(vec![1.5]),
-            BreakerVelocity { x: 200.0 },
-            BreakerState::Idle,
+            Velocity2D(Vec2::new(200.0, 0.0)),
+            DashState::Idle,
         ))
         .id();
 
@@ -254,8 +254,8 @@ fn replanting_after_cancellation_readds_single_force_entry() {
                 plant_delay: 0.3,
             },
             ActiveBumpForces(vec![]),
-            BreakerVelocity { x: 0.0 },
-            BreakerState::Idle,
+            Velocity2D(Vec2::ZERO),
+            DashState::Idle,
         ))
         .id();
 
@@ -279,10 +279,7 @@ fn replanting_after_cancellation_readds_single_force_entry() {
     );
 
     // Phase 2: movement -> unplanted (force popped)
-    app.world_mut()
-        .get_mut::<BreakerVelocity>(entity)
-        .unwrap()
-        .x = 200.0;
+    app.world_mut().get_mut::<Velocity2D>(entity).unwrap().0.x = 200.0;
     tick(&mut app);
 
     assert!(
@@ -296,10 +293,7 @@ fn replanting_after_cancellation_readds_single_force_entry() {
     );
 
     // Phase 3: stationary again -> new timer -> new planted (force pushed)
-    app.world_mut()
-        .get_mut::<BreakerVelocity>(entity)
-        .unwrap()
-        .x = 0.0;
+    app.world_mut().get_mut::<Velocity2D>(entity).unwrap().0.x = 0.0;
 
     // First tick: new timer starts
     tick(&mut app);

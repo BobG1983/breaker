@@ -96,10 +96,13 @@ pub(crate) fn fire(
     let damage = base_damage * damage_mult * edm;
 
     let query_layers = CollisionLayers::new(0, CELL_LAYER);
-    let candidates = world
+    let candidates: Vec<Entity> = world
         .resource::<CollisionQuadtree>()
         .quadtree
-        .query_circle_filtered(position, range, query_layers);
+        .query_circle_filtered(position, range, query_layers)
+        .into_iter()
+        .filter(|&e| e != entity)
+        .collect();
 
     if candidates.is_empty() {
         return;

@@ -13,6 +13,7 @@ use crate::{
     chips::{inventory::ChipInventory, resources::ChipCatalog},
     effect::{
         BoundEffects, EffectCommandsExt, EffectNode, RootEffect, StagedEffects, Target, Trigger,
+        TriggerContext,
     },
     ui::messages::ChipSelected,
     wall::components::Wall,
@@ -126,7 +127,13 @@ fn dispatch_children(
                 }
             }
             other => {
-                commands.transfer_effect(entity, chip_name.to_owned(), vec![other.clone()], true);
+                commands.transfer_effect(
+                    entity,
+                    chip_name.to_owned(),
+                    vec![other.clone()],
+                    true,
+                    TriggerContext::default(),
+                );
             }
         }
     }

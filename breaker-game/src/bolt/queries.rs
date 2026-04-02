@@ -17,7 +17,7 @@ use crate::{
     effect::effects::{
         damage_boost::ActiveDamageBoosts, piercing::ActivePiercings, speed_boost::ActiveSpeedBoosts,
     },
-    shared::EntityScale,
+    shared::NodeScalingFactor,
 };
 
 /// Collision-specific bolt data: radius, piercing, damage, speed boosts,
@@ -35,8 +35,8 @@ pub(crate) struct BoltCollisionParams {
     pub active_damage_boosts: Option<&'static ActiveDamageBoosts>,
     /// Active speed boost multipliers.
     pub active_speed_boosts: Option<&'static ActiveSpeedBoosts>,
-    /// Visual/physics scale factor.
-    pub entity_scale: Option<&'static EntityScale>,
+    /// Node scaling factor for entity dimensions.
+    pub node_scale: Option<&'static NodeScalingFactor>,
     /// Evolution chip that spawned this bolt (for damage attribution).
     pub spawned_by_evolution: Option<&'static SpawnedByEvolution>,
     /// Last collision impact position and side.
@@ -98,8 +98,26 @@ pub(crate) struct LostBoltData {
     pub angle_spread: Option<&'static BoltAngleSpread>,
     /// Whether this is an extra bolt (despawned on loss, not respawned).
     pub is_extra: Has<ExtraBolt>,
-    /// Visual/physics scale factor.
-    pub entity_scale: Option<&'static EntityScale>,
+    /// Node scaling factor for entity dimensions.
+    pub node_scale: Option<&'static NodeScalingFactor>,
+}
+
+/// Bolt data for the `sync_bolt_scale` system.
+#[derive(QueryData)]
+#[query_data(mutable)]
+pub(crate) struct SyncBoltScaleData {
+    /// Base radius in world units.
+    pub base_radius: &'static crate::shared::size::BaseRadius,
+    /// Mutable scale for rendering.
+    pub scale: &'static mut rantzsoft_spatial2d::components::Scale2D,
+    /// Active size boost multipliers.
+    pub size_boosts: Option<&'static crate::effect::effects::size_boost::ActiveSizeBoosts>,
+    /// Node scaling factor.
+    pub node_scale: Option<&'static NodeScalingFactor>,
+    /// Minimum radius constraint.
+    pub min_radius: Option<&'static crate::shared::size::MinRadius>,
+    /// Maximum radius constraint.
+    pub max_radius: Option<&'static crate::shared::size::MaxRadius>,
 }
 
 /// Applies the canonical velocity formula to spatial data with optional

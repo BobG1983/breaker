@@ -25,7 +25,7 @@ fn multiple_cells_dispatched_independently() {
                     trigger: Trigger::Died,
                     then: vec![EffectNode::Do(EffectKind::Explode {
                         range: 48.0,
-                        damage_mult: 1.0,
+                        damage: 1.0,
                     })],
                 }],
             }]),

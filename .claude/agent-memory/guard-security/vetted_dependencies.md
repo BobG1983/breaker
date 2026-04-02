@@ -106,3 +106,15 @@ cargo machete: no unused dependencies found.
 New files: all in breaker-game/src/effect/effects/ (anchor, circuit_breaker, mirror_protocol,
   entropy_engine) and matching test files. New RON assets: 12 evolution chips, 5 template chips,
   updated defaults.bolt.ron and defaults.breaker.ron. No external crates introduced.
+
+## feature/breaker-builder-pattern (2026-04-02) — breaker builder migration audit
+No new direct dependencies added. Dependency baseline unchanged.
+cargo audit: same single warning (paste RUSTSEC-2024-0436, unmaintained, transitive via metal→wgpu).
+cargo deny: same error (paste unmaintained) + same warnings (Unicode-DFS-2016 unmatched, 30+
+  duplicate transitive crates from wgpu/Windows churn). No new issues.
+cargo machete: no unused dependencies found.
+New files: breaker-game/src/breaker/builder/core.rs (908 lines), builder tests (~11 test files),
+  3 new breaker RON assets (aegis.breaker.ron, chrono.breaker.ron, prism.breaker.ron).
+Extension rename: bdef.ron → breaker.ron (registry.rs seed() fn). No external crates introduced.
+BreakerDefinition expanded from 5 fields to 35+ fields (all serde-defaulted). All production RON
+deserialization routes through Bevy asset pipeline — no new production panic surface.

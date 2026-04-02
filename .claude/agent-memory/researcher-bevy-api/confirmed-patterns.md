@@ -4,6 +4,63 @@ Verified against docs.rs/bevy/0.18.1 and official source.
 
 ---
 
+## UI Z-Ordering — GlobalZIndex and ZIndex
+
+### `GlobalZIndex(i32)` — cross-hierarchy overlay ordering
+
+```rust
+use bevy::prelude::GlobalZIndex;  // re-exported in prelude
+
+// Render above ALL other UI nodes globally (same pattern as Bevy FPS overlay):
+GlobalZIndex(i32::MAX - 1)
+// FPS overlay uses i32::MAX - 32 "so you can render on top of it if you really need to"
+```
+
+- `GlobalZIndex` allows a Node to escape the implicit draw ordering of the UI layout tree
+- Positive values render ON TOP of nodes without GlobalZIndex or lower values
+- Negative values render BELOW nodes without GlobalZIndex or higher values
+- For siblings with same GlobalZIndex: the one with greater local `ZIndex` wins
+- `ZIndex` alone only affects ordering among siblings — use `GlobalZIndex` for cross-hierarchy overlays
+- Verified from `docs.rs/bevy/0.18.0/bevy/prelude/struct.GlobalZIndex.html`
+- Confirmed pattern from `docs.rs/bevy_dev_tools/0.18.1/src/bevy_dev_tools/fps_overlay.rs`
+
+### Full-screen overlay spawn pattern (confirmed working)
+
+```rust
+commands.spawn((
+    Node {
+        width: Val::Percent(100.0),
+        height: Val::Percent(100.0),
+        position_type: PositionType::Absolute,
+        ..default()
+    },
+    BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.0)),
+    GlobalZIndex(i32::MAX - 1),  // covers all other UI including HUD
+));
+```
+
+---
+
+## StateTransitionEvent (Bevy 0.18)
+
+```rust
+// Implements Message — read with MessageReader<StateTransitionEvent<S>>
+pub struct StateTransitionEvent<S: States> {
+    pub exited: Option<S>,
+    pub entered: Option<S>,
+    pub allow_same_state_transitions: bool,
+}
+```
+
+Fires AFTER the transition completes (after OnEnter/OnExit schedules run).
+
+### BREAKING CHANGE in Bevy 0.18
+
+`next_state.set(S)` now ALWAYS fires `OnEnter`/`OnExit`, even when setting the same state value.
+Use `next_state.set_if_neq(S)` for the old behavior (only transition if the state is different).
+
+---
+
 ## Time API
 
 ### `Time<Virtual>` — controlling game speed
@@ -68,9 +125,105 @@ fn ramp_system(real: Res<Time<Real>>, mut virt: ResMut<Time<Virtual>>, mut state
 
 ---
 
-## Message System (Bevy 0.18 observer pattern)
+## Message System (Bevy 0.18)
 
-TODO: add from next research session.
+Verified against docs.rs/bevy_ecs/0.18.1, github.com/bevyengine/bevy/tree/v0.18.1.
+
+### Core types
+
+| Type | Role |
+|------|------|
+| `Messages<T>` | `Resource` — the actual message storage (double-buffered) |
+| `MessageWriter<T>` | `SystemParam` — thin wrapper around `ResMut<Messages<T>>` |
+| `MessageReader<T>` | `SystemParam` — reads from `Messages<T>` with cursor tracking |
+| `MessageMutator<T>` | `SystemParam` — mutable read with cursor tracking |
+| `MessageCursor<T>` | Tracks per-reader position in the message buffer |
+
+`MessageWriter<T>` has no extra logic: its `write()` method just calls `self.messages.write(message)`.
+
+### Registering a message type
+
+```rust
+app.add_message::<MyMessage>();
+// Must be called before any system reads/writes the message.
+// Inserts Messages<MyMessage> as a resource and schedules update system.
+```
+
+### Writing messages from a system
+
+```rust
+fn my_system(mut writer: MessageWriter<MyMessage>) {
+    writer.write(MyMessage { ... });
+}
+```
+
+### Writing messages directly from &mut World (in tests)
+
+`Messages<T>` implements `Resource` directly, so you can write to it from any `&mut World`:
+
+```rust
+// Option 1 — resource_mut (most explicit, recommended for tests):
+app.world_mut()
+    .resource_mut::<Messages<MyMessage>>()
+    .write(MyMessage { ... });
+
+// Option 2 — World::write_message convenience method:
+app.world_mut().write_message(MyMessage { ... });
+
+// Batch variant:
+app.world_mut()
+    .resource_mut::<Messages<MyMessage>>()
+    .write_batch([msg1, msg2]);
+```
+
+`World::write_message` / `write_message_batch` / `write_message_default` are confirmed
+in the World method list on docs.rs. The underlying implementation (in DeferredWorld) calls
+`get_resource_mut::<Messages<E>>()` and delegates to `write_batch` — it logs an error and
+returns `None` if the type was not registered.
+
+### Reading messages from a system
+
+```rust
+fn my_system(mut reader: MessageReader<MyMessage>) {
+    for msg in reader.read() {
+        // msg: &MyMessage
+    }
+}
+```
+
+### The `#[cfg(test)]` workaround used in this project (before knowing the above)
+
+The project currently uses a Resource + helper-system pattern to inject test messages:
+
+```rust
+// Old workaround in tests:
+#[derive(Resource)]
+struct TestMessage(Option<DamageCell>);
+
+fn enqueue_from_resource(res: Res<TestMessage>, mut writer: MessageWriter<DamageCell>) {
+    if let Some(msg) = res.0.clone() { writer.write(msg); }
+}
+
+app.insert_resource(TestMessage(Some(msg)));
+app.add_systems(FixedUpdate, enqueue_from_resource.before(handle_cell_hit));
+tick(&mut app);
+```
+
+This can be replaced with the direct resource_mut approach — no helper system or TestMessage resource needed.
+
+### Message update / buffer swap
+
+`Messages::update()` swaps double buffers once per frame. This is handled automatically by
+`message_update_system` (scheduled in `app.add_message()`). Tests using `app.update()` or
+`tick()` will have messages visible to readers on the same update tick they are written.
+
+### Module path
+
+```rust
+use bevy::ecs::message::{Messages, MessageWriter, MessageReader, MessageCursor};
+// All re-exported in bevy::prelude
+use bevy::prelude::*;
+```
 
 ---
 
@@ -283,9 +436,107 @@ Use `With<T>` / `Without<T>` as a filter when you only want to match entities th
 
 ---
 
-## State
+## State — States, SubStates, ComputedStates (Bevy 0.18.1)
 
-TODO: add from next research session.
+Verified against docs.rs/bevy/0.18.1, bevy v0.18.0 source, official examples.
+
+### `States` trait (top-level, independent)
+
+```rust
+pub trait States: 'static + Send + Sync + Clone + PartialEq + Eq + Hash + Debug {
+    const DEPENDENCY_DEPTH: usize = 1;
+}
+```
+
+Multiple independent `States` can coexist in one app — "orthogonal dimensions."
+
+```rust
+app.init_state::<GameState>()
+   .init_state::<PauseState>(); // completely independent
+```
+
+Both need `Default` (sets initial state), plus `Clone, Copy, PartialEq, Eq, Hash, Debug`.
+Registered via `AppExtStates::init_state::<S>()` or `insert_state(S)`.
+
+### `SubStates` trait (hierarchical, requires source)
+
+```rust
+pub trait SubStates: States {
+    type SourceStates: StateSet;
+    fn should_exist(sources: Self::SourceStates) -> Option<Self>;
+}
+```
+
+Derive macro + `#[source(ParentState = ParentState::Variant)]` sets up the source.
+Only exists when the source state condition is met; resource removed when condition fails.
+`SourceStates` can be a single type or a tuple of multiple types.
+SubStates CANNOT be independent (source-free) — that requires `States`.
+
+Registration: `app.add_sub_state::<S>()` after the parent state is initialized.
+
+### `ComputedStates` trait (derived, no manual transitions)
+
+```rust
+pub trait ComputedStates: 'static + Send + Sync + Clone + PartialEq + Eq + Hash + Debug {
+    type SourceStates;
+    fn compute(sources: Self::SourceStates) -> Option<Self>;
+    const ALLOW_SAME_STATE_TRANSITIONS: bool = true;
+}
+```
+
+Does NOT require `Default`. Automatically recomputed when any source changes.
+Returns `None` to remove the state resource from the world (state inactive).
+`SourceStates` can be a single type, `Option<T>`, or tuple of multiple types.
+
+Registration: `app.add_computed_state::<S>()`.
+
+### State reading and transitioning
+
+```rust
+fn my_system(
+    current: Res<State<GameState>>,          // read current state
+    mut next: ResMut<NextState<GameState>>,  // queue transition
+) {
+    let s: &GameState = current.get();
+    next.set(GameState::Playing);
+}
+```
+
+### `in_state` condition
+
+```rust
+pub fn in_state<S: States>(state: S) -> impl FnMut(Option<Res<'_, State<S>>>) + Clone;
+```
+
+Works in any schedule — `Update`, `FixedUpdate`, etc.
+
+```rust
+.add_systems(FixedUpdate, physics.run_if(in_state(NodeState::Playing)))
+.add_systems(Update, ui_system.run_if(in_state(GameState::Run)))
+```
+
+### configure_sets is per-schedule
+
+**CRITICAL**: A `run_if` on a SystemSet in one schedule does NOT propagate to other
+schedules. Must configure separately:
+
+```rust
+// MUST call configure_sets on EACH schedule independently:
+app.configure_sets(Update, GameplaySystems.run_if(not_paused));
+app.configure_sets(FixedUpdate, GameplaySystems.run_if(not_paused));
+```
+
+`in_state` accepts `Option<Res<State<S>>>` as its param so it returns `false` (not panic)
+if the state resource doesn't exist (e.g., SubStates not yet active).
+
+### AppExtStates signatures
+
+```rust
+fn init_state<S: States + Default>(&mut self) -> &mut Self;
+fn insert_state<S: States>(&mut self, state: S) -> &mut Self;
+fn add_sub_state<S: SubStates>(&mut self) -> &mut Self;
+fn add_computed_state<S: ComputedStates>(&mut self) -> &mut Self;
+```
 
 ---
 

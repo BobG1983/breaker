@@ -225,7 +225,7 @@ fn effect_kind_fire_passes_source_chip_to_explode_spawned_request_has_effect_sou
 
     EffectKind::Explode {
         range: 60.0,
-        damage_mult: 2.0,
+        damage: 2.0,
     }
     .fire(entity, "explode_chip", &mut world);
 
@@ -250,7 +250,7 @@ fn effect_kind_fire_passes_empty_source_chip_to_explode_spawned_request_has_none
 
     EffectKind::Explode {
         range: 60.0,
-        damage_mult: 2.0,
+        damage: 2.0,
     }
     .fire(entity, "", &mut world);
 
@@ -360,6 +360,8 @@ fn effect_kind_fire_dispatches_mirror_protocol_spawns_mirrored_bolts() {
             color_rgb: [6.0, 5.0, 0.5],
             min_angle_horizontal: 5.0,
             min_angle_vertical: 5.0,
+            min_radius: None,
+            max_radius: None,
         },
     );
     world.insert_resource(bolt_registry);

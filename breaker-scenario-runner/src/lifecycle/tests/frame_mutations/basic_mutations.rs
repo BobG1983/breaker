@@ -1,4 +1,4 @@
-//! Tests for noop, `SetBreakerState`, and `SetTimerRemaining` frame mutations.
+//! Tests for noop, `SetDashState`, and `SetTimerRemaining` frame mutations.
 
 use super::super::helpers::*;
 
@@ -30,12 +30,12 @@ fn apply_debug_frame_mutations_noop_when_none() {
 }
 
 // -------------------------------------------------------------------------
-// apply_debug_frame_mutations — SetBreakerState at matching frame
+// apply_debug_frame_mutations — SetDashState at matching frame
 // -------------------------------------------------------------------------
 
-/// When `frame_mutations` has `SetBreakerState(Braking)` at frame 3 and
-/// the current frame is 3, the breaker entity's `BreakerState` must
-/// become `BreakerState::Braking`.
+/// When `frame_mutations` has `SetDashState(Braking)` at frame 3 and
+/// the current frame is 3, the breaker entity's `DashState` must
+/// become `DashState::Braking`.
 #[test]
 fn apply_debug_frame_mutations_set_breaker_state_at_matching_frame() {
     let definition = ScenarioDefinition {
@@ -46,7 +46,7 @@ fn apply_debug_frame_mutations_set_breaker_state_at_matching_frame() {
         disallowed_failures: vec![],
         frame_mutations: Some(vec![FrameMutation {
             frame: 3,
-            mutation: MutationKind::SetBreakerState(ScenarioBreakerState::Braking),
+            mutation: MutationKind::SetDashState(ScenarioDashState::Braking),
         }]),
         ..Default::default()
     };
@@ -59,7 +59,7 @@ fn apply_debug_frame_mutations_set_breaker_state_at_matching_frame() {
 
     let entity = app
         .world_mut()
-        .spawn((ScenarioTagBreaker, BreakerState::Idle))
+        .spawn((ScenarioTagBreaker, DashState::Idle))
         .id();
 
     app.update();
@@ -67,20 +67,20 @@ fn apply_debug_frame_mutations_set_breaker_state_at_matching_frame() {
     let state = app
         .world()
         .entity(entity)
-        .get::<BreakerState>()
-        .expect("entity must still have BreakerState");
+        .get::<DashState>()
+        .expect("entity must still have DashState");
     assert_eq!(
         *state,
-        BreakerState::Braking,
-        "expected BreakerState::Braking at frame 3, got {state:?}"
+        DashState::Braking,
+        "expected DashState::Braking at frame 3, got {state:?}"
     );
 }
 
 // -------------------------------------------------------------------------
-// apply_debug_frame_mutations — SetBreakerState does NOT apply at non-matching frame
+// apply_debug_frame_mutations — SetDashState does NOT apply at non-matching frame
 // -------------------------------------------------------------------------
 
-/// When `frame_mutations` has `SetBreakerState(Braking)` at frame 3 but
+/// When `frame_mutations` has `SetDashState(Braking)` at frame 3 but
 /// the current frame is 2, the breaker must remain `Idle`.
 #[test]
 fn apply_debug_frame_mutations_set_breaker_state_skips_non_matching_frame() {
@@ -92,7 +92,7 @@ fn apply_debug_frame_mutations_set_breaker_state_skips_non_matching_frame() {
         disallowed_failures: vec![],
         frame_mutations: Some(vec![FrameMutation {
             frame: 3,
-            mutation: MutationKind::SetBreakerState(ScenarioBreakerState::Braking),
+            mutation: MutationKind::SetDashState(ScenarioDashState::Braking),
         }]),
         ..Default::default()
     };
@@ -105,7 +105,7 @@ fn apply_debug_frame_mutations_set_breaker_state_skips_non_matching_frame() {
 
     let entity = app
         .world_mut()
-        .spawn((ScenarioTagBreaker, BreakerState::Idle))
+        .spawn((ScenarioTagBreaker, DashState::Idle))
         .id();
 
     app.update();
@@ -113,12 +113,12 @@ fn apply_debug_frame_mutations_set_breaker_state_skips_non_matching_frame() {
     let state = app
         .world()
         .entity(entity)
-        .get::<BreakerState>()
-        .expect("entity must still have BreakerState");
+        .get::<DashState>()
+        .expect("entity must still have DashState");
     assert_eq!(
         *state,
-        BreakerState::Idle,
-        "expected BreakerState::Idle at frame 2 (mutation at frame 3), got {state:?}"
+        DashState::Idle,
+        "expected DashState::Idle at frame 2 (mutation at frame 3), got {state:?}"
     );
 }
 

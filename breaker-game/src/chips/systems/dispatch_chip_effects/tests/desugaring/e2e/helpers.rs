@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::effect::{BoundEffects, StagedEffects, Trigger};
+use crate::effect::{BoundEffects, StagedEffects, Trigger, TriggerContext};
 
 /// System that evaluates `NodeStart` trigger on all entities with `BoundEffects`.
 /// Mirrors `bridge_node_start` from `effect::triggers::node_start` (which is
@@ -20,7 +20,14 @@ pub(super) fn sys_evaluate_node_start(
             bound,
             &mut staged,
             &mut commands,
+            TriggerContext::default(),
         );
-        evaluate_staged_effects(&Trigger::NodeStart, entity, &mut staged, &mut commands);
+        evaluate_staged_effects(
+            &Trigger::NodeStart,
+            entity,
+            &mut staged,
+            &mut commands,
+            TriggerContext::default(),
+        );
     }
 }

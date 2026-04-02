@@ -75,8 +75,9 @@ If `--todo` was provided:
 1. Read the todo's detail file from `.claude/todos/`
 2. If the todo is `[NEEDS DETAIL]`, run the `/todo interrogate` procedure for it — ask questions recursively until all open questions are resolved or the user says stop
 3. Update the todo detail file with anything captured
-4. Enter `/plan` mode with the todo's context as input
-5. After the plan is approved by the user, update the todo detail file with any new decisions or scope changes from the planning discussion
-6. Launch `/implement` with the plan
+4. Update the state of the todo to [in-progress]
+5. Enter `/plan` mode with the todo's context as input
+6. After the plan is approved by the user, update the todo detail file with any new decisions or scope changes from the planning discussion
+7. Launch `/implement` with the plan
 
 If `--todo` was NOT provided: done — report the branch is ready for work.

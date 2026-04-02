@@ -24,7 +24,7 @@ fn perfect_tracking_with_multiple_bolts_tracks_first() {
         .spawn((
             ScenarioTagBreaker,
             Position2D(Vec2::new(0.0, -250.0)),
-            BreakerWidth(120.0),
+            BaseWidth(120.0),
         ))
         .id();
 
@@ -74,7 +74,7 @@ fn perfect_tracking_with_multiple_bolts_is_deterministic() {
             .spawn((
                 ScenarioTagBreaker,
                 Position2D(Vec2::new(300.0, -250.0)),
-                BreakerWidth(120.0),
+                BaseWidth(120.0),
             ))
             .id();
 

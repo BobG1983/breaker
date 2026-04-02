@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 use rantzsoft_defaults::prelude::SeedableRegistry;
+use tracing::warn;
 
 use super::definition::BoltDefinition;
 
@@ -79,11 +80,10 @@ impl SeedableRegistry for BoltRegistry {
     fn seed(&mut self, assets: &[(AssetId<BoltDefinition>, BoltDefinition)]) {
         self.bolts.clear();
         for (_id, def) in assets {
-            assert!(
-                !self.bolts.contains_key(&def.name),
-                "duplicate bolt name '{}'",
-                def.name
-            );
+            if self.bolts.contains_key(&def.name) {
+                warn!("duplicate bolt name '{}' — skipping", def.name);
+                continue;
+            }
             self.bolts.insert(def.name.clone(), def.clone());
         }
     }
@@ -111,6 +111,8 @@ mod tests {
             color_rgb: [6.0, 5.0, 0.5],
             min_angle_horizontal: 5.0,
             min_angle_vertical: 5.0,
+            min_radius: None,
+            max_radius: None,
         }
     }
 
@@ -267,17 +269,22 @@ mod tests {
         assert!(registry.get("B").is_none());
     }
 
-    // ── Behavior 11: seed() panics on duplicate bolt name ────────
+    // ── Behavior 11: seed() skips duplicate bolt name with warning ──
 
     #[test]
-    #[should_panic(expected = "duplicate bolt name")]
-    fn seed_panics_on_duplicate_bolt_name() {
+    fn seed_skips_duplicate_bolt_name() {
         let bolt1 = make_bolt_definition("Bolt", 10.0);
         let bolt2 = make_bolt_definition("Bolt", 25.0);
         let (_app, pairs) = asset_ids_for(&[bolt1, bolt2]);
 
         let mut registry = BoltRegistry::default();
         registry.seed(&pairs);
+
+        assert_eq!(registry.len(), 1, "duplicate should be skipped");
+        assert!(
+            (registry.get("Bolt").unwrap().base_damage - 10.0).abs() < f32::EPSILON,
+            "first occurrence (base_damage=10.0) should win"
+        );
     }
 
     // ── Behavior 12: update_single() upserts existing entry by name ──

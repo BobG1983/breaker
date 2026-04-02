@@ -92,7 +92,7 @@ src/
 
 The architectural boundary is about **writes** (mutations), not reads. Domains freely **read** other domains' types — components, message types, resources — via standard ECS queries. This is normal Bevy and not a violation:
 
-- **bolt** (collision systems) reads `PiercingRemaining` (bolt domain — bolt gameplay state), `ActivePiercings`, `ActiveDamageBoosts` (effect domain) from bolt entities, `CellHealth` (cells domain) from cell entities, and `BreakerWidth`, `BreakerHeight` (breaker domain) from the breaker entity. The bolt collision systems also write message types owned by other domains (e.g., writing a cells-domain `DamageCell` message). This is expected — collision is a cross-cutting concern now hosted in the bolt domain.
+- **bolt** (collision systems) reads `PiercingRemaining` (bolt domain — bolt gameplay state), `ActivePiercings`, `ActiveDamageBoosts` (effect domain) from bolt entities, `CellHealth` (cells domain) from cell entities, and `BaseWidth`, `BaseHeight` (shared domain) from the breaker entity. The bolt collision systems also write message types owned by other domains (e.g., writing a cells-domain `DamageCell` message). This is expected — collision is a cross-cutting concern now hosted in the bolt domain.
 - **cells** receives pre-computed damage via the `DamageCell` message — it does not read `ActiveDamageBoosts` directly. The bolt domain's `bolt_cell_collision` applies the multiplier when writing the message.
 - **breaker** reads `ActiveSpeedBoosts`, `ActiveSizeBoosts` (effect domain) from its own entity.
 - **effect** reads `BumpPerformed`, `BumpWhiffed` (breaker domain), `BoltImpactCell`, `BoltImpactBreaker`, `BoltImpactWall`, `BreakerImpactCell`, `BreakerImpactWall`, `BoltLost` (bolt/breaker domains), and `RequestCellDestroyed` / `CellDestroyedAt` (cells domain) messages in bridge systems.
@@ -210,7 +210,7 @@ Effects are fired through `EffectCommandsExt` on `Commands`:
 
 - `commands.fire_effect(entity, effect, source_chip)` — queues `FireEffectCommand` → calls `effect.fire(entity, &source_chip, world)` at apply
 - `commands.reverse_effect(entity, effect, source_chip)` — queues `ReverseEffectCommand` → calls `effect.reverse(entity, &source_chip, world)` at apply
-- `commands.transfer_effect(entity, name, children, permanent)` — pushes non-Do children to `BoundEffects` (permanent) or `StagedEffects` (one-shot); fires Do children immediately
+- `commands.transfer_effect(entity, name, children, permanent, context)` — pushes non-Do children to `BoundEffects` (permanent) or `StagedEffects` (one-shot); fires Do children immediately; `context` carries trigger entity references for targeted `On` resolution
 - `commands.push_bound_effects(entity, effects)` — inserts `BoundEffects` + `StagedEffects` if absent, then appends pre-built `(String, EffectNode)` entries to `BoundEffects`; used by dispatch systems that bypass the chip-name routing in `transfer_effect`
 
 ### Chain Ownership Model

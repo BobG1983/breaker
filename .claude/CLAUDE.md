@@ -13,7 +13,7 @@ Skills are the primary workflow entry points. Match the user's intent to a skill
 | Small, single-file fix (one function, one test, a rename) | `/quickfix` |
 | Checking code health | `/verify` |
 | Reviewing changed code for quality | `/simplify` |
-| Debugging a failing test, scenario, or unexpected behavior | `/debug` |
+| Debugging a failing test, scenario, or unexpected behavior | `/investigate` |
 | Done with a branch, ready to merge | `/finish-dev` |
 | Capture work for later | `/todo` |
 

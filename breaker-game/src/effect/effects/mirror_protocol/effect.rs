@@ -86,6 +86,7 @@ pub(crate) fn fire(entity: Entity, inherit: bool, _source_chip: &str, world: &mu
         .definition(&bolt_def)
         .with_velocity(Velocity2D(mirror_vel))
         .extra()
+        .headless()
         .spawn(world);
 
     // Inherit BoundEffects if requested

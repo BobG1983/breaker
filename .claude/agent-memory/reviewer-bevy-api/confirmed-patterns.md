@@ -244,3 +244,48 @@ type: reference
 - Same pattern for `ActiveSizeBoosts::multiplier`, `ActiveDamageBoosts::multiplier`, `ActivePiercings::total` — all correct
 - All three Active* types are `#[derive(Component)]` with a `Vec<f32>` / `Vec<u32>` inner field and a `.multiplier()` / `.total()` method — no tuple struct `.0` field access anywhere in systems
 - Bevy 0.18 QueryData tuple limit is 15 elements per tuple level; nested tuples each count independently
+
+## SyncBreakerScaleQuery Tuple Type Alias (confirmed correct in Bevy 0.18)
+- `type SyncBreakerScaleQuery = (&'static BaseWidth, &'static BaseHeight, &'static mut Scale2D, Option<&'static ActiveSizeBoosts>, ...)` — 9-element tuple with `&'static mut` field in a plain `type` alias (not `#[derive(QueryData)]`); valid; mutable refs in `type` aliases require `#[query_data(mutable)]` only when using `#[derive(QueryData)]`; plain `type` aliases can include `&'static mut` directly
+- Confirmed used in `Query<SyncBreakerScaleQuery, With<Breaker>>` — the `With<Breaker>` filter is on the outer Query, NOT inside the tuple; correct
+
+## SpatialData with Optional Scale2D / PreviousScale Fields (confirmed correct in Bevy 0.18)
+- `pub scale: Option<&'static Scale2D>` and `pub previous_scale: Option<&'static PreviousScale>` as named fields in a `#[derive(QueryData)] #[query_data(mutable)]` struct — both fields are read-only (no `mut`), which is valid inside a mutable QueryData struct; mutable annotation only requires the struct to be decorated, not every field to be mutable
+- `PreviousScale` is `#[derive(Component)]` in `rantzsoft_spatial2d`; correct usage in `SpatialData` QueryData
+
+## DispatchInitialEffects Command — world.query_filtered inside Command::apply (confirmed correct)
+- Creating `QueryState` from `world.query_filtered::<Entity, F>()` inside `Command::apply(self, world: &mut World)`, calling `.iter(world).collect()`, then dropping the QueryState before calling further World methods — correct; each `query_filtered` call creates and drops an owned QueryState before the next borrow begins; no aliased borrow issue
+- Calling `TransferCommand { ... }.apply(world)` directly inside another `Command::apply` — valid; Commands are plain structs implementing `Command`; calling `.apply(world)` directly (instead of queuing) is an immediate synchronous application; correct pattern in Bevy 0.18
+
+## Typestate Builder Pattern (feature/breaker-builder-pattern — confirmed correct)
+- `BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, Rendered, Primary>` — 7-dimensional typestate builder; terminal `build()` returning `impl Bundle` is correct; `spawn(&mut commands)` calling `commands.spawn(self.build()).id()` and then `commands.dispatch_initial_effects(...)` is the correct Commands-based spawn pattern
+- `BoltBuilder<...> spawn(self, world: &mut World)` — exclusive World-access spawn; `world.spawn(core)` + `.insert(...)` chain on `EntityWorldMut` is confirmed correct pattern (see earlier typestate builder notes)
+- `fn build(self) -> impl Bundle` (no `use<>`) — correct when `self` is consumed by value with no borrowed lifetime fields; compiler infers no overcapture; `use<>` optional in edition 2024
+- `fn build_core(...) -> impl Bundle + use<>` — also correct for free functions with no type/lifetime params to capture
+- `const fn with_lives(mut self, lives: Option<u32>) -> Self` in generic `BreakerBuilder<D,Mv,Da,Sp,Bm,V,R>` — valid `const fn` only when all type parameters are `Copy`/const-compatible at the call site; the match on `Option<u32>` is fine; however, `BreakerBuilder` contains `D`, `Mv`, etc. which are NOT constrained to `Copy` — this const fn only compiles when the compiler determines at monomorphization that the move is valid; NO ISSUE for the current use (typestate markers are all `()` effectively)
+- `world.remove_resource::<Assets<Mesh>>().unwrap_or_default()` in exclusive system for borrow-split — correct pattern; avoids `&mut World` aliasing when builder's `rendered()` needs `&mut Assets<Mesh>`; `world.insert_resource(meshes)` re-inserts after spawn; confirmed in `spawn_bolt/system.rs`
+- `BoltRadius` is a type alias `pub type BoltRadius = crate::shared::size::BaseRadius` — not a separate component; using it in QueryData fields queries the same component as `BaseRadius`
+
+## commands.spawn() + .id() (confirmed correct in Bevy 0.18)
+- `commands.spawn(bundle).id()` — `Commands::spawn` returns `EntityCommands`; `.id()` on `EntityCommands` returns `Entity`; method chaining `.spawn(...).id()` is valid and returns the spawned entity's `Entity` id; no deferred lookup or world access needed
+- Used in `breaker/builder/core.rs` spawn() methods — CORRECT
+
+## impl Bundle return types (confirmed correct — plain vs use<>)
+- `fn build_core(...) -> impl Bundle + use<>` (no captured lifetimes/type params) — correct; `use<>` captures nothing; prevents overcapturing in RPIT in edition 2024 (already in confirmed-patterns.md)
+- `pub fn build(self) -> impl Bundle` (consuming self, no borrows) — also CORRECT in edition 2024; `build()` takes `self` by value so there are no lifetimes to overcapture; `use<>` is optional here; the compiler infers no lifetime dependencies; no error expected
+- Both forms coexist correctly in the same file
+
+## EffectCommandsExt::dispatch_initial_effects (confirmed correct)
+- `commands.dispatch_initial_effects(effects, None)` — method is from `EffectCommandsExt` extension trait on `Commands<'_, '_>`, defined in `effect/commands/ext.rs`; queues `DispatchInitialEffects` command; signature `fn dispatch_initial_effects(&mut self, effects: Vec<RootEffect>, source_chip: Option<String>)` — CORRECT usage at call sites
+
+## ColorMaterial::from_color + meshes.add / materials.add (Bevy 0.18)
+- `meshes.add(Rectangle::new(1.0, 1.0))` — `Assets<Mesh>::add` accepts `impl Into<A>` where `Rectangle: Into<Mesh>`; CORRECT
+- `materials.add(ColorMaterial::from_color(color))` — `ColorMaterial::from_color` takes `impl Into<Color>`; accepts `Color` directly; `Assets<ColorMaterial>::add` is correct; pattern confirmed across multiple files in this project
+
+## #[serde(deny_unknown_fields)] on Asset structs (confirmed correct)
+- `#[serde(deny_unknown_fields)]` on a `#[derive(Asset, TypePath, Deserialize, Clone, Debug)]` struct — valid; serde attribute applies to `Deserialize`; `Asset` derive is independent; no conflict; RON deserialization will reject unknown fields at runtime which is the intended behavior
+- Used on `BreakerDefinition` — CORRECT; tests confirm correct RON round-trips
+
+## CollisionLayers::new(membership, mask) — project-local crate
+- `CollisionLayers::new(BREAKER_LAYER, BOLT_LAYER)` — `CollisionLayers` is from `rantzsoft_physics2d`, NOT bevy; `new(membership: u32, mask: u32) -> Self`; `BREAKER_LAYER` and `BOLT_LAYER` are `u32` constants; call is CORRECT
+- `Aabb2D::new(center: Vec2, half_extents: Vec2)` — also from `rantzsoft_physics2d`; `Aabb2D::new(Vec2::ZERO, Vec2::new(w/2, h/2))` is CORRECT

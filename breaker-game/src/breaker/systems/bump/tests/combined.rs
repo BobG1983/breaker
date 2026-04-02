@@ -4,16 +4,16 @@ use super::helpers::*;
 use crate::{
     bolt::messages::BoltImpactBreaker,
     breaker::{
-        components::{Breaker, BreakerState, BreakerStateTimer, BumpState, SettleDuration},
+        components::{Breaker, BumpState, DashState, DashStateTimer, SettleDuration},
+        definition::BreakerDefinition,
         messages::{BumpGrade, BumpPerformed},
-        resources::BreakerConfig,
     },
 };
 
 #[test]
 fn same_frame_hit_and_expiry_grades_not_whiffs() {
     let mut app = combined_bump_test_app();
-    let config = app.world().resource::<BreakerConfig>().clone();
+    let config = BreakerDefinition::default();
 
     let entity = app
         .world_mut()
@@ -67,16 +67,15 @@ fn same_frame_hit_and_expiry_grades_not_whiffs() {
 fn perfect_bump_cancels_dash() {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
-        .init_resource::<BreakerConfig>()
         .add_message::<BumpPerformed>();
-    let config = app.world().resource::<BreakerConfig>().clone();
+    let config = BreakerDefinition::default();
 
     let entity = app
         .world_mut()
         .spawn((
             Breaker,
-            BreakerState::Dashing,
-            BreakerStateTimer { remaining: 0.1 },
+            DashState::Dashing,
+            DashStateTimer { remaining: 0.1 },
             SettleDuration(config.settle_duration),
         ))
         .id();
@@ -84,6 +83,7 @@ fn perfect_bump_cancels_dash() {
     app.insert_resource(TestBumpMessage(Some(BumpPerformed {
         grade: BumpGrade::Perfect,
         bolt: None,
+        breaker: entity,
     })));
 
     app.add_systems(
@@ -95,14 +95,14 @@ fn perfect_bump_cancels_dash() {
     );
     tick(&mut app);
 
-    let state = app.world().get::<BreakerState>(entity).unwrap();
+    let state = app.world().get::<DashState>(entity).unwrap();
     assert_eq!(
         *state,
-        BreakerState::Settling,
+        DashState::Settling,
         "perfect bump during dash should transition to settling"
     );
 
-    let timer = app.world().get::<BreakerStateTimer>(entity).unwrap();
+    let timer = app.world().get::<DashStateTimer>(entity).unwrap();
     assert!(
         (timer.remaining - config.settle_duration).abs() < f32::EPSILON,
         "settle timer should be set to config.settle_duration"

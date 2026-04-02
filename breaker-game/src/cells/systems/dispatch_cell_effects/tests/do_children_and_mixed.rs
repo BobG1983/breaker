@@ -26,7 +26,7 @@ fn do_children_are_not_stored_in_bound_effects() {
                         trigger: Trigger::Died,
                         then: vec![EffectNode::Do(EffectKind::Explode {
                             range: 48.0,
-                            damage_mult: 1.0,
+                            damage: 1.0,
                         })],
                     },
                 ],
@@ -125,7 +125,7 @@ fn cell_with_multiple_root_effects_gets_all_dispatched() {
                         trigger: Trigger::Died,
                         then: vec![EffectNode::Do(EffectKind::Explode {
                             range: 48.0,
-                            damage_mult: 1.0,
+                            damage: 1.0,
                         })],
                     }],
                 },
@@ -204,7 +204,7 @@ fn cell_with_mixed_targets_dispatches_to_correct_entities() {
                         trigger: Trigger::Died,
                         then: vec![EffectNode::Do(EffectKind::Explode {
                             range: 48.0,
-                            damage_mult: 1.0,
+                            damage: 1.0,
                         })],
                     }],
                 },

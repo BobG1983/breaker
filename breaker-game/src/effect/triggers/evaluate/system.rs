@@ -20,39 +20,65 @@ impl Command for RemoveChainsCommand {
 }
 
 /// Walk `BoundEffects` for a trigger. Entries are NEVER consumed.
+///
+/// `context` carries the entities involved in the trigger event (e.g., the
+/// specific cell and bolt in an `Impacted(Cell)` collision). When an inner
+/// `On(target)` node finds a matching entity in the context, it resolves to
+/// that single entity instead of querying all entities of that type.
 pub(crate) fn evaluate_bound_effects(
     trigger: &Trigger,
-    entity: Entity,
+    effect_owner: Entity,
     bound: &BoundEffects,
     staged: &mut StagedEffects,
     commands: &mut Commands,
+    context: TriggerContext,
 ) {
     for (chip_name, node) in &bound.0 {
-        walk_bound_node(trigger, entity, chip_name, node, staged, commands);
+        walk_bound_node(
+            trigger,
+            effect_owner,
+            chip_name,
+            node,
+            staged,
+            commands,
+            context,
+        );
     }
 }
 
 /// Walk `StagedEffects` for a trigger. Matching entries ARE consumed.
+///
+/// See [`evaluate_bound_effects`] for `context` semantics.
 pub(crate) fn evaluate_staged_effects(
     trigger: &Trigger,
-    entity: Entity,
+    effect_owner: Entity,
     staged: &mut StagedEffects,
     commands: &mut Commands,
+    context: TriggerContext,
 ) {
     let mut additions = Vec::new();
     staged.0.retain(|(chip_name, node)| {
-        !walk_staged_node(trigger, entity, chip_name, node, &mut additions, commands)
+        !walk_staged_node(
+            trigger,
+            effect_owner,
+            chip_name,
+            node,
+            &mut additions,
+            commands,
+            context,
+        )
     });
     staged.0.extend(additions);
 }
 
 fn walk_bound_node(
     trigger: &Trigger,
-    entity: Entity,
+    effect_owner: Entity,
     chip_name: &str,
     node: &EffectNode,
     staged: &mut StagedEffects,
     commands: &mut Commands,
+    _context: TriggerContext,
 ) {
     if let EffectNode::When { trigger: t, then } = node
         && t == trigger
@@ -60,7 +86,7 @@ fn walk_bound_node(
         for child in then {
             match child {
                 EffectNode::Do(effect) => {
-                    commands.fire_effect(entity, effect.clone(), chip_name.to_string());
+                    commands.fire_effect(effect_owner, effect.clone(), chip_name.to_string());
                 }
                 other => {
                     staged.0.push((chip_name.to_string(), other.clone()));
@@ -68,31 +94,38 @@ fn walk_bound_node(
             }
         }
     }
+    // context is propagated through staged effects — On nodes queued from
+    // bound evaluation will pick it up via walk_staged_node.
 }
 
 /// Returns true if the node was consumed (matched).
 fn walk_staged_node(
     trigger: &Trigger,
-    entity: Entity,
+    effect_owner: Entity,
     chip_name: &str,
     node: &EffectNode,
     additions: &mut Vec<(String, EffectNode)>,
     commands: &mut Commands,
+    context: TriggerContext,
 ) -> bool {
     match node {
         EffectNode::When { trigger: t, then } if t == trigger => {
             for child in then {
                 match child {
                     EffectNode::Do(effect) => {
-                        commands.fire_effect(entity, effect.clone(), chip_name.to_string());
+                        commands.fire_effect(effect_owner, effect.clone(), chip_name.to_string());
                     }
                     EffectNode::Reverse { effects, chains } => {
                         for effect in effects {
-                            commands.reverse_effect(entity, effect.clone(), chip_name.to_string());
+                            commands.reverse_effect(
+                                effect_owner,
+                                effect.clone(),
+                                chip_name.to_string(),
+                            );
                         }
                         if !chains.is_empty() {
                             commands.queue(RemoveChainsCommand {
-                                entity,
+                                entity: effect_owner,
                                 chains: chains.clone(),
                             });
                         }
@@ -114,7 +147,7 @@ fn walk_staged_node(
                             match inner {
                                 EffectNode::Do(effect) => {
                                     commands.fire_effect(
-                                        entity,
+                                        effect_owner,
                                         effect.clone(),
                                         chip_name.to_string(),
                                     );
@@ -128,7 +161,7 @@ fn walk_staged_node(
                     EffectNode::Do(effect) => {
                         // Bare Do always matches -- fire immediately
                         any_matched = true;
-                        commands.fire_effect(entity, effect.clone(), chip_name.to_string());
+                        commands.fire_effect(effect_owner, effect.clone(), chip_name.to_string());
                     }
                     _ => {}
                 }
@@ -145,6 +178,7 @@ fn walk_staged_node(
                 chip_name: chip_name.to_string(),
                 children: on_children.clone(),
                 permanent: *permanent,
+                context,
             });
             true // consumed -- ResolveOnCommand resolves target asynchronously
         }

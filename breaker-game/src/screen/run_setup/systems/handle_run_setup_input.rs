@@ -77,16 +77,13 @@ mod tests {
     use bevy::state::app::StatesPlugin;
 
     use super::*;
-    use crate::breaker::definition::{BreakerDefinition, BreakerStatOverrides};
+    use crate::breaker::definition::BreakerDefinition;
 
     fn make_breaker(name: &str) -> BreakerDefinition {
-        BreakerDefinition {
-            name: name.to_owned(),
-            bolt: "Bolt".to_owned(),
-            stat_overrides: BreakerStatOverrides::default(),
-            life_pool: None,
-            effects: vec![],
-        }
+        ron::de::from_str(&format!(
+            r#"(name: "{name}", life_pool: None, effects: [])"#,
+        ))
+        .expect("test RON should parse")
     }
 
     fn test_breaker_registry(names: &[&str]) -> BreakerRegistry {

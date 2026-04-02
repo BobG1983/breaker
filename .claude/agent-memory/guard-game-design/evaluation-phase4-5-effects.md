@@ -24,7 +24,7 @@ Original recommendation for counter-effect on shield hit still stands for Phase 
 
 1. **RESOLVED: DamageCell source_chip threading** — All combat effects now thread chip attribution via `EffectSourceChip` component. Closed 2026-03-29.
 
-2. **OPEN: BASE_BOLT_DAMAGE hardcoding** — Shockwave and Pulse use BASE_BOLT_DAMAGE constant instead of effective damage multiplier. DamageBoost stacking amplifies via `EffectiveDamageMultiplier` but bolt base damage changes won't propagate. Weakens synergy web.
+2. **RESOLVED: BASE_BOLT_DAMAGE hardcoding** — Resolved in feature/breaker-builder-pattern (2026-04-02). `BoltDefinition.base_damage` replaces the hardcoded const. Combat effects (Shockwave, Pulse, etc.) now read `base_damage` from the registry/definition; `ActiveDamageBoosts.multiplier()` scales it. Synergy web intact. Do NOT re-flag.
 
 ### Tuning Watch
 

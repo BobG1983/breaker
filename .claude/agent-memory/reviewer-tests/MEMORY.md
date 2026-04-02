@@ -5,5 +5,7 @@
 
 - [Bolt #[require] causes false passes for zero-velocity and Spatial2D tests](pattern_require_component_false_pass.md) — stubs that spawn `(Bolt,)` auto-insert Velocity2D(Vec2::ZERO), Spatial2D, InterpolateTransform2D — zero-velocity assertions and spatial marker assertions pass at RED
 
+- [Typestate transition methods with full production logic](pattern_transition_method_production_logic.md) — definition() and dimensions() stubs contain production min/max computations, crossing RED/GREEN boundary even when build() is correctly stubbed
+
 ## Session History
 See [ephemeral/](ephemeral/) — not committed.

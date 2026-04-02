@@ -7,16 +7,19 @@ description: Start the full TDD implementation pipeline for a feature, refactor,
 
 Orchestrate the full delegated implementation pipeline for a feature. This skill is the single entry point — it sequences the phases and references the authoritative rules at each step.
 
-## Rules
+## Rules - **IMPORTANT**
 
 - **ALL agents launch with `run_in_background: true`** — no exceptions
 - **Update session-state FIRST** after every agent notification — before triaging, before launching the next agent
 - **Pass hint blocks verbatim** to fix agents — do not rephrase
 - **Never skip phases** — specs before RED, RED before GREEN, GREEN before REFACTOR
 - **Never skip the spec review loop** — even for "obvious" specs
-- **Circuit breaking** — 3 failed attempts at the same failure → stop → report STUCK then use the /debug skill
+- **Circuit breaking** — 3 failed attempts at the same failure → stop → report STUCK then use the /investigate skill
 - **No speculative work** while agents are running — end turn after launching
 - **Maximize parallelism** — waves are independent; only cargo commands serialize
+- **Always** move between plan steps without user input once verification passes clean
+- **NEVER** wait for user input to move forwards in a plan if verification passes clean
+- **Always** create a TaskList and keep it up to date whenever you update session state
 
 ## When to Use
 
@@ -60,7 +63,7 @@ When `--plan` is provided, read the plan file for the feature description, scope
 
 1. Verify you're on a topic branch (not develop or main). If on develop, run `/start-dev` to create a branch first.
 2. Parse the feature description (inline or from plan file)
-3. Create `.claude/state/session-state.md` using the format in `session-state.md`
+3. Create `.claude/state/session-state.md` using the format in the `session-state.md` rule
 4. Record the task description and any initial decisions
 
 ### Step 1 — Analyze scope and identify waves
@@ -158,3 +161,9 @@ When `/verify standard` is clean:
 1. Stage changed files
 2. Commit using the format in `commit-format.md`
 3. Update session-state to record completion
+
+
+### Step 11 - Repeat 
+
+1. Repeat Steps 1-10 until the **entire** plan is complete
+2. Run /finish-dev to run final verifications and merge

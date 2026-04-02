@@ -12,22 +12,11 @@ use rantzsoft_physics2d::{
 use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
-    breaker::{
-        components::{Breaker, BreakerHeight, BreakerWidth},
-        messages::BreakerImpactCell,
-    },
+    breaker::{components::Breaker, messages::BreakerImpactCell, queries::BreakerSizeData},
     cells::components::Cell,
-    shared::{BREAKER_LAYER, CELL_LAYER, EntityScale},
+    effect::effects::size_boost::ActiveSizeBoosts,
+    shared::{BREAKER_LAYER, CELL_LAYER},
 };
-
-/// Breaker query data for cell collision detection.
-type BreakerCellCollisionQuery = (
-    Entity,
-    &'static Position2D,
-    &'static BreakerWidth,
-    &'static BreakerHeight,
-    Option<&'static EntityScale>,
-);
 
 /// Cell entity lookup for narrow-phase overlap verification.
 type CellLookup<'w, 's> = Query<'w, 's, (&'static Position2D, &'static Aabb2D), With<Cell>>;
@@ -39,21 +28,22 @@ type CellLookup<'w, 's> = Query<'w, 's, (&'static Position2D, &'static Aabb2D), 
 /// check before sending [`BreakerImpactCell`].
 pub(crate) fn breaker_cell_collision(
     quadtree: Res<CollisionQuadtree>,
-    breaker_query: Query<BreakerCellCollisionQuery, With<Breaker>>,
+    breaker_query: Query<BreakerSizeData, With<Breaker>>,
     cell_lookup: CellLookup,
     mut writer: MessageWriter<BreakerImpactCell>,
 ) {
-    let Ok((breaker_entity, breaker_pos, breaker_w, breaker_h, breaker_scale)) =
-        breaker_query.single()
-    else {
+    let Ok(breaker) = breaker_query.single() else {
         return;
     };
 
-    let scale = breaker_scale.map_or(1.0, |s| s.0);
-    let half_w = breaker_w.half_width() * scale;
-    let half_h = breaker_h.half_height() * scale;
+    let size_mult = breaker
+        .size_boosts
+        .map_or(1.0, ActiveSizeBoosts::multiplier);
+    let scale = breaker.node_scale.map_or(1.0, |s| s.0);
+    let half_w = breaker.base_width.half_width() * size_mult * scale;
+    let half_h = breaker.base_height.half_height() * size_mult * scale;
 
-    let breaker_aabb = Aabb2D::new(breaker_pos.0, Vec2::new(half_w, half_h));
+    let breaker_aabb = Aabb2D::new(breaker.position.0, Vec2::new(half_w, half_h));
     let layers = CollisionLayers::new(BREAKER_LAYER, CELL_LAYER);
     let candidates = quadtree.quadtree.query_aabb_filtered(&breaker_aabb, layers);
 
@@ -63,11 +53,11 @@ pub(crate) fn breaker_cell_collision(
         };
 
         // Narrow-phase: verify actual AABB overlap
-        let dx = (breaker_pos.0.x - cell_pos.0.x).abs();
-        let dy = (breaker_pos.0.y - cell_pos.0.y).abs();
+        let dx = (breaker.position.0.x - cell_pos.0.x).abs();
+        let dy = (breaker.position.0.y - cell_pos.0.y).abs();
         if dx < half_w + cell_aabb.half_extents.x && dy < half_h + cell_aabb.half_extents.y {
             writer.write(BreakerImpactCell {
-                breaker: breaker_entity,
+                breaker: breaker.entity,
                 cell: cell_entity,
             });
         }
@@ -81,7 +71,10 @@ mod tests {
     use rantzsoft_spatial2d::components::{GlobalPosition2D, Spatial2D};
 
     use super::*;
-    use crate::shared::GameDrawLayer;
+    use crate::{
+        breaker::components::{BaseHeight, BaseWidth},
+        shared::{GameDrawLayer, NodeScalingFactor},
+    };
 
     // ── Helpers ──────────────────────────────────────────────────────
 
@@ -128,8 +121,8 @@ mod tests {
         app.world_mut()
             .spawn((
                 Breaker,
-                BreakerWidth(120.0),
-                BreakerHeight(20.0),
+                BaseWidth(120.0),
+                BaseHeight(20.0),
                 Position2D(pos),
                 GlobalPosition2D(pos),
                 Spatial2D,
@@ -186,7 +179,7 @@ mod tests {
 
     #[test]
     fn breaker_with_entity_scale_expands_collision_area() {
-        // B1 edge case: Breaker at (0,0) with EntityScale(2.0) => half_w=120, half_h=20.
+        // B1 edge case: Breaker at (0,0) with NodeScalingFactor(2.0) => half_w=120, half_h=20.
         // Cell at (110,0) half_extents (35,12). At scale=1.0: dx=110 > 60+35=95 (no overlap).
         // At scale=2.0: dx=110 < 120+35=155 (overlap). Verify 1 message.
         let mut app = test_app();
@@ -194,7 +187,7 @@ mod tests {
         let breaker_entity = spawn_breaker(&mut app, Vec2::new(0.0, 0.0));
         app.world_mut()
             .entity_mut(breaker_entity)
-            .insert(EntityScale(2.0));
+            .insert(NodeScalingFactor(2.0));
 
         let cell_entity = spawn_cell(&mut app, Vec2::new(110.0, 0.0), Vec2::new(35.0, 12.0));
 
@@ -249,5 +242,139 @@ mod tests {
             "breaker tangent to cell (dx == threshold) should emit 0 messages, got {}",
             msgs.0.len()
         );
+    }
+
+    // ── Bug Fix Regression: ActiveSizeBoosts in breaker AABB ────────
+    //
+    // The bug: breaker_cell_collision computes half_w = BaseWidth.half_width() * NodeScalingFactor
+    // but ignores ActiveSizeBoosts. When size boosts are active, the collision AABB is too small.
+
+    #[test]
+    fn breaker_cell_collision_uses_active_size_boosts_in_size() {
+        // Behavior 22: Breaker at (0,0) with ActiveSizeBoosts([2.0]).
+        // Correct: half_w = 60.0 * 2.0 = 120.0. Cell at (100,0) half_extents (35,12).
+        // dx = 100.0 < 120.0 + 35.0 = 155.0 => overlap => 1 message.
+        // Bug: half_w = 60.0 (ignores boost), dx = 100.0 > 60.0 + 35.0 = 95.0 => miss.
+        let mut app = test_app();
+
+        let breaker_entity = spawn_breaker(&mut app, Vec2::new(0.0, 0.0));
+        app.world_mut().entity_mut(breaker_entity).insert(
+            crate::effect::effects::size_boost::ActiveSizeBoosts(vec![2.0]),
+        );
+
+        let cell_entity = spawn_cell(&mut app, Vec2::new(100.0, 0.0), Vec2::new(35.0, 12.0));
+
+        tick(&mut app);
+
+        let msgs = app.world().resource::<BreakerCellHitMessages>();
+        assert_eq!(
+            msgs.0.len(),
+            1,
+            "breaker with ActiveSizeBoosts([2.0]) should overlap cell at dx=100 (threshold=155), got {} messages",
+            msgs.0.len(),
+        );
+        assert_eq!(msgs.0[0].breaker, breaker_entity);
+        assert_eq!(msgs.0[0].cell, cell_entity);
+    }
+
+    #[test]
+    fn breaker_cell_collision_identity_boost_still_overlaps() {
+        // Behavior 22 edge case: ActiveSizeBoosts([1.0]) => half_w = 60.0 * 1.0 = 60.0.
+        // Cell at (90,0) half_extents (35,12). dx = 90.0 < 60.0 + 35.0 = 95.0 => overlap.
+        let mut app = test_app();
+
+        let breaker_entity = spawn_breaker(&mut app, Vec2::new(0.0, 0.0));
+        app.world_mut().entity_mut(breaker_entity).insert(
+            crate::effect::effects::size_boost::ActiveSizeBoosts(vec![1.0]),
+        );
+
+        let cell_entity = spawn_cell(&mut app, Vec2::new(90.0, 0.0), Vec2::new(35.0, 12.0));
+
+        tick(&mut app);
+
+        let msgs = app.world().resource::<BreakerCellHitMessages>();
+        assert_eq!(
+            msgs.0.len(),
+            1,
+            "identity boost should still overlap at dx=90 (threshold=95), got {} messages",
+            msgs.0.len(),
+        );
+        assert_eq!(msgs.0[0].breaker, breaker_entity);
+        assert_eq!(msgs.0[0].cell, cell_entity);
+    }
+
+    #[test]
+    fn breaker_cell_collision_boosted_does_not_overlap_beyond_range() {
+        // Behavior 23: ActiveSizeBoosts([1.5]) => half_w = 60.0 * 1.5 = 90.0.
+        // Cell at (130,0) half_extents (35,12). dx = 130.0 > 90.0 + 35.0 = 125.0 => no overlap.
+        let mut app = test_app();
+
+        let breaker_entity = spawn_breaker(&mut app, Vec2::new(0.0, 0.0));
+        app.world_mut().entity_mut(breaker_entity).insert(
+            crate::effect::effects::size_boost::ActiveSizeBoosts(vec![1.5]),
+        );
+
+        spawn_cell(&mut app, Vec2::new(130.0, 0.0), Vec2::new(35.0, 12.0));
+
+        tick(&mut app);
+
+        let msgs = app.world().resource::<BreakerCellHitMessages>();
+        assert!(
+            msgs.0.is_empty(),
+            "boosted breaker should NOT overlap cell at dx=130 (threshold=125), got {} messages",
+            msgs.0.len(),
+        );
+    }
+
+    #[test]
+    fn breaker_cell_collision_boosted_tangent_emits_no_message() {
+        // Behavior 23 edge case: ActiveSizeBoosts([1.5]) => half_w = 90.0.
+        // Cell at (125,0) half_extents (35,12). dx = 125.0, threshold = 90.0 + 35.0 = 125.0.
+        // Strict inequality: 125.0 < 125.0 is false => 0 messages.
+        let mut app = test_app();
+
+        let breaker_entity = spawn_breaker(&mut app, Vec2::new(0.0, 0.0));
+        app.world_mut().entity_mut(breaker_entity).insert(
+            crate::effect::effects::size_boost::ActiveSizeBoosts(vec![1.5]),
+        );
+
+        spawn_cell(&mut app, Vec2::new(125.0, 0.0), Vec2::new(35.0, 12.0));
+
+        tick(&mut app);
+
+        let msgs = app.world().resource::<BreakerCellHitMessages>();
+        assert!(
+            msgs.0.is_empty(),
+            "boosted breaker tangent to cell (dx == threshold=125) should emit 0 messages, got {}",
+            msgs.0.len(),
+        );
+    }
+
+    #[test]
+    fn breaker_cell_collision_boost_and_node_scale_combined() {
+        // Behavior 24: ActiveSizeBoosts([1.5]), NodeScalingFactor(2.0).
+        // half_w = 60.0 * 1.5 * 2.0 = 180.0. Cell at (200,0) half_extents (35,12).
+        // dx = 200.0 < 180.0 + 35.0 = 215.0 => overlap.
+        let mut app = test_app();
+
+        let breaker_entity = spawn_breaker(&mut app, Vec2::new(0.0, 0.0));
+        app.world_mut().entity_mut(breaker_entity).insert((
+            crate::effect::effects::size_boost::ActiveSizeBoosts(vec![1.5]),
+            NodeScalingFactor(2.0),
+        ));
+
+        let cell_entity = spawn_cell(&mut app, Vec2::new(200.0, 0.0), Vec2::new(35.0, 12.0));
+
+        tick(&mut app);
+
+        let msgs = app.world().resource::<BreakerCellHitMessages>();
+        assert_eq!(
+            msgs.0.len(),
+            1,
+            "breaker with boost+scale should overlap cell at dx=200 (threshold=215), got {} messages",
+            msgs.0.len(),
+        );
+        assert_eq!(msgs.0[0].breaker, breaker_entity);
+        assert_eq!(msgs.0[0].cell, cell_entity);
     }
 }

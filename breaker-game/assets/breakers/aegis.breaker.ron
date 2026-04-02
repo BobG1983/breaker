@@ -1,0 +1,11 @@
+/* @[brickbreaker::breaker::definition::BreakerDefinition] */
+(
+    name: "Aegis",
+    life_pool: Some(3),
+    effects: [
+        On(target: Breaker, then: [When(trigger: BoltLost, then: [Do(LoseLife)])]),
+        On(target: Bolt, then: [When(trigger: PerfectBumped, then: [Do(SpeedBoost(multiplier: 1.5))])]),
+        On(target: Bolt, then: [When(trigger: EarlyBumped, then: [Do(SpeedBoost(multiplier: 1.1))])]),
+        On(target: Bolt, then: [When(trigger: LateBumped, then: [Do(SpeedBoost(multiplier: 1.1))])]),
+    ],
+)

@@ -5,11 +5,11 @@ use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D, V
 use super::helpers::*;
 use crate::{
     cells::components::Cell,
-    shared::{BOLT_LAYER, CELL_LAYER, EntityScale, GameDrawLayer, WALL_LAYER},
+    shared::{BOLT_LAYER, CELL_LAYER, GameDrawLayer, NodeScalingFactor, WALL_LAYER},
     wall::components::{Wall, WallSize},
 };
 
-// --- EntityScale collision tests ---
+// --- NodeScalingFactor collision tests ---
 
 #[test]
 fn scaled_bolt_effective_radius_changes_cell_collision_boundary() {
@@ -22,7 +22,7 @@ fn scaled_bolt_effective_radius_changes_cell_collision_boundary() {
     let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 50.0);
     app.world_mut()
         .entity_mut(bolt_entity)
-        .insert(EntityScale(0.5));
+        .insert(NodeScalingFactor(0.5));
 
     tick(&mut app);
 
@@ -37,7 +37,7 @@ fn scaled_bolt_effective_radius_changes_cell_collision_boundary() {
 
 #[test]
 fn bolt_without_entity_scale_in_cell_collision_is_backward_compatible() {
-    // Same as bolt_reflects_off_cell_bottom but explicitly no EntityScale.
+    // Same as bolt_reflects_off_cell_bottom but explicitly no NodeScalingFactor.
     // Bolt should use full radius (8.0) and reflect normally.
     let mut app = test_app();
     let bc = super::helpers::test_bolt_definition();
@@ -47,7 +47,7 @@ fn bolt_without_entity_scale_in_cell_collision_is_backward_compatible() {
     spawn_cell(&mut app, 0.0, cell_y);
 
     let start_y = cell_y - cc.height / 2.0 - bc.radius - 5.0;
-    // No EntityScale component
+    // No NodeScalingFactor component
     spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
 
     tick(&mut app);
@@ -60,7 +60,7 @@ fn bolt_without_entity_scale_in_cell_collision_is_backward_compatible() {
         .unwrap();
     assert!(
         vel.0.y < 0.0,
-        "bolt without EntityScale should reflect normally, got vy={:.1}",
+        "bolt without NodeScalingFactor should reflect normally, got vy={:.1}",
         vel.0.y
     );
 }

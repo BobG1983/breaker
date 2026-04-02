@@ -21,8 +21,14 @@ Full audit written to `.claude/specs/audit-design-coherence.md`.
 ### 6 Orphan Chips (no evolution path)
 Aftershock, Amp, Impact, Pulse, Reflex, Quick Stop — all need evolution paths. Suggested pairings in the audit doc.
 
-### 5 Missing RON Files
-Chain Hit (chip), Powder Keg (legendary), Chain Reaction (evolution), Feedback Loop (evolution), FlashStep (evolution)
+### RON File Status (updated 2026-04-02)
+Previously flagged 5 missing RON files. Current status:
+- `flashstep.evolution.ron` — NOW EXISTS (`assets/chips/evolutions/`)
+- `chain_reaction.evolution.ron` — NOW EXISTS (`assets/chips/evolutions/`)
+- `feedback_loop.chip.ron` — NOW EXISTS (`assets/chips/standard/`)
+- `powder_keg.chip.ron` — NOW EXISTS (`assets/chips/standard/`)
+- `chain_hit` chip — status unknown; grep to verify
+Evolution RON files moved to `assets/chips/evolutions/` (plural, not `evolution/`).
 
 ### Design Gap: Trigger Diversity
 PerfectBumped dominates the evolution trigger portfolio. Wall-bank, defense, and positioning playstyles are underserved by the evolution system.

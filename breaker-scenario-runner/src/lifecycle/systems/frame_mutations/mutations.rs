@@ -4,7 +4,7 @@ use std::collections::HashSet;
 
 use bevy::{ecs::system::SystemParam, prelude::*};
 use breaker::{
-    breaker::components::BreakerState,
+    breaker::components::DashState,
     chips::inventory::ChipInventory,
     effect::effects::{
         chain_lightning::{ChainLightningArc, ChainLightningChain, ChainState},
@@ -20,7 +20,7 @@ use breaker::{
 use rantzsoft_physics2d::aabb::Aabb2D;
 use rantzsoft_spatial2d::components::Position2D;
 
-use super::super::{entity_tagging::map_scenario_breaker_state, types::ScenarioConfig};
+use super::super::{entity_tagging::map_scenario_dash_state, types::ScenarioConfig};
 use crate::{
     invariants::{ScenarioFrame, ScenarioTagBolt, ScenarioTagBreaker},
     types::{MutationKind, RunStatCounter},
@@ -63,7 +63,7 @@ pub struct MutationTargets<'w, 's> {
 pub fn apply_debug_frame_mutations(
     config: Res<ScenarioConfig>,
     frame: Res<ScenarioFrame>,
-    mut breakers: Query<&mut BreakerState, With<ScenarioTagBreaker>>,
+    mut breakers: Query<&mut DashState, With<ScenarioTagBreaker>>,
     mut bolts: Query<&mut Position2D, With<ScenarioTagBolt>>,
     mut node_timer: Option<ResMut<NodeTimer>>,
     mut pause: PauseControl,
@@ -78,8 +78,8 @@ pub fn apply_debug_frame_mutations(
             continue;
         }
         match &mutation.mutation {
-            MutationKind::SetBreakerState(scenario_state) => {
-                let target = map_scenario_breaker_state(*scenario_state);
+            MutationKind::SetDashState(scenario_state) => {
+                let target = map_scenario_dash_state(*scenario_state);
                 for mut state in &mut breakers {
                     *state = target;
                 }

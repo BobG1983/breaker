@@ -117,7 +117,7 @@ impl SeedableRegistry for ChipTemplateRegistry {
     type Asset = ChipTemplate;
 
     fn asset_dir() -> &'static str {
-        "chips/templates"
+        "chips/standard"
     }
 
     fn extensions() -> &'static [&'static str] {
@@ -172,7 +172,7 @@ impl SeedableRegistry for EvolutionTemplateRegistry {
     type Asset = EvolutionTemplate;
 
     fn asset_dir() -> &'static str {
-        "chips/evolution"
+        "chips/evolutions"
     }
 
     fn extensions() -> &'static [&'static str] {

@@ -31,7 +31,7 @@ impl Default for BumpState {
 
 /// Tracks the bump pop animation — an eased upward offset on the breaker.
 #[derive(Component, Debug)]
-pub struct BumpVisual {
+pub struct BumpFeedbackState {
     /// Time remaining in the animation (seconds).
     pub timer: f32,
     /// Total duration of the animation (seconds).
@@ -62,7 +62,7 @@ pub struct BumpWeakCooldown(pub f32);
 
 /// Parameters for the bump pop visual animation.
 #[derive(Component, Debug, Clone)]
-pub struct BumpVisualParams {
+pub struct BumpFeedback {
     /// Total duration of the animation (seconds).
     pub duration: f32,
     /// Maximum Y offset at peak (world units).

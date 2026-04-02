@@ -27,6 +27,8 @@ fn make_bolt_def(name: &str, effects: Vec<RootEffect>) -> BoltDefinition {
         color_rgb: [6.0, 5.0, 0.5],
         min_angle_horizontal: 5.0,
         min_angle_vertical: 5.0,
+        min_radius: None,
+        max_radius: None,
     }
 }
 
@@ -68,10 +70,20 @@ fn dispatch_handles_mixed_targets_aegis_style() {
         ],
     );
     let mut app = test_app_with_dispatch(def);
+    let breaker_def = crate::breaker::definition::BreakerDefinition::default();
     let breaker = app
         .world_mut()
-        .spawn((Breaker, BoundEffects::default()))
+        .spawn(
+            Breaker::builder()
+                .definition(&breaker_def)
+                .headless()
+                .primary()
+                .build(),
+        )
         .id();
+    app.world_mut()
+        .entity_mut(breaker)
+        .insert(BoundEffects::default());
     let bolt = app
         .world_mut()
         .spawn((Bolt, BoltDefinitionRef("AegisBolt".to_owned())))

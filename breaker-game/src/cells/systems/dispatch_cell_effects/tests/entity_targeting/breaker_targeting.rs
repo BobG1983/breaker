@@ -32,10 +32,20 @@ fn cell_with_target_breaker_dispatches_to_breaker_entity() {
 
     let mut app = test_app(registry);
     let cell_entity = app.world_mut().spawn((Cell, CellTypeAlias('R'))).id();
+    let def = crate::breaker::definition::BreakerDefinition::default();
     let breaker_entity = app
         .world_mut()
-        .spawn((Breaker, BoundEffects::default(), StagedEffects::default()))
+        .spawn(
+            Breaker::builder()
+                .definition(&def)
+                .headless()
+                .primary()
+                .build(),
+        )
         .id();
+    app.world_mut()
+        .entity_mut(breaker_entity)
+        .insert((BoundEffects::default(), StagedEffects::default()));
     app.update();
 
     // Cell should have CellEffectsDispatched

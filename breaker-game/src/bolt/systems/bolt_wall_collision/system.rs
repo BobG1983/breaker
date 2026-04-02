@@ -42,7 +42,7 @@ pub(crate) fn bolt_wall_collision(
     let query_layers = CollisionLayers::new(0, WALL_LAYER);
 
     for mut bolt in &mut bolt_query {
-        let bolt_scale = bolt.collision.entity_scale.map_or(1.0, |s| s.0);
+        let bolt_scale = bolt.collision.node_scale.map_or(1.0, |s| s.0);
         let r = bolt.collision.radius.0 * bolt_scale;
         let position = bolt.spatial.position.0;
         let velocity = bolt.spatial.velocity.0;

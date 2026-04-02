@@ -5,7 +5,7 @@ use rantzsoft_spatial2d::components::Velocity2D;
 
 use crate::{
     bolt::components::Bolt,
-    breaker::components::{Breaker, BreakerVelocity},
+    breaker::components::Breaker,
     debug::resources::{DebugOverlays, Overlay},
 };
 
@@ -18,7 +18,7 @@ pub(crate) fn draw_velocity_vectors(
     overlays: Res<DebugOverlays>,
     mut gizmos: Gizmos,
     bolt_query: Query<(&Transform, &Velocity2D), With<Bolt>>,
-    breaker_query: Query<(&Transform, &BreakerVelocity), With<Breaker>>,
+    breaker_query: Query<(&Transform, &Velocity2D), With<Breaker>>,
 ) {
     if !overlays.is_active(Overlay::VelocityVectors) {
         return;
@@ -32,7 +32,7 @@ pub(crate) fn draw_velocity_vectors(
 
     for (transform, velocity) in &breaker_query {
         let start = transform.translation.truncate();
-        let end = start + Vec2::new(velocity.x * VELOCITY_ARROW_SCALE, 0.0);
+        let end = start + Vec2::new(velocity.0.x * VELOCITY_ARROW_SCALE, 0.0);
         gizmos.arrow_2d(start, end, BREAKER_ARROW_COLOR);
     }
 }

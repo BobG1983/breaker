@@ -23,7 +23,7 @@ fn cell_with_target_cell_effect_gets_bound_effects_populated() {
                     trigger: Trigger::Died,
                     then: vec![EffectNode::Do(EffectKind::Explode {
                         range: 48.0,
-                        damage_mult: 1.0,
+                        damage: 1.0,
                     })],
                 }],
             }]),
@@ -56,9 +56,9 @@ fn cell_with_target_cell_effect_gets_bound_effects_populated() {
             EffectNode::When {
                 trigger: Trigger::Died,
                 then,
-            } if then.len() == 1 && matches!(then[0], EffectNode::Do(EffectKind::Explode { range, damage_mult }) if (range - 48.0).abs() < f32::EPSILON && (damage_mult - 1.0).abs() < f32::EPSILON)
+            } if then.len() == 1 && matches!(then[0], EffectNode::Do(EffectKind::Explode { range, damage }) if (range - 48.0).abs() < f32::EPSILON && (damage - 1.0).abs() < f32::EPSILON)
         ),
-        "expected When {{ Died, [Do(Explode {{ range: 48.0, damage_mult: 1.0 }})] }}, got {node:?}"
+        "expected When {{ Died, [Do(Explode {{ range: 48.0, damage: 1.0 }})] }}, got {node:?}"
     );
 
     // Cell should have StagedEffects (default-inserted)
@@ -93,7 +93,7 @@ fn cell_with_existing_bound_effects_but_no_marker_still_gets_dispatched() {
                     trigger: Trigger::Died,
                     then: vec![EffectNode::Do(EffectKind::Explode {
                         range: 48.0,
-                        damage_mult: 1.0,
+                        damage: 1.0,
                     })],
                 }],
             }]),
@@ -164,7 +164,7 @@ fn cell_with_no_effects_is_unchanged() {
                     trigger: Trigger::Died,
                     then: vec![EffectNode::Do(EffectKind::Explode {
                         range: 48.0,
-                        damage_mult: 1.0,
+                        damage: 1.0,
                     })],
                 }],
             }]),
@@ -220,7 +220,7 @@ fn cell_with_empty_effects_vec_is_unchanged() {
                     trigger: Trigger::Died,
                     then: vec![EffectNode::Do(EffectKind::Explode {
                         range: 48.0,
-                        damage_mult: 1.0,
+                        damage: 1.0,
                     })],
                 }],
             }]),
@@ -276,7 +276,7 @@ fn cell_with_unknown_alias_is_skipped_no_panic() {
                     trigger: Trigger::Died,
                     then: vec![EffectNode::Do(EffectKind::Explode {
                         range: 48.0,
-                        damage_mult: 1.0,
+                        damage: 1.0,
                     })],
                 }],
             }]),
@@ -327,7 +327,7 @@ fn cell_with_alias_not_in_registry_skipped_while_known_alias_dispatched() {
                     trigger: Trigger::Died,
                     then: vec![EffectNode::Do(EffectKind::Explode {
                         range: 48.0,
-                        damage_mult: 1.0,
+                        damage: 1.0,
                     })],
                 }],
             }]),

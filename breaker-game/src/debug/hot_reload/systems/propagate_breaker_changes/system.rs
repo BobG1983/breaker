@@ -1,31 +1,21 @@
 //! System to propagate `BreakerDefinition` registry changes to live game state.
 
 use bevy::{ecs::system::SystemParam, prelude::*};
-use rantzsoft_defaults::prelude::DefaultsHandle;
+use rantzsoft_spatial2d::components::MaxSpeed;
 
 use crate::{
-    breaker::{
-        BreakerRegistry, SelectedBreaker,
-        components::Breaker,
-        resources::{BreakerConfig, BreakerDefaults},
-        systems::init_breaker::apply_stat_overrides,
-    },
+    breaker::{BreakerRegistry, SelectedBreaker, components::*},
     effect::{BoundEffects, RootEffect, Target, effects::life_lost::LivesCount},
+    shared::size::{MaxHeight, MaxWidth, MinHeight, MinWidth},
 };
 
 /// Bundled system parameters for the breaker change propagation system.
 #[derive(SystemParam)]
 pub(crate) struct BreakerChangeContext<'w, 's> {
-    /// Handle to the breaker defaults asset (for looking up the correct asset).
-    defaults_handle: Option<Res<'w, DefaultsHandle<BreakerDefaults>>>,
-    /// Loaded breaker defaults assets.
-    defaults_assets: Res<'w, Assets<BreakerDefaults>>,
     /// Currently selected breaker name.
     selected: Res<'w, SelectedBreaker>,
     /// Breaker registry (rebuilt by `propagate_registry`).
     registry: Res<'w, BreakerRegistry>,
-    /// Mutable breaker configuration.
-    config: ResMut<'w, BreakerConfig>,
     /// Breaker entities for re-stamping components.
     breaker_query: Query<'w, 's, Entity, With<Breaker>>,
     /// Breaker `BoundEffects` for populating from definition.
@@ -36,7 +26,7 @@ pub(crate) struct BreakerChangeContext<'w, 's> {
 
 /// Detects when `propagate_registry` has rebuilt the `BreakerRegistry`
 /// and if the selected breaker was modified:
-/// 1. Resets `BreakerConfig` from defaults + re-applies stat overrides
+/// 1. Re-stamps all definition-derived components on breaker entities
 /// 2. Resets `LivesCount` if breaker has `life_pool`
 /// 3. Rebuilds breaker entity `BoundEffects`
 pub(crate) fn propagate_breaker_changes(mut ctx: BreakerChangeContext) {
@@ -50,21 +40,57 @@ pub(crate) fn propagate_breaker_changes(mut ctx: BreakerChangeContext) {
     };
     let def = def.clone();
 
-    // Reset BreakerConfig from defaults + re-apply stat overrides
-    if let Some(loaded) = ctx
-        .defaults_handle
-        .as_ref()
-        .and_then(|h| ctx.defaults_assets.get(h.0.id()))
-    {
-        *ctx.config = BreakerConfig::from(loaded.clone());
-    }
-    apply_stat_overrides(&mut ctx.config, &def.stat_overrides);
-
-    // Re-stamp consequence components and lives on breaker entities
+    // Re-stamp all definition-derived components on breaker entities.
+    // Split into multiple insert calls to stay within Bevy's Bundle tuple arity limit.
     for entity in &ctx.breaker_query {
-        if let Some(life_pool) = def.life_pool {
-            ctx.commands.entity(entity).insert(LivesCount(life_pool));
-        }
+        ctx.commands
+            .entity(entity)
+            .insert((
+                MaxSpeed(def.max_speed),
+                BreakerAcceleration(def.acceleration),
+                BreakerDeceleration(def.deceleration),
+                DecelEasing {
+                    ease: def.decel_ease,
+                    strength: def.decel_ease_strength,
+                },
+                BaseWidth(def.width),
+                BaseHeight(def.height),
+                MinWidth(def.min_w.unwrap_or(def.width * 0.5)),
+                MaxWidth(def.max_w.unwrap_or(def.width * 5.0)),
+                MinHeight(def.min_h.unwrap_or(def.height * 0.5)),
+                MaxHeight(def.max_h.unwrap_or(def.height * 5.0)),
+                BreakerBaseY(def.y_position),
+                BreakerReflectionSpread(def.reflection_spread.to_radians()),
+            ))
+            .insert((
+                DashSpeedMultiplier(def.dash_speed_multiplier),
+                DashDuration(def.dash_duration),
+                DashTilt(def.dash_tilt_angle.to_radians()),
+                DashTiltEase(def.dash_tilt_ease),
+                BrakeTilt {
+                    angle: def.brake_tilt_angle.to_radians(),
+                    duration: def.brake_tilt_duration,
+                    ease: def.brake_tilt_ease,
+                },
+                BrakeDecel(def.brake_decel_multiplier),
+                SettleDuration(def.settle_duration),
+                SettleTiltEase(def.settle_tilt_ease),
+            ))
+            .insert((
+                BumpPerfectWindow(def.perfect_window),
+                BumpEarlyWindow(def.early_window),
+                BumpLateWindow(def.late_window),
+                BumpPerfectCooldown(def.perfect_bump_cooldown),
+                BumpWeakCooldown(def.weak_bump_cooldown),
+                BumpFeedback {
+                    duration: def.bump_visual_duration,
+                    peak: def.bump_visual_peak,
+                    peak_fraction: def.bump_visual_peak_fraction,
+                    rise_ease: def.bump_visual_rise_ease,
+                    fall_ease: def.bump_visual_fall_ease,
+                },
+                LivesCount(def.life_pool),
+            ));
     }
 
     // Resolve On targets to entity BoundEffects

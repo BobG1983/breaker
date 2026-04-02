@@ -27,8 +27,15 @@ fn bridge_bolt_lost(
                 bound,
                 &mut staged,
                 &mut commands,
+                TriggerContext::default(),
             );
-            evaluate_staged_effects(&Trigger::BoltLost, entity, &mut staged, &mut commands);
+            evaluate_staged_effects(
+                &Trigger::BoltLost,
+                entity,
+                &mut staged,
+                &mut commands,
+                TriggerContext::default(),
+            );
         }
     }
 }

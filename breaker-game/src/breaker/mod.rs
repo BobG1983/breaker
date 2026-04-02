@@ -1,5 +1,6 @@
 //! Breaker domain plugin — breaker mechanics, state machine, bump system.
 
+pub(crate) mod builder;
 pub mod components;
 pub mod definition;
 pub mod filters;
@@ -14,5 +15,5 @@ pub mod systems;
 pub use definition::BreakerDefinition;
 pub use plugin::BreakerPlugin;
 pub use registry::BreakerRegistry;
-pub use resources::{BreakerConfig, BreakerDefaults, ForceBumpGrade, SelectedBreaker};
+pub use resources::{ForceBumpGrade, SelectedBreaker};
 pub use sets::BreakerSystems;

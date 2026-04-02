@@ -2,17 +2,17 @@
 //! teleports the breaker instantly instead of doing a normal dash.
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{MaxSpeed, Position2D};
+use rantzsoft_spatial2d::components::{MaxSpeed, Position2D, Velocity2D};
 
 use super::super::super::system::update_breaker_state;
 use crate::{
     breaker::{
         components::{
-            BrakeDecel, BrakeTilt, Breaker, BreakerDeceleration, BreakerState, BreakerStateTimer,
-            BreakerTilt, BreakerVelocity, BreakerWidth, DashDuration, DashSpeedMultiplier,
-            DashTilt, DashTiltEase, DecelEasing, SettleDuration, SettleTiltEase,
+            BaseWidth, BrakeDecel, BrakeTilt, Breaker, BreakerDeceleration, BreakerTilt,
+            DashDuration, DashSpeedMultiplier, DashState, DashStateTimer, DashTilt, DashTiltEase,
+            DecelEasing, SettleDuration, SettleTiltEase,
         },
-        resources::BreakerConfig,
+        definition::BreakerDefinition,
     },
     effect::effects::flash_step::FlashStepActive,
     input::resources::InputActions,
@@ -20,7 +20,7 @@ use crate::{
 };
 
 pub(super) fn breaker_param_bundle(
-    config: &BreakerConfig,
+    def: &BreakerDefinition,
 ) -> (
     MaxSpeed,
     BreakerDeceleration,
@@ -35,31 +35,30 @@ pub(super) fn breaker_param_bundle(
     SettleTiltEase,
 ) {
     (
-        MaxSpeed(config.max_speed),
-        BreakerDeceleration(config.deceleration),
+        MaxSpeed(def.max_speed),
+        BreakerDeceleration(def.deceleration),
         DecelEasing {
-            ease: config.decel_ease,
-            strength: config.decel_ease_strength,
+            ease: def.decel_ease,
+            strength: def.decel_ease_strength,
         },
-        DashSpeedMultiplier(config.dash_speed_multiplier),
-        DashDuration(config.dash_duration),
-        DashTilt(config.dash_tilt_angle.to_radians()),
-        DashTiltEase(config.dash_tilt_ease),
+        DashSpeedMultiplier(def.dash_speed_multiplier),
+        DashDuration(def.dash_duration),
+        DashTilt(def.dash_tilt_angle.to_radians()),
+        DashTiltEase(def.dash_tilt_ease),
         BrakeTilt {
-            angle: config.brake_tilt_angle.to_radians(),
-            duration: config.brake_tilt_duration,
-            ease: config.brake_tilt_ease,
+            angle: def.brake_tilt_angle.to_radians(),
+            duration: def.brake_tilt_duration,
+            ease: def.brake_tilt_ease,
         },
-        BrakeDecel(config.brake_decel_multiplier),
-        SettleDuration(config.settle_duration),
-        SettleTiltEase(config.settle_tilt_ease),
+        BrakeDecel(def.brake_decel_multiplier),
+        SettleDuration(def.settle_duration),
+        SettleTiltEase(def.settle_tilt_ease),
     )
 }
 
 pub(super) fn test_app() -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
-        .init_resource::<BreakerConfig>()
         .init_resource::<InputActions>()
         .init_resource::<PlayfieldConfig>()
         .add_systems(FixedUpdate, update_breaker_state);
@@ -84,20 +83,20 @@ pub(super) fn spawn_settling_breaker_rightward_dash(
     position: Vec2,
     flash_step: bool,
 ) -> Entity {
-    let config = BreakerConfig::default();
+    let def = BreakerDefinition::default();
     let mut entity_cmds = app.world_mut().spawn((
         Breaker,
-        BreakerState::Settling,
-        BreakerVelocity { x: 0.0 },
+        DashState::Settling,
+        Velocity2D(Vec2::ZERO),
         BreakerTilt {
             angle: -0.35,
             ease_start: -0.35,
             ease_target: 0.0,
         },
-        BreakerStateTimer { remaining: 0.2 },
+        DashStateTimer { remaining: 0.2 },
         Position2D(position),
-        BreakerWidth(120.0),
-        breaker_param_bundle(&config),
+        BaseWidth(120.0),
+        breaker_param_bundle(&def),
     ));
     if flash_step {
         entity_cmds.insert(FlashStepActive);
@@ -114,20 +113,20 @@ pub(super) fn spawn_settling_breaker_leftward_dash(
     position: Vec2,
     flash_step: bool,
 ) -> Entity {
-    let config = BreakerConfig::default();
+    let def = BreakerDefinition::default();
     let mut entity_cmds = app.world_mut().spawn((
         Breaker,
-        BreakerState::Settling,
-        BreakerVelocity { x: 0.0 },
+        DashState::Settling,
+        Velocity2D(Vec2::ZERO),
         BreakerTilt {
             angle: 0.35,
             ease_start: 0.35,
             ease_target: 0.0,
         },
-        BreakerStateTimer { remaining: 0.2 },
+        DashStateTimer { remaining: 0.2 },
         Position2D(position),
-        BreakerWidth(120.0),
-        breaker_param_bundle(&config),
+        BaseWidth(120.0),
+        breaker_param_bundle(&def),
     ));
     if flash_step {
         entity_cmds.insert(FlashStepActive);

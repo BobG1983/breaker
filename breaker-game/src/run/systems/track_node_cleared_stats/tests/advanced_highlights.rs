@@ -19,22 +19,18 @@ fn speed_demon_detected_when_elapsed_below_threshold() {
         ..Default::default()
     };
     app.insert_resource(config);
-    // node_start_time=10.0, current time will be ~10.0 + accumulated ticks
-    // We set node_start_time and advance time to simulate elapsed=4.5
-    app.world_mut()
-        .resource_mut::<HighlightTracker>()
-        .node_start_time = 10.0;
 
-    // We need Time<Fixed> to report elapsed_secs around 14.5 (elapsed = 14.5 - 10.0 = 4.5)
-    // Advance fixed time by accumulating many timesteps to reach ~14.5s
-    let timestep = app.world().resource::<Time<Fixed>>().timestep();
-    let ticks_needed =
-        u32::try_from(std::time::Duration::from_millis(14500).as_micros() / timestep.as_micros())
-            .expect("tick count fits in u32");
+    // Advance a few ticks to build up elapsed time, then set node_start_time
+    // relative to the actual elapsed so the delta is exactly 4.5s.
     app.insert_resource(TestNodeCleared(false));
-    for _ in 0..ticks_needed {
+    for _ in 0..10 {
         tick(&mut app);
     }
+
+    let current_time = app.world().resource::<Time<Fixed>>().elapsed_secs();
+    app.world_mut()
+        .resource_mut::<HighlightTracker>()
+        .node_start_time = current_time - 4.5;
 
     // Now send the NodeCleared
     app.insert_resource(TestNodeCleared(true));
@@ -61,19 +57,17 @@ fn speed_demon_not_detected_when_elapsed_above_threshold() {
         ..Default::default()
     };
     app.insert_resource(config);
-    // node_start_time=10.0, advance time to ~16.0 -> elapsed=6.0 >= 5.0
-    app.world_mut()
-        .resource_mut::<HighlightTracker>()
-        .node_start_time = 10.0;
 
-    let timestep = app.world().resource::<Time<Fixed>>().timestep();
-    let ticks_needed =
-        u32::try_from(std::time::Duration::from_secs(16).as_micros() / timestep.as_micros())
-            .expect("tick count fits in u32");
+    // Advance a few ticks, then set node_start_time so elapsed is exactly 6.0s.
     app.insert_resource(TestNodeCleared(false));
-    for _ in 0..ticks_needed {
+    for _ in 0..10 {
         tick(&mut app);
     }
+
+    let current_time = app.world().resource::<Time<Fixed>>().elapsed_secs();
+    app.world_mut()
+        .resource_mut::<HighlightTracker>()
+        .node_start_time = current_time - 6.0;
 
     app.insert_resource(TestNodeCleared(true));
     tick(&mut app);

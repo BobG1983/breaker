@@ -3,10 +3,7 @@ use bevy::prelude::*;
 use crate::{
     bolt::{definition::BoltDefinition, messages::BoltSpawned, registry::BoltRegistry},
     breaker::{
-        BreakerConfig,
-        definition::{BreakerDefinition, BreakerStatOverrides},
-        registry::BreakerRegistry,
-        resources::SelectedBreaker,
+        definition::BreakerDefinition, registry::BreakerRegistry, resources::SelectedBreaker,
     },
     run::RunState,
     shared::GameRng,
@@ -16,7 +13,6 @@ pub(super) fn test_app() -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .add_message::<BoltSpawned>()
-        .init_resource::<BreakerConfig>()
         .init_resource::<RunState>()
         .init_resource::<Assets<Mesh>>()
         .init_resource::<Assets<ColorMaterial>>()
@@ -56,15 +52,12 @@ pub(super) fn make_default_bolt_definition() -> BoltDefinition {
         color_rgb: [6.0, 5.0, 0.5],
         min_angle_horizontal: 5.0,
         min_angle_vertical: 5.0,
+        min_radius: None,
+        max_radius: None,
     }
 }
 
 pub(super) fn make_default_breaker_definition() -> BreakerDefinition {
-    BreakerDefinition {
-        name: "Aegis".to_string(),
-        bolt: "Bolt".to_string(),
-        stat_overrides: BreakerStatOverrides::default(),
-        life_pool: Some(3),
-        effects: vec![],
-    }
+    ron::de::from_str(r#"(name: "Aegis", life_pool: Some(3), effects: [])"#)
+        .expect("test RON should parse")
 }

@@ -1,9 +1,9 @@
 //! Typestate builder for bolt entity construction.
 //!
 //! Entry point: [`Bolt::builder()`]. The builder prevents invalid combinations
-//! at compile time via five typestate dimensions: Position, Speed, Angle,
-//! Motion, and Role. `build()` and `spawn()` are only available when all
-//! dimensions are satisfied.
+//! at compile time via six typestate dimensions: Position, Speed, Angle,
+//! Motion, Role, and Visual. `build()` and `spawn()` are only available when
+//! all dimensions are satisfied.
 
 use bevy::{
     prelude::*,
@@ -15,8 +15,8 @@ use rantzsoft_spatial2d::components::{PreviousScale, Scale2D, Spatial, Velocity2
 use crate::{
     bolt::{
         components::{
-            Bolt, BoltAngleSpread, BoltBaseDamage, BoltDefinitionRef, BoltLifespan, BoltRadius,
-            BoltServing, BoltSpawnOffsetY, ExtraBolt, PrimaryBolt, SpawnedByEvolution,
+            Bolt, BoltAngleSpread, BoltBaseDamage, BoltDefinitionRef, BoltLifespan, BoltServing,
+            BoltSpawnOffsetY, ExtraBolt, PrimaryBolt, SpawnedByEvolution,
         },
         definition::BoltDefinition,
         resources::{DEFAULT_BOLT_ANGLE_SPREAD, DEFAULT_BOLT_SPAWN_OFFSET_Y},
@@ -25,37 +25,65 @@ use crate::{
     shared::{
         BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, CleanupOnNodeExit, CleanupOnRunEnd, GameDrawLayer,
         WALL_LAYER,
+        size::{BaseRadius, MaxRadius, MinRadius},
     },
 };
 
 /// Default bolt radius when neither `definition()` nor `with_radius()` is called.
 const DEFAULT_RADIUS: f32 = 8.0;
 
+/// Default bolt color (linear RGB) — bright teal, used when no definition or override provides one.
+pub(crate) const DEFAULT_BOLT_COLOR_RGB: [f32; 3] = [6.0, 5.0, 0.5];
+
 // ── Typestate markers ───────────────────────────────────────────────────────
 
+/// Position not yet set.
 pub struct NoPosition;
+/// Position configured with a spawn location.
 pub struct HasPosition {
     pos: Vec2,
 }
+/// Speed not yet set.
 pub struct NoSpeed;
+/// Speed configured with base, min, and max values.
 pub struct HasSpeed {
     base: f32,
     min: f32,
     max: f32,
 }
+/// Angle constraints not yet set.
 pub struct NoAngle;
+/// Angle constraints configured with horizontal and vertical minimums.
 pub struct HasAngle {
-    h: f32,
-    v: f32,
+    min_angle_h: f32,
+    min_angle_v: f32,
 }
+/// Motion mode not yet chosen.
 pub struct NoMotion;
+/// Bolt is held above the breaker, waiting for the player to bump.
 pub struct Serving;
+/// Bolt has an explicit velocity and launches immediately.
 pub struct HasVelocity {
     vel: Velocity2D,
 }
+/// Role not yet chosen.
 pub struct NoRole;
+/// Primary bolt — cleaned up on run end, triggers bolt-lost on despawn.
 pub struct Primary;
+/// Extra bolt — cleaned up on node exit, no bolt-lost trigger.
 pub struct Extra;
+
+// ── Visual dimension markers ───────────────────────────────────────────────
+
+/// Visual dimension not yet chosen.
+pub struct Unvisual;
+/// Rendered bolt with mesh and material.
+pub struct Rendered {
+    pub(crate) mesh: Handle<Mesh>,
+    pub(crate) material: Handle<ColorMaterial>,
+}
+/// Headless bolt without visual components.
+pub struct Headless;
 
 // ── Optional data ───────────────────────────────────────────────────────────
 
@@ -71,6 +99,7 @@ struct OptionalBoltData {
     override_definition_name: Option<String>,
     override_angle_spread: Option<f32>,
     override_spawn_offset_y: Option<f32>,
+    color_rgb: Option<[f32; 3]>,
 }
 
 struct BoltDefinitionParams {
@@ -78,17 +107,20 @@ struct BoltDefinitionParams {
     base_damage: f32,
     angle_spread: f32,
     spawn_offset_y: f32,
+    min_radius: Option<f32>,
+    max_radius: Option<f32>,
 }
 
 // ── Builder ─────────────────────────────────────────────────────────────────
 
 /// Typestate builder for bolt entity construction.
-pub struct BoltBuilder<P, S, A, M, R> {
+pub struct BoltBuilder<P, S, A, M, R, V> {
     position: P,
     speed: S,
     angle: A,
     motion: M,
     role: R,
+    visual: V,
     optional: OptionalBoltData,
 }
 
@@ -97,13 +129,14 @@ pub struct BoltBuilder<P, S, A, M, R> {
 impl Bolt {
     /// Creates a bolt builder in the unconfigured state.
     #[must_use]
-    pub fn builder() -> BoltBuilder<NoPosition, NoSpeed, NoAngle, NoMotion, NoRole> {
+    pub fn builder() -> BoltBuilder<NoPosition, NoSpeed, NoAngle, NoMotion, NoRole, Unvisual> {
         BoltBuilder {
             position: NoPosition,
             speed: NoSpeed,
             angle: NoAngle,
             motion: NoMotion,
             role: NoRole,
+            visual: Unvisual,
             optional: OptionalBoltData::default(),
         }
     }
@@ -111,14 +144,16 @@ impl Bolt {
 
 // ── Position transition ─────────────────────────────────────────────────────
 
-impl<S, A, M, R> BoltBuilder<NoPosition, S, A, M, R> {
-    pub fn at_position(self, pos: Vec2) -> BoltBuilder<HasPosition, S, A, M, R> {
+impl<S, A, M, R, V> BoltBuilder<NoPosition, S, A, M, R, V> {
+    #[must_use]
+    pub fn at_position(self, pos: Vec2) -> BoltBuilder<HasPosition, S, A, M, R, V> {
         BoltBuilder {
             position: HasPosition { pos },
             speed: self.speed,
             angle: self.angle,
             motion: self.motion,
             role: self.role,
+            visual: self.visual,
             optional: self.optional,
         }
     }
@@ -126,14 +161,16 @@ impl<S, A, M, R> BoltBuilder<NoPosition, S, A, M, R> {
 
 // ── Speed transition ────────────────────────────────────────────────────────
 
-impl<P, A, M, R> BoltBuilder<P, NoSpeed, A, M, R> {
-    pub fn with_speed(self, base: f32, min: f32, max: f32) -> BoltBuilder<P, HasSpeed, A, M, R> {
+impl<P, A, M, R, V> BoltBuilder<P, NoSpeed, A, M, R, V> {
+    #[must_use]
+    pub fn with_speed(self, base: f32, min: f32, max: f32) -> BoltBuilder<P, HasSpeed, A, M, R, V> {
         BoltBuilder {
             position: self.position,
             speed: HasSpeed { base, min, max },
             angle: self.angle,
             motion: self.motion,
             role: self.role,
+            visual: self.visual,
             optional: self.optional,
         }
     }
@@ -141,14 +178,23 @@ impl<P, A, M, R> BoltBuilder<P, NoSpeed, A, M, R> {
 
 // ── Angle transition ────────────────────────────────────────────────────────
 
-impl<P, S, M, R> BoltBuilder<P, S, NoAngle, M, R> {
-    pub fn with_angle(self, h: f32, v: f32) -> BoltBuilder<P, S, HasAngle, M, R> {
+impl<P, S, M, R, V> BoltBuilder<P, S, NoAngle, M, R, V> {
+    #[must_use]
+    pub fn with_angle(
+        self,
+        min_angle_h: f32,
+        min_angle_v: f32,
+    ) -> BoltBuilder<P, S, HasAngle, M, R, V> {
         BoltBuilder {
             position: self.position,
             speed: self.speed,
-            angle: HasAngle { h, v },
+            angle: HasAngle {
+                min_angle_h,
+                min_angle_v,
+            },
             motion: self.motion,
             role: self.role,
+            visual: self.visual,
             optional: self.optional,
         }
     }
@@ -156,25 +202,29 @@ impl<P, S, M, R> BoltBuilder<P, S, NoAngle, M, R> {
 
 // ── Motion transitions ──────────────────────────────────────────────────────
 
-impl<P, S, A, R> BoltBuilder<P, S, A, NoMotion, R> {
-    pub fn serving(self) -> BoltBuilder<P, S, A, Serving, R> {
+impl<P, S, A, R, V> BoltBuilder<P, S, A, NoMotion, R, V> {
+    #[must_use]
+    pub fn serving(self) -> BoltBuilder<P, S, A, Serving, R, V> {
         BoltBuilder {
             position: self.position,
             speed: self.speed,
             angle: self.angle,
             motion: Serving,
             role: self.role,
+            visual: self.visual,
             optional: self.optional,
         }
     }
 
-    pub fn with_velocity(self, vel: Velocity2D) -> BoltBuilder<P, S, A, HasVelocity, R> {
+    #[must_use]
+    pub fn with_velocity(self, vel: Velocity2D) -> BoltBuilder<P, S, A, HasVelocity, R, V> {
         BoltBuilder {
             position: self.position,
             speed: self.speed,
             angle: self.angle,
             motion: HasVelocity { vel },
             role: self.role,
+            visual: self.visual,
             optional: self.optional,
         }
     }
@@ -182,25 +232,70 @@ impl<P, S, A, R> BoltBuilder<P, S, A, NoMotion, R> {
 
 // ── Role transitions ────────────────────────────────────────────────────────
 
-impl<P, S, A, M> BoltBuilder<P, S, A, M, NoRole> {
-    pub fn primary(self) -> BoltBuilder<P, S, A, M, Primary> {
+impl<P, S, A, M, V> BoltBuilder<P, S, A, M, NoRole, V> {
+    #[must_use]
+    pub fn primary(self) -> BoltBuilder<P, S, A, M, Primary, V> {
         BoltBuilder {
             position: self.position,
             speed: self.speed,
             angle: self.angle,
             motion: self.motion,
             role: Primary,
+            visual: self.visual,
             optional: self.optional,
         }
     }
 
-    pub fn extra(self) -> BoltBuilder<P, S, A, M, Extra> {
+    #[must_use]
+    pub fn extra(self) -> BoltBuilder<P, S, A, M, Extra, V> {
         BoltBuilder {
             position: self.position,
             speed: self.speed,
             angle: self.angle,
             motion: self.motion,
             role: Extra,
+            visual: self.visual,
+            optional: self.optional,
+        }
+    }
+}
+
+// ── Visual transitions ──────────────────────────────────────────────────────
+
+impl<P, S, A, M, R> BoltBuilder<P, S, A, M, R, Unvisual> {
+    /// Configures the bolt for rendered mode with mesh and material.
+    #[must_use]
+    pub fn rendered(
+        self,
+        meshes: &mut Assets<Mesh>,
+        materials: &mut Assets<ColorMaterial>,
+    ) -> BoltBuilder<P, S, A, M, R, Rendered> {
+        let color_rgb = self.optional.color_rgb.unwrap_or(DEFAULT_BOLT_COLOR_RGB);
+        let color = Color::linear_rgb(color_rgb[0], color_rgb[1], color_rgb[2]);
+        BoltBuilder {
+            position: self.position,
+            speed: self.speed,
+            angle: self.angle,
+            motion: self.motion,
+            role: self.role,
+            visual: Rendered {
+                mesh: meshes.add(Circle::new(1.0)),
+                material: materials.add(ColorMaterial::from_color(color)),
+            },
+            optional: self.optional,
+        }
+    }
+
+    /// Configures the bolt for headless mode (no rendering components).
+    #[must_use]
+    pub fn headless(self) -> BoltBuilder<P, S, A, M, R, Headless> {
+        BoltBuilder {
+            position: self.position,
+            speed: self.speed,
+            angle: self.angle,
+            motion: self.motion,
+            role: self.role,
+            visual: Headless,
             optional: self.optional,
         }
     }
@@ -208,22 +303,26 @@ impl<P, S, A, M> BoltBuilder<P, S, A, M, NoRole> {
 
 // ── from_definition convenience ──────────────────────────────────────────────
 
-impl<P, M, R> BoltBuilder<P, NoSpeed, NoAngle, M, R> {
+impl<P, M, R, V> BoltBuilder<P, NoSpeed, NoAngle, M, R, V> {
     /// Configure the bolt from a `BoltDefinition`.
     ///
     /// Sets speed (base/min/max), angle constraints (`min_h`/`min_v` converted
     /// to radians), and radius from the definition. Also stores definition
     /// params (name, `base_damage`, `angle_spread`, `spawn_offset_y`) for
     /// insertion in `spawn_inner`.
-    pub fn definition(self, def: &BoltDefinition) -> BoltBuilder<P, HasSpeed, HasAngle, M, R> {
+    #[must_use]
+    pub fn definition(self, def: &BoltDefinition) -> BoltBuilder<P, HasSpeed, HasAngle, M, R, V> {
         let mut optional = self.optional;
         optional.definition_params = Some(BoltDefinitionParams {
             name: def.name.clone(),
             base_damage: def.base_damage,
             angle_spread: DEFAULT_BOLT_ANGLE_SPREAD,
             spawn_offset_y: DEFAULT_BOLT_SPAWN_OFFSET_Y,
+            min_radius: def.min_radius,
+            max_radius: def.max_radius,
         });
         optional.radius = optional.radius.or(Some(def.radius));
+        optional.color_rgb = optional.color_rgb.or(Some(def.color_rgb));
         BoltBuilder {
             position: self.position,
             speed: HasSpeed {
@@ -232,11 +331,12 @@ impl<P, M, R> BoltBuilder<P, NoSpeed, NoAngle, M, R> {
                 max: def.max_speed,
             },
             angle: HasAngle {
-                h: def.min_angle_horizontal.to_radians(),
-                v: def.min_angle_vertical.to_radians(),
+                min_angle_h: def.min_angle_horizontal.to_radians(),
+                min_angle_v: def.min_angle_vertical.to_radians(),
             },
             motion: self.motion,
             role: self.role,
+            visual: self.visual,
             optional,
         }
     }
@@ -244,47 +344,56 @@ impl<P, M, R> BoltBuilder<P, NoSpeed, NoAngle, M, R> {
 
 // ── Optional chainable methods (any typestate) ──────────────────────────────
 
-impl<P, S, A, M, R> BoltBuilder<P, S, A, M, R> {
+impl<P, S, A, M, R, V> BoltBuilder<P, S, A, M, R, V> {
+    #[must_use]
     pub fn spawned_by(mut self, name: &str) -> Self {
         self.optional.spawned_by = Some(name.to_string());
         self
     }
 
+    #[must_use]
     pub const fn with_lifespan(mut self, duration: f32) -> Self {
         self.optional.lifespan = Some(duration);
         self
     }
 
+    #[must_use]
     pub const fn with_radius(mut self, r: f32) -> Self {
         self.optional.radius = Some(r);
         self
     }
 
+    #[must_use]
     pub fn with_inherited_effects(mut self, effects: &BoundEffects) -> Self {
         self.optional.inherited_effects = Some(effects.clone());
         self
     }
 
+    #[must_use]
     pub fn with_effects(mut self, nodes: Vec<(String, EffectNode)>) -> Self {
         self.optional.with_effects = Some(nodes);
         self
     }
 
+    #[must_use]
     pub const fn with_base_damage(mut self, damage: f32) -> Self {
         self.optional.override_base_damage = Some(damage);
         self
     }
 
+    #[must_use]
     pub fn with_definition_name(mut self, name: String) -> Self {
         self.optional.override_definition_name = Some(name);
         self
     }
 
+    #[must_use]
     pub const fn with_angle_spread(mut self, spread: f32) -> Self {
         self.optional.override_angle_spread = Some(spread);
         self
     }
 
+    #[must_use]
     pub const fn with_spawn_offset_y(mut self, offset: f32) -> Self {
         self.optional.override_spawn_offset_y = Some(offset);
         self
@@ -296,31 +405,30 @@ impl<P, S, A, M, R> BoltBuilder<P, S, A, M, R> {
 /// Extracted values from typestate markers, ready for `build_core`.
 struct CoreParams {
     pos: Vec2,
-    base: f32,
-    min: f32,
-    max: f32,
-    h: f32,
-    v: f32,
+    base_speed: f32,
+    min_speed: f32,
+    max_speed: f32,
+    min_angle_h: f32,
+    min_angle_v: f32,
     vel: Velocity2D,
 }
 
 /// Builds the core component tuple shared by all terminal states.
 ///
-/// Returns `(base, spatial, radius_components)` as nested tuple bundles.
+/// Does NOT include `GameDrawLayer::Bolt` — that is only added by Rendered builds.
 fn build_core(params: &CoreParams, optional: &OptionalBoltData) -> impl Bundle + use<> {
     let radius = optional.radius.unwrap_or(DEFAULT_RADIUS);
 
     let base_components = (
         Bolt,
         params.vel,
-        GameDrawLayer::Bolt,
         CollisionLayers::new(BOLT_LAYER, CELL_LAYER | WALL_LAYER | BREAKER_LAYER),
     );
 
     let spatial_components = Spatial::builder()
         .at_position(params.pos)
-        .with_clamped_speed(params.base, params.min, params.max)
-        .with_clamped_angle(params.h, params.v)
+        .with_clamped_speed(params.base_speed, params.min_speed, params.max_speed)
+        .with_clamped_angle(params.min_angle_h, params.min_angle_v)
         .build();
 
     let radius_components = (
@@ -333,7 +441,7 @@ fn build_core(params: &CoreParams, optional: &OptionalBoltData) -> impl Bundle +
             y: radius,
         },
         Aabb2D::new(Vec2::ZERO, Vec2::new(radius, radius)),
-        BoltRadius(radius),
+        BaseRadius(radius),
     );
 
     (base_components, spatial_components, radius_components)
@@ -369,6 +477,12 @@ fn spawn_inner(
             BoltAngleSpread(def_params.angle_spread),
             BoltSpawnOffsetY(def_params.spawn_offset_y),
         ));
+        if let Some(min_r) = def_params.min_radius {
+            entity.insert(MinRadius(min_r));
+        }
+        if let Some(max_r) = def_params.max_radius {
+            entity.insert(MaxRadius(max_r));
+        }
     }
 
     // Override individual definition-derived components if explicit .with_*() was called
@@ -413,34 +527,34 @@ fn spawn_inner(
     entity.id()
 }
 
-// ── build() terminal impls ──────────────────────────────────────────────────
+// ── Headless build() terminal impls ────────────────────────────────────────
 
-impl BoltBuilder<HasPosition, HasSpeed, HasAngle, Serving, Primary> {
-    /// Builds the core component bundle for a primary serving bolt.
+impl BoltBuilder<HasPosition, HasSpeed, HasAngle, Serving, Primary, Headless> {
+    /// Builds the core component bundle for a headless primary serving bolt.
     #[must_use]
     pub fn build(self) -> impl Bundle {
         let params = CoreParams {
             pos: self.position.pos,
-            base: self.speed.base,
-            min: self.speed.min,
-            max: self.speed.max,
-            h: self.angle.h,
-            v: self.angle.v,
+            base_speed: self.speed.base,
+            min_speed: self.speed.min,
+            max_speed: self.speed.max,
+            min_angle_h: self.angle.min_angle_h,
+            min_angle_v: self.angle.min_angle_v,
             vel: Velocity2D(Vec2::ZERO),
         };
         let core = build_core(&params, &self.optional);
         (core, PrimaryBolt, CleanupOnRunEnd, BoltServing)
     }
 
-    /// Spawns a primary serving bolt entity with all components.
+    /// Spawns a headless primary serving bolt entity with all components.
     pub fn spawn(self, world: &mut World) -> Entity {
         let params = CoreParams {
             pos: self.position.pos,
-            base: self.speed.base,
-            min: self.speed.min,
-            max: self.speed.max,
-            h: self.angle.h,
-            v: self.angle.v,
+            base_speed: self.speed.base,
+            min_speed: self.speed.min,
+            max_speed: self.speed.max,
+            min_angle_h: self.angle.min_angle_h,
+            min_angle_v: self.angle.min_angle_v,
             vel: Velocity2D(Vec2::ZERO),
         };
         let core = build_core(&params, &self.optional);
@@ -448,32 +562,32 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, Serving, Primary> {
     }
 }
 
-impl BoltBuilder<HasPosition, HasSpeed, HasAngle, Serving, Extra> {
-    /// Builds the core component bundle for an extra serving bolt.
+impl BoltBuilder<HasPosition, HasSpeed, HasAngle, Serving, Extra, Headless> {
+    /// Builds the core component bundle for a headless extra serving bolt.
     #[must_use]
     pub fn build(self) -> impl Bundle {
         let params = CoreParams {
             pos: self.position.pos,
-            base: self.speed.base,
-            min: self.speed.min,
-            max: self.speed.max,
-            h: self.angle.h,
-            v: self.angle.v,
+            base_speed: self.speed.base,
+            min_speed: self.speed.min,
+            max_speed: self.speed.max,
+            min_angle_h: self.angle.min_angle_h,
+            min_angle_v: self.angle.min_angle_v,
             vel: Velocity2D(Vec2::ZERO),
         };
         let core = build_core(&params, &self.optional);
         (core, ExtraBolt, CleanupOnNodeExit, BoltServing)
     }
 
-    /// Spawns an extra serving bolt entity with all components.
+    /// Spawns a headless extra serving bolt entity with all components.
     pub fn spawn(self, world: &mut World) -> Entity {
         let params = CoreParams {
             pos: self.position.pos,
-            base: self.speed.base,
-            min: self.speed.min,
-            max: self.speed.max,
-            h: self.angle.h,
-            v: self.angle.v,
+            base_speed: self.speed.base,
+            min_speed: self.speed.min,
+            max_speed: self.speed.max,
+            min_angle_h: self.angle.min_angle_h,
+            min_angle_v: self.angle.min_angle_v,
             vel: Velocity2D(Vec2::ZERO),
         };
         let core = build_core(&params, &self.optional);
@@ -481,32 +595,32 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, Serving, Extra> {
     }
 }
 
-impl BoltBuilder<HasPosition, HasSpeed, HasAngle, HasVelocity, Primary> {
-    /// Builds the core component bundle for a primary bolt with velocity.
+impl BoltBuilder<HasPosition, HasSpeed, HasAngle, HasVelocity, Primary, Headless> {
+    /// Builds the core component bundle for a headless primary bolt with velocity.
     #[must_use]
     pub fn build(self) -> impl Bundle {
         let params = CoreParams {
             pos: self.position.pos,
-            base: self.speed.base,
-            min: self.speed.min,
-            max: self.speed.max,
-            h: self.angle.h,
-            v: self.angle.v,
+            base_speed: self.speed.base,
+            min_speed: self.speed.min,
+            max_speed: self.speed.max,
+            min_angle_h: self.angle.min_angle_h,
+            min_angle_v: self.angle.min_angle_v,
             vel: self.motion.vel,
         };
         let core = build_core(&params, &self.optional);
         (core, PrimaryBolt, CleanupOnRunEnd)
     }
 
-    /// Spawns a primary bolt entity with velocity and all components.
+    /// Spawns a headless primary bolt entity with velocity and all components.
     pub fn spawn(self, world: &mut World) -> Entity {
         let params = CoreParams {
             pos: self.position.pos,
-            base: self.speed.base,
-            min: self.speed.min,
-            max: self.speed.max,
-            h: self.angle.h,
-            v: self.angle.v,
+            base_speed: self.speed.base,
+            min_speed: self.speed.min,
+            max_speed: self.speed.max,
+            min_angle_h: self.angle.min_angle_h,
+            min_angle_v: self.angle.min_angle_v,
             vel: self.motion.vel,
         };
         let core = build_core(&params, &self.optional);
@@ -514,35 +628,231 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, HasVelocity, Primary> {
     }
 }
 
-impl BoltBuilder<HasPosition, HasSpeed, HasAngle, HasVelocity, Extra> {
-    /// Builds the core component bundle for an extra bolt with velocity.
+impl BoltBuilder<HasPosition, HasSpeed, HasAngle, HasVelocity, Extra, Headless> {
+    /// Builds the core component bundle for a headless extra bolt with velocity.
     #[must_use]
     pub fn build(self) -> impl Bundle {
         let params = CoreParams {
             pos: self.position.pos,
-            base: self.speed.base,
-            min: self.speed.min,
-            max: self.speed.max,
-            h: self.angle.h,
-            v: self.angle.v,
+            base_speed: self.speed.base,
+            min_speed: self.speed.min,
+            max_speed: self.speed.max,
+            min_angle_h: self.angle.min_angle_h,
+            min_angle_v: self.angle.min_angle_v,
             vel: self.motion.vel,
         };
         let core = build_core(&params, &self.optional);
         (core, ExtraBolt, CleanupOnNodeExit)
     }
 
-    /// Spawns an extra bolt entity with velocity and all components.
+    /// Spawns a headless extra bolt entity with velocity and all components.
     pub fn spawn(self, world: &mut World) -> Entity {
         let params = CoreParams {
             pos: self.position.pos,
-            base: self.speed.base,
-            min: self.speed.min,
-            max: self.speed.max,
-            h: self.angle.h,
-            v: self.angle.v,
+            base_speed: self.speed.base,
+            min_speed: self.speed.min,
+            max_speed: self.speed.max,
+            min_angle_h: self.angle.min_angle_h,
+            min_angle_v: self.angle.min_angle_v,
             vel: self.motion.vel,
         };
         let core = build_core(&params, &self.optional);
         spawn_inner(world, core, false, false, self.optional)
+    }
+}
+
+// ── Rendered build() terminal impls ────────────────────────────────────────
+
+impl BoltBuilder<HasPosition, HasSpeed, HasAngle, Serving, Primary, Rendered> {
+    /// Builds the core component bundle for a rendered primary serving bolt.
+    #[must_use]
+    pub fn build(self) -> impl Bundle {
+        let params = CoreParams {
+            pos: self.position.pos,
+            base_speed: self.speed.base,
+            min_speed: self.speed.min,
+            max_speed: self.speed.max,
+            min_angle_h: self.angle.min_angle_h,
+            min_angle_v: self.angle.min_angle_v,
+            vel: Velocity2D(Vec2::ZERO),
+        };
+        let core = build_core(&params, &self.optional);
+        (
+            core,
+            PrimaryBolt,
+            CleanupOnRunEnd,
+            BoltServing,
+            Mesh2d(self.visual.mesh),
+            MeshMaterial2d(self.visual.material),
+            GameDrawLayer::Bolt,
+        )
+    }
+
+    /// Spawns a rendered primary serving bolt entity with all components.
+    pub fn spawn(self, world: &mut World) -> Entity {
+        let mesh = self.visual.mesh.clone();
+        let material = self.visual.material.clone();
+        let params = CoreParams {
+            pos: self.position.pos,
+            base_speed: self.speed.base,
+            min_speed: self.speed.min,
+            max_speed: self.speed.max,
+            min_angle_h: self.angle.min_angle_h,
+            min_angle_v: self.angle.min_angle_v,
+            vel: Velocity2D(Vec2::ZERO),
+        };
+        let core = build_core(&params, &self.optional);
+        let entity = spawn_inner(world, core, true, true, self.optional);
+        world.entity_mut(entity).insert((
+            Mesh2d(mesh),
+            MeshMaterial2d(material),
+            GameDrawLayer::Bolt,
+        ));
+        entity
+    }
+}
+
+impl BoltBuilder<HasPosition, HasSpeed, HasAngle, Serving, Extra, Rendered> {
+    /// Builds the core component bundle for a rendered extra serving bolt.
+    #[must_use]
+    pub fn build(self) -> impl Bundle {
+        let params = CoreParams {
+            pos: self.position.pos,
+            base_speed: self.speed.base,
+            min_speed: self.speed.min,
+            max_speed: self.speed.max,
+            min_angle_h: self.angle.min_angle_h,
+            min_angle_v: self.angle.min_angle_v,
+            vel: Velocity2D(Vec2::ZERO),
+        };
+        let core = build_core(&params, &self.optional);
+        (
+            core,
+            ExtraBolt,
+            CleanupOnNodeExit,
+            BoltServing,
+            Mesh2d(self.visual.mesh),
+            MeshMaterial2d(self.visual.material),
+            GameDrawLayer::Bolt,
+        )
+    }
+
+    /// Spawns a rendered extra serving bolt entity with all components.
+    pub fn spawn(self, world: &mut World) -> Entity {
+        let mesh = self.visual.mesh.clone();
+        let material = self.visual.material.clone();
+        let params = CoreParams {
+            pos: self.position.pos,
+            base_speed: self.speed.base,
+            min_speed: self.speed.min,
+            max_speed: self.speed.max,
+            min_angle_h: self.angle.min_angle_h,
+            min_angle_v: self.angle.min_angle_v,
+            vel: Velocity2D(Vec2::ZERO),
+        };
+        let core = build_core(&params, &self.optional);
+        let entity = spawn_inner(world, core, true, false, self.optional);
+        world.entity_mut(entity).insert((
+            Mesh2d(mesh),
+            MeshMaterial2d(material),
+            GameDrawLayer::Bolt,
+        ));
+        entity
+    }
+}
+
+impl BoltBuilder<HasPosition, HasSpeed, HasAngle, HasVelocity, Primary, Rendered> {
+    /// Builds the core component bundle for a rendered primary bolt with velocity.
+    #[must_use]
+    pub fn build(self) -> impl Bundle {
+        let params = CoreParams {
+            pos: self.position.pos,
+            base_speed: self.speed.base,
+            min_speed: self.speed.min,
+            max_speed: self.speed.max,
+            min_angle_h: self.angle.min_angle_h,
+            min_angle_v: self.angle.min_angle_v,
+            vel: self.motion.vel,
+        };
+        let core = build_core(&params, &self.optional);
+        (
+            core,
+            PrimaryBolt,
+            CleanupOnRunEnd,
+            Mesh2d(self.visual.mesh),
+            MeshMaterial2d(self.visual.material),
+            GameDrawLayer::Bolt,
+        )
+    }
+
+    /// Spawns a rendered primary bolt entity with velocity and all components.
+    pub fn spawn(self, world: &mut World) -> Entity {
+        let mesh = self.visual.mesh.clone();
+        let material = self.visual.material.clone();
+        let params = CoreParams {
+            pos: self.position.pos,
+            base_speed: self.speed.base,
+            min_speed: self.speed.min,
+            max_speed: self.speed.max,
+            min_angle_h: self.angle.min_angle_h,
+            min_angle_v: self.angle.min_angle_v,
+            vel: self.motion.vel,
+        };
+        let core = build_core(&params, &self.optional);
+        let entity = spawn_inner(world, core, false, true, self.optional);
+        world.entity_mut(entity).insert((
+            Mesh2d(mesh),
+            MeshMaterial2d(material),
+            GameDrawLayer::Bolt,
+        ));
+        entity
+    }
+}
+
+impl BoltBuilder<HasPosition, HasSpeed, HasAngle, HasVelocity, Extra, Rendered> {
+    /// Builds the core component bundle for a rendered extra bolt with velocity.
+    #[must_use]
+    pub fn build(self) -> impl Bundle {
+        let params = CoreParams {
+            pos: self.position.pos,
+            base_speed: self.speed.base,
+            min_speed: self.speed.min,
+            max_speed: self.speed.max,
+            min_angle_h: self.angle.min_angle_h,
+            min_angle_v: self.angle.min_angle_v,
+            vel: self.motion.vel,
+        };
+        let core = build_core(&params, &self.optional);
+        (
+            core,
+            ExtraBolt,
+            CleanupOnNodeExit,
+            Mesh2d(self.visual.mesh),
+            MeshMaterial2d(self.visual.material),
+            GameDrawLayer::Bolt,
+        )
+    }
+
+    /// Spawns a rendered extra bolt entity with velocity and all components.
+    pub fn spawn(self, world: &mut World) -> Entity {
+        let mesh = self.visual.mesh.clone();
+        let material = self.visual.material.clone();
+        let params = CoreParams {
+            pos: self.position.pos,
+            base_speed: self.speed.base,
+            min_speed: self.speed.min,
+            max_speed: self.speed.max,
+            min_angle_h: self.angle.min_angle_h,
+            min_angle_v: self.angle.min_angle_v,
+            vel: self.motion.vel,
+        };
+        let core = build_core(&params, &self.optional);
+        let entity = spawn_inner(world, core, false, false, self.optional);
+        world.entity_mut(entity).insert((
+            Mesh2d(mesh),
+            MeshMaterial2d(material),
+            GameDrawLayer::Bolt,
+        ));
+        entity
     }
 }

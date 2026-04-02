@@ -52,7 +52,7 @@ Breaker visuals are composed from RON-defined enum values — shape, color accen
 
 ### Chip Effect Visual Modifiers
 Like the bolt, the breaker's appearance can be modified by active chip effects:
-- Width boost: Breaker visually stretches (already implemented via EntityScale)
+- Width boost: Breaker visually stretches (already implemented via NodeScalingFactor + sync_breaker_scale)
 - Speed boost: Aura trails become more intense/longer
 - Bump force boost: Impact point glow intensifies
 

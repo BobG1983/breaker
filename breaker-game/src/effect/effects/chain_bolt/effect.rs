@@ -51,6 +51,7 @@ pub(crate) fn fire(entity: Entity, tether_distance: f32, _source_chip: &str, wor
         .definition(&bolt_def)
         .with_velocity(velocity)
         .extra()
+        .headless()
         .spawn(world);
     world.entity_mut(chain_bolt).insert(ChainBoltMarker(entity));
 

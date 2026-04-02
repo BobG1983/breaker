@@ -1,4 +1,4 @@
-//! Tests for `ActiveSizeBoosts` (width boost) and `EntityScale` collision
+//! Tests for `ActiveSizeBoosts` (width boost) and `NodeScalingFactor` collision
 //! behavior on the breaker.
 
 use bevy::prelude::*;
@@ -8,7 +8,7 @@ use super::super::helpers::*;
 use crate::{
     breaker::components::{Breaker, BreakerTilt},
     effect::effects::size_boost::ActiveSizeBoosts,
-    shared::{EntityScale, GameDrawLayer},
+    shared::{GameDrawLayer, NodeScalingFactor},
 };
 
 // --- WidthBoost tests ---
@@ -44,7 +44,7 @@ fn active_size_boosts_widens_breaker_collision_width() {
     );
 }
 
-// --- EntityScale collision tests ---
+// --- NodeScalingFactor collision tests ---
 
 #[test]
 fn scaled_breaker_has_smaller_collision_hitbox() {
@@ -97,7 +97,7 @@ fn active_size_boosts_stacks_with_entity_scale_in_collision() {
         default_breaker_height(),
         default_reflection_spread(),
         ActiveSizeBoosts(vec![4.0_f32 / 3.0]),
-        EntityScale(0.7),
+        NodeScalingFactor(0.7),
         Position2D(Vec2::new(0.0, y_pos)),
         Spatial2D,
         GameDrawLayer::Breaker,
@@ -134,7 +134,7 @@ fn entity_scale_1_0_is_backward_compatible_with_breaker_collision() {
         .unwrap();
     assert!(
         vel.0.y > 0.0,
-        "EntityScale(1.0) should produce identical behavior to no scale, got vy={:.1}",
+        "NodeScalingFactor(1.0) should produce identical behavior to no scale, got vy={:.1}",
         vel.0.y
     );
 }

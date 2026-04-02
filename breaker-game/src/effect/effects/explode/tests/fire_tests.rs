@@ -1,5 +1,5 @@
 //! Tests for `fire()`: spawning `ExplodeRequest` at source position,
-//! position fallback, `damage_mult` values, and `reverse()` no-op.
+//! position fallback, `damage` values, and `reverse()` no-op.
 
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Position2D;
@@ -30,9 +30,9 @@ fn fire_spawns_explode_request_entity_at_source_position() {
         request.range
     );
     assert!(
-        (request.damage_mult - 2.0).abs() < f32::EPSILON,
-        "expected damage_mult 2.0, got {}",
-        request.damage_mult
+        (request.damage - 2.0).abs() < f32::EPSILON,
+        "expected damage 2.0, got {}",
+        request.damage
     );
     assert!(
         (pos.0.x - 50.0).abs() < f32::EPSILON,
@@ -68,10 +68,10 @@ fn fire_with_no_transform_defaults_position_to_zero() {
     );
 }
 
-// -- Behavior 20: fire() with different damage_mult values ──
+// -- Behavior 20: fire() with different damage values ──
 
 #[test]
-fn fire_with_custom_damage_mult() {
+fn fire_with_custom_damage() {
     let mut world = World::new();
     let entity = world.spawn(Transform::from_xyz(0.0, 0.0, 0.0)).id();
 
@@ -88,14 +88,14 @@ fn fire_with_custom_damage_mult() {
         request.range
     );
     assert!(
-        (request.damage_mult - 1.5).abs() < f32::EPSILON,
-        "expected damage_mult 1.5, got {}",
-        request.damage_mult
+        (request.damage - 1.5).abs() < f32::EPSILON,
+        "expected damage 1.5, got {}",
+        request.damage
     );
 }
 
 #[test]
-fn fire_with_zero_damage_mult() {
+fn fire_with_zero_damage() {
     let mut world = World::new();
     let entity = world.spawn(Transform::from_xyz(0.0, 0.0, 0.0)).id();
 
@@ -107,9 +107,9 @@ fn fire_with_zero_damage_mult() {
         .next()
         .expect("ExplodeRequest should exist");
     assert!(
-        (request.damage_mult - 0.0).abs() < f32::EPSILON,
-        "expected damage_mult 0.0, got {}",
-        request.damage_mult
+        (request.damage - 0.0).abs() < f32::EPSILON,
+        "expected damage 0.0, got {}",
+        request.damage
     );
 }
 

@@ -1,66 +1,81 @@
 ---
 name: Post-refactor file length findings
-description: Wave 4 scan (feature/chip-evolution-ecosystem): 4 HIGH + 2 mod.rs violations + 14 MEDIUM open; bolt/builder.rs is new massive file (2308 lines)
+description: Wave 5 scan (feature/breaker-builder-pattern 2026-04-02): 6 HIGH (queries.rs, 4 test files, builder/core.rs) + 4 mod.rs violations + 12 MEDIUM open
 type: project
 ---
 
-Updated 2026-04-01 on feature/chip-evolution-ecosystem branch.
+Updated 2026-04-02 on feature/breaker-builder-pattern branch.
 
-## Key changes from Wave 3 (2026-03-31)
+## Key changes from Wave 4 (2026-04-01 on feature/chip-evolution-ecosystem)
 
-- NEW: `bolt/builder.rs` at 2308 lines (504 prod, 1804 tests, 80 test fns) -- massive new file from bolt typestate builder migration
-- Many files shrank significantly (Effective* cache removal + other refactors)
-- 9 files dropped below 400 threshold: cells/resources.rs, maintain_quadtree.rs, enforce_distance_constraints.rs, gravity_well/pull_tests.rs, last_impact.rs, chip_catalog.rs, position2d.rs, damage_tests.rs, core/types/tests.rs
-- All previously LOW files now below threshold
+- All 4 previously HIGH files SPLIT: bolt/builder.rs, anchor/tests.rs, tether_beam/fire_tests.rs, dash/flash_step.rs
+- Both previous mod.rs violations FIXED
+- NEW HIGH files from breaker-builder-pattern: breaker/queries.rs (1440), breaker/builder/core.rs (829)
+- bolt/builder.rs (2308) now split but sub-files grew: definition_tests.rs (1329), visual_tests.rs (751), build_tests.rs (620)
+- Previous MEDIUM files: dispatch_chip_effects tests split (e2e, edge_cases), circuit_breaker/tests split, anchor_multipliers split, move_breaker split, piercing_beam split, bolt_wall_collision split, transfer_insert_tests split, template_tests split, spawn_bolt/tests split, aabb_tests split, steering_tests split
+- NEW: dispatch_initial_effects_tests.rs (1420), propagate_bolt_definition/tests.rs (1035), velocity_tests.rs (966)
+- NEW mod.rs violations: attraction/tests, shockwave/tests, pulse/tests, bound_and_staged, piercing_beam/tests, until/tests
 
-## Previously HIGH priority -- ALL SPLIT (as of post-new-scenarios merge)
+## All previously HIGH -- RESOLVED
 
-All 7 files from earlier waves have been split into directory modules.
+All files from waves 1-4 have been split.
 
-## Previously open mod.rs violations -- ALL FIXED (scenario-runner input + verdict)
+## OPEN HIGH priority (6 files)
 
-## OPEN HIGH priority (not yet split)
+| File | Total | Prod | Tests | Test Fns | Strategy |
+|------|-------|------|-------|----------|----------|
+| `breaker/queries.rs` | 1440 | 245 | 1195 | 33 | A: test extraction + sub-split (8 test files) |
+| `effect/commands/tests/dispatch_initial_effects_tests.rs` | 1420 | 0 | 1420 | 32 | C: sub-split by behavior (6 files) |
+| `bolt/builder/tests/definition_tests.rs` | 1329 | 0 | 1329 | 48 | C: sub-split (4 files + helpers) |
+| `debug/hot_reload/systems/propagate_bolt_definition/tests.rs` | 1035 | 0 | 1035 | 20 | C: sub-split (5 files + helpers) |
+| `rantzsoft_spatial2d/components/tests/velocity_tests.rs` | 966 | 0 | 966 | 72 | C: sub-split (8 files) |
+| `breaker/builder/core.rs` | 829 | 829 | 0 | 0 | B: types + methods + terminal |
 
-| File | Total | Prod | Tests | Test Fns | Strategy | Priority |
-|------|-------|------|-------|----------|----------|----------|
-| `bolt/builder.rs` | 2308 | 504 | 1804 | 80 | A: test extraction + sub-split (6 test files) | HIGH |
-| `effect/effects/anchor/tests.rs` | 985 | 0 | 985 | 33 | C: fire_reverse + tick_timer + bump_forces | HIGH |
-| `effect/effects/tether_beam/tests/fire_tests.rs` | 915 | 0 | 915 | 36 | C: fire_basic + chain_fire + chain_reverse + dispatch | HIGH |
-| `breaker/systems/dash/tests/flash_step.rs` | 821 | 0 | 821 | 20 | C: reversal + clamping + reset + active_boosts | HIGH |
+## OPEN mod.rs violations (4 MEDIUM + 2 LOW)
 
-## OPEN mod.rs violations
+| File | Lines | Priority |
+|------|-------|----------|
+| `effect/triggers/evaluate/tests/bound_and_staged/mod.rs` | 127 | MEDIUM |
+| `effect/effects/attraction/tests/mod.rs` | 102 | MEDIUM |
+| `effect/effects/shockwave/tests/mod.rs` | 84 | MEDIUM |
+| `effect/effects/pulse/tests/mod.rs` | 74 | MEDIUM |
+| `effect/effects/piercing_beam/tests/mod.rs` | 65 | LOW |
+| `effect/triggers/until/tests/mod.rs` | 20 | LOW |
 
-| File | Total | Violation |
-|------|-------|-----------|
-| `breaker-game/src/breaker/systems/dash/tests/mod.rs` | 408 | Contains 4 helpers + 14 test functions -- must extract to helpers.rs + dash_state_tests.rs |
-| `breaker-game/src/effect/effects/tether_beam/tests/mod.rs` | 130 | Contains 7 helper functions + 1 test resource type -- must extract to helpers.rs |
+## OPEN MEDIUM priority (12 files, 501-799 lines)
 
-## OPEN MEDIUM priority
-
-| File | Total | Prod | Tests | Test Fns | Strategy | Priority |
-|------|-------|------|-------|----------|----------|----------|
-| `chips/systems/dispatch_chip_effects/tests/desugaring/e2e.rs` | 713 | 0 | 713 | 4 | C: all_cells + all_bolts + all_walls | MEDIUM |
-| `chips/systems/dispatch_chip_effects/tests/edge_cases.rs` | 703 | 0 | 703 | 18 | C: error_handling + inventory + source_chip | MEDIUM |
-| `effect/effects/circuit_breaker/tests.rs` | 691 | 0 | 691 | 18 | C: fire_counter + fire_reward + reverse | MEDIUM |
-| `breaker/systems/bump/tests/anchor_multipliers.rs` | 679 | 0 | 679 | 17 | C: forward_grade + retroactive + window_duration | MEDIUM |
-| `effect/commands/tests/transfer_insert_tests.rs` | 560 | 0 | 560 | 18 | C: permanent + non_permanent + edge_cases | MEDIUM |
-| `effect/effects/piercing_beam/tests/fire_tests.rs` | 545 | 0 | 545 | 20 | C: geometry + damage + source_chip | MEDIUM |
-| `effect/effects/piercing_beam/tests/process_tests.rs` | 505 | 0 | 505 | 16 | C: damage_processing + source_chip | MEDIUM |
-| `breaker-scenario-runner aabb tests.rs` | 487 | 0 | 487 | 20 | C: bolt_aabb + breaker_aabb | MEDIUM |
-| `bolt/systems/bolt_wall_collision/tests.rs` | 486 | 0 | 486 | 15 | C: impact + last_impact + piercing | MEDIUM |
-| `effect/effects/attraction/tests/apply_tests/steering_tests.rs` | 451 | 0 | 451 | 10 | C: basic_steering + edge_cases | MEDIUM |
-| `chips/definition/tests/template_tests.rs` | 444 | 0 | 444 | 13 | C: basic + evolution templates | MEDIUM |
-| `bolt/systems/spawn_bolt/tests.rs` | 429 | 0 | 429 | 17 | C: primary + extra bolt tests | MEDIUM |
-| `breaker/systems/move_breaker.rs` | 422 | 98 | 324 | 11 | A: test extraction | MEDIUM |
+| File | Total | Notes |
+|------|-------|-------|
+| `breaker/systems/spawn_breaker/tests/spawn_or_reuse.rs` | 779 | 26 tests |
+| `bolt/builder/tests/visual_tests.rs` | 751 | 26 tests |
+| `bolt/builder/core.rs` | 742 | All prod, typestate builder |
+| `shared/size.rs` | 664 | 98 prod, 565 tests |
+| `bolt/builder/tests/build_tests.rs` | 620 | 23 tests |
+| `bolt/systems/reset_bolt/tests.rs` | 601 | 22 tests |
+| `effect/triggers/impacted/tests/context_entity_tests.rs` | 548 | 13 tests |
+| `effect/effects/piercing_beam/tests/fire_tests/geometry_tests.rs` | 527 | 19 tests |
+| `effect/triggers/impact/tests/context_entity_tests.rs` | 524 | 13 tests |
+| `bolt/systems/bolt_lost/tests/lost_detection_tests.rs` | 500 | 16 tests |
+| `bolt/systems/spawn_bolt/tests/migration_tests.rs` | 487 | 12 tests |
+| `rantzsoft_spatial2d/builder.rs` | 451 | 295 prod, 156 tests |
 
 ## OPEN LOW priority
 
 | File | Total | Notes |
 |------|-------|-------|
-| `effect/core/types/definitions/enums.rs` | 479 | Mostly prod (407 lines), tests only 72 -- low priority |
+| `effect/core/types/definitions/enums.rs` | 503 | 432 prod, 71 tests |
+| `screen/chip_select/systems/generate_chip_offerings/tests.rs` | 461 | 11 tests |
+| `effect/triggers/evaluate/tests/on_resolution/resolve_entity_targets.rs` | 462 | 13 tests |
+| `effect/triggers/evaluate/tests/on_resolution/resolve_edge_cases.rs` | 443 | 9 tests |
+| `effect/effects/anchor/tests/tick_timer_tests.rs` | 440 | 14 tests |
+| `debug/hot_reload/systems/propagate_breaker_changes/tests.rs` | 438 | 10 tests |
+| `effect/effects/tether_beam/tests/fire_tests/fire_basic.rs` | 435 | 15 tests |
+| `effect/effects/spawn_phantom/tests/fire_tests.rs` | 431 | 13 tests |
+| `bolt/systems/dispatch_bolt_effects/tests/basic_dispatch.rs` | 452 | 13 tests |
 
 ## Files confirmed unsplittable
 
 - rantzsoft_physics2d/src/quadtree/tree.rs (451) -- single data structure, no tests
+- rantzsoft_spatial2d/src/components/definitions.rs (402) -- pure type definitions
 - breaker-scenario-runner/src/runner/execution.rs (439) -- single concern, no tests
-- breaker-scenario-runner/src/runner/app.rs (402) -- single concern, tiny test section (2 tests)
+- breaker-scenario-runner/src/runner/app.rs (402) -- single concern, tiny test section

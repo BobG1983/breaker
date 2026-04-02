@@ -4,7 +4,7 @@ use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D};
 
 use super::super::helpers::*;
 use crate::{
-    cells::messages::DamageCell,
+    cells::{components::Cell, messages::DamageCell},
     shared::{BOLT_LAYER, CELL_LAYER, GameRng, WALL_LAYER},
 };
 
@@ -202,5 +202,119 @@ fn fire_uses_game_rng_deterministically() {
     assert_eq!(
         first_target, second_target,
         "same RNG seed should produce same target selection"
+    );
+}
+
+// ── fire() from a cell entity (Death Lightning pattern) ──
+
+#[test]
+fn fire_from_cell_entity_uses_cell_position_and_default_damage() {
+    use crate::bolt::resources::DEFAULT_BOLT_BASE_DAMAGE;
+
+    let mut app = chain_lightning_test_app();
+
+    // Source is a cell at (50, 50) — not a bolt
+    let source_cell = app
+        .world_mut()
+        .spawn((Cell, Position2D(Vec2::new(50.0, 50.0))))
+        .id();
+
+    // Target cell at (60, 50) — 10 units away, within range 30
+    let target_cell = spawn_test_cell(&mut app, 60.0, 50.0);
+
+    // Distant cell at (200, 200) — out of range
+    let _far_cell = spawn_test_cell(&mut app, 200.0, 200.0);
+
+    tick(&mut app);
+
+    fire(
+        source_cell,
+        1,
+        30.0,
+        1.0,
+        200.0,
+        "death_lightning",
+        app.world_mut(),
+    );
+
+    let messages = app.world().resource::<Messages<DamageCell>>();
+    let written: Vec<&DamageCell> = messages.iter_current_update_messages().collect();
+
+    assert_eq!(
+        written.len(),
+        1,
+        "fire() from a cell should damage exactly one nearby cell"
+    );
+    assert_eq!(
+        written[0].cell, target_cell,
+        "should damage the cell within range, not the distant one"
+    );
+    assert!(
+        (written[0].damage - DEFAULT_BOLT_BASE_DAMAGE).abs() < f32::EPSILON,
+        "damage should fall back to DEFAULT_BOLT_BASE_DAMAGE ({DEFAULT_BOLT_BASE_DAMAGE}) since cells have no BoltBaseDamage, got {}",
+        written[0].damage
+    );
+}
+
+#[test]
+fn fire_from_cell_entity_excludes_source_from_candidates() {
+    let mut app = chain_lightning_test_app();
+
+    // Source cell at origin — in the quadtree (has Cell layer + AABB)
+    let source_cell = app
+        .world_mut()
+        .spawn((
+            Cell,
+            Position2D(Vec2::ZERO),
+            Aabb2D::new(Vec2::ZERO, Vec2::new(5.0, 5.0)),
+            CollisionLayers::new(CELL_LAYER, 0),
+            GlobalPosition2D(Vec2::ZERO),
+            Spatial2D,
+        ))
+        .id();
+
+    tick(&mut app);
+
+    // Only cell in range is the source itself — should be excluded
+    fire(source_cell, 1, 50.0, 1.0, 200.0, "", app.world_mut());
+
+    let messages = app.world().resource::<Messages<DamageCell>>();
+    assert!(
+        messages.iter_current_update_messages().next().is_none(),
+        "source entity should be excluded — no valid targets means no damage"
+    );
+}
+
+#[test]
+fn fire_from_cell_entity_targets_other_cell_not_self() {
+    let mut app = chain_lightning_test_app();
+
+    // Source cell at origin — in the quadtree
+    let source_cell = app
+        .world_mut()
+        .spawn((
+            Cell,
+            Position2D(Vec2::ZERO),
+            Aabb2D::new(Vec2::ZERO, Vec2::new(5.0, 5.0)),
+            CollisionLayers::new(CELL_LAYER, 0),
+            GlobalPosition2D(Vec2::ZERO),
+            Spatial2D,
+        ))
+        .id();
+
+    // Target cell nearby
+    let target_cell = spawn_test_cell(&mut app, 10.0, 0.0);
+
+    tick(&mut app);
+
+    fire(source_cell, 1, 50.0, 1.0, 200.0, "", app.world_mut());
+
+    let messages = app.world().resource::<Messages<DamageCell>>();
+    let written: Vec<&DamageCell> = messages.iter_current_update_messages().collect();
+
+    assert_eq!(written.len(), 1, "should damage exactly one cell");
+    assert_eq!(
+        written[0].cell, target_cell,
+        "should target the other cell, not the source"
     );
 }

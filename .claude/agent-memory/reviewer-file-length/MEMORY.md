@@ -1,3 +1,3 @@
 - [Bolt module directory structure](pattern_bolt_module_structure.md) — mod.rs + system.rs + tests.rs (or tests/) pattern used throughout bolt/systems/ and now broadly across all domains
 - [Phase 3 file length findings (archived)](phase3_findings.md) — all Phase 3 flagged files split by c9964b7; archived reference only
-- [Post-refactor file length findings](phase4_findings.md) — Wave 4 scan (feature/chip-evolution-ecosystem): 4 HIGH + 2 mod.rs violations + 14 MEDIUM open; bolt/builder.rs is new 2308-line file
+- [Post-refactor file length findings](phase4_findings.md) — Wave 5 scan (feature/breaker-builder-pattern): 6 HIGH + 4 mod.rs violations + 12 MEDIUM open; queries.rs is 1440-line new HIGH

@@ -21,8 +21,21 @@ fn bridge_node_end(
 ) {
     for _msg in reader.read() {
         for (entity, bound, mut staged) in &mut query {
-            evaluate_bound_effects(&Trigger::NodeEnd, entity, bound, &mut staged, &mut commands);
-            evaluate_staged_effects(&Trigger::NodeEnd, entity, &mut staged, &mut commands);
+            evaluate_bound_effects(
+                &Trigger::NodeEnd,
+                entity,
+                bound,
+                &mut staged,
+                &mut commands,
+                TriggerContext::default(),
+            );
+            evaluate_staged_effects(
+                &Trigger::NodeEnd,
+                entity,
+                &mut staged,
+                &mut commands,
+                TriggerContext::default(),
+            );
         }
     }
 }

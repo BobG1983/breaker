@@ -65,16 +65,11 @@ pub(super) fn spawn_explode_request(
     x: f32,
     y: f32,
     range: f32,
-    damage_mult: f32,
+    damage: f32,
 ) -> Entity {
-    use crate::bolt::resources::DEFAULT_BOLT_BASE_DAMAGE;
     app.world_mut()
         .spawn((
-            ExplodeRequest {
-                range,
-                damage_mult,
-                base_damage: DEFAULT_BOLT_BASE_DAMAGE,
-            },
+            ExplodeRequest { range, damage },
             Position2D(Vec2::new(x, y)),
         ))
         .id()

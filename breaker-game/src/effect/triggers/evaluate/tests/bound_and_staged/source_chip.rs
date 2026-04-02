@@ -22,7 +22,7 @@ fn evaluate_bound_effects_threads_chip_name_as_source_chip_to_fire_effect() {
         Trigger::Bump,
         EffectKind::Explode {
             range: 60.0,
-            damage_mult: 2.0,
+            damage: 2.0,
         },
     );
 
@@ -58,7 +58,7 @@ fn evaluate_bound_effects_empty_chip_name_produces_none() {
         Trigger::Bump,
         EffectKind::Explode {
             range: 60.0,
-            damage_mult: 2.0,
+            damage: 2.0,
         },
     );
 
@@ -93,7 +93,7 @@ fn evaluate_staged_effects_threads_chip_name_as_source_chip_to_fire_effect() {
         Trigger::Bump,
         EffectKind::Explode {
             range: 60.0,
-            damage_mult: 2.0,
+            damage: 2.0,
         },
     );
 
@@ -129,7 +129,7 @@ fn once_node_preserves_chip_name_through_to_fire_effect() {
         trigger: Trigger::Bump,
         then: vec![EffectNode::Do(EffectKind::Explode {
             range: 60.0,
-            damage_mult: 2.0,
+            damage: 2.0,
         })],
     };
     let once_node = EffectNode::Once(vec![inner_when]);

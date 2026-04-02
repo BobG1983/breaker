@@ -11,7 +11,7 @@ All chip content lives in the `chips/` domain. A single `ChipDefinition` type co
 Chips are authored as **templates** — one RON file per chip concept with per-rarity slots. The loader expands templates into individual `ChipDefinition`s at load time.
 
 ```ron
-// assets/chips/templates/piercing.chip.ron
+// assets/chips/standard/piercing.chip.ron
 (
     name: "Piercing Shot",
     max_taken: 3,
@@ -98,9 +98,9 @@ When a player selects a chip, the chip dispatch system pushes the chip's `Effect
 
 ### Registries
 
-- **`ChipTemplateRegistry`** (`SeedableRegistry` `Resource`) loads all `.chip.ron` template files from `assets/chips/templates/`. Templates are expanded into `ChipDefinition`s at catalog-build time via `populate_catalog`.
+- **`ChipTemplateRegistry`** (`SeedableRegistry` `Resource`) loads all `.chip.ron` template files from `assets/chips/standard/`. Templates are expanded into `ChipDefinition`s at catalog-build time via `populate_catalog`.
 - **`ChipCatalog`** (`Resource`) holds all expanded `ChipDefinition`s plus `Recipe`s. Built at load time from `ChipTemplateRegistry` + `EvolutionTemplateRegistry`. Paired `Vec<String>` preserves insertion order for deterministic chip offers.
-- **`EvolutionTemplateRegistry`** (`SeedableRegistry` `Resource`) loads `.evolution.ron` files from `assets/chips/evolution/`. Evolution templates are expanded into `ChipDefinition`s with `rarity: Evolution` and `Recipe` entries at catalog-build time.
+- **`EvolutionTemplateRegistry`** (`SeedableRegistry` `Resource`) loads `.evolution.ron` files from `assets/chips/evolutions/`. Evolution templates are expanded into `ChipDefinition`s with `rarity: Evolution` and `Recipe` entries at catalog-build time.
 
 ## Cell Type Content System (Implemented — Phase 2)
 

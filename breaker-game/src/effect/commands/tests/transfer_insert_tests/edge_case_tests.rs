@@ -13,6 +13,7 @@ fn transfer_do_children_fire_even_without_bound_effects() {
         chip_name: "amp".to_string(),
         children: vec![EffectNode::Do(EffectKind::DamageBoost(2.0))],
         permanent: true,
+        context: TriggerContext::default(),
     };
     cmd.apply(&mut world);
 
@@ -50,6 +51,7 @@ fn transfer_mixed_do_and_when_children_without_bound_effects() {
             },
         ],
         permanent: true,
+        context: TriggerContext::default(),
     };
     cmd.apply(&mut world);
 
@@ -95,6 +97,7 @@ fn transfer_mixed_when_before_do_children_both_processed() {
             EffectNode::Do(EffectKind::DamageBoost(2.0)),
         ],
         permanent: true,
+        context: TriggerContext::default(),
     };
     cmd.apply(&mut world);
 
@@ -128,6 +131,7 @@ fn transfer_permanent_stores_until_child_with_zero_duration() {
             then: vec![EffectNode::Do(EffectKind::DamageBoost(1.5))],
         }],
         permanent: true,
+        context: TriggerContext::default(),
     };
     cmd.apply(&mut world);
 
@@ -154,6 +158,7 @@ fn transfer_entity_with_staged_but_not_bound_inserts_bound_and_stores_permanent_
             then: vec![EffectNode::Do(EffectKind::DamageBoost(1.0))],
         }],
         permanent: true,
+        context: TriggerContext::default(),
     };
     cmd.apply(&mut world);
 
@@ -195,6 +200,7 @@ fn transfer_entity_with_staged_preserves_existing_staged_entries_when_inserting_
             then: vec![EffectNode::Do(EffectKind::DamageBoost(1.0))],
         }],
         permanent: true,
+        context: TriggerContext::default(),
     };
     cmd.apply(&mut world);
 
@@ -220,6 +226,7 @@ fn transfer_entity_with_bound_but_not_staged_inserts_staged_and_stores_non_perma
             then: vec![EffectNode::Do(EffectKind::DamageBoost(1.0))],
         }],
         permanent: false,
+        context: TriggerContext::default(),
     };
     cmd.apply(&mut world);
 
@@ -261,6 +268,7 @@ fn transfer_entity_with_bound_preserves_existing_bound_entries_when_inserting_st
             then: vec![EffectNode::Do(EffectKind::DamageBoost(1.0))],
         }],
         permanent: false,
+        context: TriggerContext::default(),
     };
     cmd.apply(&mut world);
 
@@ -284,6 +292,7 @@ fn transfer_on_despawned_entity_does_not_panic() {
         chip_name: "ghost".to_string(),
         children: vec![EffectNode::Do(EffectKind::DamageBoost(1.0))],
         permanent: true,
+        context: TriggerContext::default(),
     };
     // Should not panic -- the entity-not-found guard handles this
     cmd.apply(&mut world);

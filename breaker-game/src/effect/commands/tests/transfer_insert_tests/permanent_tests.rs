@@ -16,6 +16,7 @@ fn transfer_permanent_inserts_bound_effects_when_absent_and_stores_when_child() 
             then: vec![EffectNode::Do(EffectKind::DamageBoost(2.0))],
         }],
         permanent: true,
+        context: TriggerContext::default(),
     };
     cmd.apply(&mut world);
 
@@ -46,51 +47,65 @@ fn transfer_permanent_inserts_bound_effects_when_absent_and_stores_when_child() 
 }
 
 #[test]
-fn transfer_permanent_inserts_bound_effects_when_absent_and_stores_on_child() {
+fn transfer_permanent_on_child_is_resolved_not_stored() {
+    use crate::bolt::components::{Bolt, PrimaryBolt};
+
     let mut world = World::new();
     let entity = world.spawn_empty().id();
+    // PrimaryBolt exists so ResolveOnCommand has somewhere to dispatch to
+    let _bolt = world
+        .spawn((
+            Bolt,
+            PrimaryBolt,
+            BoundEffects::default(),
+            StagedEffects::default(),
+        ))
+        .id();
 
+    // On(Bolt) child is recursively resolved via ResolveOnCommand,
+    // NOT stored verbatim in BoundEffects on the source entity.
     let cmd = TransferCommand {
         entity,
         chip_name: "redirect".to_string(),
         children: vec![EffectNode::On {
             target: Target::Bolt,
             permanent: false,
-            then: vec![EffectNode::Do(EffectKind::DamageBoost(1.0))],
+            then: vec![EffectNode::When {
+                trigger: Trigger::Died,
+                then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
+            }],
         }],
         permanent: true,
+        context: TriggerContext::default(),
     };
     cmd.apply(&mut world);
 
+    // Source entity should have BoundEffects but NO On entry (On was resolved)
     let bound = world
         .get::<BoundEffects>(entity)
         .expect("BoundEffects should be inserted when absent");
-    assert_eq!(
-        bound.0.len(),
-        1,
-        "BoundEffects should contain exactly 1 On entry"
+    assert!(
+        bound.0.is_empty(),
+        "Source entity should have no bound entries — On was resolved, not stored"
     );
-    assert_eq!(bound.0[0].0, "redirect");
-    assert_eq!(
-        bound.0[0].1,
-        EffectNode::On {
-            target: Target::Bolt,
-            permanent: false,
-            then: vec![EffectNode::Do(EffectKind::DamageBoost(1.0))],
-        }
-    );
-
-    let staged = world
-        .get::<StagedEffects>(entity)
-        .expect("StagedEffects should be inserted as default");
-    assert!(staged.0.is_empty());
 }
 
 #[test]
-fn transfer_permanent_stores_on_child_with_empty_then() {
+fn transfer_permanent_resolves_on_child_with_empty_then_is_noop() {
+    use crate::bolt::components::{Bolt, PrimaryBolt};
+
     let mut world = World::new();
     let entity = world.spawn_empty().id();
+    let bolt = world
+        .spawn((
+            Bolt,
+            PrimaryBolt,
+            BoundEffects::default(),
+            StagedEffects::default(),
+        ))
+        .id();
 
+    // On(Bolt) with empty then: resolves to bolt but transfers nothing.
     let cmd = TransferCommand {
         entity,
         chip_name: "redirect".to_string(),
@@ -100,24 +115,24 @@ fn transfer_permanent_stores_on_child_with_empty_then() {
             then: vec![],
         }],
         permanent: true,
+        context: TriggerContext::default(),
     };
     cmd.apply(&mut world);
 
+    // Source entity gets BoundEffects/StagedEffects but no entries
     let bound = world
         .get::<BoundEffects>(entity)
         .expect("BoundEffects should be inserted when absent");
-    assert_eq!(
-        bound.0.len(),
-        1,
-        "On node with empty then should still be stored"
+    assert!(
+        bound.0.is_empty(),
+        "On with empty then resolves but transfers nothing"
     );
-    assert_eq!(
-        bound.0[0].1,
-        EffectNode::On {
-            target: Target::Bolt,
-            permanent: false,
-            then: vec![],
-        }
+
+    // Bolt also has no new entries
+    let bolt_bound = world.get::<BoundEffects>(bolt).unwrap();
+    assert!(
+        bolt_bound.0.is_empty(),
+        "Bolt should have no entries from empty-then On"
     );
 }
 
@@ -143,6 +158,7 @@ fn transfer_permanent_appends_to_existing_bound_effects() {
             then: vec![EffectNode::Do(EffectKind::DamageBoost(3.0))],
         }],
         permanent: true,
+        context: TriggerContext::default(),
     };
     cmd.apply(&mut world);
 
@@ -182,6 +198,7 @@ fn transfer_permanent_inserts_bound_effects_when_absent_and_stores_until_child()
             then: vec![EffectNode::Do(EffectKind::DamageBoost(1.5))],
         }],
         permanent: true,
+        context: TriggerContext::default(),
     };
     cmd.apply(&mut world);
 

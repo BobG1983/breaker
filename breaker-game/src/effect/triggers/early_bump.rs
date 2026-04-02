@@ -23,6 +23,11 @@ fn bridge_early_bump(
         if msg.grade != BumpGrade::Early {
             continue;
         }
+        let context = TriggerContext {
+            bolt: msg.bolt,
+            breaker: Some(msg.breaker),
+            ..default()
+        };
         for (entity, bound, mut staged) in &mut query {
             evaluate_bound_effects(
                 &Trigger::EarlyBump,
@@ -30,8 +35,15 @@ fn bridge_early_bump(
                 bound,
                 &mut staged,
                 &mut commands,
+                context,
             );
-            evaluate_staged_effects(&Trigger::EarlyBump, entity, &mut staged, &mut commands);
+            evaluate_staged_effects(
+                &Trigger::EarlyBump,
+                entity,
+                &mut staged,
+                &mut commands,
+                context,
+            );
         }
     }
 }
@@ -83,9 +95,11 @@ mod tests {
     #[test]
     fn bridge_early_bump_fires_on_early_grade() {
         let mut app = test_app();
+        let breaker = app.world_mut().spawn_empty().id();
         app.insert_resource(TestBumpMsg(Some(BumpPerformed {
             grade: BumpGrade::Early,
             bolt: None,
+            breaker,
         })));
         app.world_mut().spawn((
             BoundEffects(vec![(
@@ -114,6 +128,62 @@ mod tests {
         assert!(
             (active.0[0] - 1.5).abs() < f32::EPSILON,
             "SpeedBoost multiplier should be 1.5"
+        );
+    }
+
+    #[test]
+    fn early_bump_context_resolves_to_specific_bolt() {
+        use crate::bolt::components::Bolt;
+
+        let mut app = test_app();
+        let breaker = app.world_mut().spawn_empty().id();
+
+        let bolt_a = app.world_mut().spawn((Bolt, StagedEffects::default())).id();
+        let bolt_b = app.world_mut().spawn((Bolt, StagedEffects::default())).id();
+        let bolt_c = app.world_mut().spawn((Bolt, StagedEffects::default())).id();
+
+        app.world_mut().spawn((
+            BoundEffects(vec![(
+                "ctx_test".into(),
+                EffectNode::When {
+                    trigger: Trigger::EarlyBump,
+                    then: vec![EffectNode::On {
+                        target: Target::Bolt,
+                        permanent: false,
+                        then: vec![EffectNode::When {
+                            trigger: Trigger::Died,
+                            then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
+                        }],
+                    }],
+                },
+            )]),
+            StagedEffects::default(),
+        ));
+
+        app.insert_resource(TestBumpMsg(Some(BumpPerformed {
+            grade: BumpGrade::Early,
+            bolt: Some(bolt_b),
+            breaker,
+        })));
+        tick(&mut app);
+
+        let staged_b = app.world().get::<StagedEffects>(bolt_b).unwrap();
+        assert!(!staged_b.0.is_empty(), "bolt_b SHOULD have staged effects");
+        assert!(
+            app.world()
+                .get::<StagedEffects>(bolt_a)
+                .unwrap()
+                .0
+                .is_empty(),
+            "bolt_a should be empty"
+        );
+        assert!(
+            app.world()
+                .get::<StagedEffects>(bolt_c)
+                .unwrap()
+                .0
+                .is_empty(),
+            "bolt_c should be empty"
         );
     }
 }

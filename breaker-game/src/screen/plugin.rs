@@ -14,7 +14,6 @@ use super::{
     systems::cleanup_entities,
 };
 use crate::{
-    breaker::BreakerDefaults,
     cells::CellDefaults,
     input::InputDefaults,
     run::resources::DifficultyCurveDefaults,
@@ -42,7 +41,6 @@ impl Plugin for ScreenPlugin {
             .add_plugins(
                 RantzDefaultsPluginBuilder::<GameState>::new(GameState::Loading)
                     .add_config::<PlayfieldDefaults>()
-                    .add_config::<BreakerDefaults>()
                     .add_config::<CellDefaults>()
                     .add_config::<InputDefaults>()
                     .add_config::<MainMenuDefaults>()

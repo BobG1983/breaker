@@ -27,6 +27,8 @@ fn make_bolt_definition(name: &str, base_damage: f32) -> BoltDefinition {
         color_rgb: [6.0, 5.0, 0.5],
         min_angle_horizontal: 5.0,
         min_angle_vertical: 5.0,
+        min_radius: None,
+        max_radius: None,
     }
 }
 
@@ -35,7 +37,7 @@ fn make_bolt_definition(name: &str, base_damage: f32) -> BoltDefinition {
 #[test]
 fn from_definition_transitions_speed_and_angle() {
     let def = make_bolt_definition("Bolt", 10.0);
-    let _builder: BoltBuilder<NoPosition, HasSpeed, HasAngle, NoMotion, NoRole> =
+    let _builder: BoltBuilder<NoPosition, HasSpeed, HasAngle, NoMotion, NoRole, Unvisual> =
         Bolt::builder().definition(&def);
 }
 
@@ -50,6 +52,7 @@ fn from_definition_sets_speed_components() {
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
+        .headless()
         .spawn(&mut world);
     let base = world.get::<BaseSpeed>(entity).unwrap();
     assert!(
@@ -84,6 +87,8 @@ fn from_definition_custom_speed_values_propagate() {
         color_rgb: [6.0, 5.0, 0.5],
         min_angle_horizontal: 5.0,
         min_angle_vertical: 5.0,
+        min_radius: None,
+        max_radius: None,
     };
     let mut world = World::new();
     let entity = Bolt::builder()
@@ -91,6 +96,7 @@ fn from_definition_custom_speed_values_propagate() {
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
+        .headless()
         .spawn(&mut world);
     let base = world.get::<BaseSpeed>(entity).unwrap();
     assert!(
@@ -123,6 +129,7 @@ fn from_definition_converts_angles_to_radians() {
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
+        .headless()
         .spawn(&mut world);
     let h = world.get::<MinAngleHorizontal>(entity).unwrap();
     let expected_h = 5.0_f32.to_radians();
@@ -155,6 +162,7 @@ fn from_definition_zero_angles_produce_zero_radians() {
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
+        .headless()
         .spawn(&mut world);
     let h = world.get::<MinAngleHorizontal>(entity).unwrap();
     assert!(
@@ -181,6 +189,7 @@ fn from_definition_sets_radius_and_physical_dimensions() {
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
+        .headless()
         .spawn(&mut world);
     let radius = world.get::<BoltRadius>(entity).unwrap();
     assert!(
@@ -220,6 +229,7 @@ fn from_definition_custom_radius_propagates() {
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
+        .headless()
         .spawn(&mut world);
     let radius = world.get::<BoltRadius>(entity).unwrap();
     assert!(
@@ -245,6 +255,7 @@ fn from_definition_inserts_bolt_base_damage() {
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
+        .headless()
         .spawn(&mut world);
     let dmg = world
         .get::<BoltBaseDamage>(entity)
@@ -265,6 +276,7 @@ fn from_definition_zero_damage_inserts_bolt_base_damage_zero() {
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
+        .headless()
         .spawn(&mut world);
     let dmg = world
         .get::<BoltBaseDamage>(entity)
@@ -287,6 +299,7 @@ fn from_definition_inserts_bolt_definition_ref() {
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
+        .headless()
         .spawn(&mut world);
     let def_ref = world
         .get::<BoltDefinitionRef>(entity)
@@ -307,6 +320,7 @@ fn from_definition_heavy_inserts_bolt_definition_ref_heavy() {
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
+        .headless()
         .spawn(&mut world);
     let def_ref = world
         .get::<BoltDefinitionRef>(entity)
@@ -329,6 +343,7 @@ fn from_definition_inserts_bolt_angle_spread() {
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
+        .headless()
         .spawn(&mut world);
     let spread = world
         .get::<BoltAngleSpread>(entity)
@@ -351,6 +366,7 @@ fn from_definition_inserts_bolt_spawn_offset_y() {
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
+        .headless()
         .spawn(&mut world);
     let offset = world
         .get::<BoltSpawnOffsetY>(entity)
@@ -380,6 +396,7 @@ fn from_definition_works_with_all_motion_role_combinations() {
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
+        .headless()
         .spawn(&mut world);
 
     // serving + extra
@@ -388,6 +405,7 @@ fn from_definition_works_with_all_motion_role_combinations() {
         .at_position(Vec2::new(10.0, 0.0))
         .serving()
         .extra()
+        .headless()
         .spawn(&mut world);
 
     // velocity + primary
@@ -396,6 +414,7 @@ fn from_definition_works_with_all_motion_role_combinations() {
         .at_position(Vec2::new(20.0, 0.0))
         .with_velocity(Velocity2D(Vec2::new(0.0, 720.0)))
         .primary()
+        .headless()
         .spawn(&mut world);
 
     // velocity + extra
@@ -404,6 +423,7 @@ fn from_definition_works_with_all_motion_role_combinations() {
         .at_position(Vec2::new(30.0, 0.0))
         .with_velocity(Velocity2D(Vec2::new(0.0, 720.0)))
         .extra()
+        .headless()
         .spawn(&mut world);
 
     for (label, entity) in [("sp", sp), ("se", se), ("vp", vp), ("ve", ve)] {
@@ -457,6 +477,7 @@ fn from_definition_with_radius_override_wins() {
         .serving()
         .primary()
         .with_radius(20.0)
+        .headless()
         .spawn(&mut world);
     let radius = world.get::<BoltRadius>(entity).unwrap();
     assert!(
@@ -483,6 +504,7 @@ fn from_definition_with_spawned_by_both_present() {
         .with_velocity(Velocity2D(Vec2::new(0.0, 720.0)))
         .extra()
         .spawned_by("chain_bolt")
+        .headless()
         .spawn(&mut world);
     let def_ref = world
         .get::<BoltDefinitionRef>(entity)
@@ -510,6 +532,7 @@ fn from_definition_with_lifespan_both_present() {
         .with_velocity(Velocity2D(Vec2::new(0.0, 720.0)))
         .extra()
         .with_lifespan(3.0)
+        .headless()
         .spawn(&mut world);
     let def_ref = world
         .get::<BoltDefinitionRef>(entity)
@@ -544,6 +567,7 @@ fn with_base_damage_inserts_bolt_base_damage() {
         .serving()
         .primary()
         .with_base_damage(15.0)
+        .headless()
         .spawn(&mut world);
     let dmg = world
         .get::<BoltBaseDamage>(entity)
@@ -565,6 +589,7 @@ fn with_base_damage_zero_is_valid() {
         .serving()
         .primary()
         .with_base_damage(0.0)
+        .headless()
         .spawn(&mut world);
     let dmg = world
         .get::<BoltBaseDamage>(entity)
@@ -588,6 +613,7 @@ fn with_base_damage_does_not_insert_other_definition_components() {
         .serving()
         .primary()
         .with_base_damage(15.0)
+        .headless()
         .spawn(&mut world);
     assert!(
         world.get::<BoltDefinitionRef>(entity).is_none(),
@@ -617,6 +643,7 @@ fn with_definition_name_inserts_bolt_definition_ref() {
         .serving()
         .primary()
         .with_definition_name("CustomBolt".to_string())
+        .headless()
         .spawn(&mut world);
     let def_ref = world
         .get::<BoltDefinitionRef>(entity)
@@ -638,6 +665,7 @@ fn with_definition_name_empty_string_accepted() {
         .serving()
         .primary()
         .with_definition_name(String::new())
+        .headless()
         .spawn(&mut world);
     let def_ref = world
         .get::<BoltDefinitionRef>(entity)
@@ -661,6 +689,7 @@ fn with_definition_name_does_not_insert_other_definition_components() {
         .serving()
         .primary()
         .with_definition_name("CustomBolt".to_string())
+        .headless()
         .spawn(&mut world);
     assert!(
         world.get::<BoltBaseDamage>(entity).is_none(),
@@ -690,6 +719,7 @@ fn with_angle_spread_inserts_bolt_angle_spread() {
         .serving()
         .primary()
         .with_angle_spread(0.35)
+        .headless()
         .spawn(&mut world);
     let spread = world
         .get::<BoltAngleSpread>(entity)
@@ -711,6 +741,7 @@ fn with_angle_spread_zero_is_valid() {
         .serving()
         .primary()
         .with_angle_spread(0.0)
+        .headless()
         .spawn(&mut world);
     let spread = world
         .get::<BoltAngleSpread>(entity)
@@ -734,6 +765,7 @@ fn with_angle_spread_does_not_insert_other_definition_components() {
         .serving()
         .primary()
         .with_angle_spread(0.35)
+        .headless()
         .spawn(&mut world);
     assert!(
         world.get::<BoltBaseDamage>(entity).is_none(),
@@ -763,6 +795,7 @@ fn with_spawn_offset_y_inserts_bolt_spawn_offset_y() {
         .serving()
         .primary()
         .with_spawn_offset_y(40.0)
+        .headless()
         .spawn(&mut world);
     let offset = world
         .get::<BoltSpawnOffsetY>(entity)
@@ -784,6 +817,7 @@ fn with_spawn_offset_y_zero_is_valid() {
         .serving()
         .primary()
         .with_spawn_offset_y(0.0)
+        .headless()
         .spawn(&mut world);
     let offset = world
         .get::<BoltSpawnOffsetY>(entity)
@@ -807,6 +841,7 @@ fn with_spawn_offset_y_does_not_insert_other_definition_components() {
         .serving()
         .primary()
         .with_spawn_offset_y(40.0)
+        .headless()
         .spawn(&mut world);
     assert!(
         world.get::<BoltBaseDamage>(entity).is_none(),
@@ -836,6 +871,7 @@ fn with_base_damage_overrides_definition_base_damage() {
         .serving()
         .primary()
         .with_base_damage(25.0)
+        .headless()
         .spawn(&mut world);
     let dmg = world
         .get::<BoltBaseDamage>(entity)
@@ -878,6 +914,7 @@ fn with_base_damage_zero_overrides_definition_base_damage() {
         .serving()
         .primary()
         .with_base_damage(0.0)
+        .headless()
         .spawn(&mut world);
     let dmg = world
         .get::<BoltBaseDamage>(entity)
@@ -901,6 +938,7 @@ fn with_definition_name_overrides_definition_name() {
         .serving()
         .primary()
         .with_definition_name("OverrideName".to_string())
+        .headless()
         .spawn(&mut world);
     let def_ref = world
         .get::<BoltDefinitionRef>(entity)
@@ -947,6 +985,7 @@ fn with_definition_name_empty_overrides_definition_name() {
         .serving()
         .primary()
         .with_definition_name(String::new())
+        .headless()
         .spawn(&mut world);
     let def_ref = world
         .get::<BoltDefinitionRef>(entity)
@@ -970,6 +1009,7 @@ fn with_angle_spread_overrides_definition_angle_spread() {
         .serving()
         .primary()
         .with_angle_spread(1.0)
+        .headless()
         .spawn(&mut world);
     let spread = world
         .get::<BoltAngleSpread>(entity)
@@ -1004,6 +1044,7 @@ fn with_angle_spread_zero_overrides_definition_angle_spread() {
         .serving()
         .primary()
         .with_angle_spread(0.0)
+        .headless()
         .spawn(&mut world);
     let spread = world
         .get::<BoltAngleSpread>(entity)
@@ -1027,6 +1068,7 @@ fn with_spawn_offset_y_overrides_definition_spawn_offset() {
         .serving()
         .primary()
         .with_spawn_offset_y(30.0)
+        .headless()
         .spawn(&mut world);
     let offset = world
         .get::<BoltSpawnOffsetY>(entity)
@@ -1061,6 +1103,7 @@ fn with_spawn_offset_y_zero_overrides_definition_spawn_offset() {
         .serving()
         .primary()
         .with_spawn_offset_y(0.0)
+        .headless()
         .spawn(&mut world);
     let offset = world
         .get::<BoltSpawnOffsetY>(entity)
@@ -1089,6 +1132,7 @@ fn all_four_with_methods_together_without_definition() {
         .with_definition_name("SyntheticBolt".to_string())
         .with_angle_spread(0.6)
         .with_spawn_offset_y(45.0)
+        .headless()
         .spawn(&mut world);
     let dmg = world
         .get::<BoltBaseDamage>(entity)
@@ -1133,6 +1177,7 @@ fn all_four_with_methods_plus_definition_overrides_win() {
         .with_definition_name("AllOverride".to_string())
         .with_angle_spread(2.0)
         .with_spawn_offset_y(100.0)
+        .headless()
         .spawn(&mut world);
     let dmg = world
         .get::<BoltBaseDamage>(entity)
@@ -1184,6 +1229,7 @@ fn with_base_damage_available_in_initial_state() {
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
+        .headless()
         .spawn(&mut world);
     let dmg = world
         .get::<BoltBaseDamage>(entity)
@@ -1205,6 +1251,7 @@ fn with_definition_name_available_in_initial_state() {
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
+        .headless()
         .spawn(&mut world);
     let def_ref = world
         .get::<BoltDefinitionRef>(entity)
@@ -1222,6 +1269,7 @@ fn with_angle_spread_available_in_initial_state() {
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
+        .headless()
         .spawn(&mut world);
     let spread = world
         .get::<BoltAngleSpread>(entity)
@@ -1243,6 +1291,7 @@ fn with_spawn_offset_y_available_in_initial_state() {
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
+        .headless()
         .spawn(&mut world);
     let offset = world
         .get::<BoltSpawnOffsetY>(entity)
@@ -1268,6 +1317,7 @@ fn with_base_damage_before_definition_explicit_override_wins() {
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
+        .headless()
         .spawn(&mut world);
     let dmg = world
         .get::<BoltBaseDamage>(entity)
@@ -1290,6 +1340,7 @@ fn with_base_damage_before_and_after_definition_last_with_wins() {
         .serving()
         .primary()
         .with_base_damage(42.0)
+        .headless()
         .spawn(&mut world);
     let dmg = world
         .get::<BoltBaseDamage>(entity)
@@ -1313,6 +1364,7 @@ fn with_definition_name_before_definition_explicit_override_wins() {
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
+        .headless()
         .spawn(&mut world);
     let def_ref = world
         .get::<BoltDefinitionRef>(entity)
@@ -1336,6 +1388,7 @@ fn with_angle_spread_before_definition_explicit_override_wins() {
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
+        .headless()
         .spawn(&mut world);
     let spread = world
         .get::<BoltAngleSpread>(entity)
@@ -1359,6 +1412,7 @@ fn with_spawn_offset_y_before_definition_explicit_override_wins() {
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
+        .headless()
         .spawn(&mut world);
     let offset = world
         .get::<BoltSpawnOffsetY>(entity)

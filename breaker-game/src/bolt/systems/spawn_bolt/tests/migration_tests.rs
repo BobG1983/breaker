@@ -17,10 +17,7 @@ use crate::{
         resources::{DEFAULT_BOLT_ANGLE_SPREAD, DEFAULT_BOLT_SPAWN_OFFSET_Y},
     },
     breaker::{
-        BreakerConfig,
-        components::Breaker,
-        definition::{BreakerDefinition, BreakerStatOverrides},
-        registry::BreakerRegistry,
+        components::Breaker, definition::BreakerDefinition, registry::BreakerRegistry,
         resources::SelectedBreaker,
     },
     run::RunState,
@@ -204,7 +201,7 @@ fn spawn_bolt_subsequent_node_launches_with_angle_within_spread() {
 fn spawn_bolt_uses_definition_radius_for_scale_and_aabb() {
     // Given: BoltDefinition.radius: 14.0
     // When: spawn_bolt runs
-    // Then: Scale2D { x: 14.0, y: 14.0 }, Aabb2D half_extents (14.0, 14.0), BoltRadius(14.0)
+    // Then: Scale2D { x: 14.0, y: 14.0 }, Aabb2D half_extents (14.0, 14.0), BaseRadius(14.0)
     use rantzsoft_physics2d::aabb::Aabb2D;
     use rantzsoft_spatial2d::components::Scale2D;
 
@@ -414,6 +411,7 @@ fn existing_bolt_still_triggers_bolt_spawned_with_registries() {
         .definition(&def)
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .primary()
+        .headless()
         .spawn(app.world_mut());
     app.add_systems(Startup, spawn_bolt);
     app.update();
@@ -431,7 +429,7 @@ fn existing_bolt_still_triggers_bolt_spawned_with_registries() {
 fn spawn_bolt_uses_breaker_registry_for_bolt_lookup() {
     // Given: SelectedBreaker("Chrono"). BreakerRegistry has "Chrono" with bolt: "HeavyBolt".
     //        BoltRegistry has "HeavyBolt" with base_speed: 500.0, radius: 20.0, base_damage: 25.0.
-    // Then: Bolt has BoltDefinitionRef("HeavyBolt"), BoltBaseDamage(25.0), BoltRadius(20.0).
+    // Then: Bolt has BoltDefinitionRef("HeavyBolt"), BoltBaseDamage(25.0), BaseRadius(20.0).
     let mut app = test_app_with_registries();
 
     let heavy_def = BoltDefinition {
@@ -445,18 +443,16 @@ fn spawn_bolt_uses_breaker_registry_for_bolt_lookup() {
         color_rgb: [1.0, 0.0, 0.0],
         min_angle_horizontal: 5.0,
         min_angle_vertical: 5.0,
+        min_radius: None,
+        max_radius: None,
     };
     app.world_mut()
         .resource_mut::<BoltRegistry>()
         .insert("HeavyBolt".to_string(), heavy_def);
 
-    let chrono_def = BreakerDefinition {
-        name: "Chrono".to_string(),
-        bolt: "HeavyBolt".to_string(),
-        stat_overrides: BreakerStatOverrides::default(),
-        life_pool: None,
-        effects: vec![],
-    };
+    let chrono_def: BreakerDefinition =
+        ron::de::from_str(r#"(name: "Chrono", bolt: "HeavyBolt", life_pool: None, effects: [])"#)
+            .expect("test RON should parse");
     app.world_mut()
         .resource_mut::<BreakerRegistry>()
         .insert("Chrono".to_string(), chrono_def);
@@ -532,7 +528,7 @@ fn spawn_bolt_uses_spawn_offset_y_with_breaker_entity() {
 
 #[test]
 fn spawn_bolt_uses_spawn_offset_y_without_breaker_entity() {
-    // Edge case: No breaker entity. Falls back to BreakerConfig.y_position (-250.0).
+    // Edge case: No breaker entity. Falls back to BreakerDefinition.y_position (-250.0).
     // Position = (0.0, -250.0 + 54.0) = (0.0, -196.0).
     let mut app = test_app_with_registries();
     app.add_systems(Startup, spawn_bolt);
@@ -545,10 +541,10 @@ fn spawn_bolt_uses_spawn_offset_y_without_breaker_entity() {
         .next()
         .expect("bolt should have Position2D");
 
-    let expected_y = BreakerConfig::default().y_position + DEFAULT_BOLT_SPAWN_OFFSET_Y;
+    let expected_y = BreakerDefinition::default().y_position + DEFAULT_BOLT_SPAWN_OFFSET_Y;
     assert!(
         (pos.0.y - expected_y).abs() < f32::EPSILON,
-        "bolt y should be {expected_y} (BreakerConfig.y_position + offset), got {}",
+        "bolt y should be {expected_y} (BreakerDefinition.y_position + offset), got {}",
         pos.0.y
     );
 }

@@ -27,6 +27,14 @@ impl EffectKind {
                     world,
                 );
             }
+            Self::Vulnerable { multiplier } => {
+                super::super::super::super::effects::vulnerable::reverse(
+                    entity,
+                    *multiplier,
+                    source_chip,
+                    world,
+                );
+            }
             Self::Piercing(v) => {
                 super::super::super::super::effects::piercing::reverse(
                     entity,

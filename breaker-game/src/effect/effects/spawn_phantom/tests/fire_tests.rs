@@ -247,6 +247,8 @@ fn fire_spawns_phantom_with_custom_base_speed_from_definition_ref() {
             color_rgb: [6.0, 5.0, 0.5],
             min_angle_horizontal: 5.0,
             min_angle_vertical: 5.0,
+            min_radius: None,
+            max_radius: None,
         },
     );
     registry.insert(
@@ -262,6 +264,8 @@ fn fire_spawns_phantom_with_custom_base_speed_from_definition_ref() {
             color_rgb: [6.0, 5.0, 0.5],
             min_angle_horizontal: 5.0,
             min_angle_vertical: 5.0,
+            min_radius: None,
+            max_radius: None,
         },
     );
     world.insert_resource(registry);
@@ -308,6 +312,8 @@ fn fire_reads_bolt_definition_ref_from_source_entity_for_phantom() {
             color_rgb: [6.0, 5.0, 0.5],
             min_angle_horizontal: 5.0,
             min_angle_vertical: 5.0,
+            min_radius: None,
+            max_radius: None,
         },
     );
     registry.insert(
@@ -323,6 +329,8 @@ fn fire_reads_bolt_definition_ref_from_source_entity_for_phantom() {
             color_rgb: [6.0, 5.0, 0.5],
             min_angle_horizontal: 5.0,
             min_angle_vertical: 5.0,
+            min_radius: None,
+            max_radius: None,
         },
     );
     world.insert_resource(registry);
@@ -387,6 +395,8 @@ fn fire_phantom_falls_back_to_bolt_default_when_no_definition_ref() {
             color_rgb: [6.0, 5.0, 0.5],
             min_angle_horizontal: 5.0,
             min_angle_vertical: 5.0,
+            min_radius: None,
+            max_radius: None,
         },
     );
     world.insert_resource(registry);

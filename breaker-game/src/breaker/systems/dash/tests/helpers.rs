@@ -1,22 +1,22 @@
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::MaxSpeed;
+use rantzsoft_spatial2d::components::{MaxSpeed, Velocity2D};
 
 use super::super::system::*;
 use crate::{
     breaker::{
         components::{
-            BrakeDecel, BrakeTilt, Breaker, BreakerDeceleration, BreakerState, BreakerStateTimer,
-            BreakerTilt, BreakerVelocity, DashDuration, DashSpeedMultiplier, DashTilt,
-            DashTiltEase, DecelEasing, SettleDuration, SettleTiltEase,
+            BrakeDecel, BrakeTilt, Breaker, BreakerDeceleration, BreakerTilt, DashDuration,
+            DashSpeedMultiplier, DashState, DashStateTimer, DashTilt, DashTiltEase, DecelEasing,
+            SettleDuration, SettleTiltEase,
         },
-        resources::BreakerConfig,
+        definition::BreakerDefinition,
     },
     input::resources::InputActions,
     shared::PlayfieldConfig,
 };
 
 pub(super) fn breaker_param_bundle(
-    config: &BreakerConfig,
+    def: &BreakerDefinition,
 ) -> (
     MaxSpeed,
     BreakerDeceleration,
@@ -31,37 +31,37 @@ pub(super) fn breaker_param_bundle(
     SettleTiltEase,
 ) {
     (
-        MaxSpeed(config.max_speed),
-        BreakerDeceleration(config.deceleration),
+        MaxSpeed(def.max_speed),
+        BreakerDeceleration(def.deceleration),
         DecelEasing {
-            ease: config.decel_ease,
-            strength: config.decel_ease_strength,
+            ease: def.decel_ease,
+            strength: def.decel_ease_strength,
         },
-        DashSpeedMultiplier(config.dash_speed_multiplier),
-        DashDuration(config.dash_duration),
-        DashTilt(config.dash_tilt_angle.to_radians()),
-        DashTiltEase(config.dash_tilt_ease),
+        DashSpeedMultiplier(def.dash_speed_multiplier),
+        DashDuration(def.dash_duration),
+        DashTilt(def.dash_tilt_angle.to_radians()),
+        DashTiltEase(def.dash_tilt_ease),
         BrakeTilt {
-            angle: config.brake_tilt_angle.to_radians(),
-            duration: config.brake_tilt_duration,
-            ease: config.brake_tilt_ease,
+            angle: def.brake_tilt_angle.to_radians(),
+            duration: def.brake_tilt_duration,
+            ease: def.brake_tilt_ease,
         },
-        BrakeDecel(config.brake_decel_multiplier),
-        SettleDuration(config.settle_duration),
-        SettleTiltEase(config.settle_tilt_ease),
+        BrakeDecel(def.brake_decel_multiplier),
+        SettleDuration(def.settle_duration),
+        SettleTiltEase(def.settle_tilt_ease),
     )
 }
 
 pub(super) fn spawn_test_breaker(app: &mut App) -> Entity {
-    let config = BreakerConfig::default();
+    let def = BreakerDefinition::default();
     app.world_mut()
         .spawn((
             Breaker,
-            BreakerState::Idle,
-            BreakerVelocity { x: 0.0 },
+            DashState::Idle,
+            Velocity2D(Vec2::ZERO),
             BreakerTilt::default(),
-            BreakerStateTimer { remaining: 0.0 },
-            breaker_param_bundle(&config),
+            DashStateTimer { remaining: 0.0 },
+            breaker_param_bundle(&def),
         ))
         .id()
 }
@@ -69,7 +69,6 @@ pub(super) fn spawn_test_breaker(app: &mut App) -> Entity {
 pub(super) fn test_app() -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
-        .init_resource::<BreakerConfig>()
         .init_resource::<InputActions>()
         .init_resource::<PlayfieldConfig>()
         .add_systems(FixedUpdate, update_breaker_state);
