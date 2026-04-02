@@ -4,8 +4,8 @@
 - [Effect direct spawn pattern](pattern_effect_direct_spawn.md) — fire() functions spawn full entities directly rather than messaging owning domains
 - [Dispatch pattern ownership](dispatch_pattern_ownership.md) — dispatch lives in entity domains; chip dispatch missing Once wrapper for All* desugaring
 - [ShieldActive cross-domain write](shield_cross_domain_write.md) — bolt and cells domains authorized to mutate ShieldActive directly
-- [Bolt builder typestate migration](pattern_bolt_builder_migration.md) — Bolt::builder() replaces init_bolt_params and prepare_bolt_velocity; velocity clamping now inline
-- [Breaker builder typestate migration](pattern_breaker_builder_migration.md) — Breaker::builder() with 7 dims (incl Role); old spawn chain still wired; visibility fix needed
+- [Bolt builder typestate migration](pattern_bolt_builder_migration.md) — Bolt::builder() with 6 dims (P,S,A,M,R,V); Visual added; BoltRadius aliased to BaseRadius
+- [Breaker builder typestate migration](pattern_breaker_builder_migration.md) — Breaker::builder() with 7 dims (incl Role+Visual); fully wired; BreakerConfig eliminated
 
 ## Known Gaps
 - [Cleanup marker status](known_gap_cleanup_markers.md) — all effect entities have CleanupOnNodeExit as of 2026-03-30; no open gaps

@@ -1,16 +1,14 @@
 ---
-name: MovementSettings missing derives
-description: MovementSettings in core.rs has no derives; BumpSettings only has Clone — inconsistent with DashSettings (Clone, Copy)
+name: MovementSettings derives — resolved
+description: MovementSettings and BumpSettings now both have Clone, Copy — inconsistency was fixed in feature/breaker-builder-pattern
 type: project
 ---
 
-In `breaker-game/src/breaker/builder/core.rs`:
-- `MovementSettings` — no derives at all
-- `BumpSettings` — `#[derive(Clone)]` only
-- `BumpFeedbackSettings` — `#[derive(Clone, Copy)]` 
-- `DashSettings`, `DashParams`, `BrakeParams`, `SettleParams` — all `#[derive(Clone, Copy)]`
+As of feature/breaker-builder-pattern, all settings structs in `breaker/builder/core.rs` consistently derive `Clone, Copy`:
+- `MovementSettings` — `#[derive(Clone, Copy)]`
+- `DashSettings`, `DashParams`, `BrakeParams`, `SettleParams` — `#[derive(Clone, Copy)]`
+- `BumpSettings` — `#[derive(Clone, Copy)]`
+- `BumpFeedbackSettings` — `#[derive(Clone, Copy)]`
 
-All fields in all these structs are `EaseFunction` (Copy) and `f32` (Copy), so all are Copy-eligible.
-
-**Why:** Appears to be an oversight — no deliberate decision to omit Copy.
-**How to apply:** Flag as an idiom inconsistency when reviewing this file.
+**Why:** Previous inconsistency was an oversight; resolved in the builder refactor.
+**How to apply:** No longer flag this as an issue.

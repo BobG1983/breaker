@@ -354,6 +354,45 @@ type: project
 - All Phase 5 rendering docs — intentionally forward-looking
 - `docs/architecture/bolt-definitions.md` — forward-looking sections unchanged
 
+## 2026-04-02 — feature/breaker-builder-pattern Wave 9 final doc check
+
+**Branch:** feature/breaker-builder-pattern (Wave 9)
+
+**Files reviewed:**
+- `breaker-game/src/bolt/plugin.rs` — dispatch_bolt_effects placement in FixedUpdate
+- `breaker-game/src/bolt/builder/core.rs` — spawn() signature (World not Commands)
+- `breaker-game/src/bolt/systems/dispatch_bolt_effects/system.rs` — Added<BoltDefinitionRef> trigger
+- `breaker-game/src/bolt/systems/sync_bolt_scale.rs` — system name confirmed
+- `breaker-game/src/bolt/systems/spawn_bolt/system.rs` — spawn_bolt(world: &mut World) confirmed
+- `breaker-game/src/breaker/sets.rs` — BreakerSystems variants confirmed (no InitParams)
+- `breaker-game/src/bolt/sets.rs` — BoltSystems variants confirmed
+- `breaker-game/src/breaker/queries.rs` — QueryData struct names confirmed
+- `breaker-game/src/breaker/plugin.rs` — no spawn_lives_display
+- `breaker-game/src/ui/plugin.rs` — spawn_timer_hud only (no spawn_lives_display)
+- `breaker-game/src/effect/commands/ext.rs` — transfer_effect signature (5 params with TriggerContext)
+- `breaker-game/src/effect/core/types/definitions/enums.rs` — TriggerContext struct confirmed
+
+**Drifts found and fixed:**
+- `docs/architecture/ordering.md` — removed non-existent `spawn_lives_display` from OnEnter chain
+- `docs/architecture/ordering.md` — added `apply_node_scale_to_bolt` to OnEnter chain (was missing)
+- `docs/architecture/ordering.md` — added `dispatch_bolt_effects` to FixedUpdate chain
+- `docs/architecture/ordering.md` — added `cleanup_destroyed_bolts.after(EffectSystems::Bridge)` to FixedUpdate chain
+- `docs/architecture/ordering.md` — added `.after(EnforceDistanceConstraints)` to bolt_cell_collision in MaintainQuadtree section
+- `docs/architecture/messages.md` — transfer_effect: added `context: TriggerContext` 5th param
+- `docs/architecture/plugins.md` — transfer_effect: added `context: TriggerContext` 5th param
+- `docs/architecture/builders/breaker.md` — Key Files: `BreakerBumpData` → `BreakerBumpTimingData` + `BreakerBumpGradingData` + `SyncBreakerScaleData`
+- `docs/architecture/builders/bolt.md` — spawn() Behavior: corrected to `&mut World` (not `&mut Commands`); removed dispatch_initial_effects claim
+- `docs/architecture/builders/pattern.md` — Output Paths table: noted spawn() takes World for Bolt vs Commands for Breaker
+- `docs/architecture/bolt-definitions.md` — step 5: clarified dispatch_bolt_effects runs in FixedUpdate not OnEnter
+- `docs/design/terminology/core.md` — BreakerState → DashState; BoltSpeed → BaseSpeed in code examples
+- `docs/architecture/data.md` — BoltBaseSpeed/BoltRadius example: replaced with BoltBaseDamage/BoltSpawnOffsetY; BoltRadius alias note
+
+**Items confirmed no-drift:**
+- `docs/architecture/messages.md` — BreakerSpawned sender correct (spawn_or_reuse_breaker)
+- `docs/architecture/layout.md` — builder/ module not documented (by design — see pattern.md)
+- `docs/architecture/standards.md` — invariant list unchanged (23 variants)
+- `docs/plan/index.md` — builder pattern is infra work, not a plan milestone
+
 ## 2026-03-31 — feature/chip-evolution-ecosystem bolt builder migration review
 
 **Branch:** feature/chip-evolution-ecosystem

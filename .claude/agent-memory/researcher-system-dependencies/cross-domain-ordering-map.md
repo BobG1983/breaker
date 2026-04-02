@@ -20,7 +20,6 @@ Analyzed 2026-04-01 for game-crate-splitting feasibility.
 | `BreakerSystems::Move` | breaker | bolt (hover_bolt, bolt_cell_collision) |
 | `BreakerSystems::GradeBump` | breaker | effect (bridge_bump), run (detect_close_save) |
 | `BreakerSystems::Reset` | breaker | bolt (reset_bolt ordering) |
-| `BreakerSystems::InitParams` | breaker | bolt, breaker (OnEnter) |
 | `NodeSystems::Spawn` | run::node | bolt, breaker (OnEnter ordering) |
 | `NodeSystems::TrackCompletion` | run::node | run (3 systems) |
 | `NodeSystems::ApplyTimePenalty` | run::node | run (handle_timer_expired) |

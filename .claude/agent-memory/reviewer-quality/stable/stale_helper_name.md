@@ -1,13 +1,14 @@
 ---
-name: Stale helper name in bump_visual tests
-description: breaker/systems/bump_visual/tests.rs has default_bump_visual_params() returning BumpFeedback — stale pre-rename name
+name: Stale helper name in bump_visual tests — RESOLVED
+description: default_bump_visual_params() was renamed to default_bump_feedback() in feature/breaker-builder-pattern — no open gap
 type: project
 ---
 
-`breaker-game/src/breaker/systems/bump_visual/tests.rs` has a test helper:
-```rust
-fn default_bump_visual_params() -> BumpFeedback { ... }
-```
-The return type is `BumpFeedback` (post-rename) but the function name retains the old `_visual_params` suffix from when the type was called `BumpVisualParams`.
+**RESOLVED** as of feature/breaker-builder-pattern (2026-04-02).
 
-Should be renamed to `default_bump_feedback()`.
+`breaker-game/src/breaker/systems/bump_visual/tests.rs` now has:
+```rust
+fn default_bump_feedback() -> BumpFeedback { ... }
+```
+
+The stale `default_bump_visual_params` name no longer exists. No action needed. Do NOT re-flag.

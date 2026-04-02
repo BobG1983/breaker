@@ -6,9 +6,9 @@ type: project
 
 ## Full Verification Tier Design Review — 2026-03-30
 
-### Blockers
-1. **BASE_BOLT_DAMAGE hardcoding** — 6 combat effects (Shockwave, Pulse, Explode, ChainLightning, PiercingBeam, TetherBeam) use const 10.0 instead of EffectiveDamageMultiplier. Breaks Pillar 2 synergy web. Combat effects must scale with bolt's effective damage.
-2. **Chip catalog doc drift** — `docs/design/chip-catalog.md` values use old additive format, RON files use correct 1.x multiplicative format. Affects ~10 chips.
+### Blockers (original 2026-03-30 state)
+1. **BASE_BOLT_DAMAGE hardcoding** — RESOLVED in feature/breaker-builder-pattern: `BoltDefinition` now has `base_damage` field from `BoltRegistry`; no hardcoded constant. `bolt_cell_collision` and AoE effects read `base_damage` from the definition/registry. Do NOT re-flag.
+2. **Chip catalog doc drift** — Status as of 2026-04-02 unknown; verify against current chip-catalog.md and RON files. Known state at 2026-03-30: additive format in docs vs multiplicative in RON.
 
 ### Concerns
 3. **Breaker archetype differentiation** — Aegis and Chrono have identical bump speed profiles (PerfectBumped 1.5x, Early/Late 1.1x). No stat_overrides used. Need at minimum different speed/width/force profiles.

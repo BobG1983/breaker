@@ -257,6 +257,15 @@ type: reference
 - Creating `QueryState` from `world.query_filtered::<Entity, F>()` inside `Command::apply(self, world: &mut World)`, calling `.iter(world).collect()`, then dropping the QueryState before calling further World methods — correct; each `query_filtered` call creates and drops an owned QueryState before the next borrow begins; no aliased borrow issue
 - Calling `TransferCommand { ... }.apply(world)` directly inside another `Command::apply` — valid; Commands are plain structs implementing `Command`; calling `.apply(world)` directly (instead of queuing) is an immediate synchronous application; correct pattern in Bevy 0.18
 
+## Typestate Builder Pattern (feature/breaker-builder-pattern — confirmed correct)
+- `BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, Rendered, Primary>` — 7-dimensional typestate builder; terminal `build()` returning `impl Bundle` is correct; `spawn(&mut commands)` calling `commands.spawn(self.build()).id()` and then `commands.dispatch_initial_effects(...)` is the correct Commands-based spawn pattern
+- `BoltBuilder<...> spawn(self, world: &mut World)` — exclusive World-access spawn; `world.spawn(core)` + `.insert(...)` chain on `EntityWorldMut` is confirmed correct pattern (see earlier typestate builder notes)
+- `fn build(self) -> impl Bundle` (no `use<>`) — correct when `self` is consumed by value with no borrowed lifetime fields; compiler infers no overcapture; `use<>` optional in edition 2024
+- `fn build_core(...) -> impl Bundle + use<>` — also correct for free functions with no type/lifetime params to capture
+- `const fn with_lives(mut self, lives: Option<u32>) -> Self` in generic `BreakerBuilder<D,Mv,Da,Sp,Bm,V,R>` — valid `const fn` only when all type parameters are `Copy`/const-compatible at the call site; the match on `Option<u32>` is fine; however, `BreakerBuilder` contains `D`, `Mv`, etc. which are NOT constrained to `Copy` — this const fn only compiles when the compiler determines at monomorphization that the move is valid; NO ISSUE for the current use (typestate markers are all `()` effectively)
+- `world.remove_resource::<Assets<Mesh>>().unwrap_or_default()` in exclusive system for borrow-split — correct pattern; avoids `&mut World` aliasing when builder's `rendered()` needs `&mut Assets<Mesh>`; `world.insert_resource(meshes)` re-inserts after spawn; confirmed in `spawn_bolt/system.rs`
+- `BoltRadius` is a type alias `pub type BoltRadius = crate::shared::size::BaseRadius` — not a separate component; using it in QueryData fields queries the same component as `BaseRadius`
+
 ## commands.spawn() + .id() (confirmed correct in Bevy 0.18)
 - `commands.spawn(bundle).id()` — `Commands::spawn` returns `EntityCommands`; `.id()` on `EntityCommands` returns `Entity`; method chaining `.spawn(...).id()` is valid and returns the spawned entity's `Entity` id; no deferred lookup or world access needed
 - Used in `breaker/builder/core.rs` spawn() methods — CORRECT

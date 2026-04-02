@@ -67,7 +67,7 @@ When a new feature adds new components to an existing ECS query, and those compo
 ## Redundant Component vs. Existing Data Already In-System
 
 When a code spec proposes a new component to track state that is ALREADY encoded in an existing component's field (e.g., `BreakerTilt.ease_start` already encodes last-dash direction via its sign), flag this as scope creep. The redundant component:
-1. Requires initialization in every spawn site (`spawn_breaker`, `reset_breaker`, `init_breaker_params`)
+1. Requires initialization in every spawn site (`spawn_or_reuse_breaker`, `reset_breaker`)
 2. Must be kept in sync with the authoritative source
 3. Adds noise to the query
 4. Creates a three-way divergence risk (spec mechanism, test setup, initialization sites)

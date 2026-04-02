@@ -4,6 +4,76 @@ description: Recurring staleness patterns and duplication issues found in agent 
 type: project
 ---
 
+## Full Audit — 2026-04-02 (feature/breaker-builder-pattern branch, 9 waves of implementation)
+
+**Scope:** All agent memory directories (full audit)
+
+**Context:** feature/breaker-builder-pattern. Recent commits include `spawn_or_reuse_breaker` wiring
+(replaces 4 init systems), `PrimaryBreaker` inserted via builder `.primary()`, `BoltRespawnOffsetY`/
+`BoltRespawnAngleSpread`/`BoltInitialAngle` deleted (Wave 6), `BreakerStatOverrides` eliminated,
+`BoltConfig` eliminated, RON rename `.bdef.ron` → `.breaker.ron`, architecture docs fully updated
+(Wave 9 doc session). Evolution RON files moved from `chips/evolution/` to `chips/evolutions/` (plural).
+High/medium file splits: `bolt/builder/` dir, `anchor/tests/`, `tether_beam/tests/fire_tests/`,
+`dash/tests/flash_step/`, `move_breaker/` dir, `bump/tests/anchor_multipliers/` dir.
+
+**Issues found and fixed (9):**
+
+1. **reviewer-quality/stable/stale_helper_name.md** — Said `default_bump_visual_params()` is stale.
+   The function was already renamed to `default_bump_feedback()`. Fixed: updated to RESOLVED.
+
+2. **reviewer-architecture/pattern_breaker_builder_migration.md** — Said "Old spawn chain STILL WIRED
+   in plugin.rs" and listed a visibility fix. Both resolved: `spawn_or_reuse_breaker` is live,
+   `pub(crate) mod builder` is correct. Fixed: updated Current state to 2026-04-02, architecture doc
+   drift section updated to reflect Wave 9 fixes.
+
+3. **reviewer-correctness/bug-patterns.md** — "PrimaryBreaker marker never inserted" was LATENT;
+   now FIXED (builder `.primary()` inserts it). ".definition() omits BoltRespawnOffsetY" was LATENT;
+   now MOOT (components deleted in Wave 6). BreakerBuilder with_width/with_lives/rendered() latent
+   bugs had stale production-context ("not yet wired"); updated to reflect builder is wired.
+   Fixed: updated all four entries.
+
+4. **researcher-system-dependencies/cross-domain-ordering-map.md** — Row for `BreakerSystems::InitParams`
+   (eliminated in builder migration). Fixed: removed row.
+
+5. **guard-game-design/audit-chip-evolution-coherence.md** — "5 Missing RON Files" section listed
+   `flashstep.evolution.ron`, `chain_reaction.evolution.ron`, `feedback_loop.chip.ron`,
+   `powder_keg.chip.ron` as missing. All now exist. Fixed: updated to show current status.
+
+6. **reviewer-scenarios/coverage_bolt_builder_migration.md** — Referenced `BoltRespawnOffsetY`,
+   `BoltRespawnAngleSpread`, `BoltInitialAngle` (deleted Wave 6). Fixed: updated gap #2 description
+   and coverage table row to use current component names.
+
+7. **guard-file-length/split-patterns.md** — Referenced `dispatch_breaker_effects/tests.rs` which
+   no longer exists (replaced by spawn_or_reuse_breaker). Fixed: updated note.
+
+8. **reviewer-file-length/phase4_findings.md** — All 4 HIGH priority files now SPLIT (bolt/builder.rs
+   → dir module; anchor/tether_beam/fire_tests/flash_step tests → dir modules). mod.rs violations
+   FIXED. Two MEDIUM items also split (move_breaker, anchor_multipliers). Fixed: updated all sections.
+
+9. **reviewer-file-length/MEMORY.md** — Description for phase4_findings.md showed stale "4 HIGH open".
+   Fixed: updated description.
+
+**Additional fix:**
+- **planner-spec/bolt-domain-inventory.md** — Listed deleted components `BoltRespawnOffsetY`,
+  `BoltRespawnAngleSpread`, `BoltInitialAngle` as current. Fixed: updated to Wave 6 state.
+
+**No new cross-agent duplication found.**
+**No broken MEMORY.md links found.**
+
+**New staleness patterns detected this audit:**
+- **Breaker builder wiring swap**: When `spawn_or_reuse_breaker` replaces old init systems, memory
+  files saying "old spawn chain still wired" go stale immediately. Check: reviewer-architecture/
+  pattern_breaker_builder_migration.md, reviewer-correctness/bug-patterns.md (PrimaryBreaker bug).
+- **Wave-numbered component deletions**: When a wave deletes components (Wave 6: BoltRespawnOffsetY,
+  BoltRespawnAngleSpread, BoltInitialAngle), check: planner-spec/bolt-domain-inventory.md,
+  reviewer-scenarios/coverage_bolt_builder_migration.md, reviewer-correctness/bug-patterns.md.
+- **File split completions**: When HIGH/MEDIUM items from phase4_findings.md are split, update both
+  phase4_findings.md and reviewer-file-length/MEMORY.md simultaneously.
+- **RON directory renames**: When RON asset directories are renamed (evolution/ → evolutions/),
+  check guard-game-design audit files that reference specific paths.
+
+---
+
 ## Full Audit — 2026-04-01 (feature/chip-evolution-ecosystem branch, speed_boost inline + InvariantKind renames)
 
 **Scope:** All agent memory directories (full audit)

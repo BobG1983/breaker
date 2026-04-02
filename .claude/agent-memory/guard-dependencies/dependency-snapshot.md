@@ -4,8 +4,8 @@ description: Crate versions at last audit (2026-04-01) — diff against this on 
 type: project
 ---
 
-Audit date: 2026-04-01
-Branch: feature/chip-evolution-ecosystem
+Audit date: 2026-04-02
+Branch: feature/breaker-builder-pattern
 
 ## Direct Dependencies
 
@@ -68,14 +68,12 @@ Branch: feature/chip-evolution-ecosystem
 - read-fonts v0.35.0 + v0.36.0 (dual — known wontfix)
 - skrifa v0.37.0 + v0.39.0 (dual — known wontfix)
 
-## Changes since prior audit (2026-03-31 feature/chip-evolution-ecosystem)
-- Two commits since last audit: "feat: bolt typestate builder pattern + migrate all bolt construction"
-  and "fix: attraction and gravity well use steering model with velocity formula".
-- No new direct dependencies. No Cargo.toml files changed.
-- cargo tree -d: identical set of duplicates — no new entries, no new pairs.
+## Changes since prior audit (2026-04-01 feature/chip-evolution-ecosystem)
+- Branch: feature/breaker-builder-pattern — refactor branch (Breaker builder pattern).
+- No new direct dependencies. Only Cargo.toml change on branch: comment update (module_name_repetitions
+  comment updated from "BreakerState" to "DashState" — cosmetic, no dep impact).
 - cargo-machete: CLEAN (no unused deps)
-- cargo deny check licenses: PASS (same Unicode-DFS-2016 harmless pre-approval warning)
-- cargo outdated -R: identical results to prior audit (rand 0.9→0.10 deferred, ron 0.12.0→0.12.1 eligible)
+- Transitive deps, feature flags, license status: all unchanged from prior audit.
 
 ## Known Outdated (as of audit)
 - rand: 0.9.2 → 0.10.0 (BREAKING — semver major; deferred, see known-findings.md)

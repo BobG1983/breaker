@@ -314,6 +314,46 @@ in production code.
 ### defaults.breaker.ron: new reflection_spread field (Info-level, carry-forward)
 - Confirmed in prior audit note (2026-03-31). No new findings.
 
+## feature/breaker-builder-pattern (2026-04-02) — breaker builder migration
+
+### BreakerDefinition expanded to 35+ serde-defaulted fields (Safe)
+- `#[serde(deny_unknown_fields)]` remains on the struct — unknown fields are errors, not silently swallowed.
+- All 35+ fields have `#[serde(default = "default_fn")]` or `#[serde(default)]`.
+- RON files only need `name:` to be valid. Malformed field values propagate as Bevy asset errors
+  (not production panics).
+- Three new assets: aegis.breaker.ron, chrono.breaker.ron, prism.breaker.ron. All include_str!
+  verified in #[cfg(test)] and confirmed parseable.
+- Extension changed from `bdef.ron` to `breaker.ron` in BreakerRegistry::extensions().
+
+### spawn_bolt: remove_resource + unwrap_or_default pattern (Safe)
+- `breaker-game/src/bolt/systems/spawn_bolt/system.rs:97-100`
+- `world.remove_resource::<Assets<Mesh>>().unwrap_or_default()` and same for ColorMaterial.
+- `unwrap_or_default()` is NOT `.unwrap()` — it returns an empty `Assets<T>` if the resource
+  is absent. This means if Bevy ever initializes the app without asset resources (impossible in
+  normal running, but possible in narrow unit-test setups), the builder will create meshes in a
+  fresh empty Assets store that is then re-inserted. No panic path.
+- After spawn, both resources are re-inserted unconditionally. The resource is temporarily absent
+  between remove and insert — any other system running concurrently that tries to read these
+  resources would find them missing. This is safe because `spawn_bolt` is an exclusive World
+  system (takes `&mut World`) — it serializes with all other systems. No concurrency gap.
+
+### BreakerRegistry::seed() assert! is production code (Warning — pre-existing)
+- `breaker-game/src/breaker/registry.rs:82` — `assert!(!self.breakers.contains_key(&def.name), "duplicate breaker name...")`
+- This assert! is inside `SeedableRegistry::seed()`, which is a trait impl called during
+  asset loading, NOT inside `#[cfg(test)]`. A duplicate breaker name in any two `.breaker.ron`
+  files would panic at asset load time.
+- Same pattern exists in `BoltRegistry::seed()` at bolt/registry.rs:82.
+- In practice, all shipped RON files have unique names. The risk is a developer adding a new
+  breaker RON file with a name collision. The `assert!` itself was pre-existing (not introduced
+  on this branch); this branch only renames the extension from `bdef.ron` to `breaker.ron`.
+
+### dispatch_initial_effects recursive On-chain (Info-level, new command)
+- `ext.rs`: `DispatchInitialEffects` → `TransferCommand` → `ResolveOnCommand` → `TransferCommand`...
+- Recursion depth is bounded by the nesting depth of `EffectNode::On` within `EffectNode::On`.
+- Shipped breaker RON files use at most 2 nesting levels. No infinite cycle path (each
+  `On` consumes its `then` children and dispatches to a resolved entity, not back to the
+  same entity with the same data). Info-level only.
+
 ## feature/scenario-coverage (2026-03-30)
 
 ### New scenario RON files — no new panic risk (Safe)
