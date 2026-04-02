@@ -75,8 +75,8 @@ fn fire_spawns_two_tether_bolts_with_full_physics_components() {
         // CleanupOnNodeExit
         assert!(world.get::<CleanupOnNodeExit>(*bolt).is_some());
 
-        // GameDrawLayer::Bolt
-        assert!(world.get::<GameDrawLayer>(*bolt).is_some());
+        // GameDrawLayer::Bolt is NOT present on headless bolts (only rendered)
+        assert!(world.get::<GameDrawLayer>(*bolt).is_none());
     }
 }
 
@@ -382,6 +382,8 @@ fn fire_standard_reads_bolt_definition_ref_from_source_entity() {
             color_rgb: [6.0, 5.0, 0.5],
             min_angle_horizontal: 5.0,
             min_angle_vertical: 5.0,
+            min_radius: None,
+            max_radius: None,
         },
     );
     registry.insert(
@@ -397,6 +399,8 @@ fn fire_standard_reads_bolt_definition_ref_from_source_entity() {
             color_rgb: [6.0, 5.0, 0.5],
             min_angle_horizontal: 5.0,
             min_angle_vertical: 5.0,
+            min_radius: None,
+            max_radius: None,
         },
     );
     world.insert_resource(registry);
@@ -473,6 +477,8 @@ fn fire_standard_falls_back_to_bolt_default_definition() {
             color_rgb: [6.0, 5.0, 0.5],
             min_angle_horizontal: 5.0,
             min_angle_vertical: 5.0,
+            min_radius: None,
+            max_radius: None,
         },
     );
     world.insert_resource(registry);

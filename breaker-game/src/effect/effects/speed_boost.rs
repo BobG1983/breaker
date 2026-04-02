@@ -175,6 +175,8 @@ mod tests {
                 color_rgb: [6.0, 5.0, 0.5],
                 min_angle_horizontal: 5.0,
                 min_angle_vertical: 5.0,
+                min_radius: None,
+                max_radius: None,
             }
         }
 
@@ -185,6 +187,7 @@ mod tests {
             .definition(&def)
             .with_velocity(Velocity2D(Vec2::new(0.0, def.base_speed)))
             .primary()
+            .headless()
             .spawn(&mut world);
 
         // Apply speed boost of 1.5x
@@ -217,6 +220,8 @@ mod tests {
                 color_rgb: [6.0, 5.0, 0.5],
                 min_angle_horizontal: 5.0,
                 min_angle_vertical: 5.0,
+                min_radius: None,
+                max_radius: None,
             }
         }
 
@@ -227,6 +232,7 @@ mod tests {
             .definition(&def)
             .with_velocity(Velocity2D(Vec2::new(0.0, def.base_speed * 1.5)))
             .primary()
+            .headless()
             .spawn(&mut world);
         world
             .entity_mut(entity)

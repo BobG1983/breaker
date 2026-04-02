@@ -98,12 +98,15 @@ pub(super) fn spawn_bolt(app: &mut App) -> Entity {
         color_rgb: [6.0, 5.0, 0.5],
         min_angle_horizontal: 5.0,
         min_angle_vertical: 5.0,
+        min_radius: None,
+        max_radius: None,
     };
     let entity = Bolt::builder()
         .at_position(Vec2::ZERO)
         .definition(&def)
         .with_velocity(Velocity2D(Vec2::ZERO))
         .primary()
+        .headless()
         .spawn(app.world_mut());
 
     // Test-specific effect components not handled by builder

@@ -30,6 +30,8 @@ fn test_bolt_definition() -> BoltDefinition {
         color_rgb: [6.0, 5.0, 0.5],
         min_angle_horizontal: 5.0,
         min_angle_vertical: 5.0,
+        min_radius: None,
+        max_radius: None,
     }
 }
 
@@ -44,6 +46,7 @@ fn build_primary_serving_has_bolt_marker() {
         .at_position(Vec2::new(0.0, 50.0))
         .serving()
         .primary()
+        .headless()
         .build();
     let entity = world.spawn(bundle).id();
 
@@ -69,6 +72,7 @@ fn build_primary_serving_has_spatial_markers() {
         .at_position(Vec2::new(0.0, 50.0))
         .serving()
         .primary()
+        .headless()
         .build();
     let entity = world.spawn(bundle).id();
 
@@ -94,6 +98,7 @@ fn build_primary_serving_has_position() {
         .at_position(Vec2::new(0.0, 50.0))
         .serving()
         .primary()
+        .headless()
         .build();
     let entity = world.spawn(bundle).id();
 
@@ -123,6 +128,7 @@ fn build_primary_serving_has_zero_velocity() {
         .at_position(Vec2::new(0.0, 50.0))
         .serving()
         .primary()
+        .headless()
         .build();
     let entity = world.spawn(bundle).id();
 
@@ -149,6 +155,7 @@ fn build_primary_serving_has_speed_components() {
         .at_position(Vec2::new(0.0, 50.0))
         .serving()
         .primary()
+        .headless()
         .build();
     let entity = world.spawn(bundle).id();
 
@@ -177,6 +184,7 @@ fn build_primary_serving_has_angle_components() {
         .at_position(Vec2::new(0.0, 50.0))
         .serving()
         .primary()
+        .headless()
         .build();
     let entity = world.spawn(bundle).id();
 
@@ -202,6 +210,7 @@ fn build_primary_serving_has_radius_components() {
         .at_position(Vec2::new(0.0, 50.0))
         .serving()
         .primary()
+        .headless()
         .build();
     let entity = world.spawn(bundle).id();
 
@@ -238,6 +247,7 @@ fn build_primary_serving_has_cleanup_on_run_end() {
         .at_position(Vec2::new(0.0, 50.0))
         .serving()
         .primary()
+        .headless()
         .build();
     let entity = world.spawn(bundle).id();
 
@@ -255,6 +265,7 @@ fn build_primary_serving_has_collision_layers() {
         .at_position(Vec2::new(0.0, 50.0))
         .serving()
         .primary()
+        .headless()
         .build();
     let entity = world.spawn(bundle).id();
 
@@ -273,22 +284,20 @@ fn build_primary_serving_has_collision_layers() {
 }
 
 #[test]
-fn build_primary_serving_has_game_draw_layer() {
+fn build_primary_serving_headless_has_no_game_draw_layer() {
     let mut world = World::new();
     let bundle = Bolt::builder()
         .definition(&test_bolt_definition())
         .at_position(Vec2::new(0.0, 50.0))
         .serving()
         .primary()
+        .headless()
         .build();
     let entity = world.spawn(bundle).id();
 
-    let layer = world
-        .get::<GameDrawLayer>(entity)
-        .expect("entity should have GameDrawLayer");
     assert!(
-        matches!(layer, GameDrawLayer::Bolt),
-        "GameDrawLayer should be Bolt"
+        world.get::<GameDrawLayer>(entity).is_none(),
+        "headless bolt should NOT have GameDrawLayer"
     );
 }
 
@@ -301,6 +310,7 @@ fn build_extra_velocity_has_extra_bolt_marker() {
         .at_position(Vec2::new(200.0, 300.0))
         .with_velocity(Velocity2D(Vec2::new(102.9, 385.5)))
         .extra()
+        .headless()
         .build();
     let entity = world.spawn(bundle).id();
 
@@ -330,6 +340,7 @@ fn build_extra_velocity_has_explicit_velocity() {
         .at_position(Vec2::new(200.0, 300.0))
         .with_velocity(Velocity2D(Vec2::new(102.9, 385.5)))
         .extra()
+        .headless()
         .build();
     let entity = world.spawn(bundle).id();
 
@@ -349,6 +360,7 @@ fn build_extra_velocity_has_cleanup_on_node_exit() {
         .at_position(Vec2::new(200.0, 300.0))
         .with_velocity(Velocity2D(Vec2::new(102.9, 385.5)))
         .extra()
+        .headless()
         .build();
     let entity = world.spawn(bundle).id();
 
@@ -370,6 +382,7 @@ fn build_extra_velocity_has_spatial_markers() {
         .at_position(Vec2::new(200.0, 300.0))
         .with_velocity(Velocity2D(Vec2::new(102.9, 385.5)))
         .extra()
+        .headless()
         .build();
     let entity = world.spawn(bundle).id();
 
@@ -395,6 +408,7 @@ fn build_extra_bolt_at_zero_pos_straight_up() {
         .at_position(Vec2::ZERO)
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .extra()
+        .headless()
         .build();
     let entity = world.spawn(bundle).id();
 
@@ -417,6 +431,7 @@ fn serving_bolt_always_zero_velocity() {
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
+        .headless()
         .build();
     let entity = world.spawn(bundle).id();
 
@@ -442,6 +457,7 @@ fn primary_bolt_has_cleanup_on_run_end_not_node_exit() {
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
+        .headless()
         .build();
     let entity = world.spawn(bundle).id();
 
@@ -464,6 +480,7 @@ fn extra_bolt_has_cleanup_on_node_exit_not_run_end() {
         .at_position(Vec2::ZERO)
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .extra()
+        .headless()
         .build();
     let entity = world.spawn(bundle).id();
 
@@ -487,6 +504,7 @@ fn build_uses_spatial_builder_for_velocity_constraints() {
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
+        .headless()
         .build();
     let entity = world.spawn(bundle).id();
 
@@ -531,6 +549,7 @@ fn build_without_from_config_has_default_radius() {
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
+        .headless()
         .build();
     let entity = world.spawn(bundle).id();
 
@@ -567,6 +586,7 @@ fn build_without_from_config_has_no_bolt_params() {
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
+        .headless()
         .build();
     let entity = world.spawn(bundle).id();
 
@@ -586,6 +606,7 @@ fn build_with_radius_override_sets_physical_dimensions() {
         .serving()
         .primary()
         .with_radius(20.0)
+        .headless()
         .build();
     let entity = world.spawn(bundle).id();
 
@@ -621,13 +642,14 @@ fn build_with_radius_zero_no_panic() {
         .serving()
         .primary()
         .with_radius(0.0)
+        .headless()
         .build();
     let entity = world.spawn(bundle).id();
 
     let radius = world.get::<BoltRadius>(entity).unwrap();
     assert!(
         radius.0.abs() < f32::EPSILON,
-        "BoltRadius(0.0) should be accepted"
+        "BaseRadius(0.0) should be accepted"
     );
     let scale = world.get::<Scale2D>(entity).unwrap();
     assert!(

@@ -18,7 +18,7 @@ use crate::{
 #[test]
 fn shield_absorbs_bolt_loss_and_decrements_charges() {
     // Given: Breaker at (100.0, -250.0) with ShieldActive { charges: 3 }.
-    //        Bolt at (0.0, -315.0) with velocity (100.0, -400.0), BoltRadius(14.0).
+    //        Bolt at (0.0, -315.0) with velocity (100.0, -400.0), BaseRadius(14.0).
     //        PlayfieldConfig::default() so bottom() is -300.0.
     //        Bolt Y (-315.0) < bottom() - radius (-314.0), so bolt is detected as lost.
     // When: bolt_lost runs

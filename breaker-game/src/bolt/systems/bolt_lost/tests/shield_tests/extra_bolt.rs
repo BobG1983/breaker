@@ -49,6 +49,7 @@ fn shield_protects_extra_bolt_consuming_one_charge() {
         .definition(&def)
         .with_velocity(Velocity2D(Vec2::new(-100.0, -400.0)))
         .extra()
+        .headless()
         .spawn(app.world_mut());
     let _ = extra;
     tick(&mut app);
@@ -124,6 +125,7 @@ fn shield_protects_only_extra_bolt_below_floor() {
         .definition(&def)
         .with_velocity(Velocity2D(Vec2::new(0.0, -400.0)))
         .extra()
+        .headless()
         .spawn(app.world_mut());
     // Baseline bolt above floor
     spawn_bolt(&mut app, Vec2::new(0.0, 100.0), Vec2::new(100.0, -200.0));

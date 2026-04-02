@@ -42,6 +42,8 @@ mod tests {
             color_rgb: [6.0, 5.0, 0.5],
             min_angle_horizontal: 5.0,
             min_angle_vertical: 5.0,
+            min_radius: None,
+            max_radius: None,
         }
     }
 
@@ -71,6 +73,7 @@ mod tests {
             .definition(&test_bolt_definition())
             .with_velocity(Velocity2D(Vec2::ZERO))
             .primary()
+            .headless()
             .spawn(app.world_mut())
     }
 
@@ -150,6 +153,7 @@ mod tests {
             .definition(&test_bolt_definition())
             .with_velocity(Velocity2D(Vec2::ZERO))
             .extra()
+            .headless()
             .spawn(app.world_mut());
 
         app.update();

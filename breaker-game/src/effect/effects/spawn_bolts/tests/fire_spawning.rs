@@ -35,6 +35,8 @@ fn world_with_bolt_registry() -> World {
             color_rgb: [6.0, 5.0, 0.5],
             min_angle_horizontal: 5.0,
             min_angle_vertical: 5.0,
+            min_radius: None,
+            max_radius: None,
         },
     );
     world.insert_resource(registry);
@@ -122,10 +124,10 @@ fn fire_spawns_requested_count_with_full_physics_components() {
             "bolt should have CleanupOnNodeExit"
         );
 
-        // GameDrawLayer::Bolt
+        // GameDrawLayer::Bolt is NOT present on headless bolts (only rendered)
         assert!(
-            world.get::<GameDrawLayer>(*bolt).is_some(),
-            "bolt should have GameDrawLayer"
+            world.get::<GameDrawLayer>(*bolt).is_none(),
+            "headless bolt should NOT have GameDrawLayer"
         );
     }
 }

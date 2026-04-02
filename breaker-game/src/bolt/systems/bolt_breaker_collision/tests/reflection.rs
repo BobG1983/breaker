@@ -111,6 +111,7 @@ fn reflect_top_hit_uses_active_speed_boosts_as_speed_floor() {
         .with_angle(0.0, 0.0)
         .with_velocity(Velocity2D(Vec2::new(0.0, -300.0)))
         .primary()
+        .headless()
         .spawn(app.world_mut());
     app.world_mut()
         .entity_mut(bolt_entity)
@@ -146,6 +147,7 @@ fn reflect_top_hit_without_speed_boosts_uses_raw_base_speed() {
         .with_angle(0.0, 0.0)
         .with_velocity(Velocity2D(Vec2::new(0.0, -300.0)))
         .primary()
+        .headless()
         .spawn(app.world_mut());
     // No ActiveSpeedBoosts
 
@@ -184,6 +186,7 @@ fn reflect_top_hit_ignores_base_speed_alone_when_boost_active() {
         .with_angle(0.0, 0.0)
         .with_velocity(Velocity2D(Vec2::new(0.0, -500.0)))
         .primary()
+        .headless()
         .spawn(app.world_mut());
     app.world_mut()
         .entity_mut(bolt_entity)

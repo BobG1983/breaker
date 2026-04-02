@@ -15,7 +15,7 @@ use crate::{
         components::{BaseHeight, BaseWidth, Breaker, BreakerReflectionSpread, BreakerTilt},
         definition::BreakerDefinition,
     },
-    shared::{BOLT_LAYER, BREAKER_LAYER, GameDrawLayer, NodeScalingFactor},
+    shared::{BOLT_LAYER, BREAKER_LAYER, GameDrawLayer, NodeScalingFactor, size::BaseRadius},
 };
 
 pub(super) fn test_app() -> App {
@@ -40,7 +40,7 @@ pub(super) fn default_breaker_height() -> BaseHeight {
 }
 
 pub(super) fn default_bolt_radius() -> BoltRadius {
-    BoltRadius(test_bolt_definition().radius)
+    BaseRadius(test_bolt_definition().radius)
 }
 
 /// Creates a `BoltDefinition` matching the values previously provided by
@@ -57,6 +57,8 @@ pub(super) fn test_bolt_definition() -> BoltDefinition {
         color_rgb: [6.0, 5.0, 0.5],
         min_angle_horizontal: 5.0,
         min_angle_vertical: 5.0,
+        min_radius: None,
+        max_radius: None,
     }
 }
 
@@ -104,6 +106,7 @@ pub(super) fn spawn_bolt(app: &mut App, x: f32, y: f32, vx: f32, vy: f32) -> Ent
         .definition(&def)
         .with_velocity(Velocity2D(Vec2::new(vx, vy)))
         .primary()
+        .headless()
         .spawn(app.world_mut())
 }
 
@@ -179,6 +182,7 @@ pub(super) fn spawn_scaled_bolt(
         .definition(&def)
         .with_velocity(Velocity2D(Vec2::new(vx, vy)))
         .primary()
+        .headless()
         .spawn(app.world_mut());
     app.world_mut()
         .entity_mut(entity)

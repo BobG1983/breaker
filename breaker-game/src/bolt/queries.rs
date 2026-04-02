@@ -102,6 +102,24 @@ pub(crate) struct LostBoltData {
     pub entity_scale: Option<&'static NodeScalingFactor>,
 }
 
+/// Bolt data for the `sync_bolt_scale` system.
+#[derive(QueryData)]
+#[query_data(mutable)]
+pub(crate) struct SyncBoltScaleData {
+    /// Base radius in world units.
+    pub base_radius: &'static crate::shared::size::BaseRadius,
+    /// Mutable scale for rendering.
+    pub scale: &'static mut rantzsoft_spatial2d::components::Scale2D,
+    /// Active size boost multipliers.
+    pub size_boosts: Option<&'static crate::effect::effects::size_boost::ActiveSizeBoosts>,
+    /// Node scaling factor.
+    pub node_scale: Option<&'static NodeScalingFactor>,
+    /// Minimum radius constraint.
+    pub min_radius: Option<&'static crate::shared::size::MinRadius>,
+    /// Maximum radius constraint.
+    pub max_radius: Option<&'static crate::shared::size::MaxRadius>,
+}
+
 /// Applies the canonical velocity formula to spatial data with optional
 /// speed boost multiplier.
 ///

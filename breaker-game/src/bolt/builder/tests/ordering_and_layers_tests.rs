@@ -27,6 +27,8 @@ fn test_bolt_definition() -> BoltDefinition {
         color_rgb: [6.0, 5.0, 0.5],
         min_angle_horizontal: 5.0,
         min_angle_vertical: 5.0,
+        min_radius: None,
+        max_radius: None,
     }
 }
 
@@ -42,6 +44,7 @@ fn dimensions_any_order_extra_velocity() {
         .with_angle(0.087, 0.087)
         .at_position(Vec2::new(50.0, 50.0))
         .with_speed(400.0, 200.0, 800.0)
+        .headless()
         .build();
     let entity = world.spawn(bundle).id();
 
@@ -75,6 +78,7 @@ fn from_config_in_middle_of_chain() {
         .definition(&def)
         .at_position(Vec2::ZERO)
         .serving()
+        .headless()
         .build();
     let entity = world.spawn(bundle).id();
 
@@ -97,6 +101,7 @@ fn optional_interleaved_with_dimension_methods() {
         .with_radius(10.0)
         .serving()
         .extra()
+        .headless()
         .build();
     let entity = world.spawn(bundle).id();
 
@@ -118,6 +123,7 @@ fn collision_layers_primary_bolt() {
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
+        .headless()
         .build();
     let entity = world.spawn(bundle).id();
 
@@ -134,6 +140,7 @@ fn collision_layers_extra_bolt_same_primary() {
         .at_position(Vec2::ZERO)
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .extra()
+        .headless()
         .build();
     let entity = world.spawn(bundle).id();
 
@@ -149,35 +156,41 @@ fn collision_layers_extra_bolt_same_primary() {
     );
 }
 
-// Behavior 39: All built bolts have GameDrawLayer::Bolt
+// Behavior 39: Headless bolts do NOT have GameDrawLayer::Bolt
 #[test]
-fn game_draw_layer_primary() {
+fn headless_primary_has_no_game_draw_layer() {
     let mut world = World::new();
     let bundle = Bolt::builder()
         .definition(&test_bolt_definition())
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
+        .headless()
         .build();
     let entity = world.spawn(bundle).id();
 
-    let layer = world.get::<GameDrawLayer>(entity).unwrap();
-    assert!(matches!(layer, GameDrawLayer::Bolt));
+    assert!(
+        world.get::<GameDrawLayer>(entity).is_none(),
+        "headless bolt should NOT have GameDrawLayer"
+    );
 }
 
 #[test]
-fn game_draw_layer_extra() {
+fn headless_extra_has_no_game_draw_layer() {
     let mut world = World::new();
     let bundle = Bolt::builder()
         .definition(&test_bolt_definition())
         .at_position(Vec2::ZERO)
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .extra()
+        .headless()
         .build();
     let entity = world.spawn(bundle).id();
 
-    let layer = world.get::<GameDrawLayer>(entity).unwrap();
-    assert!(matches!(layer, GameDrawLayer::Bolt));
+    assert!(
+        world.get::<GameDrawLayer>(entity).is_none(),
+        "headless bolt should NOT have GameDrawLayer"
+    );
 }
 
 // ── Section K: Manual Path Round-Trip ────────────────────────────────
@@ -192,6 +205,7 @@ fn manual_path_produces_correct_spatial_components() {
         .at_position(Vec2::new(10.0, 20.0))
         .with_velocity(Velocity2D(Vec2::new(200.0, 300.0)))
         .extra()
+        .headless()
         .build();
     let entity = world.spawn(bundle).id();
 
@@ -244,6 +258,7 @@ fn manual_path_has_no_config_bolt_params() {
         .at_position(Vec2::new(10.0, 20.0))
         .with_velocity(Velocity2D(Vec2::new(200.0, 300.0)))
         .extra()
+        .headless()
         .build();
     let entity = world.spawn(bundle).id();
 
@@ -267,6 +282,7 @@ fn manual_path_with_radius_sets_physical_dimensions() {
         .serving()
         .primary()
         .with_radius(15.0)
+        .headless()
         .build();
     let entity = world.spawn(bundle).id();
 
@@ -302,6 +318,7 @@ fn manual_path_without_radius_uses_default() {
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
+        .headless()
         .build();
     let entity = world.spawn(bundle).id();
 

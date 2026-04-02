@@ -31,6 +31,8 @@ fn make_bolt_definition(name: &str, base_speed: f32, radius: f32) -> BoltDefinit
         color_rgb: [6.0, 5.0, 0.5],
         min_angle_horizontal: 5.0,
         min_angle_vertical: 5.0,
+        min_radius: None,
+        max_radius: None,
     }
 }
 
@@ -141,10 +143,10 @@ fn spawned_bolt_has_full_physics_components_from_spawn_extra_bolt() {
         "should have CleanupOnNodeExit"
     );
 
-    // GameDrawLayer::Bolt
+    // GameDrawLayer::Bolt is NOT present on headless bolts (only rendered)
     assert!(
-        world.get::<GameDrawLayer>(bolt).is_some(),
-        "should have GameDrawLayer"
+        world.get::<GameDrawLayer>(bolt).is_none(),
+        "headless bolt should NOT have GameDrawLayer"
     );
 }
 

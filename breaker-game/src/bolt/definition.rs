@@ -43,6 +43,12 @@ pub struct BoltDefinition {
     /// Minimum angle from vertical in degrees.
     #[serde(default = "default_min_angle_vertical")]
     pub min_angle_vertical: f32,
+    /// Minimum bolt radius after boosts and scaling.
+    #[serde(default)]
+    pub min_radius: Option<f32>,
+    /// Maximum bolt radius after boosts and scaling.
+    #[serde(default)]
+    pub max_radius: Option<f32>,
 }
 
 #[cfg(test)]
@@ -183,6 +189,8 @@ mod tests {
             color_rgb: [6.0, 5.0, 0.5],
             min_angle_horizontal: 5.0,
             min_angle_vertical: 5.0,
+            min_radius: None,
+            max_radius: None,
         };
         let cloned = def.clone();
         assert_eq!(cloned.name, "Heavy");
@@ -209,6 +217,8 @@ mod tests {
             color_rgb: [6.0, 5.0, 0.5],
             min_angle_horizontal: 5.0,
             min_angle_vertical: 5.0,
+            min_radius: None,
+            max_radius: None,
         };
         let cloned = def.clone();
         assert_eq!(
@@ -234,6 +244,8 @@ mod tests {
             color_rgb: [6.0, 5.0, 0.5],
             min_angle_horizontal: 5.0,
             min_angle_vertical: 5.0,
+            min_radius: None,
+            max_radius: None,
         };
         let debug_str = format!("{def:?}");
         assert!(
@@ -292,6 +304,64 @@ mod tests {
         assert!(
             def.effects.is_empty(),
             "empty effects vec should parse to Vec::new()"
+        );
+    }
+
+    // ── Behavior 28: BoltDefinition min_radius/max_radius serde defaults ──
+
+    #[test]
+    fn bolt_definition_min_max_radius_default_to_none_when_omitted() {
+        let ron_str = r#"(
+            name: "Bolt",
+            base_speed: 720.0,
+            min_speed: 360.0,
+            max_speed: 1440.0,
+            radius: 14.0,
+            base_damage: 10.0,
+            effects: [],
+            color_rgb: (6.0, 5.0, 0.5),
+        )"#;
+        let def: BoltDefinition =
+            ron::de::from_str(ron_str).expect("RON without radius constraints should parse");
+        assert_eq!(
+            def.min_radius, None,
+            "min_radius should default to None, got {:?}",
+            def.min_radius
+        );
+        assert_eq!(
+            def.max_radius, None,
+            "max_radius should default to None, got {:?}",
+            def.max_radius
+        );
+    }
+
+    #[test]
+    fn bolt_definition_min_max_radius_explicit_values_parse() {
+        let ron_str = r#"(
+            name: "Bolt",
+            base_speed: 720.0,
+            min_speed: 360.0,
+            max_speed: 1440.0,
+            radius: 14.0,
+            base_damage: 10.0,
+            effects: [],
+            color_rgb: (6.0, 5.0, 0.5),
+            min_radius: Some(4.0),
+            max_radius: Some(20.0),
+        )"#;
+        let def: BoltDefinition =
+            ron::de::from_str(ron_str).expect("RON with explicit radius constraints should parse");
+        assert_eq!(
+            def.min_radius,
+            Some(4.0),
+            "min_radius should be Some(4.0), got {:?}",
+            def.min_radius
+        );
+        assert_eq!(
+            def.max_radius,
+            Some(20.0),
+            "max_radius should be Some(20.0), got {:?}",
+            def.max_radius
         );
     }
 }

@@ -54,6 +54,8 @@ fn test_bolt_definition() -> BoltDefinition {
         color_rgb: [6.0, 5.0, 0.5],
         min_angle_horizontal: 5.0,
         min_angle_vertical: 5.0,
+        min_radius: None,
+        max_radius: None,
     }
 }
 
@@ -65,6 +67,7 @@ pub(super) fn spawn_bolt(app: &mut App, x: f32, y: f32, vx: f32, vy: f32) -> Ent
         .definition(&def)
         .with_velocity(Velocity2D(Vec2::new(vx, vy)))
         .primary()
+        .headless()
         .spawn(app.world_mut())
 }
 
@@ -84,6 +87,7 @@ pub(super) fn spawn_piercing_bolt(
         .definition(&def)
         .with_velocity(Velocity2D(Vec2::new(vx, vy)))
         .primary()
+        .headless()
         .spawn(app.world_mut());
     app.world_mut().entity_mut(entity).insert((
         ActivePiercings(active_piercings),

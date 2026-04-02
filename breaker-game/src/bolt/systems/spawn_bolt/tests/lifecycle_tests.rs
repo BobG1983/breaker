@@ -83,6 +83,7 @@ fn existing_bolt_is_not_double_spawned() {
         .definition(&def)
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .primary()
+        .headless()
         .spawn(app.world_mut());
     app.add_systems(Startup, spawn_bolt);
     app.update();
@@ -103,6 +104,7 @@ fn existing_bolt_still_triggers_bolt_spawned_message() {
         .definition(&def)
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .primary()
+        .headless()
         .spawn(app.world_mut());
     app.add_systems(Startup, spawn_bolt);
     app.update();

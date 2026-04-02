@@ -62,6 +62,7 @@ pub(crate) fn fire(
             .definition(&bolt_def)
             .with_velocity(velocity)
             .extra()
+            .headless()
             .spawn(world);
 
         if let Some(duration) = lifespan {

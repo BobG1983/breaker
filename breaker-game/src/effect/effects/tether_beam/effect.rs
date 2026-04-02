@@ -93,6 +93,7 @@ fn spawn_tether_bolt(world: &mut World, spawn_pos: Vec2, bolt_def: &BoltDefiniti
         .definition(bolt_def)
         .with_velocity(velocity)
         .extra()
+        .headless()
         .spawn(world)
 }
 

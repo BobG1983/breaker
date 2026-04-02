@@ -112,6 +112,7 @@ pub(crate) fn fire(
         .definition(&bolt_def)
         .with_velocity(velocity)
         .extra()
+        .headless()
         .spawn(world);
     world.entity_mut(phantom).insert((
         PhantomBoltMarker,

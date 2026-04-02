@@ -30,6 +30,8 @@ fn make_default_bolt_definition() -> BoltDefinition {
         color_rgb: [6.0, 5.0, 0.5],
         min_angle_horizontal: 5.0,
         min_angle_vertical: 5.0,
+        min_radius: None,
+        max_radius: None,
     }
 }
 
@@ -50,6 +52,7 @@ fn spawn_bolt_entity(app: &mut App, pos: Vec2, velocity: Velocity2D) -> Entity {
         .definition(&def)
         .with_velocity(velocity)
         .primary()
+        .headless()
         .spawn(app.world_mut())
 }
 
@@ -209,6 +212,7 @@ fn reset_bolt_removes_serving_on_subsequent_nodes() {
         .definition(&def)
         .serving()
         .primary()
+        .headless()
         .spawn(app.world_mut());
     spawn_breaker(&mut app, 0.0, -250.0);
 
@@ -412,6 +416,7 @@ fn reset_bolt_zero_angle_spread_launches_straight_up() {
         .definition(&def)
         .with_velocity(Velocity2D(Vec2::ZERO))
         .primary()
+        .headless()
         .spawn(app.world_mut());
     // Override angle spread to 0.0 after builder inserts it
     app.world_mut()
@@ -461,6 +466,7 @@ fn reset_bolt_zero_spawn_offset_resets_to_breaker_y() {
         .definition(&def)
         .with_velocity(Velocity2D(Vec2::ZERO))
         .primary()
+        .headless()
         .spawn(app.world_mut());
     // Override offset to 0.0
     app.world_mut()
@@ -568,6 +574,7 @@ fn reset_bolt_uses_random_angle_within_spread() {
         .definition(&def)
         .with_velocity(Velocity2D(Vec2::ZERO))
         .primary()
+        .headless()
         .spawn(app.world_mut());
     // Set a specific angle spread
     app.world_mut()
@@ -626,6 +633,7 @@ fn reset_bolt_ignores_extra_bolt_with_definition_built() {
         .definition(&def)
         .with_velocity(Velocity2D(Vec2::new(300.0, 400.0)))
         .primary()
+        .headless()
         .spawn(app.world_mut());
 
     // Extra bolt
@@ -634,6 +642,7 @@ fn reset_bolt_ignores_extra_bolt_with_definition_built() {
         .definition(&def)
         .with_velocity(Velocity2D(Vec2::new(200.0, 300.0)))
         .extra()
+        .headless()
         .spawn(app.world_mut());
 
     spawn_breaker(&mut app, 0.0, -250.0);
@@ -673,6 +682,7 @@ fn reset_bolt_runs_without_bolt_config_resource() {
         .definition(&def)
         .with_velocity(Velocity2D(Vec2::new(100.0, 200.0)))
         .primary()
+        .headless()
         .spawn(app.world_mut());
     spawn_breaker(&mut app, 0.0, -250.0);
 

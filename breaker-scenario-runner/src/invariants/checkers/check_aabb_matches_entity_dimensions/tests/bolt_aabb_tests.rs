@@ -1,7 +1,7 @@
 //! Bolt AABB dimension-match tests for the `check_aabb_matches_entity_dimensions` checker.
 
 use bevy::prelude::*;
-use breaker::bolt::components::BoltRadius;
+use breaker::shared::size::BaseRadius;
 use rantzsoft_physics2d::aabb::Aabb2D;
 
 use super::{super::checker::*, helpers::*};
@@ -16,7 +16,7 @@ fn no_violation_when_bolt_aabb_matches_radius() {
     app.world_mut().spawn((
         ScenarioTagBolt,
         Aabb2D::new(Vec2::ZERO, Vec2::new(8.0, 8.0)),
-        BoltRadius(8.0),
+        BaseRadius(8.0),
     ));
     tick(&mut app);
     let log = app.world().resource::<ViolationLog>();
@@ -35,7 +35,7 @@ fn violation_when_bolt_aabb_does_not_match_radius() {
         .spawn((
             ScenarioTagBolt,
             Aabb2D::new(Vec2::ZERO, Vec2::new(12.0, 12.0)),
-            BoltRadius(8.0),
+            BaseRadius(8.0),
         ))
         .id();
     tick(&mut app);
@@ -63,7 +63,7 @@ fn no_violation_when_bolt_aabb_within_epsilon() {
     app.world_mut().spawn((
         ScenarioTagBolt,
         Aabb2D::new(Vec2::ZERO, Vec2::new(8.0005, 8.0005)),
-        BoltRadius(8.0),
+        BaseRadius(8.0),
     ));
     tick(&mut app);
     let log = app.world().resource::<ViolationLog>();
@@ -80,7 +80,7 @@ fn violation_when_bolt_aabb_exceeds_epsilon() {
     app.world_mut().spawn((
         ScenarioTagBolt,
         Aabb2D::new(Vec2::ZERO, Vec2::new(8.002, 8.002)),
-        BoltRadius(8.0),
+        BaseRadius(8.0),
     ));
     tick(&mut app);
     let log = app.world().resource::<ViolationLog>();
@@ -102,7 +102,7 @@ fn violation_when_bolt_aabb_single_axis_mismatch() {
     app.world_mut().spawn((
         ScenarioTagBolt,
         Aabb2D::new(Vec2::ZERO, Vec2::new(8.0, 12.0)),
-        BoltRadius(8.0),
+        BaseRadius(8.0),
     ));
     tick(&mut app);
     let log = app.world().resource::<ViolationLog>();
@@ -137,7 +137,7 @@ fn violation_fires_per_bolt_independently() {
     app.world_mut().spawn((
         ScenarioTagBolt,
         Aabb2D::new(Vec2::ZERO, Vec2::new(8.0, 8.0)),
-        BoltRadius(8.0),
+        BaseRadius(8.0),
     ));
     // Entity B: incorrect
     let entity_b = app
@@ -145,7 +145,7 @@ fn violation_fires_per_bolt_independently() {
         .spawn((
             ScenarioTagBolt,
             Aabb2D::new(Vec2::ZERO, Vec2::new(5.0, 5.0)),
-            BoltRadius(8.0),
+            BaseRadius(8.0),
         ))
         .id();
     tick(&mut app);
@@ -169,13 +169,13 @@ fn no_violation_when_bolt_has_non_default_radius() {
     app.world_mut().spawn((
         ScenarioTagBolt,
         Aabb2D::new(Vec2::ZERO, Vec2::new(6.0, 6.0)),
-        BoltRadius(6.0),
+        BaseRadius(6.0),
     ));
     tick(&mut app);
     let log = app.world().resource::<ViolationLog>();
     assert!(
         log.0.is_empty(),
-        "no violation expected when BoltRadius(6.0) matches half_extents (6.0, 6.0)"
+        "no violation expected when BaseRadius(6.0) matches half_extents (6.0, 6.0)"
     );
 }
 
@@ -188,7 +188,7 @@ fn no_violation_when_bolt_delta_exactly_equals_epsilon() {
     app.world_mut().spawn((
         ScenarioTagBolt,
         Aabb2D::new(Vec2::ZERO, Vec2::splat(AABB_EPSILON)),
-        BoltRadius(0.0),
+        BaseRadius(0.0),
     ));
     tick(&mut app);
     let log = app.world().resource::<ViolationLog>();

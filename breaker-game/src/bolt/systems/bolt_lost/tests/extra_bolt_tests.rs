@@ -28,6 +28,7 @@ fn extra_bolt_below_floor_is_despawned() {
         .definition(&def)
         .with_velocity(Velocity2D(Vec2::new(0.0, -400.0)))
         .extra()
+        .headless()
         .spawn(app.world_mut());
     tick(&mut app);
 
@@ -57,6 +58,7 @@ fn extra_bolt_sends_bolt_lost_on_despawn() {
         .definition(&def)
         .with_velocity(Velocity2D(Vec2::new(0.0, -400.0)))
         .extra()
+        .headless()
         .spawn(app.world_mut());
     tick(&mut app);
 
@@ -88,6 +90,7 @@ fn baseline_bolt_still_respawns_with_extra_present() {
         .definition(&def)
         .with_velocity(Velocity2D(Vec2::new(0.0, -400.0)))
         .extra()
+        .headless()
         .spawn(app.world_mut());
     tick(&mut app);
 
@@ -141,6 +144,7 @@ fn extra_bolt_writes_request_bolt_destroyed_instead_of_despawning() {
         .definition(&def)
         .with_velocity(Velocity2D(Vec2::new(0.0, -400.0)))
         .extra()
+        .headless()
         .spawn(app.world_mut());
     tick(&mut app);
 

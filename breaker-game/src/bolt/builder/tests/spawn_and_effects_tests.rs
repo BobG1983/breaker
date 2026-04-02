@@ -30,6 +30,8 @@ fn test_bolt_definition() -> BoltDefinition {
         color_rgb: [6.0, 5.0, 0.5],
         min_angle_horizontal: 5.0,
         min_angle_vertical: 5.0,
+        min_radius: None,
+        max_radius: None,
     }
 }
 
@@ -44,6 +46,7 @@ fn spawn_primary_serving_creates_complete_entity() {
         .at_position(Vec2::new(0.0, 50.0))
         .serving()
         .primary()
+        .headless()
         .spawn(&mut world);
 
     assert!(
@@ -91,7 +94,8 @@ fn spawn_primary_serving_creates_complete_entity() {
 
     assert!(world.get::<CleanupOnRunEnd>(entity).is_some());
     assert!(world.get::<CollisionLayers>(entity).is_some());
-    assert!(world.get::<GameDrawLayer>(entity).is_some());
+    // Headless bolts do NOT have GameDrawLayer
+    assert!(world.get::<GameDrawLayer>(entity).is_none());
 }
 
 // Behavior 28: spawn() for extra bolt
@@ -103,6 +107,7 @@ fn spawn_extra_bolt_creates_entity_with_extra_markers() {
         .at_position(Vec2::new(50.0, 100.0))
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .extra()
+        .headless()
         .spawn(&mut world);
 
     assert!(
@@ -147,6 +152,7 @@ fn spawn_with_spawned_by_inserts_evolution_marker() {
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .extra()
         .spawned_by("chain_bolt")
+        .headless()
         .spawn(&mut world);
     let spawned_by = world
         .get::<SpawnedByEvolution>(entity)
@@ -164,6 +170,7 @@ fn spawn_with_lifespan_inserts_timer() {
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .extra()
         .with_lifespan(5.0)
+        .headless()
         .spawn(&mut world);
     let lifespan = world
         .get::<BoltLifespan>(entity)
@@ -193,6 +200,7 @@ fn spawn_with_inherited_effects_inserts_bound_effects() {
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .extra()
         .with_inherited_effects(&inherited)
+        .headless()
         .spawn(&mut world);
 
     let bound = world
@@ -218,6 +226,7 @@ fn spawn_with_empty_inherited_effects_inserts_empty_bound_effects() {
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .extra()
         .with_inherited_effects(&inherited)
+        .headless()
         .spawn(&mut world);
 
     let bound = world
@@ -235,6 +244,7 @@ fn spawn_without_effects_has_no_bound_effects() {
         .at_position(Vec2::ZERO)
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .extra()
+        .headless()
         .spawn(&mut world);
 
     // Guard against false pass — verify a non-#[require] component is present
@@ -261,6 +271,7 @@ fn inherited_effects_are_cloned_not_moved() {
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .extra()
         .with_inherited_effects(&inherited)
+        .headless()
         .spawn(&mut world);
 
     // Original reference is still valid (it was borrowed, not consumed)

@@ -2,9 +2,8 @@
 
 use bevy::prelude::*;
 use breaker::{
-    bolt::components::BoltRadius,
     breaker::components::{BaseHeight, BaseWidth},
-    shared::NodeScalingFactor,
+    shared::{NodeScalingFactor, size::BaseRadius},
 };
 use rantzsoft_physics2d::aabb::Aabb2D;
 
@@ -168,7 +167,7 @@ fn bolt_and_breaker_checked_only_incorrect_flagged() {
     app.world_mut().spawn((
         ScenarioTagBolt,
         Aabb2D::new(Vec2::ZERO, Vec2::new(8.0, 8.0)),
-        BoltRadius(8.0),
+        BaseRadius(8.0),
     ));
     // Breaker: incorrect (expected half_width 40.0, got 50.0)
     let breaker = app
@@ -207,7 +206,7 @@ fn violation_entry_has_correct_fields_and_message() {
         .spawn((
             ScenarioTagBolt,
             Aabb2D::new(Vec2::ZERO, Vec2::new(12.0, 12.0)),
-            BoltRadius(8.0),
+            BaseRadius(8.0),
         ))
         .id();
     tick(&mut app);
@@ -266,7 +265,7 @@ fn violations_fire_for_both_bolt_and_breaker_when_both_mismatched() {
         .spawn((
             ScenarioTagBolt,
             Aabb2D::new(Vec2::ZERO, Vec2::new(12.0, 12.0)),
-            BoltRadius(8.0),
+            BaseRadius(8.0),
         ))
         .id();
     // Breaker: mismatched (expected half_extents (40.0, 6.0), actual (50.0, 10.0))

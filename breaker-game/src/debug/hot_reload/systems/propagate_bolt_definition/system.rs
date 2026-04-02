@@ -9,10 +9,11 @@ use tracing::warn;
 
 use crate::{
     bolt::{
-        components::{Bolt, BoltBaseDamage, BoltDefinitionRef, BoltRadius},
+        components::{Bolt, BoltBaseDamage, BoltDefinitionRef},
         registry::BoltRegistry,
     },
     effect::{BoundEffects, EffectCommandsExt, EffectNode, RootEffect, Target},
+    shared::size::BaseRadius,
 };
 
 /// Bundled system parameters for the bolt definition propagation system.
@@ -61,7 +62,7 @@ pub(crate) fn propagate_bolt_definition(mut ctx: BoltDefinitionChangeContext) {
             BaseSpeed(def.base_speed),
             MinSpeed(def.min_speed),
             MaxSpeed(def.max_speed),
-            BoltRadius(def.radius),
+            BaseRadius(def.radius),
             BoltBaseDamage(def.base_damage),
             Scale2D {
                 x: def.radius,

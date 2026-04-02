@@ -24,6 +24,8 @@ fn test_bolt_definition() -> BoltDefinition {
         color_rgb: [6.0, 5.0, 0.5],
         min_angle_horizontal: 5.0,
         min_angle_vertical: 5.0,
+        min_radius: None,
+        max_radius: None,
     }
 }
 
@@ -39,6 +41,7 @@ fn spawned_by_stores_evolution_name() {
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .extra()
         .spawned_by("mirror_protocol")
+        .headless()
         .spawn(&mut world);
     let spawned_by = world
         .get::<SpawnedByEvolution>(entity)
@@ -58,6 +61,7 @@ fn spawned_by_empty_string_accepted() {
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .extra()
         .spawned_by("")
+        .headless()
         .spawn(&mut world);
     let spawned_by = world
         .get::<SpawnedByEvolution>(entity)
@@ -78,6 +82,7 @@ fn with_lifespan_stores_timer() {
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .extra()
         .with_lifespan(3.5)
+        .headless()
         .spawn(&mut world);
     let lifespan = world
         .get::<BoltLifespan>(entity)
@@ -98,6 +103,7 @@ fn with_lifespan_zero_produces_zero_duration() {
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .extra()
         .with_lifespan(0.0)
+        .headless()
         .spawn(&mut world);
     let lifespan = world
         .get::<BoltLifespan>(entity)
@@ -119,6 +125,7 @@ fn with_radius_overrides_config_radius() {
         .serving()
         .primary()
         .with_radius(16.0)
+        .headless()
         .spawn(&mut world);
     let radius = world.get::<BoltRadius>(entity).unwrap();
     assert!(
@@ -158,6 +165,7 @@ fn with_radius_small_value() {
         .serving()
         .primary()
         .with_radius(0.5)
+        .headless()
         .spawn(&mut world);
     let radius = world.get::<BoltRadius>(entity).unwrap();
     assert!(
@@ -183,6 +191,7 @@ fn with_effects_stores_bound_effects() {
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .extra()
         .with_effects(effects)
+        .headless()
         .spawn(&mut world);
     let bound = world
         .get::<BoundEffects>(entity)
@@ -210,6 +219,7 @@ fn with_effects_empty_vec_inserts_empty_bound_effects() {
         .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
         .extra()
         .with_effects(vec![])
+        .headless()
         .spawn(&mut world);
     let bound = world
         .get::<BoundEffects>(entity)
@@ -238,6 +248,7 @@ fn with_effects_and_inherited_effects_combine() {
         .extra()
         .with_effects(vec![("chip_a".to_string(), node_a)])
         .with_inherited_effects(&inherited)
+        .headless()
         .spawn(&mut world);
 
     let bound = world
@@ -277,6 +288,7 @@ fn inherited_effects_before_with_effects_same_result() {
         .extra()
         .with_inherited_effects(&inherited)
         .with_effects(vec![("chip_a".to_string(), node_a)])
+        .headless()
         .spawn(&mut world);
 
     let bound = world
@@ -301,6 +313,7 @@ fn optional_methods_any_order() {
         .at_position(Vec2::ZERO)
         .serving()
         .extra()
+        .headless()
         .spawn(&mut world);
 
     assert!(
@@ -327,6 +340,7 @@ fn no_optional_methods_defaults() {
         .at_position(Vec2::ZERO)
         .serving()
         .primary()
+        .headless()
         .spawn(&mut world);
 
     assert!(

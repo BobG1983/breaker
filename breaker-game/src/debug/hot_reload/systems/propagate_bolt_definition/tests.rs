@@ -14,6 +14,7 @@ use crate::{
         registry::BoltRegistry,
     },
     effect::{BoundEffects, EffectKind, EffectNode, RootEffect, StagedEffects, Target, Trigger},
+    shared::size::BaseRadius,
 };
 
 const TEST_BOLT_NAME: &str = "TestBolt";
@@ -31,6 +32,8 @@ fn make_bolt_def(name: &str) -> BoltDefinition {
         color_rgb: [6.0, 5.0, 0.5],
         min_angle_horizontal: 5.0,
         min_angle_vertical: 5.0,
+        min_radius: None,
+        max_radius: None,
     }
 }
 
@@ -79,7 +82,7 @@ fn registry_change_restamps_base_speed() {
             BaseSpeed(999.0),
             MinSpeed(999.0),
             MaxSpeed(999.0),
-            BoltRadius(999.0),
+            BaseRadius(999.0),
             BoltBaseDamage(999.0),
             Scale2D { x: 999.0, y: 999.0 },
             Aabb2D::new(Vec2::ZERO, Vec2::new(999.0, 999.0)),
@@ -116,7 +119,7 @@ fn registry_change_skips_bolt_with_missing_definition() {
             BaseSpeed(999.0),
             MinSpeed(999.0),
             MaxSpeed(999.0),
-            BoltRadius(999.0),
+            BaseRadius(999.0),
             BoltBaseDamage(999.0),
             Scale2D { x: 999.0, y: 999.0 },
             Aabb2D::new(Vec2::ZERO, Vec2::new(999.0, 999.0)),
@@ -153,7 +156,7 @@ fn registry_change_restamps_min_speed_and_max_speed() {
             BaseSpeed(999.0),
             MinSpeed(999.0),
             MaxSpeed(999.0),
-            BoltRadius(999.0),
+            BaseRadius(999.0),
             BoltBaseDamage(999.0),
             Scale2D { x: 999.0, y: 999.0 },
             Aabb2D::new(Vec2::ZERO, Vec2::new(999.0, 999.0)),
@@ -196,7 +199,7 @@ fn registry_change_handles_equal_min_and_max_speed() {
             BaseSpeed(999.0),
             MinSpeed(999.0),
             MaxSpeed(999.0),
-            BoltRadius(999.0),
+            BaseRadius(999.0),
             BoltBaseDamage(999.0),
             Scale2D { x: 999.0, y: 999.0 },
             Aabb2D::new(Vec2::ZERO, Vec2::new(999.0, 999.0)),
@@ -239,7 +242,7 @@ fn registry_change_restamps_radius_scale_and_aabb() {
             BaseSpeed(999.0),
             MinSpeed(999.0),
             MaxSpeed(999.0),
-            BoltRadius(999.0),
+            BaseRadius(999.0),
             BoltBaseDamage(999.0),
             Scale2D { x: 999.0, y: 999.0 },
             Aabb2D::new(Vec2::ZERO, Vec2::new(999.0, 999.0)),
@@ -299,7 +302,7 @@ fn registry_change_handles_very_small_radius() {
             BaseSpeed(999.0),
             MinSpeed(999.0),
             MaxSpeed(999.0),
-            BoltRadius(999.0),
+            BaseRadius(999.0),
             BoltBaseDamage(999.0),
             Scale2D { x: 999.0, y: 999.0 },
             Aabb2D::new(Vec2::ZERO, Vec2::new(999.0, 999.0)),
@@ -346,7 +349,7 @@ fn registry_change_restamps_base_damage() {
             BaseSpeed(999.0),
             MinSpeed(999.0),
             MaxSpeed(999.0),
-            BoltRadius(999.0),
+            BaseRadius(999.0),
             BoltBaseDamage(999.0),
             Scale2D { x: 999.0, y: 999.0 },
             Aabb2D::new(Vec2::ZERO, Vec2::new(999.0, 999.0)),
@@ -382,7 +385,7 @@ fn registry_change_handles_zero_base_damage() {
             BaseSpeed(999.0),
             MinSpeed(999.0),
             MaxSpeed(999.0),
-            BoltRadius(999.0),
+            BaseRadius(999.0),
             BoltBaseDamage(999.0),
             Scale2D { x: 999.0, y: 999.0 },
             Aabb2D::new(Vec2::ZERO, Vec2::new(999.0, 999.0)),
@@ -419,7 +422,7 @@ fn registry_change_restamps_angle_clamping_in_radians() {
             BaseSpeed(999.0),
             MinSpeed(999.0),
             MaxSpeed(999.0),
-            BoltRadius(999.0),
+            BaseRadius(999.0),
             BoltBaseDamage(999.0),
             Scale2D { x: 999.0, y: 999.0 },
             Aabb2D::new(Vec2::ZERO, Vec2::new(999.0, 999.0)),
@@ -463,7 +466,7 @@ fn registry_change_handles_zero_angle_clamping() {
             BaseSpeed(999.0),
             MinSpeed(999.0),
             MaxSpeed(999.0),
-            BoltRadius(999.0),
+            BaseRadius(999.0),
             BoltBaseDamage(999.0),
             Scale2D { x: 999.0, y: 999.0 },
             Aabb2D::new(Vec2::ZERO, Vec2::new(999.0, 999.0)),
@@ -501,7 +504,7 @@ fn registry_change_updates_all_bolt_entities() {
                 BaseSpeed(100.0),
                 MinSpeed(100.0),
                 MaxSpeed(100.0),
-                BoltRadius(100.0),
+                BaseRadius(100.0),
                 BoltBaseDamage(100.0),
                 Scale2D { x: 100.0, y: 100.0 },
                 Aabb2D::new(Vec2::ZERO, Vec2::new(100.0, 100.0)),
@@ -553,7 +556,7 @@ fn registry_change_updates_bolts_with_different_definitions() {
             BaseSpeed(100.0),
             MinSpeed(100.0),
             MaxSpeed(100.0),
-            BoltRadius(100.0),
+            BaseRadius(100.0),
             BoltBaseDamage(100.0),
             Scale2D { x: 100.0, y: 100.0 },
             Aabb2D::new(Vec2::ZERO, Vec2::new(100.0, 100.0)),
@@ -569,7 +572,7 @@ fn registry_change_updates_bolts_with_different_definitions() {
             BaseSpeed(100.0),
             MinSpeed(100.0),
             MaxSpeed(100.0),
-            BoltRadius(100.0),
+            BaseRadius(100.0),
             BoltBaseDamage(100.0),
             Scale2D { x: 100.0, y: 100.0 },
             Aabb2D::new(Vec2::ZERO, Vec2::new(100.0, 100.0)),
@@ -620,7 +623,7 @@ fn system_does_not_run_on_registry_added() {
             BaseSpeed(999.0),
             MinSpeed(999.0),
             MaxSpeed(999.0),
-            BoltRadius(999.0),
+            BaseRadius(999.0),
             BoltBaseDamage(999.0),
             Scale2D { x: 999.0, y: 999.0 },
             Aabb2D::new(Vec2::ZERO, Vec2::new(999.0, 999.0)),
@@ -658,7 +661,7 @@ fn system_does_not_run_on_subsequent_frame_without_mutation() {
             BaseSpeed(999.0),
             MinSpeed(999.0),
             MaxSpeed(999.0),
-            BoltRadius(999.0),
+            BaseRadius(999.0),
             BoltBaseDamage(999.0),
             Scale2D { x: 999.0, y: 999.0 },
             Aabb2D::new(Vec2::ZERO, Vec2::new(999.0, 999.0)),
@@ -714,7 +717,7 @@ fn system_skips_entities_without_bolt_definition_ref() {
             BaseSpeed(999.0),
             MinSpeed(999.0),
             MaxSpeed(999.0),
-            BoltRadius(999.0),
+            BaseRadius(999.0),
             BoltBaseDamage(999.0),
             Scale2D { x: 999.0, y: 999.0 },
             Aabb2D::new(Vec2::ZERO, Vec2::new(999.0, 999.0)),
@@ -750,7 +753,7 @@ fn all_definition_derived_components_restamped_in_single_propagation() {
             BaseSpeed(999.0),
             MinSpeed(999.0),
             MaxSpeed(999.0),
-            BoltRadius(999.0),
+            BaseRadius(999.0),
             BoltBaseDamage(999.0),
             Scale2D { x: 999.0, y: 999.0 },
             Aabb2D::new(Vec2::ZERO, Vec2::new(999.0, 999.0)),
@@ -770,6 +773,8 @@ fn all_definition_derived_components_restamped_in_single_propagation() {
         color_rgb: [6.0, 5.0, 0.5],
         min_angle_horizontal: 5.0,
         min_angle_vertical: 5.0,
+        min_radius: None,
+        max_radius: None,
     };
     mutate_registry(&mut app, updated);
     app.update();
@@ -856,6 +861,8 @@ fn seed_two_effect_bolt_with_chip(app: &mut App) -> Entity {
         color_rgb: [6.0, 5.0, 0.5],
         min_angle_horizontal: 5.0,
         min_angle_vertical: 5.0,
+        min_radius: None,
+        max_radius: None,
     };
     seed_and_flush(app, initial);
 
@@ -866,7 +873,7 @@ fn seed_two_effect_bolt_with_chip(app: &mut App) -> Entity {
             BaseSpeed(720.0),
             MinSpeed(360.0),
             MaxSpeed(1440.0),
-            BoltRadius(14.0),
+            BaseRadius(14.0),
             BoltBaseDamage(10.0),
             Scale2D { x: 14.0, y: 14.0 },
             Aabb2D::new(Vec2::ZERO, Vec2::new(14.0, 14.0)),
@@ -923,6 +930,8 @@ fn hot_reload_rebuilds_definition_sourced_bound_effects_preserves_chip_sourced()
         color_rgb: [6.0, 5.0, 0.5],
         min_angle_horizontal: 5.0,
         min_angle_vertical: 5.0,
+        min_radius: None,
+        max_radius: None,
     };
     mutate_registry(&mut app, updated);
     app.update();
@@ -985,6 +994,8 @@ fn hot_reload_empty_definition_effects_clears_definition_entries_keeps_chip() {
         color_rgb: [6.0, 5.0, 0.5],
         min_angle_horizontal: 5.0,
         min_angle_vertical: 5.0,
+        min_radius: None,
+        max_radius: None,
     };
     seed_and_flush(&mut app, initial);
 
@@ -996,7 +1007,7 @@ fn hot_reload_empty_definition_effects_clears_definition_entries_keeps_chip() {
             BaseSpeed(720.0),
             MinSpeed(360.0),
             MaxSpeed(1440.0),
-            BoltRadius(14.0),
+            BaseRadius(14.0),
             BoltBaseDamage(10.0),
             Scale2D { x: 14.0, y: 14.0 },
             Aabb2D::new(Vec2::ZERO, Vec2::new(14.0, 14.0)),
@@ -1057,6 +1068,8 @@ fn hot_reload_no_chip_sourced_entries_clears_all_then_adds_new() {
         color_rgb: [6.0, 5.0, 0.5],
         min_angle_horizontal: 5.0,
         min_angle_vertical: 5.0,
+        min_radius: None,
+        max_radius: None,
     };
     seed_and_flush(&mut app, initial);
 
@@ -1068,7 +1081,7 @@ fn hot_reload_no_chip_sourced_entries_clears_all_then_adds_new() {
             BaseSpeed(720.0),
             MinSpeed(360.0),
             MaxSpeed(1440.0),
-            BoltRadius(14.0),
+            BaseRadius(14.0),
             BoltBaseDamage(10.0),
             Scale2D { x: 14.0, y: 14.0 },
             Aabb2D::new(Vec2::ZERO, Vec2::new(14.0, 14.0)),
@@ -1104,6 +1117,8 @@ fn hot_reload_no_chip_sourced_entries_clears_all_then_adds_new() {
         color_rgb: [6.0, 5.0, 0.5],
         min_angle_horizontal: 5.0,
         min_angle_vertical: 5.0,
+        min_radius: None,
+        max_radius: None,
     };
     mutate_registry(&mut app, updated);
     app.update();

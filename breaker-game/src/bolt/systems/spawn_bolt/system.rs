@@ -32,7 +32,8 @@ use crate::{
 ///
 /// The builder's [`definition`] inserts all definition-derived components
 /// (speed, angle, radius, bolt params) in a single call. Render
-/// components ([`Mesh2d`], [`MeshMaterial2d`]) are added post-spawn.
+/// components ([`Mesh2d`], [`MeshMaterial2d`], [`GameDrawLayer::Bolt`])
+/// are added via `.rendered()` on the builder.
 pub(crate) fn spawn_bolt(world: &mut World) {
     use rantzsoft_spatial2d::components::Position2D;
 
@@ -79,44 +80,51 @@ pub(crate) fn spawn_bolt(world: &mut World) {
 
     let serving = run_state_node_index == 0;
 
+    // Compute random angle upfront (before moving resources out for rendered()).
+    // Only needed for non-serving bolts (node index > 0).
+    let random_angle = if serving {
+        0.0
+    } else {
+        world
+            .resource_mut::<GameRng>()
+            .0
+            .random_range(-DEFAULT_BOLT_ANGLE_SPREAD..=DEFAULT_BOLT_ANGLE_SPREAD)
+    };
+
+    // Extract asset stores so .rendered() can create mesh+material handles
+    // without conflicting with the &mut World borrow in .spawn().
+    let (mut meshes, mut materials) = (
+        world.remove_resource::<Assets<Mesh>>().unwrap_or_default(),
+        world
+            .remove_resource::<Assets<ColorMaterial>>()
+            .unwrap_or_default(),
+    );
+
     let entity = if serving {
         Bolt::builder()
             .at_position(spawn_pos)
             .definition(&bolt_def)
             .serving()
             .primary()
+            .rendered(&mut meshes, &mut materials)
             .spawn(world)
     } else {
-        // Random angle within +/- DEFAULT_BOLT_ANGLE_SPREAD
-        let angle = world
-            .resource_mut::<GameRng>()
-            .0
-            .random_range(-DEFAULT_BOLT_ANGLE_SPREAD..=DEFAULT_BOLT_ANGLE_SPREAD);
         let velocity = Velocity2D(Vec2::new(
-            bolt_def.base_speed * angle.sin(),
-            bolt_def.base_speed * angle.cos(),
+            bolt_def.base_speed * random_angle.sin(),
+            bolt_def.base_speed * random_angle.cos(),
         ));
         Bolt::builder()
             .at_position(spawn_pos)
             .definition(&bolt_def)
             .with_velocity(velocity)
             .primary()
+            .rendered(&mut meshes, &mut materials)
             .spawn(world)
     };
 
-    // Render components are not part of the builder (rendering concern).
-    let mesh = world.resource_mut::<Assets<Mesh>>().add(Circle::new(1.0));
-    let color = Color::linear_rgb(
-        bolt_def.color_rgb[0],
-        bolt_def.color_rgb[1],
-        bolt_def.color_rgb[2],
-    );
-    let material = world
-        .resource_mut::<Assets<ColorMaterial>>()
-        .add(ColorMaterial::from_color(color));
-    world
-        .entity_mut(entity)
-        .insert((Mesh2d(mesh), MeshMaterial2d(material)));
+    // Re-insert asset stores.
+    world.insert_resource(meshes);
+    world.insert_resource(materials);
 
     debug!("bolt spawned entity={entity:?}");
 

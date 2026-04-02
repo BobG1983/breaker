@@ -43,6 +43,7 @@ fn spawn_test_bolt(app: &mut App, x: f32, y: f32, vx: f32, vy: f32) -> Entity {
         .with_radius(RADIUS)
         .with_velocity(Velocity2D(Vec2::new(vx, vy)))
         .primary()
+        .headless()
         .spawn(app.world_mut())
 }
 
@@ -269,6 +270,7 @@ fn serving_bolt_excluded() {
         .with_radius(RADIUS)
         .serving()
         .primary()
+        .headless()
         .spawn(app.world_mut());
     tick(&mut app);
 
@@ -297,6 +299,7 @@ fn scaled_bolt_uses_effective_radius_for_playfield_clamping() {
         .with_radius(8.0)
         .with_velocity(Velocity2D(Vec2::new(300.0, 400.0)))
         .primary()
+        .headless()
         .spawn(app.world_mut());
     app.world_mut()
         .entity_mut(entity)
