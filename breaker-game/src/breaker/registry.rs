@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 use rantzsoft_defaults::prelude::SeedableRegistry;
+use tracing::warn;
 
 use super::definition::BreakerDefinition;
 
@@ -79,11 +80,10 @@ impl SeedableRegistry for BreakerRegistry {
     fn seed(&mut self, assets: &[(AssetId<BreakerDefinition>, BreakerDefinition)]) {
         self.breakers.clear();
         for (_id, def) in assets {
-            assert!(
-                !self.breakers.contains_key(&def.name),
-                "duplicate breaker name '{}'",
-                def.name
-            );
+            if self.breakers.contains_key(&def.name) {
+                warn!("duplicate breaker name '{}' — skipping", def.name);
+                continue;
+            }
             self.breakers.insert(def.name.clone(), def.clone());
         }
     }
@@ -204,18 +204,25 @@ mod tests {
         );
     }
 
-    // ── Behavior 3: seed() panics on duplicate name ─────────────────
+    // ── Behavior 3: seed() skips duplicate name with warning ────────
 
-    /// `seed()` panics when two definitions share the same name.
+    /// `seed()` skips the second definition when two share the same name,
+    /// keeping the first occurrence.
     #[test]
-    #[should_panic(expected = "duplicate breaker name")]
-    fn seed_panics_on_duplicate_breaker_name() {
+    fn seed_skips_duplicate_breaker_name() {
         let aegis1 = make_breaker("Aegis", Some(3));
         let aegis2 = make_breaker("Aegis", Some(5));
         let (_app, pairs) = asset_ids_for(&[aegis1, aegis2]);
 
         let mut registry = BreakerRegistry::default();
         registry.seed(&pairs);
+
+        assert_eq!(registry.len(), 1, "duplicate should be skipped");
+        assert_eq!(
+            registry.get("Aegis").unwrap().life_pool,
+            Some(3),
+            "first occurrence (life_pool=3) should win"
+        );
     }
 
     // ── Behavior 4: update_single() upserts by name ─────────────────

@@ -303,7 +303,7 @@ pub(crate) fn bolt_breaker_collision(
     };
 
     for mut bolt in &mut bolt_query {
-        let bolt_scale = bolt.collision.entity_scale.map_or(1.0, |s| s.0);
+        let bolt_scale = bolt.collision.node_scale.map_or(1.0, |s| s.0);
         let r = bolt.collision.radius.0 * bolt_scale;
         let geom = BoltGeometry {
             entity: bolt.entity,

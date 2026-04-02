@@ -19,7 +19,7 @@ use crate::{
 /// (persisted from a previous node), this sends `BreakerSpawned` without
 /// spawning a new one. Otherwise, looks up the selected breaker in the
 /// registry and spawns via `Breaker::builder().definition(def)`.
-pub fn spawn_or_reuse_breaker(
+pub(crate) fn spawn_or_reuse_breaker(
     mut commands: Commands,
     selected: Res<SelectedBreaker>,
     registry: Res<BreakerRegistry>,
@@ -49,7 +49,7 @@ pub fn spawn_or_reuse_breaker(
 /// Runs when entering [`GameState::Playing`]. Returns breaker to center,
 /// clears velocity/tilt/state. On the first node, `spawn_breaker` handles
 /// initialization — this system is a no-op if no breaker exists yet.
-pub fn reset_breaker(
+pub(crate) fn reset_breaker(
     playfield: Res<PlayfieldConfig>,
     mut query: Query<BreakerResetData, With<Breaker>>,
 ) {

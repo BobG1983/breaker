@@ -90,7 +90,7 @@ pub(crate) struct BreakerMovementData {
 /// Breaker dash state machine data — full state, velocity, tilt, and all timing params.
 #[derive(QueryData)]
 #[query_data(mutable)]
-pub struct BreakerDashData {
+pub(crate) struct BreakerDashData {
     /// Mutable dash state.
     pub state: &'static mut DashState,
     /// Mutable velocity.
@@ -136,7 +136,7 @@ pub struct BreakerDashData {
 /// Breaker reset data — mutable state cleared at node start.
 #[derive(QueryData)]
 #[query_data(mutable)]
-pub struct BreakerResetData {
+pub(crate) struct BreakerResetData {
     /// Mutable world position.
     pub position: &'static mut Position2D,
     /// Mutable dash state.

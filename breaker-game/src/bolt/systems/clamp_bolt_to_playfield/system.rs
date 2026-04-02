@@ -30,7 +30,7 @@ pub(crate) fn clamp_bolt_to_playfield(
     mut bolt_query: Query<BoltCollisionData, ActiveFilter>,
 ) {
     for mut bolt in &mut bolt_query {
-        let r = bolt.collision.radius.0 * bolt.collision.entity_scale.map_or(1.0, |s| s.0);
+        let r = bolt.collision.radius.0 * bolt.collision.node_scale.map_or(1.0, |s| s.0);
         let pos = bolt.spatial.position.0;
 
         let x_min = playfield.left() + r + BOUNDARY_INSET;

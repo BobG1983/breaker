@@ -6,4 +6,4 @@ mod system;
 mod tests;
 
 pub(super) use system::eased_decel;
-pub use system::update_breaker_state;
+pub(crate) use system::update_breaker_state;

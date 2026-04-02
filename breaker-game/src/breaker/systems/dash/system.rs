@@ -56,7 +56,7 @@ struct SettleContext<'a> {
 /// - Dashing: high-speed burst with tilt, transitions to Braking when timer expires
 /// - Braking: rapid deceleration with opposite tilt, transitions to Settling when speed ~0
 /// - Settling: tilt returns to neutral, transitions to Idle when timer expires
-pub fn update_breaker_state(
+pub(crate) fn update_breaker_state(
     actions: Res<InputActions>,
     time: Res<Time<Fixed>>,
     playfield: Res<PlayfieldConfig>,

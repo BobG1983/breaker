@@ -35,8 +35,8 @@ pub(crate) struct BoltCollisionParams {
     pub active_damage_boosts: Option<&'static ActiveDamageBoosts>,
     /// Active speed boost multipliers.
     pub active_speed_boosts: Option<&'static ActiveSpeedBoosts>,
-    /// Visual/physics scale factor.
-    pub entity_scale: Option<&'static NodeScalingFactor>,
+    /// Node scaling factor for entity dimensions.
+    pub node_scale: Option<&'static NodeScalingFactor>,
     /// Evolution chip that spawned this bolt (for damage attribution).
     pub spawned_by_evolution: Option<&'static SpawnedByEvolution>,
     /// Last collision impact position and side.
@@ -98,8 +98,8 @@ pub(crate) struct LostBoltData {
     pub angle_spread: Option<&'static BoltAngleSpread>,
     /// Whether this is an extra bolt (despawned on loss, not respawned).
     pub is_extra: Has<ExtraBolt>,
-    /// Visual/physics scale factor.
-    pub entity_scale: Option<&'static NodeScalingFactor>,
+    /// Node scaling factor for entity dimensions.
+    pub node_scale: Option<&'static NodeScalingFactor>,
 }
 
 /// Bolt data for the `sync_bolt_scale` system.

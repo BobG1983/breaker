@@ -5,4 +5,4 @@ mod system;
 #[cfg(test)]
 mod tests;
 
-pub use system::{reset_breaker, spawn_or_reuse_breaker};
+pub(crate) use system::{reset_breaker, spawn_or_reuse_breaker};
