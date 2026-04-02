@@ -1,4 +1,4 @@
-use super::*;
+use super::helpers::*;
 
 // ── Existing tests (updated for new interval parameter) ──
 

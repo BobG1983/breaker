@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::*;
+use super::helpers::*;
 use crate::effect::core::EffectSourceChip;
 
 // -- fire tests ──────────────────────────────────────────────────

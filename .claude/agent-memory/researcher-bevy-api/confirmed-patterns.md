@@ -538,7 +538,72 @@ fn add_sub_state<S: SubStates>(&mut self) -> &mut Self;
 fn add_computed_state<S: ComputedStates>(&mut self) -> &mut Self;
 ```
 
+### SubStates nesting depth — verified 0.18.1
+
+**SubStates can source from other SubStates** — no depth limit. The chain works because
+`SubStates: States`, so any SubStates type satisfies `InnerStateSet for S: States`, which
+satisfies `StateSet`. The bound is `S: States`, not `S: States + !SubStates`.
+
+DEPENDENCY_DEPTH auto-increments: each level adds 1 via
+`SourceStates::SET_DEPENDENCY_DEPTH + 1`. The derive macro generates this automatically.
+
+**Teardown order** (innermost exits first):
+```
+NodeState::OnExit → RunState::OnExit → GameState::OnExit → AppState::OnExit
+```
+
+**Enter order** (outermost enters first):
+```
+AppState::OnEnter → GameState::OnEnter → RunState::OnEnter → NodeState::OnEnter
+```
+
+**Valid 4-level hierarchy** (direct chaining, no ComputedState intermediary needed for
+simple variant matching):
+```rust
+app.init_state::<AppState>()
+   .add_sub_state::<GameState>()   // source: AppState = AppState::Game
+   .add_sub_state::<RunState>()    // source: GameState = GameState::Run
+   .add_sub_state::<NodeState>();  // source: RunState = RunState::Node
+```
+
+ComputedState intermediary is only needed when source uses struct variants with fields.
+Official examples only show 1-level nesting, but the type constraints confirm 4-level works.
+
+`try_run_schedule` is used internally — missing OnEnter/OnExit handlers do not panic.
+
 ---
+
+## on_message run condition (Bevy 0.18.1)
+
+Verified from source: `github.com/bevyengine/bevy/blob/v0.18.1/crates/bevy_ecs/src/schedule/condition.rs`
+
+```rust
+// Exact signature:
+pub fn on_message<M: Message>(reader: MessageReader<'_, '_, M>) -> bool
+
+// Module path:
+use bevy::ecs::schedule::common_conditions::on_message;
+// Also re-exported in bevy::prelude::*
+
+// Usage:
+.add_systems(Update, my_system.run_if(on_message::<MyMessage>()))
+```
+
+**CRITICAL**: `on_message` uses its own `MessageReader` with its own `Local<MessageCursor<M>>`.
+Each `MessageReader` instance (whether in a run condition or system body) has an **independent cursor**.
+The condition advancing its cursor does NOT consume messages from the system body's reader.
+
+Source implementation:
+```rust
+pub fn on_message<M: Message>(mut reader: MessageReader<M>) -> bool {
+    reader.read().count() > 0
+    // "The messages need to be consumed, so that there are no false positives
+    // on subsequent calls of the run condition. Simply checking is_empty would not be enough."
+}
+```
+
+The condition returns `true` when new messages exist AND advances the condition's own cursor to prevent
+re-firing on the same message batch. The system body's `MessageReader` still sees all messages.
 
 ## SystemParam derive
 
@@ -552,9 +617,45 @@ TODO: add from next research session.
 
 ---
 
-## World access
+## World access — One-shot systems and Commands::run_system (Bevy 0.18.1)
 
-TODO: add from next research session.
+Verified against docs.rs/bevy/0.18.1, github.com/bevyengine/bevy/tree/v0.18.1.
+
+### One-shot system registration and execution
+
+```rust
+// Register at app build time — returns SystemId (Copy + Send + Sync)
+let id: SystemId = app.world_mut().register_system(my_fn);
+
+// Or from &mut World directly
+let id: SystemId = world.register_system(my_fn);
+
+// Run from Commands in a normal system (deferred — executes at ApplyDeferred)
+fn my_system(mut commands: Commands, ids: Res<RouteSystemIds>) {
+    commands.run_system(ids.some_route);       // no input
+    commands.run_system_with(ids.other, val);  // with input
+}
+
+// Run immediately from &mut World (exclusive context only)
+world.run_system(id)
+world.run_system_with(id, input)
+```
+
+- `SystemId<I = (), O = ()>` is `Copy + Send + Sync` — safe to store in Resources
+- `Commands::run_system` is deferred (runs at next ApplyDeferred sync point, same frame)
+- No return value from `Commands::run_system` — one-shot system writes to resources/components directly
+- One-shot systems can read any `SystemParam` (Res, ResMut, Query, etc.) — no need for &mut World
+
+### StateTransition schedule placement
+
+`StateTransition` is inserted **after PreUpdate** in the main schedule:
+- Frame order: `PreUpdate` → `StateTransition` → `FixedUpdate` → `Update` → `PostUpdate`
+- A `NextState` queued during `FixedUpdate` or `Update` takes effect in the NEXT frame's `StateTransition`
+- A `NextState` queued during `PreUpdate` takes effect in the SAME frame's `StateTransition`
+
+### NextState has one slot — last set() wins
+
+`NextState<S>` stores a single pending value. Multiple `set_if_neq()` calls in the same frame: only the last one takes effect. Process at most one routing message per frame and warn on duplicates.
 
 ---
 

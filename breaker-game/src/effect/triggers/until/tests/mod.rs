@@ -1,24 +1,5 @@
-use bevy::prelude::*;
-
-use super::system::*;
-use crate::effect::core::*;
+mod helpers;
 
 mod desugaring;
 mod non_until_and_source_chip;
 mod overclock_pattern;
-
-pub(super) fn test_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins);
-    register(&mut app);
-    app
-}
-
-/// Accumulates one fixed timestep then runs one update.
-pub(super) fn tick(app: &mut App) {
-    let timestep = app.world().resource::<Time<Fixed>>().timestep();
-    app.world_mut()
-        .resource_mut::<Time<Fixed>>()
-        .accumulate_overstep(timestep);
-    app.update();
-}

@@ -1,6 +1,6 @@
 //! Tests for `tick_pulse_emitter` spawn and interval behaviors.
 
-use super::super::*;
+use super::super::helpers::*;
 
 // -- Behavior 11: tick_pulse_emitter spawns PulseRing when timer fires --
 

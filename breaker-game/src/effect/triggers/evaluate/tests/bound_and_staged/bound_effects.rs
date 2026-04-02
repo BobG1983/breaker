@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use super::*;
+use super::helpers::*;
 
 #[test]
 fn bound_entry_not_consumed_after_match() {

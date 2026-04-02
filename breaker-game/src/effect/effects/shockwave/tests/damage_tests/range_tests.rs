@@ -8,7 +8,7 @@ use bevy::prelude::*;
 use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D};
 
-use super::super::*;
+use super::super::helpers::*;
 use crate::{bolt::resources::DEFAULT_BOLT_BASE_DAMAGE, shared::WALL_LAYER};
 
 // -- Behavior 1: Shockwave damages a cell within its current radius ──

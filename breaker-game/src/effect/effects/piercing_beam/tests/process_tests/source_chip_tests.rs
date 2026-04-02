@@ -1,4 +1,4 @@
-use super::super::*;
+use super::super::helpers::*;
 use crate::effect::core::EffectSourceChip;
 
 #[test]

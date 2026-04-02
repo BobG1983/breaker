@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use super::*;
+use super::helpers::*;
 
 #[test]
 fn overclock_pattern_when_bumped_until_do_speedboost() {

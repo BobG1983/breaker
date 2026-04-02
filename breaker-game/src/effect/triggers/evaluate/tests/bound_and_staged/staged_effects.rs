@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use super::*;
+use super::helpers::*;
 
 #[test]
 fn staged_entry_consumed_on_matching_trigger() {

@@ -1,7 +1,7 @@
 //! Tests for propagation of `PulseRingDamageMultiplier`, `EffectSourceChip`,
 //! and `Position2D` from `PulseEmitter` to spawned `PulseRing` entities.
 
-use super::super::*;
+use super::super::helpers::*;
 use crate::effect::core::EffectSourceChip;
 
 // -- Damage scaling: Pulse emitter propagates damage multiplier to spawned rings --

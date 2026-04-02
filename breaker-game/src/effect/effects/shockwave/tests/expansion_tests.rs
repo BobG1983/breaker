@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::*;
+use super::helpers::*;
 
 // -- system tests ────────────────────────────────────────────────
 

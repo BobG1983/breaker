@@ -1,4 +1,4 @@
-use super::super::*;
+use super::super::helpers::*;
 use crate::shared::{GameState, PlayingState};
 
 // ── Behavior 24: process_piercing_beam damages all cells in beam path ──
