@@ -16,7 +16,12 @@ fn bridge_bump(
     mut query: Query<(Entity, &BoundEffects, &mut StagedEffects)>,
     mut commands: Commands,
 ) {
-    for _msg in reader.read() {
+    for msg in reader.read() {
+        let context = TriggerContext {
+            bolt: msg.bolt,
+            breaker: Some(msg.breaker),
+            ..default()
+        };
         for (entity, bound, mut staged) in &mut query {
             evaluate_bound_effects(
                 &Trigger::Bump,
@@ -24,9 +29,9 @@ fn bridge_bump(
                 bound,
                 &mut staged,
                 &mut commands,
-                None,
+                context,
             );
-            evaluate_staged_effects(&Trigger::Bump, entity, &mut staged, &mut commands, None);
+            evaluate_staged_effects(&Trigger::Bump, entity, &mut staged, &mut commands, context);
         }
     }
 }
@@ -75,9 +80,11 @@ mod tests {
     #[test]
     fn bridge_bump_fires_on_any_grade() {
         let mut app = test_app();
+        let breaker = app.world_mut().spawn_empty().id();
         app.insert_resource(TestBumpMsg(Some(BumpPerformed {
             grade: BumpGrade::Perfect,
             bolt: None,
+            breaker,
         })));
         app.world_mut().spawn((
             BoundEffects(vec![(
@@ -106,6 +113,279 @@ mod tests {
         assert!(
             (active.0[0] - 1.5).abs() < f32::EPSILON,
             "SpeedBoost multiplier should be 1.5"
+        );
+    }
+
+    // ── Context: bolt present → retargets to specific bolt ──
+
+    #[test]
+    fn bump_context_resolves_to_specific_bolt() {
+        use crate::bolt::components::Bolt;
+
+        let mut app = test_app();
+        let breaker = app.world_mut().spawn_empty().id();
+
+        let bolt_a = app.world_mut().spawn((Bolt, StagedEffects::default())).id();
+        let bolt_b = app.world_mut().spawn((Bolt, StagedEffects::default())).id();
+        let bolt_c = app.world_mut().spawn((Bolt, StagedEffects::default())).id();
+
+        app.world_mut().spawn((
+            BoundEffects(vec![(
+                "ctx_test".into(),
+                EffectNode::When {
+                    trigger: Trigger::Bump,
+                    then: vec![EffectNode::On {
+                        target: Target::Bolt,
+                        permanent: false,
+                        then: vec![EffectNode::When {
+                            trigger: Trigger::Died,
+                            then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
+                        }],
+                    }],
+                },
+            )]),
+            StagedEffects::default(),
+        ));
+
+        app.insert_resource(TestBumpMsg(Some(BumpPerformed {
+            grade: BumpGrade::Perfect,
+            bolt: Some(bolt_b),
+            breaker,
+        })));
+
+        tick(&mut app);
+
+        let staged_b = app.world().get::<StagedEffects>(bolt_b).unwrap();
+        assert!(
+            !staged_b.0.is_empty(),
+            "bolt_b SHOULD have staged effects — it was the bumped bolt"
+        );
+        let staged_a = app.world().get::<StagedEffects>(bolt_a).unwrap();
+        let staged_c = app.world().get::<StagedEffects>(bolt_c).unwrap();
+        assert!(
+            staged_a.0.is_empty(),
+            "bolt_a should have no staged effects"
+        );
+        assert!(
+            staged_c.0.is_empty(),
+            "bolt_c should have no staged effects"
+        );
+    }
+
+    // ── Context: bolt absent → fallback to PrimaryBolt ──
+
+    #[test]
+    fn bump_no_bolt_context_falls_back_to_primary_bolt() {
+        use crate::bolt::components::{Bolt, PrimaryBolt};
+
+        let mut app = test_app();
+        let breaker = app.world_mut().spawn_empty().id();
+
+        let primary = app
+            .world_mut()
+            .spawn((Bolt, PrimaryBolt, StagedEffects::default()))
+            .id();
+        let secondary = app.world_mut().spawn((Bolt, StagedEffects::default())).id();
+
+        app.world_mut().spawn((
+            BoundEffects(vec![(
+                "ctx_test".into(),
+                EffectNode::When {
+                    trigger: Trigger::Bump,
+                    then: vec![EffectNode::On {
+                        target: Target::Bolt,
+                        permanent: false,
+                        then: vec![EffectNode::When {
+                            trigger: Trigger::Died,
+                            then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
+                        }],
+                    }],
+                },
+            )]),
+            StagedEffects::default(),
+        ));
+
+        app.insert_resource(TestBumpMsg(Some(BumpPerformed {
+            grade: BumpGrade::Perfect,
+            bolt: None,
+            breaker,
+        })));
+
+        tick(&mut app);
+
+        let primary_staged = app.world().get::<StagedEffects>(primary).unwrap();
+        assert!(
+            !primary_staged.0.is_empty(),
+            "PrimaryBolt should get the effect — no context, falls back to default"
+        );
+        let secondary_staged = app.world().get::<StagedEffects>(secondary).unwrap();
+        assert!(
+            secondary_staged.0.is_empty(),
+            "Non-primary bolt should NOT get the effect"
+        );
+    }
+
+    // ── Corner case 1: dual retarget — both bolt and breaker from one Bump ──
+
+    #[test]
+    fn bump_dual_retarget_resolves_both_bolt_and_breaker() {
+        use crate::{bolt::components::Bolt, breaker::components::Breaker};
+
+        let mut app = test_app();
+
+        let bolt_a = app.world_mut().spawn((Bolt, StagedEffects::default())).id();
+        let bolt_b = app.world_mut().spawn((Bolt, StagedEffects::default())).id();
+        let breaker_a = app
+            .world_mut()
+            .spawn((Breaker, StagedEffects::default()))
+            .id();
+        let breaker_b = app
+            .world_mut()
+            .spawn((Breaker, StagedEffects::default()))
+            .id();
+
+        // Observer: When(Bump, [On(Bolt, ...), On(Breaker, ...)])
+        app.world_mut().spawn((
+            BoundEffects(vec![
+                (
+                    "dual_bolt".into(),
+                    EffectNode::When {
+                        trigger: Trigger::Bump,
+                        then: vec![EffectNode::On {
+                            target: Target::Bolt,
+                            permanent: false,
+                            then: vec![EffectNode::When {
+                                trigger: Trigger::Died,
+                                then: vec![EffectNode::Do(EffectKind::SpeedBoost {
+                                    multiplier: 1.5,
+                                })],
+                            }],
+                        }],
+                    },
+                ),
+                (
+                    "dual_breaker".into(),
+                    EffectNode::When {
+                        trigger: Trigger::Bump,
+                        then: vec![EffectNode::On {
+                            target: Target::Breaker,
+                            permanent: false,
+                            then: vec![EffectNode::When {
+                                trigger: Trigger::Died,
+                                then: vec![EffectNode::Do(EffectKind::SpeedBoost {
+                                    multiplier: 2.0,
+                                })],
+                            }],
+                        }],
+                    },
+                ),
+            ]),
+            StagedEffects::default(),
+        ));
+
+        app.insert_resource(TestBumpMsg(Some(BumpPerformed {
+            grade: BumpGrade::Perfect,
+            bolt: Some(bolt_b),
+            breaker: breaker_b,
+        })));
+
+        tick(&mut app);
+
+        // bolt_b gets the bolt retarget
+        assert!(
+            !app.world()
+                .get::<StagedEffects>(bolt_b)
+                .unwrap()
+                .0
+                .is_empty(),
+            "bolt_b SHOULD have staged effects"
+        );
+        assert!(
+            app.world()
+                .get::<StagedEffects>(bolt_a)
+                .unwrap()
+                .0
+                .is_empty(),
+            "bolt_a should be empty"
+        );
+
+        // breaker_b gets the breaker retarget
+        assert!(
+            !app.world()
+                .get::<StagedEffects>(breaker_b)
+                .unwrap()
+                .0
+                .is_empty(),
+            "breaker_b SHOULD have staged effects"
+        );
+        assert!(
+            app.world()
+                .get::<StagedEffects>(breaker_a)
+                .unwrap()
+                .0
+                .is_empty(),
+            "breaker_a should be empty"
+        );
+    }
+
+    // ── Corner case 2: bolt None + On(Breaker) still resolves ──
+
+    #[test]
+    fn bump_bolt_none_breaker_still_resolves() {
+        use crate::breaker::components::Breaker;
+
+        let mut app = test_app();
+
+        let breaker_a = app
+            .world_mut()
+            .spawn((Breaker, StagedEffects::default()))
+            .id();
+        let breaker_b = app
+            .world_mut()
+            .spawn((Breaker, StagedEffects::default()))
+            .id();
+
+        app.world_mut().spawn((
+            BoundEffects(vec![(
+                "ctx_test".into(),
+                EffectNode::When {
+                    trigger: Trigger::Bump,
+                    then: vec![EffectNode::On {
+                        target: Target::Breaker,
+                        permanent: false,
+                        then: vec![EffectNode::When {
+                            trigger: Trigger::Died,
+                            then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
+                        }],
+                    }],
+                },
+            )]),
+            StagedEffects::default(),
+        ));
+
+        app.insert_resource(TestBumpMsg(Some(BumpPerformed {
+            grade: BumpGrade::Perfect,
+            bolt: None,
+            breaker: breaker_b,
+        })));
+
+        tick(&mut app);
+
+        assert!(
+            !app.world()
+                .get::<StagedEffects>(breaker_b)
+                .unwrap()
+                .0
+                .is_empty(),
+            "breaker_b SHOULD have staged effects — bolt being None doesn't affect breaker context"
+        );
+        assert!(
+            app.world()
+                .get::<StagedEffects>(breaker_a)
+                .unwrap()
+                .0
+                .is_empty(),
+            "breaker_a should be empty"
         );
     }
 }

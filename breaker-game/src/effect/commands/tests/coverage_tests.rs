@@ -25,6 +25,7 @@ fn transfer_permanent_stores_multiple_mixed_non_do_children_in_bound_effects() {
         chip_name: "aegis".to_string(),
         children: vec![when_node.clone(), until_node.clone(), once_node.clone()],
         permanent: true,
+        context: TriggerContext::default(),
     };
     cmd.apply(&mut world);
 
@@ -72,6 +73,7 @@ fn transfer_non_permanent_stores_mixed_non_do_children_in_staged_and_fires_do() 
         chip_name: "flux".to_string(),
         children: vec![when_node.clone(), until_node.clone(), do_node],
         permanent: false,
+        context: TriggerContext::default(),
     };
     cmd.apply(&mut world);
 

@@ -138,6 +138,7 @@ mod tests {
         app.insert_resource(TestMessages(vec![BumpPerformed {
             grade: BumpGrade::Perfect,
             bolt: Some(bolt_entity),
+            breaker: Entity::PLACEHOLDER,
         }]));
         tick(&mut app);
 
@@ -187,6 +188,7 @@ mod tests {
         app.insert_resource(TestMessages(vec![BumpPerformed {
             grade: BumpGrade::Perfect,
             bolt: Some(bolt_entity),
+            breaker: Entity::PLACEHOLDER,
         }]));
         tick(&mut app);
 
@@ -220,6 +222,7 @@ mod tests {
         app.insert_resource(TestMessages(vec![BumpPerformed {
             grade: BumpGrade::Perfect,
             bolt: None,
+            breaker: Entity::PLACEHOLDER,
         }]));
         tick(&mut app);
 
@@ -258,6 +261,7 @@ mod tests {
         app.insert_resource(TestMessages(vec![BumpPerformed {
             grade: BumpGrade::Perfect,
             bolt: Some(bolt_entity),
+            breaker: Entity::PLACEHOLDER,
         }]));
         tick(&mut app);
 
@@ -314,6 +318,7 @@ mod tests {
         app.insert_resource(TestMessages(vec![BumpPerformed {
             grade: BumpGrade::Perfect,
             bolt: Some(bolt_entity),
+            breaker: Entity::PLACEHOLDER,
         }]));
         tick(&mut app);
 

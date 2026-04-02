@@ -6,7 +6,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    breaker::{components::Breaker, queries::SyncBreakerScaleQuery},
+    breaker::{components::Breaker, queries::SyncBreakerScaleData},
     effect::effects::size_boost::ActiveSizeBoosts,
     shared::size::{ClampRange, effective_size},
 };
@@ -16,26 +16,24 @@ use crate::{
 /// Reads `BaseWidth`, `BaseHeight`, optional `ActiveSizeBoosts`,
 /// optional `NodeScalingFactor`, and optional min/max constraint
 /// components. Delegates math to [`effective_size`].
-pub(crate) fn sync_breaker_scale(mut query: Query<SyncBreakerScaleQuery, With<Breaker>>) {
-    for (breaker_w, breaker_h, mut scale, size_boosts, node_scale, min_w, max_w, min_h, max_h) in
-        &mut query
-    {
+pub(crate) fn sync_breaker_scale(mut query: Query<SyncBreakerScaleData, With<Breaker>>) {
+    for mut data in &mut query {
         let size = effective_size(
-            breaker_w.0,
-            breaker_h.0,
-            size_boosts.map_or(1.0, ActiveSizeBoosts::multiplier),
-            node_scale.map_or(1.0, |s| s.0),
+            data.base_width.0,
+            data.base_height.0,
+            data.size_boosts.map_or(1.0, ActiveSizeBoosts::multiplier),
+            data.node_scale.map_or(1.0, |s| s.0),
             ClampRange {
-                min: min_w.map(|m| m.0),
-                max: max_w.map(|m| m.0),
+                min: data.min_w.map(|m| m.0),
+                max: data.max_w.map(|m| m.0),
             },
             ClampRange {
-                min: min_h.map(|m| m.0),
-                max: max_h.map(|m| m.0),
+                min: data.min_h.map(|m| m.0),
+                max: data.max_h.map(|m| m.0),
             },
         );
-        scale.x = size.x;
-        scale.y = size.y;
+        data.scale.x = size.x;
+        data.scale.y = size.y;
     }
 }
 

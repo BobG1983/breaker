@@ -18,6 +18,7 @@ use crate::{
         messages::DamageCell,
         resources::CellConfig,
     },
+    effect::effects::vulnerable::ActiveVulnerability,
     shared::{BOLT_LAYER, CELL_LAYER, GameDrawLayer, WALL_LAYER},
     wall::components::{Wall, WallSize},
 };
@@ -156,6 +157,34 @@ pub(super) fn spawn_cell_with_custom_aabb(
             cw,
             ch,
             Aabb2D::new(Vec2::ZERO, aabb_half_extents),
+            CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
+            Position2D(pos),
+            GlobalPosition2D(pos),
+            Spatial2D,
+            GameDrawLayer::Cell,
+        ))
+        .id()
+}
+
+/// Spawns a cell with explicit [`CellHealth`] and [`ActiveVulnerability`].
+pub(super) fn spawn_vulnerable_cell(
+    app: &mut App,
+    x: f32,
+    y: f32,
+    hp: f32,
+    vulnerability: f32,
+) -> Entity {
+    let (cw, ch) = default_cell_dims();
+    let half_extents = Vec2::new(cw.half_width(), ch.half_height());
+    let pos = Vec2::new(x, y);
+    app.world_mut()
+        .spawn((
+            Cell,
+            cw,
+            ch,
+            CellHealth::new(hp),
+            ActiveVulnerability(vec![vulnerability]),
+            Aabb2D::new(Vec2::ZERO, half_extents),
             CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
             Position2D(pos),
             GlobalPosition2D(pos),

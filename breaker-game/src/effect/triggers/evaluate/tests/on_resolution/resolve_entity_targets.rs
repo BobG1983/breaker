@@ -47,7 +47,7 @@ fn bolt_without_context_resolves_to_primary_bolt_only() {
         chip_name: "bolt_speed".to_string(),
         children: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.2 })],
         permanent: true,
-        context_entity: None,
+        context: TriggerContext::default(),
     };
     cmd.apply(&mut world);
 
@@ -81,7 +81,7 @@ fn bolt_without_context_and_no_primary_bolt_is_noop() {
         chip_name: "bolt_speed".to_string(),
         children: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.2 })],
         permanent: true,
-        context_entity: None,
+        context: TriggerContext::default(),
     };
     cmd.apply(&mut world);
 
@@ -119,7 +119,7 @@ fn breaker_without_context_resolves_to_primary_breaker_only() {
             then: vec![EffectNode::Do(EffectKind::Shield { stacks: 1 })],
         }],
         permanent: true,
-        context_entity: None,
+        context: TriggerContext::default(),
     };
     cmd.apply(&mut world);
 
@@ -148,7 +148,7 @@ fn breaker_without_context_and_no_primary_breaker_is_noop() {
             then: vec![EffectNode::Do(EffectKind::Shield { stacks: 1 })],
         }],
         permanent: true,
-        context_entity: None,
+        context: TriggerContext::default(),
     };
     // Should not panic
     cmd.apply(&mut world);
@@ -173,7 +173,7 @@ fn cell_without_context_is_noop() {
             then: vec![EffectNode::Do(EffectKind::Shield { stacks: 2 })],
         }],
         permanent: true,
-        context_entity: None,
+        context: TriggerContext::default(),
     };
     cmd.apply(&mut world);
 
@@ -203,7 +203,7 @@ fn wall_without_context_is_noop() {
             then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.3 })],
         }],
         permanent: true,
-        context_entity: None,
+        context: TriggerContext::default(),
     };
     cmd.apply(&mut world);
 
@@ -241,7 +241,10 @@ fn bolt_with_context_resolves_to_specific_bolt() {
             then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
         }],
         permanent: false,
-        context_entity: Some(bolt_b),
+        context: TriggerContext {
+            bolt: Some(bolt_b),
+            ..Default::default()
+        },
     };
     cmd.apply(&mut world);
 
@@ -276,7 +279,10 @@ fn cell_with_context_resolves_to_specific_cell() {
             then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
         }],
         permanent: false,
-        context_entity: Some(cell_b),
+        context: TriggerContext {
+            cell: Some(cell_b),
+            ..Default::default()
+        },
     };
     cmd.apply(&mut world);
 
@@ -311,7 +317,10 @@ fn wall_with_context_resolves_to_specific_wall() {
             then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
         }],
         permanent: false,
-        context_entity: Some(wall_b),
+        context: TriggerContext {
+            wall: Some(wall_b),
+            ..Default::default()
+        },
     };
     cmd.apply(&mut world);
 
@@ -351,7 +360,10 @@ fn breaker_with_context_resolves_to_specific_breaker() {
             then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
         }],
         permanent: false,
-        context_entity: Some(breaker_b),
+        context: TriggerContext {
+            breaker: Some(breaker_b),
+            ..Default::default()
+        },
     };
     cmd.apply(&mut world);
 
@@ -373,7 +385,7 @@ fn breaker_with_context_resolves_to_specific_breaker() {
 // -----------------------------------------------------------------------
 
 #[test]
-fn cell_context_on_bolt_target_is_noop() {
+fn cell_context_on_bolt_target_falls_through_to_primary_bolt() {
     let mut world = World::new();
     let primary_bolt = world
         .spawn((
@@ -383,11 +395,14 @@ fn cell_context_on_bolt_target_is_noop() {
             StagedEffects::default(),
         ))
         .id();
+    let secondary_bolt = world
+        .spawn((Bolt, BoundEffects::default(), StagedEffects::default()))
+        .id();
     let cell = world
         .spawn((Cell, BoundEffects::default(), StagedEffects::default()))
         .id();
 
-    // Context is a Cell, target is Bolt — mismatch, should be no-op
+    // Context has cell but no bolt — bolt field is None, falls to resolve_default
     let cmd = ResolveOnCommand {
         target: Target::Bolt,
         chip_name: "test".to_string(),
@@ -396,14 +411,23 @@ fn cell_context_on_bolt_target_is_noop() {
             then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
         }],
         permanent: false,
-        context_entity: Some(cell),
+        context: TriggerContext {
+            cell: Some(cell),
+            ..Default::default()
+        },
     };
     cmd.apply(&mut world);
 
-    let bolt_staged = world.get::<StagedEffects>(primary_bolt).unwrap();
+    let primary_staged = world.get::<StagedEffects>(primary_bolt).unwrap();
+    assert_eq!(
+        primary_staged.0.len(),
+        1,
+        "PrimaryBolt should get the effect — context.bolt is None, falls to resolve_default"
+    );
+    let secondary_staged = world.get::<StagedEffects>(secondary_bolt).unwrap();
     assert!(
-        bolt_staged.0.is_empty(),
-        "PrimaryBolt should NOT get the effect — context was a Cell (wrong marker), no-op"
+        secondary_staged.0.is_empty(),
+        "Non-primary bolt should NOT get the effect"
     );
 }
 
@@ -431,7 +455,10 @@ fn bolt_context_on_cell_target_is_noop() {
             then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
         }],
         permanent: false,
-        context_entity: Some(bolt),
+        context: TriggerContext {
+            bolt: Some(bolt),
+            ..Default::default()
+        },
     };
     cmd.apply(&mut world);
 
@@ -466,7 +493,10 @@ fn bolt_context_on_wall_target_is_noop() {
             then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
         }],
         permanent: false,
-        context_entity: Some(bolt),
+        context: TriggerContext {
+            bolt: Some(bolt),
+            ..Default::default()
+        },
     };
     cmd.apply(&mut world);
 

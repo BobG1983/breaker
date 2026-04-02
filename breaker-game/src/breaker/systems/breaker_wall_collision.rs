@@ -12,24 +12,11 @@ use rantzsoft_physics2d::{
 use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
-    breaker::{
-        components::{BaseHeight, BaseWidth, Breaker},
-        messages::BreakerImpactWall,
-    },
+    breaker::{components::Breaker, messages::BreakerImpactWall, queries::BreakerSizeData},
     effect::effects::size_boost::ActiveSizeBoosts,
-    shared::{BREAKER_LAYER, NodeScalingFactor, WALL_LAYER},
+    shared::{BREAKER_LAYER, WALL_LAYER},
     wall::components::Wall,
 };
-
-/// Breaker query data for wall collision detection.
-type BreakerWallCollisionQuery = (
-    Entity,
-    &'static Position2D,
-    &'static BaseWidth,
-    &'static BaseHeight,
-    Option<&'static NodeScalingFactor>,
-    Option<&'static ActiveSizeBoosts>,
-);
 
 /// Wall entity lookup for narrow-phase overlap verification.
 type WallLookup<'w, 's> = Query<'w, 's, (&'static Position2D, &'static Aabb2D), With<Wall>>;
@@ -43,22 +30,22 @@ type WallLookup<'w, 's> = Query<'w, 's, (&'static Position2D, &'static Aabb2D), 
 /// edge-case overlaps for effect trigger chains.
 pub(crate) fn breaker_wall_collision(
     quadtree: Res<CollisionQuadtree>,
-    breaker_query: Query<BreakerWallCollisionQuery, With<Breaker>>,
+    breaker_query: Query<BreakerSizeData, With<Breaker>>,
     wall_lookup: WallLookup,
     mut writer: MessageWriter<BreakerImpactWall>,
 ) {
-    let Ok((breaker_entity, breaker_pos, breaker_w, breaker_h, breaker_scale, size_boosts)) =
-        breaker_query.single()
-    else {
+    let Ok(breaker) = breaker_query.single() else {
         return;
     };
 
-    let size_mult = size_boosts.map_or(1.0, ActiveSizeBoosts::multiplier);
-    let scale = breaker_scale.map_or(1.0, |s| s.0);
-    let half_w = breaker_w.half_width() * size_mult * scale;
-    let half_h = breaker_h.half_height() * size_mult * scale;
+    let size_mult = breaker
+        .size_boosts
+        .map_or(1.0, ActiveSizeBoosts::multiplier);
+    let scale = breaker.node_scale.map_or(1.0, |s| s.0);
+    let half_w = breaker.base_width.half_width() * size_mult * scale;
+    let half_h = breaker.base_height.half_height() * size_mult * scale;
 
-    let breaker_aabb = Aabb2D::new(breaker_pos.0, Vec2::new(half_w, half_h));
+    let breaker_aabb = Aabb2D::new(breaker.position.0, Vec2::new(half_w, half_h));
     let layers = CollisionLayers::new(BREAKER_LAYER, WALL_LAYER);
     let candidates = quadtree.quadtree.query_aabb_filtered(&breaker_aabb, layers);
 
@@ -68,11 +55,11 @@ pub(crate) fn breaker_wall_collision(
         };
 
         // Narrow-phase: verify actual AABB overlap
-        let dx = (breaker_pos.0.x - wall_pos.0.x).abs();
-        let dy = (breaker_pos.0.y - wall_pos.0.y).abs();
+        let dx = (breaker.position.0.x - wall_pos.0.x).abs();
+        let dy = (breaker.position.0.y - wall_pos.0.y).abs();
         if dx < half_w + wall_aabb.half_extents.x && dy < half_h + wall_aabb.half_extents.y {
             writer.write(BreakerImpactWall {
-                breaker: breaker_entity,
+                breaker: breaker.entity,
                 wall: wall_entity,
             });
         }
@@ -86,7 +73,10 @@ mod tests {
     use rantzsoft_spatial2d::components::{GlobalPosition2D, Spatial2D};
 
     use super::*;
-    use crate::shared::GameDrawLayer;
+    use crate::{
+        breaker::components::{BaseHeight, BaseWidth},
+        shared::{GameDrawLayer, NodeScalingFactor},
+    };
 
     // ── Helpers ──────────────────────────────────────────────────────
 

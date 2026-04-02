@@ -553,3 +553,91 @@ fn impact_cell_wall_context_resolves_to_specific_cell() {
         "cell_c should have no staged effects — not the impacted cell"
     );
 }
+
+// ── Corner case: Impact dual retarget — both participants from one collision ──
+
+#[test]
+fn impact_bolt_cell_dual_retarget_resolves_both() {
+    let mut app = test_app_bolt_cell();
+
+    let bolt_a = app.world_mut().spawn((Bolt, StagedEffects::default())).id();
+    let bolt_b = app.world_mut().spawn((Bolt, StagedEffects::default())).id();
+
+    let cell_a = app.world_mut().spawn((Cell, StagedEffects::default())).id();
+    let cell_b = app.world_mut().spawn((Cell, StagedEffects::default())).id();
+
+    // Observer: When(Impact(Cell), [On(Cell, ...), On(Bolt, ...)])
+    app.world_mut().spawn((
+        BoundEffects(vec![
+            (
+                "dual_cell".into(),
+                EffectNode::When {
+                    trigger: Trigger::Impact(ImpactTarget::Cell),
+                    then: vec![EffectNode::On {
+                        target: Target::Cell,
+                        permanent: false,
+                        then: vec![EffectNode::When {
+                            trigger: Trigger::Died,
+                            then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
+                        }],
+                    }],
+                },
+            ),
+            (
+                "dual_bolt".into(),
+                EffectNode::When {
+                    trigger: Trigger::Impact(ImpactTarget::Cell),
+                    then: vec![EffectNode::On {
+                        target: Target::Bolt,
+                        permanent: false,
+                        then: vec![EffectNode::When {
+                            trigger: Trigger::Died,
+                            then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 2.0 })],
+                        }],
+                    }],
+                },
+            ),
+        ]),
+        StagedEffects::default(),
+    ));
+
+    app.insert_resource(TestBoltImpactCellMsg(Some(BoltImpactCell {
+        bolt: bolt_b,
+        cell: cell_b,
+    })));
+
+    tick(&mut app);
+
+    assert!(
+        !app.world()
+            .get::<StagedEffects>(cell_b)
+            .unwrap()
+            .0
+            .is_empty(),
+        "cell_b SHOULD have staged effects from On(Cell) retarget"
+    );
+    assert!(
+        app.world()
+            .get::<StagedEffects>(cell_a)
+            .unwrap()
+            .0
+            .is_empty(),
+        "cell_a should be empty"
+    );
+    assert!(
+        !app.world()
+            .get::<StagedEffects>(bolt_b)
+            .unwrap()
+            .0
+            .is_empty(),
+        "bolt_b SHOULD have staged effects from On(Bolt) retarget"
+    );
+    assert!(
+        app.world()
+            .get::<StagedEffects>(bolt_a)
+            .unwrap()
+            .0
+            .is_empty(),
+        "bolt_a should be empty"
+    );
+}

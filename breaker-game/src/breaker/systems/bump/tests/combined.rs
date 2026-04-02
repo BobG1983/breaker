@@ -84,6 +84,7 @@ fn perfect_bump_cancels_dash() {
     app.insert_resource(TestBumpMessage(Some(BumpPerformed {
         grade: BumpGrade::Perfect,
         bolt: None,
+        breaker: entity,
     })));
 
     app.add_systems(

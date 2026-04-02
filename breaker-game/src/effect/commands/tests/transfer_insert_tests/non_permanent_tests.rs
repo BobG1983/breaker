@@ -16,6 +16,7 @@ fn transfer_non_permanent_inserts_staged_effects_when_absent_and_stores_when_chi
             then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
         }],
         permanent: false,
+        context: TriggerContext::default(),
     };
     cmd.apply(&mut world);
 
@@ -61,6 +62,7 @@ fn transfer_non_permanent_stores_multiple_non_do_children() {
             },
         ],
         permanent: false,
+        context: TriggerContext::default(),
     };
     cmd.apply(&mut world);
 
@@ -88,6 +90,7 @@ fn transfer_non_permanent_inserts_staged_effects_when_absent_and_stores_once_chi
             EffectKind::SecondWind,
         )])],
         permanent: false,
+        context: TriggerContext::default(),
     };
     cmd.apply(&mut world);
 
@@ -121,6 +124,7 @@ fn transfer_non_permanent_stores_once_child_with_empty_children() {
         chip_name: "second_wind".to_string(),
         children: vec![EffectNode::Once(vec![])],
         permanent: false,
+        context: TriggerContext::default(),
     };
     cmd.apply(&mut world);
 

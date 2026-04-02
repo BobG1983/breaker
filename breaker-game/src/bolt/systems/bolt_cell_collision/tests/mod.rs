@@ -8,3 +8,4 @@ mod damage_messages;
 mod last_impact;
 mod piercing;
 mod reflection;
+mod vulnerability;

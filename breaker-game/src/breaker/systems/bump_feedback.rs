@@ -130,6 +130,7 @@ mod tests {
         app.insert_resource(TestBumpMsg(Some(BumpPerformed {
             grade: BumpGrade::Perfect,
             bolt: None,
+            breaker: Entity::PLACEHOLDER,
         })));
         tick(&mut app);
 
@@ -148,6 +149,7 @@ mod tests {
         app.insert_resource(TestBumpMsg(Some(BumpPerformed {
             grade: BumpGrade::Early,
             bolt: None,
+            breaker: Entity::PLACEHOLDER,
         })));
         tick(&mut app);
 
@@ -166,6 +168,7 @@ mod tests {
         app.insert_resource(TestBumpMsg(Some(BumpPerformed {
             grade: BumpGrade::Late,
             bolt: None,
+            breaker: Entity::PLACEHOLDER,
         })));
         tick(&mut app);
 

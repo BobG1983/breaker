@@ -4,6 +4,7 @@ use bevy::prelude::*;
 
 use super::super::core::{
     BoundEffects, EffectKind, EffectNode, RootEffect, StagedEffects, Target, Trigger,
+    TriggerContext,
 };
 
 /// Extension trait on [`Commands`] for queuing effect operations.
@@ -19,6 +20,7 @@ pub trait EffectCommandsExt {
         chip_name: String,
         children: Vec<EffectNode>,
         permanent: bool,
+        context: TriggerContext,
     );
     /// Queue pushing pre-built effect entries to an entity's [`BoundEffects`],
     /// inserting [`BoundEffects`] and [`StagedEffects`] if absent.
@@ -52,12 +54,14 @@ impl EffectCommandsExt for Commands<'_, '_> {
         chip_name: String,
         children: Vec<EffectNode>,
         permanent: bool,
+        context: TriggerContext,
     ) {
         self.queue(TransferCommand {
             entity,
             chip_name,
             children,
             permanent,
+            context,
         });
     }
 
@@ -165,6 +169,7 @@ impl Command for DispatchInitialEffects {
                             chip_name: chip_name.clone(),
                             children: then.clone(),
                             permanent: true,
+                            context: TriggerContext::default(),
                         }
                         .apply(world);
                     }
@@ -176,6 +181,7 @@ impl Command for DispatchInitialEffects {
                             chip_name: chip_name.clone(),
                             children: then.clone(),
                             permanent: true,
+                            context: TriggerContext::default(),
                         }
                         .apply(world);
                     }
@@ -228,6 +234,7 @@ pub(crate) struct TransferCommand {
     pub(crate) chip_name: String,
     pub(crate) children: Vec<EffectNode>,
     pub(crate) permanent: bool,
+    pub(crate) context: TriggerContext,
 }
 
 impl Command for TransferCommand {
@@ -265,15 +272,15 @@ impl Command for TransferCommand {
             effect.fire(self.entity, &self.chip_name, world);
         }
 
-        // Recursively resolve nested On nodes, propagating the current entity
-        // as context so same-target chains fully unwrap.
+        // Recursively resolve nested On nodes, propagating the original
+        // trigger context so same-target chains fully unwrap.
         for (target, permanent, then) in on_children {
             ResolveOnCommand {
                 target,
                 chip_name: self.chip_name.clone(),
                 children: then,
                 permanent,
-                context_entity: Some(self.entity),
+                context: self.context,
             }
             .apply(world);
         }
@@ -290,37 +297,37 @@ use crate::{
 /// Command that resolves an `On` node: queries entities matching the target,
 /// then transfers children to each resolved entity.
 ///
-/// When `context_entity` is `Some(e)` and the entity has the marker component
-/// matching `target`, it is used directly instead of querying all entities of
-/// that type. This allows trigger chains like `When(Impacted(Cell), On(Cell, ...))`
-/// to retarget to the specific cell involved in the collision rather than every
-/// cell in the world.
+/// Reads the matching field from [`TriggerContext`] to resolve singular targets
+/// to the specific entity involved in the trigger event.
 pub(crate) struct ResolveOnCommand {
     pub(crate) target: Target,
     pub(crate) chip_name: String,
     pub(crate) children: Vec<EffectNode>,
     pub(crate) permanent: bool,
-    pub(crate) context_entity: Option<Entity>,
+    pub(crate) context: TriggerContext,
 }
 
 impl Command for ResolveOnCommand {
     fn apply(self, world: &mut World) {
         let entities = match self.target {
-            // All* targets always resolve to every entity of that type,
-            // regardless of context_entity.
+            // All* targets always resolve to every entity of that type.
             Target::AllBolts | Target::AllCells | Target::AllWalls => {
                 resolve_all(self.target, world)
             }
-            // Singular targets: context_entity determines resolution.
-            _ => match self.context_entity {
-                // Context matches target type → use that specific entity.
-                Some(ctx) if entity_matches_target(ctx, self.target, world) => vec![ctx],
-                // Context present but wrong type → no-op. The chain asked for
-                // a type that wasn't involved in this trigger.
-                Some(_) => vec![],
-                // No context (non-collision trigger) → fall back to defaults.
-                None => resolve_default(self.target, world),
-            },
+            // Singular targets: read the matching context field.
+            _ => {
+                let ctx_entity = match self.target {
+                    Target::Bolt => self.context.bolt,
+                    Target::Breaker => self.context.breaker,
+                    Target::Cell => self.context.cell,
+                    Target::Wall => self.context.wall,
+                    _ => None,
+                };
+                match ctx_entity {
+                    Some(e) => vec![e],
+                    None => resolve_default(self.target, world),
+                }
+            }
         };
         for entity in entities {
             TransferCommand {
@@ -328,21 +335,10 @@ impl Command for ResolveOnCommand {
                 chip_name: self.chip_name.clone(),
                 children: self.children.clone(),
                 permanent: self.permanent,
+                context: self.context,
             }
             .apply(world);
         }
-    }
-}
-
-/// Returns `true` if `entity` has the marker component that matches a singular target.
-fn entity_matches_target(entity: Entity, target: Target, world: &World) -> bool {
-    match target {
-        Target::Breaker => world.get::<Breaker>(entity).is_some(),
-        Target::Bolt => world.get::<Bolt>(entity).is_some(),
-        Target::Cell => world.get::<Cell>(entity).is_some(),
-        Target::Wall => world.get::<Wall>(entity).is_some(),
-        // All* targets never narrow to context — handled before this is called.
-        Target::AllBolts | Target::AllCells | Target::AllWalls => false,
     }
 }
 

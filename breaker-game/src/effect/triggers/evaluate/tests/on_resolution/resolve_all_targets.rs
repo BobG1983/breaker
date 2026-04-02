@@ -49,7 +49,7 @@ fn resolve_on_command_resolves_all_cells_to_cell_entities() {
             then: vec![EffectNode::Do(EffectKind::Shield { stacks: 1 })],
         }],
         permanent: true,
-        context_entity: None,
+        context: TriggerContext::default(),
     };
     cmd.apply(&mut world);
 
@@ -104,7 +104,7 @@ fn resolve_on_command_all_cells_with_do_children_fires_immediately() {
         chip_name: "cell_damage".to_string(),
         children: vec![EffectNode::Do(EffectKind::DamageBoost(2.0))],
         permanent: true,
-        context_entity: None,
+        context: TriggerContext::default(),
     };
     cmd.apply(&mut world);
 
@@ -151,7 +151,7 @@ fn resolve_on_command_resolves_all_bolts_to_bolt_entities() {
             })],
         }],
         permanent: true,
-        context_entity: None,
+        context: TriggerContext::default(),
     };
     cmd.apply(&mut world);
 
@@ -185,7 +185,7 @@ fn resolve_on_command_all_bolts_with_multiple_children() {
             },
         ],
         permanent: true,
-        context_entity: None,
+        context: TriggerContext::default(),
     };
     cmd.apply(&mut world);
 
@@ -221,7 +221,7 @@ fn resolve_on_command_resolves_all_walls_to_wall_entities() {
             then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
         }],
         permanent: true,
-        context_entity: None,
+        context: TriggerContext::default(),
     };
     cmd.apply(&mut world);
 
@@ -249,7 +249,7 @@ fn resolve_on_command_all_walls_with_single_wall() {
             then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
         }],
         permanent: true,
-        context_entity: None,
+        context: TriggerContext::default(),
     };
     cmd.apply(&mut world);
 
@@ -287,7 +287,10 @@ fn all_cells_with_context_entity_still_resolves_to_all_cells() {
             then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
         }],
         permanent: false,
-        context_entity: Some(cell_b),
+        context: TriggerContext {
+            cell: Some(cell_b),
+            ..Default::default()
+        },
     };
     cmd.apply(&mut world);
 
@@ -322,7 +325,10 @@ fn all_bolts_with_context_entity_still_resolves_to_all_bolts() {
             then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
         }],
         permanent: false,
-        context_entity: Some(bolt_b),
+        context: TriggerContext {
+            bolt: Some(bolt_b),
+            ..Default::default()
+        },
     };
     cmd.apply(&mut world);
 
@@ -357,7 +363,10 @@ fn all_walls_with_context_entity_still_resolves_to_all_walls() {
             then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
         }],
         permanent: false,
-        context_entity: Some(wall_b),
+        context: TriggerContext {
+            wall: Some(wall_b),
+            ..Default::default()
+        },
     };
     cmd.apply(&mut world);
 

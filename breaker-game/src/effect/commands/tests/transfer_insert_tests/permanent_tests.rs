@@ -16,6 +16,7 @@ fn transfer_permanent_inserts_bound_effects_when_absent_and_stores_when_child() 
             then: vec![EffectNode::Do(EffectKind::DamageBoost(2.0))],
         }],
         permanent: true,
+        context: TriggerContext::default(),
     };
     cmd.apply(&mut world);
 
@@ -75,6 +76,7 @@ fn transfer_permanent_on_child_is_resolved_not_stored() {
             }],
         }],
         permanent: true,
+        context: TriggerContext::default(),
     };
     cmd.apply(&mut world);
 
@@ -113,6 +115,7 @@ fn transfer_permanent_resolves_on_child_with_empty_then_is_noop() {
             then: vec![],
         }],
         permanent: true,
+        context: TriggerContext::default(),
     };
     cmd.apply(&mut world);
 
@@ -155,6 +158,7 @@ fn transfer_permanent_appends_to_existing_bound_effects() {
             then: vec![EffectNode::Do(EffectKind::DamageBoost(3.0))],
         }],
         permanent: true,
+        context: TriggerContext::default(),
     };
     cmd.apply(&mut world);
 
@@ -194,6 +198,7 @@ fn transfer_permanent_inserts_bound_effects_when_absent_and_stores_until_child()
             then: vec![EffectNode::Do(EffectKind::DamageBoost(1.5))],
         }],
         permanent: true,
+        context: TriggerContext::default(),
     };
     cmd.apply(&mut world);
 

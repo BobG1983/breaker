@@ -37,7 +37,14 @@ pub(super) fn sys_evaluate_bound_for_bump(
 ) {
     let trigger = Trigger::Bump;
     for (entity, bound, mut staged) in &mut query {
-        evaluate_bound_effects(&trigger, entity, bound, &mut staged, &mut commands, None);
+        evaluate_bound_effects(
+            &trigger,
+            entity,
+            bound,
+            &mut staged,
+            &mut commands,
+            TriggerContext::default(),
+        );
     }
 }
 
@@ -47,7 +54,13 @@ pub(super) fn sys_evaluate_staged_for_bump(
 ) {
     let trigger = Trigger::Bump;
     for (entity, mut staged) in &mut query {
-        evaluate_staged_effects(&trigger, entity, &mut staged, &mut commands, None);
+        evaluate_staged_effects(
+            &trigger,
+            entity,
+            &mut staged,
+            &mut commands,
+            TriggerContext::default(),
+        );
     }
 }
 
@@ -57,7 +70,14 @@ pub(super) fn sys_evaluate_bound_for_bump_whiff(
 ) {
     let trigger = Trigger::BumpWhiff;
     for (entity, bound, mut staged) in &mut query {
-        evaluate_bound_effects(&trigger, entity, bound, &mut staged, &mut commands, None);
+        evaluate_bound_effects(
+            &trigger,
+            entity,
+            bound,
+            &mut staged,
+            &mut commands,
+            TriggerContext::default(),
+        );
     }
 }
 
@@ -67,7 +87,13 @@ pub(super) fn sys_evaluate_staged_for_bump_whiff(
 ) {
     let trigger = Trigger::BumpWhiff;
     for (entity, mut staged) in &mut query {
-        evaluate_staged_effects(&trigger, entity, &mut staged, &mut commands, None);
+        evaluate_staged_effects(
+            &trigger,
+            entity,
+            &mut staged,
+            &mut commands,
+            TriggerContext::default(),
+        );
     }
 }
 
@@ -77,7 +103,13 @@ pub(super) fn sys_evaluate_staged_for_death(
 ) {
     let trigger = Trigger::Death;
     for (entity, mut staged) in &mut query {
-        evaluate_staged_effects(&trigger, entity, &mut staged, &mut commands, None);
+        evaluate_staged_effects(
+            &trigger,
+            entity,
+            &mut staged,
+            &mut commands,
+            TriggerContext::default(),
+        );
     }
 }
 

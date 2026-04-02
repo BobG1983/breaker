@@ -23,14 +23,14 @@ fn bridge_node_start(
             bound,
             &mut staged,
             &mut commands,
-            None,
+            TriggerContext::default(),
         );
         evaluate_staged_effects(
             &Trigger::NodeStart,
             entity,
             &mut staged,
             &mut commands,
-            None,
+            TriggerContext::default(),
         );
     }
 }

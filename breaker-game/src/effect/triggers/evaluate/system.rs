@@ -21,17 +21,17 @@ impl Command for RemoveChainsCommand {
 
 /// Walk `BoundEffects` for a trigger. Entries are NEVER consumed.
 ///
-/// `context_entity` is the "other" entity involved in the trigger event
-/// (e.g., the specific cell in an `Impacted(Cell)` trigger). When an inner
-/// `On(target)` node matches the context entity's type, it resolves to that
-/// single entity instead of querying all entities of that type.
+/// `context` carries the entities involved in the trigger event (e.g., the
+/// specific cell and bolt in an `Impacted(Cell)` collision). When an inner
+/// `On(target)` node finds a matching entity in the context, it resolves to
+/// that single entity instead of querying all entities of that type.
 pub(crate) fn evaluate_bound_effects(
     trigger: &Trigger,
     effect_owner: Entity,
     bound: &BoundEffects,
     staged: &mut StagedEffects,
     commands: &mut Commands,
-    context_entity: Option<Entity>,
+    context: TriggerContext,
 ) {
     for (chip_name, node) in &bound.0 {
         walk_bound_node(
@@ -41,20 +41,20 @@ pub(crate) fn evaluate_bound_effects(
             node,
             staged,
             commands,
-            context_entity,
+            context,
         );
     }
 }
 
 /// Walk `StagedEffects` for a trigger. Matching entries ARE consumed.
 ///
-/// See [`evaluate_bound_effects`] for `context_entity` semantics.
+/// See [`evaluate_bound_effects`] for `context` semantics.
 pub(crate) fn evaluate_staged_effects(
     trigger: &Trigger,
     effect_owner: Entity,
     staged: &mut StagedEffects,
     commands: &mut Commands,
-    context_entity: Option<Entity>,
+    context: TriggerContext,
 ) {
     let mut additions = Vec::new();
     staged.0.retain(|(chip_name, node)| {
@@ -65,7 +65,7 @@ pub(crate) fn evaluate_staged_effects(
             node,
             &mut additions,
             commands,
-            context_entity,
+            context,
         )
     });
     staged.0.extend(additions);
@@ -78,7 +78,7 @@ fn walk_bound_node(
     node: &EffectNode,
     staged: &mut StagedEffects,
     commands: &mut Commands,
-    context_entity: Option<Entity>,
+    _context: TriggerContext,
 ) {
     if let EffectNode::When { trigger: t, then } = node
         && t == trigger
@@ -94,9 +94,8 @@ fn walk_bound_node(
             }
         }
     }
-    // context_entity is propagated through staged effects — On nodes
-    // queued from bound evaluation will pick it up via walk_staged_node.
-    let _ = context_entity;
+    // context is propagated through staged effects — On nodes queued from
+    // bound evaluation will pick it up via walk_staged_node.
 }
 
 /// Returns true if the node was consumed (matched).
@@ -107,7 +106,7 @@ fn walk_staged_node(
     node: &EffectNode,
     additions: &mut Vec<(String, EffectNode)>,
     commands: &mut Commands,
-    context_entity: Option<Entity>,
+    context: TriggerContext,
 ) -> bool {
     match node {
         EffectNode::When { trigger: t, then } if t == trigger => {
@@ -179,7 +178,7 @@ fn walk_staged_node(
                 chip_name: chip_name.to_string(),
                 children: on_children.clone(),
                 permanent: *permanent,
-                context_entity,
+                context,
             });
             true // consumed -- ResolveOnCommand resolves target asynchronously
         }

@@ -41,7 +41,7 @@ use crate::{
         components::{Cell, CellHealth},
         messages::DamageCell,
     },
-    effect::effects::damage_boost::ActiveDamageBoosts,
+    effect::effects::{damage_boost::ActiveDamageBoosts, vulnerable::ActiveVulnerability},
     shared::CELL_LAYER,
 };
 
@@ -61,8 +61,16 @@ type CollisionWriters<'a> = (
 /// identifies a hit.
 ///
 /// Excludes bolts to avoid query conflicts with the mutable `bolt_query`.
-type CandidateLookup<'w, 's> =
-    Query<'w, 's, (Has<Cell>, Option<&'static CellHealth>), Without<Bolt>>;
+type CandidateLookup<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Has<Cell>,
+        Option<&'static CellHealth>,
+        Option<&'static ActiveVulnerability>,
+    ),
+    Without<Bolt>,
+>;
 
 /// Returns the first `SweepHit` whose entity is not a pierced cell.
 ///
@@ -155,7 +163,7 @@ pub(crate) fn bolt_cell_collision(
             remaining = hit.remaining;
 
             // Look up game-specific data for the hit entity
-            let Ok((is_cell, cell_health)) = candidate_lookup.get(hit.entity) else {
+            let Ok((is_cell, cell_health, vulnerability)) = candidate_lookup.get(hit.entity) else {
                 // Entity not in lookup (shouldn't happen) — skip
                 continue;
             };
@@ -165,6 +173,10 @@ pub(crate) fn bolt_cell_collision(
                 continue;
             }
 
+            // Per-cell damage including vulnerability
+            let cell_damage =
+                effective_damage * vulnerability.map_or(1.0, ActiveVulnerability::multiplier);
+
             // Check if this bolt can pierce this cell
             let can_pierce = bolt
                 .collision
@@ -172,7 +184,7 @@ pub(crate) fn bolt_cell_collision(
                 .as_deref()
                 .is_some_and(|pr| pr.0 > 0);
             let cell_hp = cell_health.map(|h| h.current);
-            let would_destroy = cell_hp.is_some_and(|hp| hp <= effective_damage);
+            let would_destroy = cell_hp.is_some_and(|hp| hp <= cell_damage);
 
             if can_pierce && would_destroy {
                 // PIERCE: do NOT reflect; decrement remaining pierces
@@ -203,7 +215,7 @@ pub(crate) fn bolt_cell_collision(
             });
             damage_writer.write(DamageCell {
                 cell: hit.entity,
-                damage: effective_damage,
+                damage: cell_damage,
                 source_chip: bolt.collision.spawned_by_evolution.map(|s| s.0.clone()),
             });
         }

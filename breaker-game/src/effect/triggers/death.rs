@@ -21,7 +21,11 @@ fn bridge_death(
     mut query: Query<(Entity, &BoundEffects, &mut StagedEffects)>,
     mut commands: Commands,
 ) {
-    for _msg in cell_reader.read() {
+    for msg in cell_reader.read() {
+        let context = TriggerContext {
+            cell: Some(msg.cell),
+            ..default()
+        };
         for (entity, bound, mut staged) in &mut query {
             evaluate_bound_effects(
                 &Trigger::Death,
@@ -29,12 +33,16 @@ fn bridge_death(
                 bound,
                 &mut staged,
                 &mut commands,
-                None,
+                context,
             );
-            evaluate_staged_effects(&Trigger::Death, entity, &mut staged, &mut commands, None);
+            evaluate_staged_effects(&Trigger::Death, entity, &mut staged, &mut commands, context);
         }
     }
-    for _msg in bolt_reader.read() {
+    for msg in bolt_reader.read() {
+        let context = TriggerContext {
+            bolt: Some(msg.bolt),
+            ..default()
+        };
         for (entity, bound, mut staged) in &mut query {
             evaluate_bound_effects(
                 &Trigger::Death,
@@ -42,9 +50,9 @@ fn bridge_death(
                 bound,
                 &mut staged,
                 &mut commands,
-                None,
+                context,
             );
-            evaluate_staged_effects(&Trigger::Death, entity, &mut staged, &mut commands, None);
+            evaluate_staged_effects(&Trigger::Death, entity, &mut staged, &mut commands, context);
         }
     }
 }
@@ -160,6 +168,117 @@ mod tests {
         assert!(
             (active.0[0] - 1.5).abs() < f32::EPSILON,
             "SpeedBoost multiplier should be 1.5"
+        );
+    }
+
+    // ── Context entity: cell death passes dying cell as context ──
+
+    #[test]
+    fn bridge_death_cell_context_resolves_to_specific_cell() {
+        use crate::cells::components::Cell;
+
+        let mut app = test_app();
+
+        let cell_a = app.world_mut().spawn((Cell, StagedEffects::default())).id();
+        let cell_b = app.world_mut().spawn((Cell, StagedEffects::default())).id();
+        let cell_c = app.world_mut().spawn((Cell, StagedEffects::default())).id();
+
+        // Observer: When(Death, [On(Cell, [When(Died, [Do(SpeedBoost)])])])
+        // On(Cell) should resolve to the specific dying cell via context
+        app.world_mut().spawn((
+            BoundEffects(vec![(
+                "death_test".into(),
+                EffectNode::When {
+                    trigger: Trigger::Death,
+                    then: vec![EffectNode::On {
+                        target: Target::Cell,
+                        permanent: false,
+                        then: vec![EffectNode::When {
+                            trigger: Trigger::Died,
+                            then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
+                        }],
+                    }],
+                },
+            )]),
+            StagedEffects::default(),
+        ));
+
+        app.insert_resource(TestCellDestroyedMsg(Some(RequestCellDestroyed {
+            cell: cell_b,
+            was_required_to_clear: true,
+        })));
+        app.insert_resource(TestBoltDestroyedMsg(None));
+
+        tick(&mut app);
+
+        let staged_b = app.world().get::<StagedEffects>(cell_b).unwrap();
+        assert!(
+            !staged_b.0.is_empty(),
+            "cell_b SHOULD have staged effects — it was the dying cell"
+        );
+        let staged_a = app.world().get::<StagedEffects>(cell_a).unwrap();
+        let staged_c = app.world().get::<StagedEffects>(cell_c).unwrap();
+        assert!(
+            staged_a.0.is_empty(),
+            "cell_a should have no staged effects — not the dying cell"
+        );
+        assert!(
+            staged_c.0.is_empty(),
+            "cell_c should have no staged effects — not the dying cell"
+        );
+    }
+
+    // ── Context entity: bolt death passes dying bolt as context ──
+
+    #[test]
+    fn bridge_death_bolt_context_resolves_to_specific_bolt() {
+        use crate::bolt::components::Bolt;
+
+        let mut app = test_app();
+
+        let bolt_a = app.world_mut().spawn((Bolt, StagedEffects::default())).id();
+        let bolt_b = app.world_mut().spawn((Bolt, StagedEffects::default())).id();
+        let bolt_c = app.world_mut().spawn((Bolt, StagedEffects::default())).id();
+
+        app.world_mut().spawn((
+            BoundEffects(vec![(
+                "death_test".into(),
+                EffectNode::When {
+                    trigger: Trigger::Death,
+                    then: vec![EffectNode::On {
+                        target: Target::Bolt,
+                        permanent: false,
+                        then: vec![EffectNode::When {
+                            trigger: Trigger::Died,
+                            then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
+                        }],
+                    }],
+                },
+            )]),
+            StagedEffects::default(),
+        ));
+
+        app.insert_resource(TestCellDestroyedMsg(None));
+        app.insert_resource(TestBoltDestroyedMsg(Some(RequestBoltDestroyed {
+            bolt: bolt_b,
+        })));
+
+        tick(&mut app);
+
+        let staged_b = app.world().get::<StagedEffects>(bolt_b).unwrap();
+        assert!(
+            !staged_b.0.is_empty(),
+            "bolt_b SHOULD have staged effects — it was the dying bolt"
+        );
+        let staged_a = app.world().get::<StagedEffects>(bolt_a).unwrap();
+        let staged_c = app.world().get::<StagedEffects>(bolt_c).unwrap();
+        assert!(
+            staged_a.0.is_empty(),
+            "bolt_a should have no staged effects — not the dying bolt"
+        );
+        assert!(
+            staged_c.0.is_empty(),
+            "bolt_c should have no staged effects — not the dying bolt"
         );
     }
 

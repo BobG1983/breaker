@@ -13,7 +13,7 @@ use crate::{
         messages::BoltImpactBreaker,
         queries::{BoltCollisionData, apply_velocity_formula},
     },
-    breaker::{filters::CollisionFilterBreaker, queries::CollisionQueryBreaker},
+    breaker::{filters::CollisionFilterBreaker, queries::BreakerCollisionData},
     effect::effects::{piercing::ActivePiercings, size_boost::ActiveSizeBoosts},
     shared::BREAKER_LAYER,
 };
@@ -277,34 +277,24 @@ pub(crate) fn bolt_breaker_collision(
     time: Res<Time<Fixed>>,
     quadtree: Res<CollisionQuadtree>,
     mut bolt_query: Query<BoltCollisionData, ActiveFilter>,
-    breaker_query: Query<(Entity, CollisionQueryBreaker), CollisionFilterBreaker>,
+    breaker_query: Query<(Entity, BreakerCollisionData), CollisionFilterBreaker>,
     mut writer: MessageWriter<BoltImpactBreaker>,
 ) {
-    let Ok((
-        breaker_entity,
-        (
-            breaker_position,
-            breaker_tilt,
-            breaker_w,
-            breaker_h,
-            max_angle,
-            size_mult,
-            breaker_entity_scale,
-        ),
-    )) = breaker_query.single()
-    else {
+    let Ok((breaker_entity, breaker)) = breaker_query.single() else {
         return;
     };
 
-    let breaker_scale = breaker_entity_scale.map_or(1.0, |s| s.0);
+    let breaker_scale = breaker.node_scale.map_or(1.0, |s| s.0);
     let surface = BreakerSurface {
-        pos: breaker_position.0,
-        half_w: breaker_w.half_width()
-            * size_mult.map_or(1.0, ActiveSizeBoosts::multiplier)
+        pos: breaker.position.0,
+        half_w: breaker.base_width.half_width()
+            * breaker
+                .size_boosts
+                .map_or(1.0, ActiveSizeBoosts::multiplier)
             * breaker_scale,
-        half_h: breaker_h.half_height() * breaker_scale,
-        tilt_angle: breaker_tilt.angle,
-        max_angle: max_angle.0,
+        half_h: breaker.base_height.half_height() * breaker_scale,
+        tilt_angle: breaker.tilt.angle,
+        max_angle: breaker.reflection_spread.0,
         entity: breaker_entity,
     };
     let sweep = SweepContext {

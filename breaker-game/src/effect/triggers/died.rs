@@ -29,9 +29,15 @@ fn bridge_died(
                 bound,
                 &mut staged,
                 &mut commands,
-                None,
+                TriggerContext::default(),
             );
-            evaluate_staged_effects(&Trigger::Died, entity, &mut staged, &mut commands, None);
+            evaluate_staged_effects(
+                &Trigger::Died,
+                entity,
+                &mut staged,
+                &mut commands,
+                TriggerContext::default(),
+            );
         }
     }
     for msg in bolt_reader.read() {
@@ -42,9 +48,15 @@ fn bridge_died(
                 bound,
                 &mut staged,
                 &mut commands,
-                None,
+                TriggerContext::default(),
             );
-            evaluate_staged_effects(&Trigger::Died, entity, &mut staged, &mut commands, None);
+            evaluate_staged_effects(
+                &Trigger::Died,
+                entity,
+                &mut staged,
+                &mut commands,
+                TriggerContext::default(),
+            );
         }
     }
 }

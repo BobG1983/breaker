@@ -27,9 +27,15 @@ fn bridge_node_end(
                 bound,
                 &mut staged,
                 &mut commands,
-                None,
+                TriggerContext::default(),
             );
-            evaluate_staged_effects(&Trigger::NodeEnd, entity, &mut staged, &mut commands, None);
+            evaluate_staged_effects(
+                &Trigger::NodeEnd,
+                entity,
+                &mut staged,
+                &mut commands,
+                TriggerContext::default(),
+            );
         }
     }
 }

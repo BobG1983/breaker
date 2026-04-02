@@ -19,15 +19,25 @@ fn bridge_bumped(
     for msg in reader.read() {
         let Some(bolt) = msg.bolt else { continue };
         if let Ok((entity, bound, mut staged)) = query.get_mut(bolt) {
+            let context = TriggerContext {
+                breaker: Some(msg.breaker),
+                ..default()
+            };
             evaluate_bound_effects(
                 &Trigger::Bumped,
                 entity,
                 bound,
                 &mut staged,
                 &mut commands,
-                None,
+                context,
             );
-            evaluate_staged_effects(&Trigger::Bumped, entity, &mut staged, &mut commands, None);
+            evaluate_staged_effects(
+                &Trigger::Bumped,
+                entity,
+                &mut staged,
+                &mut commands,
+                context,
+            );
         }
     }
 }
@@ -107,9 +117,11 @@ mod tests {
             ActiveSpeedBoosts(vec![]),
         ));
 
+        let breaker = app.world_mut().spawn_empty().id();
         app.insert_resource(TestBumpMsg(Some(BumpPerformed {
             grade: BumpGrade::Perfect,
             bolt: Some(bolt_entity),
+            breaker,
         })));
 
         tick(&mut app);
@@ -149,9 +161,11 @@ mod tests {
             ActiveSpeedBoosts(vec![]),
         ));
 
+        let breaker = app.world_mut().spawn_empty().id();
         app.insert_resource(TestBumpMsg(Some(BumpPerformed {
             grade: BumpGrade::Perfect,
             bolt: None,
+            breaker,
         })));
 
         tick(&mut app);
@@ -165,6 +179,66 @@ mod tests {
             active.0.len(),
             0,
             "bridge_bumped must skip when msg.bolt is None"
+        );
+    }
+
+    #[test]
+    fn bumped_context_resolves_to_specific_breaker() {
+        use crate::breaker::components::Breaker;
+
+        let mut app = test_app();
+
+        let breaker_a = app
+            .world_mut()
+            .spawn((Breaker, StagedEffects::default()))
+            .id();
+        let breaker_b = app
+            .world_mut()
+            .spawn((Breaker, StagedEffects::default()))
+            .id();
+
+        let bolt = app
+            .world_mut()
+            .spawn((
+                BoundEffects(vec![(
+                    "ctx_test".into(),
+                    EffectNode::When {
+                        trigger: Trigger::Bumped,
+                        then: vec![EffectNode::On {
+                            target: Target::Breaker,
+                            permanent: false,
+                            then: vec![EffectNode::When {
+                                trigger: Trigger::Died,
+                                then: vec![EffectNode::Do(EffectKind::SpeedBoost {
+                                    multiplier: 1.5,
+                                })],
+                            }],
+                        }],
+                    },
+                )]),
+                StagedEffects::default(),
+            ))
+            .id();
+
+        app.insert_resource(TestBumpMsg(Some(BumpPerformed {
+            grade: BumpGrade::Perfect,
+            bolt: Some(bolt),
+            breaker: breaker_b,
+        })));
+        tick(&mut app);
+
+        let staged_b = app.world().get::<StagedEffects>(breaker_b).unwrap();
+        assert!(
+            !staged_b.0.is_empty(),
+            "breaker_b SHOULD have staged effects"
+        );
+        assert!(
+            app.world()
+                .get::<StagedEffects>(breaker_a)
+                .unwrap()
+                .0
+                .is_empty(),
+            "breaker_a should be empty"
         );
     }
 }

@@ -13,7 +13,7 @@ use crate::{
             DashDuration, DashSpeedMultiplier, DashState, DashStateTimer, DashTilt, DashTiltEase,
             DecelEasing, SettleDuration, SettleTiltEase,
         },
-        queries::DashQuery,
+        queries::BreakerDashData,
     },
     effect::effects::{
         flash_step::FlashStepActive, size_boost::ActiveSizeBoosts, speed_boost::ActiveSpeedBoosts,
@@ -60,77 +60,64 @@ pub fn update_breaker_state(
     actions: Res<InputActions>,
     time: Res<Time<Fixed>>,
     playfield: Res<PlayfieldConfig>,
-    mut query: Query<DashQuery, With<Breaker>>,
+    mut query: Query<BreakerDashData, With<Breaker>>,
 ) {
     let dt = time.delta_secs();
 
-    for (
-        (
-            mut state,
-            mut velocity,
-            mut tilt,
-            mut timer,
-            max_speed,
-            decel,
-            easing,
-            dash_speed,
-            dash_duration,
-            dash_tilt,
-            dash_tilt_ease,
-            brake_tilt,
-            brake_decel,
-            settle_duration,
-            settle_tilt_ease,
-        ),
-        (flash_step, mut position, breaker_width, speed_mult, size_mult),
-    ) in &mut query
-    {
+    for mut data in &mut query {
         let params = DashParams {
-            max_speed,
-            decel,
-            easing,
-            dash_speed,
-            dash_duration,
-            dash_tilt,
-            dash_tilt_ease,
-            brake_tilt,
-            brake_decel,
-            settle_duration,
-            settle_tilt_ease,
+            max_speed: data.max_speed,
+            decel: data.deceleration,
+            easing: data.decel_easing,
+            dash_speed: data.dash_speed,
+            dash_duration: data.dash_duration,
+            dash_tilt: data.dash_tilt,
+            dash_tilt_ease: data.dash_tilt_ease,
+            brake_tilt: data.brake_tilt,
+            brake_decel: data.brake_decel,
+            settle_duration: data.settle_duration,
+            settle_tilt_ease: data.settle_tilt_ease,
         };
 
         let ctx = SettleContext {
             actions: &actions,
             dt,
-            flash_step,
-            position: position.as_deref_mut(),
-            breaker_width,
+            flash_step: data.flash_step,
+            position: data.position.as_deref_mut(),
+            breaker_width: data.base_width,
             playfield: &playfield,
-            speed_mult,
-            size_mult,
+            speed_mult: data.speed_boosts,
+            size_mult: data.size_boosts,
         };
 
-        match *state {
+        match *data.state {
             DashState::Idle | DashState::Settling => {
                 handle_idle_or_settling(
-                    &mut state,
-                    &mut velocity,
-                    &mut tilt,
-                    &mut timer,
+                    &mut data.state,
+                    &mut data.velocity,
+                    &mut data.tilt,
+                    &mut data.timer,
                     &params,
                     ctx,
                 );
             }
             DashState::Dashing => {
-                handle_dashing(dt, &mut state, *velocity, &mut tilt, &mut timer, &params);
+                handle_dashing(
+                    dt,
+                    &mut data.state,
+                    *data.velocity,
+                    &mut data.tilt,
+                    &mut data.timer,
+                    &params,
+                );
             }
             DashState::Braking => {
                 handle_braking(
                     dt,
-                    &mut state,
-                    &mut velocity,
-                    &mut tilt,
-                    &mut timer,
+                    &mut data.state,
+                    &mut data.velocity,
+                    &mut data.tilt,
+                    &mut data.timer,
                     &params,
                 );
             }

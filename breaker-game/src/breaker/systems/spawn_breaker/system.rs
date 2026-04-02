@@ -11,7 +11,7 @@ use crate::{
     breaker::{
         components::{Breaker, BreakerTilt, BumpState, DashState, DashStateTimer},
         messages::BreakerSpawned,
-        queries::ResetQuery,
+        queries::BreakerResetData,
         resources::BreakerConfig,
     },
     shared::{BOLT_LAYER, BREAKER_LAYER, CleanupOnRunEnd, GameDrawLayer, PlayfieldConfig},
@@ -82,27 +82,28 @@ pub fn spawn_breaker(
 /// Runs when entering [`GameState::Playing`]. Returns breaker to center,
 /// clears velocity/tilt/state. On the first node, `spawn_breaker` handles
 /// initialization — this system is a no-op if no breaker exists yet.
-pub fn reset_breaker(playfield: Res<PlayfieldConfig>, mut query: Query<ResetQuery, With<Breaker>>) {
+pub fn reset_breaker(
+    playfield: Res<PlayfieldConfig>,
+    mut query: Query<BreakerResetData, With<Breaker>>,
+) {
     // Robust if PlayfieldConfig is ever offset from world origin
     let center_x = f32::midpoint(playfield.left(), playfield.right());
-    for (mut position, mut state, mut velocity, mut tilt, mut timer, mut bump, base_y, prev) in
-        &mut query
-    {
-        position.0.x = center_x;
-        position.0.y = base_y.0;
-        *state = DashState::Idle;
-        velocity.0.x = 0.0;
-        tilt.angle = 0.0;
-        tilt.ease_start = 0.0;
-        tilt.ease_target = 0.0;
-        timer.remaining = 0.0;
-        bump.active = false;
-        bump.timer = 0.0;
-        bump.post_hit_timer = 0.0;
-        bump.cooldown = 0.0;
+    for mut data in &mut query {
+        data.position.0.x = center_x;
+        data.position.0.y = data.base_y.0;
+        *data.state = DashState::Idle;
+        data.velocity.0.x = 0.0;
+        data.tilt.angle = 0.0;
+        data.tilt.ease_start = 0.0;
+        data.tilt.ease_target = 0.0;
+        data.timer.remaining = 0.0;
+        data.bump.active = false;
+        data.bump.timer = 0.0;
+        data.bump.post_hit_timer = 0.0;
+        data.bump.cooldown = 0.0;
         // Snap interpolation to avoid lerping through teleport
-        if let Some(mut prev) = prev {
-            *prev = PreviousPosition(position.0);
+        if let Some(mut prev) = data.prev_position {
+            *prev = PreviousPosition(data.position.0);
         }
     }
 }

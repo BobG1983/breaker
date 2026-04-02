@@ -23,6 +23,8 @@ pub struct BumpPerformed {
     pub grade: BumpGrade,
     /// The bolt entity involved in this bump, if known.
     pub bolt: Option<Entity>,
+    /// The breaker entity that performed the bump.
+    pub breaker: Entity,
 }
 
 /// Sent when a forward bump window expires without bolt contact.
@@ -77,6 +79,7 @@ mod tests {
         let msg = BumpPerformed {
             grade: BumpGrade::Perfect,
             bolt: None,
+            breaker: Entity::PLACEHOLDER,
         };
         assert!(format!("{msg:?}").contains("Perfect"));
     }

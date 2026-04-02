@@ -32,7 +32,7 @@ fn resolve_on_command_with_no_matching_entities_is_noop() {
             then: vec![EffectNode::Do(EffectKind::Shield { stacks: 1 })],
         }],
         permanent: true,
-        context_entity: None,
+        context: TriggerContext::default(),
     };
     // Should not panic
     cmd.apply(&mut world);
@@ -64,7 +64,7 @@ fn resolve_on_command_all_bolts_with_no_bolts_is_noop() {
             })],
         }],
         permanent: true,
-        context_entity: None,
+        context: TriggerContext::default(),
     };
     // Should not panic
     cmd.apply(&mut world);
@@ -84,7 +84,7 @@ fn resolve_on_command_all_walls_with_no_walls_is_noop() {
             then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
         }],
         permanent: true,
-        context_entity: None,
+        context: TriggerContext::default(),
     };
     // Should not panic
     cmd.apply(&mut world);
@@ -241,7 +241,10 @@ fn nested_on_resolves_inner_on_to_bolt_immediately() {
             }],
         }],
         permanent: false,
-        context_entity: Some(cell_b),
+        context: TriggerContext {
+            cell: Some(cell_b),
+            ..Default::default()
+        },
     };
     cmd.apply(&mut world);
 
@@ -363,7 +366,10 @@ fn nested_same_target_on_nodes_unwrap_to_final_when() {
             }],
         }],
         permanent: false,
-        context_entity: Some(cell_b),
+        context: TriggerContext {
+            cell: Some(cell_b),
+            ..Default::default()
+        },
     };
     cmd.apply(&mut world);
 
@@ -395,5 +401,97 @@ fn nested_same_target_on_nodes_unwrap_to_final_when() {
     assert!(
         staged_c.0.is_empty(),
         "cell_c should have no staged effects"
+    );
+}
+
+// -----------------------------------------------------------------------
+// Nested cross-target On: context propagates through TransferCommand
+// -----------------------------------------------------------------------
+// On(Cell, [On(Bolt, [When(Died, ...)])]) with context { cell: cell_b, bolt: bolt_a }.
+// Outer resolves to cell_b via context.cell. TransferCommand propagates the
+// full context. Inner resolves to bolt_a via context.bolt.
+
+#[test]
+fn nested_cross_target_on_propagates_context() {
+    use crate::bolt::components::{Bolt, PrimaryBolt};
+
+    let mut world = World::new();
+
+    let cell_a = world
+        .spawn((Cell, BoundEffects::default(), StagedEffects::default()))
+        .id();
+    let cell_b = world
+        .spawn((Cell, BoundEffects::default(), StagedEffects::default()))
+        .id();
+    let bolt_a = world
+        .spawn((Bolt, BoundEffects::default(), StagedEffects::default()))
+        .id();
+    let bolt_b = world
+        .spawn((
+            Bolt,
+            PrimaryBolt,
+            BoundEffects::default(),
+            StagedEffects::default(),
+        ))
+        .id();
+
+    // On(Cell) → On(Bolt) with both fields in context
+    let cmd = ResolveOnCommand {
+        target: Target::Cell,
+        chip_name: "cross_target".to_string(),
+        children: vec![EffectNode::On {
+            target: Target::Bolt,
+            permanent: false,
+            then: vec![EffectNode::When {
+                trigger: Trigger::Died,
+                then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
+            }],
+        }],
+        permanent: false,
+        context: TriggerContext {
+            cell: Some(cell_b),
+            bolt: Some(bolt_a),
+            ..Default::default()
+        },
+    };
+    cmd.apply(&mut world);
+
+    // cell_b should be empty — inner On(Bolt) was recursively resolved, not stored
+    let staged_cell_b = world.get::<StagedEffects>(cell_b).unwrap();
+    assert!(
+        staged_cell_b.0.is_empty(),
+        "cell_b should have no staged effects — inner On(Bolt) was resolved immediately"
+    );
+
+    // cell_a should be empty — not in context
+    let staged_cell_a = world.get::<StagedEffects>(cell_a).unwrap();
+    assert!(
+        staged_cell_a.0.is_empty(),
+        "cell_a should have no staged effects"
+    );
+
+    // bolt_a should have the When(Died) — resolved via context.bolt
+    let staged_bolt_a = world.get::<StagedEffects>(bolt_a).unwrap();
+    assert_eq!(
+        staged_bolt_a.0.len(),
+        1,
+        "bolt_a SHOULD have 1 staged entry — resolved via context.bolt"
+    );
+    assert!(
+        matches!(
+            &staged_bolt_a.0[0].1,
+            EffectNode::When {
+                trigger: Trigger::Died,
+                ..
+            }
+        ),
+        "bolt_a's staged entry should be When(Died, ...)"
+    );
+
+    // bolt_b (PrimaryBolt) should have nothing — context.bolt pointed to bolt_a
+    let staged_bolt_b = world.get::<StagedEffects>(bolt_b).unwrap();
+    assert!(
+        staged_bolt_b.0.is_empty(),
+        "bolt_b (PrimaryBolt) should NOT get the effect — context.bolt was bolt_a"
     );
 }
