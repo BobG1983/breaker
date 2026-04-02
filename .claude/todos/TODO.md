@@ -2,8 +2,7 @@
 
 ## Backlog
 
-1. **[ready]** Split oversized files (8 HIGH, 12 MEDIUM) — [detail](detail/2026-04-02-file-splits.md)
-2. **[ready]** Scenario coverage gaps (2 HIGH, 3 MEDIUM, 3 new invariants) — [detail](detail/scenario-coverage-gaps.md)
+1. **[ready]** Scenario coverage gaps (2 HIGH, 3 MEDIUM, 3 new invariants) — [detail](detail/scenario-coverage-gaps.md)
 3. **[ready]** State machine refactor & run lifecycle — [detail](detail/spawn-bolt-setup-run-migration/spawn-bolt-setup-run-migration.md)
 4. **[NEEDS DETAIL]** Wall builder pattern — [detail](detail/wall-builder-pattern.md)
 5. **[NEEDS DETAIL]** Cell builder pattern — [detail](detail/cell-builder-pattern.md)
