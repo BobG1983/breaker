@@ -210,7 +210,7 @@ Effects are fired through `EffectCommandsExt` on `Commands`:
 
 - `commands.fire_effect(entity, effect, source_chip)` — queues `FireEffectCommand` → calls `effect.fire(entity, &source_chip, world)` at apply
 - `commands.reverse_effect(entity, effect, source_chip)` — queues `ReverseEffectCommand` → calls `effect.reverse(entity, &source_chip, world)` at apply
-- `commands.transfer_effect(entity, name, children, permanent)` — pushes non-Do children to `BoundEffects` (permanent) or `StagedEffects` (one-shot); fires Do children immediately
+- `commands.transfer_effect(entity, name, children, permanent, context)` — pushes non-Do children to `BoundEffects` (permanent) or `StagedEffects` (one-shot); fires Do children immediately; `context` carries trigger entity references for targeted `On` resolution
 - `commands.push_bound_effects(entity, effects)` — inserts `BoundEffects` + `StagedEffects` if absent, then appends pre-built `(String, EffectNode)` entries to `BoundEffects`; used by dispatch systems that bypass the chip-name routing in `transfer_effect`
 
 ### Chain Ownership Model

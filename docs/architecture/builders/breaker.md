@@ -123,7 +123,7 @@ Returns `impl Bundle` with every component for a valid breaker entity:
 
 1. `commands.spawn(self.build())`
 2. If effects are present, queues `commands.dispatch_initial_effects(effects, None)`
-3. No entity parameter needed — the command resolves targets from world by convention (Breaker → `With<Breaker>`, Bolt → `With<PrimaryBolt>`)
+3. No entity parameter needed — the command resolves targets from world by convention (Breaker → `(With<Breaker>, With<PrimaryBreaker>)`, Bolt → `With<PrimaryBolt>`)
 
 ## Systems Replaced
 
@@ -155,7 +155,7 @@ These are consolidated into `spawn_or_reuse_breaker` in `breaker/systems/`.
 ## Key Files
 
 - `breaker-game/src/breaker/builder/core.rs` — implementation
-- `breaker-game/src/breaker/queries.rs` — QueryData structs (`BreakerCollisionData`, `BreakerSizeData`, `BreakerMovementData`, `BreakerDashData`, `BreakerBumpData`, `BreakerResetData`)
+- `breaker-game/src/breaker/queries.rs` — QueryData structs (`BreakerCollisionData`, `BreakerSizeData`, `BreakerMovementData`, `BreakerDashData`, `BreakerBumpTimingData`, `BreakerBumpGradingData`, `BreakerResetData`, `SyncBreakerScaleData`)
 - `breaker-game/src/breaker/definition.rs` — `BreakerDefinition` (36 fields, all with `#[serde(default)]` except `name`)
 - `breaker-game/src/shared/size.rs` — `effective_size()`, `effective_radius()` pure functions
 - `breaker-game/assets/breakers/breaker.example.ron` — annotated reference showing all fields with defaults

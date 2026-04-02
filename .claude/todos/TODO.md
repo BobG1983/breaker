@@ -2,7 +2,7 @@
 
 ## Backlog
 
-1. **[ready]** spawn_bolt → setup_run migration — [detail](detail/spawn-bolt-setup-run-migration.md)
+1. **[NEEDS DETAIL]** spawn_bolt → setup_run migration — [detail](detail/spawn-bolt-setup-run-migration.md)
 2. **[NEEDS DETAIL]** Wall builder pattern — [detail](detail/wall-builder-pattern.md)
 3. **[NEEDS DETAIL]** Cell builder pattern — [detail](detail/cell-builder-pattern.md)
 4. **[NEEDS DETAIL]** Node & chip builder patterns + template.ron files — [detail](detail/node-chip-builders.md)

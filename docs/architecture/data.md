@@ -77,7 +77,7 @@ pub struct BumpFeedback {
 }
 ```
 
-When values are **independently accessed** across different systems, keep them as separate newtypes (`BoltBaseSpeed(f32)`, `BoltRadius(f32)`).
+When values are **independently accessed** across different systems, keep them as separate newtypes (e.g., `BoltBaseDamage(f32)`, `BoltSpawnOffsetY(f32)`). Note: `BoltRadius` is a type alias for `BaseRadius` — the component is still individually accessed, but it uses the shared spatial type rather than a bolt-specific newtype.
 
 ### 5. Builders materialize components from definitions
 

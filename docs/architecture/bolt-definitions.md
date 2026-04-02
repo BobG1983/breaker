@@ -32,7 +32,7 @@ Additionally, `BASE_BOLT_DAMAGE: f32 = 10.0` is a constant in `bolt/resources.rs
 2. Looks up `BoltDefinition` from `BoltRegistry` via `SelectedBreaker` → `BreakerRegistry` chain. Falls back to `BreakerDefinition::y_position` for spawn position.
 3. Calls `Bolt::builder()` with `.definition(&bolt_def)`, `.at_position()`, `.rendered(...)` or `.headless()`, optionally `.serving()`, and `.primary()`. The builder inserts all components in a single `.spawn(world)` call: `Bolt`, `PrimaryBolt`, `Velocity2D`, `GameDrawLayer::Bolt`, `Position2D`, `PreviousPosition`, `Scale2D`, `PreviousScale`, `Aabb2D`, `CollisionLayers`, `BaseRadius`, `MinRadius`, `MaxRadius`, `BoltSpawnOffsetY`, `BoltAngleSpread`, `BoltBaseDamage`, `BoltDefinitionRef`, `BaseSpeed`, `MinSpeed`, `MaxSpeed`, `MinAngleH`, `MinAngleV`, `CleanupOnRunEnd`. Conditionally: `BoltServing` if serving.
 4. `apply_node_scale_to_bolt` adds `NodeScalingFactor` from `ActiveNodeLayout.entity_scale`.
-5. `dispatch_bolt_effects` fires on `Added<BoltDefinitionRef>` and dispatches effects from the definition.
+5. `dispatch_bolt_effects` runs in FixedUpdate, not OnEnter. It processes `Added<BoltDefinitionRef>` each tick and dispatches effects from the definition. Effects are dispatched on the first FixedUpdate tick after spawning, not synchronously during OnEnter.
 
 There is no separate `init_bolt_params` step. The builder handles all parameter insertion at spawn time.
 

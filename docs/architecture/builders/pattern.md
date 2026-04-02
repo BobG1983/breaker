@@ -88,9 +88,9 @@ Things that don't affect entity validity (lives count, effects, color overrides)
 | Method | Input | Returns | Use case |
 |--------|-------|---------|----------|
 | `build()` | nothing | `impl Bundle` | Tests (headless), deferred spawning |
-| `spawn()` | `&mut Commands` | `Entity` | Production — spawns entity + queues effect dispatch |
+| `spawn()` | `&mut Commands` (Breaker) / `&mut World` (Bolt) | `Entity` | Production — spawns entity + queues/dispatches effects |
 
-`build()` returns **every component** needed for a valid entity. `spawn()` calls `build()`, spawns via commands, then queues `dispatch_initial_effects` (no entity parameter — resolves targets from world by convention).
+`build()` returns **every component** needed for a valid entity. For the breaker builder, `spawn()` calls `build()` via commands and queues `dispatch_initial_effects` (resolves targets from world by convention). For the bolt builder, `spawn()` takes `&mut World` directly — effect modules call it inside `fire()` functions which already hold `&mut World`. Bolt-definition effects are dispatched by the separate `dispatch_bolt_effects` system on `Added<BoltDefinitionRef>`.
 
 ## Mutually Exclusive States
 

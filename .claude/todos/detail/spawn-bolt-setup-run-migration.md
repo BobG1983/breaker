@@ -25,5 +25,23 @@ Target flow:
 - `reset_bolt` repositions at each node transition
 - `spawn_bolt` system deleted entirely
 
+## Needs Detail
+
+### 1. What is `setup_run`?
+No system or schedule point by this name exists today. Options:
+- **(a)** New system on `OnExit(GameState::RunSetup)` — bolt spawns before first `Playing` entry, during the run-setup-to-playing transition
+- **(b)** Follow breaker's `spawn_or_reuse_breaker` pattern — rename to `spawn_or_reuse_bolt` on `OnEnter(Playing)`, convert from `&mut World` to regular system, keep the guard
+
+These have very different scheduling and message-flow implications.
+
+### 2. `BoltSpawned` message on subsequent nodes
+`check_spawn_complete` (in `run/node/systems/`) needs `BoltSpawned` on **every node entry** to fire `SpawnNodeComplete`. If bolt spawns once at run start (option a above), who sends `BoltSpawned` on nodes 2+? Options:
+- `reset_bolt` takes over sending `BoltSpawned`
+- `check_spawn_complete` drops the `BoltSpawned` requirement and only checks cells/walls/breaker
+- A new "bolt ready" message replaces `BoltSpawned` for the reuse case
+
+### 3. Match breaker pattern or diverge?
+Breaker uses "spawn or reuse" on `OnEnter(Playing)` and sends `BreakerSpawned` every time — even when reusing. Bolt could mirror this exactly (cleanest, lowest risk, consistent pattern) or use a different lifecycle. What's the intent?
+
 ## Status
-`ready`
+`[NEEDS DETAIL]` — 3 open design questions above must be answered before planning

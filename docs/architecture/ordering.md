@@ -77,8 +77,6 @@ spawn_or_reuse_breaker                   [breaker domain — Breaker::builder() 
        BreakerSystems::Reset             [breaker domain]
   <- UiSystems::SpawnTimerHud
        (spawn_timer_hud)                 [ui domain]
-         <- spawn_lives_display .after(spawn_or_reuse_breaker)
-                                .after(UiSystems::SpawnTimerHud)  [effect domain]
 
 NodeSystems::Spawn
   (spawn_cells_from_layout)             [run/node domain — OnEnter]
@@ -88,19 +86,27 @@ NodeSystems::Spawn
   [dispatch_wall_effects is currently a no-op stub]
 
 spawn_bolt                               [bolt domain — uses Bolt::builder() + BoltRegistry]
+    <- apply_node_scale_to_bolt
+             .after(spawn_bolt)
+             .after(NodeSystems::Spawn)  [bolt domain]
     <- reset_bolt .after(spawn_bolt)
                   .after(BreakerSystems::Reset)
        BoltSystems::Reset              [bolt domain]
 ```
 
-Note: `spawn_or_reuse_breaker` is a single system that replaces the old 4-system chain (`spawn_breaker` → `init_breaker_params` → `init_breaker` → `dispatch_breaker_effects`). All components are emitted by `Breaker::builder()` in one call; effects are dispatched via `dispatch_initial_effects` command. `reset_bolt` is the last OnEnter system — it waits for both breaker reset and bolt init. `dispatch_cell_effects` runs after `NodeSystems::Spawn` to ensure cells are present before effects are dispatched. `dispatch_wall_effects` is a no-op stub (walls have no RON-defined effects yet).
+Note: `spawn_or_reuse_breaker` is a single system that replaces the old 4-system chain (`spawn_breaker` → `init_breaker_params` → `init_breaker` → `dispatch_breaker_effects`). All components are emitted by `Breaker::builder()` in one call; effects are dispatched via `dispatch_initial_effects` command. `reset_bolt` is the last OnEnter system — it waits for both breaker reset and bolt init. `dispatch_cell_effects` runs after `NodeSystems::Spawn` to ensure cells are present before effects are dispatched. `dispatch_wall_effects` is a no-op stub (walls have no RON-defined effects yet). `dispatch_bolt_effects` runs in FixedUpdate (not OnEnter) — it processes `Added<BoltDefinitionRef>` each tick, so it first fires the frame after the bolt spawns.
 
 ### FixedUpdate
 
 ```
+dispatch_bolt_effects .before(EffectSystems::Bridge)
+  [bolt domain — processes Added<BoltDefinitionRef> each FixedUpdate tick]
+
 rantzsoft_physics2d::PhysicsSystems::MaintainQuadtree
   (maintain_quadtree)           [rantzsoft_physics2d — incremental spatial index update]
     <- bolt_cell_collision .after(rantzsoft_physics2d::PhysicsSystems::MaintainQuadtree)
+                           .after(rantzsoft_physics2d::PhysicsSystems::EnforceDistanceConstraints)
+                           .after(BreakerSystems::Move)
     <- shockwave_collision .after(tick_shockwave)
                            .after(rantzsoft_physics2d::PhysicsSystems::MaintainQuadtree)
 
@@ -140,6 +146,9 @@ move_breaker .after(update_bump)
                [effect domain, unordered relative to physics chain]
             <- bridge_timer_threshold .in_set(EffectSystems::Bridge)
                [effect domain, unordered relative to physics chain]
+
+cleanup_destroyed_bolts .after(EffectSystems::Bridge)
+  [bolt domain — despawns RequestBoltDestroyed entities after effect bridges evaluate]
 ```
 
 Reading: the quadtree is maintained first (incremental — only changed entities re-inserted). Consumers read `Active*` components directly via `.multiplier()` / `.total()` methods. Then breaker moves, cell collisions run (reading quadtree for broad-phase, tagged `BoltSystems::CellCollision`), then breaker collision (`BoltSystems::BreakerCollision`), then bump grading (`BreakerSystems::GradeBump`), then distance constraints enforced (chain bolts), then bolt-lost detection (`BoltSystems::BoltLost`). Velocity is enforced by `apply_velocity_formula` at each collision/steering site — there is no separate velocity preparation step. All effect bridge systems run in `EffectSystems::Bridge` — downstream consumers order `.after(EffectSystems::Bridge)`.

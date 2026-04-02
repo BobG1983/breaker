@@ -51,9 +51,11 @@ Returns `impl Bundle` with: `Bolt`, spatial components (via `Spatial::builder()`
 
 ## spawn() Behavior
 
-1. `commands.spawn(self.build())`
-2. Conditionally inserts via commands: `BoltLifespan`, `BoundEffects`, `SpawnedByEvolution`, config params
-3. If effects provided, queues `commands.dispatch_initial_effects(effects, source_chip)` — no entity parameter, resolves targets from world by convention
+The bolt builder's `spawn()` takes `&mut World` (not `&mut Commands`) because effect modules spawn extra bolts inside `fire()` which already holds `&mut World`.
+
+1. `world.spawn(self.build())` — spawns core bundle
+2. Conditionally inserts onto the spawned entity: `BoltLifespan`, `BoundEffects` (from `with_effects` or `with_inherited_effects`), `SpawnedByEvolution`, definition-derived params
+3. Bolt-definition effects are **not** dispatched here. The separate `dispatch_bolt_effects` system processes `Added<BoltDefinitionRef>` each FixedUpdate tick and dispatches effects from the definition.
 
 ## Key Files
 
