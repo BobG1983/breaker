@@ -12,7 +12,7 @@ An abbreviated TDD pipeline for small fixes that don't need the full spec phase.
 - **ALL agents launch with `run_in_background: true`** — no exceptions
 - **Update session-state FIRST** after every agent notification
 - **Still TDD** — never skip the RED gate, even for "obvious" fixes
-- **Circuit breaking** — 3 failed attempts → `/debug`. See `.claude/rules/routing-repeated-failures.md`
+- **Circuit breaking** — 3 failed attempts → `/investigate`. See `.claude/rules/routing-repeated-failures.md`
 - **No speculative work** while agents are running — end turn after launching
 - **Escalation** — if at any point the fix turns out to be more complex than expected, OR the user requests broader changes mid-quickfix: stop immediately, enter `/plan` mode, create a plan, then switch to `/implement`. Do not continue the quickfix pipeline with expanded scope.
 
@@ -46,7 +46,7 @@ Example:
 ## When NOT to Use
 
 - Multi-domain or multi-file change — use `/implement`
-- Not sure what's wrong — use `/debug` first to find the root cause
+- Not sure what's wrong — use `/investigate` first to find the root cause
 - Not on a topic branch — use `/start-dev` first
 - The description takes more than two sentences — it's too complex, use `/implement`
 

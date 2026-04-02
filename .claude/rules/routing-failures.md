@@ -3,7 +3,7 @@
 Read this when a verification agent reports a failure. Each failure type routes to a different fix path.
 
 See `.claude/rules/hint-formats.md` for the standardized hint block formats that agents emit.
-See `.claude/rules/routing-repeated-failures.md` for when to stop retrying and escalate (3 attempts → `/debug`).
+See `.claude/rules/routing-repeated-failures.md` for when to stop retrying and escalate (3 attempts → `/investigate`).
 
 ## Hint Passthrough Rule
 

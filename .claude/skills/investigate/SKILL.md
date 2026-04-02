@@ -1,5 +1,5 @@
 ---
-name: debug
+name: investigate
 description: Methodical problem-solving workflow for debugging issues. Use when attempting to resolve bugs, errors, failing tests, failing scenarios, or unexpected behavior.
 ---
 
@@ -29,7 +29,7 @@ Replace ad-hoc debugging with a systematic process that:
 ## When NOT to Use
 
 - The fix is obvious and you know exactly what's wrong — use `/quickfix` instead
-- You haven't tried fixing it yet — try the normal routing in `/verify` first, then escalate to `/debug` if it keeps failing
+- You haven't tried fixing it yet — try the normal routing in `/verify` first, then escalate to `/investigate` if it keeps failing
 - You're planning new work, not debugging existing behavior — use `/plan` then `/implement`
 
 ## The DEBUG Protocol

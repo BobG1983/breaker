@@ -13,7 +13,7 @@ Run a verification tier on the current branch's changes. Launches the right agen
 - **Update session-state FIRST** after every agent notification
 - **Pass hint blocks verbatim** to fix agents — do not rephrase
 - **Never skip tiers** — Basic must pass before Standard runs, Standard before Full
-- **Circuit breaking** — 3 failed attempts at the same failure → stop → report STUCK then use the /debug skill
+- **Circuit breaking** — 3 failed attempts at the same failure → stop → report STUCK then use the /investigate skill
 - **No speculative work** while agents are running — end turn after launching
 
 ## When to Use

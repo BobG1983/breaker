@@ -2,7 +2,7 @@
 
 When fix attempts repeatedly fail, stop retrying and escalate.
 
-After **3 failed attempts** at the same failure → stop routing → move to Stuck → use `/debug` to systematically investigate root cause before surfacing to user.
+After **3 failed attempts** at the same failure → stop routing → move to Stuck → use `/investigate` to systematically investigate root cause before surfacing to user.
 
 ## What Counts as 1 Attempt
 
@@ -14,7 +14,7 @@ After **3 failed attempts** at the same failure → stop routing → move to Stu
 
 - User provides new direction or changes spec
 - Failure changes character (different error, different test, different file)
-- `/debug` identifies a new root cause (resets to 0 with the new understanding)
+- `/investigate` identifies a new root cause (resets to 0 with the new understanding)
 
 ## What NOT to Do
 
