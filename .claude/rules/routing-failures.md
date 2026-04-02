@@ -66,7 +66,7 @@ When routing failures to writer-code or writer-tests, pass the runner/reviewer a
 
 ## reviewer-file-length findings
 
-reviewer-file-length produces a split spec at `.claude/specs/file-splits.md`. The orchestrator launches parallel writer-code agents to execute the splits, then removes orphaned `.rs` files and runs Basic Verification Tier.
+reviewer-file-length writes a split spec to `.claude/todos/detail/<timestamp>-file-splits.md` and adds a todo to the top of the todo list. The orchestrator uses `/implement` or `/quickfix` to execute the splits from the todo, then removes orphaned `.rs` files and runs Basic Verification Tier.
 
 ## reviewer-tests findings
 

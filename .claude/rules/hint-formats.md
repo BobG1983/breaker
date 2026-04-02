@@ -73,7 +73,7 @@ Standardized output formats that verification agents produce and failure routing
 
 ## reviewer-file-length
 
-reviewer-file-length produces a split spec at `.claude/specs/file-splits.md` — no hint format needed. The orchestrator launches parallel writer-code agents to execute the splits.
+reviewer-file-length writes a split spec to `.claude/todos/detail/<timestamp>-file-splits.md` and adds a todo to the top of the todo list — no hint format needed. The orchestrator executes the splits from the todo via `/implement` or `/quickfix`.
 
 ## Dependency finding (guard-dependencies)
 

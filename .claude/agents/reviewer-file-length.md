@@ -85,15 +85,20 @@ domain/
 
 ## Output
 
-**Write the complete plan to `.claude/specs/file-splits.md`** using the format below. This spec file is consumed by writer-code agents.
+**Write the complete plan to `.claude/todos/detail/<timestamp>-file-splits.md`** (where `<timestamp>` is the current date in YYYY-MM-DD format) using the format below. This detail file is linked from the todo list.
 
 For each file, also check:
 - What the **parent module** declares (`mod original_file;`) — confirm it doesn't need changes
 - What **external files** import from this module — list them so the writer-code knows what to re-export
 - Whether the original file has a `//!` doc comment — copy it to the mod.rs plan
 
+**After writing the detail file**, add a todo item to the **TOP** of `.claude/todos/TODO.md` with:
+- Title: `Split oversized files (N HIGH, M MEDIUM)`
+- Detail link: the file you just wrote
+- Priority: place at the TOP of the list (before all other items)
+
 Return to the orchestrator:
-1. The spec file path: `.claude/specs/file-splits.md`
+1. The detail file path: `.claude/todos/detail/<timestamp>-file-splits.md`
 2. A summary table of all files and their priorities
 3. A recommended batching for parallel writer-code agents (group files that don't touch the same crate together)
 
