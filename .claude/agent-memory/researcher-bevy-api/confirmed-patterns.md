@@ -68,9 +68,105 @@ fn ramp_system(real: Res<Time<Real>>, mut virt: ResMut<Time<Virtual>>, mut state
 
 ---
 
-## Message System (Bevy 0.18 observer pattern)
+## Message System (Bevy 0.18)
 
-TODO: add from next research session.
+Verified against docs.rs/bevy_ecs/0.18.1, github.com/bevyengine/bevy/tree/v0.18.1.
+
+### Core types
+
+| Type | Role |
+|------|------|
+| `Messages<T>` | `Resource` — the actual message storage (double-buffered) |
+| `MessageWriter<T>` | `SystemParam` — thin wrapper around `ResMut<Messages<T>>` |
+| `MessageReader<T>` | `SystemParam` — reads from `Messages<T>` with cursor tracking |
+| `MessageMutator<T>` | `SystemParam` — mutable read with cursor tracking |
+| `MessageCursor<T>` | Tracks per-reader position in the message buffer |
+
+`MessageWriter<T>` has no extra logic: its `write()` method just calls `self.messages.write(message)`.
+
+### Registering a message type
+
+```rust
+app.add_message::<MyMessage>();
+// Must be called before any system reads/writes the message.
+// Inserts Messages<MyMessage> as a resource and schedules update system.
+```
+
+### Writing messages from a system
+
+```rust
+fn my_system(mut writer: MessageWriter<MyMessage>) {
+    writer.write(MyMessage { ... });
+}
+```
+
+### Writing messages directly from &mut World (in tests)
+
+`Messages<T>` implements `Resource` directly, so you can write to it from any `&mut World`:
+
+```rust
+// Option 1 — resource_mut (most explicit, recommended for tests):
+app.world_mut()
+    .resource_mut::<Messages<MyMessage>>()
+    .write(MyMessage { ... });
+
+// Option 2 — World::write_message convenience method:
+app.world_mut().write_message(MyMessage { ... });
+
+// Batch variant:
+app.world_mut()
+    .resource_mut::<Messages<MyMessage>>()
+    .write_batch([msg1, msg2]);
+```
+
+`World::write_message` / `write_message_batch` / `write_message_default` are confirmed
+in the World method list on docs.rs. The underlying implementation (in DeferredWorld) calls
+`get_resource_mut::<Messages<E>>()` and delegates to `write_batch` — it logs an error and
+returns `None` if the type was not registered.
+
+### Reading messages from a system
+
+```rust
+fn my_system(mut reader: MessageReader<MyMessage>) {
+    for msg in reader.read() {
+        // msg: &MyMessage
+    }
+}
+```
+
+### The `#[cfg(test)]` workaround used in this project (before knowing the above)
+
+The project currently uses a Resource + helper-system pattern to inject test messages:
+
+```rust
+// Old workaround in tests:
+#[derive(Resource)]
+struct TestMessage(Option<DamageCell>);
+
+fn enqueue_from_resource(res: Res<TestMessage>, mut writer: MessageWriter<DamageCell>) {
+    if let Some(msg) = res.0.clone() { writer.write(msg); }
+}
+
+app.insert_resource(TestMessage(Some(msg)));
+app.add_systems(FixedUpdate, enqueue_from_resource.before(handle_cell_hit));
+tick(&mut app);
+```
+
+This can be replaced with the direct resource_mut approach — no helper system or TestMessage resource needed.
+
+### Message update / buffer swap
+
+`Messages::update()` swaps double buffers once per frame. This is handled automatically by
+`message_update_system` (scheduled in `app.add_message()`). Tests using `app.update()` or
+`tick()` will have messages visible to readers on the same update tick they are written.
+
+### Module path
+
+```rust
+use bevy::ecs::message::{Messages, MessageWriter, MessageReader, MessageCursor};
+// All re-exported in bevy::prelude
+use bevy::prelude::*;
+```
 
 ---
 

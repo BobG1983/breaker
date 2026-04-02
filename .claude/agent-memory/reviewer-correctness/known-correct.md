@@ -78,3 +78,23 @@ so the narrow-phase `wall_pos.0 + wall_aabb.center` is consistent.
 `commands.entity(msg.cell).despawn()` is deferred. `CellDestroyedAt` is written
 in the same iteration before despawn executes. Entity is still alive when message
 is emitted — correct per two-phase destruction design.
+
+## ClampRange::apply: min before max ordering is correct
+
+`ClampRange::apply` applies min clamp first (floor), then max clamp (ceiling).
+When `min > max`, the result is `max` (value is raised to min, then lowered to max).
+No validator enforces `min <= max` but no production data has inverted ranges.
+
+## dispatch_chip_effects: Target::Breaker direct dispatch uses With<Breaker> only (no PrimaryBreaker)
+
+`dispatch_chip_effects` uses `targets.breakers: Query<Entity, With<Breaker>>` without
+`With<PrimaryBreaker>`. All chip RON files use `On(target: Breaker, ...)` at the top level,
+which goes through `dispatch_chip_effects`'s direct dispatch — never `ResolveOnCommand`.
+This path is CORRECT and does NOT require `PrimaryBreaker`.
+
+## breaker_cell_collision / breaker_wall_collision: single() is correct with ExtraBreaker undefined
+
+Both systems call `.single()` on `Query<..., With<Breaker>>`. `ExtraBreaker` is defined but
+never inserted on any entity — only one `Breaker` entity exists. `.single()` returns `Ok`.
+If `ExtraBreaker` is later used (spawns a second `Breaker`-marked entity), `.single()` will
+return `Err` and both systems silently skip. This is a future concern, not a current bug.

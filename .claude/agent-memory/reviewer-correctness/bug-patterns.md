@@ -194,3 +194,72 @@ active bug: primary bolt falls below playfield but no BoltLost is ever emitted.
 **Fix**: Add `BoltRespawnOffsetY` and `BoltRespawnAngleSpread` to the `definition_params` insertion block,
 using values from the definition or falling back to constants (e.g., `DEFAULT_BOLT_SPAWN_OFFSET_Y`
 and `DEFAULT_BOLT_ANGLE_SPREAD`).
+
+## PrimaryBreaker marker never inserted on spawned breaker — LATENT BUG (Breaker Builder Pattern feature)
+
+`DispatchInitialEffects` command (ext.rs:149) and `resolve_default` (ext.rs:381) both query
+`(With<Breaker>, With<PrimaryBreaker>)` to find the breaker entity. But `spawn_breaker` inserts
+only `Breaker` (not `PrimaryBreaker`), and `init_breaker` also does not insert `PrimaryBreaker`.
+
+`PrimaryBreaker` is defined in `breaker/components/core.rs` and exported, but grep confirms zero
+production callers that insert it. `ExtraBreaker` is similarly defined but unused.
+
+**Current status**: LATENT — `dispatch_initial_effects` has zero production callers, and no chip RON
+has `On(target: Breaker, ...)` nested inside a `When(...)` that would trigger `resolve_default`.
+Will become active when `dispatch_initial_effects` is wired up (Wave 6+): `Target::Breaker` effects
+will silently produce an empty `primary_breakers` vec and be dropped.
+
+**Location**: `breaker-game/src/breaker/systems/spawn_breaker/system.rs` (spawn_breaker fn)
+**Fix needed**: Insert `PrimaryBreaker` marker in `spawn_breaker` alongside `Breaker`.
+
+## BreakerBuilder: with_width() does not recompute min_w/max_w — LATENT BUG (Wave 6)
+
+`core_params_from` reads `min_w: dims.min_w` always from `HasDimensions`, not from the
+overridden width. When `.with_width(200.0)` is called on a builder whose `.definition()`
+computed `min_w = 60.0` (= 120.0 * 0.5), the entity gets `BaseWidth=200.0`, `MinWidth=60.0`,
+`MaxWidth=600.0`. The min/max are stale relative to the new base width.
+
+No test checks `MinWidth`/`MaxWidth` after `.with_width()`. Same issue applies to `.with_height()`.
+
+**Status**: LATENT — `.with_width()` has zero production callers (builder not yet wired in).
+**Location**: `breaker-game/src/breaker/builder/core.rs:639-654` (core_params_from)
+
+## BreakerBuilder: with_lives()/with_color() before definition() are silently overwritten — LATENT BUG
+
+`.definition()` unconditionally overwrites `optional.lives` and `optional.color_rgb`:
+- `self.optional.lives = def.life_pool.map_or(...)` always executes
+- `self.optional.color_rgb = Some(def.color_rgb)` always executes
+
+So `.with_lives(Some(5)).definition(...)` silently ignores the `with_lives` call.
+Same for `.with_color([...]).definition(...)`.
+
+`with_effects` is partially guarded: `definition()` only overwrites if `def.effects` is non-empty.
+
+**Status**: LATENT — builder not yet used in production. Valid call order is: `.definition()` FIRST, then `.with_*()`.
+**Location**: `breaker-game/src/breaker/builder/core.rs:461-530` (definition method)
+
+## BreakerBuilder: rendered() before definition() uses wrong color — LATENT BUG
+
+`.rendered(meshes, materials)` reads `self.optional.color_rgb` to create the material handle.
+If called before `.definition()`, `color_rgb` is `None` at call time and falls back to
+`BreakerDefinition::default().color_rgb`. Then `.definition()` sets `optional.color_rgb`
+to the definition's color — but the material was already created with the wrong color.
+
+**Status**: LATENT — zero production callers. Valid call order: `.definition()` FIRST, then `.rendered()`.
+**Location**: `breaker-game/src/breaker/builder/core.rs:376-416` (rendered method)
+
+## Scale2D stores absolute pixel dimensions, not scale ratios — confirmed design pattern
+
+`spawn_breaker` initializes `Scale2D { x: config.width, y: config.height }` (e.g., 120.0 × 20.0).
+`sync_breaker_scale` writes `effective_size()` result (absolute dimensions) to `Scale2D`.
+`compute_globals` copies `Scale2D → GlobalScale2D`, `derive_transform` puts these into
+`Transform.scale`. Breaker sprite is `Rectangle::new(1.0, 1.0)` — scaled to pixel dimensions.
+This is an absolute-dimension semantic for `Scale2D`, intentionally different from the usual
+ratio-multiplier usage. Do NOT re-flag as "incorrect use of Scale2D".
+
+## sync_breaker_scale in Update vs collision systems in FixedUpdate — CONFIRMED CORRECT
+
+`sync_breaker_scale` (Update) writes `Scale2D` (visual only). Collision systems (`breaker_cell_collision`,
+`breaker_wall_collision`) in FixedUpdate read `BaseWidth`/`BaseHeight`/`ActiveSizeBoosts`/
+`NodeScalingFactor` DIRECTLY — they do not read `Scale2D`. No ordering dependency. Intentional split.
+Do NOT re-flag the Update/FixedUpdate mismatch.
