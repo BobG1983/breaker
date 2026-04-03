@@ -14,10 +14,12 @@
 pub mod cleanup;
 pub mod dispatch;
 pub mod messages;
+mod plugin;
 pub mod route;
 pub mod routing_table;
 
 pub use cleanup::CleanupOnExit;
 pub use messages::{ChangeState, StateChanged};
+pub use plugin::RantzLifecyclePlugin;
 pub use route::Route;
-pub use routing_table::RoutingTable;
+pub use routing_table::{RoutingTable, RoutingTableAppExt};

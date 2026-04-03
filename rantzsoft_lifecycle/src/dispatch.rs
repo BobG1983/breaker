@@ -79,7 +79,10 @@ pub fn dispatch_message_routes<S: FreelyMutableState + Eq + std::hash::Hash + Co
 pub fn dispatch_condition_routes<S: FreelyMutableState + Eq + std::hash::Hash + Copy>(
     world: &mut World,
 ) {
-    let current = *world.resource::<State<S>>().get();
+    let Some(state) = world.get_resource::<State<S>>() else {
+        return; // SubState not active (parent in wrong state)
+    };
+    let current = *state.get();
 
     world.resource_scope(|world, table: Mut<RoutingTable<S>>| {
         let Some(route) = table.routes.get(&current) else {
