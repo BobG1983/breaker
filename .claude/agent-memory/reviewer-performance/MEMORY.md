@@ -10,3 +10,5 @@
 - [sync_bolt_scale schedule](sync_bolt_scale_schedule.md) — Runs in FixedUpdate unconditionally; cheap at 1 bolt; no change-detection guard needed at current scale
 - [spawn_bolt remove/insert Assets](spawn_bolt_remove_insert_assets.md) — remove_resource+insert_resource for Assets<Mesh/ColorMaterial> is correct pattern for World-exclusive system; spawn-time only
 - [propagate_breaker_changes hot reload](propagate_breaker_changes_hot_reload.md) — 3 chained .insert() splits for ~30 components; is_changed() guard means zero per-frame cost in production
+- [WallRegistry data pattern](wall_registry_pattern.md) — HashMap<String, WallDefinition> Resource; seed() clones are startup-only; 4 walls, no per-frame cost
+- [WallBuilder spawn pattern](wall_builder_spawn_pattern.md) — typestate builder; ~3-4 spawns at node start; all allocations spawn-time; legacy spawn_walls system coexists acceptably

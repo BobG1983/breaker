@@ -239,6 +239,37 @@ to the definition's color — but the material was already created with the wron
 This is an absolute-dimension semantic for `Scale2D`, intentionally different from the usual
 ratio-multiplier usage. Do NOT re-flag as "incorrect use of Scale2D".
 
+## WallBuilder Lifetime field is never consumed in build()/spawn() — CONFIRMED BUG (Wave 2)
+
+`Lifetime` is set by `.timed(duration)` and `.one_shot()` on `WallBuilder<Floor, V>` but is
+never read in `build()` or `spawn()` in `terminal.rs`. Calling `.one_shot()` or `.timed(5.0)`
+produces an identical entity to omitting those calls. No marker component or timer is inserted.
+
+**Status**: CONFIRMED BUG — no production callers of `.timed()` or `.one_shot()` yet
+(only test callers). `second_wind/system.rs` manually spawns its floor wall without the builder.
+**Location**: `breaker-game/src/wall/builder/core/terminal.rs` (both `build()` impls).
+
+## WallBuilder dispatch_effects: strips RootEffect.target, pushes all children to wall entity — LATENT HAZARD
+
+`dispatch_effects` in `terminal.rs` uses `let RootEffect::On { then, .. } = root;`, discarding
+`target`. All `then` children are pushed via `push_bound_effects` to the wall entity itself,
+regardless of whether `target` was `Bolt`, `Cell`, or `Wall`.
+
+Current RON (`wall.wall.ron`) has no effects. All test helpers use `target: Wall`.
+If a future wall RON adds `On(target: Bolt, ...)`, those nodes land on the wall entity's
+`BoundEffects` — never fired by the bolt. `dispatch_wall_effects` is a no-op stub, so the
+entire effects path for walls is scaffolding only.
+
+**Status**: LATENT — safe with current data, unsafe if multi-target wall definitions appear.
+**Location**: `breaker-game/src/wall/builder/core/terminal.rs:38-40`.
+
+## WallBuilder Floor::compute_position does NOT add half_thickness — CONFIRMED CORRECT
+
+`Floor::compute_position` returns `(0.0, playfield_bottom)` — no `+ ht` offset.
+This matches `second_wind/system.rs` which spawns at `Position2D(Vec2::new(0.0, bottom_y))`.
+The wall spans BELOW the playfield edge by `ht` (AABB half_extents), so the center is at the edge.
+Do NOT re-flag the asymmetry vs Ceiling (which DOES add `ht`).
+
 ## sync_breaker_scale in Update vs collision systems in FixedUpdate — CONFIRMED CORRECT
 
 `sync_breaker_scale` (Update) writes `Scale2D` (visual only). Collision systems (`breaker_cell_collision`,
