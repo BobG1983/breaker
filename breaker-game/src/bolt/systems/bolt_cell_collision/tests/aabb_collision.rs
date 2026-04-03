@@ -6,7 +6,7 @@ use super::helpers::*;
 use crate::{
     cells::components::Cell,
     shared::{BOLT_LAYER, CELL_LAYER, GameDrawLayer, NodeScalingFactor, WALL_LAYER},
-    wall::components::{Wall, WallSize},
+    wall::components::Wall,
 };
 
 // --- NodeScalingFactor collision tests ---
@@ -69,7 +69,7 @@ fn bolt_without_entity_scale_in_cell_collision_is_backward_compatible() {
 //
 // These tests verify that the CCD system reads collision extents from
 // `Aabb2D.half_extents` (populated by the quadtree broad phase) rather
-// than from the legacy `CellWidth`/`CellHeight` or `WallSize` components.
+// than from legacy dimension components.
 
 #[test]
 fn ccd_reads_cell_half_extents_from_aabb2d_not_cell_dimensions() {
@@ -119,23 +119,20 @@ fn ccd_reads_cell_half_extents_from_aabb2d_not_cell_dimensions() {
 }
 
 #[test]
-fn ccd_reads_wall_half_extents_from_aabb2d_not_wall_size() {
-    // Wall at (200, 0) with WallSize half_width=50, half_height=300
-    // but Aabb2D half_extents set to (5.0, 5.0).
+fn ccd_reads_wall_half_extents_from_aabb2d() {
+    // Wall at (200, 0) with tiny Aabb2D half_extents (5.0, 5.0).
     //
     // Bolt at (137, 50) moving right at (400, 0.1). y=50 is:
-    //  - INSIDE the WallSize-based expanded Y range (-308 to 308)
+    //  - would be inside a legacy large-AABB expanded Y range
     //  - OUTSIDE the Aabb2D-based expanded Y range (-13 to 13)
     //
-    // If the system reads from WallSize, the bolt hits (y=50 within range).
     // If the system reads from Aabb2D, the bolt misses (y=50 outside range).
     let mut app = test_app();
     let bc = super::helpers::test_bolt_definition();
 
-    // Spawn wall with large WallSize but tiny Aabb2D
+    // Spawn wall with tiny Aabb2D
     app.world_mut().spawn((
         Wall,
-        WallSize {},
         Aabb2D::new(Vec2::ZERO, Vec2::new(5.0, 5.0)),
         CollisionLayers::new(WALL_LAYER, BOLT_LAYER),
         Position2D(Vec2::new(200.0, 0.0)),
@@ -145,7 +142,7 @@ fn ccd_reads_wall_half_extents_from_aabb2d_not_wall_size() {
     ));
 
     // Bolt outside the expanded AABB on the left (x=137 < 142=200-50-8)
-    // but at y=50 which is inside WallSize range but outside Aabb2D range.
+    // but at y=50 which is outside the Aabb2D expanded range.
     let start_x = 200.0 - 50.0 - bc.radius - 5.0; // 137.0
     spawn_bolt(&mut app, start_x, 50.0, 400.0, 0.1);
 
@@ -160,8 +157,8 @@ fn ccd_reads_wall_half_extents_from_aabb2d_not_wall_size() {
     assert!(
         vel.0.x > 0.0,
         "bolt at y=50 should miss the wall when CCD reads Aabb2D(5,5) \
-         instead of WallSize(50,300) — got vx={:.1} \
-         (negative means it reflected off the wall using legacy WallSize)",
+         — got vx={:.1} \
+         (negative means it reflected off the wall using incorrect dimensions)",
         vel.0.x
     );
 }

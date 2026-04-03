@@ -20,7 +20,7 @@ use crate::{
     },
     effect::effects::vulnerable::ActiveVulnerability,
     shared::{BOLT_LAYER, CELL_LAYER, GameDrawLayer, WALL_LAYER},
-    wall::components::{Wall, WallSize},
+    wall::components::Wall,
 };
 
 /// Real grid vertical spacing: `cell_height` (24) + padding (4) = 28
@@ -133,7 +133,6 @@ pub(super) fn spawn_wall(app: &mut App, x: f32, y: f32, half_width: f32, half_he
     let pos = Vec2::new(x, y);
     app.world_mut().spawn((
         Wall,
-        WallSize {},
         Aabb2D::new(Vec2::ZERO, Vec2::new(half_width, half_height)),
         CollisionLayers::new(WALL_LAYER, BOLT_LAYER),
         Position2D(pos),

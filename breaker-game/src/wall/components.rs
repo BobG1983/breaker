@@ -10,13 +10,6 @@ use crate::shared::CleanupOnNodeExit;
 #[require(Spatial2D, CleanupOnNodeExit)]
 pub struct Wall;
 
-/// Half-extents for a wall entity used in CCD collision.
-///
-/// Walls are invisible collision boundaries, so they carry their own size
-/// rather than relying on cell config.
-#[derive(Component, Debug)]
-pub(crate) struct WallSize {}
-
 #[cfg(test)]
 mod tests {
     use super::*;

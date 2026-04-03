@@ -3,14 +3,8 @@
 use std::collections::HashSet;
 
 use bevy::prelude::*;
-use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
-use rantzsoft_spatial2d::components::{Position2D, Scale2D};
 
-use crate::{
-    bolt::messages::BoltImpactWall,
-    shared::{BOLT_LAYER, CleanupOnNodeExit, PlayfieldConfig, WALL_LAYER},
-    wall::components::{Wall, WallSize},
-};
+use crate::{bolt::messages::BoltImpactWall, shared::PlayfieldConfig, wall::components::Wall};
 
 /// Marker for the invisible wall entity spawned by Second Wind.
 #[derive(Component)]
@@ -30,26 +24,9 @@ pub(crate) fn fire(_entity: Entity, _source_chip: &str, world: &mut World) {
         return;
     }
 
-    let playfield = world.resource::<PlayfieldConfig>();
-    let bottom_y = playfield.bottom();
-    let half_width = playfield.width / 2.0;
-    let wall_ht = playfield.wall_half_thickness();
-
-    let wall = world
-        .spawn((
-            SecondWindWall,
-            Wall,
-            WallSize {},
-            Position2D(Vec2::new(0.0, bottom_y)),
-            Scale2D {
-                x: half_width,
-                y: wall_ht,
-            },
-            Aabb2D::new(Vec2::ZERO, Vec2::new(half_width, wall_ht)),
-            CollisionLayers::new(WALL_LAYER, BOLT_LAYER),
-            CleanupOnNodeExit,
-        ))
-        .id();
+    let playfield = world.resource::<PlayfieldConfig>().clone();
+    let bundle = Wall::builder().floor(&playfield).one_shot().build();
+    let wall = world.spawn((SecondWindWall, bundle)).id();
 
     info!("spawned second wind wall {:?}", wall);
 }
