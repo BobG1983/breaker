@@ -108,7 +108,7 @@ pub enum MutationKind {
     /// Used by the `aabb_matches_entity_dimensions` self-test to trigger a
     /// [`InvariantKind::AabbMatchesEntityDimensions`] violation.
     InjectMismatchedBoltAabb,
-    /// Spawn N extra [`GravityWellMarker`] entities to push count above threshold.
+    /// Spawn N extra [`GravityWell`] entities to push count above threshold.
     ///
     /// Used by the `gravity_well_count_reasonable` self-test to trigger a
     /// [`InvariantKind::GravityWellCountReasonable`] violation.

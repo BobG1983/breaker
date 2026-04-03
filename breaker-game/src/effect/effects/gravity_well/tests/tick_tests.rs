@@ -11,7 +11,7 @@ fn tick_gravity_well_despawns_expired_wells() {
     let well = app
         .world_mut()
         .spawn((
-            GravityWellMarker,
+            GravityWell,
             GravityWellConfig {
                 strength: 100.0,
                 radius: 80.0,

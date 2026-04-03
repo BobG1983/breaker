@@ -3,6 +3,7 @@
 use bevy::prelude::*;
 use iyes_progress::prelude::*;
 use rantzsoft_defaults::prelude::*;
+use rantzsoft_lifecycle::RantzLifecyclePlugin;
 
 use super::{
     app::loading::LoadingPlugin,
@@ -47,6 +48,17 @@ impl Plugin for StatePlugin {
             .add_sub_state::<NodeState>()
             .add_sub_state::<ChipSelectState>()
             .add_sub_state::<RunEndState>()
+            // Lifecycle crate — routing tables + dispatch for all state types
+            .add_plugins(
+                RantzLifecyclePlugin::new()
+                    .register_state::<AppState>()
+                    .register_state::<GameState>()
+                    .register_state::<MenuState>()
+                    .register_state::<RunPhase>()
+                    .register_state::<NodeState>()
+                    .register_state::<ChipSelectState>()
+                    .register_state::<RunEndState>(),
+            )
             // Defaults + progress
             .add_plugins(defaults_plugin())
             .add_plugins(

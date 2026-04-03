@@ -10,7 +10,7 @@ fn apply_gravity_pull_steers_bolt_toward_well_within_radius() {
 
     // Gravity well at origin with large radius
     app.world_mut().spawn((
-        GravityWellMarker,
+        GravityWell,
         GravityWellConfig {
             strength: 500.0,
             radius: 200.0,
@@ -43,7 +43,7 @@ fn apply_gravity_pull_uses_position2d_for_bolt_distance() {
 
     // Gravity well at Position2D origin with deliberately different Transform.
     app.world_mut().spawn((
-        GravityWellMarker,
+        GravityWell,
         GravityWellConfig {
             strength: 500.0,
             radius: 200.0,
@@ -80,7 +80,7 @@ fn apply_gravity_pull_uses_position2d_for_well_position_not_transform() {
     // Well at Position2D (0,0) but Transform at (500, 500). If the system reads
     // Transform, the bolt at (100, 0) would be pulled toward (500, 500) instead of (0,0).
     app.world_mut().spawn((
-        GravityWellMarker,
+        GravityWell,
         GravityWellConfig {
             strength: 500.0,
             radius: 200.0,
@@ -117,7 +117,7 @@ fn apply_gravity_pull_uses_position2d_radius_check_not_transform() {
     // By Position2D, bolt at (0,0) is 200 units away (outside radius 50).
     // By Transform, bolt at (0,0) would appear 30 units away (inside radius 50).
     app.world_mut().spawn((
-        GravityWellMarker,
+        GravityWell,
         GravityWellConfig {
             strength: 500.0,
             radius: 50.0,
@@ -155,7 +155,7 @@ fn apply_gravity_pull_does_not_pull_bolt_outside_radius_by_position2d() {
     // Bolt at Position2D (100, 0) = distance 100 > radius 50.
     // Transform at (10, 0) would be within radius if the system reads Transform.
     app.world_mut().spawn((
-        GravityWellMarker,
+        GravityWell,
         GravityWellConfig {
             strength: 500.0,
             radius: 50.0,
@@ -193,7 +193,7 @@ fn apply_gravity_pull_pulls_bolt_at_exact_radius_boundary() {
     // Bolt at Position2D (50, 0) = distance exactly 50 (inside).
     // Transform at (999, 0) — if system reads Transform, distance 999 > 50, would NOT pull.
     app.world_mut().spawn((
-        GravityWellMarker,
+        GravityWell,
         GravityWellConfig {
             strength: 500.0,
             radius: 50.0,
@@ -229,7 +229,7 @@ fn apply_gravity_pull_no_pull_when_bolt_at_same_position2d_as_well() {
     // Well and bolt both at Position2D origin — distance = 0, no pull.
     // Transform values differ to ensure the system reads Position2D.
     app.world_mut().spawn((
-        GravityWellMarker,
+        GravityWell,
         GravityWellConfig {
             strength: 500.0,
             radius: 200.0,
@@ -265,7 +265,7 @@ fn apply_gravity_pull_skips_well_without_position2d() {
 
     // Well with NO Position2D — only Transform. The query should not match this well.
     app.world_mut().spawn((
-        GravityWellMarker,
+        GravityWell,
         GravityWellConfig {
             strength: 500.0,
             radius: 200.0,
@@ -299,7 +299,7 @@ fn apply_gravity_pull_only_well_with_position2d_affects_bolt() {
 
     // Well A: has Position2D at (0, 0), radius 200 — should affect bolt.
     app.world_mut().spawn((
-        GravityWellMarker,
+        GravityWell,
         GravityWellConfig {
             strength: 500.0,
             radius: 200.0,
@@ -312,7 +312,7 @@ fn apply_gravity_pull_only_well_with_position2d_affects_bolt() {
 
     // Well B: NO Position2D, only Transform — should be skipped.
     app.world_mut().spawn((
-        GravityWellMarker,
+        GravityWell,
         GravityWellConfig {
             strength: 500.0,
             radius: 200.0,

@@ -8,7 +8,7 @@ use breaker::{
     chips::inventory::ChipInventory,
     effect::effects::{
         chain_lightning::{ChainLightningArc, ChainLightningChain, ChainState},
-        gravity_well::{GravityWellConfig, GravityWellMarker},
+        gravity_well::{GravityWell, GravityWellConfig},
         pulse::PulseRing,
         second_wind::SecondWindWall,
         shield::ShieldWall,
@@ -306,13 +306,13 @@ pub fn apply_inject_mismatched_bolt_aabb(bolts: &mut Query<&mut Aabb2D, With<Sce
     }
 }
 
-/// Spawns `count` extra [`GravityWellMarker`] entities.
+/// Spawns `count` extra [`GravityWell`] entities.
 ///
 /// Used exclusively by the `gravity_well_count_reasonable` self-test scenario.
 pub fn apply_spawn_extra_gravity_wells(count: usize, commands: &mut Commands) {
     for _ in 0..count {
         commands.spawn((
-            GravityWellMarker,
+            GravityWell,
             GravityWellConfig {
                 strength: 0.0,
                 radius: 0.0,

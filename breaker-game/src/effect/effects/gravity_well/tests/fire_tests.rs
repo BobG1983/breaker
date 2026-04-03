@@ -24,7 +24,7 @@ fn fire_spawns_well_entity_with_marker_and_config() {
 
     fire(entity, 100.0, 5.0, 80.0, 3, "", &mut world);
 
-    let mut query = world.query::<(&GravityWellMarker, &GravityWellConfig, &Position2D)>();
+    let mut query = world.query::<(&GravityWell, &GravityWellConfig, &Position2D)>();
     let results: Vec<_> = query.iter(&world).collect();
     assert_eq!(results.len(), 1, "expected exactly one gravity well");
 
@@ -101,7 +101,7 @@ fn fire_reads_position2d_not_transform_for_well_spawn_position() {
 
     fire(entity, 100.0, 5.0, 80.0, 3, "", &mut world);
 
-    let mut query = world.query::<(&GravityWellMarker, &Position2D)>();
+    let mut query = world.query::<(&GravityWell, &Position2D)>();
     let results: Vec<_> = query.iter(&world).collect();
     assert_eq!(results.len(), 1, "expected exactly one gravity well");
 
@@ -123,7 +123,7 @@ fn fire_reads_position2d_zero_not_transform_for_well_spawn_position() {
 
     fire(entity, 100.0, 5.0, 80.0, 3, "", &mut world);
 
-    let mut query = world.query::<(&GravityWellMarker, &Position2D)>();
+    let mut query = world.query::<(&GravityWell, &Position2D)>();
     let results: Vec<_> = query.iter(&world).collect();
     assert_eq!(results.len(), 1, "expected exactly one gravity well");
 
@@ -143,7 +143,7 @@ fn fire_falls_back_to_zero_when_entity_has_no_position2d() {
 
     fire(entity, 100.0, 5.0, 80.0, 3, "", &mut world);
 
-    let mut query = world.query::<(&GravityWellMarker, &Position2D)>();
+    let mut query = world.query::<(&GravityWell, &Position2D)>();
     let results: Vec<_> = query.iter(&world).collect();
     assert_eq!(results.len(), 1, "expected exactly one gravity well");
 
@@ -163,7 +163,7 @@ fn fire_falls_back_to_zero_when_entity_is_empty() {
 
     fire(entity, 100.0, 5.0, 80.0, 3, "", &mut world);
 
-    let mut query = world.query::<(&GravityWellMarker, &Position2D)>();
+    let mut query = world.query::<(&GravityWell, &Position2D)>();
     let results: Vec<_> = query.iter(&world).collect();
     assert_eq!(results.len(), 1, "expected exactly one gravity well");
 
@@ -186,7 +186,7 @@ fn fire_spawns_well_with_cleanup_on_node_exit() {
 
     fire(entity, 100.0, 5.0, 80.0, 3, "", &mut world);
 
-    let mut query = world.query_filtered::<Entity, With<GravityWellMarker>>();
+    let mut query = world.query_filtered::<Entity, With<GravityWell>>();
     let well = query.iter(&world).next().expect("well should exist");
 
     assert!(
@@ -207,7 +207,7 @@ fn fire_multiple_wells_all_have_cleanup_on_node_exit() {
     fire(entity, 200.0, 3.0, 60.0, 5, "", &mut world);
     fire(entity, 300.0, 4.0, 70.0, 5, "", &mut world);
 
-    let mut query = world.query_filtered::<Entity, With<GravityWellMarker>>();
+    let mut query = world.query_filtered::<Entity, With<GravityWell>>();
     let wells: Vec<Entity> = query.iter(&world).collect();
     assert_eq!(wells.len(), 3, "expected 3 gravity wells");
 
