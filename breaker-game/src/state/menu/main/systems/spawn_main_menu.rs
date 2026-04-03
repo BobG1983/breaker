@@ -95,7 +95,10 @@ mod tests {
     use bevy::state::app::StatesPlugin;
 
     use super::*;
-    use crate::{shared::GameState, state::cleanup::cleanup_entities};
+    use crate::state::{
+        cleanup::cleanup_entities,
+        types::{AppState, GameState, MenuState},
+    };
 
     fn test_config() -> MainMenuConfig {
         MainMenuConfig {
@@ -167,17 +170,25 @@ mod tests {
         app.add_plugins((MinimalPlugins, StatesPlugin, AssetPlugin::default()))
             .init_asset::<Font>()
             .insert_resource(test_config())
-            .init_state::<GameState>()
-            .add_systems(OnEnter(GameState::MainMenu), spawn_main_menu)
-            .add_systems(
-                OnExit(GameState::MainMenu),
-                cleanup_entities::<MainMenuScreen>,
-            );
+            .init_state::<AppState>()
+            .add_sub_state::<GameState>()
+            .add_sub_state::<MenuState>()
+            .add_systems(OnEnter(MenuState::Main), spawn_main_menu)
+            .add_systems(OnExit(MenuState::Main), cleanup_entities::<MainMenuScreen>);
 
-        // Enter MainMenu state
+        // Navigate to MenuState::Main
+        app.world_mut()
+            .resource_mut::<NextState<AppState>>()
+            .set(AppState::Game);
+        app.update();
         app.world_mut()
             .resource_mut::<NextState<GameState>>()
-            .set(GameState::MainMenu);
+            .set(GameState::Menu);
+        // MenuState defaults to Loading — need one update to enter Menu, then set Main
+        app.update();
+        app.world_mut()
+            .resource_mut::<NextState<MenuState>>()
+            .set(MenuState::Main);
         app.update();
 
         // Verify entities exist and selection resource was inserted
@@ -189,10 +200,10 @@ mod tests {
         assert_eq!(screen_count, 1);
         assert!(app.world().get_resource::<MainMenuSelection>().is_some());
 
-        // Exit MainMenu state
+        // Exit MenuState::Main by navigating to a different MenuState
         app.world_mut()
-            .resource_mut::<NextState<GameState>>()
-            .set(GameState::Loading);
+            .resource_mut::<NextState<MenuState>>()
+            .set(MenuState::Teardown);
         app.update();
 
         // Verify entities cleaned up; selection resource persists (reset on re-entry)

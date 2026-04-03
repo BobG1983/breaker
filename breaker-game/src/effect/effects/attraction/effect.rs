@@ -196,13 +196,13 @@ fn process_impact(attractions: &mut ActiveAttractions, impact_type: AttractionTy
 
 /// Registers attraction systems in `FixedUpdate`.
 pub(crate) fn register(app: &mut App) {
-    use crate::shared::PlayingState;
+    use crate::state::types::NodeState;
     app.add_systems(
         FixedUpdate,
         (
             apply_attraction.after(rantzsoft_physics2d::plugin::PhysicsSystems::MaintainQuadtree),
             manage_attraction_types,
         )
-            .run_if(in_state(PlayingState::Active)),
+            .run_if(in_state(NodeState::Playing)),
     );
 }

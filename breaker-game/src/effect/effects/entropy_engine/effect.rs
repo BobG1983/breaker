@@ -5,7 +5,8 @@ use rand::distr::{Distribution, weighted::WeightedIndex};
 
 use crate::{
     effect::{EffectNode, StagedEffects},
-    shared::{PlayingState, rng::GameRng},
+    shared::rng::GameRng,
+    state::types::NodeState,
 };
 
 /// Tracks cells destroyed within the current node for entropy scaling.
@@ -90,7 +91,7 @@ pub(crate) const fn reverse(_entity: Entity, _source_chip: &str, _world: &mut Wo
 /// Registers systems for `EntropyEngine` effect.
 pub(crate) fn register(app: &mut App) {
     app.add_systems(
-        OnEnter(PlayingState::Active),
+        OnEnter(NodeState::Playing),
         reset_entropy_engine_on_node_start,
     );
 }

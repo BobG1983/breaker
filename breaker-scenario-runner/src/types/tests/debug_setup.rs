@@ -1,7 +1,7 @@
 use super::super::*;
 
 // -------------------------------------------------------------------------
-// DebugSetup — partial fields
+// DebugSetup -- partial fields
 // -------------------------------------------------------------------------
 
 #[test]
@@ -24,7 +24,7 @@ fn debug_setup_default_has_no_overrides() {
 }
 
 // -------------------------------------------------------------------------
-// DebugSetup — bolt_velocity field
+// DebugSetup -- bolt_velocity field
 // -------------------------------------------------------------------------
 
 #[test]
@@ -64,7 +64,7 @@ fn debug_setup_with_bolt_velocity_parses_from_ron() {
 }
 
 // -------------------------------------------------------------------------
-// DebugSetup — extra_tagged_bolts field
+// DebugSetup -- extra_tagged_bolts field
 // -------------------------------------------------------------------------
 
 #[test]
@@ -80,7 +80,7 @@ fn debug_setup_with_extra_tagged_bolts_parses_from_ron() {
 }
 
 // -------------------------------------------------------------------------
-// DebugSetup — node_timer_remaining field
+// DebugSetup -- node_timer_remaining field
 // -------------------------------------------------------------------------
 
 #[test]
@@ -96,7 +96,7 @@ fn debug_setup_with_node_timer_remaining_parses_from_ron() {
 }
 
 // -------------------------------------------------------------------------
-// ForcedGameState — RON parsing
+// ForcedGameState -- RON parsing
 // -------------------------------------------------------------------------
 
 #[test]
@@ -130,7 +130,7 @@ fn forced_game_state_all_variants_parse_from_ron() {
 }
 
 // -------------------------------------------------------------------------
-// DebugSetup — force_previous_game_state field
+// DebugSetup -- force_previous_game_state field
 // -------------------------------------------------------------------------
 
 #[test]
@@ -146,7 +146,7 @@ fn debug_setup_with_force_previous_game_state_parses_from_ron() {
 }
 
 // -------------------------------------------------------------------------
-// DebugSetup — default has all new fields as None
+// DebugSetup -- default has all new fields as None
 // -------------------------------------------------------------------------
 
 #[test]
@@ -171,7 +171,7 @@ fn debug_setup_default_has_all_new_fields_as_none() {
 }
 
 // -------------------------------------------------------------------------
-// DebugSetup — extra_tagged_bolts zero is valid
+// DebugSetup -- extra_tagged_bolts zero is valid
 // -------------------------------------------------------------------------
 
 #[test]
@@ -182,6 +182,6 @@ fn debug_setup_extra_tagged_bolts_zero_parses_from_ron() {
     assert_eq!(
         result.extra_tagged_bolts,
         Some(0),
-        "extra_tagged_bolts must be Some(0) — means spawn zero extras"
+        "extra_tagged_bolts must be Some(0) -- means spawn zero extras"
     );
 }

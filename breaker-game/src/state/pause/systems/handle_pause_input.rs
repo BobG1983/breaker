@@ -4,22 +4,26 @@ use bevy::prelude::*;
 
 use crate::{
     input::InputConfig,
-    shared::{GameState, PlayingState},
-    state::pause::{
-        components::{PAUSE_MENU_ITEMS, PauseMenuItem},
-        resources::PauseMenuSelection,
+    state::{
+        pause::{
+            components::{PAUSE_MENU_ITEMS, PauseMenuItem},
+            resources::PauseMenuSelection,
+        },
+        types::RunPhase,
     },
 };
 
 /// Handles keyboard navigation and confirmation on the pause menu.
 ///
 /// Reads `ButtonInput<KeyCode>` directly (same pattern as main menu).
+/// Resume unpauses `Time<Virtual>`. Quit unpauses and sets
+/// `RunPhase::Teardown` to exit the run.
 pub(crate) fn handle_pause_input(
     keys: Res<ButtonInput<KeyCode>>,
     config: Res<InputConfig>,
     mut selection: ResMut<PauseMenuSelection>,
-    mut next_playing_state: ResMut<NextState<PlayingState>>,
-    mut next_game_state: ResMut<NextState<GameState>>,
+    mut time: ResMut<Time<Virtual>>,
+    mut next_run_phase: ResMut<NextState<RunPhase>>,
 ) {
     // Navigate down
     if config.menu_down.iter().any(|k| keys.just_pressed(*k)) {
@@ -43,10 +47,11 @@ pub(crate) fn handle_pause_input(
     if config.menu_confirm.iter().any(|k| keys.just_pressed(*k)) {
         match selection.selected {
             PauseMenuItem::Resume => {
-                next_playing_state.set(PlayingState::Active);
+                time.unpause();
             }
             PauseMenuItem::Quit => {
-                next_game_state.set(GameState::MainMenu);
+                time.unpause();
+                next_run_phase.set(RunPhase::Teardown);
             }
         }
     }
@@ -64,18 +69,31 @@ mod tests {
     use bevy::state::app::StatesPlugin;
 
     use super::*;
+    use crate::state::types::{AppState, GameState};
 
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, StatesPlugin))
             .init_resource::<ButtonInput<KeyCode>>()
             .insert_resource(InputConfig::default())
-            .init_state::<GameState>()
-            .add_sub_state::<PlayingState>()
+            .init_state::<AppState>()
+            .add_sub_state::<GameState>()
+            .add_sub_state::<RunPhase>()
             .insert_resource(PauseMenuSelection {
                 selected: PauseMenuItem::Resume,
             })
             .add_systems(Update, handle_pause_input);
+        // Navigate to RunPhase so NextState<RunPhase> is available
+        app.world_mut()
+            .resource_mut::<NextState<AppState>>()
+            .set(AppState::Game);
+        app.update();
+        app.world_mut()
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Run);
+        app.update();
+        // Pause time to simulate being paused
+        app.world_mut().resource_mut::<Time<Virtual>>().pause();
         app
     }
 
@@ -105,29 +123,35 @@ mod tests {
     }
 
     #[test]
-    fn confirm_resume_sets_playing_active() {
+    fn confirm_resume_unpauses_time() {
         let mut app = test_app();
         press_key(&mut app, KeyCode::Enter);
 
-        let next = app.world().resource::<NextState<PlayingState>>();
+        let time = app.world().resource::<Time<Virtual>>();
         assert!(
-            format!("{next:?}").contains("Active"),
-            "expected Active, got: {next:?}"
+            !time.is_paused(),
+            "Time<Virtual> should be unpaused after Resume"
         );
     }
 
     #[test]
-    fn confirm_quit_transitions_to_main_menu() {
+    fn confirm_quit_unpauses_and_sets_teardown() {
         let mut app = test_app();
         app.world_mut()
             .resource_mut::<PauseMenuSelection>()
             .selected = PauseMenuItem::Quit;
         press_key(&mut app, KeyCode::Enter);
 
-        let next = app.world().resource::<NextState<GameState>>();
+        let time = app.world().resource::<Time<Virtual>>();
         assert!(
-            format!("{next:?}").contains("MainMenu"),
-            "expected MainMenu, got: {next:?}"
+            !time.is_paused(),
+            "Time<Virtual> should be unpaused after Quit"
+        );
+
+        let next = app.world().resource::<NextState<RunPhase>>();
+        assert!(
+            format!("{next:?}").contains("Teardown"),
+            "expected RunPhase::Teardown, got: {next:?}"
         );
     }
 

@@ -14,10 +14,13 @@ use crate::{
     },
     breaker::BreakerSystems,
     effect::EffectSystems,
-    shared::{GameRng, GameState, PlayingState},
-    state::run::node::{
-        sets::NodeSystems,
-        systems::{apply_node_scale_to_bolt, reset_bolt},
+    shared::GameRng,
+    state::{
+        run::node::{
+            sets::NodeSystems,
+            systems::{apply_node_scale_to_bolt, reset_bolt},
+        },
+        types::NodeState,
     },
 };
 
@@ -37,7 +40,7 @@ impl Plugin for BoltPlugin {
             .add_message::<BoltImpactWall>()
             .add_message::<RequestBoltDestroyed>()
             .add_systems(
-                OnEnter(GameState::Playing),
+                OnEnter(NodeState::Loading),
                 (
                     apply_node_scale_to_bolt.after(NodeSystems::Spawn),
                     reset_bolt
@@ -79,12 +82,9 @@ impl Plugin for BoltPlugin {
                     // Cleanup destroyed bolts after effect bridges evaluate
                     cleanup_destroyed_bolts.after(EffectSystems::Bridge),
                 )
-                    .run_if(in_state(PlayingState::Active)),
+                    .run_if(in_state(NodeState::Playing)),
             )
-            .add_systems(
-                Update,
-                sync_bolt_scale.run_if(in_state(PlayingState::Active)),
-            );
+            .add_systems(Update, sync_bolt_scale.run_if(in_state(NodeState::Playing)));
     }
 }
 
@@ -93,14 +93,17 @@ mod tests {
     use rantzsoft_physics2d::resources::CollisionQuadtree;
 
     use super::*;
+    use crate::state::types::{AppState, GameState, RunPhase};
 
     #[test]
     fn plugin_builds() {
         App::new()
             .add_plugins(MinimalPlugins)
             .add_plugins(bevy::state::app::StatesPlugin)
-            .init_state::<GameState>()
-            .add_sub_state::<PlayingState>()
+            .init_state::<AppState>()
+            .add_sub_state::<GameState>()
+            .add_sub_state::<RunPhase>()
+            .add_sub_state::<NodeState>()
             // InputPlugin owns InputActions
             .init_resource::<ButtonInput<KeyCode>>()
             .add_message::<bevy::input::keyboard::KeyboardInput>()

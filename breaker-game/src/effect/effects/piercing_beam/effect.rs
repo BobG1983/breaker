@@ -11,7 +11,8 @@ use crate::{
     bolt::{components::BoltBaseDamage, resources::DEFAULT_BOLT_BASE_DAMAGE},
     cells::messages::DamageCell,
     effect::{core::EffectSourceChip, effects::damage_boost::ActiveDamageBoosts},
-    shared::{CELL_LAYER, CleanupOnNodeExit, PlayfieldConfig, PlayingState},
+    shared::{CELL_LAYER, CleanupOnNodeExit, PlayfieldConfig},
+    state::types::NodeState,
 };
 
 /// Deferred request for piercing beam instant damage.
@@ -165,6 +166,6 @@ pub(crate) fn register(app: &mut App) {
         FixedUpdate,
         process_piercing_beam
             .after(PhysicsSystems::MaintainQuadtree)
-            .run_if(in_state(PlayingState::Active)),
+            .run_if(in_state(NodeState::Playing)),
     );
 }

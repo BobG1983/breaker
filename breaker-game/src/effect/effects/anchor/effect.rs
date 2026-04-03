@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Velocity2D;
 
 use super::super::bump_force::ActiveBumpForces;
-use crate::{breaker::components::DashState, shared::PlayingState};
+use crate::{breaker::components::DashState, state::types::NodeState};
 
 /// Configuration component for the Anchor effect on a breaker entity.
 ///
@@ -150,6 +150,6 @@ pub(crate) fn tick_anchor(
 pub(crate) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
-        tick_anchor.run_if(in_state(PlayingState::Active)),
+        tick_anchor.run_if(in_state(NodeState::Playing)),
     );
 }

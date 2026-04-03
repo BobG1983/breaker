@@ -12,6 +12,7 @@ use super::{
         start_game::RunSetupPlugin,
     },
     pause::PauseMenuPlugin,
+    routing,
     run::{
         RunPlugin,
         chip_select::{ChipSelectDefaults, ChipSelectPlugin},
@@ -23,12 +24,9 @@ use super::{
 use crate::{
     cells::CellDefaults,
     input::InputDefaults,
-    shared::{
-        CleanupOnNodeExit, CleanupOnRunEnd, GameState, PlayfieldConfig, PlayfieldDefaults,
-        PlayingState,
-    },
+    shared::{CleanupOnNodeExit, CleanupOnRunEnd, PlayfieldConfig, PlayfieldDefaults},
     state::types::{
-        AppState, ChipSelectState, GamePhase, MenuState, NodeState, RunEndState, RunPhase,
+        AppState, ChipSelectState, GameState, MenuState, NodeState, RunEndState, RunPhase,
     },
 };
 
@@ -41,42 +39,19 @@ pub(crate) struct StatePlugin;
 impl Plugin for StatePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<PlayfieldConfig>()
-            // State machine (old — drives all existing systems, removed in Wave 4e)
-            .init_state::<GameState>()
-            .add_sub_state::<PlayingState>()
-            // State machine (new hierarchy — registered but unused until Wave 4b)
+            // Hierarchical state machine
             .init_state::<AppState>()
-            .add_sub_state::<GamePhase>()
+            .add_sub_state::<GameState>()
             .add_sub_state::<MenuState>()
             .add_sub_state::<RunPhase>()
             .add_sub_state::<NodeState>()
             .add_sub_state::<ChipSelectState>()
             .add_sub_state::<RunEndState>()
-            // Defaults plugin — registers loaders, startup handles, and seed
-            // systems for simple config types.
+            // Defaults + progress
+            .add_plugins(defaults_plugin())
             .add_plugins(
-                RantzDefaultsPluginBuilder::<GameState>::new(GameState::Loading)
-                    .add_config::<PlayfieldDefaults>()
-                    .add_config::<CellDefaults>()
-                    .add_config::<InputDefaults>()
-                    .add_config::<MainMenuDefaults>()
-                    .add_config::<TimerUiDefaults>()
-                    .add_config::<ChipSelectDefaults>()
-                    .add_config::<DifficultyCurveDefaults>()
-                    // Registries
-                    .add_registry::<crate::cells::CellTypeRegistry>()
-                    .add_registry::<crate::breaker::BreakerRegistry>()
-                    .add_registry::<crate::bolt::BoltRegistry>()
-                    .add_registry::<crate::state::run::NodeLayoutRegistry>()
-                    .add_registry::<crate::chips::ChipTemplateRegistry>()
-                    .add_registry::<crate::chips::EvolutionTemplateRegistry>()
-                    .add_registry::<crate::walls::WallRegistry>()
-                    .build(),
-            )
-            // Progress plugin drives Loading → MainMenu transition.
-            .add_plugins(
-                ProgressPlugin::<GameState>::new()
-                    .with_state_transition(GameState::Loading, GameState::MainMenu),
+                ProgressPlugin::<AppState>::new()
+                    .with_state_transition(AppState::Loading, AppState::Game),
             )
             // Sub-domain plugins
             .add_plugins((
@@ -87,19 +62,103 @@ impl Plugin for StatePlugin {
                 ChipSelectPlugin,
                 RunEndPlugin,
                 RunPlugin,
-            ))
-            // Cleanup (old markers — replaced by CleanupOnExit<S> in Wave 4)
-            .add_systems(
-                OnExit(GameState::Playing),
-                cleanup_entities::<CleanupOnNodeExit>,
-            )
-            .add_systems(
-                OnExit(GameState::RunEnd),
-                cleanup_entities::<CleanupOnRunEnd>,
-            )
-            // Generic cleanup (no-op until entities use CleanupOnExit<S>)
-            .add_systems(OnExit(GameState::Playing), cleanup_on_exit::<GameState>);
+            ));
+        register_routing(app);
     }
+}
+
+/// Builds the defaults plugin with all config types and registries.
+fn defaults_plugin() -> impl Plugin {
+    RantzDefaultsPluginBuilder::<AppState>::new(AppState::Loading)
+        .add_config::<PlayfieldDefaults>()
+        .add_config::<CellDefaults>()
+        .add_config::<InputDefaults>()
+        .add_config::<MainMenuDefaults>()
+        .add_config::<TimerUiDefaults>()
+        .add_config::<ChipSelectDefaults>()
+        .add_config::<DifficultyCurveDefaults>()
+        .add_registry::<crate::cells::CellTypeRegistry>()
+        .add_registry::<crate::breaker::BreakerRegistry>()
+        .add_registry::<crate::bolt::BoltRegistry>()
+        .add_registry::<crate::state::run::NodeLayoutRegistry>()
+        .add_registry::<crate::chips::ChipTemplateRegistry>()
+        .add_registry::<crate::chips::EvolutionTemplateRegistry>()
+        .add_registry::<crate::walls::WallRegistry>()
+        .build()
+}
+
+/// Registers all pass-through, teardown, and cleanup routing systems.
+pub(crate) fn register_routing(app: &mut App) {
+    // Pass-through routing
+    app.add_systems(OnEnter(MenuState::Loading), routing::menu_loading_to_main)
+        .add_systems(OnEnter(RunPhase::Loading), routing::run_loading_to_setup)
+        .add_systems(
+            OnEnter(NodeState::AnimateIn),
+            routing::node_animate_in_to_playing,
+        )
+        .add_systems(
+            OnEnter(NodeState::AnimateOut),
+            routing::node_animate_out_to_teardown,
+        )
+        .add_systems(
+            OnEnter(ChipSelectState::Loading),
+            routing::chip_select_loading_to_animate_in,
+        )
+        .add_systems(
+            OnEnter(ChipSelectState::AnimateIn),
+            routing::chip_select_animate_in_to_selecting,
+        )
+        .add_systems(
+            OnEnter(ChipSelectState::AnimateOut),
+            routing::chip_select_animate_out_to_teardown,
+        )
+        .add_systems(
+            OnEnter(RunEndState::Loading),
+            routing::run_end_loading_to_animate_in,
+        )
+        .add_systems(
+            OnEnter(RunEndState::AnimateIn),
+            routing::run_end_animate_in_to_active,
+        )
+        .add_systems(
+            OnEnter(RunEndState::AnimateOut),
+            routing::run_end_animate_out_to_teardown,
+        );
+    // Teardown routing (cleanup runs first, then router decides next parent state)
+    app.add_systems(
+        OnEnter(NodeState::Teardown),
+        (cleanup_on_exit::<NodeState>, routing::node_teardown_router).chain(),
+    )
+    .add_systems(
+        OnEnter(ChipSelectState::Teardown),
+        (
+            cleanup_on_exit::<ChipSelectState>,
+            routing::chip_select_teardown_router,
+        )
+            .chain(),
+    )
+    .add_systems(
+        OnEnter(RunEndState::Teardown),
+        (
+            cleanup_on_exit::<RunEndState>,
+            routing::run_end_teardown_router,
+        )
+            .chain(),
+    )
+    .add_systems(
+        OnEnter(RunPhase::Teardown),
+        (cleanup_on_exit::<RunPhase>, routing::run_teardown_router).chain(),
+    )
+    .add_systems(OnEnter(MenuState::Teardown), routing::menu_teardown_router);
+    // Old cleanup markers — still used until entities migrate to CleanupOnExit<S>
+    app.add_systems(
+        OnEnter(NodeState::Teardown),
+        cleanup_entities::<CleanupOnNodeExit>,
+    )
+    .add_systems(
+        OnEnter(RunPhase::Teardown),
+        cleanup_entities::<CleanupOnRunEnd>,
+    );
 }
 
 #[cfg(test)]

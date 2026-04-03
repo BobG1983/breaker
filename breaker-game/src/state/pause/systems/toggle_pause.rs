@@ -1,60 +1,36 @@
-//! System to toggle pause state with Escape key.
+//! System to toggle pause with Escape key.
 
 use bevy::prelude::*;
 
-use crate::{
-    input::resources::{GameAction, InputActions},
-    shared::PlayingState,
-};
+use crate::input::resources::{GameAction, InputActions};
 
-/// Toggles between [`PlayingState::Active`] and [`PlayingState::Paused`] on `TogglePause`.
+/// Toggles `Time<Virtual>` between paused and unpaused on `TogglePause`.
 ///
-/// Reads [`InputActions`] for the [`GameAction::TogglePause`] action.
-pub(crate) fn toggle_pause(
-    actions: Res<InputActions>,
-    current_state: Res<State<PlayingState>>,
-    mut next_state: ResMut<NextState<PlayingState>>,
-) {
+/// Gated on `NodeState::Playing` — only active during node gameplay.
+/// `Time<Virtual>::pause()` freezes `FixedUpdate` (gameplay) while leaving
+/// `Update` (UI, input) running.
+pub(crate) fn toggle_pause(actions: Res<InputActions>, mut time: ResMut<Time<Virtual>>) {
     if !actions.active(GameAction::TogglePause) {
         return;
     }
 
-    match current_state.get() {
-        PlayingState::Active => next_state.set(PlayingState::Paused),
-        PlayingState::Paused => next_state.set(PlayingState::Active),
+    if time.is_paused() {
+        time.unpause();
+    } else {
+        time.pause();
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use bevy::state::app::StatesPlugin;
-
     use super::*;
-    use crate::{input::resources::*, shared::GameState};
+    use crate::input::resources::*;
 
-    fn test_app(initial_playing_state: PlayingState) -> App {
+    fn test_app() -> App {
         let mut app = App::new();
-        app.add_plugins((MinimalPlugins, StatesPlugin))
+        app.add_plugins(MinimalPlugins)
             .init_resource::<InputActions>()
-            .init_resource::<ButtonInput<KeyCode>>()
-            .init_state::<GameState>()
-            .add_sub_state::<PlayingState>();
-
-        // Transition to Playing state so PlayingState is active
-        app.world_mut()
-            .resource_mut::<NextState<GameState>>()
-            .set(GameState::Playing);
-        app.update();
-
-        // Set initial PlayingState
-        if initial_playing_state != PlayingState::Active {
-            app.world_mut()
-                .resource_mut::<NextState<PlayingState>>()
-                .set(initial_playing_state);
-            app.update();
-        }
-
-        app.add_systems(Update, toggle_pause);
+            .add_systems(Update, toggle_pause);
         app
     }
 
@@ -67,38 +43,33 @@ mod tests {
     }
 
     #[test]
-    fn escape_toggles_active_to_paused() {
-        let mut app = test_app(PlayingState::Active);
+    fn toggle_pauses_virtual_time() {
+        let mut app = test_app();
         inject_toggle_pause(&mut app);
 
-        let next = app.world().resource::<NextState<PlayingState>>();
-        assert!(
-            format!("{next:?}").contains("Paused"),
-            "expected Paused, got: {next:?}"
-        );
+        let time = app.world().resource::<Time<Virtual>>();
+        assert!(time.is_paused(), "Time<Virtual> should be paused");
     }
 
     #[test]
-    fn escape_toggles_paused_to_active() {
-        let mut app = test_app(PlayingState::Paused);
+    fn toggle_again_unpauses_virtual_time() {
+        let mut app = test_app();
         inject_toggle_pause(&mut app);
 
-        let next = app.world().resource::<NextState<PlayingState>>();
-        assert!(
-            format!("{next:?}").contains("Active"),
-            "expected Active, got: {next:?}"
-        );
+        // Clear and toggle again
+        app.world_mut().resource_mut::<InputActions>().0.clear();
+        inject_toggle_pause(&mut app);
+
+        let time = app.world().resource::<Time<Virtual>>();
+        assert!(!time.is_paused(), "Time<Virtual> should be unpaused");
     }
 
     #[test]
-    fn no_escape_no_change() {
-        let mut app = test_app(PlayingState::Active);
+    fn no_toggle_no_change() {
+        let mut app = test_app();
         app.update();
 
-        let next = app.world().resource::<NextState<PlayingState>>();
-        assert!(
-            !format!("{next:?}").contains("Paused"),
-            "expected no state change, got: {next:?}"
-        );
+        let time = app.world().resource::<Time<Virtual>>();
+        assert!(!time.is_paused(), "Time<Virtual> should remain unpaused");
     }
 }

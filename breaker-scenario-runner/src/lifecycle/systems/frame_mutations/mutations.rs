@@ -13,7 +13,7 @@ use breaker::{
         second_wind::SecondWindWall,
         shield::ShieldWall,
     },
-    shared::{CleanupOnNodeExit, PlayingState},
+    shared::CleanupOnNodeExit,
     state::run::{
         RunStats,
         chip_select::{ChipOffering, ChipOffers},
@@ -34,10 +34,8 @@ use crate::{
 /// Extracted to keep [`apply_debug_frame_mutations`] under the 7-argument clippy limit.
 #[derive(SystemParam)]
 pub struct PauseControl<'w> {
-    /// Current [`PlayingState`] -- only present when [`GameState::Playing`] is active.
-    state: Option<Res<'w, State<PlayingState>>>,
-    /// [`NextState`] writer for toggling pause.
-    next: Option<ResMut<'w, NextState<PlayingState>>>,
+    /// Virtual time resource for pausing/unpausing.
+    time_virtual: ResMut<'w, Time<Virtual>>,
 }
 
 /// Grouped system parameters for mutation targets that need additional game state.
@@ -49,11 +47,11 @@ pub struct MutationTargets<'w, 's> {
     run_stats: Option<ResMut<'w, RunStats>>,
     /// [`ChipInventory`] resource -- absent before a run starts.
     chip_inventory: Option<ResMut<'w, ChipInventory>>,
-    /// [`ChipOffers`] resource -- present only during [`GameState::ChipSelect`].
+    /// [`ChipOffers`] resource -- present only during chip select.
     chip_offers: Option<ResMut<'w, ChipOffers>>,
     /// [`Commands`] for inserting resources when the optional resource is absent.
     commands: Commands<'w, 's>,
-    /// Bolt entities with `Aabb2D` — for [`MutationKind::InjectMismatchedBoltAabb`].
+    /// Bolt entities with `Aabb2D` -- for [`MutationKind::InjectMismatchedBoltAabb`].
     bolt_aabbs: Query<'w, 's, &'static mut Aabb2D, With<ScenarioTagBolt>>,
 }
 
@@ -168,17 +166,14 @@ pub fn apply_debug_frame_mutations(
     }
 }
 
-/// Toggles [`PlayingState`] between `Active` and `Paused`.
+/// Toggles pause via `Time<Virtual>` -- pauses or unpauses the game clock.
 ///
-/// No-op if the state or next-state resources are absent.
+/// No-op if the time resource is not available (should always be present).
 fn apply_toggle_pause(pause: &mut PauseControl) {
-    if let Some(ref state) = pause.state
-        && let Some(ref mut next) = pause.next
-    {
-        match ***state {
-            PlayingState::Active => next.set(PlayingState::Paused),
-            PlayingState::Paused => next.set(PlayingState::Active),
-        }
+    if pause.time_virtual.is_paused() {
+        pause.time_virtual.unpause();
+    } else {
+        pause.time_virtual.pause();
     }
 }
 

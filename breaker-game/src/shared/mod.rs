@@ -22,4 +22,4 @@ pub use playfield::{PlayfieldConfig, PlayfieldDefaults};
 pub use resources::RunSeed;
 pub use rng::GameRng;
 
-pub use crate::state::types::{GameState, PlayingState};
+pub use crate::state::types::GameState;

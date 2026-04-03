@@ -14,10 +14,12 @@ use crate::{
             trigger_bump_visual, update_breaker_state, update_bump,
         },
     },
-    shared::{GameState, PlayingState},
-    state::run::node::{
-        sets::NodeSystems,
-        systems::{apply_node_scale_to_breaker, reset_breaker},
+    state::{
+        run::node::{
+            sets::NodeSystems,
+            systems::{apply_node_scale_to_breaker, reset_breaker},
+        },
+        types::NodeState,
     },
 };
 
@@ -36,15 +38,15 @@ impl Plugin for BreakerPlugin {
             .add_message::<BreakerImpactWall>()
             .init_resource::<SelectedBreaker>()
             .init_resource::<ForceBumpGrade>()
-            .add_systems(OnEnter(GameState::Playing), spawn_or_reuse_breaker)
+            .add_systems(OnEnter(NodeState::Loading), spawn_or_reuse_breaker)
             .add_systems(
-                OnEnter(GameState::Playing),
+                OnEnter(NodeState::Loading),
                 apply_node_scale_to_breaker
                     .after(spawn_or_reuse_breaker)
                     .after(NodeSystems::Spawn),
             )
             .add_systems(
-                OnEnter(GameState::Playing),
+                OnEnter(NodeState::Loading),
                 reset_breaker
                     .after(spawn_or_reuse_breaker)
                     .in_set(BreakerSystems::Reset),
@@ -73,12 +75,12 @@ impl Plugin for BreakerPlugin {
                     breaker_cell_collision.after(BreakerSystems::Move),
                     breaker_wall_collision.after(BreakerSystems::Move),
                 )
-                    .run_if(in_state(PlayingState::Active)),
+                    .run_if(in_state(NodeState::Playing)),
             )
             .add_systems(
                 Update,
                 (animate_bump_visual, animate_tilt_visual, sync_breaker_scale)
-                    .run_if(in_state(PlayingState::Active)),
+                    .run_if(in_state(NodeState::Playing)),
             );
     }
 }
@@ -88,6 +90,7 @@ mod tests {
     use rantzsoft_physics2d::resources::CollisionQuadtree;
 
     use super::*;
+    use crate::state::types::{AppState, GameState, RunPhase};
 
     #[test]
     fn plugin_builds() {
@@ -97,8 +100,10 @@ mod tests {
             .add_plugins(bevy::asset::AssetPlugin::default())
             .init_asset::<Mesh>()
             .init_asset::<ColorMaterial>()
-            .init_state::<GameState>()
-            .add_sub_state::<PlayingState>()
+            .init_state::<AppState>()
+            .add_sub_state::<GameState>()
+            .add_sub_state::<RunPhase>()
+            .add_sub_state::<NodeState>()
             .init_resource::<crate::shared::PlayfieldConfig>()
             .init_resource::<crate::breaker::BreakerRegistry>()
             .init_resource::<SelectedBreaker>()

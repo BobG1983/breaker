@@ -1,44 +1,26 @@
 use bevy::prelude::*;
-use breaker::shared::GameState;
 
-use crate::{invariants::*, types::InvariantKind};
+use crate::invariants::*;
 
-/// Checks that [`GameState`] transitions follow valid paths.
+/// Validates game state transitions.
 ///
-/// Forbidden transitions:
-/// - `Loading → Playing` (must go through `MainMenu`)
-/// - `Loading → RunEnd`
-/// - `Playing → Loading`
-/// - `RunEnd → Playing` (must go through `MainMenu`)
+/// The old monolithic `GameState` had forbidden transitions that this checker
+/// validated. The new hierarchical state machine (`AppState` / `GameState` /
+/// `RunPhase` / `NodeState` / etc.) enforces valid transitions structurally
+/// via Bevy's sub-state system and is validated by unit + integration tests
+/// in the game crate.
+///
+/// This checker is now a no-op. The [`InvariantKind::ValidStateTransitions`]
+/// variant is retained so existing scenario RON files that reference it
+/// continue to parse.
 pub fn check_valid_state_transitions(
-    state: Res<State<GameState>>,
-    mut previous: ResMut<PreviousGameState>,
+    mut _previous: ResMut<PreviousGameState>,
     frame: Res<ScenarioFrame>,
-    mut log: ResMut<ViolationLog>,
+    mut _log: ResMut<ViolationLog>,
 ) {
-    let current = **state;
-    if let Some(prev) = previous.0
-        && prev != current
-    {
-        let forbidden = matches!(
-            (prev, current),
-            (GameState::Loading | GameState::RunEnd, GameState::Playing)
-                | (GameState::Loading, GameState::RunEnd)
-                | (GameState::Playing, GameState::Loading)
-        );
-        if forbidden {
-            log.0.push(ViolationEntry {
-                frame: frame.0,
-                invariant: InvariantKind::ValidStateTransitions,
-                entity: None,
-                message: format!(
-                    "ValidStateTransitions FAIL frame={} {prev:?} → {current:?}",
-                    frame.0,
-                ),
-            });
-        }
-    }
-    previous.0 = Some(current);
+    // No-op — hierarchical state machine transitions are validated by the
+    // game crate's unit and integration tests, not the scenario runner.
+    let _ = &*frame;
 }
 
 #[cfg(test)]
@@ -56,8 +38,6 @@ mod tests {
     fn test_app_valid_transitions() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
-            .add_plugins(bevy::state::app::StatesPlugin)
-            .init_state::<GameState>()
             .insert_resource(ViolationLog::default())
             .insert_resource(ScenarioFrame::default())
             .init_resource::<PreviousGameState>()
@@ -66,110 +46,20 @@ mod tests {
     }
 
     #[test]
-    fn valid_state_transitions_fires_on_loading_to_playing() {
+    fn valid_state_transitions_checker_is_noop() {
         let mut app = test_app_valid_transitions();
-        // Set previous to Loading (the default initial state)
-        app.world_mut()
-            .insert_resource(PreviousGameState(Some(GameState::Loading)));
-        // Transition to Playing (forbidden: skips MainMenu)
-        app.world_mut()
-            .resource_mut::<NextState<GameState>>()
-            .set(GameState::Playing);
-        app.update(); // process state transition
-        tick(&mut app); // run checker in FixedUpdate
+
+        // Tick several times — no violations should ever be produced
+        // since the checker is a no-op.
+        for _ in 0..5 {
+            tick(&mut app);
+        }
 
         let log = app.world().resource::<ViolationLog>();
         assert!(
-            log.0
-                .iter()
-                .any(|v| v.invariant == InvariantKind::ValidStateTransitions),
-            "expected ValidStateTransitions violation for Loading→Playing"
-        );
-    }
-
-    #[test]
-    fn valid_state_transitions_does_not_fire_on_loading_to_main_menu() {
-        let mut app = test_app_valid_transitions();
-        app.world_mut()
-            .insert_resource(PreviousGameState(Some(GameState::Loading)));
-        app.world_mut()
-            .resource_mut::<NextState<GameState>>()
-            .set(GameState::MainMenu);
-        app.update();
-        tick(&mut app);
-
-        let log = app.world().resource::<ViolationLog>();
-        let violations: Vec<_> = log
-            .0
-            .iter()
-            .filter(|v| v.invariant == InvariantKind::ValidStateTransitions)
-            .collect();
-        assert!(
-            violations.is_empty(),
-            "Loading→MainMenu should be valid, got: {:?}",
-            violations.iter().map(|v| &v.message).collect::<Vec<_>>()
-        );
-    }
-
-    // ── TransitionOut / TransitionIn path validation ─────────────────────
-
-    /// Helper: set up previous state, transition to target, run checker,
-    /// return violations.
-    fn transition_violations(previous: GameState, target: GameState) -> Vec<ViolationEntry> {
-        let mut app = test_app_valid_transitions();
-        app.world_mut()
-            .insert_resource(PreviousGameState(Some(previous)));
-        app.world_mut()
-            .resource_mut::<NextState<GameState>>()
-            .set(target);
-        app.update(); // process state transition
-        tick(&mut app); // run checker in FixedUpdate
-
-        let log = app.world().resource::<ViolationLog>();
-        log.0
-            .iter()
-            .filter(|v| v.invariant == InvariantKind::ValidStateTransitions)
-            .cloned()
-            .collect()
-    }
-
-    #[test]
-    fn transition_out_from_playing_is_valid() {
-        let violations = transition_violations(GameState::Playing, GameState::TransitionOut);
-        assert!(
-            violations.is_empty(),
-            "Playing→TransitionOut should be valid, got: {:?}",
-            violations.iter().map(|v| &v.message).collect::<Vec<_>>()
-        );
-    }
-
-    #[test]
-    fn transition_out_to_chip_select_is_valid() {
-        let violations = transition_violations(GameState::TransitionOut, GameState::ChipSelect);
-        assert!(
-            violations.is_empty(),
-            "TransitionOut→ChipSelect should be valid, got: {:?}",
-            violations.iter().map(|v| &v.message).collect::<Vec<_>>()
-        );
-    }
-
-    #[test]
-    fn chip_select_to_transition_in_is_valid() {
-        let violations = transition_violations(GameState::ChipSelect, GameState::TransitionIn);
-        assert!(
-            violations.is_empty(),
-            "ChipSelect→TransitionIn should be valid, got: {:?}",
-            violations.iter().map(|v| &v.message).collect::<Vec<_>>()
-        );
-    }
-
-    #[test]
-    fn transition_in_to_playing_is_valid() {
-        let violations = transition_violations(GameState::TransitionIn, GameState::Playing);
-        assert!(
-            violations.is_empty(),
-            "TransitionIn→Playing should be valid, got: {:?}",
-            violations.iter().map(|v| &v.message).collect::<Vec<_>>()
+            log.0.is_empty(),
+            "expected no violations from no-op checker, got: {:?}",
+            log.0.iter().map(|v| &v.message).collect::<Vec<_>>()
         );
     }
 }

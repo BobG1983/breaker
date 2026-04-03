@@ -23,8 +23,8 @@ Cells are more complex than other entities — they have multiple variant behavi
 
 **What's NOT available until each typestate is set:**
 - `build()` / `spawn()` require ALL four dimensions resolved — compile error otherwise
-- `from_definition(&def)` sets Health (from def.hp) but NOT Position or Dimensions (those come from grid layout math)
-- `.hp()` after `.from_definition()` overrides the definition's hp
+- `definition(&def)` sets Health (from def.hp) but NOT Position or Dimensions (those come from grid layout math)
+- `.hp()` after `.definition()` overrides the definition's hp
 
 **Runtime config** (optional, available in any state):
 - Variant behaviors via `CellBehavior` enum (see below)
@@ -48,19 +48,17 @@ RON definition gets:
 
 This replaces the current flat `behavior: (locked: true, regen_rate: Some(2.0))` struct pattern.
 
-**HealthShield is NOT a behavior** — it's an effect (`EffectKind::HealthShield`) that adds a `HealthShield` component. See todo #7 for the effect and component design. The `HealthShield` component is defined in `cells/components/` initially, moves to `effect/` when todo #7 lands.
-
 ### Builder behavior API
 - `.with_behavior(CellBehavior)` — add a single behavior
 - `.with_behaviors(Vec<CellBehavior>)` — add multiple behaviors at once
-- `from_definition(&def)` populates behaviors from the definition's `behaviors` field
+- `definition(&def)` populates behaviors from the definition's `behaviors` field
 - Individual convenience methods like `.locked()`, `.regen(rate)` are sugar for `.with_behavior(CellBehavior::Locked)` etc.
 
 ### Definition + manual + override layering
-- `Cell::builder().from_definition(&def)` — sets hp, color, damage visuals, behaviors from the RON-loaded `CellTypeDefinition`
+- `Cell::builder().definition(&def)` — sets hp, color, damage visuals, behaviors from the RON-loaded `CellTypeDefinition`
 - Individual setters for things not in the definition: `.position(Vec2)`, `.dimensions(width, height)`, `.scale(f32)`
 - Individual setters also work standalone for tests: `.hp(20.0)`, `.color(RED)`, `.locked(true)`
-- **Override priority**: specific setter > from_definition > default. A `.hp(50.0)` call after `.from_definition(&def)` overrides the definition's hp.
+- **Override priority**: specific setter > definition > default. A `.hp(50.0)` call after `.definition(&def)` overrides the definition's hp.
 
 ### cells/behaviors/ folder structure
 Each behavior gets its own folder with components and systems:
@@ -123,21 +121,33 @@ cells/
 
 ## Scope
 - In: `Cell::builder()...build()/spawn()` builder with typestate for base properties and runtime config for behaviors
-- In: `.from_definition(&def)` convenience that populates from `CellTypeDefinition`
+- In: `.definition(&def)` convenience that populates from `CellTypeDefinition`
 - In: Replace manual tuple assembly in `spawn_cells_from_grid` and test helpers
 - In: Handle all cell variants (standard, locked, regen, shielded + orbit children)
 - In: Refactor `CellBehavior` from struct to enum, update `CellTypeDefinition` and RON files
 - In: Add `effects: Option<Vec<RootEffect>>` to `CellTypeDefinition` (same pattern as bolts/walls)
 - In: Update RON cell files for new behavior/effects format
+- In: Create `assets/examples/cell.example.ron` documenting all fields
 - In: Restructure into `cells/behaviors/` folders, move existing components and systems
-- In: Define `HealthShield` component in `cells/components/` (placeholder for todo #7)
 - In: Move lock targets from cell type RON (`behavior: (locked: true)`) to node layout RON (`locks: { (r,c): [(r,c), ...] }`)
 - In: Update `NodeLayout` definition to include `locks` field
 - In: Update `spawn_cells_from_grid` to resolve lock coordinates to entity IDs
 - In: Remove `Locked` from `CellBehavior` enum (locking is a node-layout concern, not a cell-type concern)
+- In: Remove `build()` from public API of ALL entity builders (Cell, Wall, Bolt, Breaker) — `spawn()` only
+- In: Fix shield/second_wind wall spawning to use `spawn()` instead of `build()` + manual spawn
+- In: Architecture doc `docs/architecture/builders/cell.md` — cell builder API, typestate dimensions, definition layering (follow pattern of existing bolt/breaker/wall builder docs)
+- In: Architecture doc `docs/architecture/cell-behaviors.md` — how to create a new cell behavior (folder structure, components, systems, CellBehavior enum variant, RON format, builder integration)
 - Out: Wall builder (separate todo, already done)
 - Out: Rendering changes (placeholder rectangles for now)
 - Out: `HealthShield` effect implementation and `DamageDealt<T>` pipeline (todo #7)
+
+## Design Files
+
+| File | Contents |
+|------|----------|
+| [typestate-dimensions.md](typestate-dimensions.md) | Dimension table, transition methods, optional methods, terminal method availability |
+| [structs.md](structs.md) | All struct definitions: typestate markers, CellBehavior enum, OptionalCellData, CellBuilder |
+| [build-vs-spawn.md](build-vs-spawn.md) | What build() vs spawn() do, why spawn() must be primary, removing build() from public API, migration plan |
 
 ## Dependencies
 - Depends on: Bolt builder (done), Breaker builder (done), Wall builder (done) — establishes the pattern
@@ -149,6 +159,7 @@ cells/
 - `CellTypeAlias` component tracks which definition alias spawned a cell (used by hot-reload). Builder should accept this.
 - Cell behaviors for now: **Regen**, **Shielded** — two in the `CellBehavior` enum. **Locked** is a node-layout concern, not a cell behavior. More behaviors can be added later as game design needs them.
 - Defining and refactoring ALL behaviors (locked, regen, shielded) is in scope — including the folder restructure, component moves, system moves, and the lock-target migration from cell type to node layout.
+- **Existing bug**: `effect/effects/shield/system.rs` and `effect/effects/second_wind/system.rs` use `Wall::builder()...build()` instead of `.spawn()`, skipping effect dispatch. These are exclusive World systems so they can't use `Commands` directly — needs a design decision (command flush, refactor to Commands, or `spawn_world()` variant). See [build-vs-spawn.md](build-vs-spawn.md).
 
 ## Status
 `ready`

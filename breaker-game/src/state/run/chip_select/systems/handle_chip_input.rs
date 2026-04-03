@@ -5,11 +5,13 @@ use bevy::{ecs::system::SystemParam, prelude::*};
 use crate::{
     chips::inventory::ChipInventory,
     input::InputConfig,
-    shared::GameState,
-    state::run::chip_select::{
-        ChipSelectConfig,
-        messages::ChipSelected,
-        resources::{ChipOffering, ChipOffers, ChipSelectSelection},
+    state::{
+        run::chip_select::{
+            ChipSelectConfig,
+            messages::ChipSelected,
+            resources::{ChipOffering, ChipOffers, ChipSelectSelection},
+        },
+        types::ChipSelectState,
     },
 };
 
@@ -19,7 +21,7 @@ pub(crate) struct ChipInputActions<'w> {
     /// Current chip selection index.
     selection: ResMut<'w, ChipSelectSelection>,
     /// State transition control.
-    next_state: ResMut<'w, NextState<GameState>>,
+    next_state: ResMut<'w, NextState<ChipSelectState>>,
     /// Message writer for chip selection events.
     writer: MessageWriter<'w, ChipSelected>,
     /// Inventory for recording decay on non-selected chips.
@@ -45,7 +47,7 @@ pub(crate) fn handle_chip_input(
     // No cards — nothing to navigate or confirm
     if card_count == 0 {
         if config.menu_confirm.iter().any(|k| keys.just_pressed(*k)) {
-            actions.next_state.set(GameState::TransitionIn);
+            actions.next_state.set(ChipSelectState::AnimateOut);
         }
         return;
     }
@@ -89,7 +91,7 @@ pub(crate) fn handle_chip_input(
             }
         }
 
-        actions.next_state.set(GameState::TransitionIn);
+        actions.next_state.set(ChipSelectState::AnimateOut);
     }
 }
 

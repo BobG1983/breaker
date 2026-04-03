@@ -53,7 +53,7 @@ pub mod until;
 pub(crate) fn register(app: &mut bevy::prelude::App) {
     use bevy::prelude::*;
 
-    use crate::shared::PlayingState;
+    use crate::state::types::NodeState;
 
     bump::register(app);
     perfect_bump::register(app);
@@ -82,6 +82,6 @@ pub(crate) fn register(app: &mut bevy::prelude::App) {
 
     app.add_systems(
         FixedUpdate,
-        until::desugar_until.run_if(in_state(PlayingState::Active)),
+        until::desugar_until.run_if(in_state(NodeState::Playing)),
     );
 }

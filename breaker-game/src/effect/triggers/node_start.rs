@@ -1,6 +1,6 @@
 //! Bridge system for the `node_start` trigger.
 //!
-//! Runs on `OnEnter(PlayingState::Active)` and fires `Trigger::NodeStart` globally
+//! Runs on `OnEnter(NodeState::Playing)` and fires `Trigger::NodeStart` globally
 //! on all entities with `BoundEffects`.
 use bevy::prelude::*;
 
@@ -9,7 +9,7 @@ use crate::{
         core::*,
         triggers::evaluate::{evaluate_bound_effects, evaluate_staged_effects},
     },
-    shared::PlayingState,
+    state::types::NodeState,
 };
 
 fn bridge_node_start(
@@ -37,7 +37,7 @@ fn bridge_node_start(
 
 /// Register trigger bridge systems.
 pub(crate) fn register(app: &mut App) {
-    app.add_systems(OnEnter(PlayingState::Active), bridge_node_start);
+    app.add_systems(OnEnter(NodeState::Playing), bridge_node_start);
 }
 
 #[cfg(test)]
@@ -45,14 +45,19 @@ mod tests {
     use bevy::state::app::StatesPlugin;
 
     use super::*;
-    use crate::{effect::effects::speed_boost::ActiveSpeedBoosts, shared::GameState};
+    use crate::{
+        effect::effects::speed_boost::ActiveSpeedBoosts,
+        state::types::{AppState, GameState, RunPhase},
+    };
 
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, StatesPlugin))
-            .init_state::<GameState>()
-            .add_sub_state::<PlayingState>()
-            .add_systems(OnEnter(PlayingState::Active), bridge_node_start);
+            .init_state::<AppState>()
+            .add_sub_state::<GameState>()
+            .add_sub_state::<RunPhase>()
+            .add_sub_state::<NodeState>()
+            .add_systems(OnEnter(NodeState::Playing), bridge_node_start);
         app
     }
 
@@ -77,13 +82,25 @@ mod tests {
             ActiveSpeedBoosts(vec![]),
         ));
 
-        // Transition to GameState::Playing, which enables PlayingState::Active (default)
+        // Navigate through state hierarchy to reach NodeState::Playing
+        app.world_mut()
+            .resource_mut::<NextState<AppState>>()
+            .set(AppState::Game);
+        app.update();
         app.world_mut()
             .resource_mut::<NextState<GameState>>()
-            .set(GameState::Playing);
+            .set(GameState::Run);
+        app.update();
+        app.world_mut()
+            .resource_mut::<NextState<RunPhase>>()
+            .set(RunPhase::Node);
+        app.update();
+        app.world_mut()
+            .resource_mut::<NextState<NodeState>>()
+            .set(NodeState::Playing);
         app.update();
 
-        // OnEnter(PlayingState::Active) should have fired bridge_node_start
+        // OnEnter(NodeState::Playing) should have fired bridge_node_start
         let active = app
             .world_mut()
             .query::<&ActiveSpeedBoosts>()
@@ -92,7 +109,7 @@ mod tests {
         assert_eq!(
             active.0.len(),
             1,
-            "bridge_node_start should fire NodeStart globally on OnEnter(PlayingState::Active)"
+            "bridge_node_start should fire NodeStart globally on OnEnter(NodeState::Playing)"
         );
         assert!(
             (active.0[0] - 1.5).abs() < f32::EPSILON,

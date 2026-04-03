@@ -1,5 +1,8 @@
 use bevy::prelude::*;
-use breaker::{breaker::components::DashState, shared::GameState};
+use breaker::{
+    breaker::components::DashState,
+    state::types::{AppState, GameState},
+};
 
 use super::helpers::*;
 use crate::{invariants::*, types::InvariantKind};
@@ -21,7 +24,7 @@ fn valid_breaker_state_no_violation_after_despawn_and_respawn() {
         .spawn((ScenarioTagBreaker, DashState::Braking))
         .id();
 
-    // Tick 1: system inserts entity → DashState::Braking into Local HashMap
+    // Tick 1: system inserts entity -> DashState::Braking into Local HashMap
     tick(&mut app);
 
     assert!(
@@ -29,7 +32,7 @@ fn valid_breaker_state_no_violation_after_despawn_and_respawn() {
         "no violation expected on first tick (no previous state to compare)"
     );
 
-    // Despawn the breaker — system must remove it from Local HashMap
+    // Despawn the breaker -- system must remove it from Local HashMap
     app.world_mut().entity_mut(entity).despawn();
 
     // Tick 2: entity is gone; system should prune stale HashMap entries
@@ -40,10 +43,10 @@ fn valid_breaker_state_no_violation_after_despawn_and_respawn() {
         "no violation expected when tagged entity is despawned"
     );
 
-    // Spawn a new breaker with Idle state — may receive a recycled entity ID
+    // Spawn a new breaker with Idle state -- may receive a recycled entity ID
     app.world_mut().spawn((ScenarioTagBreaker, DashState::Idle));
 
-    // Tick 3: new entity appears for first time — no previous state in HashMap → no violation
+    // Tick 3: new entity appears for first time -- no previous state in HashMap -> no violation
     tick(&mut app);
 
     let log = app.world().resource::<ViolationLog>();
@@ -75,13 +78,13 @@ fn valid_breaker_state_does_not_fire_on_dashing_to_settling_dash_cancel() {
     // Tick 1: seeds Local with Dashing
     tick(&mut app);
 
-    // Transition to Settling (dash cancel — legal)
+    // Transition to Settling (dash cancel -- legal)
     *app.world_mut()
         .entity_mut(entity)
         .get_mut::<DashState>()
         .unwrap() = DashState::Settling;
 
-    // Tick 2: Dashing → Settling should be legal
+    // Tick 2: Dashing -> Settling should be legal
     tick(&mut app);
 
     let log = app.world().resource::<ViolationLog>();
@@ -92,12 +95,18 @@ fn valid_breaker_state_does_not_fire_on_dashing_to_settling_dash_cancel() {
     );
 }
 
-/// When `GameState` transitions (e.g., re-entering `Playing` for a new node),
+/// When `GameState` transitions (e.g., entering `Run`),
 /// the breaker state tracker clears. A breaker that was `Braking` before the
 /// transition and is now `Idle` (from `reset_breaker`) should not fire.
 #[test]
 fn valid_breaker_state_clears_tracking_on_game_state_transition() {
     let mut app = test_app_valid_breaker_state();
+
+    // Navigate into AppState::Game so GameState becomes active
+    app.world_mut()
+        .resource_mut::<NextState<AppState>>()
+        .set(AppState::Game);
+    app.update();
 
     let entity = app
         .world_mut()
@@ -109,10 +118,10 @@ fn valid_breaker_state_clears_tracking_on_game_state_transition() {
 
     assert!(app.world().resource::<ViolationLog>().0.is_empty());
 
-    // Simulate node transition: change GameState so the tracker clears
+    // Simulate transition: change GameState so the tracker clears
     app.world_mut()
         .resource_mut::<NextState<GameState>>()
-        .set(GameState::MainMenu);
+        .set(GameState::Menu);
     app.update(); // process state transition
 
     // Change breaker to Idle (what reset_breaker does)
@@ -121,8 +130,8 @@ fn valid_breaker_state_clears_tracking_on_game_state_transition() {
         .get_mut::<DashState>()
         .unwrap() = DashState::Idle;
 
-    // Tick 2: GameState changed Loading→MainMenu → tracking was cleared
-    // → Idle is treated as first frame, no comparison → no violation
+    // Tick 2: GameState changed Loading->Menu -> tracking was cleared
+    // -> Idle is treated as first frame, no comparison -> no violation
     tick(&mut app);
 
     let log = app.world().resource::<ViolationLog>();

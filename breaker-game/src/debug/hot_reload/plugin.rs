@@ -9,7 +9,7 @@ use super::{
         propagate_node_layout_changes,
     },
 };
-use crate::{chips::systems::propagate_chip_catalog, shared::GameState};
+use crate::{chips::systems::propagate_chip_catalog, state::types::NodeState};
 
 /// Plugin that enables live hot-reload of RON configuration and content files.
 ///
@@ -21,7 +21,7 @@ impl Plugin for HotReloadPlugin {
     fn build(&self, app: &mut App) {
         app.configure_sets(
             Update,
-            HotReloadSystems::PropagateDefaults.run_if(in_state(GameState::Playing)),
+            HotReloadSystems::PropagateDefaults.run_if(in_state(NodeState::Playing)),
         );
 
         // Layer 2: Content/registry changes (PropagateDefaults set)

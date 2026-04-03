@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use super::evaluate::RemoveChainsCommand;
 use crate::{
     effect::{commands::EffectCommandsExt, core::*},
-    shared::PlayingState,
+    state::types::NodeState,
 };
 
 fn tick_time_expires(
@@ -59,7 +59,7 @@ fn tick_time_expires(
 pub(crate) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
-        tick_time_expires.run_if(in_state(PlayingState::Active)),
+        tick_time_expires.run_if(in_state(NodeState::Playing)),
     );
 }
 

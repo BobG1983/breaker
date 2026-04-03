@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use super::{inventory::ChipInventory, systems::dispatch_chip_effects};
-use crate::shared::GameState;
+use crate::state::types::ChipSelectState;
 
 /// Plugin for the chips domain.
 ///
@@ -18,7 +18,7 @@ impl Plugin for ChipsPlugin {
             // Only run during ChipSelect — messages can only arrive in that state.
             .add_systems(
                 Update,
-                dispatch_chip_effects.run_if(in_state(GameState::ChipSelect)),
+                dispatch_chip_effects.run_if(in_state(ChipSelectState::Selecting)),
             );
     }
 }
@@ -29,11 +29,17 @@ mod tests {
 
     #[test]
     fn plugin_builds() {
-        use crate::{shared::GameState, state::run::chip_select::messages::ChipSelected};
+        use crate::state::{
+            run::chip_select::messages::ChipSelected,
+            types::{AppState, GameState, RunPhase},
+        };
         App::new()
             .add_plugins(MinimalPlugins)
             .add_plugins(bevy::state::app::StatesPlugin)
-            .init_state::<GameState>()
+            .init_state::<AppState>()
+            .add_sub_state::<GameState>()
+            .add_sub_state::<RunPhase>()
+            .add_sub_state::<ChipSelectState>()
             // ChipSelected must be registered before ChipsPlugin (normally by UiPlugin)
             .add_message::<ChipSelected>()
             .add_plugins(ChipsPlugin)

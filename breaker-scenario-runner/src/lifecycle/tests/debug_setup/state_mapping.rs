@@ -3,7 +3,7 @@
 use super::super::helpers::*;
 
 // -------------------------------------------------------------------------
-// apply_debug_setup — sets PreviousGameState from force_previous_game_state
+// apply_debug_setup -- sets PreviousGameState from force_previous_game_state
 // -------------------------------------------------------------------------
 
 /// When `force_previous_game_state: Some(ForcedGameState::Loading)`,
@@ -40,22 +40,23 @@ fn apply_debug_setup_sets_previous_game_state_from_forced() {
 }
 
 // -------------------------------------------------------------------------
-// map_forced_game_state — maps all variants correctly
+// map_forced_game_state -- maps all variants correctly
 // -------------------------------------------------------------------------
 
-/// Each `ForcedGameState` variant must map 1:1 to the corresponding `GameState` variant.
+/// Each `ForcedGameState` variant must map to the corresponding `GameState` variant
+/// in the new hierarchical state machine.
 #[test]
 fn map_forced_game_state_maps_all_variants_correctly() {
     let mappings = [
         (ForcedGameState::Loading, GameState::Loading),
-        (ForcedGameState::MainMenu, GameState::MainMenu),
-        (ForcedGameState::RunSetup, GameState::RunSetup),
-        (ForcedGameState::Playing, GameState::Playing),
-        (ForcedGameState::TransitionOut, GameState::TransitionOut),
-        (ForcedGameState::TransitionIn, GameState::TransitionIn),
-        (ForcedGameState::ChipSelect, GameState::ChipSelect),
-        (ForcedGameState::RunEnd, GameState::RunEnd),
-        (ForcedGameState::MetaProgression, GameState::MetaProgression),
+        (ForcedGameState::MainMenu, GameState::Menu),
+        (ForcedGameState::RunSetup, GameState::Run),
+        (ForcedGameState::Playing, GameState::Run),
+        (ForcedGameState::TransitionOut, GameState::Run),
+        (ForcedGameState::TransitionIn, GameState::Run),
+        (ForcedGameState::ChipSelect, GameState::Run),
+        (ForcedGameState::RunEnd, GameState::Run),
+        (ForcedGameState::MetaProgression, GameState::Menu),
     ];
     for (forced, expected) in &mappings {
         let result = map_forced_game_state(*forced);
@@ -67,7 +68,7 @@ fn map_forced_game_state_maps_all_variants_correctly() {
 }
 
 // -------------------------------------------------------------------------
-// map_scenario_dash_state — maps all variants 1:1
+// map_scenario_dash_state -- maps all variants 1:1
 // -------------------------------------------------------------------------
 
 /// Each `ScenarioDashState` variant must map 1:1 to the corresponding

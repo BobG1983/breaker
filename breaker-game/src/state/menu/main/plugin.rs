@@ -6,23 +6,20 @@ use super::{
     MainMenuScreen,
     systems::{handle_main_menu_input, spawn_main_menu, update_menu_colors},
 };
-use crate::{shared::GameState, state::cleanup::cleanup_entities};
+use crate::state::{cleanup::cleanup_entities, types::MenuState};
 
 /// Plugin for the main menu screen.
 pub(crate) struct MainMenuPlugin;
 
 impl Plugin for MainMenuPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(GameState::MainMenu), spawn_main_menu)
+        app.add_systems(OnEnter(MenuState::Main), spawn_main_menu)
             .add_systems(
                 Update,
                 (handle_main_menu_input, update_menu_colors)
                     .chain()
-                    .run_if(in_state(GameState::MainMenu)),
+                    .run_if(in_state(MenuState::Main)),
             )
-            .add_systems(
-                OnExit(GameState::MainMenu),
-                cleanup_entities::<MainMenuScreen>,
-            );
+            .add_systems(OnExit(MenuState::Main), cleanup_entities::<MainMenuScreen>);
     }
 }

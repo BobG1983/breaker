@@ -9,31 +9,34 @@ use super::{
     mutations::FrameMutation,
 };
 
-/// Mirrors `GameState` for RON deserialization in the scenario runner crate.
+/// Mirrors the old monolithic `GameState` for backward-compatible RON
+/// deserialization in the scenario runner crate.
 ///
-/// The game crate's `GameState` derives `States` (which brings in `Bevy`
-/// dependencies that cannot appear in plain-data RON files). This enum
-/// carries the same variants and is mapped to `GameState` at runtime by
+/// The game crate now uses a hierarchical state machine
+/// (`AppState` / `GameState` / `MenuState` / `RunPhase` / `NodeState` /
+/// `ChipSelectState` / `RunEndState`). This enum retains the old variant
+/// names so existing `.scenario.ron` files keep working. Each variant is
+/// mapped to the new `GameState` at runtime by
 /// [`crate::lifecycle::map_forced_game_state`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 pub enum ForcedGameState {
-    /// Corresponds to `GameState::Loading`.
+    /// Maps to `GameState::Loading`.
     Loading,
-    /// Corresponds to `GameState::MainMenu`.
+    /// Maps to `GameState::Menu` (was `GameState::MainMenu`).
     MainMenu,
-    /// Corresponds to `GameState::RunSetup`.
+    /// Maps to `GameState::Run` (was `GameState::RunSetup`).
     RunSetup,
-    /// Corresponds to `GameState::Playing`.
+    /// Maps to `GameState::Run` (was `GameState::Playing`).
     Playing,
-    /// Corresponds to `GameState::TransitionOut`.
+    /// Maps to `GameState::Run` (was `GameState::TransitionOut` — removed).
     TransitionOut,
-    /// Corresponds to `GameState::ChipSelect`.
+    /// Maps to `GameState::Run` (was `GameState::ChipSelect`).
     ChipSelect,
-    /// Corresponds to `GameState::TransitionIn`.
+    /// Maps to `GameState::Run` (was `GameState::TransitionIn` — removed).
     TransitionIn,
-    /// Corresponds to `GameState::RunEnd`.
+    /// Maps to `GameState::Run` (was `GameState::RunEnd`).
     RunEnd,
-    /// Corresponds to `GameState::MetaProgression`.
+    /// Maps to `GameState::Menu` (was `GameState::MetaProgression`).
     MetaProgression,
 }
 

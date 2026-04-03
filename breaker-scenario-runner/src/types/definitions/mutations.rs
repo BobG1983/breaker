@@ -40,7 +40,7 @@ pub enum MutationKind {
     SpawnExtraEntities(usize),
     /// Move the first tagged bolt to `(x, y)`, preserving z.
     MoveBolt(f32, f32),
-    /// Toggle between `PlayingState::Active` and `PlayingState::Paused`.
+    /// Toggle pause via `Time<Virtual>` — pauses or unpauses the game.
     TogglePause,
     /// Set the named [`RunStats`] counter to a specific value.
     ///

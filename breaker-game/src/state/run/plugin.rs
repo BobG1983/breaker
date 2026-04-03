@@ -28,7 +28,10 @@ use super::{
     run_end::systems::detect_most_powerful_evolution,
     systems::{advance_node, setup_run},
 };
-use crate::shared::{GameRng, GameState, PlayingState, RunSeed};
+use crate::{
+    shared::{GameRng, RunSeed},
+    state::types::{ChipSelectState, MenuState, NodeState, RunEndState, RunPhase},
+};
 
 /// Plugin for the run domain.
 ///
@@ -71,12 +74,12 @@ impl Plugin for RunPlugin {
                     detect_pinball_wizard,
                     detect_nail_biter.after(NodeSystems::TrackCompletion),
                 )
-                    .run_if(in_state(PlayingState::Active)),
+                    .run_if(in_state(NodeState::Playing)),
             )
-            // In-game highlight juice (Update, PlayingState::Active)
+            // In-game highlight juice (Update, NodeState::Playing)
             .add_systems(
                 Update,
-                spawn_highlight_text.run_if(in_state(PlayingState::Active)),
+                spawn_highlight_text.run_if(in_state(NodeState::Playing)),
             )
             // Chip selection tracking + evolution detection (Update, ChipSelect state)
             .add_systems(
@@ -86,16 +89,16 @@ impl Plugin for RunPlugin {
                     detect_first_evolution,
                     snapshot_node_highlights,
                 )
-                    .run_if(in_state(GameState::ChipSelect)),
+                    .run_if(in_state(ChipSelectState::Selecting)),
             )
             .add_systems(
-                OnEnter(GameState::Playing),
+                OnEnter(NodeState::Loading),
                 (reset_highlight_tracker, capture_run_seed, setup_run),
             )
-            .add_systems(OnEnter(GameState::RunEnd), detect_most_powerful_evolution)
-            .add_systems(OnEnter(GameState::TransitionIn), advance_node)
+            .add_systems(OnEnter(RunEndState::Active), detect_most_powerful_evolution)
+            .add_systems(OnEnter(RunPhase::Node), advance_node)
             .add_systems(
-                OnExit(GameState::MainMenu),
+                OnExit(MenuState::Main),
                 (
                     reset_run_state,
                     generate_node_sequence_system.after(reset_run_state),
@@ -118,11 +121,17 @@ mod tests {
 
     #[test]
     fn plugin_builds() {
+        use crate::state::types::{AppState, ChipSelectState, GameState, RunEndState, RunPhase};
         App::new()
             .add_plugins(MinimalPlugins)
             .add_plugins(bevy::state::app::StatesPlugin)
-            .init_state::<GameState>()
-            .add_sub_state::<PlayingState>()
+            .init_state::<AppState>()
+            .add_sub_state::<GameState>()
+            .add_sub_state::<MenuState>()
+            .add_sub_state::<RunPhase>()
+            .add_sub_state::<NodeState>()
+            .add_sub_state::<ChipSelectState>()
+            .add_sub_state::<RunEndState>()
             // Messages read by run domain systems
             .add_message::<DamageCell>()
             .add_message::<BumpPerformed>()

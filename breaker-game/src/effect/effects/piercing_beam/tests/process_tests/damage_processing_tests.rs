@@ -1,5 +1,5 @@
 use super::super::helpers::*;
-use crate::shared::{GameState, PlayingState};
+use crate::state::types::{AppState, GameState, NodeState, RunPhase};
 
 // ── Behavior 24: process_piercing_beam damages all cells in beam path ──
 
@@ -384,8 +384,10 @@ fn register_wires_process_piercing_beam_system() {
     app.add_plugins(MinimalPlugins);
     app.add_plugins(bevy::state::app::StatesPlugin);
     app.add_plugins(RantzPhysics2dPlugin);
-    app.init_state::<GameState>();
-    app.add_sub_state::<PlayingState>();
+    app.init_state::<AppState>();
+    app.add_sub_state::<GameState>();
+    app.add_sub_state::<RunPhase>();
+    app.add_sub_state::<NodeState>();
     app.add_message::<DamageCell>();
     app.insert_resource(DamageCellCollector::default());
     app.insert_resource(PlayfieldConfig::default());
@@ -393,10 +395,22 @@ fn register_wires_process_piercing_beam_system() {
 
     register(&mut app);
 
-    // Transition to PlayingState::Active so the run_if guard passes
+    // Navigate to NodeState::Playing so the run_if guard passes
+    app.world_mut()
+        .resource_mut::<NextState<AppState>>()
+        .set(AppState::Game);
+    app.update();
     app.world_mut()
         .resource_mut::<NextState<GameState>>()
-        .set(GameState::Playing);
+        .set(GameState::Run);
+    app.update();
+    app.world_mut()
+        .resource_mut::<NextState<RunPhase>>()
+        .set(RunPhase::Node);
+    app.update();
+    app.world_mut()
+        .resource_mut::<NextState<NodeState>>()
+        .set(NodeState::Playing);
     app.update();
 
     // Spawn a request — if register() wires the system, it should be processed

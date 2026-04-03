@@ -6,7 +6,10 @@ use super::*;
 use crate::{
     chips::{ChipDefinition, definition::EvolutionIngredient},
     effect::{EffectKind, EffectNode},
-    state::run::chip_select::resources::ChipOffering,
+    state::{
+        run::chip_select::resources::ChipOffering,
+        types::{AppState, GameState, RunPhase},
+    },
 };
 
 #[derive(Resource, Default)]
@@ -40,7 +43,10 @@ fn test_app_with_offers(offers: ChipOffers) -> App {
     app.add_plugins((MinimalPlugins, StatesPlugin))
         .init_resource::<ButtonInput<KeyCode>>()
         .insert_resource(InputConfig::default())
-        .init_state::<GameState>()
+        .init_state::<AppState>()
+        .add_sub_state::<GameState>()
+        .add_sub_state::<RunPhase>()
+        .add_sub_state::<ChipSelectState>()
         .insert_resource(ChipSelectSelection { index: 0 })
         .insert_resource(offers)
         .init_resource::<ReceivedChips>()
@@ -81,10 +87,10 @@ fn confirm_transitions_to_transition_in() {
     let mut app = test_app();
     press_key(&mut app, KeyCode::Enter);
 
-    let next = app.world().resource::<NextState<GameState>>();
+    let next = app.world().resource::<NextState<ChipSelectState>>();
     assert!(
-        format!("{next:?}").contains("TransitionIn"),
-        "expected TransitionIn, got: {next:?}"
+        format!("{next:?}").contains("AnimateOut"),
+        "expected AnimateOut, got: {next:?}"
     );
 }
 
@@ -143,9 +149,9 @@ fn no_input_no_change() {
     let selection = app.world().resource::<ChipSelectSelection>();
     assert_eq!(selection.index, 0);
 
-    let next = app.world().resource::<NextState<GameState>>();
+    let next = app.world().resource::<NextState<ChipSelectState>>();
     assert!(
-        !format!("{next:?}").contains("TransitionIn"),
+        !format!("{next:?}").contains("AnimateOut"),
         "expected no transition, got: {next:?}"
     );
 }
@@ -155,10 +161,10 @@ fn empty_offers_confirm_transitions_without_message() {
     let mut app = test_app_with_offers(make_offers(0));
     press_key(&mut app, KeyCode::Enter);
 
-    let next = app.world().resource::<NextState<GameState>>();
+    let next = app.world().resource::<NextState<ChipSelectState>>();
     assert!(
-        format!("{next:?}").contains("TransitionIn"),
-        "expected TransitionIn, got: {next:?}"
+        format!("{next:?}").contains("AnimateOut"),
+        "expected AnimateOut, got: {next:?}"
     );
 
     let received = app.world().resource::<ReceivedChips>();
@@ -288,10 +294,10 @@ fn confirm_evolution_transitions_to_transition_in() {
     let mut app = test_app_with_evolution_inventory();
     press_key(&mut app, KeyCode::Enter);
 
-    let next = app.world().resource::<NextState<GameState>>();
+    let next = app.world().resource::<NextState<ChipSelectState>>();
     assert!(
-        format!("{next:?}").contains("TransitionIn"),
-        "expected TransitionIn after evolution confirm, got: {next:?}"
+        format!("{next:?}").contains("AnimateOut"),
+        "expected AnimateOut after evolution confirm, got: {next:?}"
     );
 }
 

@@ -29,17 +29,32 @@ pub(super) fn test_app() -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
     app.add_plugins(bevy::state::app::StatesPlugin);
-    app.init_state::<crate::shared::GameState>();
-    app.add_sub_state::<crate::shared::PlayingState>();
+    app.init_state::<crate::state::types::AppState>();
+    app.add_sub_state::<crate::state::types::GameState>();
+    app.add_sub_state::<crate::state::types::RunPhase>();
+    app.add_sub_state::<crate::state::types::NodeState>();
     app.add_systems(Update, tick_shockwave);
     app.add_systems(Update, despawn_finished_shockwave);
     app
 }
 
 pub(super) fn enter_playing(app: &mut App) {
+    use crate::state::types::{AppState, GameState, NodeState, RunPhase};
     app.world_mut()
-        .resource_mut::<NextState<crate::shared::GameState>>()
-        .set(crate::shared::GameState::Playing);
+        .resource_mut::<NextState<AppState>>()
+        .set(AppState::Game);
+    app.update();
+    app.world_mut()
+        .resource_mut::<NextState<GameState>>()
+        .set(GameState::Run);
+    app.update();
+    app.world_mut()
+        .resource_mut::<NextState<RunPhase>>()
+        .set(RunPhase::Node);
+    app.update();
+    app.world_mut()
+        .resource_mut::<NextState<NodeState>>()
+        .set(NodeState::Playing);
     app.update();
 }
 

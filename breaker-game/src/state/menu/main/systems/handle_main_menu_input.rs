@@ -4,8 +4,10 @@ use bevy::{app::AppExit, prelude::*};
 
 use crate::{
     input::InputConfig,
-    shared::GameState,
-    state::menu::main::{MENU_ITEMS, MainMenuSelection, MenuItem},
+    state::{
+        menu::main::{MENU_ITEMS, MainMenuSelection, MenuItem},
+        types::MenuState,
+    },
 };
 
 /// Handles keyboard and mouse input for the main menu.
@@ -17,7 +19,7 @@ pub(crate) fn handle_main_menu_input(
     keys: Res<ButtonInput<KeyCode>>,
     config: Res<InputConfig>,
     mut selection: ResMut<MainMenuSelection>,
-    mut next_state: ResMut<NextState<GameState>>,
+    mut next_state: ResMut<NextState<MenuState>>,
     mut exit_writer: MessageWriter<AppExit>,
     interaction_query: Query<(&Interaction, &MenuItem), Changed<Interaction>>,
 ) {
@@ -68,11 +70,11 @@ fn current_index(selection: &MainMenuSelection) -> usize {
 /// Executes the action for the current selection.
 fn confirm_selection(
     selection: &MainMenuSelection,
-    next_state: &mut ResMut<NextState<GameState>>,
+    next_state: &mut ResMut<NextState<MenuState>>,
     exit_writer: &mut MessageWriter<AppExit>,
 ) {
     match selection.selected {
-        MenuItem::Play => next_state.set(GameState::RunSetup),
+        MenuItem::Play => next_state.set(MenuState::StartGame),
         MenuItem::Settings => {} // Not yet implemented
         MenuItem::Quit => {
             exit_writer.write(AppExit::Success);
@@ -85,18 +87,30 @@ mod tests {
     use bevy::{ecs::message::Messages, state::app::StatesPlugin};
 
     use super::*;
+    use crate::state::types::{AppState, GameState};
 
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, StatesPlugin))
             .init_resource::<ButtonInput<KeyCode>>()
             .insert_resource(InputConfig::default())
-            .init_state::<GameState>()
+            .init_state::<AppState>()
+            .add_sub_state::<GameState>()
+            .add_sub_state::<MenuState>()
             .add_message::<AppExit>()
             .insert_resource(MainMenuSelection {
                 selected: MenuItem::Play,
             })
             .add_systems(Update, handle_main_menu_input);
+        // Navigate to MenuState
+        app.world_mut()
+            .resource_mut::<NextState<AppState>>()
+            .set(AppState::Game);
+        app.update();
+        app.world_mut()
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Menu);
+        app.update();
         app
     }
 
@@ -128,14 +142,14 @@ mod tests {
     }
 
     #[test]
-    fn enter_on_play_transitions_to_run_setup() {
+    fn enter_on_play_transitions_to_start_game() {
         let mut app = test_app();
         press_key(&mut app, KeyCode::Enter);
 
-        let next = app.world().resource::<NextState<GameState>>();
+        let next = app.world().resource::<NextState<MenuState>>();
         assert!(
-            format!("{next:?}").contains("RunSetup"),
-            "expected NextState to contain RunSetup, got: {next:?}"
+            format!("{next:?}").contains("StartGame"),
+            "expected NextState to contain StartGame, got: {next:?}"
         );
     }
 
@@ -161,9 +175,9 @@ mod tests {
         press_key(&mut app, KeyCode::Enter);
 
         // No state transition
-        let next = app.world().resource::<NextState<GameState>>();
+        let next = app.world().resource::<NextState<MenuState>>();
         assert!(
-            !format!("{next:?}").contains("RunSetup"),
+            !format!("{next:?}").contains("StartGame"),
             "expected no state transition, got: {next:?}"
         );
 

@@ -2,12 +2,12 @@
 
 use bevy::prelude::*;
 
-use crate::{
-    shared::GameState,
-    state::run::{
+use crate::state::{
+    run::{
         node::messages::TimerExpired,
         resources::{RunOutcome, RunState},
     },
+    types::NodeState,
 };
 
 /// When [`TimerExpired`] is received and the run is still in progress, end the run as lost.
@@ -18,7 +18,7 @@ use crate::{
 pub(crate) fn handle_timer_expired(
     mut reader: MessageReader<TimerExpired>,
     mut run_state: ResMut<RunState>,
-    mut next_state: ResMut<NextState<GameState>>,
+    mut next_state: ResMut<NextState<NodeState>>,
 ) {
     if reader.read().next().is_none() {
         return;
@@ -34,7 +34,7 @@ pub(crate) fn handle_timer_expired(
     }
 
     run_state.outcome = RunOutcome::TimerExpired;
-    next_state.set(GameState::RunEnd);
+    next_state.set(NodeState::AnimateOut);
 }
 
 #[cfg(test)]
@@ -42,6 +42,7 @@ mod tests {
     use bevy::state::app::StatesPlugin;
 
     use super::*;
+    use crate::state::types::{AppState, GameState, RunPhase};
 
     #[derive(Resource)]
     struct SendTimerExpired(bool);
@@ -55,7 +56,10 @@ mod tests {
     fn test_app(outcome: RunOutcome) -> App {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, StatesPlugin))
-            .init_state::<GameState>()
+            .init_state::<AppState>()
+            .add_sub_state::<GameState>()
+            .add_sub_state::<RunPhase>()
+            .add_sub_state::<NodeState>()
             .add_message::<TimerExpired>()
             .insert_resource(RunState {
                 node_index: 0,
@@ -64,6 +68,19 @@ mod tests {
             })
             .insert_resource(SendTimerExpired(false))
             .add_systems(FixedUpdate, (send_expired, handle_timer_expired).chain());
+        // Navigate to NodeState
+        app.world_mut()
+            .resource_mut::<NextState<AppState>>()
+            .set(AppState::Game);
+        app.update();
+        app.world_mut()
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Run);
+        app.update();
+        app.world_mut()
+            .resource_mut::<NextState<RunPhase>>()
+            .set(RunPhase::Node);
+        app.update();
         app
     }
 
@@ -84,10 +101,10 @@ mod tests {
         let run_state = app.world().resource::<RunState>();
         assert_eq!(run_state.outcome, RunOutcome::TimerExpired);
 
-        let next = app.world().resource::<NextState<GameState>>();
+        let next = app.world().resource::<NextState<NodeState>>();
         assert!(
-            format!("{next:?}").contains("RunEnd"),
-            "expected RunEnd, got: {next:?}"
+            format!("{next:?}").contains("AnimateOut"),
+            "expected AnimateOut, got: {next:?}"
         );
     }
 

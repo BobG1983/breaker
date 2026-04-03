@@ -2,9 +2,8 @@
 
 use bevy::{ecs::schedule::ApplyDeferred, prelude::*};
 
-use crate::{
-    shared::{GameState, PlayingState},
-    state::run::{
+use crate::state::{
+    run::{
         chip_select::messages::ChipSelected,
         node::{
             hud::{
@@ -24,6 +23,7 @@ use crate::{
             },
         },
     },
+    types::NodeState,
 };
 
 /// Plugin for the node subdomain.
@@ -45,7 +45,7 @@ impl Plugin for NodePlugin {
             .add_message::<SpawnNodeComplete>()
             .add_message::<ChipSelected>()
             .add_systems(
-                OnEnter(GameState::Playing),
+                OnEnter(NodeState::Loading),
                 (
                     set_active_layout,
                     spawn_cells_from_layout.in_set(NodeSystems::Spawn),
@@ -56,7 +56,7 @@ impl Plugin for NodePlugin {
             )
             // HUD — side panels + timer display
             .add_systems(
-                OnEnter(GameState::Playing),
+                OnEnter(NodeState::Loading),
                 (
                     spawn_side_panels,
                     ApplyDeferred,
@@ -66,9 +66,9 @@ impl Plugin for NodePlugin {
             )
             .add_systems(
                 Update,
-                update_timer_display.run_if(in_state(PlayingState::Active)),
+                update_timer_display.run_if(in_state(NodeState::Playing)),
             )
-            // Intentionally runs without PlayingState::Active guard — must catch spawn signals on the first frame of play.
+            // Intentionally runs without NodeState::Playing guard — must catch spawn signals on the first frame of play.
             .add_systems(FixedUpdate, check_spawn_complete)
             .add_systems(
                 FixedUpdate,
@@ -83,7 +83,7 @@ impl Plugin for NodePlugin {
                         .in_set(NodeSystems::ApplyTimePenalty)
                         .after(NodeSystems::TickTimer),
                 )
-                    .run_if(in_state(PlayingState::Active)),
+                    .run_if(in_state(NodeState::Playing)),
             );
     }
 }
@@ -91,14 +91,17 @@ impl Plugin for NodePlugin {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::state::types::{AppState, GameState, RunPhase};
 
     #[test]
     fn plugin_builds() {
         App::new()
             .add_plugins(MinimalPlugins)
             .add_plugins(bevy::state::app::StatesPlugin)
-            .init_state::<GameState>()
-            .add_sub_state::<PlayingState>()
+            .init_state::<AppState>()
+            .add_sub_state::<GameState>()
+            .add_sub_state::<RunPhase>()
+            .add_sub_state::<NodeState>()
             .add_plugins(NodePlugin)
             .update();
     }

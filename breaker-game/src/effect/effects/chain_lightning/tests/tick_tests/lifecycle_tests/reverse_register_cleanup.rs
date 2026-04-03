@@ -8,7 +8,8 @@ use rantzsoft_physics2d::plugin::RantzPhysics2dPlugin;
 use super::*;
 use crate::{
     cells::messages::DamageCell,
-    shared::{CleanupOnNodeExit, GameRng, GameState, PlayingState},
+    shared::{CleanupOnNodeExit, GameRng},
+    state::types::{AppState, GameState, NodeState, RunPhase},
 };
 
 // -- Behavior 24: reverse() is a no-op --
@@ -47,8 +48,10 @@ fn register_wires_tick_chain_lightning_system() {
     app.add_plugins(MinimalPlugins);
     app.add_plugins(bevy::state::app::StatesPlugin);
     app.add_plugins(RantzPhysics2dPlugin);
-    app.init_state::<GameState>();
-    app.add_sub_state::<PlayingState>();
+    app.init_state::<AppState>();
+    app.add_sub_state::<GameState>();
+    app.add_sub_state::<RunPhase>();
+    app.add_sub_state::<NodeState>();
     app.add_message::<DamageCell>();
     app.insert_resource(DamageCellCollector::default());
     app.add_systems(Update, collect_damage_cells);
@@ -56,10 +59,22 @@ fn register_wires_tick_chain_lightning_system() {
 
     register(&mut app);
 
-    // Transition to PlayingState::Active
+    // Navigate to NodeState::Playing so run_if(in_state(NodeState::Playing)) passes
+    app.world_mut()
+        .resource_mut::<NextState<AppState>>()
+        .set(AppState::Game);
+    app.update();
     app.world_mut()
         .resource_mut::<NextState<GameState>>()
-        .set(GameState::Playing);
+        .set(GameState::Run);
+    app.update();
+    app.world_mut()
+        .resource_mut::<NextState<RunPhase>>()
+        .set(RunPhase::Node);
+    app.update();
+    app.world_mut()
+        .resource_mut::<NextState<NodeState>>()
+        .set(NodeState::Playing);
     app.update();
 
     // Spawn a chain in Idle with a valid target -- if register() wires the system, tick will process it

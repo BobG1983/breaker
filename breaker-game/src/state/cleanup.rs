@@ -59,7 +59,10 @@ pub(crate) fn cleanup_on_exit<S: States>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::shared::{CleanupOnNodeExit, CleanupOnRunEnd, GameState, PlayingState};
+    use crate::{
+        shared::{CleanupOnNodeExit, CleanupOnRunEnd, GameState},
+        state::types::NodeState,
+    };
 
     #[test]
     fn cleanup_on_node_exit_despawns_marked_entities() {
@@ -166,7 +169,7 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_systems(Update, cleanup_on_exit::<GameState>)
-            .add_systems(Update, cleanup_on_exit::<PlayingState>);
+            .add_systems(Update, cleanup_on_exit::<NodeState>);
 
         let entity_a = app
             .world_mut()
@@ -174,13 +177,13 @@ mod tests {
             .id();
         let entity_b = app
             .world_mut()
-            .spawn(CleanupOnExit::<PlayingState>::default())
+            .spawn(CleanupOnExit::<NodeState>::default())
             .id();
         let entity_c = app
             .world_mut()
             .spawn((
                 CleanupOnExit::<GameState>::default(),
-                CleanupOnExit::<PlayingState>::default(),
+                CleanupOnExit::<NodeState>::default(),
             ))
             .id();
 
@@ -192,7 +195,7 @@ mod tests {
         );
         assert!(
             app.world().get_entity(entity_b).is_err(),
-            "entity B (PlayingState marker) should be despawned"
+            "entity B (NodeState marker) should be despawned"
         );
         assert!(
             app.world().get_entity(entity_c).is_err(),
@@ -212,7 +215,7 @@ mod tests {
             .id();
         let entity_b = app
             .world_mut()
-            .spawn(CleanupOnExit::<PlayingState>::default())
+            .spawn(CleanupOnExit::<NodeState>::default())
             .id();
 
         app.update();
@@ -223,7 +226,7 @@ mod tests {
         );
         assert!(
             app.world().get_entity(entity_b).is_ok(),
-            "entity B (PlayingState marker) should survive — no cleanup_on_exit::<PlayingState> registered"
+            "entity B (NodeState marker) should survive — no cleanup_on_exit::<NodeState> registered"
         );
     }
 
@@ -361,21 +364,21 @@ mod tests {
         );
     }
 
-    // --- Behavior 5: Works with SubStates (PlayingState) ---
+    // --- Behavior 5: Works with SubStates (NodeState) ---
 
     #[test]
     fn cleanup_on_exit_works_with_playing_state() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
-            .add_systems(Update, cleanup_on_exit::<PlayingState>);
+            .add_systems(Update, cleanup_on_exit::<NodeState>);
 
         let marked_a = app
             .world_mut()
-            .spawn(CleanupOnExit::<PlayingState>::default())
+            .spawn(CleanupOnExit::<NodeState>::default())
             .id();
         let marked_b = app
             .world_mut()
-            .spawn(CleanupOnExit::<PlayingState>::default())
+            .spawn(CleanupOnExit::<NodeState>::default())
             .id();
         let unmarked = app.world_mut().spawn_empty().id();
 
@@ -399,12 +402,12 @@ mod tests {
     fn cleanup_on_exit_despawns_entire_entity_not_just_marker() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
-            .add_systems(Update, cleanup_on_exit::<PlayingState>);
+            .add_systems(Update, cleanup_on_exit::<NodeState>);
 
         let marked = app
             .world_mut()
             .spawn((
-                CleanupOnExit::<PlayingState>::default(),
+                CleanupOnExit::<NodeState>::default(),
                 Transform::default(),
                 Name::new("test_entity"),
             ))

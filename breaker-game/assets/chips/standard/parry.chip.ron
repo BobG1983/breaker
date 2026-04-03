@@ -6,7 +6,7 @@
         effects: [
             On(target: Breaker, then: [
                 When(trigger: PerfectBump, then: [
-                    Do(Shield(duration: 5.0, reflection_cost: 0.5)),
+                    Do(Shield(duration: 3.0, reflection_cost: 0.5)),
                 ]),
             ]),
             On(target: AllBolts, then: [

@@ -3,21 +3,23 @@
 use bevy::prelude::*;
 use tracing::warn;
 
-use crate::{
-    shared::GameState,
-    state::run::{
+use crate::state::{
+    run::{
         node::{NodeLayoutRegistry, messages::NodeCleared},
         resources::{NodeSequence, RunOutcome, RunState},
     },
+    types::NodeState,
 };
 
-/// When [`NodeCleared`] is received, either advance to the next node or win the run.
+/// When [`NodeCleared`] is received, set [`RunOutcome`] and transition to
+/// [`NodeState::AnimateOut`]. The teardown router reads `RunOutcome` to decide
+/// whether to go to `ChipSelect` or `RunEnd`.
 pub(crate) fn handle_node_cleared(
     mut reader: MessageReader<NodeCleared>,
     registry: Res<NodeLayoutRegistry>,
     node_sequence: Option<Res<NodeSequence>>,
     mut run_state: ResMut<RunState>,
-    mut next_state: ResMut<NextState<GameState>>,
+    mut next_state: ResMut<NextState<NodeState>>,
 ) {
     if reader.read().next().is_none() {
         return;
@@ -36,12 +38,11 @@ pub(crate) fn handle_node_cleared(
 
     run_state.transition_queued = true;
 
-    if (run_state.node_index as usize) < final_index {
-        next_state.set(GameState::TransitionOut);
-    } else {
+    if (run_state.node_index as usize) >= final_index {
         run_state.outcome = RunOutcome::Won;
-        next_state.set(GameState::RunEnd);
     }
+
+    next_state.set(NodeState::AnimateOut);
 }
 
 #[cfg(test)]
@@ -49,7 +50,10 @@ mod tests {
     use bevy::state::app::StatesPlugin;
 
     use super::*;
-    use crate::state::run::node::{NodeLayout, definition::NodePool};
+    use crate::state::{
+        run::node::{NodeLayout, definition::NodePool},
+        types::{AppState, GameState, RunPhase},
+    };
 
     fn make_layout(name: &str) -> NodeLayout {
         NodeLayout {
@@ -76,7 +80,10 @@ mod tests {
     fn test_app(node_index: u32, layout_count: usize) -> App {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, StatesPlugin))
-            .init_state::<GameState>()
+            .init_state::<AppState>()
+            .add_sub_state::<GameState>()
+            .add_sub_state::<RunPhase>()
+            .add_sub_state::<NodeState>()
             .add_message::<NodeCleared>();
         let mut registry = NodeLayoutRegistry::default();
         for i in 0..layout_count {
@@ -89,6 +96,19 @@ mod tests {
             })
             .insert_resource(SendNodeCleared(false))
             .add_systems(FixedUpdate, (send_cleared, handle_node_cleared).chain());
+        // Navigate to NodeState so the system can set NextState<NodeState>
+        app.world_mut()
+            .resource_mut::<NextState<AppState>>()
+            .set(AppState::Game);
+        app.update();
+        app.world_mut()
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Run);
+        app.update();
+        app.world_mut()
+            .resource_mut::<NextState<RunPhase>>()
+            .set(RunPhase::Node);
+        app.update();
         app
     }
 
@@ -101,30 +121,31 @@ mod tests {
     }
 
     #[test]
-    fn non_final_node_transitions_to_transition_out() {
+    fn non_final_node_transitions_to_animate_out() {
         let mut app = test_app(0, 3);
         app.world_mut().resource_mut::<SendNodeCleared>().0 = true;
         tick(&mut app);
 
-        let next = app.world().resource::<NextState<GameState>>();
+        let next = app.world().resource::<NextState<NodeState>>();
         assert!(
-            format!("{next:?}").contains("TransitionOut"),
-            "expected TransitionOut, got: {next:?}"
+            format!("{next:?}").contains("AnimateOut"),
+            "expected AnimateOut, got: {next:?}"
         );
         let run_state = app.world().resource::<RunState>();
         assert!(run_state.transition_queued);
+        assert_eq!(run_state.outcome, RunOutcome::InProgress);
     }
 
     #[test]
-    fn final_node_transitions_to_run_end_with_won() {
+    fn final_node_transitions_to_animate_out_with_won() {
         let mut app = test_app(2, 3); // index 2 of 3 layouts = final
         app.world_mut().resource_mut::<SendNodeCleared>().0 = true;
         tick(&mut app);
 
-        let next = app.world().resource::<NextState<GameState>>();
+        let next = app.world().resource::<NextState<NodeState>>();
         assert!(
-            format!("{next:?}").contains("RunEnd"),
-            "expected RunEnd, got: {next:?}"
+            format!("{next:?}").contains("AnimateOut"),
+            "expected AnimateOut, got: {next:?}"
         );
 
         let run_state = app.world().resource::<RunState>();
@@ -138,10 +159,10 @@ mod tests {
         app.world_mut().resource_mut::<SendNodeCleared>().0 = true;
         tick(&mut app);
 
-        let next = app.world().resource::<NextState<GameState>>();
+        let next = app.world().resource::<NextState<NodeState>>();
         let debug = format!("{next:?}");
         assert!(
-            !debug.contains("ChipSelect") && !debug.contains("RunEnd"),
+            !debug.contains("AnimateOut"),
             "empty registry should not trigger any transition, got: {next:?}"
         );
         let run_state = app.world().resource::<RunState>();
@@ -154,10 +175,10 @@ mod tests {
         // SendNodeCleared stays false
         tick(&mut app);
 
-        let next = app.world().resource::<NextState<GameState>>();
+        let next = app.world().resource::<NextState<NodeState>>();
         let debug = format!("{next:?}");
         assert!(
-            !debug.contains("ChipSelect") && !debug.contains("RunEnd"),
+            !debug.contains("AnimateOut"),
             "expected no state change, got: {next:?}"
         );
     }
@@ -184,14 +205,13 @@ mod tests {
     }
 
     /// Helper: build an app with *both* a [`NodeLayoutRegistry`] and a [`NodeSequence`].
-    ///
-    /// `layout_count` controls the registry size; `sequence_len` controls the
-    /// node sequence length. The system should use `sequence_len` to determine
-    /// the final node index, **not** `layout_count`.
     fn test_app_with_sequence(node_index: u32, layout_count: usize, sequence_len: usize) -> App {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, StatesPlugin))
-            .init_state::<GameState>()
+            .init_state::<AppState>()
+            .add_sub_state::<GameState>()
+            .add_sub_state::<RunPhase>()
+            .add_sub_state::<NodeState>()
             .add_message::<NodeCleared>();
         let mut registry = NodeLayoutRegistry::default();
         for i in 0..layout_count {
@@ -205,22 +225,32 @@ mod tests {
             })
             .insert_resource(SendNodeCleared(false))
             .add_systems(FixedUpdate, (send_cleared, handle_node_cleared).chain());
+        // Navigate to NodeState
+        app.world_mut()
+            .resource_mut::<NextState<AppState>>()
+            .set(AppState::Game);
+        app.update();
+        app.world_mut()
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Run);
+        app.update();
+        app.world_mut()
+            .resource_mut::<NextState<RunPhase>>()
+            .set(RunPhase::Node);
+        app.update();
         app
     }
 
     #[test]
     fn mid_run_node_does_not_end_game_when_sequence_longer_than_registry() {
-        // NodeSequence has 9 assignments, registry has 3 layouts.
-        // At node_index 3, we are only at the 4th of 9 nodes — NOT the end.
-        // Bug: system uses registry.len() (3) and thinks index 3 >= final (2).
         let mut app = test_app_with_sequence(3, 3, 9);
         app.world_mut().resource_mut::<SendNodeCleared>().0 = true;
         tick(&mut app);
 
-        let next = app.world().resource::<NextState<GameState>>();
+        let next = app.world().resource::<NextState<NodeState>>();
         assert!(
-            format!("{next:?}").contains("TransitionOut"),
-            "node_index 3 of 9 should advance to TransitionOut, not end the run; got: {next:?}"
+            format!("{next:?}").contains("AnimateOut"),
+            "node_index 3 of 9 should transition to AnimateOut; got: {next:?}"
         );
 
         let run_state = app.world().resource::<RunState>();
@@ -233,16 +263,14 @@ mod tests {
 
     #[test]
     fn run_ends_at_last_node_sequence_assignment() {
-        // NodeSequence has 9 assignments (final_index = 8), registry has 3 layouts.
-        // At node_index 8, we are at the last node — run should end with Won.
         let mut app = test_app_with_sequence(8, 3, 9);
         app.world_mut().resource_mut::<SendNodeCleared>().0 = true;
         tick(&mut app);
 
-        let next = app.world().resource::<NextState<GameState>>();
+        let next = app.world().resource::<NextState<NodeState>>();
         assert!(
-            format!("{next:?}").contains("RunEnd"),
-            "node_index 8 of 9 should trigger RunEnd; got: {next:?}"
+            format!("{next:?}").contains("AnimateOut"),
+            "node_index 8 of 9 should transition to AnimateOut; got: {next:?}"
         );
 
         let run_state = app.world().resource::<RunState>();
@@ -254,17 +282,15 @@ mod tests {
     }
 
     #[test]
-    fn penultimate_node_transitions_to_transition_out_not_run_end() {
-        // NodeSequence has 9 assignments (final_index = 8), registry has 3 layouts.
-        // At node_index 7, we are one before the last — should go to TransitionOut.
+    fn penultimate_node_transitions_to_animate_out_not_run_end() {
         let mut app = test_app_with_sequence(7, 3, 9);
         app.world_mut().resource_mut::<SendNodeCleared>().0 = true;
         tick(&mut app);
 
-        let next = app.world().resource::<NextState<GameState>>();
+        let next = app.world().resource::<NextState<NodeState>>();
         assert!(
-            format!("{next:?}").contains("TransitionOut"),
-            "node_index 7 of 9 should advance to TransitionOut; got: {next:?}"
+            format!("{next:?}").contains("AnimateOut"),
+            "node_index 7 of 9 should transition to AnimateOut; got: {next:?}"
         );
 
         let run_state = app.world().resource::<RunState>();

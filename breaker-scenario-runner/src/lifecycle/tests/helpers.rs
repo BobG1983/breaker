@@ -10,9 +10,12 @@ pub(super) use breaker::{
     cells::components::Cell,
     effect::{BoundEffects, EffectKind, EffectNode, RootEffect, StagedEffects, Target},
     input::resources::InputActions,
-    shared::{GameState, PlayfieldConfig, PlayingState},
-    state::run::{
-        NodeLayoutRegistry, chip_select::messages::ChipSelected, node::resources::NodeTimer,
+    shared::PlayfieldConfig,
+    state::{
+        run::{
+            NodeLayoutRegistry, chip_select::messages::ChipSelected, node::resources::NodeTimer,
+        },
+        types::{AppState, ChipSelectState, GameState, MenuState, NodeState, RunPhase},
     },
     walls::components::Wall,
 };
@@ -42,7 +45,7 @@ pub(super) fn make_scenario(max_frames: u32) -> ScenarioDefinition {
     }
 }
 
-/// Scenario for lifecycle plugin integration tests — uses `Scripted` input
+/// Scenario for lifecycle plugin integration tests -- uses `Scripted` input
 /// so no randomisation is involved.
 pub(super) fn make_lifecycle_test_scenario() -> ScenarioDefinition {
     ScenarioDefinition {
@@ -61,7 +64,13 @@ pub(super) fn lifecycle_test_app() -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .add_plugins(StatesPlugin)
-        .init_state::<GameState>()
+        .init_state::<AppState>()
+        .add_sub_state::<GameState>()
+        .add_sub_state::<MenuState>()
+        .add_sub_state::<RunPhase>()
+        .add_sub_state::<NodeState>()
+        .add_sub_state::<ChipSelectState>()
+        .add_sub_state::<breaker::state::types::RunEndState>()
         .insert_resource(ScenarioConfig {
             definition: make_lifecycle_test_scenario(),
         })
@@ -108,7 +117,9 @@ pub(super) fn bypass_app(definition: ScenarioDefinition) -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .add_plugins(StatesPlugin)
-        .init_state::<GameState>()
+        .init_state::<AppState>()
+        .add_sub_state::<GameState>()
+        .add_sub_state::<MenuState>()
         .insert_resource(ScenarioConfig { definition })
         .insert_resource(breaker::breaker::SelectedBreaker::default())
         .insert_resource(breaker::state::run::node::ScenarioLayoutOverride(None))
@@ -126,7 +137,12 @@ pub(super) fn chip_select_app(definition: ScenarioDefinition) -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .add_plugins(StatesPlugin)
-        .init_state::<GameState>()
+        .init_state::<AppState>()
+        .add_sub_state::<GameState>()
+        .add_sub_state::<MenuState>()
+        .add_sub_state::<RunPhase>()
+        .add_sub_state::<NodeState>()
+        .add_sub_state::<ChipSelectState>()
         .insert_resource(ScenarioConfig { definition })
         .init_resource::<ChipSelectionIndex>()
         .add_message::<ChipSelected>()

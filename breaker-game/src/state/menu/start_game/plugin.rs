@@ -9,14 +9,14 @@ use super::{
         update_seed_display,
     },
 };
-use crate::{shared::GameState, state::cleanup::cleanup_entities};
+use crate::state::{cleanup::cleanup_entities, types::MenuState};
 
 /// Plugin for the breaker selection screen.
 pub(crate) struct RunSetupPlugin;
 
 impl Plugin for RunSetupPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(GameState::RunSetup), spawn_run_setup)
+        app.add_systems(OnEnter(MenuState::StartGame), spawn_run_setup)
             .add_systems(
                 Update,
                 (
@@ -26,10 +26,10 @@ impl Plugin for RunSetupPlugin {
                     update_seed_display,
                 )
                     .chain()
-                    .run_if(in_state(GameState::RunSetup)),
+                    .run_if(in_state(MenuState::StartGame)),
             )
             .add_systems(
-                OnExit(GameState::RunSetup),
+                OnExit(MenuState::StartGame),
                 cleanup_entities::<RunSetupScreen>,
             );
     }
