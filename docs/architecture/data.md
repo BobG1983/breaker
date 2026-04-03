@@ -18,7 +18,7 @@ Entity components: BaseWidth, BaseHeight, BreakerReflectionSpread, …
 move_breaker, bolt_breaker_collision, …
 ```
 
-**Registries** (e.g., `Res<BreakerRegistry>`, `Res<BoltRegistry>`, `Res<CellTypeRegistry>`) are the bridge between RON data files and builders. The builder reads from a definition struct and emits all entity components in a single `build()` call.
+**Registries** (e.g., `Res<BreakerRegistry>`, `Res<BoltRegistry>`, `Res<WallRegistry>`, `Res<CellTypeRegistry>`) are the bridge between RON data files and builders. The builder reads from a definition struct and emits all entity components in a single `build()` call.
 
 **`BreakerConfig` was eliminated.** All per-breaker gameplay fields moved into `BreakerDefinition` with `#[serde(default)]`. The RON files specify only overrides from the defaults. `BoltConfig` was similarly eliminated — all fields moved into `BoltDefinition`.
 
@@ -42,6 +42,7 @@ If a value belongs to a domain, its config field and RON entry live in that doma
 
 - Breaker surface angles (`reflection_spread`), movement, dash, bump params → `BreakerDefinition` / `assets/breakers/*.breaker.ron`
 - Bolt speed/radius → `BoltDefinition` / `assets/bolts/*.bolt.ron`
+- Wall thickness, color, effects → `WallDefinition` / `assets/walls/*.wall.ron`
 
 Don't leave empty config resources — if all fields move elsewhere, delete the resource.
 
@@ -178,6 +179,7 @@ Fields are **private** — all access goes through methods. This lets internals 
 | Registry | Asset type | Key | Notes |
 |----------|-----------|-----|-------|
 | `BreakerRegistry` | `BreakerDefinition` (`breaker.ron`) | `String` (name) | Implements `SeedableRegistry`. Folder: `assets/breakers/`. Re-exported from `breaker/`. |
+| `WallRegistry` | `WallDefinition` (`wall.ron`) | `String` (name) | Implements `SeedableRegistry`. Folder: `assets/walls/`. Re-exported from `wall/`. Single `wall.wall.ron` with `(name: "Wall")` uses serde defaults for all other fields. |
 | `ChipTemplateRegistry` | `ChipTemplate` (`chip.ron`) | `String` (name) | Implements `SeedableRegistry`. Folder: `assets/chips/standard/`. Stores `(AssetId, ChipTemplate)` pairs for hot-reload. |
 | `EvolutionTemplateRegistry` | `EvolutionTemplate` (`evolution.ron`) | `String` (name) | Implements `SeedableRegistry`. Folder: `assets/chips/evolutions/`. Stores `(AssetId, EvolutionTemplate)` pairs. |
 | `ChipCatalog` | *(built from templates)* | `String` (name) | NOT a `SeedableRegistry` — built at runtime by expanding `ChipTemplate`s and `EvolutionTemplate`s via `populate_catalog`. Paired `Vec<String>` preserves insertion order for deterministic chip offers. Also holds `Vec<Recipe>` for in-catalog evolution recipes. |

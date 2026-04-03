@@ -1,11 +1,11 @@
 ---
 name: dependency-snapshot
-description: Crate versions at last audit (2026-04-01) — diff against this on next run to detect changes
+description: Crate versions at last audit (2026-04-02) — diff against this on next run to detect changes
 type: project
 ---
 
 Audit date: 2026-04-02
-Branch: feature/breaker-builder-pattern
+Branch: develop (post-merge of feature/breaker-builder-pattern)
 
 ## Direct Dependencies
 
@@ -56,7 +56,7 @@ Branch: feature/breaker-builder-pattern
 - quote 1
 - proc-macro2 1 (ignored by machete — required for proc-macro crates)
 
-## Resolved versions (from cargo tree — verified 2026-03-31)
+## Resolved versions (from cargo tree — verified 2026-04-02)
 - rand 0.9.2, rand_chacha 0.9.0
 - bevy_egui 0.39.1
 - iyes_progress 0.16.0
@@ -67,13 +67,19 @@ Branch: feature/breaker-builder-pattern
 - foldhash v0.1.5 + v0.2.0 (dual — known wontfix)
 - read-fonts v0.35.0 + v0.36.0 (dual — known wontfix)
 - skrifa v0.37.0 + v0.39.0 (dual — known wontfix)
+- hashbrown v0.15.5 + v0.16.1 (dual — known wontfix)
+- rustc-hash v1.1.0 + v2.1.1 (dual — known wontfix)
+- itertools v0.13.0 + v0.14.0 (dual — known wontfix)
 
-## Changes since prior audit (2026-04-01 feature/chip-evolution-ecosystem)
-- Branch: feature/breaker-builder-pattern — refactor branch (Breaker builder pattern).
-- No new direct dependencies. Only Cargo.toml change on branch: comment update (module_name_repetitions
-  comment updated from "BreakerState" to "DashState" — cosmetic, no dep impact).
+## Changes since prior audit (2026-04-02 feature/breaker-builder-pattern)
+- Branch: develop — wall builder feature. No new direct dependencies added.
+- Cargo.toml files: UNCHANGED from prior audit.
 - cargo-machete: CLEAN (no unused deps)
-- Transitive deps, feature flags, license status: all unchanged from prior audit.
+- cargo outdated -R: same outdated list as prior audit (rand 0.9→0.10, ron 0.12.0→0.12.1)
+- Transitive dups: consistent with prior audit — all known wontfix entries
+- paste advisory (RUSTSEC-2024-0436): not showing in cargo tree -d (not a duplicate, transitive only)
+- r-efi: not appearing as duplicate in this build (macOS dev host only)
+- License: CLEAN (cargo deny check licenses passes, same Unicode-DFS-2016 harmless pre-approval warning)
 
 ## Known Outdated (as of audit)
 - rand: 0.9.2 → 0.10.0 (BREAKING — semver major; deferred, see known-findings.md)

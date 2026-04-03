@@ -73,7 +73,7 @@ The file contains only a doc comment explaining legacy stat components were remo
 - `CellEffectsDispatched` — marker component in `cells/components/types.rs`; prevents double-dispatch by `dispatch_cell_effects`
 - `dispatch_cell_effects` — cells system; `OnEnter(GameState::Playing)` after `NodeSystems::Spawn`; skips cells with `CellEffectsDispatched`
 - `dispatch_breaker_effects` — **SUPERSEDED** in feature/breaker-builder-pattern: replaced by `spawn_or_reuse_breaker` which uses `Breaker::builder()` and fires effects inline. See line ~199 (State after Waves 1-8).
-- `dispatch_wall_effects` — wall system; `OnEnter(GameState::Playing)` chained after `spawn_walls`; currently a no-op stub (walls have no RON-defined effects)
+- `dispatch_wall_effects` — **DELETED** in wall-builder-pattern feature. `spawn_walls` now reads from `WallRegistry`, calls `Wall::builder()` three times, and dispatches effects inline via `push_bound_effects`. No separate dispatch system exists.
 - `ChainArcCountReasonable` — new `InvariantKind` variant; checks combined `ChainLightningChain` + `ChainLightningArc` entity count against `invariant_params.max_chain_arc_count` (default 50)
 - `SpawnExtraChainArcs(usize)` — new `MutationKind` variant; spawns N chain + N arc entities for self-test
 - InvariantKind total: 23 variants (25 - 2 removed: `EffectiveSpeedConsistent` and `SizeBoostInRange` removed with Effective* cache removal; `BoltSpeedInRange` renamed to `BoltSpeedAccurate`)
@@ -266,3 +266,27 @@ The file contains only a doc comment explaining legacy stat components were remo
 - All sections 4-16 under "System Changes Required" are planning docs for future bolt visuals phase.
 - `BoltRenderingConfig`, `AttachVisuals`, `sync_bolt_visual_modifiers` — not yet implemented.
 - Pseudo-code uses `BoltRadius(def.radius)` as shorthand even though it's a type alias — intentional planning notation.
+
+## Confirmed Correct / Fixed (wall-builder-pattern feature, 2026-04-02)
+
+**Wall builder fully implemented:**
+- `Wall::builder()` in `wall/builder/` with `WallBuilder<S, V>` — 2 generic params (Side, Visual).
+- Side dimension: `NoSide` → `Left` / `Right` / `Ceiling` / `Floor` (required, transitions at `.left()` / `.right()` / `.ceiling()` / `.floor()`).
+- Visual dimension: `Invisible` (default) / `Visible` (`.visible(meshes, materials)`) — not a typestate gate, both Invisible and Visible have `build()` + `spawn()`.
+- Lifetime: stored enum `Permanent` / `Timed(f32)` / `OneShot`, Floor-only setters `.timed()` / `.one_shot()`. NOT a generic dimension.
+- `build()` returns `impl Bundle` for both Invisible and Visible paths. `spawn()` takes `&mut Commands`.
+- Effects dispatched inline in `spawn()` via `push_bound_effects` — no separate dispatch system.
+- `WallDefinition` — `Asset + TypePath + Deserialize + Clone + Debug` with fields: `name`, `half_thickness` (default 90.0), `color_rgb: Option<[f32; 3]>` (default None), `effects: Vec<RootEffect>` (default empty).
+- `WallRegistry` — `Resource`, implements `SeedableRegistry`. `asset_dir() = "walls"`, `extensions() = ["wall.ron"]`.
+- `WallSize` component — **DELETED**. Walls use `Scale2D` + `Aabb2D` from builder geometry.
+- `dispatch_wall_effects` system — **DELETED**. Effect dispatch is inline in `spawn()`.
+- `spawn_walls` migrated: reads `WallRegistry`, calls `Wall::builder()` three times (left, right, ceiling).
+- `docs/todos/TODO.md` item 2 marked `[done]`.
+- `docs/architecture/ordering.md` OnEnter chain updated: `(spawn_walls, dispatch_wall_effects).chain()` → `spawn_walls` alone.
+- `docs/architecture/builders/pattern.md` Current Implementations table: Wall row added.
+- `docs/architecture/data.md` Key Types registry table: WallRegistry row added. Rule 2 example updated.
+
+**Intentionally forward-looking (do NOT flag as drift):**
+- `Lifetime::Timed(f32)` and `Lifetime::OneShot` variants exist in builder code but are `allow(dead_code)` for non-Floor walls — they're future API for Shield/SecondWind chip floor walls (Phase 5j).
+- `visible()` transition and `WallBuilder<S, Visible>` exist but are `allow(dead_code)` — future API for Phase 5j visual walls.
+- `with_half_thickness()`, `with_color()`, `with_effects()`, `invisible()` builder methods are `allow(dead_code)` — future API.

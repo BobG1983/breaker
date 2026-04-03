@@ -9,6 +9,7 @@
 - [Wave 3 TetherBeam Chain + Inherit Fix](evaluation-wave3-tetherbeam-inherit.md) — Chain mode approved with spawn governor; inherit fix approved as correctness; bolt-proliferation archetype validated
 - [Bolt Builder Migration](evaluation-bolt-builder-migration.md) — Directional steering, BreakerReflectionSpread rename, PrimaryBolt marker all approved
 - [Breaker Builder Pattern](evaluation-breaker-builder-pattern.md) — Typestate builder, LivesSetting, ClampRange, 35+ field definition, Visual dimension all approved
+- [Wall Builder Pattern](evaluation-wall-builder-pattern.md) — Typestate builder, WallDefinition RON, WallRegistry, per-side definitions, Visible dimension all approved
 
 ## Audits
 - [Chip/Evolution Coherence Audit](audit-chip-evolution-coherence.md) — 3 critical overlaps, 6 orphan chips, power curve issues; 4 of 5 missing RON files now exist (flashstep, chain_reaction, feedback_loop, powder_keg)

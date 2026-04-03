@@ -314,6 +314,38 @@ in production code.
 ### defaults.breaker.ron: new reflection_spread field (Info-level, carry-forward)
 - Confirmed in prior audit note (2026-03-31). No new findings.
 
+## wall builder feature (2026-04-02) — wall builder migration
+
+### WallDefinition RON schema — all safe (Safe)
+- `#[serde(deny_unknown_fields)]` on WallDefinition — unknown fields are errors, not silently swallowed.
+- All fields except `name` have `#[serde(default)]`. A RON file with only `(name: "Wall")` is valid.
+- `half_thickness: f32` defaults to 90.0 via a default function. No division by zero risk: half_thickness
+  is used only in arithmetic (addition, subtraction) for wall position and extents — never as a divisor.
+  A RON file setting `half_thickness: 0.0` produces a zero-extent wall (invisible, physics degenerate),
+  but does not panic. No validation guard exists — Info-level only.
+- `color_rgb: Option<[f32; 3]>` — HDR values exceeding 1.0 are permitted by design for bloom.
+  Values are passed to `color_from_rgb()` and into Bevy's ColorMaterial. No injection risk.
+- `effects: Vec<RootEffect>` — nested via existing RootEffect deserialization, which is already vetted.
+- Production deserialization via Bevy asset pipeline (returns asset error, not panic).
+- Test deserialization via ron::de::from_str(...).expect() inside #[cfg(test)] only.
+- One shipped RON: assets/walls/wall.wall.ron — contains only `name: "Wall"`, all defaults apply.
+
+### WallRegistry::seed() — warn-and-skip for duplicates (Safe — better than BreakerRegistry)
+- Unlike BreakerRegistry::seed() which uses `assert!` on duplicate names (panic on collision),
+  WallRegistry::seed() uses `warn!(...); continue;` — a duplicate wall name logs a warning and
+  the second definition is silently skipped. No production panic path. The first-wins behavior
+  is tested and documented.
+
+### Wall::builder() half_thickness resolution — no panic path (Safe)
+- resolve_half_thickness() uses Option::or().unwrap_or(DEFAULT_HALF_THICKNESS).
+  unwrap_or is not unwrap() — always returns a fallback. No panic.
+
+### second_wind/system.rs — no panic path (Safe)
+- fire() uses world.resource::<PlayfieldConfig>().clone() — panics if PlayfieldConfig is absent,
+  but this resource is always initialized at app startup. Same pattern as other effect fire() fns.
+- despawn_second_wind_on_contact: wall_query.get(msg.wall).is_ok() before any entity access. Safe.
+- No RON deserialization in second_wind — pure runtime spawning via Wall::builder().
+
 ## feature/breaker-builder-pattern (2026-04-02) — breaker builder migration
 
 ### BreakerDefinition expanded to 35+ serde-defaulted fields (Safe)

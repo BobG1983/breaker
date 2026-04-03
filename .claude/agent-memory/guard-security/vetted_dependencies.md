@@ -118,3 +118,12 @@ New files: breaker-game/src/breaker/builder/core.rs (908 lines), builder tests (
 Extension rename: bdef.ron → breaker.ron (registry.rs seed() fn). No external crates introduced.
 BreakerDefinition expanded from 5 fields to 35+ fields (all serde-defaulted). All production RON
 deserialization routes through Bevy asset pipeline — no new production panic surface.
+
+## wall builder feature (2026-04-02) — wall builder migration audit
+No new direct dependencies added. Dependency baseline unchanged from breaker builder audit.
+cargo audit: same single warning (paste RUSTSEC-2024-0436, unmaintained, transitive via metal→wgpu).
+cargo machete: no unused dependencies found.
+New files: wall/builder/core/{types,transitions,terminal}.rs (typestate builder split from core.rs),
+  wall/definition.rs, wall/registry.rs, wall/components.rs, wall/plugin.rs,
+  wall/systems/spawn_walls/system.rs, effect/effects/second_wind/system.rs.
+New RON asset: assets/walls/wall.wall.ron (minimal, name-only). No external crates introduced.

@@ -76,3 +76,9 @@ New files: breaker/builder/core.rs (908 lines) — pure typestate Rust, no unsaf
 New system: spawn_bolt/system.rs uses remove_resource/insert_resource (Bevy World safe API).
 DispatchInitialEffects command in effect/commands/ext.rs — pure safe Rust, Bevy World API only.
 Grep confirmed zero "unsafe" matches across all workspace .rs files.
+
+Still confirmed after wall builder feature (2026-04-02) — wall builder migration:
+New files: wall/builder/core/{types,transitions,terminal}.rs — pure typestate Rust, no unsafe.
+wall/definition.rs, wall/registry.rs, wall/components.rs, wall/plugin.rs,
+wall/systems/spawn_walls/system.rs, effect/effects/second_wind/system.rs — no unsafe.
+Grep confirmed zero "unsafe" matches across all wall domain .rs files.

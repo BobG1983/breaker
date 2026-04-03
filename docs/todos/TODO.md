@@ -3,7 +3,7 @@
 ## Backlog
 
 1. **[ready]** State lifecycle refactor — [detail](detail/state-lifecycle-refactor/state-lifecycle-refactor.md)
-2. **[in-progress]** Wall builder pattern — [detail](detail/wall-builder-pattern.md)
+2. **[done]** Wall builder pattern — [detail](detail/wall-builder-pattern.md)
 3. **[NEEDS DETAIL]** Cell builder pattern — [detail](detail/cell-builder-pattern.md)
 4. **[NEEDS DETAIL]** Node & chip builder patterns + template.ron files — [detail](detail/node-chip-builders.md)
 5. **[ready]** Scenario coverage gaps (2 HIGH, 3 MEDIUM, 3 new invariants) — [detail](detail/scenario-coverage-gaps.md)

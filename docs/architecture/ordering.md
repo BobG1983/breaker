@@ -82,8 +82,7 @@ NodeSystems::Spawn
   (spawn_cells_from_layout)             [run/node domain — OnEnter]
     <- dispatch_cell_effects .after(NodeSystems::Spawn)      [cells domain]
 
-(spawn_walls, dispatch_wall_effects).chain()                 [wall domain]
-  [dispatch_wall_effects is currently a no-op stub]
+spawn_walls                                                  [wall domain — Wall::builder() via WallRegistry]
 
 spawn_bolt                               [bolt domain — uses Bolt::builder() + BoltRegistry]
     <- apply_node_scale_to_bolt
@@ -94,7 +93,7 @@ spawn_bolt                               [bolt domain — uses Bolt::builder() +
        BoltSystems::Reset              [bolt domain]
 ```
 
-Note: `spawn_or_reuse_breaker` is a single system that replaces the old 4-system chain (`spawn_breaker` → `init_breaker_params` → `init_breaker` → `dispatch_breaker_effects`). All components are emitted by `Breaker::builder()` in one call; effects are dispatched via `dispatch_initial_effects` command. `reset_bolt` is the last OnEnter system — it waits for both breaker reset and bolt init. `dispatch_cell_effects` runs after `NodeSystems::Spawn` to ensure cells are present before effects are dispatched. `dispatch_wall_effects` is a no-op stub (walls have no RON-defined effects yet). `dispatch_bolt_effects` runs in FixedUpdate (not OnEnter) — it processes `Added<BoltDefinitionRef>` each tick, so it first fires the frame after the bolt spawns.
+Note: `spawn_or_reuse_breaker` is a single system that replaces the old 4-system chain (`spawn_breaker` → `init_breaker_params` → `init_breaker` → `dispatch_breaker_effects`). All components are emitted by `Breaker::builder()` in one call; effects are dispatched via `dispatch_initial_effects` command. `reset_bolt` is the last OnEnter system — it waits for both breaker reset and bolt init. `dispatch_cell_effects` runs after `NodeSystems::Spawn` to ensure cells are present before effects are dispatched. `spawn_walls` reads from `WallRegistry`, calls `Wall::builder()` three times (left, right, ceiling), and dispatches effects via `push_bound_effects` if the definition has any — the old `dispatch_wall_effects` stub was removed. `dispatch_bolt_effects` runs in FixedUpdate (not OnEnter) — it processes `Added<BoltDefinitionRef>` each tick, so it first fires the frame after the bolt spawns.
 
 ### FixedUpdate
 
