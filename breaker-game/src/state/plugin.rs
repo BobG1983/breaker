@@ -27,6 +27,9 @@ use crate::{
         CleanupOnNodeExit, CleanupOnRunEnd, GameState, PlayfieldConfig, PlayfieldDefaults,
         PlayingState,
     },
+    state::types::{
+        AppState, ChipSelectState, GamePhase, MenuState, NodeState, RunEndState, RunPhase,
+    },
 };
 
 /// Plugin for state lifecycle management.
@@ -38,9 +41,17 @@ pub(crate) struct StatePlugin;
 impl Plugin for StatePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<PlayfieldConfig>()
-            // State machine
+            // State machine (old — drives all existing systems, removed in Wave 4e)
             .init_state::<GameState>()
             .add_sub_state::<PlayingState>()
+            // State machine (new hierarchy — registered but unused until Wave 4b)
+            .init_state::<AppState>()
+            .add_sub_state::<GamePhase>()
+            .add_sub_state::<MenuState>()
+            .add_sub_state::<RunPhase>()
+            .add_sub_state::<NodeState>()
+            .add_sub_state::<ChipSelectState>()
+            .add_sub_state::<RunEndState>()
             // Defaults plugin — registers loaders, startup handles, and seed
             // systems for simple config types.
             .add_plugins(
