@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use breaker::{
     breaker::components::BaseWidth,
     effect::EffectNode,
-    run::{NodeLayout, node::definition::NodePool},
+    state::run::{NodeLayout, node::definition::NodePool},
 };
 use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 

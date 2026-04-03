@@ -7,7 +7,7 @@ use rantzsoft_spatial2d::components::{Position2D, Scale2D};
 use super::super::system::*;
 use crate::{
     shared::{BOLT_LAYER, PlayfieldConfig, WALL_LAYER},
-    wall::components::Wall,
+    walls::components::Wall,
 };
 
 #[test]

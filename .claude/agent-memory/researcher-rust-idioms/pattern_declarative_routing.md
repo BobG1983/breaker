@@ -8,7 +8,7 @@ type: project
 
 Two-tier pattern:
 
-1. **Static routes** (always the same next state): flat `app.add_systems(OnExit(S::AnimateIn), ...)` closures — no routing table needed. This IS declarative, setup-time registration. Same as `advance_node` in `run/plugin.rs:84`.
+1. **Static routes** (always the same next state): flat `app.add_systems(OnExit(S::AnimateIn), ...)` closures — no routing table needed. This IS declarative, setup-time registration. Same as `advance_node` in `state/run/plugin.rs` (was `run/plugin.rs:84` — `run/` renamed to `state/run/` in state lifecycle refactor Wave 1, 2026-04-02).
 
 2. **Dynamic routes** (need runtime resource reads): one-shot systems registered via `world.register_system(fn)` → stored as `SystemId` in a `HashMap<S, SystemId>` resource. Dispatched from an exclusive system via `world.run_system(id)`. `SystemId` is `Copy` so it can be extracted before calling `run_system`, avoiding the borrow conflict.
 

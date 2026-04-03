@@ -1,7 +1,7 @@
 //! Frame counting, frame limit checking, exit/restart, and game-state mapping.
 
 use bevy::prelude::*;
-use breaker::{run::node::messages::SpawnNodeComplete, shared::GameState};
+use breaker::{shared::GameState, state::run::node::messages::SpawnNodeComplete};
 
 use super::types::ScenarioConfig;
 use crate::{

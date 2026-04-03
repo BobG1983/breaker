@@ -739,9 +739,33 @@ The Sub-Items have been expanded into detailed implementation files:
 | [migration-mapping.md](migration-mapping.md) | Index file pointing to above |
 
 ## Pre-Implementation Notes
-- **Review implementation-waves.md before launching** — waves were written before the latest codebase changes. Revalidate wave ordering, file paths, and parallelism assumptions against current state.
-- **Revalidate scenario-runner-impact.md** — recently verified but should be spot-checked before the scenario runner wave.
+- ~~**Review implementation-waves.md before launching** — waves were written before the latest codebase changes. Revalidate wave ordering, file paths, and parallelism assumptions against current state.~~ **DONE** — validated 2026-04-02. See planning adjustments below.
+- ~~**Revalidate scenario-runner-impact.md** — recently verified but should be spot-checked before the scenario runner wave.~~ **DONE** — validated 2026-04-02. Actual: 22 files (vs 18 estimated).
 - **Phase 5p scope reduced** — transition visual effects absorbed into this todo. Update Phase 5p detail to reflect reduced scope.
 
+## Planning Adjustments (2026-04-02)
+
+Validated codebase against implementation-waves.md. Key findings:
+
+**Discrepancies from estimates:**
+- PlayingState references: 153 across 55 files (todo said "40+") — Wave 4b split into 5 batches
+- Scenario runner files: 22 with GameState coupling (todo said 18) — extra 3 are test files
+- All other estimates confirmed accurate
+
+**Execution adjustments:**
+- Wave 2c (generate_node_sequence refactor): SKIPPED — research concluded keep-as-is
+- Wave 4/5 parallelism: REJECTED — sequential to avoid merge complexity
+- All sub-waves within each wave: sequential (not parallel) to avoid lib.rs/game.rs conflicts
+- Scenario runner updates: integrated per-wave, not deferred
+- Shader research for transitions: launches during Wave 4, ready for Wave 5
+
+**Wave 5 expanded (5a-5h, was 5a-5g):**
+- 5f: Transition overlay infrastructure (was infrastructure + Fade)
+- 5g: ALL 16 built-in effect structs (Fade, Dissolve, Pixelate, Wipe, Iris, Slide — each In/Out/OutIn + Slide OneShot)
+- 5h: Plugin integration + end-to-end tests (was 5g)
+
+**Full plan:** `.claude/plans/elegant-stirring-river.md`
+
 ## Status
-`[ready]` — all implementation detail files written. Design complete across 8 waves.
+`[ready]` — design complete, plan validated and approved. Blocked by todo #2 (wall-builder-pattern).
+

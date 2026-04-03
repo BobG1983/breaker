@@ -16,7 +16,7 @@ use crate::{
     bolt::{components::BoltBaseDamage, resources::DEFAULT_BOLT_BASE_DAMAGE},
     cells::{components::Cell, messages::DamageCell},
     effect::{core::EffectSourceChip, effects::damage_boost::ActiveDamageBoosts},
-    shared::{CELL_LAYER, CleanupOnNodeExit, playing_state::PlayingState, rng::GameRng},
+    shared::{CELL_LAYER, CleanupOnNodeExit, PlayingState, rng::GameRng},
 };
 
 /// Stateful chain entity that tracks the chain lightning's progression

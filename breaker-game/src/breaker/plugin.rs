@@ -8,15 +8,17 @@ use crate::{
         BreakerSystems, ForceBumpGrade, SelectedBreaker,
         messages::{BumpPerformed, BumpWhiffed},
         systems::{
-            animate_bump_visual, animate_tilt_visual, apply_node_scale_to_breaker,
-            breaker_cell_collision, breaker_wall_collision, grade_bump, move_breaker,
-            perfect_bump_dash_cancel, reset_breaker, spawn_bump_grade_text, spawn_or_reuse_breaker,
-            spawn_whiff_text, sync_breaker_scale, trigger_bump_visual, update_breaker_state,
-            update_bump,
+            animate_bump_visual, animate_tilt_visual, breaker_cell_collision,
+            breaker_wall_collision, grade_bump, move_breaker, perfect_bump_dash_cancel,
+            spawn_bump_grade_text, spawn_or_reuse_breaker, spawn_whiff_text, sync_breaker_scale,
+            trigger_bump_visual, update_breaker_state, update_bump,
         },
     },
-    run::node::sets::NodeSystems,
     shared::{GameState, PlayingState},
+    state::run::node::{
+        sets::NodeSystems,
+        systems::{apply_node_scale_to_breaker, reset_breaker},
+    },
 };
 
 /// Plugin for the breaker domain.

@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use breaker::{chips::inventory::ChipInventory, screen::chip_select::ChipOffers};
+use breaker::{chips::inventory::ChipInventory, state::run::chip_select::ChipOffers};
 
 use crate::{invariants::*, types::InvariantKind};
 
@@ -84,7 +84,7 @@ mod tests {
 
         // Insert ChipOffers containing "A"
         app.insert_resource(ChipOffers(vec![
-            breaker::screen::chip_select::ChipOffering::Normal(chip_a.clone()),
+            breaker::state::run::chip_select::ChipOffering::Normal(chip_a.clone()),
         ]));
 
         // Insert ChipInventory where "A" is at 1/1 (maxed)
@@ -116,7 +116,7 @@ mod tests {
 
         // Insert ChipOffers containing "A"
         app.insert_resource(ChipOffers(vec![
-            breaker::screen::chip_select::ChipOffering::Normal(chip_a.clone()),
+            breaker::state::run::chip_select::ChipOffering::Normal(chip_a.clone()),
         ]));
 
         // Insert ChipInventory where "A" is at 1/3 (not maxed)
@@ -154,7 +154,7 @@ mod tests {
         // No ChipInventory inserted — system should skip gracefully
         let chip_a = test_chip("A", 1);
         app.insert_resource(ChipOffers(vec![
-            breaker::screen::chip_select::ChipOffering::Normal(chip_a),
+            breaker::state::run::chip_select::ChipOffering::Normal(chip_a),
         ]));
 
         tick(&mut app);

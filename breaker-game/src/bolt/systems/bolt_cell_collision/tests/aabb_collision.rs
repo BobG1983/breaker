@@ -6,7 +6,7 @@ use super::helpers::*;
 use crate::{
     cells::components::Cell,
     shared::{BOLT_LAYER, CELL_LAYER, GameDrawLayer, NodeScalingFactor, WALL_LAYER},
-    wall::components::Wall,
+    walls::components::Wall,
 };
 
 // --- NodeScalingFactor collision tests ---

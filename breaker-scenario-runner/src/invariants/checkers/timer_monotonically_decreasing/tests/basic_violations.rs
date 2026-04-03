@@ -1,4 +1,4 @@
-use breaker::run::node::resources::NodeTimer;
+use breaker::state::run::node::resources::NodeTimer;
 
 use super::helpers::*;
 use crate::{invariants::*, types::InvariantKind};

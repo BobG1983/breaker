@@ -19,7 +19,7 @@ use crate::{
         queries::{BoltCollisionData, apply_velocity_formula},
     },
     shared::WALL_LAYER,
-    wall::components::Wall,
+    walls::components::Wall,
 };
 
 /// Wall entity lookup for overlap detection — avoids clippy `type_complexity`.

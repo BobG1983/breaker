@@ -4,13 +4,13 @@
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, Velocity2D};
 
-use super::super::system::*;
 use crate::{
     breaker::{
         components::{Breaker, BreakerBaseY, BreakerTilt, BumpState, DashState, DashStateTimer},
         definition::BreakerDefinition,
     },
     shared::{CleanupOnRunEnd, PlayfieldConfig},
+    state::run::node::systems::reset_breaker,
 };
 
 #[test]

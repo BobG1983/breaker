@@ -17,7 +17,7 @@ type: reference
 - `update_all` is provided (default impl: `*self = Self::default(); self.seed(assets)`)
 - `AssetId<Self::Asset>` is the correct Bevy 0.18.1 type for asset identity; imported via `bevy::prelude::*`
 - `Deserialize` (not `DeserializeOwned`) in the derive is correct — `DeserializeOwned` is a blanket impl for all `T: for<'de> Deserialize<'de>` with no lifetime params; lifetime-free structs satisfy it
-- Confirmed in WallRegistry (wall/registry.rs) — seed clears then inserts by name, update_single upserts by name, ignoring the `id` arg; this is the correct pattern for name-keyed registries
+- Confirmed in WallRegistry (walls/registry/core.rs) — seed clears then inserts by name, update_single upserts by name, ignoring the `id` arg; this is the correct pattern for name-keyed registries
 
 ## Message System
 - `#[derive(Message, Clone, Debug)]` — correct derive for Bevy 0.18 message types
@@ -50,6 +50,17 @@ type: reference
 - `#[derive(SubStates, Default, Clone, Copy, PartialEq, Eq, Hash, Debug)]` + `#[source(GameState = GameState::Playing)]` — correct Bevy 0.15+ sub-state derive
 - `run_if(in_state(PlayingState::Active))` — correct state-gated system pattern
 - `OnEnter(GameState::Playing)` — correct schedule for state entry
+- `app.init_state::<GameState>()` + `app.add_sub_state::<PlayingState>()` — correct Bevy 0.15+ state registration API; confirmed in StatePlugin and many test harnesses
+- `in_state(GameState::TransitionOut).or(in_state(GameState::TransitionIn))` — valid Condition combinator for multi-state run_if
+- `OnExit(PlayingState::Paused)` — correct OnExit schedule for sub-states; Bevy fires OnExit for sub-state when parent state or sub-state transitions away
+- `Res<State<PlayingState>>` + `.get()` — correct way to read current sub-state value in a system
+- `ResMut<NextState<PlayingState>>` + `.set(...)` — correct way to request sub-state transition
+- `bevy::state::app::StatesPlugin` in test harnesses — correct plugin import path for headless state tests
+
+## UI Components (Bevy 0.15+ bundle-free)
+- `Node { width: Val::Percent(100.0), height: Val::Percent(100.0), position_type: PositionType::Absolute, ..default() }` — correct post-0.15 UI node component (not NodeBundle); spawned in a tuple with other components
+- `BackgroundColor(color)` — correct component (not part of a bundle); used alongside Node
+- `bg_color.0.with_alpha(alpha)` — correct way to update color alpha on `BackgroundColor` component (`.0` is the inner `Color`)
 
 ## SystemParam Derive
 - `#[derive(SystemParam)] struct Foo<'w> { writer: MessageWriter<'w, T>, ... }` — correct
@@ -305,5 +316,5 @@ type: reference
 - Nested sub-tuple bundle: `((Wall, Position2D, Scale2D), (Aabb2D, CollisionLayers, GameDrawLayer))` returned as `impl Bundle` — outer 2-tuple where each arm is a 3-tuple; all satisfy `Bundle`; CORRECT
 - `RootEffect::On { then, .. }` — `RootEffect` has fields `target` and `then`; `..` wildcard discards `target`; valid Rust struct pattern; CORRECT
 - `commands.push_bound_effects(entity, entries)` — method from `EffectCommandsExt` extension trait on `Commands<'_, '_>` (defined in `effect/commands/ext.rs`); signature `fn push_bound_effects(&mut self, entity: Entity, effects: Vec<(String, EffectNode)>)`; CORRECT; used by bolt, cell, chip, and wall domains
-- `Wall` component has `#[require(Spatial2D, CleanupOnNodeExit)]` — confirmed in `wall/components.rs:10`; covered by existing confirmed-patterns entry for `#[require]`
+- `Wall` component has `#[require(Spatial2D, CleanupOnNodeExit)]` — confirmed in `walls/components.rs`; covered by existing confirmed-patterns entry for `#[require]`
 - `Mesh2d(handle)` and `MeshMaterial2d(handle)` — post-0.15 component-based rendering; confirmed correct (previously established)

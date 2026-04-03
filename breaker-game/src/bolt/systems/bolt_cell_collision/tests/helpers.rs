@@ -20,7 +20,7 @@ use crate::{
     },
     effect::effects::vulnerable::ActiveVulnerability,
     shared::{BOLT_LAYER, CELL_LAYER, GameDrawLayer, PlayfieldConfig},
-    wall::components::Wall,
+    walls::components::Wall,
 };
 
 /// Real grid vertical spacing: `cell_height` (24) + padding (4) = 28

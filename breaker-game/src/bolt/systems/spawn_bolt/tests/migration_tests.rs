@@ -20,8 +20,8 @@ use crate::{
         components::Breaker, definition::BreakerDefinition, registry::BreakerRegistry,
         resources::SelectedBreaker,
     },
-    run::RunState,
     shared::GameDrawLayer,
+    state::run::RunState,
 };
 
 // ── Behavior 1: spawn_bolt reads BoltRegistry + BreakerRegistry + SelectedBreaker ──

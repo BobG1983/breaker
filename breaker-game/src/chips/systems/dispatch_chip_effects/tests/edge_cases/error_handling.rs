@@ -57,7 +57,7 @@ fn unknown_chip_name_does_not_panic() {
 fn missing_chip_catalog_resource_does_not_panic() {
     use crate::{
         chips::systems::dispatch_chip_effects::dispatch_chip_effects, shared::GameState,
-        ui::messages::ChipSelected,
+        state::run::chip_select::messages::ChipSelected,
     };
 
     // --- First prove the system WORKS with catalog ---
@@ -143,7 +143,7 @@ fn missing_chip_catalog_resource_does_not_panic() {
 fn missing_chip_inventory_resource_does_not_panic() {
     use crate::{
         chips::systems::dispatch_chip_effects::dispatch_chip_effects, shared::GameState,
-        ui::messages::ChipSelected,
+        state::run::chip_select::messages::ChipSelected,
     };
 
     // --- First prove the system WORKS with inventory ---
@@ -299,7 +299,7 @@ fn no_messages_pending_no_entities_modified() {
 fn both_catalog_and_inventory_absent_does_not_panic() {
     use crate::{
         chips::systems::dispatch_chip_effects::dispatch_chip_effects, shared::GameState,
-        ui::messages::ChipSelected,
+        state::run::chip_select::messages::ChipSelected,
     };
 
     // --- First prove the system WORKS with both resources ---

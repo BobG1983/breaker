@@ -8,7 +8,7 @@ use crate::{
     breaker::components::Breaker,
     cells::components::Cell,
     effect::{commands::ResolveOnCommand, core::*, effects::speed_boost::ActiveSpeedBoosts},
-    wall::components::Wall,
+    walls::components::Wall,
 };
 
 // -----------------------------------------------------------------------

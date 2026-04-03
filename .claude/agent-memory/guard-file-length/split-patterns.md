@@ -11,7 +11,7 @@ Most oversized files in this codebase follow the pattern: small production code 
 Typical ratio: 50-150 lines prod, 300-1400 lines tests.
 
 Key files that grow back:
-- `cells/systems/dispatch_cell_effects.rs` -- had a prior incomplete split (directory existed with no mod.rs)
+- `state/run/node/systems/dispatch_cell_effects.rs` -- had a prior incomplete split (directory existed with no mod.rs); moved from `cells/systems/` to `state/run/node/systems/` in state lifecycle refactor Wave 1 (2026-04-02)
 - `effect/triggers/evaluate.rs` -- has TWO `#[cfg(test)]` modules (tests + on_resolution_tests)
 - `effect/core/types.rs` -- has `#[cfg(test)] impl` block before the test module
 

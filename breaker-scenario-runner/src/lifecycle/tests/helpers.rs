@@ -10,10 +10,11 @@ pub(super) use breaker::{
     cells::components::Cell,
     effect::{BoundEffects, EffectKind, EffectNode, RootEffect, StagedEffects, Target},
     input::resources::InputActions,
-    run::{NodeLayoutRegistry, node::resources::NodeTimer},
     shared::{GameState, PlayfieldConfig, PlayingState},
-    ui::messages::ChipSelected,
-    wall::components::Wall,
+    state::run::{
+        NodeLayoutRegistry, chip_select::messages::ChipSelected, node::resources::NodeTimer,
+    },
+    walls::components::Wall,
 };
 pub(super) use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
@@ -73,7 +74,7 @@ pub(super) fn lifecycle_test_app() -> App {
         });
     // Resources required by bypass_menu_to_playing
     app.insert_resource(breaker::breaker::SelectedBreaker("Aegis".to_owned()))
-        .insert_resource(breaker::run::node::ScenarioLayoutOverride(None))
+        .insert_resource(breaker::state::run::node::ScenarioLayoutOverride(None))
         .init_resource::<breaker::shared::RunSeed>()
         .init_resource::<BreakerRegistry>()
         .init_resource::<NodeLayoutRegistry>()
@@ -110,7 +111,7 @@ pub(super) fn bypass_app(definition: ScenarioDefinition) -> App {
         .init_state::<GameState>()
         .insert_resource(ScenarioConfig { definition })
         .insert_resource(breaker::breaker::SelectedBreaker::default())
-        .insert_resource(breaker::run::node::ScenarioLayoutOverride(None))
+        .insert_resource(breaker::state::run::node::ScenarioLayoutOverride(None))
         .init_resource::<breaker::shared::RunSeed>()
         .init_resource::<BreakerRegistry>()
         .init_resource::<NodeLayoutRegistry>()

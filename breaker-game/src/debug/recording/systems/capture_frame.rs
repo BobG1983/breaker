@@ -7,7 +7,7 @@ use crate::{
         RecordedFrame, RecordingBuffer, RecordingConfig, RecordingFrame,
     },
     input::resources::InputActions,
-    run::node::ActiveNodeLayout,
+    state::run::node::ActiveNodeLayout,
 };
 
 /// Captures the current frame's [`InputActions`] into the [`RecordingBuffer`].
@@ -52,7 +52,7 @@ mod tests {
     use super::*;
     use crate::{
         input::resources::GameAction,
-        run::node::{ActiveNodeLayout, NodeLayout, definition::NodePool},
+        state::run::node::{ActiveNodeLayout, NodeLayout, definition::NodePool},
     };
 
     #[derive(ScheduleLabel, Debug, Hash, PartialEq, Eq, Clone)]

@@ -5,7 +5,7 @@ pub(super) use super::super::effect::*;
 pub(super) use crate::{
     breaker::components::{Breaker, DashState},
     effect::effects::bump_force::ActiveBumpForces,
-    shared::{game_state::GameState, playing_state::PlayingState},
+    shared::{GameState, PlayingState},
 };
 
 pub(super) fn test_app() -> App {

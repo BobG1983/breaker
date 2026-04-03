@@ -29,7 +29,7 @@ mod tests {
 
     #[test]
     fn plugin_builds() {
-        use crate::{shared::GameState, ui::messages::ChipSelected};
+        use crate::{shared::GameState, state::run::chip_select::messages::ChipSelected};
         App::new()
             .add_plugins(MinimalPlugins)
             .add_plugins(bevy::state::app::StatesPlugin)

@@ -8,13 +8,13 @@ use crate::{
         resources::CellConfig,
         systems::{
             cell_wall_collision, check_lock_release::check_lock_release, cleanup_cell,
-            dispatch_cell_effects, handle_cell_hit, rotate_shield_cells::rotate_shield_cells,
+            handle_cell_hit, rotate_shield_cells::rotate_shield_cells,
             sync_orbit_cell_positions::sync_orbit_cell_positions, tick_cell_regen::tick_cell_regen,
         },
     },
     effect::EffectSystems,
-    run::node::sets::NodeSystems,
     shared::{GameState, PlayingState},
+    state::run::node::{sets::NodeSystems, systems::dispatch_cell_effects},
 };
 
 /// Plugin for the cells domain.

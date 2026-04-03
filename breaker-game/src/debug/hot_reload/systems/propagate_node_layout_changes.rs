@@ -7,11 +7,11 @@ use crate::{
         components::Cell,
         resources::{CellConfig, CellTypeRegistry},
     },
-    run::node::{
+    shared::PlayfieldConfig,
+    state::run::node::{
         ActiveNodeLayout, ClearRemainingCount, NodeLayoutRegistry,
         systems::{RenderAssets, spawn_cells_from_grid},
     },
-    shared::PlayfieldConfig,
 };
 
 /// Bundled system parameters for the layout change propagation system.
@@ -95,7 +95,7 @@ mod tests {
     use super::*;
     use crate::{
         cells::{CellTypeDefinition, components::CellTypeAlias, definition::CellBehavior},
-        run::node::{NodeLayout, definition::NodePool},
+        state::run::node::{NodeLayout, definition::NodePool},
     };
 
     fn test_registry() -> CellTypeRegistry {

@@ -247,7 +247,7 @@ produces an identical entity to omitting those calls. No marker component or tim
 
 **Status**: CONFIRMED BUG — no production callers of `.timed()` or `.one_shot()` yet
 (only test callers). `second_wind/system.rs` manually spawns its floor wall without the builder.
-**Location**: `breaker-game/src/wall/builder/core/terminal.rs` (both `build()` impls).
+**Location**: `breaker-game/src/walls/builder/core/terminal.rs` (both `build()` impls).
 
 ## WallBuilder dispatch_effects: strips RootEffect.target, pushes all children to wall entity — LATENT HAZARD
 
@@ -257,11 +257,10 @@ regardless of whether `target` was `Bolt`, `Cell`, or `Wall`.
 
 Current RON (`wall.wall.ron`) has no effects. All test helpers use `target: Wall`.
 If a future wall RON adds `On(target: Bolt, ...)`, those nodes land on the wall entity's
-`BoundEffects` — never fired by the bolt. `dispatch_wall_effects` is a no-op stub, so the
-entire effects path for walls is scaffolding only.
+`BoundEffects` — never fired by the bolt. `dispatch_wall_effects` was deleted in the wall-builder-pattern feature; wall effects are now dispatched inline in Wall::builder().spawn(), but the target-stripping bug in dispatch_effects() still applies. The entire wall effects path remains scaffolding only.
 
 **Status**: LATENT — safe with current data, unsafe if multi-target wall definitions appear.
-**Location**: `breaker-game/src/wall/builder/core/terminal.rs:38-40`.
+**Location**: `breaker-game/src/walls/builder/core/terminal.rs:38-40`.
 
 ## WallBuilder Floor::compute_position does NOT add half_thickness — CONFIRMED CORRECT
 

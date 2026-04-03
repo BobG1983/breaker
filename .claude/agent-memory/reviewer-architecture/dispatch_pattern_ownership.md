@@ -4,11 +4,11 @@ description: Dispatch systems live in entity domains (breaker, cells, chips, wal
 type: project
 ---
 
-Effect dispatch is owned by entity domains, not the effect domain. As of 2026-03-30:
-- `dispatch_breaker_effects` in `breaker/systems/` — runs OnEnter(Playing) after NodeSystems::Spawn
-- `dispatch_cell_effects` in `cells/systems/` — runs OnEnter(Playing) after NodeSystems::Spawn
+Effect dispatch is owned by entity domains, not the effect domain. As of 2026-04-02 (post-refactors):
+- `dispatch_breaker_effects` — **ELIMINATED** in feature/breaker-builder-pattern; replaced by `spawn_or_reuse_breaker` (Breaker::builder() dispatches effects inline)
+- `dispatch_cell_effects` in `state/run/node/systems/` — runs OnEnter(Playing) after NodeSystems::Spawn (moved from `cells/systems/` in state lifecycle refactor)
 - `dispatch_chip_effects` in `chips/systems/` — runs Update during ChipSelect
-- `dispatch_wall_effects` in `wall/systems/` — runs OnEnter(Playing) chained after spawn_walls
+- `dispatch_wall_effects` — **ELIMINATED** in wall-builder-pattern; `spawn_walls` (now at `state/run/node/systems/`) dispatches effects inline via Wall::builder()
 
 **Why:** `docs/architecture/effects/dispatch.md` states dispatch is NOT part of the effect domain.
 

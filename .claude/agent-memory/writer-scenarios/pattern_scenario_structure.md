@@ -20,8 +20,8 @@ All scenarios live under `breaker-scenario-runner/scenarios/`:
     layout: "Corridor",   // "Corridor", "Dense", "Scatter", "Fortress", "BossArena", "Gauntlet"
     input: Chaos((action_prob: 0.3)),
     max_frames: 5000,
-    invariants: [BoltInBounds, NoEntityLeaks, NoNaN],
-    expected_violations: None,
+    disallowed_failures: [BoltInBounds, NoEntityLeaks, NoNaN],
+    allowed_failures: None,
     debug_setup: None,
 )
 ```
@@ -35,6 +35,8 @@ stress: (runs: 32, parallelism: 32),  // Stress config; omit for single-run
 initial_effects: [...],          // Effect chains injected before play starts
 invariant_params: (max_bolt_count: 16),  // Defaults: max_bolt_count=8
 ```
+
+Note: `disallowed_failures` replaces the old `invariants:` field; `allowed_failures` replaces `expected_violations:`. RON field names changed in the invariant rename refactor (2026-04-02).
 
 ## Stress conventions
 

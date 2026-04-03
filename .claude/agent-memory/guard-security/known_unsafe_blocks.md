@@ -87,3 +87,8 @@ Still confirmed after Shield refactor (2026-04-02, commit e887570) — shield.rs
 effect/effects/shield.rs uses only Bevy's safe World API (query_filtered, get_mut, resource,
 resource_mut, spawn, despawn). No unsafe blocks. All .unwrap()/.expect() are in #[cfg(test)].
 Workspace lint unsafe_code = "deny" remains in force.
+
+Still confirmed after refactor/state-folder-structure (2026-04-02, commit d2440054):
+State module hierarchy restructure (screen/, run/, wall/, ui/ → state/; wall → walls rename).
+Pure file moves + import path updates. Zero new "unsafe" keywords in any added line (grep
+confirmed 0 matches across 1710 newly added lines). Workspace lint unsafe_code = "deny" remains.

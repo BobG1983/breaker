@@ -1,16 +1,19 @@
 ---
-name: ShieldActive cross-domain write exception
-description: bolt and cells domains are authorized to directly mutate ShieldActive (effect domain component) per plugins.md exception
+name: ShieldActive cross-domain write exception — ELIMINATED
+description: ShieldActive no longer exists as of Shield refactor (2026-04-02); shield is now a timed floor wall (ShieldWall) with collision handled by bolt_wall_collision
 type: project
 ---
 
-`ShieldActive` (effect domain component, defined in `effect/effects/shield.rs`) is written by two non-effect domains as a documented architectural exception in `docs/architecture/plugins.md`:
+**ELIMINATED as of Shield refactor (2026-04-02, commit e887570).**
 
-- **bolt** (`bolt_lost` system): reads/writes ShieldActive on the breaker entity to absorb bolt losses
-- **cells** (`handle_cell_hit` system): reads/writes ShieldActive on cell entities to absorb damage hits
+`ShieldActive` component NO LONGER EXISTS. The cross-domain write exception in `docs/architecture/plugins.md` for this component was removed with the refactor.
 
-Both systems decrement `charges` directly and use `commands.entity(...).remove::<ShieldActive>()` when charges reach zero.
+Shield is now implemented as a timed visible floor wall (`ShieldWall` + `ShieldWallTimer`) that uses the normal `bolt_wall_collision` path. No cross-domain writes needed.
 
-**Why:** Damage absorption must short-circuit within the same frame as the hit — a message round-trip would be too late.
+- `bolt_lost` — no longer reads `ShieldActive`
+- `handle_cell_hit` — no longer reads `ShieldActive`
+- Cell shielding via Shield effect: REMOVED
 
-**How to apply:** If a new domain needs to write ShieldActive, it must be added to the exception list in plugins.md. Do not silently extend this exception.
+**Do NOT re-flag any absence of ShieldActive cross-domain write exceptions — the entire mechanism was redesigned.**
+
+The old plugins.md exception section has been deleted.

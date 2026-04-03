@@ -267,10 +267,31 @@ The file contains only a doc comment explaining legacy stat components were remo
 - `BoltRenderingConfig`, `AttachVisuals`, `sync_bolt_visual_modifiers` — not yet implemented.
 - Pseudo-code uses `BoltRadius(def.radius)` as shorthand even though it's a type alias — intentional planning notation.
 
+## State Folder Restructure Drift — Flagged Only (refactor/state-folder-structure, 2026-04-02)
+
+**IMPORTANT: Architecture docs are being updated in Wave 8 of this refactor. The following drifts
+were flagged (not fixed) at user request. Do NOT flag them again until after Wave 8 is merged.**
+
+**Module path renames in code vs docs:**
+
+1. `screen/` → eliminated as a domain; its responsibilities absorbed into `state/` (registered as `StatePlugin` in game.rs — no more `ScreenPlugin`)
+2. `ui/` → eliminated as a domain; HUD → `state/run/node/hud/`, chip select → `state/run/chip_select/`, menus → `state/menu/`; `UiPlugin` no longer exists; `UiSystems` is now in `state/run/node/hud/sets.rs`
+3. `run/` → `state/run/` (e.g. `run/node/` → `state/run/node/`)
+4. `wall/` → `walls/` (plural; `WallPlugin` still the name, `walls::WallPlugin`)
+
+**Docs affected:**
+- `docs/architecture/plugins.md` — Domain Layout table still shows `screen/`, `ui/`, `run/`, `wall/`; Plugin registration order still lists `ScreenPlugin`, `UiPlugin`, `RunPlugin` (not `StatePlugin`, `WallPlugin`-at-walls); Scenario runner exception paragraph still mentions `screen` and `wall` as module paths
+- `docs/architecture/plugins.md` — `UiSystems` location cited as `ui/sets.rs` (actually `state/run/node/hud/sets.rs`)
+- `docs/architecture/ordering.md` — `UiSystems::SpawnTimerHud` source file shown as `ui/sets.rs`; `NodeSystems` source shown as `run/node/sets.rs`; ordering chain comments label systems as `[ui domain]` and `[run/node domain]` where the code paths have moved
+- `docs/architecture/state.md` — "State registration, transitions, and cleanup systems live in the `screen/` domain plugin"
+- `docs/architecture/data.md` — WallRegistry "Re-exported from `wall/`" (now `walls/`)
+- `docs/architecture/builders/pattern.md` — Wall builder location shown as `breaker-game/src/wall/builder/` (now `breaker-game/src/walls/builder/`)
+- `docs/architecture/messages.md` — `WallsSpawned` sender shown as `wall (spawn_walls)` (now `walls/` domain, system is at `state/run/node/systems/spawn_walls/`)
+
 ## Confirmed Correct / Fixed (wall-builder-pattern feature, 2026-04-02)
 
 **Wall builder fully implemented:**
-- `Wall::builder()` in `wall/builder/` with `WallBuilder<S, V>` — 2 generic params (Side, Visual).
+- `Wall::builder()` in `walls/builder/` with `WallBuilder<S, V>` — 2 generic params (Side, Visual). (domain renamed from `wall/` to `walls/` in state lifecycle refactor)
 - Side dimension: `NoSide` → `Left` / `Right` / `Ceiling` / `Floor` (required, transitions at `.left()` / `.right()` / `.ceiling()` / `.floor()`).
 - Visual dimension: `Invisible` (default) / `Visible` (`.visible(meshes, materials)`) — not a typestate gate, both Invisible and Visible have `build()` + `spawn()`.
 - Lifetime: stored enum `Permanent` / `Timed(f32)` / `OneShot`, Floor-only setters `.timed()` / `.one_shot()`. NOT a generic dimension.

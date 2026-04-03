@@ -29,8 +29,8 @@ pub(super) fn test_app() -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
     app.add_plugins(bevy::state::app::StatesPlugin);
-    app.init_state::<crate::shared::game_state::GameState>();
-    app.add_sub_state::<crate::shared::playing_state::PlayingState>();
+    app.init_state::<crate::shared::GameState>();
+    app.add_sub_state::<crate::shared::PlayingState>();
     app.add_systems(Update, tick_shockwave);
     app.add_systems(Update, despawn_finished_shockwave);
     app
@@ -38,8 +38,8 @@ pub(super) fn test_app() -> App {
 
 pub(super) fn enter_playing(app: &mut App) {
     app.world_mut()
-        .resource_mut::<NextState<crate::shared::game_state::GameState>>()
-        .set(crate::shared::game_state::GameState::Playing);
+        .resource_mut::<NextState<crate::shared::GameState>>()
+        .set(crate::shared::GameState::Playing);
     app.update();
 }
 

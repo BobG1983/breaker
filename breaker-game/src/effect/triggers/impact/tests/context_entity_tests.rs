@@ -20,7 +20,7 @@ use crate::{
     },
     cells::{components::Cell, messages::CellImpactWall},
     effect::core::*,
-    wall::components::Wall,
+    walls::components::Wall,
 };
 
 /// Build `BoundEffects` with

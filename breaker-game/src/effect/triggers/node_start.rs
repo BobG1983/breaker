@@ -9,7 +9,7 @@ use crate::{
         core::*,
         triggers::evaluate::{evaluate_bound_effects, evaluate_staged_effects},
     },
-    shared::playing_state::PlayingState,
+    shared::PlayingState,
 };
 
 fn bridge_node_start(
@@ -45,7 +45,7 @@ mod tests {
     use bevy::state::app::StatesPlugin;
 
     use super::*;
-    use crate::{effect::effects::speed_boost::ActiveSpeedBoosts, shared::game_state::GameState};
+    use crate::{effect::effects::speed_boost::ActiveSpeedBoosts, shared::GameState};
 
     fn test_app() -> App {
         let mut app = App::new();

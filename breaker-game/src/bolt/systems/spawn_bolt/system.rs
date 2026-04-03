@@ -13,8 +13,8 @@ use crate::{
         resources::{DEFAULT_BOLT_ANGLE_SPREAD, DEFAULT_BOLT_SPAWN_OFFSET_Y},
     },
     breaker::{BreakerRegistry, SelectedBreaker, components::Breaker},
-    run::RunState,
     shared::GameRng,
+    state::run::RunState,
 };
 
 /// Spawns the bolt entity above the breaker using the [`Bolt`] builder.
