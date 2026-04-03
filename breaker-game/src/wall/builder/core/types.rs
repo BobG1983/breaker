@@ -46,7 +46,10 @@ pub(crate) struct Invisible;
 /// Wall has mesh and material handles for rendering.
 #[cfg_attr(
     not(test),
-    allow(dead_code, reason = "future API: Phase 5j / Shield chip")
+    allow(
+        dead_code,
+        reason = "constructed by .visible() — test-only until system-param callers exist"
+    )
 )]
 pub(crate) struct Visible {
     pub(crate) mesh: Handle<Mesh>,
@@ -113,10 +116,6 @@ pub(crate) enum Lifetime {
     #[default]
     Permanent,
     /// Wall despawns after the given duration in seconds.
-    #[cfg_attr(
-        not(test),
-        allow(dead_code, reason = "future API: Phase 5j / Shield chip")
-    )]
     Timed(f32),
     /// Wall despawns after one rebound.
     OneShot,
@@ -131,10 +130,6 @@ pub(crate) struct OptionalWallData {
     pub(crate) definition_color_rgb: Option<[f32; 3]>,
     pub(crate) definition_effects: Option<Vec<RootEffect>>,
     pub(crate) override_half_thickness: Option<f32>,
-    #[cfg_attr(
-        not(test),
-        allow(dead_code, reason = "future API: Phase 5j / Shield chip")
-    )]
     pub(crate) override_color_rgb: Option<[f32; 3]>,
     pub(crate) override_effects: Option<Vec<RootEffect>>,
 }
@@ -151,7 +146,10 @@ pub(crate) struct WallBuilder<S, V = Invisible> {
     pub(crate) lifetime: Lifetime,
     #[cfg_attr(
         not(test),
-        allow(dead_code, reason = "future API: Phase 5j / Shield chip")
+        allow(
+            dead_code,
+            reason = "read by Visible build — test-only until system-param callers exist"
+        )
     )]
     pub(crate) visual: V,
 }

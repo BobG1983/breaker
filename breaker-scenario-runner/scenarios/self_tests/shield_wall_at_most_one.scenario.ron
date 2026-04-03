@@ -1,0 +1,20 @@
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 120,
+    disallowed_failures: [ShieldWallAtMostOne],
+    allowed_failures: Some([ShieldWallAtMostOne]),
+    debug_setup: (
+        disable_physics: true,
+    ),
+    allow_early_end: false,
+    // At frame 30: spawn 2 extra ShieldWall entities.
+    // This simulates a double-fire bug that leaves two shield walls alive.
+    // The invariant fires immediately when count > 1 is detected.
+    frame_mutations: [
+        (frame: 30, mutation: SpawnExtraShieldWalls(2)),
+    ],
+)

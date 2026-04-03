@@ -1,0 +1,25 @@
+// Adversarial: Shield fires at NodeStart with duration 5.0 on the Breaker. The breaker is nearly
+// stationary (action_prob 0.01), so the bolt will frequently reach the bottom of the playfield.
+// The shield wall should reflect bolts via standard wall collision. After 5 seconds the wall
+// despawns and bolt loss resumes normally. BoltInBounds catches if the shield wall leaves the bolt
+// outside bounds. NoEntityLeaks catches if the wall entity leaks after timer expiry.
+// ShieldWallAtMostOne catches if the effect spawns duplicate walls.
+// 10000 frames gives enough time for the wall to expire and verify normal bolt-loss resumes.
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Chaos((action_prob: 0.01)),
+    max_frames: 10000,
+    disallowed_failures: [NoEntityLeaks, BoltInBounds, NoNaN, ShieldWallAtMostOne],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: 5555,
+    initial_effects: [
+        On(target: Breaker, then: [
+            When(trigger: NodeStart, then: [
+                Do(Shield(duration: 5.0)),
+            ]),
+        ]),
+    ],
+)

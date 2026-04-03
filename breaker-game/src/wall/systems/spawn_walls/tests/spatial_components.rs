@@ -113,11 +113,11 @@ fn spawned_walls_have_game_draw_layer_wall() {
 }
 
 #[test]
-fn spawned_walls_have_spatial2d_but_not_interpolate_transform2d() {
+fn spawned_walls_have_spatial2d_and_spatial_markers() {
     // Given: PlayfieldConfig default
     // When: spawn_walls runs
-    // Then: Each Wall has Spatial2D. Does NOT have InterpolateTransform2D.
-    use rantzsoft_spatial2d::components::{InterpolateTransform2D, Spatial2D};
+    // Then: Each Wall has Spatial2D and Spatial (via builder's Spatial::builder()).
+    use rantzsoft_spatial2d::components::{Spatial, Spatial2D};
 
     let mut app = test_app();
     app.update();
@@ -135,8 +135,8 @@ fn spawned_walls_have_spatial2d_but_not_interpolate_transform2d() {
             "wall should have Spatial2D marker"
         );
         assert!(
-            app.world().get::<InterpolateTransform2D>(*entity).is_none(),
-            "wall should NOT have InterpolateTransform2D (static entity)"
+            app.world().get::<Spatial>(*entity).is_some(),
+            "wall should have Spatial marker (from builder)"
         );
     }
 }

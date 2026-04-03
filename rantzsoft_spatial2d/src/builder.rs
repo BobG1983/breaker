@@ -169,6 +169,18 @@ const fn position_components(pos: Vec2) -> (Position2D, PreviousPosition) {
     (Position2D(pos), PreviousPosition(pos))
 }
 
+// ── Build impls: Position-only (no speed/angle) ────────────────────────────
+// Walls and other static entities need position but no velocity constraints.
+
+impl SpatialDataBuilder<HasPosition, NoSpeed, NoAngle> {
+    /// Builds `(Spatial, Position2D, PreviousPosition)` — position only, no speed.
+    #[must_use]
+    pub fn build(self) -> impl Bundle {
+        let pos = position_components(self.position.pos);
+        (Spatial, pos.0, pos.1)
+    }
+}
+
 // ── Build impls: NoPosition ─────────────────────────────────────────────────
 // NoSpeed + NoAngle intentionally has NO build() — compile error if nothing configured.
 

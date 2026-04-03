@@ -112,10 +112,6 @@ impl<S: SideData, V> WallBuilder<S, V> {
 
     /// Overrides the color RGB.
     #[must_use]
-    #[cfg_attr(
-        not(test),
-        allow(dead_code, reason = "future API: Phase 5j / Shield chip")
-    )]
     pub(crate) const fn with_color(mut self, rgb: [f32; 3]) -> Self {
         self.optional.override_color_rgb = Some(rgb);
         self
@@ -150,7 +146,7 @@ impl<S: SideData> WallBuilder<S, Invisible> {
     #[must_use]
     #[cfg_attr(
         not(test),
-        allow(dead_code, reason = "future API: Phase 5j / Shield chip")
+        allow(dead_code, reason = "test-only until system-param callers exist")
     )]
     pub(crate) fn visible(
         self,
@@ -181,10 +177,6 @@ impl<S: SideData> WallBuilder<S, Invisible> {
 impl<V> WallBuilder<Floor, V> {
     /// Sets the wall lifetime to timed.
     #[must_use]
-    #[cfg_attr(
-        not(test),
-        allow(dead_code, reason = "future API: Phase 5j / Shield chip")
-    )]
     pub(crate) const fn timed(mut self, duration: f32) -> Self {
         self.lifetime = Lifetime::Timed(duration);
         self

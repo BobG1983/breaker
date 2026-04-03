@@ -149,12 +149,12 @@ fn frame_mutation_spawn_extra_second_wind_walls_parses_from_ron() {
 }
 
 #[test]
-fn frame_mutation_inject_zero_charge_shield_parses_from_ron() {
-    let ron = "(frame: 30, mutation: InjectZeroChargeShield)";
+fn frame_mutation_spawn_extra_shield_walls_parses_from_ron() {
+    let ron = "(frame: 30, mutation: SpawnExtraShieldWalls(2))";
     let result: FrameMutation =
-        ron::de::from_str(ron).expect("FrameMutation InjectZeroChargeShield should parse");
+        ron::de::from_str(ron).expect("FrameMutation SpawnExtraShieldWalls should parse");
     assert_eq!(result.frame, 30);
-    assert_eq!(result.mutation, MutationKind::InjectZeroChargeShield);
+    assert_eq!(result.mutation, MutationKind::SpawnExtraShieldWalls(2));
 }
 
 #[test]

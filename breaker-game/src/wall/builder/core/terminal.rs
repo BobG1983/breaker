@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
-use rantzsoft_spatial2d::components::{Position2D, Scale2D};
+use rantzsoft_spatial2d::components::{Scale2D, Spatial};
 
 use super::types::*;
 use crate::{
@@ -47,10 +47,16 @@ fn dispatch_effects(commands: &mut Commands, entity: Entity, effects: Option<Vec
 // ── build_core() ──────────────────────────────────────────────────────────
 
 /// Builds the core component bundle shared by all wall builds (no visual).
+///
+/// Uses `Spatial::builder()` for position components, ensuring all spatial
+/// components (`Position2D`, `PreviousPosition`, Spatial marker) are consistently
+/// initialized. `GlobalPosition2D` is auto-inserted via `Spatial2D`'s `#[require]`
+/// and propagated by the spatial sync system.
 fn build_core(position: Vec2, half_extents: Vec2) -> impl Bundle + use<> {
+    let spatial = Spatial::builder().at_position(position).build();
     let identity = (
         Wall,
-        Position2D(position),
+        spatial,
         Scale2D {
             x: half_extents.x,
             y: half_extents.y,
@@ -87,7 +93,7 @@ impl<S: SideData> WallBuilder<S, Invisible> {
 
 // ── Visible build/spawn ───────────────────────────────────────────────────
 
-#[allow(dead_code, reason = "future API: Phase 5j visible walls")]
+#[allow(dead_code, reason = "test-only until system-param callers exist")]
 impl<S: SideData> WallBuilder<S, Visible> {
     /// Builds the wall component bundle with visual components (`Mesh2d` + `MeshMaterial2d`).
     #[must_use]

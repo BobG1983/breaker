@@ -66,7 +66,7 @@ mod tests {
     use rantzsoft_spatial2d::components::{GlobalPosition2D, Spatial2D};
 
     use super::*;
-    use crate::shared::GameDrawLayer;
+    use crate::shared::{GameDrawLayer, PlayfieldConfig};
 
     // ── Helpers ──────────────────────────────────────────────────────
 
@@ -123,30 +123,49 @@ mod tests {
             .id()
     }
 
-    fn spawn_wall(app: &mut App, pos: Vec2, half_extents: Vec2) -> Entity {
+    fn spawn_left_wall(app: &mut App) -> Entity {
+        let pf = PlayfieldConfig::default();
+        let bundle = Wall::builder().left(&pf).build();
+        let entity = app.world_mut().spawn(bundle).id();
+        let pos = app.world().get::<Position2D>(entity).unwrap().0;
         app.world_mut()
-            .spawn((
-                Wall,
-                Aabb2D::new(Vec2::ZERO, half_extents),
-                CollisionLayers::new(WALL_LAYER, CELL_LAYER),
-                Position2D(pos),
-                GlobalPosition2D(pos),
-                Spatial2D,
-                GameDrawLayer::Wall,
-            ))
-            .id()
+            .entity_mut(entity)
+            .insert(GlobalPosition2D(pos));
+        entity
+    }
+
+    fn spawn_right_wall(app: &mut App) -> Entity {
+        let pf = PlayfieldConfig::default();
+        let bundle = Wall::builder().right(&pf).build();
+        let entity = app.world_mut().spawn(bundle).id();
+        let pos = app.world().get::<Position2D>(entity).unwrap().0;
+        app.world_mut()
+            .entity_mut(entity)
+            .insert(GlobalPosition2D(pos));
+        entity
+    }
+
+    fn spawn_ceiling_wall(app: &mut App) -> Entity {
+        let pf = PlayfieldConfig::default();
+        let bundle = Wall::builder().ceiling(&pf).build();
+        let entity = app.world_mut().spawn(bundle).id();
+        let pos = app.world().get::<Position2D>(entity).unwrap().0;
+        app.world_mut()
+            .entity_mut(entity)
+            .insert(GlobalPosition2D(pos));
+        entity
     }
 
     // ── B5: Cell overlapping wall emits CellImpactWall ──────────────
 
     #[test]
     fn cell_overlapping_wall_emits_impact_message() {
-        // B5: Cell at (-450,50) half_extents (35,12), left wall at (-485,0) half_extents (5,300).
-        // dx=|-450-(-485)|=35 < 35+5=40, dy=|50-0|=50 < 12+300=312 => overlap => 1 message.
+        // B5: Cell at (-450,50) half_extents (35,12), left wall at (-490,0) half_extents (90,300).
+        // dx=|-450-(-490)|=40 < 35+90=125, dy=|50-0|=50 < 12+300=312 => overlap => 1 message.
         let mut app = test_app();
 
         let cell_entity = spawn_cell(&mut app, Vec2::new(-450.0, 50.0), Vec2::new(35.0, 12.0));
-        let wall_entity = spawn_wall(&mut app, Vec2::new(-485.0, 0.0), Vec2::new(5.0, 300.0));
+        let wall_entity = spawn_left_wall(&mut app);
 
         tick(&mut app);
 
@@ -171,14 +190,14 @@ mod tests {
     fn multiple_cells_overlapping_same_wall_emit_multiple_messages() {
         // B5 edge case: Two cells overlapping the same wall => exactly 2 messages.
         // Cell1 at (-450,50), Cell2 at (-455,100), both with half_extents (35,12).
-        // Wall at (-485,0) half_extents (5,300).
-        // Cell1: dx=35 < 40, dy=50 < 312 => overlap.
-        // Cell2: dx=30 < 40, dy=100 < 312 => overlap.
+        // Left wall at (-490,0) half_extents (90,300).
+        // Cell1: dx=40 < 125, dy=50 < 312 => overlap.
+        // Cell2: dx=35 < 125, dy=100 < 312 => overlap.
         let mut app = test_app();
 
         let cell1 = spawn_cell(&mut app, Vec2::new(-450.0, 50.0), Vec2::new(35.0, 12.0));
         let cell2 = spawn_cell(&mut app, Vec2::new(-455.0, 100.0), Vec2::new(35.0, 12.0));
-        let wall_entity = spawn_wall(&mut app, Vec2::new(-485.0, 0.0), Vec2::new(5.0, 300.0));
+        let wall_entity = spawn_left_wall(&mut app);
 
         tick(&mut app);
 
@@ -212,15 +231,15 @@ mod tests {
     #[test]
     fn cell_far_from_walls_emits_no_message() {
         // B6: Cell at (0,100) half_extents (35,12), three walls far away.
-        // Left wall at (-485,0): dx=485 >= 35+5=40 => no overlap.
-        // Right wall at (485,0): dx=485 >= 35+5=40 => no overlap.
-        // Ceiling at (0,310): dy=210 >= 12+5=17 => no overlap.
+        // Left wall at (-490,0): dx=490 >= 35+90=125 => no overlap.
+        // Right wall at (490,0): dx=490 >= 35+90=125 => no overlap.
+        // Ceiling at (0,390): dy=290 >= 12+90=102 => no overlap.
         let mut app = test_app();
 
         spawn_cell(&mut app, Vec2::new(0.0, 100.0), Vec2::new(35.0, 12.0));
-        spawn_wall(&mut app, Vec2::new(-485.0, 0.0), Vec2::new(5.0, 300.0));
-        spawn_wall(&mut app, Vec2::new(485.0, 0.0), Vec2::new(5.0, 300.0));
-        spawn_wall(&mut app, Vec2::new(0.0, 310.0), Vec2::new(500.0, 5.0));
+        spawn_left_wall(&mut app);
+        spawn_right_wall(&mut app);
+        spawn_ceiling_wall(&mut app);
 
         tick(&mut app);
 
@@ -234,12 +253,12 @@ mod tests {
 
     #[test]
     fn cell_tangent_to_wall_emits_no_message() {
-        // B6 edge case: Cell at (-445,50) half_x=35, wall at (-485,0) half_x=5.
-        // dx=|-445-(-485)|=40, threshold=35+5=40. Strict inequality: 40 < 40 is false => no message.
+        // B6 edge case: Cell at (-365,50) half_x=35, left wall at (-490,0) half_x=90.
+        // dx=|-365-(-490)|=125, threshold=35+90=125. Strict inequality: 125 < 125 is false => no message.
         let mut app = test_app();
 
-        spawn_cell(&mut app, Vec2::new(-445.0, 50.0), Vec2::new(35.0, 12.0));
-        spawn_wall(&mut app, Vec2::new(-485.0, 0.0), Vec2::new(5.0, 300.0));
+        spawn_cell(&mut app, Vec2::new(-365.0, 50.0), Vec2::new(35.0, 12.0));
+        spawn_left_wall(&mut app);
 
         tick(&mut app);
 

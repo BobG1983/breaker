@@ -42,9 +42,9 @@ pub enum InvariantKind {
     /// At most 1 [`SecondWindWall`](breaker::effect::effects::second_wind::SecondWindWall)
     /// entity should exist at any frame.
     SecondWindWallAtMostOne,
-    /// [`ShieldActive`](breaker::effect::effects::shield::ShieldActive) must never
-    /// have `charges == 0` -- zero-charge shields should be removed immediately.
-    ShieldChargesConsistent,
+    /// At most 1 [`ShieldWall`](breaker::effect::effects::shield::ShieldWall)
+    /// entity should exist at any frame.
+    ShieldWallAtMostOne,
     /// [`PulseRing`](breaker::effect::effects::pulse::PulseRing) entity count stays
     /// within `invariant_params.max_pulse_ring_count`.
     PulseRingAccumulation,
@@ -81,7 +81,7 @@ impl InvariantKind {
         Self::RunStatsMonotonic,
         Self::ChipOfferExpected,
         Self::SecondWindWallAtMostOne,
-        Self::ShieldChargesConsistent,
+        Self::ShieldWallAtMostOne,
         Self::PulseRingAccumulation,
         Self::ChainArcCountReasonable,
         Self::AabbMatchesEntityDimensions,
@@ -113,7 +113,7 @@ impl InvariantKind {
             Self::RunStatsMonotonic => "run stats counter decreased mid-run",
             Self::ChipOfferExpected => "expected chip not found in offerings",
             Self::SecondWindWallAtMostOne => "more than one SecondWindWall entity exists",
-            Self::ShieldChargesConsistent => "ShieldActive with zero charges not removed",
+            Self::ShieldWallAtMostOne => "more than one ShieldWall entity exists",
             Self::PulseRingAccumulation => "PulseRing entity count exceeds maximum",
             Self::ChainArcCountReasonable => "chain lightning arc/chain count exceeds maximum",
             Self::AabbMatchesEntityDimensions => {

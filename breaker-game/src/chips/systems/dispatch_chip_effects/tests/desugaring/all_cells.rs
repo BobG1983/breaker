@@ -26,7 +26,7 @@ fn all_cells_target_desugars_to_when_node_start_on_all_cells() {
             target: Target::AllCells,
             then: vec![EffectNode::When {
                 trigger: Trigger::Impacted(ImpactTarget::Bolt),
-                then: vec![EffectNode::Do(EffectKind::Shield { stacks: 1 })],
+                then: vec![EffectNode::Do(EffectKind::Shield { duration: 5.0 })],
             }],
         }],
         ingredients: None,
@@ -68,7 +68,7 @@ fn all_cells_target_desugars_to_when_node_start_on_all_cells() {
                         then: do_children,
                     } if do_children.len() == 1 && matches!(
                         &do_children[0],
-                        EffectNode::Do(EffectKind::Shield { stacks: 1 })
+                        EffectNode::Do(EffectKind::Shield { duration: 5.0 })
                     )
                 )
             )
@@ -162,7 +162,7 @@ fn all_cells_desugaring_does_not_create_bound_effects_on_cells() {
         Target::AllCells,
         EffectNode::When {
             trigger: Trigger::Impacted(ImpactTarget::Bolt),
-            then: vec![EffectNode::Do(EffectKind::Shield { stacks: 1 })],
+            then: vec![EffectNode::Do(EffectKind::Shield { duration: 5.0 })],
         },
         5,
     );
@@ -194,7 +194,7 @@ fn desugaring_preserves_existing_bound_effects_entries() {
         Target::AllCells,
         EffectNode::When {
             trigger: Trigger::Impacted(ImpactTarget::Bolt),
-            then: vec![EffectNode::Do(EffectKind::Shield { stacks: 1 })],
+            then: vec![EffectNode::Do(EffectKind::Shield { duration: 5.0 })],
         },
         5,
     );
@@ -212,7 +212,7 @@ fn desugaring_preserves_existing_bound_effects_entries() {
                 "OldChip1".to_owned(),
                 EffectNode::When {
                     trigger: Trigger::PerfectBump,
-                    then: vec![EffectNode::Do(EffectKind::Shield { stacks: 1 })],
+                    then: vec![EffectNode::Do(EffectKind::Shield { duration: 5.0 })],
                 },
             ),
             (

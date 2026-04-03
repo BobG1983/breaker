@@ -19,7 +19,7 @@ fn walk_bound_node_pushes_on_child_to_staged_effects_when_trigger_matches() {
             permanent: true,
             then: vec![EffectNode::When {
                 trigger: Trigger::Impacted(ImpactTarget::Bolt),
-                then: vec![EffectNode::Do(EffectKind::Shield { stacks: 1 })],
+                then: vec![EffectNode::Do(EffectKind::Shield { duration: 5.0 })],
             }],
         }],
     };

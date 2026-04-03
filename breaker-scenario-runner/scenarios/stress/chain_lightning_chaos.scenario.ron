@@ -10,7 +10,7 @@
     layout: "Dense",
     input: Chaos((action_prob: 0.6)),
     max_frames: 8000,
-    disallowed_failures: [NoEntityLeaks, NoNaN, BoltInBounds, ShieldChargesConsistent],
+    disallowed_failures: [NoEntityLeaks, NoNaN, BoltInBounds],
     allowed_failures: None,
     debug_setup: None,
     allow_early_end: false,

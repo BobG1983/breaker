@@ -3,12 +3,9 @@ use rantzsoft_spatial2d::components::Position2D;
 
 // Re-export the system under test so sub-modules can reference it in ordering constraints.
 pub(super) use super::super::system::handle_cell_hit;
-use crate::{
-    cells::{
-        components::*,
-        messages::{DamageCell, RequestCellDestroyed},
-    },
-    effect::effects::shield::ShieldActive,
+use crate::cells::{
+    components::*,
+    messages::{DamageCell, RequestCellDestroyed},
 };
 
 #[derive(Resource)]
@@ -188,16 +185,4 @@ pub(super) fn spawn_cell_at(app: &mut App, hp: f32, pos: Vec2, required: bool) -
         entity.insert(RequiredToClear);
     }
     entity.id()
-}
-
-pub(super) fn spawn_shielded_cell_with_charges(app: &mut App, hp: f32, charges: u32) -> Entity {
-    let entity = spawn_cell(app, hp);
-    app.world_mut()
-        .entity_mut(entity)
-        .insert(ShieldActive { charges });
-    entity
-}
-
-pub(super) fn spawn_shielded_cell(app: &mut App, hp: f32) -> Entity {
-    spawn_shielded_cell_with_charges(app, hp, 3)
 }

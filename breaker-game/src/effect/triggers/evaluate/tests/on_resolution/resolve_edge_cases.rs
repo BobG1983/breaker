@@ -39,7 +39,7 @@ fn resolve_on_command_with_no_matching_entities_is_noop() {
         chip_name: "cell_fortify".to_string(),
         children: vec![EffectNode::When {
             trigger: Trigger::Impacted(ImpactTarget::Bolt),
-            then: vec![EffectNode::Do(EffectKind::Shield { stacks: 1 })],
+            then: vec![EffectNode::Do(EffectKind::Shield { duration: 5.0 })],
         }],
         permanent: true,
         context: TriggerContext::default(),
@@ -118,7 +118,7 @@ fn on_node_in_staged_effects_consumed_regardless_of_trigger() {
                 permanent: true,
                 then: vec![EffectNode::When {
                     trigger: Trigger::Impacted(ImpactTarget::Bolt),
-                    then: vec![EffectNode::Do(EffectKind::Shield { stacks: 1 })],
+                    then: vec![EffectNode::Do(EffectKind::Shield { duration: 5.0 })],
                 }],
             },
         )]))
@@ -166,7 +166,7 @@ fn mixed_on_and_when_in_staged_effects_both_consumed_when_trigger_matches() {
                     permanent: true,
                     then: vec![EffectNode::When {
                         trigger: Trigger::Impacted(ImpactTarget::Bolt),
-                        then: vec![EffectNode::Do(EffectKind::Shield { stacks: 1 })],
+                        then: vec![EffectNode::Do(EffectKind::Shield { duration: 5.0 })],
                     }],
                 },
             ),

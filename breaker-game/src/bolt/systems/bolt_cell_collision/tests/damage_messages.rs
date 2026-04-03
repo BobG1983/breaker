@@ -161,9 +161,10 @@ fn wall_hit_does_not_emit_damage_cell() {
     let mut app = test_app_with_damage_and_wall_messages();
     let bc = super::helpers::test_bolt_definition();
 
-    spawn_wall(&mut app, 200.0, 0.0, 50.0, 300.0);
+    spawn_right_wall(&mut app);
 
-    let start_x = 200.0 - 50.0 - bc.radius - 5.0;
+    // Right wall at (490,0) half_extents (90,300); inner face at x=400.
+    let start_x = 490.0 - 90.0 - bc.radius - 5.0;
     spawn_bolt(&mut app, start_x, 0.0, 400.0, 0.1);
 
     tick(&mut app);
