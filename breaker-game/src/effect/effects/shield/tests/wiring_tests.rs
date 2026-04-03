@@ -35,7 +35,10 @@ fn register_adds_tick_system_to_fixed_update() {
 fn effect_kind_shield_has_duration_field() {
     use crate::effect::EffectKind;
     // Compile-time verification: if Shield still uses stacks: u32, this won't compile
-    let shield = EffectKind::Shield { duration: 5.0 };
+    let shield = EffectKind::Shield {
+        duration: 5.0,
+        reflection_cost: 0.0,
+    };
     drop(shield);
 }
 
@@ -43,7 +46,10 @@ fn effect_kind_shield_has_duration_field() {
 fn effect_kind_shield_zero_duration_compiles() {
     use crate::effect::EffectKind;
     // Edge case: zero duration is valid at the enum level
-    let shield = EffectKind::Shield { duration: 0.0 };
+    let shield = EffectKind::Shield {
+        duration: 0.0,
+        reflection_cost: 0.0,
+    };
     drop(shield);
 }
 
@@ -56,7 +62,11 @@ fn effect_kind_shield_fire_dispatches_end_to_end() {
     let mut world = test_world();
     let entity = world.spawn_empty().id();
 
-    EffectKind::Shield { duration: 5.0 }.fire(entity, "parry", &mut world);
+    EffectKind::Shield {
+        duration: 5.0,
+        reflection_cost: 0.0,
+    }
+    .fire(entity, "parry", &mut world);
 
     let count = world
         .query_filtered::<Entity, With<ShieldWall>>()
@@ -87,7 +97,11 @@ fn effect_kind_shield_fire_dispatches_short_duration() {
     let mut world = test_world();
     let entity = world.spawn_empty().id();
 
-    EffectKind::Shield { duration: 0.5 }.fire(entity, "parry", &mut world);
+    EffectKind::Shield {
+        duration: 0.5,
+        reflection_cost: 0.0,
+    }
+    .fire(entity, "parry", &mut world);
 
     let timers: Vec<&ShieldWallTimer> = world
         .query_filtered::<&ShieldWallTimer, With<ShieldWall>>()

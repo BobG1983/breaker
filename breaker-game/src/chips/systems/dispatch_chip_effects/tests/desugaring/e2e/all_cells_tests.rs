@@ -37,7 +37,7 @@ fn assert_cell_has_shield_bound_effect(app: &App, cell: Entity, label: &str) {
                 then: do_children,
             } if do_children.len() == 1 && matches!(
                 &do_children[0],
-                EffectNode::Do(EffectKind::Shield { duration: 5.0 })
+                EffectNode::Do(EffectKind::Shield { duration: 5.0, reflection_cost: 0.0 })
             )
         ),
         "{label} should have When(Impacted(Bolt), [Do(Shield(1))]), got {node:?}"
@@ -67,7 +67,10 @@ fn setup_e2e_desugaring_app() -> (App, Entity, Entity, Entity) {
             target: Target::AllCells,
             then: vec![EffectNode::When {
                 trigger: Trigger::Impacted(ImpactTarget::Bolt),
-                then: vec![EffectNode::Do(EffectKind::Shield { duration: 5.0 })],
+                then: vec![EffectNode::Do(EffectKind::Shield {
+                    duration: 5.0,
+                    reflection_cost: 0.0,
+                })],
             }],
         }],
         ingredients: None,
@@ -136,7 +139,7 @@ fn chip_all_cells_target_desugars_and_resolves_to_cell_bound_effects_on_node_sta
                         then: do_children,
                     } if do_children.len() == 1 && matches!(
                         &do_children[0],
-                        EffectNode::Do(EffectKind::Shield { duration: 5.0 })
+                        EffectNode::Do(EffectKind::Shield { duration: 5.0, reflection_cost: 0.0 })
                     )
                 )
             )

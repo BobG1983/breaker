@@ -56,7 +56,10 @@ fn resolve_on_command_resolves_all_cells_to_cell_entities() {
         chip_name: "cell_fortify".to_string(),
         children: vec![EffectNode::When {
             trigger: Trigger::Impacted(ImpactTarget::Bolt),
-            then: vec![EffectNode::Do(EffectKind::Shield { duration: 5.0 })],
+            then: vec![EffectNode::Do(EffectKind::Shield {
+                duration: 5.0,
+                reflection_cost: 0.0,
+            })],
         }],
         permanent: true,
         context: TriggerContext::default(),

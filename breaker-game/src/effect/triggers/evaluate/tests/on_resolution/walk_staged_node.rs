@@ -22,7 +22,10 @@ fn on_node_in_staged_effects_consumed_and_resolved_to_target_entities() {
                 permanent: true,
                 then: vec![EffectNode::When {
                     trigger: Trigger::Impacted(ImpactTarget::Bolt),
-                    then: vec![EffectNode::Do(EffectKind::Shield { duration: 5.0 })],
+                    then: vec![EffectNode::Do(EffectKind::Shield {
+                        duration: 5.0,
+                        reflection_cost: 0.0,
+                    })],
                 }],
             },
         )]))
@@ -89,7 +92,10 @@ fn on_node_with_permanent_false_sends_children_to_staged_effects_on_targets() {
                 permanent: false,
                 then: vec![EffectNode::When {
                     trigger: Trigger::Impacted(ImpactTarget::Bolt),
-                    then: vec![EffectNode::Do(EffectKind::Shield { duration: 5.0 })],
+                    then: vec![EffectNode::Do(EffectKind::Shield {
+                        duration: 5.0,
+                        reflection_cost: 0.0,
+                    })],
                 }],
             },
         )]))
