@@ -54,6 +54,7 @@ impl Plugin for ScreenPlugin {
                     .add_registry::<crate::run::NodeLayoutRegistry>()
                     .add_registry::<crate::chips::ChipTemplateRegistry>()
                     .add_registry::<crate::chips::EvolutionTemplateRegistry>()
+                    .add_registry::<crate::wall::WallRegistry>()
                     .build(),
             )
             // Progress plugin drives Loading → MainMenu transition.

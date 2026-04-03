@@ -1,0 +1,37 @@
+// ============================================================================
+// Wall Definition Template
+// ============================================================================
+//
+// Reference for all available fields in a .wall.ron file.
+// This file is NOT loaded by the game -- it exists as documentation only.
+//
+// Required fields (no default):
+//   name
+//
+// Optional fields (shown with their defaults):
+//   half_thickness — 90.0
+//   color_rgb     — None (invisible)
+//   effects       — [] (no effects)
+//
+// Loaded from: assets/walls/*.wall.ron
+// Struct:      WallDefinition (breaker-game/src/wall/definition.rs)
+// ============================================================================
+
+(
+    // REQUIRED: Display name of the wall.
+    name: "MyWall",
+
+    // --- Everything below is optional (defaults shown) ---
+
+    // Half-thickness in world units. Default: 90.0
+    half_thickness: 90.0,
+
+    // Optional RGB color for rendering. None = invisible (no visual).
+    // Values above 1.0 produce HDR bloom.
+    color_rgb: None,
+
+    // Effect chains dispatched at spawn time.
+    // Each entry is On(target: <Target>, then: [<EffectNode>, ...]).
+    // Use [] for no effects.
+    effects: [],
+)
