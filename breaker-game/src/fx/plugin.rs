@@ -3,14 +3,12 @@
 use bevy::prelude::*;
 
 use crate::{
-    fx::{
-        systems::{animate_fade_out, animate_punch_scale},
-        transition::{
-            TransitionConfig, animate_transition, cleanup_transition, spawn_transition_in,
-            spawn_transition_out,
-        },
-    },
+    fx::systems::{animate_fade_out, animate_punch_scale},
     shared::{GameState, PlayingState},
+    state::transition::{
+        TransitionConfig, animate_transition, cleanup_transition, spawn_transition_in,
+        spawn_transition_out,
+    },
 };
 
 /// Plugin for the fx domain.

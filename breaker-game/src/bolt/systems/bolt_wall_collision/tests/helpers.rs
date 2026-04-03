@@ -13,7 +13,7 @@ use crate::{
     },
     effect::effects::piercing::ActivePiercings,
     shared::{BOLT_LAYER, GameDrawLayer, WALL_LAYER},
-    wall::components::Wall,
+    walls::components::Wall,
 };
 
 pub(super) fn test_app() -> App {

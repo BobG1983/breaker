@@ -5,7 +5,7 @@ use breaker::{
     bolt::components::Bolt,
     breaker::components::{Breaker, DashState},
     cells::components::Cell,
-    wall::components::Wall,
+    walls::components::Wall,
 };
 
 use crate::{

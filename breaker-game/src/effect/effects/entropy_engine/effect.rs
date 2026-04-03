@@ -5,7 +5,7 @@ use rand::distr::{Distribution, weighted::WeightedIndex};
 
 use crate::{
     effect::{EffectNode, StagedEffects},
-    shared::{playing_state::PlayingState, rng::GameRng},
+    shared::{PlayingState, rng::GameRng},
 };
 
 /// Tracks cells destroyed within the current node for entropy scaling.

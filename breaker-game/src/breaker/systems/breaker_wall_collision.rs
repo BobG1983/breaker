@@ -15,7 +15,7 @@ use crate::{
     breaker::{components::Breaker, messages::BreakerImpactWall, queries::BreakerSizeData},
     effect::effects::size_boost::ActiveSizeBoosts,
     shared::{BREAKER_LAYER, WALL_LAYER},
-    wall::components::Wall,
+    walls::components::Wall,
 };
 
 /// Wall entity lookup for narrow-phase overlap verification.

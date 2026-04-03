@@ -73,7 +73,7 @@ fn non_quick_clear_proceeds_normally() {
 
     let override_res = app
         .world()
-        .resource::<breaker::run::node::ScenarioLayoutOverride>();
+        .resource::<breaker::state::run::node::ScenarioLayoutOverride>();
     assert_eq!(
         override_res.0.as_deref(),
         Some("corridor"),

@@ -8,5 +8,5 @@ pub(super) use crate::{
     breaker::{components::Breaker, definition::BreakerDefinition},
     cells::components::Cell,
     effect::{core::*, effects::damage_boost::ActiveDamageBoosts},
-    wall::components::Wall,
+    walls::components::Wall,
 };

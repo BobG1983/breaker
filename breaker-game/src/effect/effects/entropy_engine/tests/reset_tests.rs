@@ -4,7 +4,7 @@
 use bevy::{prelude::*, state::app::StatesPlugin};
 
 use super::super::effect::*;
-use crate::shared::{game_state::GameState, playing_state::PlayingState};
+use crate::shared::{GameState, PlayingState};
 
 // -- Behavior 21: register() wires reset system for OnEnter(PlayingState::Active) --
 

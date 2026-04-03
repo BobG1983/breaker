@@ -4,9 +4,11 @@ use bevy::prelude::*;
 use breaker::{
     bolt::BoltSystems,
     breaker::BreakerSystems,
-    run::node::{messages::SpawnNodeComplete, sets::NodeSystems},
     shared::GameState,
-    ui::messages::ChipSelected,
+    state::run::{
+        chip_select::messages::ChipSelected,
+        node::{messages::SpawnNodeComplete, sets::NodeSystems},
+    },
 };
 
 use super::{
@@ -72,13 +74,13 @@ fn register_scenario_resources(app: &mut App) {
         .add_message::<SpawnNodeComplete>()
         .add_message::<ChipSelected>()
         // Needed by check_timer_monotonically_decreasing exemption logic.
-        .add_message::<breaker::run::node::messages::ReverseTimePenalty>();
+        .add_message::<breaker::state::run::node::messages::ReverseTimePenalty>();
 }
 
 /// Registers all scenario systems: input, lifecycle hooks, invariant checkers.
 fn register_scenario_systems(app: &mut App) {
     let chip_select_condition = in_state(GameState::ChipSelect)
-        .and(resource_exists::<breaker::screen::chip_select::ChipOffers>);
+        .and(resource_exists::<breaker::state::run::chip_select::ChipOffers>);
     let playing_gate = |stats: Option<Res<ScenarioStats>>| stats.is_some_and(|s| s.entered_playing);
     // Invariant checkers run in two chained batches after setup. All checkers share
     // `ResMut<ViolationLog>`, so Bevy serialises them automatically within each batch.

@@ -11,7 +11,7 @@ use crate::{
     breaker::components::Breaker,
     cells::components::Cell,
     effect::*,
-    wall::components::Wall,
+    walls::components::Wall,
 };
 
 /// Dispatches bolt-defined effects to target entities.

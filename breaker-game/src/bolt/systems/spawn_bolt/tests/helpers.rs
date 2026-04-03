@@ -5,8 +5,8 @@ use crate::{
     breaker::{
         definition::BreakerDefinition, registry::BreakerRegistry, resources::SelectedBreaker,
     },
-    run::RunState,
     shared::GameRng,
+    state::run::RunState,
 };
 
 pub(super) fn test_app() -> App {

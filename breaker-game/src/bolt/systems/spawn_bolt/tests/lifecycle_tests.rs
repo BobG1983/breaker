@@ -7,7 +7,7 @@ use crate::{
         components::{Bolt, BoltServing},
         messages::BoltSpawned,
     },
-    run::RunState,
+    state::run::RunState,
 };
 
 #[test]

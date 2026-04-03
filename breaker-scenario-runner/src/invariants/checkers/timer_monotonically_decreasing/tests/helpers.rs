@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use breaker::run::node::messages::ReverseTimePenalty;
+use breaker::state::run::node::messages::ReverseTimePenalty;
 
 use super::super::*;
 use crate::invariants::*;

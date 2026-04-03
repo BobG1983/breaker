@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use breaker::run::node::messages::SpawnNodeComplete;
+use breaker::state::run::node::messages::SpawnNodeComplete;
 
 use crate::{invariants::*, types::InvariantKind};
 

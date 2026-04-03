@@ -14,7 +14,7 @@ use rantzsoft_spatial2d::components::Position2D;
 use crate::{
     cells::{components::Cell, messages::CellImpactWall},
     shared::{CELL_LAYER, WALL_LAYER},
-    wall::components::Wall,
+    walls::components::Wall,
 };
 
 /// Wall entity lookup for narrow-phase overlap verification.

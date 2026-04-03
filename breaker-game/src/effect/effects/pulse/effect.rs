@@ -10,7 +10,7 @@ use crate::{
     bolt::{components::BoltBaseDamage, resources::DEFAULT_BOLT_BASE_DAMAGE},
     cells::messages::DamageCell,
     effect::{core::EffectSourceChip, effects::damage_boost::ActiveDamageBoosts},
-    shared::{CELL_LAYER, CleanupOnNodeExit, playing_state::PlayingState},
+    shared::{CELL_LAYER, CleanupOnNodeExit, PlayingState},
 };
 
 /// Emitter component attached to a bolt entity. Drives periodic ring emission.

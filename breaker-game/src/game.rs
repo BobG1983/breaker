@@ -16,11 +16,9 @@ use crate::{
     effect::EffectPlugin,
     fx::FxPlugin,
     input::InputPlugin,
-    run::RunPlugin,
-    screen::ScreenPlugin,
     shared::{GameDrawLayer, PlayfieldConfig},
-    ui::UiPlugin,
-    wall::WallPlugin,
+    state::StatePlugin,
+    walls::WallPlugin,
 };
 
 /// Plugin group that assembles all game domain plugins.
@@ -50,7 +48,7 @@ impl PluginGroup for Game {
     fn build(self) -> PluginGroupBuilder {
         let mut builder = PluginGroupBuilder::start::<Self>()
             .add(InputPlugin)
-            .add(ScreenPlugin)
+            .add(StatePlugin)
             .add(RantzSpatial2dPlugin::<GameDrawLayer>::default())
             .add(rantzsoft_physics2d::plugin::RantzPhysics2dPlugin)
             .add(WallPlugin)
@@ -60,9 +58,7 @@ impl PluginGroup for Game {
             .add(CellsPlugin)
             .add(ChipsPlugin)
             .add(FxPlugin)
-            .add(RunPlugin)
             .add(AudioPlugin)
-            .add(UiPlugin)
             .add(DebugPlugin);
 
         if self.headless {

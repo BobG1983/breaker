@@ -15,8 +15,8 @@ use crate::{
         BoundEffects, EffectCommandsExt, EffectNode, RootEffect, StagedEffects, Target, Trigger,
         TriggerContext,
     },
-    ui::messages::ChipSelected,
-    wall::components::Wall,
+    state::run::chip_select::messages::ChipSelected,
+    walls::components::Wall,
 };
 
 /// Bundled entity queries for target resolution — reduces system parameter count.

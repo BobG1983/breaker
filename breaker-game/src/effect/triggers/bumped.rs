@@ -8,7 +8,7 @@ use crate::{
         sets::EffectSystems,
         triggers::evaluate::{evaluate_bound_effects, evaluate_staged_effects},
     },
-    shared::playing_state::PlayingState,
+    shared::PlayingState,
 };
 
 fn bridge_bumped(

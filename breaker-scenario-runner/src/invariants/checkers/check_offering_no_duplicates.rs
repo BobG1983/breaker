@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use bevy::prelude::*;
-use breaker::screen::chip_select::ChipOffers;
+use breaker::state::run::chip_select::ChipOffers;
 
 use crate::{invariants::*, types::InvariantKind};
 
@@ -83,8 +83,8 @@ mod tests {
         let chip_a1 = test_chip("A", 3);
         let chip_a2 = test_chip("A", 3);
         app.insert_resource(ChipOffers(vec![
-            breaker::screen::chip_select::ChipOffering::Normal(chip_a1),
-            breaker::screen::chip_select::ChipOffering::Normal(chip_a2),
+            breaker::state::run::chip_select::ChipOffering::Normal(chip_a1),
+            breaker::state::run::chip_select::ChipOffering::Normal(chip_a2),
         ]));
 
         tick(&mut app);
@@ -104,7 +104,7 @@ mod tests {
 
     #[test]
     fn no_duplicates_no_violation() {
-        use breaker::screen::chip_select::ChipOffering;
+        use breaker::state::run::chip_select::ChipOffering;
         let mut app = test_app();
 
         // Insert ChipOffers with three distinct chip names

@@ -1,7 +1,7 @@
 //! Debug overrides for bolt/breaker position, velocity, and physics freeze.
 
 use bevy::prelude::*;
-use breaker::run::node::resources::NodeTimer;
+use breaker::state::run::node::resources::NodeTimer;
 use rantzsoft_spatial2d::components::Position2D;
 
 use super::{

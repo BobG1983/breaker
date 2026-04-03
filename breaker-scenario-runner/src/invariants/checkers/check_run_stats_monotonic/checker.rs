@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use breaker::run::RunStats;
+use breaker::state::run::RunStats;
 
 use crate::{invariants::*, types::InvariantKind};
 

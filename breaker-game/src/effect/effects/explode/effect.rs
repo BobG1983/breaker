@@ -7,7 +7,7 @@ use rantzsoft_spatial2d::components::Position2D;
 use crate::{
     cells::messages::DamageCell,
     effect::core::EffectSourceChip,
-    shared::{CELL_LAYER, CleanupOnNodeExit, playing_state::PlayingState},
+    shared::{CELL_LAYER, CleanupOnNodeExit, PlayingState},
 };
 
 /// Deferred request for an instant area damage burst.

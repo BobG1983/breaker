@@ -14,7 +14,7 @@ use crate::{
         BoundEffects, EffectKind, EffectNode, ImpactTarget, RootEffect, StagedEffects, Target,
         Trigger,
     },
-    wall::components::Wall,
+    walls::components::Wall,
 };
 
 /// Helper: creates a minimal `BoltDefinition` with the given effects.

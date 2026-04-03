@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::run::node::messages::{ApplyTimePenalty, ReverseTimePenalty};
+use crate::state::run::node::messages::{ApplyTimePenalty, ReverseTimePenalty};
 
 /// Sends an [`ApplyTimePenalty`] message to subtract seconds from the node timer.
 ///
@@ -28,7 +28,7 @@ pub(crate) const fn register(_app: &mut App) {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::run::node::messages::{ApplyTimePenalty, ReverseTimePenalty};
+    use crate::state::run::node::messages::{ApplyTimePenalty, ReverseTimePenalty};
 
     // ── fire() message-writing tests ──────────────────────────────
 

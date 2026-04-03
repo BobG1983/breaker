@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use breaker::run::node::resources::NodeTimer;
+use breaker::state::run::node::resources::NodeTimer;
 
 use crate::{invariants::*, types::InvariantKind};
 

@@ -2,14 +2,14 @@
 
 ## Backlog
 
-1. **[ready]** State lifecycle refactor — [detail](detail/state-lifecycle-refactor/state-lifecycle-refactor.md)
-2. **[done]** Wall builder pattern — [detail](detail/wall-builder-pattern.md)
-3. **[NEEDS DETAIL]** Cell builder pattern — [detail](detail/cell-builder-pattern.md)
-4. **[NEEDS DETAIL]** Node & chip builder patterns + template.ron files — [detail](detail/node-chip-builders.md)
-5. **[ready]** Scenario coverage gaps (2 HIGH, 3 MEDIUM, 3 new invariants) — [detail](detail/scenario-coverage-gaps.md)
-6. **[ready]** Killed trigger, Die effect, unified death messaging — [detail](detail/killed-trigger-damage-attribution.md)
-7. **[in-progress]** Shield timer cost per reflection — [detail](detail/shield-timer-cost-per-reflection.md)
-8. **[ready]** Tidy up imports: `crate::` paths + glob consolidation — [detail](detail/tidy-imports.md)
+1. **[in-progress]** State lifecycle refactor — [detail](detail/state-lifecycle-refactor/state-lifecycle-refactor.md)
+2. **[NEEDS DETAIL]** Cross-domain prelude, re-export modules & import cleanup — [detail](detail/cross-domain-prelude.md)
+3. **[done]** Wall builder pattern — [detail](detail/wall-builder-pattern.md)
+4. **[NEEDS DETAIL]** Cell builder pattern — [detail](detail/cell-builder-pattern.md)
+5. **[NEEDS DETAIL]** Node & chip builder patterns + template.ron files — [detail](detail/node-chip-builders.md)
+6. **[ready]** Scenario coverage gaps (2 HIGH, 3 MEDIUM, 3 new invariants) — [detail](detail/scenario-coverage-gaps.md)
+7. **[ready]** Killed trigger, Die effect, unified death messaging — [detail](detail/killed-trigger-damage-attribution.md)
+8. **[in-progress]** Shield timer cost per reflection — [detail](detail/shield-timer-cost-per-reflection.md)
 9. **[NEEDS DETAIL]** Bolt birthing animation — [detail](detail/bolt-birthing-animation.md)
 10. **[NEEDS DETAIL]** Effect desugaring: NodeRunning trigger + unique stamping — [detail](detail/effect-desugaring-node-running-trigger.md)
 11. **[NEEDS DETAIL]** Node sequencing refactor — per-tier batching instead of full upfront sequence — [detail](detail/node-sequencing-refactor.md)

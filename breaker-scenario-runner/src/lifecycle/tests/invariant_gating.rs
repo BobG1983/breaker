@@ -258,7 +258,7 @@ fn scenario_stats_invariant_checks_incremented_after_one_tick() {
 /// sets `ScenarioStats::entered_playing` to `true`.
 #[test]
 fn scenario_stats_entered_playing_set_on_spawn_node_complete() {
-    use breaker::run::node::messages::SpawnNodeComplete;
+    use breaker::state::run::node::messages::SpawnNodeComplete;
 
     use crate::invariants::ScenarioStats;
 

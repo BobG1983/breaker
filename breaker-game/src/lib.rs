@@ -14,8 +14,8 @@
 
 pub mod app;
 pub mod game;
-pub mod screen;
 pub mod shared;
+pub mod state;
 
 pub(crate) mod audio;
 pub mod bolt;
@@ -27,6 +27,4 @@ pub(crate) mod debug;
 pub mod effect;
 pub(crate) mod fx;
 pub mod input;
-pub mod run;
-pub mod ui;
-pub mod wall;
+pub mod walls;

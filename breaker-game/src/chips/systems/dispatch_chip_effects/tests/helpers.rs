@@ -6,7 +6,7 @@ use crate::{
     chips::{definition::ChipDefinition, inventory::ChipInventory, resources::ChipCatalog},
     effect::{BoundEffects, StagedEffects},
     shared::GameState,
-    ui::messages::ChipSelected,
+    state::run::chip_select::messages::ChipSelected,
 };
 
 /// Resource holding messages to be sent before the dispatch system runs.
@@ -193,7 +193,7 @@ pub(super) fn spawn_cell(app: &mut App) -> Entity {
 
 /// Spawn a Wall entity with effect components.
 pub(super) fn spawn_wall(app: &mut App) -> Entity {
-    use crate::wall::components::Wall;
+    use crate::walls::components::Wall;
 
     app.world_mut()
         .spawn((Wall, BoundEffects::default(), StagedEffects::default()))

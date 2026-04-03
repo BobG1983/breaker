@@ -7,16 +7,18 @@ use crate::{
         BoltSystems,
         messages::{BoltImpactBreaker, BoltImpactCell, BoltImpactWall, BoltLost},
         systems::{
-            apply_node_scale_to_bolt, bolt_breaker_collision, bolt_cell_collision, bolt_lost,
-            bolt_wall_collision, clamp_bolt_to_playfield, cleanup_destroyed_bolts,
-            dispatch_bolt_effects, hover_bolt, launch_bolt, reset_bolt, spawn_bolt,
-            spawn_bolt_lost_text, sync_bolt_scale, tick_bolt_lifespan,
+            bolt_breaker_collision, bolt_cell_collision, bolt_lost, bolt_wall_collision,
+            clamp_bolt_to_playfield, cleanup_destroyed_bolts, dispatch_bolt_effects, hover_bolt,
+            launch_bolt, spawn_bolt, spawn_bolt_lost_text, sync_bolt_scale, tick_bolt_lifespan,
         },
     },
     breaker::BreakerSystems,
     effect::EffectSystems,
-    run::node::sets::NodeSystems,
     shared::{GameRng, GameState, PlayingState},
+    state::run::node::{
+        sets::NodeSystems,
+        systems::{apply_node_scale_to_bolt, reset_bolt},
+    },
 };
 
 /// Plugin for the bolt domain.

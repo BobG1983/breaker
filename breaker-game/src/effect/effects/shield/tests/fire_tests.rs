@@ -4,7 +4,7 @@ use rantzsoft_spatial2d::components::{Position2D, Scale2D};
 use super::helpers::*;
 use crate::{
     shared::{BOLT_LAYER, WALL_LAYER},
-    wall::components::Wall,
+    walls::components::Wall,
 };
 
 // ── Section A: fire() spawns timed visible floor wall ────────────────

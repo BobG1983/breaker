@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use breaker::screen::chip_select::{ChipOffering, ChipOffers};
+use breaker::state::run::chip_select::{ChipOffering, ChipOffers};
 
 use crate::{invariants::*, lifecycle::ScenarioConfig, types::InvariantKind};
 
@@ -60,7 +60,7 @@ mod tests {
     use breaker::{
         chips::definition::{ChipDefinition, EvolutionIngredient, Rarity},
         effect::{EffectKind, EffectNode, RootEffect, Target},
-        screen::chip_select::{ChipOffering, ChipOffers},
+        state::run::chip_select::{ChipOffering, ChipOffers},
     };
 
     use super::check_chip_offer_expected;

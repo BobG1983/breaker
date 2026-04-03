@@ -53,7 +53,7 @@ pub mod until;
 pub(crate) fn register(app: &mut bevy::prelude::App) {
     use bevy::prelude::*;
 
-    use crate::shared::playing_state::PlayingState;
+    use crate::shared::PlayingState;
 
     bump::register(app);
     perfect_bump::register(app);

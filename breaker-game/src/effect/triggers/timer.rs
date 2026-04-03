@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use super::evaluate::RemoveChainsCommand;
 use crate::{
     effect::{commands::EffectCommandsExt, core::*},
-    shared::playing_state::PlayingState,
+    shared::PlayingState,
 };
 
 fn tick_time_expires(

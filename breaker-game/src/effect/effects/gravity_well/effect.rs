@@ -6,7 +6,7 @@ use rantzsoft_spatial2d::prelude::*;
 use crate::{
     bolt::{components::Bolt, queries::apply_velocity_formula},
     effect::effects::speed_boost::ActiveSpeedBoosts,
-    shared::{CleanupOnNodeExit, playing_state::PlayingState},
+    shared::{CleanupOnNodeExit, PlayingState},
 };
 
 /// Marker for gravity well entities.

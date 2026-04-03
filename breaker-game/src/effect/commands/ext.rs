@@ -291,7 +291,7 @@ use crate::{
     bolt::components::{Bolt, PrimaryBolt},
     breaker::components::{Breaker, PrimaryBreaker},
     cells::components::Cell,
-    wall::components::Wall,
+    walls::components::Wall,
 };
 
 /// Command that resolves an `On` node: queries entities matching the target,
