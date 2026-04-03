@@ -187,7 +187,7 @@ in production code.
 ### TetherChainActive resource cleanup: OnExit(GameState::Playing) is correct (Safe)
 - `cleanup_tether_chain_resource` is registered on `OnExit(GameState::Playing)`.
 - `CleanupOnNodeExit` entities (including all TetherBeamComponent entities) are also
-  despawned on `OnExit(GameState::Playing)` in `screen/plugin.rs`.
+  despawned on `OnExit(GameState::Playing)` in the state cleanup system (previously `screen/plugin.rs` — the screen domain was eliminated in the state lifecycle refactor; cleanup is now in `state/cleanup.rs`).
 - Both resource and beam entities are cleaned up at the same state-exit hook.
   No race condition between resource removal and entity despawn.
 - `reverse()` for chain mode removes `TetherChainActive` and despawns chain beams
@@ -455,3 +455,32 @@ in production code.
 - shield_wall_at_most_one.scenario.ron, shield_wall_reflection.scenario.ron:
   parsed via load_scenario() returning Option — no panic on malformed input.
   SpawnExtraShieldWalls(2) in self-test: count is a small literal (2), no exhaustion risk.
+
+## refactor/state-folder-structure (2026-04-02, commit d2440054)
+
+### include_str path updates — test-only, no new panic surface (Safe)
+- Two existing include_str! test calls updated paths: defaults.difficulty.ron and
+  defaults.highlights.ron. The path change is from 3 levels up to 4 levels up (module moved
+  deeper). No logic change. .expect() is inside #[cfg(test)] functions only.
+  The RON files themselves are unchanged.
+
+### TransitionConfig: out_duration/in_duration division without zero guard (Warning-level)
+- `breaker-game/src/state/transition/system.rs:144`
+  `let progress = 1.0 - (timer.remaining / timer.duration);`
+- `timer.duration` is set from `config.out_duration` / `config.in_duration`, which are
+  `f32` fields in `TransitionDefaults` loaded from RON (or defaulting to 0.5/0.3).
+- The division only runs in the `else` branch (guarded by `timer.remaining > 0.0`), but
+  `timer.duration` is independently set at spawn time from the config value. A RON file
+  setting `out_duration: 0.0` or `in_duration: 0.0` would set `timer.remaining = 0.0` and
+  `timer.duration = 0.0`. On the first tick, `timer.remaining -= dt` goes negative, the
+  `if timer.remaining <= 0.0` branch fires, and the state transition happens immediately.
+  The division at line 144 is never reached — so this is NOT a production panic path.
+  The division is only reachable when remaining > 0.0 AND duration > 0.0 (since remaining
+  was initialized from duration). If duration is changed after spawn to 0.0 (not currently
+  possible), division would produce f32::INFINITY (NaN-free on IEEE 754 with nonzero
+  remaining numerator). Reassessed: Info-level only in practice; worth noting for correctness.
+
+### No new wall/state RON schemas (Safe)
+- walls/ module is a rename from wall/ — WallDefinition schema and WallRegistry behavior
+  are unchanged (carry-forward from wall builder audit 2026-04-02).
+- state/ hierarchy is pure Rust code reorganization. No new asset types or deserializers.

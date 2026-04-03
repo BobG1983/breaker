@@ -8,11 +8,11 @@ The `breaker-game` monolith has 14 domains. The `shared` module is already a fou
 
 - **bolt ↔ breaker**: tight cycle — spawn_bolt reads BreakerRegistry/SelectedBreaker; grade_bump reads BoltImpactBreaker. Cannot split without a shared interface or moving entity markers to breaker-shared.
 - **bolt ↔ effect**: tight cycle — effect effects spawn/modify bolts (spawn_bolts, gravity_well); bolt uses effect component types (BoundEffects, ActiveSpeedBoosts, etc.).
-- **cells ↔ effect**: bidirectional via ShieldActive (effect→cells component) and DamageCell/CellDestroyedAt (cells messages read by effect triggers).
+- **cells ↔ effect**: bidirectional via DamageCell/CellDestroyedAt (cells messages read by effect triggers). Note: `ShieldActive` cross-domain coupling was ELIMINATED in the Shield refactor (2026-04-02) — Shield is now a timed visible floor wall entity; no cross-domain component writes.
 - **Entity marker problem**: Bolt, Breaker, Cell, Wall are used as With<X> query filters across nearly every domain. Moving them to breaker-shared is the prerequisite for any meaningful split.
 - **effect::core types** (RootEffect, BoundEffects, StagedEffects, EffectNode) appear in BoltDefinition, BreakerDefinition, CellTypeDefinition, ChipDefinition — so all four definition-holding domains depend on effect for their own data types.
-- **screen** is a pure consumer (reads from 8+ domains, nothing reads from screen). Natural leaf crate candidate.
-- **fx** is minimally coupled — depends only on shared. Receives from bolt/breaker/run but nothing structural.
+- **screen domain ELIMINATED** (state lifecycle refactor Wave 1, 2026-04-02): screen/ → state/. UI subdomains moved to state/run/node/hud/, state/run/chip_select/, state/menu/. `screen` as "natural leaf crate candidate" is no longer applicable — the domain no longer exists as a unit.
+- **fx** is minimally coupled — depends only on shared. Receives from bolt/breaker/state/run but nothing structural.
 - **input** has zero incoming cross-domain deps. Trivially splittable.
 
 The full analysis is at `docs/todos/detail/game-crate-splitting/research/cross-domain-dependencies.md`.

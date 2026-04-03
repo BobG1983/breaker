@@ -132,3 +132,13 @@ New RON asset: assets/walls/wall.wall.ron (minimal, name-only). No external crat
 No new dependencies added. effect/effects/shield.rs rewritten (same file, no new crates).
 parry.chip.ron field rename Shield(stacks) → Shield(duration: 5.0). No external crates introduced.
 cargo audit baseline: same single warning (paste RUSTSEC-2024-0436). Not re-run (no dep changes).
+
+## refactor/state-folder-structure (2026-04-02) — state module hierarchy restructure
+Single commit (d2440054). Pure file/module restructure: screen/, run/, wall/, ui/ moved under
+state/ hierarchy; wall → walls rename. No new external crates. Cargo.toml unchanged.
+No cargo audit re-run needed (dependency baseline confirmed unchanged by diff inspection).
+No new unsafe blocks. No new production unwrap/expect calls (0 matches in added lines).
+No new RON deserialization sites in production code — only 2 new include_str! uses in
+#[cfg(test)] (defaults.difficulty.ron, defaults.highlights.ron path updates, test-only).
+New Warning: animate_transition/system.rs:144 divides by timer.duration (f32 from RON config)
+with no zero guard. See ron_deserialization_patterns.md for full analysis.

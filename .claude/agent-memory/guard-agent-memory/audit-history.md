@@ -4,6 +4,57 @@ description: Recurring staleness patterns and duplication issues found in agent 
 type: project
 ---
 
+## Full Audit — 2026-04-02 (feature/wall-builder-pattern branch, state lifecycle refactor Wave 1)
+
+**Scope:** All agent memory directories (full audit)
+
+**Context:** feature/wall-builder-pattern. State lifecycle refactor Wave 1 (file restructure) moved/renamed multiple game domains: `screen/` eliminated (cleanup → `state/cleanup.rs`; UI subdomains → `state/run/node/hud/`, `state/run/chip_select/`, `state/menu/`), `run/` → `state/run/`, `wall/` → `walls/` (singular → plural). Shield refactor (2026-04-02) eliminated `ShieldActive` component entirely — Shield is now a timed visible floor wall entity (`ShieldWall` + `ShieldWallTimer`). `effect/effects/shield.rs` split into `effect/effects/shield/` directory module. `dispatch_cell_effects` moved from `cells/systems/` to `state/run/node/systems/`. `dispatch_wall_effects` deleted (inline in `Wall::builder().spawn()`). `dispatch_breaker_effects` deleted (replaced by `spawn_or_reuse_breaker` in prior branch).
+
+**Issues found and fixed (13):**
+
+1. **reviewer-architecture/dispatch_pattern_ownership.md** — Described `dispatch_breaker_effects` in `breaker/systems/`, `dispatch_cell_effects` in `cells/systems/`, `dispatch_wall_effects` in `wall/systems/` — all stale. Fixed: updated to reflect all three as ELIMINATED or moved (`dispatch_cell_effects` → `state/run/node/systems/`).
+
+2. **reviewer-architecture/shield_cross_domain_write.md** — Described `ShieldActive` cross-domain writes by bolt and cells domains; `ShieldActive` no longer exists. Fixed: completely rewritten to document that this exception is ELIMINATED and the mechanism redesigned.
+
+3. **reviewer-performance/wall_builder_spawn_pattern.md** — 5 file paths using `src/wall/` prefix. Fixed: updated all to `src/walls/` and `spawn_walls` to `src/state/run/node/systems/spawn_walls/system.rs`.
+
+4. **reviewer-correctness/bug-patterns.md** — Two `Location:` entries referenced `breaker-game/src/wall/builder/core/terminal.rs`; also `dispatch_wall_effects` described as existing. Fixed: updated both paths to `src/walls/`; noted `dispatch_wall_effects` deleted.
+
+5. **reviewer-file-length/phase4_findings.md** — `effect/effects/shield.rs` (889 lines) still listed as open HIGH. Fixed: moved to SPLIT; updated `wall/registry.rs` MEDIUM item to `walls/registry/core.rs`.
+
+6. **reviewer-file-length/MEMORY.md** — Description still showed shield.rs as open HIGH and old `wall/` path. Fixed: updated description.
+
+7. **guard-security/ron_deserialization_patterns.md** — Referenced `screen/plugin.rs` as where `CleanupOnNodeExit` entities are despawned; `screen/` eliminated. Fixed: updated to `state/cleanup.rs (previously screen/plugin.rs — screen domain eliminated)`.
+
+8. **guard-docs/known-state.md** — `Wall::builder()` in `wall/builder/` — stale path. Fixed: updated to `walls/builder/`.
+
+9. **reviewer-bevy-api/confirmed-patterns.md** — `wall/registry.rs` → `walls/registry/core.rs`; `wall/components.rs` → `walls/components.rs`. Fixed both.
+
+10. **writer-scenarios/pattern_scenario_structure.md** — RON template used stale `invariants:` and `expected_violations:` field names. Fixed: updated to `disallowed_failures:` and `allowed_failures:`; added note about rename.
+
+11. **guard-file-length/split-patterns.md** — `cells/systems/dispatch_cell_effects.rs` path stale (moved to `state/run/node/systems/`). Fixed: updated path with migration note.
+
+12. **researcher-rust-idioms/pattern_declarative_routing.md** — Referenced `advance_node` in `run/plugin.rs:84` (stale path). Fixed: updated to `state/run/plugin.rs` with migration note.
+
+13. **researcher-codebase/project-cross-domain-topology.md** — Referenced `screen` as "pure consumer / natural leaf crate candidate" (domain eliminated); also described `ShieldActive` cross-domain coupling (eliminated). Fixed: updated both entries to reflect current state.
+
+**Files checked and NOT changed (already accurate or historical records):**
+- `guard-security/vetted_dependencies.md` — already has `refactor/state-folder-structure (2026-04-02)` entry documenting the rename; old paths in audit notes are correct for their time
+- `guard-security/known_unsafe_blocks.md` — already has state-folder-structure confirmation entry
+- `guard-docs/phase-log.md` — historical session log; old paths accurate for their time
+
+**No new cross-agent duplication found.**
+**No broken MEMORY.md links found.**
+
+**New staleness patterns detected this audit:**
+- **Domain renames (singular→plural)**: `wall/` → `walls/`. Any file with `wall/` in a path (not `walls/`) is likely stale. Risk files: reviewer-correctness/bug-patterns.md (Location entries), reviewer-performance (spawn pattern files), reviewer-bevy-api/confirmed-patterns.md, guard-file-length/split-patterns.md.
+- **Domain eliminations (screen→state)**: When a top-level domain folder is eliminated and its contents reorganized (screen/ → state/), ALL path references across all agents go stale at once. Risk files: any memory file with `screen/plugin.rs`, `ui/`, `run/plugin.rs`, `run/node/` paths.
+- **ShieldActive elimination**: When a cross-domain component exception is eliminated by architectural redesign, the reviewer-architecture exception doc becomes entirely obsolete. After any refactor redesigning an exception pattern, check reviewer-architecture for stale exception docs.
+- **RON field renames**: When scenario RON field names are renamed (invariants→disallowed_failures, expected_violations→allowed_failures), writer-scenarios RON templates go stale immediately. Check pattern_scenario_structure.md and pattern_invariant_substitution.md after any invariant infrastructure rename.
+- **Shield.rs directory split**: phase4_findings.md HIGH list goes stale when a HIGH file is split as part of a feature branch (not a dedicated refactor/file-splits). After any feature merge that incidentally splits a HIGH item, update phase4_findings immediately.
+
+---
+
 ## Full Audit — 2026-04-02 (feature/breaker-builder-pattern branch, 9 waves of implementation)
 
 **Scope:** All agent memory directories (full audit)
@@ -375,14 +426,21 @@ See [audit-history-archive.md](audit-history-archive.md) for audits prior to 202
 - **InvariantKind variant removals/renames**: When variants are removed or renamed, update: writer-scenarios/pattern_invariant_substitution.md, guard-docs/known-state.md (count), and any runner-scenarios bug files tied to the removed variant.
 - **Inline helper vs registered ECS system**: When a `pub(crate)` system is refactored to a private inline helper (not registered via `add_systems`), researcher-codebase/effect-domain-inventory.md "Runtime systems" column goes stale. Verify after any recalculate_* or similar cleanup.
 - **Evolution RON name renames**: When evolution chip `name:` changes, check runner-scenarios bug files for name-collision bugs — they may be RESOLVED.
+- **Domain renames (singular→plural path renames)**: `wall/` → `walls/`. After any domain path rename, audit: reviewer-correctness/bug-patterns.md (Location entries), reviewer-performance (spawn pattern files), reviewer-bevy-api/confirmed-patterns.md, guard-file-length/split-patterns.md.
+- **Domain eliminations**: When a top-level domain is reorganized (screen/ → state/), ALL path references across all agents go stale. High-risk agents: researcher-codebase (topology files), researcher-rust-idioms (routing pattern examples), guard-security (cleanup entity references), reviewer-architecture (dispatch pattern docs).
+- **Cross-domain exception elimination**: When a known architectural exception (e.g., ShieldActive cross-domain writes) is eliminated by redesign, the reviewer-architecture exception doc becomes obsolete. After any refactor that removes an established cross-domain pattern, check reviewer-architecture for stale exception docs.
+- **RON field renames (scenario infrastructure)**: When scenario RON field names change (invariants→disallowed_failures, expected_violations→allowed_failures), update: writer-scenarios/pattern_scenario_structure.md, writer-scenarios/pattern_invariant_substitution.md, spec-format-tests.md scenario coverage examples.
+- **Feature-branch incidental file splits**: When a HIGH file-length item is split as a side effect of a feature branch (not a dedicated refactor/file-splits), phase4_findings.md HIGH list goes stale at merge time. Check after any feature that touches large effect files.
 
 ## Agents Accumulating Memory Fastest
 
 1. **reviewer-file-length** — Highest staleness risk after large refactors. Phase findings go stale every time a split commit lands.
-2. **researcher-codebase** — Effect domain changes every phase; inventory goes stale.
+2. **researcher-codebase** — Effect domain changes every phase; inventory goes stale. Also accumulates stale domain references (screen/, ShieldActive) after structural refactors.
 3. **reviewer-correctness** — bug-patterns.md OPEN items lag behind fixes; cross-check known-correct-effects.md.
 4. **runner-linting** — lint_state_current.md is point-in-time; description drift is likely.
-5. **reviewer-architecture** — known_gap_cleanup_markers.md tracks open gaps that close over time.
-6. **writer-scenarios** — InvariantKind variant list must be updated whenever variants are added, removed, or renamed.
+5. **reviewer-architecture** — known_gap_cleanup_markers.md tracks open gaps that close over time. Exception docs (dispatch_pattern_ownership, shield_cross_domain_write) go stale when exceptions are eliminated.
+6. **writer-scenarios** — InvariantKind variant list AND RON field names must be updated when variants or infrastructure is renamed.
 7. **runner-scenarios** — Bug files for resolved bugs (name collisions, Effective* state-gate issues) linger as "open" without RESOLVED markers.
 8. **researcher-system-dependencies** — System ordering files go stale when system sets are eliminated or systems become inline helpers.
+9. **reviewer-performance** — Spawn pattern docs with file paths (e.g., wall_builder_spawn_pattern.md) go stale after domain renames.
+10. **guard-security** — CleanupOnNodeExit references (despawn locations) go stale after domain reorganizations.

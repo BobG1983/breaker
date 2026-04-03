@@ -8,5 +8,8 @@
 
 - [Default impl must call private serde-default fns](stable/default_impl_vs_serde_default_fns.md) — BreakerDefinition pattern (call default_* fns); WallDefinition inline is wrong
 
+- [pub(super) vs pub(crate) in systems/mod.rs](stable/pub_super_vs_pub_crate_systems.md) — plain `pub use` for system fns is too wide; use pub(super) or pub(crate) only
+- [color_from_rgb canonical location](stable/color_from_rgb_canonical.md) — lives in shared/color.rs; chip_select/mod.rs has a stale duplicate
+
 ## Session History
 See [ephemeral/](ephemeral/) — not committed.
