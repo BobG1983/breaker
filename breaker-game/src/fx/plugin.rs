@@ -25,7 +25,7 @@ impl Plugin for FxPlugin {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::types::{AppState, GamePhase, RunPhase};
+    use crate::state::types::{AppState, GameState, RunPhase};
 
     #[test]
     fn plugin_builds() {
@@ -33,7 +33,7 @@ mod tests {
             .add_plugins(MinimalPlugins)
             .add_plugins(bevy::state::app::StatesPlugin)
             .init_state::<AppState>()
-            .add_sub_state::<GamePhase>()
+            .add_sub_state::<GameState>()
             .add_sub_state::<RunPhase>()
             .add_sub_state::<NodeState>()
             .add_plugins(FxPlugin)

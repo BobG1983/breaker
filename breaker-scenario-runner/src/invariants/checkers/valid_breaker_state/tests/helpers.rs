@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use breaker::shared::GameState;
+use breaker::state::types::{AppState, GameState};
 
 use super::super::checker::*;
 use crate::invariants::*;
@@ -16,7 +16,8 @@ pub(super) fn test_app_valid_breaker_state() -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .add_plugins(bevy::state::app::StatesPlugin)
-        .init_state::<GameState>()
+        .init_state::<AppState>()
+        .add_sub_state::<GameState>()
         .insert_resource(ViolationLog::default())
         .insert_resource(ScenarioFrame::default())
         .add_systems(FixedUpdate, check_valid_breaker_state);

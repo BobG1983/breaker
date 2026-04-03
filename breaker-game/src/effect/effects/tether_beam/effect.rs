@@ -380,7 +380,7 @@ pub(crate) fn register(app: &mut App) {
             .after(PhysicsSystems::MaintainQuadtree),
     );
     app.add_systems(
-        OnExit(crate::shared::GameState::Playing),
+        OnEnter(crate::state::types::NodeState::Teardown),
         cleanup_tether_chain_resource.run_if(resource_exists::<TetherChainActive>),
     );
 }

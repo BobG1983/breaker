@@ -1,33 +1,25 @@
-//! Top-level game state machine.
+//! Game state — sub-state of [`AppState::Game`].
 
 use bevy::prelude::*;
 
-/// Top-level game state machine.
+use super::AppState;
+
+/// Game state within the application.
 ///
-/// Controls which systems run and which UI is displayed.
-/// Starts in [`GameState::Loading`] and transitions to [`GameState::MainMenu`]
-/// once all assets are loaded.
-#[derive(States, Default, Clone, Copy, PartialEq, Eq, Hash, Debug)]
+/// Sub-state of [`AppState::Game`]. Controls whether the player is in
+/// menus, an active run, or tearing down.
+#[derive(SubStates, Default, Clone, Copy, PartialEq, Eq, Hash, Debug)]
+#[source(AppState = AppState::Game)]
 pub enum GameState {
-    /// Initial state — preload all assets, build registries.
+    /// Registry stuffing and second-phase loading.
     #[default]
     Loading,
-    /// Main menu screen.
-    MainMenu,
-    /// Pre-run setup — breaker and seed selection.
-    RunSetup,
-    /// Active gameplay within a node. See [`PlayingState`] for sub-states.
-    Playing,
-    /// Animated transition out of a completed node (clear animation).
-    TransitionOut,
-    /// Timed chip selection between nodes.
-    ChipSelect,
-    /// Animated transition into the next node (load animation).
-    TransitionIn,
-    /// Run end screen — win or lose.
-    RunEnd,
-    /// Between-run Flux spending and meta-progression.
-    MetaProgression,
+    /// Menu screens (main menu, breaker select, options, meta).
+    Menu,
+    /// Active run — nodes, chip select, run end.
+    Run,
+    /// Game-level teardown (not used in normal flow).
+    Teardown,
 }
 
 #[cfg(test)]

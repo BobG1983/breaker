@@ -31,13 +31,13 @@ mod tests {
     fn plugin_builds() {
         use crate::state::{
             run::chip_select::messages::ChipSelected,
-            types::{AppState, GamePhase, RunPhase},
+            types::{AppState, GameState, RunPhase},
         };
         App::new()
             .add_plugins(MinimalPlugins)
             .add_plugins(bevy::state::app::StatesPlugin)
             .init_state::<AppState>()
-            .add_sub_state::<GamePhase>()
+            .add_sub_state::<GameState>()
             .add_sub_state::<RunPhase>()
             .add_sub_state::<ChipSelectState>()
             // ChipSelected must be registered before ChipsPlugin (normally by UiPlugin)

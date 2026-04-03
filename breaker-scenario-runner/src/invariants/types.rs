@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use breaker::shared::GameState;
+use breaker::state::types::GameState;
 
 /// Statistics collected during a scenario run.
 ///
@@ -12,11 +12,11 @@ pub struct ScenarioStats {
     pub invariant_checks: u32,
     /// Highest [`ScenarioFrame`] value reached.
     pub max_frame: u32,
-    /// Whether [`GameState::Playing`] was entered at least once.
+    /// Whether [`NodeState::Playing`] was entered at least once.
     ///
-    /// Defaults to `false`. Set to `true` by `tag_game_entities` on
-    /// `OnEnter(Playing)`. Invariant checkers are gated on this flag
-    /// to prevent false positives during `GameState::Loading`.
+    /// Defaults to `false`. Set to `true` when `SpawnNodeComplete` fires.
+    /// Invariant checkers are gated on this flag to prevent false positives
+    /// during initial loading states.
     pub entered_playing: bool,
     /// Number of bolt entities that were tagged with [`ScenarioTagBolt`].
     pub bolts_tagged: u32,
@@ -79,6 +79,10 @@ pub struct ScenarioPhysicsFrozen {
 }
 
 /// Tracks the previous [`GameState`] for transition validation.
+///
+/// The valid state transitions checker is now a no-op (transition rules are
+/// validated by unit tests in the game crate), but this resource is retained
+/// so that `debug_setup` can set a forced previous state for self-test scenarios.
 #[derive(Resource, Default)]
 pub struct PreviousGameState(pub Option<GameState>);
 

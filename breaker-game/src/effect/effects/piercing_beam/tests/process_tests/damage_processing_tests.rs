@@ -1,5 +1,5 @@
 use super::super::helpers::*;
-use crate::state::types::{AppState, GamePhase, NodeState, RunPhase};
+use crate::state::types::{AppState, GameState, NodeState, RunPhase};
 
 // ── Behavior 24: process_piercing_beam damages all cells in beam path ──
 
@@ -385,7 +385,7 @@ fn register_wires_process_piercing_beam_system() {
     app.add_plugins(bevy::state::app::StatesPlugin);
     app.add_plugins(RantzPhysics2dPlugin);
     app.init_state::<AppState>();
-    app.add_sub_state::<GamePhase>();
+    app.add_sub_state::<GameState>();
     app.add_sub_state::<RunPhase>();
     app.add_sub_state::<NodeState>();
     app.add_message::<DamageCell>();
@@ -401,8 +401,8 @@ fn register_wires_process_piercing_beam_system() {
         .set(AppState::Game);
     app.update();
     app.world_mut()
-        .resource_mut::<NextState<GamePhase>>()
-        .set(GamePhase::Run);
+        .resource_mut::<NextState<GameState>>()
+        .set(GameState::Run);
     app.update();
     app.world_mut()
         .resource_mut::<NextState<RunPhase>>()

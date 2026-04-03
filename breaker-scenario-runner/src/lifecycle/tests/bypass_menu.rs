@@ -1,7 +1,7 @@
 use super::helpers::*;
 
 // -------------------------------------------------------------------------
-// bypass_menu_to_playing — sets RunSeed from scenario config
+// bypass_menu_to_playing -- sets RunSeed from scenario config
 // -------------------------------------------------------------------------
 
 /// `bypass_menu_to_playing` must set `RunSeed` to `Some(0)` when the
@@ -42,33 +42,54 @@ fn bypass_menu_to_playing_sets_run_seed_from_scenario() {
 }
 
 // -------------------------------------------------------------------------
-// restart_run_on_end — transitions from RunEnd to MainMenu
+// restart_run_on_end -- transitions from RunEnd back through teardown chain
 // -------------------------------------------------------------------------
 
-/// `restart_run_on_end` must set the next state to `MainMenu` so
-/// `bypass_menu_to_playing` can restart the run.
+/// `restart_run_on_end` must set `RunPhase` to Teardown, which triggers
+/// the routing chain back to menus.
 #[test]
-fn restart_run_on_end_transitions_to_main_menu() {
+fn restart_run_on_end_transitions_through_teardown() {
+    use breaker::state::types::RunEndState;
+
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .add_plugins(StatesPlugin)
-        .init_state::<GameState>()
-        .add_systems(OnEnter(GameState::RunEnd), restart_run_on_end);
+        .init_state::<AppState>()
+        .add_sub_state::<GameState>()
+        .add_sub_state::<MenuState>()
+        .add_sub_state::<RunPhase>()
+        .add_sub_state::<NodeState>()
+        .add_sub_state::<ChipSelectState>()
+        .add_sub_state::<RunEndState>()
+        .add_systems(OnEnter(RunEndState::Active), restart_run_on_end);
 
-    // Drive into RunEnd
+    // Navigate to RunEndState::Active
+    app.world_mut()
+        .resource_mut::<NextState<AppState>>()
+        .set(AppState::Game);
+    app.update();
     app.world_mut()
         .resource_mut::<NextState<GameState>>()
-        .set(GameState::RunEnd);
+        .set(GameState::Run);
+    app.update();
+    app.world_mut()
+        .resource_mut::<NextState<RunPhase>>()
+        .set(RunPhase::RunEnd);
+    app.update();
+    // RunEndState defaults to Loading -- need to get to Active
+    app.world_mut()
+        .resource_mut::<NextState<RunEndState>>()
+        .set(RunEndState::Active);
+    // OnEnter(RunEndState::Active) fires and sets RunPhase to Teardown.
     app.update();
 
-    // OnEnter(RunEnd) fires and sets next state to MainMenu.
-    // One more update applies the transition.
+    // One more update to process RunPhase transition
     app.update();
 
-    let state = app.world().resource::<State<GameState>>();
+    let state = app.world().resource::<State<RunPhase>>();
     assert_eq!(
         **state,
-        GameState::MainMenu,
-        "expected restart_run_on_end to transition to MainMenu"
+        RunPhase::Teardown,
+        "expected restart_run_on_end to set RunPhase::Teardown"
     );
 }

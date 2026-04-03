@@ -56,7 +56,7 @@ mod tests {
     use rantzsoft_physics2d::resources::CollisionQuadtree;
 
     use super::*;
-    use crate::state::types::{AppState, GamePhase, RunPhase};
+    use crate::state::types::{AppState, GameState, RunPhase};
 
     #[test]
     fn plugin_builds() {
@@ -64,7 +64,7 @@ mod tests {
             .add_plugins(MinimalPlugins)
             .add_plugins(bevy::state::app::StatesPlugin)
             .init_state::<AppState>()
-            .add_sub_state::<GamePhase>()
+            .add_sub_state::<GameState>()
             .add_sub_state::<RunPhase>()
             .add_sub_state::<NodeState>()
             // CellsPlugin reads BoltImpactCell messages from bolt domain
@@ -94,7 +94,7 @@ mod tests {
         app.add_plugins(MinimalPlugins)
             .add_plugins(bevy::state::app::StatesPlugin)
             .init_state::<AppState>()
-            .add_sub_state::<GamePhase>()
+            .add_sub_state::<GameState>()
             .add_sub_state::<RunPhase>()
             .add_sub_state::<NodeState>()
             .init_resource::<Assets<Mesh>>()
@@ -108,8 +108,8 @@ mod tests {
             .set(AppState::Game);
         app.update();
         app.world_mut()
-            .resource_mut::<NextState<GamePhase>>()
-            .set(GamePhase::Run);
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Run);
         app.update();
         app.world_mut()
             .resource_mut::<NextState<RunPhase>>()

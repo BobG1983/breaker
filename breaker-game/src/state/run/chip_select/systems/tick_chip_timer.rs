@@ -47,13 +47,13 @@ mod tests {
     use bevy::state::app::StatesPlugin;
 
     use super::*;
-    use crate::state::types::{AppState, GamePhase, RunPhase};
+    use crate::state::types::{AppState, GameState, RunPhase};
 
     fn test_app(remaining: f32) -> App {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, StatesPlugin))
             .init_state::<AppState>()
-            .add_sub_state::<GamePhase>()
+            .add_sub_state::<GameState>()
             .add_sub_state::<RunPhase>()
             .add_sub_state::<ChipSelectState>()
             .insert_resource(ChipSelectTimer { remaining })
@@ -150,7 +150,7 @@ mod tests {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, StatesPlugin))
             .init_state::<AppState>()
-            .add_sub_state::<GamePhase>()
+            .add_sub_state::<GameState>()
             .add_sub_state::<RunPhase>()
             .add_sub_state::<ChipSelectState>()
             .insert_resource(ChipSelectTimer { remaining })

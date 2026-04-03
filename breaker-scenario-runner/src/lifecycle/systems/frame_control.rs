@@ -1,7 +1,10 @@
 //! Frame counting, frame limit checking, exit/restart, and game-state mapping.
 
 use bevy::prelude::*;
-use breaker::{shared::GameState, state::run::node::messages::SpawnNodeComplete};
+use breaker::state::{
+    run::node::messages::SpawnNodeComplete,
+    types::{GameState, RunPhase},
+};
 
 use super::types::ScenarioConfig;
 use crate::{
@@ -41,29 +44,33 @@ pub fn exit_on_run_end(mut exits: MessageWriter<AppExit>) {
     exits.write(AppExit::Success);
 }
 
-/// Redirects `RunEnd` back to `MainMenu` (which `bypass_menu_to_playing`
-/// sends to `Playing`). Used when `allow_early_end` is false so the
+/// Redirects `RunEnd` back to `Menu` (which `bypass_menu_to_playing`
+/// sends to `Run`). Used when `allow_early_end` is false so the
 /// scenario runs for the full `max_frames` frame budget.
-pub fn restart_run_on_end(mut next_state: ResMut<NextState<GameState>>) {
-    next_state.set(GameState::MainMenu);
+///
+/// Navigates through the teardown chain: `RunPhase::Teardown` triggers
+/// routing back to `GameState::Menu`, which then fires
+/// `bypass_menu_to_playing` on `OnEnter(MenuState::Main)`.
+pub fn restart_run_on_end(mut next_run_phase: ResMut<NextState<RunPhase>>) {
+    next_run_phase.set(RunPhase::Teardown);
 }
 
 /// Maps a [`ForcedGameState`] to the game crate's [`GameState`].
 ///
 /// Used by [`super::debug_setup::apply_debug_setup`] to translate the RON-serializable enum
-/// into the Bevy state enum.
+/// into the Bevy state enum. Since the game now uses a hierarchical state
+/// machine, many old variants map to `GameState::Run` or `GameState::Menu`.
 #[must_use]
 pub const fn map_forced_game_state(forced: ForcedGameState) -> GameState {
     match forced {
         ForcedGameState::Loading => GameState::Loading,
-        ForcedGameState::MainMenu => GameState::MainMenu,
-        ForcedGameState::RunSetup => GameState::RunSetup,
-        ForcedGameState::Playing => GameState::Playing,
-        ForcedGameState::TransitionOut => GameState::TransitionOut,
-        ForcedGameState::ChipSelect => GameState::ChipSelect,
-        ForcedGameState::TransitionIn => GameState::TransitionIn,
-        ForcedGameState::RunEnd => GameState::RunEnd,
-        ForcedGameState::MetaProgression => GameState::MetaProgression,
+        ForcedGameState::MainMenu | ForcedGameState::MetaProgression => GameState::Menu,
+        ForcedGameState::RunSetup
+        | ForcedGameState::Playing
+        | ForcedGameState::TransitionOut
+        | ForcedGameState::ChipSelect
+        | ForcedGameState::TransitionIn
+        | ForcedGameState::RunEnd => GameState::Run,
     }
 }
 

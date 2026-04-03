@@ -97,7 +97,7 @@ mod tests {
     use super::*;
     use crate::state::{
         cleanup::cleanup_entities,
-        types::{AppState, GamePhase, MenuState},
+        types::{AppState, GameState, MenuState},
     };
 
     fn test_config() -> MainMenuConfig {
@@ -171,7 +171,7 @@ mod tests {
             .init_asset::<Font>()
             .insert_resource(test_config())
             .init_state::<AppState>()
-            .add_sub_state::<GamePhase>()
+            .add_sub_state::<GameState>()
             .add_sub_state::<MenuState>()
             .add_systems(OnEnter(MenuState::Main), spawn_main_menu)
             .add_systems(OnExit(MenuState::Main), cleanup_entities::<MainMenuScreen>);
@@ -182,8 +182,8 @@ mod tests {
             .set(AppState::Game);
         app.update();
         app.world_mut()
-            .resource_mut::<NextState<GamePhase>>()
-            .set(GamePhase::Menu);
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Menu);
         // MenuState defaults to Loading — need one update to enter Menu, then set Main
         app.update();
         app.world_mut()

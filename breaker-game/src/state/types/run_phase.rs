@@ -1,4 +1,4 @@
-//! Run phase state — sub-state of [`GamePhase::Run`].
+//! Run phase state — sub-state of [`GameState::Run`].
 //!
 //! Temporary name `RunPhase` to avoid conflict with the existing `RunState`
 //! resource. Will be renamed to `RunState` in Wave 4e when the resource
@@ -6,14 +6,14 @@
 
 use bevy::prelude::*;
 
-use super::GamePhase;
+use super::GameState;
 
 /// Run lifecycle phase.
 ///
-/// Sub-state of [`GamePhase::Run`]. Controls the progression through
+/// Sub-state of [`GameState::Run`]. Controls the progression through
 /// a single run: loading, setup, nodes, chip select, and run end.
 #[derive(SubStates, Default, Clone, Copy, PartialEq, Eq, Hash, Debug)]
-#[source(GamePhase = GamePhase::Run)]
+#[source(GameState = GameState::Run)]
 pub enum RunPhase {
     /// Run initialization — reset state, generate node sequence, capture seed.
     #[default]
@@ -26,7 +26,7 @@ pub enum RunPhase {
     ChipSelect,
     /// Run end screen — win or lose.
     RunEnd,
-    /// Run teardown — parent `GamePhase` watches for this.
+    /// Run teardown — parent `GameState` watches for this.
     Teardown,
 }
 

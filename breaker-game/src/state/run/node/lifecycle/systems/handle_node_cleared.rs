@@ -52,7 +52,7 @@ mod tests {
     use super::*;
     use crate::state::{
         run::node::{NodeLayout, definition::NodePool},
-        types::{AppState, GamePhase, RunPhase},
+        types::{AppState, GameState, RunPhase},
     };
 
     fn make_layout(name: &str) -> NodeLayout {
@@ -81,7 +81,7 @@ mod tests {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, StatesPlugin))
             .init_state::<AppState>()
-            .add_sub_state::<GamePhase>()
+            .add_sub_state::<GameState>()
             .add_sub_state::<RunPhase>()
             .add_sub_state::<NodeState>()
             .add_message::<NodeCleared>();
@@ -102,8 +102,8 @@ mod tests {
             .set(AppState::Game);
         app.update();
         app.world_mut()
-            .resource_mut::<NextState<GamePhase>>()
-            .set(GamePhase::Run);
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Run);
         app.update();
         app.world_mut()
             .resource_mut::<NextState<RunPhase>>()
@@ -209,7 +209,7 @@ mod tests {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, StatesPlugin))
             .init_state::<AppState>()
-            .add_sub_state::<GamePhase>()
+            .add_sub_state::<GameState>()
             .add_sub_state::<RunPhase>()
             .add_sub_state::<NodeState>()
             .add_message::<NodeCleared>();
@@ -231,8 +231,8 @@ mod tests {
             .set(AppState::Game);
         app.update();
         app.world_mut()
-            .resource_mut::<NextState<GamePhase>>()
-            .set(GamePhase::Run);
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Run);
         app.update();
         app.world_mut()
             .resource_mut::<NextState<RunPhase>>()

@@ -31,7 +31,7 @@ mod tests {
     use bevy::state::app::StatesPlugin;
 
     use super::*;
-    use crate::state::types::{AppState, GamePhase, RunPhase};
+    use crate::state::types::{AppState, GameState, RunPhase};
 
     #[derive(Resource)]
     struct SendRunLost(bool);
@@ -46,7 +46,7 @@ mod tests {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, StatesPlugin))
             .init_state::<AppState>()
-            .add_sub_state::<GamePhase>()
+            .add_sub_state::<GameState>()
             .add_sub_state::<RunPhase>()
             .add_sub_state::<NodeState>()
             .add_message::<RunLost>()
@@ -66,8 +66,8 @@ mod tests {
             .set(AppState::Game);
         app.update();
         app.world_mut()
-            .resource_mut::<NextState<GamePhase>>()
-            .set(GamePhase::Run);
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Run);
         app.update();
         app.world_mut()
             .resource_mut::<NextState<RunPhase>>()

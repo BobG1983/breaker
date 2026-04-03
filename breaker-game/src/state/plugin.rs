@@ -26,7 +26,7 @@ use crate::{
     input::InputDefaults,
     shared::{CleanupOnNodeExit, CleanupOnRunEnd, PlayfieldConfig, PlayfieldDefaults},
     state::types::{
-        AppState, ChipSelectState, GamePhase, MenuState, NodeState, RunEndState, RunPhase,
+        AppState, ChipSelectState, GameState, MenuState, NodeState, RunEndState, RunPhase,
     },
 };
 
@@ -41,7 +41,7 @@ impl Plugin for StatePlugin {
         app.init_resource::<PlayfieldConfig>()
             // Hierarchical state machine
             .init_state::<AppState>()
-            .add_sub_state::<GamePhase>()
+            .add_sub_state::<GameState>()
             .add_sub_state::<MenuState>()
             .add_sub_state::<RunPhase>()
             .add_sub_state::<NodeState>()
@@ -88,7 +88,7 @@ fn defaults_plugin() -> impl Plugin {
 }
 
 /// Registers all pass-through, teardown, and cleanup routing systems.
-fn register_routing(app: &mut App) {
+pub(crate) fn register_routing(app: &mut App) {
     // Pass-through routing
     app.add_systems(OnEnter(MenuState::Loading), routing::menu_loading_to_main)
         .add_systems(OnEnter(RunPhase::Loading), routing::run_loading_to_setup)

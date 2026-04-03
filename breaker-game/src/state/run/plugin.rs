@@ -121,12 +121,12 @@ mod tests {
 
     #[test]
     fn plugin_builds() {
-        use crate::state::types::{AppState, ChipSelectState, GamePhase, RunEndState, RunPhase};
+        use crate::state::types::{AppState, ChipSelectState, GameState, RunEndState, RunPhase};
         App::new()
             .add_plugins(MinimalPlugins)
             .add_plugins(bevy::state::app::StatesPlugin)
             .init_state::<AppState>()
-            .add_sub_state::<GamePhase>()
+            .add_sub_state::<GameState>()
             .add_sub_state::<MenuState>()
             .add_sub_state::<RunPhase>()
             .add_sub_state::<NodeState>()

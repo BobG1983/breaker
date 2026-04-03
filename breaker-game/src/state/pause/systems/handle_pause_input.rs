@@ -69,7 +69,7 @@ mod tests {
     use bevy::state::app::StatesPlugin;
 
     use super::*;
-    use crate::state::types::{AppState, GamePhase};
+    use crate::state::types::{AppState, GameState};
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -77,7 +77,7 @@ mod tests {
             .init_resource::<ButtonInput<KeyCode>>()
             .insert_resource(InputConfig::default())
             .init_state::<AppState>()
-            .add_sub_state::<GamePhase>()
+            .add_sub_state::<GameState>()
             .add_sub_state::<RunPhase>()
             .insert_resource(PauseMenuSelection {
                 selected: PauseMenuItem::Resume,
@@ -89,8 +89,8 @@ mod tests {
             .set(AppState::Game);
         app.update();
         app.world_mut()
-            .resource_mut::<NextState<GamePhase>>()
-            .set(GamePhase::Run);
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Run);
         app.update();
         // Pause time to simulate being paused
         app.world_mut().resource_mut::<Time<Virtual>>().pause();

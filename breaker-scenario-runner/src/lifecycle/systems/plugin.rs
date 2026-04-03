@@ -4,10 +4,12 @@ use bevy::prelude::*;
 use breaker::{
     bolt::BoltSystems,
     breaker::BreakerSystems,
-    shared::GameState,
-    state::run::{
-        chip_select::messages::ChipSelected,
-        node::{messages::SpawnNodeComplete, sets::NodeSystems},
+    state::{
+        run::{
+            chip_select::messages::ChipSelected,
+            node::{messages::SpawnNodeComplete, sets::NodeSystems},
+        },
+        types::{ChipSelectState, MenuState, NodeState, RunEndState},
     },
 };
 
@@ -55,9 +57,12 @@ impl Plugin for ScenarioLifecycle {
         register_scenario_systems(app);
 
         if allow_early_end {
-            app.add_systems(Update, exit_on_run_end.run_if(in_state(GameState::RunEnd)));
+            app.add_systems(
+                Update,
+                exit_on_run_end.run_if(in_state(RunEndState::Active)),
+            );
         } else {
-            app.add_systems(OnEnter(GameState::RunEnd), restart_run_on_end);
+            app.add_systems(OnEnter(RunEndState::Active), restart_run_on_end);
         }
     }
 }
@@ -79,7 +84,7 @@ fn register_scenario_resources(app: &mut App) {
 
 /// Registers all scenario systems: input, lifecycle hooks, invariant checkers.
 fn register_scenario_systems(app: &mut App) {
-    let chip_select_condition = in_state(GameState::ChipSelect)
+    let chip_select_condition = in_state(ChipSelectState::Selecting)
         .and(resource_exists::<breaker::state::run::chip_select::ChipOffers>);
     let playing_gate = |stats: Option<Res<ScenarioStats>>| stats.is_some_and(|s| s.entered_playing);
     // Invariant checkers run in two chained batches after setup. All checkers share
@@ -115,7 +120,7 @@ fn register_scenario_systems(app: &mut App) {
         check_gravity_well_count_reasonable,
     )
         .chain();
-    app.add_systems(OnEnter(GameState::MainMenu), bypass_menu_to_playing)
+    app.add_systems(OnEnter(MenuState::Main), bypass_menu_to_playing)
         .add_systems(
             Update,
             check_chip_offer_expected.run_if(chip_select_condition.clone()),
@@ -125,7 +130,7 @@ fn register_scenario_systems(app: &mut App) {
             auto_skip_chip_select.run_if(chip_select_condition),
         )
         .add_systems(
-            OnEnter(GameState::Playing),
+            OnEnter(NodeState::Loading),
             (
                 seed_initial_chips,
                 init_scenario_input,

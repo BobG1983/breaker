@@ -9,7 +9,7 @@ use super::*;
 use crate::{
     cells::messages::DamageCell,
     shared::{CleanupOnNodeExit, GameRng},
-    state::types::{AppState, GamePhase, NodeState, RunPhase},
+    state::types::{AppState, GameState, NodeState, RunPhase},
 };
 
 // -- Behavior 24: reverse() is a no-op --
@@ -49,7 +49,7 @@ fn register_wires_tick_chain_lightning_system() {
     app.add_plugins(bevy::state::app::StatesPlugin);
     app.add_plugins(RantzPhysics2dPlugin);
     app.init_state::<AppState>();
-    app.add_sub_state::<GamePhase>();
+    app.add_sub_state::<GameState>();
     app.add_sub_state::<RunPhase>();
     app.add_sub_state::<NodeState>();
     app.add_message::<DamageCell>();
@@ -65,8 +65,8 @@ fn register_wires_tick_chain_lightning_system() {
         .set(AppState::Game);
     app.update();
     app.world_mut()
-        .resource_mut::<NextState<GamePhase>>()
-        .set(GamePhase::Run);
+        .resource_mut::<NextState<GameState>>()
+        .set(GameState::Run);
     app.update();
     app.world_mut()
         .resource_mut::<NextState<RunPhase>>()

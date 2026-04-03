@@ -7,7 +7,7 @@
 use bevy::prelude::*;
 use tracing::info;
 
-use super::types::{ChipSelectState, GamePhase, MenuState, NodeState, RunEndState, RunPhase};
+use super::types::{ChipSelectState, GameState, MenuState, NodeState, RunEndState, RunPhase};
 use crate::state::run::resources::{RunOutcome, RunState};
 
 // ──────────────────────────────────────────────────────────────
@@ -103,15 +103,15 @@ pub(crate) fn run_end_teardown_router(mut next: ResMut<NextState<RunPhase>>) {
 }
 
 /// `RunPhase::Teardown` — return to menu.
-pub(crate) fn run_teardown_router(mut next: ResMut<NextState<GamePhase>>) {
+pub(crate) fn run_teardown_router(mut next: ResMut<NextState<GameState>>) {
     info!("Run teardown → Menu");
-    next.set(GamePhase::Menu);
+    next.set(GameState::Menu);
 }
 
 /// `MenuState::Teardown` — start a run.
-pub(crate) fn menu_teardown_router(mut next: ResMut<NextState<GamePhase>>) {
+pub(crate) fn menu_teardown_router(mut next: ResMut<NextState<GameState>>) {
     info!("Menu teardown → Run");
-    next.set(GamePhase::Run);
+    next.set(GameState::Run);
 }
 
 #[cfg(test)]
@@ -127,7 +127,7 @@ mod tests {
         app.add_plugins(MinimalPlugins)
             .add_plugins(StatesPlugin)
             .init_state::<AppState>()
-            .add_sub_state::<GamePhase>()
+            .add_sub_state::<GameState>()
             .add_sub_state::<MenuState>()
             .add_sub_state::<RunPhase>()
             .add_sub_state::<NodeState>()
@@ -145,14 +145,14 @@ mod tests {
         // Register system BEFORE navigation so OnEnter(MenuState::Loading) fires
         app.add_systems(OnEnter(MenuState::Loading), menu_loading_to_main);
 
-        // Navigate to GamePhase::Menu to enable MenuState
+        // Navigate to GameState::Menu to enable MenuState
         app.world_mut()
             .resource_mut::<NextState<AppState>>()
             .set(AppState::Game);
         app.update();
         app.world_mut()
-            .resource_mut::<NextState<GamePhase>>()
-            .set(GamePhase::Menu);
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Menu);
         // MenuState defaults to Loading — OnEnter fires here, sets NextState<MenuState>::Main
         app.update();
         // Extra update to process the NextState set by the OnEnter system
@@ -173,8 +173,8 @@ mod tests {
             .set(AppState::Game);
         app.update();
         app.world_mut()
-            .resource_mut::<NextState<GamePhase>>()
-            .set(GamePhase::Run);
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Run);
         app.update();
         app.world_mut()
             .resource_mut::<NextState<RunPhase>>()
@@ -205,8 +205,8 @@ mod tests {
             .set(AppState::Game);
         app.update();
         app.world_mut()
-            .resource_mut::<NextState<GamePhase>>()
-            .set(GamePhase::Run);
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Run);
         app.update();
         app.world_mut()
             .resource_mut::<NextState<RunPhase>>()
@@ -243,8 +243,8 @@ mod tests {
             .set(AppState::Game);
         app.update();
         app.world_mut()
-            .resource_mut::<NextState<GamePhase>>()
-            .set(GamePhase::Run);
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Run);
         app.update();
         app.world_mut()
             .resource_mut::<NextState<RunPhase>>()
@@ -274,8 +274,8 @@ mod tests {
             .set(AppState::Game);
         app.update();
         app.world_mut()
-            .resource_mut::<NextState<GamePhase>>()
-            .set(GamePhase::Run);
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Run);
         app.update();
         app.world_mut()
             .resource_mut::<NextState<RunPhase>>()
@@ -305,8 +305,8 @@ mod tests {
             .set(AppState::Game);
         app.update();
         app.world_mut()
-            .resource_mut::<NextState<GamePhase>>()
-            .set(GamePhase::Run);
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Run);
         app.update();
         app.world_mut()
             .resource_mut::<NextState<RunPhase>>()
@@ -336,8 +336,8 @@ mod tests {
             .set(AppState::Game);
         app.update();
         app.world_mut()
-            .resource_mut::<NextState<GamePhase>>()
-            .set(GamePhase::Run);
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Run);
         app.update();
         app.world_mut()
             .resource_mut::<NextState<RunPhase>>()
@@ -368,8 +368,8 @@ mod tests {
             .set(AppState::Game);
         app.update();
         app.world_mut()
-            .resource_mut::<NextState<GamePhase>>()
-            .set(GamePhase::Run);
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Run);
         app.update();
         app.world_mut()
             .resource_mut::<NextState<RunPhase>>()
@@ -397,8 +397,8 @@ mod tests {
             .set(AppState::Game);
         app.update();
         app.world_mut()
-            .resource_mut::<NextState<GamePhase>>()
-            .set(GamePhase::Run);
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Run);
         app.update();
         app.world_mut()
             .resource_mut::<NextState<RunPhase>>()
@@ -426,19 +426,19 @@ mod tests {
             .set(AppState::Game);
         app.update();
         app.world_mut()
-            .resource_mut::<NextState<GamePhase>>()
-            .set(GamePhase::Menu);
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Menu);
         app.update();
         app.world_mut()
             .resource_mut::<NextState<MenuState>>()
             .set(MenuState::Teardown);
-        // OnEnter(Teardown) fires here, sets NextState<GamePhase>::Run
+        // OnEnter(Teardown) fires here, sets NextState<GameState>::Run
         app.update();
         // Extra update to process the NextState set by the OnEnter system
         app.update();
 
-        let state = app.world().resource::<State<GamePhase>>();
-        assert_eq!(**state, GamePhase::Run);
+        let state = app.world().resource::<State<GameState>>();
+        assert_eq!(**state, GameState::Run);
     }
 
     #[test]
@@ -451,18 +451,201 @@ mod tests {
             .set(AppState::Game);
         app.update();
         app.world_mut()
-            .resource_mut::<NextState<GamePhase>>()
-            .set(GamePhase::Run);
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Run);
         app.update();
         app.world_mut()
             .resource_mut::<NextState<RunPhase>>()
             .set(RunPhase::Teardown);
-        // OnEnter(Teardown) fires here, sets NextState<GamePhase>::Menu
+        // OnEnter(Teardown) fires here, sets NextState<GameState>::Menu
         app.update();
         // Extra update to process the NextState set by the OnEnter system
         app.update();
 
-        let state = app.world().resource::<State<GamePhase>>();
-        assert_eq!(**state, GamePhase::Menu);
+        let state = app.world().resource::<State<GameState>>();
+        assert_eq!(**state, GameState::Menu);
+    }
+
+    // ── Chain integration tests ──────────────────────────────
+
+    /// Helper: create an app with ALL routing systems registered.
+    fn chain_test_app() -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_plugins(StatesPlugin)
+            .init_state::<AppState>()
+            .add_sub_state::<GameState>()
+            .add_sub_state::<MenuState>()
+            .add_sub_state::<RunPhase>()
+            .add_sub_state::<NodeState>()
+            .add_sub_state::<ChipSelectState>()
+            .add_sub_state::<RunEndState>()
+            .init_resource::<RunState>();
+        crate::state::plugin::register_routing(&mut app);
+        app
+    }
+
+    /// Navigate through `AppState` → `GameState` → `RunPhase` → `NodeState`.
+    fn navigate_to_node_playing(app: &mut App) {
+        app.world_mut()
+            .resource_mut::<NextState<AppState>>()
+            .set(AppState::Game);
+        app.update();
+        // GameState defaults to Loading → pass-through does NOT run because
+        // we haven't navigated to GameState::Menu yet. Set it manually.
+        app.world_mut()
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Run);
+        app.update();
+        // RunPhase defaults to Loading → pass-through to Setup
+        // We need to be at RunPhase::Node for NodeState to exist
+        app.world_mut()
+            .resource_mut::<NextState<RunPhase>>()
+            .set(RunPhase::Node);
+        app.update();
+        // NodeState defaults to Loading → set AnimateIn, pass-through fires
+        app.world_mut()
+            .resource_mut::<NextState<NodeState>>()
+            .set(NodeState::AnimateIn);
+        app.update();
+        // AnimateIn pass-through → Playing
+        app.update();
+    }
+
+    #[test]
+    fn chain_node_cleared_in_progress_routes_to_chip_select_selecting() {
+        let mut app = chain_test_app();
+        navigate_to_node_playing(&mut app);
+
+        // Verify we're at NodeState::Playing
+        assert_eq!(
+            **app.world().resource::<State<NodeState>>(),
+            NodeState::Playing
+        );
+
+        // Simulate node cleared (outcome stays InProgress)
+        app.world_mut()
+            .resource_mut::<NextState<NodeState>>()
+            .set(NodeState::AnimateOut);
+        // AnimateOut → Teardown (pass-through)
+        app.update();
+        app.update();
+        // Teardown router: InProgress → ChipSelect
+        app.update();
+        // ChipSelect Loading → AnimateIn → Selecting (pass-throughs)
+        app.update();
+        app.update();
+        app.update();
+
+        assert_eq!(
+            **app.world().resource::<State<ChipSelectState>>(),
+            ChipSelectState::Selecting,
+            "node cleared (InProgress) should route through to ChipSelectState::Selecting"
+        );
+    }
+
+    #[test]
+    fn chain_node_won_routes_to_run_end_active() {
+        let mut app = chain_test_app();
+        navigate_to_node_playing(&mut app);
+
+        // Set outcome to Won
+        app.world_mut().resource_mut::<RunState>().outcome = RunOutcome::Won;
+
+        app.world_mut()
+            .resource_mut::<NextState<NodeState>>()
+            .set(NodeState::AnimateOut);
+        // AnimateOut → Teardown → RunEnd (via router)
+        // RunEnd Loading → AnimateIn → Active (pass-throughs)
+        for _ in 0..8 {
+            app.update();
+        }
+
+        assert_eq!(
+            **app.world().resource::<State<RunEndState>>(),
+            RunEndState::Active,
+            "node won should route through to RunEndState::Active"
+        );
+    }
+
+    #[test]
+    fn chain_chip_select_teardown_routes_back_to_node_playing() {
+        let mut app = chain_test_app();
+        navigate_to_node_playing(&mut app);
+
+        // Go through chip select first
+        app.world_mut()
+            .resource_mut::<NextState<NodeState>>()
+            .set(NodeState::AnimateOut);
+        for _ in 0..8 {
+            app.update();
+        }
+        assert_eq!(
+            **app.world().resource::<State<ChipSelectState>>(),
+            ChipSelectState::Selecting
+        );
+
+        // Player selects chip → AnimateOut → Teardown → RunPhase::Node
+        app.world_mut()
+            .resource_mut::<NextState<ChipSelectState>>()
+            .set(ChipSelectState::AnimateOut);
+        // Need enough updates for: AnimateOut→Teardown, Teardown→RunPhase::Node,
+        // Node activates NodeState::Loading, Loading(no pass-through)→AnimateIn→Playing
+        // NodeState::Loading has no pass-through (setup systems run there in prod).
+        // So we manually advance NodeState::Loading → AnimateIn to simulate setup complete.
+        for _ in 0..6 {
+            app.update();
+        }
+        // NodeState should be at Loading (setup systems run here in production)
+        // Simulate check_spawn_complete firing → AnimateIn
+        app.world_mut()
+            .resource_mut::<NextState<NodeState>>()
+            .set(NodeState::AnimateIn);
+        app.update();
+        // AnimateIn pass-through → Playing
+        app.update();
+
+        assert_eq!(
+            **app.world().resource::<State<NodeState>>(),
+            NodeState::Playing,
+            "chip select teardown should route back to NodeState::Playing (after setup)"
+        );
+    }
+
+    #[test]
+    fn chain_menu_teardown_routes_to_run_phase_loading() {
+        let mut app = chain_test_app();
+        app.world_mut()
+            .resource_mut::<NextState<AppState>>()
+            .set(AppState::Game);
+        app.update();
+        // GameState defaults to Loading → but no pass-through for GameState::Loading
+        // So we navigate to Menu manually
+        app.world_mut()
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Menu);
+        app.update();
+        // MenuState::Loading → Main (pass-through)
+        app.update();
+
+        assert_eq!(
+            **app.world().resource::<State<MenuState>>(),
+            MenuState::Main
+        );
+
+        // Simulate "Start Game" → MenuState::Teardown
+        app.world_mut()
+            .resource_mut::<NextState<MenuState>>()
+            .set(MenuState::Teardown);
+        for _ in 0..4 {
+            app.update();
+        }
+
+        // Teardown router sets GameState::Run → RunPhase starts at Loading
+        assert_eq!(
+            **app.world().resource::<State<GameState>>(),
+            GameState::Run,
+            "menu teardown should route to GameState::Run"
+        );
     }
 }

@@ -4,7 +4,7 @@
 use bevy::{prelude::*, state::app::StatesPlugin};
 
 use super::super::effect::*;
-use crate::state::types::{AppState, GamePhase, NodeState, RunPhase};
+use crate::state::types::{AppState, GameState, NodeState, RunPhase};
 
 // -- Behavior 21: register() wires reset system for OnEnter(NodeState::Playing) --
 
@@ -13,7 +13,7 @@ fn test_app_with_reset() -> App {
     app.add_plugins(MinimalPlugins);
     app.add_plugins(StatesPlugin);
     app.init_state::<AppState>();
-    app.add_sub_state::<GamePhase>();
+    app.add_sub_state::<GameState>();
     app.add_sub_state::<RunPhase>();
     app.add_sub_state::<NodeState>();
     register(&mut app);
@@ -26,8 +26,8 @@ fn enter_playing(app: &mut App) {
         .set(AppState::Game);
     app.update();
     app.world_mut()
-        .resource_mut::<NextState<GamePhase>>()
-        .set(GamePhase::Run);
+        .resource_mut::<NextState<GameState>>()
+        .set(GameState::Run);
     app.update();
     app.world_mut()
         .resource_mut::<NextState<RunPhase>>()

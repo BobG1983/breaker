@@ -3,7 +3,7 @@
 use super::super::helpers::*;
 
 // -------------------------------------------------------------------------
-// apply_debug_frame_mutations — MoveBolt at matching frame
+// apply_debug_frame_mutations -- MoveBolt at matching frame
 // -------------------------------------------------------------------------
 
 /// When `frame_mutations` has `MoveBolt(999.0, 999.0)` at frame 5 and
@@ -50,14 +50,13 @@ fn apply_debug_frame_mutations_move_bolt_at_matching_frame() {
 }
 
 // -------------------------------------------------------------------------
-// apply_debug_frame_mutations — TogglePause sets NextState to Paused
+// apply_debug_frame_mutations -- TogglePause pauses virtual time
 // -------------------------------------------------------------------------
 
 /// When `frame_mutations` has `TogglePause` at frame 3, the current frame
-/// is 3, and the game is in `PlayingState::Active`, the system must set
-/// `NextState<PlayingState>` to `Paused`.
+/// is 3, and the game is not paused, the system must pause `Time<Virtual>`.
 #[test]
-fn apply_debug_frame_mutations_toggle_pause_sets_paused() {
+fn apply_debug_frame_mutations_toggle_pause_pauses_virtual_time() {
     let definition = ScenarioDefinition {
         breaker: "Aegis".to_owned(),
         layout: "Corridor".to_owned(),
@@ -73,27 +72,21 @@ fn apply_debug_frame_mutations_toggle_pause_sets_paused() {
 
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
-        .add_plugins(StatesPlugin)
-        .init_state::<GameState>()
-        .add_sub_state::<PlayingState>()
         .insert_resource(ScenarioConfig { definition })
         .insert_resource(ScenarioFrame(3))
         .add_systems(Update, apply_debug_frame_mutations);
 
-    // Drive into GameState::Playing so PlayingState becomes active.
-    // Single update: state transition activates PlayingState, then the mutation
-    // system runs (frame=3 matches) and sets NextState<PlayingState> to Paused.
-    // A second update would process that transition, then the system would toggle
-    // back to Active (because TogglePause runs again at the same frame).
-    app.world_mut()
-        .resource_mut::<NextState<GameState>>()
-        .set(GameState::Playing);
+    // Verify not paused initially
+    assert!(
+        !app.world().resource::<Time<Virtual>>().is_paused(),
+        "Time<Virtual> should not be paused initially"
+    );
+
     app.update();
 
-    // Check that NextState<PlayingState> is set to Paused
-    let next = app.world().resource::<NextState<PlayingState>>();
+    // Check that Time<Virtual> is now paused
     assert!(
-        matches!(next, NextState::Pending(PlayingState::Paused)),
-        "expected NextState::Pending(Paused), got: {next:?}"
+        app.world().resource::<Time<Virtual>>().is_paused(),
+        "expected Time<Virtual> to be paused after TogglePause"
     );
 }

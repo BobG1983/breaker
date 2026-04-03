@@ -87,7 +87,7 @@ mod tests {
     use bevy::{ecs::message::Messages, state::app::StatesPlugin};
 
     use super::*;
-    use crate::state::types::{AppState, GamePhase};
+    use crate::state::types::{AppState, GameState};
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -95,7 +95,7 @@ mod tests {
             .init_resource::<ButtonInput<KeyCode>>()
             .insert_resource(InputConfig::default())
             .init_state::<AppState>()
-            .add_sub_state::<GamePhase>()
+            .add_sub_state::<GameState>()
             .add_sub_state::<MenuState>()
             .add_message::<AppExit>()
             .insert_resource(MainMenuSelection {
@@ -108,8 +108,8 @@ mod tests {
             .set(AppState::Game);
         app.update();
         app.world_mut()
-            .resource_mut::<NextState<GamePhase>>()
-            .set(GamePhase::Menu);
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Menu);
         app.update();
         app
     }

@@ -21,7 +21,7 @@ use crate::{
 /// Finds all untagged [`Breaker`] entities and inserts [`ScenarioTagBreaker`].
 /// Finds all untagged [`Cell`] entities and inserts [`ScenarioTagCell`].
 /// Finds all untagged [`Wall`] entities and inserts [`ScenarioTagWall`].
-/// Runs in `OnEnter(GameState::Playing)` before [`super::debug_setup::apply_debug_setup`].
+/// Runs in `OnEnter(NodeState::Loading)` before [`super::debug_setup::apply_debug_setup`].
 pub fn tag_game_entities(
     bolt_query: Query<Entity, (With<Bolt>, Without<ScenarioTagBolt>)>,
     breaker_query: Query<Entity, (With<Breaker>, Without<ScenarioTagBreaker>)>,

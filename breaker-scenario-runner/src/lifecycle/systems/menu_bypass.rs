@@ -5,11 +5,14 @@ use breaker::{
     breaker::{BreakerDefinition, BreakerRegistry, SelectedBreaker},
     chips::{ChipCatalog, inventory::ChipInventory},
     effect::{EffectNode, RootEffect, Target},
-    shared::{GameState, RunSeed},
-    state::run::{
-        NodeLayoutRegistry,
-        chip_select::messages::ChipSelected,
-        node::{ScenarioLayoutOverride, definition::NodePool},
+    shared::RunSeed,
+    state::{
+        run::{
+            NodeLayoutRegistry,
+            chip_select::messages::ChipSelected,
+            node::{ScenarioLayoutOverride, definition::NodePool},
+        },
+        types::{ChipSelectState, MenuState},
     },
 };
 
@@ -34,15 +37,19 @@ pub struct BypassExtras<'w, 's> {
     chip_index: ResMut<'w, ChipSelectionIndex>,
 }
 
-/// Sets the breaker and layout override, then immediately enters `Playing`.
+/// Sets the breaker and layout override, then immediately transitions
+/// through the state hierarchy toward `NodeState::Playing`.
 ///
 /// This bypasses `RunSetup` entirely -- the scenario controls which breaker
 /// and layout are used without any user interaction.
+///
+/// Navigates: `MenuState::Main` → `MenuState::Teardown` (the game's
+/// teardown routing then advances to `GameState::Run` → `RunPhase::Node`).
 pub fn bypass_menu_to_playing(
     config: Res<ScenarioConfig>,
     mut selected: ResMut<SelectedBreaker>,
     mut layout_override: ResMut<ScenarioLayoutOverride>,
-    mut next_state: ResMut<NextState<GameState>>,
+    mut next_menu: ResMut<NextState<MenuState>>,
     mut run_seed: ResMut<RunSeed>,
     mut extras: BypassExtras,
 ) {
@@ -81,12 +88,12 @@ pub fn bypass_menu_to_playing(
 
     // Scenarios always use deterministic seed (default 0 when not specified)
     run_seed.0 = Some(config.definition.seed.unwrap_or(0));
-    // initial_chips are seeded by `seed_initial_chips` on OnEnter(Playing),
-    // AFTER reset_run_state clears the inventory on OnExit(MainMenu).
+    // initial_chips are seeded by `seed_initial_chips` on OnEnter(NodeState::Loading),
+    // AFTER reset_run_state clears the inventory on OnExit(MenuState).
 
     // Dispatch initial_effects to the correct target's pending resource.
     // All targets use deferred pending resources because no game entities
-    // exist when this system runs (OnEnter(MainMenu)).
+    // exist when this system runs (OnEnter(MenuState::Main)).
     if let Some(ref effects) = config.definition.initial_effects {
         let mut bolt_entries: Vec<(String, EffectNode)> = Vec::new();
         let mut breaker_entries: Vec<(String, EffectNode)> = Vec::new();
@@ -131,20 +138,22 @@ pub fn bypass_menu_to_playing(
         }
     }
 
-    next_state.set(GameState::Playing);
+    // Transition through the hierarchy: MenuState::Teardown triggers
+    // the game's menu_teardown_router → GameState::Run → RunPhase::Node
+    next_menu.set(MenuState::Teardown);
 }
 
-/// Transitions immediately to `TransitionIn`, skipping chip selection UI.
+/// Transitions immediately to `ChipSelectState::Teardown`, skipping chip selection UI.
 ///
 /// When `chip_selections` is configured, writes the appropriate [`ChipSelected`]
 /// message before transitioning.
 pub fn auto_skip_chip_select(
-    mut next_state: ResMut<NextState<GameState>>,
+    mut next_chip: ResMut<NextState<ChipSelectState>>,
     config: Res<ScenarioConfig>,
     mut index: ResMut<ChipSelectionIndex>,
     mut chip_writer: MessageWriter<ChipSelected>,
 ) {
-    info!("auto_skip_chip_select: transitioning ChipSelect -> TransitionIn");
+    info!("auto_skip_chip_select: transitioning ChipSelect -> Teardown");
     if let Some(ref selections) = config.definition.chip_selections
         && index.0 < selections.len()
     {
@@ -153,13 +162,15 @@ pub fn auto_skip_chip_select(
         });
         index.0 += 1;
     }
-    next_state.set(GameState::TransitionIn);
+    // ChipSelectState::Teardown triggers the game's chip_select_teardown_router
+    // → RunPhase::Node → next node.
+    next_chip.set(ChipSelectState::Teardown);
 }
 
 /// Seeds `initial_chips` into [`ChipInventory`] from the [`ChipCatalog`].
 ///
-/// Runs on `OnEnter(Playing)` -- after `reset_run_state` has cleared the
-/// inventory on `OnExit(MainMenu)`. This ensures the chips survive the
+/// Runs on `OnEnter(NodeState::Loading)` -- after `reset_run_state` has cleared the
+/// inventory on `OnExit(MenuState)`. This ensures the chips survive the
 /// reset and are present when `generate_chip_offerings` checks eligibility.
 pub fn seed_initial_chips(
     config: Res<ScenarioConfig>,

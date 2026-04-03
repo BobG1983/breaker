@@ -7,7 +7,7 @@ use crate::{
     effect::{BoundEffects, StagedEffects},
     state::{
         run::chip_select::messages::ChipSelected,
-        types::{AppState, ChipSelectState, GamePhase, RunPhase},
+        types::{AppState, ChipSelectState, GameState, RunPhase},
     },
 };
 
@@ -28,7 +28,7 @@ pub(super) fn send_chip_selections(
 /// Build a minimal test app wired for `dispatch_chip_effects`.
 ///
 /// - `MinimalPlugins` + `StatesPlugin`
-/// - New state hierarchy registered (`AppState` -> `GamePhase` -> `RunPhase` -> `ChipSelectState`)
+/// - New state hierarchy registered (`AppState` -> `GameState` -> `RunPhase` -> `ChipSelectState`)
 /// - Navigated to `ChipSelectState::Selecting`
 /// - `ChipSelected` message registered
 /// - `ChipInventory` default resource
@@ -42,7 +42,7 @@ pub(super) fn test_app() -> App {
     app.add_plugins(MinimalPlugins)
         .add_plugins(bevy::state::app::StatesPlugin)
         .init_state::<AppState>()
-        .add_sub_state::<GamePhase>()
+        .add_sub_state::<GameState>()
         .add_sub_state::<RunPhase>()
         .add_sub_state::<ChipSelectState>()
         .add_message::<ChipSelected>()
@@ -66,8 +66,8 @@ pub(super) fn test_app() -> App {
         .set(AppState::Game);
     app.update();
     app.world_mut()
-        .resource_mut::<NextState<GamePhase>>()
-        .set(GamePhase::Run);
+        .resource_mut::<NextState<GameState>>()
+        .set(GameState::Run);
     app.update();
     app.world_mut()
         .resource_mut::<NextState<RunPhase>>()

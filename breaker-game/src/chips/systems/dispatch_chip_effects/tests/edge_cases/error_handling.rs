@@ -13,14 +13,14 @@ use crate::{
 
 /// Navigate a test app to `ChipSelectState::Selecting` through the full hierarchy.
 fn navigate_to_chip_select(app: &mut App) {
-    use crate::state::types::{AppState, ChipSelectState, GamePhase, RunPhase};
+    use crate::state::types::{AppState, ChipSelectState, GameState, RunPhase};
     app.world_mut()
         .resource_mut::<NextState<AppState>>()
         .set(AppState::Game);
     app.update();
     app.world_mut()
-        .resource_mut::<NextState<GamePhase>>()
-        .set(GamePhase::Run);
+        .resource_mut::<NextState<GameState>>()
+        .set(GameState::Run);
     app.update();
     app.world_mut()
         .resource_mut::<NextState<RunPhase>>()
@@ -80,7 +80,7 @@ fn missing_chip_catalog_resource_does_not_panic() {
         chips::systems::dispatch_chip_effects::dispatch_chip_effects,
         state::{
             run::chip_select::messages::ChipSelected,
-            types::{AppState, ChipSelectState, GamePhase, RunPhase},
+            types::{AppState, ChipSelectState, GameState, RunPhase},
         },
     };
 
@@ -112,7 +112,7 @@ fn missing_chip_catalog_resource_does_not_panic() {
     app.add_plugins(MinimalPlugins)
         .add_plugins(bevy::state::app::StatesPlugin)
         .init_state::<AppState>()
-        .add_sub_state::<GamePhase>()
+        .add_sub_state::<GameState>()
         .add_sub_state::<RunPhase>()
         .add_sub_state::<ChipSelectState>()
         .add_message::<ChipSelected>()
@@ -132,8 +132,8 @@ fn missing_chip_catalog_resource_does_not_panic() {
         .set(AppState::Game);
     app.update();
     app.world_mut()
-        .resource_mut::<NextState<GamePhase>>()
-        .set(GamePhase::Run);
+        .resource_mut::<NextState<GameState>>()
+        .set(GameState::Run);
     app.update();
     app.world_mut()
         .resource_mut::<NextState<RunPhase>>()
@@ -185,7 +185,7 @@ fn missing_chip_inventory_resource_does_not_panic() {
         chips::systems::dispatch_chip_effects::dispatch_chip_effects,
         state::{
             run::chip_select::messages::ChipSelected,
-            types::{AppState, ChipSelectState, GamePhase, RunPhase},
+            types::{AppState, ChipSelectState, GameState, RunPhase},
         },
     };
 
@@ -217,7 +217,7 @@ fn missing_chip_inventory_resource_does_not_panic() {
     app.add_plugins(MinimalPlugins)
         .add_plugins(bevy::state::app::StatesPlugin)
         .init_state::<AppState>()
-        .add_sub_state::<GamePhase>()
+        .add_sub_state::<GameState>()
         .add_sub_state::<RunPhase>()
         .add_sub_state::<ChipSelectState>()
         .add_message::<ChipSelected>()
@@ -345,7 +345,7 @@ fn both_catalog_and_inventory_absent_does_not_panic() {
         chips::systems::dispatch_chip_effects::dispatch_chip_effects,
         state::{
             run::chip_select::messages::ChipSelected,
-            types::{AppState, ChipSelectState, GamePhase, RunPhase},
+            types::{AppState, ChipSelectState, GameState, RunPhase},
         },
     };
 
@@ -377,7 +377,7 @@ fn both_catalog_and_inventory_absent_does_not_panic() {
     app.add_plugins(MinimalPlugins)
         .add_plugins(bevy::state::app::StatesPlugin)
         .init_state::<AppState>()
-        .add_sub_state::<GamePhase>()
+        .add_sub_state::<GameState>()
         .add_sub_state::<RunPhase>()
         .add_sub_state::<ChipSelectState>()
         .add_message::<ChipSelected>()
@@ -396,8 +396,8 @@ fn both_catalog_and_inventory_absent_does_not_panic() {
         .set(AppState::Game);
     app.update();
     app.world_mut()
-        .resource_mut::<NextState<GamePhase>>()
-        .set(GamePhase::Run);
+        .resource_mut::<NextState<GameState>>()
+        .set(GameState::Run);
     app.update();
     app.world_mut()
         .resource_mut::<NextState<RunPhase>>()

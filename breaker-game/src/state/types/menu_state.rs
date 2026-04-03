@@ -1,14 +1,14 @@
-//! Menu state — sub-state of [`GamePhase::Menu`].
+//! Menu state — sub-state of [`GameState::Menu`].
 
 use bevy::prelude::*;
 
-use super::GamePhase;
+use super::GameState;
 
 /// Menu navigation state.
 ///
-/// Sub-state of [`GamePhase::Menu`]. Controls which menu screen is active.
+/// Sub-state of [`GameState::Menu`]. Controls which menu screen is active.
 #[derive(SubStates, Default, Clone, Copy, PartialEq, Eq, Hash, Debug)]
-#[source(GamePhase = GamePhase::Menu)]
+#[source(GameState = GameState::Menu)]
 pub enum MenuState {
     /// Menu loading (pass-through).
     #[default]
@@ -21,7 +21,7 @@ pub enum MenuState {
     Options,
     /// Meta-progression / Flux spending screen (future).
     Meta,
-    /// Menu teardown — parent `GamePhase` watches for this.
+    /// Menu teardown — parent `GameState` watches for this.
     Teardown,
 }
 

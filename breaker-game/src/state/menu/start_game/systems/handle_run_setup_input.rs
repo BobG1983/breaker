@@ -82,7 +82,7 @@ mod tests {
     use super::*;
     use crate::{
         breaker::definition::BreakerDefinition,
-        state::types::{AppState, GamePhase},
+        state::types::{AppState, GameState},
     };
 
     fn make_breaker(name: &str) -> BreakerDefinition {
@@ -106,7 +106,7 @@ mod tests {
             .init_resource::<ButtonInput<KeyCode>>()
             .insert_resource(InputConfig::default())
             .init_state::<AppState>()
-            .add_sub_state::<GamePhase>()
+            .add_sub_state::<GameState>()
             .add_sub_state::<MenuState>()
             .insert_resource(SelectedBreaker::default())
             .init_resource::<RunSeed>()
@@ -131,8 +131,8 @@ mod tests {
             .set(AppState::Game);
         app.update();
         app.world_mut()
-            .resource_mut::<NextState<GamePhase>>()
-            .set(GamePhase::Menu);
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Menu);
         app.update();
         app
     }

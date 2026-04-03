@@ -100,7 +100,7 @@ pub fn apply_debug_setup(
 ///
 /// Runs once in `FixedUpdate` after
 /// [`super::entity_tagging::tag_game_entities`] to catch entities that were not yet spawned when the
-/// `OnEnter(GameState::Playing)` version of `apply_debug_setup` ran.
+/// `OnEnter(NodeState::Loading)` version of `apply_debug_setup` ran.
 ///
 /// Under heavy parallel I/O contention (45+ scenarios loading simultaneously),
 /// the `OnEnter` schedule can execute `apply_debug_setup` before spawn systems

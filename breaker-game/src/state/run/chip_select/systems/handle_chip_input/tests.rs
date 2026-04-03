@@ -8,7 +8,7 @@ use crate::{
     effect::{EffectKind, EffectNode},
     state::{
         run::chip_select::resources::ChipOffering,
-        types::{AppState, GamePhase, RunPhase},
+        types::{AppState, GameState, RunPhase},
     },
 };
 
@@ -44,7 +44,7 @@ fn test_app_with_offers(offers: ChipOffers) -> App {
         .init_resource::<ButtonInput<KeyCode>>()
         .insert_resource(InputConfig::default())
         .init_state::<AppState>()
-        .add_sub_state::<GamePhase>()
+        .add_sub_state::<GameState>()
         .add_sub_state::<RunPhase>()
         .add_sub_state::<ChipSelectState>()
         .insert_resource(ChipSelectSelection { index: 0 })
