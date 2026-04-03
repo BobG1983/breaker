@@ -4,8 +4,8 @@ description: Crate versions at last audit (2026-04-02) — diff against this on 
 type: project
 ---
 
-Audit date: 2026-04-02
-Branch: develop (post-merge of feature/breaker-builder-pattern)
+Audit date: 2026-04-02 (updated post-Shield-refactor / test-helper-migration)
+Branch: develop
 
 ## Direct Dependencies
 
@@ -72,9 +72,9 @@ Branch: develop (post-merge of feature/breaker-builder-pattern)
 - itertools v0.13.0 + v0.14.0 (dual — known wontfix)
 
 ## Changes since prior audit (2026-04-02 feature/breaker-builder-pattern)
-- Branch: develop — wall builder feature. No new direct dependencies added.
+- Shield refactor + test helper migration: No new direct dependencies added.
 - Cargo.toml files: UNCHANGED from prior audit.
-- cargo-machete: CLEAN (no unused deps)
+- cargo-machete: CLEAN (no unused deps — confirmed post-Shield-refactor)
 - cargo outdated -R: same outdated list as prior audit (rand 0.9→0.10, ron 0.12.0→0.12.1)
 - Transitive dups: consistent with prior audit — all known wontfix entries
 - paste advisory (RUSTSEC-2024-0436): not showing in cargo tree -d (not a duplicate, transitive only)

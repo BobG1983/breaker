@@ -82,3 +82,8 @@ New files: wall/builder/core/{types,transitions,terminal}.rs — pure typestate 
 wall/definition.rs, wall/registry.rs, wall/components.rs, wall/plugin.rs,
 wall/systems/spawn_walls/system.rs, effect/effects/second_wind/system.rs — no unsafe.
 Grep confirmed zero "unsafe" matches across all wall domain .rs files.
+
+Still confirmed after Shield refactor (2026-04-02, commit e887570) — shield.rs rewritten:
+effect/effects/shield.rs uses only Bevy's safe World API (query_filtered, get_mut, resource,
+resource_mut, spawn, despawn). No unsafe blocks. All .unwrap()/.expect() are in #[cfg(test)].
+Workspace lint unsafe_code = "deny" remains in force.

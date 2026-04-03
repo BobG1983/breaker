@@ -127,3 +127,8 @@ New files: wall/builder/core/{types,transitions,terminal}.rs (typestate builder 
   wall/definition.rs, wall/registry.rs, wall/components.rs, wall/plugin.rs,
   wall/systems/spawn_walls/system.rs, effect/effects/second_wind/system.rs.
 New RON asset: assets/walls/wall.wall.ron (minimal, name-only). No external crates introduced.
+
+## Shield refactor (2026-04-02, commit e887570) — no new dependencies
+No new dependencies added. effect/effects/shield.rs rewritten (same file, no new crates).
+parry.chip.ron field rename Shield(stacks) → Shield(duration: 5.0). No external crates introduced.
+cargo audit baseline: same single warning (paste RUSTSEC-2024-0436). Not re-run (no dep changes).

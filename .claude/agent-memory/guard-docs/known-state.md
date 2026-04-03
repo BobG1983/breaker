@@ -82,12 +82,12 @@ The file contains only a doc comment explaining legacy stat components were remo
 - `chip_attribution(source_chip: &str) -> Option<String>` — helper: empty → None, non-empty → Some
 - fire() method split: `fire` → `fire_aoe_and_spawn` → `fire_utility_and_spawn` (3 methods)
 - reverse() method split: `reverse` → `reverse_aoe_and_spawn` (2 methods)
-- `EffectKind::Shield { stacks: u32 }` — only field is stacks (NO base_duration, NO duration_per_level)
+- `EffectKind::Shield { duration: f32 }` — spawns a timed floor wall (`ShieldWall` + `ShieldWallTimer`); NO stacks/charges mechanism; ShieldActive type NO LONGER EXISTS
 - `EffectKind::Attraction { attraction_type, force, max_force: Option<f32> }` — named fields (NOT tuple)
 - `EffectKind::ChainLightning { arcs, range, damage_mult, arc_speed }` — arc_speed field (default 200.0 via serde)
 - `EffectKind::Pulse { base_range, range_per_level, stacks, speed, interval }` — interval field (default 0.5 via serde)
 - `BoltSystems::WallCollision` — defined in bolt/sets.rs, tags bolt_wall_collision, runs after CellCollision
-- ShieldActive cross-domain writes: bolt domain writes ShieldActive on breaker entity (bolt_lost); cells domain writes ShieldActive on cell entities (handle_cell_hit). Both are accepted architectural exceptions.
+- ShieldActive cross-domain writes: ELIMINATED. `ShieldActive` component no longer exists. Shield is now a world-space floor wall (`ShieldWall`) with a timer. The "ShieldActive Cross-Domain Write Exception" section in plugins.md has been removed.
 - No typed observer events. No `ActiveEffects`/`ArmedEffects`/`EffectChains` resources.
 - Chain stores: `BoundEffects` (permanent) + `StagedEffects` (one-shot)
 - Effect file pattern: `fire(entity, ..params.., source_chip: &str, world)` + `reverse(...)` + `register()` free functions per module
@@ -290,3 +290,23 @@ The file contains only a doc comment explaining legacy stat components were remo
 - `Lifetime::Timed(f32)` and `Lifetime::OneShot` variants exist in builder code but are `allow(dead_code)` for non-Floor walls — they're future API for Shield/SecondWind chip floor walls (Phase 5j).
 - `visible()` transition and `WallBuilder<S, Visible>` exist but are `allow(dead_code)` — future API for Phase 5j visual walls.
 - `with_half_thickness()`, `with_color()`, `with_effects()`, `invisible()` builder methods are `allow(dead_code)` — future API.
+
+## Confirmed Correct / Fixed (Shield refactor, develop branch, 2026-04-02)
+
+**Shield effect completely rewritten — ShieldActive eliminated:**
+- `ShieldActive` component NO LONGER EXISTS anywhere in production code. Do NOT flag its absence.
+- `EffectKind::Shield { duration: f32 }` — field changed from `stacks: u32` to `duration: f32`.
+- `ShieldWall` — new marker component on the floor wall entity spawned by Shield effect.
+- `ShieldWallTimer(Timer)` — new timer component; `tick_shield_wall_timer` despawns wall when expired.
+- `fire()` spawns a visible blue HDR floor wall (Wall + ShieldWall + ShieldWallTimer + Mesh2d + MeshMaterial2d). If wall exists, resets timer in-place.
+- `reverse()` despawns all ShieldWall entities.
+- `parry.chip.ron` now uses `Shield(duration: 5.0)` (was `Shield(stacks: 1)`).
+- Invariant `ShieldChargesConsistent` RENAMED to `ShieldWallAtMostOne` (checks count <= 1, not charge consistency).
+- The "ShieldActive Cross-Domain Write Exception" section in plugins.md was deleted — no longer applies.
+
+**Intentionally forward-looking in graphics catalog docs (do NOT flag as drift):**
+- `docs/design/graphics/catalog/entities.md` — "Bolt shield aura" row and "Shield barrier" implementation text reference `ShieldActive`. These are future Phase 5 rendering design docs describing planned VFX that will be redesigned for the new wall-based Shield when Phase 5 arrives. Do not edit — they are planning artifacts.
+- `docs/design/graphics/catalog/effects.md` — "Shield (bolt-loss)" row and implementation text reference `ShieldActive`. Same reasoning — future rendering design.
+- `docs/todos/detail/rendering-refactor/walls_and_background.md` — "Shield Barrier" section references `ShieldActive`. Planning doc for future rendering work.
+- `docs/todos/detail/rendering-refactor/communication.md` — Shield VFX section references `ShieldActive`. Planning doc.
+- `docs/todos/detail/game-crate-splitting/research/cross-domain-dependencies.md` — references `ShieldActive`. Historical research artifact; reflects state at time of research.

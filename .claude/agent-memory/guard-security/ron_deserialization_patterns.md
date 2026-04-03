@@ -415,3 +415,43 @@ in production code.
 - discovery.rs:load_scenario() uses .map_err(eprintln).ok() — malformed scenario files
   produce an error message and return None, not a panic. This is the same pattern as
   prior audits. No new production .expect()/.unwrap() on file-controlled data.
+
+## Shield refactor (2026-04-02, commit e887570)
+
+### EffectKind::Shield changed from {stacks: u32} to {duration: f32} (Safe)
+- parry.chip.ron uses `Shield(duration: 5.0)` — positive f32 literal, no injection risk.
+- duration: 0.0 and negative values are valid at the enum level (compile test confirms).
+  Timer::from_seconds(0.0) is valid Bevy — timer starts already finished, wall is despawned
+  on the next tick. Not a panic; wall is briefly visible for one frame at most.
+  Negative duration: Timer::from_seconds negative — Bevy clamped to 0.0 internally (safe).
+  Info-level only; RON files ship with `duration: 5.0`.
+
+### fire() resource access pattern — sequential borrows (Safe)
+- `world.resource_mut::<Assets<Mesh>>()` and `world.resource_mut::<Assets<ColorMaterial>>()`
+  are called sequentially (one finishes, returns, then the other borrows). No aliasing.
+  Each borrow ends before the next begins. Borrow checker enforces this at compile time.
+  The comment in fire() at line 43-45 correctly explains the rationale.
+
+### fire() world.resource::<PlayfieldConfig>() — panic-if-absent (Pre-existing pattern)
+- Confirmed identical to second_wind/system.rs and other effect fire() fns.
+  PlayfieldConfig is always inserted at app startup. Not a new panic surface.
+
+### re-fire silent no-op: ShieldWall exists without ShieldWallTimer (Info-level)
+- fire() at line 27: `if let Some(mut timer) = world.get_mut::<ShieldWallTimer>(wall_entity)`
+  — if the existing ShieldWall entity somehow lacks ShieldWallTimer, the `if let` falls
+  through and `return` is still reached. Timer is not reset, no new wall is spawned.
+  Silent no-op. In practice this cannot happen: all spawning paths insert both components
+  atomically via world.spawn((ShieldWall, ShieldWallTimer(...), ...)). Info-level only.
+
+### ShieldActive deleted — no residual references in production code (Safe)
+- ShieldActive is no longer a type anywhere in the .rs source tree. Confirmed by grep.
+- bolt_lost.rs and handle_cell_hit/system.rs no longer reference ShieldActive.
+  The reviewer-architecture memory file shield_cross_domain_write.md is now stale (describes
+  the deleted component). It should be updated or removed by reviewer-architecture.
+
+### No new RON deserialization panic surface (Safe)
+- parry.chip.ron: only field change is Shield(duration: 5.0) replacing stacks-based variant.
+  Loaded via Bevy asset pipeline. No production panic surface.
+- shield_wall_at_most_one.scenario.ron, shield_wall_reflection.scenario.ron:
+  parsed via load_scenario() returning Option — no panic on malformed input.
+  SpawnExtraShieldWalls(2) in self-test: count is a small literal (2), no exhaustion risk.
