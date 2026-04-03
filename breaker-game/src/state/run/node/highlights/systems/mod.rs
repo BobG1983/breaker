@@ -1,10 +1,10 @@
 //! Highlight detection systems.
 
-pub(crate) mod detect_close_save;
-pub(crate) mod detect_combo_king;
-pub(crate) mod detect_mass_destruction;
-pub(crate) mod detect_nail_biter;
-pub(crate) mod detect_pinball_wizard;
+mod detect_close_save;
+mod detect_combo_king;
+mod detect_mass_destruction;
+mod detect_nail_biter;
+mod detect_pinball_wizard;
 
 pub(crate) use detect_close_save::detect_close_save;
 pub(crate) use detect_combo_king::detect_combo_king;

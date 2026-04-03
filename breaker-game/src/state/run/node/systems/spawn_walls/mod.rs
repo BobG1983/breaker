@@ -1,4 +1,4 @@
-pub(crate) use system::*;
+pub(crate) use system::spawn_walls;
 
 mod system;
 

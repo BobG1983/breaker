@@ -1,27 +1,34 @@
 //! Node subdomain plugin registration.
 
-use bevy::prelude::*;
+use bevy::{ecs::schedule::ApplyDeferred, prelude::*};
 
 use crate::{
     shared::{GameState, PlayingState},
-    state::run::node::{
-        messages::{
-            ApplyTimePenalty, CellsSpawned, NodeCleared, ReverseTimePenalty, SpawnNodeComplete,
-            TimerExpired,
-        },
-        resources::{ClearRemainingCount, NodeTimer, ScenarioLayoutOverride},
-        sets::NodeSystems,
-        systems::{
-            apply_time_penalty, check_spawn_complete, init_clear_remaining, init_node_timer,
-            reverse_time_penalty, set_active_layout, spawn_cells_from_layout, tick_node_timer,
-            track_node_completion,
+    state::run::{
+        chip_select::messages::ChipSelected,
+        node::{
+            hud::{
+                UiSystems,
+                systems::{spawn_side_panels, spawn_timer_hud, update_timer_display},
+            },
+            messages::{
+                ApplyTimePenalty, CellsSpawned, NodeCleared, ReverseTimePenalty, SpawnNodeComplete,
+                TimerExpired,
+            },
+            resources::{ClearRemainingCount, NodeTimer, ScenarioLayoutOverride},
+            sets::NodeSystems,
+            systems::{
+                apply_time_penalty, check_spawn_complete, init_clear_remaining, init_node_timer,
+                reverse_time_penalty, set_active_layout, spawn_cells_from_layout, tick_node_timer,
+                track_node_completion,
+            },
         },
     },
 };
 
 /// Plugin for the node subdomain.
 ///
-/// Owns node layout, timer, cell spawning, and completion tracking.
+/// Owns node layout, timer, cell spawning, completion tracking, and HUD.
 pub struct NodePlugin;
 
 impl Plugin for NodePlugin {
@@ -36,6 +43,7 @@ impl Plugin for NodePlugin {
             .add_message::<ReverseTimePenalty>()
             .add_message::<CellsSpawned>()
             .add_message::<SpawnNodeComplete>()
+            .add_message::<ChipSelected>()
             .add_systems(
                 OnEnter(GameState::Playing),
                 (
@@ -45,6 +53,20 @@ impl Plugin for NodePlugin {
                     init_node_timer.in_set(NodeSystems::InitTimer),
                 )
                     .chain(),
+            )
+            // HUD — side panels + timer display
+            .add_systems(
+                OnEnter(GameState::Playing),
+                (
+                    spawn_side_panels,
+                    ApplyDeferred,
+                    spawn_timer_hud.in_set(UiSystems::SpawnTimerHud),
+                )
+                    .chain(),
+            )
+            .add_systems(
+                Update,
+                update_timer_display.run_if(in_state(PlayingState::Active)),
             )
             // Intentionally runs without PlayingState::Active guard — must catch spawn signals on the first frame of play.
             .add_systems(FixedUpdate, check_spawn_complete)

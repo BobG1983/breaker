@@ -2,10 +2,13 @@
 
 use bevy::prelude::*;
 
-use crate::state::run::chip_select::{
-    ChipSelectConfig, color_from_rgb,
-    components::{ChipCard, ChipTimerText},
-    resources::{ChipSelectSelection, ChipSelectTimer},
+use crate::{
+    shared::color_from_rgb,
+    state::run::chip_select::{
+        ChipSelectConfig,
+        components::{ChipCard, ChipTimerText},
+        resources::{ChipSelectSelection, ChipSelectTimer},
+    },
 };
 
 /// Updates the timer display text and card border colors based on selection.

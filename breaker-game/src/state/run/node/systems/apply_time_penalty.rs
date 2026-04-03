@@ -11,7 +11,7 @@ use crate::state::run::node::{
 ///
 /// Sends [`TimerExpired`] if the timer crosses zero. Skips if the timer is
 /// already at zero (idempotent).
-pub fn apply_time_penalty(
+pub(crate) fn apply_time_penalty(
     mut reader: MessageReader<ApplyTimePenalty>,
     mut timer: ResMut<NodeTimer>,
     mut writer: MessageWriter<TimerExpired>,

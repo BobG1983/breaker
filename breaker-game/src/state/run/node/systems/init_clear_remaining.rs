@@ -7,7 +7,10 @@ use crate::{cells::components::RequiredToClear, state::run::node::ClearRemaining
 /// Counts all [`RequiredToClear`] entities and inserts [`ClearRemainingCount`].
 ///
 /// Runs on `OnEnter(GameState::Playing)`, after `CellsSystems::Spawn`.
-pub fn init_clear_remaining(query: Query<(), With<RequiredToClear>>, mut commands: Commands) {
+pub(crate) fn init_clear_remaining(
+    query: Query<(), With<RequiredToClear>>,
+    mut commands: Commands,
+) {
     let remaining = u32::try_from(query.iter().count()).unwrap_or(0);
     commands.insert_resource(ClearRemainingCount { remaining });
 }

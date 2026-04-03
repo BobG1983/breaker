@@ -16,7 +16,7 @@ use crate::state::run::{
 /// If [`ScenarioLayoutOverride`] is `Some(name)`, that named layout is used
 /// instead of the index-based selection. Falls back to index selection if the
 /// named layout is not found.
-pub fn set_active_layout(
+pub(crate) fn set_active_layout(
     run_state: Res<RunState>,
     registry: Res<NodeLayoutRegistry>,
     override_res: Res<ScenarioLayoutOverride>,

@@ -15,7 +15,7 @@ use super::{
     run::{
         RunPlugin,
         chip_select::{ChipSelectDefaults, ChipSelectPlugin},
-        node::hud::{HudPlugin, TimerUiDefaults},
+        node::hud::TimerUiDefaults,
         resources::DifficultyCurveDefaults,
         run_end::RunEndPlugin,
     },
@@ -75,7 +75,6 @@ impl Plugin for StatePlugin {
                 PauseMenuPlugin,
                 ChipSelectPlugin,
                 RunEndPlugin,
-                HudPlugin,
                 RunPlugin,
             ))
             // Cleanup

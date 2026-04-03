@@ -2,10 +2,13 @@
 
 use bevy::{ecs::hierarchy::ChildSpawnerCommands, prelude::*};
 
-use crate::state::run::chip_select::{
-    ChipOffering, ChipSelectConfig, color_from_rgb,
-    components::{ChipCard, ChipSelectScreen, ChipTimerText},
-    resources::{ChipOffers, ChipSelectSelection, ChipSelectTimer},
+use crate::{
+    shared::color_from_rgb,
+    state::run::chip_select::{
+        ChipOffering, ChipSelectConfig,
+        components::{ChipCard, ChipSelectScreen, ChipTimerText},
+        resources::{ChipOffers, ChipSelectSelection, ChipSelectTimer},
+    },
 };
 
 /// Spawns the chip selection UI with cards from the pre-generated offers and a countdown timer.

@@ -6,7 +6,7 @@ use crate::state::run::node::{NodeTimer, messages::TimerExpired};
 
 /// Decrements [`NodeTimer::remaining`] each fixed tick.
 /// Sends [`TimerExpired`] when the timer reaches zero.
-pub fn tick_node_timer(
+pub(crate) fn tick_node_timer(
     time: Res<Time<Fixed>>,
     mut timer: ResMut<NodeTimer>,
     mut writer: MessageWriter<TimerExpired>,

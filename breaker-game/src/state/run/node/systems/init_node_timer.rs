@@ -14,7 +14,7 @@ use crate::state::run::{
 /// are absent (e.g. in tests or scenario overrides).
 ///
 /// Runs on `OnEnter(GameState::Playing)`, after `set_active_layout`.
-pub fn init_node_timer(
+pub(crate) fn init_node_timer(
     layout: Res<ActiveNodeLayout>,
     mut commands: Commands,
     run_state: Option<Res<RunState>>,

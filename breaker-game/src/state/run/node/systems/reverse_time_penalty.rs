@@ -9,7 +9,7 @@ use crate::state::run::node::{NodeTimer, messages::ReverseTimePenalty};
 ///
 /// Unlike [`super::apply_time_penalty`], this system does NOT send
 /// [`TimerExpired`] — adding time back cannot cause timer expiry.
-pub fn reverse_time_penalty(
+pub(crate) fn reverse_time_penalty(
     mut reader: MessageReader<ReverseTimePenalty>,
     mut timer: ResMut<NodeTimer>,
 ) {
