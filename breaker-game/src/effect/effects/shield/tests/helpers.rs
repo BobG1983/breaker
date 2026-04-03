@@ -13,7 +13,8 @@ pub(super) fn test_world() -> World {
 
 pub(super) fn test_app() -> App {
     let mut app = App::new();
-    app.add_plugins(MinimalPlugins);
+    app.add_plugins(MinimalPlugins)
+        .add_message::<crate::bolt::messages::BoltImpactWall>();
     app
 }
 

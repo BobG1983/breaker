@@ -289,6 +289,9 @@ pub enum EffectKind {
     Shield {
         /// Duration in seconds before the wall despawns.
         duration: f32,
+        /// Time subtracted from `ShieldWallTimer` per bolt reflection.
+        #[serde(default)]
+        reflection_cost: f32,
     },
     /// Arc damage jumping between nearby cells.
     ChainLightning {

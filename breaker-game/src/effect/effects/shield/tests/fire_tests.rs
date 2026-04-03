@@ -16,7 +16,7 @@ fn fire_spawns_shield_wall_with_wall_marker() {
     let mut world = test_world();
     let entity = world.spawn_empty().id();
 
-    fire(entity, 5.0, "parry", &mut world);
+    fire(entity, 5.0, 0.0, "parry", &mut world);
 
     let count = world
         .query_filtered::<Entity, (With<ShieldWall>, With<Wall>)>()
@@ -34,7 +34,7 @@ fn fire_spawns_wall_with_short_duration() {
     let mut world = test_world();
     let entity = world.spawn_empty().id();
 
-    fire(entity, 0.1, "parry", &mut world);
+    fire(entity, 0.1, 0.0, "parry", &mut world);
 
     let count = world
         .query_filtered::<Entity, With<ShieldWall>>()
@@ -53,7 +53,7 @@ fn fire_spawns_wall_at_playfield_bottom() {
     let mut world = test_world();
     let entity = world.spawn_empty().id();
 
-    fire(entity, 5.0, "parry", &mut world);
+    fire(entity, 5.0, 0.0, "parry", &mut world);
 
     let positions: Vec<Vec2> = world
         .query_filtered::<&Position2D, With<ShieldWall>>()
@@ -87,7 +87,7 @@ fn fire_spawns_wall_at_custom_playfield_bottom() {
     world.init_resource::<Assets<ColorMaterial>>();
     let entity = world.spawn_empty().id();
 
-    fire(entity, 5.0, "parry", &mut world);
+    fire(entity, 5.0, 0.0, "parry", &mut world);
 
     let positions: Vec<Vec2> = world
         .query_filtered::<&Position2D, With<ShieldWall>>()
@@ -110,7 +110,7 @@ fn fire_spawns_wall_with_collision_layers() {
     let mut world = test_world();
     let entity = world.spawn_empty().id();
 
-    fire(entity, 5.0, "parry", &mut world);
+    fire(entity, 5.0, 0.0, "parry", &mut world);
 
     let layers: Vec<&CollisionLayers> = world
         .query_filtered::<&CollisionLayers, With<ShieldWall>>()
@@ -137,7 +137,7 @@ fn fire_spawns_wall_with_aabb2d_spanning_playfield() {
     let half_width = playfield.width / 2.0;
     let wall_ht = playfield.wall_half_thickness();
 
-    fire(entity, 5.0, "parry", &mut world);
+    fire(entity, 5.0, 0.0, "parry", &mut world);
 
     let aabbs: Vec<&Aabb2D> = world
         .query_filtered::<&Aabb2D, With<ShieldWall>>()
@@ -171,7 +171,7 @@ fn fire_spawns_wall_with_scale2d_matching_playfield() {
     let half_width = playfield.width / 2.0;
     let wall_ht = playfield.wall_half_thickness();
 
-    fire(entity, 5.0, "parry", &mut world);
+    fire(entity, 5.0, 0.0, "parry", &mut world);
 
     let scales: Vec<&Scale2D> = world
         .query_filtered::<&Scale2D, With<ShieldWall>>()
@@ -204,7 +204,7 @@ fn fire_spawns_wall_with_custom_playfield_extents() {
     world.init_resource::<Assets<ColorMaterial>>();
     let entity = world.spawn_empty().id();
 
-    fire(entity, 5.0, "parry", &mut world);
+    fire(entity, 5.0, 0.0, "parry", &mut world);
 
     let aabbs: Vec<&Aabb2D> = world
         .query_filtered::<&Aabb2D, With<ShieldWall>>()
@@ -230,7 +230,7 @@ fn fire_spawns_wall_with_mesh2d_and_material() {
     let mut world = test_world();
     let entity = world.spawn_empty().id();
 
-    fire(entity, 5.0, "parry", &mut world);
+    fire(entity, 5.0, 0.0, "parry", &mut world);
 
     let has_mesh = world
         .query_filtered::<&Mesh2d, With<ShieldWall>>()
@@ -253,7 +253,7 @@ fn fire_spawns_wall_with_blue_hdr_color() {
     let mut world = test_world();
     let entity = world.spawn_empty().id();
 
-    fire(entity, 5.0, "parry", &mut world);
+    fire(entity, 5.0, 0.0, "parry", &mut world);
 
     let material_handles: Vec<&MeshMaterial2d<ColorMaterial>> = world
         .query_filtered::<&MeshMaterial2d<ColorMaterial>, With<ShieldWall>>()
@@ -281,7 +281,7 @@ fn fire_spawns_wall_with_shield_wall_timer() {
     let mut world = test_world();
     let entity = world.spawn_empty().id();
 
-    fire(entity, 5.0, "parry", &mut world);
+    fire(entity, 5.0, 0.0, "parry", &mut world);
 
     let timers: Vec<&ShieldWallTimer> = world
         .query_filtered::<&ShieldWallTimer, With<ShieldWall>>()
@@ -305,7 +305,7 @@ fn fire_spawns_wall_with_short_timer() {
     let mut world = test_world();
     let entity = world.spawn_empty().id();
 
-    fire(entity, 0.5, "parry", &mut world);
+    fire(entity, 0.5, 0.0, "parry", &mut world);
 
     let timers: Vec<&ShieldWallTimer> = world
         .query_filtered::<&ShieldWallTimer, With<ShieldWall>>()
@@ -331,7 +331,7 @@ fn fire_resets_timer_when_shield_wall_already_exists() {
     timer.tick(std::time::Duration::from_secs_f32(1.5));
     let wall_entity = world.spawn((ShieldWall, ShieldWallTimer(timer))).id();
 
-    fire(entity, 5.0, "parry", &mut world);
+    fire(entity, 5.0, 0.0, "parry", &mut world);
 
     // Exactly one ShieldWall should exist
     let wall_count = world
@@ -376,7 +376,7 @@ fn fire_resets_nearly_expired_timer() {
     timer.tick(std::time::Duration::from_secs_f32(0.999));
     world.spawn((ShieldWall, ShieldWallTimer(timer)));
 
-    fire(entity, 5.0, "parry", &mut world);
+    fire(entity, 5.0, 0.0, "parry", &mut world);
 
     let timers: Vec<&ShieldWallTimer> = world
         .query_filtered::<&ShieldWallTimer, With<ShieldWall>>()
@@ -399,7 +399,7 @@ fn fire_does_not_insert_shield_active_on_target() {
     let mut world = test_world();
     let entity = world.spawn_empty().id();
 
-    fire(entity, 5.0, "parry", &mut world);
+    fire(entity, 5.0, 0.0, "parry", &mut world);
 
     // The target entity should NOT have ShieldWall — that's on a separate wall entity
     assert!(

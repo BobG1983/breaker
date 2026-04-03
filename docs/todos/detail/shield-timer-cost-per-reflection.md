@@ -20,5 +20,12 @@ The guard-game-design agent flagged this during the wall builder feature review.
 - The system would run after `BoltSystems::WallCollision` (same as `tick_shield_wall_timer`), reading `BoltImpactWall` messages and decrementing the timer on matching `ShieldWall` entities.
 - Also consider tuning base duration from 5.0 to 3.0 (game design feedback: 5s is too generous).
 
+## Decisions
+- Cost per reflection: 0.5 seconds
+- Base duration: 3.0 seconds (down from 5.0)
+- RON field: `Shield { duration: f32, reflection_cost: f32 }` on EffectKind
+- New system: `deduct_shield_on_reflection` reads `BoltImpactWall`, deducts `reflection_cost` from `ShieldWallTimer`
+- Update parry.chip.ron: `Shield(duration: 3.0, reflection_cost: 0.5)`
+
 ## Status
-`[NEEDS DETAIL]`
+`[in-progress]`

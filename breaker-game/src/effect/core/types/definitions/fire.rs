@@ -119,10 +119,14 @@ impl EffectKind {
                     world,
                 );
             }
-            Self::Shield { duration } => {
+            Self::Shield {
+                duration,
+                reflection_cost,
+            } => {
                 super::super::super::super::effects::shield::fire(
                     entity,
                     *duration,
+                    *reflection_cost,
                     source_chip,
                     world,
                 );

@@ -82,7 +82,10 @@ fn nested_on_all_cells_inside_breaker_root_resolves_directly() {
                 permanent: false,
                 then: vec![EffectNode::When {
                     trigger: Trigger::Impacted(ImpactTarget::Bolt),
-                    then: vec![EffectNode::Do(EffectKind::Shield { duration: 5.0 })],
+                    then: vec![EffectNode::Do(EffectKind::Shield {
+                        duration: 5.0,
+                        reflection_cost: 0.0,
+                    })],
                 }],
             }],
         }],

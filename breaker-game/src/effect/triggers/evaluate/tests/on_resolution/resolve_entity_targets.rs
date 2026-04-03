@@ -130,7 +130,10 @@ fn breaker_without_context_resolves_to_primary_breaker_only() {
         chip_name: "breaker_buff".to_string(),
         children: vec![EffectNode::When {
             trigger: Trigger::PerfectBump,
-            then: vec![EffectNode::Do(EffectKind::Shield { duration: 5.0 })],
+            then: vec![EffectNode::Do(EffectKind::Shield {
+                duration: 5.0,
+                reflection_cost: 0.0,
+            })],
         }],
         permanent: true,
         context: TriggerContext::default(),
@@ -159,7 +162,10 @@ fn breaker_without_context_and_no_primary_breaker_is_noop() {
         chip_name: "breaker_buff".to_string(),
         children: vec![EffectNode::When {
             trigger: Trigger::PerfectBump,
-            then: vec![EffectNode::Do(EffectKind::Shield { duration: 5.0 })],
+            then: vec![EffectNode::Do(EffectKind::Shield {
+                duration: 5.0,
+                reflection_cost: 0.0,
+            })],
         }],
         permanent: true,
         context: TriggerContext::default(),
@@ -184,7 +190,10 @@ fn cell_without_context_is_noop() {
         chip_name: "cell_armor".to_string(),
         children: vec![EffectNode::When {
             trigger: Trigger::Impacted(ImpactTarget::Bolt),
-            then: vec![EffectNode::Do(EffectKind::Shield { duration: 10.0 })],
+            then: vec![EffectNode::Do(EffectKind::Shield {
+                duration: 10.0,
+                reflection_cost: 0.0,
+            })],
         }],
         permanent: true,
         context: TriggerContext::default(),

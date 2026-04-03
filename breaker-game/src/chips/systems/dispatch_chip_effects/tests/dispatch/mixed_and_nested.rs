@@ -161,7 +161,10 @@ fn multiple_root_effects_all_dispatched() {
                 target: Target::Breaker,
                 then: vec![EffectNode::When {
                     trigger: Trigger::PerfectBump,
-                    then: vec![EffectNode::Do(EffectKind::Shield { duration: 5.0 })],
+                    then: vec![EffectNode::Do(EffectKind::Shield {
+                        duration: 5.0,
+                        reflection_cost: 0.0,
+                    })],
                 }],
             },
             RootEffect::On {
@@ -235,7 +238,10 @@ fn three_root_effects_all_dispatched_to_appropriate_entities() {
                 target: Target::Breaker,
                 then: vec![EffectNode::When {
                     trigger: Trigger::PerfectBump,
-                    then: vec![EffectNode::Do(EffectKind::Shield { duration: 5.0 })],
+                    then: vec![EffectNode::Do(EffectKind::Shield {
+                        duration: 5.0,
+                        reflection_cost: 0.0,
+                    })],
                 }],
             },
             RootEffect::On {

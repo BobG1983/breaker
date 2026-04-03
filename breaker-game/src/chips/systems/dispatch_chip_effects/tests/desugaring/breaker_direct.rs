@@ -21,7 +21,10 @@ fn breaker_target_dispatches_directly_not_desugared() {
         Target::Breaker,
         EffectNode::When {
             trigger: Trigger::PerfectBump,
-            then: vec![EffectNode::Do(EffectKind::Shield { duration: 5.0 })],
+            then: vec![EffectNode::Do(EffectKind::Shield {
+                duration: 5.0,
+                reflection_cost: 0.0,
+            })],
         },
         5,
     );
@@ -44,7 +47,7 @@ fn breaker_target_dispatches_directly_not_desugared() {
             EffectNode::When {
                 trigger: Trigger::PerfectBump,
                 then,
-            } if then.len() == 1 && matches!(&then[0], EffectNode::Do(EffectKind::Shield { duration: 5.0 }))
+            } if then.len() == 1 && matches!(&then[0], EffectNode::Do(EffectKind::Shield { duration: 5.0, reflection_cost: 0.0 }))
         ),
         "Breaker target should NOT be desugared — expected When(PerfectBump, [Do(Shield(1))]), got {node:?}"
     );
