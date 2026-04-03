@@ -33,5 +33,5 @@ Analyzed 2026-04-01 for game-crate-splitting feasibility.
 - effect → cells: cells::cleanup_cell.after(EffectSystems::Bridge)
 - bolt → dispatch_bolt_effects.before(EffectSystems::Bridge)
 
-## Why: feeds into feasibility analysis at `.claude/todos/detail/game-crate-splitting/research/system-ordering-constraints.md`
+## Why: feeds into feasibility analysis at `docs/todos/detail/game-crate-splitting/research/system-ordering-constraints.md`
 ## How to apply: when evaluating any crate-splitting plan, check whether the set types involved here are in a shared crate or would create circular deps

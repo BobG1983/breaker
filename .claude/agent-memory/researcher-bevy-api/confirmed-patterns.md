@@ -127,7 +127,26 @@ fn ramp_system(real: Res<Time<Real>>, mut virt: ResMut<Time<Virtual>>, mut state
 
 ## Message System (Bevy 0.18)
 
-Verified against docs.rs/bevy_ecs/0.18.1, github.com/bevyengine/bevy/tree/v0.18.1.
+Verified against docs.rs/bevy_ecs/0.18.1, docs.rs/bevy_ecs_macros/0.18.1, github.com/bevyengine/bevy/tree/v0.18.1.
+
+### `#[derive(Message)]` on generic structs — CONFIRMED WORKS
+
+The `derive_message` macro in `bevy_ecs_macros/src/message.rs`:
+1. Calls `ast.generics.split_for_impl()` — preserves all user generics
+2. Appends `Self: Send + Sync + 'static` to the where clause
+3. Emits an empty impl block: `impl<T> Message for Foo<T> where Self: Send + Sync + 'static {}`
+
+**Proof**: `StateTransitionEvent<S: States>` in bevy_state uses `#[derive(..., Message)]` on a
+generic struct — verified from bevy_state source.
+
+**Manual impl also works**: `AssetEvent<A>` uses `impl<A> Message for AssetEvent<A> where A: Asset`.
+
+`Message` trait bounds: `Send + Sync + 'static` only.
+`MessageReader<E>`: bound `E: Message` only — no extra bounds.
+`MessageWriter<E>`: bound `E: Message` only — no extra bounds.
+
+`Messages<ChangeState<NodeState>>` and `Messages<ChangeState<RunState>>` are distinct resources
+(different `TypeId`). Each instantiation needs its own `app.add_message::<T>()` call.
 
 ### Core types
 
@@ -789,3 +808,155 @@ fn my_bundle_has_expected_components() {
     assert_eq!(*world.get::<ComponentA>(entity).unwrap(), expected_value);
 }
 ```
+
+---
+
+## Run Condition Combinators (Bevy 0.18.1)
+
+Verified from `github.com/bevyengine/bevy/blob/v0.18.1/crates/bevy_ecs/src/schedule/condition.rs`.
+
+All run conditions implement `SystemCondition` (an alias for `IntoSystem<In, bool, Marker>` where
+the system is `ReadOnlySystem`). The trait provides combinator methods:
+
+```rust
+fn and<M, C: SystemCondition<M, In>>(self, and: C) -> And<Self::System, C::System>
+fn or<M, C: SystemCondition<M, In>>(self, or: C) -> Or<Self::System, C::System>
+fn nand<M, C: SystemCondition<M, In>>(self, nand: C) -> Nand<Self::System, C::System>
+fn nor<M, C: SystemCondition<M, In>>(self, nor: C) -> Nor<Self::System, C::System>
+```
+
+`.and()` short-circuits: if left is false, right is never evaluated.
+`.or()` short-circuits: if left is true, right is never evaluated.
+
+```rust
+// Example: fire only when message arrived AND in a specific state
+.run_if(on_message::<NodeExited>().and(in_state(RunState::Node)))
+```
+
+---
+
+## Resource Change Detection Run Conditions (Bevy 0.18.1)
+
+Verified from source and docs.rs/bevy/0.18.1.
+
+### `resource_changed<T>` — panics if resource absent
+
+```rust
+pub fn resource_changed<T>(res: Res<'_, T>) -> bool where T: Resource
+// Implementation: res.is_changed()
+// PANICS if T does not exist in the world
+```
+
+### `resource_exists_and_changed<T>` — safe variant
+
+```rust
+pub fn resource_exists_and_changed<T>(res: Option<Res<'_, T>>) -> bool where T: Resource
+// Implementation: match res { Some(r) => r.is_changed(), None => false }
+// Returns false (no panic) if T does not exist
+```
+
+"Changed" means "mutably dereferenced since the condition last ran" — Bevy does not compare
+values. `ResMut<T>` access sets changed even if no mutation occurred.
+
+### `resource_changed_or_removed<T>` — detects removal too
+
+```rust
+pub fn resource_changed_or_removed<T>(
+    res: Option<Res<'_, T>>,
+    existed: Local<'_, bool>,
+) -> bool where T: Resource
+// Returns false if resource does not exist (uses Option)
+```
+
+### `Res<T>` implements `DetectChanges`
+
+`Res<T>` directly exposes: `is_changed() -> bool`, `is_added() -> bool`, `last_changed() -> Tick`,
+`added() -> Tick`. `Ref<T>` is for COMPONENTS only — do NOT use `Ref` for resources.
+
+---
+
+## State-Related Run Conditions (Bevy 0.18.1)
+
+Verified from `github.com/bevyengine/bevy/blob/v0.18.1/crates/bevy_state/src/condition.rs`.
+
+```rust
+pub fn state_exists<S: States>(current_state: Option<Res<State<S>>>) -> bool {
+    current_state.is_some()
+}
+
+pub fn in_state<S: States>(state: S) -> impl FnMut(Option<Res<State<S>>>) -> bool + Clone {
+    move |current_state| match current_state {
+        Some(s) => *s == state,
+        None => false,
+    }
+}
+
+pub fn state_changed<S: States>(current_state: Option<Res<State<S>>>) -> bool {
+    current_state.map_or(false, |s| s.is_changed())
+}
+```
+
+**Critical gotcha**: `state_changed<S>` returns `false` when `State<S>` is REMOVED — the Option
+is None so it returns false. It does NOT detect SubState removal (teardown). Use
+`condition_changed_to(false, state_exists::<S>())` to detect removal.
+
+---
+
+## `condition_changed` / `condition_changed_to` (Bevy 0.18.1)
+
+Verified from source.
+
+```rust
+pub fn condition_changed<Marker, CIn, C>(condition: C) -> impl SystemCondition<(), CIn>
+// Fires when wrapped condition output changes (either edge: false→true or true→false)
+// Uses Local<bool> for previous-value tracking. Initial assumed previous = false.
+
+pub fn condition_changed_to<Marker, CIn, C>(to: bool, condition: C) -> impl SystemCondition<(), CIn>
+// Fires when wrapped condition transitions to `to`.
+// Logic: *prev != new && new == to
+// Initial assumed previous = false.
+```
+
+To detect "SubState S was removed" exactly once on the removal frame:
+
+```rust
+.run_if(condition_changed_to(false, state_exists::<S>()))
+```
+
+To detect "resource R was just created" exactly once:
+
+```rust
+.run_if(condition_changed_to(true, resource_exists::<R>()))
+```
+
+---
+
+## Observers Do NOT Support Resources (Bevy 0.18.1)
+
+Verified from `bevy_ecs/src/observer/mod.rs` and `world/mod.rs` at v0.18.1.
+
+Bevy 0.18 Observers are entity/component-only. Built-in trigger types:
+- `OnAdd<C>`, `OnInsert<C>`, `OnReplace<C>`, `OnRemove<C>` — component lifecycle on entities
+- Custom `Event` types via `world.trigger()` / `commands.trigger()`
+
+`insert_resource()` does NOT fire any observer. Resources have no lifecycle hooks equivalent
+to component hooks. There is no `ResourceAdded`, `ResourceMutated`, or similar trigger.
+
+For resource-level reactivity, use `resource_exists_and_changed<T>` (polling) or emit a custom
+Message when mutating the resource.
+
+---
+
+## `StateTransitionEvent<S>` as a Message (Bevy 0.18.1)
+
+`StateTransitionEvent<S>` is a `Message` type (not a Bevy `Event`). It fires when any state
+transition occurs, including SubState removal (where `entered: None`).
+
+```rust
+// Detect NodeState being removed (entered: None case):
+.run_if(on_message::<StateTransitionEvent<NodeState>>())
+// Then check entered.is_none() in system body to confirm it's a removal
+```
+
+This is truly event-driven (zero cost when no transition occurs) and does not require
+child cooperation beyond the state machine itself firing the message.

@@ -91,3 +91,52 @@ Add to camera entity:
 ```rust
 commands.spawn((Camera2d, MyEffect::default()));
 ```
+
+## PostProcessWrite fields (Bevy 0.18)
+
+Returned by `view_target.post_process_write()`:
+
+```rust
+pub struct PostProcessWrite<'a> {
+    pub source: &'a TextureView,         // current rendered frame — sample from this
+    pub source_texture: &'a Texture,
+    pub destination: &'a TextureView,    // write your output here
+    pub destination_texture: &'a Texture,
+}
+```
+
+Textures are swapped automatically after the pass. Binding slot order in the generated node: 0 = texture_2d (source), 1 = sampler, 2 = uniform_buffer (T).
+
+## FullscreenShader module path (Bevy 0.18)
+
+```rust
+// Re-exported at crate root:
+use bevy::core_pipeline::FullscreenShader;
+// Internal: bevy_core_pipeline::fullscreen_vertex_shader::FullscreenShader
+```
+
+Users of FullscreenMaterial never need FullscreenShader directly — the plugin handles it.
+
+## Node2d Graph safe anchors (2d-only features — project config)
+
+With `features = ["2d", "serialize"]`, the registered graph is:
+```
+StartMainPass → MainOpaquePass → MainTransparentPass → EndMainPass
+→ StartMainPassPostProcessing → Tonemapping → EndMainPassPostProcessing → Upscaling
+```
+
+Safe post-processing anchors:
+- Pre-tonemapping: `vec![Node2d::StartMainPassPostProcessing.intern(), YourLabel.intern(), Node2d::Tonemapping.intern()]`
+- Post-tonemapping: `vec![Node2d::Tonemapping.intern(), YourLabel.intern(), Node2d::EndMainPassPostProcessing.intern()]`
+
+## ShaderType Alignment for Single f32 Field
+
+A struct with only `block_size: f32` needs padding to reach 16-byte minimum:
+```rust
+#[derive(Component, ExtractComponent, Clone, Copy, ShaderType, Default)]
+pub struct MyEffect {
+    pub block_size: f32,
+    pub _padding: Vec3,  // fills to 16 bytes
+}
+```
+Alternatively use `Vec4` (x = value, yzw = unused).

@@ -37,4 +37,4 @@ Do NOT add `fn active() -> Self` to the trait unless a generic system needs to a
 
 ## Full Research
 
-See `.claude/todos/detail/spawn-bolt-setup-run-migration/research/enum-trait-constraints.md`
+See `docs/todos/detail/spawn-bolt-setup-run-migration/research/enum-trait-constraints.md`

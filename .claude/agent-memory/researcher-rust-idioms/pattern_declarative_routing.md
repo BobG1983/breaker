@@ -31,4 +31,4 @@ Cross-level routes (e.g., NodeState::Teardown → GameState::ChipSelect) work na
 
 ## Full Research
 
-See `.claude/todos/detail/spawn-bolt-setup-run-migration/research/declarative-routing.md`
+See `docs/todos/detail/spawn-bolt-setup-run-migration/research/declarative-routing.md`

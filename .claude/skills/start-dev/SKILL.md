@@ -72,7 +72,7 @@ Report the new branch name.
 
 If `--todo` was provided:
 
-1. Read the todo's detail file from `.claude/todos/`
+1. Read the todo's detail file from `docs/todos/`
 2. If the todo is `[NEEDS DETAIL]`, run the `/todo interrogate` procedure for it — ask questions recursively until all open questions are resolved or the user says stop
 3. Update the todo detail file with anything captured
 4. Update the state of the todo to [in-progress]
