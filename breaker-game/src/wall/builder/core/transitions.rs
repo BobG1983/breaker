@@ -101,10 +101,6 @@ impl<S: SideData, V> WallBuilder<S, V> {
 
     /// Overrides the `half_thickness`.
     #[must_use]
-    #[cfg_attr(
-        not(test),
-        allow(dead_code, reason = "future API: Phase 5j / Shield chip")
-    )]
     pub(crate) const fn with_half_thickness(mut self, ht: f32) -> Self {
         self.optional.override_half_thickness = Some(ht);
         self
@@ -130,10 +126,6 @@ impl<S: SideData, V> WallBuilder<S, V> {
 
     /// No-op for self-documentation — wall has no visual components.
     #[must_use]
-    #[cfg_attr(
-        not(test),
-        allow(dead_code, reason = "future API: Phase 5j / Shield chip")
-    )]
     pub(crate) const fn invisible(self) -> Self {
         self
     }

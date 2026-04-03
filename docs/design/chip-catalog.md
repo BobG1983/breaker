@@ -316,7 +316,7 @@ Perfect bump grants breaker immunity + all bolts emit shockwaves.
 
 | Rarity | Effects | Design Notes |
 |--------|---------|-------------|
-| Legendary | `On(Breaker) → When(PerfectBump) → Do(Shield(stacks: 1))` + `On(AllBolts) → When(PerfectBump) → Do(Shockwave(base_range: 64, speed: 500))` | Two On targets: breaker gets shield, every bolt shockwaves. Rewards precision with brief invulnerability + area damage burst. |
+| Legendary | `On(Breaker) → When(PerfectBump) → Do(Shield(duration: 5.0))` + `On(AllBolts) → When(PerfectBump) → Do(Shockwave(base_range: 64, speed: 500))` | Two On targets: perfect bump spawns a timed floor wall, every bolt shockwaves. Rewards precision with brief invulnerability + area damage burst. |
 
 ### Powder Keg
 Cells hit by the bolt explode on death. Uses `Explode` effect *(not yet implemented)*.

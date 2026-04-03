@@ -494,10 +494,10 @@ Bolt/ domain sends modifier messages each FixedUpdate:
 fn sync_bolt_visual_modifiers(
     query: Query<(Entity, &Velocity2D, &BoltBaseSpeed, &BoltMaxSpeed,
                   Option<&ActivePiercings>, Option<&EffectiveDamageMultiplier>,
-                  Option<&ShieldActive>, Option<&BoltServing>), With<Bolt>>,
+                  Option<&BoltServing>), With<Bolt>>,
     mut set_writer: MessageWriter<SetModifier>,
 ) {
-    for (entity, velocity, base_speed, max_speed, piercing, damage_mult, shield, serving) in &query {
+    for (entity, velocity, base_speed, max_speed, piercing, damage_mult, serving) in &query {
         let speed_fraction = velocity.0.length() / max_speed.0;
 
         // Speed → trail length (overwrites each frame)

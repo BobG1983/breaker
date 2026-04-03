@@ -25,7 +25,11 @@ pub(crate) fn fire(_entity: Entity, _source_chip: &str, world: &mut World) {
     }
 
     let playfield = world.resource::<PlayfieldConfig>().clone();
-    let bundle = Wall::builder().floor(&playfield).one_shot().build();
+    let bundle = Wall::builder()
+        .floor(&playfield)
+        .invisible()
+        .one_shot()
+        .build();
     let wall = world.spawn((SecondWindWall, bundle)).id();
 
     info!("spawned second wind wall {:?}", wall);

@@ -5,6 +5,7 @@ pub mod components;
 pub mod definition;
 pub(crate) mod messages;
 mod plugin;
+/// Wall registry — `SeedableRegistry` for `WallDefinition` RON assets.
 pub mod registry;
 pub(crate) mod systems;
 

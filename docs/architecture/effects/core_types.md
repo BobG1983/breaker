@@ -130,7 +130,7 @@ pub enum EffectKind {
     TimePenalty { seconds: f32 },
     SpawnBolts { #[serde(default = "one")] count: u32, #[serde(default)] lifespan: Option<f32>, #[serde(default)] inherit: bool },
     ChainBolt { tether_distance: f32 },
-    Shield { stacks: u32 },                        // stacks become charge count; no duration
+    Shield { duration: f32 },                       // spawns a timed ShieldWall floor entity; resets timer if wall already exists
     ChainLightning {
         arcs: u32,
         range: f32,
