@@ -1,0 +1,67 @@
+// ============================================================================
+// Node Layout — Reference
+// ============================================================================
+//
+// Reference for all available fields in a .node.ron file.
+// This file is NOT loaded by the game — it exists as documentation only.
+//
+// A node layout defines the cell grid for a single level. Each char in the
+// grid maps to a cell type alias registered in a .cell.ron file. '.' means
+// empty (no cell).
+//
+// Required fields (no default):
+//   name, timer_secs, cols, rows, grid_top_offset, grid
+//
+// Optional fields (have defaults):
+//   pool           — default: Passive
+//   entity_scale   — default: 1.0
+//
+// cols/rows must match the grid dimensions exactly.
+// Grid chars must be '.' or a registered cell type alias.
+//
+// Loaded from: assets/nodes/*.node.ron
+// Struct:      NodeLayout (breaker-game/src/state/run/node/definition/types.rs)
+// ============================================================================
+
+(
+    // REQUIRED: Display name for this node.
+    name: "My Node",
+
+    // REQUIRED: Timer duration in seconds. Player must clear the node before
+    // the timer expires.
+    timer_secs: 60.0,
+
+    // REQUIRED: Number of columns in the grid.
+    cols: 10,
+
+    // REQUIRED: Number of rows in the grid.
+    rows: 5,
+
+    // REQUIRED: Y offset in world units from the playfield top edge to the
+    // top of the grid. Controls vertical placement of the cell grid.
+    grid_top_offset: 90.0,
+
+    // REQUIRED: The cell grid. Each inner array is one row (left to right).
+    // Rows are top to bottom. Each char is a cell type alias:
+    //   'S' = standard, 'T' = tough, 'L' = lock, 'R' = regen, '.' = empty
+    // Aliases must match a registered CellTypeDefinition.
+    grid: [
+        ['T','T','T','T','T','T','T','T','T','T'],
+        ['S','S','S','S','S','S','S','S','S','S'],
+        ['.','.','S','S','S','S','S','S','.','.'],
+        ['.','.','.','.','S','S','.','.','.','.'],
+        ['.','.','.','.','.','.','.','.','.','.'],
+    ],
+
+    // OPTIONAL: Which pool this node belongs to. Controls when it appears
+    // in a run's node sequence.
+    //   Passive — early/non-combat nodes (default)
+    //   Active  — higher-difficulty nodes
+    //   Boss    — end-of-tier encounters
+    pool: Active,
+
+    // OPTIONAL: Scale factor for breaker and bolt entities in this node.
+    // Range: 0.5 to 1.0. Lower values make entities smaller for dense grids.
+    // Default: 1.0 (unscaled).
+    entity_scale: 1.0,
+)
