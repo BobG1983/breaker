@@ -7,9 +7,17 @@ type: reference
 # Confirmed Correct Patterns for Bevy 0.18.1
 
 ## Asset Types
-- `#[derive(Asset, TypePath, Deserialize, Clone, Debug)]` — correct derive combo for RON-loadable assets in Bevy 0.18.1; `Asset` requires `TypePath`; `Deserialize` satisfies `DeserializeOwned` bound on `SeedableRegistry::Asset`; consistent across all project asset types (BoltDefinition, CellDefinition, BreakerDefinition, etc.)
+- `#[derive(Asset, TypePath, Deserialize, Clone, Debug)]` — correct derive combo for RON-loadable assets in Bevy 0.18.1; `Asset` requires `TypePath`; `Deserialize` satisfies `DeserializeOwned` bound on `SeedableRegistry::Asset`; consistent across all project asset types (BoltDefinition, CellDefinition, BreakerDefinition, WallDefinition, etc.)
 - `app.init_asset::<T>()` — correct registration call for custom asset types in Bevy 0.18.1
 - `#[derive(Resource, Debug, Default)]` on a registry struct — correct; `SeedableRegistry` bounds require `Resource + Default + Send + Sync + 'static`
+
+## SeedableRegistry Implementation Pattern (rantzsoft_defaults)
+- Trait source: `rantzsoft_defaults/src/registry.rs`
+- Required methods: `seed(&mut self, assets: &[(AssetId<Self::Asset>, Self::Asset)])` and `update_single(&mut self, id: AssetId<Self::Asset>, asset: &Self::Asset)`
+- `update_all` is provided (default impl: `*self = Self::default(); self.seed(assets)`)
+- `AssetId<Self::Asset>` is the correct Bevy 0.18.1 type for asset identity; imported via `bevy::prelude::*`
+- `Deserialize` (not `DeserializeOwned`) in the derive is correct — `DeserializeOwned` is a blanket impl for all `T: for<'de> Deserialize<'de>` with no lifetime params; lifetime-free structs satisfy it
+- Confirmed in WallRegistry (wall/registry.rs) — seed clears then inserts by name, update_single upserts by name, ignoring the `id` arg; this is the correct pattern for name-keyed registries
 
 ## Message System
 - `#[derive(Message, Clone, Debug)]` — correct derive for Bevy 0.18 message types
@@ -288,4 +296,14 @@ type: reference
 
 ## CollisionLayers::new(membership, mask) — project-local crate
 - `CollisionLayers::new(BREAKER_LAYER, BOLT_LAYER)` — `CollisionLayers` is from `rantzsoft_physics2d`, NOT bevy; `new(membership: u32, mask: u32) -> Self`; `BREAKER_LAYER` and `BOLT_LAYER` are `u32` constants; call is CORRECT
+- `CollisionLayers::new(WALL_LAYER, BOLT_LAYER)` — same API, wall-specific constants; CORRECT
 - `Aabb2D::new(center: Vec2, half_extents: Vec2)` — also from `rantzsoft_physics2d`; `Aabb2D::new(Vec2::ZERO, Vec2::new(w/2, h/2))` is CORRECT
+
+## Wall Builder Core (Wave 2 — confirmed correct)
+- `fn build(self) -> impl Bundle + use<S>` where `S` is a type param — valid Rust 2024 RPIT; `use<>` captures listed type params; `use<S>` captures `S` (a type parameter, not a lifetime); CORRECT
+- `fn build_core(position: Vec2, half_extents: Vec2) -> impl Bundle + use<>` — no type/lifetime params; `use<>` captures nothing; CORRECT (already known pattern, confirmed again in wall builder)
+- Nested sub-tuple bundle: `((Wall, Position2D, Scale2D), (Aabb2D, CollisionLayers, GameDrawLayer))` returned as `impl Bundle` — outer 2-tuple where each arm is a 3-tuple; all satisfy `Bundle`; CORRECT
+- `RootEffect::On { then, .. }` — `RootEffect` has fields `target` and `then`; `..` wildcard discards `target`; valid Rust struct pattern; CORRECT
+- `commands.push_bound_effects(entity, entries)` — method from `EffectCommandsExt` extension trait on `Commands<'_, '_>` (defined in `effect/commands/ext.rs`); signature `fn push_bound_effects(&mut self, entity: Entity, effects: Vec<(String, EffectNode)>)`; CORRECT; used by bolt, cell, chip, and wall domains
+- `Wall` component has `#[require(Spatial2D, CleanupOnNodeExit)]` — confirmed in `wall/components.rs:10`; covered by existing confirmed-patterns entry for `#[require]`
+- `Mesh2d(handle)` and `MeshMaterial2d(handle)` — post-0.15 component-based rendering; confirmed correct (previously established)

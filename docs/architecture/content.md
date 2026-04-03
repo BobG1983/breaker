@@ -67,7 +67,7 @@ pub enum EffectKind {
     GravityWell { strength: f32, duration: f32, radius: f32, max: u32 },
 
     // Protection / special
-    Shield { stacks: u32 },           // stacks become ShieldActive.charges (no duration)
+    Shield { duration: f32 },          // spawns a timed floor wall (ShieldWall + ShieldWallTimer)
     SecondWind,                        // unit variant — no fields
     LoseLife,
     TimePenalty { seconds: f32 },
@@ -90,9 +90,9 @@ See `docs/architecture/effects/core_types.md` for full field-level documentation
 
 When a player selects a chip, the chip dispatch system pushes the chip's `EffectNode` trees onto the breaker/bolt entity's `BoundEffects`. Bridge systems in `effect/triggers/` evaluate `BoundEffects` and `StagedEffects` on every matching trigger, calling `commands.fire_effect(entity, effect_kind, chip_name)` for each `Do` leaf they encounter.
 
-- **Stat effects** (`SpeedBoost`, `DamageBoost`, `Piercing`, `SizeBoost`, `BumpForce`, `QuickStop`): `fire()` pushes a value onto an `Active*` stack component (e.g., `ActiveSpeedBoosts(Vec<f32>)`). `EffectSystems::Recalculate` systems reduce each stack into a single `Effective*` scalar consumed by gameplay systems.
+- **Stat effects** (`SpeedBoost`, `DamageBoost`, `Piercing`, `SizeBoost`, `BumpForce`, `QuickStop`): `fire()` pushes a value onto an `Active*` stack component (e.g., `ActiveSpeedBoosts(Vec<f32>)`). Consumers read these stacks directly via `.multiplier()` / `.total()` — there is no separate `Recalculate` step.
 - **AoE/spawn effects** (`Shockwave`, `ChainLightning`, `Explode`, etc.): `fire()` spawns a request entity or directly damages nearby cells via `DamageCell` message. These carry chip attribution via `EffectSourceChip` component for damage tracking.
-- **Shield**: `fire()` inserts or adds charges to `ShieldActive` on the entity. Charge decrement happens in `bolt_lost` (breaker entity) and `handle_cell_hit` (cell entities) — not in a separate effect system.
+- **Shield**: `fire()` spawns a `ShieldWall` entity (a timed visible floor wall) with a `ShieldWallTimer`. If a wall already exists, the timer is reset in-place. `tick_shield_wall_timer` despawns the wall when the timer expires. No component is inserted on the target entity.
 
 **Adding new content:** new RON template file, no recompile. **Adding new behavior types:** new `EffectKind` variant in `effect/core/types/definitions/enums.rs` + new module in `effect/effects/` + fire/reverse arms in `definitions/fire.rs` and `definitions/reverse.rs` + `register()` call, requires recompile.
 

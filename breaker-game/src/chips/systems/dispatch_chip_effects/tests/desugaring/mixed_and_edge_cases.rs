@@ -22,7 +22,7 @@ fn no_breaker_entity_desugaring_silently_dropped() {
         Target::AllCells,
         EffectNode::When {
             trigger: Trigger::Impacted(ImpactTarget::Bolt),
-            then: vec![EffectNode::Do(EffectKind::Shield { stacks: 1 })],
+            then: vec![EffectNode::Do(EffectKind::Shield { duration: 5.0 })],
         },
         5,
     );
@@ -63,7 +63,7 @@ fn mixed_breaker_and_all_bolts_targets_dispatched_correctly() {
                 target: Target::Breaker,
                 then: vec![EffectNode::When {
                     trigger: Trigger::PerfectBump,
-                    then: vec![EffectNode::Do(EffectKind::Shield { stacks: 1 })],
+                    then: vec![EffectNode::Do(EffectKind::Shield { duration: 5.0 })],
                 }],
             },
             RootEffect::On {
@@ -149,7 +149,7 @@ fn three_root_effects_breaker_direct_cells_and_walls_desugared() {
                 target: Target::Breaker,
                 then: vec![EffectNode::When {
                     trigger: Trigger::PerfectBump,
-                    then: vec![EffectNode::Do(EffectKind::Shield { stacks: 1 })],
+                    then: vec![EffectNode::Do(EffectKind::Shield { duration: 5.0 })],
                 }],
             },
             RootEffect::On {
@@ -284,7 +284,7 @@ fn desugared_effects_preserve_chip_display_name() {
         Target::AllCells,
         EffectNode::When {
             trigger: Trigger::Impacted(ImpactTarget::Bolt),
-            then: vec![EffectNode::Do(EffectKind::Shield { stacks: 1 })],
+            then: vec![EffectNode::Do(EffectKind::Shield { duration: 5.0 })],
         },
         5,
     );
@@ -318,7 +318,7 @@ fn desugared_effects_preserve_empty_string_chip_name() {
             target: Target::AllCells,
             then: vec![EffectNode::When {
                 trigger: Trigger::Impacted(ImpactTarget::Bolt),
-                then: vec![EffectNode::Do(EffectKind::Shield { stacks: 1 })],
+                then: vec![EffectNode::Do(EffectKind::Shield { duration: 5.0 })],
             }],
         }],
         ingredients: None,

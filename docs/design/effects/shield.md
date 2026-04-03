@@ -1,22 +1,22 @@
 # Shield
 
-Temporary protection -- dual behavior depending on entity type.
+Spawns a timed visible floor wall at the playfield bottom that blocks bolt losses.
 
 ## Parameters
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `stacks` | `u32` | Number of shield charges |
+| `duration` | `f32` | How long the shield wall persists (seconds) |
 
 ## Behavior
 
-Inserts `ShieldActive { charges: stacks }` component on the entity. Behavior depends on entity type:
+Spawns a `ShieldWall` entity — a visible, blue HDR floor wall at the playfield bottom — and attaches a `ShieldWallTimer` set to `duration` seconds.
 
-- **On Breaker**: absorbs bolt losses. Each bolt saved by the shield costs one charge. Multiple bolts lost in the same frame each consume one charge independently. When charges are exhausted, remaining bolts fall through to normal handling. When charges reach zero, `ShieldActive` is removed.
-- **On Cell (or any entity with a health pool)**: absorbs damage hits. Each hit absorbed costs one charge. When charges reach zero, `ShieldActive` is removed and subsequent hits deal damage normally. Multiple hits in the same frame each consume one charge independently (same per-hit model as breaker bolt absorption).
-
-Multiple fires add charges to any existing shield (additive stacking).
+- The wall uses the same collision layers as permanent walls (membership: `WALL_LAYER`, mask: `BOLT_LAYER`), so bolts bounce off it normally.
+- `tick_shield_wall_timer` ticks the timer each `FixedUpdate` (after `BoltSystems::WallCollision`) and despawns the wall when the timer expires.
+- If a shield wall already exists when `fire()` is called, the timer is reset to the new `duration` in-place — no second wall is spawned (additive refresh, not stacking).
+- The target entity receives no component. The wall is a standalone spawned entity.
 
 ## Reversal
 
-Removes the `ShieldActive` component from the entity.
+Despawns all `ShieldWall` entities immediately.

@@ -1,6 +1,6 @@
 ---
 name: todo
-description: Manage the development todo list in .claude/todos/. Add, complete, reorder, detail, research, or interrogate items. Use when the user wants to view, modify, or add to the todo list, or research and add details to existing items.
+description: Manage the development todo list in docs/todos/. Add, complete, reorder, detail, research, or interrogate items. Use when the user wants to view, modify, or add to the todo list, or research and add details to existing items.
 ---
 
 # Todo
@@ -43,7 +43,7 @@ Manage a prioritized development todo list. Captures conversation context so fut
 ## File Structure
 
 ```
-.claude/todos/
+docs/todos/
   TODO.md              # ordered backlog — the active index
   DONE.md              # completed items — historical record, not read routinely
   detail/
@@ -63,7 +63,7 @@ Manage a prioritized development todo list. Captures conversation context so fut
 1. Read `TODO.md` (create if it doesn't exist)
 2. If the description is vague, ask up to 2 clarifying questions (use AskUserQuestion)
 3. Generate a slug from the description (e.g., `bolt-zero-velocity-clamp`)
-4. Write `.claude/todos/detail/<slug>.md` with:
+4. Write `docs/todos/detail/<slug>.md` with:
    - **Summary**: one-line description
    - **Context**: relevant conversation context — what was discussed, why this matters, what was decided
    - **Scope**: what's in and out, if known
@@ -108,7 +108,7 @@ Manage a prioritized development todo list. Captures conversation context so fut
 2. Read its detail file to understand the scope and open questions
 3. If the detail is a single file, convert to a directory: `detail/<slug>/` with the detail file moved inside and a `research/` subdirectory created
 4. Launch applicable research agents (from `sub-agents.md` Research Agents) in parallel (if no relevant agents exist, use a General agent)
-   - Tell each agent to write output to `.claude/todos/detail/<slug>/research/<topic>.md` if they write to `.claude/research/<topic>.md` instead, move it yourself
+   - Tell each agent to write output to `docs/todos/detail/<slug>/research/<topic>.md` if they write to `.claude/research/<topic>.md` instead, move it yourself
 5. After research completes, update the detail file with key findings and links to research files
 6. If research resolves open questions, update status from `[NEEDS DETAIL]` to `ready` or remove the entry from the `[NEEDS DETAIL]` list in the details file.
 

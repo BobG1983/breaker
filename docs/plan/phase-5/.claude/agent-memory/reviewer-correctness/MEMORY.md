@@ -1,1 +1,0 @@
-- [wave1-review-2026-03-30.md](ephemeral/wave1-review-2026-03-30.md) — Wave 1 scenario-coverage review: stat-boost lazy init + GravityWell/SpawnPhantom FIFO

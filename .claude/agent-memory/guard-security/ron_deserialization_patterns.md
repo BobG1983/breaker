@@ -314,6 +314,38 @@ in production code.
 ### defaults.breaker.ron: new reflection_spread field (Info-level, carry-forward)
 - Confirmed in prior audit note (2026-03-31). No new findings.
 
+## wall builder feature (2026-04-02) — wall builder migration
+
+### WallDefinition RON schema — all safe (Safe)
+- `#[serde(deny_unknown_fields)]` on WallDefinition — unknown fields are errors, not silently swallowed.
+- All fields except `name` have `#[serde(default)]`. A RON file with only `(name: "Wall")` is valid.
+- `half_thickness: f32` defaults to 90.0 via a default function. No division by zero risk: half_thickness
+  is used only in arithmetic (addition, subtraction) for wall position and extents — never as a divisor.
+  A RON file setting `half_thickness: 0.0` produces a zero-extent wall (invisible, physics degenerate),
+  but does not panic. No validation guard exists — Info-level only.
+- `color_rgb: Option<[f32; 3]>` — HDR values exceeding 1.0 are permitted by design for bloom.
+  Values are passed to `color_from_rgb()` and into Bevy's ColorMaterial. No injection risk.
+- `effects: Vec<RootEffect>` — nested via existing RootEffect deserialization, which is already vetted.
+- Production deserialization via Bevy asset pipeline (returns asset error, not panic).
+- Test deserialization via ron::de::from_str(...).expect() inside #[cfg(test)] only.
+- One shipped RON: assets/walls/wall.wall.ron — contains only `name: "Wall"`, all defaults apply.
+
+### WallRegistry::seed() — warn-and-skip for duplicates (Safe — better than BreakerRegistry)
+- Unlike BreakerRegistry::seed() which uses `assert!` on duplicate names (panic on collision),
+  WallRegistry::seed() uses `warn!(...); continue;` — a duplicate wall name logs a warning and
+  the second definition is silently skipped. No production panic path. The first-wins behavior
+  is tested and documented.
+
+### Wall::builder() half_thickness resolution — no panic path (Safe)
+- resolve_half_thickness() uses Option::or().unwrap_or(DEFAULT_HALF_THICKNESS).
+  unwrap_or is not unwrap() — always returns a fallback. No panic.
+
+### second_wind/system.rs — no panic path (Safe)
+- fire() uses world.resource::<PlayfieldConfig>().clone() — panics if PlayfieldConfig is absent,
+  but this resource is always initialized at app startup. Same pattern as other effect fire() fns.
+- despawn_second_wind_on_contact: wall_query.get(msg.wall).is_ok() before any entity access. Safe.
+- No RON deserialization in second_wind — pure runtime spawning via Wall::builder().
+
 ## feature/breaker-builder-pattern (2026-04-02) — breaker builder migration
 
 ### BreakerDefinition expanded to 35+ serde-defaulted fields (Safe)
@@ -383,3 +415,43 @@ in production code.
 - discovery.rs:load_scenario() uses .map_err(eprintln).ok() — malformed scenario files
   produce an error message and return None, not a panic. This is the same pattern as
   prior audits. No new production .expect()/.unwrap() on file-controlled data.
+
+## Shield refactor (2026-04-02, commit e887570)
+
+### EffectKind::Shield changed from {stacks: u32} to {duration: f32} (Safe)
+- parry.chip.ron uses `Shield(duration: 5.0)` — positive f32 literal, no injection risk.
+- duration: 0.0 and negative values are valid at the enum level (compile test confirms).
+  Timer::from_seconds(0.0) is valid Bevy — timer starts already finished, wall is despawned
+  on the next tick. Not a panic; wall is briefly visible for one frame at most.
+  Negative duration: Timer::from_seconds negative — Bevy clamped to 0.0 internally (safe).
+  Info-level only; RON files ship with `duration: 5.0`.
+
+### fire() resource access pattern — sequential borrows (Safe)
+- `world.resource_mut::<Assets<Mesh>>()` and `world.resource_mut::<Assets<ColorMaterial>>()`
+  are called sequentially (one finishes, returns, then the other borrows). No aliasing.
+  Each borrow ends before the next begins. Borrow checker enforces this at compile time.
+  The comment in fire() at line 43-45 correctly explains the rationale.
+
+### fire() world.resource::<PlayfieldConfig>() — panic-if-absent (Pre-existing pattern)
+- Confirmed identical to second_wind/system.rs and other effect fire() fns.
+  PlayfieldConfig is always inserted at app startup. Not a new panic surface.
+
+### re-fire silent no-op: ShieldWall exists without ShieldWallTimer (Info-level)
+- fire() at line 27: `if let Some(mut timer) = world.get_mut::<ShieldWallTimer>(wall_entity)`
+  — if the existing ShieldWall entity somehow lacks ShieldWallTimer, the `if let` falls
+  through and `return` is still reached. Timer is not reset, no new wall is spawned.
+  Silent no-op. In practice this cannot happen: all spawning paths insert both components
+  atomically via world.spawn((ShieldWall, ShieldWallTimer(...), ...)). Info-level only.
+
+### ShieldActive deleted — no residual references in production code (Safe)
+- ShieldActive is no longer a type anywhere in the .rs source tree. Confirmed by grep.
+- bolt_lost.rs and handle_cell_hit/system.rs no longer reference ShieldActive.
+  The reviewer-architecture memory file shield_cross_domain_write.md is now stale (describes
+  the deleted component). It should be updated or removed by reviewer-architecture.
+
+### No new RON deserialization panic surface (Safe)
+- parry.chip.ron: only field change is Shield(duration: 5.0) replacing stacks-based variant.
+  Loaded via Bevy asset pipeline. No production panic surface.
+- shield_wall_at_most_one.scenario.ron, shield_wall_reflection.scenario.ron:
+  parsed via load_scenario() returning Option — no panic on malformed input.
+  SpawnExtraShieldWalls(2) in self-test: count is a small literal (2), no exhaustion risk.

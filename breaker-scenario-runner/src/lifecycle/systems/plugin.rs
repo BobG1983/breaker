@@ -34,8 +34,8 @@ use crate::invariants::{
     check_gravity_well_count_reasonable, check_maxed_chip_never_offered, check_no_entity_leaks,
     check_no_nan, check_offering_no_duplicates, check_physics_frozen_during_pause,
     check_pulse_ring_accumulation, check_run_stats_monotonic, check_second_wind_wall_at_most_one,
-    check_shield_charges_consistent, check_timer_monotonically_decreasing,
-    check_timer_non_negative, check_valid_breaker_state, check_valid_state_transitions,
+    check_shield_wall_at_most_one, check_timer_monotonically_decreasing, check_timer_non_negative,
+    check_valid_breaker_state, check_valid_state_transitions,
 };
 
 /// Plugin that drives the scenario lifecycle.
@@ -103,7 +103,7 @@ fn register_scenario_systems(app: &mut App) {
         check_chip_stacks_consistent,
         check_run_stats_monotonic,
         check_second_wind_wall_at_most_one,
-        check_shield_charges_consistent,
+        check_shield_wall_at_most_one,
         check_pulse_ring_accumulation,
         check_chain_arc_count_reasonable,
     )

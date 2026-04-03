@@ -1,3 +1,3 @@
-- [known-state.md](known-state.md) — Confirmed doc/code alignment through feature/breaker-builder-pattern Wave 9 (2026-04-02); covers effect rewrite, stat-effects, runtime-effects, bolt/breaker builder migrations, BoltConfig/BreakerConfig elimination
+- [known-state.md](known-state.md) — Confirmed doc/code alignment through Shield refactor (2026-04-02); ShieldActive ELIMINATED, Shield now duration-based floor wall; covers effect rewrite, stat-effects, runtime-effects, bolt/breaker builder migrations, BoltConfig/BreakerConfig elimination
 - [terminology.md](terminology.md) — Confirmed term mappings: collision messages, EffectKind variants, Active*/Effective* pairs, new system set variants
 - [phase-log.md](phase-log.md) — Review session log: what was checked, what was updated per session (2026-03-28 through 2026-03-30)

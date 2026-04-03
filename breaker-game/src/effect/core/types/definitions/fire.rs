@@ -119,10 +119,10 @@ impl EffectKind {
                     world,
                 );
             }
-            Self::Shield { stacks } => {
+            Self::Shield { duration } => {
                 super::super::super::super::effects::shield::fire(
                     entity,
-                    *stacks,
+                    *duration,
                     source_chip,
                     world,
                 );

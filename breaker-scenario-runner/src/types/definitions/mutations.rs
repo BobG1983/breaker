@@ -88,11 +88,11 @@ pub enum MutationKind {
     /// Used by the `second_wind_wall_at_most_one` self-test to trigger an
     /// [`InvariantKind::SecondWindWallAtMostOne`] violation.
     SpawnExtraSecondWindWalls(usize),
-    /// Inject a `ShieldActive { charges: 0 }` component on the breaker entity.
+    /// Spawn N extra `ShieldWall` marker entities.
     ///
-    /// Used by the `shield_charges_consistent` self-test to trigger a
-    /// [`InvariantKind::ShieldChargesConsistent`] violation.
-    InjectZeroChargeShield,
+    /// Used by the `shield_wall_at_most_one` self-test to trigger a
+    /// [`InvariantKind::ShieldWallAtMostOne`] violation.
+    SpawnExtraShieldWalls(usize),
     /// Spawn N extra `PulseRing` marker entities to push count above the threshold.
     ///
     /// Used by the `pulse_ring_accumulation` self-test to trigger a

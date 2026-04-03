@@ -427,3 +427,37 @@ type: project
 - `docs/architecture/type_state_builder_pattern.md` — already documents Bolt::builder() correctly
 - `docs/plan/index.md` — no plan entry needed (internal refactor, not a phase milestone)
 - `docs/architecture/bolt-definitions.md` Target State section — forward-looking, all `init_bolt_params` references there are planned target code
+
+## 2026-04-02 — Shield refactor + test helper migration review
+
+**Branch:** develop (recent commits: refactor/file-splits merged, feature/breaker-builder-pattern merged)
+
+**Scope:** Shield effect completely rewritten — `ShieldActive` deleted, `EffectKind::Shield { stacks }` → `{ duration }`, new wall-based mechanic. Invariant `ShieldChargesConsistent` renamed to `ShieldWallAtMostOne`.
+
+**Files reviewed:**
+- `breaker-game/src/effect/effects/shield.rs` — full new implementation: ShieldWall, ShieldWallTimer, fire/reverse/register, tick_shield_wall_timer, 16 tests
+- `breaker-game/assets/chips/standard/parry.chip.ron` — confirmed `Shield(duration: 5.0)`
+- `breaker-scenario-runner/src/types/definitions/invariants.rs` — confirmed `ShieldWallAtMostOne` variant
+- `breaker-scenario-runner/src/invariants/checkers/check_shield_wall_at_most_one.rs` — confirmed implementation
+- `breaker-game/src/effect/triggers/bolt_lost.rs` — confirmed NO ShieldActive reference
+- `breaker-game/src/cells/systems/` — confirmed NO ShieldActive reference anywhere
+
+**Drifts found and fixed:**
+- `docs/design/effects/shield.md` — complete rewrite: removed stacks/ShieldActive description; documented duration-based wall mechanic (ShieldWall, ShieldWallTimer, timer reset on re-fire, Wall collision layers)
+- `docs/architecture/content.md` — EffectKind enum: `Shield { stacks: u32 }` → `Shield { duration: f32 }` with updated comment
+- `docs/architecture/content.md` — Shield application paragraph: removed ShieldActive/charge description; replaced with wall-spawn description
+- `docs/architecture/effects/core_types.md` — EffectKind enum: `Shield { stacks: u32 }` → `Shield { duration: f32 }` with updated comment
+- `docs/architecture/plugins.md` — deleted entire "ShieldActive Cross-Domain Write Exception" section (12 lines); updated rule sentence to remove "one additional narrow production exception" reference
+- `docs/design/chip-catalog.md` — Parry row: `Shield(stacks: 1)` → `Shield(duration: 5.0)`; design notes updated
+- `docs/architecture/bolt-definitions.md` — planned `sync_bolt_visual_modifiers` query: removed `Option<&ShieldActive>` param and `shield` variable (ShieldActive type no longer exists)
+
+**Items confirmed no-drift:**
+- `docs/architecture/standards.md` — already has `ShieldWallAtMostOne` in invariant list (correct)
+- `docs/design/terminology/scenarios.md` — MutationKind list already has `SpawnExtraShieldWalls` (correct)
+
+**Intentionally forward-looking (do NOT fix):**
+- `docs/design/graphics/catalog/entities.md` — "Bolt shield aura" + "Shield barrier" reference ShieldActive (Phase 5 rendering design)
+- `docs/design/graphics/catalog/effects.md` — "Shield (bolt-loss)" row references ShieldActive (Phase 5 rendering design)
+- `docs/todos/detail/rendering-refactor/walls_and_background.md` — Shield Barrier section references ShieldActive (future rendering todo)
+- `docs/todos/detail/rendering-refactor/communication.md` — Shield VFX section references ShieldActive (future rendering todo)
+- `docs/todos/detail/game-crate-splitting/research/cross-domain-dependencies.md` — historical research artifact; reflects pre-refactor state

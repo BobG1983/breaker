@@ -251,7 +251,7 @@ fn when_child_targeting_breaker_pushes_to_bound_effects_with_shield() {
         Target::Breaker,
         EffectNode::When {
             trigger: Trigger::PerfectBump,
-            then: vec![EffectNode::Do(EffectKind::Shield { stacks: 1 })],
+            then: vec![EffectNode::Do(EffectKind::Shield { duration: 5.0 })],
         },
         5,
     );
@@ -278,7 +278,7 @@ fn when_child_targeting_breaker_pushes_to_bound_effects_with_shield() {
             EffectNode::When {
                 trigger: Trigger::PerfectBump,
                 then,
-            } if then.len() == 1 && matches!(&then[0], EffectNode::Do(EffectKind::Shield { stacks: 1 }))
+            } if then.len() == 1 && matches!(&then[0], EffectNode::Do(EffectKind::Shield { duration: 5.0 }))
         ),
         "should be When {{ PerfectBump, [Do(Shield {{ stacks: 1 }})] }}, got {node:?}"
     );

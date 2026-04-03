@@ -1,4 +1,4 @@
-//! Basic spawn tests — wall count, `WallSize`, cleanup marker, message dispatch,
+//! Basic spawn tests — wall count, cleanup marker, message dispatch,
 //! and position matching.
 
 use bevy::prelude::*;
@@ -7,8 +7,8 @@ use super::helpers::test_app;
 use crate::{
     shared::{CleanupOnNodeExit, PlayfieldConfig},
     wall::{
-        components::{Wall, WallSize},
-        messages::WallsSpawned,
+        components::Wall, definition::WallDefinition, messages::WallsSpawned,
+        registry::WallRegistry,
     },
 };
 
@@ -23,19 +23,6 @@ fn spawns_three_walls() {
         .iter(app.world())
         .count();
     assert_eq!(count, 3, "should spawn left, right, and ceiling walls");
-}
-
-#[test]
-fn walls_have_wall_size() {
-    let mut app = test_app();
-    app.update();
-
-    let count = app
-        .world_mut()
-        .query::<&WallSize>()
-        .iter(app.world())
-        .count();
-    assert_eq!(count, 3);
 }
 
 #[test]
@@ -98,4 +85,57 @@ fn wall_positions_match_playfield() {
         .find(|pos| pos.y > playfield.top())
         .expect("should have ceiling wall");
     assert!((ceiling.x).abs() < f32::EPSILON, "ceiling centered at x=0");
+}
+
+#[test]
+fn spawn_walls_uses_definition_half_thickness_from_registry() {
+    use rantzsoft_spatial2d::components::{Position2D, Scale2D};
+
+    // Given: WallRegistry with a custom half_thickness of 45.0
+    let mut registry = WallRegistry::default();
+    registry.insert(
+        "Wall".to_string(),
+        WallDefinition {
+            name: "Wall".to_string(),
+            half_thickness: 45.0,
+            ..WallDefinition::default()
+        },
+    );
+
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .add_message::<WallsSpawned>()
+        .init_resource::<PlayfieldConfig>()
+        .insert_resource(registry)
+        .add_systems(Update, super::super::spawn_walls);
+    app.update();
+
+    // Verify: Left wall Position2D.x == -445.0, Scale2D.x == 45.0
+    // playfield.left() = -400.0, so left wall x = -400.0 - 45.0 = -445.0
+    let playfield = PlayfieldConfig::default();
+
+    let wall_data: Vec<(Vec2, f32, f32)> = app
+        .world_mut()
+        .query_filtered::<(&Position2D, &Scale2D), With<Wall>>()
+        .iter(app.world())
+        .map(|(pos, scale)| (pos.0, scale.x, scale.y))
+        .collect();
+
+    assert_eq!(wall_data.len(), 3, "should spawn 3 walls");
+
+    // Left wall: x < playfield.left()
+    let left = wall_data
+        .iter()
+        .find(|(pos, ..)| pos.x < playfield.left())
+        .expect("should have left wall");
+    assert!(
+        (left.0.x - (-445.0)).abs() < f32::EPSILON,
+        "left wall Position2D.x should be -445.0, got {}",
+        left.0.x
+    );
+    assert!(
+        (left.1 - 45.0).abs() < f32::EPSILON,
+        "left wall Scale2D.x should be 45.0, got {}",
+        left.1
+    );
 }

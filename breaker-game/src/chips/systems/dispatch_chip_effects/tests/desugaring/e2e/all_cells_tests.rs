@@ -37,7 +37,7 @@ fn assert_cell_has_shield_bound_effect(app: &App, cell: Entity, label: &str) {
                 then: do_children,
             } if do_children.len() == 1 && matches!(
                 &do_children[0],
-                EffectNode::Do(EffectKind::Shield { stacks: 1 })
+                EffectNode::Do(EffectKind::Shield { duration: 5.0 })
             )
         ),
         "{label} should have When(Impacted(Bolt), [Do(Shield(1))]), got {node:?}"
@@ -67,7 +67,7 @@ fn setup_e2e_desugaring_app() -> (App, Entity, Entity, Entity) {
             target: Target::AllCells,
             then: vec![EffectNode::When {
                 trigger: Trigger::Impacted(ImpactTarget::Bolt),
-                then: vec![EffectNode::Do(EffectKind::Shield { stacks: 1 })],
+                then: vec![EffectNode::Do(EffectKind::Shield { duration: 5.0 })],
             }],
         }],
         ingredients: None,
@@ -100,7 +100,7 @@ fn setup_e2e_desugaring_app() -> (App, Entity, Entity, Entity) {
 /// Verifies the full chain: `dispatch_chip_effects` desugars `AllCells` target
 /// to `When(NodeStart, On(AllCells, permanent: true, ...))` on the Breaker,
 /// then when `NodeStart` fires the `On(AllCells)` node resolves to each Cell
-/// entity and installs `When(Impacted(Bolt), Do(Shield { stacks: 1 }))` in
+/// entity and installs `When(Impacted(Bolt), Do(Shield { duration: 5.0 }))` in
 /// their `BoundEffects` (permanent, not `StagedEffects`).
 #[test]
 fn chip_all_cells_target_desugars_and_resolves_to_cell_bound_effects_on_node_start() {
@@ -136,7 +136,7 @@ fn chip_all_cells_target_desugars_and_resolves_to_cell_bound_effects_on_node_sta
                         then: do_children,
                     } if do_children.len() == 1 && matches!(
                         &do_children[0],
-                        EffectNode::Do(EffectKind::Shield { stacks: 1 })
+                        EffectNode::Do(EffectKind::Shield { duration: 5.0 })
                     )
                 )
             )
@@ -289,7 +289,7 @@ fn assert_cell_has_damage_boost_bound_effect(app: &App, cell: Entity, label: &st
 /// -> cells get permanent `BoundEffects` (`DamageBoost` variant).
 ///
 /// This mirrors the existing Section K test but uses `DamageBoost(2.0)` instead
-/// of `Shield { stacks: 1 }`, and targets three cells instead of two, to verify
+/// of `Shield { duration: 5.0 }`, and targets three cells instead of two, to verify
 /// the pipeline works with different effect kinds.
 #[test]
 fn chip_all_cells_damage_boost_target_desugars_and_resolves_to_cell_bound_effects_on_node_start() {

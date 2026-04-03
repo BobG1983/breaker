@@ -74,10 +74,10 @@ fn invariant_kind_second_wind_wall_at_most_one_parses() {
 }
 
 #[test]
-fn invariant_kind_shield_charges_consistent_parses() {
+fn invariant_kind_shield_wall_at_most_one_parses() {
     let result: InvariantKind =
-        ron::de::from_str("ShieldChargesConsistent").expect("ShieldChargesConsistent should parse");
-    assert_eq!(result, InvariantKind::ShieldChargesConsistent);
+        ron::de::from_str("ShieldWallAtMostOne").expect("ShieldWallAtMostOne should parse");
+    assert_eq!(result, InvariantKind::ShieldWallAtMostOne);
 }
 
 #[test]

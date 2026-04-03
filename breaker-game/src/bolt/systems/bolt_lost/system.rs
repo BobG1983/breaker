@@ -14,7 +14,6 @@ use crate::{
         queries::{LostBoltData, apply_velocity_formula},
     },
     breaker::filters::CollisionFilterBreaker,
-    effect::effects::shield::ShieldActive,
     shared::{GameRng, PlayfieldConfig},
 };
 
@@ -35,9 +34,6 @@ pub(crate) struct LostBoltEntry {
     spawn_offset: f32,
     angle_spread: f32,
     is_extra: bool,
-    effective_radius: f32,
-    current_velocity: Vec2,
-    current_position: Vec2,
 }
 
 /// Detects when the bolt falls below the playfield.
@@ -51,17 +47,13 @@ pub(crate) fn bolt_lost(
     mut rng: ResMut<GameRng>,
     mut bolt_query: Query<LostBoltData, ActiveFilter>,
     mut breaker_query: Query<
-        (
-            Entity,
-            &rantzsoft_spatial2d::components::Position2D,
-            Option<&mut ShieldActive>,
-        ),
+        (Entity, &rantzsoft_spatial2d::components::Position2D),
         CollisionFilterBreaker,
     >,
     mut writers: BoltLostWriters,
     mut lost_bolts: Local<Vec<LostBoltEntry>>,
 ) {
-    let Ok((breaker_entity, breaker_position, mut shield_opt)) = breaker_query.single_mut() else {
+    let Ok((_breaker_entity, breaker_position)) = breaker_query.single_mut() else {
         return;
     };
     let breaker_pos = breaker_position.0;
@@ -83,39 +75,12 @@ pub(crate) fn bolt_lost(
                     .angle_spread
                     .map_or(crate::bolt::resources::DEFAULT_BOLT_ANGLE_SPREAD, |a| a.0),
                 is_extra: bolt.is_extra,
-                effective_radius: bolt.radius.0 * bolt.node_scale.map_or(1.0, |s| s.0),
-                current_velocity: bolt.spatial.velocity.0,
-                current_position: bolt.spatial.position.0,
             }),
     );
 
     for entry in &*lost_bolts {
-        // Check shield charge per bolt — each bolt consumes one charge independently
-        let shield_active = shield_opt.as_mut().is_some_and(|s| s.charges > 0);
-
-        if shield_active {
-            // Shield reflection — no BoltLost sent, applies to ALL bolts (baseline + extra)
-            if let Ok(mut bolt) = bolt_query.get_mut(entry.entity) {
-                bolt.spatial.velocity.0 =
-                    Vec2::new(entry.current_velocity.x, entry.current_velocity.y.abs());
-                apply_velocity_formula(&mut bolt.spatial, bolt.active_speed_boosts);
-                let clamped_y = playfield.bottom() + entry.effective_radius;
-                let clamped_pos = Vec2::new(entry.current_position.x, clamped_y);
-                bolt.spatial.position.0 = clamped_pos;
-                commands
-                    .entity(entry.entity)
-                    .insert(PreviousPosition(clamped_pos));
-            }
-
-            // Decrement shield charge — shield_active guard ensures Some
-            if let Some(shield) = shield_opt.as_mut() {
-                shield.charges -= 1;
-                if shield.charges == 0 {
-                    commands.entity(breaker_entity).remove::<ShieldActive>();
-                }
-            }
-        } else if entry.is_extra {
-            writers.writer.write(BoltLost);
+        writers.writer.write(BoltLost);
+        if entry.is_extra {
             if let Ok(ref mut destroyed_writer) = writers.request_destroyed_writer {
                 // Two-phase destruction: write request (entity stays alive for bridge evaluation)
                 destroyed_writer.write(RequestBoltDestroyed { bolt: entry.entity });
@@ -124,7 +89,6 @@ pub(crate) fn bolt_lost(
                 commands.entity(entry.entity).despawn();
             }
         } else {
-            writers.writer.write(BoltLost);
             // Respawn above breaker
             let angle = rng.0.random_range(-entry.angle_spread..=entry.angle_spread);
             // Angle from vertical: sin->X, cos->Y; positive Y is upward.

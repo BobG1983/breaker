@@ -191,7 +191,7 @@ fn breaker_missing_bound_effects_inserted_before_push() {
         Target::Breaker,
         EffectNode::When {
             trigger: Trigger::PerfectBump,
-            then: vec![EffectNode::Do(EffectKind::Shield { stacks: 1 })],
+            then: vec![EffectNode::Do(EffectKind::Shield { duration: 5.0 })],
         },
         5,
     );
@@ -231,7 +231,7 @@ fn cell_target_desugars_to_breaker_bound_effects() {
         Target::AllCells,
         EffectNode::When {
             trigger: Trigger::Impacted(crate::effect::ImpactTarget::Bolt),
-            then: vec![EffectNode::Do(EffectKind::Shield { stacks: 1 })],
+            then: vec![EffectNode::Do(EffectKind::Shield { duration: 5.0 })],
         },
         5,
     );

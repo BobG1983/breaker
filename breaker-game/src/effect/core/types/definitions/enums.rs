@@ -285,10 +285,10 @@ pub enum EffectKind {
         /// Maximum distance between the two chained bolts.
         tether_distance: f32,
     },
-    /// Temporary breaker protection (charge-based).
+    /// Temporary visible floor wall (timed).
     Shield {
-        /// Current stack count (becomes charge count).
-        stacks: u32,
+        /// Duration in seconds before the wall despawns.
+        duration: f32,
     },
     /// Arc damage jumping between nearby cells.
     ChainLightning {

@@ -131,7 +131,7 @@ fn cell_target_desugars_to_when_node_start_on_cell() {
         Target::Cell,
         EffectNode::When {
             trigger: Trigger::Impacted(ImpactTarget::Bolt),
-            then: vec![EffectNode::Do(EffectKind::Shield { stacks: 2 })],
+            then: vec![EffectNode::Do(EffectKind::Shield { duration: 10.0 })],
         },
         5,
     );

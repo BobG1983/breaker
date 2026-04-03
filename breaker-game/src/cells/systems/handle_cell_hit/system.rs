@@ -2,13 +2,10 @@
 
 use bevy::prelude::*;
 
-use crate::{
-    cells::{
-        components::Cell,
-        messages::{DamageCell, RequestCellDestroyed},
-        queries::DamageVisualQuery,
-    },
-    effect::effects::shield::ShieldActive,
+use crate::cells::{
+    components::Cell,
+    messages::{DamageCell, RequestCellDestroyed},
+    queries::DamageVisualQuery,
 };
 
 /// Handles cell damage in response to [`DamageCell`] messages.
@@ -26,7 +23,6 @@ pub(crate) fn handle_cell_hit(
     mut request_destroyed_writer: MessageWriter<RequestCellDestroyed>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut despawned: Local<Vec<Entity>>,
-    mut commands: Commands,
 ) {
     // Local<Vec> reuses its heap allocation across frames — zero allocs after warmup.
     // Bounded by MAX_BOUNCES hits per frame.
@@ -35,32 +31,14 @@ pub(crate) fn handle_cell_hit(
         if despawned.contains(&msg.cell) {
             continue;
         }
-        let Ok((
-            mut health,
-            material_handle,
-            visuals,
-            is_required,
-            is_locked,
-            _position,
-            mut shield_opt,
-        )) = cell_query.get_mut(msg.cell)
+        let Ok((mut health, material_handle, visuals, is_required, is_locked, _position)) =
+            cell_query.get_mut(msg.cell)
         else {
             continue;
         };
 
         // Locked cells are immune to damage until unlocked.
         if is_locked {
-            continue;
-        }
-
-        // Shielded cells absorb damage: one charge per hit.
-        if let Some(ref mut shield) = shield_opt
-            && shield.charges > 0
-        {
-            shield.charges -= 1;
-            if shield.charges == 0 {
-                commands.entity(msg.cell).remove::<ShieldActive>();
-            }
             continue;
         }
 

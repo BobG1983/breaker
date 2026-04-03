@@ -11,7 +11,7 @@ use breaker::{
         gravity_well::{GravityWellConfig, GravityWellMarker},
         pulse::PulseRing,
         second_wind::SecondWindWall,
-        shield::ShieldActive,
+        shield::ShieldWall,
     },
     run::{RunStats, node::resources::NodeTimer},
     screen::chip_select::{ChipOffering, ChipOffers},
@@ -142,8 +142,10 @@ pub fn apply_debug_frame_mutations(
                     targets.commands.spawn(SecondWindWall);
                 }
             }
-            MutationKind::InjectZeroChargeShield => {
-                targets.commands.spawn(ShieldActive { charges: 0 });
+            MutationKind::SpawnExtraShieldWalls(count) => {
+                for _ in 0..*count {
+                    targets.commands.spawn(ShieldWall);
+                }
             }
             MutationKind::SpawnExtraPulseRings(count) => {
                 for _ in 0..*count {

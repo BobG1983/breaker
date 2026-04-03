@@ -5,12 +5,9 @@
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Position2D;
 
-use crate::{
-    cells::components::{CellDamageVisuals, CellHealth, Locked, RequiredToClear},
-    effect::effects::shield::ShieldActive,
-};
+use crate::cells::components::{CellDamageVisuals, CellHealth, Locked, RequiredToClear};
 
-/// Cell health, material, damage visuals, clear-requirement, lock status, position, and shield status.
+/// Cell health, material, damage visuals, clear-requirement, lock status, and position.
 pub(crate) type DamageVisualQuery = (
     &'static mut CellHealth,
     &'static MeshMaterial2d<ColorMaterial>,
@@ -18,5 +15,4 @@ pub(crate) type DamageVisualQuery = (
     Has<RequiredToClear>,
     Has<Locked>,
     &'static Position2D,
-    Option<&'static mut ShieldActive>,
 );

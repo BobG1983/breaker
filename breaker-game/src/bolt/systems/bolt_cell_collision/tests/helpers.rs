@@ -19,8 +19,8 @@ use crate::{
         resources::CellConfig,
     },
     effect::effects::vulnerable::ActiveVulnerability,
-    shared::{BOLT_LAYER, CELL_LAYER, GameDrawLayer, WALL_LAYER},
-    wall::components::{Wall, WallSize},
+    shared::{BOLT_LAYER, CELL_LAYER, GameDrawLayer, PlayfieldConfig},
+    wall::components::Wall,
 };
 
 /// Real grid vertical spacing: `cell_height` (24) + padding (4) = 28
@@ -129,18 +129,14 @@ pub(super) fn spawn_cell_with_health(app: &mut App, x: f32, y: f32, hp: f32) -> 
         .id()
 }
 
-pub(super) fn spawn_wall(app: &mut App, x: f32, y: f32, half_width: f32, half_height: f32) {
-    let pos = Vec2::new(x, y);
-    app.world_mut().spawn((
-        Wall,
-        WallSize {},
-        Aabb2D::new(Vec2::ZERO, Vec2::new(half_width, half_height)),
-        CollisionLayers::new(WALL_LAYER, BOLT_LAYER),
-        Position2D(pos),
-        GlobalPosition2D(pos),
-        Spatial2D,
-        GameDrawLayer::Wall,
-    ));
+pub(super) fn spawn_right_wall(app: &mut App) {
+    let pf = PlayfieldConfig::default();
+    let bundle = Wall::builder().right(&pf).build();
+    let entity = app.world_mut().spawn(bundle).id();
+    let pos = app.world().get::<Position2D>(entity).unwrap().0;
+    app.world_mut()
+        .entity_mut(entity)
+        .insert(GlobalPosition2D(pos));
 }
 
 /// Spawns a cell with explicit `Aabb2D` `half_extents` that differ from the

@@ -14,11 +14,9 @@ type: project
 - **14 of 15 effects approved** — serve the core identity of speed, tension, build variety
 - **Shield flagged for redesign** — violates Pillar 1 (Escalation) and Pillar 5 (Pressure Not Panic) by creating a safe harbor with zero skill expression
 
-### Shield Status (Updated 2026-03-29)
+### Shield Status (Updated 2026-04-02)
 
-Redesigned from timed immunity to charge-based absorption. Breaker shield: per-bolt charge cost, approved. Cell shield: per-hit charge cost, approved with flag — works as baseline HP variant but lacks skill expression and synergy interaction. Flagged for Phase 7 enrichment (add secondary behavior: reflection, timer penalty, or adjacency buff when shield absorbs).
-
-Original recommendation for counter-effect on shield hit still stands for Phase 7.
+Refactored AGAIN from charge-based `ShieldActive` to timed visible floor wall (`ShieldWall`). See `evaluation-shield-wall-refactor.md` for full pillar evaluation. APPROVED with tuning recommendations (reduce duration from 5s to 3s, add visual decay, add timer cost per bolt reflected). Cell shielding via Shield effect REMOVED (cell types retain their own ShieldBehavior orbits). Phase 7 enrichment: partial-width wall centered on breaker position.
 
 ### Implementation Gaps
 
