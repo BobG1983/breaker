@@ -12,7 +12,7 @@ use crate::{
 
 /// Marker for gravity well entities.
 #[derive(Component)]
-pub struct GravityWellMarker;
+pub struct GravityWell;
 
 /// Configuration and runtime state for a gravity well.
 #[derive(Component)]
@@ -86,7 +86,7 @@ pub(crate) fn fire(
 
     // Spawn the new well with its spawn order stamp.
     world.spawn((
-        GravityWellMarker,
+        GravityWell,
         GravityWellConfig {
             strength,
             radius,
@@ -113,7 +113,7 @@ pub(crate) const fn reverse(_entity: Entity, _source_chip: &str, _world: &mut Wo
 pub(crate) fn tick_gravity_well(
     mut commands: Commands,
     time: Res<Time>,
-    mut query: Query<(Entity, &mut GravityWellConfig), With<GravityWellMarker>>,
+    mut query: Query<(Entity, &mut GravityWellConfig), With<GravityWell>>,
 ) {
     let dt = time.delta_secs();
     for (entity, mut config) in &mut query {
@@ -124,14 +124,18 @@ pub(crate) fn tick_gravity_well(
     }
 }
 
-/// Filter for bolt entities that are not gravity wells.
-type BoltNotWell = (With<Bolt>, Without<GravityWellMarker>);
-
 /// Pull bolts toward active gravity wells.
+///
+/// `Without<GravityWell>` on the bolt query is required for Bevy query disjointness —
+/// both queries access `Position2D`, so the type system needs proof they can't overlap.
+#[expect(
+    clippy::type_complexity,
+    reason = "Bevy query with spatial bundle + filter"
+)]
 pub(crate) fn apply_gravity_pull(
     time: Res<Time>,
-    wells: Query<(&Position2D, &GravityWellConfig), With<GravityWellMarker>>,
-    mut bolts: Query<(SpatialData, Option<&ActiveSpeedBoosts>), BoltNotWell>,
+    wells: Query<(&Position2D, &GravityWellConfig), With<GravityWell>>,
+    mut bolts: Query<(SpatialData, Option<&ActiveSpeedBoosts>), (With<Bolt>, Without<GravityWell>)>,
 ) {
     let dt = time.delta_secs();
     for (well_position, config) in &wells {
