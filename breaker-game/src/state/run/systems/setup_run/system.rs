@@ -36,7 +36,7 @@ use crate::{
 /// stores them as [`BoundEffects`](crate::effect::BoundEffects) during spawn.
 /// No manual effect dispatch is needed.
 ///
-/// Runs on `OnEnter(GameState::Playing)`.
+/// Runs on `OnEnter(NodeState::Loading)` (first node) alongside other node setup.
 #[expect(
     clippy::too_many_arguments,
     reason = "spawns both breaker and bolt, needs both registries + assets"

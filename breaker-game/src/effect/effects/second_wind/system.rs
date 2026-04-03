@@ -76,11 +76,11 @@ pub(crate) fn despawn_second_wind_on_contact(
 
 /// Registers systems for `SecondWind` effect.
 pub(crate) fn register(app: &mut App) {
-    use crate::{bolt::BoltSystems, shared::PlayingState};
+    use crate::{bolt::BoltSystems, state::types::NodeState};
     app.add_systems(
         FixedUpdate,
         despawn_second_wind_on_contact
-            .run_if(in_state(PlayingState::Active))
+            .run_if(in_state(NodeState::Playing))
             .after(BoltSystems::WallCollision),
     );
 }

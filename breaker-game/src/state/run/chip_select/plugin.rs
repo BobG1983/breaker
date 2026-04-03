@@ -9,7 +9,7 @@ use super::{
         update_chip_display,
     },
 };
-use crate::{shared::GameState, state::cleanup::cleanup_entities};
+use crate::state::{cleanup::cleanup_entities, types::ChipSelectState};
 
 /// Plugin for the between-node chip selection screen.
 pub(crate) struct ChipSelectPlugin;
@@ -17,17 +17,17 @@ pub(crate) struct ChipSelectPlugin;
 impl Plugin for ChipSelectPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
-            OnEnter(GameState::ChipSelect),
+            OnEnter(ChipSelectState::Selecting),
             (generate_chip_offerings, ApplyDeferred, spawn_chip_select).chain(),
         )
         .add_systems(
             Update,
             (handle_chip_input, tick_chip_timer, update_chip_display)
                 .chain()
-                .run_if(in_state(GameState::ChipSelect)),
+                .run_if(in_state(ChipSelectState::Selecting)),
         )
         .add_systems(
-            OnExit(GameState::ChipSelect),
+            OnExit(ChipSelectState::Selecting),
             cleanup_entities::<ChipSelectScreen>,
         );
     }

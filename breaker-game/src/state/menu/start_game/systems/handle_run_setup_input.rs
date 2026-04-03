@@ -5,10 +5,13 @@ use bevy::{ecs::system::SystemParam, prelude::*};
 use crate::{
     breaker::{BreakerRegistry, SelectedBreaker},
     input::InputConfig,
-    shared::{GameState, RunSeed},
-    state::menu::start_game::{
-        components::BreakerCard,
-        resources::{RunSetupSelection, SeedEntry},
+    shared::RunSeed,
+    state::{
+        menu::start_game::{
+            components::BreakerCard,
+            resources::{RunSetupSelection, SeedEntry},
+        },
+        types::MenuState,
     },
 };
 
@@ -16,7 +19,7 @@ use crate::{
 #[derive(SystemParam)]
 pub(crate) struct RunConfirmation<'w> {
     breaker: ResMut<'w, SelectedBreaker>,
-    next_state: ResMut<'w, NextState<GameState>>,
+    next_state: ResMut<'w, NextState<MenuState>>,
     seed: ResMut<'w, RunSeed>,
 }
 
@@ -68,7 +71,7 @@ pub(crate) fn handle_run_setup_input(
             confirm.seed.0 = Some(seed_entry.value.parse::<u64>().unwrap_or(0));
         }
 
-        confirm.next_state.set(GameState::Playing);
+        confirm.next_state.set(MenuState::Teardown);
     }
 }
 
@@ -77,7 +80,10 @@ mod tests {
     use bevy::state::app::StatesPlugin;
 
     use super::*;
-    use crate::breaker::definition::BreakerDefinition;
+    use crate::{
+        breaker::definition::BreakerDefinition,
+        state::types::{AppState, GamePhase},
+    };
 
     fn make_breaker(name: &str) -> BreakerDefinition {
         ron::de::from_str(&format!(
@@ -99,7 +105,9 @@ mod tests {
         app.add_plugins((MinimalPlugins, StatesPlugin))
             .init_resource::<ButtonInput<KeyCode>>()
             .insert_resource(InputConfig::default())
-            .init_state::<GameState>()
+            .init_state::<AppState>()
+            .add_sub_state::<GamePhase>()
+            .add_sub_state::<MenuState>()
             .insert_resource(SelectedBreaker::default())
             .init_resource::<RunSeed>()
             .init_resource::<SeedEntry>();
@@ -117,6 +125,15 @@ mod tests {
         });
 
         app.add_systems(Update, handle_run_setup_input);
+        // Navigate to MenuState
+        app.world_mut()
+            .resource_mut::<NextState<AppState>>()
+            .set(AppState::Game);
+        app.update();
+        app.world_mut()
+            .resource_mut::<NextState<GamePhase>>()
+            .set(GamePhase::Menu);
+        app.update();
         app
     }
 
@@ -146,14 +163,14 @@ mod tests {
     }
 
     #[test]
-    fn confirm_transitions_to_playing() {
+    fn confirm_transitions_to_teardown() {
         let mut app = test_app();
         press_key(&mut app, KeyCode::Enter);
 
-        let next = app.world().resource::<NextState<GameState>>();
+        let next = app.world().resource::<NextState<MenuState>>();
         assert!(
-            format!("{next:?}").contains("Playing"),
-            "expected Playing, got: {next:?}"
+            format!("{next:?}").contains("Teardown"),
+            "expected Teardown, got: {next:?}"
         );
     }
 

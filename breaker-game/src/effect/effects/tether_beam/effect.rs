@@ -22,7 +22,8 @@ use crate::{
         core::{EffectSourceChip, chip_attribution},
         effects::damage_boost::ActiveDamageBoosts,
     },
-    shared::{CELL_LAYER, CleanupOnNodeExit, PlayingState, rng::GameRng},
+    shared::{CELL_LAYER, CleanupOnNodeExit, rng::GameRng},
+    state::types::NodeState,
 };
 
 /// Marker on a tether bolt entity, indicating it belongs to a tether beam.
@@ -372,9 +373,9 @@ pub(crate) fn register(app: &mut App) {
         FixedUpdate,
         (
             maintain_tether_chain
-                .run_if(resource_exists::<TetherChainActive>.and(in_state(PlayingState::Active)))
+                .run_if(resource_exists::<TetherChainActive>.and(in_state(NodeState::Playing)))
                 .before(tick_tether_beam),
-            tick_tether_beam.run_if(in_state(PlayingState::Active)),
+            tick_tether_beam.run_if(in_state(NodeState::Playing)),
         )
             .after(PhysicsSystems::MaintainQuadtree),
     );

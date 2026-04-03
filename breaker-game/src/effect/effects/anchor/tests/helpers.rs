@@ -5,7 +5,7 @@ pub(super) use super::super::effect::*;
 pub(super) use crate::{
     breaker::components::{Breaker, DashState},
     effect::effects::bump_force::ActiveBumpForces,
-    shared::{GameState, PlayingState},
+    state::types::{AppState, GamePhase, NodeState, RunPhase},
 };
 
 pub(super) fn test_app() -> App {
@@ -35,12 +35,26 @@ pub(super) fn register_test_app() -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
     app.add_plugins(bevy::state::app::StatesPlugin);
-    app.init_state::<GameState>();
-    app.add_sub_state::<PlayingState>();
-    // Transition into Playing state so PlayingState::Active becomes active
+    app.init_state::<AppState>();
+    app.add_sub_state::<GamePhase>();
+    app.add_sub_state::<RunPhase>();
+    app.add_sub_state::<NodeState>();
+    // Navigate to NodeState::Playing so run_if(in_state(NodeState::Playing)) passes
     app.world_mut()
-        .resource_mut::<NextState<GameState>>()
-        .set(GameState::Playing);
+        .resource_mut::<NextState<AppState>>()
+        .set(AppState::Game);
+    app.update();
+    app.world_mut()
+        .resource_mut::<NextState<GamePhase>>()
+        .set(GamePhase::Run);
+    app.update();
+    app.world_mut()
+        .resource_mut::<NextState<RunPhase>>()
+        .set(RunPhase::Node);
+    app.update();
+    app.world_mut()
+        .resource_mut::<NextState<NodeState>>()
+        .set(NodeState::Playing);
     app.update();
     app
 }

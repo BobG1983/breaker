@@ -5,8 +5,10 @@ use bevy::{ecs::world::CommandQueue, prelude::*};
 use crate::{
     chips::{definition::ChipDefinition, inventory::ChipInventory, resources::ChipCatalog},
     effect::{BoundEffects, StagedEffects},
-    shared::GameState,
-    state::run::chip_select::messages::ChipSelected,
+    state::{
+        run::chip_select::messages::ChipSelected,
+        types::{AppState, ChipSelectState, GamePhase, RunPhase},
+    },
 };
 
 /// Resource holding messages to be sent before the dispatch system runs.
@@ -26,7 +28,8 @@ pub(super) fn send_chip_selections(
 /// Build a minimal test app wired for `dispatch_chip_effects`.
 ///
 /// - `MinimalPlugins` + `StatesPlugin`
-/// - `GameState` initialised and set to `ChipSelect`
+/// - New state hierarchy registered (`AppState` -> `GamePhase` -> `RunPhase` -> `ChipSelectState`)
+/// - Navigated to `ChipSelectState::Selecting`
 /// - `ChipSelected` message registered
 /// - `ChipInventory` default resource
 /// - `ChipCatalog` default resource (caller inserts chips after)
@@ -38,7 +41,10 @@ pub(super) fn test_app() -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .add_plugins(bevy::state::app::StatesPlugin)
-        .init_state::<GameState>()
+        .init_state::<AppState>()
+        .add_sub_state::<GamePhase>()
+        .add_sub_state::<RunPhase>()
+        .add_sub_state::<ChipSelectState>()
         .add_message::<ChipSelected>()
         .init_resource::<ChipInventory>()
         .init_resource::<ChipCatalog>()
@@ -54,10 +60,22 @@ pub(super) fn test_app() -> App {
         ),
     );
 
-    // Force GameState to ChipSelect
-    let mut next_state = app.world_mut().resource_mut::<NextState<GameState>>();
-    next_state.set(GameState::ChipSelect);
-    // One update to apply the state transition
+    // Navigate to ChipSelectState::Selecting
+    app.world_mut()
+        .resource_mut::<NextState<AppState>>()
+        .set(AppState::Game);
+    app.update();
+    app.world_mut()
+        .resource_mut::<NextState<GamePhase>>()
+        .set(GamePhase::Run);
+    app.update();
+    app.world_mut()
+        .resource_mut::<NextState<RunPhase>>()
+        .set(RunPhase::ChipSelect);
+    app.update();
+    app.world_mut()
+        .resource_mut::<NextState<ChipSelectState>>()
+        .set(ChipSelectState::Selecting);
     app.update();
 
     app

@@ -1,27 +1,41 @@
 //! Tests for the `register()` / reset system: `EntropyEngineState` is cleared
-//! on `OnEnter(PlayingState::Active)`.
+//! on `OnEnter(NodeState::Playing)`.
 
 use bevy::{prelude::*, state::app::StatesPlugin};
 
 use super::super::effect::*;
-use crate::shared::{GameState, PlayingState};
+use crate::state::types::{AppState, GamePhase, NodeState, RunPhase};
 
-// -- Behavior 21: register() wires reset system for OnEnter(PlayingState::Active) --
+// -- Behavior 21: register() wires reset system for OnEnter(NodeState::Playing) --
 
 fn test_app_with_reset() -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
     app.add_plugins(StatesPlugin);
-    app.init_state::<GameState>();
-    app.add_sub_state::<PlayingState>();
+    app.init_state::<AppState>();
+    app.add_sub_state::<GamePhase>();
+    app.add_sub_state::<RunPhase>();
+    app.add_sub_state::<NodeState>();
     register(&mut app);
     app
 }
 
 fn enter_playing(app: &mut App) {
     app.world_mut()
-        .resource_mut::<NextState<GameState>>()
-        .set(GameState::Playing);
+        .resource_mut::<NextState<AppState>>()
+        .set(AppState::Game);
+    app.update();
+    app.world_mut()
+        .resource_mut::<NextState<GamePhase>>()
+        .set(GamePhase::Run);
+    app.update();
+    app.world_mut()
+        .resource_mut::<NextState<RunPhase>>()
+        .set(RunPhase::Node);
+    app.update();
+    app.world_mut()
+        .resource_mut::<NextState<NodeState>>()
+        .set(NodeState::Playing);
     app.update();
 }
 
@@ -37,13 +51,13 @@ fn reset_system_clears_cells_destroyed_on_node_start() {
 
     // Transition out and back in to trigger OnEnter(PlayingState::Active) again
     app.world_mut()
-        .resource_mut::<NextState<GameState>>()
-        .set(GameState::Loading);
+        .resource_mut::<NextState<NodeState>>()
+        .set(NodeState::Loading);
     app.update();
 
     app.world_mut()
-        .resource_mut::<NextState<GameState>>()
-        .set(GameState::Playing);
+        .resource_mut::<NextState<NodeState>>()
+        .set(NodeState::Playing);
     app.update();
 
     let state = app.world().get::<EntropyEngineState>(entity).unwrap();
@@ -71,13 +85,13 @@ fn reset_system_clears_multiple_entities() {
 
     // Transition out and back to trigger reset
     app.world_mut()
-        .resource_mut::<NextState<GameState>>()
-        .set(GameState::Loading);
+        .resource_mut::<NextState<NodeState>>()
+        .set(NodeState::Loading);
     app.update();
 
     app.world_mut()
-        .resource_mut::<NextState<GameState>>()
-        .set(GameState::Playing);
+        .resource_mut::<NextState<NodeState>>()
+        .set(NodeState::Playing);
     app.update();
 
     let state1 = app.world().get::<EntropyEngineState>(entity1).unwrap();
@@ -106,15 +120,15 @@ fn reset_system_does_not_remove_component() {
         })
         .id();
 
-    // Trigger reset
+    // Leave NodeState::Playing, then re-enter to trigger OnEnter reset
     app.world_mut()
-        .resource_mut::<NextState<GameState>>()
-        .set(GameState::Loading);
+        .resource_mut::<NextState<NodeState>>()
+        .set(NodeState::Loading);
     app.update();
 
     app.world_mut()
-        .resource_mut::<NextState<GameState>>()
-        .set(GameState::Playing);
+        .resource_mut::<NextState<NodeState>>()
+        .set(NodeState::Playing);
     app.update();
 
     assert!(

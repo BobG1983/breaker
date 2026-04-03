@@ -6,7 +6,8 @@ use rantzsoft_spatial2d::prelude::*;
 use crate::{
     bolt::{components::Bolt, queries::apply_velocity_formula},
     effect::effects::speed_boost::ActiveSpeedBoosts,
-    shared::{CleanupOnNodeExit, PlayingState},
+    shared::CleanupOnNodeExit,
+    state::types::NodeState,
 };
 
 /// Marker for gravity well entities.
@@ -152,6 +153,6 @@ pub(crate) fn apply_gravity_pull(
 pub(crate) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
-        (tick_gravity_well, apply_gravity_pull).run_if(in_state(PlayingState::Active)),
+        (tick_gravity_well, apply_gravity_pull).run_if(in_state(NodeState::Playing)),
     );
 }

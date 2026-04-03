@@ -4,7 +4,7 @@ use rantzsoft_spatial2d::components::Velocity2D;
 use super::super::effect::*;
 use crate::{
     bolt::{components::Bolt, definition::BoltDefinition},
-    shared::PlayingState,
+    state::types::{AppState, GamePhase, NodeState, RunPhase},
 };
 
 fn test_bolt_definition() -> BoltDefinition {
@@ -28,8 +28,10 @@ pub(super) fn test_app() -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
     app.add_plugins(bevy::state::app::StatesPlugin);
-    app.init_state::<crate::shared::GameState>();
-    app.add_sub_state::<PlayingState>();
+    app.init_state::<AppState>();
+    app.add_sub_state::<GamePhase>();
+    app.add_sub_state::<RunPhase>();
+    app.add_sub_state::<NodeState>();
     app.add_systems(Update, tick_gravity_well);
     app.add_systems(Update, apply_gravity_pull);
     app
@@ -55,7 +57,19 @@ pub(super) fn spawn_bolt(app: &mut App, pos: Vec2, vel: Vec2) -> Entity {
 
 pub(super) fn enter_playing(app: &mut App) {
     app.world_mut()
-        .resource_mut::<NextState<crate::shared::GameState>>()
-        .set(crate::shared::GameState::Playing);
+        .resource_mut::<NextState<AppState>>()
+        .set(AppState::Game);
+    app.update();
+    app.world_mut()
+        .resource_mut::<NextState<GamePhase>>()
+        .set(GamePhase::Run);
+    app.update();
+    app.world_mut()
+        .resource_mut::<NextState<RunPhase>>()
+        .set(RunPhase::Node);
+    app.update();
+    app.world_mut()
+        .resource_mut::<NextState<NodeState>>()
+        .set(NodeState::Playing);
     app.update();
 }

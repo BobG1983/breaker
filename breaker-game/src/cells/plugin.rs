@@ -13,8 +13,10 @@ use crate::{
         },
     },
     effect::EffectSystems,
-    shared::{GameState, PlayingState},
-    state::run::node::{sets::NodeSystems, systems::dispatch_cell_effects},
+    state::{
+        run::node::{sets::NodeSystems, systems::dispatch_cell_effects},
+        types::NodeState,
+    },
 };
 
 /// Plugin for the cells domain.
@@ -30,7 +32,7 @@ impl Plugin for CellsPlugin {
             .add_message::<CellImpactWall>()
             .init_resource::<CellConfig>()
             .add_systems(
-                OnEnter(GameState::Playing),
+                OnEnter(NodeState::Loading),
                 dispatch_cell_effects.after(NodeSystems::Spawn),
             )
             .add_systems(
@@ -44,7 +46,7 @@ impl Plugin for CellsPlugin {
                     cleanup_cell.after(EffectSystems::Bridge),
                     cell_wall_collision,
                 )
-                    .run_if(in_state(PlayingState::Active)),
+                    .run_if(in_state(NodeState::Playing)),
             );
     }
 }
@@ -54,15 +56,17 @@ mod tests {
     use rantzsoft_physics2d::resources::CollisionQuadtree;
 
     use super::*;
-    use crate::shared::GameState;
+    use crate::state::types::{AppState, GamePhase, RunPhase};
 
     #[test]
     fn plugin_builds() {
         App::new()
             .add_plugins(MinimalPlugins)
             .add_plugins(bevy::state::app::StatesPlugin)
-            .init_state::<GameState>()
-            .add_sub_state::<PlayingState>()
+            .init_state::<AppState>()
+            .add_sub_state::<GamePhase>()
+            .add_sub_state::<RunPhase>()
+            .add_sub_state::<NodeState>()
             // CellsPlugin reads BoltImpactCell messages from bolt domain
             .add_message::<crate::bolt::messages::BoltImpactCell>()
             .insert_resource(CollisionQuadtree::default())
@@ -89,17 +93,31 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_plugins(bevy::state::app::StatesPlugin)
-            .init_state::<GameState>()
-            .add_sub_state::<PlayingState>()
+            .init_state::<AppState>()
+            .add_sub_state::<GamePhase>()
+            .add_sub_state::<RunPhase>()
+            .add_sub_state::<NodeState>()
             .init_resource::<Assets<Mesh>>()
             .init_resource::<Assets<ColorMaterial>>()
             .add_message::<crate::bolt::messages::BoltImpactCell>()
             .insert_resource(CollisionQuadtree::default())
             .add_plugins(CellsPlugin);
-        // Enter Playing -> Active so run_if(in_state(PlayingState::Active)) gates pass
+        // Navigate through state hierarchy to reach NodeState::Playing
         app.world_mut()
-            .resource_mut::<NextState<GameState>>()
-            .set(GameState::Playing);
+            .resource_mut::<NextState<AppState>>()
+            .set(AppState::Game);
+        app.update();
+        app.world_mut()
+            .resource_mut::<NextState<GamePhase>>()
+            .set(GamePhase::Run);
+        app.update();
+        app.world_mut()
+            .resource_mut::<NextState<RunPhase>>()
+            .set(RunPhase::Node);
+        app.update();
+        app.world_mut()
+            .resource_mut::<NextState<NodeState>>()
+            .set(NodeState::Playing);
         app.update();
         app
     }

@@ -4,20 +4,22 @@ use bevy::prelude::*;
 
 use crate::{
     chips::inventory::ChipInventory,
-    shared::GameState,
-    state::run::chip_select::{
-        ChipSelectConfig,
-        resources::{ChipOffering, ChipOffers, ChipSelectTimer},
+    state::{
+        run::chip_select::{
+            ChipSelectConfig,
+            resources::{ChipOffering, ChipOffers, ChipSelectTimer},
+        },
+        types::ChipSelectState,
     },
 };
 
 /// Ticks the chip selection timer and auto-advances on expiry.
 ///
-/// Timer expiry transitions to [`GameState::TransitionIn`] (skip, no chip).
+/// Timer expiry transitions to [`ChipSelectState::AnimateOut`] (skip, no chip).
 pub(crate) fn tick_chip_timer(
     time: Res<Time>,
     mut timer: ResMut<ChipSelectTimer>,
-    mut next_state: ResMut<NextState<GameState>>,
+    mut next_state: ResMut<NextState<ChipSelectState>>,
     offers: Option<Res<ChipOffers>>,
     inventory: Option<ResMut<ChipInventory>>,
     config: Option<Res<ChipSelectConfig>>,
@@ -36,7 +38,7 @@ pub(crate) fn tick_chip_timer(
             }
         }
 
-        next_state.set(GameState::TransitionIn);
+        next_state.set(ChipSelectState::AnimateOut);
     }
 }
 
@@ -45,11 +47,15 @@ mod tests {
     use bevy::state::app::StatesPlugin;
 
     use super::*;
+    use crate::state::types::{AppState, GamePhase, RunPhase};
 
     fn test_app(remaining: f32) -> App {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, StatesPlugin))
-            .init_state::<GameState>()
+            .init_state::<AppState>()
+            .add_sub_state::<GamePhase>()
+            .add_sub_state::<RunPhase>()
+            .add_sub_state::<ChipSelectState>()
             .insert_resource(ChipSelectTimer { remaining })
             .add_systems(Update, tick_chip_timer);
         app
@@ -77,10 +83,10 @@ mod tests {
         let mut app = test_app(0.0);
         app.update();
 
-        let next = app.world().resource::<NextState<GameState>>();
+        let next = app.world().resource::<NextState<ChipSelectState>>();
         assert!(
-            format!("{next:?}").contains("TransitionIn"),
-            "expected TransitionIn, got: {next:?}"
+            format!("{next:?}").contains("AnimateOut"),
+            "expected AnimateOut, got: {next:?}"
         );
     }
 
@@ -102,9 +108,9 @@ mod tests {
         let mut app = test_app(100.0);
         app.update();
 
-        let next = app.world().resource::<NextState<GameState>>();
+        let next = app.world().resource::<NextState<ChipSelectState>>();
         assert!(
-            !format!("{next:?}").contains("TransitionIn"),
+            !format!("{next:?}").contains("AnimateOut"),
             "expected no transition, got: {next:?}"
         );
     }
@@ -143,7 +149,10 @@ mod tests {
     fn test_app_with_offers(remaining: f32, offers: ChipOffers) -> App {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, StatesPlugin))
-            .init_state::<GameState>()
+            .init_state::<AppState>()
+            .add_sub_state::<GamePhase>()
+            .add_sub_state::<RunPhase>()
+            .add_sub_state::<ChipSelectState>()
             .insert_resource(ChipSelectTimer { remaining })
             .insert_resource(offers)
             .init_resource::<ChipInventory>()
@@ -254,10 +263,10 @@ mod tests {
         // The system receives None for all three Option parameters.
         app.update();
 
-        let next = app.world().resource::<NextState<GameState>>();
+        let next = app.world().resource::<NextState<ChipSelectState>>();
         assert!(
-            format!("{next:?}").contains("TransitionIn"),
-            "expected TransitionIn even without ChipOffers resource, got: {next:?}"
+            format!("{next:?}").contains("AnimateOut"),
+            "expected AnimateOut even without ChipOffers resource, got: {next:?}"
         );
 
         let timer = app.world().resource::<ChipSelectTimer>();

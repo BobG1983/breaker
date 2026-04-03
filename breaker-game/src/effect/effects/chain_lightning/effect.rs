@@ -16,7 +16,8 @@ use crate::{
     bolt::{components::BoltBaseDamage, resources::DEFAULT_BOLT_BASE_DAMAGE},
     cells::{components::Cell, messages::DamageCell},
     effect::{core::EffectSourceChip, effects::damage_boost::ActiveDamageBoosts},
-    shared::{CELL_LAYER, CleanupOnNodeExit, PlayingState, rng::GameRng},
+    shared::{CELL_LAYER, CleanupOnNodeExit, rng::GameRng},
+    state::types::NodeState,
 };
 
 /// Stateful chain entity that tracks the chain lightning's progression
@@ -289,6 +290,6 @@ pub(crate) fn register(app: &mut App) {
         FixedUpdate,
         tick_chain_lightning
             .after(PhysicsSystems::MaintainQuadtree)
-            .run_if(in_state(PlayingState::Active)),
+            .run_if(in_state(NodeState::Playing)),
     );
 }

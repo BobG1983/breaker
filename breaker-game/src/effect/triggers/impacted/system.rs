@@ -16,7 +16,7 @@ use crate::{
         sets::EffectSystems,
         triggers::evaluate::{evaluate_bound_effects, evaluate_staged_effects},
     },
-    shared::PlayingState,
+    state::types::NodeState,
 };
 
 /// `BoltImpactCell` -> `Impacted(Cell)` on bolt + `Impacted(Bolt)` on cell.
@@ -344,6 +344,6 @@ pub(crate) fn register(app: &mut App) {
             bridge_impacted_cell_wall,
         )
             .in_set(EffectSystems::Bridge)
-            .run_if(in_state(PlayingState::Active)),
+            .run_if(in_state(NodeState::Playing)),
     );
 }

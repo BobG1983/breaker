@@ -11,7 +11,7 @@ use crate::{
         sets::EffectSystems,
         triggers::evaluate::{evaluate_bound_effects, evaluate_staged_effects},
     },
-    shared::PlayingState,
+    state::types::NodeState,
 };
 
 fn bridge_cell_destroyed(
@@ -46,7 +46,7 @@ pub(crate) fn register(app: &mut App) {
         FixedUpdate,
         bridge_cell_destroyed
             .in_set(EffectSystems::Bridge)
-            .run_if(in_state(PlayingState::Active)),
+            .run_if(in_state(NodeState::Playing)),
     );
 }
 

@@ -7,7 +7,8 @@ use rantzsoft_spatial2d::components::Position2D;
 use crate::{
     cells::messages::DamageCell,
     effect::core::EffectSourceChip,
-    shared::{CELL_LAYER, CleanupOnNodeExit, PlayingState},
+    shared::{CELL_LAYER, CleanupOnNodeExit},
+    state::types::NodeState,
 };
 
 /// Deferred request for an instant area damage burst.
@@ -76,6 +77,6 @@ pub(crate) fn register(app: &mut App) {
         FixedUpdate,
         process_explode_requests
             .after(PhysicsSystems::MaintainQuadtree)
-            .run_if(in_state(PlayingState::Active)),
+            .run_if(in_state(NodeState::Playing)),
     );
 }

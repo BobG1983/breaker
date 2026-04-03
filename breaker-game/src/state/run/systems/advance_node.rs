@@ -6,9 +6,8 @@ use crate::state::run::resources::RunState;
 
 /// Increments the node index and resets the transition flag.
 ///
-/// Runs on `OnEnter(GameState::TransitionIn)`. The `TransitionIn` to `Playing`
-/// state change is handled by the `animate_transition` system in the fx domain
-/// when the transition animation timer completes.
+/// Runs on `OnEnter(RunPhase::Node)` — called when entering a new node
+/// after chip select.
 pub(crate) fn advance_node(mut run_state: ResMut<RunState>) {
     run_state.node_index += 1;
     run_state.transition_queued = false;

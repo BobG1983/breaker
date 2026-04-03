@@ -10,7 +10,8 @@ use crate::{
     bolt::{components::BoltBaseDamage, resources::DEFAULT_BOLT_BASE_DAMAGE},
     cells::messages::DamageCell,
     effect::{core::EffectSourceChip, effects::damage_boost::ActiveDamageBoosts},
-    shared::{CELL_LAYER, CleanupOnNodeExit, PlayingState},
+    shared::{CELL_LAYER, CleanupOnNodeExit},
+    state::types::NodeState,
 };
 
 /// Emitter component attached to a bolt entity. Drives periodic ring emission.
@@ -207,6 +208,6 @@ pub(crate) fn register(app: &mut App) {
         )
             .chain()
             .after(PhysicsSystems::MaintainQuadtree)
-            .run_if(in_state(PlayingState::Active)),
+            .run_if(in_state(NodeState::Playing)),
     );
 }

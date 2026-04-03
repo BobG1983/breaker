@@ -7,7 +7,7 @@ use crate::state::app::loading::components::{LoadingBarFill, LoadingProgressText
 
 /// Updates the loading bar width and text based on global progress.
 pub(crate) fn update_loading_bar(
-    progress: Res<ProgressTracker<crate::shared::GameState>>,
+    progress: Res<ProgressTracker<crate::state::types::AppState>>,
     mut bar_query: Query<&mut Node, With<LoadingBarFill>>,
     mut text_query: Query<&mut Text, With<LoadingProgressText>>,
 ) {
