@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::world::CommandQueue, prelude::*};
 use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use super::helpers::*;
@@ -270,13 +270,22 @@ fn multiple_bolts_each_hit_different_cells() {
 fn serving_bolt_is_not_advanced() {
     let mut app = test_app();
 
-    let entity = Bolt::builder()
-        .at_position(Vec2::ZERO)
-        .definition(&super::helpers::test_bolt_definition())
-        .serving()
-        .primary()
-        .headless()
-        .spawn(app.world_mut());
+    let entity = {
+        let world = app.world_mut();
+        let mut queue = CommandQueue::default();
+        let entity = {
+            let mut commands = Commands::new(&mut queue, world);
+            Bolt::builder()
+                .at_position(Vec2::ZERO)
+                .definition(&super::helpers::test_bolt_definition())
+                .serving()
+                .primary()
+                .headless()
+                .spawn(&mut commands)
+        };
+        queue.apply(world);
+        entity
+    };
 
     tick(&mut app);
 

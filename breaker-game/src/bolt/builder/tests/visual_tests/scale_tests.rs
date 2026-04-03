@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::world::CommandQueue, prelude::*};
 use rantzsoft_spatial2d::components::Scale2D;
 
 use super::helpers::test_bolt_definition;
@@ -6,6 +6,20 @@ use crate::{
     bolt::components::{Bolt, PrimaryBolt},
     shared::size::{BaseRadius, MaxRadius, MinRadius},
 };
+
+/// Spawns a bolt via Commands backed by a `CommandQueue`, then applies the queue.
+fn spawn_bolt_in_world(
+    world: &mut World,
+    build_fn: impl FnOnce(&mut Commands) -> Entity,
+) -> Entity {
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let mut commands = Commands::new(&mut queue, world);
+        build_fn(&mut commands)
+    };
+    queue.apply(world);
+    entity
+}
 
 // ── Behavior 23: Builder uses BaseRadius for radius component ──
 
@@ -124,13 +138,15 @@ fn headless_bolt_with_definition_radius_constraints_has_min_max_radius() {
     def.max_radius = Some(20.0);
 
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
 
     let min_r = world
         .get::<MinRadius>(entity)
@@ -155,13 +171,15 @@ fn headless_bolt_with_no_definition_radius_constraints_has_no_min_max_radius() {
     let def = test_bolt_definition(); // min_radius: None, max_radius: None
 
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
 
     // Guard against false pass
     assert!(

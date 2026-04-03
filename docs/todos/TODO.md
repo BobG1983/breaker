@@ -5,7 +5,7 @@
 1. **[in-progress]** State lifecycle refactor — [detail](detail/state-lifecycle-refactor/state-lifecycle-refactor.md)
 2. **[NEEDS DETAIL]** Cross-domain prelude, re-export modules & import cleanup — [detail](detail/cross-domain-prelude.md)
 3. **[done]** Wall builder pattern — [detail](detail/wall-builder-pattern.md)
-4. **[NEEDS DETAIL]** Cell builder pattern — [detail](detail/cell-builder-pattern.md)
+4. **[ready]** Cell builder pattern — [detail](detail/cell-builder-pattern.md)
 5. **[NEEDS DETAIL]** Node & chip builder patterns + template.ron files — [detail](detail/node-chip-builders.md)
 6. **[ready]** Scenario coverage gaps (2 HIGH, 3 MEDIUM, 3 new invariants) — [detail](detail/scenario-coverage-gaps.md)
 7. **[ready]** Killed trigger, Die effect, unified death messaging — [detail](detail/killed-trigger-damage-attribution.md)

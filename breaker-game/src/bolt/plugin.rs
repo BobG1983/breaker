@@ -9,7 +9,7 @@ use crate::{
         systems::{
             bolt_breaker_collision, bolt_cell_collision, bolt_lost, bolt_wall_collision,
             clamp_bolt_to_playfield, cleanup_destroyed_bolts, dispatch_bolt_effects, hover_bolt,
-            launch_bolt, spawn_bolt, spawn_bolt_lost_text, sync_bolt_scale, tick_bolt_lifespan,
+            launch_bolt, spawn_bolt_lost_text, sync_bolt_scale, tick_bolt_lifespan,
         },
     },
     breaker::BreakerSystems,
@@ -39,12 +39,8 @@ impl Plugin for BoltPlugin {
             .add_systems(
                 OnEnter(GameState::Playing),
                 (
-                    spawn_bolt,
-                    apply_node_scale_to_bolt
-                        .after(spawn_bolt)
-                        .after(NodeSystems::Spawn),
+                    apply_node_scale_to_bolt.after(NodeSystems::Spawn),
                     reset_bolt
-                        .after(spawn_bolt)
                         .after(BreakerSystems::Reset)
                         .in_set(BoltSystems::Reset),
                 ),

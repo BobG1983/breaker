@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::world::CommandQueue, prelude::*};
 use rantzsoft_physics2d::aabb::Aabb2D;
 use rantzsoft_spatial2d::components::{
     BaseSpeed, MaxSpeed, MinAngleHorizontal, MinAngleVertical, MinSpeed, PreviousScale, Scale2D,
@@ -13,6 +13,21 @@ use crate::bolt::{
     },
     definition::BoltDefinition,
 };
+
+/// Spawns a bolt via Commands backed by a `CommandQueue`, then applies the queue.
+/// Returns the Entity.
+fn spawn_bolt_in_world(
+    world: &mut World,
+    build_fn: impl FnOnce(&mut Commands) -> Entity,
+) -> Entity {
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let mut commands = Commands::new(&mut queue, world);
+        build_fn(&mut commands)
+    };
+    queue.apply(world);
+    entity
+}
 
 // ── Behavior 26: .definition() satisfies Speed + Angle typestates ──
 
@@ -29,13 +44,15 @@ fn from_definition_transitions_speed_and_angle() {
 fn from_definition_sets_speed_components() {
     let def = make_bolt_definition("Bolt", 10.0);
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
     let base = world.get::<BaseSpeed>(entity).unwrap();
     assert!(
         (base.0 - 720.0).abs() < f32::EPSILON,
@@ -73,13 +90,15 @@ fn from_definition_custom_speed_values_propagate() {
         max_radius: None,
     };
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
     let base = world.get::<BaseSpeed>(entity).unwrap();
     assert!(
         (base.0 - 500.0).abs() < f32::EPSILON,
@@ -106,13 +125,15 @@ fn from_definition_custom_speed_values_propagate() {
 fn from_definition_converts_angles_to_radians() {
     let def = make_bolt_definition("Bolt", 10.0);
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
     let h = world.get::<MinAngleHorizontal>(entity).unwrap();
     let expected_h = 5.0_f32.to_radians();
     assert!(
@@ -139,13 +160,15 @@ fn from_definition_zero_angles_produce_zero_radians() {
         ..make_bolt_definition("Bolt", 10.0)
     };
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
     let h = world.get::<MinAngleHorizontal>(entity).unwrap();
     assert!(
         h.0.abs() < f32::EPSILON,
@@ -166,13 +189,15 @@ fn from_definition_zero_angles_produce_zero_radians() {
 fn from_definition_sets_radius_and_physical_dimensions() {
     let def = make_bolt_definition("Bolt", 10.0);
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
     let radius = world.get::<BoltRadius>(entity).unwrap();
     assert!(
         (radius.0 - 14.0).abs() < f32::EPSILON,
@@ -206,13 +231,15 @@ fn from_definition_custom_radius_propagates() {
         ..make_bolt_definition("Small", 10.0)
     };
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
     let radius = world.get::<BoltRadius>(entity).unwrap();
     assert!(
         (radius.0 - 7.0).abs() < f32::EPSILON,
@@ -232,13 +259,15 @@ fn from_definition_custom_radius_propagates() {
 fn from_definition_inserts_bolt_base_damage() {
     let def = make_bolt_definition("Bolt", 10.0);
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
     let dmg = world
         .get::<BoltBaseDamage>(entity)
         .expect("definition bolt should have BoltBaseDamage");
@@ -253,13 +282,15 @@ fn from_definition_inserts_bolt_base_damage() {
 fn from_definition_zero_damage_inserts_bolt_base_damage_zero() {
     let def = make_bolt_definition("Zero", 0.0);
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
     let dmg = world
         .get::<BoltBaseDamage>(entity)
         .expect("zero damage bolt should still have BoltBaseDamage");
@@ -276,13 +307,15 @@ fn from_definition_zero_damage_inserts_bolt_base_damage_zero() {
 fn from_definition_inserts_bolt_definition_ref() {
     let def = make_bolt_definition("Bolt", 10.0);
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
     let def_ref = world
         .get::<BoltDefinitionRef>(entity)
         .expect("definition bolt should have BoltDefinitionRef");
@@ -297,13 +330,15 @@ fn from_definition_inserts_bolt_definition_ref() {
 fn from_definition_heavy_inserts_bolt_definition_ref_heavy() {
     let def = make_bolt_definition("Heavy", 25.0);
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
     let def_ref = world
         .get::<BoltDefinitionRef>(entity)
         .expect("definition bolt should have BoltDefinitionRef");
@@ -320,13 +355,15 @@ fn from_definition_heavy_inserts_bolt_definition_ref_heavy() {
 fn from_definition_inserts_bolt_angle_spread() {
     let def = make_bolt_definition("Bolt", 10.0);
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
     let spread = world
         .get::<BoltAngleSpread>(entity)
         .expect("definition bolt should have BoltAngleSpread");
@@ -343,13 +380,15 @@ fn from_definition_inserts_bolt_angle_spread() {
 fn from_definition_inserts_bolt_spawn_offset_y() {
     let def = make_bolt_definition("Bolt", 10.0);
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
     let offset = world
         .get::<BoltSpawnOffsetY>(entity)
         .expect("definition bolt should have BoltSpawnOffsetY");
@@ -373,40 +412,48 @@ fn from_definition_works_with_all_motion_role_combinations() {
     let mut world = World::new();
 
     // serving + primary
-    let sp = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .headless()
-        .spawn(&mut world);
+    let sp = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
 
     // serving + extra
-    let se = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::new(10.0, 0.0))
-        .serving()
-        .extra()
-        .headless()
-        .spawn(&mut world);
+    let se = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::new(10.0, 0.0))
+            .serving()
+            .extra()
+            .headless()
+            .spawn(commands)
+    });
 
     // velocity + primary
-    let vp = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::new(20.0, 0.0))
-        .with_velocity(Velocity2D(Vec2::new(0.0, 720.0)))
-        .primary()
-        .headless()
-        .spawn(&mut world);
+    let vp = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::new(20.0, 0.0))
+            .with_velocity(Velocity2D(Vec2::new(0.0, 720.0)))
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
 
     // velocity + extra
-    let ve = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::new(30.0, 0.0))
-        .with_velocity(Velocity2D(Vec2::new(0.0, 720.0)))
-        .extra()
-        .headless()
-        .spawn(&mut world);
+    let ve = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::new(30.0, 0.0))
+            .with_velocity(Velocity2D(Vec2::new(0.0, 720.0)))
+            .extra()
+            .headless()
+            .spawn(commands)
+    });
 
     for (label, entity) in [("sp", sp), ("se", se), ("vp", vp), ("ve", ve)] {
         assert!(
@@ -453,14 +500,16 @@ fn from_definition_works_with_all_motion_role_combinations() {
 fn from_definition_with_radius_override_wins() {
     let def = make_bolt_definition("Bolt", 10.0); // radius 14.0 in definition
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .with_radius(20.0)
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .with_radius(20.0)
+            .headless()
+            .spawn(commands)
+    });
     let radius = world.get::<BoltRadius>(entity).unwrap();
     assert!(
         (radius.0 - 20.0).abs() < f32::EPSILON,
@@ -480,14 +529,16 @@ fn from_definition_with_radius_override_wins() {
 fn from_definition_with_spawned_by_both_present() {
     let def = make_bolt_definition("Bolt", 10.0);
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .with_velocity(Velocity2D(Vec2::new(0.0, 720.0)))
-        .extra()
-        .spawned_by("chain_bolt")
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .with_velocity(Velocity2D(Vec2::new(0.0, 720.0)))
+            .extra()
+            .spawned_by("chain_bolt")
+            .headless()
+            .spawn(commands)
+    });
     let def_ref = world
         .get::<BoltDefinitionRef>(entity)
         .expect("should have BoltDefinitionRef");
@@ -508,14 +559,16 @@ fn from_definition_with_spawned_by_both_present() {
 fn from_definition_with_lifespan_both_present() {
     let def = make_bolt_definition("Bolt", 10.0);
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .with_velocity(Velocity2D(Vec2::new(0.0, 720.0)))
-        .extra()
-        .with_lifespan(3.0)
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .with_velocity(Velocity2D(Vec2::new(0.0, 720.0)))
+            .extra()
+            .with_lifespan(3.0)
+            .headless()
+            .spawn(commands)
+    });
     let def_ref = world
         .get::<BoltDefinitionRef>(entity)
         .expect("should have BoltDefinitionRef");

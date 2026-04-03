@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::world::CommandQueue, prelude::*};
 use rantzsoft_spatial2d::components::{
     BaseSpeed, MaxSpeed, MinAngleHorizontal, MinAngleVertical, MinSpeed, Position2D, Velocity2D,
 };
@@ -26,6 +26,21 @@ fn test_bolt_definition() -> BoltDefinition {
         min_radius: None,
         max_radius: None,
     }
+}
+
+/// Spawns a bolt via Commands backed by a `CommandQueue`, then applies the queue.
+/// Returns the Entity.
+fn spawn_bolt_in_world(
+    world: &mut World,
+    build_fn: impl FnOnce(&mut Commands) -> Entity,
+) -> Entity {
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let mut commands = Commands::new(&mut queue, world);
+        build_fn(&mut commands)
+    };
+    queue.apply(world);
+    entity
 }
 
 // ── Section A: Entry Point and Typestate Dimensions ──────────────────
@@ -57,13 +72,16 @@ fn at_position_transitions_to_has_position() {
 #[test]
 fn at_position_stores_position_in_spawn() {
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&test_bolt_definition())
-        .at_position(Vec2::new(100.0, 250.0))
-        .serving()
-        .primary()
-        .headless()
-        .spawn(&mut world);
+    let def = test_bolt_definition();
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::new(100.0, 250.0))
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
     let pos = world
         .get::<Position2D>(entity)
         .expect("entity should have Position2D");
@@ -77,13 +95,16 @@ fn at_position_stores_position_in_spawn() {
 #[test]
 fn at_position_accepts_zero() {
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&test_bolt_definition())
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .headless()
-        .spawn(&mut world);
+    let def = test_bolt_definition();
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
     let pos = world
         .get::<Position2D>(entity)
         .expect("entity should have Position2D");
@@ -93,13 +114,16 @@ fn at_position_accepts_zero() {
 #[test]
 fn at_position_accepts_negative_coordinates() {
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&test_bolt_definition())
-        .at_position(Vec2::new(-200.0, -100.0))
-        .serving()
-        .primary()
-        .headless()
-        .spawn(&mut world);
+    let def = test_bolt_definition();
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::new(-200.0, -100.0))
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
     let pos = world
         .get::<Position2D>(entity)
         .expect("entity should have Position2D");
@@ -120,14 +144,16 @@ fn with_speed_transitions_to_has_speed() {
 #[test]
 fn with_speed_stores_values_in_spawn() {
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .with_speed(400.0, 200.0, 800.0)
-        .with_angle(0.087, 0.087)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .with_speed(400.0, 200.0, 800.0)
+            .with_angle(0.087, 0.087)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
     let base = world
         .get::<BaseSpeed>(entity)
         .expect("entity should have BaseSpeed");
@@ -157,14 +183,16 @@ fn with_speed_stores_values_in_spawn() {
 #[test]
 fn with_speed_equal_min_max_base_fixed_speed() {
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .with_speed(400.0, 400.0, 400.0)
-        .with_angle(0.087, 0.087)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .with_speed(400.0, 400.0, 400.0)
+            .with_angle(0.087, 0.087)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
     let base = world.get::<BaseSpeed>(entity).unwrap();
     let min = world.get::<MinSpeed>(entity).unwrap();
     let max = world.get::<MaxSpeed>(entity).unwrap();
@@ -186,14 +214,16 @@ fn with_angle_transitions_to_has_angle() {
 #[test]
 fn with_angle_stores_values_in_spawn() {
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .with_speed(400.0, 200.0, 800.0)
-        .with_angle(0.087, 0.087)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .with_speed(400.0, 200.0, 800.0)
+            .with_angle(0.087, 0.087)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
     let h = world
         .get::<MinAngleHorizontal>(entity)
         .expect("entity should have MinAngleHorizontal");
@@ -215,14 +245,16 @@ fn with_angle_stores_values_in_spawn() {
 #[test]
 fn with_angle_zero_valid() {
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .with_speed(400.0, 200.0, 800.0)
-        .with_angle(0.0, 0.0)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .with_speed(400.0, 200.0, 800.0)
+            .with_angle(0.0, 0.0)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
     let h = world.get::<MinAngleHorizontal>(entity).unwrap();
     let v = world.get::<MinAngleVertical>(entity).unwrap();
     assert!(
@@ -248,13 +280,16 @@ fn with_velocity_transitions_to_has_velocity() {
 #[test]
 fn with_velocity_stores_velocity_in_spawn() {
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&test_bolt_definition())
-        .at_position(Vec2::new(200.0, 300.0))
-        .with_velocity(Velocity2D(Vec2::new(102.9, 385.5)))
-        .extra()
-        .headless()
-        .spawn(&mut world);
+    let def = test_bolt_definition();
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::new(200.0, 300.0))
+            .with_velocity(Velocity2D(Vec2::new(102.9, 385.5)))
+            .extra()
+            .headless()
+            .spawn(commands)
+    });
     let vel = world
         .get::<Velocity2D>(entity)
         .expect("entity should have Velocity2D");
@@ -268,13 +303,16 @@ fn with_velocity_stores_velocity_in_spawn() {
 #[test]
 fn with_velocity_zero_valid() {
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&test_bolt_definition())
-        .at_position(Vec2::ZERO)
-        .with_velocity(Velocity2D(Vec2::ZERO))
-        .extra()
-        .headless()
-        .spawn(&mut world);
+    let def = test_bolt_definition();
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .with_velocity(Velocity2D(Vec2::ZERO))
+            .extra()
+            .headless()
+            .spawn(commands)
+    });
     // Must also check a non-#[require] component to avoid false pass from stub
     assert!(
         world.get::<ExtraBolt>(entity).is_some(),

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use bevy::{
+    ecs::world::CommandQueue,
     prelude::*,
     time::{Timer, TimerMode},
 };
@@ -107,13 +108,21 @@ pub(crate) fn fire(
     };
     let direction = Vec2::new(angle.cos(), angle.sin());
     let velocity = Velocity2D(direction * bolt_def.base_speed);
-    let phantom = Bolt::builder()
-        .at_position(spawn_pos)
-        .definition(&bolt_def)
-        .with_velocity(velocity)
-        .extra()
-        .headless()
-        .spawn(world);
+    let phantom = {
+        let mut queue = CommandQueue::default();
+        let entity = {
+            let mut commands = Commands::new(&mut queue, world);
+            Bolt::builder()
+                .at_position(spawn_pos)
+                .definition(&bolt_def)
+                .with_velocity(velocity)
+                .extra()
+                .headless()
+                .spawn(&mut commands)
+        };
+        queue.apply(world);
+        entity
+    };
     world.entity_mut(phantom).insert((
         PhantomBoltMarker,
         PhantomOwner(entity),

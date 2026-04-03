@@ -10,7 +10,6 @@ pub(crate) mod cleanup_destroyed_bolts;
 pub(crate) mod dispatch_bolt_effects;
 mod hover_bolt;
 mod launch_bolt;
-mod spawn_bolt;
 pub(crate) mod sync_bolt_scale;
 mod tick_bolt_lifespan;
 
@@ -24,6 +23,5 @@ pub(crate) use cleanup_destroyed_bolts::cleanup_destroyed_bolts;
 pub(crate) use dispatch_bolt_effects::dispatch_bolt_effects;
 pub use hover_bolt::hover_bolt;
 pub(crate) use launch_bolt::launch_bolt;
-pub(crate) use spawn_bolt::spawn_bolt;
 pub(crate) use sync_bolt_scale::sync_bolt_scale;
 pub(crate) use tick_bolt_lifespan::tick_bolt_lifespan;

@@ -48,6 +48,7 @@ pub(crate) fn launch_bolt(
 
 #[cfg(test)]
 mod tests {
+    use bevy::ecs::world::CommandQueue;
     use rantzsoft_spatial2d::components::Velocity2D;
 
     use super::*;
@@ -93,13 +94,20 @@ mod tests {
     /// Spawns a serving bolt using the builder with `.definition()`.
     fn spawn_serving_bolt(app: &mut App) -> Entity {
         let def = make_default_bolt_definition();
-        Bolt::builder()
-            .at_position(Vec2::ZERO)
-            .definition(&def)
-            .serving()
-            .primary()
-            .headless()
-            .spawn(app.world_mut())
+        let world = app.world_mut();
+        let mut queue = CommandQueue::default();
+        let entity = {
+            let mut commands = Commands::new(&mut queue, world);
+            Bolt::builder()
+                .at_position(Vec2::ZERO)
+                .definition(&def)
+                .serving()
+                .primary()
+                .headless()
+                .spawn(&mut commands)
+        };
+        queue.apply(world);
+        entity
     }
 
     // ── Existing behavioral tests (migrated to .definition()) ──
@@ -234,13 +242,22 @@ mod tests {
             min_angle_vertical: 0.0,
             ..make_default_bolt_definition()
         };
-        let bolt_id = Bolt::builder()
-            .at_position(Vec2::ZERO)
-            .definition(&def)
-            .serving()
-            .primary()
-            .headless()
-            .spawn(app.world_mut());
+        let bolt_id = {
+            let world = app.world_mut();
+            let mut queue = CommandQueue::default();
+            let entity = {
+                let mut commands = Commands::new(&mut queue, world);
+                Bolt::builder()
+                    .at_position(Vec2::ZERO)
+                    .definition(&def)
+                    .serving()
+                    .primary()
+                    .headless()
+                    .spawn(&mut commands)
+            };
+            queue.apply(world);
+            entity
+        };
         app.world_mut()
             .entity_mut(bolt_id)
             .insert(BoltAngleSpread(0.0));
@@ -264,13 +281,22 @@ mod tests {
     fn launch_bolt_uses_random_angle_within_spread() {
         let mut app = test_app();
         let def = make_default_bolt_definition();
-        let bolt_id = Bolt::builder()
-            .at_position(Vec2::ZERO)
-            .definition(&def)
-            .serving()
-            .primary()
-            .headless()
-            .spawn(app.world_mut());
+        let bolt_id = {
+            let world = app.world_mut();
+            let mut queue = CommandQueue::default();
+            let entity = {
+                let mut commands = Commands::new(&mut queue, world);
+                Bolt::builder()
+                    .at_position(Vec2::ZERO)
+                    .definition(&def)
+                    .serving()
+                    .primary()
+                    .headless()
+                    .spawn(&mut commands)
+            };
+            queue.apply(world);
+            entity
+        };
         app.world_mut()
             .entity_mut(bolt_id)
             .insert(BoltAngleSpread(0.3));
@@ -332,13 +358,22 @@ mod tests {
             min_angle_vertical: 0.0,
             ..make_default_bolt_definition()
         };
-        let bolt_id = Bolt::builder()
-            .at_position(Vec2::ZERO)
-            .definition(&def)
-            .serving()
-            .primary()
-            .headless()
-            .spawn(app.world_mut());
+        let bolt_id = {
+            let world = app.world_mut();
+            let mut queue = CommandQueue::default();
+            let entity = {
+                let mut commands = Commands::new(&mut queue, world);
+                Bolt::builder()
+                    .at_position(Vec2::ZERO)
+                    .definition(&def)
+                    .serving()
+                    .primary()
+                    .headless()
+                    .spawn(&mut commands)
+            };
+            queue.apply(world);
+            entity
+        };
         app.world_mut()
             .entity_mut(bolt_id)
             .insert(BoltAngleSpread(0.0));
@@ -378,13 +413,22 @@ mod tests {
             min_angle_vertical: 0.0,
             ..make_default_bolt_definition()
         };
-        let bolt_id = Bolt::builder()
-            .at_position(Vec2::ZERO)
-            .definition(&def)
-            .serving()
-            .primary()
-            .headless()
-            .spawn(app.world_mut());
+        let bolt_id = {
+            let world = app.world_mut();
+            let mut queue = CommandQueue::default();
+            let entity = {
+                let mut commands = Commands::new(&mut queue, world);
+                Bolt::builder()
+                    .at_position(Vec2::ZERO)
+                    .definition(&def)
+                    .serving()
+                    .primary()
+                    .headless()
+                    .spawn(&mut commands)
+            };
+            queue.apply(world);
+            entity
+        };
         app.world_mut()
             .entity_mut(bolt_id)
             .insert((BoltAngleSpread(0.0), ActiveSpeedBoosts(vec![1.5])));

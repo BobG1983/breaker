@@ -1,7 +1,7 @@
 //! Migration tests for `bolt_cell_collision` — verifying the system reads
 //! `BoltBaseDamage` from the entity component.
 
-use bevy::prelude::*;
+use bevy::{ecs::world::CommandQueue, prelude::*};
 use rantzsoft_spatial2d::components::Velocity2D;
 
 use super::helpers::*;
@@ -34,13 +34,20 @@ fn make_default_bolt_definition() -> BoltDefinition {
 /// Spawns a bolt via `.definition()` at the given position with velocity.
 fn spawn_bolt_from_definition(app: &mut App, x: f32, y: f32, vx: f32, vy: f32) -> Entity {
     let def = make_default_bolt_definition();
-    Bolt::builder()
-        .at_position(Vec2::new(x, y))
-        .definition(&def)
-        .with_velocity(Velocity2D(Vec2::new(vx, vy)))
-        .primary()
-        .headless()
-        .spawn(app.world_mut())
+    let world = app.world_mut();
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let mut commands = Commands::new(&mut queue, world);
+        Bolt::builder()
+            .at_position(Vec2::new(x, y))
+            .definition(&def)
+            .with_velocity(Velocity2D(Vec2::new(vx, vy)))
+            .primary()
+            .headless()
+            .spawn(&mut commands)
+    };
+    queue.apply(world);
+    entity
 }
 
 /// Spawns a bolt via `.definition()` with a custom `base_damage`.
@@ -49,13 +56,20 @@ fn spawn_bolt_with_damage(app: &mut App, x: f32, y: f32, vx: f32, vy: f32, damag
         base_damage: damage,
         ..make_default_bolt_definition()
     };
-    Bolt::builder()
-        .at_position(Vec2::new(x, y))
-        .definition(&def)
-        .with_velocity(Velocity2D(Vec2::new(vx, vy)))
-        .primary()
-        .headless()
-        .spawn(app.world_mut())
+    let world = app.world_mut();
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let mut commands = Commands::new(&mut queue, world);
+        Bolt::builder()
+            .at_position(Vec2::new(x, y))
+            .definition(&def)
+            .with_velocity(Velocity2D(Vec2::new(vx, vy)))
+            .primary()
+            .headless()
+            .spawn(&mut commands)
+    };
+    queue.apply(world);
+    entity
 }
 
 // ── Behavior 20: bolt_cell_collision queries BoltBaseDamage from entity ──

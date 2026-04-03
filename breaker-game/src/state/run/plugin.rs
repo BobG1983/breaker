@@ -3,7 +3,9 @@
 use bevy::prelude::*;
 
 use super::{
-    chip_select::systems::{detect_first_evolution, track_chips_collected},
+    chip_select::systems::{
+        detect_first_evolution, snapshot_node_highlights, track_chips_collected,
+    },
     definition::HighlightConfig,
     loading::systems::{capture_run_seed, generate_node_sequence_system, reset_run_state},
     messages::{HighlightTriggered, RunLost},
@@ -24,7 +26,7 @@ use super::{
     },
     resources::{DifficultyCurve, HighlightTracker, RunState, RunStats},
     run_end::systems::detect_most_powerful_evolution,
-    systems::advance_node,
+    systems::{advance_node, setup_run},
 };
 use crate::shared::{GameRng, GameState, PlayingState, RunSeed};
 
@@ -79,12 +81,16 @@ impl Plugin for RunPlugin {
             // Chip selection tracking + evolution detection (Update, ChipSelect state)
             .add_systems(
                 Update,
-                (track_chips_collected, detect_first_evolution)
+                (
+                    track_chips_collected,
+                    detect_first_evolution,
+                    snapshot_node_highlights,
+                )
                     .run_if(in_state(GameState::ChipSelect)),
             )
             .add_systems(
                 OnEnter(GameState::Playing),
-                (reset_highlight_tracker, capture_run_seed),
+                (reset_highlight_tracker, capture_run_seed, setup_run),
             )
             .add_systems(OnEnter(GameState::RunEnd), detect_most_powerful_evolution)
             .add_systems(OnEnter(GameState::TransitionIn), advance_node)

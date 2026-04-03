@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::world::CommandQueue, prelude::*};
 use rantzsoft_spatial2d::components::Velocity2D;
 
 use super::super::effect::*;
@@ -37,13 +37,20 @@ pub(super) fn test_app() -> App {
 
 pub(super) fn spawn_bolt(app: &mut App, pos: Vec2, vel: Vec2) -> Entity {
     let def = test_bolt_definition();
-    Bolt::builder()
-        .at_position(pos)
-        .definition(&def)
-        .with_velocity(Velocity2D(vel))
-        .primary()
-        .headless()
-        .spawn(app.world_mut())
+    let world = app.world_mut();
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let mut commands = Commands::new(&mut queue, world);
+        Bolt::builder()
+            .at_position(pos)
+            .definition(&def)
+            .with_velocity(Velocity2D(vel))
+            .primary()
+            .headless()
+            .spawn(&mut commands)
+    };
+    queue.apply(world);
+    entity
 }
 
 pub(super) fn enter_playing(app: &mut App) {

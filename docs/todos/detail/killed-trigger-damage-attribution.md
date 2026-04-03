@@ -230,6 +230,7 @@ struct LastDamageSource(pub Option<Entity>);
 
 | Before | After |
 |--------|-------|
+| `DamageCell` | `DamageDealt<Cell>` |
 | `RequestCellDestroyed` | `KillYourself<S, Cell>` |
 | `CellDestroyedAt` | `Destroyed<S, Cell>` |
 | `RequestBoltDestroyed` | `KillYourself<(), Bolt>` |
@@ -320,7 +321,63 @@ The bolt stays attributed through arbitrarily deep chains because `Destroyed` ca
 
 `TriggerContext` is runtime-only. Not on `EffectNode`, not on `EffectKind`, not in RON. Just a parameter on the `fire()` call stack.
 
+## Generic Damage Pipeline — `DamageDealt<T>` + `HealthShield`
+
+### `DamageDealt<T>` replaces `DamageCell`
+
+```rust
+struct DamageDealt<T: Component> {
+    pub target: Entity,
+    pub damage: f32,
+    pub source_chip: Option<String>,
+    pub source_entity: Option<Entity>,
+}
+```
+
+`T` is the target's marker component (`Cell`, `Bolt`, `Breaker`, `Wall`). Each domain registers its own `DamageDealt<T>` message and implements a listener system. Only `DamageDealt<Cell>` exists today (replacing `DamageCell`). Other variants are added later by registering the message type and adding a domain listener.
+
+### `HealthShield` component
+
+```rust
+#[derive(Component)]
+struct HealthShield {
+    pub shield_hp: f32,
+}
+```
+
+Added to any entity (cell, bolt, breaker, wall) via effects or builder. The domain's damage listener checks for `HealthShield` on the target:
+1. Subtract damage from `shield_hp` first
+2. If `shield_hp` reaches 0, remove the `HealthShield` component, apply remaining damage to entity health
+3. If `shield_hp` absorbs all damage, entity health is untouched
+
+This is distinct from the existing `Shield` effect (which creates a floor wall to prevent bolt-lost, with timer cost per reflection). `HealthShield` absorbs HP damage; `Shield` prevents bolt-lost.
+
+### Domain damage listeners
+
+```rust
+// cells domain
+fn apply_damage_to_cell(
+    mut reader: MessageReader<DamageDealt<Cell>>,
+    mut cells: Query<(&mut CellHealth, Option<&mut HealthShield>), With<Cell>>,
+) {
+    for msg in reader.read() {
+        let Ok((mut health, shield)) = cells.get_mut(msg.target) else { continue };
+        let effective_damage = absorb_shield(shield, msg.damage);
+        health.take_damage(effective_damage);
+    }
+}
+```
+
+Each domain decides whether to register a damage listener. Bolts, breakers, and walls can opt in later.
+
+### Interaction with kill pipeline
+
+`DamageDealt<T>` feeds into the kill pipeline: when `take_damage` returns `is_destroyed() == true`, the domain sends `KillYourself<S, T>` (using `source_entity` from `DamageDealt` to determine S). The damage and kill pipelines are separate steps — damage reduces HP, kill handles death triggers.
+
 ## Remaining Design Details
+
+### HealthShield component migration
+`HealthShield { shield_hp: f32 }` is initially defined in `cells/components/` by the cell builder todo (#4) so cells can use it immediately. When this todo lands, move the component to `effect/` (or `effect/components/`) since it applies to any entity type. Update the cell builder's import path accordingly.
 
 ### Despawn timing
 Entity must survive through `Killed`/`Died`/`Death` trigger evaluation + death animation before actual despawn. Needs a `PendingDespawn` marker or similar that a cleanup system processes after triggers have flushed.
