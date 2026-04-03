@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::world::CommandQueue, prelude::*};
 use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, Velocity2D};
 
 use super::*;
@@ -47,13 +47,20 @@ fn test_app() -> App {
 /// Spawns a bolt entity via `.definition()` for reset testing.
 fn spawn_bolt_entity(app: &mut App, pos: Vec2, velocity: Velocity2D) -> Entity {
     let def = make_default_bolt_definition();
-    Bolt::builder()
-        .at_position(pos)
-        .definition(&def)
-        .with_velocity(velocity)
-        .primary()
-        .headless()
-        .spawn(app.world_mut())
+    let world = app.world_mut();
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let mut commands = Commands::new(&mut queue, world);
+        Bolt::builder()
+            .at_position(pos)
+            .definition(&def)
+            .with_velocity(velocity)
+            .primary()
+            .headless()
+            .spawn(&mut commands)
+    };
+    queue.apply(world);
+    entity
 }
 
 /// Spawns a breaker entity at the given position using `Position2D`.
@@ -207,13 +214,22 @@ fn reset_bolt_removes_serving_on_subsequent_nodes() {
     let mut app = test_app();
     app.world_mut().resource_mut::<RunState>().node_index = 1;
     let def = make_default_bolt_definition();
-    let bolt_id = Bolt::builder()
-        .at_position(Vec2::ZERO)
-        .definition(&def)
-        .serving()
-        .primary()
-        .headless()
-        .spawn(app.world_mut());
+    let bolt_id = {
+        let world = app.world_mut();
+        let mut queue = CommandQueue::default();
+        let entity = {
+            let mut commands = Commands::new(&mut queue, world);
+            Bolt::builder()
+                .at_position(Vec2::ZERO)
+                .definition(&def)
+                .serving()
+                .primary()
+                .headless()
+                .spawn(&mut commands)
+        };
+        queue.apply(world);
+        entity
+    };
     spawn_breaker(&mut app, 0.0, -250.0);
 
     app.update();
@@ -411,13 +427,22 @@ fn reset_bolt_zero_angle_spread_launches_straight_up() {
         min_angle_vertical: 0.0,
         ..make_default_bolt_definition()
     };
-    let bolt_id = Bolt::builder()
-        .at_position(Vec2::ZERO)
-        .definition(&def)
-        .with_velocity(Velocity2D(Vec2::ZERO))
-        .primary()
-        .headless()
-        .spawn(app.world_mut());
+    let bolt_id = {
+        let world = app.world_mut();
+        let mut queue = CommandQueue::default();
+        let entity = {
+            let mut commands = Commands::new(&mut queue, world);
+            Bolt::builder()
+                .at_position(Vec2::ZERO)
+                .definition(&def)
+                .with_velocity(Velocity2D(Vec2::ZERO))
+                .primary()
+                .headless()
+                .spawn(&mut commands)
+        };
+        queue.apply(world);
+        entity
+    };
     // Override angle spread to 0.0 after builder inserts it
     app.world_mut()
         .entity_mut(bolt_id)
@@ -461,13 +486,22 @@ fn reset_bolt_zero_spawn_offset_resets_to_breaker_y() {
     // Edge case: BoltSpawnOffsetY(0.0) -> bolt resets to breaker Y exactly
     let mut app = test_app();
     let def = make_default_bolt_definition();
-    let bolt_id = Bolt::builder()
-        .at_position(Vec2::new(100.0, 200.0))
-        .definition(&def)
-        .with_velocity(Velocity2D(Vec2::ZERO))
-        .primary()
-        .headless()
-        .spawn(app.world_mut());
+    let bolt_id = {
+        let world = app.world_mut();
+        let mut queue = CommandQueue::default();
+        let entity = {
+            let mut commands = Commands::new(&mut queue, world);
+            Bolt::builder()
+                .at_position(Vec2::new(100.0, 200.0))
+                .definition(&def)
+                .with_velocity(Velocity2D(Vec2::ZERO))
+                .primary()
+                .headless()
+                .spawn(&mut commands)
+        };
+        queue.apply(world);
+        entity
+    };
     // Override offset to 0.0
     app.world_mut()
         .entity_mut(bolt_id)
@@ -569,13 +603,22 @@ fn reset_bolt_uses_random_angle_within_spread() {
     let mut app = test_app();
     app.world_mut().resource_mut::<RunState>().node_index = 3;
     let def = make_default_bolt_definition();
-    let bolt_id = Bolt::builder()
-        .at_position(Vec2::ZERO)
-        .definition(&def)
-        .with_velocity(Velocity2D(Vec2::ZERO))
-        .primary()
-        .headless()
-        .spawn(app.world_mut());
+    let bolt_id = {
+        let world = app.world_mut();
+        let mut queue = CommandQueue::default();
+        let entity = {
+            let mut commands = Commands::new(&mut queue, world);
+            Bolt::builder()
+                .at_position(Vec2::ZERO)
+                .definition(&def)
+                .with_velocity(Velocity2D(Vec2::ZERO))
+                .primary()
+                .headless()
+                .spawn(&mut commands)
+        };
+        queue.apply(world);
+        entity
+    };
     // Set a specific angle spread
     app.world_mut()
         .entity_mut(bolt_id)
@@ -628,22 +671,40 @@ fn reset_bolt_ignores_extra_bolt_with_definition_built() {
     let def = make_default_bolt_definition();
 
     // Baseline bolt
-    let baseline_id = Bolt::builder()
-        .at_position(Vec2::new(150.0, 100.0))
-        .definition(&def)
-        .with_velocity(Velocity2D(Vec2::new(300.0, 400.0)))
-        .primary()
-        .headless()
-        .spawn(app.world_mut());
+    let baseline_id = {
+        let world = app.world_mut();
+        let mut queue = CommandQueue::default();
+        let entity = {
+            let mut commands = Commands::new(&mut queue, world);
+            Bolt::builder()
+                .at_position(Vec2::new(150.0, 100.0))
+                .definition(&def)
+                .with_velocity(Velocity2D(Vec2::new(300.0, 400.0)))
+                .primary()
+                .headless()
+                .spawn(&mut commands)
+        };
+        queue.apply(world);
+        entity
+    };
 
     // Extra bolt
-    let extra_id = Bolt::builder()
-        .at_position(Vec2::new(-100.0, 50.0))
-        .definition(&def)
-        .with_velocity(Velocity2D(Vec2::new(200.0, 300.0)))
-        .extra()
-        .headless()
-        .spawn(app.world_mut());
+    let extra_id = {
+        let world = app.world_mut();
+        let mut queue = CommandQueue::default();
+        let entity = {
+            let mut commands = Commands::new(&mut queue, world);
+            Bolt::builder()
+                .at_position(Vec2::new(-100.0, 50.0))
+                .definition(&def)
+                .with_velocity(Velocity2D(Vec2::new(200.0, 300.0)))
+                .extra()
+                .headless()
+                .spawn(&mut commands)
+        };
+        queue.apply(world);
+        entity
+    };
 
     spawn_breaker(&mut app, 0.0, -250.0);
     app.update();
@@ -677,13 +738,21 @@ fn reset_bolt_runs_without_bolt_config_resource() {
         .add_systems(Update, reset_bolt);
 
     let def = make_default_bolt_definition();
-    Bolt::builder()
-        .at_position(Vec2::ZERO)
-        .definition(&def)
-        .with_velocity(Velocity2D(Vec2::new(100.0, 200.0)))
-        .primary()
-        .headless()
-        .spawn(app.world_mut());
+    {
+        let world = app.world_mut();
+        let mut queue = CommandQueue::default();
+        {
+            let mut commands = Commands::new(&mut queue, world);
+            Bolt::builder()
+                .at_position(Vec2::ZERO)
+                .definition(&def)
+                .with_velocity(Velocity2D(Vec2::new(100.0, 200.0)))
+                .primary()
+                .headless()
+                .spawn(&mut commands);
+        }
+        queue.apply(world);
+    }
     spawn_breaker(&mut app, 0.0, -250.0);
 
     // Should not panic if BoltConfig is no longer a system parameter

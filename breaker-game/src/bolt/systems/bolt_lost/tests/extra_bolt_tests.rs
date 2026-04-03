@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::world::CommandQueue, prelude::*};
 use rantzsoft_spatial2d::components::{Position2D, Spatial2D, Velocity2D};
 
 use super::{super::system::bolt_lost, helpers::*};
@@ -10,6 +10,17 @@ use crate::{
     breaker::components::Breaker,
     shared::{GameDrawLayer, GameRng, PlayfieldConfig},
 };
+
+fn spawn_bolt_in_app(app: &mut App, build_fn: impl FnOnce(&mut Commands) -> Entity) -> Entity {
+    let world = app.world_mut();
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let mut commands = Commands::new(&mut queue, world);
+        build_fn(&mut commands)
+    };
+    queue.apply(world);
+    entity
+}
 
 #[test]
 fn extra_bolt_below_floor_is_despawned() {
@@ -23,13 +34,15 @@ fn extra_bolt_below_floor_is_despawned() {
     ));
 
     let def = make_default_bolt_definition();
-    let entity = Bolt::builder()
-        .at_position(Vec2::new(0.0, playfield.bottom() - 100.0))
-        .definition(&def)
-        .with_velocity(Velocity2D(Vec2::new(0.0, -400.0)))
-        .extra()
-        .headless()
-        .spawn(app.world_mut());
+    let entity = spawn_bolt_in_app(&mut app, |commands| {
+        Bolt::builder()
+            .at_position(Vec2::new(0.0, playfield.bottom() - 100.0))
+            .definition(&def)
+            .with_velocity(Velocity2D(Vec2::new(0.0, -400.0)))
+            .extra()
+            .headless()
+            .spawn(commands)
+    });
     tick(&mut app);
 
     assert!(
@@ -53,13 +66,15 @@ fn extra_bolt_sends_bolt_lost_on_despawn() {
     app.add_systems(FixedUpdate, count_bolt_lost.after(bolt_lost));
 
     let def = make_default_bolt_definition();
-    Bolt::builder()
-        .at_position(Vec2::new(0.0, playfield.bottom() - 100.0))
-        .definition(&def)
-        .with_velocity(Velocity2D(Vec2::new(0.0, -400.0)))
-        .extra()
-        .headless()
-        .spawn(app.world_mut());
+    spawn_bolt_in_app(&mut app, |commands| {
+        Bolt::builder()
+            .at_position(Vec2::new(0.0, playfield.bottom() - 100.0))
+            .definition(&def)
+            .with_velocity(Velocity2D(Vec2::new(0.0, -400.0)))
+            .extra()
+            .headless()
+            .spawn(commands)
+    });
     tick(&mut app);
 
     let count = app.world().resource::<BoltLostCount>();
@@ -85,13 +100,15 @@ fn baseline_bolt_still_respawns_with_extra_present() {
     );
     // Extra bolt
     let def = make_default_bolt_definition();
-    Bolt::builder()
-        .at_position(Vec2::new(50.0, playfield.bottom() - 100.0))
-        .definition(&def)
-        .with_velocity(Velocity2D(Vec2::new(0.0, -400.0)))
-        .extra()
-        .headless()
-        .spawn(app.world_mut());
+    spawn_bolt_in_app(&mut app, |commands| {
+        Bolt::builder()
+            .at_position(Vec2::new(50.0, playfield.bottom() - 100.0))
+            .definition(&def)
+            .with_velocity(Velocity2D(Vec2::new(0.0, -400.0)))
+            .extra()
+            .headless()
+            .spawn(commands)
+    });
     tick(&mut app);
 
     // Baseline bolt should still exist (respawned)
@@ -139,13 +156,15 @@ fn extra_bolt_writes_request_bolt_destroyed_instead_of_despawning() {
     ));
 
     let def = make_default_bolt_definition();
-    let entity = Bolt::builder()
-        .at_position(Vec2::new(50.0, playfield.bottom() - 100.0))
-        .definition(&def)
-        .with_velocity(Velocity2D(Vec2::new(0.0, -400.0)))
-        .extra()
-        .headless()
-        .spawn(app.world_mut());
+    let entity = spawn_bolt_in_app(&mut app, |commands| {
+        Bolt::builder()
+            .at_position(Vec2::new(50.0, playfield.bottom() - 100.0))
+            .definition(&def)
+            .with_velocity(Velocity2D(Vec2::new(0.0, -400.0)))
+            .extra()
+            .headless()
+            .spawn(commands)
+    });
     tick(&mut app);
 
     let captured = app.world().resource::<CapturedRequestBoltDestroyed>();

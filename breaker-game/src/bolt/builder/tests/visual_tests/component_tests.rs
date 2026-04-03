@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::world::CommandQueue, prelude::*};
 use rantzsoft_spatial2d::components::{Position2D, Scale2D, Velocity2D};
 
 use super::helpers::test_bolt_definition;
@@ -7,6 +7,20 @@ use crate::{
     effect::{BoundEffects, EffectKind, EffectNode},
     shared::{CleanupOnNodeExit, CleanupOnRunEnd, GameDrawLayer, size::BaseRadius},
 };
+
+/// Spawns a bolt via Commands backed by a `CommandQueue`, then applies the queue.
+fn spawn_bolt_in_world(
+    world: &mut World,
+    build_fn: impl FnOnce(&mut Commands) -> Entity,
+) -> Entity {
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let mut commands = Commands::new(&mut queue, world);
+        build_fn(&mut commands)
+    };
+    queue.apply(world);
+    entity
+}
 
 // ── Behavior 18: Headless bolt still has all gameplay components ──
 
@@ -88,17 +102,19 @@ fn headless_extra_velocity_has_correct_markers() {
 fn headless_spawn_with_effects_has_bound_effects() {
     let def = test_bolt_definition();
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::new(0.0, 50.0))
-        .with_effects(vec![(
-            "test".to_string(),
-            EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 }),
-        )])
-        .serving()
-        .primary()
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::new(0.0, 50.0))
+            .with_effects(vec![(
+                "test".to_string(),
+                EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 }),
+            )])
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
 
     let bound = world
         .get::<BoundEffects>(entity)
@@ -111,13 +127,15 @@ fn headless_spawn_with_effects_has_bound_effects() {
 fn headless_spawn_without_effects_has_no_bound_effects() {
     let def = test_bolt_definition();
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::new(0.0, 50.0))
-        .serving()
-        .primary()
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::new(0.0, 50.0))
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
 
     // Guard against false pass
     assert!(
@@ -136,13 +154,15 @@ fn headless_spawn_without_effects_has_no_bound_effects() {
 fn headless_extra_velocity_spawn_has_correct_markers() {
     let def = test_bolt_definition();
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::new(200.0, 300.0))
-        .with_velocity(Velocity2D(Vec2::new(102.9, 385.5)))
-        .extra()
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::new(200.0, 300.0))
+            .with_velocity(Velocity2D(Vec2::new(102.9, 385.5)))
+            .extra()
+            .headless()
+            .spawn(commands)
+    });
 
     assert!(world.get::<Bolt>(entity).is_some(), "should have Bolt");
     assert!(
@@ -172,13 +192,15 @@ fn headless_extra_velocity_spawn_has_correct_markers() {
 fn headless_primary_velocity_spawn_has_primary_marker() {
     let def = test_bolt_definition();
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
-        .primary()
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
 
     assert!(
         world.get::<PrimaryBolt>(entity).is_some(),

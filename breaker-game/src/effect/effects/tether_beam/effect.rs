@@ -2,7 +2,7 @@
 
 use std::collections::HashSet;
 
-use bevy::prelude::*;
+use bevy::{ecs::world::CommandQueue, prelude::*};
 use rand::Rng;
 use rantzsoft_physics2d::{
     aabb::Aabb2D, ccd::ray_vs_aabb, collision_layers::CollisionLayers, plugin::PhysicsSystems,
@@ -88,13 +88,19 @@ fn spawn_tether_bolt(world: &mut World, spawn_pos: Vec2, bolt_def: &BoltDefiniti
     };
     let direction = Vec2::new(angle.cos(), angle.sin());
     let velocity = Velocity2D(direction * bolt_def.base_speed);
-    Bolt::builder()
-        .at_position(spawn_pos)
-        .definition(bolt_def)
-        .with_velocity(velocity)
-        .extra()
-        .headless()
-        .spawn(world)
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let mut commands = Commands::new(&mut queue, world);
+        Bolt::builder()
+            .at_position(spawn_pos)
+            .definition(bolt_def)
+            .with_velocity(velocity)
+            .extra()
+            .headless()
+            .spawn(&mut commands)
+    };
+    queue.apply(world);
+    entity
 }
 
 /// Standard mode: spawn two tethered bolts with a beam between them.

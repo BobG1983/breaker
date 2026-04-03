@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::world::CommandQueue, prelude::*};
 use rantzsoft_physics2d::collision_layers::CollisionLayers;
 use rantzsoft_spatial2d::components::{
     BaseSpeed, InterpolateTransform2D, MaxSpeed, MinSpeed, Position2D, Spatial, Spatial2D,
@@ -35,19 +35,37 @@ fn test_bolt_definition() -> BoltDefinition {
     }
 }
 
-// ── Section F: spawn(&mut World) -> Entity ──────────────────────────
+/// Spawns a bolt via Commands backed by a `CommandQueue`, then applies the queue.
+/// Returns the Entity.
+fn spawn_bolt_in_world(
+    world: &mut World,
+    build_fn: impl FnOnce(&mut Commands) -> Entity,
+) -> Entity {
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let mut commands = Commands::new(&mut queue, world);
+        build_fn(&mut commands)
+    };
+    queue.apply(world);
+    entity
+}
+
+// ── Section F: spawn(&mut Commands) -> Entity ──────────────────────────
 
 // Behavior 27: spawn() creates entity with all build components
 #[test]
 fn spawn_primary_serving_creates_complete_entity() {
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&test_bolt_definition())
-        .at_position(Vec2::new(0.0, 50.0))
-        .serving()
-        .primary()
-        .headless()
-        .spawn(&mut world);
+    let def = test_bolt_definition();
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::new(0.0, 50.0))
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
 
     assert!(
         world.get_entity(entity).is_ok(),
@@ -102,13 +120,16 @@ fn spawn_primary_serving_creates_complete_entity() {
 #[test]
 fn spawn_extra_bolt_creates_entity_with_extra_markers() {
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&test_bolt_definition())
-        .at_position(Vec2::new(50.0, 100.0))
-        .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
-        .extra()
-        .headless()
-        .spawn(&mut world);
+    let def = test_bolt_definition();
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::new(50.0, 100.0))
+            .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
+            .extra()
+            .headless()
+            .spawn(commands)
+    });
 
     assert!(
         world.get::<ExtraBolt>(entity).is_some(),
@@ -146,14 +167,17 @@ fn spawn_extra_bolt_creates_entity_with_extra_markers() {
 #[test]
 fn spawn_with_spawned_by_inserts_evolution_marker() {
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&test_bolt_definition())
-        .at_position(Vec2::ZERO)
-        .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
-        .extra()
-        .spawned_by("chain_bolt")
-        .headless()
-        .spawn(&mut world);
+    let def = test_bolt_definition();
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
+            .extra()
+            .spawned_by("chain_bolt")
+            .headless()
+            .spawn(commands)
+    });
     let spawned_by = world
         .get::<SpawnedByEvolution>(entity)
         .expect("should have SpawnedByEvolution");
@@ -164,14 +188,17 @@ fn spawn_with_spawned_by_inserts_evolution_marker() {
 #[test]
 fn spawn_with_lifespan_inserts_timer() {
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&test_bolt_definition())
-        .at_position(Vec2::ZERO)
-        .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
-        .extra()
-        .with_lifespan(5.0)
-        .headless()
-        .spawn(&mut world);
+    let def = test_bolt_definition();
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
+            .extra()
+            .with_lifespan(5.0)
+            .headless()
+            .spawn(commands)
+    });
     let lifespan = world
         .get::<BoltLifespan>(entity)
         .expect("should have BoltLifespan");
@@ -194,14 +221,16 @@ fn spawn_with_inherited_effects_inserts_bound_effects() {
     ]);
 
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&test_bolt_definition())
-        .at_position(Vec2::ZERO)
-        .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
-        .extra()
-        .with_inherited_effects(&inherited)
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&test_bolt_definition())
+            .at_position(Vec2::ZERO)
+            .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
+            .extra()
+            .with_inherited_effects(&inherited)
+            .headless()
+            .spawn(commands)
+    });
 
     let bound = world
         .get::<BoundEffects>(entity)
@@ -220,14 +249,16 @@ fn spawn_with_empty_inherited_effects_inserts_empty_bound_effects() {
     let inherited = BoundEffects(vec![]);
 
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&test_bolt_definition())
-        .at_position(Vec2::ZERO)
-        .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
-        .extra()
-        .with_inherited_effects(&inherited)
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&test_bolt_definition())
+            .at_position(Vec2::ZERO)
+            .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
+            .extra()
+            .with_inherited_effects(&inherited)
+            .headless()
+            .spawn(commands)
+    });
 
     let bound = world
         .get::<BoundEffects>(entity)
@@ -239,13 +270,16 @@ fn spawn_with_empty_inherited_effects_inserts_empty_bound_effects() {
 #[test]
 fn spawn_without_effects_has_no_bound_effects() {
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&test_bolt_definition())
-        .at_position(Vec2::ZERO)
-        .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
-        .extra()
-        .headless()
-        .spawn(&mut world);
+    let def = test_bolt_definition();
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
+            .extra()
+            .headless()
+            .spawn(commands)
+    });
 
     // Guard against false pass — verify a non-#[require] component is present
     assert!(
@@ -271,15 +305,17 @@ fn spawn_with_both_effects_orders_explicit_before_inherited() {
     )]);
 
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&test_bolt_definition())
-        .at_position(Vec2::ZERO)
-        .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
-        .extra()
-        .with_effects(explicit)
-        .with_inherited_effects(&inherited)
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&test_bolt_definition())
+            .at_position(Vec2::ZERO)
+            .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
+            .extra()
+            .with_effects(explicit)
+            .with_inherited_effects(&inherited)
+            .headless()
+            .spawn(commands)
+    });
 
     let bound = world
         .get::<BoundEffects>(entity)
@@ -302,14 +338,16 @@ fn inherited_effects_are_cloned_not_moved() {
     let inherited = BoundEffects(vec![("chip".to_string(), node)]);
 
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&test_bolt_definition())
-        .at_position(Vec2::ZERO)
-        .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
-        .extra()
-        .with_inherited_effects(&inherited)
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&test_bolt_definition())
+            .at_position(Vec2::ZERO)
+            .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
+            .extra()
+            .with_inherited_effects(&inherited)
+            .headless()
+            .spawn(commands)
+    });
 
     // Original reference is still valid (it was borrowed, not consumed)
     assert_eq!(

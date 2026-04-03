@@ -55,13 +55,13 @@ fn build_core(params: &CoreParams, optional: &OptionalBoltData) -> impl Bundle +
 
 /// Spawns a bolt entity with all components, including optionals and effects.
 fn spawn_inner(
-    world: &mut World,
+    commands: &mut Commands,
     core: impl Bundle,
     is_serving: bool,
     is_primary: bool,
     optional: OptionalBoltData,
 ) -> Entity {
-    let mut entity = world.spawn(core);
+    let mut entity = commands.spawn(core);
 
     // Role marker + cleanup
     if is_primary {
@@ -153,7 +153,7 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, Serving, Primary, Headless> {
     }
 
     /// Spawns a headless primary serving bolt entity with all components.
-    pub fn spawn(self, world: &mut World) -> Entity {
+    pub fn spawn(self, commands: &mut Commands) -> Entity {
         let params = CoreParams {
             pos: self.position.pos,
             base_speed: self.speed.base,
@@ -164,7 +164,7 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, Serving, Primary, Headless> {
             vel: Velocity2D(Vec2::ZERO),
         };
         let core = build_core(&params, &self.optional);
-        spawn_inner(world, core, true, true, self.optional)
+        spawn_inner(commands, core, true, true, self.optional)
     }
 }
 
@@ -186,7 +186,7 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, Serving, Extra, Headless> {
     }
 
     /// Spawns a headless extra serving bolt entity with all components.
-    pub fn spawn(self, world: &mut World) -> Entity {
+    pub fn spawn(self, commands: &mut Commands) -> Entity {
         let params = CoreParams {
             pos: self.position.pos,
             base_speed: self.speed.base,
@@ -197,7 +197,7 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, Serving, Extra, Headless> {
             vel: Velocity2D(Vec2::ZERO),
         };
         let core = build_core(&params, &self.optional);
-        spawn_inner(world, core, true, false, self.optional)
+        spawn_inner(commands, core, true, false, self.optional)
     }
 }
 
@@ -219,7 +219,7 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, HasVelocity, Primary, Headless
     }
 
     /// Spawns a headless primary bolt entity with velocity and all components.
-    pub fn spawn(self, world: &mut World) -> Entity {
+    pub fn spawn(self, commands: &mut Commands) -> Entity {
         let params = CoreParams {
             pos: self.position.pos,
             base_speed: self.speed.base,
@@ -230,7 +230,7 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, HasVelocity, Primary, Headless
             vel: self.motion.vel,
         };
         let core = build_core(&params, &self.optional);
-        spawn_inner(world, core, false, true, self.optional)
+        spawn_inner(commands, core, false, true, self.optional)
     }
 }
 
@@ -252,7 +252,7 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, HasVelocity, Extra, Headless> 
     }
 
     /// Spawns a headless extra bolt entity with velocity and all components.
-    pub fn spawn(self, world: &mut World) -> Entity {
+    pub fn spawn(self, commands: &mut Commands) -> Entity {
         let params = CoreParams {
             pos: self.position.pos,
             base_speed: self.speed.base,
@@ -263,7 +263,7 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, HasVelocity, Extra, Headless> 
             vel: self.motion.vel,
         };
         let core = build_core(&params, &self.optional);
-        spawn_inner(world, core, false, false, self.optional)
+        spawn_inner(commands, core, false, false, self.optional)
     }
 }
 
@@ -295,7 +295,7 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, Serving, Primary, Rendered> {
     }
 
     /// Spawns a rendered primary serving bolt entity with all components.
-    pub fn spawn(self, world: &mut World) -> Entity {
+    pub fn spawn(self, commands: &mut Commands) -> Entity {
         let mesh = self.visual.mesh.clone();
         let material = self.visual.material.clone();
         let params = CoreParams {
@@ -308,8 +308,8 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, Serving, Primary, Rendered> {
             vel: Velocity2D(Vec2::ZERO),
         };
         let core = build_core(&params, &self.optional);
-        let entity = spawn_inner(world, core, true, true, self.optional);
-        world.entity_mut(entity).insert((
+        let entity = spawn_inner(commands, core, true, true, self.optional);
+        commands.entity(entity).insert((
             Mesh2d(mesh),
             MeshMaterial2d(material),
             GameDrawLayer::Bolt,
@@ -344,7 +344,7 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, Serving, Extra, Rendered> {
     }
 
     /// Spawns a rendered extra serving bolt entity with all components.
-    pub fn spawn(self, world: &mut World) -> Entity {
+    pub fn spawn(self, commands: &mut Commands) -> Entity {
         let mesh = self.visual.mesh.clone();
         let material = self.visual.material.clone();
         let params = CoreParams {
@@ -357,8 +357,8 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, Serving, Extra, Rendered> {
             vel: Velocity2D(Vec2::ZERO),
         };
         let core = build_core(&params, &self.optional);
-        let entity = spawn_inner(world, core, true, false, self.optional);
-        world.entity_mut(entity).insert((
+        let entity = spawn_inner(commands, core, true, false, self.optional);
+        commands.entity(entity).insert((
             Mesh2d(mesh),
             MeshMaterial2d(material),
             GameDrawLayer::Bolt,
@@ -392,7 +392,7 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, HasVelocity, Primary, Rendered
     }
 
     /// Spawns a rendered primary bolt entity with velocity and all components.
-    pub fn spawn(self, world: &mut World) -> Entity {
+    pub fn spawn(self, commands: &mut Commands) -> Entity {
         let mesh = self.visual.mesh.clone();
         let material = self.visual.material.clone();
         let params = CoreParams {
@@ -405,8 +405,8 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, HasVelocity, Primary, Rendered
             vel: self.motion.vel,
         };
         let core = build_core(&params, &self.optional);
-        let entity = spawn_inner(world, core, false, true, self.optional);
-        world.entity_mut(entity).insert((
+        let entity = spawn_inner(commands, core, false, true, self.optional);
+        commands.entity(entity).insert((
             Mesh2d(mesh),
             MeshMaterial2d(material),
             GameDrawLayer::Bolt,
@@ -440,7 +440,7 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, HasVelocity, Extra, Rendered> 
     }
 
     /// Spawns a rendered extra bolt entity with velocity and all components.
-    pub fn spawn(self, world: &mut World) -> Entity {
+    pub fn spawn(self, commands: &mut Commands) -> Entity {
         let mesh = self.visual.mesh.clone();
         let material = self.visual.material.clone();
         let params = CoreParams {
@@ -453,8 +453,8 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, HasVelocity, Extra, Rendered> 
             vel: self.motion.vel,
         };
         let core = build_core(&params, &self.optional);
-        let entity = spawn_inner(world, core, false, false, self.optional);
-        world.entity_mut(entity).insert((
+        let entity = spawn_inner(commands, core, false, false, self.optional);
+        commands.entity(entity).insert((
             Mesh2d(mesh),
             MeshMaterial2d(material),
             GameDrawLayer::Bolt,

@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::world::CommandQueue, prelude::*};
 use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use super::helpers::*;
@@ -8,6 +8,17 @@ use crate::{
     effect::effects::speed_boost::ActiveSpeedBoosts,
     shared::GameDrawLayer,
 };
+
+fn spawn_bolt_in_app(app: &mut App, build_fn: impl FnOnce(&mut Commands) -> Entity) -> Entity {
+    let world = app.world_mut();
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let mut commands = Commands::new(&mut queue, world);
+        build_fn(&mut commands)
+    };
+    queue.apply(world);
+    entity
+}
 
 #[test]
 fn left_hit_reflects_leftward() {
@@ -105,14 +116,16 @@ fn reflect_top_hit_uses_active_speed_boosts_as_speed_floor() {
     spawn_breaker_at(&mut app, 0.0, y_pos);
 
     let start_y = y_pos + hh.half_height() + default_bolt_radius().0 + 3.0;
-    let bolt_entity = Bolt::builder()
-        .at_position(Vec2::new(0.0, start_y))
-        .with_speed(400.0, 0.0, f32::MAX)
-        .with_angle(0.0, 0.0)
-        .with_velocity(Velocity2D(Vec2::new(0.0, -300.0)))
-        .primary()
-        .headless()
-        .spawn(app.world_mut());
+    let bolt_entity = spawn_bolt_in_app(&mut app, |commands| {
+        Bolt::builder()
+            .at_position(Vec2::new(0.0, start_y))
+            .with_speed(400.0, 0.0, f32::MAX)
+            .with_angle(0.0, 0.0)
+            .with_velocity(Velocity2D(Vec2::new(0.0, -300.0)))
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
     app.world_mut()
         .entity_mut(bolt_entity)
         .insert(ActiveSpeedBoosts(vec![2.0]));
@@ -141,14 +154,16 @@ fn reflect_top_hit_without_speed_boosts_uses_raw_base_speed() {
     spawn_breaker_at(&mut app, 0.0, y_pos);
 
     let start_y = y_pos + hh.half_height() + default_bolt_radius().0 + 3.0;
-    let bolt_entity = Bolt::builder()
-        .at_position(Vec2::new(0.0, start_y))
-        .with_speed(400.0, 0.0, f32::MAX)
-        .with_angle(0.0, 0.0)
-        .with_velocity(Velocity2D(Vec2::new(0.0, -300.0)))
-        .primary()
-        .headless()
-        .spawn(app.world_mut());
+    let bolt_entity = spawn_bolt_in_app(&mut app, |commands| {
+        Bolt::builder()
+            .at_position(Vec2::new(0.0, start_y))
+            .with_speed(400.0, 0.0, f32::MAX)
+            .with_angle(0.0, 0.0)
+            .with_velocity(Velocity2D(Vec2::new(0.0, -300.0)))
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
     // No ActiveSpeedBoosts
 
     tick(&mut app);
@@ -180,14 +195,16 @@ fn reflect_top_hit_ignores_base_speed_alone_when_boost_active() {
     spawn_breaker_at(&mut app, 0.0, y_pos);
 
     let start_y = y_pos + hh.half_height() + default_bolt_radius().0 + 3.0;
-    let bolt_entity = Bolt::builder()
-        .at_position(Vec2::new(0.0, start_y))
-        .with_speed(400.0, 0.0, f32::MAX)
-        .with_angle(0.0, 0.0)
-        .with_velocity(Velocity2D(Vec2::new(0.0, -500.0)))
-        .primary()
-        .headless()
-        .spawn(app.world_mut());
+    let bolt_entity = spawn_bolt_in_app(&mut app, |commands| {
+        Bolt::builder()
+            .at_position(Vec2::new(0.0, start_y))
+            .with_speed(400.0, 0.0, f32::MAX)
+            .with_angle(0.0, 0.0)
+            .with_velocity(Velocity2D(Vec2::new(0.0, -500.0)))
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
     app.world_mut()
         .entity_mut(bolt_entity)
         .insert(ActiveSpeedBoosts(vec![2.0]));

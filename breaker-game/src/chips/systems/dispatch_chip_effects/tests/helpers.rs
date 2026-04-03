@@ -1,6 +1,6 @@
 //! Shared test helpers for `dispatch_chip_effects` tests.
 
-use bevy::prelude::*;
+use bevy::{ecs::world::CommandQueue, prelude::*};
 
 use crate::{
     chips::{definition::ChipDefinition, inventory::ChipInventory, resources::ChipCatalog},
@@ -101,13 +101,22 @@ pub(super) fn spawn_bolt(app: &mut App) -> Entity {
         min_radius: None,
         max_radius: None,
     };
-    let entity = Bolt::builder()
-        .at_position(Vec2::ZERO)
-        .definition(&def)
-        .with_velocity(Velocity2D(Vec2::ZERO))
-        .primary()
-        .headless()
-        .spawn(app.world_mut());
+    let entity = {
+        let world = app.world_mut();
+        let mut queue = CommandQueue::default();
+        let entity = {
+            let mut commands = Commands::new(&mut queue, world);
+            Bolt::builder()
+                .at_position(Vec2::ZERO)
+                .definition(&def)
+                .with_velocity(Velocity2D(Vec2::ZERO))
+                .primary()
+                .headless()
+                .spawn(&mut commands)
+        };
+        queue.apply(world);
+        entity
+    };
 
     // Test-specific effect components not handled by builder
     app.world_mut().entity_mut(entity).insert((

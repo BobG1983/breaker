@@ -1,9 +1,23 @@
-use bevy::prelude::*;
+use bevy::{ecs::world::CommandQueue, prelude::*};
 
 use super::helpers::make_bolt_definition;
 use crate::bolt::components::{
     Bolt, BoltAngleSpread, BoltBaseDamage, BoltDefinitionRef, BoltSpawnOffsetY,
 };
+
+/// Spawns a bolt via Commands backed by a `CommandQueue`, then applies the queue.
+fn spawn_bolt_in_world(
+    world: &mut World,
+    build_fn: impl FnOnce(&mut Commands) -> Entity,
+) -> Entity {
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let mut commands = Commands::new(&mut queue, world);
+        build_fn(&mut commands)
+    };
+    queue.apply(world);
+    entity
+}
 
 // ── Section G: Optional method ordering and typestate independence ──────────
 
@@ -14,15 +28,17 @@ fn with_base_damage_available_in_initial_state() {
     // Verifies that .with_base_damage() compiles from initial state and
     // can continue chaining through to spawn.
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .with_base_damage(10.0)
-        .with_speed(400.0, 200.0, 800.0)
-        .with_angle(0.087, 0.087)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .with_base_damage(10.0)
+            .with_speed(400.0, 200.0, 800.0)
+            .with_angle(0.087, 0.087)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
     let dmg = world
         .get::<BoltBaseDamage>(entity)
         .expect("entity should have BoltBaseDamage when called early in chain");
@@ -36,15 +52,17 @@ fn with_base_damage_available_in_initial_state() {
 #[test]
 fn with_definition_name_available_in_initial_state() {
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .with_definition_name("Test".to_string())
-        .with_speed(400.0, 200.0, 800.0)
-        .with_angle(0.087, 0.087)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .with_definition_name("Test".to_string())
+            .with_speed(400.0, 200.0, 800.0)
+            .with_angle(0.087, 0.087)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
     let def_ref = world
         .get::<BoltDefinitionRef>(entity)
         .expect("entity should have BoltDefinitionRef when called early in chain");
@@ -54,15 +72,17 @@ fn with_definition_name_available_in_initial_state() {
 #[test]
 fn with_angle_spread_available_in_initial_state() {
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .with_angle_spread(0.5)
-        .with_speed(400.0, 200.0, 800.0)
-        .with_angle(0.087, 0.087)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .with_angle_spread(0.5)
+            .with_speed(400.0, 200.0, 800.0)
+            .with_angle(0.087, 0.087)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
     let spread = world
         .get::<BoltAngleSpread>(entity)
         .expect("entity should have BoltAngleSpread when called early in chain");
@@ -76,15 +96,17 @@ fn with_angle_spread_available_in_initial_state() {
 #[test]
 fn with_spawn_offset_y_available_in_initial_state() {
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .with_spawn_offset_y(50.0)
-        .with_speed(400.0, 200.0, 800.0)
-        .with_angle(0.087, 0.087)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .with_spawn_offset_y(50.0)
+            .with_speed(400.0, 200.0, 800.0)
+            .with_angle(0.087, 0.087)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
     let offset = world
         .get::<BoltSpawnOffsetY>(entity)
         .expect("entity should have BoltSpawnOffsetY when called early in chain");
@@ -103,14 +125,16 @@ fn with_spawn_offset_y_available_in_initial_state() {
 fn with_base_damage_before_definition_explicit_override_wins() {
     let def = make_bolt_definition("Bolt", 10.0);
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .with_base_damage(25.0)
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .with_base_damage(25.0)
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
     let dmg = world
         .get::<BoltBaseDamage>(entity)
         .expect("entity should have BoltBaseDamage");
@@ -125,15 +149,17 @@ fn with_base_damage_before_definition_explicit_override_wins() {
 fn with_base_damage_before_and_after_definition_last_with_wins() {
     let def = make_bolt_definition("Bolt", 10.0);
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .with_base_damage(25.0)
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .with_base_damage(42.0)
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .with_base_damage(25.0)
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .with_base_damage(42.0)
+            .headless()
+            .spawn(commands)
+    });
     let dmg = world
         .get::<BoltBaseDamage>(entity)
         .expect("entity should have BoltBaseDamage");
@@ -150,14 +176,16 @@ fn with_base_damage_before_and_after_definition_last_with_wins() {
 fn with_definition_name_before_definition_explicit_override_wins() {
     let def = make_bolt_definition("Bolt", 10.0);
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .with_definition_name("Override".to_string())
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .with_definition_name("Override".to_string())
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
     let def_ref = world
         .get::<BoltDefinitionRef>(entity)
         .expect("entity should have BoltDefinitionRef");
@@ -174,14 +202,16 @@ fn with_definition_name_before_definition_explicit_override_wins() {
 fn with_angle_spread_before_definition_explicit_override_wins() {
     let def = make_bolt_definition("Bolt", 10.0);
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .with_angle_spread(0.8)
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .with_angle_spread(0.8)
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
     let spread = world
         .get::<BoltAngleSpread>(entity)
         .expect("entity should have BoltAngleSpread");
@@ -198,14 +228,16 @@ fn with_angle_spread_before_definition_explicit_override_wins() {
 fn with_spawn_offset_y_before_definition_explicit_override_wins() {
     let def = make_bolt_definition("Bolt", 10.0);
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .with_spawn_offset_y(30.0)
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .with_spawn_offset_y(30.0)
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
     let offset = world
         .get::<BoltSpawnOffsetY>(entity)
         .expect("entity should have BoltSpawnOffsetY");

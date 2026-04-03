@@ -67,6 +67,8 @@ impl ActiveSpeedBoosts {
 
 #[cfg(test)]
 mod tests {
+    use bevy::ecs::world::CommandQueue;
+
     use super::*;
 
     #[test]
@@ -182,13 +184,22 @@ mod tests {
 
         let mut world = World::new();
         let def = test_bolt_definition();
-        let entity = Bolt::builder()
-            .at_position(Vec2::ZERO)
-            .definition(&def)
-            .with_velocity(Velocity2D(Vec2::new(0.0, def.base_speed)))
-            .primary()
-            .headless()
-            .spawn(&mut world);
+        let base_speed = def.base_speed;
+        let entity = {
+            let mut queue = CommandQueue::default();
+            let entity = {
+                let mut commands = Commands::new(&mut queue, &world);
+                Bolt::builder()
+                    .at_position(Vec2::ZERO)
+                    .definition(&def)
+                    .with_velocity(Velocity2D(Vec2::new(0.0, base_speed)))
+                    .primary()
+                    .headless()
+                    .spawn(&mut commands)
+            };
+            queue.apply(&mut world);
+            entity
+        };
 
         // Apply speed boost of 1.5x
         fire(entity, 1.5, "test_chip", &mut world);
@@ -227,13 +238,22 @@ mod tests {
 
         let mut world = World::new();
         let def = test_bolt_definition();
-        let entity = Bolt::builder()
-            .at_position(Vec2::ZERO)
-            .definition(&def)
-            .with_velocity(Velocity2D(Vec2::new(0.0, def.base_speed * 1.5)))
-            .primary()
-            .headless()
-            .spawn(&mut world);
+        let boosted_speed = def.base_speed * 1.5;
+        let entity = {
+            let mut queue = CommandQueue::default();
+            let entity = {
+                let mut commands = Commands::new(&mut queue, &world);
+                Bolt::builder()
+                    .at_position(Vec2::ZERO)
+                    .definition(&def)
+                    .with_velocity(Velocity2D(Vec2::new(0.0, boosted_speed)))
+                    .primary()
+                    .headless()
+                    .spawn(&mut commands)
+            };
+            queue.apply(&mut world);
+            entity
+        };
         world
             .entity_mut(entity)
             .insert(ActiveSpeedBoosts(vec![1.5]));

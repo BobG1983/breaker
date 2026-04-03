@@ -24,6 +24,7 @@ pub(crate) fn apply_node_scale_to_bolt(
 
 #[cfg(test)]
 mod tests {
+    use bevy::ecs::world::CommandQueue;
     use rantzsoft_spatial2d::components::Velocity2D;
 
     use super::*;
@@ -70,13 +71,20 @@ mod tests {
     }
 
     fn spawn_bolt(app: &mut App) -> Entity {
-        Bolt::builder()
-            .at_position(Vec2::ZERO)
-            .definition(&test_bolt_definition())
-            .with_velocity(Velocity2D(Vec2::ZERO))
-            .primary()
-            .headless()
-            .spawn(app.world_mut())
+        let world = app.world_mut();
+        let mut queue = CommandQueue::default();
+        let entity = {
+            let mut commands = Commands::new(&mut queue, world);
+            Bolt::builder()
+                .at_position(Vec2::ZERO)
+                .definition(&test_bolt_definition())
+                .with_velocity(Velocity2D(Vec2::ZERO))
+                .primary()
+                .headless()
+                .spawn(&mut commands)
+        };
+        queue.apply(world);
+        entity
     }
 
     #[test]
@@ -150,13 +158,22 @@ mod tests {
         app.insert_resource(make_layout(0.7));
 
         let primary = spawn_bolt(&mut app);
-        let extra = Bolt::builder()
-            .at_position(Vec2::ZERO)
-            .definition(&test_bolt_definition())
-            .with_velocity(Velocity2D(Vec2::ZERO))
-            .extra()
-            .headless()
-            .spawn(app.world_mut());
+        let extra = {
+            let world = app.world_mut();
+            let mut queue = CommandQueue::default();
+            let entity = {
+                let mut commands = Commands::new(&mut queue, world);
+                Bolt::builder()
+                    .at_position(Vec2::ZERO)
+                    .definition(&test_bolt_definition())
+                    .with_velocity(Velocity2D(Vec2::ZERO))
+                    .extra()
+                    .headless()
+                    .spawn(&mut commands)
+            };
+            queue.apply(world);
+            entity
+        };
 
         app.update();
 

@@ -6,7 +6,7 @@ use rantzsoft_defaults::prelude::*;
 
 use super::{
     app::loading::LoadingPlugin,
-    cleanup::cleanup_entities,
+    cleanup::{cleanup_entities, cleanup_on_exit},
     menu::{
         main::{MainMenuDefaults, MainMenuPlugin},
         start_game::RunSetupPlugin,
@@ -77,7 +77,7 @@ impl Plugin for StatePlugin {
                 RunEndPlugin,
                 RunPlugin,
             ))
-            // Cleanup
+            // Cleanup (old markers — replaced by CleanupOnExit<S> in Wave 4)
             .add_systems(
                 OnExit(GameState::Playing),
                 cleanup_entities::<CleanupOnNodeExit>,
@@ -85,7 +85,9 @@ impl Plugin for StatePlugin {
             .add_systems(
                 OnExit(GameState::RunEnd),
                 cleanup_entities::<CleanupOnRunEnd>,
-            );
+            )
+            // Generic cleanup (no-op until entities use CleanupOnExit<S>)
+            .add_systems(OnExit(GameState::Playing), cleanup_on_exit::<GameState>);
     }
 }
 

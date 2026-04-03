@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::world::CommandQueue, prelude::*};
 use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use super::*;
@@ -36,15 +36,22 @@ const TOLERANCE: f32 = 0.001;
 /// Spawns a bolt with permissive spatial params for clamping tests.
 /// Uses MinSpeed(0.0) and MaxSpeed(MAX) so the velocity formula is a no-op.
 fn spawn_test_bolt(app: &mut App, x: f32, y: f32, vx: f32, vy: f32) -> Entity {
-    Bolt::builder()
-        .at_position(Vec2::new(x, y))
-        .with_speed(500.0, 0.0, f32::MAX)
-        .with_angle(0.0, 0.0)
-        .with_radius(RADIUS)
-        .with_velocity(Velocity2D(Vec2::new(vx, vy)))
-        .primary()
-        .headless()
-        .spawn(app.world_mut())
+    let world = app.world_mut();
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let mut commands = Commands::new(&mut queue, world);
+        Bolt::builder()
+            .at_position(Vec2::new(x, y))
+            .with_speed(500.0, 0.0, f32::MAX)
+            .with_angle(0.0, 0.0)
+            .with_radius(RADIUS)
+            .with_velocity(Velocity2D(Vec2::new(vx, vy)))
+            .primary()
+            .headless()
+            .spawn(&mut commands)
+    };
+    queue.apply(world);
+    entity
 }
 
 #[test]
@@ -263,15 +270,24 @@ fn corner_escape_both_axes_position2d_clamped() {
 #[test]
 fn serving_bolt_excluded() {
     let mut app = test_app();
-    let _entity = Bolt::builder()
-        .at_position(Vec2::new(500.0, 0.0))
-        .with_speed(500.0, 0.0, f32::MAX)
-        .with_angle(0.0, 0.0)
-        .with_radius(RADIUS)
-        .serving()
-        .primary()
-        .headless()
-        .spawn(app.world_mut());
+    let _entity = {
+        let world = app.world_mut();
+        let mut queue = CommandQueue::default();
+        let entity = {
+            let mut commands = Commands::new(&mut queue, world);
+            Bolt::builder()
+                .at_position(Vec2::new(500.0, 0.0))
+                .with_speed(500.0, 0.0, f32::MAX)
+                .with_angle(0.0, 0.0)
+                .with_radius(RADIUS)
+                .serving()
+                .primary()
+                .headless()
+                .spawn(&mut commands)
+        };
+        queue.apply(world);
+        entity
+    };
     tick(&mut app);
 
     let pos = app
@@ -292,15 +308,24 @@ fn serving_bolt_excluded() {
 #[test]
 fn scaled_bolt_uses_effective_radius_for_playfield_clamping() {
     let mut app = test_app();
-    let entity = Bolt::builder()
-        .at_position(Vec2::new(500.0, 0.0))
-        .with_speed(500.0, 0.0, f32::MAX)
-        .with_angle(0.0, 0.0)
-        .with_radius(8.0)
-        .with_velocity(Velocity2D(Vec2::new(300.0, 400.0)))
-        .primary()
-        .headless()
-        .spawn(app.world_mut());
+    let entity = {
+        let world = app.world_mut();
+        let mut queue = CommandQueue::default();
+        let entity = {
+            let mut commands = Commands::new(&mut queue, world);
+            Bolt::builder()
+                .at_position(Vec2::new(500.0, 0.0))
+                .with_speed(500.0, 0.0, f32::MAX)
+                .with_angle(0.0, 0.0)
+                .with_radius(8.0)
+                .with_velocity(Velocity2D(Vec2::new(300.0, 400.0)))
+                .primary()
+                .headless()
+                .spawn(&mut commands)
+        };
+        queue.apply(world);
+        entity
+    };
     app.world_mut()
         .entity_mut(entity)
         .insert(NodeScalingFactor(0.5));

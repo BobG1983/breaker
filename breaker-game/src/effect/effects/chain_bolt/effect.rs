@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::world::CommandQueue, prelude::*};
 use rand::Rng;
 use rantzsoft_physics2d::constraint::DistanceConstraint;
 use rantzsoft_spatial2d::components::Velocity2D;
@@ -46,13 +46,21 @@ pub(crate) fn fire(entity: Entity, tether_distance: f32, _source_chip: &str, wor
     };
     let direction = Vec2::new(angle.cos(), angle.sin());
     let velocity = Velocity2D(direction * bolt_def.base_speed);
-    let chain_bolt = Bolt::builder()
-        .at_position(spawn_pos)
-        .definition(&bolt_def)
-        .with_velocity(velocity)
-        .extra()
-        .headless()
-        .spawn(world);
+    let chain_bolt = {
+        let mut queue = CommandQueue::default();
+        let entity = {
+            let mut commands = Commands::new(&mut queue, world);
+            Bolt::builder()
+                .at_position(spawn_pos)
+                .definition(&bolt_def)
+                .with_velocity(velocity)
+                .extra()
+                .headless()
+                .spawn(&mut commands)
+        };
+        queue.apply(world);
+        entity
+    };
     world.entity_mut(chain_bolt).insert(ChainBoltMarker(entity));
 
     let constraint = world

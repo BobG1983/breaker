@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::world::CommandQueue, prelude::*};
 use rantzsoft_physics2d::{
     aabb::Aabb2D, collision_layers::CollisionLayers, plugin::RantzPhysics2dPlugin,
 };
@@ -62,13 +62,20 @@ fn test_bolt_definition() -> BoltDefinition {
 /// Spawns a bolt at the given position with the given velocity.
 pub(super) fn spawn_bolt(app: &mut App, x: f32, y: f32, vx: f32, vy: f32) -> Entity {
     let def = test_bolt_definition();
-    Bolt::builder()
-        .at_position(Vec2::new(x, y))
-        .definition(&def)
-        .with_velocity(Velocity2D(Vec2::new(vx, vy)))
-        .primary()
-        .headless()
-        .spawn(app.world_mut())
+    let world = app.world_mut();
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let mut commands = Commands::new(&mut queue, world);
+        Bolt::builder()
+            .at_position(Vec2::new(x, y))
+            .definition(&def)
+            .with_velocity(Velocity2D(Vec2::new(vx, vy)))
+            .primary()
+            .headless()
+            .spawn(&mut commands)
+    };
+    queue.apply(world);
+    entity
 }
 
 /// Spawns a bolt with `ActivePiercings` and `PiercingRemaining` components.
@@ -82,14 +89,20 @@ pub(super) fn spawn_piercing_bolt(
     piercing_remaining: u32,
 ) -> Entity {
     let def = test_bolt_definition();
-    let entity = Bolt::builder()
-        .at_position(Vec2::new(x, y))
-        .definition(&def)
-        .with_velocity(Velocity2D(Vec2::new(vx, vy)))
-        .primary()
-        .headless()
-        .spawn(app.world_mut());
-    app.world_mut().entity_mut(entity).insert((
+    let world = app.world_mut();
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let mut commands = Commands::new(&mut queue, world);
+        Bolt::builder()
+            .at_position(Vec2::new(x, y))
+            .definition(&def)
+            .with_velocity(Velocity2D(Vec2::new(vx, vy)))
+            .primary()
+            .headless()
+            .spawn(&mut commands)
+    };
+    queue.apply(world);
+    world.entity_mut(entity).insert((
         ActivePiercings(active_piercings),
         PiercingRemaining(piercing_remaining),
     ));

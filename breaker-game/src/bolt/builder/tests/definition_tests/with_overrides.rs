@@ -1,10 +1,24 @@
-use bevy::prelude::*;
+use bevy::{ecs::world::CommandQueue, prelude::*};
 use rantzsoft_spatial2d::components::Velocity2D;
 
 use super::helpers::make_bolt_definition;
 use crate::bolt::components::{
     Bolt, BoltAngleSpread, BoltBaseDamage, BoltDefinitionRef, BoltSpawnOffsetY,
 };
+
+/// Spawns a bolt via Commands backed by a `CommandQueue`, then applies the queue.
+fn spawn_bolt_in_world(
+    world: &mut World,
+    build_fn: impl FnOnce(&mut Commands) -> Entity,
+) -> Entity {
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let mut commands = Commands::new(&mut queue, world);
+        build_fn(&mut commands)
+    };
+    queue.apply(world);
+    entity
+}
 
 // ── Section E: Override semantics — .with_*() after .definition() ──────────
 
@@ -14,14 +28,16 @@ use crate::bolt::components::{
 fn with_base_damage_overrides_definition_base_damage() {
     let def = make_bolt_definition("Bolt", 10.0);
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .with_base_damage(25.0)
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .with_base_damage(25.0)
+            .headless()
+            .spawn(commands)
+    });
     let dmg = world
         .get::<BoltBaseDamage>(entity)
         .expect("entity should have BoltBaseDamage");
@@ -57,14 +73,16 @@ fn with_base_damage_overrides_definition_base_damage() {
 fn with_base_damage_zero_overrides_definition_base_damage() {
     let def = make_bolt_definition("Bolt", 10.0);
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .with_base_damage(0.0)
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .with_base_damage(0.0)
+            .headless()
+            .spawn(commands)
+    });
     let dmg = world
         .get::<BoltBaseDamage>(entity)
         .expect("entity should have BoltBaseDamage");
@@ -81,14 +99,16 @@ fn with_base_damage_zero_overrides_definition_base_damage() {
 fn with_definition_name_overrides_definition_name() {
     let def = make_bolt_definition("Bolt", 10.0);
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .with_definition_name("OverrideName".to_string())
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .with_definition_name("OverrideName".to_string())
+            .headless()
+            .spawn(commands)
+    });
     let def_ref = world
         .get::<BoltDefinitionRef>(entity)
         .expect("entity should have BoltDefinitionRef");
@@ -128,14 +148,16 @@ fn with_definition_name_overrides_definition_name() {
 fn with_definition_name_empty_overrides_definition_name() {
     let def = make_bolt_definition("Bolt", 10.0);
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .with_definition_name(String::new())
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .with_definition_name(String::new())
+            .headless()
+            .spawn(commands)
+    });
     let def_ref = world
         .get::<BoltDefinitionRef>(entity)
         .expect("entity should have BoltDefinitionRef");
@@ -152,14 +174,16 @@ fn with_definition_name_empty_overrides_definition_name() {
 fn with_angle_spread_overrides_definition_angle_spread() {
     let def = make_bolt_definition("Bolt", 10.0);
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .with_angle_spread(1.0)
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .with_angle_spread(1.0)
+            .headless()
+            .spawn(commands)
+    });
     let spread = world
         .get::<BoltAngleSpread>(entity)
         .expect("entity should have BoltAngleSpread");
@@ -187,14 +211,16 @@ fn with_angle_spread_overrides_definition_angle_spread() {
 fn with_angle_spread_zero_overrides_definition_angle_spread() {
     let def = make_bolt_definition("Bolt", 10.0);
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .with_angle_spread(0.0)
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .with_angle_spread(0.0)
+            .headless()
+            .spawn(commands)
+    });
     let spread = world
         .get::<BoltAngleSpread>(entity)
         .expect("entity should have BoltAngleSpread");
@@ -211,14 +237,16 @@ fn with_angle_spread_zero_overrides_definition_angle_spread() {
 fn with_spawn_offset_y_overrides_definition_spawn_offset() {
     let def = make_bolt_definition("Bolt", 10.0);
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .with_spawn_offset_y(30.0)
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .with_spawn_offset_y(30.0)
+            .headless()
+            .spawn(commands)
+    });
     let offset = world
         .get::<BoltSpawnOffsetY>(entity)
         .expect("entity should have BoltSpawnOffsetY");
@@ -246,14 +274,16 @@ fn with_spawn_offset_y_overrides_definition_spawn_offset() {
 fn with_spawn_offset_y_zero_overrides_definition_spawn_offset() {
     let def = make_bolt_definition("Bolt", 10.0);
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .with_spawn_offset_y(0.0)
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .with_spawn_offset_y(0.0)
+            .headless()
+            .spawn(commands)
+    });
     let offset = world
         .get::<BoltSpawnOffsetY>(entity)
         .expect("entity should have BoltSpawnOffsetY");
@@ -271,18 +301,20 @@ fn with_spawn_offset_y_zero_overrides_definition_spawn_offset() {
 #[test]
 fn all_four_with_methods_together_without_definition() {
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .with_speed(500.0, 250.0, 1000.0)
-        .with_angle(0.1, 0.1)
-        .at_position(Vec2::new(100.0, 200.0))
-        .with_velocity(Velocity2D(Vec2::new(0.0, 500.0)))
-        .extra()
-        .with_base_damage(20.0)
-        .with_definition_name("SyntheticBolt".to_string())
-        .with_angle_spread(0.6)
-        .with_spawn_offset_y(45.0)
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .with_speed(500.0, 250.0, 1000.0)
+            .with_angle(0.1, 0.1)
+            .at_position(Vec2::new(100.0, 200.0))
+            .with_velocity(Velocity2D(Vec2::new(0.0, 500.0)))
+            .extra()
+            .with_base_damage(20.0)
+            .with_definition_name("SyntheticBolt".to_string())
+            .with_angle_spread(0.6)
+            .with_spawn_offset_y(45.0)
+            .headless()
+            .spawn(commands)
+    });
     let dmg = world
         .get::<BoltBaseDamage>(entity)
         .expect("entity should have BoltBaseDamage");
@@ -317,17 +349,19 @@ fn all_four_with_methods_together_without_definition() {
 fn all_four_with_methods_plus_definition_overrides_win() {
     let def = make_bolt_definition("Bolt", 10.0);
     let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .with_base_damage(99.0)
-        .with_definition_name("AllOverride".to_string())
-        .with_angle_spread(2.0)
-        .with_spawn_offset_y(100.0)
-        .headless()
-        .spawn(&mut world);
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .with_base_damage(99.0)
+            .with_definition_name("AllOverride".to_string())
+            .with_angle_spread(2.0)
+            .with_spawn_offset_y(100.0)
+            .headless()
+            .spawn(commands)
+    });
     let dmg = world
         .get::<BoltBaseDamage>(entity)
         .expect("entity should have BoltBaseDamage");
