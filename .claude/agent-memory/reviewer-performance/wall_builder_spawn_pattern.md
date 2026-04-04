@@ -11,7 +11,7 @@ Reviewed files:
 - `src/walls/builder/core/transitions.rs` — entry point, side transitions, definition(), with_* chainables, visible()
 - `src/walls/builder/core/terminal.rs` — build_core(), resolve_half_thickness(), resolve_effects(), dispatch_effects(), build/spawn impls
 - `src/walls/definition.rs` — WallDefinition (name, half_thickness, color_rgb, Vec<RootEffect>)
-- `src/state/run/node/systems/spawn_walls/system.rs` — legacy spawn_walls system (manual spawn, no builder)
+- `src/state/run/node/systems/spawn_walls/system.rs` — spawn_walls system; uses Wall::builder() for left/right/ceiling walls
 
 ## Confirmed acceptable patterns
 
@@ -26,7 +26,7 @@ Reviewed files:
 - Archetype impact: invisible walls produce one archetype (Wall + Position2D + Scale2D + Aabb2D + CollisionLayers + GameDrawLayer). Visible walls add Mesh2d + MeshMaterial2d → separate archetype. Effect walls add BoundEffects + StagedEffects → additional archetype split. At 4 walls this is negligible.
 
 ## spawn_walls system
-`spawn_walls` now uses `Wall::builder()` for left/right/ceiling walls (migrated in wall-builder-pattern feature). Previously used manual `commands.spawn()`. SecondWind floor wall also uses the builder via `second_wind/system.rs`. No performance issue — all spawn-time only.
+`spawn_walls` uses `Wall::builder()` for left/right/ceiling walls. SecondWind floor wall also uses the builder via `second_wind/system.rs`. No performance issue — all spawn-time only.
 
 **Why:** 4 walls, spawned once at node start. Builder pattern adds zero runtime overhead beyond the direct spawn path.
 

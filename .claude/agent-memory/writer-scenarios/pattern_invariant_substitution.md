@@ -6,18 +6,21 @@ type: feedback
 
 The spec may request invariants that don't exist in `InvariantKind`. Only use variants listed in `InvariantKind::ALL`.
 
-As of 2026-04-01 (feature/chip-evolution-ecosystem), the available invariants are (23 total):
+As of 2026-04-02 (Shield refactor), the available invariants are (23 total):
 `BoltInBounds`, `BoltSpeedAccurate`, `BoltCountReasonable`, `BreakerInBounds`,
 `NoEntityLeaks`, `NoNaN`, `TimerNonNegative`, `ValidStateTransitions`,
 `ValidBreakerState`, `TimerMonotonicallyDecreasing`, `BreakerPositionClamped`,
 `PhysicsFrozenDuringPause`, `OfferingNoDuplicates`, `MaxedChipNeverOffered`,
 `ChipStacksConsistent`, `RunStatsMonotonic`, `ChipOfferExpected`,
-`SecondWindWallAtMostOne`, `ShieldChargesConsistent`, `PulseRingAccumulation`,
+`SecondWindWallAtMostOne`, `ShieldWallAtMostOne`, `PulseRingAccumulation`,
 `ChainArcCountReasonable`, `AabbMatchesEntityDimensions`, `GravityWellCountReasonable`
 
 **REMOVED**: `BoltSpeedInRange` (renamed to `BoltSpeedAccurate`),
 `EffectiveSpeedConsistent` (removed with Effective* cache removal),
 `SizeBoostInRange` (removed with Effective* cache removal)
+
+**RENAMED**: `ShieldChargesConsistent` → `ShieldWallAtMostOne` (Shield refactor, 2026-04-02;
+checks `ShieldWall` entity count <= 1, not charge consistency — `ShieldActive` eliminated)
 
 **Why:** The spec may be written before invariants are implemented. Using a non-existent variant causes a RON parse error.
 

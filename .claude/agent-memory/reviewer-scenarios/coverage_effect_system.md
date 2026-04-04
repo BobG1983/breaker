@@ -19,7 +19,7 @@ type: project
 | SpeedBoost | surge_speed_stress, impacted_wall_speed, overclock_until_speed, initial_effects_bolt, passive_chips_chaos, early_late_bump_effects, node_start_speed_boost, breaker_impact_trigger_chaos, node_end_speed_purge, cell_death_speed_burst | Good — Death trigger, NodeEnd purge, reversal all covered |
 | DamageBoost | passive_chips_chaos, damage_boost_until_reversal, whiplash_whiff_chaos, once_damage_single_fire | Good |
 | Piercing | passive_chips_chaos | Minimal — no scenario verifying cell pass-through count |
-| SizeBoost | passive_chips_chaos, entity_scale_collision_chaos | Minimal — passive_chips_chaos exercises SizeBoost but does NOT include SizeBoostInRange invariant; entity_scale_collision_chaos exercises Aabb2D integrity but not SizeBoostInRange directly |
+| SizeBoost | passive_chips_chaos, entity_scale_collision_chaos | Minimal — passive_chips_chaos exercises SizeBoost but no dedicated SizeBoost invariant exists (SizeBoostInRange was REMOVED with Effective* cache removal); entity_scale_collision_chaos exercises Aabb2D integrity |
 | Shockwave | surge_overclock, cascade_shockwave_stress, supernova_chain_stress, entropy_engine_stress, flux_random_chaos, whiplash_whiff_chaos | Good |
 | SpawnBolts | spawn_bolts_stress, supernova_chain_stress, entropy_engine_stress, supernova_active_play | Good |
 | ChainBolt | tether_chain_bolt_stress | Good |
@@ -28,8 +28,7 @@ type: project
 | SecondWind | bolt_lost_second_wind, second_wind_single_use | Good |
 | Attraction | attraction_cell_chaos | Good |
 | SpawnPhantom | phantom_bolt_stress | Good |
-| Shield (Breaker) | shield_bolt_loss_prevention | Adequate |
-| Shield (Cell) | shield_cell_charge_depletion | Good |
+| Shield | shield_wall_reflection (mechanic), shield_wall_at_most_one (self-test) | Adequate — reflection and timer lifecycle covered; no chaos scenario |
 | GravityWell | gravity_well_chaos, gravity_well_stress | Good — gravity_well_stress uses GravityWellCountReasonable invariant |
 | Pulse | pulse_accumulation_stress | Good |
 | Explode | explode_chaos | Good |
@@ -75,24 +74,24 @@ type: project
 |-----------|-----------|------------------------|
 | AabbMatchesEntityDimensions | aabb_matches_entity_dimensions | entity_scale_collision_chaos only |
 | GravityWellCountReasonable | gravity_well_count_reasonable | gravity_well_stress |
-| SizeBoostInRange | size_boost_in_range | NONE — not included in any chaos/stress/mechanic scenario |
+| SizeBoostInRange | N/A — REMOVED with Effective* cache removal | REMOVED — do NOT reference this invariant |
 
 ## Adversarial Quality Issues with New Scenarios
 
-- **breaker_cell_impact_chaos**: Only crash guards [NoNaN, BoltInBounds, NoEntityLeaks, BreakerInBounds]. No invariant proves BreakerImpactCell effects actually fired correctly. Missing AabbMatchesEntityDimensions and SizeBoostInRange.
-- **breaker_wall_impact_chaos**: Only crash guards [NoNaN, BoltInBounds, BreakerInBounds, BoltSpeedInRange]. No invariant proves BreakerImpactWall effects fired. Missing AabbMatchesEntityDimensions.
-- **entity_scale_collision_chaos**: Correct use of AabbMatchesEntityDimensions. Missing SizeBoostInRange despite exercising SizeBoost per-bump. The scenario applies SizeBoost(0.3) on every bump — EffectiveSizeMultiplier vs ActiveSizeBoosts product divergence is the exact failure mode SizeBoostInRange catches.
+- **breaker_cell_impact_chaos**: Only crash guards [NoNaN, BoltInBounds, NoEntityLeaks, BreakerInBounds]. No invariant proves BreakerImpactCell effects actually fired correctly. Missing AabbMatchesEntityDimensions.
+- **breaker_wall_impact_chaos**: Only crash guards [NoNaN, BoltInBounds, BreakerInBounds, BoltSpeedAccurate]. No invariant proves BreakerImpactWall effects fired. Missing AabbMatchesEntityDimensions.
+- **entity_scale_collision_chaos**: Correct use of AabbMatchesEntityDimensions. SizeBoostInRange was REMOVED — no dedicated SizeBoost value-range invariant exists. The scenario still exercises SizeBoost per-bump but there is no invariant verifying multiplier range.
 - **gravity_well_stress**: Good — uses GravityWellCountReasonable with stress(32). Appropriate.
 - **cell_wall_proximity**: Minimal scenario (no initial_effects, Scripted empty input). Only [NoNaN, NoEntityLeaks]. Does NOT verify any effect fired on CellImpactWall — no initial_effects with Impact(Wall) trigger to prove the dispatch path works.
 
 ## Invariant Gaps (this branch state)
 
 Properties with no invariant checker:
-- SizeBoost: SizeBoostInRange validates EffectiveSizeMultiplier vs product, but NOT that the multiplier stays within a plausible range (e.g., never exceeds 100x from runaway stacking)
+- SizeBoost: SizeBoostInRange REMOVED (Effective* cache removal). No invariant checks multiplier stays within a plausible range (e.g., never exceeds 100x from runaway stacking)
 - RampingDamage accumulated bonus: NoNaN partially covers but no monotonicity invariant
-- Cell ShieldActive charges never go negative: ShieldChargesConsistent covers zero, but negative unchecked
+- Shield wall count invariant: ShieldWallAtMostOne checks count <= 1; no chaos scenario exercises sustained Shield firing
 - DamageCell.source_chip correctness end-to-end: no invariant
 - AllBolts/AllCells effect targeting correctness: no invariant verifies all entities received an effect
 - Quadtree layer filter correctness at runtime: no invariant
 
-**How to apply:** Flag passive_chips_chaos missing SizeBoostInRange as MEDIUM gap. Flag entity_scale_collision_chaos missing SizeBoostInRange as MEDIUM gap. Flag new dispatch path scenarios (breaker_cell_impact_chaos, breaker_wall_impact_chaos) as testing "doesn't crash" not "works correctly."
+**How to apply:** Flag new dispatch path scenarios (breaker_cell_impact_chaos, breaker_wall_impact_chaos) as testing "doesn't crash" not "works correctly." SizeBoostInRange no longer exists — do not flag its absence as a gap.

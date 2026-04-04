@@ -4,6 +4,62 @@ description: Recurring staleness patterns and duplication issues found in agent 
 type: project
 ---
 
+## Full Audit — 2026-04-03 (feature/wall-builder-pattern branch, transition infrastructure Wave 2–3)
+
+**Scope:** All agent memory directories (full audit)
+
+**Context:** feature/wall-builder-pattern. `rantzsoft_lifecycle` crate added with transition effect infrastructure (fade, dissolve, pixelate, wipe, iris, slide) and orchestration system. Two open bugs logged: `elapsed` never incremented in run systems, and vacuous assertions in orchestration tests 8/9. New phase5_findings.md added to reviewer-file-length (3 HIGH, 7 MEDIUM, 1 LOW).
+
+**Issues found and fixed (15):**
+
+1. **reviewer-correctness/known-correct-effects.md** — Lines 196-213: `ShieldActive charge-decrement` section described an eliminated component as "confirmed correct." Fixed: replaced with elimination notice pointing to shield_cross_domain_write.md.
+
+2. **writer-scenarios/pattern_invariant_substitution.md** — Listed `ShieldChargesConsistent` (renamed to `ShieldWallAtMostOne`). Fixed: updated to `ShieldWallAtMostOne` with RENAMED note.
+
+3. **reviewer-scenarios/coverage_effect_system.md** — Multiple stale references: `shield_bolt_loss_prevention`/`shield_cell_charge_depletion` (scenarios don't exist; replaced by shield_wall_reflection + shield_wall_at_most_one), `SizeBoostInRange` invariant (removed), `EffectiveSizeMultiplier`, `BoltSpeedInRange` (renamed), `ShieldChargesConsistent`. Fixed: all 6 locations updated.
+
+4. **runner-scenarios/stable/explode-field-rename.md** — Described an open bug (damage_mult vs damage in explode_chaos.scenario.ron) that was already fixed. Fixed: rewrote as RESOLVED record.
+
+5. **runner-scenarios/MEMORY.md** — Linked the explode bug as still-open. Fixed: updated description to RESOLVED.
+
+6. **reviewer-architecture/known_gap_velocity_cross_domain_write.md** — Said "documented exceptions are ShieldActive (bolt and cells) and debug domain" — ShieldActive no longer an exception. Fixed: updated to reflect ShieldActive exception eliminated.
+
+7. **reviewer-architecture/MEMORY.md** — shield_cross_domain_write.md description said "authorized to mutate ShieldActive directly." Fixed: updated to ELIMINATED description.
+
+8. **writer-scenarios/effect_ron_syntax.md** — `Do(Shield(stacks: 1))` stale (Shield changed to `duration: f32`). Fixed: updated to `Do(Shield(duration: 5.0))` with note about removal of stacks field.
+
+9. **writer-scenarios/adversarial_patterns.md** — 6 occurrences of `BoltSpeedInRange` (renamed to `BoltSpeedAccurate`). Fixed: replaced all with `BoltSpeedAccurate`.
+
+10. **writer-scenarios/pattern_effect_ron_syntax.md** — `Explode: range, damage_mult` (should be `damage`) and Shield note missing duration field. Fixed: updated Explode and Shield entries.
+
+11. **reviewer-performance/wall_builder_spawn_pattern.md** — "legacy spawn_walls system (manual spawn, no builder)" — stale, spawn_walls now uses the builder. Fixed: updated description.
+
+12. **reviewer-quality/stable/color_from_rgb_canonical.md** — Described a duplicate `color_from_rgb` in chip_select/mod.rs that was removed in the state folder restructure. Fixed: verified removed, rewrote as RESOLVED; updated MEMORY.md link description.
+
+13. **guard-dependencies/dependency-snapshot.md** — No mention of new `rantzsoft_lifecycle` workspace member (added on this branch). Fixed: added note in Changes section with dep list and security surface summary.
+
+14. **reviewer-bevy-api/confirmed-patterns.md** — Two entries used `ShieldActive` as the concrete example type (Option<&'static mut ShieldActive> in query alias, commands.remove::<ShieldActive>()). ShieldActive eliminated. Fixed: genericized both examples and added NOTE about elimination.
+
+15. **reviewer-quality/MEMORY.md** — stale_helper_name.md link description still said "has stale helper name" (already RESOLVED). Fixed: updated link description to RESOLVED.
+
+**Files checked and NOT changed:**
+- `researcher-codebase/project-cross-domain-topology.md` — ShieldActive coupling already noted as ELIMINATED; accurate
+- `guard-docs/known-state.md` — Already contains comprehensive Shield refactor documentation
+- `reviewer-correctness/bug-patterns.md` — rantzsoft_lifecycle bugs correctly marked OPEN (2026-04-03)
+- `reviewer-file-length/phase5_findings.md` — New file, correct and current
+- `guard-security/known_unsafe_blocks.md` — Historical log; old `wall/` paths are correct for their dates
+
+**No broken MEMORY.md links found.**
+**No cross-agent duplication found.**
+
+**New staleness patterns detected this audit:**
+- **Shield RON field rename (stacks→duration)**: effect_ron_syntax.md and pattern_effect_ron_syntax.md had stale `stacks: u32` syntax. After any EffectKind field rename, check ALL writer-scenarios RON syntax reference files.
+- **Invariant renames carry through multiple files**: `BoltSpeedInRange` → `BoltSpeedAccurate` was missed in adversarial_patterns.md (6 occurrences) even after prior audits fixed writer-scenarios/pattern_invariant_substitution.md. Check adversarial_patterns.md and coverage_effect_system.md whenever invariants are renamed.
+- **ShieldActive in known-correct-effects.md**: Phase 3-5 "confirmed correct" sections persist across refactors. After any Shield-type component elimination, immediately check known-correct-effects.md for the old component in "confirmed correct" entries — these sections are maintained as append-only and drift badly.
+- **runner-scenarios bug files need RESOLVED status after RON field fixes**: When a scenario RON is fixed for a field rename, the stable bug file should be updated to RESOLVED immediately — not left for the next audit to notice.
+
+---
+
 ## Full Audit — 2026-04-02 (feature/wall-builder-pattern branch, state lifecycle refactor Wave 1)
 
 **Scope:** All agent memory directories (full audit)
@@ -431,6 +487,10 @@ See [audit-history-archive.md](audit-history-archive.md) for audits prior to 202
 - **Cross-domain exception elimination**: When a known architectural exception (e.g., ShieldActive cross-domain writes) is eliminated by redesign, the reviewer-architecture exception doc becomes obsolete. After any refactor that removes an established cross-domain pattern, check reviewer-architecture for stale exception docs.
 - **RON field renames (scenario infrastructure)**: When scenario RON field names change (invariants→disallowed_failures, expected_violations→allowed_failures), update: writer-scenarios/pattern_scenario_structure.md, writer-scenarios/pattern_invariant_substitution.md, spec-format-tests.md scenario coverage examples.
 - **Feature-branch incidental file splits**: When a HIGH file-length item is split as a side effect of a feature branch (not a dedicated refactor/file-splits), phase4_findings.md HIGH list goes stale at merge time. Check after any feature that touches large effect files.
+- **EffectKind field renames in RON syntax files**: When an EffectKind variant changes its field names (e.g., Shield stacks→duration, Explode damage_mult→damage), ALL writer-scenarios RON syntax reference files go stale: effect_ron_syntax.md, pattern_effect_ron_syntax.md, adversarial_patterns.md (if the variant appears in example patterns). After any EffectKind schema change, grep ALL writer-scenarios stable files.
+- **InvariantKind renames propagate to adversarial_patterns.md**: BoltSpeedInRange→BoltSpeedAccurate was present in adversarial_patterns.md but not fixed in prior audits. InvariantKind renames must be applied to adversarial_patterns.md in addition to pattern_invariant_substitution.md and guard-docs/known-state.md.
+- **known-correct-effects.md as append-only drift risk**: Phase 3–5 "confirmed correct" sections are never cleaned up when components are eliminated. After any cross-domain component elimination (ShieldActive, Effective* types), immediately check known-correct-effects.md for stale "confirmed correct" entries describing the eliminated component's behavior.
+- **runner-scenarios bug files after RON field fixes**: When a scenario RON file is updated to fix a field rename bug, the corresponding stable bug file in runner-scenarios/ should immediately be updated to RESOLVED, not left open for the next audit to find.
 
 ## Agents Accumulating Memory Fastest
 

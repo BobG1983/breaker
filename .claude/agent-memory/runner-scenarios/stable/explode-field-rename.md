@@ -1,22 +1,15 @@
 ---
-name: Explode struct field rename breaks scenario RON
-description: explode_chaos.scenario.ron uses damage_mult but EffectKind::Explode now requires damage — scenario file not updated when struct changed
+name: Explode struct field rename — RESOLVED
+description: explode_chaos.scenario.ron was updated to use damage (not damage_mult) — bug is fixed and closed
 type: project
 ---
 
-`breaker-scenario-runner/scenarios/stress/explode_chaos.scenario.ron` line 23 uses:
-```ron
-Do(Explode(range: 64.0, damage_mult: 1.5))
-```
+`EffectKind::Explode` uses field `damage: f32` (not `damage_mult`). The `explode_chaos.scenario.ron`
+was updated on the feature/wall-builder-pattern branch to use `damage: 15.0`.
 
-But `EffectKind::Explode` in `breaker-game/src/effect/core/types/definitions/enums.rs:363-368` is:
-```rust
-Explode {
-    range: f32,
-    damage: f32,
-}
-```
+**Verified fixed:** `breaker-scenario-runner/scenarios/stress/explode_chaos.scenario.ron` line 23
+now reads `Do(Explode(range: 64.0, damage: 15.0))`. No residual `damage_mult` usage.
 
-The `damage_mult` field was renamed to `damage` (or removed and replaced with flat damage). The scenario file was not updated. Fix: update `explode_chaos.scenario.ron` to use `damage: <value>` instead of `damage_mult: 1.5`.
-
-**How to apply:** When `EffectKind` variants change their field names or types, search all `.scenario.ron` files for usages and update them. RON parse errors at scenario load time are fatal — the scenario can't even run.
+**How to apply:** This was a one-time field rename. If a new RON field is added or renamed on
+`EffectKind`, search all `.scenario.ron` files before merging. RON parse errors at scenario
+load time are fatal — the scenario can't even run.

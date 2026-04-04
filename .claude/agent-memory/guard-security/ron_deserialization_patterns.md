@@ -484,3 +484,23 @@ in production code.
 - walls/ module is a rename from wall/ — WallDefinition schema and WallRegistry behavior
   are unchanged (carry-forward from wall builder audit 2026-04-02).
 - state/ hierarchy is pure Rust code reorganization. No new asset types or deserializers.
+
+## feature/wall-builder-pattern (2026-04-03) — rantzsoft_lifecycle crate
+
+### rantzsoft_lifecycle: no RON deserialization (Safe)
+- The new rantzsoft_lifecycle crate contains zero RON files, zero `ron::de::from_str` calls,
+  zero `include_str!` macro uses, and zero Bevy AssetLoader implementations.
+- All configuration is done in code via effect struct fields (e.g., `FadeOut { duration: 0.3,
+  color: Color::BLACK }`). These are set by game code at route registration time — no
+  file-controlled data path exists.
+- No new RON files were added to `assets/` or any other directory for this feature.
+
+### TransitionProgress elapsed/duration division: guarded in all 12 run systems (Safe)
+- All 12 built-in effect run systems (FadeOut, FadeIn, DissolveOut, DissolveIn, PixelateOut,
+  PixelateIn, WipeOut, WipeIn, IrisOut, IrisIn, SlideLeft, SlideRight) use the pattern:
+  `let t = if progress.duration > 0.0 { (elapsed / duration).clamp(0.0, 1.0) } else { 1.0 };`
+- Zero-duration is handled: `t = 1.0` immediately completes the effect on the first frame.
+- f32 division by zero would produce f32::INFINITY on IEEE 754, but the guard ensures the
+  division is never reached when duration is 0.0. No panic surface.
+- A behavior 73 test confirms this: zero-duration FadeOut sends TransitionRunComplete on
+  first frame with `completed = true`. Confirmed by reading fade.rs run system and test.

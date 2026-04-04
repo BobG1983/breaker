@@ -100,7 +100,8 @@ Do(SpawnPhantom(duration: 3.0, max_active: 1))
 
 // Utility effects
 Do(RampingDamage(damage_per_trigger: 0.25))
-Do(Shield(stacks: 1))
+Do(Shield(duration: 5.0))
+    // stacks: u32 REMOVED in Shield refactor (2026-04-02); duration: f32 is now the only field
 Do(TimePenalty(seconds: 5.0))
 Do(LoseLife)
 Do(SecondWind)

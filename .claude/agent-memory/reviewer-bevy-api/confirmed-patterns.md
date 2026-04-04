@@ -123,9 +123,10 @@ type: reference
 - `OnEnter(PlayingState::Active)` for reset system is correct for sub-state entry scheduling
 
 ## Option<&'static mut T> in Query Type Aliases
-- `Option<&'static mut ShieldActive>` in a `type DamageVisualQuery = (...)` alias — correct for Bevy 0.18 query tuples; `'static` lifetime required in type aliases
+- `Option<&'static mut ComponentT>` in a `type AliasQuery = (...)` type alias — correct for Bevy 0.18 query tuples; `'static` lifetime required in type aliases
 - Same applies to any `Option<&'static T>` or `Option<&'static mut T>` in query data tuples
 - Confirmed: `type DamageVisualQuery` in `cells/queries.rs` is correct Bevy 0.18 usage
+- NOTE: ShieldActive (formerly used in this query) was ELIMINATED in Shield refactor (2026-04-02)
 
 ## Let-Chain Syntax in System Code
 - `if let Some(ref mut x) = opt && x.field > 0 { ... }` — valid Rust 2024 edition feature; edition 2024 stabilized `let_chains`; breaker-game uses `edition = "2024"`
@@ -140,8 +141,9 @@ type: reference
 - See the CRITICAL RULE section below for the complete status of all effects
 
 ## commands.entity(e).remove::<T>() for Deferred Component Removal
-- `commands.entity(cell).remove::<ShieldActive>()` — correct deferred component removal in Bevy 0.18; `Commands::entity().remove()` buffers the removal for end-of-frame application
+- `commands.entity(e).remove::<T>()` — correct deferred component removal in Bevy 0.18; `Commands::entity().remove()` buffers the removal for end-of-frame application
 - This is correct when the system also reads/writes the component in the same frame via a `Query`; the deferred removal doesn't conflict with current frame query access
+- NOTE: Original example used `ShieldActive` but that type was ELIMINATED in Shield refactor (2026-04-02)
 
 ## insert_if_new with Tuple Bundles
 - `commands.entity(entity).insert_if_new((BoundEffects::default(), StagedEffects::default()))` — correct; insert_if_new accepts `impl Bundle`, and tuples of components are Bundles; confirmed Bevy 0.18.1

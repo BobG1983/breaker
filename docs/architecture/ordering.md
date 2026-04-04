@@ -37,12 +37,12 @@ Domains MAY define a `pub enum {Domain}Systems` with `#[derive(SystemSet)]` in `
 | `BoltSystems::WallCollision` | `bolt/sets.rs` | `bolt_wall_collision` (bolt-wall reflection — runs `.after(BoltSystems::CellCollision)`) |
 | `BreakerSystems::UpdateState` | `breaker/sets.rs` | `update_breaker_state` (intra-domain only — no cross-domain consumers yet) |
 | `EffectSystems::Bridge` | `effect/sets.rs` | `bridge_bump`, `bridge_bolt_lost`, `bridge_bump_whiff`, `bridge_no_bump`, `bridge_cell_impact`, `bridge_breaker_impact`, `bridge_wall_impact`, `bridge_cell_destroyed`, `bridge_bolt_death`, `bridge_timer_threshold` |
-| `UiSystems::SpawnTimerHud` | `ui/sets.rs` | `spawn_timer_hud` |
-| `NodeSystems::TrackCompletion` | `run/node/sets.rs` | `track_node_completion` |
-| `NodeSystems::TickTimer` | `run/node/sets.rs` | `tick_node_timer` |
-| `NodeSystems::ApplyTimePenalty` | `run/node/sets.rs` | `apply_time_penalty` |
-| `NodeSystems::Spawn` | `run/node/sets.rs` | `spawn_cells_from_layout` (OnEnter) |
-| `NodeSystems::InitTimer` | `run/node/sets.rs` | `init_node_timer` (OnEnter) |
+| `UiSystems::SpawnTimerHud` | `state/run/node/hud/sets.rs` | `spawn_timer_hud` |
+| `NodeSystems::TrackCompletion` | `state/run/node/sets.rs` | `track_node_completion` |
+| `NodeSystems::TickTimer` | `state/run/node/sets.rs` | `tick_node_timer` |
+| `NodeSystems::ApplyTimePenalty` | `state/run/node/sets.rs` | `apply_time_penalty` |
+| `NodeSystems::Spawn` | `state/run/node/sets.rs` | `spawn_cells_from_layout` (OnEnter) |
+| `NodeSystems::InitTimer` | `state/run/node/sets.rs` | `init_node_timer` (OnEnter) |
 
 **Example:**
 
@@ -66,7 +66,7 @@ hover_bolt.after(BreakerSystems::Move)
 
 The actual cross-domain ordering constraints in the codebase:
 
-### OnEnter(GameState::Playing)
+### OnEnter(NodeState::Loading)
 
 ```
 spawn_or_reuse_breaker                   [breaker domain — Breaker::builder() via registry]
@@ -76,13 +76,13 @@ spawn_or_reuse_breaker                   [breaker domain — Breaker::builder() 
   <- reset_breaker .after(spawn_or_reuse_breaker)
        BreakerSystems::Reset             [breaker domain]
   <- UiSystems::SpawnTimerHud
-       (spawn_timer_hud)                 [ui domain]
+       (spawn_timer_hud)                 [state/run/node/hud domain]
 
 NodeSystems::Spawn
-  (spawn_cells_from_layout)             [run/node domain — OnEnter]
+  (spawn_cells_from_layout)             [state/run/node domain — OnEnter]
     <- dispatch_cell_effects .after(NodeSystems::Spawn)      [cells domain]
 
-spawn_walls                                                  [wall domain — Wall::builder() via WallRegistry]
+spawn_walls                                                  [walls domain — Wall::builder() via WallRegistry]
 
 spawn_bolt                               [bolt domain — uses Bolt::builder() + BoltRegistry]
     <- apply_node_scale_to_bolt
@@ -184,28 +184,17 @@ compute_globals → derive_transform → propagate_position → propagate_rotati
 
 Reading: after all FixedUpdate ticks complete for the current visual frame, `compute_globals` resolves the parent/child hierarchy and writes `GlobalPosition2D`/`GlobalRotation2D`/`GlobalScale2D`; `derive_transform` reads Global* plus the entity's `DrawLayer` Z value and `InterpolateTransform2D` flag to write the final `Transform` (interpolated or direct); propagation systems distribute parent global values to children. Transform is derived — game systems NEVER write `Transform` directly.
 
-### OnEnter(GameState::TransitionOut) / OnEnter(GameState::TransitionIn)
+### Transition Lifecycle (rantzsoft_lifecycle)
+
+`TransitionOut` and `TransitionIn` are no longer game states. Screen transitions are managed entirely by the `rantzsoft_lifecycle` crate. Routes declare transition effects via `.with_transition(TransitionType::Out(...))` etc. The lifecycle crate's `orchestrate_transitions` system (runs in `Update`) drives the start/run/end phase progression using `StartingTransition<T>` / `RunningTransition<T>` / `EndingTransition<T>` resources as gating conditions.
+
+The `fx` domain's `spawn_transition_out`, `spawn_transition_in`, `cleanup_transition`, and `animate_transition` systems have been removed. No game-side ordering constraints exist for transitions — they are internal to `rantzsoft_lifecycle`.
+
+### OnExit(MenuState::Main)
 
 ```
-OnEnter(TransitionOut):
-  spawn_transition_out        [fx domain — spawns TransitionOverlay with TransitionTimer]
-OnExit(TransitionOut):
-  cleanup_transition          [fx domain — despawns all TransitionOverlay entities]
-
-OnEnter(TransitionIn):
-  advance_node                [run domain — increments node index in RunState]
-  spawn_transition_in         [fx domain — spawns TransitionOverlay with TransitionTimer]
-OnExit(TransitionIn):
-  cleanup_transition          [fx domain — despawns all TransitionOverlay entities]
-```
-
-Note: `advance_node` and `spawn_transition_in` are unordered relative to each other (no data dependency). The `animate_transition` system runs in `Update` conditioned on `in_state(TransitionOut).or(in_state(TransitionIn))` — it ticks the `TransitionTimer` and sets `NextState` to `ChipSelect` (on `TransitionOut` completion) or `Playing` (on `TransitionIn` completion).
-
-### OnExit(GameState::MainMenu)
-
-```
-reset_run_state                                             [run domain]
-  <- generate_node_sequence_system .after(reset_run_state) [run domain]
+reset_run_state                                             [state/run domain]
+  <- generate_node_sequence_system .after(reset_run_state) [state/run domain]
 ```
 
 Reading: run state is reset and RNG is reseeded first, then the node sequence is generated from the freshly seeded `GameRng`.

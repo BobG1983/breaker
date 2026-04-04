@@ -43,10 +43,10 @@ Until(trigger: TimeExpires(0.5), then: [
 - `SpawnBolts`: uses `count` (not `base_count`), plus optional `lifespan` and `inherit`
 - `Pulse`: `interval` has serde default of 0.5 — can be omitted
 - `Attraction`: `max_force` has serde default of `None` — use `Some(N)` to cap
-- `Shield`: targets `Breaker`, not `Bolt`
+- `Shield`: targets `Breaker`, not `Bolt`; field is `duration: f32` (was `stacks: u32` — CHANGED in Shield refactor 2026-04-02)
 - `SecondWind`: no fields — just `Do(SecondWind)`
 - `GravityWell`: `strength`, `duration`, `radius`, `max`
-- `Explode`: `range`, `damage_mult`
+- `Explode`: `range`, `damage` (NOT `damage_mult` — field renamed)
 - `SpawnPhantom`: `duration`, `max_active`
 
 ## Target values
