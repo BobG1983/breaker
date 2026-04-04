@@ -1829,6 +1829,7 @@ dependencies = [
  "rand",
  "rand_chacha",
  "rantzsoft_defaults",
+ "rantzsoft_lifecycle",
  "rantzsoft_physics2d",
  "rantzsoft_spatial2d",
  "ron",
@@ -4617,6 +4618,14 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "rantzsoft_lifecycle"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "tracing",
 ]
 
 [[package]]

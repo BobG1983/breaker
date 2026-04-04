@@ -77,6 +77,7 @@ After `/verify full` is clean:
 
 ```bash
 git flow <type> finish
+git push
 ```
 
 This merges to develop and deletes the topic branch.

@@ -75,7 +75,7 @@ These systems use `With<Bolt>` directly, not `ActiveFilter`. Evaluate each:
 | `apply_node_scale_to_bolt` | `With<Bolt>` | **NO** — runs on OnEnter, not per-tick | One-time setup is fine |
 | `detect_nail_biter` | `Without<BoltServing>` | **NO** — reads position for highlight detection, harmless | Birthing bolts at zero scale won't trigger |
 | `detect_close_save` | `Without<BoltServing>` | **NO** — same reasoning | |
-| `gravity_well` | `BoltNotWell` | Handled by **ActiveFilter** if it uses it, otherwise **YES** | Check implementation |
+| `apply_gravity_pull` | `BoltNotWell` | **YES** — modifies bolt velocity via gravity steering; birthing bolts should not be pulled | Add `Without<Birthing>` to `BoltNotWell` or to the bolt query directly |
 | `tether_beam` | `With<Bolt>` | **YES** — birthing bolts should not join tether chains | Add `Without<Birthing>` |
 | Effect target resolution (`ext.rs`) | `With<Bolt>` / `With<PrimaryBolt>` | **NO** — effects should bind to birthing bolts | They bind but don't fire until triggers |
 | `chip_dispatch` | `With<Bolt>` | **NO** — chip effects should bind to all bolts | Same reasoning |
@@ -103,7 +103,7 @@ The entity's `CollisionLayers` value must be stashed before removal and restored
 #[derive(Component)]
 pub(crate) struct Birthing {
     pub timer: Timer,
-    pub stashed_layers: CollisionLayers,
+    pub stashed_layers: Option<CollisionLayers>,
 }
 ```
 

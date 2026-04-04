@@ -4,8 +4,10 @@ use bevy::prelude::*;
 use rantzsoft_spatial2d::prelude::*;
 
 use crate::{
-    bolt::{components::Bolt, queries::apply_velocity_formula},
-    effect::effects::speed_boost::ActiveSpeedBoosts,
+    bolt::{
+        components::Bolt,
+        queries::{BoltSpeedData, apply_velocity_formula},
+    },
     shared::CleanupOnNodeExit,
     state::types::NodeState,
 };
@@ -128,27 +130,23 @@ pub(crate) fn tick_gravity_well(
 ///
 /// `Without<GravityWell>` on the bolt query is required for Bevy query disjointness —
 /// both queries access `Position2D`, so the type system needs proof they can't overlap.
-#[expect(
-    clippy::type_complexity,
-    reason = "Bevy query with spatial bundle + filter"
-)]
 pub(crate) fn apply_gravity_pull(
     time: Res<Time>,
     wells: Query<(&Position2D, &GravityWellConfig), With<GravityWell>>,
-    mut bolts: Query<(SpatialData, Option<&ActiveSpeedBoosts>), (With<Bolt>, Without<GravityWell>)>,
+    mut bolts: Query<BoltSpeedData, (With<Bolt>, Without<GravityWell>)>,
 ) {
     let dt = time.delta_secs();
     for (well_position, config) in &wells {
         let well_pos = well_position.0;
-        for (mut spatial, speed_boosts) in &mut bolts {
-            let bolt_pos = spatial.position.0;
+        for mut bolt in &mut bolts {
+            let bolt_pos = bolt.spatial.position.0;
             let delta = well_pos - bolt_pos;
             let distance = delta.length();
             if distance > 0.0 && distance <= config.radius {
                 let direction = delta / distance;
                 let steering = direction * config.strength * dt;
-                spatial.velocity.0 = (spatial.velocity.0 + steering).normalize_or_zero();
-                apply_velocity_formula(&mut spatial, speed_boosts);
+                bolt.spatial.velocity.0 = (bolt.spatial.velocity.0 + steering).normalize_or_zero();
+                apply_velocity_formula(&mut bolt.spatial, bolt.active_speed_boosts);
             }
         }
     }

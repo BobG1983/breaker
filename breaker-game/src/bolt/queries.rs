@@ -20,6 +20,20 @@ use crate::{
     shared::NodeScalingFactor,
 };
 
+/// Bolt spatial data with speed boosts for systems that modify bolt velocity
+/// without needing full collision parameters.
+///
+/// Use with `With<Bolt>` as a query filter — `Bolt` is a marker component and
+/// cannot be embedded in `QueryData`.
+#[derive(QueryData)]
+#[query_data(mutable)]
+pub(crate) struct BoltSpeedData {
+    /// Spatial position, velocity, and constraint data.
+    pub spatial: SpatialData,
+    /// Active speed boost multipliers.
+    pub active_speed_boosts: Option<&'static ActiveSpeedBoosts>,
+}
+
 /// Collision-specific bolt data: radius, piercing, damage, speed boosts,
 /// scale, evolution attribution, and impact tracking.
 #[derive(QueryData)]
