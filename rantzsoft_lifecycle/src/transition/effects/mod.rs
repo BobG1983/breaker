@@ -17,8 +17,8 @@ pub use dissolve::{DissolveIn, DissolveInConfig, DissolveOut, DissolveOutConfig}
 pub use fade::{FadeIn, FadeInConfig, FadeOut, FadeOutConfig};
 pub use iris::{IrisIn, IrisInConfig, IrisOut, IrisOutConfig};
 pub use pixelate::{PixelateIn, PixelateInConfig, PixelateOut, PixelateOutConfig};
-pub use shared::{ScreenSize, TransitionOverlay, WipeDirection};
-pub use slide::{SlideLeft, SlideLeftConfig, SlideRight, SlideRightConfig};
+pub use shared::{ScreenSize, TransitionOverlay, TransitionProgress, WipeDirection};
+pub use slide::{Slide, SlideConfig, SlideDirection};
 pub use wipe::{WipeIn, WipeInConfig, WipeOut, WipeOutConfig};
 
 use crate::transition::{
@@ -28,7 +28,7 @@ use crate::transition::{
     traits::Transition,
 };
 
-/// Register all 12 built-in transition effects with the app.
+/// Register all built-in transition effects with the app.
 ///
 /// Called from `RantzLifecyclePlugin::build`.
 pub(crate) fn register_builtin_transitions(app: &mut App) {
@@ -105,18 +105,7 @@ pub(crate) fn register_builtin_transitions(app: &mut App) {
     );
 
     // Slide
-    register_effect::<SlideLeft, _, _, _>(
-        app,
-        slide::slide_left_start,
-        slide::slide_left_run,
-        slide::slide_left_end,
-    );
-    register_effect::<SlideRight, _, _, _>(
-        app,
-        slide::slide_right_start,
-        slide::slide_right_run,
-        slide::slide_right_end,
-    );
+    register_effect::<Slide, _, _, _>(app, slide::slide_start, slide::slide_run, slide::slide_end);
 }
 
 /// Register a single transition effect type with its three phase systems.
@@ -171,10 +160,10 @@ mod tests {
     // Section 14: Plugin Registration (behaviors 69-70)
     // =======================================================================
 
-    // --- Behavior 69: All 12 effects registered in TransitionRegistry ---
+    // --- Behavior 69: All 11 effects registered in TransitionRegistry ---
 
     #[test]
-    fn all_twelve_effects_are_registered_in_transition_registry() {
+    fn all_eleven_effects_are_registered_in_transition_registry() {
         use bevy::state::app::StatesPlugin;
 
         use crate::{RantzLifecyclePlugin, transition::registry::TransitionRegistry};
@@ -201,12 +190,8 @@ mod tests {
             "TransitionRegistry should contain FadeIn"
         );
         assert!(
-            registry.contains::<SlideLeft>(),
-            "TransitionRegistry should contain SlideLeft"
-        );
-        assert!(
-            registry.contains::<SlideRight>(),
-            "TransitionRegistry should contain SlideRight"
+            registry.contains::<Slide>(),
+            "TransitionRegistry should contain Slide"
         );
         assert!(
             registry.contains::<WipeOut>(),

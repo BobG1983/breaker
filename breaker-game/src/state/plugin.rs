@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use iyes_progress::prelude::*;
 use rantzsoft_defaults::prelude::*;
 use rantzsoft_lifecycle::{
-    FadeIn, FadeOut, RantzLifecyclePlugin, Route, RoutingTableAppExt, SlideLeft, TransitionType,
+    FadeIn, FadeOut, RantzLifecyclePlugin, Route, RoutingTableAppExt, TransitionType,
     cleanup_on_exit,
 };
 
@@ -167,7 +167,10 @@ fn register_parent_routes(app: &mut App) {
                     MenuItem::Quit => MenuState::Main, // Quit handled via AppExit, not routing
                 }
             })
-            .with_transition(TransitionType::OneShot(Arc::new(SlideLeft::default()))),
+            .with_transition(TransitionType::OutIn {
+                out_e: Arc::new(FadeOut::default()),
+                in_e: Arc::new(FadeIn::default()),
+            }),
     );
     // StartGame → Teardown (message-triggered by handle_run_setup_input)
     app.add_route(Route::from(MenuState::StartGame).to(MenuState::Teardown));
