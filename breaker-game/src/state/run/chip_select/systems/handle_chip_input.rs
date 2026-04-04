@@ -1,6 +1,7 @@
 //! Handles keyboard input on the chip selection screen.
 
 use bevy::{ecs::system::SystemParam, prelude::*};
+use rantzsoft_lifecycle::ChangeState;
 
 use crate::{
     chips::inventory::ChipInventory,
@@ -21,7 +22,7 @@ pub(crate) struct ChipInputActions<'w> {
     /// Current chip selection index.
     selection: ResMut<'w, ChipSelectSelection>,
     /// State transition control.
-    next_state: ResMut<'w, NextState<ChipSelectState>>,
+    state_writer: MessageWriter<'w, ChangeState<ChipSelectState>>,
     /// Message writer for chip selection events.
     writer: MessageWriter<'w, ChipSelected>,
     /// Inventory for recording decay on non-selected chips.
@@ -47,7 +48,7 @@ pub(crate) fn handle_chip_input(
     // No cards — nothing to navigate or confirm
     if card_count == 0 {
         if config.menu_confirm.iter().any(|k| keys.just_pressed(*k)) {
-            actions.next_state.set(ChipSelectState::AnimateOut);
+            actions.state_writer.write(ChangeState::new());
         }
         return;
     }
@@ -91,7 +92,7 @@ pub(crate) fn handle_chip_input(
             }
         }
 
-        actions.next_state.set(ChipSelectState::AnimateOut);
+        actions.state_writer.write(ChangeState::new());
     }
 }
 

@@ -1,6 +1,7 @@
 //! System to handle timer expiry — lose the run.
 
 use bevy::prelude::*;
+use rantzsoft_lifecycle::ChangeState;
 
 use crate::state::{
     run::{
@@ -18,7 +19,7 @@ use crate::state::{
 pub(crate) fn handle_timer_expired(
     mut reader: MessageReader<TimerExpired>,
     mut run_state: ResMut<NodeOutcome>,
-    mut next_state: ResMut<NextState<NodeState>>,
+    mut writer: MessageWriter<ChangeState<NodeState>>,
 ) {
     if reader.read().next().is_none() {
         return;
@@ -34,12 +35,13 @@ pub(crate) fn handle_timer_expired(
     }
 
     run_state.result = NodeResult::TimerExpired;
-    next_state.set(NodeState::AnimateOut);
+    writer.write(ChangeState::new());
 }
 
 #[cfg(test)]
 mod tests {
-    use bevy::state::app::StatesPlugin;
+    use bevy::{ecs::message::Messages, state::app::StatesPlugin};
+    use rantzsoft_lifecycle::ChangeState;
 
     use super::*;
     use crate::state::types::{AppState, GameState, RunState};
@@ -61,6 +63,7 @@ mod tests {
             .add_sub_state::<RunState>()
             .add_sub_state::<NodeState>()
             .add_message::<TimerExpired>()
+            .add_message::<ChangeState<NodeState>>()
             .insert_resource(NodeOutcome {
                 node_index: 0,
                 result,
@@ -101,10 +104,10 @@ mod tests {
         let run_state = app.world().resource::<NodeOutcome>();
         assert_eq!(run_state.result, NodeResult::TimerExpired);
 
-        let next = app.world().resource::<NextState<NodeState>>();
+        let msgs = app.world().resource::<Messages<ChangeState<NodeState>>>();
         assert!(
-            format!("{next:?}").contains("AnimateOut"),
-            "expected AnimateOut, got: {next:?}"
+            msgs.iter_current_update_messages().count() > 0,
+            "expected ChangeState<NodeState> message"
         );
     }
 

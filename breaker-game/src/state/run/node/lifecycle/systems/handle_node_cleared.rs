@@ -1,6 +1,7 @@
 //! System to handle node cleared events — advance or win.
 
 use bevy::prelude::*;
+use rantzsoft_lifecycle::ChangeState;
 use tracing::warn;
 
 use crate::state::{
@@ -19,7 +20,7 @@ pub(crate) fn handle_node_cleared(
     registry: Res<NodeLayoutRegistry>,
     node_sequence: Option<Res<NodeSequence>>,
     mut run_state: ResMut<NodeOutcome>,
-    mut next_state: ResMut<NextState<NodeState>>,
+    mut writer: MessageWriter<ChangeState<NodeState>>,
 ) {
     if reader.read().next().is_none() {
         return;
@@ -42,12 +43,13 @@ pub(crate) fn handle_node_cleared(
         run_state.result = NodeResult::Won;
     }
 
-    next_state.set(NodeState::AnimateOut);
+    writer.write(ChangeState::new());
 }
 
 #[cfg(test)]
 mod tests {
-    use bevy::state::app::StatesPlugin;
+    use bevy::{ecs::message::Messages, state::app::StatesPlugin};
+    use rantzsoft_lifecycle::ChangeState;
 
     use super::*;
     use crate::state::{
@@ -84,7 +86,8 @@ mod tests {
             .add_sub_state::<GameState>()
             .add_sub_state::<RunState>()
             .add_sub_state::<NodeState>()
-            .add_message::<NodeCleared>();
+            .add_message::<NodeCleared>()
+            .add_message::<ChangeState<NodeState>>();
         let mut registry = NodeLayoutRegistry::default();
         for i in 0..layout_count {
             registry.insert(make_layout(&format!("node_{i}")));
@@ -126,10 +129,10 @@ mod tests {
         app.world_mut().resource_mut::<SendNodeCleared>().0 = true;
         tick(&mut app);
 
-        let next = app.world().resource::<NextState<NodeState>>();
+        let msgs = app.world().resource::<Messages<ChangeState<NodeState>>>();
         assert!(
-            format!("{next:?}").contains("AnimateOut"),
-            "expected AnimateOut, got: {next:?}"
+            msgs.iter_current_update_messages().count() > 0,
+            "expected ChangeState<NodeState> message"
         );
         let run_state = app.world().resource::<NodeOutcome>();
         assert!(run_state.transition_queued);
@@ -142,10 +145,10 @@ mod tests {
         app.world_mut().resource_mut::<SendNodeCleared>().0 = true;
         tick(&mut app);
 
-        let next = app.world().resource::<NextState<NodeState>>();
+        let msgs = app.world().resource::<Messages<ChangeState<NodeState>>>();
         assert!(
-            format!("{next:?}").contains("AnimateOut"),
-            "expected AnimateOut, got: {next:?}"
+            msgs.iter_current_update_messages().count() > 0,
+            "expected ChangeState<NodeState> message"
         );
 
         let run_state = app.world().resource::<NodeOutcome>();
@@ -159,11 +162,11 @@ mod tests {
         app.world_mut().resource_mut::<SendNodeCleared>().0 = true;
         tick(&mut app);
 
-        let next = app.world().resource::<NextState<NodeState>>();
-        let debug = format!("{next:?}");
-        assert!(
-            !debug.contains("AnimateOut"),
-            "empty registry should not trigger any transition, got: {next:?}"
+        let msgs = app.world().resource::<Messages<ChangeState<NodeState>>>();
+        assert_eq!(
+            msgs.iter_current_update_messages().count(),
+            0,
+            "empty registry should not trigger any ChangeState message"
         );
         let run_state = app.world().resource::<NodeOutcome>();
         assert_eq!(run_state.result, NodeResult::InProgress);
@@ -175,11 +178,11 @@ mod tests {
         // SendNodeCleared stays false
         tick(&mut app);
 
-        let next = app.world().resource::<NextState<NodeState>>();
-        let debug = format!("{next:?}");
-        assert!(
-            !debug.contains("AnimateOut"),
-            "expected no state change, got: {next:?}"
+        let msgs = app.world().resource::<Messages<ChangeState<NodeState>>>();
+        assert_eq!(
+            msgs.iter_current_update_messages().count(),
+            0,
+            "expected no ChangeState message"
         );
     }
 
@@ -212,7 +215,8 @@ mod tests {
             .add_sub_state::<GameState>()
             .add_sub_state::<RunState>()
             .add_sub_state::<NodeState>()
-            .add_message::<NodeCleared>();
+            .add_message::<NodeCleared>()
+            .add_message::<ChangeState<NodeState>>();
         let mut registry = NodeLayoutRegistry::default();
         for i in 0..layout_count {
             registry.insert(make_layout(&format!("node_{i}")));
@@ -247,10 +251,10 @@ mod tests {
         app.world_mut().resource_mut::<SendNodeCleared>().0 = true;
         tick(&mut app);
 
-        let next = app.world().resource::<NextState<NodeState>>();
+        let msgs = app.world().resource::<Messages<ChangeState<NodeState>>>();
         assert!(
-            format!("{next:?}").contains("AnimateOut"),
-            "node_index 3 of 9 should transition to AnimateOut; got: {next:?}"
+            msgs.iter_current_update_messages().count() > 0,
+            "node_index 3 of 9 should send ChangeState<NodeState> message"
         );
 
         let run_state = app.world().resource::<NodeOutcome>();
@@ -267,10 +271,10 @@ mod tests {
         app.world_mut().resource_mut::<SendNodeCleared>().0 = true;
         tick(&mut app);
 
-        let next = app.world().resource::<NextState<NodeState>>();
+        let msgs = app.world().resource::<Messages<ChangeState<NodeState>>>();
         assert!(
-            format!("{next:?}").contains("AnimateOut"),
-            "node_index 8 of 9 should transition to AnimateOut; got: {next:?}"
+            msgs.iter_current_update_messages().count() > 0,
+            "node_index 8 of 9 should send ChangeState<NodeState> message"
         );
 
         let run_state = app.world().resource::<NodeOutcome>();
@@ -287,10 +291,10 @@ mod tests {
         app.world_mut().resource_mut::<SendNodeCleared>().0 = true;
         tick(&mut app);
 
-        let next = app.world().resource::<NextState<NodeState>>();
+        let msgs = app.world().resource::<Messages<ChangeState<NodeState>>>();
         assert!(
-            format!("{next:?}").contains("AnimateOut"),
-            "node_index 7 of 9 should transition to AnimateOut; got: {next:?}"
+            msgs.iter_current_update_messages().count() > 0,
+            "node_index 7 of 9 should send ChangeState<NodeState> message"
         );
 
         let run_state = app.world().resource::<NodeOutcome>();

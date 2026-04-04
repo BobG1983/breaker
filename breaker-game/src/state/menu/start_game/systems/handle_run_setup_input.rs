@@ -1,6 +1,7 @@
 //! Handles keyboard input on the breaker selection screen.
 
 use bevy::{ecs::system::SystemParam, prelude::*};
+use rantzsoft_lifecycle::ChangeState;
 
 use crate::{
     breaker::{BreakerRegistry, SelectedBreaker},
@@ -19,7 +20,7 @@ use crate::{
 #[derive(SystemParam)]
 pub(crate) struct RunConfirmation<'w> {
     breaker: ResMut<'w, SelectedBreaker>,
-    next_state: ResMut<'w, NextState<MenuState>>,
+    state_writer: MessageWriter<'w, ChangeState<MenuState>>,
     seed: ResMut<'w, RunSeed>,
 }
 
@@ -71,13 +72,14 @@ pub(crate) fn handle_run_setup_input(
             confirm.seed.0 = Some(seed_entry.value.parse::<u64>().unwrap_or(0));
         }
 
-        confirm.next_state.set(MenuState::Teardown);
+        confirm.state_writer.write(ChangeState::new());
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use bevy::state::app::StatesPlugin;
+    use bevy::{ecs::message::Messages, state::app::StatesPlugin};
+    use rantzsoft_lifecycle::ChangeState;
 
     use super::*;
     use crate::{
@@ -108,6 +110,7 @@ mod tests {
             .init_state::<AppState>()
             .add_sub_state::<GameState>()
             .add_sub_state::<MenuState>()
+            .add_message::<ChangeState<MenuState>>()
             .insert_resource(SelectedBreaker::default())
             .init_resource::<RunSeed>()
             .init_resource::<SeedEntry>();
@@ -167,10 +170,10 @@ mod tests {
         let mut app = test_app();
         press_key(&mut app, KeyCode::Enter);
 
-        let next = app.world().resource::<NextState<MenuState>>();
+        let msgs = app.world().resource::<Messages<ChangeState<MenuState>>>();
         assert!(
-            format!("{next:?}").contains("Teardown"),
-            "expected Teardown, got: {next:?}"
+            msgs.iter_current_update_messages().count() > 0,
+            "expected ChangeState<MenuState> message"
         );
     }
 

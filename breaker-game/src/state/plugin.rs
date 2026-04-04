@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use iyes_progress::prelude::*;
 use rantzsoft_defaults::prelude::*;
-use rantzsoft_lifecycle::RantzLifecyclePlugin;
+use rantzsoft_lifecycle::{RantzLifecyclePlugin, Route, RoutingTableAppExt};
 
 use super::{
     app::loading::LoadingPlugin,
@@ -13,7 +13,6 @@ use super::{
         start_game::RunSetupPlugin,
     },
     pause::PauseMenuPlugin,
-    routing,
     run::{
         RunPlugin,
         chip_select::{ChipSelectDefaults, ChipSelectPlugin},
@@ -99,69 +98,183 @@ fn defaults_plugin() -> impl Plugin {
         .build()
 }
 
-/// Registers all pass-through, teardown, and cleanup routing systems.
-pub(crate) fn register_routing(app: &mut App) {
-    // Pass-through routing
-    app.add_systems(OnEnter(MenuState::Loading), routing::menu_loading_to_main)
-        .add_systems(OnEnter(RunState::Loading), routing::run_loading_to_setup)
+/// Registers declarative routes via the lifecycle crate and cleanup systems.
+fn register_routing(app: &mut App) {
+    register_parent_routes(app);
+    register_node_routes(app);
+    register_chip_select_routes(app);
+    register_run_end_routes(app);
+    register_cleanup(app);
+}
+
+/// `GameState`, `MenuState`, and `RunState` routes — parent-level routing.
+fn register_parent_routes(app: &mut App) {
+    use crate::state::run::resources::{NodeOutcome, NodeResult};
+
+    // ── GameState routes (parent watches MenuState/RunState) ──────────
+    app.add_route(
+        Route::from(GameState::Loading)
+            .to(GameState::Menu)
+            .when(|_| true),
+    );
+    app.add_route(
+        Route::from(GameState::Menu)
+            .to(GameState::Run)
+            .when(|world| {
+                world
+                    .get_resource::<State<MenuState>>()
+                    .is_some_and(|s| *s.get() == MenuState::Teardown)
+            }),
+    );
+    app.add_route(
+        Route::from(GameState::Run)
+            .to(GameState::Menu)
+            .when(|world| {
+                world
+                    .get_resource::<State<RunState>>()
+                    .is_some_and(|s| *s.get() == RunState::Teardown)
+            }),
+    );
+
+    // ── MenuState routes ──────────────────────────────────────────────
+    app.add_route(
+        Route::from(MenuState::Loading)
+            .to(MenuState::Main)
+            .when(|_| true),
+    );
+    // Main → dynamic (StartGame/Options/Meta based on selection)
+    app.add_route(Route::from(MenuState::Main).to_dynamic(|world| {
+        use crate::state::menu::main::MenuItem;
+        let selection = world.resource::<crate::state::menu::main::MainMenuSelection>();
+        match selection.selected {
+            MenuItem::Play => MenuState::StartGame,
+            MenuItem::Settings => MenuState::Options,
+            MenuItem::Quit => MenuState::Main, // Quit handled via AppExit, not routing
+        }
+    }));
+    // StartGame → Teardown (message-triggered by handle_run_setup_input)
+    app.add_route(Route::from(MenuState::StartGame).to(MenuState::Teardown));
+
+    // ── RunState routes ───────────────────────────────────────────────
+    app.add_route(
+        Route::from(RunState::Loading)
+            .to(RunState::Setup)
+            .when(|_| true),
+    );
+    app.add_route(
+        Route::from(RunState::Setup)
+            .to(RunState::Node)
+            .when(|_| true),
+    );
+    // Node → dynamic (ChipSelect or RunEnd based on NodeOutcome)
+    app.add_route(
+        Route::from(RunState::Node)
+            .to_dynamic(|world| match world.resource::<NodeOutcome>().result {
+                NodeResult::InProgress => RunState::ChipSelect,
+                _ => RunState::RunEnd,
+            })
+            .when(|world| {
+                world
+                    .get_resource::<State<NodeState>>()
+                    .is_some_and(|s| *s.get() == NodeState::Teardown)
+            }),
+    );
+    // ChipSelect → Node (parent watches ChipSelectState teardown)
+    app.add_route(
+        Route::from(RunState::ChipSelect)
+            .to(RunState::Node)
+            .when(|world| {
+                world
+                    .get_resource::<State<ChipSelectState>>()
+                    .is_some_and(|s| *s.get() == ChipSelectState::Teardown)
+            }),
+    );
+    // RunEnd → Teardown (parent watches RunEndState teardown)
+    app.add_route(
+        Route::from(RunState::RunEnd)
+            .to(RunState::Teardown)
+            .when(|world| {
+                world
+                    .get_resource::<State<RunEndState>>()
+                    .is_some_and(|s| *s.get() == RunEndState::Teardown)
+            }),
+    );
+}
+
+/// `NodeState` routes — node lifecycle.
+fn register_node_routes(app: &mut App) {
+    // Loading → AnimateIn: message-triggered (check_spawn_complete sends ChangeState)
+    app.add_route(Route::from(NodeState::Loading).to(NodeState::AnimateIn));
+    // AnimateIn → Playing: pass-through (gameplay animations later)
+    app.add_route(
+        Route::from(NodeState::AnimateIn)
+            .to(NodeState::Playing)
+            .when(|_| true),
+    );
+    // Playing → AnimateOut: message-triggered (handle_node_cleared etc. send ChangeState)
+    app.add_route(Route::from(NodeState::Playing).to(NodeState::AnimateOut));
+    // AnimateOut → Teardown: pass-through
+    app.add_route(
+        Route::from(NodeState::AnimateOut)
+            .to(NodeState::Teardown)
+            .when(|_| true),
+    );
+}
+
+/// `ChipSelectState` routes — chip selection lifecycle.
+fn register_chip_select_routes(app: &mut App) {
+    app.add_route(
+        Route::from(ChipSelectState::Loading)
+            .to(ChipSelectState::AnimateIn)
+            .when(|_| true),
+    );
+    app.add_route(
+        Route::from(ChipSelectState::AnimateIn)
+            .to(ChipSelectState::Selecting)
+            .when(|_| true),
+    );
+    // Selecting → AnimateOut: message-triggered (handle_chip_input/tick_chip_timer)
+    app.add_route(Route::from(ChipSelectState::Selecting).to(ChipSelectState::AnimateOut));
+    app.add_route(
+        Route::from(ChipSelectState::AnimateOut)
+            .to(ChipSelectState::Teardown)
+            .when(|_| true),
+    );
+}
+
+/// `RunEndState` routes — run end lifecycle.
+fn register_run_end_routes(app: &mut App) {
+    app.add_route(
+        Route::from(RunEndState::Loading)
+            .to(RunEndState::AnimateIn)
+            .when(|_| true),
+    );
+    app.add_route(
+        Route::from(RunEndState::AnimateIn)
+            .to(RunEndState::Active)
+            .when(|_| true),
+    );
+    // Active → AnimateOut: message-triggered (handle_run_end_input)
+    app.add_route(Route::from(RunEndState::Active).to(RunEndState::AnimateOut));
+    app.add_route(
+        Route::from(RunEndState::AnimateOut)
+            .to(RunEndState::Teardown)
+            .when(|_| true),
+    );
+}
+
+/// Cleanup systems on teardown entry.
+fn register_cleanup(app: &mut App) {
+    app.add_systems(OnEnter(NodeState::Teardown), cleanup_on_exit::<NodeState>)
         .add_systems(
-            OnEnter(NodeState::AnimateIn),
-            routing::node_animate_in_to_playing,
-        )
-        .add_systems(
-            OnEnter(NodeState::AnimateOut),
-            routing::node_animate_out_to_teardown,
-        )
-        .add_systems(
-            OnEnter(ChipSelectState::Loading),
-            routing::chip_select_loading_to_animate_in,
-        )
-        .add_systems(
-            OnEnter(ChipSelectState::AnimateIn),
-            routing::chip_select_animate_in_to_selecting,
-        )
-        .add_systems(
-            OnEnter(ChipSelectState::AnimateOut),
-            routing::chip_select_animate_out_to_teardown,
-        )
-        .add_systems(
-            OnEnter(RunEndState::Loading),
-            routing::run_end_loading_to_animate_in,
-        )
-        .add_systems(
-            OnEnter(RunEndState::AnimateIn),
-            routing::run_end_animate_in_to_active,
-        )
-        .add_systems(
-            OnEnter(RunEndState::AnimateOut),
-            routing::run_end_animate_out_to_teardown,
-        );
-    // Teardown routing (cleanup runs first, then router decides next parent state)
-    app.add_systems(
-        OnEnter(NodeState::Teardown),
-        (cleanup_on_exit::<NodeState>, routing::node_teardown_router).chain(),
-    )
-    .add_systems(
-        OnEnter(ChipSelectState::Teardown),
-        (
+            OnEnter(ChipSelectState::Teardown),
             cleanup_on_exit::<ChipSelectState>,
-            routing::chip_select_teardown_router,
         )
-            .chain(),
-    )
-    .add_systems(
-        OnEnter(RunEndState::Teardown),
-        (
+        .add_systems(
+            OnEnter(RunEndState::Teardown),
             cleanup_on_exit::<RunEndState>,
-            routing::run_end_teardown_router,
         )
-            .chain(),
-    )
-    .add_systems(
-        OnEnter(RunState::Teardown),
-        (cleanup_on_exit::<RunState>, routing::run_teardown_router).chain(),
-    )
-    .add_systems(OnEnter(MenuState::Teardown), routing::menu_teardown_router);
+        .add_systems(OnEnter(RunState::Teardown), cleanup_on_exit::<RunState>);
     // Old cleanup markers — still used until entities migrate to CleanupOnExit<S>
     app.add_systems(
         OnEnter(NodeState::Teardown),
