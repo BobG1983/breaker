@@ -51,6 +51,31 @@ pub struct StateChanged<S: States> {
     pub to: S,
 }
 
+/// Sent at the start of a transition lifecycle.
+///
+/// For Out/OutIn transitions, sent before the Out effect begins.
+/// For In/OneShot transitions, sent before the state change and effect.
+/// Game systems can listen to prepare for the transition (e.g., fade audio).
+#[derive(Message, Clone, Debug)]
+pub struct TransitionStart<S: States> {
+    /// The state we are transitioning from.
+    pub from: S,
+    /// The state we are transitioning to.
+    pub to: S,
+}
+
+/// Sent at the end of a transition lifecycle.
+///
+/// Sent after the final cleanup — state has changed, effects have completed,
+/// and `ActiveTransition` has been removed.
+#[derive(Message, Clone, Debug)]
+pub struct TransitionEnd<S: States> {
+    /// The state we transitioned from.
+    pub from: S,
+    /// The state we transitioned to.
+    pub to: S,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -110,5 +135,115 @@ mod tests {
             0,
             "ChangeState<MenuState> should have no messages"
         );
+    }
+
+    // --- Section E: TransitionStart<S> and TransitionEnd<S> ---
+
+    #[test]
+    fn transition_start_carries_from_and_to() {
+        let msg = TransitionStart {
+            from: NodeState::Loading,
+            to: NodeState::AnimateIn,
+        };
+        assert_eq!(msg.from, NodeState::Loading);
+        assert_eq!(msg.to, NodeState::AnimateIn);
+    }
+
+    #[test]
+    fn transition_start_different_state_types_are_independent() {
+        let node_msg = TransitionStart {
+            from: NodeState::Loading,
+            to: NodeState::AnimateIn,
+        };
+        let menu_msg = TransitionStart {
+            from: MenuState::Main,
+            to: MenuState::Main,
+        };
+        // Both compile and instantiate independently — verify fields accessible
+        let _ = &node_msg;
+        let _ = &menu_msg;
+    }
+
+    #[test]
+    fn transition_end_carries_from_and_to() {
+        let msg = TransitionEnd {
+            from: NodeState::Loading,
+            to: NodeState::AnimateIn,
+        };
+        assert_eq!(msg.from, NodeState::Loading);
+        assert_eq!(msg.to, NodeState::AnimateIn);
+    }
+
+    #[test]
+    fn transition_end_different_state_types_are_independent() {
+        let node_msg = TransitionEnd {
+            from: NodeState::Loading,
+            to: NodeState::AnimateIn,
+        };
+        let menu_msg = TransitionEnd {
+            from: MenuState::Main,
+            to: MenuState::Main,
+        };
+        // Both compile and instantiate independently — verify fields accessible
+        let _ = &node_msg;
+        let _ = &menu_msg;
+    }
+
+    #[test]
+    fn transition_start_and_end_register_as_separate_messages() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<TransitionStart<NodeState>>()
+            .add_message::<TransitionEnd<NodeState>>();
+
+        // Write TransitionStart, TransitionEnd should be empty
+        app.world_mut()
+            .resource_mut::<bevy::ecs::message::Messages<TransitionStart<NodeState>>>()
+            .write(TransitionStart {
+                from: NodeState::Loading,
+                to: NodeState::AnimateIn,
+            });
+        app.update();
+
+        let end_msgs = app
+            .world()
+            .resource::<bevy::ecs::message::Messages<TransitionEnd<NodeState>>>();
+        assert_eq!(
+            end_msgs.iter_current_update_messages().count(),
+            0,
+            "TransitionEnd should have no messages when only TransitionStart was written"
+        );
+    }
+
+    #[test]
+    fn transition_start_and_end_coexist_in_same_frame() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<TransitionStart<NodeState>>()
+            .add_message::<TransitionEnd<NodeState>>();
+
+        app.world_mut()
+            .resource_mut::<bevy::ecs::message::Messages<TransitionStart<NodeState>>>()
+            .write(TransitionStart {
+                from: NodeState::Loading,
+                to: NodeState::AnimateIn,
+            });
+        app.world_mut()
+            .resource_mut::<bevy::ecs::message::Messages<TransitionEnd<NodeState>>>()
+            .write(TransitionEnd {
+                from: NodeState::Loading,
+                to: NodeState::AnimateIn,
+            });
+        app.update();
+
+        let start_msgs = app
+            .world()
+            .resource::<bevy::ecs::message::Messages<TransitionStart<NodeState>>>();
+        assert_eq!(start_msgs.iter_current_update_messages().count(), 1);
+
+        let end_msgs = app
+            .world()
+            .resource::<bevy::ecs::message::Messages<TransitionEnd<NodeState>>>();
+        assert_eq!(end_msgs.iter_current_update_messages().count(), 1);
     }
 }

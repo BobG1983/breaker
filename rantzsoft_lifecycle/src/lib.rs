@@ -17,9 +17,16 @@ pub mod messages;
 mod plugin;
 pub mod route;
 pub mod routing_table;
+pub mod transition;
 
 pub use cleanup::CleanupOnExit;
-pub use messages::{ChangeState, StateChanged};
+pub use messages::{ChangeState, StateChanged, TransitionEnd, TransitionStart};
 pub use plugin::RantzLifecyclePlugin;
 pub use route::Route;
 pub use routing_table::{RoutingTable, RoutingTableAppExt};
+pub use transition::{
+    registry::TransitionRegistry,
+    resources::{ActiveTransition, EndingTransition, RunningTransition, StartingTransition},
+    traits::{InTransition, OneShotTransition, OutTransition, Transition},
+    types::TransitionType,
+};

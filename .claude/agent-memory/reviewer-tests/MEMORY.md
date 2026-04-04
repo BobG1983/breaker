@@ -7,5 +7,7 @@
 
 - [Typestate transition methods with full production logic](pattern_transition_method_production_logic.md) — definition() and dimensions() stubs contain production min/max computations, crossing RED/GREEN boundary even when build() is correctly stubbed
 
+- [Existing production dispatch causes false pass for orchestration tests](pattern_existing_production_dispatch_causes_false_pass.md) — when old dispatch fires unconditionally, State==B and StateChanged assertions pass at RED even with stub orchestration
+
 ## Session History
 See [ephemeral/](ephemeral/) — not committed.
