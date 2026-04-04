@@ -179,7 +179,7 @@ Fields are **private** — all access goes through methods. This lets internals 
 | Registry | Asset type | Key | Notes |
 |----------|-----------|-----|-------|
 | `BreakerRegistry` | `BreakerDefinition` (`breaker.ron`) | `String` (name) | Implements `SeedableRegistry`. Folder: `assets/breakers/`. Re-exported from `breaker/`. |
-| `WallRegistry` | `WallDefinition` (`wall.ron`) | `String` (name) | Implements `SeedableRegistry`. Folder: `assets/walls/`. Re-exported from `wall/`. Single `wall.wall.ron` with `(name: "Wall")` uses serde defaults for all other fields. |
+| `WallRegistry` | `WallDefinition` (`wall.ron`) | `String` (name) | Implements `SeedableRegistry`. Folder: `assets/walls/`. Re-exported from `walls/`. Single `wall.wall.ron` with `(name: "Wall")` uses serde defaults for all other fields. |
 | `ChipTemplateRegistry` | `ChipTemplate` (`chip.ron`) | `String` (name) | Implements `SeedableRegistry`. Folder: `assets/chips/standard/`. Stores `(AssetId, ChipTemplate)` pairs for hot-reload. |
 | `EvolutionTemplateRegistry` | `EvolutionTemplate` (`evolution.ron`) | `String` (name) | Implements `SeedableRegistry`. Folder: `assets/chips/evolutions/`. Stores `(AssetId, EvolutionTemplate)` pairs. |
 | `ChipCatalog` | *(built from templates)* | `String` (name) | NOT a `SeedableRegistry` — built at runtime by expanding `ChipTemplate`s and `EvolutionTemplate`s via `populate_catalog`. Paired `Vec<String>` preserves insertion order for deterministic chip offers. Also holds `Vec<Recipe>` for in-catalog evolution recipes. |

@@ -32,6 +32,9 @@ brickbreaker/                 # Repository root (workspace)
 ├── rantzsoft_defaults_derive/ # Proc-macro crate: #[derive(GameConfig)] for RON defaults loading
 │   ├── Cargo.toml
 │   └── src/lib.rs
+├── rantzsoft_lifecycle/      # Game-agnostic state routing, screen transitions, lifecycle messages
+│   ├── Cargo.toml            # Package: rantzsoft_lifecycle
+│   └── src/                  # Route builder, dispatch, transition effects, cleanup
 ├── breaker-scenario-runner/  # Automated gameplay testing tool (dev-only binary)
 │   ├── Cargo.toml            # Package: breaker_scenario_runner
 │   ├── src/                  # Runner source (types, lifecycle, invariants, input, log_capture)
@@ -53,29 +56,27 @@ src/
 ├── main.rs           # Binary entry point: calls lib to build and run
 ├── app.rs            # App — constructs the Bevy App with DefaultPlugins + Game
 ├── game.rs           # Game — PluginGroup that wires together all domain plugins
-├── shared/           # Passive types: GameState, PlayingState, cleanup markers, shared math
-├── screen/           # Screen state registration, transitions, cleanup systems
+├── shared/           # Shared types: BaseWidth, BaseHeight, PlayfieldConfig, cleanup markers (CleanupOnNodeExit, CleanupOnRunEnd)
+├── state/            # State lifecycle, routing, menus, pause, run/node management, HUD
 ├── input/            # Raw keyboard input to GameAction translation
 ├── breaker/          # Breaker mechanics, state machine, bump system
 ├── effect/           # Effect system — data-driven EffectNode trigger/effect evaluation and dispatch (top-level domain)
 ├── bolt/             # Bolt physics, reflection model, speed management, CCD collision detection, chain bolts
 ├── cells/            # Cell types, grid layout, destruction
-├── wall/             # Invisible boundary entities (left, right, ceiling)
+├── walls/            # Wall builder, wall types, boundary entities
 ├── chips/            # Chip system — ChipTemplateRegistry (SeedableRegistry) + ChipCatalog (expanded definitions + recipes); EvolutionTemplateRegistry (SeedableRegistry for evolution definitions); observer-based effect application
 ├── fx/               # Cross-cutting visual effects (fade-out, node transition overlays)
-├── run/              # Run state, node sequencing (node/ sub-domain), timer, RunStats accumulation, HighlightTracker, highlight detection (highlights/ sub-domain), spawn_highlight_text juice
 ├── audio/            # Event-driven audio, adaptive intensity (stub — Phase 6)
-├── ui/               # HUD, menus, chip selection screen
 └── debug/            # Dev tooling: overlays, telemetry, hot-reload, recording (sub-domains)
 ```
 
 **`lib.rs`** is the library root. It declares `app`, `game`, and `shared` as `pub mod` (needed by the binary and integration tests). Domain modules are `pub(crate) mod` to enforce plugin boundaries at the Rust visibility level. **`main.rs`** is the binary entry point — it calls `brickbreaker::app::build_app().run()`.
 
-**Scenario runner exception** — `bolt`, `breaker`, `cells`, `chips`, `effect`, `input`, `run`, `screen`, and `wall` are declared as `pub mod` in `lib.rs` (not `pub(crate)`) because `breaker-scenario-runner` needs cross-crate access to their components, resources, and system sets for entity tagging, input injection, invariant checking, and ordering constraints. `screen` is imported for `ChipOffers` and `ChipOffering` used in chip-selection invariant checks. `wall` and `ui` are also `pub mod` but are not currently imported by the scenario runner. This mirrors the existing debug domain exception.
+**Scenario runner exception** — `bolt`, `breaker`, `cells`, `chips`, `effect`, `input`, `state`, and `walls` are declared as `pub mod` in `lib.rs` (not `pub(crate)`) because `breaker-scenario-runner` needs cross-crate access to their components, resources, and system sets for entity tagging, input injection, invariant checking, and ordering constraints. `state` is imported for `ChipOffers` and `ChipOffering` used in chip-selection invariant checks. This mirrors the existing debug domain exception.
 
 **`App`** (`app.rs`) is responsible for constructing the Bevy `App`, adding `DefaultPlugins`, and adding the `Game` plugin group.
 
-**`Game`** (`game.rs`) is a `PluginGroup` responsible for wiring together all domain plugins in the correct order. This is the single place that knows about all plugins. Plugin registration order: `InputPlugin`, `ScreenPlugin`, `RantzSpatial2dPlugin::<GameDrawLayer>`, `RantzPhysics2dPlugin`, `WallPlugin`, `BreakerPlugin`, `EffectPlugin`, `BoltPlugin`, `CellsPlugin`, `ChipsPlugin`, `FxPlugin`, `RunPlugin`, `AudioPlugin`, `UiPlugin`, `DebugPlugin`.
+**`Game`** (`game.rs`) is a `PluginGroup` responsible for wiring together all domain plugins in the correct order. This is the single place that knows about all plugins. Plugin registration order: `InputPlugin`, `StatePlugin`, `RantzSpatial2dPlugin::<GameDrawLayer>`, `RantzPhysics2dPlugin`, `WallPlugin`, `BreakerPlugin`, `EffectPlugin`, `BoltPlugin`, `CellsPlugin`, `ChipsPlugin`, `FxPlugin`, `AudioPlugin`, `DebugPlugin`.
 
 **Domain plugins** (breaker, bolt, cells, etc.) are self-contained:
 - Each defines its own `Plugin` struct implementing `bevy::app::Plugin`
@@ -86,7 +87,7 @@ src/
 
 **Nested sub-domain plugins** — a domain may contain child plugins for cohesive subsets of functionality (e.g., breaker archetypes). The parent plugin adds child plugins via `app.add_plugins()`. `game.rs` only knows about top-level plugins. See [layout.md](layout.md) for the full nesting rules and folder structure.
 
-**Cross-domain SystemSet exports** — domains that expose ordering anchors for other domains define a `pub enum {Domain}Systems` in `sets.rs`. Current exported sets: `BreakerSystems` (`breaker/sets.rs`), `BoltSystems` (`bolt/sets.rs`), `EffectSystems` (`effect/sets.rs`, variants: `Bridge`), `UiSystems` (`ui/sets.rs`), `NodeSystems` (`run/node/sets.rs`). The external crates also export ordering sets: `rantzsoft_physics2d::PhysicsSystems` (`MaintainQuadtree`, `EnforceDistanceConstraints`) for ordering against the quadtree; `rantzsoft_spatial2d::SpatialSystems` (`SavePrevious`, `ApplyVelocity`, `ComputeGlobals`, `DeriveTransform`) for ordering against the spatial pipeline stages; `rantzsoft_defaults::DefaultsSystems` (`Seed`, `PropagateDefaults`) for ordering config-seeding systems via `RantzDefaultsPlugin`. See [ordering.md](ordering.md) for the full table and usage rules.
+**Cross-domain SystemSet exports** — domains that expose ordering anchors for other domains define a `pub enum {Domain}Systems` in `sets.rs`. Current exported sets: `BreakerSystems` (`breaker/sets.rs`), `BoltSystems` (`bolt/sets.rs`), `EffectSystems` (`effect/sets.rs`, variants: `Bridge`), `UiSystems` (`state/run/node/hud/sets.rs`), `NodeSystems` (`state/run/node/sets.rs`). The external crates also export ordering sets: `rantzsoft_physics2d::PhysicsSystems` (`MaintainQuadtree`, `EnforceDistanceConstraints`) for ordering against the quadtree; `rantzsoft_spatial2d::SpatialSystems` (`SavePrevious`, `ApplyVelocity`, `ComputeGlobals`, `DeriveTransform`) for ordering against the spatial pipeline stages; `rantzsoft_defaults::DefaultsSystems` (`Seed`, `PropagateDefaults`) for ordering config-seeding systems via `RantzDefaultsPlugin`. See [ordering.md](ordering.md) for the full table and usage rules.
 
 ## Cross-Domain Read Access
 

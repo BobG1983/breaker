@@ -120,5 +120,5 @@ Each exclusive pair shares the same dimension but produces different terminal im
 |--------|---------|-----------|----------|
 | **Bolt** | `Bolt::builder()` | P, S, A, M, R, V | `breaker-game/src/bolt/builder/` |
 | **Breaker** | `Breaker::builder()` | D, Mv, Da, Sp, Bm, V, R | `breaker-game/src/breaker/builder/` |
-| **Wall** | `Wall::builder()` | S (Side), V (Visual) | `breaker-game/src/wall/builder/` |
+| **Wall** | `Wall::builder()` | S (Side), V (Visual) | `breaker-game/src/walls/builder/` |
 | **Spatial** | `Spatial::builder()` | Position, Speed, Angle | `rantzsoft_spatial2d/src/builder.rs` |
