@@ -13,7 +13,7 @@ pub struct TransitionOverlay;
 /// Inserted by start systems, read by run systems, removed by end systems.
 /// Tests set this directly rather than relying on `Time<Real>`.
 #[derive(Resource)]
-pub(crate) struct TransitionProgress {
+pub struct TransitionProgress {
     /// Time elapsed since the transition started.
     pub elapsed: f32,
     /// Total duration of the transition.
