@@ -11,7 +11,7 @@ use rantzsoft_spatial2d::{
 
 use crate::{
     bolt::components::{
-        BoltAngleSpread, BoltBaseDamage, BoltRadius, BoltSpawnOffsetY, ExtraBolt, LastImpact,
+        Bolt, BoltAngleSpread, BoltBaseDamage, BoltRadius, BoltSpawnOffsetY, ExtraBolt, LastImpact,
         PiercingRemaining, SpawnedByEvolution,
     },
     effect::effects::{
@@ -22,12 +22,11 @@ use crate::{
 
 /// Bolt spatial data with speed boosts for systems that modify bolt velocity
 /// without needing full collision parameters.
-///
-/// Use with `With<Bolt>` as a query filter — `Bolt` is a marker component and
-/// cannot be embedded in `QueryData`.
 #[derive(QueryData)]
 #[query_data(mutable)]
 pub(crate) struct BoltSpeedData {
+    /// Bolt marker — guarantees this query only matches bolt entities.
+    pub bolt: &'static Bolt,
     /// Spatial position, velocity, and constraint data.
     pub spatial: SpatialData,
     /// Active speed boost multipliers.

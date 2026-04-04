@@ -4,10 +4,7 @@ use bevy::prelude::*;
 use rantzsoft_spatial2d::prelude::*;
 
 use crate::{
-    bolt::{
-        components::Bolt,
-        queries::{BoltSpeedData, apply_velocity_formula},
-    },
+    bolt::queries::{BoltSpeedData, apply_velocity_formula},
     shared::CleanupOnNodeExit,
     state::types::NodeState,
 };
@@ -133,7 +130,7 @@ pub(crate) fn tick_gravity_well(
 pub(crate) fn apply_gravity_pull(
     time: Res<Time>,
     wells: Query<(&Position2D, &GravityWellConfig), With<GravityWell>>,
-    mut bolts: Query<BoltSpeedData, (With<Bolt>, Without<GravityWell>)>,
+    mut bolts: Query<BoltSpeedData, Without<GravityWell>>,
 ) {
     let dt = time.delta_secs();
     for (well_position, config) in &wells {
