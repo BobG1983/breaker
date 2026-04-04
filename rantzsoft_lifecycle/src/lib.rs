@@ -19,7 +19,7 @@ pub mod route;
 pub mod routing_table;
 pub mod transition;
 
-pub use cleanup::CleanupOnExit;
+pub use cleanup::{CleanupOnExit, cleanup_on_exit};
 pub use messages::{ChangeState, StateChanged, TransitionEnd, TransitionStart};
 pub use plugin::RantzLifecyclePlugin;
 pub use route::Route;

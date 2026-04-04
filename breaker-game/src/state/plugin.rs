@@ -7,11 +7,12 @@ use iyes_progress::prelude::*;
 use rantzsoft_defaults::prelude::*;
 use rantzsoft_lifecycle::{
     FadeIn, FadeOut, RantzLifecyclePlugin, Route, RoutingTableAppExt, SlideLeft, TransitionType,
+    cleanup_on_exit,
 };
 
 use super::{
     app::loading::LoadingPlugin,
-    cleanup::{cleanup_entities, cleanup_on_exit},
+    cleanup::cleanup_entities,
     menu::{
         main::{MainMenuDefaults, MainMenuPlugin},
         start_game::RunSetupPlugin,
