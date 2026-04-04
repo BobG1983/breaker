@@ -41,10 +41,14 @@ impl Plugin for PauseMenuPlugin {
                         .and(not_in_transition.clone()),
                 ),
             )
-            // Handle pause menu input when paused (not during transitions)
+            // Handle pause menu input when paused AND menu exists (not during transitions)
             .add_systems(
                 Update,
-                handle_pause_input.run_if(is_time_paused.and(not_in_transition.clone())),
+                handle_pause_input.run_if(
+                    is_time_paused
+                        .and(any_with_component::<PauseMenuScreen>)
+                        .and(not_in_transition.clone()),
+                ),
             )
             // Cleanup pause menu when unpaused
             .add_systems(
