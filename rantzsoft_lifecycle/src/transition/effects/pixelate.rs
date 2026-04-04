@@ -143,11 +143,14 @@ pub(crate) fn pixelate_out_start(
 pub(crate) fn pixelate_out_run(
     mut overlays: Query<&mut Sprite, With<TransitionOverlay>>,
     mut progress: ResMut<TransitionProgress>,
+    time: Res<Time<Real>>,
     mut writer: MessageWriter<TransitionRunComplete>,
 ) {
     if progress.completed {
         return;
     }
+
+    progress.elapsed += time.delta_secs();
 
     let t = if progress.duration > 0.0 {
         (progress.elapsed / progress.duration).clamp(0.0, 1.0)
@@ -210,11 +213,14 @@ pub(crate) fn pixelate_in_start(
 pub(crate) fn pixelate_in_run(
     mut overlays: Query<&mut Sprite, With<TransitionOverlay>>,
     mut progress: ResMut<TransitionProgress>,
+    time: Res<Time<Real>>,
     mut writer: MessageWriter<TransitionRunComplete>,
 ) {
     if progress.completed {
         return;
     }
+
+    progress.elapsed += time.delta_secs();
 
     let t = if progress.duration > 0.0 {
         (progress.elapsed / progress.duration).clamp(0.0, 1.0)

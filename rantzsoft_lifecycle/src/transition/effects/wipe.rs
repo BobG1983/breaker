@@ -169,11 +169,14 @@ pub(crate) fn wipe_out_run(
     config: Res<WipeOutConfig>,
     screen: Res<ScreenSize>,
     mut progress: ResMut<TransitionProgress>,
+    time: Res<Time<Real>>,
     mut writer: MessageWriter<TransitionRunComplete>,
 ) {
     if progress.completed {
         return;
     }
+
+    progress.elapsed += time.delta_secs();
 
     let t = if progress.duration > 0.0 {
         (progress.elapsed / progress.duration).clamp(0.0, 1.0)
@@ -239,11 +242,14 @@ pub(crate) fn wipe_in_run(
     config: Res<WipeInConfig>,
     screen: Res<ScreenSize>,
     mut progress: ResMut<TransitionProgress>,
+    time: Res<Time<Real>>,
     mut writer: MessageWriter<TransitionRunComplete>,
 ) {
     if progress.completed {
         return;
     }
+
+    progress.elapsed += time.delta_secs();
 
     let t = if progress.duration > 0.0 {
         (progress.elapsed / progress.duration).clamp(0.0, 1.0)

@@ -132,11 +132,14 @@ pub(crate) fn iris_out_start(
 pub(crate) fn iris_out_run(
     mut overlays: Query<&mut Transform, With<TransitionOverlay>>,
     mut progress: ResMut<TransitionProgress>,
+    time: Res<Time<Real>>,
     mut writer: MessageWriter<TransitionRunComplete>,
 ) {
     if progress.completed {
         return;
     }
+
+    progress.elapsed += time.delta_secs();
 
     let t = if progress.duration > 0.0 {
         (progress.elapsed / progress.duration).clamp(0.0, 1.0)
@@ -198,11 +201,14 @@ pub(crate) fn iris_in_start(
 pub(crate) fn iris_in_run(
     mut overlays: Query<&mut Transform, With<TransitionOverlay>>,
     mut progress: ResMut<TransitionProgress>,
+    time: Res<Time<Real>>,
     mut writer: MessageWriter<TransitionRunComplete>,
 ) {
     if progress.completed {
         return;
     }
+
+    progress.elapsed += time.delta_secs();
 
     let t = if progress.duration > 0.0 {
         (progress.elapsed / progress.duration).clamp(0.0, 1.0)
