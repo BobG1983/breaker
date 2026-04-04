@@ -66,7 +66,7 @@ pub(crate) fn register(app: &mut App) {
         bridge_impact_bolt_wall.after(BoltSystems::CellCollision),
         bridge_impact_bolt_breaker.after(BoltSystems::BreakerCollision),
         // future: bridge_impact_breaker_cell, bridge_impact_breaker_wall, bridge_impact_cell_wall
-    ).run_if(in_state(PlayingState::Active)));
+    ).run_if(in_state(NodeState::Playing)));
 }
 
 /// BoltImpactCell → Impact(Cell) global + Impact(Bolt) global
@@ -115,7 +115,7 @@ pub(crate) fn register(app: &mut App) {
         bridge_impacted_bolt_wall.after(BoltSystems::CellCollision),
         bridge_impacted_bolt_breaker.after(BoltSystems::BreakerCollision),
         // future: bridge_impacted_breaker_cell, bridge_impacted_breaker_wall, bridge_impacted_cell_wall
-    ).run_if(in_state(PlayingState::Active)));
+    ).run_if(in_state(NodeState::Playing)));
 }
 
 /// BoltImpactCell → Impacted(Cell) on bolt + Impacted(Bolt) on cell
