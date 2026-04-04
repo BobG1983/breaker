@@ -4,7 +4,7 @@
 use super::helpers::*;
 use crate::state::run::{
     node::resources::NodeTimer,
-    resources::{HighlightKind, HighlightTracker, RunState, RunStats},
+    resources::{HighlightKind, HighlightTracker, NodeOutcome, RunStats},
 };
 
 #[test]
@@ -27,7 +27,7 @@ fn detects_clutch_clear_when_timer_below_threshold() {
         remaining: 2.5,
         total: 30.0,
     });
-    app.world_mut().resource_mut::<RunState>().node_index = 3;
+    app.world_mut().resource_mut::<NodeOutcome>().node_index = 3;
     app.insert_resource(TestNodeCleared(true));
     tick(&mut app);
 
@@ -77,7 +77,7 @@ fn detects_no_damage_node_when_no_bolts_lost() {
     app.world_mut()
         .resource_mut::<HighlightTracker>()
         .node_bolts_lost = 0;
-    app.world_mut().resource_mut::<RunState>().node_index = 2;
+    app.world_mut().resource_mut::<NodeOutcome>().node_index = 2;
     app.insert_resource(TestNodeCleared(true));
     tick(&mut app);
 
@@ -121,7 +121,7 @@ fn detects_fast_clear_when_elapsed_below_half_total() {
         remaining: 20.0,
         total: 30.0,
     });
-    app.world_mut().resource_mut::<RunState>().node_index = 1;
+    app.world_mut().resource_mut::<NodeOutcome>().node_index = 1;
     app.insert_resource(TestNodeCleared(true));
     tick(&mut app);
 

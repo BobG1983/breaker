@@ -4,6 +4,27 @@ description: Bug categories that appear repeatedly in this codebase — check th
 type: project
 ---
 
+## rantzsoft_lifecycle transition effects: elapsed never incremented — OPEN (2026-04-03)
+
+All 12 built-in effects (fade, dissolve, pixelate, wipe, iris, slide) in `rantzsoft_lifecycle`
+initialize `TransitionProgress { elapsed: 0.0 }` but NO run system ever calls
+`progress.elapsed += time.delta_secs()`. Result: `t = elapsed/duration = 0.0` every frame,
+`t >= 1.0` never triggers, `TransitionRunComplete` never sent — all real transitions stuck forever
+in Running phase. Only instant-completing test effects work.
+
+Fix: each `*_run` system needs `Res<Time>` and `progress.elapsed += time.delta_secs()`.
+Location: all effect run systems in `rantzsoft_lifecycle/src/transition/effects/`.
+
+## rantzsoft_lifecycle orchestration tests 8/9 vacuous assertion — OPEN (2026-04-03)
+
+`out_transition_sends_state_changed_after_state_change` and
+`out_transition_sends_transition_end_after_state_change` in
+`rantzsoft_lifecycle/src/transition/orchestration.rs` check
+`iter_current_update_messages().next().is_some()` on the last of 10 updates.
+Since messages are frame-scoped and the transition completes by update ~4-5,
+there are no messages on update 10. These tests would assert false and FAIL
+even for a correct implementation. Need a `MessageLog` capture-system approach.
+
 ## Insert-without-increment on first fire() — FIXED in Phase 1 cleanup
 
 In effect `fire()` functions that accumulate state, the original bug inserted with

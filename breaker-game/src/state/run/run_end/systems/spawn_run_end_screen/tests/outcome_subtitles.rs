@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use super::{super::spawn_run_end_screen, helpers::*};
-use crate::state::run::resources::{RunOutcome, RunState, RunStats};
+use crate::state::run::resources::{NodeOutcome, NodeResult, RunStats};
 
 const WON_SUBS: [&str; 5] = [
     "The bolt obeys. For now.",
@@ -31,7 +31,7 @@ fn won_subtitle_is_from_known_variants() {
         seed: 42,
         ..Default::default()
     };
-    let mut app = test_app_with_stats(RunOutcome::Won, stats);
+    let mut app = test_app_with_stats(NodeResult::Won, stats);
     app.update();
 
     let texts = collect_texts(&mut app);
@@ -49,7 +49,7 @@ fn won_subtitle_is_deterministic_with_same_seed() {
             seed: 42,
             ..Default::default()
         };
-        let mut app = test_app_with_stats(RunOutcome::Won, stats);
+        let mut app = test_app_with_stats(NodeResult::Won, stats);
         app.update();
         collect_texts(&mut app)
     };
@@ -79,7 +79,7 @@ fn timer_expired_subtitle_is_from_known_variants() {
         seed: 99,
         ..Default::default()
     };
-    let mut app = test_app_with_stats(RunOutcome::TimerExpired, stats);
+    let mut app = test_app_with_stats(NodeResult::TimerExpired, stats);
     app.update();
 
     let texts = collect_texts(&mut app);
@@ -98,7 +98,7 @@ fn lives_depleted_subtitle_is_from_known_variants() {
         seed: 77,
         ..Default::default()
     };
-    let mut app = test_app_with_stats(RunOutcome::LivesDepleted, stats);
+    let mut app = test_app_with_stats(NodeResult::LivesDepleted, stats);
     app.update();
 
     let texts = collect_texts(&mut app);
@@ -113,7 +113,7 @@ fn lives_depleted_subtitle_is_from_known_variants() {
 
 #[test]
 fn in_progress_outcome_shows_run_ended() {
-    let mut app = test_app(RunOutcome::InProgress);
+    let mut app = test_app(NodeResult::InProgress);
     app.update();
 
     let texts = collect_texts(&mut app);
@@ -128,9 +128,9 @@ fn subtitle_falls_back_to_first_variant_without_stats() {
     // No RunStats inserted — subtitle should fall back to first Won variant.
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
-        .insert_resource(RunState {
+        .insert_resource(NodeOutcome {
             node_index: 0,
-            outcome: RunOutcome::Won,
+            result: NodeResult::Won,
             ..default()
         })
         .add_systems(Update, spawn_run_end_screen);
@@ -155,7 +155,7 @@ fn different_seeds_produce_different_subtitles() {
             seed,
             ..Default::default()
         };
-        let mut app = test_app_with_stats(RunOutcome::Won, stats);
+        let mut app = test_app_with_stats(NodeResult::Won, stats);
         app.update();
 
         let texts = collect_texts(&mut app);

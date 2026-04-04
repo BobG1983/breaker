@@ -1,6 +1,7 @@
 //! Main menu keyboard and mouse input handling.
 
 use bevy::{app::AppExit, prelude::*};
+use rantzsoft_lifecycle::ChangeState;
 
 use crate::{
     input::InputConfig,
@@ -19,7 +20,7 @@ pub(crate) fn handle_main_menu_input(
     keys: Res<ButtonInput<KeyCode>>,
     config: Res<InputConfig>,
     mut selection: ResMut<MainMenuSelection>,
-    mut next_state: ResMut<NextState<MenuState>>,
+    mut state_writer: MessageWriter<ChangeState<MenuState>>,
     mut exit_writer: MessageWriter<AppExit>,
     interaction_query: Query<(&Interaction, &MenuItem), Changed<Interaction>>,
 ) {
@@ -28,7 +29,7 @@ pub(crate) fn handle_main_menu_input(
         match interaction {
             Interaction::Pressed => {
                 selection.selected = *item;
-                confirm_selection(&selection, &mut next_state, &mut exit_writer);
+                confirm_selection(&selection, &mut state_writer, &mut exit_writer);
             }
             Interaction::Hovered => {
                 selection.selected = *item;
@@ -55,7 +56,7 @@ pub(crate) fn handle_main_menu_input(
     }
 
     if config.menu_confirm.iter().any(|k| keys.just_pressed(*k)) {
-        confirm_selection(&selection, &mut next_state, &mut exit_writer);
+        confirm_selection(&selection, &mut state_writer, &mut exit_writer);
     }
 }
 
@@ -70,11 +71,13 @@ fn current_index(selection: &MainMenuSelection) -> usize {
 /// Executes the action for the current selection.
 fn confirm_selection(
     selection: &MainMenuSelection,
-    next_state: &mut ResMut<NextState<MenuState>>,
+    state_writer: &mut MessageWriter<ChangeState<MenuState>>,
     exit_writer: &mut MessageWriter<AppExit>,
 ) {
     match selection.selected {
-        MenuItem::Play => next_state.set(MenuState::StartGame),
+        MenuItem::Play => {
+            state_writer.write(ChangeState::new());
+        }
         MenuItem::Settings => {} // Not yet implemented
         MenuItem::Quit => {
             exit_writer.write(AppExit::Success);
@@ -85,6 +88,7 @@ fn confirm_selection(
 #[cfg(test)]
 mod tests {
     use bevy::{ecs::message::Messages, state::app::StatesPlugin};
+    use rantzsoft_lifecycle::ChangeState;
 
     use super::*;
     use crate::state::types::{AppState, GameState};
@@ -98,6 +102,7 @@ mod tests {
             .add_sub_state::<GameState>()
             .add_sub_state::<MenuState>()
             .add_message::<AppExit>()
+            .add_message::<ChangeState<MenuState>>()
             .insert_resource(MainMenuSelection {
                 selected: MenuItem::Play,
             })
@@ -146,10 +151,10 @@ mod tests {
         let mut app = test_app();
         press_key(&mut app, KeyCode::Enter);
 
-        let next = app.world().resource::<NextState<MenuState>>();
+        let msgs = app.world().resource::<Messages<ChangeState<MenuState>>>();
         assert!(
-            format!("{next:?}").contains("StartGame"),
-            "expected NextState to contain StartGame, got: {next:?}"
+            msgs.iter_current_update_messages().count() > 0,
+            "expected ChangeState<MenuState> message"
         );
     }
 
@@ -175,10 +180,11 @@ mod tests {
         press_key(&mut app, KeyCode::Enter);
 
         // No state transition
-        let next = app.world().resource::<NextState<MenuState>>();
-        assert!(
-            !format!("{next:?}").contains("StartGame"),
-            "expected no state transition, got: {next:?}"
+        let msgs = app.world().resource::<Messages<ChangeState<MenuState>>>();
+        assert_eq!(
+            msgs.iter_current_update_messages().count(),
+            0,
+            "expected no ChangeState<MenuState> message"
         );
 
         // No exit message

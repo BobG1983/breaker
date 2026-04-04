@@ -6,8 +6,15 @@ use bevy::{prelude::*, state::state::FreelyMutableState};
 
 use crate::{
     dispatch::{dispatch_condition_routes, dispatch_message_routes},
-    messages::{ChangeState, StateChanged},
+    messages::{ChangeState, StateChanged, TransitionEnd, TransitionStart},
     routing_table::RoutingTable,
+    transition::{
+        messages::{TransitionOver, TransitionReady, TransitionRunComplete},
+        orchestration::orchestrate_transitions,
+        registry::TransitionRegistry,
+        resources::{EndingTransition, RunningTransition, StartingTransition},
+        traits::Transition,
+    },
 };
 
 /// Lifecycle plugin — declarative state routing for Bevy 0.18.
@@ -42,6 +49,7 @@ impl RantzLifecyclePlugin {
     /// Register all lifecycle infrastructure for state type `S`:
     /// - [`RoutingTable<S>`] resource
     /// - [`ChangeState<S>`] and [`StateChanged<S>`] messages
+    /// - [`TransitionStart<S>`] and [`TransitionEnd<S>`] messages
     /// - Message-triggered and condition-triggered dispatch systems
     ///
     /// # Panics
@@ -57,6 +65,8 @@ impl RantzLifecyclePlugin {
                 app.init_resource::<RoutingTable<S>>()
                     .add_message::<ChangeState<S>>()
                     .add_message::<StateChanged<S>>()
+                    .add_message::<TransitionStart<S>>()
+                    .add_message::<TransitionEnd<S>>()
                     .add_systems(
                         Update,
                         (
@@ -64,6 +74,56 @@ impl RantzLifecyclePlugin {
                             dispatch_condition_routes::<S>,
                         ),
                     );
+            }));
+        self
+    }
+
+    /// Register a custom transition effect type with its three phase systems.
+    ///
+    /// The three systems correspond to the three phases of a transition:
+    /// - `start_system`: runs when `StartingTransition<T>` exists
+    /// - `run_system`: runs when `RunningTransition<T>` exists
+    /// - `end_system`: runs when `EndingTransition<T>` exists
+    ///
+    /// Each system is gated by `run_if(resource_exists::<MarkerResource<T>>)`.
+    /// Systems are ordered `.before(orchestrate_transitions)` so phase
+    /// transitions complete within each update cycle.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the internal lock is poisoned (unrecoverable).
+    #[must_use]
+    pub fn register_custom_transition<T: Transition, M1, M2, M3>(
+        self,
+        start_system: impl IntoSystem<(), (), M1> + Send + Sync + 'static,
+        run_system: impl IntoSystem<(), (), M2> + Send + Sync + 'static,
+        end_system: impl IntoSystem<(), (), M3> + Send + Sync + 'static,
+    ) -> Self {
+        #[allow(clippy::expect_used, reason = "poisoned Mutex is unrecoverable")]
+        self.registrations
+            .lock()
+            .expect("lifecycle plugin lock poisoned")
+            .push(Box::new(move |app| {
+                // Register the effect type in the TransitionRegistry
+                app.world_mut()
+                    .resource_mut::<TransitionRegistry>()
+                    .register::<T>();
+
+                // Register the three phase systems, gated on marker resources
+                app.add_systems(
+                    Update,
+                    (
+                        start_system
+                            .run_if(resource_exists::<StartingTransition<T>>)
+                            .before(orchestrate_transitions),
+                        run_system
+                            .run_if(resource_exists::<RunningTransition<T>>)
+                            .before(orchestrate_transitions),
+                        end_system
+                            .run_if(resource_exists::<EndingTransition<T>>)
+                            .before(orchestrate_transitions),
+                    ),
+                );
             }));
         self
     }
@@ -77,6 +137,16 @@ impl Default for RantzLifecyclePlugin {
 
 impl Plugin for RantzLifecyclePlugin {
     fn build(&self, app: &mut App) {
+        // Register shared transition infrastructure
+        app.init_resource::<TransitionRegistry>()
+            .add_message::<TransitionReady>()
+            .add_message::<TransitionRunComplete>()
+            .add_message::<TransitionOver>()
+            .add_systems(Update, orchestrate_transitions);
+
+        // Register built-in transition effects
+        crate::transition::effects::register_builtin_transitions(app);
+
         #[allow(clippy::expect_used, reason = "poisoned Mutex is unrecoverable")]
         let mut registrations = self
             .registrations
@@ -93,7 +163,14 @@ mod tests {
     use bevy::state::app::StatesPlugin;
 
     use super::*;
-    use crate::{Route, RoutingTable, routing_table::RoutingTableAppExt};
+    use crate::{
+        Route, RoutingTable,
+        routing_table::RoutingTableAppExt,
+        transition::{
+            messages::{TransitionOver, TransitionReady, TransitionRunComplete},
+            traits::{InTransition, OutTransition, Transition},
+        },
+    };
 
     #[derive(States, Default, Clone, Copy, PartialEq, Eq, Hash, Debug)]
     enum AppState {
@@ -108,6 +185,37 @@ mod tests {
         #[default]
         Menu,
     }
+
+    // Test effect types
+    struct TestEffectOut;
+    impl Transition for TestEffectOut {}
+    impl OutTransition for TestEffectOut {}
+
+    struct TestEffectIn;
+    impl Transition for TestEffectIn {}
+    impl InTransition for TestEffectIn {}
+
+    // Test effect systems (instant completion)
+    fn test_start_sys(mut writer: MessageWriter<TransitionReady>) {
+        writer.write(TransitionReady);
+    }
+    fn test_run_sys(mut writer: MessageWriter<TransitionRunComplete>) {
+        writer.write(TransitionRunComplete);
+    }
+    fn test_end_sys(mut writer: MessageWriter<TransitionOver>) {
+        writer.write(TransitionOver);
+    }
+    fn test_start_sys_in(mut writer: MessageWriter<TransitionReady>) {
+        writer.write(TransitionReady);
+    }
+    fn test_run_sys_in(mut writer: MessageWriter<TransitionRunComplete>) {
+        writer.write(TransitionRunComplete);
+    }
+    fn test_end_sys_in(mut writer: MessageWriter<TransitionOver>) {
+        writer.write(TransitionOver);
+    }
+
+    // --- Existing tests (preserved) ---
 
     #[test]
     fn plugin_builds_and_registers_state_types() {
@@ -212,5 +320,173 @@ mod tests {
         assert_eq!(changed.len(), 1);
         assert_eq!(changed[0].from, AppState::Loading);
         assert_eq!(changed[0].to, AppState::Game);
+    }
+
+    // --- Section L: register_custom_transition ---
+
+    // Behavior 33: register_custom_transition registers effect systems gated on marker resources
+    #[test]
+    fn register_custom_transition_registers_effect_in_registry() {
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, StatesPlugin))
+            .init_state::<AppState>()
+            .add_plugins(
+                RantzLifecyclePlugin::new()
+                    .register_state::<AppState>()
+                    .register_custom_transition::<TestEffectOut, _, _, _>(
+                        test_start_sys,
+                        test_run_sys,
+                        test_end_sys,
+                    ),
+            );
+        app.update();
+
+        let registry = app.world().resource::<TransitionRegistry>();
+        assert!(
+            registry.contains::<TestEffectOut>(),
+            "TransitionRegistry should contain TestEffectOut after register_custom_transition"
+        );
+    }
+
+    #[test]
+    fn effect_systems_do_not_run_when_marker_absent() {
+        // This test verifies that the gated systems do NOT run when
+        // their marker resources are absent. Since the test effect systems
+        // send TransitionReady/RunComplete/Over, we check that no such
+        // messages exist after an update with no markers present.
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, StatesPlugin))
+            .init_state::<AppState>()
+            .add_plugins(
+                RantzLifecyclePlugin::new()
+                    .register_state::<AppState>()
+                    .register_custom_transition::<TestEffectOut, _, _, _>(
+                        test_start_sys,
+                        test_run_sys,
+                        test_end_sys,
+                    ),
+            );
+        app.update();
+
+        // No marker resources inserted — systems should not fire
+        let ready_msgs = app
+            .world()
+            .resource::<bevy::ecs::message::Messages<TransitionReady>>();
+        assert_eq!(
+            ready_msgs.iter_current_update_messages().count(),
+            0,
+            "TransitionReady should not be sent when StartingTransition is absent"
+        );
+    }
+
+    // Behavior 34: register_custom_transition for multiple effects
+    #[test]
+    fn register_multiple_custom_transitions() {
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, StatesPlugin))
+            .init_state::<AppState>()
+            .add_plugins(
+                RantzLifecyclePlugin::new()
+                    .register_state::<AppState>()
+                    .register_custom_transition::<TestEffectOut, _, _, _>(
+                        test_start_sys,
+                        test_run_sys,
+                        test_end_sys,
+                    )
+                    .register_custom_transition::<TestEffectIn, _, _, _>(
+                        test_start_sys_in,
+                        test_run_sys_in,
+                        test_end_sys_in,
+                    ),
+            );
+        app.update();
+
+        let registry = app.world().resource::<TransitionRegistry>();
+        assert!(registry.contains::<TestEffectOut>());
+        assert!(registry.contains::<TestEffectIn>());
+    }
+
+    // Behavior 35: Plugin registers internal messages
+    #[test]
+    fn plugin_registers_internal_messages() {
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, StatesPlugin))
+            .init_state::<AppState>()
+            .add_plugins(RantzLifecyclePlugin::new().register_state::<AppState>());
+        app.update();
+
+        // The internal messages should be registered (pub(crate) but resources exist)
+        assert!(
+            app.world()
+                .contains_resource::<bevy::ecs::message::Messages<TransitionReady>>(),
+            "TransitionReady message should be registered"
+        );
+        assert!(
+            app.world()
+                .contains_resource::<bevy::ecs::message::Messages<TransitionRunComplete>>(),
+            "TransitionRunComplete message should be registered"
+        );
+        assert!(
+            app.world()
+                .contains_resource::<bevy::ecs::message::Messages<TransitionOver>>(),
+            "TransitionOver message should be registered"
+        );
+    }
+
+    // Behavior 36: Plugin registers TransitionStart<S> and TransitionEnd<S> per state
+    #[test]
+    fn plugin_registers_transition_start_and_end_per_state() {
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, StatesPlugin))
+            .init_state::<AppState>()
+            .add_plugins(RantzLifecyclePlugin::new().register_state::<AppState>());
+        app.update();
+
+        assert!(
+            app.world()
+                .contains_resource::<bevy::ecs::message::Messages<TransitionStart<AppState>>>(),
+            "TransitionStart<AppState> should be registered"
+        );
+        assert!(
+            app.world()
+                .contains_resource::<bevy::ecs::message::Messages<TransitionEnd<AppState>>>(),
+            "TransitionEnd<AppState> should be registered"
+        );
+    }
+
+    // Behavior 37: Plugin registers TransitionRegistry resource
+    #[test]
+    fn plugin_registers_transition_registry() {
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, StatesPlugin))
+            .init_state::<AppState>()
+            .add_plugins(RantzLifecyclePlugin::new());
+        app.update();
+
+        assert!(
+            app.world().contains_resource::<TransitionRegistry>(),
+            "TransitionRegistry resource should exist after plugin builds"
+        );
+    }
+
+    // Behavior 38: Plugin registers orchestration system
+    // This is verified implicitly by the end-to-end orchestration tests in Section G.
+    // Here we just verify that the plugin builds without panicking when the
+    // orchestration system is registered.
+    #[test]
+    fn plugin_builds_with_orchestration_system() {
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, StatesPlugin))
+            .init_state::<AppState>()
+            .add_plugins(
+                RantzLifecyclePlugin::new()
+                    .register_state::<AppState>()
+                    .register_custom_transition::<TestEffectOut, _, _, _>(
+                        test_start_sys,
+                        test_run_sys,
+                        test_end_sys,
+                    ),
+            );
+        app.update(); // Should not panic
     }
 }

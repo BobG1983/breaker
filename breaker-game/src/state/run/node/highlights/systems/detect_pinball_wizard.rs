@@ -18,7 +18,7 @@ pub(crate) fn detect_pinball_wizard(
     config: Res<HighlightConfig>,
     mut tracker: ResMut<HighlightTracker>,
     mut stats: ResMut<RunStats>,
-    run_state: Res<RunState>,
+    run_state: Res<NodeOutcome>,
     mut writer: MessageWriter<HighlightTriggered>,
 ) {
     // Increment cell bounces since breaker contact
@@ -111,7 +111,7 @@ mod tests {
             .add_message::<HighlightTriggered>()
             .init_resource::<RunStats>()
             .init_resource::<HighlightTracker>()
-            .init_resource::<RunState>()
+            .init_resource::<NodeOutcome>()
             .insert_resource(HighlightConfig::default())
             .init_resource::<TestBoltImpactCell>()
             .init_resource::<TestBoltImpactBreaker>()

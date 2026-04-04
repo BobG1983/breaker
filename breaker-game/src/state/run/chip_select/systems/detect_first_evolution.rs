@@ -18,7 +18,7 @@ pub(crate) fn detect_first_evolution(
     registry: Option<Res<ChipCatalog>>,
     mut tracker: ResMut<HighlightTracker>,
     mut stats: ResMut<RunStats>,
-    run_state: Res<RunState>,
+    run_state: Res<NodeOutcome>,
     mut writer: MessageWriter<HighlightTriggered>,
 ) {
     let Some(registry) = registry else {
@@ -114,7 +114,7 @@ mod tests {
             .add_message::<HighlightTriggered>()
             .init_resource::<RunStats>()
             .init_resource::<HighlightTracker>()
-            .init_resource::<RunState>()
+            .init_resource::<NodeOutcome>()
             .insert_resource(HighlightConfig::default())
             .insert_resource(test_chip_registry())
             .init_resource::<CapturedHighlightTriggered>()
@@ -258,7 +258,7 @@ mod tests {
             .add_message::<HighlightTriggered>()
             .init_resource::<RunStats>()
             .init_resource::<HighlightTracker>()
-            .init_resource::<RunState>()
+            .init_resource::<NodeOutcome>()
             .insert_resource(HighlightConfig::default())
             // NOTE: No ChipCatalog inserted — Option<Res<ChipCatalog>> is None
             .init_resource::<CapturedHighlightTriggered>()

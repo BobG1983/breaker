@@ -1,25 +1,26 @@
 //! System to handle node cleared events — advance or win.
 
 use bevy::prelude::*;
+use rantzsoft_lifecycle::ChangeState;
 use tracing::warn;
 
 use crate::state::{
     run::{
         node::{NodeLayoutRegistry, messages::NodeCleared},
-        resources::{NodeSequence, RunOutcome, RunState},
+        resources::{NodeOutcome, NodeResult, NodeSequence},
     },
     types::NodeState,
 };
 
-/// When [`NodeCleared`] is received, set [`RunOutcome`] and transition to
-/// [`NodeState::AnimateOut`]. The teardown router reads `RunOutcome` to decide
+/// When [`NodeCleared`] is received, set [`NodeOutcome`] and transition to
+/// [`NodeState::AnimateOut`]. The teardown router reads `NodeOutcome` to decide
 /// whether to go to `ChipSelect` or `RunEnd`.
 pub(crate) fn handle_node_cleared(
     mut reader: MessageReader<NodeCleared>,
     registry: Res<NodeLayoutRegistry>,
     node_sequence: Option<Res<NodeSequence>>,
-    mut run_state: ResMut<RunState>,
-    mut next_state: ResMut<NextState<NodeState>>,
+    mut run_state: ResMut<NodeOutcome>,
+    mut writer: MessageWriter<ChangeState<NodeState>>,
 ) {
     if reader.read().next().is_none() {
         return;
@@ -39,20 +40,21 @@ pub(crate) fn handle_node_cleared(
     run_state.transition_queued = true;
 
     if (run_state.node_index as usize) >= final_index {
-        run_state.outcome = RunOutcome::Won;
+        run_state.result = NodeResult::Won;
     }
 
-    next_state.set(NodeState::AnimateOut);
+    writer.write(ChangeState::new());
 }
 
 #[cfg(test)]
 mod tests {
-    use bevy::state::app::StatesPlugin;
+    use bevy::{ecs::message::Messages, state::app::StatesPlugin};
+    use rantzsoft_lifecycle::ChangeState;
 
     use super::*;
     use crate::state::{
         run::node::{NodeLayout, definition::NodePool},
-        types::{AppState, GameState, RunPhase},
+        types::{AppState, GameState, RunState},
     };
 
     fn make_layout(name: &str) -> NodeLayout {
@@ -82,15 +84,16 @@ mod tests {
         app.add_plugins((MinimalPlugins, StatesPlugin))
             .init_state::<AppState>()
             .add_sub_state::<GameState>()
-            .add_sub_state::<RunPhase>()
+            .add_sub_state::<RunState>()
             .add_sub_state::<NodeState>()
-            .add_message::<NodeCleared>();
+            .add_message::<NodeCleared>()
+            .add_message::<ChangeState<NodeState>>();
         let mut registry = NodeLayoutRegistry::default();
         for i in 0..layout_count {
             registry.insert(make_layout(&format!("node_{i}")));
         }
         app.insert_resource(registry)
-            .insert_resource(RunState {
+            .insert_resource(NodeOutcome {
                 node_index,
                 ..default()
             })
@@ -106,8 +109,8 @@ mod tests {
             .set(GameState::Run);
         app.update();
         app.world_mut()
-            .resource_mut::<NextState<RunPhase>>()
-            .set(RunPhase::Node);
+            .resource_mut::<NextState<RunState>>()
+            .set(RunState::Node);
         app.update();
         app
     }
@@ -126,14 +129,14 @@ mod tests {
         app.world_mut().resource_mut::<SendNodeCleared>().0 = true;
         tick(&mut app);
 
-        let next = app.world().resource::<NextState<NodeState>>();
+        let msgs = app.world().resource::<Messages<ChangeState<NodeState>>>();
         assert!(
-            format!("{next:?}").contains("AnimateOut"),
-            "expected AnimateOut, got: {next:?}"
+            msgs.iter_current_update_messages().count() > 0,
+            "expected ChangeState<NodeState> message"
         );
-        let run_state = app.world().resource::<RunState>();
+        let run_state = app.world().resource::<NodeOutcome>();
         assert!(run_state.transition_queued);
-        assert_eq!(run_state.outcome, RunOutcome::InProgress);
+        assert_eq!(run_state.result, NodeResult::InProgress);
     }
 
     #[test]
@@ -142,14 +145,14 @@ mod tests {
         app.world_mut().resource_mut::<SendNodeCleared>().0 = true;
         tick(&mut app);
 
-        let next = app.world().resource::<NextState<NodeState>>();
+        let msgs = app.world().resource::<Messages<ChangeState<NodeState>>>();
         assert!(
-            format!("{next:?}").contains("AnimateOut"),
-            "expected AnimateOut, got: {next:?}"
+            msgs.iter_current_update_messages().count() > 0,
+            "expected ChangeState<NodeState> message"
         );
 
-        let run_state = app.world().resource::<RunState>();
-        assert_eq!(run_state.outcome, RunOutcome::Won);
+        let run_state = app.world().resource::<NodeOutcome>();
+        assert_eq!(run_state.result, NodeResult::Won);
         assert!(run_state.transition_queued);
     }
 
@@ -159,14 +162,14 @@ mod tests {
         app.world_mut().resource_mut::<SendNodeCleared>().0 = true;
         tick(&mut app);
 
-        let next = app.world().resource::<NextState<NodeState>>();
-        let debug = format!("{next:?}");
-        assert!(
-            !debug.contains("AnimateOut"),
-            "empty registry should not trigger any transition, got: {next:?}"
+        let msgs = app.world().resource::<Messages<ChangeState<NodeState>>>();
+        assert_eq!(
+            msgs.iter_current_update_messages().count(),
+            0,
+            "empty registry should not trigger any ChangeState message"
         );
-        let run_state = app.world().resource::<RunState>();
-        assert_eq!(run_state.outcome, RunOutcome::InProgress);
+        let run_state = app.world().resource::<NodeOutcome>();
+        assert_eq!(run_state.result, NodeResult::InProgress);
     }
 
     #[test]
@@ -175,11 +178,11 @@ mod tests {
         // SendNodeCleared stays false
         tick(&mut app);
 
-        let next = app.world().resource::<NextState<NodeState>>();
-        let debug = format!("{next:?}");
-        assert!(
-            !debug.contains("AnimateOut"),
-            "expected no state change, got: {next:?}"
+        let msgs = app.world().resource::<Messages<ChangeState<NodeState>>>();
+        assert_eq!(
+            msgs.iter_current_update_messages().count(),
+            0,
+            "expected no ChangeState message"
         );
     }
 
@@ -210,16 +213,17 @@ mod tests {
         app.add_plugins((MinimalPlugins, StatesPlugin))
             .init_state::<AppState>()
             .add_sub_state::<GameState>()
-            .add_sub_state::<RunPhase>()
+            .add_sub_state::<RunState>()
             .add_sub_state::<NodeState>()
-            .add_message::<NodeCleared>();
+            .add_message::<NodeCleared>()
+            .add_message::<ChangeState<NodeState>>();
         let mut registry = NodeLayoutRegistry::default();
         for i in 0..layout_count {
             registry.insert(make_layout(&format!("node_{i}")));
         }
         app.insert_resource(registry)
             .insert_resource(make_node_sequence(sequence_len))
-            .insert_resource(RunState {
+            .insert_resource(NodeOutcome {
                 node_index,
                 ..default()
             })
@@ -235,8 +239,8 @@ mod tests {
             .set(GameState::Run);
         app.update();
         app.world_mut()
-            .resource_mut::<NextState<RunPhase>>()
-            .set(RunPhase::Node);
+            .resource_mut::<NextState<RunState>>()
+            .set(RunState::Node);
         app.update();
         app
     }
@@ -247,16 +251,16 @@ mod tests {
         app.world_mut().resource_mut::<SendNodeCleared>().0 = true;
         tick(&mut app);
 
-        let next = app.world().resource::<NextState<NodeState>>();
+        let msgs = app.world().resource::<Messages<ChangeState<NodeState>>>();
         assert!(
-            format!("{next:?}").contains("AnimateOut"),
-            "node_index 3 of 9 should transition to AnimateOut; got: {next:?}"
+            msgs.iter_current_update_messages().count() > 0,
+            "node_index 3 of 9 should send ChangeState<NodeState> message"
         );
 
-        let run_state = app.world().resource::<RunState>();
+        let run_state = app.world().resource::<NodeOutcome>();
         assert_eq!(
-            run_state.outcome,
-            RunOutcome::InProgress,
+            run_state.result,
+            NodeResult::InProgress,
             "run should still be in progress at node 3 of 9"
         );
     }
@@ -267,16 +271,16 @@ mod tests {
         app.world_mut().resource_mut::<SendNodeCleared>().0 = true;
         tick(&mut app);
 
-        let next = app.world().resource::<NextState<NodeState>>();
+        let msgs = app.world().resource::<Messages<ChangeState<NodeState>>>();
         assert!(
-            format!("{next:?}").contains("AnimateOut"),
-            "node_index 8 of 9 should transition to AnimateOut; got: {next:?}"
+            msgs.iter_current_update_messages().count() > 0,
+            "node_index 8 of 9 should send ChangeState<NodeState> message"
         );
 
-        let run_state = app.world().resource::<RunState>();
+        let run_state = app.world().resource::<NodeOutcome>();
         assert_eq!(
-            run_state.outcome,
-            RunOutcome::Won,
+            run_state.result,
+            NodeResult::Won,
             "outcome should be Won at final node"
         );
     }
@@ -287,16 +291,16 @@ mod tests {
         app.world_mut().resource_mut::<SendNodeCleared>().0 = true;
         tick(&mut app);
 
-        let next = app.world().resource::<NextState<NodeState>>();
+        let msgs = app.world().resource::<Messages<ChangeState<NodeState>>>();
         assert!(
-            format!("{next:?}").contains("AnimateOut"),
-            "node_index 7 of 9 should transition to AnimateOut; got: {next:?}"
+            msgs.iter_current_update_messages().count() > 0,
+            "node_index 7 of 9 should send ChangeState<NodeState> message"
         );
 
-        let run_state = app.world().resource::<RunState>();
+        let run_state = app.world().resource::<NodeOutcome>();
         assert_eq!(
-            run_state.outcome,
-            RunOutcome::InProgress,
+            run_state.result,
+            NodeResult::InProgress,
             "run should still be in progress at penultimate node"
         );
     }

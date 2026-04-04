@@ -71,6 +71,13 @@ Branch: develop
 - rustc-hash v1.1.0 + v2.1.1 (dual — known wontfix)
 - itertools v0.13.0 + v0.14.0 (dual — known wontfix)
 
+## Changes since prior audit (2026-04-03 feature/wall-builder-pattern Wave 2–3)
+- **rantzsoft_lifecycle** — NEW workspace member added on feature/wall-builder-pattern.
+  Direct deps: bevy 0.18.1 (default-features=false, features=["2d"]). No new third-party deps.
+  Uses `lints.workspace = true` — inherits workspace unsafe_code = "deny".
+  No FFI, no new proc-macro crates. Zero security surface added.
+  NOTE: snapshot below predates this addition — re-run cargo tree on next dep audit.
+
 ## Changes since prior audit (2026-04-02 feature/breaker-builder-pattern)
 - Shield refactor + test helper migration: No new direct dependencies added.
 - Cargo.toml files: UNCHANGED from prior audit.

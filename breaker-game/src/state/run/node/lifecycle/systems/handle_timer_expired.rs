@@ -1,11 +1,12 @@
 //! System to handle timer expiry — lose the run.
 
 use bevy::prelude::*;
+use rantzsoft_lifecycle::ChangeState;
 
 use crate::state::{
     run::{
         node::messages::TimerExpired,
-        resources::{RunOutcome, RunState},
+        resources::{NodeOutcome, NodeResult},
     },
     types::NodeState,
 };
@@ -17,14 +18,14 @@ use crate::state::{
 /// tick the timer fired, the player wins — clear beats loss.
 pub(crate) fn handle_timer_expired(
     mut reader: MessageReader<TimerExpired>,
-    mut run_state: ResMut<RunState>,
-    mut next_state: ResMut<NextState<NodeState>>,
+    mut run_state: ResMut<NodeOutcome>,
+    mut writer: MessageWriter<ChangeState<NodeState>>,
 ) {
     if reader.read().next().is_none() {
         return;
     }
 
-    if run_state.outcome != RunOutcome::InProgress {
+    if run_state.result != NodeResult::InProgress {
         return;
     }
 
@@ -33,16 +34,17 @@ pub(crate) fn handle_timer_expired(
         return;
     }
 
-    run_state.outcome = RunOutcome::TimerExpired;
-    next_state.set(NodeState::AnimateOut);
+    run_state.result = NodeResult::TimerExpired;
+    writer.write(ChangeState::new());
 }
 
 #[cfg(test)]
 mod tests {
-    use bevy::state::app::StatesPlugin;
+    use bevy::{ecs::message::Messages, state::app::StatesPlugin};
+    use rantzsoft_lifecycle::ChangeState;
 
     use super::*;
-    use crate::state::types::{AppState, GameState, RunPhase};
+    use crate::state::types::{AppState, GameState, RunState};
 
     #[derive(Resource)]
     struct SendTimerExpired(bool);
@@ -53,17 +55,18 @@ mod tests {
         }
     }
 
-    fn test_app(outcome: RunOutcome) -> App {
+    fn test_app(result: NodeResult) -> App {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, StatesPlugin))
             .init_state::<AppState>()
             .add_sub_state::<GameState>()
-            .add_sub_state::<RunPhase>()
+            .add_sub_state::<RunState>()
             .add_sub_state::<NodeState>()
             .add_message::<TimerExpired>()
-            .insert_resource(RunState {
+            .add_message::<ChangeState<NodeState>>()
+            .insert_resource(NodeOutcome {
                 node_index: 0,
-                outcome,
+                result,
                 ..default()
             })
             .insert_resource(SendTimerExpired(false))
@@ -78,8 +81,8 @@ mod tests {
             .set(GameState::Run);
         app.update();
         app.world_mut()
-            .resource_mut::<NextState<RunPhase>>()
-            .set(RunPhase::Node);
+            .resource_mut::<NextState<RunState>>()
+            .set(RunState::Node);
         app.update();
         app
     }
@@ -94,52 +97,54 @@ mod tests {
 
     #[test]
     fn timer_expired_sets_lost_and_run_end() {
-        let mut app = test_app(RunOutcome::InProgress);
+        let mut app = test_app(NodeResult::InProgress);
         app.world_mut().resource_mut::<SendTimerExpired>().0 = true;
         tick(&mut app);
 
-        let run_state = app.world().resource::<RunState>();
-        assert_eq!(run_state.outcome, RunOutcome::TimerExpired);
+        let run_state = app.world().resource::<NodeOutcome>();
+        assert_eq!(run_state.result, NodeResult::TimerExpired);
 
-        let next = app.world().resource::<NextState<NodeState>>();
+        let msgs = app.world().resource::<Messages<ChangeState<NodeState>>>();
         assert!(
-            format!("{next:?}").contains("AnimateOut"),
-            "expected AnimateOut, got: {next:?}"
+            msgs.iter_current_update_messages().count() > 0,
+            "expected ChangeState<NodeState> message"
         );
     }
 
     #[test]
     fn no_message_no_change() {
-        let mut app = test_app(RunOutcome::InProgress);
+        let mut app = test_app(NodeResult::InProgress);
         tick(&mut app);
 
-        let run_state = app.world().resource::<RunState>();
-        assert_eq!(run_state.outcome, RunOutcome::InProgress);
+        let run_state = app.world().resource::<NodeOutcome>();
+        assert_eq!(run_state.result, NodeResult::InProgress);
     }
 
     #[test]
     fn timer_expired_yields_to_node_cleared_transition() {
-        let mut app = test_app(RunOutcome::InProgress);
+        let mut app = test_app(NodeResult::InProgress);
         // Simulate handle_node_cleared having already queued a transition this frame
-        app.world_mut().resource_mut::<RunState>().transition_queued = true;
+        app.world_mut()
+            .resource_mut::<NodeOutcome>()
+            .transition_queued = true;
         app.world_mut().resource_mut::<SendTimerExpired>().0 = true;
         tick(&mut app);
 
-        let run_state = app.world().resource::<RunState>();
+        let run_state = app.world().resource::<NodeOutcome>();
         assert_eq!(
-            run_state.outcome,
-            RunOutcome::InProgress,
+            run_state.result,
+            NodeResult::InProgress,
             "timer expiry should be silently dropped when a node-cleared transition is already queued"
         );
     }
 
     #[test]
     fn already_won_ignores_timer_expired() {
-        let mut app = test_app(RunOutcome::Won);
+        let mut app = test_app(NodeResult::Won);
         app.world_mut().resource_mut::<SendTimerExpired>().0 = true;
         tick(&mut app);
 
-        let run_state = app.world().resource::<RunState>();
-        assert_eq!(run_state.outcome, RunOutcome::Won);
+        let run_state = app.world().resource::<NodeOutcome>();
+        assert_eq!(run_state.result, NodeResult::Won);
     }
 }

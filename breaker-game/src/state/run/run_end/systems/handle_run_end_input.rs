@@ -1,6 +1,7 @@
 //! System to handle input on the run-end screen.
 
 use bevy::prelude::*;
+use rantzsoft_lifecycle::ChangeState;
 
 use crate::{
     input::resources::{GameAction, InputActions},
@@ -13,27 +14,29 @@ use crate::{
 /// through the parent hierarchy to the menu.
 pub(crate) fn handle_run_end_input(
     actions: Res<InputActions>,
-    mut next_state: ResMut<NextState<RunEndState>>,
+    mut writer: MessageWriter<ChangeState<RunEndState>>,
 ) {
     if actions.active(GameAction::MenuConfirm) {
-        next_state.set(RunEndState::AnimateOut);
+        writer.write(ChangeState::new());
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use bevy::state::app::StatesPlugin;
+    use bevy::{ecs::message::Messages, state::app::StatesPlugin};
+    use rantzsoft_lifecycle::ChangeState;
 
     use super::*;
-    use crate::state::types::{AppState, GameState, RunPhase};
+    use crate::state::types::{AppState, GameState, RunState};
 
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, StatesPlugin))
             .init_state::<AppState>()
             .add_sub_state::<GameState>()
-            .add_sub_state::<RunPhase>()
+            .add_sub_state::<RunState>()
             .add_sub_state::<RunEndState>()
+            .add_message::<ChangeState<RunEndState>>()
             .init_resource::<InputActions>()
             .add_systems(Update, handle_run_end_input);
         // Navigate to RunEndState
@@ -46,8 +49,8 @@ mod tests {
             .set(GameState::Run);
         app.update();
         app.world_mut()
-            .resource_mut::<NextState<RunPhase>>()
-            .set(RunPhase::RunEnd);
+            .resource_mut::<NextState<RunState>>()
+            .set(RunState::RunEnd);
         app.update();
         app
     }
@@ -61,10 +64,10 @@ mod tests {
             .push(GameAction::MenuConfirm);
         app.update();
 
-        let next = app.world().resource::<NextState<RunEndState>>();
+        let msgs = app.world().resource::<Messages<ChangeState<RunEndState>>>();
         assert!(
-            format!("{next:?}").contains("AnimateOut"),
-            "expected AnimateOut, got: {next:?}"
+            msgs.iter_current_update_messages().count() > 0,
+            "expected ChangeState<RunEndState> message"
         );
     }
 
@@ -73,10 +76,11 @@ mod tests {
         let mut app = test_app();
         app.update();
 
-        let next = app.world().resource::<NextState<RunEndState>>();
-        assert!(
-            !format!("{next:?}").contains("AnimateOut"),
-            "expected no transition, got: {next:?}"
+        let msgs = app.world().resource::<Messages<ChangeState<RunEndState>>>();
+        assert_eq!(
+            msgs.iter_current_update_messages().count(),
+            0,
+            "expected no ChangeState message"
         );
     }
 }

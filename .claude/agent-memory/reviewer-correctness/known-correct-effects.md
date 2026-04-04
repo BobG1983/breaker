@@ -193,20 +193,11 @@ no arithmetic transformation between push and pop — same bit-pattern guarantee
 `bumps_required=1`: first call inserts counter with remaining=0, fires reward immediately, resets to 1.
 Subsequent calls decrement from 1 to 0, fire reward, reset to 1. Fires on EVERY call. Tested. Correct.
 
-## ShieldActive charge-decrement: deferred remove + eager in-memory decrement is intentional
+## ShieldActive — ELIMINATED (Shield refactor, 2026-04-02)
 
-`handle_cell_hit` and `bolt_lost` both use the same pattern:
-- Decrement `shield.charges` directly (eager, in-memory)
-- Queue `commands.entity(...).remove::<ShieldActive>()` when charges reach 0 (deferred)
+`ShieldActive` NO LONGER EXISTS. The charge-based shield mechanism was entirely redesigned.
+Shield is now a timed visible floor wall (`ShieldWall` + `ShieldWallTimer`). `bolt_lost` and
+`handle_cell_hit` no longer reference `ShieldActive`. Do NOT re-flag the absence of
+ShieldActive charge-decrement patterns — the component and its logic were deleted.
 
-On the SAME frame's next message for the same entity, the in-memory charges value is already
-0, so the `charges > 0` guard fails and subsequent hits fall through to normal damage.
-This is correct. The `DamageVisualQuery` field was changed from `Has<ShieldActive>` to
-`Option<&'static mut ShieldActive>` to support charge mutation in the system.
-
-`bolt_lost` uses `shield_opt` captured once from `breaker_query.single_mut()`. The loop
-over `lost_bolts` re-reads `shield_opt.as_mut().is_some_and(|s| s.charges > 0)` each
-iteration — correctly seeing the updated in-memory value from the previous decrement.
-
-Both behaviors are fully tested in `handle_cell_hit/tests/shield_tests.rs` and
-`bolt_lost/tests/shield_tests.rs`.
+See `reviewer-architecture/shield_cross_domain_write.md` for the full elimination record.

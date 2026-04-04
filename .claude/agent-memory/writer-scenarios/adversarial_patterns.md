@@ -8,9 +8,9 @@ type: reference
 
 1. **Spawn-then-despawn racing**: effects that spawn entities (Shockwave, PiercingBeam, ChainLightning, TetherBeam, ChainBolt) under high-frequency triggers. Dense layout + chaos 0.6 maximises simultaneous spawns. Invariants: NoEntityLeaks + NoNaN.
 
-2. **Until reversal accumulation**: wrap stat effects in Until(TimeExpires(N)) on a frequently-firing trigger. If reversal fails, stat accumulates unboundedly. Invariants: BoltSpeedInRange (for SpeedBoost), NoNaN.
+2. **Until reversal accumulation**: wrap stat effects in Until(TimeExpires(N)) on a frequently-firing trigger. If reversal fails, stat accumulates unboundedly. Invariants: BoltSpeedAccurate (for SpeedBoost), NoNaN.
 
-3. **Multiplier stacking detection**: put the same SpeedBoost/DamageBoost on multiple independent triggers that could fire simultaneously (EarlyBumped + PerfectBumped + LateBumped). If the bridge incorrectly fires multiple variants, speed blows past max. Invariants: BoltSpeedInRange.
+3. **Multiplier stacking detection**: put the same SpeedBoost/DamageBoost on multiple independent triggers that could fire simultaneously (EarlyBumped + PerfectBumped + LateBumped). If the bridge incorrectly fires multiple variants, speed blows past max. Invariants: BoltSpeedAccurate.
 
 4. **Wall bounce amplification**: Corridor layout + impacted(Wall) trigger + SpeedBoost is the canonical "does clamping hold?" test. Every wall bounce fires the effect. 8000 frames gives hundreds of applications.
 
@@ -18,7 +18,7 @@ type: reference
 
 6. **NodeTimerThreshold replay risk**: If threshold fires more than once (timer rebounds across 0.5 due to float imprecision), TimePenalty compounds. Use Chrono breaker + Dense layout + TimerNonNegative. Do NOT include TimerMonotonicallyDecreasing with TimePenalty (penalty causes valid downward jumps that look like non-monotone behavior to that invariant).
 
-7. **NodeStart double-fire**: SpeedBoost on NodeStart at high multiplier (1.5x). If NodeStart fires twice per node, bolt hits 2.25x base speed and escapes BoltMaxSpeed. Use BoltSpeedInRange.
+7. **NodeStart double-fire**: SpeedBoost on NodeStart at high multiplier (1.5x). If NodeStart fires twice per node, bolt hits 2.25x base speed and escapes BoltMaxSpeed. Use BoltSpeedAccurate.
 
 ## Layout selection guide
 
@@ -34,7 +34,7 @@ type: reference
 | Goal | Invariants |
 |------|-----------|
 | Entity lifecycle (spawn/despawn) | NoEntityLeaks + NoNaN |
-| Speed integrity | BoltSpeedInRange + BoltInBounds + NoNaN |
+| Speed integrity | BoltSpeedAccurate + BoltInBounds + NoNaN |
 | Breaker integrity | BreakerInBounds + BreakerPositionClamped + NoNaN |
 | Timer integrity | TimerNonNegative (never TimerMonotonicallyDecreasing with TimePenalty) |
 | Bolt count bounds | BoltCountReasonable (raise max_bolt_count if effect legitimately spawns multiple) |
@@ -68,14 +68,14 @@ Dense layout + `When(trigger: Death, ...)` with a stat multiplier effect is the 
 stress test for multi-cell destruction. In a single-tick pierce pass through N cells,
 Death fires N times, compounding SpeedBoost(1.05) to 1.05^N per tick. Use a small
 multiplier (1.05) so single-fire is safe but double-fire accumulates detectably.
-BoltSpeedInRange is the primary detector.
+BoltSpeedAccurate is the primary detector.
 
 ## Impact(Breaker) + Corridor accumulation
 
 Corridor layout + `When(trigger: Impact(Breaker), ...)` + small SpeedBoost (1.05x) is
 the canonical "does double-fire on breaker contact accumulate?" test. The narrow channel
 forces high-frequency breaker contacts. 8000 frames at 64 Hz = ~500+ contacts.
-1.05^500 is astronomical — any double-fire is immediately detectable via BoltSpeedInRange.
+1.05^500 is astronomical — any double-fire is immediately detectable via BoltSpeedAccurate.
 
 ## BumpWhiff with Once + AOE combined
 
@@ -83,7 +83,7 @@ forces high-frequency breaker contacts. 8000 frames at 64 Hz = ~500+ contacts.
 stress-tests two independent dispatch paths in one whiff event: Once (consumed on first
 match) and an unconditional AOE spawn. If the bridge double-reads the message, Once fires
 twice (consuming and then silently failing) while Shockwave spawns two rings per whiff.
-Use NoEntityLeaks to catch the ring accumulation and BoltSpeedInRange for DamageBoost leakage.
+Use NoEntityLeaks to catch the ring accumulation and BoltSpeedAccurate for DamageBoost leakage.
 
 ## Seed selection
 

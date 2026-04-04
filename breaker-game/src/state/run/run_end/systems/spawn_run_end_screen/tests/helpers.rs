@@ -1,22 +1,22 @@
 use bevy::prelude::*;
 
 use super::super::spawn_run_end_screen;
-use crate::state::run::resources::{RunOutcome, RunState, RunStats};
+use crate::state::run::resources::{NodeOutcome, NodeResult, RunStats};
 
-pub(super) fn test_app(outcome: RunOutcome) -> App {
+pub(super) fn test_app(result: NodeResult) -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
-        .insert_resource(RunState {
+        .insert_resource(NodeOutcome {
             node_index: 0,
-            outcome,
+            result,
             ..default()
         })
         .add_systems(Update, spawn_run_end_screen);
     app
 }
 
-pub(super) fn test_app_with_stats(outcome: RunOutcome, stats: RunStats) -> App {
-    let mut app = test_app(outcome);
+pub(super) fn test_app_with_stats(result: NodeResult, stats: RunStats) -> App {
+    let mut app = test_app(result);
     app.insert_resource(stats);
     app
 }

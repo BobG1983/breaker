@@ -3,14 +3,14 @@ use crate::state::run::definition::{TierDefinition, TierNodeCount};
 
 #[test]
 fn default_run_state_starts_at_node_zero() {
-    let state = RunState::default();
+    let state = NodeOutcome::default();
     assert_eq!(state.node_index, 0);
 }
 
 #[test]
 fn default_outcome_is_in_progress() {
-    let state = RunState::default();
-    assert_eq!(state.outcome, RunOutcome::InProgress);
+    let state = NodeOutcome::default();
+    assert_eq!(state.result, NodeResult::InProgress);
 }
 
 // -- DifficultyCurve From conversion --

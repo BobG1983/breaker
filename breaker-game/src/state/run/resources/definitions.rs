@@ -55,27 +55,27 @@ impl Default for DifficultyCurve {
     }
 }
 
-/// Outcome of the current run.
+/// How the current node ended.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub enum RunOutcome {
-    /// Run is still in progress.
+pub enum NodeResult {
+    /// Node is still in progress.
     #[default]
     InProgress,
-    /// Player cleared all nodes.
+    /// Player cleared all nodes — run won.
     Won,
-    /// Timer expired before clearing all nodes.
+    /// Timer expired before clearing.
     TimerExpired,
     /// All lives depleted (Aegis breaker).
     LivesDepleted,
 }
 
-/// Tracks the current run's progress.
+/// Tracks the current node's outcome and run progress.
 #[derive(Resource, Debug, Clone, Default)]
-pub struct RunState {
+pub struct NodeOutcome {
     /// Zero-indexed node within the current run.
     pub node_index: u32,
-    /// Current run outcome.
-    pub outcome: RunOutcome,
+    /// How the current node ended.
+    pub result: NodeResult,
     /// Set to `true` when `handle_node_cleared` queues a state transition this
     /// frame. Checked by `handle_timer_expired` to yield to the node-cleared
     /// transition (player wins tie-frame: clear beats loss).

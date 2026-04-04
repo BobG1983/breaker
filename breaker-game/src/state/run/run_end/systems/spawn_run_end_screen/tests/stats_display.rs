@@ -1,5 +1,5 @@
 use super::helpers::*;
-use crate::state::run::resources::{HighlightKind, RunHighlight, RunOutcome, RunStats};
+use crate::state::run::resources::{HighlightKind, NodeResult, RunHighlight, RunStats};
 
 #[test]
 fn displays_nodes_cleared_from_stats() {
@@ -12,7 +12,7 @@ fn displays_nodes_cleared_from_stats() {
         time_elapsed: 125.5,
         ..Default::default()
     };
-    let mut app = test_app_with_stats(RunOutcome::Won, stats);
+    let mut app = test_app_with_stats(NodeResult::Won, stats);
     app.update();
 
     let texts = collect_texts(&mut app);
@@ -33,7 +33,7 @@ fn displays_cells_destroyed_from_stats() {
         time_elapsed: 125.5,
         ..Default::default()
     };
-    let mut app = test_app_with_stats(RunOutcome::Won, stats);
+    let mut app = test_app_with_stats(NodeResult::Won, stats);
     app.update();
 
     let texts = collect_texts(&mut app);
@@ -54,7 +54,7 @@ fn displays_bumps_performed_from_stats() {
         time_elapsed: 125.5,
         ..Default::default()
     };
-    let mut app = test_app_with_stats(RunOutcome::Won, stats);
+    let mut app = test_app_with_stats(NodeResult::Won, stats);
     app.update();
 
     let texts = collect_texts(&mut app);
@@ -75,7 +75,7 @@ fn displays_perfect_bumps_from_stats() {
         time_elapsed: 125.5,
         ..Default::default()
     };
-    let mut app = test_app_with_stats(RunOutcome::Won, stats);
+    let mut app = test_app_with_stats(NodeResult::Won, stats);
     app.update();
 
     let texts = collect_texts(&mut app);
@@ -96,7 +96,7 @@ fn displays_bolts_lost_from_stats() {
         time_elapsed: 125.5,
         ..Default::default()
     };
-    let mut app = test_app_with_stats(RunOutcome::Won, stats);
+    let mut app = test_app_with_stats(NodeResult::Won, stats);
     app.update();
 
     let texts = collect_texts(&mut app);
@@ -119,7 +119,7 @@ fn displays_flux_earned_value() {
     let expected_flux = stats.flux_earned();
     assert_eq!(expected_flux, 57, "sanity check: flux_earned formula");
 
-    let mut app = test_app_with_stats(RunOutcome::Won, stats);
+    let mut app = test_app_with_stats(NodeResult::Won, stats);
     app.update();
 
     let texts = collect_texts(&mut app);
@@ -140,7 +140,7 @@ fn displays_zero_flux_when_penalty_exceeds_bonuses() {
     };
     assert_eq!(stats.flux_earned(), 0, "sanity check: flux floors at 0");
 
-    let mut app = test_app_with_stats(RunOutcome::Won, stats);
+    let mut app = test_app_with_stats(NodeResult::Won, stats);
     app.update();
 
     let texts = collect_texts(&mut app);
@@ -169,7 +169,7 @@ fn displays_highlight_entries() {
         ],
         ..Default::default()
     };
-    let mut app = test_app_with_stats(RunOutcome::Won, stats);
+    let mut app = test_app_with_stats(NodeResult::Won, stats);
     app.update();
 
     let texts = collect_texts(&mut app);
@@ -217,7 +217,7 @@ fn caps_highlights_at_three_when_four_provided() {
         ],
         ..Default::default()
     };
-    let mut app = test_app_with_stats(RunOutcome::Won, stats);
+    let mut app = test_app_with_stats(NodeResult::Won, stats);
     app.update();
 
     let texts = collect_texts(&mut app);

@@ -12,13 +12,13 @@ use crate::{
     },
     breaker::components::Breaker,
     shared::GameRng,
-    state::run::RunState,
+    state::run::NodeOutcome,
 };
 
 /// Resets the bolt's position above the breaker and adjusts velocity for the
 /// current node.
 ///
-/// On the first node (`RunState.node_index == 0`), the bolt spawns with zero
+/// On the first node (`NodeOutcome.node_index == 0`), the bolt spawns with zero
 /// velocity and a [`BoltServing`] marker. On subsequent nodes it launches
 /// immediately at base speed with a random angle within the bolt's
 /// [`BoltAngleSpread`] component.
@@ -28,7 +28,7 @@ use crate::{
 /// state is reset. [`PiercingRemaining`] is reset to `ActivePiercings.total()`.
 pub(crate) fn reset_bolt(
     mut commands: Commands,
-    run_state: Res<RunState>,
+    run_state: Res<NodeOutcome>,
     mut rng: ResMut<GameRng>,
     breaker_query: Query<&Position2D, (With<Breaker>, Without<Bolt>)>,
     mut bolt_query: Query<ResetBoltData, (With<Bolt>, Without<ExtraBolt>)>,

@@ -15,7 +15,7 @@ pub(super) use breaker::{
         run::{
             NodeLayoutRegistry, chip_select::messages::ChipSelected, node::resources::NodeTimer,
         },
-        types::{AppState, ChipSelectState, GameState, MenuState, NodeState, RunPhase},
+        types::{AppState, ChipSelectState, GameState, MenuState, NodeState, RunState},
     },
     walls::components::Wall,
 };
@@ -67,7 +67,7 @@ pub(super) fn lifecycle_test_app() -> App {
         .init_state::<AppState>()
         .add_sub_state::<GameState>()
         .add_sub_state::<MenuState>()
-        .add_sub_state::<RunPhase>()
+        .add_sub_state::<RunState>()
         .add_sub_state::<NodeState>()
         .add_sub_state::<ChipSelectState>()
         .add_sub_state::<breaker::state::types::RunEndState>()
@@ -140,7 +140,7 @@ pub(super) fn chip_select_app(definition: ScenarioDefinition) -> App {
         .init_state::<AppState>()
         .add_sub_state::<GameState>()
         .add_sub_state::<MenuState>()
-        .add_sub_state::<RunPhase>()
+        .add_sub_state::<RunState>()
         .add_sub_state::<NodeState>()
         .add_sub_state::<ChipSelectState>()
         .insert_resource(ScenarioConfig { definition })

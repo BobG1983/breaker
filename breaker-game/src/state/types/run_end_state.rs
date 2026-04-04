@@ -1,15 +1,15 @@
-//! Run end state — sub-state of [`RunPhase::RunEnd`].
+//! Run end state — sub-state of [`RunState::RunEnd`].
 
 use bevy::prelude::*;
 
-use super::RunPhase;
+use super::RunState;
 
 /// Run end lifecycle state.
 ///
-/// Sub-state of [`RunPhase::RunEnd`]. Controls the run end screen
+/// Sub-state of [`RunState::RunEnd`]. Controls the run end screen
 /// showing highlights and final stats.
 #[derive(SubStates, Default, Clone, Copy, PartialEq, Eq, Hash, Debug)]
-#[source(RunPhase = RunPhase::RunEnd)]
+#[source(RunState = RunState::RunEnd)]
 pub enum RunEndState {
     /// Run end loading (pass-through).
     #[default]
@@ -20,7 +20,7 @@ pub enum RunEndState {
     Active,
     /// Animate run end exit (pass-through until transitions are wired).
     AnimateOut,
-    /// Run end teardown — parent `RunPhase` watches for this.
+    /// Run end teardown — parent `RunState` watches for this.
     Teardown,
 }
 

@@ -1,6 +1,7 @@
 //! System to tick the chip selection countdown timer.
 
 use bevy::prelude::*;
+use rantzsoft_lifecycle::ChangeState;
 
 use crate::{
     chips::inventory::ChipInventory,
@@ -19,7 +20,7 @@ use crate::{
 pub(crate) fn tick_chip_timer(
     time: Res<Time>,
     mut timer: ResMut<ChipSelectTimer>,
-    mut next_state: ResMut<NextState<ChipSelectState>>,
+    mut state_writer: MessageWriter<ChangeState<ChipSelectState>>,
     offers: Option<Res<ChipOffers>>,
     inventory: Option<ResMut<ChipInventory>>,
     config: Option<Res<ChipSelectConfig>>,
@@ -38,24 +39,26 @@ pub(crate) fn tick_chip_timer(
             }
         }
 
-        next_state.set(ChipSelectState::AnimateOut);
+        state_writer.write(ChangeState::new());
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use bevy::state::app::StatesPlugin;
+    use bevy::{ecs::message::Messages, state::app::StatesPlugin};
+    use rantzsoft_lifecycle::ChangeState;
 
     use super::*;
-    use crate::state::types::{AppState, GameState, RunPhase};
+    use crate::state::types::{AppState, GameState, RunState};
 
     fn test_app(remaining: f32) -> App {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, StatesPlugin))
             .init_state::<AppState>()
             .add_sub_state::<GameState>()
-            .add_sub_state::<RunPhase>()
+            .add_sub_state::<RunState>()
             .add_sub_state::<ChipSelectState>()
+            .add_message::<ChangeState<ChipSelectState>>()
             .insert_resource(ChipSelectTimer { remaining })
             .add_systems(Update, tick_chip_timer);
         app
@@ -83,10 +86,12 @@ mod tests {
         let mut app = test_app(0.0);
         app.update();
 
-        let next = app.world().resource::<NextState<ChipSelectState>>();
+        let msgs = app
+            .world()
+            .resource::<Messages<ChangeState<ChipSelectState>>>();
         assert!(
-            format!("{next:?}").contains("AnimateOut"),
-            "expected AnimateOut, got: {next:?}"
+            msgs.iter_current_update_messages().count() > 0,
+            "expected ChangeState<ChipSelectState> message"
         );
     }
 
@@ -108,10 +113,13 @@ mod tests {
         let mut app = test_app(100.0);
         app.update();
 
-        let next = app.world().resource::<NextState<ChipSelectState>>();
-        assert!(
-            !format!("{next:?}").contains("AnimateOut"),
-            "expected no transition, got: {next:?}"
+        let msgs = app
+            .world()
+            .resource::<Messages<ChangeState<ChipSelectState>>>();
+        assert_eq!(
+            msgs.iter_current_update_messages().count(),
+            0,
+            "expected no ChangeState message when time remains"
         );
     }
 
@@ -151,8 +159,9 @@ mod tests {
         app.add_plugins((MinimalPlugins, StatesPlugin))
             .init_state::<AppState>()
             .add_sub_state::<GameState>()
-            .add_sub_state::<RunPhase>()
+            .add_sub_state::<RunState>()
             .add_sub_state::<ChipSelectState>()
+            .add_message::<ChangeState<ChipSelectState>>()
             .insert_resource(ChipSelectTimer { remaining })
             .insert_resource(offers)
             .init_resource::<ChipInventory>()
@@ -256,17 +265,19 @@ mod tests {
     fn timer_expiry_transitions_without_chip_offers_resource() {
         // When the timer expires but ChipOffers, ChipInventory, and
         // ChipSelectConfig are all absent (Option<Res<...>> = None), the
-        // system should still transition to TransitionIn without panicking.
+        // system should still transition without panicking.
         // This exercises the defensive `if let (Some(...), Some(...), Some(...))` guard.
         let mut app = test_app(0.0);
         // test_app does NOT insert ChipOffers, ChipInventory, or ChipSelectConfig.
         // The system receives None for all three Option parameters.
         app.update();
 
-        let next = app.world().resource::<NextState<ChipSelectState>>();
+        let msgs = app
+            .world()
+            .resource::<Messages<ChangeState<ChipSelectState>>>();
         assert!(
-            format!("{next:?}").contains("AnimateOut"),
-            "expected AnimateOut even without ChipOffers resource, got: {next:?}"
+            msgs.iter_current_update_messages().count() > 0,
+            "expected ChangeState<ChipSelectState> message even without ChipOffers resource"
         );
 
         let timer = app.world().resource::<ChipSelectTimer>();

@@ -267,26 +267,22 @@ The file contains only a doc comment explaining legacy stat components were remo
 - `BoltRenderingConfig`, `AttachVisuals`, `sync_bolt_visual_modifiers` — not yet implemented.
 - Pseudo-code uses `BoltRadius(def.radius)` as shorthand even though it's a type alias — intentional planning notation.
 
-## State Folder Restructure Drift — Flagged Only (refactor/state-folder-structure, 2026-04-02)
+## State Folder Restructure + crate-routing-migration Drift — Partially Fixed (2026-04-03)
 
-**IMPORTANT: Architecture docs are being updated in Wave 8 of this refactor. The following drifts
-were flagged (not fixed) at user request. Do NOT flag them again until after Wave 8 is merged.**
+**Wave 8 of state-lifecycle-refactor is still pending. Only the most egregious doc drift has been fixed.**
 
-**Module path renames in code vs docs:**
+**Fixed on 2026-04-03 (refactor/crate-routing-migration context):**
+- `docs/architecture/state.md` — COMPLETELY REWRITTEN. Now describes the 4-level hierarchy (AppState → GameState → MenuState/RunState → NodeState/ChipSelectState/RunEndState), `rantzsoft_lifecycle` routing, declarative `Route` API, `ChangeState<S>` messages, transition effects, pause model, and `CleanupOnExit<S>`.
+- `docs/architecture/ordering.md` — Section header `OnEnter(GameState::Playing)` → `OnEnter(NodeState::Loading)`; domain labels updated (`[ui domain]` → `[state/run/node/hud domain]`, `[wall domain]` → `[walls domain]`, `[run/node domain]` → `[state/run/node domain]`); `UiSystems::SpawnTimerHud` and `NodeSystems` source paths updated from `ui/sets.rs` / `run/node/sets.rs` to correct paths.
+- `docs/architecture/ordering.md` — Section `OnEnter(GameState::TransitionOut) / OnEnter(GameState::TransitionIn)` REMOVED and replaced with "Transition Lifecycle (rantzsoft_lifecycle)" note explaining those states no longer exist.
+- `docs/architecture/ordering.md` — Section `OnExit(GameState::MainMenu)` renamed to `OnExit(MenuState::Main)`.
+- `docs/architecture/messages.md` — `WallsSpawned` sender updated: `wall (spawn_walls)` → `walls (state/run/node/systems/spawn_walls)`.
+- `docs/architecture/messages.md` — `ChipSelected` sender updated: `UI (handle_chip_input)` → `state/run/chip_select (handle_chip_input)`.
 
-1. `screen/` → eliminated as a domain; its responsibilities absorbed into `state/` (registered as `StatePlugin` in game.rs — no more `ScreenPlugin`)
-2. `ui/` → eliminated as a domain; HUD → `state/run/node/hud/`, chip select → `state/run/chip_select/`, menus → `state/menu/`; `UiPlugin` no longer exists; `UiSystems` is now in `state/run/node/hud/sets.rs`
-3. `run/` → `state/run/` (e.g. `run/node/` → `state/run/node/`)
-4. `wall/` → `walls/` (plural; `WallPlugin` still the name, `walls::WallPlugin`)
-
-**Docs affected:**
-- `docs/architecture/plugins.md` — Domain Layout table still shows `screen/`, `ui/`, `run/`, `wall/`; Plugin registration order still lists `ScreenPlugin`, `UiPlugin`, `RunPlugin` (not `StatePlugin`, `WallPlugin`-at-walls); Scenario runner exception paragraph still mentions `screen` and `wall` as module paths
-- `docs/architecture/plugins.md` — `UiSystems` location cited as `ui/sets.rs` (actually `state/run/node/hud/sets.rs`)
-- `docs/architecture/ordering.md` — `UiSystems::SpawnTimerHud` source file shown as `ui/sets.rs`; `NodeSystems` source shown as `run/node/sets.rs`; ordering chain comments label systems as `[ui domain]` and `[run/node domain]` where the code paths have moved
-- `docs/architecture/state.md` — "State registration, transitions, and cleanup systems live in the `screen/` domain plugin"
+**Still deferred to Wave 8 (do NOT flag again until after Wave 8 merges):**
+- `docs/architecture/plugins.md` — Domain Layout table still shows `screen/`, `ui/`, `run/`, `wall/`; Plugin registration order still lists `ScreenPlugin`, `UiPlugin`, `RunPlugin` (not `StatePlugin`); Scenario runner exception paragraph still mentions `screen` and `wall` module paths; `UiSystems` location cited as `ui/sets.rs`; `rantzsoft_lifecycle` not listed in workspace layout table.
 - `docs/architecture/data.md` — WallRegistry "Re-exported from `wall/`" (now `walls/`)
 - `docs/architecture/builders/pattern.md` — Wall builder location shown as `breaker-game/src/wall/builder/` (now `breaker-game/src/walls/builder/`)
-- `docs/architecture/messages.md` — `WallsSpawned` sender shown as `wall (spawn_walls)` (now `walls/` domain, system is at `state/run/node/systems/spawn_walls/`)
 
 ## Confirmed Correct / Fixed (wall-builder-pattern feature, 2026-04-02)
 

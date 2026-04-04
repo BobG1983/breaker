@@ -16,7 +16,7 @@ pub(super) fn test_app() -> App {
     app.add_plugins(bevy::state::app::StatesPlugin);
     app.init_state::<crate::state::types::AppState>();
     app.add_sub_state::<crate::state::types::GameState>();
-    app.add_sub_state::<crate::state::types::RunPhase>();
+    app.add_sub_state::<crate::state::types::RunState>();
     app.add_sub_state::<crate::state::types::NodeState>();
     app.insert_resource(CollisionQuadtree::default());
     app.add_systems(Update, super::super::effect::apply_attraction);
@@ -49,8 +49,8 @@ pub(super) fn enter_playing(app: &mut App) {
         .set(crate::state::types::GameState::Run);
     app.update();
     app.world_mut()
-        .resource_mut::<NextState<crate::state::types::RunPhase>>()
-        .set(crate::state::types::RunPhase::Node);
+        .resource_mut::<NextState<crate::state::types::RunState>>()
+        .set(crate::state::types::RunState::Node);
     app.update();
     app.world_mut()
         .resource_mut::<NextState<crate::state::types::NodeState>>()

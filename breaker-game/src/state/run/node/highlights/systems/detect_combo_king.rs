@@ -19,7 +19,7 @@ pub(crate) fn detect_combo_king(
     config: Res<HighlightConfig>,
     mut tracker: ResMut<HighlightTracker>,
     mut stats: ResMut<RunStats>,
-    run_state: Res<RunState>,
+    run_state: Res<NodeOutcome>,
     mut writer: MessageWriter<HighlightTriggered>,
 ) {
     // Increment cells destroyed since last breaker hit
@@ -113,7 +113,7 @@ mod tests {
             .add_message::<HighlightTriggered>()
             .init_resource::<RunStats>()
             .init_resource::<HighlightTracker>()
-            .init_resource::<RunState>()
+            .init_resource::<NodeOutcome>()
             .insert_resource(HighlightConfig::default())
             .init_resource::<TestCellDestroyed>()
             .init_resource::<TestBoltImpactBreaker>()
@@ -165,7 +165,7 @@ mod tests {
             .add_message::<HighlightTriggered>()
             .init_resource::<RunStats>()
             .init_resource::<HighlightTracker>()
-            .init_resource::<RunState>()
+            .init_resource::<NodeOutcome>()
             .insert_resource(HighlightConfig::default())
             .init_resource::<TestCellDestroyedAt>()
             .init_resource::<TestBoltImpactBreaker>()

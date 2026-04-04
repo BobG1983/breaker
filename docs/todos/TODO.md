@@ -8,7 +8,7 @@
 4. **[ready]** Scenario coverage gaps (2 HIGH, 3 MEDIUM, 3 new invariants) — [detail](detail/scenario-coverage-gaps.md)
 5. **[ready]** Killed trigger, Die effect, unified death messaging — [detail](detail/killed-trigger-damage-attribution.md)
 6. **[ready]** Fix detect_combo_king stale migration test — [detail](detail/fix-combo-king-test.md)
-7. **[NEEDS DETAIL]** Bolt birthing animation — [detail](detail/bolt-birthing-animation.md)
+7. **[ready]** Bolt birthing animation — [detail](detail/bolt-birthing-animation.md)
 8. **[NEEDS DETAIL]** Effect desugaring: NodeRunning trigger + unique stamping — [detail](detail/effect-desugaring-node-running-trigger.md)
 9. **[NEEDS DETAIL]** Node sequencing refactor — per-tier batching instead of full upfront sequence — [detail](detail/node-sequencing-refactor.md)
 10. **[NEEDS DETAIL]** Scenario runner performance audit — [detail](detail/scenario-runner-performance-audit.md)

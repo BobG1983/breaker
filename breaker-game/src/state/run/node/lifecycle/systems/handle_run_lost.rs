@@ -1,37 +1,39 @@
 //! System to handle run lost — set outcome and transition to `RunEnd`.
 
 use bevy::prelude::*;
+use rantzsoft_lifecycle::ChangeState;
 
 use crate::state::{
     run::{
         messages::RunLost,
-        resources::{RunOutcome, RunState},
+        resources::{NodeOutcome, NodeResult},
     },
     types::NodeState,
 };
 
 /// When [`RunLost`] is received, sets the run outcome to lost and transitions
-/// to [`NodeState::AnimateOut`]. The teardown router reads `RunOutcome` to
+/// to [`NodeState::AnimateOut`]. The teardown router reads `NodeOutcome` to
 /// route to `RunEnd`.
 pub(crate) fn handle_run_lost(
     mut reader: MessageReader<RunLost>,
-    mut run_state: ResMut<RunState>,
-    mut next_state: ResMut<NextState<NodeState>>,
+    mut run_state: ResMut<NodeOutcome>,
+    mut writer: MessageWriter<ChangeState<NodeState>>,
 ) {
     for _msg in reader.read() {
-        if run_state.outcome == RunOutcome::InProgress {
-            run_state.outcome = RunOutcome::LivesDepleted;
-            next_state.set(NodeState::AnimateOut);
+        if run_state.result == NodeResult::InProgress {
+            run_state.result = NodeResult::LivesDepleted;
+            writer.write(ChangeState::new());
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use bevy::state::app::StatesPlugin;
+    use bevy::{ecs::message::Messages, state::app::StatesPlugin};
+    use rantzsoft_lifecycle::ChangeState;
 
     use super::*;
-    use crate::state::types::{AppState, GameState, RunPhase};
+    use crate::state::types::{AppState, GameState, RunState};
 
     #[derive(Resource)]
     struct SendRunLost(bool);
@@ -47,12 +49,13 @@ mod tests {
         app.add_plugins((MinimalPlugins, StatesPlugin))
             .init_state::<AppState>()
             .add_sub_state::<GameState>()
-            .add_sub_state::<RunPhase>()
+            .add_sub_state::<RunState>()
             .add_sub_state::<NodeState>()
             .add_message::<RunLost>()
-            .insert_resource(RunState {
+            .add_message::<ChangeState<NodeState>>()
+            .insert_resource(NodeOutcome {
                 node_index: 0,
-                outcome: RunOutcome::InProgress,
+                result: NodeResult::InProgress,
                 ..default()
             })
             .insert_resource(SendRunLost(false))
@@ -70,8 +73,8 @@ mod tests {
             .set(GameState::Run);
         app.update();
         app.world_mut()
-            .resource_mut::<NextState<RunPhase>>()
-            .set(RunPhase::Node);
+            .resource_mut::<NextState<RunState>>()
+            .set(RunState::Node);
         app.update();
         app
     }
@@ -90,25 +93,25 @@ mod tests {
         app.world_mut().resource_mut::<SendRunLost>().0 = true;
         tick(&mut app);
 
-        let run_state = app.world().resource::<RunState>();
-        assert_eq!(run_state.outcome, RunOutcome::LivesDepleted);
+        let run_state = app.world().resource::<NodeOutcome>();
+        assert_eq!(run_state.result, NodeResult::LivesDepleted);
 
-        let next = app.world().resource::<NextState<NodeState>>();
+        let msgs = app.world().resource::<Messages<ChangeState<NodeState>>>();
         assert!(
-            format!("{next:?}").contains("AnimateOut"),
-            "expected AnimateOut, got: {next:?}"
+            msgs.iter_current_update_messages().count() > 0,
+            "expected ChangeState<NodeState> message"
         );
     }
 
     #[test]
     fn run_lost_ignored_when_already_won() {
         let mut app = test_app();
-        app.world_mut().resource_mut::<RunState>().outcome = RunOutcome::Won;
+        app.world_mut().resource_mut::<NodeOutcome>().result = NodeResult::Won;
         app.world_mut().resource_mut::<SendRunLost>().0 = true;
         tick(&mut app);
 
-        let run_state = app.world().resource::<RunState>();
-        assert_eq!(run_state.outcome, RunOutcome::Won);
+        let run_state = app.world().resource::<NodeOutcome>();
+        assert_eq!(run_state.result, NodeResult::Won);
     }
 
     #[test]
@@ -116,7 +119,7 @@ mod tests {
         let mut app = test_app();
         tick(&mut app);
 
-        let run_state = app.world().resource::<RunState>();
-        assert_eq!(run_state.outcome, RunOutcome::InProgress);
+        let run_state = app.world().resource::<NodeOutcome>();
+        assert_eq!(run_state.result, NodeResult::InProgress);
     }
 }

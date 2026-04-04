@@ -6,7 +6,7 @@ use rantzsoft_spatial2d::components::Velocity2D;
 use super::helpers::test_app;
 use crate::{
     bolt::components::{Bolt, BoltServing},
-    state::run::RunState,
+    state::run::NodeOutcome,
 };
 
 // ── Behavior 22: Non-zero velocity on subsequent nodes ────────────────
@@ -14,7 +14,7 @@ use crate::{
 #[test]
 fn spawned_bolt_has_nonzero_velocity_subsequent_node() {
     let mut app = test_app();
-    app.world_mut().resource_mut::<RunState>().node_index = 1;
+    app.world_mut().resource_mut::<NodeOutcome>().node_index = 1;
     app.update();
 
     let entity = app
@@ -43,7 +43,7 @@ fn spawned_bolt_has_nonzero_velocity_subsequent_node() {
 fn spawned_bolt_has_nonzero_velocity_node_index_5() {
     // Edge case: node_index: 5
     let mut app = test_app();
-    app.world_mut().resource_mut::<RunState>().node_index = 5;
+    app.world_mut().resource_mut::<NodeOutcome>().node_index = 5;
     app.update();
 
     let entity = app
@@ -65,7 +65,7 @@ fn spawned_bolt_has_nonzero_velocity_node_index_5() {
 #[test]
 fn spawned_bolt_velocity_magnitude_matches_base_speed_subsequent_node() {
     let mut app = test_app();
-    app.world_mut().resource_mut::<RunState>().node_index = 1;
+    app.world_mut().resource_mut::<NodeOutcome>().node_index = 1;
     app.update();
 
     let entity = app
@@ -91,7 +91,7 @@ fn spawned_bolt_velocity_magnitude_matches_base_speed_subsequent_node() {
 #[test]
 fn spawned_bolt_does_not_have_serving_subsequent_node() {
     let mut app = test_app();
-    app.world_mut().resource_mut::<RunState>().node_index = 1;
+    app.world_mut().resource_mut::<NodeOutcome>().node_index = 1;
     app.update();
 
     let entity = app

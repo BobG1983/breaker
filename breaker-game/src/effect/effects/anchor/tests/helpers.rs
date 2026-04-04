@@ -5,7 +5,7 @@ pub(super) use super::super::effect::*;
 pub(super) use crate::{
     breaker::components::{Breaker, DashState},
     effect::effects::bump_force::ActiveBumpForces,
-    state::types::{AppState, GameState, NodeState, RunPhase},
+    state::types::{AppState, GameState, NodeState, RunState},
 };
 
 pub(super) fn test_app() -> App {
@@ -37,7 +37,7 @@ pub(super) fn register_test_app() -> App {
     app.add_plugins(bevy::state::app::StatesPlugin);
     app.init_state::<AppState>();
     app.add_sub_state::<GameState>();
-    app.add_sub_state::<RunPhase>();
+    app.add_sub_state::<RunState>();
     app.add_sub_state::<NodeState>();
     // Navigate to NodeState::Playing so run_if(in_state(NodeState::Playing)) passes
     app.world_mut()
@@ -49,8 +49,8 @@ pub(super) fn register_test_app() -> App {
         .set(GameState::Run);
     app.update();
     app.world_mut()
-        .resource_mut::<NextState<RunPhase>>()
-        .set(RunPhase::Node);
+        .resource_mut::<NextState<RunState>>()
+        .set(RunState::Node);
     app.update();
     app.world_mut()
         .resource_mut::<NextState<NodeState>>()

@@ -1,7 +1,7 @@
 use super::{super::helpers::*, helpers::*};
 use crate::state::run::{
     definition::HighlightConfig,
-    resources::{HighlightKind, RunHighlight, RunOutcome, RunStats},
+    resources::{HighlightKind, NodeResult, RunHighlight, RunStats},
 };
 
 #[test]
@@ -10,7 +10,7 @@ fn empty_highlights_with_config_produces_no_highlight_text() {
         highlights: vec![],
         ..Default::default()
     };
-    let mut app = test_app_with_stats(RunOutcome::Won, stats);
+    let mut app = test_app_with_stats(NodeResult::Won, stats);
     app.insert_resource(HighlightConfig::default());
     app.update();
 
@@ -46,7 +46,7 @@ fn highlight_cap_zero_produces_no_highlights() {
         ],
         ..Default::default()
     };
-    let mut app = test_app_with_stats(RunOutcome::Won, stats);
+    let mut app = test_app_with_stats(NodeResult::Won, stats);
     app.insert_resource(HighlightConfig {
         highlight_cap: 0,
         ..Default::default()
@@ -71,7 +71,7 @@ fn single_highlight_with_config_uses_selection() {
         }],
         ..Default::default()
     };
-    let mut app = test_app_with_stats(RunOutcome::Won, stats);
+    let mut app = test_app_with_stats(NodeResult::Won, stats);
     app.insert_resource(HighlightConfig::default());
     app.update();
 
@@ -100,7 +100,7 @@ fn most_powerful_evolution_shows_chip_name_from_run_stats() {
         }],
         ..Default::default()
     };
-    let mut app = test_app_with_stats(RunOutcome::Won, stats);
+    let mut app = test_app_with_stats(NodeResult::Won, stats);
     app.insert_resource(HighlightConfig::default());
     app.update();
 

@@ -1,13 +1,13 @@
 ---
-name: color_from_rgb canonical location
-description: color_from_rgb lives in shared/color.rs; chip_select/mod.rs has a duplicate
+name: color_from_rgb canonical location — duplicate REMOVED
+description: color_from_rgb lives in shared/color.rs; the former chip_select/mod.rs duplicate was removed in the state folder restructure (2026-04-02)
 type: project
 ---
 
 `color_from_rgb` is canonically defined in `shared/color.rs` and re-exported from `shared/mod.rs` as `pub use color::color_from_rgb`.
 
-`chip_select/mod.rs` contains a duplicate `pub(crate) const fn color_from_rgb` at line 15. This should be removed and replaced with a re-export of `crate::shared::color_from_rgb`.
+The duplicate in `chip_select/mod.rs` that previously existed was REMOVED in the state folder restructure (refactor/state-folder-structure, 2026-04-02). The `state/run/chip_select/mod.rs` now contains only module declarations and re-exports — no duplicate function.
 
-**Why:** The duplicate was left over when code was moved into the state/ folder structure. The chip_select systems import from `chip_select::*` which resolves to the local copy instead of shared.
+**Verified 2026-04-04:** `chip_select/mod.rs` has no `color_from_rgb` definition.
 
-**How to apply:** When reviewing chip_select code, check that `color_from_rgb` is imported from `crate::shared`, not from `crate::state::run::chip_select`.
+**How to apply:** Only one definition exists — `crate::shared::color_from_rgb`. Do NOT flag imports from shared as incorrect.

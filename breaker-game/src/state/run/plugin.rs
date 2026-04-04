@@ -24,13 +24,13 @@ use super::{
             track_node_cleared_stats, track_time_elapsed,
         },
     },
-    resources::{DifficultyCurve, HighlightTracker, RunState, RunStats},
+    resources::{DifficultyCurve, HighlightTracker, NodeOutcome, RunStats},
     run_end::systems::detect_most_powerful_evolution,
     systems::{advance_node, setup_run},
 };
 use crate::{
     shared::{GameRng, RunSeed},
-    state::types::{ChipSelectState, MenuState, NodeState, RunEndState, RunPhase},
+    state::types::{ChipSelectState, MenuState, NodeState, RunEndState, RunState},
 };
 
 /// Plugin for the run domain.
@@ -40,7 +40,7 @@ pub struct RunPlugin;
 
 impl Plugin for RunPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<RunState>()
+        app.init_resource::<NodeOutcome>()
             .init_resource::<DifficultyCurve>()
             .init_resource::<GameRng>()
             .init_resource::<RunSeed>()
@@ -96,7 +96,7 @@ impl Plugin for RunPlugin {
                 (reset_highlight_tracker, capture_run_seed, setup_run),
             )
             .add_systems(OnEnter(RunEndState::Active), detect_most_powerful_evolution)
-            .add_systems(OnEnter(RunPhase::Node), advance_node)
+            .add_systems(OnEnter(RunState::Node), advance_node)
             .add_systems(
                 OnExit(MenuState::Main),
                 (
@@ -121,14 +121,14 @@ mod tests {
 
     #[test]
     fn plugin_builds() {
-        use crate::state::types::{AppState, ChipSelectState, GameState, RunEndState, RunPhase};
+        use crate::state::types::{AppState, ChipSelectState, GameState, RunEndState, RunState};
         App::new()
             .add_plugins(MinimalPlugins)
             .add_plugins(bevy::state::app::StatesPlugin)
             .init_state::<AppState>()
             .add_sub_state::<GameState>()
             .add_sub_state::<MenuState>()
-            .add_sub_state::<RunPhase>()
+            .add_sub_state::<RunState>()
             .add_sub_state::<NodeState>()
             .add_sub_state::<ChipSelectState>()
             .add_sub_state::<RunEndState>()

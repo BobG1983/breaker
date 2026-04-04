@@ -1,6 +1,7 @@
 //! Tests for `handle_chip_input` chip selection screen input handling.
 
-use bevy::{prelude::*, state::app::StatesPlugin};
+use bevy::{ecs::message::Messages, prelude::*, state::app::StatesPlugin};
+use rantzsoft_lifecycle::ChangeState;
 
 use super::*;
 use crate::{
@@ -8,7 +9,7 @@ use crate::{
     effect::{EffectKind, EffectNode},
     state::{
         run::chip_select::resources::ChipOffering,
-        types::{AppState, GameState, RunPhase},
+        types::{AppState, GameState, RunState},
     },
 };
 
@@ -45,7 +46,7 @@ fn test_app_with_offers(offers: ChipOffers) -> App {
         .insert_resource(InputConfig::default())
         .init_state::<AppState>()
         .add_sub_state::<GameState>()
-        .add_sub_state::<RunPhase>()
+        .add_sub_state::<RunState>()
         .add_sub_state::<ChipSelectState>()
         .insert_resource(ChipSelectSelection { index: 0 })
         .insert_resource(offers)
@@ -53,6 +54,7 @@ fn test_app_with_offers(offers: ChipOffers) -> App {
         .init_resource::<ChipInventory>()
         .insert_resource(ChipSelectConfig::default())
         .add_message::<ChipSelected>()
+        .add_message::<ChangeState<ChipSelectState>>()
         .add_systems(Update, (handle_chip_input, collect_chips).chain());
     app
 }
@@ -87,10 +89,12 @@ fn confirm_transitions_to_transition_in() {
     let mut app = test_app();
     press_key(&mut app, KeyCode::Enter);
 
-    let next = app.world().resource::<NextState<ChipSelectState>>();
+    let msgs = app
+        .world()
+        .resource::<Messages<ChangeState<ChipSelectState>>>();
     assert!(
-        format!("{next:?}").contains("AnimateOut"),
-        "expected AnimateOut, got: {next:?}"
+        msgs.iter_current_update_messages().count() > 0,
+        "expected ChangeState<ChipSelectState> message"
     );
 }
 
@@ -149,10 +153,13 @@ fn no_input_no_change() {
     let selection = app.world().resource::<ChipSelectSelection>();
     assert_eq!(selection.index, 0);
 
-    let next = app.world().resource::<NextState<ChipSelectState>>();
-    assert!(
-        !format!("{next:?}").contains("AnimateOut"),
-        "expected no transition, got: {next:?}"
+    let msgs = app
+        .world()
+        .resource::<Messages<ChangeState<ChipSelectState>>>();
+    assert_eq!(
+        msgs.iter_current_update_messages().count(),
+        0,
+        "expected no ChangeState message"
     );
 }
 
@@ -161,10 +168,12 @@ fn empty_offers_confirm_transitions_without_message() {
     let mut app = test_app_with_offers(make_offers(0));
     press_key(&mut app, KeyCode::Enter);
 
-    let next = app.world().resource::<NextState<ChipSelectState>>();
+    let msgs = app
+        .world()
+        .resource::<Messages<ChangeState<ChipSelectState>>>();
     assert!(
-        format!("{next:?}").contains("AnimateOut"),
-        "expected AnimateOut, got: {next:?}"
+        msgs.iter_current_update_messages().count() > 0,
+        "expected ChangeState<ChipSelectState> message"
     );
 
     let received = app.world().resource::<ReceivedChips>();
@@ -294,10 +303,12 @@ fn confirm_evolution_transitions_to_transition_in() {
     let mut app = test_app_with_evolution_inventory();
     press_key(&mut app, KeyCode::Enter);
 
-    let next = app.world().resource::<NextState<ChipSelectState>>();
+    let msgs = app
+        .world()
+        .resource::<Messages<ChangeState<ChipSelectState>>>();
     assert!(
-        format!("{next:?}").contains("AnimateOut"),
-        "expected AnimateOut after evolution confirm, got: {next:?}"
+        msgs.iter_current_update_messages().count() > 0,
+        "expected ChangeState<ChipSelectState> message after evolution confirm"
     );
 }
 

@@ -4,7 +4,7 @@ use rantzsoft_spatial2d::components::Velocity2D;
 use super::super::effect::*;
 use crate::{
     bolt::{components::Bolt, definition::BoltDefinition},
-    state::types::{AppState, GameState, NodeState, RunPhase},
+    state::types::{AppState, GameState, NodeState, RunState},
 };
 
 fn test_bolt_definition() -> BoltDefinition {
@@ -30,7 +30,7 @@ pub(super) fn test_app() -> App {
     app.add_plugins(bevy::state::app::StatesPlugin);
     app.init_state::<AppState>();
     app.add_sub_state::<GameState>();
-    app.add_sub_state::<RunPhase>();
+    app.add_sub_state::<RunState>();
     app.add_sub_state::<NodeState>();
     app.add_systems(Update, tick_gravity_well);
     app.add_systems(Update, apply_gravity_pull);
@@ -65,8 +65,8 @@ pub(super) fn enter_playing(app: &mut App) {
         .set(GameState::Run);
     app.update();
     app.world_mut()
-        .resource_mut::<NextState<RunPhase>>()
-        .set(RunPhase::Node);
+        .resource_mut::<NextState<RunState>>()
+        .set(RunState::Node);
     app.update();
     app.world_mut()
         .resource_mut::<NextState<NodeState>>()

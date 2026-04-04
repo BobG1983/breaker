@@ -13,7 +13,7 @@ use super::{
 /// deserialization in the scenario runner crate.
 ///
 /// The game crate now uses a hierarchical state machine
-/// (`AppState` / `GameState` / `MenuState` / `RunPhase` / `NodeState` /
+/// (`AppState` / `GameState` / `MenuState` / `RunState` / `NodeState` /
 /// `ChipSelectState` / `RunEndState`). This enum retains the old variant
 /// names so existing `.scenario.ron` files keep working. Each variant is
 /// mapped to the new `GameState` at runtime by

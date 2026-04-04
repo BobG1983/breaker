@@ -92,3 +92,9 @@ Still confirmed after refactor/state-folder-structure (2026-04-02, commit d24400
 State module hierarchy restructure (screen/, run/, wall/, ui/ → state/; wall → walls rename).
 Pure file moves + import path updates. Zero new "unsafe" keywords in any added line (grep
 confirmed 0 matches across 1710 newly added lines). Workspace lint unsafe_code = "deny" remains.
+
+Still confirmed for feature/wall-builder-pattern (2026-04-03) — rantzsoft_lifecycle new crate:
+New workspace member rantzsoft_lifecycle/ added. Grepped all .rs files under
+rantzsoft_lifecycle/src/ for "unsafe": zero matches. The crate's Cargo.toml uses
+`lints.workspace = true`, inheriting the workspace `unsafe_code = "deny"` lint.
+No FFI, no raw pointers, no proc macros. No build.rs in this crate.

@@ -1,7 +1,7 @@
 use super::{super::helpers::*, helpers::*};
 use crate::state::run::{
     definition::HighlightConfig,
-    resources::{RunOutcome, RunStats},
+    resources::{NodeResult, RunStats},
 };
 
 #[test]
@@ -10,7 +10,7 @@ fn highlight_cap_reads_from_config() {
         highlights: make_highlights(6),
         ..Default::default()
     };
-    let mut app = test_app_with_stats(RunOutcome::Won, stats);
+    let mut app = test_app_with_stats(NodeResult::Won, stats);
     app.insert_resource(HighlightConfig {
         highlight_cap: 4,
         ..Default::default()
@@ -31,7 +31,7 @@ fn highlight_cap_falls_back_to_three_without_config() {
         highlights: make_highlights(6),
         ..Default::default()
     };
-    let mut app = test_app_with_stats(RunOutcome::Won, stats);
+    let mut app = test_app_with_stats(NodeResult::Won, stats);
     // Deliberately do NOT insert HighlightConfig.
     app.update();
 
@@ -49,7 +49,7 @@ fn highlight_cap_shows_fewer_when_fewer_exist() {
         highlights: make_highlights(2),
         ..Default::default()
     };
-    let mut app = test_app_with_stats(RunOutcome::Won, stats);
+    let mut app = test_app_with_stats(NodeResult::Won, stats);
     app.insert_resource(HighlightConfig {
         highlight_cap: 10,
         ..Default::default()

@@ -18,7 +18,7 @@ pub(crate) fn detect_mass_destruction(
     config: Res<HighlightConfig>,
     mut tracker: ResMut<HighlightTracker>,
     mut stats: ResMut<RunStats>,
-    run_state: Res<RunState>,
+    run_state: Res<NodeOutcome>,
     mut writer: MessageWriter<HighlightTriggered>,
 ) {
     let now = time.elapsed_secs();
@@ -93,7 +93,7 @@ mod tests {
             .add_message::<HighlightTriggered>()
             .init_resource::<RunStats>()
             .init_resource::<HighlightTracker>()
-            .init_resource::<RunState>()
+            .init_resource::<NodeOutcome>()
             .insert_resource(HighlightConfig::default())
             .init_resource::<CapturedHighlightTriggered>()
             .add_systems(
@@ -158,7 +158,7 @@ mod tests {
             .add_message::<HighlightTriggered>()
             .init_resource::<RunStats>()
             .init_resource::<HighlightTracker>()
-            .init_resource::<RunState>()
+            .init_resource::<NodeOutcome>()
             .insert_resource(HighlightConfig {
                 mass_destruction_count: 10,
                 mass_destruction_window_secs: 2.0,

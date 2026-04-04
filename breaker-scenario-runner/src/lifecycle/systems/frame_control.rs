@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use breaker::state::{
     run::node::messages::SpawnNodeComplete,
-    types::{GameState, RunPhase},
+    types::{GameState, RunState},
 };
 
 use super::types::ScenarioConfig;
@@ -48,11 +48,11 @@ pub fn exit_on_run_end(mut exits: MessageWriter<AppExit>) {
 /// sends to `Run`). Used when `allow_early_end` is false so the
 /// scenario runs for the full `max_frames` frame budget.
 ///
-/// Navigates through the teardown chain: `RunPhase::Teardown` triggers
+/// Navigates through the teardown chain: `RunState::Teardown` triggers
 /// routing back to `GameState::Menu`, which then fires
 /// `bypass_menu_to_playing` on `OnEnter(MenuState::Main)`.
-pub fn restart_run_on_end(mut next_run_phase: ResMut<NextState<RunPhase>>) {
-    next_run_phase.set(RunPhase::Teardown);
+pub fn restart_run_on_end(mut next_run_phase: ResMut<NextState<RunState>>) {
+    next_run_phase.set(RunState::Teardown);
 }
 
 /// Maps a [`ForcedGameState`] to the game crate's [`GameState`].

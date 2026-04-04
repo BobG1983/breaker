@@ -5,7 +5,7 @@ use crate::state::run::{
     definition::HighlightConfig,
     messages::HighlightTriggered,
     node::{messages::NodeCleared, resources::NodeTimer},
-    resources::{HighlightTracker, RunState, RunStats},
+    resources::{HighlightTracker, NodeOutcome, RunStats},
 };
 
 #[derive(Resource)]
@@ -27,7 +27,7 @@ pub(super) fn test_app() -> App {
         .add_message::<HighlightTriggered>()
         .init_resource::<RunStats>()
         .init_resource::<HighlightTracker>()
-        .init_resource::<RunState>()
+        .init_resource::<NodeOutcome>()
         .insert_resource(HighlightConfig::default())
         .insert_resource(NodeTimer {
             remaining: 15.0,

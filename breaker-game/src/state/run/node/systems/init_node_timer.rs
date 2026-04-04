@@ -4,20 +4,20 @@ use bevy::prelude::*;
 
 use crate::state::run::{
     node::{ActiveNodeLayout, NodeTimer},
-    resources::{NodeSequence, RunState},
+    resources::{NodeOutcome, NodeSequence},
 };
 
 /// Initializes [`NodeTimer`] from the active node layout's `timer_secs`,
 /// scaled by the current node's `timer_mult` from [`NodeSequence`].
 ///
-/// Falls back to a multiplier of `1.0` when [`RunState`] or [`NodeSequence`]
+/// Falls back to a multiplier of `1.0` when [`NodeOutcome`] or [`NodeSequence`]
 /// are absent (e.g. in tests or scenario overrides).
 ///
 /// Runs on `OnEnter(GameState::Playing)`, after `set_active_layout`.
 pub(crate) fn init_node_timer(
     layout: Res<ActiveNodeLayout>,
     mut commands: Commands,
-    run_state: Option<Res<RunState>>,
+    run_state: Option<Res<NodeOutcome>>,
     node_sequence: Option<Res<NodeSequence>>,
 ) {
     let timer_mult = if let (Some(state), Some(sequence)) = (&run_state, &node_sequence) {
@@ -42,7 +42,7 @@ mod tests {
     use crate::state::run::{
         definition::NodeType,
         node::{NodeLayout, definition::NodePool},
-        resources::{NodeAssignment, NodeSequence, RunState},
+        resources::{NodeAssignment, NodeOutcome, NodeSequence},
     };
 
     fn test_app(timer_secs: f32) -> App {
@@ -96,7 +96,7 @@ mod tests {
                 pool: NodePool::default(),
                 entity_scale: 1.0,
             }))
-            .insert_resource(RunState {
+            .insert_resource(NodeOutcome {
                 node_index: 0,
                 ..Default::default()
             })

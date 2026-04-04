@@ -142,3 +142,30 @@ No new RON deserialization sites in production code — only 2 new include_str! 
 #[cfg(test)] (defaults.difficulty.ron, defaults.highlights.ron path updates, test-only).
 New Warning: animate_transition/system.rs:144 divides by timer.duration (f32 from RON config)
 with no zero guard. See ron_deserialization_patterns.md for full analysis.
+
+## feature/wall-builder-pattern (2026-04-03) — rantzsoft_lifecycle new crate
+NEW WORKSPACE MEMBER: rantzsoft_lifecycle (0.1.0) added to breaker-game/Cargo.toml as a
+path dependency. No external crates introduced — only bevy 0.18.1 + tracing 0.1 (both
+already in the workspace). Workspace lint `unsafe_code = "deny"` applied via `lints.workspace = true`.
+cargo audit: same single warning (paste RUSTSEC-2024-0436, unmaintained, transitive via metal→wgpu).
+cargo machete: no unused dependencies found.
+No unsafe code in the new crate (zero "unsafe" keyword matches confirmed by grep).
+No RON deserialization in the new crate — pure Rust ECS plugin, no asset loading.
+Key patterns reviewed and confirmed safe:
+- Arc<dyn OutTransition/InTransition/OneShotTransition> in TransitionType: cloning by Arc::clone,
+  no double-free risk, no unsound downcasting.
+- Box<dyn FnOnce(...)> in WorldCallback (PendingTransition): stored as Option, consumed once via
+  .take() + if-let, never called twice. Sound.
+- Box<dyn Fn(&World) -> TransitionType> in TransitionKind::Dynamic: called at dispatch time
+  from &World, no mutable aliasing.
+- Box<dyn Fn(&mut World)> closures in TransitionRegistry entries: called via world.resource_scope
+  which provides exclusive World access. No aliasing.
+- TransitionProgress elapsed/duration division: all 12 run systems guard `if progress.duration > 0.0`
+  before dividing; zero-duration case returns `t = 1.0`. No panic surface.
+- Mutex<Vec<RegistrationFn>> in RantzLifecyclePlugin: .expect("poisoned") has #[allow] with reason.
+  Lock is only held during plugin build, never across await points. Poison is unrecoverable. Safe.
+- debug_assert! in handle_transition_over for OutIn invariant: fires only in debug builds, never
+  in release. The hard invariant violation path returns early after the assert.
+Deferred ChangeState re-queue pattern: dispatch_message_routes re-queues ChangeState if
+ActiveTransition is present. Bounded by transition duration (always finite). Not an infinite loop.
+No new production panic surface beyond pre-existing patterns.

@@ -38,7 +38,7 @@ mod tests {
     use super::*;
     use crate::state::run::{
         messages::HighlightTriggered,
-        resources::{HighlightKind, RunHighlight, RunState},
+        resources::{HighlightKind, NodeOutcome, RunHighlight},
     };
 
     #[derive(Resource, Default)]
@@ -58,7 +58,7 @@ mod tests {
         app.add_plugins(MinimalPlugins)
             .add_message::<HighlightTriggered>()
             .init_resource::<RunStats>()
-            .init_resource::<RunState>()
+            .init_resource::<NodeOutcome>()
             .init_resource::<HighlightTracker>()
             .init_resource::<CapturedHighlightTriggered>()
             .add_systems(

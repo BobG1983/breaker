@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use super::helpers::*;
 use crate::state::run::{
     node::resources::NodeTimer,
-    resources::{HighlightKind, HighlightTracker, RunHighlight, RunState, RunStats},
+    resources::{HighlightKind, HighlightTracker, NodeOutcome, RunHighlight, RunStats},
 };
 
 // --- Behavior 7: highlight cap reads from config ---
@@ -159,7 +159,7 @@ fn same_kind_stored_across_nodes_beyond_old_cap() {
     ];
 
     // Set up conditions for another ClutchClear on a later node
-    app.world_mut().resource_mut::<RunState>().node_index = 5;
+    app.world_mut().resource_mut::<NodeOutcome>().node_index = 5;
     app.insert_resource(NodeTimer {
         remaining: 1.0,
         total: 30.0,
