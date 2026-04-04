@@ -144,6 +144,9 @@ impl Plugin for RantzLifecyclePlugin {
             .add_message::<TransitionOver>()
             .add_systems(Update, orchestrate_transitions);
 
+        // Register built-in transition effects
+        crate::transition::effects::register_builtin_transitions(app);
+
         #[allow(clippy::expect_used, reason = "poisoned Mutex is unrecoverable")]
         let mut registrations = self
             .registrations

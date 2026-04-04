@@ -25,6 +25,13 @@ pub use plugin::RantzLifecyclePlugin;
 pub use route::Route;
 pub use routing_table::{RoutingTable, RoutingTableAppExt};
 pub use transition::{
+    effects::{
+        DissolveIn, DissolveInConfig, DissolveOut, DissolveOutConfig, FadeIn, FadeInConfig,
+        FadeOut, FadeOutConfig, IrisIn, IrisInConfig, IrisOut, IrisOutConfig, PixelateIn,
+        PixelateInConfig, PixelateOut, PixelateOutConfig, ScreenSize, SlideLeft, SlideLeftConfig,
+        SlideRight, SlideRightConfig, TransitionOverlay, WipeDirection, WipeIn, WipeInConfig,
+        WipeOut, WipeOutConfig,
+    },
     registry::TransitionRegistry,
     resources::{ActiveTransition, EndingTransition, RunningTransition, StartingTransition},
     traits::{InTransition, OneShotTransition, OutTransition, Transition},
