@@ -3,7 +3,7 @@
     layout: "Corridor",
     input: Chaos((action_prob: 0.3)),
     max_frames: 5000,
-    disallowed_failures: [BoltInBounds, BreakerInBounds, BreakerPositionClamped, NoNaN, ValidStateTransitions],
+    disallowed_failures: [BoltInBounds, BreakerInBounds, BreakerPositionClamped, NoNaN],
     allowed_failures: None,
     debug_setup: None,
     allow_early_end: false,

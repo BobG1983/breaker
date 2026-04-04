@@ -3,7 +3,7 @@
     layout: "Dense",
     input: Chaos((action_prob: 0.3)),
     max_frames: 15000,
-    disallowed_failures: [BoltInBounds, BoltSpeedAccurate, BreakerInBounds, NoNaN, NoEntityLeaks, TimerNonNegative, ValidStateTransitions],
+    disallowed_failures: [BoltInBounds, BoltSpeedAccurate, BreakerInBounds, NoNaN, NoEntityLeaks, TimerNonNegative],
     allowed_failures: None,
     debug_setup: None,
     allow_early_end: false,

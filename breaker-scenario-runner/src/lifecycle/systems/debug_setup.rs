@@ -4,12 +4,9 @@ use bevy::prelude::*;
 use breaker::state::run::node::resources::NodeTimer;
 use rantzsoft_spatial2d::components::Position2D;
 
-use super::{
-    frame_control::map_forced_game_state,
-    types::{BoltDebugQuery, BreakerDebugQuery, ScenarioConfig},
-};
+use super::types::{BoltDebugQuery, BreakerDebugQuery, ScenarioConfig};
 use crate::{
-    invariants::{PreviousGameState, ScenarioPhysicsFrozen, ScenarioTagBolt},
+    invariants::{ScenarioPhysicsFrozen, ScenarioTagBolt},
     types::DebugSetup,
 };
 
@@ -61,15 +58,14 @@ pub fn apply_entity_debug_overrides(
 /// `disable_physics` is true, inserts [`ScenarioPhysicsFrozen`] on both bolts
 /// and breakers with the post-teleport position as the frozen target.
 ///
-/// Also handles `bolt_velocity`, `extra_tagged_bolts`, `node_timer_remaining`,
-/// and `force_previous_game_state` overrides.
+/// Also handles `bolt_velocity`, `extra_tagged_bolts`, and `node_timer_remaining`
+/// overrides.
 pub fn apply_debug_setup(
     config: Res<ScenarioConfig>,
     mut bolt_query: BoltDebugQuery,
     mut breaker_query: BreakerDebugQuery,
     mut commands: Commands,
     node_timer: Option<ResMut<NodeTimer>>,
-    mut previous_state: Option<ResMut<PreviousGameState>>,
 ) {
     let Some(setup) = config.definition.debug_setup.as_ref() else {
         return;
@@ -87,12 +83,6 @@ pub fn apply_debug_setup(
         && let Some(mut timer) = node_timer
     {
         timer.remaining = remaining;
-    }
-
-    if let Some(forced) = setup.force_previous_game_state
-        && let Some(ref mut prev) = previous_state
-    {
-        prev.0 = Some(map_forced_game_state(forced));
     }
 }
 

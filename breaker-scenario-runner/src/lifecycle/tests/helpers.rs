@@ -25,8 +25,8 @@ pub(super) use super::*;
 pub(super) use crate::{
     input::{InputDriver, PerfectDriver},
     invariants::{
-        PreviousGameState, ScenarioFrame, ScenarioPhysicsFrozen, ScenarioStats, ScenarioTagBolt,
-        ScenarioTagBreaker, ScenarioTagCell, ScenarioTagWall, ViolationLog,
+        ScenarioFrame, ScenarioPhysicsFrozen, ScenarioStats, ScenarioTagBolt, ScenarioTagBreaker,
+        ScenarioTagCell, ScenarioTagWall, ViolationLog,
     },
     types::{
         BumpMode, ChaosParams, DebugSetup, ForcedGameState, FrameMutation, InputStrategy,

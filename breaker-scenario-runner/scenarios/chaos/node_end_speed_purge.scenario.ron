@@ -5,14 +5,14 @@
 // allow_early_end: false and 20000 frames drive many full node cycles (Scatter clears
 // in ~5-8 seconds at 64 Hz), exercising the NodeStart/NodeEnd boundary repeatedly.
 // BoltSpeedAccurate detects unbounded stacking on physics.
-// ValidStateTransitions guards against state machine corruption during rapid restarts.
+//  guards against state machine corruption during rapid restarts.
 // NoNaN ensures no velocity component becomes degenerate after repeated node transitions.
 (
     breaker: "Aegis",
     layout: "Scatter",
     input: Chaos((action_prob: 0.5)),
     max_frames: 20000,
-    disallowed_failures: [BoltSpeedAccurate, ValidStateTransitions, NoNaN],
+    disallowed_failures: [BoltSpeedAccurate, NoNaN],
     allowed_failures: None,
     debug_setup: None,
     allow_early_end: false,

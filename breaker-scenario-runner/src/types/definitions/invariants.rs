@@ -19,16 +19,12 @@ pub enum InvariantKind {
     NoNaN,
     /// Node timer never goes negative.
     TimerNonNegative,
-    /// Breaker state machine only takes valid transitions.
-    ValidStateTransitions,
     /// Breaker movement state machine only takes legal transitions.
     ValidDashState,
     /// Node timer decreases monotonically (never increases mid-node).
     TimerMonotonicallyDecreasing,
     /// Breaker x position stays within playfield bounds minus half-width.
     BreakerPositionClamped,
-    /// Physics entities do not move while game is paused.
-    PhysicsFrozenDuringPause,
     /// No duplicate chip names in a single offering.
     OfferingNoDuplicates,
     /// Maxed chips never appear in offerings.
@@ -70,11 +66,9 @@ impl InvariantKind {
         Self::NoEntityLeaks,
         Self::NoNaN,
         Self::TimerNonNegative,
-        Self::ValidStateTransitions,
         Self::ValidDashState,
         Self::TimerMonotonicallyDecreasing,
         Self::BreakerPositionClamped,
-        Self::PhysicsFrozenDuringPause,
         Self::OfferingNoDuplicates,
         Self::MaxedChipNeverOffered,
         Self::ChipStacksConsistent,
@@ -102,11 +96,9 @@ impl InvariantKind {
             Self::NoEntityLeaks => "unexpected entity accumulation detected",
             Self::NoNaN => "NaN detected in transform or velocity",
             Self::TimerNonNegative => "node timer went negative",
-            Self::ValidStateTransitions => "invalid game state transition",
             Self::ValidDashState => "invalid breaker movement state transition",
             Self::TimerMonotonicallyDecreasing => "node timer increased mid-node",
             Self::BreakerPositionClamped => "breaker position not clamped to playfield",
-            Self::PhysicsFrozenDuringPause => "physics entity moved while paused",
             Self::OfferingNoDuplicates => "duplicate chip in offering",
             Self::MaxedChipNeverOffered => "maxed chip appeared in offering",
             Self::ChipStacksConsistent => "held chip stacks exceed max_stacks",

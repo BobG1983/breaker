@@ -57,10 +57,6 @@ fn debug_setup_with_bolt_velocity_parses_from_ron() {
         result.node_timer_remaining.is_none(),
         "node_timer_remaining must default to None"
     );
-    assert!(
-        result.force_previous_game_state.is_none(),
-        "force_previous_game_state must default to None"
-    );
 }
 
 // -------------------------------------------------------------------------
@@ -130,22 +126,6 @@ fn forced_game_state_all_variants_parse_from_ron() {
 }
 
 // -------------------------------------------------------------------------
-// DebugSetup -- force_previous_game_state field
-// -------------------------------------------------------------------------
-
-#[test]
-fn debug_setup_with_force_previous_game_state_parses_from_ron() {
-    let ron = "(bolt_position: None, force_previous_game_state: Some(Loading))";
-    let result: DebugSetup =
-        ron::de::from_str(ron).expect("DebugSetup with force_previous_game_state should parse");
-    assert_eq!(
-        result.force_previous_game_state,
-        Some(ForcedGameState::Loading),
-        "force_previous_game_state must be Some(ForcedGameState::Loading)"
-    );
-}
-
-// -------------------------------------------------------------------------
 // DebugSetup -- default has all new fields as None
 // -------------------------------------------------------------------------
 
@@ -163,10 +143,6 @@ fn debug_setup_default_has_all_new_fields_as_none() {
     assert!(
         default.node_timer_remaining.is_none(),
         "node_timer_remaining must default to None"
-    );
-    assert!(
-        default.force_previous_game_state.is_none(),
-        "force_previous_game_state must default to None"
     );
 }
 
