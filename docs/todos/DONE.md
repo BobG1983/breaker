@@ -5,3 +5,4 @@
 - ~~Breaker builder pattern~~ — Typestate builder with 7 dimensions, migrated breaker spawn + queries
 - ~~Wall builder pattern~~ — Typestate builder with 2 dimensions (Side, Visual), migrated wall spawn sites
 - ~~Shield timer cost per reflection~~ — 0.5s cost per reflection, duration tuned to 3.0s, ReflectionCost component + deduct_shield_on_reflection system
+- ~~State lifecycle refactor~~ — Full state architecture overhaul with screen routing, transitions, and lifecycle management
