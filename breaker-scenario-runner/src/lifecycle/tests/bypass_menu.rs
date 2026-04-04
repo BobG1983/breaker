@@ -45,7 +45,7 @@ fn bypass_menu_to_playing_sets_run_seed_from_scenario() {
 // restart_run_on_end -- transitions from RunEnd back through teardown chain
 // -------------------------------------------------------------------------
 
-/// `restart_run_on_end` must set `RunPhase` to Teardown, which triggers
+/// `restart_run_on_end` must set `RunState` to Teardown, which triggers
 /// the routing chain back to menus.
 #[test]
 fn restart_run_on_end_transitions_through_teardown() {
@@ -57,7 +57,7 @@ fn restart_run_on_end_transitions_through_teardown() {
         .init_state::<AppState>()
         .add_sub_state::<GameState>()
         .add_sub_state::<MenuState>()
-        .add_sub_state::<RunPhase>()
+        .add_sub_state::<RunState>()
         .add_sub_state::<NodeState>()
         .add_sub_state::<ChipSelectState>()
         .add_sub_state::<RunEndState>()
@@ -73,23 +73,23 @@ fn restart_run_on_end_transitions_through_teardown() {
         .set(GameState::Run);
     app.update();
     app.world_mut()
-        .resource_mut::<NextState<RunPhase>>()
-        .set(RunPhase::RunEnd);
+        .resource_mut::<NextState<RunState>>()
+        .set(RunState::RunEnd);
     app.update();
     // RunEndState defaults to Loading -- need to get to Active
     app.world_mut()
         .resource_mut::<NextState<RunEndState>>()
         .set(RunEndState::Active);
-    // OnEnter(RunEndState::Active) fires and sets RunPhase to Teardown.
+    // OnEnter(RunEndState::Active) fires and sets RunState to Teardown.
     app.update();
 
-    // One more update to process RunPhase transition
+    // One more update to process RunState transition
     app.update();
 
-    let state = app.world().resource::<State<RunPhase>>();
+    let state = app.world().resource::<State<RunState>>();
     assert_eq!(
         **state,
-        RunPhase::Teardown,
-        "expected restart_run_on_end to set RunPhase::Teardown"
+        RunState::Teardown,
+        "expected restart_run_on_end to set RunState::Teardown"
     );
 }

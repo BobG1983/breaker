@@ -9,13 +9,13 @@ use crate::{
     breaker::SelectedBreaker,
     chips::inventory::ChipInventory,
     shared::{GameRng, RunSeed},
-    state::run::resources::{HighlightTracker, RunState, RunStats},
+    state::run::resources::{HighlightTracker, NodeOutcome, RunStats},
 };
 
-/// Resets [`RunState`] to defaults and reseeds [`GameRng`] when leaving the
+/// Resets [`NodeOutcome`] to defaults and reseeds [`GameRng`] when leaving the
 /// main menu (starting a run).
 pub(crate) fn reset_run_state(
-    mut run_state: ResMut<RunState>,
+    mut run_state: ResMut<NodeOutcome>,
     mut rng: ResMut<GameRng>,
     seed: Res<RunSeed>,
     selected_breaker: Option<Res<SelectedBreaker>>,
@@ -23,7 +23,7 @@ pub(crate) fn reset_run_state(
     mut stats: ResMut<RunStats>,
     mut highlight_tracker: ResMut<HighlightTracker>,
 ) {
-    *run_state = RunState::default();
+    *run_state = NodeOutcome::default();
     *stats = RunStats::default();
     *highlight_tracker = HighlightTracker::default();
     chip_inventory.clear();
@@ -41,14 +41,14 @@ pub(crate) fn reset_run_state(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::run::resources::RunOutcome;
+    use crate::state::run::resources::{NodeOutcome, NodeResult};
 
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
-            .insert_resource(RunState {
+            .insert_resource(NodeOutcome {
                 node_index: 5,
-                outcome: RunOutcome::Won,
+                result: NodeResult::Won,
                 ..default()
             })
             .init_resource::<GameRng>()
@@ -65,9 +65,9 @@ mod tests {
         let mut app = test_app();
         app.update();
 
-        let state = app.world().resource::<RunState>();
+        let state = app.world().resource::<NodeOutcome>();
         assert_eq!(state.node_index, 0);
-        assert_eq!(state.outcome, RunOutcome::InProgress);
+        assert_eq!(state.result, NodeResult::InProgress);
     }
 
     #[test]
@@ -98,9 +98,9 @@ mod tests {
         let val1: f32 = app.world_mut().resource_mut::<GameRng>().0.random();
 
         // Run again — should get a different RNG state (extremely unlikely to match)
-        app.world_mut().insert_resource(RunState {
+        app.world_mut().insert_resource(NodeOutcome {
             node_index: 5,
-            outcome: RunOutcome::Won,
+            result: NodeResult::Won,
             ..default()
         });
         app.update();

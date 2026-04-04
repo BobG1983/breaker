@@ -22,7 +22,7 @@ use crate::{
 #[test]
 fn setup_run_spawns_exactly_one_bolt_first_node() {
     let mut app = test_app();
-    // RunState defaults to node_index: 0
+    // NodeOutcome defaults to node_index: 0
     app.update();
 
     let count = app.world_mut().query::<&Bolt>().iter(app.world()).count();
@@ -138,7 +138,7 @@ fn spawned_bolt_does_not_have_cleanup_on_node_exit() {
 #[test]
 fn spawned_bolt_has_serving_marker_first_node() {
     let mut app = test_app();
-    // RunState defaults to node_index: 0
+    // NodeOutcome defaults to node_index: 0
     app.update();
 
     let entity = app

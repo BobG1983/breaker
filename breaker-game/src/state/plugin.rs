@@ -27,7 +27,7 @@ use crate::{
     input::InputDefaults,
     shared::{CleanupOnNodeExit, CleanupOnRunEnd, PlayfieldConfig, PlayfieldDefaults},
     state::types::{
-        AppState, ChipSelectState, GameState, MenuState, NodeState, RunEndState, RunPhase,
+        AppState, ChipSelectState, GameState, MenuState, NodeState, RunEndState, RunState,
     },
 };
 
@@ -44,7 +44,7 @@ impl Plugin for StatePlugin {
             .init_state::<AppState>()
             .add_sub_state::<GameState>()
             .add_sub_state::<MenuState>()
-            .add_sub_state::<RunPhase>()
+            .add_sub_state::<RunState>()
             .add_sub_state::<NodeState>()
             .add_sub_state::<ChipSelectState>()
             .add_sub_state::<RunEndState>()
@@ -54,7 +54,7 @@ impl Plugin for StatePlugin {
                     .register_state::<AppState>()
                     .register_state::<GameState>()
                     .register_state::<MenuState>()
-                    .register_state::<RunPhase>()
+                    .register_state::<RunState>()
                     .register_state::<NodeState>()
                     .register_state::<ChipSelectState>()
                     .register_state::<RunEndState>(),
@@ -103,7 +103,7 @@ fn defaults_plugin() -> impl Plugin {
 pub(crate) fn register_routing(app: &mut App) {
     // Pass-through routing
     app.add_systems(OnEnter(MenuState::Loading), routing::menu_loading_to_main)
-        .add_systems(OnEnter(RunPhase::Loading), routing::run_loading_to_setup)
+        .add_systems(OnEnter(RunState::Loading), routing::run_loading_to_setup)
         .add_systems(
             OnEnter(NodeState::AnimateIn),
             routing::node_animate_in_to_playing,
@@ -158,8 +158,8 @@ pub(crate) fn register_routing(app: &mut App) {
             .chain(),
     )
     .add_systems(
-        OnEnter(RunPhase::Teardown),
-        (cleanup_on_exit::<RunPhase>, routing::run_teardown_router).chain(),
+        OnEnter(RunState::Teardown),
+        (cleanup_on_exit::<RunState>, routing::run_teardown_router).chain(),
     )
     .add_systems(OnEnter(MenuState::Teardown), routing::menu_teardown_router);
     // Old cleanup markers — still used until entities migrate to CleanupOnExit<S>
@@ -168,7 +168,7 @@ pub(crate) fn register_routing(app: &mut App) {
         cleanup_entities::<CleanupOnNodeExit>,
     )
     .add_systems(
-        OnEnter(RunPhase::Teardown),
+        OnEnter(RunState::Teardown),
         cleanup_entities::<CleanupOnRunEnd>,
     );
 }

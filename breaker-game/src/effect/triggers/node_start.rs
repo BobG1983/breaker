@@ -47,7 +47,7 @@ mod tests {
     use super::*;
     use crate::{
         effect::effects::speed_boost::ActiveSpeedBoosts,
-        state::types::{AppState, GameState, RunPhase},
+        state::types::{AppState, GameState, RunState},
     };
 
     fn test_app() -> App {
@@ -55,7 +55,7 @@ mod tests {
         app.add_plugins((MinimalPlugins, StatesPlugin))
             .init_state::<AppState>()
             .add_sub_state::<GameState>()
-            .add_sub_state::<RunPhase>()
+            .add_sub_state::<RunState>()
             .add_sub_state::<NodeState>()
             .add_systems(OnEnter(NodeState::Playing), bridge_node_start);
         app
@@ -92,8 +92,8 @@ mod tests {
             .set(GameState::Run);
         app.update();
         app.world_mut()
-            .resource_mut::<NextState<RunPhase>>()
-            .set(RunPhase::Node);
+            .resource_mut::<NextState<RunState>>()
+            .set(RunState::Node);
         app.update();
         app.world_mut()
             .resource_mut::<NextState<NodeState>>()

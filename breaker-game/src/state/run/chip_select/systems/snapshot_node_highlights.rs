@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use crate::state::run::{
     definition::HighlightConfig,
-    resources::{HighlightTracker, RunState, RunStats},
+    resources::{HighlightTracker, NodeOutcome, RunStats},
     systems::select_highlights::select_highlights,
 };
 
@@ -15,7 +15,7 @@ use crate::state::run::{
 pub(crate) fn snapshot_node_highlights(
     mut stats: ResMut<RunStats>,
     mut tracker: ResMut<HighlightTracker>,
-    run_state: Res<RunState>,
+    run_state: Res<NodeOutcome>,
     config: Res<HighlightConfig>,
 ) {
     // Step 1: Drain all highlights and partition by node index.
@@ -56,7 +56,7 @@ mod tests {
         app.add_plugins(MinimalPlugins)
             .init_resource::<RunStats>()
             .init_resource::<HighlightTracker>()
-            .init_resource::<RunState>()
+            .init_resource::<NodeOutcome>()
             .insert_resource(HighlightConfig::default())
             .add_systems(Update, snapshot_node_highlights);
         app
@@ -92,7 +92,7 @@ mod tests {
             ];
         }
         // highlight_cap defaults to 5, so all 3 node-2 entries fit
-        app.world_mut().resource_mut::<RunState>().node_index = 2;
+        app.world_mut().resource_mut::<NodeOutcome>().node_index = 2;
 
         // Dirty tracker to prove system runs
         app.world_mut()
@@ -150,7 +150,7 @@ mod tests {
             let mut config = app.world_mut().resource_mut::<HighlightConfig>();
             config.highlight_cap = 1;
         }
-        app.world_mut().resource_mut::<RunState>().node_index = 2;
+        app.world_mut().resource_mut::<NodeOutcome>().node_index = 2;
 
         app.update();
 
@@ -187,7 +187,7 @@ mod tests {
             let mut config = app.world_mut().resource_mut::<HighlightConfig>();
             config.highlight_cap = 1;
         }
-        app.world_mut().resource_mut::<RunState>().node_index = 1;
+        app.world_mut().resource_mut::<NodeOutcome>().node_index = 1;
 
         app.update();
 
@@ -221,7 +221,7 @@ mod tests {
             let mut config = app.world_mut().resource_mut::<HighlightConfig>();
             config.highlight_cap = 0;
         }
-        app.world_mut().resource_mut::<RunState>().node_index = 1;
+        app.world_mut().resource_mut::<NodeOutcome>().node_index = 1;
 
         app.update();
 
@@ -390,7 +390,7 @@ mod tests {
             let mut config = app.world_mut().resource_mut::<HighlightConfig>();
             config.highlight_cap = 1;
         }
-        app.world_mut().resource_mut::<RunState>().node_index = 0;
+        app.world_mut().resource_mut::<NodeOutcome>().node_index = 0;
 
         // All per-node tracker fields are already at defaults (fresh tracker)
         // This should not panic or cause any mutation to the tracker
@@ -424,7 +424,7 @@ mod tests {
     #[test]
     fn empty_highlights_remain_empty_after_snapshot() {
         let mut app = test_app();
-        app.world_mut().resource_mut::<RunState>().node_index = 0;
+        app.world_mut().resource_mut::<NodeOutcome>().node_index = 0;
 
         // Pre-set tracker counters to verify they are still cleared
         {
@@ -466,7 +466,7 @@ mod tests {
             ];
         }
         // Current node is 1, but all highlights are from node 0
-        app.world_mut().resource_mut::<RunState>().node_index = 1;
+        app.world_mut().resource_mut::<NodeOutcome>().node_index = 1;
 
         {
             let mut tracker = app.world_mut().resource_mut::<HighlightTracker>();
@@ -510,7 +510,7 @@ mod tests {
             ];
         }
         // Current node is 1, but highlights are only for node 0
-        app.world_mut().resource_mut::<RunState>().node_index = 1;
+        app.world_mut().resource_mut::<NodeOutcome>().node_index = 1;
 
         // Dirty up tracker to verify it gets cleared
         {
@@ -547,7 +547,7 @@ mod tests {
             let mut stats = app.world_mut().resource_mut::<RunStats>();
             stats.highlights = vec![make_highlight(HighlightKind::FastClear, 0, 0.0)];
         }
-        app.world_mut().resource_mut::<RunState>().node_index = u32::MAX;
+        app.world_mut().resource_mut::<NodeOutcome>().node_index = u32::MAX;
 
         // Dirty up tracker to verify the system runs
         {
@@ -587,7 +587,7 @@ mod tests {
                 make_highlight(HighlightKind::NoDamageNode, 0, 0.0),
             ];
         }
-        app.world_mut().resource_mut::<RunState>().node_index = 0;
+        app.world_mut().resource_mut::<NodeOutcome>().node_index = 0;
 
         // Dirty up tracker before first tick
         {
@@ -652,7 +652,7 @@ mod tests {
             let mut config = app.world_mut().resource_mut::<HighlightConfig>();
             config.highlight_cap = 1;
         }
-        app.world_mut().resource_mut::<RunState>().node_index = 1;
+        app.world_mut().resource_mut::<NodeOutcome>().node_index = 1;
 
         app.update();
 
@@ -703,7 +703,7 @@ mod tests {
             ];
         }
         // Current node is 1, so node_index=2 is a "future" node
-        app.world_mut().resource_mut::<RunState>().node_index = 1;
+        app.world_mut().resource_mut::<NodeOutcome>().node_index = 1;
 
         // Dirty up tracker to verify the system runs
         {
@@ -752,7 +752,7 @@ mod tests {
             let mut config = app.world_mut().resource_mut::<HighlightConfig>();
             config.highlight_cap = 3;
         }
-        app.world_mut().resource_mut::<RunState>().node_index = 0;
+        app.world_mut().resource_mut::<NodeOutcome>().node_index = 0;
 
         app.update();
 
@@ -782,7 +782,7 @@ mod tests {
             let mut config = app.world_mut().resource_mut::<HighlightConfig>();
             config.highlight_cap = 0;
         }
-        app.world_mut().resource_mut::<RunState>().node_index = 0;
+        app.world_mut().resource_mut::<NodeOutcome>().node_index = 0;
 
         app.update();
 

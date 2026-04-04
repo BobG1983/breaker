@@ -8,7 +8,7 @@ use crate::{
         resources::SelectedBreaker,
     },
     shared::{PlayfieldConfig, rng::GameRng},
-    state::run::RunState,
+    state::run::NodeOutcome,
 };
 
 pub(super) fn make_default_bolt_definition() -> BoltDefinition {
@@ -38,7 +38,7 @@ pub(super) fn test_app() -> App {
     app.add_plugins(MinimalPlugins)
         .add_message::<BreakerSpawned>()
         .add_message::<BoltSpawned>()
-        .init_resource::<RunState>()
+        .init_resource::<NodeOutcome>()
         .init_resource::<Assets<Mesh>>()
         .init_resource::<Assets<ColorMaterial>>()
         .init_resource::<GameRng>()

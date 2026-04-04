@@ -5,7 +5,7 @@ use tracing::{info, warn};
 
 use crate::state::run::{
     node::{ActiveNodeLayout, NodeLayoutRegistry, ScenarioLayoutOverride},
-    resources::RunState,
+    resources::NodeOutcome,
 };
 
 /// Selects the active node layout based on the current node index.
@@ -17,7 +17,7 @@ use crate::state::run::{
 /// instead of the index-based selection. Falls back to index selection if the
 /// named layout is not found.
 pub(crate) fn set_active_layout(
-    run_state: Res<RunState>,
+    run_state: Res<NodeOutcome>,
     registry: Res<NodeLayoutRegistry>,
     override_res: Res<ScenarioLayoutOverride>,
     mut commands: Commands,
@@ -76,7 +76,7 @@ mod tests {
     fn test_app(node_index: u32, layouts: Vec<NodeLayout>) -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
-            .insert_resource(RunState {
+            .insert_resource(NodeOutcome {
                 node_index,
                 ..default()
             })

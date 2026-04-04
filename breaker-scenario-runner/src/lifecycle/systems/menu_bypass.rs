@@ -44,7 +44,7 @@ pub struct BypassExtras<'w, 's> {
 /// and layout are used without any user interaction.
 ///
 /// Navigates: `MenuState::Main` → `MenuState::Teardown` (the game's
-/// teardown routing then advances to `GameState::Run` → `RunPhase::Node`).
+/// teardown routing then advances to `GameState::Run` → `RunState::Node`).
 pub fn bypass_menu_to_playing(
     config: Res<ScenarioConfig>,
     mut selected: ResMut<SelectedBreaker>,
@@ -139,7 +139,7 @@ pub fn bypass_menu_to_playing(
     }
 
     // Transition through the hierarchy: MenuState::Teardown triggers
-    // the game's menu_teardown_router → GameState::Run → RunPhase::Node
+    // the game's menu_teardown_router → GameState::Run → RunState::Node
     next_menu.set(MenuState::Teardown);
 }
 
@@ -163,7 +163,7 @@ pub fn auto_skip_chip_select(
         index.0 += 1;
     }
     // ChipSelectState::Teardown triggers the game's chip_select_teardown_router
-    // → RunPhase::Node → next node.
+    // → RunState::Node → next node.
     next_chip.set(ChipSelectState::Teardown);
 }
 

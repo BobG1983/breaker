@@ -9,7 +9,7 @@ use crate::{
             components::{PAUSE_MENU_ITEMS, PauseMenuItem},
             resources::PauseMenuSelection,
         },
-        types::RunPhase,
+        types::RunState,
     },
 };
 
@@ -17,13 +17,13 @@ use crate::{
 ///
 /// Reads `ButtonInput<KeyCode>` directly (same pattern as main menu).
 /// Resume unpauses `Time<Virtual>`. Quit unpauses and sets
-/// `RunPhase::Teardown` to exit the run.
+/// `RunState::Teardown` to exit the run.
 pub(crate) fn handle_pause_input(
     keys: Res<ButtonInput<KeyCode>>,
     config: Res<InputConfig>,
     mut selection: ResMut<PauseMenuSelection>,
     mut time: ResMut<Time<Virtual>>,
-    mut next_run_phase: ResMut<NextState<RunPhase>>,
+    mut next_run_phase: ResMut<NextState<RunState>>,
 ) {
     // Navigate down
     if config.menu_down.iter().any(|k| keys.just_pressed(*k)) {
@@ -51,7 +51,7 @@ pub(crate) fn handle_pause_input(
             }
             PauseMenuItem::Quit => {
                 time.unpause();
-                next_run_phase.set(RunPhase::Teardown);
+                next_run_phase.set(RunState::Teardown);
             }
         }
     }
@@ -78,12 +78,12 @@ mod tests {
             .insert_resource(InputConfig::default())
             .init_state::<AppState>()
             .add_sub_state::<GameState>()
-            .add_sub_state::<RunPhase>()
+            .add_sub_state::<RunState>()
             .insert_resource(PauseMenuSelection {
                 selected: PauseMenuItem::Resume,
             })
             .add_systems(Update, handle_pause_input);
-        // Navigate to RunPhase so NextState<RunPhase> is available
+        // Navigate to RunState so NextState<RunState> is available
         app.world_mut()
             .resource_mut::<NextState<AppState>>()
             .set(AppState::Game);
@@ -148,10 +148,10 @@ mod tests {
             "Time<Virtual> should be unpaused after Quit"
         );
 
-        let next = app.world().resource::<NextState<RunPhase>>();
+        let next = app.world().resource::<NextState<RunState>>();
         assert!(
             format!("{next:?}").contains("Teardown"),
-            "expected RunPhase::Teardown, got: {next:?}"
+            "expected RunState::Teardown, got: {next:?}"
         );
     }
 

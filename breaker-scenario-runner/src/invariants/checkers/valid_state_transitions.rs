@@ -6,7 +6,7 @@ use crate::invariants::*;
 ///
 /// The old monolithic `GameState` had forbidden transitions that this checker
 /// validated. The new hierarchical state machine (`AppState` / `GameState` /
-/// `RunPhase` / `NodeState` / etc.) enforces valid transitions structurally
+/// `RunState` / `NodeState` / etc.) enforces valid transitions structurally
 /// via Bevy's sub-state system and is validated by unit + integration tests
 /// in the game crate.
 ///

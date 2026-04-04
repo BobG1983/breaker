@@ -1,7 +1,7 @@
 use super::{super::helpers::*, helpers::*};
 use crate::state::run::{
     definition::HighlightConfig,
-    resources::{HighlightKind, RunHighlight, RunOutcome, RunStats},
+    resources::{HighlightKind, NodeResult, RunHighlight, RunStats},
 };
 
 #[test]
@@ -40,7 +40,7 @@ fn highlights_displayed_in_diversity_penalized_order_with_config() {
         ],
         ..Default::default()
     };
-    let mut app = test_app_with_stats(RunOutcome::Won, stats);
+    let mut app = test_app_with_stats(NodeResult::Won, stats);
     app.insert_resource(HighlightConfig::default()); // diversity_penalty=0.5, highlight_cap=5
     app.update();
 
@@ -111,7 +111,7 @@ fn highlights_fifo_fallback_without_config() {
         ],
         ..Default::default()
     };
-    let mut app = test_app_with_stats(RunOutcome::Won, stats);
+    let mut app = test_app_with_stats(NodeResult::Won, stats);
     // Deliberately do NOT insert HighlightConfig.
     app.update();
 
@@ -190,7 +190,7 @@ fn respects_highlight_cap_from_config_with_diversity_selection() {
         ],
         ..Default::default()
     };
-    let mut app = test_app_with_stats(RunOutcome::Won, stats);
+    let mut app = test_app_with_stats(NodeResult::Won, stats);
     app.insert_resource(HighlightConfig {
         highlight_cap: 2,
         ..Default::default()

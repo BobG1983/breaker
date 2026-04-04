@@ -2,13 +2,13 @@ use bevy::prelude::*;
 
 use super::{super::spawn_run_end_screen, helpers::*};
 use crate::state::run::{
-    resources::{RunOutcome, RunState, RunStats},
+    resources::{NodeOutcome, NodeResult, RunStats},
     run_end::RunEndScreen,
 };
 
 #[test]
 fn spawn_creates_run_end_screen_entity() {
-    let mut app = test_app(RunOutcome::Won);
+    let mut app = test_app(NodeResult::Won);
     app.update();
 
     let count = app
@@ -21,7 +21,7 @@ fn spawn_creates_run_end_screen_entity() {
 
 #[test]
 fn won_shows_complete_text() {
-    let mut app = test_app(RunOutcome::Won);
+    let mut app = test_app(NodeResult::Won);
     app.update();
 
     let texts = collect_texts(&mut app);
@@ -37,7 +37,7 @@ fn won_shows_complete_text() {
 
 #[test]
 fn timer_expired_shows_times_up_text() {
-    let mut app = test_app(RunOutcome::TimerExpired);
+    let mut app = test_app(NodeResult::TimerExpired);
     app.update();
 
     let texts = collect_texts(&mut app);
@@ -49,7 +49,7 @@ fn timer_expired_shows_times_up_text() {
 
 #[test]
 fn in_progress_shows_run_ended_text() {
-    let mut app = test_app(RunOutcome::InProgress);
+    let mut app = test_app(NodeResult::InProgress);
     app.update();
 
     let screen_count = app
@@ -71,7 +71,7 @@ fn in_progress_shows_run_ended_text() {
 
 #[test]
 fn lives_depleted_shows_signal_lost_text() {
-    let mut app = test_app(RunOutcome::LivesDepleted);
+    let mut app = test_app(NodeResult::LivesDepleted);
     app.update();
 
     let texts = collect_texts(&mut app);
@@ -87,7 +87,7 @@ fn displays_seed_value() {
         seed: 42,
         ..Default::default()
     };
-    let mut app = test_app_with_stats(RunOutcome::Won, stats);
+    let mut app = test_app_with_stats(NodeResult::Won, stats);
     app.update();
 
     let texts = collect_texts(&mut app);
@@ -103,7 +103,7 @@ fn displays_large_seed_value() {
         seed: 123_456_789,
         ..Default::default()
     };
-    let mut app = test_app_with_stats(RunOutcome::Won, stats);
+    let mut app = test_app_with_stats(NodeResult::Won, stats);
     app.update();
 
     let texts = collect_texts(&mut app);
@@ -123,7 +123,7 @@ fn displays_chip_names_from_chips_collected() {
         ],
         ..Default::default()
     };
-    let mut app = test_app_with_stats(RunOutcome::Won, stats);
+    let mut app = test_app_with_stats(NodeResult::Won, stats);
     app.update();
 
     let texts = collect_texts(&mut app);
@@ -143,7 +143,7 @@ fn displays_empty_chip_list_gracefully() {
         chips_collected: vec![],
         ..Default::default()
     };
-    let mut app = test_app_with_stats(RunOutcome::Won, stats);
+    let mut app = test_app_with_stats(NodeResult::Won, stats);
     app.update();
 
     // Should not panic and should still have the run end screen
@@ -161,9 +161,9 @@ fn displays_outcome_without_stats_resource() {
     // The system should use Option<Res<RunStats>> and not panic.
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
-        .insert_resource(RunState {
+        .insert_resource(NodeOutcome {
             node_index: 0,
-            outcome: RunOutcome::Won,
+            result: NodeResult::Won,
             ..default()
         })
         .add_systems(Update, spawn_run_end_screen);

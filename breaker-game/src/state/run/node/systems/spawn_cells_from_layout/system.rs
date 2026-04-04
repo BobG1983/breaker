@@ -17,7 +17,7 @@ use crate::{
     shared::{BOLT_LAYER, CELL_LAYER, GameDrawLayer, PlayfieldConfig},
     state::run::{
         node::{ActiveNodeLayout, NodeLayout, messages::CellsSpawned},
-        resources::{NodeSequence, RunState},
+        resources::{NodeOutcome, NodeSequence},
     },
 };
 
@@ -270,7 +270,7 @@ fn spawn_orbit_children(
 /// Resolves the `hp_mult` for the current node from the run state and node
 /// sequence, falling back to `1.0` when those resources are absent (e.g. in
 /// tests or scenario overrides).
-fn resolve_hp_mult(run_state: Option<&RunState>, node_sequence: Option<&NodeSequence>) -> f32 {
+fn resolve_hp_mult(run_state: Option<&NodeOutcome>, node_sequence: Option<&NodeSequence>) -> f32 {
     if let (Some(state), Some(sequence)) = (run_state, node_sequence) {
         sequence
             .assignments
@@ -288,7 +288,7 @@ pub(crate) struct CellSpawnContext<'w> {
     cell_config: Res<'w, CellConfig>,
     playfield_config: Res<'w, PlayfieldConfig>,
     cell_registry: Res<'w, CellTypeRegistry>,
-    run_state: Option<Res<'w, RunState>>,
+    run_state: Option<Res<'w, NodeOutcome>>,
     node_sequence: Option<Res<'w, NodeSequence>>,
 }
 

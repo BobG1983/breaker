@@ -36,18 +36,18 @@ const LABEL_COLOR: Color = Color::srgba(0.7, 0.7, 0.7, 1.0);
 /// Spawns the run-end UI showing the run outcome and optional stats summary.
 pub(crate) fn spawn_run_end_screen(
     mut commands: Commands,
-    run_state: Res<RunState>,
+    run_state: Res<NodeOutcome>,
     stats: Option<Res<RunStats>>,
     config: Option<Res<HighlightConfig>>,
 ) {
     info!("run ended");
     let seed = stats.as_ref().map_or(0_u64, |s| s.seed);
     let idx = usize::try_from(seed % 5).unwrap_or(0);
-    let (title, subtitle) = match run_state.outcome {
-        RunOutcome::Won => ("RUN COMPLETE", WON_SUBTITLES[idx]),
-        RunOutcome::TimerExpired => ("TIME'S UP", TIMER_EXPIRED_SUBTITLES[idx]),
-        RunOutcome::LivesDepleted => ("SIGNAL LOST", LIVES_DEPLETED_SUBTITLES[idx]),
-        RunOutcome::InProgress => ("RUN ENDED", ""),
+    let (title, subtitle) = match run_state.result {
+        NodeResult::Won => ("RUN COMPLETE", WON_SUBTITLES[idx]),
+        NodeResult::TimerExpired => ("TIME'S UP", TIMER_EXPIRED_SUBTITLES[idx]),
+        NodeResult::LivesDepleted => ("SIGNAL LOST", LIVES_DEPLETED_SUBTITLES[idx]),
+        NodeResult::InProgress => ("RUN ENDED", ""),
     };
 
     commands

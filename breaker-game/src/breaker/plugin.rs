@@ -90,7 +90,7 @@ mod tests {
     use rantzsoft_physics2d::resources::CollisionQuadtree;
 
     use super::*;
-    use crate::state::types::{AppState, GameState, RunPhase};
+    use crate::state::types::{AppState, GameState, RunState};
 
     #[test]
     fn plugin_builds() {
@@ -102,7 +102,7 @@ mod tests {
             .init_asset::<ColorMaterial>()
             .init_state::<AppState>()
             .add_sub_state::<GameState>()
-            .add_sub_state::<RunPhase>()
+            .add_sub_state::<RunState>()
             .add_sub_state::<NodeState>()
             .init_resource::<crate::shared::PlayfieldConfig>()
             .init_resource::<crate::breaker::BreakerRegistry>()

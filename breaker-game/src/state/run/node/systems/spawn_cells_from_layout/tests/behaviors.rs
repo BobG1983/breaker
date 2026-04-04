@@ -12,7 +12,7 @@ use crate::{
     state::run::{
         definition::NodeType,
         node::{ActiveNodeLayout, NodeLayout, definition::NodePool, messages::CellsSpawned},
-        resources::{NodeAssignment, NodeSequence, RunState},
+        resources::{NodeAssignment, NodeOutcome, NodeSequence},
     },
 };
 
@@ -254,7 +254,7 @@ fn cell_hp_scaled_by_node_assignment_hp_mult() {
         .init_resource::<Assets<ColorMaterial>>()
         .insert_resource(ActiveNodeLayout(layout))
         .insert_resource(test_registry())
-        .insert_resource(RunState {
+        .insert_resource(NodeOutcome {
             node_index: 0,
             ..Default::default()
         })
@@ -309,7 +309,7 @@ fn cell_hp_unchanged_when_hp_mult_is_one() {
         .init_resource::<Assets<ColorMaterial>>()
         .insert_resource(ActiveNodeLayout(layout))
         .insert_resource(test_registry())
-        .insert_resource(RunState {
+        .insert_resource(NodeOutcome {
             node_index: 0,
             ..Default::default()
         })

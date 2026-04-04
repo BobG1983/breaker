@@ -15,7 +15,7 @@ use crate::{
         damage_boost::ActiveDamageBoosts, piercing::ActivePiercings, speed_boost::ActiveSpeedBoosts,
     },
     shared::{GameDrawLayer, GameRng},
-    state::run::RunState,
+    state::run::NodeOutcome,
 };
 
 fn make_default_bolt_definition() -> BoltDefinition {
@@ -38,7 +38,7 @@ fn make_default_bolt_definition() -> BoltDefinition {
 fn test_app() -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
-        .init_resource::<RunState>()
+        .init_resource::<NodeOutcome>()
         .init_resource::<GameRng>()
         .add_systems(Update, reset_bolt);
     app
@@ -161,7 +161,7 @@ fn reset_bolt_zeroes_velocity_on_node_zero() {
 #[test]
 fn reset_bolt_sets_initial_velocity_on_subsequent_nodes() {
     let mut app = test_app();
-    app.world_mut().resource_mut::<RunState>().node_index = 2;
+    app.world_mut().resource_mut::<NodeOutcome>().node_index = 2;
     spawn_bolt_entity(
         &mut app,
         Vec2::new(0.0, 0.0),
@@ -212,7 +212,7 @@ fn reset_bolt_inserts_serving_on_node_zero() {
 #[test]
 fn reset_bolt_removes_serving_on_subsequent_nodes() {
     let mut app = test_app();
-    app.world_mut().resource_mut::<RunState>().node_index = 1;
+    app.world_mut().resource_mut::<NodeOutcome>().node_index = 1;
     let def = make_default_bolt_definition();
     let bolt_id = {
         let world = app.world_mut();
@@ -401,7 +401,7 @@ fn reset_bolt_resets_piercing_remaining_from_multi_entry_active_piercings() {
 #[test]
 fn reset_bolt_reads_angle_spread_from_entity() {
     let mut app = test_app();
-    app.world_mut().resource_mut::<RunState>().node_index = 2;
+    app.world_mut().resource_mut::<NodeOutcome>().node_index = 2;
     let bolt_id = spawn_bolt_entity(&mut app, Vec2::ZERO, Velocity2D(Vec2::ZERO));
     spawn_breaker(&mut app, 0.0, -250.0);
 
@@ -421,7 +421,7 @@ fn reset_bolt_reads_angle_spread_from_entity() {
 fn reset_bolt_zero_angle_spread_launches_straight_up() {
     // Edge case: BoltAngleSpread(0.0) -- bolt launches straight up
     let mut app = test_app();
-    app.world_mut().resource_mut::<RunState>().node_index = 2;
+    app.world_mut().resource_mut::<NodeOutcome>().node_index = 2;
     let def = BoltDefinition {
         min_angle_horizontal: 0.0,
         min_angle_vertical: 0.0,
@@ -522,7 +522,7 @@ fn reset_bolt_zero_spawn_offset_resets_to_breaker_y() {
 #[test]
 fn reset_bolt_uses_base_speed_from_entity() {
     let mut app = test_app();
-    app.world_mut().resource_mut::<RunState>().node_index = 1;
+    app.world_mut().resource_mut::<NodeOutcome>().node_index = 1;
     let bolt_id = spawn_bolt_entity(&mut app, Vec2::ZERO, Velocity2D(Vec2::ZERO));
     spawn_breaker(&mut app, 0.0, -250.0);
 
@@ -574,7 +574,7 @@ fn reset_bolt_uses_entity_values_not_bolt_config() {
     // Then: Position uses entity offset (54.0), NOT config offset (30.0).
     //       Speed is ~720.0, NOT 400.0.
     let mut app = test_app();
-    app.world_mut().resource_mut::<RunState>().node_index = 1;
+    app.world_mut().resource_mut::<NodeOutcome>().node_index = 1;
     let bolt_id = spawn_bolt_entity(&mut app, Vec2::ZERO, Velocity2D(Vec2::ZERO));
     spawn_breaker(&mut app, 0.0, -250.0);
 
@@ -601,7 +601,7 @@ fn reset_bolt_uses_entity_values_not_bolt_config() {
 #[test]
 fn reset_bolt_uses_random_angle_within_spread() {
     let mut app = test_app();
-    app.world_mut().resource_mut::<RunState>().node_index = 3;
+    app.world_mut().resource_mut::<NodeOutcome>().node_index = 3;
     let def = make_default_bolt_definition();
     let bolt_id = {
         let world = app.world_mut();
@@ -732,7 +732,7 @@ fn reset_bolt_runs_without_bolt_config_resource() {
     // Then: System runs without panic (proves BoltConfig is not a system parameter).
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
-        .init_resource::<RunState>()
+        .init_resource::<NodeOutcome>()
         .init_resource::<GameRng>()
         // Deliberately NOT inserting BoltConfig
         .add_systems(Update, reset_bolt);

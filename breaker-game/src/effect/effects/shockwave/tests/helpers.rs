@@ -31,7 +31,7 @@ pub(super) fn test_app() -> App {
     app.add_plugins(bevy::state::app::StatesPlugin);
     app.init_state::<crate::state::types::AppState>();
     app.add_sub_state::<crate::state::types::GameState>();
-    app.add_sub_state::<crate::state::types::RunPhase>();
+    app.add_sub_state::<crate::state::types::RunState>();
     app.add_sub_state::<crate::state::types::NodeState>();
     app.add_systems(Update, tick_shockwave);
     app.add_systems(Update, despawn_finished_shockwave);
@@ -39,7 +39,7 @@ pub(super) fn test_app() -> App {
 }
 
 pub(super) fn enter_playing(app: &mut App) {
-    use crate::state::types::{AppState, GameState, NodeState, RunPhase};
+    use crate::state::types::{AppState, GameState, NodeState, RunState};
     app.world_mut()
         .resource_mut::<NextState<AppState>>()
         .set(AppState::Game);
@@ -49,8 +49,8 @@ pub(super) fn enter_playing(app: &mut App) {
         .set(GameState::Run);
     app.update();
     app.world_mut()
-        .resource_mut::<NextState<RunPhase>>()
-        .set(RunPhase::Node);
+        .resource_mut::<NextState<RunState>>()
+        .set(RunState::Node);
     app.update();
     app.world_mut()
         .resource_mut::<NextState<NodeState>>()

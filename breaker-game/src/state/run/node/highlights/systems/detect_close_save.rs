@@ -20,7 +20,7 @@ pub(crate) fn detect_close_save(
     playfield: Res<PlayfieldConfig>,
     config: Res<HighlightConfig>,
     mut stats: ResMut<RunStats>,
-    run_state: Res<RunState>,
+    run_state: Res<NodeOutcome>,
     mut writer: MessageWriter<HighlightTriggered>,
 ) {
     let bottom = playfield.bottom();
@@ -91,7 +91,7 @@ mod tests {
             .add_message::<BumpPerformed>()
             .add_message::<HighlightTriggered>()
             .init_resource::<RunStats>()
-            .init_resource::<RunState>()
+            .init_resource::<NodeOutcome>()
             .insert_resource(HighlightConfig::default())
             .insert_resource(PlayfieldConfig {
                 height: 1080.0,

@@ -4,7 +4,7 @@ use crate::state::run::{
     definition::HighlightConfig,
     messages::HighlightTriggered,
     node::{messages::NodeCleared, resources::NodeTimer},
-    resources::{HighlightKind, HighlightTracker, RunHighlight, RunState, RunStats},
+    resources::{HighlightKind, HighlightTracker, NodeOutcome, RunHighlight, RunStats},
 };
 
 /// Bundled resources for node-clear highlight detection.
@@ -12,7 +12,7 @@ use crate::state::run::{
 pub(crate) struct NodeClearContext<'w> {
     stats: ResMut<'w, RunStats>,
     tracker: ResMut<'w, HighlightTracker>,
-    run_state: Res<'w, RunState>,
+    run_state: Res<'w, NodeOutcome>,
     node_timer: Res<'w, NodeTimer>,
     config: Res<'w, HighlightConfig>,
     time: Res<'w, Time<Fixed>>,

@@ -23,7 +23,7 @@ impl Plugin for WallPlugin {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::types::{AppState, GameState, RunPhase};
+    use crate::state::types::{AppState, GameState, RunState};
 
     #[test]
     fn plugin_builds() {
@@ -34,7 +34,7 @@ mod tests {
             .add_plugins(bevy::state::app::StatesPlugin)
             .init_state::<AppState>()
             .add_sub_state::<GameState>()
-            .add_sub_state::<RunPhase>()
+            .add_sub_state::<RunState>()
             .add_sub_state::<NodeState>()
             .init_resource::<crate::shared::PlayfieldConfig>()
             .insert_resource(registry)

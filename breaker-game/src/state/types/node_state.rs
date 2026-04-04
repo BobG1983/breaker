@@ -1,16 +1,16 @@
-//! Node state — sub-state of [`RunPhase::Node`].
+//! Node state — sub-state of [`RunState::Node`].
 
 use bevy::prelude::*;
 
-use super::RunPhase;
+use super::RunState;
 
 /// Node lifecycle state.
 ///
-/// Sub-state of [`RunPhase::Node`]. Controls the progression through
+/// Sub-state of [`RunState::Node`]. Controls the progression through
 /// a single node: loading, animate-in, active gameplay, animate-out,
 /// and teardown.
 #[derive(SubStates, Default, Clone, Copy, PartialEq, Eq, Hash, Debug)]
-#[source(RunPhase = RunPhase::Node)]
+#[source(RunState = RunState::Node)]
 pub enum NodeState {
     /// Spawn cells, walls, HUD. Apply node scaling.
     #[default]
@@ -21,7 +21,7 @@ pub enum NodeState {
     Playing,
     /// Animate node exit (pass-through until transitions are wired).
     AnimateOut,
-    /// Node teardown — cleanup entities, parent `RunPhase` watches for this.
+    /// Node teardown — cleanup entities, parent `RunState` watches for this.
     Teardown,
 }
 

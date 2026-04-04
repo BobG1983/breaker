@@ -1,15 +1,15 @@
-//! Chip select state — sub-state of [`RunPhase::ChipSelect`].
+//! Chip select state — sub-state of [`RunState::ChipSelect`].
 
 use bevy::prelude::*;
 
-use super::RunPhase;
+use super::RunState;
 
 /// Chip selection lifecycle state.
 ///
-/// Sub-state of [`RunPhase::ChipSelect`]. Controls the chip selection
+/// Sub-state of [`RunState::ChipSelect`]. Controls the chip selection
 /// screen between nodes.
 #[derive(SubStates, Default, Clone, Copy, PartialEq, Eq, Hash, Debug)]
-#[source(RunPhase = RunPhase::ChipSelect)]
+#[source(RunState = RunState::ChipSelect)]
 pub enum ChipSelectState {
     /// Chip select loading (pass-through).
     #[default]
@@ -20,7 +20,7 @@ pub enum ChipSelectState {
     Selecting,
     /// Animate chip select exit (pass-through until transitions are wired).
     AnimateOut,
-    /// Chip select teardown — parent `RunPhase` watches for this.
+    /// Chip select teardown — parent `RunState` watches for this.
     Teardown,
 }
 

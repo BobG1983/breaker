@@ -6,7 +6,7 @@ use crate::state::run::resources::HighlightKind;
 
 /// Sent when the run is lost (e.g. all lives depleted).
 ///
-/// Consumed by the run state machine to set [`RunOutcome::LivesDepleted`] and transition
+/// Consumed by the run state machine to set [`NodeResult::LivesDepleted`] and transition
 /// to [`GameState::RunEnd`].
 #[derive(Message, Clone, Debug)]
 pub struct RunLost;

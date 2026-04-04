@@ -13,7 +13,7 @@ use crate::{
     },
     breaker::{BreakerRegistry, SelectedBreaker, components::Breaker, messages::BreakerSpawned},
     shared::rng::GameRng,
-    state::run::RunState,
+    state::run::NodeOutcome,
 };
 
 /// Spawns the primary breaker and primary bolt at run start.
@@ -23,7 +23,7 @@ use crate::{
 /// the bolt definition from [`BoltRegistry`]. Sends [`BreakerSpawned`] and
 /// [`BoltSpawned`] messages after spawning.
 ///
-/// On the first node (`RunState.node_index == 0`), the bolt spawns with
+/// On the first node (`NodeOutcome.node_index == 0`), the bolt spawns with
 /// zero velocity and a [`BoltServing`](crate::bolt::components::BoltServing)
 /// marker. On subsequent nodes it launches immediately with a random angle.
 ///
@@ -46,7 +46,7 @@ pub(crate) fn setup_run(
     selected: Res<SelectedBreaker>,
     breaker_reg: Res<BreakerRegistry>,
     bolt_reg: Res<BoltRegistry>,
-    run_state: Res<RunState>,
+    run_state: Res<NodeOutcome>,
     mut rng: ResMut<GameRng>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,

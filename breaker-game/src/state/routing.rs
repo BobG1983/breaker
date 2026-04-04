@@ -7,8 +7,8 @@
 use bevy::prelude::*;
 use tracing::info;
 
-use super::types::{ChipSelectState, GameState, MenuState, NodeState, RunEndState, RunPhase};
-use crate::state::run::resources::{RunOutcome, RunState};
+use super::types::{ChipSelectState, GameState, MenuState, NodeState, RunEndState, RunState};
+use crate::state::run::resources::{NodeOutcome, NodeResult};
 
 // ──────────────────────────────────────────────────────────────
 //  Pass-through routing — auto-advance states without real content
@@ -19,9 +19,9 @@ pub(crate) fn menu_loading_to_main(mut next: ResMut<NextState<MenuState>>) {
     next.set(MenuState::Main);
 }
 
-/// `RunPhase::Loading` → `RunPhase::Setup` (after run init systems run)
-pub(crate) fn run_loading_to_setup(mut next: ResMut<NextState<RunPhase>>) {
-    next.set(RunPhase::Setup);
+/// `RunState::Loading` → `RunState::Setup` (after run init systems run)
+pub(crate) fn run_loading_to_setup(mut next: ResMut<NextState<RunState>>) {
+    next.set(RunState::Setup);
 }
 
 /// `NodeState::AnimateIn` → `NodeState::Playing`
@@ -71,38 +71,38 @@ pub(crate) fn run_end_animate_out_to_teardown(mut next: ResMut<NextState<RunEndS
 /// `NodeState::Teardown` — route to `ChipSelect` or `RunEnd`.
 ///
 /// Cleanup is handled by `cleanup_on_exit::<NodeState>` chained before this.
-/// Reads [`RunOutcome`] from [`RunState`] to decide:
-/// - `InProgress` → `RunPhase::ChipSelect` (mid-run, next node)
-/// - `Won` / `TimerExpired` / `LivesDepleted` → `RunPhase::RunEnd`
+/// Reads [`NodeResult`] from [`NodeOutcome`] to decide:
+/// - `InProgress` → `RunState::ChipSelect` (mid-run, next node)
+/// - `Won` / `TimerExpired` / `LivesDepleted` → `RunState::RunEnd`
 pub(crate) fn node_teardown_router(
-    run_state: Res<RunState>,
-    mut next: ResMut<NextState<RunPhase>>,
+    run_state: Res<NodeOutcome>,
+    mut next: ResMut<NextState<RunState>>,
 ) {
-    match run_state.outcome {
-        RunOutcome::InProgress => {
+    match run_state.result {
+        NodeResult::InProgress => {
             info!("Node teardown → ChipSelect (run in progress)");
-            next.set(RunPhase::ChipSelect);
+            next.set(RunState::ChipSelect);
         }
         outcome => {
             info!("Node teardown → RunEnd (outcome: {outcome:?})");
-            next.set(RunPhase::RunEnd);
+            next.set(RunState::RunEnd);
         }
     }
 }
 
 /// `ChipSelectState::Teardown` — advance to next node.
-pub(crate) fn chip_select_teardown_router(mut next: ResMut<NextState<RunPhase>>) {
+pub(crate) fn chip_select_teardown_router(mut next: ResMut<NextState<RunState>>) {
     info!("ChipSelect teardown → Node");
-    next.set(RunPhase::Node);
+    next.set(RunState::Node);
 }
 
 /// `RunEndState::Teardown` — signal run complete.
-pub(crate) fn run_end_teardown_router(mut next: ResMut<NextState<RunPhase>>) {
+pub(crate) fn run_end_teardown_router(mut next: ResMut<NextState<RunState>>) {
     info!("RunEnd teardown → Run Teardown");
-    next.set(RunPhase::Teardown);
+    next.set(RunState::Teardown);
 }
 
-/// `RunPhase::Teardown` — return to menu.
+/// `RunState::Teardown` — return to menu.
 pub(crate) fn run_teardown_router(mut next: ResMut<NextState<GameState>>) {
     info!("Run teardown → Menu");
     next.set(GameState::Menu);
@@ -129,11 +129,11 @@ mod tests {
             .init_state::<AppState>()
             .add_sub_state::<GameState>()
             .add_sub_state::<MenuState>()
-            .add_sub_state::<RunPhase>()
+            .add_sub_state::<RunState>()
             .add_sub_state::<NodeState>()
             .add_sub_state::<ChipSelectState>()
             .add_sub_state::<RunEndState>()
-            .init_resource::<RunState>();
+            .init_resource::<NodeOutcome>();
         app
     }
 
@@ -177,8 +177,8 @@ mod tests {
             .set(GameState::Run);
         app.update();
         app.world_mut()
-            .resource_mut::<NextState<RunPhase>>()
-            .set(RunPhase::Node);
+            .resource_mut::<NextState<RunState>>()
+            .set(RunState::Node);
         app.update();
 
         // NodeState defaults to Loading → set AnimateIn
@@ -209,8 +209,8 @@ mod tests {
             .set(GameState::Run);
         app.update();
         app.world_mut()
-            .resource_mut::<NextState<RunPhase>>()
-            .set(RunPhase::Node);
+            .resource_mut::<NextState<RunState>>()
+            .set(RunState::Node);
         app.update();
         app.world_mut()
             .resource_mut::<NextState<NodeState>>()
@@ -233,8 +233,8 @@ mod tests {
 
         // Set outcome to InProgress (default)
         assert_eq!(
-            app.world().resource::<RunState>().outcome,
-            RunOutcome::InProgress
+            app.world().resource::<NodeOutcome>().result,
+            NodeResult::InProgress
         );
 
         // Navigate to NodeState::Teardown
@@ -247,19 +247,19 @@ mod tests {
             .set(GameState::Run);
         app.update();
         app.world_mut()
-            .resource_mut::<NextState<RunPhase>>()
-            .set(RunPhase::Node);
+            .resource_mut::<NextState<RunState>>()
+            .set(RunState::Node);
         app.update();
         app.world_mut()
             .resource_mut::<NextState<NodeState>>()
             .set(NodeState::Teardown);
-        // OnEnter(Teardown) fires here, sets NextState<RunPhase>::ChipSelect
+        // OnEnter(Teardown) fires here, sets NextState<RunState>::ChipSelect
         app.update();
         // Extra update to process the NextState set by the OnEnter system
         app.update();
 
-        let state = app.world().resource::<State<RunPhase>>();
-        assert_eq!(**state, RunPhase::ChipSelect);
+        let state = app.world().resource::<State<RunState>>();
+        assert_eq!(**state, RunState::ChipSelect);
     }
 
     #[test]
@@ -267,7 +267,7 @@ mod tests {
         let mut app = test_app();
         app.add_systems(OnEnter(NodeState::Teardown), node_teardown_router);
 
-        app.world_mut().resource_mut::<RunState>().outcome = RunOutcome::Won;
+        app.world_mut().resource_mut::<NodeOutcome>().result = NodeResult::Won;
 
         app.world_mut()
             .resource_mut::<NextState<AppState>>()
@@ -278,19 +278,19 @@ mod tests {
             .set(GameState::Run);
         app.update();
         app.world_mut()
-            .resource_mut::<NextState<RunPhase>>()
-            .set(RunPhase::Node);
+            .resource_mut::<NextState<RunState>>()
+            .set(RunState::Node);
         app.update();
         app.world_mut()
             .resource_mut::<NextState<NodeState>>()
             .set(NodeState::Teardown);
-        // OnEnter(Teardown) fires here, sets NextState<RunPhase>::RunEnd
+        // OnEnter(Teardown) fires here, sets NextState<RunState>::RunEnd
         app.update();
         // Extra update to process the NextState set by the OnEnter system
         app.update();
 
-        let state = app.world().resource::<State<RunPhase>>();
-        assert_eq!(**state, RunPhase::RunEnd);
+        let state = app.world().resource::<State<RunState>>();
+        assert_eq!(**state, RunState::RunEnd);
     }
 
     #[test]
@@ -298,7 +298,7 @@ mod tests {
         let mut app = test_app();
         app.add_systems(OnEnter(NodeState::Teardown), node_teardown_router);
 
-        app.world_mut().resource_mut::<RunState>().outcome = RunOutcome::TimerExpired;
+        app.world_mut().resource_mut::<NodeOutcome>().result = NodeResult::TimerExpired;
 
         app.world_mut()
             .resource_mut::<NextState<AppState>>()
@@ -309,19 +309,19 @@ mod tests {
             .set(GameState::Run);
         app.update();
         app.world_mut()
-            .resource_mut::<NextState<RunPhase>>()
-            .set(RunPhase::Node);
+            .resource_mut::<NextState<RunState>>()
+            .set(RunState::Node);
         app.update();
         app.world_mut()
             .resource_mut::<NextState<NodeState>>()
             .set(NodeState::Teardown);
-        // OnEnter(Teardown) fires here, sets NextState<RunPhase>::RunEnd
+        // OnEnter(Teardown) fires here, sets NextState<RunState>::RunEnd
         app.update();
         // Extra update to process the NextState set by the OnEnter system
         app.update();
 
-        let state = app.world().resource::<State<RunPhase>>();
-        assert_eq!(**state, RunPhase::RunEnd);
+        let state = app.world().resource::<State<RunState>>();
+        assert_eq!(**state, RunState::RunEnd);
     }
 
     #[test]
@@ -329,7 +329,7 @@ mod tests {
         let mut app = test_app();
         app.add_systems(OnEnter(NodeState::Teardown), node_teardown_router);
 
-        app.world_mut().resource_mut::<RunState>().outcome = RunOutcome::LivesDepleted;
+        app.world_mut().resource_mut::<NodeOutcome>().result = NodeResult::LivesDepleted;
 
         app.world_mut()
             .resource_mut::<NextState<AppState>>()
@@ -340,19 +340,19 @@ mod tests {
             .set(GameState::Run);
         app.update();
         app.world_mut()
-            .resource_mut::<NextState<RunPhase>>()
-            .set(RunPhase::Node);
+            .resource_mut::<NextState<RunState>>()
+            .set(RunState::Node);
         app.update();
         app.world_mut()
             .resource_mut::<NextState<NodeState>>()
             .set(NodeState::Teardown);
-        // OnEnter(Teardown) fires here, sets NextState<RunPhase>::RunEnd
+        // OnEnter(Teardown) fires here, sets NextState<RunState>::RunEnd
         app.update();
         // Extra update to process the NextState set by the OnEnter system
         app.update();
 
-        let state = app.world().resource::<State<RunPhase>>();
-        assert_eq!(**state, RunPhase::RunEnd);
+        let state = app.world().resource::<State<RunState>>();
+        assert_eq!(**state, RunState::RunEnd);
     }
 
     #[test]
@@ -372,19 +372,19 @@ mod tests {
             .set(GameState::Run);
         app.update();
         app.world_mut()
-            .resource_mut::<NextState<RunPhase>>()
-            .set(RunPhase::ChipSelect);
+            .resource_mut::<NextState<RunState>>()
+            .set(RunState::ChipSelect);
         app.update();
         app.world_mut()
             .resource_mut::<NextState<ChipSelectState>>()
             .set(ChipSelectState::Teardown);
-        // OnEnter(Teardown) fires here, sets NextState<RunPhase>::Node
+        // OnEnter(Teardown) fires here, sets NextState<RunState>::Node
         app.update();
         // Extra update to process the NextState set by the OnEnter system
         app.update();
 
-        let state = app.world().resource::<State<RunPhase>>();
-        assert_eq!(**state, RunPhase::Node);
+        let state = app.world().resource::<State<RunState>>();
+        assert_eq!(**state, RunState::Node);
     }
 
     #[test]
@@ -401,19 +401,19 @@ mod tests {
             .set(GameState::Run);
         app.update();
         app.world_mut()
-            .resource_mut::<NextState<RunPhase>>()
-            .set(RunPhase::RunEnd);
+            .resource_mut::<NextState<RunState>>()
+            .set(RunState::RunEnd);
         app.update();
         app.world_mut()
             .resource_mut::<NextState<RunEndState>>()
             .set(RunEndState::Teardown);
-        // OnEnter(Teardown) fires here, sets NextState<RunPhase>::Teardown
+        // OnEnter(Teardown) fires here, sets NextState<RunState>::Teardown
         app.update();
         // Extra update to process the NextState set by the OnEnter system
         app.update();
 
-        let state = app.world().resource::<State<RunPhase>>();
-        assert_eq!(**state, RunPhase::Teardown);
+        let state = app.world().resource::<State<RunState>>();
+        assert_eq!(**state, RunState::Teardown);
     }
 
     #[test]
@@ -444,7 +444,7 @@ mod tests {
     #[test]
     fn run_teardown_routes_to_menu() {
         let mut app = test_app();
-        app.add_systems(OnEnter(RunPhase::Teardown), run_teardown_router);
+        app.add_systems(OnEnter(RunState::Teardown), run_teardown_router);
 
         app.world_mut()
             .resource_mut::<NextState<AppState>>()
@@ -455,8 +455,8 @@ mod tests {
             .set(GameState::Run);
         app.update();
         app.world_mut()
-            .resource_mut::<NextState<RunPhase>>()
-            .set(RunPhase::Teardown);
+            .resource_mut::<NextState<RunState>>()
+            .set(RunState::Teardown);
         // OnEnter(Teardown) fires here, sets NextState<GameState>::Menu
         app.update();
         // Extra update to process the NextState set by the OnEnter system
@@ -476,16 +476,16 @@ mod tests {
             .init_state::<AppState>()
             .add_sub_state::<GameState>()
             .add_sub_state::<MenuState>()
-            .add_sub_state::<RunPhase>()
+            .add_sub_state::<RunState>()
             .add_sub_state::<NodeState>()
             .add_sub_state::<ChipSelectState>()
             .add_sub_state::<RunEndState>()
-            .init_resource::<RunState>();
+            .init_resource::<NodeOutcome>();
         crate::state::plugin::register_routing(&mut app);
         app
     }
 
-    /// Navigate through `AppState` → `GameState` → `RunPhase` → `NodeState`.
+    /// Navigate through `AppState` → `GameState` → `RunState` → `NodeState`.
     fn navigate_to_node_playing(app: &mut App) {
         app.world_mut()
             .resource_mut::<NextState<AppState>>()
@@ -497,11 +497,11 @@ mod tests {
             .resource_mut::<NextState<GameState>>()
             .set(GameState::Run);
         app.update();
-        // RunPhase defaults to Loading → pass-through to Setup
-        // We need to be at RunPhase::Node for NodeState to exist
+        // RunState defaults to Loading → pass-through to Setup
+        // We need to be at RunState::Node for NodeState to exist
         app.world_mut()
-            .resource_mut::<NextState<RunPhase>>()
-            .set(RunPhase::Node);
+            .resource_mut::<NextState<RunState>>()
+            .set(RunState::Node);
         app.update();
         // NodeState defaults to Loading → set AnimateIn, pass-through fires
         app.world_mut()
@@ -550,7 +550,7 @@ mod tests {
         navigate_to_node_playing(&mut app);
 
         // Set outcome to Won
-        app.world_mut().resource_mut::<RunState>().outcome = RunOutcome::Won;
+        app.world_mut().resource_mut::<NodeOutcome>().result = NodeResult::Won;
 
         app.world_mut()
             .resource_mut::<NextState<NodeState>>()
@@ -585,11 +585,11 @@ mod tests {
             ChipSelectState::Selecting
         );
 
-        // Player selects chip → AnimateOut → Teardown → RunPhase::Node
+        // Player selects chip → AnimateOut → Teardown → RunState::Node
         app.world_mut()
             .resource_mut::<NextState<ChipSelectState>>()
             .set(ChipSelectState::AnimateOut);
-        // Need enough updates for: AnimateOut→Teardown, Teardown→RunPhase::Node,
+        // Need enough updates for: AnimateOut→Teardown, Teardown→RunState::Node,
         // Node activates NodeState::Loading, Loading(no pass-through)→AnimateIn→Playing
         // NodeState::Loading has no pass-through (setup systems run there in prod).
         // So we manually advance NodeState::Loading → AnimateIn to simulate setup complete.
@@ -641,7 +641,7 @@ mod tests {
             app.update();
         }
 
-        // Teardown router sets GameState::Run → RunPhase starts at Loading
+        // Teardown router sets GameState::Run → RunState starts at Loading
         assert_eq!(
             **app.world().resource::<State<GameState>>(),
             GameState::Run,
