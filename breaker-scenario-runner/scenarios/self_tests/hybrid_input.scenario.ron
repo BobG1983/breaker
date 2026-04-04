@@ -7,7 +7,7 @@
     layout: "Corridor",
     input: Hybrid((scripted_frames: 100, action_prob: 0.3)),
     max_frames: 500,
-    disallowed_failures: [BoltInBounds, BreakerInBounds, NoNaN, ValidStateTransitions],
+    disallowed_failures: [BoltInBounds, BreakerInBounds, NoNaN],
     allowed_failures: None,
     debug_setup: None,
     allow_early_end: false,

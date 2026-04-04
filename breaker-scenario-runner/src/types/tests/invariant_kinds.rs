@@ -32,13 +32,6 @@ fn invariant_kind_no_nan_parses() {
 }
 
 #[test]
-fn invariant_kind_valid_state_transitions_parses() {
-    let result: InvariantKind =
-        ron::de::from_str("ValidStateTransitions").expect("ValidStateTransitions should parse");
-    assert_eq!(result, InvariantKind::ValidStateTransitions);
-}
-
-#[test]
 fn invariant_kind_offering_no_duplicates_parses() {
     let result: InvariantKind =
         ron::de::from_str("OfferingNoDuplicates").expect("OfferingNoDuplicates should parse");
@@ -295,11 +288,11 @@ fn invariant_kind_gravity_well_count_reasonable_debug_round_trip() {
 // -------------------------------------------------------------------------
 
 #[test]
-fn invariant_kind_all_contains_23_variants() {
+fn invariant_kind_all_contains_21_variants() {
     assert_eq!(
         InvariantKind::ALL.len(),
-        23,
-        "InvariantKind::ALL should contain 23 variants"
+        21,
+        "InvariantKind::ALL should contain 21 variants"
     );
 }
 

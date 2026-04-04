@@ -60,9 +60,6 @@ pub struct DebugSetup {
     /// Override `NodeTimer::remaining` to this value.
     #[serde(default)]
     pub node_timer_remaining: Option<f32>,
-    /// Force `PreviousGameState` to this value (mapped to `GameState`).
-    #[serde(default)]
-    pub force_previous_game_state: Option<ForcedGameState>,
 }
 
 /// Tunable parameters for invariant checkers.

@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use breaker::state::types::GameState;
 
 /// Statistics collected during a scenario run.
 ///
@@ -77,14 +76,6 @@ pub struct ScenarioPhysicsFrozen {
     /// The world-space position this entity is pinned to each tick.
     pub target: Vec2,
 }
-
-/// Tracks the previous [`GameState`] for transition validation.
-///
-/// The valid state transitions checker is now a no-op (transition rules are
-/// validated by unit tests in the game crate), but this resource is retained
-/// so that `debug_setup` can set a forced previous state for self-test scenarios.
-#[derive(Resource, Default)]
-pub struct PreviousGameState(pub Option<GameState>);
 
 /// Baseline entity count for leak detection.
 #[derive(Resource, Default)]

@@ -8,7 +8,7 @@
     layout: "Corridor",
     input: Chaos((action_prob: 0.1)),
     max_frames: 3000,
-    disallowed_failures: [BoltInBounds, BreakerInBounds, NoNaN, ValidStateTransitions],
+    disallowed_failures: [BoltInBounds, BreakerInBounds, NoNaN],
     allowed_failures: None,
     debug_setup: None,
     allow_early_end: false,
