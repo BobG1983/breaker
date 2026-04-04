@@ -1,9 +1,13 @@
 //! State plugin registration.
 
+use std::sync::Arc;
+
 use bevy::prelude::*;
 use iyes_progress::prelude::*;
 use rantzsoft_defaults::prelude::*;
-use rantzsoft_lifecycle::{RantzLifecyclePlugin, Route, RoutingTableAppExt};
+use rantzsoft_lifecycle::{
+    FadeIn, FadeOut, RantzLifecyclePlugin, Route, RoutingTableAppExt, SlideLeft, TransitionType,
+};
 
 use super::{
     app::loading::LoadingPlugin,
@@ -101,25 +105,29 @@ fn defaults_plugin() -> impl Plugin {
 /// Registers declarative routes via the lifecycle crate and cleanup systems.
 fn register_routing(app: &mut App) {
     register_parent_routes(app);
+    register_run_routes(app);
     register_node_routes(app);
     register_chip_select_routes(app);
     register_run_end_routes(app);
     register_cleanup(app);
 }
 
-/// `GameState`, `MenuState`, and `RunState` routes — parent-level routing.
+/// `GameState` and `MenuState` routes — parent-level routing.
 fn register_parent_routes(app: &mut App) {
-    use crate::state::run::resources::{NodeOutcome, NodeResult};
-
     // ── GameState routes (parent watches MenuState/RunState) ──────────
     app.add_route(
         Route::from(GameState::Loading)
             .to(GameState::Menu)
+            .with_transition(TransitionType::In(Arc::new(FadeIn::default())))
             .when(|_| true),
     );
     app.add_route(
         Route::from(GameState::Menu)
             .to(GameState::Run)
+            .with_transition(TransitionType::OutIn {
+                out_e: Arc::new(FadeOut::default()),
+                in_e: Arc::new(FadeIn::default()),
+            })
             .when(|world| {
                 world
                     .get_resource::<State<MenuState>>()
@@ -129,6 +137,10 @@ fn register_parent_routes(app: &mut App) {
     app.add_route(
         Route::from(GameState::Run)
             .to(GameState::Menu)
+            .with_transition(TransitionType::OutIn {
+                out_e: Arc::new(FadeOut::default()),
+                in_e: Arc::new(FadeIn::default()),
+            })
             .when(|world| {
                 world
                     .get_resource::<State<RunState>>()
@@ -143,19 +155,27 @@ fn register_parent_routes(app: &mut App) {
             .when(|_| true),
     );
     // Main → dynamic (StartGame/Options/Meta based on selection)
-    app.add_route(Route::from(MenuState::Main).to_dynamic(|world| {
-        use crate::state::menu::main::MenuItem;
-        let selection = world.resource::<crate::state::menu::main::MainMenuSelection>();
-        match selection.selected {
-            MenuItem::Play => MenuState::StartGame,
-            MenuItem::Settings => MenuState::Options,
-            MenuItem::Quit => MenuState::Main, // Quit handled via AppExit, not routing
-        }
-    }));
+    app.add_route(
+        Route::from(MenuState::Main)
+            .to_dynamic(|world| {
+                use crate::state::menu::main::MenuItem;
+                let selection = world.resource::<crate::state::menu::main::MainMenuSelection>();
+                match selection.selected {
+                    MenuItem::Play => MenuState::StartGame,
+                    MenuItem::Settings => MenuState::Options,
+                    MenuItem::Quit => MenuState::Main, // Quit handled via AppExit, not routing
+                }
+            })
+            .with_transition(TransitionType::OneShot(Arc::new(SlideLeft::default()))),
+    );
     // StartGame → Teardown (message-triggered by handle_run_setup_input)
     app.add_route(Route::from(MenuState::StartGame).to(MenuState::Teardown));
+}
 
-    // ── RunState routes ───────────────────────────────────────────────
+/// `RunState` routes — run lifecycle with transition effects.
+fn register_run_routes(app: &mut App) {
+    use crate::state::run::resources::{NodeOutcome, NodeResult};
+
     app.add_route(
         Route::from(RunState::Loading)
             .to(RunState::Setup)
@@ -164,6 +184,7 @@ fn register_parent_routes(app: &mut App) {
     app.add_route(
         Route::from(RunState::Setup)
             .to(RunState::Node)
+            .with_transition(TransitionType::In(Arc::new(FadeIn::default())))
             .when(|_| true),
     );
     // Node → dynamic (ChipSelect or RunEnd based on NodeOutcome)
@@ -172,6 +193,10 @@ fn register_parent_routes(app: &mut App) {
             .to_dynamic(|world| match world.resource::<NodeOutcome>().result {
                 NodeResult::InProgress => RunState::ChipSelect,
                 _ => RunState::RunEnd,
+            })
+            .with_transition(TransitionType::OutIn {
+                out_e: Arc::new(FadeOut::default()),
+                in_e: Arc::new(FadeIn::default()),
             })
             .when(|world| {
                 world
@@ -183,6 +208,10 @@ fn register_parent_routes(app: &mut App) {
     app.add_route(
         Route::from(RunState::ChipSelect)
             .to(RunState::Node)
+            .with_transition(TransitionType::OutIn {
+                out_e: Arc::new(FadeOut::default()),
+                in_e: Arc::new(FadeIn::default()),
+            })
             .when(|world| {
                 world
                     .get_resource::<State<ChipSelectState>>()
