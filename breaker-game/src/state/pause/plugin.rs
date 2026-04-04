@@ -1,6 +1,7 @@
 //! Pause menu plugin registration.
 
 use bevy::prelude::*;
+use rantzsoft_lifecycle::ActiveTransition;
 
 use super::{
     PauseMenuScreen,
@@ -21,17 +22,30 @@ pub(crate) struct PauseMenuPlugin;
 
 impl Plugin for PauseMenuPlugin {
     fn build(&self, app: &mut App) {
+        // Pause systems are gated on NOT ActiveTransition — transitions
+        // pause Time<Virtual> but should not trigger the pause menu.
+        let not_in_transition = not(resource_exists::<ActiveTransition>);
+
         app
-            // Toggle pause on Escape (only during active node gameplay)
-            .add_systems(Update, toggle_pause.run_if(in_state(NodeState::Playing)))
-            // Spawn pause menu when paused and no menu exists yet
+            // Toggle pause on Escape (only during active node gameplay, not during transitions)
             .add_systems(
                 Update,
-                spawn_pause_menu
-                    .run_if(is_time_paused.and(not(any_with_component::<PauseMenuScreen>))),
+                toggle_pause.run_if(in_state(NodeState::Playing).and(not_in_transition.clone())),
             )
-            // Handle pause menu input when paused
-            .add_systems(Update, handle_pause_input.run_if(is_time_paused))
+            // Spawn pause menu when paused and no menu exists yet (not during transitions)
+            .add_systems(
+                Update,
+                spawn_pause_menu.run_if(
+                    is_time_paused
+                        .and(not(any_with_component::<PauseMenuScreen>))
+                        .and(not_in_transition.clone()),
+                ),
+            )
+            // Handle pause menu input when paused (not during transitions)
+            .add_systems(
+                Update,
+                handle_pause_input.run_if(is_time_paused.and(not_in_transition.clone())),
+            )
             // Cleanup pause menu when unpaused
             .add_systems(
                 Update,
