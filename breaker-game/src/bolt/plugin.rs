@@ -9,7 +9,8 @@ use crate::{
         systems::{
             bolt_breaker_collision, bolt_cell_collision, bolt_lost, bolt_wall_collision,
             clamp_bolt_to_playfield, cleanup_destroyed_bolts, dispatch_bolt_effects, hover_bolt,
-            launch_bolt, spawn_bolt_lost_text, sync_bolt_scale, tick_bolt_lifespan,
+            launch_bolt, normalize_bolt_speed_after_constraints, spawn_bolt_lost_text,
+            sync_bolt_scale, tick_bolt_lifespan,
         },
     },
     breaker::BreakerSystems,
@@ -56,11 +57,13 @@ impl Plugin for BoltPlugin {
                     spawn_bolt_lost_text,
                     // Dispatch bolt-definition effects to target entities
                     dispatch_bolt_effects.before(EffectSystems::Bridge),
+                    // Renormalize bolt speed after tether constraints redistribute velocity
+                    normalize_bolt_speed_after_constraints.after(
+                        rantzsoft_physics2d::plugin::PhysicsSystems::EnforceDistanceConstraints,
+                    ),
                     // Collision systems
                     bolt_cell_collision
-                        .after(
-                            rantzsoft_physics2d::plugin::PhysicsSystems::EnforceDistanceConstraints,
-                        )
+                        .after(normalize_bolt_speed_after_constraints)
                         .after(BreakerSystems::Move)
                         .after(rantzsoft_physics2d::plugin::PhysicsSystems::MaintainQuadtree)
                         .in_set(BoltSystems::CellCollision),

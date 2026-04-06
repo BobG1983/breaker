@@ -40,7 +40,8 @@ Both require `Reversible` effects for direct `Fire()`. Both relax to `AnyFire` w
 | Condition | Start | End | Notes |
 |---|---|---|---|
 | `NodeActive` | Node start | Node teardown | Ignores pause. Spans Playing + Paused. Most common. |
-| `NodePlaying` | Enter `NodeState::Playing` | Exit `NodeState::Playing` | Respects pause — effect toggles on/off. Niche. |
+| `ShieldActive` | Any `ShieldWall` entity spawns | Last `ShieldWall` despawns | Global — true when any shield exists in the world. |
+| `ComboActive(u32)` | Nth consecutive perfect bump | Non-perfect bump (streak breaks) | Uses existing `consecutive_perfect_bumps` counter. `ComboActive(3)` = fires on 3rd consecutive perfect. |
 
 ## Local Triggers (fire on specific participant entities)
 

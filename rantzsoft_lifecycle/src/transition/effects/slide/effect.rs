@@ -1,11 +1,14 @@
 //! Slide transition effects.
 //!
 //! The primary API is [`Slide`] with [`SlideDirection`], a unified
-//! `OneShotTransition` that slides the camera in any of four directions.
+//! `OneShotTransition` that uses a post-process shader with UV offset.
 
 use bevy::prelude::*;
 
-use super::super::shared::{ScreenSize, SlideStartEnd, TransitionProgress};
+use super::super::{
+    post_process::{EffectType, TransitionEffect, slide_direction_to_vec4},
+    shared::TransitionProgress,
+};
 use crate::transition::{
     messages::{TransitionOver, TransitionReady, TransitionRunComplete},
     resources::StartingTransition,
@@ -36,8 +39,8 @@ pub enum SlideDirection {
 
 /// Slide content in the specified direction.
 ///
-/// An `OneShotTransition` that animates the camera position by one screen
-/// dimension in the given [`SlideDirection`].
+/// An `OneShotTransition` that animates a UV offset shader effect in the given
+/// [`SlideDirection`].
 pub struct Slide {
     /// Duration in seconds.
     pub duration: f32,
@@ -82,31 +85,22 @@ pub struct SlideConfig {
 // Unified Slide systems
 // ---------------------------------------------------------------------------
 
-/// Start system for [`Slide`] -- records camera position and sends
+/// Start system for [`Slide`] — inserts `TransitionEffect` on camera and sends
 /// `TransitionReady`.
 pub(crate) fn slide_start(
     config: Res<SlideConfig>,
-    screen: Res<ScreenSize>,
-    cameras: Query<&Transform, With<Camera2d>>,
+    cameras: Query<Entity, With<Camera2d>>,
     mut writer: MessageWriter<TransitionReady>,
     mut commands: Commands,
 ) {
-    let camera_pos = cameras
-        .iter()
-        .next()
-        .map_or(Vec2::ZERO, |t| Vec2::new(t.translation.x, t.translation.y));
-
-    let target = match config.direction {
-        SlideDirection::Left => Vec2::new(camera_pos.x - screen.0.x, camera_pos.y),
-        SlideDirection::Right => Vec2::new(camera_pos.x + screen.0.x, camera_pos.y),
-        SlideDirection::Up => Vec2::new(camera_pos.x, camera_pos.y + screen.0.y),
-        SlideDirection::Down => Vec2::new(camera_pos.x, camera_pos.y - screen.0.y),
-    };
-
-    commands.insert_resource(SlideStartEnd {
-        start: camera_pos,
-        target,
-    });
+    if let Some(camera) = cameras.iter().next() {
+        commands.entity(camera).insert(TransitionEffect {
+            color: Vec4::ZERO,
+            direction: slide_direction_to_vec4(&config.direction),
+            effect_type: EffectType::SLIDE,
+            progress: 0.0,
+        });
+    }
     commands.insert_resource(TransitionProgress {
         elapsed: 0.0,
         duration: config.duration,
@@ -116,10 +110,9 @@ pub(crate) fn slide_start(
     writer.write(TransitionReady);
 }
 
-/// Run system for [`Slide`] -- lerps camera toward target.
+/// Run system for [`Slide`] — updates `TransitionEffect.progress`.
 pub(crate) fn slide_run(
-    mut cameras: Query<&mut Transform, With<Camera2d>>,
-    slide: Res<SlideStartEnd>,
+    mut effects: Query<&mut TransitionEffect>,
     mut progress: ResMut<TransitionProgress>,
     time: Res<Time<Real>>,
     mut writer: MessageWriter<TransitionRunComplete>,
@@ -136,10 +129,8 @@ pub(crate) fn slide_run(
         1.0
     };
 
-    let pos = slide.start.lerp(slide.target, t);
-    for mut transform in &mut cameras {
-        transform.translation.x = pos.x;
-        transform.translation.y = pos.y;
+    for mut effect in &mut effects {
+        effect.progress = t;
     }
 
     if t >= 1.0 {
@@ -148,9 +139,16 @@ pub(crate) fn slide_run(
     }
 }
 
-/// End system for [`Slide`] -- removes resources and sends `TransitionOver`.
-pub(crate) fn slide_end(mut writer: MessageWriter<TransitionOver>, mut commands: Commands) {
-    commands.remove_resource::<SlideStartEnd>();
+/// End system for [`Slide`] — removes `TransitionEffect` from camera and sends
+/// `TransitionOver`.
+pub(crate) fn slide_end(
+    mut writer: MessageWriter<TransitionOver>,
+    mut commands: Commands,
+    cameras: Query<Entity, With<Camera2d>>,
+) {
+    if let Some(camera) = cameras.iter().next() {
+        commands.entity(camera).remove::<TransitionEffect>();
+    }
     commands.remove_resource::<TransitionProgress>();
     writer.write(TransitionOver);
 }

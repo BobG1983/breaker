@@ -11,6 +11,8 @@ pub mod fade;
 pub mod iris;
 /// Pixelate transition effect.
 pub mod pixelate;
+/// Post-process transition effect component and types.
+pub mod post_process;
 /// Shared transition types and components.
 pub mod shared;
 /// Slide transition effect.
@@ -25,8 +27,9 @@ pub use dissolve::{DissolveIn, DissolveInConfig, DissolveOut, DissolveOutConfig}
 pub use fade::{FadeIn, FadeInConfig, FadeOut, FadeOutConfig};
 pub use iris::{IrisIn, IrisInConfig, IrisOut, IrisOutConfig};
 pub use pixelate::{PixelateIn, PixelateInConfig, PixelateOut, PixelateOutConfig};
+pub use post_process::{EffectType, TransitionEffect, TransitionLabel};
 pub(crate) use registration::register_builtin_transitions;
-pub use shared::{ScreenSize, TransitionOverlay, TransitionProgress, WipeDirection};
+pub use shared::{ScreenSize, TransitionProgress, WipeDirection};
 pub use slide::{Slide, SlideConfig, SlideDirection};
 pub use wipe::{WipeIn, WipeInConfig, WipeOut, WipeOutConfig};
 

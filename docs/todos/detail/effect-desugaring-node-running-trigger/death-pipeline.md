@@ -72,25 +72,107 @@ impl DeathAttribution for (Bolt, Cell) {
 | `()` | `Bolt` | Bolt lost, lifespan expiry |
 | `()` | `Wall` | Timer expiry |
 
-## Generic Damage: DamageDealt<T>
+## Unified Damage Message
 
-Replaces `DamageCell`:
+All damage sources send a single message type. One system processes all damage and tracks kill attribution.
 
 ```rust
-struct DamageDealt<T: Component> {
-    pub target: Entity,
-    pub damage: f32,
-    pub source_chip: Option<String>,
-    pub source_entity: Option<Entity>,
+/// Sent by: bolt collision, shockwave fire(), chain lightning fire(),
+/// explode fire(), any effect that deals damage.
+struct DamageMessage {
+    pub dealer: Option<Entity>,  // who caused this damage (propagated through chains)
+    pub target: Entity,          // who takes the damage
+    pub amount: f32,             // damage amount
+}
+```
+
+### apply_damage system
+
+Processes all DamageMessages, decrements HP, and sets KilledBy **only on the killing blow** — the hit that crosses HP from positive to zero.
+
+```rust
+fn apply_damage(
+    mut messages: MessageReader<DamageMessage>,
+    mut query: Query<(&mut Hp, &mut KilledBy)>,
+) {
+    for msg in messages.read() {
+        if let Ok((mut hp, mut source)) = query.get_mut(msg.target) {
+            let was_alive = hp.current > 0;
+            hp.current -= msg.amount;
+            if was_alive && hp.current <= 0 {
+                // This is the killing blow — set attribution
+                source.dealer = msg.dealer;
+            }
+        }
+    }
+}
+```
+
+### KilledBy component
+
+```rust
+/// Set by apply_damage on the killing blow. Read by the death system.
+#[derive(Component, Default)]
+struct KilledBy {
+    pub dealer: Option<Entity>,
+}
+```
+
+### Damage propagation through effect chains
+
+Effects that deal damage read the current TriggerContext to propagate the dealer:
+
+```rust
+// In shockwave fire():
+//   TriggerContext has the bolt that caused this shockwave
+//   Shockwave sends DamageMessage { dealer: context.bolt(), ... }
+
+// In explode fire() (from powder keg Transfer):
+//   TriggerContext has the DeathContext of the cell that exploded
+//   Explosion sends DamageMessage { dealer: death_context.killer, ... }
+//   (bolt B killed the cell, so bolt B gets credit for explosion kills)
+
+// In chain lightning fire():
+//   TriggerContext has the bolt that caused the chain
+//   Each arc sends DamageMessage { dealer: context.bolt(), ... }
+```
+
+### Replaces
+
+| Before | After |
+|---|---|
+| `DamageCell` | `DamageMessage` (unified, all entity types) |
+| Direct HP mutation in effect systems | All damage flows through `DamageMessage` → `apply_damage` |
+| No kill attribution | `KilledBy` set on killing blow only |
+
+## Death System
+
+Runs after `apply_damage`. Queries for entities with `Hp.current <= 0`:
+
+```rust
+fn detect_deaths(
+    query: Query<(Entity, &KilledBy, &Hp), Changed<Hp>>,
+    // ...
+) {
+    for (entity, source, hp) in &query {
+        if hp.current <= 0 {
+            // Verify killer still exists before sending Killed
+            let killer = source.dealer.filter(|&e| world.get_entity(e).is_some());
+
+            // Send KillYourself → domain handler → Destroyed → bridge triggers
+            send_kill_yourself(entity, killer);
+        }
+    }
 }
 ```
 
 ## TriggerContext Integration
 
 `TriggerContext` fields map to named trigger participants. Bridges populate fields from `Destroyed<S, T>` messages:
-- `Killed(KillTarget)` fires on killer → `context.bolt/breaker/cell = killer`, victim fields populated
+- `Killed(KillTarget)` fires on killer → `context` has DeathContext { victim, killer }
 - `Died` fires on victim → same context, different perspective
 - `DeathOccurred` fires globally → same context on all entities
+- Killer is `Option<Entity>` — if None, `Killed` is not fired (environmental death)
 
 ## Types Eliminated
 
@@ -106,38 +188,43 @@ struct DamageDealt<T: Component> {
 | `bridge_death` | N × `bridge_destroyed::<S, T>` |
 | `bridge_died` | collapsed into `bridge_destroyed` |
 
-## RON Examples (new vocabulary)
+## RON Examples (final syntax)
 
 ```ron
 // Kill reward: "every cell I kill boosts my speed"
-When(Killed(Cell), On(This, Fire(SpeedBoost(1.3))))
+Route(Bolt, When(Killed(Cell), Fire(SpeedBoost(1.3))))
 
 // Cell revenge: "when I die, explode"
-When(Died, On(This, Fire(Explode(range: 48.0, damage: 10.0))))
+Route(Cell, When(Died, Fire(Explode(range: 48.0, damage: 10.0))))
 
 // Cascade: "when any cell dies, shockwave from me"
-When(DeathOccurred(Cell), On(This, Fire(Shockwave(
+Route(Bolt, When(DeathOccurred(Cell), Fire(Shockwave(
     base_range: 32.0, range_per_level: 0.0, stacks: 1, speed: 300.0,
 ))))
 
-// Powder keg: "when I hit a cell, stamp 'when you die, explode' on it"
-When(Impacted(Cell), On(Impacted::Target, Transfer(
-    When(Died, On(This, Fire(Explode(range: 48.0, damage: 10.0))))
-)))
+// Powder keg: "when I hit a cell, transfer 'when you die, explode' onto it"
+Route(Bolt, When(Impacted(Cell), On(ImpactTarget::Impactee, Transfer(
+    When(Died, Fire(Explode(range: 48.0, damage: 10.0)))
+))))
 
 // One-shot wall: "when hit by bolt, kill myself"
-When(Impacted(Bolt), On(This, Fire(Die)))
+Route(Wall, When(Impacted(Bolt), Fire(Die)))
 
 // Generic kill reward: "every kill boosts my speed"
-When(Killed(Any), On(This, Fire(SpeedBoost(1.1))))
+Route(Bolt, When(Killed(Any), Fire(SpeedBoost(1.1))))
 ```
 
-## RON Migration (~17 files)
+## RON Migration (55 files — validated)
+
+See [ron-migration/](ron-migration/) for all migrated files and [ron-migration/VALIDATION_REPORT.md](ron-migration/VALIDATION_REPORT.md) for the validation results.
 
 ```ron
 // Before                              // After
-When(trigger: CellDestroyed, ...)  →  When(DeathOccurred(Cell), ...)
-When(trigger: Death, ...)          →  When(DeathOccurred(Any), ...)
+On(target: Bolt, then: [...])      →  Route(Bolt, ...)
+On(target: Breaker, then: [...])   →  Route(Breaker, ...)
 Do(...)                            →  Fire(...)
-On(target: Bolt, then: [...])      →  When/On with new vocabulary
+On(This, Fire(...))                →  Fire(...) (implicit This)
+On(target: Cell, ...)              →  On(ImpactTarget::Impactee, ...)
+When(trigger: CellDestroyed, ...)  →  When(Killed(Cell), ...) or When(DeathOccurred(Cell), ...)
+When(trigger: Death, ...)          →  When(DeathOccurred(Any), ...)
 ```

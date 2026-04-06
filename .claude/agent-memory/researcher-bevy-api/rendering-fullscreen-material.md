@@ -117,6 +117,44 @@ use bevy::core_pipeline::FullscreenShader;
 
 Users of FullscreenMaterial never need FullscreenShader directly — the plugin handles it.
 
+## Official WGSL Binding Layout — Confirmed from Chromatic Aberration Example
+
+From `assets/shaders/post_processing.wgsl` (v0.18.0 source):
+
+```wgsl
+@group(0) @binding(0) var screen_texture: texture_2d<f32>;
+@group(0) @binding(1) var texture_sampler: sampler;
+
+struct PostProcessSettings { intensity: f32, ... }
+@group(0) @binding(2) var<uniform> settings: PostProcessSettings;
+```
+
+Fragment entry point signature:
+```wgsl
+#import bevy_core_pipeline::fullscreen_vertex_shader::FullscreenVertexOutput
+
+@fragment
+fn fragment(in: FullscreenVertexOutput) -> @location(0) vec4<f32>
+```
+
+`FullscreenVertexOutput` fields: `@builtin(position) position: vec4<f32>` and `@location(0) uv: vec2<f32>`.
+UV range: `[0,0]` = top-left, `[1,1]` = bottom-right.
+
+Import path in WGSL: `#import bevy_core_pipeline::fullscreen_vertex_shader::FullscreenVertexOutput`
+
+## sub_graph() — One-Frame Activation Delay
+
+- `sub_graph() = None` (default): node added via `ExtractSchedule` on `Added<T>` — **one-frame delay** on first activation
+- `sub_graph() = Some(Core2d.intern())`: node registered at plugin `build()` startup — **no delay**, always in graph
+
+Use `Some(Core2d.intern())` for effects that activate mid-session. Requires:
+```rust
+use bevy::core_pipeline::core_2d::Core2d;
+fn sub_graph() -> Option<bevy::render::render_graph::InternedRenderSubGraph> {
+    Some(Core2d.intern())
+}
+```
+
 ## Node2d Graph safe anchors (2d-only features — project config)
 
 With `features = ["2d", "serialize"]`, the registered graph is:

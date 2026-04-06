@@ -138,65 +138,6 @@ mod tests {
         app.update();
     }
 
-    // =========================================================================
-    // C7 Wave 2a: CellDestroyed -> CellDestroyedAt migration (behavior 32d)
-    // =========================================================================
-
-    #[derive(Resource, Default)]
-    struct TestCellDestroyedAt(Vec<crate::cells::messages::CellDestroyedAt>);
-
-    fn enqueue_cell_destroyed_at(
-        msg_res: Res<TestCellDestroyedAt>,
-        mut writer: MessageWriter<crate::cells::messages::CellDestroyedAt>,
-    ) {
-        for msg in &msg_res.0 {
-            writer.write(msg.clone());
-        }
-    }
-
-    #[test]
-    fn detect_combo_reads_cell_destroyed_at() {
-        use crate::cells::messages::CellDestroyedAt;
-
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_message::<CellDestroyedAt>()
-            .add_message::<BoltImpactBreaker>()
-            .add_message::<HighlightTriggered>()
-            .init_resource::<RunStats>()
-            .init_resource::<HighlightTracker>()
-            .init_resource::<NodeOutcome>()
-            .insert_resource(HighlightConfig::default())
-            .init_resource::<TestCellDestroyedAt>()
-            .init_resource::<TestBoltImpactBreaker>()
-            .init_resource::<CapturedHighlightTriggered>()
-            .add_systems(
-                FixedUpdate,
-                (
-                    (enqueue_cell_destroyed_at, enqueue_bolt_hit_breaker),
-                    detect_combo_king,
-                    collect_highlight_triggered,
-                )
-                    .chain(),
-            );
-
-        app.insert_resource(TestCellDestroyedAt(vec![
-            CellDestroyedAt {
-                was_required_to_clear: true,
-            },
-            CellDestroyedAt {
-                was_required_to_clear: false,
-            },
-        ]));
-        tick(&mut app);
-
-        let tracker = app.world().resource::<HighlightTracker>();
-        assert_eq!(
-            tracker.cells_since_last_breaker_hit, 2,
-            "CellDestroyedAt messages should increment cells_since_last_breaker_hit"
-        );
-    }
-
     // --- Behavior 6: CellDestroyedAt increments cells_since_last_breaker_hit ---
 
     #[test]
@@ -360,6 +301,17 @@ mod tests {
         assert_eq!(
             combo_count, 1,
             "should NOT add a second ComboKing highlight"
+        );
+
+        let captured = app.world().resource::<CapturedHighlightTriggered>();
+        let msg_count = captured
+            .0
+            .iter()
+            .filter(|h| h.kind == HighlightKind::ComboKing)
+            .count();
+        assert_eq!(
+            msg_count, 1,
+            "should still emit HighlightTriggered even when deduped in RunStats"
         );
     }
 }

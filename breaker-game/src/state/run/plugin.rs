@@ -26,7 +26,7 @@ use super::{
     },
     resources::{DifficultyCurve, HighlightTracker, NodeOutcome, RunStats},
     run_end::systems::detect_most_powerful_evolution,
-    systems::{advance_node, setup_run},
+    systems::{advance_node, hide_gameplay_entities, setup_run, show_gameplay_entities},
 };
 use crate::{
     shared::{GameRng, RunSeed},
@@ -96,7 +96,11 @@ impl Plugin for RunPlugin {
                 (reset_highlight_tracker, capture_run_seed, setup_run),
             )
             .add_systems(OnEnter(RunEndState::Active), detect_most_powerful_evolution)
-            .add_systems(OnEnter(RunState::Node), advance_node)
+            .add_systems(OnExit(RunState::Node), hide_gameplay_entities)
+            .add_systems(
+                OnEnter(RunState::Node),
+                (advance_node, show_gameplay_entities),
+            )
             .add_systems(
                 OnExit(MenuState::Main),
                 (

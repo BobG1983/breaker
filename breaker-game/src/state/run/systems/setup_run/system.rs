@@ -119,9 +119,4 @@ pub(crate) fn setup_run(
 
     // Step 8: Send BoltSpawned message
     bolt_spawned.write(BoltSpawned);
-
-    debug!(
-        "setup_run: spawned breaker '{}' and bolt '{}'",
-        selected.0, bolt_name
-    );
 }

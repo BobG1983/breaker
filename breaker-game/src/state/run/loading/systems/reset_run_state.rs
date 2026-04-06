@@ -3,10 +3,8 @@
 use bevy::prelude::*;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
-use tracing::info;
 
 use crate::{
-    breaker::SelectedBreaker,
     chips::inventory::ChipInventory,
     shared::{GameRng, RunSeed},
     state::run::resources::{HighlightTracker, NodeOutcome, RunStats},
@@ -18,7 +16,6 @@ pub(crate) fn reset_run_state(
     mut run_state: ResMut<NodeOutcome>,
     mut rng: ResMut<GameRng>,
     seed: Res<RunSeed>,
-    selected_breaker: Option<Res<SelectedBreaker>>,
     mut chip_inventory: ResMut<ChipInventory>,
     mut stats: ResMut<RunStats>,
     mut highlight_tracker: ResMut<HighlightTracker>,
@@ -29,13 +26,9 @@ pub(crate) fn reset_run_state(
     chip_inventory.clear();
     if let Some(s) = seed.0 {
         *rng = GameRng::from_seed(s);
-        info!("run started seed={s}");
     } else {
         rng.0 = ChaCha8Rng::from_os_rng();
-        info!("run started seed=random");
     }
-    let breaker_name = selected_breaker.as_deref().map_or("none", |b| b.0.as_str());
-    info!("run started breaker={}", breaker_name);
 }
 
 #[cfg(test)]

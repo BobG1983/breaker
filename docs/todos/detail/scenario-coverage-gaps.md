@@ -36,6 +36,12 @@ The old `width_boost_visual` only applied boosts to width. `sync_breaker_scale` 
 
 **Fix:** Enable `BreakerPositionClamped` and `AabbMatchesEntityDimensions` in existing scenarios when size boost is active.
 
+### 6. No scenario exercises pause/quit path
+
+The scenario runner cannot exercise the pause or quit-to-menu path because `toggle_pause` and `handle_pause_input` read `ButtonInput<KeyCode>` directly, not `InputActions`. The `aegis_pause_stress` scenario injects `TogglePause` into `InputActions`, but `toggle_pause` reads `ButtonInput<KeyCode>` directly — so the game never actually pauses. The quit-from-pause routing (`NodeResult::Quit` → `NodeState::Teardown` → `RunState::Teardown`) has zero scenario coverage.
+
+**Fix:** Add a `QuitToMenu` meta-action or frame mutation that sets `NodeOutcome.result = NodeResult::Quit` and writes `ChangeState<NodeState>`, exercising the quit routing and cleanup. Fix or remove `aegis_pause_stress` scenario (currently tests the wrong thing). Mirror `auto_skip_chip_select` pattern.
+
 ## New Invariants Needed
 
 - **`BreakerCountReasonable`** — fires if `With<PrimaryBreaker>` count != 1 during `GameState::Playing`

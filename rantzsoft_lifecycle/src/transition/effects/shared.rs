@@ -35,17 +35,6 @@ impl Default for ScreenSize {
     }
 }
 
-/// Start and target positions for slide transitions.
-///
-/// Inserted by slide start systems, read by run systems, removed by end systems.
-#[derive(Resource)]
-pub(crate) struct SlideStartEnd {
-    /// Camera position when the slide began.
-    pub start: Vec2,
-    /// Target camera position at the end of the slide.
-    pub target: Vec2,
-}
-
 /// Direction for wipe transitions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum WipeDirection {
@@ -124,20 +113,6 @@ mod tests {
         let size = ScreenSize(Vec2::new(1280.0, 720.0));
         assert!((size.0.x - 1280.0).abs() < f32::EPSILON);
         assert!((size.0.y - 720.0).abs() < f32::EPSILON);
-    }
-
-    // --- SlideStartEnd ---
-
-    #[test]
-    fn slide_start_end_stores_start_and_target() {
-        let mut world = World::new();
-        world.insert_resource(SlideStartEnd {
-            start: Vec2::new(0.0, 0.0),
-            target: Vec2::new(-1280.0, 0.0),
-        });
-        let sse = world.resource::<SlideStartEnd>();
-        assert!((sse.start.x).abs() < f32::EPSILON);
-        assert!((sse.target.x - (-1280.0)).abs() < f32::EPSILON);
     }
 
     // --- WipeDirection ---
