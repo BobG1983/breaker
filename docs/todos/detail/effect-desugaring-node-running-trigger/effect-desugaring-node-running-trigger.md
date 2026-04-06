@@ -1,132 +1,106 @@
-# Effect Desugaring: Spawn Trigger + SpawnedEntity Target
+# Effect System Refactor: Typestate Builder, Spawn/During Triggers, Unified Vocabulary
 
 ## Summary
-Add a `Spawn(EntityType)` trigger, `SpawnedEntity` target, and `PrimaryBolt`/`ExtraBolt` target variants. `Spawn(Bolt)` fires for future bolts only (via `Added<Bolt>`). `AllBolts` remains for stamping existing bolts. No new resources or auto-stamp systems — the trigger system handles everything.
+Comprehensive effect system refactor: unified RON/builder vocabulary, new wrappers (`When`/`During`/`Until`/`Spawned`), new targets (`EveryBolt`/`ActiveBolts`/`PrimaryBolts`/`ExtraBolts`/`This`), named trigger participants, `transfer()` terminal, typestate builder with `Reversible` trait enforcement, and the unified death pipeline (absorbed from todo #7). RON and builder share the same names. Builder validates at construction time; RON goes through the builder at load time.
 
-## The Problem (confirmed real)
-1. **Late-spawned bolts miss AllBolts effects.** A chip says `AllBolts: SpeedBoost`. Currently desugared to per-entity `BoundEffects` at dispatch time. Bolts spawned mid-node by SpawnBolts/MirrorProtocol (with `inherit: false`) miss it entirely.
-2. **Duplicate stamping.** If a second breaker spawns, it re-dispatches and double-stamps effects on existing bolts.
+## Design Documents
 
-## Solution
+| File | Contents |
+|------|----------|
+| [api-reference.md](api-reference.md) | Full trigger/target/terminal tables, rename mapping, reversibility catalog |
+| [builder-design.md](builder-design.md) | Typestate machine, Rust types, builder examples, RON format, validation rules |
+| [death-pipeline.md](death-pipeline.md) | Killed/Died/DeathOccurred triggers, KillYourself/Destroyed messages, DamageDealt<T>, domain handlers |
 
-### Semantics
+## Research
 
-| Target / Trigger | What it does |
-|-----------------|-------------|
-| `AllBolts` | Stamp all existing bolts RIGHT NOW (point-in-time snapshot, current behavior) |
-| `Spawn(Bolt)` + `SpawnedEntity` | Stamp each bolt AS IT APPEARS in the future (via `Added<Bolt>` bridge) |
-| `PrimaryBolt` | Resolves to entities with `PrimaryBolt` marker only |
-| `ExtraBolt` | Resolves to entities with `ExtraBolt` marker only |
-| Both together | `AllBolts` for existing + `Spawn(Bolt)` for future = full coverage |
+| File | Contents |
+|------|----------|
+| [research/transfer-effects-flow.md](research/transfer-effects-flow.md) | Dispatch pipeline trace, insertion points, BoundEffects structure |
+| [research/added-bolt-observer-feasibility.md](research/added-bolt-observer-feasibility.md) | Added<T> timing, component availability, spawn paths |
 
-A chip that wants "every bolt, current and future, gets SpeedBoost" would express:
-```ron
-// Stamp existing bolts at node start
-When(NodeStart, On(AllBolts, Do(SpeedBoost)))
-// Stamp future bolts as they spawn
-When(Spawn(Bolt), On(SpawnedEntity, Do(SpeedBoost)))
-```
+## The Problems (confirmed real)
 
-Or if we want syntactic sugar, a new `AllBoltsAlways` (or similar) could desugar to both. But the explicit two-trigger form is clear and avoids hidden magic.
+1. **Late-spawned bolts miss AllBolts effects.** Bolts spawned mid-node by effects with `inherit: false` never get AllBolts effects.
+2. **Duplicate stamping.** Second breaker spawn re-stamps all existing bolts.
+3. **No kill attribution.** Can't express "when I kill a cell" — only "when a cell dies somewhere."
+4. **Ambiguous targets.** `Bolt` as target means different things in different contexts. `This` on a local trigger is ambiguous.
+5. **No scoped effects.** Can't express "speed boost for the duration of this node, reversed at end."
+6. **No future-entity targeting.** Can't express "every bolt that will ever exist during this node."
 
-### `SpawnedEntity` — only valid inside `Spawn()` triggers
+## Key Design Decisions
 
-`SpawnedEntity` resolves to the specific entity that triggered the `Spawn` event. It is ONLY valid inside a `Spawn(...)` trigger context.
+### Unified vocabulary (RON = builder)
+`When`, `During`, `Spawned`, `On`, `Fire`, `Transfer`, `This`. No divergence between data format and code API.
 
-**Validation**: runtime, at RON load or dispatch time. If `SpawnedEntity` appears outside a `Spawn(...)` trigger, reject with a clear error. Compile-time enforcement would require splitting the effect tree type system — not worth the refactor.
+### Named trigger participants (not `Other`)
+Each trigger defines named participants: `PerfectBumped::Bolt`, `Died::Killer`, `Impacted::Target`. Typestate enforces only valid participants for the current trigger. See [api-reference.md](api-reference.md) for full table.
 
-### `Spawn(Bolt)` does NOT fire retroactively
+### `This` = bound entity (distinct from participants)
+`This` always means "the entity BoundEffects lives on." Named participants come from the trigger event. Same entity, different semantic source.
 
-If a `Spawn(Bolt)` trigger is registered late (after bolts already exist), it does NOT stamp existing bolts. Only `AllBolts` does that. This keeps the semantics clean:
-- `AllBolts` = "existing bolts now"
-- `Spawn(Bolt)` = "future bolts as they appear"
+### `Occurred` suffix for globals
+Local: `PerfectBumped` (past tense, "I was bumped"). Global: `PerfectBumpOccurred` (unambiguous, heavier name signals broader scope).
 
-### Spawn ordering guarantee
+### `During` / `Until` reversibility depends on nesting
+`During(X, On(target, Fire(effect)))` and `Until(X, On(target, Fire(effect)))` — effect must be `Reversible`. Wrapping a nested `When` relaxes the constraint — inner effects can be anything (reversal removes the trigger registration, not individual firings).
 
-`setup_run` controls spawn order: breaker spawns first → effects dispatched → bolts/cells/walls spawn. By the time `Added<Bolt>` fires for the primary bolt, the breaker's `When(Spawn(Bolt), ...)` trigger is already in its `BoundEffects`.
+### `During` vs `Until`
+`During(condition)` = state-scoped (fires on condition start, reverses on condition end). Takes a **condition**: `NodeActive`, `NodePlaying`.
+`Until(trigger)` = event-scoped (fires immediately, reverses when trigger fires). Takes any **trigger**: `Died`, `BoltLostOccurred`, etc.
 
-### New Types
+### Conditions: `NodeActive` + `NodePlaying`
+`NodeActive` = node start through teardown (ignores pause). Most common.
+`NodePlaying` = only while `NodeState::Playing` (respects pause, toggles on/off). Niche.
 
-```rust
-/// Trigger variant: fires when an entity of the given type is added.
-enum Trigger {
-    // ... existing variants ...
-    Spawn(EntityType),
-}
+### `Spawned()` does NOT fire retroactively
+`Spawned(Bolt)` = future only. `ActiveBolts` = existing only. `EveryBolt` = both (desugars to `ActiveBolts` + `Spawned(Bolt)`).
 
-enum EntityType {
-    Bolt,
-    Cell,
-    Wall,
-    Breaker,
-}
+### `transfer()` is a terminal
+Takes an inner effect tree. Stamps it onto the target entity's BoundEffects. `transfer()` uses implicit target from context. `transfer_to(target, tree)` for explicit override.
 
-/// Target variants
-enum Target {
-    // ... existing variants ...
-    SpawnedEntity,   // the entity that caused the Spawn trigger (runtime-validated)
-    PrimaryBolt,     // entities with PrimaryBolt marker
-    ExtraBolts,      // entities with ExtraBolt marker
-    // AllBolts remains unchanged — both PrimaryBolt + ExtraBolt
-}
-```
+### Effect types stay as-is
+`SpawnBolts`, `Shockwave`, `ChainBolt`, etc. each keep their own module, `fire()`, and params. The refactor is triggers/targets/builder, not effect reorganization.
 
-### Dedup
+### `SpawnBolts` + `SpawnPhantom` gain optional definition override
+`definition: Option<String>` — `None` inherits source bolt definition (current behavior), `Some("FastBolt")` overrides.
 
-Each bolt spawns once → `Added<Bolt>` fires once → trigger fires once. No dedup component needed for `Spawn(Bolt)`.
-
-For `AllBolts` (existing behavior), the existing duplicate-stamping problem (issue #2) still needs a fix. Options:
-- Source_id dedup on `push_bound_effects` (chip_name + effect_index — pre-desugaring index available at dispatch time per research)
-- Or: only dispatch AllBolts effects once per chip (track "already dispatched" per chip in a resource)
-
-## Implementation Plan
-
-### Step 1: Add Spawn trigger variant + EntityType enum
-In trigger type definitions.
-
-### Step 2: Add SpawnedEntity + PrimaryBolt + ExtraBolts target variants
-In target type definitions. Add runtime validation: SpawnedEntity outside Spawn trigger → error at RON load.
-
-### Step 3: Add bridge systems
-- `bridge_bolt_spawn`: query `Added<Bolt>`, evaluate BoundEffects on all entities for `When(Spawn(Bolt), ...)` matches, fire with SpawnedEntity → the new bolt
-- Same for `bridge_cell_spawn`, `bridge_wall_spawn`, `bridge_breaker_spawn`
-- Register in FixedUpdate, after entity spawn systems
-
-### Step 4: Add target resolution for PrimaryBolt / ExtraBolts
-Wherever `AllBolts` is resolved (the entity query), add resolution for:
-- `PrimaryBolt` → `query_filtered::<Entity, With<PrimaryBolt>>()`
-- `ExtraBolts` → `query_filtered::<Entity, With<ExtraBolt>>()`
-
-### Step 5: Fix duplicate stamping for AllBolts
-Add source_id dedup to `push_bound_effects`: (chip_name, pre-desugaring effect_index). Skip if entity already has this source_id. Pre-desugaring index is available at dispatch time (confirmed by research).
-
-### Step 6: Update RON definitions
-Where chips/breakers currently use `AllBolts` and need future coverage, add `Spawn(Bolt)` trigger alongside. Audit existing definitions to determine which need both.
-
-### Step 7: Tests
-- Late-spawned bolt gets `Spawn(Bolt)` effect
-- Existing bolts get `AllBolts` effect but NOT `Spawn(Bolt)` retroactively
-- `SpawnedEntity` outside `Spawn` trigger → error
-- `PrimaryBolt` resolves to primary only
-- `ExtraBolts` resolves to extras only
-- Dedup: second breaker dispatch doesn't double-stamp AllBolts
-
-## What We DON'T Need
-- ~~AllBoltsEffects / AllCellsEffects resources~~
-- ~~Auto-stamp systems~~
-- ~~ReceivedEffectSources dedup component~~
-
-## Research (still valid)
-- [research/transfer-effects-flow.md](research/transfer-effects-flow.md) — dispatch pipeline, insertion points, BoundEffects structure, source_id availability
-- [research/added-bolt-observer-feasibility.md](research/added-bolt-observer-feasibility.md) — Added<T> timing, component availability, spawn paths
+### Died fires on victim only, Killed fires on killer only
+Same event, two triggers, opposite perspectives. Both have `::Victim` and `::Killer` participants for targeting.
 
 ## Scope
-- In: `Spawn(EntityType)` trigger, `SpawnedEntity` target (runtime-validated), `PrimaryBolt`/`ExtraBolts` targets, 4 bridge systems, source_id dedup for AllBolts, RON definition audit, tests
-- Out: Changing inherit behavior, co-op breaker spawning, compile-time SpawnedEntity validation, AllBoltsAlways sugar
+
+**In:**
+- All design from absorbed todo #7 (Killed/Die/death pipeline, DamageDealt<T>, TriggerContext, domain handlers, bridge systems, RON migration)
+- `Spawned(EntityType)` trigger (implicit target)
+- `During(NodeActive)` scoped trigger with `Reversible` enforcement
+- `EveryBolt`/`ActiveBolts`/`PrimaryBolts`/`ExtraBolts` targets (+ Cell/Wall/Breaker equivalents)
+- Named trigger participants per trigger type
+- `This` as bound-entity target
+- `transfer()` / `transfer_to()` terminals
+- Unified RON/builder vocabulary (`When`/`During`/`Spawned`/`On`/`Fire`/`This`)
+- Typestate effect builder with `Reversible` marker trait
+- `Raw → Builder → Valid` + `Valid → Raw → RON` round-trip
+- 4 bridge systems for `Added<Bolt/Cell/Wall/Breaker>`
+- Reversal system for `During`
+- Source_id dedup for `ActiveBolts`
+- Runtime recursion depth limit for spawn chains
+- `SpawnBolts` + `SpawnPhantom` optional definition override
+- Global trigger rename (`Occurred` suffix)
+- RON migration (~17 files)
+- Tests
+
+**Out:**
+- Changing inherit behavior
+- Co-op breaker spawning
+- Content generation tooling (Phase 7 — builder becomes its API)
+- During reacting to pause
+- During reversing on source entity despawn
+- Reorganizing effect types under unified `Spawn(...)` variant
 
 ## Dependencies
 - Depends on: Nothing specific
-- Blocks: Future co-op / breaker clone mechanics
+- Blocks: Future co-op / breaker clone mechanics, content generation tooling (Phase 7)
+- Absorbs: todo #7 (Killed trigger / unified death messaging)
 
 ## Status
-`ready` — design is clean. Research confirms Added<Bolt> timing and dispatch insertion points.
+`[NEEDS DETAIL]` — design is mostly complete. Remaining: (1) full participant catalog needs verification against bridge system implementations, (2) typestate builder Rust internals (PhantomData threading, associated types for participants), (3) exact `Raw` struct definitions for RON round-trip. See individual design docs for detailed status.
