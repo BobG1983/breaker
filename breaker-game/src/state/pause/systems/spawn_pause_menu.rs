@@ -2,6 +2,7 @@
 
 use bevy::prelude::*;
 
+use super::update_pause_menu_colors::{NORMAL_COLOR, SELECTED_COLOR};
 use crate::state::pause::{
     components::{PAUSE_MENU_ITEMS, PauseMenuItem, PauseMenuScreen},
     resources::PauseMenuSelection,
@@ -52,9 +53,9 @@ pub(crate) fn spawn_pause_menu(mut commands: Commands) {
                 };
 
                 let color = if *item == PauseMenuItem::Resume {
-                    Color::srgb(0.4, 0.8, 1.0)
+                    SELECTED_COLOR
                 } else {
-                    Color::srgb(0.6, 0.6, 0.7)
+                    NORMAL_COLOR
                 };
 
                 parent.spawn((

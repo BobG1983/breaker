@@ -207,13 +207,33 @@ fn build_produces_correct_dimension_components() {
 
     assert!((world.get::<BaseWidth>(entity).unwrap().0 - defaults.width).abs() < f32::EPSILON);
     assert!((world.get::<BaseHeight>(entity).unwrap().0 - defaults.height).abs() < f32::EPSILON);
-    assert!((world.get::<MinWidth>(entity).unwrap().0 - (defaults.width * 0.5)).abs() < f32::EPSILON);
-    assert!((world.get::<MaxWidth>(entity).unwrap().0 - (defaults.width * 5.0)).abs() < f32::EPSILON);
     assert!(
-        (world.get::<MinHeight>(entity).unwrap().0 - (defaults.height * 0.5)).abs() < f32::EPSILON
+        defaults
+            .width
+            .mul_add(-0.5, world.get::<MinWidth>(entity).unwrap().0)
+            .abs()
+            < f32::EPSILON
     );
     assert!(
-        (world.get::<MaxHeight>(entity).unwrap().0 - (defaults.height * 5.0)).abs() < f32::EPSILON
+        defaults
+            .width
+            .mul_add(-5.0, world.get::<MaxWidth>(entity).unwrap().0)
+            .abs()
+            < f32::EPSILON
+    );
+    assert!(
+        defaults
+            .height
+            .mul_add(-0.5, world.get::<MinHeight>(entity).unwrap().0)
+            .abs()
+            < f32::EPSILON
+    );
+    assert!(
+        defaults
+            .height
+            .mul_add(-5.0, world.get::<MaxHeight>(entity).unwrap().0)
+            .abs()
+            < f32::EPSILON
     );
     assert!(
         (world.get::<BreakerBaseY>(entity).unwrap().0 - defaults.y_position).abs() < f32::EPSILON

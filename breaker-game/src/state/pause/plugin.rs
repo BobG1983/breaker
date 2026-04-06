@@ -5,7 +5,7 @@ use rantzsoft_lifecycle::ActiveTransition;
 
 use super::{
     PauseMenuScreen,
-    systems::{handle_pause_input, spawn_pause_menu, toggle_pause},
+    systems::{handle_pause_input, spawn_pause_menu, toggle_pause, update_pause_menu_colors},
 };
 use crate::state::{cleanup::cleanup_entities, types::NodeState};
 
@@ -45,6 +45,16 @@ impl Plugin for PauseMenuPlugin {
             .add_systems(
                 Update,
                 handle_pause_input.run_if(
+                    is_time_paused
+                        .and(any_with_component::<PauseMenuScreen>)
+                        .and(not_in_transition.clone()),
+                ),
+            )
+            // Update pause menu item colors based on current selection
+            // Must run after handle_pause_input so color reflects this frame's selection.
+            .add_systems(
+                Update,
+                update_pause_menu_colors.after(handle_pause_input).run_if(
                     is_time_paused
                         .and(any_with_component::<PauseMenuScreen>)
                         .and(not_in_transition.clone()),
