@@ -3,7 +3,8 @@
 use bevy::prelude::*;
 
 use super::systems::{
-    bolt_info_ui, breaker_state_ui, debug_ui_system, input_actions_ui, track_bump_result,
+    bolt_info_ui, breaker_state_ui, debug_ui_system, input_actions_ui, state_chain_ui,
+    track_bump_result,
 };
 use crate::{bolt::BoltSystems, debug::resources::DebugOverlays, state::types::NodeState};
 
@@ -19,6 +20,7 @@ impl Plugin for TelemetryPlugin {
                 bolt_info_ui,
                 breaker_state_ui,
                 input_actions_ui,
+                state_chain_ui,
             )
                 .run_if(resource_exists::<DebugOverlays>),
         )
