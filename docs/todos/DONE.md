@@ -6,3 +6,8 @@
 - ~~Wall builder pattern~~ — Typestate builder with 2 dimensions (Side, Visual), migrated wall spawn sites
 - ~~Shield timer cost per reflection~~ — 0.5s cost per reflection, duration tuned to 3.0s, ReflectionCost component + deduct_shield_on_reflection system
 - ~~State lifecycle refactor~~ — Full state architecture overhaul with screen routing, transitions, and lifecycle management
+- ~~Hide breaker/bolt during RunEnd/ChipSelect states~~ — Toggle Visibility on RunState::Node exit/entry
+- ~~Extra bolts missing NodeScalingFactor on zoomed-out layouts~~ — Already fixed: apply_node_scale_to_late_bolts + sync_bolt_scale
+- ~~Delete PhysicsFrozenDuringPause invariant~~ — Removed in commit 8ef028d7, replaced with unit tests
+- ~~Fix detect_combo_king stale migration test~~ — Removed duplicate migration test, added HighlightTriggered assertion to dedup test
+- ~~Bolt speed normalization after tether constraint~~ — Added normalize_bolt_speed_after_constraints system after enforce_distance_constraints

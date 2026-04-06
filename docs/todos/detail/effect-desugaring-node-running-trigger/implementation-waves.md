@@ -145,6 +145,15 @@ trait Reversible: Effect { fn reverse(&self, entity: Entity, source_chip: &str, 
 
 Reference: [builder-design.md](builder-design.md) Traits section
 
+### 1l. DespawnEntity message
+New file: `shared/messages.rs` (or add to existing shared messages)
+
+```rust
+struct DespawnEntity { pub entity: Entity }
+```
+
+Cross-domain message — lives in `shared::messages` since any domain can request a despawn. Replaces both `PendingDespawn` component and all direct `.despawn()`/`.try_despawn()` calls.
+
 ---
 
 ## Wave 2: Builder (depends on Wave 1 types)
@@ -303,14 +312,20 @@ fn bridge_destroyed<S, T>(mut reader: MessageReader<Destroyed<S, T>>, ...)
 
 Reference: [death-pipeline.md](death-pipeline.md) Death Chain section
 
-### 5d. PendingDespawn system (parallel with 5b)
+### 5d. Centralized despawn system (parallel with 5b)
 New file: `new_effect/damage/despawn.rs`
 
 ```rust
-fn despawn_pending(query: Query<Entity, With<PendingDespawn>>, mut commands: Commands)
+fn process_despawn_requests(mut reader: MessageReader<DespawnEntity>, mut commands: Commands) {
+    for msg in reader.read() {
+        commands.entity(msg.entity).try_despawn();
+    }
+}
 ```
 
-Runs after all trigger evaluation. Reference: [phase-6-swap-spec.md](phase-6-swap-spec.md) Step 6
+Replaces the old `PendingDespawn` component approach. All entity despawns go through the `DespawnEntity` message — the death pipeline writes it after trigger evaluation completes, and domain systems write it instead of calling `.despawn()` directly. Runs in **PostFixedUpdate** so FixedUpdate systems that write the message don't lose messages at the schedule boundary, and all FixedUpdate systems have a chance to read the entity before it's gone. Uses `try_despawn` internally to handle already-cleaned-up entities gracefully (e.g., `CleanupOnExit` races).
+
+Phase 6 sweep: convert all `.despawn()`/`.try_despawn()` calls across effect fire/reverse functions, bolt_lost, chain_lightning arc cleanup, tether beam, shockwave, explode, and any entity lifecycle system to write `DespawnEntity` instead.
 
 ---
 
@@ -448,14 +463,15 @@ After swap is verified, update architecture and design docs to reflect the new e
 3. Copy migrated RON files to asset directories (55 files)
 4. Update plugin registration in lib.rs
 5. Update domain systems to use new message types (see swap spec for exact file list)
-6. Verify: `cargo dcheck`, `cargo dclippy`, `cargo dtest`, `cargo scenario -- --all`
+6. Sweep all `.despawn()`/`.try_despawn()` calls across domains to write `DespawnEntity` message instead (bolt_lost, chain_lightning, tether beam, shockwave, explode, entity lifecycle systems)
+7. Verify: `cargo dcheck`, `cargo dclippy`, `cargo dtest`, `cargo scenario -- --all`
 
 ---
 
 ## Parallelism Summary
 
 ```
-Wave 1 (all parallel):  1a | 1b | 1c | 1d | 1e | 1f | 1g | 1h | 1i | 1j | 1k
+Wave 1 (all parallel):  1a | 1b | 1c | 1d | 1e | 1f | 1g | 1h | 1i | 1j | 1k | 1l
                               ↓
 Wave 2 (all parallel):  2a | 2b | 2c | 2d | 2e
                               ↓
@@ -474,4 +490,4 @@ Wave 8 (serial):        plugin wiring
 Phase 6 (serial):       swap
 ```
 
-Maximum parallelism: Waves 1, 2, 6, and 7 are fully parallel (11, 5, ~20, and ~10 tasks respectively). Waves 5 and 6 can overlap since effect implementations don't depend on the damage system (they just need to know the DamageMessage type from Wave 1).
+Maximum parallelism: Waves 1, 2, 6, and 7 are fully parallel (12, 5, ~20, and ~10 tasks respectively). Waves 5 and 6 can overlap since effect implementations don't depend on the damage system (they just need to know the DamageMessage type from Wave 1).

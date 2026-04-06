@@ -23,6 +23,11 @@ Comprehensive effect system refactor: unified RON/builder vocabulary, new wrappe
 | [research/transfer-effects-flow.md](research/transfer-effects-flow.md) | Dispatch pipeline trace, insertion points, BoundEffects structure |
 | [research/added-bolt-observer-feasibility.md](research/added-bolt-observer-feasibility.md) | Added<T> timing, component availability, spawn paths |
 
+## Absorbed Todos
+
+- **Todo #7** (Killed trigger / unified death messaging) — absorbed into death pipeline design
+- **Todo #1** (Centralized entity despawn system) — absorbed into Wave 5d. `DespawnEntity` message replaces `PendingDespawn` component approach AND centralizes all `.despawn()`/`.try_despawn()` calls across the codebase. The message lives in `shared::messages`, the `process_despawn_requests` system runs in PostFixedUpdate after all trigger evaluation. Phase 6 sweep converts all domain despawn calls to write the message instead.
+
 ## The Problems (confirmed real)
 
 1. **Late-spawned bolts miss AllBolts effects.** Bolts spawned mid-node by effects with `inherit: false` never get AllBolts effects.
@@ -85,7 +90,7 @@ src/new_effect/
 - SpawnedRegistry resource for EveryBolt desugaring
 - Source tracking (SourceId) for chip unequip cleanup
 - Runtime recursion depth limit (MAX_DISPATCH_DEPTH = 10)
-- PendingDespawn unified entity cleanup
+- Centralized `DespawnEntity` message + `process_despawn_requests` system (replaces PendingDespawn component + scattered `.despawn()` calls)
 - RON migration (55 files — validated, see ron-migration/)
 - Tests
 
@@ -100,7 +105,7 @@ src/new_effect/
 ## Dependencies
 - Depends on: Nothing specific
 - Blocks: Future co-op / breaker clone mechanics, content generation tooling (Phase 7)
-- Absorbs: todo #7 (Killed trigger / unified death messaging)
+- Absorbs: todo #7 (Killed trigger / unified death messaging), todo #1 (centralized entity despawn)
 
 ## Status
 `ready` — 22 design decisions resolved, 8 design documents complete, implementation waves defined with parallelism analysis. See [decisions.md](decisions.md) for all resolved questions, [implementation-waves.md](implementation-waves.md) for build order.
