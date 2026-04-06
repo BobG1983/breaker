@@ -4,7 +4,6 @@ description: "Use this agent to find ALL references to a type, system, message, 
 tools: Read, Glob, Grep
 model: sonnet
 color: blue
-memory: project
 ---
 
 You are a codebase impact analyst. Your job is to find ALL references to a given type, system, message, or component and categorize them by relationship type.
