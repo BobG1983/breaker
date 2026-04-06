@@ -140,16 +140,10 @@ fn register_parent_routes(app: &mut App) {
     app.add_route(
         Route::from(GameState::Run)
             .to(GameState::Menu)
-            .with_transition(TransitionType::OutIn {
-                out_e: Arc::new(FadeOut {
-                    duration: 0.6,
-                    color: Color::WHITE,
-                }),
-                in_e: Arc::new(FadeIn {
-                    duration: 0.6,
-                    color: Color::WHITE,
-                }),
-            })
+            .with_transition(TransitionType::Out(Arc::new(FadeOut {
+                duration: 0.6,
+                color: Color::WHITE,
+            })))
             .when(|world| {
                 world
                     .get_resource::<State<RunState>>()
@@ -175,16 +169,10 @@ fn register_parent_routes(app: &mut App) {
                     MenuItem::Quit => MenuState::Main, // Quit handled via AppExit, not routing
                 }
             })
-            .with_transition(TransitionType::OutIn {
-                out_e: Arc::new(FadeOut {
-                    duration: 0.6,
-                    color: Color::WHITE,
-                }),
-                in_e: Arc::new(FadeIn {
-                    duration: 0.6,
-                    color: Color::WHITE,
-                }),
-            }),
+            .with_transition(TransitionType::Out(Arc::new(FadeOut {
+                duration: 0.6,
+                color: Color::WHITE,
+            }))),
     );
     // StartGame → Teardown (message-triggered by handle_run_setup_input)
     app.add_route(Route::from(MenuState::StartGame).to(MenuState::Teardown));
@@ -222,16 +210,10 @@ fn register_run_routes(app: &mut App) {
     app.add_route(
         Route::from(RunState::Node)
             .to_dynamic(resolve_node_next_state)
-            .with_transition(TransitionType::OutIn {
-                out_e: Arc::new(FadeOut {
-                    duration: 0.6,
-                    color: Color::WHITE,
-                }),
-                in_e: Arc::new(FadeIn {
-                    duration: 0.6,
-                    color: Color::WHITE,
-                }),
-            })
+            .with_transition(TransitionType::Out(Arc::new(FadeOut {
+                duration: 0.6,
+                color: Color::WHITE,
+            })))
             .when(|world| {
                 world
                     .get_resource::<State<NodeState>>()
@@ -242,16 +224,10 @@ fn register_run_routes(app: &mut App) {
     app.add_route(
         Route::from(RunState::ChipSelect)
             .to(RunState::Node)
-            .with_transition(TransitionType::OutIn {
-                out_e: Arc::new(FadeOut {
-                    duration: 0.6,
-                    color: Color::WHITE,
-                }),
-                in_e: Arc::new(FadeIn {
-                    duration: 0.6,
-                    color: Color::WHITE,
-                }),
-            })
+            .with_transition(TransitionType::Out(Arc::new(FadeOut {
+                duration: 0.6,
+                color: Color::WHITE,
+            })))
             .when(|world| {
                 world
                     .get_resource::<State<ChipSelectState>>()
