@@ -9,9 +9,9 @@ use crate::{
 
 fn default_movement() -> MovementSettings {
     MovementSettings {
-        max_speed: 500.0,
-        acceleration: 3000.0,
-        deceleration: 2500.0,
+        max_speed: 1000.0,
+        acceleration: 6000.0,
+        deceleration: 5000.0,
         decel_ease: EaseFunction::QuadraticIn,
         decel_ease_strength: 1.0,
     }
@@ -126,7 +126,7 @@ fn different_ordering_produces_identical_entities() {
 
 #[test]
 fn with_overrides_after_definition_before_build() {
-    let def = test_breaker_definition(); // max_speed: 500.0, width: 120.0
+    let def = test_breaker_definition(); // max_speed: 1000.0, width: 120.0
     let mut world = World::new();
     let bundle = Breaker::builder()
         .definition(&def)

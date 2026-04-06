@@ -13,7 +13,7 @@ use crate::{
 
 #[test]
 fn with_max_speed_overrides_definition_value() {
-    let def = test_breaker_definition(); // max_speed: 500.0
+    let def = test_breaker_definition(); // max_speed: 1000.0
     let mut world = World::new();
     let bundle = Breaker::builder()
         .definition(&def)
@@ -309,9 +309,9 @@ fn without_definition_without_with_lives_defaults_to_infinite() {
     let bundle = Breaker::builder()
         .dimensions(120.0, 20.0, -250.0)
         .movement(super::super::core::MovementSettings {
-            max_speed: 500.0,
-            acceleration: 3000.0,
-            deceleration: 2500.0,
+            max_speed: 1000.0,
+            acceleration: 6000.0,
+            deceleration: 5000.0,
             decel_ease: EaseFunction::QuadraticIn,
             decel_ease_strength: 1.0,
         })

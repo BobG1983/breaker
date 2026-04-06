@@ -222,9 +222,9 @@ fn build_produces_correct_movement_components() {
         .build();
     let entity = world.spawn(bundle).id();
 
-    assert!((world.get::<MaxSpeed>(entity).unwrap().0 - 500.0).abs() < f32::EPSILON);
-    assert!((world.get::<BreakerAcceleration>(entity).unwrap().0 - 3000.0).abs() < f32::EPSILON);
-    assert!((world.get::<BreakerDeceleration>(entity).unwrap().0 - 2500.0).abs() < f32::EPSILON);
+    assert!((world.get::<MaxSpeed>(entity).unwrap().0 - 1000.0).abs() < f32::EPSILON);
+    assert!((world.get::<BreakerAcceleration>(entity).unwrap().0 - 6000.0).abs() < f32::EPSILON);
+    assert!((world.get::<BreakerDeceleration>(entity).unwrap().0 - 5000.0).abs() < f32::EPSILON);
     let de = world.get::<DecelEasing>(entity).unwrap();
     assert!(matches!(de.ease, EaseFunction::QuadraticIn));
     assert!((de.strength - 1.0).abs() < f32::EPSILON);

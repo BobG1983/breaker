@@ -27,7 +27,7 @@ fn seed_populates_from_expanded_definitions() {
         ron::de::from_str(r#"(name: "TestBreaker", width: 150.0, max_speed: 700.0, effects: [])"#)
             .expect("test RON should parse");
     let def_b: BreakerDefinition =
-        ron::de::from_str(r#"(name: "OtherBreaker", width: 120.0, max_speed: 500.0, effects: [])"#)
+        ron::de::from_str(r#"(name: "OtherBreaker", width: 120.0, max_speed: 1000.0, effects: [])"#)
             .expect("test RON should parse");
 
     let mut app = App::new();
@@ -57,7 +57,7 @@ fn seed_populates_from_expanded_definitions() {
 
     let other_def = registry.get("OtherBreaker").unwrap();
     assert!((other_def.width - 120.0).abs() < f32::EPSILON);
-    assert!((other_def.max_speed - 500.0).abs() < f32::EPSILON);
+    assert!((other_def.max_speed - 1000.0).abs() < f32::EPSILON);
 }
 
 // ── Behavior 53: BreakerRegistry asset_dir() still returns "breakers" ──

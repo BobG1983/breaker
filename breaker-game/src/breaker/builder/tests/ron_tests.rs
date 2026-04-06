@@ -24,9 +24,9 @@ fn minimal_ron_parses_with_all_defaults() {
     assert!(def.max_h.is_none());
 
     // Movement
-    assert!((def.max_speed - 500.0).abs() < f32::EPSILON);
-    assert!((def.acceleration - 3000.0).abs() < f32::EPSILON);
-    assert!((def.deceleration - 2500.0).abs() < f32::EPSILON);
+    assert!((def.max_speed - 1000.0).abs() < f32::EPSILON);
+    assert!((def.acceleration - 6000.0).abs() < f32::EPSILON);
+    assert!((def.deceleration - 5000.0).abs() < f32::EPSILON);
     assert!(matches!(def.decel_ease, EaseFunction::QuadraticIn));
     assert!((def.decel_ease_strength - 1.0).abs() < f32::EPSILON);
 
@@ -86,8 +86,8 @@ fn ron_with_explicit_gameplay_fields_parses() {
     assert!((def.max_speed - 600.0).abs() < f32::EPSILON);
     assert!((def.reflection_spread - 60.0).abs() < f32::EPSILON);
     // Other fields should be defaults
-    assert!((def.acceleration - 3000.0).abs() < f32::EPSILON);
-    assert!((def.deceleration - 2500.0).abs() < f32::EPSILON);
+    assert!((def.acceleration - 6000.0).abs() < f32::EPSILON);
+    assert!((def.deceleration - 5000.0).abs() < f32::EPSILON);
 }
 
 // ── Behavior 46: BreakerDefinition with explicit min/max size fields parses ──
@@ -125,7 +125,7 @@ fn aegis_breaker_ron_parses_with_expanded_definition() {
     assert_eq!(def.effects.len(), 4);
     // All gameplay fields should be defaults
     assert!((def.width - 120.0).abs() < f32::EPSILON);
-    assert!((def.max_speed - 500.0).abs() < f32::EPSILON);
+    assert!((def.max_speed - 1000.0).abs() < f32::EPSILON);
 }
 
 // ── Behavior 48: chrono.breaker.ron parses with expanded BreakerDefinition ──

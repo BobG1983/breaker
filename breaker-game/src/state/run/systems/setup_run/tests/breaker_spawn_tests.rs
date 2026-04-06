@@ -237,7 +237,7 @@ fn spawned_breaker_has_scale2d_from_definition() {
 
 #[test]
 fn spawned_breaker_has_max_speed_from_definition() {
-    // BreakerDefinition default: max_speed=500.0
+    // BreakerDefinition default: max_speed=1000.0
     let mut app = test_app();
     app.update();
 
@@ -252,8 +252,8 @@ fn spawned_breaker_has_max_speed_from_definition() {
         .get::<MaxSpeed>(entity)
         .expect("breaker should have MaxSpeed");
     assert!(
-        (max_speed.0 - 500.0).abs() < f32::EPSILON,
-        "MaxSpeed should be 500.0, got {}",
+        (max_speed.0 - 1000.0).abs() < f32::EPSILON,
+        "MaxSpeed should be 1000.0, got {}",
         max_speed.0
     );
 }

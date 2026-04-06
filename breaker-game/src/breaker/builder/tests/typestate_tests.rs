@@ -47,9 +47,9 @@ fn dimensions_zero_compiles_and_stores_values() {
     let bundle = Breaker::builder()
         .dimensions(0.0, 0.0, 0.0)
         .movement(MovementSettings {
-            max_speed: 500.0,
-            acceleration: 3000.0,
-            deceleration: 2500.0,
+            max_speed: 1000.0,
+            acceleration: 6000.0,
+            deceleration: 5000.0,
             decel_ease: EaseFunction::QuadraticIn,
             decel_ease_strength: 1.0,
         })
@@ -133,9 +133,9 @@ fn movement_transitions_to_has_movement() {
         Unvisual,
         NoRole,
     > = Breaker::builder().movement(MovementSettings {
-        max_speed: 500.0,
-        acceleration: 3000.0,
-        deceleration: 2500.0,
+        max_speed: 1000.0,
+        acceleration: 6000.0,
+        deceleration: 5000.0,
         decel_ease: EaseFunction::QuadraticIn,
         decel_ease_strength: 1.0,
     });
@@ -145,8 +145,8 @@ fn movement_transitions_to_has_movement() {
 fn movement_zero_max_speed_compiles() {
     let _builder = Breaker::builder().movement(MovementSettings {
         max_speed: 0.0,
-        acceleration: 3000.0,
-        deceleration: 2500.0,
+        acceleration: 6000.0,
+        deceleration: 5000.0,
         decel_ease: EaseFunction::QuadraticIn,
         decel_ease_strength: 1.0,
     });

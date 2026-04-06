@@ -7,15 +7,15 @@ use super::super::core::*;
 #[test]
 fn movement_settings_construction() {
     let settings = MovementSettings {
-        max_speed: 500.0,
-        acceleration: 3000.0,
-        deceleration: 2500.0,
+        max_speed: 1000.0,
+        acceleration: 6000.0,
+        deceleration: 5000.0,
         decel_ease: EaseFunction::QuadraticIn,
         decel_ease_strength: 1.0,
     };
-    assert!((settings.max_speed - 500.0).abs() < f32::EPSILON);
-    assert!((settings.acceleration - 3000.0).abs() < f32::EPSILON);
-    assert!((settings.deceleration - 2500.0).abs() < f32::EPSILON);
+    assert!((settings.max_speed - 1000.0).abs() < f32::EPSILON);
+    assert!((settings.acceleration - 6000.0).abs() < f32::EPSILON);
+    assert!((settings.deceleration - 5000.0).abs() < f32::EPSILON);
     assert!(matches!(settings.decel_ease, EaseFunction::QuadraticIn));
     assert!((settings.decel_ease_strength - 1.0).abs() < f32::EPSILON);
 }

@@ -18,10 +18,10 @@ use crate::{
 #[test]
 fn flash_step_teleport_respects_speed_multiplier_for_distance() {
     // Given: Breaker at (200, -250), Settling from rightward dash (ease_start=-0.35),
-    //        FlashStepActive, ActiveSpeedBoosts(vec![1.5]), MaxSpeed(500),
+    //        FlashStepActive, ActiveSpeedBoosts(vec![1.5]), MaxSpeed(1000),
     //        DashSpeedMultiplier(4), DashDuration(0.15)
     // When: DashLeft
-    // Then: Position2D.x == -250.0 (200 + (-1)*500*1.5*4*0.15 = 200 - 450)
+    // Then: Position2D.x == -340.0 (clamped: unclamped 200 - 900 = -700, playfield left -400 + half_width 60 = -340)
     let mut app = test_app();
     let config = BreakerDefinition::default();
     let entity = app
@@ -52,15 +52,15 @@ fn flash_step_teleport_respects_speed_multiplier_for_distance() {
 
     let pos = app.world().get::<Position2D>(entity).unwrap();
     assert!(
-        (pos.0.x - (-250.0)).abs() < 0.01,
-        "with ActiveSpeedBoosts([1.5]), teleport to -250.0 (200 - 500*1.5*4*0.15=450), got {}",
+        (pos.0.x - (-340.0)).abs() < 0.01,
+        "with ActiveSpeedBoosts([1.5]), teleport clamps to -340.0 (playfield left -400 + half_width 60), got {}",
         pos.0.x
     );
 }
 
 #[test]
 fn flash_step_teleport_with_speed_multiplier_one_matches_no_multiplier() {
-    // Edge case: ActiveSpeedBoosts(vec![1.0]) same result as no multiplier (300 distance)
+    // Edge case: ActiveSpeedBoosts(vec![1.0]) same result as no multiplier (600 distance, clamped to -340)
     let mut app = test_app();
     let config = BreakerDefinition::default();
     let entity = app
@@ -91,8 +91,8 @@ fn flash_step_teleport_with_speed_multiplier_one_matches_no_multiplier() {
 
     let pos = app.world().get::<Position2D>(entity).unwrap();
     assert!(
-        (pos.0.x - (-300.0)).abs() < f32::EPSILON,
-        "ActiveSpeedBoosts([1.0]) should give same 300.0 distance, expected -300.0, got {}",
+        (pos.0.x - (-340.0)).abs() < f32::EPSILON,
+        "ActiveSpeedBoosts([1.0]) should clamp to -340.0 (playfield left -400 + half_width 60), got {}",
         pos.0.x
     );
 }
@@ -102,10 +102,10 @@ fn flash_step_teleport_with_speed_multiplier_one_matches_no_multiplier() {
 #[test]
 fn flash_step_teleport_reads_active_speed_boosts_for_distance() {
     // Given: Breaker at (200.0, -250.0), Settling from rightward dash (ease_start=-0.35),
-    //        FlashStepActive, ActiveSpeedBoosts(vec![1.5]), MaxSpeed(500),
+    //        FlashStepActive, ActiveSpeedBoosts(vec![1.5]), MaxSpeed(1000),
     //        DashSpeedMultiplier(4), DashDuration(0.15)
     // When: DashLeft
-    // Then: Position2D.x = 200.0 + (-1) * 500.0 * 1.5 * 4.0 * 0.15 = 200.0 - 450.0 = -250.0
+    // Then: Position2D.x clamped to -340.0 (unclamped: 200 - 900 = -700, playfield left -400 + half_width 60 = -340)
     let mut app = test_app();
     let config = BreakerDefinition::default();
     let entity = app
@@ -136,9 +136,9 @@ fn flash_step_teleport_reads_active_speed_boosts_for_distance() {
 
     let pos = app.world().get::<Position2D>(entity).unwrap();
     assert!(
-        (pos.0.x - (-250.0)).abs() < 0.01,
-        "with ActiveSpeedBoosts([1.5]), teleport to -250.0 \
-         (200 - 500*1.5*4*0.15=450), got {}",
+        (pos.0.x - (-340.0)).abs() < 0.01,
+        "with ActiveSpeedBoosts([1.5]), teleport clamps to -340.0 \
+         (playfield left -400 + half_width 60), got {}",
         pos.0.x
     );
 }
