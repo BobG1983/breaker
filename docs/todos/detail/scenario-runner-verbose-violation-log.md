@@ -59,8 +59,37 @@ Each subprocess captures its own screenshot via Bevy's built-in screenshot API. 
 
 When `--visual` is passed, shrink windows so an entire "wave" of runs fits on screen simultaneously.
 
-### Render Approach: PENDING TEST
-**Pending**: user is testing whether the game handles window resizing gracefully. If it does, no game crate changes needed (just shrink windows). If resizing breaks the playfield layout, render-to-texture will be needed (game renders to fixed-res offscreen target, scaled into window).
+### UI Scaling Fix: UiScale Sync System (RESEARCHED — READY)
+
+**Root cause**: the camera uses `ScalingMode::AutoMin { min_width: 1920.0, min_height: 1080.0 }` which scales all world-space entities correctly. But Bevy's UI layout resolves `Val::Px` against physical window pixels, ignoring camera scaling. All 14 UI files use `Val::Px` for padding/gaps/dimensions and absolute `font_size` values designed for 1920×1080.
+
+**Fix**: a single `sync_ui_scale` system — no need to touch the 14 UI files individually:
+
+```rust
+fn sync_ui_scale(
+    mut ui_scale: ResMut<UiScale>,
+    windows: Query<&Window, With<PrimaryWindow>>,
+) {
+    if let Ok(window) = windows.single() {
+        let scale = (window.width() / 1920.0).min(window.height() / 1080.0);
+        ui_scale.0 = scale;
+    }
+}
+```
+
+- `UiScale` (in `bevy::prelude`) scales ALL `Val::Px` values and ALL `font_size` values globally
+- The `min()` gives letterbox behavior — UI never overflows, may have empty bars on one axis
+- Root nodes using `Val::Percent(100.0)` continue to work correctly
+- No RON config changes, no per-spawn-system changes, no font size refactors
+
+**Gotchas**:
+- `Val::Vw/Vh/VMin/VMax` are NOT scaled by UiScale — but the codebase doesn't use these
+- Hairline `Val::Px(1.0)` borders may become sub-pixel at small windows — acceptable for placeholder
+- Register in `Update` schedule, no run condition needed (runs in all states)
+
+**This fix is part of this todo** — must be completed before tiling works. See research:
+- [UI scaling investigation](research/ui-scaling-investigation.md) — full catalog of all absolute pixel values across 14 files
+- [Bevy UI scaling patterns](research/bevy-ui-scaling.md) — UiScale API details, Val variant behavior, font scaling
 
 ### Window Tiling
 - When `--visual` is passed with parallel runs, tile all windows across the screen
@@ -86,8 +115,8 @@ Pool size is always determined by the `-p` flag (or default). In visual mode, sc
 - Feature 1 (log file): No dependencies
 - Feature 2 (screenshots): Depends on Feature 1 (output directory), requires `--visual` mode, uses Bevy screenshot API
 - Feature 3 (--clean): Depends on Feature 1 (fixed directory structure)
-- Feature 4 (tiling): May depend on resolution-independent rendering (pending test)
+- Feature 4 (tiling): Depends on UI scaling fix (play area scales, UI doesn't — fix is part of this todo)
 - Feature 5 (streaming): Independent of features 1-3, but pairs naturally with tiling for pocket reuse
 
 ## Status
-`[NEEDS DETAIL]` — render approach pending user's window resize test; Bevy screenshot API needs research; streaming execution implementation design needs detail
+`ready` — all features researched and designed. UI scaling fix is a single `sync_ui_scale` system (no 14-file refactor). Screenshot API uses Bevy's `Screenshot::primary_window()`. Streaming execution uses thread-per-child + mpsc. Implementation order: Feature 1 (log dir) → Feature 3 (--clean) → Feature 2 (screenshots) → Feature 4 (UiScale + tiling) → Feature 5 (streaming pool).

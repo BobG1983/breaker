@@ -960,3 +960,86 @@ transition occurs, including SubState removal (where `entered: None`).
 
 This is truly event-driven (zero cost when no transition occurs) and does not require
 child cooperation beyond the state machine itself firing the message.
+
+---
+
+## UI Scaling — Val variants, UiScale, TextFont (Bevy 0.18.1)
+
+Verified from: `docs.rs/bevy/0.18.1`, `crates/bevy_ui/src/layout/convert.rs`,
+`crates/bevy_ui/src/update.rs`, `crates/bevy_ui/src/widget/text.rs`,
+`examples/ui/ui_scaling.rs` all at v0.18.1.
+
+### Val variants (bevy::ui::Val / bevy::prelude::Val)
+
+```rust
+pub enum Val {
+    Auto,
+    Px(f32),        // scaled by: camera.target_scaling_factor() * ui_scale.0
+    Percent(f32),   // % of parent node dimension — NOT scaled by UiScale
+    Vw(f32),        // % of physical_size.x — NOT scaled by UiScale
+    Vh(f32),        // % of physical_size.y — NOT scaled by UiScale
+    VMin(f32),      // % of physical_size.min_element() — NOT scaled by UiScale
+    VMax(f32),      // % of physical_size.max_element() — NOT scaled by UiScale
+}
+```
+
+Conversion is in `into_length_percentage_auto` in `convert.rs`:
+- `Val::Px(v)` → `scale_factor * v`  (scale_factor = camera factor × ui_scale.0)
+- `Val::Vw(v)` → `physical_size.x * v / 100.`  (raw physical pixels, no UiScale)
+- `Val::Vh(v)` → `physical_size.y * v / 100.`  (raw physical pixels, no UiScale)
+
+**Gotcha**: Vw/Vh/VMin/VMax respond to window resize automatically (tracked via
+`ComputedUiRenderTargetInfo`). Do NOT mix Px and Vw/Vh in the same layout when
+UiScale != 1.0 — the two unit systems are on different scales.
+
+### UiScale resource
+
+```rust
+// bevy::ui::UiScale (re-exported in bevy::prelude)
+pub struct UiScale(pub f32);  // Default: 1.0
+```
+
+Applied in `propagate_ui_target_cameras` (`update.rs`):
+```
+layout_scale_factor = camera.target_scaling_factor() * ui_scale.0
+```
+
+**What UiScale scales**: `Val::Px` sizing AND `TextFont::font_size`.
+Source comment in `widget/text.rs`: `"scale_factor is already multiplied by UiScale"`.
+
+**What UiScale does NOT scale**: `Val::Vw/Vh/VMin/VMax`, `Val::Percent`.
+
+### TextFont — font_size field
+
+```rust
+pub struct TextFont {
+    pub font: Handle<Font>,
+    pub font_size: f32,  // physical pixels, no viewport-relative variant
+    // ...
+}
+```
+
+No built-in responsive font size in Bevy 0.18.1. Font size IS multiplied by
+`scale_factor` (which includes UiScale), so setting UiScale scales fonts globally.
+
+### Recommended pattern: UiScale driven by window dimensions
+
+```rust
+fn sync_ui_scale(
+    mut ui_scale: ResMut<UiScale>,
+    windows: Query<&Window, With<PrimaryWindow>>,
+) {
+    if let Ok(window) = windows.get_single() {
+        // Design resolution: 1920×1080. Use min to letterbox.
+        let scale = (window.width() / 1920.0).min(window.height() / 1080.0);
+        ui_scale.0 = scale;
+    }
+}
+// Run in Update. All Val::Px and font_size designed for 1920×1080 scale automatically.
+```
+
+**UiScale is global** — cannot be per-node. If some Px values should not scale
+(e.g., hairline 1px borders), use `Val::Px(1.0 / ui_scale.0)` to counteract it,
+or switch those values to a different approach.
+
+Full research report: `docs/todos/detail/scenario-runner-verbose-violation-log/research/bevy-ui-scaling.md`
