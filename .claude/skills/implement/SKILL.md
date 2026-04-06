@@ -41,9 +41,12 @@ Orchestrate the full delegated implementation pipeline for a feature. This skill
 /implement <feature description>
 /implement --plan <path/to/plan.md>
 /implement --plan <path/to/plan.md> --task <task name or number>
+/implement todo <number or name>
 ```
 
 When `--plan` is provided, read the plan file for the feature description, scope, and wave structure. When `--task` is also provided, implement only that specific task from the plan.
+
+When `todo` is provided, read the todo's detail file from `docs/todos/` and use it as the feature description and scope. If the todo is `[NEEDS DETAIL]`, run the `/todo interrogate` procedure for it first. Update the todo status to `[in-progress]` before proceeding.
 
 ## Before You Begin
 
