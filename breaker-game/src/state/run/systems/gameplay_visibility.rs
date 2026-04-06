@@ -8,7 +8,6 @@ use crate::{bolt::components::Bolt, breaker::components::Breaker};
 ///
 /// Runs on `OnExit(RunState::Node)` so gameplay entities are invisible during
 /// `ChipSelect` and `RunEnd` screens.
-#[allow(dead_code, reason = "wired into schedule in upcoming quickfix")]
 pub(crate) fn hide_gameplay_entities(
     mut breakers: Query<&mut Visibility, (With<Breaker>, Without<Bolt>)>,
     mut bolts: Query<&mut Visibility, (With<Bolt>, Without<Breaker>)>,
@@ -25,7 +24,6 @@ pub(crate) fn hide_gameplay_entities(
 ///
 /// Runs on `OnEnter(RunState::Node)` so gameplay entities reappear when
 /// returning from `ChipSelect` to the next node.
-#[allow(dead_code, reason = "wired into schedule in upcoming quickfix")]
 pub(crate) fn show_gameplay_entities(
     mut breakers: Query<&mut Visibility, (With<Breaker>, Without<Bolt>)>,
     mut bolts: Query<&mut Visibility, (With<Bolt>, Without<Breaker>)>,

@@ -53,6 +53,10 @@ impl FullscreenMaterial for TransitionEffect {
     fn sub_graph() -> Option<InternedRenderSubGraph> {
         Some(Core2d.intern())
     }
+
+    fn node_label() -> impl bevy::render::render_graph::RenderLabel {
+        TransitionLabel
+    }
 }
 
 /// Effect type constants used in `TransitionEffect::effect_type`.
