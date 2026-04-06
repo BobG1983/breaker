@@ -33,6 +33,8 @@ fn world_with_bolt_registry() -> World {
     );
     world.insert_resource(registry);
     world.insert_resource(GameRng::default());
+    world.init_resource::<Assets<Mesh>>();
+    world.init_resource::<Assets<ColorMaterial>>();
     world
 }
 
@@ -179,6 +181,8 @@ fn fire_chain_bolt_custom_base_speed() {
     );
     world.insert_resource(registry);
     world.insert_resource(GameRng::default());
+    world.init_resource::<Assets<Mesh>>();
+    world.init_resource::<Assets<ColorMaterial>>();
 
     let anchor = world.spawn(Position2D(Vec2::ZERO)).id();
 

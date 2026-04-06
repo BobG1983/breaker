@@ -4,15 +4,18 @@ use bevy::prelude::*;
 use rantzsoft_physics2d::{
     collision_layers::CollisionLayers, plugin::PhysicsSystems, resources::CollisionQuadtree,
 };
-use rantzsoft_spatial2d::components::Position2D;
+use rantzsoft_spatial2d::components::{Position2D, Scale2D, Spatial};
 
 use crate::{
     bolt::{components::BoltBaseDamage, resources::DEFAULT_BOLT_BASE_DAMAGE},
     cells::messages::DamageCell,
     effect::{core::EffectSourceChip, effects::damage_boost::ActiveDamageBoosts},
-    shared::{CELL_LAYER, CleanupOnNodeExit},
+    shared::{CELL_LAYER, CleanupOnNodeExit, GameDrawLayer},
     state::types::NodeState,
 };
+
+/// Placeholder pulse ring color — HDR teal.
+const PULSE_COLOR: Color = Color::linear_rgb(0.5, 3.0, 4.0);
 
 /// Emitter component attached to a bolt entity. Drives periodic ring emission.
 #[derive(Component)]
@@ -114,6 +117,8 @@ pub(crate) fn tick_pulse_emitter(
     time: Res<Time<Fixed>>,
     mut commands: Commands,
     mut emitters: Query<EmitterQuery>,
+    mut meshes: Option<ResMut<Assets<Mesh>>>,
+    mut materials: Option<ResMut<Assets<ColorMaterial>>>,
 ) {
     let dt = time.timestep().as_secs_f32();
     for (_entity, mut emitter, position, active_boosts, esc, bolt_base_damage) in &mut emitters {
@@ -124,6 +129,7 @@ pub(crate) fn tick_pulse_emitter(
             let speed = emitter.speed;
             let damage_multiplier = active_boosts.map_or(1.0, ActiveDamageBoosts::multiplier);
             let base_dmg = bolt_base_damage.map_or(DEFAULT_BOLT_BASE_DAMAGE, |d| d.0);
+            let emitter_pos = position.0;
             let mut ring = commands.spawn((
                 PulseRing,
                 PulseSource,
@@ -133,9 +139,17 @@ pub(crate) fn tick_pulse_emitter(
                 PulseDamaged(HashSet::new()),
                 PulseRingDamageMultiplier(damage_multiplier),
                 PulseRingBaseDamage(base_dmg),
-                Position2D(position.0),
+                Spatial::builder().at_position(emitter_pos).build(),
+                Scale2D { x: 0.0, y: 0.0 },
                 CleanupOnNodeExit,
             ));
+            if let (Some(m), Some(mat)) = (meshes.as_mut(), materials.as_mut()) {
+                ring.insert((
+                    Mesh2d(m.add(Circle::new(1.0))),
+                    MeshMaterial2d(mat.add(ColorMaterial::from_color(PULSE_COLOR))),
+                    GameDrawLayer::Fx,
+                ));
+            }
             ring.insert(esc.cloned().unwrap_or_default());
         }
     }
@@ -197,12 +211,22 @@ pub(crate) fn despawn_finished_pulse_ring(
     }
 }
 
+/// Syncs `Scale2D` to match `PulseRadius` each tick so the visual mesh
+/// tracks the expanding pulse ring.
+pub(crate) fn sync_pulse_visual(mut query: Query<(&PulseRadius, &mut Scale2D), With<PulseRing>>) {
+    for (radius, mut scale) in &mut query {
+        scale.x = radius.0;
+        scale.y = radius.0;
+    }
+}
+
 pub(crate) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         (
             tick_pulse_emitter,
             tick_pulse_ring,
+            sync_pulse_visual,
             apply_pulse_damage,
             despawn_finished_pulse_ring,
         )

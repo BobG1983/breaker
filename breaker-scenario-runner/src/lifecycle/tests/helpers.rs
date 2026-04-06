@@ -170,6 +170,7 @@ pub(super) fn perfect_tracking_app(seed: u64, mode: BumpMode) -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .init_resource::<InputActions>()
+        .init_resource::<PlayfieldConfig>()
         .insert_resource(ForceBumpGrade::default());
     let driver = InputDriver::Perfect(PerfectDriver::new(seed, mode));
     app.insert_resource(ScenarioInputDriver(driver));

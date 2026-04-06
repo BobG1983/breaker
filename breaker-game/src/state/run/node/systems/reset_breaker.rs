@@ -6,6 +6,7 @@ use rantzsoft_spatial2d::components::PreviousPosition;
 use crate::{
     breaker::{
         components::{Breaker, DashState},
+        messages::BreakerSpawned,
         queries::BreakerResetData,
     },
     shared::PlayfieldConfig,
@@ -19,9 +20,11 @@ use crate::{
 pub(crate) fn reset_breaker(
     playfield: Res<PlayfieldConfig>,
     mut query: Query<BreakerResetData, With<Breaker>>,
+    mut spawned: MessageWriter<BreakerSpawned>,
 ) {
     // Robust if PlayfieldConfig is ever offset from world origin
     let center_x = f32::midpoint(playfield.left(), playfield.right());
+    let mut any_reset = false;
     for mut data in &mut query {
         data.position.0.x = center_x;
         data.position.0.y = data.base_y.0;
@@ -39,5 +42,9 @@ pub(crate) fn reset_breaker(
         if let Some(mut prev) = data.prev_position {
             *prev = PreviousPosition(data.position.0);
         }
+        any_reset = true;
+    }
+    if any_reset {
+        spawned.write(BreakerSpawned);
     }
 }

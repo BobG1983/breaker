@@ -8,7 +8,9 @@ use rantzsoft_physics2d::{
     aabb::Aabb2D, ccd::ray_vs_aabb, collision_layers::CollisionLayers, plugin::PhysicsSystems,
     resources::CollisionQuadtree,
 };
-use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Velocity2D};
+use rantzsoft_spatial2d::components::{
+    GlobalPosition2D, Position2D, Rotation2D, Scale2D, Spatial, Velocity2D,
+};
 
 use crate::{
     bolt::{
@@ -22,7 +24,7 @@ use crate::{
         core::{EffectSourceChip, chip_attribution},
         effects::damage_boost::ActiveDamageBoosts,
     },
-    shared::{CELL_LAYER, CleanupOnNodeExit, rng::GameRng},
+    shared::{CELL_LAYER, CleanupOnNodeExit, GameDrawLayer, rng::GameRng},
     state::types::NodeState,
 };
 
@@ -81,6 +83,21 @@ pub(crate) fn fire(
     }
 }
 
+/// Placeholder beam color — HDR electric blue.
+const TETHER_BEAM_COLOR: Color = Color::linear_rgb(0.5, 1.0, 5.0);
+
+/// Tries to create mesh and material handles for beam visual components.
+/// Returns `None` if asset resources are not available (e.g., in minimal test worlds).
+fn spawn_beam_visual_handles(world: &mut World) -> Option<(Handle<Mesh>, Handle<ColorMaterial>)> {
+    let mesh_handle = world
+        .get_resource_mut::<Assets<Mesh>>()?
+        .add(Rectangle::new(1.0, 1.0));
+    let material_handle = world
+        .get_resource_mut::<Assets<ColorMaterial>>()?
+        .add(ColorMaterial::from_color(TETHER_BEAM_COLOR));
+    Some((mesh_handle, material_handle))
+}
+
 /// Spawns a single extra bolt with a random velocity direction at the given position.
 fn spawn_tether_bolt(world: &mut World, spawn_pos: Vec2, bolt_def: &BoltDefinition) -> Entity {
     let angle = {
@@ -89,6 +106,9 @@ fn spawn_tether_bolt(world: &mut World, spawn_pos: Vec2, bolt_def: &BoltDefiniti
     };
     let direction = Vec2::new(angle.cos(), angle.sin());
     let velocity = Velocity2D(direction * bolt_def.base_speed);
+
+    let visual = super::super::bolt_visual_handles(world, bolt_def.color_rgb);
+
     let mut queue = CommandQueue::default();
     let entity = {
         let mut commands = Commands::new(&mut queue, world);
@@ -101,6 +121,8 @@ fn spawn_tether_bolt(world: &mut World, spawn_pos: Vec2, bolt_def: &BoltDefiniti
             .spawn(&mut commands)
     };
     queue.apply(world);
+    super::super::insert_bolt_visuals(world, entity, visual);
+
     entity
 }
 
@@ -133,19 +155,29 @@ fn fire_standard(entity: Entity, damage_mult: f32, source_chip: &str, world: &mu
         .map_or(DEFAULT_BOLT_BASE_DAMAGE, |d| d.0);
 
     // Spawn the beam entity linking both bolts
-    let _beam = world
-        .spawn((
-            TetherBeamComponent {
-                bolt_a,
-                bolt_b,
-                damage_mult,
-                effective_damage_multiplier: edm,
-                base_damage,
-            },
-            EffectSourceChip::new(source_chip),
-            CleanupOnNodeExit,
-        ))
-        .id();
+    let visual = spawn_beam_visual_handles(world);
+
+    let mut beam = world.spawn((
+        TetherBeamComponent {
+            bolt_a,
+            bolt_b,
+            damage_mult,
+            effective_damage_multiplier: edm,
+            base_damage,
+        },
+        EffectSourceChip::new(source_chip),
+        CleanupOnNodeExit,
+    ));
+    if let Some((mesh_handle, material_handle)) = visual {
+        beam.insert((
+            Spatial::builder().at_position(Vec2::ZERO).build(),
+            Scale2D { x: 1.0, y: 1.0 },
+            Mesh2d(mesh_handle),
+            MeshMaterial2d(material_handle),
+            GameDrawLayer::Fx,
+        ));
+    }
+    let _beam = beam.id();
 
     // Add TetherBoltMarker to each bolt
     world.entity_mut(bolt_a).insert(TetherBoltMarker);
@@ -181,7 +213,9 @@ fn fire_chain(entity: Entity, damage_mult: f32, source_chip: &str, world: &mut W
 
     // Spawn chain beams for each consecutive pair
     for pair in bolts.windows(2) {
-        world.spawn((
+        let visual = spawn_beam_visual_handles(world);
+
+        let mut beam = world.spawn((
             TetherBeamComponent {
                 bolt_a: pair[0],
                 bolt_b: pair[1],
@@ -193,6 +227,15 @@ fn fire_chain(entity: Entity, damage_mult: f32, source_chip: &str, world: &mut W
             EffectSourceChip::new(source_chip),
             CleanupOnNodeExit,
         ));
+        if let Some((mesh_handle, material_handle)) = visual {
+            beam.insert((
+                Spatial::builder().at_position(Vec2::ZERO).build(),
+                Scale2D { x: 1.0, y: 1.0 },
+                Mesh2d(mesh_handle),
+                MeshMaterial2d(material_handle),
+                GameDrawLayer::Fx,
+            ));
+        }
     }
 
     // Insert TetherChainActive resource
@@ -256,6 +299,7 @@ pub(crate) fn tick_tether_beam(
     mut damage_writer: MessageWriter<DamageCell>,
 ) {
     let query_layers = CollisionLayers::new(0, CELL_LAYER);
+    let mut damaged_this_tick: HashSet<Entity> = HashSet::new();
 
     for (beam_entity, component, esc) in &beams {
         // Look up both bolt positions; despawn beam if either is missing.
@@ -263,13 +307,13 @@ pub(crate) fn tick_tether_beam(
         let (pos_a, bolt_radius) = if let Ok((p, _, radius)) = bolts.get(component.bolt_a) {
             (p.0, radius.map_or(8.0, |r| r.0))
         } else {
-            commands.entity(beam_entity).despawn();
+            commands.entity(beam_entity).try_despawn();
             continue;
         };
         let pos_b = if let Ok((p, ..)) = bolts.get(component.bolt_b) {
             p.0
         } else {
-            commands.entity(beam_entity).despawn();
+            commands.entity(beam_entity).try_despawn();
             continue;
         };
         let beam_half_width = bolt_radius;
@@ -289,8 +333,9 @@ pub(crate) fn tick_tether_beam(
         let direction = beam_vec.normalize_or_zero();
         let damage =
             component.base_damage * component.damage_mult * component.effective_damage_multiplier;
+        let source_chip = esc.and_then(EffectSourceChip::source_chip);
 
-        let mut damaged_this_tick: HashSet<Entity> = HashSet::new();
+        damaged_this_tick.clear();
 
         for cell in candidates {
             if damaged_this_tick.contains(&cell) {
@@ -316,7 +361,7 @@ pub(crate) fn tick_tether_beam(
                 damage_writer.write(DamageCell {
                     cell,
                     damage,
-                    source_chip: esc.and_then(EffectSourceChip::source_chip),
+                    source_chip: source_chip.clone(),
                 });
             }
         }
@@ -332,6 +377,8 @@ pub(crate) fn maintain_tether_chain(
     mut chain_active: ResMut<TetherChainActive>,
     bolts: Query<Entity, With<Bolt>>,
     chain_beams: Query<Entity, With<TetherChainBeam>>,
+    mut meshes: Option<ResMut<Assets<Mesh>>>,
+    mut materials: Option<ResMut<Assets<ColorMaterial>>>,
 ) {
     let bolt_count = bolts.iter().count();
     if bolt_count == chain_active.last_bolt_count {
@@ -340,7 +387,7 @@ pub(crate) fn maintain_tether_chain(
 
     // Despawn all existing chain beam entities
     for beam_entity in &chain_beams {
-        commands.entity(beam_entity).despawn();
+        commands.entity(beam_entity).try_despawn();
     }
 
     // Collect and sort bolts by index (ascending spawn order)
@@ -350,7 +397,7 @@ pub(crate) fn maintain_tether_chain(
     // Spawn N-1 beams for consecutive bolt pairs
     let esc = EffectSourceChip(chain_active.source_chip.clone());
     for pair in sorted_bolts.windows(2) {
-        commands.spawn((
+        let mut beam = commands.spawn((
             TetherBeamComponent {
                 bolt_a: pair[0],
                 bolt_b: pair[1],
@@ -362,9 +409,54 @@ pub(crate) fn maintain_tether_chain(
             esc.clone(),
             CleanupOnNodeExit,
         ));
+        if let (Some(m), Some(mat)) = (meshes.as_mut(), materials.as_mut()) {
+            beam.insert((
+                Spatial::builder().at_position(Vec2::ZERO).build(),
+                Scale2D { x: 1.0, y: 1.0 },
+                Mesh2d(m.add(Rectangle::new(1.0, 1.0))),
+                MeshMaterial2d(mat.add(ColorMaterial::from_color(TETHER_BEAM_COLOR))),
+                GameDrawLayer::Fx,
+            ));
+        }
     }
 
     chain_active.last_bolt_count = bolt_count;
+}
+
+/// Syncs `Position2D`, `Scale2D`, and `Rotation2D` on each tether beam entity
+/// to match the midpoint, length, and angle between its two bolts.
+pub(crate) fn sync_tether_beam_visual(
+    mut beams: Query<
+        (
+            &TetherBeamComponent,
+            &mut Position2D,
+            &mut Scale2D,
+            &mut Rotation2D,
+        ),
+        Without<Bolt>,
+    >,
+    bolt_positions: Query<&Position2D, With<Bolt>>,
+) {
+    for (beam, mut position, mut scale, mut rotation) in &mut beams {
+        let Ok(pos_a) = bolt_positions.get(beam.bolt_a) else {
+            continue;
+        };
+        let Ok(pos_b) = bolt_positions.get(beam.bolt_b) else {
+            continue;
+        };
+
+        let a = pos_a.0;
+        let b = pos_b.0;
+        let midpoint = (a + b) / 2.0;
+        let delta = b - a;
+        let length = delta.length();
+        let angle = delta.y.atan2(delta.x);
+
+        position.0 = midpoint;
+        scale.x = length;
+        scale.y = 4.0;
+        rotation.0 = Rot2::radians(angle);
+    }
 }
 
 /// Registers systems for `TetherBeam` effect.
@@ -375,6 +467,9 @@ pub(crate) fn register(app: &mut App) {
             maintain_tether_chain
                 .run_if(resource_exists::<TetherChainActive>.and(in_state(NodeState::Playing)))
                 .before(tick_tether_beam),
+            sync_tether_beam_visual
+                .before(tick_tether_beam)
+                .run_if(in_state(NodeState::Playing)),
             tick_tether_beam.run_if(in_state(NodeState::Playing)),
         )
             .after(PhysicsSystems::MaintainQuadtree),

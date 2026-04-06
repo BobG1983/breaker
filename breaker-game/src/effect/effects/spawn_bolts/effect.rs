@@ -51,6 +51,9 @@ pub(crate) fn fire(
         None
     };
 
+    // Create visual handles once before the loop — Handle cloning is a cheap Arc increment
+    let visual = super::super::bolt_visual_handles(world, bolt_def.color_rgb);
+
     for _ in 0..count {
         let angle = {
             let mut rng = world.resource_mut::<GameRng>();
@@ -58,6 +61,7 @@ pub(crate) fn fire(
         };
         let direction = Vec2::new(angle.cos(), angle.sin());
         let velocity = Velocity2D(direction * bolt_def.base_speed);
+
         let bolt_entity = {
             let mut queue = CommandQueue::default();
             let entity = {
@@ -73,6 +77,12 @@ pub(crate) fn fire(
             queue.apply(world);
             entity
         };
+
+        super::super::insert_bolt_visuals(
+            world,
+            bolt_entity,
+            visual.as_ref().map(|(m, mat)| (m.clone(), mat.clone())),
+        );
 
         if let Some(duration) = lifespan {
             world

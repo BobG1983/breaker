@@ -8,6 +8,10 @@ Currently, importing a type from another domain requires knowing its exact modul
 
 The codebase has also accumulated `super::super::` import chains (especially in test modules after file splits) that are harder to read and more fragile than `crate::` absolute paths.
 
+## Plan
+
+- [plan.md](cross-domain-prelude/plan.md) — implementation plan (2 phases, 6 waves)
+
 ## Research
 
 Full research reports in `cross-domain-prelude/`:
@@ -18,7 +22,7 @@ Full research reports in `cross-domain-prelude/`:
 ### Key findings
 
 **Production cross-domain types (4 tiers by usage breadth):**
-- Tier 1 — Universal (5+ domains): `Bolt`, `Breaker`, `Cell`, `Wall` entity markers; `GameState`, `PlayingState` states; `BoundEffects`, `StagedEffects` effect containers; `CleanupOnNodeExit`, `PlayfieldConfig`
+- Tier 1 — Universal (5+ domains): `Bolt`, `Breaker`, `Cell`, `Wall` entity markers; `AppState`, `GameState`, `NodeState`, `RunState`, `ChipSelectState`, `RunEndState`, `MenuState` states (at `crate::state::types::*`); `BoundEffects`, `StagedEffects` effect containers; `CleanupOnNodeExit`, `PlayfieldConfig`
 - Tier 2 — Effect coupling (3-4 domains): `ActivePiercings`, `ActiveDamageBoosts`, `ActiveSizeBoosts`, `ActiveSpeedBoosts`, `ActiveVulnerability`, `AnchorActive`, `AnchorPlanted`, `FlashStepActive`
 - Tier 3 — Messages (2-3 domains): `BumpPerformed`, `CellDestroyedAt`, `DamageCell`, `NodeCleared`, `ChipSelected`, and many more
 - Tier 4 — Narrow (2 domains): various smaller cross-domain imports
@@ -42,9 +46,9 @@ Full research reports in `cross-domain-prelude/`:
   - `src/prelude/mod.rs` — declares submodules, re-exports curated subset for `use crate::prelude::*`
   - `src/prelude/components.rs` — re-exports ALL cross-domain components (full set)
   - `src/prelude/resources.rs` — re-exports ALL cross-domain resources (full set)
-  - `src/prelude/states.rs` — re-exports ALL cross-domain states (full set)
+  - `src/prelude/states.rs` — re-exports ALL cross-domain states (`AppState`, `GameState`, `NodeState`, `RunState`, `ChipSelectState`, `RunEndState`, `MenuState` from `crate::state::types`)
   - `src/prelude/messages.rs` — re-exports ALL cross-domain messages (full set)
-- In: `crate::prelude` glob re-exports only the most universal types (tier 1-2: entity markers, states, effect containers, lifecycle markers)
+- In: `crate::prelude` glob re-exports only the most universal types (tier 1-2: entity markers, all states, effect containers, lifecycle markers)
 - In: Less common types available via `crate::prelude::components`, `crate::prelude::messages`, etc.
 - In: All re-exports are `pub(crate)` for now
 - In: `#[cfg(feature = "dev")]` gating on dev-only re-exports
@@ -68,11 +72,18 @@ Full research reports in `cross-domain-prelude/`:
 - **Directory structure**: `src/prelude/` directory with `mod.rs` + `components.rs`, `resources.rs`, `states.rs`, `messages.rs`
 - **No name collisions in prelude-relevant categories**: all components, resources, messages, and states are uniquely named across domains. Only collisions are 6 builder typestate markers (bolt vs breaker) which are not re-export candidates. See [research-name-collisions.md](cross-domain-prelude/research-name-collisions.md).
 
-## Open questions
-- Re-validate research after state lifecycle refactor (item 1) lands — the refactor moves `crate::run` → `crate::state::run` and other modules, so import paths and cross-domain relationships in the research reports will be stale
+## Post-refactor reconciliation (2026-04-04)
+
+State lifecycle refactor landed. Key changes affecting this todo:
+- `PlayingState` removed — replaced by 7 states: `AppState`, `GameState`, `NodeState`, `RunState`, `ChipSelectState`, `RunEndState`, `MenuState`
+- States now live at `crate::state::types::*` (re-exported from `crate::state::types`)
+- `crate::run` moved to `crate::state::run`
+- 26 `super::super::` usages remain across 20 files (Phase 2 migration targets)
+- Research reports in `cross-domain-prelude/` have stale paths but the tier structure and name collision findings remain valid — the types are the same, just at different paths
 
 ## Dependencies
-- Depends on: State lifecycle refactor (item 1) — folder structure should be settled first
+- Depends on: ~~State lifecycle refactor (item 1)~~ — DONE
+- Blocks: nothing
 
 ## Status
-`NEEDS DETAIL` — blocked on item 1 (state lifecycle refactor) for research re-validation
+`ready`

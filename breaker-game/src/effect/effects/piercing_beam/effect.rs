@@ -5,15 +5,21 @@ use rantzsoft_physics2d::{
     aabb::Aabb2D, collision_layers::CollisionLayers, plugin::PhysicsSystems,
     resources::CollisionQuadtree,
 };
-use rantzsoft_spatial2d::components::{GlobalPosition2D, Velocity2D};
+use rantzsoft_spatial2d::components::{GlobalPosition2D, Rotation2D, Scale2D, Spatial, Velocity2D};
 
 use crate::{
     bolt::{components::BoltBaseDamage, resources::DEFAULT_BOLT_BASE_DAMAGE},
     cells::messages::DamageCell,
     effect::{core::EffectSourceChip, effects::damage_boost::ActiveDamageBoosts},
-    shared::{CELL_LAYER, CleanupOnNodeExit, PlayfieldConfig},
+    fx::EffectFlashTimer,
+    shared::{CELL_LAYER, CleanupOnNodeExit, GameDrawLayer, PlayfieldConfig},
     state::types::NodeState,
 };
+
+/// Placeholder beam flash color — HDR white-yellow.
+const BEAM_FLASH_COLOR: Color = Color::linear_rgb(5.0, 5.0, 2.0);
+/// Placeholder beam flash duration in seconds.
+const BEAM_FLASH_DURATION: f32 = 0.15;
 
 /// Deferred request for piercing beam instant damage.
 ///
@@ -99,6 +105,8 @@ pub(crate) fn process_piercing_beam(
     quadtree: Res<CollisionQuadtree>,
     positions: Query<&GlobalPosition2D>,
     mut damage_writer: MessageWriter<DamageCell>,
+    mut meshes: Option<ResMut<Assets<Mesh>>>,
+    mut materials: Option<ResMut<Assets<ColorMaterial>>>,
 ) {
     let query_layers = CollisionLayers::new(0, CELL_LAYER);
 
@@ -155,6 +163,29 @@ pub(crate) fn process_piercing_beam(
                 damage: request.damage,
                 source_chip: esc.and_then(EffectSourceChip::source_chip),
             });
+        }
+
+        // Spawn flash visual entity for beams with non-trivial length.
+        if length > f32::EPSILON
+            && let (Some(meshes), Some(materials)) = (meshes.as_mut(), materials.as_mut())
+        {
+            let beam_midpoint = origin + dir * (length / 2.0);
+            let beam_width = hw * 2.0;
+            let beam_angle = dir.y.atan2(dir.x);
+
+            commands.spawn((
+                Spatial::builder().at_position(beam_midpoint).build(),
+                Scale2D {
+                    x: length,
+                    y: beam_width,
+                },
+                Rotation2D::from_radians(beam_angle),
+                GameDrawLayer::Fx,
+                Mesh2d(meshes.add(Rectangle::new(1.0, 1.0))),
+                MeshMaterial2d(materials.add(ColorMaterial::from_color(BEAM_FLASH_COLOR))),
+                EffectFlashTimer(BEAM_FLASH_DURATION),
+                CleanupOnNodeExit,
+            ));
         }
 
         commands.entity(entity).despawn();

@@ -42,6 +42,8 @@ fn world_with_bolt_registry() -> World {
     registry.insert("Bolt".to_string(), make_bolt_definition("Bolt", 400.0, 8.0));
     world.insert_resource(registry);
     world.insert_resource(GameRng::default());
+    world.init_resource::<Assets<Mesh>>();
+    world.init_resource::<Assets<ColorMaterial>>();
     world
 }
 
@@ -143,10 +145,18 @@ fn spawned_bolt_has_full_physics_components_from_spawn_extra_bolt() {
         "should have CleanupOnNodeExit"
     );
 
-    // GameDrawLayer::Bolt is NOT present on headless bolts (only rendered)
+    // Visual components: rendered mirror bolts have Mesh2d, MeshMaterial2d, and GameDrawLayer::Bolt
     assert!(
-        world.get::<GameDrawLayer>(bolt).is_none(),
-        "headless bolt should NOT have GameDrawLayer"
+        matches!(world.get::<GameDrawLayer>(bolt), Some(GameDrawLayer::Bolt)),
+        "rendered mirror bolt should have GameDrawLayer::Bolt"
+    );
+    assert!(
+        world.get::<Mesh2d>(bolt).is_some(),
+        "rendered mirror bolt should have Mesh2d"
+    );
+    assert!(
+        world.get::<MeshMaterial2d<ColorMaterial>>(bolt).is_some(),
+        "rendered mirror bolt should have MeshMaterial2d<ColorMaterial>"
     );
 }
 
@@ -195,6 +205,8 @@ fn fire_reads_bolt_definition_ref_from_source_bolt_for_mirrored_construction() {
     );
     world.insert_resource(registry);
     world.insert_resource(GameRng::default());
+    world.init_resource::<Assets<Mesh>>();
+    world.init_resource::<Assets<ColorMaterial>>();
 
     let bolt_entity = world
         .spawn((
@@ -257,6 +269,8 @@ fn fire_falls_back_to_bolt_default_definition_when_source_bolt_has_no_definition
     );
     world.insert_resource(registry);
     world.insert_resource(GameRng::default());
+    world.init_resource::<Assets<Mesh>>();
+    world.init_resource::<Assets<ColorMaterial>>();
 
     let bolt_entity = world
         .spawn((

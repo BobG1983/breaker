@@ -8,6 +8,7 @@ use crate::{
     breaker::{
         components::{Breaker, BreakerBaseY, BreakerTilt, BumpState, DashState, DashStateTimer},
         definition::BreakerDefinition,
+        messages::BreakerSpawned,
     },
     shared::{CleanupOnRunEnd, PlayfieldConfig},
     state::run::node::systems::reset_breaker,
@@ -20,6 +21,7 @@ fn reset_breaker_writes_position2d() {
     // Then: Position2D(Vec2::new(0.0, -250.0))
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
+        .add_message::<BreakerSpawned>()
         .init_resource::<PlayfieldConfig>();
 
     let def = BreakerDefinition::default();
@@ -80,6 +82,7 @@ fn reset_breaker_previous_position_matches_position() {
     // Then: PreviousPosition matches Position2D (no interpolation teleport)
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
+        .add_message::<BreakerSpawned>()
         .init_resource::<PlayfieldConfig>();
 
     let def = BreakerDefinition::default();
@@ -134,6 +137,7 @@ fn reset_breaker_previous_position_matches_position() {
 fn reset_breaker_restores_state() {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
+        .add_message::<BreakerSpawned>()
         .init_resource::<PlayfieldConfig>();
 
     let def = BreakerDefinition::default();

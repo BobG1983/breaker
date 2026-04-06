@@ -14,8 +14,8 @@ use crate::{
         registry::BoltRegistry,
     },
     shared::{
-        BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, CleanupOnNodeExit, CleanupOnRunEnd, WALL_LAYER,
-        rng::GameRng,
+        BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, CleanupOnNodeExit, CleanupOnRunEnd, GameDrawLayer,
+        WALL_LAYER, rng::GameRng,
     },
 };
 
@@ -270,6 +270,8 @@ fn fire_spawns_phantom_with_custom_base_speed_from_definition_ref() {
     );
     world.insert_resource(registry);
     world.insert_resource(GameRng::default());
+    world.init_resource::<Assets<Mesh>>();
+    world.init_resource::<Assets<ColorMaterial>>();
 
     let entity = world
         .spawn((
@@ -335,6 +337,8 @@ fn fire_reads_bolt_definition_ref_from_source_entity_for_phantom() {
     );
     world.insert_resource(registry);
     world.insert_resource(GameRng::default());
+    world.init_resource::<Assets<Mesh>>();
+    world.init_resource::<Assets<ColorMaterial>>();
 
     let entity = world
         .spawn((
@@ -401,6 +405,8 @@ fn fire_phantom_falls_back_to_bolt_default_when_no_definition_ref() {
     );
     world.insert_resource(registry);
     world.insert_resource(GameRng::default());
+    world.init_resource::<Assets<Mesh>>();
+    world.init_resource::<Assets<ColorMaterial>>();
 
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 
@@ -494,5 +500,51 @@ fn fire_reads_position_from_position2d_not_transform() {
         Vec2::new(50.0, 75.0),
         "phantom should use Position2D (50, 75) not Transform (999, 999), got {:?}",
         pos.0
+    );
+}
+
+// ── Behavior 21: fire() spawns rendered phantom bolts with visual components ──
+
+#[test]
+fn fire_spawns_rendered_phantom_with_visual_components() {
+    let mut world = world_with_bolt_registry();
+    let entity = world.spawn((Position2D(Vec2::new(0.0, 0.0)), Bolt)).id();
+
+    fire(entity, 5.0, 3, "", &mut world);
+
+    let mut query = world.query_filtered::<Entity, With<PhantomBoltMarker>>();
+    let phantom = query.iter(&world).next().expect("phantom should exist");
+
+    assert!(
+        matches!(
+            world.get::<GameDrawLayer>(phantom),
+            Some(GameDrawLayer::Bolt)
+        ),
+        "rendered phantom bolt should have GameDrawLayer::Bolt"
+    );
+    assert!(
+        world.get::<Mesh2d>(phantom).is_some(),
+        "rendered phantom bolt should have Mesh2d"
+    );
+    assert!(
+        world
+            .get::<MeshMaterial2d<ColorMaterial>>(phantom)
+            .is_some(),
+        "rendered phantom bolt should have MeshMaterial2d<ColorMaterial>"
+    );
+}
+
+#[test]
+fn fire_max_active_zero_does_not_create_mesh_handles() {
+    let mut world = world_with_bolt_registry();
+    let entity = world.spawn(Position2D(Vec2::ZERO)).id();
+
+    fire(entity, 5.0, 0, "", &mut world);
+
+    let mut query = world.query_filtered::<Entity, With<PhantomBoltMarker>>();
+    let count = query.iter(&world).count();
+    assert_eq!(
+        count, 0,
+        "max_active=0 should spawn no phantom bolts, got {count}"
     );
 }

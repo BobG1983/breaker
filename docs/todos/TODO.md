@@ -2,7 +2,7 @@
 
 ## Backlog
 
-1. **[NEEDS DETAIL]** Cross-domain prelude, re-export modules & import cleanup — [detail](detail/cross-domain-prelude.md)
+1. **[ready]** Cross-domain prelude, re-export modules & import cleanup — [detail](detail/cross-domain-prelude.md)
 2. **[ready]** Cell builder pattern — [detail](detail/cell-builder-pattern/cell-builder-pattern.md)
 3. **[ready]** Scenario coverage gaps (2 HIGH, 3 MEDIUM, 3 new invariants) — [detail](detail/scenario-coverage-gaps.md)
 4. **[ready]** Killed trigger, Die effect, unified death messaging — [detail](detail/killed-trigger-damage-attribution.md)

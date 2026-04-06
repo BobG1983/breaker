@@ -75,8 +75,19 @@ fn fire_spawns_two_tether_bolts_with_full_physics_components() {
         // CleanupOnNodeExit
         assert!(world.get::<CleanupOnNodeExit>(*bolt).is_some());
 
-        // GameDrawLayer::Bolt is NOT present on headless bolts (only rendered)
-        assert!(world.get::<GameDrawLayer>(*bolt).is_none());
+        // Visual components: rendered tether bolts have Mesh2d, MeshMaterial2d, and GameDrawLayer::Bolt
+        assert!(
+            matches!(world.get::<GameDrawLayer>(*bolt), Some(GameDrawLayer::Bolt)),
+            "rendered tether bolt should have GameDrawLayer::Bolt"
+        );
+        assert!(
+            world.get::<Mesh2d>(*bolt).is_some(),
+            "rendered tether bolt should have Mesh2d"
+        );
+        assert!(
+            world.get::<MeshMaterial2d<ColorMaterial>>(*bolt).is_some(),
+            "rendered tether bolt should have MeshMaterial2d<ColorMaterial>"
+        );
     }
 }
 
@@ -405,6 +416,8 @@ fn fire_standard_reads_bolt_definition_ref_from_source_entity() {
     );
     world.insert_resource(registry);
     world.insert_resource(GameRng::default());
+    world.init_resource::<Assets<Mesh>>();
+    world.init_resource::<Assets<ColorMaterial>>();
 
     let entity = world
         .spawn((
@@ -483,6 +496,8 @@ fn fire_standard_falls_back_to_bolt_default_definition() {
     );
     world.insert_resource(registry);
     world.insert_resource(GameRng::default());
+    world.init_resource::<Assets<Mesh>>();
+    world.init_resource::<Assets<ColorMaterial>>();
 
     let entity = world.spawn(Position2D(Vec2::ZERO)).id();
 

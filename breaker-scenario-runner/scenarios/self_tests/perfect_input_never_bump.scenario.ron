@@ -2,11 +2,12 @@
 // Breaker tracks bolt position but never issues a Bump action.
 // Bolt will eventually fall past the breaker and trigger bolt_lost.
 // allow_early_end: true lets the run end naturally (bolt_lost -> RunEnd).
+// Aegis + Corridor provides a real playfield for the bolt to traverse.
 (
     breaker: "godmode",
-    layout: "quick_clear",
+    layout: "Corridor",
     input: Perfect(NeverBump),
-    max_frames: 500,
+    max_frames: 5000,
     disallowed_failures: [BoltInBounds, BreakerInBounds, NoNaN],
     allowed_failures: None,
     debug_setup: None,

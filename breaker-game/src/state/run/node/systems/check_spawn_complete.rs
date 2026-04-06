@@ -2,11 +2,15 @@
 //! signals have been received.
 
 use bevy::prelude::*;
+use rantzsoft_lifecycle::ChangeState;
 
 use crate::{
     bolt::messages::BoltSpawned,
     breaker::messages::BreakerSpawned,
-    state::run::node::messages::{CellsSpawned, SpawnNodeComplete},
+    state::{
+        run::node::messages::{CellsSpawned, SpawnNodeComplete},
+        types::NodeState,
+    },
     walls::messages::WallsSpawned,
 };
 
@@ -27,15 +31,17 @@ impl SpawnChecklist {
     }
 }
 
-/// Reads spawn signals from each domain and fires [`SpawnNodeComplete`] when
-/// all have arrived. Drains each message queue and resets after firing.
+/// Reads spawn signals from each domain and fires [`SpawnNodeComplete`] +
+/// [`ChangeState<NodeState>`] when all have arrived. The `ChangeState` message
+/// triggers the lifecycle route `Loading → AnimateIn`.
 pub(crate) fn check_spawn_complete(
     mut checklist: Local<SpawnChecklist>,
     mut bolt_reader: MessageReader<BoltSpawned>,
     mut breaker_reader: MessageReader<BreakerSpawned>,
     mut cells_reader: MessageReader<CellsSpawned>,
     mut walls_reader: MessageReader<WallsSpawned>,
-    mut writer: MessageWriter<SpawnNodeComplete>,
+    mut spawn_writer: MessageWriter<SpawnNodeComplete>,
+    mut state_writer: MessageWriter<ChangeState<NodeState>>,
 ) {
     for _ in bolt_reader.read() {
         checklist.0 |= SpawnChecklist::BOLT;
@@ -51,7 +57,8 @@ pub(crate) fn check_spawn_complete(
     }
 
     if checklist.is_complete() {
-        writer.write(SpawnNodeComplete);
+        spawn_writer.write(SpawnNodeComplete);
+        state_writer.write(ChangeState::new());
         *checklist = SpawnChecklist::default();
     }
 }
@@ -68,6 +75,7 @@ mod tests {
             .add_message::<CellsSpawned>()
             .add_message::<WallsSpawned>()
             .add_message::<SpawnNodeComplete>()
+            .add_message::<ChangeState<NodeState>>()
             .add_systems(Update, check_spawn_complete);
         app
     }
@@ -233,6 +241,35 @@ mod tests {
         assert!(
             messages.iter_current_update_messages().count() > 0,
             "SpawnNodeComplete must fire again for a new node entry"
+        );
+    }
+
+    /// When all spawn signals arrive, `check_spawn_complete` must write
+    /// `ChangeState<NodeState>` so the lifecycle route `Loading → AnimateIn`
+    /// fires.
+    #[test]
+    fn sends_change_state_when_all_signals_received() {
+        use rantzsoft_lifecycle::ChangeState;
+
+        use crate::state::types::NodeState;
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<BoltSpawned>()
+            .add_message::<BreakerSpawned>()
+            .add_message::<CellsSpawned>()
+            .add_message::<WallsSpawned>()
+            .add_message::<SpawnNodeComplete>()
+            .add_message::<ChangeState<NodeState>>()
+            .add_systems(Update, check_spawn_complete);
+
+        send_all_signals(&mut app);
+        app.update();
+
+        let messages = app.world().resource::<Messages<ChangeState<NodeState>>>();
+        assert!(
+            messages.iter_current_update_messages().count() > 0,
+            "ChangeState<NodeState> must be sent to advance Loading → AnimateIn"
         );
     }
 }

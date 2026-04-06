@@ -4,17 +4,20 @@ use bevy::prelude::*;
 use rantzsoft_physics2d::{
     collision_layers::CollisionLayers, plugin::PhysicsSystems, resources::CollisionQuadtree,
 };
-use rantzsoft_spatial2d::components::Position2D;
+use rantzsoft_spatial2d::components::{Position2D, Scale2D, Spatial};
 
 use crate::{
     bolt::{components::BoltBaseDamage, resources::DEFAULT_BOLT_BASE_DAMAGE},
     cells::messages::DamageCell,
     effect::{core::EffectSourceChip, effects::damage_boost::ActiveDamageBoosts},
-    shared::{CELL_LAYER, CleanupOnNodeExit},
+    shared::{CELL_LAYER, CleanupOnNodeExit, GameDrawLayer},
     state::types::NodeState,
 };
 
 /// Marker component for shockwave entities.
+/// Placeholder shockwave color — HDR orange.
+const SHOCKWAVE_COLOR: Color = Color::linear_rgb(4.0, 1.5, 0.2);
+
 #[derive(Component)]
 pub(crate) struct ShockwaveSource;
 
@@ -76,7 +79,17 @@ pub(crate) fn fire(
         .get::<BoltBaseDamage>(entity)
         .map_or(DEFAULT_BOLT_BASE_DAMAGE, |d| d.0);
 
-    world.spawn((
+    let visual = {
+        let mesh = world
+            .get_resource_mut::<Assets<Mesh>>()
+            .map(|mut m| m.add(Circle::new(1.0)));
+        let mat = world
+            .get_resource_mut::<Assets<ColorMaterial>>()
+            .map(|mut m| m.add(ColorMaterial::from_color(SHOCKWAVE_COLOR)));
+        mesh.zip(mat)
+    };
+
+    let mut entity = world.spawn((
         ShockwaveSource,
         ShockwaveRadius(0.0),
         ShockwaveMaxRadius(effective_range),
@@ -85,9 +98,14 @@ pub(crate) fn fire(
         ShockwaveDamageMultiplier(edm),
         ShockwaveBaseDamage(base_damage),
         EffectSourceChip::new(source_chip),
-        Position2D(position),
+        Spatial::builder().at_position(position).build(),
+        Scale2D { x: 0.0, y: 0.0 },
+        GameDrawLayer::Fx,
         CleanupOnNodeExit,
     ));
+    if let Some((mesh, mat)) = visual {
+        entity.insert((Mesh2d(mesh), MeshMaterial2d(mat)));
+    }
 }
 
 pub(crate) const fn reverse(_entity: Entity, _source_chip: &str, _world: &mut World) {}
@@ -149,11 +167,23 @@ pub(crate) fn apply_shockwave_damage(
     }
 }
 
+/// Syncs `Scale2D` to match `ShockwaveRadius` each tick so the visual mesh
+/// tracks the expanding shockwave.
+pub(crate) fn sync_shockwave_visual(
+    mut query: Query<(&ShockwaveRadius, &mut Scale2D), With<ShockwaveSource>>,
+) {
+    for (radius, mut scale) in &mut query {
+        scale.x = radius.0;
+        scale.y = radius.0;
+    }
+}
+
 pub(crate) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         (
             tick_shockwave,
+            sync_shockwave_visual,
             apply_shockwave_damage,
             despawn_finished_shockwave,
         )

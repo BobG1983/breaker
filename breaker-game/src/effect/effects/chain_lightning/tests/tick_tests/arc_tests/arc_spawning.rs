@@ -3,6 +3,7 @@
 use std::collections::HashSet;
 
 use bevy::prelude::*;
+use rantzsoft_spatial2d::components::{Position2D, Spatial};
 
 use super::*;
 use crate::shared::CleanupOnNodeExit;
@@ -37,15 +38,18 @@ fn arc_entity_has_chain_lightning_arc_marker_and_no_extra_fields() {
 
     tick(&mut app);
 
-    let mut arc_query = app
-        .world_mut()
-        .query::<(&ChainLightningArc, &Transform, &CleanupOnNodeExit)>();
+    let mut arc_query = app.world_mut().query::<(
+        &ChainLightningArc,
+        &Spatial,
+        &Position2D,
+        &CleanupOnNodeExit,
+    )>();
     let arcs: Vec<_> = arc_query.iter(app.world()).collect();
     assert_eq!(arcs.len(), 1, "expected one arc entity");
 
-    let (_, transform, _) = arcs[0];
+    let (_, _, position, _) = arcs[0];
     assert!(
-        (transform.translation.x - 20.0).abs() < 0.01,
-        "arc Transform should be at source position"
+        (position.0.x - 20.0).abs() < 0.01,
+        "arc Position2D should be at source position"
     );
 }

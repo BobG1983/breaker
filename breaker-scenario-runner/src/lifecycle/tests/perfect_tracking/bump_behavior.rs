@@ -7,7 +7,7 @@ fn perfect_tracking_writes_bump_when_bolt_within_threshold() {
 
     app.add_systems(Update, apply_perfect_tracking);
 
-    // Bolt at y=-240, breaker at y=-250 => distance=10 <= 20 threshold
+    // Bolt at y=-240, breaker at y=-250 => distance=10 <= 60 threshold
     app.world_mut().spawn((
         ScenarioTagBolt,
         Position2D(Vec2::new(0.0, -240.0)),
@@ -28,17 +28,17 @@ fn perfect_tracking_writes_bump_when_bolt_within_threshold() {
     );
 }
 
-/// Edge case: bolt at distance 20.1 (just beyond threshold) does NOT write Bump.
+/// Edge case: bolt at distance 60.1 (just beyond threshold) does NOT write Bump.
 #[test]
 fn perfect_tracking_does_not_write_bump_when_bolt_beyond_threshold() {
     let mut app = perfect_tracking_app(42, BumpMode::AlwaysPerfect);
 
     app.add_systems(Update, apply_perfect_tracking);
 
-    // Bolt at y=-229.9, breaker at y=-250 => distance=20.1 > 20.0
+    // Bolt at y=-189.9, breaker at y=-250 => distance=60.1 > 60.0
     app.world_mut().spawn((
         ScenarioTagBolt,
-        Position2D(Vec2::new(0.0, -229.9)),
+        Position2D(Vec2::new(0.0, -189.9)),
         Velocity2D(Vec2::new(0.0, -400.0)),
     ));
     app.world_mut().spawn((
@@ -52,7 +52,7 @@ fn perfect_tracking_does_not_write_bump_when_bolt_beyond_threshold() {
     let actions = app.world().resource::<InputActions>();
     assert!(
         !actions.active(breaker::input::resources::GameAction::Bump),
-        "expected no Bump when bolt is beyond threshold (distance=20.1)"
+        "expected no Bump when bolt is beyond threshold (distance=60.1)"
     );
 }
 

@@ -109,6 +109,8 @@ pub(crate) fn fire(
     let direction = Vec2::new(angle.cos(), angle.sin());
     let velocity = Velocity2D(direction * bolt_def.base_speed);
     let phantom = {
+        let visual = super::super::bolt_visual_handles(world, bolt_def.color_rgb);
+
         let mut queue = CommandQueue::default();
         let entity = {
             let mut commands = Commands::new(&mut queue, world);
@@ -121,6 +123,8 @@ pub(crate) fn fire(
                 .spawn(&mut commands)
         };
         queue.apply(world);
+        super::super::insert_bolt_visuals(world, entity, visual);
+
         entity
     };
     world.entity_mut(phantom).insert((

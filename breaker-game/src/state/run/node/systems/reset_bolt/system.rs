@@ -7,6 +7,7 @@ use rantzsoft_spatial2d::components::Position2D;
 use crate::{
     bolt::{
         components::{Bolt, BoltServing, ExtraBolt},
+        messages::BoltSpawned,
         queries::{ResetBoltData, apply_velocity_formula},
         resources::DEFAULT_BOLT_ANGLE_SPREAD,
     },
@@ -32,6 +33,7 @@ pub(crate) fn reset_bolt(
     mut rng: ResMut<GameRng>,
     breaker_query: Query<&Position2D, (With<Breaker>, Without<Bolt>)>,
     mut bolt_query: Query<ResetBoltData, (With<Bolt>, Without<ExtraBolt>)>,
+    mut bolt_spawned: MessageWriter<BoltSpawned>,
 ) {
     let Ok(breaker_pos) = breaker_query.single() else {
         return;
@@ -69,5 +71,7 @@ pub(crate) fn reset_bolt(
         {
             remaining.0 = ap.total();
         }
+
+        bolt_spawned.write(BoltSpawned);
     }
 }

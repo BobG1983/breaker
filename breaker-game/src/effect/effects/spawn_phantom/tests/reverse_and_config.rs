@@ -90,6 +90,8 @@ fn fire_custom_radius_from_bolt_definition_ref() {
     );
     world.insert_resource(registry);
     world.insert_resource(GameRng::default());
+    world.init_resource::<Assets<Mesh>>();
+    world.init_resource::<Assets<ColorMaterial>>();
 
     let entity = world
         .spawn((

@@ -41,6 +41,8 @@ fn world_with_bolt_registry() -> World {
     );
     world.insert_resource(registry);
     world.insert_resource(GameRng::default());
+    world.init_resource::<Assets<Mesh>>();
+    world.init_resource::<Assets<ColorMaterial>>();
     world
 }
 
@@ -124,10 +126,18 @@ fn fire_spawns_requested_count_with_full_physics_components() {
             "bolt should have CleanupOnNodeExit"
         );
 
-        // GameDrawLayer::Bolt is NOT present on headless bolts (only rendered)
+        // Visual components: rendered extra bolts have Mesh2d, MeshMaterial2d, and GameDrawLayer::Bolt
         assert!(
-            world.get::<GameDrawLayer>(*bolt).is_none(),
-            "headless bolt should NOT have GameDrawLayer"
+            matches!(world.get::<GameDrawLayer>(*bolt), Some(GameDrawLayer::Bolt)),
+            "rendered extra bolt should have GameDrawLayer::Bolt"
+        );
+        assert!(
+            world.get::<Mesh2d>(*bolt).is_some(),
+            "rendered extra bolt should have Mesh2d"
+        );
+        assert!(
+            world.get::<MeshMaterial2d<ColorMaterial>>(*bolt).is_some(),
+            "rendered extra bolt should have MeshMaterial2d<ColorMaterial>"
         );
     }
 }

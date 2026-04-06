@@ -36,6 +36,8 @@ fn world_with_bolt_registry() -> World {
     );
     world.insert_resource(registry);
     world.insert_resource(GameRng::default());
+    world.init_resource::<Assets<Mesh>>();
+    world.init_resource::<Assets<ColorMaterial>>();
     world
 }
 
