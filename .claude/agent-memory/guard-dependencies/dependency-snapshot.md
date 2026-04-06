@@ -1,11 +1,11 @@
 ---
 name: dependency-snapshot
-description: Crate versions at last audit (2026-04-02) — diff against this on next run to detect changes
+description: Crate versions at last audit (2026-04-06) — diff against this on next run to detect changes
 type: project
 ---
 
-Audit date: 2026-04-02 (updated post-Shield-refactor / test-helper-migration)
-Branch: develop
+Audit date: 2026-04-06
+Branch: feature/effect-placeholder-visuals
 
 ## Direct Dependencies
 
@@ -14,6 +14,7 @@ Branch: develop
 - bevy_egui 0.39 → resolved 0.39.1 (optional, dev feature)
 - rantzsoft_defaults (path)
 - rantzsoft_physics2d (path)
+- rantzsoft_lifecycle (path)
 - rantzsoft_spatial2d (path)
 - tracing 0.1 (features = ["release_max_level_warn"])
 - tracing-appender 0.2
@@ -28,6 +29,7 @@ Branch: develop
 ### breaker-scenario-runner
 - bevy 0.18.1 (default-features = false, features = ["2d"])
 - breaker (path, default-features = false)
+- rantzsoft_lifecycle (path)  ← NEW since last audit
 - rantzsoft_spatial2d (path)
 - rantzsoft_physics2d (path)
 - clap 4 (features = ["derive"])
@@ -36,6 +38,10 @@ Branch: develop
 - ron 0.12
 - serde 1 (features = ["derive"])
 - rand 0.9 → resolved 0.9.2
+
+### rantzsoft_lifecycle  ← NEW workspace member (added on feature/wall-builder-pattern)
+- bevy 0.18.1 (default-features = false, features = ["2d"])
+- tracing 0.1
 
 ### rantzsoft_spatial2d
 - bevy 0.18.1 (default-features = false, features = ["2d"])
@@ -56,43 +62,51 @@ Branch: develop
 - quote 1
 - proc-macro2 1 (ignored by machete — required for proc-macro crates)
 
-## Resolved versions (from cargo tree — verified 2026-04-02)
+## Resolved versions (from cargo tree -d — verified 2026-04-06)
 - rand 0.9.2, rand_chacha 0.9.0
 - bevy_egui 0.39.1
 - iyes_progress 0.16.0
 - ron 0.12.0 (0.12.1 now available — patch bump eligible, see known-findings)
-- objc2 v0.5.2 + v0.6.4 (dual — known wontfix)
-- bitflags v1.3.2 + v2.11.0 (dual — known wontfix)
-- getrandom v0.3.4 + v0.4.2 (dual — known wontfix)
-- foldhash v0.1.5 + v0.2.0 (dual — known wontfix)
-- read-fonts v0.35.0 + v0.36.0 (dual — known wontfix)
-- skrifa v0.37.0 + v0.39.0 (dual — known wontfix)
-- hashbrown v0.15.5 + v0.16.1 (dual — known wontfix)
-- rustc-hash v1.1.0 + v2.1.1 (dual — known wontfix)
-- itertools v0.13.0 + v0.14.0 (dual — known wontfix)
 
-## Changes since prior audit (2026-04-03 feature/wall-builder-pattern Wave 2–3)
-- **rantzsoft_lifecycle** — NEW workspace member added on feature/wall-builder-pattern.
-  Direct deps: bevy 0.18.1 (default-features=false, features=["2d"]). No new third-party deps.
-  Uses `lints.workspace = true` — inherits workspace unsafe_code = "deny".
-  No FFI, no new proc-macro crates. Zero security surface added.
-  NOTE: snapshot below predates this addition — re-run cargo tree on next dep audit.
+## Transitive duplicates (cargo tree -d — 2026-04-06)
+All entries below match known-findings.md — no new duplicates introduced by rantzsoft_lifecycle:
+- bitflags v1.3.2 + v2.11.0 (known wontfix)
+- block2 v0.5.1 + v0.6.2 (known wontfix)
+- core-foundation v0.9.4 + v0.10.1 (known wontfix)
+- core-graphics-types v0.1.3 + v0.2.0 (known wontfix)
+- either v1.15.0 (same-version dual-path — not a real dup)
+- foldhash v0.1.5 + v0.2.0 (known wontfix)
+- getrandom v0.3.4 + v0.4.2 (known wontfix)
+- hashbrown v0.15.5 + v0.16.1 (known wontfix)
+- indexmap v2.13.0 (same-version dual-path — not a real dup)
+- itertools v0.13.0 + v0.14.0 (known wontfix)
+- libc v0.2.183 (same-version dual-path — not a real dup)
+- memchr v2.8.0 (same-version dual-path — not a real dup)
+- objc2 v0.5.2 + v0.6.4 (known wontfix)
+- objc2-app-kit v0.2.2 + v0.3.2 (known wontfix — same chain as objc2)
+- objc2-foundation v0.2.2 + v0.3.2 (known wontfix — same chain as objc2)
+- read-fonts v0.35.0 + v0.36.0 (known wontfix)
+- regex v1.12.3 (same-version dual-path — not a real dup)
+- regex-automata v0.4.14 (same-version dual-path — not a real dup)
+- regex-syntax v0.8.10 (same-version dual-path — not a real dup)
+- rustc-hash v1.1.0 + v2.1.1 (known wontfix)
+- skrifa v0.37.0 + v0.39.0 (known wontfix)
 
-## Changes since prior audit (2026-04-02 feature/breaker-builder-pattern)
-- Shield refactor + test helper migration: No new direct dependencies added.
-- Cargo.toml files: UNCHANGED from prior audit.
-- cargo-machete: CLEAN (no unused deps — confirmed post-Shield-refactor)
-- cargo outdated -R: same outdated list as prior audit (rand 0.9→0.10, ron 0.12.0→0.12.1)
-- Transitive dups: consistent with prior audit — all known wontfix entries
-- paste advisory (RUSTSEC-2024-0436): not showing in cargo tree -d (not a duplicate, transitive only)
-- r-efi: not appearing as duplicate in this build (macOS dev host only)
-- License: CLEAN (cargo deny check licenses passes, same Unicode-DFS-2016 harmless pre-approval warning)
+## Changes since prior audit (2026-04-02)
+- rantzsoft_lifecycle added as direct dep of breaker-scenario-runner (NEW)
+  Uses CleanupOnExit in: lifecycle/systems/frame_mutations/mutations.rs,
+  invariants/checkers/check_chain_arc_count_reasonable.rs,
+  lifecycle/tests/frame_mutations/chain_arcs.rs
+  No new third-party transitive deps (tracing already declared directly by scenario runner)
+- cargo-machete: CLEAN
+- cargo outdated -R: same outdated list (rand 0.9→0.10 BREAKING, ron 0.12.0→0.12.1 patch)
+- cargo deny check licenses: PASS (same Unicode-DFS-2016 harmless pre-approval warning)
+- Transitive dups: no new dups introduced — all match known-findings.md
 
 ## Known Outdated (as of audit)
 - rand: 0.9.2 → 0.10.0 (BREAKING — semver major; deferred, see known-findings.md)
 - rand_chacha: 0.9.0 → 0.10.0 (BREAKING — must match rand; deferred)
 - ron: 0.12.0 → 0.12.1 (PATCH — no breaking changes; low-risk bump; three Cargo.toml files)
-- cargo outdated -R shows no other outdated direct deps
 
 ## Transitive Advisory
 - paste 1.0.15 (RUSTSEC-2024-0436, unmaintained) — pulled in by metal → wgpu-hal → wgpu → bevy_render
@@ -103,7 +117,6 @@ Branch: develop
 - One harmless warning: Unicode-DFS-2016 pre-allowlisted but not currently matched by any dep
 - r-efi (LGPL-2.1-or-later): deny.toml exception present; platform-target-only (Android/WASM)
 - self_cell (GPL-2.0-only): deny.toml exception present; runtime dep via cosmic-text → bevy_text
-- SpaceMono font (OFL-1.1): bundled asset, not a crate dep; OFL-1.1 already in deny.toml allowlist
 
 ## Feature Flag Audit (as of audit)
 - bevy/dynamic_linking: ONLY in .cargo/config.toml aliases; NOT in any Cargo.toml or release profile. CLEAN.
@@ -111,3 +124,4 @@ Branch: develop
 - bevy_egui: optional behind "dev" feature; not included in release/scenario builds. CLEAN.
 - iyes_progress: optional behind "progress" feature in rantzsoft_defaults. CLEAN.
 - hot-reload: feature-gated in rantzsoft_defaults; activated by breaker-game dev feature. CLEAN.
+- rantzsoft_lifecycle: no features declared. CLEAN.

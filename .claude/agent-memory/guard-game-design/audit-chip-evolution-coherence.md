@@ -27,7 +27,7 @@ Previously flagged 5 missing RON files. Current status:
 - `chain_reaction.evolution.ron` — NOW EXISTS (`assets/chips/evolutions/`)
 - `feedback_loop.chip.ron` — NOW EXISTS (`assets/chips/standard/`)
 - `powder_keg.chip.ron` — NOW EXISTS (`assets/chips/standard/`)
-- `chain_hit` chip — status unknown; grep to verify
+- `chain_hit` chip — STILL MISSING (verified 2026-04-06; no RON file under assets/chips/)
 Evolution RON files moved to `assets/chips/evolutions/` (plural, not `evolution/`).
 
 ### Design Gap: Trigger Diversity

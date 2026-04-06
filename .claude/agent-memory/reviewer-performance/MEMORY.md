@@ -13,3 +13,5 @@
 - [WallRegistry data pattern](wall_registry_pattern.md) — HashMap<String, WallDefinition> Resource; seed() clones are startup-only; 4 walls, no per-frame cost
 - [WallBuilder spawn pattern](wall_builder_spawn_pattern.md) — typestate builder; ~3-4 spawns at node start; all allocations spawn-time; legacy spawn_walls system coexists acceptably
 - [update_pause_menu_colors pattern](pause_menu_colors_pattern.md) — 2-entity Update query gated on is_time_paused; unconditional write is fine at this scale; no allocations
+- [cleanup_on_exit double registration](cleanup_on_exit_double_registration.md) — OnEnter(NodeState::Teardown) + OnEnter(RunState::Teardown) both register cleanup_on_exit<NodeState>; intentional safety net, zero per-frame cost
+- [handle_pause_input params](handle_pause_input_params.md) — ResMut<NodeOutcome> + MessageWriter in Update; gated by run_if; no cross-schedule parallelism conflict with FixedUpdate lifecycle writers

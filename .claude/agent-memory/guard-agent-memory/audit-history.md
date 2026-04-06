@@ -4,6 +4,43 @@ description: Recurring staleness patterns and duplication issues found in agent 
 type: project
 ---
 
+## Full Audit — 2026-04-06 (feature/effect-placeholder-visuals branch)
+
+**Scope:** All agent memory directories (full audit)
+
+**Context:** feature/effect-placeholder-visuals branch. Active work on effect visual placeholders. `rantzsoft_lifecycle` crate added with transition effects. Phase 5 file-split spec open (`phase5_findings.md`). `PauseMenuPlugin` now guards `handle_pause_input` with `not_in_transition + any_with_component::<PauseMenuScreen>`.
+
+**Issues found and fixed (5):**
+
+1. **planner-review/MEMORY.md** — 5 stable files unlinked: `feedback_counter_resource_state.md`, `feedback_test_impl_path_mismatch.md`, `patterns_counter_semantics.md`, `patterns_per_owner_state.md`, `patterns_world_borrow_conflict.md`. Fixed: added links in two new sections.
+
+2. **runner-scenarios/stable/pause-menu-selection-missing-resource.md** — Described as open bug; the fix is confirmed in plugin.rs (`not_in_transition + any_with_component::<PauseMenuScreen>` compound run condition). Fixed: rewrote as RESOLVED record.
+
+3. **runner-scenarios/MEMORY.md** — Link description still said "panics when..." (open bug framing). Fixed: updated to RESOLVED description.
+
+4. **guard-game-design/audit-chip-evolution-coherence.md** — `chain_hit` chip status said "unknown; grep to verify." Verified: no RON file exists. Fixed: updated to "STILL MISSING (verified 2026-04-06)".
+
+5. **planner-spec/bolt-domain-inventory.md** — Referenced `PlayingState::Active` (doesn't exist). Actual state is `NodeState::Playing`. Fixed: updated.
+
+**Files checked and NOT changed:**
+- `reviewer-performance/` — all 15 entries accurate including new `cleanup_on_exit_double_registration.md` and `handle_pause_input_params.md`
+- `writer-scenarios/pattern_invariant_substitution.md` — invariant list accurate (23 variants)
+- `reviewer-scenarios/coverage_effect_system.md` — accurate, well-maintained
+- `guard-docs/known-state.md` — comprehensive and current (330 lines, over split threshold but dense reference doc)
+- `reviewer-architecture/shield_cross_domain_write.md` — correctly marks ShieldActive as ELIMINATED
+- `researcher-rust-idioms/pattern_screen_lifecycle_trait.md` + `pattern_declarative_routing.md` — historical design research, no current code references, but correct as planning artifacts
+- `guard-agent-memory/MEMORY.md` — already had both links, no change needed
+
+**No cross-agent duplication found.**
+**No broken MEMORY.md links found (except planner-review, fixed above).**
+
+**New staleness patterns detected this audit:**
+- **State type renames go stale in inventory files**: `PlayingState::Active` → `NodeState::Playing` was missed in `planner-spec/bolt-domain-inventory.md`. After any state type rename or state hierarchy refactor, check all domain inventory files (planner-spec/*.md) for old state names.
+- **Scenario runner bug files lag behind code fixes**: `pause-menu-selection-missing-resource.md` described an open bug that was fixed in the same feature branch. When a fix is landed, update the bug memory file to RESOLVED immediately.
+- **MEMORY.md index drift for agents with many files**: `planner-review` had 5 of 6 stable files unlinked. Agents that accumulate feedback/pattern files over multiple sessions tend to forget to update their index. Check planner-review MEMORY.md on every future audit.
+
+---
+
 ## Full Audit — 2026-04-03 (feature/wall-builder-pattern branch, transition infrastructure Wave 2–3)
 
 **Scope:** All agent memory directories (full audit)

@@ -23,7 +23,7 @@ The builder collapses all of this into a single `build()` call that produces eve
 ### Mutually Exclusive
 
 - **Visual**: `Rendered` (includes `Mesh2d` + `MeshMaterial2d`) vs `Headless` (omits them). Most tests use `headless()`.
-- **Role**: `Primary` (`PrimaryBreaker` + `CleanupOnRunEnd`) vs `Extra` (`ExtraBreaker` + `CleanupOnNodeExit`). Production breakers use `.primary()`.
+- **Role**: `Primary` (`PrimaryBreaker` + `CleanupOnExit<RunState>`) vs `Extra` (`ExtraBreaker` + `CleanupOnExit<NodeState>`). Production breakers use `.primary()`.
 
 Four terminal `impl` blocks exist (Rendered+Primary, Rendered+Extra, Headless+Primary, Headless+Extra), each providing `build()` and `spawn()`.
 
@@ -115,8 +115,8 @@ Returns `impl Bundle` with every component for a valid breaker entity:
 | Spread | `BreakerReflectionSpread` (radians) |
 | Bump | `BumpPerfectWindow`, `BumpEarlyWindow`, `BumpLateWindow`, `BumpPerfectCooldown`, `BumpWeakCooldown`, `BumpFeedback` |
 | Lifecycle | `LivesCount(Option<u32>)` (always present, `None` = infinite) |
-| Role (Primary) | `PrimaryBreaker`, `CleanupOnRunEnd` |
-| Role (Extra) | `ExtraBreaker`, `CleanupOnNodeExit` |
+| Role (Primary) | `PrimaryBreaker`, `CleanupOnExit<RunState>` |
+| Role (Extra) | `ExtraBreaker`, `CleanupOnExit<NodeState>` |
 | Rendered only | `Mesh2d`, `MeshMaterial2d` |
 
 ## spawn() Behavior

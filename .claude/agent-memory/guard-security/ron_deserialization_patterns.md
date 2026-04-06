@@ -504,3 +504,16 @@ in production code.
   division is never reached when duration is 0.0. No panic surface.
 - A behavior 73 test confirms this: zero-duration FadeOut sends TransitionRunComplete on
   first frame with `completed = true`. Confirmed by reading fade.rs run system and test.
+
+## feature/effect-placeholder-visuals (2026-04-06)
+
+### No new RON deserialization sites (Safe)
+- handle_pause_input.rs: no RON loading, no asset loading, no deserialization.
+- state/plugin.rs: no RON loading. All route closures read ECS resources (State<S>, NodeOutcome)
+  — no file-controlled data.
+- shared/components.rs: three marker types removed. No RON schema changes.
+- breaker-scenario-runner/Cargo.toml: adds rantzsoft_lifecycle (workspace path dep).
+  That crate has zero RON deserialization — confirmed in 2026-04-03 audit.
+- No new RON assets added. No new include_str! uses. No changes to existing deserialization sites.
+- Carry-forward warnings from prior audits unchanged (hit_fraction, negative damage,
+  BreakerRegistry assert!, circuit_breaker bumps_required underflow risk).

@@ -102,6 +102,19 @@ type: reference
 ## Test App Patterns (feature/missing-unit-tests — confirmed correct)
 - `App::new().add_plugins(MinimalPlugins)` — correct minimal test harness for ECS+FixedUpdate tests
 - `add_message::<T>()` in test_app() — correct message registration for test harness
+
+## State Plugin / Lifecycle Crate Patterns (feature/effect-placeholder-visuals — confirmed correct)
+- `MessageWriter<ChangeState<NodeState>>` as a system param — correct; `ChangeState<S>` is a `#[derive(Message)]` type in rantzsoft_lifecycle; `MessageWriter<'w, T>` is the correct Bevy 0.18 param; `.write(ChangeState::new())` is the correct send call
+- `ResMut<Time<Virtual>>` + `.unpause()` / `.pause()` — confirmed correct in Bevy 0.18.1 for virtual time control
+- `ResMut<NodeOutcome>` + `node_outcome.result = NodeResult::Quit` — correct mutable resource mutation in a system param
+- `Route::from(S).to_dynamic(fn)` — project-local typestate builder API (not Bevy core); `fn(&World) -> S` is the correct closure signature; passing a named function (`resolve_node_next_state`) and an inline closure are both valid
+- `Route::from(S).to_dynamic(fn).with_transition(T).when(fn)` — correct chaining; typestate enforces no double-set; `.to_dynamic` accepts `impl Fn(&World) -> S + Send + Sync + 'static`
+- `app.add_systems(OnEnter(NodeState::Teardown), cleanup_on_exit::<NodeState>)` — correct; `cleanup_on_exit<S>` is a free function system in rantzsoft_lifecycle taking `(Commands, Query<Entity, With<CleanupOnExit<S>>>)`; wiring to `OnEnter(State::Teardown)` is the project's cleanup pattern
+- `CleanupOnExit::<S>::default()` in spawn tuples — correct; type has `impl Default` via `PhantomData`; used in `commands.entity(e).insert(...)`, `commands.spawn((..., CleanupOnExit::<S>::default(), ...))`, and as `#[require]` fields
+- `#[require(Spatial2D, CleanupOnExit<NodeState>)]` on `#[derive(Component)]` structs — correct Bevy 0.15+ required components syntax; generic type parameters inside `#[require(...)]` are supported
+- `Messages<ChangeState<NodeState>>` resource accessed via `app.world().resource::<Messages<T>>()` in tests — confirmed correct test pattern for asserting message writes
+- `app.world().resource::<Messages<T>>().iter_current_update_messages().count()` — confirmed correct assertion idiom
+- Two `ResMut<...>` params for DIFFERENT types in one system (`ResMut<Time<Virtual>>` + `ResMut<NodeOutcome>`) — valid; no world access conflict
 - `app.world().resource::<Time<Fixed>>().timestep()` + `app.world_mut().resource_mut::<Time<Fixed>>().accumulate_overstep(timestep)` then `app.update()` — correct pattern to advance one FixedUpdate tick
 - `app.world_mut().query::<&T>().iter(app.world()).next().unwrap()` — correct in narrow tests where the entity count is constrained; lint is `clippy::unwrap_used` (warn not deny) so allowed in tests
 - `app.world_mut().query_filtered::<&T, With<U>>().iter(app.world())` — correct; mutable borrow for QueryState then immutable for iteration

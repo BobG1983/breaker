@@ -44,7 +44,7 @@ at each mutation site (collision, bolt_lost, launch_bolt, reset_bolt).
 
 ### Scheduling (plugin.rs)
 - OnEnter(GameState::Playing): spawn_bolt (exclusive world fn), apply_entity_scale_to_bolt, reset_bolt
-- FixedUpdate under PlayingState::Active
+- FixedUpdate under NodeState::Playing
 - Order: CellCollision → WallCollision (after Cell), BreakerCollision (after Cell) → clamp → BoltLost
 
 ### Test Structure

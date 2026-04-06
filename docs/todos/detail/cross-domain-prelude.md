@@ -22,7 +22,7 @@ Full research reports in `cross-domain-prelude/`:
 ### Key findings
 
 **Production cross-domain types (4 tiers by usage breadth):**
-- Tier 1 — Universal (5+ domains): `Bolt`, `Breaker`, `Cell`, `Wall` entity markers; `AppState`, `GameState`, `NodeState`, `RunState`, `ChipSelectState`, `RunEndState`, `MenuState` states (at `crate::state::types::*`); `BoundEffects`, `StagedEffects` effect containers; `CleanupOnNodeExit`, `PlayfieldConfig`
+- Tier 1 — Universal (5+ domains): `Bolt`, `Breaker`, `Cell`, `Wall` entity markers; `AppState`, `GameState`, `NodeState`, `RunState`, `ChipSelectState`, `RunEndState`, `MenuState` states (at `crate::state::types::*`); `BoundEffects`, `StagedEffects` effect containers; `CleanupOnExit<NodeState>` (from `rantzsoft_lifecycle`), `PlayfieldConfig`
 - Tier 2 — Effect coupling (3-4 domains): `ActivePiercings`, `ActiveDamageBoosts`, `ActiveSizeBoosts`, `ActiveSpeedBoosts`, `ActiveVulnerability`, `AnchorActive`, `AnchorPlanted`, `FlashStepActive`
 - Tier 3 — Messages (2-3 domains): `BumpPerformed`, `CellDestroyedAt`, `DamageCell`, `NodeCleared`, `ChipSelected`, and many more
 - Tier 4 — Narrow (2 domains): various smaller cross-domain imports

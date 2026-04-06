@@ -4,7 +4,7 @@
 Centralize entity despawn into a DespawnEntity message + single despawn system — eliminates scattered .despawn()/.try_despawn() calls, gives a single place for future deferred cleanup or entity recycling.
 
 ## Context
-During scenario testing (2026-04-06), multiple "Entity despawned" Bevy warnings appeared in visual mode because various systems called `.despawn()` on entities that were already cleaned up by CleanupOnNodeExit/CleanupOnRunEnd. Converting all calls to `.try_despawn()` is a band-aid — the real fix is to centralize despawn so:
+During scenario testing (2026-04-06), multiple "Entity despawned" Bevy warnings appeared in visual mode because various systems called `.despawn()` on entities that were already cleaned up by `CleanupOnExit<NodeState>`/`CleanupOnExit<RunState>`. Converting all calls to `.try_despawn()` is a band-aid — the real fix is to centralize despawn so:
 
 1. Only one system ever calls despawn
 2. That system can use try_despawn internally
@@ -16,7 +16,7 @@ During scenario testing (2026-04-06), multiple "Entity despawned" Bevy warnings 
 - In: Sweep all `.despawn()` / `.try_despawn()` calls to write the message instead
 - In: Runs in a late schedule (PostUpdate or dedicated cleanup set) so all systems have a chance to read the entity first
 - Out: Deferred cleanup / entity pooling (future enhancement, not now)
-- Out: CleanupOnNodeExit / CleanupOnRunEnd markers (those are state-driven, separate mechanism)
+- Out: `CleanupOnExit<NodeState>` / `CleanupOnExit<RunState>` markers (those are state-driven, separate mechanism)
 
 ## Dependencies
 - Depends on: nothing
