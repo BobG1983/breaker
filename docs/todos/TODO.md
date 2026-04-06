@@ -11,7 +11,7 @@
 7. ~~Killed trigger, Die effect, unified death messaging~~ — **absorbed into #10** (effect system refactor)
 8. **[ready]** Fix detect_combo_king stale migration test — [detail](detail/fix-combo-king-test.md)
 9. **[ready]** Bolt birthing animation — [detail](detail/bolt-birthing-animation.md)
-10. **[NEEDS DETAIL]** Effect system refactor: typestate builder, Spawn/During triggers, unified vocabulary — [detail](detail/effect-desugaring-node-running-trigger/effect-desugaring-node-running-trigger.md)
+10. **[ready]** Effect system refactor: typestate builder, Spawn/During triggers, unified vocabulary — [detail](detail/effect-desugaring-node-running-trigger/effect-desugaring-node-running-trigger.md)
 11. **[NEEDS DETAIL]** Node sequencing refactor — per-tier batching instead of full upfront sequence — [detail](detail/node-sequencing-refactor.md)
 12. **[NEEDS DETAIL]** Scenario runner performance audit — [detail](detail/scenario-runner-performance-audit.md)
 13. **[NEEDS DETAIL]** Delete `PhysicsFrozenDuringPause` invariant — replace with unit tests — [detail](detail/delete-physics-frozen-invariant.md)

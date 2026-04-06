@@ -100,7 +100,7 @@ Two entry points: `EffectDef` for definition-level entries (Route required), `Ef
 
 ### Key rules
 - `Fire` always targets `This` (the entity Route routes to, or the entity BoundEffects lives on inside a Stamp/Transfer payload)
-- `On` is ONLY for non-This targets: trigger participants (`PerfectBumped::Bolt`) — redirects Fire/Stamp/Transfer to that entity
+- `On` is ONLY for non-This targets: trigger participants (`BumpTarget::Bolt`) — redirects Fire/Stamp/Transfer to that entity
 - `On(This, ...)` never appears — it's always just `Fire(...)` directly
 - `Route` is required at definition root — you cannot have a bare `When(...)` in an `effects: []` list
 - `Stamp` (terminal) = permanent add to target's BoundEffects at runtime
@@ -388,13 +388,15 @@ enum RawTerminal {
 
 #[derive(Serialize, Deserialize)]
 enum RawParticipant {
-    // Flat participant names — permissive, validated by loader against trigger context
-    Bolt, Breaker, Cell, Wall,
-    Impactor, Target, Victim, Killer, Entity,
+    // Fully qualified — matches ParticipantTarget exactly
+    BumpTarget(BumpTarget),
+    ImpactTarget(ImpactTarget),
+    DeathTarget(DeathTarget),
+    BoltLostTarget(BoltLostTarget),
 }
 ```
 
-Raw uses flat participant names (`Bolt`, `Victim`, etc.) — the loader validates they match the trigger context and maps to the per-trigger `ParticipantTarget` variant. No `This` in On — Fire targets This implicitly. No entity types in On — Route handles routing at definition level.
+RON uses fully qualified participant names: `On(BumpTarget::Bolt, ...)`, `On(ImpactTarget::Impactee, ...)`. RawParticipant matches ParticipantTarget — no flat names, no ambiguity. No `This` in On — Fire targets This implicitly. No entity types in On — Route handles routing at definition level.
 
 ## RON → Valid (loader)
 
@@ -497,15 +499,14 @@ impl ValidTree {
     }
 }
 
-// ParticipantTarget → RawParticipant: flatten per-trigger enums back to flat names
+// ParticipantTarget → RawParticipant: direct mapping (same structure)
 impl ParticipantTarget {
     fn to_raw(&self) -> RawParticipant {
         match self {
-            ParticipantTarget::Death(DeathTarget::Victim) => RawParticipant::Victim,
-            ParticipantTarget::Death(DeathTarget::Killer) => RawParticipant::Killer,
-            ParticipantTarget::Bump(BumpTarget::Bolt) => RawParticipant::Bolt,
-            ParticipantTarget::Impact(ImpactTarget::Impactee) => RawParticipant::Impactee,
-            // ... etc
+            ParticipantTarget::Bump(t) => RawParticipant::BumpTarget(*t),
+            ParticipantTarget::Impact(t) => RawParticipant::ImpactTarget(*t),
+            ParticipantTarget::Death(t) => RawParticipant::DeathTarget(*t),
+            ParticipantTarget::BoltLost(t) => RawParticipant::BoltLostTarget(*t),
         }
     }
 }
@@ -559,7 +560,7 @@ EffectDef::route(Bolt)
 // Transfer: powder keg — "when I hit a cell, stamp 'when you die, explode' on it"
 EffectDef::route(Bolt)
     .when(Impacted(Cell))
-    .on(Impacted::Target)
+    .on(ImpactTarget::Impactee)
     .transfer(
         EffectTree::when(Died)
             .fire(Explode { range: 48.0, damage: 10.0 })?
@@ -585,7 +586,7 @@ EffectDef::route(Breaker)
 // Named participants: redirect fire to a trigger participant
 EffectDef::route(Breaker)
     .when(PerfectBumped)
-    .on(PerfectBumped::Bolt)
+    .on(BumpTarget::Bolt)
     .fire(FlashStep)?;
 ```
 
@@ -606,12 +607,12 @@ EffectDef::route(Breaker)
         Route(Bolt, When(Killed(Cell), Fire(SpeedBoost(1.3)))),
 
         // Transfer (one-shot): "when you die, explode" onto impacted cell
-        Route(Bolt, When(Impacted(Cell), On(Impacted::Target, Transfer(
+        Route(Bolt, When(Impacted(Cell), On(ImpactTarget::Impactee, Transfer(
             When(Died, Fire(Explode(range: 48.0, damage: 10.0)))
         )))),
 
         // Stamp (permanent): "always explode on death" onto impacted cell
-        Route(Bolt, When(Impacted(Cell), On(Impacted::Target, Stamp(
+        Route(Bolt, When(Impacted(Cell), On(ImpactTarget::Impactee, Stamp(
             When(Died, Fire(Explode(range: 48.0, damage: 10.0)))
         )))),
 
@@ -641,7 +642,7 @@ EffectDef::route(Breaker)
 - `Route(EveryBolt, ...)` → `This` = each bolt entity individually
 - Inside a `Stamp`/`Transfer` payload → `This` = the entity the tree was added to
 
-`On` only appears when you need to redirect away from `This` to a trigger participant. For example, `On(Impacted::Target, Transfer(...))` redirects the Transfer to the impact target instead of This.
+`On` only appears when you need to redirect away from `This` to a trigger participant. For example, `On(ImpactTarget::Impactee, Transfer(...))` redirects the Transfer to the impact target instead of This.
 
 ## Spawned + Stamp/Transfer Pattern
 
@@ -677,9 +678,9 @@ EffectDef::route(Bolt)
 
 **Route** = definition-level routing. "This tree goes to this entity type's BoundEffects." Required at root of every `effects: []` entry. `Route(Bolt, ...)`, `Route(EveryBolt, ...)`, etc.
 
-**Stamp** (terminal) = runtime permanent add. `On(Impacted::Target, Stamp(When(Died, Fire(Explode))))` permanently adds "explode on death" to the target cell's BoundEffects. Re-arms — survives multiple deaths/lives.
+**Stamp** (terminal) = runtime permanent add. `On(ImpactTarget::Impactee, Stamp(When(Died, Fire(Explode))))` permanently adds "explode on death" to the target cell's BoundEffects. Re-arms — survives multiple deaths/lives.
 
-**Transfer** (terminal) = runtime one-shot. `On(Impacted::Target, Transfer(When(Died, Fire(Explode))))` arms a one-shot listener in the target cell's StagedEffects. Cell dies, explode fires, entry consumed. Hit the cell again to re-transfer.
+**Transfer** (terminal) = runtime one-shot. `On(ImpactTarget::Impactee, Transfer(When(Died, Fire(Explode))))` arms a one-shot listener in the target cell's StagedEffects. Cell dies, explode fires, entry consumed. Hit the cell again to re-transfer.
 
 This distinction is load-bearing: choosing Stamp vs Transfer for the same inner tree gives fundamentally different gameplay behavior.
 
@@ -739,7 +740,7 @@ This distinction is load-bearing: choosing Stamp vs Transfer for the same inner 
     legendary: (
         prefix: "",
         effects: [
-            Route(Bolt, When(Impacted(Cell), On(Impacted::Target, Transfer(
+            Route(Bolt, When(Impacted(Cell), On(ImpactTarget::Impactee, Transfer(
                 When(Died, Fire(Explode(range: 48.0, damage: 10.0)))
             )))),
         ],

@@ -9,7 +9,9 @@ Comprehensive effect system refactor: unified RON/builder vocabulary, new wrappe
 |------|----------|
 | [api-reference.md](api-reference.md) | Full trigger/target/terminal tables, rename mapping, reversibility catalog |
 | [builder-design.md](builder-design.md) | Typestate machine, Rust types, builder examples, RON format, validation rules |
+| [storage-and-dispatch.md](storage-and-dispatch.md) | BoundEffects/StagedEffects/SpawnedRegistry shape, dispatch walk, condition monitor, command extensions |
 | [death-pipeline.md](death-pipeline.md) | Killed/Died/DeathOccurred triggers, KillYourself/Destroyed messages, DamageDealt<T>, domain handlers |
+| [examples.md](examples.md) | Builder + RON side-by-side for every pattern |
 
 ## Research
 
@@ -33,7 +35,7 @@ Comprehensive effect system refactor: unified RON/builder vocabulary, new wrappe
 `When`, `During`, `Spawned`, `On`, `Fire`, `Transfer`, `This`. No divergence between data format and code API.
 
 ### Named trigger participants (not `Other`)
-Each trigger defines named participants: `PerfectBumped::Bolt`, `Died::Killer`, `Impacted::Target`. Typestate enforces only valid participants for the current trigger. See [api-reference.md](api-reference.md) for full table.
+Each trigger defines named participants: `BumpTarget::Bolt`, `DeathTarget::Killer`, `ImpactTarget::Impactee`. Typestate enforces only valid participants for the current trigger. See [api-reference.md](api-reference.md) for full table.
 
 ### `This` = bound entity (distinct from participants)
 `This` always means "the entity BoundEffects lives on." Named participants come from the trigger event. Same entity, different semantic source.
@@ -100,7 +102,8 @@ src/new_effect/
   triggers/       # bump/, impact/, death/, bolt_lost/ (shared participant enums)
   tree/           # ValidTree, ValidDef, Raw types
   loader/         # RON -> builder -> ValidDef
-  dispatch/       # fire_effect, stamp_effect, transfer_effect, reverse_effect
+  dispatch/       # walk_effects, bridge systems, condition monitor
+  damage/         # DamageMessage, KilledBy, Hp, apply_damage, detect_deaths
   effects/        # SpeedBoost, Shockwave, Explode, etc. (fire/reverse impls)
 ```
 
@@ -161,7 +164,11 @@ Same event, two triggers, opposite perspectives. Both have `::Victim` and `::Kil
 **Typed per-trigger structs.** Each trigger concept has its own context struct with named fields. `BumpContext { bolt, breaker, source }`, `ImpactContext { impactor, impactee, source }`, `DeathContext { victim, killer, source }`, `BoltLostContext { bolt, breaker, source }`. Wrapped in `enum TriggerContext { Bump(BumpContext), Impact(ImpactContext), Death(DeathContext), BoltLost(BoltLostContext), None }`.
 
 ### 3. During/Until reversal
-**Trigger pair desugar.** During desugars at load time into two permanent When entries in BoundEffects: `When(NodeActiveStarted, Fire(effect))` + `When(NodeActiveEnded, Reverse(effect))`. Normal dispatch handles both — no special During runtime logic. Condition cycling works naturally (both are When, re-arming). Until desugars into: (1) fire immediately, (2) insert `Once(trigger, Reverse(effect))` into BoundEffects — One-shot reversal that self-removes after firing.
+**During is first-class, not desugared.** During stays as `During(condition, inner)` in BoundEffects. A condition-monitoring system watches for NodeState changes and fires/reverses During entries directly. No synthetic triggers (NodeActiveStarted/NodeActiveEnded don't exist). Condition cycling is handled by the monitor system.
+
+**Until desugars to Once.** Until fires immediately, then inserts `Once(trigger, Reverse(effect))` into BoundEffects. One-shot reversal that self-removes after firing. Uses real triggers (Died, TimeExpires, etc.).
+
+**Sequence in scoped context** produces paired reversals: `During(NodeActive, Sequence([Fire(SpeedBoost), Fire(DamageBoost)]))` → on condition start both fire, on condition end both reverse via `Sequence([Reverse(SpeedBoost), Reverse(DamageBoost)])`.
 
 ### 4. Once self-removal
 **Remove inline during dispatch.** Dispatch uses `retain()` on the Vec — Once entries return false (removed), When entries return true (kept). Practically may need collect-then-remove due to ownership/borrow constraints, but same-frame semantics.
@@ -172,33 +179,81 @@ Same event, two triggers, opposite perspectives. Both have `::Victim` and `::Kil
 ### 6. Source tracking
 **Chip definition name (String).** `type SourceId = String`. BoundEffects entries are `(SourceId, ValidTree)` pairs. Reverse index `HashMap<SourceId, Vec<Trigger>>` enables fast removal on chip unequip. SpawnedRegistry also tracks SourceId for cleanup.
 
-### 7. Kill attribution
-**DamageSource component.** When a bolt deals damage to a cell, `DamageSource { dealer: Entity }` is set on the cell. When HP reaches zero, the death system reads DamageSource to get the killer entity, then fires `Died` on the cell and `Killed(Cell)` on the killer with correct DeathContext participants.
+### 7. Kill attribution — propagated through effect chains
+**KilledBy propagates from TriggerContext.** `KilledBy { dealer: Option<Entity> }`. The dealer is the originating bolt entity, propagated through effect chains:
+- Bolt hits cell → `dealer: Some(bolt)`
+- Bolt's shockwave kills cell → `dealer: Some(bolt)` (shockwave inherits from spawning bolt)
+- Bolt's chain lightning kills cell → `dealer: Some(bolt)` (arc inherits from source)
+- Powder keg: bolt B kills cell → cell explodes → `dealer: Some(bolt_B)` (from DeathContext.killer, not the transferring bolt) → explosion kills cell C → `dealer: Some(bolt_B)`
+- Environmental/timer hazard → `dealer: None` → Killed doesn't fire, Died + DeathOccurred still fire
+
+`DeathContext { victim: Entity, killer: Option<Entity> }`. When killer is None, `Killed(Cell)` is skipped (no entity to fire on). `Died` always fires on victim. `DeathOccurred(Cell)` always fires globally.
+
+TriggerContext flows through `fire_effect` so effects can read the killer entity and stamp it as KilledBy on whatever they spawn/damage.
+
+**Unified damage message:** All damage sources (bolt collision, shockwave, chain lightning, explosion) send `DamageMessage { dealer: Option<Entity>, target: Entity, amount: f32 }`. One `apply_damage` system processes them all, decrements HP, and sets `KilledBy` only on the killing blow (HP crosses from positive to zero). Earlier hits that reduce HP but don't kill do not set KilledBy.
+
+**Corner cases:**
+- **Multi-source same frame**: Message processing order determines the killing blow. Deterministic (system ordering + message queue order).
+- **Dealer despawns mid-chain**: Before firing Killed on the dealer, verify entity still exists. If despawned, skip Killed silently (known valid case — bolt lost while shockwave is still expanding). Died and DeathOccurred still fire.
 
 ### 8. Bridge systems for Spawned
 **4 standard systems in PostFixedUpdate** (not Bevy Observers). One per entity type: `bridge_bolt_added`, `bridge_cell_added`, `bridge_wall_added`, `bridge_breaker_added`. Each queries `Added<Bolt/Cell/Wall/Breaker>`, reads SpawnedRegistry for matching entries, stamps/transfers trees onto the new entity's BoundEffects/StagedEffects.
 
 ### 9. Build phasing
-**Bottom-up: types → builder → loader → dispatch → swap.**
+**Bottom-up: types → builder → loader → dispatch → damage → swap.**
 - Phase 1: Core types (enums, tree structs, participant enums, EffectType, RouteTarget)
 - Phase 2: Builder (EffectDef::route(), EffectTree, typestate, validation)
 - Phase 3: Loader (RON → Raw → builder → ValidDef, round-trip)
-- Phase 4: Storage + Dispatch (BoundEffects HashMap, StagedEffects, SpawnedRegistry, trigger dispatch, During/Until desugar, bridge systems)
-- Phase 5: Swap (delete src/effect/, rename new_effect → effect, rewire imports, migrate RON files)
-
-## Open Questions (NEEDS DETAIL)
+- Phase 4: Storage + Dispatch (BoundEffects HashMap, StagedEffects, SpawnedRegistry, walk_effects, condition monitor, bridge systems)
+- Phase 5: Damage + Death pipeline (DamageMessage, apply_damage, KilledBy, detect_deaths, KillYourself<S,T>, Destroyed<S,T>, bridge_destroyed, PendingDespawn)
+- Phase 6: Swap — delete src/effect/, rename new_effect → effect, rewire imports, migrate RON files, replace domain-specific damage/death messaging:
+  - `DamageCell` → `DamageMessage`
+  - `RequestCellDestroyed` → `KillYourself<Bolt, Cell>` (and other S,T pairs)
+  - `CellDestroyedAt` → `Destroyed<Bolt, Cell>`
+  - `RequestBoltDestroyed` → `KillYourself<(), Bolt>`
+  - `bridge_cell_destroyed` → `bridge_destroyed::<Bolt, Cell>`
+  - Direct HP mutation in effects → `DamageMessage`
+  - Per-domain cleanup systems → unified `PendingDespawn`
 
 ### 10. Nested When in HashMap storage
-BoundEffects is `HashMap<Trigger, Vec<...>>` keyed by trigger. `When(PerfectBumped, When(Impacted(Cell), Fire(Shockwave)))` has nested triggers. Is the outer `PerfectBumped` the key, with the inner `When(Impacted(Cell), ...)` as the tree value? When PerfectBumped fires, does the inner tree move to StagedEffects under `Impacted(Cell)`?
+**Arm into StagedEffects.** BoundEffects keys by outer trigger (PerfectBumped). When it fires, the inner tree `When(Impacted(Cell), Fire(Shockwave))` moves to StagedEffects under the `Impacted(Cell)` key. When Impacted fires, Shockwave executes and the entry is consumed. Next PerfectBumped re-arms from BoundEffects again.
 
-### 11. Multiple effects from one trigger — ordering
-Whiplash has two entries under `BumpWhiffOccurred` (DamageBoost + Shockwave). The Vec handles this naturally, but are there ordering guarantees? Does insertion order matter? Can effects from the same trigger interact (e.g., DamageBoost applied before Shockwave fires)?
+### 11. Multiple effects from one trigger — Sequence node
+**Sequence for ordered execution.** New tree node `Sequence([Fire(A), Fire(B)])` executes children in order. Use when one effect must apply before another (e.g., DamageBoost before Shockwave). Independent effects stay as separate Route entries — Sequence is only for when order matters.
 
 ### 12. Transfer/Stamp tree ownership
-When we Transfer or Stamp a tree onto another entity, who owns the SourceId? The original chip that caused the transfer, or does it get a new source? Matters for cleanup — if the source chip is unequipped, do transferred trees on other entities get removed too?
+**Detach on transfer.** Once transferred/stamped onto another entity, the tree has no link back to the source. Unequipping the chip removes the bolt's BoundEffects entries (stops future transfers) but doesn't touch entities that already received trees. No cross-entity cleanup tracking.
 
 ### 13. Chip loading → Route processing
-The current chip loader processes `On(target: Bolt)` at equip time. The new loader processes `Route(Bolt, ...)`. Is this a system, an asset processor, or part of the chip equip command? When exactly does Route resolution happen in the frame lifecycle?
+**Equip command processes Routes.** Same timing as today. The chip equip command reads each ValidDef, matches on RouteTarget, and stamps the tree into the target entity's BoundEffects with the chip's SourceId. EveryBolt desugars here: stamp existing + register in SpawnedRegistry.
+
+### 14. During is first-class, not desugared
+During stays as a first-class node in BoundEffects. A condition-monitoring system watches for NodeState changes and fires/reverses During entries directly. No synthetic triggers (NodeActiveStarted/NodeActiveEnded don't exist). Avoids creating triggers that nothing else uses and that would miss mid-equip state (even though mid-node equip is out of scope).
+
+### 15. RON participant syntax — fully qualified
+RON uses shared enum names: `On(BumpTarget::Bolt, ...)`, `On(ImpactTarget::Impactee, ...)`. RawParticipant wraps the shared enums: `enum RawParticipant { BumpTarget(BumpTarget), ImpactTarget(ImpactTarget), DeathTarget(DeathTarget), BoltLostTarget(BoltLostTarget) }`. No flat names, no ambiguity.
+
+### 16. Sequence in scoped context — paired reversals
+`During(NodeActive, Sequence([Fire(SpeedBoost), Fire(DamageBoost)]))` → on condition start both fire, on condition end the condition monitor reverses both via `Sequence([Reverse(SpeedBoost), Reverse(DamageBoost)])`.
+
+### 17. BoundEffects storage for During
+During entries in BoundEffects are keyed by their condition (not a trigger). BoundEffects gains a second map: `conditions: HashMap<Condition, Vec<(SourceId, ValidTree)>>` alongside `triggers: HashMap<Trigger, Vec<(SourceId, ValidTree)>>`. The condition monitor reads `conditions`, trigger dispatch reads `triggers`.
+
+### 18. Dispatch ordering — StagedEffects first
+StagedEffects is walked BEFORE BoundEffects on each trigger dispatch. Prevents a single trigger from both arming and consuming a nested When in the same call. E.g., `When(PerfectBumped, When(PerfectBumped, Fire(...)))` — first bump arms, second bump consumes. If BoundEffects walked first, both would happen in one dispatch.
+
+### 19. During + nested When lifecycle
+During's inner When is registered into `BoundEffects.triggers` on condition start, with a scope source (`"ChipName:During(NodeActive)"`). On condition end, the scope source is used to remove the registration AND any armed StagedEffects entries from it. See [storage-and-dispatch.md](storage-and-dispatch.md) for full details.
+
+### 20. Recursion depth limit
+Depth counter on TriggerContext, incremented on each sub-dispatch. MAX_DISPATCH_DEPTH = 10. Prevents infinite spawn chains.
+
+### 21. Trigger locality — bridge systems decide
+No `locality()` method on Trigger. No centralized `dispatch_trigger`. Each trigger has its own Bevy bridge system that knows its participants and scope. Local bridges walk participant entities. Global bridges query all entities with effects. All bridge systems call a shared `walk_effects` helper for the tree-walking logic.
+
+### 22. Stale participant references
+Debug warning + skip. If `On(BumpTarget::Bolt, ...)` resolves to a despawned entity, log a debug warning and skip the fire. Helps catch bugs in development, normal gameplay occurrence in production.
 
 ## Status
-`[NEEDS DETAIL]` — 9 core decisions resolved, 4 remaining open questions. See design docs: [api-reference.md](api-reference.md), [builder-design.md](builder-design.md), [death-pipeline.md](death-pipeline.md), [examples.md](examples.md), [ron-migration/](ron-migration/).
+`ready` — all 22 design decisions resolved. See design docs: [api-reference.md](api-reference.md), [builder-design.md](builder-design.md), [storage-and-dispatch.md](storage-and-dispatch.md), [death-pipeline.md](death-pipeline.md), [examples.md](examples.md), [ron-migration/](ron-migration/).
