@@ -2,13 +2,13 @@
 use bevy::prelude::*;
 
 use crate::{
-    breaker::{messages::BumpPerformed, sets::BreakerSystems},
+    breaker::sets::BreakerSystems,
     effect::{
         core::*,
         sets::EffectSystems,
         triggers::evaluate::{evaluate_bound_effects, evaluate_staged_effects},
     },
-    state::types::NodeState,
+    prelude::*,
 };
 
 fn bridge_bump(

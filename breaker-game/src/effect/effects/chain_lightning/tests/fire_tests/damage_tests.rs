@@ -1,8 +1,10 @@
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Position2D;
 
-use super::super::helpers::*;
-use crate::{bolt::resources::DEFAULT_BOLT_BASE_DAMAGE, cells::messages::DamageCell};
+use crate::{
+    bolt::resources::DEFAULT_BOLT_BASE_DAMAGE, cells::messages::DamageCell,
+    effect::effects::chain_lightning::tests::helpers::*,
+};
 
 // ── Behavior 1: fire() damages the first valid target cell immediately via DamageCell ──
 

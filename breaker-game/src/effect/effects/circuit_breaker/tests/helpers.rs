@@ -1,7 +1,6 @@
 pub(super) use bevy::prelude::*;
 pub(super) use rantzsoft_spatial2d::components::Position2D;
 
-pub(super) use super::super::effect::*;
 pub(super) use crate::{
     bolt::{
         components::{Bolt, ExtraBolt},
@@ -11,7 +10,10 @@ pub(super) use crate::{
     effect::{
         BoundEffects, EffectKind, EffectNode,
         core::EffectSourceChip,
-        effects::shockwave::{ShockwaveMaxRadius, ShockwaveSource, ShockwaveSpeed},
+        effects::{
+            circuit_breaker::effect::*,
+            shockwave::{ShockwaveMaxRadius, ShockwaveSource, ShockwaveSpeed},
+        },
     },
     shared::rng::GameRng,
 };

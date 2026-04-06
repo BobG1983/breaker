@@ -1,6 +1,9 @@
-use super::super::drivers::*;
-use crate::types::{
-    BumpMode, ChaosParams, GameAction, HybridParams, InputStrategy, ScriptedFrame, ScriptedParams,
+use crate::{
+    input::drivers::*,
+    types::{
+        BumpMode, ChaosParams, GameAction, HybridParams, InputStrategy, ScriptedFrame,
+        ScriptedParams,
+    },
 };
 
 // -------------------------------------------------------------------------

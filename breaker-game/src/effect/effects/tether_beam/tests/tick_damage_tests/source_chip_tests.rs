@@ -1,7 +1,6 @@
 //! Tests for `EffectSourceChip` attribution on `tick_tether_beam` damage messages.
 
-use super::super::helpers::*;
-use crate::effect::core::EffectSourceChip;
+use crate::effect::{core::EffectSourceChip, effects::tether_beam::tests::helpers::*};
 
 #[test]
 fn tick_tether_beam_populates_source_chip_from_effect_source_chip() {

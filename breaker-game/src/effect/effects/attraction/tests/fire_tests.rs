@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 
-use super::super::effect::*;
-use crate::effect::core::AttractionType;
+use crate::effect::{core::AttractionType, effects::attraction::effect::*};
 
 // ── Existing tests (updated for new max_force parameter) ──
 

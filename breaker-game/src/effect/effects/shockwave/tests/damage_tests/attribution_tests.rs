@@ -6,8 +6,7 @@ use std::collections::HashSet;
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Position2D;
 
-use super::super::helpers::*;
-use crate::effect::core::EffectSourceChip;
+use crate::effect::{core::EffectSourceChip, effects::shockwave::tests::helpers::*};
 
 // -- Section C: EffectSourceChip attribution tests ───────────────────
 

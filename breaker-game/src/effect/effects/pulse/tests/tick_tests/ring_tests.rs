@@ -1,6 +1,6 @@
 //! Tests for `tick_pulse_ring` expansion and `despawn_finished_pulse_ring` behaviors.
 
-use super::super::helpers::*;
+use crate::effect::effects::pulse::tests::helpers::*;
 
 // -- Behavior 14: tick_pulse_ring expands radius --
 

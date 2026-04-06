@@ -4,9 +4,9 @@
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Position2D;
 
-use super::super::effect::*;
 use crate::{
     bolt::{definition::BoltDefinition, registry::BoltRegistry},
+    effect::effects::spawn_phantom::effect::*,
     shared::rng::GameRng,
 };
 

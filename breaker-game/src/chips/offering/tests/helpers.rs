@@ -7,9 +7,11 @@ use rand::{
     distr::{Distribution, weighted::WeightedIndex},
 };
 
-use super::super::system::*;
 use crate::{
-    chips::definition::{ChipDefinition, Rarity},
+    chips::{
+        definition::{ChipDefinition, Rarity},
+        offering::system::*,
+    },
     effect::{EffectKind, EffectNode},
 };
 

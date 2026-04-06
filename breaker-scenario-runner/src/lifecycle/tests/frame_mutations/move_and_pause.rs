@@ -1,6 +1,6 @@
 //! Tests for `MoveBolt` and `TogglePause` frame mutations.
 
-use super::super::helpers::*;
+use crate::lifecycle::tests::helpers::*;
 
 // -------------------------------------------------------------------------
 // apply_debug_frame_mutations -- MoveBolt at matching frame

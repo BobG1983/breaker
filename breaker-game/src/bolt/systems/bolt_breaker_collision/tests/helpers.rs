@@ -4,12 +4,12 @@ use rantzsoft_physics2d::{
 };
 use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D, Velocity2D};
 
-use super::super::system::bolt_breaker_collision;
 use crate::{
     bolt::{
         components::{Bolt, BoltRadius},
         definition::BoltDefinition,
         messages::BoltImpactBreaker,
+        systems::bolt_breaker_collision::system::bolt_breaker_collision,
     },
     breaker::{
         components::{BaseHeight, BaseWidth, Breaker, BreakerReflectionSpread, BreakerTilt},

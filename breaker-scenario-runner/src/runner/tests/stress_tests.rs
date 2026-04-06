@@ -1,6 +1,6 @@
 //! Tests for `StressResult`, `StressFailure`, and `partition_stress_scenarios`.
 
-use super::super::execution::{StressFailure, StressResult, build_run_list};
+use crate::runner::execution::{StressFailure, StressResult, build_run_list};
 
 // -------------------------------------------------------------------------
 // StressResult::passed — all copies pass or any copy fails
@@ -117,7 +117,7 @@ fn stress_result_summary_line_with_failures() {
 
 #[test]
 fn partition_stress_scenarios_separates_stress_from_normal() {
-    use super::super::execution::partition_stress_scenarios;
+    use crate::runner::execution::partition_stress_scenarios;
 
     let runs = build_run_list(None, true);
     assert!(
@@ -159,7 +159,7 @@ fn partition_stress_scenarios_separates_stress_from_normal() {
 
 #[test]
 fn partition_stress_scenarios_all_normal_when_no_stress() {
-    use super::super::execution::partition_stress_scenarios;
+    use crate::runner::execution::partition_stress_scenarios;
 
     // aegis_chaos has no stress field.
     let runs = build_run_list(Some("aegis_chaos"), false);
@@ -171,7 +171,7 @@ fn partition_stress_scenarios_all_normal_when_no_stress() {
 
 #[test]
 fn partition_stress_scenarios_returns_default_stress_config() {
-    use super::super::execution::partition_stress_scenarios;
+    use crate::runner::execution::partition_stress_scenarios;
 
     let runs = build_run_list(Some("split_decision_cascade"), false);
     let (_, stress) = partition_stress_scenarios(&runs);
@@ -184,7 +184,7 @@ fn partition_stress_scenarios_returns_default_stress_config() {
 
 #[test]
 fn partition_stress_scenarios_empty_input_returns_empty() {
-    use super::super::execution::partition_stress_scenarios;
+    use crate::runner::execution::partition_stress_scenarios;
 
     let (normal, stress) = partition_stress_scenarios(&[]);
     assert!(normal.is_empty());

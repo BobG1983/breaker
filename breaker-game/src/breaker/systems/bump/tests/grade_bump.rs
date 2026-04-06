@@ -181,9 +181,9 @@ fn grade_bump_forward_sends_bolt_entity() {
     app.add_systems(
         FixedUpdate,
         (
-            enqueue_hit.before(super::super::grade_bump),
-            super::super::grade_bump,
-            capture_bumps.after(super::super::grade_bump),
+            enqueue_hit.before(crate::breaker::systems::bump::grade_bump),
+            crate::breaker::systems::bump::grade_bump,
+            capture_bumps.after(crate::breaker::systems::bump::grade_bump),
         ),
     );
 
@@ -239,9 +239,9 @@ fn grade_bump_sets_last_hit_bolt_when_no_active_bump() {
     app.add_systems(
         FixedUpdate,
         (
-            enqueue_hit.before(super::super::grade_bump),
-            super::super::grade_bump,
-            capture_bumps.after(super::super::grade_bump),
+            enqueue_hit.before(crate::breaker::systems::bump::grade_bump),
+            crate::breaker::systems::bump::grade_bump,
+            capture_bumps.after(crate::breaker::systems::bump::grade_bump),
         ),
     );
 

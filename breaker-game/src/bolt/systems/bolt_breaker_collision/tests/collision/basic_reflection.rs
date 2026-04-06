@@ -3,7 +3,7 @@
 
 use rantzsoft_spatial2d::components::Velocity2D;
 
-use super::super::helpers::*;
+use crate::bolt::systems::bolt_breaker_collision::tests::helpers::*;
 
 #[test]
 fn bolt_reflects_upward_on_center_hit() {

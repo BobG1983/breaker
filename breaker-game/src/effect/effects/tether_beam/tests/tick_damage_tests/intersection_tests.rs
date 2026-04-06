@@ -1,6 +1,6 @@
 //! Tests for beam-cell intersection geometry: segment vs AABB, multiple cells, dedup.
 
-use super::super::helpers::*;
+use crate::effect::effects::tether_beam::tests::helpers::*;
 
 #[test]
 fn tick_tether_beam_damages_cell_intersecting_beam_segment() {

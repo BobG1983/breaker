@@ -1,5 +1,4 @@
-use super::super::helpers::*;
-use crate::effect::core::EffectSourceChip;
+use crate::effect::{core::EffectSourceChip, effects::piercing_beam::tests::helpers::*};
 
 #[test]
 fn fire_stores_effect_source_chip_with_non_empty_chip_name() {

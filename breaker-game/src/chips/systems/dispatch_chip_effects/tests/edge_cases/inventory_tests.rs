@@ -2,9 +2,11 @@
 
 use bevy::prelude::*;
 
-use super::super::helpers::*;
 use crate::{
-    chips::{definition::ChipDefinition, inventory::ChipInventory, resources::ChipCatalog},
+    chips::{
+        definition::ChipDefinition, inventory::ChipInventory, resources::ChipCatalog,
+        systems::dispatch_chip_effects::tests::helpers::*,
+    },
     effect::{
         BoundEffects, EffectKind, EffectNode, Target, Trigger,
         effects::{damage_boost::ActiveDamageBoosts, speed_boost::ActiveSpeedBoosts},

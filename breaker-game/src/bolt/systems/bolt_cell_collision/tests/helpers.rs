@@ -5,13 +5,13 @@ use rantzsoft_physics2d::{
 use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D, Velocity2D};
 
 // Re-export constants used by test modules
-pub(super) use super::super::system::MAX_BOUNCES;
-use super::super::system::bolt_cell_collision;
+pub(super) use crate::bolt::systems::bolt_cell_collision::system::MAX_BOUNCES;
 use crate::{
     bolt::{
         components::Bolt,
         definition::BoltDefinition,
         messages::{BoltImpactCell, BoltImpactWall},
+        systems::bolt_cell_collision::system::bolt_cell_collision,
     },
     cells::{
         components::{Cell, CellHealth, CellHeight, CellWidth},

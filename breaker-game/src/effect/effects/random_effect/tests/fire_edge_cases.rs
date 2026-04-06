@@ -3,13 +3,12 @@
 
 use bevy::prelude::*;
 
-use super::super::system::*;
 use crate::{
     effect::{
         core::{EffectKind, EffectNode, StagedEffects, Trigger},
         effects::{
             bump_force::ActiveBumpForces, damage_boost::ActiveDamageBoosts,
-            speed_boost::ActiveSpeedBoosts,
+            random_effect::system::*, speed_boost::ActiveSpeedBoosts,
         },
     },
     shared::rng::GameRng,

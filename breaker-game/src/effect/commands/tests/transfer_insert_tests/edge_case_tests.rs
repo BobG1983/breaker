@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 
-use super::super::super::ext::*;
-use crate::effect::{core::*, effects::damage_boost::ActiveDamageBoosts};
+use crate::effect::{commands::ext::*, core::*, effects::damage_boost::ActiveDamageBoosts};
 
 #[test]
 fn transfer_do_children_fire_even_without_bound_effects() {

@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Position2D;
 
-use super::super::system::spawn_cells_from_layout;
 use crate::{
     cells::{
         CellTypeDefinition,
@@ -12,6 +11,7 @@ use crate::{
     shared::PlayfieldConfig,
     state::run::node::{
         ActiveNodeLayout, NodeLayout, definition::NodePool, messages::CellsSpawned,
+        systems::spawn_cells_from_layout::system::spawn_cells_from_layout,
     },
 };
 

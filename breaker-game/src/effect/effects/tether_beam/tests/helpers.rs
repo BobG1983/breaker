@@ -9,7 +9,6 @@ pub(super) use rantzsoft_spatial2d::components::{
     BaseSpeed, GlobalPosition2D, MaxSpeed, MinSpeed, Position2D, Scale2D, Spatial2D, Velocity2D,
 };
 
-pub(super) use super::super::*;
 pub(super) use crate::{
     bolt::{
         DEFAULT_BOLT_BASE_DAMAGE,
@@ -18,6 +17,7 @@ pub(super) use crate::{
         registry::BoltRegistry,
     },
     cells::{components::Cell, messages::DamageCell},
+    effect::effects::tether_beam::*,
     shared::{BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, GameDrawLayer, WALL_LAYER, rng::GameRng},
     state::types::{NodeState, RunState},
 };

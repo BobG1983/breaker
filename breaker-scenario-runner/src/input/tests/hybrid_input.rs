@@ -1,5 +1,4 @@
-use super::super::drivers::*;
-use crate::types::HybridParams;
+use crate::{input::drivers::*, types::HybridParams};
 
 // -------------------------------------------------------------------------
 // HybridInput — returns empty during scripted phase

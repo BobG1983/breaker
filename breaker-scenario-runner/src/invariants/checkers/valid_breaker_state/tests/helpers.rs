@@ -1,8 +1,7 @@
 use bevy::prelude::*;
 use breaker::state::types::{AppState, GameState};
 
-use super::super::checker::*;
-use crate::invariants::*;
+use crate::invariants::{checkers::valid_breaker_state::checker::*, *};
 
 pub(super) fn tick(app: &mut App) {
     let timestep = app.world().resource::<Time<Fixed>>().timestep();

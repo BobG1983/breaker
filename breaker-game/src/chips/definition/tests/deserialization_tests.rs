@@ -1,5 +1,7 @@
-use super::super::types::*;
-use crate::effect::{ImpactTarget, Target};
+use crate::{
+    chips::definition::types::*,
+    effect::{ImpactTarget, Target},
+};
 
 // =========================================================================
 // Preserved tests: Rarity deserialization

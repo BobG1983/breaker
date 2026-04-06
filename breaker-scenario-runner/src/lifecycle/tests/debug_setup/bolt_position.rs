@@ -1,6 +1,6 @@
 //! Tests for bolt teleport and `ScenarioPhysicsFrozen` insertion via `apply_debug_setup`.
 
-use super::super::helpers::*;
+use crate::lifecycle::tests::helpers::*;
 
 // -------------------------------------------------------------------------
 // apply_debug_setup — teleport to bolt_position

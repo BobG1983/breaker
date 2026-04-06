@@ -2,28 +2,25 @@
 
 use bevy::{ecs::schedule::ApplyDeferred, prelude::*};
 
-use crate::state::{
-    run::{
-        chip_select::messages::ChipSelected,
-        node::{
-            hud::{
-                UiSystems,
-                systems::{spawn_side_panels, spawn_timer_hud, update_timer_display},
-            },
-            messages::{
-                ApplyTimePenalty, CellsSpawned, NodeCleared, ReverseTimePenalty, SpawnNodeComplete,
-                TimerExpired,
-            },
-            resources::{ClearRemainingCount, NodeTimer, ScenarioLayoutOverride},
-            sets::NodeSystems,
-            systems::{
-                apply_time_penalty, check_spawn_complete, init_clear_remaining, init_node_timer,
-                reverse_time_penalty, set_active_layout, spawn_cells_from_layout, tick_node_timer,
-                track_node_completion,
-            },
+use crate::{
+    prelude::*,
+    state::run::node::{
+        hud::{
+            UiSystems,
+            systems::{spawn_side_panels, spawn_timer_hud, update_timer_display},
+        },
+        messages::{
+            ApplyTimePenalty, CellsSpawned, NodeCleared, ReverseTimePenalty, SpawnNodeComplete,
+            TimerExpired,
+        },
+        resources::{ClearRemainingCount, NodeTimer, ScenarioLayoutOverride},
+        sets::NodeSystems,
+        systems::{
+            apply_time_penalty, check_spawn_complete, init_clear_remaining, init_node_timer,
+            reverse_time_penalty, set_active_layout, spawn_cells_from_layout, tick_node_timer,
+            track_node_completion,
         },
     },
-    types::NodeState,
 };
 
 /// Plugin for the node subdomain.
@@ -36,7 +33,7 @@ impl Plugin for NodePlugin {
         app.init_resource::<ClearRemainingCount>()
             .init_resource::<NodeTimer>()
             .init_resource::<ScenarioLayoutOverride>()
-            .add_message::<crate::cells::messages::CellDestroyedAt>()
+            .add_message::<CellDestroyedAt>()
             .add_message::<NodeCleared>()
             .add_message::<TimerExpired>()
             .add_message::<ApplyTimePenalty>()

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
-use super::super::system::*;
 pub(super) use crate::effect::core::*;
+use crate::effect::triggers::until::system::*;
 
 pub(super) fn test_app() -> App {
     let mut app = App::new();

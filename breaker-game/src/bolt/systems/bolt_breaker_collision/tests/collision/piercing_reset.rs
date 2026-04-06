@@ -3,8 +3,10 @@
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Velocity2D;
 
-use super::super::helpers::*;
-use crate::{bolt::components::PiercingRemaining, effect::effects::piercing::ActivePiercings};
+use crate::{
+    bolt::{components::PiercingRemaining, systems::bolt_breaker_collision::tests::helpers::*},
+    effect::effects::piercing::ActivePiercings,
+};
 
 // --- Piercing reset tests (using ActivePiercings) ---
 

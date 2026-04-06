@@ -7,16 +7,9 @@
 use bevy::{ecs::system::SystemParam, prelude::*};
 
 use crate::{
-    bolt::components::Bolt,
-    breaker::components::Breaker,
-    cells::components::Cell,
     chips::{inventory::ChipInventory, resources::ChipCatalog},
-    effect::{
-        BoundEffects, EffectCommandsExt, EffectNode, RootEffect, StagedEffects, Target, Trigger,
-        TriggerContext,
-    },
-    state::run::chip_select::messages::ChipSelected,
-    walls::components::Wall,
+    effect::{EffectCommandsExt, Target, Trigger, TriggerContext},
+    prelude::*,
 };
 
 /// Bundled entity queries for target resolution — reduces system parameter count.

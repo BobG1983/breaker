@@ -1,4 +1,4 @@
-use super::super::*;
+use crate::types::*;
 
 // -------------------------------------------------------------------------
 // ScenarioDefinition — allowed_failures field

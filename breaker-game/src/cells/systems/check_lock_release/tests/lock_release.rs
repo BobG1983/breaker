@@ -107,8 +107,9 @@ fn enqueue_cell_destroyed_at(
 }
 
 fn lock_release_app_cell_destroyed_at() -> App {
-    use super::super::check_lock_release;
-    use crate::cells::messages::CellDestroyedAt;
+    use crate::cells::{
+        messages::CellDestroyedAt, systems::check_lock_release::check_lock_release,
+    };
 
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)

@@ -1,6 +1,6 @@
 //! Tests for extra tagged bolt spawning via `apply_debug_setup`.
 
-use super::super::helpers::*;
+use crate::lifecycle::tests::helpers::*;
 
 // -------------------------------------------------------------------------
 // apply_debug_setup — spawns extra tagged bolts

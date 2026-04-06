@@ -1,9 +1,11 @@
 use bevy::{ecs::world::CommandQueue, prelude::*};
 use rantzsoft_spatial2d::components::Velocity2D;
 
-use super::super::system::bolt_lost;
 use crate::{
-    bolt::{components::Bolt, definition::BoltDefinition, messages::BoltLost},
+    bolt::{
+        components::Bolt, definition::BoltDefinition, messages::BoltLost,
+        systems::bolt_lost::system::bolt_lost,
+    },
     shared::{GameRng, PlayfieldConfig},
 };
 

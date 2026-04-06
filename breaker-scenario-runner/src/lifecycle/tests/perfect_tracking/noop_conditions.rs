@@ -1,4 +1,4 @@
-use super::super::helpers::*;
+use crate::lifecycle::tests::helpers::*;
 
 /// Perfect tracking does not run when `InputDriver` is not `Perfect`.
 #[test]

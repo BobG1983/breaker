@@ -1,4 +1,4 @@
-use super::super::helpers::*;
+use crate::lifecycle::tests::helpers::*;
 
 // =========================================================================
 // AllBolts, Cell, AllCells, Wall, AllWalls target routing

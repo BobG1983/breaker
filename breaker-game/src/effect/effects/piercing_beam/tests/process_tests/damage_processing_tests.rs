@@ -1,5 +1,7 @@
-use super::super::helpers::*;
-use crate::state::types::{AppState, GameState, NodeState, RunState};
+use crate::{
+    effect::effects::piercing_beam::tests::helpers::*,
+    state::types::{AppState, GameState, NodeState, RunState},
+};
 
 // ── Behavior 24: process_piercing_beam damages all cells in beam path ──
 

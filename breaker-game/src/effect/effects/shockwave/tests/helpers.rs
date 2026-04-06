@@ -6,9 +6,9 @@ pub(super) use rantzsoft_physics2d::{
 };
 pub(super) use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D};
 
-pub(super) use super::super::effect::*;
 pub(super) use crate::{
     cells::{components::Cell, messages::DamageCell},
+    effect::effects::shockwave::effect::*,
     shared::CELL_LAYER,
 };
 

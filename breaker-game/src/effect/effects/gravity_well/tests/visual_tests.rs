@@ -4,8 +4,7 @@
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::{Position2D, Scale2D, Spatial};
 
-use super::super::effect::*;
-use crate::shared::GameDrawLayer;
+use crate::{effect::effects::gravity_well::effect::*, shared::GameDrawLayer};
 
 // ── Helper: App with asset resources for fire()-based visual tests ──
 

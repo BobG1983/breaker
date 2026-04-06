@@ -1,6 +1,6 @@
 //! Tests for bolt velocity override via `apply_debug_setup`.
 
-use super::super::helpers::*;
+use crate::lifecycle::tests::helpers::*;
 
 // -------------------------------------------------------------------------
 // apply_debug_setup — sets BoltVelocity when bolt_velocity is Some

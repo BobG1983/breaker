@@ -1,5 +1,4 @@
-use super::super::helpers::*;
-use crate::effect::core::EffectSourceChip;
+use crate::effect::{core::EffectSourceChip, effects::piercing_beam::tests::helpers::*};
 
 // ── Behavior 16: fire() spawns PiercingBeamRequest with correct beam geometry ──
 

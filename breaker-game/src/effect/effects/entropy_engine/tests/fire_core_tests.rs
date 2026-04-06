@@ -3,12 +3,11 @@
 
 use bevy::prelude::*;
 
-use super::super::effect::*;
 use crate::{
     effect::{
         EffectNode,
         core::{EffectKind, StagedEffects},
-        effects::damage_boost::ActiveDamageBoosts,
+        effects::{damage_boost::ActiveDamageBoosts, entropy_engine::effect::*},
     },
     shared::rng::GameRng,
 };

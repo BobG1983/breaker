@@ -1,5 +1,4 @@
-use super::super::core::*;
-use crate::breaker::definition::BreakerDefinition;
+use crate::breaker::{builder::core::*, definition::BreakerDefinition};
 
 // ── Behavior 54: MovementSettings can be constructed ──
 

@@ -2,8 +2,7 @@
 
 use bevy::prelude::*;
 
-use super::super::system::*;
-use crate::shared::PlayfieldConfig;
+use crate::{effect::effects::second_wind::system::*, shared::PlayfieldConfig};
 
 #[test]
 fn fire_with_existing_wall_does_not_spawn_second() {

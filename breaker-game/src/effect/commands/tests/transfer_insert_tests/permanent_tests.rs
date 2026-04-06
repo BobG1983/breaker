@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 
-use super::super::super::ext::*;
-use crate::effect::core::*;
+use crate::effect::{commands::ext::*, core::*};
 
 #[test]
 fn transfer_permanent_inserts_bound_effects_when_absent_and_stores_when_child() {

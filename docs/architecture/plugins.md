@@ -56,6 +56,7 @@ src/
 ├── main.rs           # Binary entry point: calls lib to build and run
 ├── app.rs            # App — constructs the Bevy App with DefaultPlugins + Game
 ├── game.rs           # Game — PluginGroup that wires together all domain plugins
+├── prelude/          # Cross-domain import convenience — re-exports only, no types
 ├── shared/           # Shared types: BaseWidth, BaseHeight, PlayfieldConfig, NodeScalingFactor (cleanup markers CleanupOnExit<S> come from rantzsoft_lifecycle)
 ├── state/            # State lifecycle, routing, menus, pause, run/node management, HUD
 ├── input/            # Raw keyboard input to GameAction translation

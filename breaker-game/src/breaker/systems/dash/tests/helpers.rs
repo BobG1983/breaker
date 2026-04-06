@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::{MaxSpeed, Velocity2D};
 
-use super::super::system::*;
 use crate::{
     breaker::{
         components::{
@@ -10,6 +9,7 @@ use crate::{
             SettleDuration, SettleTiltEase,
         },
         definition::BreakerDefinition,
+        systems::dash::system::*,
     },
     input::resources::InputActions,
     shared::PlayfieldConfig,

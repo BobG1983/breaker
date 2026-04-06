@@ -1,6 +1,6 @@
 //! Tests for multiple frame mutations on the same frame.
 
-use super::super::helpers::*;
+use crate::lifecycle::tests::helpers::*;
 
 // -------------------------------------------------------------------------
 // apply_debug_frame_mutations — multiple mutations on same frame

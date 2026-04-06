@@ -4,9 +4,11 @@ use bevy::prelude::*;
 use rantzsoft_physics2d::collision_layers::CollisionLayers;
 use rantzsoft_spatial2d::components::{GlobalPosition2D, Velocity2D};
 
-use super::super::super::{super::effect::*, helpers::*};
 use crate::{
-    effect::core::AttractionType,
+    effect::{
+        core::AttractionType,
+        effects::attraction::{effect::*, tests::helpers::*},
+    },
     shared::{BREAKER_LAYER, CELL_LAYER, WALL_LAYER},
 };
 

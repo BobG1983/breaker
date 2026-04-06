@@ -1,7 +1,6 @@
 pub(super) use bevy::prelude::*;
 
-pub(super) use super::super::system::*;
-pub(super) use crate::shared::PlayfieldConfig;
+pub(super) use crate::{effect::effects::shield::system::*, shared::PlayfieldConfig};
 
 pub(super) fn test_world() -> World {
     let mut world = World::new();

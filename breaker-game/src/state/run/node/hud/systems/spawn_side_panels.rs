@@ -3,8 +3,10 @@
 use bevy::prelude::*;
 use rantzsoft_lifecycle::CleanupOnExit;
 
-use super::super::components::{SidePanels, StatusPanel};
-use crate::state::types::RunState;
+use crate::state::{
+    run::node::hud::components::{SidePanels, StatusPanel},
+    types::RunState,
+};
 
 /// Spawns the full-screen flex row with left and right side panels.
 pub(crate) fn spawn_side_panels(mut commands: Commands, existing: Query<(), With<SidePanels>>) {

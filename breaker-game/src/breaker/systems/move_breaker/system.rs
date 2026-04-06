@@ -48,7 +48,7 @@ pub(crate) fn move_breaker(
                 data.velocity.0.x = data.velocity.0.x.clamp(-effective_max, effective_max);
             } else {
                 // Decelerate toward zero with eased speed curve
-                let effective_decel = super::super::dash::eased_decel(
+                let effective_decel = crate::breaker::systems::dash::eased_decel(
                     data.deceleration.0,
                     data.velocity.0.x.abs(),
                     effective_max,

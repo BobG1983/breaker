@@ -13,14 +13,7 @@ use crate::{
         DashSpeedMultiplier, DashState, DashStateTimer, DashTilt, DashTiltEase, DecelEasing,
         SettleDuration, SettleTiltEase,
     },
-    effect::{
-        AnchorActive, AnchorPlanted,
-        effects::{
-            flash_step::FlashStepActive, size_boost::ActiveSizeBoosts,
-            speed_boost::ActiveSpeedBoosts,
-        },
-    },
-    shared::NodeScalingFactor,
+    prelude::*,
 };
 
 // ── QueryData structs ───────────────────────────────────────────────────

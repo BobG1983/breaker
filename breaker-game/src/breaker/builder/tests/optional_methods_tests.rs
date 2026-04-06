@@ -314,39 +314,39 @@ fn without_definition_without_with_lives_defaults_to_infinite() {
     let mut world = World::new();
     let bundle = Breaker::builder()
         .dimensions(defaults.width, defaults.height, defaults.y_position)
-        .movement(super::super::core::MovementSettings {
+        .movement(crate::breaker::builder::core::MovementSettings {
             max_speed: defaults.max_speed,
             acceleration: defaults.acceleration,
             deceleration: defaults.deceleration,
             decel_ease: defaults.decel_ease,
             decel_ease_strength: defaults.decel_ease_strength,
         })
-        .dashing(super::super::core::DashSettings {
-            dash: super::super::core::DashParams {
+        .dashing(crate::breaker::builder::core::DashSettings {
+            dash: crate::breaker::builder::core::DashParams {
                 speed_multiplier: defaults.dash_speed_multiplier,
                 duration: defaults.dash_duration,
                 tilt_angle: defaults.dash_tilt_angle,
                 tilt_ease: defaults.dash_tilt_ease,
             },
-            brake: super::super::core::BrakeParams {
+            brake: crate::breaker::builder::core::BrakeParams {
                 tilt_angle: defaults.brake_tilt_angle,
                 tilt_duration: defaults.brake_tilt_duration,
                 tilt_ease: defaults.brake_tilt_ease,
                 decel_multiplier: defaults.brake_decel_multiplier,
             },
-            settle: super::super::core::SettleParams {
+            settle: crate::breaker::builder::core::SettleParams {
                 duration: defaults.settle_duration,
                 tilt_ease: defaults.settle_tilt_ease,
             },
         })
         .spread(defaults.reflection_spread)
-        .bump(super::super::core::BumpSettings {
+        .bump(crate::breaker::builder::core::BumpSettings {
             perfect_window: defaults.perfect_window,
             early_window: defaults.early_window,
             late_window: defaults.late_window,
             perfect_cooldown: defaults.perfect_bump_cooldown,
             weak_cooldown: defaults.weak_bump_cooldown,
-            feedback: super::super::core::BumpFeedbackSettings {
+            feedback: crate::breaker::builder::core::BumpFeedbackSettings {
                 duration: defaults.bump_visual_duration,
                 peak: defaults.bump_visual_peak,
                 peak_fraction: defaults.bump_visual_peak_fraction,

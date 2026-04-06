@@ -7,6 +7,43 @@
 
 ---
 
+## Prelude — Cross-Domain Imports
+
+The `crate::prelude` module provides stable import points for types used across domain boundaries. Use it to avoid verbose, fragile `crate::domain::submodule::Type` imports.
+
+### Usage
+
+- **`use crate::prelude::*`** — curated glob of the most universally used cross-domain types: entity markers (Bolt, Breaker, Cell, Wall), all states, all cross-domain messages, effect containers and active-effect components, and common resources (GameRng, InputActions, PlayfieldConfig).
+
+The prelude submodules (`components`, `messages`, `resources`, `states`) currently export the same set as the curated glob. As more cross-domain types are added, narrower types may be placed in submodules only (not the glob) for files that need them without pulling in everything.
+
+### When to Use
+
+- **Use the prelude** when a file imports 3+ types from 2+ different domains. Replace the verbose cross-domain imports with `use crate::prelude::*` and keep domain-internal imports explicit.
+- **Don't use the prelude** for 1-2 cross-domain imports — explicit paths are clearer for small import sets.
+- **Don't use the prelude for same-domain imports** — even if a type is in the prelude, import it from your own domain's module path when you're within that domain.
+
+### What Belongs in the Prelude
+
+A type belongs in `crate::prelude` if it is used by **2+ domains**. Add it to the appropriate submodule file and to the curated glob in `prelude/mod.rs`. Only add re-exports for types that have active consumers through the prelude — unused re-exports cause clippy warnings.
+
+When adding new cross-domain types (components, messages, resources, states), add them to the prelude as consumers are migrated to use it.
+
+### What Does NOT Belong in the Prelude
+
+- Domain-internal types (only used within one domain)
+- Plugins, system sets (wiring code only)
+- Constants (stay in `crate::shared`)
+- Effect dispatch enums (`EffectKind`, `Target`, `Trigger`, `TriggerContext`) — these are well-served by `use crate::effect::*` within the effect domain
+
+### Import Style
+
+- Prefer `crate::` absolute paths over `super::super::` chains (2+ levels). Single `super::` is fine and idiomatic.
+- Group related imports from the same module using Rust grouped import syntax.
+- In test files, `use crate::` paths are preferred over deep `super::` chains for readability after file splits.
+
+---
+
 ## Error Handling — Strict Dev, Lenient Release
 
 **Dev builds** (`cfg(debug_assertions)`): panic aggressively on any unexpected state. Catches bugs fast. If a system encounters something that shouldn't happen, it crashes with a clear message. `debug_assert!` for invariants throughout.

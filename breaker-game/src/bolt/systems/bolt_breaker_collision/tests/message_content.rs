@@ -10,7 +10,9 @@ fn bolt_entity_in_hit_message() {
     app.insert_resource(CapturedHitBolts::default())
         .add_systems(
             FixedUpdate,
-            collect_breaker_hit_bolts.after(super::super::system::bolt_breaker_collision),
+            collect_breaker_hit_bolts.after(
+                crate::bolt::systems::bolt_breaker_collision::system::bolt_breaker_collision,
+            ),
         );
 
     spawn_breaker_at(&mut app, 0.0, y_pos);
@@ -39,7 +41,9 @@ fn breaker_entity_in_hit_message() {
     app.insert_resource(CapturedHitPairs::default())
         .add_systems(
             FixedUpdate,
-            collect_breaker_hit_pairs.after(super::super::system::bolt_breaker_collision),
+            collect_breaker_hit_pairs.after(
+                crate::bolt::systems::bolt_breaker_collision::system::bolt_breaker_collision,
+            ),
         );
 
     let breaker_entity = spawn_breaker_at(&mut app, 200.0, y_pos);

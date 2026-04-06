@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use bevy::prelude::*;
 use rantzsoft_defaults::prelude::SeedableRegistry;
 
-use super::super::definition::{NodeLayout, NodePool};
+use crate::state::run::node::definition::{NodeLayout, NodePool};
 
 /// The active node layout for the current node.
 #[derive(Resource, Debug, Clone)]

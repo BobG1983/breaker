@@ -1,8 +1,7 @@
 use bevy::prelude::*;
 use breaker::state::run::node::messages::ReverseTimePenalty;
 
-use super::super::*;
-use crate::invariants::*;
+use crate::invariants::{checkers::timer_monotonically_decreasing::*, *};
 
 pub(super) fn tick(app: &mut App) {
     let timestep = app.world().resource::<Time<Fixed>>().timestep();

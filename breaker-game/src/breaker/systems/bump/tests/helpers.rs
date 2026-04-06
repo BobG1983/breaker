@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 
-use super::super::{grade_bump, update_bump};
 use crate::{
     bolt::messages::BoltImpactBreaker,
     breaker::{
@@ -10,6 +9,7 @@ use crate::{
         },
         definition::BreakerDefinition,
         messages::{BumpPerformed, BumpWhiffed},
+        systems::bump::{grade_bump, update_bump},
     },
     input::resources::{GameAction, InputActions},
 };

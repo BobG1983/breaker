@@ -4,11 +4,14 @@
 use bevy::prelude::*;
 use rantzsoft_lifecycle::CleanupOnExit;
 
-use super::super::helpers::*;
 use crate::{
     fx::{FadeOut, PunchScale},
     state::{
-        run::{components::HighlightPopup, messages::HighlightTriggered, resources::HighlightKind},
+        run::{
+            components::HighlightPopup, messages::HighlightTriggered,
+            node::lifecycle::systems::spawn_highlight_text::tests::helpers::*,
+            resources::HighlightKind,
+        },
         types::NodeState,
     },
 };

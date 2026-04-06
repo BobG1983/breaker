@@ -3,8 +3,7 @@
 use bevy::prelude::*;
 use breaker::shared::PlayfieldConfig;
 
-use super::super::*;
-use crate::invariants::*;
+use crate::invariants::{checkers::bolt_in_bounds::*, *};
 
 pub(super) fn test_app_bolt_in_bounds() -> App {
     let mut app = App::new();

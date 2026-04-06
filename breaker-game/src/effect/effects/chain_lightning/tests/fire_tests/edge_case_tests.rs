@@ -1,8 +1,7 @@
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Position2D;
 
-use super::super::helpers::*;
-use crate::cells::messages::DamageCell;
+use crate::{cells::messages::DamageCell, effect::effects::chain_lightning::tests::helpers::*};
 
 // ── Behavior 3: fire() with arcs=0 does nothing ──
 

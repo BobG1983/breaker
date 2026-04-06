@@ -39,7 +39,7 @@ impl PulseEmitter {
     /// Effective maximum radius: `base_range + (stacks - 1) * range_per_level`.
     #[must_use]
     pub(crate) fn effective_max_radius(&self) -> f32 {
-        super::super::effective_range(self.base_range, self.range_per_level, self.stacks)
+        crate::effect::effects::effective_range(self.base_range, self.range_per_level, self.stacks)
     }
 }
 

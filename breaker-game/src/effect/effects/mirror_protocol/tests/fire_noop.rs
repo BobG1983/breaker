@@ -3,13 +3,13 @@
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
-use super::super::effect::*;
 use crate::{
     bolt::{
         components::{Bolt, ExtraBolt, ImpactSide, LastImpact},
         definition::BoltDefinition,
         registry::BoltRegistry,
     },
+    effect::effects::mirror_protocol::effect::*,
     shared::rng::GameRng,
 };
 

@@ -4,9 +4,9 @@ use bevy::prelude::*;
 use rantzsoft_physics2d::constraint::DistanceConstraint;
 use rantzsoft_spatial2d::components::Position2D;
 
-use super::super::effect::*;
 use crate::{
     bolt::{definition::BoltDefinition, registry::BoltRegistry},
+    effect::effects::chain_bolt::effect::*,
     shared::rng::GameRng,
 };
 

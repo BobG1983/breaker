@@ -2,8 +2,9 @@
 
 use rantzsoft_spatial2d::components::{Position2D, Rotation2D, Scale2D};
 
-use super::super::helpers::*;
-use crate::{fx::EffectFlashTimer, shared::GameDrawLayer};
+use crate::{
+    effect::effects::piercing_beam::tests::helpers::*, fx::EffectFlashTimer, shared::GameDrawLayer,
+};
 
 // ── Test app with asset support ────────────────────────────────────
 

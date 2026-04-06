@@ -177,7 +177,8 @@ fn ccd_uses_aabb2d_larger_than_cell_dimensions_to_detect_hit() {
     let mut app = test_app();
     app.insert_resource(HitCells::default()).add_systems(
         FixedUpdate,
-        collect_cell_hits.after(super::super::system::bolt_cell_collision),
+        collect_cell_hits
+            .after(crate::bolt::systems::bolt_cell_collision::system::bolt_cell_collision),
     );
 
     let cell_y = 100.0;
@@ -223,7 +224,8 @@ fn cell_with_aabb2d_but_no_cell_dimensions_is_collision_candidate() {
     let mut app = test_app();
     app.insert_resource(HitCells::default()).add_systems(
         FixedUpdate,
-        collect_cell_hits.after(super::super::system::bolt_cell_collision),
+        collect_cell_hits
+            .after(crate::bolt::systems::bolt_cell_collision::system::bolt_cell_collision),
     );
 
     let bc = super::helpers::test_bolt_definition();

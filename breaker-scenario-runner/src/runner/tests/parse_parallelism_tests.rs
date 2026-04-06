@@ -1,6 +1,6 @@
 //! Tests for `parse_parallelism`, `Parallelism::resolve`, and `Parallelism` Display.
 
-use super::super::execution::{Parallelism, parse_parallelism};
+use crate::runner::execution::{Parallelism, parse_parallelism};
 
 // -------------------------------------------------------------------------
 // parse_parallelism — parses "all" or a positive integer

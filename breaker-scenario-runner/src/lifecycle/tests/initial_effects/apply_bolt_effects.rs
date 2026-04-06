@@ -1,4 +1,4 @@
-use super::super::helpers::*;
+use crate::lifecycle::tests::helpers::*;
 
 // =========================================================================
 // apply_pending_bolt_effects

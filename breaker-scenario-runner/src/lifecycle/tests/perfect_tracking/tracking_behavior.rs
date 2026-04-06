@@ -1,4 +1,4 @@
-use super::super::helpers::*;
+use crate::lifecycle::tests::helpers::*;
 
 /// Perfect tracking moves breaker x toward bolt x with random offset when
 /// bolt moves downward (negative y velocity).

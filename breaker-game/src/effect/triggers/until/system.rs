@@ -72,7 +72,7 @@ pub(crate) fn desugar_until(
 
 /// Test-only registration: adds `desugar_until` to `FixedUpdate` without `run_if` guards.
 ///
-/// Production registration is handled by [`super::super::register`] in `triggers/mod.rs`,
+/// Production registration is handled by [`crate::effect::triggers::register`] in `triggers/mod.rs`,
 /// which adds the `run_if(in_state(NodeState::Playing))` condition.
 #[cfg(test)]
 pub(crate) fn register(app: &mut App) {

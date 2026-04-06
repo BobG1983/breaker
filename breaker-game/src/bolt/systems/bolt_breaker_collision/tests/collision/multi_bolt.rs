@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Velocity2D;
 
-use super::super::helpers::*;
+use crate::bolt::systems::bolt_breaker_collision::tests::helpers::*;
 
 #[test]
 fn multiple_bolts_each_reflect_off_breaker() {
@@ -12,7 +12,8 @@ fn multiple_bolts_each_reflect_off_breaker() {
     let y_pos = -250.0;
     app.insert_resource(HitBreakers::default()).add_systems(
         FixedUpdate,
-        collect_breaker_hits.after(super::super::super::system::bolt_breaker_collision),
+        collect_breaker_hits
+            .after(crate::bolt::systems::bolt_breaker_collision::system::bolt_breaker_collision),
     );
     spawn_breaker_at(&mut app, 0.0, y_pos);
 

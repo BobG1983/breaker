@@ -1,5 +1,7 @@
-use super::super::helpers::*;
-use crate::effect::{core::EffectSourceChip, effects::damage_boost::ActiveDamageBoosts};
+use crate::effect::{
+    core::EffectSourceChip,
+    effects::{damage_boost::ActiveDamageBoosts, tether_beam::tests::helpers::*},
+};
 
 // ══════════════════════════════════════════════════════════════════
 // Section B: Standard mode fire (chain: false) — new assertions

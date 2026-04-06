@@ -1,7 +1,9 @@
 use bevy::prelude::*;
 
-use super::super::system::dispatch_bolt_effects;
-use crate::bolt::{definition::BoltDefinition, registry::BoltRegistry};
+use crate::bolt::{
+    definition::BoltDefinition, registry::BoltRegistry,
+    systems::dispatch_bolt_effects::system::dispatch_bolt_effects,
+};
 
 pub(super) const TEST_BOLT_NAME: &str = "TestBolt";
 

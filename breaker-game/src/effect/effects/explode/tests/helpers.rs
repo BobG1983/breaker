@@ -7,9 +7,9 @@ use rantzsoft_physics2d::{
 };
 use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D};
 
-use super::super::effect::*;
 use crate::{
     cells::{components::Cell, messages::DamageCell},
+    effect::effects::explode::effect::*,
     shared::CELL_LAYER,
 };
 

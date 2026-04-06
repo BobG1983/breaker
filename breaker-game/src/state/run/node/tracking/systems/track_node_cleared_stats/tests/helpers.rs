@@ -1,10 +1,12 @@
 use bevy::prelude::*;
 
-use super::super::system::track_node_cleared_stats;
 use crate::state::run::{
     definition::HighlightConfig,
     messages::HighlightTriggered,
-    node::{messages::NodeCleared, resources::NodeTimer},
+    node::{
+        messages::NodeCleared, resources::NodeTimer,
+        tracking::systems::track_node_cleared_stats::system::track_node_cleared_stats,
+    },
     resources::{HighlightTracker, NodeOutcome, RunStats},
 };
 

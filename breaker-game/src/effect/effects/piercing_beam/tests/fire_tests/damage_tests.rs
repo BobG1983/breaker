@@ -1,4 +1,4 @@
-use super::super::helpers::*;
+use crate::effect::effects::piercing_beam::tests::helpers::*;
 
 // ── Behavior 19: fire() applies damage_mult ──
 

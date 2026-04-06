@@ -13,7 +13,7 @@ impl EffectKind {
                 range_per_level,
                 stacks,
                 speed,
-            } => super::super::super::super::effects::shockwave::fire(
+            } => crate::effect::effects::shockwave::fire(
                 entity,
                 *base_range,
                 *range_per_level,
@@ -23,54 +23,29 @@ impl EffectKind {
                 world,
             ),
             Self::SpeedBoost { multiplier } => {
-                super::super::super::super::effects::speed_boost::fire(
-                    entity,
-                    *multiplier,
-                    source_chip,
-                    world,
-                );
+                crate::effect::effects::speed_boost::fire(entity, *multiplier, source_chip, world);
             }
             Self::DamageBoost(v) => {
-                super::super::super::super::effects::damage_boost::fire(
-                    entity,
-                    *v,
-                    source_chip,
-                    world,
-                );
+                crate::effect::effects::damage_boost::fire(entity, *v, source_chip, world);
             }
             Self::Vulnerable { multiplier } => {
-                super::super::super::super::effects::vulnerable::fire(
-                    entity,
-                    *multiplier,
-                    source_chip,
-                    world,
-                );
+                crate::effect::effects::vulnerable::fire(entity, *multiplier, source_chip, world);
             }
             Self::Piercing(v) => {
-                super::super::super::super::effects::piercing::fire(entity, *v, source_chip, world);
+                crate::effect::effects::piercing::fire(entity, *v, source_chip, world);
             }
             Self::SizeBoost(v) => {
-                super::super::super::super::effects::size_boost::fire(
-                    entity,
-                    *v,
-                    source_chip,
-                    world,
-                );
+                crate::effect::effects::size_boost::fire(entity, *v, source_chip, world);
             }
             Self::BumpForce(v) => {
-                super::super::super::super::effects::bump_force::fire(
-                    entity,
-                    *v,
-                    source_chip,
-                    world,
-                );
+                crate::effect::effects::bump_force::fire(entity, *v, source_chip, world);
             }
             Self::Attraction {
                 attraction_type,
                 force,
                 max_force,
             } => {
-                super::super::super::super::effects::attraction::fire(
+                crate::effect::effects::attraction::fire(
                     entity,
                     *attraction_type,
                     *force,
@@ -80,15 +55,10 @@ impl EffectKind {
                 );
             }
             Self::LoseLife => {
-                super::super::super::super::effects::life_lost::fire(entity, source_chip, world);
+                crate::effect::effects::life_lost::fire(entity, source_chip, world);
             }
             Self::TimePenalty { seconds } => {
-                super::super::super::super::effects::time_penalty::fire(
-                    entity,
-                    *seconds,
-                    source_chip,
-                    world,
-                );
+                crate::effect::effects::time_penalty::fire(entity, *seconds, source_chip, world);
             }
             _ => self.fire_aoe_and_spawn(entity, source_chip, world),
         }
@@ -102,7 +72,7 @@ impl EffectKind {
                 lifespan,
                 inherit,
             } => {
-                super::super::super::super::effects::spawn_bolts::fire(
+                crate::effect::effects::spawn_bolts::fire(
                     entity,
                     *count,
                     *lifespan,
@@ -112,7 +82,7 @@ impl EffectKind {
                 );
             }
             Self::ChainBolt { tether_distance } => {
-                super::super::super::super::effects::chain_bolt::fire(
+                crate::effect::effects::chain_bolt::fire(
                     entity,
                     *tether_distance,
                     source_chip,
@@ -123,7 +93,7 @@ impl EffectKind {
                 duration,
                 reflection_cost,
             } => {
-                super::super::super::super::effects::shield::fire(
+                crate::effect::effects::shield::fire(
                     entity,
                     *duration,
                     *reflection_cost,
@@ -136,7 +106,7 @@ impl EffectKind {
                 range,
                 damage_mult,
                 arc_speed,
-            } => super::super::super::super::effects::chain_lightning::fire(
+            } => crate::effect::effects::chain_lightning::fire(
                 entity,
                 *arcs,
                 *range,
@@ -146,7 +116,7 @@ impl EffectKind {
                 world,
             ),
             Self::PiercingBeam { damage_mult, width } => {
-                super::super::super::super::effects::piercing_beam::fire(
+                crate::effect::effects::piercing_beam::fire(
                     entity,
                     *damage_mult,
                     *width,
@@ -160,9 +130,9 @@ impl EffectKind {
                 stacks,
                 speed,
                 interval,
-            } => super::super::super::super::effects::pulse::fire(
+            } => crate::effect::effects::pulse::fire(
                 entity,
-                super::super::super::super::effects::pulse::PulseEmitter {
+                crate::effect::effects::pulse::PulseEmitter {
                     base_range: *base_range,
                     range_per_level: *range_per_level,
                     stacks: *stacks,
@@ -174,7 +144,7 @@ impl EffectKind {
                 world,
             ),
             Self::SecondWind => {
-                super::super::super::super::effects::second_wind::fire(entity, source_chip, world);
+                crate::effect::effects::second_wind::fire(entity, source_chip, world);
             }
             _ => self.fire_utility_and_spawn(entity, source_chip, world),
         }
@@ -186,7 +156,7 @@ impl EffectKind {
             Self::SpawnPhantom {
                 duration,
                 max_active,
-            } => super::super::super::super::effects::spawn_phantom::fire(
+            } => crate::effect::effects::spawn_phantom::fire(
                 entity,
                 *duration,
                 *max_active,
@@ -198,7 +168,7 @@ impl EffectKind {
                 duration,
                 radius,
                 max,
-            } => super::super::super::super::effects::gravity_well::fire(
+            } => crate::effect::effects::gravity_well::fire(
                 entity,
                 *strength,
                 *duration,
@@ -208,15 +178,10 @@ impl EffectKind {
                 world,
             ),
             Self::RandomEffect(pool) => {
-                super::super::super::super::effects::random_effect::fire(
-                    entity,
-                    pool,
-                    source_chip,
-                    world,
-                );
+                crate::effect::effects::random_effect::fire(entity, pool, source_chip, world);
             }
             Self::EntropyEngine { max_effects, pool } => {
-                super::super::super::super::effects::entropy_engine::fire(
+                crate::effect::effects::entropy_engine::fire(
                     entity,
                     *max_effects,
                     pool,
@@ -225,7 +190,7 @@ impl EffectKind {
                 );
             }
             Self::RampingDamage { damage_per_trigger } => {
-                super::super::super::super::effects::ramping_damage::fire(
+                crate::effect::effects::ramping_damage::fire(
                     entity,
                     *damage_per_trigger,
                     source_chip,
@@ -233,13 +198,7 @@ impl EffectKind {
                 );
             }
             Self::Explode { range, damage } => {
-                super::super::super::super::effects::explode::fire(
-                    entity,
-                    *range,
-                    *damage,
-                    source_chip,
-                    world,
-                );
+                crate::effect::effects::explode::fire(entity, *range, *damage, source_chip, world);
             }
             _ => self.fire_breaker_effects(entity, source_chip, world),
         }
@@ -249,15 +208,10 @@ impl EffectKind {
     fn fire_breaker_effects(&self, entity: Entity, source_chip: &str, world: &mut World) {
         match self {
             Self::QuickStop { multiplier } => {
-                super::super::super::super::effects::quick_stop::fire(
-                    entity,
-                    *multiplier,
-                    source_chip,
-                    world,
-                );
+                crate::effect::effects::quick_stop::fire(entity, *multiplier, source_chip, world);
             }
             Self::TetherBeam { damage_mult, chain } => {
-                super::super::super::super::effects::tether_beam::fire(
+                crate::effect::effects::tether_beam::fire(
                     entity,
                     *damage_mult,
                     *chain,
@@ -266,19 +220,14 @@ impl EffectKind {
                 );
             }
             Self::MirrorProtocol { inherit } => {
-                super::super::super::super::effects::mirror_protocol::fire(
-                    entity,
-                    *inherit,
-                    source_chip,
-                    world,
-                );
+                crate::effect::effects::mirror_protocol::fire(entity, *inherit, source_chip, world);
             }
             Self::Anchor {
                 bump_force_multiplier,
                 perfect_window_multiplier,
                 plant_delay,
             } => {
-                super::super::super::super::effects::anchor::fire(
+                crate::effect::effects::anchor::fire(
                     entity,
                     *bump_force_multiplier,
                     *perfect_window_multiplier,
@@ -288,7 +237,7 @@ impl EffectKind {
                 );
             }
             Self::FlashStep => {
-                super::super::super::super::effects::flash_step::fire(entity, source_chip, world);
+                crate::effect::effects::flash_step::fire(entity, source_chip, world);
             }
             Self::CircuitBreaker {
                 bumps_required,
@@ -297,7 +246,7 @@ impl EffectKind {
                 shockwave_range,
                 shockwave_speed,
             } => {
-                use super::super::super::super::effects::circuit_breaker;
+                use crate::effect::effects::circuit_breaker;
                 let config = circuit_breaker::CircuitBreakerConfig {
                     bumps_required: *bumps_required,
                     spawn_count: *spawn_count,

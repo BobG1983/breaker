@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 
-use super::super::ext::*;
-use crate::effect::{core::*, effects::damage_boost::ActiveDamageBoosts};
+use crate::effect::{commands::ext::*, core::*, effects::damage_boost::ActiveDamageBoosts};
 
 // -- Section I: commands.rs source_chip threading tests ───────────────────
 

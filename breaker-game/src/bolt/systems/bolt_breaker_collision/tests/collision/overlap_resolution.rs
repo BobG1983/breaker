@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
-use super::super::helpers::*;
+use crate::bolt::systems::bolt_breaker_collision::tests::helpers::*;
 
 #[test]
 fn overlap_resolved_writes_position2d_y() {
@@ -12,7 +12,8 @@ fn overlap_resolved_writes_position2d_y() {
     let y_pos = -250.0;
     app.insert_resource(HitBreakers::default()).add_systems(
         FixedUpdate,
-        collect_breaker_hits.after(super::super::super::system::bolt_breaker_collision),
+        collect_breaker_hits
+            .after(crate::bolt::systems::bolt_breaker_collision::system::bolt_breaker_collision),
     );
 
     let animated_y = y_pos + 10.0;
@@ -50,7 +51,8 @@ fn upward_bolt_inside_breaker_pushed_out_no_message() {
     let y_pos = -250.0;
     app.insert_resource(HitBreakers::default()).add_systems(
         FixedUpdate,
-        collect_breaker_hits.after(super::super::super::system::bolt_breaker_collision),
+        collect_breaker_hits
+            .after(crate::bolt::systems::bolt_breaker_collision::system::bolt_breaker_collision),
     );
 
     let animated_y = y_pos + 10.0;
@@ -92,7 +94,8 @@ fn upward_bolt_side_hit_is_not_reflected() {
     let breaker_y = -250.0;
     app.insert_resource(HitBreakers::default()).add_systems(
         FixedUpdate,
-        collect_breaker_hits.after(super::super::super::system::bolt_breaker_collision),
+        collect_breaker_hits
+            .after(crate::bolt::systems::bolt_breaker_collision::system::bolt_breaker_collision),
     );
     spawn_breaker_at(&mut app, 0.0, breaker_y);
 
@@ -125,7 +128,8 @@ fn downward_bolt_side_hit_is_reflected() {
     let breaker_y = -250.0;
     app.insert_resource(HitBreakers::default()).add_systems(
         FixedUpdate,
-        collect_breaker_hits.after(super::super::super::system::bolt_breaker_collision),
+        collect_breaker_hits
+            .after(crate::bolt::systems::bolt_breaker_collision::system::bolt_breaker_collision),
     );
     spawn_breaker_at(&mut app, 0.0, breaker_y);
 

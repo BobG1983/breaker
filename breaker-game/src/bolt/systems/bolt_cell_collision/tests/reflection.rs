@@ -9,7 +9,8 @@ fn vertical_adjacent_cells_no_cascade() {
     let cc = crate::cells::resources::CellConfig::default();
     app.insert_resource(HitCells::default()).add_systems(
         FixedUpdate,
-        collect_cell_hits.after(super::super::system::bolt_cell_collision),
+        collect_cell_hits
+            .after(crate::bolt::systems::bolt_cell_collision::system::bolt_cell_collision),
     );
 
     let upper_y = 100.0;
@@ -41,7 +42,8 @@ fn horizontal_adjacent_cells_no_cascade() {
     let cc = crate::cells::resources::CellConfig::default();
     app.insert_resource(HitCells::default()).add_systems(
         FixedUpdate,
-        collect_cell_hits.after(super::super::system::bolt_cell_collision),
+        collect_cell_hits
+            .after(crate::bolt::systems::bolt_cell_collision::system::bolt_cell_collision),
     );
 
     let left_x = 0.0;
@@ -73,7 +75,8 @@ fn grid_entry_from_below_hits_one_cell() {
     let cc = crate::cells::resources::CellConfig::default();
     app.insert_resource(HitCells::default()).add_systems(
         FixedUpdate,
-        collect_cell_hits.after(super::super::system::bolt_cell_collision),
+        collect_cell_hits
+            .after(crate::bolt::systems::bolt_cell_collision::system::bolt_cell_collision),
     );
 
     // 3x2 mini-grid at real spacing

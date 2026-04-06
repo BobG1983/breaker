@@ -1,9 +1,9 @@
 use bevy::{ecs::world::CommandQueue, prelude::*};
 use rantzsoft_spatial2d::components::Velocity2D;
 
-use super::super::effect::*;
 use crate::{
     bolt::{components::Bolt, definition::BoltDefinition},
+    effect::effects::gravity_well::effect::*,
     state::types::{AppState, GameState, NodeState, RunState},
 };
 

@@ -1,7 +1,9 @@
 use bevy::prelude::*;
 
-use super::super::system::propagate_bolt_definition;
-use crate::bolt::{definition::BoltDefinition, registry::BoltRegistry};
+use crate::{
+    bolt::{definition::BoltDefinition, registry::BoltRegistry},
+    debug::hot_reload::systems::propagate_bolt_definition::system::propagate_bolt_definition,
+};
 
 pub(super) const TEST_BOLT_NAME: &str = "TestBolt";
 

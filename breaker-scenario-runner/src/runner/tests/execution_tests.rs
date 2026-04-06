@@ -1,6 +1,6 @@
 //! Tests for `print_summary` and `build_run_list`.
 
-use super::super::execution::{build_run_list, print_summary};
+use crate::runner::execution::{build_run_list, print_summary};
 
 // -------------------------------------------------------------------------
 // print_summary — prints cross-scenario summary and returns exit code

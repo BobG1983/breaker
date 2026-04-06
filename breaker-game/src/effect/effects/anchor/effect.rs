@@ -3,8 +3,10 @@
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Velocity2D;
 
-use super::super::bump_force::ActiveBumpForces;
-use crate::{breaker::components::DashState, state::types::NodeState};
+use crate::{
+    breaker::components::DashState, effect::effects::bump_force::ActiveBumpForces,
+    state::types::NodeState,
+};
 
 /// Configuration component for the Anchor effect on a breaker entity.
 ///

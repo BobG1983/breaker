@@ -4,8 +4,8 @@ use bevy::prelude::*;
 use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{Position2D, Scale2D};
 
-use super::super::system::*;
 use crate::{
+    effect::effects::second_wind::system::*,
     shared::{BOLT_LAYER, PlayfieldConfig, WALL_LAYER},
     walls::components::Wall,
 };

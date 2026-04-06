@@ -1,6 +1,6 @@
 //! Tests for `map_forced_game_state` and `map_scenario_dash_state`.
 
-use super::super::helpers::*;
+use crate::lifecycle::tests::helpers::*;
 
 // -------------------------------------------------------------------------
 // map_forced_game_state -- maps all variants correctly

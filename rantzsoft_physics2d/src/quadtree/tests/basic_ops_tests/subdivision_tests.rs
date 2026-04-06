@@ -1,7 +1,13 @@
 use bevy::prelude::*;
 
-use super::super::{small_aabb, spawn_entities};
-use crate::{aabb::Aabb2D, collision_layers::CollisionLayers, quadtree::Quadtree};
+use crate::{
+    aabb::Aabb2D,
+    collision_layers::CollisionLayers,
+    quadtree::{
+        Quadtree,
+        tests::{small_aabb, spawn_entities},
+    },
+};
 
 #[test]
 #[expect(

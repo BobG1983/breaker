@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use rantzsoft_spatial2d::prelude::*;
 
-use super::super::effect::*;
+use crate::effect::effects::gravity_well::effect::*;
 
 /// Helper: call `fire()` with standard test values. Only `entity`, `max`, and `world` vary.
 fn fire_well(entity: Entity, max: u32, world: &mut World) {

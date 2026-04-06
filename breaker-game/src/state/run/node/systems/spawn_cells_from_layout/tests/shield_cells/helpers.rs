@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 
-use super::super::super::system::spawn_cells_from_layout;
 use crate::{
     cells::{
         CellTypeDefinition,
@@ -10,6 +9,7 @@ use crate::{
     shared::PlayfieldConfig,
     state::run::node::{
         ActiveNodeLayout, NodeLayout, definition::NodePool, messages::CellsSpawned,
+        systems::spawn_cells_from_layout::system::spawn_cells_from_layout,
     },
 };
 

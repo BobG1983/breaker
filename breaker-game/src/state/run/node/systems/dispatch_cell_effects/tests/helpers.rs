@@ -1,9 +1,11 @@
 use bevy::prelude::*;
 
-use super::super::system::dispatch_cell_effects;
-use crate::cells::{
-    definition::{CellBehavior, CellTypeDefinition},
-    resources::CellTypeRegistry,
+use crate::{
+    cells::{
+        definition::{CellBehavior, CellTypeDefinition},
+        resources::CellTypeRegistry,
+    },
+    state::run::node::systems::dispatch_cell_effects::system::dispatch_cell_effects,
 };
 
 /// Builds a minimal cell type definition with the given id, alias, hp, and effects.

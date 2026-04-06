@@ -1,6 +1,6 @@
 //! Tests for noop, `SetDashState`, and `SetTimerRemaining` frame mutations.
 
-use super::super::helpers::*;
+use crate::lifecycle::tests::helpers::*;
 
 // -------------------------------------------------------------------------
 // apply_debug_frame_mutations — no-op when frame_mutations is None

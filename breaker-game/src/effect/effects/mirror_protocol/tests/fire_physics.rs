@@ -7,13 +7,13 @@ use rantzsoft_spatial2d::components::{
     BaseSpeed, MaxSpeed, MinSpeed, Position2D, PreviousPosition, Scale2D, Velocity2D,
 };
 
-use super::super::effect::*;
 use crate::{
     bolt::{
         components::{Bolt, BoltDefinitionRef, BoltRadius, ExtraBolt, ImpactSide, LastImpact},
         definition::BoltDefinition,
         registry::BoltRegistry,
     },
+    effect::effects::mirror_protocol::effect::*,
     shared::{BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, GameDrawLayer, WALL_LAYER, rng::GameRng},
     state::types::NodeState,
 };

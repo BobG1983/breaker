@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::super::super::definitions::*;
+use crate::components::definitions::*;
 
 // ── Velocity2D::with_speed() ────────────────────────────────
 

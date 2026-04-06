@@ -4,8 +4,10 @@
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Velocity2D;
 
-use super::super::helpers::*;
-use crate::{bolt::components::PiercingRemaining, effect::effects::piercing::ActivePiercings};
+use crate::{
+    bolt::{components::PiercingRemaining, systems::bolt_cell_collision::tests::helpers::*},
+    effect::effects::piercing::ActivePiercings,
+};
 
 #[test]
 fn two_stacked_cells_both_pierced_in_one_frame() {
@@ -14,10 +16,11 @@ fn two_stacked_cells_both_pierced_in_one_frame() {
     // Cell A at (0.0, 60.0), Cell B at (0.0, 90.0), both CellHealth(10).
     // Two BoltImpactCell messages. PiercingRemaining goes from 2 to 0.
     let mut app = test_app();
-    let bc = super::super::helpers::test_bolt_definition();
+    let bc = crate::bolt::systems::bolt_cell_collision::tests::helpers::test_bolt_definition();
     app.insert_resource(FullHitMessages::default()).add_systems(
         FixedUpdate,
-        collect_full_hits.after(super::super::super::system::bolt_cell_collision),
+        collect_full_hits
+            .after(crate::bolt::systems::bolt_cell_collision::system::bolt_cell_collision),
     );
 
     // Place bolt below both cells, moving upward at high speed
@@ -53,11 +56,12 @@ fn skip_set_is_per_bolt_two_bolts_pierce_independently() {
     // Two bolts each with PiercingRemaining(1), one cell in each bolt's path.
     // Each bolt pierces its cell independently. Two BoltImpactCell messages total.
     let mut app = test_app();
-    let bc = super::super::helpers::test_bolt_definition();
+    let bc = crate::bolt::systems::bolt_cell_collision::tests::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
     app.insert_resource(FullHitMessages::default()).add_systems(
         FixedUpdate,
-        collect_full_hits.after(super::super::super::system::bolt_cell_collision),
+        collect_full_hits
+            .after(crate::bolt::systems::bolt_cell_collision::system::bolt_cell_collision),
     );
 
     let left_cell_y = 100.0;
@@ -106,7 +110,7 @@ fn bolt_with_exhausted_piercing_reflects_normally() {
     // Bolt has ActivePiercings(vec![2]) but PiercingRemaining(0) — all pierces used up.
     // It should reflect off a destroyable cell, not pierce through it.
     let mut app = test_app();
-    let bc = super::super::helpers::test_bolt_definition();
+    let bc = crate::bolt::systems::bolt_cell_collision::tests::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
 
     let cell_y = 100.0;
@@ -146,10 +150,11 @@ fn piercing_bolt_hits_grid_adjacent_cells() {
     // Bolt with ActivePiercings(vec![2]), PiercingRemaining(2) should pierce through
     // both grid-adjacent cells (spaced GRID_STEP_Y=28 apart) in one frame.
     let mut app = test_app();
-    let bc = super::super::helpers::test_bolt_definition();
+    let bc = crate::bolt::systems::bolt_cell_collision::tests::helpers::test_bolt_definition();
     app.insert_resource(HitCells::default()).add_systems(
         FixedUpdate,
-        collect_cell_hits.after(super::super::super::system::bolt_cell_collision),
+        collect_cell_hits
+            .after(crate::bolt::systems::bolt_cell_collision::system::bolt_cell_collision),
     );
 
     let upper_cell_y = 100.0;

@@ -4,7 +4,7 @@
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Position2D;
 
-use super::super::effect::*;
+use crate::effect::effects::explode::effect::*;
 
 // -- Behavior 19: fire() spawns ExplodeRequest entity at source position ──
 
