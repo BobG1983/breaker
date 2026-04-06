@@ -12,7 +12,7 @@
 8. **[NEEDS DETAIL]** Node sequencing refactor — per-tier batching instead of full upfront sequence — [detail](detail/node-sequencing-refactor.md)
 9. **[NEEDS DETAIL]** Scenario runner performance audit — [detail](detail/scenario-runner-performance-audit.md)
 10. **[NEEDS DETAIL]** Delete `PhysicsFrozenDuringPause` invariant — replace with unit tests — [detail](detail/delete-physics-frozen-invariant.md)
-11. **[ready]** Scenario runner: verbose violation log file — [detail](detail/scenario-runner-verbose-violation-log.md)
+11. **[NEEDS DETAIL]** Scenario runner: verbose log + visual mode (tiling, resolution-independent render, streaming execution) — [detail](detail/scenario-runner-verbose-violation-log.md)
 12. **[ready]** Phase 5c: Crate setup + plugin separation — [detail](detail/phase-5c-render-plugin-separation.md)
 13. **[ready]** Phase 5d: Post-processing pipeline — [detail](detail/phase-5d-post-processing-pipeline.md)
 14. **[ready]** Phase 5e: Particle system — [detail](detail/phase-5e-particle-system.md)
