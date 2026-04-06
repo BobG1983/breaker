@@ -18,7 +18,7 @@ use crate::{
     state::{
         run::node::{
             sets::NodeSystems,
-            systems::{apply_node_scale_to_bolt, reset_bolt},
+            systems::{apply_node_scale_to_bolt, apply_node_scale_to_late_bolts, reset_bolt},
         },
         types::NodeState,
     },
@@ -77,6 +77,8 @@ impl Plugin for BoltPlugin {
                         )
                         .after(clamp_bolt_to_playfield)
                         .in_set(BoltSystems::BoltLost),
+                    // Tag late-spawned bolts with NodeScalingFactor
+                    apply_node_scale_to_late_bolts,
                     // Tick bolt lifespan timers and request destruction on expiry
                     tick_bolt_lifespan.before(BoltSystems::BoltLost),
                     // Cleanup destroyed bolts after effect bridges evaluate
