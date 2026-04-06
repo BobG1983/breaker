@@ -238,6 +238,21 @@ mod tests {
     }
 
     // =======================================================================
+    // FullscreenMaterial: node_label matches node_edges
+    // =======================================================================
+
+    #[test]
+    fn node_label_appears_in_node_edges() {
+        use bevy::render::render_graph::RenderLabel;
+        let label = TransitionEffect::node_label().intern();
+        let edges = TransitionEffect::node_edges();
+        assert!(
+            edges.contains(&label),
+            "node_label() must appear in node_edges() — mismatch causes InvalidNode panic"
+        );
+    }
+
+    // =======================================================================
     // Spec Behavior 4: EffectType constants
     // =======================================================================
 
