@@ -1,7 +1,7 @@
 //! System to select the active node layout for the current node.
 
 use bevy::prelude::*;
-use tracing::{info, warn};
+use tracing::warn;
 
 use crate::state::run::{
     node::{ActiveNodeLayout, NodeLayoutRegistry, ScenarioLayoutOverride},
@@ -29,7 +29,6 @@ pub(crate) fn set_active_layout(
 
     if let Some(name) = &override_res.0 {
         if let Some(layout) = registry.get_by_name(name) {
-            info!("node layout: {}", layout.name);
             commands.insert_resource(ActiveNodeLayout(layout.clone()));
             return;
         }
@@ -43,7 +42,6 @@ pub(crate) fn set_active_layout(
     let Some(layout) = registry.get_by_index(index) else {
         return;
     };
-    info!("node layout: {}", layout.name);
     commands.insert_resource(ActiveNodeLayout(layout.clone()));
 }
 

@@ -6,7 +6,6 @@ use rantzsoft_spatial2d::{
     components::{Position2D, Scale2D},
     propagation::PositionPropagation,
 };
-use tracing::debug;
 
 use crate::{
     cells::{
@@ -125,7 +124,6 @@ pub(crate) fn spawn_cells_from_grid(
     let start_x = -grid_width / 2.0 + cell_width / 2.0;
     let start_y = playfield.top() - layout.grid_top_offset - cell_height / 2.0;
 
-    debug!("grid scale={scale:.3} cell={cell_width:.1}x{cell_height:.1}");
     let rect_mesh = meshes.add(Rectangle::new(1.0, 1.0));
     let mut required_count = 0u32;
 
@@ -305,7 +303,7 @@ pub(crate) fn spawn_cells_from_layout(
     mut cells_spawned: MessageWriter<CellsSpawned>,
 ) {
     let hp_mult = resolve_hp_mult(ctx.run_state.as_deref(), ctx.node_sequence.as_deref());
-    let count = spawn_cells_from_grid(
+    spawn_cells_from_grid(
         &mut commands,
         &ctx.cell_config,
         &ctx.playfield_config,
@@ -317,6 +315,5 @@ pub(crate) fn spawn_cells_from_layout(
         },
         hp_mult,
     );
-    debug!("cells spawned count={count}");
     cells_spawned.write(CellsSpawned);
 }
