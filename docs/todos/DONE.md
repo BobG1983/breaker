@@ -11,3 +11,4 @@
 - ~~Delete PhysicsFrozenDuringPause invariant~~ — Removed in commit 8ef028d7, replaced with unit tests
 - ~~Fix detect_combo_king stale migration test~~ — Removed duplicate migration test, added HighlightTriggered assertion to dedup test
 - ~~Bolt speed normalization after tether constraint~~ — Added normalize_bolt_speed_after_constraints system after enforce_distance_constraints
+- ~~Phase 5p: Transitions & PlayingState~~ — Already delivered by rantzsoft_lifecycle crate (state routing, screen transitions, cleanup)
