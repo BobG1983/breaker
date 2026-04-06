@@ -32,11 +32,12 @@ impl Plugin for PauseMenuPlugin {
                 Update,
                 toggle_pause.run_if(in_state(NodeState::Playing).and(not_in_transition.clone())),
             )
-            // Spawn pause menu when paused and no menu exists yet (not during transitions)
+            // Spawn pause menu when paused during active gameplay (not during transitions or loading)
             .add_systems(
                 Update,
                 spawn_pause_menu.run_if(
-                    is_time_paused
+                    in_state(NodeState::Playing)
+                        .and(is_time_paused)
                         .and(not(any_with_component::<PauseMenuScreen>))
                         .and(not_in_transition.clone()),
                 ),
