@@ -50,7 +50,9 @@ fn dash_settings_construction() {
     assert!((settings.brake.tilt_angle - defaults.brake_tilt_angle).abs() < f32::EPSILON);
     assert!((settings.brake.tilt_duration - defaults.brake_tilt_duration).abs() < f32::EPSILON);
     assert_eq!(settings.brake.tilt_ease, defaults.brake_tilt_ease);
-    assert!((settings.brake.decel_multiplier - defaults.brake_decel_multiplier).abs() < f32::EPSILON);
+    assert!(
+        (settings.brake.decel_multiplier - defaults.brake_decel_multiplier).abs() < f32::EPSILON
+    );
     assert!((settings.settle.duration - defaults.settle_duration).abs() < f32::EPSILON);
     assert_eq!(settings.settle.tilt_ease, defaults.settle_tilt_ease);
 }
@@ -81,7 +83,9 @@ fn bump_settings_construction() {
     assert!((settings.weak_cooldown - defaults.weak_bump_cooldown).abs() < f32::EPSILON);
     assert!((settings.feedback.duration - defaults.bump_visual_duration).abs() < f32::EPSILON);
     assert!((settings.feedback.peak - defaults.bump_visual_peak).abs() < f32::EPSILON);
-    assert!((settings.feedback.peak_fraction - defaults.bump_visual_peak_fraction).abs() < f32::EPSILON);
+    assert!(
+        (settings.feedback.peak_fraction - defaults.bump_visual_peak_fraction).abs() < f32::EPSILON
+    );
     assert_eq!(settings.feedback.rise_ease, defaults.bump_visual_rise_ease);
     assert_eq!(settings.feedback.fall_ease, defaults.bump_visual_fall_ease);
 }

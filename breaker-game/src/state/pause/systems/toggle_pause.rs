@@ -2,15 +2,18 @@
 
 use bevy::prelude::*;
 
-use crate::input::resources::{GameAction, InputActions};
-
-/// Toggles `Time<Virtual>` between paused and unpaused on `TogglePause`.
+/// Toggles `Time<Virtual>` between paused and unpaused on Escape.
+///
+/// Reads `ButtonInput<KeyCode>` directly instead of `InputActions` because
+/// pause is a UI action in `Update`, not a gameplay action in `FixedUpdate`.
+/// `InputActions` is cleared in `FixedPostUpdate` (before `Update`) and
+/// stales when `Time<Virtual>` is paused (`FixedPostUpdate` stops running).
 ///
 /// Gated on `NodeState::Playing` — only active during node gameplay.
 /// `Time<Virtual>::pause()` freezes `FixedUpdate` (gameplay) while leaving
 /// `Update` (UI, input) running.
-pub(crate) fn toggle_pause(actions: Res<InputActions>, mut time: ResMut<Time<Virtual>>) {
-    if !actions.active(GameAction::TogglePause) {
+pub(crate) fn toggle_pause(keyboard: Res<ButtonInput<KeyCode>>, mut time: ResMut<Time<Virtual>>) {
+    if !keyboard.just_pressed(KeyCode::Escape) {
         return;
     }
 
@@ -24,28 +27,31 @@ pub(crate) fn toggle_pause(actions: Res<InputActions>, mut time: ResMut<Time<Vir
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::input::resources::*;
 
     fn test_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
-            .init_resource::<InputActions>()
+            .init_resource::<ButtonInput<KeyCode>>()
             .add_systems(Update, toggle_pause);
         app
     }
 
-    fn inject_toggle_pause(app: &mut App) {
+    /// Simulates a single Escape key press-and-release cycle.
+    fn tap_escape(app: &mut App) {
         app.world_mut()
-            .resource_mut::<InputActions>()
-            .0
-            .push(GameAction::TogglePause);
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::Escape);
         app.update();
+        // Release and clear so next frame sees a clean state
+        let mut input = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+        input.release(KeyCode::Escape);
+        input.clear();
     }
 
     #[test]
     fn toggle_pauses_virtual_time() {
         let mut app = test_app();
-        inject_toggle_pause(&mut app);
+        tap_escape(&mut app);
 
         let time = app.world().resource::<Time<Virtual>>();
         assert!(time.is_paused(), "Time<Virtual> should be paused");
@@ -54,11 +60,8 @@ mod tests {
     #[test]
     fn toggle_again_unpauses_virtual_time() {
         let mut app = test_app();
-        inject_toggle_pause(&mut app);
-
-        // Clear and toggle again
-        app.world_mut().resource_mut::<InputActions>().0.clear();
-        inject_toggle_pause(&mut app);
+        tap_escape(&mut app);
+        tap_escape(&mut app);
 
         let time = app.world().resource::<Time<Virtual>>();
         assert!(!time.is_paused(), "Time<Virtual> should be unpaused");
@@ -71,5 +74,24 @@ mod tests {
 
         let time = app.world().resource::<Time<Virtual>>();
         assert!(!time.is_paused(), "Time<Virtual> should remain unpaused");
+    }
+
+    #[test]
+    fn held_escape_does_not_double_toggle() {
+        let mut app = test_app();
+        tap_escape(&mut app);
+
+        assert!(
+            app.world().resource::<Time<Virtual>>().is_paused(),
+            "should be paused after first press"
+        );
+
+        // Next frame with no new press — should stay paused
+        app.update();
+
+        assert!(
+            app.world().resource::<Time<Virtual>>().is_paused(),
+            "should stay paused when Escape is not pressed again"
+        );
     }
 }

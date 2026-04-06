@@ -8,12 +8,11 @@ use super::helpers::test_breaker_definition;
 use crate::{
     breaker::{
         components::{
-            BrakeDecel, BrakeTilt, Breaker, BreakerAcceleration, BreakerBaseY,
-            BreakerDeceleration, BreakerInitialized, BreakerReflectionSpread, BreakerTilt,
-            BumpEarlyWindow, BumpFeedback, BumpLateWindow, BumpPerfectCooldown,
-            BumpPerfectWindow, BumpState, BumpWeakCooldown, DashDuration, DashSpeedMultiplier,
-            DashState, DashStateTimer, DashTilt, DashTiltEase, DecelEasing, PrimaryBreaker,
-            SettleDuration, SettleTiltEase,
+            BrakeDecel, BrakeTilt, Breaker, BreakerAcceleration, BreakerBaseY, BreakerDeceleration,
+            BreakerInitialized, BreakerReflectionSpread, BreakerTilt, BumpEarlyWindow,
+            BumpFeedback, BumpLateWindow, BumpPerfectCooldown, BumpPerfectWindow, BumpState,
+            BumpWeakCooldown, DashDuration, DashSpeedMultiplier, DashState, DashStateTimer,
+            DashTilt, DashTiltEase, DecelEasing, PrimaryBreaker, SettleDuration, SettleTiltEase,
         },
         definition::BreakerDefinition,
     },
@@ -208,11 +207,17 @@ fn build_produces_correct_dimension_components() {
 
     assert!((world.get::<BaseWidth>(entity).unwrap().0 - defaults.width).abs() < f32::EPSILON);
     assert!((world.get::<BaseHeight>(entity).unwrap().0 - defaults.height).abs() < f32::EPSILON);
-    assert!((world.get::<MinWidth>(entity).unwrap().0 - defaults.width * 0.5).abs() < f32::EPSILON);
-    assert!((world.get::<MaxWidth>(entity).unwrap().0 - defaults.width * 5.0).abs() < f32::EPSILON);
-    assert!((world.get::<MinHeight>(entity).unwrap().0 - defaults.height * 0.5).abs() < f32::EPSILON);
-    assert!((world.get::<MaxHeight>(entity).unwrap().0 - defaults.height * 5.0).abs() < f32::EPSILON);
-    assert!((world.get::<BreakerBaseY>(entity).unwrap().0 - defaults.y_position).abs() < f32::EPSILON);
+    assert!((world.get::<MinWidth>(entity).unwrap().0 - (defaults.width * 0.5)).abs() < f32::EPSILON);
+    assert!((world.get::<MaxWidth>(entity).unwrap().0 - (defaults.width * 5.0)).abs() < f32::EPSILON);
+    assert!(
+        (world.get::<MinHeight>(entity).unwrap().0 - (defaults.height * 0.5)).abs() < f32::EPSILON
+    );
+    assert!(
+        (world.get::<MaxHeight>(entity).unwrap().0 - (defaults.height * 5.0)).abs() < f32::EPSILON
+    );
+    assert!(
+        (world.get::<BreakerBaseY>(entity).unwrap().0 - defaults.y_position).abs() < f32::EPSILON
+    );
 }
 
 // ── Behavior 32: build() produces correct movement components ──
@@ -230,8 +235,14 @@ fn build_produces_correct_movement_components() {
     let entity = world.spawn(bundle).id();
 
     assert!((world.get::<MaxSpeed>(entity).unwrap().0 - defaults.max_speed).abs() < f32::EPSILON);
-    assert!((world.get::<BreakerAcceleration>(entity).unwrap().0 - defaults.acceleration).abs() < f32::EPSILON);
-    assert!((world.get::<BreakerDeceleration>(entity).unwrap().0 - defaults.deceleration).abs() < f32::EPSILON);
+    assert!(
+        (world.get::<BreakerAcceleration>(entity).unwrap().0 - defaults.acceleration).abs()
+            < f32::EPSILON
+    );
+    assert!(
+        (world.get::<BreakerDeceleration>(entity).unwrap().0 - defaults.deceleration).abs()
+            < f32::EPSILON
+    );
     let de = world.get::<DecelEasing>(entity).unwrap();
     assert_eq!(de.ease, defaults.decel_ease);
     assert!((de.strength - defaults.decel_ease_strength).abs() < f32::EPSILON);
@@ -251,17 +262,39 @@ fn build_produces_correct_dash_components() {
         .build();
     let entity = world.spawn(bundle).id();
 
-    assert!((world.get::<DashSpeedMultiplier>(entity).unwrap().0 - defaults.dash_speed_multiplier).abs() < f32::EPSILON);
-    assert!((world.get::<DashDuration>(entity).unwrap().0 - defaults.dash_duration).abs() < f32::EPSILON);
-    assert!((world.get::<DashTilt>(entity).unwrap().0 - defaults.dash_tilt_angle.to_radians()).abs() < 1e-5);
-    assert_eq!(world.get::<DashTiltEase>(entity).unwrap().0, defaults.dash_tilt_ease);
+    assert!(
+        (world.get::<DashSpeedMultiplier>(entity).unwrap().0 - defaults.dash_speed_multiplier)
+            .abs()
+            < f32::EPSILON
+    );
+    assert!(
+        (world.get::<DashDuration>(entity).unwrap().0 - defaults.dash_duration).abs()
+            < f32::EPSILON
+    );
+    assert!(
+        (world.get::<DashTilt>(entity).unwrap().0 - defaults.dash_tilt_angle.to_radians()).abs()
+            < 1e-5
+    );
+    assert_eq!(
+        world.get::<DashTiltEase>(entity).unwrap().0,
+        defaults.dash_tilt_ease
+    );
     let bt = world.get::<BrakeTilt>(entity).unwrap();
     assert!((bt.angle - defaults.brake_tilt_angle.to_radians()).abs() < 1e-5);
     assert!((bt.duration - defaults.brake_tilt_duration).abs() < f32::EPSILON);
     assert_eq!(bt.ease, defaults.brake_tilt_ease);
-    assert!((world.get::<BrakeDecel>(entity).unwrap().0 - defaults.brake_decel_multiplier).abs() < f32::EPSILON);
-    assert!((world.get::<SettleDuration>(entity).unwrap().0 - defaults.settle_duration).abs() < f32::EPSILON);
-    assert_eq!(world.get::<SettleTiltEase>(entity).unwrap().0, defaults.settle_tilt_ease);
+    assert!(
+        (world.get::<BrakeDecel>(entity).unwrap().0 - defaults.brake_decel_multiplier).abs()
+            < f32::EPSILON
+    );
+    assert!(
+        (world.get::<SettleDuration>(entity).unwrap().0 - defaults.settle_duration).abs()
+            < f32::EPSILON
+    );
+    assert_eq!(
+        world.get::<SettleTiltEase>(entity).unwrap().0,
+        defaults.settle_tilt_ease
+    );
 }
 
 // ── Behavior 34: build() produces correct bump components ──
@@ -278,11 +311,27 @@ fn build_produces_correct_bump_components() {
         .build();
     let entity = world.spawn(bundle).id();
 
-    assert!((world.get::<BumpPerfectWindow>(entity).unwrap().0 - defaults.perfect_window).abs() < f32::EPSILON);
-    assert!((world.get::<BumpEarlyWindow>(entity).unwrap().0 - defaults.early_window).abs() < f32::EPSILON);
-    assert!((world.get::<BumpLateWindow>(entity).unwrap().0 - defaults.late_window).abs() < f32::EPSILON);
-    assert!((world.get::<BumpPerfectCooldown>(entity).unwrap().0 - defaults.perfect_bump_cooldown).abs() < f32::EPSILON);
-    assert!((world.get::<BumpWeakCooldown>(entity).unwrap().0 - defaults.weak_bump_cooldown).abs() < f32::EPSILON);
+    assert!(
+        (world.get::<BumpPerfectWindow>(entity).unwrap().0 - defaults.perfect_window).abs()
+            < f32::EPSILON
+    );
+    assert!(
+        (world.get::<BumpEarlyWindow>(entity).unwrap().0 - defaults.early_window).abs()
+            < f32::EPSILON
+    );
+    assert!(
+        (world.get::<BumpLateWindow>(entity).unwrap().0 - defaults.late_window).abs()
+            < f32::EPSILON
+    );
+    assert!(
+        (world.get::<BumpPerfectCooldown>(entity).unwrap().0 - defaults.perfect_bump_cooldown)
+            .abs()
+            < f32::EPSILON
+    );
+    assert!(
+        (world.get::<BumpWeakCooldown>(entity).unwrap().0 - defaults.weak_bump_cooldown).abs()
+            < f32::EPSILON
+    );
     let bf = world.get::<BumpFeedback>(entity).unwrap();
     assert!((bf.duration - defaults.bump_visual_duration).abs() < f32::EPSILON);
     assert!((bf.peak - defaults.bump_visual_peak).abs() < f32::EPSILON);

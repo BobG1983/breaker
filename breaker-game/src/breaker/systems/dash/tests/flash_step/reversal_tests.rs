@@ -15,7 +15,7 @@ use crate::{
     input::resources::{GameAction, InputActions},
 };
 
-/// Dash velocity: max_speed * dash_speed_multiplier (using default config).
+/// Dash velocity: `max_speed * dash_speed_multiplier` (using default config).
 fn default_dash_velocity() -> f32 {
     let d = BreakerDefinition::default();
     d.max_speed * d.dash_speed_multiplier
@@ -33,7 +33,8 @@ fn reversal_dash_left_during_settling_with_flash_step_teleports_to_endpoint() {
     // When: DashLeft active
     // Then: Position2D.x == min_x (clamped), DashState == Idle, velocity.x == 0.0
     let mut app = test_app();
-    let entity = spawn_settling_breaker_rightward_dash(&mut app, Vec2::new(0.0, defaults.y_position), true);
+    let entity =
+        spawn_settling_breaker_rightward_dash(&mut app, Vec2::new(0.0, defaults.y_position), true);
 
     app.world_mut()
         .resource_mut::<InputActions>()
@@ -75,7 +76,8 @@ fn reversal_dash_right_during_settling_with_flash_step_teleports_to_endpoint() {
     // When: DashRight active
     // Then: Position2D.x == max_x (clamped), DashState == Idle, velocity.x == 0.0
     let mut app = test_app();
-    let entity = spawn_settling_breaker_leftward_dash(&mut app, Vec2::new(0.0, defaults.y_position), true);
+    let entity =
+        spawn_settling_breaker_leftward_dash(&mut app, Vec2::new(0.0, defaults.y_position), true);
 
     app.world_mut()
         .resource_mut::<InputActions>()
@@ -173,7 +175,8 @@ fn same_direction_dash_with_flash_step_does_normal_dash() {
     // When: DashRight (same direction as last dash)
     // Then: DashState == Dashing (normal), velocity.x == dash_velocity, position unchanged
     let mut app = test_app();
-    let entity = spawn_settling_breaker_rightward_dash(&mut app, Vec2::new(0.0, defaults.y_position), true);
+    let entity =
+        spawn_settling_breaker_rightward_dash(&mut app, Vec2::new(0.0, defaults.y_position), true);
 
     app.world_mut()
         .resource_mut::<InputActions>()
@@ -209,7 +212,8 @@ fn same_direction_dash_leftward_settle_with_dash_left_does_normal_dash() {
     let defaults = BreakerDefinition::default();
     // Edge case: leftward settle tilt (ease_start=0.35) + DashLeft = same direction
     let mut app = test_app();
-    let entity = spawn_settling_breaker_leftward_dash(&mut app, Vec2::new(0.0, defaults.y_position), true);
+    let entity =
+        spawn_settling_breaker_leftward_dash(&mut app, Vec2::new(0.0, defaults.y_position), true);
 
     app.world_mut()
         .resource_mut::<InputActions>()
@@ -234,7 +238,8 @@ fn reversal_dash_without_flash_step_does_normal_dash() {
     // When: DashLeft (reversal direction)
     // Then: DashState == Dashing, velocity.x == -dash_velocity, position unchanged
     let mut app = test_app();
-    let entity = spawn_settling_breaker_rightward_dash(&mut app, Vec2::new(0.0, defaults.y_position), false);
+    let entity =
+        spawn_settling_breaker_rightward_dash(&mut app, Vec2::new(0.0, defaults.y_position), false);
 
     app.world_mut()
         .resource_mut::<InputActions>()

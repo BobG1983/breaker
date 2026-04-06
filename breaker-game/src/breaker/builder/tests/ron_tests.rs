@@ -49,7 +49,9 @@ fn minimal_ron_parses_with_all_defaults() {
     assert!((def.weak_bump_cooldown - defaults.weak_bump_cooldown).abs() < f32::EPSILON);
     assert!((def.bump_visual_duration - defaults.bump_visual_duration).abs() < f32::EPSILON);
     assert!((def.bump_visual_peak - defaults.bump_visual_peak).abs() < f32::EPSILON);
-    assert!((def.bump_visual_peak_fraction - defaults.bump_visual_peak_fraction).abs() < f32::EPSILON);
+    assert!(
+        (def.bump_visual_peak_fraction - defaults.bump_visual_peak_fraction).abs() < f32::EPSILON
+    );
     assert_eq!(def.bump_visual_rise_ease, defaults.bump_visual_rise_ease);
     assert_eq!(def.bump_visual_fall_ease, defaults.bump_visual_fall_ease);
 
