@@ -12,6 +12,7 @@ Comprehensive effect system refactor: unified RON/builder vocabulary, new wrappe
 | [storage-and-dispatch.md](storage-and-dispatch.md) | BoundEffects/StagedEffects/SpawnedRegistry shape, dispatch walk, condition monitor, command extensions |
 | [death-pipeline.md](death-pipeline.md) | Killed/Died/DeathOccurred triggers, KillYourself/Destroyed messages, DamageDealt<T>, domain handlers |
 | [examples.md](examples.md) | Builder + RON side-by-side for every pattern |
+| [phase-6-swap-spec.md](phase-6-swap-spec.md) | Complete swap spec: every system, message, and file that changes outside src/effect/ |
 
 ## Research
 
