@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+use crate::state::run::messages::RunLost;
+
 /// Tracks remaining lives for an entity.
 ///
 /// - `None` = infinite lives (never decremented, never incremented)
@@ -13,10 +15,18 @@ pub struct LivesCount(pub Option<u32>);
 /// - `LivesCount(Some(0))` — stays at 0 (saturating)
 /// - `LivesCount(Some(n))` — decrements to n-1
 pub(crate) fn fire(entity: Entity, _source_chip: &str, world: &mut World) {
-    if let Some(mut lives) = world.get_mut::<LivesCount>(entity)
+    let reached_zero = if let Some(mut lives) = world.get_mut::<LivesCount>(entity)
         && let Some(ref mut n) = lives.0
     {
+        let was_positive = *n > 0;
         *n = n.saturating_sub(1);
+        was_positive && *n == 0
+    } else {
+        false
+    };
+
+    if reached_zero {
+        world.write_message(RunLost);
     }
 }
 
@@ -146,6 +156,109 @@ mod tests {
         assert!(
             world.get::<LivesCount>(entity).is_none(),
             "fire on entity without LivesCount should not add the component"
+        );
+    }
+
+    // ── RunLost message tests ────────────────────────────────────
+
+    use crate::state::run::messages::RunLost;
+
+    #[test]
+    fn fire_writes_run_lost_when_lives_reach_zero() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_message::<RunLost>();
+        let entity = app.world_mut().spawn(LivesCount(Some(1))).id();
+
+        fire(entity, "", app.world_mut());
+
+        let lives = app.world().get::<LivesCount>(entity).unwrap();
+        assert_eq!(
+            lives.0,
+            Some(0),
+            "LivesCount(Some(1)) should become Some(0) after fire"
+        );
+        let messages = app.world().resource::<Messages<RunLost>>();
+        let written: Vec<&RunLost> = messages.iter_current_update_messages().collect();
+        assert_eq!(
+            written.len(),
+            1,
+            "fire() should write exactly 1 RunLost message when lives reach 0, got {}",
+            written.len()
+        );
+    }
+
+    #[test]
+    fn fire_does_not_write_run_lost_when_lives_still_positive() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_message::<RunLost>();
+        let entity = app.world_mut().spawn(LivesCount(Some(3))).id();
+
+        fire(entity, "", app.world_mut());
+
+        let lives = app.world().get::<LivesCount>(entity).unwrap();
+        assert_eq!(
+            lives.0,
+            Some(2),
+            "LivesCount(Some(3)) should become Some(2) after fire"
+        );
+        let messages = app.world().resource::<Messages<RunLost>>();
+        let written: Vec<&RunLost> = messages.iter_current_update_messages().collect();
+        assert_eq!(
+            written.len(),
+            0,
+            "fire() should NOT write RunLost when lives are still positive, got {}",
+            written.len()
+        );
+    }
+
+    #[test]
+    fn fire_does_not_write_run_lost_for_infinite_lives() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_message::<RunLost>();
+        let entity = app.world_mut().spawn(LivesCount(None)).id();
+
+        fire(entity, "", app.world_mut());
+
+        let lives = app.world().get::<LivesCount>(entity).unwrap();
+        assert_eq!(
+            lives.0, None,
+            "infinite lives should remain None after fire"
+        );
+        let messages = app.world().resource::<Messages<RunLost>>();
+        let written: Vec<&RunLost> = messages.iter_current_update_messages().collect();
+        assert_eq!(
+            written.len(),
+            0,
+            "fire() should NOT write RunLost for infinite lives, got {}",
+            written.len()
+        );
+    }
+
+    #[test]
+    fn fire_does_not_write_run_lost_when_already_zero() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_message::<RunLost>();
+        let entity = app.world_mut().spawn(LivesCount(Some(0))).id();
+
+        fire(entity, "", app.world_mut());
+
+        let lives = app.world().get::<LivesCount>(entity).unwrap();
+        assert_eq!(
+            lives.0,
+            Some(0),
+            "LivesCount(Some(0)) should remain Some(0) after fire"
+        );
+        let messages = app.world().resource::<Messages<RunLost>>();
+        let written: Vec<&RunLost> = messages.iter_current_update_messages().collect();
+        assert_eq!(
+            written.len(),
+            0,
+            "fire() should NOT write RunLost when lives were already 0 (no double-trigger), got {}",
+            written.len()
         );
     }
 }
