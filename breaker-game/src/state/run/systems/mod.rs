@@ -1,6 +1,7 @@
 //! Run-level systems (not node-specific).
 
 mod advance_node;
+mod gameplay_visibility;
 pub(crate) mod select_highlights;
 mod setup_run;
 

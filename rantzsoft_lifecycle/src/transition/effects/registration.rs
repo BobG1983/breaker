@@ -21,6 +21,9 @@ use crate::transition::{
 ///
 /// Called from `RantzLifecyclePlugin::build`.
 pub(crate) fn register_builtin_transitions(app: &mut App) {
+    // Post-process shader pipeline
+    super::post_process::setup_post_process(app);
+
     // Fade
     register_effect::<FadeOut, _, _, _>(
         app,

@@ -1,16 +1,29 @@
 //! Post-process transition effect component and types.
 //!
 //! `TransitionEffect` is inserted on the camera entity by start systems and
-//! removed by end systems. The shader reads this component to drive fullscreen
-//! post-processing transitions.
+//! removed by end systems. The shader reads this component as a uniform to
+//! drive fullscreen post-processing transitions via `FullscreenMaterial`.
 
-use bevy::prelude::*;
+use bevy::{
+    asset::embedded_asset,
+    core_pipeline::{
+        core_2d::graph::{Core2d, Node2d},
+        fullscreen_material::FullscreenMaterial,
+    },
+    prelude::*,
+    render::{
+        extract_component::ExtractComponent,
+        render_graph::{InternedRenderLabel, InternedRenderSubGraph, RenderLabel, RenderSubGraph},
+        render_resource::ShaderType,
+    },
+    shader::ShaderRef,
+};
 
 /// Fullscreen transition effect component, inserted on the camera entity.
 ///
 /// All fields are WGSL-aligned (`Vec4` first for 16-byte alignment).
 /// The shader reads these fields each frame to render the transition.
-#[derive(Component, Clone, Copy, Default)]
+#[derive(Component, ExtractComponent, Clone, Copy, Default, ShaderType)]
 pub struct TransitionEffect {
     /// Effect color as linear RGBA Vec4.
     pub color: Vec4,
@@ -22,6 +35,24 @@ pub struct TransitionEffect {
     pub effect_type: u32,
     /// Animation progress, 0.0 to 1.0.
     pub progress: f32,
+}
+
+impl FullscreenMaterial for TransitionEffect {
+    fn fragment_shader() -> ShaderRef {
+        "embedded://rantzsoft_lifecycle/transition/effects/shaders/transition.wgsl".into()
+    }
+
+    fn node_edges() -> Vec<InternedRenderLabel> {
+        vec![
+            Node2d::Tonemapping.intern(),
+            TransitionLabel.intern(),
+            Node2d::EndMainPassPostProcessing.intern(),
+        ]
+    }
+
+    fn sub_graph() -> Option<InternedRenderSubGraph> {
+        Some(Core2d.intern())
+    }
 }
 
 /// Effect type constants used in `TransitionEffect::effect_type`.
@@ -45,11 +76,30 @@ impl EffectType {
 }
 
 /// Render label for the transition post-process pass.
-#[derive(Debug, Hash, PartialEq, Eq, Clone)]
+#[derive(Debug, Hash, PartialEq, Eq, Clone, bevy::render::render_graph::RenderLabel)]
 pub struct TransitionLabel;
 
+/// Register the `FullscreenMaterialPlugin` and embed the shader asset.
+///
+/// Requires `AssetPlugin` to be present (skipped in headless/test environments
+/// that use `MinimalPlugins` without asset support).
+pub(crate) fn setup_post_process(app: &mut App) {
+    use bevy::{
+        asset::io::embedded::EmbeddedAssetRegistry,
+        core_pipeline::fullscreen_material::FullscreenMaterialPlugin,
+    };
+
+    // Skip in headless/test environments without AssetPlugin
+    if !app.world().contains_resource::<EmbeddedAssetRegistry>() {
+        return;
+    }
+
+    app.add_plugins(FullscreenMaterialPlugin::<TransitionEffect>::default());
+    embedded_asset!(app, "shaders/transition.wgsl");
+}
+
 // ---------------------------------------------------------------------------
-// Direction encoding helpers (stubs — return Vec4::ZERO)
+// Direction encoding helpers
 // ---------------------------------------------------------------------------
 
 /// Convert a `WipeDirection` to a direction `Vec4` for the shader.
