@@ -127,16 +127,10 @@ fn register_parent_routes(app: &mut App) {
     app.add_route(
         Route::from(GameState::Menu)
             .to(GameState::Run)
-            .with_transition(TransitionType::OutIn {
-                out_e: Arc::new(FadeOut {
-                    duration: 0.6,
-                    color: Color::WHITE,
-                }),
-                in_e: Arc::new(FadeIn {
-                    duration: 0.6,
-                    color: Color::WHITE,
-                }),
-            })
+            .with_transition(TransitionType::Out(Arc::new(FadeOut {
+                duration: 0.6,
+                color: Color::WHITE,
+            })))
             .when(|world| {
                 world
                     .get_resource::<State<MenuState>>()
