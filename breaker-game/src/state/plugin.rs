@@ -12,7 +12,6 @@ use rantzsoft_lifecycle::{
 
 use super::{
     app::loading::LoadingPlugin,
-    cleanup::cleanup_entities,
     menu::{
         main::{MainMenuDefaults, MainMenuPlugin},
         start_game::RunSetupPlugin,
@@ -22,14 +21,14 @@ use super::{
         RunPlugin,
         chip_select::{ChipSelectDefaults, ChipSelectPlugin},
         node::hud::TimerUiDefaults,
-        resources::DifficultyCurveDefaults,
+        resources::{DifficultyCurveDefaults, NodeOutcome, NodeResult},
         run_end::RunEndPlugin,
     },
 };
 use crate::{
     cells::CellDefaults,
     input::InputDefaults,
-    shared::{CleanupOnNodeExit, CleanupOnRunEnd, PlayfieldConfig, PlayfieldDefaults},
+    shared::{PlayfieldConfig, PlayfieldDefaults},
     state::types::{
         AppState, ChipSelectState, GameState, MenuState, NodeState, RunEndState, RunState,
     },
@@ -176,10 +175,20 @@ fn register_parent_routes(app: &mut App) {
     app.add_route(Route::from(MenuState::StartGame).to(MenuState::Teardown));
 }
 
+/// Resolves the next `RunState` when leaving `RunState::Node`.
+///
+/// Extracted from the inline `to_dynamic` closure so it can be unit tested.
+/// Reads `NodeOutcome.result` to decide routing.
+pub(crate) fn resolve_node_next_state(world: &World) -> RunState {
+    match world.resource::<NodeOutcome>().result {
+        NodeResult::InProgress => RunState::ChipSelect,
+        NodeResult::Quit => RunState::Teardown,
+        _ => RunState::RunEnd,
+    }
+}
+
 /// `RunState` routes — run lifecycle with transition effects.
 fn register_run_routes(app: &mut App) {
-    use crate::state::run::resources::{NodeOutcome, NodeResult};
-
     app.add_route(
         Route::from(RunState::Loading)
             .to(RunState::Setup)
@@ -191,13 +200,10 @@ fn register_run_routes(app: &mut App) {
             .with_transition(TransitionType::In(Arc::new(FadeIn::default())))
             .when(|_| true),
     );
-    // Node → dynamic (ChipSelect or RunEnd based on NodeOutcome)
+    // Node → dynamic (ChipSelect, RunEnd, or Teardown based on NodeOutcome)
     app.add_route(
         Route::from(RunState::Node)
-            .to_dynamic(|world| match world.resource::<NodeOutcome>().result {
-                NodeResult::InProgress => RunState::ChipSelect,
-                _ => RunState::RunEnd,
-            })
+            .to_dynamic(resolve_node_next_state)
             .with_transition(TransitionType::OutIn {
                 out_e: Arc::new(FadeOut::default()),
                 in_e: Arc::new(FadeIn::default()),
@@ -308,20 +314,15 @@ fn register_cleanup(app: &mut App) {
             cleanup_on_exit::<RunEndState>,
         )
         .add_systems(OnEnter(RunState::Teardown), cleanup_on_exit::<RunState>);
-    // Old cleanup markers — still used until entities migrate to CleanupOnExit<S>
-    app.add_systems(
-        OnEnter(NodeState::Teardown),
-        cleanup_entities::<CleanupOnNodeExit>,
-    )
-    .add_systems(
-        OnEnter(RunState::Teardown),
-        cleanup_entities::<CleanupOnRunEnd>,
-    );
+    // Safety net: also clean node-scoped entities when the run tears down
+    // (covers quit-from-pause where NodeState may not reach its own Teardown)
+    app.add_systems(OnEnter(RunState::Teardown), cleanup_on_exit::<NodeState>);
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::state::run::resources::{NodeOutcome, NodeResult};
 
     #[test]
     fn plugin_builds() {
@@ -333,5 +334,171 @@ mod tests {
             ))
             .add_plugins(StatePlugin)
             .update();
+    }
+
+    // ── Behavior 7a: Quit routes to RunState::Teardown ──────────────────
+
+    #[test]
+    fn resolve_node_next_state_quit_returns_teardown() {
+        let mut world = World::new();
+        world.insert_resource(NodeOutcome {
+            result: NodeResult::Quit,
+            node_index: 0,
+            transition_queued: false,
+        });
+
+        let next = resolve_node_next_state(&world);
+        assert_eq!(
+            next,
+            RunState::Teardown,
+            "NodeResult::Quit should route to RunState::Teardown"
+        );
+    }
+
+    #[test]
+    fn resolve_node_next_state_quit_ignores_node_index_and_transition_queued() {
+        let mut world = World::new();
+        world.insert_resource(NodeOutcome {
+            result: NodeResult::Quit,
+            node_index: 99,
+            transition_queued: true,
+        });
+
+        let next = resolve_node_next_state(&world);
+        assert_eq!(
+            next,
+            RunState::Teardown,
+            "NodeResult::Quit should route to Teardown regardless of node_index or transition_queued"
+        );
+    }
+
+    // ── Behavior 7b: InProgress routes to ChipSelect ────────────────────
+
+    #[test]
+    fn resolve_node_next_state_in_progress_returns_chip_select() {
+        let mut world = World::new();
+        world.insert_resource(NodeOutcome {
+            result: NodeResult::InProgress,
+            node_index: 0,
+            transition_queued: false,
+        });
+
+        let next = resolve_node_next_state(&world);
+        assert_eq!(next, RunState::ChipSelect);
+    }
+
+    // ── Behavior 7c: Won routes to RunEnd ───────────────────────────────
+
+    #[test]
+    fn resolve_node_next_state_won_returns_run_end() {
+        let mut world = World::new();
+        world.insert_resource(NodeOutcome {
+            result: NodeResult::Won,
+            node_index: 8,
+            transition_queued: false,
+        });
+
+        let next = resolve_node_next_state(&world);
+        assert_eq!(next, RunState::RunEnd);
+    }
+
+    // ── Behavior 7d: TimerExpired routes to RunEnd ──────────────────────
+
+    #[test]
+    fn resolve_node_next_state_timer_expired_returns_run_end() {
+        let mut world = World::new();
+        world.insert_resource(NodeOutcome {
+            result: NodeResult::TimerExpired,
+            node_index: 3,
+            transition_queued: false,
+        });
+
+        let next = resolve_node_next_state(&world);
+        assert_eq!(next, RunState::RunEnd);
+    }
+
+    // ── Behavior 7e: LivesDepleted routes to RunEnd ─────────────────────
+
+    #[test]
+    fn resolve_node_next_state_lives_depleted_returns_run_end() {
+        let mut world = World::new();
+        world.insert_resource(NodeOutcome {
+            result: NodeResult::LivesDepleted,
+            node_index: 1,
+            transition_queued: false,
+        });
+
+        let next = resolve_node_next_state(&world);
+        assert_eq!(next, RunState::RunEnd);
+    }
+
+    // ── Behavior 8: CleanupOnExit<NodeState> on OnEnter(RunState::Teardown) ────
+
+    #[test]
+    fn cleanup_on_node_exit_runs_on_enter_run_state_teardown() {
+        use bevy::state::app::StatesPlugin;
+        use rantzsoft_lifecycle::CleanupOnExit;
+
+        use crate::state::types::{AppState, GameState};
+
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, StatesPlugin))
+            .init_state::<AppState>()
+            .add_sub_state::<GameState>()
+            .add_sub_state::<RunState>()
+            .add_sub_state::<NodeState>()
+            .add_sub_state::<ChipSelectState>()
+            .add_sub_state::<RunEndState>();
+
+        // Use the real register_cleanup to verify it includes
+        // cleanup_on_exit::<NodeState> on OnEnter(RunState::Teardown).
+        register_cleanup(&mut app);
+
+        // Navigate to RunState::Node first
+        app.world_mut()
+            .resource_mut::<NextState<AppState>>()
+            .set(AppState::Game);
+        app.update();
+        app.world_mut()
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Run);
+        app.update();
+        app.world_mut()
+            .resource_mut::<NextState<RunState>>()
+            .set(RunState::Node);
+        app.update();
+
+        // Spawn entities with cleanup markers
+        let node_exit_entity = app
+            .world_mut()
+            .spawn(CleanupOnExit::<NodeState>::default())
+            .id();
+        let both_markers_entity = app
+            .world_mut()
+            .spawn((
+                CleanupOnExit::<NodeState>::default(),
+                CleanupOnExit::<RunState>::default(),
+            ))
+            .id();
+        let unrelated_entity = app.world_mut().spawn_empty().id();
+
+        // Transition directly to RunState::Teardown (bypassing NodeState teardown)
+        app.world_mut()
+            .resource_mut::<NextState<RunState>>()
+            .set(RunState::Teardown);
+        app.update();
+
+        assert!(
+            app.world().get_entity(node_exit_entity).is_err(),
+            "CleanupOnExit<NodeState> entity should be despawned on RunState::Teardown"
+        );
+        assert!(
+            app.world().get_entity(both_markers_entity).is_err(),
+            "Entity with both CleanupOnExit<NodeState> and CleanupOnExit<RunState> should be despawned"
+        );
+        assert!(
+            app.world().get_entity(unrelated_entity).is_ok(),
+            "Entity without cleanup markers should survive"
+        );
     }
 }

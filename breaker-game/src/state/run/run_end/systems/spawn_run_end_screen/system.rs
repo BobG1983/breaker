@@ -47,7 +47,7 @@ pub(crate) fn spawn_run_end_screen(
         NodeResult::Won => ("RUN COMPLETE", WON_SUBTITLES[idx]),
         NodeResult::TimerExpired => ("TIME'S UP", TIMER_EXPIRED_SUBTITLES[idx]),
         NodeResult::LivesDepleted => ("SIGNAL LOST", LIVES_DEPLETED_SUBTITLES[idx]),
-        NodeResult::InProgress => ("RUN ENDED", ""),
+        NodeResult::InProgress | NodeResult::Quit => ("RUN ENDED", ""),
     };
 
     commands
