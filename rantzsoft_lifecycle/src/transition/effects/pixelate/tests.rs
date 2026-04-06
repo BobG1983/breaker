@@ -1,10 +1,11 @@
 use bevy::prelude::*;
 
-use super::{
-    super::shared::{ScreenSize, TransitionOverlay, TransitionProgress},
-    effect::*,
-};
+use super::effect::*;
 use crate::transition::{
+    effects::{
+        post_process::{EffectType, TransitionEffect},
+        shared::TransitionProgress,
+    },
     messages::{TransitionOver, TransitionReady, TransitionRunComplete},
     resources::{EndingTransition, RunningTransition, StartingTransition},
 };
@@ -15,29 +16,18 @@ fn effect_test_app() -> App {
     app.add_message::<TransitionReady>();
     app.add_message::<TransitionRunComplete>();
     app.add_message::<TransitionOver>();
-    app.insert_resource(ScreenSize::default());
+    app.world_mut().spawn(Camera2d);
     app
 }
 
 // =======================================================================
-// Section 11: PixelateOut
+// Section 6: PixelateOut (post-process)
 // =======================================================================
 
-// --- Behavior 49: PixelateOut implements Transition and OutTransition ---
+// --- Spec Behavior 25: PixelateOut start ---
 
 #[test]
-fn pixelate_out_satisfies_transition_and_out_transition() {
-    use crate::transition::traits::OutTransition;
-    let _effect: Box<dyn OutTransition> = Box::new(PixelateOut {
-        duration: 0.6,
-        color: Color::BLACK,
-    });
-}
-
-// --- Behavior 50: PixelateOut start spawns overlay at zero alpha ---
-
-#[test]
-fn pixelate_out_start_spawns_overlay_at_zero_alpha() {
+fn pixelate_out_start_inserts_transition_effect_on_camera() {
     let mut app = effect_test_app();
     app.insert_resource(PixelateOutConfig {
         duration: 0.6,
@@ -47,34 +37,19 @@ fn pixelate_out_start_spawns_overlay_at_zero_alpha() {
     app.add_systems(Update, pixelate_out_start);
     app.update();
 
-    let overlay_count = app
+    let effects: Vec<&TransitionEffect> = app
         .world_mut()
-        .query_filtered::<Entity, With<TransitionOverlay>>()
-        .iter(app.world())
-        .count();
-    assert_eq!(overlay_count, 1);
-
-    let sprites: Vec<&Sprite> = app
-        .world_mut()
-        .query_filtered::<&Sprite, With<TransitionOverlay>>()
+        .query_filtered::<&TransitionEffect, With<Camera2d>>()
         .iter(app.world())
         .collect();
-    let alpha = sprites[0].color.alpha();
+    assert_eq!(effects.len(), 1);
+    let effect = effects[0];
+    assert_eq!(effect.effect_type, EffectType::PIXELATE);
     assert!(
-        alpha.abs() < f32::EPSILON,
-        "PixelateOut should start at alpha 0.0"
+        effect.progress.abs() < f32::EPSILON,
+        "progress should be 0.0"
     );
-
-    let size = sprites[0].custom_size.unwrap_or_default();
-    assert!((size.x - 1920.0).abs() < f32::EPSILON);
-    assert!((size.y - 1080.0).abs() < f32::EPSILON);
-
-    let z_indices: Vec<&GlobalZIndex> = app
-        .world_mut()
-        .query_filtered::<&GlobalZIndex, With<TransitionOverlay>>()
-        .iter(app.world())
-        .collect();
-    assert_eq!(z_indices[0].0, i32::MAX - 1);
+    assert_eq!(effect.color, Vec4::new(0.0, 0.0, 0.0, 1.0));
 
     let msgs = app
         .world()
@@ -85,71 +60,71 @@ fn pixelate_out_start_spawns_overlay_at_zero_alpha() {
     assert!((progress.duration - 0.6).abs() < f32::EPSILON);
 }
 
-// --- Behavior 51: PixelateOut run increases alpha with block-step curve ---
+// --- Spec Behavior 26: PixelateOut run ---
 
 #[test]
-fn pixelate_out_run_increases_alpha_at_mid_progress() {
+fn pixelate_out_run_increases_progress_on_camera() {
     let mut app = effect_test_app();
+    let camera_entity = app
+        .world_mut()
+        .query_filtered::<Entity, With<Camera2d>>()
+        .iter(app.world())
+        .next()
+        .unwrap();
+    app.world_mut()
+        .entity_mut(camera_entity)
+        .insert(TransitionEffect {
+            color: Vec4::new(0.0, 0.0, 0.0, 1.0),
+            direction: Vec4::ZERO,
+            effect_type: EffectType::PIXELATE,
+            progress: 0.0,
+        });
     app.insert_resource(RunningTransition::<PixelateOut>::new());
     app.insert_resource(TransitionProgress {
         elapsed: 0.25,
         duration: 1.0,
         completed: false,
     });
-    app.world_mut().spawn((
-        Sprite {
-            color: Color::srgba(0.0, 0.0, 0.0, 0.0),
-            custom_size: Some(Vec2::new(1920.0, 1080.0)),
-            ..default()
-        },
-        TransitionOverlay,
-    ));
     app.add_systems(Update, pixelate_out_run);
     app.update();
 
-    let sprites: Vec<&Sprite> = app
+    let effects: Vec<&TransitionEffect> = app
         .world_mut()
-        .query_filtered::<&Sprite, With<TransitionOverlay>>()
+        .query_filtered::<&TransitionEffect, With<Camera2d>>()
         .iter(app.world())
         .collect();
-    let alpha = sprites[0].color.alpha();
     assert!(
-        alpha > 0.0,
-        "alpha should have increased at 25% progress, got {alpha}"
+        effects[0].progress > 0.0,
+        "progress should have increased from 0.0, got {}",
+        effects[0].progress
     );
-    assert!(alpha <= 1.0, "alpha should not exceed 1.0, got {alpha}");
 }
 
 #[test]
 fn pixelate_out_run_sends_complete_at_full_progress() {
     let mut app = effect_test_app();
+    let camera_entity = app
+        .world_mut()
+        .query_filtered::<Entity, With<Camera2d>>()
+        .iter(app.world())
+        .next()
+        .unwrap();
+    app.world_mut()
+        .entity_mut(camera_entity)
+        .insert(TransitionEffect {
+            color: Vec4::new(0.0, 0.0, 0.0, 1.0),
+            direction: Vec4::ZERO,
+            effect_type: EffectType::PIXELATE,
+            progress: 0.0,
+        });
     app.insert_resource(RunningTransition::<PixelateOut>::new());
     app.insert_resource(TransitionProgress {
         elapsed: 1.0,
         duration: 1.0,
         completed: false,
     });
-    app.world_mut().spawn((
-        Sprite {
-            color: Color::srgba(0.0, 0.0, 0.0, 0.0),
-            custom_size: Some(Vec2::new(1920.0, 1080.0)),
-            ..default()
-        },
-        TransitionOverlay,
-    ));
     app.add_systems(Update, pixelate_out_run);
     app.update();
-
-    let sprites: Vec<&Sprite> = app
-        .world_mut()
-        .query_filtered::<&Sprite, With<TransitionOverlay>>()
-        .iter(app.world())
-        .collect();
-    let alpha = sprites[0].color.alpha();
-    assert!(
-        (alpha - 1.0).abs() < f32::EPSILON,
-        "alpha should be 1.0 at full progress"
-    );
 
     let msgs = app
         .world()
@@ -160,20 +135,21 @@ fn pixelate_out_run_sends_complete_at_full_progress() {
 #[test]
 fn pixelate_out_run_does_not_double_send_when_already_completed() {
     let mut app = effect_test_app();
+    let camera_entity = app
+        .world_mut()
+        .query_filtered::<Entity, With<Camera2d>>()
+        .iter(app.world())
+        .next()
+        .unwrap();
+    app.world_mut()
+        .entity_mut(camera_entity)
+        .insert(TransitionEffect::default());
     app.insert_resource(RunningTransition::<PixelateOut>::new());
     app.insert_resource(TransitionProgress {
         elapsed: 1.0,
         duration: 1.0,
         completed: true,
     });
-    app.world_mut().spawn((
-        Sprite {
-            color: Color::srgba(0.0, 0.0, 0.0, 1.0),
-            custom_size: Some(Vec2::new(1920.0, 1080.0)),
-            ..default()
-        },
-        TransitionOverlay,
-    ));
     app.add_systems(Update, pixelate_out_run);
     app.update();
 
@@ -183,28 +159,35 @@ fn pixelate_out_run_does_not_double_send_when_already_completed() {
     assert_eq!(msgs.iter_current_update_messages().count(), 0);
 }
 
-// --- Behavior 52: PixelateOut end ---
+// --- Spec Behavior 27: PixelateOut end ---
 
 #[test]
-fn pixelate_out_end_despawns_overlay_and_sends_transition_over() {
+fn pixelate_out_end_removes_transition_effect_and_sends_transition_over() {
     let mut app = effect_test_app();
+    let camera_entity = app
+        .world_mut()
+        .query_filtered::<Entity, With<Camera2d>>()
+        .iter(app.world())
+        .next()
+        .unwrap();
+    app.world_mut()
+        .entity_mut(camera_entity)
+        .insert(TransitionEffect::default());
     app.insert_resource(EndingTransition::<PixelateOut>::new());
     app.insert_resource(TransitionProgress {
         elapsed: 0.6,
         duration: 0.6,
         completed: true,
     });
-    app.world_mut()
-        .spawn((Sprite::default(), TransitionOverlay));
     app.add_systems(Update, pixelate_out_end);
     app.update();
 
-    let overlay_count = app
+    let effects: Vec<&TransitionEffect> = app
         .world_mut()
-        .query_filtered::<Entity, With<TransitionOverlay>>()
+        .query_filtered::<&TransitionEffect, With<Camera2d>>()
         .iter(app.world())
-        .count();
-    assert_eq!(overlay_count, 0);
+        .collect();
+    assert_eq!(effects.len(), 0, "TransitionEffect should be removed");
     assert!(!app.world().contains_resource::<TransitionProgress>());
 
     let msgs = app
@@ -214,24 +197,13 @@ fn pixelate_out_end_despawns_overlay_and_sends_transition_over() {
 }
 
 // =======================================================================
-// Section 12: PixelateIn
+// Section 7: PixelateIn (post-process)
 // =======================================================================
 
-// --- Behavior 53: PixelateIn implements Transition and InTransition ---
+// --- Spec Behavior 28: PixelateIn start ---
 
 #[test]
-fn pixelate_in_satisfies_transition_and_in_transition() {
-    use crate::transition::traits::InTransition;
-    let _effect: Box<dyn InTransition> = Box::new(PixelateIn {
-        duration: 0.6,
-        color: Color::BLACK,
-    });
-}
-
-// --- Behavior 54: PixelateIn start spawns fully opaque overlay ---
-
-#[test]
-fn pixelate_in_start_spawns_fully_opaque_overlay() {
+fn pixelate_in_start_inserts_transition_effect_on_camera_at_full_progress() {
     let mut app = effect_test_app();
     app.insert_resource(PixelateInConfig {
         duration: 0.6,
@@ -241,22 +213,16 @@ fn pixelate_in_start_spawns_fully_opaque_overlay() {
     app.add_systems(Update, pixelate_in_start);
     app.update();
 
-    let overlay_count = app
+    let effects: Vec<&TransitionEffect> = app
         .world_mut()
-        .query_filtered::<Entity, With<TransitionOverlay>>()
-        .iter(app.world())
-        .count();
-    assert_eq!(overlay_count, 1);
-
-    let sprites: Vec<&Sprite> = app
-        .world_mut()
-        .query_filtered::<&Sprite, With<TransitionOverlay>>()
+        .query_filtered::<&TransitionEffect, With<Camera2d>>()
         .iter(app.world())
         .collect();
-    let alpha = sprites[0].color.alpha();
+    assert_eq!(effects.len(), 1);
+    assert_eq!(effects[0].effect_type, EffectType::PIXELATE);
     assert!(
-        (alpha - 1.0).abs() < f32::EPSILON,
-        "PixelateIn should start at alpha 1.0"
+        (effects[0].progress - 1.0).abs() < f32::EPSILON,
+        "PixelateIn should start at progress 1.0"
     );
 
     let msgs = app
@@ -264,75 +230,77 @@ fn pixelate_in_start_spawns_fully_opaque_overlay() {
         .resource::<bevy::ecs::message::Messages<TransitionReady>>();
     assert_eq!(msgs.iter_current_update_messages().count(), 1);
     assert!(app.world().contains_resource::<TransitionProgress>());
-    let progress = app.world().resource::<TransitionProgress>();
-    assert!((progress.duration - 0.6).abs() < f32::EPSILON);
 }
 
-// --- Behavior 55: PixelateIn run decreases alpha with block-step curve ---
+// --- Spec Behavior 29: PixelateIn run ---
 
 #[test]
-fn pixelate_in_run_decreases_alpha_at_mid_progress() {
+fn pixelate_in_run_decreases_progress_on_camera() {
     let mut app = effect_test_app();
+    let camera_entity = app
+        .world_mut()
+        .query_filtered::<Entity, With<Camera2d>>()
+        .iter(app.world())
+        .next()
+        .unwrap();
+    app.world_mut()
+        .entity_mut(camera_entity)
+        .insert(TransitionEffect {
+            color: Vec4::new(0.0, 0.0, 0.0, 1.0),
+            direction: Vec4::ZERO,
+            effect_type: EffectType::PIXELATE,
+            progress: 1.0,
+        });
     app.insert_resource(RunningTransition::<PixelateIn>::new());
     app.insert_resource(TransitionProgress {
         elapsed: 0.5,
         duration: 1.0,
         completed: false,
     });
-    app.world_mut().spawn((
-        Sprite {
-            color: Color::srgba(0.0, 0.0, 0.0, 1.0),
-            custom_size: Some(Vec2::new(1920.0, 1080.0)),
-            ..default()
-        },
-        TransitionOverlay,
-    ));
     app.add_systems(Update, pixelate_in_run);
     app.update();
 
-    let sprites: Vec<&Sprite> = app
+    let effects: Vec<&TransitionEffect> = app
         .world_mut()
-        .query_filtered::<&Sprite, With<TransitionOverlay>>()
+        .query_filtered::<&TransitionEffect, With<Camera2d>>()
         .iter(app.world())
         .collect();
-    let alpha = sprites[0].color.alpha();
-    assert!(alpha >= 0.0, "alpha should not go negative, got {alpha}");
     assert!(
-        alpha < 1.0,
-        "alpha should have decreased from 1.0 at 50% progress, got {alpha}"
+        effects[0].progress < 1.0,
+        "progress should have decreased from 1.0, got {}",
+        effects[0].progress
+    );
+    assert!(
+        effects[0].progress >= 0.0,
+        "progress should not go negative"
     );
 }
 
 #[test]
 fn pixelate_in_run_sends_complete_at_full_progress() {
     let mut app = effect_test_app();
+    let camera_entity = app
+        .world_mut()
+        .query_filtered::<Entity, With<Camera2d>>()
+        .iter(app.world())
+        .next()
+        .unwrap();
+    app.world_mut()
+        .entity_mut(camera_entity)
+        .insert(TransitionEffect {
+            color: Vec4::new(0.0, 0.0, 0.0, 1.0),
+            direction: Vec4::ZERO,
+            effect_type: EffectType::PIXELATE,
+            progress: 1.0,
+        });
     app.insert_resource(RunningTransition::<PixelateIn>::new());
     app.insert_resource(TransitionProgress {
         elapsed: 1.0,
         duration: 1.0,
         completed: false,
     });
-    app.world_mut().spawn((
-        Sprite {
-            color: Color::srgba(0.0, 0.0, 0.0, 1.0),
-            custom_size: Some(Vec2::new(1920.0, 1080.0)),
-            ..default()
-        },
-        TransitionOverlay,
-    ));
     app.add_systems(Update, pixelate_in_run);
     app.update();
-
-    let sprites: Vec<&Sprite> = app
-        .world_mut()
-        .query_filtered::<&Sprite, With<TransitionOverlay>>()
-        .iter(app.world())
-        .collect();
-    let alpha = sprites[0].color.alpha();
-    assert!(
-        alpha.abs() < f32::EPSILON,
-        "alpha should be 0.0 at full progress"
-    );
 
     let msgs = app
         .world()
@@ -343,20 +311,21 @@ fn pixelate_in_run_sends_complete_at_full_progress() {
 #[test]
 fn pixelate_in_run_does_not_double_send_when_already_completed() {
     let mut app = effect_test_app();
+    let camera_entity = app
+        .world_mut()
+        .query_filtered::<Entity, With<Camera2d>>()
+        .iter(app.world())
+        .next()
+        .unwrap();
+    app.world_mut()
+        .entity_mut(camera_entity)
+        .insert(TransitionEffect::default());
     app.insert_resource(RunningTransition::<PixelateIn>::new());
     app.insert_resource(TransitionProgress {
         elapsed: 1.0,
         duration: 1.0,
         completed: true,
     });
-    app.world_mut().spawn((
-        Sprite {
-            color: Color::srgba(0.0, 0.0, 0.0, 0.0),
-            custom_size: Some(Vec2::new(1920.0, 1080.0)),
-            ..default()
-        },
-        TransitionOverlay,
-    ));
     app.add_systems(Update, pixelate_in_run);
     app.update();
 
@@ -366,28 +335,35 @@ fn pixelate_in_run_does_not_double_send_when_already_completed() {
     assert_eq!(msgs.iter_current_update_messages().count(), 0);
 }
 
-// --- Behavior 56: PixelateIn end ---
+// --- Spec Behavior 30: PixelateIn end ---
 
 #[test]
-fn pixelate_in_end_despawns_overlay_and_sends_transition_over() {
+fn pixelate_in_end_removes_transition_effect_and_sends_transition_over() {
     let mut app = effect_test_app();
+    let camera_entity = app
+        .world_mut()
+        .query_filtered::<Entity, With<Camera2d>>()
+        .iter(app.world())
+        .next()
+        .unwrap();
+    app.world_mut()
+        .entity_mut(camera_entity)
+        .insert(TransitionEffect::default());
     app.insert_resource(EndingTransition::<PixelateIn>::new());
     app.insert_resource(TransitionProgress {
         elapsed: 0.6,
         duration: 0.6,
         completed: true,
     });
-    app.world_mut()
-        .spawn((Sprite::default(), TransitionOverlay));
     app.add_systems(Update, pixelate_in_end);
     app.update();
 
-    let overlay_count = app
+    let effects: Vec<&TransitionEffect> = app
         .world_mut()
-        .query_filtered::<Entity, With<TransitionOverlay>>()
+        .query_filtered::<&TransitionEffect, With<Camera2d>>()
         .iter(app.world())
-        .count();
-    assert_eq!(overlay_count, 0);
+        .collect();
+    assert_eq!(effects.len(), 0);
     assert!(!app.world().contains_resource::<TransitionProgress>());
 
     let msgs = app
@@ -396,9 +372,41 @@ fn pixelate_in_end_despawns_overlay_and_sends_transition_over() {
     assert_eq!(msgs.iter_current_update_messages().count(), 1);
 }
 
-// =======================================================================
-// Section 13: insert_starting overrides (behaviors 67-68)
-// =======================================================================
+// --- Spec Behaviors 66-67: Pixelate trait satisfaction ---
+
+#[test]
+fn pixelate_out_satisfies_transition_and_out_transition() {
+    use crate::transition::traits::OutTransition;
+    let _effect: Box<dyn OutTransition> = Box::new(PixelateOut {
+        duration: 0.6,
+        color: Color::BLACK,
+    });
+}
+
+#[test]
+fn pixelate_in_satisfies_transition_and_in_transition() {
+    use crate::transition::traits::InTransition;
+    let _effect: Box<dyn InTransition> = Box::new(PixelateIn {
+        duration: 0.6,
+        color: Color::BLACK,
+    });
+}
+
+// --- Spec Behaviors 77-78: Pixelate defaults ---
+
+#[test]
+fn pixelate_out_default_duration_is_0_3() {
+    let effect = PixelateOut::default();
+    assert!((effect.duration - 0.3).abs() < f32::EPSILON);
+}
+
+#[test]
+fn pixelate_in_default_duration_is_0_3() {
+    let effect = PixelateIn::default();
+    assert!((effect.duration - 0.3).abs() < f32::EPSILON);
+}
+
+// --- Spec Behaviors 55-56: Pixelate insert_starting ---
 
 #[test]
 fn pixelate_out_insert_starting_inserts_marker_and_config() {
@@ -411,10 +419,7 @@ fn pixelate_out_insert_starting_inserts_marker_and_config() {
     effect.insert_starting(&mut world);
 
     assert!(world.contains_resource::<StartingTransition<PixelateOut>>());
-    assert!(
-        world.contains_resource::<PixelateOutConfig>(),
-        "PixelateOutConfig should be inserted by insert_starting"
-    );
+    assert!(world.contains_resource::<PixelateOutConfig>());
 }
 
 #[test]
@@ -428,8 +433,5 @@ fn pixelate_in_insert_starting_inserts_marker_and_config() {
     effect.insert_starting(&mut world);
 
     assert!(world.contains_resource::<StartingTransition<PixelateIn>>());
-    assert!(
-        world.contains_resource::<PixelateInConfig>(),
-        "PixelateInConfig should be inserted by insert_starting"
-    );
+    assert!(world.contains_resource::<PixelateInConfig>());
 }

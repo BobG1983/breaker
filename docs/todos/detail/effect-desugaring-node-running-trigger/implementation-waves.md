@@ -15,7 +15,7 @@ New file: `new_effect/triggers/mod.rs`
 // Old has 18 variants with different naming. New has Occurred suffix for globals,
 // local/global distinction, ImpactTarget/KillTarget/DeathTarget params.
 enum Trigger { PerfectBumped, EarlyBumped, ..., PerfectBumpOccurred, ..., TimeExpires(f32) }
-enum Condition { NodeActive, NodePlaying }
+enum Condition { NodeActive, ShieldActive, ComboActive(u32) }
 enum EntityType { Bolt, Cell, Wall, Breaker }
 ```
 
@@ -424,6 +424,24 @@ Register: all bridge systems, walk_effects dependencies, condition monitor, appl
 ## Phase 6: Swap (depends on all waves complete + tested)
 
 See [phase-6-swap-spec.md](phase-6-swap-spec.md) for the complete step-by-step spec.
+
+## Phase 7: Documentation Update
+
+After swap is verified, update architecture and design docs to reflect the new effect system.
+
+**`docs/architecture/`:**
+- How to add a new trigger (create participant enum variant, add bridge system, register in plugin)
+- How to add a new effect (implement `Effect` trait, optionally `Reversible`, add to `EffectType` enum)
+- How to add a new condition (add `Condition` variant, add monitor system)
+- Updated message flow diagrams (DamageMessage -> apply_damage -> KilledBy -> KillYourself -> Destroyed -> bridge_destroyed)
+- BoundEffects/StagedEffects storage shape and dispatch ordering
+- Route/Stamp/Transfer semantics
+
+**`docs/design/`:**
+- Effect system vocabulary reference (Route, When, During, Until, Spawned, On, Fire, Stamp, Transfer, Sequence)
+- Participant enum reference (BumpTarget, ImpactTarget, DeathTarget, BoltLostTarget)
+- Condition reference (NodeActive, ShieldActive, ComboActive)
+- Kill attribution chain documentation
 
 1. Delete `src/effect/` (277 files, ~44k lines)
 2. Rename `src/new_effect/` -> `src/effect/`

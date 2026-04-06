@@ -216,42 +216,50 @@ If `On(BumpTarget::Bolt, Fire(SpeedBoost))` resolves a participant entity that h
 
 ### Condition monitor
 
-A system watches for state changes relevant to conditions. During is first-class — not desugared into triggers.
+One system per condition, each watching for its specific state change. During is first-class — not desugared into triggers.
 
 ```rust
-fn monitor_conditions(
+// NodeActive: watches NodeState transitions
+fn monitor_node_active(
     node_state: Res<State<NodeState>>,
     mut query: Query<(Entity, &mut BoundEffects, &mut StagedEffects)>,
-    mut commands: Commands,
 ) {
-    // Detect NodeActive start/end based on NodeState transitions
     // NodeActive = Playing or Paused (spans both)
-
-    if node_active_started {
-        for (entity, mut bound, mut staged) in &mut query {
-            if let Some(entries) = bound.conditions.get(&Condition::NodeActive) {
-                for entry in entries {
-                    activate_during(entity, &entry.source, &entry.tree,
-                        &mut bound, &mut staged, &mut commands);
-                }
-            }
-        }
-    }
-
-    if node_active_ended {
-        for (entity, mut bound, mut staged) in &mut query {
-            if let Some(entries) = bound.conditions.get(&Condition::NodeActive) {
-                for entry in entries {
-                    deactivate_during(entity, &entry.source, &entry.tree,
-                        &mut bound, &mut staged, &mut commands);
-                }
-            }
+    // Start: enter Playing from non-Playing non-Paused
+    // End: node teardown
+    for (entity, mut bound, mut staged) in &mut query {
+        if let Some(entries) = bound.conditions.get(&Condition::NodeActive) {
+            // activate_during / deactivate_during on transition
         }
     }
 }
+
+// ShieldActive: watches ShieldWall entity existence
+fn monitor_shield_active(
+    added: Query<Entity, Added<ShieldWall>>,
+    removed: RemovedComponents<ShieldWall>,
+    existing: Query<Entity, With<ShieldWall>>,
+    mut query: Query<(Entity, &mut BoundEffects, &mut StagedEffects)>,
+) {
+    // Start: Added<ShieldWall> detected AND no shield was active before
+    // End: ShieldWall removed AND no ShieldWall entities remain
+    // activate/deactivate During(ShieldActive, ...) entries
+}
+
+// ComboActive: watches consecutive perfect bump counter
+fn monitor_combo_active(
+    bump_events: MessageReader<BumpGraded>,
+    tracker: Res<HighlightTracker>,  // has consecutive_perfect_bumps
+    mut query: Query<(Entity, &mut BoundEffects, &mut StagedEffects)>,
+) {
+    // For each ComboActive(n) condition in BoundEffects:
+    // Start: consecutive_perfect_bumps crosses n upward
+    // End: consecutive_perfect_bumps resets to 0 (non-perfect bump)
+    // Must track per-n threshold state to detect crossings
+}
 ```
 
-During stays in `BoundEffects.conditions` permanently — condition cycling is handled by the monitor calling activate/deactivate on each transition.
+During stays in `BoundEffects.conditions` permanently — condition cycling is handled by the monitors calling activate/deactivate on each transition. Each condition can cycle independently.
 
 ### During + nested When lifecycle
 

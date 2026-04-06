@@ -230,7 +230,7 @@ enum Trigger {
     TimeExpires(f32),
 }
 
-enum Condition { NodeActive, NodePlaying }
+enum Condition { NodeActive, ShieldActive, ComboActive(u32) }
 enum EntityType { Bolt, Cell, Wall, Breaker }
 enum ImpactTarget { Cell, Bolt, Wall, Breaker }
 enum KillTarget { Cell, Bolt, Wall, Breaker, Any }

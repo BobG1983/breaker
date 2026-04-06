@@ -58,6 +58,30 @@ EffectDef::route(EveryBolt)
 Route(EveryBolt, During(NodeActive, Fire(SpeedBoost(multiplier: 1.3))))
 ```
 
+## 5b. During — shield-scoped
+
+```rust
+// "While shield is up, bolts deal double damage"
+EffectDef::route(EveryBolt)
+    .during(ShieldActive)
+    .fire(DamageBoost { multiplier: 2.0 })?;
+```
+```ron
+Route(EveryBolt, During(ShieldActive, Fire(DamageBoost(multiplier: 2.0))))
+```
+
+## 5c. During — combo-scoped
+
+```rust
+// "After 3 consecutive perfect bumps, speed boost until streak breaks"
+EffectDef::route(EveryBolt)
+    .during(ComboActive(3))
+    .fire(SpeedBoost { multiplier: 1.5 })?;
+```
+```ron
+Route(EveryBolt, During(ComboActive(3), Fire(SpeedBoost(multiplier: 1.5))))
+```
+
 ## 6. Transfer — one-shot (powder keg)
 
 ```rust

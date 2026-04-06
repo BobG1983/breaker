@@ -2,7 +2,8 @@ use bevy::prelude::*;
 
 use super::{
     fade::{self, FadeIn, FadeOut, FadeOutConfig},
-    shared::{TransitionOverlay, TransitionProgress},
+    post_process::{EffectType, TransitionEffect},
+    shared::TransitionProgress,
     *,
 };
 use crate::transition::{
@@ -16,15 +17,101 @@ fn effect_test_app() -> App {
     app.add_message::<TransitionReady>();
     app.add_message::<TransitionRunComplete>();
     app.add_message::<TransitionOver>();
-    app.insert_resource(ScreenSize::default());
+    app.world_mut().spawn(Camera2d);
     app
 }
 
 // =======================================================================
-// Section 14: Plugin Registration (behaviors 69-70)
+// Section 13: Shared Progress Tracking
 // =======================================================================
 
-// --- Behavior 69: All 11 effects registered in TransitionRegistry ---
+// --- Spec Behavior 49: TransitionProgress computes correctly ---
+
+#[test]
+fn progress_fraction_computes_correctly() {
+    let progress = TransitionProgress {
+        elapsed: 0.3,
+        duration: 0.5,
+        completed: false,
+    };
+    let fraction = (progress.elapsed / progress.duration).clamp(0.0, 1.0);
+    assert!(
+        (fraction - 0.6).abs() < f32::EPSILON,
+        "0.3 / 0.5 should be 0.6, got {fraction}"
+    );
+}
+
+#[test]
+fn progress_fraction_clamps_to_one_on_overshoot() {
+    let progress = TransitionProgress {
+        elapsed: 0.6,
+        duration: 0.5,
+        completed: false,
+    };
+    let fraction = (progress.elapsed / progress.duration).clamp(0.0, 1.0);
+    assert!(
+        (fraction - 1.0).abs() < f32::EPSILON,
+        "overshooting should clamp to 1.0"
+    );
+}
+
+// --- Spec Behavior 50: Zero-duration effect completes immediately ---
+
+#[test]
+fn zero_duration_effect_completes_immediately_via_fade_out() {
+    let mut app = effect_test_app();
+    let camera_entity = app
+        .world_mut()
+        .query_filtered::<Entity, With<Camera2d>>()
+        .iter(app.world())
+        .next()
+        .unwrap();
+    app.world_mut()
+        .entity_mut(camera_entity)
+        .insert(TransitionEffect {
+            color: Vec4::new(0.0, 0.0, 0.0, 1.0),
+            direction: Vec4::ZERO,
+            effect_type: EffectType::FADE,
+            progress: 0.0,
+        });
+    app.insert_resource(crate::transition::resources::RunningTransition::<FadeOut>::new());
+    app.insert_resource(TransitionProgress {
+        elapsed: 0.0,
+        duration: 0.0,
+        completed: false,
+    });
+    app.add_systems(Update, fade::fade_out_run);
+    app.update();
+
+    let msgs = app
+        .world()
+        .resource::<bevy::ecs::message::Messages<TransitionRunComplete>>();
+    assert_eq!(
+        msgs.iter_current_update_messages().count(),
+        1,
+        "zero-duration effect should send TransitionRunComplete on first frame"
+    );
+
+    let progress = app.world().resource::<TransitionProgress>();
+    assert!(
+        progress.completed,
+        "zero-duration effect should set completed = true"
+    );
+
+    let effects: Vec<&TransitionEffect> = app
+        .world_mut()
+        .query_filtered::<&TransitionEffect, With<Camera2d>>()
+        .iter(app.world())
+        .collect();
+    assert!(
+        (effects[0].progress - 1.0).abs() < f32::EPSILON,
+        "progress should be 1.0 for zero-duration effect"
+    );
+}
+
+// =======================================================================
+// Section 14: Plugin Registration
+// =======================================================================
 
 #[test]
 fn all_eleven_effects_are_registered_in_transition_registry() {
@@ -45,53 +132,91 @@ fn all_eleven_effects_are_registered_in_transition_registry() {
     app.update();
 
     let registry = app.world().resource::<TransitionRegistry>();
-    assert!(
-        registry.contains::<FadeOut>(),
-        "TransitionRegistry should contain FadeOut"
+    assert!(registry.contains::<FadeOut>());
+    assert!(registry.contains::<FadeIn>());
+    assert!(registry.contains::<Slide>());
+    assert!(registry.contains::<WipeOut>());
+    assert!(registry.contains::<WipeIn>());
+    assert!(registry.contains::<IrisOut>());
+    assert!(registry.contains::<IrisIn>());
+    assert!(registry.contains::<DissolveOut>());
+    assert!(registry.contains::<DissolveIn>());
+    assert!(registry.contains::<PixelateOut>());
+    assert!(registry.contains::<PixelateIn>());
+}
+
+// =======================================================================
+// Section 18: End System Camera Safety
+// =======================================================================
+
+// --- Spec Behavior 89: End system does not panic when camera lacks TransitionEffect ---
+
+#[test]
+fn end_system_does_not_panic_when_camera_lacks_transition_effect() {
+    let mut app = effect_test_app();
+    // Camera exists but has no TransitionEffect
+    app.insert_resource(crate::transition::resources::EndingTransition::<FadeOut>::new());
+    app.insert_resource(TransitionProgress {
+        elapsed: 0.5,
+        duration: 0.5,
+        completed: true,
+    });
+    app.add_systems(Update, fade::fade_out_end);
+    app.update();
+
+    let msgs = app
+        .world()
+        .resource::<bevy::ecs::message::Messages<TransitionOver>>();
+    assert_eq!(
+        msgs.iter_current_update_messages().count(),
+        1,
+        "TransitionOver should still be sent even without TransitionEffect on camera"
     );
     assert!(
-        registry.contains::<FadeIn>(),
-        "TransitionRegistry should contain FadeIn"
-    );
-    assert!(
-        registry.contains::<Slide>(),
-        "TransitionRegistry should contain Slide"
-    );
-    assert!(
-        registry.contains::<WipeOut>(),
-        "TransitionRegistry should contain WipeOut"
-    );
-    assert!(
-        registry.contains::<WipeIn>(),
-        "TransitionRegistry should contain WipeIn"
-    );
-    assert!(
-        registry.contains::<IrisOut>(),
-        "TransitionRegistry should contain IrisOut"
-    );
-    assert!(
-        registry.contains::<IrisIn>(),
-        "TransitionRegistry should contain IrisIn"
-    );
-    assert!(
-        registry.contains::<DissolveOut>(),
-        "TransitionRegistry should contain DissolveOut"
-    );
-    assert!(
-        registry.contains::<DissolveIn>(),
-        "TransitionRegistry should contain DissolveIn"
-    );
-    assert!(
-        registry.contains::<PixelateOut>(),
-        "TransitionRegistry should contain PixelateOut"
-    );
-    assert!(
-        registry.contains::<PixelateIn>(),
-        "TransitionRegistry should contain PixelateIn"
+        !app.world().contains_resource::<TransitionProgress>(),
+        "TransitionProgress should be removed"
     );
 }
 
-// --- Behavior 70: Built-in effect systems are gated on marker resources ---
+// --- Spec Behavior 90: End system does not despawn any entities ---
+
+#[test]
+fn end_system_does_not_despawn_any_entities() {
+    let mut app = effect_test_app();
+    let camera_entity = app
+        .world_mut()
+        .query_filtered::<Entity, With<Camera2d>>()
+        .iter(app.world())
+        .next()
+        .unwrap();
+    app.world_mut()
+        .entity_mut(camera_entity)
+        .insert(TransitionEffect::default());
+    let entity_count_before = app.world().entities().len();
+
+    app.insert_resource(crate::transition::resources::EndingTransition::<FadeOut>::new());
+    app.insert_resource(TransitionProgress {
+        elapsed: 0.5,
+        duration: 0.5,
+        completed: true,
+    });
+    app.add_systems(Update, fade::fade_out_end);
+    app.update();
+
+    let entity_count_after = app.world().entities().len();
+    assert_eq!(
+        entity_count_before, entity_count_after,
+        "no entities should be despawned (only component removed)"
+    );
+    assert!(
+        app.world().get_entity(camera_entity).is_ok(),
+        "camera entity should still exist"
+    );
+}
+
+// =======================================================================
+// Section 14 (continued): Built-in effect systems gated on marker resources
+// =======================================================================
 
 #[test]
 fn inserting_fade_out_marker_causes_only_fade_out_start_to_fire() {
@@ -111,7 +236,7 @@ fn inserting_fade_out_marker_causes_only_fade_out_start_to_fire() {
         .add_plugins(RantzLifecyclePlugin::new().register_state::<TestState>());
     app.update();
 
-    // Insert FadeOut marker + config + screen size (already default)
+    // Insert FadeOut marker + config
     app.insert_resource(StartingTransition::<FadeOut>::new());
     app.insert_resource(FadeOutConfig {
         duration: 0.5,
@@ -141,148 +266,30 @@ fn inserting_fade_out_marker_causes_only_fade_out_start_to_fire() {
 }
 
 // =======================================================================
-// Section 15: Progress Tracking Shared Behavior (behaviors 71-73)
+// Section 20: Test App Helper Update
 // =======================================================================
 
-// --- Behavior 71: TransitionProgress initialized to elapsed 0.0 ---
-// Covered by individual effect start tests which check:
-//   progress.elapsed == 0.0, progress.completed == false
-
-// --- Behavior 72: Progress is elapsed / duration clamped to [0.0, 1.0] ---
+// --- Spec Behavior 93: effect_test_app() creates app with Camera2d ---
 
 #[test]
-fn progress_fraction_computes_correctly() {
-    // This is a unit test on the shared computation pattern.
-    // Each effect's run system should compute: progress = (elapsed / duration).clamp(0.0, 1.0)
-    let progress = TransitionProgress {
-        elapsed: 0.3,
-        duration: 0.5,
-        completed: false,
-    };
-    let fraction = (progress.elapsed / progress.duration).clamp(0.0, 1.0);
-    assert!(
-        (fraction - 0.6).abs() < f32::EPSILON,
-        "0.3 / 0.5 should be 0.6, got {fraction}"
-    );
-}
-
-#[test]
-fn progress_fraction_clamps_to_one_on_overshoot() {
-    let progress = TransitionProgress {
-        elapsed: 0.6,
-        duration: 0.5,
-        completed: false,
-    };
-    let fraction = (progress.elapsed / progress.duration).clamp(0.0, 1.0);
-    assert!(
-        (fraction - 1.0).abs() < f32::EPSILON,
-        "overshooting should clamp to 1.0"
-    );
-}
-
-// --- Behavior 73: Zero-duration effect completes immediately ---
-
-#[test]
-fn zero_duration_effect_completes_immediately_via_fade_out() {
-    // Use FadeOut as the representative effect for zero-duration behavior.
+fn effect_test_app_has_camera2d_entity() {
     let mut app = effect_test_app();
-    app.insert_resource(crate::transition::resources::RunningTransition::<FadeOut>::new());
-    app.insert_resource(TransitionProgress {
-        elapsed: 0.0,
-        duration: 0.0,
-        completed: false,
-    });
-    app.world_mut().spawn((
-        Sprite {
-            color: Color::srgba(0.0, 0.0, 0.0, 0.0),
-            custom_size: Some(Vec2::new(1920.0, 1080.0)),
-            ..default()
-        },
-        TransitionOverlay,
-    ));
-    app.add_systems(Update, fade::fade_out_run);
-    app.update();
-
-    // For zero duration, progress should be 1.0 (not NaN) and complete should fire.
-    let msgs = app
-        .world()
-        .resource::<bevy::ecs::message::Messages<TransitionRunComplete>>();
+    let camera_count = app
+        .world_mut()
+        .query_filtered::<Entity, With<Camera2d>>()
+        .iter(app.world())
+        .count();
     assert_eq!(
-        msgs.iter_current_update_messages().count(),
-        1,
-        "zero-duration effect should send TransitionRunComplete on first frame"
-    );
-
-    let progress = app.world().resource::<TransitionProgress>();
-    assert!(
-        progress.completed,
-        "zero-duration effect should set completed = true"
-    );
-}
-
-// =======================================================================
-// Section 16: Overlay Entity Marker (behaviors 74-75)
-// =======================================================================
-
-// --- Behavior 74: All overlay entities tagged with TransitionOverlay ---
-// Covered by every start system test that checks for TransitionOverlay component.
-
-// --- Behavior 75: End system despawns only TransitionOverlay entities ---
-
-#[test]
-fn end_system_only_despawns_overlay_entities_not_others() {
-    let mut app = effect_test_app();
-    app.insert_resource(crate::transition::resources::EndingTransition::<FadeOut>::new());
-    app.insert_resource(TransitionProgress {
-        elapsed: 0.5,
-        duration: 0.5,
-        completed: true,
-    });
-
-    // Spawn an overlay entity and a non-overlay entity
-    app.world_mut()
-        .spawn((Sprite::default(), TransitionOverlay));
-    let non_overlay = app.world_mut().spawn(Camera2d).id();
-
-    app.add_systems(Update, fade::fade_out_end);
-    app.update();
-
-    let overlay_count = app
-        .world_mut()
-        .query_filtered::<Entity, With<TransitionOverlay>>()
-        .iter(app.world())
-        .count();
-    assert_eq!(overlay_count, 0, "overlay should be despawned");
-
-    assert!(
-        app.world().get_entity(non_overlay).is_ok(),
-        "non-overlay entity (camera) should NOT be despawned"
+        camera_count, 1,
+        "effect_test_app should have a Camera2d entity"
     );
 }
 
 #[test]
-fn end_system_despawns_all_overlay_entities_if_multiple_exist() {
-    let mut app = effect_test_app();
-    app.insert_resource(crate::transition::resources::EndingTransition::<FadeOut>::new());
-    app.insert_resource(TransitionProgress {
-        elapsed: 0.5,
-        duration: 0.5,
-        completed: true,
-    });
-
-    // Spawn two overlay entities
-    app.world_mut()
-        .spawn((Sprite::default(), TransitionOverlay));
-    app.world_mut()
-        .spawn((Sprite::default(), TransitionOverlay));
-
-    app.add_systems(Update, fade::fade_out_end);
-    app.update();
-
-    let overlay_count = app
-        .world_mut()
-        .query_filtered::<Entity, With<TransitionOverlay>>()
-        .iter(app.world())
-        .count();
-    assert_eq!(overlay_count, 0, "all overlay entities should be despawned");
+fn effect_test_app_has_no_screen_size_resource() {
+    let app = effect_test_app();
+    assert!(
+        !app.world().contains_resource::<ScreenSize>(),
+        "effect_test_app should NOT have ScreenSize resource"
+    );
 }

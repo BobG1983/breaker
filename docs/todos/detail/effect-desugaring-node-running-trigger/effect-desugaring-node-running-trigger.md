@@ -90,12 +90,12 @@ src/new_effect/
 - Tests
 
 **Out:**
-- Changing inherit behavior
-- Co-op breaker spawning
+- Changing inherit behavior (SpawnBolts inherit flag stays as-is)
+- Co-op breaker spawning (multi-breaker support deferred)
 - Content generation tooling (Phase 7 — builder becomes its API)
-- During reacting to pause
-- During reversing on source entity despawn
-- Reorganizing effect types under unified `Spawn(...)` variant
+- `NodePlaying` condition (not defined in enum — add when needed. Only `NodeActive` is implemented.)
+- During reversing on source entity despawn (orphaned effects stay applied until node teardown cleans everything — acceptable)
+- Reorganizing effect types under unified `Spawn(...)` variant (SpawnBolts/SpawnPhantom/ChainBolt stay separate)
 
 ## Dependencies
 - Depends on: Nothing specific
