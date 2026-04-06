@@ -1,12 +1,13 @@
 //! System to spawn the timer HUD on node entry.
 
 use bevy::prelude::*;
+use rantzsoft_lifecycle::CleanupOnExit;
 
 use super::super::{
     components::{NodeTimerDisplay, StatusPanel},
     resources::TimerUiConfig,
 };
-use crate::{shared::CleanupOnNodeExit, state::run::node::NodeTimer};
+use crate::state::{run::node::NodeTimer, types::NodeState};
 
 /// Spawns the timer display as a child of the [`StatusPanel`].
 pub(crate) fn spawn_timer_hud(
@@ -31,7 +32,7 @@ pub(crate) fn spawn_timer_hud(
     commands.entity(panel).with_children(|parent| {
         parent
             .spawn((
-                CleanupOnNodeExit,
+                CleanupOnExit::<NodeState>::default(),
                 Node {
                     padding: UiRect::axes(Val::Px(10.0), Val::Px(4.0)),
                     border_radius: BorderRadius::all(Val::Px(6.0)),
@@ -104,9 +105,9 @@ mod tests {
             .expect("NodeTimerDisplay should have a parent");
         assert!(
             app.world()
-                .get::<CleanupOnNodeExit>(parent.parent())
+                .get::<CleanupOnExit<NodeState>>(parent.parent())
                 .is_some(),
-            "parent wrapper should have CleanupOnNodeExit"
+            "parent wrapper should have CleanupOnExit<NodeState>"
         );
     }
 

@@ -12,21 +12,43 @@ One builder for everything. RON deserializes into permissive `Raw` structs (deri
 
 ## Typestate Machine
 
+Two entry points: `EffectDef` for definition-level entries (Route required), `EffectTree` for inner trees and Transfer payloads.
+
 ```
 ┌─────────────────────────────────────────────────────┐
-│ Entry Points                                         │
+│ Definition Entry Point (Route required at root)      │
 │                                                       │
-│ Effect::when(event)       → TriggerChain<AnyFire>    │
-│ Effect::during(condition) → DuringContext             │
-│ Effect::until(trigger)    → UntilContext              │
-│ Effect::spawned(type)     → SpawnedContext            │
+│ EffectDef::route(route_target) → RouteContext        │
+└─────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────┐
+│ RouteContext (sets This for the subtree)              │
+│                                                       │
+│ .fire(effect)             → ValidDef                 │
+│ .when(trigger)            → TriggerChain<AnyFire>    │
+│ .once(trigger)            → TriggerChain<AnyFire>    │
+│ .during(condition)        → DuringContext             │
+│ .until(trigger)           → UntilContext              │
+│ .spawned(type)            → SpawnedContext            │
+└─────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────┐
+│ Inner Tree Entry Point (for Transfer payloads)       │
+│                                                       │
+│ EffectTree::when(trigger)     → TriggerChain<AnyFire>│
+│ EffectTree::once(trigger)     → TriggerChain<AnyFire>│
+│ EffectTree::during(condition) → DuringContext         │
+│ EffectTree::until(trigger)    → UntilContext          │
+│ EffectTree::fire(effect)      → ValidTree            │
 └─────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────┐
 │ TriggerChain<FireConstraint>                         │
 │                                                       │
-│ .when(event) → TriggerChain<FireConstraint>  (nest)  │
-│ .on(target)  → TargetContext<FireConstraint>          │
+│ .when(event)   → TriggerChain<FireConstraint> (nest) │
+│ .fire(effect)  → ValidTree/ValidDef (targets This)   │
+│ .on(target)    → TargetContext<FireConstraint>        │
+│                  (only for non-This targets)          │
 └─────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────┐
@@ -36,8 +58,11 @@ One builder for everything. RON deserializes into permissive `Raw` structs (deri
 │ .when(event) → TriggerChain<AnyFire>     (nested When│
 │                — reversal removes listener, so inner  │
 │                can be anything)                       │
-│ .on(target)  → TargetContext<ReversibleOnly>  (direct │
-│                fire — must be reversible)              │
+│ .fire(reversible_effect) → ValidTree/ValidDef        │
+│                (direct fire — must be reversible,     │
+│                 targets This implicitly)              │
+│ .on(target)  → TargetContext<ReversibleOnly>          │
+│                (only for non-This targets)            │
 └─────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────┐
@@ -46,19 +71,22 @@ One builder for everything. RON deserializes into permissive `Raw` structs (deri
 │                                                       │
 │ .when(event) → TriggerChain<AnyFire>     (nested When│
 │                — same relaxation as During)           │
-│ .on(target)  → TargetContext<ReversibleOnly>  (direct │
-│                fire — must be reversible)              │
+│ .fire(reversible_effect) → ValidTree/ValidDef        │
+│                (direct fire — must be reversible,     │
+│                 targets This implicitly)              │
+│ .on(target)  → TargetContext<ReversibleOnly>          │
+│                (only for non-This targets)            │
 └─────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────┐
 │ TargetContext<AnyFire>                               │
-│ .fire(any_effect) → ValidEffect                      │
-│ .transfer(inner_tree) → ValidEffect                  │
+│ .fire(any_effect) → ValidTree/ValidDef               │
+│ .transfer(inner_tree) → ValidTree/ValidDef           │
 │                                                       │
 │ TargetContext<ReversibleOnly>                         │
-│ .fire(reversible_effect) → ValidEffect               │
+│ .fire(reversible_effect) → ValidTree/ValidDef        │
 │ .fire(non_reversible)    → COMPILE ERROR             │
-│ .transfer(inner_tree) → ValidEffect                  │
+│ .transfer(inner_tree) → ValidTree/ValidDef           │
 │                                                       │
 │ (transfer is always allowed — it stamps BoundEffects, │
 │  which is inherently reversible via removal)          │
@@ -66,9 +94,17 @@ One builder for everything. RON deserializes into permissive `Raw` structs (deri
 
 ┌─────────────────────────────────────────────────────┐
 │ SpawnedContext                                        │
-│ .fire(any_effect) → ValidEffect  (implicit target)   │
+│ .fire(any_effect) → ValidTree/ValidDef (implicit tgt)│
 └─────────────────────────────────────────────────────┘
 ```
+
+### Key rules
+- `Fire` always targets `This` (the entity Route routes to, or the entity BoundEffects lives on inside a Stamp/Transfer payload)
+- `On` is ONLY for non-This targets: trigger participants (`PerfectBumped::Bolt`) — redirects Fire/Stamp/Transfer to that entity
+- `On(This, ...)` never appears — it's always just `Fire(...)` directly
+- `Route` is required at definition root — you cannot have a bare `When(...)` in an `effects: []` list
+- `Stamp` (terminal) = permanent add to target's BoundEffects at runtime
+- `Transfer` (terminal) = one-shot add to target's StagedEffects at runtime
 
 ## Rust Types
 
@@ -86,12 +122,30 @@ trait Reversible: Effect {
     fn reverse(&self, entity: Entity, source_chip: &str, world: &mut World);
 }
 
-// ── Entry points ──
-impl EffectBuilder {
-    fn when(event: impl Into<Trigger>) -> TriggerChain<AnyFire>;
+// ── Definition entry point (Route required) ──
+impl EffectDef {
+    fn stamp(target: impl Into<RouteTarget>) -> RouteContext;
+}
+
+// ── RouteContext (sets This for the subtree) ──
+struct RouteContext { target: RouteTarget }
+
+impl RouteContext {
+    fn fire(self, effect: impl Effect) -> ValidDef;                     // passive effect
+    fn when(self, trigger: impl Into<Trigger>) -> TriggerChain<AnyFire>;
+    fn once(self, trigger: impl Into<Trigger>) -> TriggerChain<AnyFire>;
+    fn during(self, condition: impl Into<Condition>) -> DuringContext;
+    fn until(self, trigger: impl Into<Trigger>) -> UntilContext;
+    fn spawned(self, entity_type: EntityType) -> SpawnedContext;
+}
+
+// ── Inner tree entry point (for Transfer payloads) ──
+impl EffectTree {
+    fn when(trigger: impl Into<Trigger>) -> TriggerChain<AnyFire>;
+    fn once(trigger: impl Into<Trigger>) -> TriggerChain<AnyFire>;
     fn during(condition: impl Into<Condition>) -> DuringContext;
     fn until(trigger: impl Into<Trigger>) -> UntilContext;
-    fn spawned(entity_type: EntityType) -> SpawnedContext;
+    fn fire(effect: impl Effect) -> ValidTree;                          // direct fire on This
 }
 
 // ── TriggerChain ──
@@ -101,56 +155,61 @@ struct TriggerChain<C> {
 }
 
 impl<C> TriggerChain<C> {
-    fn when(self, event: impl Into<Trigger>) -> TriggerChain<C>;
-    fn on(self, target: impl Into<Target>) -> TargetContext<C>;
+    fn when(self, event: impl Into<Trigger>) -> TriggerChain<C>;       // nest triggers
+    fn fire(self, effect: impl Effect) -> ValidDef;                     // fire on This (implicit)
+    fn on(self, target: impl Into<ParticipantTarget>) -> TargetContext<C>; // non-This target only
 }
 
 // ── DuringContext ──
 struct DuringContext { condition: Condition }
 
 impl DuringContext {
-    fn when(self, event: impl Into<Trigger>) -> DuringTriggerChain; // relaxes to AnyFire
-    fn on(self, target: impl Into<Target>) -> TargetContext<ReversibleOnly>; // direct = reversible
+    fn when(self, event: impl Into<Trigger>) -> DuringTriggerChain;    // relaxes to AnyFire
+    fn fire(self, effect: impl Reversible) -> ValidDef;                 // direct = reversible, targets This
+    fn on(self, target: impl Into<ParticipantTarget>) -> TargetContext<ReversibleOnly>;
 }
 
 struct DuringTriggerChain { condition: Condition, triggers: Vec<Trigger> }
 
 impl DuringTriggerChain {
     fn when(self, event: impl Into<Trigger>) -> DuringTriggerChain;
-    fn on(self, target: impl Into<Target>) -> TargetContext<AnyFire>; // nested When = any
+    fn fire(self, effect: impl Effect) -> ValidDef;                     // nested When = any
+    fn on(self, target: impl Into<ParticipantTarget>) -> TargetContext<AnyFire>;
 }
 
 // ── UntilContext (same shape as DuringContext, different semantics) ──
 struct UntilContext { trigger: Trigger }
 
 impl UntilContext {
-    fn when(self, event: impl Into<Trigger>) -> UntilTriggerChain; // relaxes to AnyFire
-    fn on(self, target: impl Into<Target>) -> TargetContext<ReversibleOnly>; // direct = reversible
+    fn when(self, event: impl Into<Trigger>) -> UntilTriggerChain;     // relaxes to AnyFire
+    fn fire(self, effect: impl Reversible) -> ValidDef;                 // direct = reversible, targets This
+    fn on(self, target: impl Into<ParticipantTarget>) -> TargetContext<ReversibleOnly>;
 }
 
 struct UntilTriggerChain { until_trigger: Trigger, triggers: Vec<Trigger> }
 
 impl UntilTriggerChain {
     fn when(self, event: impl Into<Trigger>) -> UntilTriggerChain;
-    fn on(self, target: impl Into<Target>) -> TargetContext<AnyFire>; // nested When = any
+    fn fire(self, effect: impl Effect) -> ValidDef;                     // nested When = any
+    fn on(self, target: impl Into<ParticipantTarget>) -> TargetContext<AnyFire>;
 }
 
-// ── TargetContext ──
+// ── TargetContext (only reached via .on() for non-This targets) ──
 impl TargetContext<AnyFire> {
-    fn fire(self, effect: impl Effect) -> ValidEffect;
-    fn transfer(self, inner: ValidEffect) -> ValidEffect;
-    fn transfer_to(self, target: impl Into<Target>, inner: ValidEffect) -> ValidEffect;
+    fn fire(self, effect: impl Effect) -> ValidDef;
+    fn stamp(self, inner: ValidTree) -> ValidDef;                       // permanent → BoundEffects
+    fn transfer(self, inner: ValidTree) -> ValidDef;                    // one-shot → StagedEffects
 }
 
 impl TargetContext<ReversibleOnly> {
-    fn fire(self, effect: impl Reversible) -> ValidEffect; // compile error if !Reversible
-    fn transfer(self, inner: ValidEffect) -> ValidEffect;
-    fn transfer_to(self, target: impl Into<Target>, inner: ValidEffect) -> ValidEffect;
+    fn fire(self, effect: impl Reversible) -> ValidDef;                 // compile error if !Reversible
+    fn stamp(self, inner: ValidTree) -> ValidDef;                       // permanent → BoundEffects
+    fn transfer(self, inner: ValidTree) -> ValidDef;                    // one-shot → StagedEffects
 }
 
 // ── SpawnedContext ──
 impl SpawnedContext {
-    fn fire(self, effect: impl Effect) -> ValidEffect;
+    fn fire(self, effect: impl Effect) -> ValidDef;                     // implicit target
 }
 ```
 
@@ -177,46 +236,45 @@ enum ImpactTarget { Cell, Bolt, Wall, Breaker }
 enum KillTarget { Cell, Bolt, Wall, Breaker, Any }
 enum DeathTarget { Cell, Bolt, Wall, Breaker, Any }
 
-// ── Per-trigger participant enums ──
+// ── RouteTarget: definition-time entity routing (no This, no participants) ──
 
-enum PerfectBumpedTarget { Bolt, Breaker }
-enum EarlyBumpedTarget { Bolt, Breaker }
-enum LateBumpedTarget { Bolt, Breaker }
-enum BumpedTarget { Bolt, Breaker }
-enum ImpactedTarget { Impactor, Target }
-enum DiedTarget { Victim, Killer }
-enum KilledTarget { Killer, Victim }
-enum BumpOccurredTarget { Bolt, Breaker }
-enum ImpactOccurredTarget { Bolt, Cell, Wall, Breaker }  // depends on ImpactTarget
-enum DeathOccurredTarget { Entity, Killer }
-enum BoltLostOccurredTarget { Bolt, Breaker }
-// NodeStartOccurred, NodeEndOccurred, etc. — no participants
-
-// ── ValidTarget: all possible targets, structurally typed ──
-
-enum ValidTarget {
-    // Entity reference
-    This,
-
-    // Aggregate targets
-    EveryBolt, ActiveBolts, PrimaryBolts, ExtraBolts,
-    EveryCell, ActiveCells,
-    EveryWall, ActiveWalls,
-    EveryBreaker, ActiveBreakers,
-
-    // Per-trigger participants (structurally enforced)
-    PerfectBumped(PerfectBumpedTarget),
-    EarlyBumped(EarlyBumpedTarget),
-    LateBumped(LateBumpedTarget),
-    Bumped(BumpedTarget),
-    Impacted(ImpactedTarget),
-    Died(DiedTarget),
-    Killed(KilledTarget),
-    BumpOccurred(BumpOccurredTarget),
-    ImpactOccurred(ImpactOccurredTarget),
-    DeathOccurred(DeathOccurredTarget),
-    BoltLostOccurred(BoltLostOccurredTarget),
+enum RouteTarget {
+    Bolt, Breaker, Cell, Wall,
+    ActiveBolts, EveryBolt, PrimaryBolts, ExtraBolts,
+    ActiveCells, EveryCells,
+    ActiveWalls, EveryWall,
+    ActiveBreakers, EveryBreaker,
 }
+
+// ── Shared participant enums ──
+// Grouped by concept. Triggers sharing an enum live in the same folder.
+
+enum BumpTarget { Bolt, Breaker }          // triggers/bump/
+// Used by: PerfectBumped, EarlyBumped, LateBumped, Bumped,
+//          PerfectBumpOccurred, BumpOccurred, BumpWhiffOccurred, NoBumpOccurred
+
+enum ImpactTarget { Impactor, Impactee }   // triggers/impact/
+// Used by: Impacted, ImpactOccurred
+
+enum DeathTarget { Victim, Killer }        // triggers/death/
+// Used by: Died, Killed, DeathOccurred
+
+enum BoltLostTarget { Bolt, Breaker }      // triggers/bolt_lost/
+// Used by: BoltLostOccurred
+
+// NodeStartOccurred, NodeEndOccurred, NodeTimerThresholdOccurred — no participants
+
+// ── ParticipantTarget: runtime redirect (On target, non-This only) ──
+// Shared enums — multiple triggers map to the same concept.
+
+enum ParticipantTarget {
+    Bump(BumpTarget),           // triggers/bump/
+    Impact(ImpactTarget),       // triggers/impact/
+    Death(DeathTarget),         // triggers/death/
+    BoltLost(BoltLostTarget),   // triggers/bolt_lost/
+}
+// No This variant (Fire targets This implicitly).
+// No entity types (Route handles routing at definition level).
 
 // ── Effect types: full set + reversible subset ──
 
@@ -246,135 +304,168 @@ enum ReversibleEffectType {
 
 // ── Validated tree structure ──
 
-enum ValidEffect {
-    When(Trigger, ValidInner),
-    During(Condition, ValidScopedInner),
-    Until(Trigger, ValidScopedInner),
-    Spawned(EntityType, ValidTerminal),
+// Definition-level: Route wraps every top-level entry
+struct ValidDef {
+    stamp_target: RouteTarget,
+    tree: ValidTree,
 }
 
-enum ValidInner {
-    When(Trigger, Box<ValidInner>),        // nested triggers
-    On(ValidTarget, ValidTerminal),         // target + terminal
+// Inner tree (lives inside Route, and inside Stamp/Transfer payloads)
+enum ValidTree {
+    Fire(EffectType),                               // fire on This (implicit)
+    When(Trigger, Box<ValidTree>),
+    Once(Trigger, Box<ValidTree>),                  // same as When, self-removes after first match
+    During(Condition, ValidScopedTree),
+    Until(Trigger, ValidScopedTree),
+    Spawned(EntityType, Box<ValidTree>),
+    On(ParticipantTarget, ValidTerminal),            // redirect to non-This target
 }
 
-enum ValidScopedInner {
-    When(Trigger, Box<ValidInner>),        // nested When → relaxed (any effect OK)
-    On(ValidTarget, ValidScopedTerminal),  // direct → reversible only
+enum ValidScopedTree {
+    Fire(ReversibleEffectType),                      // direct fire in scoped context — reversible only
+    When(Trigger, Box<ValidTree>),                   // nested When → relaxed (any effect OK)
+    On(ParticipantTarget, ValidScopedTerminal),      // direct to non-This — reversible only
 }
 
 enum ValidTerminal {
-    Fire(EffectType),                       // any effect
-    Transfer(Box<ValidEffect>),             // stamp inner tree
+    Fire(EffectType),                               // any effect, immediate
+    Stamp(Box<ValidTree>),                           // permanent → target's BoundEffects
+    Transfer(Box<ValidTree>),                        // one-shot → target's StagedEffects
+    Reverse(ReversibleEffectType),                   // internal only — generated by During/Until
 }
 
 enum ValidScopedTerminal {
-    Fire(ReversibleEffectType),             // reversible only
-    Transfer(Box<ValidEffect>),             // transfer always OK
+    Fire(ReversibleEffectType),                      // reversible only
+    Stamp(Box<ValidTree>),                           // stamp always OK (removable via BoundEffects cleanup)
+    Transfer(Box<ValidTree>),                        // transfer always OK
 }
+
+// Note: Reverse never appears in RawEffect/RON. It's generated internally when
+// During/Until desugar their reversal entries into StagedEffects:
+//   During(NodeActive, Fire(SpeedBoost))
+//   → fires SpeedBoost immediately
+//   → stages: When(NodeEndOccurred, Reverse(SpeedBoost))
+
 ```
 
 ## Raw Types (RON schema — permissive, for serde)
 
 ```rust
+// Definition-level: Route wraps every top-level entry
 #[derive(Serialize, Deserialize)]
-enum RawEffect {
-    When(Trigger, Box<RawInner>),
-    During(Condition, Box<RawInner>),
-    Until(Trigger, Box<RawInner>),
-    Spawned(EntityType, Box<RawTerminal>),
+struct RawDef {
+    route: RawRouteTarget,
+    tree: RawTree,
 }
 
 #[derive(Serialize, Deserialize)]
-enum RawInner {
-    When(Trigger, Box<RawInner>),
-    On(RawTarget, Box<RawTerminal>),
+enum RawRouteTarget {
+    Bolt, Breaker, Cell, Wall,
+    ActiveBolts, EveryBolt, PrimaryBolts, ExtraBolts,
+    ActiveCells, EveryCells,
+    ActiveWalls, EveryWall,
+    ActiveBreakers, EveryBreaker,
+}
+
+// Inner tree (lives inside Route, and inside Stamp/Transfer payloads)
+#[derive(Serialize, Deserialize)]
+enum RawTree {
+    Fire(EffectType),                       // fire on This (implicit)
+    When(Trigger, Box<RawTree>),
+    Once(Trigger, Box<RawTree>),
+    During(Condition, Box<RawTree>),
+    Until(Trigger, Box<RawTree>),
+    Spawned(EntityType, Box<RawTree>),
+    On(RawParticipant, Box<RawTerminal>),   // redirect to non-This target
 }
 
 #[derive(Serialize, Deserialize)]
 enum RawTerminal {
     Fire(EffectType),                       // any effect — validation checks reversibility
-    Transfer(Box<RawEffect>),
+    Stamp(Box<RawTree>),                    // permanent → target's BoundEffects
+    Transfer(Box<RawTree>),                 // one-shot → target's StagedEffects
 }
 
 #[derive(Serialize, Deserialize)]
-enum RawTarget {
-    This,
-    EveryBolt, ActiveBolts, PrimaryBolts, ExtraBolts,
-    EveryCell, ActiveCells,
-    EveryWall, ActiveWalls,
-    EveryBreaker, ActiveBreakers,
-    // Participants — permissive, validated by loader
+enum RawParticipant {
+    // Flat participant names — permissive, validated by loader against trigger context
     Bolt, Breaker, Cell, Wall,
     Impactor, Target, Victim, Killer, Entity,
 }
 ```
 
-Raw uses flat participant names (`Bolt`, `Victim`, etc.) — the loader validates they match the trigger context and maps to the per-trigger `ValidTarget` variant.
+Raw uses flat participant names (`Bolt`, `Victim`, etc.) — the loader validates they match the trigger context and maps to the per-trigger `ParticipantTarget` variant. No `This` in On — Fire targets This implicitly. No entity types in On — Route handles routing at definition level.
 
 ## RON → Valid (loader)
 
 ```rust
-fn load_effect(raw: &RawEffect) -> Result<ValidEffect, EffectError> {
-    match raw {
-        RawEffect::When(trigger, inner) => {
-            let valid_inner = load_inner(trigger, inner)?;
-            Ok(ValidEffect::When(*trigger, valid_inner))
-        }
-        RawEffect::During(condition, inner) => {
-            let valid_inner = load_scoped_inner(inner)?;
-            Ok(ValidEffect::During(*condition, valid_inner))
-        }
-        RawEffect::Until(trigger, inner) => {
-            let valid_inner = load_scoped_inner(inner)?;
-            Ok(ValidEffect::Until(*trigger, valid_inner))
-        }
-        RawEffect::Spawned(entity_type, terminal) => {
-            let valid_term = load_terminal(terminal)?;
-            Ok(ValidEffect::Spawned(*entity_type, valid_term))
-        }
-    }
+fn load_def(raw: &RawDef) -> Result<ValidDef, EffectError> {
+    let target = validate_stamp_target(&raw.stamp)?;
+    let tree = load_tree(&raw.tree, None)?; // no trigger context at root
+    Ok(ValidDef { stamp_target: target, tree })
 }
 
-fn load_inner(trigger_ctx: &Trigger, raw: &RawInner) -> Result<ValidInner, EffectError> {
+fn load_tree(raw: &RawTree, trigger_ctx: Option<&Trigger>) -> Result<ValidTree, EffectError> {
     match raw {
-        RawInner::When(trigger, next) => {
-            let inner = load_inner(trigger, next)?;
-            Ok(ValidInner::When(*trigger, Box::new(inner)))
+        RawTree::Fire(effect) => Ok(ValidTree::Fire(effect.clone())),
+        RawTree::When(trigger, inner) => {
+            let tree = load_tree(inner, Some(trigger))?;
+            Ok(ValidTree::When(*trigger, Box::new(tree)))
         }
-        RawInner::On(raw_target, terminal) => {
-            let target = validate_target(trigger_ctx, raw_target)?; // checks participant validity
+        RawTree::Once(trigger, inner) => {
+            let tree = load_tree(inner, Some(trigger))?;
+            Ok(ValidTree::Once(*trigger, Box::new(tree)))
+        }
+        RawTree::During(condition, inner) => {
+            let scoped = load_scoped_tree(inner, trigger_ctx)?;
+            Ok(ValidTree::During(*condition, scoped))
+        }
+        RawTree::Until(trigger, inner) => {
+            let scoped = load_scoped_tree(inner, trigger_ctx)?;
+            Ok(ValidTree::Until(*trigger, scoped))
+        }
+        RawTree::Spawned(entity_type, inner) => {
+            let tree = load_tree(inner, None)?;
+            Ok(ValidTree::Spawned(*entity_type, Box::new(tree)))
+        }
+        RawTree::On(participant, terminal) => {
+            let target = validate_participant(trigger_ctx, participant)?;
             let term = load_terminal(terminal)?;
-            Ok(ValidInner::On(target, term))
+            Ok(ValidTree::On(target, term))
         }
     }
 }
 
-fn load_scoped_inner(raw: &RawInner) -> Result<ValidScopedInner, EffectError> {
+fn load_scoped_tree(raw: &RawTree, trigger_ctx: Option<&Trigger>) -> Result<ValidScopedTree, EffectError> {
     match raw {
-        RawInner::When(trigger, next) => {
-            // Nested When → relaxed (any effect OK)
-            let inner = load_inner(trigger, next)?;
-            Ok(ValidScopedInner::When(*trigger, Box::new(inner)))
-        }
-        RawInner::On(raw_target, terminal) => {
-            // Direct → must be reversible
-            let target = validate_target_no_context(raw_target)?;
-            let term = load_scoped_terminal(terminal)?;
-            Ok(ValidScopedInner::On(target, term))
-        }
-    }
-}
-
-fn load_scoped_terminal(raw: &RawTerminal) -> Result<ValidScopedTerminal, EffectError> {
-    match raw {
-        RawTerminal::Fire(effect) => {
+        RawTree::Fire(effect) => {
             let reversible = to_reversible(effect)?; // Err if not reversible
-            Ok(ValidScopedTerminal::Fire(reversible))
+            Ok(ValidScopedTree::Fire(reversible))
+        }
+        RawTree::When(trigger, inner) => {
+            // Nested When → relaxed (any effect OK)
+            let tree = load_tree(inner, Some(trigger))?;
+            Ok(ValidScopedTree::When(*trigger, Box::new(tree)))
+        }
+        RawTree::On(participant, terminal) => {
+            let target = validate_participant(trigger_ctx, participant)?;
+            let term = load_scoped_terminal(terminal)?;
+            Ok(ValidScopedTree::On(target, term))
+        }
+        _ => Err(EffectError::InvalidInScopedContext),
+    }
+}
+
+fn load_terminal(raw: &RawTerminal) -> Result<ValidTerminal, EffectError> {
+    match raw {
+        RawTerminal::Fire(effect) => Ok(ValidTerminal::Fire(effect.clone())),
+        RawTerminal::Stamp(inner) => {
+            let tree = load_tree(inner, None)?; // Stamp payload has no trigger context
+            Ok(ValidTerminal::Stamp(Box::new(tree)))
         }
         RawTerminal::Transfer(inner) => {
-            let valid = load_effect(inner)?;
-            Ok(ValidScopedTerminal::Transfer(Box::new(valid)))
+            let tree = load_tree(inner, None)?; // Transfer payload has no trigger context
+            Ok(ValidTerminal::Transfer(Box::new(tree)))
         }
     }
 }
@@ -383,26 +474,37 @@ fn load_scoped_terminal(raw: &RawTerminal) -> Result<ValidScopedTerminal, Effect
 ## Valid → Raw (round-trip for serialization)
 
 ```rust
-impl ValidEffect {
-    fn to_raw(&self) -> RawEffect {
-        match self {
-            ValidEffect::When(t, inner) => RawEffect::When(*t, Box::new(inner.to_raw())),
-            ValidEffect::During(c, inner) => RawEffect::During(*c, Box::new(inner.to_raw_inner())),
-            ValidEffect::Until(t, inner) => RawEffect::Until(*t, Box::new(inner.to_raw_inner())),
-            ValidEffect::Spawned(e, term) => RawEffect::Spawned(*e, Box::new(term.to_raw())),
+impl ValidDef {
+    fn to_raw(&self) -> RawDef {
+        RawDef {
+            stamp: self.stamp_target.to_raw(),
+            tree: self.tree.to_raw(),
         }
     }
 }
 
-// ValidTarget → RawTarget: flatten per-trigger enums back to flat names
-impl ValidTarget {
-    fn to_raw(&self) -> RawTarget {
+impl ValidTree {
+    fn to_raw(&self) -> RawTree {
         match self {
-            ValidTarget::This => RawTarget::This,
-            ValidTarget::EveryBolt => RawTarget::EveryBolt,
-            ValidTarget::Died(DiedTarget::Victim) => RawTarget::Victim,
-            ValidTarget::Died(DiedTarget::Killer) => RawTarget::Killer,
-            ValidTarget::PerfectBumped(PerfectBumpedTarget::Bolt) => RawTarget::Bolt,
+            ValidTree::Fire(e) => RawTree::Fire(e.clone()),
+            ValidTree::When(t, inner) => RawTree::When(*t, Box::new(inner.to_raw())),
+            ValidTree::Once(t, inner) => RawTree::Once(*t, Box::new(inner.to_raw())),
+            ValidTree::During(c, inner) => RawTree::During(*c, Box::new(inner.to_raw_tree())),
+            ValidTree::Until(t, inner) => RawTree::Until(*t, Box::new(inner.to_raw_tree())),
+            ValidTree::Spawned(e, inner) => RawTree::Spawned(*e, Box::new(inner.to_raw())),
+            ValidTree::On(target, term) => RawTree::On(target.to_raw(), Box::new(term.to_raw())),
+        }
+    }
+}
+
+// ParticipantTarget → RawParticipant: flatten per-trigger enums back to flat names
+impl ParticipantTarget {
+    fn to_raw(&self) -> RawParticipant {
+        match self {
+            ParticipantTarget::Death(DeathTarget::Victim) => RawParticipant::Victim,
+            ParticipantTarget::Death(DeathTarget::Killer) => RawParticipant::Killer,
+            ParticipantTarget::Bump(BumpTarget::Bolt) => RawParticipant::Bolt,
+            ParticipantTarget::Impact(ImpactTarget::Impactee) => RawParticipant::Impactee,
             // ... etc
         }
     }
@@ -412,105 +514,297 @@ impl ValidTarget {
 ## Builder Usage Examples
 
 ```rust
-// Simple: when bumped, speed boost on self
-EffectBuilder::when(PerfectBumped)
-    .on(This)
+// Simple passive: damage boost on bolt
+EffectDef::route(Bolt)
+    .fire(DamageBoost { multiplier: 3.0 })?;
+
+// Triggered: when bumped, speed boost (Fire targets This = bolt)
+EffectDef::route(Bolt)
+    .when(PerfectBumped)
     .fire(SpeedBoost { multiplier: 1.5 })?;
 
 // Scoped: speed boost for the whole node, reversed at teardown
-EffectBuilder::during(NodeRunning)
-    .on(EveryBolt)
+EffectDef::route(EveryBolt)
+    .during(NodeActive)
     .fire(SpeedBoost { multiplier: 1.3 })?;
 
 // Won't compile: Explode is not Reversible
-// EffectBuilder::during(NodeRunning)
-//     .on(EveryBolt)
+// EffectDef::route(Bolt)
+//     .during(NodeActive)
 //     .fire(Explode { range: 50.0, damage: 10.0 })
 
 // During + nested When: non-reversible is OK (During reverses the listener)
-EffectBuilder::during(NodeRunning)
+EffectDef::route(Bolt)
+    .during(NodeActive)
     .when(PerfectBumped)
-    .on(This)
     .fire(Explode { range: 50.0, damage: 10.0 })?;
 
 // Until: speed boost until I die (fires immediately, reverses on death)
-EffectBuilder::until(Died)
-    .on(This)
+EffectDef::route(Bolt)
+    .until(Died)
     .fire(SpeedBoost { multiplier: 1.5 })?;
 
-// Until: shield until a bolt is lost (global trigger as reversal)
-EffectBuilder::until(BoltLostOccurred)
-    .on(This)
-    .fire(Shield { charges: 1 })?;
-
 // Until + nested When: non-reversible OK (same relaxation as During)
-EffectBuilder::until(Died)
+EffectDef::route(Bolt)
+    .until(Died)
     .when(PerfectBumped)
-    .on(This)
     .fire(Explode { range: 50.0, damage: 10.0 })?;
 
-// On bolt spawn, apply piercing
-EffectBuilder::spawned(Bolt)
-    .fire(Piercing { count: 3 })?;
-
-// Nested triggers: perfect bump then cell impact
-EffectBuilder::when(PerfectBumped)
+// Nested triggers: perfect bump then cell impact then fire on This
+EffectDef::route(Bolt)
+    .when(PerfectBumped)
     .when(Impacted(Cell))
-    .on(This)
     .fire(ChainBolt { tether_distance: 120.0 })?;
 
 // Transfer: powder keg — "when I hit a cell, stamp 'when you die, explode' on it"
-EffectBuilder::when(Impacted(Cell))
+EffectDef::route(Bolt)
+    .when(Impacted(Cell))
     .on(Impacted::Target)
     .transfer(
-        EffectBuilder::when(Died)
-            .on(This)
+        EffectTree::when(Died)
             .fire(Explode { range: 48.0, damage: 10.0 })?
     )?;
 
-// Kill reward: "when I kill a cell, boost my speed"
-EffectBuilder::when(Killed(Cell))
-    .on(This)
+// Kill reward: "when I kill a cell, boost my speed" (Fire targets This = bolt)
+EffectDef::route(Bolt)
+    .when(Killed(Cell))
     .fire(SpeedBoost { multiplier: 1.3 })?;
 
-// Named participants: "when a bump occurs, do something to the breaker"
-EffectBuilder::when(PerfectBumped)
-    .on(PerfectBumped::Breaker)
+// Breaker bolt effect: stamp speed boost onto every bolt
+EffectDef::route(EveryBolt)
+    .when(PerfectBumped)
+    .fire(SpeedBoost { multiplier: 1.5 })?;
+
+// Mixed-target chip: bolt gets damage, breaker gets penalty
+EffectDef::route(Bolt)
+    .fire(DamageBoost { multiplier: 3.0 })?;
+EffectDef::route(Breaker)
+    .when(BoltLostOccurred)
+    .fire(LoseLife)?;
+
+// Named participants: redirect fire to a trigger participant
+EffectDef::route(Breaker)
+    .when(PerfectBumped)
+    .on(PerfectBumped::Bolt)
     .fire(FlashStep)?;
 ```
 
 ## RON Format
 
 ```ron
-// Same vocabulary as builder
+// Same vocabulary as builder. Route required at root of every entry.
 (
-    name: "Aegis Protocol",
+    name: "Example Chip",
     effects: [
-        // Scoped: every bolt gets speed boost for the node
-        During(NodeRunning, On(EveryBolt, Fire(SpeedBoost(1.3)))),
+        // Simple passive: bolt gets damage boost
+        Route(Bolt, Fire(DamageBoost(3.0))),
 
-        // Primary bolts: shockwave on perfect bump
-        When(PerfectBumped, On(PrimaryBolts, Fire(Shockwave(
-            base_range: 96.0, range_per_level: 0.0, stacks: 1, speed: 400.0,
+        // Scoped: every bolt gets speed boost for the node
+        Route(EveryBolt, During(NodeActive, Fire(SpeedBoost(1.3)))),
+
+        // Triggered: kill reward (Fire targets This = bolt)
+        Route(Bolt, When(Killed(Cell), Fire(SpeedBoost(1.3)))),
+
+        // Transfer (one-shot): "when you die, explode" onto impacted cell
+        Route(Bolt, When(Impacted(Cell), On(Impacted::Target, Transfer(
+            When(Died, Fire(Explode(range: 48.0, damage: 10.0)))
         )))),
 
-        // Kill reward
-        When(Killed(Cell), On(This, Fire(SpeedBoost(1.3)))),
-
-        // Transfer: stamp "when you die, explode" on impacted cell
-        When(Impacted(Cell), On(Impacted::Target, Transfer(
-            When(Died, On(This, Fire(Explode(range: 48.0, damage: 10.0))))
-        ))),
+        // Stamp (permanent): "always explode on death" onto impacted cell
+        Route(Bolt, When(Impacted(Cell), On(Impacted::Target, Stamp(
+            When(Died, Fire(Explode(range: 48.0, damage: 10.0)))
+        )))),
 
         // Event-scoped: speed boost until I die
-        Until(Died, On(This, Fire(SpeedBoost(1.5)))),
+        Route(Bolt, Until(Died, Fire(SpeedBoost(1.5)))),
 
         // On bolt spawn
-        Spawned(Bolt, Fire(Piercing)),
+        Route(Bolt, Spawned(Bolt, Fire(Piercing))),
 
-        // Global: when any death occurs
-        When(DeathOccurred(Cell), On(This, Fire(Shockwave(
+        // Mixed target: breaker effect in same chip
+        Route(Breaker, When(BoltLostOccurred, Fire(LoseLife))),
+
+        // Global: when any death occurs, shockwave on This
+        Route(Bolt, When(DeathOccurred(Cell), Fire(Shockwave(
             base_range: 32.0, range_per_level: 0.0, stacks: 1, speed: 300.0,
+        )))),
+    ],
+)
+```
+
+## `This` Semantics
+
+`This` is implicit — it's the entity `Route` routes to. `Fire(effect)` always fires on `This`. You never write `This` in the RON or builder; it's determined by the `Route` target:
+
+- `Route(Bolt, ...)` → `This` = the bolt entity
+- `Route(Breaker, ...)` → `This` = the breaker entity
+- `Route(EveryBolt, ...)` → `This` = each bolt entity individually
+- Inside a `Stamp`/`Transfer` payload → `This` = the entity the tree was added to
+
+`On` only appears when you need to redirect away from `This` to a trigger participant. For example, `On(Impacted::Target, Transfer(...))` redirects the Transfer to the impact target instead of This.
+
+## Spawned + Stamp/Transfer Pattern
+
+`Spawned(EntityType, ...)` fires on entity add with an implicit target. To add a *scoped* effect on the new entity, use `Stamp` (permanent) or `Transfer` (one-shot):
+
+```ron
+// Every future bolt permanently gets damage boost until it dies
+Route(Bolt, Spawned(Bolt, Stamp(
+    Until(Died, Fire(DamageBoost(multiplier: 1.5)))
+)))
+```
+
+Builder:
+```rust
+EffectDef::route(Bolt)
+    .spawned(Bolt)
+    .transfer(
+        EffectTree::until(Died)
+            .fire(DamageBoost { multiplier: 1.5 })?
+    )?;
+```
+
+`Spawned` + `Fire` = fire-and-forget effect on the new entity.
+`Spawned` + `Transfer` = arm an effect tree in the new entity's StagedEffects (one-shot, consumed when triggered).
+
+## Route vs Stamp vs Transfer Semantics
+
+| | Destination | Permanence | When | Re-arms |
+|---|---|---|---|---|
+| **Route** | BoundEffects | Permanent — part of the entity's identity | Definition/load time | Yes — triggers re-arm after firing |
+| **Stamp** (terminal) | BoundEffects | Permanent — added at runtime | Runtime (trigger fires) | Yes — triggers re-arm after firing |
+| **Transfer** (terminal) | StagedEffects | Temporary — consumed when triggered | Runtime (trigger fires) | No — one-shot, consumed on match |
+
+**Route** = definition-level routing. "This tree goes to this entity type's BoundEffects." Required at root of every `effects: []` entry. `Route(Bolt, ...)`, `Route(EveryBolt, ...)`, etc.
+
+**Stamp** (terminal) = runtime permanent add. `On(Impacted::Target, Stamp(When(Died, Fire(Explode))))` permanently adds "explode on death" to the target cell's BoundEffects. Re-arms — survives multiple deaths/lives.
+
+**Transfer** (terminal) = runtime one-shot. `On(Impacted::Target, Transfer(When(Died, Fire(Explode))))` arms a one-shot listener in the target cell's StagedEffects. Cell dies, explode fires, entry consumed. Hit the cell again to re-transfer.
+
+This distinction is load-bearing: choosing Stamp vs Transfer for the same inner tree gives fundamentally different gameplay behavior.
+
+## Real RON Migration Examples
+
+### Aegis Breaker
+```ron
+// ── Current ──
+(
+    name: "Aegis",
+    life_pool: Some(3),
+    effects: [
+        On(target: Bolt, then: [When(trigger: BoltLost, then: [Do(LoseLife)])]),
+        On(target: Bolt, then: [When(trigger: PerfectBumped, then: [Do(SpeedBoost(multiplier: 1.5))])]),
+        On(target: Bolt, then: [When(trigger: EarlyBumped, then: [Do(SpeedBoost(multiplier: 1.1))])]),
+        On(target: Bolt, then: [When(trigger: LateBumped, then: [Do(SpeedBoost(multiplier: 1.1))])]),
+    ],
+)
+
+// ── New ──
+(
+    name: "Aegis",
+    life_pool: Some(3),
+    effects: [
+        Route(Breaker, When(BoltLostOccurred, Fire(LoseLife))),
+        Route(EveryBolt, When(PerfectBumped, Fire(SpeedBoost(multiplier: 1.5)))),
+        Route(EveryBolt, When(EarlyBumped, Fire(SpeedBoost(multiplier: 1.1)))),
+        Route(EveryBolt, When(LateBumped, Fire(SpeedBoost(multiplier: 1.1)))),
+    ],
+)
+```
+
+### Powder Keg (transfer)
+```ron
+// ── Current ──
+(
+    name: "Powder Keg",
+    legendary: (
+        prefix: "",
+        effects: [
+            On(target: Bolt, then: [
+                When(trigger: Impacted(Cell), then: [
+                    On(target: Cell, then: [
+                        When(trigger: Died, then: [
+                            Do(Explode(range: 48.0, damage: 10.0)),
+                        ]),
+                    ]),
+                ]),
+            ]),
+        ],
+    ),
+)
+
+// ── New ──
+(
+    name: "Powder Keg",
+    legendary: (
+        prefix: "",
+        effects: [
+            Route(Bolt, When(Impacted(Cell), On(Impacted::Target, Transfer(
+                When(Died, Fire(Explode(range: 48.0, damage: 10.0)))
+            )))),
+        ],
+    ),
+)
+```
+
+### Circuit Breaker (evolution)
+```ron
+// ── Current ──
+(
+    name: "Circuit Breaker",
+    effects: [
+        On(target: Bolt, then: [
+            When(trigger: PerfectBumped, then: [
+                Do(CircuitBreaker(bumps_required: 3, spawn_count: 1, inherit: true,
+                    shockwave_range: 160.0, shockwave_speed: 500.0)),
+            ]),
+        ]),
+    ],
+)
+
+// ── New ──
+(
+    name: "Circuit Breaker",
+    effects: [
+        Route(Bolt, When(PerfectBumped, Fire(CircuitBreaker(
+            bumps_required: 3, spawn_count: 1, inherit: true,
+            shockwave_range: 160.0, shockwave_speed: 500.0,
+        )))),
+    ],
+)
+```
+
+### Entropy Engine (kill trigger)
+```ron
+// ── Current ──
+(
+    name: "Entropy Engine",
+    effects: [
+        On(target: Bolt, then: [
+            When(trigger: CellDestroyed, then: [
+                Do(EntropyEngine(max_effects: 3, pool: [
+                    (0.3, Do(SpawnBolts())),
+                    (0.25, Do(Shockwave(base_range: 48.0, range_per_level: 0.0, stacks: 1, speed: 400.0))),
+                    (0.25, Do(ChainBolt(tether_distance: 120.0))),
+                    (0.20, Do(SpeedBoost(multiplier: 1.3))),
+                ])),
+            ]),
+        ]),
+    ],
+)
+
+// ── New ──
+(
+    name: "Entropy Engine",
+    effects: [
+        Route(Bolt, When(Killed(Cell), Fire(EntropyEngine(
+            max_effects: 3,
+            pool: [
+                (0.3, Fire(SpawnBolts())),
+                (0.25, Fire(Shockwave(base_range: 48.0, range_per_level: 0.0, stacks: 1, speed: 400.0))),
+                (0.25, Fire(ChainBolt(tether_distance: 120.0))),
+                (0.20, Fire(SpeedBoost(multiplier: 1.3))),
+            ],
         )))),
     ],
 )
@@ -519,20 +813,23 @@ EffectBuilder::when(PerfectBumped)
 ## RON Loader (walks raw tree, calls builder)
 
 ```rust
-fn load_effect(raw: &RawEffect) -> Result<ValidEffect, EffectError> {
+fn load_def_via_builder(raw: &RawDef) -> Result<ValidDef, EffectError> {
+    let ctx = EffectDef::route(raw.stamp.try_into()?);
+    load_tree_via_builder(ctx, &raw.tree)
+}
+
+fn load_tree_via_builder(ctx: RouteContext, raw: &RawTree) -> Result<ValidDef, EffectError> {
     match raw {
-        RawEffect::When(event, inner) => {
-            let chain = EffectBuilder::when(event.try_into()?);
-            load_inner(chain, inner)
+        RawTree::Fire(effect) => ctx.fire(effect.try_into()?),
+        RawTree::When(trigger, inner) => {
+            let chain = ctx.when(trigger.try_into()?);
+            load_chain_via_builder(chain, inner)
         }
-        RawEffect::During(condition, inner) => {
-            let ctx = EffectBuilder::during(condition.try_into()?);
-            load_during_inner(ctx, inner)
+        RawTree::During(condition, inner) => {
+            let during = ctx.during(condition.try_into()?);
+            load_during_via_builder(during, inner)
         }
-        RawEffect::Spawned(entity_type, inner) => {
-            let ctx = EffectBuilder::spawned(entity_type.try_into()?);
-            load_fire(ctx, inner)
-        }
+        // ... etc
     }
 }
 ```
@@ -571,8 +868,11 @@ impl Reversible for SecondWind { ... }
 
 | Rule | Example violation | Caught by |
 |------|-------------------|-----------|
-| `During` directly wrapping `Fire(X)` — X must be `Reversible` | `During(NodeRunning, On(This, Fire(Explode)))` | Compile error (builder) / `Err(NonReversibleInDuring)` (RON loader) |
-| `Spawned` has implicit target — no `On()` | `Spawned(Bolt, On(Breaker, Fire(...)))` | Compile error (no `.on()` on SpawnedContext) / `Err(SpawnedCannotHaveExplicitTarget)` |
+| `Route` required at definition root | Bare `When(...)` in `effects: []` | `Err(MissingRoute)` (RON loader) |
+| `During` directly wrapping `Fire(X)` — X must be `Reversible` | `Route(Bolt, During(NodeActive, Fire(Explode)))` | Compile error (builder) / `Err(NonReversibleInDuring)` (RON loader) |
+| `On` only accepts participant targets | `Route(Bolt, When(..., On(ActiveBolts, Fire(...))))` | Compile error (builder: `ParticipantTarget` type) / `Err(InvalidOnTarget)` |
+| `Spawned` has implicit target — no `On()` | `Spawned(Bolt, On(..., Fire(...)))` | Compile error (no `.on()` on SpawnedContext) / `Err(SpawnedCannotHaveExplicitTarget)` |
 | `Spawned(Bolt)` + `Fire(SpawnBolts)` = direct loop | | `Err(SpawnLoop)` (RON loader) / runtime recursion depth limit |
 | Indirect spawn loops | A spawns B spawns A | Runtime recursion depth limit (safety net) |
-| Named participant not available on trigger | `When(NodeStartOccurred, On(NodeStartOccurred::Bolt, ...))` — NodeStart has no participants | Compile error (associated type) / `Err(InvalidParticipant)` |
+| Named participant not available on trigger | `When(NodeStartOccurred, On(Bolt, ...))` — NodeStart has no participants | Compile error (associated type) / `Err(InvalidParticipant)` |
+| `Route(This, ...)` not valid | `This` is not a `RouteTarget` variant | Compile error (builder) / `Err(InvalidRouteTarget)` (RON loader) |

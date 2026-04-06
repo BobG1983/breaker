@@ -28,9 +28,9 @@ Additionally, `BASE_BOLT_DAMAGE: f32 = 10.0` is a constant in `bolt/resources.rs
 
 ### Current Spawn Flow (Implemented)
 
-1. `spawn_bolt` runs on `OnEnter(GameState::Playing)`. If a `Bolt` entity exists (persists across nodes via `CleanupOnRunEnd`), it just fires `BoltSpawned` and returns.
+1. `spawn_bolt` runs on `OnEnter(GameState::Playing)`. If a `Bolt` entity exists (persists across nodes via `CleanupOnExit<RunState>`), it just fires `BoltSpawned` and returns.
 2. Looks up `BoltDefinition` from `BoltRegistry` via `SelectedBreaker` → `BreakerRegistry` chain. Falls back to `BreakerDefinition::y_position` for spawn position.
-3. Calls `Bolt::builder()` with `.definition(&bolt_def)`, `.at_position()`, `.rendered(...)` or `.headless()`, optionally `.serving()`, and `.primary()`. The builder inserts all components in a single `.spawn(world)` call: `Bolt`, `PrimaryBolt`, `Velocity2D`, `GameDrawLayer::Bolt`, `Position2D`, `PreviousPosition`, `Scale2D`, `PreviousScale`, `Aabb2D`, `CollisionLayers`, `BaseRadius`, `MinRadius`, `MaxRadius`, `BoltSpawnOffsetY`, `BoltAngleSpread`, `BoltBaseDamage`, `BoltDefinitionRef`, `BaseSpeed`, `MinSpeed`, `MaxSpeed`, `MinAngleH`, `MinAngleV`, `CleanupOnRunEnd`. Conditionally: `BoltServing` if serving.
+3. Calls `Bolt::builder()` with `.definition(&bolt_def)`, `.at_position()`, `.rendered(...)` or `.headless()`, optionally `.serving()`, and `.primary()`. The builder inserts all components in a single `.spawn(&mut commands)` call: `Bolt`, `PrimaryBolt`, `Velocity2D`, `GameDrawLayer::Bolt`, `Position2D`, `PreviousPosition`, `Scale2D`, `PreviousScale`, `Aabb2D`, `CollisionLayers`, `BaseRadius`, `MinRadius`, `MaxRadius`, `BoltSpawnOffsetY`, `BoltAngleSpread`, `BoltBaseDamage`, `BoltDefinitionRef`, `BaseSpeed`, `MinSpeed`, `MaxSpeed`, `MinAngleH`, `MinAngleV`, `CleanupOnExit<RunState>`. Conditionally: `BoltServing` if serving.
 4. `apply_node_scale_to_bolt` adds `NodeScalingFactor` from `ActiveNodeLayout.entity_scale`.
 5. `dispatch_bolt_effects` runs in FixedUpdate, not OnEnter. It processes `Added<BoltDefinitionRef>` each tick and dispatches effects from the definition. Effects are dispatched on the first FixedUpdate tick after spawning, not synchronously during OnEnter.
 
@@ -38,7 +38,7 @@ There is no separate `init_bolt_params` step. The builder handles all parameter 
 
 ### Current Extra Bolt Spawn
 
-Effect modules that spawn extra bolts (`SpawnBolts`, `SpawnPhantom`, `ChainBolt`, `MirrorProtocol`) each call `Bolt::builder()` directly — there is no shared `spawn_extra_bolt` helper function. The builder handles component insertion uniformly. Extra bolts use `.extra()` instead of `.primary()` and carry `ExtraBolt` + `CleanupOnNodeExit`.
+Effect modules that spawn extra bolts (`SpawnBolts`, `SpawnPhantom`, `ChainBolt`, `MirrorProtocol`) each call `Bolt::builder()` directly — there is no shared `spawn_extra_bolt` helper function. The builder handles component insertion uniformly. Extra bolts use `.extra()` instead of `.primary()` and carry `ExtraBolt` + `CleanupOnExit<NodeState>`. Effect modules call `.spawn(&mut commands)` via a `CommandQueue` bridge (since `fire()` takes `&mut World`).
 
 ### Current Bolt Lost (Implemented)
 

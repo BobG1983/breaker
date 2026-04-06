@@ -4,6 +4,7 @@ use std::collections::HashSet;
 
 use bevy::{ecs::world::CommandQueue, prelude::*};
 use rand::Rng;
+use rantzsoft_lifecycle::CleanupOnExit;
 use rantzsoft_physics2d::{
     aabb::Aabb2D, ccd::ray_vs_aabb, collision_layers::CollisionLayers, plugin::PhysicsSystems,
     resources::CollisionQuadtree,
@@ -24,7 +25,7 @@ use crate::{
         core::{EffectSourceChip, chip_attribution},
         effects::damage_boost::ActiveDamageBoosts,
     },
-    shared::{CELL_LAYER, CleanupOnNodeExit, GameDrawLayer, rng::GameRng},
+    shared::{CELL_LAYER, GameDrawLayer, rng::GameRng},
     state::types::NodeState,
 };
 
@@ -166,7 +167,7 @@ fn fire_standard(entity: Entity, damage_mult: f32, source_chip: &str, world: &mu
             base_damage,
         },
         EffectSourceChip::new(source_chip),
-        CleanupOnNodeExit,
+        CleanupOnExit::<NodeState>::default(),
     ));
     if let Some((mesh_handle, material_handle)) = visual {
         beam.insert((
@@ -225,7 +226,7 @@ fn fire_chain(entity: Entity, damage_mult: f32, source_chip: &str, world: &mut W
             },
             TetherChainBeam,
             EffectSourceChip::new(source_chip),
-            CleanupOnNodeExit,
+            CleanupOnExit::<NodeState>::default(),
         ));
         if let Some((mesh_handle, material_handle)) = visual {
             beam.insert((
@@ -407,7 +408,7 @@ pub(crate) fn maintain_tether_chain(
             },
             TetherChainBeam,
             esc.clone(),
-            CleanupOnNodeExit,
+            CleanupOnExit::<NodeState>::default(),
         ));
         if let (Some(m), Some(mat)) = (meshes.as_mut(), materials.as_mut()) {
             beam.insert((

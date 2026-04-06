@@ -1,0 +1,27 @@
+// MIGRATED: new effect system syntax
+// Impact: shockwave from bolt on perfect bump → cell impact
+// Route(Bolt, ...) → stamped on bolt, This = bolt
+// PerfectBumped is local (fires on bolt). Impacted(Cell) is local.
+// Shockwave fires from the bolt (This).
+(
+    name: "Impact",
+    max_taken: 3,
+    common: (
+        prefix: "Minor",
+        effects: [
+            Route(Bolt, When(PerfectBumped, When(Impacted(Cell), Fire(Shockwave(base_range: 24.0, range_per_level: 6.0, stacks: 1, speed: 400.0))))),
+        ],
+    ),
+    uncommon: (
+        prefix: "Strong",
+        effects: [
+            Route(Bolt, When(PerfectBumped, When(Impacted(Cell), Fire(Shockwave(base_range: 36.0, range_per_level: 10.0, stacks: 1, speed: 400.0))))),
+        ],
+    ),
+    rare: (
+        prefix: "Devastating",
+        effects: [
+            Route(Bolt, When(PerfectBumped, When(Impacted(Cell), Fire(Shockwave(base_range: 48.0, range_per_level: 14.0, stacks: 1, speed: 400.0))))),
+        ],
+    ),
+)

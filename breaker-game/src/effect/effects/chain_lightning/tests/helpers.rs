@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
 use bevy::prelude::*;
+use rantzsoft_lifecycle::CleanupOnExit;
 use rantzsoft_physics2d::{
     aabb::Aabb2D, collision_layers::CollisionLayers, plugin::RantzPhysics2dPlugin,
 };
@@ -10,7 +11,8 @@ pub(super) use super::super::effect::*;
 use crate::{
     cells::{components::Cell, messages::DamageCell},
     effect::core::EffectSourceChip,
-    shared::{CELL_LAYER, CleanupOnNodeExit, GameRng},
+    shared::{CELL_LAYER, GameRng},
+    state::types::NodeState,
 };
 
 /// App with `MinimalPlugins` + physics + `GameRng` seeded at 42.
@@ -101,19 +103,19 @@ pub(super) fn spawn_chain(app: &mut App, config: SpawnChainConfig) -> Entity {
                 arc_speed: config.arc_speed,
             },
             EffectSourceChip(config.source_chip),
-            CleanupOnNodeExit,
+            CleanupOnExit::<NodeState>::default(),
         ))
         .id()
 }
 
-/// Spawn a bare `ChainLightningArc` marker entity with spatial components and `CleanupOnNodeExit`.
+/// Spawn a bare `ChainLightningArc` marker entity with spatial components and `CleanupOnExit<NodeState>`.
 /// The arc's logical state (target, position) lives in `ChainState::ArcTraveling` on the chain entity.
 pub(super) fn spawn_arc(app: &mut App, position: Vec2) -> Entity {
     app.world_mut()
         .spawn((
             ChainLightningArc,
             Spatial::builder().at_position(position).build(),
-            CleanupOnNodeExit,
+            CleanupOnExit::<NodeState>::default(),
         ))
         .id()
 }

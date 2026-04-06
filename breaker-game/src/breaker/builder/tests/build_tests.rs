@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use rantzsoft_lifecycle::CleanupOnExit;
 use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{
     MaxSpeed, Position2D, PreviousPosition, PreviousScale, Scale2D, Velocity2D,
@@ -18,9 +19,10 @@ use crate::{
     },
     effect::effects::life_lost::LivesCount,
     shared::{
-        BaseHeight, BaseWidth, CleanupOnRunEnd, GameDrawLayer,
+        BaseHeight, BaseWidth, GameDrawLayer,
         size::{MaxHeight, MaxWidth, MinHeight, MinWidth},
     },
+    state::types::RunState,
 };
 
 // ── Behavior 28: build() on a headless primary breaker produces all core components ──
@@ -50,8 +52,8 @@ fn build_headless_primary_has_breaker_marker() {
         "should have PrimaryBreaker"
     );
     assert!(
-        world.get::<CleanupOnRunEnd>(entity).is_some(),
-        "should have CleanupOnRunEnd"
+        world.get::<CleanupOnExit<RunState>>(entity).is_some(),
+        "should have CleanupOnExit<RunState>"
     );
 }
 

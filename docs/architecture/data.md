@@ -102,7 +102,7 @@ pub fn spawn_or_reuse_breaker(
             .primary()
             .spawn(&mut commands);
     }
-    // Otherwise reuse the existing entity (persisted across nodes via CleanupOnRunEnd)
+    // Otherwise reuse the existing entity (persisted across nodes via CleanupOnExit<RunState>)
 }
 ```
 

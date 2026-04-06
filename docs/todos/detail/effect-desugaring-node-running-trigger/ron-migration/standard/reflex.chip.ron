@@ -1,0 +1,22 @@
+// MIGRATED: new effect system syntax
+// Reflex: breaker spawns bolts on perfect bump
+// Route(Breaker, ...) → effect stamped on breaker, This = breaker
+// PerfectBump → PerfectBumpOccurred (global trigger, fires on all entities with BoundEffects)
+// SpawnBolts and SpeedBoost fire on the breaker (This).
+(
+    name: "Reflex",
+    max_taken: 1,
+    uncommon: (
+        prefix: "Quick",
+        effects: [
+            Route(Breaker, When(PerfectBumpOccurred, Fire(SpawnBolts()))),
+        ],
+    ),
+    rare: (
+        prefix: "Lightning",
+        effects: [
+            Route(Breaker, When(PerfectBumpOccurred, Fire(SpawnBolts()))),
+            Route(Breaker, When(PerfectBumpOccurred, Fire(SpeedBoost(multiplier: 1.2)))),
+        ],
+    ),
+)

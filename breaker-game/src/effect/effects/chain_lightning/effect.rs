@@ -7,6 +7,7 @@ use std::collections::HashSet;
 
 use bevy::{ecs::system::SystemParam, prelude::*};
 use rand::prelude::IndexedRandom;
+use rantzsoft_lifecycle::CleanupOnExit;
 use rantzsoft_physics2d::{
     collision_layers::CollisionLayers, plugin::PhysicsSystems, resources::CollisionQuadtree,
 };
@@ -16,7 +17,7 @@ use crate::{
     bolt::{components::BoltBaseDamage, resources::DEFAULT_BOLT_BASE_DAMAGE},
     cells::{components::Cell, messages::DamageCell},
     effect::{core::EffectSourceChip, effects::damage_boost::ActiveDamageBoosts},
-    shared::{CELL_LAYER, CleanupOnNodeExit, GameDrawLayer, rng::GameRng},
+    shared::{CELL_LAYER, GameDrawLayer, rng::GameRng},
     state::types::NodeState,
 };
 
@@ -151,7 +152,7 @@ pub(crate) fn fire(
             arc_speed,
         },
         esc,
-        CleanupOnNodeExit,
+        CleanupOnExit::<NodeState>::default(),
     ));
 }
 
@@ -222,7 +223,7 @@ pub(crate) fn tick_chain_lightning(
                     ChainLightningArc,
                     Spatial::builder().at_position(chain.source).build(),
                     Transform::from_translation(chain.source.extend(0.0)),
-                    CleanupOnNodeExit,
+                    CleanupOnExit::<NodeState>::default(),
                 ));
                 if let (Some(m), Some(mat)) = (meshes.as_mut(), materials.as_mut()) {
                     arc.insert((

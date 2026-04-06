@@ -1,6 +1,7 @@
 pub(super) use std::collections::HashSet;
 
 pub(super) use bevy::prelude::*;
+pub(super) use rantzsoft_lifecycle::CleanupOnExit;
 pub(super) use rantzsoft_physics2d::{
     aabb::Aabb2D, collision_layers::CollisionLayers, plugin::RantzPhysics2dPlugin,
 };
@@ -17,10 +18,8 @@ pub(super) use crate::{
         registry::BoltRegistry,
     },
     cells::{components::Cell, messages::DamageCell},
-    shared::{
-        BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, CleanupOnNodeExit, CleanupOnRunEnd, GameDrawLayer,
-        WALL_LAYER, rng::GameRng,
-    },
+    shared::{BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, GameDrawLayer, WALL_LAYER, rng::GameRng},
+    state::types::{NodeState, RunState},
 };
 
 pub(super) fn world_with_bolt_registry() -> World {
@@ -142,7 +141,7 @@ pub(super) fn spawn_tether_beam_with_edm(
                 effective_damage_multiplier,
                 base_damage: DEFAULT_BOLT_BASE_DAMAGE,
             },
-            CleanupOnNodeExit,
+            CleanupOnExit::<NodeState>::default(),
         ))
         .id();
     // Add TetherBoltMarker to each bolt

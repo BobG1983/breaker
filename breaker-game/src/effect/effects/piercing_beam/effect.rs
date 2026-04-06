@@ -1,6 +1,7 @@
 //! Fast-expanding beam rectangle in the bolt's velocity direction.
 
 use bevy::prelude::*;
+use rantzsoft_lifecycle::CleanupOnExit;
 use rantzsoft_physics2d::{
     aabb::Aabb2D, collision_layers::CollisionLayers, plugin::PhysicsSystems,
     resources::CollisionQuadtree,
@@ -12,7 +13,7 @@ use crate::{
     cells::messages::DamageCell,
     effect::{core::EffectSourceChip, effects::damage_boost::ActiveDamageBoosts},
     fx::EffectFlashTimer,
-    shared::{CELL_LAYER, CleanupOnNodeExit, GameDrawLayer, PlayfieldConfig},
+    shared::{CELL_LAYER, GameDrawLayer, PlayfieldConfig},
     state::types::NodeState,
 };
 
@@ -87,7 +88,7 @@ pub(crate) fn fire(
             damage: base_damage * damage_mult * edm,
         },
         EffectSourceChip::new(source_chip),
-        CleanupOnNodeExit,
+        CleanupOnExit::<NodeState>::default(),
     ));
 }
 
@@ -184,7 +185,7 @@ pub(crate) fn process_piercing_beam(
                 Mesh2d(meshes.add(Rectangle::new(1.0, 1.0))),
                 MeshMaterial2d(materials.add(ColorMaterial::from_color(BEAM_FLASH_COLOR))),
                 EffectFlashTimer(BEAM_FLASH_DURATION),
-                CleanupOnNodeExit,
+                CleanupOnExit::<NodeState>::default(),
             ));
         }
 

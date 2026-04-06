@@ -1,11 +1,12 @@
 use std::collections::HashMap;
 
 use bevy::prelude::*;
+use rantzsoft_lifecycle::CleanupOnExit;
 use rantzsoft_spatial2d::prelude::*;
 
 use crate::{
     bolt::queries::{BoltSpeedData, apply_velocity_formula},
-    shared::{CleanupOnNodeExit, GameDrawLayer},
+    shared::GameDrawLayer,
     state::types::NodeState,
 };
 
@@ -112,7 +113,7 @@ pub(crate) fn fire(
             y: radius,
         },
         GameDrawLayer::Fx,
-        CleanupOnNodeExit,
+        CleanupOnExit::<NodeState>::default(),
     ));
     if let Some((mesh, mat)) = visual {
         well.insert((Mesh2d(mesh), MeshMaterial2d(mat)));

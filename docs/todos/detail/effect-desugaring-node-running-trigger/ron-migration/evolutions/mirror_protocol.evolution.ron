@@ -1,0 +1,15 @@
+// MIGRATED: new effect system syntax
+// Mirror Protocol: perfect bumps spawn mirrored piercing bolts
+// Route(Bolt, ...) → effect stamped on bolt, This = bolt
+// PerfectBump (no -ed suffix) was the global trigger → PerfectBumpOccurred
+(
+    name: "Mirror Protocol",
+    description: "Perfect bumps spawn mirrored piercing bolts that spread in controlled directions",
+    effects: [
+        Route(Bolt, When(PerfectBumpOccurred, Fire(MirrorProtocol(inherit: true)))),
+    ],
+    ingredients: [
+        (chip_name: "Reflex", stacks_required: 1),
+        (chip_name: "Piercing Shot", stacks_required: 2),
+    ],
+)

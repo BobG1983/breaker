@@ -308,6 +308,56 @@ The file contains only a doc comment explaining legacy stat components were remo
 - `visible()` transition and `WallBuilder<S, Visible>` exist but are `allow(dead_code)` — future API for Phase 5j visual walls.
 - `with_half_thickness()`, `with_color()`, `with_effects()`, `invisible()` builder methods are `allow(dead_code)` — future API.
 
+## Confirmed Correct / Fixed (pause-quit cleanup, feature/effect-placeholder-visuals, 2026-04-06)
+
+**CleanupOnNodeExit / CleanupOnRunEnd FULLY REMOVED — migration complete:**
+- `CleanupOnNodeExit` and `CleanupOnRunEnd` DO NOT EXIST in `breaker-game/src/`. They were removed.
+- All entity lifecycle markers are now `CleanupOnExit<NodeState>` and `CleanupOnExit<RunState>` from `rantzsoft_lifecycle`.
+- `shared/components.rs` no longer contains any cleanup markers — it only has `BaseWidth`, `BaseHeight`, `NodeScalingFactor`.
+- The known-state entry from 2026-04-03 saying "still transitioning" is SUPERSEDED.
+
+**NodeResult::Quit added:**
+- `NodeResult` enum now has 5 variants: `InProgress`, `Won`, `TimerExpired`, `LivesDepleted`, `Quit`.
+- `NodeResult::Quit` routes to `RunState::Teardown` via `resolve_node_next_state()` in `state/plugin.rs`.
+- `NodeResult::Quit` skips `RunEnd` screen entirely.
+
+**handle_pause_input — routing model (not NextState):**
+- Quit action sets `NodeOutcome.result = NodeResult::Quit`, sends `ChangeState<NodeState>`, unpauses time.
+- Does NOT call `NextState` directly.
+- `resolve_node_next_state` reads `NodeOutcome.result` and returns `RunState::Teardown` for `Quit`.
+
+**Safety net cleanup on RunState::Teardown:**
+- `cleanup_on_exit::<NodeState>` runs on BOTH `OnEnter(NodeState::Teardown)` AND `OnEnter(RunState::Teardown)`.
+- The second registration is the safety net for quit-from-pause where `NodeState` may not reach its own `Teardown`.
+
+**Bolt builder spawn() takes &mut Commands (NOT &mut World):**
+- All terminal `spawn()` impls in `bolt/builder/core/terminal.rs` take `&mut Commands`.
+- Effect modules inside `fire()` (which takes `&mut World`) bridge via `CommandQueue`:
+  `let mut queue = CommandQueue::default(); let mut commands = Commands::new(&mut queue, world); ...; queue.apply(world);`
+- The 2026-04-02 memory entry "Bolt builder `spawn()` takes `&mut World`" is SUPERSEDED.
+
+**Docs fixed in this session:**
+- `docs/architecture/state.md` — Entity Cleanup section: removed "legacy markers, still transitioning" claim; added safety net description; added `NodeResult::Quit` and routing to Pause section.
+- `docs/architecture/builders/breaker.md` — Role dimension and build() table: `CleanupOnRunEnd` → `CleanupOnExit<RunState>`, `CleanupOnNodeExit` → `CleanupOnExit<NodeState>`.
+- `docs/architecture/builders/bolt.md` — Role description, build() output, spawn() behavior, Why section: old marker names replaced; spawn() signature corrected to `&mut Commands`.
+- `docs/architecture/plugins.md` — `shared/` description: removed old marker names, noted `CleanupOnExit<S>` from `rantzsoft_lifecycle`.
+- `docs/architecture/bolt-definitions.md` — Current Spawn Flow and Extra Bolt Spawn: old marker names replaced; `.spawn(world)` → `.spawn(&mut commands)`.
+- `docs/architecture/data.md` — code comment: `CleanupOnRunEnd` → `CleanupOnExit<RunState>`.
+- `docs/todos/detail/hide-entities-during-non-gameplay.md` — marker names updated.
+- `docs/todos/detail/centralized-despawn-system.md` — marker names updated.
+- `docs/todos/detail/cross-domain-prelude.md` — Tier 1 list updated.
+- `docs/todos/detail/cross-domain-prelude/plan.md` — re-export code and component list updated.
+
+**Intentionally NOT edited (historical research artifacts — do NOT flag as drift):**
+- `docs/todos/detail/cross-domain-prelude/research-name-collisions.md` — historical snapshot of `shared::components` before migration.
+- `docs/todos/detail/cross-domain-prelude/research-cross-domain-pub-crate-types.md` — historical snapshot.
+- `docs/todos/detail/game-crate-splitting/research/cross-domain-dependencies.md` — historical research.
+- `docs/todos/detail/game-crate-splitting/research/system-ordering-constraints.md` — historical research.
+- `docs/todos/detail/wall-builder-pattern/research/wall-construction-sites.md` — historical research.
+- `docs/todos/detail/killed-trigger-damage-attribution/research/generic-message-patterns.md` — historical research.
+- `docs/todos/detail/effect-desugaring-node-running-trigger/research/added-bolt-observer-feasibility.md` — historical research.
+- `docs/architecture/bolt-definitions.md` "Target State" pseudo-code uses `CleanupOnRunEnd` — this is forward-looking planning code, clearly labeled as such. Do NOT edit.
+
 ## Confirmed Correct / Fixed (Shield refactor, develop branch, 2026-04-02)
 
 **Shield effect completely rewritten — ShieldActive eliminated:**

@@ -6,5 +6,7 @@
 - [Evolution Ecosystem Coverage Map](coverage_evolution_ecosystem.md) — gaps from chip-evolution-ecosystem branch: 4 new effects, 16 evolutions, recipe eligibility offering path
 - [Breaker Builder Pattern Coverage Map](coverage_breaker_builder_pattern.md) — gaps from breaker-builder-pattern branch: spawn_or_reuse_breaker, effective_radius/size with ClampRange, node-scale+boost interaction, BreakerPositionClamped staleness
 
+- [Pause Quit Fix Coverage Map](coverage_pause_quit_fix.md) — gaps for quit-from-pause fix; runner cannot inject into ButtonInput<KeyCode>, so no scenario exercises actual quit path
+
 ## Session History
 See [ephemeral/](ephemeral/) — not committed.

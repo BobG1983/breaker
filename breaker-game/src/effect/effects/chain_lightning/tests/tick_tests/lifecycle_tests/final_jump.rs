@@ -3,9 +3,10 @@
 use std::collections::HashSet;
 
 use bevy::prelude::*;
+use rantzsoft_lifecycle::CleanupOnExit;
 
 use super::*;
-use crate::{effect::core::EffectSourceChip, shared::CleanupOnNodeExit};
+use crate::{effect::core::EffectSourceChip, state::types::NodeState};
 
 // -- Behavior 18: tick damages target and despawns chain when final jump completes --
 
@@ -37,7 +38,7 @@ fn tick_final_jump_damages_target_and_despawns_chain() {
                 arc_speed: 200.0,
             },
             EffectSourceChip(None),
-            CleanupOnNodeExit,
+            CleanupOnExit::<NodeState>::default(),
         ))
         .id();
 
@@ -93,7 +94,7 @@ fn tick_final_jump_arc_starts_close_to_target_damages_and_despawns_same_tick() {
                 arc_speed: 200.0,
             },
             EffectSourceChip(None),
-            CleanupOnNodeExit,
+            CleanupOnExit::<NodeState>::default(),
         ))
         .id();
 

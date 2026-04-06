@@ -175,11 +175,13 @@ fn fire_falls_back_to_zero_when_entity_is_empty() {
     );
 }
 
-// ── Spawned well entity has CleanupOnNodeExit ───────────────
+// ── Spawned well entity has CleanupOnExit<NodeState> ───────────────
 
 #[test]
 fn fire_spawns_well_with_cleanup_on_node_exit() {
-    use crate::shared::CleanupOnNodeExit;
+    use rantzsoft_lifecycle::CleanupOnExit;
+
+    use crate::state::types::NodeState;
 
     let mut world = World::new();
     let entity = world.spawn(Position2D(Vec2::new(50.0, 75.0))).id();
@@ -190,14 +192,16 @@ fn fire_spawns_well_with_cleanup_on_node_exit() {
     let well = query.iter(&world).next().expect("well should exist");
 
     assert!(
-        world.get::<CleanupOnNodeExit>(well).is_some(),
-        "spawned gravity well should have CleanupOnNodeExit"
+        world.get::<CleanupOnExit<NodeState>>(well).is_some(),
+        "spawned gravity well should have CleanupOnExit<NodeState>"
     );
 }
 
 #[test]
 fn fire_multiple_wells_all_have_cleanup_on_node_exit() {
-    use crate::shared::CleanupOnNodeExit;
+    use rantzsoft_lifecycle::CleanupOnExit;
+
+    use crate::state::types::NodeState;
 
     let mut world = World::new();
     let entity = world.spawn(Position2D(Vec2::new(10.0, 20.0))).id();
@@ -213,8 +217,8 @@ fn fire_multiple_wells_all_have_cleanup_on_node_exit() {
 
     for well in &wells {
         assert!(
-            world.get::<CleanupOnNodeExit>(*well).is_some(),
-            "ALL spawned gravity wells should have CleanupOnNodeExit"
+            world.get::<CleanupOnExit<NodeState>>(*well).is_some(),
+            "ALL spawned gravity wells should have CleanupOnExit<NodeState>"
         );
     }
 }

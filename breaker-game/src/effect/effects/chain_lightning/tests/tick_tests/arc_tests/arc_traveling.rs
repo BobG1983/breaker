@@ -3,10 +3,11 @@
 use std::collections::HashSet;
 
 use bevy::prelude::*;
+use rantzsoft_lifecycle::CleanupOnExit;
 use rantzsoft_spatial2d::components::Position2D;
 
 use super::*;
-use crate::{effect::core::EffectSourceChip, shared::CleanupOnNodeExit};
+use crate::{effect::core::EffectSourceChip, state::types::NodeState};
 
 // -- Behavior 16: tick advances arc position toward target --
 
@@ -39,7 +40,7 @@ fn tick_arc_traveling_advances_arc_toward_target() {
                 arc_speed: 200.0,
             },
             EffectSourceChip(None),
-            CleanupOnNodeExit,
+            CleanupOnExit::<NodeState>::default(),
         ))
         .id();
 

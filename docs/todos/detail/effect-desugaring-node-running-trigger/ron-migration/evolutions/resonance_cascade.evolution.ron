@@ -1,0 +1,14 @@
+// MIGRATED: new effect system syntax
+// Resonance Cascade: bolt emits constant damage pulses (passive, no trigger)
+// Route(Bolt, ...) → effect stamped on bolt, This = bolt
+(
+    name: "Resonance Cascade",
+    description: "The bolt constantly emits damage pulses — a walking field of destruction",
+    effects: [
+        Route(Bolt, Fire(Pulse(base_range: 64.0, range_per_level: 16.0, stacks: 1, speed: 300.0))),
+    ],
+    ingredients: [
+        (chip_name: "Pulse", stacks_required: 2),
+        (chip_name: "Bolt Size", stacks_required: 2),
+    ],
+)

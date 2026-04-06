@@ -1,6 +1,7 @@
 //! Tests for `fire()` core bolt spawning and physics component setup.
 
 use bevy::prelude::*;
+use rantzsoft_lifecycle::CleanupOnExit;
 use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{
     BaseSpeed, MaxSpeed, MinSpeed, Position2D, PreviousPosition, Scale2D, Velocity2D,
@@ -13,10 +14,8 @@ use crate::{
         definition::BoltDefinition,
         registry::BoltRegistry,
     },
-    shared::{
-        BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, CleanupOnNodeExit, CleanupOnRunEnd, GameDrawLayer,
-        WALL_LAYER, rng::GameRng,
-    },
+    shared::{BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, GameDrawLayer, WALL_LAYER, rng::GameRng},
+    state::types::{NodeState, RunState},
 };
 
 fn world_with_bolt_registry() -> World {
@@ -120,10 +119,10 @@ fn fire_spawns_requested_count_with_full_physics_components() {
             .expect("bolt should have BoltRadius");
         assert!((radius.0 - 8.0).abs() < f32::EPSILON);
 
-        // CleanupOnNodeExit
+        // CleanupOnExit<NodeState>
         assert!(
-            world.get::<CleanupOnNodeExit>(*bolt).is_some(),
-            "bolt should have CleanupOnNodeExit"
+            world.get::<CleanupOnExit<NodeState>>(*bolt).is_some(),
+            "bolt should have CleanupOnExit<NodeState>"
         );
 
         // Visual components: rendered extra bolts have Mesh2d, MeshMaterial2d, and GameDrawLayer::Bolt
@@ -237,11 +236,11 @@ fn fire_marks_bolts_with_extra_bolt_and_cleanup_on_node_exit() {
         "bolt should have ExtraBolt"
     );
     assert!(
-        world.get::<CleanupOnNodeExit>(bolt).is_some(),
-        "bolt should have CleanupOnNodeExit"
+        world.get::<CleanupOnExit<NodeState>>(bolt).is_some(),
+        "bolt should have CleanupOnExit<NodeState>"
     );
     assert!(
-        world.get::<CleanupOnRunEnd>(bolt).is_none(),
-        "bolt should NOT have CleanupOnRunEnd"
+        world.get::<CleanupOnExit<RunState>>(bolt).is_none(),
+        "bolt should NOT have CleanupOnExit<RunState>"
     );
 }

@@ -1,0 +1,12 @@
+// MIGRATED: new effect system syntax
+/* @[brickbreaker::breaker::definition::BreakerDefinition] */
+(
+    name: "Aegis",
+    life_pool: Some(3),
+    effects: [
+        Route(Breaker, When(BoltLostOccurred, Fire(LoseLife))),
+        Route(EveryBolt, When(PerfectBumped, Fire(SpeedBoost(multiplier: 1.5)))),
+        Route(EveryBolt, When(EarlyBumped, Fire(SpeedBoost(multiplier: 1.1)))),
+        Route(EveryBolt, When(LateBumped, Fire(SpeedBoost(multiplier: 1.1)))),
+    ],
+)

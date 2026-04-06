@@ -4,7 +4,7 @@
 
 ## Why
 
-Bolts are spawned in 5+ locations: the primary bolt spawn system, effect `fire()` functions (SpawnBolts, MirrorProtocol, TetherBeam, ChainLightning), and tests. Before the builder, each site assembled a different component tuple. Missing a component (like `CleanupOnNodeExit` on extra bolts) caused silent entity lifecycle bugs.
+Bolts are spawned in 5+ locations: the primary bolt spawn system, effect `fire()` functions (SpawnBolts, MirrorProtocol, TetherBeam, ChainLightning), and tests. Before the builder, each site assembled a different component tuple. Missing a component (like `CleanupOnExit<NodeState>` on extra bolts) caused silent entity lifecycle bugs.
 
 The builder ensures every bolt is complete — compile-time verification that position, speed, angle, motion, and role are all specified.
 
@@ -22,7 +22,7 @@ The builder ensures every bolt is complete — compile-time verification that po
 ### Mutually Exclusive
 
 - **Motion**: `Serving` (stationary, `BoltServing` marker) vs `HasVelocity` (launched, has velocity). Can't be both.
-- **Role**: `Primary` (persists across nodes, `CleanupOnRunEnd`) vs `Extra` (cleaned up on node exit, `CleanupOnNodeExit`). Can't be both.
+- **Role**: `Primary` (persists across nodes, `CleanupOnExit<RunState>`) vs `Extra` (cleaned up on node exit, `CleanupOnExit<NodeState>`). Can't be both.
 - **Visual**: `Rendered` (includes `Mesh2d` + `MeshMaterial2d`) vs `Headless` (omits them).
 
 ### Definition Shortcut
@@ -45,15 +45,15 @@ After `.definition()` or after manually satisfying S/A, individual values can be
 
 ## build() Output
 
-Returns `impl Bundle` with: `Bolt`, spatial components (via `Spatial::builder()`), `Velocity2D`, `Scale2D`, `PreviousScale`, `Aabb2D`, `BaseRadius` (aliased as `BoltRadius`), `MinRadius`, `MaxRadius`, `CollisionLayers`, `GameDrawLayer::Bolt`, cleanup marker (`CleanupOnRunEnd` or `CleanupOnNodeExit`), role marker (`PrimaryBolt` or `ExtraBolt`), and optionally `Mesh2d` + `MeshMaterial2d` (if rendered).
+Returns `impl Bundle` with: `Bolt`, spatial components (via `Spatial::builder()`), `Velocity2D`, `Scale2D`, `PreviousScale`, `Aabb2D`, `BaseRadius` (aliased as `BoltRadius`), `MinRadius`, `MaxRadius`, `CollisionLayers`, `GameDrawLayer::Bolt`, cleanup marker (`CleanupOnExit<RunState>` or `CleanupOnExit<NodeState>`), role marker (`PrimaryBolt` or `ExtraBolt`), and optionally `Mesh2d` + `MeshMaterial2d` (if rendered).
 
 `BoltRadius` is a type alias for `BaseRadius` from `shared/size.rs` — the same shared radius component used by all round entities.
 
 ## spawn() Behavior
 
-The bolt builder's `spawn()` takes `&mut World` (not `&mut Commands`) because effect modules spawn extra bolts inside `fire()` which already holds `&mut World`.
+The bolt builder's `spawn()` takes `&mut Commands`. Effect modules that spawn extra bolts inside `fire()` (which holds `&mut World`) bridge through a `CommandQueue`: they create `Commands::new(&mut queue, world)`, call `.spawn(&mut commands)`, then `queue.apply(world)`.
 
-1. `world.spawn(self.build())` — spawns core bundle
+1. `commands.spawn(self.build())` — spawns core bundle
 2. Conditionally inserts onto the spawned entity: `BoltLifespan`, `BoundEffects` (from `with_effects` or `with_inherited_effects`), `SpawnedByEvolution`, definition-derived params
 3. Bolt-definition effects are **not** dispatched here. The separate `dispatch_bolt_effects` system processes `Added<BoltDefinitionRef>` each FixedUpdate tick and dispatches effects from the definition.
 

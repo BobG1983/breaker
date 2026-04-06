@@ -2,13 +2,15 @@
 //! `ChainBoltAnchor`, `BoltDefinition`, and `Position2D` source.
 
 use bevy::prelude::*;
+use rantzsoft_lifecycle::CleanupOnExit;
 use rantzsoft_physics2d::constraint::DistanceConstraint;
 use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use super::super::effect::*;
 use crate::{
     bolt::{components::ExtraBolt, definition::BoltDefinition, registry::BoltRegistry},
-    shared::{CleanupOnNodeExit, CleanupOnRunEnd, rng::GameRng},
+    shared::rng::GameRng,
+    state::types::{NodeState, RunState},
 };
 
 fn world_with_bolt_registry() -> World {
@@ -53,12 +55,12 @@ fn fire_spawns_chain_bolt_with_extra_bolt_and_cleanup_on_node_exit() {
         "chain bolt should have ExtraBolt"
     );
     assert!(
-        world.get::<CleanupOnNodeExit>(chain_bolt).is_some(),
-        "chain bolt should have CleanupOnNodeExit"
+        world.get::<CleanupOnExit<NodeState>>(chain_bolt).is_some(),
+        "chain bolt should have CleanupOnExit<NodeState>"
     );
     assert!(
-        world.get::<CleanupOnRunEnd>(chain_bolt).is_none(),
-        "chain bolt should NOT have CleanupOnRunEnd"
+        world.get::<CleanupOnExit<RunState>>(chain_bolt).is_none(),
+        "chain bolt should NOT have CleanupOnExit<RunState>"
     );
 }
 

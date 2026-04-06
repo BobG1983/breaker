@@ -1,14 +1,15 @@
 //! Tests for `FadeOut` duration, cascade stagger, z-position, `PunchScale`,
-//! and `CleanupOnNodeExit` / `HighlightPopup` markers.
+//! and `CleanupOnExit<NodeState>` / `HighlightPopup` markers.
 
 use bevy::prelude::*;
+use rantzsoft_lifecycle::CleanupOnExit;
 
 use super::super::helpers::*;
 use crate::{
     fx::{FadeOut, PunchScale},
-    shared::CleanupOnNodeExit,
-    state::run::{
-        components::HighlightPopup, messages::HighlightTriggered, resources::HighlightKind,
+    state::{
+        run::{components::HighlightPopup, messages::HighlightTriggered, resources::HighlightKind},
+        types::NodeState,
     },
 };
 
@@ -156,7 +157,7 @@ fn popup_has_punch_scale_from_config() {
 }
 
 // ---------------------------------------------------------------
-// Behavior 5: CleanupOnNodeExit and HighlightPopup markers
+// Behavior 5: CleanupOnExit<NodeState> and HighlightPopup markers
 // ---------------------------------------------------------------
 
 #[test]
@@ -169,11 +170,11 @@ fn popup_has_cleanup_and_highlight_markers() {
 
     let count = app
         .world_mut()
-        .query_filtered::<Entity, (With<CleanupOnNodeExit>, With<HighlightPopup>)>()
+        .query_filtered::<Entity, (With<CleanupOnExit<NodeState>>, With<HighlightPopup>)>()
         .iter(app.world())
         .count();
     assert_eq!(
         count, 1,
-        "popup should have both CleanupOnNodeExit and HighlightPopup"
+        "popup should have both CleanupOnExit<NodeState> and HighlightPopup"
     );
 }

@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
 use bevy::prelude::*;
+use rantzsoft_lifecycle::CleanupOnExit;
 use rantzsoft_physics2d::{
     collision_layers::CollisionLayers, plugin::PhysicsSystems, resources::CollisionQuadtree,
 };
@@ -10,7 +11,7 @@ use crate::{
     bolt::{components::BoltBaseDamage, resources::DEFAULT_BOLT_BASE_DAMAGE},
     cells::messages::DamageCell,
     effect::{core::EffectSourceChip, effects::damage_boost::ActiveDamageBoosts},
-    shared::{CELL_LAYER, CleanupOnNodeExit, GameDrawLayer},
+    shared::{CELL_LAYER, GameDrawLayer},
     state::types::NodeState,
 };
 
@@ -101,7 +102,7 @@ pub(crate) fn fire(
         Spatial::builder().at_position(position).build(),
         Scale2D { x: 0.0, y: 0.0 },
         GameDrawLayer::Fx,
-        CleanupOnNodeExit,
+        CleanupOnExit::<NodeState>::default(),
     ));
     if let Some((mesh, mat)) = visual {
         entity.insert((Mesh2d(mesh), MeshMaterial2d(mat)));

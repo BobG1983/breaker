@@ -1,0 +1,15 @@
+// MIGRATED: new effect system syntax
+// Voltchain: killing cells unleashes chain lightning
+// Route(Bolt, ...) → effect stamped on bolt, This = bolt
+// CellDestroyed on bolt → Killed(Cell): "I killed a cell" (local, fires on killer)
+(
+    name: "Voltchain",
+    description: "Destroying cells unleashes chain lightning to nearby targets",
+    effects: [
+        Route(Bolt, When(Killed(Cell), Fire(ChainLightning(arcs: 6, range: 128.0, damage_mult: 0.5)))),
+    ],
+    ingredients: [
+        (chip_name: "Chain Reaction", stacks_required: 1),
+        (chip_name: "Aftershock", stacks_required: 2),
+    ],
+)

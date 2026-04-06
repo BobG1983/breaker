@@ -1,0 +1,26 @@
+// MIGRATED: new effect system syntax
+// Amp: bolt gains ramping damage (passive, no trigger)
+// Route(Bolt, ...) with no When → immediate passive effect on bolt
+// This = bolt
+(
+    name: "Amp",
+    max_taken: 2,
+    common: (
+        prefix: "Basic",
+        effects: [
+            Route(Bolt, Fire(RampingDamage(damage_per_trigger: 0.02))),
+        ],
+    ),
+    uncommon: (
+        prefix: "Potent",
+        effects: [
+            Route(Bolt, Fire(RampingDamage(damage_per_trigger: 0.04))),
+        ],
+    ),
+    rare: (
+        prefix: "Savage",
+        effects: [
+            Route(Bolt, Fire(RampingDamage(damage_per_trigger: 0.06))),
+        ],
+    ),
+)

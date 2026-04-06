@@ -1,13 +1,14 @@
 //! Wall domain components.
 
 use bevy::prelude::*;
+use rantzsoft_lifecycle::CleanupOnExit;
 use rantzsoft_spatial2d::components::Spatial2D;
 
-use crate::shared::CleanupOnNodeExit;
+use crate::state::types::NodeState;
 
 /// Marker component identifying wall entities (left, right, ceiling).
 #[derive(Component, Debug, Default)]
-#[require(Spatial2D, CleanupOnNodeExit)]
+#[require(Spatial2D, CleanupOnExit<NodeState>)]
 pub struct Wall;
 
 #[cfg(test)]
@@ -30,15 +31,19 @@ mod tests {
     }
 
     #[test]
-    fn wall_require_inserts_cleanup_on_node_exit() {
-        use crate::shared::CleanupOnNodeExit;
+    fn wall_require_inserts_cleanup_on_exit_node_state() {
+        use rantzsoft_lifecycle::CleanupOnExit;
+
+        use crate::state::types::NodeState;
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         let entity = app.world_mut().spawn(Wall).id();
         app.update();
         assert!(
-            app.world().get::<CleanupOnNodeExit>(entity).is_some(),
-            "Wall should auto-insert CleanupOnNodeExit via #[require]"
+            app.world()
+                .get::<CleanupOnExit<NodeState>>(entity)
+                .is_some(),
+            "Wall should auto-insert CleanupOnExit<NodeState> via #[require]"
         );
     }
 

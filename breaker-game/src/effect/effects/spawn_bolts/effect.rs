@@ -18,7 +18,7 @@ use crate::{
 /// Spawns additional bolts from an entity.
 ///
 /// Each spawned bolt gets full physics components, a random velocity at
-/// the definition's `base_speed`, and `CleanupOnNodeExit`. If `inherit` is
+/// the definition's `base_speed`, and `CleanupOnExit<NodeState>`. If `inherit` is
 /// true, `BoundEffects` from the source entity are cloned onto each spawned
 /// bolt.
 pub(crate) fn fire(

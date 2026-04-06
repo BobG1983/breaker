@@ -13,13 +13,16 @@ use breaker::{
         second_wind::SecondWindWall,
         shield::ShieldWall,
     },
-    shared::CleanupOnNodeExit,
-    state::run::{
-        RunStats,
-        chip_select::{ChipOffering, ChipOffers},
-        node::resources::NodeTimer,
+    state::{
+        run::{
+            RunStats,
+            chip_select::{ChipOffering, ChipOffers},
+            node::resources::NodeTimer,
+        },
+        types::NodeState,
     },
 };
+use rantzsoft_lifecycle::CleanupOnExit;
 use rantzsoft_physics2d::aabb::Aabb2D;
 use rantzsoft_spatial2d::components::Position2D;
 
@@ -189,9 +192,9 @@ fn apply_spawn_extra_chain_arcs(count: usize, commands: &mut Commands) {
                 range: 0.0,
                 arc_speed: 0.0,
             },
-            CleanupOnNodeExit,
+            CleanupOnExit::<NodeState>::default(),
         ));
-        commands.spawn((ChainLightningArc, CleanupOnNodeExit));
+        commands.spawn((ChainLightningArc, CleanupOnExit::<NodeState>::default()));
     }
 }
 
@@ -319,7 +322,7 @@ pub fn apply_spawn_extra_gravity_wells(count: usize, commands: &mut Commands) {
                 remaining: 999.0,
                 owner: Entity::PLACEHOLDER,
             },
-            CleanupOnNodeExit,
+            CleanupOnExit::<NodeState>::default(),
         ));
     }
 }

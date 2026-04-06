@@ -1,9 +1,10 @@
 //! Side panel chrome — left (Augments) and right (Status) flanking the playfield.
 
 use bevy::prelude::*;
+use rantzsoft_lifecycle::CleanupOnExit;
 
 use super::super::components::{SidePanels, StatusPanel};
-use crate::shared::CleanupOnRunEnd;
+use crate::state::types::RunState;
 
 /// Spawns the full-screen flex row with left and right side panels.
 pub(crate) fn spawn_side_panels(mut commands: Commands, existing: Query<(), With<SidePanels>>) {
@@ -13,7 +14,7 @@ pub(crate) fn spawn_side_panels(mut commands: Commands, existing: Query<(), With
     commands
         .spawn((
             SidePanels,
-            CleanupOnRunEnd,
+            CleanupOnExit::<RunState>::default(),
             Node {
                 width: Val::Percent(100.0),
                 height: Val::Percent(100.0),

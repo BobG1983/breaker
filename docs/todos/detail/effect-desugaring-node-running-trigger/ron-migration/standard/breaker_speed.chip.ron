@@ -1,0 +1,27 @@
+// MIGRATED: new effect system syntax
+// Breaker Speed: breaker moves faster (passive), rare adds bump force
+// Route(Breaker, ...) → immediate passive on breaker
+// This = breaker
+(
+    name: "Breaker Speed",
+    max_taken: 3,
+    common: (
+        prefix: "Quick",
+        effects: [
+            Route(Breaker, Fire(SpeedBoost(multiplier: 1.1))),
+        ],
+    ),
+    uncommon: (
+        prefix: "Agile",
+        effects: [
+            Route(Breaker, Fire(SpeedBoost(multiplier: 1.2))),
+        ],
+    ),
+    rare: (
+        prefix: "Lightning",
+        effects: [
+            Route(Breaker, Fire(SpeedBoost(multiplier: 1.3))),
+            Route(Breaker, Fire(BumpForce(1.1))),
+        ],
+    ),
+)

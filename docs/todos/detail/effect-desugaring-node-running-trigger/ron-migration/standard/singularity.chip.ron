@@ -1,0 +1,16 @@
+// MIGRATED: new effect system syntax
+// Singularity: bolt gets smaller but hits harder and moves faster (passive)
+// Route(Bolt, ...) → immediate passive on bolt
+// This = bolt
+(
+    name: "Singularity",
+    max_taken: 1,
+    legendary: (
+        prefix: "",
+        effects: [
+            Route(Bolt, Fire(SizeBoost(0.6))),
+            Route(Bolt, Fire(DamageBoost(2.5))),
+            Route(Bolt, Fire(SpeedBoost(multiplier: 1.4))),
+        ],
+    ),
+)

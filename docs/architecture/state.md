@@ -80,6 +80,12 @@ The lifecycle crate pauses `Time<Virtual>` during Out-type transitions and unpau
 
 Pause is NOT a state. `toggle_pause` calls `time.pause()` / `time.unpause()` on `Time<Virtual>`. `FixedUpdate` freezes entirely (no catch-up on resume). Input and UI systems that use `Time<Real>` continue running. The pause screen is spawned in `GameState::Run` gated on `Time<Virtual>::is_paused()`.
 
+The pause menu has two actions, handled by `handle_pause_input`:
+- **Resume** — calls `time.unpause()`, no routing.
+- **Quit** — sets `NodeOutcome.result = NodeResult::Quit`, sends `ChangeState<NodeState>`, and unpauses time. The routing table sees `NodeResult::Quit` and resolves `RunState::Teardown` as the next state via `resolve_node_next_state`. `NodeResult::Quit` skips the `RunEnd` screen entirely.
+
+`handle_pause_input` does NOT call `NextState` directly — it sends a `ChangeState<NodeState>` message and lets the routing table handle the transition.
+
 Time model:
 - `Time<Virtual>` — game time, pausable. The default `Time` in `Update`.
 - `Time<Fixed>` — fixed timestep, accumulates from `Time<Virtual>`. The default `Time` in `FixedUpdate`. Freezes when virtual is paused.
@@ -87,8 +93,8 @@ Time model:
 
 ## Entity Cleanup
 
-`CleanupOnExit<S>` (from `rantzsoft_lifecycle`) marks entities for automatic despawn when state `S` exits. `StatePlugin` registers `cleanup_on_exit::<S>` on `OnEnter(S::Teardown)` for `NodeState`, `ChipSelectState`, `RunEndState`, and `RunState`. Entities with `CleanupOnNodeExit` or `CleanupOnRunEnd` (legacy markers, still transitioning) are handled by the `cleanup_entities` system.
+`CleanupOnExit<S>` (from `rantzsoft_lifecycle`) marks entities for automatic despawn when state `S` exits. `StatePlugin` registers `cleanup_on_exit::<S>` on `OnEnter(S::Teardown)` for `NodeState`, `ChipSelectState`, `RunEndState`, and `RunState`. As a safety net, `cleanup_on_exit::<NodeState>` also runs on `OnEnter(RunState::Teardown)` — this covers the quit-from-pause path where `NodeState` may not reach its own `Teardown`. The old `CleanupOnNodeExit` and `CleanupOnRunEnd` marker types have been fully removed; all entity lifecycle markers are now `CleanupOnExit<NodeState>` and `CleanupOnExit<RunState>`.
 
 ## Passive types vs. active logic
 
-State enum types and cleanup markers are passive types defined in `state/types/` (for state enums) and `shared.rs` (for legacy cleanup markers), imported by all domains. Routing declarations, transition wiring, and cleanup system registration all live in `state/plugin.rs`.
+State enum types are passive types defined in `state/types/`, imported by all domains. Cleanup markers (`CleanupOnExit<S>`) come from `rantzsoft_lifecycle`. Routing declarations, transition wiring, and cleanup system registration all live in `state/plugin.rs`.

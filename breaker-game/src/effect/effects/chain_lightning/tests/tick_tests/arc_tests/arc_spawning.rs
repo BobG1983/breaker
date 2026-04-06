@@ -3,10 +3,11 @@
 use std::collections::HashSet;
 
 use bevy::prelude::*;
+use rantzsoft_lifecycle::CleanupOnExit;
 use rantzsoft_spatial2d::components::{Position2D, Spatial};
 
 use super::*;
-use crate::shared::CleanupOnNodeExit;
+use crate::state::types::NodeState;
 
 // -- Behavior 15: Arc spawned with marker and chain transitions to ArcTraveling --
 
@@ -42,7 +43,7 @@ fn arc_entity_has_chain_lightning_arc_marker_and_no_extra_fields() {
         &ChainLightningArc,
         &Spatial,
         &Position2D,
-        &CleanupOnNodeExit,
+        &CleanupOnExit<NodeState>,
     )>();
     let arcs: Vec<_> = arc_query.iter(app.world()).collect();
     assert_eq!(arcs.len(), 1, "expected one arc entity");

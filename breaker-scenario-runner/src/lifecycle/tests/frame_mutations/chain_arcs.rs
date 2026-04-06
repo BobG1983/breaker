@@ -9,13 +9,14 @@ use super::super::helpers::*;
 /// When `frame_mutations` has `SpawnExtraChainArcs(3)` at frame 30 and the
 /// current frame is 30, 3 `ChainLightningChain` entities and 3
 /// `ChainLightningArc` entities must be spawned (6 total). Each entity
-/// must also have a `CleanupOnNodeExit` marker.
+/// must also have a `CleanupOnExit<NodeState>` marker.
 #[test]
 fn apply_debug_frame_mutations_spawn_extra_chain_arcs_at_matching_frame() {
     use breaker::{
         effect::effects::chain_lightning::{ChainLightningArc, ChainLightningChain},
-        shared::CleanupOnNodeExit,
+        state::types::NodeState,
     };
+    use rantzsoft_lifecycle::CleanupOnExit;
 
     let definition = ScenarioDefinition {
         breaker: "Aegis".to_owned(),
@@ -59,26 +60,26 @@ fn apply_debug_frame_mutations_spawn_extra_chain_arcs_at_matching_frame() {
         "expected 3 ChainLightningArc entities from SpawnExtraChainArcs(3), got {arc_count}"
     );
 
-    // Verify CleanupOnNodeExit marker on chain entities
+    // Verify CleanupOnExit<NodeState> marker on chain entities
     let chain_cleanup_count = app
         .world_mut()
-        .query_filtered::<Entity, (With<ChainLightningChain>, With<CleanupOnNodeExit>)>()
+        .query_filtered::<Entity, (With<ChainLightningChain>, With<CleanupOnExit<NodeState>>)>()
         .iter(app.world())
         .count();
     assert_eq!(
         chain_cleanup_count, 3,
-        "all ChainLightningChain entities must have CleanupOnNodeExit"
+        "all ChainLightningChain entities must have CleanupOnExit<NodeState>"
     );
 
-    // Verify CleanupOnNodeExit marker on arc entities
+    // Verify CleanupOnExit<NodeState> marker on arc entities
     let arc_cleanup_count = app
         .world_mut()
-        .query_filtered::<Entity, (With<ChainLightningArc>, With<CleanupOnNodeExit>)>()
+        .query_filtered::<Entity, (With<ChainLightningArc>, With<CleanupOnExit<NodeState>>)>()
         .iter(app.world())
         .count();
     assert_eq!(
         arc_cleanup_count, 3,
-        "all ChainLightningArc entities must have CleanupOnNodeExit"
+        "all ChainLightningArc entities must have CleanupOnExit<NodeState>"
     );
 }
 

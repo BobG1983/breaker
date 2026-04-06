@@ -1,0 +1,15 @@
+// MIGRATED: new effect system syntax
+// Arcwelder: bolt tether beams on bump
+// Route(Bolt, ...) → effect stamped on bolt, This = bolt
+// Bumped is local: fires on both bolt and breaker. Bolt is This.
+(
+    name: "Arcwelder",
+    description: "All your bolts connected by crackling neon beams that damage everything they intersect",
+    effects: [
+        Route(Bolt, When(Bumped, Fire(TetherBeam(damage_mult: 1.5, chain: true)))),
+    ],
+    ingredients: [
+        (chip_name: "Tether", stacks_required: 2),
+        (chip_name: "Amp", stacks_required: 2),
+    ],
+)

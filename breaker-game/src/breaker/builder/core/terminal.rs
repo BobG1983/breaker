@@ -1,6 +1,7 @@
 //! Terminal build/spawn impls and shared core building helpers.
 
 use bevy::{math::curve::easing::EaseFunction, prelude::*};
+use rantzsoft_lifecycle::CleanupOnExit;
 use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{
     MaxSpeed, Position2D, PreviousPosition, PreviousScale, Scale2D, Velocity2D,
@@ -17,10 +18,10 @@ use crate::{
     },
     effect::{EffectCommandsExt, effects::life_lost::LivesCount},
     shared::{
-        BOLT_LAYER, BREAKER_LAYER, BaseHeight, BaseWidth, CleanupOnNodeExit, CleanupOnRunEnd,
-        GameDrawLayer,
+        BOLT_LAYER, BREAKER_LAYER, BaseHeight, BaseWidth, GameDrawLayer,
         size::{MaxHeight, MaxWidth, MinHeight, MinWidth},
     },
+    state::types::{NodeState, RunState},
 };
 
 // ── Private helpers ─────────────────────────────────────────────────────────
@@ -221,7 +222,7 @@ impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, 
         (
             core,
             PrimaryBreaker,
-            CleanupOnRunEnd,
+            CleanupOnExit::<RunState>::default(),
             GameDrawLayer::Breaker,
             Mesh2d(self.visual.mesh),
             MeshMaterial2d(self.visual.material),
@@ -255,7 +256,7 @@ impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, 
         (
             core,
             ExtraBreaker,
-            CleanupOnNodeExit,
+            CleanupOnExit::<NodeState>::default(),
             GameDrawLayer::Breaker,
             Mesh2d(self.visual.mesh),
             MeshMaterial2d(self.visual.material),
@@ -286,7 +287,7 @@ impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, 
             &self.optional,
         );
         let core = build_core(&params, &self.optional);
-        (core, PrimaryBreaker, CleanupOnRunEnd)
+        (core, PrimaryBreaker, CleanupOnExit::<RunState>::default())
     }
 
     /// Spawns a headless primary breaker entity, including effect dispatch.
@@ -313,7 +314,7 @@ impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, 
             &self.optional,
         );
         let core = build_core(&params, &self.optional);
-        (core, ExtraBreaker, CleanupOnNodeExit)
+        (core, ExtraBreaker, CleanupOnExit::<NodeState>::default())
     }
 
     /// Spawns a headless extra breaker entity, including effect dispatch.

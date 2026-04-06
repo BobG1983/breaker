@@ -1,0 +1,17 @@
+// MIGRATED: new effect system syntax
+// Whiplash: after a bump whiff, every cell impact deals bonus damage + shockwave
+// Route(Bolt, ...) → effect stamped on bolt, This = bolt
+// BumpWhiff → BumpWhiffOccurred (global trigger)
+// Impacted(Cell) is local: Bolt is Impactor, Cell is Target.
+// Both effects repeat on every cell impact after a whiff (no Once gate).
+(
+    name: "Whiplash",
+    max_taken: 1,
+    legendary: (
+        prefix: "",
+        effects: [
+            Route(Bolt, When(BumpWhiffOccurred, When(Impacted(Cell), Fire(DamageBoost(2.5))))),
+            Route(Bolt, When(BumpWhiffOccurred, When(Impacted(Cell), Fire(Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 500.0))))),
+        ],
+    ),
+)

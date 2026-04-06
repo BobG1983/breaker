@@ -37,7 +37,8 @@ pub fn check_chain_arc_count_reasonable(
 mod tests {
     use std::collections::HashSet;
 
-    use breaker::{effect::effects::chain_lightning::ChainState, shared::CleanupOnNodeExit};
+    use breaker::{effect::effects::chain_lightning::ChainState, state::types::NodeState};
+    use rantzsoft_lifecycle::CleanupOnExit;
 
     use super::*;
     use crate::types::{InputStrategy, InvariantParams, ScenarioDefinition, ScriptedParams};
@@ -85,13 +86,15 @@ mod tests {
                     range: 0.0,
                     arc_speed: 0.0,
                 },
-                CleanupOnNodeExit,
+                CleanupOnExit::<NodeState>::default(),
             ))
             .id()
     }
 
     fn spawn_arc(world: &mut World) -> Entity {
-        world.spawn((ChainLightningArc, CleanupOnNodeExit)).id()
+        world
+            .spawn((ChainLightningArc, CleanupOnExit::<NodeState>::default()))
+            .id()
     }
 
     // -----------------------------------------------------------------

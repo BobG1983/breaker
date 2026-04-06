@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use rantzsoft_lifecycle::CleanupOnExit;
 use rantzsoft_physics2d::{
     collision_layers::CollisionLayers, plugin::PhysicsSystems, resources::CollisionQuadtree,
 };
@@ -8,7 +9,7 @@ use crate::{
     cells::messages::DamageCell,
     effect::core::EffectSourceChip,
     fx::EffectFlashTimer,
-    shared::{CELL_LAYER, CleanupOnNodeExit, GameDrawLayer},
+    shared::{CELL_LAYER, GameDrawLayer},
     state::types::NodeState,
 };
 
@@ -37,7 +38,7 @@ pub(crate) fn fire(entity: Entity, range: f32, damage: f32, source_chip: &str, w
         ExplodeRequest { range, damage },
         EffectSourceChip::new(source_chip),
         Position2D(position),
-        CleanupOnNodeExit,
+        CleanupOnExit::<NodeState>::default(),
     ));
 }
 
@@ -91,7 +92,7 @@ pub(crate) fn process_explode_requests(
                 Mesh2d(meshes.add(Circle::new(1.0))),
                 MeshMaterial2d(materials.add(ColorMaterial::from_color(EXPLODE_FLASH_COLOR))),
                 EffectFlashTimer(EXPLODE_FLASH_DURATION),
-                CleanupOnNodeExit,
+                CleanupOnExit::<NodeState>::default(),
             ));
         }
 

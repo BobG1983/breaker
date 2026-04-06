@@ -1,6 +1,7 @@
 //! Tests for spawned bolt physics components (via `spawn_extra_bolt`) and velocity override.
 
 use bevy::prelude::*;
+use rantzsoft_lifecycle::CleanupOnExit;
 use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{
     BaseSpeed, MaxSpeed, MinSpeed, Position2D, PreviousPosition, Scale2D, Velocity2D,
@@ -13,10 +14,8 @@ use crate::{
         definition::BoltDefinition,
         registry::BoltRegistry,
     },
-    shared::{
-        BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, CleanupOnNodeExit, GameDrawLayer, WALL_LAYER,
-        rng::GameRng,
-    },
+    shared::{BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, GameDrawLayer, WALL_LAYER, rng::GameRng},
+    state::types::NodeState,
 };
 
 fn make_bolt_definition(name: &str, base_speed: f32, radius: f32) -> BoltDefinition {
@@ -139,10 +138,10 @@ fn spawned_bolt_has_full_physics_components_from_spawn_extra_bolt() {
         .expect("should have BoltRadius");
     assert!((radius.0 - 8.0).abs() < f32::EPSILON);
 
-    // CleanupOnNodeExit
+    // CleanupOnExit<NodeState>
     assert!(
-        world.get::<CleanupOnNodeExit>(bolt).is_some(),
-        "should have CleanupOnNodeExit"
+        world.get::<CleanupOnExit<NodeState>>(bolt).is_some(),
+        "should have CleanupOnExit<NodeState>"
     );
 
     // Visual components: rendered mirror bolts have Mesh2d, MeshMaterial2d, and GameDrawLayer::Bolt

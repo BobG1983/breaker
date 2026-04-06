@@ -1,6 +1,7 @@
 //! Tests for `SpawnPhantom` `fire()` bolt spawning, components, and cap enforcement.
 
 use bevy::prelude::*;
+use rantzsoft_lifecycle::CleanupOnExit;
 use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{Position2D, Scale2D, Velocity2D};
 
@@ -13,10 +14,8 @@ use crate::{
         definition::BoltDefinition,
         registry::BoltRegistry,
     },
-    shared::{
-        BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, CleanupOnNodeExit, CleanupOnRunEnd, GameDrawLayer,
-        WALL_LAYER, rng::GameRng,
-    },
+    shared::{BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, GameDrawLayer, WALL_LAYER, rng::GameRng},
+    state::types::{NodeState, RunState},
 };
 
 // -- fire tests ──────────────────────────────────────────────────
@@ -183,12 +182,12 @@ fn fire_spawns_phantom_with_cleanup_on_node_exit_not_run_end() {
     let phantom = query.iter(&world).next().expect("phantom should exist");
 
     assert!(
-        world.get::<CleanupOnNodeExit>(phantom).is_some(),
-        "phantom should have CleanupOnNodeExit"
+        world.get::<CleanupOnExit<NodeState>>(phantom).is_some(),
+        "phantom should have CleanupOnExit<NodeState>"
     );
     assert!(
-        world.get::<CleanupOnRunEnd>(phantom).is_none(),
-        "phantom should NOT have CleanupOnRunEnd"
+        world.get::<CleanupOnExit<RunState>>(phantom).is_none(),
+        "phantom should NOT have CleanupOnExit<RunState>"
     );
 }
 

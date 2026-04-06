@@ -169,3 +169,20 @@ Key patterns reviewed and confirmed safe:
 Deferred ChangeState re-queue pattern: dispatch_message_routes re-queues ChangeState if
 ActiveTransition is present. Bounded by transition duration (always finite). Not an infinite loop.
 No new production panic surface beyond pre-existing patterns.
+
+## feature/effect-placeholder-visuals (2026-04-06) — pause input + state routing + scenario runner dep
+Changed files: handle_pause_input.rs, state/plugin.rs, breaker-scenario-runner/Cargo.toml, shared/components.rs.
+No new external crates. rantzsoft_lifecycle added to breaker-scenario-runner/Cargo.toml as a workspace
+path dependency (same crate already vetted 2026-04-03). lints.workspace = true inherits unsafe_code = "deny".
+cargo audit: same single warning (paste RUSTSEC-2024-0436, unmaintained, transitive via metal→wgpu).
+cargo machete: no unused dependencies found.
+No unsafe blocks in any changed file. No new RON deserialization sites.
+No new production .unwrap()/.expect() calls — current_index() uses .unwrap_or(0) (defensive fallback,
+  selection is always a valid PAUSE_MENU_ITEMS variant; not a panic path).
+resolve_node_next_state() uses world.resource::<NodeOutcome>() — safe because NodeOutcome is
+  init_resource'd in RunPlugin::build(), which runs before any route resolver fires.
+Double-registration of cleanup_on_exit::<NodeState>: registers on both OnEnter(NodeState::Teardown)
+  and OnEnter(RunState::Teardown). In the quit-from-pause path NodeState::Teardown fires first,
+  despawning all CleanupOnExit<NodeState> entities. The second run (RunState::Teardown) iterates
+  zero entities — safe, not a double-despawn. Intentional safety-net pattern.
+shared/components.rs: three old marker types removed. No security impact (compile-time removals only).

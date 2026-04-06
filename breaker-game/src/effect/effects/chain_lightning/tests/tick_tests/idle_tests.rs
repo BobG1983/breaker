@@ -1,9 +1,10 @@
 use std::collections::HashSet;
 
 use bevy::prelude::*;
+use rantzsoft_lifecycle::CleanupOnExit;
 
 use super::*;
-use crate::shared::CleanupOnNodeExit;
+use crate::state::types::NodeState;
 
 // ── Section B: tick_chain_lightning -- Idle State ──────────────────
 
@@ -62,10 +63,12 @@ fn tick_idle_chain_spawns_arc_and_transitions_to_arc_traveling() {
         arc_transform.translation.y
     );
 
-    // Arc should have CleanupOnNodeExit
+    // Arc should have CleanupOnExit<NodeState>
     assert!(
-        app.world().get::<CleanupOnNodeExit>(arc_entity).is_some(),
-        "arc entity should have CleanupOnNodeExit"
+        app.world()
+            .get::<CleanupOnExit<NodeState>>(arc_entity)
+            .is_some(),
+        "arc entity should have CleanupOnExit<NodeState>"
     );
 
     // Chain should be in ArcTraveling state

@@ -1,0 +1,15 @@
+// MIGRATED: new effect system syntax
+// Deadline: bolt gets massive speed boost when node timer hits 25%
+// Route(Bolt, When(...)) → stamped on bolt, This = bolt
+// NodeTimerThreshold → NodeTimerThresholdOccurred (global trigger, no participants)
+// SpeedBoost fires on the bolt (This).
+(
+    name: "Deadline",
+    max_taken: 1,
+    legendary: (
+        prefix: "",
+        effects: [
+            Route(Bolt, When(NodeTimerThresholdOccurred(0.25), Fire(SpeedBoost(multiplier: 2.0)))),
+        ],
+    ),
+)

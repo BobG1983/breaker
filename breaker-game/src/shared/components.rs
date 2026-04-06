@@ -33,21 +33,6 @@ impl BaseHeight {
 #[derive(Component, Debug, Clone, Copy)]
 pub struct NodeScalingFactor(pub f32);
 
-/// Marker component for entities that should be despawned when exiting a node.
-///
-/// Added to bolt, cells, and other node-scoped entities. Node exit is modeled
-/// as exiting [`GameState::Playing`] — any new transitions out of `Playing`
-/// must account for the fact that all `CleanupOnNodeExit` entities will be
-/// despawned.
-#[derive(Component, Default)]
-pub struct CleanupOnNodeExit;
-
-/// Marker component for entities that should be despawned when a run ends.
-///
-/// Added to breaker, run-scoped chips, and accumulated state.
-#[derive(Component)]
-pub struct CleanupOnRunEnd;
-
 #[cfg(test)]
 mod tests {
     use super::*;

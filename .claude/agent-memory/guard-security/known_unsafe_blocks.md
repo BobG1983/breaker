@@ -98,3 +98,9 @@ New workspace member rantzsoft_lifecycle/ added. Grepped all .rs files under
 rantzsoft_lifecycle/src/ for "unsafe": zero matches. The crate's Cargo.toml uses
 `lints.workspace = true`, inheriting the workspace `unsafe_code = "deny"` lint.
 No FFI, no raw pointers, no proc macros. No build.rs in this crate.
+
+Still confirmed for feature/effect-placeholder-visuals (2026-04-06):
+Changed files: handle_pause_input.rs, state/plugin.rs, shared/components.rs.
+Grepped all four changed files for "unsafe": zero matches in all. Workspace lint
+unsafe_code = "deny" remains in force. breaker-scenario-runner/Cargo.toml adds
+rantzsoft_lifecycle as workspace path dep; that crate's unsafe inventory is unchanged.

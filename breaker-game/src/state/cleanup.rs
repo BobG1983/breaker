@@ -15,30 +15,17 @@ pub(crate) fn cleanup_entities<T: Component>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::shared::{CleanupOnNodeExit, CleanupOnRunEnd};
+
+    #[derive(Component)]
+    struct TestMarker;
 
     #[test]
-    fn cleanup_on_node_exit_despawns_marked_entities() {
+    fn cleanup_entities_despawns_marked_entities() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
-            .add_systems(Update, cleanup_entities::<CleanupOnNodeExit>);
+            .add_systems(Update, cleanup_entities::<TestMarker>);
 
-        let marked = app.world_mut().spawn(CleanupOnNodeExit).id();
-        let unmarked = app.world_mut().spawn_empty().id();
-
-        app.update();
-
-        assert!(app.world().get_entity(marked).is_err());
-        assert!(app.world().get_entity(unmarked).is_ok());
-    }
-
-    #[test]
-    fn cleanup_on_run_end_despawns_marked_entities() {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_systems(Update, cleanup_entities::<CleanupOnRunEnd>);
-
-        let marked = app.world_mut().spawn(CleanupOnRunEnd).id();
+        let marked = app.world_mut().spawn(TestMarker).id();
         let unmarked = app.world_mut().spawn_empty().id();
 
         app.update();

@@ -2,13 +2,17 @@
 
 use bevy::prelude::*;
 use rand::Rng;
+use rantzsoft_lifecycle::CleanupOnExit;
 
 use crate::{
     fx::{FadeOut, PunchScale},
-    shared::{CleanupOnNodeExit, GameRng},
-    state::run::{
-        components::HighlightPopup, definition::HighlightConfig, messages::HighlightTriggered,
-        resources::HighlightKind,
+    shared::GameRng,
+    state::{
+        run::{
+            components::HighlightPopup, definition::HighlightConfig, messages::HighlightTriggered,
+            resources::HighlightKind,
+        },
+        types::NodeState,
     },
 };
 
@@ -106,7 +110,7 @@ pub(crate) fn spawn_highlight_text(
                 duration: config.popup_overshoot_duration_secs,
                 overshoot: config.popup_overshoot_scale,
             },
-            CleanupOnNodeExit,
+            CleanupOnExit::<NodeState>::default(),
             HighlightPopup,
         ));
     }

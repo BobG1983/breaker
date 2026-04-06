@@ -1,6 +1,7 @@
 //! Tests for breaker spawning behaviors (2-11).
 
 use bevy::prelude::*;
+use rantzsoft_lifecycle::CleanupOnExit;
 use rantzsoft_spatial2d::components::{MaxSpeed, Position2D, Scale2D};
 
 use super::helpers::{make_aegis_breaker_definition, test_app};
@@ -15,7 +16,7 @@ use crate::{
         resources::SelectedBreaker,
     },
     effect::effects::life_lost::LivesCount,
-    shared::{CleanupOnNodeExit, CleanupOnRunEnd},
+    state::types::{NodeState, RunState},
 };
 
 /// Convenience accessor for `BreakerDefinition::default()`.
@@ -99,7 +100,7 @@ fn spawned_breaker_does_not_have_extra_breaker_marker() {
     );
 }
 
-// ── Behavior 4: Spawned breaker has CleanupOnRunEnd marker ────────────
+// ── Behavior 4: Spawned breaker has CleanupOnExit<RunState> marker ────────────
 
 #[test]
 fn spawned_breaker_has_cleanup_on_run_end() {
@@ -113,8 +114,8 @@ fn spawned_breaker_has_cleanup_on_run_end() {
         .next()
         .expect("breaker should exist");
     assert!(
-        app.world().get::<CleanupOnRunEnd>(entity).is_some(),
-        "spawned breaker should have CleanupOnRunEnd"
+        app.world().get::<CleanupOnExit<RunState>>(entity).is_some(),
+        "spawned breaker should have CleanupOnExit<RunState>"
     );
 }
 
@@ -130,8 +131,10 @@ fn spawned_breaker_does_not_have_cleanup_on_node_exit() {
         .next()
         .expect("breaker should exist");
     assert!(
-        app.world().get::<CleanupOnNodeExit>(entity).is_none(),
-        "primary breaker should NOT have CleanupOnNodeExit (persists across nodes)"
+        app.world()
+            .get::<CleanupOnExit<NodeState>>(entity)
+            .is_none(),
+        "primary breaker should NOT have CleanupOnExit<NodeState> (persists across nodes)"
     );
 }
 

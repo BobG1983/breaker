@@ -2,10 +2,12 @@
 //! and position matching.
 
 use bevy::prelude::*;
+use rantzsoft_lifecycle::CleanupOnExit;
 
 use super::helpers::test_app;
 use crate::{
-    shared::{CleanupOnNodeExit, PlayfieldConfig},
+    shared::PlayfieldConfig,
+    state::types::NodeState,
     walls::{
         components::Wall, definition::WallDefinition, messages::WallsSpawned,
         registry::WallRegistry,
@@ -32,10 +34,10 @@ fn walls_have_cleanup_marker() {
 
     let count = app
         .world_mut()
-        .query_filtered::<Entity, (With<Wall>, With<CleanupOnNodeExit>)>()
+        .query_filtered::<Entity, (With<Wall>, With<CleanupOnExit<NodeState>>)>()
         .iter(app.world())
         .count();
-    assert_eq!(count, 3, "all walls should have CleanupOnNodeExit");
+    assert_eq!(count, 3, "all walls should have CleanupOnExit<NodeState>");
 }
 
 #[test]

@@ -67,6 +67,8 @@ pub enum NodeResult {
     TimerExpired,
     /// All lives depleted (Aegis breaker).
     LivesDepleted,
+    /// Player quit from the pause menu.
+    Quit,
 }
 
 /// Tracks the current node's outcome and run progress.
@@ -267,5 +269,46 @@ impl Default for HighlightTracker {
             first_evolution_recorded: false,
             evolution_damage: std::collections::HashMap::new(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── Behavior 5: NodeResult includes Quit variant ────────────────────
+
+    #[test]
+    fn node_result_quit_is_valid_variant() {
+        // Exhaustive match proves Quit exists alongside all other variants.
+        let result = NodeResult::Quit;
+        let label = match result {
+            NodeResult::InProgress => "in_progress",
+            NodeResult::Won => "won",
+            NodeResult::TimerExpired => "timer_expired",
+            NodeResult::LivesDepleted => "lives_depleted",
+            NodeResult::Quit => "quit",
+        };
+        assert_eq!(label, "quit");
+    }
+
+    #[test]
+    fn node_result_default_is_in_progress() {
+        assert_eq!(NodeResult::default(), NodeResult::InProgress);
+    }
+
+    // ── Behavior 6: NodeResult::Quit is distinct from all other variants ─
+
+    #[test]
+    fn node_result_quit_is_not_equal_to_other_variants() {
+        assert_ne!(NodeResult::Quit, NodeResult::InProgress);
+        assert_ne!(NodeResult::Quit, NodeResult::Won);
+        assert_ne!(NodeResult::Quit, NodeResult::TimerExpired);
+        assert_ne!(NodeResult::Quit, NodeResult::LivesDepleted);
+    }
+
+    #[test]
+    fn node_result_quit_equals_itself() {
+        assert_eq!(NodeResult::Quit, NodeResult::Quit);
     }
 }

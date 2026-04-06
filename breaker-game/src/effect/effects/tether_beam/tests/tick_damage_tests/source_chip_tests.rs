@@ -36,7 +36,7 @@ fn tick_tether_beam_populates_source_chip_from_effect_source_chip() {
                 base_damage: DEFAULT_BOLT_BASE_DAMAGE,
             },
             EffectSourceChip(Some("tether".to_string())),
-            CleanupOnNodeExit,
+            CleanupOnExit::<NodeState>::default(),
         ))
         .id();
     app.world_mut().entity_mut(bolt_a).insert(TetherBoltMarker);
@@ -94,7 +94,7 @@ fn tick_tether_beam_source_chip_none_when_effect_source_chip_none() {
                 base_damage: DEFAULT_BOLT_BASE_DAMAGE,
             },
             EffectSourceChip(None),
-            CleanupOnNodeExit,
+            CleanupOnExit::<NodeState>::default(),
         ))
         .id();
     app.world_mut().entity_mut(bolt_a).insert(TetherBoltMarker);
@@ -144,7 +144,7 @@ fn tick_tether_beam_defaults_to_none_when_no_effect_source_chip() {
                 effective_damage_multiplier: 1.0,
                 base_damage: DEFAULT_BOLT_BASE_DAMAGE,
             },
-            CleanupOnNodeExit,
+            CleanupOnExit::<NodeState>::default(),
         ))
         .id();
     app.world_mut().entity_mut(bolt_a).insert(TetherBoltMarker);
@@ -196,7 +196,7 @@ fn multiple_tether_beams_with_different_source_chips_produce_correctly_attribute
                 base_damage: DEFAULT_BOLT_BASE_DAMAGE,
             },
             EffectSourceChip(Some("alpha".to_string())),
-            CleanupOnNodeExit,
+            CleanupOnExit::<NodeState>::default(),
         ))
         .id();
     app.world_mut()
@@ -236,7 +236,7 @@ fn multiple_tether_beams_with_different_source_chips_produce_correctly_attribute
                 base_damage: DEFAULT_BOLT_BASE_DAMAGE,
             },
             EffectSourceChip(Some("beta".to_string())),
-            CleanupOnNodeExit,
+            CleanupOnExit::<NodeState>::default(),
         ))
         .id();
     app.world_mut()

@@ -1,11 +1,13 @@
 use bevy::{ecs::world::CommandQueue, prelude::*};
+use rantzsoft_lifecycle::CleanupOnExit;
 use rantzsoft_spatial2d::components::{Position2D, Scale2D, Velocity2D};
 
 use super::helpers::test_bolt_definition;
 use crate::{
     bolt::components::{Bolt, BoltServing, ExtraBolt, PrimaryBolt},
     effect::{BoundEffects, EffectKind, EffectNode},
-    shared::{CleanupOnNodeExit, CleanupOnRunEnd, GameDrawLayer, size::BaseRadius},
+    shared::{GameDrawLayer, size::BaseRadius},
+    state::types::{NodeState, RunState},
 };
 
 /// Spawns a bolt via Commands backed by a `CommandQueue`, then applies the queue.
@@ -63,8 +65,8 @@ fn headless_primary_serving_has_all_gameplay_components() {
         "should have BaseRadius"
     );
     assert!(
-        world.get::<CleanupOnRunEnd>(entity).is_some(),
-        "should have CleanupOnRunEnd"
+        world.get::<CleanupOnExit<RunState>>(entity).is_some(),
+        "should have CleanupOnExit<RunState>"
     );
     // Headless does NOT have GameDrawLayer
     assert!(
@@ -91,8 +93,8 @@ fn headless_extra_velocity_has_correct_markers() {
         "should have ExtraBolt"
     );
     assert!(
-        world.get::<CleanupOnNodeExit>(entity).is_some(),
-        "should have CleanupOnNodeExit"
+        world.get::<CleanupOnExit<NodeState>>(entity).is_some(),
+        "should have CleanupOnExit<NodeState>"
     );
 }
 
@@ -178,8 +180,8 @@ fn headless_extra_velocity_spawn_has_correct_markers() {
         "should NOT have BoltServing"
     );
     assert!(
-        world.get::<CleanupOnNodeExit>(entity).is_some(),
-        "should have CleanupOnNodeExit"
+        world.get::<CleanupOnExit<NodeState>>(entity).is_some(),
+        "should have CleanupOnExit<NodeState>"
     );
     let vel = world.get::<Velocity2D>(entity).unwrap();
     assert!(
@@ -207,8 +209,8 @@ fn headless_primary_velocity_spawn_has_primary_marker() {
         "should have PrimaryBolt"
     );
     assert!(
-        world.get::<CleanupOnRunEnd>(entity).is_some(),
-        "should have CleanupOnRunEnd"
+        world.get::<CleanupOnExit<RunState>>(entity).is_some(),
+        "should have CleanupOnExit<RunState>"
     );
 }
 
@@ -229,7 +231,7 @@ fn headless_serving_primary_has_correct_markers() {
 
     assert!(world.get::<PrimaryBolt>(entity).is_some());
     assert!(world.get::<BoltServing>(entity).is_some());
-    assert!(world.get::<CleanupOnRunEnd>(entity).is_some());
+    assert!(world.get::<CleanupOnExit<RunState>>(entity).is_some());
     assert!(world.get::<Mesh2d>(entity).is_none());
 }
 
@@ -248,7 +250,7 @@ fn headless_serving_extra_has_correct_markers() {
 
     assert!(world.get::<ExtraBolt>(entity).is_some());
     assert!(world.get::<BoltServing>(entity).is_some());
-    assert!(world.get::<CleanupOnNodeExit>(entity).is_some());
+    assert!(world.get::<CleanupOnExit<NodeState>>(entity).is_some());
     assert!(world.get::<Mesh2d>(entity).is_none());
 }
 
@@ -267,7 +269,7 @@ fn headless_velocity_primary_has_correct_markers() {
 
     assert!(world.get::<PrimaryBolt>(entity).is_some());
     assert!(world.get::<BoltServing>(entity).is_none());
-    assert!(world.get::<CleanupOnRunEnd>(entity).is_some());
+    assert!(world.get::<CleanupOnExit<RunState>>(entity).is_some());
     assert!(world.get::<Mesh2d>(entity).is_none());
 }
 
@@ -286,7 +288,7 @@ fn headless_velocity_extra_has_correct_markers() {
 
     assert!(world.get::<ExtraBolt>(entity).is_some());
     assert!(world.get::<BoltServing>(entity).is_none());
-    assert!(world.get::<CleanupOnNodeExit>(entity).is_some());
+    assert!(world.get::<CleanupOnExit<NodeState>>(entity).is_some());
     assert!(world.get::<Mesh2d>(entity).is_none());
 }
 
@@ -320,7 +322,7 @@ fn rendered_serving_primary_has_mesh() {
 
     assert!(app.world().get::<PrimaryBolt>(entity).is_some());
     assert!(app.world().get::<BoltServing>(entity).is_some());
-    assert!(app.world().get::<CleanupOnRunEnd>(entity).is_some());
+    assert!(app.world().get::<CleanupOnExit<RunState>>(entity).is_some());
     assert!(app.world().get::<Mesh2d>(entity).is_some());
 }
 

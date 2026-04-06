@@ -1,13 +1,14 @@
 //! Cells domain components.
 
 use bevy::prelude::*;
+use rantzsoft_lifecycle::CleanupOnExit;
 use rantzsoft_spatial2d::components::Spatial2D;
 
-use crate::shared::CleanupOnNodeExit;
+use crate::state::types::NodeState;
 
 /// Marker component identifying a cell entity.
 #[derive(Component, Debug, Default)]
-#[require(Spatial2D, CleanupOnNodeExit)]
+#[require(Spatial2D, CleanupOnExit<NodeState>)]
 pub struct Cell;
 
 /// Marker for cells that count toward node completion.

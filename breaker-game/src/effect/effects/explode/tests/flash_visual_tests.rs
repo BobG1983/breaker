@@ -1,13 +1,13 @@
 //! Tests for explode flash visual entity spawning.
 
 use bevy::prelude::*;
+use rantzsoft_lifecycle::CleanupOnExit;
 use rantzsoft_spatial2d::components::{Position2D, Scale2D};
 
 use super::helpers::*;
 use crate::{
-    effect::effects::explode::ExplodeRequest,
-    fx::EffectFlashTimer,
-    shared::{CleanupOnNodeExit, GameDrawLayer},
+    effect::effects::explode::ExplodeRequest, fx::EffectFlashTimer, shared::GameDrawLayer,
+    state::types::NodeState,
 };
 
 // ── Test app with asset support ────────────────────────────────────
@@ -70,8 +70,8 @@ fn process_explode_requests_spawns_flash_visual_entity_with_required_components(
         "flash entity should have MeshMaterial2d<ColorMaterial>"
     );
     assert!(
-        app.world().get::<CleanupOnNodeExit>(flash).is_some(),
-        "flash entity should have CleanupOnNodeExit"
+        app.world().get::<CleanupOnExit<NodeState>>(flash).is_some(),
+        "flash entity should have CleanupOnExit<NodeState>"
     );
     assert!(
         matches!(

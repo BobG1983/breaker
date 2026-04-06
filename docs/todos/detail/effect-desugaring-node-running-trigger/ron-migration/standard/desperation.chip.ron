@@ -1,0 +1,15 @@
+// MIGRATED: new effect system syntax
+// Desperation: breaker gets speed boost + spawns bolt on bolt loss
+// Route(Breaker, ...) → stamped on breaker, This = breaker
+// BoltLost → BoltLostOccurred (global trigger)
+(
+    name: "Desperation",
+    max_taken: 1,
+    legendary: (
+        prefix: "",
+        effects: [
+            Route(Breaker, When(BoltLostOccurred, Fire(SpeedBoost(multiplier: 2.0)))),
+            Route(Breaker, When(BoltLostOccurred, Fire(SpawnBolts(count: 1, inherit: true)))),
+        ],
+    ),
+)
