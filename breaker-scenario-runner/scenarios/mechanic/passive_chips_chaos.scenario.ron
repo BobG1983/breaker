@@ -1,11 +1,12 @@
 // Adversarial: passive chip effects (Piercing, DamageBoost, SpeedBoost, SizeBoost) loaded via
-// initial_effects. Dense layout maximises cell hits. Chaos input at moderate action probability
-// drives rapid bump sequences to trigger repeated effect application. If any passive effect handler
-// corrupts bolt state (speed, position, NaN) under sustained load this scenario will catch it.
+// initial_effects. Dense layout maximises cell hits. Godmode breaker guarantees infinite play;
+// Perfect(AlwaysPerfect) input drives reliable bump sequences to trigger repeated effect
+// application. If any passive effect handler corrupts bolt state (speed, position, NaN) under
+// sustained load this scenario will catch it.
 (
-    breaker: "Aegis",
+    breaker: "godmode",
     layout: "Dense",
-    input: Chaos((action_prob: 0.5)),
+    input: Perfect(AlwaysPerfect),
     max_frames: 5000,
     disallowed_failures: [BoltInBounds, BoltSpeedAccurate, NoEntityLeaks, NoNaN],
     allowed_failures: None,

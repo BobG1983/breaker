@@ -1,19 +1,20 @@
 // Adversarial: Voltchain evolution chip (Chain Reaction x1 + Damage Boost x2) is injected via
 // chip_selections. Voltchain fires chain lightning between cells on cell impact — each arc
 // travels to nearby targets and can trigger secondary cell destructions, creating cascade chains.
-// Dense layout under chaos 0.5 maximises simultaneous cell impacts across 8000 frames, which
-// drives the maximum number of overlapping chain-lightning spawns. The adversarial risk: if
-// arc entities are not cleaned up after chain completion (target destroyed mid-flight, no
-// reachable next target, or chain-length exceeded), ChainArcCountReasonable fires. Simultaneous
-// cascades from multiple Voltchain triggers can create enough in-flight arcs to exhaust the
-// default 50-entity ceiling if any arc-or-chain entity leaks. NoEntityLeaks detects orphaned
-// ChainLightningChain/Arc entities that survive past their expected cleanup frame. NoNaN
-// guards against position corruption from mid-flight target despawn. BoltSpeedAccurate catches
-// any physics corruption from the arc-damage application path.
+// Dense layout under Perfect input maximises simultaneous cell impacts across 8000 frames, which
+// drives the maximum number of overlapping chain-lightning spawns. Godmode breaker guarantees
+// infinite play for sustained cascade buildup. The adversarial risk: if arc entities are not
+// cleaned up after chain completion (target destroyed mid-flight, no reachable next target, or
+// chain-length exceeded), ChainArcCountReasonable fires. Simultaneous cascades from multiple
+// Voltchain triggers can create enough in-flight arcs to exhaust the default 50-entity ceiling
+// if any arc-or-chain entity leaks. NoEntityLeaks detects orphaned ChainLightningChain/Arc
+// entities that survive past their expected cleanup frame. NoNaN guards against position
+// corruption from mid-flight target despawn. BoltSpeedAccurate catches any physics corruption
+// from the arc-damage application path.
 (
-    breaker: "Aegis",
+    breaker: "godmode",
     layout: "Dense",
-    input: Chaos((action_prob: 0.5)),
+    input: Perfect(AlwaysPerfect),
     max_frames: 8000,
     disallowed_failures: [ChainArcCountReasonable, NoEntityLeaks, NoNaN, BoltSpeedAccurate],
     allowed_failures: None,

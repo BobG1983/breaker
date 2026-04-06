@@ -1,16 +1,17 @@
 // Adversarial: Three SpeedBoost effects registered on distinct bump-timing triggers —
 // EarlyBumped (0.85x, a slight penalty), PerfectBumped (1.3x), LateBumped (0.9x, mild
-// penalty). Dense layout and chaos 0.5 drive a mix of all three timing outcomes.
+// penalty). Dense layout drives frequent bumps to exercise all three timing outcomes.
+// Perfect(Random) input randomly assigns bump grades (Early, Perfect, Late) to exercise
+// the full timing spectrum including back-to-back mixed timings.
 // The adversarial risk: if the trigger bridge incorrectly fires multiple timing variants
 // for the same bump event, stacked multipliers compound and blow past BoltMaxSpeed.
 // If timing tags are never cleared between bumps, old multipliers accumulate silently.
 // BoltSpeedAccurate is the primary detector — it fires the moment bolt speed leaves the
-// configured min/max envelope. 5000 frames at moderate chaos ensures enough bump events
-// to exercise the full timing spectrum including back-to-back mixed timings.
+// configured min/max envelope. Godmode breaker ensures infinite play across 5000 frames.
 (
-    breaker: "Aegis",
+    breaker: "godmode",
     layout: "Dense",
-    input: Chaos((action_prob: 0.5)),
+    input: Perfect(Random),
     max_frames: 5000,
     disallowed_failures: [BoltSpeedAccurate],
     allowed_failures: None,

@@ -2,8 +2,8 @@
 // Supernova is a multi-stage evolution (Piercing Shot x3 + Surge) that spawns additional bolts
 // and fires shockwaves on cell destruction. Prism breaker already starts with multiple bolts,
 // so Supernova's spawning pressure combines with Prism's native multi-bolt behaviour to stress
-// bolt count and entity lifecycle under Dense layout. Chaos 0.5 keeps breaker movement
-// unpredictable, maximising simultaneous cell destruction events across 10000 frames.
+// bolt count and entity lifecycle under Dense layout. Perfect(AlwaysPerfect) input sustains
+// active play across 10000 frames, maximising simultaneous cell destruction events.
 // BoltCountReasonable (max 20) catches runaway bolt accumulation if Supernova's spawn cleanup
 // fails. NoEntityLeaks detects orphaned shockwave request or bolt entities. BoltSpeedAccurate
 // catches bolt physics corruption from simultaneous spawn events. NoNaN guards against
@@ -12,7 +12,7 @@
 (
     breaker: "Prism",
     layout: "Dense",
-    input: Chaos((action_prob: 0.5)),
+    input: Perfect(AlwaysPerfect),
     max_frames: 10000,
     disallowed_failures: [NoEntityLeaks, BoltCountReasonable, BoltSpeedAccurate, NoNaN],
     allowed_failures: None,
