@@ -8,7 +8,7 @@ type: project
 
 ### Blockers (original 2026-03-30 state)
 1. **BASE_BOLT_DAMAGE hardcoding** — RESOLVED in feature/breaker-builder-pattern: `BoltDefinition` now has `base_damage` field from `BoltRegistry`; no hardcoded constant. `bolt_cell_collision` and AoE effects read `base_damage` from the definition/registry. Do NOT re-flag.
-2. **Chip catalog doc drift** — Status as of 2026-04-02 unknown; verify against current chip-catalog.md and RON files. Known state at 2026-03-30: additive format in docs vs multiplicative in RON.
+2. **Chip catalog doc drift** — RESOLVED as of 2026-04-06 audit. chip-catalog.md no longer uses "additive" or "multiplicative" framing; Shield is documented as `Shield(duration: 5.0)`; Parry chip uses `duration:` field correctly. No remaining drift found.
 
 ### Concerns
 3. **Breaker archetype differentiation** — Aegis and Chrono have identical bump speed profiles (PerfectBumped 1.5x, Early/Late 1.1x). No stat_overrides used. Need at minimum different speed/width/force profiles.

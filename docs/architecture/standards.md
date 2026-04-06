@@ -25,7 +25,7 @@ The prelude submodules (`components`, `messages`, `resources`, `states`) current
 
 ### What Belongs in the Prelude
 
-A type belongs in `crate::prelude` if it is used by **2+ domains**. Add it to the appropriate submodule file and to the curated glob in `prelude/mod.rs`. Only add re-exports for types that have active consumers through the prelude — unused re-exports cause clippy warnings.
+A type belongs in `crate::prelude` if it is used by **2+ domains** — add it to the appropriate submodule file (`components.rs`, `messages.rs`, `resources.rs`, or `states.rs`). Add it to the curated glob in `prelude/mod.rs` only if it is used by **3+ domains**. Only add re-exports for types that have active consumers through the prelude — unused re-exports cause clippy warnings.
 
 When adding new cross-domain types (components, messages, resources, states), add them to the prelude as consumers are migrated to use it.
 

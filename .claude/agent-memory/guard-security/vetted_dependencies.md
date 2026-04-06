@@ -1,188 +1,48 @@
 ---
 name: vetted_dependencies
-description: Known dependency state and audit findings for the brickbreaker workspace
+description: Durable security baseline for the brickbreaker workspace — unsafe analysis patterns, known panic surface, vetted dep state
 type: project
 ---
 
-## Workspace direct dependencies (as of 2026-03-30)
+## Dependency Security Baseline
 
-### breaker-game
-- bevy 0.18.1 (default-features = false, features = ["2d", "serialize"])
-- bevy_egui 0.39 (optional, dev only)
-- rantzsoft_defaults, rantzsoft_physics2d, rantzsoft_spatial2d (workspace paths)
-- tracing 0.1, tracing-appender 0.2, tracing-subscriber 0.3
-- serde 1 (with derive)
-- ron 0.12
-- iyes_progress 0.16
-- rand 0.9, rand_chacha 0.9
-- (proptest removed — no dev-dependencies remaining)
+Current dep snapshot and duplicate/wontfix findings are in `guard-dependencies/dependency-snapshot.md` and `guard-dependencies/known-findings.md`. The security guard focuses on unsafe code, panic surface, and deserialization risk.
 
-## cargo audit findings (2026-03-28)
-
-### Warnings (not errors)
-- `paste 1.0.15` — RUSTSEC-2024-0436 — unmaintained
-  - Transitive via: metal → wgpu-hal → wgpu → bevy_render → bevy
-  - Not directly controllable; no CVE, no known exploit. Info-level only.
-  - Resolution: wait for wgpu/bevy to update or replace metal backend.
-
-### cargo deny check findings
-- `error[unmaintained]`: paste — same as above, mapped to deny error by deny.toml policy
-- `warning[duplicate]`: 40+ crates have duplicate versions — all from transitive
-  Windows/wgpu/objc2 churn. None are direct dependencies. Normal for Bevy ecosystem.
-- `warning[license-not-encountered]`: Unicode-DFS-2016 in the allow list but not
-  encountered in this dep tree scan. Harmless — allowlist entry is forward-compatible.
+### cargo audit recurring pattern
+- Single recurring warning: `paste 1.0.15` — RUSTSEC-2024-0436 (unmaintained, not a CVE)
+- Transitive via: metal → wgpu-hal → wgpu → bevy_render → bevy. Not directly controllable.
+- `cargo deny` exits code 1 due to deny.toml treating this warning as an error (expected).
+- No new direct-dependency security advisories found through 2026-04-06.
 
 ### cargo machete
-- No unused dependencies found.
+- No unused dependencies found through 2026-04-06 (all audits clean).
 
-## Known unsafe blocks in workspace
-- None found in breaker-game/src/ (workspace lint: `unsafe_code = "deny"`)
+## Known Unsafe Blocks in Workspace
+- None in breaker-game/src/ (workspace lint: `unsafe_code = "deny"`)
 - No build.rs files anywhere in the workspace
 
-## Phase 3 note (2026-03-28)
-No new dependencies added in the effect system rewrite or trigger bridge phases.
-Dependency baseline unchanged from Phase 1 audit.
+## Vetted Patterns — rantzsoft_lifecycle (added 2026-04-03)
 
-## Phase 4+5 note (2026-03-28, feature/runtime-effects)
-No new dependencies added in the runtime effects implementation (attraction, chain_bolt,
-explode, pulse, second_wind, shockwave, spawn_phantom). Dependency baseline unchanged.
-cargo audit: same single warning (paste RUSTSEC-2024-0436, unmaintained, transitive via metal→wgpu).
-cargo machete: no unused dependencies found.
+Security-reviewed patterns in `rantzsoft_lifecycle` — all confirmed safe:
 
-## Phase 6 note (2026-03-29, feature/source-chip-shield-absorption)
-No new dependencies added. Dependency baseline unchanged.
-cargo audit: same single warning (paste RUSTSEC-2024-0436, unmaintained, transitive via metal→wgpu).
-cargo machete: no unused dependencies found.
+- `Arc<dyn OutTransition/InTransition/OneShotTransition>` in TransitionType: cloned via Arc::clone, no double-free, no unsound downcasting.
+- `Box<dyn FnOnce(...)>` in WorldCallback (PendingTransition): stored as Option, consumed once via `.take()` + if-let, never called twice. Sound.
+- `Box<dyn Fn(&World) -> TransitionType>` in TransitionKind::Dynamic: called at dispatch time from &World, no mutable aliasing.
+- `Box<dyn Fn(&mut World)>` closures in TransitionRegistry entries: called via `world.resource_scope` which provides exclusive World access. No aliasing.
+- TransitionProgress elapsed/duration division: all 12 run systems guard `if progress.duration > 0.0` before dividing; zero-duration case returns `t = 1.0`. No panic surface.
+- `Mutex<Vec<RegistrationFn>>` in RantzLifecyclePlugin: `.expect("poisoned")` has `#[allow]` with reason. Lock only held during plugin build, never across await points. Poison is unrecoverable. Safe.
+- `debug_assert!` in handle_transition_over for OutIn invariant: fires only in debug builds. The hard invariant violation path returns early after the assert.
+- Deferred ChangeState re-queue pattern: dispatch_message_routes re-queues ChangeState if ActiveTransition is present. Bounded by transition duration (always finite). Not an infinite loop.
 
-## develop post-merge note (2026-03-30, refactor/split-23-files)
-Refactor commit c9964b7 split 23 oversized .rs files into directory modules (code-only
-structural change, no logic changes). No new dependencies added. Dependency baseline
-unchanged from Phase 6.
-cargo audit: same single warning (paste RUSTSEC-2024-0436, unmaintained, transitive).
-cargo deny: exits code 1 due to deny.toml treating paste warning as error — same as before.
-  Also warns on Unicode-DFS-2016 license not encountered (harmless allowlist forward-compat entry).
-  40+ transitive duplicate crates (all wgpu/Windows ecosystem churn, no direct deps affected).
-cargo machete: no unused dependencies found.
-All vetted direct dependencies confirmed unchanged.
+## Vetted Patterns — state/plugin.rs (added 2026-04-06)
 
-## feature/missing-unit-tests note (2026-03-30)
-Branch adds unit tests only; one production change: overlay_color in
-breaker-game/src/fx/transition/system.rs widened from private to pub(super) to enable
-test access. No new dependencies added. Dependency baseline unchanged.
-cargo audit: same single warning (paste RUSTSEC-2024-0436, unmaintained, transitive).
-All test .unwrap()/.expect() calls are inside #[cfg(test)] modules — not production panic
-surface. No new unsafe blocks.
+- `resolve_node_next_state()` uses `world.resource::<NodeOutcome>()` — safe because NodeOutcome is `init_resource'd` in RunPlugin::build(), which runs before any route resolver fires.
+- Double-registration of `cleanup_on_exit::<NodeState>`: registers on both `OnEnter(NodeState::Teardown)` and `OnEnter(RunState::Teardown)`. In the quit-from-pause path, NodeState::Teardown fires first, despawning all CleanupOnExit<NodeState> entities. The second run iterates zero entities — safe. Intentional safety-net.
 
-## feature/scenario-coverage note (2026-03-30)
-One new direct dependency: rantzsoft_physics2d (workspace path) added to
-breaker-scenario-runner/Cargo.toml. This is the workspace-internal physics2d crate —
-already vetted in prior audits, no CVEs, no unsafe code.
-cargo audit: same single warning (paste RUSTSEC-2024-0436, unmaintained, transitive via metal→wgpu).
-cargo deny: same error (paste unmaintained) + same warnings (Unicode-DFS-2016 unmatched, 40+ duplicate transitive).
-cargo machete: no unused dependencies found.
-No new external crates introduced.
+## Known RON Deserialization Panic Surface
 
-## Cache removal refactor audit (2026-03-30, feature/scenario-coverage — commits d6d9b80 + 2bdb81b)
-No new dependencies. Dependency baseline unchanged from prior note.
-cargo audit: same single warning (paste RUSTSEC-2024-0436, unmaintained, transitive).
-cargo machete: no unused dependencies found.
-No new external crates introduced. Removals are internal types only.
+- `animate_transition/system.rs`: divides by `timer.duration` (f32 from RON config) with no zero guard. Only reachable when `transition.duration == 0.0` in RON data. See `ron_deserialization_patterns.md` for full analysis.
+- All other RON deserialization routes through Bevy asset pipeline — same panic surface as prior audits.
 
-## feature/chip-evolution-ecosystem (2026-03-31) — bolt builder migration audit
-No new direct dependencies added. Dependency baseline unchanged.
-cargo audit: same single warning (paste RUSTSEC-2024-0436, unmaintained, transitive via metal→wgpu).
-cargo machete: no unused dependencies found.
-New files: breaker-game/src/bolt/builder.rs, rantzsoft_spatial2d/src/builder.rs,
-rantzsoft_spatial2d/src/queries.rs. All are internal code — no external crates introduced.
-
-## feature/chip-evolution-ecosystem (2026-04-01) — chip ecosystem + new effects audit
-No new direct dependencies added. Dependency baseline unchanged from prior audit.
-cargo audit: same single warning (paste RUSTSEC-2024-0436, unmaintained, transitive via metal→wgpu).
-cargo deny: exits code 1 due to deny.toml treating paste warning as error — same as prior audits.
-  Also warns on Unicode-DFS-2016 license not encountered (harmless).
-  30+ transitive duplicate crates (bitflags, objc2, windows, thiserror, etc.) — all wgpu/Windows
-  ecosystem churn. None are direct dependencies. Normal for Bevy 0.18 ecosystem.
-cargo machete: no unused dependencies found.
-New files: all in breaker-game/src/effect/effects/ (anchor, circuit_breaker, mirror_protocol,
-  entropy_engine) and matching test files. New RON assets: 12 evolution chips, 5 template chips,
-  updated defaults.bolt.ron and defaults.breaker.ron. No external crates introduced.
-
-## feature/breaker-builder-pattern (2026-04-02) — breaker builder migration audit
-No new direct dependencies added. Dependency baseline unchanged.
-cargo audit: same single warning (paste RUSTSEC-2024-0436, unmaintained, transitive via metal→wgpu).
-cargo deny: same error (paste unmaintained) + same warnings (Unicode-DFS-2016 unmatched, 30+
-  duplicate transitive crates from wgpu/Windows churn). No new issues.
-cargo machete: no unused dependencies found.
-New files: breaker-game/src/breaker/builder/core.rs (908 lines), builder tests (~11 test files),
-  3 new breaker RON assets (aegis.breaker.ron, chrono.breaker.ron, prism.breaker.ron).
-Extension rename: bdef.ron → breaker.ron (registry.rs seed() fn). No external crates introduced.
-BreakerDefinition expanded from 5 fields to 35+ fields (all serde-defaulted). All production RON
-deserialization routes through Bevy asset pipeline — no new production panic surface.
-
-## wall builder feature (2026-04-02) — wall builder migration audit
-No new direct dependencies added. Dependency baseline unchanged from breaker builder audit.
-cargo audit: same single warning (paste RUSTSEC-2024-0436, unmaintained, transitive via metal→wgpu).
-cargo machete: no unused dependencies found.
-New files: wall/builder/core/{types,transitions,terminal}.rs (typestate builder split from core.rs),
-  wall/definition.rs, wall/registry.rs, wall/components.rs, wall/plugin.rs,
-  wall/systems/spawn_walls/system.rs, effect/effects/second_wind/system.rs.
-New RON asset: assets/walls/wall.wall.ron (minimal, name-only). No external crates introduced.
-
-## Shield refactor (2026-04-02, commit e887570) — no new dependencies
-No new dependencies added. effect/effects/shield.rs rewritten (same file, no new crates).
-parry.chip.ron field rename Shield(stacks) → Shield(duration: 5.0). No external crates introduced.
-cargo audit baseline: same single warning (paste RUSTSEC-2024-0436). Not re-run (no dep changes).
-
-## refactor/state-folder-structure (2026-04-02) — state module hierarchy restructure
-Single commit (d2440054). Pure file/module restructure: screen/, run/, wall/, ui/ moved under
-state/ hierarchy; wall → walls rename. No new external crates. Cargo.toml unchanged.
-No cargo audit re-run needed (dependency baseline confirmed unchanged by diff inspection).
-No new unsafe blocks. No new production unwrap/expect calls (0 matches in added lines).
-No new RON deserialization sites in production code — only 2 new include_str! uses in
-#[cfg(test)] (defaults.difficulty.ron, defaults.highlights.ron path updates, test-only).
-New Warning: animate_transition/system.rs:144 divides by timer.duration (f32 from RON config)
-with no zero guard. See ron_deserialization_patterns.md for full analysis.
-
-## feature/wall-builder-pattern (2026-04-03) — rantzsoft_lifecycle new crate
-NEW WORKSPACE MEMBER: rantzsoft_lifecycle (0.1.0) added to breaker-game/Cargo.toml as a
-path dependency. No external crates introduced — only bevy 0.18.1 + tracing 0.1 (both
-already in the workspace). Workspace lint `unsafe_code = "deny"` applied via `lints.workspace = true`.
-cargo audit: same single warning (paste RUSTSEC-2024-0436, unmaintained, transitive via metal→wgpu).
-cargo machete: no unused dependencies found.
-No unsafe code in the new crate (zero "unsafe" keyword matches confirmed by grep).
-No RON deserialization in the new crate — pure Rust ECS plugin, no asset loading.
-Key patterns reviewed and confirmed safe:
-- Arc<dyn OutTransition/InTransition/OneShotTransition> in TransitionType: cloning by Arc::clone,
-  no double-free risk, no unsound downcasting.
-- Box<dyn FnOnce(...)> in WorldCallback (PendingTransition): stored as Option, consumed once via
-  .take() + if-let, never called twice. Sound.
-- Box<dyn Fn(&World) -> TransitionType> in TransitionKind::Dynamic: called at dispatch time
-  from &World, no mutable aliasing.
-- Box<dyn Fn(&mut World)> closures in TransitionRegistry entries: called via world.resource_scope
-  which provides exclusive World access. No aliasing.
-- TransitionProgress elapsed/duration division: all 12 run systems guard `if progress.duration > 0.0`
-  before dividing; zero-duration case returns `t = 1.0`. No panic surface.
-- Mutex<Vec<RegistrationFn>> in RantzLifecyclePlugin: .expect("poisoned") has #[allow] with reason.
-  Lock is only held during plugin build, never across await points. Poison is unrecoverable. Safe.
-- debug_assert! in handle_transition_over for OutIn invariant: fires only in debug builds, never
-  in release. The hard invariant violation path returns early after the assert.
-Deferred ChangeState re-queue pattern: dispatch_message_routes re-queues ChangeState if
-ActiveTransition is present. Bounded by transition duration (always finite). Not an infinite loop.
-No new production panic surface beyond pre-existing patterns.
-
-## feature/effect-placeholder-visuals (2026-04-06) — pause input + state routing + scenario runner dep
-Changed files: handle_pause_input.rs, state/plugin.rs, breaker-scenario-runner/Cargo.toml, shared/components.rs.
-No new external crates. rantzsoft_lifecycle added to breaker-scenario-runner/Cargo.toml as a workspace
-path dependency (same crate already vetted 2026-04-03). lints.workspace = true inherits unsafe_code = "deny".
-cargo audit: same single warning (paste RUSTSEC-2024-0436, unmaintained, transitive via metal→wgpu).
-cargo machete: no unused dependencies found.
-No unsafe blocks in any changed file. No new RON deserialization sites.
-No new production .unwrap()/.expect() calls — current_index() uses .unwrap_or(0) (defensive fallback,
-  selection is always a valid PAUSE_MENU_ITEMS variant; not a panic path).
-resolve_node_next_state() uses world.resource::<NodeOutcome>() — safe because NodeOutcome is
-  init_resource'd in RunPlugin::build(), which runs before any route resolver fires.
-Double-registration of cleanup_on_exit::<NodeState>: registers on both OnEnter(NodeState::Teardown)
-  and OnEnter(RunState::Teardown). In the quit-from-pause path NodeState::Teardown fires first,
-  despawning all CleanupOnExit<NodeState> entities. The second run (RunState::Teardown) iterates
-  zero entities — safe, not a double-despawn. Intentional safety-net pattern.
-shared/components.rs: three old marker types removed. No security impact (compile-time removals only).
+## proptest Removal
+proptest was removed from dev-dependencies in 2026-03-28. No dev-dependencies remain in breaker-game.

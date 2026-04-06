@@ -72,15 +72,14 @@ Do NOT flag absence of `EffectiveDamageMultiplier`, `EffectiveSpeedMultiplier`, 
 - `chip_attribution(s: &str) -> Option<String>` — empty → None, non-empty → Some. Helper in core/types.rs.
 - `BoltSystems::WallCollision` — system set tagging `bolt_wall_collision`; runs after CellCollision
 
-## ShieldActive Variants
+## ShieldActive — ELIMINATED (2026-04-02)
 
-- `ShieldActive { charges: u32 }` — only field. No `remaining`, no `owner`, no duration fields.
-- Charge decrement: handled in `bolt_lost` (breaker shield) and `handle_cell_hit` (cell shield) — NOT in a dedicated shield tick system.
+`ShieldActive` NO LONGER EXISTS. Shield is now `ShieldWall` + `ShieldWallTimer` — a timed visible floor wall using the normal `bolt_wall_collision` path. Do NOT reference `ShieldActive`, charge mechanics, or cell shielding via Shield effect. See `reviewer-architecture/shield_cross_domain_write.md`.
 
-## InvariantKind Names (2026-04-01 verified)
+## InvariantKind Names (2026-04-06 verified)
 
 - `BoltSpeedAccurate` — correct name (NOT `BoltSpeedInRange`); `standards.md` was stale, now fixed.
-- Total: 23 variants as of feature/chip-evolution-ecosystem.
+- Total: 21 variants on develop (2026-04-06 verified). Earlier count of 23 was stale — variant names `ValidStateTransitions`, `ValidBreakerState`, `PhysicsFrozenDuringPause` never existed; actual breaker state variant is `ValidDashState`.
 
 ## MutationKind Count (2026-04-01 verified)
 

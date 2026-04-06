@@ -4,6 +4,99 @@ description: Recurring staleness patterns and duplication issues found in agent 
 type: project
 ---
 
+## Full Audit — 2026-04-06 (refactor/cross-domain-prelude branch)
+
+**Scope:** All agent memory directories (full audit)
+
+**Context:** refactor/cross-domain-prelude branch. Active work on cross-domain prelude module. Wall builder, breaker builder, and transition infrastructure all merged to develop. Phase 7 file-split findings open.
+
+**Issues found and fixed (6):**
+
+1. **researcher-impact/wall-construction-sites-2026-04-02.md** — Date-stamped research for completed feature (wall-builder-pattern). Moved to ephemeral/. Updated MEMORY.md to "No active stable memories."
+
+2. **guard-docs/phase-log.md** — Append-only session review log (dates, branches, files reviewed, drifts found). All durable facts are in known-state.md. Moved to ephemeral/phase-log.md. Updated MEMORY.md to remove link and add Session History section.
+
+3. **guard-file-length/MEMORY.md** — Cross-reference pointed to phase6_findings.md as current. Superseded by phase7_findings.md (Wave 11). Fixed: updated to phase7_findings.md.
+
+4. **guard-security/vetted_dependencies.md** — File accumulated per-session "Phase N note" entries (date-stamped branch-specific run outputs). Dep list was stale (2026-03-30). Durable content (paste advisory, machete clean baseline, rantzsoft_lifecycle security patterns, RON panic surface) extracted; session notes stripped. Updated MEMORY.md description.
+
+5. **guard-dependencies/MEMORY.md** — dependency-snapshot.md link description said "2026-03-28" but file was updated to 2026-04-06. Fixed: updated description.
+
+6. **guard-game-design/MEMORY.md** — evaluation-full-verification-2026-03-30.md link description said "Blocker 2 (catalog drift) open" but the file itself marks it RESOLVED (2026-04-06). Fixed: updated description to reflect both blockers RESOLVED.
+
+**Files checked and NOT changed:**
+- `reviewer-correctness/bug-patterns.md` — orchestration vacuous assertion still OPEN; confirmed
+- `reviewer-performance/` — all 17 entries checked; accurate
+- `writer-scenarios/` — all 8 files checked; accurate
+- `guard-game-design/` — all evaluation files accurate
+- `reviewer-architecture/` — all files accurate (Velocity2D cross-domain write gap still valid OPEN)
+- `guard-docs/known-state.md` — comprehensive and current
+- `planner-spec/` — MEMORY.md has bolt-domain-inventory.md link; confirmed inventory is current
+- `guard-agent-memory/MEMORY.md` — correct (two links only)
+- `reviewer-quality/MEMORY.md` — correctly uses ephemeral/ section for ephemeral files
+
+**No cross-agent duplication found.**
+**No broken MEMORY.md links found (all linked files verified to exist).**
+
+**New staleness patterns detected this audit:**
+- **Session review logs accumulate in stable root**: guard-docs/phase-log.md is an append-only session history log that should never have been in stable root. Rule: if a file description says "record of sessions", "per-session note", or "what was reviewed on date X", it belongs in ephemeral.
+- **Security audit notes drift into per-session append pattern**: vetted_dependencies.md accumulated 15+ "Phase N note" sections mirroring the guard-docs/phase-log.md pattern. Security guards should store durable security baseline facts only; per-run "no new deps" notes are ephemeral.
+- **MEMORY.md link descriptions go stale when files are updated**: guard-dependencies description said "2026-03-28" but the file had been updated to 2026-04-06. guard-game-design description still said "Blocker 2 open" after the file marked it RESOLVED. When updating a memory file, always re-read its MEMORY.md link description and update if stale.
+- **Date-stamped research files for completed features**: researcher-impact stored wall builder research (2026-04-02) as stable even though the feature was merged weeks ago. Research gathered for a specific completed feature is ephemeral — move immediately after the feature merges.
+
+---
+
+## Full Audit — 2026-04-06 (develop — pre-merge of refactor/transition-post-process)
+
+**Scope:** All agent memory directories (full audit)
+
+**Context:** develop branch post-merge of refactor/transition-post-process. `rantzsoft_lifecycle` transition effects have `elapsed += time.delta_secs()` in all run systems. Phase 6 file-split spec open. InvariantKind is now 21 variants (not 23 as previously recorded).
+
+**Issues found and fixed (10):**
+
+1. **guard-docs/terminology.md** — `ShieldActive Variants` section described eliminated component. Fixed: replaced with ELIMINATED notice (matches shield_cross_domain_write.md).
+
+2. **guard-docs/terminology.md** — InvariantKind count said 23 (chip-evolution-ecosystem era). Fixed: corrected to 21; noted non-existent variants `ValidStateTransitions`, `ValidBreakerState`, `PhysicsFrozenDuringPause`; actual variant is `ValidDashState`.
+
+3. **guard-docs/known-state.md** — Line 86: InvariantKind total said 23, MutationKind said "verify current count." Fixed: corrected to 21 (InvariantKind) and 16 (MutationKind); noted `InjectWrongBoltSpeed` doesn't exist.
+
+4. **writer-scenarios/pattern_invariant_substitution.md** — Listed 23 variants including 3 that don't exist (`ValidStateTransitions`, `ValidBreakerState`, `PhysicsFrozenDuringPause`). Referenced `InjectWrongBoltSpeed` (doesn't exist in MutationKind). Fixed: corrected to 21 variants with correct names including `ValidDashState`; corrected BoltSpeedAccurate mutation note.
+
+5. **reviewer-scenarios/pattern_adversarial_quality.md** — 3 occurrences of `BoltSpeedInRange` (renamed to `BoltSpeedAccurate`). Fixed: all 3 replaced.
+
+6. **guard-file-length/MEMORY.md** — Cross-reference pointed to `phase4_findings.md` as current open findings. Fixed: updated to `phase6_findings.md` (Wave 10, 2026-04-06).
+
+7. **writer-scenarios/effect_ron_syntax.md** — `Explode` variant used `damage_mult` (field was renamed to `damage` in 2026-04-02 refactor; same fix applied to explode-field-rename.md in 2026-04-03 audit but `effect_ron_syntax.md` was missed). Fixed: corrected to `damage: 15.0`.
+
+8. **reviewer-correctness/bug-patterns.md** — `rantzsoft_lifecycle` elapsed-never-incremented bug was OPEN (2026-04-03). Verified FIXED in develop: all 6 effect run systems now call `progress.elapsed += time.delta_secs()`. Fixed: updated to FIXED.
+
+9. **guard-game-design/evaluation-full-verification-2026-03-30.md** — Blocker 2 (chip catalog doc drift) said "status unknown." Verified RESOLVED: chip-catalog.md uses `duration:` field for Shield, no additive/multiplicative framing. Fixed: marked RESOLVED.
+
+10. **guard-docs/MEMORY.md** — `known-state.md` description was stale (said "through crate-routing-migration 2026-04-03"). Fixed: updated to "through prelude refactor 2026-04-06".
+
+**Files checked and NOT changed:**
+- `reviewer-performance/` — all 17 entries accurate
+- `reviewer-scenarios/coverage_effect_system.md` — accurate, well-maintained
+- `guard-docs/known-state.md` — comprehensive; content correct except InvariantKind count (fixed above)
+- `reviewer-correctness/bug-patterns.md` — rantzsoft_lifecycle orchestration tests 8/9 vacuous assertion remains OPEN; cannot verify test pass/fail without running cargo
+- `writer-scenarios/adversarial_patterns.md` — all BoltSpeedAccurate (correct)
+- `writer-scenarios/pattern_effect_ron_syntax.md` — Explode uses `damage` (correct; was fixed in 2026-04-03 audit)
+- `planner-review/MEMORY.md` — all 5 links present (fixed in prior audit)
+- `reviewer-tests/MEMORY.md` — all 7 pattern files linked
+- `guard-agent-memory/MEMORY.md` — correct
+
+**Previous audit note corrected:**
+- The 2026-04-06 (prior) audit noted `writer-scenarios/pattern_invariant_substitution.md` as "accurate (23 variants)" — this was incorrect. The 23-variant list included `ValidStateTransitions`, `ValidBreakerState`, `PhysicsFrozenDuringPause` which never existed. The actual count was 21. Fixed this audit.
+
+**No cross-agent duplication found.**
+
+**New staleness patterns detected this audit:**
+- **InvariantKind variant list drifts silently**: `pattern_invariant_substitution.md` and `guard-docs/known-state.md` both claimed 23 variants with phantom variant names. After any InvariantKind change (add/remove/rename), IMMEDIATELY check both these files plus `guard-docs/terminology.md`.
+- **Explode RON syntax slips across files**: `explode-field-rename.md` was fixed in 2026-04-03 audit but `effect_ron_syntax.md` was not. When fixing an RON field rename in one writer-scenarios file, check ALL writer-scenarios RON syntax reference files.
+- **OPEN bug files don't get updated when fixes land on develop**: The `elapsed` bug landed on develop without updating the bug-patterns.md OPEN record. When a fix merges to develop, update the OPEN bug entry to FIXED immediately.
+
+---
+
 ## Full Audit — 2026-04-06 (feature/effect-placeholder-visuals branch)
 
 **Scope:** All agent memory directories (full audit)
@@ -526,6 +619,9 @@ See [audit-history-archive.md](audit-history-archive.md) for audits prior to 202
 - **Feature-branch incidental file splits**: When a HIGH file-length item is split as a side effect of a feature branch (not a dedicated refactor/file-splits), phase4_findings.md HIGH list goes stale at merge time. Check after any feature that touches large effect files.
 - **EffectKind field renames in RON syntax files**: When an EffectKind variant changes its field names (e.g., Shield stacks→duration, Explode damage_mult→damage), ALL writer-scenarios RON syntax reference files go stale: effect_ron_syntax.md, pattern_effect_ron_syntax.md, adversarial_patterns.md (if the variant appears in example patterns). After any EffectKind schema change, grep ALL writer-scenarios stable files.
 - **InvariantKind renames propagate to adversarial_patterns.md**: BoltSpeedInRange→BoltSpeedAccurate was present in adversarial_patterns.md but not fixed in prior audits. InvariantKind renames must be applied to adversarial_patterns.md in addition to pattern_invariant_substitution.md and guard-docs/known-state.md.
+- **InvariantKind count/list has multiple owners**: guard-docs/known-state.md, guard-docs/terminology.md, and writer-scenarios/pattern_invariant_substitution.md ALL record the InvariantKind variant list. They MUST be updated together — updating one and not the others causes divergence. After any InvariantKind add/remove/rename, grep all three.
+- **OPEN bugs don't self-update when fixes land on develop**: reviewer-correctness/bug-patterns.md OPEN items must be manually updated when a fix merges to develop. The `elapsed` bug was OPEN in memory for weeks after the fix landed. Check bug-patterns.md on every audit against the actual code.
+- **guard-file-length MEMORY.md cross-reference goes stale**: After each new phase6/7/N findings file is added to reviewer-file-length, the guard-file-length cross-reference must be updated to point to the latest phase file.
 - **known-correct-effects.md as append-only drift risk**: Phase 3–5 "confirmed correct" sections are never cleaned up when components are eliminated. After any cross-domain component elimination (ShieldActive, Effective* types), immediately check known-correct-effects.md for stale "confirmed correct" entries describing the eliminated component's behavior.
 - **runner-scenarios bug files after RON field fixes**: When a scenario RON file is updated to fix a field rename bug, the corresponding stable bug file in runner-scenarios/ should immediately be updated to RESOLVED, not left open for the next audit to find.
 

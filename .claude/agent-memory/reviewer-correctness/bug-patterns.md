@@ -4,16 +4,12 @@ description: Bug categories that appear repeatedly in this codebase — check th
 type: project
 ---
 
-## rantzsoft_lifecycle transition effects: elapsed never incremented — OPEN (2026-04-03)
+## rantzsoft_lifecycle transition effects: elapsed never incremented — FIXED (2026-04-06 verified)
 
 All 12 built-in effects (fade, dissolve, pixelate, wipe, iris, slide) in `rantzsoft_lifecycle`
-initialize `TransitionProgress { elapsed: 0.0 }` but NO run system ever calls
-`progress.elapsed += time.delta_secs()`. Result: `t = elapsed/duration = 0.0` every frame,
-`t >= 1.0` never triggers, `TransitionRunComplete` never sent — all real transitions stuck forever
-in Running phase. Only instant-completing test effects work.
-
-Fix: each `*_run` system needs `Res<Time>` and `progress.elapsed += time.delta_secs()`.
-Location: all effect run systems in `rantzsoft_lifecycle/src/transition/effects/`.
+now call `progress.elapsed += time.delta_secs()` in their run systems (verified in each
+`*_run` system in `rantzsoft_lifecycle/src/transition/effects/`). TransitionRunComplete
+is sent when `elapsed >= duration`. This bug was OPEN as of 2026-04-03 but is FIXED on develop.
 
 ## rantzsoft_lifecycle orchestration tests 8/9 vacuous assertion — OPEN (2026-04-03)
 

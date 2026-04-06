@@ -4,7 +4,7 @@
 - [Multiplicative Stacking Approved](decision-multiplicative-stacking.md) — Phase 3 additive-to-multiplicative change evaluated and approved against all pillars
 - [Phase 4+5 Effect Roster Evaluation](evaluation-phase4-5-effects.md) — 14/15 effects approved; Shield redesigned to charges; BASE_BOLT_DAMAGE gap RESOLVED (BoltDefinition.base_damage)
 - [Runtime Effects Round 2](evaluation-runtime-effects-round2.md) — source_chip threading, Shield charges, Chain Lightning arcs all approved; tuning notes
-- [Full Verification 2026-03-30](evaluation-full-verification-2026-03-30.md) — Blocker 1 (BASE_BOLT_DAMAGE) RESOLVED; Blocker 2 (catalog drift) open; 3 concerns (breaker diff, Surge stacking, Attraction gate)
+- [Full Verification 2026-03-30](evaluation-full-verification-2026-03-30.md) — Both blockers RESOLVED; 3 open concerns: breaker archetype differentiation, Surge permanent stacking, Attraction(Breaker) gate
 
 - [Wave 3 TetherBeam Chain + Inherit Fix](evaluation-wave3-tetherbeam-inherit.md) — Chain mode approved with spawn governor; inherit fix approved as correctness; bolt-proliferation archetype validated
 - [Bolt Builder Migration](evaluation-bolt-builder-migration.md) — Directional steering, BreakerReflectionSpread rename, PrimaryBolt marker all approved

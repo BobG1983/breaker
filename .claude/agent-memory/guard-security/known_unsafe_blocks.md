@@ -104,3 +104,9 @@ Changed files: handle_pause_input.rs, state/plugin.rs, shared/components.rs.
 Grepped all four changed files for "unsafe": zero matches in all. Workspace lint
 unsafe_code = "deny" remains in force. breaker-scenario-runner/Cargo.toml adds
 rantzsoft_lifecycle as workspace path dep; that crate's unsafe inventory is unchanged.
+
+Still confirmed for refactor/add-cross-domain-prelude (2026-04-06, commit 9d6f8a18):
+New files: prelude/mod.rs, prelude/components.rs, prelude/messages.rs, prelude/resources.rs,
+prelude/states.rs. All five contain only use/pub(crate) re-export declarations. Grepped for
+"unsafe": zero matches. Pure module wiring with no executable code paths. Workspace lint
+unsafe_code = "deny" remains in force.
