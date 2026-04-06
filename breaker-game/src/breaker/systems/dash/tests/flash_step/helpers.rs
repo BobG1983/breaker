@@ -95,7 +95,7 @@ pub(super) fn spawn_settling_breaker_rightward_dash(
         },
         DashStateTimer { remaining: 0.2 },
         Position2D(position),
-        BaseWidth(120.0),
+        BaseWidth(def.width),
         breaker_param_bundle(&def),
     ));
     if flash_step {
@@ -125,7 +125,7 @@ pub(super) fn spawn_settling_breaker_leftward_dash(
         },
         DashStateTimer { remaining: 0.2 },
         Position2D(position),
-        BaseWidth(120.0),
+        BaseWidth(def.width),
         breaker_param_bundle(&def),
     ));
     if flash_step {

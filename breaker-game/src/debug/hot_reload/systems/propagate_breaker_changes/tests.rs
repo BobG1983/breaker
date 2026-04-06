@@ -419,10 +419,12 @@ fn registry_is_added_guard_prevents_stamping() {
     // First update: registry is_added() returns true — should NOT stamp
     app.update();
 
+    let defaults = BreakerDefinition::default();
     let max_speed = app.world().get::<MaxSpeed>(entity).unwrap();
     assert!(
-        (max_speed.0 - 1000.0).abs() < f32::EPSILON,
-        "MaxSpeed should remain 1000.0 on initial registry add, got {}",
+        (max_speed.0 - defaults.max_speed).abs() < f32::EPSILON,
+        "MaxSpeed should remain {} on initial registry add, got {}",
+        defaults.max_speed,
         max_speed.0
     );
 }

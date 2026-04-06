@@ -15,16 +15,25 @@ use crate::{
     input::resources::{GameAction, InputActions},
 };
 
+/// Dash velocity: max_speed * dash_speed_multiplier (using default config).
+fn default_dash_velocity() -> f32 {
+    let d = BreakerDefinition::default();
+    d.max_speed * d.dash_speed_multiplier
+}
+
 // -- Behavior 1: Reversal dash right-to-left teleports breaker ------
 
 #[test]
 fn reversal_dash_left_during_settling_with_flash_step_teleports_to_endpoint() {
-    // Given: Breaker in Settling at (0.0, -250.0), last dash rightward (ease_start=-0.35),
-    //        FlashStepActive, MaxSpeed(1000), DashSpeedMultiplier(4), DashDuration(0.15)
+    let defaults = BreakerDefinition::default();
+    let half_w = defaults.width / 2.0;
+    let min_x = -400.0 + half_w;
+    // Given: Breaker in Settling at (0.0, y_position), last dash rightward (ease_start=-0.35),
+    //        FlashStepActive, default speed/multiplier/duration
     // When: DashLeft active
-    // Then: Position2D.x == -340.0 (clamped: playfield left -400 + half_width 60), DashState == Idle, velocity.x == 0.0
+    // Then: Position2D.x == min_x (clamped), DashState == Idle, velocity.x == 0.0
     let mut app = test_app();
-    let entity = spawn_settling_breaker_rightward_dash(&mut app, Vec2::new(0.0, -250.0), true);
+    let entity = spawn_settling_breaker_rightward_dash(&mut app, Vec2::new(0.0, defaults.y_position), true);
 
     app.world_mut()
         .resource_mut::<InputActions>()
@@ -34,8 +43,8 @@ fn reversal_dash_left_during_settling_with_flash_step_teleports_to_endpoint() {
 
     let pos = app.world().get::<Position2D>(entity).unwrap();
     assert!(
-        (pos.0.x - (-340.0)).abs() < f32::EPSILON,
-        "teleport should clamp to -340.0 (playfield left -400 + half_width 60), got {}",
+        (pos.0.x - min_x).abs() < f32::EPSILON,
+        "teleport should clamp to {min_x} (playfield left -400 + half_width {half_w}), got {}",
         pos.0.x
     );
 
@@ -58,12 +67,15 @@ fn reversal_dash_left_during_settling_with_flash_step_teleports_to_endpoint() {
 
 #[test]
 fn reversal_dash_right_during_settling_with_flash_step_teleports_to_endpoint() {
-    // Given: Breaker in Settling at (0.0, -250.0), last dash leftward (ease_start=0.35),
-    //        FlashStepActive, MaxSpeed(1000), DashSpeedMultiplier(4), DashDuration(0.15)
+    let defaults = BreakerDefinition::default();
+    let half_w = defaults.width / 2.0;
+    let max_x = 400.0 - half_w;
+    // Given: Breaker in Settling at (0.0, y_position), last dash leftward (ease_start=0.35),
+    //        FlashStepActive, default speed/multiplier/duration
     // When: DashRight active
-    // Then: Position2D.x == 340.0 (clamped: playfield right 400 - half_width 60), DashState == Idle, velocity.x == 0.0
+    // Then: Position2D.x == max_x (clamped), DashState == Idle, velocity.x == 0.0
     let mut app = test_app();
-    let entity = spawn_settling_breaker_leftward_dash(&mut app, Vec2::new(0.0, -250.0), true);
+    let entity = spawn_settling_breaker_leftward_dash(&mut app, Vec2::new(0.0, defaults.y_position), true);
 
     app.world_mut()
         .resource_mut::<InputActions>()
@@ -73,8 +85,8 @@ fn reversal_dash_right_during_settling_with_flash_step_teleports_to_endpoint() {
 
     let pos = app.world().get::<Position2D>(entity).unwrap();
     assert!(
-        (pos.0.x - 340.0).abs() < f32::EPSILON,
-        "teleport should clamp to 340.0 (playfield right 400 - half_width 60), got {}",
+        (pos.0.x - max_x).abs() < f32::EPSILON,
+        "teleport should clamp to {max_x} (playfield right 400 - half_width {half_w}), got {}",
         pos.0.x
     );
 
@@ -111,8 +123,8 @@ fn reversal_dash_right_with_custom_dash_params_uses_entity_values() {
                 ease_target: 0.0,
             },
             DashStateTimer { remaining: 0.2 },
-            Position2D(Vec2::new(0.0, -250.0)),
-            BaseWidth(120.0),
+            Position2D(Vec2::new(0.0, config.y_position)),
+            BaseWidth(config.width),
             FlashStepActive,
             MaxSpeed(500.0),
             BreakerDeceleration(config.deceleration),
@@ -156,11 +168,12 @@ fn reversal_dash_right_with_custom_dash_params_uses_entity_values() {
 
 #[test]
 fn same_direction_dash_with_flash_step_does_normal_dash() {
+    let defaults = BreakerDefinition::default();
     // Given: Settling, last dash rightward (ease_start=-0.35), FlashStepActive
     // When: DashRight (same direction as last dash)
-    // Then: DashState == Dashing (normal), velocity.x == 4000, position unchanged
+    // Then: DashState == Dashing (normal), velocity.x == dash_velocity, position unchanged
     let mut app = test_app();
-    let entity = spawn_settling_breaker_rightward_dash(&mut app, Vec2::new(0.0, -250.0), true);
+    let entity = spawn_settling_breaker_rightward_dash(&mut app, Vec2::new(0.0, defaults.y_position), true);
 
     app.world_mut()
         .resource_mut::<InputActions>()
@@ -175,10 +188,11 @@ fn same_direction_dash_with_flash_step_does_normal_dash() {
         "same-direction dash should do normal Dashing, not teleport"
     );
 
+    let expected_vel = default_dash_velocity();
     let vel = app.world().get::<Velocity2D>(entity).unwrap();
     assert!(
-        (vel.0.x - 4000.0).abs() < f32::EPSILON,
-        "same-direction dash should set normal velocity 4000 (1000*4), got {}",
+        (vel.0.x - expected_vel).abs() < f32::EPSILON,
+        "same-direction dash should set normal velocity {expected_vel} (max_speed*multiplier), got {}",
         vel.0.x
     );
 
@@ -192,9 +206,10 @@ fn same_direction_dash_with_flash_step_does_normal_dash() {
 
 #[test]
 fn same_direction_dash_leftward_settle_with_dash_left_does_normal_dash() {
+    let defaults = BreakerDefinition::default();
     // Edge case: leftward settle tilt (ease_start=0.35) + DashLeft = same direction
     let mut app = test_app();
-    let entity = spawn_settling_breaker_leftward_dash(&mut app, Vec2::new(0.0, -250.0), true);
+    let entity = spawn_settling_breaker_leftward_dash(&mut app, Vec2::new(0.0, defaults.y_position), true);
 
     app.world_mut()
         .resource_mut::<InputActions>()
@@ -214,11 +229,12 @@ fn same_direction_dash_leftward_settle_with_dash_left_does_normal_dash() {
 
 #[test]
 fn reversal_dash_without_flash_step_does_normal_dash() {
+    let defaults = BreakerDefinition::default();
     // Given: Settling, last dash rightward, NO FlashStepActive
     // When: DashLeft (reversal direction)
-    // Then: DashState == Dashing, velocity.x == -4000, position unchanged
+    // Then: DashState == Dashing, velocity.x == -dash_velocity, position unchanged
     let mut app = test_app();
-    let entity = spawn_settling_breaker_rightward_dash(&mut app, Vec2::new(0.0, -250.0), false);
+    let entity = spawn_settling_breaker_rightward_dash(&mut app, Vec2::new(0.0, defaults.y_position), false);
 
     app.world_mut()
         .resource_mut::<InputActions>()
@@ -233,10 +249,11 @@ fn reversal_dash_without_flash_step_does_normal_dash() {
         "without FlashStepActive, reversal dash should do normal Dashing"
     );
 
+    let expected_vel = default_dash_velocity();
     let vel = app.world().get::<Velocity2D>(entity).unwrap();
     assert!(
-        (vel.0.x - (-4000.0)).abs() < f32::EPSILON,
-        "normal dash left velocity should be -4000, got {}",
+        (vel.0.x - (-expected_vel)).abs() < f32::EPSILON,
+        "normal dash left velocity should be -{expected_vel}, got {}",
         vel.0.x
     );
 
@@ -254,7 +271,7 @@ fn reversal_dash_without_flash_step_does_normal_dash() {
 fn dash_from_idle_with_flash_step_does_normal_dash() {
     // Given: Idle state, FlashStepActive present
     // When: DashLeft
-    // Then: DashState == Dashing, velocity.x == -4000, position unchanged
+    // Then: DashState == Dashing, velocity.x == -dash_velocity, position unchanged
     let mut app = test_app();
     let config = BreakerDefinition::default();
     let entity = app
@@ -265,8 +282,8 @@ fn dash_from_idle_with_flash_step_does_normal_dash() {
             Velocity2D(Vec2::ZERO),
             BreakerTilt::default(),
             DashStateTimer { remaining: 0.0 },
-            Position2D(Vec2::new(0.0, -250.0)),
-            BaseWidth(120.0),
+            Position2D(Vec2::new(0.0, config.y_position)),
+            BaseWidth(config.width),
             FlashStepActive,
             breaker_param_bundle(&config),
         ))
@@ -285,10 +302,11 @@ fn dash_from_idle_with_flash_step_does_normal_dash() {
         "from Idle with FlashStep, dash should still be normal Dashing"
     );
 
+    let expected_vel = default_dash_velocity();
     let vel = app.world().get::<Velocity2D>(entity).unwrap();
     assert!(
-        (vel.0.x - (-4000.0)).abs() < f32::EPSILON,
-        "from Idle, dash velocity should be normal -4000, got {}",
+        (vel.0.x - (-expected_vel)).abs() < f32::EPSILON,
+        "from Idle, dash velocity should be normal -{expected_vel}, got {}",
         vel.0.x
     );
 

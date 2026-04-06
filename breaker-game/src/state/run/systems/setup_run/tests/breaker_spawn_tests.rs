@@ -18,6 +18,11 @@ use crate::{
     shared::{CleanupOnNodeExit, CleanupOnRunEnd},
 };
 
+/// Convenience accessor for `BreakerDefinition::default()`.
+fn defaults() -> BreakerDefinition {
+    BreakerDefinition::default()
+}
+
 // ── Behavior 2: Spawns exactly one breaker entity when none exists ────
 
 #[test]
@@ -153,7 +158,6 @@ fn spawned_breaker_has_breaker_initialized() {
 
 #[test]
 fn spawned_breaker_has_position2d_at_default_y() {
-    // BreakerDefinition default y_position is -250.0
     let mut app = test_app();
     app.update();
 
@@ -167,7 +171,7 @@ fn spawned_breaker_has_position2d_at_default_y() {
         .world()
         .get::<Position2D>(entity)
         .expect("breaker should have Position2D");
-    let expected = Vec2::new(0.0, -250.0);
+    let expected = Vec2::new(0.0, defaults().y_position);
     assert!(
         (position.0.x - expected.x).abs() < f32::EPSILON
             && (position.0.y - expected.y).abs() < f32::EPSILON,
@@ -211,7 +215,7 @@ fn spawned_breaker_has_position2d_at_custom_y() {
 
 #[test]
 fn spawned_breaker_has_scale2d_from_definition() {
-    // BreakerDefinition default: width=120.0, height=20.0
+    let d = defaults();
     let mut app = test_app();
     app.update();
 
@@ -226,8 +230,10 @@ fn spawned_breaker_has_scale2d_from_definition() {
         .get::<Scale2D>(entity)
         .expect("breaker should have Scale2D");
     assert!(
-        (scale.x - 120.0).abs() < f32::EPSILON && (scale.y - 20.0).abs() < f32::EPSILON,
-        "Scale2D should be (120.0, 20.0), got ({}, {})",
+        (scale.x - d.width).abs() < f32::EPSILON && (scale.y - d.height).abs() < f32::EPSILON,
+        "Scale2D should be ({}, {}), got ({}, {})",
+        d.width,
+        d.height,
         scale.x,
         scale.y,
     );
@@ -237,7 +243,7 @@ fn spawned_breaker_has_scale2d_from_definition() {
 
 #[test]
 fn spawned_breaker_has_max_speed_from_definition() {
-    // BreakerDefinition default: max_speed=1000.0
+    let d = defaults();
     let mut app = test_app();
     app.update();
 
@@ -252,8 +258,9 @@ fn spawned_breaker_has_max_speed_from_definition() {
         .get::<MaxSpeed>(entity)
         .expect("breaker should have MaxSpeed");
     assert!(
-        (max_speed.0 - 1000.0).abs() < f32::EPSILON,
-        "MaxSpeed should be 1000.0, got {}",
+        (max_speed.0 - d.max_speed).abs() < f32::EPSILON,
+        "MaxSpeed should be {}, got {}",
+        d.max_speed,
         max_speed.0
     );
 }
@@ -319,7 +326,7 @@ fn spawned_breaker_has_lives_count_none_for_chrono() {
 
 #[test]
 fn spawned_breaker_has_reflection_spread_in_radians() {
-    // BreakerDefinition default: reflection_spread=75.0 degrees
+    let d = defaults();
     let mut app = test_app();
     app.update();
 
@@ -333,10 +340,11 @@ fn spawned_breaker_has_reflection_spread_in_radians() {
         .world()
         .get::<BreakerReflectionSpread>(entity)
         .expect("breaker should have BreakerReflectionSpread");
-    let expected = 75.0_f32.to_radians();
+    let expected = d.reflection_spread.to_radians();
     assert!(
         (spread.0 - expected).abs() < 1e-5,
-        "BreakerReflectionSpread should be {expected} (75 degrees in radians), got {}",
+        "BreakerReflectionSpread should be {expected} ({} degrees in radians), got {}",
+        d.reflection_spread,
         spread.0
     );
 }

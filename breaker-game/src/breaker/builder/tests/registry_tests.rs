@@ -55,9 +55,10 @@ fn seed_populates_from_expanded_definitions() {
     assert!((test_def.width - 150.0).abs() < f32::EPSILON);
     assert!((test_def.max_speed - 700.0).abs() < f32::EPSILON);
 
+    let defaults = BreakerDefinition::default();
     let other_def = registry.get("OtherBreaker").unwrap();
-    assert!((other_def.width - 120.0).abs() < f32::EPSILON);
-    assert!((other_def.max_speed - 1000.0).abs() < f32::EPSILON);
+    assert!((other_def.width - defaults.width).abs() < f32::EPSILON);
+    assert!((other_def.max_speed - defaults.max_speed).abs() < f32::EPSILON);
 }
 
 // ── Behavior 53: BreakerRegistry asset_dir() still returns "breakers" ──

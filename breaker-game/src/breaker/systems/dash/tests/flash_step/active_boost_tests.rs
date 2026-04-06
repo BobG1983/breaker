@@ -36,8 +36,8 @@ fn flash_step_teleport_respects_speed_multiplier_for_distance() {
                 ease_target: 0.0,
             },
             DashStateTimer { remaining: 0.2 },
-            Position2D(Vec2::new(200.0, -250.0)),
-            BaseWidth(120.0),
+            Position2D(Vec2::new(200.0, config.y_position)),
+            BaseWidth(config.width),
             FlashStepActive,
             ActiveSpeedBoosts(vec![1.5]),
             breaker_param_bundle(&config),
@@ -50,17 +50,19 @@ fn flash_step_teleport_respects_speed_multiplier_for_distance() {
         .push(GameAction::DashLeft);
     tick(&mut app);
 
+    let half_w = config.width / 2.0;
+    let min_x = -400.0 + half_w;
     let pos = app.world().get::<Position2D>(entity).unwrap();
     assert!(
-        (pos.0.x - (-340.0)).abs() < 0.01,
-        "with ActiveSpeedBoosts([1.5]), teleport clamps to -340.0 (playfield left -400 + half_width 60), got {}",
+        (pos.0.x - min_x).abs() < 0.01,
+        "with ActiveSpeedBoosts([1.5]), teleport clamps to {min_x} (playfield left -400 + half_width {half_w}), got {}",
         pos.0.x
     );
 }
 
 #[test]
 fn flash_step_teleport_with_speed_multiplier_one_matches_no_multiplier() {
-    // Edge case: ActiveSpeedBoosts(vec![1.0]) same result as no multiplier (600 distance, clamped to -340)
+    // Edge case: ActiveSpeedBoosts(vec![1.0]) same result as no multiplier (600 distance, clamped)
     let mut app = test_app();
     let config = BreakerDefinition::default();
     let entity = app
@@ -75,8 +77,8 @@ fn flash_step_teleport_with_speed_multiplier_one_matches_no_multiplier() {
                 ease_target: 0.0,
             },
             DashStateTimer { remaining: 0.2 },
-            Position2D(Vec2::new(0.0, -250.0)),
-            BaseWidth(120.0),
+            Position2D(Vec2::new(0.0, config.y_position)),
+            BaseWidth(config.width),
             FlashStepActive,
             ActiveSpeedBoosts(vec![1.0]),
             breaker_param_bundle(&config),
@@ -89,10 +91,12 @@ fn flash_step_teleport_with_speed_multiplier_one_matches_no_multiplier() {
         .push(GameAction::DashLeft);
     tick(&mut app);
 
+    let half_w = config.width / 2.0;
+    let min_x = -400.0 + half_w;
     let pos = app.world().get::<Position2D>(entity).unwrap();
     assert!(
-        (pos.0.x - (-340.0)).abs() < f32::EPSILON,
-        "ActiveSpeedBoosts([1.0]) should clamp to -340.0 (playfield left -400 + half_width 60), got {}",
+        (pos.0.x - min_x).abs() < f32::EPSILON,
+        "ActiveSpeedBoosts([1.0]) should clamp to {min_x} (playfield left -400 + half_width {half_w}), got {}",
         pos.0.x
     );
 }
@@ -101,11 +105,10 @@ fn flash_step_teleport_with_speed_multiplier_one_matches_no_multiplier() {
 
 #[test]
 fn flash_step_teleport_reads_active_speed_boosts_for_distance() {
-    // Given: Breaker at (200.0, -250.0), Settling from rightward dash (ease_start=-0.35),
-    //        FlashStepActive, ActiveSpeedBoosts(vec![1.5]), MaxSpeed(1000),
-    //        DashSpeedMultiplier(4), DashDuration(0.15)
+    // Given: Breaker at (200.0, y_position), Settling from rightward dash (ease_start=-0.35),
+    //        FlashStepActive, ActiveSpeedBoosts(vec![1.5])
     // When: DashLeft
-    // Then: Position2D.x clamped to -340.0 (unclamped: 200 - 900 = -700, playfield left -400 + half_width 60 = -340)
+    // Then: Position2D.x clamped to playfield left + half_width
     let mut app = test_app();
     let config = BreakerDefinition::default();
     let entity = app
@@ -120,8 +123,8 @@ fn flash_step_teleport_reads_active_speed_boosts_for_distance() {
                 ease_target: 0.0,
             },
             DashStateTimer { remaining: 0.2 },
-            Position2D(Vec2::new(200.0, -250.0)),
-            BaseWidth(120.0),
+            Position2D(Vec2::new(200.0, config.y_position)),
+            BaseWidth(config.width),
             FlashStepActive,
             ActiveSpeedBoosts(vec![1.5]),
             breaker_param_bundle(&config),
@@ -134,11 +137,13 @@ fn flash_step_teleport_reads_active_speed_boosts_for_distance() {
         .push(GameAction::DashLeft);
     tick(&mut app);
 
+    let half_w = config.width / 2.0;
+    let min_x = -400.0 + half_w;
     let pos = app.world().get::<Position2D>(entity).unwrap();
     assert!(
-        (pos.0.x - (-340.0)).abs() < 0.01,
-        "with ActiveSpeedBoosts([1.5]), teleport clamps to -340.0 \
-         (playfield left -400 + half_width 60), got {}",
+        (pos.0.x - min_x).abs() < 0.01,
+        "with ActiveSpeedBoosts([1.5]), teleport clamps to {min_x} \
+         (playfield left -400 + half_width {half_w}), got {}",
         pos.0.x
     );
 }
@@ -147,13 +152,14 @@ fn flash_step_teleport_reads_active_speed_boosts_for_distance() {
 
 #[test]
 fn flash_step_teleport_reads_active_size_boosts_for_clamp_half_width() {
-    // Given: Breaker at (300.0, -250.0), Settling from leftward dash (ease_start=0.35),
-    //        FlashStepActive, ActiveSizeBoosts(vec![2.0]), BaseWidth(120.0) (half_width=60.0),
+    // Given: Breaker at (300.0, y_position), Settling from leftward dash (ease_start=0.35),
+    //        FlashStepActive, ActiveSizeBoosts(vec![2.0]), BaseWidth(default),
     //        DashRight input, playfield right = 400.0
     // When: dash system clamps after flash step teleport
-    // Then: effective_half_w = 60.0 * 2.0 = 120.0 -> max_x = 400.0 - 120.0 = 280.0
+    // Then: effective_half_w = half_width * 2.0 -> max_x = 400.0 - effective_half_w
     let mut app = test_app();
     let config = BreakerDefinition::default();
+    let half_w = config.width / 2.0;
     let entity = app
         .world_mut()
         .spawn((
@@ -166,8 +172,8 @@ fn flash_step_teleport_reads_active_size_boosts_for_clamp_half_width() {
                 ease_target: 0.0,
             },
             DashStateTimer { remaining: 0.2 },
-            Position2D(Vec2::new(300.0, -250.0)),
-            BaseWidth(120.0),
+            Position2D(Vec2::new(300.0, config.y_position)),
+            BaseWidth(config.width),
             FlashStepActive,
             ActiveSizeBoosts(vec![2.0]),
             breaker_param_bundle(&config),
@@ -181,11 +187,11 @@ fn flash_step_teleport_reads_active_size_boosts_for_clamp_half_width() {
     tick(&mut app);
 
     let pos = app.world().get::<Position2D>(entity).unwrap();
-    let expected_max_x = 280.0_f32; // 400.0 - (60.0 * 2.0)
+    let expected_max_x = 400.0 - (half_w * 2.0);
     assert!(
         (pos.0.x - expected_max_x).abs() < f32::EPSILON,
         "with ActiveSizeBoosts([2.0]), clamp to {:.1} \
-         (400 - 60*2.0), got {}",
+         (400 - {half_w}*2.0), got {}",
         expected_max_x,
         pos.0.x
     );

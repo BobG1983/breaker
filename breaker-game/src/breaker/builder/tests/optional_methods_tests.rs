@@ -1,10 +1,13 @@
-use bevy::{math::curve::easing::EaseFunction, prelude::*};
+use bevy::prelude::*;
 use rantzsoft_physics2d::aabb::Aabb2D;
 use rantzsoft_spatial2d::components::{MaxSpeed, Position2D, PreviousScale, Scale2D};
 
 use super::helpers::test_breaker_definition;
 use crate::{
-    breaker::components::{Breaker, BreakerBaseY, BreakerReflectionSpread},
+    breaker::{
+        components::{Breaker, BreakerBaseY, BreakerReflectionSpread},
+        definition::BreakerDefinition,
+    },
     effect::effects::life_lost::LivesCount,
     shared::{BaseHeight, BaseWidth},
 };
@@ -55,7 +58,8 @@ fn with_max_speed_zero_stores_zero() {
 
 #[test]
 fn with_width_overrides_definition_value() {
-    let def = test_breaker_definition(); // width: 120.0, height: 20.0
+    let def = test_breaker_definition();
+    let defaults = BreakerDefinition::default();
     let mut world = World::new();
     let bundle = Breaker::builder()
         .definition(&def)
@@ -80,8 +84,8 @@ fn with_width_overrides_definition_value() {
         "Scale2D.x should be 200.0"
     );
     assert!(
-        (scale.y - 20.0).abs() < f32::EPSILON,
-        "Scale2D.y should remain 20.0"
+        (scale.y - defaults.height).abs() < f32::EPSILON,
+        "Scale2D.y should remain default height"
     );
 
     let aabb = world.get::<Aabb2D>(entity);
@@ -103,7 +107,8 @@ fn with_width_overrides_definition_value() {
 
 #[test]
 fn with_height_overrides_definition_value() {
-    let def = test_breaker_definition(); // width: 120.0, height: 20.0
+    let def = test_breaker_definition();
+    let defaults = BreakerDefinition::default();
     let mut world = World::new();
     let bundle = Breaker::builder()
         .definition(&def)
@@ -124,8 +129,8 @@ fn with_height_overrides_definition_value() {
     assert!(scale.is_some(), "entity should have Scale2D");
     let scale = scale.unwrap();
     assert!(
-        (scale.x - 120.0).abs() < f32::EPSILON,
-        "Scale2D.x should remain 120.0"
+        (scale.x - defaults.width).abs() < f32::EPSILON,
+        "Scale2D.x should remain default width"
     );
     assert!(
         (scale.y - 30.0).abs() < f32::EPSILON,
@@ -143,8 +148,8 @@ fn with_height_overrides_definition_value() {
     assert!(ps.is_some(), "entity should have PreviousScale");
     let ps = ps.unwrap();
     assert!(
-        (ps.x - 120.0).abs() < f32::EPSILON,
-        "PreviousScale.x should remain 120.0"
+        (ps.x - defaults.width).abs() < f32::EPSILON,
+        "PreviousScale.x should remain default width"
     );
     assert!(
         (ps.y - 30.0).abs() < f32::EPSILON,
@@ -305,47 +310,48 @@ fn without_with_lives_definition_none_produces_infinite() {
 
 #[test]
 fn without_definition_without_with_lives_defaults_to_infinite() {
+    let defaults = BreakerDefinition::default();
     let mut world = World::new();
     let bundle = Breaker::builder()
-        .dimensions(120.0, 20.0, -250.0)
+        .dimensions(defaults.width, defaults.height, defaults.y_position)
         .movement(super::super::core::MovementSettings {
-            max_speed: 1000.0,
-            acceleration: 6000.0,
-            deceleration: 5000.0,
-            decel_ease: EaseFunction::QuadraticIn,
-            decel_ease_strength: 1.0,
+            max_speed: defaults.max_speed,
+            acceleration: defaults.acceleration,
+            deceleration: defaults.deceleration,
+            decel_ease: defaults.decel_ease,
+            decel_ease_strength: defaults.decel_ease_strength,
         })
         .dashing(super::super::core::DashSettings {
             dash: super::super::core::DashParams {
-                speed_multiplier: 4.0,
-                duration: 0.15,
-                tilt_angle: 15.0,
-                tilt_ease: EaseFunction::QuadraticInOut,
+                speed_multiplier: defaults.dash_speed_multiplier,
+                duration: defaults.dash_duration,
+                tilt_angle: defaults.dash_tilt_angle,
+                tilt_ease: defaults.dash_tilt_ease,
             },
             brake: super::super::core::BrakeParams {
-                tilt_angle: 25.0,
-                tilt_duration: 0.2,
-                tilt_ease: EaseFunction::CubicInOut,
-                decel_multiplier: 2.0,
+                tilt_angle: defaults.brake_tilt_angle,
+                tilt_duration: defaults.brake_tilt_duration,
+                tilt_ease: defaults.brake_tilt_ease,
+                decel_multiplier: defaults.brake_decel_multiplier,
             },
             settle: super::super::core::SettleParams {
-                duration: 0.25,
-                tilt_ease: EaseFunction::CubicOut,
+                duration: defaults.settle_duration,
+                tilt_ease: defaults.settle_tilt_ease,
             },
         })
-        .spread(75.0)
+        .spread(defaults.reflection_spread)
         .bump(super::super::core::BumpSettings {
-            perfect_window: 0.15,
-            early_window: 0.15,
-            late_window: 0.15,
-            perfect_cooldown: 0.0,
-            weak_cooldown: 0.15,
+            perfect_window: defaults.perfect_window,
+            early_window: defaults.early_window,
+            late_window: defaults.late_window,
+            perfect_cooldown: defaults.perfect_bump_cooldown,
+            weak_cooldown: defaults.weak_bump_cooldown,
             feedback: super::super::core::BumpFeedbackSettings {
-                duration: 0.15,
-                peak: 24.0,
-                peak_fraction: 0.3,
-                rise_ease: EaseFunction::CubicOut,
-                fall_ease: EaseFunction::QuadraticIn,
+                duration: defaults.bump_visual_duration,
+                peak: defaults.bump_visual_peak,
+                peak_fraction: defaults.bump_visual_peak_fraction,
+                rise_ease: defaults.bump_visual_rise_ease,
+                fall_ease: defaults.bump_visual_fall_ease,
             },
         })
         .headless()
