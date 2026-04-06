@@ -118,15 +118,24 @@ fn register_parent_routes(app: &mut App) {
     app.add_route(
         Route::from(GameState::Loading)
             .to(GameState::Menu)
-            .with_transition(TransitionType::In(Arc::new(FadeIn::default())))
+            .with_transition(TransitionType::In(Arc::new(FadeIn {
+                duration: 0.6,
+                color: Color::WHITE,
+            })))
             .when(|_| true),
     );
     app.add_route(
         Route::from(GameState::Menu)
             .to(GameState::Run)
             .with_transition(TransitionType::OutIn {
-                out_e: Arc::new(FadeOut::default()),
-                in_e: Arc::new(FadeIn::default()),
+                out_e: Arc::new(FadeOut {
+                    duration: 0.6,
+                    color: Color::WHITE,
+                }),
+                in_e: Arc::new(FadeIn {
+                    duration: 0.6,
+                    color: Color::WHITE,
+                }),
             })
             .when(|world| {
                 world
@@ -138,8 +147,14 @@ fn register_parent_routes(app: &mut App) {
         Route::from(GameState::Run)
             .to(GameState::Menu)
             .with_transition(TransitionType::OutIn {
-                out_e: Arc::new(FadeOut::default()),
-                in_e: Arc::new(FadeIn::default()),
+                out_e: Arc::new(FadeOut {
+                    duration: 0.6,
+                    color: Color::WHITE,
+                }),
+                in_e: Arc::new(FadeIn {
+                    duration: 0.6,
+                    color: Color::WHITE,
+                }),
             })
             .when(|world| {
                 world
@@ -167,8 +182,14 @@ fn register_parent_routes(app: &mut App) {
                 }
             })
             .with_transition(TransitionType::OutIn {
-                out_e: Arc::new(FadeOut::default()),
-                in_e: Arc::new(FadeIn::default()),
+                out_e: Arc::new(FadeOut {
+                    duration: 0.6,
+                    color: Color::WHITE,
+                }),
+                in_e: Arc::new(FadeIn {
+                    duration: 0.6,
+                    color: Color::WHITE,
+                }),
             }),
     );
     // StartGame → Teardown (message-triggered by handle_run_setup_input)
@@ -197,7 +218,10 @@ fn register_run_routes(app: &mut App) {
     app.add_route(
         Route::from(RunState::Setup)
             .to(RunState::Node)
-            .with_transition(TransitionType::In(Arc::new(FadeIn::default())))
+            .with_transition(TransitionType::In(Arc::new(FadeIn {
+                duration: 0.6,
+                color: Color::WHITE,
+            })))
             .when(|_| true),
     );
     // Node → dynamic (ChipSelect, RunEnd, or Teardown based on NodeOutcome)
@@ -205,8 +229,14 @@ fn register_run_routes(app: &mut App) {
         Route::from(RunState::Node)
             .to_dynamic(resolve_node_next_state)
             .with_transition(TransitionType::OutIn {
-                out_e: Arc::new(FadeOut::default()),
-                in_e: Arc::new(FadeIn::default()),
+                out_e: Arc::new(FadeOut {
+                    duration: 0.6,
+                    color: Color::WHITE,
+                }),
+                in_e: Arc::new(FadeIn {
+                    duration: 0.6,
+                    color: Color::WHITE,
+                }),
             })
             .when(|world| {
                 world
@@ -219,8 +249,14 @@ fn register_run_routes(app: &mut App) {
         Route::from(RunState::ChipSelect)
             .to(RunState::Node)
             .with_transition(TransitionType::OutIn {
-                out_e: Arc::new(FadeOut::default()),
-                in_e: Arc::new(FadeIn::default()),
+                out_e: Arc::new(FadeOut {
+                    duration: 0.6,
+                    color: Color::WHITE,
+                }),
+                in_e: Arc::new(FadeIn {
+                    duration: 0.6,
+                    color: Color::WHITE,
+                }),
             })
             .when(|world| {
                 world
