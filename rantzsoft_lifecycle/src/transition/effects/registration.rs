@@ -7,7 +7,6 @@ use super::{
     fade::{self, FadeIn, FadeOut},
     iris::{self, IrisIn, IrisOut},
     pixelate::{self, PixelateIn, PixelateOut},
-    shared::ScreenSize,
     slide::{self, Slide},
     wipe::{self, WipeIn, WipeOut},
 };
@@ -22,8 +21,6 @@ use crate::transition::{
 ///
 /// Called from `RantzLifecyclePlugin::build`.
 pub(crate) fn register_builtin_transitions(app: &mut App) {
-    app.init_resource::<ScreenSize>();
-
     // Fade
     register_effect::<FadeOut, _, _, _>(
         app,

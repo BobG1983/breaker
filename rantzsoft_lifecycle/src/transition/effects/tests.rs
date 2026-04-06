@@ -11,14 +11,14 @@ use crate::transition::{
     resources::StartingTransition,
 };
 
-fn effect_test_app() -> App {
+fn effect_test_app() -> (App, Entity) {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
     app.add_message::<TransitionReady>();
     app.add_message::<TransitionRunComplete>();
     app.add_message::<TransitionOver>();
-    app.world_mut().spawn(Camera2d);
-    app
+    let camera = app.world_mut().spawn(Camera2d).id();
+    (app, camera)
 }
 
 // =======================================================================
@@ -59,21 +59,13 @@ fn progress_fraction_clamps_to_one_on_overshoot() {
 
 #[test]
 fn zero_duration_effect_completes_immediately_via_fade_out() {
-    let mut app = effect_test_app();
-    let camera_entity = app
-        .world_mut()
-        .query_filtered::<Entity, With<Camera2d>>()
-        .iter(app.world())
-        .next()
-        .unwrap();
-    app.world_mut()
-        .entity_mut(camera_entity)
-        .insert(TransitionEffect {
-            color: Vec4::new(0.0, 0.0, 0.0, 1.0),
-            direction: Vec4::ZERO,
-            effect_type: EffectType::FADE,
-            progress: 0.0,
-        });
+    let (mut app, camera) = effect_test_app();
+    app.world_mut().entity_mut(camera).insert(TransitionEffect {
+        color: Vec4::new(0.0, 0.0, 0.0, 1.0),
+        direction: Vec4::ZERO,
+        effect_type: EffectType::FADE,
+        progress: 0.0,
+    });
     app.insert_resource(crate::transition::resources::RunningTransition::<FadeOut>::new());
     app.insert_resource(TransitionProgress {
         elapsed: 0.0,
@@ -153,7 +145,7 @@ fn all_eleven_effects_are_registered_in_transition_registry() {
 
 #[test]
 fn end_system_does_not_panic_when_camera_lacks_transition_effect() {
-    let mut app = effect_test_app();
+    let (mut app, _camera) = effect_test_app();
     // Camera exists but has no TransitionEffect
     app.insert_resource(crate::transition::resources::EndingTransition::<FadeOut>::new());
     app.insert_resource(TransitionProgress {
@@ -182,15 +174,9 @@ fn end_system_does_not_panic_when_camera_lacks_transition_effect() {
 
 #[test]
 fn end_system_does_not_despawn_any_entities() {
-    let mut app = effect_test_app();
-    let camera_entity = app
-        .world_mut()
-        .query_filtered::<Entity, With<Camera2d>>()
-        .iter(app.world())
-        .next()
-        .unwrap();
+    let (mut app, camera) = effect_test_app();
     app.world_mut()
-        .entity_mut(camera_entity)
+        .entity_mut(camera)
         .insert(TransitionEffect::default());
     let entity_count_before = app.world().entities().len();
 
@@ -209,7 +195,7 @@ fn end_system_does_not_despawn_any_entities() {
         "no entities should be despawned (only component removed)"
     );
     assert!(
-        app.world().get_entity(camera_entity).is_ok(),
+        app.world().get_entity(camera).is_ok(),
         "camera entity should still exist"
     );
 }
@@ -273,7 +259,7 @@ fn inserting_fade_out_marker_causes_only_fade_out_start_to_fire() {
 
 #[test]
 fn effect_test_app_has_camera2d_entity() {
-    let mut app = effect_test_app();
+    let (mut app, _camera) = effect_test_app();
     let camera_count = app
         .world_mut()
         .query_filtered::<Entity, With<Camera2d>>()
@@ -287,7 +273,7 @@ fn effect_test_app_has_camera2d_entity() {
 
 #[test]
 fn effect_test_app_has_no_screen_size_resource() {
-    let app = effect_test_app();
+    let (app, _camera) = effect_test_app();
     assert!(
         !app.world().contains_resource::<ScreenSize>(),
         "effect_test_app should NOT have ScreenSize resource"

@@ -10,14 +10,14 @@ use crate::transition::{
     resources::{EndingTransition, RunningTransition, StartingTransition},
 };
 
-fn effect_test_app() -> App {
+fn effect_test_app() -> (App, Entity) {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
     app.add_message::<TransitionReady>();
     app.add_message::<TransitionRunComplete>();
     app.add_message::<TransitionOver>();
-    app.world_mut().spawn(Camera2d);
-    app
+    let camera = app.world_mut().spawn(Camera2d).id();
+    (app, camera)
 }
 
 // =======================================================================
@@ -28,7 +28,7 @@ fn effect_test_app() -> App {
 
 #[test]
 fn dissolve_out_start_inserts_transition_effect_on_camera() {
-    let mut app = effect_test_app();
+    let (mut app, _camera) = effect_test_app();
     app.insert_resource(DissolveOutConfig {
         duration: 0.8,
         color: Color::BLACK,
@@ -64,21 +64,13 @@ fn dissolve_out_start_inserts_transition_effect_on_camera() {
 
 #[test]
 fn dissolve_out_run_increases_progress_on_camera() {
-    let mut app = effect_test_app();
-    let camera_entity = app
-        .world_mut()
-        .query_filtered::<Entity, With<Camera2d>>()
-        .iter(app.world())
-        .next()
-        .unwrap();
-    app.world_mut()
-        .entity_mut(camera_entity)
-        .insert(TransitionEffect {
-            color: Vec4::new(0.0, 0.0, 0.0, 1.0),
-            direction: Vec4::ZERO,
-            effect_type: EffectType::DISSOLVE,
-            progress: 0.0,
-        });
+    let (mut app, camera) = effect_test_app();
+    app.world_mut().entity_mut(camera).insert(TransitionEffect {
+        color: Vec4::new(0.0, 0.0, 0.0, 1.0),
+        direction: Vec4::ZERO,
+        effect_type: EffectType::DISSOLVE,
+        progress: 0.0,
+    });
     app.insert_resource(RunningTransition::<DissolveOut>::new());
     app.insert_resource(TransitionProgress {
         elapsed: 0.5,
@@ -102,21 +94,13 @@ fn dissolve_out_run_increases_progress_on_camera() {
 
 #[test]
 fn dissolve_out_run_sends_complete_at_full_progress() {
-    let mut app = effect_test_app();
-    let camera_entity = app
-        .world_mut()
-        .query_filtered::<Entity, With<Camera2d>>()
-        .iter(app.world())
-        .next()
-        .unwrap();
-    app.world_mut()
-        .entity_mut(camera_entity)
-        .insert(TransitionEffect {
-            color: Vec4::new(0.0, 0.0, 0.0, 1.0),
-            direction: Vec4::ZERO,
-            effect_type: EffectType::DISSOLVE,
-            progress: 0.0,
-        });
+    let (mut app, camera) = effect_test_app();
+    app.world_mut().entity_mut(camera).insert(TransitionEffect {
+        color: Vec4::new(0.0, 0.0, 0.0, 1.0),
+        direction: Vec4::ZERO,
+        effect_type: EffectType::DISSOLVE,
+        progress: 0.0,
+    });
     app.insert_resource(RunningTransition::<DissolveOut>::new());
     app.insert_resource(TransitionProgress {
         elapsed: 1.0,
@@ -134,21 +118,13 @@ fn dissolve_out_run_sends_complete_at_full_progress() {
 
 #[test]
 fn dissolve_out_run_does_not_double_send_when_already_completed() {
-    let mut app = effect_test_app();
-    let camera_entity = app
-        .world_mut()
-        .query_filtered::<Entity, With<Camera2d>>()
-        .iter(app.world())
-        .next()
-        .unwrap();
-    app.world_mut()
-        .entity_mut(camera_entity)
-        .insert(TransitionEffect {
-            color: Vec4::new(0.0, 0.0, 0.0, 1.0),
-            direction: Vec4::ZERO,
-            effect_type: EffectType::DISSOLVE,
-            progress: 1.0,
-        });
+    let (mut app, camera) = effect_test_app();
+    app.world_mut().entity_mut(camera).insert(TransitionEffect {
+        color: Vec4::new(0.0, 0.0, 0.0, 1.0),
+        direction: Vec4::ZERO,
+        effect_type: EffectType::DISSOLVE,
+        progress: 1.0,
+    });
     app.insert_resource(RunningTransition::<DissolveOut>::new());
     app.insert_resource(TransitionProgress {
         elapsed: 1.0,
@@ -168,15 +144,9 @@ fn dissolve_out_run_does_not_double_send_when_already_completed() {
 
 #[test]
 fn dissolve_out_end_removes_transition_effect_and_sends_transition_over() {
-    let mut app = effect_test_app();
-    let camera_entity = app
-        .world_mut()
-        .query_filtered::<Entity, With<Camera2d>>()
-        .iter(app.world())
-        .next()
-        .unwrap();
+    let (mut app, camera) = effect_test_app();
     app.world_mut()
-        .entity_mut(camera_entity)
+        .entity_mut(camera)
         .insert(TransitionEffect::default());
     app.insert_resource(EndingTransition::<DissolveOut>::new());
     app.insert_resource(TransitionProgress {
@@ -209,7 +179,7 @@ fn dissolve_out_end_removes_transition_effect_and_sends_transition_over() {
 
 #[test]
 fn dissolve_in_start_inserts_transition_effect_on_camera_at_full_progress() {
-    let mut app = effect_test_app();
+    let (mut app, _camera) = effect_test_app();
     app.insert_resource(DissolveInConfig {
         duration: 0.8,
         color: Color::BLACK,
@@ -241,21 +211,13 @@ fn dissolve_in_start_inserts_transition_effect_on_camera_at_full_progress() {
 
 #[test]
 fn dissolve_in_run_decreases_progress_on_camera() {
-    let mut app = effect_test_app();
-    let camera_entity = app
-        .world_mut()
-        .query_filtered::<Entity, With<Camera2d>>()
-        .iter(app.world())
-        .next()
-        .unwrap();
-    app.world_mut()
-        .entity_mut(camera_entity)
-        .insert(TransitionEffect {
-            color: Vec4::new(0.0, 0.0, 0.0, 1.0),
-            direction: Vec4::ZERO,
-            effect_type: EffectType::DISSOLVE,
-            progress: 1.0,
-        });
+    let (mut app, camera) = effect_test_app();
+    app.world_mut().entity_mut(camera).insert(TransitionEffect {
+        color: Vec4::new(0.0, 0.0, 0.0, 1.0),
+        direction: Vec4::ZERO,
+        effect_type: EffectType::DISSOLVE,
+        progress: 1.0,
+    });
     app.insert_resource(RunningTransition::<DissolveIn>::new());
     app.insert_resource(TransitionProgress {
         elapsed: 0.5,
@@ -283,21 +245,13 @@ fn dissolve_in_run_decreases_progress_on_camera() {
 
 #[test]
 fn dissolve_in_run_sends_complete_at_full_progress() {
-    let mut app = effect_test_app();
-    let camera_entity = app
-        .world_mut()
-        .query_filtered::<Entity, With<Camera2d>>()
-        .iter(app.world())
-        .next()
-        .unwrap();
-    app.world_mut()
-        .entity_mut(camera_entity)
-        .insert(TransitionEffect {
-            color: Vec4::new(0.0, 0.0, 0.0, 1.0),
-            direction: Vec4::ZERO,
-            effect_type: EffectType::DISSOLVE,
-            progress: 1.0,
-        });
+    let (mut app, camera) = effect_test_app();
+    app.world_mut().entity_mut(camera).insert(TransitionEffect {
+        color: Vec4::new(0.0, 0.0, 0.0, 1.0),
+        direction: Vec4::ZERO,
+        effect_type: EffectType::DISSOLVE,
+        progress: 1.0,
+    });
     app.insert_resource(RunningTransition::<DissolveIn>::new());
     app.insert_resource(TransitionProgress {
         elapsed: 1.0,
@@ -315,15 +269,9 @@ fn dissolve_in_run_sends_complete_at_full_progress() {
 
 #[test]
 fn dissolve_in_run_does_not_double_send_when_already_completed() {
-    let mut app = effect_test_app();
-    let camera_entity = app
-        .world_mut()
-        .query_filtered::<Entity, With<Camera2d>>()
-        .iter(app.world())
-        .next()
-        .unwrap();
+    let (mut app, camera) = effect_test_app();
     app.world_mut()
-        .entity_mut(camera_entity)
+        .entity_mut(camera)
         .insert(TransitionEffect::default());
     app.insert_resource(RunningTransition::<DissolveIn>::new());
     app.insert_resource(TransitionProgress {
@@ -344,15 +292,9 @@ fn dissolve_in_run_does_not_double_send_when_already_completed() {
 
 #[test]
 fn dissolve_in_end_removes_transition_effect_and_sends_transition_over() {
-    let mut app = effect_test_app();
-    let camera_entity = app
-        .world_mut()
-        .query_filtered::<Entity, With<Camera2d>>()
-        .iter(app.world())
-        .next()
-        .unwrap();
+    let (mut app, camera) = effect_test_app();
     app.world_mut()
-        .entity_mut(camera_entity)
+        .entity_mut(camera)
         .insert(TransitionEffect::default());
     app.insert_resource(EndingTransition::<DissolveIn>::new());
     app.insert_resource(TransitionProgress {

@@ -1,11 +1,13 @@
 //! Wipe transition effects — `WipeOut` (`OutTransition`) and `WipeIn` (`InTransition`).
 //!
-//! Wipe effects use a single `Sprite` that slides from off-screen to cover
-//! (`WipeOut`) or retracts off-screen to reveal (`WipeIn`).
+//! Wipe effects use a post-process shader with directional threshold wipe.
 
 use bevy::prelude::*;
 
-use super::super::shared::{ScreenSize, TransitionOverlay, TransitionProgress, WipeDirection};
+use super::super::{
+    post_process::{EffectType, TransitionEffect, color_to_linear_vec4, wipe_direction_to_vec4},
+    shared::{TransitionProgress, WipeDirection},
+};
 use crate::transition::{
     messages::{TransitionOver, TransitionReady, TransitionRunComplete},
     resources::StartingTransition,
@@ -107,65 +109,37 @@ pub struct WipeInConfig {
 }
 
 // ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/// Compute the off-screen start position for a wipe-out animation.
-fn wipe_out_start_pos(direction: WipeDirection, screen: Vec2) -> Vec3 {
-    match direction {
-        WipeDirection::Left => Vec3::new(screen.x, 0.0, 0.0),
-        WipeDirection::Right => Vec3::new(-screen.x, 0.0, 0.0),
-        WipeDirection::Up => Vec3::new(0.0, -screen.y, 0.0),
-        WipeDirection::Down => Vec3::new(0.0, screen.y, 0.0),
-    }
-}
-
-/// Compute the off-screen end position for a wipe-in animation.
-fn wipe_in_end_pos(direction: WipeDirection, screen: Vec2) -> Vec3 {
-    match direction {
-        WipeDirection::Left => Vec3::new(-screen.x, 0.0, 0.0),
-        WipeDirection::Right => Vec3::new(screen.x, 0.0, 0.0),
-        WipeDirection::Up => Vec3::new(0.0, screen.y, 0.0),
-        WipeDirection::Down => Vec3::new(0.0, -screen.y, 0.0),
-    }
-}
-
-// ---------------------------------------------------------------------------
 // Systems
 // ---------------------------------------------------------------------------
 
-/// Start system for `WipeOut` — spawns off-screen overlay and sends
-/// `TransitionReady`.
+/// Start system for `WipeOut` — inserts `TransitionEffect` on camera with wipe
+/// direction and sends `TransitionReady`.
 pub(crate) fn wipe_out_start(
     mut commands: Commands,
     config: Res<WipeOutConfig>,
-    screen: Res<ScreenSize>,
+    cameras: Query<Entity, With<Camera2d>>,
     mut writer: MessageWriter<TransitionReady>,
 ) {
-    let start_pos = wipe_out_start_pos(config.direction, screen.0);
-    commands.spawn((
-        Sprite {
-            color: config.color,
-            custom_size: Some(screen.0),
-            ..default()
-        },
-        Transform::from_translation(start_pos),
-        GlobalZIndex(i32::MAX - 1),
-        TransitionOverlay,
-    ));
+    if let Some(camera) = cameras.iter().next() {
+        commands.entity(camera).insert(TransitionEffect {
+            color: color_to_linear_vec4(config.color),
+            direction: wipe_direction_to_vec4(&config.direction),
+            effect_type: EffectType::WIPE,
+            progress: 0.0,
+        });
+    }
     commands.insert_resource(TransitionProgress {
         elapsed: 0.0,
         duration: config.duration,
         completed: false,
     });
+    commands.remove_resource::<WipeOutConfig>();
     writer.write(TransitionReady);
 }
 
-/// Run system for `WipeOut` — slides overlay across screen.
+/// Run system for `WipeOut` — increases `TransitionEffect.progress`.
 pub(crate) fn wipe_out_run(
-    mut overlays: Query<&mut Transform, With<TransitionOverlay>>,
-    config: Res<WipeOutConfig>,
-    screen: Res<ScreenSize>,
+    mut effects: Query<&mut TransitionEffect>,
     mut progress: ResMut<TransitionProgress>,
     time: Res<Time<Real>>,
     mut writer: MessageWriter<TransitionRunComplete>,
@@ -182,11 +156,8 @@ pub(crate) fn wipe_out_run(
         1.0
     };
 
-    let start_pos = wipe_out_start_pos(config.direction, screen.0);
-    let end_pos = Vec3::ZERO;
-
-    for mut transform in &mut overlays {
-        transform.translation = start_pos.lerp(end_pos, t);
+    for mut effect in &mut effects {
+        effect.progress = t;
     }
 
     if t >= 1.0 {
@@ -195,50 +166,48 @@ pub(crate) fn wipe_out_run(
     }
 }
 
-/// End system for `WipeOut` — despawns overlay and sends `TransitionOver`.
+/// End system for `WipeOut` — removes `TransitionEffect` from camera and sends
+/// `TransitionOver`.
 pub(crate) fn wipe_out_end(
     mut commands: Commands,
-    overlays: Query<Entity, With<TransitionOverlay>>,
+    cameras: Query<Entity, With<Camera2d>>,
     mut writer: MessageWriter<TransitionOver>,
 ) {
-    for entity in &overlays {
-        commands.entity(entity).despawn();
+    if let Some(camera) = cameras.iter().next() {
+        commands.entity(camera).remove::<TransitionEffect>();
     }
     commands.remove_resource::<TransitionProgress>();
     writer.write(TransitionOver);
 }
 
-/// Start system for `WipeIn` — spawns full-coverage overlay and sends
-/// `TransitionReady`.
+/// Start system for `WipeIn` — inserts `TransitionEffect` at full progress on
+/// camera and sends `TransitionReady`.
 pub(crate) fn wipe_in_start(
     mut commands: Commands,
     config: Res<WipeInConfig>,
-    screen: Res<ScreenSize>,
+    cameras: Query<Entity, With<Camera2d>>,
     mut writer: MessageWriter<TransitionReady>,
 ) {
-    commands.spawn((
-        Sprite {
-            color: config.color,
-            custom_size: Some(screen.0),
-            ..default()
-        },
-        Transform::from_translation(Vec3::ZERO),
-        GlobalZIndex(i32::MAX - 1),
-        TransitionOverlay,
-    ));
+    if let Some(camera) = cameras.iter().next() {
+        commands.entity(camera).insert(TransitionEffect {
+            color: color_to_linear_vec4(config.color),
+            direction: wipe_direction_to_vec4(&config.direction),
+            effect_type: EffectType::WIPE,
+            progress: 1.0,
+        });
+    }
     commands.insert_resource(TransitionProgress {
         elapsed: 0.0,
         duration: config.duration,
         completed: false,
     });
+    commands.remove_resource::<WipeInConfig>();
     writer.write(TransitionReady);
 }
 
-/// Run system for `WipeIn` — slides overlay off-screen.
+/// Run system for `WipeIn` — decreases `TransitionEffect.progress`.
 pub(crate) fn wipe_in_run(
-    mut overlays: Query<&mut Transform, With<TransitionOverlay>>,
-    config: Res<WipeInConfig>,
-    screen: Res<ScreenSize>,
+    mut effects: Query<&mut TransitionEffect>,
     mut progress: ResMut<TransitionProgress>,
     time: Res<Time<Real>>,
     mut writer: MessageWriter<TransitionRunComplete>,
@@ -255,11 +224,8 @@ pub(crate) fn wipe_in_run(
         1.0
     };
 
-    let start_pos = Vec3::ZERO;
-    let end_pos = wipe_in_end_pos(config.direction, screen.0);
-
-    for mut transform in &mut overlays {
-        transform.translation = start_pos.lerp(end_pos, t);
+    for mut effect in &mut effects {
+        effect.progress = (1.0 - t).max(0.0);
     }
 
     if t >= 1.0 {
@@ -268,14 +234,15 @@ pub(crate) fn wipe_in_run(
     }
 }
 
-/// End system for `WipeIn` — despawns overlay and sends `TransitionOver`.
+/// End system for `WipeIn` — removes `TransitionEffect` from camera and sends
+/// `TransitionOver`.
 pub(crate) fn wipe_in_end(
     mut commands: Commands,
-    overlays: Query<Entity, With<TransitionOverlay>>,
+    cameras: Query<Entity, With<Camera2d>>,
     mut writer: MessageWriter<TransitionOver>,
 ) {
-    for entity in &overlays {
-        commands.entity(entity).despawn();
+    if let Some(camera) = cameras.iter().next() {
+        commands.entity(camera).remove::<TransitionEffect>();
     }
     commands.remove_resource::<TransitionProgress>();
     writer.write(TransitionOver);

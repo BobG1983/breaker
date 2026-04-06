@@ -29,7 +29,7 @@ pub use iris::{IrisIn, IrisInConfig, IrisOut, IrisOutConfig};
 pub use pixelate::{PixelateIn, PixelateInConfig, PixelateOut, PixelateOutConfig};
 pub use post_process::{EffectType, TransitionEffect, TransitionLabel};
 pub(crate) use registration::register_builtin_transitions;
-pub use shared::{ScreenSize, TransitionOverlay, TransitionProgress, WipeDirection};
+pub use shared::{ScreenSize, TransitionProgress, WipeDirection};
 pub use slide::{Slide, SlideConfig, SlideDirection};
 pub use wipe::{WipeIn, WipeInConfig, WipeOut, WipeOutConfig};
 

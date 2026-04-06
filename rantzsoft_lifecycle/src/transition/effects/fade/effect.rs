@@ -2,7 +2,10 @@
 
 use bevy::prelude::*;
 
-use super::super::shared::{ScreenSize, TransitionOverlay, TransitionProgress};
+use super::super::{
+    post_process::{EffectType, TransitionEffect, color_to_linear_vec4},
+    shared::TransitionProgress,
+};
 use crate::transition::{
     messages::{TransitionOver, TransitionReady, TransitionRunComplete},
     resources::StartingTransition,
@@ -95,23 +98,22 @@ pub struct FadeInConfig {
 // Systems
 // ---------------------------------------------------------------------------
 
-/// Start system for `FadeOut` — spawns overlay sprite and sends `TransitionReady`.
+/// Start system for `FadeOut` — inserts `TransitionEffect` on camera and sends
+/// `TransitionReady`.
 pub(crate) fn fade_out_start(
     mut commands: Commands,
     config: Res<FadeOutConfig>,
-    screen: Res<ScreenSize>,
+    cameras: Query<Entity, With<Camera2d>>,
     mut writer: MessageWriter<TransitionReady>,
 ) {
-    commands.spawn((
-        Sprite {
-            color: config.color.with_alpha(0.0),
-            custom_size: Some(screen.0),
-            ..default()
-        },
-        Transform::from_translation(Vec3::ZERO),
-        GlobalZIndex(i32::MAX - 1),
-        TransitionOverlay,
-    ));
+    if let Some(camera) = cameras.iter().next() {
+        commands.entity(camera).insert(TransitionEffect {
+            color: color_to_linear_vec4(config.color),
+            direction: Vec4::ZERO,
+            effect_type: EffectType::FADE,
+            progress: 0.0,
+        });
+    }
     commands.insert_resource(TransitionProgress {
         elapsed: 0.0,
         duration: config.duration,
@@ -121,9 +123,10 @@ pub(crate) fn fade_out_start(
     writer.write(TransitionReady);
 }
 
-/// Run system for `FadeOut` — advances overlay alpha based on progress.
+/// Run system for `FadeOut` — advances `TransitionEffect.progress` based on
+/// elapsed time.
 pub(crate) fn fade_out_run(
-    mut overlays: Query<&mut Sprite, With<TransitionOverlay>>,
+    mut effects: Query<&mut TransitionEffect>,
     mut progress: ResMut<TransitionProgress>,
     time: Res<Time<Real>>,
     mut writer: MessageWriter<TransitionRunComplete>,
@@ -140,8 +143,8 @@ pub(crate) fn fade_out_run(
         1.0
     };
 
-    for mut sprite in &mut overlays {
-        sprite.color = sprite.color.with_alpha(t);
+    for mut effect in &mut effects {
+        effect.progress = t;
     }
 
     if t >= 1.0 {
@@ -150,38 +153,36 @@ pub(crate) fn fade_out_run(
     }
 }
 
-/// End system for `FadeOut` — despawns overlay, removes progress, sends
-/// `TransitionOver`.
+/// End system for `FadeOut` — removes `TransitionEffect` from camera, removes
+/// progress, sends `TransitionOver`.
 pub(crate) fn fade_out_end(
     mut commands: Commands,
-    overlays: Query<Entity, With<TransitionOverlay>>,
+    cameras: Query<Entity, With<Camera2d>>,
     mut writer: MessageWriter<TransitionOver>,
 ) {
-    for entity in &overlays {
-        commands.entity(entity).despawn();
+    if let Some(camera) = cameras.iter().next() {
+        commands.entity(camera).remove::<TransitionEffect>();
     }
     commands.remove_resource::<TransitionProgress>();
     writer.write(TransitionOver);
 }
 
-/// Start system for `FadeIn` — spawns overlay at full opacity and sends
-/// `TransitionReady`.
+/// Start system for `FadeIn` — inserts `TransitionEffect` at full progress on
+/// camera and sends `TransitionReady`.
 pub(crate) fn fade_in_start(
     mut commands: Commands,
     config: Res<FadeInConfig>,
-    screen: Res<ScreenSize>,
+    cameras: Query<Entity, With<Camera2d>>,
     mut writer: MessageWriter<TransitionReady>,
 ) {
-    commands.spawn((
-        Sprite {
-            color: config.color.with_alpha(1.0),
-            custom_size: Some(screen.0),
-            ..default()
-        },
-        Transform::from_translation(Vec3::ZERO),
-        GlobalZIndex(i32::MAX - 1),
-        TransitionOverlay,
-    ));
+    if let Some(camera) = cameras.iter().next() {
+        commands.entity(camera).insert(TransitionEffect {
+            color: color_to_linear_vec4(config.color),
+            direction: Vec4::ZERO,
+            effect_type: EffectType::FADE,
+            progress: 1.0,
+        });
+    }
     commands.insert_resource(TransitionProgress {
         elapsed: 0.0,
         duration: config.duration,
@@ -191,9 +192,10 @@ pub(crate) fn fade_in_start(
     writer.write(TransitionReady);
 }
 
-/// Run system for `FadeIn` — decreases overlay alpha based on progress.
+/// Run system for `FadeIn` — decreases `TransitionEffect.progress` based on
+/// elapsed time.
 pub(crate) fn fade_in_run(
-    mut overlays: Query<&mut Sprite, With<TransitionOverlay>>,
+    mut effects: Query<&mut TransitionEffect>,
     mut progress: ResMut<TransitionProgress>,
     time: Res<Time<Real>>,
     mut writer: MessageWriter<TransitionRunComplete>,
@@ -210,8 +212,8 @@ pub(crate) fn fade_in_run(
         1.0
     };
 
-    for mut sprite in &mut overlays {
-        sprite.color = sprite.color.with_alpha((1.0 - t).max(0.0));
+    for mut effect in &mut effects {
+        effect.progress = (1.0 - t).max(0.0);
     }
 
     if t >= 1.0 {
@@ -220,15 +222,15 @@ pub(crate) fn fade_in_run(
     }
 }
 
-/// End system for `FadeIn` — despawns overlay, removes progress, sends
-/// `TransitionOver`.
+/// End system for `FadeIn` — removes `TransitionEffect` from camera, removes
+/// progress, sends `TransitionOver`.
 pub(crate) fn fade_in_end(
     mut commands: Commands,
-    overlays: Query<Entity, With<TransitionOverlay>>,
+    cameras: Query<Entity, With<Camera2d>>,
     mut writer: MessageWriter<TransitionOver>,
 ) {
-    for entity in &overlays {
-        commands.entity(entity).despawn();
+    if let Some(camera) = cameras.iter().next() {
+        commands.entity(camera).remove::<TransitionEffect>();
     }
     commands.remove_resource::<TransitionProgress>();
     writer.write(TransitionOver);

@@ -1,12 +1,14 @@
 //! Pixelate transition effects — `PixelateOut` (`OutTransition`) and `PixelateIn`
 //! (`InTransition`).
 //!
-//! Pixelate effects use a single `Sprite` with a block-step alpha animation
-//! curve, distinct from dissolve.
+//! Pixelate effects use a post-process shader with UV grid snap.
 
 use bevy::prelude::*;
 
-use super::super::shared::{ScreenSize, TransitionOverlay, TransitionProgress};
+use super::super::{
+    post_process::{EffectType, TransitionEffect, color_to_linear_vec4},
+    shared::TransitionProgress,
+};
 use crate::transition::{
     messages::{TransitionOver, TransitionReady, TransitionRunComplete},
     resources::StartingTransition,
@@ -97,37 +99,25 @@ pub struct PixelateInConfig {
 }
 
 // ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/// Quantize linear progress into block-step alpha for pixelate visual.
-fn pixelate_alpha(progress: f32) -> f32 {
-    let steps = 5.0;
-    (progress * steps).ceil() / steps
-}
-
-// ---------------------------------------------------------------------------
 // Systems
 // ---------------------------------------------------------------------------
 
-/// Start system for `PixelateOut` — spawns overlay at zero alpha and sends
-/// `TransitionReady`.
+/// Start system for `PixelateOut` — inserts `TransitionEffect` on camera and
+/// sends `TransitionReady`.
 pub(crate) fn pixelate_out_start(
     mut commands: Commands,
     config: Res<PixelateOutConfig>,
-    screen: Res<ScreenSize>,
+    cameras: Query<Entity, With<Camera2d>>,
     mut writer: MessageWriter<TransitionReady>,
 ) {
-    commands.spawn((
-        Sprite {
-            color: config.color.with_alpha(0.0),
-            custom_size: Some(screen.0),
-            ..default()
-        },
-        Transform::from_translation(Vec3::ZERO),
-        GlobalZIndex(i32::MAX - 1),
-        TransitionOverlay,
-    ));
+    if let Some(camera) = cameras.iter().next() {
+        commands.entity(camera).insert(TransitionEffect {
+            color: color_to_linear_vec4(config.color),
+            direction: Vec4::ZERO,
+            effect_type: EffectType::PIXELATE,
+            progress: 0.0,
+        });
+    }
     commands.insert_resource(TransitionProgress {
         elapsed: 0.0,
         duration: config.duration,
@@ -137,9 +127,9 @@ pub(crate) fn pixelate_out_start(
     writer.write(TransitionReady);
 }
 
-/// Run system for `PixelateOut` — increases alpha with block-step curve.
+/// Run system for `PixelateOut` — increases `TransitionEffect.progress`.
 pub(crate) fn pixelate_out_run(
-    mut overlays: Query<&mut Sprite, With<TransitionOverlay>>,
+    mut effects: Query<&mut TransitionEffect>,
     mut progress: ResMut<TransitionProgress>,
     time: Res<Time<Real>>,
     mut writer: MessageWriter<TransitionRunComplete>,
@@ -156,9 +146,8 @@ pub(crate) fn pixelate_out_run(
         1.0
     };
 
-    let alpha = pixelate_alpha(t);
-    for mut sprite in &mut overlays {
-        sprite.color = sprite.color.with_alpha(alpha);
+    for mut effect in &mut effects {
+        effect.progress = t;
     }
 
     if t >= 1.0 {
@@ -167,37 +156,36 @@ pub(crate) fn pixelate_out_run(
     }
 }
 
-/// End system for `PixelateOut` — despawns overlay and sends `TransitionOver`.
+/// End system for `PixelateOut` — removes `TransitionEffect` from camera and
+/// sends `TransitionOver`.
 pub(crate) fn pixelate_out_end(
     mut commands: Commands,
-    overlays: Query<Entity, With<TransitionOverlay>>,
+    cameras: Query<Entity, With<Camera2d>>,
     mut writer: MessageWriter<TransitionOver>,
 ) {
-    for entity in &overlays {
-        commands.entity(entity).despawn();
+    if let Some(camera) = cameras.iter().next() {
+        commands.entity(camera).remove::<TransitionEffect>();
     }
     commands.remove_resource::<TransitionProgress>();
     writer.write(TransitionOver);
 }
 
-/// Start system for `PixelateIn` — spawns fully opaque overlay and sends
-/// `TransitionReady`.
+/// Start system for `PixelateIn` — inserts fully opaque `TransitionEffect` on
+/// camera and sends `TransitionReady`.
 pub(crate) fn pixelate_in_start(
     mut commands: Commands,
     config: Res<PixelateInConfig>,
-    screen: Res<ScreenSize>,
+    cameras: Query<Entity, With<Camera2d>>,
     mut writer: MessageWriter<TransitionReady>,
 ) {
-    commands.spawn((
-        Sprite {
-            color: config.color.with_alpha(1.0),
-            custom_size: Some(screen.0),
-            ..default()
-        },
-        Transform::from_translation(Vec3::ZERO),
-        GlobalZIndex(i32::MAX - 1),
-        TransitionOverlay,
-    ));
+    if let Some(camera) = cameras.iter().next() {
+        commands.entity(camera).insert(TransitionEffect {
+            color: color_to_linear_vec4(config.color),
+            direction: Vec4::ZERO,
+            effect_type: EffectType::PIXELATE,
+            progress: 1.0,
+        });
+    }
     commands.insert_resource(TransitionProgress {
         elapsed: 0.0,
         duration: config.duration,
@@ -207,9 +195,9 @@ pub(crate) fn pixelate_in_start(
     writer.write(TransitionReady);
 }
 
-/// Run system for `PixelateIn` — decreases alpha with block-step curve.
+/// Run system for `PixelateIn` — decreases `TransitionEffect.progress`.
 pub(crate) fn pixelate_in_run(
-    mut overlays: Query<&mut Sprite, With<TransitionOverlay>>,
+    mut effects: Query<&mut TransitionEffect>,
     mut progress: ResMut<TransitionProgress>,
     time: Res<Time<Real>>,
     mut writer: MessageWriter<TransitionRunComplete>,
@@ -226,9 +214,8 @@ pub(crate) fn pixelate_in_run(
         1.0
     };
 
-    let alpha = (1.0 - pixelate_alpha(t)).max(0.0);
-    for mut sprite in &mut overlays {
-        sprite.color = sprite.color.with_alpha(alpha);
+    for mut effect in &mut effects {
+        effect.progress = (1.0 - t).max(0.0);
     }
 
     if t >= 1.0 {
@@ -237,14 +224,15 @@ pub(crate) fn pixelate_in_run(
     }
 }
 
-/// End system for `PixelateIn` — despawns overlay and sends `TransitionOver`.
+/// End system for `PixelateIn` — removes `TransitionEffect` from camera and
+/// sends `TransitionOver`.
 pub(crate) fn pixelate_in_end(
     mut commands: Commands,
-    overlays: Query<Entity, With<TransitionOverlay>>,
+    cameras: Query<Entity, With<Camera2d>>,
     mut writer: MessageWriter<TransitionOver>,
 ) {
-    for entity in &overlays {
-        commands.entity(entity).despawn();
+    if let Some(camera) = cameras.iter().next() {
+        commands.entity(camera).remove::<TransitionEffect>();
     }
     commands.remove_resource::<TransitionProgress>();
     writer.write(TransitionOver);

@@ -10,14 +10,14 @@ use crate::transition::{
     resources::{EndingTransition, RunningTransition, StartingTransition},
 };
 
-fn effect_test_app() -> App {
+fn effect_test_app() -> (App, Entity) {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
     app.add_message::<TransitionReady>();
     app.add_message::<TransitionRunComplete>();
     app.add_message::<TransitionOver>();
-    app.world_mut().spawn(Camera2d);
-    app
+    let camera = app.world_mut().spawn(Camera2d).id();
+    (app, camera)
 }
 
 // =======================================================================
@@ -28,7 +28,7 @@ fn effect_test_app() -> App {
 
 #[test]
 fn slide_start_inserts_transition_effect_on_camera_with_left_direction() {
-    let mut app = effect_test_app();
+    let (mut app, _camera) = effect_test_app();
     app.insert_resource(SlideConfig {
         duration: 0.4,
         direction: SlideDirection::Left,
@@ -67,7 +67,7 @@ fn slide_start_inserts_transition_effect_on_camera_with_left_direction() {
 
 #[test]
 fn slide_start_does_not_insert_slide_start_end_resource() {
-    let mut app = effect_test_app();
+    let (mut app, _camera) = effect_test_app();
     app.insert_resource(SlideConfig {
         duration: 0.4,
         direction: SlideDirection::Left,
@@ -76,18 +76,15 @@ fn slide_start_does_not_insert_slide_start_end_resource() {
     app.add_systems(Update, slide_start);
     app.update();
 
-    assert!(
-        !app.world()
-            .contains_resource::<crate::transition::effects::shared::SlideStartEnd>(),
-        "SlideStartEnd should NOT be inserted (removed from slide implementation)"
-    );
+    // SlideStartEnd was removed from the codebase — if slide_start ran without
+    // panicking, the old resource pattern is gone. No assertion needed.
 }
 
 // --- Spec Behavior 45: Slide direction encoding (UV Y inverted) ---
 
 #[test]
 fn slide_start_encodes_right_as_positive_x() {
-    let mut app = effect_test_app();
+    let (mut app, _camera) = effect_test_app();
     app.insert_resource(SlideConfig {
         duration: 0.4,
         direction: SlideDirection::Right,
@@ -110,7 +107,7 @@ fn slide_start_encodes_right_as_positive_x() {
 
 #[test]
 fn slide_start_encodes_up_as_negative_y_uv_inverted() {
-    let mut app = effect_test_app();
+    let (mut app, _camera) = effect_test_app();
     app.insert_resource(SlideConfig {
         duration: 0.4,
         direction: SlideDirection::Up,
@@ -133,7 +130,7 @@ fn slide_start_encodes_up_as_negative_y_uv_inverted() {
 
 #[test]
 fn slide_start_encodes_down_as_positive_y_uv_inverted() {
-    let mut app = effect_test_app();
+    let (mut app, _camera) = effect_test_app();
     app.insert_resource(SlideConfig {
         duration: 0.4,
         direction: SlideDirection::Down,
@@ -158,21 +155,13 @@ fn slide_start_encodes_down_as_positive_y_uv_inverted() {
 
 #[test]
 fn slide_run_updates_progress_on_camera() {
-    let mut app = effect_test_app();
-    let camera_entity = app
-        .world_mut()
-        .query_filtered::<Entity, With<Camera2d>>()
-        .iter(app.world())
-        .next()
-        .unwrap();
-    app.world_mut()
-        .entity_mut(camera_entity)
-        .insert(TransitionEffect {
-            color: Vec4::ZERO,
-            direction: Vec4::new(-1.0, 0.0, 0.0, 0.0),
-            effect_type: EffectType::SLIDE,
-            progress: 0.0,
-        });
+    let (mut app, camera) = effect_test_app();
+    app.world_mut().entity_mut(camera).insert(TransitionEffect {
+        color: Vec4::ZERO,
+        direction: Vec4::new(-1.0, 0.0, 0.0, 0.0),
+        effect_type: EffectType::SLIDE,
+        progress: 0.0,
+    });
     app.insert_resource(RunningTransition::<Slide>::new());
     app.insert_resource(TransitionProgress {
         elapsed: 0.25,
@@ -196,21 +185,13 @@ fn slide_run_updates_progress_on_camera() {
 
 #[test]
 fn slide_run_sends_complete_at_full_progress() {
-    let mut app = effect_test_app();
-    let camera_entity = app
-        .world_mut()
-        .query_filtered::<Entity, With<Camera2d>>()
-        .iter(app.world())
-        .next()
-        .unwrap();
-    app.world_mut()
-        .entity_mut(camera_entity)
-        .insert(TransitionEffect {
-            color: Vec4::ZERO,
-            direction: Vec4::new(-1.0, 0.0, 0.0, 0.0),
-            effect_type: EffectType::SLIDE,
-            progress: 0.0,
-        });
+    let (mut app, camera) = effect_test_app();
+    app.world_mut().entity_mut(camera).insert(TransitionEffect {
+        color: Vec4::ZERO,
+        direction: Vec4::new(-1.0, 0.0, 0.0, 0.0),
+        effect_type: EffectType::SLIDE,
+        progress: 0.0,
+    });
     app.insert_resource(RunningTransition::<Slide>::new());
     app.insert_resource(TransitionProgress {
         elapsed: 1.0,
@@ -228,15 +209,9 @@ fn slide_run_sends_complete_at_full_progress() {
 
 #[test]
 fn slide_run_does_not_double_send_when_already_completed() {
-    let mut app = effect_test_app();
-    let camera_entity = app
-        .world_mut()
-        .query_filtered::<Entity, With<Camera2d>>()
-        .iter(app.world())
-        .next()
-        .unwrap();
+    let (mut app, camera) = effect_test_app();
     app.world_mut()
-        .entity_mut(camera_entity)
+        .entity_mut(camera)
         .insert(TransitionEffect::default());
     app.insert_resource(RunningTransition::<Slide>::new());
     app.insert_resource(TransitionProgress {
@@ -257,25 +232,17 @@ fn slide_run_does_not_double_send_when_already_completed() {
 
 #[test]
 fn slide_run_does_not_move_camera_position() {
-    let mut app = effect_test_app();
+    let (mut app, camera) = effect_test_app();
     // Move camera to an offset position
-    let camera_entity = app
-        .world_mut()
-        .query_filtered::<Entity, With<Camera2d>>()
-        .iter(app.world())
-        .next()
-        .unwrap();
     app.world_mut()
-        .entity_mut(camera_entity)
+        .entity_mut(camera)
         .insert(Transform::from_xyz(100.0, 50.0, 0.0));
-    app.world_mut()
-        .entity_mut(camera_entity)
-        .insert(TransitionEffect {
-            color: Vec4::ZERO,
-            direction: Vec4::new(-1.0, 0.0, 0.0, 0.0),
-            effect_type: EffectType::SLIDE,
-            progress: 0.0,
-        });
+    app.world_mut().entity_mut(camera).insert(TransitionEffect {
+        color: Vec4::ZERO,
+        direction: Vec4::new(-1.0, 0.0, 0.0, 0.0),
+        effect_type: EffectType::SLIDE,
+        progress: 0.0,
+    });
     app.insert_resource(RunningTransition::<Slide>::new());
     app.insert_resource(TransitionProgress {
         elapsed: 0.5,
@@ -306,15 +273,9 @@ fn slide_run_does_not_move_camera_position() {
 
 #[test]
 fn slide_end_removes_transition_effect_and_sends_transition_over() {
-    let mut app = effect_test_app();
-    let camera_entity = app
-        .world_mut()
-        .query_filtered::<Entity, With<Camera2d>>()
-        .iter(app.world())
-        .next()
-        .unwrap();
+    let (mut app, camera) = effect_test_app();
     app.world_mut()
-        .entity_mut(camera_entity)
+        .entity_mut(camera)
         .insert(TransitionEffect::default());
     app.insert_resource(EndingTransition::<Slide>::new());
     app.insert_resource(TransitionProgress {
@@ -341,7 +302,7 @@ fn slide_end_removes_transition_effect_and_sends_transition_over() {
 
 #[test]
 fn slide_end_does_not_remove_slide_start_end_resource() {
-    let mut app = effect_test_app();
+    let (mut app, _camera) = effect_test_app();
     // SlideStartEnd should never be present in the new implementation
     app.insert_resource(EndingTransition::<Slide>::new());
     app.insert_resource(TransitionProgress {
@@ -352,11 +313,7 @@ fn slide_end_does_not_remove_slide_start_end_resource() {
     app.add_systems(Update, slide_end);
     app.update();
 
-    assert!(
-        !app.world()
-            .contains_resource::<crate::transition::effects::shared::SlideStartEnd>(),
-        "SlideStartEnd should never be present"
-    );
+    // SlideStartEnd was removed — slide_end runs without the old resource.
 }
 
 // --- Spec Behavior 72: Slide trait satisfaction ---

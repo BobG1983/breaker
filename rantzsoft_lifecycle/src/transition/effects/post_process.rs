@@ -53,24 +53,36 @@ pub struct TransitionLabel;
 // ---------------------------------------------------------------------------
 
 /// Convert a `WipeDirection` to a direction `Vec4` for the shader.
-///
-/// Stub: returns `Vec4::ZERO`. GREEN phase implements the real mapping.
 #[must_use]
 pub const fn wipe_direction_to_vec4(
-    _direction: &crate::transition::effects::shared::WipeDirection,
+    direction: &crate::transition::effects::shared::WipeDirection,
 ) -> Vec4 {
-    Vec4::ZERO
+    match direction {
+        crate::transition::effects::shared::WipeDirection::Left => Vec4::new(-1.0, 0.0, 0.0, 0.0),
+        crate::transition::effects::shared::WipeDirection::Right => Vec4::new(1.0, 0.0, 0.0, 0.0),
+        crate::transition::effects::shared::WipeDirection::Up => Vec4::new(0.0, 1.0, 0.0, 0.0),
+        crate::transition::effects::shared::WipeDirection::Down => Vec4::new(0.0, -1.0, 0.0, 0.0),
+    }
 }
 
 /// Convert a `SlideDirection` to a direction `Vec4` for the shader (UV Y
 /// inverted).
-///
-/// Stub: returns `Vec4::ZERO`. GREEN phase implements the real mapping.
 #[must_use]
 pub const fn slide_direction_to_vec4(
-    _direction: &crate::transition::effects::slide::SlideDirection,
+    direction: &crate::transition::effects::slide::SlideDirection,
 ) -> Vec4 {
-    Vec4::ZERO
+    match direction {
+        crate::transition::effects::slide::SlideDirection::Left => Vec4::new(-1.0, 0.0, 0.0, 0.0),
+        crate::transition::effects::slide::SlideDirection::Right => Vec4::new(1.0, 0.0, 0.0, 0.0),
+        crate::transition::effects::slide::SlideDirection::Up => Vec4::new(0.0, -1.0, 0.0, 0.0),
+        crate::transition::effects::slide::SlideDirection::Down => Vec4::new(0.0, 1.0, 0.0, 0.0),
+    }
+}
+
+/// Convert a `Color` to linear RGBA `Vec4`.
+pub(crate) fn color_to_linear_vec4(color: Color) -> Vec4 {
+    let linear = color.to_linear();
+    Vec4::new(linear.red, linear.green, linear.blue, linear.alpha)
 }
 
 #[cfg(test)]
@@ -121,7 +133,9 @@ mod tests {
             })
             .id();
 
-        let effect = world.get::<TransitionEffect>(entity).unwrap();
+        let effect_ref = world.get::<TransitionEffect>(entity);
+        assert!(effect_ref.is_some(), "entity should have TransitionEffect");
+        let effect = effect_ref.copied().unwrap_or_default();
         assert_eq!(effect.color, Vec4::new(0.0, 0.0, 0.0, 1.0));
         assert_eq!(effect.direction, Vec4::ZERO);
         assert_eq!(effect.effect_type, EffectType::FADE);
@@ -164,12 +178,9 @@ mod tests {
             progress: 0.5,
         };
         let copied = original;
-        let cloned = original.clone();
-
+        // Verify Copy works (original still usable after copy)
         assert_eq!(copied.color, original.color);
         assert_eq!(copied.effect_type, original.effect_type);
-        assert_eq!(cloned.color, original.color);
-        assert_eq!(cloned.effect_type, original.effect_type);
     }
 
     // =======================================================================

@@ -10,14 +10,14 @@ use crate::transition::{
     resources::{EndingTransition, RunningTransition, StartingTransition},
 };
 
-fn effect_test_app() -> App {
+fn effect_test_app() -> (App, Entity) {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
     app.add_message::<TransitionReady>();
     app.add_message::<TransitionRunComplete>();
     app.add_message::<TransitionOver>();
-    app.world_mut().spawn(Camera2d);
-    app
+    let camera = app.world_mut().spawn(Camera2d).id();
+    (app, camera)
 }
 
 // =======================================================================
@@ -28,7 +28,7 @@ fn effect_test_app() -> App {
 
 #[test]
 fn pixelate_out_start_inserts_transition_effect_on_camera() {
-    let mut app = effect_test_app();
+    let (mut app, _camera) = effect_test_app();
     app.insert_resource(PixelateOutConfig {
         duration: 0.6,
         color: Color::BLACK,
@@ -64,21 +64,13 @@ fn pixelate_out_start_inserts_transition_effect_on_camera() {
 
 #[test]
 fn pixelate_out_run_increases_progress_on_camera() {
-    let mut app = effect_test_app();
-    let camera_entity = app
-        .world_mut()
-        .query_filtered::<Entity, With<Camera2d>>()
-        .iter(app.world())
-        .next()
-        .unwrap();
-    app.world_mut()
-        .entity_mut(camera_entity)
-        .insert(TransitionEffect {
-            color: Vec4::new(0.0, 0.0, 0.0, 1.0),
-            direction: Vec4::ZERO,
-            effect_type: EffectType::PIXELATE,
-            progress: 0.0,
-        });
+    let (mut app, camera) = effect_test_app();
+    app.world_mut().entity_mut(camera).insert(TransitionEffect {
+        color: Vec4::new(0.0, 0.0, 0.0, 1.0),
+        direction: Vec4::ZERO,
+        effect_type: EffectType::PIXELATE,
+        progress: 0.0,
+    });
     app.insert_resource(RunningTransition::<PixelateOut>::new());
     app.insert_resource(TransitionProgress {
         elapsed: 0.25,
@@ -102,21 +94,13 @@ fn pixelate_out_run_increases_progress_on_camera() {
 
 #[test]
 fn pixelate_out_run_sends_complete_at_full_progress() {
-    let mut app = effect_test_app();
-    let camera_entity = app
-        .world_mut()
-        .query_filtered::<Entity, With<Camera2d>>()
-        .iter(app.world())
-        .next()
-        .unwrap();
-    app.world_mut()
-        .entity_mut(camera_entity)
-        .insert(TransitionEffect {
-            color: Vec4::new(0.0, 0.0, 0.0, 1.0),
-            direction: Vec4::ZERO,
-            effect_type: EffectType::PIXELATE,
-            progress: 0.0,
-        });
+    let (mut app, camera) = effect_test_app();
+    app.world_mut().entity_mut(camera).insert(TransitionEffect {
+        color: Vec4::new(0.0, 0.0, 0.0, 1.0),
+        direction: Vec4::ZERO,
+        effect_type: EffectType::PIXELATE,
+        progress: 0.0,
+    });
     app.insert_resource(RunningTransition::<PixelateOut>::new());
     app.insert_resource(TransitionProgress {
         elapsed: 1.0,
@@ -134,15 +118,9 @@ fn pixelate_out_run_sends_complete_at_full_progress() {
 
 #[test]
 fn pixelate_out_run_does_not_double_send_when_already_completed() {
-    let mut app = effect_test_app();
-    let camera_entity = app
-        .world_mut()
-        .query_filtered::<Entity, With<Camera2d>>()
-        .iter(app.world())
-        .next()
-        .unwrap();
+    let (mut app, camera) = effect_test_app();
     app.world_mut()
-        .entity_mut(camera_entity)
+        .entity_mut(camera)
         .insert(TransitionEffect::default());
     app.insert_resource(RunningTransition::<PixelateOut>::new());
     app.insert_resource(TransitionProgress {
@@ -163,15 +141,9 @@ fn pixelate_out_run_does_not_double_send_when_already_completed() {
 
 #[test]
 fn pixelate_out_end_removes_transition_effect_and_sends_transition_over() {
-    let mut app = effect_test_app();
-    let camera_entity = app
-        .world_mut()
-        .query_filtered::<Entity, With<Camera2d>>()
-        .iter(app.world())
-        .next()
-        .unwrap();
+    let (mut app, camera) = effect_test_app();
     app.world_mut()
-        .entity_mut(camera_entity)
+        .entity_mut(camera)
         .insert(TransitionEffect::default());
     app.insert_resource(EndingTransition::<PixelateOut>::new());
     app.insert_resource(TransitionProgress {
@@ -204,7 +176,7 @@ fn pixelate_out_end_removes_transition_effect_and_sends_transition_over() {
 
 #[test]
 fn pixelate_in_start_inserts_transition_effect_on_camera_at_full_progress() {
-    let mut app = effect_test_app();
+    let (mut app, _camera) = effect_test_app();
     app.insert_resource(PixelateInConfig {
         duration: 0.6,
         color: Color::BLACK,
@@ -236,21 +208,13 @@ fn pixelate_in_start_inserts_transition_effect_on_camera_at_full_progress() {
 
 #[test]
 fn pixelate_in_run_decreases_progress_on_camera() {
-    let mut app = effect_test_app();
-    let camera_entity = app
-        .world_mut()
-        .query_filtered::<Entity, With<Camera2d>>()
-        .iter(app.world())
-        .next()
-        .unwrap();
-    app.world_mut()
-        .entity_mut(camera_entity)
-        .insert(TransitionEffect {
-            color: Vec4::new(0.0, 0.0, 0.0, 1.0),
-            direction: Vec4::ZERO,
-            effect_type: EffectType::PIXELATE,
-            progress: 1.0,
-        });
+    let (mut app, camera) = effect_test_app();
+    app.world_mut().entity_mut(camera).insert(TransitionEffect {
+        color: Vec4::new(0.0, 0.0, 0.0, 1.0),
+        direction: Vec4::ZERO,
+        effect_type: EffectType::PIXELATE,
+        progress: 1.0,
+    });
     app.insert_resource(RunningTransition::<PixelateIn>::new());
     app.insert_resource(TransitionProgress {
         elapsed: 0.5,
@@ -278,21 +242,13 @@ fn pixelate_in_run_decreases_progress_on_camera() {
 
 #[test]
 fn pixelate_in_run_sends_complete_at_full_progress() {
-    let mut app = effect_test_app();
-    let camera_entity = app
-        .world_mut()
-        .query_filtered::<Entity, With<Camera2d>>()
-        .iter(app.world())
-        .next()
-        .unwrap();
-    app.world_mut()
-        .entity_mut(camera_entity)
-        .insert(TransitionEffect {
-            color: Vec4::new(0.0, 0.0, 0.0, 1.0),
-            direction: Vec4::ZERO,
-            effect_type: EffectType::PIXELATE,
-            progress: 1.0,
-        });
+    let (mut app, camera) = effect_test_app();
+    app.world_mut().entity_mut(camera).insert(TransitionEffect {
+        color: Vec4::new(0.0, 0.0, 0.0, 1.0),
+        direction: Vec4::ZERO,
+        effect_type: EffectType::PIXELATE,
+        progress: 1.0,
+    });
     app.insert_resource(RunningTransition::<PixelateIn>::new());
     app.insert_resource(TransitionProgress {
         elapsed: 1.0,
@@ -310,15 +266,9 @@ fn pixelate_in_run_sends_complete_at_full_progress() {
 
 #[test]
 fn pixelate_in_run_does_not_double_send_when_already_completed() {
-    let mut app = effect_test_app();
-    let camera_entity = app
-        .world_mut()
-        .query_filtered::<Entity, With<Camera2d>>()
-        .iter(app.world())
-        .next()
-        .unwrap();
+    let (mut app, camera) = effect_test_app();
     app.world_mut()
-        .entity_mut(camera_entity)
+        .entity_mut(camera)
         .insert(TransitionEffect::default());
     app.insert_resource(RunningTransition::<PixelateIn>::new());
     app.insert_resource(TransitionProgress {
@@ -339,15 +289,9 @@ fn pixelate_in_run_does_not_double_send_when_already_completed() {
 
 #[test]
 fn pixelate_in_end_removes_transition_effect_and_sends_transition_over() {
-    let mut app = effect_test_app();
-    let camera_entity = app
-        .world_mut()
-        .query_filtered::<Entity, With<Camera2d>>()
-        .iter(app.world())
-        .next()
-        .unwrap();
+    let (mut app, camera) = effect_test_app();
     app.world_mut()
-        .entity_mut(camera_entity)
+        .entity_mut(camera)
         .insert(TransitionEffect::default());
     app.insert_resource(EndingTransition::<PixelateIn>::new());
     app.insert_resource(TransitionProgress {
