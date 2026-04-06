@@ -1,4 +1,5 @@
 use bevy::{ecs::world::CommandQueue, prelude::*};
+use rantzsoft_lifecycle::CleanupOnExit;
 use rantzsoft_physics2d::collision_layers::CollisionLayers;
 use rantzsoft_spatial2d::components::{
     BaseSpeed, InterpolateTransform2D, MaxSpeed, MinSpeed, Position2D, Spatial, Spatial2D,
@@ -13,7 +14,8 @@ use crate::{
         definition::BoltDefinition,
     },
     effect::{BoundEffects, EffectKind, EffectNode},
-    shared::{CleanupOnNodeExit, CleanupOnRunEnd, GameDrawLayer},
+    shared::GameDrawLayer,
+    state::types::{NodeState, RunState},
 };
 
 /// Creates a `BoltDefinition` matching the values previously provided by
@@ -110,7 +112,7 @@ fn spawn_primary_serving_creates_complete_entity() {
     let radius = world.get::<BoltRadius>(entity).unwrap();
     assert!((radius.0 - 8.0).abs() < f32::EPSILON);
 
-    assert!(world.get::<CleanupOnRunEnd>(entity).is_some());
+    assert!(world.get::<CleanupOnExit<RunState>>(entity).is_some());
     assert!(world.get::<CollisionLayers>(entity).is_some());
     // Headless bolts do NOT have GameDrawLayer
     assert!(world.get::<GameDrawLayer>(entity).is_none());
@@ -136,8 +138,8 @@ fn spawn_extra_bolt_creates_entity_with_extra_markers() {
         "should have ExtraBolt"
     );
     assert!(
-        world.get::<CleanupOnNodeExit>(entity).is_some(),
-        "should have CleanupOnNodeExit"
+        world.get::<CleanupOnExit<NodeState>>(entity).is_some(),
+        "should have CleanupOnExit<NodeState>"
     );
     assert!(
         world.get::<PrimaryBolt>(entity).is_none(),

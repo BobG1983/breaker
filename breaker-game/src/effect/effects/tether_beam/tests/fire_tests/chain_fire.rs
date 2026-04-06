@@ -63,8 +63,11 @@ fn fire_chain_true_with_three_bolts_creates_two_chain_beams() {
     );
 
     // Verify beam properties
-    let mut beam_query =
-        world.query::<(&TetherBeamComponent, &EffectSourceChip, &CleanupOnNodeExit)>();
+    let mut beam_query = world.query::<(
+        &TetherBeamComponent,
+        &EffectSourceChip,
+        &CleanupOnExit<NodeState>,
+    )>();
     for (beam, esc, _cleanup) in beam_query.iter(&world) {
         assert!(
             (beam.damage_mult - 2.0).abs() < f32::EPSILON,

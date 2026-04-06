@@ -2,6 +2,7 @@ use bevy::{
     prelude::*,
     time::{Timer, TimerMode},
 };
+use rantzsoft_lifecycle::CleanupOnExit;
 use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{PreviousScale, Scale2D, Spatial, Velocity2D};
 
@@ -13,10 +14,10 @@ use crate::{
     },
     effect::{BoundEffects, EffectNode},
     shared::{
-        BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, CleanupOnNodeExit, CleanupOnRunEnd, GameDrawLayer,
-        WALL_LAYER,
+        BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, GameDrawLayer, WALL_LAYER,
         size::{BaseRadius, MaxRadius, MinRadius},
     },
+    state::types::{NodeState, RunState},
 };
 
 /// Builds the core component tuple shared by all terminal states.
@@ -65,9 +66,9 @@ fn spawn_inner(
 
     // Role marker + cleanup
     if is_primary {
-        entity.insert((PrimaryBolt, CleanupOnRunEnd));
+        entity.insert((PrimaryBolt, CleanupOnExit::<RunState>::default()));
     } else {
-        entity.insert((ExtraBolt, CleanupOnNodeExit));
+        entity.insert((ExtraBolt, CleanupOnExit::<NodeState>::default()));
     }
 
     // Serving marker
@@ -149,7 +150,12 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, Serving, Primary, Headless> {
             vel: Velocity2D(Vec2::ZERO),
         };
         let core = build_core(&params, &self.optional);
-        (core, PrimaryBolt, CleanupOnRunEnd, BoltServing)
+        (
+            core,
+            PrimaryBolt,
+            CleanupOnExit::<RunState>::default(),
+            BoltServing,
+        )
     }
 
     /// Spawns a headless primary serving bolt entity with all components.
@@ -182,7 +188,12 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, Serving, Extra, Headless> {
             vel: Velocity2D(Vec2::ZERO),
         };
         let core = build_core(&params, &self.optional);
-        (core, ExtraBolt, CleanupOnNodeExit, BoltServing)
+        (
+            core,
+            ExtraBolt,
+            CleanupOnExit::<NodeState>::default(),
+            BoltServing,
+        )
     }
 
     /// Spawns a headless extra serving bolt entity with all components.
@@ -215,7 +226,7 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, HasVelocity, Primary, Headless
             vel: self.motion.vel,
         };
         let core = build_core(&params, &self.optional);
-        (core, PrimaryBolt, CleanupOnRunEnd)
+        (core, PrimaryBolt, CleanupOnExit::<RunState>::default())
     }
 
     /// Spawns a headless primary bolt entity with velocity and all components.
@@ -248,7 +259,7 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, HasVelocity, Extra, Headless> 
             vel: self.motion.vel,
         };
         let core = build_core(&params, &self.optional);
-        (core, ExtraBolt, CleanupOnNodeExit)
+        (core, ExtraBolt, CleanupOnExit::<NodeState>::default())
     }
 
     /// Spawns a headless extra bolt entity with velocity and all components.
@@ -286,7 +297,7 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, Serving, Primary, Rendered> {
         (
             core,
             PrimaryBolt,
-            CleanupOnRunEnd,
+            CleanupOnExit::<RunState>::default(),
             BoltServing,
             Mesh2d(self.visual.mesh),
             MeshMaterial2d(self.visual.material),
@@ -335,7 +346,7 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, Serving, Extra, Rendered> {
         (
             core,
             ExtraBolt,
-            CleanupOnNodeExit,
+            CleanupOnExit::<NodeState>::default(),
             BoltServing,
             Mesh2d(self.visual.mesh),
             MeshMaterial2d(self.visual.material),
@@ -384,7 +395,7 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, HasVelocity, Primary, Rendered
         (
             core,
             PrimaryBolt,
-            CleanupOnRunEnd,
+            CleanupOnExit::<RunState>::default(),
             Mesh2d(self.visual.mesh),
             MeshMaterial2d(self.visual.material),
             GameDrawLayer::Bolt,
@@ -432,7 +443,7 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, HasVelocity, Extra, Rendered> 
         (
             core,
             ExtraBolt,
-            CleanupOnNodeExit,
+            CleanupOnExit::<NodeState>::default(),
             Mesh2d(self.visual.mesh),
             MeshMaterial2d(self.visual.material),
             GameDrawLayer::Bolt,

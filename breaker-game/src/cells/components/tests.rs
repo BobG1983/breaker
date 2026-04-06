@@ -192,15 +192,19 @@ fn cell_require_inserts_spatial2d() {
 }
 
 #[test]
-fn cell_require_inserts_cleanup_on_node_exit() {
-    use crate::shared::CleanupOnNodeExit;
+fn cell_require_inserts_cleanup_on_exit_node_state() {
+    use rantzsoft_lifecycle::CleanupOnExit;
+
+    use crate::state::types::NodeState;
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
     let entity = app.world_mut().spawn(Cell).id();
     app.update();
     assert!(
-        app.world().get::<CleanupOnNodeExit>(entity).is_some(),
-        "Cell should auto-insert CleanupOnNodeExit via #[require]"
+        app.world()
+            .get::<CleanupOnExit<NodeState>>(entity)
+            .is_some(),
+        "Cell should auto-insert CleanupOnExit<NodeState> via #[require]"
     );
 }
 

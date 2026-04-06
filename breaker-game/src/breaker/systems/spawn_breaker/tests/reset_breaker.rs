@@ -2,6 +2,7 @@
 //! and full state restoration.
 
 use bevy::prelude::*;
+use rantzsoft_lifecycle::CleanupOnExit;
 use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, Velocity2D};
 
 use crate::{
@@ -10,8 +11,8 @@ use crate::{
         definition::BreakerDefinition,
         messages::BreakerSpawned,
     },
-    shared::{CleanupOnRunEnd, PlayfieldConfig},
-    state::run::node::systems::reset_breaker,
+    shared::PlayfieldConfig,
+    state::{run::node::systems::reset_breaker, types::RunState},
 };
 
 #[test]
@@ -45,7 +46,7 @@ fn reset_breaker_writes_position2d() {
             cooldown: 0.2,
             last_hit_bolt: None,
         },
-        CleanupOnRunEnd,
+        CleanupOnExit::<RunState>::default(),
     ));
 
     app.add_systems(Update, reset_breaker);
@@ -106,7 +107,7 @@ fn reset_breaker_previous_position_matches_position() {
             cooldown: 0.2,
             last_hit_bolt: None,
         },
-        CleanupOnRunEnd,
+        CleanupOnExit::<RunState>::default(),
     ));
 
     app.add_systems(Update, reset_breaker);
@@ -160,7 +161,7 @@ fn reset_breaker_restores_state() {
             cooldown: 0.2,
             last_hit_bolt: None,
         },
-        CleanupOnRunEnd,
+        CleanupOnExit::<RunState>::default(),
     ));
 
     app.add_systems(Update, reset_breaker);

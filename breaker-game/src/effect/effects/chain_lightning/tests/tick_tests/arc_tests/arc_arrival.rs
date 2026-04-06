@@ -3,9 +3,10 @@
 use std::collections::HashSet;
 
 use bevy::prelude::*;
+use rantzsoft_lifecycle::CleanupOnExit;
 
 use super::*;
-use crate::{effect::core::EffectSourceChip, shared::CleanupOnNodeExit};
+use crate::{effect::core::EffectSourceChip, state::types::NodeState};
 
 // -- Behavior 17: tick damages target and updates chain when arc arrives --
 
@@ -41,7 +42,7 @@ fn tick_arc_arrival_damages_target_and_transitions_to_idle() {
                 arc_speed: 200.0,
             },
             EffectSourceChip(None),
-            CleanupOnNodeExit,
+            CleanupOnExit::<NodeState>::default(),
         ))
         .id();
 
@@ -122,7 +123,7 @@ fn tick_arc_arrival_at_exact_target_position_triggers_damage() {
             arc_speed: 200.0,
         },
         EffectSourceChip(None),
-        CleanupOnNodeExit,
+        CleanupOnExit::<NodeState>::default(),
     ));
 
     tick(&mut app);
@@ -166,7 +167,7 @@ fn tick_arc_arrival_updates_source_to_target_global_position() {
                 arc_speed: 200.0,
             },
             EffectSourceChip(None),
-            CleanupOnNodeExit,
+            CleanupOnExit::<NodeState>::default(),
         ))
         .id();
 
@@ -216,7 +217,7 @@ fn tick_arc_arrival_target_despawned_chain_transitions_to_idle() {
                 arc_speed: 200.0,
             },
             EffectSourceChip(None),
-            CleanupOnNodeExit,
+            CleanupOnExit::<NodeState>::default(),
         ))
         .id();
 

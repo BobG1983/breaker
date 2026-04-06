@@ -78,28 +78,34 @@ fn bolt_explicit_components_still_work() {
 }
 
 #[test]
-fn bolt_does_not_insert_cleanup_on_run_end() {
-    use crate::shared::CleanupOnRunEnd;
+fn bolt_does_not_insert_cleanup_on_exit_run_state() {
+    use rantzsoft_lifecycle::CleanupOnExit;
+
+    use crate::state::types::RunState;
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
     let entity = app.world_mut().spawn(Bolt).id();
     app.update();
     assert!(
-        app.world().get::<CleanupOnRunEnd>(entity).is_none(),
-        "Bolt should NOT auto-insert CleanupOnRunEnd"
+        app.world().get::<CleanupOnExit<RunState>>(entity).is_none(),
+        "Bolt should NOT auto-insert CleanupOnExit<RunState>"
     );
 }
 
 #[test]
-fn bolt_does_not_insert_cleanup_on_node_exit() {
-    use crate::shared::CleanupOnNodeExit;
+fn bolt_does_not_insert_cleanup_on_exit_node_state() {
+    use rantzsoft_lifecycle::CleanupOnExit;
+
+    use crate::state::types::NodeState;
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
     let entity = app.world_mut().spawn(Bolt).id();
     app.update();
     assert!(
-        app.world().get::<CleanupOnNodeExit>(entity).is_none(),
-        "Bolt should NOT auto-insert CleanupOnNodeExit"
+        app.world()
+            .get::<CleanupOnExit<NodeState>>(entity)
+            .is_none(),
+        "Bolt should NOT auto-insert CleanupOnExit<NodeState>"
     );
 }
 

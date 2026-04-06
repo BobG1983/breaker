@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use rantzsoft_lifecycle::CleanupOnExit;
 use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{
     BaseSpeed, InterpolateTransform2D, MaxSpeed, MinAngleHorizontal, MinAngleVertical, MinSpeed,
@@ -10,10 +11,8 @@ use crate::{
         components::{Bolt, BoltRadius, BoltServing, BoltSpawnOffsetY, ExtraBolt, PrimaryBolt},
         definition::BoltDefinition,
     },
-    shared::{
-        BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, CleanupOnNodeExit, CleanupOnRunEnd, GameDrawLayer,
-        WALL_LAYER,
-    },
+    shared::{BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, GameDrawLayer, WALL_LAYER},
+    state::types::{NodeState, RunState},
 };
 
 /// Creates a `BoltDefinition` matching the values previously provided by
@@ -252,8 +251,8 @@ fn build_primary_serving_has_cleanup_on_run_end() {
     let entity = world.spawn(bundle).id();
 
     assert!(
-        world.get::<CleanupOnRunEnd>(entity).is_some(),
-        "Primary bolt should have CleanupOnRunEnd"
+        world.get::<CleanupOnExit<RunState>>(entity).is_some(),
+        "Primary bolt should have CleanupOnExit<RunState>"
     );
 }
 
@@ -365,12 +364,12 @@ fn build_extra_velocity_has_cleanup_on_node_exit() {
     let entity = world.spawn(bundle).id();
 
     assert!(
-        world.get::<CleanupOnNodeExit>(entity).is_some(),
-        "Extra bolt should have CleanupOnNodeExit"
+        world.get::<CleanupOnExit<NodeState>>(entity).is_some(),
+        "Extra bolt should have CleanupOnExit<NodeState>"
     );
     assert!(
-        world.get::<CleanupOnRunEnd>(entity).is_none(),
-        "Extra bolt should NOT have CleanupOnRunEnd"
+        world.get::<CleanupOnExit<RunState>>(entity).is_none(),
+        "Extra bolt should NOT have CleanupOnExit<RunState>"
     );
 }
 
@@ -448,7 +447,7 @@ fn serving_bolt_always_zero_velocity() {
     );
 }
 
-// Behavior 22: Primary bolt gets CleanupOnRunEnd, not CleanupOnNodeExit
+// Behavior 22: Primary bolt gets CleanupOnExit<RunState>, not CleanupOnExit<NodeState>
 #[test]
 fn primary_bolt_has_cleanup_on_run_end_not_node_exit() {
     let mut world = World::new();
@@ -462,16 +461,16 @@ fn primary_bolt_has_cleanup_on_run_end_not_node_exit() {
     let entity = world.spawn(bundle).id();
 
     assert!(
-        world.get::<CleanupOnRunEnd>(entity).is_some(),
-        "Primary bolt should have CleanupOnRunEnd"
+        world.get::<CleanupOnExit<RunState>>(entity).is_some(),
+        "Primary bolt should have CleanupOnExit<RunState>"
     );
     assert!(
-        world.get::<CleanupOnNodeExit>(entity).is_none(),
-        "Primary bolt should NOT have CleanupOnNodeExit"
+        world.get::<CleanupOnExit<NodeState>>(entity).is_none(),
+        "Primary bolt should NOT have CleanupOnExit<NodeState>"
     );
 }
 
-// Behavior 23: Extra bolt gets CleanupOnNodeExit, not CleanupOnRunEnd
+// Behavior 23: Extra bolt gets CleanupOnExit<NodeState>, not CleanupOnExit<RunState>
 #[test]
 fn extra_bolt_has_cleanup_on_node_exit_not_run_end() {
     let mut world = World::new();
@@ -485,12 +484,12 @@ fn extra_bolt_has_cleanup_on_node_exit_not_run_end() {
     let entity = world.spawn(bundle).id();
 
     assert!(
-        world.get::<CleanupOnNodeExit>(entity).is_some(),
-        "Extra bolt should have CleanupOnNodeExit"
+        world.get::<CleanupOnExit<NodeState>>(entity).is_some(),
+        "Extra bolt should have CleanupOnExit<NodeState>"
     );
     assert!(
-        world.get::<CleanupOnRunEnd>(entity).is_none(),
-        "Extra bolt should NOT have CleanupOnRunEnd"
+        world.get::<CleanupOnExit<RunState>>(entity).is_none(),
+        "Extra bolt should NOT have CleanupOnExit<RunState>"
     );
 }
 

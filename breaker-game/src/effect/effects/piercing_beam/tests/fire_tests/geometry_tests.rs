@@ -295,7 +295,7 @@ fn fire_with_no_transform_defaults_origin_to_zero() {
     );
 }
 
-// ── Behavior 16 extra: request entity has CleanupOnNodeExit ──
+// ── Behavior 16 extra: request entity has CleanupOnExit<NodeState> ──
 
 #[test]
 fn fire_request_entity_has_cleanup_on_node_exit() {
@@ -311,8 +311,10 @@ fn fire_request_entity_has_cleanup_on_node_exit() {
     let request_entity = query.iter(&world).next().expect("request should exist");
 
     assert!(
-        world.get::<CleanupOnNodeExit>(request_entity).is_some(),
-        "PiercingBeamRequest entity should have CleanupOnNodeExit"
+        world
+            .get::<CleanupOnExit<NodeState>>(request_entity)
+            .is_some(),
+        "PiercingBeamRequest entity should have CleanupOnExit<NodeState>"
     );
 }
 

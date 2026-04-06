@@ -3,9 +3,10 @@
 use std::collections::HashSet;
 
 use bevy::prelude::*;
+use rantzsoft_lifecycle::CleanupOnExit;
 
 use super::*;
-use crate::{effect::core::EffectSourceChip, shared::CleanupOnNodeExit};
+use crate::{effect::core::EffectSourceChip, state::types::NodeState};
 
 // -- Behavior 20: DamageCell from arc arrival includes source_chip --
 
@@ -35,7 +36,7 @@ fn tick_arc_arrival_damage_cell_includes_source_chip() {
             arc_speed: 200.0,
         },
         EffectSourceChip(Some("zapper".to_string())),
-        CleanupOnNodeExit,
+        CleanupOnExit::<NodeState>::default(),
     ));
 
     tick(&mut app);
@@ -75,7 +76,7 @@ fn tick_arc_arrival_damage_cell_source_chip_none_when_effect_source_chip_none() 
             arc_speed: 200.0,
         },
         EffectSourceChip(None),
-        CleanupOnNodeExit,
+        CleanupOnExit::<NodeState>::default(),
     ));
 
     tick(&mut app);
@@ -116,7 +117,7 @@ fn tick_arc_arrival_no_effect_source_chip_component_defaults_to_none() {
             range: 25.0,
             arc_speed: 200.0,
         },
-        CleanupOnNodeExit,
+        CleanupOnExit::<NodeState>::default(),
     ));
 
     tick(&mut app);

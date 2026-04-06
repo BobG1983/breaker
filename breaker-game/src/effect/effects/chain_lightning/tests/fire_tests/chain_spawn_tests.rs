@@ -1,11 +1,11 @@
 use bevy::prelude::*;
+use rantzsoft_lifecycle::CleanupOnExit;
 use rantzsoft_spatial2d::components::Position2D;
 
 use super::super::helpers::*;
 use crate::{
-    bolt::resources::DEFAULT_BOLT_BASE_DAMAGE,
-    effect::core::EffectSourceChip,
-    shared::{CleanupOnNodeExit, GameRng},
+    bolt::resources::DEFAULT_BOLT_BASE_DAMAGE, effect::core::EffectSourceChip, shared::GameRng,
+    state::types::NodeState,
 };
 
 // ── Behavior 2: fire() spawns a ChainLightningChain entity with correct initial state ──
@@ -99,8 +99,10 @@ fn fire_chain_entity_has_cleanup_on_node_exit() {
         .expect("chain entity should exist");
 
     assert!(
-        app.world().get::<CleanupOnNodeExit>(chain_entity).is_some(),
-        "ChainLightningChain entity should have CleanupOnNodeExit"
+        app.world()
+            .get::<CleanupOnExit<NodeState>>(chain_entity)
+            .is_some(),
+        "ChainLightningChain entity should have CleanupOnExit<NodeState>"
     );
 }
 

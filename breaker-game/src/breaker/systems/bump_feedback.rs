@@ -1,6 +1,7 @@
 //! Visual text feedback for bump grades.
 
 use bevy::prelude::*;
+use rantzsoft_lifecycle::CleanupOnExit;
 
 use crate::{
     breaker::{
@@ -8,7 +9,7 @@ use crate::{
         messages::{BumpGrade, BumpPerformed, BumpWhiffed},
     },
     fx::FadeOut,
-    shared::CleanupOnNodeExit,
+    state::types::NodeState,
 };
 
 /// Fade duration for bump grade text (seconds).
@@ -46,7 +47,7 @@ pub fn spawn_bump_grade_text(
                 timer: FADE_DURATION,
                 duration: FADE_DURATION,
             },
-            CleanupOnNodeExit,
+            CleanupOnExit::<NodeState>::default(),
         ));
     }
 }
@@ -77,7 +78,7 @@ pub fn spawn_whiff_text(
                 timer: FADE_DURATION,
                 duration: FADE_DURATION,
             },
-            CleanupOnNodeExit,
+            CleanupOnExit::<NodeState>::default(),
         ));
     }
 }

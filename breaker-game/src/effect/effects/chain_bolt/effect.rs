@@ -1,5 +1,6 @@
 use bevy::{ecs::world::CommandQueue, prelude::*};
 use rand::Rng;
+use rantzsoft_lifecycle::CleanupOnExit;
 use rantzsoft_physics2d::constraint::DistanceConstraint;
 use rantzsoft_spatial2d::components::Velocity2D;
 
@@ -8,7 +9,8 @@ use crate::{
         components::{Bolt, BoltDefinitionRef},
         registry::BoltRegistry,
     },
-    shared::{CleanupOnNodeExit, rng::GameRng},
+    shared::rng::GameRng,
+    state::types::NodeState,
 };
 
 /// Marker on a chain bolt entity, pointing to its anchor entity.
@@ -74,7 +76,7 @@ pub(crate) fn fire(entity: Entity, tether_distance: f32, _source_chip: &str, wor
                 entity_b: chain_bolt,
                 max_distance: tether_distance,
             },
-            CleanupOnNodeExit,
+            CleanupOnExit::<NodeState>::default(),
         ))
         .id();
 

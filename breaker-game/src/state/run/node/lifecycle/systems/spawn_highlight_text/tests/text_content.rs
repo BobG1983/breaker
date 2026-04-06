@@ -1,11 +1,12 @@
 use bevy::prelude::*;
+use rantzsoft_lifecycle::CleanupOnExit;
 
 use super::helpers::*;
 use crate::{
     fx::{FadeOut, PunchScale},
-    shared::CleanupOnNodeExit,
-    state::run::{
-        components::HighlightPopup, messages::HighlightTriggered, resources::HighlightKind,
+    state::{
+        run::{components::HighlightPopup, messages::HighlightTriggered, resources::HighlightKind},
+        types::NodeState,
     },
 };
 
@@ -17,7 +18,7 @@ use crate::{
 /// 1. A `Text2d` entity is spawned containing `expected_text`.
 /// 2. The entity has a `TextColor` matching `expected_color`.
 /// 3. The entity has a `FadeOut` component.
-/// 4. The entity has a `CleanupOnNodeExit` component.
+/// 4. The entity has a `CleanupOnExit<NodeState>` component.
 /// 5. The entity has a `HighlightPopup` component.
 /// 6. The entity has a `PunchScale` component.
 fn assert_highlight_spawns_popup(kind: HighlightKind, expected_text: &str, expected_color: Color) {
@@ -55,7 +56,7 @@ fn assert_highlight_spawns_popup(kind: HighlightKind, expected_text: &str, expec
         .query_filtered::<Entity, (
             With<Text2d>,
             With<FadeOut>,
-            With<CleanupOnNodeExit>,
+            With<CleanupOnExit<NodeState>>,
             With<HighlightPopup>,
             With<PunchScale>,
         )>()
@@ -63,7 +64,7 @@ fn assert_highlight_spawns_popup(kind: HighlightKind, expected_text: &str, expec
         .count();
     assert_eq!(
         popup_count, 1,
-        "popup entity should have Text2d, FadeOut, CleanupOnNodeExit, HighlightPopup, and PunchScale"
+        "popup entity should have Text2d, FadeOut, CleanupOnExit<NodeState>, HighlightPopup, and PunchScale"
     );
 }
 

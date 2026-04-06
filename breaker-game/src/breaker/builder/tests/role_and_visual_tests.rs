@@ -1,12 +1,13 @@
 use bevy::prelude::*;
+use rantzsoft_lifecycle::CleanupOnExit;
 
 use super::helpers::test_breaker_definition;
 use crate::{
     breaker::components::{Breaker, ExtraBreaker, PrimaryBreaker},
-    shared::{CleanupOnNodeExit, CleanupOnRunEnd},
+    state::types::{NodeState, RunState},
 };
 
-// ── Behavior 36: .primary() produces PrimaryBreaker + CleanupOnRunEnd ──
+// ── Behavior 36: .primary() produces PrimaryBreaker + CleanupOnExit<RunState> ──
 
 #[test]
 fn primary_produces_primary_breaker_and_cleanup_on_run_end() {
@@ -24,20 +25,20 @@ fn primary_produces_primary_breaker_and_cleanup_on_run_end() {
         "should have PrimaryBreaker"
     );
     assert!(
-        world.get::<CleanupOnRunEnd>(entity).is_some(),
-        "should have CleanupOnRunEnd"
+        world.get::<CleanupOnExit<RunState>>(entity).is_some(),
+        "should have CleanupOnExit<RunState>"
     );
     assert!(
         world.get::<ExtraBreaker>(entity).is_none(),
         "should NOT have ExtraBreaker"
     );
     assert!(
-        world.get::<CleanupOnNodeExit>(entity).is_none(),
-        "should NOT have CleanupOnNodeExit"
+        world.get::<CleanupOnExit<NodeState>>(entity).is_none(),
+        "should NOT have CleanupOnExit<NodeState>"
     );
 }
 
-// ── Behavior 37: .extra() produces ExtraBreaker + CleanupOnNodeExit ──
+// ── Behavior 37: .extra() produces ExtraBreaker + CleanupOnExit<NodeState> ──
 
 #[test]
 fn extra_produces_extra_breaker_and_cleanup_on_node_exit() {
@@ -55,16 +56,16 @@ fn extra_produces_extra_breaker_and_cleanup_on_node_exit() {
         "should have ExtraBreaker"
     );
     assert!(
-        world.get::<CleanupOnNodeExit>(entity).is_some(),
-        "should have CleanupOnNodeExit"
+        world.get::<CleanupOnExit<NodeState>>(entity).is_some(),
+        "should have CleanupOnExit<NodeState>"
     );
     assert!(
         world.get::<PrimaryBreaker>(entity).is_none(),
         "should NOT have PrimaryBreaker"
     );
     assert!(
-        world.get::<CleanupOnRunEnd>(entity).is_none(),
-        "should NOT have CleanupOnRunEnd"
+        world.get::<CleanupOnExit<RunState>>(entity).is_none(),
+        "should NOT have CleanupOnExit<RunState>"
     );
 }
 

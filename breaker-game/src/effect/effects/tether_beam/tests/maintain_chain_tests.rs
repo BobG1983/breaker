@@ -210,9 +210,11 @@ fn maintain_tether_chain_creates_beams_with_correct_properties() {
     tick(&mut app);
 
     // Each new beam should have the correct properties from the resource
-    let mut beam_query =
-        app.world_mut()
-            .query::<(&TetherBeamComponent, &EffectSourceChip, &CleanupOnNodeExit)>();
+    let mut beam_query = app.world_mut().query::<(
+        &TetherBeamComponent,
+        &EffectSourceChip,
+        &CleanupOnExit<NodeState>,
+    )>();
     let beams: Vec<_> = beam_query.iter(app.world()).collect();
     assert_eq!(
         beams.len(),

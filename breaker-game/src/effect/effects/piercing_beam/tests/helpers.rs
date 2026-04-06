@@ -1,6 +1,7 @@
 pub(super) use std::collections::HashSet;
 
 pub(super) use bevy::prelude::*;
+pub(super) use rantzsoft_lifecycle::CleanupOnExit;
 pub(super) use rantzsoft_physics2d::{
     aabb::Aabb2D, collision_layers::CollisionLayers, plugin::RantzPhysics2dPlugin,
 };
@@ -14,7 +15,8 @@ pub(super) use crate::{
     effect::effects::piercing_beam::{
         PiercingBeamRequest, fire, process_piercing_beam, register, reverse,
     },
-    shared::{BOLT_LAYER, CELL_LAYER, CleanupOnNodeExit, PlayfieldConfig, WALL_LAYER},
+    shared::{BOLT_LAYER, CELL_LAYER, PlayfieldConfig, WALL_LAYER},
+    state::types::NodeState,
 };
 
 // ── Test helpers ────────────────────────────────────────────────

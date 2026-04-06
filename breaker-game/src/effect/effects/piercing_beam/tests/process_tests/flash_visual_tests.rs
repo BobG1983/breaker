@@ -65,8 +65,8 @@ fn process_piercing_beam_spawns_flash_visual_entity_with_required_components() {
         "flash entity should have MeshMaterial2d<ColorMaterial>"
     );
     assert!(
-        app.world().get::<CleanupOnNodeExit>(flash).is_some(),
-        "flash entity should have CleanupOnNodeExit"
+        app.world().get::<CleanupOnExit<NodeState>>(flash).is_some(),
+        "flash entity should have CleanupOnExit<NodeState>"
     );
     assert!(
         matches!(

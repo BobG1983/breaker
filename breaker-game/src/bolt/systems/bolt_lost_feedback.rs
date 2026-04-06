@@ -1,8 +1,9 @@
 //! Visual feedback when the bolt is lost — spawns a "BOLT LOST" text that fades out.
 
 use bevy::prelude::*;
+use rantzsoft_lifecycle::CleanupOnExit;
 
-use crate::{bolt::messages::BoltLost, fx::FadeOut, shared::CleanupOnNodeExit};
+use crate::{bolt::messages::BoltLost, fx::FadeOut, state::types::NodeState};
 
 /// Duration of the "BOLT LOST" text fade in seconds.
 const FADE_DURATION: f32 = 1.5;
@@ -19,7 +20,7 @@ pub fn spawn_bolt_lost_text(mut reader: MessageReader<BoltLost>, mut commands: C
                 timer: FADE_DURATION,
                 duration: FADE_DURATION,
             },
-            CleanupOnNodeExit,
+            CleanupOnExit::<NodeState>::default(),
         ));
     }
 }

@@ -105,7 +105,7 @@ fn tick_tether_beam_uses_snapshotted_base_damage_from_beam_component() {
             effective_damage_multiplier: 1.5,
             base_damage: 20.0,
         },
-        CleanupOnNodeExit,
+        CleanupOnExit::<NodeState>::default(),
     ));
     app.world_mut().entity_mut(bolt_a).insert(TetherBoltMarker);
     app.world_mut().entity_mut(bolt_b).insert(TetherBoltMarker);
@@ -161,7 +161,7 @@ fn tick_tether_beam_base_damage_10_matches_old_behavior() {
             effective_damage_multiplier: 1.0,
             base_damage: 10.0,
         },
-        CleanupOnNodeExit,
+        CleanupOnExit::<NodeState>::default(),
     ));
     app.world_mut().entity_mut(bolt_a).insert(TetherBoltMarker);
     app.world_mut().entity_mut(bolt_b).insert(TetherBoltMarker);

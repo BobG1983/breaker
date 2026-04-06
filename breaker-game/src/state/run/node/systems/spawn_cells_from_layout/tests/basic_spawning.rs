@@ -1,11 +1,15 @@
 use bevy::prelude::*;
+use rantzsoft_lifecycle::CleanupOnExit;
 use rantzsoft_spatial2d::components::Position2D;
 
 use super::{super::system::grid_extent, helpers::*};
 use crate::{
     cells::{components::*, resources::CellConfig},
-    shared::{CleanupOnNodeExit, PlayfieldConfig},
-    state::run::node::{NodeLayout, definition::NodePool, messages::CellsSpawned},
+    shared::PlayfieldConfig,
+    state::{
+        run::node::{NodeLayout, definition::NodePool, messages::CellsSpawned},
+        types::NodeState,
+    },
 };
 
 #[test]
@@ -88,7 +92,7 @@ fn all_cells_have_cleanup_marker() {
     let cell_count = app.world_mut().query::<&Cell>().iter(app.world()).count();
     let marked_count = app
         .world_mut()
-        .query::<(&Cell, &CleanupOnNodeExit)>()
+        .query::<(&Cell, &CleanupOnExit<NodeState>)>()
         .iter(app.world())
         .count();
     assert_eq!(cell_count, marked_count);

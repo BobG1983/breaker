@@ -1,6 +1,7 @@
 //! Tests for bolt spawning behaviors on first node (12-21).
 
 use bevy::prelude::*;
+use rantzsoft_lifecycle::CleanupOnExit;
 use rantzsoft_spatial2d::components::{
     BaseSpeed, MaxSpeed, MinSpeed, Position2D, Scale2D, Velocity2D,
 };
@@ -14,7 +15,7 @@ use crate::{
         registry::BoltRegistry,
     },
     breaker::registry::BreakerRegistry,
-    shared::{CleanupOnNodeExit, CleanupOnRunEnd},
+    state::types::{NodeState, RunState},
 };
 
 // ── Behavior 12: Spawns exactly one bolt entity (first node) ──────────
@@ -97,7 +98,7 @@ fn spawned_bolt_does_not_have_extra_bolt_marker() {
     );
 }
 
-// ── Behavior 14: Spawned bolt has CleanupOnRunEnd marker ──────────────
+// ── Behavior 14: Spawned bolt has CleanupOnExit<RunState> marker ──────────────
 
 #[test]
 fn spawned_bolt_has_cleanup_on_run_end() {
@@ -111,8 +112,8 @@ fn spawned_bolt_has_cleanup_on_run_end() {
         .next()
         .expect("bolt should exist");
     assert!(
-        app.world().get::<CleanupOnRunEnd>(entity).is_some(),
-        "primary bolt should have CleanupOnRunEnd"
+        app.world().get::<CleanupOnExit<RunState>>(entity).is_some(),
+        "primary bolt should have CleanupOnExit<RunState>"
     );
 }
 
@@ -128,8 +129,10 @@ fn spawned_bolt_does_not_have_cleanup_on_node_exit() {
         .next()
         .expect("bolt should exist");
     assert!(
-        app.world().get::<CleanupOnNodeExit>(entity).is_none(),
-        "primary bolt should NOT have CleanupOnNodeExit"
+        app.world()
+            .get::<CleanupOnExit<NodeState>>(entity)
+            .is_none(),
+        "primary bolt should NOT have CleanupOnExit<NodeState>"
     );
 }
 

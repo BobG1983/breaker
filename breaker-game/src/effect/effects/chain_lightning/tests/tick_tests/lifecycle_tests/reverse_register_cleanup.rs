@@ -1,14 +1,15 @@
-//! Tests for `reverse()`, `register()`, `CleanupOnNodeExit`, and chain despawn on no valid targets.
+//! Tests for `reverse()`, `register()`, `CleanupOnExit<NodeState>`, and chain despawn on no valid targets.
 
 use std::collections::HashSet;
 
 use bevy::prelude::*;
+use rantzsoft_lifecycle::CleanupOnExit;
 use rantzsoft_physics2d::plugin::RantzPhysics2dPlugin;
 
 use super::*;
 use crate::{
     cells::messages::DamageCell,
-    shared::{CleanupOnNodeExit, GameRng},
+    shared::GameRng,
     state::types::{AppState, GameState, NodeState, RunState},
 };
 
@@ -111,7 +112,7 @@ fn register_wires_tick_chain_lightning_system() {
     );
 }
 
-// -- Behavior 27: ChainLightningArc has CleanupOnNodeExit --
+// -- Behavior 27: ChainLightningArc has CleanupOnExit<NodeState> --
 
 #[test]
 fn arc_entity_has_cleanup_on_node_exit() {
@@ -146,8 +147,10 @@ fn arc_entity_has_cleanup_on_node_exit() {
         .query_filtered::<Entity, With<ChainLightningArc>>();
     if let Some(arc_entity) = arc_query.iter(app.world()).next() {
         assert!(
-            app.world().get::<CleanupOnNodeExit>(arc_entity).is_some(),
-            "ChainLightningArc entity should have CleanupOnNodeExit"
+            app.world()
+                .get::<CleanupOnExit<NodeState>>(arc_entity)
+                .is_some(),
+            "ChainLightningArc entity should have CleanupOnExit<NodeState>"
         );
     } else {
         panic!("expected an arc entity to be spawned");

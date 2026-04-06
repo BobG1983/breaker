@@ -72,8 +72,8 @@ fn fire_spawns_two_tether_bolts_with_full_physics_components() {
         assert!((world.get::<MaxSpeed>(*bolt).unwrap().0 - 800.0).abs() < f32::EPSILON);
         assert!((world.get::<BoltRadius>(*bolt).unwrap().0 - 8.0).abs() < f32::EPSILON);
 
-        // CleanupOnNodeExit
-        assert!(world.get::<CleanupOnNodeExit>(*bolt).is_some());
+        // CleanupOnExit<NodeState>
+        assert!(world.get::<CleanupOnExit<NodeState>>(*bolt).is_some());
 
         // Visual components: rendered tether bolts have Mesh2d, MeshMaterial2d, and GameDrawLayer::Bolt
         assert!(
@@ -235,12 +235,12 @@ fn fire_spawns_bolts_with_extra_bolt_and_cleanup_on_node_exit() {
             "tether bolt should have ExtraBolt"
         );
         assert!(
-            world.get::<CleanupOnNodeExit>(bolt).is_some(),
-            "tether bolt should have CleanupOnNodeExit"
+            world.get::<CleanupOnExit<NodeState>>(bolt).is_some(),
+            "tether bolt should have CleanupOnExit<NodeState>"
         );
         assert!(
-            world.get::<CleanupOnRunEnd>(bolt).is_none(),
-            "tether bolt should NOT have CleanupOnRunEnd"
+            world.get::<CleanupOnExit<RunState>>(bolt).is_none(),
+            "tether bolt should NOT have CleanupOnExit<RunState>"
         );
     }
 }
