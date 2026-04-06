@@ -1,0 +1,27 @@
+// MIGRATED: new effect system syntax
+// Surge: bolt gets temporary speed boost on perfect bump
+// Route(Bolt, ...) → effect stamped on bolt, This = bolt
+// PerfectBumped is local (fires on both bolt and breaker), bolt is participant
+// Until(TimeExpires(...)) fires SpeedBoost immediately, reverses when timer expires, self-removes
+(
+    name: "Surge",
+    max_taken: 3,
+    common: (
+        prefix: "Basic",
+        effects: [
+            Route(Bolt, When(PerfectBumped, Until(TimeExpires(1.5), Fire(SpeedBoost(multiplier: 1.5))))),
+        ],
+    ),
+    uncommon: (
+        prefix: "Strong",
+        effects: [
+            Route(Bolt, When(PerfectBumped, Until(TimeExpires(1.5), Fire(SpeedBoost(multiplier: 1.75))))),
+        ],
+    ),
+    rare: (
+        prefix: "Extreme",
+        effects: [
+            Route(Bolt, When(PerfectBumped, Until(TimeExpires(1.5), Fire(SpeedBoost(multiplier: 2.0))))),
+        ],
+    ),
+)

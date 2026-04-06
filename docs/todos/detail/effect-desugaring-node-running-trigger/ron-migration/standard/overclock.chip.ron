@@ -1,0 +1,31 @@
+// MIGRATED: new effect system syntax
+// Overclock: temporary speed + damage boost on perfect bump
+// Route(Bolt, ...) → stamped on bolt, This = bolt
+// PerfectBumped is local (fires on bolt).
+// Until(TimeExpires(X)) → timed reversal. SpeedBoost and DamageBoost are both reversible.
+// Each Until can only hold one Fire, so two separate entries per rarity.
+(
+    name: "Overclock",
+    max_taken: 2,
+    common: (
+        prefix: "Basic",
+        effects: [
+            Route(Bolt, When(PerfectBumped, Until(TimeExpires(3.0), Fire(SpeedBoost(multiplier: 1.2))))),
+            Route(Bolt, When(PerfectBumped, Until(TimeExpires(3.0), Fire(DamageBoost(1.15))))),
+        ],
+    ),
+    uncommon: (
+        prefix: "Charged",
+        effects: [
+            Route(Bolt, When(PerfectBumped, Until(TimeExpires(4.0), Fire(SpeedBoost(multiplier: 1.3))))),
+            Route(Bolt, When(PerfectBumped, Until(TimeExpires(4.0), Fire(DamageBoost(1.25))))),
+        ],
+    ),
+    rare: (
+        prefix: "Supercharged",
+        effects: [
+            Route(Bolt, When(PerfectBumped, Until(TimeExpires(5.0), Fire(SpeedBoost(multiplier: 1.4))))),
+            Route(Bolt, When(PerfectBumped, Until(TimeExpires(5.0), Fire(DamageBoost(1.4))))),
+        ],
+    ),
+)

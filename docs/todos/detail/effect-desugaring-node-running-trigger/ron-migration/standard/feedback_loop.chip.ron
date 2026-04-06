@@ -1,0 +1,16 @@
+// MIGRATED: new effect system syntax
+// Feedback Loop: perfect bump → hit cell → kill cell → temporary speed boost
+// Route(Bolt, ...) → stamped on bolt, This = bolt
+// PerfectBumped is local (fires on bolt). Impacted(Cell) is local.
+// CellDestroyed on a bolt → Killed(Cell) ("I killed a cell").
+// Until(TimeExpires(3.0)) → timed reversal. SpeedBoost is reversible.
+(
+    name: "Feedback Loop",
+    max_taken: 1,
+    legendary: (
+        prefix: "",
+        effects: [
+            Route(Bolt, When(PerfectBumped, When(Impacted(Cell), When(Killed(Cell), Until(TimeExpires(3.0), Fire(SpeedBoost(multiplier: 1.5))))))),
+        ],
+    ),
+)

@@ -1,0 +1,13 @@
+// MIGRATED: new effect system syntax
+// Chain Reaction: when a bolt kills two cells in sequence, spawn bolts
+// Both triggers are local Killed(Cell) — bolt must directly kill both cells.
+(
+    name: "Chain Reaction",
+    max_taken: 1,
+    legendary: (
+        prefix: "",
+        effects: [
+            Route(Bolt, When(Killed(Cell), When(Killed(Cell), Fire(SpawnBolts())))),
+        ],
+    ),
+)

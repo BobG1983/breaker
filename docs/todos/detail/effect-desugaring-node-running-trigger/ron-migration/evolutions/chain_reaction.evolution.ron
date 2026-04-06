@@ -1,0 +1,16 @@
+// MIGRATED: new effect system syntax
+// Shock Chain: bolt shockwaves when it kills a cell
+// Route(Bolt, ...) → effect stamped on bolt, This = bolt
+// CellDestroyed on bolt → Killed(Cell): "I killed a cell" (local, fires on killer)
+(
+    name: "Shock Chain",
+    description: "Destroyed cells trigger recursive shockwaves — each kill spawns another wave",
+    effects: [
+        Route(Bolt, When(Killed(Cell), Fire(Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 400.0)))),
+    ],
+    ingredients: [
+        (chip_name: "Chain Reaction", stacks_required: 1),
+        (chip_name: "Aftershock", stacks_required: 2),
+        (chip_name: "Cascade", stacks_required: 2),
+    ],
+)

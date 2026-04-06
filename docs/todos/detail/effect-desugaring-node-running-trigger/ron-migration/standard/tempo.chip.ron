@@ -1,0 +1,16 @@
+// MIGRATED: new effect system syntax
+// Tempo: all bolts gain stacking speed boost on bump, resets on whiff
+// AllBolts → ActiveBolts (preserve original snapshot-at-stamp-time semantics)
+// Bumped is local (fires on both bolt and breaker), bolt is participant
+// BumpWhiff → BumpWhiffOccurred (global trigger)
+// Until fires SpeedBoost immediately, reverses when BumpWhiffOccurred fires, self-removes
+(
+    name: "Tempo",
+    max_taken: 1,
+    legendary: (
+        prefix: "",
+        effects: [
+            Route(ActiveBolts, When(Bumped, Until(BumpWhiffOccurred, Fire(SpeedBoost(multiplier: 1.2))))),
+        ],
+    ),
+)

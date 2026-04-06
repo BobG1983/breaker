@@ -1,0 +1,17 @@
+// MIGRATED: new effect system syntax
+// Nova Lance: perfect bump then cell impact fires piercing beam
+// Route(Bolt, ...) → effect stamped on bolt, This = bolt
+// PerfectBumped is local: fires on both bolt and breaker. Bolt is This.
+// Impacted(Cell) is local: fires on both entities. Bolt is Impactor, Cell is Target.
+// Nested When chain: PerfectBumped → Impacted(Cell) → Fire
+(
+    name: "Nova Lance",
+    description: "Perfect bumps unleash a devastating piercing beam through all cells in the bolt's path",
+    effects: [
+        Route(Bolt, When(PerfectBumped, When(Impacted(Cell), Fire(PiercingBeam(damage_mult: 2.5, width: 40.0))))),
+    ],
+    ingredients: [
+        (chip_name: "Impact", stacks_required: 2),
+        (chip_name: "Bolt Speed", stacks_required: 3),
+    ],
+)

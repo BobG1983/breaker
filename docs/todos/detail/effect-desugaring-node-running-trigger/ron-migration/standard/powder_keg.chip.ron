@@ -1,0 +1,19 @@
+// MIGRATED: new effect system syntax
+// Powder Keg: when bolt hits a cell, stamp "when you die, explode" on that cell
+// This is the Transfer pattern:
+//   On(Bolt) → When(Impacted(Cell)) → On(Cell) → When(Died) → Do(Explode)
+// becomes:
+//   Route(Bolt, When(Impacted(Cell)) → On(ImpactTarget::Impactee) → Transfer(When(Died) → Fire(Explode)))
+// After transfer, the cell owns the effect. This = the cell. Died fires on victim (the cell).
+(
+    name: "Powder Keg",
+    max_taken: 1,
+    legendary: (
+        prefix: "",
+        effects: [
+            Route(Bolt, When(Impacted(Cell), On(ImpactTarget::Impactee, Transfer(
+                When(Died, Fire(Explode(range: 48.0, damage: 10.0)))
+            )))),
+        ],
+    ),
+)

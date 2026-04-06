@@ -1,0 +1,30 @@
+// MIGRATED: new effect system syntax
+// Splinter: bolt spawns short-lived bolts and gets size boost on cell kill
+// Route(Bolt, ...) → effect stamped on bolt, This = bolt
+// CellDestroyed → Killed(Cell) because this is on a bolt (the killer)
+// SpawnBolts and SizeBoost fire from the bolt (This).
+(
+    name: "Splinter",
+    max_taken: 2,
+    common: (
+        prefix: "Minor",
+        effects: [
+            Route(Bolt, When(Killed(Cell), Fire(SpawnBolts(count: 1, lifespan: Some(2.0), inherit: false)))),
+            Route(Bolt, When(Killed(Cell), Fire(SizeBoost(0.5)))),
+        ],
+    ),
+    uncommon: (
+        prefix: "Spreading",
+        effects: [
+            Route(Bolt, When(Killed(Cell), Fire(SpawnBolts(count: 2, lifespan: Some(2.5), inherit: false)))),
+            Route(Bolt, When(Killed(Cell), Fire(SizeBoost(0.55)))),
+        ],
+    ),
+    rare: (
+        prefix: "Devastating",
+        effects: [
+            Route(Bolt, When(Killed(Cell), Fire(SpawnBolts(count: 3, lifespan: Some(3.0), inherit: false)))),
+            Route(Bolt, When(Killed(Cell), Fire(SizeBoost(0.6)))),
+        ],
+    ),
+)

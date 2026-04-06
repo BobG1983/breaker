@@ -1,0 +1,26 @@
+// MIGRATED: new effect system syntax
+// Bump Force: breaker bump force boost (passive)
+// Route(Breaker, ...) → immediate passive on breaker
+// This = breaker
+(
+    name: "Bump Force",
+    max_taken: 3,
+    common: (
+        prefix: "Firm",
+        effects: [
+            Route(Breaker, Fire(BumpForce(1.1))),
+        ],
+    ),
+    uncommon: (
+        prefix: "Strong",
+        effects: [
+            Route(Breaker, Fire(BumpForce(1.2))),
+        ],
+    ),
+    rare: (
+        prefix: "Crushing",
+        effects: [
+            Route(Breaker, Fire(BumpForce(1.35))),
+        ],
+    ),
+)

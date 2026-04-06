@@ -1,0 +1,26 @@
+// MIGRATED: new effect system syntax
+// Bolt Size: bolt gets larger (passive)
+// Route(Bolt, ...) → immediate passive on bolt
+// This = bolt
+(
+    name: "Bolt Size",
+    max_taken: 3,
+    common: (
+        prefix: "Broad",
+        effects: [
+            Route(Bolt, Fire(SizeBoost(1.15))),
+        ],
+    ),
+    uncommon: (
+        prefix: "Expanded",
+        effects: [
+            Route(Bolt, Fire(SizeBoost(1.25))),
+        ],
+    ),
+    rare: (
+        prefix: "Massive",
+        effects: [
+            Route(Bolt, Fire(SizeBoost(1.4))),
+        ],
+    ),
+)

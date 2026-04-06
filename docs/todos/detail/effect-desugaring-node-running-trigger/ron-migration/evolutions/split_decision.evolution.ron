@@ -1,0 +1,15 @@
+// MIGRATED: new effect system syntax
+// Split Decision: killing cells spawns permanent bolts
+// Route(Bolt, ...) → effect stamped on bolt, This = bolt
+// CellDestroyed on bolt → Killed(Cell): "I killed a cell" (local, fires on killer)
+(
+    name: "Split Decision",
+    description: "Destroyed cells spawn permanent bolts that inherit the parent's effects",
+    effects: [
+        Route(Bolt, When(Killed(Cell), Fire(SpawnBolts(count: 2, inherit: true)))),
+    ],
+    ingredients: [
+        (chip_name: "Splinter", stacks_required: 2),
+        (chip_name: "Piercing Shot", stacks_required: 2),
+    ],
+)

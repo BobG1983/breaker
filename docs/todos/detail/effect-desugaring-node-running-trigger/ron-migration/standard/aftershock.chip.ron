@@ -1,0 +1,27 @@
+// MIGRATED: new effect system syntax
+// Aftershock: bolt shockwaves on wall impact
+// Route(Bolt, ...) → effect stamped on bolt, This = bolt
+// Impacted(Wall) is local: fires on both entities. Bolt is Impactor, Wall is Target.
+// Shockwave fires from the bolt (This).
+(
+    name: "Aftershock",
+    max_taken: 3,
+    common: (
+        prefix: "Minor",
+        effects: [
+            Route(Bolt, When(Impacted(Wall), Fire(Shockwave(base_range: 16.0, range_per_level: 4.0, stacks: 1, speed: 400.0)))),
+        ],
+    ),
+    uncommon: (
+        prefix: "Rumbling",
+        effects: [
+            Route(Bolt, When(Impacted(Wall), Fire(Shockwave(base_range: 24.0, range_per_level: 6.0, stacks: 1, speed: 400.0)))),
+        ],
+    ),
+    rare: (
+        prefix: "Thundering",
+        effects: [
+            Route(Bolt, When(Impacted(Wall), Fire(Shockwave(base_range: 32.0, range_per_level: 10.0, stacks: 1, speed: 400.0)))),
+        ],
+    ),
+)

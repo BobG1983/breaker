@@ -1,0 +1,24 @@
+// MIGRATED: new effect system syntax
+// Entropy Engine: killing cells fires escalating random effects
+// Route(Bolt, ...) → effect stamped on bolt, This = bolt
+// CellDestroyed on bolt → Killed(Cell): "I killed a cell" (local, fires on killer)
+// Do() inside pool → Fire()
+(
+    name: "Entropy Engine",
+    description: "Destroying cells fires escalating random effects on the primary bolt",
+    effects: [
+        Route(Bolt, When(Killed(Cell), Fire(EntropyEngine(
+            max_effects: 3,
+            pool: [
+                (0.3, Fire(SpawnBolts())),
+                (0.25, Fire(Shockwave(base_range: 48.0, range_per_level: 0.0, stacks: 1, speed: 400.0))),
+                (0.25, Fire(ChainBolt(tether_distance: 120.0))),
+                (0.20, Fire(SpeedBoost(multiplier: 1.3))),
+            ],
+        )))),
+    ],
+    ingredients: [
+        (chip_name: "Cascade", stacks_required: 2),
+        (chip_name: "Flux", stacks_required: 2),
+    ],
+)

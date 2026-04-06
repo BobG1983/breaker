@@ -1,0 +1,12 @@
+// MIGRATED: new effect system syntax
+/* @[brickbreaker::breaker::definition::BreakerDefinition] */
+(
+    name: "Chrono",
+    life_pool: None,
+    effects: [
+        Route(Breaker, When(BoltLostOccurred, Fire(TimePenalty(seconds: 5.0)))),
+        Route(EveryBolt, When(PerfectBumped, Fire(SpeedBoost(multiplier: 1.5)))),
+        Route(EveryBolt, When(EarlyBumped, Fire(SpeedBoost(multiplier: 1.1)))),
+        Route(EveryBolt, When(LateBumped, Fire(SpeedBoost(multiplier: 1.1)))),
+    ],
+)
