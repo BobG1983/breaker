@@ -1,7 +1,7 @@
-use bevy::{math::curve::easing::EaseFunction, prelude::*};
+use bevy::prelude::*;
 
 use super::{super::core::*, helpers::test_breaker_definition};
-use crate::breaker::components::Breaker;
+use crate::breaker::{components::Breaker, definition::BreakerDefinition};
 
 // ── Behavior 1: Breaker::builder() returns a builder in the fully-unconfigured state ──
 
@@ -43,47 +43,48 @@ fn dimensions_transitions_to_has_dimensions() {
 
 #[test]
 fn dimensions_zero_compiles_and_stores_values() {
+    let defaults = BreakerDefinition::default();
     let mut world = World::new();
     let bundle = Breaker::builder()
         .dimensions(0.0, 0.0, 0.0)
         .movement(MovementSettings {
-            max_speed: 500.0,
-            acceleration: 3000.0,
-            deceleration: 2500.0,
-            decel_ease: EaseFunction::QuadraticIn,
-            decel_ease_strength: 1.0,
+            max_speed: defaults.max_speed,
+            acceleration: defaults.acceleration,
+            deceleration: defaults.deceleration,
+            decel_ease: defaults.decel_ease,
+            decel_ease_strength: defaults.decel_ease_strength,
         })
         .dashing(DashSettings {
             dash: DashParams {
-                speed_multiplier: 4.0,
-                duration: 0.15,
-                tilt_angle: 15.0,
-                tilt_ease: EaseFunction::QuadraticInOut,
+                speed_multiplier: defaults.dash_speed_multiplier,
+                duration: defaults.dash_duration,
+                tilt_angle: defaults.dash_tilt_angle,
+                tilt_ease: defaults.dash_tilt_ease,
             },
             brake: BrakeParams {
-                tilt_angle: 25.0,
-                tilt_duration: 0.2,
-                tilt_ease: EaseFunction::CubicInOut,
-                decel_multiplier: 2.0,
+                tilt_angle: defaults.brake_tilt_angle,
+                tilt_duration: defaults.brake_tilt_duration,
+                tilt_ease: defaults.brake_tilt_ease,
+                decel_multiplier: defaults.brake_decel_multiplier,
             },
             settle: SettleParams {
-                duration: 0.25,
-                tilt_ease: EaseFunction::CubicOut,
+                duration: defaults.settle_duration,
+                tilt_ease: defaults.settle_tilt_ease,
             },
         })
-        .spread(75.0)
+        .spread(defaults.reflection_spread)
         .bump(BumpSettings {
-            perfect_window: 0.15,
-            early_window: 0.15,
-            late_window: 0.15,
-            perfect_cooldown: 0.0,
-            weak_cooldown: 0.15,
+            perfect_window: defaults.perfect_window,
+            early_window: defaults.early_window,
+            late_window: defaults.late_window,
+            perfect_cooldown: defaults.perfect_bump_cooldown,
+            weak_cooldown: defaults.weak_bump_cooldown,
             feedback: BumpFeedbackSettings {
-                duration: 0.15,
-                peak: 24.0,
-                peak_fraction: 0.3,
-                rise_ease: EaseFunction::CubicOut,
-                fall_ease: EaseFunction::QuadraticIn,
+                duration: defaults.bump_visual_duration,
+                peak: defaults.bump_visual_peak,
+                peak_fraction: defaults.bump_visual_peak_fraction,
+                rise_ease: defaults.bump_visual_rise_ease,
+                fall_ease: defaults.bump_visual_fall_ease,
             },
         })
         .headless()
@@ -124,6 +125,7 @@ fn dimensions_negative_y_stores_value() {
 
 #[test]
 fn movement_transitions_to_has_movement() {
+    let defaults = BreakerDefinition::default();
     let _builder: BreakerBuilder<
         NoDimensions,
         HasMovement,
@@ -133,22 +135,23 @@ fn movement_transitions_to_has_movement() {
         Unvisual,
         NoRole,
     > = Breaker::builder().movement(MovementSettings {
-        max_speed: 500.0,
-        acceleration: 3000.0,
-        deceleration: 2500.0,
-        decel_ease: EaseFunction::QuadraticIn,
-        decel_ease_strength: 1.0,
+        max_speed: defaults.max_speed,
+        acceleration: defaults.acceleration,
+        deceleration: defaults.deceleration,
+        decel_ease: defaults.decel_ease,
+        decel_ease_strength: defaults.decel_ease_strength,
     });
 }
 
 #[test]
 fn movement_zero_max_speed_compiles() {
+    let defaults = BreakerDefinition::default();
     let _builder = Breaker::builder().movement(MovementSettings {
         max_speed: 0.0,
-        acceleration: 3000.0,
-        deceleration: 2500.0,
-        decel_ease: EaseFunction::QuadraticIn,
-        decel_ease_strength: 1.0,
+        acceleration: defaults.acceleration,
+        deceleration: defaults.deceleration,
+        decel_ease: defaults.decel_ease,
+        decel_ease_strength: defaults.decel_ease_strength,
     });
 }
 
@@ -156,6 +159,7 @@ fn movement_zero_max_speed_compiles() {
 
 #[test]
 fn dashing_transitions_to_has_dashing() {
+    let defaults = BreakerDefinition::default();
     let _builder: BreakerBuilder<
         NoDimensions,
         NoMovement,
@@ -166,20 +170,20 @@ fn dashing_transitions_to_has_dashing() {
         NoRole,
     > = Breaker::builder().dashing(DashSettings {
         dash: DashParams {
-            speed_multiplier: 4.0,
-            duration: 0.15,
-            tilt_angle: 15.0,
-            tilt_ease: EaseFunction::QuadraticInOut,
+            speed_multiplier: defaults.dash_speed_multiplier,
+            duration: defaults.dash_duration,
+            tilt_angle: defaults.dash_tilt_angle,
+            tilt_ease: defaults.dash_tilt_ease,
         },
         brake: BrakeParams {
-            tilt_angle: 25.0,
-            tilt_duration: 0.2,
-            tilt_ease: EaseFunction::CubicInOut,
-            decel_multiplier: 2.0,
+            tilt_angle: defaults.brake_tilt_angle,
+            tilt_duration: defaults.brake_tilt_duration,
+            tilt_ease: defaults.brake_tilt_ease,
+            decel_multiplier: defaults.brake_decel_multiplier,
         },
         settle: SettleParams {
-            duration: 0.25,
-            tilt_ease: EaseFunction::CubicOut,
+            duration: defaults.settle_duration,
+            tilt_ease: defaults.settle_tilt_ease,
         },
     });
 }
@@ -208,6 +212,7 @@ fn spread_zero_compiles() {
 
 #[test]
 fn bump_transitions_to_has_bump() {
+    let defaults = BreakerDefinition::default();
     let _builder: BreakerBuilder<
         NoDimensions,
         NoMovement,
@@ -217,17 +222,17 @@ fn bump_transitions_to_has_bump() {
         Unvisual,
         NoRole,
     > = Breaker::builder().bump(BumpSettings {
-        perfect_window: 0.15,
-        early_window: 0.15,
-        late_window: 0.15,
-        perfect_cooldown: 0.0,
-        weak_cooldown: 0.15,
+        perfect_window: defaults.perfect_window,
+        early_window: defaults.early_window,
+        late_window: defaults.late_window,
+        perfect_cooldown: defaults.perfect_bump_cooldown,
+        weak_cooldown: defaults.weak_bump_cooldown,
         feedback: BumpFeedbackSettings {
-            duration: 0.15,
-            peak: 24.0,
-            peak_fraction: 0.3,
-            rise_ease: EaseFunction::CubicOut,
-            fall_ease: EaseFunction::QuadraticIn,
+            duration: defaults.bump_visual_duration,
+            peak: defaults.bump_visual_peak,
+            peak_fraction: defaults.bump_visual_peak_fraction,
+            rise_ease: defaults.bump_visual_rise_ease,
+            fall_ease: defaults.bump_visual_fall_ease,
         },
     });
 }

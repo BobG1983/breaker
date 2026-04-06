@@ -222,4 +222,303 @@ mod integration_tests {
         // Note: messages may have been consumed by now, but ActiveTransition
         // absence confirms no transition was started.
     }
+
+    // --- Test 4: FixedUpdate ChangeState WITHOUT transitions ---
+    //
+    // Same route chain as Test 5 but NO transitions. If this passes and
+    // Test 5 fails, transitions are the blocker.
+
+    #[test]
+    fn fixed_update_change_state_works_without_transitions() {
+        #[derive(States, Default, Clone, Copy, PartialEq, Eq, Hash, Debug)]
+        enum Parent {
+            #[default]
+            Setup,
+            Node,
+        }
+
+        #[derive(SubStates, Default, Clone, Copy, PartialEq, Eq, Hash, Debug)]
+        #[source(Parent = Parent::Node)]
+        enum Child {
+            #[default]
+            Loading,
+            AnimateIn,
+            Playing,
+        }
+
+        fn trigger_child(
+            mut writer: MessageWriter<ChangeState<Child>>,
+            mut fired: Local<bool>,
+            state: Option<Res<State<Child>>>,
+        ) {
+            if *fired {
+                return;
+            }
+            if let Some(s) = state
+                && *s.get() == Child::Loading
+            {
+                writer.write(ChangeState::new());
+                *fired = true;
+            }
+        }
+
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, StatesPlugin))
+            .init_state::<Parent>()
+            .add_sub_state::<Child>()
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                std::time::Duration::from_millis(20),
+            ))
+            .add_plugins(
+                RantzLifecyclePlugin::new()
+                    .register_state::<Parent>()
+                    .register_state::<Child>(),
+            );
+
+        // Parent: Setup → Node (condition, NO transition)
+        app.add_route(Route::from(Parent::Setup).to(Parent::Node).when(|_| true));
+
+        // Child: Loading → AnimateIn (message-triggered, no transition)
+        app.add_route(Route::from(Child::Loading).to(Child::AnimateIn));
+
+        // Child: AnimateIn → Playing (condition, no transition)
+        app.add_route(
+            Route::from(Child::AnimateIn)
+                .to(Child::Playing)
+                .when(|_| true),
+        );
+
+        app.add_systems(FixedUpdate, trigger_child);
+
+        for _ in 0..20 {
+            app.update();
+        }
+
+        let child_state = app.world().get_resource::<State<Child>>().map(|s| *s.get());
+
+        assert_eq!(
+            child_state,
+            Some(Child::Playing),
+            "Without transitions, Child must reach Playing"
+        );
+    }
+
+    // --- Test 5a: Full 3-level hierarchy with OutIn + In transitions ---
+    //
+    // Mirrors the actual game: Grand → Parent → Child
+    //   Grand: Menu → Run (OutIn FadeOut+FadeIn, condition-triggered)
+    //   Parent: Setup → Node (FadeIn, condition-triggered)
+    //   Child: Loading → AnimateIn (message-triggered) → Playing (condition)
+    //
+    // FixedUpdate system writes ChangeState<Child> when Child is Loading.
+
+    #[test]
+    fn full_hierarchy_with_outin_and_in_transitions() {
+        use crate::FadeIn;
+
+        #[derive(States, Default, Clone, Copy, PartialEq, Eq, Hash, Debug)]
+        enum Grand {
+            #[default]
+            Menu,
+            Run,
+        }
+
+        #[derive(SubStates, Default, Clone, Copy, PartialEq, Eq, Hash, Debug)]
+        #[source(Grand = Grand::Run)]
+        enum Parent {
+            #[default]
+            Setup,
+            Node,
+        }
+
+        #[derive(SubStates, Default, Clone, Copy, PartialEq, Eq, Hash, Debug)]
+        #[source(Parent = Parent::Node)]
+        enum Child {
+            #[default]
+            Loading,
+            AnimateIn,
+            Playing,
+        }
+
+        fn trigger_child(
+            mut writer: MessageWriter<ChangeState<Child>>,
+            mut fired: Local<bool>,
+            state: Option<Res<State<Child>>>,
+        ) {
+            if *fired {
+                return;
+            }
+            if let Some(s) = state
+                && *s.get() == Child::Loading
+            {
+                writer.write(ChangeState::new());
+                *fired = true;
+            }
+        }
+
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, StatesPlugin))
+            .init_state::<Grand>()
+            .add_sub_state::<Parent>()
+            .add_sub_state::<Child>()
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                std::time::Duration::from_millis(20),
+            ))
+            .add_plugins(
+                RantzLifecyclePlugin::new()
+                    .register_state::<Grand>()
+                    .register_state::<Parent>()
+                    .register_state::<Child>(),
+            );
+
+        // Grand: Menu → Run with OutIn transition
+        app.add_route(
+            Route::from(Grand::Menu)
+                .to(Grand::Run)
+                .with_transition(crate::TransitionType::OutIn {
+                    out_e: Arc::new(crate::FadeOut::default()),
+                    in_e: Arc::new(FadeIn::default()),
+                })
+                .when(|_| true),
+        );
+
+        // Parent: Setup → Node with FadeIn
+        app.add_route(
+            Route::from(Parent::Setup)
+                .to(Parent::Node)
+                .with_transition(crate::TransitionType::In(Arc::new(FadeIn::default())))
+                .when(|_| true),
+        );
+
+        // Child: Loading → AnimateIn (message-triggered)
+        app.add_route(Route::from(Child::Loading).to(Child::AnimateIn));
+
+        // Child: AnimateIn → Playing (condition)
+        app.add_route(
+            Route::from(Child::AnimateIn)
+                .to(Child::Playing)
+                .when(|_| true),
+        );
+
+        app.add_systems(FixedUpdate, trigger_child);
+
+        // Drive transitions to completion (OutIn = ~38 frames, In = ~19 frames)
+        let transition_frames = drive_transition_to_completion(&mut app, 80);
+
+        // Extra frames for child state chain (needs enough frames for
+        // Child transitions to settle — Parent's FadeIn transition also
+        // needs to complete before Child routes can dispatch)
+        let child_frames = drive_transition_to_completion(&mut app, 80);
+
+        for _ in 0..20 {
+            app.update();
+        }
+
+        let child_state = app.world().get_resource::<State<Child>>().map(|s| *s.get());
+
+        assert_eq!(
+            child_state,
+            Some(Child::Playing),
+            "Child must reach Playing through full OutIn + In transition chain \
+             (transition took {transition_frames} frames, child took {child_frames} frames)"
+        );
+    }
+
+    // --- Test 5b: FixedUpdate ChangeState through transition chain ---
+    //
+    // Mirrors the game's NodeState lifecycle:
+    //   Parent: condition-triggered route with FadeIn transition (Setup → Node)
+    //   Child:  message-triggered route (Loading → AnimateIn)
+    //           condition pass-through (AnimateIn → Playing)
+    //
+    // A system in FixedUpdate writes ChangeState<Child> after the parent
+    // transition completes. The child must reach Playing.
+
+    #[test]
+    fn fixed_update_change_state_reaches_playing_through_transition_chain() {
+        use crate::FadeIn;
+
+        #[derive(States, Default, Clone, Copy, PartialEq, Eq, Hash, Debug)]
+        enum Parent {
+            #[default]
+            Setup,
+            Node,
+        }
+
+        #[derive(SubStates, Default, Clone, Copy, PartialEq, Eq, Hash, Debug)]
+        #[source(Parent = Parent::Node)]
+        enum Child {
+            #[default]
+            Loading,
+            AnimateIn,
+            Playing,
+        }
+
+        // System in FixedUpdate that writes ChangeState<Child> once
+        fn trigger_child_transition(
+            mut writer: MessageWriter<ChangeState<Child>>,
+            mut fired: Local<bool>,
+            state: Option<Res<State<Child>>>,
+        ) {
+            if *fired {
+                return;
+            }
+            if let Some(s) = state
+                && *s.get() == Child::Loading
+            {
+                writer.write(ChangeState::new());
+                *fired = true;
+            }
+        }
+
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, StatesPlugin))
+            .init_state::<Parent>()
+            .add_sub_state::<Child>()
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                std::time::Duration::from_millis(20),
+            ))
+            .add_plugins(
+                RantzLifecyclePlugin::new()
+                    .register_state::<Parent>()
+                    .register_state::<Child>(),
+            );
+
+        // Parent: Setup → Node with FadeIn transition (condition: always)
+        app.add_route(
+            Route::from(Parent::Setup)
+                .to(Parent::Node)
+                .with_transition(crate::TransitionType::In(Arc::new(FadeIn::default())))
+                .when(|_| true),
+        );
+
+        // Child: Loading → AnimateIn (message-triggered)
+        app.add_route(Route::from(Child::Loading).to(Child::AnimateIn));
+
+        // Child: AnimateIn → Playing (condition: always)
+        app.add_route(
+            Route::from(Child::AnimateIn)
+                .to(Child::Playing)
+                .when(|_| true),
+        );
+
+        app.add_systems(FixedUpdate, trigger_child_transition);
+
+        // Drive until the parent transition completes and child reaches Playing
+        let frames = drive_transition_to_completion(&mut app, 30);
+
+        // Give extra frames for child state to advance
+        for _ in 0..10 {
+            app.update();
+        }
+
+        let child_state = app.world().get_resource::<State<Child>>().map(|s| *s.get());
+
+        assert_eq!(
+            child_state,
+            Some(Child::Playing),
+            "Child must reach Playing after parent transition completes \
+             and FixedUpdate writes ChangeState<Child> (took {frames} frames for transition)"
+        );
+    }
 }

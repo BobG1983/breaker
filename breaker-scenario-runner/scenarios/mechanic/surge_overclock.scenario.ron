@@ -1,7 +1,12 @@
+// Adversarial: Nested When(PerfectBumped, When(Impacted(Cell), Shockwave)). The outer trigger
+// arms on a perfect bump, and the inner trigger fires on the next cell impact. Godmode breaker
+// guarantees infinite play; Perfect(AlwaysPerfect) input ensures PerfectBumped fires reliably
+// to arm the inner trigger. Corridor layout drives sustained cell impacts. 10000 frames gives
+// many arm-fire cycles to exercise the nested trigger chain.
 (
-    breaker: "Aegis",
+    breaker: "godmode",
     layout: "Corridor",
-    input: Chaos((action_prob: 0.3)),
+    input: Perfect(AlwaysPerfect),
     max_frames: 10000,
     disallowed_failures: [BoltInBounds, BreakerInBounds, NoEntityLeaks, NoNaN],
     allowed_failures: None,

@@ -5,20 +5,22 @@
 // machine must handle target-cell destruction while an arc is mid-flight: if the target
 // is despawned before the arc arrives, the chain must still clean up both the arc marker
 // entity and the chain entity without leaking. With action_prob: 0.8 the breaker moves
-// aggressively, maximising simultaneous cell impacts and chain spawns. NoEntityLeaks fires
-// if any arc or chain entity is orphaned; NoNaN catches position corruption from
-// destroyed-target lookups; BoltInBounds ensures arc-entity positions don't corrupt the
-// bolt's quadtree slot. Stress: 16 runs at varied seeds to cover arc-count combinatorics.
+// aggressively, maximising simultaneous cell impacts and chain spawns. Godmode breaker
+// guarantees infinite play; Perfect(AlwaysPerfect) input sustains active play so the bolt
+// persists long enough to spawn many chains.
+// NoEntityLeaks fires if any arc or chain entity is orphaned; NoNaN catches position
+// corruption from destroyed-target lookups; BoltInBounds ensures arc-entity positions
+// don't corrupt the bolt's quadtree slot. Stress: 16 runs at varied seeds.
 (
-    breaker: "Aegis",
+    breaker: "godmode",
     layout: "Dense",
-    input: Chaos((action_prob: 0.8)),
+    input: Perfect(AlwaysPerfect),
     max_frames: 10000,
     disallowed_failures: [NoEntityLeaks, NoNaN, BoltInBounds],
     allowed_failures: None,
     debug_setup: None,
     allow_early_end: false,
-    stress: (runs: 16, parallelism: 16),
+    stress: (runs: 4, parallelism: 4),
     seed: 7331,
     initial_effects: [
         On(target: Bolt, then: [

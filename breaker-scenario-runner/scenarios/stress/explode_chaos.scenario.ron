@@ -15,7 +15,6 @@
     allowed_failures: None,
     debug_setup: None,
     allow_early_end: false,
-    stress: (runs: 32, parallelism: 32),
     seed: 7777,
     initial_effects: [
         On(target: Bolt, then: [

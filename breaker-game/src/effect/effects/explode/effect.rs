@@ -2,14 +2,20 @@ use bevy::prelude::*;
 use rantzsoft_physics2d::{
     collision_layers::CollisionLayers, plugin::PhysicsSystems, resources::CollisionQuadtree,
 };
-use rantzsoft_spatial2d::components::Position2D;
+use rantzsoft_spatial2d::components::{Position2D, Scale2D, Spatial};
 
 use crate::{
     cells::messages::DamageCell,
     effect::core::EffectSourceChip,
-    shared::{CELL_LAYER, CleanupOnNodeExit},
+    fx::EffectFlashTimer,
+    shared::{CELL_LAYER, CleanupOnNodeExit, GameDrawLayer},
     state::types::NodeState,
 };
+
+/// Placeholder explode flash color — HDR red-orange.
+const EXPLODE_FLASH_COLOR: Color = Color::linear_rgb(5.0, 2.0, 0.3);
+/// Placeholder explode flash duration in seconds.
+const EXPLODE_FLASH_DURATION: f32 = 0.2;
 
 /// Deferred request for an instant area damage burst.
 ///
@@ -52,6 +58,8 @@ pub(crate) fn process_explode_requests(
         Option<&EffectSourceChip>,
     )>,
     mut damage_writer: MessageWriter<DamageCell>,
+    mut meshes: Option<ResMut<Assets<Mesh>>>,
+    mut materials: Option<ResMut<Assets<ColorMaterial>>>,
 ) {
     let query_layers = CollisionLayers::new(0, CELL_LAYER);
     for (entity, position, request, esc) in &requests {
@@ -68,6 +76,25 @@ pub(crate) fn process_explode_requests(
                 source_chip: esc.and_then(EffectSourceChip::source_chip),
             });
         }
+
+        // Spawn flash visual entity for explosions with non-trivial range.
+        if request.range > f32::EPSILON
+            && let (Some(meshes), Some(materials)) = (meshes.as_mut(), materials.as_mut())
+        {
+            commands.spawn((
+                Spatial::builder().at_position(position).build(),
+                Scale2D {
+                    x: request.range,
+                    y: request.range,
+                },
+                GameDrawLayer::Fx,
+                Mesh2d(meshes.add(Circle::new(1.0))),
+                MeshMaterial2d(materials.add(ColorMaterial::from_color(EXPLODE_FLASH_COLOR))),
+                EffectFlashTimer(EXPLODE_FLASH_DURATION),
+                CleanupOnNodeExit,
+            ));
+        }
+
         commands.entity(entity).despawn();
     }
 }

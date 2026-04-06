@@ -38,6 +38,7 @@ fn make_default_bolt_definition() -> BoltDefinition {
 fn test_app() -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
+        .add_message::<crate::bolt::messages::BoltSpawned>()
         .init_resource::<NodeOutcome>()
         .init_resource::<GameRng>()
         .add_systems(Update, reset_bolt);
@@ -732,6 +733,7 @@ fn reset_bolt_runs_without_bolt_config_resource() {
     // Then: System runs without panic (proves BoltConfig is not a system parameter).
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
+        .add_message::<crate::bolt::messages::BoltSpawned>()
         .init_resource::<NodeOutcome>()
         .init_resource::<GameRng>()
         // Deliberately NOT inserting BoltConfig

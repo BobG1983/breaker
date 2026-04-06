@@ -162,6 +162,17 @@ Active nodes must feel fundamentally different from passive nodes, not just "pas
 
 **New agent for Phase 7:** Introduce `reviewer-compile-time` agent to monitor compile-time impact as the crate grows with 40+ chips, new cell types, and expanded RON content. Track incremental build times and flag when a module or derive macro pushes compile time past acceptable thresholds.
 
+## Content Generation Tooling
+
+Build tooling for creating and validating game content (chips, evolutions, cell types, layouts). The effect system's typestate builder (from todo #10 — effect system refactor) becomes the API foundation for this:
+
+- **Effect tree editor/generator**: tool that constructs valid effect trees using the builder API — impossible to create invalid combinations
+- **Chip definition validator**: batch-validates all RON chip definitions against the builder
+- **Layout editor**: visual or semi-visual tool for creating/testing level layouts
+- **Evolution recipe validator**: checks ingredient availability, orphan detection, synergy graph connectivity
+
+This tooling ensures that as the content pool grows to 40+ chips, invalid definitions are caught at authoring time, not at runtime during gameplay.
+
 ## Acceptance Criteria
 
 1. 40+ chips with functional effects

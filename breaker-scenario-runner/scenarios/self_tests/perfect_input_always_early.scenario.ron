@@ -1,10 +1,10 @@
 // Verifies Perfect(AlwaysEarly) runs without crash. Every bump is graded Early.
-// Godmode + quick_clear sustains play across many early-bump cycles.
+// Aegis + Corridor provides cells to hit across many early-bump cycles.
 (
     breaker: "godmode",
-    layout: "quick_clear",
+    layout: "Corridor",
     input: Perfect(AlwaysEarly),
-    max_frames: 1000,
+    max_frames: 5000,
     disallowed_failures: [BoltInBounds, BreakerInBounds, NoNaN, BoltSpeedAccurate],
     allowed_failures: None,
     debug_setup: None,

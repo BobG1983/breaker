@@ -19,6 +19,5 @@ pub use bump_feedback::{spawn_bump_grade_text, spawn_whiff_text};
 pub use bump_visual::{animate_bump_visual, trigger_bump_visual};
 pub(crate) use dash::update_breaker_state;
 pub(crate) use move_breaker::move_breaker;
-pub(crate) use spawn_breaker::spawn_or_reuse_breaker;
 pub(crate) use sync_breaker_scale::sync_breaker_scale;
 pub use tilt_visual::animate_tilt_visual;

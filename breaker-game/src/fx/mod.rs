@@ -4,5 +4,5 @@ pub(crate) mod components;
 mod plugin;
 pub(crate) mod systems;
 
-pub(crate) use components::{FadeOut, PunchScale};
+pub(crate) use components::{EffectFlashTimer, FadeOut, PunchScale};
 pub(crate) use plugin::FxPlugin;

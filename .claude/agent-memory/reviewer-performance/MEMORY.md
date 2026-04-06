@@ -12,3 +12,4 @@
 - [propagate_breaker_changes hot reload](propagate_breaker_changes_hot_reload.md) — 3 chained .insert() splits for ~30 components; is_changed() guard means zero per-frame cost in production
 - [WallRegistry data pattern](wall_registry_pattern.md) — HashMap<String, WallDefinition> Resource; seed() clones are startup-only; 4 walls, no per-frame cost
 - [WallBuilder spawn pattern](wall_builder_spawn_pattern.md) — typestate builder; ~3-4 spawns at node start; all allocations spawn-time; legacy spawn_walls system coexists acceptably
+- [update_pause_menu_colors pattern](pause_menu_colors_pattern.md) — 2-entity Update query gated on is_time_paused; unconditional write is fine at this scale; no allocations

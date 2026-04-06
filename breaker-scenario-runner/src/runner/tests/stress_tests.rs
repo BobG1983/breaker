@@ -127,26 +127,26 @@ fn partition_stress_scenarios_separates_stress_from_normal() {
 
     let (normal, stress) = partition_stress_scenarios(&runs);
 
-    // We know breaker_oob_stress and prism_scatter_stress have stress: Some(())
+    // We know chain_lightning_arc_lifecycle and split_decision_cascade have stress fields
     let stress_names: Vec<&str> = stress.iter().map(|(n, ..)| n.as_str()).collect();
     assert!(
-        stress_names.contains(&"breaker_oob_stress"),
-        "breaker_oob_stress must be in stress partition, got: {stress_names:?}"
+        stress_names.contains(&"chain_lightning_arc_lifecycle"),
+        "chain_lightning_arc_lifecycle must be in stress partition, got: {stress_names:?}"
     );
     assert!(
-        stress_names.contains(&"prism_scatter_stress"),
-        "prism_scatter_stress must be in stress partition, got: {stress_names:?}"
+        stress_names.contains(&"split_decision_cascade"),
+        "split_decision_cascade must be in stress partition, got: {stress_names:?}"
     );
 
     // Normal scenarios should not include stress scenarios.
     let normal_names: Vec<&str> = normal.iter().map(|(n, _)| n.as_str()).collect();
     assert!(
-        !normal_names.contains(&"breaker_oob_stress"),
-        "breaker_oob_stress must NOT be in normal partition"
+        !normal_names.contains(&"chain_lightning_arc_lifecycle"),
+        "chain_lightning_arc_lifecycle must NOT be in normal partition"
     );
     assert!(
-        !normal_names.contains(&"prism_scatter_stress"),
-        "prism_scatter_stress must NOT be in normal partition"
+        !normal_names.contains(&"split_decision_cascade"),
+        "split_decision_cascade must NOT be in normal partition"
     );
 
     // Total must equal original.
@@ -173,13 +173,13 @@ fn partition_stress_scenarios_all_normal_when_no_stress() {
 fn partition_stress_scenarios_returns_default_stress_config() {
     use super::super::execution::partition_stress_scenarios;
 
-    let runs = build_run_list(Some("breaker_oob_stress"), false);
+    let runs = build_run_list(Some("split_decision_cascade"), false);
     let (_, stress) = partition_stress_scenarios(&runs);
 
-    assert_eq!(stress.len(), 1, "breaker_oob_stress must be stress");
+    assert_eq!(stress.len(), 1, "split_decision_cascade must be stress");
     let (_, _, config) = &stress[0];
-    assert_eq!(config.runs, 32, "default runs must be 32");
-    assert_eq!(config.parallelism, 32, "default parallelism must be 32");
+    assert_eq!(config.runs, 4, "runs must be 4");
+    assert_eq!(config.parallelism, 4, "parallelism must be 4");
 }
 
 #[test]

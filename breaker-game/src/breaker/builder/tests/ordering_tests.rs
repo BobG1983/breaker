@@ -1,56 +1,62 @@
-use bevy::{math::curve::easing::EaseFunction, prelude::*};
+use bevy::prelude::*;
 use rantzsoft_spatial2d::components::MaxSpeed;
 
 use super::{super::core::*, helpers::test_breaker_definition};
 use crate::{
-    breaker::components::{Breaker, BreakerBaseY},
+    breaker::{
+        components::{Breaker, BreakerBaseY},
+        definition::BreakerDefinition,
+    },
     shared::BaseWidth,
 };
 
 fn default_movement() -> MovementSettings {
+    let defaults = BreakerDefinition::default();
     MovementSettings {
-        max_speed: 500.0,
-        acceleration: 3000.0,
-        deceleration: 2500.0,
-        decel_ease: EaseFunction::QuadraticIn,
-        decel_ease_strength: 1.0,
+        max_speed: defaults.max_speed,
+        acceleration: defaults.acceleration,
+        deceleration: defaults.deceleration,
+        decel_ease: defaults.decel_ease,
+        decel_ease_strength: defaults.decel_ease_strength,
     }
 }
 
 fn default_dashing() -> DashSettings {
+    let defaults = BreakerDefinition::default();
     DashSettings {
         dash: DashParams {
-            speed_multiplier: 4.0,
-            duration: 0.15,
-            tilt_angle: 15.0,
-            tilt_ease: EaseFunction::QuadraticInOut,
+            speed_multiplier: defaults.dash_speed_multiplier,
+            duration: defaults.dash_duration,
+            tilt_angle: defaults.dash_tilt_angle,
+            tilt_ease: defaults.dash_tilt_ease,
         },
         brake: BrakeParams {
-            tilt_angle: 25.0,
-            tilt_duration: 0.2,
-            tilt_ease: EaseFunction::CubicInOut,
-            decel_multiplier: 2.0,
+            tilt_angle: defaults.brake_tilt_angle,
+            tilt_duration: defaults.brake_tilt_duration,
+            tilt_ease: defaults.brake_tilt_ease,
+            decel_multiplier: defaults.brake_decel_multiplier,
         },
         settle: SettleParams {
-            duration: 0.25,
-            tilt_ease: EaseFunction::CubicOut,
+            duration: defaults.settle_duration,
+            tilt_ease: defaults.settle_tilt_ease,
         },
     }
 }
 
 fn default_bump() -> BumpSettings {
+    let defaults = BreakerDefinition::default();
     BumpSettings {
-        perfect_window: 0.15,
-        early_window: 0.15,
-        late_window: 0.15,
-        perfect_cooldown: 0.0,
-        weak_cooldown: 0.15,
+        perfect_window: defaults.perfect_window,
+        early_window: defaults.early_window,
+        late_window: defaults.late_window,
+        perfect_cooldown: defaults.perfect_bump_cooldown,
+        weak_cooldown: defaults.weak_bump_cooldown,
         feedback: BumpFeedbackSettings {
-            duration: 0.15,
-            peak: 24.0,
-            peak_fraction: 0.3,
-            rise_ease: EaseFunction::CubicOut,
-            fall_ease: EaseFunction::QuadraticIn,
+            duration: defaults.bump_visual_duration,
+            peak: defaults.bump_visual_peak,
+            peak_fraction: defaults.bump_visual_peak_fraction,
+            rise_ease: defaults.bump_visual_rise_ease,
+            fall_ease: defaults.bump_visual_fall_ease,
         },
     }
 }
@@ -59,14 +65,15 @@ fn default_bump() -> BumpSettings {
 
 #[test]
 fn different_ordering_produces_identical_entities() {
+    let defaults = BreakerDefinition::default();
     let mut world = World::new();
 
     // Order A: dimensions first, then movement, dashing, spread, bump, headless, primary
     let bundle_a = Breaker::builder()
-        .dimensions(120.0, 20.0, -250.0)
+        .dimensions(defaults.width, defaults.height, defaults.y_position)
         .movement(default_movement())
         .dashing(default_dashing())
-        .spread(75.0)
+        .spread(defaults.reflection_spread)
         .bump(default_bump())
         .headless()
         .primary()
@@ -78,10 +85,10 @@ fn different_ordering_produces_identical_entities() {
         .primary()
         .headless()
         .bump(default_bump())
-        .spread(75.0)
+        .spread(defaults.reflection_spread)
         .dashing(default_dashing())
         .movement(default_movement())
-        .dimensions(120.0, 20.0, -250.0)
+        .dimensions(defaults.width, defaults.height, defaults.y_position)
         .build();
     let entity_b = world.spawn(bundle_b).id();
 
@@ -126,7 +133,7 @@ fn different_ordering_produces_identical_entities() {
 
 #[test]
 fn with_overrides_after_definition_before_build() {
-    let def = test_breaker_definition(); // max_speed: 500.0, width: 120.0
+    let def = test_breaker_definition(); // max_speed: 1000.0, width: 120.0
     let mut world = World::new();
     let bundle = Breaker::builder()
         .definition(&def)

@@ -14,6 +14,14 @@ pub(crate) struct FadeOut {
     pub duration: f32,
 }
 
+/// A countdown timer for one-shot flash visual entities.
+/// Entities with this component are despawned when the timer reaches zero.
+///
+/// Used for instant effect flashes (piercing beam, explode) that appear
+/// briefly and disappear — no opacity fading, just spawn and despawn.
+#[derive(Component, Debug)]
+pub(crate) struct EffectFlashTimer(pub f32);
+
 /// A scale-overshoot animation that punches in then settles to 1.0.
 ///
 /// Entities with this component will have their `Transform.scale` animated

@@ -2,7 +2,9 @@
 
 pub(crate) mod fire_helpers;
 
-pub(crate) use fire_helpers::{effective_range, entity_position};
+pub(crate) use fire_helpers::{
+    bolt_visual_handles, effective_range, entity_position, insert_bolt_visuals,
+};
 
 /// Breaker plants after stationary delay, modifying bump behavior.
 pub mod anchor;

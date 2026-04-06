@@ -17,7 +17,9 @@ mod spawn_cells_from_layout;
 mod tick_node_timer;
 mod track_node_completion;
 
-pub(crate) use apply_node_scale_to_bolt::apply_node_scale_to_bolt;
+pub(crate) use apply_node_scale_to_bolt::{
+    apply_node_scale_to_bolt, apply_node_scale_to_late_bolts,
+};
 pub(crate) use apply_node_scale_to_breaker::apply_node_scale_to_breaker;
 pub(crate) use apply_time_penalty::apply_time_penalty;
 pub(crate) use check_spawn_complete::check_spawn_complete;

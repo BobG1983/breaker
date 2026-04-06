@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use rantzsoft_physics2d::{
     aabb::Aabb2D, collision_layers::CollisionLayers, plugin::RantzPhysics2dPlugin,
 };
-use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D};
+use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial, Spatial2D};
 
 pub(super) use super::super::effect::*;
 use crate::{
@@ -106,13 +106,13 @@ pub(super) fn spawn_chain(app: &mut App, config: SpawnChainConfig) -> Entity {
         .id()
 }
 
-/// Spawn a bare `ChainLightningArc` marker entity with `Transform` and `CleanupOnNodeExit`.
+/// Spawn a bare `ChainLightningArc` marker entity with spatial components and `CleanupOnNodeExit`.
 /// The arc's logical state (target, position) lives in `ChainState::ArcTraveling` on the chain entity.
 pub(super) fn spawn_arc(app: &mut App, position: Vec2) -> Entity {
     app.world_mut()
         .spawn((
             ChainLightningArc,
-            Transform::from_xyz(position.x, position.y, 0.0),
+            Spatial::builder().at_position(position).build(),
             CleanupOnNodeExit,
         ))
         .id()

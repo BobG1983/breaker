@@ -13,8 +13,6 @@ pub(crate) enum Overlay {
     Hitboxes,
     /// Velocity vector arrows on moving entities.
     VelocityVectors,
-    /// Current game state label.
-    State,
     /// Bolt telemetry window.
     BoltInfo,
     /// Breaker state telemetry window.
@@ -26,7 +24,7 @@ pub(crate) enum Overlay {
 #[cfg(feature = "dev")]
 impl Overlay {
     /// Total number of overlay variants.
-    const COUNT: usize = 7;
+    const COUNT: usize = 6;
 }
 
 /// Resource controlling which debug overlays are visible.
@@ -81,7 +79,6 @@ mod tests {
         assert!(!overlays.is_active(Overlay::Fps));
         assert!(!overlays.is_active(Overlay::Hitboxes));
         assert!(!overlays.is_active(Overlay::VelocityVectors));
-        assert!(!overlays.is_active(Overlay::State));
         assert!(!overlays.is_active(Overlay::BoltInfo));
         assert!(!overlays.is_active(Overlay::DashState));
         assert!(!overlays.is_active(Overlay::InputActions));

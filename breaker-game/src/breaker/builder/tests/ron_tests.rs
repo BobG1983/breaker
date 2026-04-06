@@ -1,5 +1,3 @@
-use bevy::math::curve::easing::EaseFunction;
-
 use crate::breaker::definition::BreakerDefinition;
 
 // ── Behavior 44: BreakerDefinition with all-default fields parses from minimal RON ──
@@ -8,6 +6,7 @@ use crate::breaker::definition::BreakerDefinition;
 fn minimal_ron_parses_with_all_defaults() {
     let ron_str = r#"(name: "TestBreaker", effects: [])"#;
     let def: BreakerDefinition = ron::de::from_str(ron_str).expect("minimal RON should parse");
+    let defaults = BreakerDefinition::default();
 
     assert_eq!(def.name, "TestBreaker");
     assert_eq!(def.bolt, "Bolt");
@@ -15,55 +14,54 @@ fn minimal_ron_parses_with_all_defaults() {
     assert!(def.effects.is_empty());
 
     // Dimensions
-    assert!((def.width - 120.0).abs() < f32::EPSILON);
-    assert!((def.height - 20.0).abs() < f32::EPSILON);
-    assert!((def.y_position - (-250.0)).abs() < f32::EPSILON);
+    assert!((def.width - defaults.width).abs() < f32::EPSILON);
+    assert!((def.height - defaults.height).abs() < f32::EPSILON);
+    assert!((def.y_position - defaults.y_position).abs() < f32::EPSILON);
     assert!(def.min_w.is_none());
     assert!(def.max_w.is_none());
     assert!(def.min_h.is_none());
     assert!(def.max_h.is_none());
 
     // Movement
-    assert!((def.max_speed - 500.0).abs() < f32::EPSILON);
-    assert!((def.acceleration - 3000.0).abs() < f32::EPSILON);
-    assert!((def.deceleration - 2500.0).abs() < f32::EPSILON);
-    assert!(matches!(def.decel_ease, EaseFunction::QuadraticIn));
-    assert!((def.decel_ease_strength - 1.0).abs() < f32::EPSILON);
+    assert!((def.max_speed - defaults.max_speed).abs() < f32::EPSILON);
+    assert!((def.acceleration - defaults.acceleration).abs() < f32::EPSILON);
+    assert!((def.deceleration - defaults.deceleration).abs() < f32::EPSILON);
+    assert_eq!(def.decel_ease, defaults.decel_ease);
+    assert!((def.decel_ease_strength - defaults.decel_ease_strength).abs() < f32::EPSILON);
 
     // Dash
-    assert!((def.dash_speed_multiplier - 4.0).abs() < f32::EPSILON);
-    assert!((def.dash_duration - 0.15).abs() < f32::EPSILON);
-    assert!((def.dash_tilt_angle - 15.0).abs() < f32::EPSILON);
-    assert!(matches!(def.dash_tilt_ease, EaseFunction::QuadraticInOut));
-    assert!((def.brake_tilt_angle - 25.0).abs() < f32::EPSILON);
-    assert!((def.brake_tilt_duration - 0.2).abs() < f32::EPSILON);
-    assert!(matches!(def.brake_tilt_ease, EaseFunction::CubicInOut));
-    assert!((def.brake_decel_multiplier - 2.0).abs() < f32::EPSILON);
-    assert!((def.settle_duration - 0.25).abs() < f32::EPSILON);
-    assert!(matches!(def.settle_tilt_ease, EaseFunction::CubicOut));
+    assert!((def.dash_speed_multiplier - defaults.dash_speed_multiplier).abs() < f32::EPSILON);
+    assert!((def.dash_duration - defaults.dash_duration).abs() < f32::EPSILON);
+    assert!((def.dash_tilt_angle - defaults.dash_tilt_angle).abs() < f32::EPSILON);
+    assert_eq!(def.dash_tilt_ease, defaults.dash_tilt_ease);
+    assert!((def.brake_tilt_angle - defaults.brake_tilt_angle).abs() < f32::EPSILON);
+    assert!((def.brake_tilt_duration - defaults.brake_tilt_duration).abs() < f32::EPSILON);
+    assert_eq!(def.brake_tilt_ease, defaults.brake_tilt_ease);
+    assert!((def.brake_decel_multiplier - defaults.brake_decel_multiplier).abs() < f32::EPSILON);
+    assert!((def.settle_duration - defaults.settle_duration).abs() < f32::EPSILON);
+    assert_eq!(def.settle_tilt_ease, defaults.settle_tilt_ease);
 
     // Bump
-    assert!((def.perfect_window - 0.15).abs() < f32::EPSILON);
-    assert!((def.early_window - 0.15).abs() < f32::EPSILON);
-    assert!((def.late_window - 0.15).abs() < f32::EPSILON);
-    assert!((def.perfect_bump_cooldown - 0.0).abs() < f32::EPSILON);
-    assert!((def.weak_bump_cooldown - 0.15).abs() < f32::EPSILON);
-    assert!((def.bump_visual_duration - 0.15).abs() < f32::EPSILON);
-    assert!((def.bump_visual_peak - 24.0).abs() < f32::EPSILON);
-    assert!((def.bump_visual_peak_fraction - 0.3).abs() < f32::EPSILON);
-    assert!(matches!(def.bump_visual_rise_ease, EaseFunction::CubicOut));
-    assert!(matches!(
-        def.bump_visual_fall_ease,
-        EaseFunction::QuadraticIn
-    ));
+    assert!((def.perfect_window - defaults.perfect_window).abs() < f32::EPSILON);
+    assert!((def.early_window - defaults.early_window).abs() < f32::EPSILON);
+    assert!((def.late_window - defaults.late_window).abs() < f32::EPSILON);
+    assert!((def.perfect_bump_cooldown - defaults.perfect_bump_cooldown).abs() < f32::EPSILON);
+    assert!((def.weak_bump_cooldown - defaults.weak_bump_cooldown).abs() < f32::EPSILON);
+    assert!((def.bump_visual_duration - defaults.bump_visual_duration).abs() < f32::EPSILON);
+    assert!((def.bump_visual_peak - defaults.bump_visual_peak).abs() < f32::EPSILON);
+    assert!(
+        (def.bump_visual_peak_fraction - defaults.bump_visual_peak_fraction).abs() < f32::EPSILON
+    );
+    assert_eq!(def.bump_visual_rise_ease, defaults.bump_visual_rise_ease);
+    assert_eq!(def.bump_visual_fall_ease, defaults.bump_visual_fall_ease);
 
     // Spread
-    assert!((def.reflection_spread - 75.0).abs() < f32::EPSILON);
+    assert!((def.reflection_spread - defaults.reflection_spread).abs() < f32::EPSILON);
 
     // Visual
-    assert!((def.color_rgb[0] - 0.2).abs() < f32::EPSILON);
-    assert!((def.color_rgb[1] - 2.0).abs() < f32::EPSILON);
-    assert!((def.color_rgb[2] - 3.0).abs() < f32::EPSILON);
+    assert!((def.color_rgb[0] - defaults.color_rgb[0]).abs() < f32::EPSILON);
+    assert!((def.color_rgb[1] - defaults.color_rgb[1]).abs() < f32::EPSILON);
+    assert!((def.color_rgb[2] - defaults.color_rgb[2]).abs() < f32::EPSILON);
 }
 
 // ── Behavior 45: BreakerDefinition with explicit gameplay fields parses ──
@@ -81,13 +79,14 @@ fn ron_with_explicit_gameplay_fields_parses() {
     let def: BreakerDefinition =
         ron::de::from_str(ron_str).expect("RON with explicit fields should parse");
 
+    let defaults = BreakerDefinition::default();
     assert!((def.width - 150.0).abs() < f32::EPSILON);
     assert!((def.height - 25.0).abs() < f32::EPSILON);
     assert!((def.max_speed - 600.0).abs() < f32::EPSILON);
     assert!((def.reflection_spread - 60.0).abs() < f32::EPSILON);
     // Other fields should be defaults
-    assert!((def.acceleration - 3000.0).abs() < f32::EPSILON);
-    assert!((def.deceleration - 2500.0).abs() < f32::EPSILON);
+    assert!((def.acceleration - defaults.acceleration).abs() < f32::EPSILON);
+    assert!((def.deceleration - defaults.deceleration).abs() < f32::EPSILON);
 }
 
 // ── Behavior 46: BreakerDefinition with explicit min/max size fields parses ──
@@ -119,13 +118,14 @@ fn aegis_breaker_ron_parses_with_expanded_definition() {
     let def: BreakerDefinition =
         ron::de::from_str(ron_str).expect("aegis.breaker.ron should parse");
 
+    let defaults = BreakerDefinition::default();
     assert_eq!(def.name, "Aegis");
     assert_eq!(def.bolt, "Bolt");
     assert_eq!(def.life_pool, Some(3));
     assert_eq!(def.effects.len(), 4);
     // All gameplay fields should be defaults
-    assert!((def.width - 120.0).abs() < f32::EPSILON);
-    assert!((def.max_speed - 500.0).abs() < f32::EPSILON);
+    assert!((def.width - defaults.width).abs() < f32::EPSILON);
+    assert!((def.max_speed - defaults.max_speed).abs() < f32::EPSILON);
 }
 
 // ── Behavior 48: chrono.breaker.ron parses with expanded BreakerDefinition ──

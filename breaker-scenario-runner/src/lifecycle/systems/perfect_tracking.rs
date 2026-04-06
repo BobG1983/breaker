@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use breaker::{
     breaker::{messages::BumpGrade, resources::ForceBumpGrade},
     input::resources::InputActions,
+    shared::PlayfieldConfig,
 };
 use rand::{Rng, prelude::IndexedRandom};
 use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
@@ -36,6 +37,7 @@ pub fn apply_perfect_tracking(
     mut breaker_query: BreakerTrackingQuery,
     mut actions: ResMut<InputActions>,
     mut stats: Option<ResMut<ScenarioStats>>,
+    playfield: Res<PlayfieldConfig>,
 ) {
     let Some(ref mut driver) = driver else {
         return;
@@ -60,14 +62,16 @@ pub fn apply_perfect_tracking(
             -PERFECT_TRACKING_WIDTH_FACTOR * half_width
                 ..=PERFECT_TRACKING_WIDTH_FACTOR * half_width,
         );
-        breaker_pos.0.x = bolt_position.x + offset;
+        breaker_pos.0.x = (bolt_position.x + offset).clamp(
+            playfield.left() + half_width,
+            playfield.right() - half_width,
+        );
 
-        // Bump when bolt is near breaker and descending
-        if bolt_velocity.y < 0.0
-            && bolt_position.y > breaker_pos.0.y
-            && bolt_position.y - breaker_pos.0.y <= PERFECT_TRACKING_BUMP_THRESHOLD
-            && perfect.bump_mode != BumpMode::NeverBump
-        {
+        // Bump when bolt is within threshold distance of breaker.
+        // Checks both descent and ascent (e.g. right after bolt_lost respawn)
+        // because the bolt may pass through the breaker zone going upward.
+        let dist = (bolt_position.y - breaker_pos.0.y).abs();
+        if dist <= PERFECT_TRACKING_BUMP_THRESHOLD && perfect.bump_mode != BumpMode::NeverBump {
             should_bump = true;
         }
     }

@@ -10,8 +10,8 @@ use crate::{
         systems::{
             animate_bump_visual, animate_tilt_visual, breaker_cell_collision,
             breaker_wall_collision, grade_bump, move_breaker, perfect_bump_dash_cancel,
-            spawn_bump_grade_text, spawn_or_reuse_breaker, spawn_whiff_text, sync_breaker_scale,
-            trigger_bump_visual, update_breaker_state, update_bump,
+            spawn_bump_grade_text, spawn_whiff_text, sync_breaker_scale, trigger_bump_visual,
+            update_breaker_state, update_bump,
         },
     },
     state::{
@@ -38,18 +38,15 @@ impl Plugin for BreakerPlugin {
             .add_message::<BreakerImpactWall>()
             .init_resource::<SelectedBreaker>()
             .init_resource::<ForceBumpGrade>()
-            .add_systems(OnEnter(NodeState::Loading), spawn_or_reuse_breaker)
             .add_systems(
                 OnEnter(NodeState::Loading),
                 apply_node_scale_to_breaker
-                    .after(spawn_or_reuse_breaker)
+                    .after(BreakerSystems::Reset)
                     .after(NodeSystems::Spawn),
             )
             .add_systems(
                 OnEnter(NodeState::Loading),
-                reset_breaker
-                    .after(spawn_or_reuse_breaker)
-                    .in_set(BreakerSystems::Reset),
+                reset_breaker.in_set(BreakerSystems::Reset),
             )
             .add_systems(
                 FixedUpdate,

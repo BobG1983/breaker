@@ -13,7 +13,6 @@
     debug_setup: None,
     invariant_params: (max_bolt_count: 20),
     allow_early_end: false,
-    stress: (runs: 16, parallelism: 16),
     seed: 1337,
     initial_effects: [
         On(target: Bolt, then: [

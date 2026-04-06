@@ -100,9 +100,9 @@ Generate multiple possible causes:
 Test hypotheses systematically:
 
 1. Start with most likely hypothesis
-2. Write a test that will confirm OR refute
+2. Write a test that represents the desired behavior
 3. Execute that test only, record results
-4. If refuted, move to next hypothesis
+4. If the test passes, move to next hypothesis - a passing test means things are behaving correctly
 5. Continue until root cause confirmed or you run out of hypotheses
 6. If you run out of hypotheses start the whole skill over again
 

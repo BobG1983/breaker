@@ -33,6 +33,8 @@ fn world_with_seed_42() -> World {
     );
     world.insert_resource(registry);
     world.insert_resource(GameRng::from_seed(42));
+    world.init_resource::<Assets<Mesh>>();
+    world.init_resource::<Assets<ColorMaterial>>();
     world
 }
 

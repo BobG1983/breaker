@@ -10,17 +10,20 @@ use rand::prelude::IndexedRandom;
 use rantzsoft_physics2d::{
     collision_layers::CollisionLayers, plugin::PhysicsSystems, resources::CollisionQuadtree,
 };
-use rantzsoft_spatial2d::components::GlobalPosition2D;
+use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Scale2D, Spatial};
 
 use crate::{
     bolt::{components::BoltBaseDamage, resources::DEFAULT_BOLT_BASE_DAMAGE},
     cells::{components::Cell, messages::DamageCell},
     effect::{core::EffectSourceChip, effects::damage_boost::ActiveDamageBoosts},
-    shared::{CELL_LAYER, CleanupOnNodeExit, rng::GameRng},
+    shared::{CELL_LAYER, CleanupOnNodeExit, GameDrawLayer, rng::GameRng},
     state::types::NodeState,
 };
 
 /// Stateful chain entity that tracks the chain lightning's progression
+/// Placeholder arc color — HDR purple.
+const ARC_COLOR: Color = Color::linear_rgb(3.0, 0.5, 5.0);
+
 /// through multiple targets over successive ticks.
 #[derive(Component)]
 pub struct ChainLightningChain {
@@ -160,7 +163,7 @@ pub struct ChainLightningWorld<'w, 's> {
     quadtree: Res<'w, CollisionQuadtree>,
     cell_positions: Query<'w, 's, &'static GlobalPosition2D, With<Cell>>,
     rng: ResMut<'w, GameRng>,
-    arc_transforms: Query<'w, 's, &'static mut Transform, With<ChainLightningArc>>,
+    arc_positions: Query<'w, 's, &'static mut Position2D, With<ChainLightningArc>>,
 }
 
 /// Tick system for chain lightning progression.
@@ -173,6 +176,8 @@ pub(crate) fn tick_chain_lightning(
     mut chains: Query<(Entity, &mut ChainLightningChain, Option<&EffectSourceChip>)>,
     mut world: ChainLightningWorld,
     mut damage_writer: MessageWriter<DamageCell>,
+    mut meshes: Option<ResMut<Assets<Mesh>>>,
+    mut materials: Option<ResMut<Assets<ColorMaterial>>>,
 ) {
     let dt = time.delta_secs();
     let query_layers = CollisionLayers::new(0, CELL_LAYER);
@@ -213,13 +218,21 @@ pub(crate) fn tick_chain_lightning(
                     .get(target)
                     .map_or(Vec2::ZERO, |gp| gp.0);
 
-                let arc_entity = commands
-                    .spawn((
-                        ChainLightningArc,
-                        Transform::from_translation(chain.source.extend(0.0)),
-                        CleanupOnNodeExit,
-                    ))
-                    .id();
+                let mut arc = commands.spawn((
+                    ChainLightningArc,
+                    Spatial::builder().at_position(chain.source).build(),
+                    Transform::from_translation(chain.source.extend(0.0)),
+                    CleanupOnNodeExit,
+                ));
+                if let (Some(m), Some(mat)) = (meshes.as_mut(), materials.as_mut()) {
+                    arc.insert((
+                        Scale2D { x: 6.0, y: 6.0 },
+                        GameDrawLayer::Fx,
+                        Mesh2d(m.add(Circle::new(1.0))),
+                        MeshMaterial2d(mat.add(ColorMaterial::from_color(ARC_COLOR))),
+                    ));
+                }
+                let arc_entity = arc.id();
 
                 chain.state = ChainState::ArcTraveling {
                     target,
@@ -236,49 +249,41 @@ pub(crate) fn tick_chain_lightning(
             } => {
                 let diff = target_pos - arc_pos;
                 let distance = diff.length();
-
                 let step = chain.arc_speed * dt;
 
-                if distance <= step || distance < f32::EPSILON {
-                    let target_gp = world.cell_positions.get(target);
-                    let target_exists = target_gp.is_ok();
-
-                    if target_exists {
-                        let source_chip = esc.and_then(EffectSourceChip::source_chip);
-                        damage_writer.write(DamageCell {
-                            cell: target,
-                            damage: chain.damage,
-                            source_chip,
-                        });
+                if distance > step && distance >= f32::EPSILON {
+                    let new_arc_pos = arc_pos + (diff / distance) * step;
+                    if let Ok(mut position) = world.arc_positions.get_mut(arc_entity) {
+                        position.0 = new_arc_pos;
                     }
-
-                    chain.hit_set.insert(target);
-
-                    // Use GlobalPosition2D if available, otherwise target_pos
-                    chain.source = target_gp.map_or(target_pos, |gp| gp.0);
-
-                    chain.remaining_jumps -= 1;
-                    commands.entity(arc_entity).try_despawn();
-
-                    if chain.remaining_jumps == 0 {
-                        commands.entity(chain_entity).try_despawn();
-                    } else {
-                        chain.state = ChainState::Idle;
-                    }
-                } else {
-                    let direction = diff / distance;
-                    let new_arc_pos = arc_pos + direction * step;
-
-                    if let Ok(mut transform) = world.arc_transforms.get_mut(arc_entity) {
-                        transform.translation = new_arc_pos.extend(0.0);
-                    }
-
                     chain.state = ChainState::ArcTraveling {
                         target,
                         target_pos,
                         arc_entity,
                         arc_pos: new_arc_pos,
                     };
+                    continue;
+                }
+
+                let target_gp = world.cell_positions.get(target);
+                if target_gp.is_ok() {
+                    let source_chip = esc.and_then(EffectSourceChip::source_chip);
+                    damage_writer.write(DamageCell {
+                        cell: target,
+                        damage: chain.damage,
+                        source_chip,
+                    });
+                }
+
+                chain.hit_set.insert(target);
+                chain.source = target_gp.map_or(target_pos, |gp| gp.0);
+                chain.remaining_jumps -= 1;
+                commands.entity(arc_entity).try_despawn();
+
+                if chain.remaining_jumps == 0 {
+                    commands.entity(chain_entity).try_despawn();
+                } else {
+                    chain.state = ChainState::Idle;
                 }
             }
         }

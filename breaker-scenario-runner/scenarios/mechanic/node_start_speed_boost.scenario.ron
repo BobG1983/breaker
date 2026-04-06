@@ -1,16 +1,17 @@
 // Adversarial: SpeedBoost(1.5) fires once on NodeStart — the bolt receives a permanent
 // velocity multiplier from frame 1 of the node. Dense layout means the boosted bolt
-// immediately encounters cells and wall reflections at 1.5x base speed. The adversarial
-// risk: if NodeStart fires more than once per node (e.g. due to state re-entry or
-// restart logic), SpeedBoost stacks to 2.25x then 3.375x and escapes BoltMaxSpeed.
+// immediately encounters cells and wall reflections at 1.5x base speed. Godmode breaker
+// guarantees infinite play so the bolt persists across multiple node transitions. The
+// adversarial risk: if NodeStart fires more than once per node (e.g. due to state re-entry
+// or restart logic), SpeedBoost stacks to 2.25x then 3.375x and escapes BoltMaxSpeed.
 // If the boost is applied before the bolt has a BoundEffects component, the fire()
 // call silently drops it and no boost occurs — BoltSpeedAccurate won't fire, but the
 // scenario documents expected baseline speed range. 3000 frames is sufficient to clear
 // most Dense nodes and verify no double-application on node transitions.
 (
-    breaker: "Aegis",
+    breaker: "godmode",
     layout: "Dense",
-    input: Chaos((action_prob: 0.4)),
+    input: Perfect(AlwaysPerfect),
     max_frames: 3000,
     disallowed_failures: [BoltSpeedAccurate],
     allowed_failures: None,

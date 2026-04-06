@@ -8,10 +8,28 @@ use crate::{
 
 /// Inserts [`NodeScalingFactor`] on all bolt entities from the active node layout.
 ///
-/// Runs `OnEnter(GameState::Playing)`. Overwrites any existing `NodeScalingFactor`.
+/// Runs `OnEnter(NodeState::Loading)`. Overwrites any existing `NodeScalingFactor`.
 pub(crate) fn apply_node_scale_to_bolt(
     layout: Option<Res<ActiveNodeLayout>>,
     query: Query<Entity, With<Bolt>>,
+    mut commands: Commands,
+) {
+    let Some(layout) = layout else { return };
+    for entity in &query {
+        commands
+            .entity(entity)
+            .insert(NodeScalingFactor(layout.0.entity_scale));
+    }
+}
+
+/// Catches bolts spawned mid-gameplay (e.g. by `spawn_bolts` effect) that
+/// missed the `OnEnter(NodeState::Loading)` pass.
+///
+/// Runs in `FixedUpdate` during `NodeState::Playing`. Only targets bolts
+/// that don't already have [`NodeScalingFactor`].
+pub(crate) fn apply_node_scale_to_late_bolts(
+    layout: Option<Res<ActiveNodeLayout>>,
+    query: Query<Entity, (With<Bolt>, Without<NodeScalingFactor>)>,
     mut commands: Commands,
 ) {
     let Some(layout) = layout else { return };
@@ -146,6 +164,55 @@ mod tests {
         assert!(
             app.world().get::<NodeScalingFactor>(entity).is_none(),
             "NodeScalingFactor should not be inserted without ActiveNodeLayout",
+        );
+    }
+
+    #[test]
+    fn late_bolt_receives_node_scaling_factor() {
+        // Given: ActiveNodeLayout with entity_scale = 0.6
+        // When: a bolt WITHOUT NodeScalingFactor exists and apply_node_scale_to_late_bolts runs
+        // Then: the bolt gets NodeScalingFactor(0.6)
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_systems(Update, super::apply_node_scale_to_late_bolts);
+        app.insert_resource(make_layout(0.6));
+
+        let entity = spawn_bolt(&mut app);
+        // Bolt has no NodeScalingFactor (simulates effect-spawned bolt)
+        assert!(app.world().get::<NodeScalingFactor>(entity).is_none());
+
+        app.update();
+
+        let scale = app.world().get::<NodeScalingFactor>(entity).unwrap();
+        assert!(
+            (scale.0 - 0.6).abs() < f32::EPSILON,
+            "late bolt should get NodeScalingFactor(0.6), got NodeScalingFactor({})",
+            scale.0,
+        );
+    }
+
+    #[test]
+    fn late_bolt_skips_already_tagged() {
+        // Given: Bolt WITH NodeScalingFactor(0.7), ActiveNodeLayout with entity_scale = 0.6
+        // When: apply_node_scale_to_late_bolts runs
+        // Then: NodeScalingFactor stays 0.7 (Without filter excludes it)
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_systems(Update, super::apply_node_scale_to_late_bolts);
+        app.insert_resource(make_layout(0.6));
+
+        let entity = spawn_bolt(&mut app);
+        app.world_mut()
+            .entity_mut(entity)
+            .insert(NodeScalingFactor(0.7));
+
+        app.update();
+
+        let scale = app.world().get::<NodeScalingFactor>(entity).unwrap();
+        assert!(
+            (scale.0 - 0.7).abs() < f32::EPSILON,
+            "already-tagged bolt should keep NodeScalingFactor(0.7), got NodeScalingFactor({})",
+            scale.0,
         );
     }
 

@@ -4,13 +4,15 @@
 // queue a reversal and one is dropped — ActiveDamageBoosts grows unboundedly and
 // the damage multiplier diverges from the expected single-boost value.
 // Dense layout drives frequent bumps to create many overlapping Until windows.
+// Godmode breaker guarantees infinite play; Perfect(AlwaysPerfect) input guarantees
+// reliable bump cadence to maximise overlapping Until windows.
 // BoltSpeedAccurate is included as a secondary signal: a corrupted damage multiplier can
 // indirectly affect bolt physics in systems that gate on damage state. 5000 frames gives
-// multiple Until cycles (each 1.0 s at 64 fps ≈ 64 frames) to expire and restart.
+// multiple Until cycles (each 1.0 s at 64 fps = 64 frames) to expire and restart.
 (
-    breaker: "Aegis",
+    breaker: "godmode",
     layout: "Dense",
-    input: Chaos((action_prob: 0.5)),
+    input: Perfect(AlwaysPerfect),
     max_frames: 5000,
     disallowed_failures: [BoltSpeedAccurate, NoNaN],
     allowed_failures: None,

@@ -3,6 +3,7 @@
 use std::collections::HashSet;
 
 use bevy::prelude::*;
+use rantzsoft_spatial2d::components::Position2D;
 
 use super::*;
 use crate::{effect::core::EffectSourceChip, shared::CleanupOnNodeExit};
@@ -47,14 +48,14 @@ fn tick_arc_traveling_advances_arc_toward_target() {
     // Arc should move toward (120, 0) by arc_speed * dt
     // dt = 1/64 = 0.015625, distance_per_tick = 200.0 * 0.015625 = 3.125
     // Direction is (1, 0), so new position should be (23.125, 0, 0)
-    let arc_transform = app.world().get::<Transform>(arc).unwrap();
+    let arc_position = app.world().get::<Position2D>(arc).unwrap();
     assert!(
-        (arc_transform.translation.x - 23.125).abs() < 0.1,
+        (arc_position.0.x - 23.125).abs() < 0.1,
         "arc should advance by ~3.125 units per tick, expected ~23.125, got {}",
-        arc_transform.translation.x
+        arc_position.0.x
     );
     assert!(
-        (arc_transform.translation.y - 0.0).abs() < 0.01,
+        (arc_position.0.y - 0.0).abs() < 0.01,
         "arc y should remain ~0.0"
     );
 

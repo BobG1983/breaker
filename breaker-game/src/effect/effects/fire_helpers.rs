@@ -3,6 +3,43 @@
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Position2D;
 
+use crate::shared::GameDrawLayer;
+
+/// Creates mesh and material handles for a bolt visual (circle with the given color).
+/// Returns `None` if asset resources are unavailable (e.g., minimal test worlds).
+pub(crate) fn bolt_visual_handles(
+    world: &mut World,
+    color_rgb: [f32; 3],
+) -> Option<(Handle<Mesh>, Handle<ColorMaterial>)> {
+    let mesh = world
+        .get_resource_mut::<Assets<Mesh>>()?
+        .add(Circle::new(1.0));
+    let material =
+        world
+            .get_resource_mut::<Assets<ColorMaterial>>()?
+            .add(ColorMaterial::from_color(Color::linear_rgb(
+                color_rgb[0],
+                color_rgb[1],
+                color_rgb[2],
+            )));
+    Some((mesh, material))
+}
+
+/// Inserts bolt visual components on an entity if handles are available.
+pub(crate) fn insert_bolt_visuals(
+    world: &mut World,
+    entity: Entity,
+    visual: Option<(Handle<Mesh>, Handle<ColorMaterial>)>,
+) {
+    if let Some((mesh, material)) = visual {
+        world.entity_mut(entity).insert((
+            Mesh2d(mesh),
+            MeshMaterial2d(material),
+            GameDrawLayer::Bolt,
+        ));
+    }
+}
+
 /// Returns the entity's [`Position2D`] value, or [`Vec2::ZERO`] if absent.
 pub(crate) fn entity_position(world: &World, entity: Entity) -> Vec2 {
     world.get::<Position2D>(entity).map_or(Vec2::ZERO, |p| p.0)

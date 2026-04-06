@@ -5,9 +5,12 @@ use rantzsoft_spatial2d::prelude::*;
 
 use crate::{
     bolt::queries::{BoltSpeedData, apply_velocity_formula},
-    shared::CleanupOnNodeExit,
+    shared::{CleanupOnNodeExit, GameDrawLayer},
     state::types::NodeState,
 };
+
+/// Placeholder gravity well color — HDR purple.
+const GRAVITY_WELL_COLOR: Color = Color::linear_rgb(1.0, 0.2, 2.0);
 
 /// Marker for gravity well entities.
 #[derive(Component)]
@@ -84,7 +87,17 @@ pub(crate) fn fire(
     }
 
     // Spawn the new well with its spawn order stamp.
-    world.spawn((
+    let visual = {
+        let mesh = world
+            .get_resource_mut::<Assets<Mesh>>()
+            .map(|mut m| m.add(Circle::new(1.0)));
+        let mat = world
+            .get_resource_mut::<Assets<ColorMaterial>>()
+            .map(|mut m| m.add(ColorMaterial::from_color(GRAVITY_WELL_COLOR)));
+        mesh.zip(mat)
+    };
+
+    let mut well = world.spawn((
         GravityWell,
         GravityWellConfig {
             strength,
@@ -93,9 +106,17 @@ pub(crate) fn fire(
             owner: entity,
         },
         GravityWellSpawnOrder(counter_value),
-        Position2D(position),
+        Spatial::builder().at_position(position).build(),
+        Scale2D {
+            x: radius,
+            y: radius,
+        },
+        GameDrawLayer::Fx,
         CleanupOnNodeExit,
     ));
+    if let Some((mesh, mat)) = visual {
+        well.insert((Mesh2d(mesh), MeshMaterial2d(mat)));
+    }
 
     // SCOPE C — re-borrow resource to store incremented counter.
     {
@@ -149,9 +170,26 @@ pub(crate) fn apply_gravity_pull(
     }
 }
 
+/// Syncs `Scale2D` to match `GravityWellConfig.radius` each tick so the visual
+/// mesh tracks the gravity well's influence area.
+pub(crate) fn sync_gravity_well_visual(
+    mut query: Query<(&GravityWellConfig, &mut Scale2D), With<GravityWell>>,
+) {
+    for (config, mut scale) in &mut query {
+        scale.x = config.radius;
+        scale.y = config.radius;
+    }
+}
+
 pub(crate) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
-        (tick_gravity_well, apply_gravity_pull).run_if(in_state(NodeState::Playing)),
+        (
+            tick_gravity_well,
+            sync_gravity_well_visual,
+            apply_gravity_pull,
+        )
+            .chain()
+            .run_if(in_state(NodeState::Playing)),
     );
 }

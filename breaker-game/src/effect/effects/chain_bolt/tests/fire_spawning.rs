@@ -11,7 +11,7 @@ use crate::{
         definition::BoltDefinition,
         registry::BoltRegistry,
     },
-    shared::{BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, WALL_LAYER, rng::GameRng},
+    shared::{BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, GameDrawLayer, WALL_LAYER, rng::GameRng},
 };
 
 fn make_bolt_definition(name: &str, base_speed: f32, radius: f32) -> BoltDefinition {
@@ -37,6 +37,8 @@ fn world_with_bolt_registry() -> World {
     registry.insert("Bolt".to_string(), make_bolt_definition("Bolt", 400.0, 8.0));
     world.insert_resource(registry);
     world.insert_resource(GameRng::default());
+    world.init_resource::<Assets<Mesh>>();
+    world.init_resource::<Assets<ColorMaterial>>();
     world
 }
 
@@ -137,6 +139,8 @@ fn fire_reads_bolt_definition_ref_from_anchor_entity() {
     );
     world.insert_resource(registry);
     world.insert_resource(GameRng::default());
+    world.init_resource::<Assets<Mesh>>();
+    world.init_resource::<Assets<ColorMaterial>>();
 
     let anchor = world
         .spawn((
@@ -199,6 +203,8 @@ fn fire_falls_back_to_bolt_default_definition_when_anchor_has_no_definition_ref(
     );
     world.insert_resource(registry);
     world.insert_resource(GameRng::default());
+    world.init_resource::<Assets<Mesh>>();
+    world.init_resource::<Assets<ColorMaterial>>();
 
     let anchor = world.spawn(Position2D(Vec2::ZERO)).id();
 
@@ -223,5 +229,36 @@ fn fire_falls_back_to_bolt_default_definition_when_anchor_has_no_definition_ref(
         (radius.0 - 14.0).abs() < f32::EPSILON,
         "BoltRadius should be 14.0 from Bolt default definition, got {}",
         radius.0
+    );
+}
+
+// ── Behavior 22: fire() spawns rendered chain bolt with visual components ──
+
+#[test]
+fn fire_spawns_rendered_chain_bolt_with_visual_components() {
+    let mut world = world_with_bolt_registry();
+    let anchor = world.spawn(Position2D(Vec2::new(100.0, 200.0))).id();
+
+    fire(anchor, 50.0, "", &mut world);
+
+    let mut query = world.query_filtered::<Entity, With<ChainBoltMarker>>();
+    let chain_bolt = query.iter(&world).next().expect("chain bolt should exist");
+
+    assert!(
+        matches!(
+            world.get::<GameDrawLayer>(chain_bolt),
+            Some(GameDrawLayer::Bolt)
+        ),
+        "rendered chain bolt should have GameDrawLayer::Bolt"
+    );
+    assert!(
+        world.get::<Mesh2d>(chain_bolt).is_some(),
+        "rendered chain bolt should have Mesh2d"
+    );
+    assert!(
+        world
+            .get::<MeshMaterial2d<ColorMaterial>>(chain_bolt)
+            .is_some(),
+        "rendered chain bolt should have MeshMaterial2d<ColorMaterial>"
     );
 }

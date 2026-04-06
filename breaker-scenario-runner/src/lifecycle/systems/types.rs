@@ -131,7 +131,14 @@ pub fn quick_clear_layout(pool: NodePool) -> NodeLayout {
 }
 
 /// Distance threshold (world units) for bolt-breaker proximity to trigger bump.
-pub const PERFECT_TRACKING_BUMP_THRESHOLD: f32 = 20.0;
+///
+/// Must exceed the bolt spawn offset (default 54) so that a freshly-spawned or
+/// respawned bolt (placed at `breaker_y + spawn_offset`) is caught immediately.
+/// Also must exceed the bolt-breaker collision distance (breaker half-height +
+/// bolt radius ≈ 24) plus one bolt step per tick (≈ 11 at 700 u/s @ 64 Hz)
+/// because `apply_perfect_tracking` runs in `FixedPreUpdate` — before the
+/// physics systems in `FixedUpdate` move the bolt and resolve collisions.
+pub const PERFECT_TRACKING_BUMP_THRESHOLD: f32 = 60.0;
 
 /// Factor of breaker half-width used for random x offset.
 pub const PERFECT_TRACKING_WIDTH_FACTOR: f32 = 0.8;

@@ -2,14 +2,16 @@
 // produces irregular inter-cell distances — the bolt travels long gaps between hits, then
 // clusters several impacts in quick succession. This exercises the monotonic accumulation
 // path (trigger_count up, accumulated up) and the reverse() path when a node ends and the
-// component is removed. The adversarial risk: if accumulated ever produces NaN (e.g. from
-// f32 overflow after thousands of hits), or if BoltInBounds breaks because a damage
-// calculation corrupts bolt velocity, these invariants catch it. 8000 frames at moderate
-// chaos lets the bolt bounce long enough to hit every cell multiple times.
+// component is removed. Godmode breaker guarantees infinite play so the bolt persists long
+// enough to accumulate thousands of cell hits. The adversarial risk: if accumulated ever
+// produces NaN (e.g. from f32 overflow after thousands of hits), or if BoltInBounds breaks
+// because a damage calculation corrupts bolt velocity, these invariants catch it.
+// Perfect(AlwaysPerfect) input sustains active play so the bolt bounces long enough to hit
+// every cell multiple times across 8000 frames.
 (
-    breaker: "Aegis",
+    breaker: "godmode",
     layout: "Scatter",
-    input: Chaos((action_prob: 0.3)),
+    input: Perfect(AlwaysPerfect),
     max_frames: 8000,
     disallowed_failures: [NoNaN, BoltInBounds],
     allowed_failures: None,

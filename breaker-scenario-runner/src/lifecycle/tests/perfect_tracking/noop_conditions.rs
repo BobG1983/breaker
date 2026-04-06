@@ -5,7 +5,8 @@ use super::super::helpers::*;
 fn perfect_tracking_noop_when_driver_is_not_perfect() {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
-        .init_resource::<InputActions>();
+        .init_resource::<InputActions>()
+        .init_resource::<PlayfieldConfig>();
 
     let driver = InputDriver::Chaos(crate::input::ChaosDriver::new(
         42,
@@ -46,7 +47,8 @@ fn perfect_tracking_noop_when_driver_is_not_perfect() {
 fn perfect_tracking_noop_when_driver_absent() {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
-        .init_resource::<InputActions>();
+        .init_resource::<InputActions>()
+        .init_resource::<PlayfieldConfig>();
     // No ScenarioInputDriver inserted
     app.insert_resource(ForceBumpGrade::default());
 

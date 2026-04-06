@@ -13,8 +13,8 @@ use crate::{
 
 #[test]
 fn reversal_dash_left_clamps_to_playfield_left_bound() {
-    // Edge case: Breaker at (-350, -250) dashing left with 300 teleport distance
-    //            would go to -650 but clamps to -400 + 60 = -340
+    // Edge case: Breaker at (-350, -250) dashing left with 600 teleport distance
+    //            would go to -950 but clamps to -400 + 60 = -340
     let mut app = test_app();
     let entity = spawn_settling_breaker_rightward_dash(&mut app, Vec2::new(-350.0, -250.0), true);
 
@@ -39,7 +39,7 @@ fn flash_step_teleport_clamps_to_playfield_right_boundary() {
     // Given: Breaker at (350, -250), Settling from leftward dash (ease_start=0.35),
     //        FlashStepActive, BaseWidth(120), playfield right=400
     // When: DashRight
-    // Then: Position2D.x == 340 (400 - 60 half-width), NOT 650
+    // Then: Position2D.x == 340 (400 - 60 half-width), NOT 950
     let mut app = test_app();
     let entity = spawn_settling_breaker_leftward_dash(&mut app, Vec2::new(350.0, -250.0), true);
 
@@ -87,7 +87,7 @@ fn flash_step_teleport_clamps_to_playfield_left_boundary() {
     // Given: Breaker at (-350, -250), Settling from rightward dash (ease_start=-0.35),
     //        FlashStepActive, BaseWidth(120), playfield left=-400
     // When: DashLeft
-    // Then: Position2D.x == -340 (-400 + 60 half-width), NOT -650
+    // Then: Position2D.x == -340 (-400 + 60 half-width), NOT -950
     let mut app = test_app();
     let entity = spawn_settling_breaker_rightward_dash(&mut app, Vec2::new(-350.0, -250.0), true);
 
@@ -135,7 +135,7 @@ fn flash_step_teleport_with_size_multiplier_adjusts_clamp_half_width() {
     // Given: Breaker at (300, -250), Settling from leftward dash, FlashStepActive,
     //        BaseWidth(120), ActiveSizeBoosts(vec![2.0]), playfield right=400
     // When: DashRight
-    // Then: Position2D.x == 280 (400 - 120 effective half-width from 60*2.0), NOT 600
+    // Then: Position2D.x == 280 (400 - 120 effective half-width from 60*2.0), NOT 900
     let mut app = test_app();
     let config = BreakerDefinition::default();
     let entity = app

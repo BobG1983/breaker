@@ -20,13 +20,13 @@ const fn default_y_position() -> f32 {
     -250.0
 }
 const fn default_max_speed() -> f32 {
-    500.0
+    1000.0
 }
 const fn default_acceleration() -> f32 {
-    3000.0
+    6000.0
 }
 const fn default_deceleration() -> f32 {
-    2500.0
+    5000.0
 }
 const fn default_decel_ease() -> EaseFunction {
     EaseFunction::QuadraticIn

@@ -1,11 +1,12 @@
 // Smoke test: Perfect(AlwaysPerfect) input strategy.
-// Every bump is perfectly timed. Godmode + quick_clear sustains play past bolt_lost.
-// Verifies no crash and invariants hold across many perfect-bump cycles.
+// Every bump is perfectly timed. Aegis + Corridor provides cells to hit and
+// enough play time for multiple bump cycles. Verifies no crash and invariants
+// hold across sustained perfect-bump play.
 (
     breaker: "godmode",
-    layout: "quick_clear",
+    layout: "Corridor",
     input: Perfect(AlwaysPerfect),
-    max_frames: 1000,
+    max_frames: 5000,
     disallowed_failures: [BoltInBounds, BreakerInBounds, NoNaN, BoltSpeedAccurate],
     allowed_failures: None,
     debug_setup: None,
