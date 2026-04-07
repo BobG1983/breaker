@@ -148,6 +148,7 @@ cells/
 | [typestate-dimensions.md](typestate-dimensions.md) | Dimension table, transition methods, optional methods, terminal method availability |
 | [structs.md](structs.md) | All struct definitions: typestate markers, CellBehavior enum, OptionalCellData, CellBuilder |
 | [build-vs-spawn.md](build-vs-spawn.md) | What build() vs spawn() do, why spawn() must be primary, removing build() from public API, migration plan |
+| [cell-modifiers.md](cell-modifiers.md) | New cell modifiers (Volatile, Sequence, Survival, Armored, Phantom, Magnetic, Portal), builder API, RON format, behavior folders, graphics needs |
 
 ## Dependencies
 - Depends on: Bolt builder (done), Breaker builder (done), Wall builder (done) — establishes the pattern
@@ -157,7 +158,7 @@ cells/
 - Follow the pattern from `bolt/builder/` and `wall/builder/`
 - Shielded cells spawn orbit children as separate entities. Extract `spawn_orbit_children` from `spawn_cells_from_layout` into `cells/behaviors/shielded/systems/`.
 - `CellTypeAlias` component tracks which definition alias spawned a cell (used by hot-reload). Builder should accept this.
-- Cell behaviors for now: **Regen**, **Shielded** — two in the `CellBehavior` enum. **Locked** is a node-layout concern, not a cell behavior. More behaviors can be added later as game design needs them.
+- All cell "types" are reframed as **modifiers**: every cell is a standard cell with HP, modifiers add behavior. A cell can have multiple modifiers. **Locked**, **Regen**, and **Shielded** are modifiers in the `CellBehavior` enum. Locked's key cells are defined in the node layout RON (not the cell type RON), but Locked itself is a modifier on the cell. New modifiers (Volatile, Sequence, Survival, Armored, Phantom, Magnetic, Portal) are designed — see [cell-modifiers.md](cell-modifiers.md).
 - Defining and refactoring ALL behaviors (locked, regen, shielded) is in scope — including the folder restructure, component moves, system moves, and the lock-target migration from cell type to node layout.
 - **Existing bug**: `effect/effects/shield/system.rs` and `effect/effects/second_wind/system.rs` use `Wall::builder()...build()` instead of `.spawn()`, skipping effect dispatch. These are exclusive World systems so they can't use `Commands` directly — needs a design decision (command flush, refactor to Commands, or `spawn_world()` variant). See [build-vs-spawn.md](build-vs-spawn.md).
 

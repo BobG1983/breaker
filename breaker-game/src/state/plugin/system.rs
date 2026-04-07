@@ -248,12 +248,8 @@ fn register_run_routes(app: &mut App) {
 fn register_node_routes(app: &mut App) {
     // Loading → AnimateIn: message-triggered (check_spawn_complete sends ChangeState)
     app.add_route(Route::from(NodeState::Loading).to(NodeState::AnimateIn));
-    // AnimateIn → Playing: pass-through (gameplay animations later)
-    app.add_route(
-        Route::from(NodeState::AnimateIn)
-            .to(NodeState::Playing)
-            .when(|_| true),
-    );
+    // AnimateIn → Playing: message-triggered (all_animate_in_complete sends ChangeState)
+    app.add_route(Route::from(NodeState::AnimateIn).to(NodeState::Playing));
     // Playing → AnimateOut: message-triggered (handle_node_cleared etc. send ChangeState)
     app.add_route(Route::from(NodeState::Playing).to(NodeState::AnimateOut));
     // AnimateOut → Teardown: pass-through

@@ -1,6 +1,6 @@
 use bevy::prelude::*;
-use rantzsoft_stateflow::CleanupOnExit;
 use rantzsoft_spatial2d::components::Position2D;
+use rantzsoft_stateflow::CleanupOnExit;
 
 use super::{super::system::grid_extent, helpers::*};
 use crate::{

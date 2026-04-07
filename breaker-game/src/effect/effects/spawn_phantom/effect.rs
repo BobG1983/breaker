@@ -6,14 +6,13 @@ use bevy::{
     time::{Timer, TimerMode},
 };
 use rand::Rng;
-use rantzsoft_spatial2d::components::Velocity2D;
 
 use crate::{
     bolt::{
-        components::{Bolt, BoltDefinitionRef, BoltLifespan, PiercingRemaining},
+        components::{BoltDefinitionRef, BoltLifespan, PiercingRemaining},
         registry::BoltRegistry,
     },
-    shared::rng::GameRng,
+    prelude::*,
 };
 
 /// Marker for phantom bolt entities.
@@ -120,6 +119,7 @@ pub(crate) fn fire(
                 .with_velocity(velocity)
                 .extra()
                 .headless()
+                .birthed()
                 .spawn(&mut commands)
         };
         queue.apply(world);

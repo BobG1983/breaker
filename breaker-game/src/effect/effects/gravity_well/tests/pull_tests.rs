@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use rantzsoft_physics2d::collision_layers::CollisionLayers;
 use rantzsoft_spatial2d::prelude::*;
 
 use super::{super::effect::*, helpers::*};
@@ -291,6 +292,96 @@ fn apply_gravity_pull_skips_well_without_position2d() {
         velocity.y
     );
 }
+
+// ── Behaviors 10-11: apply_gravity_pull skips bolts with Birthing ──
+
+/// Helper to create a `Birthing` component for tests.
+fn test_birthing() -> crate::shared::birthing::Birthing {
+    crate::shared::birthing::Birthing {
+        timer: Timer::from_seconds(0.3, TimerMode::Once),
+        target_scale: Scale2D { x: 8.0, y: 8.0 },
+        stashed_layers: CollisionLayers::default(),
+    }
+}
+
+// Behavior 10: apply_gravity_pull skips bolts with Birthing
+#[test]
+fn apply_gravity_pull_skips_bolt_with_birthing() {
+    let mut app = test_app();
+    enter_playing(&mut app);
+
+    // Gravity well at origin with large radius
+    app.world_mut().spawn((
+        GravityWell,
+        GravityWellConfig {
+            strength: 500.0,
+            radius: 200.0,
+            remaining: 10.0,
+            owner: Entity::PLACEHOLDER,
+        },
+        Position2D(Vec2::ZERO),
+    ));
+
+    // Bolt WITH Birthing at (100, 0) — should NOT be pulled
+    let bolt = spawn_bolt(&mut app, Vec2::new(100.0, 0.0), Vec2::ZERO);
+    app.world_mut().entity_mut(bolt).insert(test_birthing());
+
+    app.update();
+
+    let velocity = app.world().get::<Velocity2D>(bolt).unwrap();
+    assert!(
+        velocity.x.abs() < f32::EPSILON && velocity.y.abs() < f32::EPSILON,
+        "bolt with Birthing should NOT be pulled by gravity well, got velocity = ({}, {})",
+        velocity.x,
+        velocity.y
+    );
+}
+
+// Behavior 10 edge case: non-birthing bolt at same position IS pulled
+#[test]
+fn apply_gravity_pull_skips_birthing_but_pulls_non_birthing() {
+    let mut app = test_app();
+    enter_playing(&mut app);
+
+    app.world_mut().spawn((
+        GravityWell,
+        GravityWellConfig {
+            strength: 500.0,
+            radius: 200.0,
+            remaining: 10.0,
+            owner: Entity::PLACEHOLDER,
+        },
+        Position2D(Vec2::ZERO),
+    ));
+
+    // Bolt WITH Birthing — should NOT be pulled
+    let birthing_bolt = spawn_bolt(&mut app, Vec2::new(100.0, 0.0), Vec2::ZERO);
+    app.world_mut()
+        .entity_mut(birthing_bolt)
+        .insert(test_birthing());
+
+    // Bolt WITHOUT Birthing — SHOULD be pulled
+    let normal_bolt = spawn_bolt(&mut app, Vec2::new(100.0, 0.0), Vec2::ZERO);
+
+    app.update();
+
+    let birthing_vel = app.world().get::<Velocity2D>(birthing_bolt).unwrap();
+    assert!(
+        birthing_vel.x.abs() < f32::EPSILON,
+        "birthing bolt should NOT be pulled, got velocity.x = {}",
+        birthing_vel.x
+    );
+
+    let normal_vel = app.world().get::<Velocity2D>(normal_bolt).unwrap();
+    assert!(
+        normal_vel.x < 0.0,
+        "non-birthing bolt should be pulled toward well (velocity.x < 0.0), got {}",
+        normal_vel.x
+    );
+}
+
+// Behavior 11: apply_gravity_pull pulls bolts without Birthing normally
+// (covered by existing `apply_gravity_pull_steers_bolt_toward_well_within_radius` test)
 
 #[test]
 fn apply_gravity_pull_only_well_with_position2d_affects_bolt() {

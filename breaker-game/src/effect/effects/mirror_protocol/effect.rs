@@ -1,14 +1,14 @@
 //! `MirrorProtocol` effect -- spawns mirrored bolts reflected across the last impact surface.
 
 use bevy::{ecs::world::CommandQueue, prelude::*};
-use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use crate::{
     bolt::{
-        components::{Bolt, BoltDefinitionRef, ImpactSide, LastImpact},
+        components::{BoltDefinitionRef, ImpactSide, LastImpact},
         registry::BoltRegistry,
     },
     effect::BoundEffects,
+    prelude::*,
 };
 
 /// Spawns a mirrored bolt reflected across the bolt's last impact surface.
@@ -93,6 +93,7 @@ pub(crate) fn fire(entity: Entity, inherit: bool, _source_chip: &str, world: &mu
                 .with_velocity(Velocity2D(mirror_vel))
                 .extra()
                 .headless()
+                .birthed()
                 .spawn(&mut commands)
         };
         queue.apply(world);

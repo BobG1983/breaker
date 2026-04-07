@@ -5,10 +5,9 @@ use rand::Rng;
 use rantzsoft_spatial2d::queries::SpatialData;
 
 use crate::{
-    bolt::{components::*, filters::ServingFilter, queries::apply_velocity_formula},
-    effect::effects::speed_boost::ActiveSpeedBoosts,
-    input::resources::{GameAction, InputActions},
-    shared::GameRng,
+    bolt::{components::*, filters::LaunchFilter, queries::apply_velocity_formula},
+    input::resources::GameAction,
+    prelude::*,
 };
 
 /// Launches the bolt when the player activates bump.
@@ -27,7 +26,7 @@ pub(crate) fn launch_bolt(
             Option<&ActiveSpeedBoosts>,
             &BoltAngleSpread,
         ),
-        ServingFilter,
+        LaunchFilter,
     >,
 ) {
     if !actions.active(GameAction::Bump) {

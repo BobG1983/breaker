@@ -2,16 +2,23 @@
 
 use bevy::prelude::*;
 
-use crate::bolt::{
-    components::{Bolt, BoltLifespan},
-    messages::RequestBoltDestroyed,
+use crate::{
+    bolt::{
+        components::{Bolt, BoltLifespan},
+        messages::RequestBoltDestroyed,
+    },
+    shared::birthing::Birthing,
 };
+
+/// Query for active (non-birthing) bolts with lifespan timers.
+type BoltLifespanQuery<'w, 's> =
+    Query<'w, 's, (Entity, &'static mut BoltLifespan), (With<Bolt>, Without<Birthing>)>;
 
 /// Ticks [`BoltLifespan`] timers on bolt entities and writes
 /// [`RequestBoltDestroyed`] when the timer finishes.
 pub(crate) fn tick_bolt_lifespan(
     time: Res<Time>,
-    mut query: Query<(Entity, &mut BoltLifespan), With<Bolt>>,
+    mut query: BoltLifespanQuery,
     mut writer: MessageWriter<RequestBoltDestroyed>,
 ) {
     for (entity, mut lifespan) in &mut query {
@@ -116,4 +123,98 @@ mod tests {
             "BoltLifespan(2.0s) should NOT produce RequestBoltDestroyed after 1 tick (~0.016s)"
         );
     }
+
+    // ── Behaviors 3-4: tick_bolt_lifespan skips bolts with Birthing ──
+
+    /// Helper to create a `Birthing` component for tests.
+    fn test_birthing() -> crate::shared::birthing::Birthing {
+        use rantzsoft_physics2d::collision_layers::CollisionLayers;
+        use rantzsoft_spatial2d::components::Scale2D;
+
+        crate::shared::birthing::Birthing {
+            timer: Timer::from_seconds(0.3, TimerMode::Once),
+            target_scale: Scale2D { x: 8.0, y: 8.0 },
+            stashed_layers: CollisionLayers::default(),
+        }
+    }
+
+    // Behavior 3: tick_bolt_lifespan skips bolts with Birthing
+    #[test]
+    fn tick_bolt_lifespan_skips_bolts_with_birthing() {
+        let mut app = test_app();
+
+        // Bolt WITH Birthing — should NOT produce RequestBoltDestroyed
+        let _birthing_bolt = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                ExtraBolt,
+                Velocity2D(Vec2::new(0.0, 400.0)),
+                Position2D(Vec2::ZERO),
+                BoltLifespan(Timer::from_seconds(0.5, TimerMode::Once)),
+                test_birthing(),
+            ))
+            .id();
+
+        // Tick 40 times (well past 0.5s lifespan)
+        for _ in 0..40 {
+            tick(&mut app);
+        }
+
+        let captured = app.world().resource::<CapturedRequestBoltDestroyed>();
+        assert!(
+            captured.0.is_empty(),
+            "tick_bolt_lifespan should NOT destroy a bolt with Birthing component"
+        );
+    }
+
+    // Behavior 3 edge case: non-birthing bolt with same lifespan IS destroyed
+    #[test]
+    fn tick_bolt_lifespan_skips_birthing_but_processes_non_birthing() {
+        let mut app = test_app();
+
+        // Bolt WITH Birthing — should be skipped
+        let _birthing_bolt = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                ExtraBolt,
+                Velocity2D(Vec2::new(0.0, 400.0)),
+                Position2D(Vec2::ZERO),
+                BoltLifespan(Timer::from_seconds(0.5, TimerMode::Once)),
+                test_birthing(),
+            ))
+            .id();
+
+        // Bolt WITHOUT Birthing — should be destroyed
+        let normal_bolt = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                ExtraBolt,
+                Velocity2D(Vec2::new(0.0, 400.0)),
+                Position2D(Vec2::ZERO),
+                BoltLifespan(Timer::from_seconds(0.5, TimerMode::Once)),
+            ))
+            .id();
+
+        for _ in 0..40 {
+            tick(&mut app);
+        }
+
+        let captured = app.world().resource::<CapturedRequestBoltDestroyed>();
+        assert_eq!(
+            captured.0.len(),
+            1,
+            "only the non-birthing bolt should produce RequestBoltDestroyed"
+        );
+        assert_eq!(
+            captured.0[0].bolt, normal_bolt,
+            "RequestBoltDestroyed should reference the non-birthing bolt"
+        );
+    }
+
+    // Behavior 4: tick_bolt_lifespan processes bolts without Birthing normally
+    // (covered by existing `bolt_lifespan_destroys_bolt_on_expiry` test — this
+    //  is the edge case that the filter change does not break existing behavior)
 }

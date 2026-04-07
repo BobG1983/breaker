@@ -1,11 +1,11 @@
 use std::collections::HashSet;
 
 use bevy::prelude::*;
-use rantzsoft_stateflow::CleanupOnExit;
 use rantzsoft_physics2d::{
     aabb::Aabb2D, collision_layers::CollisionLayers, plugin::RantzPhysics2dPlugin,
 };
 use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial, Spatial2D};
+use rantzsoft_stateflow::CleanupOnExit;
 
 pub(super) use crate::effect::effects::chain_lightning::effect::*;
 use crate::{

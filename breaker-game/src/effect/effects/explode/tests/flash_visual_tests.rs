@@ -1,8 +1,8 @@
 //! Tests for explode flash visual entity spawning.
 
 use bevy::prelude::*;
-use rantzsoft_stateflow::CleanupOnExit;
 use rantzsoft_spatial2d::components::{Position2D, Scale2D};
+use rantzsoft_stateflow::CleanupOnExit;
 
 use super::helpers::*;
 use crate::{

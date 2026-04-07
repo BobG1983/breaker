@@ -16,9 +16,9 @@ use crate::{
         resources::{ClearRemainingCount, NodeTimer, ScenarioLayoutOverride},
         sets::NodeSystems,
         systems::{
-            apply_time_penalty, check_spawn_complete, init_clear_remaining, init_node_timer,
-            reverse_time_penalty, set_active_layout, spawn_cells_from_layout, tick_node_timer,
-            track_node_completion,
+            all_animate_in_complete, apply_time_penalty, check_spawn_complete,
+            init_clear_remaining, init_node_timer, reverse_time_penalty, set_active_layout,
+            spawn_cells_from_layout, tick_node_timer, track_node_completion,
         },
     },
 };
@@ -67,6 +67,10 @@ impl Plugin for NodePlugin {
             )
             // Intentionally runs without NodeState::Playing guard — must catch spawn signals on the first frame of play.
             .add_systems(FixedUpdate, check_spawn_complete)
+            .add_systems(
+                FixedUpdate,
+                all_animate_in_complete.run_if(in_state(NodeState::AnimateIn)),
+            )
             .add_systems(
                 FixedUpdate,
                 (

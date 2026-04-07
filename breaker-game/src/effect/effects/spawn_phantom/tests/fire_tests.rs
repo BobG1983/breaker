@@ -1,9 +1,9 @@
 //! Tests for `SpawnPhantom` `fire()` bolt spawning, components, and cap enforcement.
 
 use bevy::prelude::*;
-use rantzsoft_stateflow::CleanupOnExit;
 use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{Position2D, Scale2D, Velocity2D};
+use rantzsoft_stateflow::CleanupOnExit;
 
 use super::{super::effect::*, helpers::*};
 use crate::{
@@ -14,9 +14,51 @@ use crate::{
         definition::BoltDefinition,
         registry::BoltRegistry,
     },
-    shared::{BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, GameDrawLayer, WALL_LAYER, rng::GameRng},
+    shared::{
+        BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, GameDrawLayer, WALL_LAYER, birthing::Birthing,
+        rng::GameRng,
+    },
     state::types::{NodeState, RunState},
 };
+
+// ── Behavior 15: spawn_phantom fire() produces bolt with Birthing ──
+
+#[test]
+fn fire_spawns_phantom_with_birthing_component() {
+    let mut world = world_with_bolt_registry();
+    let entity = world.spawn(Position2D(Vec2::new(0.0, 0.0))).id();
+
+    fire(entity, 5.0, 3, "", &mut world);
+
+    let mut query = world.query_filtered::<Entity, With<PhantomBoltMarker>>();
+    let phantom = query.iter(&world).next().expect("phantom should exist");
+
+    assert!(
+        world
+            .get::<crate::shared::birthing::Birthing>(phantom)
+            .is_some(),
+        "spawned phantom bolt should have Birthing component"
+    );
+}
+
+// Behavior 15 edge case: single phantom still has Birthing
+#[test]
+fn fire_single_phantom_has_birthing_component() {
+    let mut world = world_with_bolt_registry();
+    let entity = world.spawn(Position2D(Vec2::ZERO)).id();
+
+    fire(entity, 5.0, 1, "", &mut world);
+
+    let mut query = world.query_filtered::<Entity, With<PhantomBoltMarker>>();
+    let phantom = query.iter(&world).next().expect("phantom should exist");
+
+    assert!(
+        world
+            .get::<crate::shared::birthing::Birthing>(phantom)
+            .is_some(),
+        "single spawned phantom should have Birthing component"
+    );
+}
 
 // -- fire tests ──────────────────────────────────────────────────
 
@@ -65,19 +107,34 @@ fn fire_spawns_phantom_with_bolt_marker_and_physics_components() {
         vel.0.length()
     );
 
-    // Scale2D
+    // Scale2D — zeroed by birthing
     let scale = world
         .get::<Scale2D>(phantom)
         .expect("phantom should have Scale2D");
     assert!(
-        (scale.x - 8.0).abs() < f32::EPSILON,
-        "phantom Scale2D.x should be radius (8.0), got {}",
+        (scale.x - 0.0).abs() < f32::EPSILON,
+        "phantom Scale2D.x should be 0.0 (zeroed by birthing), got {}",
         scale.x
     );
     assert!(
-        (scale.y - 8.0).abs() < f32::EPSILON,
-        "phantom Scale2D.y should be radius (8.0), got {}",
+        (scale.y - 0.0).abs() < f32::EPSILON,
+        "phantom Scale2D.y should be 0.0 (zeroed by birthing), got {}",
         scale.y
+    );
+
+    // Birthing — stashes original scale and layers
+    let birthing = world
+        .get::<Birthing>(phantom)
+        .expect("phantom should have Birthing");
+    assert!(
+        (birthing.target_scale.x - 8.0).abs() < f32::EPSILON,
+        "Birthing target_scale.x should be radius (8.0), got {}",
+        birthing.target_scale.x
+    );
+    assert!(
+        (birthing.target_scale.y - 8.0).abs() < f32::EPSILON,
+        "Birthing target_scale.y should be radius (8.0), got {}",
+        birthing.target_scale.y
     );
 
     // Aabb2D
@@ -95,18 +152,22 @@ fn fire_spawns_phantom_with_bolt_marker_and_physics_components() {
         "phantom Aabb2D half_extents should be (8.0, 8.0)"
     );
 
-    // CollisionLayers
+    // CollisionLayers — zeroed by birthing, originals stashed in Birthing
     let layers = world
         .get::<CollisionLayers>(phantom)
         .expect("phantom should have CollisionLayers");
     assert_eq!(
-        layers.membership, BOLT_LAYER,
-        "phantom membership should be BOLT_LAYER"
+        layers.membership, 0,
+        "phantom membership should be 0 (zeroed by birthing)"
     );
     assert_eq!(
-        layers.mask,
-        CELL_LAYER | WALL_LAYER | BREAKER_LAYER,
-        "phantom mask should be CELL|WALL|BREAKER"
+        layers.mask, 0,
+        "phantom mask should be 0 (zeroed by birthing)"
+    );
+    assert_eq!(birthing.stashed_layers.membership, BOLT_LAYER);
+    assert_eq!(
+        birthing.stashed_layers.mask,
+        CELL_LAYER | WALL_LAYER | BREAKER_LAYER
     );
 }
 
@@ -360,13 +421,22 @@ fn fire_reads_bolt_definition_ref_from_source_entity_for_phantom() {
         vel.0.length()
     );
 
+    // Scale2D — zeroed by birthing; original stashed in Birthing
     let scale = world
         .get::<Scale2D>(phantom)
         .expect("phantom should have Scale2D");
     assert!(
-        (scale.x - 12.0).abs() < f32::EPSILON,
-        "phantom Scale2D.x should be 12.0 from Heavy definition, got {}",
+        (scale.x - 0.0).abs() < f32::EPSILON,
+        "phantom Scale2D.x should be 0.0 (zeroed by birthing), got {}",
         scale.x
+    );
+    let birthing = world
+        .get::<Birthing>(phantom)
+        .expect("phantom should have Birthing");
+    assert!(
+        (birthing.target_scale.x - 12.0).abs() < f32::EPSILON,
+        "Birthing target_scale.x should be 12.0 from Heavy definition, got {}",
+        birthing.target_scale.x
     );
 
     let radius = world

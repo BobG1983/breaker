@@ -14,10 +14,8 @@ use crate::{
         Bolt, BoltAngleSpread, BoltBaseDamage, BoltRadius, BoltSpawnOffsetY, ExtraBolt, LastImpact,
         PiercingRemaining, SpawnedByEvolution,
     },
-    effect::effects::{
-        damage_boost::ActiveDamageBoosts, piercing::ActivePiercings, speed_boost::ActiveSpeedBoosts,
-    },
-    shared::NodeScalingFactor,
+    effect::effects::piercing::ActivePiercings,
+    prelude::*,
 };
 
 /// Bolt spatial data with speed boosts for systems that modify bolt velocity

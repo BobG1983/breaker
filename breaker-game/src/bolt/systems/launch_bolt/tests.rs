@@ -353,6 +353,86 @@ fn launch_bolt_velocity_matches_base_speed() {
     );
 }
 
+// ── Behaviors 5-6: launch_bolt skips bolts with Birthing ──
+
+/// Helper to create a `Birthing` component for tests.
+fn test_birthing() -> crate::shared::birthing::Birthing {
+    use rantzsoft_physics2d::collision_layers::CollisionLayers;
+    use rantzsoft_spatial2d::components::Scale2D;
+
+    crate::shared::birthing::Birthing {
+        timer: Timer::from_seconds(0.3, TimerMode::Once),
+        target_scale: Scale2D { x: 8.0, y: 8.0 },
+        stashed_layers: CollisionLayers::default(),
+    }
+}
+
+// Behavior 5: launch_bolt skips bolts with Birthing
+#[test]
+fn launch_bolt_skips_serving_bolt_with_birthing() {
+    let mut app = test_app();
+
+    let bolt_id = spawn_serving_bolt(&mut app);
+    // Insert Birthing after spawning (spec says: do NOT modify spawn_serving_bolt helper)
+    app.world_mut().entity_mut(bolt_id).insert(test_birthing());
+
+    app.world_mut()
+        .resource_mut::<InputActions>()
+        .0
+        .push(GameAction::Bump);
+    tick(&mut app);
+
+    // Bolt should STILL be serving (was NOT launched)
+    assert!(
+        app.world().get::<BoltServing>(bolt_id).is_some(),
+        "serving bolt with Birthing should NOT be launched"
+    );
+
+    let vel = app.world().get::<Velocity2D>(bolt_id).unwrap();
+    assert!(
+        vel.speed() < f32::EPSILON,
+        "serving bolt with Birthing should still have zero velocity, got {}",
+        vel.speed()
+    );
+}
+
+// Behavior 5 edge case: a second serving bolt WITHOUT Birthing IS launched
+#[test]
+fn launch_bolt_skips_birthing_but_launches_non_birthing() {
+    let mut app = test_app();
+
+    // Bolt A: serving + Birthing — should NOT be launched
+    let bolt_a = spawn_serving_bolt(&mut app);
+    app.world_mut().entity_mut(bolt_a).insert(test_birthing());
+
+    // Bolt B: serving, NO Birthing — should be launched
+    let bolt_b = spawn_serving_bolt(&mut app);
+
+    app.world_mut()
+        .resource_mut::<InputActions>()
+        .0
+        .push(GameAction::Bump);
+    tick(&mut app);
+
+    // Bolt A: still serving
+    assert!(
+        app.world().get::<BoltServing>(bolt_a).is_some(),
+        "birthing serving bolt should NOT be launched"
+    );
+
+    // Bolt B: launched (BoltServing removed)
+    assert!(
+        app.world().get::<BoltServing>(bolt_b).is_none(),
+        "non-birthing serving bolt should be launched (BoltServing removed)"
+    );
+    let vel_b = app.world().get::<Velocity2D>(bolt_b).unwrap();
+    assert!(vel_b.0.y > 0.0, "non-birthing bolt should launch upward");
+}
+
+// Behavior 6: launch_bolt launches serving bolts without Birthing normally
+// (covered by existing `bump_launches_serving_bolt` test — ensures filter
+//  change does not break existing behavior)
+
 #[test]
 fn launch_bolt_velocity_with_speed_boost() {
     // Edge case: ActiveSpeedBoosts(vec![1.5]) -> speed = 720.0 * 1.5 = 1080.0

@@ -1,8 +1,8 @@
 //! Cells domain components.
 
 use bevy::prelude::*;
-use rantzsoft_stateflow::CleanupOnExit;
 use rantzsoft_spatial2d::components::Spatial2D;
+use rantzsoft_stateflow::CleanupOnExit;
 
 use crate::state::types::NodeState;
 

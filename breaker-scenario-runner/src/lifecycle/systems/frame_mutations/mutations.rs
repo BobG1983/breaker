@@ -22,9 +22,9 @@ use breaker::{
         types::NodeState,
     },
 };
-use rantzsoft_stateflow::CleanupOnExit;
 use rantzsoft_physics2d::aabb::Aabb2D;
 use rantzsoft_spatial2d::components::Position2D;
+use rantzsoft_stateflow::CleanupOnExit;
 
 use crate::{
     invariants::{ScenarioFrame, ScenarioTagBolt, ScenarioTagBreaker},

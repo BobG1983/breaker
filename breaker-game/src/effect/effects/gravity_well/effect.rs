@@ -1,13 +1,12 @@
 use std::collections::HashMap;
 
 use bevy::prelude::*;
-use rantzsoft_stateflow::CleanupOnExit;
 use rantzsoft_spatial2d::prelude::*;
 
 use crate::{
     bolt::queries::{BoltSpeedData, apply_velocity_formula},
+    prelude::*,
     shared::GameDrawLayer,
-    state::types::NodeState,
 };
 
 /// Placeholder gravity well color — HDR purple.
@@ -152,7 +151,7 @@ pub(crate) fn tick_gravity_well(
 pub(crate) fn apply_gravity_pull(
     time: Res<Time>,
     wells: Query<(&Position2D, &GravityWellConfig), With<GravityWell>>,
-    mut bolts: Query<BoltSpeedData, Without<GravityWell>>,
+    mut bolts: Query<BoltSpeedData, (Without<GravityWell>, Without<Birthing>)>,
 ) {
     let dt = time.delta_secs();
     for (well_position, config) in &wells {

@@ -1,14 +1,13 @@
 //! System to keep a serving bolt hovering above the breaker.
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
     bolt::{
         components::{Bolt, BoltSpawnOffsetY},
         filters::ServingFilter,
     },
-    breaker::components::Breaker,
+    prelude::*,
 };
 
 /// Keeps the bolt positioned above the breaker while serving.
@@ -88,6 +87,133 @@ mod tests {
                 && (position.0.y - expected.y).abs() < f32::EPSILON,
             "hover bolt Position2D should be {expected:?}, got {:?}",
             position.0,
+        );
+    }
+
+    // ── Behavior 7: hover_bolt still positions birthing+serving bolts ──
+
+    /// Helper to create a `Birthing` component for tests.
+    fn test_birthing() -> crate::shared::birthing::Birthing {
+        use rantzsoft_physics2d::collision_layers::CollisionLayers;
+        use rantzsoft_spatial2d::components::Scale2D;
+
+        crate::shared::birthing::Birthing {
+            timer: Timer::from_seconds(0.3, TimerMode::Once),
+            target_scale: Scale2D { x: 8.0, y: 8.0 },
+            stashed_layers: CollisionLayers::default(),
+        }
+    }
+
+    #[test]
+    fn hover_bolt_positions_birthing_and_serving_bolt() {
+        // Given: bolt with Bolt + BoltServing + Birthing at Position2D(0.0, 0.0),
+        //        breaker at Position2D(100.0, -250.0), BoltSpawnOffsetY(30.0)
+        // When: hover_bolt runs
+        // Then: bolt Position2D is updated to (100.0, -220.0) — proving
+        //       ServingFilter is intentionally unchanged (no Without<Birthing>)
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+
+        let spawn_offset_y = 30.0;
+
+        app.world_mut().spawn((
+            Breaker,
+            Position2D(Vec2::new(100.0, -250.0)),
+            Spatial2D,
+            GameDrawLayer::Breaker,
+        ));
+
+        // Birthing + serving bolt
+        app.world_mut().spawn((
+            Bolt,
+            BoltServing,
+            BoltSpawnOffsetY(spawn_offset_y),
+            Velocity2D(Vec2::new(0.0, 0.0)),
+            Position2D(Vec2::new(0.0, 0.0)),
+            test_birthing(),
+        ));
+
+        app.add_systems(FixedUpdate, hover_bolt);
+        tick(&mut app);
+
+        let position = app
+            .world_mut()
+            .query_filtered::<&Position2D, With<Bolt>>()
+            .iter(app.world())
+            .next()
+            .expect("bolt should have Position2D");
+
+        let expected = Vec2::new(100.0, -250.0 + spawn_offset_y);
+        assert!(
+            (position.0.x - expected.x).abs() < f32::EPSILON
+                && (position.0.y - expected.y).abs() < f32::EPSILON,
+            "hover_bolt should position birthing+serving bolt at {:?}, got {:?}",
+            expected,
+            position.0,
+        );
+    }
+
+    // Behavior 7 edge case: non-birthing serving bolt is also positioned
+    #[test]
+    fn hover_bolt_positions_both_birthing_and_non_birthing_serving_bolts() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+
+        let spawn_offset_y = 30.0;
+
+        app.world_mut().spawn((
+            Breaker,
+            Position2D(Vec2::new(100.0, -250.0)),
+            Spatial2D,
+            GameDrawLayer::Breaker,
+        ));
+
+        // Birthing + serving bolt
+        let birthing_bolt = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                BoltServing,
+                BoltSpawnOffsetY(spawn_offset_y),
+                Velocity2D(Vec2::ZERO),
+                Position2D(Vec2::ZERO),
+                test_birthing(),
+            ))
+            .id();
+
+        // Non-birthing serving bolt
+        let normal_bolt = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                BoltServing,
+                BoltSpawnOffsetY(spawn_offset_y),
+                Velocity2D(Vec2::ZERO),
+                Position2D(Vec2::ZERO),
+            ))
+            .id();
+
+        app.add_systems(FixedUpdate, hover_bolt);
+        tick(&mut app);
+
+        let expected = Vec2::new(100.0, -250.0 + spawn_offset_y);
+
+        let birthing_pos = app.world().get::<Position2D>(birthing_bolt).unwrap();
+        assert!(
+            (birthing_pos.0.x - expected.x).abs() < f32::EPSILON
+                && (birthing_pos.0.y - expected.y).abs() < f32::EPSILON,
+            "birthing+serving bolt should be positioned at {:?}, got {:?}",
+            expected,
+            birthing_pos.0,
+        );
+
+        let normal_pos = app.world().get::<Position2D>(normal_bolt).unwrap();
+        assert!(
+            (normal_pos.0.x - expected.x).abs() < f32::EPSILON
+                && (normal_pos.0.y - expected.y).abs() < f32::EPSILON,
+            "non-birthing serving bolt should also be positioned at {:?}, got {:?}",
+            expected,
+            normal_pos.0,
         );
     }
 

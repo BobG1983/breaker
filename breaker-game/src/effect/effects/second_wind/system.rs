@@ -4,7 +4,7 @@ use std::collections::HashSet;
 
 use bevy::prelude::*;
 
-use crate::{bolt::messages::BoltImpactWall, shared::PlayfieldConfig, walls::components::Wall};
+use crate::prelude::*;
 
 /// Marker for the invisible wall entity spawned by Second Wind.
 #[derive(Component)]
@@ -76,7 +76,7 @@ pub(crate) fn despawn_second_wind_on_contact(
 
 /// Registers systems for `SecondWind` effect.
 pub(crate) fn register(app: &mut App) {
-    use crate::{bolt::BoltSystems, state::types::NodeState};
+    use crate::bolt::BoltSystems;
     app.add_systems(
         FixedUpdate,
         despawn_second_wind_on_contact

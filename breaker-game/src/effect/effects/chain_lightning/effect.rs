@@ -7,18 +7,14 @@ use std::collections::HashSet;
 
 use bevy::{ecs::system::SystemParam, prelude::*};
 use rand::prelude::IndexedRandom;
-use rantzsoft_stateflow::CleanupOnExit;
-use rantzsoft_physics2d::{
-    collision_layers::CollisionLayers, plugin::PhysicsSystems, resources::CollisionQuadtree,
-};
-use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Scale2D, Spatial};
+use rantzsoft_physics2d::{plugin::PhysicsSystems, resources::CollisionQuadtree};
+use rantzsoft_spatial2d::components::{GlobalPosition2D, Spatial};
 
 use crate::{
     bolt::{components::BoltBaseDamage, resources::DEFAULT_BOLT_BASE_DAMAGE},
-    cells::{components::Cell, messages::DamageCell},
-    effect::{core::EffectSourceChip, effects::damage_boost::ActiveDamageBoosts},
-    shared::{CELL_LAYER, GameDrawLayer, rng::GameRng},
-    state::types::NodeState,
+    effect::core::EffectSourceChip,
+    prelude::*,
+    shared::{CELL_LAYER, GameDrawLayer},
 };
 
 /// Stateful chain entity that tracks the chain lightning's progression

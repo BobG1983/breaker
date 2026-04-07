@@ -1,9 +1,9 @@
 use bevy::prelude::*;
-use rantzsoft_stateflow::CleanupOnExit;
 use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{
     MaxSpeed, Position2D, PreviousPosition, PreviousScale, Scale2D, Velocity2D,
 };
+use rantzsoft_stateflow::CleanupOnExit;
 
 use super::helpers::test_breaker_definition;
 use crate::{

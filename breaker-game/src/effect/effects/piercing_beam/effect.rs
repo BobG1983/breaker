@@ -1,20 +1,15 @@
 //! Fast-expanding beam rectangle in the bolt's velocity direction.
 
 use bevy::prelude::*;
-use rantzsoft_stateflow::CleanupOnExit;
-use rantzsoft_physics2d::{
-    aabb::Aabb2D, collision_layers::CollisionLayers, plugin::PhysicsSystems,
-    resources::CollisionQuadtree,
-};
-use rantzsoft_spatial2d::components::{GlobalPosition2D, Rotation2D, Scale2D, Spatial, Velocity2D};
+use rantzsoft_physics2d::{plugin::PhysicsSystems, resources::CollisionQuadtree};
+use rantzsoft_spatial2d::components::{GlobalPosition2D, Rotation2D, Spatial};
 
 use crate::{
     bolt::{components::BoltBaseDamage, resources::DEFAULT_BOLT_BASE_DAMAGE},
-    cells::messages::DamageCell,
-    effect::{core::EffectSourceChip, effects::damage_boost::ActiveDamageBoosts},
+    effect::core::EffectSourceChip,
     fx::EffectFlashTimer,
-    shared::{CELL_LAYER, GameDrawLayer, PlayfieldConfig},
-    state::types::NodeState,
+    prelude::*,
+    shared::{CELL_LAYER, GameDrawLayer},
 };
 
 /// Placeholder beam flash color — HDR white-yellow.

@@ -1,11 +1,11 @@
 //! Tests for spawned bolt physics components (via `spawn_extra_bolt`) and velocity override.
 
 use bevy::prelude::*;
-use rantzsoft_stateflow::CleanupOnExit;
 use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{
     BaseSpeed, MaxSpeed, MinSpeed, Position2D, PreviousPosition, Scale2D, Velocity2D,
 };
+use rantzsoft_stateflow::CleanupOnExit;
 
 use crate::{
     bolt::{
@@ -14,7 +14,10 @@ use crate::{
         registry::BoltRegistry,
     },
     effect::effects::mirror_protocol::effect::*,
-    shared::{BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, GameDrawLayer, WALL_LAYER, rng::GameRng},
+    shared::{
+        BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, GameDrawLayer, WALL_LAYER, birthing::Birthing,
+        rng::GameRng,
+    },
     state::types::NodeState,
 };
 
@@ -90,15 +93,26 @@ fn spawned_bolt_has_full_physics_components_from_spawn_extra_bolt() {
         "should have PreviousPosition"
     );
 
-    // Scale2D -- radius=8.0 from default config
+    // Scale2D — zeroed by birthing
     let scale = world.get::<Scale2D>(bolt).expect("should have Scale2D");
     assert!(
-        (scale.x - 8.0).abs() < f32::EPSILON,
-        "Scale2D.x should be 8.0"
+        (scale.x - 0.0).abs() < f32::EPSILON,
+        "Scale2D.x should be 0.0 (zeroed by birthing)"
     );
     assert!(
-        (scale.y - 8.0).abs() < f32::EPSILON,
-        "Scale2D.y should be 8.0"
+        (scale.y - 0.0).abs() < f32::EPSILON,
+        "Scale2D.y should be 0.0 (zeroed by birthing)"
+    );
+
+    // Birthing — stashes original scale and layers
+    let birthing = world.get::<Birthing>(bolt).expect("should have Birthing");
+    assert!(
+        (birthing.target_scale.x - 8.0).abs() < f32::EPSILON,
+        "Birthing target_scale.x should be 8.0"
+    );
+    assert!(
+        (birthing.target_scale.y - 8.0).abs() < f32::EPSILON,
+        "Birthing target_scale.y should be 8.0"
     );
 
     // Aabb2D
@@ -106,12 +120,17 @@ fn spawned_bolt_has_full_physics_components_from_spawn_extra_bolt() {
     assert_eq!(aabb.center, Vec2::ZERO);
     assert_eq!(aabb.half_extents, Vec2::new(8.0, 8.0));
 
-    // CollisionLayers
+    // CollisionLayers — zeroed by birthing, originals stashed in Birthing
     let layers = world
         .get::<CollisionLayers>(bolt)
         .expect("should have CollisionLayers");
-    assert_eq!(layers.membership, BOLT_LAYER);
-    assert_eq!(layers.mask, CELL_LAYER | WALL_LAYER | BREAKER_LAYER);
+    assert_eq!(layers.membership, 0);
+    assert_eq!(layers.mask, 0);
+    assert_eq!(birthing.stashed_layers.membership, BOLT_LAYER);
+    assert_eq!(
+        birthing.stashed_layers.mask,
+        CELL_LAYER | WALL_LAYER | BREAKER_LAYER
+    );
 
     // Velocity2D at mirror velocity: (-100, 400)
     let vel = world
@@ -188,6 +207,79 @@ fn fire_overwrites_spawn_extra_bolt_random_velocity_with_mirror_velocity() {
     );
 }
 
+// ── Behavior 14: mirror_protocol fire() produces bolt with Birthing ──
+
+#[test]
+fn fire_spawns_mirrored_bolt_with_birthing_component() {
+    let mut world = world_with_bolt_registry();
+    let bolt_entity = world
+        .spawn((
+            Bolt,
+            Position2D(Vec2::new(60.0, 250.0)),
+            Velocity2D(Vec2::new(100.0, 400.0)),
+            LastImpact {
+                position: Vec2::new(50.0, 200.0),
+                side: ImpactSide::Top,
+            },
+        ))
+        .id();
+
+    fire(bolt_entity, false, "mirror_protocol", &mut world);
+
+    let mut query = world.query_filtered::<Entity, (With<Bolt>, With<ExtraBolt>)>();
+    let mirrored = query
+        .iter(&world)
+        .next()
+        .expect("mirrored bolt should exist");
+
+    assert!(
+        world
+            .get::<crate::shared::birthing::Birthing>(mirrored)
+            .is_some(),
+        "mirrored bolt should have Birthing component"
+    );
+}
+
+// Behavior 14 edge case: with inherit=true, spawned bolt still has Birthing alongside inherited BoundEffects
+#[test]
+fn fire_with_inherit_spawns_mirrored_bolt_with_birthing_and_bound_effects() {
+    use crate::effect::core::BoundEffects;
+
+    let mut world = world_with_bolt_registry();
+    let bolt_entity = world
+        .spawn((
+            Bolt,
+            Position2D(Vec2::new(60.0, 250.0)),
+            Velocity2D(Vec2::new(100.0, 400.0)),
+            LastImpact {
+                position: Vec2::new(50.0, 200.0),
+                side: ImpactSide::Top,
+            },
+            BoundEffects(vec![]),
+        ))
+        .id();
+
+    fire(bolt_entity, true, "mirror_protocol", &mut world);
+
+    let mut query = world.query_filtered::<Entity, (With<Bolt>, With<ExtraBolt>)>();
+    let mirrored = query
+        .iter(&world)
+        .next()
+        .expect("mirrored bolt should exist");
+
+    assert!(
+        world
+            .get::<crate::shared::birthing::Birthing>(mirrored)
+            .is_some(),
+        "inherited mirrored bolt should have Birthing component"
+    );
+    // Also verify BoundEffects is present (inherited)
+    assert!(
+        world.get::<BoundEffects>(mirrored).is_some(),
+        "inherited mirrored bolt should also have BoundEffects"
+    );
+}
+
 // ── Behavior 7: fire() reads BoltDefinitionRef from source bolt for mirrored bolt construction ──
 
 #[test]
@@ -237,13 +329,22 @@ fn fire_reads_bolt_definition_ref_from_source_bolt_for_mirrored_construction() {
         radius.0
     );
 
+    // Scale2D — zeroed by birthing; original stashed in Birthing
     let scale = world
         .get::<Scale2D>(mirrored)
         .expect("mirrored bolt should have Scale2D");
     assert!(
-        (scale.x - 12.0).abs() < f32::EPSILON,
-        "Scale2D.x should be 12.0 from Heavy definition, got {}",
+        (scale.x - 0.0).abs() < f32::EPSILON,
+        "Scale2D.x should be 0.0 (zeroed by birthing), got {}",
         scale.x
+    );
+    let birthing = world
+        .get::<Birthing>(mirrored)
+        .expect("mirrored bolt should have Birthing");
+    assert!(
+        (birthing.target_scale.x - 12.0).abs() < f32::EPSILON,
+        "Birthing target_scale.x should be 12.0 from Heavy definition, got {}",
+        birthing.target_scale.x
     );
 
     let base_speed = world

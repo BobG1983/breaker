@@ -14,7 +14,7 @@ use crate::{
         queries::{LostBoltData, apply_velocity_formula},
     },
     breaker::filters::CollisionFilterBreaker,
-    shared::{GameRng, PlayfieldConfig},
+    prelude::*,
 };
 
 /// Bundled message writers for `bolt_lost` to satisfy clippy's

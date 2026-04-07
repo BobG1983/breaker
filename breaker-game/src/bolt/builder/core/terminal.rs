@@ -2,22 +2,19 @@ use bevy::{
     prelude::*,
     time::{Timer, TimerMode},
 };
-use rantzsoft_stateflow::CleanupOnExit;
-use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
-use rantzsoft_spatial2d::components::{PreviousScale, Scale2D, Spatial, Velocity2D};
+use rantzsoft_spatial2d::components::Spatial;
 
 use super::types::*;
 use crate::{
     bolt::components::{
-        Bolt, BoltAngleSpread, BoltBaseDamage, BoltDefinitionRef, BoltLifespan, BoltServing,
-        BoltSpawnOffsetY, ExtraBolt, PrimaryBolt, SpawnedByEvolution,
+        BoltAngleSpread, BoltBaseDamage, BoltDefinitionRef, BoltLifespan, BoltSpawnOffsetY,
+        ExtraBolt, PrimaryBolt, SpawnedByEvolution,
     },
-    effect::{BoundEffects, EffectNode},
+    prelude::*,
     shared::{
         BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, GameDrawLayer, WALL_LAYER,
         size::{BaseRadius, MaxRadius, MinRadius},
     },
-    state::types::{NodeState, RunState},
 };
 
 /// Builds the core component tuple shared by all terminal states.
@@ -129,6 +126,22 @@ fn spawn_inner(
             effect_entries.extend(inherited.0);
         }
         entity.insert(BoundEffects(effect_entries));
+    }
+
+    if optional.birthed {
+        let target_scale = Scale2D {
+            x: optional.radius.unwrap_or(DEFAULT_RADIUS),
+            y: optional.radius.unwrap_or(DEFAULT_RADIUS),
+        };
+        let stashed_layers =
+            CollisionLayers::new(BOLT_LAYER, CELL_LAYER | WALL_LAYER | BREAKER_LAYER);
+
+        entity.insert((
+            Scale2D { x: 0.0, y: 0.0 },
+            PreviousScale { x: 0.0, y: 0.0 },
+            CollisionLayers::default(),
+            Birthing::new(target_scale, stashed_layers),
+        ));
     }
 
     entity.id()

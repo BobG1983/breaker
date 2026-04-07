@@ -1,15 +1,11 @@
 //! Visual text feedback for bump grades.
 
 use bevy::prelude::*;
-use rantzsoft_stateflow::CleanupOnExit;
 
 use crate::{
-    breaker::{
-        components::Breaker,
-        messages::{BumpGrade, BumpPerformed, BumpWhiffed},
-    },
+    breaker::messages::{BumpGrade, BumpWhiffed},
     fx::FadeOut,
-    state::types::NodeState,
+    prelude::*,
 };
 
 /// Fade duration for bump grade text (seconds).

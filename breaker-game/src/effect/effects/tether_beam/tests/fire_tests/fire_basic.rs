@@ -1,5 +1,72 @@
 use crate::effect::effects::tether_beam::tests::helpers::*;
 
+// ── Behaviors 17-18: tether_beam fire() produces bolts with Birthing ──
+
+// Behavior 17: fire() in standard mode produces bolts with Birthing
+#[test]
+fn fire_standard_spawns_tether_bolts_with_birthing_component() {
+    let mut world = world_with_bolt_registry();
+    let entity = world.spawn(Position2D(Vec2::new(100.0, 200.0))).id();
+
+    fire(entity, 1.5, false, "tether_beam", &mut world);
+
+    let mut query = world.query_filtered::<Entity, With<TetherBoltMarker>>();
+    let bolts: Vec<Entity> = query.iter(&world).collect();
+    assert_eq!(bolts.len(), 2, "should spawn 2 tether bolts");
+
+    for bolt in &bolts {
+        assert!(
+            world
+                .get::<crate::shared::birthing::Birthing>(*bolt)
+                .is_some(),
+            "tether bolt should have Birthing component"
+        );
+    }
+}
+
+// Behavior 17 edge case: beam entity does NOT have Birthing
+#[test]
+fn fire_standard_beam_entity_does_not_have_birthing() {
+    let mut world = world_with_bolt_registry();
+    let entity = world.spawn(Position2D(Vec2::new(100.0, 200.0))).id();
+
+    fire(entity, 1.5, false, "tether_beam", &mut world);
+
+    let mut beam_query = world.query_filtered::<Entity, With<TetherBeamComponent>>();
+    let beam = beam_query.iter(&world).next().expect("beam should exist");
+
+    assert!(
+        world
+            .get::<crate::shared::birthing::Birthing>(beam)
+            .is_none(),
+        "beam entity should NOT have Birthing — only bolt entities"
+    );
+}
+
+// Behavior 18: fire() in chain mode does NOT spawn new bolts (no Birthing concern)
+#[test]
+fn fire_chain_mode_does_not_add_birthing_components() {
+    let mut world = world_with_bolt_registry();
+
+    // Spawn two existing bolt entities (these are pre-existing, not spawned by fire)
+    world.spawn((Bolt, Position2D(Vec2::ZERO)));
+    world.spawn((Bolt, Position2D(Vec2::ZERO)));
+
+    // Firing entity (effect owner, not a bolt)
+    let entity = world.spawn(Position2D(Vec2::ZERO)).id();
+
+    fire(entity, 1.5, true, "tether_beam", &mut world);
+
+    // Chain mode should NOT add any new Birthing components
+    let mut birthing_query =
+        world.query_filtered::<Entity, With<crate::shared::birthing::Birthing>>();
+    let birthing_count = birthing_query.iter(&world).count();
+    assert_eq!(
+        birthing_count, 0,
+        "chain mode should NOT spawn new bolts or add Birthing, got {birthing_count} entities with Birthing"
+    );
+}
+
 #[test]
 fn fire_spawns_two_tether_bolts_with_full_physics_components() {
     let mut world = world_with_bolt_registry();
@@ -45,12 +112,19 @@ fn fire_spawns_two_tether_bolts_with_full_physics_components() {
             vel.0.length()
         );
 
-        // Scale2D
+        // Scale2D — zeroed by birthing
         let scale = world
             .get::<Scale2D>(*bolt)
             .expect("tether bolt should have Scale2D");
-        assert!((scale.x - 8.0).abs() < f32::EPSILON);
-        assert!((scale.y - 8.0).abs() < f32::EPSILON);
+        assert!((scale.x - 0.0).abs() < f32::EPSILON);
+        assert!((scale.y - 0.0).abs() < f32::EPSILON);
+
+        // Birthing — stashes original scale and layers
+        let birthing = world
+            .get::<Birthing>(*bolt)
+            .expect("tether bolt should have Birthing");
+        assert!((birthing.target_scale.x - 8.0).abs() < f32::EPSILON);
+        assert!((birthing.target_scale.y - 8.0).abs() < f32::EPSILON);
 
         // Aabb2D
         let aabb = world
@@ -59,12 +133,17 @@ fn fire_spawns_two_tether_bolts_with_full_physics_components() {
         assert_eq!(aabb.center, Vec2::ZERO);
         assert_eq!(aabb.half_extents, Vec2::new(8.0, 8.0));
 
-        // CollisionLayers
+        // CollisionLayers — zeroed by birthing, originals stashed in Birthing
         let layers = world
             .get::<CollisionLayers>(*bolt)
             .expect("tether bolt should have CollisionLayers");
-        assert_eq!(layers.membership, BOLT_LAYER);
-        assert_eq!(layers.mask, CELL_LAYER | WALL_LAYER | BREAKER_LAYER);
+        assert_eq!(layers.membership, 0);
+        assert_eq!(layers.mask, 0);
+        assert_eq!(birthing.stashed_layers.membership, BOLT_LAYER);
+        assert_eq!(
+            birthing.stashed_layers.mask,
+            CELL_LAYER | WALL_LAYER | BREAKER_LAYER
+        );
 
         // Speed components
         assert!((world.get::<BaseSpeed>(*bolt).unwrap().0 - 400.0).abs() < f32::EPSILON);
@@ -442,13 +521,22 @@ fn fire_standard_reads_bolt_definition_ref_from_source_entity() {
             vel.0.length()
         );
 
+        // Scale2D — zeroed by birthing; original stashed in Birthing
         let scale = world
             .get::<Scale2D>(*bolt)
             .expect("bolt should have Scale2D");
         assert!(
-            (scale.x - 12.0).abs() < f32::EPSILON,
-            "Scale2D.x should be 12.0 from Heavy definition, got {}",
+            (scale.x - 0.0).abs() < f32::EPSILON,
+            "Scale2D.x should be 0.0 (zeroed by birthing), got {}",
             scale.x
+        );
+        let birthing = world
+            .get::<Birthing>(*bolt)
+            .expect("bolt should have Birthing");
+        assert!(
+            (birthing.target_scale.x - 12.0).abs() < f32::EPSILON,
+            "Birthing target_scale.x should be 12.0 from Heavy definition, got {}",
+            birthing.target_scale.x
         );
 
         let radius = world

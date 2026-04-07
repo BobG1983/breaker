@@ -9,5 +9,9 @@
 
 - [Existing production dispatch causes false pass for orchestration tests](pattern_existing_production_dispatch_causes_false_pass.md) — when old dispatch fires unconditionally, State==B and StateChanged assertions pass at RED even with stub orchestration
 
+- [Stray #[test] on helper fn — compile error](pattern_stray_test_attribute_on_helper.md) — #[test] placed before comment + helper fn causes "attribute on non-test fn" compile error at RED gate
+
+- [Route change behaviors missing when in existing file](pattern_route_change_test_missing.md) — writer-tests creates new system files but misses spec behaviors targeting existing files (e.g., state/plugin/tests.rs)
+
 ## Session History
 See [ephemeral/](ephemeral/) — not committed.

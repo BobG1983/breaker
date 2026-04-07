@@ -11,7 +11,10 @@ use crate::{
         registry::BoltRegistry,
     },
     effect::effects::chain_bolt::effect::*,
-    shared::{BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, GameDrawLayer, WALL_LAYER, rng::GameRng},
+    shared::{
+        BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, GameDrawLayer, WALL_LAYER, birthing::Birthing,
+        rng::GameRng,
+    },
 };
 
 fn make_bolt_definition(name: &str, base_speed: f32, radius: f32) -> BoltDefinition {
@@ -89,17 +92,30 @@ fn fire_spawns_one_chain_bolt_with_full_physics() {
         vel.0.length()
     );
 
-    // Scale2D
+    // Scale2D — zeroed by birthing
     let scale = world
         .get::<Scale2D>(chain_bolt_entity)
         .expect("chain bolt should have Scale2D");
     assert!(
-        (scale.x - 8.0).abs() < f32::EPSILON,
-        "Scale2D.x should be radius (8.0)"
+        (scale.x - 0.0).abs() < f32::EPSILON,
+        "Scale2D.x should be 0.0 (zeroed by birthing)"
     );
     assert!(
-        (scale.y - 8.0).abs() < f32::EPSILON,
-        "Scale2D.y should be radius (8.0)"
+        (scale.y - 0.0).abs() < f32::EPSILON,
+        "Scale2D.y should be 0.0 (zeroed by birthing)"
+    );
+
+    // Birthing — stashes original scale and layers
+    let birthing = world
+        .get::<Birthing>(chain_bolt_entity)
+        .expect("chain bolt should have Birthing");
+    assert!(
+        (birthing.target_scale.x - 8.0).abs() < f32::EPSILON,
+        "Birthing target_scale.x should be radius (8.0)"
+    );
+    assert!(
+        (birthing.target_scale.y - 8.0).abs() < f32::EPSILON,
+        "Birthing target_scale.y should be radius (8.0)"
     );
 
     // Aabb2D
@@ -109,17 +125,58 @@ fn fire_spawns_one_chain_bolt_with_full_physics() {
     assert_eq!(aabb.center, Vec2::ZERO);
     assert_eq!(aabb.half_extents, Vec2::new(8.0, 8.0));
 
-    // CollisionLayers
+    // CollisionLayers — zeroed by birthing, originals stashed in Birthing
     let layers = world
         .get::<CollisionLayers>(chain_bolt_entity)
         .expect("chain bolt should have CollisionLayers");
-    assert_eq!(layers.membership, BOLT_LAYER);
-    assert_eq!(layers.mask, CELL_LAYER | WALL_LAYER | BREAKER_LAYER);
+    assert_eq!(layers.membership, 0);
+    assert_eq!(layers.mask, 0);
+    assert_eq!(birthing.stashed_layers.membership, BOLT_LAYER);
+    assert_eq!(
+        birthing.stashed_layers.mask,
+        CELL_LAYER | WALL_LAYER | BREAKER_LAYER
+    );
 
     // Anchor should have ChainBoltAnchor
     assert!(
         world.get::<ChainBoltAnchor>(anchor).is_some(),
         "anchor should have ChainBoltAnchor component"
+    );
+}
+
+// ── Behavior 16: chain_bolt fire() produces bolt with Birthing ──
+
+#[test]
+fn fire_spawns_chain_bolt_with_birthing_component() {
+    let mut world = world_with_bolt_registry();
+    let anchor = world.spawn(Position2D(Vec2::new(100.0, 200.0))).id();
+
+    fire(anchor, 150.0, "", &mut world);
+
+    let mut query = world.query_filtered::<Entity, With<ChainBoltMarker>>();
+    let chain_bolt_entity = query.iter(&world).next().expect("chain bolt should exist");
+
+    assert!(
+        world
+            .get::<crate::shared::birthing::Birthing>(chain_bolt_entity)
+            .is_some(),
+        "spawned chain bolt should have Birthing component"
+    );
+}
+
+// Behavior 16 edge case: anchor entity does NOT gain Birthing
+#[test]
+fn fire_anchor_does_not_gain_birthing() {
+    let mut world = world_with_bolt_registry();
+    let anchor = world.spawn(Position2D(Vec2::new(100.0, 200.0))).id();
+
+    fire(anchor, 150.0, "", &mut world);
+
+    assert!(
+        world
+            .get::<crate::shared::birthing::Birthing>(anchor)
+            .is_none(),
+        "anchor entity should NOT gain Birthing component — only the spawned chain bolt"
     );
 }
 
@@ -163,13 +220,22 @@ fn fire_reads_bolt_definition_ref_from_anchor_entity() {
         vel.0.length()
     );
 
+    // Scale2D — zeroed by birthing; original stashed in Birthing
     let scale = world
         .get::<Scale2D>(chain_bolt_entity)
         .expect("chain bolt should have Scale2D");
     assert!(
-        (scale.x - 12.0).abs() < f32::EPSILON,
-        "Scale2D.x should be 12.0 from Heavy definition, got {}",
+        (scale.x - 0.0).abs() < f32::EPSILON,
+        "Scale2D.x should be 0.0 (zeroed by birthing), got {}",
         scale.x
+    );
+    let birthing = world
+        .get::<Birthing>(chain_bolt_entity)
+        .expect("chain bolt should have Birthing");
+    assert!(
+        (birthing.target_scale.x - 12.0).abs() < f32::EPSILON,
+        "Birthing target_scale.x should be 12.0 from Heavy definition, got {}",
+        birthing.target_scale.x
     );
 
     let radius = world

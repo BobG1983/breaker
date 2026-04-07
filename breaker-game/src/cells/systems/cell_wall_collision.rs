@@ -6,16 +6,9 @@
 //! `Impact(Wall)` / `Impacted(Cell)` chains.
 
 use bevy::prelude::*;
-use rantzsoft_physics2d::{
-    aabb::Aabb2D, collision_layers::CollisionLayers, resources::CollisionQuadtree,
-};
-use rantzsoft_spatial2d::components::Position2D;
+use rantzsoft_physics2d::resources::CollisionQuadtree;
 
-use crate::{
-    cells::{components::Cell, messages::CellImpactWall},
-    shared::{CELL_LAYER, WALL_LAYER},
-    walls::components::Wall,
-};
+use crate::{prelude::*, shared::{CELL_LAYER, WALL_LAYER}};
 
 /// Wall entity lookup for narrow-phase overlap verification.
 type WallLookup<'w, 's> = Query<'w, 's, (&'static Position2D, &'static Aabb2D), With<Wall>>;

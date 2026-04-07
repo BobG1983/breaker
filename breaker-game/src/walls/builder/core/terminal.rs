@@ -1,14 +1,13 @@
 //! Terminal build/spawn impls for `WallBuilder`.
 
 use bevy::prelude::*;
-use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
-use rantzsoft_spatial2d::components::{Scale2D, Spatial};
+use rantzsoft_spatial2d::components::Spatial;
 
 use super::types::*;
 use crate::{
-    effect::{EffectCommandsExt, EffectNode, RootEffect},
+    effect::EffectCommandsExt,
+    prelude::*,
     shared::{BOLT_LAYER, GameDrawLayer, WALL_LAYER},
-    walls::components::Wall,
 };
 
 // ── Resolution helpers ────────────────────────────────────────────────────

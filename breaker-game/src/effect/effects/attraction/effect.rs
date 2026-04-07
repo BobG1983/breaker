@@ -1,15 +1,11 @@
 use bevy::prelude::*;
-use rantzsoft_physics2d::{
-    aabb::Aabb2D, collision_layers::CollisionLayers, resources::CollisionQuadtree,
-};
+use rantzsoft_physics2d::resources::CollisionQuadtree;
 use rantzsoft_spatial2d::{components::GlobalPosition2D, queries::SpatialData};
 
 use crate::{
-    bolt::{
-        messages::{BoltImpactBreaker, BoltImpactCell, BoltImpactWall},
-        queries::apply_velocity_formula,
-    },
-    effect::{core::AttractionType, effects::speed_boost::ActiveSpeedBoosts},
+    bolt::queries::apply_velocity_formula,
+    effect::core::AttractionType,
+    prelude::*,
     shared::{BREAKER_LAYER, CELL_LAYER, WALL_LAYER},
 };
 
@@ -196,7 +192,6 @@ fn process_impact(attractions: &mut ActiveAttractions, impact_type: AttractionTy
 
 /// Registers attraction systems in `FixedUpdate`.
 pub(crate) fn register(app: &mut App) {
-    use crate::state::types::NodeState;
     app.add_systems(
         FixedUpdate,
         (

@@ -74,6 +74,7 @@ pub(in crate::bolt::builder) struct OptionalBoltData {
     pub(in crate::bolt::builder) override_angle_spread: Option<f32>,
     pub(in crate::bolt::builder) override_spawn_offset_y: Option<f32>,
     pub(in crate::bolt::builder) color_rgb: Option<[f32; 3]>,
+    pub(in crate::bolt::builder) birthed: bool,
 }
 
 pub(in crate::bolt::builder) struct BoltDefinitionParams {
