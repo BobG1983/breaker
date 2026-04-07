@@ -10,6 +10,7 @@ use std::{
 use super::{
     app::run_scenario,
     discovery::{collect_scenario_paths, load_stress_config, scenario_name},
+    run_log::RunLog,
 };
 use crate::{log_capture::LogBuffer, types::StressConfig};
 
@@ -81,7 +82,12 @@ pub fn build_run_list(scenario: Option<&str>, all: bool) -> Vec<(String, PathBuf
 
 /// Runs a single scenario in-process. Returns process exit code (0 = pass, 1 = fail).
 #[must_use]
-pub fn run_with_args(scenario: Option<&str>, headless: bool, verbose: bool) -> i32 {
+pub fn run_with_args(
+    scenario: Option<&str>,
+    headless: bool,
+    verbose: bool,
+    run_log: Option<&RunLog>,
+) -> i32 {
     let scenario_paths = collect_scenario_paths(scenario, false);
 
     if scenario_paths.is_empty() {
@@ -91,7 +97,7 @@ pub fn run_with_args(scenario: Option<&str>, headless: bool, verbose: bool) -> i
 
     let mut shared_log_buffer: Option<LogBuffer> = None;
     let path = &scenario_paths[0];
-    let passed = run_scenario(path, headless, verbose, &mut shared_log_buffer, None);
+    let passed = run_scenario(path, headless, verbose, &mut shared_log_buffer, run_log);
 
     i32::from(!passed)
 }
@@ -101,9 +107,14 @@ pub fn run_with_args(scenario: Option<&str>, headless: bool, verbose: bool) -> i
 /// Unlike [`run_with_args`], this does not re-resolve the scenario name to a
 /// path — use it when the caller has already located the `.scenario.ron` file.
 #[must_use]
-pub fn run_single_scenario(path: &Path, headless: bool, verbose: bool) -> i32 {
+pub fn run_single_scenario(
+    path: &Path,
+    headless: bool,
+    verbose: bool,
+    run_log: Option<&RunLog>,
+) -> i32 {
     let mut shared_log_buffer: Option<LogBuffer> = None;
-    let passed = run_scenario(path, headless, verbose, &mut shared_log_buffer, None);
+    let passed = run_scenario(path, headless, verbose, &mut shared_log_buffer, run_log);
     i32::from(!passed)
 }
 
@@ -117,13 +128,13 @@ pub fn run_all_serial(
     runs: &[(String, PathBuf)],
     headless: bool,
     verbose: bool,
-    output_dir: Option<&Path>,
+    run_log: Option<&RunLog>,
 ) -> Vec<(String, bool)> {
     let mut shared_log_buffer: Option<LogBuffer> = None;
     let mut results: Vec<(String, bool)> = Vec::with_capacity(runs.len());
 
     for (display_name, path) in runs {
-        let passed = run_scenario(path, headless, verbose, &mut shared_log_buffer, output_dir);
+        let passed = run_scenario(path, headless, verbose, &mut shared_log_buffer, run_log);
         results.push((display_name.clone(), passed));
     }
 
@@ -165,7 +176,7 @@ pub fn print_summary(results: &[(String, bool)]) -> i32 {
 // Subprocess batched execution
 // -------------------------------------------------------------------------
 
-/// Work item for [`spawn_batched`]: one subprocess to launch.
+/// Work item for subprocess execution: one subprocess to launch.
 pub(super) struct SubprocessSpec {
     /// Name shown in output and stored in results.
     pub(super) display_name: String,
@@ -287,7 +298,7 @@ pub fn run_all_parallel(
     visual: bool,
     verbose: bool,
     parallelism: usize,
-    output_dir: Option<&Path>,
+    run_log: Option<&RunLog>,
 ) -> Vec<(String, bool)> {
     let specs: Vec<SubprocessSpec> = runs
         .iter()
@@ -321,30 +332,11 @@ pub fn run_all_parallel(
             }
         }
         println!();
-    }
 
-    // Write captured output to output_dir for failed scenarios.
-    if let Some(dir) = output_dir {
-        for result in &all_results {
-            if !result.passed {
-                let scenario_dir = dir.join(&result.name);
-                if let Err(e) = std::fs::create_dir_all(&scenario_dir) {
-                    eprintln!(
-                        "warning: failed to create log dir for [{}]: {e}",
-                        result.name
-                    );
-                    continue;
-                }
-                let log_path = scenario_dir.join("output.log");
-                let mut content = result.stdout.clone();
-                if !result.stderr.is_empty() {
-                    content.push_str("\n--- stderr ---\n");
-                    content.push_str(&result.stderr);
-                }
-                if let Err(e) = std::fs::write(&log_path, &content) {
-                    eprintln!("warning: failed to write log for [{}]: {e}", result.name);
-                }
-            }
+        // Send captured subprocess output to the unified log file.
+        if let Some(log) = run_log {
+            log.write_lines(result.stdout.lines());
+            log.write_lines(result.stderr.lines());
         }
     }
 
@@ -447,6 +439,7 @@ pub fn run_stress_scenario(
     config: &StressConfig,
     visual: bool,
     verbose: bool,
+    run_log: Option<&RunLog>,
 ) -> StressResult {
     let runs = config.runs.max(1);
     let parallelism = config.parallelism.max(1);
@@ -473,6 +466,14 @@ pub fn run_stress_scenario(
             };
         }
     };
+
+    // Send captured subprocess output to the unified log file.
+    if let Some(log) = run_log {
+        for result in &all_results {
+            log.write_lines(result.stdout.lines());
+            log.write_lines(result.stderr.lines());
+        }
+    }
 
     let failures: Vec<StressFailure> = all_results
         .into_iter()
@@ -501,18 +502,32 @@ pub fn run_stress_scenario(
 /// Prints the result of a stress scenario run.
 ///
 /// Failure stdout and stderr are always printed for failed copies.
-pub fn print_stress_result(result: &StressResult) {
-    println!("[{}] stress: {}", result.name, result.summary_line());
+pub fn print_stress_result(result: &StressResult, run_log: Option<&RunLog>) {
+    let summary = format!("[{}] stress: {}", result.name, result.summary_line());
+    println!("{summary}");
+    if let Some(log) = run_log {
+        log.write_line(&summary);
+    }
 
     if !result.passed() {
         for failure in &result.failures {
-            println!("  Copy {}:", failure.copy_index);
+            let copy_line = format!("  Copy {}:", failure.copy_index);
+            println!("{copy_line}");
+            if let Some(log) = run_log {
+                log.write_line(&copy_line);
+            }
             for line in failure.stdout.lines() {
                 println!("    {line}");
+                if let Some(log) = run_log {
+                    log.write_line(&format!("    {line}"));
+                }
             }
             if !failure.stderr.is_empty() {
                 for line in failure.stderr.lines() {
                     eprintln!("    {line}");
+                    if let Some(log) = run_log {
+                        log.write_line(&format!("    {line}"));
+                    }
                 }
             }
         }

@@ -22,7 +22,9 @@ use breaker_scenario_runner::{
     runner::{
         self, Parallelism, build_run_list, load_scenario, parse_parallelism,
         partition_stress_scenarios, print_stress_result, print_summary, run_all_parallel,
-        run_all_serial, run_single_scenario, run_stress_scenario, run_with_args,
+        run_all_serial,
+        run_log::{RunLog, create_run_log, format_log_path_message},
+        run_single_scenario, run_stress_scenario, run_with_args,
     },
 };
 use clap::Parser;
@@ -63,7 +65,7 @@ fn main() {
 
     // Stress-copy subprocess: always run single in-process, ignore stress fields.
     if args.execution.stress_copy {
-        let exit_code = run_with_args(args.scenario.as_deref(), headless, args.verbose);
+        let exit_code = run_with_args(args.scenario.as_deref(), headless, args.verbose, None);
         process::exit(exit_code);
     }
 
@@ -76,16 +78,23 @@ fn main() {
             process::exit(1);
         }
 
+        // Create RunLog for single-scenario fast path.
+        let run_log = create_run_log_if_needed(true);
+
         let (normal, stress) = partition_stress_scenarios(&runs);
         if let Some((name, _path, config)) = stress.into_iter().next() {
-            let result = run_stress_scenario(&name, &config, args.visual, args.verbose);
-            print_stress_result(&result);
+            let result =
+                run_stress_scenario(&name, &config, args.visual, args.verbose, run_log.as_ref());
+            print_stress_result(&result, run_log.as_ref());
+            print_log_path_and_shutdown(run_log);
             process::exit(i32::from(!result.passed()));
         }
 
         // No stress config — run in-process with the already-resolved path.
         if !normal.is_empty() {
-            let exit_code = run_single_scenario(&normal[0].1, headless, args.verbose);
+            let exit_code =
+                run_single_scenario(&normal[0].1, headless, args.verbose, run_log.as_ref());
+            print_log_path_and_shutdown(run_log);
             process::exit(exit_code);
         }
     }
@@ -117,7 +126,7 @@ fn main() {
         );
     }
 
-    let output_dir = if args.all { create_output_dir() } else { None };
+    let run_log = create_run_log_if_needed(args.all || args.scenario.is_some());
 
     let worst_exit = run_loop(
         &normal_runs,
@@ -126,7 +135,7 @@ fn main() {
         headless,
         &args,
         parallelism,
-        output_dir.as_deref(),
+        run_log.as_ref(),
     );
 
     // Print coverage report when running --all.
@@ -134,10 +143,7 @@ fn main() {
         print_coverage_for_runs(&runs);
     }
 
-    // Print output directory location.
-    if let Some(dir) = &output_dir {
-        println!("\nLogs: {}", dir.display());
-    }
+    print_log_path_and_shutdown(run_log);
 
     process::exit(worst_exit);
 }
@@ -154,7 +160,7 @@ fn run_loop(
     headless: bool,
     args: &Args,
     parallelism: Parallelism,
-    output_dir: Option<&Path>,
+    run_log: Option<&RunLog>,
 ) -> i32 {
     let mut worst_exit = 0;
     for iteration in 1..=loop_count {
@@ -166,23 +172,17 @@ fn run_loop(
 
         if !normal_runs.is_empty() {
             let results = if args.execution.serial {
-                run_all_serial(normal_runs, headless, args.verbose, output_dir)
+                run_all_serial(normal_runs, headless, args.verbose, run_log)
             } else {
                 let batch_size = parallelism.resolve(normal_runs.len());
-                run_all_parallel(
-                    normal_runs,
-                    args.visual,
-                    args.verbose,
-                    batch_size,
-                    output_dir,
-                )
+                run_all_parallel(normal_runs, args.visual, args.verbose, batch_size, run_log)
             };
             all_results.extend(results);
         }
 
         for (name, _path, config) in stress_runs {
-            let result = run_stress_scenario(name, config, args.visual, args.verbose);
-            print_stress_result(&result);
+            let result = run_stress_scenario(name, config, args.visual, args.verbose, run_log);
+            print_stress_result(&result, run_log);
             all_results.push((name.clone(), result.passed()));
         }
 
@@ -194,16 +194,26 @@ fn run_loop(
     worst_exit
 }
 
-/// Creates the output directory for `--all` runs. Returns `None` on failure
-/// (warning printed to stderr).
-fn create_output_dir() -> Option<PathBuf> {
-    let date = runner::output_dir::today_date_string();
-    match runner::output_dir::create_run_dir(Path::new(runner::output_dir::BASE_DIR), &date) {
-        Ok(dir) => Some(dir),
+/// Creates a `RunLog` if needed. Returns `None` on failure (warning printed to stderr).
+fn create_run_log_if_needed(should_create: bool) -> Option<RunLog> {
+    if !should_create {
+        return None;
+    }
+    match create_run_log(Path::new(runner::output_dir::BASE_DIR)) {
+        Ok(log) => Some(log),
         Err(e) => {
-            eprintln!("warning: failed to create output directory: {e}");
+            eprintln!("warning: failed to create run log: {e}");
             None
         }
+    }
+}
+
+/// Flushes, prints log path, and shuts down the `RunLog` if present.
+fn print_log_path_and_shutdown(run_log: Option<RunLog>) {
+    if let Some(log) = run_log {
+        log.flush();
+        println!("{}", format_log_path_message(log.path()));
+        log.shutdown();
     }
 }
 

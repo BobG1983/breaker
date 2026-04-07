@@ -15,10 +15,17 @@ pub fn check_no_entity_leaks(
     mut baseline: ResMut<EntityLeakBaseline>,
     mut log: ResMut<ViolationLog>,
 ) {
+    let spawned = spawn_reader.read().next().is_some();
+    let needs_check = baseline.baseline.is_some() && frame.0.is_multiple_of(120);
+
+    // Only count entities when we actually need the value.
+    if !spawned && !needs_check {
+        return;
+    }
     let count = all_entities.iter().count();
 
     // When SpawnNodeComplete arrives, all gameplay entities are spawned — sample now.
-    for _ in spawn_reader.read() {
+    if spawned {
         baseline.baseline = Some(count);
     }
 
@@ -27,7 +34,7 @@ pub fn check_no_entity_leaks(
     };
 
     // Check every 120 frames (~1.9 s at 64 Hz fixed timestep)
-    if frame.0.is_multiple_of(120) && count > base * 2 {
+    if needs_check && count > base * 2 {
         log.0.push(ViolationEntry {
             frame: frame.0,
             invariant: InvariantKind::NoEntityLeaks,
