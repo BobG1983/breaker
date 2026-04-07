@@ -5,7 +5,9 @@
 //! all violations for end-of-run reporting.
 
 mod checkers;
+pub mod screenshot;
 mod types;
 
 pub use checkers::*;
+pub use screenshot::*;
 pub use types::*;
