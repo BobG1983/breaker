@@ -5,6 +5,8 @@
 //! all violations for end-of-run reporting.
 
 mod checkers;
+/// First-failure screenshot tracking: detects new invariant violations,
+/// formats screenshot output paths, and tracks which kinds have been captured.
 pub mod screenshot;
 mod types;
 
