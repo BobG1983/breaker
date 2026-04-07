@@ -165,20 +165,20 @@ pub fn print_summary(results: &[(String, bool)]) -> i32 {
 // -------------------------------------------------------------------------
 
 /// Work item for [`spawn_batched`]: one subprocess to launch.
-struct SubprocessSpec {
+pub(super) struct SubprocessSpec {
     /// Name shown in output and stored in results.
-    display_name: String,
+    pub(super) display_name: String,
     /// CLI arguments specific to this work item (e.g. `["-s", "name"]`).
     /// Shared flags (`--visual`, `-v`) are added by [`spawn_batched`].
-    extra_args: Vec<String>,
+    pub(super) extra_args: Vec<String>,
 }
 
 /// Result of a single subprocess run.
-struct ChildResult {
-    name: String,
-    passed: bool,
-    stdout: String,
-    stderr: String,
+pub(super) struct ChildResult {
+    pub(super) name: String,
+    pub(super) passed: bool,
+    pub(super) stdout: String,
+    pub(super) stderr: String,
 }
 
 /// Spawns subprocesses in batches and collects results.
@@ -298,7 +298,8 @@ pub fn run_all_parallel(
         })
         .collect();
 
-    let all_results = match spawn_batched(&specs, visual, verbose, parallelism) {
+    let all_results = match super::streaming::spawn_streaming(&specs, visual, verbose, parallelism)
+    {
         Ok(results) => results,
         Err(e) => {
             eprintln!("{e}");
