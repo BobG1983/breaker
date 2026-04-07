@@ -84,62 +84,54 @@ fn normalize_layout_name(name: &str) -> String {
 
 /// Formats the coverage report as a plain-text string (no ANSI escapes).
 ///
-/// Shows a full breakdown of invariant self-test coverage and layout usage
-/// with `[x]`/`[ ]` markers and scenario counts.
+/// Only reports gaps — missing self-tests and unused layouts. Returns an
+/// empty string when coverage is complete.
 #[must_use]
 pub fn format_coverage_report(report: &CoverageReport) -> String {
     use std::fmt::Write as _;
 
+    let has_missing_tests = !report.missing_self_tests.is_empty();
+    let has_unused_layouts = !report.unused_layouts.is_empty();
+
+    if !has_missing_tests && !has_unused_layouts {
+        return String::new();
+    }
+
     let mut out = String::new();
+    out.push_str("Coverage Gaps\n=============\n");
 
-    // Header
-    out.push_str("Coverage Report\n===============\n");
-
-    // Invariant summary
-    let covered = report.covered_self_tests.len();
-    let total = covered + report.missing_self_tests.len();
-    let _ = writeln!(out, "Invariants: {covered}/{total} covered by self-tests");
-
-    // Single-pass iteration over InvariantKind::ALL
-    for variant in InvariantKind::ALL {
-        if report.covered_self_tests.contains(variant) {
-            let _ = writeln!(out, "  [x] {variant:?}");
-        } else {
+    if has_missing_tests {
+        let _ = writeln!(
+            out,
+            "Missing self-tests ({}):",
+            report.missing_self_tests.len()
+        );
+        for variant in &report.missing_self_tests {
             let _ = writeln!(out, "  [ ] {variant:?}");
         }
     }
 
-    // Blank line separator
-    out.push('\n');
-
-    // Layout summary
-    let used = report.used_layouts.len();
-    let layout_total = used + report.unused_layouts.len();
-    let _ = writeln!(
-        out,
-        "Layouts: {used}/{layout_total} referenced by scenarios"
-    );
-
-    // Used layouts with counts
-    for (name, count) in &report.used_layouts {
-        let plural = if *count == 1 { "scenario" } else { "scenarios" };
-        let _ = writeln!(out, "  [x] {name} ({count} {plural})");
-    }
-
-    // Unused layouts
-    for name in &report.unused_layouts {
-        let _ = writeln!(out, "  [ ] {name}");
+    if has_unused_layouts {
+        if has_missing_tests {
+            out.push('\n');
+        }
+        let _ = writeln!(out, "Unused layouts ({}):", report.unused_layouts.len());
+        for name in &report.unused_layouts {
+            let _ = writeln!(out, "  [ ] {name}");
+        }
     }
 
     out
 }
 
-/// Prints the coverage report to stdout.
+/// Prints coverage gaps to stdout. Prints nothing when coverage is complete.
 /// Returns `true` if there are any gaps (missing self-tests or unused layouts).
 #[must_use]
 pub fn print_coverage_report(report: &CoverageReport) -> bool {
     let formatted = format_coverage_report(report);
-    print!("{formatted}");
+    if !formatted.is_empty() {
+        print!("{formatted}");
+    }
     !report.missing_self_tests.is_empty() || !report.unused_layouts.is_empty()
 }
 
@@ -887,400 +879,51 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------
-    // Behavior 10 (spec): format_coverage_report with gaps shows counts
+    // format_coverage_report — gaps-only output
     // -----------------------------------------------------------------------
 
     #[test]
-    fn format_report_with_gaps_shows_invariant_counts_and_per_item_status() {
+    fn format_report_returns_empty_when_no_gaps() {
         let report = CoverageReport {
-            covered_self_tests: vec![InvariantKind::BoltInBounds, InvariantKind::BreakerInBounds],
+            covered_self_tests: InvariantKind::ALL.to_vec(),
+            missing_self_tests: vec![],
+            used_layouts: vec![("Corridor".to_owned(), 2)],
+            unused_layouts: vec![],
+        };
+        assert!(format_coverage_report(&report).is_empty());
+    }
+
+    #[test]
+    fn format_report_lists_only_gaps_when_present() {
+        let report = CoverageReport {
+            covered_self_tests: vec![InvariantKind::BoltInBounds],
             missing_self_tests: vec![InvariantKind::NoNaN],
             used_layouts: vec![("Corridor".to_owned(), 3)],
             unused_layouts: vec!["Fortress".to_owned()],
         };
-
         let output = format_coverage_report(&report);
-
-        assert!(
-            output.contains("Invariants: 2/3 covered by self-tests"),
-            "output should contain 'Invariants: 2/3 covered by self-tests', got:\n{output}"
-        );
-        assert!(
-            output.contains("[x] BoltInBounds"),
-            "output should contain '[x] BoltInBounds', got:\n{output}"
-        );
-        assert!(
-            output.contains("[x] BreakerInBounds"),
-            "output should contain '[x] BreakerInBounds', got:\n{output}"
-        );
-        assert!(
-            output.contains("[ ] NoNaN"),
-            "output should contain '[ ] NoNaN', got:\n{output}"
-        );
-        assert!(
-            output.contains("Layouts: 1/2 referenced by scenarios"),
-            "output should contain 'Layouts: 1/2 referenced by scenarios', got:\n{output}"
-        );
-        assert!(
-            output.contains("Corridor") && output.contains("(3 scenarios)"),
-            "output should show Corridor with (3 scenarios), got:\n{output}"
-        );
-        assert!(
-            output.contains("[ ] Fortress"),
-            "output should show Fortress marked with [ ], got:\n{output}"
-        );
+        assert!(output.contains("[ ] NoNaN"));
+        assert!(output.contains("[ ] Fortress"));
+        assert!(!output.contains("BoltInBounds"));
+        assert!(!output.contains("Corridor"));
     }
 
-    // -----------------------------------------------------------------------
-    // Behavior 11 (spec): full report with no gaps shows complete breakdown
-    // -----------------------------------------------------------------------
-
     #[test]
-    fn format_report_no_gaps_shows_complete_breakdown_not_just_summary() {
-        let report = CoverageReport {
-            covered_self_tests: InvariantKind::ALL.to_vec(),
-            missing_self_tests: vec![],
-            used_layouts: vec![("Corridor".to_owned(), 2), ("Fortress".to_owned(), 1)],
-            unused_layouts: vec![],
-        };
-
-        let output = format_coverage_report(&report);
-
-        let expected_header = format!(
-            "Invariants: {}/{} covered by self-tests",
-            InvariantKind::ALL.len(),
-            InvariantKind::ALL.len()
-        );
-        assert!(
-            output.contains(&expected_header),
-            "output should contain '{expected_header}', got:\n{output}"
-        );
-        // All 22 invariant variant names should appear with [x] marker.
-        for variant in InvariantKind::ALL {
-            let marker = format!("[x] {variant:?}");
-            assert!(
-                output.contains(&marker),
-                "output should contain '{marker}', got:\n{output}"
-            );
-        }
-        assert!(
-            output.contains("Layouts: 2/2 referenced by scenarios"),
-            "output should contain 'Layouts: 2/2 referenced by scenarios', got:\n{output}"
-        );
-        assert!(
-            output.contains("Corridor") && output.contains("(2 scenarios)"),
-            "output should show Corridor with (2 scenarios), got:\n{output}"
-        );
-        assert!(
-            output.contains("Fortress") && output.contains("(1 scenario)"),
-            "output should show Fortress with (1 scenario), got:\n{output}"
-        );
-    }
-
-    // -----------------------------------------------------------------------
-    // Behavior 12 (spec): only invariant gaps shows full layout breakdown
-    // -----------------------------------------------------------------------
-
-    #[test]
-    fn format_report_only_invariant_gaps_shows_full_layout_breakdown() {
-        let report = CoverageReport {
-            covered_self_tests: vec![InvariantKind::BoltInBounds],
+    fn print_coverage_report_returns_correct_bool() {
+        let gaps = CoverageReport {
             missing_self_tests: vec![InvariantKind::NoNaN],
-            used_layouts: vec![("Corridor".to_owned(), 1)],
-            unused_layouts: vec![],
-        };
-
-        let output = format_coverage_report(&report);
-
-        assert!(
-            output.contains("Invariants: 1/2"),
-            "output should contain 'Invariants: 1/2', got:\n{output}"
-        );
-        assert!(
-            output.contains("Layouts: 1/1"),
-            "output should contain 'Layouts: 1/1', got:\n{output}"
-        );
-        assert!(
-            output.contains("[x] BoltInBounds"),
-            "output should contain '[x] BoltInBounds', got:\n{output}"
-        );
-        assert!(
-            output.contains("[ ] NoNaN"),
-            "output should contain '[ ] NoNaN', got:\n{output}"
-        );
-    }
-
-    // -----------------------------------------------------------------------
-    // Behavior 13 (spec): only layout gaps shows full invariant breakdown
-    // -----------------------------------------------------------------------
-
-    #[test]
-    fn format_report_only_layout_gaps_shows_full_invariant_breakdown() {
-        let report = CoverageReport {
-            covered_self_tests: vec![InvariantKind::BoltInBounds],
-            missing_self_tests: vec![],
-            used_layouts: vec![],
-            unused_layouts: vec!["Fortress".to_owned()],
-        };
-
-        let output = format_coverage_report(&report);
-
-        assert!(
-            output.contains("Invariants: 1/1"),
-            "output should contain 'Invariants: 1/1', got:\n{output}"
-        );
-        assert!(
-            output.contains("Layouts: 0/1"),
-            "output should contain 'Layouts: 0/1', got:\n{output}"
-        );
-        assert!(
-            output.contains("[x] BoltInBounds"),
-            "output should contain '[x] BoltInBounds', got:\n{output}"
-        );
-        assert!(
-            output.contains("[ ] Fortress"),
-            "output should show Fortress marked with [ ], got:\n{output}"
-        );
-    }
-
-    // -----------------------------------------------------------------------
-    // Behavior 14 (spec): empty report (no invariants, no layouts)
-    // -----------------------------------------------------------------------
-
-    #[test]
-    fn format_report_empty_shows_zero_counts() {
-        let report = CoverageReport {
-            covered_self_tests: vec![],
-            missing_self_tests: vec![],
-            used_layouts: vec![],
-            unused_layouts: vec![],
-        };
-
-        let output = format_coverage_report(&report);
-
-        assert!(
-            output.contains("Invariants: 0/0 covered by self-tests"),
-            "output should contain 'Invariants: 0/0 covered by self-tests', got:\n{output}"
-        );
-        assert!(
-            output.contains("Layouts: 0/0 referenced by scenarios"),
-            "output should contain 'Layouts: 0/0 referenced by scenarios', got:\n{output}"
-        );
-    }
-
-    // -----------------------------------------------------------------------
-    // Behavior 15 (spec): print_coverage_report returns true when
-    //   missing_self_tests is non-empty (backwards compatibility)
-    // -----------------------------------------------------------------------
-
-    #[test]
-    fn print_coverage_report_returns_true_with_missing_self_tests_and_new_fields() {
-        let report = CoverageReport {
-            missing_self_tests: vec![InvariantKind::BoltInBounds],
             unused_layouts: vec![],
             covered_self_tests: vec![],
             used_layouts: vec![],
         };
+        assert!(print_coverage_report(&gaps));
 
-        assert!(
-            print_coverage_report(&report),
-            "print_coverage_report must return true when missing_self_tests is non-empty"
-        );
-    }
-
-    // -----------------------------------------------------------------------
-    // Behavior 16 (spec): print_coverage_report returns true when
-    //   unused_layouts is non-empty (backwards compatibility)
-    // -----------------------------------------------------------------------
-
-    #[test]
-    fn print_coverage_report_returns_true_with_unused_layouts_and_new_fields() {
-        let report = CoverageReport {
-            missing_self_tests: vec![],
-            unused_layouts: vec!["Fortress".to_owned()],
-            covered_self_tests: vec![],
-            used_layouts: vec![],
-        };
-
-        assert!(
-            print_coverage_report(&report),
-            "print_coverage_report must return true when unused_layouts is non-empty"
-        );
-    }
-
-    // -----------------------------------------------------------------------
-    // Behavior 17 (spec): print_coverage_report returns false when both
-    //   gap lists are empty (backwards compatibility)
-    // -----------------------------------------------------------------------
-
-    #[test]
-    fn print_coverage_report_returns_false_with_no_gaps_and_populated_new_fields() {
-        let report = CoverageReport {
+        let clean = CoverageReport {
             missing_self_tests: vec![],
             unused_layouts: vec![],
             covered_self_tests: vec![InvariantKind::BoltInBounds],
-            used_layouts: vec![("Corridor".to_owned(), 1)],
-        };
-
-        assert!(
-            !print_coverage_report(&report),
-            "print_coverage_report must return false when gap lists are empty, \
-             regardless of covered_self_tests/used_layouts content"
-        );
-    }
-
-    // -----------------------------------------------------------------------
-    // Behavior 18 (spec): no ANSI escape codes in format output
-    // -----------------------------------------------------------------------
-
-    #[test]
-    fn format_report_contains_no_ansi_escape_codes() {
-        let report = CoverageReport {
-            covered_self_tests: vec![InvariantKind::BoltInBounds],
-            missing_self_tests: vec![InvariantKind::NoNaN],
-            used_layouts: vec![("Corridor".to_owned(), 1)],
-            unused_layouts: vec!["Fortress".to_owned()],
-        };
-
-        let output = format_coverage_report(&report);
-
-        assert!(
-            !output.contains("\x1b["),
-            "output must not contain ANSI escape sequences, got:\n{output}"
-        );
-        assert!(
-            output.contains("[x] BoltInBounds"),
-            "covered invariants should use literal '[x]' marker, got:\n{output}"
-        );
-        assert!(
-            output.contains("[ ] NoNaN"),
-            "missing invariants should use literal '[ ]' marker, got:\n{output}"
-        );
-    }
-
-    // -----------------------------------------------------------------------
-    // Behavior 19 (spec): invariant names use Debug format
-    // -----------------------------------------------------------------------
-
-    #[test]
-    fn format_report_uses_debug_format_for_invariant_names() {
-        let report = CoverageReport {
-            covered_self_tests: vec![InvariantKind::BoltInBounds],
-            missing_self_tests: vec![InvariantKind::NoNaN],
             used_layouts: vec![],
-            unused_layouts: vec![],
         };
-
-        let output = format_coverage_report(&report);
-
-        // Names should be the {:?} Debug representation, not human-readable descriptions.
-        assert!(
-            output.contains("[x] BoltInBounds"),
-            "should use Debug name 'BoltInBounds', not a human-readable description, got:\n{output}"
-        );
-        assert!(
-            output.contains("[ ] NoNaN"),
-            "should use Debug name 'NoNaN', not a human-readable description, got:\n{output}"
-        );
-        assert!(
-            !output.contains("bolt position outside playfield bounds"),
-            "should not contain the fail_reason description, got:\n{output}"
-        );
-    }
-
-    // -----------------------------------------------------------------------
-    // Behavior 20 (spec): invariants listed in ALL order, single pass
-    // -----------------------------------------------------------------------
-
-    #[test]
-    fn format_report_lists_invariants_in_all_order_single_pass() {
-        let report = CoverageReport {
-            covered_self_tests: vec![InvariantKind::BoltInBounds, InvariantKind::NoNaN],
-            missing_self_tests: vec![
-                InvariantKind::BoltSpeedAccurate,
-                InvariantKind::BreakerInBounds,
-            ],
-            used_layouts: vec![],
-            unused_layouts: vec![],
-        };
-
-        let output = format_coverage_report(&report);
-
-        // InvariantKind::ALL order: BoltInBounds(0), BoltSpeedAccurate(1),
-        //   BreakerInBounds(3), NoNaN(5).
-        let pos_bolt = output
-            .find("BoltInBounds")
-            .expect("BoltInBounds not found in output");
-        let pos_speed = output
-            .find("BoltSpeedAccurate")
-            .expect("BoltSpeedAccurate not found in output");
-        let pos_breaker = output
-            .find("BreakerInBounds")
-            .expect("BreakerInBounds not found in output");
-        let pos_nan = output.find("NoNaN").expect("NoNaN not found in output");
-
-        assert!(
-            pos_bolt < pos_speed,
-            "BoltInBounds ({pos_bolt}) should appear before BoltSpeedAccurate ({pos_speed})"
-        );
-        assert!(
-            pos_speed < pos_breaker,
-            "BoltSpeedAccurate ({pos_speed}) should appear before BreakerInBounds ({pos_breaker})"
-        );
-        assert!(
-            pos_breaker < pos_nan,
-            "BreakerInBounds ({pos_breaker}) should appear before NoNaN ({pos_nan})"
-        );
-    }
-
-    // -----------------------------------------------------------------------
-    // Behavior 21 (spec): layout scenario count singular/plural
-    // -----------------------------------------------------------------------
-
-    #[test]
-    fn format_report_uses_correct_singular_plural_for_scenario_count() {
-        let report = CoverageReport {
-            covered_self_tests: vec![],
-            missing_self_tests: vec![],
-            used_layouts: vec![("Solo".to_owned(), 1), ("Multi".to_owned(), 2)],
-            unused_layouts: vec![],
-        };
-
-        let output = format_coverage_report(&report);
-
-        assert!(
-            output.contains("(1 scenario)"),
-            "singular: should contain '(1 scenario)', got:\n{output}"
-        );
-        assert!(
-            output.contains("(2 scenarios)"),
-            "plural: should contain '(2 scenarios)', got:\n{output}"
-        );
-        // Make sure singular does NOT have trailing 's'.
-        assert!(
-            !output.contains("(1 scenarios)"),
-            "should not contain '(1 scenarios)' (incorrect plural), got:\n{output}"
-        );
-    }
-
-    // -----------------------------------------------------------------------
-    // Behavior 22 (spec): format_coverage_report stub returns String
-    // -----------------------------------------------------------------------
-
-    #[test]
-    fn format_coverage_report_stub_returns_string() {
-        let report = CoverageReport {
-            covered_self_tests: vec![],
-            missing_self_tests: vec![],
-            used_layouts: vec![],
-            unused_layouts: vec![],
-        };
-
-        let result: String = format_coverage_report(&report);
-
-        // In the RED phase, the stub returns String::new().
-        // This test merely confirms the function exists, accepts &CoverageReport,
-        // and returns String. Content tests (10-14, 18-21) verify correctness.
-        drop(result);
+        assert!(!print_coverage_report(&clean));
     }
 }
