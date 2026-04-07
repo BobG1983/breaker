@@ -13,7 +13,11 @@ pub fn check_breaker_in_bounds(
     playfield: Res<PlayfieldConfig>,
     frame: Res<ScenarioFrame>,
     mut log: ResMut<ViolationLog>,
+    mut stats: Option<ResMut<ScenarioStats>>,
 ) {
+    if let Some(ref mut s) = stats {
+        s.invariant_checks += 1;
+    }
     let margin = 50.0;
     let left = playfield.left() - margin;
     let right = playfield.right() + margin;

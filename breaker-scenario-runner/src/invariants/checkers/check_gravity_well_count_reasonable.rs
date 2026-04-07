@@ -15,7 +15,11 @@ pub fn check_gravity_well_count_reasonable(
     config: Res<ScenarioConfig>,
     frame: Res<ScenarioFrame>,
     mut log: ResMut<ViolationLog>,
+    mut stats: Option<ResMut<ScenarioStats>>,
 ) {
+    if let Some(ref mut s) = stats {
+        s.invariant_checks += 1;
+    }
     let max = config.definition.invariant_params.max_gravity_well_count;
     let count = wells.iter().count();
     if count > max {

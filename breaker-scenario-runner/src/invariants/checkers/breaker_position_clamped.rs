@@ -19,7 +19,11 @@ pub fn check_breaker_position_clamped(
     playfield: Res<PlayfieldConfig>,
     frame: Res<ScenarioFrame>,
     mut log: ResMut<ViolationLog>,
+    mut stats: Option<ResMut<ScenarioStats>>,
 ) {
+    if let Some(ref mut s) = stats {
+        s.invariant_checks += 1;
+    }
     let tolerance = 1.0_f32;
     for (entity, position, width, size_boosts) in &breakers {
         let boost_mult = size_boosts.map_or(1.0, ActiveSizeBoosts::multiplier);

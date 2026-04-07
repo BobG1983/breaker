@@ -235,8 +235,8 @@ fn non_requested_checker_not_registered_when_lists_nonempty() {
     // Step 1: check_bolt_in_bounds should have run and incremented the counter
     let stats = app.world().resource::<ScenarioStats>();
     assert!(
-        stats.invariant_checks >= 10,
-        "expected invariant_checks >= 10 from check_bolt_in_bounds (10 valid bolts), got {}",
+        stats.invariant_checks >= 1,
+        "expected invariant_checks >= 1 from check_bolt_in_bounds (one invocation per frame), got {}",
         stats.invariant_checks
     );
 

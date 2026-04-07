@@ -19,7 +19,11 @@ pub fn check_pulse_ring_accumulation(
     config: Res<ScenarioConfig>,
     frame: Res<ScenarioFrame>,
     mut log: ResMut<ViolationLog>,
+    mut stats: Option<ResMut<ScenarioStats>>,
 ) {
+    if let Some(ref mut s) = stats {
+        s.invariant_checks += 1;
+    }
     let max = config.definition.invariant_params.max_pulse_ring_count;
     let count = rings.iter().count();
     if count > max {

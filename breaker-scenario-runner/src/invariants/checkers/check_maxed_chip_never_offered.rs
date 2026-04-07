@@ -13,7 +13,11 @@ pub fn check_maxed_chip_never_offered(
     inventory: Option<Res<ChipInventory>>,
     frame: Res<ScenarioFrame>,
     mut log: ResMut<ViolationLog>,
+    mut stats: Option<ResMut<ScenarioStats>>,
 ) {
+    if let Some(ref mut s) = stats {
+        s.invariant_checks += 1;
+    }
     let Some(offers) = offers else { return };
     let Some(inventory) = inventory else { return };
 

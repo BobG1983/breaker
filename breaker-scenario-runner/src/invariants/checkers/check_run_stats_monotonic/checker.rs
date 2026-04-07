@@ -49,7 +49,11 @@ pub fn check_run_stats_monotonic(
     mut previous: Local<Option<PreviousRunStats>>,
     frame: Res<ScenarioFrame>,
     mut log: ResMut<ViolationLog>,
+    mut scenario_stats: Option<ResMut<ScenarioStats>>,
 ) {
+    if let Some(ref mut s) = scenario_stats {
+        s.invariant_checks += 1;
+    }
     let Some(stats) = stats else {
         *previous = None;
         return;

@@ -14,7 +14,11 @@ pub fn check_no_entity_leaks(
     mut spawn_reader: MessageReader<SpawnNodeComplete>,
     mut baseline: ResMut<EntityLeakBaseline>,
     mut log: ResMut<ViolationLog>,
+    mut stats: Option<ResMut<ScenarioStats>>,
 ) {
+    if let Some(ref mut s) = stats {
+        s.invariant_checks += 1;
+    }
     let spawned = spawn_reader.read().next().is_some();
     let needs_check = baseline.baseline.is_some() && frame.0.is_multiple_of(120);
 

@@ -22,7 +22,11 @@ pub fn check_timer_monotonically_decreasing(
     frame: Res<ScenarioFrame>,
     mut reverse_reader: MessageReader<ReverseTimePenalty>,
     mut log: ResMut<ViolationLog>,
+    mut stats: Option<ResMut<ScenarioStats>>,
 ) {
+    if let Some(ref mut s) = stats {
+        s.invariant_checks += 1;
+    }
     // Consume all ReverseTimePenalty messages this tick.
     // If any were sent, a timer increase is legitimate.
     let reverse_penalty_this_tick = reverse_reader.read().next().is_some();
