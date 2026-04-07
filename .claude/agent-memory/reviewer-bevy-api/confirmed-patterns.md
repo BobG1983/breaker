@@ -121,12 +121,12 @@ type: reference
 - `add_message::<T>()` in test_app() — correct message registration for test harness
 
 ## State Plugin / Lifecycle Crate Patterns (feature/effect-placeholder-visuals — confirmed correct)
-- `MessageWriter<ChangeState<NodeState>>` as a system param — correct; `ChangeState<S>` is a `#[derive(Message)]` type in rantzsoft_lifecycle; `MessageWriter<'w, T>` is the correct Bevy 0.18 param; `.write(ChangeState::new())` is the correct send call
+- `MessageWriter<ChangeState<NodeState>>` as a system param — correct; `ChangeState<S>` is a `#[derive(Message)]` type in rantzsoft_stateflow; `MessageWriter<'w, T>` is the correct Bevy 0.18 param; `.write(ChangeState::new())` is the correct send call
 - `ResMut<Time<Virtual>>` + `.unpause()` / `.pause()` — confirmed correct in Bevy 0.18.1 for virtual time control
 - `ResMut<NodeOutcome>` + `node_outcome.result = NodeResult::Quit` — correct mutable resource mutation in a system param
 - `Route::from(S).to_dynamic(fn)` — project-local typestate builder API (not Bevy core); `fn(&World) -> S` is the correct closure signature; passing a named function (`resolve_node_next_state`) and an inline closure are both valid
 - `Route::from(S).to_dynamic(fn).with_transition(T).when(fn)` — correct chaining; typestate enforces no double-set; `.to_dynamic` accepts `impl Fn(&World) -> S + Send + Sync + 'static`
-- `app.add_systems(OnEnter(NodeState::Teardown), cleanup_on_exit::<NodeState>)` — correct; `cleanup_on_exit<S>` is a free function system in rantzsoft_lifecycle taking `(Commands, Query<Entity, With<CleanupOnExit<S>>>)`; wiring to `OnEnter(State::Teardown)` is the project's cleanup pattern
+- `app.add_systems(OnEnter(NodeState::Teardown), cleanup_on_exit::<NodeState>)` — correct; `cleanup_on_exit<S>` is a free function system in rantzsoft_stateflow taking `(Commands, Query<Entity, With<CleanupOnExit<S>>>)`; wiring to `OnEnter(State::Teardown)` is the project's cleanup pattern
 - `CleanupOnExit::<S>::default()` in spawn tuples — correct; type has `impl Default` via `PhantomData`; used in `commands.entity(e).insert(...)`, `commands.spawn((..., CleanupOnExit::<S>::default(), ...))`, and as `#[require]` fields
 - `#[require(Spatial2D, CleanupOnExit<NodeState>)]` on `#[derive(Component)]` structs — correct Bevy 0.15+ required components syntax; generic type parameters inside `#[require(...)]` are supported
 - `Messages<ChangeState<NodeState>>` resource accessed via `app.world().resource::<Messages<T>>()` in tests — confirmed correct test pattern for asserting message writes

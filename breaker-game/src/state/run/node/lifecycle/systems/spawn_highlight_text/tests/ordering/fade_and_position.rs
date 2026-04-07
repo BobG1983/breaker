@@ -2,7 +2,7 @@
 //! and `CleanupOnExit<NodeState>` / `HighlightPopup` markers.
 
 use bevy::prelude::*;
-use rantzsoft_lifecycle::CleanupOnExit;
+use rantzsoft_stateflow::CleanupOnExit;
 
 use crate::{
     fx::{FadeOut, PunchScale},

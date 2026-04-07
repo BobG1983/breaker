@@ -11,6 +11,6 @@
 - ~~Delete PhysicsFrozenDuringPause invariant~~ — Removed in commit 8ef028d7, replaced with unit tests
 - ~~Fix detect_combo_king stale migration test~~ — Removed duplicate migration test, added HighlightTriggered assertion to dedup test
 - ~~Bolt speed normalization after tether constraint~~ — Added normalize_bolt_speed_after_constraints system after enforce_distance_constraints
-- ~~Phase 5p: Transitions & PlayingState~~ — Already delivered by rantzsoft_lifecycle crate (state routing, screen transitions, cleanup)
+- ~~Phase 5p: Transitions & PlayingState~~ — Already delivered by rantzsoft_stateflow crate (state routing, screen transitions, cleanup)
 - ~~Cross-domain prelude, re-export modules & import cleanup~~ — breaker-game/src/prelude/ with 5 re-export modules, merged in refactor/cross-domain-prelude
 - ~~Scenario runner improvements~~ — Streaming subprocess pool, frame budget cuts (666K→386K), parse-once optimization, coverage report, unified log, --coverage/--fail-fast flags. 12min→1:22 runtime.

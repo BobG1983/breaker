@@ -389,7 +389,7 @@ fn plain_route_still_works_after_transition_infrastructure_added() {
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, StatesPlugin))
         .init_state::<TestState>()
-        .add_plugins(crate::RantzLifecyclePlugin::new().register_state::<TestState>());
+        .add_plugins(crate::RantzStateflowPlugin::new().register_state::<TestState>());
 
     app.world_mut()
         .resource_mut::<RoutingTable<TestState>>()
@@ -432,7 +432,7 @@ fn condition_route_without_transition_still_works() {
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, StatesPlugin))
         .init_state::<TestState>()
-        .add_plugins(crate::RantzLifecyclePlugin::new().register_state::<TestState>());
+        .add_plugins(crate::RantzStateflowPlugin::new().register_state::<TestState>());
 
     app.world_mut()
         .resource_mut::<RoutingTable<TestState>>()

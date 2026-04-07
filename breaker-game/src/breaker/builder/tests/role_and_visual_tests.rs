@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use rantzsoft_lifecycle::CleanupOnExit;
+use rantzsoft_stateflow::CleanupOnExit;
 
 use super::helpers::test_breaker_definition;
 use crate::{

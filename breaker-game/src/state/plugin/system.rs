@@ -5,8 +5,8 @@ use std::sync::Arc;
 use bevy::prelude::*;
 use iyes_progress::prelude::*;
 use rantzsoft_defaults::prelude::*;
-use rantzsoft_lifecycle::{
-    FadeIn, FadeOut, RantzLifecyclePlugin, Route, RoutingTableAppExt, TransitionType,
+use rantzsoft_stateflow::{
+    FadeIn, FadeOut, RantzStateflowPlugin, Route, RoutingTableAppExt, TransitionType,
     cleanup_on_exit,
 };
 
@@ -51,7 +51,7 @@ impl Plugin for StatePlugin {
             .add_sub_state::<RunEndState>()
             // Lifecycle crate — routing tables + dispatch for all state types
             .add_plugins(
-                RantzLifecyclePlugin::new()
+                RantzStateflowPlugin::new()
                     .register_state::<AppState>()
                     .register_state::<GameState>()
                     .register_state::<MenuState>()

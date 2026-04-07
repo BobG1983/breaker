@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use super::helpers::*;
 use crate::{
-    RantzLifecyclePlugin,
+    RantzStateflowPlugin,
     transition::resources::{
         ActiveTransition, EndingTransition, PendingTransition, RunningTransition,
         StartingTransition,
@@ -364,7 +364,7 @@ fn phase_stalls_when_no_system_sends_transition_ready() {
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin))
         .init_state::<TestState>()
-        .add_plugins(RantzLifecyclePlugin::new().register_state::<TestState>());
+        .add_plugins(RantzStateflowPlugin::new().register_state::<TestState>());
 
     // Manually add the route with the transition type. Since
     // TestEffectOut systems are NOT registered, no TransitionReady

@@ -22,7 +22,7 @@ pub mod transition;
 
 pub use cleanup::{CleanupOnExit, cleanup_on_exit};
 pub use messages::{ChangeState, StateChanged, TransitionEnd, TransitionStart};
-pub use plugin::RantzLifecyclePlugin;
+pub use plugin::RantzStateflowPlugin;
 pub use route::Route;
 pub use routing_table::{RoutingTable, RoutingTableAppExt};
 pub use transition::{

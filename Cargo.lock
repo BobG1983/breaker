@@ -1829,9 +1829,9 @@ dependencies = [
  "rand",
  "rand_chacha",
  "rantzsoft_defaults",
- "rantzsoft_lifecycle",
  "rantzsoft_physics2d",
  "rantzsoft_spatial2d",
+ "rantzsoft_stateflow",
  "ron",
  "serde",
  "tracing",
@@ -1847,9 +1847,9 @@ dependencies = [
  "breaker",
  "clap",
  "rand",
- "rantzsoft_lifecycle",
  "rantzsoft_physics2d",
  "rantzsoft_spatial2d",
+ "rantzsoft_stateflow",
  "ron",
  "serde",
  "tracing",
@@ -4622,14 +4622,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rantzsoft_lifecycle"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "tracing",
-]
-
-[[package]]
 name = "rantzsoft_physics2d"
 version = "0.1.0"
 dependencies = [
@@ -4642,6 +4634,14 @@ name = "rantzsoft_spatial2d"
 version = "0.1.0"
 dependencies = [
  "bevy",
+]
+
+[[package]]
+name = "rantzsoft_stateflow"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "tracing",
 ]
 
 [[package]]

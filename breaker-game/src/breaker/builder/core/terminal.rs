@@ -1,7 +1,7 @@
 //! Terminal build/spawn impls and shared core building helpers.
 
 use bevy::{math::curve::easing::EaseFunction, prelude::*};
-use rantzsoft_lifecycle::CleanupOnExit;
+use rantzsoft_stateflow::CleanupOnExit;
 use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{
     MaxSpeed, Position2D, PreviousPosition, PreviousScale, Scale2D, Velocity2D,

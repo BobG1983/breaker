@@ -1,5 +1,5 @@
 [workspace]
-members = ["breaker-game", "rantzsoft_spatial2d", "rantzsoft_physics2d", "rantzsoft_defaults", "rantzsoft_defaults_derive", "rantzsoft_lifecycle", "breaker-scenario-runner"]
+members = ["breaker-game", "rantzsoft_spatial2d", "rantzsoft_physics2d", "rantzsoft_defaults", "rantzsoft_defaults_derive", "rantzsoft_stateflow", "breaker-scenario-runner"]
 resolver = "3"
 
 [workspace.lints.rust]

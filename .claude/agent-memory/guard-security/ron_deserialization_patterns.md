@@ -486,10 +486,10 @@ in production code.
   are unchanged (carry-forward from wall builder audit 2026-04-02).
 - state/ hierarchy is pure Rust code reorganization. No new asset types or deserializers.
 
-## feature/wall-builder-pattern (2026-04-03) — rantzsoft_lifecycle crate
+## feature/wall-builder-pattern (2026-04-03) — rantzsoft_stateflow crate
 
-### rantzsoft_lifecycle: no RON deserialization (Safe)
-- The new rantzsoft_lifecycle crate contains zero RON files, zero `ron::de::from_str` calls,
+### rantzsoft_stateflow: no RON deserialization (Safe)
+- The new rantzsoft_stateflow crate contains zero RON files, zero `ron::de::from_str` calls,
   zero `include_str!` macro uses, and zero Bevy AssetLoader implementations.
 - All configuration is done in code via effect struct fields (e.g., `FadeOut { duration: 0.3,
   color: Color::BLACK }`). These are set by game code at route registration time — no
@@ -513,7 +513,7 @@ in production code.
 - state/plugin.rs: no RON loading. All route closures read ECS resources (State<S>, NodeOutcome)
   — no file-controlled data.
 - shared/components.rs: three marker types removed. No RON schema changes.
-- breaker-scenario-runner/Cargo.toml: adds rantzsoft_lifecycle (workspace path dep).
+- breaker-scenario-runner/Cargo.toml: adds rantzsoft_stateflow (workspace path dep).
   That crate has zero RON deserialization — confirmed in 2026-04-03 audit.
 - No new RON assets added. No new include_str! uses. No changes to existing deserialization sites.
 - Carry-forward warnings from prior audits unchanged (hit_fraction, negative damage,

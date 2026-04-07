@@ -3,7 +3,7 @@ use std::sync::Arc;
 use bevy::{prelude::*, state::app::StatesPlugin};
 
 use crate::{
-    ChangeState, RantzLifecyclePlugin, Route, RoutingTableAppExt,
+    ChangeState, RantzStateflowPlugin, Route, RoutingTableAppExt,
     transition::{
         effects::shared::TransitionProgress,
         resources::{ActiveTransition, PendingTransition},
@@ -22,7 +22,7 @@ fn integration_app() -> App {
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, StatesPlugin))
         .init_state::<TestState>()
-        .add_plugins(RantzLifecyclePlugin::new().register_state::<TestState>());
+        .add_plugins(RantzStateflowPlugin::new().register_state::<TestState>());
     app
 }
 
@@ -228,7 +228,7 @@ fn fixed_update_change_state_works_without_transitions() {
             std::time::Duration::from_millis(20),
         ))
         .add_plugins(
-            RantzLifecyclePlugin::new()
+            RantzStateflowPlugin::new()
                 .register_state::<Parent>()
                 .register_state::<Child>(),
         );
@@ -323,7 +323,7 @@ fn full_hierarchy_with_outin_and_in_transitions() {
             std::time::Duration::from_millis(20),
         ))
         .add_plugins(
-            RantzLifecyclePlugin::new()
+            RantzStateflowPlugin::new()
                 .register_state::<Grand>()
                 .register_state::<Parent>()
                 .register_state::<Child>(),
@@ -437,7 +437,7 @@ fn fixed_update_change_state_reaches_playing_through_transition_chain() {
             std::time::Duration::from_millis(20),
         ))
         .add_plugins(
-            RantzLifecyclePlugin::new()
+            RantzStateflowPlugin::new()
                 .register_state::<Parent>()
                 .register_state::<Child>(),
         );

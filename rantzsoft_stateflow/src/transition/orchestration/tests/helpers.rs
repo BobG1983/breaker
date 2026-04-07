@@ -3,7 +3,7 @@ use std::sync::Arc;
 use bevy::{prelude::*, state::app::StatesPlugin};
 
 use crate::{
-    RantzLifecyclePlugin, Route,
+    RantzStateflowPlugin, Route,
     messages::ChangeState,
     transition::{
         messages::{TransitionOver, TransitionReady, TransitionRunComplete},
@@ -84,7 +84,7 @@ pub(super) fn transition_test_app() -> App {
     app.add_plugins((MinimalPlugins, StatesPlugin))
         .init_state::<TestState>()
         .add_plugins(
-            RantzLifecyclePlugin::new()
+            RantzStateflowPlugin::new()
                 .register_state::<TestState>()
                 .register_custom_transition::<TestEffectOut, _, _, _>(
                     test_effect_out_start,

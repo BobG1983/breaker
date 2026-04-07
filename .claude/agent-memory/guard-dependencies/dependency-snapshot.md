@@ -14,7 +14,7 @@ Branch: feature/effect-placeholder-visuals
 - bevy_egui 0.39 → resolved 0.39.1 (optional, dev feature)
 - rantzsoft_defaults (path)
 - rantzsoft_physics2d (path)
-- rantzsoft_lifecycle (path)
+- rantzsoft_stateflow (path)
 - rantzsoft_spatial2d (path)
 - tracing 0.1 (features = ["release_max_level_warn"])
 - tracing-appender 0.2
@@ -29,7 +29,7 @@ Branch: feature/effect-placeholder-visuals
 ### breaker-scenario-runner
 - bevy 0.18.1 (default-features = false, features = ["2d"])
 - breaker (path, default-features = false)
-- rantzsoft_lifecycle (path)  ← NEW since last audit
+- rantzsoft_stateflow (path)  ← NEW since last audit
 - rantzsoft_spatial2d (path)
 - rantzsoft_physics2d (path)
 - clap 4 (features = ["derive"])
@@ -39,7 +39,7 @@ Branch: feature/effect-placeholder-visuals
 - serde 1 (features = ["derive"])
 - rand 0.9 → resolved 0.9.2
 
-### rantzsoft_lifecycle  ← NEW workspace member (added on feature/wall-builder-pattern)
+### rantzsoft_stateflow  ← NEW workspace member (added on feature/wall-builder-pattern)
 - bevy 0.18.1 (default-features = false, features = ["2d"])
 - tracing 0.1
 
@@ -69,7 +69,7 @@ Branch: feature/effect-placeholder-visuals
 - ron 0.12.0 (0.12.1 now available — patch bump eligible, see known-findings)
 
 ## Transitive duplicates (cargo tree -d — 2026-04-06)
-All entries below match known-findings.md — no new duplicates introduced by rantzsoft_lifecycle:
+All entries below match known-findings.md — no new duplicates introduced by rantzsoft_stateflow:
 - bitflags v1.3.2 + v2.11.0 (known wontfix)
 - block2 v0.5.1 + v0.6.2 (known wontfix)
 - core-foundation v0.9.4 + v0.10.1 (known wontfix)
@@ -93,7 +93,7 @@ All entries below match known-findings.md — no new duplicates introduced by ra
 - skrifa v0.37.0 + v0.39.0 (known wontfix)
 
 ## Changes since prior audit (2026-04-02)
-- rantzsoft_lifecycle added as direct dep of breaker-scenario-runner (NEW)
+- rantzsoft_stateflow added as direct dep of breaker-scenario-runner (NEW)
   Uses CleanupOnExit in: lifecycle/systems/frame_mutations/mutations.rs,
   invariants/checkers/check_chain_arc_count_reasonable.rs,
   lifecycle/tests/frame_mutations/chain_arcs.rs
@@ -124,4 +124,4 @@ All entries below match known-findings.md — no new duplicates introduced by ra
 - bevy_egui: optional behind "dev" feature; not included in release/scenario builds. CLEAN.
 - iyes_progress: optional behind "progress" feature in rantzsoft_defaults. CLEAN.
 - hot-reload: feature-gated in rantzsoft_defaults; activated by breaker-game dev feature. CLEAN.
-- rantzsoft_lifecycle: no features declared. CLEAN.
+- rantzsoft_stateflow: no features declared. CLEAN.

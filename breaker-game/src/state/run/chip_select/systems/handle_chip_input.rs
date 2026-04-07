@@ -1,7 +1,7 @@
 //! Handles keyboard input on the chip selection screen.
 
 use bevy::{ecs::system::SystemParam, prelude::*};
-use rantzsoft_lifecycle::ChangeState;
+use rantzsoft_stateflow::ChangeState;
 
 use crate::{
     chips::inventory::ChipInventory,

@@ -4,7 +4,7 @@ description: When a crate has existing production dispatch code, orchestration t
 type: feedback
 ---
 
-In `rantzsoft_lifecycle`, `dispatch_message_routes` is existing production code — not a stub. It unconditionally calls `NextState::set()` and writes `StateChanged` whenever a route exists. When orchestration tests send `ChangeState` and then assert `State == B` or `StateChanged sent`, these assertions pass at RED because the existing dispatch handles them regardless of whether `orchestrate_transitions` does anything.
+In `rantzsoft_stateflow`, `dispatch_message_routes` is existing production code — not a stub. It unconditionally calls `NextState::set()` and writes `StateChanged` whenever a route exists. When orchestration tests send `ChangeState` and then assert `State == B` or `StateChanged sent`, these assertions pass at RED because the existing dispatch handles them regardless of whether `orchestrate_transitions` does anything.
 
 **Why:** The transition orchestration infrastructure is added on top of an existing routing system. The existing dispatch has no awareness of `TransitionKind`. Tests that assert state changes or StateChanged messages that would ALSO be sent by the naive existing dispatch cannot serve as RED gate validators for orchestration behaviors.
 

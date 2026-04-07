@@ -1,6 +1,6 @@
 # State Management
 
-Bevy `States` and `SubStates` form a four-level hierarchy. State routing is declarative — each plugin registers its transitions via `rantzsoft_lifecycle::Route` entries; domain systems send `ChangeState<S>` messages when they are done and let the routing table decide the destination.
+Bevy `States` and `SubStates` form a four-level hierarchy. State routing is declarative — each plugin registers its transitions via `rantzsoft_stateflow::Route` entries; domain systems send `ChangeState<S>` messages when they are done and let the routing table decide the destination.
 
 ## State Hierarchy
 
@@ -50,9 +50,9 @@ AppState (top-level States)
 
 All state enum types live in `breaker-game/src/state/types/`. Each sub-state is registered by `StatePlugin` in `breaker-game/src/state/plugin.rs`.
 
-## Declarative Routing via rantzsoft_lifecycle
+## Declarative Routing via rantzsoft_stateflow
 
-State transitions use the `rantzsoft_lifecycle` crate (`RantzLifecyclePlugin`, `Route`, `RoutingTable<S>`, `ChangeState<S>`, `StateChanged<S>`). No domain calls `NextState` directly; they send a destination-less message instead.
+State transitions use the `rantzsoft_stateflow` crate (`RantzStateflowPlugin`, `Route`, `RoutingTable<S>`, `ChangeState<S>`, `StateChanged<S>`). No domain calls `NextState` directly; they send a destination-less message instead.
 
 **Route types:**
 
@@ -63,7 +63,7 @@ State transitions use the `rantzsoft_lifecycle` crate (`RantzLifecyclePlugin`, `
 
 **Route registration** happens in `state/plugin.rs` via `register_routing()`, split into `register_parent_routes`, `register_run_routes`, `register_node_routes`, `register_chip_select_routes`, and `register_run_end_routes`.
 
-**Lifecycle messages** (per state type `S`, registered by `RantzLifecyclePlugin::register_state::<S>()`):
+**Lifecycle messages** (per state type `S`, registered by `RantzStateflowPlugin::register_state::<S>()`):
 
 - `ChangeState<S>` — sent by domain systems to request a transition from the current state
 - `StateChanged<S> { from, to }` — sent by the routing system after every completed transition
@@ -72,7 +72,7 @@ State transitions use the `rantzsoft_lifecycle` crate (`RantzLifecyclePlugin`, `
 
 ## Transition Effects
 
-Transition effects (fade, dissolve, wipe, iris, pixelate, slide) are implemented in `rantzsoft_lifecycle` and registered on individual routes via `.with_transition(TransitionType::Out(...))`, `.with_transition(TransitionType::In(...))`, or `.with_transition(TransitionType::OutIn { out_e, in_e })`.
+Transition effects (fade, dissolve, wipe, iris, pixelate, slide) are implemented in `rantzsoft_stateflow` and registered on individual routes via `.with_transition(TransitionType::Out(...))`, `.with_transition(TransitionType::In(...))`, or `.with_transition(TransitionType::OutIn { out_e, in_e })`.
 
 The lifecycle crate pauses `Time<Virtual>` during Out-type transitions and unpauses after In-type transitions complete. Overlay animations run on `Time<Real>` so they are not affected by the pause.
 
@@ -93,8 +93,8 @@ Time model:
 
 ## Entity Cleanup
 
-`CleanupOnExit<S>` (from `rantzsoft_lifecycle`) marks entities for automatic despawn when state `S` exits. `StatePlugin` registers `cleanup_on_exit::<S>` on `OnEnter(S::Teardown)` for `NodeState`, `ChipSelectState`, `RunEndState`, and `RunState`. As a safety net, `cleanup_on_exit::<NodeState>` also runs on `OnEnter(RunState::Teardown)` — this covers the quit-from-pause path where `NodeState` may not reach its own `Teardown`. The old `CleanupOnNodeExit` and `CleanupOnRunEnd` marker types have been fully removed; all entity lifecycle markers are now `CleanupOnExit<NodeState>` and `CleanupOnExit<RunState>`.
+`CleanupOnExit<S>` (from `rantzsoft_stateflow`) marks entities for automatic despawn when state `S` exits. `StatePlugin` registers `cleanup_on_exit::<S>` on `OnEnter(S::Teardown)` for `NodeState`, `ChipSelectState`, `RunEndState`, and `RunState`. As a safety net, `cleanup_on_exit::<NodeState>` also runs on `OnEnter(RunState::Teardown)` — this covers the quit-from-pause path where `NodeState` may not reach its own `Teardown`. The old `CleanupOnNodeExit` and `CleanupOnRunEnd` marker types have been fully removed; all entity lifecycle markers are now `CleanupOnExit<NodeState>` and `CleanupOnExit<RunState>`.
 
 ## Passive types vs. active logic
 
-State enum types are passive types defined in `state/types/`, imported by all domains. Cleanup markers (`CleanupOnExit<S>`) come from `rantzsoft_lifecycle`. Routing declarations, transition wiring, and cleanup system registration all live in `state/plugin.rs`.
+State enum types are passive types defined in `state/types/`, imported by all domains. Cleanup markers (`CleanupOnExit<S>`) come from `rantzsoft_stateflow`. Routing declarations, transition wiring, and cleanup system registration all live in `state/plugin.rs`.

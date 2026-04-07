@@ -295,15 +295,15 @@ The file contains only a doc comment explaining legacy stat components were remo
 **Wave 8 of state-lifecycle-refactor is still pending. Only the most egregious doc drift has been fixed.**
 
 **Fixed on 2026-04-03 (refactor/crate-routing-migration context):**
-- `docs/architecture/state.md` — COMPLETELY REWRITTEN. Now describes the 4-level hierarchy (AppState → GameState → MenuState/RunState → NodeState/ChipSelectState/RunEndState), `rantzsoft_lifecycle` routing, declarative `Route` API, `ChangeState<S>` messages, transition effects, pause model, and `CleanupOnExit<S>`.
+- `docs/architecture/state.md` — COMPLETELY REWRITTEN. Now describes the 4-level hierarchy (AppState → GameState → MenuState/RunState → NodeState/ChipSelectState/RunEndState), `rantzsoft_stateflow` routing, declarative `Route` API, `ChangeState<S>` messages, transition effects, pause model, and `CleanupOnExit<S>`.
 - `docs/architecture/ordering.md` — Section header `OnEnter(GameState::Playing)` → `OnEnter(NodeState::Loading)`; domain labels updated (`[ui domain]` → `[state/run/node/hud domain]`, `[wall domain]` → `[walls domain]`, `[run/node domain]` → `[state/run/node domain]`); `UiSystems::SpawnTimerHud` and `NodeSystems` source paths updated from `ui/sets.rs` / `run/node/sets.rs` to correct paths.
-- `docs/architecture/ordering.md` — Section `OnEnter(GameState::TransitionOut) / OnEnter(GameState::TransitionIn)` REMOVED and replaced with "Transition Lifecycle (rantzsoft_lifecycle)" note explaining those states no longer exist.
+- `docs/architecture/ordering.md` — Section `OnEnter(GameState::TransitionOut) / OnEnter(GameState::TransitionIn)` REMOVED and replaced with "Transition Lifecycle (rantzsoft_stateflow)" note explaining those states no longer exist.
 - `docs/architecture/ordering.md` — Section `OnExit(GameState::MainMenu)` renamed to `OnExit(MenuState::Main)`.
 - `docs/architecture/messages.md` — `WallsSpawned` sender updated: `wall (spawn_walls)` → `walls (state/run/node/systems/spawn_walls)`.
 - `docs/architecture/messages.md` — `ChipSelected` sender updated: `UI (handle_chip_input)` → `state/run/chip_select (handle_chip_input)`.
 
 **Still deferred to Wave 8 (do NOT flag again until after Wave 8 merges):**
-- `docs/architecture/plugins.md` — Domain Layout table still shows `screen/`, `ui/`, `run/`, `wall/`; Plugin registration order still lists `ScreenPlugin`, `UiPlugin`, `RunPlugin` (not `StatePlugin`); Scenario runner exception paragraph still mentions `screen` and `wall` module paths; `UiSystems` location cited as `ui/sets.rs`; `rantzsoft_lifecycle` not listed in workspace layout table.
+- `docs/architecture/plugins.md` — Domain Layout table still shows `screen/`, `ui/`, `run/`, `wall/`; Plugin registration order still lists `ScreenPlugin`, `UiPlugin`, `RunPlugin` (not `StatePlugin`); Scenario runner exception paragraph still mentions `screen` and `wall` module paths; `UiSystems` location cited as `ui/sets.rs`; `rantzsoft_stateflow` not listed in workspace layout table.
 - `docs/architecture/data.md` — WallRegistry "Re-exported from `wall/`" (now `walls/`)
 - `docs/architecture/builders/pattern.md` — Wall builder location shown as `breaker-game/src/wall/builder/` (now `breaker-game/src/walls/builder/`)
 
@@ -335,7 +335,7 @@ The file contains only a doc comment explaining legacy stat components were remo
 
 **CleanupOnNodeExit / CleanupOnRunEnd FULLY REMOVED — migration complete:**
 - `CleanupOnNodeExit` and `CleanupOnRunEnd` DO NOT EXIST in `breaker-game/src/`. They were removed.
-- All entity lifecycle markers are now `CleanupOnExit<NodeState>` and `CleanupOnExit<RunState>` from `rantzsoft_lifecycle`.
+- All entity lifecycle markers are now `CleanupOnExit<NodeState>` and `CleanupOnExit<RunState>` from `rantzsoft_stateflow`.
 - `shared/components.rs` no longer contains any cleanup markers — it only has `BaseWidth`, `BaseHeight`, `NodeScalingFactor`.
 - The known-state entry from 2026-04-03 saying "still transitioning" is SUPERSEDED.
 
@@ -363,7 +363,7 @@ The file contains only a doc comment explaining legacy stat components were remo
 - `docs/architecture/state.md` — Entity Cleanup section: removed "legacy markers, still transitioning" claim; added safety net description; added `NodeResult::Quit` and routing to Pause section.
 - `docs/architecture/builders/breaker.md` — Role dimension and build() table: `CleanupOnRunEnd` → `CleanupOnExit<RunState>`, `CleanupOnNodeExit` → `CleanupOnExit<NodeState>`.
 - `docs/architecture/builders/bolt.md` — Role description, build() output, spawn() behavior, Why section: old marker names replaced; spawn() signature corrected to `&mut Commands`.
-- `docs/architecture/plugins.md` — `shared/` description: removed old marker names, noted `CleanupOnExit<S>` from `rantzsoft_lifecycle`.
+- `docs/architecture/plugins.md` — `shared/` description: removed old marker names, noted `CleanupOnExit<S>` from `rantzsoft_stateflow`.
 - `docs/architecture/bolt-definitions.md` — Current Spawn Flow and Extra Bolt Spawn: old marker names replaced; `.spawn(world)` → `.spawn(&mut commands)`.
 - `docs/architecture/data.md` — code comment: `CleanupOnRunEnd` → `CleanupOnExit<RunState>`.
 - `docs/todos/detail/hide-entities-during-non-gameplay.md` — marker names updated.

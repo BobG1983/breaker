@@ -2,7 +2,7 @@ use bevy::{
     prelude::*,
     time::{Timer, TimerMode},
 };
-use rantzsoft_lifecycle::CleanupOnExit;
+use rantzsoft_stateflow::CleanupOnExit;
 use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{PreviousScale, Scale2D, Spatial, Velocity2D};
 

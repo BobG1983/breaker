@@ -64,7 +64,7 @@ fn plugin_builds_and_registers_state_types() {
         .init_state::<AppState>()
         .add_sub_state::<GameState>()
         .add_plugins(
-            RantzLifecyclePlugin::new()
+            RantzStateflowPlugin::new()
                 .register_state::<AppState>()
                 .register_state::<GameState>(),
         );
@@ -82,7 +82,7 @@ fn plugin_dispatch_works_end_to_end() {
         .init_state::<AppState>()
         .add_sub_state::<GameState>()
         .add_plugins(
-            RantzLifecyclePlugin::new()
+            RantzStateflowPlugin::new()
                 .register_state::<AppState>()
                 .register_state::<GameState>(),
         );
@@ -115,7 +115,7 @@ fn plugin_condition_dispatch_works() {
     app.add_plugins((MinimalPlugins, StatesPlugin))
         .init_state::<AppState>()
         .insert_resource(Ready(false))
-        .add_plugins(RantzLifecyclePlugin::new().register_state::<AppState>());
+        .add_plugins(RantzStateflowPlugin::new().register_state::<AppState>());
 
     app.add_route(
         Route::from(AppState::Loading)
@@ -143,7 +143,7 @@ fn plugin_sends_state_changed_message() {
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, StatesPlugin))
         .init_state::<AppState>()
-        .add_plugins(RantzLifecyclePlugin::new().register_state::<AppState>());
+        .add_plugins(RantzStateflowPlugin::new().register_state::<AppState>());
 
     app.add_route(Route::from(AppState::Loading).to(AppState::Game));
     app.update();
@@ -171,7 +171,7 @@ fn register_custom_transition_registers_effect_in_registry() {
     app.add_plugins((MinimalPlugins, StatesPlugin))
         .init_state::<AppState>()
         .add_plugins(
-            RantzLifecyclePlugin::new()
+            RantzStateflowPlugin::new()
                 .register_state::<AppState>()
                 .register_custom_transition::<TestEffectOut, _, _, _>(
                     test_start_sys,
@@ -198,7 +198,7 @@ fn effect_systems_do_not_run_when_marker_absent() {
     app.add_plugins((MinimalPlugins, StatesPlugin))
         .init_state::<AppState>()
         .add_plugins(
-            RantzLifecyclePlugin::new()
+            RantzStateflowPlugin::new()
                 .register_state::<AppState>()
                 .register_custom_transition::<TestEffectOut, _, _, _>(
                     test_start_sys,
@@ -226,7 +226,7 @@ fn register_multiple_custom_transitions() {
     app.add_plugins((MinimalPlugins, StatesPlugin))
         .init_state::<AppState>()
         .add_plugins(
-            RantzLifecyclePlugin::new()
+            RantzStateflowPlugin::new()
                 .register_state::<AppState>()
                 .register_custom_transition::<TestEffectOut, _, _, _>(
                     test_start_sys,
@@ -252,7 +252,7 @@ fn plugin_registers_internal_messages() {
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, StatesPlugin))
         .init_state::<AppState>()
-        .add_plugins(RantzLifecyclePlugin::new().register_state::<AppState>());
+        .add_plugins(RantzStateflowPlugin::new().register_state::<AppState>());
     app.update();
 
     // The internal messages should be registered (pub(crate) but resources exist)
@@ -279,7 +279,7 @@ fn plugin_registers_transition_start_and_end_per_state() {
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, StatesPlugin))
         .init_state::<AppState>()
-        .add_plugins(RantzLifecyclePlugin::new().register_state::<AppState>());
+        .add_plugins(RantzStateflowPlugin::new().register_state::<AppState>());
     app.update();
 
     assert!(
@@ -300,7 +300,7 @@ fn plugin_registers_transition_registry() {
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, StatesPlugin))
         .init_state::<AppState>()
-        .add_plugins(RantzLifecyclePlugin::new());
+        .add_plugins(RantzStateflowPlugin::new());
     app.update();
 
     assert!(
@@ -319,7 +319,7 @@ fn plugin_builds_with_orchestration_system() {
     app.add_plugins((MinimalPlugins, StatesPlugin))
         .init_state::<AppState>()
         .add_plugins(
-            RantzLifecyclePlugin::new()
+            RantzStateflowPlugin::new()
                 .register_state::<AppState>()
                 .register_custom_transition::<TestEffectOut, _, _, _>(
                     test_start_sys,

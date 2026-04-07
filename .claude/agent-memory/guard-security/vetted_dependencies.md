@@ -21,16 +21,16 @@ Current dep snapshot and duplicate/wontfix findings are in `guard-dependencies/d
 - None in breaker-game/src/ (workspace lint: `unsafe_code = "deny"`)
 - No build.rs files anywhere in the workspace
 
-## Vetted Patterns — rantzsoft_lifecycle (added 2026-04-03)
+## Vetted Patterns — rantzsoft_stateflow (added 2026-04-03)
 
-Security-reviewed patterns in `rantzsoft_lifecycle` — all confirmed safe:
+Security-reviewed patterns in `rantzsoft_stateflow` — all confirmed safe:
 
 - `Arc<dyn OutTransition/InTransition/OneShotTransition>` in TransitionType: cloned via Arc::clone, no double-free, no unsound downcasting.
 - `Box<dyn FnOnce(...)>` in WorldCallback (PendingTransition): stored as Option, consumed once via `.take()` + if-let, never called twice. Sound.
 - `Box<dyn Fn(&World) -> TransitionType>` in TransitionKind::Dynamic: called at dispatch time from &World, no mutable aliasing.
 - `Box<dyn Fn(&mut World)>` closures in TransitionRegistry entries: called via `world.resource_scope` which provides exclusive World access. No aliasing.
 - TransitionProgress elapsed/duration division: all 12 run systems guard `if progress.duration > 0.0` before dividing; zero-duration case returns `t = 1.0`. No panic surface.
-- `Mutex<Vec<RegistrationFn>>` in RantzLifecyclePlugin: `.expect("poisoned")` has `#[allow]` with reason. Lock only held during plugin build, never across await points. Poison is unrecoverable. Safe.
+- `Mutex<Vec<RegistrationFn>>` in RantzStateflowPlugin: `.expect("poisoned")` has `#[allow]` with reason. Lock only held during plugin build, never across await points. Poison is unrecoverable. Safe.
 - `debug_assert!` in handle_transition_over for OutIn invariant: fires only in debug builds. The hard invariant violation path returns early after the assert.
 - Deferred ChangeState re-queue pattern: dispatch_message_routes re-queues ChangeState if ActiveTransition is present. Bounded by transition duration (always finite). Not an infinite loop.
 

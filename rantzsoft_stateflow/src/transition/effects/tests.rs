@@ -109,7 +109,7 @@ fn zero_duration_effect_completes_immediately_via_fade_out() {
 fn all_eleven_effects_are_registered_in_transition_registry() {
     use bevy::state::app::StatesPlugin;
 
-    use crate::{RantzLifecyclePlugin, transition::registry::TransitionRegistry};
+    use crate::{RantzStateflowPlugin, transition::registry::TransitionRegistry};
 
     #[derive(bevy::prelude::States, Default, Clone, Copy, PartialEq, Eq, Hash, Debug)]
     enum TestState {
@@ -120,7 +120,7 @@ fn all_eleven_effects_are_registered_in_transition_registry() {
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, StatesPlugin));
     app.init_state::<TestState>()
-        .add_plugins(RantzLifecyclePlugin::new().register_state::<TestState>());
+        .add_plugins(RantzStateflowPlugin::new().register_state::<TestState>());
     app.update();
 
     let registry = app.world().resource::<TransitionRegistry>();
@@ -208,7 +208,7 @@ fn end_system_does_not_despawn_any_entities() {
 fn inserting_fade_out_marker_causes_only_fade_out_start_to_fire() {
     use bevy::state::app::StatesPlugin;
 
-    use crate::RantzLifecyclePlugin;
+    use crate::RantzStateflowPlugin;
 
     #[derive(bevy::prelude::States, Default, Clone, Copy, PartialEq, Eq, Hash, Debug)]
     enum TestState {
@@ -219,7 +219,7 @@ fn inserting_fade_out_marker_causes_only_fade_out_start_to_fire() {
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, StatesPlugin));
     app.init_state::<TestState>()
-        .add_plugins(RantzLifecyclePlugin::new().register_state::<TestState>());
+        .add_plugins(RantzStateflowPlugin::new().register_state::<TestState>());
     app.update();
 
     // Insert FadeOut marker + config

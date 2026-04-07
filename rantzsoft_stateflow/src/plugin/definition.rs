@@ -24,7 +24,7 @@ use crate::{
 ///
 /// ```text
 /// app.add_plugins(
-///     RantzLifecyclePlugin::new()
+///     RantzStateflowPlugin::new()
 ///         .register_state::<AppState>()
 ///         .register_state::<GameState>()
 ///         .register_state::<NodeState>()
@@ -33,11 +33,11 @@ use crate::{
 type RegistrationFn = Box<dyn FnOnce(&mut App) + Send + Sync>;
 
 /// Lifecycle plugin implementation.
-pub struct RantzLifecyclePlugin {
+pub struct RantzStateflowPlugin {
     registrations: Mutex<Vec<RegistrationFn>>,
 }
 
-impl RantzLifecyclePlugin {
+impl RantzStateflowPlugin {
     /// Create a new lifecycle plugin builder.
     #[must_use]
     pub fn new() -> Self {
@@ -129,13 +129,13 @@ impl RantzLifecyclePlugin {
     }
 }
 
-impl Default for RantzLifecyclePlugin {
+impl Default for RantzStateflowPlugin {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Plugin for RantzLifecyclePlugin {
+impl Plugin for RantzStateflowPlugin {
     fn build(&self, app: &mut App) {
         // Register shared transition infrastructure
         app.init_resource::<TransitionRegistry>()

@@ -1,7 +1,7 @@
 //! Side panel chrome — left (Augments) and right (Status) flanking the playfield.
 
 use bevy::prelude::*;
-use rantzsoft_lifecycle::CleanupOnExit;
+use rantzsoft_stateflow::CleanupOnExit;
 
 use crate::state::{
     run::node::hud::components::{SidePanels, StatusPanel},

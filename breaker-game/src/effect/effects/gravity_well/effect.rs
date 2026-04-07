@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use bevy::prelude::*;
-use rantzsoft_lifecycle::CleanupOnExit;
+use rantzsoft_stateflow::CleanupOnExit;
 use rantzsoft_spatial2d::prelude::*;
 
 use crate::{

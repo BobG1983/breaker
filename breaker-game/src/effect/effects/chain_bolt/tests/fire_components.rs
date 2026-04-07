@@ -2,7 +2,7 @@
 //! `ChainBoltAnchor`, `BoltDefinition`, and `Position2D` source.
 
 use bevy::prelude::*;
-use rantzsoft_lifecycle::CleanupOnExit;
+use rantzsoft_stateflow::CleanupOnExit;
 use rantzsoft_physics2d::constraint::DistanceConstraint;
 use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 

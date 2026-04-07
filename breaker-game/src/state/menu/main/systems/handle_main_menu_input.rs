@@ -1,7 +1,7 @@
 //! Main menu keyboard and mouse input handling.
 
 use bevy::{app::AppExit, prelude::*};
-use rantzsoft_lifecycle::ChangeState;
+use rantzsoft_stateflow::ChangeState;
 
 use crate::{
     input::InputConfig,
@@ -88,7 +88,7 @@ fn confirm_selection(
 #[cfg(test)]
 mod tests {
     use bevy::{ecs::message::Messages, state::app::StatesPlugin};
-    use rantzsoft_lifecycle::ChangeState;
+    use rantzsoft_stateflow::ChangeState;
 
     use super::*;
     use crate::state::types::{AppState, GameState};

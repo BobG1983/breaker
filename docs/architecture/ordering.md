@@ -184,11 +184,11 @@ compute_globals → derive_transform → propagate_position → propagate_rotati
 
 Reading: after all FixedUpdate ticks complete for the current visual frame, `compute_globals` resolves the parent/child hierarchy and writes `GlobalPosition2D`/`GlobalRotation2D`/`GlobalScale2D`; `derive_transform` reads Global* plus the entity's `DrawLayer` Z value and `InterpolateTransform2D` flag to write the final `Transform` (interpolated or direct); propagation systems distribute parent global values to children. Transform is derived — game systems NEVER write `Transform` directly.
 
-### Transition Lifecycle (rantzsoft_lifecycle)
+### Transition Lifecycle (rantzsoft_stateflow)
 
-`TransitionOut` and `TransitionIn` are no longer game states. Screen transitions are managed entirely by the `rantzsoft_lifecycle` crate. Routes declare transition effects via `.with_transition(TransitionType::Out(...))` etc. The lifecycle crate's `orchestrate_transitions` system (runs in `Update`) drives the start/run/end phase progression using `StartingTransition<T>` / `RunningTransition<T>` / `EndingTransition<T>` resources as gating conditions.
+`TransitionOut` and `TransitionIn` are no longer game states. Screen transitions are managed entirely by the `rantzsoft_stateflow` crate. Routes declare transition effects via `.with_transition(TransitionType::Out(...))` etc. The lifecycle crate's `orchestrate_transitions` system (runs in `Update`) drives the start/run/end phase progression using `StartingTransition<T>` / `RunningTransition<T>` / `EndingTransition<T>` resources as gating conditions.
 
-The `fx` domain's `spawn_transition_out`, `spawn_transition_in`, `cleanup_transition`, and `animate_transition` systems have been removed. No game-side ordering constraints exist for transitions — they are internal to `rantzsoft_lifecycle`.
+The `fx` domain's `spawn_transition_out`, `spawn_transition_in`, `cleanup_transition`, and `animate_transition` systems have been removed. No game-side ordering constraints exist for transitions — they are internal to `rantzsoft_stateflow`.
 
 ### OnExit(MenuState::Main)
 

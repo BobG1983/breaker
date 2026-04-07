@@ -16,7 +16,7 @@ fn apply_debug_frame_mutations_spawn_extra_chain_arcs_at_matching_frame() {
         effect::effects::chain_lightning::{ChainLightningArc, ChainLightningChain},
         state::types::NodeState,
     };
-    use rantzsoft_lifecycle::CleanupOnExit;
+    use rantzsoft_stateflow::CleanupOnExit;
 
     let definition = ScenarioDefinition {
         breaker: "Aegis".to_owned(),

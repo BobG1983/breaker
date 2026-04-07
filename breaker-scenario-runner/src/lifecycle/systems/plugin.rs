@@ -14,7 +14,7 @@ use breaker::{
         types::{ChipSelectState, GameState, MenuState, NodeState, RunEndState, RunState},
     },
 };
-use rantzsoft_lifecycle::{routing_table::RoutingTable, transition::types::TransitionKind};
+use rantzsoft_stateflow::{routing_table::RoutingTable, transition::types::TransitionKind};
 
 use super::{
     debug_setup::{apply_debug_setup, deferred_debug_setup, enforce_frozen_positions},

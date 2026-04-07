@@ -1,5 +1,5 @@
 use bevy::{ecs::world::CommandQueue, prelude::*};
-use rantzsoft_lifecycle::CleanupOnExit;
+use rantzsoft_stateflow::CleanupOnExit;
 use rantzsoft_spatial2d::components::{Position2D, Scale2D, Velocity2D};
 
 use super::helpers::test_bolt_definition;

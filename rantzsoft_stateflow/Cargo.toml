@@ -1,5 +1,5 @@
 [package]
-name = "rantzsoft_lifecycle"
+name = "rantzsoft_stateflow"
 version = "0.1.0"
 edition = "2024"
 publish = false

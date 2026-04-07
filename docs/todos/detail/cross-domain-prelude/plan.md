@@ -23,7 +23,7 @@ pub(crate) mod states;
 pub(crate) use components::{
     Bolt, Breaker, Cell, Wall,                              // entity markers
     BoundEffects, StagedEffects,                            // effect containers
-    NodeScalingFactor,  // lifecycle (CleanupOnExit<S> comes from rantzsoft_lifecycle directly)
+    NodeScalingFactor,  // lifecycle (CleanupOnExit<S> comes from rantzsoft_stateflow directly)
     ActivePiercings, ActiveDamageBoosts, ActiveSizeBoosts,  // effect state (tier 2)
     ActiveSpeedBoosts, ActiveVulnerability,
     AnchorActive, AnchorPlanted, FlashStepActive,
@@ -43,7 +43,7 @@ pub(crate) use crate::state::types::{
 
 **`breaker-game/src/prelude/components.rs`** — all cross-domain components:
 - Entity markers: `Bolt`, `Breaker`, `Cell`, `Wall` (from their domain `components` modules)
-- Shared: `NodeScalingFactor`, `BaseWidth`, `BaseHeight` (from `shared::components`); `CleanupOnExit<S>` comes from `rantzsoft_lifecycle` directly — not re-exported here
+- Shared: `NodeScalingFactor`, `BaseWidth`, `BaseHeight` (from `shared::components`); `CleanupOnExit<S>` comes from `rantzsoft_stateflow` directly — not re-exported here
 - Effect: `BoundEffects`, `StagedEffects`, `ActivePiercings`, `ActiveDamageBoosts`, `ActiveSizeBoosts`, `ActiveSpeedBoosts`, `ActiveVulnerability`, `AnchorActive`, `AnchorPlanted`, `FlashStepActive`, `LivesCount`, `ShieldWall` (from `effect`)
 - Cross-domain bolt: `BoltServing` (from `bolt`)
 - Cross-domain cells: `RequiredToClear` (from `cells`)

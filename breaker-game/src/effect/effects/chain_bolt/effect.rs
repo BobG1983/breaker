@@ -1,6 +1,6 @@
 use bevy::{ecs::world::CommandQueue, prelude::*};
 use rand::Rng;
-use rantzsoft_lifecycle::CleanupOnExit;
+use rantzsoft_stateflow::CleanupOnExit;
 use rantzsoft_physics2d::constraint::DistanceConstraint;
 use rantzsoft_spatial2d::components::Velocity2D;
 

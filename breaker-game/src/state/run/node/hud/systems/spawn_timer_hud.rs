@@ -1,7 +1,7 @@
 //! System to spawn the timer HUD on node entry.
 
 use bevy::prelude::*;
-use rantzsoft_lifecycle::CleanupOnExit;
+use rantzsoft_stateflow::CleanupOnExit;
 
 use crate::state::{
     run::node::{
