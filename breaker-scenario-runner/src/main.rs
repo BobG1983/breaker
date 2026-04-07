@@ -154,7 +154,7 @@ fn run_single_fast_path(args: &Args, headless: bool, fail_fast: bool) {
         process::exit(1);
     }
 
-    let run_log = create_run_log_if_needed(true);
+    let run_log = None;
 
     let (normal, stress) = partition_stress_scenarios(&runs);
     if let Some((name, _path, config)) = stress.into_iter().next() {
