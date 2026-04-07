@@ -9,9 +9,10 @@ use breaker::{
             chip_select::messages::ChipSelected,
             node::{messages::SpawnNodeComplete, sets::NodeSystems},
         },
-        types::{ChipSelectState, MenuState, NodeState, RunEndState},
+        types::{ChipSelectState, GameState, MenuState, NodeState, RunEndState, RunState},
     },
 };
+use rantzsoft_lifecycle::{routing_table::RoutingTable, transition::types::TransitionKind};
 
 use super::{
     debug_setup::{apply_debug_setup, deferred_debug_setup, enforce_frozen_positions},
@@ -52,6 +53,7 @@ impl Plugin for ScenarioLifecycle {
             .definition
             .allow_early_end;
 
+        strip_all_transitions(app);
         register_scenario_resources(app);
         register_scenario_systems(app);
 
@@ -64,6 +66,28 @@ impl Plugin for ScenarioLifecycle {
             app.add_systems(OnEnter(RunEndState::Active), restart_run_on_end);
         }
     }
+}
+
+/// Strips all transition effects from all routing tables, replacing them with
+/// instant state changes (`TransitionKind::None`).
+///
+/// Animated transitions pause `Time<Virtual>`, which blocks `FixedUpdate` and
+/// prevents the scenario frame counter from advancing. Headless scenarios don't
+/// need visual transitions — instant state changes are correct and fast.
+fn strip_all_transitions(app: &mut App) {
+    fn strip<S: States>(app: &mut App) {
+        if let Some(mut table) = app.world_mut().get_resource_mut::<RoutingTable<S>>() {
+            for route in table.routes.values_mut() {
+                route.transition = TransitionKind::None;
+            }
+        }
+    }
+    strip::<GameState>(app);
+    strip::<MenuState>(app);
+    strip::<RunState>(app);
+    strip::<NodeState>(app);
+    strip::<ChipSelectState>(app);
+    strip::<RunEndState>(app);
 }
 
 /// Initialises all resources and messages required by the scenario lifecycle.
