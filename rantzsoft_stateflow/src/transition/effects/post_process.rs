@@ -39,7 +39,7 @@ pub struct TransitionEffect {
 
 impl FullscreenMaterial for TransitionEffect {
     fn fragment_shader() -> ShaderRef {
-        "embedded://rantzsoft_lifecycle/transition/effects/shaders/transition.wgsl".into()
+        "embedded://rantzsoft_stateflow/transition/effects/shaders/transition.wgsl".into()
     }
 
     fn node_edges() -> Vec<InternedRenderLabel> {

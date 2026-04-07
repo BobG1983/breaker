@@ -1,6 +1,6 @@
 ---
 name: ScreenLifecycle trait — associated methods, not associated types or derive
-description: How to express "enum must expose Loading/AnimateIn/AnimateOut/Teardown phases" via a trait for rantzsoft_lifecycle
+description: How to express "enum must expose Loading/AnimateIn/AnimateOut/Teardown phases" via a trait for rantzsoft_stateflow
 type: project
 ---
 

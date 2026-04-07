@@ -21,10 +21,10 @@ defaultstest = "test -p rantzsoft_defaults --features bevy/dynamic_linking,hot-r
 defaultsclippy = "clippy -p rantzsoft_defaults --all-targets --features bevy/dynamic_linking,hot-reload"
 defaultscheck = "check -p rantzsoft_defaults --features bevy/dynamic_linking,hot-reload"
 
-# rantzsoft_lifecycle (dynamic linking to avoid workspace artifact conflicts)
-lifecycletest = "test -p rantzsoft_lifecycle --features bevy/dynamic_linking"
-lifecycleclippy = "clippy -p rantzsoft_lifecycle --all-targets --features bevy/dynamic_linking"
-lifecyclecheck = "check -p rantzsoft_lifecycle --features bevy/dynamic_linking"
+# rantzsoft_stateflow (dynamic linking to avoid workspace artifact conflicts)
+stateflowtest = "test -p rantzsoft_stateflow --features bevy/dynamic_linking"
+stateflowclippy = "clippy -p rantzsoft_stateflow --all-targets --features bevy/dynamic_linking"
+stateflowcheck = "check -p rantzsoft_stateflow --features bevy/dynamic_linking"
 
 # scenario runner (dev — ONLY for debugging bugs in the runner itself)
 dscenario = "run -p breaker_scenario_runner"

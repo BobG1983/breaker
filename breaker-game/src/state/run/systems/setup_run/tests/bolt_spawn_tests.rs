@@ -1,7 +1,7 @@
 //! Tests for bolt spawning behaviors on first node (12-21).
 
 use bevy::prelude::*;
-use rantzsoft_lifecycle::CleanupOnExit;
+use rantzsoft_stateflow::CleanupOnExit;
 use rantzsoft_spatial2d::components::{
     BaseSpeed, MaxSpeed, MinSpeed, Position2D, Scale2D, Velocity2D,
 };

@@ -1,7 +1,7 @@
 pub(super) use std::collections::HashSet;
 
 pub(super) use bevy::prelude::*;
-pub(super) use rantzsoft_lifecycle::CleanupOnExit;
+pub(super) use rantzsoft_stateflow::CleanupOnExit;
 pub(super) use rantzsoft_physics2d::{
     aabb::Aabb2D, collision_layers::CollisionLayers, plugin::RantzPhysics2dPlugin,
 };

@@ -32,8 +32,8 @@ brickbreaker/                 # Repository root (workspace)
 ├── rantzsoft_defaults_derive/ # Proc-macro crate: #[derive(GameConfig)] for RON defaults loading
 │   ├── Cargo.toml
 │   └── src/lib.rs
-├── rantzsoft_lifecycle/      # Game-agnostic state routing, screen transitions, lifecycle messages
-│   ├── Cargo.toml            # Package: rantzsoft_lifecycle
+├── rantzsoft_stateflow/      # Game-agnostic state routing, screen transitions, lifecycle messages
+│   ├── Cargo.toml            # Package: rantzsoft_stateflow
 │   └── src/                  # Route builder, dispatch, transition effects, cleanup
 ├── breaker-scenario-runner/  # Automated gameplay testing tool (dev-only binary)
 │   ├── Cargo.toml            # Package: breaker_scenario_runner
@@ -57,7 +57,7 @@ src/
 ├── app.rs            # App — constructs the Bevy App with DefaultPlugins + Game
 ├── game.rs           # Game — PluginGroup that wires together all domain plugins
 ├── prelude/          # Cross-domain import convenience — re-exports only, no types
-├── shared/           # Shared types: BaseWidth, BaseHeight, PlayfieldConfig, NodeScalingFactor (cleanup markers CleanupOnExit<S> come from rantzsoft_lifecycle)
+├── shared/           # Shared types: BaseWidth, BaseHeight, PlayfieldConfig, NodeScalingFactor (cleanup markers CleanupOnExit<S> come from rantzsoft_stateflow)
 ├── state/            # State lifecycle, routing, menus, pause, run/node management, HUD
 ├── input/            # Raw keyboard input to GameAction translation
 ├── breaker/          # Breaker mechanics, state machine, bump system

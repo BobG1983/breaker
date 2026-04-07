@@ -1,7 +1,7 @@
 //! Pause menu plugin registration.
 
 use bevy::prelude::*;
-use rantzsoft_lifecycle::ActiveTransition;
+use rantzsoft_stateflow::ActiveTransition;
 
 use super::{
     PauseMenuScreen,

@@ -1,7 +1,7 @@
 //! System to handle node cleared events — advance or win.
 
 use bevy::prelude::*;
-use rantzsoft_lifecycle::ChangeState;
+use rantzsoft_stateflow::ChangeState;
 use tracing::warn;
 
 use crate::state::{
@@ -49,7 +49,7 @@ pub(crate) fn handle_node_cleared(
 #[cfg(test)]
 mod tests {
     use bevy::{ecs::message::Messages, state::app::StatesPlugin};
-    use rantzsoft_lifecycle::ChangeState;
+    use rantzsoft_stateflow::ChangeState;
 
     use super::*;
     use crate::state::{

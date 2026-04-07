@@ -1,7 +1,7 @@
 //! System to tick the chip selection countdown timer.
 
 use bevy::prelude::*;
-use rantzsoft_lifecycle::ChangeState;
+use rantzsoft_stateflow::ChangeState;
 
 use crate::{
     chips::inventory::ChipInventory,
@@ -46,7 +46,7 @@ pub(crate) fn tick_chip_timer(
 #[cfg(test)]
 mod tests {
     use bevy::{ecs::message::Messages, state::app::StatesPlugin};
-    use rantzsoft_lifecycle::ChangeState;
+    use rantzsoft_stateflow::ChangeState;
 
     use super::*;
     use crate::state::types::{AppState, GameState, RunState};

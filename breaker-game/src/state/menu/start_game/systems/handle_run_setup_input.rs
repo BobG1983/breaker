@@ -1,7 +1,7 @@
 //! Handles keyboard input on the breaker selection screen.
 
 use bevy::{ecs::system::SystemParam, prelude::*};
-use rantzsoft_lifecycle::ChangeState;
+use rantzsoft_stateflow::ChangeState;
 
 use crate::{
     breaker::{BreakerRegistry, SelectedBreaker},
@@ -79,7 +79,7 @@ pub(crate) fn handle_run_setup_input(
 #[cfg(test)]
 mod tests {
     use bevy::{ecs::message::Messages, state::app::StatesPlugin};
-    use rantzsoft_lifecycle::ChangeState;
+    use rantzsoft_stateflow::ChangeState;
 
     use super::*;
     use crate::{

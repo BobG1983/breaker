@@ -8,7 +8,7 @@ Updated 2026-04-07: All 11 MEDIUM actionable items confirmed resolved in feature
 
 ## Scope
 
-Full workspace scan: all .rs files across breaker-game, rantzsoft_lifecycle, rantzsoft_spatial2d, rantzsoft_physics2d, rantzsoft_defaults, breaker-scenario-runner (1176 files total, Wave 11 2026-04-06).
+Full workspace scan: all .rs files across breaker-game, rantzsoft_stateflow, rantzsoft_spatial2d, rantzsoft_physics2d, rantzsoft_defaults, breaker-scenario-runner (1176 files total, Wave 11 2026-04-06).
 
 ## Status vs Phase 6
 

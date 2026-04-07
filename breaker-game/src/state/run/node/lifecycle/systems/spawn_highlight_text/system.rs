@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 use rand::Rng;
-use rantzsoft_lifecycle::CleanupOnExit;
+use rantzsoft_stateflow::CleanupOnExit;
 
 use crate::{
     fx::{FadeOut, PunchScale},

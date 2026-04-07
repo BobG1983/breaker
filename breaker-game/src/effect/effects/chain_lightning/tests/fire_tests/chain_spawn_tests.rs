@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use rantzsoft_lifecycle::CleanupOnExit;
+use rantzsoft_stateflow::CleanupOnExit;
 use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{

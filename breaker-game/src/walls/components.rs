@@ -1,7 +1,7 @@
 //! Wall domain components.
 
 use bevy::prelude::*;
-use rantzsoft_lifecycle::CleanupOnExit;
+use rantzsoft_stateflow::CleanupOnExit;
 use rantzsoft_spatial2d::components::Spatial2D;
 
 use crate::state::types::NodeState;
@@ -32,7 +32,7 @@ mod tests {
 
     #[test]
     fn wall_require_inserts_cleanup_on_exit_node_state() {
-        use rantzsoft_lifecycle::CleanupOnExit;
+        use rantzsoft_stateflow::CleanupOnExit;
 
         use crate::state::types::NodeState;
         let mut app = App::new();

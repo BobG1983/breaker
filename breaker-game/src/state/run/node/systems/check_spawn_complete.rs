@@ -2,7 +2,7 @@
 //! signals have been received.
 
 use bevy::prelude::*;
-use rantzsoft_lifecycle::ChangeState;
+use rantzsoft_stateflow::ChangeState;
 
 use crate::{
     bolt::messages::BoltSpawned,
@@ -249,7 +249,7 @@ mod tests {
     /// fires.
     #[test]
     fn sends_change_state_when_all_signals_received() {
-        use rantzsoft_lifecycle::ChangeState;
+        use rantzsoft_stateflow::ChangeState;
 
         use crate::state::types::NodeState;
 

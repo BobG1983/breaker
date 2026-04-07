@@ -4,18 +4,18 @@ description: Bug categories that appear repeatedly in this codebase — check th
 type: project
 ---
 
-## rantzsoft_lifecycle transition effects: elapsed never incremented — FIXED (2026-04-06 verified)
+## rantzsoft_stateflow transition effects: elapsed never incremented — FIXED (2026-04-06 verified)
 
-All 12 built-in effects (fade, dissolve, pixelate, wipe, iris, slide) in `rantzsoft_lifecycle`
+All 12 built-in effects (fade, dissolve, pixelate, wipe, iris, slide) in `rantzsoft_stateflow`
 now call `progress.elapsed += time.delta_secs()` in their run systems (verified in each
-`*_run` system in `rantzsoft_lifecycle/src/transition/effects/`). TransitionRunComplete
+`*_run` system in `rantzsoft_stateflow/src/transition/effects/`). TransitionRunComplete
 is sent when `elapsed >= duration`. This bug was OPEN as of 2026-04-03 but is FIXED on develop.
 
-## rantzsoft_lifecycle orchestration tests 8/9 vacuous assertion — OPEN (2026-04-03)
+## rantzsoft_stateflow orchestration tests 8/9 vacuous assertion — OPEN (2026-04-03)
 
 `out_transition_sends_state_changed_after_state_change` and
 `out_transition_sends_transition_end_after_state_change` in
-`rantzsoft_lifecycle/src/transition/orchestration.rs` check
+`rantzsoft_stateflow/src/transition/orchestration.rs` check
 `iter_current_update_messages().next().is_some()` on the last of 10 updates.
 Since messages are frame-scoped and the transition completes by update ~4-5,
 there are no messages on update 10. These tests would assert false and FAIL

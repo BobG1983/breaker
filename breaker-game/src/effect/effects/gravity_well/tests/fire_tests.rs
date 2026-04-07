@@ -179,7 +179,7 @@ fn fire_falls_back_to_zero_when_entity_is_empty() {
 
 #[test]
 fn fire_spawns_well_with_cleanup_on_node_exit() {
-    use rantzsoft_lifecycle::CleanupOnExit;
+    use rantzsoft_stateflow::CleanupOnExit;
 
     use crate::state::types::NodeState;
 
@@ -199,7 +199,7 @@ fn fire_spawns_well_with_cleanup_on_node_exit() {
 
 #[test]
 fn fire_multiple_wells_all_have_cleanup_on_node_exit() {
-    use rantzsoft_lifecycle::CleanupOnExit;
+    use rantzsoft_stateflow::CleanupOnExit;
 
     use crate::state::types::NodeState;
 

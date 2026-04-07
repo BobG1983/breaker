@@ -1,7 +1,7 @@
 //! Visual text feedback for bump grades.
 
 use bevy::prelude::*;
-use rantzsoft_lifecycle::CleanupOnExit;
+use rantzsoft_stateflow::CleanupOnExit;
 
 use crate::{
     breaker::{

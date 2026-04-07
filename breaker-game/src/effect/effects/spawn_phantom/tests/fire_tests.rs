@@ -1,7 +1,7 @@
 //! Tests for `SpawnPhantom` `fire()` bolt spawning, components, and cap enforcement.
 
 use bevy::prelude::*;
-use rantzsoft_lifecycle::CleanupOnExit;
+use rantzsoft_stateflow::CleanupOnExit;
 use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{Position2D, Scale2D, Velocity2D};
 

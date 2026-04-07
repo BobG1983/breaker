@@ -193,7 +193,7 @@ fn cell_require_inserts_spatial2d() {
 
 #[test]
 fn cell_require_inserts_cleanup_on_exit_node_state() {
-    use rantzsoft_lifecycle::CleanupOnExit;
+    use rantzsoft_stateflow::CleanupOnExit;
 
     use crate::state::types::NodeState;
     let mut app = App::new();

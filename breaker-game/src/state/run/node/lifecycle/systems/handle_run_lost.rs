@@ -1,7 +1,7 @@
 //! System to handle run lost — set outcome and transition to `RunEnd`.
 
 use bevy::prelude::*;
-use rantzsoft_lifecycle::ChangeState;
+use rantzsoft_stateflow::ChangeState;
 
 use crate::state::{
     run::{
@@ -30,7 +30,7 @@ pub(crate) fn handle_run_lost(
 #[cfg(test)]
 mod tests {
     use bevy::{ecs::message::Messages, state::app::StatesPlugin};
-    use rantzsoft_lifecycle::ChangeState;
+    use rantzsoft_stateflow::ChangeState;
 
     use super::*;
     use crate::state::types::{AppState, GameState, RunState};

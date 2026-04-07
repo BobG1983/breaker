@@ -7,7 +7,7 @@ use std::collections::HashSet;
 
 use bevy::{ecs::system::SystemParam, prelude::*};
 use rand::prelude::IndexedRandom;
-use rantzsoft_lifecycle::CleanupOnExit;
+use rantzsoft_stateflow::CleanupOnExit;
 use rantzsoft_physics2d::{
     collision_layers::CollisionLayers, plugin::PhysicsSystems, resources::CollisionQuadtree,
 };

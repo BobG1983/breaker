@@ -56,7 +56,7 @@ app.add_route(Route::from(MenuState::Credits).to(MenuState::Main));
 
 ```rust
 use std::sync::Arc;
-use rantzsoft_lifecycle::{FadeIn, FadeOut, TransitionType};
+use rantzsoft_stateflow::{FadeIn, FadeOut, TransitionType};
 
 app.add_route(
     Route::from(MenuState::Main)
@@ -133,7 +133,7 @@ fn handle_credits_input(
 Spawn entities with `CleanupOnExit<MenuState>` so they're despawned when MenuState exits:
 
 ```rust
-use rantzsoft_lifecycle::CleanupOnExit;
+use rantzsoft_stateflow::CleanupOnExit;
 
 fn spawn_credits_screen(mut commands: Commands) {
     commands.spawn((

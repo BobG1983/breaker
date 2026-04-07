@@ -84,7 +84,7 @@ mod tests {
 
     #[test]
     fn primary_builder_inserts_cleanup_on_exit_run_state() {
-        use rantzsoft_lifecycle::CleanupOnExit;
+        use rantzsoft_stateflow::CleanupOnExit;
 
         use crate::state::types::RunState;
         let mut app = App::new();
@@ -109,7 +109,7 @@ mod tests {
 
     #[test]
     fn breaker_require_does_not_insert_cleanup_on_exit_node_state() {
-        use rantzsoft_lifecycle::CleanupOnExit;
+        use rantzsoft_stateflow::CleanupOnExit;
 
         use crate::state::types::NodeState;
         let mut app = App::new();

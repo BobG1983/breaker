@@ -42,7 +42,7 @@ mod tests {
     use std::collections::HashSet;
 
     use breaker::{effect::effects::chain_lightning::ChainState, state::types::NodeState};
-    use rantzsoft_lifecycle::CleanupOnExit;
+    use rantzsoft_stateflow::CleanupOnExit;
 
     use super::*;
     use crate::types::{InputStrategy, InvariantParams, ScenarioDefinition, ScriptedParams};

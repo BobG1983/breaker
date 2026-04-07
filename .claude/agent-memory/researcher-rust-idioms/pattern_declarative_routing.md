@@ -14,11 +14,11 @@ Two-tier pattern:
 
 ## Cross-Level Routing
 
-Cross-level routes (e.g., NodeState::Teardown → GameState::ChipSelect) work naturally: the route handler function (a one-shot system in the game crate) injects `ResMut<NextState<GameState>>` directly. The `rantzsoft_lifecycle` crate sees only `SystemId` and never names game types.
+Cross-level routes (e.g., NodeState::Teardown → GameState::ChipSelect) work naturally: the route handler function (a one-shot system in the game crate) injects `ResMut<NextState<GameState>>` directly. The `rantzsoft_stateflow` crate sees only `SystemId` and never names game types.
 
 ## Split of Ownership
 
-- `rantzsoft_lifecycle` owns: the dispatch runner (exclusive system), the `LifecycleRouteTable<S>` resource type, and the trigger mechanism.
+- `rantzsoft_stateflow` owns: the dispatch runner (exclusive system), the `LifecycleRouteTable<S>` resource type, and the trigger mechanism.
 - Game crate owns: registering routes into the table, and the route handler functions (which may reference game vocabulary).
 
 ## Why Not Alternatives

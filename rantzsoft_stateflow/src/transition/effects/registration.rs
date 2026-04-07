@@ -19,7 +19,7 @@ use crate::transition::{
 
 /// Register all built-in transition effects with the app.
 ///
-/// Called from `RantzLifecyclePlugin::build`.
+/// Called from `RantzStateflowPlugin::build`.
 pub(crate) fn register_builtin_transitions(app: &mut App) {
     // Post-process shader pipeline
     super::post_process::setup_post_process(app);
