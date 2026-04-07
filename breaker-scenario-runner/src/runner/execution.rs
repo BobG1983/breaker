@@ -9,9 +9,13 @@ use std::{
 
 use super::{
     app::run_scenario,
-    discovery::{collect_scenario_paths, load_stress_config, scenario_name},
+    discovery::{collect_scenario_paths, load_scenario, scenario_name},
+    run_log::RunLog,
 };
-use crate::{log_capture::LogBuffer, types::StressConfig};
+use crate::{
+    log_capture::LogBuffer,
+    types::{ScenarioDefinition, StressConfig},
+};
 
 /// Parallelism level for subprocess-based execution.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -65,23 +69,35 @@ pub fn parse_parallelism(value: &str) -> Result<Parallelism, String> {
 
 /// Builds the run list for a single iteration of execution.
 ///
-/// Each entry is `(display_name, scenario_path)`. For a single scenario,
-/// returns one entry; for `--all`, returns one entry per scenario file.
+/// Each entry is `(display_name, scenario_path, definition)`. For a single
+/// scenario, returns one entry; for `--all`, returns one entry per scenario
+/// file. Entries whose RON fails to parse are silently filtered out
+/// (`load_scenario` prints errors to stderr).
 #[must_use]
-pub fn build_run_list(scenario: Option<&str>, all: bool) -> Vec<(String, PathBuf)> {
+pub fn build_run_list(
+    scenario: Option<&str>,
+    all: bool,
+) -> Vec<(String, PathBuf, ScenarioDefinition)> {
     let scenario_paths = collect_scenario_paths(scenario, all);
     scenario_paths
         .into_iter()
-        .map(|p| {
+        .filter_map(|p| {
             let name = scenario_name(&p);
-            (name, p)
+            let def = load_scenario(&p)?;
+            Some((name, p, def))
         })
         .collect()
 }
 
 /// Runs a single scenario in-process. Returns process exit code (0 = pass, 1 = fail).
 #[must_use]
-pub fn run_with_args(scenario: Option<&str>, headless: bool, verbose: bool) -> i32 {
+pub fn run_with_args(
+    scenario: Option<&str>,
+    headless: bool,
+    verbose: bool,
+    run_log: Option<&RunLog>,
+    fail_fast: bool,
+) -> i32 {
     let scenario_paths = collect_scenario_paths(scenario, false);
 
     if scenario_paths.is_empty() {
@@ -91,7 +107,14 @@ pub fn run_with_args(scenario: Option<&str>, headless: bool, verbose: bool) -> i
 
     let mut shared_log_buffer: Option<LogBuffer> = None;
     let path = &scenario_paths[0];
-    let passed = run_scenario(path, headless, verbose, &mut shared_log_buffer);
+    let passed = run_scenario(
+        path,
+        headless,
+        verbose,
+        &mut shared_log_buffer,
+        run_log,
+        fail_fast,
+    );
 
     i32::from(!passed)
 }
@@ -101,9 +124,22 @@ pub fn run_with_args(scenario: Option<&str>, headless: bool, verbose: bool) -> i
 /// Unlike [`run_with_args`], this does not re-resolve the scenario name to a
 /// path — use it when the caller has already located the `.scenario.ron` file.
 #[must_use]
-pub fn run_single_scenario(path: &Path, headless: bool, verbose: bool) -> i32 {
+pub fn run_single_scenario(
+    path: &Path,
+    headless: bool,
+    verbose: bool,
+    run_log: Option<&RunLog>,
+    fail_fast: bool,
+) -> i32 {
     let mut shared_log_buffer: Option<LogBuffer> = None;
-    let passed = run_scenario(path, headless, verbose, &mut shared_log_buffer);
+    let passed = run_scenario(
+        path,
+        headless,
+        verbose,
+        &mut shared_log_buffer,
+        run_log,
+        fail_fast,
+    );
     i32::from(!passed)
 }
 
@@ -117,12 +153,21 @@ pub fn run_all_serial(
     runs: &[(String, PathBuf)],
     headless: bool,
     verbose: bool,
+    run_log: Option<&RunLog>,
+    fail_fast: bool,
 ) -> Vec<(String, bool)> {
     let mut shared_log_buffer: Option<LogBuffer> = None;
     let mut results: Vec<(String, bool)> = Vec::with_capacity(runs.len());
 
     for (display_name, path) in runs {
-        let passed = run_scenario(path, headless, verbose, &mut shared_log_buffer);
+        let passed = run_scenario(
+            path,
+            headless,
+            verbose,
+            &mut shared_log_buffer,
+            run_log,
+            fail_fast,
+        );
         results.push((display_name.clone(), passed));
     }
 
@@ -164,7 +209,7 @@ pub fn print_summary(results: &[(String, bool)]) -> i32 {
 // Subprocess batched execution
 // -------------------------------------------------------------------------
 
-/// Work item for [`spawn_batched`]: one subprocess to launch.
+/// Work item for subprocess execution: one subprocess to launch.
 pub(super) struct SubprocessSpec {
     /// Name shown in output and stored in results.
     pub(super) display_name: String,
@@ -286,14 +331,20 @@ pub fn run_all_parallel(
     visual: bool,
     verbose: bool,
     parallelism: usize,
+    run_log: Option<&RunLog>,
+    fail_fast: bool,
 ) -> Vec<(String, bool)> {
     let specs: Vec<SubprocessSpec> = runs
         .iter()
         .map(|(display_name, path)| {
             let name = scenario_name(path);
+            let mut extra_args = vec!["-s".into(), name];
+            if fail_fast {
+                extra_args.push("--fail-fast".into());
+            }
             SubprocessSpec {
                 display_name: display_name.clone(),
-                extra_args: vec!["-s".into(), name],
+                extra_args,
             }
         })
         .collect();
@@ -319,6 +370,12 @@ pub fn run_all_parallel(
             }
         }
         println!();
+
+        // Send captured subprocess output to the unified log file.
+        if let Some(log) = run_log {
+            log.write_lines(result.stdout.lines());
+            log.write_lines(result.stderr.lines());
+        }
     }
 
     all_results
@@ -387,19 +444,21 @@ pub(super) type NormalRun = (String, PathBuf);
 /// A stress scenario run entry: `(name, path, stress_config)`.
 pub(super) type StressRun = (String, PathBuf, StressConfig);
 
-/// Partitions a run list into `(normal, stress)` scenarios by checking each
-/// RON file for a `stress` field.
+/// Partitions a run list into `(normal, stress)` scenarios by reading the
+/// `stress` field from each pre-parsed [`ScenarioDefinition`].
 ///
 /// Returns `(normal_runs, stress_runs)` where `stress_runs` includes the
 /// resolved [`StressConfig`] for each stress scenario.
 #[must_use]
-pub fn partition_stress_scenarios(runs: &[(String, PathBuf)]) -> (Vec<NormalRun>, Vec<StressRun>) {
+pub fn partition_stress_scenarios(
+    runs: &[(String, PathBuf, ScenarioDefinition)],
+) -> (Vec<NormalRun>, Vec<StressRun>) {
     let mut normal = Vec::new();
     let mut stress = Vec::new();
 
-    for (name, path) in runs {
-        match load_stress_config(path) {
-            Some(config) => stress.push((name.clone(), path.clone(), config)),
+    for (name, path, def) in runs {
+        match &def.stress {
+            Some(config) => stress.push((name.clone(), path.clone(), config.clone())),
             None => normal.push((name.clone(), path.clone())),
         }
     }
@@ -420,14 +479,22 @@ pub fn run_stress_scenario(
     config: &StressConfig,
     visual: bool,
     verbose: bool,
+    run_log: Option<&RunLog>,
+    fail_fast: bool,
 ) -> StressResult {
     let runs = config.runs.max(1);
     let parallelism = config.parallelism.max(1);
 
     let specs: Vec<SubprocessSpec> = (0..runs)
-        .map(|i| SubprocessSpec {
-            display_name: format!("copy_{i}"),
-            extra_args: vec!["-s".into(), name.into(), "--stress-copy".into()],
+        .map(|i| {
+            let mut extra_args = vec!["-s".into(), name.into(), "--stress-copy".into()];
+            if fail_fast {
+                extra_args.push("--fail-fast".into());
+            }
+            SubprocessSpec {
+                display_name: format!("copy_{i}"),
+                extra_args,
+            }
         })
         .collect();
 
@@ -446,6 +513,14 @@ pub fn run_stress_scenario(
             };
         }
     };
+
+    // Send captured subprocess output to the unified log file.
+    if let Some(log) = run_log {
+        for result in &all_results {
+            log.write_lines(result.stdout.lines());
+            log.write_lines(result.stderr.lines());
+        }
+    }
 
     let failures: Vec<StressFailure> = all_results
         .into_iter()
@@ -474,18 +549,32 @@ pub fn run_stress_scenario(
 /// Prints the result of a stress scenario run.
 ///
 /// Failure stdout and stderr are always printed for failed copies.
-pub fn print_stress_result(result: &StressResult) {
-    println!("[{}] stress: {}", result.name, result.summary_line());
+pub fn print_stress_result(result: &StressResult, run_log: Option<&RunLog>) {
+    let summary = format!("[{}] stress: {}", result.name, result.summary_line());
+    println!("{summary}");
+    if let Some(log) = run_log {
+        log.write_line(&summary);
+    }
 
     if !result.passed() {
         for failure in &result.failures {
-            println!("  Copy {}:", failure.copy_index);
+            let copy_line = format!("  Copy {}:", failure.copy_index);
+            println!("{copy_line}");
+            if let Some(log) = run_log {
+                log.write_line(&copy_line);
+            }
             for line in failure.stdout.lines() {
                 println!("    {line}");
+                if let Some(log) = run_log {
+                    log.write_line(&format!("    {line}"));
+                }
             }
             if !failure.stderr.is_empty() {
                 for line in failure.stderr.lines() {
                     eprintln!("    {line}");
+                    if let Some(log) = run_log {
+                        log.write_line(&format!("    {line}"));
+                    }
                 }
             }
         }

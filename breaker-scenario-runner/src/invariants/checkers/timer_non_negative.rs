@@ -10,7 +10,11 @@ pub fn check_timer_non_negative(
     timer: Option<Res<NodeTimer>>,
     frame: Res<ScenarioFrame>,
     mut log: ResMut<ViolationLog>,
+    mut stats: Option<ResMut<ScenarioStats>>,
 ) {
+    if let Some(ref mut s) = stats {
+        s.invariant_checks += 1;
+    }
     let Some(timer) = timer else { return };
     if timer.remaining < 0.0 {
         log.0.push(ViolationEntry {

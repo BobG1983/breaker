@@ -21,7 +21,11 @@ pub fn check_valid_breaker_state(
     mut prev_game_state: Local<Option<GameState>>,
     frame: Res<ScenarioFrame>,
     mut log: ResMut<ViolationLog>,
+    mut stats: Option<ResMut<ScenarioStats>>,
 ) {
+    if let Some(ref mut s) = stats {
+        s.invariant_checks += 1;
+    }
     let current_game = game_state.map(|s| **s);
     // On game-state transition, clear tracking.
     if let (Some(prev_gs), Some(cur_gs)) = (*prev_game_state, current_game)

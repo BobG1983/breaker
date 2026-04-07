@@ -31,8 +31,12 @@ pub fn check_bolt_speed_accurate(
     bolts: BoltSpeedQuery,
     frame: Res<ScenarioFrame>,
     mut log: ResMut<ViolationLog>,
+    mut stats: Option<ResMut<ScenarioStats>>,
 ) {
     const SPEED_TOLERANCE: f32 = 1.0;
+    if let Some(ref mut s) = stats {
+        s.invariant_checks += 1;
+    }
     for (entity, velocity, base_speed, min_speed, max_speed, active_boosts) in &bolts {
         let speed = velocity.speed();
         if speed < f32::EPSILON {

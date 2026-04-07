@@ -17,7 +17,11 @@ pub fn check_chip_stacks_consistent(
     inventory: Option<Res<ChipInventory>>,
     frame: Res<ScenarioFrame>,
     mut log: ResMut<ViolationLog>,
+    mut stats: Option<ResMut<ScenarioStats>>,
 ) {
+    if let Some(ref mut s) = stats {
+        s.invariant_checks += 1;
+    }
     let Some(inventory) = inventory else { return };
 
     for (name, stacks, max_stacks) in inventory.iter_held_stacks() {

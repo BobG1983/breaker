@@ -62,7 +62,7 @@ pub fn today_date_string() -> String {
 ///
 /// All intermediate conversions use `try_from` with safe defaults. The algorithm
 /// guarantees values are in range for any date within +/- 5 million years.
-fn civil_from_days(days_since_epoch: i64) -> (i32, i32, i32) {
+pub(super) fn civil_from_days(days_since_epoch: i64) -> (i32, i32, i32) {
     let z = days_since_epoch + 719_468;
     let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
     let doe = u32::try_from(z - era * 146_097).unwrap_or(0);

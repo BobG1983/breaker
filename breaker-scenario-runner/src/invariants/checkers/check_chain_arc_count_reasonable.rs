@@ -17,7 +17,11 @@ pub fn check_chain_arc_count_reasonable(
     config: Res<ScenarioConfig>,
     frame: Res<ScenarioFrame>,
     mut log: ResMut<ViolationLog>,
+    mut stats: Option<ResMut<ScenarioStats>>,
 ) {
+    if let Some(ref mut s) = stats {
+        s.invariant_checks += 1;
+    }
     let max = config.definition.invariant_params.max_chain_arc_count;
     let count = chains.iter().count() + arcs.iter().count();
     if count > max {

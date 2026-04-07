@@ -36,9 +36,7 @@ pub fn check_bolt_in_bounds(
     let top = playfield.top();
     let left = playfield.left();
     let right = playfield.right();
-    let mut checks = 0u32;
     for (entity, position, bolt_radius) in &bolts {
-        checks += 1;
         let x = position.0.x;
         let y = position.0.y;
         let margin = bolt_radius.map_or(0.0, |r| r.0 + 1.0);
@@ -79,6 +77,6 @@ pub fn check_bolt_in_bounds(
         }
     }
     if let Some(ref mut s) = stats {
-        s.invariant_checks += checks;
+        s.invariant_checks += 1;
     }
 }

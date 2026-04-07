@@ -1043,3 +1043,60 @@ fn sync_ui_scale(
 or switch those values to a different approach.
 
 Full research report: `docs/todos/detail/scenario-runner-verbose-violation-log/research/bevy-ui-scaling.md`
+
+---
+
+## Screenshot API — `bevy::render::view::screenshot`
+
+Verified from `crates/bevy_render/src/view/window/screenshot.rs` at tag `v0.18.1` and
+`examples/window/screenshot.rs`.
+
+### Pattern: spawn an entity with `Screenshot` component + observer
+
+```rust
+use bevy::render::view::screenshot::{save_to_disk, Capturing, Screenshot};
+
+fn take_screenshot(mut commands: Commands) {
+    commands
+        .spawn(Screenshot::primary_window())
+        .observe(save_to_disk("screenshot.png"));
+}
+```
+
+### Key types
+
+- `Screenshot(pub RenderTarget)` — Component. Constructors: `::primary_window()`,
+  `::window(entity)`, `::image(handle)`, `::texture_view(handle)`
+- `ScreenshotCaptured { entity: Entity, image: Image }` — EntityEvent, triggered on the
+  screenshot entity when the GPU readback completes
+- `Capturing` — marker Component, present while capture is in flight
+- `Captured` — marker Component, added when image is ready (entity despawned next First tick)
+- `save_to_disk(path: impl AsRef<Path>) -> impl FnMut(On<ScreenshotCaptured>)` — free fn
+
+### Critical: observer trigger type is `On<>`, NOT `Trigger<>`
+
+In 0.18.1: `impl FnMut(On<ScreenshotCaptured>)`
+In 0.15.x: `impl FnMut(Trigger<ScreenshotCaptured>)` — WRONG for 0.18.1
+
+### Async — spans at least 2 frames
+
+Frame N: spawn entity. Frame N (render): GPU captures. Async task maps buffer and sends over
+mpsc. Frame N+1+ (Update): `trigger_screenshots` polls channel, fires observer. Not same-frame.
+
+### ScreenshotPlugin is auto-included with DefaultPlugins
+
+Path: `DefaultPlugins -> RenderPlugin -> ViewPlugin -> WindowRenderPlugin -> ScreenshotPlugin`.
+No manual registration needed. Not present in `MinimalPlugins` (headless) — must guard.
+
+### save_to_disk format
+
+Format inferred from file extension. PNG recommended. Image saved as RGB8 (alpha stripped — alpha
+stores HDR brightness). Directory must exist before the observer fires (create_dir_all before
+spawning the entity, not inside the observer closure).
+
+### One screenshot per render target per frame
+
+`extract_screenshots` skips duplicates and despawns the duplicate entity. Only one
+`Screenshot::primary_window()` per frame will be captured.
+
+Full research report: `.claude/research/scenario-runner-bevy-screenshot-api.md`

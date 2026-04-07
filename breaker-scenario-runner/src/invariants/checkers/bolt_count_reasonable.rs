@@ -10,7 +10,11 @@ pub fn check_bolt_count_reasonable(
     config: Res<ScenarioConfig>,
     frame: Res<ScenarioFrame>,
     mut log: ResMut<ViolationLog>,
+    mut stats: Option<ResMut<ScenarioStats>>,
 ) {
+    if let Some(ref mut s) = stats {
+        s.invariant_checks += 1;
+    }
     let max = config.definition.invariant_params.max_bolt_count;
     let count = bolts.iter().count();
     if count > max {

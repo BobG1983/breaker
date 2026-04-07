@@ -1,3 +1,5 @@
+use std::fmt::Write as _;
+
 use crate::{
     invariants::ViolationEntry, log_capture::LogEntry, types::InvariantKind,
     verdict::ScenarioVerdict,
@@ -13,11 +15,26 @@ pub(super) fn print_verbose_failures(
     violations: &[ViolationEntry],
     logs: &[LogEntry],
 ) {
+    print!(
+        "{}",
+        format_verbose_failures(scenario_name, verdict, violations, logs)
+    );
+}
+
+/// Returns verbose failure output as a `String` (no stdout printing).
+pub(super) fn format_verbose_failures(
+    scenario_name: &str,
+    verdict: &ScenarioVerdict,
+    violations: &[ViolationEntry],
+    logs: &[LogEntry],
+) -> String {
+    let mut out = String::new();
     for reason in &verdict.reasons {
-        println!("  REASON [{scenario_name}]: {reason}");
+        let _ = writeln!(out, "  REASON [{scenario_name}]: {reason}");
     }
     for v in violations {
-        println!(
+        let _ = writeln!(
+            out,
             "  VIOLATION frame={} {:?} entity={:?}: {}",
             v.frame, v.invariant, v.entity, v.message
         );
@@ -28,11 +45,13 @@ pub(super) fn print_verbose_failures(
         );
     }
     for l in logs {
-        println!(
+        let _ = writeln!(
+            out,
             "  LOG frame={} {:?} target={}: {}",
             l.frame, l.level, l.target, l.message
         );
     }
+    out
 }
 
 // ---------------------------------------------------------------------------
@@ -44,10 +63,22 @@ pub(super) fn print_compact_failures(
     violations: &[ViolationEntry],
     logs: &[LogEntry],
 ) {
+    print!("{}", format_compact_failures(verdict, violations, logs));
+}
+
+/// Returns compact failure output as a `String` (no stdout printing).
+pub(super) fn format_compact_failures(
+    verdict: &ScenarioVerdict,
+    violations: &[ViolationEntry],
+    logs: &[LogEntry],
+) -> String {
+    let mut out = String::new();
+
     // Grouped violations.
     let violation_groups = group_violations(violations);
     for g in &violation_groups {
-        println!(
+        let _ = writeln!(
+            out,
             "  {:30} x{:<5} {}",
             format!("{:?}", g.invariant),
             g.count,
@@ -58,23 +89,26 @@ pub(super) fn print_compact_failures(
     // Grouped logs.
     let log_groups = group_logs(logs);
     for g in &log_groups {
-        println!(
+        let _ = writeln!(
+            out,
             "  {:30} x{:<5} {}",
             format!("captured {:?} log", g.level),
             g.count,
             format_frame_range(g.count, g.first_frame, g.last_frame)
         );
         if g.count == 1 {
-            println!("    {}", g.message);
+            let _ = writeln!(out, "    {}", g.message);
         }
     }
 
     // Health-check reasons (those not covered by violations or logs).
     for reason in &verdict.reasons {
         if is_health_check_reason(reason) {
-            println!("  {reason}");
+            let _ = writeln!(out, "  {reason}");
         }
     }
+
+    out
 }
 
 fn format_frame_range(count: u32, first: u32, last: u32) -> String {

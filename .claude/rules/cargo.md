@@ -80,6 +80,13 @@ cargo scenario -- -s aegis_chaos     # Single scenario, in-process
 
 `--serial` and `--parallel` are mutually exclusive.
 
+```
+cargo scenario -- --all --fail-fast      # Stop on first violation per scenario (default for --all)
+cargo scenario -- -s foo --no-fail-fast  # Run to completion despite violations
+cargo scenario -- --coverage             # Print coverage report only, don't run scenarios
+cargo scenario -- --clean                # Remove all output in /tmp/breaker-scenario-runner
+```
+
 ### Stress testing via RON
 
 Scenarios can declare a `stress` field to automatically run multiple copies under `--all`:

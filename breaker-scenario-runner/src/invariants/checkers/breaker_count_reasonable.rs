@@ -19,6 +19,10 @@ pub fn check_breaker_count_reasonable(
     mut log: ResMut<ViolationLog>,
     mut stats: Option<ResMut<ScenarioStats>>,
 ) {
+    if let Some(ref mut s) = stats {
+        s.invariant_checks += 1;
+    }
+
     // Gate: do not check invariants until the game has entered Playing.
     // When ScenarioStats is present but entered_playing is false, we are
     // still in Loading/MainMenu — entities may not be fully initialized.
@@ -39,10 +43,6 @@ pub fn check_breaker_count_reasonable(
                 frame.0,
             ),
         });
-    }
-
-    if let Some(ref mut stats) = stats {
-        stats.invariant_checks += 1;
     }
 }
 
@@ -324,7 +324,7 @@ mod tests {
     }
 
     #[test]
-    fn does_not_increment_invariant_checks_when_entered_playing_false() {
+    fn increments_invariant_checks_even_when_entered_playing_false() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .insert_resource(ViolationLog::default())
@@ -338,8 +338,8 @@ mod tests {
         tick(&mut app);
         let stats = app.world().resource::<ScenarioStats>();
         assert_eq!(
-            stats.invariant_checks, 0,
-            "invariant_checks should remain 0 when entered_playing is false, got {}",
+            stats.invariant_checks, 1,
+            "invariant_checks should increment even when entered_playing is false, got {}",
             stats.invariant_checks
         );
     }

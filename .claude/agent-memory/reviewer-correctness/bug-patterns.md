@@ -286,6 +286,27 @@ This matches `second_wind/system.rs` which spawns at `Position2D(Vec2::new(0.0, 
 The wall spans BELOW the playfield edge by `ht` (AABB half_extents), so the center is at the edge.
 Do NOT re-flag the asymmetry vs Ceiling (which DOES add `ht`).
 
+## should_fail_fast suppresses fast-exit for ALL violations when any allowed_failures exists — OPEN
+
+`should_fail_fast` (runner/app.rs) returns false when `allowed_failures` is `Some([...])` with any
+entries — even if the actual violation is from a DIFFERENT, disallowed invariant kind. A self-test
+scenario allowing `BoltInBounds` that also triggers an unexpected `NoNaN` will NOT fail fast.
+This is a logic bug: the check should compare the violation's kind against `allowed_failures`, not
+just test whether the set is non-empty.
+
+**Status**: OPEN — no test covers the mixed-allowed/disallowed failure case.
+**Location**: `breaker-scenario-runner/src/runner/app.rs:410-421`
+
+## breaker_count_reasonable: invariant_checks increment AFTER early return (differs from all other checkers)
+
+`check_breaker_count_reasonable` increments `stats.invariant_checks` AFTER the `!entered_playing`
+early return (line 45), unlike all 21 other checkers which increment BEFORE any early return.
+When the checker is gated out by `entered_playing == false`, the counter is NOT incremented,
+while other checkers always increment. The test `does_not_increment_invariant_checks_when_entered_playing_false`
+explicitly validates this behavior. In production this doesn't matter because the `playing_gate`
+run_if condition prevents the system from running at all during `!entered_playing`.
+**Status**: OPEN inconsistency — intentional per test, but differs from all peers.
+
 ## sync_breaker_scale in Update vs collision systems in FixedUpdate — CONFIRMED CORRECT
 
 `sync_breaker_scale` (Update) writes `Scale2D` (visual only). Collision systems (`breaker_cell_collision`,

@@ -10,10 +10,15 @@ use tracing::{info, warn};
 
 use super::{
     discovery::{load_scenario, scenario_name},
-    output::{print_compact_failures, print_verbose_failures},
+    output::{format_verbose_failures, print_compact_failures, print_verbose_failures},
+    run_log::RunLog,
+    tiling,
 };
 use crate::{
-    invariants::{ScenarioFrame, ScenarioStats, ViolationEntry, ViolationLog},
+    invariants::{
+        ScenarioFrame, ScenarioName, ScenarioStats, ScreenshotOutputDir, ScreenshotTracker,
+        ViolationEntry, ViolationLog, capture_violation_screenshots,
+    },
     lifecycle::{ScenarioConfig, ScenarioLifecycle},
     log_capture::{CapturedLogs, LogBuffer, LogEntry, poll_log_buffer, scenario_log_layer_factory},
     types::ScenarioDefinition,
@@ -149,12 +154,17 @@ fn build_app(headless: bool, first_run: bool) -> App {
         .add_plugins(Game::headless());
     } else {
         // Visual mode — full DefaultPlugins for windowed rendering.
+        let window = tiling::read_tile_env().map_or_else(
+            || Window {
+                title: "Scenario Runner".into(),
+                ..default()
+            },
+            |tile| tiling::window_from_tile(&tile),
+        );
+
         let mut defaults = DefaultPlugins
             .set(WindowPlugin {
-                primary_window: Some(Window {
-                    title: "Scenario Runner".into(),
-                    ..default()
-                }),
+                primary_window: Some(window),
                 ..default()
             })
             .set(bevy::asset::AssetPlugin {
@@ -191,6 +201,8 @@ pub(super) fn run_scenario(
     headless: bool,
     verbose: bool,
     shared_log_buffer: &mut Option<LogBuffer>,
+    run_log: Option<&RunLog>,
+    fail_fast: bool,
 ) -> bool {
     let sname = scenario_name(path);
 
@@ -199,10 +211,14 @@ pub(super) fn run_scenario(
         return false;
     };
 
-    println!(
+    let running_line = format!(
         "Running [{sname}] breaker={} layout={}",
         definition.breaker, definition.layout
     );
+    println!("{running_line}");
+    if let Some(log) = run_log {
+        log.write_line(&running_line);
+    }
     info!(
         target: "breaker_scenario_runner",
         "scenario start name={sname} breaker={} layout={}",
@@ -230,8 +246,29 @@ pub(super) fn run_scenario(
         .add_plugins(ScenarioLifecycle)
         .init_resource::<CapturedLogs>()
         .insert_resource(eval_buffer.clone())
+        .insert_resource(ScenarioName(sname.clone()))
         .add_systems(FixedUpdate, poll_log_buffer)
-        .add_systems(Last, snapshot_eval_data);
+        .add_systems(
+            Last,
+            capture_violation_screenshots.run_if(resource_exists::<ScreenshotOutputDir>),
+        );
+
+    if !headless {
+        // Visual mode needs per-frame snapshots — app.run() replaces self
+        // with App::empty(), so Last-schedule is the only capture path.
+        app.add_systems(Last, snapshot_eval_data);
+    }
+
+    // Screenshots go alongside the log file — fall back to CWD if path has no parent.
+    if !headless && let Some(log) = run_log {
+        let output_dir = log
+            .path()
+            .parent()
+            .unwrap_or_else(|| Path::new("."))
+            .to_path_buf();
+        app.insert_resource(ScreenshotOutputDir(output_dir));
+        app.init_resource::<ScreenshotTracker>();
+    }
 
     if headless {
         app.finish();
@@ -247,6 +284,12 @@ pub(super) fn run_scenario(
                     eprintln!("FAIL [{sname}]: system panic: {msg}");
                     break;
                 }
+            }
+            if let Some(config) = app.world().get_resource::<ScenarioConfig>()
+                && let Some(log) = app.world().get_resource::<ViolationLog>()
+                && should_fail_fast(log, &config.definition, fail_fast)
+            {
+                break;
             }
             if app.should_exit().is_some() {
                 break;
@@ -273,7 +316,7 @@ pub(super) fn run_scenario(
         app.run();
     }
 
-    collect_and_evaluate(&eval_buffer, &sname, verbose)
+    collect_and_evaluate(&eval_buffer, &sname, verbose, run_log)
 }
 
 /// Evaluates pass/fail from the shared eval buffer populated by [`snapshot_eval_data`].
@@ -284,7 +327,12 @@ pub(super) fn run_scenario(
 /// Poison recovery on the mutex lock is intentional: if the snapshot writer
 /// panicked, we still evaluate whatever partial data was captured (or report
 /// the missing-snapshot failure) rather than propagating the panic.
-fn collect_and_evaluate(shared: &SharedEvalBuffer, scenario_name: &str, verbose: bool) -> bool {
+pub(super) fn collect_and_evaluate(
+    shared: &SharedEvalBuffer,
+    scenario_name: &str,
+    verbose: bool,
+    run_log: Option<&RunLog>,
+) -> bool {
     let mut verdict = ScenarioVerdict::default();
 
     let snapshot = shared
@@ -301,7 +349,7 @@ fn collect_and_evaluate(shared: &SharedEvalBuffer, scenario_name: &str, verbose:
         (vec![], vec![], ScenarioStats::default())
     };
 
-    println!(
+    let stats_line = format!(
         "  [{scenario_name}] frames={} actions={} violations={} logs={} bolts={} breakers={} entered_playing={}",
         stats.max_frame,
         stats.actions_injected,
@@ -311,18 +359,37 @@ fn collect_and_evaluate(shared: &SharedEvalBuffer, scenario_name: &str, verbose:
         stats.breakers_tagged,
         stats.entered_playing
     );
+    println!("{stats_line}");
+    if let Some(log) = run_log {
+        log.write_line(&stats_line);
+    }
 
     if verdict.passed() {
-        println!("PASS [{scenario_name}]");
+        let pass_line = format!("PASS [{scenario_name}]");
+        println!("{pass_line}");
+        if let Some(log) = run_log {
+            log.write_line(&pass_line);
+        }
         info!(target: "breaker_scenario_runner", "scenario pass name={scenario_name}");
     } else {
         let reason_count = verdict.reasons.len();
-        println!("FAIL [{scenario_name}]: {reason_count} failure(s)");
+        let fail_line = format!("FAIL [{scenario_name}]: {reason_count} failure(s)");
+        println!("{fail_line}");
+        if let Some(log) = run_log {
+            log.write_line(&fail_line);
+        }
         warn!(
             target: "breaker_scenario_runner",
             "scenario fail name={scenario_name} reasons={reason_count}",
         );
 
+        // Always send verbose output to log file.
+        if let Some(log) = run_log {
+            let verbose_text = format_verbose_failures(scenario_name, &verdict, &violations, &logs);
+            log.write_lines(verbose_text.lines());
+        }
+
+        // Print to stdout based on verbose flag.
         if verbose {
             print_verbose_failures(scenario_name, &verdict, &violations, &logs);
         } else {
@@ -331,6 +398,30 @@ fn collect_and_evaluate(shared: &SharedEvalBuffer, scenario_name: &str, verbose:
     }
 
     verdict.passed()
+}
+
+/// Returns `true` when the scenario should exit early due to `--fail-fast`.
+///
+/// Triggers when:
+/// - `fail_fast` flag is `true`
+/// - `violation_log` contains at least one violation whose invariant kind
+///   is NOT in `definition.allowed_failures`
+///
+/// A self-test scenario with `allowed_failures: Some([BoltInBounds])` will
+/// still fail-fast if an unexpected `NoNaN` violation occurs.
+#[must_use]
+pub(super) fn should_fail_fast(
+    violation_log: &ViolationLog,
+    definition: &ScenarioDefinition,
+    fail_fast: bool,
+) -> bool {
+    fail_fast
+        && violation_log.0.iter().any(|v| {
+            definition
+                .allowed_failures
+                .as_ref()
+                .is_none_or(|af| !af.contains(&v.invariant))
+        })
 }
 
 /// Returns `true` if `start` elapsed longer ago than `timeout`.
@@ -420,7 +511,7 @@ mod tests {
     #[test]
     fn collect_and_evaluate_fails_when_no_snapshot() {
         let buffer = SharedEvalBuffer(Arc::new(Mutex::new(None)));
-        let passed = collect_and_evaluate(&buffer, "test_scenario", false);
+        let passed = collect_and_evaluate(&buffer, "test_scenario", false, None);
         assert!(!passed, "should fail when no snapshot was captured");
     }
 
@@ -450,7 +541,7 @@ mod tests {
             definition,
         };
         let buffer = SharedEvalBuffer(Arc::new(Mutex::new(Some(snapshot))));
-        let passed = collect_and_evaluate(&buffer, "test_scenario", false);
+        let passed = collect_and_evaluate(&buffer, "test_scenario", false, None);
         assert!(
             passed,
             "should pass with clean snapshot and empty scripted actions"

@@ -12,7 +12,11 @@ pub fn check_chip_offer_expected(
     config: Res<ScenarioConfig>,
     frame: Res<ScenarioFrame>,
     mut log: ResMut<ViolationLog>,
+    mut stats: Option<ResMut<ScenarioStats>>,
 ) {
+    if let Some(ref mut s) = stats {
+        s.invariant_checks += 1;
+    }
     let Some(ref expected) = config.definition.expected_offerings else {
         return;
     };

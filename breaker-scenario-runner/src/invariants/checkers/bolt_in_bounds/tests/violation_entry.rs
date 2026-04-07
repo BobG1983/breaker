@@ -35,8 +35,8 @@ fn bolt_in_bounds_increments_invariant_checks_in_scenario_stats() {
 
     let stats = app.world().resource::<ScenarioStats>();
     assert_eq!(
-        stats.invariant_checks, 3,
-        "expected invariant_checks=3 for 3 tagged bolts, got {}",
+        stats.invariant_checks, 1,
+        "expected invariant_checks=1 (one checker invocation per frame), got {}",
         stats.invariant_checks
     );
 }

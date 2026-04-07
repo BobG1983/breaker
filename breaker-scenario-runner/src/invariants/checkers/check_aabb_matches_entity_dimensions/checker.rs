@@ -40,7 +40,11 @@ pub fn check_aabb_matches_entity_dimensions(
     breakers: BreakerAabbQuery,
     frame: Res<ScenarioFrame>,
     mut log: ResMut<ViolationLog>,
+    mut stats: Option<ResMut<ScenarioStats>>,
 ) {
+    if let Some(ref mut s) = stats {
+        s.invariant_checks += 1;
+    }
     for (entity, aabb, radius) in &bolts {
         let expected = Vec2::splat(radius.0);
         let actual = aabb.half_extents;

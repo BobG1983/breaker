@@ -13,7 +13,11 @@ pub fn check_offering_no_duplicates(
     offers: Option<Res<ChipOffers>>,
     frame: Res<ScenarioFrame>,
     mut log: ResMut<ViolationLog>,
+    mut stats: Option<ResMut<ScenarioStats>>,
 ) {
+    if let Some(ref mut s) = stats {
+        s.invariant_checks += 1;
+    }
     let Some(offers) = offers else { return };
 
     let mut seen = HashSet::new();

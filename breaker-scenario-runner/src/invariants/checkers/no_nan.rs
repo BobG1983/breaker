@@ -19,7 +19,11 @@ pub fn check_no_nan(
     tagged: TaggedPositionQuery,
     frame: Res<ScenarioFrame>,
     mut log: ResMut<ViolationLog>,
+    mut stats: Option<ResMut<ScenarioStats>>,
 ) {
+    if let Some(ref mut s) = stats {
+        s.invariant_checks += 1;
+    }
     for (entity, position) in &tagged {
         let p = position.0;
         if !p.is_finite() {

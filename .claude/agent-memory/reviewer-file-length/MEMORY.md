@@ -1,9 +1,12 @@
 - [Bolt module directory structure](pattern_bolt_module_structure.md) -- mod.rs + system.rs + tests.rs (or tests/) pattern used throughout bolt/systems/ and now broadly across all domains
-- [Phase 3 file length findings (archived)](phase3_findings.md) -- all Phase 3 flagged files split by c9964b7; archived reference only
-- [Post-refactor file length findings](phase4_findings.md) -- Wave 8 scan (2026-04-02 state restructure): 0 HIGH, 0 MEDIUM actionable, 20 MEDIUM monitor, 12 LOW. All clear.
-- [Phase 5 findings — rantzsoft_lifecycle + state transition](phase5_findings.md) -- Wave 9 scan (2026-04-03): 3 HIGH, 7 MEDIUM, 1 LOW in rantzsoft_lifecycle + state/. Superseded by phase 6.
-- [Phase 6 findings — full workspace scan](phase6_findings.md) -- Wave 10 scan (2026-04-06): 2 HIGH, 11 MEDIUM actionable, 1 mod.rs violation, 21 monitor, 6 LOW. All HIGH items resolved.
-- [Phase 7 findings — post-import-refactor](phase7_findings.md) -- Wave 11 scan (2026-04-06 develop): 0 HIGH, 11 MEDIUM actionable (Strategy A), 40+ monitor, 0 violations. Spec at .claude/specs/file-splits.md
+- [Phase 8 findings — scenario-runner-wiring](phase8_findings.md) -- Wave 12 scan (2026-04-07): 2 HIGH, 2 MEDIUM actionable, 4 MEDIUM monitor. Spec at .claude/specs/file-splits.md
+
+## Archived (superseded, no open items)
+- phase7_findings.md — Wave 11, all MEDIUM resolved in feature/scenario-runner-wiring
+- phase3_findings.md — all Phase 3 files split by c9964b7
+- phase4_findings.md — Wave 8 snapshot, all items closed
+- phase5_findings.md — Wave 9 snapshot, superseded by phase 6 (all items now closed)
+- phase6_findings.md — Wave 10 snapshot, superseded by phase 7 (all items now closed)
 
 ## Session History
 See [ephemeral/](ephemeral/) -- not committed.

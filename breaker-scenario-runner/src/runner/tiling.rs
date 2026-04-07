@@ -3,6 +3,17 @@
 //! Pure functions for computing grid dimensions and tile positions, plus
 //! environment variable constants used to pass window geometry to subprocesses.
 
+use bevy::{
+    math::IVec2,
+    window::{Window, WindowPosition, WindowResolution},
+};
+
+/// Default screen width in pixels (Full HD).
+pub const DEFAULT_SCREEN_WIDTH: u32 = 1920;
+
+/// Default screen height in pixels (Full HD).
+pub const DEFAULT_SCREEN_HEIGHT: u32 = 1080;
+
 /// Environment variable name for the window X position.
 pub const ENV_WINDOW_X: &str = "SCENARIO_WINDOW_X";
 
@@ -82,5 +93,66 @@ pub const fn tile_position(
         y: row * tile_h,
         width: tile_w,
         height: tile_h,
+    }
+}
+
+/// Returns environment variable key-value pairs for a given slot in a tiled grid.
+///
+/// Uses [`grid_dimensions`] and [`tile_position`] with [`DEFAULT_SCREEN_WIDTH`]
+/// and [`DEFAULT_SCREEN_HEIGHT`] to compute the tile geometry, then returns the
+/// four env var pairs that a subprocess needs to position its window.
+#[must_use]
+pub fn tile_env_vars(slot: usize, total: usize) -> Vec<(&'static str, String)> {
+    let (cols, rows) = grid_dimensions(total);
+    let tile = tile_position(
+        u32::try_from(slot).unwrap_or(u32::MAX),
+        u32::try_from(cols).unwrap_or(1),
+        u32::try_from(rows).unwrap_or(1),
+        DEFAULT_SCREEN_WIDTH,
+        DEFAULT_SCREEN_HEIGHT,
+    );
+    vec![
+        (ENV_WINDOW_X, tile.x.to_string()),
+        (ENV_WINDOW_Y, tile.y.to_string()),
+        (ENV_WINDOW_W, tile.width.to_string()),
+        (ENV_WINDOW_H, tile.height.to_string()),
+    ]
+}
+
+/// Reads tile position from environment variables through a dependency-injected getter.
+///
+/// Returns `Some(TilePosition)` if all four env var keys are present and parseable
+/// as `u32`, otherwise returns `None`.
+#[must_use]
+pub fn parse_tile_env(getter: impl Fn(&str) -> Option<String>) -> Option<TilePosition> {
+    let x = getter(ENV_WINDOW_X)?.parse::<u32>().ok()?;
+    let y = getter(ENV_WINDOW_Y)?.parse::<u32>().ok()?;
+    let width = getter(ENV_WINDOW_W)?.parse::<u32>().ok()?;
+    let height = getter(ENV_WINDOW_H)?.parse::<u32>().ok()?;
+    Some(TilePosition {
+        x,
+        y,
+        width,
+        height,
+    })
+}
+
+/// Reads tile position from actual environment variables.
+///
+/// Thin wrapper around [`parse_tile_env`] using `std::env::var`.
+#[must_use]
+pub fn read_tile_env() -> Option<TilePosition> {
+    parse_tile_env(|key| std::env::var(key).ok())
+}
+
+/// Converts a [`TilePosition`] into a Bevy [`Window`] with correct title,
+/// position, and resolution.
+#[must_use]
+pub fn window_from_tile(tile: &TilePosition) -> Window {
+    Window {
+        title: "Scenario Runner".into(),
+        position: WindowPosition::At(IVec2::new(tile.x.cast_signed(), tile.y.cast_signed())),
+        resolution: WindowResolution::new(tile.width, tile.height),
+        ..Default::default()
     }
 }

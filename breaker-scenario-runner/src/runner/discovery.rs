@@ -80,10 +80,3 @@ pub fn load_scenario(path: &Path) -> Option<ScenarioDefinition> {
         .map_err(|e| eprintln!("Failed to parse {}: {e}", path.display()))
         .ok()
 }
-
-/// Loads the stress config from a scenario RON file, if present.
-///
-/// Returns `None` if the file doesn't exist, fails to parse, or has no `stress` field.
-pub(super) fn load_stress_config(path: &Path) -> Option<crate::types::StressConfig> {
-    load_scenario(path).and_then(|def| def.stress)
-}

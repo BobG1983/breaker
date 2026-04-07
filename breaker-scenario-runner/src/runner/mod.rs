@@ -8,6 +8,7 @@ mod discovery;
 mod execution;
 mod output;
 pub mod output_dir;
+pub mod run_log;
 pub mod streaming;
 #[cfg(test)]
 mod tests;

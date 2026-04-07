@@ -76,15 +76,19 @@ Do NOT flag absence of `EffectiveDamageMultiplier`, `EffectiveSpeedMultiplier`, 
 
 `ShieldActive` NO LONGER EXISTS. Shield is now `ShieldWall` + `ShieldWallTimer` — a timed visible floor wall using the normal `bolt_wall_collision` path. Do NOT reference `ShieldActive`, charge mechanics, or cell shielding via Shield effect. See `reviewer-architecture/shield_cross_domain_write.md`.
 
-## InvariantKind Names (2026-04-06 verified)
+## InvariantKind Names (2026-04-06 verified, updated for BreakerCountReasonable)
 
-- `BoltSpeedAccurate` — correct name (NOT `BoltSpeedInRange`); `standards.md` was stale, now fixed.
-- Total: 21 variants on develop (2026-04-06 verified). Earlier count of 23 was stale — variant names `ValidStateTransitions`, `ValidBreakerState`, `PhysicsFrozenDuringPause` never existed; actual breaker state variant is `ValidDashState`.
+- `BoltSpeedAccurate` — correct name (NOT `BoltSpeedInRange`).
+- `ValidDashState` — correct name (NOT `ValidStateTransitions` or `ValidBreakerState`).
+- `BreakerCountReasonable` — added; checks exactly 1 `PrimaryBreaker` exists during gameplay. Self-test complete.
+- Total: 22 variants. `ValidStateTransitions`, `ValidBreakerState`, `PhysicsFrozenDuringPause` never existed in code.
+- All 22 self-tests are complete — `BreakerCountReasonable` self-test is no longer pending.
 
-## MutationKind Count (2026-04-01 verified)
+## MutationKind (2026-04-06 verified)
 
-- 16 variants in code (NOT 18). `InjectWrongSizeMultiplier` and `InjectWrongEffectiveSpeed` removed with Effective* cache removal.
-- `terminology/scenarios.md` corrected to remove those two.
+- 17 variants in code. `SpawnExtraPrimaryBreakers(usize)` added. First state-override variant is `SetDashState` (NOT `SetBreakerState`).
+- `InjectWrongSizeMultiplier`, `InjectWrongEffectiveSpeed`, `InjectWrongBoltSpeed` do NOT exist.
+- `terminology/scenarios.md` corrected: `SetBreakerState` → `SetDashState`, `SpawnExtraPrimaryBreakers` added.
 
 ## speed_boost Velocity Recalculation (2026-04-01)
 

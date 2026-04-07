@@ -6,7 +6,10 @@ use std::{
     time::Duration,
 };
 
-use super::execution::{ChildResult, SubprocessSpec};
+use super::{
+    execution::{ChildResult, SubprocessSpec},
+    tiling,
+};
 
 /// A pure state machine that tracks how many items can run concurrently,
 /// how many have been dispatched, and how many have completed.
@@ -115,6 +118,12 @@ pub(super) fn spawn_streaming(
             }
             cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
 
+            if visual {
+                for (key, value) in tiling::tile_env_vars(idx, specs.len()) {
+                    cmd.env(key, value);
+                }
+            }
+
             match cmd.spawn() {
                 Ok(child) => active.push((idx, child)),
                 Err(e) => {
@@ -133,71 +142,82 @@ pub(super) fn spawn_streaming(
             }
         }
 
-        // Poll phase — check for completed children (iterate backwards for swap_remove).
-        let mut any_finished = false;
-        let mut i = active.len();
-        while i > 0 {
-            i -= 1;
-            match active[i].1.try_wait() {
-                Ok(Some(_status)) => {
-                    let (idx, child) = active.swap_remove(i);
-                    match child.wait_with_output() {
-                        Ok(output) => {
-                            let stdout = String::from_utf8(output.stdout).unwrap_or_else(|e| {
-                                String::from_utf8_lossy(e.as_bytes()).into_owned()
-                            });
-                            let stderr = String::from_utf8(output.stderr).unwrap_or_else(|e| {
-                                String::from_utf8_lossy(e.as_bytes()).into_owned()
-                            });
-                            results[idx] = Some(ChildResult {
-                                name: specs[idx].display_name.clone(),
-                                passed: output.status.success(),
-                                stdout,
-                                stderr,
-                            });
-                        }
-                        Err(e) => {
-                            eprintln!(
-                                "Failed to wait on child process [{}]: {e}",
-                                specs[idx].display_name
-                            );
-                            results[idx] = Some(ChildResult {
-                                name: specs[idx].display_name.clone(),
-                                passed: false,
-                                stdout: String::new(),
-                                stderr: format!("wait error: {e}"),
-                            });
-                        }
-                    }
-                    pool.mark_complete();
-                    any_finished = true;
-                }
-                Ok(None) => {
-                    // Still running, skip.
-                }
-                Err(e) => {
-                    let (idx, _child) = active.swap_remove(i);
-                    eprintln!(
-                        "Failed to check child process [{}]: {e}",
-                        specs[idx].display_name
-                    );
-                    results[idx] = Some(ChildResult {
-                        name: specs[idx].display_name.clone(),
-                        passed: false,
-                        stdout: String::new(),
-                        stderr: format!("try_wait error: {e}"),
-                    });
-                    pool.mark_complete();
-                    any_finished = true;
-                }
-            }
-        }
+        let any_finished = poll_active_children(&mut active, specs, &mut results, &mut pool);
 
         // Sleep phase — avoid busy-waiting if no child finished this iteration.
         if !any_finished && !pool.is_done() {
-            thread::sleep(Duration::from_millis(10));
+            thread::sleep(Duration::from_millis(1));
         }
     }
 
     Ok(results.into_iter().flatten().collect())
+}
+
+/// Polls active child processes for completion, collecting results.
+///
+/// Iterates backwards for safe `swap_remove`. Returns `true` if any child
+/// finished during this poll cycle.
+fn poll_active_children(
+    active: &mut Vec<(usize, std::process::Child)>,
+    specs: &[SubprocessSpec],
+    results: &mut [Option<ChildResult>],
+    pool: &mut StreamingPool,
+) -> bool {
+    let mut any_finished = false;
+    let mut i = active.len();
+    while i > 0 {
+        i -= 1;
+        match active[i].1.try_wait() {
+            Ok(Some(_status)) => {
+                let (idx, child) = active.swap_remove(i);
+                match child.wait_with_output() {
+                    Ok(output) => {
+                        let stdout = String::from_utf8(output.stdout)
+                            .unwrap_or_else(|e| String::from_utf8_lossy(e.as_bytes()).into_owned());
+                        let stderr = String::from_utf8(output.stderr)
+                            .unwrap_or_else(|e| String::from_utf8_lossy(e.as_bytes()).into_owned());
+                        results[idx] = Some(ChildResult {
+                            name: specs[idx].display_name.clone(),
+                            passed: output.status.success(),
+                            stdout,
+                            stderr,
+                        });
+                    }
+                    Err(e) => {
+                        eprintln!(
+                            "Failed to wait on child process [{}]: {e}",
+                            specs[idx].display_name
+                        );
+                        results[idx] = Some(ChildResult {
+                            name: specs[idx].display_name.clone(),
+                            passed: false,
+                            stdout: String::new(),
+                            stderr: format!("wait error: {e}"),
+                        });
+                    }
+                }
+                pool.mark_complete();
+                any_finished = true;
+            }
+            Ok(None) => {
+                // Still running, skip.
+            }
+            Err(e) => {
+                let (idx, _child) = active.swap_remove(i);
+                eprintln!(
+                    "Failed to check child process [{}]: {e}",
+                    specs[idx].display_name
+                );
+                results[idx] = Some(ChildResult {
+                    name: specs[idx].display_name.clone(),
+                    passed: false,
+                    stdout: String::new(),
+                    stderr: format!("try_wait error: {e}"),
+                });
+                pool.mark_complete();
+                any_finished = true;
+            }
+        }
+    }
+    any_finished
 }

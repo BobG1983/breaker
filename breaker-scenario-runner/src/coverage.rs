@@ -13,6 +13,10 @@ pub struct CoverageReport {
     pub missing_self_tests: Vec<InvariantKind>,
     /// Layout names (from `.node.ron` files) that no scenario references.
     pub unused_layouts: Vec<String>,
+    /// `InvariantKind` variants that have at least one self-test scenario.
+    pub covered_self_tests: Vec<InvariantKind>,
+    /// Layout names that are referenced by at least one scenario, with counts.
+    pub used_layouts: Vec<(String, usize)>,
 }
 
 /// Checks self-test parity and layout coverage from loaded scenario definitions.
@@ -26,34 +30,48 @@ pub fn check_coverage(
     self_test_names: &[String],
     layout_names: &[String],
 ) -> CoverageReport {
-    let missing_self_tests: Vec<InvariantKind> = InvariantKind::ALL
-        .iter()
-        .copied()
-        .filter(|variant| {
-            !scenarios.iter().any(|(name, def)| {
-                self_test_names.contains(name)
-                    && def
-                        .allowed_failures
-                        .as_ref()
-                        .is_some_and(|violations| violations.contains(variant))
-            })
+    let is_covered = |variant: &InvariantKind| {
+        scenarios.iter().any(|(name, def)| {
+            self_test_names.contains(name)
+                && def
+                    .allowed_failures
+                    .as_ref()
+                    .is_some_and(|violations| violations.contains(variant))
         })
-        .collect();
+    };
 
-    let unused_layouts: Vec<String> = layout_names
-        .iter()
-        .filter(|layout| {
-            let normalized = normalize_layout_name(layout);
-            !scenarios
-                .iter()
-                .any(|(_, def)| normalize_layout_name(&def.layout) == normalized)
-        })
-        .cloned()
-        .collect();
+    let mut missing_self_tests = Vec::new();
+    let mut covered_self_tests = Vec::new();
+
+    for variant in InvariantKind::ALL {
+        if is_covered(variant) {
+            covered_self_tests.push(*variant);
+        } else {
+            missing_self_tests.push(*variant);
+        }
+    }
+
+    let mut unused_layouts = Vec::new();
+    let mut used_layouts = Vec::new();
+
+    for layout in layout_names {
+        let normalized = normalize_layout_name(layout);
+        let count = scenarios
+            .iter()
+            .filter(|(_, def)| normalize_layout_name(&def.layout) == normalized)
+            .count();
+        if count > 0 {
+            used_layouts.push((layout.clone(), count));
+        } else {
+            unused_layouts.push(layout.clone());
+        }
+    }
 
     CoverageReport {
         missing_self_tests,
         unused_layouts,
+        covered_self_tests,
+        used_layouts,
     }
 }
 
@@ -64,30 +82,57 @@ fn normalize_layout_name(name: &str) -> String {
     name.to_lowercase().replace('_', "")
 }
 
-/// Prints the coverage report to stdout.
+/// Formats the coverage report as a plain-text string (no ANSI escapes).
+///
+/// Only reports gaps — missing self-tests and unused layouts. Returns an
+/// empty string when coverage is complete.
+#[must_use]
+pub fn format_coverage_report(report: &CoverageReport) -> String {
+    use std::fmt::Write as _;
+
+    let has_missing_tests = !report.missing_self_tests.is_empty();
+    let has_unused_layouts = !report.unused_layouts.is_empty();
+
+    if !has_missing_tests && !has_unused_layouts {
+        return String::new();
+    }
+
+    let mut out = String::new();
+    out.push_str("Coverage Gaps\n=============\n");
+
+    if has_missing_tests {
+        let _ = writeln!(
+            out,
+            "Missing self-tests ({}):",
+            report.missing_self_tests.len()
+        );
+        for variant in &report.missing_self_tests {
+            let _ = writeln!(out, "  [ ] {variant:?}");
+        }
+    }
+
+    if has_unused_layouts {
+        if has_missing_tests {
+            out.push('\n');
+        }
+        let _ = writeln!(out, "Unused layouts ({}):", report.unused_layouts.len());
+        for name in &report.unused_layouts {
+            let _ = writeln!(out, "  [ ] {name}");
+        }
+    }
+
+    out
+}
+
+/// Prints coverage gaps to stdout. Prints nothing when coverage is complete.
 /// Returns `true` if there are any gaps (missing self-tests or unused layouts).
 #[must_use]
 pub fn print_coverage_report(report: &CoverageReport) -> bool {
-    println!("Coverage Report");
-    println!("===============");
-
-    let has_gaps = !report.missing_self_tests.is_empty() || !report.unused_layouts.is_empty();
-
-    if !report.missing_self_tests.is_empty() {
-        println!("\nMissing Self-Tests:");
-        for variant in &report.missing_self_tests {
-            println!("  - {variant:?}");
-        }
+    let formatted = format_coverage_report(report);
+    if !formatted.is_empty() {
+        print!("{formatted}");
     }
-
-    if !report.unused_layouts.is_empty() {
-        println!("\nUnused Layouts:");
-        for layout in &report.unused_layouts {
-            println!("  - {layout}");
-        }
-    }
-
-    has_gaps
+    !report.missing_self_tests.is_empty() || !report.unused_layouts.is_empty()
 }
 
 #[cfg(test)]
@@ -327,6 +372,8 @@ mod tests {
         let report = CoverageReport {
             missing_self_tests: vec![InvariantKind::BoltInBounds],
             unused_layouts: vec![],
+            covered_self_tests: vec![],
+            used_layouts: vec![],
         };
 
         let has_gaps = print_coverage_report(&report);
@@ -342,6 +389,8 @@ mod tests {
         let report = CoverageReport {
             missing_self_tests: vec![],
             unused_layouts: vec!["Fortress".to_owned()],
+            covered_self_tests: vec![],
+            used_layouts: vec![],
         };
 
         let has_gaps = print_coverage_report(&report);
@@ -361,6 +410,8 @@ mod tests {
         let report = CoverageReport {
             missing_self_tests: vec![],
             unused_layouts: vec![],
+            covered_self_tests: vec![],
+            used_layouts: vec![],
         };
 
         let has_gaps = print_coverage_report(&report);
@@ -369,5 +420,510 @@ mod tests {
             !has_gaps,
             "print_coverage_report must return false when both lists are empty"
         );
+    }
+
+    // -----------------------------------------------------------------------
+    // Behavior 1 (spec): covered_self_tests is complement of missing
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn covered_self_tests_contains_invariants_with_self_test_scenarios() {
+        let scenarios = vec![(
+            "bolt_oob_detection".to_owned(),
+            minimal_scenario("corridor", Some(vec![InvariantKind::BoltInBounds])),
+        )];
+        let self_test_names = vec!["bolt_oob_detection".to_owned()];
+        let layout_names: Vec<String> = vec![];
+
+        let report = check_coverage(&scenarios, &self_test_names, &layout_names);
+
+        assert_eq!(
+            report.covered_self_tests,
+            vec![InvariantKind::BoltInBounds],
+            "covered_self_tests should contain exactly BoltInBounds"
+        );
+        assert_eq!(
+            report.missing_self_tests.len(),
+            InvariantKind::ALL.len() - 1,
+            "missing_self_tests should contain all variants except BoltInBounds"
+        );
+        // Union of covered and missing equals ALL (no duplicates, no omissions).
+        let mut union: Vec<InvariantKind> = report.covered_self_tests.clone();
+        union.extend_from_slice(&report.missing_self_tests);
+        for variant in InvariantKind::ALL {
+            assert!(
+                union.contains(variant),
+                "{variant:?} missing from union of covered + missing"
+            );
+        }
+        assert_eq!(
+            union.len(),
+            InvariantKind::ALL.len(),
+            "union of covered + missing should have no duplicates"
+        );
+    }
+
+    #[test]
+    fn non_self_test_scenario_does_not_contribute_to_covered_self_tests() {
+        // A scenario NOT in self_test_names has allowed_failures for BoltInBounds,
+        // but it should NOT appear in covered_self_tests.
+        let scenarios = vec![(
+            "some_mechanic_test".to_owned(),
+            minimal_scenario("corridor", Some(vec![InvariantKind::BoltInBounds])),
+        )];
+        let self_test_names: Vec<String> = vec![];
+        let layout_names: Vec<String> = vec![];
+
+        let report = check_coverage(&scenarios, &self_test_names, &layout_names);
+
+        assert!(
+            !report
+                .covered_self_tests
+                .contains(&InvariantKind::BoltInBounds),
+            "BoltInBounds from a non-self-test scenario must not appear in covered_self_tests"
+        );
+        assert!(
+            report.covered_self_tests.is_empty(),
+            "covered_self_tests should be empty when no self-test scenarios exist"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Behavior 2 (spec): all invariants covered produces full covered list
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn all_invariants_covered_produces_full_covered_list_and_empty_missing() {
+        let mut scenarios = Vec::new();
+        let mut self_test_names = Vec::new();
+
+        for (i, variant) in InvariantKind::ALL.iter().enumerate() {
+            let name = format!("self_test_{i}");
+            scenarios.push((
+                name.clone(),
+                minimal_scenario("corridor", Some(vec![*variant])),
+            ));
+            self_test_names.push(name);
+        }
+
+        let layout_names = vec!["corridor".to_owned()];
+
+        let report = check_coverage(&scenarios, &self_test_names, &layout_names);
+
+        assert_eq!(
+            report.covered_self_tests.len(),
+            InvariantKind::ALL.len(),
+            "covered_self_tests should contain all {} variants",
+            InvariantKind::ALL.len()
+        );
+        assert!(
+            report.missing_self_tests.is_empty(),
+            "missing_self_tests should be empty when all invariants are covered"
+        );
+        assert_eq!(
+            report.covered_self_tests,
+            InvariantKind::ALL,
+            "covered_self_tests should match InvariantKind::ALL exactly (same order, same length)"
+        );
+    }
+
+    #[test]
+    fn no_scenarios_produces_empty_covered_and_full_missing() {
+        let scenarios: Vec<(String, ScenarioDefinition)> = vec![];
+        let self_test_names: Vec<String> = vec![];
+        let layout_names: Vec<String> = vec![];
+
+        let report = check_coverage(&scenarios, &self_test_names, &layout_names);
+
+        assert!(
+            report.covered_self_tests.is_empty(),
+            "covered_self_tests should be empty when no scenarios exist"
+        );
+        assert_eq!(
+            report.missing_self_tests.len(),
+            InvariantKind::ALL.len(),
+            "missing_self_tests should contain all {} variants when no scenarios exist",
+            InvariantKind::ALL.len()
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Behavior 3 (spec): duplicate coverage produces single entry
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn duplicate_self_test_coverage_produces_single_entry_in_covered() {
+        let scenarios = vec![
+            (
+                "bolt_oob_a".to_owned(),
+                minimal_scenario("corridor", Some(vec![InvariantKind::BoltInBounds])),
+            ),
+            (
+                "bolt_oob_b".to_owned(),
+                minimal_scenario("corridor", Some(vec![InvariantKind::BoltInBounds])),
+            ),
+        ];
+        let self_test_names = vec!["bolt_oob_a".to_owned(), "bolt_oob_b".to_owned()];
+        let layout_names: Vec<String> = vec![];
+
+        let report = check_coverage(&scenarios, &self_test_names, &layout_names);
+
+        let bolt_count = report
+            .covered_self_tests
+            .iter()
+            .filter(|v| **v == InvariantKind::BoltInBounds)
+            .count();
+        assert_eq!(
+            bolt_count, 1,
+            "BoltInBounds should appear exactly once in covered_self_tests, got {bolt_count}"
+        );
+        assert!(
+            !report
+                .missing_self_tests
+                .contains(&InvariantKind::BoltInBounds),
+            "BoltInBounds must not appear in missing_self_tests when covered"
+        );
+    }
+
+    #[test]
+    fn self_test_covering_multiple_invariants_adds_each_once() {
+        let scenarios = vec![(
+            "multi_cover".to_owned(),
+            minimal_scenario(
+                "corridor",
+                Some(vec![
+                    InvariantKind::BoltInBounds,
+                    InvariantKind::BreakerInBounds,
+                ]),
+            ),
+        )];
+        let self_test_names = vec!["multi_cover".to_owned()];
+        let layout_names: Vec<String> = vec![];
+
+        let report = check_coverage(&scenarios, &self_test_names, &layout_names);
+
+        assert!(
+            report
+                .covered_self_tests
+                .contains(&InvariantKind::BoltInBounds),
+            "BoltInBounds should be in covered_self_tests"
+        );
+        assert!(
+            report
+                .covered_self_tests
+                .contains(&InvariantKind::BreakerInBounds),
+            "BreakerInBounds should be in covered_self_tests"
+        );
+        // Each appears exactly once.
+        let bolt_count = report
+            .covered_self_tests
+            .iter()
+            .filter(|v| **v == InvariantKind::BoltInBounds)
+            .count();
+        let breaker_count = report
+            .covered_self_tests
+            .iter()
+            .filter(|v| **v == InvariantKind::BreakerInBounds)
+            .count();
+        assert_eq!(bolt_count, 1, "BoltInBounds should appear exactly once");
+        assert_eq!(
+            breaker_count, 1,
+            "BreakerInBounds should appear exactly once"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Behavior 4 (spec): covered_self_tests preserves ALL ordering
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn covered_self_tests_preserves_invariant_kind_all_ordering() {
+        // Scenarios discover BreakerInBounds, NoNaN, BoltInBounds (not ALL order).
+        let scenarios = vec![
+            (
+                "breaker_test".to_owned(),
+                minimal_scenario("corridor", Some(vec![InvariantKind::BreakerInBounds])),
+            ),
+            (
+                "nan_test".to_owned(),
+                minimal_scenario("corridor", Some(vec![InvariantKind::NoNaN])),
+            ),
+            (
+                "bolt_test".to_owned(),
+                minimal_scenario("corridor", Some(vec![InvariantKind::BoltInBounds])),
+            ),
+        ];
+        let self_test_names = vec![
+            "breaker_test".to_owned(),
+            "nan_test".to_owned(),
+            "bolt_test".to_owned(),
+        ];
+        let layout_names: Vec<String> = vec![];
+
+        let report = check_coverage(&scenarios, &self_test_names, &layout_names);
+
+        // InvariantKind::ALL has BoltInBounds at 0, BreakerInBounds at 3, NoNaN at 5.
+        assert_eq!(
+            report.covered_self_tests,
+            vec![
+                InvariantKind::BoltInBounds,
+                InvariantKind::BreakerInBounds,
+                InvariantKind::NoNaN,
+            ],
+            "covered_self_tests should be in InvariantKind::ALL order, not discovery order"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Behavior 5 (spec): used_layouts populated with scenario counts
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn used_layouts_populated_with_scenario_counts() {
+        let scenarios = vec![
+            (
+                "corridor_test".to_owned(),
+                minimal_scenario("Corridor", None),
+            ),
+            (
+                "corridor_chaos".to_owned(),
+                minimal_scenario("Corridor", None),
+            ),
+            (
+                "fortress_test".to_owned(),
+                minimal_scenario("Fortress", None),
+            ),
+        ];
+        let self_test_names: Vec<String> = vec![];
+        let layout_names = vec![
+            "Corridor".to_owned(),
+            "Fortress".to_owned(),
+            "Scatter".to_owned(),
+        ];
+
+        let report = check_coverage(&scenarios, &self_test_names, &layout_names);
+
+        assert!(
+            report.used_layouts.contains(&("Corridor".to_owned(), 2)),
+            "used_layouts should contain (Corridor, 2), got: {:?}",
+            report.used_layouts
+        );
+        assert!(
+            report.used_layouts.contains(&("Fortress".to_owned(), 1)),
+            "used_layouts should contain (Fortress, 1), got: {:?}",
+            report.used_layouts
+        );
+        assert!(
+            !report
+                .used_layouts
+                .iter()
+                .any(|(name, _)| name == "Scatter"),
+            "Scatter should not appear in used_layouts"
+        );
+        assert_eq!(
+            report.unused_layouts,
+            vec!["Scatter".to_owned()],
+            "unused_layouts should contain only Scatter"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Behavior 6 (spec): layout name normalization applies to used_layouts
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn used_layouts_counting_applies_normalization() {
+        let scenarios = vec![
+            (
+                "corridor_lower".to_owned(),
+                minimal_scenario("corridor", None),
+            ),
+            (
+                "corridor_pascal".to_owned(),
+                minimal_scenario("Corridor", None),
+            ),
+        ];
+        let self_test_names: Vec<String> = vec![];
+        let layout_names = vec!["Corridor".to_owned()];
+
+        let report = check_coverage(&scenarios, &self_test_names, &layout_names);
+
+        assert_eq!(
+            report.used_layouts,
+            vec![("Corridor".to_owned(), 2)],
+            "both scenarios should match via normalization; name should be the layout_names entry"
+        );
+    }
+
+    #[test]
+    fn used_layouts_normalization_strips_underscores() {
+        // Layout file "boss_arena" (snake_case), scenario uses "BossArena" (PascalCase).
+        let scenarios = vec![("boss_test".to_owned(), minimal_scenario("BossArena", None))];
+        let self_test_names: Vec<String> = vec![];
+        let layout_names = vec!["boss_arena".to_owned()];
+
+        let report = check_coverage(&scenarios, &self_test_names, &layout_names);
+
+        assert_eq!(
+            report.used_layouts,
+            vec![("boss_arena".to_owned(), 1)],
+            "boss_arena should match BossArena after normalization"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Behavior 7 (spec): all layouts used produces full used list
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn all_layouts_used_produces_full_used_list_and_empty_unused() {
+        let scenarios = vec![(
+            "corridor_test".to_owned(),
+            minimal_scenario("Corridor", None),
+        )];
+        let self_test_names: Vec<String> = vec![];
+        let layout_names = vec!["Corridor".to_owned()];
+
+        let report = check_coverage(&scenarios, &self_test_names, &layout_names);
+
+        assert_eq!(
+            report.used_layouts,
+            vec![("Corridor".to_owned(), 1)],
+            "used_layouts should contain Corridor with count 1"
+        );
+        assert!(
+            report.unused_layouts.is_empty(),
+            "unused_layouts should be empty when all layouts are used"
+        );
+    }
+
+    #[test]
+    fn no_layouts_produces_empty_used_and_unused() {
+        let scenarios = vec![(
+            "corridor_test".to_owned(),
+            minimal_scenario("Corridor", None),
+        )];
+        let self_test_names: Vec<String> = vec![];
+        let layout_names: Vec<String> = vec![];
+
+        let report = check_coverage(&scenarios, &self_test_names, &layout_names);
+
+        assert!(
+            report.used_layouts.is_empty(),
+            "used_layouts should be empty when no layout_names exist"
+        );
+        assert!(
+            report.unused_layouts.is_empty(),
+            "unused_layouts should be empty when no layout_names exist"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Behavior 8 (spec): no scenarios means all layouts unused, none used
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn no_scenarios_means_all_layouts_unused_and_none_used() {
+        let scenarios: Vec<(String, ScenarioDefinition)> = vec![];
+        let self_test_names: Vec<String> = vec![];
+        let layout_names = vec!["Corridor".to_owned(), "Fortress".to_owned()];
+
+        let report = check_coverage(&scenarios, &self_test_names, &layout_names);
+
+        assert!(
+            report.used_layouts.is_empty(),
+            "used_layouts should be empty when no scenarios exist"
+        );
+        assert_eq!(
+            report.unused_layouts,
+            vec!["Corridor".to_owned(), "Fortress".to_owned()],
+            "all layouts should be unused when no scenarios exist"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Behavior 9 (spec): used_layouts preserves layout_names ordering
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn used_layouts_preserves_layout_names_ordering() {
+        let scenarios = vec![
+            (
+                "corridor_test".to_owned(),
+                minimal_scenario("Corridor", None),
+            ),
+            (
+                "fortress_test".to_owned(),
+                minimal_scenario("Fortress", None),
+            ),
+        ];
+        let self_test_names: Vec<String> = vec![];
+        let layout_names = vec![
+            "Fortress".to_owned(),
+            "Corridor".to_owned(),
+            "Scatter".to_owned(),
+        ];
+
+        let report = check_coverage(&scenarios, &self_test_names, &layout_names);
+
+        assert_eq!(
+            report.used_layouts,
+            vec![("Fortress".to_owned(), 1), ("Corridor".to_owned(), 1),],
+            "used_layouts should preserve layout_names ordering, not scenario discovery order"
+        );
+        assert_eq!(
+            report.unused_layouts,
+            vec!["Scatter".to_owned()],
+            "unused_layouts should contain Scatter"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // format_coverage_report — gaps-only output
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn format_report_returns_empty_when_no_gaps() {
+        let report = CoverageReport {
+            covered_self_tests: InvariantKind::ALL.to_vec(),
+            missing_self_tests: vec![],
+            used_layouts: vec![("Corridor".to_owned(), 2)],
+            unused_layouts: vec![],
+        };
+        assert!(format_coverage_report(&report).is_empty());
+    }
+
+    #[test]
+    fn format_report_lists_only_gaps_when_present() {
+        let report = CoverageReport {
+            covered_self_tests: vec![InvariantKind::BoltInBounds],
+            missing_self_tests: vec![InvariantKind::NoNaN],
+            used_layouts: vec![("Corridor".to_owned(), 3)],
+            unused_layouts: vec!["Fortress".to_owned()],
+        };
+        let output = format_coverage_report(&report);
+        assert!(output.contains("[ ] NoNaN"));
+        assert!(output.contains("[ ] Fortress"));
+        assert!(!output.contains("BoltInBounds"));
+        assert!(!output.contains("Corridor"));
+    }
+
+    #[test]
+    fn print_coverage_report_returns_correct_bool() {
+        let gaps = CoverageReport {
+            missing_self_tests: vec![InvariantKind::NoNaN],
+            unused_layouts: vec![],
+            covered_self_tests: vec![],
+            used_layouts: vec![],
+        };
+        assert!(print_coverage_report(&gaps));
+
+        let clean = CoverageReport {
+            missing_self_tests: vec![],
+            unused_layouts: vec![],
+            covered_self_tests: vec![InvariantKind::BoltInBounds],
+            used_layouts: vec![],
+        };
+        assert!(!print_coverage_report(&clean));
     }
 }

@@ -14,7 +14,7 @@
     layout: "Dense",
     input: Chaos((action_prob: 0.4)),
     max_frames: 5000,
-    disallowed_failures: [TimerNonNegative],
+    disallowed_failures: [BoltInBounds, BreakerCountReasonable, BreakerInBounds, NoNaN, TimerNonNegative],
     allowed_failures: None,
     debug_setup: None,
     allow_early_end: false,

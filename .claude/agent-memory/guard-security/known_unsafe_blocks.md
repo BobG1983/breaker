@@ -110,3 +110,10 @@ New files: prelude/mod.rs, prelude/components.rs, prelude/messages.rs, prelude/r
 prelude/states.rs. All five contain only use/pub(crate) re-export declarations. Grepped for
 "unsafe": zero matches. Pure module wiring with no executable code paths. Workspace lint
 unsafe_code = "deny" remains in force.
+
+Still confirmed for feature/scenario-runner-wiring (2026-04-07):
+New/changed files across breaker-scenario-runner/src/runner/ (app.rs, discovery.rs, execution.rs,
+output_dir.rs, run_log.rs, streaming.rs, tiling.rs, output.rs, mod.rs) and main.rs.
+Grepped for "unsafe" across all .rs files: zero matches. No FFI, no raw pointers, no build.rs.
+Workspace lint unsafe_code = "deny" remains in force and is inherited by the crate via
+`lints.workspace = true` in breaker-scenario-runner/Cargo.toml.

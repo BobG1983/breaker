@@ -1,8 +1,24 @@
 ---
 name: known-state
-description: Confirmed doc/code alignment state; covers effect system rewrite (2026-03-28), stat-effects phase (feature/stat-effects), file-split refactor (2026-03-30), bolt builder migration (2026-03-31), and prelude refactor (2026-04-06)
+description: Confirmed doc/code alignment state; covers effect system rewrite (2026-03-28), stat-effects phase (feature/stat-effects), file-split refactor (2026-03-30), bolt builder migration (2026-03-31), prelude refactor (2026-04-06), scenario-runner-wiring (2026-04-07)
 type: project
 ---
+
+## Confirmed Correct (as of scenario-runner-wiring, 2026-04-07)
+
+- `docs/architecture/standards.md` — Scenario Runner section: updated to reflect RunLog, output_dir, coverage, window tiling, screenshot-on-violation, fail-fast mode, `allowed_failures` field name, conditional invariant checkers (entered_playing gate), `--coverage` and `--clean` CLI flags
+- `allowed_failures` — correct RON field name for self-test expected violations (was `expected_violations` in older docs, now removed)
+- `ScenarioStats::entered_playing` — all invariant checkers gated on this flag; prevents false positives during loading
+- `RunLog` — async mpsc + background thread, writes to `/tmp/breaker-scenario-runner/<date>/<N>.log`; `output_dir.rs` manages structured per-run directories
+- `ScreenshotTracker` + `capture_violation_screenshots` — visual mode only, one screenshot per `InvariantKind` on first violation, stored next to the log file
+- `StreamingPool` — count-based streaming pool in `streaming.rs`; replaces raw `chunks()` batch logic
+- `tiling.rs` — pure grid math for parallel visual-mode window placement; `TilePosition`, env vars `SCENARIO_WINDOW_X/Y/W/H`
+- `coverage.rs` — `CoverageReport`, `check_coverage()`, `print_coverage_report()`; runs on `--all` and `--coverage`; prints gaps only (silent when complete)
+- `discovery.rs` — RON parsed with `ron::Options::default().with_default_extension(Extensions::IMPLICIT_SOME)` (the "RON parse dedup" is really IMPLICIT_SOME extension, not dedup)
+
+## Intentionally forward-looking / do NOT flag
+
+- `cargo.md` scenario runner options table — does not list `--fail-fast`, `--no-fail-fast`, `--clean`, `--coverage` flags. These were added on feature/scenario-runner-wiring but `.claude/rules/cargo.md` is not in guard-docs' edit scope. Needs human update.
 
 ## Confirmed Correct (as of prelude refactor, 2026-04-06)
 
@@ -83,8 +99,8 @@ The file contains only a doc comment explaining legacy stat components were remo
 - `dispatch_wall_effects` — **DELETED** in wall-builder-pattern feature. `spawn_walls` now reads from `WallRegistry`, calls `Wall::builder()` three times, and dispatches effects inline via `push_bound_effects`. No separate dispatch system exists.
 - `ChainArcCountReasonable` — new `InvariantKind` variant; checks combined `ChainLightningChain` + `ChainLightningArc` entity count against `invariant_params.max_chain_arc_count` (default 50)
 - `SpawnExtraChainArcs(usize)` — new `MutationKind` variant; spawns N chain + N arc entities for self-test
-- InvariantKind total: 21 variants (verified 2026-04-06 on develop). Prior count of 23 was stale — `ValidStateTransitions`, `ValidBreakerState`, `PhysicsFrozenDuringPause` never existed in code; breaker state variant is `ValidDashState`. Also `BoltSpeedInRange` renamed to `BoltSpeedAccurate`.
-- MutationKind total: 16 variants (verified 2026-04-06). `InjectWrongSizeMultiplier` and `InjectWrongEffectiveSpeed` removed with Effective* cache removal. `InjectWrongBoltSpeed` also does NOT exist.
+- InvariantKind total: 22 variants (verified 2026-04-06 post-BreakerCountReasonable addition). `BreakerCountReasonable` added. `ValidStateTransitions`, `ValidBreakerState`, `PhysicsFrozenDuringPause` never existed; breaker state variant is `ValidDashState`. `BoltSpeedInRange` renamed to `BoltSpeedAccurate`. Self-test for `BreakerCountReasonable` is COMPLETE (`breaker_count_reasonable.scenario.ron` exists, uses `SpawnExtraPrimaryBreakers`).
+- MutationKind total: 17 variants (updated 2026-04-06). Added `SpawnExtraPrimaryBreakers(usize)`. First variant is `SetDashState` (NOT `SetBreakerState`). `InjectWrongSizeMultiplier`, `InjectWrongEffectiveSpeed`, `InjectWrongBoltSpeed` do NOT exist.
 - `EffectSourceChip(Option<String>)` — component on AoE/spawn effect entities; carries chip attribution from dispatch to damage-application tick
 - `chip_attribution(source_chip: &str) -> Option<String>` — helper: empty → None, non-empty → Some
 - fire() method split: `fire` → `fire_aoe_and_spawn` → `fire_utility_and_spawn` (3 methods)

@@ -6,6 +6,7 @@ use super::*;
 
 mod bypass_menu;
 mod chip_select;
+mod conditional_checkers;
 mod debug_setup;
 mod entity_tagging;
 mod force_bump_grade;
