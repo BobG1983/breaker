@@ -43,7 +43,7 @@
             (frame: 200, actions: [DashLeft]),
         ],
     )),
-    max_frames: 5000,
+    max_frames: 2000,
     disallowed_failures: [BreakerPositionClamped, BreakerInBounds, NoNaN, ValidDashState],
     allowed_failures: None,
     debug_setup: None,

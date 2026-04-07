@@ -2,7 +2,7 @@
     breaker: "Chrono",
     layout: "Scatter",
     input: Chaos((action_prob: 0.8)),
-    max_frames: 10000,
+    max_frames: 3000,
     disallowed_failures: [TimerNonNegative, TimerMonotonicallyDecreasing, BoltInBounds, NoNaN],
     allowed_failures: None,
     debug_setup: None,

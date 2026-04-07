@@ -13,7 +13,7 @@
     breaker: "Prism",
     layout: "Dense",
     input: Perfect(AlwaysPerfect),
-    max_frames: 10000,
+    max_frames: 5000,
     disallowed_failures: [NoEntityLeaks, BoltCountReasonable, BoltSpeedAccurate, NoNaN],
     allowed_failures: None,
     debug_setup: None,

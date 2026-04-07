@@ -11,6 +11,7 @@ use tracing::{info, warn};
 use super::{
     discovery::{load_scenario, scenario_name},
     output::{print_compact_failures, print_verbose_failures},
+    output_dir::write_violations_log,
 };
 use crate::{
     invariants::{ScenarioFrame, ScenarioStats, ViolationEntry, ViolationLog},
@@ -191,6 +192,7 @@ pub(super) fn run_scenario(
     headless: bool,
     verbose: bool,
     shared_log_buffer: &mut Option<LogBuffer>,
+    output_dir: Option<&Path>,
 ) -> bool {
     let sname = scenario_name(path);
 
@@ -273,7 +275,7 @@ pub(super) fn run_scenario(
         app.run();
     }
 
-    collect_and_evaluate(&eval_buffer, &sname, verbose)
+    collect_and_evaluate(&eval_buffer, &sname, verbose, output_dir)
 }
 
 /// Evaluates pass/fail from the shared eval buffer populated by [`snapshot_eval_data`].
@@ -284,7 +286,12 @@ pub(super) fn run_scenario(
 /// Poison recovery on the mutex lock is intentional: if the snapshot writer
 /// panicked, we still evaluate whatever partial data was captured (or report
 /// the missing-snapshot failure) rather than propagating the panic.
-fn collect_and_evaluate(shared: &SharedEvalBuffer, scenario_name: &str, verbose: bool) -> bool {
+fn collect_and_evaluate(
+    shared: &SharedEvalBuffer,
+    scenario_name: &str,
+    verbose: bool,
+    output_dir: Option<&Path>,
+) -> bool {
     let mut verdict = ScenarioVerdict::default();
 
     let snapshot = shared
@@ -300,6 +307,12 @@ fn collect_and_evaluate(shared: &SharedEvalBuffer, scenario_name: &str, verbose:
         verdict.add_fail_reason("No evaluation data captured during run".into());
         (vec![], vec![], ScenarioStats::default())
     };
+
+    if let Some(dir) = output_dir
+        && let Err(e) = write_violations_log(dir, scenario_name, &violations)
+    {
+        eprintln!("warning: failed to write violations log for [{scenario_name}]: {e}");
+    }
 
     println!(
         "  [{scenario_name}] frames={} actions={} violations={} logs={} bolts={} breakers={} entered_playing={}",
@@ -420,7 +433,7 @@ mod tests {
     #[test]
     fn collect_and_evaluate_fails_when_no_snapshot() {
         let buffer = SharedEvalBuffer(Arc::new(Mutex::new(None)));
-        let passed = collect_and_evaluate(&buffer, "test_scenario", false);
+        let passed = collect_and_evaluate(&buffer, "test_scenario", false, None);
         assert!(!passed, "should fail when no snapshot was captured");
     }
 
@@ -450,7 +463,7 @@ mod tests {
             definition,
         };
         let buffer = SharedEvalBuffer(Arc::new(Mutex::new(Some(snapshot))));
-        let passed = collect_and_evaluate(&buffer, "test_scenario", false);
+        let passed = collect_and_evaluate(&buffer, "test_scenario", false, None);
         assert!(
             passed,
             "should pass with clean snapshot and empty scripted actions"

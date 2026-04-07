@@ -5,7 +5,7 @@ use rantzsoft_spatial2d::components::MaxSpeed;
 
 use crate::{
     breaker::{BreakerRegistry, SelectedBreaker, components::*},
-    effect::Target,
+    effect::{Target, effects::life_lost::LivesCount},
     prelude::*,
     shared::size::{MaxHeight, MaxWidth, MinHeight, MinWidth},
 };

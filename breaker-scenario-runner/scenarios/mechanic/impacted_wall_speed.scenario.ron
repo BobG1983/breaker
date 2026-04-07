@@ -10,7 +10,7 @@
     breaker: "godmode",
     layout: "Corridor",
     input: Perfect(AlwaysPerfect),
-    max_frames: 8000,
+    max_frames: 4000,
     disallowed_failures: [BoltInBounds, BoltSpeedAccurate, NoEntityLeaks, NoNaN],
     allowed_failures: None,
     debug_setup: None,

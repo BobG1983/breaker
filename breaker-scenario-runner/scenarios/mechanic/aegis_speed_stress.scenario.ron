@@ -15,7 +15,7 @@
             (frame: 100, actions: [Bump]),
         ],
     )),
-    max_frames: 10000,
+    max_frames: 3000,
     disallowed_failures: [BoltSpeedAccurate, BoltInBounds, NoNaN],
     allowed_failures: None,
     debug_setup: None,

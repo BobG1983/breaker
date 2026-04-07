@@ -7,7 +7,7 @@ pub(crate) use crate::{
     effect::{
         AnchorActive, AnchorPlanted, BoundEffects, EffectNode, RootEffect, StagedEffects,
         effects::{
-            damage_boost::ActiveDamageBoosts, flash_step::FlashStepActive, life_lost::LivesCount,
+            damage_boost::ActiveDamageBoosts, flash_step::FlashStepActive,
             size_boost::ActiveSizeBoosts, speed_boost::ActiveSpeedBoosts,
             vulnerable::ActiveVulnerability,
         },

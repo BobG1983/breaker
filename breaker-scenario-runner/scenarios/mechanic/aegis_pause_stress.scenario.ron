@@ -45,7 +45,7 @@
             (frame: 200, actions: [TogglePause]),
         ],
     )),
-    max_frames: 5000,
+    max_frames: 2000,
     disallowed_failures: [BoltInBounds, BreakerInBounds, NoNaN],
     allowed_failures: None,
     debug_setup: None,

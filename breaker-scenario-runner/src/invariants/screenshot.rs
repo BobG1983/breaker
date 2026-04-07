@@ -48,10 +48,26 @@ pub fn detect_new_violations(
         .collect()
 }
 
-/// Constructs `<output_dir>/<scenario_name>/<kind:?>.png`.
+/// Constructs `<output_dir>/<scenario_name>-<kind:?>.png`.
 #[must_use]
 pub fn screenshot_path(output_dir: &Path, scenario_name: &str, kind: InvariantKind) -> PathBuf {
-    output_dir.join(scenario_name).join(format!("{kind:?}.png"))
+    output_dir.join(format!("{scenario_name}-{kind:?}.png"))
+}
+
+/// Detects new invariant violations and captures screenshots for each.
+///
+/// Early-returns when `ScreenshotOutputDir` or `ScenarioName` resources are
+/// absent (headless mode). Otherwise, for each new violation kind not yet in
+/// the tracker, creates the output directory, spawns a `Screenshot` entity
+/// with a `save_to_disk` observer, and marks the kind as captured.
+pub fn capture_violation_screenshots(
+    _commands: Commands,
+    _tracker: ResMut<ScreenshotTracker>,
+    _vl: Res<ViolationLog>,
+    _output_dir: Option<Res<ScreenshotOutputDir>>,
+    _scenario_name: Option<Res<ScenarioName>>,
+) {
+    // Stub — no-op. Production logic will be added in the GREEN phase.
 }
 
 #[cfg(test)]
@@ -353,7 +369,7 @@ mod tests {
     // screenshot_path
     // =========================================================================
 
-    /// `screenshot_path` formats path as `<output_dir>/<scenario_name>/<Kind:?>.png`.
+    /// `screenshot_path` formats path as `<output_dir>/<scenario_name>-<Kind:?>.png`.
     #[test]
     fn screenshot_path_formats_with_output_dir_scenario_name_and_kind_debug() {
         let result = screenshot_path(
@@ -363,8 +379,8 @@ mod tests {
         );
         assert_eq!(
             result,
-            PathBuf::from("/tmp/breaker-scenario-runner/2026-04-06/0/aegis_chaos/BoltInBounds.png"),
-            "path must be <output_dir>/<scenario_name>/<Kind:?>.png"
+            PathBuf::from("/tmp/breaker-scenario-runner/2026-04-06/0/aegis_chaos-BoltInBounds.png"),
+            "path must be <output_dir>/<scenario_name>-<Kind:?>.png"
         );
     }
 

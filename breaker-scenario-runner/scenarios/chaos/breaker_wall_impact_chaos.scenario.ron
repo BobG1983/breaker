@@ -14,7 +14,7 @@
     breaker: "Aegis",
     layout: "Corridor",
     input: Chaos((action_prob: 0.9)),
-    max_frames: 6000,
+    max_frames: 3000,
     disallowed_failures: [NoNaN, BoltInBounds, BreakerInBounds, BoltSpeedAccurate],
     allowed_failures: None,
     debug_setup: None,

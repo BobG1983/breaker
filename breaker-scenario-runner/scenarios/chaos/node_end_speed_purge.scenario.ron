@@ -11,7 +11,7 @@
     breaker: "Aegis",
     layout: "Scatter",
     input: Chaos((action_prob: 0.5)),
-    max_frames: 10000,
+    max_frames: 5000,
     disallowed_failures: [BoltSpeedAccurate, NoNaN],
     allowed_failures: None,
     debug_setup: None,

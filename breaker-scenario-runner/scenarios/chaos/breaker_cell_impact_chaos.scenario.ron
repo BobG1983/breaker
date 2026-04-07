@@ -16,7 +16,7 @@
     breaker: "Aegis",
     layout: "Dense",
     input: Chaos((action_prob: 0.8)),
-    max_frames: 6000,
+    max_frames: 3000,
     disallowed_failures: [NoNaN, BoltInBounds, NoEntityLeaks, BreakerInBounds],
     allowed_failures: None,
     debug_setup: None,

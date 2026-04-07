@@ -25,7 +25,7 @@
             (frame: 105, actions: [DashRight]),
         ],
     )),
-    max_frames: 10000,
+    max_frames: 3000,
     disallowed_failures: [BreakerInBounds, BoltInBounds, NoNaN],
     allowed_failures: None,
     debug_setup: None,

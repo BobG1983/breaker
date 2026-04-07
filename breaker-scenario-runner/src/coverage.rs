@@ -13,6 +13,10 @@ pub struct CoverageReport {
     pub missing_self_tests: Vec<InvariantKind>,
     /// Layout names (from `.node.ron` files) that no scenario references.
     pub unused_layouts: Vec<String>,
+    /// `InvariantKind` variants that have at least one self-test scenario.
+    pub covered_self_tests: Vec<InvariantKind>,
+    /// Layout names that are referenced by at least one scenario, with counts.
+    pub used_layouts: Vec<(String, usize)>,
 }
 
 /// Checks self-test parity and layout coverage from loaded scenario definitions.
@@ -54,6 +58,8 @@ pub fn check_coverage(
     CoverageReport {
         missing_self_tests,
         unused_layouts,
+        covered_self_tests: vec![],
+        used_layouts: vec![],
     }
 }
 
@@ -62,6 +68,15 @@ pub fn check_coverage(
 /// Layout RON files use `snake_case` (`boss_arena`) while scenarios use `PascalCase` (`BossArena`).
 fn normalize_layout_name(name: &str) -> String {
     name.to_lowercase().replace('_', "")
+}
+
+/// Formats the coverage report as a plain-text string (no ANSI escapes).
+///
+/// Shows a full breakdown of invariant self-test coverage and layout usage
+/// with `[x]`/`[ ]` markers and scenario counts.
+#[must_use]
+pub fn format_coverage_report(_report: &CoverageReport) -> String {
+    String::new()
 }
 
 /// Prints the coverage report to stdout.
@@ -85,6 +100,10 @@ pub fn print_coverage_report(report: &CoverageReport) -> bool {
         for layout in &report.unused_layouts {
             println!("  - {layout}");
         }
+    }
+
+    if !has_gaps {
+        println!("All invariants have self-tests. All layouts are used.");
     }
 
     has_gaps
@@ -327,6 +346,8 @@ mod tests {
         let report = CoverageReport {
             missing_self_tests: vec![InvariantKind::BoltInBounds],
             unused_layouts: vec![],
+            covered_self_tests: vec![],
+            used_layouts: vec![],
         };
 
         let has_gaps = print_coverage_report(&report);
@@ -342,6 +363,8 @@ mod tests {
         let report = CoverageReport {
             missing_self_tests: vec![],
             unused_layouts: vec!["Fortress".to_owned()],
+            covered_self_tests: vec![],
+            used_layouts: vec![],
         };
 
         let has_gaps = print_coverage_report(&report);
@@ -361,6 +384,8 @@ mod tests {
         let report = CoverageReport {
             missing_self_tests: vec![],
             unused_layouts: vec![],
+            covered_self_tests: vec![],
+            used_layouts: vec![],
         };
 
         let has_gaps = print_coverage_report(&report);

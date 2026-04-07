@@ -18,7 +18,7 @@ pub(crate) mod states;
 pub(crate) use components::{
     ActiveDamageBoosts, ActiveSizeBoosts, ActiveSpeedBoosts, ActiveVulnerability, AnchorActive,
     AnchorPlanted, Bolt, BoltServing, BoundEffects, Breaker, Cell, EffectNode, FlashStepActive,
-    LivesCount, NodeScalingFactor, RootEffect, StagedEffects, Wall,
+    NodeScalingFactor, RootEffect, StagedEffects, Wall,
 };
 pub(crate) use messages::*;
 pub(crate) use resources::{GameRng, InputActions, PlayfieldConfig};

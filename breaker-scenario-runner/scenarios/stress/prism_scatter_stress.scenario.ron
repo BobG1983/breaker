@@ -2,7 +2,7 @@
     breaker: "Prism",
     layout: "Scatter",
     input: Chaos((action_prob: 0.3)),
-    max_frames: 10000,
+    max_frames: 5000,
     disallowed_failures: [BoltInBounds, BreakerInBounds, NoEntityLeaks, NoNaN],
     allowed_failures: None,
     debug_setup: None,

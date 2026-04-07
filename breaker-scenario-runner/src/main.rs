@@ -12,7 +12,10 @@
 //!   `cargo scenario -- --all --serial`
 //!   `cargo scenario -- --all --loop 3`
 
-use std::{path::Path, process};
+use std::{
+    path::{Path, PathBuf},
+    process,
+};
 
 use breaker_scenario_runner::{
     coverage::{check_coverage, print_coverage_report},
@@ -114,6 +117,45 @@ fn main() {
         );
     }
 
+    let output_dir = if args.all { create_output_dir() } else { None };
+
+    let worst_exit = run_loop(
+        &normal_runs,
+        &stress_runs,
+        loop_count,
+        headless,
+        &args,
+        parallelism,
+        output_dir.as_deref(),
+    );
+
+    // Print coverage report when running --all.
+    if args.all {
+        print_coverage_for_runs(&runs);
+    }
+
+    // Print output directory location.
+    if let Some(dir) = &output_dir {
+        println!("\nLogs: {}", dir.display());
+    }
+
+    process::exit(worst_exit);
+}
+
+/// Runs normal + stress scenarios for `loop_count` iterations. Returns worst exit code.
+fn run_loop(
+    normal_runs: &[(String, PathBuf)],
+    stress_runs: &[(
+        String,
+        PathBuf,
+        breaker_scenario_runner::types::StressConfig,
+    )],
+    loop_count: usize,
+    headless: bool,
+    args: &Args,
+    parallelism: Parallelism,
+    output_dir: Option<&Path>,
+) -> i32 {
     let mut worst_exit = 0;
     for iteration in 1..=loop_count {
         if loop_count > 1 {
@@ -122,37 +164,47 @@ fn main() {
 
         let mut all_results: Vec<(String, bool)> = Vec::new();
 
-        // Run normal scenarios.
         if !normal_runs.is_empty() {
             let results = if args.execution.serial {
-                run_all_serial(&normal_runs, headless, args.verbose)
+                run_all_serial(normal_runs, headless, args.verbose, output_dir)
             } else {
                 let batch_size = parallelism.resolve(normal_runs.len());
-                run_all_parallel(&normal_runs, args.visual, args.verbose, batch_size)
+                run_all_parallel(
+                    normal_runs,
+                    args.visual,
+                    args.verbose,
+                    batch_size,
+                    output_dir,
+                )
             };
             all_results.extend(results);
         }
 
-        // Run stress scenarios.
-        for (name, _path, config) in &stress_runs {
+        for (name, _path, config) in stress_runs {
             let result = run_stress_scenario(name, config, args.visual, args.verbose);
             print_stress_result(&result);
             all_results.push((name.clone(), result.passed()));
         }
 
-        // Print combined summary for this iteration.
         let exit_code = print_summary(&all_results);
         if exit_code > worst_exit {
             worst_exit = exit_code;
         }
     }
+    worst_exit
+}
 
-    // Print coverage report when running --all.
-    if args.all {
-        print_coverage_for_runs(&runs);
+/// Creates the output directory for `--all` runs. Returns `None` on failure
+/// (warning printed to stderr).
+fn create_output_dir() -> Option<PathBuf> {
+    let date = runner::output_dir::today_date_string();
+    match runner::output_dir::create_run_dir(Path::new(runner::output_dir::BASE_DIR), &date) {
+        Ok(dir) => Some(dir),
+        Err(e) => {
+            eprintln!("warning: failed to create output directory: {e}");
+            None
+        }
     }
-
-    process::exit(worst_exit);
 }
 
 /// Loads all scenario definitions, identifies self-test scenarios, discovers

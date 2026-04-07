@@ -91,7 +91,7 @@ pub fn run_with_args(scenario: Option<&str>, headless: bool, verbose: bool) -> i
 
     let mut shared_log_buffer: Option<LogBuffer> = None;
     let path = &scenario_paths[0];
-    let passed = run_scenario(path, headless, verbose, &mut shared_log_buffer);
+    let passed = run_scenario(path, headless, verbose, &mut shared_log_buffer, None);
 
     i32::from(!passed)
 }
@@ -103,7 +103,7 @@ pub fn run_with_args(scenario: Option<&str>, headless: bool, verbose: bool) -> i
 #[must_use]
 pub fn run_single_scenario(path: &Path, headless: bool, verbose: bool) -> i32 {
     let mut shared_log_buffer: Option<LogBuffer> = None;
-    let passed = run_scenario(path, headless, verbose, &mut shared_log_buffer);
+    let passed = run_scenario(path, headless, verbose, &mut shared_log_buffer, None);
     i32::from(!passed)
 }
 
@@ -117,12 +117,13 @@ pub fn run_all_serial(
     runs: &[(String, PathBuf)],
     headless: bool,
     verbose: bool,
+    output_dir: Option<&Path>,
 ) -> Vec<(String, bool)> {
     let mut shared_log_buffer: Option<LogBuffer> = None;
     let mut results: Vec<(String, bool)> = Vec::with_capacity(runs.len());
 
     for (display_name, path) in runs {
-        let passed = run_scenario(path, headless, verbose, &mut shared_log_buffer);
+        let passed = run_scenario(path, headless, verbose, &mut shared_log_buffer, output_dir);
         results.push((display_name.clone(), passed));
     }
 
@@ -286,6 +287,7 @@ pub fn run_all_parallel(
     visual: bool,
     verbose: bool,
     parallelism: usize,
+    output_dir: Option<&Path>,
 ) -> Vec<(String, bool)> {
     let specs: Vec<SubprocessSpec> = runs
         .iter()
@@ -319,6 +321,31 @@ pub fn run_all_parallel(
             }
         }
         println!();
+    }
+
+    // Write captured output to output_dir for failed scenarios.
+    if let Some(dir) = output_dir {
+        for result in &all_results {
+            if !result.passed {
+                let scenario_dir = dir.join(&result.name);
+                if let Err(e) = std::fs::create_dir_all(&scenario_dir) {
+                    eprintln!(
+                        "warning: failed to create log dir for [{}]: {e}",
+                        result.name
+                    );
+                    continue;
+                }
+                let log_path = scenario_dir.join("output.log");
+                let mut content = result.stdout.clone();
+                if !result.stderr.is_empty() {
+                    content.push_str("\n--- stderr ---\n");
+                    content.push_str(&result.stderr);
+                }
+                if let Err(e) = std::fs::write(&log_path, &content) {
+                    eprintln!("warning: failed to write log for [{}]: {e}", result.name);
+                }
+            }
+        }
     }
 
     all_results

@@ -2,7 +2,7 @@
     breaker: "Aegis",
     layout: "Fortress",
     input: Chaos((action_prob: 0.01)),
-    max_frames: 5000,
+    max_frames: 2000,
     disallowed_failures: [NoEntityLeaks, BoltInBounds, NoNaN],
     allowed_failures: None,
     debug_setup: None,

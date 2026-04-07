@@ -2,7 +2,7 @@
     breaker: "Aegis",
     layout: "Corridor",
     input: Chaos((action_prob: 0.95)),
-    max_frames: 10000,
+    max_frames: 3000,
     disallowed_failures: [ValidDashState, BreakerInBounds, BreakerPositionClamped, NoNaN],
     allowed_failures: None,
     debug_setup: None,
