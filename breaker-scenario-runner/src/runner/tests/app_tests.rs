@@ -632,6 +632,58 @@ fn should_fail_fast_returns_false_when_log_empty_and_allowed_failures_empty() {
 }
 
 // =========================================================================
+// collect_and_evaluate — basic pass/fail
+// =========================================================================
+
+// -------------------------------------------------------------------------
+// collect_and_evaluate fails when no snapshot was captured
+// -------------------------------------------------------------------------
+
+#[test]
+fn collect_and_evaluate_fails_when_no_snapshot() {
+    let buffer = SharedEvalBuffer(Arc::new(Mutex::new(None)));
+    let passed = collect_and_evaluate(&buffer, "test_scenario", false, None);
+    assert!(!passed, "should fail when no snapshot was captured");
+}
+
+// -------------------------------------------------------------------------
+// collect_and_evaluate passes with a clean snapshot
+// -------------------------------------------------------------------------
+
+#[test]
+fn collect_and_evaluate_passes_with_clean_snapshot() {
+    let definition = ScenarioDefinition {
+        breaker: "test".into(),
+        layout: "test".into(),
+        input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
+        max_frames: 100,
+        disallowed_failures: vec![],
+        ..Default::default()
+    };
+    let stats = ScenarioStats {
+        actions_injected: 0,
+        invariant_checks: 10,
+        max_frame: 50,
+        entered_playing: true,
+        bolts_tagged: 1,
+        breakers_tagged: 1,
+        ..Default::default()
+    };
+    let snapshot = EvalSnapshot {
+        violations: vec![],
+        logs: vec![],
+        stats,
+        definition,
+    };
+    let buffer = SharedEvalBuffer(Arc::new(Mutex::new(Some(snapshot))));
+    let passed = collect_and_evaluate(&buffer, "test_scenario", false, None);
+    assert!(
+        passed,
+        "should pass with clean snapshot and empty scripted actions"
+    );
+}
+
+// =========================================================================
 // collect_and_evaluate — contract test for early-exit data
 // =========================================================================
 
