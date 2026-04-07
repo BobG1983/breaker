@@ -248,11 +248,16 @@ pub(super) fn run_scenario(
         .insert_resource(eval_buffer.clone())
         .insert_resource(ScenarioName(sname.clone()))
         .add_systems(FixedUpdate, poll_log_buffer)
-        .add_systems(Last, snapshot_eval_data)
         .add_systems(
             Last,
             capture_violation_screenshots.run_if(resource_exists::<ScreenshotOutputDir>),
         );
+
+    if !headless {
+        // Visual mode needs per-frame snapshots — app.run() replaces self
+        // with App::empty(), so Last-schedule is the only capture path.
+        app.add_systems(Last, snapshot_eval_data);
+    }
 
     // Screenshots go alongside the log file — fall back to CWD if path has no parent.
     if !headless && let Some(log) = run_log {
