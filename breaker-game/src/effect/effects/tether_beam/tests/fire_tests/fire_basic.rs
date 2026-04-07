@@ -1,4 +1,4 @@
-use super::super::helpers::*;
+use crate::effect::effects::tether_beam::tests::helpers::*;
 
 #[test]
 fn fire_spawns_two_tether_bolts_with_full_physics_components() {

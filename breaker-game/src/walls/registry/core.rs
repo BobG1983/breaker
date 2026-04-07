@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use rantzsoft_defaults::prelude::SeedableRegistry;
 use tracing::warn;
 
-use super::super::definition::WallDefinition;
+use crate::walls::definition::WallDefinition;
 
 /// Registry of all loaded wall definitions, keyed by name.
 #[derive(Resource, Debug, Default)]

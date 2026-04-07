@@ -2,12 +2,14 @@
 
 use bevy::prelude::*;
 
-use super::super::helpers::*;
 use crate::{
     bolt::messages::BoltImpactBreaker,
-    breaker::components::{
-        Breaker, BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown, BumpPerfectWindow,
-        BumpState, BumpWeakCooldown, SettleDuration,
+    breaker::{
+        components::{
+            Breaker, BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown, BumpPerfectWindow,
+            BumpState, BumpWeakCooldown, SettleDuration,
+        },
+        systems::bump::tests::helpers::*,
     },
     effect::{AnchorActive, AnchorPlanted},
 };

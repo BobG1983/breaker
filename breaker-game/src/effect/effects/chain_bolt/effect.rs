@@ -27,7 +27,7 @@ pub(crate) struct ChainBoltAnchor;
 pub(crate) struct ChainBoltConstraint(pub(crate) Entity);
 
 pub(crate) fn fire(entity: Entity, tether_distance: f32, _source_chip: &str, world: &mut World) {
-    let spawn_pos = super::super::entity_position(world, entity);
+    let spawn_pos = crate::effect::effects::entity_position(world, entity);
 
     let def_ref = world
         .get::<BoltDefinitionRef>(entity)
@@ -49,7 +49,7 @@ pub(crate) fn fire(entity: Entity, tether_distance: f32, _source_chip: &str, wor
     let direction = Vec2::new(angle.cos(), angle.sin());
     let velocity = Velocity2D(direction * bolt_def.base_speed);
     let chain_bolt = {
-        let visual = super::super::bolt_visual_handles(world, bolt_def.color_rgb);
+        let visual = crate::effect::effects::bolt_visual_handles(world, bolt_def.color_rgb);
 
         let mut queue = CommandQueue::default();
         let entity = {
@@ -63,7 +63,7 @@ pub(crate) fn fire(entity: Entity, tether_distance: f32, _source_chip: &str, wor
                 .spawn(&mut commands)
         };
         queue.apply(world);
-        super::super::insert_bolt_visuals(world, entity, visual);
+        crate::effect::effects::insert_bolt_visuals(world, entity, visual);
 
         entity
     };

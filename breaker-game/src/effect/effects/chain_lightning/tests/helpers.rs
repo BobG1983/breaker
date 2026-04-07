@@ -7,7 +7,7 @@ use rantzsoft_physics2d::{
 };
 use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial, Spatial2D};
 
-pub(super) use super::super::effect::*;
+pub(super) use crate::effect::effects::chain_lightning::effect::*;
 use crate::{
     cells::{components::Cell, messages::DamageCell},
     effect::core::EffectSourceChip,

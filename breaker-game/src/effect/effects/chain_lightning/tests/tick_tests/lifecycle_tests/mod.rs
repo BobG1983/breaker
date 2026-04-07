@@ -1,4 +1,4 @@
-use super::super::helpers::*;
+use crate::effect::effects::chain_lightning::tests::helpers::*;
 
 mod final_jump;
 mod multiple_chains;

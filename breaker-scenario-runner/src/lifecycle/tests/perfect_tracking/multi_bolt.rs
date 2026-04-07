@@ -1,4 +1,4 @@
-use super::super::helpers::*;
+use crate::lifecycle::tests::helpers::*;
 
 /// Perfect tracking with multiple bolts tracks the first bolt found.
 #[test]

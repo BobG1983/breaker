@@ -31,17 +31,13 @@ pub(crate) const MAX_BOUNCES: u32 = 4;
 
 use crate::{
     bolt::{
-        components::{Bolt, LastImpact, ccd_normal_to_impact_side},
+        components::{LastImpact, ccd_normal_to_impact_side},
         filters::ActiveFilter,
-        messages::BoltImpactCell,
         queries::{BoltCollisionData, apply_velocity_formula},
         resources::DEFAULT_BOLT_BASE_DAMAGE,
     },
-    cells::{
-        components::{Cell, CellHealth},
-        messages::DamageCell,
-    },
-    effect::effects::{damage_boost::ActiveDamageBoosts, vulnerable::ActiveVulnerability},
+    cells::components::CellHealth,
+    prelude::*,
     shared::CELL_LAYER,
 };
 

@@ -1,5 +1,7 @@
-use super::super::drivers::*;
-use crate::types::{GameAction, ScriptedFrame, ScriptedParams};
+use crate::{
+    input::drivers::*,
+    types::{GameAction, ScriptedFrame, ScriptedParams},
+};
 
 // -------------------------------------------------------------------------
 // ScriptedInput — fires at exact frame numbers

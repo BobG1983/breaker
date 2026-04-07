@@ -4,19 +4,22 @@
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Velocity2D;
 
-use super::super::helpers::*;
-use crate::{bolt::components::PiercingRemaining, effect::effects::piercing::ActivePiercings};
+use crate::{
+    bolt::{components::PiercingRemaining, systems::bolt_cell_collision::tests::helpers::*},
+    effect::effects::piercing::ActivePiercings,
+};
 
 #[test]
 fn non_piercing_bolt_reflects_off_cell() {
     // Non-piercing bolt hitting a cell reflects (velocity.y < 0 after upward approach).
     // BoltImpactCell is sent. No PiercingRemaining component involved.
     let mut app = test_app();
-    let bc = super::super::helpers::test_bolt_definition();
+    let bc = crate::bolt::systems::bolt_cell_collision::tests::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
     app.insert_resource(HitCells::default()).add_systems(
         FixedUpdate,
-        collect_cell_hits.after(super::super::super::system::bolt_cell_collision),
+        collect_cell_hits
+            .after(crate::bolt::systems::bolt_cell_collision::system::bolt_cell_collision),
     );
 
     let cell_y = 100.0;
@@ -51,11 +54,12 @@ fn non_piercing_bolt_reflects_off_cell() {
 #[test]
 fn piercing_bolt_passes_through_cell_it_would_destroy() {
     let mut app = test_app();
-    let bc = super::super::helpers::test_bolt_definition();
+    let bc = crate::bolt::systems::bolt_cell_collision::tests::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
     app.insert_resource(HitCells::default()).add_systems(
         FixedUpdate,
-        collect_cell_hits.after(super::super::super::system::bolt_cell_collision),
+        collect_cell_hits
+            .after(crate::bolt::systems::bolt_cell_collision::system::bolt_cell_collision),
     );
 
     let cell_y = 100.0;
@@ -101,7 +105,7 @@ fn piercing_bolt_reflects_off_cell_it_would_not_destroy() {
     // Cell with CellHealth(30) — base damage 10, cell survives.
     // Bolt should reflect (velocity.y < 0). PiercingRemaining stays 1.
     let mut app = test_app();
-    let bc = super::super::helpers::test_bolt_definition();
+    let bc = crate::bolt::systems::bolt_cell_collision::tests::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
 
     let cell_y = 100.0;

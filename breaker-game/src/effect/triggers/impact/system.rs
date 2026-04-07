@@ -5,18 +5,13 @@
 use bevy::prelude::*;
 
 use crate::{
-    bolt::{
-        messages::{BoltImpactBreaker, BoltImpactCell, BoltImpactWall},
-        sets::BoltSystems,
-    },
-    breaker::messages::{BreakerImpactCell, BreakerImpactWall},
-    cells::messages::CellImpactWall,
+    bolt::sets::BoltSystems,
     effect::{
         core::*,
         sets::EffectSystems,
         triggers::evaluate::{evaluate_bound_effects, evaluate_staged_effects},
     },
-    state::types::NodeState,
+    prelude::*,
 };
 
 /// `BoltImpactCell` -> `Impact(Cell)` global + `Impact(Bolt)` global.

@@ -65,8 +65,8 @@ pub(crate) fn fire(
             let ss = counter.shockwave_speed;
             let br = counter.bumps_required;
             counter.remaining = br;
-            super::super::spawn_bolts::fire(entity, sc, None, inh, source_chip, world);
-            super::super::shockwave::fire(entity, sr, 0.0, 1, ss, source_chip, world);
+            crate::effect::effects::spawn_bolts::fire(entity, sc, None, inh, source_chip, world);
+            crate::effect::effects::shockwave::fire(entity, sr, 0.0, 1, ss, source_chip, world);
         }
     } else {
         // First call: insert counter with remaining = bumps_required - 1.
@@ -84,7 +84,7 @@ pub(crate) fn fire(
             if let Some(mut counter) = world.get_mut::<CircuitBreakerCounter>(entity) {
                 counter.remaining = config.bumps_required;
             }
-            super::super::spawn_bolts::fire(
+            crate::effect::effects::spawn_bolts::fire(
                 entity,
                 config.spawn_count,
                 None,
@@ -92,7 +92,7 @@ pub(crate) fn fire(
                 source_chip,
                 world,
             );
-            super::super::shockwave::fire(
+            crate::effect::effects::shockwave::fire(
                 entity,
                 config.shockwave_range,
                 0.0,

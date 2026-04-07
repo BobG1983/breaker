@@ -1,4 +1,4 @@
-use super::super::super::definitions::*;
+use crate::components::definitions::*;
 
 // ── Velocity2D::from_angle_up() ─────────────────────────────
 

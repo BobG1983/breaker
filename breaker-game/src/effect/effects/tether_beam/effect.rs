@@ -108,7 +108,7 @@ fn spawn_tether_bolt(world: &mut World, spawn_pos: Vec2, bolt_def: &BoltDefiniti
     let direction = Vec2::new(angle.cos(), angle.sin());
     let velocity = Velocity2D(direction * bolt_def.base_speed);
 
-    let visual = super::super::bolt_visual_handles(world, bolt_def.color_rgb);
+    let visual = crate::effect::effects::bolt_visual_handles(world, bolt_def.color_rgb);
 
     let mut queue = CommandQueue::default();
     let entity = {
@@ -122,14 +122,14 @@ fn spawn_tether_bolt(world: &mut World, spawn_pos: Vec2, bolt_def: &BoltDefiniti
             .spawn(&mut commands)
     };
     queue.apply(world);
-    super::super::insert_bolt_visuals(world, entity, visual);
+    crate::effect::effects::insert_bolt_visuals(world, entity, visual);
 
     entity
 }
 
 /// Standard mode: spawn two tethered bolts with a beam between them.
 fn fire_standard(entity: Entity, damage_mult: f32, source_chip: &str, world: &mut World) {
-    let spawn_pos = super::super::entity_position(world, entity);
+    let spawn_pos = crate::effect::effects::entity_position(world, entity);
 
     let def_ref = world
         .get::<BoltDefinitionRef>(entity)

@@ -1,7 +1,10 @@
 use bevy::prelude::*;
 
-use super::super::{small_aabb, spawn_entities, test_tree};
-use crate::{aabb::Aabb2D, collision_layers::CollisionLayers};
+use crate::{
+    aabb::Aabb2D,
+    collision_layers::CollisionLayers,
+    quadtree::tests::{small_aabb, spawn_entities, test_tree},
+};
 
 #[test]
 fn query_aabb_finds_overlapping_entity() {

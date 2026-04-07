@@ -2,8 +2,8 @@
 
 use bevy::prelude::*;
 
-use super::super::super::system::*;
 pub(super) use crate::effect::core::*;
+use crate::effect::triggers::evaluate::system::*;
 
 /// Helper: build a `When(trigger, [Do(effect)])` node.
 pub(super) fn when_do(trigger: Trigger, effect: EffectKind) -> EffectNode {

@@ -32,7 +32,7 @@ pub(crate) struct ExplodeRequest {
 }
 
 pub(crate) fn fire(entity: Entity, range: f32, damage: f32, source_chip: &str, world: &mut World) {
-    let position = super::super::entity_position(world, entity);
+    let position = crate::effect::effects::entity_position(world, entity);
 
     world.spawn((
         ExplodeRequest { range, damage },

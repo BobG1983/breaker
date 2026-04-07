@@ -1,4 +1,4 @@
-use super::super::definition::*;
+use crate::plugin::definition::*;
 
 // -- Behavior: prelude re-exports all public API types --
 

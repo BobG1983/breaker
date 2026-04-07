@@ -12,7 +12,8 @@ use crate::route::{FinalizedRoute, IntoFinalizedRoute};
 /// convenience method on `App`.
 #[derive(Resource)]
 pub struct RoutingTable<S: States> {
-    pub(crate) routes: HashMap<S, FinalizedRoute<S>>, // pub(crate) for dispatch systems
+    /// The registered routes, keyed by source state variant.
+    pub routes: HashMap<S, FinalizedRoute<S>>,
 }
 
 impl<S: States> Default for RoutingTable<S> {

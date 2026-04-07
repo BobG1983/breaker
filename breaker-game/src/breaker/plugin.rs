@@ -6,7 +6,9 @@ use crate::{
     bolt::BoltSystems,
     breaker::{
         BreakerSystems, ForceBumpGrade, SelectedBreaker,
-        messages::{BumpPerformed, BumpWhiffed},
+        messages::{
+            BreakerImpactCell, BreakerImpactWall, BreakerSpawned, BumpPerformed, BumpWhiffed,
+        },
         systems::{
             animate_bump_visual, animate_tilt_visual, breaker_cell_collision,
             breaker_wall_collision, grade_bump, move_breaker, perfect_bump_dash_cancel,
@@ -14,12 +16,10 @@ use crate::{
             update_breaker_state, update_bump,
         },
     },
-    state::{
-        run::node::{
-            sets::NodeSystems,
-            systems::{apply_node_scale_to_breaker, reset_breaker},
-        },
-        types::NodeState,
+    prelude::*,
+    state::run::node::{
+        sets::NodeSystems,
+        systems::{apply_node_scale_to_breaker, reset_breaker},
     },
 };
 
@@ -30,7 +30,6 @@ pub struct BreakerPlugin;
 
 impl Plugin for BreakerPlugin {
     fn build(&self, app: &mut App) {
-        use crate::breaker::messages::{BreakerImpactCell, BreakerImpactWall, BreakerSpawned};
         app.add_message::<BumpPerformed>()
             .add_message::<BumpWhiffed>()
             .add_message::<BreakerSpawned>()

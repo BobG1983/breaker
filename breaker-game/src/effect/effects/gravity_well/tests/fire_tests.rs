@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use rantzsoft_spatial2d::prelude::*;
 
-use super::super::effect::*;
+use crate::effect::effects::gravity_well::effect::*;
 
 // ── fire tests ──────────────────────────────────────────────────
 

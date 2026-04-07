@@ -1,5 +1,7 @@
-use super::super::drivers::*;
-use crate::types::{ChaosParams, GameAction};
+use crate::{
+    input::drivers::*,
+    types::{ChaosParams, GameAction},
+};
 
 // -------------------------------------------------------------------------
 // ChaosDriver — statistical probability

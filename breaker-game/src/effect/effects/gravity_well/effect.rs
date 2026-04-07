@@ -57,7 +57,7 @@ pub(crate) fn fire(
         return;
     }
 
-    let position = super::super::entity_position(world, entity);
+    let position = crate::effect::effects::entity_position(world, entity);
 
     // SCOPE A — read counter value from resource (copy out, drop borrow).
     let counter_value: u64 = {

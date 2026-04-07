@@ -43,12 +43,13 @@ type: project
 - `dash/system.rs:253` — `speed / reference_speed` in `eased_decel` — guarded. Safe.
 
 ### Unguarded division: hit_fraction (Warning-level)
-- `bolt_breaker_collision/system.rs:80` — `((clamped_x - breaker_x) / half_w).clamp(-1.0, 1.0)`
-- `half_w` = `breaker_width.half_width() * EffectiveSizeMultiplier * EntityScale`
-- `EffectiveSizeMultiplier` is the product of all `ActiveSizeBoosts` entries
+- `bolt_breaker_collision/system.rs` — `((clamped_x - breaker_x) / half_w).clamp(-1.0, 1.0)`
+- `half_w` = `breaker_width.half_width() * ActiveSizeBoosts::multiplier() * NodeScalingFactor`
+  (NOTE: `EffectiveSizeMultiplier` and `EntityScale` were removed; current components are
+  `ActiveSizeBoosts::multiplier()` and `NodeScalingFactor` — verify exact formula against current code)
 - Chip templates include negative SizeBoost values (e.g. `SizeBoost(-0.5)` in splinter.chip.ron)
-- An odd number of negative-factor SizeBoost applications makes `EffectiveSizeMultiplier`
-  negative; when negative half_w feeds into `impact_x.clamp(lo, hi)` with lo > hi,
+- An odd number of negative-factor SizeBoost applications makes the multiplier negative;
+  when negative half_w feeds into `impact_x.clamp(lo, hi)` with lo > hi,
   Rust debug builds PANIC. Release builds return `lo` (garbage value).
 - This is a Warning-level issue: requires non-obvious chip stacking, game design likely
   prevents it in practice, but the guard is missing at the formula layer.

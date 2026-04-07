@@ -1,7 +1,9 @@
 use bevy::prelude::*;
 
-use super::super::definitions::*;
-use crate::propagation::{PositionPropagation, RotationPropagation, ScalePropagation};
+use crate::{
+    components::definitions::*,
+    propagation::{PositionPropagation, RotationPropagation, ScalePropagation},
+};
 
 // ── Simple wrappers ─────────────────────────────────────────
 

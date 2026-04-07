@@ -47,7 +47,7 @@ pub(crate) fn fire(
     source_chip: &str,
     world: &mut World,
 ) {
-    let pos = super::super::entity_position(world, entity);
+    let pos = crate::effect::effects::entity_position(world, entity);
 
     let velocity = world.get::<Velocity2D>(entity).map_or(Vec2::ZERO, |v| v.0);
 

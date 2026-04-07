@@ -1,7 +1,9 @@
 use bevy::prelude::*;
 
-use super::super::spawn_run_end_screen;
-use crate::state::run::resources::{NodeOutcome, NodeResult, RunStats};
+use crate::state::run::{
+    resources::{NodeOutcome, NodeResult, RunStats},
+    run_end::systems::spawn_run_end_screen::spawn_run_end_screen,
+};
 
 pub(super) fn test_app(result: NodeResult) -> App {
     let mut app = App::new();

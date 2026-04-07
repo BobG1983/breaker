@@ -68,9 +68,10 @@ pub(crate) fn fire(
     source_chip: &str,
     world: &mut World,
 ) {
-    let effective_range = super::super::effective_range(base_range, range_per_level, stacks);
+    let effective_range =
+        crate::effect::effects::effective_range(base_range, range_per_level, stacks);
 
-    let position = super::super::entity_position(world, entity);
+    let position = crate::effect::effects::entity_position(world, entity);
 
     let edm = world
         .get::<ActiveDamageBoosts>(entity)

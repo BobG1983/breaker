@@ -6,9 +6,9 @@ use rantzsoft_lifecycle::CleanupOnExit;
 use rantzsoft_physics2d::constraint::DistanceConstraint;
 use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
-use super::super::effect::*;
 use crate::{
     bolt::{components::ExtraBolt, definition::BoltDefinition, registry::BoltRegistry},
+    effect::effects::chain_bolt::effect::*,
     shared::rng::GameRng,
     state::types::{NodeState, RunState},
 };

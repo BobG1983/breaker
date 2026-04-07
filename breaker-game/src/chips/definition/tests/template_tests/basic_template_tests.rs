@@ -1,5 +1,7 @@
-use super::super::super::types::*;
-use crate::effect::{EffectKind, EffectNode, RootEffect, Target, Trigger};
+use crate::{
+    chips::definition::types::*,
+    effect::{EffectKind, EffectNode, RootEffect, Target, Trigger},
+};
 
 // =========================================================================
 // ChipTemplate with Vec<RootEffect>

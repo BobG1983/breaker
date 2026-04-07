@@ -4,8 +4,8 @@
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::{Position2D, Spatial2D, Velocity2D};
 
-use super::super::helpers::*;
 use crate::{
+    bolt::systems::bolt_breaker_collision::tests::helpers::*,
     breaker::components::{Breaker, BreakerTilt},
     effect::effects::size_boost::ActiveSizeBoosts,
     shared::{GameDrawLayer, NodeScalingFactor},

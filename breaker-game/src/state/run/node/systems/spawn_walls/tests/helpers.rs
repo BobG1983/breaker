@@ -2,9 +2,9 @@
 
 use bevy::prelude::*;
 
-use super::super::*;
 use crate::{
     shared::PlayfieldConfig,
+    state::run::node::systems::spawn_walls::*,
     walls::{definition::WallDefinition, messages::WallsSpawned, registry::WallRegistry},
 };
 

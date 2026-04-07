@@ -2,8 +2,7 @@
 
 use bevy::prelude::*;
 
-use super::super::checker::*;
-use crate::invariants::*;
+use crate::invariants::{checkers::check_aabb_matches_entity_dimensions::checker::*, *};
 
 pub(super) fn tick(app: &mut App) {
     let timestep = app.world().resource::<Time<Fixed>>().timestep();

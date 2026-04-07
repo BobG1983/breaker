@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use super::super::core::{
+use crate::effect::core::{
     BoundEffects, EffectKind, EffectNode, RootEffect, StagedEffects, Target, Trigger,
     TriggerContext,
 };
@@ -287,12 +287,7 @@ impl Command for TransferCommand {
     }
 }
 
-use crate::{
-    bolt::components::{Bolt, PrimaryBolt},
-    breaker::components::{Breaker, PrimaryBreaker},
-    cells::components::Cell,
-    walls::components::Wall,
-};
+use crate::{bolt::components::PrimaryBolt, breaker::components::PrimaryBreaker, prelude::*};
 
 /// Command that resolves an `On` node: queries entities matching the target,
 /// then transfers children to each resolved entity.

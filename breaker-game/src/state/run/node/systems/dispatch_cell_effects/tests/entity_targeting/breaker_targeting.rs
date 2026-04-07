@@ -2,11 +2,11 @@
 
 use bevy::prelude::*;
 
-use super::super::helpers::{make_cell_def, test_app};
 use crate::{
     breaker::components::Breaker,
     cells::components::{Cell, CellEffectsDispatched, CellTypeAlias},
     effect::{BoundEffects, EffectKind, EffectNode, RootEffect, StagedEffects, Target, Trigger},
+    state::run::node::systems::dispatch_cell_effects::tests::helpers::{make_cell_def, test_app},
 };
 
 // ── Behavior 6: Cell with Target::Breaker dispatches to breaker entity ──

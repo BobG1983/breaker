@@ -1,11 +1,11 @@
 ---
 name: start-dev
-description: Start a new development branch from develop using git-flow. Use when beginning any new feature, bug fix, or refactor. Guards against accidentally working on develop. Optionally takes a --todo to drive the full lifecycle from todo → plan → implement.
+description: Start a new development branch from develop using git-flow. Use when beginning any new feature, bug fix, or refactor. Guards against accidentally working on develop. Optionally takes a todo to drive the full lifecycle from todo → plan → implement.
 ---
 
 # Start Dev
 
-Start a new git-flow topic branch from develop. Guards against working directly on develop or starting a branch when you're already on one. When given a `--todo`, drives the full lifecycle: interrogate for missing detail → plan → `/implement`.
+Start a new git-flow topic branch from develop. Guards against working directly on develop or starting a branch when you're already on one. When given a `todo`, drives the full lifecycle: interrogate for missing detail → plan → `/implement`.
 
 ## Rules
 
@@ -30,14 +30,14 @@ Start a new git-flow topic branch from develop. Guards against working directly 
 /start-dev feature <name>
 /start-dev fix <name>
 /start-dev refactor <name>
-/start-dev feature <name> --todo <number or name>
+/start-dev feature <name> todo <number or name>
 ```
 
 ## Procedure
 
-### Step 1 — Todo lifecycle (if `--todo` provided)
+### Step 1 — Todo lifecycle (if `todo` provided)
 
-If `--todo` was provided:
+If `todo` was provided:
 
 1. Read the todo's detail file from `docs/todos/`
 2. If the todo is `[NEEDS DETAIL]`, run the `/todo interrogate` procedure for it — ask questions recursively until all open questions are resolved or the user says stop
@@ -48,7 +48,7 @@ If `--todo` was provided:
 7. Create the plan with the **todo's details** as input
 7. After the plan is approved by the user, update the todo detail file with any new decisions or scope changes from the planning discussion
 
-If `--todo` was NOT provided: move directly to Step 2
+If `todo` was NOT provided: move directly to Step 2
 
 ### Step 2 — Check current branch
 

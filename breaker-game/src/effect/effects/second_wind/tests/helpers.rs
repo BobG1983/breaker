@@ -2,8 +2,7 @@
 
 use bevy::prelude::*;
 
-use super::super::system::*;
-use crate::bolt::messages::BoltImpactWall;
+use crate::{bolt::messages::BoltImpactWall, effect::effects::second_wind::system::*};
 
 pub(super) fn despawn_test_app() -> App {
     let mut app = App::new();

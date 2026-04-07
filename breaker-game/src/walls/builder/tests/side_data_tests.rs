@@ -1,4 +1,4 @@
-use super::super::core::*;
+use crate::walls::builder::core::*;
 
 // ── Behavior 43: SideData::compute_position for Left ──
 

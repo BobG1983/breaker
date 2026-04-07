@@ -3,8 +3,10 @@
 
 use bevy::{prelude::*, state::app::StatesPlugin};
 
-use super::super::effect::*;
-use crate::state::types::{AppState, GameState, NodeState, RunState};
+use crate::{
+    effect::effects::entropy_engine::effect::*,
+    state::types::{AppState, GameState, NodeState, RunState},
+};
 
 // -- Behavior 21: register() wires reset system for OnEnter(NodeState::Playing) --
 

@@ -1,5 +1,4 @@
-use super::super::helpers::*;
-use crate::effect::EffectKind;
+use crate::effect::{EffectKind, effects::tether_beam::tests::helpers::*};
 
 // ══════════════════════════════════════════════════════════════════
 // Section G: Dispatch integration

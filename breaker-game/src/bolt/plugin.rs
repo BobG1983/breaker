@@ -5,7 +5,10 @@ use bevy::prelude::*;
 use crate::{
     bolt::{
         BoltSystems,
-        messages::{BoltImpactBreaker, BoltImpactCell, BoltImpactWall, BoltLost},
+        messages::{
+            BoltImpactBreaker, BoltImpactCell, BoltImpactWall, BoltLost, BoltSpawned,
+            RequestBoltDestroyed,
+        },
         systems::{
             bolt_breaker_collision, bolt_cell_collision, bolt_lost, bolt_wall_collision,
             clamp_bolt_to_playfield, cleanup_destroyed_bolts, dispatch_bolt_effects, hover_bolt,
@@ -15,13 +18,10 @@ use crate::{
     },
     breaker::BreakerSystems,
     effect::EffectSystems,
-    shared::GameRng,
-    state::{
-        run::node::{
-            sets::NodeSystems,
-            systems::{apply_node_scale_to_bolt, apply_node_scale_to_late_bolts, reset_bolt},
-        },
-        types::NodeState,
+    prelude::*,
+    state::run::node::{
+        sets::NodeSystems,
+        systems::{apply_node_scale_to_bolt, apply_node_scale_to_late_bolts, reset_bolt},
     },
 };
 
@@ -32,7 +32,6 @@ pub struct BoltPlugin;
 
 impl Plugin for BoltPlugin {
     fn build(&self, app: &mut App) {
-        use crate::bolt::messages::{BoltSpawned, RequestBoltDestroyed};
         app.init_resource::<GameRng>()
             .add_message::<BoltSpawned>()
             .add_message::<BoltImpactBreaker>()

@@ -19,7 +19,10 @@ pub(super) fn test_app() -> App {
     app.add_sub_state::<crate::state::types::RunState>();
     app.add_sub_state::<crate::state::types::NodeState>();
     app.insert_resource(CollisionQuadtree::default());
-    app.add_systems(Update, super::super::effect::apply_attraction);
+    app.add_systems(
+        Update,
+        crate::effect::effects::attraction::effect::apply_attraction,
+    );
     app
 }
 
@@ -32,8 +35,9 @@ pub(super) fn test_app_with_manage() -> App {
     app.add_systems(
         FixedUpdate,
         (
-            enqueue_messages.before(super::super::effect::manage_attraction_types),
-            super::super::effect::manage_attraction_types,
+            enqueue_messages
+                .before(crate::effect::effects::attraction::effect::manage_attraction_types),
+            crate::effect::effects::attraction::effect::manage_attraction_types,
         ),
     );
     app

@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 
-use super::super::system::setup_run;
 use crate::{
     bolt::{definition::BoltDefinition, messages::BoltSpawned, registry::BoltRegistry},
     breaker::{
@@ -8,7 +7,7 @@ use crate::{
         resources::SelectedBreaker,
     },
     shared::{PlayfieldConfig, rng::GameRng},
-    state::run::NodeOutcome,
+    state::run::{NodeOutcome, systems::setup_run::system::setup_run},
 };
 
 pub(super) fn make_default_bolt_definition() -> BoltDefinition {

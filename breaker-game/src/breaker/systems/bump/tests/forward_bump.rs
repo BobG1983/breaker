@@ -276,7 +276,7 @@ fn fixed_schedule_bump_app() -> App {
     app.add_systems(FixedPostUpdate, clear_input_actions);
 
     // FixedUpdate: process bumps (production schedule)
-    app.add_systems(FixedUpdate, super::super::update_bump);
+    app.add_systems(FixedUpdate, crate::breaker::systems::bump::update_bump);
 
     // Update: capture results
     app.add_systems(Update, (capture_bumps, capture_whiffs));

@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Position2D;
 
 // Re-export the system under test so sub-modules can reference it in ordering constraints.
-pub(super) use super::super::system::handle_cell_hit;
+pub(super) use crate::cells::systems::handle_cell_hit::system::handle_cell_hit;
 use crate::cells::{
     components::*,
     messages::{DamageCell, RequestCellDestroyed},

@@ -9,7 +9,7 @@ use bevy_egui::EguiContexts;
 
 use crate::{
     debug::resources::{DebugOverlays, Overlay},
-    state::types::{AppState, ChipSelectState, GameState, MenuState, NodeState, RunState},
+    prelude::*,
 };
 
 /// Bundled state queries for the state chain display.

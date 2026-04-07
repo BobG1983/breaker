@@ -1,5 +1,7 @@
-use super::super::{small_aabb, spawn_entities, test_tree};
-use crate::collision_layers::CollisionLayers;
+use crate::{
+    collision_layers::CollisionLayers,
+    quadtree::tests::{small_aabb, spawn_entities, test_tree},
+};
 
 #[test]
 fn new_creates_empty_tree() {

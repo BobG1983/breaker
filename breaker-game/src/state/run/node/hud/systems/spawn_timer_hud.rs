@@ -3,11 +3,16 @@
 use bevy::prelude::*;
 use rantzsoft_lifecycle::CleanupOnExit;
 
-use super::super::{
-    components::{NodeTimerDisplay, StatusPanel},
-    resources::TimerUiConfig,
+use crate::state::{
+    run::node::{
+        NodeTimer,
+        hud::{
+            components::{NodeTimerDisplay, StatusPanel},
+            resources::TimerUiConfig,
+        },
+    },
+    types::NodeState,
 };
-use crate::state::{run::node::NodeTimer, types::NodeState};
 
 /// Spawns the timer display as a child of the [`StatusPanel`].
 pub(crate) fn spawn_timer_hud(

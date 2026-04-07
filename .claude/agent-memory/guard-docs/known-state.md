@@ -1,8 +1,15 @@
 ---
 name: known-state
-description: Confirmed doc/code alignment state; covers effect system rewrite (2026-03-28), stat-effects phase (feature/stat-effects), file-split refactor (2026-03-30), and bolt builder migration (2026-03-31)
+description: Confirmed doc/code alignment state; covers effect system rewrite (2026-03-28), stat-effects phase (feature/stat-effects), file-split refactor (2026-03-30), bolt builder migration (2026-03-31), and prelude refactor (2026-04-06)
 type: project
 ---
+
+## Confirmed Correct (as of prelude refactor, 2026-04-06)
+
+- `docs/architecture/standards.md` — Prelude section: submodule/glob threshold distinction (2+ for submodules, 3+ for curated glob) is now documented correctly
+- `docs/architecture/plugins.md` — prelude/ entry in Domain Layout matches actual prelude structure (re-exports only, no types)
+- `docs/architecture/index.md` — standards.md description ("prelude conventions") accurate
+- `breaker-game/src/prelude/` — 5 files: mod.rs + components.rs + messages.rs + resources.rs + states.rs; all pure re-export files, no type definitions
 
 ## Confirmed Correct (as of runtime-effects branch, 2026-03-28)
 
@@ -76,8 +83,8 @@ The file contains only a doc comment explaining legacy stat components were remo
 - `dispatch_wall_effects` — **DELETED** in wall-builder-pattern feature. `spawn_walls` now reads from `WallRegistry`, calls `Wall::builder()` three times, and dispatches effects inline via `push_bound_effects`. No separate dispatch system exists.
 - `ChainArcCountReasonable` — new `InvariantKind` variant; checks combined `ChainLightningChain` + `ChainLightningArc` entity count against `invariant_params.max_chain_arc_count` (default 50)
 - `SpawnExtraChainArcs(usize)` — new `MutationKind` variant; spawns N chain + N arc entities for self-test
-- InvariantKind total: 23 variants (25 - 2 removed: `EffectiveSpeedConsistent` and `SizeBoostInRange` removed with Effective* cache removal; `BoltSpeedInRange` renamed to `BoltSpeedAccurate`)
-- MutationKind total: verify current count — `InjectWrongSizeMultiplier` and `InjectWrongEffectiveSpeed` removed with Effective* cache removal
+- InvariantKind total: 21 variants (verified 2026-04-06 on develop). Prior count of 23 was stale — `ValidStateTransitions`, `ValidBreakerState`, `PhysicsFrozenDuringPause` never existed in code; breaker state variant is `ValidDashState`. Also `BoltSpeedInRange` renamed to `BoltSpeedAccurate`.
+- MutationKind total: 16 variants (verified 2026-04-06). `InjectWrongSizeMultiplier` and `InjectWrongEffectiveSpeed` removed with Effective* cache removal. `InjectWrongBoltSpeed` also does NOT exist.
 - `EffectSourceChip(Option<String>)` — component on AoE/spawn effect entities; carries chip attribution from dispatch to damage-application tick
 - `chip_attribution(source_chip: &str) -> Option<String>` — helper: empty → None, non-empty → Some
 - fire() method split: `fire` → `fire_aoe_and_spawn` → `fire_utility_and_spawn` (3 methods)

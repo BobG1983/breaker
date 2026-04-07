@@ -144,7 +144,8 @@ fn bolt_hits_only_nearest_cell() {
 
     app.insert_resource(HitCells::default()).add_systems(
         FixedUpdate,
-        collect_cell_hits.after(super::super::system::bolt_cell_collision),
+        collect_cell_hits
+            .after(crate::bolt::systems::bolt_cell_collision::system::bolt_cell_collision),
     );
 
     // Two cells vertically, bolt path crosses both
@@ -171,7 +172,8 @@ fn bolt_hit_cell_message_sent() {
     let cc = crate::cells::resources::CellConfig::default();
     app.insert_resource(HitCells::default()).add_systems(
         FixedUpdate,
-        collect_cell_hits.after(super::super::system::bolt_cell_collision),
+        collect_cell_hits
+            .after(crate::bolt::systems::bolt_cell_collision::system::bolt_cell_collision),
     );
 
     let cell_y = 100.0;
@@ -216,7 +218,8 @@ fn max_bounces_cap() {
     let cc = crate::cells::resources::CellConfig::default();
     app.insert_resource(HitCells::default()).add_systems(
         FixedUpdate,
-        collect_cell_hits.after(super::super::system::bolt_cell_collision),
+        collect_cell_hits
+            .after(crate::bolt::systems::bolt_cell_collision::system::bolt_cell_collision),
     );
 
     // Two cells very close together creating a narrow channel.
@@ -245,7 +248,8 @@ fn multiple_bolts_each_hit_different_cells() {
     let cc = crate::cells::resources::CellConfig::default();
     app.insert_resource(HitCells::default()).add_systems(
         FixedUpdate,
-        collect_cell_hits.after(super::super::system::bolt_cell_collision),
+        collect_cell_hits
+            .after(crate::bolt::systems::bolt_cell_collision::system::bolt_cell_collision),
     );
 
     let cell_a = spawn_cell(&mut app, -100.0, 100.0);
@@ -309,7 +313,8 @@ fn bolt_cell_collision_populates_bolt_entity_in_message() {
     let cc = crate::cells::resources::CellConfig::default();
     app.insert_resource(FullHitMessages::default()).add_systems(
         FixedUpdate,
-        collect_full_hits.after(super::super::system::bolt_cell_collision),
+        collect_full_hits
+            .after(crate::bolt::systems::bolt_cell_collision::system::bolt_cell_collision),
     );
 
     let cell_y = 100.0;

@@ -2,12 +2,11 @@
 
 use bevy::prelude::*;
 
-use super::super::system::*;
 use crate::{
     bolt::messages::{BoltImpactBreaker, BoltImpactCell, BoltImpactWall},
     breaker::messages::{BreakerImpactCell, BreakerImpactWall},
     cells::messages::CellImpactWall,
-    effect::core::*,
+    effect::{core::*, triggers::impact::system::*},
 };
 
 // -- BoltImpactCell helper --

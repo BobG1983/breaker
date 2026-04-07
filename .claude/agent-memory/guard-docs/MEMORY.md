@@ -1,3 +1,5 @@
-- [known-state.md](known-state.md) — Confirmed doc/code alignment through crate-routing-migration (2026-04-03); state.md fully rewritten for 4-level hierarchy + rantzsoft_lifecycle; ordering.md and messages.md partially fixed; plugins.md/data.md/builders/pattern.md still deferred to Wave 8
+- [known-state.md](known-state.md) — Confirmed doc/code alignment through prelude refactor (2026-04-06); covers effect system rewrite, stat-effects, file-split refactor, bolt builder migration, prelude conventions
 - [terminology.md](terminology.md) — Confirmed term mappings: collision messages, EffectKind variants, Active*/Effective* pairs, new system set variants
-- [phase-log.md](phase-log.md) — Review session log: what was checked, what was updated per session (2026-03-28 through 2026-03-30)
+
+## Session History
+See [ephemeral/](ephemeral/) — not committed.

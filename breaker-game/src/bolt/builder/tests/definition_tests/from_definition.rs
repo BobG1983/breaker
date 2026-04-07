@@ -5,8 +5,9 @@ use rantzsoft_spatial2d::components::{
     Velocity2D,
 };
 
-use super::{super::super::core::*, helpers::make_bolt_definition};
+use super::helpers::make_bolt_definition;
 use crate::bolt::{
+    builder::core::*,
     components::{
         Bolt, BoltAngleSpread, BoltBaseDamage, BoltDefinitionRef, BoltLifespan, BoltRadius,
         BoltSpawnOffsetY, SpawnedByEvolution,

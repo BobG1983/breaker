@@ -1,6 +1,6 @@
 //! Tests for breaker teleport via `apply_debug_setup`.
 
-use super::super::helpers::*;
+use crate::lifecycle::tests::helpers::*;
 
 // -------------------------------------------------------------------------
 // apply_debug_setup — teleport breaker to breaker_position

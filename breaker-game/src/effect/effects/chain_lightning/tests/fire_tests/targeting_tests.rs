@@ -2,9 +2,9 @@ use bevy::prelude::*;
 use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D};
 
-use super::super::helpers::*;
 use crate::{
     cells::{components::Cell, messages::DamageCell},
+    effect::effects::chain_lightning::tests::helpers::*,
     shared::{BOLT_LAYER, CELL_LAYER, GameRng, WALL_LAYER},
 };
 

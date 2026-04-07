@@ -3,8 +3,8 @@ use rantzsoft_spatial2d::components::{
     BaseSpeed, MaxSpeed, MinAngleHorizontal, MinAngleVertical, MinSpeed, Position2D, Velocity2D,
 };
 
-use super::super::core::*;
 use crate::bolt::{
+    builder::core::*,
     components::{Bolt, ExtraBolt},
     definition::BoltDefinition,
 };

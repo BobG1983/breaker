@@ -109,7 +109,10 @@ fn spawn_walls_uses_definition_half_thickness_from_registry() {
         .add_message::<WallsSpawned>()
         .init_resource::<PlayfieldConfig>()
         .insert_resource(registry)
-        .add_systems(Update, super::super::spawn_walls);
+        .add_systems(
+            Update,
+            crate::state::run::node::systems::spawn_walls::spawn_walls,
+        );
     app.update();
 
     // Verify: Left wall Position2D.x == -445.0, Scale2D.x == 45.0

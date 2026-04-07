@@ -29,7 +29,7 @@ pub(crate) fn fire(
     _source_chip: &str,
     world: &mut World,
 ) {
-    let spawn_pos = super::super::entity_position(world, entity);
+    let spawn_pos = crate::effect::effects::entity_position(world, entity);
 
     let def_ref = world
         .get::<BoltDefinitionRef>(entity)
@@ -52,7 +52,7 @@ pub(crate) fn fire(
     };
 
     // Create visual handles once before the loop — Handle cloning is a cheap Arc increment
-    let visual = super::super::bolt_visual_handles(world, bolt_def.color_rgb);
+    let visual = crate::effect::effects::bolt_visual_handles(world, bolt_def.color_rgb);
 
     for _ in 0..count {
         let angle = {
@@ -78,7 +78,7 @@ pub(crate) fn fire(
             entity
         };
 
-        super::super::insert_bolt_visuals(
+        crate::effect::effects::insert_bolt_visuals(
             world,
             bolt_entity,
             visual.as_ref().map(|(m, mat)| (m.clone(), mat.clone())),

@@ -82,7 +82,7 @@ pub(crate) fn fire(entity: Entity, inherit: bool, _source_chip: &str, world: &mu
 
     // Spawn the mirrored bolt with the deterministic mirror velocity
     let bolt_id = {
-        let visual = super::super::bolt_visual_handles(world, bolt_def.color_rgb);
+        let visual = crate::effect::effects::bolt_visual_handles(world, bolt_def.color_rgb);
 
         let mut queue = CommandQueue::default();
         let entity = {
@@ -96,7 +96,7 @@ pub(crate) fn fire(entity: Entity, inherit: bool, _source_chip: &str, world: &mu
                 .spawn(&mut commands)
         };
         queue.apply(world);
-        super::super::insert_bolt_visuals(world, entity, visual);
+        crate::effect::effects::insert_bolt_visuals(world, entity, visual);
 
         entity
     };

@@ -2,7 +2,6 @@
 
 use bevy::prelude::*;
 
-use super::super::helpers::*;
 use crate::{
     bolt::messages::BoltImpactBreaker,
     breaker::{
@@ -11,6 +10,7 @@ use crate::{
             BumpState, BumpWeakCooldown, SettleDuration,
         },
         messages::BumpGrade,
+        systems::bump::tests::helpers::*,
     },
     effect::{AnchorActive, AnchorPlanted},
 };

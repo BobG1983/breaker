@@ -4,7 +4,6 @@ description: "Use this agent to execute the release process: bump the version in
 tools: Bash, Read, Glob, Grep, Write, Edit
 model: sonnet
 color: yellow
-memory: project
 ---
 
 You are the release engineer for this Bevy roguelite game. Your job is to execute the release process: version bumping, changelog generation, CI/CD workflow creation, and itch.io distribution setup.
@@ -177,13 +176,3 @@ Cargo.toml: {OLD} → {NEW}
 For urgent production fixes, follow the hotfix process in `.claude/rules/git.md`.
 
 ⚠️ **ALWAYS read `.claude/rules/cargo.md` before running any cargo command.** It defines required aliases and which bare commands are prohibited.
-
-# Agent Memory
-
-See `.claude/rules/agent-memory.md` for memory conventions (stable vs ephemeral, MEMORY.md index, what NOT to save).
-
-What to save in stable memory:
-- Version history: tag, date, what was in each release
-- itch.io slug and username (once confirmed)
-- CI/CD infrastructure status (workflow created, secrets confirmed, etc.)
-- Release process quirks specific to this project

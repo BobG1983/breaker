@@ -4,12 +4,12 @@ use rantzsoft_physics2d::{
 };
 use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D, Velocity2D};
 
-use super::super::*;
 use crate::{
     bolt::{
         components::{Bolt, PiercingRemaining},
         definition::BoltDefinition,
         messages::BoltImpactWall,
+        systems::bolt_wall_collision::*,
     },
     effect::effects::piercing::ActivePiercings,
     shared::{BOLT_LAYER, GameDrawLayer, WALL_LAYER},

@@ -1,4 +1,4 @@
-use super::super::helpers::*;
+use crate::effect::effects::tether_beam::tests::helpers::*;
 
 // ══════════════════════════════════════════════════════════════════
 // Section D: Standard mode reverse (chain: false) — existing behavior preserved

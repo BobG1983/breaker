@@ -1,10 +1,9 @@
 pub(super) use bevy::prelude::*;
 pub(super) use rantzsoft_spatial2d::components::Velocity2D;
 
-pub(super) use super::super::effect::*;
 pub(super) use crate::{
     breaker::components::{Breaker, DashState},
-    effect::effects::bump_force::ActiveBumpForces,
+    effect::effects::{anchor::effect::*, bump_force::ActiveBumpForces},
     state::types::{AppState, GameState, NodeState, RunState},
 };
 

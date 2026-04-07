@@ -14,6 +14,7 @@
 
 pub mod app;
 pub mod game;
+pub(crate) mod prelude;
 pub mod shared;
 pub mod state;
 

@@ -1,9 +1,11 @@
 use bevy::prelude::*;
 
-use super::super::system::spawn_highlight_text;
 use crate::{
     shared::{GameRng, PlayfieldConfig},
-    state::run::{definition::HighlightConfig, messages::HighlightTriggered},
+    state::run::{
+        definition::HighlightConfig, messages::HighlightTriggered,
+        node::lifecycle::systems::spawn_highlight_text::system::spawn_highlight_text,
+    },
 };
 
 #[derive(Resource)]

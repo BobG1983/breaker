@@ -3,12 +3,13 @@
 
 use bevy::prelude::*;
 
-use super::super::helpers::*;
 use crate::{
     fx::FadeOut,
     shared::GameRng,
     state::run::{
-        components::HighlightPopup, messages::HighlightTriggered, resources::HighlightKind,
+        components::HighlightPopup, messages::HighlightTriggered,
+        node::lifecycle::systems::spawn_highlight_text::tests::helpers::*,
+        resources::HighlightKind,
     },
 };
 

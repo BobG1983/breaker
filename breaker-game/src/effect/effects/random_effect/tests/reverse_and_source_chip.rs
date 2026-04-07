@@ -2,11 +2,10 @@
 
 use bevy::prelude::*;
 
-use super::super::system::*;
 use crate::{
     effect::{
         core::{EffectKind, EffectNode, StagedEffects, Trigger},
-        effects::damage_boost::ActiveDamageBoosts,
+        effects::{damage_boost::ActiveDamageBoosts, random_effect::system::*},
     },
     shared::rng::GameRng,
 };

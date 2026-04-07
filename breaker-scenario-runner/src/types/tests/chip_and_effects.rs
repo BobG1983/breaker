@@ -1,4 +1,4 @@
-use super::super::*;
+use crate::types::*;
 
 // -------------------------------------------------------------------------
 // ScenarioDefinition — chip_selections field

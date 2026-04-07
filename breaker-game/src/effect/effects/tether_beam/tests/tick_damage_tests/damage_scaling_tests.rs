@@ -1,7 +1,6 @@
 //! Tests for `effective_damage_multiplier` scaling in `tick_tether_beam`.
 
-use super::super::helpers::*;
-use crate::bolt::components::BoltBaseDamage;
+use crate::{bolt::components::BoltBaseDamage, effect::effects::tether_beam::tests::helpers::*};
 
 #[test]
 fn tick_tether_beam_damage_scales_by_effective_damage_multiplier() {

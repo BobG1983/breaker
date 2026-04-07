@@ -5,14 +5,13 @@
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Position2D;
 
-use super::super::effect::*;
 use crate::{
     bolt::{
         components::{Bolt, ExtraBolt},
         definition::BoltDefinition,
         registry::BoltRegistry,
     },
-    effect::{BoundEffects, EffectKind, EffectNode},
+    effect::{BoundEffects, EffectKind, EffectNode, effects::spawn_bolts::effect::*},
     shared::rng::GameRng,
 };
 

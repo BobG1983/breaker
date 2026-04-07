@@ -6,8 +6,9 @@ use std::collections::HashSet;
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Position2D;
 
-use super::super::helpers::*;
-use crate::bolt::resources::DEFAULT_BOLT_BASE_DAMAGE;
+use crate::{
+    bolt::resources::DEFAULT_BOLT_BASE_DAMAGE, effect::effects::shockwave::tests::helpers::*,
+};
 
 // -- Damage scaling: Shockwave damage scales by ShockwaveDamageMultiplier ──
 

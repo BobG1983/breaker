@@ -89,8 +89,8 @@ fn perfect_bump_cancels_dash() {
     app.add_systems(
         FixedUpdate,
         (
-            enqueue_bump.before(super::super::perfect_bump_dash_cancel),
-            super::super::perfect_bump_dash_cancel,
+            enqueue_bump.before(crate::breaker::systems::bump::perfect_bump_dash_cancel),
+            crate::breaker::systems::bump::perfect_bump_dash_cancel,
         ),
     );
     tick(&mut app);

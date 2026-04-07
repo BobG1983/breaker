@@ -1,4 +1,4 @@
-use super::super::helpers::*;
+use crate::lifecycle::tests::helpers::*;
 
 /// Perfect tracking writes Bump when bolt is within threshold of breaker.
 #[test]

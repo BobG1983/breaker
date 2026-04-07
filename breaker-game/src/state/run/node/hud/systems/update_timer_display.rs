@@ -2,8 +2,10 @@
 
 use bevy::prelude::*;
 
-use super::super::{components::NodeTimerDisplay, resources::TimerUiConfig};
-use crate::state::run::node::NodeTimer;
+use crate::state::run::node::{
+    NodeTimer,
+    hud::{components::NodeTimerDisplay, resources::TimerUiConfig},
+};
 
 /// Updates the timer display text and color based on remaining time.
 pub(crate) fn update_timer_display(

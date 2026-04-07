@@ -1,4 +1,4 @@
-use super::super::helpers::*;
+use crate::effect::effects::chain_lightning::tests::helpers::*;
 
 mod arc_arrival;
 mod arc_spawning;

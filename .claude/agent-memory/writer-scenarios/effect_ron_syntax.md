@@ -84,7 +84,8 @@ Do(ChainLightning(arcs: 3, range: 96.0, damage_mult: 1.5))
     // arc_speed is optional, serde default is 200.0 — use arc_speed: 50.0 for slow-arc stress
 Do(ChainLightning(arcs: 5, range: 112.0, damage_mult: 1.5, arc_speed: 50.0))
 Do(PiercingBeam(damage_mult: 2.0, width: 16.0))
-Do(Explode(range: 80.0, damage_mult: 2.0))
+Do(Explode(range: 80.0, damage: 15.0))
+    // field is `damage: f32` (flat damage per cell), NOT `damage_mult`
 Do(Pulse(base_range: 32.0, range_per_level: 8.0, stacks: 1, speed: 400.0))
     // interval field is optional, defaults to 0.5
 Do(Pulse(base_range: 32.0, range_per_level: 8.0, stacks: 1, speed: 400.0, interval: 0.25))

@@ -1,7 +1,11 @@
 //! Tests for `group_violations`, `group_logs`, and `is_invariant_fail_reason`.
 
-use super::super::output::{group_logs, group_violations, is_invariant_fail_reason};
-use crate::{invariants::ViolationEntry, log_capture::LogEntry, types::InvariantKind};
+use crate::{
+    invariants::ViolationEntry,
+    log_capture::LogEntry,
+    runner::output::{group_logs, group_violations, is_invariant_fail_reason},
+    types::InvariantKind,
+};
 
 // -------------------------------------------------------------------------
 // group_violations — groups by invariant kind

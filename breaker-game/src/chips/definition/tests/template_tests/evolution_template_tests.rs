@@ -1,5 +1,7 @@
-use super::super::super::types::*;
-use crate::effect::{EffectKind, EffectNode, RootEffect, Target};
+use crate::{
+    chips::definition::types::*,
+    effect::{EffectKind, EffectNode, RootEffect, Target},
+};
 
 // =========================================================================
 // C5: expand_evolution_template produces Rarity::Evolution

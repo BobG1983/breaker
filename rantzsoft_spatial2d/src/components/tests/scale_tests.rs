@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::super::definitions::*;
+use crate::components::definitions::*;
 
 // ── Scale2D ─────────────────────────────────────────────────
 

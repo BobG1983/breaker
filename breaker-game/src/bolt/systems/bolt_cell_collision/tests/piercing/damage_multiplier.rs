@@ -3,9 +3,8 @@
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Velocity2D;
 
-use super::super::helpers::*;
 use crate::{
-    bolt::components::PiercingRemaining,
+    bolt::{components::PiercingRemaining, systems::bolt_cell_collision::tests::helpers::*},
     effect::effects::{damage_boost::ActiveDamageBoosts, piercing::ActivePiercings},
 };
 
@@ -17,7 +16,7 @@ use crate::{
 #[test]
 fn piercing_with_effective_damage_multiplier_uses_boosted_damage_for_lookahead() {
     let mut app = test_app();
-    let bc = super::super::helpers::test_bolt_definition();
+    let bc = crate::bolt::systems::bolt_cell_collision::tests::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
 
     let cell_y = 100.0;
@@ -60,7 +59,7 @@ fn piercing_with_effective_damage_multiplier_uses_boosted_damage_for_lookahead()
 #[test]
 fn piercing_without_effective_damage_multiplier_reflects_off_tough_cell() {
     let mut app = test_app();
-    let bc = super::super::helpers::test_bolt_definition();
+    let bc = crate::bolt::systems::bolt_cell_collision::tests::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
 
     let cell_y = 100.0;

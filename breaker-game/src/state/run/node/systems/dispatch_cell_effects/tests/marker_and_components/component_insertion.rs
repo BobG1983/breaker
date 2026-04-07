@@ -2,11 +2,11 @@
 
 use bevy::prelude::*;
 
-use super::super::helpers::{make_cell_def, test_app};
 use crate::{
     bolt::components::Bolt,
     cells::components::{Cell, CellTypeAlias},
     effect::{BoundEffects, EffectKind, EffectNode, RootEffect, StagedEffects, Target, Trigger},
+    state::run::node::systems::dispatch_cell_effects::tests::helpers::{make_cell_def, test_app},
 };
 
 // ── Behavior 11: BoundEffects and StagedEffects inserted if absent on self-targeted cell ──

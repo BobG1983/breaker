@@ -4,13 +4,13 @@ use bevy::prelude::*;
 use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{Position2D, Scale2D, Velocity2D};
 
-use super::super::effect::*;
 use crate::{
     bolt::{
         components::{Bolt, BoltDefinitionRef, BoltRadius},
         definition::BoltDefinition,
         registry::BoltRegistry,
     },
+    effect::effects::chain_bolt::effect::*,
     shared::{BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, GameDrawLayer, WALL_LAYER, rng::GameRng},
 };
 

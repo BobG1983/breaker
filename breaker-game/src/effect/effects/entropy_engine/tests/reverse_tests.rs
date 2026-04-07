@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use super::super::effect::*;
+use crate::effect::effects::entropy_engine::effect::*;
 
 // -- Behavior 19: reverse() is a no-op (entity with state) --
 

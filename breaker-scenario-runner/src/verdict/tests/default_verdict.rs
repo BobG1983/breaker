@@ -1,6 +1,6 @@
 //! Tests for `ScenarioVerdict` default state and `passed()` on defaults.
 
-use super::super::evaluation::*;
+use crate::verdict::evaluation::*;
 
 // -------------------------------------------------------------------------
 // Behavior 1: Default verdict is Fail with default reason

@@ -2,11 +2,11 @@
 
 use bevy::prelude::*;
 
-use super::super::helpers::{make_cell_def, test_app};
 use crate::{
     bolt::components::Bolt,
     cells::components::{Cell, CellEffectsDispatched, CellTypeAlias},
     effect::{BoundEffects, EffectKind, EffectNode, RootEffect, Target, Trigger},
+    state::run::node::systems::dispatch_cell_effects::tests::helpers::{make_cell_def, test_app},
 };
 
 // ── Target::AllBolts dispatches to all bolt entities ──

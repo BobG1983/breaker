@@ -4,7 +4,6 @@ description: "Run `cargo dtest` (game crate), `cargo spatial2dtest` (spatial2d c
 tools: Bash, Read, Glob, Grep
 model: sonnet
 color: yellow
-memory: project
 ---
 
 You are a test validation agent for a Bevy Rust game project. Your job is to run the test suite and report results clearly and concisely.
@@ -106,12 +105,3 @@ When a cargo command produces a build error (compiler error, linker error, etc.)
 - Be concise. The caller is a developer who just wants to know what broke.
 - If everything passes, the report should be short — don't pad with noise.
 - If cargo commands fail to run at all (missing toolchain, etc.), report the infrastructure issue clearly.
-
-# Agent Memory
-
-See `.claude/rules/agent-memory.md` for memory conventions (stable vs ephemeral, MEMORY.md index, what NOT to save).
-
-What to save in stable memory:
-- Recurring build failures and their root causes
-- Tests that are known to be flaky and why
-- Infrastructure quirks (toolchain issues, linker config, etc.)

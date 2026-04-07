@@ -7,7 +7,7 @@ type: feedback
 ## What works well (confirmed in existing scenarios)
 
 - **Stress + seed diversity**: `stress: (runs: 32, parallelism: 32)` with different seeds explores probability space that single runs miss. Especially valuable for RandomEffect and any randomized spawn direction.
-- **Rapid trigger + BoltSpeedInRange**: High action_prob (0.9) + SpeedBoost per trigger quickly reveals clamping failures.
+- **Rapid trigger + BoltSpeedAccurate**: High action_prob (0.9) + SpeedBoost per trigger quickly reveals clamping failures.
 - **NoEntityLeaks on spawn effects**: SpawnBolts/ChainBolt/Shockwave under dense layout + rapid destruction is the canonical pattern for entity lifecycle gaps.
 - **4-deep trigger chains (supernova_chain_stress)**: Tests the arm/resolve cycle across multiple event depths — structural stress that unit tests cannot replicate.
 - **Until + expiry reversal**: overclock_until_speed correctly uses 5000 frames to accumulate many Until cycles. This is the right pattern for time-expiry reversal bugs.
@@ -15,7 +15,7 @@ type: feedback
 
 ## Anti-patterns to flag in scenarios
 
-- **No invariants that verify correct behavior** — scenarios that only list `BoltInBounds, NoNaN` don't verify the effect did anything. A SpeedBoost scenario that doesn't include `BoltSpeedInRange` tells you it didn't crash, not that it worked.
+- **No invariants that verify correct behavior** — scenarios that only list `BoltInBounds, NoNaN` don't verify the effect did anything. A SpeedBoost scenario that doesn't include `BoltSpeedAccurate` tells you it didn't crash, not that it worked.
 - **Too-short max_frames for timer effects**: A GravityWell or Shield scenario with 500 frames may never complete a duration cycle. Effects with timers need at least 3000–5000 frames.
 - **Weak layout for area effects**: Shockwave/Explode/ChainLightning at Corridor layout may never encounter cells near the bolt path. Dense or Scatter are better for area effect coverage.
 - **Passive effects without reversal test**: DamageBoost/SpeedBoost/Piercing scenarios should use an Until wrapper to exercise the reversal path, not just accumulation.
@@ -26,7 +26,7 @@ type: feedback
 ## When a scenario tests current behavior instead of desired behavior
 
 - ramping_damage_reset uses `NoNaN, BoltInBounds` — these don't verify RampingDamage actually accumulated correctly. The scenario documents "it doesn't crash" not "it works as designed." A RunStatsMonotonic or dedicated accumulated-damage check would prove correct behavior.
-- damage_boost_until_reversal uses `BoltSpeedInRange, NoNaN` — neither invariant directly detects an incorrect DamageMultiplier. There's no `EffectiveDamageConsistent` equivalent.
+- damage_boost_until_reversal uses `BoltSpeedAccurate, NoNaN` — neither invariant directly detects an incorrect DamageMultiplier. There's no `EffectiveDamageConsistent` equivalent.
 - chain_lightning_chaos: previously missing ChainArcCountReasonable (now fixed). Lesson: new invariants must be backfilled into existing related scenarios immediately.
 
 ## How to apply

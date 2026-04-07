@@ -26,9 +26,9 @@ use rantzsoft_lifecycle::CleanupOnExit;
 use rantzsoft_physics2d::aabb::Aabb2D;
 use rantzsoft_spatial2d::components::Position2D;
 
-use super::super::{entity_tagging::map_scenario_dash_state, types::ScenarioConfig};
 use crate::{
     invariants::{ScenarioFrame, ScenarioTagBolt, ScenarioTagBreaker},
+    lifecycle::systems::{entity_tagging::map_scenario_dash_state, types::ScenarioConfig},
     types::{MutationKind, RunStatCounter},
 };
 

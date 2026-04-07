@@ -7,13 +7,13 @@ use std::{
 
 use bevy::prelude::*;
 
-use super::super::app::{
-    SharedEvalBuffer, drain_remaining_logs, guarded_update, is_timed_out, snapshot_eval_data,
-};
 use crate::{
     invariants::{ScenarioFrame, ScenarioStats, ViolationEntry, ViolationLog},
     lifecycle::ScenarioConfig,
     log_capture::{CapturedLogs, LogBuffer},
+    runner::app::{
+        SharedEvalBuffer, drain_remaining_logs, guarded_update, is_timed_out, snapshot_eval_data,
+    },
     types::InvariantKind,
 };
 

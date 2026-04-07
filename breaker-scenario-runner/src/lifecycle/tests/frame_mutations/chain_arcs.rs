@@ -1,6 +1,6 @@
 //! Tests for `SpawnExtraChainArcs` frame mutation.
 
-use super::super::helpers::*;
+use crate::lifecycle::tests::helpers::*;
 
 // -------------------------------------------------------------------------
 // apply_debug_frame_mutations — SpawnExtraChainArcs at matching frame

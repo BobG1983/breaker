@@ -4,7 +4,6 @@
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::{MaxSpeed, Position2D, Velocity2D};
 
-use super::super::super::system::update_breaker_state;
 use crate::{
     breaker::{
         components::{
@@ -13,6 +12,7 @@ use crate::{
             DecelEasing, SettleDuration, SettleTiltEase,
         },
         definition::BreakerDefinition,
+        systems::dash::system::update_breaker_state,
     },
     effect::effects::flash_step::FlashStepActive,
     input::resources::InputActions,

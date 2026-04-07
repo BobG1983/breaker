@@ -2,7 +2,7 @@ use std::f32::consts::{FRAC_PI_2, PI};
 
 use bevy::prelude::*;
 
-use super::super::definitions::*;
+use crate::components::definitions::*;
 
 // ── Position2D ──────────────────────────────────────────────
 
