@@ -96,6 +96,7 @@ pub fn run_with_args(
     headless: bool,
     verbose: bool,
     run_log: Option<&RunLog>,
+    fail_fast: bool,
 ) -> i32 {
     let scenario_paths = collect_scenario_paths(scenario, false);
 
@@ -106,7 +107,14 @@ pub fn run_with_args(
 
     let mut shared_log_buffer: Option<LogBuffer> = None;
     let path = &scenario_paths[0];
-    let passed = run_scenario(path, headless, verbose, &mut shared_log_buffer, run_log);
+    let passed = run_scenario(
+        path,
+        headless,
+        verbose,
+        &mut shared_log_buffer,
+        run_log,
+        fail_fast,
+    );
 
     i32::from(!passed)
 }
@@ -121,9 +129,17 @@ pub fn run_single_scenario(
     headless: bool,
     verbose: bool,
     run_log: Option<&RunLog>,
+    fail_fast: bool,
 ) -> i32 {
     let mut shared_log_buffer: Option<LogBuffer> = None;
-    let passed = run_scenario(path, headless, verbose, &mut shared_log_buffer, run_log);
+    let passed = run_scenario(
+        path,
+        headless,
+        verbose,
+        &mut shared_log_buffer,
+        run_log,
+        fail_fast,
+    );
     i32::from(!passed)
 }
 
@@ -138,12 +154,20 @@ pub fn run_all_serial(
     headless: bool,
     verbose: bool,
     run_log: Option<&RunLog>,
+    fail_fast: bool,
 ) -> Vec<(String, bool)> {
     let mut shared_log_buffer: Option<LogBuffer> = None;
     let mut results: Vec<(String, bool)> = Vec::with_capacity(runs.len());
 
     for (display_name, path) in runs {
-        let passed = run_scenario(path, headless, verbose, &mut shared_log_buffer, run_log);
+        let passed = run_scenario(
+            path,
+            headless,
+            verbose,
+            &mut shared_log_buffer,
+            run_log,
+            fail_fast,
+        );
         results.push((display_name.clone(), passed));
     }
 
@@ -308,14 +332,19 @@ pub fn run_all_parallel(
     verbose: bool,
     parallelism: usize,
     run_log: Option<&RunLog>,
+    fail_fast: bool,
 ) -> Vec<(String, bool)> {
     let specs: Vec<SubprocessSpec> = runs
         .iter()
         .map(|(display_name, path)| {
             let name = scenario_name(path);
+            let mut extra_args = vec!["-s".into(), name];
+            if fail_fast {
+                extra_args.push("--fail-fast".into());
+            }
             SubprocessSpec {
                 display_name: display_name.clone(),
-                extra_args: vec!["-s".into(), name],
+                extra_args,
             }
         })
         .collect();
@@ -451,14 +480,21 @@ pub fn run_stress_scenario(
     visual: bool,
     verbose: bool,
     run_log: Option<&RunLog>,
+    fail_fast: bool,
 ) -> StressResult {
     let runs = config.runs.max(1);
     let parallelism = config.parallelism.max(1);
 
     let specs: Vec<SubprocessSpec> = (0..runs)
-        .map(|i| SubprocessSpec {
-            display_name: format!("copy_{i}"),
-            extra_args: vec!["-s".into(), name.into(), "--stress-copy".into()],
+        .map(|i| {
+            let mut extra_args = vec!["-s".into(), name.into(), "--stress-copy".into()];
+            if fail_fast {
+                extra_args.push("--fail-fast".into());
+            }
+            SubprocessSpec {
+                display_name: format!("copy_{i}"),
+                extra_args,
+            }
         })
         .collect();
 

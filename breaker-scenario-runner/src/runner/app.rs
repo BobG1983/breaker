@@ -202,6 +202,7 @@ pub(super) fn run_scenario(
     verbose: bool,
     shared_log_buffer: &mut Option<LogBuffer>,
     run_log: Option<&RunLog>,
+    fail_fast: bool,
 ) -> bool {
     let sname = scenario_name(path);
 
@@ -278,6 +279,12 @@ pub(super) fn run_scenario(
                     eprintln!("FAIL [{sname}]: system panic: {msg}");
                     break;
                 }
+            }
+            if let Some(config) = app.world().get_resource::<ScenarioConfig>()
+                && let Some(log) = app.world().get_resource::<ViolationLog>()
+                && should_fail_fast(log, &config.definition, fail_fast)
+            {
+                break;
             }
             if app.should_exit().is_some() {
                 break;
@@ -386,6 +393,26 @@ pub(super) fn collect_and_evaluate(
     }
 
     verdict.passed()
+}
+
+/// Returns `true` when the scenario should exit early due to `--fail-fast`.
+///
+/// All three conditions must be met:
+/// - `fail_fast` flag is `true`
+/// - `violation_log` is non-empty
+/// - `definition.allowed_failures` is `None` or `Some(vec![])` (not a self-test)
+#[must_use]
+pub(super) fn should_fail_fast(
+    violation_log: &ViolationLog,
+    definition: &ScenarioDefinition,
+    fail_fast: bool,
+) -> bool {
+    fail_fast
+        && !violation_log.0.is_empty()
+        && definition
+            .allowed_failures
+            .as_ref()
+            .is_none_or(Vec::is_empty)
 }
 
 /// Returns `true` if `start` elapsed longer ago than `timeout`.
