@@ -46,3 +46,19 @@ Security-reviewed patterns in `rantzsoft_lifecycle` — all confirmed safe:
 
 ## proptest Removal
 proptest was removed from dev-dependencies in 2026-03-28. No dev-dependencies remain in breaker-game.
+
+## breaker-scenario-runner new dependencies (added/confirmed 2026-04-07)
+
+The following direct dependencies in breaker-scenario-runner/Cargo.toml have been vetted:
+- `clap = "4"` with `derive` feature — widely audited CLI parser, no known CVEs.
+- `ron = "0.12"` — same version used in the wider workspace; confirmed safe deserialization
+  pattern (returns Result, not panic). Carries the same recursive-depth concern as prior
+  audits (RON is not bounded by default) — mitigated because scenario files are dev assets.
+- `tracing = "0.1"`, `tracing-subscriber = "0.3"` — standard logging crates, no known CVEs.
+- `rand = "0.9"` — new version (codebase was on 0.8 in breaker-game). No known CVEs.
+- `serde = "1"` with `derive` — vetted across the workspace.
+- `breaker`, `rantzsoft_*` — workspace path dependencies; already audited.
+
+NOTE: `cargo audit` and `cargo deny` could not be run in this session (Bash tool not available).
+Last known cargo audit result: RUSTSEC-2024-0436 (paste crate — unmaintained, not a CVE) — still
+transitive via bevy. No direct-dep security advisories known through 2026-04-07.

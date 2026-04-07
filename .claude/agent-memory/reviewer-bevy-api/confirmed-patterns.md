@@ -148,6 +148,26 @@ type: reference
 - `chain_lightning/effect.rs` — FIXED in rework: now uses `world.get::<Position2D>(entity).map_or(Vec2::ZERO, |p| p.0)`. No Transform fallback. Correct.
 - `piercing_beam/effect.rs` — FIXED (feature/full-verification-fixes): `fire()` uses `super::super::entity_position(world, entity)` which is `Position2D -> Vec2::ZERO` only. No Transform fallback. Correct.
 
+## Screenshot API (Bevy 0.18.1)
+- `Screenshot::primary_window()` — correct constructor; returns a `Screenshot` component bundle
+- `.observe(save_to_disk(path))` — correct; `save_to_disk(PathBuf)` returns an observer system that handles `ScreenshotCaptured`; used via `.observe()` on the spawned entity
+- `commands.spawn(Screenshot::primary_window()).observe(save_to_disk(path.clone()))` — confirmed correct full pattern for saving screenshots
+- `Screenshot` + `save_to_disk` — imported from `bevy::render::view::screenshot::{Screenshot, save_to_disk}`
+- Researched note: async, takes at least 2 frames to complete; `DefaultPlugins` includes the required subsystem automatically
+
+## SystemParam Derive — Two Queries Same Archetype, Different Components
+- `#[derive(SystemParam)]` struct with two Query fields both filtered `With<Breaker>`:
+  `Query<Entity, With<Breaker>>` (reads Entity — no component, no conflict)
+  `Query<&mut BoundEffects, With<Breaker>>` (writes BoundEffects)
+- This is valid in Bevy 0.18: queries only conflict when they access the SAME component with conflicting mutability
+- Entity access is never a component conflict
+- Confirmed correct in `propagate_breaker_changes/system.rs`
+
+## query.single() Return Type (Bevy 0.15+)
+- `query.single()` returns `Result<Q, QuerySingleError>` (not the item directly)
+- `let Ok(window) = windows.single()` — correct `if let Ok(...)` usage
+- `windows.single()` in app.rs:497 in a `sync_ui_scale` system — confirmed correct
+
 ## EntropyEngine Component
 - `EntropyEngineState` is `pub` (not `pub(crate)`) because tests in same file need it and it's a component — correct
 - `OnEnter(PlayingState::Active)` for reset system is correct for sub-state entry scheduling

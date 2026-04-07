@@ -21,8 +21,7 @@ Key files that grow back:
 - Complex because every function shares a massive import block; each child file needs its own subset
 
 ### mod.rs Violations
-- `breaker-scenario-runner/src/types/mod.rs` -- 560 lines of type definitions, not just wiring
-- Fix: extract to `definitions.rs`, `mod.rs` becomes `mod definitions; pub use definitions::*; #[cfg(test)] mod tests;`
+- (none known as of 2026-04-07 — `breaker-scenario-runner/src/types/mod.rs` was fixed: extracted to `definitions/` subdirectory; mod.rs is now wiring-only)
 
 ### Import Adjustment Rules (verified)
 - `some_file.rs` tests using `use super::*;` -> `some_file/tests.rs` needs `use super::system::*;`
@@ -37,6 +36,6 @@ Key files that grow back:
 ### Pure Test Files Over Threshold
 Many files in `tests/` directories are 400-800 lines. These are already extracted and under the 800-line Strategy C threshold. They don't need further splitting unless they exceed 800 lines.
 
-Remaining files in the 600-800 range are tracked in reviewer-file-length/phase4_findings.md.
+Monitor files approaching 800-line Strategy C threshold are tracked in reviewer-file-length/phase7_findings.md (current as of Wave 11, 2026-04-06 develop).
 Note: `dispatch_breaker_effects` no longer exists — replaced by `spawn_or_reuse_breaker` in
 feature/breaker-builder-pattern. `bolt/builder.rs` monolith was split to `bolt/builder/` directory module.

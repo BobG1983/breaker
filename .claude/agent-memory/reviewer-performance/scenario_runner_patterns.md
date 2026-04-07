@@ -28,4 +28,33 @@ This crate is diagnostic tooling, not gameplay. Performance standards are relaxe
 - `flush` creates a one-shot `mpsc::channel` per call — intended for synchronization, not a hot path.
 - Background BufWriter thread is correct pattern for async IO.
 
+**check_offering_no_duplicates** (`src/invariants/checkers/check_offering_no_duplicates.rs`):
+- Allocates a `HashSet` and calls `.to_owned()` per chip name every FixedUpdate frame while in `ChipSelectState::Selecting`.
+- ChipOffers typically has 3 chips max. HashSet is tiny (3 entries). ChipSelect state is brief (1-2 frames in headless).
+- Confirmed Minor/Watch: not worth fixing at current scale.
+
+**check_chip_offer_expected** (`src/invariants/checkers/check_chip_offer_expected.rs`):
+- Runs in `Update` gated on `in_state(ChipSelectState::Selecting).and(resource_exists::<ChipOffers>)`.
+- On violation, collects offer names into a `Vec<_>` and calls `.join()` for the message string — allocation only on actual violation, which is rare.
+- Schedule is correct: Update instead of FixedUpdate because auto_skip_chip_select runs in PostUpdate and would race. Intentional design.
+
+**snapshot_eval_data** (`src/runner/app.rs`):
+- Runs in `Last` every frame in visual mode. Clones `ViolationLog`, `CapturedLogs`, `ScenarioStats`, `ScenarioDefinition` every frame.
+- Only registered in visual mode (headless uses `snapshot_eval_data_from_world` once at end). Cost is bounded by violation count (rare), log count (rare), and definition size (small).
+- This is a previous known pattern — skip-per-frame already added for headless (commit f736109b).
+
+**Checker pattern — unconditional `stats.invariant_checks += 1`**:
+- Every checker increments `invariant_checks` even when the resource being checked is absent (e.g. NodeTimer, ChipOffers).
+- This means all 21 checkers fire every FixedUpdate frame (minus the playing_gate), but the guards (`let Some(x) = x else { return }`) are extremely cheap — just a None check.
+- Confirmed as intentional (commit f736109b: "fix: all invariant checkers increment invariant_checks counter").
+
+**check_chain_arc_count_reasonable** (`src/invariants/checkers/check_chain_arc_count_reasonable.rs`):
+- Two separate queries for `ChainLightningChain` and `ChainLightningArc` — each calls `.iter().count()`.
+- Combined count done as `chains.iter().count() + arcs.iter().count()`. These can't be merged into one query (different components).
+- At current scale: chain arcs are a handful at most. Two `.count()` calls over tiny archetypes is negligible.
+
+**active_invariant_kinds HashSet** (`src/lifecycle/systems/plugin.rs`):
+- `active_invariant_kinds()` builds a `HashSet<InvariantKind>` at app build time (in `register_scenario_systems`), not per-frame.
+- The HashSet is consumed immediately by `register_active_checkers` and dropped. No per-frame cost.
+
 **Why:** Scenario runner is diagnostic tooling. It runs once per test invocation, not continuously. Per-frame allocations in visual mode only; headless mode (the common path) still has the HashSet allocation.

@@ -518,3 +518,58 @@ in production code.
 - No new RON assets added. No new include_str! uses. No changes to existing deserialization sites.
 - Carry-forward warnings from prior audits unchanged (hit_fraction, negative damage,
   BreakerRegistry assert!, circuit_breaker bumps_required underflow risk).
+
+## feature/scenario-runner-wiring (2026-04-07)
+
+### Scenario runner RON loading: load_scenario() — confirmed safe pattern (Safe)
+- `discovery.rs:load_scenario()` uses `ron::Options::default().with_default_extension(Extensions::IMPLICIT_SOME).from_str()`.
+- Error path: `.map_err(|e| eprintln!(...)).ok()` — malformed RON returns None, prints to
+  stderr, does not panic. Callers treat None as a filtered-out entry.
+- No .expect() or .unwrap() on the deserialization result in production code.
+- RON content is read from filesystem paths discovered within the `scenarios/` directory
+  (bounded to `CARGO_MANIFEST_DIR/scenarios/`). No user-provided file paths reach the deserializer.
+
+### scenario_name used as filesystem path component in write_violations_log (Warning-level)
+- `output_dir.rs:129` — `let scenario_dir = run_dir.join(scenario_name);`
+- `scenario_name` is derived from `path.file_stem()` (the OS-provided filename stem),
+  NOT from the `-s` CLI argument directly.
+- The `-s` argument is used only to search for a matching `.scenario.ron` file.
+  The directory name is derived from the found file's stem. The scenario files are
+  on-disk assets (not user-uploaded), so the stem is trusted developer content.
+- An adversarial scenario filename like `../escape.scenario.ron` WOULD produce a
+  path traversal via `run_dir.join("../escape")`. On macOS/Linux, `Path::join` does
+  not canonicalize or sanitize `..` components. If a `.scenario.ron` file with `..`
+  in its stem were placed in the scenarios/ directory, `write_violations_log` would
+  write outside BASE_DIR. In practice, all scenario files are checked-in dev assets —
+  no mechanism for untrusted files to enter the scenarios/ directory exists today.
+  Flagged as Warning-level for future-proofing.
+
+### subprocess spawning: no command injection risk (Safe)
+- `execution.rs` and `streaming.rs` use `Command::new(&exe)` + `.arg()` calls.
+- The scenario name passed via `-s <name>` is built from `scenario_name(path)` (file stem
+  from OS), not from raw CLI input. Each argument is passed as a discrete `.arg()` call —
+  no shell interpolation occurs. Rust's Command does not invoke a shell.
+- Visual mode env vars (SCENARIO_WINDOW_X/Y/W/H) are set only to numeric string values
+  derived from integer arithmetic in tiling.rs. No injection risk.
+
+### resolve_log_file_path: suffix collision loop (Info-level)
+- `run_log.rs:resolve_log_file_path()` loops until a non-existent filename is found,
+  incrementing a u32 suffix. Under adversarial conditions (or a directory filled with
+  colliding filenames), this could loop for a long time. In practice the log directory
+  is `/tmp/breaker-scenario-runner/` which is dev-controlled. Not a realistic threat.
+
+### StressConfig unbounded runs/parallelism from RON (Warning-level, carry-forward)
+- `StressConfig::runs` and `StressConfig::parallelism` are `usize` fields in scenario RON.
+- No upper bound is enforced at deserialization time. A scenario RON with
+  `stress: Some((runs: 1000000, parallelism: 1000000))` would attempt to spawn 1M
+  subprocesses. The outer batch loop in spawn_batched/spawn_streaming would saturate
+  the OS process table. Scenario files are dev assets, so this is low risk in practice.
+  Same pattern as SpawnExtraGravityWells noted in the 2026-03-30 audit.
+
+### guarded_update uses std::panic::catch_unwind (Info-level)
+- `app.rs:guarded_update()` wraps `app.update()` in `catch_unwind(AssertUnwindSafe(...))`.
+- AssertUnwindSafe is required because App is not UnwindSafe. Using this on code with
+  interior mutability (all of Bevy ECS) means post-panic state may be undefined.
+  The runner treats any caught panic as a scenario failure and exits, so the App is
+  not reused after a panic. This is the correct pattern for a testing harness.
+  No soundness concern; noted for awareness.

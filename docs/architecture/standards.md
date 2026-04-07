@@ -75,14 +75,14 @@ Every new gameplay mechanic or system must also be evaluated for **scenario runn
 
 When implementing a new feature, ask:
 1. **Can existing invariants catch regressions?** If so, ensure existing scenarios exercise the new code path (e.g., a new cell type should appear in at least one scenario layout).
-2. **Does this feature introduce a new invariant?** Properties that must always hold (e.g., "chip stack count never exceeds max_stacks", "bolt count never exceeds configured max") should become new `InvariantKind` variants checked every frame. **Every new `InvariantKind` must have a self-test scenario** in `scenarios/self_tests/` that intentionally triggers the violation using `debug_setup` or `frame_mutations` and asserts it fires via `expected_violations`.
+2. **Does this feature introduce a new invariant?** Properties that must always hold (e.g., "chip stack count never exceeds max_stacks", "bolt count never exceeds configured max") should become new `InvariantKind` variants checked every frame. **Every new `InvariantKind` must have a self-test scenario** in `scenarios/self_tests/` that intentionally triggers the violation using `debug_setup` or `frame_mutations` and asserts it fires via `allowed_failures`.
 3. **Does this feature need a dedicated scenario?** New mechanics that interact with physics, timing, or state machines benefit from chaos-input stress testing that unit tests cannot replicate.
 
 Existing invariant kinds: `BoltInBounds`, `BoltSpeedAccurate`, `BoltCountReasonable`, `BreakerInBounds`, `NoEntityLeaks`, `NoNaN`, `TimerNonNegative`, `ValidDashState`, `TimerMonotonicallyDecreasing`, `BreakerPositionClamped`, `OfferingNoDuplicates`, `MaxedChipNeverOffered`, `ChipStacksConsistent`, `RunStatsMonotonic`, `ChipOfferExpected`, `SecondWindWallAtMostOne`, `ShieldWallAtMostOne`, `PulseRingAccumulation`, `ChainArcCountReasonable`, `AabbMatchesEntityDimensions`, `GravityWellCountReasonable`, `BreakerCountReasonable`.
 
 Scenarios live in `breaker-scenario-runner/scenarios/` organized by category (`mechanic/`, `stress/`, `self_tests/`, `chaos/`).
 
-The coverage manifest (`breaker-scenario-runner/src/coverage.rs`) runs with `--all` and reports missing self-tests and unused layouts. All 22 invariants have self-test coverage.
+The coverage manifest (`breaker-scenario-runner/src/coverage.rs`) runs with `--all` (printed before the run) and standalone with `--coverage`. Reports missing self-tests and unused layouts; prints nothing when coverage is complete. All 22 invariants have self-test coverage.
 
 ---
 
@@ -129,12 +129,18 @@ Future phases will add: textures, sprite atlases, audio clips, and cross-referen
 
 Automated gameplay testing tool in `breaker-scenario-runner/`. A separate workspace crate that is never shipped in release builds.
 
-- **CLI**: `cargo scenario -- -s <name> --visual` (visual debug), `cargo scenario -- --all` (CI/validation)
-- **Scenario files**: RON-defined runs (`breaker`, `layout`, `input`, `max_frames`, `invariants`) stored in `breaker-scenario-runner/scenarios/`
+- **CLI**: `cargo scenario -- -s <name> --visual` (visual debug), `cargo scenario -- --all` (CI/validation), `cargo scenario -- --coverage` (coverage report only)
+- **Scenario files**: RON-defined runs (`breaker`, `layout`, `input`, `max_frames`, `disallowed_failures`, `allowed_failures`, etc.) stored in `breaker-scenario-runner/scenarios/`
 - **Input strategies**: `Chaos` (seeded random), `Scripted` (deterministic frame-action pairs), `Hybrid` (scripted then chaos)
 - **Invariants checked each frame**: `BoltInBounds`, `BoltSpeedAccurate`, `BoltCountReasonable`, `BreakerInBounds`, `NoEntityLeaks`, `NoNaN`, `TimerNonNegative`, `ValidDashState`, `TimerMonotonicallyDecreasing`, `BreakerPositionClamped`, `OfferingNoDuplicates`, `MaxedChipNeverOffered`, `ChipStacksConsistent`, `RunStatsMonotonic`, `ChipOfferExpected`, `SecondWindWallAtMostOne`, `ShieldWallAtMostOne`, `PulseRingAccumulation`, `ChainArcCountReasonable`, `AabbMatchesEntityDimensions`, `GravityWellCountReasonable`, `BreakerCountReasonable`
+- **Conditional checking**: all invariant checkers are gated on `ScenarioStats::entered_playing` to prevent false positives during initial loading states
 - **Log capture**: custom `tracing::Layer` fails the scenario on any WARN/ERROR from `breaker` targets
-- **Self-test scenarios**: scenarios in `scenarios/self_tests/` use `expected_violations` to verify the invariant checker itself
+- **Self-test scenarios**: scenarios in `scenarios/self_tests/` use `allowed_failures` to verify the invariant checker itself fires the expected violation
+- **Fail-fast mode**: `--fail-fast` stops the scenario on the first invariant violation; `--no-fail-fast` runs to completion; default is on for `--all`, off for `-s`
+- **Run log**: each run writes an async log to `/tmp/breaker-scenario-runner/<YYYY-MM-DD>/<N>.log` via `RunLog` (background mpsc + file IO thread)
+- **Output directory**: structured output at `<BASE_DIR>/<YYYY-MM-DD>/<N>/`; run number auto-increments; `--clean` removes all output
+- **Window tiling**: parallel visual-mode runs (`--visual --all`) tile game windows in a grid across the screen using `tiling::TilePosition` and env vars (`SCENARIO_WINDOW_X/Y/W/H`)
+- **Screenshot-on-violation**: in visual mode with a run log, the runner captures one screenshot per `InvariantKind` on first violation via `ScreenshotTracker` + `capture_violation_screenshots`
 
 The scenario runner uses `ScenarioLayoutOverride` (a resource in `run/node/resources.rs`) to bypass the run-setup screen and inject the specified layout and archetype directly.
 
