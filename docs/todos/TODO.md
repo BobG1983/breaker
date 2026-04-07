@@ -3,7 +3,7 @@
 ## Backlog
 
 1. **[NEEDS DETAIL]** Scenario coverage gaps — evolution chip path, NoBump/Died/Impact(Bolt)/Impacted(Breaker) trigger scenarios
-2. **[ready]** Rename rantzsoft_lifecycle → rantzsoft_stateflow — [detail](detail/rename-lifecycle-to-stateflow.md)
+2. **[in-progress]** Rename rantzsoft_lifecycle → rantzsoft_stateflow — [detail](detail/rename-lifecycle-to-stateflow.md)
 2. **[ready]** Cell builder pattern — [detail](detail/cell-builder-pattern/cell-builder-pattern.md)
 3. **[ready]** Bolt birthing animation — [detail](detail/bolt-birthing-animation.md)
 4. **[ready]** Effect system refactor: typestate builder, Spawn/During triggers, unified vocabulary, centralized despawn — [detail](detail/effect-desugaring-node-running-trigger/effect-desugaring-node-running-trigger.md)
