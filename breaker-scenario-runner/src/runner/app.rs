@@ -402,10 +402,13 @@ pub(super) fn collect_and_evaluate(
 
 /// Returns `true` when the scenario should exit early due to `--fail-fast`.
 ///
-/// All three conditions must be met:
+/// Triggers when:
 /// - `fail_fast` flag is `true`
-/// - `violation_log` is non-empty
-/// - `definition.allowed_failures` is `None` or `Some(vec![])` (not a self-test)
+/// - `violation_log` contains at least one violation whose invariant kind
+///   is NOT in `definition.allowed_failures`
+///
+/// A self-test scenario with `allowed_failures: Some([BoltInBounds])` will
+/// still fail-fast if an unexpected `NoNaN` violation occurs.
 #[must_use]
 pub(super) fn should_fail_fast(
     violation_log: &ViolationLog,
@@ -413,11 +416,12 @@ pub(super) fn should_fail_fast(
     fail_fast: bool,
 ) -> bool {
     fail_fast
-        && !violation_log.0.is_empty()
-        && definition
-            .allowed_failures
-            .as_ref()
-            .is_none_or(Vec::is_empty)
+        && violation_log.0.iter().any(|v| {
+            definition
+                .allowed_failures
+                .as_ref()
+                .is_none_or(|af| !af.contains(&v.invariant))
+        })
 }
 
 /// Returns `true` if `start` elapsed longer ago than `timeout`.

@@ -14,7 +14,7 @@
     layout: "Fortress",
     input: Chaos((action_prob: 0.7)),
     max_frames: 4000,
-    disallowed_failures: [BoltInBounds, BoltSpeedAccurate, BreakerCountReasonable, BreakerInBounds, NoEntityLeaks, NoNaN],
+    disallowed_failures: [BoltInBounds, BoltSpeedAccurate, BreakerCountReasonable, BreakerInBounds, BreakerPositionClamped, NoEntityLeaks, NoNaN, ValidDashState],
     allowed_failures: None,
     debug_setup: None,
     allow_early_end: false,

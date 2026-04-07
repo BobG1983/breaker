@@ -473,11 +473,11 @@ fn should_fail_fast_returns_true_when_allowed_failures_is_empty_vec() {
 }
 
 // -------------------------------------------------------------------------
-// Behavior 6: returns false when scenario has non-empty allowed_failures
+// Behavior 6: returns false when all violations are in allowed_failures
 // -------------------------------------------------------------------------
 
 #[test]
-fn should_fail_fast_returns_false_when_allowed_failures_is_non_empty() {
+fn should_fail_fast_returns_false_when_violation_is_in_allowed_failures() {
     let log = violation_log_with(vec![ViolationEntry {
         frame: 10,
         invariant: InvariantKind::BoltInBounds,
@@ -490,16 +490,16 @@ fn should_fail_fast_returns_false_when_allowed_failures_is_non_empty() {
 
     assert!(
         !result,
-        "should_fail_fast must return false when allowed_failures is non-empty (self-test scenario)"
+        "should_fail_fast must return false when violation is in allowed_failures (expected self-test violation)"
     );
 }
 
 // -------------------------------------------------------------------------
-// Behavior 6 edge: multiple allowed_failures still returns false
+// Behavior 6 edge: multiple allowed_failures covering the violation
 // -------------------------------------------------------------------------
 
 #[test]
-fn should_fail_fast_returns_false_when_multiple_allowed_failures() {
+fn should_fail_fast_returns_false_when_violation_covered_by_multiple_allowed() {
     let log = violation_log_with(vec![bolt_oob_violation(10)]);
     let definition = definition_with_allowed_failures(Some(vec![
         InvariantKind::BoltInBounds,
@@ -510,7 +510,56 @@ fn should_fail_fast_returns_false_when_multiple_allowed_failures() {
 
     assert!(
         !result,
-        "should_fail_fast must return false when allowed_failures has multiple entries"
+        "should_fail_fast must return false when violation is in allowed_failures list"
+    );
+}
+
+// -------------------------------------------------------------------------
+// Behavior 6 edge: disallowed violation in self-test triggers fail-fast
+// -------------------------------------------------------------------------
+
+#[test]
+fn should_fail_fast_returns_true_when_violation_not_in_allowed_failures() {
+    // Self-test allows BoltInBounds but gets NoNaN — should fail-fast
+    let log = violation_log_with(vec![ViolationEntry {
+        frame: 10,
+        invariant: InvariantKind::NoNaN,
+        entity: None,
+        message: "unexpected NaN".into(),
+    }]);
+    let definition = definition_with_allowed_failures(Some(vec![InvariantKind::BoltInBounds]));
+
+    let result = should_fail_fast(&log, &definition, true);
+
+    assert!(
+        result,
+        "should_fail_fast must return true when violation is NOT in allowed_failures (disallowed violation in self-test)"
+    );
+}
+
+// -------------------------------------------------------------------------
+// Behavior 6 edge: mixed allowed and disallowed violations triggers fail-fast
+// -------------------------------------------------------------------------
+
+#[test]
+fn should_fail_fast_returns_true_when_any_violation_not_in_allowed_failures() {
+    // Self-test allows BoltInBounds, gets both BoltInBounds (allowed) and NoNaN (disallowed)
+    let log = violation_log_with(vec![
+        bolt_oob_violation(5),
+        ViolationEntry {
+            frame: 10,
+            invariant: InvariantKind::NoNaN,
+            entity: None,
+            message: "unexpected NaN".into(),
+        },
+    ]);
+    let definition = definition_with_allowed_failures(Some(vec![InvariantKind::BoltInBounds]));
+
+    let result = should_fail_fast(&log, &definition, true);
+
+    assert!(
+        result,
+        "should_fail_fast must return true when any violation is NOT in allowed_failures"
     );
 }
 
