@@ -13,7 +13,7 @@ Skills are the primary workflow entry points. Match the user's intent to a skill
 | Small, single-file fix (one function, one test, a rename) | `/quickfix` |
 | Checking code health | `/verify` |
 | Reviewing changed code for quality | `/simplify` |
-| Debugging a failing test, scenario, or unexpected behavior | `/investigate` |
+| Any failure — tests, scenarios, builds, or unexpected behavior after a change | `/investigate` |
 | Done with a branch, ready to merge | `/finish-dev` |
 | Capture work for later | `/todo` |
 
@@ -31,6 +31,8 @@ See `docs/design/` for design pillars, `docs/architecture/` for technical decisi
 All code identifiers MUST use game vocabulary — see `.claude/rules/project-context.md` Terminology.
 
 ## Decision Making
+
+**ALWAYS investigate before fixing**: When tests, scenarios, or builds fail after a change, use `/investigate` before writing any fix — even if you think you know the cause. Do not guess. Do not bulk-edit files based on an untested hypothesis. Your first hypothesis is often wrong. The cost of investigating is tokens; the cost of a wrong fix cascade is the user's trust and a mess in the codebase.
 
 **ALWAYS ask before**:
 - Creating new plugins, systems, or modules not in the architecture

@@ -484,7 +484,10 @@ mod tests {
     #[test]
     fn no_fail_fast_flag_with_scenario_sets_no_fail_fast_field() {
         let args = Args::parse_from(["breaker_scenario_runner", "-s", "foo", "--no-fail-fast"]);
-        assert!(args.fail_fast_mode.no_fail_fast, "no_fail_fast must be true");
+        assert!(
+            args.fail_fast_mode.no_fail_fast,
+            "no_fail_fast must be true"
+        );
         assert_eq!(args.scenario.as_deref(), Some("foo"));
     }
 
@@ -492,7 +495,11 @@ mod tests {
     #[test]
     fn neither_flag_with_all_resolves_to_true() {
         let args = Args::parse_from(["breaker_scenario_runner", "--all"]);
-        let resolved = resolve_fail_fast(args.fail_fast_mode.fail_fast, args.fail_fast_mode.no_fail_fast, args.all);
+        let resolved = resolve_fail_fast(
+            args.fail_fast_mode.fail_fast,
+            args.fail_fast_mode.no_fail_fast,
+            args.all,
+        );
         assert!(
             resolved,
             "resolved fail_fast must be true when neither flag given with --all"
@@ -503,7 +510,11 @@ mod tests {
     #[test]
     fn neither_flag_with_all_and_serial_resolves_to_true() {
         let args = Args::parse_from(["breaker_scenario_runner", "--all", "--serial"]);
-        let resolved = resolve_fail_fast(args.fail_fast_mode.fail_fast, args.fail_fast_mode.no_fail_fast, args.all);
+        let resolved = resolve_fail_fast(
+            args.fail_fast_mode.fail_fast,
+            args.fail_fast_mode.no_fail_fast,
+            args.all,
+        );
         assert!(
             resolved,
             "resolved fail_fast must be true when --all --serial given without fail-fast flags"
@@ -514,7 +525,11 @@ mod tests {
     #[test]
     fn neither_flag_with_scenario_resolves_to_false() {
         let args = Args::parse_from(["breaker_scenario_runner", "-s", "foo"]);
-        let resolved = resolve_fail_fast(args.fail_fast_mode.fail_fast, args.fail_fast_mode.no_fail_fast, args.all);
+        let resolved = resolve_fail_fast(
+            args.fail_fast_mode.fail_fast,
+            args.fail_fast_mode.no_fail_fast,
+            args.all,
+        );
         assert!(
             !resolved,
             "resolved fail_fast must be false when neither flag given with -s"
@@ -525,7 +540,11 @@ mod tests {
     #[test]
     fn neither_flag_with_scenario_and_verbose_resolves_to_false() {
         let args = Args::parse_from(["breaker_scenario_runner", "-s", "foo", "-v"]);
-        let resolved = resolve_fail_fast(args.fail_fast_mode.fail_fast, args.fail_fast_mode.no_fail_fast, args.all);
+        let resolved = resolve_fail_fast(
+            args.fail_fast_mode.fail_fast,
+            args.fail_fast_mode.no_fail_fast,
+            args.all,
+        );
         assert!(
             !resolved,
             "resolved fail_fast must be false when -s -v given without fail-fast flags"
@@ -536,7 +555,11 @@ mod tests {
     #[test]
     fn explicit_fail_fast_with_scenario_resolves_to_true() {
         let args = Args::parse_from(["breaker_scenario_runner", "-s", "foo", "--fail-fast"]);
-        let resolved = resolve_fail_fast(args.fail_fast_mode.fail_fast, args.fail_fast_mode.no_fail_fast, args.all);
+        let resolved = resolve_fail_fast(
+            args.fail_fast_mode.fail_fast,
+            args.fail_fast_mode.no_fail_fast,
+            args.all,
+        );
         assert!(
             resolved,
             "resolved fail_fast must be true when --fail-fast explicitly given with -s"
@@ -547,7 +570,11 @@ mod tests {
     #[test]
     fn explicit_fail_fast_before_scenario_resolves_to_true() {
         let args = Args::parse_from(["breaker_scenario_runner", "--fail-fast", "-s", "foo"]);
-        let resolved = resolve_fail_fast(args.fail_fast_mode.fail_fast, args.fail_fast_mode.no_fail_fast, args.all);
+        let resolved = resolve_fail_fast(
+            args.fail_fast_mode.fail_fast,
+            args.fail_fast_mode.no_fail_fast,
+            args.all,
+        );
         assert!(
             resolved,
             "resolved fail_fast must be true regardless of flag order"
@@ -558,7 +585,11 @@ mod tests {
     #[test]
     fn explicit_no_fail_fast_with_all_resolves_to_false() {
         let args = Args::parse_from(["breaker_scenario_runner", "--all", "--no-fail-fast"]);
-        let resolved = resolve_fail_fast(args.fail_fast_mode.fail_fast, args.fail_fast_mode.no_fail_fast, args.all);
+        let resolved = resolve_fail_fast(
+            args.fail_fast_mode.fail_fast,
+            args.fail_fast_mode.no_fail_fast,
+            args.all,
+        );
         assert!(
             !resolved,
             "resolved fail_fast must be false when --no-fail-fast explicitly given with --all"
@@ -569,7 +600,11 @@ mod tests {
     #[test]
     fn explicit_no_fail_fast_before_all_resolves_to_false() {
         let args = Args::parse_from(["breaker_scenario_runner", "--no-fail-fast", "--all"]);
-        let resolved = resolve_fail_fast(args.fail_fast_mode.fail_fast, args.fail_fast_mode.no_fail_fast, args.all);
+        let resolved = resolve_fail_fast(
+            args.fail_fast_mode.fail_fast,
+            args.fail_fast_mode.no_fail_fast,
+            args.all,
+        );
         assert!(
             !resolved,
             "resolved fail_fast must be false regardless of flag order"
@@ -630,7 +665,11 @@ mod tests {
             args.fail_fast_mode.no_fail_fast,
             "no_fail_fast must be true when --no-fail-fast is last"
         );
-        let resolved = resolve_fail_fast(args.fail_fast_mode.fail_fast, args.fail_fast_mode.no_fail_fast, args.all);
+        let resolved = resolve_fail_fast(
+            args.fail_fast_mode.fail_fast,
+            args.fail_fast_mode.no_fail_fast,
+            args.all,
+        );
         assert!(
             !resolved,
             "resolved fail_fast must be false when --no-fail-fast wins"
@@ -654,7 +693,11 @@ mod tests {
             !args.fail_fast_mode.no_fail_fast,
             "no_fail_fast must be false when --fail-fast is last"
         );
-        let resolved = resolve_fail_fast(args.fail_fast_mode.fail_fast, args.fail_fast_mode.no_fail_fast, args.all);
+        let resolved = resolve_fail_fast(
+            args.fail_fast_mode.fail_fast,
+            args.fail_fast_mode.no_fail_fast,
+            args.all,
+        );
         assert!(
             resolved,
             "resolved fail_fast must be true when --fail-fast wins"
