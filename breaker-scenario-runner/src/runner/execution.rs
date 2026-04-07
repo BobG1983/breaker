@@ -9,10 +9,13 @@ use std::{
 
 use super::{
     app::run_scenario,
-    discovery::{collect_scenario_paths, load_stress_config, scenario_name},
+    discovery::{collect_scenario_paths, load_scenario, scenario_name},
     run_log::RunLog,
 };
-use crate::{log_capture::LogBuffer, types::StressConfig};
+use crate::{
+    log_capture::LogBuffer,
+    types::{ScenarioDefinition, StressConfig},
+};
 
 /// Parallelism level for subprocess-based execution.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -66,16 +69,22 @@ pub fn parse_parallelism(value: &str) -> Result<Parallelism, String> {
 
 /// Builds the run list for a single iteration of execution.
 ///
-/// Each entry is `(display_name, scenario_path)`. For a single scenario,
-/// returns one entry; for `--all`, returns one entry per scenario file.
+/// Each entry is `(display_name, scenario_path, definition)`. For a single
+/// scenario, returns one entry; for `--all`, returns one entry per scenario
+/// file. Entries whose RON fails to parse are silently filtered out
+/// (`load_scenario` prints errors to stderr).
 #[must_use]
-pub fn build_run_list(scenario: Option<&str>, all: bool) -> Vec<(String, PathBuf)> {
+pub fn build_run_list(
+    scenario: Option<&str>,
+    all: bool,
+) -> Vec<(String, PathBuf, ScenarioDefinition)> {
     let scenario_paths = collect_scenario_paths(scenario, all);
     scenario_paths
         .into_iter()
-        .map(|p| {
+        .filter_map(|p| {
             let name = scenario_name(&p);
-            (name, p)
+            let def = load_scenario(&p)?;
+            Some((name, p, def))
         })
         .collect()
 }
@@ -406,19 +415,21 @@ pub(super) type NormalRun = (String, PathBuf);
 /// A stress scenario run entry: `(name, path, stress_config)`.
 pub(super) type StressRun = (String, PathBuf, StressConfig);
 
-/// Partitions a run list into `(normal, stress)` scenarios by checking each
-/// RON file for a `stress` field.
+/// Partitions a run list into `(normal, stress)` scenarios by reading the
+/// `stress` field from each pre-parsed [`ScenarioDefinition`].
 ///
 /// Returns `(normal_runs, stress_runs)` where `stress_runs` includes the
 /// resolved [`StressConfig`] for each stress scenario.
 #[must_use]
-pub fn partition_stress_scenarios(runs: &[(String, PathBuf)]) -> (Vec<NormalRun>, Vec<StressRun>) {
+pub fn partition_stress_scenarios(
+    runs: &[(String, PathBuf, ScenarioDefinition)],
+) -> (Vec<NormalRun>, Vec<StressRun>) {
     let mut normal = Vec::new();
     let mut stress = Vec::new();
 
-    for (name, path) in runs {
-        match load_stress_config(path) {
-            Some(config) => stress.push((name.clone(), path.clone(), config)),
+    for (name, path, def) in runs {
+        match &def.stress {
+            Some(config) => stress.push((name.clone(), path.clone(), config.clone())),
             None => normal.push((name.clone(), path.clone())),
         }
     }

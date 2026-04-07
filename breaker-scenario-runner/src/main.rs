@@ -20,9 +20,8 @@ use std::{
 use breaker_scenario_runner::{
     coverage::{check_coverage, print_coverage_report},
     runner::{
-        self, Parallelism, build_run_list, load_scenario, parse_parallelism,
-        partition_stress_scenarios, print_stress_result, print_summary, run_all_parallel,
-        run_all_serial,
+        self, Parallelism, build_run_list, parse_parallelism, partition_stress_scenarios,
+        print_stress_result, print_summary, run_all_parallel, run_all_serial,
         run_log::{RunLog, create_run_log, format_log_path_message},
         run_single_scenario, run_stress_scenario, run_with_args,
     },
@@ -217,24 +216,27 @@ fn print_log_path_and_shutdown(run_log: Option<RunLog>) {
     }
 }
 
-/// Loads all scenario definitions, identifies self-test scenarios, discovers
-/// layout files, and prints the coverage report.
-fn print_coverage_for_runs(runs: &[(String, std::path::PathBuf)]) {
+/// Uses pre-parsed scenario definitions to identify self-test scenarios,
+/// discover layout files, and print the coverage report.
+fn print_coverage_for_runs(
+    runs: &[(
+        String,
+        PathBuf,
+        breaker_scenario_runner::types::ScenarioDefinition,
+    )],
+) {
     use breaker_scenario_runner::runner::scenarios_dir;
 
     let scenarios: Vec<(String, breaker_scenario_runner::types::ScenarioDefinition)> = runs
         .iter()
-        .filter_map(|(name, path)| {
-            let def = load_scenario(path)?;
-            Some((name.clone(), def))
-        })
+        .map(|(name, _path, def)| (name.clone(), def.clone()))
         .collect();
 
     let self_tests_dir = scenarios_dir().join("self_tests");
     let self_test_names: Vec<String> = runs
         .iter()
-        .filter(|(_, path)| path.starts_with(&self_tests_dir))
-        .map(|(name, _)| name.clone())
+        .filter(|(_, path, _)| path.starts_with(&self_tests_dir))
+        .map(|(name, ..)| name.clone())
         .collect();
 
     let layout_names = discover_layout_names();
