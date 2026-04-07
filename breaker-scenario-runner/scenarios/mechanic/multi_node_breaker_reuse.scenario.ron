@@ -1,0 +1,17 @@
+// Mechanic: Multi-node test verifying the PrimaryBreaker entity is reused
+// across node transitions. quick_clear layout has a single cell that clears
+// quickly. Perfect(AlwaysPerfect) input drives efficient clearing. With
+// allow_early_end: true, the scenario naturally transitions through multiple
+// nodes. BreakerCountReasonable verifies exactly 1 PrimaryBreaker exists
+// throughout, catching any double-spawn or despawn-on-transition bugs.
+(
+    breaker: "godmode",
+    layout: "quick_clear",
+    input: Perfect(AlwaysPerfect),
+    max_frames: 5000,
+    disallowed_failures: [BreakerCountReasonable, NoNaN, BreakerInBounds, BreakerPositionClamped, BoltInBounds],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: true,
+    seed: 7777,
+)

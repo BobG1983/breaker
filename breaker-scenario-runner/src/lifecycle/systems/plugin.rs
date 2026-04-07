@@ -34,11 +34,12 @@ use super::{
 use crate::invariants::{
     EntityLeakBaseline, ScenarioFrame, ScenarioStats, ViolationLog,
     check_aabb_matches_entity_dimensions, check_bolt_count_reasonable, check_bolt_in_bounds,
-    check_bolt_speed_accurate, check_breaker_in_bounds, check_breaker_position_clamped,
-    check_chain_arc_count_reasonable, check_chip_offer_expected, check_chip_stacks_consistent,
-    check_gravity_well_count_reasonable, check_maxed_chip_never_offered, check_no_entity_leaks,
-    check_no_nan, check_offering_no_duplicates, check_pulse_ring_accumulation,
-    check_run_stats_monotonic, check_second_wind_wall_at_most_one, check_shield_wall_at_most_one,
+    check_bolt_speed_accurate, check_breaker_count_reasonable, check_breaker_in_bounds,
+    check_breaker_position_clamped, check_chain_arc_count_reasonable, check_chip_offer_expected,
+    check_chip_stacks_consistent, check_gravity_well_count_reasonable,
+    check_maxed_chip_never_offered, check_no_entity_leaks, check_no_nan,
+    check_offering_no_duplicates, check_pulse_ring_accumulation, check_run_stats_monotonic,
+    check_second_wind_wall_at_most_one, check_shield_wall_at_most_one,
     check_timer_monotonically_decreasing, check_timer_non_negative, check_valid_breaker_state,
 };
 
@@ -138,6 +139,7 @@ fn register_scenario_systems(app: &mut App) {
     let checkers_c = (
         check_aabb_matches_entity_dimensions,
         check_gravity_well_count_reasonable,
+        check_breaker_count_reasonable,
     )
         .chain();
     app.add_systems(OnEnter(MenuState::Main), bypass_menu_to_playing)

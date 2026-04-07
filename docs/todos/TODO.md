@@ -3,9 +3,9 @@
 ## Backlog
 
 1. **[ready]** Rename rantzsoft_lifecycle → rantzsoft_stateflow — [detail](detail/rename-lifecycle-to-stateflow.md)
-2. **[ready]** Cross-domain prelude, re-export modules & import cleanup — [detail](detail/cross-domain-prelude.md)
+2. **[done]** Cross-domain prelude, re-export modules & import cleanup — [detail](detail/cross-domain-prelude.md)
 3. **[ready]** Cell builder pattern — [detail](detail/cell-builder-pattern/cell-builder-pattern.md)
-4. **[ready]** Scenario runner improvements: verbose log/visual mode → coverage gaps → performance audit — [detail](detail/scenario-runner-improvements/scenario-runner-improvements.md)
+4. **[in-progress]** Scenario runner improvements: verbose log/visual mode → coverage gaps → performance audit — [detail](detail/scenario-runner-improvements/scenario-runner-improvements.md)
 5. **[ready]** Bolt birthing animation — [detail](detail/bolt-birthing-animation.md)
 6. **[ready]** Effect system refactor: typestate builder, Spawn/During triggers, unified vocabulary, centralized despawn — [detail](detail/effect-desugaring-node-running-trigger/effect-desugaring-node-running-trigger.md)
 7. **[NEEDS DETAIL]** Node sequencing refactor — per-tier batching instead of full upfront sequence — [detail](detail/node-sequencing-refactor.md)

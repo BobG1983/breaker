@@ -236,6 +236,28 @@ fn frame_mutation_spawn_extra_gravity_wells_zero_parses_from_ron() {
 }
 
 // -------------------------------------------------------------------------
+// FrameMutation — SpawnExtraPrimaryBreakers RON deserialization
+// -------------------------------------------------------------------------
+
+#[test]
+fn frame_mutation_spawn_extra_primary_breakers_parses_from_ron() {
+    let ron = "(frame: 30, mutation: SpawnExtraPrimaryBreakers(1))";
+    let result: FrameMutation =
+        ron::de::from_str(ron).expect("FrameMutation SpawnExtraPrimaryBreakers should parse");
+    assert_eq!(result.frame, 30);
+    assert_eq!(result.mutation, MutationKind::SpawnExtraPrimaryBreakers(1));
+}
+
+#[test]
+fn frame_mutation_spawn_extra_primary_breakers_zero_parses_from_ron() {
+    let ron = "(frame: 30, mutation: SpawnExtraPrimaryBreakers(0))";
+    let result: FrameMutation =
+        ron::de::from_str(ron).expect("FrameMutation SpawnExtraPrimaryBreakers(0) should parse");
+    assert_eq!(result.frame, 30);
+    assert_eq!(result.mutation, MutationKind::SpawnExtraPrimaryBreakers(0));
+}
+
+// -------------------------------------------------------------------------
 // ScenarioDashState — all variants parse from RON
 // -------------------------------------------------------------------------
 

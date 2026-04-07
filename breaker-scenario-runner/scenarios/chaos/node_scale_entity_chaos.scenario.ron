@@ -1,0 +1,24 @@
+// Adversarial: Tests the interaction between node-level EntityScale and
+// SizeBoost effects under live gameplay. boss_arena uses entity_scale: 0.7,
+// stacking SizeBoost(2.0) on the breaker every bump. If EntityScale and
+// SizeBoost interact incorrectly (double-application, incorrect base
+// restoration on node transition) BreakerPositionClamped or
+// AabbMatchesEntityDimensions will fire.
+(
+    breaker: "godmode",
+    layout: "BossArena",
+    input: Chaos((action_prob: 0.6)),
+    max_frames: 8000,
+    disallowed_failures: [BreakerPositionClamped, AabbMatchesEntityDimensions, NoNaN, BoltInBounds, BreakerInBounds, BreakerCountReasonable],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: 9001,
+    initial_effects: [
+        On(target: Breaker, then: [
+            When(trigger: Bumped, then: [
+                Do(SizeBoost(2.0)),
+            ]),
+        ]),
+    ],
+)

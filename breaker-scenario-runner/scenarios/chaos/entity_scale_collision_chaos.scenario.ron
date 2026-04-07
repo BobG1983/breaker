@@ -16,7 +16,7 @@
     layout: "Dense",
     input: Chaos((action_prob: 0.6)),
     max_frames: 6000,
-    disallowed_failures: [NoNaN, BoltInBounds, BreakerInBounds, AabbMatchesEntityDimensions],
+    disallowed_failures: [NoNaN, BoltInBounds, BreakerInBounds, BreakerPositionClamped, AabbMatchesEntityDimensions],
     allowed_failures: None,
     debug_setup: None,
     allow_early_end: false,

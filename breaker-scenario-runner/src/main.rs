@@ -12,19 +12,31 @@
 //!   `cargo scenario -- --all --serial`
 //!   `cargo scenario -- --all --loop 3`
 
-use std::process;
+use std::{path::Path, process};
 
 use breaker_scenario_runner::{
     coverage::{check_coverage, print_coverage_report},
     runner::{
-        Parallelism, build_run_list, load_scenario, parse_parallelism, partition_stress_scenarios,
-        print_stress_result, print_summary, run_all_parallel, run_all_serial, run_single_scenario,
-        run_stress_scenario, run_with_args,
+        self, Parallelism, build_run_list, load_scenario, parse_parallelism,
+        partition_stress_scenarios, print_stress_result, print_summary, run_all_parallel,
+        run_all_serial, run_single_scenario, run_stress_scenario, run_with_args,
     },
 };
 use clap::Parser;
 
 fn main() {
+    // Handle --clean before full CLI parsing to avoid adding a 4th bool to Args.
+    if std::env::args().any(|a| a == "--clean") {
+        if let Err(e) =
+            runner::output_dir::clean_output_dir(Path::new(runner::output_dir::BASE_DIR))
+        {
+            eprintln!("Failed to clean output directory: {e}");
+            process::exit(1);
+        }
+        println!("Cleaned {}", runner::output_dir::BASE_DIR);
+        process::exit(0);
+    }
+
     let args = Args::parse();
 
     if args.visual && !args.all && args.scenario.is_none() {

@@ -31,6 +31,9 @@ fn check_bolt_in_bounds_is_registered_in_scenario_lifecycle() {
     app.world_mut()
         .spawn((ScenarioTagBolt, Position2D(Vec2::new(0.0, 500.0))));
 
+    // Satisfy BreakerCountReasonable (expects exactly 1 PrimaryBreaker)
+    app.world_mut().spawn(PrimaryBreaker);
+
     tick(&mut app);
 
     let log = app.world().resource::<ViolationLog>();
@@ -63,6 +66,9 @@ fn check_no_nan_is_registered_in_scenario_lifecycle() {
 
     app.world_mut()
         .spawn((ScenarioTagBolt, Position2D(Vec2::new(f32::NAN, 0.0))));
+
+    // Satisfy BreakerCountReasonable (expects exactly 1 PrimaryBreaker)
+    app.world_mut().spawn(PrimaryBreaker);
 
     tick(&mut app);
 

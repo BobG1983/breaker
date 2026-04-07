@@ -51,7 +51,13 @@ pub fn exit_on_run_end(mut exits: MessageWriter<AppExit>) {
 /// Navigates through the teardown chain: `RunState::Teardown` triggers
 /// routing back to `GameState::Menu`, which then fires
 /// `bypass_menu_to_playing` on `OnEnter(MenuState::Main)`.
-pub fn restart_run_on_end(mut next_run_phase: ResMut<NextState<RunState>>) {
+pub fn restart_run_on_end(
+    mut next_run_phase: ResMut<NextState<RunState>>,
+    mut stats: Option<ResMut<ScenarioStats>>,
+) {
+    if let Some(ref mut stats) = stats {
+        stats.entered_playing = false;
+    }
     next_run_phase.set(RunState::Teardown);
 }
 
