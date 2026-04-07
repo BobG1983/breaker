@@ -5,7 +5,7 @@
         actions: [],
     )),
     max_frames: 120,
-    disallowed_failures: [TimerNonNegative],
+    disallowed_failures: [BoltInBounds, BreakerCountReasonable, BreakerInBounds, NoNaN, TimerNonNegative],
     allowed_failures: [TimerNonNegative],
     debug_setup: (
         node_timer_remaining: -1.0,

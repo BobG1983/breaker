@@ -15,7 +15,7 @@
     layout: "Corridor",
     input: Chaos((action_prob: 0.9)),
     max_frames: 3000,
-    disallowed_failures: [NoNaN, BoltInBounds, BreakerInBounds, BoltSpeedAccurate],
+    disallowed_failures: [BoltInBounds, BoltSpeedAccurate, BreakerCountReasonable, BreakerInBounds, NoNaN],
     allowed_failures: None,
     debug_setup: None,
     allow_early_end: false,

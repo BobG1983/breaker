@@ -5,7 +5,7 @@
         actions: [],
     )),
     max_frames: 300,
-    disallowed_failures: [NoEntityLeaks],
+    disallowed_failures: [BoltInBounds, BreakerCountReasonable, BreakerInBounds, NoEntityLeaks, NoNaN],
     allowed_failures: [NoEntityLeaks],
     debug_setup: (
         disable_physics: true,

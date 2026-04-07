@@ -7,7 +7,7 @@
     layout: "quick_clear",
     input: Perfect(AlwaysPerfect),
     max_frames: 1000,
-    disallowed_failures: [BoltInBounds, BreakerInBounds, NoNaN, BoltSpeedAccurate],
+    disallowed_failures: [BoltInBounds, BoltSpeedAccurate, BreakerCountReasonable, BreakerInBounds, NoNaN],
     allowed_failures: None,
     debug_setup: None,
     allow_early_end: false,

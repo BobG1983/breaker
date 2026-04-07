@@ -5,7 +5,7 @@
         actions: [],
     )),
     max_frames: 120,
-    disallowed_failures: [ValidDashState],
+    disallowed_failures: [BoltInBounds, BreakerCountReasonable, BreakerInBounds, NoNaN, ValidDashState],
     allowed_failures: [ValidDashState],
     debug_setup: (
         disable_physics: true,

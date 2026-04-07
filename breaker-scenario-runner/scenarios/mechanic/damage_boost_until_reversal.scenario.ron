@@ -14,7 +14,7 @@
     layout: "Dense",
     input: Perfect(AlwaysPerfect),
     max_frames: 5000,
-    disallowed_failures: [BoltSpeedAccurate, NoNaN],
+    disallowed_failures: [BoltInBounds, BoltSpeedAccurate, BreakerCountReasonable, BreakerInBounds, NoNaN],
     allowed_failures: None,
     debug_setup: None,
     allow_early_end: false,

@@ -5,7 +5,7 @@
         actions: [],
     )),
     max_frames: 120,
-    disallowed_failures: [TimerMonotonicallyDecreasing],
+    disallowed_failures: [BoltInBounds, BreakerCountReasonable, BreakerInBounds, NoNaN, TimerMonotonicallyDecreasing],
     allowed_failures: [TimerMonotonicallyDecreasing],
     debug_setup: (
         disable_physics: true,

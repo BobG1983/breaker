@@ -10,7 +10,7 @@
         ],
     )),
     max_frames: 1000,
-    disallowed_failures: [BoltInBounds, BreakerInBounds, NoNaN],
+    disallowed_failures: [BoltInBounds, BreakerCountReasonable, BreakerInBounds, NoNaN],
     allowed_failures: None,
     debug_setup: None,
 )

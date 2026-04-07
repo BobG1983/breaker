@@ -9,7 +9,7 @@
         actions: [],
     )),
     max_frames: 120,
-    disallowed_failures: [BreakerCountReasonable],
+    disallowed_failures: [BoltInBounds, BreakerCountReasonable, BreakerInBounds, NoNaN],
     allowed_failures: Some([BreakerCountReasonable]),
     debug_setup: (
         disable_physics: true,

@@ -5,7 +5,7 @@
         actions: [],
     )),
     max_frames: 120,
-    disallowed_failures: [BoltInBounds],
+    disallowed_failures: [BoltInBounds, BreakerCountReasonable, BreakerInBounds, NoNaN],
     allowed_failures: [BoltInBounds],
     debug_setup: (
         bolt_position: (0.0, 1000.0),

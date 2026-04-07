@@ -12,7 +12,7 @@
         actions: [],
     )),
     max_frames: 120,
-    disallowed_failures: [AabbMatchesEntityDimensions],
+    disallowed_failures: [AabbMatchesEntityDimensions, BoltInBounds, BreakerCountReasonable, BreakerInBounds, NoNaN],
     allowed_failures: Some([AabbMatchesEntityDimensions]),
     debug_setup: (
         disable_physics: true,

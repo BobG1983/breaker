@@ -3,7 +3,7 @@
     layout: "Scatter",
     input: Chaos((action_prob: 0.8)),
     max_frames: 3000,
-    disallowed_failures: [TimerNonNegative, TimerMonotonicallyDecreasing, BoltInBounds, NoNaN],
+    disallowed_failures: [BoltInBounds, BreakerCountReasonable, BreakerInBounds, NoNaN, TimerMonotonicallyDecreasing, TimerNonNegative],
     allowed_failures: None,
     debug_setup: None,
     seed: 900,

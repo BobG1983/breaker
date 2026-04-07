@@ -8,7 +8,7 @@
     layout: "Dense",
     input: Chaos((action_prob: 0.6)),
     max_frames: 4000,
-    disallowed_failures: [BoltCountReasonable, NoEntityLeaks, NoNaN, BoltInBounds],
+    disallowed_failures: [BoltCountReasonable, BoltInBounds, BreakerCountReasonable, BreakerInBounds, NoEntityLeaks, NoNaN],
     allowed_failures: None,
     debug_setup: None,
     invariant_params: (max_bolt_count: 20),

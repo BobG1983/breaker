@@ -17,7 +17,7 @@
         actions: [],
     )),
     max_frames: 600,
-    disallowed_failures: [NoNaN, NoEntityLeaks],
+    disallowed_failures: [BoltInBounds, BreakerCountReasonable, BreakerInBounds, NoEntityLeaks, NoNaN],
     allowed_failures: None,
     debug_setup: None,
     seed: 1111,

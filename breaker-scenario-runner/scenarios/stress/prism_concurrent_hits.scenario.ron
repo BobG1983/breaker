@@ -3,7 +3,7 @@
     layout: "Scatter",
     input: Chaos((action_prob: 0.7)),
     max_frames: 5000,
-    disallowed_failures: [BoltInBounds, NoNaN, BoltCountReasonable, NoEntityLeaks, BoltSpeedAccurate],
+    disallowed_failures: [BoltCountReasonable, BoltInBounds, BoltSpeedAccurate, BreakerCountReasonable, BreakerInBounds, NoEntityLeaks, NoNaN],
     allowed_failures: None,
     debug_setup: None,
     invariant_params: (max_bolt_count: 12),

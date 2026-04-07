@@ -3,7 +3,7 @@
     layout: "quick_clear",
     input: Perfect(AlwaysPerfect),
     max_frames: 3000,
-    disallowed_failures: [ChipOfferExpected],
+    disallowed_failures: [BoltInBounds, BreakerCountReasonable, BreakerInBounds, ChipOfferExpected, NoNaN],
     allowed_failures: Some([ChipOfferExpected]),
     allow_early_end: true,
     expected_offerings: Some(["Railgun"]),

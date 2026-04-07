@@ -3,7 +3,7 @@
     layout: "Scatter",
     input: Chaos((action_prob: 0.9)),
     max_frames: 5000,
-    disallowed_failures: [BoltInBounds, BreakerInBounds, NoNaN, NoEntityLeaks, ValidDashState],
+    disallowed_failures: [BoltInBounds, BreakerCountReasonable, BreakerInBounds, NoEntityLeaks, NoNaN, ValidDashState],
     allowed_failures: None,
     debug_setup: None,
     allow_early_end: false,

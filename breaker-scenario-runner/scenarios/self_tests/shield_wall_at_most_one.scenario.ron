@@ -5,7 +5,7 @@
         actions: [],
     )),
     max_frames: 120,
-    disallowed_failures: [ShieldWallAtMostOne],
+    disallowed_failures: [BoltInBounds, BreakerCountReasonable, BreakerInBounds, NoNaN, ShieldWallAtMostOne],
     allowed_failures: Some([ShieldWallAtMostOne]),
     debug_setup: (
         disable_physics: true,
