@@ -116,5 +116,8 @@ jobs:
           shared-key: "ci-scenarios"
           save-if: ${{ github.ref == 'refs/heads/develop' }}
 
+      - name: Build scenario runner
+        run: cargo build --release -p breaker_scenario_runner
+
       - name: Run scenarios
         run: cargo run --release -p breaker_scenario_runner -- --all
