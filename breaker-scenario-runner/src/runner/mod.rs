@@ -10,7 +10,8 @@ mod output;
 pub mod output_dir;
 #[cfg(test)]
 mod tests;
+pub mod tiling;
 
-pub use app::{drain_remaining_logs, guarded_update, is_timed_out};
+pub use app::{drain_remaining_logs, guarded_update, is_timed_out, sync_ui_scale};
 pub use discovery::load_scenario;
 pub use execution::*;

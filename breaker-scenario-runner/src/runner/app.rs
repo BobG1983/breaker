@@ -4,7 +4,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use bevy::{log::LogPlugin, prelude::*, time::TimeUpdateStrategy};
+use bevy::{log::LogPlugin, prelude::*, time::TimeUpdateStrategy, window::PrimaryWindow};
 use breaker::game::Game;
 use tracing::{info, warn};
 
@@ -398,6 +398,18 @@ pub fn guarded_update(app: &mut App) -> Result<(), String> {
             .or_else(|| payload.downcast_ref::<String>().cloned())
             .unwrap_or_else(|| "unknown panic".to_owned())
     })
+}
+
+/// Syncs the [`UiScale`] resource based on the primary window dimensions.
+///
+/// Formula: `ui_scale = min(window_width / 1920.0, window_height / 1080.0)`
+///
+/// This ensures all `Val::Px` and font sizes designed for 1920x1080 scale
+/// correctly to the actual window size.
+pub fn sync_ui_scale(mut ui_scale: ResMut<UiScale>, windows: Query<&Window, With<PrimaryWindow>>) {
+    if let Ok(window) = windows.single() {
+        ui_scale.0 = (window.width() / 1920.0).min(window.height() / 1080.0);
+    }
 }
 
 #[cfg(test)]
