@@ -4,9 +4,7 @@ use std::collections::HashSet;
 
 use bevy::{ecs::world::CommandQueue, prelude::*};
 use rand::Rng;
-use rantzsoft_physics2d::{
-    ccd::ray_vs_aabb, plugin::PhysicsSystems, resources::CollisionQuadtree,
-};
+use rantzsoft_physics2d::{ccd::ray_vs_aabb, plugin::PhysicsSystems, resources::CollisionQuadtree};
 use rantzsoft_spatial2d::components::{GlobalPosition2D, Rotation2D, Spatial};
 
 use crate::{

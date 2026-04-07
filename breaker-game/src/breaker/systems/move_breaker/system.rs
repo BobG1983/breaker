@@ -3,10 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    breaker::{
-        components::DashState,
-        queries::BreakerMovementData,
-    },
+    breaker::{components::DashState, queries::BreakerMovementData},
     input::resources::GameAction,
     prelude::*,
 };

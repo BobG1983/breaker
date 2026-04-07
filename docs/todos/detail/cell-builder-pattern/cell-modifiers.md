@@ -64,10 +64,35 @@ Cells can have multiple modifiers. Some interesting combos:
 
 Not all combinations make sense — some should be disallowed or untested initially. But the system should support arbitrary combinations.
 
+## Key Decisions
+
+### Cell RON Files Dropped
+No more `standard.cell.ron`, `lock.cell.ron`, `tough.cell.ron`, etc. Every cell is a standard cell. Modifiers are applied at generation time by the skeleton/block system (later) or directly via the builder (now). Current cell RON files should be removed.
+
+### All Modifier Combos Are Valid
+No combo is invalid — Survival is temporary immunity (self-destructs), so even Survival + Sequence or Survival + Portal work. Compile-time validation checks that required params are present, not that the combo is "sensible." Emergent interactions from unusual combos are a feature.
+
+### Modifier Tuning Values
+Initially: tuning values are in the builder code (hardcoded or from a config resource). When node sequencing is implemented, block RON files will specify modifiers with params per cell position. See node sequencing todo for block RON format.
+
+### HP Model
+HP is NOT defined per cell. Instead:
+- A **toughness dimension** (tough/standard/weak) sets a base HP value
+- A helper function `hp_for(toughness, tier, node_index) → f32` computes actual HP
+- Per-tier multiplier (e.g., +50% per tier) + per-node multiplier (e.g., +10% per node within tier)
+- Block positions will specify toughness (default: standard), not raw HP numbers
+- "Tough" replaces the old `tough.cell.ron` — it's just a higher toughness dimension on a standard cell
+
+### Visuals Are Modifier-Driven
+Cell RON files no longer define `color_rgb` or damage visual params. Instead:
+- Each modifier has a defined visual treatment (shader, sprite, overlay) — designed in Phase 5
+- Toughness affects base color intensity (tougher = more saturated/brighter)
+- No per-cell color authoring — visuals are systematic, not hand-painted
+
 ## Implementation Needs
 
 ### CellBehavior Enum Changes
-The existing `CellBehavior` enum needs to expand to cover all modifiers:
+The existing `CellBehavior` enum expands to cover all modifiers:
 ```rust
 enum CellBehavior {
     Locked,  // key cells defined in node layout, not here
@@ -83,29 +108,26 @@ enum CellBehavior {
 }
 ```
 
-### Cell RON Format Changes
-Cell definitions support multiple modifiers:
-```ron
-(
-    id: "armored_volatile",
-    alias: 'V',
-    hp: 20.0,
-    color_rgb: (2.5, 0.2, 4.0),
-    required_to_clear: true,
-    behaviors: [Volatile, Armored(value: 2)],
-)
-```
-
 ### Builder API
 ```rust
 Cell::builder()
     .position(pos)
     .dimensions(w, h)
-    .hp(20.0)
+    .toughness(Toughness::Tough)  // or .standard() / .weak()
+    .tier_hp(tier, node_index)     // computes HP from toughness + tier + node
     .volatile()
     .armored(2)
     .rendered(mesh, material)
     .spawn(commands);
+```
+
+### Toughness Enum
+```rust
+enum Toughness {
+    Weak,      // low base HP
+    Standard,  // default base HP
+    Tough,     // high base HP
+}
 ```
 
 ### Behavior Folders
@@ -137,24 +159,27 @@ Each modifier needs visual representation. Add to Phase 5 scope:
 - **Magnetic**: field lines radiating from cell, bolt-pull particle trail
 - **Portal**: portal spawn VFX on cell death, portal entity visual (dimensional tear?), sub-level transition effect, return transition effect
 
-### Skeleton Integration
-Skeletons in the node generation system specify which modifiers a cell position can have:
-- `[Volatile]` — must have volatile modifier
-- `[Armored, Magnetic]` — pick one modifier based on tier weights
-- `[Any]` — any modifier from tier's available pool (or none)
-- `[Standard]` — no modifiers, just HP
+### Skeleton Integration (node sequencing — future)
+Skeletons in the node generation system will specify modifiers + toughness per cell position. The node generator calls the builder API directly:
+```rust
+// Skeleton resolved to: Armored(2), Volatile, Tough, at tier 3 node 2
+Cell::builder()
+    .position(grid_pos)
+    .dimensions(w, h)
+    .toughness(Toughness::Tough)
+    .tier_hp(3, 2)
+    .volatile()
+    .armored(2)
+    .rendered(mesh, material)
+    .spawn(commands);
+```
+Skeleton format and block RON details live in the node sequencing refactor todo.
 
 ## Needs Detail
 
-### RON Format & Builder API Integration
-- How do modifiers compose in RON? Is `behaviors: [Volatile, Armored(value: 2)]` sufficient or do we need a richer format for multi-modifier cells?
-- Builder API for modifier combinations — does `.volatile().armored(2)` just add components, or do we need validation that the combo is legal?
-- How does definition layering work when a skeleton says "pick from [Armored, Magnetic]"? Does the cell get a definition with the modifier already set, or does the node generator add the modifier after builder construction?
-
-### Modifier Designs
+### Modifier Designs (per-modifier)
 - Component definitions for each new modifier
 - System designs for each modifier's behavior
-- Modifier interaction rules (which combinations are valid?)
 - How sequence groups are defined across blocks (group_id scoping)
 - Survival attack pattern catalog
 - Phantom phase timing and telegraph specifics
@@ -162,6 +187,16 @@ Skeletons in the node generation system specify which modifiers a cell position 
 - Portal sub-level generation (how are sub-levels built? mini-frames?)
 - Portal transition system (state management for parent/sub-level, entity lifecycle)
 - Portal + BoltLost interaction (teleport back, portal persists)
+
+### Builder & HP
+- Toughness enum base values (what HP does Weak/Standard/Tough map to?)
+- `hp_for()` function: exact formula for tier + node_index scaling
+- Builder compile-time checks: what does "required params present" look like for each modifier?
+
+### Migration
+- Remove `standard.cell.ron`, `tough.cell.ron`, `lock.cell.ron`, `regen.cell.ron`
+- Update `spawn_cells_from_grid` to use builder with toughness + tier HP
+- Update node layout RON to not reference cell type aliases (currently `'S'`, `'T'`, `'L'`, `'R'`)
 
 ## Status
 `[NEEDS DETAIL]` — design intent captured, needs component/system-level detail

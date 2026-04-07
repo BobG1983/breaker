@@ -111,6 +111,8 @@ pub(crate) struct LostBoltData {
     pub is_extra: Has<ExtraBolt>,
     /// Node scaling factor for entity dimensions.
     pub node_scale: Option<&'static NodeScalingFactor>,
+    /// Current collision layers — stashed for birthing on respawn.
+    pub layers: &'static CollisionLayers,
 }
 
 /// Bolt data for the `sync_bolt_scale` system.

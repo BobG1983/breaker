@@ -372,41 +372,9 @@ fn fade_out_run_does_not_double_send_complete_when_already_completed() {
     );
 }
 
-// --- Spec Behavior 12: FadeOut end removes TransitionEffect ---
-
-#[test]
-fn fade_out_end_removes_transition_effect_from_camera() {
-    let (mut app, camera) = effect_test_app();
-    app.world_mut().entity_mut(camera).insert(TransitionEffect {
-        color: Vec4::new(0.0, 0.0, 0.0, 1.0),
-        direction: Vec4::ZERO,
-        effect_type: EffectType::FADE,
-        progress: 1.0,
-    });
-    app.insert_resource(EndingTransition::<FadeOut>::new());
-    app.insert_resource(TransitionProgress {
-        elapsed: 0.5,
-        duration: 0.5,
-        completed: true,
-    });
-    app.add_systems(Update, fade_out_end);
-    app.update();
-
-    let effects: Vec<&TransitionEffect> = app
-        .world_mut()
-        .query_filtered::<&TransitionEffect, With<Camera2d>>()
-        .iter(app.world())
-        .collect();
-    assert_eq!(
-        effects.len(),
-        0,
-        "TransitionEffect should be removed from camera"
-    );
-    assert!(
-        !app.world().contains_resource::<TransitionProgress>(),
-        "TransitionProgress should be removed"
-    );
-}
+// Spec Behavior 12 REMOVED: fade_out_end must NOT remove TransitionEffect.
+// The overlay stays at progress=1.0 until a subsequent FadeIn replaces it.
+// See fade_out_lifecycle_tests.rs for the correct behavior tests.
 
 #[test]
 fn fade_out_end_sends_transition_over() {

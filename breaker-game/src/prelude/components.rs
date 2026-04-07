@@ -1,7 +1,7 @@
 //! Re-exports of cross-domain components and spatial/physics types.
 
 pub(crate) use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
-pub(crate) use rantzsoft_spatial2d::components::{PreviousScale, Position2D, Scale2D, Velocity2D};
+pub(crate) use rantzsoft_spatial2d::components::{Position2D, PreviousScale, Scale2D, Velocity2D};
 pub(crate) use rantzsoft_stateflow::CleanupOnExit;
 
 pub(crate) use crate::{

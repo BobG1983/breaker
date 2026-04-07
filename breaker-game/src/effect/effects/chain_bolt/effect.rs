@@ -3,10 +3,7 @@ use rand::Rng;
 use rantzsoft_physics2d::constraint::DistanceConstraint;
 
 use crate::{
-    bolt::{
-        components::BoltDefinitionRef,
-        registry::BoltRegistry,
-    },
+    bolt::{components::BoltDefinitionRef, registry::BoltRegistry},
     prelude::*,
 };
 

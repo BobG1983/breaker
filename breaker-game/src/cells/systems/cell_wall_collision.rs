@@ -8,7 +8,10 @@
 use bevy::prelude::*;
 use rantzsoft_physics2d::resources::CollisionQuadtree;
 
-use crate::{prelude::*, shared::{CELL_LAYER, WALL_LAYER}};
+use crate::{
+    prelude::*,
+    shared::{CELL_LAYER, WALL_LAYER},
+};
 
 /// Wall entity lookup for narrow-phase overlap verification.
 type WallLookup<'w, 's> = Query<'w, 's, (&'static Position2D, &'static Aabb2D), With<Wall>>;

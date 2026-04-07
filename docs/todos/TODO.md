@@ -2,7 +2,7 @@
 
 ## Backlog
 
-1. **[ready]** Cell builder pattern + cell modifiers (volatile, sequence, survival, armored, phantom, magnetic, portal) — [detail](detail/cell-builder-pattern/cell-builder-pattern.md)
+1. **[NEEDS DETAIL]** Cell builder pattern + cell modifiers (volatile, sequence, survival, armored, phantom, magnetic, portal) — needs RON format design, builder API for modifier composition, skeleton integration — [detail](detail/cell-builder-pattern/cell-builder-pattern.md)
 2. **[in-progress]** Bolt birthing animation — [detail](detail/bolt-birthing-animation.md)
 3. **[ready]** Effect system refactor: typestate builder, Spawn/During triggers, unified vocabulary, centralized despawn — [detail](detail/effect-desugaring-node-running-trigger/effect-desugaring-node-running-trigger.md)
 4. **[NEEDS DETAIL]** Scenario coverage gaps — evolution chip path, NoBump/Died/Impact(Bolt)/Impacted(Breaker) trigger scenarios

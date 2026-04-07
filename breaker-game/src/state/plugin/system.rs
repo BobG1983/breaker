@@ -116,7 +116,7 @@ fn register_parent_routes(app: &mut App) {
     app.add_route(
         Route::from(GameState::Loading)
             .to(GameState::Menu)
-            .with_transition(TransitionType::In(Arc::new(FadeIn {
+            .with_transition(TransitionType::Out(Arc::new(FadeOut {
                 duration: 0.6,
                 color: Color::WHITE,
             })))
@@ -153,6 +153,10 @@ fn register_parent_routes(app: &mut App) {
     app.add_route(
         Route::from(MenuState::Loading)
             .to(MenuState::Main)
+            .with_transition(TransitionType::In(Arc::new(FadeIn {
+                duration: 0.6,
+                color: Color::WHITE,
+            })))
             .when(|_| true),
     );
     // Main → dynamic (StartGame/Options/Meta based on selection)

@@ -4,7 +4,6 @@
 //! configuration. No systems or plugins — those live in domain plugins.
 
 pub mod birthing;
-pub(crate) use birthing::Birthing;
 pub mod collision_layers;
 pub mod color;
 pub mod components;

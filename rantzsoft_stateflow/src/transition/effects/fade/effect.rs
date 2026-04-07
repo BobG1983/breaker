@@ -153,16 +153,13 @@ pub(crate) fn fade_out_run(
     }
 }
 
-/// End system for `FadeOut` — removes `TransitionEffect` from camera, removes
-/// progress, sends `TransitionOver`.
-pub(crate) fn fade_out_end(
-    mut commands: Commands,
-    cameras: Query<Entity, With<Camera2d>>,
-    mut writer: MessageWriter<TransitionOver>,
-) {
-    if let Some(camera) = cameras.iter().next() {
-        commands.entity(camera).remove::<TransitionEffect>();
-    }
+/// End system for `FadeOut` — removes progress, sends `TransitionOver`.
+///
+/// The `TransitionEffect` overlay is intentionally left on the camera at
+/// progress=1.0 (fully opaque). A subsequent `FadeIn` (or other In
+/// transition) will replace and reveal. Removing the overlay here would
+/// expose stale content for one frame before the state flush cleans up.
+pub(crate) fn fade_out_end(mut commands: Commands, mut writer: MessageWriter<TransitionOver>) {
     commands.remove_resource::<TransitionProgress>();
     writer.write(TransitionOver);
 }

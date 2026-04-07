@@ -8,7 +8,7 @@ use crate::{
         resources::{DEFAULT_BOLT_ANGLE_SPREAD, DEFAULT_BOLT_SPAWN_OFFSET_Y},
     },
     breaker::components::Breaker,
-    shared::{GameDrawLayer, NodeScalingFactor, PlayfieldConfig},
+    shared::{GameDrawLayer, NodeScalingFactor, PlayfieldConfig, birthing::Birthing},
 };
 
 #[test]
@@ -564,5 +564,32 @@ fn bolt_lost_works_without_old_respawn_components() {
         (pos.0.y - expected_y).abs() < f32::EPSILON,
         "respawn y should be {expected_y} (from BoltSpawnOffsetY), got {}",
         pos.0.y
+    );
+}
+
+// ── Birthing: respawned bolt should enter birthing animation ──
+
+#[test]
+fn bolt_lost_respawn_inserts_birthing_component() {
+    let mut app = test_app();
+    let playfield = PlayfieldConfig::default();
+    app.world_mut().spawn((
+        Breaker,
+        Position2D(Vec2::new(0.0, -250.0)),
+        rantzsoft_spatial2d::components::Spatial2D,
+        GameDrawLayer::Breaker,
+    ));
+
+    let entity = spawn_bolt(
+        &mut app,
+        Vec2::new(0.0, playfield.bottom() - 100.0),
+        Vec2::new(0.0, -400.0),
+    );
+    tick(&mut app);
+
+    // After respawn, bolt should have Birthing component
+    assert!(
+        app.world().get::<Birthing>(entity).is_some(),
+        "respawned bolt must have Birthing component for scale-up animation"
     );
 }
