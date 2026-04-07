@@ -90,8 +90,14 @@ fn run_log_new_succeeds_when_parent_already_exists() {
 
 #[test]
 fn run_log_new_fails_for_impossible_path() {
-    // /dev/null is a file on Unix, so /dev/null/impossible/log.log cannot be created.
-    let path = PathBuf::from("/dev/null/impossible/log.log");
+    // Use a path that is uncreatable on all platforms:
+    // - Unix: /dev/null is a file, so /dev/null/impossible/log.log cannot be created
+    // - Windows: NUL is a reserved device name, so NUL/impossible/log.log cannot be created
+    let path = if cfg!(windows) {
+        PathBuf::from("NUL/impossible/log.log")
+    } else {
+        PathBuf::from("/dev/null/impossible/log.log")
+    };
     let result = RunLog::new(&path);
     assert!(
         result.is_err(),
