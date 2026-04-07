@@ -2,7 +2,7 @@
 
 ## Backlog
 
-1. **[NEEDS DETAIL]** Scenario coverage gaps — TetherBeam chain mode, evolution chip path, NoBump/Died triggers, prelude glob threshold (ActiveVulnerability/FlashStepActive below 3-domain threshold)
+1. **[NEEDS DETAIL]** Scenario coverage gaps — evolution chip path, NoBump/Died/Impact(Bolt)/Impacted(Breaker) trigger scenarios
 2. **[ready]** Rename rantzsoft_lifecycle → rantzsoft_stateflow — [detail](detail/rename-lifecycle-to-stateflow.md)
 2. **[ready]** Cell builder pattern — [detail](detail/cell-builder-pattern/cell-builder-pattern.md)
 3. **[ready]** Bolt birthing animation — [detail](detail/bolt-birthing-animation.md)

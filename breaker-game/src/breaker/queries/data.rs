@@ -13,7 +13,7 @@ use crate::{
         DashSpeedMultiplier, DashState, DashStateTimer, DashTilt, DashTiltEase, DecelEasing,
         SettleDuration, SettleTiltEase,
     },
-    prelude::*,
+    prelude::{components::FlashStepActive, *},
 };
 
 // ── QueryData structs ───────────────────────────────────────────────────
