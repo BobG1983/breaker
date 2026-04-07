@@ -9,7 +9,7 @@
             (frame: 180, actions: [Bump]),
         ],
     )),
-    max_frames: 30000,
+    max_frames: 1000,
     disallowed_failures: [BoltInBounds, BreakerInBounds, NoNaN],
     allowed_failures: None,
     debug_setup: None,

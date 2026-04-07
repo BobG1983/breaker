@@ -18,7 +18,6 @@
         disable_physics: true,
         bolt_velocity: (0.0, 0.0),
     ),
-    allow_early_end: false,
     frame_mutations: [
         (frame: 30, mutation: InjectMismatchedBoltAabb),
     ],

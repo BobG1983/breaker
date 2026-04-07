@@ -21,7 +21,6 @@
     invariant_params: (
         max_gravity_well_count: 5,
     ),
-    allow_early_end: false,
     frame_mutations: [
         (frame: 30, mutation: SpawnExtraGravityWells(15)),
     ],

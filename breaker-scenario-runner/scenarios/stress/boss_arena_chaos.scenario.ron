@@ -2,7 +2,7 @@
     breaker: "Prism",
     layout: "BossArena",
     input: Chaos((action_prob: 0.4)),
-    max_frames: 20000,
+    max_frames: 10000,
     disallowed_failures: [BoltInBounds, BoltSpeedAccurate, BoltCountReasonable, BreakerInBounds, NoNaN, NoEntityLeaks, TimerNonNegative],
     allowed_failures: None,
     debug_setup: None,

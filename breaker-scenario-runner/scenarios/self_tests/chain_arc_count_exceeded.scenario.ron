@@ -10,7 +10,6 @@
     debug_setup: (
         disable_physics: true,
     ),
-    allow_early_end: false,
     // max_chain_arc_count default is 50.
     // Spawn 30 chain + 30 arc = 60 entities — 10 over the default threshold.
     frame_mutations: [
