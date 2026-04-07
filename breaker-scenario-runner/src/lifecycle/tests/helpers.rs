@@ -3,7 +3,7 @@ pub(super) use breaker::{
     bolt::components::Bolt,
     breaker::{
         BreakerRegistry,
-        components::{BaseWidth, Breaker, DashState},
+        components::{BaseWidth, Breaker, DashState, PrimaryBreaker},
         messages::BumpGrade,
         resources::ForceBumpGrade,
     },

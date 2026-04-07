@@ -50,6 +50,8 @@ pub enum InvariantKind {
     AabbMatchesEntityDimensions,
     /// Gravity well entity count stays within `invariant_params.max_gravity_well_count`.
     GravityWellCountReasonable,
+    /// Exactly one `PrimaryBreaker` entity should exist during gameplay.
+    BreakerCountReasonable,
 }
 
 impl InvariantKind {
@@ -80,6 +82,7 @@ impl InvariantKind {
         Self::ChainArcCountReasonable,
         Self::AabbMatchesEntityDimensions,
         Self::GravityWellCountReasonable,
+        Self::BreakerCountReasonable,
     ];
 
     /// Standard human-readable fail reason for this invariant violation.
@@ -112,6 +115,7 @@ impl InvariantKind {
                 "Aabb2D half_extents do not match entity dimensions"
             }
             Self::GravityWellCountReasonable => "gravity well entity count exceeds maximum",
+            Self::BreakerCountReasonable => "primary breaker count is not exactly 1",
         }
     }
 }

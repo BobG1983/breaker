@@ -288,11 +288,11 @@ fn invariant_kind_gravity_well_count_reasonable_debug_round_trip() {
 // -------------------------------------------------------------------------
 
 #[test]
-fn invariant_kind_all_contains_21_variants() {
+fn invariant_kind_all_contains_22_variants() {
     assert_eq!(
         InvariantKind::ALL.len(),
-        21,
-        "InvariantKind::ALL should contain 21 variants"
+        22,
+        "InvariantKind::ALL should contain 22 variants"
     );
 }
 
@@ -364,5 +364,41 @@ fn invariant_params_partial_override_preserves_defaults_for_unspecified_fields()
     assert_eq!(
         params.max_chain_arc_count, 50,
         "max_chain_arc_count should retain default of 50"
+    );
+}
+
+// -------------------------------------------------------------------------
+// InvariantKind::BreakerCountReasonable -- behaviors 1-4
+// -------------------------------------------------------------------------
+
+#[test]
+fn invariant_kind_breaker_count_reasonable_parses() {
+    let result: InvariantKind =
+        ron::de::from_str("BreakerCountReasonable").expect("BreakerCountReasonable should parse");
+    assert_eq!(result, InvariantKind::BreakerCountReasonable);
+}
+
+#[test]
+fn invariant_kind_all_includes_breaker_count_reasonable() {
+    assert!(
+        InvariantKind::ALL.contains(&InvariantKind::BreakerCountReasonable),
+        "InvariantKind::ALL must include BreakerCountReasonable"
+    );
+}
+
+#[test]
+fn fail_reason_breaker_count_reasonable() {
+    assert_eq!(
+        InvariantKind::BreakerCountReasonable.fail_reason(),
+        "primary breaker count is not exactly 1"
+    );
+}
+
+#[test]
+fn invariant_kind_breaker_count_reasonable_debug_round_trip() {
+    let debug_str = format!("{:?}", InvariantKind::BreakerCountReasonable);
+    assert!(
+        debug_str.contains("BreakerCountReasonable"),
+        "Debug output should contain 'BreakerCountReasonable', got: {debug_str}"
     );
 }
