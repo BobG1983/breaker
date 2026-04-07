@@ -7,6 +7,7 @@ mod app;
 mod discovery;
 mod execution;
 mod output;
+pub mod output_dir;
 #[cfg(test)]
 mod tests;
 
