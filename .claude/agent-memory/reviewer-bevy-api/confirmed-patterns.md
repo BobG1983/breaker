@@ -92,6 +92,23 @@ type: reference
 - `let boosts = world.get::<T>(entity).cloned();` then `let mut query = world.query::<SpatialData>(); query.get_mut(world, entity)` — valid; `.cloned()` releases the immutable borrow before the mutable query borrow starts; `QueryState::get_mut(&mut self, &'w mut World, Entity)` is the correct exclusive World accessor API; confirmed in `speed_boost.rs:47-53`
 - `world.query::<SpatialDataMutableType>()` returns an owned `QueryState`; calling `.get_mut(world, entity)` on it is the correct pattern for per-entity exclusive World access in World-access functions
 
+## Screenshot API (Bevy 0.18.1)
+- Correct import path: `bevy::render::view::window::screenshot::{Screenshot, save_to_disk}` — NOT `bevy::render::view::screenshot`
+- `Screenshot::primary_window()` — correct method; returns a `Screenshot` component; no args
+- `save_to_disk(path)` — standalone function returning `impl FnMut(On<'_, '_, ScreenshotCaptured>)`; used as an observer via `commands.spawn(Screenshot::primary_window()).observe(save_to_disk(path))`
+- `commands.spawn(Screenshot::primary_window()).observe(save_to_disk(path))` — correct spawning pattern
+
+## Window API (Bevy 0.18.1)
+- `WindowResolution::new(width: u32, height: u32)` — takes `u32` physical pixels (confirmed)
+- `WindowPosition::At(IVec2)` — correct; IVec2 holds pixel coordinates
+- `UiScale` — in `bevy::prelude`, struct with inner `f32`; `ui_scale.0` is the f32 multiplier
+- `PrimaryWindow` — correct marker component, in `bevy::window`; used as `With<PrimaryWindow>` query filter
+- `query.single()` — returns `Result` in Bevy 0.15+; use `let Ok(x) = query.single()` pattern
+
+## Run Conditions
+- `resource_exists::<T>` — in `bevy::prelude`; used as `system.run_if(resource_exists::<MyResource>)` (no call parens — it IS the condition function item)
+- `Option<Res<T>>` as system parameter — valid; system still runs even if resource is absent; `None` when absent
+
 ## Other
 - `Bloom` from `bevy::post_process::bloom::Bloom` — correct 0.18 path
 - `Projection::from(OrthographicProjection { ... })` — correct 0.18 API

@@ -83,8 +83,8 @@ The file contains only a doc comment explaining legacy stat components were remo
 - `dispatch_wall_effects` — **DELETED** in wall-builder-pattern feature. `spawn_walls` now reads from `WallRegistry`, calls `Wall::builder()` three times, and dispatches effects inline via `push_bound_effects`. No separate dispatch system exists.
 - `ChainArcCountReasonable` — new `InvariantKind` variant; checks combined `ChainLightningChain` + `ChainLightningArc` entity count against `invariant_params.max_chain_arc_count` (default 50)
 - `SpawnExtraChainArcs(usize)` — new `MutationKind` variant; spawns N chain + N arc entities for self-test
-- InvariantKind total: 21 variants (verified 2026-04-06 on develop). Prior count of 23 was stale — `ValidStateTransitions`, `ValidBreakerState`, `PhysicsFrozenDuringPause` never existed in code; breaker state variant is `ValidDashState`. Also `BoltSpeedInRange` renamed to `BoltSpeedAccurate`.
-- MutationKind total: 16 variants (verified 2026-04-06). `InjectWrongSizeMultiplier` and `InjectWrongEffectiveSpeed` removed with Effective* cache removal. `InjectWrongBoltSpeed` also does NOT exist.
+- InvariantKind total: 22 variants (verified 2026-04-06 post-BreakerCountReasonable addition). `BreakerCountReasonable` added. `ValidStateTransitions`, `ValidBreakerState`, `PhysicsFrozenDuringPause` never existed; breaker state variant is `ValidDashState`. `BoltSpeedInRange` renamed to `BoltSpeedAccurate`. Self-test for `BreakerCountReasonable` is COMPLETE (`breaker_count_reasonable.scenario.ron` exists, uses `SpawnExtraPrimaryBreakers`).
+- MutationKind total: 17 variants (updated 2026-04-06). Added `SpawnExtraPrimaryBreakers(usize)`. First variant is `SetDashState` (NOT `SetBreakerState`). `InjectWrongSizeMultiplier`, `InjectWrongEffectiveSpeed`, `InjectWrongBoltSpeed` do NOT exist.
 - `EffectSourceChip(Option<String>)` — component on AoE/spawn effect entities; carries chip attribution from dispatch to damage-application tick
 - `chip_attribution(source_chip: &str) -> Option<String>` — helper: empty → None, non-empty → Some
 - fire() method split: `fire` → `fire_aoe_and_spawn` → `fire_utility_and_spawn` (3 methods)

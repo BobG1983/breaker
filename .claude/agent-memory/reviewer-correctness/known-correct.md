@@ -92,6 +92,26 @@ No validator enforces `min <= max` but no production data has inverted ranges.
 which goes through `dispatch_chip_effects`'s direct dispatch — never `ResolveOnCommand`.
 This path is CORRECT and does NOT require `PrimaryBreaker`.
 
+## check_breaker_position_clamped omits NodeScalingFactor — matches move_breaker exactly
+
+`check_breaker_position_clamped` computes `effective_half_width = base_width.half_width() * size_boosts.multiplier`.
+`move_breaker/system.rs` (line 66-67) uses the identical formula for position clamping, with no NodeScalingFactor.
+`breaker_cell_collision` and `breaker_wall_collision` DO use NodeScalingFactor for their AABB — but that is collision
+detection, not position clamping. The checker mirrors what move_breaker enforces. Do NOT re-flag the omission of NodeScalingFactor.
+
+## check_breaker_count_reasonable: double-gate (playing_gate + internal gate) is intentional
+
+In plugin.rs, `checkers_c` has `.run_if(playing_gate)` which only passes when `stats.entered_playing == true`.
+`check_breaker_count_reasonable` ALSO has its own `entered_playing` early-return gate. The double-gate is
+intentional: the internal gate allows isolated unit tests (without playing_gate in place) to still respect
+the entered_playing flag. In the full scenario runner, `ScenarioStats` is always present and both gates agree.
+
+## check_breaker_count_reasonable: fires when ScenarioStats absent (None) by design
+
+When `stats` is `Option<ResMut<ScenarioStats>>` and is `None`, the early-return gate is skipped and the checker runs.
+This only occurs in unit tests (full runner always has ScenarioStats via init_resource). Tested in
+`fires_when_scenario_stats_absent_and_zero_breakers`. Do NOT flag as missing gate.
+
 ## breaker_cell_collision / breaker_wall_collision: single() is correct with ExtraBreaker undefined
 
 Both systems call `.single()` on `Query<..., With<Breaker>>`. `ExtraBreaker` is defined but
