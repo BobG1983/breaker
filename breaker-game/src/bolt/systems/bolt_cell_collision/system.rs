@@ -37,7 +37,7 @@ use crate::{
         resources::DEFAULT_BOLT_BASE_DAMAGE,
     },
     cells::components::CellHealth,
-    prelude::*,
+    prelude::{components::ActiveVulnerability, *},
     shared::CELL_LAYER,
 };
 

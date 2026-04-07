@@ -1,0 +1,31 @@
+// Adversarial: Arcwelder (TetherBeam chain mode) fires fire_chain on every Bumped event,
+// which despawns all TetherChainBeam entities and rebuilds N-1 beams for N sorted bolts.
+// Simultaneously, maintain_tether_chain runs every FixedUpdate tick and performs the SAME
+// despawn-and-rebuild whenever the bolt count changes. Prism generates both triggers for
+// this collision: it spawns an extra bolt on PerfectBump (bolt count +1, triggering
+// maintain_tether_chain on the next tick) and applies TimePenalty on BoltLost (bolt count -1,
+// triggering maintain_tether_chain again). The chaos input at 0.6 drives frequent Bumped
+// events that re-fire fire_chain before maintain_tether_chain has resolved the previous
+// rebuild. The race condition risk: if fire_chain despawns beams that maintain_tether_chain
+// has already queued for respawn (or vice versa), stale TetherChainBeam entities accumulate
+// (NoEntityLeaks), beam components reference despawned bolt entities causing NaN propagation
+// into tick_tether_beam damage arithmetic (NoNaN), or Prism bolt-spawn accumulation under
+// repeated PerfectBump fires exceeds the expected ceiling (BoltCountReasonable).
+// BoltSpeedAccurate guards against speed drift from chain-mode steering interactions.
+// Scatter layout varies cell spacing so tether beam path lengths differ across rebuilds,
+// maximising the geometric diversity of the despawn-respawn race.
+// Stress: 32 runs to explore varied RNG paths through Prism spawn and bolt-loss events.
+(
+    breaker: "Prism",
+    layout: "Scatter",
+    input: Chaos((action_prob: 0.6)),
+    max_frames: 5000,
+    disallowed_failures: [BoltInBounds, BoltCountReasonable, BoltSpeedAccurate, BreakerCountReasonable, BreakerInBounds, NoEntityLeaks, NoNaN],
+    allowed_failures: None,
+    debug_setup: None,
+    invariant_params: (max_bolt_count: 12),
+    allow_early_end: false,
+    stress: (runs: 32, parallelism: 32),
+    seed: 7211,
+    chip_selections: ["Arcwelder"],
+)

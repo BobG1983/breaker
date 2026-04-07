@@ -16,9 +16,9 @@ pub(crate) mod states;
 // --- Curated glob: entity markers, effect state, messages, resources, states ---
 
 pub(crate) use components::{
-    ActiveDamageBoosts, ActiveSizeBoosts, ActiveSpeedBoosts, ActiveVulnerability, AnchorActive,
-    AnchorPlanted, Bolt, BoltServing, BoundEffects, Breaker, Cell, EffectNode, FlashStepActive,
-    NodeScalingFactor, RootEffect, StagedEffects, Wall,
+    ActiveDamageBoosts, ActiveSizeBoosts, ActiveSpeedBoosts, AnchorActive, AnchorPlanted, Bolt,
+    BoltServing, BoundEffects, Breaker, Cell, EffectNode, NodeScalingFactor, RootEffect,
+    StagedEffects, Wall,
 };
 pub(crate) use messages::*;
 pub(crate) use resources::{GameRng, InputActions, PlayfieldConfig};
