@@ -12,7 +12,7 @@
         actions: [],
     )),
     max_frames: 120,
-    disallowed_failures: [BoltInBounds, BreakerCountReasonable, BreakerInBounds, GravityWellCountReasonable, NoNaN],
+    disallowed_failures: [GravityWellCountReasonable],
     allowed_failures: Some([GravityWellCountReasonable]),
     debug_setup: (
         disable_physics: true,

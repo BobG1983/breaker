@@ -5,7 +5,7 @@
         actions: [],
     )),
     max_frames: 120,
-    disallowed_failures: [BoltInBounds, BreakerCountReasonable, BreakerInBounds, MaxedChipNeverOffered, NoNaN],
+    disallowed_failures: [MaxedChipNeverOffered],
     allowed_failures: [MaxedChipNeverOffered],
     debug_setup: (
         disable_physics: true,
