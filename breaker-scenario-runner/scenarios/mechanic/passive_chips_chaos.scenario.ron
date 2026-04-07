@@ -8,7 +8,7 @@
     layout: "Dense",
     input: Perfect(AlwaysPerfect),
     max_frames: 5000,
-    disallowed_failures: [BoltInBounds, BoltSpeedAccurate, NoEntityLeaks, NoNaN],
+    disallowed_failures: [BoltInBounds, BoltSpeedAccurate, NoEntityLeaks, NoNaN, BreakerPositionClamped],
     allowed_failures: None,
     debug_setup: None,
     allow_early_end: false,

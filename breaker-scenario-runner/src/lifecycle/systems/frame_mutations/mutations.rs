@@ -4,7 +4,7 @@ use std::collections::HashSet;
 
 use bevy::{ecs::system::SystemParam, prelude::*};
 use breaker::{
-    breaker::components::DashState,
+    breaker::components::{DashState, PrimaryBreaker},
     chips::inventory::ChipInventory,
     effect::effects::{
         chain_lightning::{ChainLightningArc, ChainLightningChain, ChainState},
@@ -164,6 +164,11 @@ pub fn apply_debug_frame_mutations(
             }
             MutationKind::SpawnExtraGravityWells(count) => {
                 apply_spawn_extra_gravity_wells(*count, &mut targets.commands);
+            }
+            MutationKind::SpawnExtraPrimaryBreakers(count) => {
+                for _ in 0..*count {
+                    targets.commands.spawn(PrimaryBreaker);
+                }
             }
         }
     }

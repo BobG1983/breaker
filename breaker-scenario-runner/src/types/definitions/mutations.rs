@@ -113,6 +113,11 @@ pub enum MutationKind {
     /// Used by the `gravity_well_count_reasonable` self-test to trigger a
     /// [`InvariantKind::GravityWellCountReasonable`] violation.
     SpawnExtraGravityWells(usize),
+    /// Spawn N extra [`PrimaryBreaker`] marker entities.
+    ///
+    /// Used by the `breaker_count_reasonable` self-test to trigger a
+    /// [`InvariantKind::BreakerCountReasonable`] violation.
+    SpawnExtraPrimaryBreakers(usize),
 }
 
 /// Mirrors `DashState` for RON deserialization in the scenario runner crate.

@@ -1,0 +1,21 @@
+// Self-test: SpawnExtraPrimaryBreakers(1) adds a second PrimaryBreaker entity,
+// pushing the count from 1 to 2. The BreakerCountReasonable invariant requires
+// exactly 1 PrimaryBreaker during gameplay. Physics is frozen so no game events
+// fire and the spawned marker remains stable.
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 120,
+    disallowed_failures: [BreakerCountReasonable],
+    allowed_failures: Some([BreakerCountReasonable]),
+    debug_setup: (
+        disable_physics: true,
+        node_timer_remaining: 9999.0,
+    ),
+    frame_mutations: [
+        (frame: 5, mutation: SpawnExtraPrimaryBreakers(1)),
+    ],
+)
