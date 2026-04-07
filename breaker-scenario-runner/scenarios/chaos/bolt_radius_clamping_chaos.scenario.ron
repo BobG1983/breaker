@@ -5,7 +5,7 @@
 // or BoltInBounds will fire.
 (
     breaker: "godmode",
-    layout: "boss_arena",
+    layout: "BossArena",
     input: Chaos((action_prob: 0.6)),
     max_frames: 8000,
     disallowed_failures: [AabbMatchesEntityDimensions, NoNaN, BoltInBounds, BreakerCountReasonable],
