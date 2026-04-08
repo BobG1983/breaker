@@ -7,7 +7,7 @@
 3. **[ready]** Effect system refactor: typestate builder, Spawn/During triggers, unified vocabulary, centralized despawn — [detail](detail/effect-desugaring-node-running-trigger/effect-desugaring-node-running-trigger.md)
 4. **[ready]** Scenario coverage gaps — evolution lifecycle, NoBump/Died/Impact(Bolt)/Impacted(Breaker) trigger scenarios — [detail](detail/scenario-coverage-gaps.md)
 5. **[ready]** Toughness + HP scaling — Toughness enum, exponential ramp (base * 1.2^tier * node_mult) — [detail](detail/toughness-hp-scaling.md)
-6. **[NEEDS DETAIL]** New cell modifiers (volatile, sequence, survival, armored, phantom, magnetic, portal) — [detail](detail/new-cell-modifiers.md)
+6. **[ready]** New cell modifiers (volatile, sequence, survival, armored, phantom, magnetic, portal) — [detail](detail/new-cell-modifiers.md)
 7. **[NEEDS DETAIL]** Protocol & hazard system design — protocols (positive, instead of chip), hazards (16 flat pool, choose-your-poison at tier 9+) — [detail](detail/mod-system-design.md)
 8. **[NEEDS DETAIL]** Node sequencing refactor — per-tier batching, volatile nodes, portal cells, frame/block/skeleton generation — [detail](detail/node-sequencing-refactor/node-sequencing-refactor.md)
 9. **[ready]** Phase 5c: Crate setup + plugin separation — [detail](detail/phase-5c-render-plugin-separation.md)
