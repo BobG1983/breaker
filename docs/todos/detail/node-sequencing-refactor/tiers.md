@@ -34,14 +34,15 @@ Within a tier, node design is modified based on tier difficulty. Higher tiers ma
 ## Infinite Scaling (Tier 9+)
 Three mechanisms stack for infinite difficulty:
 1. **Cell type escalation** — tougher cell types, more portal cells
-2. **Hazards** — player picks from 3 random hazards per tier. Hazards can stack. See [Protocol & Hazard system design](../mod-system-design.md).
+2. **Hazards** — player picks from 3 random hazards per tier. Hazards can stack. See [Protocol & Hazard system design](../mod-system-design/mod-system-design.md).
 3. **Block tier escalation** — higher-tier blocks with harder compositions become available
 
 ## Tier Regression Protocol
 A protocol that "moves you back a tier" — drops difficulty by 1, gives the player another tier of levels to earn rewards. The tier 0 variant can only appear once.
 
-## Needs Detail
-- Data structures for tier state (current tier, node index within tier, hazard stack)
-- API for tier generation (when does a tier get generated? what triggers it?)
-- How does the tier system integrate with existing run state?
-- Tier regression mechanics — how does going back a tier interact with hazard stack?
+## Tier State (Decided)
+Split into two Bevy resources:
+- **`TierConfig`** — tier level, modifier pool, hazard stack (what this tier looks like). Rebuilt when `RunProgress` crosses a tier boundary.
+- **`RunProgress`** — current tier, node index within tier, total nodes cleared (where the player is).
+
+Per-tier generation triggers when the player reaches a new tier boundary (last node of previous tier cleared). The generator creates the next tier's 4+1 nodes using `NodeGenRng` seeded from `hash(run_seed, tier_index)`.
