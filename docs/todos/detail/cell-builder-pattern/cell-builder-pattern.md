@@ -120,11 +120,11 @@ cells/
 **Migration:** Remove `behavior: (locked: true)` from `lock.cell.ron`. Add `locks` section to any node layout RON that uses lock cells.
 
 ## Scope
-- In: `Cell::builder()...build()/spawn()` builder with typestate for base properties and runtime config for behaviors
+- In: `Cell::builder()...spawn()` builder with typestate for base properties and runtime config for behaviors
 - In: `.definition(&def)` convenience that populates from `CellTypeDefinition`
 - In: Replace manual tuple assembly in `spawn_cells_from_grid` and test helpers
-- In: Handle all cell variants (standard, locked, regen, shielded + orbit children)
-- In: Refactor `CellBehavior` from struct to enum, update `CellTypeDefinition` and RON files
+- In: Handle existing cell variants (standard, locked, regen, shielded + orbit children)
+- In: Refactor `CellBehavior` from struct to enum (existing modifiers only: Locked, Regen, Shielded)
 - In: Add `effects: Option<Vec<RootEffect>>` to `CellTypeDefinition` (same pattern as bolts/walls)
 - In: Update RON cell files for new behavior/effects format
 - In: Create `assets/examples/cell.example.ron` documenting all fields
@@ -132,14 +132,15 @@ cells/
 - In: Move lock targets from cell type RON (`behavior: (locked: true)`) to node layout RON (`locks: { (r,c): [(r,c), ...] }`)
 - In: Update `NodeLayout` definition to include `locks` field
 - In: Update `spawn_cells_from_grid` to resolve lock coordinates to entity IDs
-- In: Remove `Locked` from `CellBehavior` enum (locking is a node-layout concern, not a cell-type concern)
 - In: Remove `build()` from public API of ALL entity builders (Cell, Wall, Bolt, Breaker) — `spawn()` only
 - In: Fix shield/second_wind wall spawning to use `spawn()` instead of `build()` + manual spawn
-- In: Architecture doc `docs/architecture/builders/cell.md` — cell builder API, typestate dimensions, definition layering (follow pattern of existing bolt/breaker/wall builder docs)
+- In: Architecture doc `docs/architecture/builders/cell.md` — cell builder API, typestate dimensions, definition layering
 - In: Architecture doc `docs/architecture/cell-behaviors.md` — how to create a new cell behavior (folder structure, components, systems, CellBehavior enum variant, RON format, builder integration)
-- Out: Wall builder (separate todo, already done)
+- Out: Toughness enum + HP scaling formula (separate todo)
+- Out: New cell modifiers — volatile, sequence, survival, armored, phantom, magnetic, portal (separate todo)
+- Out: Wall builder (already done)
 - Out: Rendering changes (placeholder rectangles for now)
-- Out: `HealthShield` effect implementation and `DamageDealt<T>` pipeline (todo #7)
+- Out: `HealthShield` effect implementation and `DamageDealt<T>` pipeline
 
 ## Design Files
 
@@ -152,15 +153,16 @@ cells/
 
 ## Dependencies
 - Depends on: Bolt builder (done), Breaker builder (done), Wall builder (done) — establishes the pattern
-- Blocks: Rendering refactor (builders own visual setup)
+- Blocks: Toughness + HP scaling todo, New cell modifiers todo, Rendering refactor
 
 ## Notes
 - Follow the pattern from `bolt/builder/` and `wall/builder/`
 - Shielded cells spawn orbit children as separate entities. Extract `spawn_orbit_children` from `spawn_cells_from_layout` into `cells/behaviors/shielded/systems/`.
 - `CellTypeAlias` component tracks which definition alias spawned a cell (used by hot-reload). Builder should accept this.
-- All cell "types" are reframed as **modifiers**: every cell is a standard cell with HP, modifiers add behavior. A cell can have multiple modifiers. **Locked**, **Regen**, and **Shielded** are modifiers in the `CellBehavior` enum. Locked's key cells are defined in the node layout RON (not the cell type RON), but Locked itself is a modifier on the cell. New modifiers (Volatile, Sequence, Survival, Armored, Phantom, Magnetic, Portal) are designed — see [cell-modifiers.md](cell-modifiers.md).
-- Defining and refactoring ALL behaviors (locked, regen, shielded) is in scope — including the folder restructure, component moves, system moves, and the lock-target migration from cell type to node layout.
+- Existing modifiers (Locked, Regen, Shielded) are refactored as part of this todo. New modifiers (Volatile → Portal) are a separate todo — see [cell-modifiers.md](cell-modifiers.md) for their designs.
+- Defining and refactoring ALL existing behaviors (locked, regen, shielded) is in scope — including the folder restructure, component moves, system moves, and the lock-target migration from cell type to node layout.
 - **Existing bug**: `effect/effects/shield/system.rs` and `effect/effects/second_wind/system.rs` use `Wall::builder()...build()` instead of `.spawn()`, skipping effect dispatch. These are exclusive World systems so they can't use `Commands` directly — needs a design decision (command flush, refactor to Commands, or `spawn_world()` variant). See [build-vs-spawn.md](build-vs-spawn.md).
+- Builder uses `.hp(value)` directly — no toughness enum yet (separate todo).
 
 ## Status
 `ready`
