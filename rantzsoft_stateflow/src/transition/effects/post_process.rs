@@ -17,6 +17,7 @@ use bevy::{
         render_resource::ShaderType,
     },
     shader::ShaderRef,
+    ui_render::graph::NodeUi,
 };
 
 /// Fullscreen transition effect component, inserted on the camera entity.
@@ -44,9 +45,9 @@ impl FullscreenMaterial for TransitionEffect {
 
     fn node_edges() -> Vec<InternedRenderLabel> {
         vec![
-            Node2d::Tonemapping.intern(),
+            NodeUi::UiPass.intern(),
             TransitionLabel.intern(),
-            Node2d::EndMainPassPostProcessing.intern(),
+            Node2d::Upscaling.intern(),
         ]
     }
 

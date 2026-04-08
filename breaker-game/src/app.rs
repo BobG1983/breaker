@@ -94,7 +94,7 @@ pub fn build_app() -> App {
     let mut app = App::new();
 
     let default_filter = if cfg!(debug_assertions) {
-        "breaker=debug,bevy=warn"
+        "breaker=debug,bevy=warn,bevy_egui=error"
     } else {
         "breaker=warn,bevy=error"
     };

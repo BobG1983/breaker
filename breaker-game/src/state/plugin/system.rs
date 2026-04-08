@@ -102,12 +102,26 @@ fn defaults_plugin() -> impl Plugin {
 
 /// Registers declarative routes via the lifecycle crate and cleanup systems.
 fn register_routing(app: &mut App) {
+    register_app_routes(app);
     register_parent_routes(app);
     register_run_routes(app);
     register_node_routes(app);
     register_chip_select_routes(app);
     register_run_end_routes(app);
     register_cleanup(app);
+}
+
+/// `AppState` routes — top-level app lifecycle.
+fn register_app_routes(app: &mut App) {
+    app.add_route(
+        Route::from(AppState::Game)
+            .to(AppState::Teardown)
+            .when(|world| {
+                world
+                    .get_resource::<State<GameState>>()
+                    .is_some_and(|s| *s.get() == GameState::Teardown)
+            }),
+    );
 }
 
 /// `GameState` and `MenuState` routes — parent-level routing.
@@ -124,11 +138,25 @@ fn register_parent_routes(app: &mut App) {
     );
     app.add_route(
         Route::from(GameState::Menu)
-            .to(GameState::Run)
-            .with_transition(TransitionType::Out(Arc::new(FadeOut {
-                duration: 0.6,
-                color: Color::WHITE,
-            })))
+            .to_dynamic(|world| {
+                use crate::state::menu::main::MenuItem;
+                let selection = world.resource::<crate::state::menu::main::MainMenuSelection>();
+                match selection.selected {
+                    MenuItem::Quit => GameState::Teardown,
+                    _ => GameState::Run,
+                }
+            })
+            .with_dynamic_transition(|world| {
+                use crate::state::menu::main::MenuItem;
+                let selection = world.resource::<crate::state::menu::main::MainMenuSelection>();
+                match selection.selected {
+                    MenuItem::Quit => TransitionType::None,
+                    _ => TransitionType::Out(Arc::new(FadeOut {
+                        duration: 0.6,
+                        color: Color::WHITE,
+                    })),
+                }
+            })
             .when(|world| {
                 world
                     .get_resource::<State<MenuState>>()
@@ -159,7 +187,7 @@ fn register_parent_routes(app: &mut App) {
             })))
             .when(|_| true),
     );
-    // Main → dynamic (StartGame/Options/Meta based on selection)
+    // Main → dynamic (StartGame/Options/Teardown based on selection)
     app.add_route(
         Route::from(MenuState::Main)
             .to_dynamic(|world| {
@@ -168,13 +196,20 @@ fn register_parent_routes(app: &mut App) {
                 match selection.selected {
                     MenuItem::Play => MenuState::StartGame,
                     MenuItem::Settings => MenuState::Options,
-                    MenuItem::Quit => MenuState::Main, // Quit handled via AppExit, not routing
+                    MenuItem::Quit => MenuState::Teardown,
                 }
             })
-            .with_transition(TransitionType::Out(Arc::new(FadeOut {
-                duration: 0.6,
-                color: Color::WHITE,
-            }))),
+            .with_dynamic_transition(|world| {
+                use crate::state::menu::main::MenuItem;
+                let selection = world.resource::<crate::state::menu::main::MainMenuSelection>();
+                match selection.selected {
+                    MenuItem::Quit => TransitionType::None,
+                    _ => TransitionType::Out(Arc::new(FadeOut {
+                        duration: 0.6,
+                        color: Color::WHITE,
+                    })),
+                }
+            }),
     );
     // StartGame → Teardown (message-triggered by handle_run_setup_input)
     app.add_route(Route::from(MenuState::StartGame).to(MenuState::Teardown));
@@ -317,5 +352,11 @@ pub(super) fn register_cleanup(app: &mut App) {
             OnEnter(RunEndState::Teardown),
             cleanup_on_exit::<RunEndState>,
         )
-        .add_systems(OnEnter(RunState::Teardown), cleanup_on_exit::<RunState>);
+        .add_systems(OnEnter(RunState::Teardown), cleanup_on_exit::<RunState>)
+        .add_systems(OnEnter(AppState::Teardown), send_app_exit);
+}
+
+/// Sends [`AppExit::Success`] to cleanly shut down the application.
+fn send_app_exit(mut writer: MessageWriter<AppExit>) {
+    writer.write(AppExit::Success);
 }

@@ -17,6 +17,8 @@ use super::traits::{InTransition, OneShotTransition, OutTransition};
 /// only implements `Transition` (not the specific sub-trait) will NOT compile
 /// in the wrong variant.
 pub enum TransitionType {
+    /// No transition effect — instant state change.
+    None,
     /// Hide current content, then change state.
     Out(Arc<dyn OutTransition>),
     /// Change state, then reveal new content.
@@ -41,6 +43,7 @@ impl TransitionType {
     #[must_use]
     pub fn type_ids(&self) -> Vec<TypeId> {
         match self {
+            Self::None => vec![],
             Self::Out(t) => vec![(**t).type_id()],
             Self::In(t) => vec![(**t).type_id()],
             Self::OutIn { out_e, in_e } => vec![(**out_e).type_id(), (**in_e).type_id()],
@@ -52,6 +55,7 @@ impl TransitionType {
 impl Clone for TransitionType {
     fn clone(&self) -> Self {
         match self {
+            Self::None => Self::None,
             Self::Out(t) => Self::Out(Arc::clone(t)),
             Self::In(t) => Self::In(Arc::clone(t)),
             Self::OutIn { out_e, in_e } => Self::OutIn {

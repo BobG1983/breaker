@@ -72,16 +72,13 @@ fn current_index(selection: &MainMenuSelection) -> usize {
 fn confirm_selection(
     selection: &MainMenuSelection,
     state_writer: &mut MessageWriter<ChangeState<MenuState>>,
-    exit_writer: &mut MessageWriter<AppExit>,
+    _exit_writer: &mut MessageWriter<AppExit>,
 ) {
     match selection.selected {
-        MenuItem::Play => {
+        MenuItem::Play | MenuItem::Quit => {
             state_writer.write(ChangeState::new());
         }
-        MenuItem::Settings => {} // Not yet implemented
-        MenuItem::Quit => {
-            exit_writer.write(AppExit::Success);
-        }
+        MenuItem::Settings => {}
     }
 }
 
@@ -159,17 +156,15 @@ mod tests {
     }
 
     #[test]
-    fn enter_on_quit_sends_exit() {
+    fn enter_on_quit_sends_change_state() {
         let mut app = test_app();
         app.world_mut().resource_mut::<MainMenuSelection>().selected = MenuItem::Quit;
         press_key(&mut app, KeyCode::Enter);
 
-        let messages = app.world().resource::<Messages<AppExit>>();
+        let messages = app.world().resource::<Messages<ChangeState<MenuState>>>();
         assert!(
-            messages
-                .iter_current_update_messages()
-                .any(|m| *m == AppExit::Success),
-            "expected AppExit::Success message"
+            messages.iter_current_update_messages().count() > 0,
+            "expected ChangeState<MenuState> message for quit"
         );
     }
 

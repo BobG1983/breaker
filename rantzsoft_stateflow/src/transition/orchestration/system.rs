@@ -215,7 +215,13 @@ pub(crate) fn begin_transition<S: FreelyMutableState + Copy>(
     to: S,
     transition: TransitionType,
 ) {
-    // ALL transition types pause virtual time. pause() is idempotent.
+    // None: instant state change — no pause, no overlay, no transition lifecycle
+    if matches!(transition, TransitionType::None) {
+        (make_state_change_closure(from, to))(world);
+        return;
+    }
+
+    // ALL non-None transition types pause virtual time. pause() is idempotent.
     world.resource_mut::<Time<Virtual>>().pause();
 
     // Insert ActiveTransition
@@ -292,5 +298,6 @@ pub(crate) fn begin_transition<S: FreelyMutableState + Copy>(
             world.insert_resource(pending);
             effect.insert_starting(world);
         }
+        TransitionType::None => unreachable!("handled by early return above"),
     }
 }
