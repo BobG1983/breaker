@@ -9,5 +9,7 @@
 
 - [Effect system dispatch chain](effect-system-dispatch-chain.md) — BoundEffects/StagedEffects walk order, bridge pattern, Until desugaring, new system differences, protocol integration surface
 
+- [Node sequence and tier architecture](node-sequence-tier-architecture.md) — NodeSequence resource, NodeOutcome.node_index, tier_index on NodeAssignment, advance_node timing, current_tier does not exist yet
+
 ## Session History
 See [ephemeral/](ephemeral/) — not committed.

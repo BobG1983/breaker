@@ -14,7 +14,7 @@ Cell::builder()  // -> CellBuilder<NoPosition, NoDimensions, NoHealth, Unvisual>
 |-----------|-------------|------------|-------------------|
 | Position | `NoPosition` | `HasPosition { pos: Vec2 }` | `.position(Vec2)` |
 | Dimensions | `NoDimensions` | `HasDimensions { width, height }` | `.dimensions(w, h)` |
-| Health | `NoHealth` | `HasHealth { hp: f32 }` | `.hp(value)` or `.definition(&def)` |
+| Health | `NoHealth` | `HasHealth { hp: f32 }` | `.definition(&def)` (production); `.hp(value)` (test-only) |
 | Visual | `Unvisual` | `Rendered` / `Headless` | `.rendered(meshes, materials)` / `.headless()` |
 
 `.definition(&CellTypeDefinition)` transitions Health and populates optional data (alias, damage visuals, behaviors, effects, color) from the RON-loaded definition.
@@ -34,9 +34,9 @@ Cell::builder()  // -> CellBuilder<NoPosition, NoDimensions, NoHealth, Unvisual>
 | `.alias(String)` | Sets `CellTypeAlias` component |
 | `.locked(Vec<Entity>)` | Inserts `LockCell` + `Locked` + `Locks` components |
 | `.guarded(Vec<u8>, GuardianSpawnConfig)` | Spawns guardian children in ring slots |
-| `.override_hp(f32)` | Overrides definition HP (requires `HasHealth`) |
+| `.override_hp(f32)` | Overrides definition HP — only available after `HasHealth` is set (i.e., after `.definition()`) |
 
-Test-only methods (`#[cfg(test)]`): `.hp()`, `.headless()`, `.required_to_clear()`, `.damage_visuals()`, `.with_effects()`, `.with_behavior()`, `.color_rgb()`.
+Test-only methods (`#[cfg(test)]`): `.hp()`, `.headless()`, `.required_to_clear()`, `.damage_visuals()`, `.with_effects()`, `.with_behavior()`, `.color_rgb()`. In production, `.rendered()` accepts `&mut Assets<Mesh>` and `&mut Assets<ColorMaterial>` and pre-computes guardian visual handles when `.guarded()` has been called.
 
 ## Terminal: `spawn()`
 
@@ -54,7 +54,7 @@ Test-only methods (`#[cfg(test)]`): `.hp()`, `.headless()`, `.required_to_clear(
 ## Guardian Spawning
 
 When `.guarded(slots, config)` is called:
-- `slots: Vec<u8>` — ring slot indices (0-7) from `collect_guardian_slots()`
+- `slots: Vec<u8>` — ring slot indices (0-7) provided by the spawn pipeline from node layout data
 - `config: GuardianSpawnConfig` — hp, color, speed, dimensions, step sizes
 
 Guardian visual handles are pre-computed during `.rendered()` and stored in `GuardedSpawnData.guardian_visuals`. Each guardian gets: `Cell`, `GuardianCell`, `GuardianSlot`, `SlideTarget`, `GuardianSlideSpeed`, `GuardianGridStep`, `CellHealth`, square dimensions, `PositionPropagation::Absolute`, `ChildOf(parent)`.
@@ -71,6 +71,7 @@ cells/builder/
     terminal.rs     — spawn(), spawn_inner(), spawn_guardian_children()
   tests/
     mod.rs
+    typestate_tests.rs
     build_tests.rs
     definition_tests.rs
     spawn_tests.rs

@@ -54,6 +54,21 @@ pub(crate) fn compute_grid_scale(
     let default_grid_width = grid_extent(step_x, cols_f, config.padding_x);
     let default_grid_height = grid_extent(step_y, rows_f, config.padding_y);
 
+    if default_grid_width <= 0.0 || default_grid_height <= 0.0 {
+        warn!(
+            "compute_grid_scale: degenerate layout (cols={cols}, rows={rows}), \
+             grid extent is zero or negative"
+        );
+        return ScaledGridDims {
+            cell_width: 0.0,
+            cell_height: 0.0,
+            padding_x: 0.0,
+            step_x: 0.0,
+            step_y: 0.0,
+            scale: 0.0,
+        };
+    }
+
     let available_width = playfield.width;
     let available_height = (playfield.cell_zone_height() - grid_top_offset).max(0.0);
 

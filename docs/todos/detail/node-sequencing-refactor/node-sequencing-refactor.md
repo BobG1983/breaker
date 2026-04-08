@@ -111,10 +111,11 @@ Decided — full implementation plan in [rng-architecture.md](rng-architecture.m
 `ready` — all architectural decisions resolved, implementation waves planned. See [waves.md](waves.md).
 
 ## Dependencies
-- Depends on: protocol & hazard system design (must be resolved first)
-- Depends on: cell builder pattern (in progress — provides Cell::builder() and CellBehavior enum)
+- Depends on: cell builder pattern (provides Cell::builder() and CellBehavior enum)
+- Depends on: protocol & hazard system (must be implemented — Wave 3 wires tier boundary triggers for hazard selection and protocol offerings)
 - Blocks: Phase 8 (content & variety), Phase 9 (roguelite progression)
 - Related: Phase 10 (boss nodes) — boss nodes cap each tier, fully hand-designed
+- Note: Waves 0-2 (RNG migration, data types, composition engine) can start before protocols/hazards are implemented
 
 ## Post-Landing: Fill Tier Regression Stub
 The Tier Regression protocol is scaffolded with a stub — config resource, activation, offering all work, but the system that actually modifies `NodeSequence` to replay a lower tier is a no-op. After this todo lands and `NodeSequence` supports runtime tier manipulation, fill in the stub at `protocol/protocols/tier_regression.rs`. See `docs/todos/detail/mod-system-design/protocols/tier_regression.md` for the full design.

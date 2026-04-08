@@ -4,6 +4,21 @@ description: Confirmed term mappings and glossary gaps for the brickbreaker rogu
 type: project
 ---
 
+## Cell Behaviors (2026-04-08)
+
+- `CellBehavior` — enum in `cells/definition.rs`; variants: `Regen { rate: f32 }`, `Guarded(GuardedBehavior)`
+- `GuardedBehavior` — struct in `cells/definition.rs`; fields: `guardian_hp: f32`, `guardian_color_rgb: [f32; 3]`, `slide_speed: f32`
+- `GuardedCell` — permanent marker on the parent cell (damageable, not locked)
+- `GuardianCell` — permanent marker on child cells; slides clockwise around parent ring
+- `GuardianSlot(u8)` — current ring slot index (0-7, clockwise from top-left)
+- `SlideTarget(u8)` — target ring slot the guardian is sliding toward
+- `GuardianSlideSpeed(f32)` — units/sec; 0.0 means stationary
+- `GuardianGridStep { step_x, step_y }` — step sizes from `ScaledGridDims`
+- `LockCell` / `Locked` / `Locks(Vec<Entity>)` / `Unlocked` — lock behavior components in `cells/behaviors/locked/components.rs`
+- `RegenCell` / `Regen` / `RegenRate(f32)` / `NoRegen` — regen behavior components in `cells/behaviors/regen/components.rs`
+- `CellTypeRegistry` — `SeedableRegistry`, keyed by `String` alias (multi-char). Folder: `assets/cells/`. `seed()` skips invalid definitions with `warn!`.
+- `GuardianSpawnConfig` — builder struct (not deserialized from RON); fields: `hp`, `color_rgb`, `slide_speed`, `cell_height`, `step_x`, `step_y`
+
 ## Birthing (2026-04-08)
 
 - `Birthing` — component in `shared/birthing.rs`; fields: `timer: Timer`, `target_scale: Scale2D`, `stashed_layers: CollisionLayers`

@@ -10,6 +10,7 @@
 - [Bolt Builder Migration](evaluation-bolt-builder-migration.md) — Directional steering, BreakerReflectionSpread rename, PrimaryBolt marker all approved
 - [Breaker Builder Pattern](evaluation-breaker-builder-pattern.md) — Typestate builder, LivesSetting, ClampRange, 35+ field definition, Visual dimension all approved
 - [Wall Builder Pattern](evaluation-wall-builder-pattern.md) — Typestate builder, WallDefinition RON, WallRegistry, per-side definitions, Visible dimension all approved
+- [Guard Cell Redesign](evaluation-guard-cell-redesign.md) — 3x3 grid replacing orbit model approved all 6 pillars; slide speed escalation + formation reassemble sharpening notes
 
 - [Shield Wall Refactor](evaluation-shield-wall-refactor.md) — Charges to timed visible wall APPROVED; tension tuning needed (5s too generous); cell shielding removal correct
 - Node Sequencing & Mod System — Pass 6: 10 Terminal candidates proposed (designer picks 5); Volatile Revenge kept; 4 originals rejected — see `docs/todos/detail/node-sequencing-refactor/` and `docs/todos/detail/mod-system-design.md` for authoritative state

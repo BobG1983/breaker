@@ -144,7 +144,8 @@ ALL tuning values in every protocol AND every hazard must be RON-configurable an
 - Out: chip system changes (chips are separate), tier system (separate todo), evolution catalog redesign (Phase 7)
 
 ## Dependencies
-- Depends on: node sequencing refactor (tiers must exist)
+- Depends on: stubbed `current_tier: u32` on `NodeOutcome` — 3-file change, see [stubbing-tiers.md](stubbing-tiers.md). Full tier system from node sequencing refactor is NOT required.
+- Depends on: legendary rarity removal (assumes Legendary is already gone)
 - Depends on: chip selection UI (protocols display on chip select screen), hazard selection UI (separate screen after chip selection, tier 9+ only)
 
 ## Design Files
@@ -159,6 +160,8 @@ ALL tuning values in every protocol AND every hazard must be RON-configurable an
 
 | File | Contents |
 |------|----------|
+| [stubbing-tiers.md](stubbing-tiers.md) | **Tier stub spec** — 3-file change to surface `current_tier: u32` on `NodeOutcome` from existing `NodeAssignment.tier_index`. Prerequisite for this todo. |
+| [research/tier-stub-trace.md](research/tier-stub-trace.md) | Full codebase trace of node sequence data flow, state machine, and tier surfacing options |
 | [research/interface-design.md](research/interface-design.md) | **Interface design** — concrete Rust types, traits, enums, struct layouts, RON formats, system patterns, cross-domain message inventory. Reviewed by architecture + idiom agents. |
 | [research/chip-offering-flow.md](research/chip-offering-flow.md) | Full trace: ChipCatalog structure, offering algorithm, rarity weights, selection UI, effect dispatch, protocol integration point |
 | [research/effect-system-architecture.md](research/effect-system-architecture.md) | Current effect system trace + planned new system primitives (Route/Stamp/Transfer/During/Killed), protocol-to-category mapping (A=effect tree, B=custom system) |

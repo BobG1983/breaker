@@ -2,13 +2,13 @@
 
 ## Backlog
 
-1. **[in-progress]** Cell builder pattern + existing modifiers (locked, regen, shielded) — typestate builder, folder restructure, enum refactor, lock migration, RON migration — [detail](detail/cell-builder-pattern/cell-builder-pattern.md)
+1. **[done]** Cell builder pattern + existing modifiers (locked, regen, guarded) — typestate builder, folder restructure, enum refactor, lock migration, RON migration — [detail](detail/cell-builder-pattern/cell-builder-pattern.md)
 2. **[ready]** Effect system refactor: typestate builder, Spawn/During triggers, unified vocabulary, centralized despawn — [detail](detail/effect-desugaring-node-running-trigger/effect-desugaring-node-running-trigger.md)
 3. **[ready]** Scenario coverage gaps — birthing invariants, evolution lifecycle, trigger scenarios, runner RON field naming — [detail](detail/scenario-coverage-gaps.md)
 4. **[ready]** Toughness + HP scaling — Toughness enum, exponential ramp (base * 1.2^tier * node_mult) — [detail](detail/toughness-hp-scaling.md)
 5. **[ready]** New cell modifiers (volatile, sequence, survival, armored, phantom, magnetic, portal) — [detail](detail/new-cell-modifiers.md)
 6. **[ready]** Legendary rarity removal — retune 8 as Rare (6 with Common/Uncommon tiers), cut 3, promote 2 to protocols, remove Anchor evolution — [detail](detail/legendary-removal.md)
-7. **[ready]** Protocol & hazard system design — 15 protocols, 16 hazards, interface design, 31 per-item implementation guides, 10-wave plan — [detail](detail/mod-system-design/mod-system-design.md)
+7. **[ready]** Protocol & hazard system — 15 protocols, 16 hazards, interface design, 31 per-item implementation guides, 10-wave plan — [detail](detail/mod-system-design/mod-system-design.md)
 8. **[ready]** Node sequencing refactor — per-tier batching, volatile nodes, portal cells, frame/block generation, RNG architecture — [detail](detail/node-sequencing-refactor/node-sequencing-refactor.md)
 9. **[ready]** Phase 5c: Crate setup + plugin separation — [detail](detail/phase-5c-render-plugin-separation.md)
 10. **[ready]** Phase 5d: Post-processing pipeline (transition shader done, remaining: bloom, CRT, etc.) — [detail](detail/phase-5d-post-processing-pipeline.md)

@@ -184,7 +184,7 @@ Fields are **private** — all access goes through methods. This lets internals 
 | `EvolutionTemplateRegistry` | `EvolutionTemplate` (`evolution.ron`) | `String` (name) | Implements `SeedableRegistry`. Folder: `assets/chips/evolutions/`. Stores `(AssetId, EvolutionTemplate)` pairs. |
 | `ChipCatalog` | *(built from templates)* | `String` (name) | NOT a `SeedableRegistry` — built at runtime by expanding `ChipTemplate`s and `EvolutionTemplate`s via `populate_catalog`. Paired `Vec<String>` preserves insertion order for deterministic chip offers. Also holds `Vec<Recipe>` for in-catalog evolution recipes. |
 | `NodeLayoutRegistry` | `NodeLayout` | `String` (name) | Paired `Vec<String>` preserves insertion order for index-based node progression. |
-| `CellTypeRegistry` | `CellTypeDefinition` | `char` (alias) | Exception: keyed by grid alias char, not name. `CellTypeDefinition.hp` is `f32`. Has optional `behavior: CellBehavior` field (locked, regen_rate). |
+| `CellTypeRegistry` | `CellTypeDefinition` | `String` (alias) | Keyed by alias string (multi-char aliases like `"Gu"` are supported). `CellTypeDefinition.hp` is `f32`. Has optional `behaviors: Option<Vec<CellBehavior>>` field (variants: `Regen { rate }`, `Guarded(GuardedBehavior)`). Implements `SeedableRegistry`. Folder: `assets/cells/`. |
 
 ### Pipeline
 
