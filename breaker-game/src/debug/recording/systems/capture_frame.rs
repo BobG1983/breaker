@@ -121,6 +121,7 @@ mod tests {
                 grid: vec![],
                 pool: NodePool::default(),
                 entity_scale: 1.0,
+                locks: None,
             }));
         run_with_actions(&mut app, vec![GameAction::MoveRight]);
 
@@ -141,6 +142,7 @@ mod tests {
                 grid: vec![],
                 pool: NodePool::default(),
                 entity_scale: 1.0,
+                locks: None,
             }));
         run_with_actions(&mut app, vec![GameAction::DashLeft]);
 

@@ -12,6 +12,11 @@ use crate::{
     },
 };
 
+/// Helper to reduce verbosity of String grid construction.
+fn s(val: &str) -> String {
+    val.to_owned()
+}
+
 #[test]
 fn correct_cell_count_full_layout() {
     let layout = full_layout();
@@ -147,9 +152,10 @@ fn unrecognized_alias_produces_no_entity() {
         cols: 3,
         rows: 1,
         grid_top_offset: 50.0,
-        grid: vec![vec!['S', 'X', 'S']], // 'X' not in registry
+        grid: vec![vec![s("S"), s("X"), s("S")]], // "X" not in registry
         pool: NodePool::default(),
         entity_scale: 1.0,
+        locks: None,
     };
     let mut app = test_app(layout);
     app.update();
@@ -269,8 +275,8 @@ fn all_cells_have_cell_type_alias() {
 }
 
 #[test]
-fn cell_type_alias_matches_grid_char() {
-    // full_layout: row 0 = [T, S, S], row 1 = [S, S, S] -> 1 T, 5 S
+fn cell_type_alias_matches_grid_string() {
+    // full_layout: row 0 = ["T", "S", "S"], row 1 = ["S", "S", "S"] -> 1 T, 5 S
     let layout = full_layout();
     let mut app = test_app(layout);
     app.update();
@@ -278,9 +284,9 @@ fn cell_type_alias_matches_grid_char() {
     let mut t_count = 0;
     let mut s_count = 0;
     for alias in app.world_mut().query::<&CellTypeAlias>().iter(app.world()) {
-        match alias.0 {
-            'T' => t_count += 1,
-            'S' => s_count += 1,
+        match alias.0.as_str() {
+            "T" => t_count += 1,
+            "S" => s_count += 1,
             other => panic!("unexpected alias '{other}'"),
         }
     }

@@ -1,10 +1,16 @@
 //! Node layout definition — RON-deserialized data for a single node layout.
 
+use std::collections::HashMap;
+
 use bevy::prelude::*;
 use serde::Deserialize;
 
 #[cfg(test)]
 use crate::cells::CellTypeRegistry;
+
+/// Maps locked cell positions `(row, col)` to the positions of cells that
+/// must be destroyed to unlock them.
+pub type LockMap = HashMap<(usize, usize), Vec<(usize, usize)>>;
 
 #[cfg(test)]
 /// Maximum number of columns in a node grid.
@@ -25,7 +31,7 @@ pub enum NodePool {
     Boss,
 }
 
-/// A node layout loaded from RON. Grid uses nested char arrays.
+/// A node layout loaded from RON. Grid uses nested String arrays.
 #[derive(Asset, TypePath, Deserialize, Clone, Debug)]
 pub struct NodeLayout {
     /// Display name.
@@ -38,14 +44,19 @@ pub struct NodeLayout {
     pub rows: u32,
     /// Y offset from playfield top for grid start.
     pub grid_top_offset: f32,
-    /// Grid rows — each inner vec is a row, each char is alias or '.' (empty).
-    pub grid: Vec<Vec<char>>,
+    /// Grid rows — each inner vec is a row, each String is alias or "." (empty).
+    pub grid: Vec<Vec<String>>,
     /// Which pool this layout belongs to. Defaults to `Passive` for backward compatibility.
     #[serde(default)]
     pub pool: NodePool,
     /// Scale factor for breaker and bolt entities (0.5..=1.0). Defaults to 1.0.
     #[serde(default = "default_entity_scale")]
     pub entity_scale: f32,
+    /// Lock groups: maps each locked cell position `(row, col)` to the positions
+    /// of cells that must be destroyed to unlock it.
+    /// Absent or `None` means no locks in this layout.
+    #[serde(default)]
+    pub locks: Option<LockMap>,
 }
 
 #[cfg(test)]
@@ -61,8 +72,8 @@ const fn default_entity_scale() -> f32 {
 }
 
 impl NodeLayout {
-    /// Validates that grid dimensions match declared cols/rows and all non-'.'
-    /// chars exist in the given registry.
+    /// Validates that grid dimensions match declared cols/rows and all non-"."
+    /// strings exist in the given registry.
     ///
     /// # Errors
     ///
@@ -106,8 +117,8 @@ impl NodeLayout {
                     self.cols,
                 ));
             }
-            for &ch in row {
-                if ch != '.' && !registry.contains(ch) {
+            for ch in row {
+                if ch != "." && !registry.contains(ch) {
                     return Err(format!(
                         "layout '{}': unknown alias '{}' at row {}",
                         self.name, ch, i,
@@ -115,17 +126,55 @@ impl NodeLayout {
                 }
             }
         }
+        if let Some(ref locks) = self.locks {
+            let max_row = self.rows as usize;
+            let max_col = self.cols as usize;
+            for (&(key_row, key_col), targets) in locks {
+                if key_row >= max_row || key_col >= max_col {
+                    return Err(format!(
+                        "layout '{}': lock key ({}, {}) is out of grid bounds ({}x{})",
+                        self.name, key_row, key_col, self.rows, self.cols,
+                    ));
+                }
+                if self.grid[key_row][key_col] == "." {
+                    return Err(format!(
+                        "layout '{}': lock key ({}, {}) references an empty cell",
+                        self.name, key_row, key_col,
+                    ));
+                }
+                for &(target_row, target_col) in targets {
+                    if target_row >= max_row || target_col >= max_col {
+                        return Err(format!(
+                            "layout '{}': lock target ({}, {}) is out of grid bounds ({}x{})",
+                            self.name, target_row, target_col, self.rows, self.cols,
+                        ));
+                    }
+                    if self.grid[target_row][target_col] == "." {
+                        return Err(format!(
+                            "layout '{}': lock target ({}, {}) references an empty cell",
+                            self.name, target_row, target_col,
+                        ));
+                    }
+                    if target_row == key_row && target_col == key_col {
+                        return Err(format!(
+                            "layout '{}': lock at ({}, {}) has self-referencing target at same position",
+                            self.name, key_row, key_col,
+                        ));
+                    }
+                }
+            }
+        }
         Ok(())
     }
 
-    /// Counts non-'.' cells in the grid.
+    /// Counts non-"." cells in the grid.
     #[must_use]
     #[cfg(test)]
     pub fn cell_count(&self) -> usize {
         self.grid
             .iter()
             .flat_map(|row| row.iter())
-            .filter(|&&ch| ch != '.')
+            .filter(|ch| ch.as_str() != ".")
             .count()
     }
 }

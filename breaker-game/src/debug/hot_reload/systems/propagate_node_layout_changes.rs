@@ -94,17 +94,17 @@ pub(crate) fn propagate_node_layout_changes(mut ctx: LayoutChangeContext) {
 mod tests {
     use super::*;
     use crate::{
-        cells::{CellTypeDefinition, components::CellTypeAlias, definition::CellBehavior},
+        cells::{CellTypeDefinition, components::CellTypeAlias},
         state::run::node::{NodeLayout, definition::NodePool},
     };
 
     fn test_registry() -> CellTypeRegistry {
         let mut registry = CellTypeRegistry::default();
         registry.insert(
-            'S',
+            "S".to_owned(),
             CellTypeDefinition {
                 id: "standard".to_owned(),
-                alias: 'S',
+                alias: "S".to_owned(),
                 hp: 1.0,
                 color_rgb: [4.0, 0.2, 0.5],
                 required_to_clear: true,
@@ -112,15 +112,16 @@ mod tests {
                 damage_green_min: 0.2,
                 damage_blue_range: 0.4,
                 damage_blue_base: 0.2,
-                behavior: CellBehavior::default(),
+                behaviors: None,
+                shield: None,
                 effects: None,
             },
         );
         registry.insert(
-            'T',
+            "T".to_owned(),
             CellTypeDefinition {
                 id: "tough".to_owned(),
-                alias: 'T',
+                alias: "T".to_owned(),
                 hp: 3.0,
                 color_rgb: [2.5, 0.2, 4.0],
                 required_to_clear: true,
@@ -128,14 +129,15 @@ mod tests {
                 damage_green_min: 0.2,
                 damage_blue_range: 0.4,
                 damage_blue_base: 0.2,
-                behavior: CellBehavior::default(),
+                behaviors: None,
+                shield: None,
                 effects: None,
             },
         );
         registry
     }
 
-    fn make_layout(name: &str, grid: Vec<Vec<char>>) -> NodeLayout {
+    fn make_layout(name: &str, grid: Vec<Vec<String>>) -> NodeLayout {
         let rows = u32::try_from(grid.len()).unwrap();
         let cols = if grid.is_empty() {
             0
@@ -151,6 +153,7 @@ mod tests {
             grid,
             pool: NodePool::default(),
             entity_scale: 1.0,
+            locks: None,
         }
     }
 
@@ -172,7 +175,7 @@ mod tests {
         let mut app = test_app();
 
         // Create initial layout
-        let initial_layout = make_layout("test", vec![vec!['S', 'S']]);
+        let initial_layout = make_layout("test", vec![vec!["S".to_owned(), "S".to_owned()]]);
         app.world_mut()
             .insert_resource(ActiveNodeLayout(initial_layout.clone()));
 
@@ -191,7 +194,10 @@ mod tests {
         assert_eq!(cell_count, 0, "no cells until registry is mutated");
 
         // Mutate registry — simulates propagate_registry rebuild with updated layout
-        let updated_layout = make_layout("test", vec![vec!['S', 'T', 'S']]);
+        let updated_layout = make_layout(
+            "test",
+            vec![vec!["S".to_owned(), "T".to_owned(), "S".to_owned()]],
+        );
         {
             let mut registry = app.world_mut().resource_mut::<NodeLayoutRegistry>();
             registry.clear();
@@ -210,7 +216,7 @@ mod tests {
     fn clear_remaining_count_updated_after_respawn() {
         let mut app = test_app();
 
-        let layout = make_layout("test", vec![vec!['S', 'T']]);
+        let layout = make_layout("test", vec![vec!["S".to_owned(), "T".to_owned()]]);
         app.world_mut()
             .insert_resource(ActiveNodeLayout(layout.clone()));
         {
@@ -224,7 +230,10 @@ mod tests {
         app.update();
 
         // Modify registry to trigger respawn
-        let updated_layout = make_layout("test", vec![vec!['S', 'S', 'S']]);
+        let updated_layout = make_layout(
+            "test",
+            vec![vec!["S".to_owned(), "S".to_owned(), "S".to_owned()]],
+        );
         {
             let mut registry = app.world_mut().resource_mut::<NodeLayoutRegistry>();
             registry.clear();
@@ -245,7 +254,7 @@ mod tests {
     fn old_cells_despawned_on_layout_change() {
         let mut app = test_app();
 
-        let layout = make_layout("test", vec![vec!['S']]);
+        let layout = make_layout("test", vec![vec!["S".to_owned()]]);
         app.world_mut()
             .insert_resource(ActiveNodeLayout(layout.clone()));
         {
@@ -254,16 +263,16 @@ mod tests {
         }
 
         // Manually spawn some "old" cell entities
-        app.world_mut().spawn((Cell, CellTypeAlias('S')));
-        app.world_mut().spawn((Cell, CellTypeAlias('S')));
-        app.world_mut().spawn((Cell, CellTypeAlias('S')));
+        app.world_mut().spawn((Cell, CellTypeAlias("S".to_owned())));
+        app.world_mut().spawn((Cell, CellTypeAlias("S".to_owned())));
+        app.world_mut().spawn((Cell, CellTypeAlias("S".to_owned())));
 
         // Flush Added
         app.update();
         app.update();
 
         // Modify registry to 1 cell
-        let updated_layout = make_layout("test", vec![vec!['T']]);
+        let updated_layout = make_layout("test", vec![vec!["T".to_owned()]]);
         {
             let mut registry = app.world_mut().resource_mut::<NodeLayoutRegistry>();
             registry.clear();

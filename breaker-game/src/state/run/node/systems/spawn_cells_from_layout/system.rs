@@ -128,8 +128,8 @@ pub(crate) fn spawn_cells_from_grid(
     let mut required_count = 0u32;
 
     for (row_idx, row) in layout.grid.iter().enumerate() {
-        for (col_idx, &alias) in row.iter().enumerate() {
-            if alias == '.' {
+        for (col_idx, alias) in row.iter().enumerate() {
+            if alias == "." {
                 continue;
             }
             let Some(def) = registry.get(alias) else {
@@ -146,7 +146,7 @@ pub(crate) fn spawn_cells_from_grid(
             let cell_entity_id = {
                 let mut entity = commands.spawn((
                     Cell,
-                    CellTypeAlias(alias),
+                    CellTypeAlias(alias.clone()),
                     CellWidth::new(cell_width),
                     CellHeight::new(cell_height),
                     CellHealth::new(scaled_hp),
@@ -172,20 +172,22 @@ pub(crate) fn spawn_cells_from_grid(
                     entity.insert(RequiredToClear);
                     required_count += 1;
                 }
-                if def.behavior.locked {
-                    entity.insert(Locked);
-                    entity.insert(LockAdjacents(Vec::new()));
+                if let Some(ref behaviors) = def.behaviors {
+                    for behavior in behaviors {
+                        match behavior {
+                            crate::cells::definition::CellBehavior::Regen { rate } => {
+                                entity.insert(CellRegen { rate: *rate });
+                            }
+                        }
+                    }
                 }
-                if let Some(rate) = def.behavior.regen_rate {
-                    entity.insert(CellRegen { rate });
-                }
-                if def.behavior.shield.is_some() {
+                if def.shield.is_some() {
                     entity.insert((ShieldParent, Locked));
                 }
                 entity.id()
             };
 
-            if let Some(ref shield) = def.behavior.shield {
+            if let Some(ref shield) = def.shield {
                 spawn_orbit_children(
                     commands,
                     shield,

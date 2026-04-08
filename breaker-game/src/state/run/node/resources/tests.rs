@@ -13,9 +13,10 @@ fn make_layout(name: &str) -> NodeLayout {
         cols: 2,
         rows: 1,
         grid_top_offset: 50.0,
-        grid: vec![vec!['.', '.']],
+        grid: vec![vec![".".to_owned(), ".".to_owned()]],
         pool: NodePool::default(),
         entity_scale: 1.0,
+        locks: None,
     }
 }
 
@@ -85,9 +86,10 @@ fn make_pool_layout(name: &str, pool: NodePool) -> NodeLayout {
         cols: 2,
         rows: 1,
         grid_top_offset: 50.0,
-        grid: vec![vec!['.', '.']],
+        grid: vec![vec![".".to_owned(), ".".to_owned()]],
         pool,
         entity_scale: 1.0,
+        locks: None,
     }
 }
 
@@ -239,9 +241,10 @@ fn seed_inserts_without_cross_registry_validation() {
         cols: 2,
         rows: 1,
         grid_top_offset: 50.0,
-        grid: vec![vec!['Z', 'Q']],
+        grid: vec![vec!["Z".to_owned(), "Q".to_owned()]],
         pool: NodePool::default(),
         entity_scale: 1.0,
+        locks: None,
     };
     let (_app, pairs) = asset_ids_for(&[layout_with_unknown_alias]);
 

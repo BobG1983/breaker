@@ -5,7 +5,6 @@ use crate::{
     cells::{
         CellTypeDefinition,
         components::Cell,
-        definition::CellBehavior,
         resources::{CellConfig, CellTypeRegistry},
     },
     shared::PlayfieldConfig,
@@ -15,13 +14,18 @@ use crate::{
     },
 };
 
+/// Helper to reduce verbosity of String grid construction.
+fn s(val: &str) -> String {
+    val.to_owned()
+}
+
 pub(super) fn test_registry() -> CellTypeRegistry {
     let mut registry = CellTypeRegistry::default();
     registry.insert(
-        'S',
+        "S".to_owned(),
         CellTypeDefinition {
             id: "standard".to_owned(),
-            alias: 'S',
+            alias: "S".to_owned(),
             hp: 1.0,
             color_rgb: [4.0, 0.2, 0.5],
             required_to_clear: true,
@@ -29,15 +33,16 @@ pub(super) fn test_registry() -> CellTypeRegistry {
             damage_green_min: 0.2,
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
-            behavior: CellBehavior::default(),
+            behaviors: None,
+            shield: None,
             effects: None,
         },
     );
     registry.insert(
-        'T',
+        "T".to_owned(),
         CellTypeDefinition {
             id: "tough".to_owned(),
-            alias: 'T',
+            alias: "T".to_owned(),
             hp: 3.0,
             color_rgb: [2.5, 0.2, 4.0],
             required_to_clear: true,
@@ -45,7 +50,8 @@ pub(super) fn test_registry() -> CellTypeRegistry {
             damage_green_min: 0.2,
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
-            behavior: CellBehavior::default(),
+            behaviors: None,
+            shield: None,
             effects: None,
         },
     );
@@ -60,9 +66,10 @@ pub(super) fn full_layout() -> NodeLayout {
         cols: 3,
         rows: 2,
         grid_top_offset: 50.0,
-        grid: vec![vec!['T', 'S', 'S'], vec!['S', 'S', 'S']],
+        grid: vec![vec![s("T"), s("S"), s("S")], vec![s("S"), s("S"), s("S")]],
         pool: NodePool::default(),
         entity_scale: 1.0,
+        locks: None,
     }
 }
 
@@ -74,9 +81,10 @@ pub(super) fn sparse_layout() -> NodeLayout {
         cols: 3,
         rows: 2,
         grid_top_offset: 50.0,
-        grid: vec![vec!['.', 'S', '.'], vec!['T', '.', 'S']],
+        grid: vec![vec![s("."), s("S"), s(".")], vec![s("T"), s("."), s("S")]],
         pool: NodePool::default(),
         entity_scale: 1.0,
+        locks: None,
     }
 }
 
@@ -155,9 +163,9 @@ pub(super) fn scaled_test_app(layout: NodeLayout) -> App {
     app
 }
 
-/// Builds a `NodeLayout` filled entirely with 'S' cells.
+/// Builds a `NodeLayout` filled entirely with "S" cells.
 pub(super) fn uniform_layout(cols: u32, rows: u32, grid_top_offset: f32) -> NodeLayout {
-    let grid = vec![vec!['S'; cols as usize]; rows as usize];
+    let grid = vec![vec![s("S"); cols as usize]; rows as usize];
     NodeLayout {
         name: format!("uniform_{cols}x{rows}"),
         timer_secs: 60.0,
@@ -167,5 +175,6 @@ pub(super) fn uniform_layout(cols: u32, rows: u32, grid_top_offset: f32) -> Node
         grid,
         pool: NodePool::default(),
         entity_scale: 1.0,
+        locks: None,
     }
 }

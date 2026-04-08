@@ -51,18 +51,14 @@ impl ShieldBehavior {
     }
 }
 
-/// Optional behavior flags for a cell type.
-#[derive(Deserialize, Clone, Debug, Default)]
-pub(crate) struct CellBehavior {
-    /// Whether this cell starts locked (immune to damage until adjacents are cleared).
-    #[serde(default)]
-    pub locked: bool,
-    /// If set, HP regenerates at this rate per second.
-    #[serde(default)]
-    pub regen_rate: Option<f32>,
-    /// If set, this cell is a shield that spawns orbiting children.
-    #[serde(default)]
-    pub shield: Option<ShieldBehavior>,
+/// Behavioral variants that can be attached to a cell type.
+///
+/// Each variant represents a distinct runtime behavior. A cell type may have
+/// zero or more behaviors via `Option<Vec<CellBehavior>>`.
+#[derive(Deserialize, Clone, Debug, PartialEq)]
+pub(crate) enum CellBehavior {
+    /// Cell regenerates HP at the given rate per second.
+    Regen { rate: f32 },
 }
 
 /// A cell type definition loaded from RON.
@@ -70,8 +66,8 @@ pub(crate) struct CellBehavior {
 pub(crate) struct CellTypeDefinition {
     /// Unique identifier.
     pub id: String,
-    /// Single-char alias used in node layout grids.
-    pub alias: char,
+    /// Alias used in node layout grids — may be multi-character.
+    pub alias: String,
     /// Hit points for this cell type.
     pub hp: f32,
     /// HDR RGB color.
@@ -86,9 +82,12 @@ pub(crate) struct CellTypeDefinition {
     pub damage_blue_range: f32,
     /// Base blue channel value for damage color feedback.
     pub damage_blue_base: f32,
-    /// Optional behavior flags (locked, regen). Defaults to no behavior.
+    /// Optional behavior list (regen, etc.). Defaults to `None`.
     #[serde(default)]
-    pub behavior: CellBehavior,
+    pub behaviors: Option<Vec<CellBehavior>>,
+    /// Optional shield configuration. Stays as a separate field until Wave 4.
+    #[serde(default)]
+    pub shield: Option<ShieldBehavior>,
     /// Optional effect chains for this cell type. Defaults to `None`.
     #[serde(default)]
     pub effects: Option<Vec<RootEffect>>,
@@ -105,7 +104,9 @@ impl CellTypeDefinition {
     ///
     /// Checks:
     /// - `hp` must be finite and positive (> 0.0).
-    /// - `behavior.regen_rate`, if `Some`, must be finite and positive (> 0.0).
+    /// - `alias` must not be empty or the reserved `"."`.
+    /// - Each `CellBehavior::Regen { rate }` must have a finite positive rate.
+    /// - `shield`, if present, must pass its own validation.
     ///
     /// # Errors
     ///
@@ -114,14 +115,26 @@ impl CellTypeDefinition {
         if self.hp <= 0.0 || !self.hp.is_finite() {
             return Err(format!("hp must be positive and finite, got {}", self.hp));
         }
-        if let Some(rate) = self.behavior.regen_rate
-            && (rate <= 0.0 || !rate.is_finite())
-        {
-            return Err(format!(
-                "regen_rate must be positive and finite, got {rate}"
-            ));
+        if self.alias.is_empty() {
+            return Err("alias must not be empty".to_owned());
         }
-        if let Some(ref shield) = self.behavior.shield {
+        if self.alias == "." {
+            return Err("alias '.' is reserved for empty grid positions".to_owned());
+        }
+        if let Some(ref behaviors) = self.behaviors {
+            for behavior in behaviors {
+                match behavior {
+                    CellBehavior::Regen { rate } => {
+                        if *rate <= 0.0 || !rate.is_finite() {
+                            return Err(format!(
+                                "regen rate must be positive and finite, got {rate}"
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+        if let Some(ref shield) = self.shield {
             shield.validate()?;
         }
         Ok(())
@@ -137,7 +150,7 @@ mod tests {
     fn valid_definition() -> CellTypeDefinition {
         CellTypeDefinition {
             id: "test".to_owned(),
-            alias: 'T',
+            alias: "T".to_owned(),
             hp: 20.0,
             color_rgb: [1.0, 0.5, 0.2],
             required_to_clear: true,
@@ -145,7 +158,8 @@ mod tests {
             damage_green_min: 0.2,
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
-            behavior: CellBehavior::default(),
+            behaviors: None,
+            shield: None,
             effects: None,
         }
     }
@@ -180,62 +194,319 @@ mod tests {
         assert!(def.validate().is_err(), "hp = INFINITY should be rejected");
     }
 
-    // ── regen_rate validation ────────────────────────────────────────
+    // ── CellBehavior enum tests (Part A behaviors 1-2) ──────────────
 
     #[test]
-    fn validate_rejects_zero_regen_rate() {
-        let mut def = valid_definition();
-        def.behavior.regen_rate = Some(0.0);
+    fn cell_behavior_regen_deserializes_from_ron() {
+        let ron_str = "Regen(rate: 2.0)";
+        let result: CellBehavior = ron::de::from_str(ron_str).expect("should deserialize");
+        assert_eq!(result, CellBehavior::Regen { rate: 2.0 });
+    }
+
+    #[test]
+    fn cell_behavior_regen_smallest_positive_rate_deserializes() {
+        let ron_str = "Regen(rate: 0.001)";
+        let result: CellBehavior = ron::de::from_str(ron_str).expect("should deserialize");
+        assert_eq!(result, CellBehavior::Regen { rate: 0.001 });
+    }
+
+    #[test]
+    fn cell_behavior_is_clone_debug() {
+        let behavior = CellBehavior::Regen { rate: 3.5 };
+        let cloned = behavior.clone();
+        assert_eq!(behavior, cloned, "clone should equal original");
+        let debug_str = format!("{behavior:?}");
         assert!(
-            def.validate().is_err(),
-            "regen_rate = Some(0.0) should be rejected"
+            debug_str.contains("Regen"),
+            "debug should contain 'Regen', got: {debug_str}"
+        );
+        assert!(
+            debug_str.contains("3.5"),
+            "debug should contain '3.5', got: {debug_str}"
+        );
+    }
+
+    // ── CellTypeDefinition deserialization (Part A behaviors 3-5, 14) ─
+
+    #[test]
+    fn definition_with_no_behaviors_field_deserializes_to_none() {
+        let ron_str = r#"(
+            id: "test",
+            alias: "S",
+            hp: 10.0,
+            color_rgb: (1.0, 0.5, 0.2),
+            required_to_clear: true,
+            damage_hdr_base: 4.0,
+            damage_green_min: 0.2,
+            damage_blue_range: 0.4,
+            damage_blue_base: 0.2,
+        )"#;
+        let def: CellTypeDefinition =
+            ron::de::from_str(ron_str).expect("should deserialize without behaviors field");
+        assert!(
+            def.behaviors.is_none(),
+            "missing behaviors field should default to None"
         );
     }
 
     #[test]
-    fn validate_rejects_negative_regen_rate() {
-        let mut def = valid_definition();
-        def.behavior.regen_rate = Some(-1.0);
+    fn definition_with_explicit_behaviors_none_deserializes() {
+        let ron_str = r#"(
+            id: "test",
+            alias: "S",
+            hp: 10.0,
+            color_rgb: (1.0, 0.5, 0.2),
+            required_to_clear: true,
+            damage_hdr_base: 4.0,
+            damage_green_min: 0.2,
+            damage_blue_range: 0.4,
+            damage_blue_base: 0.2,
+            behaviors: None,
+        )"#;
+        let def: CellTypeDefinition =
+            ron::de::from_str(ron_str).expect("should deserialize with behaviors: None");
         assert!(
-            def.validate().is_err(),
-            "regen_rate = Some(-1.0) should be rejected"
+            def.behaviors.is_none(),
+            "explicit behaviors: None should produce None"
         );
     }
 
     #[test]
-    fn validate_rejects_infinite_regen_rate() {
-        let mut def = valid_definition();
-        def.behavior.regen_rate = Some(f32::INFINITY);
-        assert!(
-            def.validate().is_err(),
-            "regen_rate = Some(INFINITY) should be rejected"
+    fn definition_with_empty_behaviors_vec_deserializes() {
+        let ron_str = r#"(
+            id: "test",
+            alias: "S",
+            hp: 10.0,
+            color_rgb: (1.0, 0.5, 0.2),
+            required_to_clear: true,
+            damage_hdr_base: 4.0,
+            damage_green_min: 0.2,
+            damage_blue_range: 0.4,
+            damage_blue_base: 0.2,
+            behaviors: Some([]),
+        )"#;
+        let def: CellTypeDefinition =
+            ron::de::from_str(ron_str).expect("should deserialize with behaviors: Some([])");
+        assert_eq!(
+            def.behaviors,
+            Some(vec![]),
+            "behaviors: Some([]) should produce Some(empty vec)"
         );
     }
 
-    // ── positive cases ──────────────────────────────────────────────
+    #[test]
+    fn definition_with_single_regen_behavior_deserializes() {
+        let ron_str = r#"(
+            id: "regen",
+            alias: "R",
+            hp: 20.0,
+            color_rgb: (0.3, 4.0, 0.3),
+            required_to_clear: true,
+            damage_hdr_base: 4.0,
+            damage_green_min: 0.4,
+            damage_blue_range: 0.3,
+            damage_blue_base: 0.1,
+            behaviors: Some([Regen(rate: 2.0)]),
+        )"#;
+        let def: CellTypeDefinition =
+            ron::de::from_str(ron_str).expect("should deserialize with Regen behavior");
+        assert_eq!(
+            def.behaviors,
+            Some(vec![CellBehavior::Regen { rate: 2.0 }]),
+            "should parse single Regen behavior"
+        );
+    }
 
     #[test]
-    fn validate_accepts_valid_definition_without_regen() {
-        let def = valid_definition();
+    fn definition_alias_is_string() {
+        let ron_str = r#"(
+            id: "test",
+            alias: "S",
+            hp: 10.0,
+            color_rgb: (1.0, 0.5, 0.2),
+            required_to_clear: true,
+            damage_hdr_base: 4.0,
+            damage_green_min: 0.2,
+            damage_blue_range: 0.4,
+            damage_blue_base: 0.2,
+        )"#;
+        let def: CellTypeDefinition = ron::de::from_str(ron_str).expect("should deserialize");
+        assert_eq!(def.alias, "S".to_owned(), "alias should be a String");
+    }
+
+    #[test]
+    fn definition_multi_char_alias_deserializes() {
+        let ron_str = r#"(
+            id: "guard",
+            alias: "Gu",
+            hp: 10.0,
+            color_rgb: (1.0, 0.5, 0.2),
+            required_to_clear: true,
+            damage_hdr_base: 4.0,
+            damage_green_min: 0.2,
+            damage_blue_range: 0.4,
+            damage_blue_base: 0.2,
+        )"#;
+        let def: CellTypeDefinition = ron::de::from_str(ron_str).expect("should deserialize");
+        assert_eq!(
+            def.alias,
+            "Gu".to_owned(),
+            "multi-char alias should deserialize"
+        );
+    }
+
+    // ── validate() for behaviors (Part A behaviors 6-13) ─────────────
+
+    #[test]
+    fn validate_accepts_valid_definition_with_regen_behavior() {
+        let mut def = valid_definition();
+        def.behaviors = Some(vec![CellBehavior::Regen { rate: 2.0 }]);
         assert!(
             def.validate().is_ok(),
-            "valid definition with regen_rate = None should pass: {:?}",
+            "valid Regen {{ rate: 2.0 }} should pass: {:?}",
             def.validate(),
         );
     }
 
     #[test]
-    fn validate_accepts_valid_definition_with_regen() {
+    fn validate_accepts_regen_with_very_small_positive_rate() {
         let mut def = valid_definition();
-        def.behavior.regen_rate = Some(2.0);
+        def.behaviors = Some(vec![CellBehavior::Regen { rate: 0.001 }]);
         assert!(
             def.validate().is_ok(),
-            "valid definition with regen_rate = Some(2.0) should pass: {:?}",
+            "Regen {{ rate: 0.001 }} should pass: {:?}",
             def.validate(),
         );
     }
 
-    // ── ShieldBehavior validation ─────────────────────────────────
+    #[test]
+    fn validate_rejects_regen_with_zero_rate() {
+        let mut def = valid_definition();
+        def.behaviors = Some(vec![CellBehavior::Regen { rate: 0.0 }]);
+        let err = def.validate().expect_err("rate = 0.0 should be rejected");
+        let err_lower = err.to_lowercase();
+        assert!(
+            err_lower.contains("regen") || err_lower.contains('0'),
+            "error should mention regen or zero, got: {err}"
+        );
+    }
+
+    #[test]
+    fn validate_rejects_regen_with_negative_rate() {
+        let mut def = valid_definition();
+        def.behaviors = Some(vec![CellBehavior::Regen { rate: -1.0 }]);
+        assert!(def.validate().is_err(), "rate = -1.0 should be rejected");
+    }
+
+    #[test]
+    fn validate_rejects_regen_with_tiny_negative_rate() {
+        let mut def = valid_definition();
+        def.behaviors = Some(vec![CellBehavior::Regen { rate: -0.001 }]);
+        assert!(def.validate().is_err(), "rate = -0.001 should be rejected");
+    }
+
+    #[test]
+    fn validate_rejects_regen_with_nan_rate() {
+        let mut def = valid_definition();
+        def.behaviors = Some(vec![CellBehavior::Regen { rate: f32::NAN }]);
+        assert!(def.validate().is_err(), "rate = NaN should be rejected");
+    }
+
+    #[test]
+    fn validate_rejects_regen_with_infinite_rate() {
+        let mut def = valid_definition();
+        def.behaviors = Some(vec![CellBehavior::Regen {
+            rate: f32::INFINITY,
+        }]);
+        assert!(
+            def.validate().is_err(),
+            "rate = INFINITY should be rejected"
+        );
+    }
+
+    #[test]
+    fn validate_rejects_regen_with_neg_infinite_rate() {
+        let mut def = valid_definition();
+        def.behaviors = Some(vec![CellBehavior::Regen {
+            rate: f32::NEG_INFINITY,
+        }]);
+        assert!(
+            def.validate().is_err(),
+            "rate = NEG_INFINITY should be rejected"
+        );
+    }
+
+    #[test]
+    fn validate_accepts_behaviors_none() {
+        let mut def = valid_definition();
+        def.behaviors = None;
+        assert!(
+            def.validate().is_ok(),
+            "behaviors: None should pass: {:?}",
+            def.validate(),
+        );
+    }
+
+    #[test]
+    fn validate_accepts_empty_behaviors_vec() {
+        let mut def = valid_definition();
+        def.behaviors = Some(vec![]);
+        assert!(
+            def.validate().is_ok(),
+            "behaviors: Some(vec![]) should pass: {:?}",
+            def.validate(),
+        );
+    }
+
+    #[test]
+    fn validate_rejects_when_any_behavior_invalid() {
+        // First valid, second invalid
+        let mut def = valid_definition();
+        def.behaviors = Some(vec![
+            CellBehavior::Regen { rate: 2.0 },
+            CellBehavior::Regen { rate: -1.0 },
+        ]);
+        assert!(
+            def.validate().is_err(),
+            "behaviors with one invalid entry should be rejected"
+        );
+    }
+
+    #[test]
+    fn validate_rejects_when_first_behavior_invalid() {
+        // First invalid, second valid
+        let mut def = valid_definition();
+        def.behaviors = Some(vec![
+            CellBehavior::Regen { rate: -1.0 },
+            CellBehavior::Regen { rate: 2.0 },
+        ]);
+        assert!(
+            def.validate().is_err(),
+            "behaviors with first entry invalid should be rejected"
+        );
+    }
+
+    // ── alias validation (Part A behaviors 15-16) ────────────────────
+
+    #[test]
+    fn validate_rejects_empty_alias() {
+        let mut def = valid_definition();
+        def.alias = String::new();
+        assert!(def.validate().is_err(), "empty alias should be rejected");
+    }
+
+    #[test]
+    fn validate_rejects_dot_alias() {
+        let mut def = valid_definition();
+        def.alias = ".".to_owned();
+        let err = def.validate().expect_err("dot alias should be rejected");
+        assert!(
+            err.contains("reserved") || err.contains('.'),
+            "error should mention reserved or dot, got: {err}"
+        );
+    }
+
+    // ── ShieldBehavior delegation (Part A behavior 17) ───────────────
 
     fn valid_shield() -> ShieldBehavior {
         ShieldBehavior {
@@ -361,7 +632,7 @@ mod tests {
     #[test]
     fn cell_definition_validate_delegates_to_shield_validate() {
         let mut def = valid_definition();
-        def.behavior.shield = Some(ShieldBehavior {
+        def.shield = Some(ShieldBehavior {
             count: 3,
             radius: -1.0, // invalid
             speed: std::f32::consts::FRAC_PI_2,
@@ -377,10 +648,20 @@ mod tests {
     #[test]
     fn cell_definition_validate_accepts_valid_shield() {
         let mut def = valid_definition();
-        def.behavior.shield = Some(valid_shield());
+        def.shield = Some(valid_shield());
         assert!(
             def.validate().is_ok(),
             "CellTypeDefinition with valid ShieldBehavior should pass: {:?}",
+            def.validate(),
+        );
+    }
+
+    #[test]
+    fn validate_accepts_valid_definition_without_behaviors() {
+        let def = valid_definition();
+        assert!(
+            def.validate().is_ok(),
+            "valid definition with behaviors = None should pass: {:?}",
             def.validate(),
         );
     }

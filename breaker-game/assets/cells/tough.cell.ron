@@ -1,7 +1,7 @@
 /* @[brickbreaker::cells::resources::CellTypeDefinition] */
 (
     id: "tough",
-    alias: 'T',
+    alias: "T",
     hp: 30.0,
     color_rgb: (2.5, 0.2, 4.0),
     required_to_clear: true,

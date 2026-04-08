@@ -15,10 +15,10 @@ use crate::{
 fn cell_with_target_bolt_dispatches_to_bolt_entity() {
     let mut registry = crate::cells::resources::CellTypeRegistry::default();
     registry.insert(
-        'B',
+        "B".to_owned(),
         make_cell_def(
             "bolt_boost_cell",
-            'B',
+            "B",
             10.0,
             Some(vec![RootEffect::On {
                 target: Target::Bolt,
@@ -31,7 +31,10 @@ fn cell_with_target_bolt_dispatches_to_bolt_entity() {
     );
 
     let mut app = test_app(registry);
-    let cell_entity = app.world_mut().spawn((Cell, CellTypeAlias('B'))).id();
+    let cell_entity = app
+        .world_mut()
+        .spawn((Cell, CellTypeAlias("B".to_owned())))
+        .id();
     let bolt_entity = app.world_mut().spawn(Bolt).id();
     app.update();
 
@@ -85,10 +88,10 @@ fn cell_with_target_bolt_dispatches_to_bolt_entity() {
 fn cell_with_target_bolt_no_bolt_present_no_panic() {
     let mut registry = crate::cells::resources::CellTypeRegistry::default();
     registry.insert(
-        'B',
+        "B".to_owned(),
         make_cell_def(
             "bolt_boost_cell",
-            'B',
+            "B",
             10.0,
             Some(vec![RootEffect::On {
                 target: Target::Bolt,
@@ -101,7 +104,10 @@ fn cell_with_target_bolt_no_bolt_present_no_panic() {
     );
 
     let mut app = test_app(registry);
-    let cell_entity = app.world_mut().spawn((Cell, CellTypeAlias('B'))).id();
+    let cell_entity = app
+        .world_mut()
+        .spawn((Cell, CellTypeAlias("B".to_owned())))
+        .id();
     // No bolt entity spawned
     app.update();
 

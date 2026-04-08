@@ -14,10 +14,7 @@ use super::{
 };
 use crate::{
     cells::{
-        CellTypeDefinition,
-        components::*,
-        definition::{CellBehavior, ShieldBehavior},
-        resources::CellTypeRegistry,
+        CellTypeDefinition, components::*, definition::ShieldBehavior, resources::CellTypeRegistry,
     },
     state::run::node::{
         ActiveNodeLayout, NodeLayout, definition::NodePool, messages::CellsSpawned,
@@ -79,12 +76,13 @@ fn orbit_radius_scaled_by_grid_scale_factor() {
         rows: 20,
         grid_top_offset: 90.0,
         grid: {
-            let mut grid = vec![vec!['N'; 40]; 20];
-            grid[0][0] = 'H'; // shield in corner
+            let mut grid = vec![vec!["N".to_owned(); 40]; 20];
+            grid[0][0] = "H".to_owned(); // shield in corner
             grid
         },
         pool: NodePool::default(),
         entity_scale: 1.0,
+        locks: None,
     };
 
     let cell_config = ron_like_cell_config();
@@ -248,10 +246,10 @@ fn shield_with_zero_orbit_count_has_empty_lock_adjacents() {
     // Then: shield has Locked + LockAdjacents(empty) -> will immediately unlock
     let mut registry = CellTypeRegistry::default();
     registry.insert(
-        'H',
+        "H".to_owned(),
         CellTypeDefinition {
             id: "shield_zero".to_owned(),
-            alias: 'H',
+            alias: "H".to_owned(),
             hp: 20.0,
             color_rgb: [0.8, 0.8, 1.0],
             required_to_clear: true,
@@ -259,17 +257,14 @@ fn shield_with_zero_orbit_count_has_empty_lock_adjacents() {
             damage_green_min: 0.2,
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
-            behavior: CellBehavior {
-                locked: false,
-                regen_rate: None,
-                shield: Some(ShieldBehavior {
-                    count: 0,
-                    radius: 60.0,
-                    speed: std::f32::consts::FRAC_PI_2,
-                    hp: 10.0,
-                    color_rgb: [0.5, 0.8, 1.0],
-                }),
-            },
+            behaviors: None,
+            shield: Some(ShieldBehavior {
+                count: 0,
+                radius: 60.0,
+                speed: std::f32::consts::FRAC_PI_2,
+                hp: 10.0,
+                color_rgb: [0.5, 0.8, 1.0],
+            }),
             effects: None,
         },
     );
@@ -280,9 +275,10 @@ fn shield_with_zero_orbit_count_has_empty_lock_adjacents() {
         cols: 1,
         rows: 1,
         grid_top_offset: 50.0,
-        grid: vec![vec!['H']],
+        grid: vec![vec!["H".to_owned()]],
         pool: NodePool::default(),
         entity_scale: 1.0,
+        locks: None,
     };
 
     let mut app = shield_test_app(layout, registry);

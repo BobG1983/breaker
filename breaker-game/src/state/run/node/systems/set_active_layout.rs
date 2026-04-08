@@ -57,9 +57,10 @@ mod tests {
             cols: 2,
             rows: 1,
             grid_top_offset: 50.0,
-            grid: vec![vec!['S', 'S']],
+            grid: vec![vec!["S".to_owned(), "S".to_owned()]],
             pool: NodePool::default(),
             entity_scale: 1.0,
+            locks: None,
         }
     }
 

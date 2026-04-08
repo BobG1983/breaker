@@ -15,10 +15,10 @@ use crate::{
 fn bound_effects_and_staged_effects_inserted_on_cell_if_absent() {
     let mut registry = crate::cells::resources::CellTypeRegistry::default();
     registry.insert(
-        'E',
+        "E".to_owned(),
         make_cell_def(
             "effect_cell",
-            'E',
+            "E",
             10.0,
             Some(vec![RootEffect::On {
                 target: Target::Cell,
@@ -35,7 +35,10 @@ fn bound_effects_and_staged_effects_inserted_on_cell_if_absent() {
 
     let mut app = test_app(registry);
     // Spawn cell with NO BoundEffects and NO StagedEffects
-    let cell_entity = app.world_mut().spawn((Cell, CellTypeAlias('E'))).id();
+    let cell_entity = app
+        .world_mut()
+        .spawn((Cell, CellTypeAlias("E".to_owned())))
+        .id();
     app.update();
 
     assert!(
@@ -54,10 +57,10 @@ fn bound_effects_and_staged_effects_inserted_on_cell_if_absent() {
 fn staged_effects_inserted_when_bound_effects_already_exists() {
     let mut registry = crate::cells::resources::CellTypeRegistry::default();
     registry.insert(
-        'E',
+        "E".to_owned(),
         make_cell_def(
             "effect_cell",
-            'E',
+            "E",
             10.0,
             Some(vec![RootEffect::On {
                 target: Target::Cell,
@@ -76,7 +79,7 @@ fn staged_effects_inserted_when_bound_effects_already_exists() {
     // Spawn cell WITH BoundEffects but WITHOUT StagedEffects
     let cell_entity = app
         .world_mut()
-        .spawn((Cell, CellTypeAlias('E'), BoundEffects::default()))
+        .spawn((Cell, CellTypeAlias("E".to_owned()), BoundEffects::default()))
         .id();
     app.update();
 
@@ -92,10 +95,10 @@ fn staged_effects_inserted_when_bound_effects_already_exists() {
 fn bolt_gets_bound_effects_and_staged_effects_pre_inserted() {
     let mut registry = crate::cells::resources::CellTypeRegistry::default();
     registry.insert(
-        'B',
+        "B".to_owned(),
         make_cell_def(
             "bolt_boost_cell",
-            'B',
+            "B",
             10.0,
             Some(vec![RootEffect::On {
                 target: Target::Bolt,
@@ -108,7 +111,7 @@ fn bolt_gets_bound_effects_and_staged_effects_pre_inserted() {
     );
 
     let mut app = test_app(registry);
-    app.world_mut().spawn((Cell, CellTypeAlias('B')));
+    app.world_mut().spawn((Cell, CellTypeAlias("B".to_owned())));
     // Bolt spawned with NO BoundEffects, NO StagedEffects
     let bolt_entity = app.world_mut().spawn(Bolt).id();
     app.update();
@@ -129,10 +132,10 @@ fn bolt_gets_bound_effects_and_staged_effects_pre_inserted() {
 fn bolt_with_bound_effects_but_no_staged_effects_gets_staged_effects_inserted() {
     let mut registry = crate::cells::resources::CellTypeRegistry::default();
     registry.insert(
-        'B',
+        "B".to_owned(),
         make_cell_def(
             "bolt_boost_cell",
-            'B',
+            "B",
             10.0,
             Some(vec![RootEffect::On {
                 target: Target::Bolt,
@@ -145,7 +148,7 @@ fn bolt_with_bound_effects_but_no_staged_effects_gets_staged_effects_inserted() 
     );
 
     let mut app = test_app(registry);
-    app.world_mut().spawn((Cell, CellTypeAlias('B')));
+    app.world_mut().spawn((Cell, CellTypeAlias("B".to_owned())));
     // Bolt has BoundEffects but NOT StagedEffects
     let bolt_entity = app.world_mut().spawn((Bolt, BoundEffects::default())).id();
     app.update();

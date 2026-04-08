@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::{
     cells::{
         CellTypeDefinition,
-        definition::{CellBehavior, ShieldBehavior},
+        definition::ShieldBehavior,
         resources::{CellConfig, CellTypeRegistry},
     },
     shared::PlayfieldConfig,
@@ -17,10 +17,10 @@ use crate::{
 pub(super) fn shield_registry() -> CellTypeRegistry {
     let mut registry = CellTypeRegistry::default();
     registry.insert(
-        'H',
+        "H".to_owned(),
         CellTypeDefinition {
             id: "shield".to_owned(),
-            alias: 'H',
+            alias: "H".to_owned(),
             hp: 20.0,
             color_rgb: [0.8, 0.8, 1.0],
             required_to_clear: true,
@@ -28,25 +28,22 @@ pub(super) fn shield_registry() -> CellTypeRegistry {
             damage_green_min: 0.2,
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
-            behavior: CellBehavior {
-                locked: false,
-                regen_rate: None,
-                shield: Some(ShieldBehavior {
-                    count: 3,
-                    radius: 60.0,
-                    speed: std::f32::consts::FRAC_PI_2,
-                    hp: 10.0,
-                    color_rgb: [0.5, 0.8, 1.0],
-                }),
-            },
+            behaviors: None,
+            shield: Some(ShieldBehavior {
+                count: 3,
+                radius: 60.0,
+                speed: std::f32::consts::FRAC_PI_2,
+                hp: 10.0,
+                color_rgb: [0.5, 0.8, 1.0],
+            }),
             effects: None,
         },
     );
     registry.insert(
-        'N',
+        "N".to_owned(),
         CellTypeDefinition {
             id: "normal".to_owned(),
-            alias: 'N',
+            alias: "N".to_owned(),
             hp: 1.0,
             color_rgb: [1.0, 0.5, 0.5],
             required_to_clear: true,
@@ -54,7 +51,8 @@ pub(super) fn shield_registry() -> CellTypeRegistry {
             damage_green_min: 0.2,
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
-            behavior: CellBehavior::default(),
+            behaviors: None,
+            shield: None,
             effects: None,
         },
     );
@@ -68,9 +66,10 @@ pub(super) fn shield_layout() -> NodeLayout {
         cols: 2,
         rows: 1,
         grid_top_offset: 50.0,
-        grid: vec![vec!['H', 'N']],
+        grid: vec![vec!["H".to_owned(), "N".to_owned()]],
         pool: NodePool::default(),
         entity_scale: 1.0,
+        locks: None,
     }
 }
 

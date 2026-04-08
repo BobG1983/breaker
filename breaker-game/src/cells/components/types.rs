@@ -17,8 +17,8 @@ pub struct RequiredToClear;
 
 /// Tracks which cell type definition alias spawned this cell.
 /// Used by hot-reload to update live cells when their type definition changes.
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct CellTypeAlias(pub char);
+#[derive(Component, Debug, Clone, PartialEq, Eq)]
+pub(crate) struct CellTypeAlias(pub String);
 
 /// Visual parameters for cell damage color feedback.
 #[derive(Component, Debug, Clone)]
@@ -169,3 +169,38 @@ pub(crate) struct OrbitConfig {
 /// if the system re-runs (e.g., hot-reload re-entry).
 #[derive(Component, Debug)]
 pub(crate) struct CellEffectsDispatched;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── Part D: CellTypeAlias wraps String (behaviors 46-47) ─────────
+
+    #[test]
+    fn cell_type_alias_wraps_string() {
+        let alias = CellTypeAlias("S".to_owned());
+        assert_eq!(alias.0, "S", "CellTypeAlias.0 should be a String");
+    }
+
+    #[test]
+    fn cell_type_alias_multi_char() {
+        let alias = CellTypeAlias("Gu".to_owned());
+        assert_eq!(alias.0, "Gu", "multi-char CellTypeAlias should work");
+    }
+
+    #[test]
+    fn cell_type_alias_is_clone_debug_not_copy() {
+        let alias = CellTypeAlias("S".to_owned());
+        let cloned = alias.clone();
+        assert_eq!(alias, cloned, "clone should equal original");
+        let debug_str = format!("{alias:?}");
+        assert!(
+            debug_str.contains("CellTypeAlias"),
+            "debug should contain type name, got: {debug_str}"
+        );
+        assert!(
+            debug_str.contains('S'),
+            "debug should contain value, got: {debug_str}"
+        );
+    }
+}

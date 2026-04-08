@@ -10,7 +10,6 @@ use crate::{
     cells::{
         CellTypeDefinition,
         components::*,
-        definition::CellBehavior,
         resources::{CellConfig, CellTypeRegistry},
     },
     shared::{BOLT_LAYER, CELL_LAYER, GameDrawLayer, PlayfieldConfig},
@@ -247,9 +246,10 @@ fn spawned_cell_has_aabb2d_with_half_extents_matching_cell_dimensions() {
         cols: 1,
         rows: 1,
         grid_top_offset: 50.0,
-        grid: vec![vec!['S']],
+        grid: vec![vec!["S".to_owned()]],
         pool: NodePool::default(),
         entity_scale: 1.0,
+        locks: None,
     };
     let config = CellConfig::default(); // width=70.0, height=24.0
     let mut app = test_app(layout);
@@ -359,10 +359,10 @@ fn locked_cell_has_same_collision_layers_as_normal_cell() {
 
     let mut registry = CellTypeRegistry::default();
     registry.insert(
-        'L',
+        "L".to_owned(),
         CellTypeDefinition {
             id: "locked".to_owned(),
-            alias: 'L',
+            alias: "L".to_owned(),
             hp: 5.0,
             color_rgb: [1.0, 1.0, 1.0],
             required_to_clear: true,
@@ -370,19 +370,16 @@ fn locked_cell_has_same_collision_layers_as_normal_cell() {
             damage_green_min: 0.2,
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
-            behavior: CellBehavior {
-                locked: true,
-                regen_rate: None,
-                ..Default::default()
-            },
+            behaviors: None,
+            shield: None,
             effects: None,
         },
     );
     registry.insert(
-        'N',
+        "N".to_owned(),
         CellTypeDefinition {
             id: "normal".to_owned(),
-            alias: 'N',
+            alias: "N".to_owned(),
             hp: 1.0,
             color_rgb: [1.0, 0.5, 0.5],
             required_to_clear: true,
@@ -390,7 +387,8 @@ fn locked_cell_has_same_collision_layers_as_normal_cell() {
             damage_green_min: 0.2,
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
-            behavior: CellBehavior::default(),
+            behaviors: None,
+            shield: None,
             effects: None,
         },
     );
@@ -401,9 +399,10 @@ fn locked_cell_has_same_collision_layers_as_normal_cell() {
         cols: 2,
         rows: 1,
         grid_top_offset: 50.0,
-        grid: vec![vec!['L', 'N']],
+        grid: vec![vec!["L".to_owned(), "N".to_owned()]],
         pool: NodePool::default(),
         entity_scale: 1.0,
+        locks: None,
     };
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)

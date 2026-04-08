@@ -4,4 +4,5 @@ mod helpers;
 
 mod entity_scale;
 mod layout_validation;
+mod lock_validation;
 mod ron_parsing;

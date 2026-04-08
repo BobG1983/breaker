@@ -12,10 +12,10 @@ use crate::{
 fn cell_with_target_cell_effect_gets_bound_effects_populated() {
     let mut registry = crate::cells::resources::CellTypeRegistry::default();
     registry.insert(
-        'E',
+        "E".to_owned(),
         make_cell_def(
             "effect_cell",
-            'E',
+            "E",
             10.0,
             Some(vec![RootEffect::On {
                 target: Target::Cell,
@@ -31,7 +31,10 @@ fn cell_with_target_cell_effect_gets_bound_effects_populated() {
     );
 
     let mut app = test_app(registry);
-    let cell_entity = app.world_mut().spawn((Cell, CellTypeAlias('E'))).id();
+    let cell_entity = app
+        .world_mut()
+        .spawn((Cell, CellTypeAlias("E".to_owned())))
+        .id();
     app.update();
 
     // Cell should have BoundEffects with exactly 1 entry
@@ -82,10 +85,10 @@ fn cell_with_target_cell_effect_gets_bound_effects_populated() {
 fn cell_with_existing_bound_effects_but_no_marker_still_gets_dispatched() {
     let mut registry = crate::cells::resources::CellTypeRegistry::default();
     registry.insert(
-        'E',
+        "E".to_owned(),
         make_cell_def(
             "effect_cell",
-            'E',
+            "E",
             10.0,
             Some(vec![RootEffect::On {
                 target: Target::Cell,
@@ -105,7 +108,7 @@ fn cell_with_existing_bound_effects_but_no_marker_still_gets_dispatched() {
         .world_mut()
         .spawn((
             Cell,
-            CellTypeAlias('E'),
+            CellTypeAlias("E".to_owned()),
             BoundEffects(vec![(
                 "existing_chip".to_owned(),
                 EffectNode::When {
@@ -151,12 +154,12 @@ fn cell_with_existing_bound_effects_but_no_marker_still_gets_dispatched() {
 #[test]
 fn cell_with_no_effects_is_unchanged() {
     let mut registry = crate::cells::resources::CellTypeRegistry::default();
-    registry.insert('S', make_cell_def("standard", 'S', 10.0, None));
+    registry.insert("S".to_owned(), make_cell_def("standard", "S", 10.0, None));
     registry.insert(
-        'E',
+        "E".to_owned(),
         make_cell_def(
             "effect_cell",
-            'E',
+            "E",
             10.0,
             Some(vec![RootEffect::On {
                 target: Target::Cell,
@@ -172,8 +175,14 @@ fn cell_with_no_effects_is_unchanged() {
     );
 
     let mut app = test_app(registry);
-    let cell_s = app.world_mut().spawn((Cell, CellTypeAlias('S'))).id();
-    let cell_e = app.world_mut().spawn((Cell, CellTypeAlias('E'))).id();
+    let cell_s = app
+        .world_mut()
+        .spawn((Cell, CellTypeAlias("S".to_owned())))
+        .id();
+    let cell_e = app
+        .world_mut()
+        .spawn((Cell, CellTypeAlias("E".to_owned())))
+        .id();
     app.update();
 
     // Positive: 'E' cell with effects SHOULD get BoundEffects
@@ -207,12 +216,15 @@ fn cell_with_no_effects_is_unchanged() {
 #[test]
 fn cell_with_empty_effects_vec_is_unchanged() {
     let mut registry = crate::cells::resources::CellTypeRegistry::default();
-    registry.insert('S', make_cell_def("standard", 'S', 10.0, Some(vec![])));
     registry.insert(
-        'E',
+        "S".to_owned(),
+        make_cell_def("standard", "S", 10.0, Some(vec![])),
+    );
+    registry.insert(
+        "E".to_owned(),
         make_cell_def(
             "effect_cell",
-            'E',
+            "E",
             10.0,
             Some(vec![RootEffect::On {
                 target: Target::Cell,
@@ -228,8 +240,14 @@ fn cell_with_empty_effects_vec_is_unchanged() {
     );
 
     let mut app = test_app(registry);
-    let cell_s = app.world_mut().spawn((Cell, CellTypeAlias('S'))).id();
-    let cell_e = app.world_mut().spawn((Cell, CellTypeAlias('E'))).id();
+    let cell_s = app
+        .world_mut()
+        .spawn((Cell, CellTypeAlias("S".to_owned())))
+        .id();
+    let cell_e = app
+        .world_mut()
+        .spawn((Cell, CellTypeAlias("E".to_owned())))
+        .id();
     app.update();
 
     // Positive: 'E' cell with non-empty effects SHOULD get BoundEffects
@@ -263,12 +281,12 @@ fn cell_with_empty_effects_vec_is_unchanged() {
 #[test]
 fn cell_with_unknown_alias_is_skipped_no_panic() {
     let mut registry = crate::cells::resources::CellTypeRegistry::default();
-    registry.insert('S', make_cell_def("standard", 'S', 10.0, None));
+    registry.insert("S".to_owned(), make_cell_def("standard", "S", 10.0, None));
     registry.insert(
-        'E',
+        "E".to_owned(),
         make_cell_def(
             "effect_cell",
-            'E',
+            "E",
             10.0,
             Some(vec![RootEffect::On {
                 target: Target::Cell,
@@ -284,8 +302,14 @@ fn cell_with_unknown_alias_is_skipped_no_panic() {
     );
 
     let mut app = test_app(registry);
-    let cell_x = app.world_mut().spawn((Cell, CellTypeAlias('X'))).id();
-    let cell_e = app.world_mut().spawn((Cell, CellTypeAlias('E'))).id();
+    let cell_x = app
+        .world_mut()
+        .spawn((Cell, CellTypeAlias("X".to_owned())))
+        .id();
+    let cell_e = app
+        .world_mut()
+        .spawn((Cell, CellTypeAlias("E".to_owned())))
+        .id();
     app.update();
 
     // Positive: 'E' cell with known alias and effects SHOULD get BoundEffects
@@ -316,10 +340,10 @@ fn cell_with_unknown_alias_is_skipped_no_panic() {
 fn cell_with_alias_not_in_registry_skipped_while_known_alias_dispatched() {
     let mut registry = crate::cells::resources::CellTypeRegistry::default();
     registry.insert(
-        'E',
+        "E".to_owned(),
         make_cell_def(
             "effect_cell",
-            'E',
+            "E",
             10.0,
             Some(vec![RootEffect::On {
                 target: Target::Cell,
@@ -335,8 +359,14 @@ fn cell_with_alias_not_in_registry_skipped_while_known_alias_dispatched() {
     );
 
     let mut app = test_app(registry);
-    let cell_e = app.world_mut().spawn((Cell, CellTypeAlias('E'))).id();
-    let cell_x = app.world_mut().spawn((Cell, CellTypeAlias('X'))).id();
+    let cell_e = app
+        .world_mut()
+        .spawn((Cell, CellTypeAlias("E".to_owned())))
+        .id();
+    let cell_x = app
+        .world_mut()
+        .spawn((Cell, CellTypeAlias("X".to_owned())))
+        .id();
     app.update();
 
     // Positive: 'E' cell with known alias SHOULD get BoundEffects

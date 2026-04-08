@@ -18,34 +18,19 @@ use crate::{
 
 // --- A2: CellBehavior wiring tests ---
 
-/// Creates a registry with a locked cell type ('L') and a regen cell type ('R').
+/// Helper to reduce verbosity of String grid construction.
+fn s(val: &str) -> String {
+    val.to_owned()
+}
+
+/// Creates a registry with a regen cell type ('R') and a normal cell type ('N').
 fn behavior_registry() -> CellTypeRegistry {
     let mut registry = CellTypeRegistry::default();
     registry.insert(
-        'L',
-        CellTypeDefinition {
-            id: "locked".to_owned(),
-            alias: 'L',
-            hp: 5.0,
-            color_rgb: [1.0, 1.0, 1.0],
-            required_to_clear: true,
-            damage_hdr_base: 4.0,
-            damage_green_min: 0.2,
-            damage_blue_range: 0.4,
-            damage_blue_base: 0.2,
-            behavior: CellBehavior {
-                locked: true,
-                regen_rate: None,
-                ..Default::default()
-            },
-            effects: None,
-        },
-    );
-    registry.insert(
-        'R',
+        "R".to_owned(),
         CellTypeDefinition {
             id: "regen".to_owned(),
-            alias: 'R',
+            alias: "R".to_owned(),
             hp: 8.0,
             color_rgb: [0.5, 1.0, 0.5],
             required_to_clear: true,
@@ -53,19 +38,16 @@ fn behavior_registry() -> CellTypeRegistry {
             damage_green_min: 0.2,
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
-            behavior: CellBehavior {
-                locked: false,
-                regen_rate: Some(2.0),
-                ..Default::default()
-            },
+            behaviors: Some(vec![CellBehavior::Regen { rate: 2.0 }]),
+            shield: None,
             effects: None,
         },
     );
     registry.insert(
-        'N',
+        "N".to_owned(),
         CellTypeDefinition {
             id: "normal".to_owned(),
-            alias: 'N',
+            alias: "N".to_owned(),
             hp: 1.0,
             color_rgb: [1.0, 0.5, 0.5],
             required_to_clear: true,
@@ -73,7 +55,8 @@ fn behavior_registry() -> CellTypeRegistry {
             damage_green_min: 0.2,
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
-            behavior: CellBehavior::default(),
+            behaviors: None,
+            shield: None,
             effects: None,
         },
     );
@@ -94,83 +77,10 @@ fn behavior_test_app(layout: NodeLayout, registry: CellTypeRegistry) -> App {
     app
 }
 
-#[test]
-fn locked_cell_definition_spawns_with_locked_component() {
-    let layout = NodeLayout {
-        name: "lock_test".to_owned(),
-        timer_secs: 60.0,
-        cols: 2,
-        rows: 1,
-        grid_top_offset: 50.0,
-        grid: vec![vec!['L', 'N']],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-    };
-    let mut app = behavior_test_app(layout, behavior_registry());
-    app.update();
-
-    let locked_count = app
-        .world_mut()
-        .query::<(&Cell, &Locked)>()
-        .iter(app.world())
-        .count();
-    assert_eq!(
-        locked_count, 1,
-        "cell with behavior.locked=true should have Locked component"
-    );
-}
-
-#[test]
-fn non_locked_cell_does_not_have_locked_component() {
-    let layout = NodeLayout {
-        name: "no_lock_test".to_owned(),
-        timer_secs: 60.0,
-        cols: 2,
-        rows: 1,
-        grid_top_offset: 50.0,
-        grid: vec![vec!['N', 'R']],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-    };
-    let mut app = behavior_test_app(layout, behavior_registry());
-    app.update();
-
-    let locked_count = app
-        .world_mut()
-        .query::<(&Cell, &Locked)>()
-        .iter(app.world())
-        .count();
-    assert_eq!(
-        locked_count, 0,
-        "cells with behavior.locked=false should NOT have Locked component"
-    );
-}
-
-#[test]
-fn locked_cell_definition_spawns_with_lock_adjacents_component() {
-    let layout = NodeLayout {
-        name: "lock_adj_test".to_owned(),
-        timer_secs: 60.0,
-        cols: 2,
-        rows: 1,
-        grid_top_offset: 50.0,
-        grid: vec![vec!['L', 'N']],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-    };
-    let mut app = behavior_test_app(layout, behavior_registry());
-    app.update();
-
-    let lock_adj_count = app
-        .world_mut()
-        .query::<(&Cell, &LockAdjacents)>()
-        .iter(app.world())
-        .count();
-    assert_eq!(
-        lock_adj_count, 1,
-        "cell with behavior.locked=true should have LockAdjacents component"
-    );
-}
+// NOTE: locked_cell_definition_spawns_with_locked_component,
+// non_locked_cell_does_not_have_locked_component, and
+// locked_cell_definition_spawns_with_lock_adjacents_component
+// have been REMOVED — locking is no longer driven by CellBehavior.
 
 #[test]
 fn regen_cell_definition_spawns_with_cell_regen_component() {
@@ -180,9 +90,10 @@ fn regen_cell_definition_spawns_with_cell_regen_component() {
         cols: 2,
         rows: 1,
         grid_top_offset: 50.0,
-        grid: vec![vec!['R', 'N']],
+        grid: vec![vec![s("R"), s("N")]],
         pool: NodePool::default(),
         entity_scale: 1.0,
+        locks: None,
     };
     let mut app = behavior_test_app(layout, behavior_registry());
     app.update();
@@ -196,7 +107,7 @@ fn regen_cell_definition_spawns_with_cell_regen_component() {
     assert_eq!(
         regen_cells.len(),
         1,
-        "cell with behavior.regen_rate=Some(2.0) should have CellRegen component"
+        "cell with behaviors: [Regen {{ rate: 2.0 }}] should have CellRegen component"
     );
     assert!(
         (regen_cells[0].rate - 2.0).abs() < f32::EPSILON,
@@ -213,9 +124,10 @@ fn non_regen_cell_does_not_have_cell_regen_component() {
         cols: 2,
         rows: 1,
         grid_top_offset: 50.0,
-        grid: vec![vec!['L', 'N']],
+        grid: vec![vec![s("N"), s("N")]],
         pool: NodePool::default(),
         entity_scale: 1.0,
+        locks: None,
     };
     let mut app = behavior_test_app(layout, behavior_registry());
     app.update();
@@ -227,7 +139,7 @@ fn non_regen_cell_does_not_have_cell_regen_component() {
         .count();
     assert_eq!(
         regen_count, 0,
-        "cells with behavior.regen_rate=None should NOT have CellRegen component"
+        "cells with behaviors: None should NOT have CellRegen component"
     );
 }
 
@@ -241,9 +153,10 @@ fn cell_hp_scaled_by_node_assignment_hp_mult() {
         cols: 1,
         rows: 1,
         grid_top_offset: 50.0,
-        grid: vec![vec!['S']],
+        grid: vec![vec![s("S")]],
         pool: NodePool::default(),
         entity_scale: 1.0,
+        locks: None,
     };
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
@@ -296,9 +209,10 @@ fn cell_hp_unchanged_when_hp_mult_is_one() {
         cols: 1,
         rows: 1,
         grid_top_offset: 50.0,
-        grid: vec![vec!['T']],
+        grid: vec![vec![s("T")]],
         pool: NodePool::default(),
         entity_scale: 1.0,
+        locks: None,
     };
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)

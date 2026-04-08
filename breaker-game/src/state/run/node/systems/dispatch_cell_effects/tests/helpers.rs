@@ -1,23 +1,20 @@
 use bevy::prelude::*;
 
 use crate::{
-    cells::{
-        definition::{CellBehavior, CellTypeDefinition},
-        resources::CellTypeRegistry,
-    },
+    cells::{definition::CellTypeDefinition, resources::CellTypeRegistry},
     state::run::node::systems::dispatch_cell_effects::system::dispatch_cell_effects,
 };
 
 /// Builds a minimal cell type definition with the given id, alias, hp, and effects.
 pub(super) fn make_cell_def(
     id: &str,
-    alias: char,
+    alias: &str,
     hp: f32,
     effects: Option<Vec<crate::effect::RootEffect>>,
 ) -> CellTypeDefinition {
     CellTypeDefinition {
         id: id.to_owned(),
-        alias,
+        alias: alias.to_owned(),
         hp,
         color_rgb: [1.0, 1.0, 1.0],
         required_to_clear: true,
@@ -25,7 +22,8 @@ pub(super) fn make_cell_def(
         damage_green_min: 0.3,
         damage_blue_range: 0.5,
         damage_blue_base: 0.2,
-        behavior: CellBehavior::default(),
+        behaviors: None,
+        shield: None,
         effects,
     }
 }

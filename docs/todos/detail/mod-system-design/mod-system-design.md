@@ -114,8 +114,29 @@ The choose-your-poison + stacking model creates decisions at two levels:
 
 Stacking is what makes deep infinite runs impressive — not just variety of hazards but *intensity* of repeated ones. By tier 14+, the player's build is wild (multi-pierce, chain lightning, AoE, maxed speed) — hazards are the counterweight. Unstoppable force meets immovable object.
 
+## Decisions
+
+### Hazard Start
+Hazards start at **tier 9** — right after completing the 8-tier structured run. This is the "infinity mode" boundary.
+
+### Meta-Progression
+Protocol pool grows via **meta-progression** across runs. Players unlock new protocols over time (like unlocking new Jokers in Balatro). This gives long-term progression beyond a single run.
+
+### Protocol Design Approach
+- Target **15 protocols initially** (to match 16 hazards), **30 each by Phase 7** (content & variety phase)
+- Source inspiration from **current legendary chips** — legendaries may be better as protocols than chips (one-time, run-altering, powerful)
+- Review the killed hazard proposals for ideas that were "too positive" or "better as a different category"
+- Use **guard-game-design** agent for brainstorm generation — feed it the hazard design philosophy, the killed-hazard reasons, and the existing legendary chips
+- Protocols are **code-implemented systems** (like hazards), with RON-tuned values
+
+### Content Targets
+| Category | Initial (this todo) | Phase 7 target |
+|----------|-------------------|----------------|
+| Protocols | 15 | 30 |
+| Hazards | 16 (designed) | 30 |
+
 ## Scope
-- In: protocol offering logic, hazard choose-your-poison UI (pick from 3 random), hazard stacking, hazard systems (code-implemented, RON-tuned), UI for protocols on chip select screen, protocol/hazard state tracking
+- In: protocol offering logic, hazard choose-your-poison UI (pick from 3 random), hazard stacking, hazard systems (code-implemented, RON-tuned), UI for protocols on chip select screen, protocol/hazard state tracking, meta-progression for protocol unlocks
 - Out: chip system changes (chips are separate), tier system (separate todo)
 
 ## Dependencies
@@ -124,12 +145,9 @@ Stacking is what makes deep infinite runs impressive — not just variety of haz
 - Related: tier regression mechanic — likely a protocol (it's one-time, run-altering)
 
 ## Open Questions
-- What specific protocols exist? Need a list of ~8-15 designs
-- Is the tier regression mechanic a protocol?
-- Does the protocol pool grow via meta-progression across runs?
-- When exactly do hazards start? Tier 9 (right after run-complete)?
+- **Protocol designs**: need brainstorm session with guard-game-design. Check legendary chips as source. Generate 15 to start.
 - Erosion shrink rate exact number
 - Volatility growth rate floor
 
 ## Status
-`[NEEDS DETAIL]` — specific protocol designs, some exact hazard numbers
+`[NEEDS DETAIL]` — hazard system fully designed, protocol designs need brainstorm session (use `/todo research 6` to run guard-game-design)

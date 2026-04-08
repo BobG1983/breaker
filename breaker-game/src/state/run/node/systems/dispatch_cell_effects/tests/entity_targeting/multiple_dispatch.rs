@@ -14,10 +14,10 @@ use crate::{
 fn multiple_cells_dispatched_independently() {
     let mut registry = crate::cells::resources::CellTypeRegistry::default();
     registry.insert(
-        'E',
+        "E".to_owned(),
         make_cell_def(
             "effect_cell",
-            'E',
+            "E",
             10.0,
             Some(vec![RootEffect::On {
                 target: Target::Cell,
@@ -31,12 +31,21 @@ fn multiple_cells_dispatched_independently() {
             }]),
         ),
     );
-    registry.insert('S', make_cell_def("standard", 'S', 10.0, None));
+    registry.insert("S".to_owned(), make_cell_def("standard", "S", 10.0, None));
 
     let mut app = test_app(registry);
-    let cell_a = app.world_mut().spawn((Cell, CellTypeAlias('E'))).id();
-    let cell_b = app.world_mut().spawn((Cell, CellTypeAlias('E'))).id();
-    let cell_c = app.world_mut().spawn((Cell, CellTypeAlias('S'))).id();
+    let cell_a = app
+        .world_mut()
+        .spawn((Cell, CellTypeAlias("E".to_owned())))
+        .id();
+    let cell_b = app
+        .world_mut()
+        .spawn((Cell, CellTypeAlias("E".to_owned())))
+        .id();
+    let cell_c = app
+        .world_mut()
+        .spawn((Cell, CellTypeAlias("S".to_owned())))
+        .id();
     app.update();
 
     // Cell A: has BoundEffects with 1 entry

@@ -267,9 +267,10 @@ fn single_cell_grid_spawns_centered_at_full_scale() {
         cols: 1,
         rows: 1,
         grid_top_offset: 50.0,
-        grid: vec![vec!['S']],
+        grid: vec![vec!["S".to_owned()]],
         pool: NodePool::default(),
         entity_scale: 1.0,
+        locks: None,
     };
     let mut app = scaled_test_app(layout);
     app.update();
