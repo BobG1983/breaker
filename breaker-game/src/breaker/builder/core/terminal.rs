@@ -200,12 +200,12 @@ fn build_core(params: &CoreParams, optional: &OptionalBreakerData) -> impl Bundl
     )
 }
 
-// ── build() and spawn() terminal impls ─────────────────────────────────────
+// ── spawn() terminal impls ────────────────────────────────────────────────
 
 impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, Rendered, Primary> {
-    /// Builds the component bundle for a rendered primary breaker.
-    #[must_use]
-    pub fn build(self) -> impl Bundle {
+    /// Spawns a rendered primary breaker entity, including effect dispatch.
+    pub fn spawn(self, commands: &mut Commands) -> Entity {
+        let effects = self.optional.effects.clone();
         let params = core_params_from(
             &self.dimensions,
             &self.movement,
@@ -215,20 +215,16 @@ impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, 
             &self.optional,
         );
         let core = build_core(&params, &self.optional);
-        (
-            core,
-            PrimaryBreaker,
-            CleanupOnExit::<RunState>::default(),
-            GameDrawLayer::Breaker,
-            Mesh2d(self.visual.mesh),
-            MeshMaterial2d(self.visual.material),
-        )
-    }
-
-    /// Spawns a rendered primary breaker entity, including effect dispatch.
-    pub fn spawn(self, commands: &mut Commands) -> Entity {
-        let effects = self.optional.effects.clone();
-        let entity = commands.spawn(self.build()).id();
+        let entity = commands
+            .spawn((
+                core,
+                PrimaryBreaker,
+                CleanupOnExit::<RunState>::default(),
+                GameDrawLayer::Breaker,
+                Mesh2d(self.visual.mesh),
+                MeshMaterial2d(self.visual.material),
+            ))
+            .id();
         if let Some(effects) = effects.filter(|e| !e.is_empty()) {
             commands.dispatch_initial_effects(effects, None);
         }
@@ -237,9 +233,9 @@ impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, 
 }
 
 impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, Rendered, Extra> {
-    /// Builds the component bundle for a rendered extra breaker.
-    #[must_use]
-    pub fn build(self) -> impl Bundle {
+    /// Spawns a rendered extra breaker entity, including effect dispatch.
+    pub fn spawn(self, commands: &mut Commands) -> Entity {
+        let effects = self.optional.effects.clone();
         let params = core_params_from(
             &self.dimensions,
             &self.movement,
@@ -249,20 +245,16 @@ impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, 
             &self.optional,
         );
         let core = build_core(&params, &self.optional);
-        (
-            core,
-            ExtraBreaker,
-            CleanupOnExit::<NodeState>::default(),
-            GameDrawLayer::Breaker,
-            Mesh2d(self.visual.mesh),
-            MeshMaterial2d(self.visual.material),
-        )
-    }
-
-    /// Spawns a rendered extra breaker entity, including effect dispatch.
-    pub fn spawn(self, commands: &mut Commands) -> Entity {
-        let effects = self.optional.effects.clone();
-        let entity = commands.spawn(self.build()).id();
+        let entity = commands
+            .spawn((
+                core,
+                ExtraBreaker,
+                CleanupOnExit::<NodeState>::default(),
+                GameDrawLayer::Breaker,
+                Mesh2d(self.visual.mesh),
+                MeshMaterial2d(self.visual.material),
+            ))
+            .id();
         if let Some(effects) = effects.filter(|e| !e.is_empty()) {
             commands.dispatch_initial_effects(effects, None);
         }
@@ -271,9 +263,9 @@ impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, 
 }
 
 impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, Headless, Primary> {
-    /// Builds the component bundle for a headless primary breaker.
-    #[must_use]
-    pub fn build(self) -> impl Bundle {
+    /// Spawns a headless primary breaker entity, including effect dispatch.
+    pub fn spawn(self, commands: &mut Commands) -> Entity {
+        let effects = self.optional.effects.clone();
         let params = core_params_from(
             &self.dimensions,
             &self.movement,
@@ -283,13 +275,9 @@ impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, 
             &self.optional,
         );
         let core = build_core(&params, &self.optional);
-        (core, PrimaryBreaker, CleanupOnExit::<RunState>::default())
-    }
-
-    /// Spawns a headless primary breaker entity, including effect dispatch.
-    pub fn spawn(self, commands: &mut Commands) -> Entity {
-        let effects = self.optional.effects.clone();
-        let entity = commands.spawn(self.build()).id();
+        let entity = commands
+            .spawn((core, PrimaryBreaker, CleanupOnExit::<RunState>::default()))
+            .id();
         if let Some(effects) = effects.filter(|e| !e.is_empty()) {
             commands.dispatch_initial_effects(effects, None);
         }
@@ -298,9 +286,9 @@ impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, 
 }
 
 impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, Headless, Extra> {
-    /// Builds the component bundle for a headless extra breaker.
-    #[must_use]
-    pub fn build(self) -> impl Bundle {
+    /// Spawns a headless extra breaker entity, including effect dispatch.
+    pub fn spawn(self, commands: &mut Commands) -> Entity {
+        let effects = self.optional.effects.clone();
         let params = core_params_from(
             &self.dimensions,
             &self.movement,
@@ -310,13 +298,9 @@ impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, 
             &self.optional,
         );
         let core = build_core(&params, &self.optional);
-        (core, ExtraBreaker, CleanupOnExit::<NodeState>::default())
-    }
-
-    /// Spawns a headless extra breaker entity, including effect dispatch.
-    pub fn spawn(self, commands: &mut Commands) -> Entity {
-        let effects = self.optional.effects.clone();
-        let entity = commands.spawn(self.build()).id();
+        let entity = commands
+            .spawn((core, ExtraBreaker, CleanupOnExit::<NodeState>::default()))
+            .id();
         if let Some(effects) = effects.filter(|e| !e.is_empty()) {
             commands.dispatch_initial_effects(effects, None);
         }

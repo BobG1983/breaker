@@ -1,6 +1,17 @@
-//! Tests for empty effects, empty then, and multiple root effects (behaviors 12-13).
+use bevy::{ecs::world::CommandQueue, prelude::*};
 
+// Tests for empty effects, empty then, and multiple root effects (behaviors 12-13).
 use super::helpers::*;
+
+fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let mut commands = Commands::new(&mut queue, world);
+        f(&mut commands)
+    };
+    queue.apply(world);
+    entity
+}
 
 // ── Behavior 12: Empty effects list is a no-op ──────────────────────────
 // An empty effects list means nothing to dispatch -- the stub already does
@@ -11,15 +22,13 @@ use super::helpers::*;
 fn empty_effects_list_alongside_real_effect() {
     let mut world = World::new();
     let def = BreakerDefinition::default();
-    let breaker = world
-        .spawn(
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .build(),
-        )
-        .id();
+    let breaker = spawn_in_world(&mut world, |commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
     world
         .entity_mut(breaker)
         .insert((BoundEffects::default(), StagedEffects::default()));
@@ -66,15 +75,13 @@ fn empty_effects_list_alongside_real_effect() {
 fn on_with_empty_then_alongside_real_effect() {
     let mut world = World::new();
     let def = BreakerDefinition::default();
-    let breaker = world
-        .spawn(
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .build(),
-        )
-        .id();
+    let breaker = spawn_in_world(&mut world, |commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
     world
         .entity_mut(breaker)
         .insert((BoundEffects::default(), StagedEffects::default()));
@@ -112,16 +119,14 @@ fn on_with_empty_then_alongside_real_effect() {
 #[test]
 fn multiple_root_effects_different_targets_all_processed() {
     let mut world = World::new();
-    let breaker = world
-        .spawn({
-            let def = BreakerDefinition::default();
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .build()
-        })
-        .id();
+    let def = BreakerDefinition::default();
+    let breaker = spawn_in_world(&mut world, |commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
     world.entity_mut(breaker).insert((
         BoundEffects::default(),
         StagedEffects::default(),
@@ -209,21 +214,20 @@ fn multiple_root_effects_different_targets_all_processed() {
 #[test]
 fn three_root_effects_breaker_bolt_all_bolts() {
     let mut world = World::new();
-    let breaker = world
-        .spawn({
-            let def = BreakerDefinition::default();
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .build()
-        })
-        .id();
+    let def = BreakerDefinition::default();
+    let breaker = spawn_in_world(&mut world, |commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
     world.entity_mut(breaker).insert((
         BoundEffects::default(),
         StagedEffects::default(),
         ActiveDamageBoosts(vec![]),
     ));
+
     let primary = world
         .spawn((
             Bolt,

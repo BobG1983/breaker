@@ -27,14 +27,15 @@ fn spawn_bolt_in_world(
 fn headless_bolt_has_base_radius_from_definition() {
     let def = test_bolt_definition();
     let mut world = World::new();
-    let bundle = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .headless()
-        .build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
 
     let radius = world
         .get::<BaseRadius>(entity)
@@ -50,15 +51,16 @@ fn headless_bolt_has_base_radius_from_definition() {
 fn headless_bolt_with_radius_override_has_base_radius() {
     let def = test_bolt_definition();
     let mut world = World::new();
-    let bundle = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .with_radius(20.0)
-        .headless()
-        .build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .with_radius(20.0)
+            .headless()
+            .spawn(commands)
+    });
 
     let radius = world
         .get::<BaseRadius>(entity)
@@ -75,15 +77,16 @@ fn headless_bolt_with_radius_override_has_base_radius() {
 #[test]
 fn headless_bolt_without_definition_has_default_base_radius() {
     let mut world = World::new();
-    let bundle = Bolt::builder()
-        .with_speed(400.0, 200.0, 800.0)
-        .with_angle(0.087, 0.087)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .headless()
-        .build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .with_speed(400.0, 200.0, 800.0)
+            .with_angle(0.087, 0.087)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
 
     let radius = world
         .get::<BaseRadius>(entity)
@@ -103,16 +106,17 @@ fn headless_bolt_without_definition_has_default_base_radius() {
 #[test]
 fn headless_bolt_with_zero_radius() {
     let mut world = World::new();
-    let bundle = Bolt::builder()
-        .with_speed(400.0, 200.0, 800.0)
-        .with_angle(0.087, 0.087)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .with_radius(0.0)
-        .headless()
-        .build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .with_speed(400.0, 200.0, 800.0)
+            .with_angle(0.087, 0.087)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .with_radius(0.0)
+            .headless()
+            .spawn(commands)
+    });
 
     let radius = world
         .get::<BaseRadius>(entity)

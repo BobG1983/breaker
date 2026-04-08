@@ -1,0 +1,18 @@
+(
+    id: "guarded",
+    alias: "Gu",
+    hp: 30.0,
+    color_rgb: (0.8, 0.3, 4.0),
+    required_to_clear: true,
+    damage_hdr_base: 4.0,
+    damage_green_min: 0.2,
+    damage_blue_range: 0.4,
+    damage_blue_base: 0.2,
+    behaviors: Some([
+        Guarded((
+            guardian_hp: 15.0,
+            guardian_color_rgb: (0.5, 0.2, 3.0),
+            slide_speed: 60.0,
+        )),
+    ]),
+)

@@ -15,10 +15,10 @@ use crate::{
 fn cell_with_target_all_bolts_dispatches_to_all_bolt_entities() {
     let mut registry = crate::cells::resources::CellTypeRegistry::default();
     registry.insert(
-        'B',
+        "B".to_owned(),
         make_cell_def(
             "all_bolts_cell",
-            'B',
+            "B",
             10.0,
             Some(vec![RootEffect::On {
                 target: Target::AllBolts,
@@ -31,7 +31,10 @@ fn cell_with_target_all_bolts_dispatches_to_all_bolt_entities() {
     );
 
     let mut app = test_app(registry);
-    let cell_entity = app.world_mut().spawn((Cell, CellTypeAlias('B'))).id();
+    let cell_entity = app
+        .world_mut()
+        .spawn((Cell, CellTypeAlias("B".to_owned())))
+        .id();
     let bolt_a = app.world_mut().spawn(Bolt).id();
     let bolt_b = app.world_mut().spawn(Bolt).id();
     app.update();
@@ -108,10 +111,10 @@ fn cell_with_target_all_bolts_dispatches_to_all_bolt_entities() {
 fn cell_with_target_all_cells_dispatches_to_all_cells() {
     let mut registry = crate::cells::resources::CellTypeRegistry::default();
     registry.insert(
-        'A',
+        "A".to_owned(),
         make_cell_def(
             "all_cells_buff",
-            'A',
+            "A",
             10.0,
             Some(vec![RootEffect::On {
                 target: Target::AllCells,
@@ -125,11 +128,17 @@ fn cell_with_target_all_cells_dispatches_to_all_cells() {
             }]),
         ),
     );
-    registry.insert('S', make_cell_def("standard", 'S', 10.0, None));
+    registry.insert("S".to_owned(), make_cell_def("standard", "S", 10.0, None));
 
     let mut app = test_app(registry);
-    let cell_a = app.world_mut().spawn((Cell, CellTypeAlias('A'))).id();
-    let cell_b = app.world_mut().spawn((Cell, CellTypeAlias('S'))).id();
+    let cell_a = app
+        .world_mut()
+        .spawn((Cell, CellTypeAlias("A".to_owned())))
+        .id();
+    let cell_b = app
+        .world_mut()
+        .spawn((Cell, CellTypeAlias("S".to_owned())))
+        .id();
     app.update();
 
     // Cell A (source) has BoundEffects with 1 entry (AllCells includes self)
@@ -173,10 +182,10 @@ fn cell_with_target_all_cells_dispatches_to_all_cells() {
 fn single_cell_with_all_cells_targets_itself() {
     let mut registry = crate::cells::resources::CellTypeRegistry::default();
     registry.insert(
-        'A',
+        "A".to_owned(),
         make_cell_def(
             "all_cells_buff",
-            'A',
+            "A",
             10.0,
             Some(vec![RootEffect::On {
                 target: Target::AllCells,
@@ -192,7 +201,10 @@ fn single_cell_with_all_cells_targets_itself() {
     );
 
     let mut app = test_app(registry);
-    let cell_a = app.world_mut().spawn((Cell, CellTypeAlias('A'))).id();
+    let cell_a = app
+        .world_mut()
+        .spawn((Cell, CellTypeAlias("A".to_owned())))
+        .id();
     app.update();
 
     let bound = app

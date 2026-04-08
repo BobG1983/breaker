@@ -1,6 +1,16 @@
 //! Tests for `Target::Breaker` effect dispatch to breaker entities.
 
-use bevy::prelude::*;
+use bevy::{ecs::world::CommandQueue, prelude::*};
+
+fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let mut commands = Commands::new(&mut queue, world);
+        f(&mut commands)
+    };
+    queue.apply(world);
+    entity
+}
 
 use crate::{
     breaker::components::Breaker,
@@ -15,10 +25,10 @@ use crate::{
 fn cell_with_target_breaker_dispatches_to_breaker_entity() {
     let mut registry = crate::cells::resources::CellTypeRegistry::default();
     registry.insert(
-        'R',
+        "R".to_owned(),
         make_cell_def(
             "breaker_buff_cell",
-            'R',
+            "R",
             10.0,
             Some(vec![RootEffect::On {
                 target: Target::Breaker,
@@ -31,18 +41,18 @@ fn cell_with_target_breaker_dispatches_to_breaker_entity() {
     );
 
     let mut app = test_app(registry);
-    let cell_entity = app.world_mut().spawn((Cell, CellTypeAlias('R'))).id();
-    let def = crate::breaker::definition::BreakerDefinition::default();
-    let breaker_entity = app
+    let cell_entity = app
         .world_mut()
-        .spawn(
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .build(),
-        )
+        .spawn((Cell, CellTypeAlias("R".to_owned())))
         .id();
+    let def = crate::breaker::definition::BreakerDefinition::default();
+    let breaker_entity = spawn_in_world(app.world_mut(), |commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
     app.world_mut()
         .entity_mut(breaker_entity)
         .insert((BoundEffects::default(), StagedEffects::default()));
@@ -92,10 +102,10 @@ fn cell_with_target_breaker_dispatches_to_breaker_entity() {
 fn cell_with_target_breaker_no_breaker_present_no_panic() {
     let mut registry = crate::cells::resources::CellTypeRegistry::default();
     registry.insert(
-        'R',
+        "R".to_owned(),
         make_cell_def(
             "breaker_buff_cell",
-            'R',
+            "R",
             10.0,
             Some(vec![RootEffect::On {
                 target: Target::Breaker,
@@ -108,7 +118,10 @@ fn cell_with_target_breaker_no_breaker_present_no_panic() {
     );
 
     let mut app = test_app(registry);
-    let cell_entity = app.world_mut().spawn((Cell, CellTypeAlias('R'))).id();
+    let cell_entity = app
+        .world_mut()
+        .spawn((Cell, CellTypeAlias("R".to_owned())))
+        .id();
     // No breaker entity spawned
     app.update();
 

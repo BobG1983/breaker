@@ -17,10 +17,10 @@ use crate::{
 fn cell_with_target_bolt_dispatches_to_all_bolt_entities() {
     let mut registry = crate::cells::resources::CellTypeRegistry::default();
     registry.insert(
-        'B',
+        "B".to_owned(),
         make_cell_def(
             "bolt_boost_cell",
-            'B',
+            "B",
             10.0,
             Some(vec![RootEffect::On {
                 target: Target::Bolt,
@@ -33,7 +33,10 @@ fn cell_with_target_bolt_dispatches_to_all_bolt_entities() {
     );
 
     let mut app = test_app(registry);
-    let _cell_entity = app.world_mut().spawn((Cell, CellTypeAlias('B'))).id();
+    let _cell_entity = app
+        .world_mut()
+        .spawn((Cell, CellTypeAlias("B".to_owned())))
+        .id();
     let bolt_a = app.world_mut().spawn(Bolt).id();
     let bolt_b = app.world_mut().spawn(Bolt).id();
     app.update();
@@ -96,10 +99,10 @@ fn cell_with_target_bolt_dispatches_to_all_bolt_entities() {
 fn cell_with_target_wall_dispatches_to_all_wall_entities() {
     let mut registry = crate::cells::resources::CellTypeRegistry::default();
     registry.insert(
-        'W',
+        "W".to_owned(),
         make_cell_def(
             "wall_buff_cell",
-            'W',
+            "W",
             10.0,
             Some(vec![RootEffect::On {
                 target: Target::Wall,
@@ -112,7 +115,10 @@ fn cell_with_target_wall_dispatches_to_all_wall_entities() {
     );
 
     let mut app = test_app(registry);
-    let _cell_entity = app.world_mut().spawn((Cell, CellTypeAlias('W'))).id();
+    let _cell_entity = app
+        .world_mut()
+        .spawn((Cell, CellTypeAlias("W".to_owned())))
+        .id();
     let wall_a = app.world_mut().spawn(Wall).id();
     let wall_b = app.world_mut().spawn(Wall).id();
     app.update();

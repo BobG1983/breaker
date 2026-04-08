@@ -1,5 +1,17 @@
+use bevy::{ecs::world::CommandQueue, prelude::*};
+
 use super::helpers::default_playfield;
 use crate::walls::{builder::core::types::Lifetime, components::Wall};
+
+fn spawn_inworld(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let mut commands = Commands::new(&mut queue, world);
+        f(&mut commands)
+    };
+    queue.apply(world);
+    entity
+}
 
 // ── Behavior 16: Default lifetime is Permanent ──
 
@@ -31,13 +43,25 @@ fn default_lifetime_is_permanent_for_floor() {
 fn timed_compiles_on_floor_and_can_build() {
     let pf = default_playfield();
     // Verify the method compiles and builder can proceed to build
-    let _bundle = Wall::builder().floor(&pf).timed(5.0).build();
+    // Just verify the chain compiles — spawn into a world
+
+    let mut world = World::new();
+
+    spawn_inworld(&mut world, |commands| {
+        Wall::builder().floor(&pf).timed(5.0).spawn(commands)
+    });
 }
 
 #[test]
 fn timed_zero_compiles_on_floor() {
     let pf = default_playfield();
-    let _bundle = Wall::builder().floor(&pf).timed(0.0).build();
+    // Just verify the chain compiles — spawn into a world
+
+    let mut world = World::new();
+
+    spawn_inworld(&mut world, |commands| {
+        Wall::builder().floor(&pf).timed(0.0).spawn(commands)
+    });
 }
 
 // ── Behavior 18: .one_shot() is available on Floor and sets Lifetime::OneShot ──
@@ -45,14 +69,30 @@ fn timed_zero_compiles_on_floor() {
 #[test]
 fn one_shot_compiles_on_floor_and_can_build() {
     let pf = default_playfield();
-    let _bundle = Wall::builder().floor(&pf).one_shot().build();
+    // Just verify the chain compiles — spawn into a world
+
+    let mut world = World::new();
+
+    spawn_inworld(&mut world, |commands| {
+        Wall::builder().floor(&pf).one_shot().spawn(commands)
+    });
 }
 
 #[test]
 fn one_shot_then_timed_last_wins() {
     let pf = default_playfield();
     // Both compile and build succeeds
-    let _bundle = Wall::builder().floor(&pf).one_shot().timed(3.0).build();
+    // Just verify the chain compiles — spawn into a world
+
+    let mut world = World::new();
+
+    spawn_inworld(&mut world, |commands| {
+        Wall::builder()
+            .floor(&pf)
+            .one_shot()
+            .timed(3.0)
+            .spawn(commands)
+    });
 }
 
 // ── Behavior 51: Lifetime::default() is Permanent ──

@@ -69,48 +69,38 @@ fn build_core(position: Vec2, half_extents: Vec2) -> impl Bundle + use<> {
     (identity, physics)
 }
 
-// ── Invisible build/spawn ─────────────────────────────────────────────────
+// ── Invisible spawn ──────────────────────────────────────────────────────
 
 impl<S: SideData> WallBuilder<S, Invisible> {
-    /// Builds the wall component bundle (no visual components).
-    #[must_use]
-    pub(crate) fn build(self) -> impl Bundle + use<S> {
-        let ht = resolve_half_thickness(&self.optional);
-        let position = self.side.compute_position(ht);
-        let half_extents = self.side.compute_half_extents(ht);
-        build_core(position, half_extents)
-    }
-
     /// Spawns an invisible wall entity and dispatches initial effects if present.
     pub(crate) fn spawn(self, commands: &mut Commands) -> Entity {
         let effects = resolve_effects(&self.optional);
-        let entity = commands.spawn(self.build()).id();
+        let ht = resolve_half_thickness(&self.optional);
+        let position = self.side.compute_position(ht);
+        let half_extents = self.side.compute_half_extents(ht);
+        let entity = commands.spawn(build_core(position, half_extents)).id();
         dispatch_effects(commands, entity, effects);
         entity
     }
 }
 
-// ── Visible build/spawn ───────────────────────────────────────────────────
+// ── Visible spawn ────────────────────────────────────────────────────────
 
 #[allow(dead_code, reason = "test-only until system-param callers exist")]
 impl<S: SideData> WallBuilder<S, Visible> {
-    /// Builds the wall component bundle with visual components (`Mesh2d` + `MeshMaterial2d`).
-    #[must_use]
-    pub(crate) fn build(self) -> impl Bundle + use<S> {
-        let ht = resolve_half_thickness(&self.optional);
-        let position = self.side.compute_position(ht);
-        let half_extents = self.side.compute_half_extents(ht);
-        (
-            build_core(position, half_extents),
-            Mesh2d(self.visual.mesh),
-            MeshMaterial2d(self.visual.material),
-        )
-    }
-
     /// Spawns a visible wall entity and dispatches initial effects if present.
     pub(crate) fn spawn(self, commands: &mut Commands) -> Entity {
         let effects = resolve_effects(&self.optional);
-        let entity = commands.spawn(self.build()).id();
+        let ht = resolve_half_thickness(&self.optional);
+        let position = self.side.compute_position(ht);
+        let half_extents = self.side.compute_half_extents(ht);
+        let entity = commands
+            .spawn((
+                build_core(position, half_extents),
+                Mesh2d(self.visual.mesh),
+                MeshMaterial2d(self.visual.material),
+            ))
+            .id();
         dispatch_effects(commands, entity, effects);
         entity
     }

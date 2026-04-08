@@ -11,6 +11,16 @@ use crate::{
     },
 };
 
+pub(super) fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let mut commands = Commands::new(&mut queue, world);
+        f(&mut commands)
+    };
+    queue.apply(world);
+    entity
+}
+
 /// Resource holding messages to be sent before the dispatch system runs.
 #[derive(Resource, Default)]
 pub(super) struct PendingChipSelections(pub Vec<ChipSelected>);
@@ -158,16 +168,13 @@ pub(super) fn spawn_breaker(app: &mut App) -> Entity {
     };
 
     let def = BreakerDefinition::default();
-    let entity = app
-        .world_mut()
-        .spawn(
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .build(),
-        )
-        .id();
+    let entity = spawn_in_world(app.world_mut(), |commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
     app.world_mut().entity_mut(entity).insert((
         BoundEffects::default(),
         StagedEffects::default(),
@@ -190,22 +197,20 @@ pub(super) fn spawn_breaker_bare(app: &mut App) -> Entity {
     };
 
     let def = BreakerDefinition::default();
-    let entity = app
-        .world_mut()
-        .spawn(
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .build(),
-        )
-        .id();
+    let entity = spawn_in_world(app.world_mut(), |commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
     app.world_mut().entity_mut(entity).insert((
         ActiveBumpForces::default(),
         ActiveSizeBoosts::default(),
         ActiveDamageBoosts::default(),
         ActiveSpeedBoosts::default(),
     ));
+
     entity
 }
 

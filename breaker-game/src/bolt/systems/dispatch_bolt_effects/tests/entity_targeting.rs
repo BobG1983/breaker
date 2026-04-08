@@ -1,6 +1,16 @@
 //! Behaviors 5-10: target entity resolution for bolt effects.
 
-use bevy::prelude::*;
+use bevy::{ecs::world::CommandQueue, prelude::*};
+
+fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let mut commands = Commands::new(&mut queue, world);
+        f(&mut commands)
+    };
+    queue.apply(world);
+    entity
+}
 
 use super::helpers::{TEST_BOLT_NAME, test_app_with_dispatch};
 use crate::{
@@ -51,16 +61,13 @@ fn dispatch_pushes_breaker_targeted_effects_to_breaker_entity() {
     );
     let mut app = test_app_with_dispatch(def);
     let breaker_def = crate::breaker::definition::BreakerDefinition::default();
-    let breaker = app
-        .world_mut()
-        .spawn(
-            Breaker::builder()
-                .definition(&breaker_def)
-                .headless()
-                .primary()
-                .build(),
-        )
-        .id();
+    let breaker = spawn_in_world(app.world_mut(), |commands| {
+        Breaker::builder()
+            .definition(&breaker_def)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
     app.world_mut()
         .entity_mut(breaker)
         .insert(BoundEffects::default());
@@ -372,6 +379,7 @@ fn dispatch_pushes_all_walls_targeted_effects_to_all_wall_entities() {
             }],
         }],
     );
+
     let mut app = test_app_with_dispatch(def);
     let wall1 = app.world_mut().spawn(Wall).id();
     let wall2 = app.world_mut().spawn(Wall).id();

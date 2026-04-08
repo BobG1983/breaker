@@ -31,57 +31,75 @@ Cells are more complex than other entities — they have multiple variant behavi
 - Effects, damage visuals, alias, required_to_clear — all optional with sensible defaults
 
 ### CellBehavior enum + effects in RON
-Replace the current `CellBehavior` struct (with bool `locked`, `Option<f32>` regen_rate, `Option<ShieldBehavior>`) with a `CellBehavior` enum:
+Replace the current `CellBehavior` struct with a `CellBehavior` enum:
 ```rust
 enum CellBehavior {
     Regen { rate: f32 },
-    Shielded(ShieldBehavior),
 }
 ```
-Note: `Locked` is NOT a cell behavior — it's a node-layout concern (see "Lock targets" section below).
-`ShieldBehavior` is spawn-time config for orbit children: `{ count, radius, speed, hp, color_rgb }`.
+Note: `Locked` is NOT a cell behavior — it's a node-layout concern (see "Lock targets" section below). `Guarded` variant added in Wave 4 when the guard cell design is implemented.
 
 RON definition gets:
-- `behaviors: Option<Vec<CellBehavior>>` — defaults to None, auto-unwrapped Some so RON writes `behaviors: [Locked, Regen(rate: 2.0)]` not `Some([...])`
+- `behaviors: Option<Vec<CellBehavior>>` — defaults to None, auto-unwrapped Some so RON writes `behaviors: [Regen(rate: 2.0)]` not `Some([...])`
 - `effects: Option<Vec<RootEffect>>` — same pattern as bolts/walls. Defaults to None, auto-unwrapped Some.
-- A cell can have multiple behaviors (e.g., locked + regen)
+- A cell can have multiple behaviors (e.g., regen + future behaviors)
 
 This replaces the current flat `behavior: (locked: true, regen_rate: Some(2.0))` struct pattern.
 
+### Component marker pattern
+Each behavior uses a capability/state/data split:
+
+**Lock:**
+- `LockCell` — permanent marker: "this cell has lock capability"
+- `Locked` — state marker: currently locked (damage query uses `Without<Locked>`)
+- `Locks(Vec<Entity>)` — data: entities that must be destroyed to unlock
+- `Unlocked` — state marker: was locked, now unlocked (future use: effects that trigger on unlock)
+- System: queries `(With<LockCell>, With<Locks>, With<Locked>, Without<Unlocked>)` → if all Lock entities destroyed → remove `Locked`, add `Unlocked`
+
+**Regen:**
+- `RegenCell` — permanent marker: "this cell has regen capability"
+- `Regen` — state marker: currently regenerating
+- `RegenRate(f32)` — data: HP/sec
+- `NoRegen` — state marker: regen disabled (future use: debuffs that stop regen)
+- System: queries `(With<RegenCell>, With<Regen>, Without<NoRegen>)` with `CellHealth` → apply rate
+
+CellBehavior enum maps to component bundles at spawn:
+- `CellBehavior::Regen { rate: 2.0 }` → inserts `(RegenCell, Regen, RegenRate(2.0))`
+- Lock (from NodeLayout) → inserts `(LockCell, Locked, Locks(entities))`
+
 ### Builder behavior API
-- `.with_behavior(CellBehavior)` — add a single behavior
+- `.with_behavior(CellBehavior)` — add a single behavior (inserts capability + state + data components)
 - `.with_behaviors(Vec<CellBehavior>)` — add multiple behaviors at once
+- `.locked(Vec<Entity>)` — inserts `(LockCell, Locked, Locks(entities))`. Takes resolved entity IDs, not grid coordinates. The spawn pipeline resolves coordinates to entities, then passes them here.
 - `definition(&def)` populates behaviors from the definition's `behaviors` field
-- Individual convenience methods like `.locked()`, `.regen(rate)` are sugar for `.with_behavior(CellBehavior::Locked)` etc.
+- `.regen(rate)` — sugar for `.with_behavior(CellBehavior::Regen { rate })`
 
 ### Definition + manual + override layering
 - `Cell::builder().definition(&def)` — sets hp, color, damage visuals, behaviors from the RON-loaded `CellTypeDefinition`
 - Individual setters for things not in the definition: `.position(Vec2)`, `.dimensions(width, height)`, `.scale(f32)`
-- Individual setters also work standalone for tests: `.hp(20.0)`, `.color(RED)`, `.locked(true)`
+- Individual setters also work standalone for tests: `.hp(20.0)`, `.color(RED)`, `.locked(vec![entity])`
 - **Override priority**: specific setter > definition > default. A `.hp(50.0)` call after `.definition(&def)` overrides the definition's hp.
 
 ### cells/behaviors/ folder structure
-Each behavior gets its own folder with components and systems:
+Each behavior is a fully self-contained package — ALL components and systems live under `cells/behaviors/<name>/`. Nothing behavior-specific lives in `cells/components/types.rs`. Cross-domain components are globbed into `prelude/components.rs` (e.g., `Locked` for damage query filters). Same pattern as effects.
 ```
 cells/
   behaviors/
     locked/
       mod.rs
-      components.rs   // Locked, LockAdjacents
+      components.rs   // LockCell, Locked, Locks(Vec<Entity>), Unlocked
       systems/
-        check_lock_release/  // existing system, moved here
+        check_lock_release/  // existing system, refactored for new components
     regen/
       mod.rs
-      components.rs   // CellRegen
+      components.rs   // RegenCell, Regen, RegenRate(f32), NoRegen
       systems/
-        tick_cell_regen.rs  // existing system, moved here
-    shielded/
+        tick_cell_regen.rs  // existing system, refactored for new components
+    guarded/           // Wave 4 — guard cell redesign
       mod.rs
-      components.rs   // ShieldParent, OrbitCell, OrbitAngle, OrbitConfig
+      components.rs   // GuardedCell, GuardianCell, GuardianSlot(usize)
       systems/
-        rotate_shield_cells.rs        // existing, moved
-        sync_orbit_cell_positions.rs  // existing, moved
-        spawn_orbit_children.rs       // extracted from spawn_cells_from_layout
+        slide_guardian_cells.rs
 ```
 
 ### Lock targets defined in node layout, not cell type
@@ -91,15 +109,21 @@ cells/
 ```ron
 (
     grid: [
-        ['S','.','.'],
-        ['.','S','.'],
-        ['.','.','L'],
+        ["S",".","."],
+        [".","S","."],
+        [".",".","L"],
     ],
     locks: {
         (2,2): [(0,0), (1,1)],  // cell at (2,2) is locked by cells at (0,0) and (1,1)
     },
 )
 ```
+
+**Lock chains**: Locks can chain — a locked cell can be a lock target for another locked cell (e.g., Cell A locked by Cell B, Cell B locked by Cell C). The spawn pipeline must:
+1. Spawn all non-locked cells first, collecting `HashMap<(usize,usize), Entity>`
+2. Topological sort the `locks` entries by dependency order (cells whose lock targets are all non-locked spawn first)
+3. Spawn locked cells in dependency order, calling `.locked(resolved_entities)` on each
+4. **Circular lock handling**: detect circular dependencies during spawn. Log a debug warning ("ignoring lock X — would create circular lock") and skip the circular connection. Don't panic, don't reject the layout — just don't wire the final connection that would create the cycle.
 
 - `locks` is `Option<HashMap<(usize, usize), Vec<(usize, usize)>>>` — `#[serde(default)]`, defaults to None. Most node layouts won't have locks so you don't write it at all
 - Key = (row, col) of the locked cell, value = list of (row, col) key cells
@@ -123,8 +147,10 @@ cells/
 - In: `Cell::builder()...spawn()` builder with typestate for base properties and runtime config for behaviors
 - In: `.definition(&def)` convenience that populates from `CellTypeDefinition`
 - In: Replace manual tuple assembly in `spawn_cells_from_grid` and test helpers
-- In: Handle existing cell variants (standard, locked, regen, shielded + orbit children)
-- In: Refactor `CellBehavior` from struct to enum (existing modifiers only: Locked, Regen, Shielded)
+- In: Handle existing cell variants (standard, locked, regen) + redesign guard cells (replaces shielded/orbit)
+- In: Refactor `CellBehavior` from struct to enum (Regen initially, Guarded added in final wave)
+- In: Multi-char grid aliases (`alias: char` → `alias: String`, `grid: Vec<Vec<char>>` → `Vec<Vec<String>>`) — needed for `Gu`/`gu` guard cell aliases
+- In: Guard cell redesign: 3x3 grid-based model replacing orbit model. Guarded Cell (parent, damageable, NOT locked) + Guardian Cells (square children, slide between ring positions, ChildOf parent). Builder API: `.guarded(vec![(-1,0),(1,0)])` with relative grid offsets. Layout controls guardian count via `gu` positions in the 3x3 ring around `Gu`.
 - In: Add `effects: Option<Vec<RootEffect>>` to `CellTypeDefinition` (same pattern as bolts/walls)
 - In: Update RON cell files for new behavior/effects format
 - In: Create `assets/examples/cell.example.ron` documenting all fields
@@ -132,7 +158,7 @@ cells/
 - In: Move lock targets from cell type RON (`behavior: (locked: true)`) to node layout RON (`locks: { (r,c): [(r,c), ...] }`)
 - In: Update `NodeLayout` definition to include `locks` field
 - In: Update `spawn_cells_from_grid` to resolve lock coordinates to entity IDs
-- In: Remove `build()` from public API of ALL entity builders (Cell, Wall, Bolt, Breaker) — `spawn()` only
+- In: Remove `build()` entirely from ALL entity builders (Cell, Wall, Bolt, Breaker) — make private, `spawn()` is the only terminal
 - In: Fix shield/second_wind wall spawning to use `spawn()` instead of `build()` + manual spawn
 - In: Architecture doc `docs/architecture/builders/cell.md` — cell builder API, typestate dimensions, definition layering
 - In: Architecture doc `docs/architecture/cell-behaviors.md` — how to create a new cell behavior (folder structure, components, systems, CellBehavior enum variant, RON format, builder integration)
@@ -157,10 +183,12 @@ cells/
 
 ## Notes
 - Follow the pattern from `bolt/builder/` and `wall/builder/`
-- Shielded cells spawn orbit children as separate entities. Extract `spawn_orbit_children` from `spawn_cells_from_layout` into `cells/behaviors/shielded/systems/`.
-- `CellTypeAlias` component tracks which definition alias spawned a cell (used by hot-reload). Builder should accept this.
-- Existing modifiers (Locked, Regen, Shielded) are refactored as part of this todo. New modifiers (Volatile → Portal) are a separate todo — see [cell-modifiers.md](cell-modifiers.md) for their designs.
-- Defining and refactoring ALL existing behaviors (locked, regen, shielded) is in scope — including the folder restructure, component moves, system moves, and the lock-target migration from cell type to node layout.
+- `CellTypeAlias` component tracks which definition alias spawned a cell (used by hot-reload). Builder should accept this. Changes from `CellTypeAlias(char)` to `CellTypeAlias(String)` with the multi-char alias migration.
+- Locked and Regen are refactored as part of this todo (folder restructure, component moves, system moves, lock-target migration). New modifiers (Volatile → Portal) are a separate todo — see [cell-modifiers.md](cell-modifiers.md) for their designs.
+- Shielded/orbit model is REPLACED by the new Guard Cell model (3x3 grid, sliding guardians). Old components (`ShieldParent`, `OrbitCell`, `OrbitAngle`, `OrbitConfig`) and old systems (`rotate_shield_cells`, `sync_orbit_cell_positions`) are removed.
+- **Vocabulary**: Guarded Cell = parent, Guardian Cell = child. Replaces Shield/Orbit terminology.
+- **Guardian dimensions**: square (`cell_height × cell_height`), centered in grid slot. Gap on each side = `(cell_width - cell_height) / 2`. Bolts can squeeze past sides.
+- **Guard cell design** happens in parallel with early implementation waves, implemented as final wave.
 - **Existing bug**: `effect/effects/shield/system.rs` and `effect/effects/second_wind/system.rs` use `Wall::builder()...build()` instead of `.spawn()`, skipping effect dispatch. These are exclusive World systems so they can't use `Commands` directly — needs a design decision (command flush, refactor to Commands, or `spawn_world()` variant). See [build-vs-spawn.md](build-vs-spawn.md).
 - Builder uses `.hp(value)` directly — no toughness enum yet (separate todo).
 

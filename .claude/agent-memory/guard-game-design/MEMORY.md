@@ -10,10 +10,14 @@
 - [Bolt Builder Migration](evaluation-bolt-builder-migration.md) — Directional steering, BreakerReflectionSpread rename, PrimaryBolt marker all approved
 - [Breaker Builder Pattern](evaluation-breaker-builder-pattern.md) — Typestate builder, LivesSetting, ClampRange, 35+ field definition, Visual dimension all approved
 - [Wall Builder Pattern](evaluation-wall-builder-pattern.md) — Typestate builder, WallDefinition RON, WallRegistry, per-side definitions, Visible dimension all approved
+- [Guard Cell Redesign](evaluation-guard-cell-redesign.md) — 3x3 grid replacing orbit model approved all 6 pillars; slide speed escalation + formation reassemble sharpening notes
 
 - [Shield Wall Refactor](evaluation-shield-wall-refactor.md) — Charges to timed visible wall APPROVED; tension tuning needed (5s too generous); cell shielding removal correct
 - Node Sequencing & Mod System — Pass 6: 10 Terminal candidates proposed (designer picks 5); Volatile Revenge kept; 4 originals rejected — see `docs/todos/detail/node-sequencing-refactor/` and `docs/todos/detail/mod-system-design.md` for authoritative state
 - [Bolt Birthing Animation](evaluation-bolt-birthing-animation.md) — Concept approved; 0.3s too slow (recommend 0.12-0.15s); linear lerp weak (ease-out); AnimateIn gate questionable; tether beam interaction approved; quit chain approved
+
+- [Protocol Brainstorm Evaluation](evaluation-protocol-brainstorm.md) — 15 protocol designs; 2 legendaries promoted; archetypes and hazard counter-play mapped
+- [Protocol Brainstorm R2](evaluation-protocol-brainstorm-r2.md) — Chip/protocol reclassification: 5 demoted to chips (Overburn, Fission, Iron Curtain, Kickstart, Gravity Lens); 5 replacements designed (Greed, Reckless Dash, Polarity, Momentum Flip, Burnout)
 
 ## Audits
 - [Chip/Evolution Coherence Audit](audit-chip-evolution-coherence.md) — 3 critical overlaps, 6 orphan chips, power curve issues; 4 of 5 missing RON files now exist (flashstep, chain_reaction, feedback_loop, powder_keg)

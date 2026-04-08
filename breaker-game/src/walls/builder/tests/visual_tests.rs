@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::world::CommandQueue, prelude::*};
 
 use super::helpers::default_playfield;
 use crate::{shared::GameDrawLayer, walls::components::Wall};
@@ -9,6 +9,16 @@ fn visual_test_app() -> App {
         .init_asset::<Mesh>()
         .init_asset::<ColorMaterial>();
     app
+}
+
+fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let mut commands = Commands::new(&mut queue, world);
+        f(&mut commands)
+    };
+    queue.apply(world);
+    entity
 }
 
 // ── Behavior 13: .visible() stores mesh and material handles ──
@@ -22,11 +32,10 @@ fn visible_produces_mesh_and_material_components() {
         move |mut commands: Commands,
               mut meshes: ResMut<Assets<Mesh>>,
               mut materials: ResMut<Assets<ColorMaterial>>| {
-            let bundle = Wall::builder()
+            Wall::builder()
                 .left(&pf)
                 .visible(&mut meshes, &mut materials)
-                .build();
-            commands.spawn(bundle);
+                .spawn(&mut commands);
         }
     });
     app.update();
@@ -67,11 +76,10 @@ fn visible_without_color_uses_white_fallback() {
         move |mut commands: Commands,
               mut meshes: ResMut<Assets<Mesh>>,
               mut materials: ResMut<Assets<ColorMaterial>>| {
-            let bundle = Wall::builder()
+            let e = Wall::builder()
                 .left(&pf)
                 .visible(&mut meshes, &mut materials)
-                .build();
-            let e = commands.spawn(bundle).id();
+                .spawn(&mut commands);
             commands.insert_resource(SpawnedEntity(e));
         }
     });
@@ -103,8 +111,9 @@ fn no_visible_call_produces_no_mesh_or_material() {
     let pf = default_playfield();
     let mut world = World::new();
 
-    let bundle = Wall::builder().left(&pf).build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_in_world(&mut world, |commands| {
+        Wall::builder().left(&pf).spawn(commands)
+    });
 
     assert!(
         world.get::<Mesh2d>(entity).is_none(),
@@ -129,8 +138,9 @@ fn invisible_call_also_produces_no_mesh_or_material() {
     let pf = default_playfield();
     let mut world = World::new();
 
-    let bundle = Wall::builder().left(&pf).invisible().build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_in_world(&mut world, |commands| {
+        Wall::builder().left(&pf).invisible().spawn(commands)
+    });
 
     assert!(
         world.get::<Mesh2d>(entity).is_none(),
@@ -147,8 +157,11 @@ fn invisible_call_also_produces_no_mesh_or_material() {
 #[test]
 fn invisible_returns_self_unchanged() {
     let pf = default_playfield();
-    // Just verify it compiles and can proceed to build
-    let _bundle = Wall::builder().left(&pf).invisible().build();
+    let mut world = World::new();
+    // Just verify it compiles and can proceed to spawn
+    spawn_in_world(&mut world, |commands| {
+        Wall::builder().left(&pf).invisible().spawn(commands)
+    });
 }
 
 #[test]
@@ -160,12 +173,11 @@ fn invisible_then_visible_produces_visual_components() {
         move |mut commands: Commands,
               mut meshes: ResMut<Assets<Mesh>>,
               mut materials: ResMut<Assets<ColorMaterial>>| {
-            let bundle = Wall::builder()
+            Wall::builder()
                 .left(&pf)
                 .invisible()
                 .visible(&mut meshes, &mut materials)
-                .build();
-            commands.spawn(bundle);
+                .spawn(&mut commands);
         }
     });
     app.update();

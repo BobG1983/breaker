@@ -13,10 +13,10 @@ use crate::{
 fn do_children_are_not_stored_in_bound_effects() {
     let mut registry = crate::cells::resources::CellTypeRegistry::default();
     registry.insert(
-        'D',
+        "D".to_owned(),
         make_cell_def(
             "immediate_effect_cell",
-            'D',
+            "D",
             10.0,
             Some(vec![RootEffect::On {
                 target: Target::Cell,
@@ -35,7 +35,10 @@ fn do_children_are_not_stored_in_bound_effects() {
     );
 
     let mut app = test_app(registry);
-    let cell_entity = app.world_mut().spawn((Cell, CellTypeAlias('D'))).id();
+    let cell_entity = app
+        .world_mut()
+        .spawn((Cell, CellTypeAlias("D".to_owned())))
+        .id();
     app.update();
 
     // BoundEffects should have exactly 1 entry (the When node), NOT the Do node
@@ -68,10 +71,10 @@ fn do_children_are_not_stored_in_bound_effects() {
 fn all_do_children_results_in_no_bound_effects_entries() {
     let mut registry = crate::cells::resources::CellTypeRegistry::default();
     registry.insert(
-        'D',
+        "D".to_owned(),
         make_cell_def(
             "all_do_cell",
-            'D',
+            "D",
             10.0,
             Some(vec![RootEffect::On {
                 target: Target::Cell,
@@ -84,7 +87,10 @@ fn all_do_children_results_in_no_bound_effects_entries() {
     );
 
     let mut app = test_app(registry);
-    let cell_entity = app.world_mut().spawn((Cell, CellTypeAlias('D'))).id();
+    let cell_entity = app
+        .world_mut()
+        .spawn((Cell, CellTypeAlias("D".to_owned())))
+        .id();
     app.update();
 
     // If BoundEffects was inserted, it should be empty (all children were Do nodes)
@@ -113,10 +119,10 @@ fn all_do_children_results_in_no_bound_effects_entries() {
 fn cell_with_multiple_root_effects_gets_all_dispatched() {
     let mut registry = crate::cells::resources::CellTypeRegistry::default();
     registry.insert(
-        'M',
+        "M".to_owned(),
         make_cell_def(
             "multi_effect_cell",
-            'M',
+            "M",
             20.0,
             Some(vec![
                 RootEffect::On {
@@ -141,7 +147,10 @@ fn cell_with_multiple_root_effects_gets_all_dispatched() {
     );
 
     let mut app = test_app(registry);
-    let cell_entity = app.world_mut().spawn((Cell, CellTypeAlias('M'))).id();
+    let cell_entity = app
+        .world_mut()
+        .spawn((Cell, CellTypeAlias("M".to_owned())))
+        .id();
     app.update();
 
     let bound = app
@@ -192,10 +201,10 @@ fn cell_with_multiple_root_effects_gets_all_dispatched() {
 fn cell_with_mixed_targets_dispatches_to_correct_entities() {
     let mut registry = crate::cells::resources::CellTypeRegistry::default();
     registry.insert(
-        'M',
+        "M".to_owned(),
         make_cell_def(
             "mixed_target_cell",
-            'M',
+            "M",
             10.0,
             Some(vec![
                 RootEffect::On {
@@ -220,7 +229,10 @@ fn cell_with_mixed_targets_dispatches_to_correct_entities() {
     );
 
     let mut app = test_app(registry);
-    let cell_entity = app.world_mut().spawn((Cell, CellTypeAlias('M'))).id();
+    let cell_entity = app
+        .world_mut()
+        .spawn((Cell, CellTypeAlias("M".to_owned())))
+        .id();
     let bolt_entity = app.world_mut().spawn(Bolt).id();
     app.update();
 

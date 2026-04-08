@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 use rantzsoft_defaults::{GameConfig, prelude::SeedableRegistry};
+use tracing::warn;
 
 use super::super::definition::CellTypeDefinition;
 
@@ -36,23 +37,23 @@ impl Default for CellConfig {
     }
 }
 
-/// Registry mapping alias chars to cell type definitions. Built at boot from all loaded RONs.
+/// Registry mapping alias strings to cell type definitions. Built at boot from all loaded RONs.
 #[derive(Resource, Debug, Default)]
 pub(crate) struct CellTypeRegistry {
-    /// Map from alias char to cell type definition.
-    types: HashMap<char, CellTypeDefinition>,
+    /// Map from alias string to cell type definition.
+    types: HashMap<String, CellTypeDefinition>,
 }
 
 impl CellTypeRegistry {
-    /// Looks up a cell type definition by its alias char.
-    pub(crate) fn get(&self, alias: char) -> Option<&CellTypeDefinition> {
-        self.types.get(&alias)
+    /// Looks up a cell type definition by its alias string.
+    pub(crate) fn get(&self, alias: &str) -> Option<&CellTypeDefinition> {
+        self.types.get(alias)
     }
 
     /// Returns `true` if the registry contains a definition for the given alias.
     #[cfg(test)]
-    pub(crate) fn contains(&self, alias: char) -> bool {
-        self.types.contains_key(&alias)
+    pub(crate) fn contains(&self, alias: &str) -> bool {
+        self.types.contains_key(alias)
     }
 
     /// Inserts a cell type definition under the given alias, returning the
@@ -60,7 +61,7 @@ impl CellTypeRegistry {
     #[cfg(test)]
     pub(crate) fn insert(
         &mut self,
-        alias: char,
+        alias: String,
         def: CellTypeDefinition,
     ) -> Option<CellTypeDefinition> {
         self.types.insert(alias, def)
@@ -87,35 +88,34 @@ impl SeedableRegistry for CellTypeRegistry {
     fn seed(&mut self, assets: &[(AssetId<CellTypeDefinition>, CellTypeDefinition)]) {
         self.types.clear();
         for (_id, def) in assets {
-            if let Err(e) = def.validate() {
-                warn!("Skipping cell type '{}': {e}", def.id);
+            // Reserved alias is a programming error — panic before validate() filters it.
+            assert!(def.alias != ".", "reserved alias '{}'", def.alias);
+            if def.validate().is_err() {
+                warn!(
+                    "skipping cell type '{}' (alias '{}'): validation failed",
+                    def.id, def.alias
+                );
                 continue;
             }
             assert!(
-                def.alias != '.',
-                "cell type '{}' uses reserved alias '.'",
-                def.id
-            );
-            assert!(
                 !self.types.contains_key(&def.alias),
-                "duplicate cell type alias '{}' from '{}'",
-                def.alias,
-                def.id
+                "duplicate cell type alias '{}'",
+                def.alias
             );
-            self.types.insert(def.alias, def.clone());
+            self.types.insert(def.alias.clone(), def.clone());
         }
     }
 
     fn update_single(&mut self, _id: AssetId<CellTypeDefinition>, asset: &CellTypeDefinition) {
-        if let Err(e) = asset.validate() {
-            warn!("Skipping cell type '{}': {e}", asset.id);
+        // Reserved alias is a programming error — panic before validate() filters it.
+        assert!(asset.alias != ".", "reserved alias '{}'", asset.alias);
+        if asset.validate().is_err() {
+            warn!(
+                "ignoring invalid cell type update '{}' (alias '{}')",
+                asset.id, asset.alias
+            );
             return;
         }
-        assert!(
-            asset.alias != '.',
-            "cell type '{}' uses reserved alias '.'",
-            asset.id
-        );
-        self.types.insert(asset.alias, asset.clone());
+        self.types.insert(asset.alias.clone(), asset.clone());
     }
 }

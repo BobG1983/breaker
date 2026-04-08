@@ -1,21 +1,19 @@
 //! System to spawn cells from the active node layout.
 
+use std::collections::{HashMap, HashSet, VecDeque};
+
 use bevy::{ecs::system::SystemParam, prelude::*};
-use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
-use rantzsoft_spatial2d::{
-    components::{Position2D, Scale2D},
-    propagation::PositionPropagation,
-};
 
 use crate::{
     cells::{
+        builder::core::types::GuardianSpawnConfig,
         components::*,
-        definition::ShieldBehavior,
+        definition::CellBehavior,
         resources::{CellConfig, CellTypeRegistry},
     },
-    shared::{BOLT_LAYER, CELL_LAYER, GameDrawLayer, PlayfieldConfig},
+    shared::PlayfieldConfig,
     state::run::{
-        node::{ActiveNodeLayout, NodeLayout, messages::CellsSpawned},
+        node::{ActiveNodeLayout, NodeLayout, definition::LockMap, messages::CellsSpawned},
         resources::{NodeOutcome, NodeSequence},
     },
 };
@@ -56,6 +54,21 @@ pub(crate) fn compute_grid_scale(
     let default_grid_width = grid_extent(step_x, cols_f, config.padding_x);
     let default_grid_height = grid_extent(step_y, rows_f, config.padding_y);
 
+    if default_grid_width <= 0.0 || default_grid_height <= 0.0 {
+        warn!(
+            "compute_grid_scale: degenerate layout (cols={cols}, rows={rows}), \
+             grid extent is zero or negative"
+        );
+        return ScaledGridDims {
+            cell_width: 0.0,
+            cell_height: 0.0,
+            padding_x: 0.0,
+            step_x: 0.0,
+            step_y: 0.0,
+            scale: 0.0,
+        };
+    }
+
     let available_width = playfield.width;
     let available_height = (playfield.cell_zone_height() - grid_top_offset).max(0.0);
 
@@ -84,11 +97,141 @@ pub(crate) struct RenderAssets<'a> {
     pub materials: &'a mut Assets<ColorMaterial>,
 }
 
+/// Pre-computed grid positions and dimensions shared across spawn helpers.
+struct GridSpawnParams {
+    step_x: f32,
+    step_y: f32,
+    start_x: f32,
+    start_y: f32,
+    cell_width: f32,
+    cell_height: f32,
+}
+
+impl GridSpawnParams {
+    /// Computes the world-space position for a given grid coordinate.
+    fn cell_pos(&self, row_idx: usize, col_idx: usize) -> Vec2 {
+        let col_f = f32::from(u16::try_from(col_idx).unwrap_or(u16::MAX));
+        let row_f = f32::from(u16::try_from(row_idx).unwrap_or(u16::MAX));
+        let x = col_f.mul_add(self.step_x, self.start_x);
+        let y = row_f.mul_add(-self.step_y, self.start_y);
+        Vec2::new(x, y)
+    }
+}
+
+/// Immutable context for cell spawning helpers. Bundles the shared read-only
+/// state so individual functions stay under clippy's argument limit.
+struct GridCellContext<'a> {
+    layout: &'a NodeLayout,
+    registry: &'a CellTypeRegistry,
+    params: GridSpawnParams,
+    hp_mult: f32,
+}
+
+impl GridCellContext<'_> {
+    /// Pass 1: spawns non-locked cells. Returns
+    /// required-to-clear count for cells spawned in this pass.
+    fn spawn_pass1(
+        &self,
+        commands: &mut Commands,
+        lock_keys: &HashMap<(usize, usize), &Vec<(usize, usize)>>,
+        gu_skip: &HashSet<(usize, usize)>,
+        meshes: &mut Assets<Mesh>,
+        materials: &mut Assets<ColorMaterial>,
+        entity_map: &mut HashMap<(usize, usize), Entity>,
+    ) -> u32 {
+        let mut required_count = 0u32;
+
+        for (row_idx, row) in self.layout.grid.iter().enumerate() {
+            for (col_idx, alias) in row.iter().enumerate() {
+                if alias == "." {
+                    continue;
+                }
+                let coord = (row_idx, col_idx);
+
+                // Skip guardian grid positions — consumed by the guarded parent.
+                if gu_skip.contains(&coord) {
+                    continue;
+                }
+
+                let Some(def) = self.registry.get(alias) else {
+                    continue;
+                };
+
+                // Check if this cell type has a Guarded behavior.
+                let guarded_behavior = def.behaviors.as_ref().and_then(|behaviors| {
+                    behaviors.iter().find_map(|b| match b {
+                        CellBehavior::Guarded(g) => Some(g),
+                        CellBehavior::Regen { .. } => None,
+                    })
+                });
+
+                if let Some(guarded) = guarded_behavior {
+                    let guardian_slots =
+                        collect_guardian_slots(&self.layout.grid, row_idx, col_idx);
+                    let config = GuardianSpawnConfig {
+                        hp: guarded.guardian_hp * self.hp_mult,
+                        color_rgb: guarded.guardian_color_rgb,
+                        slide_speed: guarded.slide_speed,
+                        cell_height: self.params.cell_height,
+                        step_x: self.params.step_x,
+                        step_y: self.params.step_y,
+                    };
+                    let pos = self.params.cell_pos(row_idx, col_idx);
+                    let scaled_hp = def.hp * self.hp_mult;
+                    let entity_id = Cell::builder()
+                        .definition(def)
+                        .position(pos)
+                        .dimensions(self.params.cell_width, self.params.cell_height)
+                        .override_hp(scaled_hp)
+                        .alias(alias.clone())
+                        .guarded(guardian_slots, config)
+                        .rendered(meshes, materials)
+                        .spawn(commands);
+                    if def.required_to_clear {
+                        required_count += 1;
+                    }
+                    entity_map.insert(coord, entity_id);
+                    continue;
+                }
+
+                // Skip cells that are in the locks map — handled in Pass 2.
+                if lock_keys.contains_key(&coord) {
+                    continue;
+                }
+
+                // Non-locked cell: spawn via builder.
+                let pos = self.params.cell_pos(row_idx, col_idx);
+                let scaled_hp = def.hp * self.hp_mult;
+
+                let entity_id = Cell::builder()
+                    .definition(def)
+                    .position(pos)
+                    .dimensions(self.params.cell_width, self.params.cell_height)
+                    .override_hp(scaled_hp)
+                    .alias(alias.clone())
+                    .rendered(meshes, materials)
+                    .spawn(commands);
+
+                if def.required_to_clear {
+                    required_count += 1;
+                }
+                entity_map.insert(coord, entity_id);
+            }
+        }
+
+        required_count
+    }
+}
+
 /// Spawns cells from a grid layout. Returns the count of `RequiredToClear` cells.
 ///
 /// Shared between the `OnEnter(Playing)` system and hot-reload respawn.
 ///
 /// `hp_mult` scales every cell's HP (from the node's difficulty assignment).
+///
+/// Uses a two-pass approach when the layout has locks:
+/// - **Pass 1**: spawns non-locked cells
+/// - **Pass 2**: spawns locked cells in topological order with resolved entity IDs
 pub(crate) fn spawn_cells_from_grid(
     commands: &mut Commands,
     config: &CellConfig,
@@ -106,163 +249,371 @@ pub(crate) fn spawn_cells_from_grid(
         layout.rows,
         layout.grid_top_offset,
     );
-    let ScaledGridDims {
-        cell_width,
-        cell_height,
-        padding_x,
-        step_x,
-        step_y,
-        scale,
-        ..
-    } = dims;
+
+    debug!(
+        "spawn_cells_from_grid: layout '{}' cols={} rows={} scale={:.3}",
+        layout.name, layout.cols, layout.rows, dims.scale
+    );
 
     let grid_width = grid_extent(
-        step_x,
+        dims.step_x,
         f32::from(u16::try_from(layout.cols).unwrap_or(u16::MAX)),
-        padding_x,
+        dims.padding_x,
     );
-    let start_x = -grid_width / 2.0 + cell_width / 2.0;
-    let start_y = playfield.top() - layout.grid_top_offset - cell_height / 2.0;
 
-    let rect_mesh = meshes.add(Rectangle::new(1.0, 1.0));
-    let mut required_count = 0u32;
+    let lock_keys: HashMap<(usize, usize), &Vec<(usize, usize)>> = layout
+        .locks
+        .as_ref()
+        .map(|locks| locks.iter().map(|(k, v)| (*k, v)).collect())
+        .unwrap_or_default();
 
-    for (row_idx, row) in layout.grid.iter().enumerate() {
-        for (col_idx, &alias) in row.iter().enumerate() {
-            if alias == '.' {
-                continue;
-            }
-            let Some(def) = registry.get(alias) else {
-                continue;
-            };
-            let col_f = f32::from(u16::try_from(col_idx).unwrap_or(u16::MAX));
-            let row_f = f32::from(u16::try_from(row_idx).unwrap_or(u16::MAX));
-            let x = col_f.mul_add(step_x, start_x);
-            let y = row_f.mul_add(-step_y, start_y);
-            let scaled_hp = def.hp * hp_mult;
+    let ctx = GridCellContext {
+        layout,
+        registry,
+        hp_mult,
+        params: GridSpawnParams {
+            step_x: dims.step_x,
+            step_y: dims.step_y,
+            start_x: -grid_width / 2.0 + dims.cell_width / 2.0,
+            start_y: playfield.top() - layout.grid_top_offset - dims.cell_height / 2.0,
+            cell_width: dims.cell_width,
+            cell_height: dims.cell_height,
+        },
+    };
 
-            // Block scope limits EntityCommands borrow so `commands` can
-            // be used for orbit children below.
-            let cell_entity_id = {
-                let mut entity = commands.spawn((
-                    Cell,
-                    CellTypeAlias(alias),
-                    CellWidth::new(cell_width),
-                    CellHeight::new(cell_height),
-                    CellHealth::new(scaled_hp),
-                    CellDamageVisuals {
-                        hdr_base: def.damage_hdr_base,
-                        green_min: def.damage_green_min,
-                        blue_range: def.damage_blue_range,
-                        blue_base: def.damage_blue_base,
-                    },
-                    Mesh2d(rect_mesh.clone()),
-                    MeshMaterial2d(materials.add(ColorMaterial::from_color(def.color()))),
-                    Position2D(Vec2::new(x, y)),
-                    Scale2D {
-                        x: cell_width,
-                        y: cell_height,
-                    },
-                    Aabb2D::new(Vec2::ZERO, Vec2::new(cell_width / 2.0, cell_height / 2.0)),
-                    CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
-                    GameDrawLayer::Cell,
-                ));
+    // Pre-scan: collect guardian (`gu`) positions that belong to guarded (`Gu`) parents.
+    let gu_skip = build_guardian_skip_set(&layout.grid, registry);
 
-                if def.required_to_clear {
-                    entity.insert(RequiredToClear);
-                    required_count += 1;
-                }
-                if def.behavior.locked {
-                    entity.insert(Locked);
-                    entity.insert(LockAdjacents(Vec::new()));
-                }
-                if let Some(rate) = def.behavior.regen_rate {
-                    entity.insert(CellRegen { rate });
-                }
-                if def.behavior.shield.is_some() {
-                    entity.insert((ShieldParent, Locked));
-                }
-                entity.id()
-            };
+    let mut entity_map: HashMap<(usize, usize), Entity> = HashMap::new();
 
-            if let Some(ref shield) = def.behavior.shield {
-                spawn_orbit_children(
-                    commands,
-                    shield,
-                    cell_entity_id,
-                    Vec2::new(x, y),
-                    scale,
-                    hp_mult,
-                    (&rect_mesh, materials),
-                );
-            }
-        }
-    }
+    let mut required_count = ctx.spawn_pass1(
+        commands,
+        &lock_keys,
+        &gu_skip,
+        meshes,
+        materials,
+        &mut entity_map,
+    );
+
+    required_count += resolve_and_spawn_locks(&ctx, commands, &mut entity_map, meshes, materials);
+
     required_count
 }
 
-/// Spawns orbit children around a shield cell and inserts `LockAdjacents`.
-fn spawn_orbit_children(
+/// Pass 2: resolves lock dependencies via topological sort and spawns locked
+/// cells in dependency order. Returns the additional required-to-clear count.
+fn resolve_and_spawn_locks(
+    ctx: &GridCellContext<'_>,
     commands: &mut Commands,
-    shield: &ShieldBehavior,
-    shield_entity: Entity,
-    center: Vec2,
-    scale: f32,
-    hp_mult: f32,
-    render: (&Handle<Mesh>, &mut Assets<ColorMaterial>),
-) {
-    let (rect_mesh, materials) = render;
-    let orbit_dim = 20.0 * scale;
-    let orbit_half = orbit_dim / 2.0;
-    let orbit_half_diag = orbit_half * std::f32::consts::SQRT_2;
-    let min_clamp = orbit_half_diag + 1.0;
-    let scaled_radius = (shield.radius * scale).max(min_clamp);
-
-    let orbit_color = crate::shared::color_from_rgb(shield.color_rgb);
-    let orbit_material = materials.add(ColorMaterial::from_color(orbit_color));
-
-    let orbit_count_f = f32::from(u16::try_from(shield.count).unwrap_or(u16::MAX));
-    let mut orbit_ids = Vec::with_capacity(shield.count as usize);
-    for i in 0..shield.count {
-        let i_f = f32::from(u16::try_from(i).unwrap_or(u16::MAX));
-        let angle = 2.0 * std::f32::consts::PI * i_f / orbit_count_f;
-        let offset = Vec2::new(scaled_radius * angle.cos(), scaled_radius * angle.sin());
-        let orbit_pos = center + offset;
-
-        let orbit_entity = commands
-            .spawn((
-                Cell,
-                OrbitCell,
-                ChildOf(shield_entity),
-                CellHealth::new(shield.hp * hp_mult),
-                CellWidth::new(orbit_dim),
-                CellHeight::new(orbit_dim),
-                Mesh2d(rect_mesh.clone()),
-                MeshMaterial2d(orbit_material.clone()),
-                Position2D(orbit_pos),
-                PositionPropagation::Absolute,
-                Scale2D {
-                    x: orbit_dim,
-                    y: orbit_dim,
-                },
-                (
-                    Aabb2D::new(Vec2::ZERO, Vec2::new(orbit_half, orbit_half)),
-                    CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
-                    OrbitAngle(angle),
-                    OrbitConfig {
-                        radius: scaled_radius,
-                        speed: shield.speed,
-                    },
-                    GameDrawLayer::Cell,
-                ),
-            ))
-            .id();
-        orbit_ids.push(orbit_entity);
+    entity_map: &mut HashMap<(usize, usize), Entity>,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<ColorMaterial>,
+) -> u32 {
+    let Some(ref locks) = ctx.layout.locks else {
+        return 0;
+    };
+    if locks.is_empty() {
+        return 0;
     }
 
-    commands
-        .entity(shield_entity)
-        .insert(LockAdjacents(orbit_ids));
+    // Filter out lock keys that reference cells already spawned in Pass 1.
+    let effective_locks: LockMap = locks
+        .iter()
+        .filter(|&(&(r, c), _)| !entity_map.contains_key(&(r, c)))
+        .map(|(&k, v)| (k, v.clone()))
+        .collect();
+
+    let (sorted, cyclic) = topological_sort_locks(&effective_locks);
+    let mut required_count = 0u32;
+
+    // Spawn sorted (acyclic) locked cells.
+    for coord in sorted {
+        required_count += spawn_locked_cell(
+            ctx,
+            commands,
+            &effective_locks,
+            entity_map,
+            coord,
+            meshes,
+            materials,
+        );
+    }
+
+    // Spawn cyclic entries as unlocked fallbacks.
+    for coord in cyclic {
+        required_count +=
+            spawn_unlocked_fallback(ctx, commands, entity_map, coord, meshes, materials);
+    }
+
+    required_count
+}
+
+/// Spawns a single locked cell, resolving its lock targets to entity IDs.
+/// Returns 1 if the cell is required-to-clear, 0 otherwise.
+fn spawn_locked_cell(
+    ctx: &GridCellContext<'_>,
+    commands: &mut Commands,
+    effective_locks: &LockMap,
+    entity_map: &mut HashMap<(usize, usize), Entity>,
+    coord: (usize, usize),
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<ColorMaterial>,
+) -> u32 {
+    let (row_idx, col_idx) = coord;
+    let Some(alias) = ctx
+        .layout
+        .grid
+        .get(row_idx)
+        .and_then(|row| row.get(col_idx))
+    else {
+        return 0;
+    };
+    if alias == "." {
+        return 0;
+    }
+    let Some(def) = ctx.registry.get(alias) else {
+        return 0;
+    };
+
+    let pos = ctx.params.cell_pos(row_idx, col_idx);
+    let scaled_hp = def.hp * ctx.hp_mult;
+
+    // Resolve lock targets to entity IDs.
+    let targets = &effective_locks[&coord];
+    let resolved: Vec<Entity> = targets
+        .iter()
+        .filter_map(|target| {
+            entity_map.get(target).copied().or_else(|| {
+                debug!(
+                    "layout '{}': lock target ({}, {}) for cell ({}, {}) \
+                     has no spawned entity — skipping target",
+                    ctx.layout.name, target.0, target.1, row_idx, col_idx
+                );
+                None
+            })
+        })
+        .collect();
+
+    // If no targets resolved, spawn without Locked (graceful degradation).
+    let entity_id = if resolved.is_empty() {
+        Cell::builder()
+            .definition(def)
+            .position(pos)
+            .dimensions(ctx.params.cell_width, ctx.params.cell_height)
+            .override_hp(scaled_hp)
+            .alias(alias.clone())
+            .rendered(meshes, materials)
+            .spawn(commands)
+    } else {
+        Cell::builder()
+            .definition(def)
+            .position(pos)
+            .dimensions(ctx.params.cell_width, ctx.params.cell_height)
+            .override_hp(scaled_hp)
+            .alias(alias.clone())
+            .locked(resolved)
+            .rendered(meshes, materials)
+            .spawn(commands)
+    };
+
+    entity_map.insert(coord, entity_id);
+    u32::from(def.required_to_clear)
+}
+
+/// Spawns a cell as an unlocked fallback (used for cyclic lock entries).
+/// Returns 1 if the cell is required-to-clear, 0 otherwise.
+fn spawn_unlocked_fallback(
+    ctx: &GridCellContext<'_>,
+    commands: &mut Commands,
+    entity_map: &mut HashMap<(usize, usize), Entity>,
+    coord: (usize, usize),
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<ColorMaterial>,
+) -> u32 {
+    let (row_idx, col_idx) = coord;
+    let Some(alias) = ctx
+        .layout
+        .grid
+        .get(row_idx)
+        .and_then(|row| row.get(col_idx))
+    else {
+        return 0;
+    };
+    if alias == "." {
+        return 0;
+    }
+    let Some(def) = ctx.registry.get(alias) else {
+        return 0;
+    };
+
+    let pos = ctx.params.cell_pos(row_idx, col_idx);
+    let scaled_hp = def.hp * ctx.hp_mult;
+
+    let entity_id = Cell::builder()
+        .definition(def)
+        .position(pos)
+        .dimensions(ctx.params.cell_width, ctx.params.cell_height)
+        .override_hp(scaled_hp)
+        .alias(alias.clone())
+        .rendered(meshes, materials)
+        .spawn(commands);
+
+    entity_map.insert(coord, entity_id);
+    u32::from(def.required_to_clear)
+}
+
+/// Builds a set of grid positions occupied by `gu` (guardian) aliases that are
+/// adjacent to a `Gu` (guarded) cell. These positions are consumed by the
+/// guarded parent's builder and must not be spawned independently.
+fn build_guardian_skip_set(
+    grid: &[Vec<String>],
+    registry: &CellTypeRegistry,
+) -> HashSet<(usize, usize)> {
+    let mut skip = HashSet::new();
+    let offsets: [(i32, i32); 8] = [
+        (-1, -1),
+        (-1, 0),
+        (-1, 1),
+        (0, 1),
+        (1, 1),
+        (1, 0),
+        (1, -1),
+        (0, -1),
+    ];
+    for (row_idx, row) in grid.iter().enumerate() {
+        for (col_idx, alias) in row.iter().enumerate() {
+            // Check if this cell has a Guarded behavior.
+            let is_guarded = registry.get(alias).is_some_and(|def| {
+                def.behaviors.as_ref().is_some_and(|behaviors| {
+                    behaviors
+                        .iter()
+                        .any(|b| matches!(b, CellBehavior::Guarded(_)))
+                })
+            });
+            if !is_guarded {
+                continue;
+            }
+            for &(dr, dc) in &offsets {
+                let Some(nr) =
+                    usize::try_from(i32::try_from(row_idx).unwrap_or(i32::MAX) + dr).ok()
+                else {
+                    continue;
+                };
+                let Some(nc) =
+                    usize::try_from(i32::try_from(col_idx).unwrap_or(i32::MAX) + dc).ok()
+                else {
+                    continue;
+                };
+                if let Some(neighbor_alias) = grid.get(nr).and_then(|r| r.get(nc))
+                    && neighbor_alias == "gu"
+                {
+                    skip.insert((nr, nc));
+                }
+            }
+        }
+    }
+    skip
+}
+
+/// Scans the 3x3 neighborhood around a guarded cell and returns ring slot
+/// indices (0-7) for each adjacent position containing a `gu` alias.
+fn collect_guardian_slots(grid: &[Vec<String>], center_row: usize, center_col: usize) -> Vec<u8> {
+    // Grid offset (row_delta, col_delta) to ring slot index mapping.
+    const OFFSET_TO_SLOT: [((i32, i32), u8); 8] = [
+        ((-1, -1), 0),
+        ((-1, 0), 1),
+        ((-1, 1), 2),
+        ((0, 1), 3),
+        ((1, 1), 4),
+        ((1, 0), 5),
+        ((1, -1), 6),
+        ((0, -1), 7),
+    ];
+    let mut slots = Vec::new();
+    for &((dr, dc), slot) in &OFFSET_TO_SLOT {
+        let Some(nr) = usize::try_from(i32::try_from(center_row).unwrap_or(i32::MAX) + dr).ok()
+        else {
+            continue;
+        };
+        let Some(nc) = usize::try_from(i32::try_from(center_col).unwrap_or(i32::MAX) + dc).ok()
+        else {
+            continue;
+        };
+        if let Some(alias) = grid.get(nr).and_then(|r| r.get(nc))
+            && alias == "gu"
+        {
+            slots.push(slot);
+        }
+    }
+    slots
+}
+
+/// Performs a topological sort of lock entries using Kahn's algorithm.
+///
+/// Returns `(sorted, cyclic)`:
+/// - `sorted`: lock keys in an order where all dependencies come first.
+/// - `cyclic`: lock keys that participate in a cycle (could not be ordered).
+type GridCoord = (usize, usize);
+
+fn topological_sort_locks(locks: &LockMap) -> (Vec<GridCoord>, Vec<GridCoord>) {
+    // Build in-degree map. Only edges between lock-map keys matter.
+    let mut in_degree: HashMap<(usize, usize), usize> = HashMap::new();
+    // dependents[target] = list of lock keys that depend on target
+    let mut dependents: HashMap<(usize, usize), Vec<(usize, usize)>> = HashMap::new();
+
+    for &key in locks.keys() {
+        in_degree.entry(key).or_insert(0);
+    }
+
+    for (&key, targets) in locks {
+        for target in targets {
+            // Only count edges where the target is also a lock key.
+            if locks.contains_key(target) {
+                *in_degree.entry(key).or_insert(0) += 1;
+                dependents.entry(*target).or_default().push(key);
+            }
+        }
+    }
+
+    // Seed the queue with all lock keys that have in-degree 0.
+    let mut queue: VecDeque<(usize, usize)> = in_degree
+        .iter()
+        .filter(|entry| *entry.1 == 0)
+        .map(|entry| *entry.0)
+        .collect();
+
+    let mut sorted = Vec::with_capacity(locks.len());
+
+    while let Some(node) = queue.pop_front() {
+        sorted.push(node);
+        if let Some(deps) = dependents.get(&node) {
+            for &dep in deps {
+                if let Some(deg) = in_degree.get_mut(&dep) {
+                    *deg -= 1;
+                    if *deg == 0 {
+                        queue.push_back(dep);
+                    }
+                }
+            }
+        }
+    }
+
+    // Remaining nodes with in-degree > 0 are cyclic.
+    let cyclic: Vec<(usize, usize)> = in_degree
+        .into_iter()
+        .filter(|(_, deg)| *deg > 0)
+        .map(|(k, _)| k)
+        .collect();
+
+    if !cyclic.is_empty() {
+        debug!(
+            "topological_sort_locks: detected cycle among {} lock entries: {:?}",
+            cyclic.len(),
+            cyclic
+        );
+    }
+
+    (sorted, cyclic)
 }
 
 /// Resolves the `hp_mult` for the current node from the run state and node

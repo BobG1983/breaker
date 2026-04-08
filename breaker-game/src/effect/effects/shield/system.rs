@@ -1,6 +1,6 @@
 //! Shield effect — timed visible floor wall that protects the breaker.
 
-use bevy::prelude::*;
+use bevy::{ecs::world::CommandQueue, prelude::*};
 
 use crate::prelude::*;
 
@@ -44,33 +44,34 @@ pub(crate) fn fire(
 
     let playfield = world.resource::<PlayfieldConfig>().clone();
 
-    // Build invisible wall core via builder (position, scale, aabb, collision layers).
-    let core = Wall::builder()
-        .floor(&playfield)
-        .with_half_thickness(playfield.wall_half_thickness())
-        .with_color([0.3, 0.6, 2.0])
-        .timed(duration)
-        .build();
-
     // Create visual handles sequentially to avoid double &mut World borrow.
     // (.visible() requires both &mut Assets<Mesh> and &mut Assets<ColorMaterial>
     // simultaneously, which is impossible with exclusive &mut World access.)
+    let color = crate::shared::color_from_rgb([0.3, 0.6, 2.0]);
     let mesh = world
         .resource_mut::<Assets<Mesh>>()
         .add(Rectangle::new(1.0, 1.0));
-    let color = crate::shared::color_from_rgb([0.3, 0.6, 2.0]);
     let material = world
         .resource_mut::<Assets<ColorMaterial>>()
         .add(ColorMaterial::from_color(color));
 
-    world.spawn((
-        ShieldWall,
-        ShieldWallTimer(Timer::from_seconds(duration, TimerMode::Once)),
-        ShieldReflectionCost(reflection_cost),
-        core,
-        Mesh2d(mesh),
-        MeshMaterial2d(material),
-    ));
+    let mut queue = CommandQueue::default();
+    {
+        let mut commands = Commands::new(&mut queue, world);
+        let entity = Wall::builder()
+            .floor(&playfield)
+            .with_half_thickness(playfield.wall_half_thickness())
+            .timed(duration)
+            .spawn(&mut commands);
+        commands.entity(entity).insert((
+            ShieldWall,
+            ShieldWallTimer(Timer::from_seconds(duration, TimerMode::Once)),
+            ShieldReflectionCost(reflection_cost),
+            Mesh2d(mesh),
+            MeshMaterial2d(material),
+        ));
+    }
+    queue.apply(world);
 }
 
 /// Despawns all `ShieldWall` entities.

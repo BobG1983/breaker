@@ -57,7 +57,7 @@ pub(crate) fn cell_wall_collision(
 
 #[cfg(test)]
 mod tests {
-    use bevy::prelude::*;
+    use bevy::{ecs::world::CommandQueue, prelude::*};
     use rantzsoft_physics2d::plugin::RantzPhysics2dPlugin;
     use rantzsoft_spatial2d::components::{GlobalPosition2D, Spatial2D};
 
@@ -96,6 +96,16 @@ mod tests {
         app
     }
 
+    fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
+        let mut queue = CommandQueue::default();
+        let entity = {
+            let mut commands = Commands::new(&mut queue, world);
+            f(&mut commands)
+        };
+        queue.apply(world);
+        entity
+    }
+
     /// Accumulates one fixed timestep then runs one update.
     fn tick(app: &mut App) {
         let timestep = app.world().resource::<Time<Fixed>>().timestep();
@@ -121,8 +131,9 @@ mod tests {
 
     fn spawn_left_wall(app: &mut App) -> Entity {
         let pf = PlayfieldConfig::default();
-        let bundle = Wall::builder().left(&pf).build();
-        let entity = app.world_mut().spawn(bundle).id();
+        let entity = spawn_in_world(app.world_mut(), |commands| {
+            Wall::builder().left(&pf).spawn(commands)
+        });
         let pos = app.world().get::<Position2D>(entity).unwrap().0;
         app.world_mut()
             .entity_mut(entity)
@@ -132,8 +143,9 @@ mod tests {
 
     fn spawn_right_wall(app: &mut App) -> Entity {
         let pf = PlayfieldConfig::default();
-        let bundle = Wall::builder().right(&pf).build();
-        let entity = app.world_mut().spawn(bundle).id();
+        let entity = spawn_in_world(app.world_mut(), |commands| {
+            Wall::builder().right(&pf).spawn(commands)
+        });
         let pos = app.world().get::<Position2D>(entity).unwrap().0;
         app.world_mut()
             .entity_mut(entity)
@@ -143,8 +155,9 @@ mod tests {
 
     fn spawn_ceiling_wall(app: &mut App) -> Entity {
         let pf = PlayfieldConfig::default();
-        let bundle = Wall::builder().ceiling(&pf).build();
-        let entity = app.world_mut().spawn(bundle).id();
+        let entity = spawn_in_world(app.world_mut(), |commands| {
+            Wall::builder().ceiling(&pf).spawn(commands)
+        });
         let pos = app.world().get::<Position2D>(entity).unwrap().0;
         app.world_mut()
             .entity_mut(entity)

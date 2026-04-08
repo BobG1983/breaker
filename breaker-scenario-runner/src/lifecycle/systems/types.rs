@@ -124,9 +124,10 @@ pub fn quick_clear_layout(pool: NodePool) -> NodeLayout {
         cols: 1,
         rows: 1,
         grid_top_offset: 50.0,
-        grid: vec![vec!['.']],
+        grid: vec![vec![".".to_owned()]],
         pool,
         entity_scale: 1.0,
+        locks: None,
     }
 }
 

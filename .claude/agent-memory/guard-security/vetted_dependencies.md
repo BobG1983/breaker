@@ -69,6 +69,12 @@ transitive via bevy. No direct-dep security advisories known through 2026-04-07.
 Warning: `paste 1.0.15` — RUSTSEC-2024-0436 (unmaintained, no CVE). Same transitive path as prior.
 No new advisories. cargo machete: no unused dependencies found.
 
+## cargo audit result — feature/cell-builder-pattern (2026-04-08)
+
+`cargo audit` run successfully. Result: 1 warning (allowed), 0 errors.
+Same RUSTSEC-2024-0436 (paste) recurring warning. No new advisories.
+cargo machete: no unused dependencies found.
+
 ## Vetted Patterns — rantzsoft_stateflow TransitionType::None (added 2026-04-08)
 
 - `TransitionType::None` variant: cloned safely (trivially `Clone`). `type_ids()` returns `vec![]` — correct.
@@ -85,6 +91,24 @@ No new advisories. cargo machete: no unused dependencies found.
   `MenuState::Main` to have been entered. Insertion is guaranteed to precede dispatch. Safe.
 - `world.resource::<NodeOutcome>()` in `resolve_node_next_state` (system.rs:223): `NodeOutcome`
   is `init_resource`'d in RunPlugin::build(). Safe (confirmed in prior audit, still holds).
+
+## Cell builder / guarded behavior panic surface (added 2026-04-08)
+
+- `GuardedBehavior::validate()` checks `guardian_hp` and `slide_speed` but NOT `guardian_color_rgb`.
+  NaN or Inf in color fields passes validation and reaches `Color::linear_rgb()` at spawn time.
+  Bevy's `Color::linear_rgb()` accepts any f32 — no panic, but produces garbled color. Info-level.
+- `ring_slot_offset(slot: u8)` wildcard arm uses `debug_assert!(false, ...)` + returns (0.0, 0.0).
+  In release builds out-of-range slots silently return (0.0, 0.0). Only called from two sites:
+  (1) `spawn_guardian_children` with slot from `collect_guardian_slots()` (0..=7 always),
+  (2) `slide_guardian_cells` system with `slide_target.0` (a u8 mod 8, always 0..=7). Safe.
+- `compute_grid_scale` divides by `default_grid_width` and `default_grid_height` at lines 60-61
+  with no zero-guard. If `cols=0` or `rows=0` in a node RON, `grid_extent` returns a negative
+  number (step * 0 - padding = -padding), so division produces a negative scale; `.min(1.0)`
+  keeps it negative; `cell_width = config.width * negative_scale` goes negative; cell positions
+  become nonsensical. Not a panic in f32, but a silent layout corruption. Warning-level.
+  NOTE: `NodeLayout` has no `validate()` at load time — cols/rows are not guarded.
+- `CellTypeRegistry::seed()` calls `validate()` and skips invalid definitions with `warn!()`.
+  The validation gate is in production code (not test-only). Valid.
 
 ## Birthing animation panic surface (added 2026-04-08)
 

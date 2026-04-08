@@ -2,7 +2,7 @@
 
 use std::collections::HashSet;
 
-use bevy::prelude::*;
+use bevy::{ecs::world::CommandQueue, prelude::*};
 
 use crate::prelude::*;
 
@@ -25,12 +25,19 @@ pub(crate) fn fire(_entity: Entity, _source_chip: &str, world: &mut World) {
     }
 
     let playfield = world.resource::<PlayfieldConfig>().clone();
-    let bundle = Wall::builder()
-        .floor(&playfield)
-        .invisible()
-        .one_shot()
-        .build();
-    let wall = world.spawn((SecondWindWall, bundle)).id();
+
+    let mut queue = CommandQueue::default();
+    let wall = {
+        let mut commands = Commands::new(&mut queue, world);
+        let entity = Wall::builder()
+            .floor(&playfield)
+            .invisible()
+            .one_shot()
+            .spawn(&mut commands);
+        commands.entity(entity).insert(SecondWindWall);
+        entity
+    };
+    queue.apply(world);
 
     info!("spawned second wind wall {:?}", wall);
 }

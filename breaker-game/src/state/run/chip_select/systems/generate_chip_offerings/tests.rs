@@ -176,9 +176,10 @@ fn make_test_layout(pool: NodePool) -> ActiveNodeLayout {
         cols: 1,
         rows: 1,
         grid_top_offset: 50.0,
-        grid: vec![vec!['S']],
+        grid: vec![vec!["S".to_owned()]],
         pool,
         entity_scale: 1.0,
+        locks: None,
     })
 }
 

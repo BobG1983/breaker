@@ -14,10 +14,10 @@ use crate::{
 fn cell_effects_dispatched_marker_prevents_double_dispatch() {
     let mut registry = crate::cells::resources::CellTypeRegistry::default();
     registry.insert(
-        'E',
+        "E".to_owned(),
         make_cell_def(
             "effect_cell",
-            'E',
+            "E",
             10.0,
             Some(vec![RootEffect::On {
                 target: Target::Cell,
@@ -38,7 +38,7 @@ fn cell_effects_dispatched_marker_prevents_double_dispatch() {
         .world_mut()
         .spawn((
             Cell,
-            CellTypeAlias('E'),
+            CellTypeAlias("E".to_owned()),
             CellEffectsDispatched,
             BoundEffects(vec![(
                 String::new(),
@@ -72,10 +72,10 @@ fn cell_effects_dispatched_marker_prevents_double_dispatch() {
 fn marker_on_one_cell_skips_it_while_other_is_dispatched() {
     let mut registry = crate::cells::resources::CellTypeRegistry::default();
     registry.insert(
-        'E',
+        "E".to_owned(),
         make_cell_def(
             "effect_cell",
-            'E',
+            "E",
             10.0,
             Some(vec![RootEffect::On {
                 target: Target::Cell,
@@ -96,7 +96,7 @@ fn marker_on_one_cell_skips_it_while_other_is_dispatched() {
         .world_mut()
         .spawn((
             Cell,
-            CellTypeAlias('E'),
+            CellTypeAlias("E".to_owned()),
             CellEffectsDispatched,
             BoundEffects(vec![(
                 String::new(),
@@ -111,7 +111,10 @@ fn marker_on_one_cell_skips_it_while_other_is_dispatched() {
         ))
         .id();
     // Cell B: not dispatched yet
-    let cell_b = app.world_mut().spawn((Cell, CellTypeAlias('E'))).id();
+    let cell_b = app
+        .world_mut()
+        .spawn((Cell, CellTypeAlias("E".to_owned())))
+        .id();
     app.update();
 
     // Cell A unchanged (still 1 entry)

@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::world::CommandQueue, prelude::*};
 use rantzsoft_physics2d::{
     aabb::Aabb2D, collision_layers::CollisionLayers, plugin::RantzPhysics2dPlugin,
 };
@@ -13,6 +13,16 @@ use crate::{
     shared::{BREAKER_LAYER, GameDrawLayer, NodeScalingFactor, PlayfieldConfig, WALL_LAYER},
     walls::components::Wall,
 };
+
+fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let mut commands = Commands::new(&mut queue, world);
+        f(&mut commands)
+    };
+    queue.apply(world);
+    entity
+}
 
 // ── Helpers ──────────────────────────────────────────────────────
 
@@ -73,8 +83,9 @@ fn spawn_breaker(app: &mut App, pos: Vec2) -> Entity {
 
 fn spawn_left_wall(app: &mut App) -> Entity {
     let pf = PlayfieldConfig::default();
-    let bundle = Wall::builder().left(&pf).build();
-    let entity = app.world_mut().spawn(bundle).id();
+    let entity = spawn_in_world(app.world_mut(), |commands| {
+        Wall::builder().left(&pf).spawn(commands)
+    });
     let pos = app.world().get::<Position2D>(entity).unwrap().0;
     app.world_mut()
         .entity_mut(entity)
@@ -84,8 +95,9 @@ fn spawn_left_wall(app: &mut App) -> Entity {
 
 fn spawn_right_wall(app: &mut App) -> Entity {
     let pf = PlayfieldConfig::default();
-    let bundle = Wall::builder().right(&pf).build();
-    let entity = app.world_mut().spawn(bundle).id();
+    let entity = spawn_in_world(app.world_mut(), |commands| {
+        Wall::builder().right(&pf).spawn(commands)
+    });
     let pos = app.world().get::<Position2D>(entity).unwrap().0;
     app.world_mut()
         .entity_mut(entity)
@@ -95,8 +107,9 @@ fn spawn_right_wall(app: &mut App) -> Entity {
 
 fn spawn_ceiling_wall(app: &mut App) -> Entity {
     let pf = PlayfieldConfig::default();
-    let bundle = Wall::builder().ceiling(&pf).build();
-    let entity = app.world_mut().spawn(bundle).id();
+    let entity = spawn_in_world(app.world_mut(), |commands| {
+        Wall::builder().ceiling(&pf).spawn(commands)
+    });
     let pos = app.world().get::<Position2D>(entity).unwrap().0;
     app.world_mut()
         .entity_mut(entity)
@@ -364,6 +377,7 @@ fn breaker_wall_collision_boost_and_node_scale_combined() {
         "breaker with boost+scale should overlap wall at dx=140 (threshold=270), got {} messages",
         msgs.0.len(),
     );
+
     assert_eq!(msgs.0[0].breaker, breaker_entity);
     assert_eq!(msgs.0[0].wall, wall_entity);
 }

@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Position2D;
 
@@ -5,23 +7,35 @@ use crate::{
     cells::{
         CellTypeDefinition,
         components::Cell,
-        definition::CellBehavior,
         resources::{CellConfig, CellTypeRegistry},
     },
     shared::PlayfieldConfig,
-    state::run::node::{
-        ActiveNodeLayout, NodeLayout, definition::NodePool, messages::CellsSpawned,
-        systems::spawn_cells_from_layout::system::spawn_cells_from_layout,
+    state::run::{
+        definition::NodeType,
+        node::{
+            ActiveNodeLayout, NodeLayout,
+            definition::{LockMap, NodePool},
+            messages::CellsSpawned,
+            systems::spawn_cells_from_layout::system::{
+                compute_grid_scale, grid_extent, spawn_cells_from_layout,
+            },
+        },
+        resources::{NodeAssignment, NodeOutcome, NodeSequence},
     },
 };
+
+/// Helper to reduce verbosity of String grid construction.
+fn s(val: &str) -> String {
+    val.to_owned()
+}
 
 pub(super) fn test_registry() -> CellTypeRegistry {
     let mut registry = CellTypeRegistry::default();
     registry.insert(
-        'S',
+        "S".to_owned(),
         CellTypeDefinition {
             id: "standard".to_owned(),
-            alias: 'S',
+            alias: "S".to_owned(),
             hp: 1.0,
             color_rgb: [4.0, 0.2, 0.5],
             required_to_clear: true,
@@ -29,15 +43,16 @@ pub(super) fn test_registry() -> CellTypeRegistry {
             damage_green_min: 0.2,
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
-            behavior: CellBehavior::default(),
+            behaviors: None,
+
             effects: None,
         },
     );
     registry.insert(
-        'T',
+        "T".to_owned(),
         CellTypeDefinition {
             id: "tough".to_owned(),
-            alias: 'T',
+            alias: "T".to_owned(),
             hp: 3.0,
             color_rgb: [2.5, 0.2, 4.0],
             required_to_clear: true,
@@ -45,7 +60,8 @@ pub(super) fn test_registry() -> CellTypeRegistry {
             damage_green_min: 0.2,
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
-            behavior: CellBehavior::default(),
+            behaviors: None,
+
             effects: None,
         },
     );
@@ -60,9 +76,10 @@ pub(super) fn full_layout() -> NodeLayout {
         cols: 3,
         rows: 2,
         grid_top_offset: 50.0,
-        grid: vec![vec!['T', 'S', 'S'], vec!['S', 'S', 'S']],
+        grid: vec![vec![s("T"), s("S"), s("S")], vec![s("S"), s("S"), s("S")]],
         pool: NodePool::default(),
         entity_scale: 1.0,
+        locks: None,
     }
 }
 
@@ -74,9 +91,10 @@ pub(super) fn sparse_layout() -> NodeLayout {
         cols: 3,
         rows: 2,
         grid_top_offset: 50.0,
-        grid: vec![vec!['.', 'S', '.'], vec!['T', '.', 'S']],
+        grid: vec![vec![s("."), s("S"), s(".")], vec![s("T"), s("."), s("S")]],
         pool: NodePool::default(),
         entity_scale: 1.0,
+        locks: None,
     }
 }
 
@@ -155,9 +173,9 @@ pub(super) fn scaled_test_app(layout: NodeLayout) -> App {
     app
 }
 
-/// Builds a `NodeLayout` filled entirely with 'S' cells.
+/// Builds a `NodeLayout` filled entirely with "S" cells.
 pub(super) fn uniform_layout(cols: u32, rows: u32, grid_top_offset: f32) -> NodeLayout {
-    let grid = vec![vec!['S'; cols as usize]; rows as usize];
+    let grid = vec![vec![s("S"); cols as usize]; rows as usize];
     NodeLayout {
         name: format!("uniform_{cols}x{rows}"),
         timer_secs: 60.0,
@@ -167,5 +185,225 @@ pub(super) fn uniform_layout(cols: u32, rows: u32, grid_top_offset: f32) -> Node
         grid,
         pool: NodePool::default(),
         entity_scale: 1.0,
+        locks: None,
     }
+}
+
+// =============================================================================
+// Lock Resolution Helpers
+// =============================================================================
+
+/// A 3x2 layout with a single lock: cell (0,1) locked by cell (1,0).
+pub(super) fn locked_layout_3x2_single() -> NodeLayout {
+    let mut locks: LockMap = HashMap::new();
+    locks.insert((0, 1), vec![(1, 0)]);
+    NodeLayout {
+        name: "locked_3x2_single".to_owned(),
+        timer_secs: 60.0,
+        cols: 3,
+        rows: 2,
+        grid_top_offset: 50.0,
+        grid: vec![vec![s("S"), s("S"), s("S")], vec![s("S"), s("S"), s("S")]],
+        pool: NodePool::default(),
+        entity_scale: 1.0,
+        locks: Some(locks),
+    }
+}
+
+/// A 2x1 layout with cell (0,0) locked by cell (0,1).
+pub(super) fn simple_locked_layout() -> NodeLayout {
+    let mut locks: LockMap = HashMap::new();
+    locks.insert((0, 0), vec![(0, 1)]);
+    NodeLayout {
+        name: "simple_locked".to_owned(),
+        timer_secs: 60.0,
+        cols: 2,
+        rows: 1,
+        grid_top_offset: 50.0,
+        grid: vec![vec![s("S"), s("S")]],
+        pool: NodePool::default(),
+        entity_scale: 1.0,
+        locks: Some(locks),
+    }
+}
+
+/// A 3x1 layout with chain: A(0,0) locked by B(0,1), B locked by C(0,2).
+pub(super) fn chain_locked_layout() -> NodeLayout {
+    let mut locks: LockMap = HashMap::new();
+    locks.insert((0, 0), vec![(0, 1)]);
+    locks.insert((0, 1), vec![(0, 2)]);
+    NodeLayout {
+        name: "chain_locked".to_owned(),
+        timer_secs: 60.0,
+        cols: 3,
+        rows: 1,
+        grid_top_offset: 50.0,
+        grid: vec![vec![s("S"), s("S"), s("S")]],
+        pool: NodePool::default(),
+        entity_scale: 1.0,
+        locks: Some(locks),
+    }
+}
+
+/// A 2x2 layout with diamond dependency:
+/// A=(0,0) locked by B=(0,1) and C=(1,0);
+/// B=(0,1) locked by D=(1,1);
+/// C=(1,0) locked by D=(1,1).
+pub(super) fn diamond_locked_layout() -> NodeLayout {
+    let mut locks: LockMap = HashMap::new();
+    locks.insert((0, 0), vec![(0, 1), (1, 0)]);
+    locks.insert((0, 1), vec![(1, 1)]);
+    locks.insert((1, 0), vec![(1, 1)]);
+    NodeLayout {
+        name: "diamond_locked".to_owned(),
+        timer_secs: 60.0,
+        cols: 2,
+        rows: 2,
+        grid_top_offset: 50.0,
+        grid: vec![vec![s("S"), s("S")], vec![s("S"), s("S")]],
+        pool: NodePool::default(),
+        entity_scale: 1.0,
+        locks: Some(locks),
+    }
+}
+
+/// A 2x1 layout with circular lock: A(0,0) locked by B(0,1), B locked by A.
+pub(super) fn circular_locked_layout() -> NodeLayout {
+    let mut locks: LockMap = HashMap::new();
+    locks.insert((0, 0), vec![(0, 1)]);
+    locks.insert((0, 1), vec![(0, 0)]);
+    NodeLayout {
+        name: "circular_locked".to_owned(),
+        timer_secs: 60.0,
+        cols: 2,
+        rows: 1,
+        grid_top_offset: 50.0,
+        grid: vec![vec![s("S"), s("S")]],
+        pool: NodePool::default(),
+        entity_scale: 1.0,
+        locks: Some(locks),
+    }
+}
+
+/// Collects Cell entities keyed by their approximate grid position.
+/// Uses `Position2D` to determine which grid slot each cell occupies.
+/// Matches entities to grid positions within 0.01 world units of expected center.
+pub(super) fn collect_cells_by_grid_position(
+    app: &mut App,
+    layout: &NodeLayout,
+) -> HashMap<(usize, usize), Entity> {
+    let config = app.world().resource::<CellConfig>().clone();
+    let playfield = app.world().resource::<PlayfieldConfig>().clone();
+
+    let dims = compute_grid_scale(
+        &config,
+        &playfield,
+        layout.cols,
+        layout.rows,
+        layout.grid_top_offset,
+    );
+
+    let grid_width = grid_extent(
+        dims.step_x,
+        f32::from(u16::try_from(layout.cols).unwrap_or(u16::MAX)),
+        dims.padding_x,
+    );
+    let start_x = -grid_width / 2.0 + dims.cell_width / 2.0;
+    let start_y = playfield.top() - layout.grid_top_offset - dims.cell_height / 2.0;
+
+    // Build expected positions for each grid slot
+    let mut expected_positions: Vec<((usize, usize), (f32, f32))> = Vec::new();
+    for (row_idx, row) in layout.grid.iter().enumerate() {
+        for (col_idx, alias) in row.iter().enumerate() {
+            if alias == "." {
+                continue;
+            }
+            let col_f = f32::from(u16::try_from(col_idx).unwrap_or(u16::MAX));
+            let row_f = f32::from(u16::try_from(row_idx).unwrap_or(u16::MAX));
+            let x = col_f.mul_add(dims.step_x, start_x);
+            let y = row_f.mul_add(-dims.step_y, start_y);
+            expected_positions.push(((row_idx, col_idx), (x, y)));
+        }
+    }
+
+    // Collect all Cell entities with their positions
+    let cell_entities: Vec<(Entity, Vec2)> = app
+        .world_mut()
+        .query_filtered::<(Entity, &Position2D), With<Cell>>()
+        .iter(app.world())
+        .map(|(e, pos)| (e, pos.0))
+        .collect();
+
+    let mut result = HashMap::new();
+    for ((row, col), (ex, ey)) in &expected_positions {
+        for &(entity, pos) in &cell_entities {
+            if (pos.x - ex).abs() < 0.01 && (pos.y - ey).abs() < 0.01 {
+                result.insert((*row, *col), entity);
+                break;
+            }
+        }
+    }
+    result
+}
+
+/// Creates a test `App` with explicit HP multiplier via `NodeOutcome`/`NodeSequence`.
+pub(super) fn test_app_with_hp_mult(layout: NodeLayout, hp_mult: f32) -> App {
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .add_message::<CellsSpawned>()
+        .init_resource::<CellConfig>()
+        .init_resource::<PlayfieldConfig>()
+        .init_resource::<Assets<Mesh>>()
+        .init_resource::<Assets<ColorMaterial>>()
+        .insert_resource(ActiveNodeLayout(layout))
+        .insert_resource(test_registry())
+        .insert_resource(NodeOutcome {
+            node_index: 0,
+            ..Default::default()
+        })
+        .insert_resource(NodeSequence {
+            assignments: vec![NodeAssignment {
+                node_type: NodeType::Active,
+                tier_index: 0,
+                hp_mult,
+                timer_mult: 1.0,
+            }],
+        })
+        .add_systems(Startup, spawn_cells_from_layout);
+    app
+}
+
+/// Creates a test `App` with a registry containing an "F" type
+/// (`required_to_clear=false`) plus the standard "S" type.
+pub(super) fn test_app_with_non_required_cell(layout: NodeLayout) -> App {
+    let mut registry = test_registry();
+    registry.insert(
+        "F".to_owned(),
+        CellTypeDefinition {
+            id: "filler".to_owned(),
+            alias: "F".to_owned(),
+            hp: 1.0,
+            color_rgb: [0.5, 0.5, 0.5],
+            required_to_clear: false,
+            damage_hdr_base: 4.0,
+            damage_green_min: 0.2,
+            damage_blue_range: 0.4,
+            damage_blue_base: 0.2,
+            behaviors: None,
+
+            effects: None,
+        },
+    );
+
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .add_message::<CellsSpawned>()
+        .init_resource::<CellConfig>()
+        .init_resource::<PlayfieldConfig>()
+        .init_resource::<Assets<Mesh>>()
+        .init_resource::<Assets<ColorMaterial>>()
+        .insert_resource(ActiveNodeLayout(layout))
+        .insert_resource(registry)
+        .add_systems(Startup, spawn_cells_from_layout);
+    app
 }

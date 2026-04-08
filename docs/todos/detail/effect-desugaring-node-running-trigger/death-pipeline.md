@@ -74,25 +74,29 @@ impl DeathAttribution for (Bolt, Cell) {
 
 ## Unified Damage Message
 
-All damage sources send a single message type. One system processes all damage and tracks kill attribution.
+All damage sources send a generic message type per victim type. One system per victim type processes damage and tracks kill attribution.
 
 ```rust
+/// Generic damage message — one Bevy message queue per victim type T.
 /// Sent by: bolt collision, shockwave fire(), chain lightning fire(),
 /// explode fire(), any effect that deals damage.
-struct DamageMessage {
+struct DamageDealt<T: Component> {
     pub dealer: Option<Entity>,  // who caused this damage (propagated through chains)
     pub target: Entity,          // who takes the damage
     pub amount: f32,             // damage amount
+    _marker: PhantomData<T>,
 }
 ```
 
+Usage: `DamageDealt<Cell>` replaces the old `DamageCell`. `DamageDealt<Bolt>`, `DamageDealt<Wall>`, etc. for other entity types.
+
 ### apply_damage system
 
-Processes all DamageMessages, decrements HP, and sets KilledBy **only on the killing blow** — the hit that crosses HP from positive to zero.
+Processes all `DamageDealt<T>` messages, decrements HP, and sets KilledBy **only on the killing blow** — the hit that crosses HP from positive to zero.
 
 ```rust
-fn apply_damage(
-    mut messages: MessageReader<DamageMessage>,
+fn apply_damage<T: Component>(
+    mut messages: MessageReader<DamageDealt<T>>,
     mut query: Query<(&mut Hp, &mut KilledBy)>,
 ) {
     for msg in messages.read() {
@@ -125,24 +129,24 @@ Effects that deal damage read the current TriggerContext to propagate the dealer
 ```rust
 // In shockwave fire():
 //   TriggerContext has the bolt that caused this shockwave
-//   Shockwave sends DamageMessage { dealer: context.bolt(), ... }
+//   Shockwave sends DamageDealt<Cell> { dealer: context.bolt(), ... }
 
 // In explode fire() (from powder keg Transfer):
 //   TriggerContext has the DeathContext of the cell that exploded
-//   Explosion sends DamageMessage { dealer: death_context.killer, ... }
+//   Explosion sends DamageDealt<Cell> { dealer: death_context.killer, ... }
 //   (bolt B killed the cell, so bolt B gets credit for explosion kills)
 
 // In chain lightning fire():
 //   TriggerContext has the bolt that caused the chain
-//   Each arc sends DamageMessage { dealer: context.bolt(), ... }
+//   Each arc sends DamageDealt<Cell> { dealer: context.bolt(), ... }
 ```
 
 ### Replaces
 
 | Before | After |
 |---|---|
-| `DamageCell` | `DamageMessage` (unified, all entity types) |
-| Direct HP mutation in effect systems | All damage flows through `DamageMessage` → `apply_damage` |
+| `DamageCell` | `DamageDealt<Cell>` (generic per victim type) |
+| Direct HP mutation in effect systems | All damage flows through `DamageDealt<T>` → `apply_damage::<T>` |
 | No kill attribution | `KilledBy` set on killing blow only |
 
 ## Death System

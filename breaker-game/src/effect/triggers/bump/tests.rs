@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::world::CommandQueue, prelude::*};
 
 use super::system::*;
 use crate::{
@@ -6,6 +6,16 @@ use crate::{
     effect::{core::*, effects::speed_boost::ActiveSpeedBoosts},
     prelude::*,
 };
+
+fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let mut commands = Commands::new(&mut queue, world);
+        f(&mut commands)
+    };
+    queue.apply(world);
+    entity
+}
 
 #[derive(Resource)]
 struct TestBumpMsg(Option<BumpPerformed>);
@@ -37,25 +47,21 @@ fn spawn_test_breaker(app: &mut App, primary: bool) -> Entity {
     use crate::breaker::{components::Breaker, definition::BreakerDefinition};
     let def = BreakerDefinition::default();
     let entity = if primary {
-        app.world_mut()
-            .spawn(
-                Breaker::builder()
-                    .definition(&def)
-                    .headless()
-                    .primary()
-                    .build(),
-            )
-            .id()
+        spawn_in_world(app.world_mut(), |commands| {
+            Breaker::builder()
+                .definition(&def)
+                .headless()
+                .primary()
+                .spawn(commands)
+        })
     } else {
-        app.world_mut()
-            .spawn(
-                Breaker::builder()
-                    .definition(&def)
-                    .headless()
-                    .extra()
-                    .build(),
-            )
-            .id()
+        spawn_in_world(app.world_mut(), |commands| {
+            Breaker::builder()
+                .definition(&def)
+                .headless()
+                .extra()
+                .spawn(commands)
+        })
     };
     app.world_mut()
         .entity_mut(entity)
@@ -313,29 +319,23 @@ fn bump_bolt_none_breaker_still_resolves() {
     let mut app = test_app();
 
     let def = crate::breaker::definition::BreakerDefinition::default();
-    let breaker_a = app
-        .world_mut()
-        .spawn(
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .build(),
-        )
-        .id();
+    let breaker_a = spawn_in_world(app.world_mut(), |commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
     app.world_mut()
         .entity_mut(breaker_a)
         .insert(StagedEffects::default());
-    let breaker_b = app
-        .world_mut()
-        .spawn(
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .extra()
-                .build(),
-        )
-        .id();
+    let breaker_b = spawn_in_world(app.world_mut(), |commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .extra()
+            .spawn(commands)
+    });
     app.world_mut()
         .entity_mut(breaker_b)
         .insert(StagedEffects::default());

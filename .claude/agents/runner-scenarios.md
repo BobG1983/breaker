@@ -148,5 +148,5 @@ If all scenarios pass, the report should be brief — just the results table, co
 - Do NOT apply lint suppressions or `#[allow(...)]` attributes
 - Do NOT create helper scripts
 - Do NOT delete any file for any reason
-Describe the suspected fix precisely (file, line, what to change) — but do NOT apply it.
-- Do NOT write any files
+- DO describe the suspected fix precisely (file, line, what to change) — but do NOT apply it.
+- Do NOT write any files except those specified in the above instructions

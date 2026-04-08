@@ -1,6 +1,17 @@
-//! Tests for bolt target dispatch (behaviors 3, 15).
+use bevy::{ecs::world::CommandQueue, prelude::*};
 
+// Tests for bolt target dispatch (behaviors 3, 15).
 use super::helpers::*;
+
+fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let mut commands = Commands::new(&mut queue, world);
+        f(&mut commands)
+    };
+    queue.apply(world);
+    entity
+}
 
 // ── Behavior 3: Bolt target dispatches to PrimaryBolt only ───────────────
 
@@ -72,15 +83,13 @@ fn bolt_target_no_primary_bolt_but_breaker_still_processed() {
         ))
         .id();
     let def = BreakerDefinition::default();
-    let breaker = world
-        .spawn(
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .build(),
-        )
-        .id();
+    let breaker = spawn_in_world(&mut world, |commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
     world
         .entity_mut(breaker)
         .insert((BoundEffects::default(), StagedEffects::default()));
@@ -186,16 +195,14 @@ fn bolt_target_do_fires_on_only_bolt_when_it_is_primary() {
 fn bolt_target_do_no_bolts_alongside_breaker() {
     // Zero bolts -> Bolt target is no-op. Breaker target must still work.
     let mut world = World::new();
-    let breaker = world
-        .spawn({
-            let def = BreakerDefinition::default();
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .build()
-        })
-        .id();
+    let def = BreakerDefinition::default();
+    let breaker = spawn_in_world(&mut world, |commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
     world.entity_mut(breaker).insert((
         BoundEffects::default(),
         StagedEffects::default(),

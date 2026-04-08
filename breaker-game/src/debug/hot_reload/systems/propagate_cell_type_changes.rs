@@ -27,7 +27,7 @@ pub(crate) fn propagate_cell_type_changes(
 
     // Update matching live cell entities
     for (alias, mut health, mut visuals, mat_handle) in &mut query {
-        let Some(def) = registry.get(alias.0) else {
+        let Some(def) = registry.get(&alias.0) else {
             continue;
         };
 
@@ -48,12 +48,12 @@ pub(crate) fn propagate_cell_type_changes(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cells::{CellTypeDefinition, definition::CellBehavior};
+    use crate::cells::CellTypeDefinition;
 
     fn make_standard_def() -> CellTypeDefinition {
         CellTypeDefinition {
             id: "standard".to_owned(),
-            alias: 'S',
+            alias: "S".to_owned(),
             hp: 1.0,
             color_rgb: [4.0, 0.2, 0.5],
             required_to_clear: true,
@@ -61,7 +61,8 @@ mod tests {
             damage_green_min: 0.2,
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
-            behavior: CellBehavior::default(),
+            behaviors: None,
+
             effects: None,
         }
     }
@@ -69,7 +70,7 @@ mod tests {
     fn make_tough_def() -> CellTypeDefinition {
         CellTypeDefinition {
             id: "tough".to_owned(),
-            alias: 'T',
+            alias: "T".to_owned(),
             hp: 3.0,
             color_rgb: [2.5, 0.2, 4.0],
             required_to_clear: true,
@@ -77,7 +78,8 @@ mod tests {
             damage_green_min: 0.2,
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
-            behavior: CellBehavior::default(),
+            behaviors: None,
+
             effects: None,
         }
     }
@@ -98,7 +100,7 @@ mod tests {
         let def = make_standard_def();
         {
             let mut registry = app.world_mut().resource_mut::<CellTypeRegistry>();
-            registry.insert('S', def);
+            registry.insert("S".to_owned(), def);
         }
 
         let material_handle = {
@@ -109,7 +111,7 @@ mod tests {
             .world_mut()
             .spawn((
                 Cell,
-                CellTypeAlias('S'),
+                CellTypeAlias("S".to_owned()),
                 CellHealth::new(1.0),
                 CellDamageVisuals {
                     hdr_base: 4.0,
@@ -131,7 +133,7 @@ mod tests {
             let mut updated_def = make_standard_def();
             updated_def.hp = 5.0;
             updated_def.damage_hdr_base = 8.0;
-            registry.insert('S', updated_def);
+            registry.insert("S".to_owned(), updated_def);
         }
 
         app.update();
@@ -161,8 +163,8 @@ mod tests {
         let t_def = make_tough_def();
         {
             let mut registry = app.world_mut().resource_mut::<CellTypeRegistry>();
-            registry.insert('S', s_def);
-            registry.insert('T', t_def);
+            registry.insert("S".to_owned(), s_def);
+            registry.insert("T".to_owned(), t_def);
         }
 
         let material_handle = {
@@ -175,7 +177,7 @@ mod tests {
             .world_mut()
             .spawn((
                 Cell,
-                CellTypeAlias('T'),
+                CellTypeAlias("T".to_owned()),
                 CellHealth::new(3.0),
                 CellDamageVisuals {
                     hdr_base: 4.0,
@@ -196,7 +198,7 @@ mod tests {
             let mut registry = app.world_mut().resource_mut::<CellTypeRegistry>();
             let mut updated_s = make_standard_def();
             updated_s.hp = 10.0;
-            registry.insert('S', updated_s);
+            registry.insert("S".to_owned(), updated_s);
         }
 
         app.update();
@@ -216,7 +218,7 @@ mod tests {
         let def = make_tough_def(); // hp=3
         {
             let mut registry = app.world_mut().resource_mut::<CellTypeRegistry>();
-            registry.insert('T', def);
+            registry.insert("T".to_owned(), def);
         }
 
         let material_handle = {
@@ -229,7 +231,7 @@ mod tests {
             .world_mut()
             .spawn((
                 Cell,
-                CellTypeAlias('T'),
+                CellTypeAlias("T".to_owned()),
                 CellHealth {
                     current: 3.0,
                     max: 3.0,
@@ -253,7 +255,7 @@ mod tests {
             let mut registry = app.world_mut().resource_mut::<CellTypeRegistry>();
             let mut updated_def = make_tough_def();
             updated_def.hp = 1.0;
-            registry.insert('T', updated_def);
+            registry.insert("T".to_owned(), updated_def);
         }
 
         app.update();

@@ -5,6 +5,10 @@
 | **Breaker** | The paddle | `Breaker`, `DashState`, `BreakerPlugin` |
 | **Bolt** | The ball | `Bolt`, `BaseSpeed`, `BoltLost` |
 | **Cell** | A brick | `Cell`, `CellGrid`, `CellDestroyed` |
+| **GuardedCell** | A cell that has guardian children orbiting it in a 3×3 ring. The parent is fully damageable — guardians are independent cells that must be destroyed separately. | `GuardedCell`, `GuardianCell`, `CellBehavior::Guarded`, `GuardedBehavior` |
+| **GuardianCell** | A child cell that slides clockwise around its guarded parent's ring. Square dimensions. Spawned via `ChildOf` relationship — auto-despawns when parent dies. | `GuardianCell`, `GuardianSlot`, `SlideTarget`, `GuardianSlideSpeed`, `GuardianGridStep` |
+| **LockCell** | A cell that is immune to damage until its lock targets are destroyed. Lock targets are defined in the node layout RON (`locks` field), not the cell type definition. | `LockCell`, `Locked`, `Locks`, `Unlocked` |
+| **CellBehavior** | An enum variant attached to a `CellTypeDefinition` that activates runtime behavior at spawn. Current variants: `Regen { rate }`, `Guarded(GuardedBehavior)`. | `CellBehavior`, `CellTypeDefinition.behaviors` |
 | **Node** | A level | `Node`, `NodeTimer`, `NodeLayout` |
 | **ExtraBolt** | Additional bolt spawned by Prism breaker on a perfect bump; despawned on loss rather than respawned | `ExtraBolt` |
 | **ChainBolt** | A bolt entity spawned tethered to an anchor bolt via `DistanceConstraint`. Spawned by the `ChainBolt` effect directly in `chain_bolt::fire()` via `&mut World` | `ChainBoltMarker`, `ChainBoltAnchor`, `ChainBoltConstraint`, `DistanceConstraint` |

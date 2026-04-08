@@ -40,7 +40,7 @@ pub(crate) fn dispatch_cell_effects(
         return;
     };
     for (entity, alias) in &cell_query {
-        let Some(def) = registry.get(alias.0) else {
+        let Some(def) = registry.get(&alias.0) else {
             continue;
         };
 

@@ -102,7 +102,8 @@ impl<S: SideData, V> WallBuilder<S, V> {
         self
     }
 
-    /// Overrides the color RGB.
+    /// Overrides the color RGB (test-only — production uses definition).
+    #[cfg(test)]
     #[must_use]
     pub(crate) const fn with_color(mut self, rgb: [f32; 3]) -> Self {
         self.optional.override_color_rgb = Some(rgb);

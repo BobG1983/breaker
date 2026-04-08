@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::world::CommandQueue, prelude::*};
 
 use super::helpers::*;
 use crate::{
@@ -11,21 +11,28 @@ use crate::{
     },
 };
 
+fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let mut commands = Commands::new(&mut queue, world);
+        f(&mut commands)
+    };
+    queue.apply(world);
+    entity
+}
+
 #[test]
 fn bolt_hit_with_active_forward_perfect() {
     let mut app = grade_bump_test_app();
     let config = BreakerDefinition::default();
 
-    let entity = app
-        .world_mut()
-        .spawn(
-            Breaker::builder()
-                .definition(&config)
-                .headless()
-                .primary()
-                .build(),
-        )
-        .id();
+    let entity = spawn_in_world(app.world_mut(), |commands| {
+        Breaker::builder()
+            .definition(&config)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
     app.world_mut().entity_mut(entity).insert(BumpState {
         active: true,
         timer: config.perfect_window * 0.5, // in the perfect zone
@@ -58,16 +65,13 @@ fn bolt_hit_with_active_forward_early() {
     let mut app = grade_bump_test_app();
     let config = BreakerDefinition::default();
 
-    let entity = app
-        .world_mut()
-        .spawn(
-            Breaker::builder()
-                .definition(&config)
-                .headless()
-                .primary()
-                .build(),
-        )
-        .id();
+    let entity = spawn_in_world(app.world_mut(), |commands| {
+        Breaker::builder()
+            .definition(&config)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
     app.world_mut().entity_mut(entity).insert(BumpState {
         active: true,
         timer: config.early_window + config.perfect_window, // just started
@@ -98,16 +102,13 @@ fn bolt_hit_without_active_sets_post_hit_timer_no_message() {
     let mut app = grade_bump_test_app();
     let config = BreakerDefinition::default();
 
-    let entity = app
-        .world_mut()
-        .spawn(
-            Breaker::builder()
-                .definition(&config)
-                .headless()
-                .primary()
-                .build(),
-        )
-        .id();
+    let entity = spawn_in_world(app.world_mut(), |commands| {
+        Breaker::builder()
+            .definition(&config)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
 
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
         bolt: Entity::PLACEHOLDER,
@@ -132,16 +133,13 @@ fn no_hit_no_change() {
     let mut app = grade_bump_test_app();
     let config = BreakerDefinition::default();
 
-    let entity = app
-        .world_mut()
-        .spawn(
-            Breaker::builder()
-                .definition(&config)
-                .headless()
-                .primary()
-                .build(),
-        )
-        .id();
+    let entity = spawn_in_world(app.world_mut(), |commands| {
+        Breaker::builder()
+            .definition(&config)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
 
     // No hit message
     tick(&mut app);
@@ -188,16 +186,13 @@ fn grade_bump_forward_sends_bolt_entity() {
     );
 
     {
-        let entity = app
-            .world_mut()
-            .spawn(
-                Breaker::builder()
-                    .definition(&config)
-                    .headless()
-                    .primary()
-                    .build(),
-            )
-            .id();
+        let entity = spawn_in_world(app.world_mut(), |commands| {
+            Breaker::builder()
+                .definition(&config)
+                .headless()
+                .primary()
+                .spawn(commands)
+        });
         app.world_mut().entity_mut(entity).insert(BumpState {
             active: true,
             timer: config.perfect_window * 0.5, // in the perfect zone
@@ -245,16 +240,13 @@ fn grade_bump_sets_last_hit_bolt_when_no_active_bump() {
         ),
     );
 
-    let breaker_entity = app
-        .world_mut()
-        .spawn(
-            Breaker::builder()
-                .definition(&config)
-                .headless()
-                .primary()
-                .build(),
-        )
-        .id();
+    let breaker_entity = spawn_in_world(app.world_mut(), |commands| {
+        Breaker::builder()
+            .definition(&config)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
 
     tick(&mut app);
 
@@ -279,16 +271,13 @@ fn grade_bump_uses_force_grade_when_some() {
     app.insert_resource(ForceBumpGrade(Some(BumpGrade::Late)));
 
     {
-        let entity = app
-            .world_mut()
-            .spawn(
-                Breaker::builder()
-                    .definition(&config)
-                    .headless()
-                    .primary()
-                    .build(),
-            )
-            .id();
+        let entity = spawn_in_world(app.world_mut(), |commands| {
+            Breaker::builder()
+                .definition(&config)
+                .headless()
+                .primary()
+                .spawn(commands)
+        });
         app.world_mut().entity_mut(entity).insert(BumpState {
             active: true,
             timer: config.perfect_window * 0.5, // in the perfect zone — would normally grade Perfect
@@ -322,16 +311,13 @@ fn grade_bump_ignores_force_grade_when_none() {
     app.insert_resource(ForceBumpGrade(None));
 
     {
-        let entity = app
-            .world_mut()
-            .spawn(
-                Breaker::builder()
-                    .definition(&config)
-                    .headless()
-                    .primary()
-                    .build(),
-            )
-            .id();
+        let entity = spawn_in_world(app.world_mut(), |commands| {
+            Breaker::builder()
+                .definition(&config)
+                .headless()
+                .primary()
+                .spawn(commands)
+        });
         app.world_mut().entity_mut(entity).insert(BumpState {
             active: true,
             timer: config.perfect_window * 0.5, // in the perfect zone
@@ -365,16 +351,13 @@ fn grade_bump_works_without_force_grade_resource() {
     // Intentionally do NOT insert ForceBumpGrade resource
 
     {
-        let entity = app
-            .world_mut()
-            .spawn(
-                Breaker::builder()
-                    .definition(&config)
-                    .headless()
-                    .primary()
-                    .build(),
-            )
-            .id();
+        let entity = spawn_in_world(app.world_mut(), |commands| {
+            Breaker::builder()
+                .definition(&config)
+                .headless()
+                .primary()
+                .spawn(commands)
+        });
         app.world_mut().entity_mut(entity).insert(BumpState {
             active: true,
             timer: config.perfect_window * 0.5, // in the perfect zone
@@ -386,6 +369,7 @@ fn grade_bump_works_without_force_grade_resource() {
         bolt: Entity::PLACEHOLDER,
         breaker: Entity::PLACEHOLDER,
     })));
+
     tick(&mut app);
 
     let captured = app.world().resource::<CapturedBumps>();

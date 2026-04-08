@@ -1,0 +1,24 @@
+// Mechanic: Verifies guard cell behavior under live gameplay. Bastion layout
+// includes two guarded cells with guardian rings. The chaos input drives the
+// bolt through the guardian perimeter, testing that:
+// 1. Guardian cells slide between ring positions correctly
+// 2. Guardian cells block bolt physically (bolt bounces off guardians)
+// 3. Destroying a guardian opens a permanent gap
+// 4. Parent guarded cell remains damageable (not locked)
+// 5. Entity cleanup works — no leaks from ChildOf or CleanupOnExit
+//
+// AabbMatchesEntityDimensions validates guardian square AABB sizing (cell_height x cell_height).
+// BoltInBounds and NoNaN guard against physics corruption from guardian collisions.
+// EntityLeaks catches orphaned guardian entities after node transitions.
+(
+    breaker: "Aegis",
+    layout: "Bastion",
+    input: Chaos((action_prob: 0.7)),
+    max_frames: 3000,
+    disallowed_failures: [AabbMatchesEntityDimensions, BoltInBounds, BreakerCountReasonable, BreakerInBounds, BreakerPositionClamped, NoEntityLeaks, NoNaN],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: 7749,
+    initial_effects: [],
+)

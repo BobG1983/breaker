@@ -31,8 +31,20 @@ pub struct BreakerInitialized;
 
 #[cfg(test)]
 mod tests {
+    use bevy::ecs::world::CommandQueue;
+
     use super::*;
     use crate::breaker::definition::BreakerDefinition;
+
+    fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
+        let mut queue = CommandQueue::default();
+        let entity = {
+            let mut commands = Commands::new(&mut queue, world);
+            f(&mut commands)
+        };
+        queue.apply(world);
+        entity
+    }
 
     // ── Breaker #[require] tests ─────────────────────────────────
 
@@ -42,16 +54,13 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         let def = BreakerDefinition::default();
-        let entity = app
-            .world_mut()
-            .spawn(
-                Breaker::builder()
-                    .definition(&def)
-                    .headless()
-                    .primary()
-                    .build(),
-            )
-            .id();
+        let entity = spawn_in_world(app.world_mut(), |commands| {
+            Breaker::builder()
+                .definition(&def)
+                .headless()
+                .primary()
+                .spawn(commands)
+        });
         app.update();
         assert!(
             app.world().get::<Spatial2D>(entity).is_some(),
@@ -65,16 +74,13 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         let def = BreakerDefinition::default();
-        let entity = app
-            .world_mut()
-            .spawn(
-                Breaker::builder()
-                    .definition(&def)
-                    .headless()
-                    .primary()
-                    .build(),
-            )
-            .id();
+        let entity = spawn_in_world(app.world_mut(), |commands| {
+            Breaker::builder()
+                .definition(&def)
+                .headless()
+                .primary()
+                .spawn(commands)
+        });
         app.update();
         assert!(
             app.world().get::<InterpolateTransform2D>(entity).is_some(),
@@ -90,16 +96,13 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         let def = BreakerDefinition::default();
-        let entity = app
-            .world_mut()
-            .spawn(
-                Breaker::builder()
-                    .definition(&def)
-                    .headless()
-                    .primary()
-                    .build(),
-            )
-            .id();
+        let entity = spawn_in_world(app.world_mut(), |commands| {
+            Breaker::builder()
+                .definition(&def)
+                .headless()
+                .primary()
+                .spawn(commands)
+        });
         app.update();
         assert!(
             app.world().get::<CleanupOnExit<RunState>>(entity).is_some(),
@@ -115,16 +118,13 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         let def = BreakerDefinition::default();
-        let entity = app
-            .world_mut()
-            .spawn(
-                Breaker::builder()
-                    .definition(&def)
-                    .headless()
-                    .primary()
-                    .build(),
-            )
-            .id();
+        let entity = spawn_in_world(app.world_mut(), |commands| {
+            Breaker::builder()
+                .definition(&def)
+                .headless()
+                .primary()
+                .spawn(commands)
+        });
         app.update();
         assert!(
             app.world()
@@ -144,16 +144,13 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         let def = BreakerDefinition::default();
-        let entity = app
-            .world_mut()
-            .spawn(
-                Breaker::builder()
-                    .definition(&def)
-                    .headless()
-                    .primary()
-                    .build(),
-            )
-            .id();
+        let entity = spawn_in_world(app.world_mut(), |commands| {
+            Breaker::builder()
+                .definition(&def)
+                .headless()
+                .primary()
+                .spawn(commands)
+        });
         app.update();
         let layers = app
             .world()

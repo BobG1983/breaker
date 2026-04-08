@@ -7,7 +7,13 @@ pub(crate) use rantzsoft_stateflow::CleanupOnExit;
 pub(crate) use crate::{
     bolt::components::{Bolt, BoltServing},
     breaker::components::Breaker,
-    cells::components::Cell,
+    cells::{
+        behaviors::{
+            locked::components::{LockCell, Locked, Locks, Unlocked},
+            regen::components::{NoRegen, Regen, RegenCell, RegenRate},
+        },
+        components::Cell,
+    },
     effect::{
         AnchorActive, AnchorPlanted, BoundEffects, EffectNode, RootEffect, StagedEffects,
         effects::{

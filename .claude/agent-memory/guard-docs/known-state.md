@@ -4,6 +4,31 @@ description: Confirmed doc/code alignment state for current and recent sessions;
 type: project
 ---
 
+## Confirmed Correct (as of cell-builder-pattern, 2026-04-08)
+
+- `docs/todos/TODO.md` — item 1 changed from `[in-progress]` (labelled "shielded") to `[done]` (corrected to "guarded")
+- `docs/todos/DONE.md` — cell builder pattern entry added
+- `docs/architecture/builders/cell.md` — fixed: `.hp()` marked as production transition (it's test-only); `.override_hp()` clarified to require HasHealth; `collect_guardian_slots()` reference removed (function does not exist); `typestate_tests.rs` added to file layout; `.rendered()` guardian pre-computation note added
+- `docs/architecture/builders/pattern.md` — Cell builder row added to the Current Implementations table
+- `docs/architecture/data.md` — `CellTypeRegistry` table row corrected: key is `String` not `char`; field is `behaviors: Option<Vec<CellBehavior>>` not `behavior: CellBehavior`; `SeedableRegistry` noted
+- `docs/design/terminology/core.md` — added `GuardedCell`, `GuardianCell`, `LockCell`, `CellBehavior` entries
+
+### Key facts for cell-builder-pattern
+
+- `Cell::builder()` returns `CellBuilder<NoPosition, NoDimensions, NoHealth, Unvisual>`
+- `.hp()` is `#[cfg(test)]` only — production MUST use `.definition(&def)` to set Health
+- `.override_hp()` is on `impl<P,D,V> CellBuilder<P,D,HasHealth,V>` — requires HasHealth, not any typestate
+- `GuardianSpawnConfig` fields: `hp`, `color_rgb`, `slide_speed`, `cell_height`, `step_x`, `step_y` — no dimensions field
+- `collect_guardian_slots()` does NOT exist — slots are passed by callers from node layout data
+- Test files in `cells/builder/tests/`: `typestate_tests.rs`, `build_tests.rs`, `definition_tests.rs`, `spawn_tests.rs`, `optional_tests.rs`, `integration_tests.rs`
+- `CellTypeRegistry` keys by `String` alias (multi-char supported), implements `SeedableRegistry`, folder `assets/cells/`
+- `NodeLayout.locks: Option<LockMap>` where `LockMap = HashMap<(usize,usize), Vec<(usize,usize)>>`
+- `Headless` visual marker is `#[cfg(test)]` only — gated out of production builds
+- Guardian initial `SlideTarget` set to `(slot + 1) % 8` at spawn time in `spawn_guardian_children`
+- `slide_guardian_cells` system registered in `FixedUpdate` with `.run_if(in_state(NodeState::Playing))`
+
+---
+
 ## Confirmed Correct (as of bolt-birthing-animation, 2026-04-08)
 
 - `docs/todos/TODO.md` — item 2 changed from `[in-progress]` to `[done]`

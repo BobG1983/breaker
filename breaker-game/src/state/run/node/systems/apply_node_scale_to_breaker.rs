@@ -29,11 +29,23 @@ pub(crate) fn apply_node_scale_to_breaker(
 
 #[cfg(test)]
 mod tests {
+    use bevy::ecs::world::CommandQueue;
+
     use super::*;
     use crate::{
         breaker::definition::BreakerDefinition,
         state::run::node::{NodeLayout, definition::NodePool},
     };
+
+    fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
+        let mut queue = CommandQueue::default();
+        let entity = {
+            let mut commands = Commands::new(&mut queue, world);
+            f(&mut commands)
+        };
+        queue.apply(world);
+        entity
+    }
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -49,9 +61,10 @@ mod tests {
             cols: 2,
             rows: 1,
             grid_top_offset: 50.0,
-            grid: vec![vec!['S', 'S']],
+            grid: vec![vec!["S".to_owned(), "S".to_owned()]],
             pool: NodePool::default(),
             entity_scale,
+            locks: None,
         }
     }
 
@@ -65,16 +78,13 @@ mod tests {
         app.insert_resource(ActiveNodeLayout(make_layout(0.7)));
 
         let def = BreakerDefinition::default();
-        let entity = app
-            .world_mut()
-            .spawn(
-                Breaker::builder()
-                    .definition(&def)
-                    .headless()
-                    .primary()
-                    .build(),
-            )
-            .id();
+        let entity = spawn_in_world(app.world_mut(), |commands| {
+            Breaker::builder()
+                .definition(&def)
+                .headless()
+                .primary()
+                .spawn(commands)
+        });
 
         app.update();
 
@@ -100,16 +110,13 @@ mod tests {
         app.insert_resource(ActiveNodeLayout(make_layout(0.9)));
 
         let def = BreakerDefinition::default();
-        let entity = app
-            .world_mut()
-            .spawn(
-                Breaker::builder()
-                    .definition(&def)
-                    .headless()
-                    .primary()
-                    .build(),
-            )
-            .id();
+        let entity = spawn_in_world(app.world_mut(), |commands| {
+            Breaker::builder()
+                .definition(&def)
+                .headless()
+                .primary()
+                .spawn(commands)
+        });
         app.world_mut()
             .entity_mut(entity)
             .insert(NodeScalingFactor(0.7));
@@ -135,16 +142,13 @@ mod tests {
         let mut app = test_app();
 
         let def = BreakerDefinition::default();
-        let entity = app
-            .world_mut()
-            .spawn(
-                Breaker::builder()
-                    .definition(&def)
-                    .headless()
-                    .primary()
-                    .build(),
-            )
-            .id();
+        let entity = spawn_in_world(app.world_mut(), |commands| {
+            Breaker::builder()
+                .definition(&def)
+                .headless()
+                .primary()
+                .spawn(commands)
+        });
 
         app.update();
 
