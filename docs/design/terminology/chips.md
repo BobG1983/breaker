@@ -45,6 +45,27 @@
 | **SpawnPhantom** | Triggered effect leaf — spawns a temporary phantom bolt with infinite piercing and a lifespan timer. Parameters: `duration`, `max_active`. | `Do(SpawnPhantom { duration: 2.0, max_active: 1 })` |
 | **GravityWell** | Triggered effect leaf — spawns a gravity well entity that attracts bolts within a radius for a given duration. Parameters: `strength`, `duration`, `radius`, `max`. | `Do(GravityWell { strength: 1.0, duration: 3.0, radius: 80.0, max: 1 })` |
 
+## Protocols
+
+| Term | Meaning | Code Examples |
+|------|---------|---------------|
+| **ProtocolKind** | C-style enum identifying each protocol. 15 variants. Used as `HashMap` key in registries and `HashSet` member in `ActiveProtocols`. | `ProtocolKind::Deadline`, `ProtocolKind::DebtCollector` |
+| **ProtocolTuning** | Enum with struct variants — each variant carries the kind-specific tuning fields for one protocol. Effect-tree protocols carry `effects: Vec<ValidDef>`. Custom-system protocols carry RON-tunable values. The variant IS the kind discriminant — `tuning.kind()` derives `ProtocolKind`. | `ProtocolTuning::DebtCollector { stack_per_bump: f32 }` |
+| **ProtocolDefinition** | RON asset loaded from `assets/protocols/*.protocol.ron`. Common fields (`name`, `description`, `unlock_tier`) + a `ProtocolTuning` variant. | `ProtocolDefinition`, `Asset + TypePath + Deserialize` |
+| **ProtocolRegistry** | `SeedableRegistry` resource keyed on `ProtocolKind`. One RON file per enum variant. | `ProtocolRegistry`, `protocols/*.protocol.ron` |
+| **ActiveProtocols** | Per-run resource tracking which protocols the player has taken. `HashSet<ProtocolKind>`. Cleared on run reset. | `ActiveProtocols`, `protocol_active(kind)` |
+| **ProtocolOffer** | Resource holding the protocol offered on the current chip select screen. `None` if no protocol available. Owned by the protocol domain. | `ProtocolOffer(Option<ProtocolDefinition>)` |
+
+## Hazards
+
+| Term | Meaning | Code Examples |
+|------|---------|---------------|
+| **HazardKind** | C-style enum identifying each hazard. 16 variants. Used as `HashMap` key in `ActiveHazards`. | `HazardKind::Decay`, `HazardKind::Drift` |
+| **HazardTuning** | Enum with struct variants — each variant carries the kind-specific tuning fields. The variant IS the kind discriminant. | `HazardTuning::Decay { base_percent: f32, per_level_percent: f32 }` |
+| **HazardDefinition** | RON asset loaded from `assets/hazards/*.hazard.ron`. | `HazardDefinition`, `Asset + TypePath + Deserialize` |
+| **HazardRegistry** | `SeedableRegistry` resource keyed on `HazardKind`. | `HazardRegistry`, `hazards/*.hazard.ron` |
+| **ActiveHazards** | Per-run resource tracking active hazards and stack counts. `HashMap<HazardKind, u32>`. Stacks increment on each selection. Cleared on run reset. | `ActiveHazards`, `hazard_active(kind)` |
+
 ## Evolutions
 
 | Term | Meaning | Code Examples |

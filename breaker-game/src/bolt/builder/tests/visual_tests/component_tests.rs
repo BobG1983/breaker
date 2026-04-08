@@ -30,14 +30,15 @@ fn spawn_bolt_in_world(
 fn headless_primary_serving_has_all_gameplay_components() {
     let def = test_bolt_definition();
     let mut world = World::new();
-    let bundle = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::new(0.0, 50.0))
-        .serving()
-        .primary()
-        .headless()
-        .build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::new(0.0, 50.0))
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
 
     assert!(world.get::<Bolt>(entity).is_some(), "should have Bolt");
     assert!(
@@ -79,14 +80,15 @@ fn headless_primary_serving_has_all_gameplay_components() {
 fn headless_extra_velocity_has_correct_markers() {
     let def = test_bolt_definition();
     let mut world = World::new();
-    let bundle = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
-        .extra()
-        .headless()
-        .build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
+            .extra()
+            .headless()
+            .spawn(commands)
+    });
 
     assert!(
         world.get::<ExtraBolt>(entity).is_some(),
@@ -220,14 +222,15 @@ fn headless_primary_velocity_spawn_has_primary_marker() {
 fn headless_serving_primary_has_correct_markers() {
     let def = test_bolt_definition();
     let mut world = World::new();
-    let bundle = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .headless()
-        .build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
 
     assert!(world.get::<PrimaryBolt>(entity).is_some());
     assert!(world.get::<BoltServing>(entity).is_some());
@@ -239,14 +242,15 @@ fn headless_serving_primary_has_correct_markers() {
 fn headless_serving_extra_has_correct_markers() {
     let def = test_bolt_definition();
     let mut world = World::new();
-    let bundle = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .extra()
-        .headless()
-        .build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .extra()
+            .headless()
+            .spawn(commands)
+    });
 
     assert!(world.get::<ExtraBolt>(entity).is_some());
     assert!(world.get::<BoltServing>(entity).is_some());
@@ -258,14 +262,15 @@ fn headless_serving_extra_has_correct_markers() {
 fn headless_velocity_primary_has_correct_markers() {
     let def = test_bolt_definition();
     let mut world = World::new();
-    let bundle = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
-        .primary()
-        .headless()
-        .build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
 
     assert!(world.get::<PrimaryBolt>(entity).is_some());
     assert!(world.get::<BoltServing>(entity).is_none());
@@ -277,14 +282,15 @@ fn headless_velocity_primary_has_correct_markers() {
 fn headless_velocity_extra_has_correct_markers() {
     let def = test_bolt_definition();
     let mut world = World::new();
-    let bundle = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
-        .extra()
-        .headless()
-        .build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
+            .extra()
+            .headless()
+            .spawn(commands)
+    });
 
     assert!(world.get::<ExtraBolt>(entity).is_some());
     assert!(world.get::<BoltServing>(entity).is_none());
@@ -303,14 +309,13 @@ fn rendered_serving_primary_has_mesh() {
         move |mut commands: Commands,
               mut meshes: ResMut<Assets<Mesh>>,
               mut materials: ResMut<Assets<ColorMaterial>>| {
-            let bundle = Bolt::builder()
+            Bolt::builder()
                 .definition(&def)
                 .at_position(Vec2::ZERO)
                 .serving()
                 .primary()
                 .rendered(&mut meshes, &mut materials)
-                .build();
-            commands.spawn(bundle);
+                .spawn(&mut commands);
         }
     });
     app.update();
@@ -331,14 +336,15 @@ fn headless_build_does_not_panic_on_bare_world() {
     // Edge case: Headless build can spawn into a bare World::new() with no asset infrastructure
     let def = test_bolt_definition();
     let mut world = World::new();
-    let bundle = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .serving()
-        .primary()
-        .headless()
-        .build();
     // This must NOT panic — no assets needed for headless
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_bolt_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
     assert!(world.get::<Bolt>(entity).is_some());
 }

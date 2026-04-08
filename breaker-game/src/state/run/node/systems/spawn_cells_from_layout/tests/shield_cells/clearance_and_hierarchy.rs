@@ -237,13 +237,13 @@ fn orbit_cells_are_children_of_shield_via_child_of() {
     }
 }
 
-// -- Edge case: orbit_count=0 -> shield has empty LockAdjacents --
+// -- Edge case: orbit_count=0 -> shield has empty Locks --
 
 #[test]
 fn shield_with_zero_orbit_count_has_empty_lock_adjacents() {
     // Given: shield with orbit_count=0
     // When: spawn runs
-    // Then: shield has Locked + LockAdjacents(empty) -> will immediately unlock
+    // Then: shield has Locked + Locks(empty) -> will immediately unlock
     let mut registry = CellTypeRegistry::default();
     registry.insert(
         "H".to_owned(),
@@ -295,16 +295,16 @@ fn shield_with_zero_orbit_count_has_empty_lock_adjacents() {
         "shield with orbit_count=0 should spawn no orbit cells"
     );
 
-    // Shield has LockAdjacents with empty vec
-    let adjacents: Vec<&LockAdjacents> = app
+    // Shield has Locks with empty vec
+    let adjacents: Vec<&Locks> = app
         .world_mut()
-        .query_filtered::<&LockAdjacents, With<ShieldParent>>()
+        .query_filtered::<&Locks, With<ShieldParent>>()
         .iter(app.world())
         .collect();
     assert_eq!(adjacents.len(), 1);
     assert!(
         adjacents[0].0.is_empty(),
-        "shield with orbit_count=0 should have empty LockAdjacents, got {} entries",
+        "shield with orbit_count=0 should have empty Locks, got {} entries",
         adjacents[0].0.len()
     );
 }

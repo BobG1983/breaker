@@ -4,12 +4,13 @@ use bevy::prelude::*;
 
 use crate::{
     cells::{
+        behaviors::{locked::systems::check_lock_release, regen::systems::tick_cell_regen},
         messages::{CellDestroyedAt, CellImpactWall, DamageCell, RequestCellDestroyed},
         resources::CellConfig,
         systems::{
-            cell_wall_collision, check_lock_release::check_lock_release, cleanup_cell,
-            handle_cell_hit, rotate_shield_cells::rotate_shield_cells,
-            sync_orbit_cell_positions::sync_orbit_cell_positions, tick_cell_regen::tick_cell_regen,
+            cell_wall_collision, cleanup_cell, handle_cell_hit,
+            rotate_shield_cells::rotate_shield_cells,
+            sync_orbit_cell_positions::sync_orbit_cell_positions,
         },
     },
     effect::EffectSystems,

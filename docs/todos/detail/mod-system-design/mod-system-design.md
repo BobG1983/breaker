@@ -11,13 +11,13 @@ Protocols and hazards are a new upgrade category distinct from chips. Protocols 
 ### Protocols (Positive)
 - Each protocol can only appear **once** per run
 - Only **1 protocol** is offered per tier
-- Player picks a protocol **instead of a chip** — it's an opportunity cost trade (you give up a chip slot to take the protocol)
+- Protocol is an **extra entry** on the chip select screen — displayed below the 3 chip offerings (landscape orientation, spanning width). Player picks EITHER a chip OR the protocol — picking either **closes the screen**. Opportunity cost is giving up a chip to take the protocol
 - Possibly costs something to buy (currency TBD)
-- Once picked, remains visible but greyed out and crossed out
+- Once picked, remains visible but greyed out and crossed out (not selectable)
 - Should interact with chip system for synergy possibilities
 
 ### Hazards (Negative — Tier 9+)
-Starting around tier 9 (infinite play — name TBD, "infinity mode" placeholder), the player is shown **3 random hazards** and **must pick one** (choose-your-poison). Hazard selection happens on its own dedicated UI screen **after** the chip/protocol selection screen, only at tier 9+.
+Starting around tier 9 (infinite play — name TBD, "infinity mode" placeholder), the player is shown **3 random hazards** and **must pick one** (choose-your-poison). Hazard selection happens on its own dedicated **timed** UI screen **after** the chip/protocol selection screen, only at tier 9+. On timer expiry, a hazard is auto-picked at random.
 
 **Key mechanics:**
 - **16 hazards** in a single flat pool (no severity tiers)
@@ -116,38 +116,111 @@ Stacking is what makes deep infinite runs impressive — not just variety of haz
 
 ## Decisions
 
+### Chip/Protocol Distinction
+- **Chips** are **power** — buffs that don't change how you WANT to play
+- **Protocols** are **rule changes** — fundamentally change how you WANT to play
+- **The test**: Does this make me play differently, or just play the same way but stronger?
+
+### Legendary Rarity Removal
+Delete the Legendary rarity entirely. Only Common, Uncommon, Rare, and Evolution remain. All 11 existing legendaries → rework as Rare chips with tuned-down numbers. Anchor evolution → promote to protocol, delete evolution entry.
+
 ### Hazard Start
 Hazards start at **tier 9** — right after completing the 8-tier structured run. This is the "infinity mode" boundary.
 
 ### Meta-Progression
-Protocol pool grows via **meta-progression** across runs. Players unlock new protocols over time (like unlocking new Jokers in Balatro). This gives long-term progression beyond a single run.
+Protocol pool grows via **meta-progression** across runs. Players unlock new protocols over time (like unlocking new Jokers in Balatro).
 
-### Protocol Design Approach
-- Target **15 protocols initially** (to match 16 hazards), **30 each by Phase 7** (content & variety phase)
-- Source inspiration from **current legendary chips** — legendaries may be better as protocols than chips (one-time, run-altering, powerful)
-- Review the killed hazard proposals for ideas that were "too positive" or "better as a different category"
-- Use **guard-game-design** agent for brainstorm generation — feed it the hazard design philosophy, the killed-hazard reasons, and the existing legendary chips
-- Protocols are **code-implemented systems** (like hazards), with RON-tuned values
+### RON Tunable + Hot Reloadable
+ALL tuning values in every protocol AND every hazard must be RON-configurable and hot-reloadable. No hardcoded numbers.
 
 ### Content Targets
 | Category | Initial (this todo) | Phase 7 target |
 |----------|-------------------|----------------|
-| Protocols | 15 | 30 |
+| Protocols | 15 (designed) | 30 |
 | Hazards | 16 (designed) | 30 |
 
 ## Scope
-- In: protocol offering logic, hazard choose-your-poison UI (pick from 3 random), hazard stacking, hazard systems (code-implemented, RON-tuned), UI for protocols on chip select screen, protocol/hazard state tracking, meta-progression for protocol unlocks
-- Out: chip system changes (chips are separate), tier system (separate todo)
+- In: protocol offering logic (extra entry below chips on chip select screen, pick chip OR protocol), hazard choose-your-poison UI (pick from 3 random), hazard stacking, hazard systems (code-implemented, RON-tuned), UI for protocols on chip select screen, protocol/hazard state tracking, meta-progression for protocol unlocks, legendary rarity removal + retune as Rare
+- Out: chip system changes (chips are separate), tier system (separate todo), evolution catalog redesign (Phase 7)
 
 ## Dependencies
 - Depends on: node sequencing refactor (tiers must exist)
 - Depends on: chip selection UI (protocols display on chip select screen), hazard selection UI (separate screen after chip selection, tier 9+ only)
-- Related: tier regression mechanic — likely a protocol (it's one-time, run-altering)
 
-## Open Questions
-- **Protocol designs**: need brainstorm session with guard-game-design. Check legendary chips as source. Generate 15 to start.
-- Erosion shrink rate exact number
-- Volatility growth rate floor
+## Design Files
+
+| File | Contents |
+|------|----------|
+| [research/protocol-decisions.md](research/protocol-decisions.md) | **Source of truth** for all 15 protocol designs, legendary migration, declined protocols with reasons, graphics catalog note, open tuning questions |
+| [research/protocol-brainstorm.md](research/protocol-brainstorm.md) | R1 agent brainstorm (15 initial candidates — input, not source of truth) |
+| [research/protocol-candidates-r3.md](research/protocol-candidates-r3.md) | R3 agent brainstorm (8 candidates — input, not source of truth) |
+
+## Technical Research Files
+
+| File | Contents |
+|------|----------|
+| [research/interface-design.md](research/interface-design.md) | **Interface design** — concrete Rust types, traits, enums, struct layouts, RON formats, system patterns, cross-domain message inventory. Reviewed by architecture + idiom agents. |
+| [research/chip-offering-flow.md](research/chip-offering-flow.md) | Full trace: ChipCatalog structure, offering algorithm, rarity weights, selection UI, effect dispatch, protocol integration point |
+| [research/effect-system-architecture.md](research/effect-system-architecture.md) | Current effect system trace + planned new system primitives (Route/Stamp/Transfer/During/Killed), protocol-to-category mapping (A=effect tree, B=custom system) |
+| [research/run-state-flow.md](research/run-state-flow.md) | Full state machine trace, node completion chain, chip select flow, HazardSelect insertion plan with 7 concrete wiring steps |
+| [research/catalog-ron-patterns.md](research/catalog-ron-patterns.md) | SeedableConfig vs SeedableRegistry patterns, GameConfig derive macro, hot-reload wiring, ProtocolRegistry/HazardRegistry recommendation |
+| [research/plugin-organization-patterns.md](research/plugin-organization-patterns.md) | Plugin structure survey, delegation pattern (effect/ model), cross-domain messages, scheduling patterns, recommended directory layout |
+| [research/cross-domain-messages.md](research/cross-domain-messages.md) | New message struct definitions with full Rust code, ownership, producers, consumers |
+| [research/registry-struct-patterns.md](research/registry-struct-patterns.md) | Exact code: BreakerRegistry, CellTypeRegistry, SeedableRegistry trait, ChipDefinition, GameConfig derive |
+| [research/effect-item-patterns.md](research/effect-item-patterns.md) | Exact code: simple effect (damage_boost), complex effect (shockwave), trigger bridges, delegation pattern |
+| [research/message-component-patterns.md](research/message-component-patterns.md) | Exact code: message derives, component patterns, per-run resources, enum patterns |
+
+## What's Done
+- **Game design**: 15 protocols designed with mechanics, behavior changes, synergies
+- **Game design**: 16 hazards designed with stacking, trap synergies, killed proposals
+- **Game design**: Chip/protocol distinction defined, legendary migration decided
+
+## Technical Design
+
+Research completed 2026-04-08. All concrete interface designs, struct layouts, and system patterns are in the referenced files below. Do NOT duplicate design details inline — read the source files.
+
+| Document | What it covers |
+|----------|---------------|
+| [research/interface-design.md](research/interface-design.md) | **Primary reference**: all Rust types, enums, registries, resources, messages, system patterns, plugin structure, cross-domain rules |
+| [research/cross-domain-messages.md](research/cross-domain-messages.md) | New message struct definitions: `HealCell`, `SpawnGhostCell`, `ApplyBoltForce`, `ApplyBreakerShrink`, `ApplyBreakerRestore` |
+| [legendary-retuning.md](legendary-retuning.md) | Legendary removal + per-chip retuning plan (11 chips need Rare values — `[NEEDS DETAIL]`) |
+| [protocols/](protocols/) | Per-protocol implementation guides (config, components, systems, behaviors, edge cases) |
+| [hazards/](hazards/) | Per-hazard implementation guides (config, components, systems, stacking, behaviors, edge cases) |
+
+### Key Technical Decisions (summary — details in interface-design.md)
+
+- **Two plugins**: `ProtocolPlugin` + `HazardPlugin`, `effect/`-style delegation pattern
+- **Tuning enum IS the kind**: `ProtocolTuning` / `HazardTuning` enum variants carry per-item fields, `kind()` derives the C-style `ProtocolKind` / `HazardKind`
+- **Per-item config resources**: Tuning extracted at activation into typed config (e.g., `DebtCollectorConfig`). Systems read `Res<Config>` — zero enum matching at runtime.
+- **`run_if` gating**: `protocol_active(kind)` / `hazard_active(kind)` closures prevent inactive systems from running
+- **Message-driven cross-domain**: Hazards never mutate other domains' resources directly. Damage pipeline hazards (Diffusion, Tether, Sympathy, Momentum) are handled by the cell damage system reading hazard config resources.
+- **Damage message**: After effect refactor (todo #2), `DamageCell` → `DamageDealt<Cell>`. The cell damage system (`apply_damage::<Cell>`) handles redistribution for Diffusion/Tether/Sympathy/Momentum.
+- **Protocol offering**: Extra entry below chips. Pick protocol OR chip — either closes the screen. Random from seeded `GameRng`.
+- **Hazard select**: Separate timed screen after chip select, tier 9+ only. Auto-picks at random on timer expiry.
+- **Effect refactor dependency**: Protocol implementation waits for todo #2. Effect-tree protocols use `ValidDef` types from the new system.
+
+## Implementation Order
+
+This todo is large. Suggested implementation waves:
+
+1. **Infrastructure**: `ProtocolKind`/`HazardKind` enums, `ProtocolRegistry`/`HazardRegistry` registries, `ActiveProtocols`/`ActiveHazards` resources, plugin shells, RON loading
+2. **Legendary removal + Anchor migration**: Remove `Legendary` rarity, retune 13 chips as Rare, delete Anchor evolution, create Anchor protocol RON
+3. **Protocol offering integration**: `ChipOffering::Protocol` variant, `generate_chip_offerings` protocol slot, `handle_chip_input` protocol branch, `ProtocolSelected` message, protocol card rendering
+4. **Effect-tree protocols**: Deadline, Ricochet Protocol, Anchor, Kickstart (depends on effect refactor — todo #2)
+5. **Custom-system protocols**: Debt Collector, Echo Strike, Siphon, Fission, Burnout, Conductor, Afterimage, Reckless Dash, Greed, Iron Curtain, Tier Regression (several depend on effect refactor for `Killed` trigger; Tier Regression depends on node sequencing — todo #7)
+6. **Hazard state flow**: `RunState::HazardSelect`, `HazardSelectState`, `resolve_post_chip_state` dynamic route, hazard select UI
+7. **Hazard systems**: All 16 hazards (depends on node sequencing for tier 9+ — todo #7)
+8. **Scenarios**: Invariant checkers + adversarial scenarios for all protocols and hazards
+
+**Hard dependencies**:
+- Waves 4-5 depend on **todo #2** (effect system refactor) for `SourceId`, `Killed(KillTarget)`, `During(Condition)`, `Route`/`Stamp`/`Transfer`. Protocol implementation waits for the refactor — `ProtocolDefinition` effect-tree variants use the new system's `ValidDef` types, not `RootEffect`.
+- Waves 5 (Tier Regression), 6, 7 depend on **todo #7** (node sequencing refactor) for extended tiers and tier 9+ gating
+- Waves 1-3 can proceed independently
+
+**Design decisions**:
+- Protocol offering is random from seeded `GameRng` (deterministic from run seed)
+- Picking a protocol closes the chip select screen (protocol OR chip, not both)
+- Hazard select screen is timed — on expiry, a hazard is auto-picked at random
 
 ## Status
-`[NEEDS DETAIL]` — hazard system fully designed, protocol designs need brainstorm session (use `/todo research 6` to run guard-game-design)
+`[NEEDS DETAIL]` — technical design complete, needs implementation wave breakdown into concrete specs before `/implement`

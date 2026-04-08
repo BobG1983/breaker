@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::world::CommandQueue, prelude::*};
 use rantzsoft_spatial2d::components::MaxSpeed;
 
 use super::{super::core::*, helpers::test_breaker_definition};
@@ -9,6 +9,16 @@ use crate::{
     },
     shared::BaseWidth,
 };
+
+fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let mut commands = Commands::new(&mut queue, world);
+        f(&mut commands)
+    };
+    queue.apply(world);
+    entity
+}
 
 fn default_movement() -> MovementSettings {
     let defaults = BreakerDefinition::default();
@@ -69,28 +79,30 @@ fn different_ordering_produces_identical_entities() {
     let mut world = World::new();
 
     // Order A: dimensions first, then movement, dashing, spread, bump, headless, primary
-    let bundle_a = Breaker::builder()
-        .dimensions(defaults.width, defaults.height, defaults.y_position)
-        .movement(default_movement())
-        .dashing(default_dashing())
-        .spread(defaults.reflection_spread)
-        .bump(default_bump())
-        .headless()
-        .primary()
-        .build();
-    let entity_a = world.spawn(bundle_a).id();
+    let entity_a = spawn_in_world(&mut world, |commands| {
+        Breaker::builder()
+            .dimensions(defaults.width, defaults.height, defaults.y_position)
+            .movement(default_movement())
+            .dashing(default_dashing())
+            .spread(defaults.reflection_spread)
+            .bump(default_bump())
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
 
     // Order B: primary first, then headless, bump, spread, dashing, movement, dimensions
-    let bundle_b = Breaker::builder()
-        .primary()
-        .headless()
-        .bump(default_bump())
-        .spread(defaults.reflection_spread)
-        .dashing(default_dashing())
-        .movement(default_movement())
-        .dimensions(defaults.width, defaults.height, defaults.y_position)
-        .build();
-    let entity_b = world.spawn(bundle_b).id();
+    let entity_b = spawn_in_world(&mut world, |commands| {
+        Breaker::builder()
+            .primary()
+            .headless()
+            .bump(default_bump())
+            .spread(defaults.reflection_spread)
+            .dashing(default_dashing())
+            .movement(default_movement())
+            .dimensions(defaults.width, defaults.height, defaults.y_position)
+            .spawn(commands)
+    });
 
     // Both should have the same MaxSpeed
     let ms_a = world.get::<MaxSpeed>(entity_a);
@@ -135,14 +147,15 @@ fn different_ordering_produces_identical_entities() {
 fn with_overrides_after_definition_before_build() {
     let def = test_breaker_definition(); // max_speed: 1000.0, width: 120.0
     let mut world = World::new();
-    let bundle = Breaker::builder()
-        .definition(&def)
-        .with_max_speed(700.0)
-        .with_width(200.0)
-        .headless()
-        .primary()
-        .build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_in_world(&mut world, |commands| {
+        Breaker::builder()
+            .definition(&def)
+            .with_max_speed(700.0)
+            .with_width(200.0)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
 
     let ms = world.get::<MaxSpeed>(entity);
     assert!(ms.is_some(), "entity should have MaxSpeed");

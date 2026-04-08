@@ -1,6 +1,17 @@
-//! Tests for breaker target dispatch (behaviors 1-2).
+use bevy::{ecs::world::CommandQueue, prelude::*};
 
+// Tests for breaker target dispatch (behaviors 1-2).
 use super::helpers::*;
+
+fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let mut commands = Commands::new(&mut queue, world);
+        f(&mut commands)
+    };
+    queue.apply(world);
+    entity
+}
 
 // ── Behavior 1: Breaker target with Do effect fires immediately ──────────
 
@@ -8,15 +19,13 @@ use super::helpers::*;
 fn breaker_target_do_effect_fires_immediately() {
     let mut world = World::new();
     let def = BreakerDefinition::default();
-    let breaker = world
-        .spawn(
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .build(),
-        )
-        .id();
+    let breaker = spawn_in_world(&mut world, |commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
     world.entity_mut(breaker).insert(ActiveDamageBoosts(vec![]));
 
     DispatchInitialEffects {
@@ -42,15 +51,13 @@ fn breaker_target_do_effect_fires_immediately() {
 fn breaker_target_multiple_bare_do_children_all_fire() {
     let mut world = World::new();
     let def = BreakerDefinition::default();
-    let breaker = world
-        .spawn(
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .build(),
-        )
-        .id();
+    let breaker = spawn_in_world(&mut world, |commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
     world.entity_mut(breaker).insert(ActiveDamageBoosts(vec![]));
 
     DispatchInitialEffects {
@@ -81,15 +88,13 @@ fn breaker_target_multiple_bare_do_children_all_fire() {
 fn breaker_target_when_effect_pushes_to_bound_effects() {
     let mut world = World::new();
     let def = BreakerDefinition::default();
-    let breaker = world
-        .spawn(
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .build(),
-        )
-        .id();
+    let breaker = spawn_in_world(&mut world, |commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
     world
         .entity_mut(breaker)
         .insert((BoundEffects::default(), StagedEffects::default()));
@@ -132,15 +137,13 @@ fn breaker_target_when_effect_pushes_to_bound_effects() {
 fn breaker_target_mixed_do_and_when_fires_do_stores_when() {
     let mut world = World::new();
     let def = BreakerDefinition::default();
-    let breaker = world
-        .spawn(
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .build(),
-        )
-        .id();
+    let breaker = spawn_in_world(&mut world, |commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
     world.entity_mut(breaker).insert((
         BoundEffects::default(),
         StagedEffects::default(),

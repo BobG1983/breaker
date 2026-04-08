@@ -6,7 +6,7 @@ use bevy::{ecs::world::CommandQueue, prelude::*};
 use crate::{
     cells::{
         components::{
-            Cell, CellDamageVisuals, CellHealth, CellRegen, CellTypeAlias, LockAdjacents, Locked,
+            Cell, CellDamageVisuals, CellHealth, CellTypeAlias, Locked, Locks, RegenRate,
             RequiredToClear,
         },
         definition::{CellBehavior, CellTypeDefinition},
@@ -48,7 +48,7 @@ fn spawn_cell_in_world(
 
 // ── Section F: Optional Chainable Methods ───────────────────────────────────
 
-// Behavior 24: .with_behavior(CellBehavior::Regen { rate: 3.0 }) inserts CellRegen
+// Behavior 24: .with_behavior(CellBehavior::Regen { rate: 3.0 }) inserts RegenRate
 #[test]
 fn with_behavior_regen_inserts_cell_regen() {
     let mut world = World::new();
@@ -63,12 +63,12 @@ fn with_behavior_regen_inserts_cell_regen() {
     });
 
     let regen = world
-        .get::<CellRegen>(entity)
-        .expect("entity should have CellRegen");
+        .get::<RegenRate>(entity)
+        .expect("entity should have RegenRate");
     assert!(
-        (regen.rate - 3.0).abs() < f32::EPSILON,
-        "CellRegen rate should be 3.0, got {}",
-        regen.rate
+        (regen.0 - 3.0).abs() < f32::EPSILON,
+        "RegenRate rate should be 3.0, got {}",
+        regen.0
     );
 }
 
@@ -88,12 +88,12 @@ fn with_behavior_twice_last_write_wins() {
     });
 
     let regen = world
-        .get::<CellRegen>(entity)
-        .expect("entity should have CellRegen");
+        .get::<RegenRate>(entity)
+        .expect("entity should have RegenRate");
     assert!(
-        (regen.rate - 1.0).abs() < f32::EPSILON,
-        "CellRegen rate should be 1.0 (last write wins), got {}",
-        regen.rate
+        (regen.0 - 1.0).abs() < f32::EPSILON,
+        "RegenRate rate should be 1.0 (last write wins), got {}",
+        regen.0
     );
 }
 
@@ -115,12 +115,12 @@ fn with_behavior_after_definition_explicit_wins() {
     });
 
     let regen = world
-        .get::<CellRegen>(entity)
-        .expect("entity should have CellRegen");
+        .get::<RegenRate>(entity)
+        .expect("entity should have RegenRate");
     assert!(
-        (regen.rate - 5.0).abs() < f32::EPSILON,
-        "CellRegen rate should be 5.0 (explicit appended after definition, last write wins), got {}",
-        regen.rate
+        (regen.0 - 5.0).abs() < f32::EPSILON,
+        "RegenRate rate should be 5.0 (explicit appended after definition, last write wins), got {}",
+        regen.0
     );
 }
 
@@ -142,12 +142,12 @@ fn with_behavior_without_definition_behaviors() {
     });
 
     let regen = world
-        .get::<CellRegen>(entity)
-        .expect("entity should have CellRegen");
+        .get::<RegenRate>(entity)
+        .expect("entity should have RegenRate");
     assert!(
-        (regen.rate - 3.0).abs() < f32::EPSILON,
-        "CellRegen rate should be 3.0 (explicit only), got {}",
-        regen.rate
+        (regen.0 - 3.0).abs() < f32::EPSILON,
+        "RegenRate rate should be 3.0 (explicit only), got {}",
+        regen.0
     );
 }
 
@@ -391,9 +391,9 @@ fn locked_inserts_locked_and_lock_adjacents() {
         "entity should have Locked marker"
     );
     let adjacents = world
-        .get::<LockAdjacents>(entity)
-        .expect("entity should have LockAdjacents");
-    assert_eq!(adjacents.0.len(), 2, "LockAdjacents should have 2 entities");
+        .get::<Locks>(entity)
+        .expect("entity should have Locks");
+    assert_eq!(adjacents.0.len(), 2, "Locks should have 2 entities");
     assert_eq!(adjacents.0[0], e1);
     assert_eq!(adjacents.0[1], e2);
 }
@@ -417,9 +417,9 @@ fn locked_empty_vec_still_inserts_markers() {
         "entity should have Locked marker even with empty vec"
     );
     let adjacents = world
-        .get::<LockAdjacents>(entity)
-        .expect("entity should have LockAdjacents");
-    assert!(adjacents.0.is_empty(), "LockAdjacents should be empty");
+        .get::<Locks>(entity)
+        .expect("entity should have Locks");
+    assert!(adjacents.0.is_empty(), "Locks should be empty");
 }
 
 // Behavior 32: .locked() is available in any typestate (compile test)
@@ -453,7 +453,7 @@ fn no_locked_has_no_lock_components() {
         "entity should NOT have Locked without .locked()"
     );
     assert!(
-        world.get::<LockAdjacents>(entity).is_none(),
-        "entity should NOT have LockAdjacents without .locked()"
+        world.get::<Locks>(entity).is_none(),
+        "entity should NOT have Locks without .locked()"
     );
 }

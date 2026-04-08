@@ -7,8 +7,8 @@ use rantzsoft_spatial2d::components::{Position2D, Scale2D};
 use crate::{
     cells::{
         components::{
-            Cell, CellDamageVisuals, CellHealth, CellHeight, CellRegen, CellTypeAlias, CellWidth,
-            LockAdjacents, Locked, RequiredToClear,
+            Cell, CellDamageVisuals, CellHealth, CellHeight, CellTypeAlias, CellWidth, Locked,
+            Locks, RegenRate, RequiredToClear,
         },
         definition::{CellBehavior, CellTypeDefinition},
     },
@@ -118,12 +118,12 @@ fn full_definition_with_hp_override_and_behavior() {
 
     // Explicit behavior overwrites definition behavior — last write wins
     let regen = world
-        .get::<CellRegen>(entity)
-        .expect("should have CellRegen");
+        .get::<RegenRate>(entity)
+        .expect("should have RegenRate");
     assert!(
-        (regen.rate - 5.0).abs() < f32::EPSILON,
-        "CellRegen rate should be 5.0 (explicit overwrites definition), got {}",
-        regen.rate
+        (regen.0 - 5.0).abs() < f32::EPSILON,
+        "RegenRate rate should be 5.0 (explicit overwrites definition), got {}",
+        regen.0
     );
 
     // Core components
@@ -238,16 +238,16 @@ fn minimal_builder_no_definition_no_optionals() {
         "should NOT have RequiredToClear"
     );
     assert!(
-        world.get::<CellRegen>(entity).is_none(),
-        "should NOT have CellRegen"
+        world.get::<RegenRate>(entity).is_none(),
+        "should NOT have RegenRate"
     );
     assert!(
         world.get::<Locked>(entity).is_none(),
         "should NOT have Locked"
     );
     assert!(
-        world.get::<LockAdjacents>(entity).is_none(),
-        "should NOT have LockAdjacents"
+        world.get::<Locks>(entity).is_none(),
+        "should NOT have Locks"
     );
 }
 
@@ -274,9 +274,7 @@ fn builder_with_locked_and_definition() {
     });
 
     assert!(world.get::<Locked>(entity).is_some(), "should have Locked");
-    let adjacents = world
-        .get::<LockAdjacents>(entity)
-        .expect("should have LockAdjacents");
+    let adjacents = world.get::<Locks>(entity).expect("should have Locks");
     assert_eq!(adjacents.0.len(), 3);
     assert_eq!(adjacents.0[0], e1);
     assert_eq!(adjacents.0[1], e2);
@@ -353,15 +351,15 @@ fn builder_defaults_no_optional_components() {
         "should NOT have CellDamageVisuals"
     );
     assert!(
-        world.get::<CellRegen>(entity).is_none(),
-        "should NOT have CellRegen"
+        world.get::<RegenRate>(entity).is_none(),
+        "should NOT have RegenRate"
     );
     assert!(
         world.get::<Locked>(entity).is_none(),
         "should NOT have Locked"
     );
     assert!(
-        world.get::<LockAdjacents>(entity).is_none(),
-        "should NOT have LockAdjacents"
+        world.get::<Locks>(entity).is_none(),
+        "should NOT have Locks"
     );
 }

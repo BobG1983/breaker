@@ -1,5 +1,6 @@
 //! Cells domain plugin — cell types, damage handling, destruction.
 
+pub(crate) mod behaviors;
 pub(crate) mod builder;
 pub mod components;
 pub(crate) mod definition;

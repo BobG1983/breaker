@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::world::CommandQueue, prelude::*};
 use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{Position2D, Scale2D};
 
@@ -8,6 +8,16 @@ use crate::{
     walls::{components::Wall, definition::WallDefinition},
 };
 
+fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let mut commands = Commands::new(&mut queue, world);
+        f(&mut commands)
+    };
+    queue.apply(world);
+    entity
+}
+
 // ── Behavior 19: build() on Left wall produces correct core components ──
 
 #[test]
@@ -15,8 +25,9 @@ fn build_left_wall_has_wall_marker() {
     let pf = default_playfield();
     let mut world = World::new();
 
-    let bundle = Wall::builder().left(&pf).build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_in_world(&mut world, |commands| {
+        Wall::builder().left(&pf).spawn(commands)
+    });
 
     assert!(
         world.get::<Wall>(entity).is_some(),
@@ -29,8 +40,9 @@ fn build_left_wall_has_correct_position() {
     let pf = default_playfield();
     let mut world = World::new();
 
-    let bundle = Wall::builder().left(&pf).build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_in_world(&mut world, |commands| {
+        Wall::builder().left(&pf).spawn(commands)
+    });
 
     let pos = world.get::<Position2D>(entity);
     assert!(pos.is_some(), "should have Position2D");
@@ -52,8 +64,9 @@ fn build_left_wall_has_correct_scale() {
     let pf = default_playfield();
     let mut world = World::new();
 
-    let bundle = Wall::builder().left(&pf).build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_in_world(&mut world, |commands| {
+        Wall::builder().left(&pf).spawn(commands)
+    });
 
     let scale = world.get::<Scale2D>(entity);
     assert!(scale.is_some(), "should have Scale2D");
@@ -75,8 +88,9 @@ fn build_left_wall_has_correct_aabb() {
     let pf = default_playfield();
     let mut world = World::new();
 
-    let bundle = Wall::builder().left(&pf).build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_in_world(&mut world, |commands| {
+        Wall::builder().left(&pf).spawn(commands)
+    });
 
     let aabb = world.get::<Aabb2D>(entity);
     assert!(aabb.is_some(), "should have Aabb2D");
@@ -98,8 +112,9 @@ fn build_left_wall_has_collision_layers() {
     let pf = default_playfield();
     let mut world = World::new();
 
-    let bundle = Wall::builder().left(&pf).build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_in_world(&mut world, |commands| {
+        Wall::builder().left(&pf).spawn(commands)
+    });
 
     let layers = world.get::<CollisionLayers>(entity);
     assert!(layers.is_some(), "should have CollisionLayers");
@@ -113,8 +128,9 @@ fn build_left_wall_has_game_draw_layer() {
     let pf = default_playfield();
     let mut world = World::new();
 
-    let bundle = Wall::builder().left(&pf).build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_in_world(&mut world, |commands| {
+        Wall::builder().left(&pf).spawn(commands)
+    });
 
     assert!(
         matches!(
@@ -132,8 +148,9 @@ fn build_right_wall_has_correct_position_and_extents() {
     let pf = default_playfield();
     let mut world = World::new();
 
-    let bundle = Wall::builder().right(&pf).build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_in_world(&mut world, |commands| {
+        Wall::builder().right(&pf).spawn(commands)
+    });
 
     let pos = world.get::<Position2D>(entity).unwrap();
     assert!(
@@ -174,8 +191,9 @@ fn build_ceiling_wall_has_correct_position_and_extents() {
     let pf = default_playfield();
     let mut world = World::new();
 
-    let bundle = Wall::builder().ceiling(&pf).build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_in_world(&mut world, |commands| {
+        Wall::builder().ceiling(&pf).spawn(commands)
+    });
 
     let pos = world.get::<Position2D>(entity).unwrap();
     assert!(
@@ -217,8 +235,9 @@ fn build_floor_wall_has_correct_position_and_extents() {
     let pf = default_playfield();
     let mut world = World::new();
 
-    let bundle = Wall::builder().floor(&pf).build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_in_world(&mut world, |commands| {
+        Wall::builder().floor(&pf).spawn(commands)
+    });
 
     let pos = world.get::<Position2D>(entity).unwrap();
     assert!(
@@ -264,8 +283,9 @@ fn build_left_with_definition_half_thickness_45() {
     };
     let mut world = World::new();
 
-    let bundle = Wall::builder().left(&pf).definition(&def).build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_in_world(&mut world, |commands| {
+        Wall::builder().left(&pf).definition(&def).spawn(commands)
+    });
 
     let pos = world.get::<Position2D>(entity).unwrap();
     assert!(
@@ -300,8 +320,12 @@ fn build_ceiling_with_definition_half_thickness_45() {
     };
     let mut world = World::new();
 
-    let bundle = Wall::builder().ceiling(&pf).definition(&def).build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_in_world(&mut world, |commands| {
+        Wall::builder()
+            .ceiling(&pf)
+            .definition(&def)
+            .spawn(commands)
+    });
 
     let pos = world.get::<Position2D>(entity).unwrap();
     assert!(
@@ -328,8 +352,12 @@ fn build_left_with_override_half_thickness_60() {
     let pf = default_playfield();
     let mut world = World::new();
 
-    let bundle = Wall::builder().left(&pf).with_half_thickness(60.0).build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_in_world(&mut world, |commands| {
+        Wall::builder()
+            .left(&pf)
+            .with_half_thickness(60.0)
+            .spawn(commands)
+    });
 
     let pos = world.get::<Position2D>(entity).unwrap();
     assert!(
@@ -354,12 +382,13 @@ fn build_left_override_beats_definition_half_thickness() {
     };
     let mut world = World::new();
 
-    let bundle = Wall::builder()
-        .left(&pf)
-        .definition(&def)
-        .with_half_thickness(60.0)
-        .build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_in_world(&mut world, |commands| {
+        Wall::builder()
+            .left(&pf)
+            .definition(&def)
+            .with_half_thickness(60.0)
+            .spawn(commands)
+    });
 
     let pos = world.get::<Position2D>(entity).unwrap();
     assert!(
@@ -383,11 +412,10 @@ fn build_with_visible_has_mesh_and_material() {
         move |mut commands: Commands,
               mut meshes: ResMut<Assets<Mesh>>,
               mut materials: ResMut<Assets<ColorMaterial>>| {
-            let bundle = Wall::builder()
+            Wall::builder()
                 .left(&pf)
                 .visible(&mut meshes, &mut materials)
-                .build();
-            commands.spawn(bundle);
+                .spawn(&mut commands);
         }
     });
     app.update();
@@ -414,8 +442,9 @@ fn build_without_visible_has_no_mesh_or_material() {
     let pf = default_playfield();
     let mut world = World::new();
 
-    let bundle = Wall::builder().left(&pf).build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_in_world(&mut world, |commands| {
+        Wall::builder().left(&pf).spawn(commands)
+    });
 
     assert!(
         world.get::<Mesh2d>(entity).is_none(),
@@ -434,8 +463,9 @@ fn build_floor_one_shot_has_correct_position() {
     let pf = default_playfield();
     let mut world = World::new();
 
-    let bundle = Wall::builder().floor(&pf).one_shot().build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_in_world(&mut world, |commands| {
+        Wall::builder().floor(&pf).one_shot().spawn(commands)
+    });
 
     let pos = world.get::<Position2D>(entity).unwrap();
     assert!(
@@ -454,8 +484,9 @@ fn build_floor_timed_has_correct_position() {
     let pf = default_playfield();
     let mut world = World::new();
 
-    let bundle = Wall::builder().floor(&pf).timed(5.0).build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_in_world(&mut world, |commands| {
+        Wall::builder().floor(&pf).timed(5.0).spawn(commands)
+    });
 
     let pos = world.get::<Position2D>(entity).unwrap();
     assert!(
@@ -472,10 +503,18 @@ fn build_all_sides_have_collision_layers() {
     let pf = default_playfield();
     let mut world = World::new();
 
-    let left = world.spawn(Wall::builder().left(&pf).build()).id();
-    let right = world.spawn(Wall::builder().right(&pf).build()).id();
-    let ceiling = world.spawn(Wall::builder().ceiling(&pf).build()).id();
-    let floor = world.spawn(Wall::builder().floor(&pf).build()).id();
+    let left = spawn_in_world(&mut world, |commands| {
+        Wall::builder().left(&pf).spawn(commands)
+    });
+    let right = spawn_in_world(&mut world, |commands| {
+        Wall::builder().right(&pf).spawn(commands)
+    });
+    let ceiling = spawn_in_world(&mut world, |commands| {
+        Wall::builder().ceiling(&pf).spawn(commands)
+    });
+    let floor = spawn_in_world(&mut world, |commands| {
+        Wall::builder().floor(&pf).spawn(commands)
+    });
 
     for (name, entity) in [
         ("Left", left),
@@ -501,10 +540,18 @@ fn build_all_sides_have_game_draw_layer_wall() {
     let pf = default_playfield();
     let mut world = World::new();
 
-    let left = world.spawn(Wall::builder().left(&pf).build()).id();
-    let right = world.spawn(Wall::builder().right(&pf).build()).id();
-    let ceiling = world.spawn(Wall::builder().ceiling(&pf).build()).id();
-    let floor = world.spawn(Wall::builder().floor(&pf).build()).id();
+    let left = spawn_in_world(&mut world, |commands| {
+        Wall::builder().left(&pf).spawn(commands)
+    });
+    let right = spawn_in_world(&mut world, |commands| {
+        Wall::builder().right(&pf).spawn(commands)
+    });
+    let ceiling = spawn_in_world(&mut world, |commands| {
+        Wall::builder().ceiling(&pf).spawn(commands)
+    });
+    let floor = spawn_in_world(&mut world, |commands| {
+        Wall::builder().floor(&pf).spawn(commands)
+    });
 
     for (name, entity) in [
         ("Left", left),
@@ -528,7 +575,9 @@ fn build_visible_and_invisible_both_have_game_draw_layer() {
     let mut world = World::new();
 
     // Invisible wall
-    let invisible = world.spawn(Wall::builder().left(&pf).build()).id();
+    let invisible = spawn_in_world(&mut world, |commands| {
+        Wall::builder().left(&pf).spawn(commands)
+    });
     assert!(
         matches!(
             world.get::<GameDrawLayer>(invisible),

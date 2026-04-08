@@ -1,4 +1,4 @@
-//! Tests for `ShieldParent` marker, `Locked`, and `LockAdjacents` components
+//! Tests for `ShieldParent` marker, `Locked`, and `Locks` components
 //! on shield cells.
 
 use bevy::prelude::*;
@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use super::helpers::*;
 use crate::cells::components::*;
 
-// -- Behavior 1: Shield cell has ShieldParent + OrbitConfig + Locked + LockAdjacents --
+// -- Behavior 1: Shield cell has ShieldParent + OrbitConfig + Locked + Locks --
 
 #[test]
 fn shield_cell_has_shield_parent_marker() {
@@ -31,12 +31,12 @@ fn shield_cell_has_locked_and_lock_adjacents() {
 
     let shield_locked_count = app
         .world_mut()
-        .query::<(&Cell, &ShieldParent, &Locked, &LockAdjacents)>()
+        .query::<(&Cell, &ShieldParent, &Locked, &Locks)>()
         .iter(app.world())
         .count();
     assert_eq!(
         shield_locked_count, 1,
-        "shield cell should have Locked + LockAdjacents"
+        "shield cell should have Locked + Locks"
     );
 }
 
@@ -44,28 +44,28 @@ fn shield_cell_has_locked_and_lock_adjacents() {
 fn shield_cell_lock_adjacents_contains_orbit_entity_ids() {
     // Given: shield with orbit_count=3
     // When: spawn runs
-    // Then: LockAdjacents contains exactly 3 entity IDs (the orbit children)
+    // Then: Locks contains exactly 3 entity IDs (the orbit children)
     let mut app = shield_test_app(shield_layout(), shield_registry());
     app.update();
 
-    let shield_adjacents: Vec<&LockAdjacents> = app
+    let shield_adjacents: Vec<&Locks> = app
         .world_mut()
-        .query_filtered::<&LockAdjacents, With<ShieldParent>>()
+        .query_filtered::<&Locks, With<ShieldParent>>()
         .iter(app.world())
         .collect();
     assert_eq!(shield_adjacents.len(), 1);
     assert_eq!(
         shield_adjacents[0].0.len(),
         3,
-        "shield LockAdjacents should contain 3 orbit entity IDs, got {}",
+        "shield Locks should contain 3 orbit entity IDs, got {}",
         shield_adjacents[0].0.len()
     );
 
-    // Verify each entity in LockAdjacents is an actual OrbitCell
+    // Verify each entity in Locks is an actual OrbitCell
     for &orbit_entity in &shield_adjacents[0].0 {
         assert!(
             app.world().get::<OrbitCell>(orbit_entity).is_some(),
-            "LockAdjacents entity {orbit_entity:?} should have OrbitCell component"
+            "Locks entity {orbit_entity:?} should have OrbitCell component"
         );
     }
 }

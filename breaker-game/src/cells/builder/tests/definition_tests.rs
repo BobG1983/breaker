@@ -7,7 +7,7 @@ use crate::{
     cells::{
         builder::core::*,
         components::{
-            Cell, CellDamageVisuals, CellHealth, CellRegen, CellTypeAlias, RequiredToClear,
+            Cell, CellDamageVisuals, CellHealth, CellTypeAlias, RegenRate, RequiredToClear,
         },
         definition::{CellBehavior, CellTypeDefinition},
     },
@@ -281,16 +281,16 @@ fn definition_stores_regen_behavior() {
     });
 
     let regen = world
-        .get::<CellRegen>(entity)
-        .expect("entity should have CellRegen");
+        .get::<RegenRate>(entity)
+        .expect("entity should have RegenRate");
     assert!(
-        (regen.rate - 2.0).abs() < f32::EPSILON,
-        "CellRegen rate should be 2.0, got {}",
-        regen.rate
+        (regen.0 - 2.0).abs() < f32::EPSILON,
+        "RegenRate rate should be 2.0, got {}",
+        regen.0
     );
 }
 
-// Behavior 19 edge case: behaviors None means no CellRegen
+// Behavior 19 edge case: behaviors None means no RegenRate
 #[test]
 fn definition_behaviors_none_has_no_regen() {
     let mut def = test_cell_definition();
@@ -316,12 +316,12 @@ fn definition_behaviors_none_has_no_regen() {
     );
 
     assert!(
-        world.get::<CellRegen>(entity).is_none(),
-        "entity should NOT have CellRegen when behaviors is None"
+        world.get::<RegenRate>(entity).is_none(),
+        "entity should NOT have RegenRate when behaviors is None"
     );
 }
 
-// Behavior 19 edge case: behaviors empty vec means no CellRegen
+// Behavior 19 edge case: behaviors empty vec means no RegenRate
 #[test]
 fn definition_behaviors_empty_vec_has_no_regen() {
     let mut def = test_cell_definition();
@@ -347,8 +347,8 @@ fn definition_behaviors_empty_vec_has_no_regen() {
     );
 
     assert!(
-        world.get::<CellRegen>(entity).is_none(),
-        "entity should NOT have CellRegen when behaviors is Some(vec![])"
+        world.get::<RegenRate>(entity).is_none(),
+        "entity should NOT have RegenRate when behaviors is Some(vec![])"
     );
 }
 
@@ -615,7 +615,7 @@ fn no_definition_no_override_uses_defaults() {
         "should NOT have RequiredToClear without definition"
     );
     assert!(
-        world.get::<CellRegen>(entity).is_none(),
-        "should NOT have CellRegen without definition"
+        world.get::<RegenRate>(entity).is_none(),
+        "should NOT have RegenRate without definition"
     );
 }

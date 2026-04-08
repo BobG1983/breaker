@@ -28,6 +28,16 @@ pub(super) const GRID_STEP_Y: f32 = 28.0;
 /// Real grid horizontal spacing: `cell_width` (70) + padding (4) = 74
 pub(super) const GRID_STEP_X: f32 = 74.0;
 
+pub(super) fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let mut commands = Commands::new(&mut queue, world);
+        f(&mut commands)
+    };
+    queue.apply(world);
+    entity
+}
+
 pub(super) fn test_app() -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
@@ -138,8 +148,9 @@ pub(super) fn spawn_cell_with_health(app: &mut App, x: f32, y: f32, hp: f32) -> 
 
 pub(super) fn spawn_right_wall(app: &mut App) {
     let pf = PlayfieldConfig::default();
-    let bundle = Wall::builder().right(&pf).build();
-    let entity = app.world_mut().spawn(bundle).id();
+    let entity = spawn_in_world(app.world_mut(), |commands| {
+        Wall::builder().right(&pf).spawn(commands)
+    });
     let pos = app.world().get::<Position2D>(entity).unwrap().0;
     app.world_mut()
         .entity_mut(entity)
@@ -273,5 +284,6 @@ pub(super) fn test_app_with_damage_and_wall_messages() -> App {
             FixedUpdate,
             (collect_damage_cells, collect_wall_hits, collect_full_hits).after(bolt_cell_collision),
         );
+
     app
 }

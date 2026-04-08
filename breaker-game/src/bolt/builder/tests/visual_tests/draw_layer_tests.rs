@@ -17,14 +17,13 @@ fn rendered_primary_serving_has_game_draw_layer() {
         move |mut commands: Commands,
               mut meshes: ResMut<Assets<Mesh>>,
               mut materials: ResMut<Assets<ColorMaterial>>| {
-            let bundle = Bolt::builder()
+            Bolt::builder()
                 .definition(&def)
                 .at_position(Vec2::new(0.0, 50.0))
                 .serving()
                 .primary()
                 .rendered(&mut meshes, &mut materials)
-                .build();
-            commands.spawn(bundle);
+                .spawn(&mut commands);
         }
     });
     app.update();
@@ -55,14 +54,13 @@ fn rendered_extra_velocity_has_game_draw_layer() {
         move |mut commands: Commands,
               mut meshes: ResMut<Assets<Mesh>>,
               mut materials: ResMut<Assets<ColorMaterial>>| {
-            let bundle = Bolt::builder()
+            Bolt::builder()
                 .definition(&def)
                 .at_position(Vec2::ZERO)
                 .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
                 .extra()
                 .rendered(&mut meshes, &mut materials)
-                .build();
-            commands.spawn(bundle);
+                .spawn(&mut commands);
         }
     });
     app.update();

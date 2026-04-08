@@ -1,4 +1,4 @@
-use bevy::{math::curve::easing::EaseFunction, prelude::*};
+use bevy::{ecs::world::CommandQueue, math::curve::easing::EaseFunction, prelude::*};
 use rantzsoft_spatial2d::components::MaxSpeed;
 
 use super::{
@@ -17,6 +17,16 @@ use crate::{
         size::{MaxHeight, MaxWidth, MinHeight, MinWidth},
     },
 };
+
+fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let mut commands = Commands::new(&mut queue, world);
+        f(&mut commands)
+    };
+    queue.apply(world);
+    entity
+}
 
 // ── Behavior 11: .definition() transitions D+Mv+Da+Sp+Bm at once ──
 
@@ -47,6 +57,7 @@ fn definition_does_not_transition_visual_or_role() {
         Unvisual,
         NoRole,
     > = Breaker::builder().definition(&def);
+
     // If this compiles, V and R are unchanged.
 }
 
@@ -56,12 +67,13 @@ fn definition_does_not_transition_visual_or_role() {
 fn definition_stores_correct_dimension_values() {
     let def = custom_breaker_definition(); // width: 150.0, height: 25.0, y_position: -300.0
     let mut world = World::new();
-    let bundle = Breaker::builder()
-        .definition(&def)
-        .headless()
-        .primary()
-        .build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_in_world(&mut world, |commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
 
     let bw = world.get::<BaseWidth>(entity);
     assert!(bw.is_some(), "entity should have BaseWidth");
@@ -91,12 +103,13 @@ fn definition_stores_correct_dimension_values() {
 fn definition_stores_correct_movement_values() {
     let def = custom_breaker_definition();
     let mut world = World::new();
-    let bundle = Breaker::builder()
-        .definition(&def)
-        .headless()
-        .primary()
-        .build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_in_world(&mut world, |commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
 
     let ms = world.get::<MaxSpeed>(entity);
     assert!(ms.is_some(), "entity should have MaxSpeed");
@@ -138,12 +151,13 @@ fn definition_stores_correct_movement_values() {
 fn definition_stores_correct_dashing_values() {
     let def = custom_breaker_definition();
     let mut world = World::new();
-    let bundle = Breaker::builder()
-        .definition(&def)
-        .headless()
-        .primary()
-        .build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_in_world(&mut world, |commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
 
     let dsm = world.get::<DashSpeedMultiplier>(entity);
     assert!(dsm.is_some(), "entity should have DashSpeedMultiplier");
@@ -193,12 +207,13 @@ fn definition_stores_correct_dashing_values() {
 fn definition_stores_correct_spread_value() {
     let def = test_breaker_definition(); // reflection_spread: 75.0
     let mut world = World::new();
-    let bundle = Breaker::builder()
-        .definition(&def)
-        .headless()
-        .primary()
-        .build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_in_world(&mut world, |commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
 
     let spread = world.get::<BreakerReflectionSpread>(entity);
     assert!(
@@ -213,12 +228,13 @@ fn definition_spread_zero_produces_zero_radians() {
     let mut def = test_breaker_definition();
     def.reflection_spread = 0.0;
     let mut world = World::new();
-    let bundle = Breaker::builder()
-        .definition(&def)
-        .headless()
-        .primary()
-        .build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_in_world(&mut world, |commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
 
     let spread = world.get::<BreakerReflectionSpread>(entity);
     assert!(
@@ -234,12 +250,13 @@ fn definition_spread_zero_produces_zero_radians() {
 fn definition_stores_correct_bump_values() {
     let def = custom_breaker_definition();
     let mut world = World::new();
-    let bundle = Breaker::builder()
-        .definition(&def)
-        .headless()
-        .primary()
-        .build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_in_world(&mut world, |commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
 
     let pw = world.get::<BumpPerfectWindow>(entity);
     assert!(pw.is_some(), "entity should have BumpPerfectWindow");
@@ -277,12 +294,13 @@ fn definition_stores_correct_bump_values() {
 fn definition_computes_min_max_from_base_when_none() {
     let def = test_breaker_definition(); // width: 120.0, height: 20.0, min_w/max_w/min_h/max_h: None
     let mut world = World::new();
-    let bundle = Breaker::builder()
-        .definition(&def)
-        .headless()
-        .primary()
-        .build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_in_world(&mut world, |commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
 
     let min_w = world.get::<MinWidth>(entity);
     assert!(min_w.is_some(), "entity should have MinWidth");
@@ -318,12 +336,13 @@ fn definition_zero_width_produces_zero_min_max() {
     let mut def = test_breaker_definition();
     def.width = 0.0;
     let mut world = World::new();
-    let bundle = Breaker::builder()
-        .definition(&def)
-        .headless()
-        .primary()
-        .build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_in_world(&mut world, |commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
 
     let min_w = world.get::<MinWidth>(entity);
     assert!(min_w.is_some(), "entity should have MinWidth");
@@ -351,12 +370,13 @@ fn definition_uses_explicit_min_max_when_provided() {
     def.max_h = Some(40.0);
 
     let mut world = World::new();
-    let bundle = Breaker::builder()
-        .definition(&def)
-        .headless()
-        .primary()
-        .build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_in_world(&mut world, |commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
 
     let min_w = world.get::<MinWidth>(entity);
     assert!(min_w.is_some(), "entity should have MinWidth");

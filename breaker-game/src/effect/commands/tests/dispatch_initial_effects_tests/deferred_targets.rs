@@ -1,6 +1,17 @@
-//! Tests for `AllBolts`, `AllCells`, `AllWalls` deferred target dispatch (behaviors 6-8).
+use bevy::{ecs::world::CommandQueue, prelude::*};
 
+// Tests for `AllBolts`, `AllCells`, `AllWalls` deferred target dispatch (behaviors 6-8).
 use super::helpers::*;
+
+fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let mut commands = Commands::new(&mut queue, world);
+        f(&mut commands)
+    };
+    queue.apply(world);
+    entity
+}
 
 // ── Behavior 6: AllBolts target is deferred -- wrapped and pushed to first breaker ──
 
@@ -8,15 +19,13 @@ use super::helpers::*;
 fn all_bolts_target_deferred_wrapped_on_first_breaker() {
     let mut world = World::new();
     let def = BreakerDefinition::default();
-    let breaker = world
-        .spawn(
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .build(),
-        )
-        .id();
+    let breaker = spawn_in_world(&mut world, |commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
     world
         .entity_mut(breaker)
         .insert((BoundEffects::default(), StagedEffects::default()));
@@ -69,15 +78,13 @@ fn all_bolts_target_deferred_wrapped_on_first_breaker() {
 fn all_bolts_do_children_still_deferred_not_fired() {
     let mut world = World::new();
     let def = BreakerDefinition::default();
-    let breaker = world
-        .spawn(
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .build(),
-        )
-        .id();
+    let breaker = spawn_in_world(&mut world, |commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
     world
         .entity_mut(breaker)
         .insert((BoundEffects::default(), StagedEffects::default()));
@@ -117,15 +124,13 @@ fn all_bolts_do_children_still_deferred_not_fired() {
 fn all_cells_target_deferred_wrapped_on_first_breaker() {
     let mut world = World::new();
     let def = BreakerDefinition::default();
-    let breaker = world
-        .spawn(
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .build(),
-        )
-        .id();
+    let breaker = spawn_in_world(&mut world, |commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
     world
         .entity_mut(breaker)
         .insert((BoundEffects::default(), StagedEffects::default()));
@@ -193,15 +198,13 @@ fn all_cells_target_deferred_wrapped_on_first_breaker() {
 fn all_cells_multiple_children_wrapped_in_single_on() {
     let mut world = World::new();
     let def = BreakerDefinition::default();
-    let breaker = world
-        .spawn(
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .build(),
-        )
-        .id();
+    let breaker = spawn_in_world(&mut world, |commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
     world
         .entity_mut(breaker)
         .insert((BoundEffects::default(), StagedEffects::default()));
@@ -255,15 +258,13 @@ fn all_cells_multiple_children_wrapped_in_single_on() {
 fn all_walls_target_deferred_wrapped_on_first_breaker() {
     let mut world = World::new();
     let def = BreakerDefinition::default();
-    let breaker = world
-        .spawn(
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .build(),
-        )
-        .id();
+    let breaker = spawn_in_world(&mut world, |commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
     world
         .entity_mut(breaker)
         .insert((BoundEffects::default(), StagedEffects::default()));
@@ -328,15 +329,13 @@ fn all_walls_target_deferred_wrapped_on_first_breaker() {
 fn all_walls_empty_then_still_creates_wrapper() {
     let mut world = World::new();
     let def = BreakerDefinition::default();
-    let breaker = world
-        .spawn(
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .build(),
-        )
-        .id();
+    let breaker = spawn_in_world(&mut world, |commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
     world
         .entity_mut(breaker)
         .insert((BoundEffects::default(), StagedEffects::default()));
@@ -367,6 +366,7 @@ fn all_walls_empty_then_still_creates_wrapper() {
             then: vec![],
         }],
     };
+
     assert_eq!(
         bound.0[0].1, expected,
         "Wrapper should contain empty inner then"

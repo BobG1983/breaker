@@ -1,6 +1,17 @@
-//! Tests for Cell and Wall target no-op behavior (behaviors 4-5).
+use bevy::{ecs::world::CommandQueue, prelude::*};
 
+// Tests for Cell and Wall target no-op behavior (behaviors 4-5).
 use super::helpers::*;
+
+fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let mut commands = Commands::new(&mut queue, world);
+        f(&mut commands)
+    };
+    queue.apply(world);
+    entity
+}
 
 // ── Behavior 4: Cell target is a no-op (no effects dispatched) ───────────
 
@@ -10,16 +21,14 @@ fn cell_target_is_noop_but_breaker_target_processes() {
     let mut world = World::new();
     let cell_a = world.spawn((Cell, BoundEffects::default())).id();
     let cell_b = world.spawn((Cell, BoundEffects::default())).id();
-    let breaker = world
-        .spawn({
-            let def = BreakerDefinition::default();
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .build()
-        })
-        .id();
+    let def = BreakerDefinition::default();
+    let breaker = spawn_in_world(&mut world, |commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
     world.entity_mut(breaker).insert((
         BoundEffects::default(),
         StagedEffects::default(),
@@ -69,15 +78,13 @@ fn cell_target_when_children_noop_with_breaker_processed() {
     let mut world = World::new();
     let cell = world.spawn((Cell, BoundEffects::default())).id();
     let def = BreakerDefinition::default();
-    let breaker = world
-        .spawn(
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .build(),
-        )
-        .id();
+    let breaker = spawn_in_world(&mut world, |commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
     world
         .entity_mut(breaker)
         .insert((BoundEffects::default(), StagedEffects::default()));
@@ -126,16 +133,14 @@ fn wall_target_is_noop_but_breaker_target_processes() {
     let mut world = World::new();
     let wall_a = world.spawn((Wall, BoundEffects::default())).id();
     let wall_b = world.spawn((Wall, BoundEffects::default())).id();
-    let breaker = world
-        .spawn({
-            let def = BreakerDefinition::default();
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .build()
-        })
-        .id();
+    let def = BreakerDefinition::default();
+    let breaker = spawn_in_world(&mut world, |commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
     world.entity_mut(breaker).insert((
         BoundEffects::default(),
         StagedEffects::default(),
@@ -192,15 +197,13 @@ fn wall_target_do_children_noop_with_breaker_processed() {
     let mut world = World::new();
     let wall = world.spawn((Wall, BoundEffects::default())).id();
     let def = BreakerDefinition::default();
-    let breaker = world
-        .spawn(
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .build(),
-        )
-        .id();
+    let breaker = spawn_in_world(&mut world, |commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
     world
         .entity_mut(breaker)
         .insert((BoundEffects::default(), StagedEffects::default()));

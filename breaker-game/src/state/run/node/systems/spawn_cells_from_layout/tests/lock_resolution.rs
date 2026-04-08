@@ -49,15 +49,15 @@ fn non_locked_cells_spawn_normally_when_locks_present() {
         "only the cell at (0,1) should have Locked component"
     );
 
-    // The locked cell at (0,1) should have LockAdjacents with exactly 1 entity
+    // The locked cell at (0,1) should have Locks with exactly 1 entity
     let lock_adjacents_count = app
         .world_mut()
-        .query::<(&Cell, &LockAdjacents)>()
+        .query::<(&Cell, &Locks)>()
         .iter(app.world())
         .count();
     assert_eq!(
         lock_adjacents_count, 1,
-        "only the locked cell should have LockAdjacents"
+        "only the locked cell should have Locks"
     );
 }
 
@@ -125,24 +125,24 @@ fn locked_cell_lock_adjacents_references_correct_entity() {
     let alias_0_1 = app.world().get::<CellTypeAlias>(entity_0_1).unwrap();
     assert_eq!(alias_0_1.0, "T");
 
-    // Cell at (0,2) should be locked with LockAdjacents containing entity at (0,0)
+    // Cell at (0,2) should be locked with Locks containing entity at (0,0)
     let entity_0_2 = cells_by_pos[&(0, 2)];
     let adjacents = app
         .world()
-        .get::<LockAdjacents>(entity_0_2)
-        .expect("locked cell at (0,2) should have LockAdjacents");
+        .get::<Locks>(entity_0_2)
+        .expect("locked cell at (0,2) should have Locks");
     assert_eq!(
         adjacents.0.len(),
         1,
-        "LockAdjacents should contain exactly 1 entity"
+        "Locks should contain exactly 1 entity"
     );
     assert_eq!(
         adjacents.0[0], entity_0_0,
-        "LockAdjacents should reference the entity at grid position (0,0)"
+        "Locks should reference the entity at grid position (0,0)"
     );
 }
 
-// -- Behavior 3: Locked cells receive Locked + LockAdjacents with correct entity IDs --
+// -- Behavior 3: Locked cells receive Locked + Locks with correct entity IDs --
 
 #[test]
 fn locked_cell_has_locked_and_lock_adjacents_with_two_targets() {
@@ -172,27 +172,23 @@ fn locked_cell_has_locked_and_lock_adjacents_with_two_targets() {
         "cell at (0,0) should have Locked component"
     );
 
-    // Cell at (0,0) should have LockAdjacents with 2 entities
+    // Cell at (0,0) should have Locks with 2 entities
     let adjacents = app
         .world()
-        .get::<LockAdjacents>(entity_0_0)
-        .expect("cell at (0,0) should have LockAdjacents");
-    assert_eq!(
-        adjacents.0.len(),
-        2,
-        "LockAdjacents should contain 2 entities"
-    );
+        .get::<Locks>(entity_0_0)
+        .expect("cell at (0,0) should have Locks");
+    assert_eq!(adjacents.0.len(), 2, "Locks should contain 2 entities");
 
-    // Entities in LockAdjacents should be the cells at (1,0) and (1,1)
+    // Entities in Locks should be the cells at (1,0) and (1,1)
     let entity_1_0 = cells_by_pos[&(1, 0)];
     let entity_1_1 = cells_by_pos[&(1, 1)];
     assert!(
         adjacents.0.contains(&entity_1_0),
-        "LockAdjacents should contain entity at (1,0)"
+        "Locks should contain entity at (1,0)"
     );
     assert!(
         adjacents.0.contains(&entity_1_1),
-        "LockAdjacents should contain entity at (1,1)"
+        "Locks should contain entity at (1,1)"
     );
 
     // Target cells should NOT have Locked
@@ -218,12 +214,12 @@ fn locked_cell_with_single_dependency() {
     let entity_0_0 = cells_by_pos[&(0, 0)];
     let adjacents = app
         .world()
-        .get::<LockAdjacents>(entity_0_0)
-        .expect("locked cell should have LockAdjacents");
+        .get::<Locks>(entity_0_0)
+        .expect("locked cell should have Locks");
     assert_eq!(
         adjacents.0.len(),
         1,
-        "LockAdjacents should contain exactly 1 entity"
+        "Locks should contain exactly 1 entity"
     );
 }
 
@@ -255,40 +251,40 @@ fn chain_lock_resolves_in_dependency_order() {
         "cell C at (0,2) should NOT have Locked"
     );
 
-    // Cell B at (0,1) — Locked + LockAdjacents([entity_C])
+    // Cell B at (0,1) — Locked + Locks([entity_C])
     assert!(
         app.world().get::<Locked>(entity_b).is_some(),
         "cell B at (0,1) should have Locked"
     );
     let b_adjacents = app
         .world()
-        .get::<LockAdjacents>(entity_b)
-        .expect("cell B should have LockAdjacents");
+        .get::<Locks>(entity_b)
+        .expect("cell B should have Locks");
     assert_eq!(b_adjacents.0.len(), 1);
     assert_eq!(b_adjacents.0[0], entity_c);
 
-    // Cell A at (0,0) — Locked + LockAdjacents([entity_B])
+    // Cell A at (0,0) — Locked + Locks([entity_B])
     assert!(
         app.world().get::<Locked>(entity_a).is_some(),
         "cell A at (0,0) should have Locked"
     );
     let a_adjacents = app
         .world()
-        .get::<LockAdjacents>(entity_a)
-        .expect("cell A should have LockAdjacents");
+        .get::<Locks>(entity_a)
+        .expect("cell A should have Locks");
     assert_eq!(a_adjacents.0.len(), 1);
     assert_eq!(a_adjacents.0[0], entity_b);
 
-    // entity_B in A's LockAdjacents is valid and has Locked
+    // entity_B in A's Locks is valid and has Locked
     assert!(
         app.world().get::<Locked>(a_adjacents.0[0]).is_some(),
-        "entity_B referenced by A's LockAdjacents should have Locked component"
+        "entity_B referenced by A's Locks should have Locked component"
     );
 
-    // entity_C in B's LockAdjacents does NOT have Locked
+    // entity_C in B's Locks does NOT have Locked
     assert!(
         app.world().get::<Locked>(b_adjacents.0[0]).is_none(),
-        "entity_C referenced by B's LockAdjacents should NOT have Locked component"
+        "entity_C referenced by B's Locks should NOT have Locked component"
     );
 }
 
@@ -318,11 +314,11 @@ fn three_deep_chain_all_cells_spawn_correctly() {
 
     // D at (0,3) — no Locked (spawned in Pass 1)
     assert!(app.world().get::<Locked>(cells_by_pos[&(0, 3)]).is_none());
-    // C at (0,2) — Locked with LockAdjacents pointing to D
+    // C at (0,2) — Locked with Locks pointing to D
     assert!(app.world().get::<Locked>(cells_by_pos[&(0, 2)]).is_some());
-    // B at (0,1) — Locked with LockAdjacents pointing to C
+    // B at (0,1) — Locked with Locks pointing to C
     assert!(app.world().get::<Locked>(cells_by_pos[&(0, 1)]).is_some());
-    // A at (0,0) — Locked with LockAdjacents pointing to B
+    // A at (0,0) — Locked with Locks pointing to B
     assert!(app.world().get::<Locked>(cells_by_pos[&(0, 0)]).is_some());
 }
 
@@ -352,21 +348,21 @@ fn diamond_lock_resolves_all_four_cells() {
         "D at (1,1) should not have Locked"
     );
 
-    // B has Locked + LockAdjacents containing entity_D
+    // B has Locked + Locks containing entity_D
     assert!(app.world().get::<Locked>(entity_b).is_some());
-    let b_adj = app.world().get::<LockAdjacents>(entity_b).unwrap();
+    let b_adj = app.world().get::<Locks>(entity_b).unwrap();
     assert_eq!(b_adj.0.len(), 1);
     assert_eq!(b_adj.0[0], entity_d);
 
-    // C has Locked + LockAdjacents containing entity_D
+    // C has Locked + Locks containing entity_D
     assert!(app.world().get::<Locked>(entity_c).is_some());
-    let c_adj = app.world().get::<LockAdjacents>(entity_c).unwrap();
+    let c_adj = app.world().get::<Locks>(entity_c).unwrap();
     assert_eq!(c_adj.0.len(), 1);
     assert_eq!(c_adj.0[0], entity_d);
 
-    // A has Locked + LockAdjacents containing entity_B and entity_C
+    // A has Locked + Locks containing entity_B and entity_C
     assert!(app.world().get::<Locked>(entity_a).is_some());
-    let a_adj = app.world().get::<LockAdjacents>(entity_a).unwrap();
+    let a_adj = app.world().get::<Locks>(entity_a).unwrap();
     assert_eq!(a_adj.0.len(), 2);
     assert!(a_adj.0.contains(&entity_b));
     assert!(a_adj.0.contains(&entity_c));
@@ -417,16 +413,16 @@ fn multiple_independent_lock_groups_resolve_correctly() {
     // (0,0) locked by (0,1)
     let adj_0_0 = app
         .world()
-        .get::<LockAdjacents>(cells_by_pos[&(0, 0)])
-        .expect("cell at (0,0) should have LockAdjacents");
+        .get::<Locks>(cells_by_pos[&(0, 0)])
+        .expect("cell at (0,0) should have Locks");
     assert_eq!(adj_0_0.0.len(), 1);
     assert_eq!(adj_0_0.0[0], cells_by_pos[&(0, 1)]);
 
     // (0,2) locked by (0,3)
     let adj_0_2 = app
         .world()
-        .get::<LockAdjacents>(cells_by_pos[&(0, 2)])
-        .expect("cell at (0,2) should have LockAdjacents");
+        .get::<Locks>(cells_by_pos[&(0, 2)])
+        .expect("cell at (0,2) should have Locks");
     assert_eq!(adj_0_2.0.len(), 1);
     assert_eq!(adj_0_2.0[0], cells_by_pos[&(0, 3)]);
 }
@@ -447,7 +443,7 @@ fn direct_circular_lock_drops_edges_both_spawn_unlocked() {
     let cell_count = app.world_mut().query::<&Cell>().iter(app.world()).count();
     assert_eq!(cell_count, 2, "both cells should still spawn");
 
-    // Neither cell should have Locked or LockAdjacents (circular edges dropped)
+    // Neither cell should have Locked or Locks (circular edges dropped)
     let locked_count = app
         .world_mut()
         .query::<(&Cell, &Locked)>()
@@ -460,12 +456,12 @@ fn direct_circular_lock_drops_edges_both_spawn_unlocked() {
 
     let lock_adj_count = app
         .world_mut()
-        .query::<(&Cell, &LockAdjacents)>()
+        .query::<(&Cell, &Locks)>()
         .iter(app.world())
         .count();
     assert_eq!(
         lock_adj_count, 0,
-        "circular lock edges should be dropped — no LockAdjacents components"
+        "circular lock edges should be dropped — no Locks components"
     );
 }
 
@@ -590,7 +586,7 @@ fn large_cycle_four_nodes_all_spawn_without_locks() {
 // Section E: Builder Integration with Lock Resolution
 // =============================================================================
 
-// -- Behavior 9: Locked cell's LockAdjacents entity IDs match Pass 1 entities --
+// -- Behavior 9: Locked cell's Locks entity IDs match Pass 1 entities --
 
 #[test]
 fn locked_cell_lock_adjacents_matches_pass1_entity() {
@@ -606,12 +602,12 @@ fn locked_cell_lock_adjacents_matches_pass1_entity() {
 
     let adjacents = app
         .world()
-        .get::<LockAdjacents>(entity_locked)
-        .expect("locked cell should have LockAdjacents");
+        .get::<Locks>(entity_locked)
+        .expect("locked cell should have Locks");
     assert_eq!(adjacents.0.len(), 1);
     assert_eq!(
         adjacents.0[0], entity_target,
-        "LockAdjacents entity should match the Pass 1 entity at (0,1)"
+        "Locks entity should match the Pass 1 entity at (0,1)"
     );
 
     // Verify the referenced entity has CellTypeAlias("S") and exists
@@ -682,9 +678,9 @@ fn locked_cell_hp_scaled_by_hp_mult() {
         health_t.max
     );
 
-    // Locked cell should have Locked + LockAdjacents
+    // Locked cell should have Locked + Locks
     assert!(app.world().get::<Locked>(entity_t).is_some());
-    let adj = app.world().get::<LockAdjacents>(entity_t).unwrap();
+    let adj = app.world().get::<Locks>(entity_t).unwrap();
     assert_eq!(adj.0.len(), 1);
     assert_eq!(adj.0[0], cells_by_pos[&(0, 1)]);
 
@@ -762,29 +758,29 @@ fn shielded_cell_not_affected_by_locks_map() {
     let mut app = test_app_with_shield_registry(layout);
     app.update();
 
-    // "H" at (0,0) should have ShieldParent + Locked + LockAdjacents (from orbit path)
-    let shield_parents: Vec<(Entity, &LockAdjacents)> = app
+    // "H" at (0,0) should have ShieldParent + Locked + Locks (from orbit path)
+    let shield_parents: Vec<(Entity, &Locks)> = app
         .world_mut()
-        .query_filtered::<(Entity, &LockAdjacents), With<ShieldParent>>()
+        .query_filtered::<(Entity, &Locks), With<ShieldParent>>()
         .iter(app.world())
         .collect();
     assert_eq!(
         shield_parents.len(),
         1,
-        "shield cell should have ShieldParent + LockAdjacents"
+        "shield cell should have ShieldParent + Locks"
     );
-    // Shield cell's LockAdjacents should contain orbit entities (3 of them)
+    // Shield cell's Locks should contain orbit entities (3 of them)
     let (shield_entity, shield_adj) = shield_parents[0];
     assert_eq!(
         shield_adj.0.len(),
         3,
-        "shield cell LockAdjacents should have 3 orbit entities, not lock targets"
+        "shield cell Locks should have 3 orbit entities, not lock targets"
     );
     // Verify orbit entities are OrbitCell, not regular cells
     for &orbit_entity in &shield_adj.0 {
         assert!(
             app.world().get::<OrbitCell>(orbit_entity).is_some(),
-            "shield LockAdjacents should reference OrbitCell entities"
+            "shield Locks should reference OrbitCell entities"
         );
     }
 
@@ -794,11 +790,11 @@ fn shielded_cell_not_affected_by_locks_map() {
         "shield cell should have Locked from orbit path"
     );
 
-    // Cell at (0,1) should have Locked + LockAdjacents from lock resolution path
+    // Cell at (0,1) should have Locked + Locks from lock resolution path
     // We need to find the non-shield locked cell
-    let non_shield_locked: Vec<(Entity, &LockAdjacents)> = app
+    let non_shield_locked: Vec<(Entity, &Locks)> = app
         .world_mut()
-        .query_filtered::<(Entity, &LockAdjacents), (With<Locked>, Without<ShieldParent>)>()
+        .query_filtered::<(Entity, &Locks), (With<Locked>, Without<ShieldParent>)>()
         .iter(app.world())
         .collect();
     assert_eq!(

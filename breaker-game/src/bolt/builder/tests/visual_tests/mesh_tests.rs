@@ -1,8 +1,18 @@
-use bevy::prelude::*;
+use bevy::{ecs::world::CommandQueue, prelude::*};
 use rantzsoft_spatial2d::components::Velocity2D;
 
 use super::helpers::test_bolt_definition;
 use crate::bolt::components::{Bolt, BoltServing, PrimaryBolt};
+
+fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let mut commands = Commands::new(&mut queue, world);
+        f(&mut commands)
+    };
+    queue.apply(world);
+    entity
+}
 
 // ── Behavior 16: .headless() build does NOT insert Mesh2d or MeshMaterial2d ──
 
@@ -10,14 +20,15 @@ use crate::bolt::components::{Bolt, BoltServing, PrimaryBolt};
 fn headless_primary_serving_has_no_mesh_or_material() {
     let def = test_bolt_definition();
     let mut world = World::new();
-    let bundle = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::new(0.0, 50.0))
-        .serving()
-        .primary()
-        .headless()
-        .build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::new(0.0, 50.0))
+            .serving()
+            .primary()
+            .headless()
+            .spawn(commands)
+    });
 
     assert!(
         world.get::<Bolt>(entity).is_some(),
@@ -45,14 +56,15 @@ fn headless_primary_serving_has_no_mesh_or_material() {
 fn headless_extra_velocity_has_no_mesh_or_material() {
     let def = test_bolt_definition();
     let mut world = World::new();
-    let bundle = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::ZERO)
-        .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
-        .extra()
-        .headless()
-        .build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_in_world(&mut world, |commands| {
+        Bolt::builder()
+            .definition(&def)
+            .at_position(Vec2::ZERO)
+            .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
+            .extra()
+            .headless()
+            .spawn(commands)
+    });
 
     assert!(
         world.get::<Mesh2d>(entity).is_none(),
@@ -77,14 +89,13 @@ fn rendered_primary_serving_has_mesh_and_material() {
         move |mut commands: Commands,
               mut meshes: ResMut<Assets<Mesh>>,
               mut materials: ResMut<Assets<ColorMaterial>>| {
-            let bundle = Bolt::builder()
+            Bolt::builder()
                 .definition(&def)
                 .at_position(Vec2::new(0.0, 50.0))
                 .serving()
                 .primary()
                 .rendered(&mut meshes, &mut materials)
-                .build();
-            commands.spawn(bundle);
+                .spawn(&mut commands);
         }
     });
     app.update();
@@ -129,14 +140,13 @@ fn rendered_extra_velocity_has_mesh_and_material() {
         move |mut commands: Commands,
               mut meshes: ResMut<Assets<Mesh>>,
               mut materials: ResMut<Assets<ColorMaterial>>| {
-            let bundle = Bolt::builder()
+            Bolt::builder()
                 .definition(&def)
                 .at_position(Vec2::ZERO)
                 .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
                 .extra()
                 .rendered(&mut meshes, &mut materials)
-                .build();
-            commands.spawn(bundle);
+                .spawn(&mut commands);
         }
     });
     app.update();
@@ -171,14 +181,13 @@ fn rendered_primary_serving_has_valid_mesh_handle() {
         move |mut commands: Commands,
               mut meshes: ResMut<Assets<Mesh>>,
               mut materials: ResMut<Assets<ColorMaterial>>| {
-            let bundle = Bolt::builder()
+            Bolt::builder()
                 .definition(&def)
                 .at_position(Vec2::ZERO)
                 .serving()
                 .primary()
                 .rendered(&mut meshes, &mut materials)
-                .build();
-            commands.spawn(bundle);
+                .spawn(&mut commands);
         }
     });
     app.update();
@@ -213,14 +222,13 @@ fn rendered_bolt_has_mesh2d_present() {
         move |mut commands: Commands,
               mut meshes: ResMut<Assets<Mesh>>,
               mut materials: ResMut<Assets<ColorMaterial>>| {
-            let bundle = Bolt::builder()
+            Bolt::builder()
                 .definition(&def)
                 .at_position(Vec2::ZERO)
                 .serving()
                 .primary()
                 .rendered(&mut meshes, &mut materials)
-                .build();
-            commands.spawn(bundle);
+                .spawn(&mut commands);
         }
     });
     app.update();

@@ -125,23 +125,6 @@ impl CellHealth {
     }
 }
 
-/// Marker component — cell is locked and immune to damage.
-///
-/// Removed by `check_lock_release` when all adjacent cells are destroyed.
-#[derive(Component, Debug)]
-pub(crate) struct Locked;
-
-/// Tracks which adjacent cells must be destroyed to unlock this cell.
-#[derive(Component, Debug)]
-pub(crate) struct LockAdjacents(pub Vec<Entity>);
-
-/// Cell regenerates HP at this rate per second.
-#[derive(Component, Debug)]
-pub(crate) struct CellRegen {
-    /// HP regenerated per second.
-    pub rate: f32,
-}
-
 /// Marker component identifying a shield cell (spawns orbiting children).
 #[derive(Component, Debug)]
 pub(crate) struct ShieldParent;

@@ -249,12 +249,12 @@ impl GridCellContext<'_> {
                 for behavior in behaviors {
                     match behavior {
                         crate::cells::definition::CellBehavior::Regen { rate } => {
-                            entity.insert(CellRegen { rate: *rate });
+                            entity.insert((RegenCell, Regen, RegenRate(*rate)));
                         }
                     }
                 }
             }
-            entity.insert((ShieldParent, Locked));
+            entity.insert((ShieldParent, LockCell, Locked));
             entity.id()
         };
 
@@ -575,7 +575,7 @@ fn topological_sort_locks(locks: &LockMap) -> (Vec<GridCoord>, Vec<GridCoord>) {
     (sorted, cyclic)
 }
 
-/// Spawns orbit children around a shield cell and inserts `LockAdjacents`.
+/// Spawns orbit children around a shield cell and inserts `Locks`.
 fn spawn_orbit_children(
     commands: &mut Commands,
     shield: &ShieldBehavior,
@@ -634,9 +634,7 @@ fn spawn_orbit_children(
         orbit_ids.push(orbit_entity);
     }
 
-    commands
-        .entity(shield_entity)
-        .insert(LockAdjacents(orbit_ids));
+    commands.entity(shield_entity).insert(Locks(orbit_ids));
 }
 
 /// Resolves the `hp_mult` for the current node from the run state and node

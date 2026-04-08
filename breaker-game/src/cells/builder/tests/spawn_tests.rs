@@ -10,8 +10,8 @@ use rantzsoft_stateflow::CleanupOnExit;
 use crate::{
     cells::{
         components::{
-            Cell, CellDamageVisuals, CellHealth, CellHeight, CellRegen, CellTypeAlias, CellWidth,
-            LockAdjacents, Locked, RequiredToClear,
+            Cell, CellDamageVisuals, CellHealth, CellHeight, CellTypeAlias, CellWidth, Locked,
+            Locks, RegenRate, RequiredToClear,
         },
         definition::{CellBehavior, CellTypeDefinition},
     },
@@ -404,11 +404,11 @@ fn spawn_headless_with_definition_has_all_definition_components() {
     assert_eq!(alias.0, "R");
 
     let regen = world
-        .get::<CellRegen>(entity)
-        .expect("should have CellRegen");
+        .get::<RegenRate>(entity)
+        .expect("should have RegenRate");
     assert!(
-        (regen.rate - 2.0).abs() < f32::EPSILON,
-        "CellRegen rate should be 2.0"
+        (regen.0 - 2.0).abs() < f32::EPSILON,
+        "RegenRate rate should be 2.0"
     );
 }
 
@@ -469,8 +469,8 @@ fn spawn_headless_definition_behaviors_none_no_regen() {
     );
 
     assert!(
-        world.get::<CellRegen>(entity).is_none(),
-        "should NOT have CellRegen when definition has behaviors: None"
+        world.get::<RegenRate>(entity).is_none(),
+        "should NOT have RegenRate when definition has behaviors: None"
     );
 }
 
@@ -513,7 +513,7 @@ fn spawn_rendered_has_visual_components() {
 
 // ── Section J: spawn_inner() Behavior Insertion ─────────────────────────────
 
-// Behavior 41: CellBehavior::Regen { rate } inserts CellRegen component
+// Behavior 41: CellBehavior::Regen { rate } inserts RegenRate component
 #[test]
 fn spawn_inner_regen_behavior_inserts_cell_regen() {
     let mut world = World::new();
@@ -528,11 +528,11 @@ fn spawn_inner_regen_behavior_inserts_cell_regen() {
     });
 
     let regen = world
-        .get::<CellRegen>(entity)
-        .expect("entity should have CellRegen");
+        .get::<RegenRate>(entity)
+        .expect("entity should have RegenRate");
     assert!(
-        (regen.rate - 2.0).abs() < f32::EPSILON,
-        "CellRegen rate should be 2.0"
+        (regen.0 - 2.0).abs() < f32::EPSILON,
+        "RegenRate rate should be 2.0"
     );
 }
 
@@ -554,11 +554,11 @@ fn spawn_inner_multiple_regen_last_write_wins() {
     });
 
     let regen = world
-        .get::<CellRegen>(entity)
-        .expect("entity should have CellRegen");
+        .get::<RegenRate>(entity)
+        .expect("entity should have RegenRate");
     assert!(
-        (regen.rate - 5.0).abs() < f32::EPSILON,
-        "CellRegen rate should be 5.0 (last write wins)"
+        (regen.0 - 5.0).abs() < f32::EPSILON,
+        "RegenRate rate should be 5.0 (last write wins)"
     );
 }
 
@@ -581,12 +581,12 @@ fn spawn_inner_empty_behaviors_no_regen() {
         "entity should have CellHealth from builder"
     );
     assert!(
-        world.get::<CellRegen>(entity).is_none(),
-        "entity should NOT have CellRegen without behaviors"
+        world.get::<RegenRate>(entity).is_none(),
+        "entity should NOT have RegenRate without behaviors"
     );
 }
 
-// Behavior 43: .locked(entities) inserts Locked and LockAdjacents via spawn_inner
+// Behavior 43: .locked(entities) inserts Locked and Locks via spawn_inner
 #[test]
 fn spawn_inner_locked_inserts_markers() {
     let mut world = World::new();
@@ -608,8 +608,8 @@ fn spawn_inner_locked_inserts_markers() {
         "entity should have Locked marker"
     );
     let adjacents = world
-        .get::<LockAdjacents>(entity)
-        .expect("entity should have LockAdjacents");
+        .get::<Locks>(entity)
+        .expect("entity should have Locks");
     assert_eq!(adjacents.0.len(), 2);
     assert_eq!(adjacents.0[0], e1);
     assert_eq!(adjacents.0[1], e2);
@@ -632,8 +632,8 @@ fn spawn_inner_locked_single_entity() {
     });
 
     let adjacents = world
-        .get::<LockAdjacents>(entity)
-        .expect("entity should have LockAdjacents");
+        .get::<Locks>(entity)
+        .expect("entity should have Locks");
     assert_eq!(adjacents.0.len(), 1);
     assert_eq!(adjacents.0[0], e1);
 }

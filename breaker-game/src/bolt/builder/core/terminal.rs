@@ -147,30 +147,9 @@ fn spawn_inner(
     entity.id()
 }
 
-// ── Headless build() terminal impls ────────────────────────────────────────
+// ── Headless spawn() terminal impls ────────────────────────────────────────
 
 impl BoltBuilder<HasPosition, HasSpeed, HasAngle, Serving, Primary, Headless> {
-    /// Builds the core component bundle for a headless primary serving bolt.
-    #[must_use]
-    pub fn build(self) -> impl Bundle {
-        let params = CoreParams {
-            pos: self.position.pos,
-            base_speed: self.speed.base,
-            min_speed: self.speed.min,
-            max_speed: self.speed.max,
-            min_angle_h: self.angle.min_angle_h,
-            min_angle_v: self.angle.min_angle_v,
-            vel: Velocity2D(Vec2::ZERO),
-        };
-        let core = build_core(&params, &self.optional);
-        (
-            core,
-            PrimaryBolt,
-            CleanupOnExit::<RunState>::default(),
-            BoltServing,
-        )
-    }
-
     /// Spawns a headless primary serving bolt entity with all components.
     pub fn spawn(self, commands: &mut Commands) -> Entity {
         let params = CoreParams {
@@ -188,27 +167,6 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, Serving, Primary, Headless> {
 }
 
 impl BoltBuilder<HasPosition, HasSpeed, HasAngle, Serving, Extra, Headless> {
-    /// Builds the core component bundle for a headless extra serving bolt.
-    #[must_use]
-    pub fn build(self) -> impl Bundle {
-        let params = CoreParams {
-            pos: self.position.pos,
-            base_speed: self.speed.base,
-            min_speed: self.speed.min,
-            max_speed: self.speed.max,
-            min_angle_h: self.angle.min_angle_h,
-            min_angle_v: self.angle.min_angle_v,
-            vel: Velocity2D(Vec2::ZERO),
-        };
-        let core = build_core(&params, &self.optional);
-        (
-            core,
-            ExtraBolt,
-            CleanupOnExit::<NodeState>::default(),
-            BoltServing,
-        )
-    }
-
     /// Spawns a headless extra serving bolt entity with all components.
     pub fn spawn(self, commands: &mut Commands) -> Entity {
         let params = CoreParams {
@@ -226,22 +184,6 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, Serving, Extra, Headless> {
 }
 
 impl BoltBuilder<HasPosition, HasSpeed, HasAngle, HasVelocity, Primary, Headless> {
-    /// Builds the core component bundle for a headless primary bolt with velocity.
-    #[must_use]
-    pub fn build(self) -> impl Bundle {
-        let params = CoreParams {
-            pos: self.position.pos,
-            base_speed: self.speed.base,
-            min_speed: self.speed.min,
-            max_speed: self.speed.max,
-            min_angle_h: self.angle.min_angle_h,
-            min_angle_v: self.angle.min_angle_v,
-            vel: self.motion.vel,
-        };
-        let core = build_core(&params, &self.optional);
-        (core, PrimaryBolt, CleanupOnExit::<RunState>::default())
-    }
-
     /// Spawns a headless primary bolt entity with velocity and all components.
     pub fn spawn(self, commands: &mut Commands) -> Entity {
         let params = CoreParams {
@@ -259,22 +201,6 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, HasVelocity, Primary, Headless
 }
 
 impl BoltBuilder<HasPosition, HasSpeed, HasAngle, HasVelocity, Extra, Headless> {
-    /// Builds the core component bundle for a headless extra bolt with velocity.
-    #[must_use]
-    pub fn build(self) -> impl Bundle {
-        let params = CoreParams {
-            pos: self.position.pos,
-            base_speed: self.speed.base,
-            min_speed: self.speed.min,
-            max_speed: self.speed.max,
-            min_angle_h: self.angle.min_angle_h,
-            min_angle_v: self.angle.min_angle_v,
-            vel: self.motion.vel,
-        };
-        let core = build_core(&params, &self.optional);
-        (core, ExtraBolt, CleanupOnExit::<NodeState>::default())
-    }
-
     /// Spawns a headless extra bolt entity with velocity and all components.
     pub fn spawn(self, commands: &mut Commands) -> Entity {
         let params = CoreParams {
@@ -291,33 +217,9 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, HasVelocity, Extra, Headless> 
     }
 }
 
-// ── Rendered build() terminal impls ────────────────────────────────────────
+// ── Rendered spawn() terminal impls ────────────────────────────────────────
 
 impl BoltBuilder<HasPosition, HasSpeed, HasAngle, Serving, Primary, Rendered> {
-    /// Builds the core component bundle for a rendered primary serving bolt.
-    #[must_use]
-    pub fn build(self) -> impl Bundle {
-        let params = CoreParams {
-            pos: self.position.pos,
-            base_speed: self.speed.base,
-            min_speed: self.speed.min,
-            max_speed: self.speed.max,
-            min_angle_h: self.angle.min_angle_h,
-            min_angle_v: self.angle.min_angle_v,
-            vel: Velocity2D(Vec2::ZERO),
-        };
-        let core = build_core(&params, &self.optional);
-        (
-            core,
-            PrimaryBolt,
-            CleanupOnExit::<RunState>::default(),
-            BoltServing,
-            Mesh2d(self.visual.mesh),
-            MeshMaterial2d(self.visual.material),
-            GameDrawLayer::Bolt,
-        )
-    }
-
     /// Spawns a rendered primary serving bolt entity with all components.
     pub fn spawn(self, commands: &mut Commands) -> Entity {
         let mesh = self.visual.mesh.clone();
@@ -343,30 +245,6 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, Serving, Primary, Rendered> {
 }
 
 impl BoltBuilder<HasPosition, HasSpeed, HasAngle, Serving, Extra, Rendered> {
-    /// Builds the core component bundle for a rendered extra serving bolt.
-    #[must_use]
-    pub fn build(self) -> impl Bundle {
-        let params = CoreParams {
-            pos: self.position.pos,
-            base_speed: self.speed.base,
-            min_speed: self.speed.min,
-            max_speed: self.speed.max,
-            min_angle_h: self.angle.min_angle_h,
-            min_angle_v: self.angle.min_angle_v,
-            vel: Velocity2D(Vec2::ZERO),
-        };
-        let core = build_core(&params, &self.optional);
-        (
-            core,
-            ExtraBolt,
-            CleanupOnExit::<NodeState>::default(),
-            BoltServing,
-            Mesh2d(self.visual.mesh),
-            MeshMaterial2d(self.visual.material),
-            GameDrawLayer::Bolt,
-        )
-    }
-
     /// Spawns a rendered extra serving bolt entity with all components.
     pub fn spawn(self, commands: &mut Commands) -> Entity {
         let mesh = self.visual.mesh.clone();
@@ -392,29 +270,6 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, Serving, Extra, Rendered> {
 }
 
 impl BoltBuilder<HasPosition, HasSpeed, HasAngle, HasVelocity, Primary, Rendered> {
-    /// Builds the core component bundle for a rendered primary bolt with velocity.
-    #[must_use]
-    pub fn build(self) -> impl Bundle {
-        let params = CoreParams {
-            pos: self.position.pos,
-            base_speed: self.speed.base,
-            min_speed: self.speed.min,
-            max_speed: self.speed.max,
-            min_angle_h: self.angle.min_angle_h,
-            min_angle_v: self.angle.min_angle_v,
-            vel: self.motion.vel,
-        };
-        let core = build_core(&params, &self.optional);
-        (
-            core,
-            PrimaryBolt,
-            CleanupOnExit::<RunState>::default(),
-            Mesh2d(self.visual.mesh),
-            MeshMaterial2d(self.visual.material),
-            GameDrawLayer::Bolt,
-        )
-    }
-
     /// Spawns a rendered primary bolt entity with velocity and all components.
     pub fn spawn(self, commands: &mut Commands) -> Entity {
         let mesh = self.visual.mesh.clone();
@@ -440,29 +295,6 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, HasVelocity, Primary, Rendered
 }
 
 impl BoltBuilder<HasPosition, HasSpeed, HasAngle, HasVelocity, Extra, Rendered> {
-    /// Builds the core component bundle for a rendered extra bolt with velocity.
-    #[must_use]
-    pub fn build(self) -> impl Bundle {
-        let params = CoreParams {
-            pos: self.position.pos,
-            base_speed: self.speed.base,
-            min_speed: self.speed.min,
-            max_speed: self.speed.max,
-            min_angle_h: self.angle.min_angle_h,
-            min_angle_v: self.angle.min_angle_v,
-            vel: self.motion.vel,
-        };
-        let core = build_core(&params, &self.optional);
-        (
-            core,
-            ExtraBolt,
-            CleanupOnExit::<NodeState>::default(),
-            Mesh2d(self.visual.mesh),
-            MeshMaterial2d(self.visual.material),
-            GameDrawLayer::Bolt,
-        )
-    }
-
     /// Spawns a rendered extra bolt entity with velocity and all components.
     pub fn spawn(self, commands: &mut Commands) -> Entity {
         let mesh = self.visual.mesh.clone();

@@ -1,7 +1,17 @@
-use bevy::prelude::*;
+use bevy::{ecs::world::CommandQueue, prelude::*};
 
 use super::{super::core::*, helpers::test_breaker_definition};
 use crate::breaker::{components::Breaker, definition::BreakerDefinition};
+
+fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
+    let mut queue = CommandQueue::default();
+    let entity = {
+        let mut commands = Commands::new(&mut queue, world);
+        f(&mut commands)
+    };
+    queue.apply(world);
+    entity
+}
 
 // ── Behavior 1: Breaker::builder() returns a builder in the fully-unconfigured state ──
 
@@ -45,52 +55,75 @@ fn dimensions_transitions_to_has_dimensions() {
 fn dimensions_zero_compiles_and_stores_values() {
     let defaults = BreakerDefinition::default();
     let mut world = World::new();
-    let bundle = Breaker::builder()
-        .dimensions(0.0, 0.0, 0.0)
-        .movement(MovementSettings {
-            max_speed: defaults.max_speed,
-            acceleration: defaults.acceleration,
-            deceleration: defaults.deceleration,
-            decel_ease: defaults.decel_ease,
-            decel_ease_strength: defaults.decel_ease_strength,
-        })
-        .dashing(DashSettings {
-            dash: DashParams {
-                speed_multiplier: defaults.dash_speed_multiplier,
-                duration: defaults.dash_duration,
-                tilt_angle: defaults.dash_tilt_angle,
-                tilt_ease: defaults.dash_tilt_ease,
-            },
-            brake: BrakeParams {
-                tilt_angle: defaults.brake_tilt_angle,
-                tilt_duration: defaults.brake_tilt_duration,
-                tilt_ease: defaults.brake_tilt_ease,
-                decel_multiplier: defaults.brake_decel_multiplier,
-            },
-            settle: SettleParams {
-                duration: defaults.settle_duration,
-                tilt_ease: defaults.settle_tilt_ease,
-            },
-        })
-        .spread(defaults.reflection_spread)
-        .bump(BumpSettings {
-            perfect_window: defaults.perfect_window,
-            early_window: defaults.early_window,
-            late_window: defaults.late_window,
-            perfect_cooldown: defaults.perfect_bump_cooldown,
-            weak_cooldown: defaults.weak_bump_cooldown,
-            feedback: BumpFeedbackSettings {
-                duration: defaults.bump_visual_duration,
-                peak: defaults.bump_visual_peak,
-                peak_fraction: defaults.bump_visual_peak_fraction,
-                rise_ease: defaults.bump_visual_rise_ease,
-                fall_ease: defaults.bump_visual_fall_ease,
-            },
-        })
-        .headless()
-        .primary()
-        .build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_in_world(&mut world, |commands| {
+        Breaker::builder()
+            .dimensions(0.0, 0.0, 0.0)
+            .movement(MovementSettings {
+                max_speed: defaults.max_speed,
+
+                acceleration: defaults.acceleration,
+
+                deceleration: defaults.deceleration,
+
+                decel_ease: defaults.decel_ease,
+
+                decel_ease_strength: defaults.decel_ease_strength,
+            })
+            .dashing(DashSettings {
+                dash: DashParams {
+                    speed_multiplier: defaults.dash_speed_multiplier,
+
+                    duration: defaults.dash_duration,
+
+                    tilt_angle: defaults.dash_tilt_angle,
+
+                    tilt_ease: defaults.dash_tilt_ease,
+                },
+
+                brake: BrakeParams {
+                    tilt_angle: defaults.brake_tilt_angle,
+
+                    tilt_duration: defaults.brake_tilt_duration,
+
+                    tilt_ease: defaults.brake_tilt_ease,
+
+                    decel_multiplier: defaults.brake_decel_multiplier,
+                },
+
+                settle: SettleParams {
+                    duration: defaults.settle_duration,
+
+                    tilt_ease: defaults.settle_tilt_ease,
+                },
+            })
+            .spread(defaults.reflection_spread)
+            .bump(BumpSettings {
+                perfect_window: defaults.perfect_window,
+
+                early_window: defaults.early_window,
+
+                late_window: defaults.late_window,
+
+                perfect_cooldown: defaults.perfect_bump_cooldown,
+
+                weak_cooldown: defaults.weak_bump_cooldown,
+
+                feedback: BumpFeedbackSettings {
+                    duration: defaults.bump_visual_duration,
+
+                    peak: defaults.bump_visual_peak,
+
+                    peak_fraction: defaults.bump_visual_peak_fraction,
+
+                    rise_ease: defaults.bump_visual_rise_ease,
+
+                    fall_ease: defaults.bump_visual_fall_ease,
+                },
+            })
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
     // Stub returns only Breaker marker; BaseWidth(0.0) will be missing (test FAILS in RED)
     let bw = world.get::<crate::shared::BaseWidth>(entity);
     assert!(
@@ -106,13 +139,14 @@ fn dimensions_zero_compiles_and_stores_values() {
 #[test]
 fn dimensions_negative_y_stores_value() {
     let mut world = World::new();
-    let bundle = Breaker::builder()
-        .definition(&test_breaker_definition())
-        .with_y_position(-500.0)
-        .headless()
-        .primary()
-        .build();
-    let entity = world.spawn(bundle).id();
+    let entity = spawn_in_world(&mut world, |commands| {
+        Breaker::builder()
+            .definition(&test_breaker_definition())
+            .with_y_position(-500.0)
+            .headless()
+            .primary()
+            .spawn(commands)
+    });
     let base_y = world.get::<crate::breaker::components::BreakerBaseY>(entity);
     assert!(base_y.is_some(), "entity should have BreakerBaseY(-500.0)");
     assert!(

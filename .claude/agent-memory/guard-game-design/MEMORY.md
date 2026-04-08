@@ -16,6 +16,7 @@
 - [Bolt Birthing Animation](evaluation-bolt-birthing-animation.md) — Concept approved; 0.3s too slow (recommend 0.12-0.15s); linear lerp weak (ease-out); AnimateIn gate questionable; tether beam interaction approved; quit chain approved
 
 - [Protocol Brainstorm Evaluation](evaluation-protocol-brainstorm.md) — 15 protocol designs; 2 legendaries promoted; archetypes and hazard counter-play mapped
+- [Protocol Brainstorm R2](evaluation-protocol-brainstorm-r2.md) — Chip/protocol reclassification: 5 demoted to chips (Overburn, Fission, Iron Curtain, Kickstart, Gravity Lens); 5 replacements designed (Greed, Reckless Dash, Polarity, Momentum Flip, Burnout)
 
 ## Audits
 - [Chip/Evolution Coherence Audit](audit-chip-evolution-coherence.md) — 3 critical overlaps, 6 orphan chips, power curve issues; 4 of 5 missing RON files now exist (flashstep, chain_reaction, feedback_loop, powder_keg)

@@ -130,14 +130,14 @@ fn spawn_inner(commands: &mut Commands, core: impl Bundle, optional: OptionalCel
     }
 
     if let Some(entities) = optional.locked_entities.clone() {
-        entity.insert((Locked, LockAdjacents(entities)));
+        entity.insert((LockCell, Locked, Locks(entities)));
     }
 
     let behaviors = resolve_behaviors(&optional);
     for behavior in behaviors {
         match behavior {
             CellBehavior::Regen { rate } => {
-                entity.insert(CellRegen { rate });
+                entity.insert((RegenCell, Regen, RegenRate(rate)));
             }
         }
     }

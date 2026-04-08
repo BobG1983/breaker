@@ -150,16 +150,13 @@ fn missing_chip_catalog_resource_does_not_panic() {
     let breaker = {
         use crate::breaker::{components::Breaker, definition::BreakerDefinition};
         let def = BreakerDefinition::default();
-        let entity = app
-            .world_mut()
-            .spawn(
-                Breaker::builder()
-                    .definition(&def)
-                    .headless()
-                    .primary()
-                    .build(),
-            )
-            .id();
+        let entity = spawn_in_world(app.world_mut(), |commands| {
+            Breaker::builder()
+                .definition(&def)
+                .headless()
+                .primary()
+                .spawn(commands)
+        });
         app.world_mut()
             .entity_mut(entity)
             .insert((BoundEffects::default(), StagedEffects::default()));
@@ -254,16 +251,13 @@ fn missing_chip_inventory_resource_does_not_panic() {
             effect::effects::speed_boost::ActiveSpeedBoosts,
         };
         let def = BreakerDefinition::default();
-        let entity = app
-            .world_mut()
-            .spawn(
-                Breaker::builder()
-                    .definition(&def)
-                    .headless()
-                    .primary()
-                    .build(),
-            )
-            .id();
+        let entity = spawn_in_world(app.world_mut(), |commands| {
+            Breaker::builder()
+                .definition(&def)
+                .headless()
+                .primary()
+                .spawn(commands)
+        });
         app.world_mut().entity_mut(entity).insert((
             BoundEffects::default(),
             StagedEffects::default(),

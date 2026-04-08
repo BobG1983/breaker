@@ -98,21 +98,21 @@ fn regen_cell_definition_spawns_with_cell_regen_component() {
     let mut app = behavior_test_app(layout, behavior_registry());
     app.update();
 
-    let regen_cells: Vec<&CellRegen> = app
+    let regen_cells: Vec<&RegenRate> = app
         .world_mut()
-        .query::<(&Cell, &CellRegen)>()
+        .query::<(&Cell, &RegenRate)>()
         .iter(app.world())
         .map(|(_, regen)| regen)
         .collect();
     assert_eq!(
         regen_cells.len(),
         1,
-        "cell with behaviors: [Regen {{ rate: 2.0 }}] should have CellRegen component"
+        "cell with behaviors: [Regen {{ rate: 2.0 }}] should have RegenRate component"
     );
     assert!(
-        (regen_cells[0].rate - 2.0).abs() < f32::EPSILON,
-        "CellRegen rate should be 2.0, got {}",
-        regen_cells[0].rate
+        (regen_cells[0].0 - 2.0).abs() < f32::EPSILON,
+        "RegenRate rate should be 2.0, got {}",
+        regen_cells[0].0
     );
 }
 
@@ -134,12 +134,12 @@ fn non_regen_cell_does_not_have_cell_regen_component() {
 
     let regen_count = app
         .world_mut()
-        .query::<(&Cell, &CellRegen)>()
+        .query::<(&Cell, &RegenRate)>()
         .iter(app.world())
         .count();
     assert_eq!(
         regen_count, 0,
-        "cells with behaviors: None should NOT have CellRegen component"
+        "cells with behaviors: None should NOT have RegenRate component"
     );
 }
 
