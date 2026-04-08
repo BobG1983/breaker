@@ -1100,3 +1100,51 @@ spawning the entity, not inside the observer closure).
 `Screenshot::primary_window()` per frame will be captured.
 
 Full research report: `.claude/research/scenario-runner-bevy-screenshot-api.md`
+
+---
+
+## AppExit — Message-Based App Shutdown
+
+### AppExit is a Message, not an Event
+
+```rust
+#[derive(Message, Debug, Clone, Default, PartialEq, Eq)]
+pub enum AppExit { #[default] Success, Error(NonZero<u8>) }
+```
+
+### Registration — automatic, never call add_message::<AppExit>()
+
+`App::default()` always calls `app.add_message::<AppExit>()` (line 131, app.rs). It is always
+available as a `MessageWriter<AppExit>` system param. Never register it yourself.
+
+### Writing AppExit
+
+```rust
+fn quit(mut writer: MessageWriter<AppExit>) {
+    writer.write(AppExit::Success);  // app exits after this frame
+}
+```
+
+### When does the runner check for AppExit?
+
+**Not inside the schedule.** The check is in the runner, outside ECS, after `app.update()` returns.
+`App::should_exit()` creates a fresh `MessageCursor` (last_message_count=0) and reads `Messages<AppExit>`.
+Because the cursor starts at 0, it reads the FULL double-buffer — so the message is visible
+even after `message_update_system` has swapped buffers.
+
+- **Windowed apps (DefaultPlugins/winit)**: checked in `redraw_requested()` after each `app.update()` call
+- **Headless apps (ScheduleRunnerPlugin)**: checked after each loop iteration
+- Both call `app.should_exit()` which scans `Messages<AppExit>` with a fresh cursor
+
+### Hang-on-quit: the most likely cause
+
+`UpdateMode::Reactive` — winit only calls `app.update()` when events arrive. If no events fire
+after `AppExit` is written, `should_exit()` is never called and the message sits unchecked.
+Solution: ensure an input event fires, OR trigger a `RequestRedraw` message alongside `AppExit`.
+
+### Error priority
+
+If both `AppExit::Success` and `AppExit::Error(N)` exist in the buffer, `should_exit()` returns
+the first `Error` it finds.
+
+Full research report: `.claude/research/bevy-app-exit-api.md`
