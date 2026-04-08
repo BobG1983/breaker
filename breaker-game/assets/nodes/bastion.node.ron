@@ -1,0 +1,18 @@
+/* @[brickbreaker::cells::resources::NodeLayout] */
+(
+    name: "Bastion",
+    timer_secs: 80.0,
+    cols: 10,
+    rows: 7,
+    grid_top_offset: 60.0,
+    pool: Active,
+    grid: [
+        ["S","S","S","S","S","S","S","S","S","S"],
+        ["S",".",".","gu",".","gu",".",".",".","S"],
+        ["S",".","gu","Gu","gu","Gu","gu",".",".","S"],
+        ["S",".",".","gu",".","gu",".",".",".","S"],
+        [".",".",".",".",".",".",".",".",".","."],
+        ["T","T","T","T","T","T","T","T","T","T"],
+        ["S","S","S","S","S","S","S","S","S","S"],
+    ],
+)
