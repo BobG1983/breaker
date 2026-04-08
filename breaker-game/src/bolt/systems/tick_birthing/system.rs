@@ -19,7 +19,9 @@ pub(crate) fn tick_birthing(
     for (entity, mut birthing, mut scale, mut layers) in &mut query {
         birthing.timer.tick(time.delta());
 
-        let t = birthing.fraction();
+        let linear = birthing.fraction();
+        // Ease-out: fast start, smooth finish — feels snappy and alive
+        let t = linear * (2.0 - linear);
 
         if birthing.timer.just_finished() {
             // Snap to exact target — no lerp drift
@@ -28,7 +30,7 @@ pub(crate) fn tick_birthing(
             *layers = birthing.stashed_layers;
             commands.entity(entity).remove::<Birthing>();
         } else {
-            // Linear lerp from zero to target
+            // Ease-out lerp from zero to target
             scale.x = birthing.target_scale.x * t;
             scale.y = birthing.target_scale.y * t;
         }

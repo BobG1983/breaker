@@ -380,8 +380,10 @@ fn sync_bolt_scale_empty_world_no_panic() {
 fn test_birthing() -> crate::shared::birthing::Birthing {
     use rantzsoft_physics2d::collision_layers::CollisionLayers;
 
+    use crate::shared::birthing::BIRTHING_DURATION;
+
     crate::shared::birthing::Birthing {
-        timer: Timer::from_seconds(0.3, TimerMode::Once),
+        timer: Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
         target_scale: Scale2D { x: 8.0, y: 8.0 },
         stashed_layers: CollisionLayers::default(),
     }

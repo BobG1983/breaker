@@ -13,7 +13,7 @@ pub enum AppState {
     Loading,
     /// Game is running — sub-states handle menus, runs, nodes.
     Game,
-    /// Application teardown (not used in normal flow).
+    /// Application teardown — reached via quit-from-menu path.
     Teardown,
 }
 

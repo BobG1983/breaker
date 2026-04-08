@@ -18,7 +18,7 @@ pub enum GameState {
     Menu,
     /// Active run — nodes, chip select, run end.
     Run,
-    /// Game-level teardown (not used in normal flow).
+    /// Game-level teardown — reached via quit-from-menu path.
     Teardown,
 }
 

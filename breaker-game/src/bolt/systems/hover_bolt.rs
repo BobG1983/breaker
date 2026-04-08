@@ -97,8 +97,10 @@ mod tests {
         use rantzsoft_physics2d::collision_layers::CollisionLayers;
         use rantzsoft_spatial2d::components::Scale2D;
 
+        use crate::shared::birthing::BIRTHING_DURATION;
+
         crate::shared::birthing::Birthing {
-            timer: Timer::from_seconds(0.3, TimerMode::Once),
+            timer: Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
             target_scale: Scale2D { x: 8.0, y: 8.0 },
             stashed_layers: CollisionLayers::default(),
         }
