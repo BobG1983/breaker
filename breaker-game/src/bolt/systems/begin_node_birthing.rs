@@ -281,6 +281,36 @@ mod tests {
         );
     }
 
+    // Edge case: Bolt with zero scale gets Birthing with zero target_scale
+    #[test]
+    fn bolt_with_zero_scale_gets_zero_target_scale() {
+        let mut app = test_app();
+
+        let entity = app
+            .world_mut()
+            .spawn((
+                Bolt,
+                Scale2D { x: 0.0, y: 0.0 },
+                PreviousScale { x: 0.0, y: 0.0 },
+                CollisionLayers::new(BOLT_LAYER, CELL_LAYER | WALL_LAYER | BREAKER_LAYER),
+            ))
+            .id();
+
+        app.update();
+
+        let birthing = app
+            .world()
+            .get::<Birthing>(entity)
+            .expect("Bolt should have Birthing");
+        assert!(
+            birthing.target_scale.x.abs() < f32::EPSILON
+                && birthing.target_scale.y.abs() < f32::EPSILON,
+            "Zero-scale bolt should have zero target_scale, got ({}, {})",
+            birthing.target_scale.x,
+            birthing.target_scale.y
+        );
+    }
+
     // Edge case: Single bolt entity
     #[test]
     fn single_bolt_entity() {

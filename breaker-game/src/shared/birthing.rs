@@ -7,7 +7,9 @@ use rantzsoft_physics2d::collision_layers::CollisionLayers;
 use rantzsoft_spatial2d::components::Scale2D;
 
 /// Duration of the birthing animation in seconds.
-pub(crate) const BIRTHING_DURATION: f32 = 0.3;
+///
+/// Must be short enough to avoid dead air (see `docs/design/decisions/animate-in-timing.md`).
+pub(crate) const BIRTHING_DURATION: f32 = 0.15;
 
 /// Tracks an entity that is animating into existence.
 ///
@@ -54,15 +56,15 @@ mod tests {
     #[test]
     fn birthing_stores_timer_target_scale_and_stashed_layers() {
         let birthing = Birthing {
-            timer: Timer::from_seconds(0.3, TimerMode::Once),
+            timer: Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
             target_scale: Scale2D { x: 8.0, y: 8.0 },
             stashed_layers: CollisionLayers::new(0x01, 0x0E),
         };
 
         assert_eq!(
             birthing.timer.duration(),
-            Duration::from_secs_f32(0.3),
-            "timer duration should be 0.3s"
+            Duration::from_secs_f32(BIRTHING_DURATION),
+            "timer duration should be {BIRTHING_DURATION}s"
         );
         assert!(
             (birthing.target_scale.x - 8.0).abs() < f32::EPSILON,
@@ -85,7 +87,7 @@ mod tests {
     #[test]
     fn birthing_stashed_layers_default_stored_exactly() {
         let birthing = Birthing {
-            timer: Timer::from_seconds(0.3, TimerMode::Once),
+            timer: Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
             target_scale: Scale2D { x: 8.0, y: 8.0 },
             stashed_layers: CollisionLayers::default(),
         };
@@ -102,10 +104,10 @@ mod tests {
 
     // Behavior 2: BIRTHING_DURATION constant is 0.3 seconds
     #[test]
-    fn birthing_duration_is_zero_point_three() {
+    fn birthing_duration_is_zero_point_fifteen() {
         assert!(
-            (BIRTHING_DURATION - 0.3).abs() < f32::EPSILON,
-            "BIRTHING_DURATION should be 0.3, got {BIRTHING_DURATION}"
+            (BIRTHING_DURATION - 0.15).abs() < f32::EPSILON,
+            "BIRTHING_DURATION should be 0.15, got {BIRTHING_DURATION}"
         );
     }
 }

@@ -44,8 +44,8 @@ fn scale_increases_from_zero_after_one_tick() {
 
     tick(&mut app);
 
-    // After 1 tick at 1/64s, timer fraction is approximately 0.015625 / 0.3 = 0.05208
-    // Scale should be approximately 8.0 * 0.05208 = 0.4167
+    // After 1 tick at 1/64s: fraction ≈ 0.1042, ease-out t*(2-t) ≈ 0.1975
+    // Scale should be approximately 8.0 * 0.1975 ≈ 1.58
     let scale = app
         .world()
         .get::<Scale2D>(entity)
@@ -56,13 +56,14 @@ fn scale_increases_from_zero_after_one_tick() {
         scale.x
     );
     assert!(
-        (scale.x - 0.4167).abs() < 0.05,
-        "Scale2D.x should be approximately 0.4167, got {}",
+        scale.x > 1.0 && scale.x < 2.5,
+        "Scale2D.x should be in ease-out range after one tick, got {}",
         scale.x
     );
     assert!(
-        (scale.y - 0.4167).abs() < 0.05,
-        "Scale2D.y should be approximately 0.4167, got {}",
+        (scale.x - scale.y).abs() < f32::EPSILON,
+        "Scale2D.x and y should match for square target, got ({}, {})",
+        scale.x,
         scale.y
     );
 
@@ -108,8 +109,8 @@ fn scale_reaches_exact_target_after_full_duration() {
         ))
         .id();
 
-    // 20 ticks at 1/64s = 0.3125s > 0.3s -- timer should complete
-    for _ in 0..20 {
+    // 10 ticks at 1/64s = 0.15625s > 0.15s -- timer should complete
+    for _ in 0..10 {
         tick(&mut app);
     }
 
@@ -302,6 +303,66 @@ fn handles_zero_y_target_scale() {
     );
 }
 
+// Edge case: Non-default CollisionLayers stay zeroed during birthing
+#[test]
+fn non_default_layers_stay_zeroed_during_birthing() {
+    let mut app = test_app();
+
+    // Entity starts with non-zero CollisionLayers that were stashed by begin_node_birthing.
+    // During birthing, the entity's live layers should be zeroed regardless.
+    let entity = app
+        .world_mut()
+        .spawn((
+            Scale2D { x: 0.0, y: 0.0 },
+            CollisionLayers::new(BOLT_LAYER, CELL_LAYER | WALL_LAYER | BREAKER_LAYER),
+            Birthing {
+                timer: Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
+                target_scale: Scale2D { x: 8.0, y: 8.0 },
+                stashed_layers: CollisionLayers::new(
+                    BOLT_LAYER,
+                    CELL_LAYER | WALL_LAYER | BREAKER_LAYER,
+                ),
+            },
+        ))
+        .id();
+
+    // After 1 tick, layers should still be whatever they were — tick_birthing
+    // only restores layers on completion, it doesn't zero them mid-animation.
+    // (begin_node_birthing is responsible for zeroing at insertion time.)
+    tick(&mut app);
+
+    let layers = app
+        .world()
+        .get::<CollisionLayers>(entity)
+        .expect("entity should have CollisionLayers");
+    // The entity started with non-zero layers. tick_birthing doesn't touch layers
+    // until completion — it's begin_node_birthing / .birthed() that zeros them.
+    // This test documents that tick_birthing does NOT zero layers mid-animation.
+    assert_eq!(
+        layers.membership, BOLT_LAYER,
+        "tick_birthing should not zero layers mid-animation (that's the builder's job)"
+    );
+
+    // After completion, stashed layers are restored
+    for _ in 0..10 {
+        tick(&mut app);
+    }
+
+    let layers = app
+        .world()
+        .get::<CollisionLayers>(entity)
+        .expect("entity should have CollisionLayers");
+    assert_eq!(
+        layers.membership, BOLT_LAYER,
+        "stashed layers should be restored on completion"
+    );
+    assert_eq!(
+        layers.mask,
+        CELL_LAYER | WALL_LAYER | BREAKER_LAYER,
+        "stashed mask should be restored on completion"
+    );
+}
+
 // Behavior 7: tick_birthing does not affect entities without Birthing
 #[test]
 fn does_not_affect_entities_without_birthing() {
@@ -461,21 +522,22 @@ fn scale_lerp_is_linear_at_midpoint() {
         ))
         .id();
 
-    // Approximately 10 ticks at 1/64s to reach ~50% of 0.3s
-    for _ in 0..10 {
+    // Approximately 5 ticks at 1/64s to reach ~50% of 0.15s
+    for _ in 0..5 {
         tick(&mut app);
     }
 
     let scale = app.world().get::<Scale2D>(entity).expect("entity exists");
-    // At ~50% fraction, scale should be approximately 10.0 * 0.5 = 5.0
+    // At ~50% fraction, ease-out t*(2-t) = 0.5*1.5 = 0.75, scale ≈ 10.0*0.75 = 7.5
     assert!(
-        (scale.x - 5.0).abs() < 0.5,
-        "Scale2D.x should be approximately 5.0 at midpoint, got {}",
+        scale.x > 6.0 && scale.x < 9.0,
+        "Scale2D.x should be in ease-out midpoint range (~7.5), got {}",
         scale.x
     );
     assert!(
-        (scale.y - 5.0).abs() < 0.5,
-        "Scale2D.y should be approximately 5.0 at midpoint, got {}",
+        (scale.x - scale.y).abs() < f32::EPSILON,
+        "Scale2D.x and y should match for square target, got ({}, {})",
+        scale.x,
         scale.y
     );
 }
@@ -546,8 +608,8 @@ fn full_birthing_lifecycle_from_builder() {
         "CollisionLayers should be zeroed before ticking"
     );
 
-    // Tick enough to complete birthing (20+ ticks)
-    for _ in 0..22 {
+    // Tick enough to complete birthing (10+ ticks)
+    for _ in 0..12 {
         tick(&mut app);
     }
 

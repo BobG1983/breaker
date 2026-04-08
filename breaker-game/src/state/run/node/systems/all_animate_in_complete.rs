@@ -21,6 +21,7 @@ pub(crate) fn all_animate_in_complete(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::shared::birthing::BIRTHING_DURATION;
 
     fn test_app() -> App {
         let mut app = App::new();
@@ -72,7 +73,7 @@ mod tests {
             Scale2D { x: 0.0, y: 0.0 },
             CollisionLayers::default(),
             Birthing {
-                timer: Timer::from_seconds(0.3, TimerMode::Once),
+                timer: Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
                 target_scale: Scale2D { x: 8.0, y: 8.0 },
                 stashed_layers: CollisionLayers::new(0x01, 0x0E),
             },
@@ -101,7 +102,7 @@ mod tests {
             Scale2D { x: 0.0, y: 0.0 },
             CollisionLayers::default(),
             Birthing {
-                timer: Timer::from_seconds(0.3, TimerMode::Once),
+                timer: Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
                 target_scale: Scale2D { x: 8.0, y: 8.0 },
                 stashed_layers: CollisionLayers::new(0x01, 0x0E),
             },
@@ -111,7 +112,7 @@ mod tests {
             Scale2D { x: 0.0, y: 0.0 },
             CollisionLayers::default(),
             Birthing {
-                timer: Timer::from_seconds(0.3, TimerMode::Once),
+                timer: Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
                 target_scale: Scale2D { x: 16.0, y: 16.0 },
                 stashed_layers: CollisionLayers::new(0x02, 0x0D),
             },
@@ -184,7 +185,7 @@ mod tests {
                 PreviousScale { x: 0.0, y: 0.0 },
                 CollisionLayers::default(),
                 Birthing {
-                    timer: Timer::from_seconds(0.3, TimerMode::Once),
+                    timer: Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
                     target_scale: Scale2D { x: 8.0, y: 8.0 },
                     stashed_layers: CollisionLayers::new(
                         BOLT_LAYER,
