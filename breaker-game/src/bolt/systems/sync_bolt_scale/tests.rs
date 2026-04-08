@@ -373,3 +373,105 @@ fn sync_bolt_scale_empty_world_no_panic() {
     // No entities — system should run without panicking
     tick(&mut app);
 }
+
+// ── Behaviors 8-9: sync_bolt_scale skips bolts with Birthing ──
+
+/// Helper to create a `Birthing` component for tests.
+fn test_birthing() -> crate::shared::birthing::Birthing {
+    use rantzsoft_physics2d::collision_layers::CollisionLayers;
+
+    crate::shared::birthing::Birthing {
+        timer: Timer::from_seconds(0.3, TimerMode::Once),
+        target_scale: Scale2D { x: 8.0, y: 8.0 },
+        stashed_layers: CollisionLayers::default(),
+    }
+}
+
+// Behavior 8: sync_bolt_scale skips bolts with Birthing
+#[test]
+fn sync_bolt_scale_skips_bolts_with_birthing() {
+    let mut app = test_app();
+
+    let entity = app
+        .world_mut()
+        .spawn((
+            Bolt,
+            BaseRadius(8.0),
+            Scale2D { x: 1.0, y: 1.0 },
+            test_birthing(),
+        ))
+        .id();
+
+    tick(&mut app);
+
+    let scale = app.world().get::<Scale2D>(entity).unwrap();
+    assert!(
+        (scale.x - 1.0).abs() < f32::EPSILON && (scale.y - 1.0).abs() < f32::EPSILON,
+        "sync_bolt_scale should NOT modify Scale2D on bolt with Birthing, expected (1.0, 1.0), got ({}, {})",
+        scale.x,
+        scale.y,
+    );
+}
+
+// Behavior 8 edge case: non-birthing bolt DOES get Scale2D updated
+#[test]
+fn sync_bolt_scale_skips_birthing_but_processes_non_birthing() {
+    let mut app = test_app();
+
+    let birthing_bolt = app
+        .world_mut()
+        .spawn((
+            Bolt,
+            BaseRadius(8.0),
+            Scale2D { x: 1.0, y: 1.0 },
+            test_birthing(),
+        ))
+        .id();
+
+    let normal_bolt = app
+        .world_mut()
+        .spawn((Bolt, BaseRadius(8.0), Scale2D { x: 1.0, y: 1.0 }))
+        .id();
+
+    tick(&mut app);
+
+    // Birthing bolt: Scale2D unchanged
+    let birthing_scale = app.world().get::<Scale2D>(birthing_bolt).unwrap();
+    assert!(
+        (birthing_scale.x - 1.0).abs() < f32::EPSILON
+            && (birthing_scale.y - 1.0).abs() < f32::EPSILON,
+        "birthing bolt Scale2D should remain (1.0, 1.0), got ({}, {})",
+        birthing_scale.x,
+        birthing_scale.y,
+    );
+
+    // Non-birthing bolt: Scale2D set to (8.0, 8.0)
+    let normal_scale = app.world().get::<Scale2D>(normal_bolt).unwrap();
+    assert!(
+        (normal_scale.x - 8.0).abs() < f32::EPSILON && (normal_scale.y - 8.0).abs() < f32::EPSILON,
+        "non-birthing bolt Scale2D should be (8.0, 8.0), got ({}, {})",
+        normal_scale.x,
+        normal_scale.y,
+    );
+}
+
+// Behavior 9: sync_bolt_scale processes bolts without Birthing normally
+#[test]
+fn sync_bolt_scale_processes_non_birthing_bolt_with_radius_14() {
+    let mut app = test_app();
+
+    let entity = app
+        .world_mut()
+        .spawn((Bolt, BaseRadius(14.0), Scale2D { x: 1.0, y: 1.0 }))
+        .id();
+
+    tick(&mut app);
+
+    let scale = app.world().get::<Scale2D>(entity).unwrap();
+    assert!(
+        (scale.x - 14.0).abs() < f32::EPSILON && (scale.y - 14.0).abs() < f32::EPSILON,
+        "non-birthing bolt Scale2D should be (14.0, 14.0), got ({}, {})",
+        scale.x,
+        scale.y,
+    );
+}

@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::{bolt::messages::BoltImpactWall, shared::PlayfieldConfig, walls::components::Wall};
+use crate::prelude::*;
 
 /// Marker for the shield wall entity spawned by the Shield effect.
 #[derive(Component)]

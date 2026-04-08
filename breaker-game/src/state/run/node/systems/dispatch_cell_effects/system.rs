@@ -7,14 +7,12 @@
 use bevy::prelude::*;
 
 use crate::{
-    bolt::components::Bolt,
-    breaker::components::Breaker,
     cells::{
-        components::{Cell, CellEffectsDispatched, CellTypeAlias},
+        components::{CellEffectsDispatched, CellTypeAlias},
         resources::CellTypeRegistry,
     },
-    effect::{EffectCommandsExt, EffectNode, RootEffect, Target},
-    walls::components::Wall,
+    effect::{EffectCommandsExt, Target},
+    prelude::*,
 };
 
 /// Query for cells that have not yet had their effects dispatched.

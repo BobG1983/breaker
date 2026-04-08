@@ -1,6 +1,6 @@
 //! Main menu keyboard and mouse input handling.
 
-use bevy::{app::AppExit, prelude::*};
+use bevy::prelude::*;
 use rantzsoft_stateflow::ChangeState;
 
 use crate::{
@@ -21,7 +21,6 @@ pub(crate) fn handle_main_menu_input(
     config: Res<InputConfig>,
     mut selection: ResMut<MainMenuSelection>,
     mut state_writer: MessageWriter<ChangeState<MenuState>>,
-    mut exit_writer: MessageWriter<AppExit>,
     interaction_query: Query<(&Interaction, &MenuItem), Changed<Interaction>>,
 ) {
     // Mouse interaction
@@ -29,7 +28,7 @@ pub(crate) fn handle_main_menu_input(
         match interaction {
             Interaction::Pressed => {
                 selection.selected = *item;
-                confirm_selection(&selection, &mut state_writer, &mut exit_writer);
+                confirm_selection(&selection, &mut state_writer);
             }
             Interaction::Hovered => {
                 selection.selected = *item;
@@ -56,7 +55,7 @@ pub(crate) fn handle_main_menu_input(
     }
 
     if config.menu_confirm.iter().any(|k| keys.just_pressed(*k)) {
-        confirm_selection(&selection, &mut state_writer, &mut exit_writer);
+        confirm_selection(&selection, &mut state_writer);
     }
 }
 
@@ -72,22 +71,18 @@ fn current_index(selection: &MainMenuSelection) -> usize {
 fn confirm_selection(
     selection: &MainMenuSelection,
     state_writer: &mut MessageWriter<ChangeState<MenuState>>,
-    exit_writer: &mut MessageWriter<AppExit>,
 ) {
     match selection.selected {
-        MenuItem::Play => {
+        MenuItem::Play | MenuItem::Quit => {
             state_writer.write(ChangeState::new());
         }
-        MenuItem::Settings => {} // Not yet implemented
-        MenuItem::Quit => {
-            exit_writer.write(AppExit::Success);
-        }
+        MenuItem::Settings => {}
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use bevy::{ecs::message::Messages, state::app::StatesPlugin};
+    use bevy::{app::AppExit, ecs::message::Messages, state::app::StatesPlugin};
     use rantzsoft_stateflow::ChangeState;
 
     use super::*;
@@ -159,17 +154,15 @@ mod tests {
     }
 
     #[test]
-    fn enter_on_quit_sends_exit() {
+    fn enter_on_quit_sends_change_state() {
         let mut app = test_app();
         app.world_mut().resource_mut::<MainMenuSelection>().selected = MenuItem::Quit;
         press_key(&mut app, KeyCode::Enter);
 
-        let messages = app.world().resource::<Messages<AppExit>>();
+        let messages = app.world().resource::<Messages<ChangeState<MenuState>>>();
         assert!(
-            messages
-                .iter_current_update_messages()
-                .any(|m| *m == AppExit::Success),
-            "expected AppExit::Success message"
+            messages.iter_current_update_messages().count() > 0,
+            "expected ChangeState<MenuState> message for quit"
         );
     }
 

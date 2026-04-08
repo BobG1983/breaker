@@ -66,6 +66,12 @@ hover_bolt.after(BreakerSystems::Move)
 
 The actual cross-domain ordering constraints in the codebase:
 
+### OnEnter(NodeState::AnimateIn)
+
+```
+begin_node_birthing                      [bolt domain — inserts Birthing on all bolt entities, zeroes Scale2D/PreviousScale/CollisionLayers]
+```
+
 ### OnEnter(NodeState::Loading)
 
 ```
@@ -98,6 +104,10 @@ Note: `spawn_or_reuse_breaker` is a single system that replaces the old 4-system
 ### FixedUpdate
 
 ```
+tick_birthing                            [bolt domain — lerps Scale2D from zero → target; restores CollisionLayers on completion; removes Birthing]
+  .run_if(in_state(NodeState::AnimateIn).or(in_state(NodeState::Playing)))
+  [unordered — runs independently of physics chain]
+
 dispatch_bolt_effects .before(EffectSystems::Bridge)
   [bolt domain — processes Added<BoltDefinitionRef> each FixedUpdate tick]
 

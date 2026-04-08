@@ -3,13 +3,9 @@
 use bevy::prelude::*;
 
 use crate::{
-    breaker::{
-        components::{Breaker, DashState},
-        queries::BreakerMovementData,
-    },
-    effect::effects::{size_boost::ActiveSizeBoosts, speed_boost::ActiveSpeedBoosts},
-    input::resources::{GameAction, InputActions},
-    shared::PlayfieldConfig,
+    breaker::{components::DashState, queries::BreakerMovementData},
+    input::resources::GameAction,
+    prelude::*,
 };
 
 /// Reads input actions and moves the breaker horizontally.

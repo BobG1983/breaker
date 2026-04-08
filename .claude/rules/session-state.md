@@ -66,13 +66,18 @@ Keep under 80 lines. Use this exact structure:
 | Agent | Status | Action Needed |
 
 ## Active Failures
-- [failure]: attempt N — [what was tried] → [result]
+- [failure]: attempt N 
+  — Hypothesis: [Hypothesis for what is wrong]
+  - Test written to confirm: [name of test & file]
+  - Proven: [True/False]
+  - Fix Attempted: [what fixwas tried] 
+  → RESULT: [result]
 
 ## Resolved
-- [failure]: fixed attempt N, verified by [agent] - [what resolved the issue]
+- [failure]: fixed attempt N, verified by [test]
 
 ## Stuck
-- [failure]: N attempts, needs human input
+- [failure]: N attempts pre-investigate, N attempts using /investigate, needs human input
 ```
 
 ## Column Values

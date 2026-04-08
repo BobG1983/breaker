@@ -3,6 +3,7 @@
 //! Contains passive types only: state enums, dimension components, and playfield
 //! configuration. No systems or plugins — those live in domain plugins.
 
+pub mod birthing;
 pub mod collision_layers;
 pub mod color;
 pub mod components;

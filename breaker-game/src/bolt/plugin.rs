@@ -5,15 +5,12 @@ use bevy::prelude::*;
 use crate::{
     bolt::{
         BoltSystems,
-        messages::{
-            BoltImpactBreaker, BoltImpactCell, BoltImpactWall, BoltLost, BoltSpawned,
-            RequestBoltDestroyed,
-        },
+        messages::{BoltLost, BoltSpawned},
         systems::{
-            bolt_breaker_collision, bolt_cell_collision, bolt_lost, bolt_wall_collision,
-            clamp_bolt_to_playfield, cleanup_destroyed_bolts, dispatch_bolt_effects, hover_bolt,
-            launch_bolt, normalize_bolt_speed_after_constraints, spawn_bolt_lost_text,
-            sync_bolt_scale, tick_bolt_lifespan,
+            begin_node_birthing, bolt_breaker_collision, bolt_cell_collision, bolt_lost,
+            bolt_wall_collision, clamp_bolt_to_playfield, cleanup_destroyed_bolts,
+            dispatch_bolt_effects, hover_bolt, launch_bolt, normalize_bolt_speed_after_constraints,
+            spawn_bolt_lost_text, sync_bolt_scale, tick_birthing, tick_bolt_lifespan,
         },
     },
     breaker::BreakerSystems,
@@ -47,6 +44,12 @@ impl Plugin for BoltPlugin {
                         .after(BreakerSystems::Reset)
                         .in_set(BoltSystems::Reset),
                 ),
+            )
+            .add_systems(OnEnter(NodeState::AnimateIn), begin_node_birthing)
+            .add_systems(
+                FixedUpdate,
+                tick_birthing
+                    .run_if(in_state(NodeState::AnimateIn).or(in_state(NodeState::Playing))),
             )
             .add_systems(
                 FixedUpdate,

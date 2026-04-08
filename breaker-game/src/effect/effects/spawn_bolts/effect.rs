@@ -4,15 +4,14 @@ use bevy::{
     time::{Timer, TimerMode},
 };
 use rand::Rng;
-use rantzsoft_spatial2d::components::Velocity2D;
 
 use crate::{
     bolt::{
-        components::{Bolt, BoltDefinitionRef, BoltLifespan, ExtraBolt},
+        components::{BoltDefinitionRef, BoltLifespan, ExtraBolt},
         registry::BoltRegistry,
     },
     effect::BoundEffects,
-    shared::rng::GameRng,
+    prelude::*,
 };
 
 /// Spawns additional bolts from an entity.
@@ -72,6 +71,7 @@ pub(crate) fn fire(
                     .with_velocity(velocity)
                     .extra()
                     .headless()
+                    .birthed()
                     .spawn(&mut commands)
             };
             queue.apply(world);

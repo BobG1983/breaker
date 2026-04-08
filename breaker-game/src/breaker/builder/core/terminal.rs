@@ -1,27 +1,23 @@
 //! Terminal build/spawn impls and shared core building helpers.
 
 use bevy::{math::curve::easing::EaseFunction, prelude::*};
-use rantzsoft_stateflow::CleanupOnExit;
-use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
-use rantzsoft_spatial2d::components::{
-    MaxSpeed, Position2D, PreviousPosition, PreviousScale, Scale2D, Velocity2D,
-};
+use rantzsoft_spatial2d::components::{MaxSpeed, PreviousPosition};
 
 use super::types::*;
 use crate::{
     breaker::components::{
-        BrakeDecel, BrakeTilt, Breaker, BreakerAcceleration, BreakerBaseY, BreakerDeceleration,
+        BrakeDecel, BrakeTilt, BreakerAcceleration, BreakerBaseY, BreakerDeceleration,
         BreakerInitialized, BreakerReflectionSpread, BreakerTilt, BumpEarlyWindow, BumpFeedback,
         BumpLateWindow, BumpPerfectCooldown, BumpPerfectWindow, BumpState, BumpWeakCooldown,
         DashDuration, DashSpeedMultiplier, DashState, DashStateTimer, DashTilt, DashTiltEase,
         DecelEasing, ExtraBreaker, PrimaryBreaker, SettleDuration, SettleTiltEase,
     },
     effect::{EffectCommandsExt, effects::life_lost::LivesCount},
+    prelude::*,
     shared::{
         BOLT_LAYER, BREAKER_LAYER, BaseHeight, BaseWidth, GameDrawLayer,
         size::{MaxHeight, MaxWidth, MinHeight, MinWidth},
     },
-    state::types::{NodeState, RunState},
 };
 
 // ── Private helpers ─────────────────────────────────────────────────────────

@@ -12,9 +12,14 @@
 - [Wall Builder Pattern](evaluation-wall-builder-pattern.md) — Typestate builder, WallDefinition RON, WallRegistry, per-side definitions, Visible dimension all approved
 
 - [Shield Wall Refactor](evaluation-shield-wall-refactor.md) — Charges to timed visible wall APPROVED; tension tuning needed (5s too generous); cell shielding removal correct
+- Node Sequencing & Mod System — Pass 6: 10 Terminal candidates proposed (designer picks 5); Volatile Revenge kept; 4 originals rejected — see `docs/todos/detail/node-sequencing-refactor/` and `docs/todos/detail/mod-system-design.md` for authoritative state
+- [Bolt Birthing Animation](evaluation-bolt-birthing-animation.md) — Concept approved; 0.3s too slow (recommend 0.12-0.15s); linear lerp weak (ease-out); AnimateIn gate questionable; tether beam interaction approved; quit chain approved
 
 ## Audits
 - [Chip/Evolution Coherence Audit](audit-chip-evolution-coherence.md) — 3 critical overlaps, 6 orphan chips, power curve issues; 4 of 5 missing RON files now exist (flashstep, chain_reaction, feedback_loop, powder_keg)
+
+## Open Concerns
+- [Open Design Concerns](open-design-concerns.md) — Breaker archetype differentiation, Surge permanent stacking, Attraction(Breaker) gate
 
 ## Session History
 See [ephemeral/](ephemeral/) — not committed.

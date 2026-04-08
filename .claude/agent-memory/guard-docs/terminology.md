@@ -4,6 +4,19 @@ description: Confirmed term mappings and glossary gaps for the brickbreaker rogu
 type: project
 ---
 
+## Birthing (2026-04-08)
+
+- `Birthing` — component in `shared/birthing.rs`; fields: `timer: Timer`, `target_scale: Scale2D`, `stashed_layers: CollisionLayers`
+- `BIRTHING_DURATION` — `0.3` seconds constant in `shared/birthing.rs`
+- `begin_node_birthing` — system in `bolt/systems/begin_node_birthing.rs`; inserts Birthing on all bolts at AnimateIn entry
+- `tick_birthing` — system in `bolt/systems/tick_birthing.rs`; lerps scale, restores layers, removes component
+- Builder `.birthed()` method — sets `optional.birthed = true`; bolt spawns with zeroed scale/layers and a Birthing component
+
+## TransitionType::None (2026-04-08)
+
+- `TransitionType::None` — instant state change variant in `rantzsoft_stateflow::TransitionType`; used by quit path so app exits without playing a transition animation
+- `with_dynamic_transition(fn)` — route method for computing transition type at dispatch time from `&World`
+
 ## Confirmed Correct Terminology in Code
 
 - `BoltImpactCell`, `BoltImpactWall`, `BoltImpactBreaker` — correct collision message names (not BoltHit*)

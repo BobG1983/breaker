@@ -4,22 +4,20 @@ use bevy::{
     math::curve::{Curve, easing::EaseFunction},
     prelude::*,
 };
-use rantzsoft_spatial2d::components::{MaxSpeed, Position2D, Velocity2D};
+use rantzsoft_spatial2d::components::MaxSpeed;
 
 use crate::{
     breaker::{
         components::{
-            BaseWidth, BrakeDecel, BrakeTilt, Breaker, BreakerDeceleration, BreakerTilt,
-            DashDuration, DashSpeedMultiplier, DashState, DashStateTimer, DashTilt, DashTiltEase,
-            DecelEasing, SettleDuration, SettleTiltEase,
+            BrakeDecel, BrakeTilt, BreakerDeceleration, BreakerTilt, DashDuration,
+            DashSpeedMultiplier, DashState, DashStateTimer, DashTilt, DashTiltEase, DecelEasing,
+            SettleDuration, SettleTiltEase,
         },
         queries::BreakerDashData,
     },
-    effect::effects::{
-        flash_step::FlashStepActive, size_boost::ActiveSizeBoosts, speed_boost::ActiveSpeedBoosts,
-    },
-    input::resources::{GameAction, InputActions},
-    shared::PlayfieldConfig,
+    input::resources::GameAction,
+    prelude::*,
+    shared::BaseWidth,
 };
 
 /// Read-only dash configuration components, bundled to reduce argument count.

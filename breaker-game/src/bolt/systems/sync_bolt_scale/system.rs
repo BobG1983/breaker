@@ -5,15 +5,17 @@
 
 use bevy::prelude::*;
 
-use crate::bolt::{components::Bolt, queries::SyncBoltScaleData};
+use crate::{
+    bolt::{components::Bolt, queries::SyncBoltScaleData},
+    prelude::*,
+};
 
 /// Sets bolt [`Scale2D`] based on [`BaseRadius`], optional [`ActiveSizeBoosts`],
 /// optional [`NodeScalingFactor`], and optional min/max radius constraints.
-pub(crate) fn sync_bolt_scale(mut query: Query<SyncBoltScaleData, With<Bolt>>) {
-    use crate::{
-        effect::effects::size_boost::ActiveSizeBoosts,
-        shared::size::{ClampRange, effective_radius},
-    };
+pub(crate) fn sync_bolt_scale(
+    mut query: Query<SyncBoltScaleData, (With<Bolt>, Without<Birthing>)>,
+) {
+    use crate::shared::size::{ClampRange, effective_radius};
 
     for mut data in &mut query {
         let boost = data.size_boosts.map_or(1.0, ActiveSizeBoosts::multiplier);

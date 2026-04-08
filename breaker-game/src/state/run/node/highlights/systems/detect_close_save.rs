@@ -1,12 +1,9 @@
 //! System to detect `CloseSave` highlights when a bolt is saved near the bottom boundary.
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
-    bolt::components::{Bolt, BoltServing},
-    breaker::messages::BumpPerformed,
-    shared::PlayfieldConfig,
+    prelude::*,
     state::run::{definition::HighlightConfig, messages::HighlightTriggered, resources::*},
 };
 

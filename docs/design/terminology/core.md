@@ -8,5 +8,6 @@
 | **Node** | A level | `Node`, `NodeTimer`, `NodeLayout` |
 | **ExtraBolt** | Additional bolt spawned by Prism breaker on a perfect bump; despawned on loss rather than respawned | `ExtraBolt` |
 | **ChainBolt** | A bolt entity spawned tethered to an anchor bolt via `DistanceConstraint`. Spawned by the `ChainBolt` effect directly in `chain_bolt::fire()` via `&mut World` | `ChainBoltMarker`, `ChainBoltAnchor`, `ChainBoltConstraint`, `DistanceConstraint` |
+| **Birthing** | The brief animation phase after a bolt spawns — scale lerps from zero to full size while collision is disabled. Prevents single-frame cascade explosions and provides visual spawn feedback. | `Birthing`, `begin_node_birthing`, `tick_birthing`, `BIRTHING_DURATION` |
 | **Bump** | Breaker's upward hit | `BumpGrade`, `BumpPerformed` |
 | **Rig** | The player's complete build (Breaker + Bolt + Chips + seed + score) | `Rig`, `RigSummary` |

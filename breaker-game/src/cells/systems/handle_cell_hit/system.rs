@@ -2,11 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::cells::{
-    components::Cell,
-    messages::{DamageCell, RequestCellDestroyed},
-    queries::DamageVisualQuery,
-};
+use crate::{cells::queries::DamageVisualQuery, prelude::*};
 
 /// Handles cell damage in response to [`DamageCell`] messages.
 ///

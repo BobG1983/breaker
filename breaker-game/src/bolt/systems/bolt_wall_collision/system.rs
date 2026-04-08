@@ -6,10 +6,7 @@
 //! detection, then verifies actual AABB overlap expanded by the bolt radius.
 
 use bevy::prelude::*;
-use rantzsoft_physics2d::{
-    aabb::Aabb2D, collision_layers::CollisionLayers, prelude::reflect, resources::CollisionQuadtree,
-};
-use rantzsoft_spatial2d::components::Position2D;
+use rantzsoft_physics2d::{prelude::reflect, resources::CollisionQuadtree};
 
 use crate::{
     bolt::{
@@ -18,8 +15,8 @@ use crate::{
         messages::BoltImpactWall,
         queries::{BoltCollisionData, apply_velocity_formula},
     },
+    prelude::*,
     shared::WALL_LAYER,
-    walls::components::Wall,
 };
 
 /// Wall entity lookup for overlap detection — avoids clippy `type_complexity`.

@@ -1,9 +1,9 @@
 use bevy::prelude::*;
-use rantzsoft_stateflow::CleanupOnExit;
 use rantzsoft_physics2d::{
     collision_layers::CollisionLayers, plugin::PhysicsSystems, resources::CollisionQuadtree,
 };
 use rantzsoft_spatial2d::components::{Position2D, Scale2D, Spatial};
+use rantzsoft_stateflow::CleanupOnExit;
 
 use crate::{
     cells::messages::DamageCell,

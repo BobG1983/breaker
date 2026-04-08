@@ -1,11 +1,11 @@
 //! Tests for `fire()` core bolt spawning and physics component setup.
 
 use bevy::prelude::*;
-use rantzsoft_stateflow::CleanupOnExit;
 use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{
     BaseSpeed, MaxSpeed, MinSpeed, Position2D, PreviousPosition, Scale2D, Velocity2D,
 };
+use rantzsoft_stateflow::CleanupOnExit;
 
 use crate::{
     bolt::{
@@ -14,7 +14,10 @@ use crate::{
         registry::BoltRegistry,
     },
     effect::effects::spawn_bolts::effect::*,
-    shared::{BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, GameDrawLayer, WALL_LAYER, rng::GameRng},
+    shared::{
+        BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, GameDrawLayer, WALL_LAYER, birthing::Birthing,
+        rng::GameRng,
+    },
     state::types::{NodeState, RunState},
 };
 
@@ -79,24 +82,36 @@ fn fire_spawns_requested_count_with_full_physics_components() {
             .expect("bolt should have PreviousPosition");
         assert_eq!(prev.0, Vec2::new(50.0, 100.0));
 
-        // Scale2D — radius=8.0 from default config
+        // Scale2D — zeroed by birthing
         let scale = world
             .get::<Scale2D>(*bolt)
             .expect("bolt should have Scale2D");
-        assert!((scale.x - 8.0).abs() < f32::EPSILON);
-        assert!((scale.y - 8.0).abs() < f32::EPSILON);
+        assert!((scale.x - 0.0).abs() < f32::EPSILON);
+        assert!((scale.y - 0.0).abs() < f32::EPSILON);
+
+        // Birthing — stashes original scale and layers
+        let birthing = world
+            .get::<Birthing>(*bolt)
+            .expect("bolt should have Birthing");
+        assert!((birthing.target_scale.x - 8.0).abs() < f32::EPSILON);
+        assert!((birthing.target_scale.y - 8.0).abs() < f32::EPSILON);
 
         // Aabb2D
         let aabb = world.get::<Aabb2D>(*bolt).expect("bolt should have Aabb2D");
         assert_eq!(aabb.center, Vec2::ZERO);
         assert_eq!(aabb.half_extents, Vec2::new(8.0, 8.0));
 
-        // CollisionLayers
+        // CollisionLayers — zeroed by birthing, originals stashed in Birthing
         let layers = world
             .get::<CollisionLayers>(*bolt)
             .expect("bolt should have CollisionLayers");
-        assert_eq!(layers.membership, BOLT_LAYER);
-        assert_eq!(layers.mask, CELL_LAYER | WALL_LAYER | BREAKER_LAYER);
+        assert_eq!(layers.membership, 0);
+        assert_eq!(layers.mask, 0);
+        assert_eq!(birthing.stashed_layers.membership, BOLT_LAYER);
+        assert_eq!(
+            birthing.stashed_layers.mask,
+            CELL_LAYER | WALL_LAYER | BREAKER_LAYER
+        );
 
         // Speed components
         let base = world
@@ -218,6 +233,78 @@ fn fire_spawns_bolt_at_zero_when_owner_has_no_position2d() {
         pos.0,
         Vec2::ZERO,
         "bolt should default to Vec2::ZERO when owner has no Position2D"
+    );
+}
+
+// ── Behaviors 12-13: spawn_bolts fire() produces bolts with Birthing ──
+
+// Behavior 12: fire() produces bolts with Birthing component
+#[test]
+fn fire_spawns_bolts_with_birthing_component() {
+    let mut world = world_with_bolt_registry();
+    let entity = world.spawn(Position2D(Vec2::new(50.0, 100.0))).id();
+
+    fire(entity, 3, None, false, "", &mut world);
+
+    let mut query = world.query_filtered::<Entity, (With<Bolt>, With<ExtraBolt>)>();
+    let bolts: Vec<Entity> = query.iter(&world).collect();
+    assert_eq!(bolts.len(), 3, "expected 3 bolts spawned");
+
+    for bolt in &bolts {
+        assert!(
+            world
+                .get::<crate::shared::birthing::Birthing>(*bolt)
+                .is_some(),
+            "spawned bolt should have Birthing component"
+        );
+    }
+}
+
+// Behavior 12 edge case: single bolt still has Birthing
+#[test]
+fn fire_single_bolt_has_birthing_component() {
+    let mut world = world_with_bolt_registry();
+    let entity = world.spawn(Position2D(Vec2::ZERO)).id();
+
+    fire(entity, 1, None, false, "", &mut world);
+
+    let mut query = world.query_filtered::<Entity, (With<Bolt>, With<ExtraBolt>)>();
+    let bolt = query.iter(&world).next().expect("bolt should exist");
+    assert!(
+        world
+            .get::<crate::shared::birthing::Birthing>(bolt)
+            .is_some(),
+        "single spawned bolt should have Birthing component"
+    );
+}
+
+// Behavior 13: fire() with lifespan still adds Birthing
+#[test]
+fn fire_with_lifespan_also_adds_birthing() {
+    let mut world = world_with_bolt_registry();
+    let entity = world.spawn(Position2D(Vec2::ZERO)).id();
+
+    fire(entity, 1, Some(2.0), false, "", &mut world);
+
+    let mut query = world.query_filtered::<Entity, (With<Bolt>, With<ExtraBolt>)>();
+    let bolt = query.iter(&world).next().expect("bolt should exist");
+
+    // Has BoltLifespan
+    let lifespan = world
+        .get::<crate::bolt::components::BoltLifespan>(bolt)
+        .expect("bolt should have BoltLifespan");
+    assert!(
+        (lifespan.0.duration().as_secs_f32() - 2.0).abs() < 0.01,
+        "BoltLifespan should be 2.0s, got {}",
+        lifespan.0.duration().as_secs_f32()
+    );
+
+    // AND has Birthing
+    assert!(
+        world
+            .get::<crate::shared::birthing::Birthing>(bolt)
+            .is_some(),
+        "bolt with lifespan should also have Birthing component"
     );
 }
 

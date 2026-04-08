@@ -1,10 +1,10 @@
 //! Tests for bolt spawning behaviors on first node (12-21).
 
 use bevy::prelude::*;
-use rantzsoft_stateflow::CleanupOnExit;
 use rantzsoft_spatial2d::components::{
     BaseSpeed, MaxSpeed, MinSpeed, Position2D, Scale2D, Velocity2D,
 };
+use rantzsoft_stateflow::CleanupOnExit;
 
 use super::helpers::{make_aegis_breaker_definition, test_app};
 use crate::{

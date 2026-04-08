@@ -14,7 +14,7 @@ use crate::{
         queries::{LostBoltData, apply_velocity_formula},
     },
     breaker::filters::CollisionFilterBreaker,
-    shared::{GameRng, PlayfieldConfig},
+    prelude::*,
 };
 
 /// Bundled message writers for `bolt_lost` to satisfy clippy's
@@ -34,6 +34,9 @@ pub(crate) struct LostBoltEntry {
     spawn_offset: f32,
     angle_spread: f32,
     is_extra: bool,
+    radius: f32,
+    node_scale: f32,
+    layers: CollisionLayers,
 }
 
 /// Detects when the bolt falls below the playfield.
@@ -75,6 +78,9 @@ pub(crate) fn bolt_lost(
                     .angle_spread
                     .map_or(crate::bolt::resources::DEFAULT_BOLT_ANGLE_SPREAD, |a| a.0),
                 is_extra: bolt.is_extra,
+                radius: bolt.radius.0,
+                node_scale: bolt.node_scale.map_or(1.0, |s| s.0),
+                layers: *bolt.layers,
             }),
     );
 
@@ -98,9 +104,21 @@ pub(crate) fn bolt_lost(
                 apply_velocity_formula(&mut bolt.spatial, bolt.active_speed_boosts);
                 let new_pos = Vec2::new(breaker_pos.x, breaker_pos.y + entry.spawn_offset);
                 bolt.spatial.position.0 = new_pos;
-                commands
-                    .entity(entry.entity)
-                    .insert(PreviousPosition(new_pos));
+
+                let effective_radius = entry.radius * entry.node_scale;
+                let target_scale = Scale2D {
+                    x: effective_radius,
+                    y: effective_radius,
+                };
+                let stashed_layers = entry.layers;
+
+                commands.entity(entry.entity).insert((
+                    PreviousPosition(new_pos),
+                    Scale2D { x: 0.0, y: 0.0 },
+                    PreviousScale { x: 0.0, y: 0.0 },
+                    CollisionLayers::default(),
+                    Birthing::new(target_scale, stashed_layers),
+                ));
             }
         }
     }

@@ -8,18 +8,16 @@
 //! cross-domain type, add it to the appropriate submodule file and (if used by
 //! 3+ domains) to the curated glob below.
 
+// Prelude re-exports are consumed via wildcard imports (`use crate::prelude::*`)
+// which clippy cannot trace — individual items appear unused even when they aren't.
+#![allow(unused_imports, reason = "prelude items consumed via wildcard imports")]
+
 pub(crate) mod components;
 pub(crate) mod messages;
 pub(crate) mod resources;
 pub(crate) mod states;
 
-// --- Curated glob: entity markers, effect state, messages, resources, states ---
-
-pub(crate) use components::{
-    ActiveDamageBoosts, ActiveSizeBoosts, ActiveSpeedBoosts, AnchorActive, AnchorPlanted, Bolt,
-    BoltServing, BoundEffects, Breaker, Cell, EffectNode, NodeScalingFactor, RootEffect,
-    StagedEffects, Wall,
-};
+pub(crate) use components::*;
 pub(crate) use messages::*;
-pub(crate) use resources::{GameRng, InputActions, PlayfieldConfig};
+pub(crate) use resources::*;
 pub(crate) use states::*;

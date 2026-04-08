@@ -117,3 +117,12 @@ output_dir.rs, run_log.rs, streaming.rs, tiling.rs, output.rs, mod.rs) and main.
 Grepped for "unsafe" across all .rs files: zero matches. No FFI, no raw pointers, no build.rs.
 Workspace lint unsafe_code = "deny" remains in force and is inherited by the crate via
 `lints.workspace = true` in breaker-scenario-runner/Cargo.toml.
+
+Still confirmed for feature/bolt-birthing-animation (2026-04-08):
+New/changed files: rantzsoft_stateflow/src/transition/types.rs (TransitionType::None variant),
+rantzsoft_stateflow/src/transition/orchestration/system.rs (begin_transition + handle_transition_over),
+rantzsoft_stateflow/src/transition/effects/post_process.rs, fade/effect.rs,
+breaker-game/src/bolt/systems/begin_node_birthing.rs, tick_birthing.rs, shared/birthing.rs,
+state/plugin/system.rs, state/plugin/tests.rs, state/menu/main/systems/handle_main_menu_input.rs,
+breaker-scenario-runner/src/lifecycle/systems/frame_mutations/mutations.rs, app.rs.
+Grepped all changed files for "unsafe": zero matches. Workspace lint unsafe_code = "deny" remains in force.

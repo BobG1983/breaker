@@ -2,17 +2,15 @@
 
 use bevy::prelude::*;
 use rand::Rng;
-use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
     bolt::{
-        components::{Bolt, BoltServing, ExtraBolt},
+        components::ExtraBolt,
         messages::BoltSpawned,
         queries::{ResetBoltData, apply_velocity_formula},
         resources::DEFAULT_BOLT_ANGLE_SPREAD,
     },
-    breaker::components::Breaker,
-    shared::GameRng,
+    prelude::*,
     state::run::NodeOutcome,
 };
 

@@ -5,14 +5,12 @@
 use bevy::prelude::*;
 
 use crate::{
-    bolt::messages::RequestBoltDestroyed,
-    cells::messages::RequestCellDestroyed,
     effect::{
         core::*,
         sets::EffectSystems,
         triggers::evaluate::{evaluate_bound_effects, evaluate_staged_effects},
     },
-    state::types::NodeState,
+    prelude::*,
 };
 
 fn bridge_died(

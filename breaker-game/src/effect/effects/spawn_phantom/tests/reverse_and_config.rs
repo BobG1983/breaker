@@ -5,7 +5,7 @@ use rantzsoft_physics2d::aabb::Aabb2D;
 use rantzsoft_spatial2d::components::{Position2D, Scale2D};
 
 use super::{super::effect::*, helpers::*};
-use crate::bolt::components::BoltLifespan;
+use crate::{bolt::components::BoltLifespan, shared::birthing::Birthing};
 
 #[test]
 fn reverse_is_noop_phantoms_self_despawn() {
@@ -105,13 +105,22 @@ fn fire_custom_radius_from_bolt_definition_ref() {
     let mut query = world.query_filtered::<Entity, With<PhantomBoltMarker>>();
     let phantom = query.iter(&world).next().expect("phantom should exist");
 
+    // Scale2D — zeroed by birthing; original stashed in Birthing
     let scale = world
         .get::<Scale2D>(phantom)
         .expect("phantom should have Scale2D");
     assert!(
-        (scale.x - 6.0).abs() < f32::EPSILON,
-        "Scale2D.x should use definition radius (6.0), got {}",
+        (scale.x - 0.0).abs() < f32::EPSILON,
+        "Scale2D.x should be 0.0 (zeroed by birthing), got {}",
         scale.x
+    );
+    let birthing = world
+        .get::<Birthing>(phantom)
+        .expect("phantom should have Birthing");
+    assert!(
+        (birthing.target_scale.x - 6.0).abs() < f32::EPSILON,
+        "Birthing target_scale.x should use definition radius (6.0), got {}",
+        birthing.target_scale.x
     );
 
     let aabb = world

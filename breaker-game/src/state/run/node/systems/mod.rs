@@ -1,5 +1,6 @@
 //! Node systems — entity setup and runtime.
 
+pub(crate) mod all_animate_in_complete;
 pub(crate) mod apply_node_scale_to_bolt;
 pub(crate) mod apply_node_scale_to_breaker;
 pub(crate) mod dispatch_cell_effects;
@@ -17,6 +18,7 @@ mod spawn_cells_from_layout;
 mod tick_node_timer;
 mod track_node_completion;
 
+pub(crate) use all_animate_in_complete::all_animate_in_complete;
 pub(crate) use apply_node_scale_to_bolt::{
     apply_node_scale_to_bolt, apply_node_scale_to_late_bolts,
 };

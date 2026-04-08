@@ -2,8 +2,8 @@
 //! and full state restoration.
 
 use bevy::prelude::*;
-use rantzsoft_stateflow::CleanupOnExit;
 use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, Velocity2D};
+use rantzsoft_stateflow::CleanupOnExit;
 
 use crate::{
     breaker::{

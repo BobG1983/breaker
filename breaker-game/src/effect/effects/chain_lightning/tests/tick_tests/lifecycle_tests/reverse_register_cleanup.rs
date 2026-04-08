@@ -3,8 +3,8 @@
 use std::collections::HashSet;
 
 use bevy::prelude::*;
-use rantzsoft_stateflow::CleanupOnExit;
 use rantzsoft_physics2d::plugin::RantzPhysics2dPlugin;
+use rantzsoft_stateflow::CleanupOnExit;
 
 use super::*;
 use crate::{

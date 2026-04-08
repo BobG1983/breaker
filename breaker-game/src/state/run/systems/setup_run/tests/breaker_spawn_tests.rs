@@ -1,8 +1,8 @@
 //! Tests for breaker spawning behaviors (2-11).
 
 use bevy::prelude::*;
-use rantzsoft_stateflow::CleanupOnExit;
 use rantzsoft_spatial2d::components::{MaxSpeed, Position2D, Scale2D};
+use rantzsoft_stateflow::CleanupOnExit;
 
 use super::helpers::{make_aegis_breaker_definition, test_app};
 use crate::{

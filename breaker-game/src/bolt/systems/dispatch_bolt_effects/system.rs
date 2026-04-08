@@ -8,10 +8,8 @@ use crate::{
         components::{Bolt, BoltDefinitionRef},
         registry::BoltRegistry,
     },
-    breaker::components::Breaker,
-    cells::components::Cell,
     effect::*,
-    walls::components::Wall,
+    prelude::*,
 };
 
 /// Dispatches bolt-defined effects to target entities.

@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::Velocity2D;
 
 use super::types::*;
 use crate::{
@@ -8,7 +7,7 @@ use crate::{
         definition::BoltDefinition,
         resources::{DEFAULT_BOLT_ANGLE_SPREAD, DEFAULT_BOLT_SPAWN_OFFSET_Y},
     },
-    effect::{BoundEffects, EffectNode},
+    prelude::*,
 };
 
 // ── Entry point ─────────────────────────────────────────────────────────────
@@ -283,6 +282,17 @@ impl<P, S, A, M, R, V> BoltBuilder<P, S, A, M, R, V> {
     #[must_use]
     pub const fn with_spawn_offset_y(mut self, offset: f32) -> Self {
         self.optional.override_spawn_offset_y = Some(offset);
+        self
+    }
+
+    /// Marks this bolt for birthing animation on spawn.
+    ///
+    /// When spawned, the entity starts with zeroed `Scale2D`, `PreviousScale`,
+    /// and `CollisionLayers`. A [`Birthing`] component is inserted that drives
+    /// the scale lerp and layer restoration.
+    #[must_use]
+    pub const fn birthed(mut self) -> Self {
+        self.optional.birthed = true;
         self
     }
 }

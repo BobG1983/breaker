@@ -1,10 +1,10 @@
 use bevy::prelude::*;
-use rantzsoft_stateflow::CleanupOnExit;
 use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{
     BaseSpeed, InterpolateTransform2D, MaxSpeed, MinAngleHorizontal, MinAngleVertical, MinSpeed,
     Position2D, PreviousPosition, PreviousScale, Scale2D, Spatial, Spatial2D, Velocity2D,
 };
+use rantzsoft_stateflow::CleanupOnExit;
 
 use crate::{
     bolt::{

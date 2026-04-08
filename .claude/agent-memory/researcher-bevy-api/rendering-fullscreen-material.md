@@ -157,15 +157,30 @@ fn sub_graph() -> Option<bevy::render::render_graph::InternedRenderSubGraph> {
 
 ## Node2d Graph safe anchors (2d-only features — project config)
 
-With `features = ["2d", "serialize"]`, the registered graph is:
+With `features = ["2d", "serialize"]`, the full execution order including UI is:
 ```
 StartMainPass → MainOpaquePass → MainTransparentPass → EndMainPass
-→ StartMainPassPostProcessing → Tonemapping → EndMainPassPostProcessing → Upscaling
+→ StartMainPassPostProcessing → Tonemapping → EndMainPassPostProcessing
+→ NodeUi::UiPass   ← UI renders here (bevy_ui_render adds this)
+→ Node2d::Upscaling
 ```
+
+UI wiring (added by bevy_ui_render::UiRenderPlugin):
+- `Node2d::EndMainPass → NodeUi::UiPass` (both incoming edges)
+- `Node2d::EndMainPassPostProcessing → NodeUi::UiPass`
+- `NodeUi::UiPass → Node2d::Upscaling`
 
 Safe post-processing anchors:
 - Pre-tonemapping: `vec![Node2d::StartMainPassPostProcessing.intern(), YourLabel.intern(), Node2d::Tonemapping.intern()]`
-- Post-tonemapping: `vec![Node2d::Tonemapping.intern(), YourLabel.intern(), Node2d::EndMainPassPostProcessing.intern()]`
+- Post-tonemapping (under UI): `vec![Node2d::Tonemapping.intern(), YourLabel.intern(), Node2d::EndMainPassPostProcessing.intern()]`
+- Post-UI (over everything): `vec![NodeUi::UiPass.intern(), YourLabel.intern(), Node2d::Upscaling.intern()]`
+
+Import for post-UI anchor:
+```rust
+use bevy::ui_render::graph::NodeUi;  // verified: bevy::ui_render::graph::NodeUi
+```
+
+`NodeUi::UiPass` is the ONLY variant of that enum.
 
 ## ShaderType Alignment for Single f32 Field
 

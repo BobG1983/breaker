@@ -3,11 +3,7 @@
 use bevy::prelude::*;
 
 use super::types::*;
-use crate::{
-    effect::RootEffect,
-    shared::PlayfieldConfig,
-    walls::{components::Wall, definition::WallDefinition},
-};
+use crate::{prelude::*, walls::definition::WallDefinition};
 
 // ── Entry point ────────────────────────────────────────────────────────────
 

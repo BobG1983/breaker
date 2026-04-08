@@ -15,3 +15,4 @@
 - ~~Cross-domain prelude, re-export modules & import cleanup~~ — breaker-game/src/prelude/ with 5 re-export modules, merged in refactor/cross-domain-prelude
 - ~~Scenario runner improvements~~ — Streaming subprocess pool, frame budget cuts (666K→386K), parse-once optimization, coverage report, unified log, --coverage/--fail-fast flags. 12min→1:22 runtime.
 - ~~Rename rantzsoft_lifecycle → rantzsoft_stateflow~~ — Pure rename across 151 files, no behavior changes
+- ~~Bolt birthing animation~~ — `Birthing` component in `shared/birthing.rs`, `begin_node_birthing` system on `OnEnter(NodeState::AnimateIn)`, `tick_birthing` in FixedUpdate; builder `.birthed()` method; `TransitionType::None` + quit teardown chain (`MenuState::Teardown` → `GameState::Teardown` → `AppState::Teardown` → `send_app_exit`)

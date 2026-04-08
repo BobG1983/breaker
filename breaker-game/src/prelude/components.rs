@@ -1,4 +1,8 @@
-//! Re-exports of cross-domain components.
+//! Re-exports of cross-domain components and spatial/physics types.
+
+pub(crate) use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
+pub(crate) use rantzsoft_spatial2d::components::{Position2D, PreviousScale, Scale2D, Velocity2D};
+pub(crate) use rantzsoft_stateflow::CleanupOnExit;
 
 pub(crate) use crate::{
     bolt::components::{Bolt, BoltServing},
@@ -12,6 +16,6 @@ pub(crate) use crate::{
             vulnerable::ActiveVulnerability,
         },
     },
-    shared::components::NodeScalingFactor,
+    shared::{birthing::Birthing, components::NodeScalingFactor},
     walls::components::Wall,
 };

@@ -44,8 +44,8 @@ AppState (top-level States)
 │       │       │       ├── AnimateOut
 │       │       │       └── Teardown
 │       │       └── Teardown     ← cleanup CleanupOnExit<RunState>; parent GameState watches for this
-│       └── Teardown
-└── Teardown   ← app shutdown (not used in normal flow)
+│       └── Teardown   ← quit destination; `AppState::Game` routes here when `GameState == Teardown`
+└── Teardown   ← app shutdown; reached via quit path — `send_app_exit` fires `AppExit::Success` on entry
 ```
 
 All state enum types live in `breaker-game/src/state/types/`. Each sub-state is registered by `StatePlugin` in `breaker-game/src/state/plugin.rs`.
@@ -72,9 +72,23 @@ State transitions use the `rantzsoft_stateflow` crate (`RantzStateflowPlugin`, `
 
 ## Transition Effects
 
-Transition effects (fade, dissolve, wipe, iris, pixelate, slide) are implemented in `rantzsoft_stateflow` and registered on individual routes via `.with_transition(TransitionType::Out(...))`, `.with_transition(TransitionType::In(...))`, or `.with_transition(TransitionType::OutIn { out_e, in_e })`.
+Transition effects (fade, dissolve, wipe, iris, pixelate, slide) are implemented in `rantzsoft_stateflow` and registered on individual routes via `.with_transition(TransitionType::Out(...))`, `.with_transition(TransitionType::In(...))`, `.with_transition(TransitionType::OutIn { out_e, in_e })`, or `.with_dynamic_transition(fn)` for routes whose transition type is computed at dispatch time.
+
+`TransitionType::None` (instant state change with no animation) is used on routes where no visual transition is desired — for example, the quit-from-menu path uses `TransitionType::None` so the app exits without playing a fade.
 
 The lifecycle crate pauses `Time<Virtual>` during Out-type transitions and unpauses after In-type transitions complete. Overlay animations run on `Time<Real>` so they are not affected by the pause.
+
+## Quit Teardown Chain
+
+Selecting **Quit** from the main menu triggers a chain through the state hierarchy that terminates the process:
+
+1. `handle_main_menu_input` sets `MainMenuSelection::selected = MenuItem::Quit` and sends `ChangeState<MenuState>`.
+2. The routing table matches `MenuState::Main → MenuState::Teardown` with `TransitionType::None` (instant, no animation) when `MenuItem::Quit` is selected.
+3. `MenuState::Teardown` triggers the condition route `GameState::Menu → GameState::Teardown` (also `TransitionType::None`).
+4. `GameState::Teardown` triggers the condition route `AppState::Game → AppState::Teardown`.
+5. `OnEnter(AppState::Teardown)` runs `send_app_exit`, which writes `AppExit::Success` to terminate the process.
+
+The `with_dynamic_transition` method on `GameState::Menu → GameState::Teardown` returns `TransitionType::None` for the quit path (vs. `TransitionType::Out(FadeOut)` for the play path).
 
 ## Pause
 

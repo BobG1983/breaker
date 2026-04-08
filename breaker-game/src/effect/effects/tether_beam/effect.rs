@@ -4,29 +4,19 @@ use std::collections::HashSet;
 
 use bevy::{ecs::world::CommandQueue, prelude::*};
 use rand::Rng;
-use rantzsoft_stateflow::CleanupOnExit;
-use rantzsoft_physics2d::{
-    aabb::Aabb2D, ccd::ray_vs_aabb, collision_layers::CollisionLayers, plugin::PhysicsSystems,
-    resources::CollisionQuadtree,
-};
-use rantzsoft_spatial2d::components::{
-    GlobalPosition2D, Position2D, Rotation2D, Scale2D, Spatial, Velocity2D,
-};
+use rantzsoft_physics2d::{ccd::ray_vs_aabb, plugin::PhysicsSystems, resources::CollisionQuadtree};
+use rantzsoft_spatial2d::components::{GlobalPosition2D, Rotation2D, Spatial};
 
 use crate::{
     bolt::{
-        components::{Bolt, BoltBaseDamage, BoltDefinitionRef, BoltRadius},
+        components::{BoltBaseDamage, BoltDefinitionRef, BoltRadius},
         definition::BoltDefinition,
         registry::BoltRegistry,
         resources::DEFAULT_BOLT_BASE_DAMAGE,
     },
-    cells::{components::Cell, messages::DamageCell},
-    effect::{
-        core::{EffectSourceChip, chip_attribution},
-        effects::damage_boost::ActiveDamageBoosts,
-    },
-    shared::{CELL_LAYER, GameDrawLayer, rng::GameRng},
-    state::types::NodeState,
+    effect::core::{EffectSourceChip, chip_attribution},
+    prelude::*,
+    shared::{CELL_LAYER, GameDrawLayer},
 };
 
 /// Marker on a tether bolt entity, indicating it belongs to a tether beam.
@@ -119,6 +109,7 @@ fn spawn_tether_bolt(world: &mut World, spawn_pos: Vec2, bolt_def: &BoltDefiniti
             .with_velocity(velocity)
             .extra()
             .headless()
+            .birthed()
             .spawn(&mut commands)
     };
     queue.apply(world);
@@ -476,7 +467,7 @@ pub(crate) fn register(app: &mut App) {
             .after(PhysicsSystems::MaintainQuadtree),
     );
     app.add_systems(
-        OnEnter(crate::state::types::NodeState::Teardown),
+        OnEnter(NodeState::Teardown),
         cleanup_tether_chain_resource.run_if(resource_exists::<TetherChainActive>),
     );
 }

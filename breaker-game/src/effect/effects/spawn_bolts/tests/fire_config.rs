@@ -13,7 +13,7 @@ use crate::{
         registry::BoltRegistry,
     },
     effect::effects::spawn_bolts::effect::*,
-    shared::rng::GameRng,
+    shared::{birthing::Birthing, rng::GameRng},
 };
 
 fn make_bolt_definition(name: &str, base_speed: f32, radius: f32) -> BoltDefinition {
@@ -85,18 +85,32 @@ fn fire_reads_bolt_definition_ref_from_source_entity_and_uses_bolt_registry() {
         vel.0.length()
     );
 
+    // Scale2D — zeroed by birthing; original stashed in Birthing
     let scale = world
         .get::<Scale2D>(bolt)
         .expect("bolt should have Scale2D");
     assert!(
-        (scale.x - 12.0).abs() < f32::EPSILON,
-        "Scale2D.x should be 12.0 from Heavy definition, got {}",
+        (scale.x - 0.0).abs() < f32::EPSILON,
+        "Scale2D.x should be 0.0 (zeroed by birthing), got {}",
         scale.x
     );
     assert!(
-        (scale.y - 12.0).abs() < f32::EPSILON,
-        "Scale2D.y should be 12.0 from Heavy definition, got {}",
+        (scale.y - 0.0).abs() < f32::EPSILON,
+        "Scale2D.y should be 0.0 (zeroed by birthing), got {}",
         scale.y
+    );
+    let birthing = world
+        .get::<Birthing>(bolt)
+        .expect("bolt should have Birthing");
+    assert!(
+        (birthing.target_scale.x - 12.0).abs() < f32::EPSILON,
+        "Birthing target_scale.x should be 12.0 from Heavy definition, got {}",
+        birthing.target_scale.x
+    );
+    assert!(
+        (birthing.target_scale.y - 12.0).abs() < f32::EPSILON,
+        "Birthing target_scale.y should be 12.0 from Heavy definition, got {}",
+        birthing.target_scale.y
     );
 
     let aabb = world.get::<Aabb2D>(bolt).expect("bolt should have Aabb2D");

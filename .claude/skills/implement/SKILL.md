@@ -66,7 +66,7 @@ When `todo` is provided, read the todo's detail file from `docs/todos/` and use 
 
 1. Verify you're on a topic branch (not develop or main). If on develop, run `/start-dev` to create a branch first.
 2. Parse the feature description (inline or from plan file)
-3. Create `.claude/state/session-state.md` using the format in the `session-state.md` rule
+3. Create `.claude/state/investigations-state.md` using the format in the `.claude/rules/session-state.md`
 4. Record the task description and any initial decisions
 
 ### Step 1 — Analyze scope and identify waves
