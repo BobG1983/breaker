@@ -4,14 +4,13 @@ use bevy::prelude::*;
 
 use crate::{
     cells::{
-        behaviors::{locked::systems::check_lock_release, regen::systems::tick_cell_regen},
+        behaviors::{
+            guarded::systems::slide_guardian_cells, locked::systems::check_lock_release,
+            regen::systems::tick_cell_regen,
+        },
         messages::{CellDestroyedAt, CellImpactWall, DamageCell, RequestCellDestroyed},
         resources::CellConfig,
-        systems::{
-            cell_wall_collision, cleanup_cell, handle_cell_hit,
-            rotate_shield_cells::rotate_shield_cells,
-            sync_orbit_cell_positions::sync_orbit_cell_positions,
-        },
+        systems::{cell_wall_collision, cleanup_cell, handle_cell_hit},
     },
     effect::EffectSystems,
     prelude::*,
@@ -40,8 +39,7 @@ impl Plugin for CellsPlugin {
                     handle_cell_hit,
                     check_lock_release.after(handle_cell_hit),
                     tick_cell_regen,
-                    rotate_shield_cells,
-                    sync_orbit_cell_positions.after(rotate_shield_cells),
+                    slide_guardian_cells,
                     cleanup_cell.after(EffectSystems::Bridge),
                     cell_wall_collision,
                 )
@@ -73,20 +71,16 @@ mod tests {
             .update();
     }
 
-    // ── Orbit system registration tests ───────────────────────────
-    //
-    // These verify that CellsPlugin registers rotate_shield_cells and
-    // sync_orbit_cell_positions. They will FAIL until the plugin wires
-    // the orbit systems.
+    // ── Guardian system registration test ─────────────────────────
 
     use std::time::Duration;
 
-    use rantzsoft_spatial2d::{
-        components::{Position2D, Spatial2D},
-        propagation::PositionPropagation,
-    };
+    use rantzsoft_spatial2d::components::{Position2D, Spatial2D};
 
-    use crate::cells::components::{Cell, OrbitAngle, OrbitCell, OrbitConfig, ShieldParent};
+    use crate::cells::components::{
+        Cell, GuardedCell, GuardianCell, GuardianGridStep, GuardianSlideSpeed, GuardianSlot,
+        SlideTarget,
+    };
 
     fn cells_plugin_app() -> App {
         let mut app = App::new();
@@ -131,103 +125,59 @@ mod tests {
         app.update();
     }
 
-    /// Behavior 11: `CellsPlugin` registers `rotate_shield_cells`.
+    /// Behavior 43: `CellsPlugin` registers `slide_guardian_cells` in `FixedUpdate`.
     ///
-    /// Given: shield parent with orbit child at `OrbitAngle(0.0)`,
-    ///        `OrbitConfig { radius: 60.0, speed: PI/2 }`
-    /// When: `CellsPlugin` tick at dt=1.0s
-    /// Then: `OrbitAngle` ~ PI/2
+    /// Given: guarded parent at origin, guardian at slot 3 with `SlideTarget(4)`,
+    ///        speed 100.0, step (72.0, 26.0)
+    /// When: `CellsPlugin` tick at dt=0.5s
+    /// Then: guardian snaps to slot 4 position Vec2(72.0, -26.0) (distance 26.0 < 100*0.5=50)
     #[test]
-    fn cells_plugin_registers_rotate_shield_cells() {
-        use std::f32::consts::FRAC_PI_2;
-
+    fn cells_plugin_registers_slide_guardian_cells() {
         let mut app = cells_plugin_app();
 
-        let shield = app
+        let parent = app
             .world_mut()
             .spawn((
                 Cell,
-                ShieldParent,
+                GuardedCell,
                 Spatial2D,
-                Position2D(Vec2::new(100.0, 200.0)),
+                Position2D(Vec2::new(0.0, 0.0)),
             ))
             .id();
 
-        let orbit = app
+        let guardian = app
             .world_mut()
             .spawn((
                 Cell,
-                OrbitCell,
+                GuardianCell,
                 Spatial2D,
-                PositionPropagation::Absolute,
-                Position2D(Vec2::ZERO),
-                OrbitAngle(0.0),
-                OrbitConfig {
-                    radius: 60.0,
-                    speed: FRAC_PI_2,
+                Position2D(Vec2::new(72.0, 0.0)), // slot 3 position
+                GuardianSlot(3),
+                SlideTarget(4),
+                GuardianSlideSpeed(100.0),
+                GuardianGridStep {
+                    step_x: 72.0,
+                    step_y: 26.0,
                 },
-                ChildOf(shield),
+                ChildOf(parent),
             ))
             .id();
 
-        tick_cells(&mut app, Duration::from_secs(1));
+        tick_cells(&mut app, Duration::from_millis(500));
 
-        let angle = app.world().get::<OrbitAngle>(orbit).unwrap();
+        // Slot 4 target position = (72.0, -26.0), distance from start = 26.0
+        // Speed 100 * dt 0.5 = 50.0 > 26.0, so should snap
+        let pos = app.world().get::<Position2D>(guardian).unwrap();
         assert!(
-            (angle.0 - FRAC_PI_2).abs() < 1e-4,
-            "orbit angle should be ~PI/2 ({FRAC_PI_2}) after 1s at speed PI/2 via CellsPlugin, got {}",
-            angle.0
+            (pos.0.x - 72.0).abs() < 1.0 && (pos.0.y - (-26.0)).abs() < 1.0,
+            "guardian should snap to slot 4 position (72.0, -26.0) via CellsPlugin, got {:?}",
+            pos.0
         );
-    }
-
-    /// Behavior 12: `CellsPlugin` registers `sync_orbit_cell_positions`.
-    ///
-    /// Given: shield at (100.0, 200.0), orbit at angle 0.0, radius 60.0
-    /// When: `CellsPlugin` systems run
-    /// Then: orbit `Position2D` = (160.0, 200.0)
-    #[test]
-    fn cells_plugin_registers_sync_orbit_cell_positions() {
-        let mut app = cells_plugin_app();
-
-        let shield = app
-            .world_mut()
-            .spawn((
-                Cell,
-                ShieldParent,
-                Spatial2D,
-                Position2D(Vec2::new(100.0, 200.0)),
-            ))
-            .id();
-
-        let orbit = app
-            .world_mut()
-            .spawn((
-                Cell,
-                OrbitCell,
-                Spatial2D,
-                PositionPropagation::Absolute,
-                Position2D(Vec2::ZERO),
-                OrbitAngle(0.0),
-                OrbitConfig {
-                    radius: 60.0,
-                    speed: std::f32::consts::FRAC_PI_2,
-                },
-                ChildOf(shield),
-            ))
-            .id();
-
-        tick_cells(&mut app, Duration::from_millis(16));
-
-        let pos = app.world().get::<Position2D>(orbit).unwrap();
-        assert!(
-            (pos.0.x - 160.0).abs() < 1.0,
-            "orbit x should be ~160.0 (shield 100.0 + radius 60.0 * cos(0)), got {}",
-            pos.0.x
-        );
-        assert!(
-            (pos.0.y - 200.0).abs() < 3.0,
-            "orbit y should be ~200.0 (shield 200.0 + radius 60.0 * sin(0)), got {}",
-            pos.0.y
+        let slot = app.world().get::<GuardianSlot>(guardian).unwrap();
+        assert_eq!(
+            slot.0, 4,
+            "GuardianSlot should update to 4 via CellsPlugin, got {}",
+            slot.0
         );
     }
 }

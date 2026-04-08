@@ -23,7 +23,7 @@ pub(super) fn make_cell_def(
         damage_blue_range: 0.5,
         damage_blue_base: 0.2,
         behaviors: None,
-        shield: None,
+
         effects,
     }
 }

@@ -267,7 +267,7 @@ fn validate_accepts_multi_char_string_alias() {
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
             behaviors: None,
-            shield: None,
+
             effects: None,
         },
     );
@@ -301,7 +301,7 @@ fn validate_accepts_three_char_alias_in_registry() {
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
             behaviors: None,
-            shield: None,
+
             effects: None,
         },
     );

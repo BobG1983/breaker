@@ -17,7 +17,7 @@ pub(super) fn test_registry() -> CellTypeRegistry {
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
             behaviors: None,
-            shield: None,
+
             effects: None,
         },
     );
@@ -34,7 +34,7 @@ pub(super) fn test_registry() -> CellTypeRegistry {
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
             behaviors: None,
-            shield: None,
+
             effects: None,
         },
     );

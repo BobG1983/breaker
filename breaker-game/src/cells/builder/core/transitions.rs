@@ -112,7 +112,7 @@ impl<P, D, H> CellBuilder<P, D, H, Unvisual> {
     /// Configures the cell for rendered mode with mesh and material.
     #[must_use]
     pub(crate) fn rendered(
-        self,
+        mut self,
         meshes: &mut Assets<Mesh>,
         materials: &mut Assets<ColorMaterial>,
     ) -> CellBuilder<P, D, H, Rendered> {
@@ -127,6 +127,21 @@ impl<P, D, H> CellBuilder<P, D, H, Unvisual> {
             })
             .unwrap_or(DEFAULT_CELL_COLOR_RGB);
         let color = Color::linear_rgb(color_rgb[0], color_rgb[1], color_rgb[2]);
+
+        // Pre-compute guardian visual handles if guarded data exists.
+        if let Some(ref mut guarded_data) = self.optional.guarded_data {
+            let config = &guarded_data.guardian_config;
+            let guardian_color = Color::linear_rgb(
+                config.color_rgb[0],
+                config.color_rgb[1],
+                config.color_rgb[2],
+            );
+            guarded_data.guardian_visuals = Some((
+                meshes.add(Rectangle::new(1.0, 1.0)),
+                materials.add(ColorMaterial::from_color(guardian_color)),
+            ));
+        }
+
         CellBuilder {
             position: self.position,
             dimensions: self.dimensions,
@@ -165,6 +180,16 @@ impl<P, D, H, V> CellBuilder<P, D, H, V> {
     #[must_use]
     pub(crate) fn locked(mut self, entities: Vec<Entity>) -> Self {
         self.optional.locked_entities = Some(entities);
+        self
+    }
+
+    #[must_use]
+    pub(crate) fn guarded(mut self, slots: Vec<u8>, config: GuardianSpawnConfig) -> Self {
+        self.optional.guarded_data = Some(GuardedSpawnData {
+            slots,
+            guardian_config: config,
+            guardian_visuals: None,
+        });
         self
     }
 }

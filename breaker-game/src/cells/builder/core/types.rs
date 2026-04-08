@@ -57,6 +57,32 @@ pub(in crate::cells::builder) struct CellDefinitionParams {
     pub(in crate::cells::builder) color_rgb: [f32; 3],
 }
 
+/// Data for spawning guardian children around a guarded cell.
+pub(in crate::cells::builder) struct GuardedSpawnData {
+    /// Ring slot indices (0-7) where guardians should be placed.
+    pub slots: Vec<u8>,
+    /// Guardian cell configuration.
+    pub guardian_config: GuardianSpawnConfig,
+    /// Pre-computed visual handles for rendered guardians (None for headless).
+    pub guardian_visuals: Option<(Handle<Mesh>, Handle<ColorMaterial>)>,
+}
+
+/// Configuration for each guardian child entity.
+pub(crate) struct GuardianSpawnConfig {
+    /// Hit points for the guardian.
+    pub(crate) hp: f32,
+    /// HDR RGB color for the guardian.
+    pub(crate) color_rgb: [f32; 3],
+    /// Slide speed in world units per second.
+    pub(crate) slide_speed: f32,
+    /// Guardian dimension (square: `cell_height` x `cell_height`).
+    pub(crate) cell_height: f32,
+    /// Horizontal grid step.
+    pub(crate) step_x: f32,
+    /// Vertical grid step.
+    pub(crate) step_y: f32,
+}
+
 #[derive(Default)]
 pub(in crate::cells::builder) struct OptionalCellData {
     pub(in crate::cells::builder) definition_params: Option<CellDefinitionParams>,
@@ -68,6 +94,7 @@ pub(in crate::cells::builder) struct OptionalCellData {
     pub(in crate::cells::builder) color_rgb: Option<[f32; 3]>,
     pub(in crate::cells::builder) behaviors: Vec<CellBehavior>,
     pub(in crate::cells::builder) locked_entities: Option<Vec<Entity>>,
+    pub(in crate::cells::builder) guarded_data: Option<GuardedSpawnData>,
 }
 
 // ── Builder ─────────────────────────────────────────────────────────────────

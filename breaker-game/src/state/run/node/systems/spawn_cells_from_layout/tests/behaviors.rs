@@ -39,7 +39,7 @@ fn behavior_registry() -> CellTypeRegistry {
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
             behaviors: Some(vec![CellBehavior::Regen { rate: 2.0 }]),
-            shield: None,
+
             effects: None,
         },
     );
@@ -56,7 +56,7 @@ fn behavior_registry() -> CellTypeRegistry {
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
             behaviors: None,
-            shield: None,
+
             effects: None,
         },
     );

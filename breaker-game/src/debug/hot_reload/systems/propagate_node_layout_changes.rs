@@ -113,7 +113,7 @@ mod tests {
                 damage_blue_range: 0.4,
                 damage_blue_base: 0.2,
                 behaviors: None,
-                shield: None,
+
                 effects: None,
             },
         );
@@ -130,7 +130,7 @@ mod tests {
                 damage_blue_range: 0.4,
                 damage_blue_base: 0.2,
                 behaviors: None,
-                shield: None,
+
                 effects: None,
             },
         );

@@ -5,4 +5,3 @@ mod behaviors;
 mod lock_resolution;
 mod position2d;
 mod scaling;
-mod shield_cells;

@@ -2,11 +2,16 @@
 
 use bevy::prelude::*;
 use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
-use rantzsoft_spatial2d::components::{Position2D, Scale2D};
+use rantzsoft_spatial2d::{
+    components::{Position2D, Scale2D},
+    propagation::PositionPropagation,
+};
 
 use super::types::*;
 use crate::{
-    cells::{components::*, definition::CellBehavior},
+    cells::{
+        behaviors::guarded::components::ring_slot_offset, components::*, definition::CellBehavior,
+    },
     effect::{EffectCommandsExt, EffectNode, RootEffect},
     shared::{BOLT_LAYER, CELL_LAYER, GameDrawLayer},
 };
@@ -139,6 +144,9 @@ fn spawn_inner(commands: &mut Commands, core: impl Bundle, optional: OptionalCel
             CellBehavior::Regen { rate } => {
                 entity.insert((RegenCell, Regen, RegenRate(rate)));
             }
+            CellBehavior::Guarded(_) => {
+                entity.insert(GuardedCell);
+            }
         }
     }
 
@@ -152,7 +160,8 @@ fn spawn_inner(commands: &mut Commands, core: impl Bundle, optional: OptionalCel
 #[cfg(test)]
 impl CellBuilder<HasPosition, HasDimensions, HasHealth, Headless> {
     /// Spawns a headless cell entity with all components.
-    pub(crate) fn spawn(self, commands: &mut Commands) -> Entity {
+    pub(crate) fn spawn(mut self, commands: &mut Commands) -> Entity {
+        let guarded_data = self.optional.guarded_data.take();
         let params = CoreParams {
             pos: self.position.pos,
             width: self.dimensions.width,
@@ -160,7 +169,12 @@ impl CellBuilder<HasPosition, HasDimensions, HasHealth, Headless> {
             hp: self.health.hp,
         };
         let core = build_core(&params, &self.optional);
-        spawn_inner(commands, core, self.optional)
+        let entity = spawn_inner(commands, core, self.optional);
+        if let Some(guarded_data) = guarded_data {
+            commands.entity(entity).insert(GuardedCell);
+            spawn_guardian_children(commands, entity, &params, &guarded_data);
+        }
+        entity
     }
 }
 
@@ -168,9 +182,10 @@ impl CellBuilder<HasPosition, HasDimensions, HasHealth, Headless> {
 
 impl CellBuilder<HasPosition, HasDimensions, HasHealth, Rendered> {
     /// Spawns a rendered cell entity with all components.
-    pub(crate) fn spawn(self, commands: &mut Commands) -> Entity {
+    pub(crate) fn spawn(mut self, commands: &mut Commands) -> Entity {
         let mesh = self.visual.mesh.clone();
         let material = self.visual.material.clone();
+        let guarded_data = self.optional.guarded_data.take();
         let params = CoreParams {
             pos: self.position.pos,
             width: self.dimensions.width,
@@ -184,6 +199,68 @@ impl CellBuilder<HasPosition, HasDimensions, HasHealth, Rendered> {
             MeshMaterial2d(material),
             GameDrawLayer::Cell,
         ));
+        if let Some(guarded_data) = guarded_data {
+            commands.entity(entity).insert(GuardedCell);
+            spawn_guardian_children(commands, entity, &params, &guarded_data);
+        }
         entity
+    }
+}
+
+/// Spawns guardian children around a guarded parent cell.
+///
+/// Each guardian gets full cell components (Cell, health, position, collision)
+/// plus guardian-specific components (`GuardianCell`, `GuardianSlot`, `SlideTarget`, etc.).
+/// Guardian dimensions are square (`cell_height` x `cell_height`).
+/// If `guardian_visuals` is `Some`, each guardian also receives visual components.
+fn spawn_guardian_children(
+    commands: &mut Commands,
+    parent_entity: Entity,
+    parent_params: &CoreParams,
+    guarded_data: &GuardedSpawnData,
+) {
+    let config = &guarded_data.guardian_config;
+    let guardian_dim = config.cell_height;
+    let guardian_half = guardian_dim / 2.0;
+
+    for &slot in &guarded_data.slots {
+        let (ox, oy) = ring_slot_offset(slot);
+        let world_pos = Vec2::new(
+            ox.mul_add(config.step_x, parent_params.pos.x),
+            oy.mul_add(config.step_y, parent_params.pos.y),
+        );
+        let initial_target = (slot + 1) % 8;
+
+        let mut entity = commands.spawn((
+            Cell,
+            GuardianCell,
+            GuardianSlot(slot),
+            SlideTarget(initial_target),
+            GuardianSlideSpeed(config.slide_speed),
+            GuardianGridStep {
+                step_x: config.step_x,
+                step_y: config.step_y,
+            },
+            CellHealth::new(config.hp),
+            CellWidth::new(guardian_dim),
+            CellHeight::new(guardian_dim),
+            Position2D(world_pos),
+            PositionPropagation::Absolute,
+            Scale2D {
+                x: guardian_dim,
+                y: guardian_dim,
+            },
+            Aabb2D::new(Vec2::ZERO, Vec2::new(guardian_half, guardian_half)),
+            CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
+            ChildOf(parent_entity),
+        ));
+
+        if let Some((ref mesh, ref material)) = guarded_data.guardian_visuals {
+            entity.insert((
+                Mesh2d(mesh.clone()),
+                MeshMaterial2d(material.clone()),
+                GameDrawLayer::Cell,
+            ));
+        }
     }
 }

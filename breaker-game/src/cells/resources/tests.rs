@@ -82,7 +82,7 @@ fn make_cell_type(id: &str, alias: &str, hp: f32) -> CellTypeDefinition {
         damage_blue_range: 0.5,
         damage_blue_base: 0.2,
         behaviors: None,
-        shield: None,
+
         effects: None,
     }
 }

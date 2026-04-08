@@ -371,7 +371,7 @@ fn locked_cell_has_same_collision_layers_as_normal_cell() {
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
             behaviors: None,
-            shield: None,
+
             effects: None,
         },
     );
@@ -388,7 +388,7 @@ fn locked_cell_has_same_collision_layers_as_normal_cell() {
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
             behaviors: None,
-            shield: None,
+
             effects: None,
         },
     );

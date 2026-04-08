@@ -7,7 +7,6 @@ use crate::{
     cells::{
         CellTypeDefinition,
         components::Cell,
-        definition::ShieldBehavior,
         resources::{CellConfig, CellTypeRegistry},
     },
     shared::PlayfieldConfig,
@@ -45,7 +44,7 @@ pub(super) fn test_registry() -> CellTypeRegistry {
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
             behaviors: None,
-            shield: None,
+
             effects: None,
         },
     );
@@ -62,7 +61,7 @@ pub(super) fn test_registry() -> CellTypeRegistry {
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
             behaviors: None,
-            shield: None,
+
             effects: None,
         },
     );
@@ -374,63 +373,6 @@ pub(super) fn test_app_with_hp_mult(layout: NodeLayout, hp_mult: f32) -> App {
     app
 }
 
-/// Creates a test `App` with a registry containing a shield cell type ('H') and "S".
-pub(super) fn test_app_with_shield_registry(layout: NodeLayout) -> App {
-    let mut registry = CellTypeRegistry::default();
-    registry.insert(
-        "H".to_owned(),
-        CellTypeDefinition {
-            id: "shield".to_owned(),
-            alias: "H".to_owned(),
-            hp: 20.0,
-            color_rgb: [0.8, 0.8, 1.0],
-            required_to_clear: true,
-            damage_hdr_base: 4.0,
-            damage_green_min: 0.2,
-            damage_blue_range: 0.4,
-            damage_blue_base: 0.2,
-            behaviors: None,
-            shield: Some(ShieldBehavior {
-                count: 3,
-                radius: 60.0,
-                speed: std::f32::consts::FRAC_PI_2,
-                hp: 10.0,
-                color_rgb: [0.5, 0.8, 1.0],
-            }),
-            effects: None,
-        },
-    );
-    registry.insert(
-        "S".to_owned(),
-        CellTypeDefinition {
-            id: "standard".to_owned(),
-            alias: "S".to_owned(),
-            hp: 1.0,
-            color_rgb: [4.0, 0.2, 0.5],
-            required_to_clear: true,
-            damage_hdr_base: 4.0,
-            damage_green_min: 0.2,
-            damage_blue_range: 0.4,
-            damage_blue_base: 0.2,
-            behaviors: None,
-            shield: None,
-            effects: None,
-        },
-    );
-
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .add_message::<CellsSpawned>()
-        .init_resource::<CellConfig>()
-        .init_resource::<PlayfieldConfig>()
-        .init_resource::<Assets<Mesh>>()
-        .init_resource::<Assets<ColorMaterial>>()
-        .insert_resource(ActiveNodeLayout(layout))
-        .insert_resource(registry)
-        .add_systems(Startup, spawn_cells_from_layout);
-    app
-}
-
 /// Creates a test `App` with a registry containing an "F" type
 /// (`required_to_clear=false`) plus the standard "S" type.
 pub(super) fn test_app_with_non_required_cell(layout: NodeLayout) -> App {
@@ -448,7 +390,7 @@ pub(super) fn test_app_with_non_required_cell(layout: NodeLayout) -> App {
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
             behaviors: None,
-            shield: None,
+
             effects: None,
         },
     );

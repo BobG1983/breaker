@@ -5,47 +5,39 @@ use serde::Deserialize;
 
 use crate::effect::RootEffect;
 
-/// Configuration for a shield cell's orbiting children.
-#[derive(Deserialize, Clone, Debug)]
-pub(crate) struct ShieldBehavior {
-    /// Number of orbit cells to spawn around the shield.
-    pub count: u32,
-    /// Distance from shield center to orbit cell center (before grid scaling).
-    pub radius: f32,
-    /// Angular speed in radians per second.
-    pub speed: f32,
-    /// Hit points for each orbit cell.
-    pub hp: f32,
-    /// HDR RGB color for orbit cells.
-    pub color_rgb: [f32; 3],
+/// Configuration for a guarded cell's guardian children.
+#[derive(Deserialize, Clone, Debug, PartialEq)]
+pub(crate) struct GuardedBehavior {
+    /// Hit points for each guardian cell.
+    pub guardian_hp: f32,
+    /// HDR RGB color for guardian cells.
+    pub guardian_color_rgb: [f32; 3],
+    /// Slide speed in world units per second.
+    pub slide_speed: f32,
 }
 
-impl ShieldBehavior {
+impl GuardedBehavior {
     /// Validates that all fields are well-formed.
     ///
     /// Checks:
-    /// - `radius` must be finite and positive (> 0.0).
-    /// - `speed` must be finite and non-negative (>= 0.0).
-    /// - `hp` must be finite and positive (> 0.0).
+    /// - `guardian_hp` must be positive and finite (> 0.0).
+    /// - `slide_speed` must be non-negative and finite (>= 0.0).
     ///
     /// # Errors
     ///
     /// Returns an error string describing the first invalid field found.
     pub(crate) fn validate(&self) -> Result<(), String> {
-        if self.radius <= 0.0 || !self.radius.is_finite() {
+        if self.guardian_hp <= 0.0 || !self.guardian_hp.is_finite() {
             return Err(format!(
-                "radius must be positive and finite, got {}",
-                self.radius
+                "guardian_hp must be positive and finite, got {}",
+                self.guardian_hp
             ));
         }
-        if self.speed < 0.0 || !self.speed.is_finite() {
+        if self.slide_speed < 0.0 || !self.slide_speed.is_finite() {
             return Err(format!(
-                "speed must be non-negative and finite, got {}",
-                self.speed
+                "slide_speed must be non-negative and finite, got {}",
+                self.slide_speed
             ));
-        }
-        if self.hp <= 0.0 || !self.hp.is_finite() {
-            return Err(format!("hp must be positive and finite, got {}", self.hp));
         }
         Ok(())
     }
@@ -59,6 +51,8 @@ impl ShieldBehavior {
 pub(crate) enum CellBehavior {
     /// Cell regenerates HP at the given rate per second.
     Regen { rate: f32 },
+    /// Cell has guardian children that slide in a ring.
+    Guarded(GuardedBehavior),
 }
 
 /// A cell type definition loaded from RON.
@@ -82,12 +76,9 @@ pub(crate) struct CellTypeDefinition {
     pub damage_blue_range: f32,
     /// Base blue channel value for damage color feedback.
     pub damage_blue_base: f32,
-    /// Optional behavior list (regen, etc.). Defaults to `None`.
+    /// Optional behavior list (regen, guarded, etc.). Defaults to `None`.
     #[serde(default)]
     pub behaviors: Option<Vec<CellBehavior>>,
-    /// Optional shield configuration. Stays as a separate field until Wave 4.
-    #[serde(default)]
-    pub shield: Option<ShieldBehavior>,
     /// Optional effect chains for this cell type. Defaults to `None`.
     #[serde(default)]
     pub effects: Option<Vec<RootEffect>>,
@@ -106,7 +97,7 @@ impl CellTypeDefinition {
     /// - `hp` must be finite and positive (> 0.0).
     /// - `alias` must not be empty or the reserved `"."`.
     /// - Each `CellBehavior::Regen { rate }` must have a finite positive rate.
-    /// - `shield`, if present, must pass its own validation.
+    /// - Each `CellBehavior::Guarded` must pass `GuardedBehavior::validate()`.
     ///
     /// # Errors
     ///
@@ -131,11 +122,11 @@ impl CellTypeDefinition {
                             ));
                         }
                     }
+                    CellBehavior::Guarded(guarded) => {
+                        guarded.validate()?;
+                    }
                 }
             }
-        }
-        if let Some(ref shield) = self.shield {
-            shield.validate()?;
         }
         Ok(())
     }
@@ -159,8 +150,15 @@ mod tests {
             damage_blue_range: 0.4,
             damage_blue_base: 0.2,
             behaviors: None,
-            shield: None,
             effects: None,
+        }
+    }
+
+    fn valid_guarded_behavior() -> GuardedBehavior {
+        GuardedBehavior {
+            guardian_hp: 10.0,
+            guardian_color_rgb: [0.5, 0.8, 1.0],
+            slide_speed: 30.0,
         }
     }
 
@@ -194,7 +192,7 @@ mod tests {
         assert!(def.validate().is_err(), "hp = INFINITY should be rejected");
     }
 
-    // ── CellBehavior enum tests (Part A behaviors 1-2) ──────────────
+    // ── CellBehavior enum tests ────────────────────────────────────
 
     #[test]
     fn cell_behavior_regen_deserializes_from_ron() {
@@ -226,7 +224,325 @@ mod tests {
         );
     }
 
-    // ── CellTypeDefinition deserialization (Part A behaviors 3-5, 14) ─
+    // ── Section A: CellBehavior::Guarded deserializes ──────────────
+
+    // Behavior 1: Guarded variant deserializes from RON
+    #[test]
+    fn cell_behavior_guarded_deserializes_from_ron() {
+        let ron_str =
+            "Guarded((guardian_hp: 10.0, guardian_color_rgb: (0.5, 0.8, 1.0), slide_speed: 30.0))";
+        let result: CellBehavior = ron::de::from_str(ron_str).expect("should deserialize");
+        assert_eq!(
+            result,
+            CellBehavior::Guarded(GuardedBehavior {
+                guardian_hp: 10.0,
+                guardian_color_rgb: [0.5, 0.8, 1.0],
+                slide_speed: 30.0,
+            })
+        );
+    }
+
+    // Behavior 1 edge case: slide_speed: 0.0 (stationary guardians)
+    #[test]
+    fn cell_behavior_guarded_zero_slide_speed_deserializes() {
+        let ron_str =
+            "Guarded((guardian_hp: 10.0, guardian_color_rgb: (0.5, 0.8, 1.0), slide_speed: 0.0))";
+        let result: CellBehavior = ron::de::from_str(ron_str).expect("should deserialize");
+        assert_eq!(
+            result,
+            CellBehavior::Guarded(GuardedBehavior {
+                guardian_hp: 10.0,
+                guardian_color_rgb: [0.5, 0.8, 1.0],
+                slide_speed: 0.0,
+            })
+        );
+    }
+
+    // Behavior 2: CellBehavior::Guarded is Clone + Debug + PartialEq
+    #[test]
+    fn cell_behavior_guarded_is_clone_debug_partial_eq() {
+        let behavior = CellBehavior::Guarded(GuardedBehavior {
+            guardian_hp: 10.0,
+            guardian_color_rgb: [0.5, 0.8, 1.0],
+            slide_speed: 30.0,
+        });
+        let cloned = behavior.clone();
+        assert_eq!(behavior, cloned, "clone should equal original via ==");
+        let debug_str = format!("{behavior:?}");
+        assert!(
+            debug_str.contains("Guarded"),
+            "debug should contain 'Guarded', got: {debug_str}"
+        );
+        assert!(
+            debug_str.contains("10.0") || debug_str.contains("10"),
+            "debug should contain '10.0', got: {debug_str}"
+        );
+    }
+
+    // Behavior 3: GuardedBehavior struct has required fields
+    #[test]
+    fn guarded_behavior_struct_has_required_fields() {
+        let gb = GuardedBehavior {
+            guardian_hp: 5.0,
+            guardian_color_rgb: [1.0, 0.0, 0.0],
+            slide_speed: 50.0,
+        };
+        assert!(
+            (gb.guardian_hp - 5.0).abs() < f32::EPSILON,
+            "guardian_hp should be 5.0"
+        );
+        assert!(
+            (gb.guardian_color_rgb[0] - 1.0).abs() < f32::EPSILON
+                && (gb.guardian_color_rgb[1] - 0.0).abs() < f32::EPSILON
+                && (gb.guardian_color_rgb[2] - 0.0).abs() < f32::EPSILON,
+            "guardian_color_rgb should be [1.0, 0.0, 0.0]"
+        );
+        assert!(
+            (gb.slide_speed - 50.0).abs() < f32::EPSILON,
+            "slide_speed should be 50.0"
+        );
+    }
+
+    // ── Section B: GuardedBehavior Validation ──────────────────────
+
+    // Behavior 4: validate() accepts valid values
+    #[test]
+    fn guarded_behavior_validate_accepts_valid() {
+        let gb = valid_guarded_behavior();
+        assert!(
+            gb.validate().is_ok(),
+            "valid GuardedBehavior should pass validation: {:?}",
+            gb.validate(),
+        );
+    }
+
+    // Behavior 4 edge case: smallest positive hp
+    #[test]
+    fn guarded_behavior_validate_accepts_smallest_positive_hp() {
+        let mut gb = valid_guarded_behavior();
+        gb.guardian_hp = 0.001;
+        assert!(
+            gb.validate().is_ok(),
+            "guardian_hp = 0.001 should pass: {:?}",
+            gb.validate(),
+        );
+    }
+
+    // Behavior 5: validate() rejects zero guardian_hp
+    #[test]
+    fn guarded_behavior_validate_rejects_zero_hp() {
+        let mut gb = valid_guarded_behavior();
+        gb.guardian_hp = 0.0;
+        assert!(
+            gb.validate().is_err(),
+            "guardian_hp = 0.0 should be rejected"
+        );
+    }
+
+    // Behavior 6: validate() rejects negative guardian_hp
+    #[test]
+    fn guarded_behavior_validate_rejects_negative_hp() {
+        let mut gb = valid_guarded_behavior();
+        gb.guardian_hp = -5.0;
+        assert!(
+            gb.validate().is_err(),
+            "guardian_hp = -5.0 should be rejected"
+        );
+    }
+
+    // Behavior 6 edge case: -0.001
+    #[test]
+    fn guarded_behavior_validate_rejects_tiny_negative_hp() {
+        let mut gb = valid_guarded_behavior();
+        gb.guardian_hp = -0.001;
+        assert!(
+            gb.validate().is_err(),
+            "guardian_hp = -0.001 should be rejected"
+        );
+    }
+
+    // Behavior 7: validate() rejects NaN guardian_hp
+    #[test]
+    fn guarded_behavior_validate_rejects_nan_hp() {
+        let mut gb = valid_guarded_behavior();
+        gb.guardian_hp = f32::NAN;
+        assert!(
+            gb.validate().is_err(),
+            "guardian_hp = NaN should be rejected"
+        );
+    }
+
+    // Behavior 8: validate() rejects infinite guardian_hp
+    #[test]
+    fn guarded_behavior_validate_rejects_infinite_hp() {
+        let mut gb = valid_guarded_behavior();
+        gb.guardian_hp = f32::INFINITY;
+        assert!(
+            gb.validate().is_err(),
+            "guardian_hp = INFINITY should be rejected"
+        );
+    }
+
+    // Behavior 8 edge case: NEG_INFINITY
+    #[test]
+    fn guarded_behavior_validate_rejects_neg_infinite_hp() {
+        let mut gb = valid_guarded_behavior();
+        gb.guardian_hp = f32::NEG_INFINITY;
+        assert!(
+            gb.validate().is_err(),
+            "guardian_hp = NEG_INFINITY should be rejected"
+        );
+    }
+
+    // Behavior 9: validate() accepts zero slide_speed
+    #[test]
+    fn guarded_behavior_validate_accepts_zero_slide_speed() {
+        let mut gb = valid_guarded_behavior();
+        gb.slide_speed = 0.0;
+        assert!(
+            gb.validate().is_ok(),
+            "slide_speed = 0.0 should be accepted: {:?}",
+            gb.validate(),
+        );
+    }
+
+    // Behavior 10: validate() rejects negative slide_speed
+    #[test]
+    fn guarded_behavior_validate_rejects_negative_slide_speed() {
+        let mut gb = valid_guarded_behavior();
+        gb.slide_speed = -1.0;
+        assert!(
+            gb.validate().is_err(),
+            "slide_speed = -1.0 should be rejected"
+        );
+    }
+
+    // Behavior 10 edge case: -0.001
+    #[test]
+    fn guarded_behavior_validate_rejects_tiny_negative_slide_speed() {
+        let mut gb = valid_guarded_behavior();
+        gb.slide_speed = -0.001;
+        assert!(
+            gb.validate().is_err(),
+            "slide_speed = -0.001 should be rejected"
+        );
+    }
+
+    // Behavior 11: validate() rejects NaN slide_speed
+    #[test]
+    fn guarded_behavior_validate_rejects_nan_slide_speed() {
+        let mut gb = valid_guarded_behavior();
+        gb.slide_speed = f32::NAN;
+        assert!(
+            gb.validate().is_err(),
+            "slide_speed = NaN should be rejected"
+        );
+    }
+
+    // Behavior 12: validate() rejects infinite slide_speed
+    #[test]
+    fn guarded_behavior_validate_rejects_infinite_slide_speed() {
+        let mut gb = valid_guarded_behavior();
+        gb.slide_speed = f32::INFINITY;
+        assert!(
+            gb.validate().is_err(),
+            "slide_speed = INFINITY should be rejected"
+        );
+    }
+
+    // Behavior 12 edge case: NEG_INFINITY
+    #[test]
+    fn guarded_behavior_validate_rejects_neg_infinite_slide_speed() {
+        let mut gb = valid_guarded_behavior();
+        gb.slide_speed = f32::NEG_INFINITY;
+        assert!(
+            gb.validate().is_err(),
+            "slide_speed = NEG_INFINITY should be rejected"
+        );
+    }
+
+    // ── Section C: CellTypeDefinition Guarded Validation Delegation ──
+
+    // Behavior 13: validate() delegates to GuardedBehavior::validate()
+    #[test]
+    fn cell_definition_validate_delegates_to_guarded_validate() {
+        let mut def = valid_definition();
+        def.behaviors = Some(vec![CellBehavior::Guarded(GuardedBehavior {
+            guardian_hp: -1.0, // invalid
+            guardian_color_rgb: [0.5, 0.8, 1.0],
+            slide_speed: 30.0,
+        })]);
+        assert!(
+            def.validate().is_err(),
+            "CellTypeDefinition.validate should reject invalid GuardedBehavior"
+        );
+    }
+
+    // Behavior 14: validate() accepts valid Guarded behavior
+    #[test]
+    fn cell_definition_validate_accepts_valid_guarded() {
+        let mut def = valid_definition();
+        def.behaviors = Some(vec![CellBehavior::Guarded(valid_guarded_behavior())]);
+        assert!(
+            def.validate().is_ok(),
+            "CellTypeDefinition with valid GuardedBehavior should pass: {:?}",
+            def.validate(),
+        );
+    }
+
+    // Behavior 14 edge case: both Regen and Guarded valid
+    #[test]
+    fn cell_definition_validate_accepts_regen_and_guarded() {
+        let mut def = valid_definition();
+        def.behaviors = Some(vec![
+            CellBehavior::Regen { rate: 2.0 },
+            CellBehavior::Guarded(valid_guarded_behavior()),
+        ]);
+        assert!(
+            def.validate().is_ok(),
+            "definition with both Regen and valid Guarded should pass: {:?}",
+            def.validate(),
+        );
+    }
+
+    // Behavior 15: validate() rejects when any behavior is invalid (mixed vec)
+    #[test]
+    fn cell_definition_validate_rejects_mixed_vec_with_invalid_guarded() {
+        let mut def = valid_definition();
+        def.behaviors = Some(vec![
+            CellBehavior::Regen { rate: 2.0 },
+            CellBehavior::Guarded(GuardedBehavior {
+                guardian_hp: 0.0, // invalid
+                guardian_color_rgb: [0.5, 0.8, 1.0],
+                slide_speed: 30.0,
+            }),
+        ]);
+        assert!(
+            def.validate().is_err(),
+            "behaviors with one invalid Guarded entry should be rejected"
+        );
+    }
+
+    // Behavior 16: CellTypeDefinition without shield field deserializes
+    #[test]
+    fn definition_without_shield_field_deserializes() {
+        let ron_str = r#"(
+            id: "test",
+            alias: "T",
+            hp: 10.0,
+            color_rgb: (1.0, 0.5, 0.2),
+            required_to_clear: true,
+            damage_hdr_base: 4.0,
+            damage_green_min: 0.2,
+            damage_blue_range: 0.4,
+            damage_blue_base: 0.2,
+        )"#;
+        let def: CellTypeDefinition =
+            ron::de::from_str(ron_str).expect("should deserialize without shield field");
+        assert_eq!(def.alias, "T");
+    }
+
+    // ── CellTypeDefinition deserialization ──────────────────────────
 
     #[test]
     fn definition_with_no_behaviors_field_deserializes_to_none() {
@@ -355,7 +671,7 @@ mod tests {
         );
     }
 
-    // ── validate() for behaviors (Part A behaviors 6-13) ─────────────
+    // ── validate() for behaviors ────────────────────────────────────
 
     #[test]
     fn validate_accepts_valid_definition_with_regen_behavior() {
@@ -486,7 +802,7 @@ mod tests {
         );
     }
 
-    // ── alias validation (Part A behaviors 15-16) ────────────────────
+    // ── alias validation ────────────────────────────────────────────
 
     #[test]
     fn validate_rejects_empty_alias() {
@@ -503,156 +819,6 @@ mod tests {
         assert!(
             err.contains("reserved") || err.contains('.'),
             "error should mention reserved or dot, got: {err}"
-        );
-    }
-
-    // ── ShieldBehavior delegation (Part A behavior 17) ───────────────
-
-    fn valid_shield() -> ShieldBehavior {
-        ShieldBehavior {
-            count: 3,
-            radius: 60.0,
-            speed: std::f32::consts::FRAC_PI_2,
-            hp: 10.0,
-            color_rgb: [0.5, 0.8, 1.0],
-        }
-    }
-
-    #[test]
-    fn shield_validate_accepts_valid_shield() {
-        let shield = valid_shield();
-        assert!(
-            shield.validate().is_ok(),
-            "valid ShieldBehavior should pass validation: {:?}",
-            shield.validate(),
-        );
-    }
-
-    #[test]
-    fn shield_validate_rejects_zero_orbit_radius() {
-        let mut shield = valid_shield();
-        shield.radius = 0.0;
-        assert!(
-            shield.validate().is_err(),
-            "orbit_radius = 0.0 should be rejected"
-        );
-    }
-
-    #[test]
-    fn shield_validate_rejects_negative_orbit_radius() {
-        let mut shield = valid_shield();
-        shield.radius = -10.0;
-        assert!(
-            shield.validate().is_err(),
-            "orbit_radius = -10.0 should be rejected"
-        );
-    }
-
-    #[test]
-    fn shield_validate_rejects_infinite_orbit_radius() {
-        let mut shield = valid_shield();
-        shield.radius = f32::INFINITY;
-        assert!(
-            shield.validate().is_err(),
-            "orbit_radius = INFINITY should be rejected"
-        );
-    }
-
-    #[test]
-    fn shield_validate_rejects_nan_orbit_radius() {
-        let mut shield = valid_shield();
-        shield.radius = f32::NAN;
-        assert!(
-            shield.validate().is_err(),
-            "orbit_radius = NaN should be rejected"
-        );
-    }
-
-    #[test]
-    fn shield_validate_rejects_negative_orbit_speed() {
-        let mut shield = valid_shield();
-        shield.speed = -1.0;
-        assert!(
-            shield.validate().is_err(),
-            "orbit_speed = -1.0 should be rejected"
-        );
-    }
-
-    #[test]
-    fn shield_validate_accepts_zero_orbit_speed() {
-        // Zero speed means orbit cells don't rotate, which is valid.
-        let mut shield = valid_shield();
-        shield.speed = 0.0;
-        assert!(
-            shield.validate().is_ok(),
-            "orbit_speed = 0.0 should be accepted (stationary orbits)"
-        );
-    }
-
-    #[test]
-    fn shield_validate_rejects_infinite_orbit_speed() {
-        let mut shield = valid_shield();
-        shield.speed = f32::INFINITY;
-        assert!(
-            shield.validate().is_err(),
-            "orbit_speed = INFINITY should be rejected"
-        );
-    }
-
-    #[test]
-    fn shield_validate_rejects_zero_orbit_hp() {
-        let mut shield = valid_shield();
-        shield.hp = 0.0;
-        assert!(
-            shield.validate().is_err(),
-            "orbit_hp = 0.0 should be rejected"
-        );
-    }
-
-    #[test]
-    fn shield_validate_rejects_negative_orbit_hp() {
-        let mut shield = valid_shield();
-        shield.hp = -5.0;
-        assert!(
-            shield.validate().is_err(),
-            "orbit_hp = -5.0 should be rejected"
-        );
-    }
-
-    #[test]
-    fn shield_validate_rejects_nan_orbit_hp() {
-        let mut shield = valid_shield();
-        shield.hp = f32::NAN;
-        assert!(
-            shield.validate().is_err(),
-            "orbit_hp = NaN should be rejected"
-        );
-    }
-
-    #[test]
-    fn cell_definition_validate_delegates_to_shield_validate() {
-        let mut def = valid_definition();
-        def.shield = Some(ShieldBehavior {
-            count: 3,
-            radius: -1.0, // invalid
-            speed: std::f32::consts::FRAC_PI_2,
-            hp: 10.0,
-            color_rgb: [0.5, 0.8, 1.0],
-        });
-        assert!(
-            def.validate().is_err(),
-            "CellTypeDefinition.validate should reject invalid ShieldBehavior"
-        );
-    }
-
-    #[test]
-    fn cell_definition_validate_accepts_valid_shield() {
-        let mut def = valid_definition();
-        def.shield = Some(valid_shield());
-        assert!(
-            def.validate().is_ok(),
-            "CellTypeDefinition with valid ShieldBehavior should pass: {:?}",
-            def.validate(),
         );
     }
 
