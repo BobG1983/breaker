@@ -1,5 +1,13 @@
-- [Confirmed Bevy 0.18.1 API Patterns](confirmed-patterns.md) — verified-correct patterns for Time<Virtual>/Real/Fixed, time dilation, ramp systems; QueryData derive; Bundle trait and BundleInfo; Message system; States/SubStates/ComputedStates trait signatures, in_state condition, configure_sets is per-schedule; GlobalZIndex full-screen overlay pattern; StateTransitionEvent fields; Bevy 0.18 breaking change: next_state.set() always triggers OnEnter/OnExit; one-shot systems (register_system/Commands::run_system); on_message run condition with independent cursor; StateTransition schedule placement (after PreUpdate); NextState single-slot semantics; run condition combinators (.and/.or/.nand/.nor); resource_changed/resource_exists_and_changed/resource_changed_or_removed; state_exists/state_changed; condition_changed/condition_changed_to edge detectors; Observers do NOT support resources; StateTransitionEvent<S> as Message for state removal detection; Val variants (Px/Percent/Vw/Vh/VMin/VMax) conversion rules; UiScale resource (scales Px+font_size, NOT Vw/Vh/Percent); TextFont::font_size is physical pixels scaled by UiScale; recommended sync_ui_scale pattern; Screenshot API: Screenshot component + On<ScreenshotCaptured> observer, async 2+ frames, auto-included in DefaultPlugins, save_to_disk infers format from extension; AppExit is a Message (not Event), auto-registered, MessageWriter<AppExit> works, checked by runner AFTER app.update() not inside schedule, hang-on-quit caused by UpdateMode::Reactive with no events firing
-- [FullscreenMaterial API](rendering-fullscreen-material.md) — FullscreenMaterial trait, FullscreenMaterialPlugin, ViewTarget ping-pong, PostProcessWrite fields, Node2d graph anchors including post-UI placement (NodeUi::UiPass from bevy::ui_render::graph), full Core2d+UI execution order, blend state limitation, HDR support
+## Bevy 0.18.1 API Reference
+
+- [Time API](api-time-and-virtual.md) — Time<Virtual>/Real/Fixed, dilation, pause/unpause, ramp systems
+- [Message System](api-message-system.md) — Message derive, MessageWriter/Reader, test injection, on_message, AppExit
+- [QueryData Derive](api-query-data.md) — custom named query structs, mutable, nested, Has/With distinction
+- [State System](api-states.md) — States/SubStates/ComputedStates, StateTransitionEvent, in_state/state_changed, condition_changed, configure_sets per-schedule
+- [World Access and Bundle](api-world-and-bundle.md) — one-shot systems, Commands::run_system, Bundle/BundleInfo introspection
+- [Run Conditions](api-run-conditions.md) — combinators (.and/.or/.nand/.nor), resource change detection, Observers limitation
+- [UI and Rendering](api-ui-and-rendering.md) — GlobalZIndex overlays, Val variants, UiScale, TextFont, Screenshot API
+- [FullscreenMaterial API](rendering-fullscreen-material.md) — FullscreenMaterial trait, ViewTarget ping-pong, PostProcessWrite, Node2d graph anchors
 
 ## Session History
 See [ephemeral/](ephemeral/) — not committed.

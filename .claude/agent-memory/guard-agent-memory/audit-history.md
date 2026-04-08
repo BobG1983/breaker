@@ -4,6 +4,41 @@ description: When full audits were run, what scope, and what was found — helps
 type: project
 ---
 
+## 2026-04-08 — Full Audit (feature/bolt-birthing-animation pre-merge gate)
+
+**Scope:** All 27 agent memory directories.
+**Total stable files:** ~130 across all agents.
+**Issues found:** 7 (all fixed).
+
+### Fixes Applied
+
+1. **guard-file-length/MEMORY.md** — stale cross-reference pointing to `phase7_findings.md` as current; updated to `phase8_findings.md` (Wave 12, 2026-04-07).
+
+2. **researcher-bevy-api/confirmed-patterns.md** — 1150 lines; split into 7 focused files: `api-time-and-virtual.md`, `api-message-system.md`, `api-query-data.md`, `api-states.md`, `api-world-and-bundle.md`, `api-run-conditions.md`, `api-ui-and-rendering.md`. Original tombstoned with redirect. MEMORY.md updated.
+
+3. **reviewer-correctness/bug-patterns.md** — 351 lines; split into `bug-patterns-open.md` (OPEN/LATENT bugs) and `bug-patterns-resolved.md` (FIXED/CONFIRMED patterns). Original tombstoned. MEMORY.md updated.
+
+4. **guard-docs/known-state.md** — 420 lines; split into `known-state.md` (recent sessions only, ~90 lines) and `known-state-history.md` (older phases 2026-03-28 through 2026-04-06). MEMORY.md updated.
+
+5. **researcher-codebase/MEMORY.md** — two new files (`bolt-lost-respawn-gap.md`, `time-virtual-pausing-hazard.md`) were new/untracked in git but already correctly indexed in MEMORY.md. No fix needed.
+
+6. **researcher-crates/MEMORY.md** — new file `iyes_progress_integration.md` was already correctly indexed in MEMORY.md. No fix needed.
+
+7. **reviewer-bevy-api/MEMORY.md** — was missing the new split files; rebuilt to index all 8 api-*.md files.
+
+### Staleness Patterns Observed
+
+- **researcher-bevy-api/confirmed-patterns.md** is the most rapidly-growing file. Each new API discovery adds to it indefinitely. Pattern: split by topic proactively, not reactively.
+- **guard-docs/known-state.md** accumulates one section per feature branch. Pattern: keep only the most recent 3 sessions + standing facts; archive the rest to known-state-history.md.
+- **reviewer-correctness/bug-patterns.md** mixed OPEN and RESOLVED bugs making it hard to scan. Pattern: separate open from resolved to avoid double-checking already-fixed issues.
+- **guard-file-length/MEMORY.md** cross-reference goes stale every phase boundary (phase3→4→5→6→7→8). Pattern: always update guard-file-length cross-reference when a new phase8+ file is created.
+
+### Agents with No Issues Found
+
+orchestrator, planner-spec, planner-review, writer-code, writer-tests, researcher-system-dependencies, researcher-rust-idioms, reviewer-architecture, reviewer-performance, reviewer-quality, reviewer-scenarios, reviewer-tests, reviewer-file-length, runner-linting, runner-scenarios, writer-scenarios, guard-security, guard-dependencies, guard-game-design, guard-file-length (after fix).
+
+---
+
 ## 2026-04-07 — Full Audit (feature/scenario-runner-wiring pre-merge gate)
 
 **Scope:** All 26 agent memory directories.

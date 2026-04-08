@@ -1,1 +1,2 @@
 - [Confirmed Bevy 0.18.1 API Patterns](confirmed-patterns.md) — verified-correct patterns for Time API (Virtual/Real/Fixed), QueryData derive (read-only, mutable, nested, Has/With), Bundle trait and BundleInfo; many sections still TODO (message system, state, SystemParam derive, component spawning, World access, let-chains)
+- [Additional confirmed patterns v2](confirmed-patterns-v2.md) — Messages::drain(), iter_current_update_messages(), get_resource_or_insert_with, Query::single_mut() Result, NodeUi::UiPass post-UI anchor confirmed correct

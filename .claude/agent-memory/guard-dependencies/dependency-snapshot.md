@@ -4,8 +4,9 @@ description: Crate versions at last audit (2026-04-06) — diff against this on 
 type: project
 ---
 
-Audit date: 2026-04-06
-Branch: feature/effect-placeholder-visuals
+Audit date: 2026-04-08
+Branch: feature/bolt-birthing-animation
+Prior audit: 2026-04-06 (feature/effect-placeholder-visuals)
 
 ## Direct Dependencies
 
@@ -92,16 +93,15 @@ All entries below match known-findings.md — no new duplicates introduced by ra
 - rustc-hash v1.1.0 + v2.1.1 (known wontfix)
 - skrifa v0.37.0 + v0.39.0 (known wontfix)
 
-## Changes since prior audit (2026-04-02)
-- rantzsoft_stateflow added as direct dep of breaker-scenario-runner (NEW)
-  Uses CleanupOnExit in: lifecycle/systems/frame_mutations/mutations.rs,
-  invariants/checkers/check_chain_arc_count_reasonable.rs,
-  lifecycle/tests/frame_mutations/chain_arcs.rs
-  No new third-party transitive deps (tracing already declared directly by scenario runner)
+## Changes since prior audit (2026-04-06)
+- No new direct dependencies added on feature/bolt-birthing-animation
+- Cargo.toml files identical to 2026-04-06 snapshot
 - cargo-machete: CLEAN
 - cargo outdated -R: same outdated list (rand 0.9→0.10 BREAKING, ron 0.12.0→0.12.1 patch)
 - cargo deny check licenses: PASS (same Unicode-DFS-2016 harmless pre-approval warning)
+- cargo deny check advisories: same RUSTSEC-2024-0436 (paste unmaintained, known wontfix)
 - Transitive dups: no new dups introduced — all match known-findings.md
+- Feature flags: bevy/dynamic_linking confirmed aliases-only; not in any Cargo.toml or release profile
 
 ## Known Outdated (as of audit)
 - rand: 0.9.2 → 0.10.0 (BREAKING — semver major; deferred, see known-findings.md)

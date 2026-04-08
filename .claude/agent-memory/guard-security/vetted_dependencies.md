@@ -62,3 +62,35 @@ The following direct dependencies in breaker-scenario-runner/Cargo.toml have bee
 NOTE: `cargo audit` and `cargo deny` could not be run in this session (Bash tool not available).
 Last known cargo audit result: RUSTSEC-2024-0436 (paste crate — unmaintained, not a CVE) — still
 transitive via bevy. No direct-dep security advisories known through 2026-04-07.
+
+## cargo audit result — feature/bolt-birthing-animation (2026-04-08)
+
+`cargo audit` run successfully. Result: 1 warning (allowed), 0 errors.
+Warning: `paste 1.0.15` — RUSTSEC-2024-0436 (unmaintained, no CVE). Same transitive path as prior.
+No new advisories. cargo machete: no unused dependencies found.
+
+## Vetted Patterns — rantzsoft_stateflow TransitionType::None (added 2026-04-08)
+
+- `TransitionType::None` variant: cloned safely (trivially `Clone`). `type_ids()` returns `vec![]` — correct.
+- `begin_transition`: early-return on `TransitionType::None` before any pause/resource insert. Instant
+  state change only. No resource leak, no double-change. Sound.
+- `unreachable!("handled by early return above")` at system.rs:301: sound. The `begin_transition`
+  function handles `None` via early return on line 219 before reaching the `match` at line 236.
+  The compiler exhaustiveness checker sees `None` as reachable in the match, hence the arm exists,
+  but it truly cannot be reached at runtime. No panic risk in practice.
+- Dynamic closures calling `world.resource::<MainMenuSelection>()` in register_parent_routes:
+  closures at system.rs:143, 151, 195, 204 — `MainMenuSelection` inserted by `spawn_main_menu`
+  which runs `OnEnter(MenuState::Main)` before routing ever evaluates these closures. The routes
+  only fire when `GameState::Menu` or `MenuState::Main` is the current state, which requires
+  `MenuState::Main` to have been entered. Insertion is guaranteed to precede dispatch. Safe.
+- `world.resource::<NodeOutcome>()` in `resolve_node_next_state` (system.rs:223): `NodeOutcome`
+  is `init_resource`'d in RunPlugin::build(). Safe (confirmed in prior audit, still holds).
+
+## Birthing animation panic surface (added 2026-04-08)
+
+- `tick_birthing.rs`: `birthing.fraction()` calls `Timer::fraction()` — Bevy returns 0.0..=1.0,
+  no division by zero possible (Bevy guards zero-duration internally).
+- `scale.x = birthing.target_scale.x * t` — simple f32 multiply, no overflow in f32, no panic.
+- `begin_node_birthing.rs`: all operations are ECS queries + component inserts — no panic surface.
+- `shared/birthing.rs`: `Birthing::new` always sets BIRTHING_DURATION (0.3) — never zero.
+  `fraction()` delegates to `Timer::fraction()` — safe.

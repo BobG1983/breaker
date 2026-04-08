@@ -1,8 +1,12 @@
 ---
-name: Recurring bug patterns
-description: Bug categories that appear repeatedly in this codebase — check these first on every review
+name: bug-patterns — SPLIT
+description: Split on 2026-04-08 (was 351 lines). See bug-patterns-open.md and bug-patterns-resolved.md.
 type: project
 ---
+
+This file has been split into two focused files:
+- [bug-patterns-open.md](bug-patterns-open.md) — OPEN and LATENT bugs (actively check these)
+- [bug-patterns-resolved.md](bug-patterns-resolved.md) — FIXED / CONFIRMED CORRECT patterns (do not re-flag)
 
 ## rantzsoft_stateflow transition effects: elapsed never incremented — FIXED (2026-04-06 verified)
 
@@ -313,3 +317,39 @@ run_if condition prevents the system from running at all during `!entered_playin
 `breaker_wall_collision`) in FixedUpdate read `BaseWidth`/`BaseHeight`/`ActiveSizeBoosts`/
 `NodeScalingFactor` DIRECTLY — they do not read `Scale2D`. No ordering dependency. Intentional split.
 Do NOT re-flag the Update/FixedUpdate mismatch.
+
+## sync_bolt_scale Update vs tick_birthing FixedUpdate ordering — CONFIRMED CORRECT (feature/bolt-birthing-animation, 2026-04-08)
+
+`sync_bolt_scale` (Update) has `Without<Birthing>` filter. `tick_birthing` (FixedUpdate) writes `Scale2D` for
+birthing bolts. Commands flush between FixedUpdate and Update — so by the time sync_bolt_scale runs,
+`Birthing` is already present and the bolt is excluded. No clobber. Intentional.
+
+## bolt_lost deferred Birthing insert timing — CONFIRMED CORRECT (feature/bolt-birthing-animation, 2026-04-08)
+
+`bolt_lost` does: (1) immediate mutable-query position/velocity write, (2) deferred commands insert
+Scale2D{0,0}/PreviousScale{0,0}/CollisionLayers::default()/Birthing. The one-frame window where
+the bolt has a new position but still has old scale/layers is safe because bolt_lost runs last
+in FixedUpdate and no other system in the same frame can detect the bolt at its new position.
+The deferred commands flush before Update, so sync_bolt_scale's Without<Birthing> filter correctly
+excludes the bolt. Do NOT re-flag this one-frame window.
+
+## all_animate_in_complete: query is NOT bolt-specific — CONFIRMED CORRECT (feature/bolt-birthing-animation, 2026-04-08)
+
+`all_animate_in_complete` queries `Query<(), With<Birthing>>` — matches ANY entity with Birthing,
+not just bolts. This is intentional: it waits for ALL birthing animations to complete regardless
+of entity type. If any non-bolt entity gains Birthing in the future, this system will naturally
+wait for them too. Do NOT re-flag as "should be bolt-specific".
+
+## quit teardown chain: TransitionType::None via dynamic transition — CONFIRMED CORRECT (feature/bolt-birthing-animation, 2026-04-08)
+
+`with_dynamic_transition` closure returning `TransitionType::None` correctly propagates through
+`resolve_transition` as `Some(TransitionType::None)`, then `begin_transition` handles it with
+an early-return instant state change. No `Time<Virtual>` pause, no overlay. The route is
+`GameState::Menu → Teardown` (instant) and `MenuState::Main → Teardown` (instant), which chains
+correctly to `AppState::Teardown` via the condition-triggered AppState route watching `GameState`.
+
+## Birthing stashed_layers in bolt_lost — confirmed correct (2026-04-08)
+
+`bolt_lost` stashes `entry.layers` which was copied from the bolt's current CollisionLayers
+before any insert. The stashed value is the correct full-collision layer set since no system
+has zeroed the layers yet at that point.

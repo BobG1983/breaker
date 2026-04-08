@@ -6,6 +6,7 @@
 - [Evolution Ecosystem Coverage Map](coverage_evolution_ecosystem.md) — gaps from chip-evolution-ecosystem branch: 4 new effects, 16 evolutions, recipe eligibility offering path
 - [Breaker Builder Pattern Coverage Map](coverage_breaker_builder_pattern.md) — gaps from breaker-builder-pattern branch: spawn_or_reuse_breaker, effective_radius/size with ClampRange, node-scale+boost interaction, BreakerPositionClamped staleness
 
+- [Bolt Birthing Animation Coverage Map](coverage_bolt_birthing_animation.md) — no scenario specifically tests birthing gating, AnimateIn duration, or bolt-lost respawn birthing; BoltBirthingInactive invariant missing
 - [Pause Quit Fix Coverage Map](coverage_pause_quit_fix.md) — gaps for quit-from-pause fix; runner cannot inject into ButtonInput<KeyCode>, so no scenario exercises actual quit path
 - [Scenario Runner Wiring Branch Coverage Map](coverage_scenario_runner_wiring.md) — new scenarios added on feature/scenario-runner-wiring: Prism/Aegis/Chrono baseline, CircuitBreaker/FlashStep/MirrorProtocol/Anchor/SplitDecision/NovaLance, node-scale+boost scenarios, multi-node reuse; remaining gaps noted
 

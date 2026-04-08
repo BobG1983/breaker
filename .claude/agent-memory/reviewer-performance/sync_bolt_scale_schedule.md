@@ -1,15 +1,17 @@
 ---
 name: sync_bolt_scale schedule
-description: sync_bolt_scale runs in FixedUpdate every tick with no change-detection guard — runs unconditionally but is cheap at 1 bolt
+description: sync_bolt_scale runs in Update (not FixedUpdate) gated by in_state(NodeState::Playing) — visual sync, correct placement
 type: project
 ---
 
-`sync_bolt_scale` is registered in `FixedUpdate` with `run_if(in_state(PlayingState::Active))` in `BoltPlugin` (bolt/plugin.rs line 88). Tests register it in `FixedUpdate` for convenience.
+`sync_bolt_scale` is registered in `Update` with `run_if(in_state(NodeState::Playing))` in `BoltPlugin` (`breaker-game/src/bolt/plugin.rs` line 94). Tests register it in `Update` for convenience.
 
-The system runs unconditionally every `FixedUpdate` tick. There is no change-detection guard (e.g., `Changed<BaseRadius>`, `Changed<ActiveSizeBoosts>`). The iteration body is cheap: a few multiplications and two float assignments.
+The system runs unconditionally each `Update` frame during `NodeState::Playing`. There is no change-detection guard (e.g., `Changed<BaseRadius>`, `Changed<ActiveSizeBoosts>`). The iteration body is cheap: a few multiplications and two float assignments.
 
-At 1 bolt entity, this is unmeasurably cheap per tick. The `ActiveSizeBoosts` `Vec<f32>` that feeds `multiplier()` calls `.iter().product()` in the loop body — again, at O(1) boost entries and 1 entity, negligible.
+The `Without<Birthing>` filter (added in the birthing animation branch) means birthing bolts are skipped — their Scale2D is driven by `tick_birthing` in FixedUpdate instead.
 
-**Compared to sync_breaker_scale**: breaker runs in `Update` (visual), bolt runs in `FixedUpdate`. Both are correct for their respective domains — bolt physics need the fixed timestep; breaker scale is visual-only. This asymmetry is acceptable.
+At 1 bolt entity, this is unmeasurably cheap per frame. The `ActiveSizeBoosts` `Vec<f32>` that feeds `multiplier()` calls `.iter().product()` — at O(1) boost entries and 1 entity, negligible.
 
-**How to apply:** Do not flag the unconditional run or the FixedUpdate placement as issues. The system is correctly placed and has acceptable cost at current entity scale. If bolt count ever grows to dozens simultaneously (e.g., a multiball mechanic), consider a `Changed<>` guard as an optimization.
+**Compared to sync_breaker_scale**: breaker runs in `Update` (visual), bolt scale also runs in `Update`. Both are visual-sync systems — correct placement.
+
+**How to apply:** Do not flag the unconditional run, the Update placement, or the Without<Birthing> filter as issues. The system is correctly placed. If bolt count ever grows to dozens simultaneously, consider a `Changed<>` guard.
