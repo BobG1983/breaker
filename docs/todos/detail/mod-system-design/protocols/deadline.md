@@ -101,6 +101,24 @@ The RON effect tree uses the new effect system's primitives (todo #2 dependency)
    - When: Deadline activates
    - Then: All 3 bolts receive 2x speed and 2x damage
 
+## Previous Legendary (reference only)
+
+Previous legendary chip RON for reference. The protocol design above is the source of truth — this is preserved for memory/reference only, possibly relevant for tuning comparison, possibly not.
+
+```ron
+// Former deadline.chip.ron legendary: slot
+effects: [
+    On(target: Bolt, then: [
+        When(trigger: NodeTimerThreshold(0.25), then: [
+            Until(trigger: NodeEnd, then: [
+                Do(SpeedBoost(multiplier: 2.0)),
+                Do(DamageBoost(2.0)),
+            ]),
+        ]),
+    ]),
+]
+```
+
 ## Edge Cases
 
 - **Node starts below 25%**: If a node's timer is configured to start below 25% (unlikely but possible), Deadline fires immediately on node start.

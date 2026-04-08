@@ -115,6 +115,31 @@ The RON effect tree uses the new effect system's primitives (todo #2 dependency)
    - When: Breaker starts moving (unplants)
    - Then: Bolt's Piercing from Anchor is removed (bolt may still have piercing from chips)
 
+## Previous Evolution (reference only)
+
+Previous evolution chip RON for reference. The protocol design above is the source of truth — this is preserved for memory/reference only, possibly relevant for tuning comparison, possibly not.
+
+```ron
+// Former anchor.evolution.ron
+(
+    name: "Anchor",
+    description: "Plant the breaker for doubled bump force and a wider perfect window",
+    effects: [
+        On(target: Breaker, then: [
+            Do(Anchor(
+                bump_force_multiplier: 2.0,
+                perfect_window_multiplier: 1.5,
+                plant_delay: 0.3,
+            )),
+        ]),
+    ],
+    ingredients: [
+        (chip_name: "Quick Stop", stacks_required: 2),
+        (chip_name: "Bump Force", stacks_required: 2),
+    ],
+)
+```
+
 ## Edge Cases
 
 - **Multiple bolts**: All bolts receive piercing while breaker is planted, all lose it on unplant. Each bolt tracked independently if it was spawned during planted vs unplanted state.

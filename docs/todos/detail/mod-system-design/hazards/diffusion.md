@@ -21,7 +21,7 @@ pub(crate) struct DiffusionConfig {
 
 ## Components
 
-None. Diffusion is stateless -- it intercepts the damage pipeline per-frame with no per-entity tracking.
+None. Diffusion is stateless — the cells domain reads `DiffusionConfig` per-frame with no per-entity tracking.
 
 ## Messages
 
@@ -76,28 +76,28 @@ if let Some(config) = diffusion_config {
 
 1. **Damage is shared to adjacent cells at stack=1**
    - Given: Cell A at (2,3) with 100 HP, adjacent cells B and C, bolt deals 50 damage to A
-   - When: `diffusion_intercept_damage` runs
+   - When: ``apply_damage::<Cell>` with Diffusion active` runs
    - Then: A receives 40 damage (80% of 50), B receives 5 damage (20% / 2 adjacent), C receives 5 damage
 
 2. **Share percentage scales with stack count at stack=3**
    - Given: Stack=3 (share=40%), Cell A with adjacent cells B, C, D (3 neighbors), bolt deals 60 damage to A
-   - When: `diffusion_intercept_damage` runs
+   - When: ``apply_damage::<Cell>` with Diffusion active` runs
    - Then: A receives 36 damage (60% of 60), B/C/D each receive 8 damage (40% of 60 / 3)
 
 3. **Cascade depth increases at stack=6**
    - Given: Stack=6 (depth=2), Cell A adjacent to B, B adjacent to C (but C not adjacent to A), bolt deals 100 damage to A
-   - When: `diffusion_intercept_damage` runs
+   - When: ``apply_damage::<Cell>` with Diffusion active` runs
    - Then: A receives reduced damage, B receives ring-1 share, C receives ring-2 share (fraction of B's share)
 
 4. **No diffusion when cell has no adjacent cells**
    - Given: Isolated cell A with no neighbors, bolt deals 50 damage
-   - When: `diffusion_intercept_damage` runs
+   - When: ``apply_damage::<Cell>` with Diffusion active` runs
    - Then: A receives full 50 damage (nothing to share with)
 
 5. **System does not run when hazard is inactive**
    - Given: Diffusion not in `ActiveHazards`
    - When: damage is dealt
-   - Then: `diffusion_intercept_damage` does not run, damage passes through unmodified
+   - Then: ``apply_damage::<Cell>` with Diffusion active` does not run, damage passes through unmodified
 
 ## Edge Cases
 

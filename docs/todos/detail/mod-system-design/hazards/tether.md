@@ -34,14 +34,22 @@ Each cell in a linked pair has a `TetherLink` pointing to the other. When one pa
 
 ## Messages
 
-**Reads**: `DamageDealt<Cell>` (intercepts to add tether redirect damage)
-**Sends**: Additional `DamageDealt<Cell>` entries for tether partners
+**Reads**: None directly for damage redirect — the cells domain's `apply_damage::<Cell>` reads `TetherConfig` + `TetherLink` components.
+**Sends**: None for damage redirect.
+
+The cell damage system (`apply_damage::<Cell>`) handles tether redirection:
+1. For each `DamageDealt<Cell>`, checks if the target has a `TetherLink` component
+2. Computes redirect: `damage * damage_percent / 100.0`
+3. Sends additional `DamageDealt<Cell>` for the partner
+4. Original target takes FULL damage (Tether adds extra damage to the partner, does not reduce incoming)
 
 ## Systems
 
-1. **`establish_tether_links`**
-   - Schedule: Runs once per node setup (after cells are spawned)
-   - Run if: `hazard_active(HazardKind::Tether)` AND node just started (e.g., `OnEnter(NodeState::Playing)` or first frame)
+The hazard domain provides link management systems. Damage redirect is handled by the cells domain.
+
+1. **`establish_tether_links`** (hazard domain)
+   - Schedule: `OnEnter(NodeState::Playing)` or first frame of Playing
+   - Run if: `hazard_active(HazardKind::Tether)`
    - Behavior:
      1. Query all cell entities with grid positions
      2. Build list of all eligible adjacent pairs (horizontally and vertically adjacent)
@@ -50,17 +58,7 @@ Each cell in a linked pair has a `TetherLink` pointing to the other. When one pa
      5. Insert `TetherLink` component on both cells in each selected pair
    - Ordering: After cell spawn systems complete
 
-2. **`tether_redirect_damage`**
-   - Schedule: `FixedUpdate`
-   - Run if: `hazard_active(HazardKind::Tether)` AND `in_state(NodeState::Playing)`
-   - Ordering: After Diffusion (if active), before `apply_damage`
-   - Behavior:
-     1. Read all pending `DamageDealt<Cell>` entries
-     2. For each damaged cell that has a `TetherLink`, compute redirect amount: `damage * damage_percent / 100.0`
-     3. Send new `DamageDealt<Cell>` for the partner with the redirect amount
-     4. Original target takes FULL damage (Tether does not reduce incoming damage -- it adds extra damage to the partner)
-
-3. **`cleanup_broken_tether_links`**
+2. **`cleanup_broken_tether_links`** (hazard domain)
    - Schedule: `FixedUpdate`
    - Run if: `hazard_active(HazardKind::Tether)` AND `in_state(NodeState::Playing)`
    - Ordering: After `apply_damage` (cells may die)

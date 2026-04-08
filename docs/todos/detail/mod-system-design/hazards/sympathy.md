@@ -25,23 +25,24 @@ None. Sympathy is stateless -- it reacts to damage events per-frame with no per-
 
 ## Messages
 
-**Reads**: `DamageDealt<Cell>` (reads damage dealt to compute heal amounts)
-**Sends**: `HealCell { cell: Entity, amount: f32 }` for each adjacent cell within cascade depth
+**Reads**: None directly — the cells domain's `apply_damage::<Cell>` reads `SympathyConfig` and handles healing.
+**Sends**: None directly. The cells domain sends `HealCell` internally.
+
+The cell damage system (`apply_damage::<Cell>`) handles Sympathy:
+1. After applying damage to a cell, reads `Res<SympathyConfig>` + `Res<ActiveHazards>`
+2. Computes `heal_percent = base + per_level * (stack - 1)`
+3. Computes `depth = 1 + floor((stack - 1) / depth_increase_interval)`
+4. Finds adjacent cells within `depth` using spatial adjacency query
+5. Sends `HealCell` for each adjacent cell (ring 1: `damage * heal_percent / 100.0`, ring N: attenuating)
+6. Does NOT heal the damaged cell itself — only neighbors
 
 ## Systems
 
-1. **`sympathy_heal_adjacent`**
-   - Schedule: `FixedUpdate`
-   - Run if: `hazard_active(HazardKind::Sympathy)` AND `in_state(NodeState::Playing)`
-   - Ordering: After `apply_damage` (needs to know actual damage dealt, including any Diffusion modification)
-   - Behavior:
-     1. Read `DamageDealt<Cell>` entries (or damage-applied events if available)
-     2. For each damage event, compute `heal_percent = base + per_level * (stack - 1)`
-     3. Compute `depth = 1 + floor((stack - 1) / depth_increase_interval)`
-     4. Find adjacent cells within `depth` using spatial adjacency query
-     5. For each adjacent cell at depth ring 1: send `HealCell { cell, amount: damage * heal_percent / 100.0 }`
-     6. For depth > 1, each successive ring heals based on the previous ring's heal amount (attenuating outward): ring N heals `ring_(N-1)_amount * heal_percent / 100.0`
-     7. Do NOT heal the damaged cell itself -- only neighbors
+**No hazard-domain runtime systems for the healing logic.** The cells domain's `apply_damage::<Cell>` reads `SympathyConfig` and handles it.
+
+The hazard domain provides:
+- `SympathyConfig` resource (populated at hazard activation time)
+- `ActiveHazards` resource (already provided by `HazardPlugin`)
 
 ## Stacking Behavior
 

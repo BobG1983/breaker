@@ -197,25 +197,162 @@ Research completed 2026-04-08. All concrete interface designs, struct layouts, a
 - **Damage message**: After effect refactor (todo #2), `DamageCell` → `DamageDealt<Cell>`. The cell damage system (`apply_damage::<Cell>`) handles redistribution for Diffusion/Tether/Sympathy/Momentum.
 - **Protocol offering**: Extra entry below chips. Pick protocol OR chip — either closes the screen. Random from seeded `GameRng`.
 - **Hazard select**: Separate timed screen after chip select, tier 9+ only. Auto-picks at random on timer expiry.
-- **Effect refactor dependency**: Protocol implementation waits for todo #2. Effect-tree protocols use `ValidDef` types from the new system.
+- **Effect refactor**: Todo #2 completes before this todo starts. Effect-tree protocols use `ValidDef` types, `DamageDealt<Cell>`, `SourceId`, `Killed(KillTarget)` from the new system. No waiting needed.
 
 ## Implementation Order
 
-This todo is large. Suggested implementation waves:
+This todo splits into 10 waves. Waves within a group can run in parallel. Hard dependencies gate between groups.
 
-1. **Infrastructure**: `ProtocolKind`/`HazardKind` enums, `ProtocolRegistry`/`HazardRegistry` registries, `ActiveProtocols`/`ActiveHazards` resources, plugin shells, RON loading
-2. **Legendary removal + Anchor migration**: Remove `Legendary` rarity, retune 13 chips as Rare, delete Anchor evolution, create Anchor protocol RON
-3. **Protocol offering integration**: `ChipOffering::Protocol` variant, `generate_chip_offerings` protocol slot, `handle_chip_input` protocol branch, `ProtocolSelected` message, protocol card rendering
-4. **Effect-tree protocols**: Deadline, Ricochet Protocol, Anchor, Kickstart (depends on effect refactor — todo #2)
-5. **Custom-system protocols**: Debt Collector, Echo Strike, Siphon, Fission, Burnout, Conductor, Afterimage, Reckless Dash, Greed, Iron Curtain, Tier Regression (several depend on effect refactor for `Killed` trigger; Tier Regression depends on node sequencing — todo #7)
-6. **Hazard state flow**: `RunState::HazardSelect`, `HazardSelectState`, `resolve_post_chip_state` dynamic route, hazard select UI
-7. **Hazard systems**: All 16 hazards (depends on node sequencing for tier 9+ — todo #7)
-8. **Scenarios**: Invariant checkers + adversarial scenarios for all protocols and hazards
+### Group A — No dependencies (can start now)
 
-**Hard dependencies**:
-- Waves 4-5 depend on **todo #2** (effect system refactor) for `SourceId`, `Killed(KillTarget)`, `During(Condition)`, `Route`/`Stamp`/`Transfer`. Protocol implementation waits for the refactor — `ProtocolDefinition` effect-tree variants use the new system's `ValidDef` types, not `RootEffect`.
-- Waves 5 (Tier Regression), 6, 7 depend on **todo #7** (node sequencing refactor) for extended tiers and tier 9+ gating
-- Waves 1-3 can proceed independently
+**Wave 1: Plugin infrastructure**
+- Create `protocol/` module: `mod.rs`, `plugin.rs`, `definition.rs`, `resources.rs`, `messages.rs`
+- Create `hazard/` module: same structure
+- `ProtocolKind` (15 variants) + `ProtocolKind::ALL` const
+- `HazardKind` (16 variants) + `HazardKind::ALL` const
+- `ProtocolTuning` enum (all 15 variants with fields, `kind()`, `effects()`)
+- `HazardTuning` enum (all 16 variants with fields, `kind()`)
+- `ProtocolDefinition` + `HazardDefinition` asset structs
+- `ProtocolRegistry` + `HazardRegistry` with `SeedableRegistry` impls
+- `ActiveProtocols` + `ActiveHazards` + `UnlockedProtocols` resources
+- `ProtocolOffer` + `HazardOffers` resources
+- `ProtocolSelected` + `HazardSelected` messages
+- `protocol_active()` + `hazard_active()` run_if helpers
+- `ProtocolPlugin` + `HazardPlugin` shells (empty `protocols::register` / `hazards::register`)
+- Wire registries into `defaults_plugin()`, plugins into `game.rs`
+- Wire `ActiveProtocols.clear()` + `ActiveHazards.clear()` into `reset_run_state`
+- Add terminology entries (done)
+- **Files touched**: ~15 new files, 3 modified (game.rs, state/plugin/system.rs, reset_run_state.rs)
+- **Detail**: [research/interface-design.md](research/interface-design.md) sections 1-8, 13
+
+**Wave 2**: Removed — legendary removal is now a separate todo queued before this one. See [legendary-removal.md](../legendary-removal.md). By the time this todo starts, Legendary rarity is gone, chips are retuned, and Deadline/Ricochet Protocol/Anchor are ready for protocol RON creation.
+
+### Group B — After Wave 1
+
+**Wave 3: Protocol offering integration**
+- `generate_protocol_offering` system: reads `ProtocolRegistry`, `ActiveProtocols`, `UnlockedProtocols`, `GameRng` → inserts `ProtocolOffer`
+- Modify `spawn_chip_select`: spawn protocol card row below chip cards (landscape orientation)
+- Modify `handle_chip_input`: up/down navigation between chip row and protocol row; protocol confirm sends `ProtocolSelected` + `ChangeState<ChipSelectState>`
+- Modify `tick_chip_timer`: timer expiry skips protocol (auto-selects nothing for protocol)
+- `dispatch_protocol_selection`: reads `ProtocolSelected`, inserts into `ActiveProtocols`, calls `protocols::activate()` (config resource insertion), dispatches effect trees via new effect system API
+- Protocol cleanup system: removes config resources on `OnExit(MenuState::Main)`
+- **Files touched**: `chip_select/systems/`, `chip_select/resources.rs`, `protocol/systems/`, `protocol/plugin.rs`
+- **Detail**: [research/interface-design.md](research/interface-design.md) sections 7, 9, 10; [research/chip-offering-flow.md](research/chip-offering-flow.md)
+
+**Wave 3b: Cross-domain messages** (parallel with Wave 3)
+- Define `HealCell`, `SpawnGhostCell`, `ApplyBoltForce`, `ApplyBreakerShrink`, `ApplyBreakerRestore` messages in their owning domains
+- Stub consuming systems (accept message, log, no-op) — real handlers come when hazards are implemented
+- **Files touched**: `cells/messages.rs`, `bolt/messages.rs`, `breaker/messages.rs`, + consuming system stubs
+- **Detail**: [research/cross-domain-messages.md](research/cross-domain-messages.md)
+
+### Group C — After Wave 3
+
+**Wave 4: Effect-tree protocols** (all 4 in parallel)
+- Write RON effect trees for Deadline, Ricochet Protocol, Anchor, Kickstart using `ValidDef` format
+- Wire `dispatch_protocol_selection` to use effect system dispatch API for effect installation
+- **Files touched**: 4 `.protocol.ron` files, `dispatch_protocol_selection` effect branch
+- **Detail**: [protocols/deadline.md](protocols/deadline.md), [protocols/ricochet_protocol.md](protocols/ricochet_protocol.md), [protocols/anchor.md](protocols/anchor.md), [protocols/kickstart.md](protocols/kickstart.md)
+
+**Wave 5: Custom-system protocols** (all 10 in parallel, after Wave 3)
+
+All custom-system protocols can run in parallel. Each gets: config resource, activate fn, runtime system(s), register(app), tests.
+
+Simple batch (read existing messages only):
+- **Greed**: `GreedStacks` resource, `ChipOfferSkipped` message, rarity boost in `generate_chip_offerings` — [protocols/greed.md](protocols/greed.md)
+- **Siphon**: `SiphonStreak` resource, reads `CellDestroyedAt`, sends `ReverseTimePenalty` — [protocols/siphon.md](protocols/siphon.md)
+- **Burnout**: `BurnoutHeat` component, heat gauge systems, mega-bump dispatch — [protocols/burnout.md](protocols/burnout.md)
+
+`DamageDealt<Cell>` batch (send damage messages):
+- **Debt Collector**: `DebtStack` component, bump grade tracking, cash-out bonus damage — [protocols/debt_collector.md](protocols/debt_collector.md)
+- **Iron Curtain**: damage wave on bolt-lost — [protocols/iron_curtain.md](protocols/iron_curtain.md)
+- **Echo Strike**: echo network, fractional echo damage — [protocols/echo_strike.md](protocols/echo_strike.md)
+- **Reckless Dash**: risky zone detection, 4x damage boost — [protocols/reckless_dash.md](protocols/reckless_dash.md)
+- **Afterimage**: phantom breaker spawn, phantom bolt piercing — [protocols/afterimage.md](protocols/afterimage.md)
+- **Fission**: kill counter, bolt splitting — [protocols/fission.md](protocols/fission.md)
+
+Conductor (chip effect filtering):
+- **Conductor**: `Conducted` marker, primary swap, bolt-lost suppression, chip effect gating — [protocols/conductor.md](protocols/conductor.md)
+
+### Group D — After Wave 1 (parallel with Group B/C)
+
+**Wave 6: Hazard state flow**
+- Add `RunState::HazardSelect` variant + `HazardSelectState` substate (5 variants)
+- `resolve_post_chip_state` dynamic route: `tier_index >= HAZARD_TIER_THRESHOLD` → HazardSelect, else → Node
+- `const HAZARD_TIER_THRESHOLD: u32 = 9` — a tier is a group of nodes (currently 4 nodes + 1 boss per tier). With the current 5-tier difficulty curve (tiers 0–4), `tier_index` never reaches 9, so the route never fires. When todo #7 extends the difficulty curve into infinite play (tiers 9+), hazards activate automatically with zero code changes.
+- `HazardSelectPlugin`: `generate_hazard_offerings`, `spawn_hazard_select`, `handle_hazard_input`, `tick_hazard_timer`
+- `dispatch_hazard_selection`: reads `HazardSelected`, increments `ActiveHazards`, calls `hazards::activate()`
+- Wire routes in `register_routing()`
+- Register `HazardSelectState` in `StatePlugin`
+- **Files touched**: `state/types/run_state.rs`, new `state/types/hazard_select_state.rs`, `state/plugin/system.rs`, new `state/run/hazard_select/` module, `hazard/plugin.rs`
+- **Detail**: [research/run-state-flow.md](research/run-state-flow.md) section 9; [research/interface-design.md](research/interface-design.md) section 10
+
+**Wave 7: Hazard systems — simple batch** (parallel, after Wave 6)
+These hazards send messages to other domains and don't touch the damage pipeline:
+- **Decay**: `ApplyTimePenalty` — [hazards/decay.md](hazards/decay.md)
+- **Drift**: `ApplyBoltForce` — [hazards/drift.md](hazards/drift.md)
+- **Haste**: effect system `SpeedBoost` or message — [hazards/haste.md](hazards/haste.md)
+- **Echo Cells**: `SpawnGhostCell` — [hazards/echo_cells.md](hazards/echo_cells.md)
+- **Erosion**: `ApplyBreakerShrink` + `ApplyBreakerRestore` — [hazards/erosion.md](hazards/erosion.md)
+- **Cascade**: `HealCell` — [hazards/cascade.md](hazards/cascade.md)
+- **Fracture**: cell spawn — [hazards/fracture.md](hazards/fracture.md)
+- **Renewal**: `HealCell` — [hazards/renewal.md](hazards/renewal.md)
+- **Volatility**: `HealCell` — [hazards/volatility.md](hazards/volatility.md)
+- **Gravity Surge**: `ApplyBoltForce` — [hazards/gravity_surge.md](hazards/gravity_surge.md)
+- **Overcharge**: per-bolt speed tracking — [hazards/overcharge.md](hazards/overcharge.md)
+- **Resonance**: wave entity spawning — [hazards/resonance.md](hazards/resonance.md)
+
+**Wave 7b: Hazard systems — damage pipeline batch** (needs todo #2 for `DamageDealt<Cell>` + `apply_damage::<Cell>`)
+These hazards modify how the cell damage system behaves:
+- **Diffusion**: `DiffusionConfig` read by `apply_damage::<Cell>` — [hazards/diffusion.md](hazards/diffusion.md)
+- **Tether**: `TetherConfig` + `TetherLink` components + link management — [hazards/tether.md](hazards/tether.md)
+- **Momentum**: `MomentumConfig` read by `apply_damage::<Cell>` + split check — [hazards/momentum.md](hazards/momentum.md)
+- **Sympathy**: `SympathyConfig` read by `apply_damage::<Cell>` — [hazards/sympathy.md](hazards/sympathy.md)
+
+### Group E — Tier Regression (scaffolded now, completed after todo #7)
+
+**Wave 8: Tier Regression protocol**
+Implement everything except the actual `NodeSequence` mutation:
+- `TierRegressionConfig { tiers_back: u32 }` resource, `activate()`, `register()`
+- `ProtocolTuning::TierRegression` variant (already in Wave 1)
+- `tier_regression.protocol.ron` with tuning values
+- System that fires on activation: inserts `TierRegressionPending` resource/marker
+- **Stub**: The system that would modify `NodeSequence` logs a warning and no-ops. When todo #7 lands, the stub is replaced with the actual tier manipulation (one system body change).
+- Tests verify the scaffolding (config populated, marker inserted, offering works) but skip the actual regression behavior.
+- **Detail**: [protocols/tier_regression.md](protocols/tier_regression.md)
+
+### Group F — After all implementation
+
+**Wave 9: Scenarios**
+- New invariants: `ProtocolStateConsistent`, `HazardStackValid`, `HazardScalingBounded`
+- Self-test scenarios for each invariant
+- Adversarial chaos scenarios per custom-system protocol
+- Hazard stacking stress scenarios for trap synergy pairs
+- **Detail**: main detail file Scenario Coverage section
+
+### Dependency Graph
+
+```
+                  ┌── Wave 3 ──┬── Wave 4 (effect-tree) ──────┐
+                  │            └── Wave 5 (custom-system) ────┤
+Wave 1 ──┬───────┤                                            │
+          │       ├── Wave 3b                                  ├── Wave 9
+          │       ├── Wave 6 ── Wave 7 ───────────────────────┤
+          │       │         └── Wave 7b (damage pipeline) ────┤
+          │       └── Wave 8 (scaffold, stub for todo #7) ────┘
+Wave 2 ──┘
+```
+
+All external dependencies (todo #2 effect refactor) are complete before this todo starts. Todo #7 only blocks the Tier Regression system body (stubbed).
+
+### Parallelism summary
+
+| Phase | What runs | Blocked on |
+|-------|-----------|------------|
+| Start | Waves 1 + 2 in parallel | Nothing |
+| After Wave 1 | Waves 3 + 3b + 6 + 8 in parallel | Wave 1 |
+| After Wave 3 | Waves 4 + 5 in parallel (all 14 protocols) | Wave 3 |
+| After Wave 6 | Waves 7 + 7b in parallel (all 16 hazards) | Wave 6 |
+| After all waves | Wave 9 (scenarios) | Everything |
 
 **Design decisions**:
 - Protocol offering is random from seeded `GameRng` (deterministic from run seed)
@@ -223,4 +360,4 @@ This todo is large. Suggested implementation waves:
 - Hazard select screen is timed — on expiry, a hazard is auto-picked at random
 
 ## Status
-`[NEEDS DETAIL]` — technical design complete, needs implementation wave breakdown into concrete specs before `/implement`
+`ready` — game design (15 protocols, 16 hazards), technical design (interface-design.md), per-item implementation guides (31 files in protocols/ and hazards/), cross-domain messages defined, 10-wave implementation order with dependency graph. One sub-item `[NEEDS DETAIL]`: legendary retuning values (legendary-retuning.md).

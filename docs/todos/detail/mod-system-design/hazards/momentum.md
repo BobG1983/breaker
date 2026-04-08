@@ -30,28 +30,25 @@ No additional per-cell component needed. Momentum reads `DamageDealt<Cell>` (non
 
 ## Messages
 
-**Reads**: `DamageDealt<Cell>` (filters for non-lethal -- cell survived the hit)
-**Sends**: `HealCell { cell: Entity, amount: f32 }`, cell spawn message for splits (e.g., `SpawnCell` or direct cell spawning within the cells domain)
+**Reads**: None directly for the heal-on-nonlethal logic — the cells domain's `apply_damage::<Cell>` reads `MomentumConfig` and handles it.
+**Sends**: None for healing. The cells domain sends `HealCell` internally when processing non-lethal hits with Momentum active.
+
+The split check is a hazard-domain system that reads cell HP and sends spawn messages.
 
 ## Systems
 
-1. **`attach_starting_hp`**
+1. **`attach_starting_hp`** (hazard domain)
    - Schedule: After cell spawn (per node start)
    - Run if: `hazard_active(HazardKind::Momentum)` AND cells exist without `CellStartingHp`
    - Behavior: Insert `CellStartingHp(current_hp)` on all cell entities
    - Note: Shared with Volatility. If Volatility already attaches this, Momentum reuses it. A shared "hazard cell setup" system could handle this.
 
-2. **`momentum_heal_on_nonlethal`**
-   - Schedule: `FixedUpdate`
-   - Run if: `hazard_active(HazardKind::Momentum)` AND `in_state(NodeState::Playing)`
-   - Ordering: After `apply_damage` (need to know which cells survived)
-   - Behavior:
-     1. Read `DamageDealt<Cell>` entries
-     2. For each message where the target cell is still alive (survived the hit):
-        a. Compute heal amount: `base_hp_per_hit + hp_per_level * (stack - 1)`
-        b. Send `HealCell { cell, amount }`
+2. **Heal-on-nonlethal** (cells domain — NOT a hazard system)
+   - The `apply_damage::<Cell>` system reads `Res<MomentumConfig>` + `Res<ActiveHazards>`
+   - On non-lethal hits (cell survived), computes heal: `base_hp_per_hit + hp_per_level * (stack - 1)`
+   - Sends `HealCell { cell, amount }` internally
 
-3. **`momentum_split_check`**
+3. **`momentum_split_check`** (hazard domain)
    - Schedule: `FixedUpdate`
    - Run if: `hazard_active(HazardKind::Momentum)` AND `in_state(NodeState::Playing)`
    - Ordering: After `momentum_heal_on_nonlethal` and after `HealCell` is processed

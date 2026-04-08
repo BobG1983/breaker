@@ -105,6 +105,23 @@ The RON effect tree uses the new effect system's primitives (todo #2 dependency)
    - When: Bolt bounces off breaker, then another wall, then impacts a cell
    - Then: Cell receives 3x damage (boost was never consumed by the breaker bounce — only cell impact consumes it)
 
+## Previous Legendary (reference only)
+
+Previous legendary chip RON for reference. The protocol design above is the source of truth — this is preserved for memory/reference only, possibly relevant for tuning comparison, possibly not.
+
+```ron
+// Former ricochet_protocol.chip.ron legendary: slot
+effects: [
+    On(target: Bolt, then: [
+        When(trigger: Impacted(Wall), then: [
+            Until(trigger: Impacted(Cell), then: [
+                Do(DamageBoost(3.0)),
+            ]),
+        ]),
+    ]),
+]
+```
+
 ## Edge Cases
 
 - **Piercing bolt**: If the bolt has Piercing and passes through a cell, that counts as a cell impact — the boost is consumed on the first cell contacted, even if the bolt continues through.
