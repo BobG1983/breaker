@@ -8,12 +8,7 @@ use crate::{bolt::components::Bolt, prelude::*};
 type BirthingEligibleQuery<'w, 's> = Query<
     'w,
     's,
-    (
-        Entity,
-        &'static Scale2D,
-        &'static PreviousScale,
-        &'static CollisionLayers,
-    ),
+    (Entity, &'static Scale2D, &'static CollisionLayers),
     (With<Bolt>, Without<Birthing>),
 >;
 
@@ -22,7 +17,7 @@ type BirthingEligibleQuery<'w, 's> = Query<
 ///
 /// Runs on `OnEnter(NodeState::AnimateIn)`.
 pub(crate) fn begin_node_birthing(mut commands: Commands, query: BirthingEligibleQuery) {
-    for (entity, scale, _previous_scale, layers) in &query {
+    for (entity, scale, layers) in &query {
         let target_scale = *scale;
         let stashed_layers = *layers;
 

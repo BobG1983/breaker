@@ -139,16 +139,23 @@ fn register_parent_routes(app: &mut App) {
     app.add_route(
         Route::from(GameState::Menu)
             .to_dynamic(|world| {
-                use crate::state::menu::main::MenuItem;
-                let selection = world.resource::<crate::state::menu::main::MainMenuSelection>();
+                use crate::state::menu::main::{MainMenuSelection, MenuItem};
+                let Some(selection) = world.get_resource::<MainMenuSelection>() else {
+                    return GameState::Run;
+                };
                 match selection.selected {
                     MenuItem::Quit => GameState::Teardown,
                     _ => GameState::Run,
                 }
             })
             .with_dynamic_transition(|world| {
-                use crate::state::menu::main::MenuItem;
-                let selection = world.resource::<crate::state::menu::main::MainMenuSelection>();
+                use crate::state::menu::main::{MainMenuSelection, MenuItem};
+                let Some(selection) = world.get_resource::<MainMenuSelection>() else {
+                    return TransitionType::Out(Arc::new(FadeOut {
+                        duration: 0.6,
+                        color: Color::WHITE,
+                    }));
+                };
                 match selection.selected {
                     MenuItem::Quit => TransitionType::None,
                     _ => TransitionType::Out(Arc::new(FadeOut {
@@ -191,8 +198,10 @@ fn register_parent_routes(app: &mut App) {
     app.add_route(
         Route::from(MenuState::Main)
             .to_dynamic(|world| {
-                use crate::state::menu::main::MenuItem;
-                let selection = world.resource::<crate::state::menu::main::MainMenuSelection>();
+                use crate::state::menu::main::{MainMenuSelection, MenuItem};
+                let Some(selection) = world.get_resource::<MainMenuSelection>() else {
+                    return MenuState::StartGame;
+                };
                 match selection.selected {
                     MenuItem::Play => MenuState::StartGame,
                     MenuItem::Settings => MenuState::Options,
@@ -200,8 +209,13 @@ fn register_parent_routes(app: &mut App) {
                 }
             })
             .with_dynamic_transition(|world| {
-                use crate::state::menu::main::MenuItem;
-                let selection = world.resource::<crate::state::menu::main::MainMenuSelection>();
+                use crate::state::menu::main::{MainMenuSelection, MenuItem};
+                let Some(selection) = world.get_resource::<MainMenuSelection>() else {
+                    return TransitionType::Out(Arc::new(FadeOut {
+                        duration: 0.6,
+                        color: Color::WHITE,
+                    }));
+                };
                 match selection.selected {
                     MenuItem::Quit => TransitionType::None,
                     _ => TransitionType::Out(Arc::new(FadeOut {

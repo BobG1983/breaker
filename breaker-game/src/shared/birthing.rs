@@ -16,20 +16,20 @@ pub(crate) const BIRTHING_DURATION: f32 = 0.3;
 /// completion, `target_scale` is applied exactly and `stashed_layers`
 /// are restored.
 #[derive(Component, Debug)]
-pub struct Birthing {
+pub(crate) struct Birthing {
     /// Timer tracking animation progress.
-    pub timer: Timer,
+    pub(crate) timer: Timer,
     /// The scale the entity will reach when birthing completes.
-    pub target_scale: Scale2D,
+    pub(crate) target_scale: Scale2D,
     /// The collision layers to restore when birthing completes.
-    pub stashed_layers: CollisionLayers,
+    pub(crate) stashed_layers: CollisionLayers,
 }
 
 impl Birthing {
     /// Creates a new Birthing component that will animate from zero scale to `target_scale`,
     /// restoring `stashed_layers` on completion.
     #[must_use]
-    pub fn new(target_scale: Scale2D, stashed_layers: CollisionLayers) -> Self {
+    pub(crate) fn new(target_scale: Scale2D, stashed_layers: CollisionLayers) -> Self {
         Self {
             timer: Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
             target_scale,
@@ -39,7 +39,7 @@ impl Birthing {
 
     /// Returns the fraction complete (0.0 to 1.0).
     #[must_use]
-    pub fn fraction(&self) -> f32 {
+    pub(crate) fn fraction(&self) -> f32 {
         self.timer.fraction()
     }
 }

@@ -11,18 +11,18 @@ use crate::{
 ///
 /// Shared across bolt and physics systems that should skip serving bolts.
 /// Also excludes bolts in the birthing animation.
-pub type ActiveFilter = (With<Bolt>, Without<BoltServing>, Without<Birthing>);
+pub(crate) type ActiveFilter = (With<Bolt>, Without<BoltServing>, Without<Birthing>);
 
 /// Query filter for serving bolts (hovering, awaiting launch).
 ///
 /// Used by `hover_bolt`.
-pub type ServingFilter = (With<Bolt>, With<BoltServing>);
+pub(crate) type ServingFilter = (With<Bolt>, With<BoltServing>);
 
 /// Query filter for serving bolts that are ready to launch (not birthing).
 ///
 /// Used by `launch_bolt`. Extends [`ServingFilter`] with `Without<Birthing>`
 /// because a bolt can be both serving and birthing at node entry.
-pub type LaunchFilter = (With<Bolt>, With<BoltServing>, Without<Birthing>);
+pub(crate) type LaunchFilter = (With<Bolt>, With<BoltServing>, Without<Birthing>);
 
 #[cfg(test)]
 mod tests {
