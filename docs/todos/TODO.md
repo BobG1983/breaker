@@ -10,7 +10,7 @@
 6. **[ready]** Protocol & hazard system — 15 protocols, 16 hazards, interface design, 31 per-item implementation guides, 10-wave plan — [detail](detail/mod-system-design/mod-system-design.md)
 7. **[ready]** Node sequencing refactor — per-tier batching, volatile nodes, portal cells, frame/block generation, RNG architecture — [detail](detail/node-sequencing-refactor/node-sequencing-refactor.md)
 8. **[ready]** Split spawn_cells_from_layout into separate concerns (grid geometry, lock resolution, entity spawning) — [detail](detail/split-spawn-cells-from-layout.md)
-9. **[ready]** Distribute state routing to domain plugins — [detail](detail/split-state-routing.md)
+9. **[in-progress]** Distribute state routing to domain plugins — [detail](detail/split-state-routing.md)
 10. **[ready]** Phase 5c: Crate setup + plugin separation — [detail](detail/phase-5c-render-plugin-separation.md)
 11. **[ready]** Phase 5d: Post-processing pipeline (transition shader done, remaining: bloom, CRT, etc.) — [detail](detail/phase-5d-post-processing-pipeline.md)
 12. **[ready]** Phase 5e: Particle system — [detail](detail/phase-5e-particle-system.md)
