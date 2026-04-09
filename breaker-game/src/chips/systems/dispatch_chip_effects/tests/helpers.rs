@@ -121,25 +121,12 @@ pub(super) fn spawn_bolt(app: &mut App) -> Entity {
 
 /// Spawn a Breaker entity with effect components.
 pub(super) fn spawn_breaker(app: &mut App) -> Entity {
-    use crate::{
-        breaker::{components::Breaker, definition::BreakerDefinition},
-        effect::effects::{
-            bump_force::ActiveBumpForces, damage_boost::ActiveDamageBoosts,
-            size_boost::ActiveSizeBoosts, speed_boost::ActiveSpeedBoosts,
-        },
+    use crate::effect::effects::{
+        bump_force::ActiveBumpForces, damage_boost::ActiveDamageBoosts,
+        size_boost::ActiveSizeBoosts, speed_boost::ActiveSpeedBoosts,
     };
 
-    let def = BreakerDefinition::default();
-    let entity = {
-        let world = app.world_mut();
-        let entity = Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(&mut world.commands());
-        world.flush();
-        entity
-    };
+    let entity = crate::breaker::test_utils::spawn_breaker(app, 0.0, 0.0);
     app.world_mut().entity_mut(entity).insert((
         BoundEffects::default(),
         StagedEffects::default(),
@@ -153,25 +140,12 @@ pub(super) fn spawn_breaker(app: &mut App) -> Entity {
 
 /// Spawn a Breaker entity without `BoundEffects` or `StagedEffects`.
 pub(super) fn spawn_breaker_bare(app: &mut App) -> Entity {
-    use crate::{
-        breaker::{components::Breaker, definition::BreakerDefinition},
-        effect::effects::{
-            bump_force::ActiveBumpForces, damage_boost::ActiveDamageBoosts,
-            size_boost::ActiveSizeBoosts, speed_boost::ActiveSpeedBoosts,
-        },
+    use crate::effect::effects::{
+        bump_force::ActiveBumpForces, damage_boost::ActiveDamageBoosts,
+        size_boost::ActiveSizeBoosts, speed_boost::ActiveSpeedBoosts,
     };
 
-    let def = BreakerDefinition::default();
-    let entity = {
-        let world = app.world_mut();
-        let entity = Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(&mut world.commands());
-        world.flush();
-        entity
-    };
+    let entity = crate::breaker::test_utils::spawn_breaker(app, 0.0, 0.0);
     app.world_mut().entity_mut(entity).insert((
         ActiveBumpForces::default(),
         ActiveSizeBoosts::default(),

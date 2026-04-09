@@ -358,6 +358,15 @@ impl<Mv, Da, Sp, Bm, V, R> BreakerBuilder<HasDimensions, Mv, Da, Sp, Bm, V, R> {
         self.optional.override_y_position = Some(y);
         self
     }
+
+    /// Sets both x and y position, overriding `y_position` from dimensions/definition
+    /// and setting x (which defaults to 0.0).
+    #[must_use]
+    pub const fn at_position(mut self, x: f32, y: f32) -> Self {
+        self.optional.override_x_position = Some(x);
+        self.optional.override_y_position = Some(y);
+        self
+    }
 }
 
 impl<D, Da, Sp, Bm, V, R> BreakerBuilder<D, HasMovement, Da, Sp, Bm, V, R> {

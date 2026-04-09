@@ -82,10 +82,7 @@ pub fn spawn_whiff_text(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        breaker::test_utils::default_breaker_definition, fx::FadeOut,
-        shared::test_utils::TestAppBuilder,
-    };
+    use crate::{fx::FadeOut, shared::test_utils::TestAppBuilder};
 
     #[derive(Resource)]
     struct TestBumpMsg(Option<BumpPerformed>);
@@ -112,14 +109,7 @@ mod tests {
     use crate::shared::test_utils::tick;
 
     fn spawn_breaker(app: &mut App) {
-        let def = default_breaker_definition();
-        let world = app.world_mut();
-        let entity = Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(&mut world.commands());
-        world.flush();
+        let entity = crate::breaker::test_utils::spawn_breaker(app, 0.0, -450.0);
         app.world_mut()
             .entity_mut(entity)
             .insert(Transform::from_xyz(0.0, -450.0, 0.0));

@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use super::helpers::test_app;
 use crate::{
     bolt::{components::Bolt, messages::BoltSpawned},
-    breaker::{components::Breaker, definition::BreakerDefinition, messages::BreakerSpawned},
+    breaker::{components::Breaker, messages::BreakerSpawned},
 };
 
 // ── Behavior 1: setup_run early-returns when a breaker already exists ──
@@ -14,16 +14,7 @@ use crate::{
 fn setup_run_early_returns_when_breaker_already_exists() {
     let mut app = test_app();
     // Pre-spawn a breaker entity
-    let def = BreakerDefinition::default();
-    {
-        let world = app.world_mut();
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(&mut world.commands());
-        world.flush();
-    };
+    crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
     app.update();
 
     let breaker_count = app
@@ -59,19 +50,13 @@ fn setup_run_early_returns_when_breaker_already_exists() {
 
 #[test]
 fn setup_run_early_returns_when_two_breakers_exist() {
+    use crate::breaker::definition::BreakerDefinition;
+
     let mut app = test_app();
     // Pre-spawn two breaker entities
-    let def = BreakerDefinition::default();
+    crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
     {
-        let world = app.world_mut();
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(&mut world.commands());
-        world.flush();
-    };
-    {
+        let def = BreakerDefinition::default();
         let world = app.world_mut();
         Breaker::builder()
             .definition(&def)

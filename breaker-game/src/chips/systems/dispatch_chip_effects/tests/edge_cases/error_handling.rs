@@ -105,18 +105,7 @@ fn missing_chip_catalog_resource_does_not_panic() {
 
     // Spawn a breaker and send a message — system should handle missing catalog gracefully
     let breaker = {
-        use crate::breaker::{components::Breaker, definition::BreakerDefinition};
-        let def = BreakerDefinition::default();
-        let entity = {
-            let world = app.world_mut();
-            let entity = Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .spawn(&mut world.commands());
-            world.flush();
-            entity
-        };
+        let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
         app.world_mut()
             .entity_mut(entity)
             .insert((BoundEffects::default(), StagedEffects::default()));
@@ -198,21 +187,8 @@ fn missing_chip_inventory_resource_does_not_panic() {
 
     // Spawn a breaker so dispatch has targets
     let breaker = {
-        use crate::{
-            breaker::{components::Breaker, definition::BreakerDefinition},
-            effect::effects::speed_boost::ActiveSpeedBoosts,
-        };
-        let def = BreakerDefinition::default();
-        let entity = {
-            let world = app.world_mut();
-            let entity = Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .spawn(&mut world.commands());
-            world.flush();
-            entity
-        };
+        use crate::effect::effects::speed_boost::ActiveSpeedBoosts;
+        let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
         app.world_mut().entity_mut(entity).insert((
             BoundEffects::default(),
             StagedEffects::default(),

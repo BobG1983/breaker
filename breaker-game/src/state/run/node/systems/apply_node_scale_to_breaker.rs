@@ -30,10 +30,7 @@ pub(crate) fn apply_node_scale_to_breaker(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        breaker::definition::BreakerDefinition,
-        state::run::node::{NodeLayout, definition::NodePool},
-    };
+    use crate::state::run::node::{NodeLayout, definition::NodePool};
 
     fn test_app() -> App {
         use crate::shared::test_utils::TestAppBuilder;
@@ -65,17 +62,7 @@ mod tests {
 
         app.insert_resource(ActiveNodeLayout(make_layout(0.7)));
 
-        let def = BreakerDefinition::default();
-        let entity = {
-            let world = app.world_mut();
-            let entity = Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .spawn(&mut world.commands());
-            world.flush();
-            entity
-        };
+        let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
 
         app.update();
 
@@ -100,17 +87,7 @@ mod tests {
 
         app.insert_resource(ActiveNodeLayout(make_layout(0.9)));
 
-        let def = BreakerDefinition::default();
-        let entity = {
-            let world = app.world_mut();
-            let entity = Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .spawn(&mut world.commands());
-            world.flush();
-            entity
-        };
+        let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
         app.world_mut()
             .entity_mut(entity)
             .insert(NodeScalingFactor(0.7));
@@ -135,17 +112,7 @@ mod tests {
         // Then: no panic, no NodeScalingFactor inserted
         let mut app = test_app();
 
-        let def = BreakerDefinition::default();
-        let entity = {
-            let world = app.world_mut();
-            let entity = Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .spawn(&mut world.commands());
-            world.flush();
-            entity
-        };
+        let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
 
         app.update();
 

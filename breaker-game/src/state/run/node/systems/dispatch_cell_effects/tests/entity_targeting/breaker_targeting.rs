@@ -3,7 +3,6 @@
 use bevy::prelude::*;
 
 use crate::{
-    breaker::components::Breaker,
     cells::components::{Cell, CellEffectsDispatched, CellTypeAlias},
     effect::{BoundEffects, EffectKind, EffectNode, RootEffect, StagedEffects, Target, Trigger},
     state::run::node::systems::dispatch_cell_effects::tests::helpers::{make_cell_def, test_app},
@@ -35,17 +34,7 @@ fn cell_with_target_breaker_dispatches_to_breaker_entity() {
         .world_mut()
         .spawn((Cell, CellTypeAlias("R".to_owned())))
         .id();
-    let def = crate::breaker::definition::BreakerDefinition::default();
-    let breaker_entity = {
-        let world = app.world_mut();
-        let entity = Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(&mut world.commands());
-        world.flush();
-        entity
-    };
+    let breaker_entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
     app.world_mut()
         .entity_mut(breaker_entity)
         .insert((BoundEffects::default(), StagedEffects::default()));

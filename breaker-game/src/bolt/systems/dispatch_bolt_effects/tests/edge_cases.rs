@@ -10,7 +10,6 @@ use crate::{
         registry::BoltRegistry,
         systems::dispatch_bolt_effects::dispatch_bolt_effects,
     },
-    breaker::components::Breaker,
     effect::{BoundEffects, EffectKind, EffectNode, RootEffect, StagedEffects, Target, Trigger},
 };
 
@@ -70,17 +69,7 @@ fn dispatch_handles_mixed_targets_aegis_style() {
         ],
     );
     let mut app = test_app_with_dispatch(def);
-    let breaker_def = crate::breaker::definition::BreakerDefinition::default();
-    let breaker = {
-        let world = app.world_mut();
-        let entity = Breaker::builder()
-            .definition(&breaker_def)
-            .headless()
-            .primary()
-            .spawn(&mut world.commands());
-        world.flush();
-        entity
-    };
+    let breaker = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
     app.world_mut()
         .entity_mut(breaker)
         .insert(BoundEffects::default());

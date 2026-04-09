@@ -32,7 +32,6 @@ pub struct BreakerInitialized;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::breaker::definition::BreakerDefinition;
 
     // ── Breaker #[require] tests ─────────────────────────────────
 
@@ -41,14 +40,7 @@ mod tests {
         use rantzsoft_spatial2d::components::Spatial2D;
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        let def = BreakerDefinition::default();
-        let world = app.world_mut();
-        let entity = Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(&mut world.commands());
-        world.flush();
+        let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
         app.update();
         assert!(
             app.world().get::<Spatial2D>(entity).is_some(),
@@ -61,14 +53,7 @@ mod tests {
         use rantzsoft_spatial2d::components::InterpolateTransform2D;
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        let def = BreakerDefinition::default();
-        let world = app.world_mut();
-        let entity = Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(&mut world.commands());
-        world.flush();
+        let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
         app.update();
         assert!(
             app.world().get::<InterpolateTransform2D>(entity).is_some(),
@@ -83,14 +68,7 @@ mod tests {
         use crate::state::types::RunState;
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        let def = BreakerDefinition::default();
-        let world = app.world_mut();
-        let entity = Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(&mut world.commands());
-        world.flush();
+        let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
         app.update();
         assert!(
             app.world().get::<CleanupOnExit<RunState>>(entity).is_some(),
@@ -105,14 +83,7 @@ mod tests {
         use crate::state::types::NodeState;
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        let def = BreakerDefinition::default();
-        let world = app.world_mut();
-        let entity = Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(&mut world.commands());
-        world.flush();
+        let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
         app.update();
         assert!(
             app.world()
@@ -131,14 +102,7 @@ mod tests {
         use crate::shared::{BOLT_LAYER, BREAKER_LAYER};
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        let def = BreakerDefinition::default();
-        let world = app.world_mut();
-        let entity = Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(&mut world.commands());
-        world.flush();
+        let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
         app.update();
         let layers = app
             .world()

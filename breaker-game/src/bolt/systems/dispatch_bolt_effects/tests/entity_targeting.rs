@@ -8,7 +8,6 @@ use crate::{
         components::{Bolt, BoltDefinitionRef},
         definition::BoltDefinition,
     },
-    breaker::components::Breaker,
     cells::components::Cell,
     effect::{
         BoundEffects, EffectKind, EffectNode, ImpactTarget, RootEffect, StagedEffects, Target,
@@ -50,17 +49,7 @@ fn dispatch_pushes_breaker_targeted_effects_to_breaker_entity() {
         }],
     );
     let mut app = test_app_with_dispatch(def);
-    let breaker_def = crate::breaker::definition::BreakerDefinition::default();
-    let breaker = {
-        let world = app.world_mut();
-        let entity = Breaker::builder()
-            .definition(&breaker_def)
-            .headless()
-            .primary()
-            .spawn(&mut world.commands());
-        world.flush();
-        entity
-    };
+    let breaker = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
     app.world_mut()
         .entity_mut(breaker)
         .insert(BoundEffects::default());

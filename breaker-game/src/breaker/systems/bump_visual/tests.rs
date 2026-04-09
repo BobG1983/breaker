@@ -119,17 +119,7 @@ fn set_bump_action(app: &mut App) {
 fn trigger_inserts_bump_visual_on_bump_action() {
     let mut app = trigger_test_app();
 
-    let def = BreakerDefinition::default();
-    let entity = {
-        let world = app.world_mut();
-        let entity = Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(&mut world.commands());
-        world.flush();
-        entity
-    };
+    let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
 
     set_bump_action(&mut app);
     tick(&mut app);
@@ -144,17 +134,7 @@ fn trigger_inserts_bump_visual_on_bump_action() {
 fn trigger_skips_without_bump_action() {
     let mut app = trigger_test_app();
 
-    let def = BreakerDefinition::default();
-    let entity = {
-        let world = app.world_mut();
-        let entity = Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(&mut world.commands());
-        world.flush();
-        entity
-    };
+    let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
 
     // No Bump action set
     tick(&mut app);
@@ -169,17 +149,7 @@ fn trigger_skips_without_bump_action() {
 fn trigger_fires_during_cooldown() {
     let mut app = trigger_test_app();
 
-    let def = BreakerDefinition::default();
-    let entity = {
-        let world = app.world_mut();
-        let entity = Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(&mut world.commands());
-        world.flush();
-        entity
-    };
+    let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
     app.world_mut().entity_mut(entity).insert(BumpState {
         cooldown: 0.5,
         ..Default::default()
@@ -199,17 +169,7 @@ fn trigger_does_not_retrigger_while_animating() {
     let mut app = trigger_test_app();
     let params = default_bump_feedback();
 
-    let def = BreakerDefinition::default();
-    let entity = {
-        let world = app.world_mut();
-        let entity = Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(&mut world.commands());
-        world.flush();
-        entity
-    };
+    let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
     app.world_mut()
         .entity_mut(entity)
         .insert(BumpFeedbackState {
@@ -249,17 +209,7 @@ fn animate_applies_position2d_y_offset_during_animation() {
     let config = BreakerDefinition::default();
     let params = default_bump_feedback();
 
-    let def = BreakerDefinition::default();
-    let entity = {
-        let world = app.world_mut();
-        let entity = Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(&mut world.commands());
-        world.flush();
-        entity
-    };
+    let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
     app.world_mut()
         .entity_mut(entity)
         .insert(BumpFeedbackState {
@@ -293,17 +243,7 @@ fn animate_removes_bump_visual_when_done() {
     let config = BreakerDefinition::default();
     let params = default_bump_feedback();
 
-    let def = BreakerDefinition::default();
-    let entity = {
-        let world = app.world_mut();
-        let entity = Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(&mut world.commands());
-        world.flush();
-        entity
-    };
+    let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, config.y_position);
     app.world_mut()
         .entity_mut(entity)
         .insert(BumpFeedbackState {
@@ -339,17 +279,7 @@ fn animate_snaps_position2d_to_base_after_expiry() {
     let params = default_bump_feedback();
 
     // Start with an offset Y to verify the snap overrides it
-    let def = BreakerDefinition::default();
-    let entity = {
-        let world = app.world_mut();
-        let entity = Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(&mut world.commands());
-        world.flush();
-        entity
-    };
+    let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, config.y_position);
     app.world_mut().entity_mut(entity).insert((
         Position2D(Vec2::new(0.0, config.y_position + 5.0)),
         BumpFeedbackState {
