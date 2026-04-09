@@ -12,8 +12,6 @@ pub struct NodeAssignment {
     pub node_type: NodeType,
     /// Which tier this node belongs to (0-indexed).
     pub tier_index: u32,
-    /// Hit-point multiplier for cells in this node.
-    pub hp_mult: f32,
     /// Timer multiplier for this node.
     pub timer_mult: f32,
 }
@@ -39,8 +37,6 @@ pub struct NodeSequence {
 pub struct DifficultyCurve {
     /// Ordered list of tier definitions.
     pub tiers: Vec<TierDefinition>,
-    /// HP multiplier applied to boss nodes.
-    pub boss_hp_mult: f32,
     /// Timer reduction applied after each boss encounter.
     pub timer_reduction_per_boss: f32,
 }
@@ -49,7 +45,6 @@ impl Default for DifficultyCurve {
     fn default() -> Self {
         Self {
             tiers: vec![],
-            boss_hp_mult: 1.0,
             timer_reduction_per_boss: 0.0,
         }
     }
@@ -78,10 +73,13 @@ pub struct NodeOutcome {
     pub node_index: u32,
     /// How the current node ended.
     pub result: NodeResult,
-    /// Set to `true` when `handle_node_cleared` queues a state transition this
-    /// frame. Checked by `handle_timer_expired` to yield to the node-cleared
-    /// transition (player wins tie-frame: clear beats loss).
-    pub transition_queued: bool,
+    /// `true` when `handle_node_cleared` fires this frame — tells
+    /// `handle_timer_expired` to yield (player wins tie-frame: clear beats loss).
+    pub cleared_this_frame: bool,
+    /// Current tier in the run (increments after boss clear).
+    pub tier: u32,
+    /// Position within the current tier (resets after boss clear).
+    pub position_in_tier: u32,
 }
 
 /// Thematic categories for highlight diversity scoring.
@@ -310,5 +308,76 @@ mod tests {
     #[test]
     fn node_result_quit_equals_itself() {
         assert_eq!(NodeResult::Quit, NodeResult::Quit);
+    }
+
+    // ── Part E: NodeOutcome tier and position_in_tier ─────────────────
+
+    // Behavior 17: NodeOutcome default has tier=0 and position_in_tier=0
+    #[test]
+    fn node_outcome_default_tier_and_position() {
+        let outcome = NodeOutcome::default();
+        assert_eq!(outcome.tier, 0);
+        assert_eq!(outcome.position_in_tier, 0);
+    }
+
+    // Behavior 18: NodeOutcome can be constructed with explicit tier and position_in_tier
+    #[test]
+    fn node_outcome_explicit_tier_and_position() {
+        let outcome = NodeOutcome {
+            tier: 3,
+            position_in_tier: 4,
+            ..Default::default()
+        };
+        assert_eq!(outcome.tier, 3);
+        assert_eq!(outcome.position_in_tier, 4);
+        assert_eq!(outcome.node_index, 0);
+    }
+
+    // Behavior 18 edge case: large values
+    #[test]
+    fn node_outcome_large_tier_and_position() {
+        let outcome = NodeOutcome {
+            tier: 100,
+            position_in_tier: 50,
+            ..Default::default()
+        };
+        assert_eq!(outcome.tier, 100);
+        assert_eq!(outcome.position_in_tier, 50);
+    }
+
+    // ── Part F: NodeAssignment without hp_mult ───────────────────────
+
+    // Behavior 19: NodeAssignment no longer has hp_mult field
+    #[test]
+    fn node_assignment_without_hp_mult_compiles() {
+        let assignment = NodeAssignment {
+            node_type: crate::state::run::definition::NodeType::Active,
+            tier_index: 0,
+            timer_mult: 1.0,
+        };
+        let _ = assignment.node_type;
+        let _ = assignment.tier_index;
+        let _ = assignment.timer_mult;
+    }
+
+    // ── Part H: DifficultyCurve without boss_hp_mult ─────────────────
+
+    // Behavior 21: DifficultyCurve no longer has boss_hp_mult field
+    #[test]
+    fn difficulty_curve_without_boss_hp_mult_compiles() {
+        let curve = DifficultyCurve {
+            tiers: vec![],
+            timer_reduction_per_boss: 0.0,
+        };
+        drop(curve.tiers);
+        let _ = curve.timer_reduction_per_boss;
+    }
+
+    // Behavior 21 edge case: default
+    #[test]
+    fn difficulty_curve_default_has_no_boss_hp_mult() {
+        let curve = DifficultyCurve::default();
+        assert!(curve.tiers.is_empty());
+        assert!((curve.timer_reduction_per_boss - 0.0).abs() < f32::EPSILON);
     }
 }

@@ -9,7 +9,7 @@ use crate::{
         components::{
             Cell, CellDamageVisuals, CellHealth, CellTypeAlias, RegenRate, RequiredToClear,
         },
-        definition::{CellBehavior, CellTypeDefinition},
+        definition::{CellBehavior, CellTypeDefinition, Toughness},
     },
     effect::{BoundEffects, EffectKind, EffectNode, RootEffect, Target},
 };
@@ -19,7 +19,7 @@ fn test_cell_definition() -> CellTypeDefinition {
     CellTypeDefinition {
         id: "test".to_owned(),
         alias: "T".to_owned(),
-        hp: 20.0,
+        toughness: Toughness::default(),
         color_rgb: [1.0, 0.5, 0.2],
         required_to_clear: true,
         damage_hdr_base: 4.0,
@@ -70,7 +70,7 @@ fn definition_does_not_transition_position_or_dimensions() {
 #[test]
 fn definition_stores_hp_from_definition() {
     let mut def = test_cell_definition();
-    def.hp = 30.0;
+
     def.alias = "R".to_owned();
     def.color_rgb = [0.3, 4.0, 0.3];
     def.required_to_clear = true;
@@ -94,18 +94,18 @@ fn definition_stores_hp_from_definition() {
         .get::<CellHealth>(entity)
         .expect("entity should have CellHealth");
     assert!(
-        (health.current - 30.0).abs() < f32::EPSILON && (health.max - 30.0).abs() < f32::EPSILON,
-        "CellHealth should be {{ current: 30.0, max: 30.0 }}, got {{ current: {}, max: {} }}",
+        (health.current - 20.0).abs() < f32::EPSILON && (health.max - 20.0).abs() < f32::EPSILON,
+        "CellHealth should be {{ current: 20.0, max: 20.0 }} (Standard default_base_hp), got {{ current: {}, max: {} }}",
         health.current,
         health.max
     );
 }
 
-// Behavior 14 edge case: definition with tiny hp
+// Behavior 14 edge case: definition with Weak toughness produces 10.0 HP
 #[test]
-fn definition_stores_tiny_hp() {
+fn definition_stores_weak_toughness_hp() {
     let mut def = test_cell_definition();
-    def.hp = 0.001;
+    def.toughness = Toughness::Weak;
 
     let mut world = World::new();
     let entity = spawn_cell_in_world(&mut world, |commands| {
@@ -121,8 +121,10 @@ fn definition_stores_tiny_hp() {
         .get::<CellHealth>(entity)
         .expect("entity should have CellHealth");
     assert!(
-        (health.current - 0.001).abs() < f32::EPSILON && (health.max - 0.001).abs() < f32::EPSILON,
-        "CellHealth should be {{ current: 0.001, max: 0.001 }}"
+        (health.current - 10.0).abs() < f32::EPSILON && (health.max - 10.0).abs() < f32::EPSILON,
+        "CellHealth should be {{ current: 10.0, max: 10.0 }} (Weak default_base_hp), got {{ current: {}, max: {} }}",
+        health.current,
+        health.max
     );
 }
 
@@ -409,8 +411,7 @@ fn definition_effects_none_has_no_bound_effects() {
 // Behavior 21: .override_hp() after .definition() overrides definition hp
 #[test]
 fn override_hp_after_definition_overrides() {
-    let mut def = test_cell_definition();
-    def.hp = 30.0;
+    let def = test_cell_definition();
 
     let mut world = World::new();
     let entity = spawn_cell_in_world(&mut world, |commands| {
@@ -437,8 +438,7 @@ fn override_hp_after_definition_overrides() {
 // Behavior 21 edge case: override to tiny hp
 #[test]
 fn override_hp_tiny_value() {
-    let mut def = test_cell_definition();
-    def.hp = 30.0;
+    let def = test_cell_definition();
 
     let mut world = World::new();
     let entity = spawn_cell_in_world(&mut world, |commands| {
@@ -512,7 +512,7 @@ fn override_hp_to_smaller_value() {
 #[test]
 fn definition_values_propagate_without_override() {
     let mut def = test_cell_definition();
-    def.hp = 30.0;
+
     def.alias = "R".to_owned();
     def.color_rgb = [0.3, 4.0, 0.3];
     def.required_to_clear = true;
@@ -535,8 +535,8 @@ fn definition_values_propagate_without_override() {
         .get::<CellHealth>(entity)
         .expect("should have CellHealth");
     assert!(
-        (health.current - 30.0).abs() < f32::EPSILON && (health.max - 30.0).abs() < f32::EPSILON,
-        "CellHealth should be {{ current: 30.0, max: 30.0 }}"
+        (health.current - 20.0).abs() < f32::EPSILON && (health.max - 20.0).abs() < f32::EPSILON,
+        "CellHealth should be {{ current: 20.0, max: 20.0 }} (Standard default_base_hp)"
     );
 
     let visuals = world
@@ -619,3 +619,128 @@ fn no_definition_no_override_uses_defaults() {
         "should NOT have RegenRate without definition"
     );
 }
+
+// ── Part K: Builder .tier_hp() and .definition() with toughness ─────
+
+use crate::cells::resources::ToughnessConfig;
+
+// Behavior 33: .tier_hp(config, tier, pos) transitions NoHealth -> HasHealth
+#[test]
+fn tier_hp_transitions_to_has_health() {
+    let config = ToughnessConfig::default();
+    let _builder: CellBuilder<NoPosition, NoDimensions, HasHealth, Unvisual> = Cell::builder()
+        .toughness(Toughness::Standard)
+        .tier_hp(&config, 0, 0);
+    // Type annotation compiles — that is the assertion.
+}
+
+// Behavior 33: .tier_hp() produces HP = 20.0 for Standard at tier 0, position 0
+#[test]
+fn tier_hp_standard_tier0_pos0_produces_20() {
+    let config = ToughnessConfig::default();
+
+    let mut world = World::new();
+    let entity = spawn_cell_in_world(&mut world, |commands| {
+        Cell::builder()
+            .toughness(Toughness::Standard)
+            .tier_hp(&config, 0, 0)
+            .position(Vec2::ZERO)
+            .dimensions(70.0, 24.0)
+            .headless()
+            .spawn(commands)
+    });
+
+    let health = world
+        .get::<CellHealth>(entity)
+        .expect("should have CellHealth");
+    assert!(
+        (health.current - 20.0).abs() < f32::EPSILON,
+        "HP should be 20.0 (Standard, tier 0, pos 0), got {}",
+        health.current
+    );
+}
+
+// Behavior 33 edge case: .tier_hp() without prior .toughness() uses Standard default
+#[test]
+fn tier_hp_without_toughness_uses_standard_default() {
+    let config = ToughnessConfig::default();
+
+    let mut world = World::new();
+    let entity = spawn_cell_in_world(&mut world, |commands| {
+        Cell::builder()
+            .tier_hp(&config, 0, 0)
+            .position(Vec2::ZERO)
+            .dimensions(70.0, 24.0)
+            .headless()
+            .spawn(commands)
+    });
+
+    let health = world
+        .get::<CellHealth>(entity)
+        .expect("should have CellHealth");
+    assert!(
+        (health.current - 20.0).abs() < f32::EPSILON,
+        "HP should be 20.0 (default Standard, tier 0, pos 0), got {}",
+        health.current
+    );
+}
+
+// Behavior 34: .tier_hp() with tier 3, position 4, Standard produces ~41.472
+#[test]
+fn tier_hp_standard_tier3_pos4_produces_correct_hp() {
+    let config = ToughnessConfig::default();
+
+    let mut world = World::new();
+    let entity = spawn_cell_in_world(&mut world, |commands| {
+        Cell::builder()
+            .toughness(Toughness::Standard)
+            .tier_hp(&config, 3, 4)
+            .position(Vec2::ZERO)
+            .dimensions(70.0, 24.0)
+            .headless()
+            .spawn(commands)
+    });
+
+    let health = world
+        .get::<CellHealth>(entity)
+        .expect("should have CellHealth");
+    // 20.0 * 1.2^3 * (1.0 + 0.05*4) = 20.0 * 1.728 * 1.2 = 41.472
+    assert!(
+        (health.current - 41.472).abs() < 0.01,
+        "HP should be ~41.472 (Standard, tier 3, pos 4), got {}",
+        health.current
+    );
+}
+
+// Behavior 35: .definition() stores toughness from CellTypeDefinition
+#[test]
+fn definition_stores_toughness_from_definition() {
+    let mut def = test_cell_definition();
+    def.toughness = Toughness::Weak;
+
+    let mut world = World::new();
+    let entity = spawn_cell_in_world(&mut world, |commands| {
+        Cell::builder()
+            .definition(&def)
+            .position(Vec2::ZERO)
+            .dimensions(70.0, 24.0)
+            .headless()
+            .spawn(commands)
+    });
+
+    let health = world
+        .get::<CellHealth>(entity)
+        .expect("should have CellHealth");
+    // .definition() sets HP to def.toughness.default_base_hp() = 10.0 for Weak
+    assert!(
+        (health.current - 10.0).abs() < f32::EPSILON,
+        "HP should be 10.0 (Weak.default_base_hp()), got {}",
+        health.current
+    );
+}
+
+// Behavior 35 edge case: .definition() and .tier_hp() are mutually exclusive
+// (both are NoHealth -> HasHealth transitions, cannot be chained)
+// This is a compile-time assertion — uncommenting the following would not compile:
+// Cell::builder().definition(&def).tier_hp(&config, 0, 0);
+// The type system enforces this.

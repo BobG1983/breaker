@@ -26,7 +26,8 @@ fn resolve_node_next_state_quit_returns_teardown() {
     world.insert_resource(NodeOutcome {
         result: NodeResult::Quit,
         node_index: 0,
-        transition_queued: false,
+        cleared_this_frame: false,
+        ..default()
     });
 
     let next = resolve_node_next_state(&world);
@@ -38,19 +39,20 @@ fn resolve_node_next_state_quit_returns_teardown() {
 }
 
 #[test]
-fn resolve_node_next_state_quit_ignores_node_index_and_transition_queued() {
+fn resolve_node_next_state_quit_ignores_node_index_and_cleared_this_frame() {
     let mut world = World::new();
     world.insert_resource(NodeOutcome {
         result: NodeResult::Quit,
         node_index: 99,
-        transition_queued: true,
+        cleared_this_frame: true,
+        ..default()
     });
 
     let next = resolve_node_next_state(&world);
     assert_eq!(
         next,
         RunState::Teardown,
-        "NodeResult::Quit should route to Teardown regardless of node_index or transition_queued"
+        "NodeResult::Quit should route to Teardown regardless of node_index or cleared_this_frame"
     );
 }
 
@@ -62,7 +64,8 @@ fn resolve_node_next_state_in_progress_returns_chip_select() {
     world.insert_resource(NodeOutcome {
         result: NodeResult::InProgress,
         node_index: 0,
-        transition_queued: false,
+        cleared_this_frame: false,
+        ..default()
     });
 
     let next = resolve_node_next_state(&world);
@@ -77,7 +80,8 @@ fn resolve_node_next_state_won_returns_run_end() {
     world.insert_resource(NodeOutcome {
         result: NodeResult::Won,
         node_index: 8,
-        transition_queued: false,
+        cleared_this_frame: false,
+        ..default()
     });
 
     let next = resolve_node_next_state(&world);
@@ -92,7 +96,8 @@ fn resolve_node_next_state_timer_expired_returns_run_end() {
     world.insert_resource(NodeOutcome {
         result: NodeResult::TimerExpired,
         node_index: 3,
-        transition_queued: false,
+        cleared_this_frame: false,
+        ..default()
     });
 
     let next = resolve_node_next_state(&world);
@@ -107,7 +112,8 @@ fn resolve_node_next_state_lives_depleted_returns_run_end() {
     world.insert_resource(NodeOutcome {
         result: NodeResult::LivesDepleted,
         node_index: 1,
-        transition_queued: false,
+        cleared_this_frame: false,
+        ..default()
     });
 
     let next = resolve_node_next_state(&world);

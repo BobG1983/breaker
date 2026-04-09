@@ -1,13 +1,16 @@
 use bevy::{ecs::world::CommandQueue, prelude::*};
 
-use crate::cells::{builder::core::types::GuardianSpawnConfig, definition::CellTypeDefinition};
+use crate::cells::{
+    builder::core::types::GuardianSpawnConfig,
+    definition::{CellTypeDefinition, Toughness},
+};
 
 /// Creates a test `CellTypeDefinition` with known values.
 pub(super) fn test_cell_definition() -> CellTypeDefinition {
     CellTypeDefinition {
         id: "test".to_owned(),
         alias: "T".to_owned(),
-        hp: 20.0,
+        toughness: Toughness::default(),
         color_rgb: [1.0, 0.5, 0.2],
         required_to_clear: true,
         damage_hdr_base: 4.0,

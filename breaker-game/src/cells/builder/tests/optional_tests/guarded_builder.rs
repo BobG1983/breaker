@@ -381,7 +381,7 @@ fn guarded_empty_slots_no_guardian_children() {
 fn combined_definition_and_guarded_spawns_exactly_n_guardians() {
     let mut guarded_def = test_cell_definition();
     guarded_def.behaviors = Some(vec![CellBehavior::Guarded(GuardedBehavior {
-        guardian_hp: 10.0,
+        guardian_hp_fraction: 0.5,
         guardian_color_rgb: [0.5, 0.8, 1.0],
         slide_speed: 30.0,
     })]);

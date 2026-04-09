@@ -13,7 +13,7 @@ use crate::{
             Cell, CellDamageVisuals, CellHealth, CellHeight, CellTypeAlias, CellWidth, Locked,
             Locks, RegenRate, RequiredToClear,
         },
-        definition::{CellBehavior, CellTypeDefinition},
+        definition::{CellBehavior, CellTypeDefinition, Toughness},
     },
     shared::{BOLT_LAYER, CELL_LAYER, GameDrawLayer},
     state::types::NodeState,
@@ -24,7 +24,7 @@ fn test_cell_definition() -> CellTypeDefinition {
     CellTypeDefinition {
         id: "test".to_owned(),
         alias: "T".to_owned(),
-        hp: 20.0,
+        toughness: Toughness::default(),
         color_rgb: [1.0, 0.5, 0.2],
         required_to_clear: true,
         damage_hdr_base: 4.0,
@@ -334,7 +334,7 @@ fn spawn_returns_valid_entity_with_core_components() {
 #[test]
 fn spawn_headless_with_definition_has_all_definition_components() {
     let mut def = test_cell_definition();
-    def.hp = 30.0;
+
     def.alias = "R".to_owned();
     def.color_rgb = [0.3, 4.0, 0.3];
     def.required_to_clear = true;
@@ -369,8 +369,8 @@ fn spawn_headless_with_definition_has_all_definition_components() {
         .get::<CellHealth>(entity)
         .expect("should have CellHealth");
     assert!(
-        (health.current - 30.0).abs() < f32::EPSILON && (health.max - 30.0).abs() < f32::EPSILON,
-        "CellHealth should be {{ current: 30.0, max: 30.0 }}"
+        (health.current - 20.0).abs() < f32::EPSILON && (health.max - 20.0).abs() < f32::EPSILON,
+        "CellHealth should be {{ current: 20.0, max: 20.0 }} (Standard toughness base)"
     );
 
     let visuals = world

@@ -8,11 +8,7 @@ use crate::state::run::definition::{NodeType, TierNodeCount};
 
 #[test]
 fn fixed_count_produces_correct_node_totals() {
-    let curve = make_curve(
-        vec![make_tier(TierNodeCount::Fixed(5), 0.5, 1.0, 1.0)],
-        3.0,
-        0.0,
-    );
+    let curve = make_curve(vec![make_tier(TierNodeCount::Fixed(5), 0.5, 1.0)], 0.0);
     let mut rng = rng_from_seed(42);
 
     let seq = generate_node_sequence(&curve, &mut rng);
@@ -41,11 +37,7 @@ fn fixed_count_produces_correct_node_totals() {
 
 #[test]
 fn range_count_stays_within_bounds_across_seeds() {
-    let curve = make_curve(
-        vec![make_tier(TierNodeCount::Range(4, 6), 0.5, 1.0, 1.0)],
-        3.0,
-        0.0,
-    );
+    let curve = make_curve(vec![make_tier(TierNodeCount::Range(4, 6), 0.5, 1.0)], 0.0);
 
     for seed in 0..100_u64 {
         let mut rng = rng_from_seed(seed);
@@ -62,7 +54,7 @@ fn range_count_stays_within_bounds_across_seeds() {
 
 #[test]
 fn empty_tiers_produces_empty_sequence() {
-    let curve = make_curve(vec![], 3.0, 0.1);
+    let curve = make_curve(vec![], 0.1);
     let mut rng = rng_from_seed(42);
 
     let seq = generate_node_sequence(&curve, &mut rng);
@@ -77,11 +69,7 @@ fn empty_tiers_produces_empty_sequence() {
 
 #[test]
 fn fixed_zero_produces_only_boss_node() {
-    let curve = make_curve(
-        vec![make_tier(TierNodeCount::Fixed(0), 0.5, 1.0, 1.0)],
-        3.0,
-        0.0,
-    );
+    let curve = make_curve(vec![make_tier(TierNodeCount::Fixed(0), 0.5, 1.0)], 0.0);
     let mut rng = rng_from_seed(42);
 
     let seq = generate_node_sequence(&curve, &mut rng);

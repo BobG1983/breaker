@@ -9,9 +9,9 @@ pub(crate) mod messages;
 mod plugin;
 pub(crate) mod queries;
 pub(crate) mod resources;
-mod systems;
+pub(crate) mod systems;
 
 #[cfg(test)]
 pub(crate) use definition::CellTypeDefinition;
 pub(crate) use plugin::CellsPlugin;
-pub(crate) use resources::{CellDefaults, CellTypeRegistry};
+pub(crate) use resources::{CellDefaults, CellTypeRegistry, ToughnessDefaults};

@@ -49,8 +49,6 @@ pub struct TierDefinition {
     pub nodes: TierNodeCount,
     /// Fraction of nodes in this tier that are active (0.0 to 1.0).
     pub active_ratio: f32,
-    /// Hit-point multiplier applied to cells in this tier.
-    pub hp_mult: f32,
     /// Timer multiplier applied to node timers in this tier.
     pub timer_mult: f32,
     /// Cell-type aliases introduced in this tier.
@@ -180,5 +178,27 @@ impl Default for HighlightDefaults {
             max_expected_comeback: 3.0,
             max_expected_perfect_node: 20.0,
         }
+    }
+}
+
+// ── Part G: TierDefinition without hp_mult ───────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Behavior 20: TierDefinition no longer has hp_mult field
+    #[test]
+    fn tier_definition_without_hp_mult_compiles() {
+        let tier = TierDefinition {
+            nodes: TierNodeCount::Fixed(3),
+            active_ratio: 0.5,
+            timer_mult: 1.0,
+            introduced_cells: vec![],
+        };
+        let _ = tier.nodes;
+        let _ = tier.active_ratio;
+        let _ = tier.timer_mult;
+        drop(tier.introduced_cells);
     }
 }

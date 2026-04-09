@@ -8,11 +8,12 @@ use crate::{
     cells::{
         builder::core::types::GuardianSpawnConfig,
         components::*,
-        definition::CellBehavior,
-        resources::{CellConfig, CellTypeRegistry},
+        definition::{CellBehavior, Toughness},
+        resources::{CellConfig, CellTypeRegistry, ToughnessConfig},
     },
     shared::PlayfieldConfig,
     state::run::{
+        definition::NodeType,
         node::{ActiveNodeLayout, NodeLayout, definition::LockMap, messages::CellsSpawned},
         resources::{NodeOutcome, NodeSequence},
     },
@@ -118,16 +119,73 @@ impl GridSpawnParams {
     }
 }
 
+/// Context for toughness-based HP resolution at spawn time.
+pub(crate) struct HpContext {
+    pub tier: u32,
+    pub position_in_tier: u32,
+    pub is_boss: bool,
+}
+
+/// Bundles toughness config and HP context to reduce argument count on
+/// [`spawn_cells_from_grid`].
+pub(crate) struct ToughnessHpData<'a> {
+    pub toughness_config: Option<&'a ToughnessConfig>,
+    pub hp_context: HpContext,
+}
+
 /// Immutable context for cell spawning helpers. Bundles the shared read-only
 /// state so individual functions stay under clippy's argument limit.
 struct GridCellContext<'a> {
     layout: &'a NodeLayout,
     registry: &'a CellTypeRegistry,
     params: GridSpawnParams,
-    hp_mult: f32,
+    /// Precomputed HP scaling — tier scale computed once per batch, config
+    /// reference kept for per-cell `base_hp()` lookup.
+    hp_scale: HpScale<'a>,
+}
+
+/// Precomputed HP scaling for a spawn batch. Caches the tier scale factor
+/// (computed once via `powi()`) and keeps the config reference for per-cell
+/// `base_hp()` lookups. Without a config, falls back to `default_base_hp()`.
+#[derive(Clone, Copy)]
+struct HpScale<'a> {
+    config: Option<&'a ToughnessConfig>,
+    /// `tier_scale * boss_multiplier` (if boss) or `tier_scale` (if not).
+    scale: f32,
+}
+
+impl<'a> HpScale<'a> {
+    fn from_context(config: Option<&'a ToughnessConfig>, hp_context: &HpContext) -> Self {
+        config.map_or(
+            Self {
+                config: None,
+                scale: 1.0,
+            },
+            |c| {
+                let tier = c.tier_scale(hp_context.tier, hp_context.position_in_tier);
+                Self {
+                    config: Some(c),
+                    scale: if hp_context.is_boss {
+                        tier * c.boss_multiplier
+                    } else {
+                        tier
+                    },
+                }
+            },
+        )
+    }
 }
 
 impl GridCellContext<'_> {
+    /// Computes HP for a cell: `base_hp(toughness) * precomputed_scale`.
+    fn compute_hp(&self, toughness: Toughness) -> f32 {
+        let base = self
+            .hp_scale
+            .config
+            .map_or_else(|| toughness.default_base_hp(), |c| c.base_hp(toughness));
+        base * self.hp_scale.scale
+    }
+
     /// Pass 1: spawns non-locked cells. Returns
     /// required-to-clear count for cells spawned in this pass.
     fn spawn_pass1(
@@ -168,8 +226,10 @@ impl GridCellContext<'_> {
                 if let Some(guarded) = guarded_behavior {
                     let guardian_slots =
                         collect_guardian_slots(&self.layout.grid, row_idx, col_idx);
+                    let parent_hp = self.compute_hp(def.toughness);
+                    let guardian_hp = parent_hp * guarded.guardian_hp_fraction;
                     let config = GuardianSpawnConfig {
-                        hp: guarded.guardian_hp * self.hp_mult,
+                        hp: guardian_hp,
                         color_rgb: guarded.guardian_color_rgb,
                         slide_speed: guarded.slide_speed,
                         cell_height: self.params.cell_height,
@@ -177,12 +237,11 @@ impl GridCellContext<'_> {
                         step_y: self.params.step_y,
                     };
                     let pos = self.params.cell_pos(row_idx, col_idx);
-                    let scaled_hp = def.hp * self.hp_mult;
                     let entity_id = Cell::builder()
                         .definition(def)
                         .position(pos)
                         .dimensions(self.params.cell_width, self.params.cell_height)
-                        .override_hp(scaled_hp)
+                        .override_hp(parent_hp)
                         .alias(alias.clone())
                         .guarded(guardian_slots, config)
                         .rendered(meshes, materials)
@@ -201,7 +260,7 @@ impl GridCellContext<'_> {
 
                 // Non-locked cell: spawn via builder.
                 let pos = self.params.cell_pos(row_idx, col_idx);
-                let scaled_hp = def.hp * self.hp_mult;
+                let scaled_hp = self.compute_hp(def.toughness);
 
                 let entity_id = Cell::builder()
                     .definition(def)
@@ -227,8 +286,6 @@ impl GridCellContext<'_> {
 ///
 /// Shared between the `OnEnter(Playing)` system and hot-reload respawn.
 ///
-/// `hp_mult` scales every cell's HP (from the node's difficulty assignment).
-///
 /// Uses a two-pass approach when the layout has locks:
 /// - **Pass 1**: spawns non-locked cells
 /// - **Pass 2**: spawns locked cells in topological order with resolved entity IDs
@@ -239,9 +296,13 @@ pub(crate) fn spawn_cells_from_grid(
     layout: &NodeLayout,
     registry: &CellTypeRegistry,
     render_assets: RenderAssets<'_>,
-    hp_mult: f32,
+    toughness_hp: ToughnessHpData<'_>,
 ) -> u32 {
     let RenderAssets { meshes, materials } = render_assets;
+    let ToughnessHpData {
+        toughness_config,
+        hp_context,
+    } = toughness_hp;
     let dims = compute_grid_scale(
         config,
         playfield,
@@ -267,10 +328,11 @@ pub(crate) fn spawn_cells_from_grid(
         .map(|locks| locks.iter().map(|(k, v)| (*k, v)).collect())
         .unwrap_or_default();
 
+    let hp_scale = HpScale::from_context(toughness_config, &hp_context);
     let ctx = GridCellContext {
         layout,
         registry,
-        hp_mult,
+        hp_scale,
         params: GridSpawnParams {
             step_x: dims.step_x,
             step_y: dims.step_y,
@@ -376,7 +438,7 @@ fn spawn_locked_cell(
     };
 
     let pos = ctx.params.cell_pos(row_idx, col_idx);
-    let scaled_hp = def.hp * ctx.hp_mult;
+    let scaled_hp = ctx.compute_hp(def.toughness);
 
     // Resolve lock targets to entity IDs.
     let targets = &effective_locks[&coord];
@@ -447,7 +509,7 @@ fn spawn_unlocked_fallback(
     };
 
     let pos = ctx.params.cell_pos(row_idx, col_idx);
-    let scaled_hp = def.hp * ctx.hp_mult;
+    let scaled_hp = ctx.compute_hp(def.toughness);
 
     let entity_id = Cell::builder()
         .definition(def)
@@ -616,17 +678,23 @@ fn topological_sort_locks(locks: &LockMap) -> (Vec<GridCoord>, Vec<GridCoord>) {
     (sorted, cyclic)
 }
 
-/// Resolves the `hp_mult` for the current node from the run state and node
-/// sequence, falling back to `1.0` when those resources are absent (e.g. in
-/// tests or scenario overrides).
-fn resolve_hp_mult(run_state: Option<&NodeOutcome>, node_sequence: Option<&NodeSequence>) -> f32 {
-    if let (Some(state), Some(sequence)) = (run_state, node_sequence) {
-        sequence
-            .assignments
-            .get(state.node_index as usize)
-            .map_or(1.0, |a| a.hp_mult)
-    } else {
-        1.0
+/// Resolves the HP context from the current run state and node sequence.
+fn resolve_hp_context(
+    run_state: Option<&NodeOutcome>,
+    node_sequence: Option<&NodeSequence>,
+) -> HpContext {
+    let (tier, position_in_tier, is_boss) =
+        if let (Some(state), Some(sequence)) = (run_state, node_sequence) {
+            let assignment = sequence.assignments.get(state.node_index as usize);
+            let is_boss = assignment.is_some_and(|a| a.node_type == NodeType::Boss);
+            (state.tier, state.position_in_tier, is_boss)
+        } else {
+            (0, 0, false)
+        };
+    HpContext {
+        tier,
+        position_in_tier,
+        is_boss,
     }
 }
 
@@ -639,6 +707,7 @@ pub(crate) struct CellSpawnContext<'w> {
     cell_registry: Res<'w, CellTypeRegistry>,
     run_state: Option<Res<'w, NodeOutcome>>,
     node_sequence: Option<Res<'w, NodeSequence>>,
+    toughness_config: Option<Res<'w, ToughnessConfig>>,
 }
 
 /// Spawns cells from the active node layout.
@@ -653,7 +722,7 @@ pub(crate) fn spawn_cells_from_layout(
     mut render_assets: (ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>),
     mut cells_spawned: MessageWriter<CellsSpawned>,
 ) {
-    let hp_mult = resolve_hp_mult(ctx.run_state.as_deref(), ctx.node_sequence.as_deref());
+    let hp_context = resolve_hp_context(ctx.run_state.as_deref(), ctx.node_sequence.as_deref());
     spawn_cells_from_grid(
         &mut commands,
         &ctx.cell_config,
@@ -664,7 +733,10 @@ pub(crate) fn spawn_cells_from_layout(
             meshes: &mut render_assets.0,
             materials: &mut render_assets.1,
         },
-        hp_mult,
+        ToughnessHpData {
+            toughness_config: ctx.toughness_config.as_deref(),
+            hp_context,
+        },
     );
     cells_spawned.write(CellsSpawned);
 }

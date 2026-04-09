@@ -1,7 +1,7 @@
 (
     id: "lock",
     alias: "L",
-    hp: 10.0,
+    toughness: Weak,
     color_rgb: (0.5, 0.5, 3.0),
     required_to_clear: true,
     damage_hdr_base: 3.0,

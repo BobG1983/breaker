@@ -31,8 +31,8 @@ pub(crate) fn propagate_cell_type_changes(
             continue;
         };
 
-        health.max = def.hp;
-        health.current = health.current.min(def.hp);
+        health.max = def.toughness.default_base_hp();
+        health.current = health.current.min(def.toughness.default_base_hp());
 
         visuals.hdr_base = def.damage_hdr_base;
         visuals.green_min = def.damage_green_min;
@@ -48,13 +48,13 @@ pub(crate) fn propagate_cell_type_changes(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cells::CellTypeDefinition;
+    use crate::cells::{CellTypeDefinition, definition::Toughness};
 
     fn make_standard_def() -> CellTypeDefinition {
         CellTypeDefinition {
             id: "standard".to_owned(),
             alias: "S".to_owned(),
-            hp: 1.0,
+            toughness: Toughness::default(),
             color_rgb: [4.0, 0.2, 0.5],
             required_to_clear: true,
             damage_hdr_base: 4.0,
@@ -71,7 +71,7 @@ mod tests {
         CellTypeDefinition {
             id: "tough".to_owned(),
             alias: "T".to_owned(),
-            hp: 3.0,
+            toughness: Toughness::Tough,
             color_rgb: [2.5, 0.2, 4.0],
             required_to_clear: true,
             damage_hdr_base: 4.0,
@@ -127,11 +127,11 @@ mod tests {
         app.update();
         app.update();
 
-        // Mutate registry directly — simulates propagate_registry rebuild
+        // Mutate registry: change toughness from Standard (20.0) to Weak (10.0)
         {
             let mut registry = app.world_mut().resource_mut::<CellTypeRegistry>();
             let mut updated_def = make_standard_def();
-            updated_def.hp = 5.0;
+            updated_def.toughness = Toughness::Weak;
             updated_def.damage_hdr_base = 8.0;
             registry.insert("S".to_owned(), updated_def);
         }
@@ -140,12 +140,13 @@ mod tests {
 
         let health = app.world().get::<CellHealth>(entity).unwrap();
         assert!(
-            (health.max - 5.0).abs() < f32::EPSILON,
-            "CellHealth.max should be updated to 5.0"
+            (health.max - 10.0).abs() < f32::EPSILON,
+            "CellHealth.max should update to Weak base 10.0, got {}",
+            health.max
         );
         assert!(
             (health.current - 1.0).abs() < f32::EPSILON,
-            "CellHealth.current should be clamped to new max (but was already <= 5.0)"
+            "CellHealth.current should remain 1.0 (already <= 10.0)"
         );
 
         let visuals = app.world().get::<CellDamageVisuals>(entity).unwrap();
@@ -172,13 +173,13 @@ mod tests {
             mats.add(ColorMaterial::from_color(Color::WHITE))
         };
 
-        // Spawn a 'T' cell
+        // Spawn a 'T' cell with Tough base HP
         let t_entity = app
             .world_mut()
             .spawn((
                 Cell,
                 CellTypeAlias("T".to_owned()),
-                CellHealth::new(3.0),
+                CellHealth::new(30.0),
                 CellDamageVisuals {
                     hdr_base: 4.0,
                     green_min: 0.2,
@@ -196,18 +197,18 @@ mod tests {
         // Modify only 'S' in the registry (but registry still reports Changed)
         {
             let mut registry = app.world_mut().resource_mut::<CellTypeRegistry>();
-            let mut updated_s = make_standard_def();
-            updated_s.hp = 10.0;
+            let updated_s = make_standard_def();
             registry.insert("S".to_owned(), updated_s);
         }
 
         app.update();
 
-        // 'T' cell should be unchanged — registry updated 'T' with same values
+        // 'T' cell recalculated from Tough toughness — max stays 30.0
         let health = app.world().get::<CellHealth>(t_entity).unwrap();
         assert!(
-            (health.max - 3.0).abs() < f32::EPSILON,
-            "Tough cell max HP should remain 3.0 since only standard was modified"
+            (health.max - 30.0).abs() < f32::EPSILON,
+            "Tough cell max HP should be Tough base 30.0, got {}",
+            health.max
         );
     }
 
@@ -215,7 +216,7 @@ mod tests {
     fn current_health_clamped_to_new_max() {
         let mut app = test_app();
 
-        let def = make_tough_def(); // hp=3
+        let def = make_tough_def(); // Tough toughness, base 30.0
         {
             let mut registry = app.world_mut().resource_mut::<CellTypeRegistry>();
             registry.insert("T".to_owned(), def);
@@ -226,15 +227,15 @@ mod tests {
             mats.add(ColorMaterial::from_color(Color::WHITE))
         };
 
-        // Spawn cell with current=3.0, max=3.0
+        // Spawn cell with current=30.0, max=30.0 (Tough base)
         let entity = app
             .world_mut()
             .spawn((
                 Cell,
                 CellTypeAlias("T".to_owned()),
                 CellHealth {
-                    current: 3.0,
-                    max: 3.0,
+                    current: 30.0,
+                    max: 30.0,
                 },
                 CellDamageVisuals {
                     hdr_base: 4.0,
@@ -250,21 +251,26 @@ mod tests {
         app.update();
         app.update();
 
-        // Reduce HP from 3.0 to 1.0 — current should clamp
+        // Change toughness from Tough (30.0) to Weak (10.0) — current should clamp
         {
             let mut registry = app.world_mut().resource_mut::<CellTypeRegistry>();
             let mut updated_def = make_tough_def();
-            updated_def.hp = 1.0;
+            updated_def.toughness = Toughness::Weak;
             registry.insert("T".to_owned(), updated_def);
         }
 
         app.update();
 
         let health = app.world().get::<CellHealth>(entity).unwrap();
-        assert!((health.max - 1.0).abs() < f32::EPSILON);
         assert!(
-            (health.current - 1.0).abs() < f32::EPSILON,
-            "current health should be clamped to new max"
+            (health.max - 10.0).abs() < f32::EPSILON,
+            "max should be Weak base 10.0, got {}",
+            health.max
+        );
+        assert!(
+            (health.current - 10.0).abs() < f32::EPSILON,
+            "current (30.0) should clamp to new max (10.0), got {}",
+            health.current
         );
     }
 }

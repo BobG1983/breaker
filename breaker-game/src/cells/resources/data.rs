@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use rantzsoft_defaults::{GameConfig, prelude::SeedableRegistry};
 use tracing::warn;
 
-use super::super::definition::CellTypeDefinition;
+use super::super::definition::{CellTypeDefinition, Toughness};
 
 /// Cell configuration resource — shared grid layout properties.
 #[derive(Resource, Debug, Clone, PartialEq, GameConfig)]
@@ -34,6 +34,81 @@ impl Default for CellConfig {
             padding_x: 4.0,
             padding_y: 4.0,
         }
+    }
+}
+
+/// Toughness scaling configuration resource — HP computation parameters.
+#[derive(Resource, Debug, Clone, PartialEq, GameConfig)]
+#[game_config(
+    defaults = "ToughnessDefaults",
+    path = "config/defaults.toughness.ron",
+    ext = "toughness.ron"
+)]
+pub(crate) struct ToughnessConfig {
+    /// Base HP for Weak cells.
+    pub weak_base: f32,
+    /// Base HP for Standard cells.
+    pub standard_base: f32,
+    /// Base HP for Tough cells.
+    pub tough_base: f32,
+    /// Exponential multiplier per tier.
+    pub tier_multiplier: f32,
+    /// Linear multiplier per position within a tier.
+    pub node_multiplier: f32,
+    /// HP multiplier for boss nodes.
+    pub boss_multiplier: f32,
+}
+
+impl Default for ToughnessConfig {
+    fn default() -> Self {
+        Self {
+            weak_base: 10.0,
+            standard_base: 20.0,
+            tough_base: 30.0,
+            tier_multiplier: 1.2,
+            node_multiplier: 0.05,
+            boss_multiplier: 3.0,
+        }
+    }
+}
+
+impl ToughnessConfig {
+    /// Returns the base HP for the given toughness level.
+    #[must_use]
+    pub(crate) const fn base_hp(&self, toughness: Toughness) -> f32 {
+        match toughness {
+            Toughness::Weak => self.weak_base,
+            Toughness::Standard => self.standard_base,
+            Toughness::Tough => self.tough_base,
+        }
+    }
+
+    /// Computes the tier + position scaling factor.
+    /// Formula: `tier_multiplier`^`tier` * (1.0 + `node_multiplier` * `position_in_tier`)
+    #[must_use]
+    pub(crate) fn tier_scale(&self, tier: u32, position_in_tier: u32) -> f32 {
+        let tier_i32 = i32::try_from(tier).unwrap_or(i32::MAX);
+        let pos_f32 = f32::from(u16::try_from(position_in_tier).unwrap_or(u16::MAX));
+        self.tier_multiplier.powi(tier_i32) * self.node_multiplier.mul_add(pos_f32, 1.0)
+    }
+
+    /// Full HP computation: `base_hp(toughness)` * `tier_scale(tier, position_in_tier)`.
+    #[cfg(test)]
+    #[must_use]
+    pub(crate) fn hp_for(&self, toughness: Toughness, tier: u32, position_in_tier: u32) -> f32 {
+        self.base_hp(toughness) * self.tier_scale(tier, position_in_tier)
+    }
+
+    /// Boss HP: `hp_for(...)` * `boss_multiplier`.
+    #[cfg(test)]
+    #[must_use]
+    pub(crate) fn hp_for_boss(
+        &self,
+        toughness: Toughness,
+        tier: u32,
+        position_in_tier: u32,
+    ) -> f32 {
+        self.hp_for(toughness, tier, position_in_tier) * self.boss_multiplier
     }
 }
 

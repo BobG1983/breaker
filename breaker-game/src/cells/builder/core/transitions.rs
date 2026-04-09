@@ -8,7 +8,13 @@ use crate::cells::{
     definition::CellTypeDefinition,
 };
 #[cfg(test)]
-use crate::{cells::definition::CellBehavior, effect::RootEffect};
+use crate::{
+    cells::{
+        definition::{CellBehavior, Toughness},
+        resources::ToughnessConfig,
+    },
+    effect::RootEffect,
+};
 
 // ── Entry point ─────────────────────────────────────────────────────────────
 
@@ -99,7 +105,9 @@ impl<P, D, V> CellBuilder<P, D, NoHealth, V> {
         CellBuilder {
             position: self.position,
             dimensions: self.dimensions,
-            health: HasHealth { hp: def.hp },
+            health: HasHealth {
+                hp: def.toughness.default_base_hp(),
+            },
             visual: self.visual,
             optional: self.optional,
         }
@@ -168,9 +176,41 @@ impl<P, D, H> CellBuilder<P, D, H, Unvisual> {
     }
 }
 
+// ── Tier HP transition ─────────────────────────────────────────────────────
+
+#[cfg(test)]
+impl<P, D, V> CellBuilder<P, D, NoHealth, V> {
+    /// Sets HP from toughness config and tier context.
+    /// Uses the stored toughness (from `.toughness()`) or defaults to Standard.
+    #[must_use]
+    pub(crate) fn tier_hp(
+        self,
+        config: &ToughnessConfig,
+        tier: u32,
+        position_in_tier: u32,
+    ) -> CellBuilder<P, D, HasHealth, V> {
+        let toughness = self.optional.toughness.unwrap_or_default();
+        let hp = config.hp_for(toughness, tier, position_in_tier);
+        CellBuilder {
+            position: self.position,
+            dimensions: self.dimensions,
+            health: HasHealth { hp },
+            visual: self.visual,
+            optional: self.optional,
+        }
+    }
+}
+
 // ── Optional chainable methods (any typestate) ──────────────────────────────
 
 impl<P, D, H, V> CellBuilder<P, D, H, V> {
+    #[cfg(test)]
+    #[must_use]
+    pub(crate) const fn toughness(mut self, toughness: Toughness) -> Self {
+        self.optional.toughness = Some(toughness);
+        self
+    }
+
     #[must_use]
     pub(crate) fn alias(mut self, alias: String) -> Self {
         self.optional.alias = Some(alias);

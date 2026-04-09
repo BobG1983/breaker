@@ -38,9 +38,9 @@ fn locked_cell_with_required_to_clear_has_both_components() {
 
 #[test]
 fn locked_cell_hp_scaled_by_hp_mult() {
-    // Given: 2x1 grid ["T","S"], locks: {(0,0): [(0,1)]}, hp_mult=2.0
-    // "T" has hp=3.0, so scaled_hp = 3.0 * 2.0 = 6.0
-    // "S" has hp=1.0, so scaled_hp = 1.0 * 2.0 = 2.0
+    // Given: 2x1 grid ["T","S"], locks: {(0,0): [(0,1)]}
+    // "T" is Tough toughness — without ToughnessConfig, fallback = 30.0
+    // "S" is Standard toughness — without ToughnessConfig, fallback = 20.0
     let mut locks: LockMap = HashMap::new();
     locks.insert((0, 0), vec![(0, 1)]);
     let layout = NodeLayout {
@@ -59,17 +59,17 @@ fn locked_cell_hp_scaled_by_hp_mult() {
 
     let cells_by_pos = collect_cells_by_grid_position(&mut app, &layout);
 
-    // Locked cell at (0,0) — "T" with hp 3.0 * 2.0 = 6.0
+    // Locked cell at (0,0) — "T" Tough toughness, fallback base = 30.0
     let entity_t = cells_by_pos[&(0, 0)];
     let health_t = app.world().get::<CellHealth>(entity_t).unwrap();
     assert!(
-        (health_t.current - 6.0).abs() < f32::EPSILON,
-        "locked cell 'T' current HP should be 6.0, got {}",
+        (health_t.current - 30.0).abs() < f32::EPSILON,
+        "locked cell 'T' current HP should be Tough base 30.0, got {}",
         health_t.current
     );
     assert!(
-        (health_t.max - 6.0).abs() < f32::EPSILON,
-        "locked cell 'T' max HP should be 6.0, got {}",
+        (health_t.max - 30.0).abs() < f32::EPSILON,
+        "locked cell 'T' max HP should be Tough base 30.0, got {}",
         health_t.max
     );
 
@@ -79,12 +79,12 @@ fn locked_cell_hp_scaled_by_hp_mult() {
     assert_eq!(adj.0.len(), 1);
     assert_eq!(adj.0[0], cells_by_pos[&(0, 1)]);
 
-    // Non-locked cell at (0,1) — "S" with hp 1.0 * 2.0 = 2.0
+    // Non-locked cell at (0,1) — "S" Standard toughness, fallback base = 20.0
     let entity_s = cells_by_pos[&(0, 1)];
     let health_s = app.world().get::<CellHealth>(entity_s).unwrap();
     assert!(
-        (health_s.current - 2.0).abs() < f32::EPSILON,
-        "non-locked cell 'S' current HP should be 2.0, got {}",
+        (health_s.current - 20.0).abs() < f32::EPSILON,
+        "non-locked cell 'S' current HP should be Standard base 20.0, got {}",
         health_s.current
     );
     assert!(app.world().get::<Locked>(entity_s).is_none());
@@ -92,7 +92,7 @@ fn locked_cell_hp_scaled_by_hp_mult() {
 
 #[test]
 fn locked_cell_hp_unscaled_when_hp_mult_is_one() {
-    // Edge case: hp_mult = 1.0 — locked cell "T" has CellHealth { current: 3.0, max: 3.0 }
+    // Edge case: locked cell "T" (Tough) — without ToughnessConfig, fallback = 30.0
     let mut locks: LockMap = HashMap::new();
     locks.insert((0, 0), vec![(0, 1)]);
     let layout = NodeLayout {
@@ -113,13 +113,13 @@ fn locked_cell_hp_unscaled_when_hp_mult_is_one() {
     let entity_t = cells_by_pos[&(0, 0)];
     let health_t = app.world().get::<CellHealth>(entity_t).unwrap();
     assert!(
-        (health_t.current - 3.0).abs() < f32::EPSILON,
-        "locked cell 'T' HP should be 3.0, got {}",
+        (health_t.current - 30.0).abs() < f32::EPSILON,
+        "locked cell 'T' HP should be Tough base 30.0, got {}",
         health_t.current
     );
     assert!(
-        (health_t.max - 3.0).abs() < f32::EPSILON,
-        "locked cell 'T' max HP should be 3.0, got {}",
+        (health_t.max - 30.0).abs() < f32::EPSILON,
+        "locked cell 'T' max HP should be Tough base 30.0, got {}",
         health_t.max
     );
 }

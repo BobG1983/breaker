@@ -2,6 +2,7 @@
 //! mismatches, cell counting, and grid dimension bounds.
 
 use super::{super::types::*, helpers::test_registry};
+use crate::cells::definition::Toughness;
 
 /// Helper to reduce verbosity of String grid construction.
 fn s(val: &str) -> String {
@@ -259,7 +260,7 @@ fn validate_accepts_multi_char_string_alias() {
         crate::cells::CellTypeDefinition {
             id: "guard".to_owned(),
             alias: "Gu".to_owned(),
-            hp: 5.0,
+            toughness: Toughness::default(),
             color_rgb: [1.0, 1.0, 1.0],
             required_to_clear: true,
             damage_hdr_base: 4.0,
@@ -293,7 +294,7 @@ fn validate_accepts_three_char_alias_in_registry() {
         crate::cells::CellTypeDefinition {
             id: "shielded".to_owned(),
             alias: "Shd".to_owned(),
-            hp: 5.0,
+            toughness: Toughness::default(),
             color_rgb: [1.0, 1.0, 1.0],
             required_to_clear: true,
             damage_hdr_base: 4.0,

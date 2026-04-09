@@ -1,0 +1,8 @@
+(
+    weak_base: 10.0,
+    standard_base: 20.0,
+    tough_base: 30.0,
+    tier_multiplier: 1.2,
+    node_multiplier: 0.05,
+    boss_multiplier: 3.0,
+)

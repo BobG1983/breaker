@@ -7,6 +7,7 @@ use crate::{
     cells::{
         CellTypeDefinition,
         components::Cell,
+        definition::Toughness,
         resources::{CellConfig, CellTypeRegistry},
     },
     shared::PlayfieldConfig,
@@ -36,7 +37,7 @@ pub(super) fn test_registry() -> CellTypeRegistry {
         CellTypeDefinition {
             id: "standard".to_owned(),
             alias: "S".to_owned(),
-            hp: 1.0,
+            toughness: Toughness::default(),
             color_rgb: [4.0, 0.2, 0.5],
             required_to_clear: true,
             damage_hdr_base: 4.0,
@@ -53,7 +54,7 @@ pub(super) fn test_registry() -> CellTypeRegistry {
         CellTypeDefinition {
             id: "tough".to_owned(),
             alias: "T".to_owned(),
-            hp: 3.0,
+            toughness: crate::cells::definition::Toughness::Tough,
             color_rgb: [2.5, 0.2, 4.0],
             required_to_clear: true,
             damage_hdr_base: 4.0,
@@ -286,8 +287,6 @@ pub(super) fn circular_locked_layout() -> NodeLayout {
 }
 
 /// Collects Cell entities keyed by their approximate grid position.
-/// Uses `Position2D` to determine which grid slot each cell occupies.
-/// Matches entities to grid positions within 0.01 world units of expected center.
 pub(super) fn collect_cells_by_grid_position(
     app: &mut App,
     layout: &NodeLayout,
@@ -311,7 +310,6 @@ pub(super) fn collect_cells_by_grid_position(
     let start_x = -grid_width / 2.0 + dims.cell_width / 2.0;
     let start_y = playfield.top() - layout.grid_top_offset - dims.cell_height / 2.0;
 
-    // Build expected positions for each grid slot
     let mut expected_positions: Vec<((usize, usize), (f32, f32))> = Vec::new();
     for (row_idx, row) in layout.grid.iter().enumerate() {
         for (col_idx, alias) in row.iter().enumerate() {
@@ -326,7 +324,6 @@ pub(super) fn collect_cells_by_grid_position(
         }
     }
 
-    // Collect all Cell entities with their positions
     let cell_entities: Vec<(Entity, Vec2)> = app
         .world_mut()
         .query_filtered::<(Entity, &Position2D), With<Cell>>()
@@ -346,8 +343,10 @@ pub(super) fn collect_cells_by_grid_position(
     result
 }
 
-/// Creates a test `App` with explicit HP multiplier via `NodeOutcome`/`NodeSequence`.
-pub(super) fn test_app_with_hp_mult(layout: NodeLayout, hp_mult: f32) -> App {
+/// Creates a test `App` with `NodeOutcome`/`NodeSequence` for HP multiplier testing.
+/// Note: `hp_mult` has been removed from `NodeAssignment`. This helper now just
+/// inserts the resources for compatibility.
+pub(super) fn test_app_with_hp_mult(layout: NodeLayout, _hp_mult: f32) -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .add_message::<CellsSpawned>()
@@ -365,7 +364,51 @@ pub(super) fn test_app_with_hp_mult(layout: NodeLayout, hp_mult: f32) -> App {
             assignments: vec![NodeAssignment {
                 node_type: NodeType::Active,
                 tier_index: 0,
-                hp_mult,
+                timer_mult: 1.0,
+            }],
+        })
+        .add_systems(Startup, spawn_cells_from_layout);
+    app
+}
+
+/// Creates a test `App` with `ToughnessConfig`, `NodeOutcome` (tier/position),
+/// and `NodeSequence` for toughness-based HP testing.
+///
+/// `tier` and `position_in_tier` are set on `NodeOutcome`. If `is_boss` is true,
+/// the single `NodeAssignment` uses `NodeType::Boss`.
+pub(super) fn test_app_with_toughness(
+    layout: NodeLayout,
+    registry: CellTypeRegistry,
+    tier: u32,
+    position_in_tier: u32,
+    is_boss: bool,
+) -> App {
+    use crate::cells::resources::ToughnessConfig;
+
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .add_message::<CellsSpawned>()
+        .init_resource::<CellConfig>()
+        .init_resource::<PlayfieldConfig>()
+        .init_resource::<Assets<Mesh>>()
+        .init_resource::<Assets<ColorMaterial>>()
+        .insert_resource(ActiveNodeLayout(layout))
+        .insert_resource(registry)
+        .insert_resource(ToughnessConfig::default())
+        .insert_resource(NodeOutcome {
+            node_index: 0,
+            tier,
+            position_in_tier,
+            ..Default::default()
+        })
+        .insert_resource(NodeSequence {
+            assignments: vec![NodeAssignment {
+                node_type: if is_boss {
+                    NodeType::Boss
+                } else {
+                    NodeType::Active
+                },
+                tier_index: tier,
                 timer_mult: 1.0,
             }],
         })
@@ -382,7 +425,7 @@ pub(super) fn test_app_with_non_required_cell(layout: NodeLayout) -> App {
         CellTypeDefinition {
             id: "filler".to_owned(),
             alias: "F".to_owned(),
-            hp: 1.0,
+            toughness: Toughness::default(),
             color_rgb: [0.5, 0.5, 0.5],
             required_to_clear: false,
             damage_hdr_base: 4.0,
