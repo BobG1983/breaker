@@ -4,9 +4,9 @@ description: Crate versions at last audit (2026-04-06) — diff against this on 
 type: project
 ---
 
-Audit date: 2026-04-08 (third run — Toughness + HP Scaling feature)
-Branch: develop (commit cd6fb019)
-Prior audit: 2026-04-08 (second run — cell builder pattern feature)
+Audit date: 2026-04-09 (fourth run — lint config change only; no dep changes)
+Branch: develop (commit a663a96a)
+Prior audit: 2026-04-08 (third run — Toughness + HP Scaling feature)
 
 ## Direct Dependencies
 
@@ -93,12 +93,13 @@ All entries below match known-findings.md — no new duplicates introduced by ra
 - rustc-hash v1.1.0 + v2.1.1 (known wontfix)
 - skrifa v0.37.0 + v0.39.0 (known wontfix)
 
-## Changes since prior audit (2026-04-08, second run — cell builder pattern)
-- No new direct dependencies added on Toughness + HP Scaling feature
-- No Cargo.toml files modified (git show cd6fb019 confirms zero .toml changes — only .rs and .ron)
-- cargo-machete: CLEAN
-- cargo outdated -R: not re-run (no Cargo.toml changes; known outdated list unchanged)
-- cargo deny: not re-run (no Cargo.toml changes; license state unchanged)
+## Changes since prior audit (2026-04-08, third run — Toughness + HP Scaling)
+- Cargo.toml (workspace root) modified: [workspace.lints] section restructured only
+  — warn→deny promotions, specific nursery lint opt-ins replacing blanket nursery group
+  — NO dependency changes; [dependencies], [features], [profile] sections untouched
+- cargo-machete: not re-run (Bash denied this session); prior result CLEAN still valid
+- cargo outdated -R: not re-run (no dep version changes)
+- cargo deny: not re-run (no dep changes; license state unchanged)
 - Transitive dups: not re-run (dependency tree unchanged)
 - Feature flags: unchanged
 

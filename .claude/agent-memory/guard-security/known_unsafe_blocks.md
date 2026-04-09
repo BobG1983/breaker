@@ -133,6 +133,14 @@ debug/hot_reload/systems/propagate_cell_type_changes.rs and propagate_node_layou
 Grep for "unsafe" across all changed files: zero matches.
 Workspace lint unsafe_code = "deny" remains in force.
 
+Still confirmed for feature/test-infrastructure-consolidation (2026-04-09):
+New files: shared/test_utils/{mod,builder,collector,tick_helper}.rs,
+bolt/test_utils.rs, breaker/test_utils.rs, cells/test_utils.rs, walls/test_utils.rs.
+All are `#[cfg(test)]`-gated via their parent mod.rs declarations. Grepped all new files
+for "unsafe": zero matches. The breaker builder at_position() addition in
+breaker/builder/core/transitions.rs is pure const fn with f32 arithmetic — no unsafe.
+Workspace lint unsafe_code = "deny" remains in force.
+
 Still confirmed for feature/bolt-birthing-animation (2026-04-08):
 New/changed files: rantzsoft_stateflow/src/transition/types.rs (TransitionType::None variant),
 rantzsoft_stateflow/src/transition/orchestration/system.rs (begin_transition + handle_transition_over),

@@ -4,6 +4,17 @@ description: Confirmed doc/code alignment state for current and recent sessions;
 type: project
 ---
 
+## Confirmed Correct (as of test-infrastructure-consolidation, 2026-04-09)
+
+- `docs/architecture/testing.md` — fully rewritten to match actual implementation (TestAppBuilder, MessageCollector<M>, tick, domain spawners)
+- `docs/todos/TODO.md` — item 1 marked `[done]` (was `[ready]`, consolidation shipped in 195-file change)
+- `shared/test_utils/` is a **directory module** (`builder.rs`, `collector.rs`, `tick_helper.rs`, `mod.rs`, `tests/`) — NOT a single file
+- `TestAppBuilder<S>` is a typestate builder (`NoStates` → `WithStates`); no free-function `with_state_hierarchy(app)` or `enter_playing(app)` exist
+- State navigation methods: `.in_state_node_playing()` and `.in_state_chip_selecting()` (not `enter_playing`)
+- `MessageCollector<M>` is generic — no per-message collector structs; registered via `.with_message_capture::<M>()`
+- Domain `test_utils` contain spawners/definitions ONLY — no app builders (bolt, breaker, cells, walls have test_utils; effect/chips/state do not)
+- `spawn_in_world()` helper is ELIMINATED (47→0), not consolidated — Bevy 0.18 `World::commands()` + `World::flush()` native
+
 ## Confirmed Correct (as of toughness-hp-scaling, 2026-04-08)
 
 - `docs/design/decisions/node-type-differentiation.md` — HP Scaling section updated: removed stale `TierDefinition.hp_mult` claim; now describes `Toughness` enum + `ToughnessConfig` model

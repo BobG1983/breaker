@@ -1,4 +1,5 @@
 /target
+rustc-ice-*.txt
 .claude/agent-memory/**/ephemeral/
 .claude/specs/
 .claude/research/

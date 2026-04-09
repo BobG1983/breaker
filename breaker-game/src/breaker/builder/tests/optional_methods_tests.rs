@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 use rantzsoft_physics2d::aabb::Aabb2D;
-use rantzsoft_spatial2d::components::{MaxSpeed, Position2D, PreviousScale, Scale2D};
+use rantzsoft_spatial2d::components::{
+    MaxSpeed, Position2D, PreviousPosition, PreviousScale, Scale2D,
+};
 
 use super::helpers::test_breaker_definition;
 use crate::{
@@ -154,6 +156,74 @@ fn with_height_overrides_definition_value() {
     assert!(
         (ps.y - 30.0).abs() < f32::EPSILON,
         "PreviousScale.y should be 30.0"
+    );
+}
+
+// ── at_position() sets both x and y ──
+
+#[test]
+fn at_position_sets_both_x_and_y() {
+    let def = test_breaker_definition();
+    let mut world = World::new();
+    let entity = Breaker::builder()
+        .definition(&def)
+        .at_position(Vec2::new(150.0, -300.0))
+        .headless()
+        .primary()
+        .spawn(&mut world.commands());
+    world.flush();
+
+    let pos = world
+        .get::<Position2D>(entity)
+        .expect("should have Position2D");
+    assert!(
+        (pos.0.x - 150.0).abs() < f32::EPSILON,
+        "Position2D.x should be 150.0, got {}",
+        pos.0.x
+    );
+    assert!(
+        (pos.0.y - (-300.0)).abs() < f32::EPSILON,
+        "Position2D.y should be -300.0, got {}",
+        pos.0.y
+    );
+
+    let prev = world
+        .get::<PreviousPosition>(entity)
+        .expect("should have PreviousPosition");
+    assert!(
+        (prev.0.x - 150.0).abs() < f32::EPSILON,
+        "PreviousPosition.x should be 150.0"
+    );
+
+    let by = world
+        .get::<BreakerBaseY>(entity)
+        .expect("should have BreakerBaseY");
+    assert!(
+        (by.0 - (-300.0)).abs() < f32::EPSILON,
+        "BreakerBaseY should be -300.0"
+    );
+}
+
+#[test]
+fn at_position_zero_overrides_definition_defaults() {
+    let def = test_breaker_definition(); // y_position: -250.0
+    let mut world = World::new();
+    let entity = Breaker::builder()
+        .definition(&def)
+        .at_position(Vec2::ZERO)
+        .headless()
+        .primary()
+        .spawn(&mut world.commands());
+    world.flush();
+
+    let pos = world.get::<Position2D>(entity).expect("should exist");
+    assert!(
+        pos.0.x.abs() < f32::EPSILON,
+        "explicit zero x should not fall back to any default"
+    );
+    assert!(
+        pos.0.y.abs() < f32::EPSILON,
+        "explicit zero y should override definition y_position (-250.0)"
     );
 }
 

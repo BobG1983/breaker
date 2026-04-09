@@ -25,7 +25,7 @@ pub(crate) fn spawn_breaker(app: &mut App, x: f32, y: f32) -> Entity {
     let world = app.world_mut();
     let entity = Breaker::builder()
         .definition(&def)
-        .at_position(x, y)
+        .at_position(Vec2::new(x, y))
         .headless()
         .primary()
         .spawn(&mut world.commands());

@@ -4,6 +4,33 @@ description: When full audits were run, what scope, and what was found — helps
 type: project
 ---
 
+## 2026-04-09 — Targeted Audit (develop, post scenario-coverage-gaps merge)
+
+**Scope:** All agent memory directories; focused check on reviewer-performance (branch touched it).
+**Total stable files:** ~137 across all agents.
+**Issues found:** 2 (both fixed).
+
+### Fixes Applied
+
+1. **reviewer-bevy-api/MEMORY.md** — linked 7 `api-*.md` files that do not exist in that directory (they live in `researcher-bevy-api/`). All 7 broken links removed. Added a note pointing to `researcher-bevy-api/` as the correct home for those files.
+
+2. **reviewer-file-length/MEMORY.md** — `phase11_findings.md` (Wave 15, toughness-hp-scaling, 2026-04-08) exists on disk but was not indexed. Added the missing entry.
+
+### reviewer-performance — Verified Clean
+
+All 21 stable files confirmed valid: systems (sync_breaker_scale, sync_bolt_scale, tick_birthing, spawn_bolt, propagate_breaker_changes, handle_pause_input, update_pause_menu_colors, begin_node_birthing, dispatch_initial_effects) all still exist in codebase. Builders (BreakerBuilder, BoltBuilder, WallBuilder) still present. ToughnessConfig exists. test_utils split into directory module — patterns still accurate. MEMORY.md indexes all 21 files correctly including the two new ones (toughness_hp_scaling.md, test_utils_patterns.md) added on this branch.
+
+### Staleness Patterns Observed
+
+- **reviewer-bevy-api/MEMORY.md** accumulated broken links from a prior split that moved `confirmed-patterns.md` content into 7 topic files under `researcher-bevy-api/`. The reviewer-bevy-api MEMORY.md was never updated to remove those links. Confirmed pattern: after any split that moves files across agent directories, check both agents' MEMORY.md files.
+- **reviewer-file-length/MEMORY.md** misses new phase entries whenever a new phase file is created without updating the index. Confirmed pattern from prior audits — check every time a new phase file is created.
+
+### Agents with No Issues Found
+
+orchestrator, planner-spec, planner-review, writer-code, writer-tests, researcher-system-dependencies, researcher-rust-idioms, researcher-bevy-api, reviewer-architecture (not present in listing — no memory dir), reviewer-performance, reviewer-quality, reviewer-scenarios (not present), reviewer-tests (not present), reviewer-file-length (after fix), reviewer-correctness, reviewer-bevy-api (after fix), runner-linting (not present), runner-scenarios, writer-scenarios, guard-security, guard-dependencies, guard-game-design, guard-docs (not present), guard-agent-memory, researcher-crates, researcher-codebase.
+
+---
+
 ## 2026-04-08 — Full Audit (develop, post cell-builder-pattern merge)
 
 **Scope:** All 27 agent memory directories.
