@@ -92,26 +92,27 @@ enum TriggerContext { Bump(BumpContext), Impact(ImpactContext), Death(DeathConte
 
 Reference: [decisions.md](decisions.md) #2
 
-### 1h. SourceId type + BoundEffects/StagedEffects/SpawnedRegistry structs
+### 1h. SourceId type + BoundEffects/StagedEffects/OnSpawnEffectRegistry structs
 New file: `new_effect/storage/mod.rs`
 
 ```rust
-// New: HashMap-indexed with conditions map and source reverse index
+// Flat Vec storage — Trigger contains f32 variants that can't impl Hash/Eq.
+// Linear scan is fine — counts are in single digits per entity.
 type SourceId = String;
-struct BoundEntry { source: SourceId, tree: ValidTree }
-enum BoundKey { Trigger(Trigger), Condition(Condition) }
+struct BoundEntry<K> { key: K, source: SourceId, tree: ValidTree }
+enum BoundKey { Trigger(usize), Condition(usize) }
 struct BoundEffects {
-    triggers: HashMap<Trigger, Vec<BoundEntry>>,
-    conditions: HashMap<Condition, Vec<BoundEntry>>,
-    sources: HashMap<SourceId, Vec<BoundKey>>,
+    triggers: Vec<BoundEntry<Trigger>>,
+    conditions: Vec<BoundEntry<Condition>>,
+    sources: HashMap<SourceId, Vec<BoundKey>>,  // reverse index — SourceId is String, fine for HashMap
 }
-struct StagedEntry { source: SourceId, tree: ValidTree }
-struct StagedEffects { entries: HashMap<Trigger, Vec<StagedEntry>> }
+struct StagedEntry { trigger: Trigger, source: SourceId, tree: ValidTree }
+struct StagedEffects { entries: Vec<StagedEntry> }
 struct SpawnedEntry { source: SourceId, tree: ValidTree }
-struct SpawnedRegistry { entries: HashMap<EntityType, Vec<SpawnedEntry>> }
+struct OnSpawnEffectRegistry { entries: HashMap<EntityType, Vec<SpawnedEntry>> }  // EntityType impls Hash+Eq
 ```
 
-Reference: [storage-and-dispatch.md](storage-and-dispatch.md) BoundEffects/StagedEffects/SpawnedRegistry sections
+Reference: [storage-and-dispatch.md](storage-and-dispatch.md) BoundEffects/StagedEffects/OnSpawnEffectRegistry sections
 
 ### 1i. DamageDealt<T> + KilledBy + GameEntity trait
 New file: `new_effect/damage/mod.rs`
@@ -265,7 +266,7 @@ Reference: [storage-and-dispatch.md](storage-and-dispatch.md) Condition monitor 
 ### 4c. Spawned bridge systems (parallel with 4b)
 New file: `new_effect/dispatch/spawned.rs`
 
-4 systems (bolt/cell/wall/breaker) in PostFixedUpdate. Query `Added<T>`, read SpawnedRegistry, stamp trees.
+4 systems (bolt/cell/wall/breaker) in PostFixedUpdate. Query `Added<T>`, read OnSpawnEffectRegistry, stamp trees.
 
 Reference: [storage-and-dispatch.md](storage-and-dispatch.md) Bridge systems section
 

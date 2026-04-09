@@ -19,7 +19,7 @@ enum DeathTarget { Victim, Killer }
 - `On(DeathTarget::Killer, ...)` resolves to the entity that killed it (if present)
 
 ## Source Message
-`Destroyed<T: GameEntity>` — generic on killer type (S) and victim type (T). Sent by domain kill handlers after processing `KillYourself<T: GameEntity>`.
+`Destroyed<T: GameEntity>` — generic on victim type (T). Killer is `Option<Entity>`, type determined at runtime. Sent by domain kill handlers after processing `KillYourself<T: GameEntity>`.
 
 ## Bridge System: `bridge_destroyed<T: GameEntity>`
 ```

@@ -1,40 +1,45 @@
 # Storage & Dispatch
 
-How BoundEffects, StagedEffects, and SpawnedRegistry are structured, and how dispatch walks them.
+How BoundEffects, StagedEffects, and OnSpawnEffectRegistry are structured, and how dispatch walks them.
 
 ## BoundEffects (Component)
 
 Permanent effect trees. Populated by Route at load time and Stamp at runtime. Never consumed — When entries re-arm after firing.
 
 ```rust
-#[derive(Component)]
+#[derive(Component, Default)]
 struct BoundEffects {
-    /// Trigger-keyed trees. When a trigger fires, look up the key,
-    /// walk matching trees, execute or arm into StagedEffects.
-    triggers: HashMap<Trigger, Vec<BoundEntry>>,
+    /// Trigger-keyed entries. When a trigger fires, linear scan for matching
+    /// trigger, walk matching trees, execute or arm into StagedEffects.
+    /// Flat Vec — counts are small (no chip has hundreds of triggers) and
+    /// Trigger contains f32 variants that can't impl Hash/Eq.
+    triggers: Vec<BoundEntry<Trigger>>,
 
-    /// Condition-keyed trees. The condition monitor system reads these
+    /// Condition-keyed entries. The condition monitor system reads these
     /// directly — not event-driven, checked on state change.
-    conditions: HashMap<Condition, Vec<BoundEntry>>,
+    conditions: Vec<BoundEntry<Condition>>,
 
-    /// Reverse index for removal. Maps SourceId to the set of keys
-    /// (triggers + conditions) that source contributed to.
+    /// Reverse index for removal. Maps SourceId to entry indices.
     /// Used by chip unequip to find and remove all entries from a source.
+    /// HashMap is fine here — SourceId is String, impls Hash+Eq.
     sources: HashMap<SourceId, Vec<BoundKey>>,
 }
 
-struct BoundEntry {
+struct BoundEntry<K> {
+    key: K,
     source: SourceId,
     tree: ValidTree,
 }
 
 enum BoundKey {
-    Trigger(Trigger),
-    Condition(Condition),
+    Trigger(usize),    // index into triggers Vec
+    Condition(usize),  // index into conditions Vec
 }
 
 type SourceId = String; // chip name, breaker name, etc.
 ```
+
+> **Why flat Vec, not HashMap?** `Trigger` contains `f32` variants (`TimeExpires`, `NodeTimerThresholdOccurred`) which don't implement `Hash` or `Eq`. Using `HashMap<Trigger, ...>` would require wrapping all f32s in `OrderedFloat<f32>`, polluting the entire type tree with a dependency. Flat Vec with linear scan on `trigger == key` avoids this entirely. Performance is equivalent — chip effect counts are in single digits.
 
 ### What goes in BoundEffects
 
@@ -56,14 +61,16 @@ type SourceId = String; // chip name, breaker name, etc.
 Armed inner trees waiting for a trigger match. Populated by Transfer at runtime and by nested When arming. Consumed when triggered.
 
 ```rust
-#[derive(Component)]
+#[derive(Component, Default)]
 struct StagedEffects {
-    /// Trigger-keyed armed entries. When a trigger fires, look up the key,
+    /// Armed entries waiting for trigger match. Linear scan on trigger fire,
     /// execute all matching entries, remove them (consumed).
-    entries: HashMap<Trigger, Vec<StagedEntry>>,
+    /// Flat Vec — same rationale as BoundEffects (Trigger contains f32).
+    entries: Vec<StagedEntry>,
 }
 
 struct StagedEntry {
+    trigger: Trigger,
     source: SourceId,
     tree: ValidTree,
 }
@@ -108,13 +115,13 @@ Cell dies:
   → bolt must impact again to re-transfer
 ```
 
-## SpawnedRegistry (Resource)
+## OnSpawnEffectRegistry (Resource)
 
 Global registry of Spawned listeners. Populated by EveryBolt desugaring and explicit Spawned entries at equip time. Read by bridge systems on Added<T>.
 
 ```rust
 #[derive(Resource, Default)]
-struct SpawnedRegistry {
+struct OnSpawnEffectRegistry {
     /// EntityType -> trees to stamp/transfer onto new entities of that type.
     entries: HashMap<EntityType, Vec<SpawnedEntry>>,
 }
@@ -132,7 +139,7 @@ struct SpawnedEntry {
 ```rust
 fn bridge_bolt_added(
     new_bolts: Query<Entity, Added<Bolt>>,
-    registry: Res<SpawnedRegistry>,
+    registry: Res<OnSpawnEffectRegistry>,
     mut bound_query: Query<&mut BoundEffects>,
 ) {
     for new_bolt in &new_bolts {
@@ -300,7 +307,7 @@ The existing `EffectCommandsExt` is rewritten in `new_effect/`:
 | `reverse_effect(entity, effect)` | Reverse a previously fired effect | Immediate |
 | `stamp_effect(entity, source, tree)` | Add tree to entity's BoundEffects | BoundEffects |
 | `transfer_effect(entity, source, tree)` | Add tree to entity's StagedEffects | StagedEffects |
-| `remove_source(entity, source)` | Remove all entries from a source | BoundEffects + StagedEffects + SpawnedRegistry |
+| `remove_source(entity, source)` | Remove all entries from a source | BoundEffects + StagedEffects + OnSpawnEffectRegistry |
 
 ## Shared Tree Walker
 
@@ -326,17 +333,22 @@ fn walk_effects(
         return;
     }
 
-    // Step A: consume armed entries from StagedEffects
-    if let Some(entries) = staged.entries.remove(trigger) {
-        for entry in entries {
-            execute_tree(&entry.tree, entity, context, bound, staged, commands);
-        }
+    // Step A: consume armed entries from StagedEffects (linear scan, drain matching)
+    let matched: Vec<_> = staged.entries
+        .extract_if(|e| e.trigger == *trigger)
+        .collect();
+    for entry in matched {
+        execute_tree(&entry.tree, entity, context, bound, staged, commands);
     }
 
-    // Step B: arm/execute from BoundEffects (When re-arms, Once self-removes)
-    if let Some(entries) = bound.triggers.get(trigger) {
+    // Step B: arm/execute from BoundEffects (linear scan, When re-arms, Once self-removes)
+    let matching: Vec<_> = bound.triggers.iter().enumerate()
+        .filter(|(_, e)| e.key == *trigger)
+        .map(|(i, e)| (i, e.clone()))
+        .collect();
+    {
         let mut to_remove = Vec::new();
-        for (i, entry) in entries.iter().enumerate() {
+        for (i, entry) in &matching {
             match &entry.tree {
                 ValidTree::When(_, inner) => {
                     // Arm inner into StagedEffects — entry stays (re-arms)

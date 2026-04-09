@@ -115,7 +115,7 @@ struct ReversibleOnly;
 
 // ── Traits ──
 trait Effect {
-    fn fire(&self, entity: Entity, source_chip: &str, context: TriggerContext, world: &mut World);
+    fn fire(&self, entity: Entity, source_chip: &str, context: &TriggerContext, world: &mut World);
 }
 
 trait Reversible: Effect {

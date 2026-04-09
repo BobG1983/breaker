@@ -3,7 +3,7 @@
 All 22 decisions resolved during interrogation. Referenced from the main overview.
 
 ## 1. Dispatch mechanics
-**HashMap-indexed storage.** BoundEffects and StagedEffects both use `HashMap<Trigger, Vec<(SourceId, ValidTree)>>`. When a trigger fires, look up the key, get matching trees, walk them. No separate index — the storage IS the index. For local triggers, fire on both participant entities if they have matching BoundEffects/StagedEffects entries.
+**REVISED — flat Vec storage.** ~~HashMap-indexed storage~~ → `Vec<BoundEntry>` with linear scan on trigger match. BoundEffects uses two Vecs (one for trigger-keyed entries, one for condition-keyed entries) plus a source reverse index. StagedEffects uses one Vec. Counts are small (no chip has hundreds of triggers), so linear scan is fast enough and avoids the `Hash + Eq` requirement that `HashMap<Trigger, ...>` would impose — `Trigger` contains `f32` variants (`TimeExpires`, `NodeTimerThresholdOccurred`) which don't implement Hash/Eq. For local triggers, fire on both participant entities if they have matching BoundEffects/StagedEffects entries.
 
 ## 2. TriggerContext
 **Typed per-trigger structs.** Each trigger concept has its own context struct with named fields. `BumpContext { bolt, breaker, source }`, `ImpactContext { impactor, impactee, source }`, `DeathContext { victim, killer, source }`, `BoltLostContext { bolt, breaker, source }`. Wrapped in `enum TriggerContext { Bump(BumpContext), Impact(ImpactContext), Death(DeathContext), BoltLost(BoltLostContext), None }`.
@@ -68,7 +68,7 @@ RON uses shared enum names: `On(BumpTarget::Bolt, ...)`, `On(ImpactTarget::Impac
 `During(NodeActive, Sequence([Fire(SpeedBoost), Fire(DamageBoost)]))` — on condition start both fire, on condition end the condition monitor reverses both.
 
 ## 17. BoundEffects storage for During
-During entries keyed by condition (not trigger). BoundEffects has two maps: `conditions: HashMap<Condition, Vec<...>>` and `triggers: HashMap<Trigger, Vec<...>>`.
+During entries keyed by condition (not trigger). BoundEffects has two flat Vecs: `conditions: Vec<BoundEntry<Condition>>` and `triggers: Vec<BoundEntry<Trigger>>`. Linear scan on both.
 
 ## 18. Dispatch ordering — StagedEffects first
 StagedEffects walked BEFORE BoundEffects on each trigger dispatch. Prevents arm-and-consume in same call.

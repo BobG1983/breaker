@@ -216,7 +216,7 @@ fn process_despawn_requests(
     mut commands: Commands,
 ) {
     for msg in messages.read() {
-        commands.entity(msg.entity).despawn();
+        commands.entity(msg.entity).try_despawn();
     }
 }
 ```
