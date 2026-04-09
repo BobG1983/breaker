@@ -1,5 +1,6 @@
 # Done
 
+- ~~Distribute state routing to domain plugins~~ — Moved NodeState/ChipSelectState/RunEndState routes + cleanup from centralized system.rs to their respective domain plugins
 - ~~Phase 5a: Rendering architecture~~ — Architecture docs written at docs/architecture/rendering/
 - ~~Phase 5b: Design decisions~~ — DR-1 through DR-10 resolved, documented at docs/design/graphics/decisions-required.md
 - ~~Breaker builder pattern~~ — Typestate builder with 7 dimensions, migrated breaker spawn + queries
