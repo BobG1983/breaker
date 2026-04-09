@@ -1,6 +1,7 @@
 //! Chip selection screen plugin registration.
 
 use bevy::{ecs::schedule::ApplyDeferred, prelude::*};
+use rantzsoft_stateflow::{Route, RoutingTableAppExt, cleanup_on_exit};
 
 use super::{
     ChipSelectScreen,
@@ -16,6 +17,29 @@ pub(crate) struct ChipSelectPlugin;
 
 impl Plugin for ChipSelectPlugin {
     fn build(&self, app: &mut App) {
+        // ChipSelectState routes — chip selection lifecycle
+        app.add_route(
+            Route::from(ChipSelectState::Loading)
+                .to(ChipSelectState::AnimateIn)
+                .when(|_| true),
+        );
+        app.add_route(
+            Route::from(ChipSelectState::AnimateIn)
+                .to(ChipSelectState::Selecting)
+                .when(|_| true),
+        );
+        // Selecting → AnimateOut: message-triggered (handle_chip_input/tick_chip_timer)
+        app.add_route(Route::from(ChipSelectState::Selecting).to(ChipSelectState::AnimateOut));
+        app.add_route(
+            Route::from(ChipSelectState::AnimateOut)
+                .to(ChipSelectState::Teardown)
+                .when(|_| true),
+        );
+        app.add_systems(
+            OnEnter(ChipSelectState::Teardown),
+            cleanup_on_exit::<ChipSelectState>,
+        );
+
         app.add_systems(
             OnEnter(ChipSelectState::Selecting),
             (generate_chip_offerings, ApplyDeferred, spawn_chip_select).chain(),

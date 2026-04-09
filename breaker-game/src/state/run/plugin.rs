@@ -133,6 +133,12 @@ mod tests {
             .add_sub_state::<NodeState>()
             .add_sub_state::<ChipSelectState>()
             .add_sub_state::<RunEndState>()
+            .add_plugins(
+                rantzsoft_stateflow::RantzStateflowPlugin::new()
+                    .register_state::<NodeState>()
+                    .register_state::<ChipSelectState>()
+                    .register_state::<RunEndState>(),
+            )
             // Messages read by run domain systems
             .add_message::<DamageCell>()
             .add_message::<BumpPerformed>()

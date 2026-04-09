@@ -102,13 +102,13 @@ fn defaults_plugin() -> impl Plugin {
 }
 
 /// Registers declarative routes via the lifecycle crate and cleanup systems.
+///
+/// Cross-state routes (parent watches child teardown) live here.
+/// Leaf-state routes live in their domain plugins (`NodePlugin`, `ChipSelectPlugin`, `RunEndPlugin`).
 fn register_routing(app: &mut App) {
     register_app_routes(app);
     register_parent_routes(app);
     register_run_routes(app);
-    register_node_routes(app);
-    register_chip_select_routes(app);
-    register_run_end_routes(app);
     register_cleanup(app);
 }
 
@@ -298,76 +298,11 @@ fn register_run_routes(app: &mut App) {
     );
 }
 
-/// `NodeState` routes — node lifecycle.
-fn register_node_routes(app: &mut App) {
-    // Loading → AnimateIn: message-triggered (check_spawn_complete sends ChangeState)
-    app.add_route(Route::from(NodeState::Loading).to(NodeState::AnimateIn));
-    // AnimateIn → Playing: message-triggered (all_animate_in_complete sends ChangeState)
-    app.add_route(Route::from(NodeState::AnimateIn).to(NodeState::Playing));
-    // Playing → AnimateOut: message-triggered (handle_node_cleared etc. send ChangeState)
-    app.add_route(Route::from(NodeState::Playing).to(NodeState::AnimateOut));
-    // AnimateOut → Teardown: pass-through
-    app.add_route(
-        Route::from(NodeState::AnimateOut)
-            .to(NodeState::Teardown)
-            .when(|_| true),
-    );
-}
-
-/// `ChipSelectState` routes — chip selection lifecycle.
-fn register_chip_select_routes(app: &mut App) {
-    app.add_route(
-        Route::from(ChipSelectState::Loading)
-            .to(ChipSelectState::AnimateIn)
-            .when(|_| true),
-    );
-    app.add_route(
-        Route::from(ChipSelectState::AnimateIn)
-            .to(ChipSelectState::Selecting)
-            .when(|_| true),
-    );
-    // Selecting → AnimateOut: message-triggered (handle_chip_input/tick_chip_timer)
-    app.add_route(Route::from(ChipSelectState::Selecting).to(ChipSelectState::AnimateOut));
-    app.add_route(
-        Route::from(ChipSelectState::AnimateOut)
-            .to(ChipSelectState::Teardown)
-            .when(|_| true),
-    );
-}
-
-/// `RunEndState` routes — run end lifecycle.
-fn register_run_end_routes(app: &mut App) {
-    app.add_route(
-        Route::from(RunEndState::Loading)
-            .to(RunEndState::AnimateIn)
-            .when(|_| true),
-    );
-    app.add_route(
-        Route::from(RunEndState::AnimateIn)
-            .to(RunEndState::Active)
-            .when(|_| true),
-    );
-    // Active → AnimateOut: message-triggered (handle_run_end_input)
-    app.add_route(Route::from(RunEndState::Active).to(RunEndState::AnimateOut));
-    app.add_route(
-        Route::from(RunEndState::AnimateOut)
-            .to(RunEndState::Teardown)
-            .when(|_| true),
-    );
-}
-
-/// Cleanup systems on teardown entry.
+/// Cleanup systems for cross-state teardown.
+///
+/// Leaf-state cleanup lives in domain plugins (`NodePlugin`, `ChipSelectPlugin`, `RunEndPlugin`).
 pub(super) fn register_cleanup(app: &mut App) {
-    app.add_systems(OnEnter(NodeState::Teardown), cleanup_on_exit::<NodeState>)
-        .add_systems(
-            OnEnter(ChipSelectState::Teardown),
-            cleanup_on_exit::<ChipSelectState>,
-        )
-        .add_systems(
-            OnEnter(RunEndState::Teardown),
-            cleanup_on_exit::<RunEndState>,
-        )
-        .add_systems(OnEnter(RunState::Teardown), cleanup_on_exit::<RunState>)
+    app.add_systems(OnEnter(RunState::Teardown), cleanup_on_exit::<RunState>)
         .add_systems(OnEnter(AppState::Teardown), send_app_exit);
 }
 

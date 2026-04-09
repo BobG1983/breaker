@@ -1,6 +1,7 @@
 //! Node subdomain plugin registration.
 
 use bevy::{ecs::schedule::ApplyDeferred, prelude::*};
+use rantzsoft_stateflow::{Route, RoutingTableAppExt, cleanup_on_exit};
 
 use crate::{
     prelude::*,
@@ -30,6 +31,21 @@ pub struct NodePlugin;
 
 impl Plugin for NodePlugin {
     fn build(&self, app: &mut App) {
+        // NodeState routes — node lifecycle
+        // Loading → AnimateIn: message-triggered (check_spawn_complete sends ChangeState)
+        app.add_route(Route::from(NodeState::Loading).to(NodeState::AnimateIn));
+        // AnimateIn → Playing: message-triggered (all_animate_in_complete sends ChangeState)
+        app.add_route(Route::from(NodeState::AnimateIn).to(NodeState::Playing));
+        // Playing → AnimateOut: message-triggered (handle_node_cleared etc. send ChangeState)
+        app.add_route(Route::from(NodeState::Playing).to(NodeState::AnimateOut));
+        // AnimateOut → Teardown: pass-through
+        app.add_route(
+            Route::from(NodeState::AnimateOut)
+                .to(NodeState::Teardown)
+                .when(|_| true),
+        );
+        app.add_systems(OnEnter(NodeState::Teardown), cleanup_on_exit::<NodeState>);
+
         app.init_resource::<ClearRemainingCount>()
             .init_resource::<NodeTimer>()
             .init_resource::<ScenarioLayoutOverride>()
@@ -103,6 +119,9 @@ mod tests {
             .add_sub_state::<GameState>()
             .add_sub_state::<RunState>()
             .add_sub_state::<NodeState>()
+            .add_plugins(
+                rantzsoft_stateflow::RantzStateflowPlugin::new().register_state::<NodeState>(),
+            )
             .add_plugins(NodePlugin)
             .update();
     }
