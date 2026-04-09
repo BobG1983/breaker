@@ -5,7 +5,7 @@
 1. **[ready]** Split oversized files (0 HIGH, 1 MEDIUM) — [detail](detail/2026-04-08-file-splits.md)
 2. **[in-progress]** Effect system refactor: typestate builder, Spawn/During triggers, unified vocabulary, centralized despawn — [detail](detail/effect-desugaring-node-running-trigger/effect-desugaring-node-running-trigger.md)
 3. **[ready]** Scenario coverage gaps — birthing invariants, evolution lifecycle, trigger scenarios, runner RON field naming — [detail](detail/scenario-coverage-gaps.md)
-4. **[in-progress]** Toughness + HP scaling — Toughness enum, exponential ramp (base * 1.2^tier * node_mult) — [detail](detail/toughness-hp-scaling.md)
+4. **[done]** Toughness + HP scaling — Toughness enum, exponential ramp (base * 1.2^tier * node_mult) — [detail](detail/toughness-hp-scaling.md)
 5. **[ready]** New cell modifiers (volatile, sequence, survival, armored, phantom, magnetic, portal) — [detail](detail/new-cell-modifiers.md)
 6. **[ready]** Legendary rarity removal — retune 8 as Rare (6 with Common/Uncommon tiers), cut 3, promote 2 to protocols, remove Anchor evolution — [detail](detail/legendary-removal.md)
 7. **[ready]** Protocol & hazard system — 15 protocols, 16 hazards, interface design, 31 per-item implementation guides, 10-wave plan — [detail](detail/mod-system-design/mod-system-design.md)
