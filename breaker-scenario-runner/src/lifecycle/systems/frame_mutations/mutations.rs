@@ -13,6 +13,7 @@ use breaker::{
         second_wind::SecondWindWall,
         shield::ShieldWall,
     },
+    shared::birthing::Birthing,
     state::{
         run::{
             RunStats,
@@ -22,7 +23,7 @@ use breaker::{
         types::NodeState,
     },
 };
-use rantzsoft_physics2d::aabb::Aabb2D;
+use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::Position2D;
 use rantzsoft_stateflow::CleanupOnExit;
 
@@ -56,6 +57,9 @@ pub struct MutationTargets<'w, 's> {
     commands: Commands<'w, 's>,
     /// Bolt entities with `Aabb2D` -- for [`MutationKind::InjectMismatchedBoltAabb`].
     bolt_aabbs: Query<'w, 's, &'static mut Aabb2D, With<ScenarioTagBolt>>,
+    /// Birthing bolt entities -- for [`MutationKind::InjectNonZeroBirthingLayers`].
+    birthing_bolt_layers:
+        Query<'w, 's, &'static mut CollisionLayers, (With<ScenarioTagBolt>, With<Birthing>)>,
 }
 
 /// Applies per-frame mutations from [`ScenarioConfig`] at matching frames.
@@ -166,9 +170,10 @@ pub fn apply_debug_frame_mutations(
                 apply_spawn_extra_gravity_wells(*count, &mut targets.commands);
             }
             MutationKind::SpawnExtraPrimaryBreakers(count) => {
-                for _ in 0..*count {
-                    targets.commands.spawn(PrimaryBreaker);
-                }
+                apply_spawn_extra_primary_breakers(*count, &mut targets.commands);
+            }
+            MutationKind::InjectNonZeroBirthingLayers => {
+                apply_inject_non_zero_birthing_layers(&mut targets.birthing_bolt_layers);
             }
         }
     }
@@ -329,5 +334,21 @@ pub fn apply_spawn_extra_gravity_wells(count: usize, commands: &mut Commands) {
             },
             CleanupOnExit::<NodeState>::default(),
         ));
+    }
+}
+
+fn apply_spawn_extra_primary_breakers(count: usize, commands: &mut Commands) {
+    for _ in 0..count {
+        commands.spawn(PrimaryBreaker);
+    }
+}
+
+type BirthingBoltLayersQuery<'w, 's> =
+    Query<'w, 's, &'static mut CollisionLayers, (With<ScenarioTagBolt>, With<Birthing>)>;
+
+fn apply_inject_non_zero_birthing_layers(bolts: &mut BirthingBoltLayersQuery) {
+    for mut layers in bolts {
+        layers.membership = 0xFF;
+        layers.mask = 0xFF;
     }
 }

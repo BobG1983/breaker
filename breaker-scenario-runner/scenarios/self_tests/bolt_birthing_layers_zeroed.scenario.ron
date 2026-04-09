@@ -1,0 +1,19 @@
+//! Self-test: verifies BoltBirthingLayersZeroed invariant fires when
+//! a birthing bolt has non-zero CollisionLayers.
+//!
+//! The bolt enters Birthing on node start (frame ~1-2). At frame 3 we inject
+//! non-zero collision layers on any bolt that has Birthing, which should
+//! trigger the invariant on the same frame.
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 60,
+    disallowed_failures: [BoltBirthingLayersZeroed],
+    allowed_failures: [BoltBirthingLayersZeroed],
+    frame_mutations: [
+        (frame: 3, mutation: InjectNonZeroBirthingLayers),
+    ],
+)

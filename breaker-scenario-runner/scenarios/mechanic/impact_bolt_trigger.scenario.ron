@@ -1,0 +1,22 @@
+// Adversarial: Impact(Bolt) trigger — global impact trigger with Bolt target.
+// Registers a SpeedBoost on Impact(Bolt) so every bolt-cell collision fires
+// a speed change. With Dense layout and Perfect input, impacts are frequent.
+// BoltSpeedAccurate is the primary detector — if Impact(Bolt) dispatches to
+// the wrong entity or fires multiple times per collision, compounding
+// multipliers will push speed outside the valid envelope.
+(
+    breaker: "godmode",
+    layout: "Dense",
+    input: Perfect(AlwaysPerfect),
+    max_frames: 3000,
+    disallowed_failures: [BoltInBounds, BoltSpeedAccurate, BreakerCountReasonable, BreakerInBounds, NoNaN],
+    allow_early_end: false,
+    seed: 7777,
+    initial_effects: [
+        On(target: Bolt, then: [
+            When(trigger: Impact(Bolt), then: [
+                Do(SpeedBoost(multiplier: 1.05)),
+            ]),
+        ]),
+    ],
+)

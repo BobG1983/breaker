@@ -1,0 +1,23 @@
+// Adversarial: Impacted(Breaker) trigger — targeted on both collision
+// participants when the bolt hits the breaker. Registers a SizeBoost on the
+// bolt via Impacted(Breaker) to verify the targeted trigger resolves to the
+// correct entity (the bolt, not the breaker). With chaos input the breaker
+// moves unpredictably, generating collisions at varied positions and angles.
+// AabbMatchesEntityDimensions catches size corruption from SizeBoost applied
+// to the wrong entity. NoNaN catches state corruption from dispatch errors.
+(
+    breaker: "godmode",
+    layout: "Dense",
+    input: Chaos((action_prob: 0.7)),
+    max_frames: 3000,
+    disallowed_failures: [AabbMatchesEntityDimensions, BoltInBounds, BreakerCountReasonable, BreakerInBounds, NoEntityLeaks, NoNaN],
+    allow_early_end: false,
+    seed: 4242,
+    initial_effects: [
+        On(target: Bolt, then: [
+            When(trigger: Impacted(Breaker), then: [
+                Do(SizeBoost(1.1)),
+            ]),
+        ]),
+    ],
+)

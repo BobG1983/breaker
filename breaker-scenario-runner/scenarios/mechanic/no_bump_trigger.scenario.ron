@@ -1,0 +1,24 @@
+// Adversarial: NoBump trigger exercised under scripted no-input conditions.
+// Scripted with zero actions — the bolt hits the breaker repeatedly with no
+// bump input, so NoBump fires every collision. A SpeedBoost on NoBump slows
+// the bolt (0.8x penalty) each time. BoltSpeedAccurate catches speed leaving
+// the valid envelope. If NoBump fires alongside another bump grade (double
+// trigger bug), the compounding multipliers will trip BoltSpeedAccurate.
+(
+    breaker: "godmode",
+    layout: "Dense",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 3000,
+    disallowed_failures: [BoltInBounds, BoltSpeedAccurate, BreakerCountReasonable, BreakerInBounds, NoNaN],
+    allow_early_end: false,
+    seed: 9999,
+    initial_effects: [
+        On(target: Bolt, then: [
+            When(trigger: NoBump, then: [
+                Do(SpeedBoost(multiplier: 0.8)),
+            ]),
+        ]),
+    ],
+)

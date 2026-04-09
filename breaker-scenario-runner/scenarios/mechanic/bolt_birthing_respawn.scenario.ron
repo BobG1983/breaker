@@ -1,0 +1,15 @@
+// Adversarial: bolt-lost → respawn cycle exercised under chaos input.
+// When a bolt is lost, the game respawns it with Birthing — CollisionLayers
+// zeroed during the 0.15s animation, then restored. This scenario runs long
+// enough for multiple lost-and-respawn cycles. BoltBirthingLayersZeroed fires
+// if any respawned bolt has non-zero layers during its birthing animation.
+// BoltInBounds catches position corruption on respawn.
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Chaos((action_prob: 0.3)),
+    max_frames: 3000,
+    disallowed_failures: [BoltInBounds, BoltBirthingLayersZeroed, BreakerCountReasonable, BreakerInBounds, NoEntityLeaks, NoNaN],
+    allow_early_end: false,
+    seed: 42,
+)
