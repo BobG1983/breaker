@@ -41,13 +41,13 @@ mod tests {
     use super::*;
 
     fn test_app(selection_index: usize) -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
+        use crate::shared::test_utils::TestAppBuilder;
+        TestAppBuilder::new()
             .insert_resource(RunSetupSelection {
                 index: selection_index,
             })
-            .add_systems(Update, update_run_setup_colors);
-        app
+            .with_system(Update, update_run_setup_colors)
+            .build()
     }
 
     /// Spawns a card with a text child. Returns (card, text) entities.

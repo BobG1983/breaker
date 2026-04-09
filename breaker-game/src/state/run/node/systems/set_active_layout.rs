@@ -73,16 +73,16 @@ mod tests {
     }
 
     fn test_app(node_index: u32, layouts: Vec<NodeLayout>) -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
+        use crate::shared::test_utils::TestAppBuilder;
+        TestAppBuilder::new()
             .insert_resource(NodeOutcome {
                 node_index,
                 ..default()
             })
             .insert_resource(make_node_registry(layouts))
             .insert_resource(ScenarioLayoutOverride::default())
-            .add_systems(Startup, set_active_layout);
-        app
+            .with_system(Startup, set_active_layout)
+            .build()
     }
 
     #[test]

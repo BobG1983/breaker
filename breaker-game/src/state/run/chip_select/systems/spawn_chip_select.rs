@@ -173,12 +173,12 @@ mod tests {
     }
 
     fn test_app_with_offers(offers: ChipOffers) -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
+        use crate::shared::test_utils::TestAppBuilder;
+        TestAppBuilder::new()
             .insert_resource(ChipSelectConfig::default())
             .insert_resource(offers)
-            .add_systems(Update, spawn_chip_select);
-        app
+            .with_system(Update, spawn_chip_select)
+            .build()
     }
 
     #[test]

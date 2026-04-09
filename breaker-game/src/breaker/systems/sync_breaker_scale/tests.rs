@@ -8,24 +8,17 @@ use crate::{
     shared::{
         NodeScalingFactor,
         size::{MaxHeight, MaxWidth, MinHeight, MinWidth},
+        test_utils::TestAppBuilder,
     },
 };
 
 fn test_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .add_systems(FixedUpdate, sync_breaker_scale);
-    app
+    TestAppBuilder::new()
+        .with_system(FixedUpdate, sync_breaker_scale)
+        .build()
 }
 
-/// Accumulates one fixed timestep then runs one update.
-fn tick(app: &mut App) {
-    let timestep = app.world().resource::<Time<Fixed>>().timestep();
-    app.world_mut()
-        .resource_mut::<Time<Fixed>>()
-        .accumulate_overstep(timestep);
-    app.update();
-}
+use crate::shared::test_utils::tick;
 
 // ── Behavior 16: Base dimensions with no boosts ─────────────────
 

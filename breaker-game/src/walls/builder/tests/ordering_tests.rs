@@ -1,4 +1,4 @@
-use bevy::{ecs::world::CommandQueue, prelude::*};
+use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Position2D;
 
 use super::helpers::default_playfield;
@@ -6,16 +6,6 @@ use crate::{
     shared::GameDrawLayer,
     walls::{components::Wall, definition::WallDefinition},
 };
-
-fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
-    let mut queue = CommandQueue::default();
-    let entity = {
-        let mut commands = Commands::new(&mut queue, world);
-        f(&mut commands)
-    };
-    queue.apply(world);
-    entity
-}
 
 // ── Behavior 36: Side transition + definition in any order ──
 
@@ -28,9 +18,11 @@ fn definition_after_side_produces_correct_components() {
     };
     let mut world = World::new();
 
-    let entity = spawn_in_world(&mut world, |commands| {
-        Wall::builder().left(&pf).definition(&def).spawn(commands)
-    });
+    let entity = Wall::builder()
+        .left(&pf)
+        .definition(&def)
+        .spawn(&mut world.commands());
+    world.flush();
 
     let pos = world.get::<Position2D>(entity).unwrap();
     assert!(
@@ -50,21 +42,26 @@ fn definition_works_on_all_four_sides() {
     let mut world = World::new();
 
     // All four sides should compile with .definition()
-    let _left = spawn_in_world(&mut world, |commands| {
-        Wall::builder().left(&pf).definition(&def).spawn(commands)
-    });
-    let _right = spawn_in_world(&mut world, |commands| {
-        Wall::builder().right(&pf).definition(&def).spawn(commands)
-    });
-    let _ceiling = spawn_in_world(&mut world, |commands| {
-        Wall::builder()
-            .ceiling(&pf)
-            .definition(&def)
-            .spawn(commands)
-    });
-    let _floor = spawn_in_world(&mut world, |commands| {
-        Wall::builder().floor(&pf).definition(&def).spawn(commands)
-    });
+    let _left = Wall::builder()
+        .left(&pf)
+        .definition(&def)
+        .spawn(&mut world.commands());
+    world.flush();
+    let _right = Wall::builder()
+        .right(&pf)
+        .definition(&def)
+        .spawn(&mut world.commands());
+    world.flush();
+    let _ceiling = Wall::builder()
+        .ceiling(&pf)
+        .definition(&def)
+        .spawn(&mut world.commands());
+    world.flush();
+    let _floor = Wall::builder()
+        .floor(&pf)
+        .definition(&def)
+        .spawn(&mut world.commands());
+    world.flush();
 }
 
 // ── Behavior 37: Optional methods can be chained in any order after side ──
@@ -78,14 +75,13 @@ fn optional_methods_chainable_in_any_order() {
     };
     let mut world = World::new();
 
-    let entity = spawn_in_world(&mut world, |commands| {
-        Wall::builder()
-            .left(&pf)
-            .with_half_thickness(60.0)
-            .with_color([1.0, 0.0, 0.0])
-            .definition(&def)
-            .spawn(commands)
-    });
+    let entity = Wall::builder()
+        .left(&pf)
+        .with_half_thickness(60.0)
+        .with_color([1.0, 0.0, 0.0])
+        .definition(&def)
+        .spawn(&mut world.commands());
+    world.flush();
 
     let pos = world.get::<Position2D>(entity).unwrap();
     assert!(
@@ -104,14 +100,13 @@ fn definition_then_overrides_then_build() {
     };
     let mut world = World::new();
 
-    let entity = spawn_in_world(&mut world, |commands| {
-        Wall::builder()
-            .left(&pf)
-            .definition(&def)
-            .with_effects(vec![])
-            .with_half_thickness(60.0)
-            .spawn(commands)
-    });
+    let entity = Wall::builder()
+        .left(&pf)
+        .definition(&def)
+        .with_effects(vec![])
+        .with_half_thickness(60.0)
+        .spawn(&mut world.commands());
+    world.flush();
 
     let pos = world.get::<Position2D>(entity).unwrap();
     assert!(
@@ -128,12 +123,11 @@ fn build_without_definition_with_override() {
     let pf = default_playfield();
     let mut world = World::new();
 
-    let entity = spawn_in_world(&mut world, |commands| {
-        Wall::builder()
-            .left(&pf)
-            .with_half_thickness(60.0)
-            .spawn(commands)
-    });
+    let entity = Wall::builder()
+        .left(&pf)
+        .with_half_thickness(60.0)
+        .spawn(&mut world.commands());
+    world.flush();
 
     let pos = world.get::<Position2D>(entity).unwrap();
     assert!(
@@ -148,9 +142,8 @@ fn build_without_definition_without_override_uses_default() {
     let pf = default_playfield();
     let mut world = World::new();
 
-    let entity = spawn_in_world(&mut world, |commands| {
-        Wall::builder().left(&pf).spawn(commands)
-    });
+    let entity = Wall::builder().left(&pf).spawn(&mut world.commands());
+    world.flush();
 
     let pos = world.get::<Position2D>(entity).unwrap();
     assert!(
@@ -225,13 +218,12 @@ fn floor_one_shot_before_definition_produces_same_result() {
     let def = WallDefinition::default();
     let mut world = World::new();
 
-    let entity = spawn_in_world(&mut world, |commands| {
-        Wall::builder()
-            .floor(&pf)
-            .one_shot()
-            .definition(&def)
-            .spawn(commands)
-    });
+    let entity = Wall::builder()
+        .floor(&pf)
+        .one_shot()
+        .definition(&def)
+        .spawn(&mut world.commands());
+    world.flush();
 
     let pos = world.get::<Position2D>(entity).unwrap();
     assert!(

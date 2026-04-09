@@ -43,8 +43,8 @@ mod tests {
     use super::*;
 
     fn test_app(timer_remaining: f32, selection_index: usize) -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
+        use crate::shared::test_utils::TestAppBuilder;
+        TestAppBuilder::new()
             .insert_resource(ChipSelectConfig::default())
             .insert_resource(ChipSelectTimer {
                 remaining: timer_remaining,
@@ -52,8 +52,8 @@ mod tests {
             .insert_resource(ChipSelectSelection {
                 index: selection_index,
             })
-            .add_systems(Update, update_chip_display);
-        app
+            .with_system(Update, update_chip_display)
+            .build()
     }
 
     #[test]

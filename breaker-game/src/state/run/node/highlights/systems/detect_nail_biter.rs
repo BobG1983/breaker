@@ -94,19 +94,19 @@ mod tests {
     }
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_message::<NodeCleared>()
-            .add_message::<HighlightTriggered>()
-            .init_resource::<RunStats>()
-            .init_resource::<NodeOutcome>()
+        use crate::shared::test_utils::TestAppBuilder;
+        TestAppBuilder::new()
+            .with_message::<NodeCleared>()
+            .with_message::<HighlightTriggered>()
+            .with_resource::<RunStats>()
+            .with_resource::<NodeOutcome>()
             .insert_resource(HighlightConfig::default())
             .insert_resource(PlayfieldConfig {
                 height: 1080.0,
                 ..Default::default()
             })
-            .init_resource::<CapturedHighlightTriggered>()
-            .add_systems(
+            .with_resource::<CapturedHighlightTriggered>()
+            .with_system(
                 FixedUpdate,
                 (
                     enqueue_messages,
@@ -114,17 +114,11 @@ mod tests {
                     collect_highlight_triggered,
                 )
                     .chain(),
-            );
-        app
+            )
+            .build()
     }
 
-    fn tick(app: &mut App) {
-        let timestep = app.world().resource::<Time<Fixed>>().timestep();
-        app.world_mut()
-            .resource_mut::<Time<Fixed>>()
-            .accumulate_overstep(timestep);
-        app.update();
-    }
+    use crate::shared::test_utils::tick;
 
     // --- Behavior 15: NailBiter detected when bolt near bottom at node clear ---
 

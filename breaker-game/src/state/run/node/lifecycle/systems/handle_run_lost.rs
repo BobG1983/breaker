@@ -29,11 +29,14 @@ pub(crate) fn handle_run_lost(
 
 #[cfg(test)]
 mod tests {
-    use bevy::{ecs::message::Messages, state::app::StatesPlugin};
+    use bevy::ecs::message::Messages;
     use rantzsoft_stateflow::ChangeState;
 
     use super::*;
-    use crate::state::types::{AppState, GameState, RunState};
+    use crate::{
+        shared::test_utils::TestAppBuilder,
+        state::types::{AppState, GameState, RunState},
+    };
 
     #[derive(Resource)]
     struct SendRunLost(bool);
@@ -45,24 +48,21 @@ mod tests {
     }
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins((MinimalPlugins, StatesPlugin))
-            .init_state::<AppState>()
-            .add_sub_state::<GameState>()
-            .add_sub_state::<RunState>()
-            .add_sub_state::<NodeState>()
-            .add_message::<RunLost>()
-            .add_message::<ChangeState<NodeState>>()
+        let mut app = TestAppBuilder::new()
+            .with_state_hierarchy()
+            .with_message::<RunLost>()
+            .with_message::<ChangeState<NodeState>>()
             .insert_resource(NodeOutcome {
                 node_index: 0,
                 result: NodeResult::InProgress,
                 ..default()
             })
             .insert_resource(SendRunLost(false))
-            .add_systems(
+            .with_system(
                 FixedUpdate,
                 (send_run_lost.before(handle_run_lost), handle_run_lost),
-            );
+            )
+            .build();
         // Navigate to NodeState
         app.world_mut()
             .resource_mut::<NextState<AppState>>()
@@ -79,13 +79,7 @@ mod tests {
         app
     }
 
-    fn tick(app: &mut App) {
-        let timestep = app.world().resource::<Time<Fixed>>().timestep();
-        app.world_mut()
-            .resource_mut::<Time<Fixed>>()
-            .accumulate_overstep(timestep);
-        app.update();
-    }
+    use crate::shared::test_utils::tick;
 
     #[test]
     fn run_lost_sets_outcome_and_transitions() {

@@ -108,17 +108,17 @@ mod tests {
     /// Uses `Update` schedule (not `FixedUpdate`) since chip selection
     /// happens during the `ChipSelect` game state.
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_message::<ChipSelected>()
-            .add_message::<HighlightTriggered>()
-            .init_resource::<RunStats>()
-            .init_resource::<HighlightTracker>()
-            .init_resource::<NodeOutcome>()
+        use crate::shared::test_utils::TestAppBuilder;
+        TestAppBuilder::new()
+            .with_message::<ChipSelected>()
+            .with_message::<HighlightTriggered>()
+            .with_resource::<RunStats>()
+            .with_resource::<HighlightTracker>()
+            .with_resource::<NodeOutcome>()
             .insert_resource(HighlightConfig::default())
             .insert_resource(test_chip_registry())
-            .init_resource::<CapturedHighlightTriggered>()
-            .add_systems(
+            .with_resource::<CapturedHighlightTriggered>()
+            .with_system(
                 Update,
                 (
                     enqueue_messages,
@@ -126,8 +126,8 @@ mod tests {
                     collect_highlight_triggered,
                 )
                     .chain(),
-            );
-        app
+            )
+            .build()
     }
 
     // --- Behavior 21: FirstEvolution detected on first evolution chip ---

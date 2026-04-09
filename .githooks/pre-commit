@@ -7,9 +7,9 @@ cargo fmt
 # Re-stage any files that were reformatted
 git diff --name-only | grep '\.rs$' | xargs -r git add
 
-# Clippy — reject commit on any warnings/errors
+# Clippy — workspace lints in Cargo.toml enforce deny on all warnings
 echo "Running workspace clippy..."
-cargo all-dclippy -- -D warnings
+cargo all-dclippy
 if [ $? -ne 0 ]; then
     echo "❌ Clippy failed. Fix warnings before committing."
     exit 1

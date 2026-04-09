@@ -165,15 +165,18 @@ mod tests {
     }
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
-            .init_asset::<ColorMaterial>()
-            .init_asset::<Mesh>()
-            .init_resource::<CellConfig>()
-            .init_resource::<PlayfieldConfig>()
-            .init_resource::<NodeLayoutRegistry>()
+        use crate::shared::test_utils::TestAppBuilder;
+
+        let mut app = TestAppBuilder::new()
+            .with_resource::<CellConfig>()
+            .with_resource::<PlayfieldConfig>()
+            .with_resource::<NodeLayoutRegistry>()
             .insert_resource(test_registry())
-            .add_systems(Update, propagate_node_layout_changes);
+            .with_system(Update, propagate_node_layout_changes)
+            .build();
+        app.add_plugins(AssetPlugin::default());
+        app.init_asset::<ColorMaterial>();
+        app.init_asset::<Mesh>();
         app
     }
 

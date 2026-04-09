@@ -22,3 +22,6 @@ pub use resources::RunSeed;
 pub use rng::GameRng;
 
 pub use crate::state::types::GameState;
+
+#[cfg(test)]
+pub(crate) mod test_utils;

@@ -76,14 +76,7 @@ mod tests {
         app
     }
 
-    /// Accumulates one fixed timestep then runs one update.
-    fn tick(app: &mut App) {
-        let timestep = app.world().resource::<Time<Fixed>>().timestep();
-        app.world_mut()
-            .resource_mut::<Time<Fixed>>()
-            .accumulate_overstep(timestep);
-        app.update();
-    }
+    use crate::shared::test_utils::tick;
 
     /// Helper: build a `When(TimeExpires(secs), [child])` node.
     fn time_expires_node(secs: f32, child: EffectNode) -> EffectNode {

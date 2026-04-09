@@ -74,12 +74,12 @@ pub(crate) fn spawn_pause_menu(mut commands: Commands) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::shared::test_utils::TestAppBuilder;
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_systems(Update, spawn_pause_menu);
-        app
+        TestAppBuilder::new()
+            .with_system(Update, spawn_pause_menu)
+            .build()
     }
 
     #[test]

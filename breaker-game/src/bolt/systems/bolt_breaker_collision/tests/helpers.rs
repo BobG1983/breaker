@@ -1,14 +1,11 @@
-use bevy::{ecs::world::CommandQueue, prelude::*};
-use rantzsoft_physics2d::{
-    aabb::Aabb2D, collision_layers::CollisionLayers, plugin::RantzPhysics2dPlugin,
-};
-use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D, Velocity2D};
+use bevy::prelude::*;
+use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
+use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D};
 
+pub(super) use crate::bolt::test_utils::default_bolt_definition;
 use crate::{
     bolt::{
-        components::{Bolt, BoltRadius},
-        definition::BoltDefinition,
-        messages::BoltImpactBreaker,
+        components::BoltRadius, messages::BoltImpactBreaker,
         systems::bolt_breaker_collision::system::bolt_breaker_collision,
     },
     breaker::{
@@ -19,16 +16,17 @@ use crate::{
 };
 
 pub(super) fn test_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .add_plugins(RantzPhysics2dPlugin)
-        .add_message::<BoltImpactBreaker>()
-        .add_systems(
+    use crate::shared::test_utils::TestAppBuilder;
+
+    TestAppBuilder::new()
+        .with_physics()
+        .with_message::<BoltImpactBreaker>()
+        .with_system(
             FixedUpdate,
             bolt_breaker_collision
                 .after(rantzsoft_physics2d::plugin::PhysicsSystems::MaintainQuadtree),
-        );
-    app
+        )
+        .build()
 }
 
 pub(super) fn default_breaker_width() -> BaseWidth {
@@ -40,26 +38,7 @@ pub(super) fn default_breaker_height() -> BaseHeight {
 }
 
 pub(super) fn default_bolt_radius() -> BoltRadius {
-    BaseRadius(test_bolt_definition().radius)
-}
-
-/// Creates a `BoltDefinition` matching the values previously provided by
-/// `BoltConfig::default()`, so existing position calculations remain valid.
-pub(super) fn test_bolt_definition() -> BoltDefinition {
-    BoltDefinition {
-        name: "Bolt".to_string(),
-        base_speed: 400.0,
-        min_speed: 200.0,
-        max_speed: 800.0,
-        radius: 8.0,
-        base_damage: 10.0,
-        effects: vec![],
-        color_rgb: [6.0, 5.0, 0.5],
-        min_angle_horizontal: 5.0,
-        min_angle_vertical: 5.0,
-        min_radius: None,
-        max_radius: None,
-    }
+    BaseRadius(default_bolt_definition().radius)
 }
 
 pub(super) fn default_reflection_spread() -> BreakerReflectionSpread {
@@ -89,33 +68,7 @@ pub(super) fn spawn_breaker_at(app: &mut App, x: f32, y: f32) -> Entity {
         .id()
 }
 
-/// Accumulates one fixed timestep of overstep, then runs one update.
-pub(super) fn tick(app: &mut App) {
-    let timestep = app.world().resource::<Time<Fixed>>().timestep();
-    app.world_mut()
-        .resource_mut::<Time<Fixed>>()
-        .accumulate_overstep(timestep);
-    app.update();
-}
-
-/// Bolt entities now use `Position2D` as canonical position.
-pub(super) fn spawn_bolt(app: &mut App, x: f32, y: f32, vx: f32, vy: f32) -> Entity {
-    let def = test_bolt_definition();
-    let world = app.world_mut();
-    let mut queue = CommandQueue::default();
-    let entity = {
-        let mut commands = Commands::new(&mut queue, world);
-        Bolt::builder()
-            .at_position(Vec2::new(x, y))
-            .definition(&def)
-            .with_velocity(Velocity2D(Vec2::new(vx, vy)))
-            .primary()
-            .headless()
-            .spawn(&mut commands)
-    };
-    queue.apply(world);
-    entity
-}
+pub(super) use crate::{bolt::test_utils::spawn_bolt, shared::test_utils::tick};
 
 #[derive(Resource, Default)]
 pub(super) struct HitBreakers(pub(super) u32);
@@ -183,21 +136,8 @@ pub(super) fn spawn_scaled_bolt(
     vy: f32,
     entity_scale: f32,
 ) -> Entity {
-    let def = test_bolt_definition();
-    let world = app.world_mut();
-    let mut queue = CommandQueue::default();
-    let entity = {
-        let mut commands = Commands::new(&mut queue, world);
-        Bolt::builder()
-            .at_position(Vec2::new(x, y))
-            .definition(&def)
-            .with_velocity(Velocity2D(Vec2::new(vx, vy)))
-            .primary()
-            .headless()
-            .spawn(&mut commands)
-    };
-    queue.apply(world);
-    world
+    let entity = spawn_bolt(app, x, y, vx, vy);
+    app.world_mut()
         .entity_mut(entity)
         .insert(NodeScalingFactor(entity_scale));
     entity

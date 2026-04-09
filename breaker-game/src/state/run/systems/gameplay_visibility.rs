@@ -39,19 +39,18 @@ pub(crate) fn show_gameplay_entities(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::shared::test_utils::TestAppBuilder;
 
     fn hide_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_systems(Update, hide_gameplay_entities);
-        app
+        TestAppBuilder::new()
+            .with_system(Update, hide_gameplay_entities)
+            .build()
     }
 
     fn show_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_systems(Update, show_gameplay_entities);
-        app
+        TestAppBuilder::new()
+            .with_system(Update, show_gameplay_entities)
+            .build()
     }
 
     // ── hide_gameplay_entities ────────────────────────────────────────

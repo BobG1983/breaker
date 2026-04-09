@@ -81,20 +81,8 @@ pub fn spawn_whiff_text(
 
 #[cfg(test)]
 mod tests {
-    use bevy::ecs::world::CommandQueue;
-
     use super::*;
-    use crate::fx::FadeOut;
-
-    fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
-        let mut queue = CommandQueue::default();
-        let entity = {
-            let mut commands = Commands::new(&mut queue, world);
-            f(&mut commands)
-        };
-        queue.apply(world);
-        entity
-    }
+    use crate::{fx::FadeOut, shared::test_utils::TestAppBuilder};
 
     #[derive(Resource)]
     struct TestBumpMsg(Option<BumpPerformed>);
@@ -106,37 +94,22 @@ mod tests {
     }
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_message::<BumpPerformed>()
-            .add_systems(
+        TestAppBuilder::new()
+            .with_message::<BumpPerformed>()
+            .with_system(
                 FixedUpdate,
                 (
                     enqueue_bump.before(spawn_bump_grade_text),
                     spawn_bump_grade_text,
                 ),
-            );
-        app
+            )
+            .build()
     }
 
-    fn tick(app: &mut App) {
-        let timestep = app.world().resource::<Time<Fixed>>().timestep();
-        app.world_mut()
-            .resource_mut::<Time<Fixed>>()
-            .accumulate_overstep(timestep);
-        app.update();
-    }
+    use crate::shared::test_utils::tick;
 
     fn spawn_breaker(app: &mut App) {
-        use crate::breaker::definition::BreakerDefinition;
-        let def = BreakerDefinition::default();
-        let entity = spawn_in_world(app.world_mut(), |commands| {
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .spawn(commands)
-        });
+        let entity = crate::breaker::test_utils::spawn_breaker(app, 0.0, -450.0);
         app.world_mut()
             .entity_mut(entity)
             .insert(Transform::from_xyz(0.0, -450.0, 0.0));

@@ -8,10 +8,11 @@ use crate::{
             BaseWidth, Breaker, BreakerAcceleration, BreakerDeceleration, DashState, DecelEasing,
         },
         definition::BreakerDefinition,
+        test_utils::default_breaker_definition,
     },
     effect::effects::{size_boost::ActiveSizeBoosts, speed_boost::ActiveSpeedBoosts},
     input::resources::{GameAction, InputActions},
-    shared::PlayfieldConfig,
+    shared::{PlayfieldConfig, test_utils::TestAppBuilder},
 };
 
 #[test]
@@ -36,25 +37,17 @@ fn deceleration_clamps_at_zero() {
 }
 
 fn integration_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .init_resource::<PlayfieldConfig>()
-        .init_resource::<InputActions>()
-        .add_systems(FixedUpdate, move_breaker);
-    app
+    TestAppBuilder::new()
+        .with_resource::<PlayfieldConfig>()
+        .with_resource::<InputActions>()
+        .with_system(FixedUpdate, move_breaker)
+        .build()
 }
 
-/// Accumulates one fixed timestep of overstep, then runs one update.
-fn tick(app: &mut App) {
-    let timestep = app.world().resource::<Time<Fixed>>().timestep();
-    app.world_mut()
-        .resource_mut::<Time<Fixed>>()
-        .accumulate_overstep(timestep);
-    app.update();
-}
+use crate::shared::test_utils::tick;
 
 fn spawn_breaker_at(app: &mut App, state: DashState, position: Vec2) -> Entity {
-    let def = BreakerDefinition::default();
+    let def = default_breaker_definition();
     app.world_mut()
         .spawn((
             Breaker,
@@ -74,7 +67,7 @@ fn spawn_breaker_at(app: &mut App, state: DashState, position: Vec2) -> Entity {
 }
 
 fn spawn_breaker(app: &mut App, state: DashState) -> Entity {
-    let def = BreakerDefinition::default();
+    let def = default_breaker_definition();
     spawn_breaker_at(app, state, Vec2::new(0.0, def.y_position))
 }
 

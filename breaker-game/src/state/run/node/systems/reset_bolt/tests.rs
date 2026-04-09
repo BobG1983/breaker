@@ -36,13 +36,13 @@ fn make_default_bolt_definition() -> BoltDefinition {
 }
 
 fn test_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .add_message::<crate::bolt::messages::BoltSpawned>()
-        .init_resource::<NodeOutcome>()
-        .init_resource::<GameRng>()
-        .add_systems(Update, reset_bolt);
-    app
+    use crate::shared::test_utils::TestAppBuilder;
+    TestAppBuilder::new()
+        .with_message::<crate::bolt::messages::BoltSpawned>()
+        .with_resource::<NodeOutcome>()
+        .with_resource::<GameRng>()
+        .with_system(Update, reset_bolt)
+        .build()
 }
 
 /// Spawns a bolt entity via `.definition()` for reset testing.
@@ -731,13 +731,8 @@ fn reset_bolt_runs_without_bolt_config_resource() {
     // Given: No BoltConfig resource inserted.
     // When: reset_bolt runs with a definition-built bolt.
     // Then: System runs without panic (proves BoltConfig is not a system parameter).
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .add_message::<crate::bolt::messages::BoltSpawned>()
-        .init_resource::<NodeOutcome>()
-        .init_resource::<GameRng>()
-        // Deliberately NOT inserting BoltConfig
-        .add_systems(Update, reset_bolt);
+    // Deliberately NOT inserting BoltConfig
+    let mut app = test_app();
 
     let def = make_default_bolt_definition();
     {

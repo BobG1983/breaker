@@ -1,20 +1,22 @@
 use bevy::prelude::*;
 
 use super::system::*;
-use crate::state::run::{
-    definition::HighlightConfig,
-    resources::{HighlightKind, HighlightTracker, NodeOutcome, RunHighlight, RunStats},
+use crate::{
+    shared::test_utils::TestAppBuilder,
+    state::run::{
+        definition::HighlightConfig,
+        resources::{HighlightKind, HighlightTracker, NodeOutcome, RunHighlight, RunStats},
+    },
 };
 
 fn test_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .init_resource::<RunStats>()
-        .init_resource::<HighlightTracker>()
-        .init_resource::<NodeOutcome>()
+    TestAppBuilder::new()
+        .with_resource::<RunStats>()
+        .with_resource::<HighlightTracker>()
+        .with_resource::<NodeOutcome>()
         .insert_resource(HighlightConfig::default())
-        .add_systems(Update, snapshot_node_highlights);
-    app
+        .with_system(Update, snapshot_node_highlights)
+        .build()
 }
 
 fn make_highlight(kind: HighlightKind, node_index: u32, value: f32) -> RunHighlight {

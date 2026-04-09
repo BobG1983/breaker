@@ -1,11 +1,11 @@
-use bevy::{ecs::world::CommandQueue, prelude::*};
+use bevy::prelude::*;
 use rantzsoft_spatial2d::components::MaxSpeed;
 
 use super::system::*;
 use crate::{
     breaker::{
         SelectedBreaker,
-        components::{Breaker, BreakerBaseY, BreakerReflectionSpread, DashTilt},
+        components::{BreakerBaseY, BreakerReflectionSpread, DashTilt},
         definition::BreakerDefinition,
         registry::BreakerRegistry,
     },
@@ -15,23 +15,14 @@ use crate::{
     },
 };
 
-fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
-    let mut queue = CommandQueue::default();
-    let entity = {
-        let mut commands = Commands::new(&mut queue, world);
-        f(&mut commands)
-    };
-    queue.apply(world);
-    entity
-}
-
 fn test_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .init_resource::<BreakerRegistry>()
-        .init_resource::<SelectedBreaker>()
-        .add_systems(Update, propagate_breaker_changes);
-    app
+    use crate::shared::test_utils::TestAppBuilder;
+
+    TestAppBuilder::new()
+        .with_resource::<BreakerRegistry>()
+        .with_resource::<SelectedBreaker>()
+        .with_system(Update, propagate_breaker_changes)
+        .build()
 }
 
 fn make_test_def(name: &str, life_pool: Option<u32>) -> BreakerDefinition {
@@ -93,14 +84,7 @@ fn hot_reload_stamps_max_speed_from_definition() {
         .insert_resource(SelectedBreaker("Test".to_owned()));
 
     // Spawn breaker with old MaxSpeed
-    let def = BreakerDefinition::default();
-    let entity = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
     app.world_mut()
         .entity_mut(entity)
         .insert(BoundEffects::default());
@@ -144,14 +128,7 @@ fn hot_reload_updates_reflection_spread_in_radians() {
     app.world_mut()
         .insert_resource(SelectedBreaker("Test".to_owned()));
 
-    let def = BreakerDefinition::default();
-    let entity = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
     app.world_mut().entity_mut(entity).insert((
         BreakerReflectionSpread(999.0),
         DashTilt(999.0),
@@ -206,14 +183,7 @@ fn lives_count_reset_on_breaker_change() {
         .insert_resource(SelectedBreaker("Test".to_owned()));
 
     // Spawn breaker with 1 life remaining (took damage)
-    let def = BreakerDefinition::default();
-    let entity = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
     app.world_mut()
         .entity_mut(entity)
         .insert((LivesCount(Some(1)), BoundEffects::default()));
@@ -257,14 +227,7 @@ fn lives_count_reset_to_none_on_breaker_change() {
         .insert_resource(SelectedBreaker("Test".to_owned()));
 
     // Spawn breaker with 2 finite lives
-    let def = BreakerDefinition::default();
-    let entity = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
     app.world_mut()
         .entity_mut(entity)
         .insert((LivesCount(Some(2)), BoundEffects::default()));
@@ -315,14 +278,7 @@ fn active_chains_rebuilt_on_breaker_change() {
     app.world_mut()
         .insert_resource(SelectedBreaker("Test".to_owned()));
 
-    let def = BreakerDefinition::default();
-    let breaker_entity = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let breaker_entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
     app.world_mut()
         .entity_mut(breaker_entity)
         .insert(BoundEffects::default());
@@ -388,13 +344,7 @@ fn registry_is_added_guard_prevents_stamping() {
 
     // Spawn breaker with MaxSpeed(1000.0)
     let def = make_test_def("Test", Some(3));
-    let entity = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
     app.world_mut()
         .entity_mut(entity)
         .insert(BoundEffects::default());
@@ -411,7 +361,7 @@ fn registry_is_added_guard_prevents_stamping() {
     // First update: registry is_added() returns true — should NOT stamp
     app.update();
 
-    let defaults = BreakerDefinition::default();
+    let defaults = crate::breaker::test_utils::default_breaker_definition();
     let max_speed = app.world().get::<MaxSpeed>(entity).unwrap();
     assert!(
         (max_speed.0 - defaults.max_speed).abs() < f32::EPSILON,
@@ -437,14 +387,7 @@ fn hot_reload_updates_breaker_base_y_from_definition() {
     app.world_mut()
         .insert_resource(SelectedBreaker("Test".to_owned()));
 
-    let def = BreakerDefinition::default();
-    let entity = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
     app.world_mut()
         .entity_mut(entity)
         .insert(BoundEffects::default());
@@ -489,14 +432,7 @@ fn lives_count_inserted_on_entity_without_prior_lives_count() {
         .insert_resource(SelectedBreaker("Test".to_owned()));
 
     // Spawn breaker WITHOUT LivesCount component
-    let def = BreakerDefinition::default();
-    let entity = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
     app.world_mut()
         .entity_mut(entity)
         .insert(BoundEffects::default());
@@ -548,14 +484,7 @@ fn speed_boost_chains_appear_in_effect_chains_on_breaker_change() {
     app.world_mut()
         .insert_resource(SelectedBreaker("Test".to_owned()));
 
-    let def = BreakerDefinition::default();
-    let breaker_entity = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let breaker_entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
     app.world_mut()
         .entity_mut(breaker_entity)
         .insert(BoundEffects::default());

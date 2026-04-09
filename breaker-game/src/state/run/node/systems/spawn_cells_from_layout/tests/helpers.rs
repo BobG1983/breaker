@@ -10,7 +10,7 @@ use crate::{
         definition::Toughness,
         resources::{CellConfig, CellTypeRegistry},
     },
-    shared::PlayfieldConfig,
+    shared::{PlayfieldConfig, test_utils::TestAppBuilder},
     state::run::{
         definition::NodeType,
         node::{
@@ -100,17 +100,16 @@ pub(super) fn sparse_layout() -> NodeLayout {
 }
 
 pub(super) fn test_app(layout: NodeLayout) -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .add_message::<CellsSpawned>()
-        .init_resource::<CellConfig>()
-        .init_resource::<PlayfieldConfig>()
-        .init_resource::<Assets<Mesh>>()
-        .init_resource::<Assets<ColorMaterial>>()
+    TestAppBuilder::new()
+        .with_message::<CellsSpawned>()
+        .with_resource::<CellConfig>()
+        .with_resource::<PlayfieldConfig>()
+        .with_resource::<Assets<Mesh>>()
+        .with_resource::<Assets<ColorMaterial>>()
         .insert_resource(ActiveNodeLayout(layout))
         .insert_resource(test_registry())
-        .add_systems(Startup, spawn_cells_from_layout);
-    app
+        .with_system(Startup, spawn_cells_from_layout)
+        .build()
 }
 
 pub(super) fn collect_sorted_cell_positions(app: &mut App) -> Vec<(f32, f32)> {
@@ -161,17 +160,16 @@ pub(super) fn ron_like_playfield_config() -> PlayfieldConfig {
 
 /// Creates a test `App` with explicit RON-like configs for grid-scale tests.
 pub(super) fn scaled_test_app(layout: NodeLayout) -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .add_message::<CellsSpawned>()
+    TestAppBuilder::new()
+        .with_message::<CellsSpawned>()
         .insert_resource(ron_like_cell_config())
         .insert_resource(ron_like_playfield_config())
-        .init_resource::<Assets<Mesh>>()
-        .init_resource::<Assets<ColorMaterial>>()
+        .with_resource::<Assets<Mesh>>()
+        .with_resource::<Assets<ColorMaterial>>()
         .insert_resource(ActiveNodeLayout(layout))
         .insert_resource(test_registry())
-        .add_systems(Startup, spawn_cells_from_layout);
-    app
+        .with_system(Startup, spawn_cells_from_layout)
+        .build()
 }
 
 /// Builds a `NodeLayout` filled entirely with "S" cells.
@@ -345,13 +343,12 @@ pub(super) fn collect_cells_by_grid_position(
 
 /// Creates a test `App` with `NodeOutcome` and `NodeSequence` resources.
 pub(super) fn test_app_with_sequence(layout: NodeLayout) -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .add_message::<CellsSpawned>()
-        .init_resource::<CellConfig>()
-        .init_resource::<PlayfieldConfig>()
-        .init_resource::<Assets<Mesh>>()
-        .init_resource::<Assets<ColorMaterial>>()
+    TestAppBuilder::new()
+        .with_message::<CellsSpawned>()
+        .with_resource::<CellConfig>()
+        .with_resource::<PlayfieldConfig>()
+        .with_resource::<Assets<Mesh>>()
+        .with_resource::<Assets<ColorMaterial>>()
         .insert_resource(ActiveNodeLayout(layout))
         .insert_resource(test_registry())
         .insert_resource(NodeOutcome {
@@ -365,8 +362,8 @@ pub(super) fn test_app_with_sequence(layout: NodeLayout) -> App {
                 timer_mult: 1.0,
             }],
         })
-        .add_systems(Startup, spawn_cells_from_layout);
-    app
+        .with_system(Startup, spawn_cells_from_layout)
+        .build()
 }
 
 /// Creates a test `App` with `ToughnessConfig`, `NodeOutcome` (tier/position),
@@ -383,13 +380,12 @@ pub(super) fn test_app_with_toughness(
 ) -> App {
     use crate::cells::resources::ToughnessConfig;
 
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .add_message::<CellsSpawned>()
-        .init_resource::<CellConfig>()
-        .init_resource::<PlayfieldConfig>()
-        .init_resource::<Assets<Mesh>>()
-        .init_resource::<Assets<ColorMaterial>>()
+    TestAppBuilder::new()
+        .with_message::<CellsSpawned>()
+        .with_resource::<CellConfig>()
+        .with_resource::<PlayfieldConfig>()
+        .with_resource::<Assets<Mesh>>()
+        .with_resource::<Assets<ColorMaterial>>()
         .insert_resource(ActiveNodeLayout(layout))
         .insert_resource(registry)
         .insert_resource(ToughnessConfig::default())
@@ -410,13 +406,14 @@ pub(super) fn test_app_with_toughness(
                 timer_mult: 1.0,
             }],
         })
-        .add_systems(Startup, spawn_cells_from_layout);
-    app
+        .with_system(Startup, spawn_cells_from_layout)
+        .build()
 }
 
 /// Creates a test `App` with a registry containing an "F" type
 /// (`required_to_clear=false`) plus the standard "S" type.
 pub(super) fn test_app_with_non_required_cell(layout: NodeLayout) -> App {
+    use crate::shared::test_utils::TestAppBuilder;
     let mut registry = test_registry();
     registry.insert(
         "F".to_owned(),
@@ -436,15 +433,14 @@ pub(super) fn test_app_with_non_required_cell(layout: NodeLayout) -> App {
         },
     );
 
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .add_message::<CellsSpawned>()
-        .init_resource::<CellConfig>()
-        .init_resource::<PlayfieldConfig>()
-        .init_resource::<Assets<Mesh>>()
-        .init_resource::<Assets<ColorMaterial>>()
+    TestAppBuilder::new()
+        .with_message::<CellsSpawned>()
+        .with_resource::<CellConfig>()
+        .with_resource::<PlayfieldConfig>()
+        .with_resource::<Assets<Mesh>>()
+        .with_resource::<Assets<ColorMaterial>>()
         .insert_resource(ActiveNodeLayout(layout))
         .insert_resource(registry)
-        .add_systems(Startup, spawn_cells_from_layout);
-    app
+        .with_system(Startup, spawn_cells_from_layout)
+        .build()
 }

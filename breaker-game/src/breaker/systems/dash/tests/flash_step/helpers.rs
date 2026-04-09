@@ -2,77 +2,29 @@
 //! teleports the breaker instantly instead of doing a normal dash.
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{MaxSpeed, Position2D, Velocity2D};
+use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
+pub(super) use super::super::helpers::breaker_param_bundle;
 use crate::{
     breaker::{
-        components::{
-            BaseWidth, BrakeDecel, BrakeTilt, Breaker, BreakerDeceleration, BreakerTilt,
-            DashDuration, DashSpeedMultiplier, DashState, DashStateTimer, DashTilt, DashTiltEase,
-            DecelEasing, SettleDuration, SettleTiltEase,
-        },
-        definition::BreakerDefinition,
+        components::{BaseWidth, Breaker, BreakerTilt, DashState, DashStateTimer},
         systems::dash::system::update_breaker_state,
+        test_utils::default_breaker_definition,
     },
     effect::effects::flash_step::FlashStepActive,
     input::resources::InputActions,
-    shared::PlayfieldConfig,
+    shared::{PlayfieldConfig, test_utils::TestAppBuilder},
 };
 
-pub(super) fn breaker_param_bundle(
-    def: &BreakerDefinition,
-) -> (
-    MaxSpeed,
-    BreakerDeceleration,
-    DecelEasing,
-    DashSpeedMultiplier,
-    DashDuration,
-    DashTilt,
-    DashTiltEase,
-    BrakeTilt,
-    BrakeDecel,
-    SettleDuration,
-    SettleTiltEase,
-) {
-    (
-        MaxSpeed(def.max_speed),
-        BreakerDeceleration(def.deceleration),
-        DecelEasing {
-            ease: def.decel_ease,
-            strength: def.decel_ease_strength,
-        },
-        DashSpeedMultiplier(def.dash_speed_multiplier),
-        DashDuration(def.dash_duration),
-        DashTilt(def.dash_tilt_angle.to_radians()),
-        DashTiltEase(def.dash_tilt_ease),
-        BrakeTilt {
-            angle: def.brake_tilt_angle.to_radians(),
-            duration: def.brake_tilt_duration,
-            ease: def.brake_tilt_ease,
-        },
-        BrakeDecel(def.brake_decel_multiplier),
-        SettleDuration(def.settle_duration),
-        SettleTiltEase(def.settle_tilt_ease),
-    )
-}
-
 pub(super) fn test_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .init_resource::<InputActions>()
-        .init_resource::<PlayfieldConfig>()
-        .add_systems(FixedUpdate, update_breaker_state);
-    app
+    TestAppBuilder::new()
+        .with_resource::<InputActions>()
+        .with_resource::<PlayfieldConfig>()
+        .with_system(FixedUpdate, update_breaker_state)
+        .build()
 }
 
-/// Accumulates one fixed timestep of overstep, then runs one update.
-pub(super) fn tick(app: &mut App) {
-    let timestep = app.world().resource::<Time<Fixed>>().timestep();
-    app.world_mut()
-        .resource_mut::<Time<Fixed>>()
-        .accumulate_overstep(timestep);
-    app.update();
-}
+pub(super) use crate::shared::test_utils::tick;
 
 /// Spawns a breaker in Settling state with a rightward-dash settle tilt
 /// (`ease_start` < 0, meaning last dash was rightward).
@@ -83,7 +35,7 @@ pub(super) fn spawn_settling_breaker_rightward_dash(
     position: Vec2,
     flash_step: bool,
 ) -> Entity {
-    let def = BreakerDefinition::default();
+    let def = default_breaker_definition();
     let mut entity_cmds = app.world_mut().spawn((
         Breaker,
         DashState::Settling,
@@ -113,7 +65,7 @@ pub(super) fn spawn_settling_breaker_leftward_dash(
     position: Vec2,
     flash_step: bool,
 ) -> Entity {
-    let def = BreakerDefinition::default();
+    let def = default_breaker_definition();
     let mut entity_cmds = app.world_mut().spawn((
         Breaker,
         DashState::Settling,

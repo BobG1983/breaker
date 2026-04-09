@@ -1,4 +1,4 @@
-use bevy::{ecs::world::CommandQueue, prelude::*};
+use bevy::prelude::*;
 use rantzsoft_stateflow::CleanupOnExit;
 
 use super::helpers::test_breaker_definition;
@@ -7,29 +7,18 @@ use crate::{
     state::types::{NodeState, RunState},
 };
 
-fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
-    let mut queue = CommandQueue::default();
-    let entity = {
-        let mut commands = Commands::new(&mut queue, world);
-        f(&mut commands)
-    };
-    queue.apply(world);
-    entity
-}
-
 // ── Behavior 36: .primary() produces PrimaryBreaker + CleanupOnExit<RunState> ──
 
 #[test]
 fn primary_produces_primary_breaker_and_cleanup_on_run_end() {
     let def = test_breaker_definition();
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = Breaker::builder()
+        .definition(&def)
+        .headless()
+        .primary()
+        .spawn(&mut world.commands());
+    world.flush();
 
     assert!(
         world.get::<PrimaryBreaker>(entity).is_some(),
@@ -55,13 +44,12 @@ fn primary_produces_primary_breaker_and_cleanup_on_run_end() {
 fn extra_produces_extra_breaker_and_cleanup_on_node_exit() {
     let def = test_breaker_definition();
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .extra()
-            .spawn(commands)
-    });
+    let entity = Breaker::builder()
+        .definition(&def)
+        .headless()
+        .extra()
+        .spawn(&mut world.commands());
+    world.flush();
 
     assert!(
         world.get::<ExtraBreaker>(entity).is_some(),
@@ -87,13 +75,12 @@ fn extra_produces_extra_breaker_and_cleanup_on_node_exit() {
 fn headless_build_has_no_mesh_or_material() {
     let def = test_breaker_definition();
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = Breaker::builder()
+        .definition(&def)
+        .headless()
+        .primary()
+        .spawn(&mut world.commands());
+    world.flush();
 
     assert!(
         world.get::<Mesh2d>(entity).is_none(),

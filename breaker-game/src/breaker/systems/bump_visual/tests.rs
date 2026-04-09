@@ -1,26 +1,18 @@
-use bevy::{ecs::world::CommandQueue, prelude::*};
+use bevy::prelude::*;
 
 use super::*;
 use crate::{
     breaker::{
         components::{Breaker, BumpFeedback, BumpFeedbackState, BumpState},
         definition::BreakerDefinition,
+        test_utils::default_breaker_definition,
     },
     input::resources::{GameAction, InputActions},
+    shared::test_utils::TestAppBuilder,
 };
 
-fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
-    let mut queue = CommandQueue::default();
-    let entity = {
-        let mut commands = Commands::new(&mut queue, world);
-        f(&mut commands)
-    };
-    queue.apply(world);
-    entity
-}
-
 fn default_bump_feedback() -> BumpFeedback {
-    let config = BreakerDefinition::default();
+    let config = default_breaker_definition();
     BumpFeedback {
         duration: config.bump_visual_duration,
         peak: config.bump_visual_peak,
@@ -108,20 +100,13 @@ fn bump_offset_asymmetric_shape() {
 }
 
 fn trigger_test_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .init_resource::<InputActions>()
-        .add_systems(FixedUpdate, trigger_bump_visual);
-    app
+    TestAppBuilder::new()
+        .with_resource::<InputActions>()
+        .with_system(FixedUpdate, trigger_bump_visual)
+        .build()
 }
 
-fn tick(app: &mut App) {
-    let timestep = app.world().resource::<Time<Fixed>>().timestep();
-    app.world_mut()
-        .resource_mut::<Time<Fixed>>()
-        .accumulate_overstep(timestep);
-    app.update();
-}
+use crate::shared::test_utils::tick;
 
 fn set_bump_action(app: &mut App) {
     app.world_mut()
@@ -134,14 +119,7 @@ fn set_bump_action(app: &mut App) {
 fn trigger_inserts_bump_visual_on_bump_action() {
     let mut app = trigger_test_app();
 
-    let def = BreakerDefinition::default();
-    let entity = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
 
     set_bump_action(&mut app);
     tick(&mut app);
@@ -156,14 +134,7 @@ fn trigger_inserts_bump_visual_on_bump_action() {
 fn trigger_skips_without_bump_action() {
     let mut app = trigger_test_app();
 
-    let def = BreakerDefinition::default();
-    let entity = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
 
     // No Bump action set
     tick(&mut app);
@@ -178,14 +149,7 @@ fn trigger_skips_without_bump_action() {
 fn trigger_fires_during_cooldown() {
     let mut app = trigger_test_app();
 
-    let def = BreakerDefinition::default();
-    let entity = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
     app.world_mut().entity_mut(entity).insert(BumpState {
         cooldown: 0.5,
         ..Default::default()
@@ -205,14 +169,7 @@ fn trigger_does_not_retrigger_while_animating() {
     let mut app = trigger_test_app();
     let params = default_bump_feedback();
 
-    let def = BreakerDefinition::default();
-    let entity = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
     app.world_mut()
         .entity_mut(entity)
         .insert(BumpFeedbackState {
@@ -235,10 +192,9 @@ fn trigger_does_not_retrigger_while_animating() {
 }
 
 fn animate_test_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .add_systems(FixedUpdate, animate_bump_visual);
-    app
+    TestAppBuilder::new()
+        .with_system(FixedUpdate, animate_bump_visual)
+        .build()
 }
 
 #[test]
@@ -253,14 +209,7 @@ fn animate_applies_position2d_y_offset_during_animation() {
     let config = BreakerDefinition::default();
     let params = default_bump_feedback();
 
-    let def = BreakerDefinition::default();
-    let entity = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
     app.world_mut()
         .entity_mut(entity)
         .insert(BumpFeedbackState {
@@ -294,14 +243,7 @@ fn animate_removes_bump_visual_when_done() {
     let config = BreakerDefinition::default();
     let params = default_bump_feedback();
 
-    let def = BreakerDefinition::default();
-    let entity = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, config.y_position);
     app.world_mut()
         .entity_mut(entity)
         .insert(BumpFeedbackState {
@@ -337,14 +279,7 @@ fn animate_snaps_position2d_to_base_after_expiry() {
     let params = default_bump_feedback();
 
     // Start with an offset Y to verify the snap overrides it
-    let def = BreakerDefinition::default();
-    let entity = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, config.y_position);
     app.world_mut().entity_mut(entity).insert((
         Position2D(Vec2::new(0.0, config.y_position + 5.0)),
         BumpFeedbackState {

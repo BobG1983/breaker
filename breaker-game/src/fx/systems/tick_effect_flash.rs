@@ -29,11 +29,12 @@ mod tests {
 
     /// Build a test app that advances time by `dt` each update.
     fn test_app(dt: Duration) -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
+        use crate::shared::test_utils::TestAppBuilder;
+
+        TestAppBuilder::new()
             .insert_resource(TimeUpdateStrategy::ManualDuration(dt))
-            .add_systems(Update, tick_effect_flash);
-        app
+            .with_system(Update, tick_effect_flash)
+            .build()
     }
 
     /// Default 16ms timestep for tests.
@@ -153,38 +154,17 @@ mod tests {
 
     #[test]
     fn fx_plugin_registers_tick_effect_flash_running_in_node_playing() {
-        use crate::state::types::{AppState, GameState, RunState};
+        use crate::shared::test_utils::TestAppBuilder;
 
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_plugins(bevy::state::app::StatesPlugin);
-        app.insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_millis(
-            16,
-        )));
-        app.init_state::<AppState>();
-        app.add_sub_state::<GameState>();
-        app.add_sub_state::<RunState>();
-        app.add_sub_state::<crate::state::types::NodeState>();
+        let mut app = TestAppBuilder::new()
+            .with_state_hierarchy()
+            .in_state_node_playing()
+            .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_millis(
+                16,
+            )))
+            .build();
 
         app.add_plugins(crate::fx::FxPlugin);
-
-        // Navigate to NodeState::Playing
-        app.world_mut()
-            .resource_mut::<NextState<AppState>>()
-            .set(AppState::Game);
-        app.update();
-        app.world_mut()
-            .resource_mut::<NextState<GameState>>()
-            .set(GameState::Run);
-        app.update();
-        app.world_mut()
-            .resource_mut::<NextState<crate::state::types::RunState>>()
-            .set(crate::state::types::RunState::Node);
-        app.update();
-        app.world_mut()
-            .resource_mut::<NextState<crate::state::types::NodeState>>()
-            .set(crate::state::types::NodeState::Playing);
-        app.update();
 
         // Spawn entity with a very short timer
         let entity = app.world_mut().spawn(EffectFlashTimer(0.001)).id();
@@ -201,19 +181,15 @@ mod tests {
 
     #[test]
     fn tick_effect_flash_does_not_run_outside_node_playing() {
-        use crate::state::types::{AppState, GameState, RunState};
+        use crate::shared::test_utils::TestAppBuilder;
 
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_plugins(bevy::state::app::StatesPlugin);
-        app.init_state::<AppState>();
-        app.add_sub_state::<GameState>();
-        app.add_sub_state::<RunState>();
-        app.add_sub_state::<crate::state::types::NodeState>();
+        let mut app = TestAppBuilder::new()
+            .with_state_hierarchy()
+            // Stay in default AppState (Loading) - NOT NodeState::Playing
+            .build();
 
         app.add_plugins(crate::fx::FxPlugin);
 
-        // Stay in default AppState (Loading) - NOT NodeState::Playing
         let entity = app.world_mut().spawn(EffectFlashTimer(0.001)).id();
 
         // Multiple updates

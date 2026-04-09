@@ -36,10 +36,11 @@ mod tests {
     use crate::cells::{behaviors::regen::components::*, components::*};
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_systems(FixedUpdate, tick_cell_regen);
-        app
+        use crate::shared::test_utils::TestAppBuilder;
+
+        TestAppBuilder::new()
+            .with_system(FixedUpdate, tick_cell_regen)
+            .build()
     }
 
     /// Sets the fixed timestep to `dt` and accumulates one step, then runs update.

@@ -29,20 +29,16 @@ mod tests {
 
     #[test]
     fn plugin_builds() {
-        use crate::state::{
-            run::chip_select::messages::ChipSelected,
-            types::{AppState, GameState, RunState},
+        use crate::{
+            shared::test_utils::TestAppBuilder, state::run::chip_select::messages::ChipSelected,
         };
-        App::new()
-            .add_plugins(MinimalPlugins)
-            .add_plugins(bevy::state::app::StatesPlugin)
-            .init_state::<AppState>()
-            .add_sub_state::<GameState>()
-            .add_sub_state::<RunState>()
-            .add_sub_state::<ChipSelectState>()
+
+        let mut app = TestAppBuilder::new()
+            .with_state_hierarchy()
             // ChipSelected must be registered before ChipsPlugin (normally by UiPlugin)
-            .add_message::<ChipSelected>()
-            .add_plugins(ChipsPlugin)
-            .update();
+            .with_message::<ChipSelected>()
+            .build();
+        app.add_plugins(ChipsPlugin);
+        app.update();
     }
 }

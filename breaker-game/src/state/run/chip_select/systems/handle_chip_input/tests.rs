@@ -1,16 +1,14 @@
 //! Tests for `handle_chip_input` chip selection screen input handling.
 
-use bevy::{ecs::message::Messages, prelude::*, state::app::StatesPlugin};
+use bevy::{ecs::message::Messages, prelude::*};
 use rantzsoft_stateflow::ChangeState;
 
 use super::*;
 use crate::{
     chips::{ChipDefinition, definition::EvolutionIngredient},
     effect::{EffectKind, EffectNode},
-    state::{
-        run::chip_select::resources::ChipOffering,
-        types::{AppState, GameState, RunState},
-    },
+    shared::test_utils::TestAppBuilder,
+    state::run::chip_select::resources::ChipOffering,
 };
 
 #[derive(Resource, Default)]
@@ -40,23 +38,19 @@ fn test_app() -> App {
 }
 
 fn test_app_with_offers(offers: ChipOffers) -> App {
-    let mut app = App::new();
-    app.add_plugins((MinimalPlugins, StatesPlugin))
-        .init_resource::<ButtonInput<KeyCode>>()
+    TestAppBuilder::new()
+        .with_state_hierarchy()
+        .with_resource::<ButtonInput<KeyCode>>()
         .insert_resource(InputConfig::default())
-        .init_state::<AppState>()
-        .add_sub_state::<GameState>()
-        .add_sub_state::<RunState>()
-        .add_sub_state::<ChipSelectState>()
         .insert_resource(ChipSelectSelection { index: 0 })
         .insert_resource(offers)
-        .init_resource::<ReceivedChips>()
-        .init_resource::<ChipInventory>()
+        .with_resource::<ReceivedChips>()
+        .with_resource::<ChipInventory>()
         .insert_resource(ChipSelectConfig::default())
-        .add_message::<ChipSelected>()
-        .add_message::<ChangeState<ChipSelectState>>()
-        .add_systems(Update, (handle_chip_input, collect_chips).chain());
-    app
+        .with_message::<ChipSelected>()
+        .with_message::<ChangeState<ChipSelectState>>()
+        .with_system(Update, (handle_chip_input, collect_chips).chain())
+        .build()
 }
 
 fn press_key(app: &mut App, key: KeyCode) {

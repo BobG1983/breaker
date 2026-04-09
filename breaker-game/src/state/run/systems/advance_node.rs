@@ -40,15 +40,15 @@ mod tests {
     };
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
+        use crate::shared::test_utils::TestAppBuilder;
+        TestAppBuilder::new()
             .insert_resource(NodeOutcome {
                 node_index: 0,
                 cleared_this_frame: true,
                 ..default()
             })
-            .add_systems(Update, advance_node);
-        app
+            .with_system(Update, advance_node)
+            .build()
     }
 
     #[test]
@@ -81,8 +81,8 @@ mod tests {
         cleared_this_frame: bool,
         assignments: Vec<NodeAssignment>,
     ) -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
+        use crate::shared::test_utils::TestAppBuilder;
+        TestAppBuilder::new()
             .insert_resource(NodeOutcome {
                 node_index,
                 cleared_this_frame,
@@ -91,8 +91,8 @@ mod tests {
                 ..default()
             })
             .insert_resource(NodeSequence { assignments })
-            .add_systems(Update, advance_node);
-        app
+            .with_system(Update, advance_node)
+            .build()
     }
 
     // Behavior 22: advance_node updates tier and position_in_tier based on previous node's type
@@ -295,8 +295,8 @@ mod tests {
     // Behavior 27: advance_node gracefully handles missing NodeSequence resource
     #[test]
     fn advance_without_node_sequence_only_increments_index() {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
+        use crate::shared::test_utils::TestAppBuilder;
+        let mut app = TestAppBuilder::new()
             .insert_resource(NodeOutcome {
                 node_index: 0,
                 tier: 0,
@@ -304,7 +304,8 @@ mod tests {
                 cleared_this_frame: true,
                 ..default()
             })
-            .add_systems(Update, advance_node);
+            .with_system(Update, advance_node)
+            .build();
         app.update();
 
         let outcome = app.world().resource::<NodeOutcome>();

@@ -11,28 +11,8 @@ use crate::{
         BoundEffects, EffectKind, EffectNode, StagedEffects, Target,
         effects::damage_boost::ActiveDamageBoosts,
     },
+    shared::test_utils::TestAppBuilder,
 };
-
-/// Navigate a test app to `ChipSelectState::Selecting` through the full hierarchy.
-fn navigate_to_chip_select(app: &mut App) {
-    use crate::state::types::{AppState, ChipSelectState, GameState, RunState};
-    app.world_mut()
-        .resource_mut::<NextState<AppState>>()
-        .set(AppState::Game);
-    app.update();
-    app.world_mut()
-        .resource_mut::<NextState<GameState>>()
-        .set(GameState::Run);
-    app.update();
-    app.world_mut()
-        .resource_mut::<NextState<RunState>>()
-        .set(RunState::ChipSelect);
-    app.update();
-    app.world_mut()
-        .resource_mut::<NextState<ChipSelectState>>()
-        .set(ChipSelectState::Selecting);
-    app.update();
-}
 
 // ── Behavior 15: Chip name not found in catalog — silently ignored ──
 
@@ -80,10 +60,7 @@ fn unknown_chip_name_does_not_panic() {
 fn missing_chip_catalog_resource_does_not_panic() {
     use crate::{
         chips::systems::dispatch_chip_effects::dispatch_chip_effects,
-        state::{
-            run::chip_select::messages::ChipSelected,
-            types::{AppState, ChipSelectState, GameState, RunState},
-        },
+        state::run::chip_select::messages::ChipSelected,
     };
 
     // --- First prove the system WORKS with catalog ---
@@ -110,53 +87,25 @@ fn missing_chip_catalog_resource_does_not_panic() {
     );
 
     // --- Now test without catalog ---
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .add_plugins(bevy::state::app::StatesPlugin)
-        .init_state::<AppState>()
-        .add_sub_state::<GameState>()
-        .add_sub_state::<RunState>()
-        .add_sub_state::<ChipSelectState>()
-        .add_message::<ChipSelected>()
-        .init_resource::<ChipInventory>()
+    let mut app = TestAppBuilder::new()
+        .with_state_hierarchy()
+        .in_state_chip_selecting()
+        .with_message::<ChipSelected>()
+        .with_resource::<ChipInventory>()
         // Deliberately NOT inserting ChipCatalog
-        .init_resource::<PendingChipSelections>()
-        .add_systems(
+        .insert_resource(PendingChipSelections::default())
+        .with_system(
             Update,
             (
                 send_chip_selections.before(dispatch_chip_effects),
                 dispatch_chip_effects,
             ),
-        );
-
-    app.world_mut()
-        .resource_mut::<NextState<AppState>>()
-        .set(AppState::Game);
-    app.update();
-    app.world_mut()
-        .resource_mut::<NextState<GameState>>()
-        .set(GameState::Run);
-    app.update();
-    app.world_mut()
-        .resource_mut::<NextState<RunState>>()
-        .set(RunState::ChipSelect);
-    app.update();
-    app.world_mut()
-        .resource_mut::<NextState<ChipSelectState>>()
-        .set(ChipSelectState::Selecting);
-    app.update();
+        )
+        .build();
 
     // Spawn a breaker and send a message — system should handle missing catalog gracefully
     let breaker = {
-        use crate::breaker::{components::Breaker, definition::BreakerDefinition};
-        let def = BreakerDefinition::default();
-        let entity = spawn_in_world(app.world_mut(), |commands| {
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .spawn(commands)
-        });
+        let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
         app.world_mut()
             .entity_mut(entity)
             .insert((BoundEffects::default(), StagedEffects::default()));
@@ -182,10 +131,7 @@ fn missing_chip_catalog_resource_does_not_panic() {
 fn missing_chip_inventory_resource_does_not_panic() {
     use crate::{
         chips::systems::dispatch_chip_effects::dispatch_chip_effects,
-        state::{
-            run::chip_select::messages::ChipSelected,
-            types::{AppState, ChipSelectState, GameState, RunState},
-        },
+        state::run::chip_select::messages::ChipSelected,
     };
 
     // --- First prove the system WORKS with inventory ---
@@ -212,24 +158,21 @@ fn missing_chip_inventory_resource_does_not_panic() {
     );
 
     // --- Now test without inventory ---
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .add_plugins(bevy::state::app::StatesPlugin)
-        .init_state::<AppState>()
-        .add_sub_state::<GameState>()
-        .add_sub_state::<RunState>()
-        .add_sub_state::<ChipSelectState>()
-        .add_message::<ChipSelected>()
-        .init_resource::<ChipCatalog>()
+    let mut app = TestAppBuilder::new()
+        .with_state_hierarchy()
+        .in_state_chip_selecting()
+        .with_message::<ChipSelected>()
+        .with_resource::<ChipCatalog>()
         // Deliberately NOT inserting ChipInventory
-        .init_resource::<PendingChipSelections>()
-        .add_systems(
+        .insert_resource(PendingChipSelections::default())
+        .with_system(
             Update,
             (
                 send_chip_selections.before(dispatch_chip_effects),
                 dispatch_chip_effects,
             ),
-        );
+        )
+        .build();
 
     // Insert chip into catalog so lookup succeeds
     {
@@ -242,22 +185,10 @@ fn missing_chip_inventory_resource_does_not_panic() {
         app.world_mut().resource_mut::<ChipCatalog>().insert(def);
     }
 
-    navigate_to_chip_select(&mut app);
-
     // Spawn a breaker so dispatch has targets
     let breaker = {
-        use crate::{
-            breaker::{components::Breaker, definition::BreakerDefinition},
-            effect::effects::speed_boost::ActiveSpeedBoosts,
-        };
-        let def = BreakerDefinition::default();
-        let entity = spawn_in_world(app.world_mut(), |commands| {
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .spawn(commands)
-        });
+        use crate::effect::effects::speed_boost::ActiveSpeedBoosts;
+        let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
         app.world_mut().entity_mut(entity).insert((
             BoundEffects::default(),
             StagedEffects::default(),
@@ -339,10 +270,7 @@ fn no_messages_pending_no_entities_modified() {
 fn both_catalog_and_inventory_absent_does_not_panic() {
     use crate::{
         chips::systems::dispatch_chip_effects::dispatch_chip_effects,
-        state::{
-            run::chip_select::messages::ChipSelected,
-            types::{AppState, ChipSelectState, GameState, RunState},
-        },
+        state::run::chip_select::messages::ChipSelected,
     };
 
     // --- First prove the system WORKS with both resources ---
@@ -369,40 +297,20 @@ fn both_catalog_and_inventory_absent_does_not_panic() {
     );
 
     // --- Now test without EITHER resource ---
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .add_plugins(bevy::state::app::StatesPlugin)
-        .init_state::<AppState>()
-        .add_sub_state::<GameState>()
-        .add_sub_state::<RunState>()
-        .add_sub_state::<ChipSelectState>()
-        .add_message::<ChipSelected>()
+    let mut app = TestAppBuilder::new()
+        .with_state_hierarchy()
+        .in_state_chip_selecting()
+        .with_message::<ChipSelected>()
         // Deliberately NOT inserting ChipCatalog or ChipInventory
-        .init_resource::<PendingChipSelections>()
-        .add_systems(
+        .insert_resource(PendingChipSelections::default())
+        .with_system(
             Update,
             (
                 send_chip_selections.before(dispatch_chip_effects),
                 dispatch_chip_effects,
             ),
-        );
-
-    app.world_mut()
-        .resource_mut::<NextState<AppState>>()
-        .set(AppState::Game);
-    app.update();
-    app.world_mut()
-        .resource_mut::<NextState<GameState>>()
-        .set(GameState::Run);
-    app.update();
-    app.world_mut()
-        .resource_mut::<NextState<RunState>>()
-        .set(RunState::ChipSelect);
-    app.update();
-    app.world_mut()
-        .resource_mut::<NextState<ChipSelectState>>()
-        .set(ChipSelectState::Selecting);
-    app.update();
+        )
+        .build();
 
     select_chip(&mut app, "Any Chip");
 

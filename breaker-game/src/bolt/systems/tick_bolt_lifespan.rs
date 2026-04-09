@@ -49,24 +49,19 @@ mod tests {
     }
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_message::<RequestBoltDestroyed>()
-            .init_resource::<CapturedRequestBoltDestroyed>()
-            .add_systems(
+        use crate::shared::test_utils::TestAppBuilder;
+
+        TestAppBuilder::new()
+            .with_message::<RequestBoltDestroyed>()
+            .with_resource::<CapturedRequestBoltDestroyed>()
+            .with_system(
                 FixedUpdate,
                 (tick_bolt_lifespan, capture_request_bolt_destroyed).chain(),
-            );
-        app
+            )
+            .build()
     }
 
-    fn tick(app: &mut App) {
-        let timestep = app.world().resource::<Time<Fixed>>().timestep();
-        app.world_mut()
-            .resource_mut::<Time<Fixed>>()
-            .accumulate_overstep(timestep);
-        app.update();
-    }
+    use crate::shared::test_utils::tick;
 
     /// Ticking many frames until a 0.5s timer expires should produce a
     /// `RequestBoltDestroyed` message for the bolt entity.

@@ -184,6 +184,7 @@ pub(crate) struct OptionalBreakerData {
     pub(crate) color_rgb: Option<[f32; 3]>,
     pub(crate) override_width: Option<f32>,
     pub(crate) override_height: Option<f32>,
+    pub(crate) override_x_position: Option<f32>,
     pub(crate) override_y_position: Option<f32>,
     pub(crate) override_max_speed: Option<f32>,
     pub(crate) override_reflection_spread: Option<f32>,

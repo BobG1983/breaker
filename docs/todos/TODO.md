@@ -2,7 +2,7 @@
 
 ## Backlog
 
-1. **[ready]** Test infrastructure consolidation — TestAppBuilder + domain test_utils; eliminate 73 `tick()`, 47 `spawn_in_world()`, 101 `test_app()` copies — [detail](detail/test-infrastructure-consolidation/test-infrastructure-consolidation.md)
+1. **[done]** Test infrastructure consolidation — TestAppBuilder + domain test_utils; eliminate 73 `tick()`, 47 `spawn_in_world()`, 101 `test_app()` copies — [detail](detail/test-infrastructure-consolidation/test-infrastructure-consolidation.md)
 2. **[in-progress]** Effect system refactor: typestate builder, Spawn/During triggers, unified vocabulary, centralized despawn — [detail](detail/effect-desugaring-node-running-trigger/effect-desugaring-node-running-trigger.md)
 3. **[NEEDS DETAIL]** New effect domain test migration — migrate `new_effect/` tests to TestAppBuilder after effect refactor ships — [detail](detail/new-effect-test-migration.md)
 4. **[ready]** Remove game crate prelude module — replace glob imports with explicit per-domain imports — [detail](detail/remove-game-prelude.md)

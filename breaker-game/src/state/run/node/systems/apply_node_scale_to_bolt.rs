@@ -48,6 +48,7 @@ mod tests {
     use super::*;
     use crate::{
         bolt::definition::BoltDefinition,
+        shared::test_utils::TestAppBuilder,
         state::run::node::{NodeLayout, definition::NodePool},
     };
 
@@ -69,10 +70,9 @@ mod tests {
     }
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_systems(Update, apply_node_scale_to_bolt);
-        app
+        TestAppBuilder::new()
+            .with_system(Update, apply_node_scale_to_bolt)
+            .build()
     }
 
     fn make_layout(entity_scale: f32) -> ActiveNodeLayout {
@@ -173,10 +173,10 @@ mod tests {
         // Given: ActiveNodeLayout with entity_scale = 0.6
         // When: a bolt WITHOUT NodeScalingFactor exists and apply_node_scale_to_late_bolts runs
         // Then: the bolt gets NodeScalingFactor(0.6)
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_systems(Update, super::apply_node_scale_to_late_bolts);
-        app.insert_resource(make_layout(0.6));
+        let mut app = TestAppBuilder::new()
+            .with_system(Update, super::apply_node_scale_to_late_bolts)
+            .insert_resource(make_layout(0.6))
+            .build();
 
         let entity = spawn_bolt(&mut app);
         // Bolt has no NodeScalingFactor (simulates effect-spawned bolt)
@@ -197,10 +197,10 @@ mod tests {
         // Given: Bolt WITH NodeScalingFactor(0.7), ActiveNodeLayout with entity_scale = 0.6
         // When: apply_node_scale_to_late_bolts runs
         // Then: NodeScalingFactor stays 0.7 (Without filter excludes it)
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_systems(Update, super::apply_node_scale_to_late_bolts);
-        app.insert_resource(make_layout(0.6));
+        let mut app = TestAppBuilder::new()
+            .with_system(Update, super::apply_node_scale_to_late_bolts)
+            .insert_resource(make_layout(0.6))
+            .build();
 
         let entity = spawn_bolt(&mut app);
         app.world_mut()

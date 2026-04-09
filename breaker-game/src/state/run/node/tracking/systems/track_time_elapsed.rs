@@ -14,20 +14,14 @@ mod tests {
     use super::*;
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .init_resource::<RunStats>()
-            .add_systems(FixedUpdate, track_time_elapsed);
-        app
+        use crate::shared::test_utils::TestAppBuilder;
+        TestAppBuilder::new()
+            .with_resource::<RunStats>()
+            .with_system(FixedUpdate, track_time_elapsed)
+            .build()
     }
 
-    fn tick(app: &mut App) {
-        let timestep = app.world().resource::<Time<Fixed>>().timestep();
-        app.world_mut()
-            .resource_mut::<Time<Fixed>>()
-            .accumulate_overstep(timestep);
-        app.update();
-    }
+    use crate::shared::test_utils::tick;
 
     #[test]
     fn accumulates_simulation_time_each_tick() {

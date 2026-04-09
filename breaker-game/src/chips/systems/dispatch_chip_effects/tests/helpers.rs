@@ -1,25 +1,12 @@
 //! Shared test helpers for `dispatch_chip_effects` tests.
 
-use bevy::{ecs::world::CommandQueue, prelude::*};
+use bevy::prelude::*;
 
 use crate::{
     chips::{definition::ChipDefinition, inventory::ChipInventory, resources::ChipCatalog},
     effect::{BoundEffects, StagedEffects},
-    state::{
-        run::chip_select::messages::ChipSelected,
-        types::{AppState, ChipSelectState, GameState, RunState},
-    },
+    state::run::chip_select::messages::ChipSelected,
 };
-
-pub(super) fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
-    let mut queue = CommandQueue::default();
-    let entity = {
-        let mut commands = Commands::new(&mut queue, world);
-        f(&mut commands)
-    };
-    queue.apply(world);
-    entity
-}
 
 /// Resource holding messages to be sent before the dispatch system runs.
 #[derive(Resource, Default)]
@@ -46,49 +33,28 @@ pub(super) fn send_chip_selections(
 /// - `PendingChipSelections` resource
 /// - `send_chip_selections` runs before `dispatch_chip_effects` in `Update`
 pub(super) fn test_app() -> App {
-    use crate::chips::systems::dispatch_chip_effects::dispatch_chip_effects;
+    use crate::{
+        chips::systems::dispatch_chip_effects::dispatch_chip_effects,
+        shared::test_utils::TestAppBuilder,
+    };
 
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .add_plugins(bevy::state::app::StatesPlugin)
-        .init_state::<AppState>()
-        .add_sub_state::<GameState>()
-        .add_sub_state::<RunState>()
-        .add_sub_state::<ChipSelectState>()
-        .add_message::<ChipSelected>()
-        .init_resource::<ChipInventory>()
-        .init_resource::<ChipCatalog>()
-        .init_resource::<PendingChipSelections>();
-
-    // Add the system without run_if guard for direct testing.
-    // The plugin_builds test in plugin.rs covers the state guard.
-    app.add_systems(
-        Update,
-        (
-            send_chip_selections.before(dispatch_chip_effects),
-            dispatch_chip_effects,
-        ),
-    );
-
-    // Navigate to ChipSelectState::Selecting
-    app.world_mut()
-        .resource_mut::<NextState<AppState>>()
-        .set(AppState::Game);
-    app.update();
-    app.world_mut()
-        .resource_mut::<NextState<GameState>>()
-        .set(GameState::Run);
-    app.update();
-    app.world_mut()
-        .resource_mut::<NextState<RunState>>()
-        .set(RunState::ChipSelect);
-    app.update();
-    app.world_mut()
-        .resource_mut::<NextState<ChipSelectState>>()
-        .set(ChipSelectState::Selecting);
-    app.update();
-
-    app
+    TestAppBuilder::new()
+        .with_state_hierarchy()
+        .in_state_chip_selecting()
+        .with_message::<ChipSelected>()
+        .with_resource::<ChipInventory>()
+        .with_resource::<ChipCatalog>()
+        .insert_resource(PendingChipSelections::default())
+        // Add the system without run_if guard for direct testing.
+        // The plugin_builds test in plugin.rs covers the state guard.
+        .with_system(
+            Update,
+            (
+                send_chip_selections.before(dispatch_chip_effects),
+                dispatch_chip_effects,
+            ),
+        )
+        .build()
 }
 
 /// Insert a chip definition into the app's `ChipCatalog`.
@@ -131,18 +97,14 @@ pub(super) fn spawn_bolt(app: &mut App) -> Entity {
     };
     let entity = {
         let world = app.world_mut();
-        let mut queue = CommandQueue::default();
-        let entity = {
-            let mut commands = Commands::new(&mut queue, world);
-            Bolt::builder()
-                .at_position(Vec2::ZERO)
-                .definition(&def)
-                .with_velocity(Velocity2D(Vec2::ZERO))
-                .primary()
-                .headless()
-                .spawn(&mut commands)
-        };
-        queue.apply(world);
+        let entity = Bolt::builder()
+            .at_position(Vec2::ZERO)
+            .definition(&def)
+            .with_velocity(Velocity2D(Vec2::ZERO))
+            .primary()
+            .headless()
+            .spawn(&mut world.commands());
+        world.flush();
         entity
     };
 
@@ -159,22 +121,12 @@ pub(super) fn spawn_bolt(app: &mut App) -> Entity {
 
 /// Spawn a Breaker entity with effect components.
 pub(super) fn spawn_breaker(app: &mut App) -> Entity {
-    use crate::{
-        breaker::{components::Breaker, definition::BreakerDefinition},
-        effect::effects::{
-            bump_force::ActiveBumpForces, damage_boost::ActiveDamageBoosts,
-            size_boost::ActiveSizeBoosts, speed_boost::ActiveSpeedBoosts,
-        },
+    use crate::effect::effects::{
+        bump_force::ActiveBumpForces, damage_boost::ActiveDamageBoosts,
+        size_boost::ActiveSizeBoosts, speed_boost::ActiveSpeedBoosts,
     };
 
-    let def = BreakerDefinition::default();
-    let entity = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = crate::breaker::test_utils::spawn_breaker(app, 0.0, 0.0);
     app.world_mut().entity_mut(entity).insert((
         BoundEffects::default(),
         StagedEffects::default(),
@@ -188,22 +140,12 @@ pub(super) fn spawn_breaker(app: &mut App) -> Entity {
 
 /// Spawn a Breaker entity without `BoundEffects` or `StagedEffects`.
 pub(super) fn spawn_breaker_bare(app: &mut App) -> Entity {
-    use crate::{
-        breaker::{components::Breaker, definition::BreakerDefinition},
-        effect::effects::{
-            bump_force::ActiveBumpForces, damage_boost::ActiveDamageBoosts,
-            size_boost::ActiveSizeBoosts, speed_boost::ActiveSpeedBoosts,
-        },
+    use crate::effect::effects::{
+        bump_force::ActiveBumpForces, damage_boost::ActiveDamageBoosts,
+        size_boost::ActiveSizeBoosts, speed_boost::ActiveSpeedBoosts,
     };
 
-    let def = BreakerDefinition::default();
-    let entity = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = crate::breaker::test_utils::spawn_breaker(app, 0.0, 0.0);
     app.world_mut().entity_mut(entity).insert((
         ActiveBumpForces::default(),
         ActiveSizeBoosts::default(),

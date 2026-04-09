@@ -18,13 +18,15 @@ pub(crate) fn init_clear_remaining(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cells::components::{Cell, RequiredToClear};
+    use crate::{
+        cells::components::{Cell, RequiredToClear},
+        shared::test_utils::TestAppBuilder,
+    };
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_systems(Startup, init_clear_remaining);
-        app
+        TestAppBuilder::new()
+            .with_system(Startup, init_clear_remaining)
+            .build()
     }
 
     #[test]

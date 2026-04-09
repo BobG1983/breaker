@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    shared::{GameRng, PlayfieldConfig},
+    shared::{GameRng, PlayfieldConfig, test_utils::TestAppBuilder},
     state::run::{
         definition::HighlightConfig, messages::HighlightTriggered,
         node::lifecycle::systems::spawn_highlight_text::system::spawn_highlight_text,
@@ -21,18 +21,17 @@ pub(super) fn enqueue_highlights(
 }
 
 pub(super) fn test_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .add_message::<HighlightTriggered>()
-        .init_resource::<HighlightConfig>()
-        .init_resource::<PlayfieldConfig>()
-        .init_resource::<GameRng>()
-        .add_systems(
+    TestAppBuilder::new()
+        .with_message::<HighlightTriggered>()
+        .with_resource::<HighlightConfig>()
+        .with_resource::<PlayfieldConfig>()
+        .with_resource::<GameRng>()
+        .with_system(
             Update,
             (
                 enqueue_highlights.before(spawn_highlight_text),
                 spawn_highlight_text,
             ),
-        );
-    app
+        )
+        .build()
 }

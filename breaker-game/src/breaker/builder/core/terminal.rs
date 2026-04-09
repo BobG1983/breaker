@@ -27,6 +27,7 @@ struct CoreParams {
     // Dimensions
     width: f32,
     height: f32,
+    x_position: f32,
     y_position: f32,
     min_w: f32,
     max_w: f32,
@@ -56,6 +57,7 @@ fn core_params_from(
 ) -> CoreParams {
     let width = optional.override_width.unwrap_or(dims.width);
     let height = optional.override_height.unwrap_or(dims.height);
+    let x_position = optional.override_x_position.unwrap_or(0.0);
     let y_position = optional.override_y_position.unwrap_or(dims.y_position);
     let max_speed = optional.override_max_speed.unwrap_or(mv.max_speed);
     let spread_degrees = optional
@@ -65,6 +67,7 @@ fn core_params_from(
     CoreParams {
         width,
         height,
+        x_position,
         y_position,
         min_w: dims.min_w,
         max_w: dims.max_w,
@@ -101,8 +104,8 @@ fn build_core(params: &CoreParams, optional: &OptionalBreakerData) -> impl Bundl
 
     // Spatial
     let spatial = (
-        Position2D(Vec2::new(0.0, params.y_position)),
-        PreviousPosition(Vec2::new(0.0, params.y_position)),
+        Position2D(Vec2::new(params.x_position, params.y_position)),
+        PreviousPosition(Vec2::new(params.x_position, params.y_position)),
     );
 
     // Scale

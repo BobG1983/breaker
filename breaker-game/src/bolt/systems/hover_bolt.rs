@@ -33,15 +33,10 @@ mod tests {
     use rantzsoft_spatial2d::components::{Position2D, Spatial2D, Velocity2D};
 
     use super::*;
-    use crate::{bolt::components::BoltServing, shared::GameDrawLayer};
-
-    fn tick(app: &mut App) {
-        let timestep = app.world().resource::<Time<Fixed>>().timestep();
-        app.world_mut()
-            .resource_mut::<Time<Fixed>>()
-            .accumulate_overstep(timestep);
-        app.update();
-    }
+    use crate::{
+        bolt::components::BoltServing,
+        shared::{GameDrawLayer, test_utils::tick},
+    };
 
     #[test]
     fn hover_bolt_writes_position2d_tracking_breaker() {

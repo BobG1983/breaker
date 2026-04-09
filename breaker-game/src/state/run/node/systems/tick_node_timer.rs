@@ -30,24 +30,18 @@ mod tests {
     use super::*;
 
     fn test_app(remaining: f32) -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_message::<TimerExpired>()
+        use crate::shared::test_utils::TestAppBuilder;
+        TestAppBuilder::new()
+            .with_message::<TimerExpired>()
             .insert_resource(NodeTimer {
                 remaining,
                 total: remaining,
             })
-            .add_systems(FixedUpdate, tick_node_timer);
-        app
+            .with_system(FixedUpdate, tick_node_timer)
+            .build()
     }
 
-    fn tick(app: &mut App) {
-        let timestep = app.world().resource::<Time<Fixed>>().timestep();
-        app.world_mut()
-            .resource_mut::<Time<Fixed>>()
-            .accumulate_overstep(timestep);
-        app.update();
-    }
+    use crate::shared::test_utils::tick;
 
     fn tick_with_delta(app: &mut App, delta: Duration) {
         app.world_mut()

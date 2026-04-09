@@ -26,18 +26,13 @@ impl Plugin for FxPlugin {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::types::{AppState, GameState, RunState};
 
     #[test]
     fn plugin_builds() {
-        App::new()
-            .add_plugins(MinimalPlugins)
-            .add_plugins(bevy::state::app::StatesPlugin)
-            .init_state::<AppState>()
-            .add_sub_state::<GameState>()
-            .add_sub_state::<RunState>()
-            .add_sub_state::<NodeState>()
-            .add_plugins(FxPlugin)
-            .update();
+        use crate::shared::test_utils::TestAppBuilder;
+
+        let mut app = TestAppBuilder::new().with_state_hierarchy().build();
+        app.add_plugins(FxPlugin);
+        app.update();
     }
 }

@@ -45,23 +45,19 @@ pub(crate) fn tick_chip_timer(
 
 #[cfg(test)]
 mod tests {
-    use bevy::{ecs::message::Messages, state::app::StatesPlugin};
+    use bevy::ecs::message::Messages;
     use rantzsoft_stateflow::ChangeState;
 
     use super::*;
-    use crate::state::types::{AppState, GameState, RunState};
+    use crate::shared::test_utils::TestAppBuilder;
 
     fn test_app(remaining: f32) -> App {
-        let mut app = App::new();
-        app.add_plugins((MinimalPlugins, StatesPlugin))
-            .init_state::<AppState>()
-            .add_sub_state::<GameState>()
-            .add_sub_state::<RunState>()
-            .add_sub_state::<ChipSelectState>()
-            .add_message::<ChangeState<ChipSelectState>>()
+        TestAppBuilder::new()
+            .with_state_hierarchy()
+            .with_message::<ChangeState<ChipSelectState>>()
             .insert_resource(ChipSelectTimer { remaining })
-            .add_systems(Update, tick_chip_timer);
-        app
+            .with_system(Update, tick_chip_timer)
+            .build()
     }
 
     #[test]
@@ -155,19 +151,15 @@ mod tests {
     }
 
     fn test_app_with_offers(remaining: f32, offers: ChipOffers) -> App {
-        let mut app = App::new();
-        app.add_plugins((MinimalPlugins, StatesPlugin))
-            .init_state::<AppState>()
-            .add_sub_state::<GameState>()
-            .add_sub_state::<RunState>()
-            .add_sub_state::<ChipSelectState>()
-            .add_message::<ChangeState<ChipSelectState>>()
+        TestAppBuilder::new()
+            .with_state_hierarchy()
+            .with_message::<ChangeState<ChipSelectState>>()
             .insert_resource(ChipSelectTimer { remaining })
             .insert_resource(offers)
-            .init_resource::<ChipInventory>()
+            .with_resource::<ChipInventory>()
             .insert_resource(ChipSelectConfig::default())
-            .add_systems(Update, tick_chip_timer);
-        app
+            .with_system(Update, tick_chip_timer)
+            .build()
     }
 
     #[test]

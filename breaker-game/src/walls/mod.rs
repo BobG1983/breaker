@@ -9,6 +9,9 @@ mod plugin;
 pub mod registry;
 pub(crate) mod systems;
 
+#[cfg(test)]
+pub(crate) mod test_utils;
+
 pub use definition::WallDefinition;
 pub(crate) use plugin::WallPlugin;
 pub use registry::WallRegistry;

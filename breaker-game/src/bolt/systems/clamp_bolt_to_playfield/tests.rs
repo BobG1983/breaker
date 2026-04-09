@@ -4,7 +4,7 @@ use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 use super::*;
 use crate::{
     bolt::components::{Bolt, BoltServing},
-    shared::{NodeScalingFactor, PlayfieldConfig},
+    shared::NodeScalingFactor,
 };
 
 /// Local alias for the CCD epsilon used in test expected values.
@@ -14,20 +14,15 @@ use crate::{
 const CCD_EPSILON: f32 = 0.01;
 
 fn test_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .init_resource::<PlayfieldConfig>()
-        .add_systems(FixedUpdate, clamp_bolt_to_playfield);
-    app
+    use crate::shared::test_utils::TestAppBuilder;
+
+    TestAppBuilder::new()
+        .with_playfield()
+        .with_system(FixedUpdate, clamp_bolt_to_playfield)
+        .build()
 }
 
-fn tick(app: &mut App) {
-    let timestep = app.world().resource::<Time<Fixed>>().timestep();
-    app.world_mut()
-        .resource_mut::<Time<Fixed>>()
-        .accumulate_overstep(timestep);
-    app.update();
-}
+use crate::shared::test_utils::tick;
 
 /// Default playfield: width=800, height=600 -> left=-400, right=400, top=300, bottom=-300
 const RADIUS: f32 = 6.0;

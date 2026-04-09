@@ -177,13 +177,7 @@ pub(super) fn test_app_cell_wall() -> App {
     app
 }
 
-pub(super) fn tick(app: &mut App) {
-    let timestep = app.world().resource::<Time<Fixed>>().timestep();
-    app.world_mut()
-        .resource_mut::<Time<Fixed>>()
-        .accumulate_overstep(timestep);
-    app.update();
-}
+pub(super) use crate::shared::test_utils::tick;
 
 pub(super) fn impacted_cell_bound_effects() -> BoundEffects {
     BoundEffects(vec![(

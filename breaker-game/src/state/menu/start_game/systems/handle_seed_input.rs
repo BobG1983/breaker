@@ -61,12 +61,12 @@ mod tests {
     use super::*;
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_message::<KeyboardInput>()
-            .init_resource::<SeedEntry>()
-            .add_systems(Update, handle_seed_input);
-        app
+        use crate::shared::test_utils::TestAppBuilder;
+        TestAppBuilder::new()
+            .with_message::<KeyboardInput>()
+            .with_resource::<SeedEntry>()
+            .with_system(Update, handle_seed_input)
+            .build()
     }
 
     fn send_key(app: &mut App, logical_key: Key, text: Option<&str>) {

@@ -63,13 +63,12 @@ pub(crate) fn breaker_cell_collision(
 #[cfg(test)]
 mod tests {
     use bevy::prelude::*;
-    use rantzsoft_physics2d::plugin::RantzPhysics2dPlugin;
     use rantzsoft_spatial2d::components::{GlobalPosition2D, Spatial2D};
 
     use super::*;
     use crate::{
         breaker::components::{BaseHeight, BaseWidth},
-        shared::{GameDrawLayer, NodeScalingFactor},
+        shared::{GameDrawLayer, NodeScalingFactor, test_utils::TestAppBuilder},
     };
 
     // ── Helpers ──────────────────────────────────────────────────────
@@ -87,31 +86,23 @@ mod tests {
     }
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_plugins(RantzPhysics2dPlugin)
-            .add_message::<BreakerImpactCell>()
+        TestAppBuilder::new()
+            .with_physics()
+            .with_message::<BreakerImpactCell>()
             .insert_resource(BreakerCellHitMessages::default())
-            .add_systems(
+            .with_system(
                 FixedUpdate,
                 breaker_cell_collision
                     .after(rantzsoft_physics2d::plugin::PhysicsSystems::MaintainQuadtree),
             )
-            .add_systems(
+            .with_system(
                 FixedUpdate,
                 collect_breaker_cell_hits.after(breaker_cell_collision),
-            );
-        app
+            )
+            .build()
     }
 
-    /// Accumulates one fixed timestep then runs one update.
-    fn tick(app: &mut App) {
-        let timestep = app.world().resource::<Time<Fixed>>().timestep();
-        app.world_mut()
-            .resource_mut::<Time<Fixed>>()
-            .accumulate_overstep(timestep);
-        app.update();
-    }
+    use crate::shared::test_utils::tick;
 
     fn spawn_breaker(app: &mut App, pos: Vec2) -> Entity {
         app.world_mut()

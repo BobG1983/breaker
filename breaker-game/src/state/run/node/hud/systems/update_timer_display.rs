@@ -31,12 +31,12 @@ mod tests {
     use super::*;
 
     fn test_app(remaining: f32, total: f32) -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
+        use crate::shared::test_utils::TestAppBuilder;
+        TestAppBuilder::new()
             .insert_resource(NodeTimer { remaining, total })
             .insert_resource(TimerUiConfig::default())
-            .add_systems(Update, update_timer_display);
-        app
+            .with_system(Update, update_timer_display)
+            .build()
     }
 
     fn spawn_display(app: &mut App) -> Entity {

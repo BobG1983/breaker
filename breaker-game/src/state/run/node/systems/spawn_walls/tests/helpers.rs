@@ -9,6 +9,7 @@ use crate::{
 };
 
 pub(super) fn test_app() -> App {
+    use crate::shared::test_utils::TestAppBuilder;
     let mut registry = WallRegistry::default();
     registry.insert(
         "Wall".to_string(),
@@ -17,11 +18,10 @@ pub(super) fn test_app() -> App {
             ..WallDefinition::default()
         },
     );
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .add_message::<WallsSpawned>()
-        .init_resource::<PlayfieldConfig>()
+    TestAppBuilder::new()
+        .with_message::<WallsSpawned>()
+        .with_resource::<PlayfieldConfig>()
         .insert_resource(registry)
-        .add_systems(Update, spawn_walls);
-    app
+        .with_system(Update, spawn_walls)
+        .build()
 }

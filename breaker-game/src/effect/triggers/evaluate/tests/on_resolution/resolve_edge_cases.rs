@@ -1,7 +1,7 @@
 //! Tests for `ResolveOnCommand` no-op edge cases (Behavior 22) and
 //! On node consumption behavior (Behavior 24).
 
-use bevy::{ecs::world::CommandQueue, prelude::*};
+use bevy::prelude::*;
 
 use super::helpers::*;
 use crate::{
@@ -10,16 +10,6 @@ use crate::{
     cells::components::Cell,
     effect::{commands::ResolveOnCommand, core::*},
 };
-
-fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
-    let mut queue = CommandQueue::default();
-    let entity = {
-        let mut commands = Commands::new(&mut queue, world);
-        f(&mut commands)
-    };
-    queue.apply(world);
-    entity
-}
 
 // -----------------------------------------------------------------------
 // Behavior 22: No matching entities -- no-op
@@ -31,13 +21,12 @@ fn resolve_on_command_with_no_matching_entities_is_noop() {
 
     // Spawn a Breaker but target AllCells -- no Cell entities exist
     let def = crate::breaker::definition::BreakerDefinition::default();
-    let breaker = spawn_in_world(&mut world, |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let breaker = Breaker::builder()
+        .definition(&def)
+        .headless()
+        .primary()
+        .spawn(&mut world.commands());
+    world.flush();
     world
         .entity_mut(breaker)
         .insert((BoundEffects::default(), StagedEffects::default()));

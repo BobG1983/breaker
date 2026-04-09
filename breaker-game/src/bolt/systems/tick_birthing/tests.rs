@@ -7,19 +7,14 @@ use crate::{
 };
 
 fn test_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .add_systems(FixedUpdate, tick_birthing);
-    app
+    use crate::shared::test_utils::TestAppBuilder;
+
+    TestAppBuilder::new()
+        .with_system(FixedUpdate, tick_birthing)
+        .build()
 }
 
-fn tick(app: &mut App) {
-    let timestep = app.world().resource::<Time<Fixed>>().timestep();
-    app.world_mut()
-        .resource_mut::<Time<Fixed>>()
-        .accumulate_overstep(timestep);
-    app.update();
-}
+use crate::shared::test_utils::tick;
 
 // Behavior 3: tick_birthing lerps scale from zero toward target_scale each tick
 #[test]

@@ -1,25 +1,14 @@
 //! Build tests — verify that dimension transitions store correct values for spawn.
 //! Behaviors 4, 6, 8: `.position()`, `.dimensions()`, `.hp()` store values in spawned entity.
 
-use bevy::{ecs::world::CommandQueue, prelude::*};
+use bevy::prelude::*;
 use rantzsoft_physics2d::aabb::Aabb2D;
 use rantzsoft_spatial2d::components::{Position2D, Scale2D};
 
-use crate::cells::components::{Cell, CellHealth, CellHeight, CellWidth};
-
-/// Spawns a cell via Commands backed by a `CommandQueue`, then applies the queue.
-fn spawn_cell_in_world(
-    world: &mut World,
-    build_fn: impl FnOnce(&mut Commands) -> Entity,
-) -> Entity {
-    let mut queue = CommandQueue::default();
-    let entity = {
-        let mut commands = Commands::new(&mut queue, world);
-        build_fn(&mut commands)
-    };
-    queue.apply(world);
-    entity
-}
+use crate::cells::{
+    components::{Cell, CellHealth, CellHeight, CellWidth},
+    test_utils::spawn_cell_in_world,
+};
 
 // ── Behavior 4: .position(pos) stores position for spawn ────────────────────
 

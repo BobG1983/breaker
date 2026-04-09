@@ -30,24 +30,18 @@ mod tests {
     }
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_message::<CellDestroyedAt>()
-            .init_resource::<RunStats>()
-            .add_systems(
+        use crate::shared::test_utils::TestAppBuilder;
+        TestAppBuilder::new()
+            .with_message::<CellDestroyedAt>()
+            .with_resource::<RunStats>()
+            .with_system(
                 FixedUpdate,
                 (enqueue_messages, track_cells_destroyed).chain(),
-            );
-        app
+            )
+            .build()
     }
 
-    fn tick(app: &mut App) {
-        let timestep = app.world().resource::<Time<Fixed>>().timestep();
-        app.world_mut()
-            .resource_mut::<Time<Fixed>>()
-            .accumulate_overstep(timestep);
-        app.update();
-    }
+    use crate::shared::test_utils::tick;
 
     #[test]
     fn increments_cells_destroyed_for_each_message() {

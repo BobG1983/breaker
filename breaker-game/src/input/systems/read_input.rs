@@ -105,15 +105,16 @@ mod tests {
     use super::*;
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .init_resource::<InputActions>()
-            .init_resource::<InputConfig>()
-            .init_resource::<DoubleTapState>()
-            .init_resource::<ButtonInput<KeyCode>>()
-            .add_message::<KeyboardInput>()
-            .add_systems(Update, read_input_actions);
-        app
+        use crate::shared::test_utils::TestAppBuilder;
+
+        TestAppBuilder::new()
+            .with_resource::<InputActions>()
+            .with_resource::<InputConfig>()
+            .with_resource::<DoubleTapState>()
+            .with_resource::<ButtonInput<KeyCode>>()
+            .with_message::<KeyboardInput>()
+            .with_system(Update, read_input_actions)
+            .build()
     }
 
     fn send_key_press(app: &mut App, key: KeyCode) {

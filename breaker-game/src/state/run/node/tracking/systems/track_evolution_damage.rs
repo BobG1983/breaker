@@ -22,8 +22,11 @@ pub(crate) fn track_evolution_damage(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::run::{
-        node::lifecycle::systems::reset_highlight_tracker, resources::HighlightTracker,
+    use crate::{
+        shared::test_utils::TestAppBuilder,
+        state::run::{
+            node::lifecycle::systems::reset_highlight_tracker, resources::HighlightTracker,
+        },
     };
 
     #[derive(Resource)]
@@ -36,24 +39,17 @@ mod tests {
     }
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_message::<DamageCell>()
-            .init_resource::<HighlightTracker>()
-            .add_systems(
+        TestAppBuilder::new()
+            .with_message::<DamageCell>()
+            .with_resource::<HighlightTracker>()
+            .with_system(
                 FixedUpdate,
                 (enqueue_messages, track_evolution_damage).chain(),
-            );
-        app
+            )
+            .build()
     }
 
-    fn tick(app: &mut App) {
-        let timestep = app.world().resource::<Time<Fixed>>().timestep();
-        app.world_mut()
-            .resource_mut::<Time<Fixed>>()
-            .accumulate_overstep(timestep);
-        app.update();
-    }
+    use crate::shared::test_utils::tick;
 
     // --- Behavior 1: Accumulates damage for a single evolution chip ---
 
@@ -215,10 +211,10 @@ mod tests {
 
     #[test]
     fn evolution_damage_persists_across_reset_highlight_tracker() {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .init_resource::<HighlightTracker>()
-            .add_systems(Update, reset_highlight_tracker);
+        let mut app = TestAppBuilder::new()
+            .with_resource::<HighlightTracker>()
+            .with_system(Update, reset_highlight_tracker)
+            .build();
 
         // Pre-seed evolution damage
         app.world_mut()

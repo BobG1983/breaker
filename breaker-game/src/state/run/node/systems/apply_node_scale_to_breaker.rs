@@ -29,29 +29,14 @@ pub(crate) fn apply_node_scale_to_breaker(
 
 #[cfg(test)]
 mod tests {
-    use bevy::ecs::world::CommandQueue;
-
     use super::*;
-    use crate::{
-        breaker::definition::BreakerDefinition,
-        state::run::node::{NodeLayout, definition::NodePool},
-    };
-
-    fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
-        let mut queue = CommandQueue::default();
-        let entity = {
-            let mut commands = Commands::new(&mut queue, world);
-            f(&mut commands)
-        };
-        queue.apply(world);
-        entity
-    }
+    use crate::state::run::node::{NodeLayout, definition::NodePool};
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_systems(Update, apply_node_scale_to_breaker);
-        app
+        use crate::shared::test_utils::TestAppBuilder;
+        TestAppBuilder::new()
+            .with_system(Update, apply_node_scale_to_breaker)
+            .build()
     }
 
     fn make_layout(entity_scale: f32) -> NodeLayout {
@@ -77,14 +62,7 @@ mod tests {
 
         app.insert_resource(ActiveNodeLayout(make_layout(0.7)));
 
-        let def = BreakerDefinition::default();
-        let entity = spawn_in_world(app.world_mut(), |commands| {
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .spawn(commands)
-        });
+        let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
 
         app.update();
 
@@ -109,14 +87,7 @@ mod tests {
 
         app.insert_resource(ActiveNodeLayout(make_layout(0.9)));
 
-        let def = BreakerDefinition::default();
-        let entity = spawn_in_world(app.world_mut(), |commands| {
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .spawn(commands)
-        });
+        let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
         app.world_mut()
             .entity_mut(entity)
             .insert(NodeScalingFactor(0.7));
@@ -141,14 +112,7 @@ mod tests {
         // Then: no panic, no NodeScalingFactor inserted
         let mut app = test_app();
 
-        let def = BreakerDefinition::default();
-        let entity = spawn_in_world(app.world_mut(), |commands| {
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .spawn(commands)
-        });
+        let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
 
         app.update();
 

@@ -23,22 +23,22 @@ pub(crate) fn handle_run_end_input(
 
 #[cfg(test)]
 mod tests {
-    use bevy::{ecs::message::Messages, state::app::StatesPlugin};
+    use bevy::ecs::message::Messages;
     use rantzsoft_stateflow::ChangeState;
 
     use super::*;
-    use crate::state::types::{AppState, GameState, RunState};
+    use crate::{
+        shared::test_utils::TestAppBuilder,
+        state::types::{AppState, GameState, RunState},
+    };
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins((MinimalPlugins, StatesPlugin))
-            .init_state::<AppState>()
-            .add_sub_state::<GameState>()
-            .add_sub_state::<RunState>()
-            .add_sub_state::<RunEndState>()
-            .add_message::<ChangeState<RunEndState>>()
-            .init_resource::<InputActions>()
-            .add_systems(Update, handle_run_end_input);
+        let mut app = TestAppBuilder::new()
+            .with_state_hierarchy()
+            .with_message::<ChangeState<RunEndState>>()
+            .with_resource::<InputActions>()
+            .with_system(Update, handle_run_end_input)
+            .build();
         // Navigate to RunEndState
         app.world_mut()
             .resource_mut::<NextState<AppState>>()

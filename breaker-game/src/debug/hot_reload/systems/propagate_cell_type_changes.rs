@@ -85,11 +85,14 @@ mod tests {
     }
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
-            .init_asset::<ColorMaterial>()
-            .init_resource::<CellTypeRegistry>()
-            .add_systems(Update, propagate_cell_type_changes);
+        use crate::shared::test_utils::TestAppBuilder;
+
+        let mut app = TestAppBuilder::new()
+            .with_resource::<CellTypeRegistry>()
+            .with_system(Update, propagate_cell_type_changes)
+            .build();
+        app.add_plugins(AssetPlugin::default());
+        app.init_asset::<ColorMaterial>();
         app
     }
 

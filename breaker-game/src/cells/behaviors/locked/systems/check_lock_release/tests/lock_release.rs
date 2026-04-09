@@ -119,20 +119,21 @@ fn enqueue_cell_destroyed_at(
 }
 
 fn lock_release_app_cell_destroyed_at() -> App {
-    use crate::cells::behaviors::locked::systems::check_lock_release;
+    use crate::{
+        cells::behaviors::locked::systems::check_lock_release, shared::test_utils::TestAppBuilder,
+    };
 
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .add_message::<CellDestroyedAt>()
-        .init_resource::<TestCellDestroyedAtMessages>()
-        .add_systems(
+    TestAppBuilder::new()
+        .with_message::<CellDestroyedAt>()
+        .with_resource::<TestCellDestroyedAtMessages>()
+        .with_system(
             FixedUpdate,
             (
                 enqueue_cell_destroyed_at.before(check_lock_release),
                 check_lock_release,
             ),
-        );
-    app
+        )
+        .build()
 }
 
 #[test]

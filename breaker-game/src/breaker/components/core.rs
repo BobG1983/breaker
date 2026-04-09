@@ -31,20 +31,7 @@ pub struct BreakerInitialized;
 
 #[cfg(test)]
 mod tests {
-    use bevy::ecs::world::CommandQueue;
-
     use super::*;
-    use crate::breaker::definition::BreakerDefinition;
-
-    fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
-        let mut queue = CommandQueue::default();
-        let entity = {
-            let mut commands = Commands::new(&mut queue, world);
-            f(&mut commands)
-        };
-        queue.apply(world);
-        entity
-    }
 
     // ── Breaker #[require] tests ─────────────────────────────────
 
@@ -53,14 +40,7 @@ mod tests {
         use rantzsoft_spatial2d::components::Spatial2D;
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        let def = BreakerDefinition::default();
-        let entity = spawn_in_world(app.world_mut(), |commands| {
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .spawn(commands)
-        });
+        let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
         app.update();
         assert!(
             app.world().get::<Spatial2D>(entity).is_some(),
@@ -73,14 +53,7 @@ mod tests {
         use rantzsoft_spatial2d::components::InterpolateTransform2D;
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        let def = BreakerDefinition::default();
-        let entity = spawn_in_world(app.world_mut(), |commands| {
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .spawn(commands)
-        });
+        let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
         app.update();
         assert!(
             app.world().get::<InterpolateTransform2D>(entity).is_some(),
@@ -95,14 +68,7 @@ mod tests {
         use crate::state::types::RunState;
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        let def = BreakerDefinition::default();
-        let entity = spawn_in_world(app.world_mut(), |commands| {
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .spawn(commands)
-        });
+        let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
         app.update();
         assert!(
             app.world().get::<CleanupOnExit<RunState>>(entity).is_some(),
@@ -117,14 +83,7 @@ mod tests {
         use crate::state::types::NodeState;
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        let def = BreakerDefinition::default();
-        let entity = spawn_in_world(app.world_mut(), |commands| {
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .spawn(commands)
-        });
+        let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
         app.update();
         assert!(
             app.world()
@@ -143,14 +102,7 @@ mod tests {
         use crate::shared::{BOLT_LAYER, BREAKER_LAYER};
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        let def = BreakerDefinition::default();
-        let entity = spawn_in_world(app.world_mut(), |commands| {
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .spawn(commands)
-        });
+        let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
         app.update();
         let layers = app
             .world()

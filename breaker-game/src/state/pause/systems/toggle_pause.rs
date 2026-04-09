@@ -27,13 +27,13 @@ pub(crate) fn toggle_pause(keyboard: Res<ButtonInput<KeyCode>>, mut time: ResMut
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::shared::test_utils::TestAppBuilder;
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .init_resource::<ButtonInput<KeyCode>>()
-            .add_systems(Update, toggle_pause);
-        app
+        TestAppBuilder::new()
+            .with_resource::<ButtonInput<KeyCode>>()
+            .with_system(Update, toggle_pause)
+            .build()
     }
 
     /// Simulates a single Escape key press-and-release cycle.

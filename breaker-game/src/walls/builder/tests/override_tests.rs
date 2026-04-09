@@ -1,19 +1,9 @@
-use bevy::{ecs::world::CommandQueue, prelude::*};
+use bevy::prelude::*;
 use rantzsoft_physics2d::aabb::Aabb2D;
 use rantzsoft_spatial2d::components::{Position2D, Scale2D};
 
 use super::helpers::{custom_wall_definition, default_playfield};
 use crate::walls::{components::Wall, definition::WallDefinition};
-
-fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
-    let mut queue = CommandQueue::default();
-    let entity = {
-        let mut commands = Commands::new(&mut queue, world);
-        f(&mut commands)
-    };
-    queue.apply(world);
-    entity
-}
 
 // ── Behavior 8: .with_half_thickness() stores override ──
 
@@ -22,12 +12,11 @@ fn with_half_thickness_overrides_position() {
     let pf = default_playfield();
     let mut world = World::new();
 
-    let entity = spawn_in_world(&mut world, |commands| {
-        Wall::builder()
-            .left(&pf)
-            .with_half_thickness(60.0)
-            .spawn(commands)
-    });
+    let entity = Wall::builder()
+        .left(&pf)
+        .with_half_thickness(60.0)
+        .spawn(&mut world.commands());
+    world.flush();
 
     let pos = world.get::<Position2D>(entity).unwrap();
     assert!(
@@ -66,12 +55,11 @@ fn with_half_thickness_zero_produces_edge_position() {
     let pf = default_playfield();
     let mut world = World::new();
 
-    let entity = spawn_in_world(&mut world, |commands| {
-        Wall::builder()
-            .left(&pf)
-            .with_half_thickness(0.0)
-            .spawn(commands)
-    });
+    let entity = Wall::builder()
+        .left(&pf)
+        .with_half_thickness(0.0)
+        .spawn(&mut world.commands());
+    world.flush();
 
     let pos = world.get::<Position2D>(entity).unwrap();
     assert!(
@@ -157,13 +145,12 @@ fn override_beats_definition_when_definition_first() {
     };
     let mut world = World::new();
 
-    let entity = spawn_in_world(&mut world, |commands| {
-        Wall::builder()
-            .left(&pf)
-            .definition(&def)
-            .with_half_thickness(60.0)
-            .spawn(commands)
-    });
+    let entity = Wall::builder()
+        .left(&pf)
+        .definition(&def)
+        .with_half_thickness(60.0)
+        .spawn(&mut world.commands());
+    world.flush();
 
     let pos = world.get::<Position2D>(entity).unwrap();
     assert!(
@@ -182,13 +169,12 @@ fn override_beats_definition_when_override_first() {
     };
     let mut world = World::new();
 
-    let entity = spawn_in_world(&mut world, |commands| {
-        Wall::builder()
-            .left(&pf)
-            .with_half_thickness(60.0)
-            .definition(&def)
-            .spawn(commands)
-    });
+    let entity = Wall::builder()
+        .left(&pf)
+        .with_half_thickness(60.0)
+        .definition(&def)
+        .spawn(&mut world.commands());
+    world.flush();
 
     let pos = world.get::<Position2D>(entity).unwrap();
     assert!(

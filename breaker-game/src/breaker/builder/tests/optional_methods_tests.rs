@@ -1,6 +1,8 @@
-use bevy::{ecs::world::CommandQueue, prelude::*};
+use bevy::prelude::*;
 use rantzsoft_physics2d::aabb::Aabb2D;
-use rantzsoft_spatial2d::components::{MaxSpeed, Position2D, PreviousScale, Scale2D};
+use rantzsoft_spatial2d::components::{
+    MaxSpeed, Position2D, PreviousPosition, PreviousScale, Scale2D,
+};
 
 use super::helpers::test_breaker_definition;
 use crate::{
@@ -12,30 +14,19 @@ use crate::{
     shared::{BaseHeight, BaseWidth},
 };
 
-fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
-    let mut queue = CommandQueue::default();
-    let entity = {
-        let mut commands = Commands::new(&mut queue, world);
-        f(&mut commands)
-    };
-    queue.apply(world);
-    entity
-}
-
 // ── Behavior 19: .with_max_speed() overrides definition max_speed ──
 
 #[test]
 fn with_max_speed_overrides_definition_value() {
     let def = test_breaker_definition(); // max_speed: 1000.0
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .with_max_speed(700.0)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = Breaker::builder()
+        .definition(&def)
+        .with_max_speed(700.0)
+        .headless()
+        .primary()
+        .spawn(&mut world.commands());
+    world.flush();
 
     let ms = world.get::<MaxSpeed>(entity);
     assert!(ms.is_some(), "entity should have MaxSpeed");
@@ -49,14 +40,13 @@ fn with_max_speed_overrides_definition_value() {
 fn with_max_speed_zero_stores_zero() {
     let def = test_breaker_definition();
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .with_max_speed(0.0)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = Breaker::builder()
+        .definition(&def)
+        .with_max_speed(0.0)
+        .headless()
+        .primary()
+        .spawn(&mut world.commands());
+    world.flush();
 
     let ms = world.get::<MaxSpeed>(entity);
     assert!(ms.is_some(), "entity should have MaxSpeed");
@@ -73,14 +63,13 @@ fn with_width_overrides_definition_value() {
     let def = test_breaker_definition();
     let defaults = BreakerDefinition::default();
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .with_width(200.0)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = Breaker::builder()
+        .definition(&def)
+        .with_width(200.0)
+        .headless()
+        .primary()
+        .spawn(&mut world.commands());
+    world.flush();
 
     let bw = world.get::<BaseWidth>(entity);
     assert!(bw.is_some(), "entity should have BaseWidth");
@@ -123,14 +112,13 @@ fn with_height_overrides_definition_value() {
     let def = test_breaker_definition();
     let defaults = BreakerDefinition::default();
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .with_height(30.0)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = Breaker::builder()
+        .definition(&def)
+        .with_height(30.0)
+        .headless()
+        .primary()
+        .spawn(&mut world.commands());
+    world.flush();
 
     let bh = world.get::<BaseHeight>(entity);
     assert!(bh.is_some(), "entity should have BaseHeight");
@@ -171,20 +159,87 @@ fn with_height_overrides_definition_value() {
     );
 }
 
+// ── at_position() sets both x and y ──
+
+#[test]
+fn at_position_sets_both_x_and_y() {
+    let def = test_breaker_definition();
+    let mut world = World::new();
+    let entity = Breaker::builder()
+        .definition(&def)
+        .at_position(Vec2::new(150.0, -300.0))
+        .headless()
+        .primary()
+        .spawn(&mut world.commands());
+    world.flush();
+
+    let pos = world
+        .get::<Position2D>(entity)
+        .expect("should have Position2D");
+    assert!(
+        (pos.0.x - 150.0).abs() < f32::EPSILON,
+        "Position2D.x should be 150.0, got {}",
+        pos.0.x
+    );
+    assert!(
+        (pos.0.y - (-300.0)).abs() < f32::EPSILON,
+        "Position2D.y should be -300.0, got {}",
+        pos.0.y
+    );
+
+    let prev = world
+        .get::<PreviousPosition>(entity)
+        .expect("should have PreviousPosition");
+    assert!(
+        (prev.0.x - 150.0).abs() < f32::EPSILON,
+        "PreviousPosition.x should be 150.0"
+    );
+
+    let by = world
+        .get::<BreakerBaseY>(entity)
+        .expect("should have BreakerBaseY");
+    assert!(
+        (by.0 - (-300.0)).abs() < f32::EPSILON,
+        "BreakerBaseY should be -300.0"
+    );
+}
+
+#[test]
+fn at_position_zero_overrides_definition_defaults() {
+    let def = test_breaker_definition(); // y_position: -250.0
+    let mut world = World::new();
+    let entity = Breaker::builder()
+        .definition(&def)
+        .at_position(Vec2::ZERO)
+        .headless()
+        .primary()
+        .spawn(&mut world.commands());
+    world.flush();
+
+    let pos = world.get::<Position2D>(entity).expect("should exist");
+    assert!(
+        pos.0.x.abs() < f32::EPSILON,
+        "explicit zero x should not fall back to any default"
+    );
+    assert!(
+        pos.0.y.abs() < f32::EPSILON,
+        "explicit zero y should override definition y_position (-250.0)"
+    );
+}
+
 // ── Behavior 22: .with_y_position() overrides definition y_position ──
 
 #[test]
 fn with_y_position_overrides_definition_value() {
     let def = test_breaker_definition(); // y_position: -250.0
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .with_y_position(-300.0)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = Breaker::builder()
+        .definition(&def)
+        .with_y_position(-300.0)
+        .headless()
+        .primary()
+        .spawn(&mut world.commands());
+    world.flush();
 
     let by = world.get::<BreakerBaseY>(entity);
     assert!(by.is_some(), "entity should have BreakerBaseY");
@@ -207,14 +262,13 @@ fn with_y_position_overrides_definition_value() {
 fn with_reflection_spread_overrides_definition_value() {
     let def = test_breaker_definition(); // reflection_spread: 75.0
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .with_reflection_spread(60.0)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = Breaker::builder()
+        .definition(&def)
+        .with_reflection_spread(60.0)
+        .headless()
+        .primary()
+        .spawn(&mut world.commands());
+    world.flush();
 
     let spread = world.get::<BreakerReflectionSpread>(entity);
     assert!(
@@ -230,14 +284,13 @@ fn with_reflection_spread_overrides_definition_value() {
 fn with_lives_some_sets_lives_count() {
     let def = test_breaker_definition();
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .with_lives(Some(3))
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = Breaker::builder()
+        .definition(&def)
+        .with_lives(Some(3))
+        .headless()
+        .primary()
+        .spawn(&mut world.commands());
+    world.flush();
 
     let lives = world.get::<LivesCount>(entity);
     assert!(lives.is_some(), "entity should have LivesCount");
@@ -248,14 +301,13 @@ fn with_lives_some_sets_lives_count() {
 fn with_lives_none_sets_infinite_lives() {
     let def = test_breaker_definition();
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .with_lives(None)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = Breaker::builder()
+        .definition(&def)
+        .with_lives(None)
+        .headless()
+        .primary()
+        .spawn(&mut world.commands());
+    world.flush();
 
     let lives = world.get::<LivesCount>(entity);
     assert!(lives.is_some(), "entity should have LivesCount");
@@ -270,14 +322,13 @@ fn with_lives_none_sets_infinite_lives() {
 fn with_lives_zero_stores_zero() {
     let def = test_breaker_definition();
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .with_lives(Some(0))
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = Breaker::builder()
+        .definition(&def)
+        .with_lives(Some(0))
+        .headless()
+        .primary()
+        .spawn(&mut world.commands());
+    world.flush();
 
     let lives = world.get::<LivesCount>(entity);
     assert!(lives.is_some(), "entity should have LivesCount");
@@ -291,13 +342,12 @@ fn without_with_lives_uses_definition_life_pool() {
     let mut def = test_breaker_definition();
     def.life_pool = Some(3);
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = Breaker::builder()
+        .definition(&def)
+        .headless()
+        .primary()
+        .spawn(&mut world.commands());
+    world.flush();
 
     let lives = world.get::<LivesCount>(entity);
     assert!(lives.is_some(), "entity should have LivesCount");
@@ -312,13 +362,12 @@ fn without_with_lives_uses_definition_life_pool() {
 fn without_with_lives_definition_none_produces_infinite() {
     let def = test_breaker_definition(); // life_pool: None
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = Breaker::builder()
+        .definition(&def)
+        .headless()
+        .primary()
+        .spawn(&mut world.commands());
+    world.flush();
 
     let lives = world.get::<LivesCount>(entity);
     assert!(lives.is_some(), "entity should have LivesCount");
@@ -333,75 +382,74 @@ fn without_with_lives_definition_none_produces_infinite() {
 fn without_definition_without_with_lives_defaults_to_infinite() {
     let defaults = BreakerDefinition::default();
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Breaker::builder()
-            .dimensions(defaults.width, defaults.height, defaults.y_position)
-            .movement(crate::breaker::builder::core::MovementSettings {
-                max_speed: defaults.max_speed,
+    let entity = Breaker::builder()
+        .dimensions(defaults.width, defaults.height, defaults.y_position)
+        .movement(crate::breaker::builder::core::MovementSettings {
+            max_speed: defaults.max_speed,
 
-                acceleration: defaults.acceleration,
+            acceleration: defaults.acceleration,
 
-                deceleration: defaults.deceleration,
+            deceleration: defaults.deceleration,
 
-                decel_ease: defaults.decel_ease,
+            decel_ease: defaults.decel_ease,
 
-                decel_ease_strength: defaults.decel_ease_strength,
-            })
-            .dashing(crate::breaker::builder::core::DashSettings {
-                dash: crate::breaker::builder::core::DashParams {
-                    speed_multiplier: defaults.dash_speed_multiplier,
+            decel_ease_strength: defaults.decel_ease_strength,
+        })
+        .dashing(crate::breaker::builder::core::DashSettings {
+            dash: crate::breaker::builder::core::DashParams {
+                speed_multiplier: defaults.dash_speed_multiplier,
 
-                    duration: defaults.dash_duration,
+                duration: defaults.dash_duration,
 
-                    tilt_angle: defaults.dash_tilt_angle,
+                tilt_angle: defaults.dash_tilt_angle,
 
-                    tilt_ease: defaults.dash_tilt_ease,
-                },
+                tilt_ease: defaults.dash_tilt_ease,
+            },
 
-                brake: crate::breaker::builder::core::BrakeParams {
-                    tilt_angle: defaults.brake_tilt_angle,
+            brake: crate::breaker::builder::core::BrakeParams {
+                tilt_angle: defaults.brake_tilt_angle,
 
-                    tilt_duration: defaults.brake_tilt_duration,
+                tilt_duration: defaults.brake_tilt_duration,
 
-                    tilt_ease: defaults.brake_tilt_ease,
+                tilt_ease: defaults.brake_tilt_ease,
 
-                    decel_multiplier: defaults.brake_decel_multiplier,
-                },
+                decel_multiplier: defaults.brake_decel_multiplier,
+            },
 
-                settle: crate::breaker::builder::core::SettleParams {
-                    duration: defaults.settle_duration,
+            settle: crate::breaker::builder::core::SettleParams {
+                duration: defaults.settle_duration,
 
-                    tilt_ease: defaults.settle_tilt_ease,
-                },
-            })
-            .spread(defaults.reflection_spread)
-            .bump(crate::breaker::builder::core::BumpSettings {
-                perfect_window: defaults.perfect_window,
+                tilt_ease: defaults.settle_tilt_ease,
+            },
+        })
+        .spread(defaults.reflection_spread)
+        .bump(crate::breaker::builder::core::BumpSettings {
+            perfect_window: defaults.perfect_window,
 
-                early_window: defaults.early_window,
+            early_window: defaults.early_window,
 
-                late_window: defaults.late_window,
+            late_window: defaults.late_window,
 
-                perfect_cooldown: defaults.perfect_bump_cooldown,
+            perfect_cooldown: defaults.perfect_bump_cooldown,
 
-                weak_cooldown: defaults.weak_bump_cooldown,
+            weak_cooldown: defaults.weak_bump_cooldown,
 
-                feedback: crate::breaker::builder::core::BumpFeedbackSettings {
-                    duration: defaults.bump_visual_duration,
+            feedback: crate::breaker::builder::core::BumpFeedbackSettings {
+                duration: defaults.bump_visual_duration,
 
-                    peak: defaults.bump_visual_peak,
+                peak: defaults.bump_visual_peak,
 
-                    peak_fraction: defaults.bump_visual_peak_fraction,
+                peak_fraction: defaults.bump_visual_peak_fraction,
 
-                    rise_ease: defaults.bump_visual_rise_ease,
+                rise_ease: defaults.bump_visual_rise_ease,
 
-                    fall_ease: defaults.bump_visual_fall_ease,
-                },
-            })
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+                fall_ease: defaults.bump_visual_fall_ease,
+            },
+        })
+        .headless()
+        .primary()
+        .spawn(&mut world.commands());
+    world.flush();
 
     let lives = world.get::<LivesCount>(entity);
     assert!(

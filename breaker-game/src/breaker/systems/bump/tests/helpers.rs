@@ -12,6 +12,7 @@ use crate::{
         systems::bump::{grade_bump, update_bump},
     },
     input::resources::{GameAction, InputActions},
+    shared::test_utils::TestAppBuilder,
 };
 
 #[derive(Resource)]
@@ -68,33 +69,25 @@ pub(super) fn bump_param_bundle(
 }
 
 pub(super) fn update_bump_test_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .init_resource::<InputActions>()
-        .add_message::<BumpPerformed>()
-        .add_message::<BumpWhiffed>()
-        .init_resource::<CapturedBumps>()
-        .init_resource::<CapturedWhiffs>()
+    TestAppBuilder::new()
+        .with_resource::<InputActions>()
+        .with_message::<BumpPerformed>()
+        .with_message::<BumpWhiffed>()
+        .with_resource::<CapturedBumps>()
+        .with_resource::<CapturedWhiffs>()
         .insert_resource(TestInputActive(false))
-        .add_systems(
+        .with_system(
             FixedUpdate,
             (
                 set_bump_action.before(update_bump),
                 update_bump,
                 (capture_bumps, capture_whiffs).after(update_bump),
             ),
-        );
-    app
+        )
+        .build()
 }
 
-/// Accumulates one fixed timestep of overstep, then runs one update.
-pub(super) fn tick(app: &mut App) {
-    let timestep = app.world().resource::<Time<Fixed>>().timestep();
-    app.world_mut()
-        .resource_mut::<Time<Fixed>>()
-        .accumulate_overstep(timestep);
-    app.update();
-}
+pub(super) use crate::shared::test_utils::tick;
 
 #[derive(Resource)]
 pub(super) struct TestHitMessage(pub Option<BoltImpactBreaker>);
@@ -109,38 +102,36 @@ pub(super) fn enqueue_hit(
 }
 
 pub(super) fn grade_bump_test_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .add_message::<BoltImpactBreaker>()
-        .add_message::<BumpPerformed>()
-        .add_message::<BumpWhiffed>()
-        .init_resource::<CapturedBumps>()
+    TestAppBuilder::new()
+        .with_message::<BoltImpactBreaker>()
+        .with_message::<BumpPerformed>()
+        .with_message::<BumpWhiffed>()
+        .with_resource::<CapturedBumps>()
         .insert_resource(TestHitMessage(None))
-        .add_systems(
+        .with_system(
             FixedUpdate,
             (
                 enqueue_hit.before(grade_bump),
                 grade_bump,
                 capture_bumps.after(grade_bump),
             ),
-        );
-    app
+        )
+        .build()
 }
 
 /// App that runs both `update_bump` and `grade_bump` with production ordering,
 /// plus a hit injector and message captures.
 pub(super) fn combined_bump_test_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .init_resource::<InputActions>()
-        .add_message::<BoltImpactBreaker>()
-        .add_message::<BumpPerformed>()
-        .add_message::<BumpWhiffed>()
-        .init_resource::<CapturedBumps>()
-        .init_resource::<CapturedWhiffs>()
+    TestAppBuilder::new()
+        .with_resource::<InputActions>()
+        .with_message::<BoltImpactBreaker>()
+        .with_message::<BumpPerformed>()
+        .with_message::<BumpWhiffed>()
+        .with_resource::<CapturedBumps>()
+        .with_resource::<CapturedWhiffs>()
         .insert_resource(TestInputActive(false))
         .insert_resource(TestHitMessage(None))
-        .add_systems(
+        .with_system(
             FixedUpdate,
             (
                 set_bump_action.before(update_bump),
@@ -149,8 +140,8 @@ pub(super) fn combined_bump_test_app() -> App {
                 grade_bump.after(update_bump),
                 (capture_bumps, capture_whiffs).after(grade_bump),
             ),
-        );
-    app
+        )
+        .build()
 }
 
 #[derive(Resource)]

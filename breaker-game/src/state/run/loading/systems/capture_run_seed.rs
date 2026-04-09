@@ -33,15 +33,15 @@ pub(crate) fn capture_run_seed(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::shared::test_utils::TestAppBuilder;
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .init_resource::<RunStats>()
-            .init_resource::<GameRng>()
-            .init_resource::<RunSeed>()
-            .add_systems(Update, capture_run_seed);
-        app
+        TestAppBuilder::new()
+            .with_resource::<RunStats>()
+            .with_resource::<GameRng>()
+            .with_resource::<RunSeed>()
+            .with_system(Update, capture_run_seed)
+            .build()
     }
 
     #[test]

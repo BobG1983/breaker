@@ -34,22 +34,16 @@ mod tests {
     }
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_message::<BoltLost>()
-            .init_resource::<RunStats>()
-            .init_resource::<HighlightTracker>()
-            .add_systems(FixedUpdate, (enqueue_messages, track_bolts_lost).chain());
-        app
+        use crate::shared::test_utils::TestAppBuilder;
+        TestAppBuilder::new()
+            .with_message::<BoltLost>()
+            .with_resource::<RunStats>()
+            .with_resource::<HighlightTracker>()
+            .with_system(FixedUpdate, (enqueue_messages, track_bolts_lost).chain())
+            .build()
     }
 
-    fn tick(app: &mut App) {
-        let timestep = app.world().resource::<Time<Fixed>>().timestep();
-        app.world_mut()
-            .resource_mut::<Time<Fixed>>()
-            .accumulate_overstep(timestep);
-        app.update();
-    }
+    use crate::shared::test_utils::tick;
 
     #[test]
     fn increments_bolts_lost_for_each_message() {

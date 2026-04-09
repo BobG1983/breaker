@@ -78,12 +78,13 @@ pub(crate) fn handle_run_setup_input(
 
 #[cfg(test)]
 mod tests {
-    use bevy::{ecs::message::Messages, state::app::StatesPlugin};
+    use bevy::ecs::message::Messages;
     use rantzsoft_stateflow::ChangeState;
 
     use super::*;
     use crate::{
         breaker::definition::BreakerDefinition,
+        shared::test_utils::TestAppBuilder,
         state::types::{AppState, GameState},
     };
 
@@ -103,21 +104,19 @@ mod tests {
     }
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins((MinimalPlugins, StatesPlugin))
-            .init_resource::<ButtonInput<KeyCode>>()
-            .insert_resource(InputConfig::default())
-            .init_state::<AppState>()
-            .add_sub_state::<GameState>()
-            .add_sub_state::<MenuState>()
-            .add_message::<ChangeState<MenuState>>()
-            .insert_resource(SelectedBreaker::default())
-            .init_resource::<RunSeed>()
-            .init_resource::<SeedEntry>();
-
         let registry = test_breaker_registry(&["Aegis", "Chrono"]);
-        app.insert_resource(registry)
-            .insert_resource(RunSetupSelection { index: 0 });
+        let mut app = TestAppBuilder::new()
+            .with_state_hierarchy()
+            .with_resource::<ButtonInput<KeyCode>>()
+            .insert_resource(InputConfig::default())
+            .with_message::<ChangeState<MenuState>>()
+            .insert_resource(SelectedBreaker::default())
+            .with_resource::<RunSeed>()
+            .with_resource::<SeedEntry>()
+            .insert_resource(registry)
+            .insert_resource(RunSetupSelection { index: 0 })
+            .with_system(Update, handle_run_setup_input)
+            .build();
 
         // Spawn cards matching registry
         app.world_mut().spawn(BreakerCard {
@@ -127,7 +126,6 @@ mod tests {
             breaker_name: "Chrono".to_owned(),
         });
 
-        app.add_systems(Update, handle_run_setup_input);
         // Navigate to MenuState
         app.world_mut()
             .resource_mut::<NextState<AppState>>()

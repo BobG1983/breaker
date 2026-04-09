@@ -10,9 +10,10 @@ use crate::{
         },
         definition::BreakerDefinition,
         systems::dash::system::*,
+        test_utils::default_breaker_definition,
     },
     input::resources::InputActions,
-    shared::PlayfieldConfig,
+    shared::{PlayfieldConfig, test_utils::TestAppBuilder},
 };
 
 pub(super) fn breaker_param_bundle(
@@ -53,7 +54,7 @@ pub(super) fn breaker_param_bundle(
 }
 
 pub(super) fn spawn_test_breaker(app: &mut App) -> Entity {
-    let def = BreakerDefinition::default();
+    let def = default_breaker_definition();
     app.world_mut()
         .spawn((
             Breaker,
@@ -67,19 +68,11 @@ pub(super) fn spawn_test_breaker(app: &mut App) -> Entity {
 }
 
 pub(super) fn test_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .init_resource::<InputActions>()
-        .init_resource::<PlayfieldConfig>()
-        .add_systems(FixedUpdate, update_breaker_state);
-    app
+    TestAppBuilder::new()
+        .with_resource::<InputActions>()
+        .with_resource::<PlayfieldConfig>()
+        .with_system(FixedUpdate, update_breaker_state)
+        .build()
 }
 
-/// Accumulates one fixed timestep of overstep, then runs one update.
-pub(super) fn tick(app: &mut App) {
-    let timestep = app.world().resource::<Time<Fixed>>().timestep();
-    app.world_mut()
-        .resource_mut::<Time<Fixed>>()
-        .accumulate_overstep(timestep);
-    app.update();
-}
+pub(super) use crate::shared::test_utils::tick;

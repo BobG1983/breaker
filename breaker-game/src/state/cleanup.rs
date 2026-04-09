@@ -21,9 +21,10 @@ mod tests {
 
     #[test]
     fn cleanup_entities_despawns_marked_entities() {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_systems(Update, cleanup_entities::<TestMarker>);
+        use crate::shared::test_utils::TestAppBuilder;
+        let mut app = TestAppBuilder::new()
+            .with_system(Update, cleanup_entities::<TestMarker>)
+            .build();
 
         let marked = app.world_mut().spawn(TestMarker).id();
         let unmarked = app.world_mut().spawn_empty().id();

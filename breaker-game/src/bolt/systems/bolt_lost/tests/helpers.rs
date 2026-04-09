@@ -1,4 +1,4 @@
-use bevy::{ecs::world::CommandQueue, prelude::*};
+use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Velocity2D;
 
 use crate::{
@@ -6,7 +6,7 @@ use crate::{
         components::Bolt, definition::BoltDefinition, messages::BoltLost,
         systems::bolt_lost::system::bolt_lost,
     },
-    shared::{GameRng, PlayfieldConfig},
+    shared::GameRng,
 };
 
 pub(super) fn make_default_bolt_definition() -> BoltDefinition {
@@ -27,40 +27,31 @@ pub(super) fn make_default_bolt_definition() -> BoltDefinition {
 }
 
 pub(super) fn test_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .init_resource::<PlayfieldConfig>()
-        .init_resource::<GameRng>()
-        .add_message::<BoltLost>()
-        .add_systems(FixedUpdate, bolt_lost);
-    app
+    use crate::shared::test_utils::TestAppBuilder;
+
+    TestAppBuilder::new()
+        .with_playfield()
+        .with_resource::<GameRng>()
+        .with_message::<BoltLost>()
+        .with_system(FixedUpdate, bolt_lost)
+        .build()
 }
 
-pub(super) fn tick(app: &mut App) {
-    let timestep = app.world().resource::<Time<Fixed>>().timestep();
-    app.world_mut()
-        .resource_mut::<Time<Fixed>>()
-        .accumulate_overstep(timestep);
-    app.update();
-}
+pub(super) use crate::shared::test_utils::tick;
 
 /// Spawns a bolt at the given position with the given velocity using the builder
 /// with `.definition()`.
 pub(super) fn spawn_bolt(app: &mut App, pos: Vec2, vel: Vec2) -> Entity {
     let def = make_default_bolt_definition();
     let world = app.world_mut();
-    let mut queue = CommandQueue::default();
-    let entity = {
-        let mut commands = Commands::new(&mut queue, world);
-        Bolt::builder()
-            .at_position(pos)
-            .definition(&def)
-            .with_velocity(Velocity2D(vel))
-            .primary()
-            .headless()
-            .spawn(&mut commands)
-    };
-    queue.apply(world);
+    let entity = Bolt::builder()
+        .at_position(pos)
+        .definition(&def)
+        .with_velocity(Velocity2D(vel))
+        .primary()
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
     entity
 }
 
@@ -72,18 +63,14 @@ pub(super) fn spawn_bolt_with_definition(
     def: &BoltDefinition,
 ) -> Entity {
     let world = app.world_mut();
-    let mut queue = CommandQueue::default();
-    let entity = {
-        let mut commands = Commands::new(&mut queue, world);
-        Bolt::builder()
-            .at_position(pos)
-            .definition(def)
-            .with_velocity(Velocity2D(vel))
-            .primary()
-            .headless()
-            .spawn(&mut commands)
-    };
-    queue.apply(world);
+    let entity = Bolt::builder()
+        .at_position(pos)
+        .definition(def)
+        .with_velocity(Velocity2D(vel))
+        .primary()
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
     entity
 }
 

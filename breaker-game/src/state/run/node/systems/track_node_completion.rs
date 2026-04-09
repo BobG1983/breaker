@@ -61,25 +61,19 @@ mod tests {
     }
 
     fn test_app(remaining: u32) -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_message::<CellDestroyedAt>()
-            .add_message::<NodeCleared>()
+        use crate::shared::test_utils::TestAppBuilder;
+        TestAppBuilder::new()
+            .with_message::<CellDestroyedAt>()
+            .with_message::<NodeCleared>()
             .insert_resource(ClearRemainingCount { remaining })
-            .add_systems(
+            .with_system(
                 FixedUpdate,
                 (enqueue_messages, track_node_completion).chain(),
-            );
-        app
+            )
+            .build()
     }
 
-    fn tick(app: &mut App) {
-        let timestep = app.world().resource::<Time<Fixed>>().timestep();
-        app.world_mut()
-            .resource_mut::<Time<Fixed>>()
-            .accumulate_overstep(timestep);
-        app.update();
-    }
+    use crate::shared::test_utils::tick;
 
     #[test]
     fn decrement_on_required_destroyed() {
@@ -164,18 +158,17 @@ mod tests {
     }
 
     fn test_app_cell_destroyed_at(remaining: u32) -> App {
-        use crate::cells::messages::CellDestroyedAt;
+        use crate::{cells::messages::CellDestroyedAt, shared::test_utils::TestAppBuilder};
 
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_message::<CellDestroyedAt>()
-            .add_message::<NodeCleared>()
+        TestAppBuilder::new()
+            .with_message::<CellDestroyedAt>()
+            .with_message::<NodeCleared>()
             .insert_resource(ClearRemainingCount { remaining })
-            .add_systems(
+            .with_system(
                 FixedUpdate,
                 (enqueue_cell_destroyed_at, track_node_completion).chain(),
-            );
-        app
+            )
+            .build()
     }
 
     #[test]

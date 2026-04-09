@@ -1,7 +1,5 @@
-use bevy::{ecs::world::CommandQueue, prelude::*};
-use rantzsoft_physics2d::{
-    aabb::Aabb2D, collision_layers::CollisionLayers, plugin::RantzPhysics2dPlugin,
-};
+use bevy::prelude::*;
+use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D};
 
 use super::system::*;
@@ -10,19 +8,9 @@ use crate::{
         components::{BaseHeight, BaseWidth, Breaker},
         messages::BreakerImpactWall,
     },
-    shared::{BREAKER_LAYER, GameDrawLayer, NodeScalingFactor, PlayfieldConfig, WALL_LAYER},
-    walls::components::Wall,
+    shared::{BREAKER_LAYER, GameDrawLayer, NodeScalingFactor, WALL_LAYER},
+    walls::test_utils::{spawn_ceiling_wall, spawn_left_wall, spawn_right_wall},
 };
-
-fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
-    let mut queue = CommandQueue::default();
-    let entity = {
-        let mut commands = Commands::new(&mut queue, world);
-        f(&mut commands)
-    };
-    queue.apply(world);
-    entity
-}
 
 // ── Helpers ──────────────────────────────────────────────────────
 
@@ -39,31 +27,25 @@ fn collect_breaker_wall_hits(
 }
 
 fn test_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .add_plugins(RantzPhysics2dPlugin)
-        .add_message::<BreakerImpactWall>()
+    use crate::shared::test_utils::TestAppBuilder;
+
+    TestAppBuilder::new()
+        .with_physics()
+        .with_message::<BreakerImpactWall>()
         .insert_resource(BreakerWallHitMessages::default())
-        .add_systems(
+        .with_system(
             FixedUpdate,
             breaker_wall_collision
                 .after(rantzsoft_physics2d::plugin::PhysicsSystems::MaintainQuadtree),
         )
-        .add_systems(
+        .with_system(
             FixedUpdate,
             collect_breaker_wall_hits.after(breaker_wall_collision),
-        );
-    app
+        )
+        .build()
 }
 
-/// Accumulates one fixed timestep then runs one update.
-fn tick(app: &mut App) {
-    let timestep = app.world().resource::<Time<Fixed>>().timestep();
-    app.world_mut()
-        .resource_mut::<Time<Fixed>>()
-        .accumulate_overstep(timestep);
-    app.update();
-}
+use crate::shared::test_utils::tick;
 
 fn spawn_breaker(app: &mut App, pos: Vec2) -> Entity {
     app.world_mut()
@@ -79,42 +61,6 @@ fn spawn_breaker(app: &mut App, pos: Vec2) -> Entity {
             GameDrawLayer::Breaker,
         ))
         .id()
-}
-
-fn spawn_left_wall(app: &mut App) -> Entity {
-    let pf = PlayfieldConfig::default();
-    let entity = spawn_in_world(app.world_mut(), |commands| {
-        Wall::builder().left(&pf).spawn(commands)
-    });
-    let pos = app.world().get::<Position2D>(entity).unwrap().0;
-    app.world_mut()
-        .entity_mut(entity)
-        .insert(GlobalPosition2D(pos));
-    entity
-}
-
-fn spawn_right_wall(app: &mut App) -> Entity {
-    let pf = PlayfieldConfig::default();
-    let entity = spawn_in_world(app.world_mut(), |commands| {
-        Wall::builder().right(&pf).spawn(commands)
-    });
-    let pos = app.world().get::<Position2D>(entity).unwrap().0;
-    app.world_mut()
-        .entity_mut(entity)
-        .insert(GlobalPosition2D(pos));
-    entity
-}
-
-fn spawn_ceiling_wall(app: &mut App) -> Entity {
-    let pf = PlayfieldConfig::default();
-    let entity = spawn_in_world(app.world_mut(), |commands| {
-        Wall::builder().ceiling(&pf).spawn(commands)
-    });
-    let pos = app.world().get::<Position2D>(entity).unwrap().0;
-    app.world_mut()
-        .entity_mut(entity)
-        .insert(GlobalPosition2D(pos));
-    entity
 }
 
 // ── B3: Breaker overlapping wall emits BreakerImpactWall ────────

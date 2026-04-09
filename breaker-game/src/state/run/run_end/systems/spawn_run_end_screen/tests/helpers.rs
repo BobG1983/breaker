@@ -1,20 +1,22 @@
 use bevy::prelude::*;
 
-use crate::state::run::{
-    resources::{NodeOutcome, NodeResult, RunStats},
-    run_end::systems::spawn_run_end_screen::spawn_run_end_screen,
+use crate::{
+    shared::test_utils::TestAppBuilder,
+    state::run::{
+        resources::{NodeOutcome, NodeResult, RunStats},
+        run_end::systems::spawn_run_end_screen::spawn_run_end_screen,
+    },
 };
 
 pub(super) fn test_app(result: NodeResult) -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
+    TestAppBuilder::new()
         .insert_resource(NodeOutcome {
             node_index: 0,
             result,
             ..default()
         })
-        .add_systems(Update, spawn_run_end_screen);
-    app
+        .with_system(Update, spawn_run_end_screen)
+        .build()
 }
 
 pub(super) fn test_app_with_stats(result: NodeResult, stats: RunStats) -> App {

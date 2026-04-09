@@ -27,11 +27,12 @@ pub(super) fn make_bolt_def(name: &str) -> BoltDefinition {
 
 /// Creates a test app with the `propagate_bolt_definition` system.
 pub(super) fn test_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins);
-    app.init_resource::<BoltRegistry>()
-        .add_systems(Update, propagate_bolt_definition);
-    app
+    use crate::shared::test_utils::TestAppBuilder;
+
+    TestAppBuilder::new()
+        .with_resource::<BoltRegistry>()
+        .with_system(Update, propagate_bolt_definition)
+        .build()
 }
 
 /// Seeds the registry with a definition and flushes the Added state.

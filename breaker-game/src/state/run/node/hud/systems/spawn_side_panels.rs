@@ -96,12 +96,12 @@ pub(crate) fn spawn_side_panels(mut commands: Commands, existing: Query<(), With
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::shared::test_utils::TestAppBuilder;
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_systems(Update, spawn_side_panels);
-        app
+        TestAppBuilder::new()
+            .with_system(Update, spawn_side_panels)
+            .build()
     }
 
     #[test]

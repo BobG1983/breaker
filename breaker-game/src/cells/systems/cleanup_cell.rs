@@ -24,6 +24,7 @@ pub(crate) fn cleanup_cell(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::shared::test_utils::tick;
 
     // ---------------------------------------------------------------
     // Test helpers
@@ -58,25 +59,18 @@ mod tests {
     }
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_message::<RequestCellDestroyed>()
-            .add_message::<CellDestroyedAt>()
-            .init_resource::<EnqueueRequestCellDestroyed>()
-            .init_resource::<CapturedCellDestroyedAt>()
-            .add_systems(
+        use crate::shared::test_utils::TestAppBuilder;
+
+        TestAppBuilder::new()
+            .with_message::<RequestCellDestroyed>()
+            .with_message::<CellDestroyedAt>()
+            .with_resource::<EnqueueRequestCellDestroyed>()
+            .with_resource::<CapturedCellDestroyedAt>()
+            .with_system(
                 FixedUpdate,
                 (enqueue_requests, cleanup_cell, capture_cell_destroyed_at).chain(),
-            );
-        app
-    }
-
-    fn tick(app: &mut App) {
-        let timestep = app.world().resource::<Time<Fixed>>().timestep();
-        app.world_mut()
-            .resource_mut::<Time<Fixed>>()
-            .accumulate_overstep(timestep);
-        app.update();
+            )
+            .build()
     }
 
     // ---------------------------------------------------------------

@@ -134,6 +134,27 @@ cargo machete: no unused dependencies found. No new dependencies introduced by t
 - `CellTypeRegistry::seed()` calls `validate()` and skips invalid definitions with `warn!()`.
   The validation gate is in production code (not test-only). Valid.
 
+## cargo audit — feature/test-infrastructure-consolidation (2026-04-09)
+
+`cargo audit` could not be run (Bash tool denied in this session).
+No new dependencies introduced by this branch — breaker-game/Cargo.toml unchanged.
+Expected result: same RUSTSEC-2024-0436 (paste) recurring warning, no new advisories.
+
+## Lint config changes — feature/test-infrastructure-consolidation (2026-04-09)
+
+Workspace `Cargo.toml` lint escalations confirmed intentional and safe:
+- `let_underscore_drop`, `unreachable_pub`, `trivial_casts`, `trivial_numeric_casts`: warn → deny
+- `unwrap_used`, `expect_used`, `panic`, `todo`, `unimplemented`: warn → deny
+- `nursery` blanket group removed; replaced with explicit opt-in list (same or stricter coverage)
+- `redundant_pub_crate = "allow"` removed (was a nursery-group override, now moot)
+- Pre-commit hook: removed `-D warnings` flag (now redundant — workspace lints are all "deny")
+
+Implication: `#[allow(...)]` attributes in `#[cfg(test)]` code must now carry a reason
+(allow_attributes_without_reason = "deny" was already on). The three `.unwrap()` calls
+in `walls/test_utils.rs` (lines 55, 74, 93) require either an `#[allow]` with reason
+or replacement with `expect()` (but `expect_used` is now deny too) — need `.unwrap_or_else`
+or restructured logic to satisfy the new lint level. This is an existing clippy finding.
+
 ## Birthing animation panic surface (added 2026-04-08)
 
 - `tick_birthing.rs`: `birthing.fraction()` calls `Timer::fraction()` — Bevy returns 0.0..=1.0,
