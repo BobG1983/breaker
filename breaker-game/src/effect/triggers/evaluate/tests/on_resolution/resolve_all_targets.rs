@@ -1,7 +1,7 @@
 //! Tests for `ResolveOnCommand` resolving `AllCells`, `AllBolts`, `AllWalls` targets
 //! (Behaviors 16-18).
 
-use bevy::{ecs::world::CommandQueue, prelude::*};
+use bevy::prelude::*;
 
 use crate::{
     bolt::components::Bolt,
@@ -10,16 +10,6 @@ use crate::{
     effect::{commands::ResolveOnCommand, core::*, effects::speed_boost::ActiveSpeedBoosts},
     walls::components::Wall,
 };
-
-fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
-    let mut queue = CommandQueue::default();
-    let entity = {
-        let mut commands = Commands::new(&mut queue, world);
-        f(&mut commands)
-    };
-    queue.apply(world);
-    entity
-}
 
 // -----------------------------------------------------------------------
 // Behavior 16: ResolveOnCommand resolves AllCells
@@ -40,13 +30,12 @@ fn resolve_on_command_resolves_all_cells_to_cell_entities() {
 
     // Also spawn non-target entities to ensure they are not affected
     let def = crate::breaker::definition::BreakerDefinition::default();
-    let breaker = spawn_in_world(&mut world, |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let breaker = Breaker::builder()
+        .definition(&def)
+        .headless()
+        .primary()
+        .spawn(&mut world.commands());
+    world.flush();
     world
         .entity_mut(breaker)
         .insert((BoundEffects::default(), StagedEffects::default()));

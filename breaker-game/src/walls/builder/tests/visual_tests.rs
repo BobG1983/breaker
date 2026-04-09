@@ -1,4 +1,4 @@
-use bevy::{ecs::world::CommandQueue, prelude::*};
+use bevy::prelude::*;
 
 use super::helpers::default_playfield;
 use crate::{shared::GameDrawLayer, walls::components::Wall};
@@ -9,16 +9,6 @@ fn visual_test_app() -> App {
         .init_asset::<Mesh>()
         .init_asset::<ColorMaterial>();
     app
-}
-
-fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
-    let mut queue = CommandQueue::default();
-    let entity = {
-        let mut commands = Commands::new(&mut queue, world);
-        f(&mut commands)
-    };
-    queue.apply(world);
-    entity
 }
 
 // ── Behavior 13: .visible() stores mesh and material handles ──
@@ -111,9 +101,8 @@ fn no_visible_call_produces_no_mesh_or_material() {
     let pf = default_playfield();
     let mut world = World::new();
 
-    let entity = spawn_in_world(&mut world, |commands| {
-        Wall::builder().left(&pf).spawn(commands)
-    });
+    let entity = Wall::builder().left(&pf).spawn(&mut world.commands());
+    world.flush();
 
     assert!(
         world.get::<Mesh2d>(entity).is_none(),
@@ -138,9 +127,11 @@ fn invisible_call_also_produces_no_mesh_or_material() {
     let pf = default_playfield();
     let mut world = World::new();
 
-    let entity = spawn_in_world(&mut world, |commands| {
-        Wall::builder().left(&pf).invisible().spawn(commands)
-    });
+    let entity = Wall::builder()
+        .left(&pf)
+        .invisible()
+        .spawn(&mut world.commands());
+    world.flush();
 
     assert!(
         world.get::<Mesh2d>(entity).is_none(),
@@ -159,9 +150,11 @@ fn invisible_returns_self_unchanged() {
     let pf = default_playfield();
     let mut world = World::new();
     // Just verify it compiles and can proceed to spawn
-    spawn_in_world(&mut world, |commands| {
-        Wall::builder().left(&pf).invisible().spawn(commands)
-    });
+    Wall::builder()
+        .left(&pf)
+        .invisible()
+        .spawn(&mut world.commands());
+    world.flush();
 }
 
 #[test]

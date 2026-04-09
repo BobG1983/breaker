@@ -5,7 +5,7 @@
 //! Each test spawns multiple entities of the target type and verifies that only
 //! the entity named in the collision message receives the transferred effect.
 
-use bevy::{ecs::world::CommandQueue, prelude::*};
+use bevy::prelude::*;
 
 use super::helpers::*;
 use crate::{
@@ -18,16 +18,6 @@ use crate::{
     effect::core::*,
     walls::components::Wall,
 };
-
-fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
-    let mut queue = CommandQueue::default();
-    let entity = {
-        let mut commands = Commands::new(&mut queue, world);
-        f(&mut commands)
-    };
-    queue.apply(world);
-    entity
-}
 
 /// Build `BoundEffects` with
 /// `When(Impacted(X), [On(Y, permanent=false, [When(Died, [Do(SpeedBoost)])])])`.
@@ -150,13 +140,16 @@ fn impacted_breaker_cell_context_resolves_to_specific_cell() {
     let mut app = test_app_breaker_cell();
 
     let def = crate::breaker::definition::BreakerDefinition::default();
-    let breaker = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
+    let breaker = {
+        let world = app.world_mut();
+        let entity = Breaker::builder()
             .definition(&def)
             .headless()
             .primary()
-            .spawn(commands)
-    });
+            .spawn(&mut world.commands());
+        world.flush();
+        entity
+    };
     app.world_mut().entity_mut(breaker).insert((
         retarget_on_impacted(ImpactTarget::Cell, Target::Cell),
         StagedEffects::default(),
@@ -197,23 +190,29 @@ fn impacted_breaker_cell_context_resolves_to_specific_breaker() {
     let mut app = test_app_breaker_cell();
 
     let def = crate::breaker::definition::BreakerDefinition::default();
-    let breaker_a = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
+    let breaker_a = {
+        let world = app.world_mut();
+        let entity = Breaker::builder()
             .definition(&def)
             .headless()
             .primary()
-            .spawn(commands)
-    });
+            .spawn(&mut world.commands());
+        world.flush();
+        entity
+    };
     app.world_mut()
         .entity_mut(breaker_a)
         .insert(StagedEffects::default());
-    let breaker_b = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
+    let breaker_b = {
+        let world = app.world_mut();
+        let entity = Breaker::builder()
             .definition(&def)
             .headless()
             .extra()
-            .spawn(commands)
-    });
+            .spawn(&mut world.commands());
+        world.flush();
+        entity
+    };
     app.world_mut()
         .entity_mut(breaker_b)
         .insert(StagedEffects::default());
@@ -304,23 +303,29 @@ fn impacted_bolt_breaker_context_resolves_to_specific_breaker() {
         .id();
 
     let def = crate::breaker::definition::BreakerDefinition::default();
-    let breaker_a = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
+    let breaker_a = {
+        let world = app.world_mut();
+        let entity = Breaker::builder()
             .definition(&def)
             .headless()
             .primary()
-            .spawn(commands)
-    });
+            .spawn(&mut world.commands());
+        world.flush();
+        entity
+    };
     app.world_mut()
         .entity_mut(breaker_a)
         .insert(StagedEffects::default());
-    let breaker_b = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
+    let breaker_b = {
+        let world = app.world_mut();
+        let entity = Breaker::builder()
             .definition(&def)
             .headless()
             .extra()
-            .spawn(commands)
-    });
+            .spawn(&mut world.commands());
+        world.flush();
+        entity
+    };
     app.world_mut()
         .entity_mut(breaker_b)
         .insert(StagedEffects::default());
@@ -442,13 +447,16 @@ fn impacted_bolt_breaker_context_resolves_to_specific_bolt() {
     let bolt_c = app.world_mut().spawn((Bolt, StagedEffects::default())).id();
 
     let def = crate::breaker::definition::BreakerDefinition::default();
-    let breaker = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
+    let breaker = {
+        let world = app.world_mut();
+        let entity = Breaker::builder()
             .definition(&def)
             .headless()
             .primary()
-            .spawn(commands)
-    });
+            .spawn(&mut world.commands());
+        world.flush();
+        entity
+    };
     app.world_mut().entity_mut(breaker).insert((
         retarget_on_impacted(ImpactTarget::Bolt, Target::Bolt),
         StagedEffects::default(),
@@ -487,13 +495,16 @@ fn impacted_breaker_wall_context_resolves_to_specific_wall() {
     let mut app = test_app_breaker_wall();
 
     let def = crate::breaker::definition::BreakerDefinition::default();
-    let breaker = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
+    let breaker = {
+        let world = app.world_mut();
+        let entity = Breaker::builder()
             .definition(&def)
             .headless()
             .primary()
-            .spawn(commands)
-    });
+            .spawn(&mut world.commands());
+        world.flush();
+        entity
+    };
     app.world_mut().entity_mut(breaker).insert((
         retarget_on_impacted(ImpactTarget::Wall, Target::Wall),
         StagedEffects::default(),
@@ -534,23 +545,29 @@ fn impacted_breaker_wall_context_resolves_to_specific_breaker() {
     let mut app = test_app_breaker_wall();
 
     let def = crate::breaker::definition::BreakerDefinition::default();
-    let breaker_a = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
+    let breaker_a = {
+        let world = app.world_mut();
+        let entity = Breaker::builder()
             .definition(&def)
             .headless()
             .primary()
-            .spawn(commands)
-    });
+            .spawn(&mut world.commands());
+        world.flush();
+        entity
+    };
     app.world_mut()
         .entity_mut(breaker_a)
         .insert(StagedEffects::default());
-    let breaker_b = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
+    let breaker_b = {
+        let world = app.world_mut();
+        let entity = Breaker::builder()
             .definition(&def)
             .headless()
             .extra()
-            .spawn(commands)
-    });
+            .spawn(&mut world.commands());
+        world.flush();
+        entity
+    };
     app.world_mut()
         .entity_mut(breaker_b)
         .insert(StagedEffects::default());

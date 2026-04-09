@@ -1,6 +1,6 @@
 //! Shared test helpers for `dispatch_chip_effects` tests.
 
-use bevy::{ecs::world::CommandQueue, prelude::*};
+use bevy::prelude::*;
 
 use crate::{
     chips::{definition::ChipDefinition, inventory::ChipInventory, resources::ChipCatalog},
@@ -10,16 +10,6 @@ use crate::{
         types::{AppState, ChipSelectState, GameState, RunState},
     },
 };
-
-pub(super) fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
-    let mut queue = CommandQueue::default();
-    let entity = {
-        let mut commands = Commands::new(&mut queue, world);
-        f(&mut commands)
-    };
-    queue.apply(world);
-    entity
-}
 
 /// Resource holding messages to be sent before the dispatch system runs.
 #[derive(Resource, Default)]
@@ -131,18 +121,14 @@ pub(super) fn spawn_bolt(app: &mut App) -> Entity {
     };
     let entity = {
         let world = app.world_mut();
-        let mut queue = CommandQueue::default();
-        let entity = {
-            let mut commands = Commands::new(&mut queue, world);
-            Bolt::builder()
-                .at_position(Vec2::ZERO)
-                .definition(&def)
-                .with_velocity(Velocity2D(Vec2::ZERO))
-                .primary()
-                .headless()
-                .spawn(&mut commands)
-        };
-        queue.apply(world);
+        let entity = Bolt::builder()
+            .at_position(Vec2::ZERO)
+            .definition(&def)
+            .with_velocity(Velocity2D(Vec2::ZERO))
+            .primary()
+            .headless()
+            .spawn(&mut world.commands());
+        world.flush();
         entity
     };
 
@@ -168,13 +154,16 @@ pub(super) fn spawn_breaker(app: &mut App) -> Entity {
     };
 
     let def = BreakerDefinition::default();
-    let entity = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
+    let entity = {
+        let world = app.world_mut();
+        let entity = Breaker::builder()
             .definition(&def)
             .headless()
             .primary()
-            .spawn(commands)
-    });
+            .spawn(&mut world.commands());
+        world.flush();
+        entity
+    };
     app.world_mut().entity_mut(entity).insert((
         BoundEffects::default(),
         StagedEffects::default(),
@@ -197,13 +186,16 @@ pub(super) fn spawn_breaker_bare(app: &mut App) -> Entity {
     };
 
     let def = BreakerDefinition::default();
-    let entity = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
+    let entity = {
+        let world = app.world_mut();
+        let entity = Breaker::builder()
             .definition(&def)
             .headless()
             .primary()
-            .spawn(commands)
-    });
+            .spawn(&mut world.commands());
+        world.flush();
+        entity
+    };
     app.world_mut().entity_mut(entity).insert((
         ActiveBumpForces::default(),
         ActiveSizeBoosts::default(),

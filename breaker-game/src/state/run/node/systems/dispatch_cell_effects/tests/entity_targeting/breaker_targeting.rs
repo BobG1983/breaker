@@ -1,16 +1,6 @@
 //! Tests for `Target::Breaker` effect dispatch to breaker entities.
 
-use bevy::{ecs::world::CommandQueue, prelude::*};
-
-fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
-    let mut queue = CommandQueue::default();
-    let entity = {
-        let mut commands = Commands::new(&mut queue, world);
-        f(&mut commands)
-    };
-    queue.apply(world);
-    entity
-}
+use bevy::prelude::*;
 
 use crate::{
     breaker::components::Breaker,
@@ -46,13 +36,16 @@ fn cell_with_target_breaker_dispatches_to_breaker_entity() {
         .spawn((Cell, CellTypeAlias("R".to_owned())))
         .id();
     let def = crate::breaker::definition::BreakerDefinition::default();
-    let breaker_entity = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
+    let breaker_entity = {
+        let world = app.world_mut();
+        let entity = Breaker::builder()
             .definition(&def)
             .headless()
             .primary()
-            .spawn(commands)
-    });
+            .spawn(&mut world.commands());
+        world.flush();
+        entity
+    };
     app.world_mut()
         .entity_mut(breaker_entity)
         .insert((BoundEffects::default(), StagedEffects::default()));

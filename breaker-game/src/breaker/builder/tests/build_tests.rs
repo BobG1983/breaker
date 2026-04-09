@@ -1,4 +1,4 @@
-use bevy::{ecs::world::CommandQueue, prelude::*};
+use bevy::prelude::*;
 use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{
     MaxSpeed, Position2D, PreviousPosition, PreviousScale, Scale2D, Velocity2D,
@@ -25,29 +25,18 @@ use crate::{
     state::types::RunState,
 };
 
-fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
-    let mut queue = CommandQueue::default();
-    let entity = {
-        let mut commands = Commands::new(&mut queue, world);
-        f(&mut commands)
-    };
-    queue.apply(world);
-    entity
-}
-
 // ── Behavior 28: build() on a headless primary breaker produces all core components ──
 
 #[test]
 fn build_headless_primary_has_breaker_marker() {
     let def = test_breaker_definition();
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = Breaker::builder()
+        .definition(&def)
+        .headless()
+        .primary()
+        .spawn(&mut world.commands());
+    world.flush();
 
     assert!(
         world.get::<Breaker>(entity).is_some(),
@@ -72,13 +61,12 @@ fn build_headless_primary_has_breaker_marker() {
 fn build_headless_primary_has_default_state_components() {
     let def = test_breaker_definition();
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = Breaker::builder()
+        .definition(&def)
+        .headless()
+        .primary()
+        .spawn(&mut world.commands());
+    world.flush();
 
     let vel = world.get::<Velocity2D>(entity);
     assert!(vel.is_some(), "should have Velocity2D");
@@ -124,13 +112,12 @@ fn build_produces_correct_spatial_components() {
     let def = test_breaker_definition(); // width: 120.0, height: 20.0, y_position: -250.0
     let defaults = BreakerDefinition::default();
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = Breaker::builder()
+        .definition(&def)
+        .headless()
+        .primary()
+        .spawn(&mut world.commands());
+    world.flush();
 
     let pos = world.get::<Position2D>(entity);
     assert!(pos.is_some(), "should have Position2D");
@@ -184,13 +171,12 @@ fn build_produces_correct_spatial_components() {
 fn build_produces_correct_collision_layers() {
     let def = test_breaker_definition();
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = Breaker::builder()
+        .definition(&def)
+        .headless()
+        .primary()
+        .spawn(&mut world.commands());
+    world.flush();
 
     let layers = world.get::<CollisionLayers>(entity);
     assert!(layers.is_some(), "should have CollisionLayers");
@@ -214,13 +200,12 @@ fn build_produces_correct_dimension_components() {
     let def = test_breaker_definition(); // width: 120.0, height: 20.0, y_position: -250.0
     let defaults = BreakerDefinition::default();
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = Breaker::builder()
+        .definition(&def)
+        .headless()
+        .primary()
+        .spawn(&mut world.commands());
+    world.flush();
 
     assert!((world.get::<BaseWidth>(entity).unwrap().0 - defaults.width).abs() < f32::EPSILON);
     assert!((world.get::<BaseHeight>(entity).unwrap().0 - defaults.height).abs() < f32::EPSILON);
@@ -264,13 +249,12 @@ fn build_produces_correct_movement_components() {
     let def = test_breaker_definition();
     let defaults = BreakerDefinition::default();
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = Breaker::builder()
+        .definition(&def)
+        .headless()
+        .primary()
+        .spawn(&mut world.commands());
+    world.flush();
 
     assert!((world.get::<MaxSpeed>(entity).unwrap().0 - defaults.max_speed).abs() < f32::EPSILON);
     assert!(
@@ -293,13 +277,12 @@ fn build_produces_correct_dash_components() {
     let def = test_breaker_definition();
     let defaults = BreakerDefinition::default();
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = Breaker::builder()
+        .definition(&def)
+        .headless()
+        .primary()
+        .spawn(&mut world.commands());
+    world.flush();
 
     assert!(
         (world.get::<DashSpeedMultiplier>(entity).unwrap().0 - defaults.dash_speed_multiplier)
@@ -343,13 +326,12 @@ fn build_produces_correct_bump_components() {
     let def = test_breaker_definition();
     let defaults = BreakerDefinition::default();
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = Breaker::builder()
+        .definition(&def)
+        .headless()
+        .primary()
+        .spawn(&mut world.commands());
+    world.flush();
 
     assert!(
         (world.get::<BumpPerfectWindow>(entity).unwrap().0 - defaults.perfect_window).abs()
@@ -387,13 +369,12 @@ fn build_produces_correct_spread_component() {
     let def = test_breaker_definition(); // reflection_spread: 75.0
     let defaults = BreakerDefinition::default();
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = Breaker::builder()
+        .definition(&def)
+        .headless()
+        .primary()
+        .spawn(&mut world.commands());
+    world.flush();
 
     let spread = world.get::<BreakerReflectionSpread>(entity);
     assert!(spread.is_some(), "should have BreakerReflectionSpread");
@@ -405,13 +386,12 @@ fn build_spread_zero_produces_zero() {
     let mut def = test_breaker_definition();
     def.reflection_spread = 0.0;
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = Breaker::builder()
+        .definition(&def)
+        .headless()
+        .primary()
+        .spawn(&mut world.commands());
+    world.flush();
 
     let spread = world.get::<BreakerReflectionSpread>(entity);
     assert!(spread.is_some(), "should have BreakerReflectionSpread");
@@ -423,13 +403,12 @@ fn build_spread_180_produces_pi() {
     let mut def = test_breaker_definition();
     def.reflection_spread = 180.0;
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let entity = Breaker::builder()
+        .definition(&def)
+        .headless()
+        .primary()
+        .spawn(&mut world.commands());
+    world.flush();
 
     let spread = world.get::<BreakerReflectionSpread>(entity);
     assert!(spread.is_some(), "should have BreakerReflectionSpread");

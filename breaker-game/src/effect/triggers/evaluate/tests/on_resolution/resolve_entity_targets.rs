@@ -7,7 +7,7 @@
 //! - `Wall` without context → no-op (empty)
 //! - Any singular target with `context_entity` → that specific entity (if marker matches)
 
-use bevy::{ecs::world::CommandQueue, prelude::*};
+use bevy::prelude::*;
 
 use crate::{
     bolt::components::{Bolt, PrimaryBolt},
@@ -16,16 +16,6 @@ use crate::{
     effect::{commands::ResolveOnCommand, core::*, effects::speed_boost::ActiveSpeedBoosts},
     walls::components::Wall,
 };
-
-fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
-    let mut queue = CommandQueue::default();
-    let entity = {
-        let mut commands = Commands::new(&mut queue, world);
-        f(&mut commands)
-    };
-    queue.apply(world);
-    entity
-}
 
 // -----------------------------------------------------------------------
 // Bolt without context → PrimaryBolt only
@@ -110,23 +100,21 @@ fn bolt_without_context_and_no_primary_bolt_is_noop() {
 fn breaker_without_context_resolves_to_primary_breaker_only() {
     let mut world = World::new();
     let def = crate::breaker::definition::BreakerDefinition::default();
-    let primary = spawn_in_world(&mut world, |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let primary = Breaker::builder()
+        .definition(&def)
+        .headless()
+        .primary()
+        .spawn(&mut world.commands());
+    world.flush();
     world
         .entity_mut(primary)
         .insert((BoundEffects::default(), StagedEffects::default()));
-    let secondary = spawn_in_world(&mut world, |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .extra()
-            .spawn(commands)
-    });
+    let secondary = Breaker::builder()
+        .definition(&def)
+        .headless()
+        .extra()
+        .spawn(&mut world.commands());
+    world.flush();
     world
         .entity_mut(secondary)
         .insert((BoundEffects::default(), StagedEffects::default()));
@@ -370,23 +358,21 @@ fn wall_with_context_resolves_to_specific_wall() {
 fn breaker_with_context_resolves_to_specific_breaker() {
     let mut world = World::new();
     let def = crate::breaker::definition::BreakerDefinition::default();
-    let breaker_a = spawn_in_world(&mut world, |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .primary()
-            .spawn(commands)
-    });
+    let breaker_a = Breaker::builder()
+        .definition(&def)
+        .headless()
+        .primary()
+        .spawn(&mut world.commands());
+    world.flush();
     world
         .entity_mut(breaker_a)
         .insert((BoundEffects::default(), StagedEffects::default()));
-    let breaker_b = spawn_in_world(&mut world, |commands| {
-        Breaker::builder()
-            .definition(&def)
-            .headless()
-            .extra()
-            .spawn(commands)
-    });
+    let breaker_b = Breaker::builder()
+        .definition(&def)
+        .headless()
+        .extra()
+        .spawn(&mut world.commands());
+    world.flush();
     world
         .entity_mut(breaker_b)
         .insert((BoundEffects::default(), StagedEffects::default()));

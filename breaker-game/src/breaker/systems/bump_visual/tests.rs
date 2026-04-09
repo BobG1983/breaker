@@ -1,4 +1,4 @@
-use bevy::{ecs::world::CommandQueue, prelude::*};
+use bevy::prelude::*;
 
 use super::*;
 use crate::{
@@ -8,16 +8,6 @@ use crate::{
     },
     input::resources::{GameAction, InputActions},
 };
-
-fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
-    let mut queue = CommandQueue::default();
-    let entity = {
-        let mut commands = Commands::new(&mut queue, world);
-        f(&mut commands)
-    };
-    queue.apply(world);
-    entity
-}
 
 fn default_bump_feedback() -> BumpFeedback {
     let config = BreakerDefinition::default();
@@ -129,13 +119,16 @@ fn trigger_inserts_bump_visual_on_bump_action() {
     let mut app = trigger_test_app();
 
     let def = BreakerDefinition::default();
-    let entity = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
+    let entity = {
+        let world = app.world_mut();
+        let entity = Breaker::builder()
             .definition(&def)
             .headless()
             .primary()
-            .spawn(commands)
-    });
+            .spawn(&mut world.commands());
+        world.flush();
+        entity
+    };
 
     set_bump_action(&mut app);
     tick(&mut app);
@@ -151,13 +144,16 @@ fn trigger_skips_without_bump_action() {
     let mut app = trigger_test_app();
 
     let def = BreakerDefinition::default();
-    let entity = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
+    let entity = {
+        let world = app.world_mut();
+        let entity = Breaker::builder()
             .definition(&def)
             .headless()
             .primary()
-            .spawn(commands)
-    });
+            .spawn(&mut world.commands());
+        world.flush();
+        entity
+    };
 
     // No Bump action set
     tick(&mut app);
@@ -173,13 +169,16 @@ fn trigger_fires_during_cooldown() {
     let mut app = trigger_test_app();
 
     let def = BreakerDefinition::default();
-    let entity = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
+    let entity = {
+        let world = app.world_mut();
+        let entity = Breaker::builder()
             .definition(&def)
             .headless()
             .primary()
-            .spawn(commands)
-    });
+            .spawn(&mut world.commands());
+        world.flush();
+        entity
+    };
     app.world_mut().entity_mut(entity).insert(BumpState {
         cooldown: 0.5,
         ..Default::default()
@@ -200,13 +199,16 @@ fn trigger_does_not_retrigger_while_animating() {
     let params = default_bump_feedback();
 
     let def = BreakerDefinition::default();
-    let entity = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
+    let entity = {
+        let world = app.world_mut();
+        let entity = Breaker::builder()
             .definition(&def)
             .headless()
             .primary()
-            .spawn(commands)
-    });
+            .spawn(&mut world.commands());
+        world.flush();
+        entity
+    };
     app.world_mut()
         .entity_mut(entity)
         .insert(BumpFeedbackState {
@@ -248,13 +250,16 @@ fn animate_applies_position2d_y_offset_during_animation() {
     let params = default_bump_feedback();
 
     let def = BreakerDefinition::default();
-    let entity = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
+    let entity = {
+        let world = app.world_mut();
+        let entity = Breaker::builder()
             .definition(&def)
             .headless()
             .primary()
-            .spawn(commands)
-    });
+            .spawn(&mut world.commands());
+        world.flush();
+        entity
+    };
     app.world_mut()
         .entity_mut(entity)
         .insert(BumpFeedbackState {
@@ -289,13 +294,16 @@ fn animate_removes_bump_visual_when_done() {
     let params = default_bump_feedback();
 
     let def = BreakerDefinition::default();
-    let entity = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
+    let entity = {
+        let world = app.world_mut();
+        let entity = Breaker::builder()
             .definition(&def)
             .headless()
             .primary()
-            .spawn(commands)
-    });
+            .spawn(&mut world.commands());
+        world.flush();
+        entity
+    };
     app.world_mut()
         .entity_mut(entity)
         .insert(BumpFeedbackState {
@@ -332,13 +340,16 @@ fn animate_snaps_position2d_to_base_after_expiry() {
 
     // Start with an offset Y to verify the snap overrides it
     let def = BreakerDefinition::default();
-    let entity = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
+    let entity = {
+        let world = app.world_mut();
+        let entity = Breaker::builder()
             .definition(&def)
             .headless()
             .primary()
-            .spawn(commands)
-    });
+            .spawn(&mut world.commands());
+        world.flush();
+        entity
+    };
     app.world_mut().entity_mut(entity).insert((
         Position2D(Vec2::new(0.0, config.y_position + 5.0)),
         BumpFeedbackState {

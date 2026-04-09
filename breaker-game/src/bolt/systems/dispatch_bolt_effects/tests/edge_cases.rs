@@ -1,6 +1,6 @@
 //! Behaviors 11-13: mixed targets, missing definition, component insertion.
 
-use bevy::{ecs::world::CommandQueue, prelude::*};
+use bevy::prelude::*;
 
 use super::helpers::{TEST_BOLT_NAME, test_app_with_dispatch};
 use crate::{
@@ -13,16 +13,6 @@ use crate::{
     breaker::components::Breaker,
     effect::{BoundEffects, EffectKind, EffectNode, RootEffect, StagedEffects, Target, Trigger},
 };
-
-fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
-    let mut queue = CommandQueue::default();
-    let entity = {
-        let mut commands = Commands::new(&mut queue, world);
-        f(&mut commands)
-    };
-    queue.apply(world);
-    entity
-}
 
 /// Helper: creates a minimal `BoltDefinition` with the given effects.
 fn make_bolt_def(name: &str, effects: Vec<RootEffect>) -> BoltDefinition {
@@ -81,13 +71,16 @@ fn dispatch_handles_mixed_targets_aegis_style() {
     );
     let mut app = test_app_with_dispatch(def);
     let breaker_def = crate::breaker::definition::BreakerDefinition::default();
-    let breaker = spawn_in_world(app.world_mut(), |commands| {
-        Breaker::builder()
+    let breaker = {
+        let world = app.world_mut();
+        let entity = Breaker::builder()
             .definition(&breaker_def)
             .headless()
             .primary()
-            .spawn(commands)
-    });
+            .spawn(&mut world.commands());
+        world.flush();
+        entity
+    };
     app.world_mut()
         .entity_mut(breaker)
         .insert(BoundEffects::default());

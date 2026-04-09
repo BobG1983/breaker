@@ -81,20 +81,8 @@ pub fn spawn_whiff_text(
 
 #[cfg(test)]
 mod tests {
-    use bevy::ecs::world::CommandQueue;
-
     use super::*;
     use crate::fx::FadeOut;
-
-    fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
-        let mut queue = CommandQueue::default();
-        let entity = {
-            let mut commands = Commands::new(&mut queue, world);
-            f(&mut commands)
-        };
-        queue.apply(world);
-        entity
-    }
 
     #[derive(Resource)]
     struct TestBumpMsg(Option<BumpPerformed>);
@@ -124,13 +112,13 @@ mod tests {
     fn spawn_breaker(app: &mut App) {
         use crate::breaker::definition::BreakerDefinition;
         let def = BreakerDefinition::default();
-        let entity = spawn_in_world(app.world_mut(), |commands| {
-            Breaker::builder()
-                .definition(&def)
-                .headless()
-                .primary()
-                .spawn(commands)
-        });
+        let world = app.world_mut();
+        let entity = Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(&mut world.commands());
+        world.flush();
         app.world_mut()
             .entity_mut(entity)
             .insert(Transform::from_xyz(0.0, -450.0, 0.0));

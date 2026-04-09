@@ -1,18 +1,8 @@
-use bevy::{ecs::world::CommandQueue, prelude::*};
+use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Velocity2D;
 
 use super::helpers::test_bolt_definition;
 use crate::bolt::components::{Bolt, BoltServing, PrimaryBolt};
-
-fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
-    let mut queue = CommandQueue::default();
-    let entity = {
-        let mut commands = Commands::new(&mut queue, world);
-        f(&mut commands)
-    };
-    queue.apply(world);
-    entity
-}
 
 // ── Behavior 16: .headless() build does NOT insert Mesh2d or MeshMaterial2d ──
 
@@ -20,15 +10,14 @@ fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) ->
 fn headless_primary_serving_has_no_mesh_or_material() {
     let def = test_bolt_definition();
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Bolt::builder()
-            .definition(&def)
-            .at_position(Vec2::new(0.0, 50.0))
-            .serving()
-            .primary()
-            .headless()
-            .spawn(commands)
-    });
+    let entity = Bolt::builder()
+        .definition(&def)
+        .at_position(Vec2::new(0.0, 50.0))
+        .serving()
+        .primary()
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
 
     assert!(
         world.get::<Bolt>(entity).is_some(),
@@ -56,15 +45,14 @@ fn headless_primary_serving_has_no_mesh_or_material() {
 fn headless_extra_velocity_has_no_mesh_or_material() {
     let def = test_bolt_definition();
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Bolt::builder()
-            .definition(&def)
-            .at_position(Vec2::ZERO)
-            .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
-            .extra()
-            .headless()
-            .spawn(commands)
-    });
+    let entity = Bolt::builder()
+        .definition(&def)
+        .at_position(Vec2::ZERO)
+        .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
+        .extra()
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
 
     assert!(
         world.get::<Mesh2d>(entity).is_none(),

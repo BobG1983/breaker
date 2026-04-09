@@ -1,22 +1,12 @@
 //! Tests for the guard path: `setup_run` early-returns when a breaker already exists.
 
-use bevy::{ecs::world::CommandQueue, prelude::*};
+use bevy::prelude::*;
 
 use super::helpers::test_app;
 use crate::{
     bolt::{components::Bolt, messages::BoltSpawned},
     breaker::{components::Breaker, definition::BreakerDefinition, messages::BreakerSpawned},
 };
-
-fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
-    let mut queue = CommandQueue::default();
-    let entity = {
-        let mut commands = Commands::new(&mut queue, world);
-        f(&mut commands)
-    };
-    queue.apply(world);
-    entity
-}
 
 // ── Behavior 1: setup_run early-returns when a breaker already exists ──
 
@@ -25,13 +15,15 @@ fn setup_run_early_returns_when_breaker_already_exists() {
     let mut app = test_app();
     // Pre-spawn a breaker entity
     let def = BreakerDefinition::default();
-    spawn_in_world(app.world_mut(), |commands| {
+    {
+        let world = app.world_mut();
         Breaker::builder()
             .definition(&def)
             .headless()
             .primary()
-            .spawn(commands)
-    });
+            .spawn(&mut world.commands());
+        world.flush();
+    };
     app.update();
 
     let breaker_count = app
@@ -70,20 +62,24 @@ fn setup_run_early_returns_when_two_breakers_exist() {
     let mut app = test_app();
     // Pre-spawn two breaker entities
     let def = BreakerDefinition::default();
-    spawn_in_world(app.world_mut(), |commands| {
+    {
+        let world = app.world_mut();
         Breaker::builder()
             .definition(&def)
             .headless()
             .primary()
-            .spawn(commands)
-    });
-    spawn_in_world(app.world_mut(), |commands| {
+            .spawn(&mut world.commands());
+        world.flush();
+    };
+    {
+        let world = app.world_mut();
         Breaker::builder()
             .definition(&def)
             .headless()
             .extra()
-            .spawn(commands)
-    });
+            .spawn(&mut world.commands());
+        world.flush();
+    };
     app.update();
 
     let breaker_count = app

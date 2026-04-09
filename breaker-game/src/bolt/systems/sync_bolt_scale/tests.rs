@@ -19,9 +19,7 @@ fn test_app() -> App {
 }
 
 /// Runs one update tick.
-fn tick(app: &mut App) {
-    app.update();
-}
+use crate::shared::test_utils::tick;
 
 // ── Behavior 9: Base radius with no boosts sets Scale2D to base radius ──
 

@@ -61,20 +61,8 @@ pub(crate) fn register(app: &mut App) {
 
 #[cfg(test)]
 mod tests {
-    use bevy::ecs::world::CommandQueue;
-
     use super::*;
     use crate::{breaker::messages::BumpGrade, effect::effects::speed_boost::ActiveSpeedBoosts};
-
-    fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
-        let mut queue = CommandQueue::default();
-        let entity = {
-            let mut commands = Commands::new(&mut queue, world);
-            f(&mut commands)
-        };
-        queue.apply(world);
-        entity
-    }
 
     #[derive(Resource)]
     struct TestBumpMsg(Option<BumpPerformed>);
@@ -148,23 +136,29 @@ mod tests {
         let mut app = test_app();
 
         let def = crate::breaker::definition::BreakerDefinition::default();
-        let breaker_a = spawn_in_world(app.world_mut(), |commands| {
-            Breaker::builder()
+        let breaker_a = {
+            let world = app.world_mut();
+            let entity = Breaker::builder()
                 .definition(&def)
                 .headless()
                 .primary()
-                .spawn(commands)
-        });
+                .spawn(&mut world.commands());
+            world.flush();
+            entity
+        };
         app.world_mut()
             .entity_mut(breaker_a)
             .insert(StagedEffects::default());
-        let breaker_b = spawn_in_world(app.world_mut(), |commands| {
-            Breaker::builder()
+        let breaker_b = {
+            let world = app.world_mut();
+            let entity = Breaker::builder()
                 .definition(&def)
                 .headless()
                 .extra()
-                .spawn(commands)
-        });
+                .spawn(&mut world.commands());
+            world.flush();
+            entity
+        };
         app.world_mut()
             .entity_mut(breaker_b)
             .insert(StagedEffects::default());

@@ -1,4 +1,4 @@
-use bevy::{ecs::world::CommandQueue, prelude::*};
+use bevy::prelude::*;
 use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{
     BaseSpeed, InterpolateTransform2D, MaxSpeed, MinAngleHorizontal, MinAngleVertical, MinSpeed,
@@ -12,16 +12,6 @@ use crate::{
     },
     shared::{BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, GameDrawLayer, WALL_LAYER},
 };
-
-fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
-    let mut queue = CommandQueue::default();
-    let entity = {
-        let mut commands = Commands::new(&mut queue, world);
-        f(&mut commands)
-    };
-    queue.apply(world);
-    entity
-}
 
 /// Creates a `BoltDefinition` matching the values previously provided by
 /// `BoltConfig::default()`, so existing assertions remain valid.
@@ -48,16 +38,15 @@ fn test_bolt_definition() -> BoltDefinition {
 #[test]
 fn dimensions_any_order_extra_velocity() {
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Bolt::builder()
-            .extra()
-            .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
-            .with_angle(0.087, 0.087)
-            .at_position(Vec2::new(50.0, 50.0))
-            .with_speed(400.0, 200.0, 800.0)
-            .headless()
-            .spawn(commands)
-    });
+    let entity = Bolt::builder()
+        .extra()
+        .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
+        .with_angle(0.087, 0.087)
+        .at_position(Vec2::new(50.0, 50.0))
+        .with_speed(400.0, 200.0, 800.0)
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
 
     let pos = world.get::<Position2D>(entity).unwrap();
     assert!(
@@ -84,15 +73,14 @@ fn dimensions_any_order_extra_velocity() {
 fn from_config_in_middle_of_chain() {
     let def = test_bolt_definition();
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Bolt::builder()
-            .primary()
-            .definition(&def)
-            .at_position(Vec2::ZERO)
-            .serving()
-            .headless()
-            .spawn(commands)
-    });
+    let entity = Bolt::builder()
+        .primary()
+        .definition(&def)
+        .at_position(Vec2::ZERO)
+        .serving()
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
 
     assert!(world.get::<PrimaryBolt>(entity).is_some());
     assert!(world.get::<BoltServing>(entity).is_some());
@@ -105,18 +93,17 @@ fn from_config_in_middle_of_chain() {
 fn optional_interleaved_with_dimension_methods() {
     let def = test_bolt_definition();
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Bolt::builder()
-            .spawned_by("test")
-            .at_position(Vec2::ZERO)
-            .with_lifespan(2.0)
-            .definition(&def)
-            .with_radius(10.0)
-            .serving()
-            .extra()
-            .headless()
-            .spawn(commands)
-    });
+    let entity = Bolt::builder()
+        .spawned_by("test")
+        .at_position(Vec2::ZERO)
+        .with_lifespan(2.0)
+        .definition(&def)
+        .with_radius(10.0)
+        .serving()
+        .extra()
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
 
     // Bolt params from config should be present
     assert!(world.get::<BoltRadius>(entity).is_some());
@@ -131,15 +118,14 @@ fn optional_interleaved_with_dimension_methods() {
 #[test]
 fn collision_layers_primary_bolt() {
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Bolt::builder()
-            .definition(&test_bolt_definition())
-            .at_position(Vec2::ZERO)
-            .serving()
-            .primary()
-            .headless()
-            .spawn(commands)
-    });
+    let entity = Bolt::builder()
+        .definition(&test_bolt_definition())
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
 
     let layers = world.get::<CollisionLayers>(entity).unwrap();
     assert_eq!(layers.membership, BOLT_LAYER);
@@ -149,15 +135,14 @@ fn collision_layers_primary_bolt() {
 #[test]
 fn collision_layers_extra_bolt_same_primary() {
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Bolt::builder()
-            .definition(&test_bolt_definition())
-            .at_position(Vec2::ZERO)
-            .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
-            .extra()
-            .headless()
-            .spawn(commands)
-    });
+    let entity = Bolt::builder()
+        .definition(&test_bolt_definition())
+        .at_position(Vec2::ZERO)
+        .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
+        .extra()
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
 
     let layers = world.get::<CollisionLayers>(entity).unwrap();
     assert_eq!(
@@ -175,15 +160,14 @@ fn collision_layers_extra_bolt_same_primary() {
 #[test]
 fn headless_primary_has_no_game_draw_layer() {
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Bolt::builder()
-            .definition(&test_bolt_definition())
-            .at_position(Vec2::ZERO)
-            .serving()
-            .primary()
-            .headless()
-            .spawn(commands)
-    });
+    let entity = Bolt::builder()
+        .definition(&test_bolt_definition())
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
 
     assert!(
         world.get::<GameDrawLayer>(entity).is_none(),
@@ -194,15 +178,14 @@ fn headless_primary_has_no_game_draw_layer() {
 #[test]
 fn headless_extra_has_no_game_draw_layer() {
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Bolt::builder()
-            .definition(&test_bolt_definition())
-            .at_position(Vec2::ZERO)
-            .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
-            .extra()
-            .headless()
-            .spawn(commands)
-    });
+    let entity = Bolt::builder()
+        .definition(&test_bolt_definition())
+        .at_position(Vec2::ZERO)
+        .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
+        .extra()
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
 
     assert!(
         world.get::<GameDrawLayer>(entity).is_none(),
@@ -216,16 +199,15 @@ fn headless_extra_has_no_game_draw_layer() {
 #[test]
 fn manual_path_produces_correct_spatial_components() {
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Bolt::builder()
-            .with_speed(500.0, 250.0, 750.0)
-            .with_angle(0.1, 0.15)
-            .at_position(Vec2::new(10.0, 20.0))
-            .with_velocity(Velocity2D(Vec2::new(200.0, 300.0)))
-            .extra()
-            .headless()
-            .spawn(commands)
-    });
+    let entity = Bolt::builder()
+        .with_speed(500.0, 250.0, 750.0)
+        .with_angle(0.1, 0.15)
+        .at_position(Vec2::new(10.0, 20.0))
+        .with_velocity(Velocity2D(Vec2::new(200.0, 300.0)))
+        .extra()
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
 
     let base = world.get::<BaseSpeed>(entity).unwrap();
     assert!(
@@ -270,16 +252,15 @@ fn manual_path_produces_correct_spatial_components() {
 #[test]
 fn manual_path_has_no_config_bolt_params() {
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Bolt::builder()
-            .with_speed(500.0, 250.0, 750.0)
-            .with_angle(0.1, 0.15)
-            .at_position(Vec2::new(10.0, 20.0))
-            .with_velocity(Velocity2D(Vec2::new(200.0, 300.0)))
-            .extra()
-            .headless()
-            .spawn(commands)
-    });
+    let entity = Bolt::builder()
+        .with_speed(500.0, 250.0, 750.0)
+        .with_angle(0.1, 0.15)
+        .at_position(Vec2::new(10.0, 20.0))
+        .with_velocity(Velocity2D(Vec2::new(200.0, 300.0)))
+        .extra()
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
 
     assert!(world.get::<BoltSpawnOffsetY>(entity).is_none());
 
@@ -294,17 +275,16 @@ fn manual_path_has_no_config_bolt_params() {
 #[test]
 fn manual_path_with_radius_sets_physical_dimensions() {
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Bolt::builder()
-            .with_speed(400.0, 200.0, 800.0)
-            .with_angle(0.087, 0.087)
-            .at_position(Vec2::ZERO)
-            .serving()
-            .primary()
-            .with_radius(15.0)
-            .headless()
-            .spawn(commands)
-    });
+    let entity = Bolt::builder()
+        .with_speed(400.0, 200.0, 800.0)
+        .with_angle(0.087, 0.087)
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .with_radius(15.0)
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
 
     let radius = world.get::<BoltRadius>(entity).unwrap();
     assert!(
@@ -332,16 +312,15 @@ fn manual_path_with_radius_sets_physical_dimensions() {
 #[test]
 fn manual_path_without_radius_uses_default() {
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Bolt::builder()
-            .with_speed(400.0, 200.0, 800.0)
-            .with_angle(0.087, 0.087)
-            .at_position(Vec2::ZERO)
-            .serving()
-            .primary()
-            .headless()
-            .spawn(commands)
-    });
+    let entity = Bolt::builder()
+        .with_speed(400.0, 200.0, 800.0)
+        .with_angle(0.087, 0.087)
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
 
     let radius = world.get::<BoltRadius>(entity).unwrap();
     assert!(

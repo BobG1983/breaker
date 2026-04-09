@@ -1,18 +1,8 @@
-use bevy::{ecs::world::CommandQueue, prelude::*};
+use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Position2D;
 
 use super::helpers::{custom_wall_definition, default_playfield, test_wall_definition};
 use crate::walls::{components::Wall, definition::WallDefinition};
-
-fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
-    let mut queue = CommandQueue::default();
-    let entity = {
-        let mut commands = Commands::new(&mut queue, world);
-        f(&mut commands)
-    };
-    queue.apply(world);
-    entity
-}
 
 // ── Behavior 6: .definition() stores definition values ──
 
@@ -22,9 +12,11 @@ fn definition_stores_half_thickness_from_custom_definition() {
     let def = custom_wall_definition(); // half_thickness: 45.0
 
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Wall::builder().left(&pf).definition(&def).spawn(commands)
-    });
+    let entity = Wall::builder()
+        .left(&pf)
+        .definition(&def)
+        .spawn(&mut world.commands());
+    world.flush();
 
     // With ht = 45.0, Left position should be (-400.0 - 45.0, 0.0) = (-445.0, 0.0)
     let pos = world.get::<Position2D>(entity);
@@ -110,14 +102,15 @@ fn definition_with_default_ht_produces_same_position_as_no_definition() {
     let mut world = World::new();
 
     // With definition
-    let entity_with = spawn_in_world(&mut world, |commands| {
-        Wall::builder().left(&pf).definition(&def).spawn(commands)
-    });
+    let entity_with = Wall::builder()
+        .left(&pf)
+        .definition(&def)
+        .spawn(&mut world.commands());
+    world.flush();
 
     // Without definition
-    let entity_without = spawn_in_world(&mut world, |commands| {
-        Wall::builder().left(&pf).spawn(commands)
-    });
+    let entity_without = Wall::builder().left(&pf).spawn(&mut world.commands());
+    world.flush();
 
     let pos_with = world.get::<Position2D>(entity_with).unwrap();
     let pos_without = world.get::<Position2D>(entity_without).unwrap();
@@ -141,9 +134,8 @@ fn resolution_priority_no_definition_no_override_uses_default() {
     let pf = default_playfield();
     let mut world = World::new();
 
-    let entity = spawn_in_world(&mut world, |commands| {
-        Wall::builder().left(&pf).spawn(commands)
-    });
+    let entity = Wall::builder().left(&pf).spawn(&mut world.commands());
+    world.flush();
 
     let pos = world.get::<Position2D>(entity).unwrap();
     assert!(
@@ -162,9 +154,11 @@ fn resolution_priority_definition_without_override() {
         half_thickness: 45.0,
         ..Default::default()
     };
-    let entity = spawn_in_world(&mut world, |commands| {
-        Wall::builder().left(&pf).definition(&def).spawn(commands)
-    });
+    let entity = Wall::builder()
+        .left(&pf)
+        .definition(&def)
+        .spawn(&mut world.commands());
+    world.flush();
 
     let pos = world.get::<Position2D>(entity).unwrap();
     assert!(
@@ -183,13 +177,12 @@ fn resolution_priority_override_beats_definition() {
         half_thickness: 45.0,
         ..Default::default()
     };
-    let entity = spawn_in_world(&mut world, |commands| {
-        Wall::builder()
-            .left(&pf)
-            .definition(&def)
-            .with_half_thickness(60.0)
-            .spawn(commands)
-    });
+    let entity = Wall::builder()
+        .left(&pf)
+        .definition(&def)
+        .with_half_thickness(60.0)
+        .spawn(&mut world.commands());
+    world.flush();
 
     let pos = world.get::<Position2D>(entity).unwrap();
     assert!(
@@ -208,9 +201,11 @@ fn resolution_priority_definition_with_default_ht_same_as_no_definition() {
         half_thickness: 90.0,
         ..Default::default()
     };
-    let entity = spawn_in_world(&mut world, |commands| {
-        Wall::builder().left(&pf).definition(&def).spawn(commands)
-    });
+    let entity = Wall::builder()
+        .left(&pf)
+        .definition(&def)
+        .spawn(&mut world.commands());
+    world.flush();
 
     let pos = world.get::<Position2D>(entity).unwrap();
     assert!(

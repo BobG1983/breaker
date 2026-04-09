@@ -1,4 +1,4 @@
-use bevy::{ecs::world::CommandQueue, prelude::*};
+use bevy::prelude::*;
 use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{
     BaseSpeed, InterpolateTransform2D, MaxSpeed, MinAngleHorizontal, MinAngleVertical, MinSpeed,
@@ -14,16 +14,6 @@ use crate::{
     shared::{BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, GameDrawLayer, WALL_LAYER},
     state::types::{NodeState, RunState},
 };
-
-fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
-    let mut queue = CommandQueue::default();
-    let entity = {
-        let mut commands = Commands::new(&mut queue, world);
-        f(&mut commands)
-    };
-    queue.apply(world);
-    entity
-}
 
 /// Creates a `BoltDefinition` matching the values previously provided by
 /// `BoltConfig::default()`, so existing assertions remain valid.
@@ -50,15 +40,14 @@ fn test_bolt_definition() -> BoltDefinition {
 #[test]
 fn build_primary_serving_has_bolt_marker() {
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Bolt::builder()
-            .definition(&test_bolt_definition())
-            .at_position(Vec2::new(0.0, 50.0))
-            .serving()
-            .primary()
-            .headless()
-            .spawn(commands)
-    });
+    let entity = Bolt::builder()
+        .definition(&test_bolt_definition())
+        .at_position(Vec2::new(0.0, 50.0))
+        .serving()
+        .primary()
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
 
     assert!(
         world.get::<Bolt>(entity).is_some(),
@@ -77,15 +66,14 @@ fn build_primary_serving_has_bolt_marker() {
 #[test]
 fn build_primary_serving_has_spatial_markers() {
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Bolt::builder()
-            .definition(&test_bolt_definition())
-            .at_position(Vec2::new(0.0, 50.0))
-            .serving()
-            .primary()
-            .headless()
-            .spawn(commands)
-    });
+    let entity = Bolt::builder()
+        .definition(&test_bolt_definition())
+        .at_position(Vec2::new(0.0, 50.0))
+        .serving()
+        .primary()
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
 
     assert!(
         world.get::<Spatial>(entity).is_some(),
@@ -104,15 +92,14 @@ fn build_primary_serving_has_spatial_markers() {
 #[test]
 fn build_primary_serving_has_position() {
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Bolt::builder()
-            .definition(&test_bolt_definition())
-            .at_position(Vec2::new(0.0, 50.0))
-            .serving()
-            .primary()
-            .headless()
-            .spawn(commands)
-    });
+    let entity = Bolt::builder()
+        .definition(&test_bolt_definition())
+        .at_position(Vec2::new(0.0, 50.0))
+        .serving()
+        .primary()
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
 
     let pos = world
         .get::<Position2D>(entity)
@@ -135,15 +122,14 @@ fn build_primary_serving_has_position() {
 #[test]
 fn build_primary_serving_has_zero_velocity() {
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Bolt::builder()
-            .definition(&test_bolt_definition())
-            .at_position(Vec2::new(0.0, 50.0))
-            .serving()
-            .primary()
-            .headless()
-            .spawn(commands)
-    });
+    let entity = Bolt::builder()
+        .definition(&test_bolt_definition())
+        .at_position(Vec2::new(0.0, 50.0))
+        .serving()
+        .primary()
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
 
     // Guard against false pass from stub — check a non-#[require] component
     assert!(
@@ -163,15 +149,14 @@ fn build_primary_serving_has_zero_velocity() {
 #[test]
 fn build_primary_serving_has_speed_components() {
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Bolt::builder()
-            .definition(&test_bolt_definition())
-            .at_position(Vec2::new(0.0, 50.0))
-            .serving()
-            .primary()
-            .headless()
-            .spawn(commands)
-    });
+    let entity = Bolt::builder()
+        .definition(&test_bolt_definition())
+        .at_position(Vec2::new(0.0, 50.0))
+        .serving()
+        .primary()
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
 
     let base = world.get::<BaseSpeed>(entity).unwrap();
     assert!(
@@ -193,15 +178,14 @@ fn build_primary_serving_has_speed_components() {
 #[test]
 fn build_primary_serving_has_angle_components() {
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Bolt::builder()
-            .definition(&test_bolt_definition())
-            .at_position(Vec2::new(0.0, 50.0))
-            .serving()
-            .primary()
-            .headless()
-            .spawn(commands)
-    });
+    let entity = Bolt::builder()
+        .definition(&test_bolt_definition())
+        .at_position(Vec2::new(0.0, 50.0))
+        .serving()
+        .primary()
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
 
     let h = world.get::<MinAngleHorizontal>(entity).unwrap();
     let expected_h = 5.0_f32.to_radians();
@@ -220,15 +204,14 @@ fn build_primary_serving_has_angle_components() {
 #[test]
 fn build_primary_serving_has_radius_components() {
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Bolt::builder()
-            .definition(&test_bolt_definition())
-            .at_position(Vec2::new(0.0, 50.0))
-            .serving()
-            .primary()
-            .headless()
-            .spawn(commands)
-    });
+    let entity = Bolt::builder()
+        .definition(&test_bolt_definition())
+        .at_position(Vec2::new(0.0, 50.0))
+        .serving()
+        .primary()
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
 
     let radius = world.get::<BoltRadius>(entity).unwrap();
     assert!(
@@ -258,15 +241,14 @@ fn build_primary_serving_has_radius_components() {
 #[test]
 fn build_primary_serving_has_cleanup_on_run_end() {
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Bolt::builder()
-            .definition(&test_bolt_definition())
-            .at_position(Vec2::new(0.0, 50.0))
-            .serving()
-            .primary()
-            .headless()
-            .spawn(commands)
-    });
+    let entity = Bolt::builder()
+        .definition(&test_bolt_definition())
+        .at_position(Vec2::new(0.0, 50.0))
+        .serving()
+        .primary()
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
 
     assert!(
         world.get::<CleanupOnExit<RunState>>(entity).is_some(),
@@ -277,15 +259,14 @@ fn build_primary_serving_has_cleanup_on_run_end() {
 #[test]
 fn build_primary_serving_has_collision_layers() {
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Bolt::builder()
-            .definition(&test_bolt_definition())
-            .at_position(Vec2::new(0.0, 50.0))
-            .serving()
-            .primary()
-            .headless()
-            .spawn(commands)
-    });
+    let entity = Bolt::builder()
+        .definition(&test_bolt_definition())
+        .at_position(Vec2::new(0.0, 50.0))
+        .serving()
+        .primary()
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
 
     let layers = world
         .get::<CollisionLayers>(entity)
@@ -304,15 +285,14 @@ fn build_primary_serving_has_collision_layers() {
 #[test]
 fn build_primary_serving_headless_has_no_game_draw_layer() {
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Bolt::builder()
-            .definition(&test_bolt_definition())
-            .at_position(Vec2::new(0.0, 50.0))
-            .serving()
-            .primary()
-            .headless()
-            .spawn(commands)
-    });
+    let entity = Bolt::builder()
+        .definition(&test_bolt_definition())
+        .at_position(Vec2::new(0.0, 50.0))
+        .serving()
+        .primary()
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
 
     assert!(
         world.get::<GameDrawLayer>(entity).is_none(),
@@ -324,15 +304,14 @@ fn build_primary_serving_headless_has_no_game_draw_layer() {
 #[test]
 fn build_extra_velocity_has_extra_bolt_marker() {
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Bolt::builder()
-            .definition(&test_bolt_definition())
-            .at_position(Vec2::new(200.0, 300.0))
-            .with_velocity(Velocity2D(Vec2::new(102.9, 385.5)))
-            .extra()
-            .headless()
-            .spawn(commands)
-    });
+    let entity = Bolt::builder()
+        .definition(&test_bolt_definition())
+        .at_position(Vec2::new(200.0, 300.0))
+        .with_velocity(Velocity2D(Vec2::new(102.9, 385.5)))
+        .extra()
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
 
     assert!(
         world.get::<Bolt>(entity).is_some(),
@@ -355,15 +334,14 @@ fn build_extra_velocity_has_extra_bolt_marker() {
 #[test]
 fn build_extra_velocity_has_explicit_velocity() {
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Bolt::builder()
-            .definition(&test_bolt_definition())
-            .at_position(Vec2::new(200.0, 300.0))
-            .with_velocity(Velocity2D(Vec2::new(102.9, 385.5)))
-            .extra()
-            .headless()
-            .spawn(commands)
-    });
+    let entity = Bolt::builder()
+        .definition(&test_bolt_definition())
+        .at_position(Vec2::new(200.0, 300.0))
+        .with_velocity(Velocity2D(Vec2::new(102.9, 385.5)))
+        .extra()
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
 
     let vel = world.get::<Velocity2D>(entity).unwrap();
     assert!(
@@ -376,15 +354,14 @@ fn build_extra_velocity_has_explicit_velocity() {
 #[test]
 fn build_extra_velocity_has_cleanup_on_node_exit() {
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Bolt::builder()
-            .definition(&test_bolt_definition())
-            .at_position(Vec2::new(200.0, 300.0))
-            .with_velocity(Velocity2D(Vec2::new(102.9, 385.5)))
-            .extra()
-            .headless()
-            .spawn(commands)
-    });
+    let entity = Bolt::builder()
+        .definition(&test_bolt_definition())
+        .at_position(Vec2::new(200.0, 300.0))
+        .with_velocity(Velocity2D(Vec2::new(102.9, 385.5)))
+        .extra()
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
 
     assert!(
         world.get::<CleanupOnExit<NodeState>>(entity).is_some(),
@@ -399,15 +376,14 @@ fn build_extra_velocity_has_cleanup_on_node_exit() {
 #[test]
 fn build_extra_velocity_has_spatial_markers() {
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Bolt::builder()
-            .definition(&test_bolt_definition())
-            .at_position(Vec2::new(200.0, 300.0))
-            .with_velocity(Velocity2D(Vec2::new(102.9, 385.5)))
-            .extra()
-            .headless()
-            .spawn(commands)
-    });
+    let entity = Bolt::builder()
+        .definition(&test_bolt_definition())
+        .at_position(Vec2::new(200.0, 300.0))
+        .with_velocity(Velocity2D(Vec2::new(102.9, 385.5)))
+        .extra()
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
 
     assert!(
         world.get::<Spatial>(entity).is_some(),
@@ -426,15 +402,14 @@ fn build_extra_velocity_has_spatial_markers() {
 #[test]
 fn build_extra_bolt_at_zero_pos_straight_up() {
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Bolt::builder()
-            .definition(&test_bolt_definition())
-            .at_position(Vec2::ZERO)
-            .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
-            .extra()
-            .headless()
-            .spawn(commands)
-    });
+    let entity = Bolt::builder()
+        .definition(&test_bolt_definition())
+        .at_position(Vec2::ZERO)
+        .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
+        .extra()
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
 
     let pos = world.get::<Position2D>(entity).unwrap();
     assert_eq!(pos.0, Vec2::ZERO);
@@ -449,16 +424,15 @@ fn build_extra_bolt_at_zero_pos_straight_up() {
 #[test]
 fn serving_bolt_always_zero_velocity() {
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Bolt::builder()
-            .with_speed(999.0, 100.0, 2000.0)
-            .with_angle(0.0, 0.0)
-            .at_position(Vec2::ZERO)
-            .serving()
-            .primary()
-            .headless()
-            .spawn(commands)
-    });
+    let entity = Bolt::builder()
+        .with_speed(999.0, 100.0, 2000.0)
+        .with_angle(0.0, 0.0)
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
 
     // Guard against false pass from stub — check non-#[require] component
     assert!(
@@ -477,15 +451,14 @@ fn serving_bolt_always_zero_velocity() {
 #[test]
 fn primary_bolt_has_cleanup_on_run_end_not_node_exit() {
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Bolt::builder()
-            .definition(&test_bolt_definition())
-            .at_position(Vec2::ZERO)
-            .serving()
-            .primary()
-            .headless()
-            .spawn(commands)
-    });
+    let entity = Bolt::builder()
+        .definition(&test_bolt_definition())
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
 
     assert!(
         world.get::<CleanupOnExit<RunState>>(entity).is_some(),
@@ -501,15 +474,14 @@ fn primary_bolt_has_cleanup_on_run_end_not_node_exit() {
 #[test]
 fn extra_bolt_has_cleanup_on_node_exit_not_run_end() {
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Bolt::builder()
-            .definition(&test_bolt_definition())
-            .at_position(Vec2::ZERO)
-            .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
-            .extra()
-            .headless()
-            .spawn(commands)
-    });
+    let entity = Bolt::builder()
+        .definition(&test_bolt_definition())
+        .at_position(Vec2::ZERO)
+        .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
+        .extra()
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
 
     assert!(
         world.get::<CleanupOnExit<NodeState>>(entity).is_some(),
@@ -525,16 +497,15 @@ fn extra_bolt_has_cleanup_on_node_exit_not_run_end() {
 #[test]
 fn build_uses_spatial_builder_for_velocity_constraints() {
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Bolt::builder()
-            .with_speed(500.0, 100.0, 900.0)
-            .with_angle(0.1, 0.2)
-            .at_position(Vec2::ZERO)
-            .serving()
-            .primary()
-            .headless()
-            .spawn(commands)
-    });
+    let entity = Bolt::builder()
+        .with_speed(500.0, 100.0, 900.0)
+        .with_angle(0.1, 0.2)
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
 
     assert!(
         world.get::<Spatial>(entity).is_some(),
@@ -571,16 +542,15 @@ fn build_uses_spatial_builder_for_velocity_constraints() {
 #[test]
 fn build_without_from_config_has_default_radius() {
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Bolt::builder()
-            .with_speed(400.0, 200.0, 800.0)
-            .with_angle(0.087, 0.087)
-            .at_position(Vec2::ZERO)
-            .serving()
-            .primary()
-            .headless()
-            .spawn(commands)
-    });
+    let entity = Bolt::builder()
+        .with_speed(400.0, 200.0, 800.0)
+        .with_angle(0.087, 0.087)
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
 
     let radius = world.get::<BoltRadius>(entity).unwrap();
     assert!(
@@ -609,16 +579,15 @@ fn build_without_from_config_has_default_radius() {
 #[test]
 fn build_without_from_config_has_no_bolt_params() {
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Bolt::builder()
-            .with_speed(400.0, 200.0, 800.0)
-            .with_angle(0.087, 0.087)
-            .at_position(Vec2::ZERO)
-            .serving()
-            .primary()
-            .headless()
-            .spawn(commands)
-    });
+    let entity = Bolt::builder()
+        .with_speed(400.0, 200.0, 800.0)
+        .with_angle(0.087, 0.087)
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
 
     assert!(
         world.get::<BoltSpawnOffsetY>(entity).is_none(),
@@ -630,16 +599,15 @@ fn build_without_from_config_has_no_bolt_params() {
 #[test]
 fn build_with_radius_override_sets_physical_dimensions() {
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Bolt::builder()
-            .definition(&test_bolt_definition())
-            .at_position(Vec2::ZERO)
-            .serving()
-            .primary()
-            .with_radius(20.0)
-            .headless()
-            .spawn(commands)
-    });
+    let entity = Bolt::builder()
+        .definition(&test_bolt_definition())
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .with_radius(20.0)
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
 
     let radius = world.get::<BoltRadius>(entity).unwrap();
     assert!(
@@ -667,16 +635,15 @@ fn build_with_radius_override_sets_physical_dimensions() {
 #[test]
 fn build_with_radius_zero_no_panic() {
     let mut world = World::new();
-    let entity = spawn_in_world(&mut world, |commands| {
-        Bolt::builder()
-            .definition(&test_bolt_definition())
-            .at_position(Vec2::ZERO)
-            .serving()
-            .primary()
-            .with_radius(0.0)
-            .headless()
-            .spawn(commands)
-    });
+    let entity = Bolt::builder()
+        .definition(&test_bolt_definition())
+        .at_position(Vec2::ZERO)
+        .serving()
+        .primary()
+        .with_radius(0.0)
+        .headless()
+        .spawn(&mut world.commands());
+    world.flush();
 
     let radius = world.get::<BoltRadius>(entity).unwrap();
     assert!(

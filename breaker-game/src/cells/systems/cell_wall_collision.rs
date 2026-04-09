@@ -57,7 +57,7 @@ pub(crate) fn cell_wall_collision(
 
 #[cfg(test)]
 mod tests {
-    use bevy::{ecs::world::CommandQueue, prelude::*};
+    use bevy::prelude::*;
     use rantzsoft_physics2d::plugin::RantzPhysics2dPlugin;
     use rantzsoft_spatial2d::components::{GlobalPosition2D, Spatial2D};
 
@@ -96,16 +96,6 @@ mod tests {
         app
     }
 
-    fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
-        let mut queue = CommandQueue::default();
-        let entity = {
-            let mut commands = Commands::new(&mut queue, world);
-            f(&mut commands)
-        };
-        queue.apply(world);
-        entity
-    }
-
     fn spawn_cell(app: &mut App, pos: Vec2, half_extents: Vec2) -> Entity {
         app.world_mut()
             .spawn((
@@ -122,9 +112,12 @@ mod tests {
 
     fn spawn_left_wall(app: &mut App) -> Entity {
         let pf = PlayfieldConfig::default();
-        let entity = spawn_in_world(app.world_mut(), |commands| {
-            Wall::builder().left(&pf).spawn(commands)
-        });
+        let entity = {
+            let world = app.world_mut();
+            let entity = Wall::builder().left(&pf).spawn(&mut world.commands());
+            world.flush();
+            entity
+        };
         let pos = app.world().get::<Position2D>(entity).unwrap().0;
         app.world_mut()
             .entity_mut(entity)
@@ -134,9 +127,12 @@ mod tests {
 
     fn spawn_right_wall(app: &mut App) -> Entity {
         let pf = PlayfieldConfig::default();
-        let entity = spawn_in_world(app.world_mut(), |commands| {
-            Wall::builder().right(&pf).spawn(commands)
-        });
+        let entity = {
+            let world = app.world_mut();
+            let entity = Wall::builder().right(&pf).spawn(&mut world.commands());
+            world.flush();
+            entity
+        };
         let pos = app.world().get::<Position2D>(entity).unwrap().0;
         app.world_mut()
             .entity_mut(entity)
@@ -146,9 +142,12 @@ mod tests {
 
     fn spawn_ceiling_wall(app: &mut App) -> Entity {
         let pf = PlayfieldConfig::default();
-        let entity = spawn_in_world(app.world_mut(), |commands| {
-            Wall::builder().ceiling(&pf).spawn(commands)
-        });
+        let entity = {
+            let world = app.world_mut();
+            let entity = Wall::builder().ceiling(&pf).spawn(&mut world.commands());
+            world.flush();
+            entity
+        };
         let pos = app.world().get::<Position2D>(entity).unwrap().0;
         app.world_mut()
             .entity_mut(entity)

@@ -1,19 +1,9 @@
-use bevy::{ecs::world::CommandQueue, prelude::*};
+use bevy::prelude::*;
 use rantzsoft_physics2d::aabb::Aabb2D;
 use rantzsoft_spatial2d::components::{Position2D, Scale2D};
 
 use super::helpers::default_playfield;
 use crate::{shared::PlayfieldConfig, walls::components::Wall};
-
-fn spawn_in_world(world: &mut World, f: impl FnOnce(&mut Commands) -> Entity) -> Entity {
-    let mut queue = CommandQueue::default();
-    let entity = {
-        let mut commands = Commands::new(&mut queue, world);
-        f(&mut commands)
-    };
-    queue.apply(world);
-    entity
-}
 
 // ── Behavior 40: Left wall position scales with custom playfield width ──
 
@@ -27,9 +17,8 @@ fn left_wall_custom_width_1000() {
 
     let mut world = World::new();
 
-    let entity = spawn_in_world(&mut world, |commands| {
-        Wall::builder().left(&pf).spawn(commands)
-    });
+    let entity = Wall::builder().left(&pf).spawn(&mut world.commands());
+    world.flush();
 
     let pos = world.get::<Position2D>(entity).unwrap();
     assert!(
@@ -68,9 +57,8 @@ fn left_wall_zero_width() {
     };
     let mut world = World::new();
 
-    let entity = spawn_in_world(&mut world, |commands| {
-        Wall::builder().left(&pf).spawn(commands)
-    });
+    let entity = Wall::builder().left(&pf).spawn(&mut world.commands());
+    world.flush();
 
     let pos = world.get::<Position2D>(entity).unwrap();
     assert!(
@@ -91,9 +79,8 @@ fn ceiling_wall_custom_height_1080() {
     };
     let mut world = World::new();
 
-    let entity = spawn_in_world(&mut world, |commands| {
-        Wall::builder().ceiling(&pf).spawn(commands)
-    });
+    let entity = Wall::builder().ceiling(&pf).spawn(&mut world.commands());
+    world.flush();
 
     let pos = world.get::<Position2D>(entity).unwrap();
     assert!(pos.0.x.abs() < f32::EPSILON, "Ceiling x should be 0.0");
@@ -123,9 +110,8 @@ fn ceiling_wall_zero_height() {
     };
     let mut world = World::new();
 
-    let entity = spawn_in_world(&mut world, |commands| {
-        Wall::builder().ceiling(&pf).spawn(commands)
-    });
+    let entity = Wall::builder().ceiling(&pf).spawn(&mut world.commands());
+    world.flush();
 
     let pos = world.get::<Position2D>(entity).unwrap();
     assert!(
@@ -146,9 +132,8 @@ fn floor_wall_custom_height_1080() {
     };
     let mut world = World::new();
 
-    let entity = spawn_in_world(&mut world, |commands| {
-        Wall::builder().floor(&pf).spawn(commands)
-    });
+    let entity = Wall::builder().floor(&pf).spawn(&mut world.commands());
+    world.flush();
 
     let pos = world.get::<Position2D>(entity).unwrap();
     assert!(
@@ -173,9 +158,8 @@ fn floor_wall_default_playfield_at_bottom() {
     let pf = default_playfield();
     let mut world = World::new();
 
-    let entity = spawn_in_world(&mut world, |commands| {
-        Wall::builder().floor(&pf).spawn(commands)
-    });
+    let entity = Wall::builder().floor(&pf).spawn(&mut world.commands());
+    world.flush();
 
     let pos = world.get::<Position2D>(entity).unwrap();
     assert!(
