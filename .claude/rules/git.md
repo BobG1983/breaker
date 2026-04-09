@@ -10,12 +10,6 @@ git flow config add topic refactor develop --prefix=refactor/
 git flow config edit topic bugfix --prefix=fix/
 ```
 
-Also set the local merge strategy to always create merge commits (preserves full branch topology in git UIs):
-
-```bash
-git config --local merge.ff false
-```
-
 This establishes:
 - **Base branches**: `main` (production), `develop` (integration)
 - **Topic types**: `feature/*`, `fix/*`, `refactor/*`, `release/*`, `hotfix/*`
@@ -102,7 +96,7 @@ The Full Verification Tier includes the Standard Verification Tier (which must a
 
 ## History Hygiene
 
-- `merge.ff = false` is set locally — all merges create merge commits, preserving full branch topology in git UIs
+- Fast-forward merges are allowed — `git flow finish` creates merge commits automatically when needed
 - Never rewrite shared history without explicit approval
 - Keep `main` and `develop` always clean and passing (fmt, clippy, tests)
 - If a pre-commit hook fails, fix the issue and create a NEW commit (don't amend)
