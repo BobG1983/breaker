@@ -10,7 +10,7 @@ use crate::{
     shared::PlayfieldConfig,
     state::run::node::{
         ActiveNodeLayout, ClearRemainingCount, NodeLayoutRegistry,
-        systems::{RenderAssets, spawn_cells_from_grid},
+        systems::{HpContext, RenderAssets, ToughnessHpData, spawn_cells_from_grid},
     },
 };
 
@@ -69,7 +69,7 @@ pub(crate) fn propagate_node_layout_changes(mut ctx: LayoutChangeContext) {
         ctx.commands.entity(entity).despawn();
     }
 
-    // Respawn cells from updated layout (hot-reload uses default hp_mult)
+    // Respawn cells from updated layout (hot-reload uses default toughness fallback)
     let required_count = spawn_cells_from_grid(
         &mut ctx.commands,
         &ctx.cell_config,
@@ -80,7 +80,14 @@ pub(crate) fn propagate_node_layout_changes(mut ctx: LayoutChangeContext) {
             meshes: &mut ctx.meshes,
             materials: &mut ctx.materials,
         },
-        1.0,
+        ToughnessHpData {
+            toughness_config: None,
+            hp_context: HpContext {
+                tier: 0,
+                position_in_tier: 0,
+                is_boss: false,
+            },
+        },
     );
 
     // Update active layout and clear remaining count
@@ -94,7 +101,7 @@ pub(crate) fn propagate_node_layout_changes(mut ctx: LayoutChangeContext) {
 mod tests {
     use super::*;
     use crate::{
-        cells::{CellTypeDefinition, components::CellTypeAlias},
+        cells::{CellTypeDefinition, components::CellTypeAlias, definition::Toughness},
         state::run::node::{NodeLayout, definition::NodePool},
     };
 
@@ -105,7 +112,7 @@ mod tests {
             CellTypeDefinition {
                 id: "standard".to_owned(),
                 alias: "S".to_owned(),
-                hp: 1.0,
+                toughness: Toughness::default(),
                 color_rgb: [4.0, 0.2, 0.5],
                 required_to_clear: true,
                 damage_hdr_base: 4.0,
@@ -122,7 +129,7 @@ mod tests {
             CellTypeDefinition {
                 id: "tough".to_owned(),
                 alias: "T".to_owned(),
-                hp: 3.0,
+                toughness: Toughness::Tough,
                 color_rgb: [2.5, 0.2, 4.0],
                 required_to_clear: true,
                 damage_hdr_base: 4.0,

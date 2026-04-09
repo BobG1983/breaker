@@ -10,6 +10,7 @@ use crate::{
     cells::{
         CellTypeDefinition,
         components::*,
+        definition::Toughness,
         resources::{CellConfig, CellTypeRegistry},
     },
     shared::{BOLT_LAYER, CELL_LAYER, GameDrawLayer, PlayfieldConfig},
@@ -363,7 +364,7 @@ fn locked_cell_has_same_collision_layers_as_normal_cell() {
         CellTypeDefinition {
             id: "locked".to_owned(),
             alias: "L".to_owned(),
-            hp: 5.0,
+            toughness: Toughness::default(),
             color_rgb: [1.0, 1.0, 1.0],
             required_to_clear: true,
             damage_hdr_base: 4.0,
@@ -380,7 +381,7 @@ fn locked_cell_has_same_collision_layers_as_normal_cell() {
         CellTypeDefinition {
             id: "normal".to_owned(),
             alias: "N".to_owned(),
-            hp: 1.0,
+            toughness: Toughness::default(),
             color_rgb: [1.0, 0.5, 0.5],
             required_to_clear: true,
             damage_hdr_base: 4.0,

@@ -2,7 +2,7 @@
 (
     id: "tough",
     alias: "T",
-    hp: 30.0,
+    toughness: Tough,
     color_rgb: (2.5, 0.2, 4.0),
     required_to_clear: true,
     damage_hdr_base: 4.0,

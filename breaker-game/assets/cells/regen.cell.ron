@@ -1,7 +1,7 @@
 (
     id: "regen",
     alias: "R",
-    hp: 20.0,
+    toughness: Standard,
     color_rgb: (0.3, 4.0, 0.3),
     required_to_clear: true,
     damage_hdr_base: 4.0,

@@ -14,7 +14,7 @@ use crate::state::{
 /// When [`TimerExpired`] is received and the run is still in progress, end the run as lost.
 ///
 /// Yields to any transition already queued this frame by `handle_node_cleared`
-/// (`run_state.transition_queued`). If the last cell was cleared on the same
+/// (`run_state.cleared_this_frame`). If the last cell was cleared on the same
 /// tick the timer fired, the player wins — clear beats loss.
 pub(crate) fn handle_timer_expired(
     mut reader: MessageReader<TimerExpired>,
@@ -30,7 +30,7 @@ pub(crate) fn handle_timer_expired(
     }
 
     // Yield to handle_node_cleared if it already queued a transition this frame.
-    if run_state.transition_queued {
+    if run_state.cleared_this_frame {
         return;
     }
 
@@ -126,7 +126,7 @@ mod tests {
         // Simulate handle_node_cleared having already queued a transition this frame
         app.world_mut()
             .resource_mut::<NodeOutcome>()
-            .transition_queued = true;
+            .cleared_this_frame = true;
         app.world_mut().resource_mut::<SendTimerExpired>().0 = true;
         tick(&mut app);
 

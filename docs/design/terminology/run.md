@@ -2,7 +2,9 @@
 
 | Term | Meaning | Code Examples |
 |------|---------|---------------|
-| **Tier** | A group of nodes in a run sequence sharing the same difficulty parameters (HP multiplier, timer multiplier, active ratio, introduced cell types) | `TierDefinition`, `tier_index` |
+| **Tier** | A group of nodes in a run sequence sharing the same difficulty parameters (timer multiplier, active ratio, introduced cell types). HP scaling is handled separately by `ToughnessConfig`, not by tier-level multipliers. | `TierDefinition`, `tier_index` |
+| **Toughness** | A cell durability enum (`Weak`, `Standard`, `Tough`) that determines base HP. Used at cell generation time to assign HP via the scaling formula in `ToughnessConfig`. Replaces raw HP values in RON definitions. | `Toughness`, `Toughness::Weak`, `Toughness::Standard`, `Toughness::Tough` |
+| **ToughnessConfig** | RON-tunable resource (loaded from `defaults.toughness.ron`) holding base HP values per toughness level, the exponential tier multiplier (`1.2^tier`), the linear node multiplier (`+5% per position`), and the boss node multiplier. | `ToughnessConfig`, `ToughnessDefaults`, `hp_for()` |
 | **DifficultyCurve** | The ordered list of tier definitions loaded from `defaults.difficulty.ron`; drives procedural node sequence generation | `DifficultyCurve`, `DifficultyCurveDefaults` |
 | **NodeType** | The category of a single node in the run sequence: Passive, Active, or Boss | `NodeType::Passive`, `NodeType::Active`, `NodeType::Boss` |
 | **NodePool** | The pool a node layout belongs to — `Passive`, `Active`, or `Boss` — controls which layouts are eligible for each node type | `NodePool`, `NodeLayout.pool` |

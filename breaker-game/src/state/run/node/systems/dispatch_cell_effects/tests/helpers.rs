@@ -1,7 +1,10 @@
 use bevy::prelude::*;
 
 use crate::{
-    cells::{definition::CellTypeDefinition, resources::CellTypeRegistry},
+    cells::{
+        definition::{CellTypeDefinition, Toughness},
+        resources::CellTypeRegistry,
+    },
     state::run::node::systems::dispatch_cell_effects::system::dispatch_cell_effects,
 };
 
@@ -9,13 +12,13 @@ use crate::{
 pub(super) fn make_cell_def(
     id: &str,
     alias: &str,
-    hp: f32,
+    _hp: f32,
     effects: Option<Vec<crate::effect::RootEffect>>,
 ) -> CellTypeDefinition {
     CellTypeDefinition {
         id: id.to_owned(),
         alias: alias.to_owned(),
-        hp,
+        toughness: Toughness::default(),
         color_rgb: [1.0, 1.0, 1.0],
         required_to_clear: true,
         damage_hdr_base: 1.0,

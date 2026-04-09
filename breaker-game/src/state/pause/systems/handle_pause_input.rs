@@ -217,8 +217,8 @@ mod tests {
             "node_index should be unchanged after quit"
         );
         assert!(
-            !outcome.transition_queued,
-            "transition_queued should remain false"
+            !outcome.cleared_this_frame,
+            "cleared_this_frame should remain false"
         );
     }
 

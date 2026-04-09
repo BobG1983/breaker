@@ -8,11 +8,7 @@ use crate::state::run::definition::{NodeType, TierNodeCount};
 
 #[test]
 fn active_ratio_zero_produces_all_passive() {
-    let curve = make_curve(
-        vec![make_tier(TierNodeCount::Fixed(5), 0.0, 1.0, 1.0)],
-        3.0,
-        0.0,
-    );
+    let curve = make_curve(vec![make_tier(TierNodeCount::Fixed(5), 0.0, 1.0)], 0.0);
     let mut rng = rng_from_seed(42);
 
     let seq = generate_node_sequence(&curve, &mut rng);
@@ -42,11 +38,7 @@ fn active_ratio_zero_produces_all_passive() {
 
 #[test]
 fn active_ratio_one_produces_all_active() {
-    let curve = make_curve(
-        vec![make_tier(TierNodeCount::Fixed(5), 1.0, 1.0, 1.0)],
-        3.0,
-        0.0,
-    );
+    let curve = make_curve(vec![make_tier(TierNodeCount::Fixed(5), 1.0, 1.0)], 0.0);
     let mut rng = rng_from_seed(42);
 
     let seq = generate_node_sequence(&curve, &mut rng);
@@ -76,11 +68,7 @@ fn active_ratio_one_produces_all_active() {
 
 #[test]
 fn active_ratio_fractional_rounds_correctly() {
-    let curve = make_curve(
-        vec![make_tier(TierNodeCount::Fixed(5), 0.4, 1.0, 1.0)],
-        3.0,
-        0.0,
-    );
+    let curve = make_curve(vec![make_tier(TierNodeCount::Fixed(5), 0.4, 1.0)], 0.0);
     let mut rng = rng_from_seed(42);
 
     let seq = generate_node_sequence(&curve, &mut rng);

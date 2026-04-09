@@ -37,7 +37,7 @@ pub(crate) fn handle_node_cleared(
 
     let final_index = total_nodes.saturating_sub(1);
 
-    run_state.transition_queued = true;
+    run_state.cleared_this_frame = true;
 
     if (run_state.node_index as usize) >= final_index {
         run_state.result = NodeResult::Won;
@@ -136,7 +136,7 @@ mod tests {
             "expected ChangeState<NodeState> message"
         );
         let run_state = app.world().resource::<NodeOutcome>();
-        assert!(run_state.transition_queued);
+        assert!(run_state.cleared_this_frame);
         assert_eq!(run_state.result, NodeResult::InProgress);
     }
 
@@ -154,7 +154,7 @@ mod tests {
 
         let run_state = app.world().resource::<NodeOutcome>();
         assert_eq!(run_state.result, NodeResult::Won);
-        assert!(run_state.transition_queued);
+        assert!(run_state.cleared_this_frame);
     }
 
     #[test]
@@ -201,7 +201,6 @@ mod tests {
                 .map(|_| NodeAssignment {
                     node_type: NodeType::Passive,
                     tier_index: 0,
-                    hp_mult: 1.0,
                     timer_mult: 1.0,
                 })
                 .collect(),

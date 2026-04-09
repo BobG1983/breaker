@@ -50,15 +50,21 @@ fn cells_get_hp_from_type_definition() {
     let mut found_standard = false;
     let mut found_tough = false;
     for health in app.world_mut().query::<&CellHealth>().iter(app.world()) {
-        if (health.max - 1.0).abs() < f32::EPSILON {
+        if (health.max - 20.0).abs() < f32::EPSILON {
             found_standard = true;
         }
-        if (health.max - 3.0).abs() < f32::EPSILON {
+        if (health.max - 30.0).abs() < f32::EPSILON {
             found_tough = true;
         }
     }
-    assert!(found_standard, "should have standard cells (hp=1.0)");
-    assert!(found_tough, "should have tough cells (hp=3.0)");
+    assert!(
+        found_standard,
+        "should have standard cells (Standard toughness base=20.0)"
+    );
+    assert!(
+        found_tough,
+        "should have tough cells (Tough toughness base=30.0)"
+    );
 }
 
 #[test]

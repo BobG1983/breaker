@@ -1,7 +1,7 @@
 (
     id: "guardian",
     alias: "gu",
-    hp: 15.0,
+    toughness: Weak,
     color_rgb: (0.5, 0.2, 3.0),
     required_to_clear: false,
     damage_hdr_base: 3.0,

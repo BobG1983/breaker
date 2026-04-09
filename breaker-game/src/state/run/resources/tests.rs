@@ -22,19 +22,16 @@ fn difficulty_curve_from_defaults_copies_all_fields() {
             TierDefinition {
                 nodes: TierNodeCount::Fixed(3),
                 active_ratio: 0.0,
-                hp_mult: 1.0,
                 timer_mult: 1.0,
                 introduced_cells: vec![],
             },
             TierDefinition {
                 nodes: TierNodeCount::Range(4, 6),
                 active_ratio: 0.5,
-                hp_mult: 1.5,
                 timer_mult: 0.8,
                 introduced_cells: vec!['T'],
             },
         ],
-        boss_hp_mult: 3.0,
         timer_reduction_per_boss: 0.1,
     };
 
@@ -42,20 +39,11 @@ fn difficulty_curve_from_defaults_copies_all_fields() {
 
     assert_eq!(curve.tiers.len(), 2, "tier count should match");
     assert!(
-        (curve.boss_hp_mult - 3.0).abs() < f32::EPSILON,
-        "boss_hp_mult should be 3.0, got {}",
-        curve.boss_hp_mult
-    );
-    assert!(
         (curve.timer_reduction_per_boss - 0.1).abs() < f32::EPSILON,
         "timer_reduction_per_boss should be 0.1, got {}",
         curve.timer_reduction_per_boss
     );
     // Spot-check first tier fields
-    assert!(
-        (curve.tiers[0].hp_mult - 1.0).abs() < f32::EPSILON,
-        "first tier hp_mult should be 1.0"
-    );
     assert!(
         (curve.tiers[0].active_ratio - 0.0).abs() < f32::EPSILON,
         "first tier active_ratio should be 0.0"

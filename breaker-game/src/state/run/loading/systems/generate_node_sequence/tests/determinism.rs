@@ -10,10 +10,9 @@ use crate::state::run::definition::TierNodeCount;
 fn same_seed_produces_identical_sequence() {
     let curve = make_curve(
         vec![
-            make_tier(TierNodeCount::Fixed(3), 0.5, 1.0, 1.0),
-            make_tier(TierNodeCount::Fixed(3), 0.5, 1.5, 0.9),
+            make_tier(TierNodeCount::Fixed(3), 0.5, 1.0),
+            make_tier(TierNodeCount::Fixed(3), 0.5, 0.9),
         ],
-        3.0,
         0.1,
     );
 
@@ -40,10 +39,9 @@ fn same_seed_produces_identical_sequence() {
 fn different_seeds_produce_different_sequences() {
     let curve = make_curve(
         vec![
-            make_tier(TierNodeCount::Fixed(3), 0.5, 1.0, 1.0),
-            make_tier(TierNodeCount::Fixed(3), 0.5, 1.5, 0.9),
+            make_tier(TierNodeCount::Fixed(3), 0.5, 1.0),
+            make_tier(TierNodeCount::Fixed(3), 0.5, 0.9),
         ],
-        3.0,
         0.1,
     );
 

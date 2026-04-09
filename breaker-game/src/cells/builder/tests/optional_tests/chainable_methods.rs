@@ -329,3 +329,45 @@ fn required_to_clear_false_overrides_true_definition() {
         "should NOT have RequiredToClear (override false)"
     );
 }
+
+// ── Part K: .toughness() chainable method ─────────────────────────────
+
+use crate::cells::definition::Toughness;
+
+// Behavior 32: .toughness() is chainable
+#[test]
+fn toughness_is_chainable() {
+    let _builder = Cell::builder().toughness(Toughness::Tough);
+    // Compiles — that is the assertion.
+}
+
+// Behavior 32 edge case: calling .toughness() multiple times — last one wins
+#[test]
+fn toughness_last_write_wins() {
+    let _builder = Cell::builder()
+        .toughness(Toughness::Weak)
+        .toughness(Toughness::Tough);
+    // The builder stores the last value internally.
+    // Full verification happens when .tier_hp() reads it.
+}
+
+// Behavior 32 edge case: not calling .toughness() at all — legacy .hp() path still works
+#[test]
+fn no_toughness_hp_path_still_works() {
+    let mut world = World::new();
+    let entity = spawn_cell_in_world(&mut world, |commands| {
+        Cell::builder()
+            .position(Vec2::ZERO)
+            .dimensions(70.0, 24.0)
+            .hp(20.0)
+            .headless()
+            .spawn(commands)
+    });
+    let health = world
+        .get::<crate::cells::components::CellHealth>(entity)
+        .expect("should have CellHealth");
+    assert!(
+        (health.current - 20.0).abs() < f32::EPSILON,
+        "legacy .hp() should still set health"
+    );
+}

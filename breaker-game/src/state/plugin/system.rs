@@ -11,7 +11,7 @@ use rantzsoft_stateflow::{
 };
 
 use crate::{
-    cells::CellDefaults,
+    cells::{CellDefaults, ToughnessDefaults},
     input::InputDefaults,
     prelude::*,
     shared::PlayfieldDefaults,
@@ -89,6 +89,7 @@ fn defaults_plugin() -> impl Plugin {
         .add_config::<MainMenuDefaults>()
         .add_config::<TimerUiDefaults>()
         .add_config::<ChipSelectDefaults>()
+        .add_config::<ToughnessDefaults>()
         .add_config::<DifficultyCurveDefaults>()
         .add_registry::<crate::cells::CellTypeRegistry>()
         .add_registry::<crate::breaker::BreakerRegistry>()

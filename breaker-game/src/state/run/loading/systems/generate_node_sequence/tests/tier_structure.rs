@@ -1,9 +1,15 @@
-//! Tests for tier structure: boss at end of each tier, HP multipliers,
-//! boss HP formula, timer reduction accumulation, timer clamp, and
-//! `tier_index` assignment.
+//! Tests for tier structure: boss at end of each tier, timer reduction
+//! accumulation, timer clamp, and `tier_index` assignment.
+//!
+//! HP multiplier tests (`hp_multipliers_applied_per_tier`,
+//! `boss_hp_mult_is_tier_hp_mult_times_boss_hp_mult`) have been removed —
+//! HP is now computed from `ToughnessConfig` at spawn time.
 
 use super::{super::system::generate_node_sequence, helpers::*};
-use crate::state::run::definition::{NodeType, TierNodeCount};
+use crate::state::run::{
+    definition::{NodeType, TierNodeCount},
+    resources::DifficultyCurve,
+};
 
 // -- 8. Each tier ends with a Boss node --
 
@@ -11,11 +17,10 @@ use crate::state::run::definition::{NodeType, TierNodeCount};
 fn each_tier_ends_with_boss_node() {
     let curve = make_curve(
         vec![
-            make_tier(TierNodeCount::Fixed(2), 0.5, 1.0, 1.0),
-            make_tier(TierNodeCount::Fixed(2), 0.5, 1.5, 0.9),
-            make_tier(TierNodeCount::Fixed(2), 0.5, 2.0, 0.8),
+            make_tier(TierNodeCount::Fixed(2), 0.5, 1.0),
+            make_tier(TierNodeCount::Fixed(2), 0.5, 0.9),
+            make_tier(TierNodeCount::Fixed(2), 0.5, 0.8),
         ],
-        3.0,
         0.1,
     );
     let mut rng = rng_from_seed(42);
@@ -43,79 +48,16 @@ fn each_tier_ends_with_boss_node() {
     );
 }
 
-// -- 9. HP multipliers applied per tier --
-
-#[test]
-fn hp_multipliers_applied_per_tier() {
-    let curve = make_curve(
-        vec![
-            make_tier(TierNodeCount::Fixed(2), 0.5, 1.0, 1.0),
-            make_tier(TierNodeCount::Fixed(2), 0.5, 2.0, 1.0),
-        ],
-        1.0, // boss_hp_mult = 1.0 so boss hp_mult == tier hp_mult
-        0.0,
-    );
-    let mut rng = rng_from_seed(42);
-
-    let seq = generate_node_sequence(&curve, &mut rng);
-
-    // Tier 0: indices 0, 1 (non-boss) should have hp_mult 1.0
-    for i in 0..2 {
-        assert!(
-            (seq.assignments[i].hp_mult - 1.0).abs() < f32::EPSILON,
-            "tier 0 node {i} hp_mult should be 1.0, got {}",
-            seq.assignments[i].hp_mult
-        );
-    }
-
-    // Tier 1: indices 3, 4 (non-boss) should have hp_mult 2.0
-    for i in 3..5 {
-        assert!(
-            (seq.assignments[i].hp_mult - 2.0).abs() < f32::EPSILON,
-            "tier 1 node {i} hp_mult should be 2.0, got {}",
-            seq.assignments[i].hp_mult
-        );
-    }
-}
-
-// -- 10. Boss HP = tier.hp_mult * boss_hp_mult --
-
-#[test]
-fn boss_hp_mult_is_tier_hp_mult_times_boss_hp_mult() {
-    let curve = make_curve(
-        vec![make_tier(TierNodeCount::Fixed(2), 0.5, 1.5, 1.0)],
-        3.0,
-        0.0,
-    );
-    let mut rng = rng_from_seed(42);
-
-    let seq = generate_node_sequence(&curve, &mut rng);
-
-    let boss = seq
-        .assignments
-        .iter()
-        .find(|a| a.node_type == NodeType::Boss)
-        .expect("should have a boss node");
-
-    let expected = 1.5 * 3.0; // 4.5
-    assert!(
-        (boss.hp_mult - expected).abs() < f32::EPSILON,
-        "boss hp_mult should be 4.5 (1.5 * 3.0), got {}",
-        boss.hp_mult
-    );
-}
-
 // -- 11. Timer reduction cumulates after each boss --
 
 #[test]
 fn timer_reduction_cumulates_after_each_boss() {
     let curve = make_curve(
         vec![
-            make_tier(TierNodeCount::Fixed(1), 0.0, 1.0, 1.0),
-            make_tier(TierNodeCount::Fixed(1), 0.0, 1.0, 1.0),
-            make_tier(TierNodeCount::Fixed(1), 0.0, 1.0, 1.0),
+            make_tier(TierNodeCount::Fixed(1), 0.0, 1.0),
+            make_tier(TierNodeCount::Fixed(1), 0.0, 1.0),
+            make_tier(TierNodeCount::Fixed(1), 0.0, 1.0),
         ],
-        1.0,
         0.1,
     );
     let mut rng = rng_from_seed(42);
@@ -150,10 +92,9 @@ fn timer_reduction_cumulates_after_each_boss() {
 fn timer_mult_clamped_to_minimum() {
     let curve = make_curve(
         vec![
-            make_tier(TierNodeCount::Fixed(1), 0.0, 1.0, 0.15),
-            make_tier(TierNodeCount::Fixed(1), 0.0, 1.0, 0.15),
+            make_tier(TierNodeCount::Fixed(1), 0.0, 0.15),
+            make_tier(TierNodeCount::Fixed(1), 0.0, 0.15),
         ],
-        1.0,
         0.1,
     );
     let mut rng = rng_from_seed(42);
@@ -181,11 +122,10 @@ fn timer_mult_clamped_to_minimum() {
 fn tier_index_correctly_assigned() {
     let curve = make_curve(
         vec![
-            make_tier(TierNodeCount::Fixed(2), 0.5, 1.0, 1.0),
-            make_tier(TierNodeCount::Fixed(2), 0.5, 1.5, 0.9),
-            make_tier(TierNodeCount::Fixed(2), 0.5, 2.0, 0.8),
+            make_tier(TierNodeCount::Fixed(2), 0.5, 1.0),
+            make_tier(TierNodeCount::Fixed(2), 0.5, 0.9),
+            make_tier(TierNodeCount::Fixed(2), 0.5, 0.8),
         ],
-        3.0,
         0.1,
     );
     let mut rng = rng_from_seed(42);
@@ -218,4 +158,78 @@ fn tier_index_correctly_assigned() {
             seq.assignments[i].tier_index
         );
     }
+}
+
+// ── Part J: NodeAssignment no longer has hp_mult ──────────────────────────
+
+// Behavior 29: generate_node_sequence no longer sets hp_mult on assignments
+#[test]
+fn assignments_have_only_node_type_tier_index_timer_mult() {
+    let curve = make_curve(vec![make_tier(TierNodeCount::Fixed(2), 0.5, 1.0)], 0.0);
+    let mut rng = rng_from_seed(42);
+
+    let seq = generate_node_sequence(&curve, &mut rng);
+
+    // Verify that each assignment has the expected fields (compile-time check).
+    // If hp_mult existed, this would not compile.
+    for assignment in &seq.assignments {
+        _ = assignment.node_type;
+        _ = assignment.tier_index;
+        _ = assignment.timer_mult;
+    }
+    assert_eq!(seq.assignments.len(), 3, "2 non-boss + 1 boss = 3");
+}
+
+// Behavior 30: timer_mult still correctly set with cumulative reduction
+#[test]
+fn timer_mult_still_correctly_set_with_cumulative_reduction() {
+    let curve = make_curve(
+        vec![
+            make_tier(TierNodeCount::Fixed(1), 0.0, 1.0),
+            make_tier(TierNodeCount::Fixed(1), 0.0, 1.0),
+            make_tier(TierNodeCount::Fixed(1), 0.0, 1.0),
+        ],
+        0.1,
+    );
+    let mut rng = rng_from_seed(42);
+
+    let seq = generate_node_sequence(&curve, &mut rng);
+
+    // Tier 0: 1.0
+    assert!(
+        (seq.assignments[0].timer_mult - 1.0).abs() < f32::EPSILON,
+        "tier 0 timer_mult should be 1.0"
+    );
+    // Tier 1: 1.0 - 0.1 = 0.9
+    assert!(
+        (seq.assignments[2].timer_mult - 0.9).abs() < f32::EPSILON,
+        "tier 1 timer_mult should be 0.9"
+    );
+    // Tier 2: 1.0 - 0.2 = 0.8
+    assert!(
+        (seq.assignments[4].timer_mult - 0.8).abs() < f32::EPSILON,
+        "tier 2 timer_mult should be 0.8"
+    );
+}
+
+// Behavior 31: DifficultyCurve used by generate_node_sequence no longer has boss_hp_mult
+#[test]
+fn difficulty_curve_without_boss_hp_mult_compiles() {
+    let curve = DifficultyCurve {
+        tiers: vec![make_tier(TierNodeCount::Fixed(1), 0.0, 1.0)],
+        timer_reduction_per_boss: 0.1,
+    };
+    let mut rng = rng_from_seed(42);
+    let seq = generate_node_sequence(&curve, &mut rng);
+    assert!(!seq.assignments.is_empty(), "sequence should not be empty");
+}
+
+// ── Part N: Difficulty RON integration ────────────────────────────────────
+
+// Behavior 50: defaults.difficulty.ron parses without hp_mult/boss_hp_mult
+#[test]
+fn defaults_difficulty_ron_parses_without_hp_mult() {
+    let ron_str = include_str!("../../../../../../../assets/config/defaults.difficulty.ron");
+    let _curve: crate::state::run::resources::DifficultyCurveDefaults =
+        ron::de::from_str(ron_str).expect("defaults.difficulty.ron should parse");
 }

@@ -85,6 +85,14 @@ Cell::builder()
 - Depends on: Cell builder pattern (provides the builder API to extend)
 - Blocks: Node sequencing refactor (needs toughness to generate cells)
 
+## Planning Decisions (2026-04-08)
+- **Node tracking**: `tier` and `position_in_tier` added as runtime state on `NodeOutcome` (not pre-computed on `NodeAssignment`)
+- **Guardian HP from parent**: Replace `guardian_hp` raw value with `guardian_hp_fraction` — guardians derive HP as fraction of parent's computed HP
+- **Remove `hp_mult`**: Clean break — removed from both `TierDefinition` and `NodeAssignment`
+- **`boss_hp_mult` moved to `ToughnessConfig`**: Now `boss_multiplier` in `ToughnessConfig` resource (RON-tunable alongside other scaling values)
+- **Builder**: `.toughness()` + `.tier_hp()` added as production methods (not test-only), for future node sequencing builder path
+- **Plan file**: `.claude/plans/declarative-strolling-pascal.md`
+
 ## Notes
 - "Tough" replaces the old `tough.cell.ron` — it's just a higher toughness on a standard cell
 - Base values and multipliers should live in a config resource so they can be tuned without recompiling
@@ -92,4 +100,4 @@ Cell::builder()
 - Consider whether chip damage upgrades need to scale similarly to avoid trivialization at high tiers
 
 ## Status
-`ready`
+`in-progress`

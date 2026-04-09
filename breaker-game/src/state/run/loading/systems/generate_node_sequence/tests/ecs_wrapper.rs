@@ -16,11 +16,7 @@ fn system_inserts_node_sequence_resource() {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
 
-    let curve = make_curve(
-        vec![make_tier(TierNodeCount::Fixed(3), 0.5, 1.0, 1.0)],
-        3.0,
-        0.0,
-    );
+    let curve = make_curve(vec![make_tier(TierNodeCount::Fixed(3), 0.5, 1.0)], 0.0);
     app.insert_resource(curve);
     app.insert_resource(crate::shared::GameRng::from_seed(42));
     app.add_systems(Update, generate_node_sequence_system);
@@ -42,10 +38,9 @@ fn system_generates_deterministic_sequence_from_game_rng() {
     // Run the system twice with the same seed and curve, verify identical results.
     let curve = make_curve(
         vec![
-            make_tier(TierNodeCount::Fixed(2), 0.5, 1.0, 1.0),
-            make_tier(TierNodeCount::Range(3, 5), 0.4, 1.5, 0.9),
+            make_tier(TierNodeCount::Fixed(2), 0.5, 1.0),
+            make_tier(TierNodeCount::Range(3, 5), 0.4, 0.9),
         ],
-        2.0,
         0.1,
     );
 

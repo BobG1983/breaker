@@ -15,7 +15,7 @@ fn behavior_guarded_inserts_guarded_cell_marker() {
     let entity = spawn_cell_in_world(&mut world, |commands| {
         Cell::builder()
             .with_behavior(CellBehavior::Guarded(GuardedBehavior {
-                guardian_hp: 10.0,
+                guardian_hp_fraction: 0.5,
                 guardian_color_rgb: [0.5, 0.8, 1.0],
                 slide_speed: 30.0,
             }))
@@ -39,7 +39,7 @@ fn behavior_guarded_does_not_spawn_children() {
     let _entity = spawn_cell_in_world(&mut world, |commands| {
         Cell::builder()
             .with_behavior(CellBehavior::Guarded(GuardedBehavior {
-                guardian_hp: 10.0,
+                guardian_hp_fraction: 0.5,
                 guardian_color_rgb: [0.5, 0.8, 1.0],
                 slide_speed: 30.0,
             }))

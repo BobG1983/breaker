@@ -43,7 +43,6 @@ pub(super) fn generate_node_sequence(
                 NodeAssignment {
                     node_type,
                     tier_index,
-                    hp_mult: 0.0,    // set below
                     timer_mult: 0.0, // set below
                 }
             })
@@ -55,24 +54,22 @@ pub(super) fn generate_node_sequence(
         // 5. Compute timer_mult with cumulative boss reduction
         let timer_mult = (tier.timer_mult - cumulative_timer_reduction).max(0.1);
 
-        // 6-7. Set hp_mult, timer_mult, and tier_index on all non-boss assignments
+        // 6. Set timer_mult on all non-boss assignments
         for node in &mut tier_nodes {
-            node.hp_mult = tier.hp_mult;
             node.timer_mult = timer_mult;
         }
 
-        // 8. Append non-boss nodes to the main assignments vec
+        // 7. Append non-boss nodes to the main assignments vec
         assignments.append(&mut tier_nodes);
 
-        // 9. Append Boss node
+        // 8. Append Boss node
         assignments.push(NodeAssignment {
             node_type: NodeType::Boss,
             tier_index,
-            hp_mult: tier.hp_mult * curve.boss_hp_mult,
             timer_mult,
         });
 
-        // 10. Advance cumulative timer reduction
+        // 9. Advance cumulative timer reduction
         cumulative_timer_reduction += curve.timer_reduction_per_boss;
     }
 

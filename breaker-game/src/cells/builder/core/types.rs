@@ -2,6 +2,8 @@
 
 use bevy::prelude::*;
 
+#[cfg(test)]
+use crate::cells::definition::Toughness;
 use crate::{
     cells::{components::CellDamageVisuals, definition::CellBehavior},
     effect::RootEffect,
@@ -95,6 +97,8 @@ pub(in crate::cells::builder) struct OptionalCellData {
     pub(in crate::cells::builder) behaviors: Vec<CellBehavior>,
     pub(in crate::cells::builder) locked_entities: Option<Vec<Entity>>,
     pub(in crate::cells::builder) guarded_data: Option<GuardedSpawnData>,
+    #[cfg(test)]
+    pub(in crate::cells::builder) toughness: Option<Toughness>,
 }
 
 // ── Builder ─────────────────────────────────────────────────────────────────

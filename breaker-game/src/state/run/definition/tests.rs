@@ -86,20 +86,19 @@ fn validate_rejects_range_min_greater_than_max() {
 
 #[test]
 fn tier_definition_deserializes_from_ron() {
-    let ron_str = "(nodes: Range(4, 6), active_ratio: 0.2, hp_mult: 1.3, timer_mult: 0.9, introduced_cells: ['T'])";
+    let ron_str =
+        "(nodes: Range(4, 6), active_ratio: 0.2, timer_mult: 0.9, introduced_cells: ['T'])";
     let tier: TierDefinition =
         ron::de::from_str(ron_str).expect("TierDefinition should deserialize");
     assert_eq!(tier.nodes, TierNodeCount::Range(4, 6));
     assert!((tier.active_ratio - 0.2).abs() < f32::EPSILON);
-    assert!((tier.hp_mult - 1.3).abs() < f32::EPSILON);
     assert!((tier.timer_mult - 0.9).abs() < f32::EPSILON);
     assert_eq!(tier.introduced_cells, vec!['T']);
 }
 
 #[test]
 fn tier_definition_empty_introduced_cells_deserializes() {
-    let ron_str =
-        "(nodes: Fixed(3), active_ratio: 0.0, hp_mult: 1.0, timer_mult: 1.0, introduced_cells: [])";
+    let ron_str = "(nodes: Fixed(3), active_ratio: 0.0, timer_mult: 1.0, introduced_cells: [])";
     let tier: TierDefinition =
         ron::de::from_str(ron_str).expect("empty introduced_cells should deserialize");
     assert!(tier.introduced_cells.is_empty());
@@ -112,16 +111,14 @@ fn difficulty_curve_defaults_deserializes_from_ron() {
     let ron_str = "
 (
     tiers: [
-        (nodes: Fixed(3), active_ratio: 0.0, hp_mult: 1.0, timer_mult: 1.0, introduced_cells: []),
-        (nodes: Range(4, 6), active_ratio: 0.5, hp_mult: 1.5, timer_mult: 0.8, introduced_cells: ['T']),
+        (nodes: Fixed(3), active_ratio: 0.0, timer_mult: 1.0, introduced_cells: []),
+        (nodes: Range(4, 6), active_ratio: 0.5, timer_mult: 0.8, introduced_cells: ['T']),
     ],
-    boss_hp_mult: 3.0,
     timer_reduction_per_boss: 0.1,
 )";
     let defaults: DifficultyCurveDefaults =
         ron::de::from_str(ron_str).expect("DifficultyCurveDefaults should deserialize");
     assert_eq!(defaults.tiers.len(), 2);
-    assert!((defaults.boss_hp_mult - 3.0).abs() < f32::EPSILON);
     assert!((defaults.timer_reduction_per_boss - 0.1).abs() < f32::EPSILON);
     assert_eq!(defaults.tiers[0].nodes, TierNodeCount::Fixed(3));
     assert!((defaults.tiers[0].active_ratio - 0.0).abs() < f32::EPSILON);
@@ -132,7 +129,6 @@ fn difficulty_curve_defaults_empty_tiers_deserializes() {
     let ron_str = "
 (
     tiers: [],
-    boss_hp_mult: 2.0,
     timer_reduction_per_boss: 0.05,
 )";
     let defaults: DifficultyCurveDefaults =
@@ -148,7 +144,6 @@ fn difficulty_ron_file_parses() {
     let defaults: DifficultyCurveDefaults =
         ron::de::from_str(ron_str).expect("difficulty.ron should parse as DifficultyCurveDefaults");
     assert_eq!(defaults.tiers.len(), 5);
-    assert!((defaults.boss_hp_mult - 3.0).abs() < f32::EPSILON);
     assert!((defaults.timer_reduction_per_boss - 0.1).abs() < f32::EPSILON);
 }
 

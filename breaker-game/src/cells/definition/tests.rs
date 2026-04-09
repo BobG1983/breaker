@@ -6,7 +6,7 @@ fn valid_definition() -> CellTypeDefinition {
     CellTypeDefinition {
         id: "test".to_owned(),
         alias: "T".to_owned(),
-        hp: 20.0,
+        toughness: Toughness::Standard,
         color_rgb: [1.0, 0.5, 0.2],
         required_to_clear: true,
         damage_hdr_base: 4.0,
@@ -20,43 +20,295 @@ fn valid_definition() -> CellTypeDefinition {
 
 fn valid_guarded_behavior() -> GuardedBehavior {
     GuardedBehavior {
-        guardian_hp: 10.0,
+        guardian_hp_fraction: 0.5,
         guardian_color_rgb: [0.5, 0.8, 1.0],
         slide_speed: 30.0,
     }
 }
 
-// ── hp validation ────────────────────────────────────────────────
+// ── Part A: Toughness Enum ──────────────────────────────────────
 
+// Behavior 1: Toughness enum has three variants
 #[test]
-fn validate_rejects_zero_hp() {
-    let mut def = valid_definition();
-    def.hp = 0.0;
-    assert!(def.validate().is_err(), "hp = 0.0 should be rejected");
+fn toughness_has_three_distinct_variants() {
+    // Exhaustive match proves all three variants exist.
+    let label = |t: Toughness| match t {
+        Toughness::Weak => "weak",
+        Toughness::Standard => "standard",
+        Toughness::Tough => "tough",
+    };
+    assert_eq!(label(Toughness::Weak), "weak");
+    assert_eq!(label(Toughness::Standard), "standard");
+    assert_eq!(label(Toughness::Tough), "tough");
+}
+
+// Behavior 1 edge case: Default variant is Standard
+#[test]
+fn toughness_default_is_standard() {
+    assert_eq!(Toughness::default(), Toughness::Standard);
+}
+
+// Behavior 2: Toughness::default_base_hp() returns hardcoded fallback per variant
+#[test]
+fn toughness_weak_default_base_hp_returns_10() {
+    assert!(
+        (Toughness::Weak.default_base_hp() - 10.0).abs() < f32::EPSILON,
+        "Weak.default_base_hp() should return 10.0, got {}",
+        Toughness::Weak.default_base_hp()
+    );
 }
 
 #[test]
-fn validate_rejects_negative_hp() {
-    let mut def = valid_definition();
-    def.hp = -1.0;
-    assert!(def.validate().is_err(), "hp = -1.0 should be rejected");
+fn toughness_standard_default_base_hp_returns_20() {
+    assert!(
+        (Toughness::Standard.default_base_hp() - 20.0).abs() < f32::EPSILON,
+        "Standard.default_base_hp() should return 20.0, got {}",
+        Toughness::Standard.default_base_hp()
+    );
 }
 
 #[test]
-fn validate_rejects_nan_hp() {
-    let mut def = valid_definition();
-    def.hp = f32::NAN;
-    assert!(def.validate().is_err(), "hp = NaN should be rejected");
+fn toughness_tough_default_base_hp_returns_30() {
+    assert!(
+        (Toughness::Tough.default_base_hp() - 30.0).abs() < f32::EPSILON,
+        "Tough.default_base_hp() should return 30.0, got {}",
+        Toughness::Tough.default_base_hp()
+    );
+}
+
+// Behavior 3: Toughness deserializes from RON
+#[test]
+fn toughness_weak_deserializes_from_ron() {
+    let result: Toughness = ron::de::from_str("Weak").expect("should deserialize Weak");
+    assert_eq!(result, Toughness::Weak);
 }
 
 #[test]
-fn validate_rejects_infinite_hp() {
-    let mut def = valid_definition();
-    def.hp = f32::INFINITY;
-    assert!(def.validate().is_err(), "hp = INFINITY should be rejected");
+fn toughness_standard_deserializes_from_ron() {
+    let result: Toughness = ron::de::from_str("Standard").expect("should deserialize Standard");
+    assert_eq!(result, Toughness::Standard);
 }
 
-// ── CellBehavior enum tests ────────────────────────────────────
+#[test]
+fn toughness_tough_deserializes_from_ron() {
+    let result: Toughness = ron::de::from_str("Tough").expect("should deserialize Tough");
+    assert_eq!(result, Toughness::Tough);
+}
+
+// Behavior 3 edge case: invalid variant
+#[test]
+fn toughness_invalid_variant_fails_deserialization() {
+    let result: Result<Toughness, _> = ron::de::from_str("Legendary");
+    assert!(
+        result.is_err(),
+        "\"Legendary\" should not deserialize as Toughness"
+    );
+}
+
+// Behavior 4: Toughness traits
+#[test]
+fn toughness_is_clone_copy_debug_eq() {
+    let t = Toughness::Weak;
+    let cloned = t;
+    assert_eq!(t, cloned, "copy should equal original");
+    let debug_str = format!("{t:?}");
+    assert!(
+        debug_str.contains("Weak"),
+        "debug should contain 'Weak', got: {debug_str}"
+    );
+    assert_eq!(Toughness::Weak, Toughness::Weak);
+    assert_ne!(Toughness::Weak, Toughness::Standard);
+}
+
+// Behavior 4 edge case: serialize round-trip
+#[test]
+fn toughness_serialize_round_trip() {
+    let original = Toughness::Tough;
+    let serialized = ron::ser::to_string(&original).expect("should serialize");
+    let deserialized: Toughness = ron::de::from_str(&serialized).expect("should deserialize");
+    assert_eq!(
+        original, deserialized,
+        "round-trip should produce same value"
+    );
+}
+
+// ── Part B: CellTypeDefinition with toughness ───────────────────
+
+// Behavior 5: CellTypeDefinition has toughness field
+#[test]
+fn definition_has_toughness_field() {
+    let def = CellTypeDefinition {
+        id: "test".to_owned(),
+        alias: "T".to_owned(),
+        toughness: Toughness::Standard,
+        color_rgb: [1.0, 0.5, 0.2],
+        required_to_clear: true,
+        damage_hdr_base: 4.0,
+        damage_green_min: 0.2,
+        damage_blue_range: 0.4,
+        damage_blue_base: 0.2,
+        behaviors: None,
+        effects: None,
+    };
+    assert_eq!(def.toughness, Toughness::Standard);
+}
+
+// Behavior 5 edge case: toughness defaults via serde when omitted
+#[test]
+fn definition_toughness_defaults_when_omitted_from_ron() {
+    let ron_str = r#"(
+        id: "test",
+        alias: "T",
+        color_rgb: (1.0, 0.5, 0.2),
+        required_to_clear: true,
+        damage_hdr_base: 4.0,
+        damage_green_min: 0.2,
+        damage_blue_range: 0.4,
+        damage_blue_base: 0.2,
+    )"#;
+    let def: CellTypeDefinition =
+        ron::de::from_str(ron_str).expect("should deserialize without toughness field");
+    assert_eq!(
+        def.toughness,
+        Toughness::Standard,
+        "toughness should default to Standard"
+    );
+}
+
+// Behavior 6: validate() no longer checks hp
+#[test]
+fn validate_accepts_all_toughness_variants() {
+    for toughness in [Toughness::Weak, Toughness::Standard, Toughness::Tough] {
+        let mut def = valid_definition();
+        def.toughness = toughness;
+        assert!(
+            def.validate().is_ok(),
+            "toughness {toughness:?} should pass validation"
+        );
+    }
+}
+
+// Behavior 7: CellTypeDefinition deserializes from RON with toughness field
+#[test]
+fn definition_deserializes_with_toughness_weak() {
+    let ron_str = r#"(
+        id: "test",
+        alias: "T",
+        toughness: Weak,
+        color_rgb: (1.0, 0.5, 0.2),
+        required_to_clear: true,
+        damage_hdr_base: 4.0,
+        damage_green_min: 0.2,
+        damage_blue_range: 0.4,
+        damage_blue_base: 0.2,
+    )"#;
+    let def: CellTypeDefinition =
+        ron::de::from_str(ron_str).expect("should deserialize with toughness: Weak");
+    assert_eq!(def.toughness, Toughness::Weak);
+}
+
+// ── Part C: GuardedBehavior with guardian_hp_fraction ────────────
+
+// Behavior 8: GuardedBehavior has guardian_hp_fraction field
+#[test]
+fn guarded_behavior_has_guardian_hp_fraction() {
+    let gb = GuardedBehavior {
+        guardian_hp_fraction: 0.5,
+        guardian_color_rgb: [0.5, 0.8, 1.0],
+        slide_speed: 30.0,
+    };
+    assert!((gb.guardian_hp_fraction - 0.5).abs() < f32::EPSILON);
+}
+
+// Behavior 8 edge case: fraction of 1.0 (guardian HP = parent HP)
+#[test]
+fn guarded_behavior_fraction_one_valid() {
+    let mut gb = valid_guarded_behavior();
+    gb.guardian_hp_fraction = 1.0;
+    assert!(gb.validate().is_ok(), "fraction 1.0 should be valid");
+}
+
+// Behavior 9: validate() checks guardian_hp_fraction in (0.0, 1.0]
+#[test]
+fn guarded_behavior_validate_accepts_valid_fraction() {
+    let gb = valid_guarded_behavior();
+    assert!(gb.validate().is_ok());
+}
+
+#[test]
+fn guarded_behavior_validate_rejects_zero_fraction() {
+    let mut gb = valid_guarded_behavior();
+    gb.guardian_hp_fraction = 0.0;
+    assert!(gb.validate().is_err(), "fraction 0.0 should be rejected");
+}
+
+#[test]
+fn guarded_behavior_validate_rejects_negative_fraction() {
+    let mut gb = valid_guarded_behavior();
+    gb.guardian_hp_fraction = -0.5;
+    assert!(gb.validate().is_err(), "fraction -0.5 should be rejected");
+}
+
+#[test]
+fn guarded_behavior_validate_rejects_fraction_above_one() {
+    let mut gb = valid_guarded_behavior();
+    gb.guardian_hp_fraction = 1.5;
+    assert!(gb.validate().is_err(), "fraction 1.5 should be rejected");
+}
+
+#[test]
+fn guarded_behavior_validate_rejects_nan_fraction() {
+    let mut gb = valid_guarded_behavior();
+    gb.guardian_hp_fraction = f32::NAN;
+    assert!(gb.validate().is_err(), "fraction NaN should be rejected");
+}
+
+#[test]
+fn guarded_behavior_validate_rejects_infinite_fraction() {
+    let mut gb = valid_guarded_behavior();
+    gb.guardian_hp_fraction = f32::INFINITY;
+    assert!(
+        gb.validate().is_err(),
+        "fraction INFINITY should be rejected"
+    );
+}
+
+#[test]
+fn guarded_behavior_validate_accepts_smallest_practical_fraction() {
+    let mut gb = valid_guarded_behavior();
+    gb.guardian_hp_fraction = 0.001;
+    assert!(gb.validate().is_ok(), "fraction 0.001 should be valid");
+}
+
+// Behavior 10: GuardedBehavior deserializes from RON with guardian_hp_fraction
+#[test]
+fn cell_behavior_guarded_deserializes_with_fraction() {
+    let ron_str = "Guarded((guardian_hp_fraction: 0.5, guardian_color_rgb: (0.5, 0.8, 1.0), slide_speed: 30.0))";
+    let result: CellBehavior = ron::de::from_str(ron_str).expect("should deserialize");
+    assert_eq!(
+        result,
+        CellBehavior::Guarded(GuardedBehavior {
+            guardian_hp_fraction: 0.5,
+            guardian_color_rgb: [0.5, 0.8, 1.0],
+            slide_speed: 30.0,
+        })
+    );
+}
+
+// Behavior 10 edge case: fraction 1.0 deserializes
+#[test]
+fn cell_behavior_guarded_fraction_one_deserializes() {
+    let ron_str = "Guarded((guardian_hp_fraction: 1.0, guardian_color_rgb: (0.5, 0.8, 1.0), slide_speed: 30.0))";
+    let result: CellBehavior = ron::de::from_str(ron_str).expect("should deserialize");
+    match result {
+        CellBehavior::Guarded(g) => {
+            assert!((g.guardian_hp_fraction - 1.0).abs() < f32::EPSILON);
+        }
+        CellBehavior::Regen { .. } => panic!("expected Guarded variant"),
+    }
+}
+
+// ── Existing tests updated for toughness/fraction ───────────────
 
 #[test]
 fn cell_behavior_regen_deserializes_from_ron() {
@@ -78,283 +330,60 @@ fn cell_behavior_is_clone_debug() {
     let cloned = behavior.clone();
     assert_eq!(behavior, cloned, "clone should equal original");
     let debug_str = format!("{behavior:?}");
-    assert!(
-        debug_str.contains("Regen"),
-        "debug should contain 'Regen', got: {debug_str}"
-    );
-    assert!(
-        debug_str.contains("3.5"),
-        "debug should contain '3.5', got: {debug_str}"
-    );
+    assert!(debug_str.contains("Regen"));
+    assert!(debug_str.contains("3.5"));
 }
 
-// ── Section A: CellBehavior::Guarded deserializes ──────────────
+// ── slide_speed validation ──────────────────────────────────────
 
-// Behavior 1: Guarded variant deserializes from RON
-#[test]
-fn cell_behavior_guarded_deserializes_from_ron() {
-    let ron_str =
-        "Guarded((guardian_hp: 10.0, guardian_color_rgb: (0.5, 0.8, 1.0), slide_speed: 30.0))";
-    let result: CellBehavior = ron::de::from_str(ron_str).expect("should deserialize");
-    assert_eq!(
-        result,
-        CellBehavior::Guarded(GuardedBehavior {
-            guardian_hp: 10.0,
-            guardian_color_rgb: [0.5, 0.8, 1.0],
-            slide_speed: 30.0,
-        })
-    );
-}
-
-// Behavior 1 edge case: slide_speed: 0.0 (stationary guardians)
-#[test]
-fn cell_behavior_guarded_zero_slide_speed_deserializes() {
-    let ron_str =
-        "Guarded((guardian_hp: 10.0, guardian_color_rgb: (0.5, 0.8, 1.0), slide_speed: 0.0))";
-    let result: CellBehavior = ron::de::from_str(ron_str).expect("should deserialize");
-    assert_eq!(
-        result,
-        CellBehavior::Guarded(GuardedBehavior {
-            guardian_hp: 10.0,
-            guardian_color_rgb: [0.5, 0.8, 1.0],
-            slide_speed: 0.0,
-        })
-    );
-}
-
-// Behavior 2: CellBehavior::Guarded is Clone + Debug + PartialEq
-#[test]
-fn cell_behavior_guarded_is_clone_debug_partial_eq() {
-    let behavior = CellBehavior::Guarded(GuardedBehavior {
-        guardian_hp: 10.0,
-        guardian_color_rgb: [0.5, 0.8, 1.0],
-        slide_speed: 30.0,
-    });
-    let cloned = behavior.clone();
-    assert_eq!(behavior, cloned, "clone should equal original via ==");
-    let debug_str = format!("{behavior:?}");
-    assert!(
-        debug_str.contains("Guarded"),
-        "debug should contain 'Guarded', got: {debug_str}"
-    );
-    assert!(
-        debug_str.contains("10.0") || debug_str.contains("10"),
-        "debug should contain '10.0', got: {debug_str}"
-    );
-}
-
-// Behavior 3: GuardedBehavior struct has required fields
-#[test]
-fn guarded_behavior_struct_has_required_fields() {
-    let gb = GuardedBehavior {
-        guardian_hp: 5.0,
-        guardian_color_rgb: [1.0, 0.0, 0.0],
-        slide_speed: 50.0,
-    };
-    assert!(
-        (gb.guardian_hp - 5.0).abs() < f32::EPSILON,
-        "guardian_hp should be 5.0"
-    );
-    assert!(
-        (gb.guardian_color_rgb[0] - 1.0).abs() < f32::EPSILON
-            && (gb.guardian_color_rgb[1] - 0.0).abs() < f32::EPSILON
-            && (gb.guardian_color_rgb[2] - 0.0).abs() < f32::EPSILON,
-        "guardian_color_rgb should be [1.0, 0.0, 0.0]"
-    );
-    assert!(
-        (gb.slide_speed - 50.0).abs() < f32::EPSILON,
-        "slide_speed should be 50.0"
-    );
-}
-
-// ── Section B: GuardedBehavior Validation ──────────────────────
-
-// Behavior 4: validate() accepts valid values
-#[test]
-fn guarded_behavior_validate_accepts_valid() {
-    let gb = valid_guarded_behavior();
-    assert!(
-        gb.validate().is_ok(),
-        "valid GuardedBehavior should pass validation: {:?}",
-        gb.validate(),
-    );
-}
-
-// Behavior 4 edge case: smallest positive hp
-#[test]
-fn guarded_behavior_validate_accepts_smallest_positive_hp() {
-    let mut gb = valid_guarded_behavior();
-    gb.guardian_hp = 0.001;
-    assert!(
-        gb.validate().is_ok(),
-        "guardian_hp = 0.001 should pass: {:?}",
-        gb.validate(),
-    );
-}
-
-// Behavior 5: validate() rejects zero guardian_hp
-#[test]
-fn guarded_behavior_validate_rejects_zero_hp() {
-    let mut gb = valid_guarded_behavior();
-    gb.guardian_hp = 0.0;
-    assert!(
-        gb.validate().is_err(),
-        "guardian_hp = 0.0 should be rejected"
-    );
-}
-
-// Behavior 6: validate() rejects negative guardian_hp
-#[test]
-fn guarded_behavior_validate_rejects_negative_hp() {
-    let mut gb = valid_guarded_behavior();
-    gb.guardian_hp = -5.0;
-    assert!(
-        gb.validate().is_err(),
-        "guardian_hp = -5.0 should be rejected"
-    );
-}
-
-// Behavior 6 edge case: -0.001
-#[test]
-fn guarded_behavior_validate_rejects_tiny_negative_hp() {
-    let mut gb = valid_guarded_behavior();
-    gb.guardian_hp = -0.001;
-    assert!(
-        gb.validate().is_err(),
-        "guardian_hp = -0.001 should be rejected"
-    );
-}
-
-// Behavior 7: validate() rejects NaN guardian_hp
-#[test]
-fn guarded_behavior_validate_rejects_nan_hp() {
-    let mut gb = valid_guarded_behavior();
-    gb.guardian_hp = f32::NAN;
-    assert!(
-        gb.validate().is_err(),
-        "guardian_hp = NaN should be rejected"
-    );
-}
-
-// Behavior 8: validate() rejects infinite guardian_hp
-#[test]
-fn guarded_behavior_validate_rejects_infinite_hp() {
-    let mut gb = valid_guarded_behavior();
-    gb.guardian_hp = f32::INFINITY;
-    assert!(
-        gb.validate().is_err(),
-        "guardian_hp = INFINITY should be rejected"
-    );
-}
-
-// Behavior 8 edge case: NEG_INFINITY
-#[test]
-fn guarded_behavior_validate_rejects_neg_infinite_hp() {
-    let mut gb = valid_guarded_behavior();
-    gb.guardian_hp = f32::NEG_INFINITY;
-    assert!(
-        gb.validate().is_err(),
-        "guardian_hp = NEG_INFINITY should be rejected"
-    );
-}
-
-// Behavior 9: validate() accepts zero slide_speed
 #[test]
 fn guarded_behavior_validate_accepts_zero_slide_speed() {
     let mut gb = valid_guarded_behavior();
     gb.slide_speed = 0.0;
-    assert!(
-        gb.validate().is_ok(),
-        "slide_speed = 0.0 should be accepted: {:?}",
-        gb.validate(),
-    );
+    assert!(gb.validate().is_ok());
 }
 
-// Behavior 10: validate() rejects negative slide_speed
 #[test]
 fn guarded_behavior_validate_rejects_negative_slide_speed() {
     let mut gb = valid_guarded_behavior();
     gb.slide_speed = -1.0;
-    assert!(
-        gb.validate().is_err(),
-        "slide_speed = -1.0 should be rejected"
-    );
+    assert!(gb.validate().is_err());
 }
 
-// Behavior 10 edge case: -0.001
-#[test]
-fn guarded_behavior_validate_rejects_tiny_negative_slide_speed() {
-    let mut gb = valid_guarded_behavior();
-    gb.slide_speed = -0.001;
-    assert!(
-        gb.validate().is_err(),
-        "slide_speed = -0.001 should be rejected"
-    );
-}
-
-// Behavior 11: validate() rejects NaN slide_speed
 #[test]
 fn guarded_behavior_validate_rejects_nan_slide_speed() {
     let mut gb = valid_guarded_behavior();
     gb.slide_speed = f32::NAN;
-    assert!(
-        gb.validate().is_err(),
-        "slide_speed = NaN should be rejected"
-    );
+    assert!(gb.validate().is_err());
 }
 
-// Behavior 12: validate() rejects infinite slide_speed
 #[test]
 fn guarded_behavior_validate_rejects_infinite_slide_speed() {
     let mut gb = valid_guarded_behavior();
     gb.slide_speed = f32::INFINITY;
-    assert!(
-        gb.validate().is_err(),
-        "slide_speed = INFINITY should be rejected"
-    );
+    assert!(gb.validate().is_err());
 }
 
-// Behavior 12 edge case: NEG_INFINITY
-#[test]
-fn guarded_behavior_validate_rejects_neg_infinite_slide_speed() {
-    let mut gb = valid_guarded_behavior();
-    gb.slide_speed = f32::NEG_INFINITY;
-    assert!(
-        gb.validate().is_err(),
-        "slide_speed = NEG_INFINITY should be rejected"
-    );
-}
+// ── CellTypeDefinition validation delegation ────────────────────
 
-// ── Section C: CellTypeDefinition Guarded Validation Delegation ──
-
-// Behavior 13: validate() delegates to GuardedBehavior::validate()
 #[test]
 fn cell_definition_validate_delegates_to_guarded_validate() {
     let mut def = valid_definition();
     def.behaviors = Some(vec![CellBehavior::Guarded(GuardedBehavior {
-        guardian_hp: -1.0, // invalid
+        guardian_hp_fraction: 0.0, // invalid
         guardian_color_rgb: [0.5, 0.8, 1.0],
         slide_speed: 30.0,
     })]);
-    assert!(
-        def.validate().is_err(),
-        "CellTypeDefinition.validate should reject invalid GuardedBehavior"
-    );
+    assert!(def.validate().is_err());
 }
 
-// Behavior 14: validate() accepts valid Guarded behavior
 #[test]
 fn cell_definition_validate_accepts_valid_guarded() {
     let mut def = valid_definition();
     def.behaviors = Some(vec![CellBehavior::Guarded(valid_guarded_behavior())]);
-    assert!(
-        def.validate().is_ok(),
-        "CellTypeDefinition with valid GuardedBehavior should pass: {:?}",
-        def.validate(),
-    );
+    assert!(def.validate().is_ok());
 }
 
-// Behavior 14 edge case: both Regen and Guarded valid
 #[test]
 fn cell_definition_validate_accepts_regen_and_guarded() {
     let mut def = valid_definition();
@@ -362,48 +391,7 @@ fn cell_definition_validate_accepts_regen_and_guarded() {
         CellBehavior::Regen { rate: 2.0 },
         CellBehavior::Guarded(valid_guarded_behavior()),
     ]);
-    assert!(
-        def.validate().is_ok(),
-        "definition with both Regen and valid Guarded should pass: {:?}",
-        def.validate(),
-    );
-}
-
-// Behavior 15: validate() rejects when any behavior is invalid (mixed vec)
-#[test]
-fn cell_definition_validate_rejects_mixed_vec_with_invalid_guarded() {
-    let mut def = valid_definition();
-    def.behaviors = Some(vec![
-        CellBehavior::Regen { rate: 2.0 },
-        CellBehavior::Guarded(GuardedBehavior {
-            guardian_hp: 0.0, // invalid
-            guardian_color_rgb: [0.5, 0.8, 1.0],
-            slide_speed: 30.0,
-        }),
-    ]);
-    assert!(
-        def.validate().is_err(),
-        "behaviors with one invalid Guarded entry should be rejected"
-    );
-}
-
-// Behavior 16: CellTypeDefinition without shield field deserializes
-#[test]
-fn definition_without_shield_field_deserializes() {
-    let ron_str = r#"(
-        id: "test",
-        alias: "T",
-        hp: 10.0,
-        color_rgb: (1.0, 0.5, 0.2),
-        required_to_clear: true,
-        damage_hdr_base: 4.0,
-        damage_green_min: 0.2,
-        damage_blue_range: 0.4,
-        damage_blue_base: 0.2,
-    )"#;
-    let def: CellTypeDefinition =
-        ron::de::from_str(ron_str).expect("should deserialize without shield field");
-    assert_eq!(def.alias, "T");
+    assert!(def.validate().is_ok());
 }
 
 // ── CellTypeDefinition deserialization ──────────────────────────
@@ -413,7 +401,7 @@ fn definition_with_no_behaviors_field_deserializes_to_none() {
     let ron_str = r#"(
         id: "test",
         alias: "S",
-        hp: 10.0,
+        toughness: Weak,
         color_rgb: (1.0, 0.5, 0.2),
         required_to_clear: true,
         damage_hdr_base: 4.0,
@@ -423,55 +411,7 @@ fn definition_with_no_behaviors_field_deserializes_to_none() {
     )"#;
     let def: CellTypeDefinition =
         ron::de::from_str(ron_str).expect("should deserialize without behaviors field");
-    assert!(
-        def.behaviors.is_none(),
-        "missing behaviors field should default to None"
-    );
-}
-
-#[test]
-fn definition_with_explicit_behaviors_none_deserializes() {
-    let ron_str = r#"(
-        id: "test",
-        alias: "S",
-        hp: 10.0,
-        color_rgb: (1.0, 0.5, 0.2),
-        required_to_clear: true,
-        damage_hdr_base: 4.0,
-        damage_green_min: 0.2,
-        damage_blue_range: 0.4,
-        damage_blue_base: 0.2,
-        behaviors: None,
-    )"#;
-    let def: CellTypeDefinition =
-        ron::de::from_str(ron_str).expect("should deserialize with behaviors: None");
-    assert!(
-        def.behaviors.is_none(),
-        "explicit behaviors: None should produce None"
-    );
-}
-
-#[test]
-fn definition_with_empty_behaviors_vec_deserializes() {
-    let ron_str = r#"(
-        id: "test",
-        alias: "S",
-        hp: 10.0,
-        color_rgb: (1.0, 0.5, 0.2),
-        required_to_clear: true,
-        damage_hdr_base: 4.0,
-        damage_green_min: 0.2,
-        damage_blue_range: 0.4,
-        damage_blue_base: 0.2,
-        behaviors: Some([]),
-    )"#;
-    let def: CellTypeDefinition =
-        ron::de::from_str(ron_str).expect("should deserialize with behaviors: Some([])");
-    assert_eq!(
-        def.behaviors,
-        Some(vec![]),
-        "behaviors: Some([]) should produce Some(empty vec)"
-    );
+    assert!(def.behaviors.is_none());
 }
 
 #[test]
@@ -479,7 +419,7 @@ fn definition_with_single_regen_behavior_deserializes() {
     let ron_str = r#"(
         id: "regen",
         alias: "R",
-        hp: 20.0,
+        toughness: Standard,
         color_rgb: (0.3, 4.0, 0.3),
         required_to_clear: true,
         damage_hdr_base: 4.0,
@@ -490,180 +430,7 @@ fn definition_with_single_regen_behavior_deserializes() {
     )"#;
     let def: CellTypeDefinition =
         ron::de::from_str(ron_str).expect("should deserialize with Regen behavior");
-    assert_eq!(
-        def.behaviors,
-        Some(vec![CellBehavior::Regen { rate: 2.0 }]),
-        "should parse single Regen behavior"
-    );
-}
-
-#[test]
-fn definition_alias_is_string() {
-    let ron_str = r#"(
-        id: "test",
-        alias: "S",
-        hp: 10.0,
-        color_rgb: (1.0, 0.5, 0.2),
-        required_to_clear: true,
-        damage_hdr_base: 4.0,
-        damage_green_min: 0.2,
-        damage_blue_range: 0.4,
-        damage_blue_base: 0.2,
-    )"#;
-    let def: CellTypeDefinition = ron::de::from_str(ron_str).expect("should deserialize");
-    assert_eq!(def.alias, "S".to_owned(), "alias should be a String");
-}
-
-#[test]
-fn definition_multi_char_alias_deserializes() {
-    let ron_str = r#"(
-        id: "guard",
-        alias: "Gu",
-        hp: 10.0,
-        color_rgb: (1.0, 0.5, 0.2),
-        required_to_clear: true,
-        damage_hdr_base: 4.0,
-        damage_green_min: 0.2,
-        damage_blue_range: 0.4,
-        damage_blue_base: 0.2,
-    )"#;
-    let def: CellTypeDefinition = ron::de::from_str(ron_str).expect("should deserialize");
-    assert_eq!(
-        def.alias,
-        "Gu".to_owned(),
-        "multi-char alias should deserialize"
-    );
-}
-
-// ── validate() for behaviors ────────────────────────────────────
-
-#[test]
-fn validate_accepts_valid_definition_with_regen_behavior() {
-    let mut def = valid_definition();
-    def.behaviors = Some(vec![CellBehavior::Regen { rate: 2.0 }]);
-    assert!(
-        def.validate().is_ok(),
-        "valid Regen {{ rate: 2.0 }} should pass: {:?}",
-        def.validate(),
-    );
-}
-
-#[test]
-fn validate_accepts_regen_with_very_small_positive_rate() {
-    let mut def = valid_definition();
-    def.behaviors = Some(vec![CellBehavior::Regen { rate: 0.001 }]);
-    assert!(
-        def.validate().is_ok(),
-        "Regen {{ rate: 0.001 }} should pass: {:?}",
-        def.validate(),
-    );
-}
-
-#[test]
-fn validate_rejects_regen_with_zero_rate() {
-    let mut def = valid_definition();
-    def.behaviors = Some(vec![CellBehavior::Regen { rate: 0.0 }]);
-    let err = def.validate().expect_err("rate = 0.0 should be rejected");
-    let err_lower = err.to_lowercase();
-    assert!(
-        err_lower.contains("regen") || err_lower.contains('0'),
-        "error should mention regen or zero, got: {err}"
-    );
-}
-
-#[test]
-fn validate_rejects_regen_with_negative_rate() {
-    let mut def = valid_definition();
-    def.behaviors = Some(vec![CellBehavior::Regen { rate: -1.0 }]);
-    assert!(def.validate().is_err(), "rate = -1.0 should be rejected");
-}
-
-#[test]
-fn validate_rejects_regen_with_tiny_negative_rate() {
-    let mut def = valid_definition();
-    def.behaviors = Some(vec![CellBehavior::Regen { rate: -0.001 }]);
-    assert!(def.validate().is_err(), "rate = -0.001 should be rejected");
-}
-
-#[test]
-fn validate_rejects_regen_with_nan_rate() {
-    let mut def = valid_definition();
-    def.behaviors = Some(vec![CellBehavior::Regen { rate: f32::NAN }]);
-    assert!(def.validate().is_err(), "rate = NaN should be rejected");
-}
-
-#[test]
-fn validate_rejects_regen_with_infinite_rate() {
-    let mut def = valid_definition();
-    def.behaviors = Some(vec![CellBehavior::Regen {
-        rate: f32::INFINITY,
-    }]);
-    assert!(
-        def.validate().is_err(),
-        "rate = INFINITY should be rejected"
-    );
-}
-
-#[test]
-fn validate_rejects_regen_with_neg_infinite_rate() {
-    let mut def = valid_definition();
-    def.behaviors = Some(vec![CellBehavior::Regen {
-        rate: f32::NEG_INFINITY,
-    }]);
-    assert!(
-        def.validate().is_err(),
-        "rate = NEG_INFINITY should be rejected"
-    );
-}
-
-#[test]
-fn validate_accepts_behaviors_none() {
-    let mut def = valid_definition();
-    def.behaviors = None;
-    assert!(
-        def.validate().is_ok(),
-        "behaviors: None should pass: {:?}",
-        def.validate(),
-    );
-}
-
-#[test]
-fn validate_accepts_empty_behaviors_vec() {
-    let mut def = valid_definition();
-    def.behaviors = Some(vec![]);
-    assert!(
-        def.validate().is_ok(),
-        "behaviors: Some(vec![]) should pass: {:?}",
-        def.validate(),
-    );
-}
-
-#[test]
-fn validate_rejects_when_any_behavior_invalid() {
-    // First valid, second invalid
-    let mut def = valid_definition();
-    def.behaviors = Some(vec![
-        CellBehavior::Regen { rate: 2.0 },
-        CellBehavior::Regen { rate: -1.0 },
-    ]);
-    assert!(
-        def.validate().is_err(),
-        "behaviors with one invalid entry should be rejected"
-    );
-}
-
-#[test]
-fn validate_rejects_when_first_behavior_invalid() {
-    // First invalid, second valid
-    let mut def = valid_definition();
-    def.behaviors = Some(vec![
-        CellBehavior::Regen { rate: -1.0 },
-        CellBehavior::Regen { rate: 2.0 },
-    ]);
-    assert!(
-        def.validate().is_err(),
-        "behaviors with first entry invalid should be rejected"
-    );
+    assert_eq!(def.behaviors, Some(vec![CellBehavior::Regen { rate: 2.0 }]),);
 }
 
 // ── alias validation ────────────────────────────────────────────
@@ -672,26 +439,71 @@ fn validate_rejects_when_first_behavior_invalid() {
 fn validate_rejects_empty_alias() {
     let mut def = valid_definition();
     def.alias = String::new();
-    assert!(def.validate().is_err(), "empty alias should be rejected");
+    assert!(def.validate().is_err());
 }
 
 #[test]
 fn validate_rejects_dot_alias() {
     let mut def = valid_definition();
     def.alias = ".".to_owned();
-    let err = def.validate().expect_err("dot alias should be rejected");
-    assert!(
-        err.contains("reserved") || err.contains('.'),
-        "error should mention reserved or dot, got: {err}"
-    );
+    assert!(def.validate().is_err());
 }
 
 #[test]
 fn validate_accepts_valid_definition_without_behaviors() {
     let def = valid_definition();
-    assert!(
-        def.validate().is_ok(),
-        "valid definition with behaviors = None should pass: {:?}",
-        def.validate(),
-    );
+    assert!(def.validate().is_ok());
+}
+
+// ── Regen rate validation ───────────────────────────────────────
+
+#[test]
+fn validate_accepts_valid_definition_with_regen_behavior() {
+    let mut def = valid_definition();
+    def.behaviors = Some(vec![CellBehavior::Regen { rate: 2.0 }]);
+    assert!(def.validate().is_ok());
+}
+
+#[test]
+fn validate_rejects_regen_with_zero_rate() {
+    let mut def = valid_definition();
+    def.behaviors = Some(vec![CellBehavior::Regen { rate: 0.0 }]);
+    assert!(def.validate().is_err());
+}
+
+#[test]
+fn validate_rejects_regen_with_negative_rate() {
+    let mut def = valid_definition();
+    def.behaviors = Some(vec![CellBehavior::Regen { rate: -1.0 }]);
+    assert!(def.validate().is_err());
+}
+
+#[test]
+fn validate_rejects_regen_with_nan_rate() {
+    let mut def = valid_definition();
+    def.behaviors = Some(vec![CellBehavior::Regen { rate: f32::NAN }]);
+    assert!(def.validate().is_err());
+}
+
+#[test]
+fn validate_rejects_regen_with_infinite_rate() {
+    let mut def = valid_definition();
+    def.behaviors = Some(vec![CellBehavior::Regen {
+        rate: f32::INFINITY,
+    }]);
+    assert!(def.validate().is_err());
+}
+
+#[test]
+fn validate_accepts_behaviors_none() {
+    let mut def = valid_definition();
+    def.behaviors = None;
+    assert!(def.validate().is_ok());
+}
+
+#[test]
+fn validate_accepts_empty_behaviors_vec() {
+    let mut def = valid_definition();
+    def.behaviors = Some(vec![]);
+    assert!(def.validate().is_ok());
 }

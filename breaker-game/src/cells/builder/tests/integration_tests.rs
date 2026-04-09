@@ -10,7 +10,7 @@ use crate::{
             Cell, CellDamageVisuals, CellHealth, CellHeight, CellTypeAlias, CellWidth, Locked,
             Locks, RegenRate, RequiredToClear,
         },
-        definition::{CellBehavior, CellTypeDefinition},
+        definition::{CellBehavior, CellTypeDefinition, Toughness},
     },
     shared::{BOLT_LAYER, CELL_LAYER},
 };
@@ -20,7 +20,7 @@ fn test_cell_definition() -> CellTypeDefinition {
     CellTypeDefinition {
         id: "test".to_owned(),
         alias: "T".to_owned(),
-        hp: 20.0,
+        toughness: Toughness::default(),
         color_rgb: [1.0, 0.5, 0.2],
         required_to_clear: true,
         damage_hdr_base: 4.0,
@@ -52,7 +52,7 @@ fn spawn_cell_in_world(
 #[test]
 fn full_definition_with_hp_override_and_behavior() {
     let mut def = test_cell_definition();
-    def.hp = 30.0;
+
     def.alias = "R".to_owned();
     def.color_rgb = [0.3, 4.0, 0.3];
     def.required_to_clear = true;
@@ -136,8 +136,7 @@ fn full_definition_with_hp_override_and_behavior() {
 // Behavior 44 edge case: override hp to smaller value than definition
 #[test]
 fn full_definition_override_hp_smaller() {
-    let mut def = test_cell_definition();
-    def.hp = 30.0;
+    let def = test_cell_definition();
 
     let mut world = World::new();
     let entity = spawn_cell_in_world(&mut world, |commands| {

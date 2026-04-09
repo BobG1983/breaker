@@ -106,7 +106,6 @@ mod tests {
                 assignments: vec![NodeAssignment {
                     node_type: NodeType::Active,
                     tier_index: 0,
-                    hp_mult: 1.0,
                     timer_mult,
                 }],
             })
