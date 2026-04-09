@@ -24,10 +24,6 @@ pub(crate) fn default_breaker_definition() -> BreakerDefinition {
 /// via a post-spawn `Position2D` + `PreviousPosition` override.
 ///
 /// Returns the spawned `Entity` for assertions.
-#[expect(
-    dead_code,
-    reason = "will be used when remaining domains migrate to breaker::test_utils"
-)]
 pub(crate) fn spawn_breaker(app: &mut App, x: f32, y: f32) -> Entity {
     let def = default_breaker_definition();
     let world = app.world_mut();
@@ -45,4 +41,17 @@ pub(crate) fn spawn_breaker(app: &mut App, x: f32, y: f32) -> Entity {
         .entity_mut(entity)
         .insert((Position2D(pos), PreviousPosition(pos)));
     entity
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::shared::test_utils::TestAppBuilder;
+
+    #[test]
+    fn spawn_breaker_returns_entity_with_breaker_marker() {
+        let mut app = TestAppBuilder::new().build();
+        let entity = spawn_breaker(&mut app, 100.0, -200.0);
+        assert!(app.world().entity(entity).contains::<Breaker>());
+    }
 }
