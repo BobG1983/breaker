@@ -146,7 +146,7 @@ fn non_regen_cell_does_not_have_cell_regen_component() {
 // --- A4: HP multiplier tests ---
 
 #[test]
-fn cell_hp_scaled_by_node_assignment_hp_mult() {
+fn cell_hp_falls_back_to_default_base_hp_without_config() {
     let layout = NodeLayout {
         name: "hp_mult_test".to_owned(),
         timer_secs: 60.0,
@@ -202,7 +202,7 @@ fn cell_hp_scaled_by_node_assignment_hp_mult() {
 }
 
 #[test]
-fn cell_hp_unchanged_when_hp_mult_is_one() {
+fn cell_hp_tough_falls_back_to_default_base_hp() {
     let layout = NodeLayout {
         name: "hp_mult_one_test".to_owned(),
         timer_secs: 60.0,

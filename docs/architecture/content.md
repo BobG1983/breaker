@@ -104,28 +104,29 @@ When a player selects a chip, the chip dispatch system pushes the chip's `Effect
 
 ## Cell Type Content System (Implemented — Phase 2)
 
-Cell type content lives in `cells/definition.rs` as `CellTypeDefinition`. Each cell type is a RON file; the `CellTypeRegistry` maps single-character aliases to definitions for use in node layout grids.
+Cell type content lives in `cells/definition.rs` as `CellTypeDefinition`. Each cell type is a RON file; the `CellTypeRegistry` maps string aliases to definitions for use in node layout grids.
 
 ```rust
 // cells/definition.rs
 #[derive(Asset, TypePath, Deserialize)]
 pub struct CellTypeDefinition {
     pub id: String,
-    pub alias: char,            // single-char key used in layout grids
-    pub hp: f32,                // hit points (f32 for damage calculations)
+    pub alias: String,                  // string key used in layout grids (e.g., "S", "Gu")
+    #[serde(default)]
+    pub toughness: Toughness,           // Weak | Standard | Tough — determines base HP
     pub color_rgb: [f32; 3],
     pub required_to_clear: bool,
     pub damage_hdr_base: f32,
     pub damage_green_min: f32,
     pub damage_blue_range: f32,
     pub damage_blue_base: f32,
-    pub behavior: CellBehavior, // optional: locked, regen_rate (serde default = no behavior)
+    pub behaviors: Option<Vec<CellBehavior>>, // optional per-cell behaviors
 }
 
 // CellBehavior controls special cell mechanics:
-pub struct CellBehavior {
-    pub locked: bool,           // immune to damage until all adjacent cells are cleared
-    pub regen_rate: Option<f32>, // HP/sec regeneration rate (None = no regen)
+pub enum CellBehavior {
+    Regen { rate: f32 },            // HP/sec regeneration rate
+    Guarded(GuardedBehavior),       // guardian shield with hp_fraction, color, slide_speed
 }
 ```
 

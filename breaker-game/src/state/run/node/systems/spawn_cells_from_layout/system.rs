@@ -685,7 +685,9 @@ fn resolve_hp_context(
 ) -> HpContext {
     let (tier, position_in_tier, is_boss) =
         if let (Some(state), Some(sequence)) = (run_state, node_sequence) {
-            let assignment = sequence.assignments.get(state.node_index as usize);
+            let assignment = sequence
+                .assignments
+                .get(usize::try_from(state.node_index).unwrap_or(usize::MAX));
             let is_boss = assignment.is_some_and(|a| a.node_type == NodeType::Boss);
             (state.tier, state.position_in_tier, is_boss)
         } else {

@@ -343,10 +343,8 @@ pub(super) fn collect_cells_by_grid_position(
     result
 }
 
-/// Creates a test `App` with `NodeOutcome`/`NodeSequence` for HP multiplier testing.
-/// Note: `hp_mult` has been removed from `NodeAssignment`. This helper now just
-/// inserts the resources for compatibility.
-pub(super) fn test_app_with_hp_mult(layout: NodeLayout, _hp_mult: f32) -> App {
+/// Creates a test `App` with `NodeOutcome` and `NodeSequence` resources.
+pub(super) fn test_app_with_sequence(layout: NodeLayout) -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .add_message::<CellsSpawned>()

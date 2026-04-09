@@ -54,7 +54,7 @@ fn locked_cell_hp_scaled_by_hp_mult() {
         entity_scale: 1.0,
         locks: Some(locks),
     };
-    let mut app = test_app_with_hp_mult(layout.clone(), 2.0);
+    let mut app = test_app_with_sequence(layout.clone());
     app.update();
 
     let cells_by_pos = collect_cells_by_grid_position(&mut app, &layout);
@@ -106,7 +106,7 @@ fn locked_cell_hp_unscaled_when_hp_mult_is_one() {
         entity_scale: 1.0,
         locks: Some(locks),
     };
-    let mut app = test_app_with_hp_mult(layout.clone(), 1.0);
+    let mut app = test_app_with_sequence(layout.clone());
     app.update();
 
     let cells_by_pos = collect_cells_by_grid_position(&mut app, &layout);

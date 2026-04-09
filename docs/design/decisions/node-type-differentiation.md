@@ -26,7 +26,9 @@ Examples: enemies shaped like characters, falling brick patterns, locked cores r
 
 ## HP Scaling
 
-HP multiplier (from `TierDefinition`) applies only to "tough" cells — cells that are inherently durable. Normal cells always stay at base HP. Portals are exempt from HP scaling.
+HP scales via the `Toughness` enum (`Weak`, `Standard`, `Tough`) and the exponential formula in `ToughnessConfig`. Cells are assigned a toughness level at generation time; `ToughnessConfig.boss_multiplier` applies an extra HP multiplier on boss nodes. Portals are exempt from HP scaling.
+
+`TierDefinition` no longer carries an `hp_mult` field — all HP scaling parameters live in `ToughnessConfig` (RON-tunable via `defaults.toughness.ron`).
 
 This keeps early-tier nodes feeling snappy while tough cells in later tiers become meaningfully harder to break.
 

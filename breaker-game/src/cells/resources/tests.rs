@@ -356,6 +356,64 @@ fn lock_cell_ron_has_toughness_weak() {
     assert_eq!(def.toughness, Toughness::Weak);
 }
 
+// ── ToughnessConfig::validate() ─────────────────────────────────
+
+#[test]
+fn toughness_config_validate_default_passes() {
+    assert!(
+        ToughnessConfig::default().validate().is_ok(),
+        "default ToughnessConfig should pass validation"
+    );
+}
+
+#[test]
+fn toughness_config_validate_rejects_zero_weak_base() {
+    let config = ToughnessConfig {
+        weak_base: 0.0,
+        ..Default::default()
+    };
+    assert!(
+        config.validate().is_err(),
+        "weak_base: 0.0 should be rejected"
+    );
+}
+
+#[test]
+fn toughness_config_validate_rejects_nan_tier_multiplier() {
+    let config = ToughnessConfig {
+        tier_multiplier: f32::NAN,
+        ..Default::default()
+    };
+    assert!(
+        config.validate().is_err(),
+        "tier_multiplier: NaN should be rejected"
+    );
+}
+
+#[test]
+fn toughness_config_validate_rejects_negative_boss_multiplier() {
+    let config = ToughnessConfig {
+        boss_multiplier: -1.0,
+        ..Default::default()
+    };
+    assert!(
+        config.validate().is_err(),
+        "boss_multiplier: -1.0 should be rejected"
+    );
+}
+
+#[test]
+fn toughness_config_validate_rejects_negative_node_multiplier() {
+    let config = ToughnessConfig {
+        node_multiplier: -0.5,
+        ..Default::default()
+    };
+    assert!(
+        config.validate().is_err(),
+        "node_multiplier: -0.5 should be rejected"
+    );
+}
+
 // ── Part D: ToughnessConfig resource tests ──────────────────────
 
 // Behavior 11: ToughnessConfig has correct default fields

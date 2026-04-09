@@ -129,7 +129,7 @@ mod tests {
             CellTypeDefinition {
                 id: "tough".to_owned(),
                 alias: "T".to_owned(),
-                toughness: Toughness::default(),
+                toughness: Toughness::Tough,
                 color_rgb: [2.5, 0.2, 4.0],
                 required_to_clear: true,
                 damage_hdr_base: 4.0,
