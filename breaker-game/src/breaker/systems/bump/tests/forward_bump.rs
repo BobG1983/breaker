@@ -32,7 +32,6 @@ fn input_opens_forward_window() {
 #[test]
 fn input_on_cooldown_ignored() {
     let mut app = update_bump_test_app();
-    let config = BreakerDefinition::default();
 
     let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
     app.world_mut().entity_mut(entity).insert(BumpState {
@@ -105,7 +104,6 @@ fn forward_window_expiry_sends_whiff_and_sets_cooldown() {
 #[test]
 fn post_hit_timer_ticks_down() {
     let mut app = update_bump_test_app();
-    let config = BreakerDefinition::default();
 
     let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
     app.world_mut().entity_mut(entity).insert(BumpState {
@@ -123,7 +121,6 @@ fn post_hit_timer_ticks_down() {
 #[test]
 fn cooldown_ticks_down() {
     let mut app = update_bump_test_app();
-    let config = BreakerDefinition::default();
 
     let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
     app.world_mut().entity_mut(entity).insert(BumpState {
@@ -145,7 +142,6 @@ fn bump_while_serving_does_not_open_forward_window() {
     use crate::bolt::components::BoltServing;
 
     let mut app = update_bump_test_app();
-    let config = BreakerDefinition::default();
 
     let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
 
@@ -166,7 +162,6 @@ fn bump_while_serving_does_not_open_forward_window() {
 fn bump_without_serving_bolt_opens_forward_window() {
     // Regression guard: normal bump still works when no BoltServing exists
     let mut app = update_bump_test_app();
-    let config = BreakerDefinition::default();
 
     let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
 
@@ -215,7 +210,6 @@ fn fixed_schedule_bump_app() -> App {
 #[test]
 fn bump_not_lost_when_fixed_update_skips_frame() {
     let mut app = fixed_schedule_bump_app();
-    let config = BreakerDefinition::default();
 
     let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
 

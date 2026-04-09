@@ -101,7 +101,6 @@ fn bolt_hit_without_active_sets_post_hit_timer_no_message() {
 #[test]
 fn no_hit_no_change() {
     let mut app = grade_bump_test_app();
-    let config = BreakerDefinition::default();
 
     let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
 
@@ -180,8 +179,6 @@ fn grade_bump_sets_last_hit_bolt_when_no_active_bump() {
         .add_message::<crate::breaker::messages::BumpPerformed>()
         .add_message::<crate::breaker::messages::BumpWhiffed>()
         .init_resource::<CapturedBumps>();
-
-    let config = BreakerDefinition::default();
 
     let bolt_entity = app.world_mut().spawn_empty().id();
 
