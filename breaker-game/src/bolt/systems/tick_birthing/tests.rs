@@ -7,10 +7,11 @@ use crate::{
 };
 
 fn test_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .add_systems(FixedUpdate, tick_birthing);
-    app
+    use crate::shared::test_utils::TestAppBuilder;
+
+    TestAppBuilder::new()
+        .with_system(FixedUpdate, tick_birthing)
+        .build()
 }
 
 use crate::shared::test_utils::tick;

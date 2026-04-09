@@ -2,7 +2,7 @@
 //! Section I: `spawn()` terminal method — rendered
 //! Section J: `spawn_inner()` behavior insertion
 
-use bevy::{ecs::world::CommandQueue, prelude::*};
+use bevy::prelude::*;
 use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{Position2D, Scale2D, Spatial2D};
 use rantzsoft_stateflow::CleanupOnExit;
@@ -13,43 +13,12 @@ use crate::{
             Cell, CellDamageVisuals, CellHealth, CellHeight, CellTypeAlias, CellWidth, Locked,
             Locks, RegenRate, RequiredToClear,
         },
-        definition::{CellBehavior, CellTypeDefinition, Toughness},
+        definition::CellBehavior,
+        test_utils::{spawn_cell_in_world, test_cell_definition},
     },
     shared::{BOLT_LAYER, CELL_LAYER, GameDrawLayer},
     state::types::NodeState,
 };
-
-/// Creates a test `CellTypeDefinition` with known values.
-fn test_cell_definition() -> CellTypeDefinition {
-    CellTypeDefinition {
-        id: "test".to_owned(),
-        alias: "T".to_owned(),
-        toughness: Toughness::default(),
-        color_rgb: [1.0, 0.5, 0.2],
-        required_to_clear: true,
-        damage_hdr_base: 4.0,
-        damage_green_min: 0.2,
-        damage_blue_range: 0.4,
-        damage_blue_base: 0.2,
-        behaviors: None,
-
-        effects: None,
-    }
-}
-
-/// Spawns a cell via Commands backed by a `CommandQueue`, then applies the queue.
-fn spawn_cell_in_world(
-    world: &mut World,
-    build_fn: impl FnOnce(&mut Commands) -> Entity,
-) -> Entity {
-    let mut queue = CommandQueue::default();
-    let entity = {
-        let mut commands = Commands::new(&mut queue, world);
-        build_fn(&mut commands)
-    };
-    queue.apply(world);
-    entity
-}
 
 // ── Section H: spawn() — Headless ──────────────────────────────────────────
 

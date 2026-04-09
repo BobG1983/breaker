@@ -26,12 +26,13 @@ fn make_default_bolt_definition() -> BoltDefinition {
 }
 
 fn test_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .init_resource::<InputActions>()
-        .init_resource::<GameRng>()
-        .add_systems(FixedUpdate, launch_bolt);
-    app
+    use crate::shared::test_utils::TestAppBuilder;
+
+    TestAppBuilder::new()
+        .with_resource::<InputActions>()
+        .with_resource::<GameRng>()
+        .with_system(FixedUpdate, launch_bolt)
+        .build()
 }
 
 use crate::shared::test_utils::tick;

@@ -38,10 +38,11 @@ mod tests {
     };
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_systems(Update, begin_node_birthing);
-        app
+        use crate::shared::test_utils::TestAppBuilder;
+
+        TestAppBuilder::new()
+            .with_system(Update, begin_node_birthing)
+            .build()
     }
 
     // Behavior 18: begin_node_birthing inserts Birthing on all bolts at AnimateIn entry

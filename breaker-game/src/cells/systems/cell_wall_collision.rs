@@ -58,11 +58,13 @@ pub(crate) fn cell_wall_collision(
 #[cfg(test)]
 mod tests {
     use bevy::prelude::*;
-    use rantzsoft_physics2d::plugin::RantzPhysics2dPlugin;
     use rantzsoft_spatial2d::components::{GlobalPosition2D, Spatial2D};
 
     use super::*;
-    use crate::shared::{GameDrawLayer, PlayfieldConfig, test_utils::tick};
+    use crate::{
+        shared::{GameDrawLayer, test_utils::tick},
+        walls::test_utils::{spawn_ceiling_wall, spawn_left_wall, spawn_right_wall},
+    };
 
     // ── Helpers ──────────────────────────────────────────────────────
 
@@ -79,21 +81,22 @@ mod tests {
     }
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_plugins(RantzPhysics2dPlugin)
-            .add_message::<CellImpactWall>()
+        use crate::shared::test_utils::TestAppBuilder;
+
+        TestAppBuilder::new()
+            .with_physics()
+            .with_message::<CellImpactWall>()
             .insert_resource(CellWallHitMessages::default())
-            .add_systems(
+            .with_system(
                 FixedUpdate,
                 cell_wall_collision
                     .after(rantzsoft_physics2d::plugin::PhysicsSystems::MaintainQuadtree),
             )
-            .add_systems(
+            .with_system(
                 FixedUpdate,
                 collect_cell_wall_hits.after(cell_wall_collision),
-            );
-        app
+            )
+            .build()
     }
 
     fn spawn_cell(app: &mut App, pos: Vec2, half_extents: Vec2) -> Entity {
@@ -108,51 +111,6 @@ mod tests {
                 GameDrawLayer::Cell,
             ))
             .id()
-    }
-
-    fn spawn_left_wall(app: &mut App) -> Entity {
-        let pf = PlayfieldConfig::default();
-        let entity = {
-            let world = app.world_mut();
-            let entity = Wall::builder().left(&pf).spawn(&mut world.commands());
-            world.flush();
-            entity
-        };
-        let pos = app.world().get::<Position2D>(entity).unwrap().0;
-        app.world_mut()
-            .entity_mut(entity)
-            .insert(GlobalPosition2D(pos));
-        entity
-    }
-
-    fn spawn_right_wall(app: &mut App) -> Entity {
-        let pf = PlayfieldConfig::default();
-        let entity = {
-            let world = app.world_mut();
-            let entity = Wall::builder().right(&pf).spawn(&mut world.commands());
-            world.flush();
-            entity
-        };
-        let pos = app.world().get::<Position2D>(entity).unwrap().0;
-        app.world_mut()
-            .entity_mut(entity)
-            .insert(GlobalPosition2D(pos));
-        entity
-    }
-
-    fn spawn_ceiling_wall(app: &mut App) -> Entity {
-        let pf = PlayfieldConfig::default();
-        let entity = {
-            let world = app.world_mut();
-            let entity = Wall::builder().ceiling(&pf).spawn(&mut world.commands());
-            world.flush();
-            entity
-        };
-        let pos = app.world().get::<Position2D>(entity).unwrap().0;
-        app.world_mut()
-            .entity_mut(entity)
-            .insert(GlobalPosition2D(pos));
-        entity
     }
 
     // ── B5: Cell overlapping wall emits CellImpactWall ──────────────

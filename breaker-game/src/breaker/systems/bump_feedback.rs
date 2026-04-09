@@ -82,7 +82,10 @@ pub fn spawn_whiff_text(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fx::FadeOut;
+    use crate::{
+        breaker::test_utils::default_breaker_definition, fx::FadeOut,
+        shared::test_utils::TestAppBuilder,
+    };
 
     #[derive(Resource)]
     struct TestBumpMsg(Option<BumpPerformed>);
@@ -94,24 +97,22 @@ mod tests {
     }
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_message::<BumpPerformed>()
-            .add_systems(
+        TestAppBuilder::new()
+            .with_message::<BumpPerformed>()
+            .with_system(
                 FixedUpdate,
                 (
                     enqueue_bump.before(spawn_bump_grade_text),
                     spawn_bump_grade_text,
                 ),
-            );
-        app
+            )
+            .build()
     }
 
     use crate::shared::test_utils::tick;
 
     fn spawn_breaker(app: &mut App) {
-        use crate::breaker::definition::BreakerDefinition;
-        let def = BreakerDefinition::default();
+        let def = default_breaker_definition();
         let world = app.world_mut();
         let entity = Breaker::builder()
             .definition(&def)

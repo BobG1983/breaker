@@ -1,26 +1,24 @@
 use bevy::prelude::*;
-use rantzsoft_physics2d::{
-    aabb::Aabb2D, collision_layers::CollisionLayers, plugin::RantzPhysics2dPlugin,
-};
-use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D, Velocity2D};
+use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
+use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D};
 
 // Re-export constants used by test modules
 pub(super) use crate::bolt::systems::bolt_cell_collision::system::MAX_BOUNCES;
+pub(super) use crate::bolt::test_utils::{
+    default_bolt_definition as test_bolt_definition, spawn_bolt,
+};
 use crate::{
     bolt::{
-        components::Bolt,
-        definition::BoltDefinition,
         messages::{BoltImpactCell, BoltImpactWall},
         systems::bolt_cell_collision::system::bolt_cell_collision,
     },
     cells::{
         components::{Cell, CellHealth, CellHeight, CellWidth},
         messages::DamageCell,
-        resources::CellConfig,
+        test_utils as cell_test_utils,
     },
     effect::effects::vulnerable::ActiveVulnerability,
-    shared::{BOLT_LAYER, CELL_LAYER, GameDrawLayer, PlayfieldConfig},
-    walls::components::Wall,
+    shared::{BOLT_LAYER, CELL_LAYER, GameDrawLayer},
 };
 
 /// Real grid vertical spacing: `cell_height` (24) + padding (4) = 28
@@ -29,79 +27,30 @@ pub(super) const GRID_STEP_Y: f32 = 28.0;
 pub(super) const GRID_STEP_X: f32 = 74.0;
 
 pub(super) fn test_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .add_plugins(RantzPhysics2dPlugin)
-        .add_message::<BoltImpactCell>()
-        .add_message::<DamageCell>()
-        .add_message::<BoltImpactWall>()
-        .add_systems(
+    use crate::shared::test_utils::TestAppBuilder;
+
+    TestAppBuilder::new()
+        .with_physics()
+        .with_message::<BoltImpactCell>()
+        .with_message::<DamageCell>()
+        .with_message::<BoltImpactWall>()
+        .with_system(
             FixedUpdate,
             bolt_cell_collision
                 .after(rantzsoft_physics2d::plugin::PhysicsSystems::MaintainQuadtree),
-        );
-    app
-}
-
-/// Creates a `BoltDefinition` matching the values previously provided by
-/// `BoltConfig::default()`, so existing position calculations remain valid.
-pub(super) fn test_bolt_definition() -> BoltDefinition {
-    BoltDefinition {
-        name: "Bolt".to_string(),
-        base_speed: 400.0,
-        min_speed: 200.0,
-        max_speed: 800.0,
-        radius: 8.0,
-        base_damage: 10.0,
-        effects: vec![],
-        color_rgb: [6.0, 5.0, 0.5],
-        min_angle_horizontal: 5.0,
-        min_angle_vertical: 5.0,
-        min_radius: None,
-        max_radius: None,
-    }
-}
-
-/// Spawns a bolt at the given position with the given velocity using the builder.
-pub(super) fn spawn_bolt(app: &mut App, x: f32, y: f32, vx: f32, vy: f32) -> Entity {
-    let def = test_bolt_definition();
-    let world = app.world_mut();
-    let entity = Bolt::builder()
-        .at_position(Vec2::new(x, y))
-        .definition(&def)
-        .with_velocity(Velocity2D(Vec2::new(vx, vy)))
-        .primary()
-        .headless()
-        .spawn(&mut world.commands());
-    world.flush();
-    entity
+        )
+        .build()
 }
 
 pub(super) fn default_cell_dims() -> (CellWidth, CellHeight) {
-    let cc = CellConfig::default();
-    (CellWidth::new(cc.width), CellHeight::new(cc.height))
+    cell_test_utils::default_cell_dims()
 }
 
 pub(super) use crate::shared::test_utils::tick;
 
 /// Cell entities use `Position2D` as canonical position.
 pub(super) fn spawn_cell(app: &mut App, x: f32, y: f32) -> Entity {
-    let (cw, ch) = default_cell_dims();
-    let half_extents = Vec2::new(cw.half_width(), ch.half_height());
-    let pos = Vec2::new(x, y);
-    app.world_mut()
-        .spawn((
-            Cell,
-            cw,
-            ch,
-            Aabb2D::new(Vec2::ZERO, half_extents),
-            CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
-            Position2D(pos),
-            GlobalPosition2D(pos),
-            Spatial2D,
-            GameDrawLayer::Cell,
-        ))
-        .id()
+    cell_test_utils::spawn_cell(app, x, y)
 }
 
 /// Spawns a cell with explicit [`CellHealth`] for piercing lookahead tests.
@@ -125,19 +74,7 @@ pub(super) fn spawn_cell_with_health(app: &mut App, x: f32, y: f32, hp: f32) -> 
         .id()
 }
 
-pub(super) fn spawn_right_wall(app: &mut App) {
-    let pf = PlayfieldConfig::default();
-    let entity = {
-        let world = app.world_mut();
-        let entity = Wall::builder().right(&pf).spawn(&mut world.commands());
-        world.flush();
-        entity
-    };
-    let pos = app.world().get::<Position2D>(entity).unwrap().0;
-    app.world_mut()
-        .entity_mut(entity)
-        .insert(GlobalPosition2D(pos));
-}
+pub(super) use crate::walls::test_utils::spawn_right_wall;
 
 /// Spawns a cell with explicit `Aabb2D` `half_extents` that differ from the
 /// legacy `CellWidth`/`CellHeight` dimensions. Used to test which source
@@ -248,24 +185,24 @@ pub(super) fn collect_wall_hits(
 /// Creates a test app with `DamageCell` and `BoltImpactWall` message capture
 /// in addition to the standard `BoltImpactCell`.
 pub(super) fn test_app_with_damage_and_wall_messages() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .add_plugins(RantzPhysics2dPlugin)
-        .add_message::<BoltImpactCell>()
-        .add_message::<DamageCell>()
-        .add_message::<BoltImpactWall>()
+    use crate::shared::test_utils::TestAppBuilder;
+
+    TestAppBuilder::new()
+        .with_physics()
+        .with_message::<BoltImpactCell>()
+        .with_message::<DamageCell>()
+        .with_message::<BoltImpactWall>()
         .insert_resource(DamageCellMessages::default())
         .insert_resource(WallHitMessages::default())
         .insert_resource(FullHitMessages::default())
-        .add_systems(
+        .with_system(
             FixedUpdate,
             bolt_cell_collision
                 .after(rantzsoft_physics2d::plugin::PhysicsSystems::MaintainQuadtree),
         )
-        .add_systems(
+        .with_system(
             FixedUpdate,
             (collect_damage_cells, collect_wall_hits, collect_full_hits).after(bolt_cell_collision),
-        );
-
-    app
+        )
+        .build()
 }

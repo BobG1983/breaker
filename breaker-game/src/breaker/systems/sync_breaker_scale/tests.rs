@@ -8,14 +8,14 @@ use crate::{
     shared::{
         NodeScalingFactor,
         size::{MaxHeight, MaxWidth, MinHeight, MinWidth},
+        test_utils::TestAppBuilder,
     },
 };
 
 fn test_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .add_systems(FixedUpdate, sync_breaker_scale);
-    app
+    TestAppBuilder::new()
+        .with_system(FixedUpdate, sync_breaker_scale)
+        .build()
 }
 
 use crate::shared::test_utils::tick;

@@ -55,34 +55,31 @@ pub(super) fn capture_request_cell_destroyed(
 }
 
 pub(super) fn test_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .init_resource::<Assets<Mesh>>()
-        .init_resource::<Assets<ColorMaterial>>()
-        .add_message::<DamageCell>()
-        .add_message::<RequestCellDestroyed>()
-        .add_systems(FixedUpdate, handle_cell_hit);
-    app
+    use crate::shared::test_utils::TestAppBuilder;
+
+    TestAppBuilder::new()
+        .with_resource::<Assets<Mesh>>()
+        .with_resource::<Assets<ColorMaterial>>()
+        .with_message::<DamageCell>()
+        .with_message::<RequestCellDestroyed>()
+        .with_system(FixedUpdate, handle_cell_hit)
+        .build()
 }
 
 pub(super) fn test_app_two_phase() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .init_resource::<Assets<Mesh>>()
-        .init_resource::<Assets<ColorMaterial>>()
-        .add_message::<DamageCell>()
-        .add_message::<RequestCellDestroyed>()
-        .add_systems(FixedUpdate, handle_cell_hit);
-    app
+    use crate::shared::test_utils::TestAppBuilder;
+
+    TestAppBuilder::new()
+        .with_resource::<Assets<Mesh>>()
+        .with_resource::<Assets<ColorMaterial>>()
+        .with_message::<DamageCell>()
+        .with_message::<RequestCellDestroyed>()
+        .with_system(FixedUpdate, handle_cell_hit)
+        .build()
 }
 
 pub(super) fn default_damage_visuals() -> CellDamageVisuals {
-    CellDamageVisuals {
-        hdr_base: 4.0,
-        green_min: 0.2,
-        blue_range: 0.4,
-        blue_base: 0.2,
-    }
+    crate::cells::test_utils::default_damage_visuals()
 }
 
 pub(super) fn spawn_cell(app: &mut App, hp: f32) -> Entity {

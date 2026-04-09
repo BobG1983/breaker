@@ -49,15 +49,16 @@ mod tests {
     }
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_message::<RequestBoltDestroyed>()
-            .init_resource::<CapturedRequestBoltDestroyed>()
-            .add_systems(
+        use crate::shared::test_utils::TestAppBuilder;
+
+        TestAppBuilder::new()
+            .with_message::<RequestBoltDestroyed>()
+            .with_resource::<CapturedRequestBoltDestroyed>()
+            .with_system(
                 FixedUpdate,
                 (tick_bolt_lifespan, capture_request_bolt_destroyed).chain(),
-            );
-        app
+            )
+            .build()
     }
 
     use crate::shared::test_utils::tick;

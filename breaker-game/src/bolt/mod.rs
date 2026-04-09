@@ -19,3 +19,6 @@ pub use resources::{
     DEFAULT_BOLT_ANGLE_SPREAD, DEFAULT_BOLT_BASE_DAMAGE, DEFAULT_BOLT_SPAWN_OFFSET_Y,
 };
 pub use sets::BoltSystems;
+
+#[cfg(test)]
+pub(crate) mod test_utils;

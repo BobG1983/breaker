@@ -2,6 +2,7 @@
 
 pub(crate) mod builder;
 pub mod components;
+
 pub mod definition;
 pub mod filters;
 pub mod messages;
@@ -11,6 +12,8 @@ pub mod registry;
 pub mod resources;
 pub mod sets;
 pub mod systems;
+#[cfg(test)]
+pub(crate) mod test_utils;
 
 pub use definition::BreakerDefinition;
 pub use plugin::BreakerPlugin;

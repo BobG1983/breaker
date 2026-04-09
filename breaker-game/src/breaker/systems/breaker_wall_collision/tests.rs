@@ -1,7 +1,5 @@
 use bevy::prelude::*;
-use rantzsoft_physics2d::{
-    aabb::Aabb2D, collision_layers::CollisionLayers, plugin::RantzPhysics2dPlugin,
-};
+use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D};
 
 use super::system::*;
@@ -10,8 +8,8 @@ use crate::{
         components::{BaseHeight, BaseWidth, Breaker},
         messages::BreakerImpactWall,
     },
-    shared::{BREAKER_LAYER, GameDrawLayer, NodeScalingFactor, PlayfieldConfig, WALL_LAYER},
-    walls::components::Wall,
+    shared::{BREAKER_LAYER, GameDrawLayer, NodeScalingFactor, WALL_LAYER},
+    walls::test_utils::{spawn_ceiling_wall, spawn_left_wall, spawn_right_wall},
 };
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -29,21 +27,22 @@ fn collect_breaker_wall_hits(
 }
 
 fn test_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .add_plugins(RantzPhysics2dPlugin)
-        .add_message::<BreakerImpactWall>()
+    use crate::shared::test_utils::TestAppBuilder;
+
+    TestAppBuilder::new()
+        .with_physics()
+        .with_message::<BreakerImpactWall>()
         .insert_resource(BreakerWallHitMessages::default())
-        .add_systems(
+        .with_system(
             FixedUpdate,
             breaker_wall_collision
                 .after(rantzsoft_physics2d::plugin::PhysicsSystems::MaintainQuadtree),
         )
-        .add_systems(
+        .with_system(
             FixedUpdate,
             collect_breaker_wall_hits.after(breaker_wall_collision),
-        );
-    app
+        )
+        .build()
 }
 
 use crate::shared::test_utils::tick;
@@ -62,51 +61,6 @@ fn spawn_breaker(app: &mut App, pos: Vec2) -> Entity {
             GameDrawLayer::Breaker,
         ))
         .id()
-}
-
-fn spawn_left_wall(app: &mut App) -> Entity {
-    let pf = PlayfieldConfig::default();
-    let entity = {
-        let world = app.world_mut();
-        let entity = Wall::builder().left(&pf).spawn(&mut world.commands());
-        world.flush();
-        entity
-    };
-    let pos = app.world().get::<Position2D>(entity).unwrap().0;
-    app.world_mut()
-        .entity_mut(entity)
-        .insert(GlobalPosition2D(pos));
-    entity
-}
-
-fn spawn_right_wall(app: &mut App) -> Entity {
-    let pf = PlayfieldConfig::default();
-    let entity = {
-        let world = app.world_mut();
-        let entity = Wall::builder().right(&pf).spawn(&mut world.commands());
-        world.flush();
-        entity
-    };
-    let pos = app.world().get::<Position2D>(entity).unwrap().0;
-    app.world_mut()
-        .entity_mut(entity)
-        .insert(GlobalPosition2D(pos));
-    entity
-}
-
-fn spawn_ceiling_wall(app: &mut App) -> Entity {
-    let pf = PlayfieldConfig::default();
-    let entity = {
-        let world = app.world_mut();
-        let entity = Wall::builder().ceiling(&pf).spawn(&mut world.commands());
-        world.flush();
-        entity
-    };
-    let pos = app.world().get::<Position2D>(entity).unwrap().0;
-    app.world_mut()
-        .entity_mut(entity)
-        .insert(GlobalPosition2D(pos));
-    entity
 }
 
 // ── B3: Breaker overlapping wall emits BreakerImpactWall ────────

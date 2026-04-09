@@ -40,18 +40,19 @@ mod tests {
     }
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_message::<BoltLost>()
-            .add_systems(
+        use crate::shared::test_utils::TestAppBuilder;
+
+        TestAppBuilder::new()
+            .with_message::<BoltLost>()
+            .with_system(
                 Update,
                 (
                     enqueue_lost.before(spawn_bolt_lost_text),
                     spawn_bolt_lost_text,
                     animate_fade_out.after(spawn_bolt_lost_text),
                 ),
-            );
-        app
+            )
+            .build()
     }
 
     #[test]

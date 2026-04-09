@@ -12,10 +12,11 @@ use crate::{
 };
 
 fn test_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .add_systems(Update, sync_bolt_scale);
-    app
+    use crate::shared::test_utils::TestAppBuilder;
+
+    TestAppBuilder::new()
+        .with_system(Update, sync_bolt_scale)
+        .build()
 }
 
 /// Runs one update tick.

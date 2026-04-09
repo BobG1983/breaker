@@ -38,10 +38,11 @@ mod tests {
     const TOLERANCE: f32 = 0.5;
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_systems(FixedUpdate, normalize_bolt_speed_after_constraints);
-        app
+        use crate::shared::test_utils::TestAppBuilder;
+
+        TestAppBuilder::new()
+            .with_system(FixedUpdate, normalize_bolt_speed_after_constraints)
+            .build()
     }
 
     use crate::shared::test_utils::tick;

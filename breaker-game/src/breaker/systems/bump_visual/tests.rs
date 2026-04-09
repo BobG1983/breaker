@@ -5,12 +5,14 @@ use crate::{
     breaker::{
         components::{Breaker, BumpFeedback, BumpFeedbackState, BumpState},
         definition::BreakerDefinition,
+        test_utils::default_breaker_definition,
     },
     input::resources::{GameAction, InputActions},
+    shared::test_utils::TestAppBuilder,
 };
 
 fn default_bump_feedback() -> BumpFeedback {
-    let config = BreakerDefinition::default();
+    let config = default_breaker_definition();
     BumpFeedback {
         duration: config.bump_visual_duration,
         peak: config.bump_visual_peak,
@@ -98,11 +100,10 @@ fn bump_offset_asymmetric_shape() {
 }
 
 fn trigger_test_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .init_resource::<InputActions>()
-        .add_systems(FixedUpdate, trigger_bump_visual);
-    app
+    TestAppBuilder::new()
+        .with_resource::<InputActions>()
+        .with_system(FixedUpdate, trigger_bump_visual)
+        .build()
 }
 
 use crate::shared::test_utils::tick;
@@ -231,10 +232,9 @@ fn trigger_does_not_retrigger_while_animating() {
 }
 
 fn animate_test_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .add_systems(FixedUpdate, animate_bump_visual);
-    app
+    TestAppBuilder::new()
+        .with_system(FixedUpdate, animate_bump_visual)
+        .build()
 }
 
 #[test]

@@ -7,10 +7,11 @@ use super::system::slide_guardian_cells;
 use crate::cells::{behaviors::guarded::components::*, components::Cell};
 
 fn test_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins);
-    app.add_systems(FixedUpdate, slide_guardian_cells);
-    app
+    use crate::shared::test_utils::TestAppBuilder;
+
+    TestAppBuilder::new()
+        .with_system(FixedUpdate, slide_guardian_cells)
+        .build()
 }
 
 /// Sets the fixed timestep to `dt` and accumulates one step, then runs update.

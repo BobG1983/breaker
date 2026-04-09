@@ -49,44 +49,39 @@ pub(super) fn enqueue_damage_cell(
 
 /// App for testing `check_lock_release` (behaviors 2, 3, 5).
 pub(super) fn lock_release_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .add_message::<CellDestroyedAt>()
-        .init_resource::<TestDestroyedMessages>()
-        .add_systems(
+    use crate::shared::test_utils::TestAppBuilder;
+
+    TestAppBuilder::new()
+        .with_message::<CellDestroyedAt>()
+        .with_resource::<TestDestroyedMessages>()
+        .with_system(
             FixedUpdate,
             (
                 enqueue_destroyed.before(check_lock_release),
                 check_lock_release,
             ),
-        );
-    app
+        )
+        .build()
 }
 
 /// App for testing `handle_cell_hit` with lock interaction (behaviors 1, 4).
 pub(super) fn hit_app() -> App {
-    use crate::cells::messages::RequestCellDestroyed;
+    use crate::{cells::messages::RequestCellDestroyed, shared::test_utils::TestAppBuilder};
 
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .init_resource::<Assets<Mesh>>()
-        .init_resource::<Assets<ColorMaterial>>()
-        .add_message::<DamageCell>()
-        .add_message::<RequestCellDestroyed>()
-        .add_systems(
+    TestAppBuilder::new()
+        .with_resource::<Assets<Mesh>>()
+        .with_resource::<Assets<ColorMaterial>>()
+        .with_message::<DamageCell>()
+        .with_message::<RequestCellDestroyed>()
+        .with_system(
             FixedUpdate,
             (enqueue_damage_cell.before(handle_cell_hit), handle_cell_hit),
-        );
-    app
+        )
+        .build()
 }
 
 pub(super) fn default_damage_visuals() -> CellDamageVisuals {
-    CellDamageVisuals {
-        hdr_base: 4.0,
-        green_min: 0.2,
-        blue_range: 0.4,
-        blue_base: 0.2,
-    }
+    crate::cells::test_utils::default_damage_visuals()
 }
 
 /// Spawns a cell with `Locked` marker and visuals for the hit-system tests.
