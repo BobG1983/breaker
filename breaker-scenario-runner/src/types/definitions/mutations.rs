@@ -118,6 +118,12 @@ pub enum MutationKind {
     /// Used by the `breaker_count_reasonable` self-test to trigger a
     /// [`InvariantKind::BreakerCountReasonable`] violation.
     SpawnExtraPrimaryBreakers(usize),
+    /// Set the first tagged bolt's [`CollisionLayers`] to non-zero values
+    /// while it has a [`Birthing`] component.
+    ///
+    /// Used by the `bolt_birthing_layers_zeroed` self-test to trigger a
+    /// [`InvariantKind::BoltBirthingLayersZeroed`] violation.
+    InjectNonZeroBirthingLayers,
 }
 
 /// Mirrors `DashState` for RON deserialization in the scenario runner crate.

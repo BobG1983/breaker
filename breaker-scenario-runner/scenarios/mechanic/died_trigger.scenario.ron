@@ -1,0 +1,22 @@
+// Adversarial: Died trigger — fires on the dying entity when a cell is
+// destroyed. Registers a DamageBoost on Death (global) to verify the global
+// death trigger still dispatches alongside the targeted Died trigger.
+// Perfect input with Dense layout guarantees many cell deaths per run.
+// NoEntityLeaks catches leaked entities from orphaned trigger chains.
+// NoNaN catches corrupt state from dispatch on despawning entities.
+(
+    breaker: "godmode",
+    layout: "Dense",
+    input: Perfect(AlwaysPerfect),
+    max_frames: 3000,
+    disallowed_failures: [BoltInBounds, BreakerCountReasonable, BreakerInBounds, NoEntityLeaks, NoNaN],
+    allow_early_end: false,
+    seed: 5555,
+    initial_effects: [
+        On(target: Bolt, then: [
+            When(trigger: Death, then: [
+                Do(DamageBoost(1.1)),
+            ]),
+        ]),
+    ],
+)

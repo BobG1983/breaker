@@ -289,7 +289,7 @@ fn print_coverage_for_runs(
 
     let report = check_coverage(&scenarios, &self_test_names, &layout_names);
     println!();
-    let _ = print_coverage_report(&report);
+    let _ = print_coverage_report(&report, true);
 }
 
 /// Discovers layout names from `.node.ron` files in the game assets directory.

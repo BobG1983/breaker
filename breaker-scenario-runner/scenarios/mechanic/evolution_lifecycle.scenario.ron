@@ -1,0 +1,24 @@
+// Adversarial: full chip evolution lifecycle under sustained chaos input.
+// Pre-selects 3x "Basic Piercing Shot" so the next Piercing Shot offering
+// triggers the Supernova evolution. allow_early_end: true lets the run end
+// naturally once the boss is cleared, exercising the full acquire → evolve →
+// play-with-evolved-effect → run-end lifecycle.
+// ChipOfferExpected verifies Supernova appears in the offering.
+// ChipStacksConsistent catches inventory corruption during the evolution.
+// NoEntityLeaks catches leaked effect entities from the evolved Supernova.
+(
+    breaker: "Aegis",
+    layout: "quick_boss",
+    input: Perfect(AlwaysPerfect),
+    max_frames: 5000,
+    disallowed_failures: [BoltInBounds, BreakerCountReasonable, BreakerInBounds, ChipOfferExpected, ChipStacksConsistent, NoEntityLeaks, NoNaN],
+    allow_early_end: true,
+    seed: 1337,
+    initial_chips: Some([
+        "Basic Piercing Shot",
+        "Basic Piercing Shot",
+        "Basic Piercing Shot",
+        "Basic Surge",
+    ]),
+    expected_offerings: Some(["Supernova"]),
+)
