@@ -47,9 +47,10 @@ mod tests {
 
     #[test]
     fn plugin_builds_headless() {
-        App::new()
-            .add_plugins(MinimalPlugins)
-            .add_plugins(DebugPlugin)
-            .update();
+        use crate::shared::test_utils::TestAppBuilder;
+
+        let mut app = TestAppBuilder::new().build();
+        app.add_plugins(DebugPlugin);
+        app.update();
     }
 }

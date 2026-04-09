@@ -34,13 +34,13 @@ mod tests {
     }
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_message::<BoltLost>()
-            .init_resource::<RunStats>()
-            .init_resource::<HighlightTracker>()
-            .add_systems(FixedUpdate, (enqueue_messages, track_bolts_lost).chain());
-        app
+        use crate::shared::test_utils::TestAppBuilder;
+        TestAppBuilder::new()
+            .with_message::<BoltLost>()
+            .with_resource::<RunStats>()
+            .with_resource::<HighlightTracker>()
+            .with_system(FixedUpdate, (enqueue_messages, track_bolts_lost).chain())
+            .build()
     }
 
     use crate::shared::test_utils::tick;

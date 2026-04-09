@@ -26,13 +26,13 @@ pub(crate) fn reset_highlight_tracker(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::shared::test_utils::TestAppBuilder;
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .init_resource::<HighlightTracker>()
-            .add_systems(Update, reset_highlight_tracker);
-        app
+        TestAppBuilder::new()
+            .with_resource::<HighlightTracker>()
+            .with_system(Update, reset_highlight_tracker)
+            .build()
     }
 
     #[test]

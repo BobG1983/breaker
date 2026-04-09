@@ -64,17 +64,17 @@ fn behavior_registry() -> CellTypeRegistry {
 }
 
 fn behavior_test_app(layout: NodeLayout, registry: CellTypeRegistry) -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .add_message::<CellsSpawned>()
-        .init_resource::<CellConfig>()
-        .init_resource::<PlayfieldConfig>()
-        .init_resource::<Assets<Mesh>>()
-        .init_resource::<Assets<ColorMaterial>>()
+    use crate::shared::test_utils::TestAppBuilder;
+    TestAppBuilder::new()
+        .with_message::<CellsSpawned>()
+        .with_resource::<CellConfig>()
+        .with_resource::<PlayfieldConfig>()
+        .with_resource::<Assets<Mesh>>()
+        .with_resource::<Assets<ColorMaterial>>()
         .insert_resource(ActiveNodeLayout(layout))
         .insert_resource(registry)
-        .add_systems(Startup, spawn_cells_from_layout);
-    app
+        .with_system(Startup, spawn_cells_from_layout)
+        .build()
 }
 
 // NOTE: locked_cell_definition_spawns_with_locked_component,

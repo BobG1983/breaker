@@ -21,14 +21,13 @@ pub(crate) fn all_animate_in_complete(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::shared::birthing::BIRTHING_DURATION;
+    use crate::shared::{birthing::BIRTHING_DURATION, test_utils::TestAppBuilder};
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_message::<ChangeState<NodeState>>()
-            .add_systems(Update, all_animate_in_complete);
-        app
+        TestAppBuilder::new()
+            .with_message::<ChangeState<NodeState>>()
+            .with_system(Update, all_animate_in_complete)
+            .build()
     }
 
     // Behavior 24: all_animate_in_complete sends ChangeState when no Birthing entities remain
@@ -167,13 +166,13 @@ mod tests {
 
         // Phase 1: Simulate begin_node_birthing (OnEnter) by setting up the entity
         // with Birthing, zeroed scale, and zeroed layers -- as begin_node_birthing would.
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_message::<ChangeState<NodeState>>()
-            .add_systems(
+        let mut app = TestAppBuilder::new()
+            .with_message::<ChangeState<NodeState>>()
+            .with_system(
                 FixedUpdate,
                 (tick_birthing, all_animate_in_complete).chain(),
-            );
+            )
+            .build();
 
         // Spawn bolt as begin_node_birthing would leave it: Birthing inserted,
         // scale/layers zeroed, original values stashed in Birthing.

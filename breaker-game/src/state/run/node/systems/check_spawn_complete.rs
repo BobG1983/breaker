@@ -68,16 +68,16 @@ mod tests {
     use super::*;
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_message::<BoltSpawned>()
-            .add_message::<BreakerSpawned>()
-            .add_message::<CellsSpawned>()
-            .add_message::<WallsSpawned>()
-            .add_message::<SpawnNodeComplete>()
-            .add_message::<ChangeState<NodeState>>()
-            .add_systems(Update, check_spawn_complete);
-        app
+        use crate::shared::test_utils::TestAppBuilder;
+        TestAppBuilder::new()
+            .with_message::<BoltSpawned>()
+            .with_message::<BreakerSpawned>()
+            .with_message::<CellsSpawned>()
+            .with_message::<WallsSpawned>()
+            .with_message::<SpawnNodeComplete>()
+            .with_message::<ChangeState<NodeState>>()
+            .with_system(Update, check_spawn_complete)
+            .build()
     }
 
     fn send_all_signals(app: &mut App) {
@@ -253,15 +253,7 @@ mod tests {
 
         use crate::state::types::NodeState;
 
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_message::<BoltSpawned>()
-            .add_message::<BreakerSpawned>()
-            .add_message::<CellsSpawned>()
-            .add_message::<WallsSpawned>()
-            .add_message::<SpawnNodeComplete>()
-            .add_message::<ChangeState<NodeState>>()
-            .add_systems(Update, check_spawn_complete);
+        let mut app = test_app();
 
         send_all_signals(&mut app);
         app.update();

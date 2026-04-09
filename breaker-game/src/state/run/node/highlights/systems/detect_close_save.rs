@@ -83,19 +83,19 @@ mod tests {
     }
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_message::<BumpPerformed>()
-            .add_message::<HighlightTriggered>()
-            .init_resource::<RunStats>()
-            .init_resource::<NodeOutcome>()
+        use crate::shared::test_utils::TestAppBuilder;
+        TestAppBuilder::new()
+            .with_message::<BumpPerformed>()
+            .with_message::<HighlightTriggered>()
+            .with_resource::<RunStats>()
+            .with_resource::<NodeOutcome>()
             .insert_resource(HighlightConfig::default())
             .insert_resource(PlayfieldConfig {
                 height: 1080.0,
                 ..Default::default()
             })
-            .init_resource::<CapturedHighlightTriggered>()
-            .add_systems(
+            .with_resource::<CapturedHighlightTriggered>()
+            .with_system(
                 FixedUpdate,
                 (
                     enqueue_messages,
@@ -103,8 +103,8 @@ mod tests {
                     collect_highlight_triggered,
                 )
                     .chain(),
-            );
-        app
+            )
+            .build()
     }
 
     use crate::shared::test_utils::tick;

@@ -6,7 +6,7 @@ use crate::{
         definition::BreakerDefinition, messages::BreakerSpawned, registry::BreakerRegistry,
         resources::SelectedBreaker,
     },
-    shared::{PlayfieldConfig, rng::GameRng},
+    shared::{PlayfieldConfig, rng::GameRng, test_utils::TestAppBuilder},
     state::run::{NodeOutcome, systems::setup_run::system::setup_run},
 };
 
@@ -33,31 +33,27 @@ pub(super) fn make_aegis_breaker_definition() -> BreakerDefinition {
 }
 
 pub(super) fn test_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .add_message::<BreakerSpawned>()
-        .add_message::<BoltSpawned>()
-        .init_resource::<NodeOutcome>()
-        .init_resource::<Assets<Mesh>>()
-        .init_resource::<Assets<ColorMaterial>>()
-        .init_resource::<GameRng>()
-        .init_resource::<PlayfieldConfig>();
-
     // Set up breaker registry with "Aegis" definition
     let breaker_def = make_aegis_breaker_definition();
     let mut breaker_registry = BreakerRegistry::default();
     breaker_registry.insert("Aegis".to_string(), breaker_def);
-    app.insert_resource(breaker_registry);
 
     // Set up bolt registry with "Bolt" definition
     let bolt_def = make_default_bolt_definition();
     let mut bolt_registry = BoltRegistry::default();
     bolt_registry.insert("Bolt".to_string(), bolt_def);
-    app.insert_resource(bolt_registry);
 
-    // Selected breaker defaults to "Aegis"
-    app.insert_resource(SelectedBreaker::default());
-
-    app.add_systems(Startup, setup_run);
-    app
+    TestAppBuilder::new()
+        .with_message::<BreakerSpawned>()
+        .with_message::<BoltSpawned>()
+        .with_resource::<NodeOutcome>()
+        .with_resource::<Assets<Mesh>>()
+        .with_resource::<Assets<ColorMaterial>>()
+        .with_resource::<GameRng>()
+        .with_resource::<PlayfieldConfig>()
+        .insert_resource(breaker_registry)
+        .insert_resource(bolt_registry)
+        .insert_resource(SelectedBreaker::default())
+        .with_system(Startup, setup_run)
+        .build()
 }

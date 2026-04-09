@@ -148,11 +148,11 @@ mod tests {
     }
 
     fn test_app(registry: BreakerRegistry) -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
+        use crate::shared::test_utils::TestAppBuilder;
+        TestAppBuilder::new()
             .insert_resource(registry)
-            .add_systems(Update, spawn_run_setup);
-        app
+            .with_system(Update, spawn_run_setup)
+            .build()
     }
 
     #[test]

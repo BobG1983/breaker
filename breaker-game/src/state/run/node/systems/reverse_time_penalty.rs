@@ -33,13 +33,13 @@ mod tests {
     }
 
     fn test_app_with_send(remaining: f32, total: f32) -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_message::<ReverseTimePenalty>()
+        use crate::shared::test_utils::TestAppBuilder;
+        TestAppBuilder::new()
+            .with_message::<ReverseTimePenalty>()
             .insert_resource(NodeTimer { remaining, total })
             .insert_resource(SendReverse(vec![]))
-            .add_systems(FixedUpdate, (send_reverse, reverse_time_penalty).chain());
-        app
+            .with_system(FixedUpdate, (send_reverse, reverse_time_penalty).chain())
+            .build()
     }
 
     use crate::shared::test_utils::tick;

@@ -16,12 +16,13 @@ use crate::{
 };
 
 fn test_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .init_resource::<BreakerRegistry>()
-        .init_resource::<SelectedBreaker>()
-        .add_systems(Update, propagate_breaker_changes);
-    app
+    use crate::shared::test_utils::TestAppBuilder;
+
+    TestAppBuilder::new()
+        .with_resource::<BreakerRegistry>()
+        .with_resource::<SelectedBreaker>()
+        .with_system(Update, propagate_breaker_changes)
+        .build()
 }
 
 fn make_test_def(name: &str, life_pool: Option<u32>) -> BreakerDefinition {

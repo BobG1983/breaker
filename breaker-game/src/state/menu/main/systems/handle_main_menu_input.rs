@@ -82,26 +82,27 @@ fn confirm_selection(
 
 #[cfg(test)]
 mod tests {
-    use bevy::{app::AppExit, ecs::message::Messages, state::app::StatesPlugin};
+    use bevy::{app::AppExit, ecs::message::Messages};
     use rantzsoft_stateflow::ChangeState;
 
     use super::*;
-    use crate::state::types::{AppState, GameState};
+    use crate::{
+        shared::test_utils::TestAppBuilder,
+        state::types::{AppState, GameState},
+    };
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins((MinimalPlugins, StatesPlugin))
-            .init_resource::<ButtonInput<KeyCode>>()
+        let mut app = TestAppBuilder::new()
+            .with_state_hierarchy()
+            .with_resource::<ButtonInput<KeyCode>>()
             .insert_resource(InputConfig::default())
-            .init_state::<AppState>()
-            .add_sub_state::<GameState>()
-            .add_sub_state::<MenuState>()
-            .add_message::<AppExit>()
-            .add_message::<ChangeState<MenuState>>()
+            .with_message::<AppExit>()
+            .with_message::<ChangeState<MenuState>>()
             .insert_resource(MainMenuSelection {
                 selected: MenuItem::Play,
             })
-            .add_systems(Update, handle_main_menu_input);
+            .with_system(Update, handle_main_menu_input)
+            .build();
         // Navigate to MenuState
         app.world_mut()
             .resource_mut::<NextState<AppState>>()

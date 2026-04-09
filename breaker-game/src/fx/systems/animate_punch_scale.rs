@@ -34,11 +34,12 @@ mod tests {
 
     /// Build a test app that advances time by `dt` each update.
     fn test_app(dt: Duration) -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
+        use crate::shared::test_utils::TestAppBuilder;
+
+        TestAppBuilder::new()
             .insert_resource(TimeUpdateStrategy::ManualDuration(dt))
-            .add_systems(Update, animate_punch_scale);
-        app
+            .with_system(Update, animate_punch_scale)
+            .build()
     }
 
     /// Default 16ms timestep for tests that just need time to advance.

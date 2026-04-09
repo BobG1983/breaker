@@ -30,11 +30,13 @@ mod tests {
 
     #[test]
     fn plugin_builds() {
-        App::new()
-            .add_plugins(MinimalPlugins)
-            .init_resource::<ButtonInput<KeyCode>>()
-            .add_message::<bevy::input::keyboard::KeyboardInput>()
-            .add_plugins(InputPlugin)
-            .update();
+        use crate::shared::test_utils::TestAppBuilder;
+
+        let mut app = TestAppBuilder::new()
+            .with_resource::<ButtonInput<KeyCode>>()
+            .with_message::<bevy::input::keyboard::KeyboardInput>()
+            .build();
+        app.add_plugins(InputPlugin);
+        app.update();
     }
 }

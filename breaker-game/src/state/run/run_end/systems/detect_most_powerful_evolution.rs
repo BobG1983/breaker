@@ -54,18 +54,18 @@ mod tests {
     }
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_message::<HighlightTriggered>()
-            .init_resource::<RunStats>()
-            .init_resource::<NodeOutcome>()
-            .init_resource::<HighlightTracker>()
-            .init_resource::<CapturedHighlightTriggered>()
-            .add_systems(
+        use crate::shared::test_utils::TestAppBuilder;
+        TestAppBuilder::new()
+            .with_message::<HighlightTriggered>()
+            .with_resource::<RunStats>()
+            .with_resource::<NodeOutcome>()
+            .with_resource::<HighlightTracker>()
+            .with_resource::<CapturedHighlightTriggered>()
+            .with_system(
                 Update,
                 (detect_most_powerful_evolution, collect_highlight_triggered).chain(),
-            );
-        app
+            )
+            .build()
     }
 
     // --- Behavior 6: Detects single evolution with correct fields ---

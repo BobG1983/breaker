@@ -33,11 +33,11 @@ mod tests {
     use super::*;
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .init_resource::<SeedEntry>()
-            .add_systems(Update, update_seed_display);
-        app
+        use crate::shared::test_utils::TestAppBuilder;
+        TestAppBuilder::new()
+            .with_resource::<SeedEntry>()
+            .with_system(Update, update_seed_display)
+            .build()
     }
 
     fn spawn_display(app: &mut App) -> Entity {

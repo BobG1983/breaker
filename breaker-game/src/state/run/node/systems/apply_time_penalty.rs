@@ -56,21 +56,21 @@ mod tests {
     }
 
     fn test_app_with_send(remaining: f32) -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_message::<ApplyTimePenalty>()
-            .add_message::<TimerExpired>()
+        use crate::shared::test_utils::TestAppBuilder;
+        TestAppBuilder::new()
+            .with_message::<ApplyTimePenalty>()
+            .with_message::<TimerExpired>()
             .insert_resource(NodeTimer {
                 remaining,
                 total: remaining,
             })
             .insert_resource(SendPenalty(None))
-            .init_resource::<TimerExpiredCaptured>()
-            .add_systems(
+            .with_resource::<TimerExpiredCaptured>()
+            .with_system(
                 FixedUpdate,
                 (send_penalty, apply_time_penalty, capture_timer_expired).chain(),
-            );
-        app
+            )
+            .build()
     }
 
     use crate::shared::test_utils::tick;

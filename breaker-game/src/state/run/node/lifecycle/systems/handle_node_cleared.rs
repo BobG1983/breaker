@@ -48,7 +48,7 @@ pub(crate) fn handle_node_cleared(
 
 #[cfg(test)]
 mod tests {
-    use bevy::{ecs::message::Messages, state::app::StatesPlugin};
+    use bevy::ecs::message::Messages;
     use rantzsoft_stateflow::ChangeState;
 
     use super::*;
@@ -81,25 +81,23 @@ mod tests {
     }
 
     fn test_app(node_index: u32, layout_count: usize) -> App {
-        let mut app = App::new();
-        app.add_plugins((MinimalPlugins, StatesPlugin))
-            .init_state::<AppState>()
-            .add_sub_state::<GameState>()
-            .add_sub_state::<RunState>()
-            .add_sub_state::<NodeState>()
-            .add_message::<NodeCleared>()
-            .add_message::<ChangeState<NodeState>>();
+        use crate::shared::test_utils::TestAppBuilder;
         let mut registry = NodeLayoutRegistry::default();
         for i in 0..layout_count {
             registry.insert(make_layout(&format!("node_{i}")));
         }
-        app.insert_resource(registry)
+        let mut app = TestAppBuilder::new()
+            .with_state_hierarchy()
+            .with_message::<NodeCleared>()
+            .with_message::<ChangeState<NodeState>>()
+            .insert_resource(registry)
             .insert_resource(NodeOutcome {
                 node_index,
                 ..default()
             })
             .insert_resource(SendNodeCleared(false))
-            .add_systems(FixedUpdate, (send_cleared, handle_node_cleared).chain());
+            .with_system(FixedUpdate, (send_cleared, handle_node_cleared).chain())
+            .build();
         // Navigate to NodeState so the system can set NextState<NodeState>
         app.world_mut()
             .resource_mut::<NextState<AppState>>()
@@ -203,26 +201,24 @@ mod tests {
 
     /// Helper: build an app with *both* a [`NodeLayoutRegistry`] and a [`NodeSequence`].
     fn test_app_with_sequence(node_index: u32, layout_count: usize, sequence_len: usize) -> App {
-        let mut app = App::new();
-        app.add_plugins((MinimalPlugins, StatesPlugin))
-            .init_state::<AppState>()
-            .add_sub_state::<GameState>()
-            .add_sub_state::<RunState>()
-            .add_sub_state::<NodeState>()
-            .add_message::<NodeCleared>()
-            .add_message::<ChangeState<NodeState>>();
+        use crate::shared::test_utils::TestAppBuilder;
         let mut registry = NodeLayoutRegistry::default();
         for i in 0..layout_count {
             registry.insert(make_layout(&format!("node_{i}")));
         }
-        app.insert_resource(registry)
+        let mut app = TestAppBuilder::new()
+            .with_state_hierarchy()
+            .with_message::<NodeCleared>()
+            .with_message::<ChangeState<NodeState>>()
+            .insert_resource(registry)
             .insert_resource(make_node_sequence(sequence_len))
             .insert_resource(NodeOutcome {
                 node_index,
                 ..default()
             })
             .insert_resource(SendNodeCleared(false))
-            .add_systems(FixedUpdate, (send_cleared, handle_node_cleared).chain());
+            .with_system(FixedUpdate, (send_cleared, handle_node_cleared).chain())
+            .build();
         // Navigate to NodeState
         app.world_mut()
             .resource_mut::<NextState<AppState>>()

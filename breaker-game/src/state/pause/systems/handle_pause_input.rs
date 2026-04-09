@@ -71,30 +71,30 @@ fn current_index(selection: &PauseMenuSelection) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use bevy::{ecs::message::Messages, state::app::StatesPlugin};
+    use bevy::ecs::message::Messages;
     use rantzsoft_stateflow::ChangeState;
 
     use super::*;
-    use crate::state::{
-        run::resources::{NodeOutcome, NodeResult},
-        types::{AppState, GameState, NodeState, RunState},
+    use crate::{
+        shared::test_utils::TestAppBuilder,
+        state::{
+            run::resources::{NodeOutcome, NodeResult},
+            types::{AppState, GameState, NodeState, RunState},
+        },
     };
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins((MinimalPlugins, StatesPlugin))
-            .init_resource::<ButtonInput<KeyCode>>()
+        let mut app = TestAppBuilder::new()
+            .with_state_hierarchy()
+            .with_resource::<ButtonInput<KeyCode>>()
             .insert_resource(InputConfig::default())
-            .init_state::<AppState>()
-            .add_sub_state::<GameState>()
-            .add_sub_state::<RunState>()
-            .add_sub_state::<NodeState>()
-            .add_message::<ChangeState<NodeState>>()
+            .with_message::<ChangeState<NodeState>>()
             .insert_resource(NodeOutcome::default())
             .insert_resource(PauseMenuSelection {
                 selected: PauseMenuItem::Resume,
             })
-            .add_systems(Update, handle_pause_input);
+            .with_system(Update, handle_pause_input)
+            .build();
         // Navigate to NodeState so sub-states are active
         app.world_mut()
             .resource_mut::<NextState<AppState>>()

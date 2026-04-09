@@ -13,13 +13,14 @@ use crate::{
 // ── Test helpers ────────────────────────────────────────────────────
 
 fn test_app() -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins);
-    app.init_resource::<ChipTemplateRegistry>();
-    app.init_resource::<EvolutionTemplateRegistry>();
-    // RegistryHandles are inserted manually per test
-    app.add_systems(Update, build_chip_catalog.map(drop));
-    app
+    use crate::shared::test_utils::TestAppBuilder;
+
+    TestAppBuilder::new()
+        .with_resource::<ChipTemplateRegistry>()
+        .with_resource::<EvolutionTemplateRegistry>()
+        // RegistryHandles are inserted manually per test
+        .with_system(Update, build_chip_catalog.map(drop))
+        .build()
 }
 
 fn insert_loaded_handles(app: &mut App) {

@@ -46,14 +46,14 @@ fn make_mixed_registry() -> ChipCatalog {
 }
 
 fn test_app_with_registry(registry: ChipCatalog) -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
+    use crate::shared::test_utils::TestAppBuilder;
+    TestAppBuilder::new()
         .insert_resource(registry)
-        .init_resource::<ChipInventory>()
+        .with_resource::<ChipInventory>()
         .insert_resource(ChipSelectConfig::default())
         .insert_resource(GameRng::from_seed(42))
-        .add_systems(Update, generate_chip_offerings);
-    app
+        .with_system(Update, generate_chip_offerings)
+        .build()
 }
 
 #[test]
@@ -189,7 +189,7 @@ fn make_test_layout(pool: NodePool) -> ActiveNodeLayout {
 /// chip definition and a recipe requiring "Piercing Shot" x2.
 /// The `ActiveNodeLayout` pool controls whether evolutions are offered.
 fn test_app_for_evolution(pool: NodePool, evolution_eligible: bool) -> App {
-    let mut app = App::new();
+    use crate::shared::test_utils::TestAppBuilder;
 
     let ps_def = ChipDefinition::test("Piercing Shot", EffectNode::Do(EffectKind::Piercing(1)), 5)
         .with_template("Piercing Shot");
@@ -225,14 +225,14 @@ fn test_app_for_evolution(pool: NodePool, evolution_eligible: bool) -> App {
         result_name: "Barrage".to_owned(),
     });
 
-    app.add_plugins(MinimalPlugins)
+    TestAppBuilder::new()
         .insert_resource(registry)
         .insert_resource(inventory)
         .insert_resource(ChipSelectConfig::default())
         .insert_resource(GameRng::from_seed(42))
         .insert_resource(make_test_layout(pool))
-        .add_systems(Update, generate_chip_offerings);
-    app
+        .with_system(Update, generate_chip_offerings)
+        .build()
 }
 
 // --- Behavior 13: generate_chip_offerings on boss node with eligible recipe ---

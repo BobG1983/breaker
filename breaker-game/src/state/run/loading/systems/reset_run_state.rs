@@ -34,23 +34,25 @@ pub(crate) fn reset_run_state(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::run::resources::{NodeOutcome, NodeResult};
+    use crate::{
+        shared::test_utils::TestAppBuilder,
+        state::run::resources::{NodeOutcome, NodeResult},
+    };
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
+        TestAppBuilder::new()
             .insert_resource(NodeOutcome {
                 node_index: 5,
                 result: NodeResult::Won,
                 ..default()
             })
-            .init_resource::<GameRng>()
-            .init_resource::<RunSeed>()
-            .init_resource::<ChipInventory>()
-            .init_resource::<RunStats>()
-            .init_resource::<HighlightTracker>()
-            .add_systems(Update, reset_run_state);
-        app
+            .with_resource::<GameRng>()
+            .with_resource::<RunSeed>()
+            .with_resource::<ChipInventory>()
+            .with_resource::<RunStats>()
+            .with_resource::<HighlightTracker>()
+            .with_system(Update, reset_run_state)
+            .build()
     }
 
     #[test]

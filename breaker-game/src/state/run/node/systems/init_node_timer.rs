@@ -46,8 +46,8 @@ mod tests {
     };
 
     fn test_app(timer_secs: f32) -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
+        use crate::shared::test_utils::TestAppBuilder;
+        TestAppBuilder::new()
             .insert_resource(ActiveNodeLayout(NodeLayout {
                 name: "test".to_owned(),
                 timer_secs,
@@ -59,8 +59,8 @@ mod tests {
                 entity_scale: 1.0,
                 locks: None,
             }))
-            .add_systems(Startup, init_node_timer);
-        app
+            .with_system(Startup, init_node_timer)
+            .build()
     }
 
     #[test]
@@ -85,8 +85,8 @@ mod tests {
     // --- A5: Timer multiplier tests ---
 
     fn test_app_with_node_sequence(timer_secs: f32, timer_mult: f32) -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
+        use crate::shared::test_utils::TestAppBuilder;
+        TestAppBuilder::new()
             .insert_resource(ActiveNodeLayout(NodeLayout {
                 name: "timer_mult_test".to_owned(),
                 timer_secs,
@@ -109,8 +109,8 @@ mod tests {
                     timer_mult,
                 }],
             })
-            .add_systems(Startup, init_node_timer);
-        app
+            .with_system(Startup, init_node_timer)
+            .build()
     }
 
     #[test]

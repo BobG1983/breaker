@@ -36,10 +36,10 @@ mod tests {
     };
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_systems(Update, apply_node_scale_to_breaker);
-        app
+        use crate::shared::test_utils::TestAppBuilder;
+        TestAppBuilder::new()
+            .with_system(Update, apply_node_scale_to_breaker)
+            .build()
     }
 
     fn make_layout(entity_scale: f32) -> NodeLayout {

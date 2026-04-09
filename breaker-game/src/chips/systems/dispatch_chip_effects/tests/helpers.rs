@@ -5,10 +5,7 @@ use bevy::prelude::*;
 use crate::{
     chips::{definition::ChipDefinition, inventory::ChipInventory, resources::ChipCatalog},
     effect::{BoundEffects, StagedEffects},
-    state::{
-        run::chip_select::messages::ChipSelected,
-        types::{AppState, ChipSelectState, GameState, RunState},
-    },
+    state::run::chip_select::messages::ChipSelected,
 };
 
 /// Resource holding messages to be sent before the dispatch system runs.
@@ -36,49 +33,28 @@ pub(super) fn send_chip_selections(
 /// - `PendingChipSelections` resource
 /// - `send_chip_selections` runs before `dispatch_chip_effects` in `Update`
 pub(super) fn test_app() -> App {
-    use crate::chips::systems::dispatch_chip_effects::dispatch_chip_effects;
+    use crate::{
+        chips::systems::dispatch_chip_effects::dispatch_chip_effects,
+        shared::test_utils::TestAppBuilder,
+    };
 
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .add_plugins(bevy::state::app::StatesPlugin)
-        .init_state::<AppState>()
-        .add_sub_state::<GameState>()
-        .add_sub_state::<RunState>()
-        .add_sub_state::<ChipSelectState>()
-        .add_message::<ChipSelected>()
-        .init_resource::<ChipInventory>()
-        .init_resource::<ChipCatalog>()
-        .init_resource::<PendingChipSelections>();
-
-    // Add the system without run_if guard for direct testing.
-    // The plugin_builds test in plugin.rs covers the state guard.
-    app.add_systems(
-        Update,
-        (
-            send_chip_selections.before(dispatch_chip_effects),
-            dispatch_chip_effects,
-        ),
-    );
-
-    // Navigate to ChipSelectState::Selecting
-    app.world_mut()
-        .resource_mut::<NextState<AppState>>()
-        .set(AppState::Game);
-    app.update();
-    app.world_mut()
-        .resource_mut::<NextState<GameState>>()
-        .set(GameState::Run);
-    app.update();
-    app.world_mut()
-        .resource_mut::<NextState<RunState>>()
-        .set(RunState::ChipSelect);
-    app.update();
-    app.world_mut()
-        .resource_mut::<NextState<ChipSelectState>>()
-        .set(ChipSelectState::Selecting);
-    app.update();
-
-    app
+    TestAppBuilder::new()
+        .with_state_hierarchy()
+        .in_state_chip_selecting()
+        .with_message::<ChipSelected>()
+        .with_resource::<ChipInventory>()
+        .with_resource::<ChipCatalog>()
+        .insert_resource(PendingChipSelections::default())
+        // Add the system without run_if guard for direct testing.
+        // The plugin_builds test in plugin.rs covers the state guard.
+        .with_system(
+            Update,
+            (
+                send_chip_selections.before(dispatch_chip_effects),
+                dispatch_chip_effects,
+            ),
+        )
+        .build()
 }
 
 /// Insert a chip definition into the app's `ChipCatalog`.

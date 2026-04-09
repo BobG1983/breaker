@@ -30,15 +30,15 @@ mod tests {
     }
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_message::<CellDestroyedAt>()
-            .init_resource::<RunStats>()
-            .add_systems(
+        use crate::shared::test_utils::TestAppBuilder;
+        TestAppBuilder::new()
+            .with_message::<CellDestroyedAt>()
+            .with_resource::<RunStats>()
+            .with_system(
                 FixedUpdate,
                 (enqueue_messages, track_cells_destroyed).chain(),
-            );
-        app
+            )
+            .build()
     }
 
     use crate::shared::test_utils::tick;

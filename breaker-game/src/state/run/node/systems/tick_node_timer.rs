@@ -30,15 +30,15 @@ mod tests {
     use super::*;
 
     fn test_app(remaining: f32) -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .add_message::<TimerExpired>()
+        use crate::shared::test_utils::TestAppBuilder;
+        TestAppBuilder::new()
+            .with_message::<TimerExpired>()
             .insert_resource(NodeTimer {
                 remaining,
                 total: remaining,
             })
-            .add_systems(FixedUpdate, tick_node_timer);
-        app
+            .with_system(FixedUpdate, tick_node_timer)
+            .build()
     }
 
     use crate::shared::test_utils::tick;

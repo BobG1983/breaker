@@ -29,15 +29,15 @@ pub(crate) fn update_pause_menu_colors(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::shared::test_utils::TestAppBuilder;
 
     fn test_app() -> App {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
+        TestAppBuilder::new()
             .insert_resource(PauseMenuSelection {
                 selected: PauseMenuItem::Resume,
             })
-            .add_systems(Update, update_pause_menu_colors);
-        app
+            .with_system(Update, update_pause_menu_colors)
+            .build()
     }
 
     /// Spawns two pause menu item entities (Resume and Quit) with a default

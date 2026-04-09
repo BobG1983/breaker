@@ -33,9 +33,9 @@ pub(super) fn make_cell_def(
 
 /// Creates a test app with the dispatch system and the given registry.
 pub(super) fn test_app(registry: CellTypeRegistry) -> App {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins);
-    app.insert_resource(registry);
-    app.add_systems(Update, dispatch_cell_effects);
-    app
+    use crate::shared::test_utils::TestAppBuilder;
+    TestAppBuilder::new()
+        .insert_resource(registry)
+        .with_system(Update, dispatch_cell_effects)
+        .build()
 }
