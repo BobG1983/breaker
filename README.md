@@ -4,17 +4,31 @@ A roguelite Arkanoid clone — the reflex pressure of Ikaruga meets the build-cr
 
 ## Setup
 
-After cloning, enable the tracked pre-commit hooks:
+After cloning:
 
-```
+```bash
+# 1. Enable pre-commit hooks (fmt, clippy, tests)
 git config --local core.hooksPath .githooks
+
+# 2. Initialize git-flow-next
+git flow init --preset=classic --defaults
+git flow config add topic refactor develop --prefix=refactor/
+git flow config edit topic bugfix --prefix=fix/
+
+# 3. Set merge strategy (preserve branch topology)
+git config --local merge.ff false
+
+# 4. Install graphify for the knowledge graph MCP server (.mcp.json)
+pip install graphifyy
+graphify .                           # Initial graph build (outputs to graphify-out/)
 ```
 
-This runs `cargo fmt`, `cargo all-dclippy`, and `cargo all-dtest` before each commit.
+**Prerequisites:**
+- Rust toolchain (nightly)
+- [mold](https://github.com/rui314/mold) or lld recommended for fast linking
+- Python 3.10+ (for graphify knowledge graph)
 
 ## Build & Run
-
-**Prerequisites:** Rust toolchain (nightly). [mold](https://github.com/rui314/mold) or lld recommended for fast linking.
 
 ```
 cargo dev                    # Dev build + run (dynamic linking)
@@ -43,20 +57,11 @@ cargo install cargo-outdated  # Outdated dependency reporting
 
 ## Knowledge Graph
 
-This project uses [graphify](https://github.com/safishamsi/graphify) to maintain a queryable knowledge graph of the codebase and documentation.
+This project uses [graphify](https://github.com/safishamsi/graphify) to maintain a queryable knowledge graph of the codebase and documentation. The MCP server is configured project-locally in `.mcp.json` — Claude Code picks it up automatically after `pip install graphifyy`.
 
 ```bash
-pip install graphifyy                # Install (PyPI name is graphifyy, CLI is graphify)
-graphify claude install              # Add always-on CLAUDE.md integration
-```
-
-Usage (inside Claude Code or any supported AI assistant):
-
-```
-/graphify .                          # Full pipeline on project root
+/graphify .                          # Full rebuild
 /graphify . --update                 # Incremental update (changed files only)
-/graphify query "how does the effect system work?"
-/graphify explain "TriggerChain"
 ```
 
 Outputs land in `graphify-out/` (gitignored): `graph.html` (interactive visualization), `GRAPH_REPORT.md` (audit report), `graph.json` (raw graph data).

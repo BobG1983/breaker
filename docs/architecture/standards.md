@@ -56,7 +56,7 @@ When adding new cross-domain types (components, messages, resources, states), ad
 
 ## Testing — TDD
 
-See `.claude/rules/tdd.md` for the full RED → GREEN → REFACTOR cycle definition, agent boundaries, and RED gate.
+See `.claude/rules/tdd.md` for the full RED → GREEN → REFACTOR cycle definition, agent boundaries, and RED gate. See [testing.md](testing.md) for test infrastructure conventions (composable app builders, domain `test_utils`, shared helpers).
 
 **No implementation before failing tests. No exceptions.**
 

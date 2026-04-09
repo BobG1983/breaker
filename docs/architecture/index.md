@@ -22,4 +22,5 @@ Technical decisions for how the game is built. See `../design/` for *why* (game 
 | [content.md](content.md) | Content identity (enum behaviors + RON instances), upgrade application, RON validation |
 | [data.md](data.md) | Data model — components vs resources, config pipeline, ownership rules, dimension conventions |
 | [standards.md](standards.md) | Code standards, prelude conventions, error handling, testing (TDD), entity cleanup, asset loading, debug console |
+| [testing.md](testing.md) | Test infrastructure — composable app builders, domain test_utils, shared helpers, migration plan |
 | [effects/](effects/index.md) | Effect system architecture — triggers, commands, dispatch, evaluation, reversal |
