@@ -55,7 +55,14 @@
       "WebFetch(domain:crates.io)",
       "WebFetch(domain:docs.rs)",
       "WebFetch(domain:bevyengine.org)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "mcp__graphify__get_community",
+      "mcp__graphify__get_neighbors",
+      "mcp__graphify__get_node",
+      "mcp__graphify__god_nodes",
+      "mcp__graphify__graph_stats",
+      "mcp__graphify__query_graph",
+      "mcp__graphify__shortest_path"
     ]
   },
   "hooks": {
