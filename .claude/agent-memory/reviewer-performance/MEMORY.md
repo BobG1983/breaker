@@ -18,3 +18,4 @@
 - [Scenario runner performance patterns](scenario_runner_patterns.md) — HashSet alloc per-frame in visual mode only; check_coverage/tile_env_vars are startup/spawn-time; RunLog async write is correct
 - [Birthing animation query patterns](birthing_animation_patterns.md) — tick_birthing/all_animate_in_complete/begin_node_birthing and Without<Birthing> proliferation — all acceptable at 1-few bolt scale
 - [Toughness + HP Scaling patterns](toughness_hp_scaling.md) — HpScale precomputed once per spawn batch (powi() + mul_add()); advance_node is OnEnter-only array index; all spawn-time, no per-frame cost
+- [test_utils patterns](test_utils_patterns.md) — TestAppBuilder used only in self-tests; 42 domain helpers define own test_app(); tick() duplicated verbatim across domains; all patterns are correct at test scale
