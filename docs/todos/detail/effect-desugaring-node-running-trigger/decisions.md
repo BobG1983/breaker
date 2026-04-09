@@ -34,7 +34,7 @@ All 22 decisions resolved during interrogation. Referenced from the main overvie
 
 `DeathContext { victim: Entity, killer: Option<Entity> }`. When killer is None, `Killed(Cell)` is skipped (no entity to fire on). `Died` always fires on victim. `DeathOccurred(Cell)` always fires globally.
 
-**Unified damage message:** All damage sources send `DamageMessage { dealer: Option<Entity>, target: Entity, amount: f32, source_chip: Option<String> }`. One `apply_damage` system processes them all, decrements HP, and sets `KilledBy` only on the killing blow (HP crosses from positive to zero).
+**Unified damage message:** All damage sources send `DamageDealt<T: GameEntity> { dealer: Option<Entity>, target: Entity, amount: f32, source_chip: Option<String> }` — one Bevy message queue per victim type T. One `apply_damage<T>` system per victim type processes them, decrements HP, and sets `KilledBy` only on the killing blow (HP crosses from positive to zero). `trait GameEntity: Component {}` impl'd on Bolt, Cell, Wall, Breaker. No S (killer) generic — killer is `Option<Entity>`, type determined at runtime.
 
 **Corner cases:**
 - **Multi-source same frame**: Message processing order determines the killing blow. Deterministic (system ordering + message queue order).

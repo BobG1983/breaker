@@ -2,15 +2,28 @@
 
 Absorbed from the original "Killed trigger, Die effect, unified death messaging" todo. Full design lives here; original detail file at `detail/killed-trigger-damage-attribution.md` is the historical reference.
 
+## GameEntity Trait
+
+```rust
+/// Marker trait for entity types that participate in the death pipeline.
+/// Impl'd on every domain entity type that can be killed or kill.
+trait GameEntity: Component {}
+
+impl GameEntity for Bolt {}
+impl GameEntity for Cell {}
+impl GameEntity for Wall {}
+impl GameEntity for Breaker {}
+```
+
 ## Messages
 
 ```rust
-struct KillYourself<S: Component, T: Component> {
+struct KillYourself<T: GameEntity> {
     pub victim: Entity,
     pub killer: Option<Entity>,
 }
 
-struct Destroyed<S: Component, T: Component> {
+struct Destroyed<T: GameEntity> {
     pub victim: Entity,
     pub killer: Option<Entity>,
     pub victim_pos: Vec2,
@@ -18,25 +31,25 @@ struct Destroyed<S: Component, T: Component> {
 }
 ```
 
-Generic on killer type (S) and victim type (T). Each (S, T) pair is a separate Bevy message queue.
+Generic on victim type (T). Each T is a separate Bevy message queue. Killer type is classified at runtime from `KilledBy.dealer` entity's components, not via a type parameter.
 
 ## Death Chain
 
 ```
 Fire(Die) evaluates on entity
-  → sends KillYourself<S, T> { victim: self, killer: from TriggerContext }
+  → sends KillYourself<T> { victim: self, killer: from TriggerContext }
 
-Domain kill handler receives KillYourself<S, T>
+Domain kill handler receives KillYourself<T>
   → checks invuln/shield (can ignore — no Destroyed sent)
-  → sends Destroyed<S, T> { victim, killer, positions }
+  → sends Destroyed<T> { victim, killer, positions }
   → does NOT despawn yet
 
-bridge_destroyed<S, T> receives Destroyed<S, T>
+bridge_destroyed<T> receives Destroyed<T>
   → fires Killed(KillTarget) on KILLER entity only
   → fires Died on VICTIM entity only
   → fires DeathOccurred(DeathTarget) GLOBALLY on all entities with BoundEffects
   → entity survives through trigger evaluation + death animation
-  → despawn after via PendingDespawn
+  → despawn after via DespawnEntity message (processed in PostFixedUpdate)
 ```
 
 ## Triggers from Death Events
@@ -47,30 +60,30 @@ bridge_destroyed<S, T> receives Destroyed<S, T>
 | `Died` | Victim only | `::Victim`, `::Killer` |
 | `DeathOccurred(DeathTarget)` | All entities globally | `::Entity`, `::Killer` |
 
-## DeathAttribution Trait
+## DeathAttribution
+
+Death attribution works via runtime killer classification. When `detect_*_deaths` reads `KilledBy.dealer`, it inspects the dealer entity's components to determine what kind of entity performed the kill (Bolt, Breaker, Cell, etc.). This replaces the old compile-time `(S, T)` generic pairs — the victim type is known from the specialized detect system, and the killer type is resolved at runtime.
 
 ```rust
-trait DeathAttribution: Send + Sync + 'static {
-    fn kill_target() -> KillTarget;
-    fn death_target() -> DeathTarget;
-}
-
-impl DeathAttribution for (Bolt, Cell) {
-    fn kill_target() -> KillTarget { KillTarget::Cell }
-    fn death_target() -> DeathTarget { DeathTarget::Cell }
+/// Classify the killer entity at runtime by inspecting its components.
+fn classify_killer(entity: Entity, world: &World) -> Option<KillTarget> {
+    if world.get::<Bolt>(entity).is_some() { return Some(KillTarget::Bolt); }
+    if world.get::<Breaker>(entity).is_some() { return Some(KillTarget::Breaker); }
+    if world.get::<Cell>(entity).is_some() { return Some(KillTarget::Cell); }
+    None // environmental death
 }
 ```
 
-## Valid (S, T) Pairs
+## Valid Killer/Victim Pairs
 
-| S (killer) | T (victim) | Source |
+| Killer (runtime) | T (victim) | Source |
 |---|---|---|
-| `Bolt` | `Cell` | Direct hit + bolt-sourced effects |
-| `Breaker` | `Cell` | Breaker-cell collision |
-| `Cell` | `Cell` | Chain reaction |
-| `Bolt` | `Wall` | One-shot wall hit |
-| `()` | `Bolt` | Bolt lost, lifespan expiry |
-| `()` | `Wall` | Timer expiry |
+| Bolt | `Cell` | Direct hit + bolt-sourced effects |
+| Breaker | `Cell` | Breaker-cell collision |
+| Cell | `Cell` | Chain reaction |
+| Bolt | `Wall` | One-shot wall hit |
+| None (environmental) | `Bolt` | Bolt lost, lifespan expiry |
+| None (environmental) | `Wall` | Timer expiry |
 
 ## Unified Damage Message
 
@@ -80,10 +93,11 @@ All damage sources send a generic message type per victim type. One system per v
 /// Generic damage message — one Bevy message queue per victim type T.
 /// Sent by: bolt collision, shockwave fire(), chain lightning fire(),
 /// explode fire(), any effect that deals damage.
-struct DamageDealt<T: Component> {
-    pub dealer: Option<Entity>,  // who caused this damage (propagated through chains)
-    pub target: Entity,          // who takes the damage
-    pub amount: f32,             // damage amount
+struct DamageDealt<T: GameEntity> {
+    pub dealer: Option<Entity>,      // who caused this damage (propagated through chains)
+    pub target: Entity,              // who takes the damage
+    pub amount: f32,                 // damage amount
+    pub source_chip: Option<String>, // which chip originated this damage (for UI/stats)
     _marker: PhantomData<T>,
 }
 ```
@@ -94,10 +108,12 @@ Usage: `DamageDealt<Cell>` replaces the old `DamageCell`. `DamageDealt<Bolt>`, `
 
 Processes all `DamageDealt<T>` messages, decrements HP, and sets KilledBy **only on the killing blow** — the hit that crosses HP from positive to zero.
 
+**Locked cells**: `apply_damage::<Cell>` skips entities with the `Locked` component — locked cells cannot take damage. This system must be ordered AFTER `check_lock_release` so that cells unlocked this frame can still receive damage.
+
 ```rust
-fn apply_damage<T: Component>(
+fn apply_damage<T: GameEntity>(
     mut messages: MessageReader<DamageDealt<T>>,
-    mut query: Query<(&mut Hp, &mut KilledBy)>,
+    mut query: Query<(&mut Hp, &mut KilledBy), Without<Locked>>,
 ) {
     for msg in messages.read() {
         if let Ok((mut hp, mut source)) = query.get_mut(msg.target) {
@@ -149,30 +165,69 @@ Effects that deal damage read the current TriggerContext to propagate the dealer
 | Direct HP mutation in effect systems | All damage flows through `DamageDealt<T>` → `apply_damage::<T>` |
 | No kill attribution | `KilledBy` set on killing blow only |
 
-## Death System
+## Death Detection Systems
 
-Runs after `apply_damage`. Queries for entities with `Hp.current <= 0`:
+Per-domain specialized systems run after `apply_damage`. Each queries its domain's health component + marker to detect newly dead entities. Killer type is classified at runtime from `KilledBy.dealer`.
 
 ```rust
-fn detect_deaths(
-    query: Query<(Entity, &KilledBy, &Hp), Changed<Hp>>,
+// In cells/ domain
+fn detect_cell_deaths(
+    query: Query<(Entity, &KilledBy, &Hp), (With<Cell>, Changed<Hp>)>,
+    mut kill_messages: MessageWriter<KillYourself<Cell>>,
     // ...
 ) {
     for (entity, source, hp) in &query {
         if hp.current <= 0 {
-            // Verify killer still exists before sending Killed
-            let killer = source.dealer.filter(|&e| world.get_entity(e).is_some());
-
-            // Send KillYourself → domain handler → Destroyed → bridge triggers
-            send_kill_yourself(entity, killer);
+            kill_messages.send(KillYourself {
+                victim: entity,
+                killer: source.dealer,
+            });
         }
+    }
+}
+
+// In bolt/ domain
+fn detect_bolt_deaths(
+    query: Query<(Entity, &KilledBy, &Hp), (With<Bolt>, Changed<Hp>)>,
+    mut kill_messages: MessageWriter<KillYourself<Bolt>>,
+    // ...
+) { /* same pattern */ }
+
+// In wall/ domain — if walls have HP
+fn detect_wall_deaths(
+    query: Query<(Entity, &KilledBy, &Hp), (With<Wall>, Changed<Hp>)>,
+    mut kill_messages: MessageWriter<KillYourself<Wall>>,
+    // ...
+) { /* same pattern */ }
+```
+
+## DespawnEntity Message
+
+```rust
+/// Sent after death animations and trigger evaluation complete.
+/// Lives in shared/messages.rs.
+struct DespawnEntity {
+    pub entity: Entity,
+}
+
+/// Processes all pending despawn requests. Runs in PostFixedUpdate.
+fn process_despawn_requests(
+    mut messages: MessageReader<DespawnEntity>,
+    mut commands: Commands,
+) {
+    for msg in messages.read() {
+        commands.entity(msg.entity).despawn();
     }
 }
 ```
 
+## Node Completion Tracking
+
+`track_node_completion` queries `Has<RequiredToClear>` from the still-alive entity. The entity survives until `DespawnEntity` processes in PostFixedUpdate, so the `RequiredToClear` component is still accessible when `Destroyed<Cell>` is handled in FixedUpdate. No extra field on `Destroyed<T>` is needed.
+
 ## TriggerContext Integration
 
-`TriggerContext` fields map to named trigger participants. Bridges populate fields from `Destroyed<S, T>` messages:
+`TriggerContext` fields map to named trigger participants. Bridges populate fields from `Destroyed<T>` messages:
 - `Killed(KillTarget)` fires on killer → `context` has DeathContext { victim, killer }
 - `Died` fires on victim → same context, different perspective
 - `DeathOccurred` fires globally → same context on all entities
@@ -183,14 +238,15 @@ fn detect_deaths(
 | Before | After |
 |---|---|
 | `DamageCell` | `DamageDealt<Cell>` |
-| `RequestCellDestroyed` | `KillYourself<S, Cell>` |
-| `CellDestroyedAt` | `Destroyed<S, Cell>` |
-| `RequestBoltDestroyed` | `KillYourself<(), Bolt>` |
+| `RequestCellDestroyed` | `KillYourself<Cell>` |
+| `CellDestroyedAt` | `Destroyed<Cell>` |
+| `RequestBoltDestroyed` | `KillYourself<Bolt>` |
 | `Trigger::CellDestroyed` | `DeathOccurred(Cell)` |
 | `Trigger::Death` | `DeathOccurred(DeathTarget)` |
-| `bridge_cell_destroyed` | `bridge_destroyed::<S, Cell>` |
-| `bridge_death` | N × `bridge_destroyed::<S, T>` |
+| `bridge_cell_destroyed` | `bridge_destroyed::<Cell>` |
+| `bridge_death` | N × `bridge_destroyed::<T>` |
 | `bridge_died` | collapsed into `bridge_destroyed` |
+| `PendingDespawn` | `DespawnEntity` message + `process_despawn_requests` |
 
 ## RON Examples (final syntax)
 

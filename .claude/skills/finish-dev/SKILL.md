@@ -82,7 +82,23 @@ git push
 
 This merges to develop and deletes the topic branch.
 
-### Step 7 — Cleanup ephemeral artifacts
+### Step 7 — Promote detail docs
+
+If this branch implemented a todo item that has a detail file/directory in `docs/todos/detail/`:
+
+1. Read the detail file (and any design docs in the directory)
+2. Identify content that belongs in `docs/architecture/` (technical decisions, system design, data structures, ordering, patterns) or `docs/design/` (game design, terminology, player-facing mechanics)
+3. For each piece of promotable content:
+   - If a matching architecture/design doc already exists: update it with the new information
+   - If no matching doc exists but the content is substantial: create a new doc in the appropriate location
+   - If the content is trivial or already covered: skip
+4. Update any `index.md` files that reference the promoted docs
+5. After promotion, run `/todo done <item>` (which will delete the detail file and update TODO.md/DONE.md)
+6. Commit the doc promotion: `docs: promote <feature> design docs to architecture/design`
+
+**Why?** Detail files accumulate design decisions, research, and architectural context during planning. Promoting to `docs/architecture/` and `docs/design/` keeps project documentation evergreen. Future sessions find decisions without re-deriving them.
+
+### Step 8 — Cleanup ephemeral artifacts
 
 After a successful merge, remove all ephemeral artifacts from this branch's work:
 
@@ -96,6 +112,6 @@ rm -rf .claude/agent-memory/*/ephemeral/*
 
 These are all gitignored and only useful during active development. Specs, session-state, research output, debug reports, and ephemeral agent memory are dead once the branch is merged. Stable agent memory (the root of each agent's memory dir) is preserved.
 
-### Step 8 — Confirm
+### Step 9 — Confirm
 
-Report: branch merged to develop, topic branch deleted, ephemeral artifacts cleaned up.
+Report: branch merged to develop, topic branch deleted, docs promoted, ephemeral artifacts cleaned up.

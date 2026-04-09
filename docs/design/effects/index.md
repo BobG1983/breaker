@@ -51,7 +51,7 @@ All multipliers use the **1.x standard**: 2.0 = 2x (double), 0.5 = 50% (half).
 
 ## Meta
 
-- [RandomEffect](random_effect.md) — weighted random selection from pool
+- [RandomEffect](random_effect.md) — weighted random selection from a weighted pool of flat EffectType variants (not full trees)
 - [EntropyEngine](entropy_engine.md) — escalating chaos, multiple effects per cell destroyed
 - [CircuitBreaker](circuit_breaker.md) — charge counter on perfect bumps, fires spawn + shockwave on completion *(evolution)*
 

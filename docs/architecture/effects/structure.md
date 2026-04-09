@@ -28,6 +28,10 @@ effect/
 - Trigger bridge systems
 - Effect fire/reverse functions and runtime systems
 
+**Dispatch pipeline** (`effect/dispatch/` or co-located):
+- `death_bridge.rs` — `bridge_destroyed<T: GameEntity>` system
+- Command extensions (`effect/commands.rs`) — `EffectCommandsExt` trait implementing EntityCommand for fire/reverse/stamp/transfer/equip/unequip
+
 **Outside effect domain**:
 - Dispatch lives in entity domains (`chips/`, `breaker/`, `cells/`)
 - Collision detection lives in entity domains (`bolt/`, `breaker/`, `cells/`)

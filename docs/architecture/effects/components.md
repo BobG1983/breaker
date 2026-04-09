@@ -36,3 +36,9 @@ Entries are **consumed when matched**. Populated by:
 - Until desugaring (Until is replaced with a `When(trigger, [Reverse(...)])` entry)
 
 **Always present, may be empty.** Spawned alongside BoundEffects on every effect-participating entity. An empty StagedEffects means no partially-resolved chains are pending — this is the normal state between trigger evaluations.
+
+## Command Extensions
+
+Effect execution and cross-entity mutation are deferred through `EffectCommandsExt` on Bevy `Commands`. Bridge systems take `Commands` as a parameter and call extension methods (fire_effect, stamp_effect, transfer_effect, etc.). Each command implements `EntityCommand` and executes with `&mut World` when Bevy flushes the command queue.
+
+See [Commands](commands.md) for the full EffectCommandsExt trait.

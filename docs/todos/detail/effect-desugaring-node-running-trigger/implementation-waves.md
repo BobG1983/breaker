@@ -113,11 +113,25 @@ struct SpawnedRegistry { entries: HashMap<EntityType, Vec<SpawnedEntry>> }
 
 Reference: [storage-and-dispatch.md](storage-and-dispatch.md) BoundEffects/StagedEffects/SpawnedRegistry sections
 
-### 1i. DamageMessage + KilledBy
+### 1i. DamageDealt<T> + KilledBy + GameEntity trait
 New file: `new_effect/damage/mod.rs`
 
 ```rust
-struct DamageMessage { dealer: Option<Entity>, target: Entity, amount: f32, source_chip: Option<String> }
+/// Marker trait for entity types that participate in the death pipeline.
+trait GameEntity: Component {}
+impl GameEntity for Bolt {}
+impl GameEntity for Cell {}
+impl GameEntity for Wall {}
+impl GameEntity for Breaker {}
+
+/// Generic damage message — one Bevy message queue per victim type T.
+struct DamageDealt<T: GameEntity> {
+    pub dealer: Option<Entity>,
+    pub target: Entity,
+    pub amount: f32,
+    pub source_chip: Option<String>,
+    _marker: PhantomData<T>,
+}
 
 #[derive(Component, Default)]
 struct KilledBy { dealer: Option<Entity> }
@@ -129,9 +143,11 @@ Reference: [death-pipeline.md](death-pipeline.md) Unified Damage Message section
 New file: `new_effect/damage/messages.rs`
 
 ```rust
-struct KillYourself<S: Component, T: Component> { victim: Entity, killer: Option<Entity> }
-struct Destroyed<S: Component, T: Component> { victim: Entity, killer: Option<Entity>, victim_pos: Vec2, killer_pos: Option<Vec2> }
+struct KillYourself<T: GameEntity> { victim: Entity, killer: Option<Entity> }
+struct Destroyed<T: GameEntity> { victim: Entity, killer: Option<Entity>, victim_pos: Vec2, killer_pos: Option<Vec2> }
 ```
+
+No S generic — killer type determined at runtime from KilledBy.dealer entity's components.
 
 Reference: [death-pipeline.md](death-pipeline.md) Messages section
 
@@ -227,13 +243,17 @@ Bevy systems. This is where BoundEffects/StagedEffects get wired into the ECS.
 ### 4a. walk_effects helper (MUST BE FIRST)
 New file: `new_effect/dispatch/walk.rs`
 
-The shared tree-walking function all bridge systems call. StagedEffects first, then BoundEffects. Handles When (arm), Once (arm + remove), Fire (execute), Sequence (ordered), On (redirect + Stamp/Transfer).
+The shared tree-walking function all bridge systems call. StagedEffects first, then BoundEffects. Handles When (arm into StagedEffects), Once (arm + mark for removal), Fire/Stamp/Transfer (deferred via Commands), Sequence (ordered), On (redirect to participant entity).
+
+walk_effects takes `&mut Commands` and defers all effect execution and cross-entity mutation through command extensions. Bridge systems are regular Bevy systems (not exclusive) — they take `Query` + `Commands` parameters.
 
 ```rust
-fn walk_effects(trigger, context, entity, bound, staged, world)
+fn walk_effects(trigger, context, entity, bound: &BoundEffects, staged: &mut StagedEffects, commands: &mut Commands)
 ```
 
-Reference: [storage-and-dispatch.md](storage-and-dispatch.md) Shared Tree Walker section
+Same-entity StagedEffects mutations (drain matching entries) happen inline. Cross-entity Stamp/Transfer and effect Fire/Reverse are deferred via `EffectCommandsExt` on Commands. Bevy applies commands at schedule flush points.
+
+Reference: [storage-and-dispatch.md](storage-and-dispatch.md) Shared Tree Walker + Command Extensions sections
 
 ### 4b. Condition monitor (depends on 4a)
 New file: `new_effect/dispatch/conditions.rs`
@@ -270,8 +290,12 @@ trait EffectCommandsExt {
     fn stamp_effect(entity, source, tree);
     fn transfer_effect(entity, source, tree);
     fn remove_source(entity, source);
+    fn equip_chip(entity, defs: &[ValidDef], source: SourceId);
+    fn unequip_chip(entity, source: SourceId);
 }
 ```
+
+`equip_chip` / `unequip_chip` are the chip domain's integration point — called via Commands at chip equip/unequip time.
 
 Reference: [storage-and-dispatch.md](storage-and-dispatch.md) Command Extensions section
 
@@ -287,28 +311,38 @@ New unified damage/death systems. These run alongside the old systems during dev
 New file: `new_effect/damage/systems.rs`
 
 ```rust
-fn apply_damage(mut messages: MessageReader<DamageMessage>, mut query: Query<(&mut CellHealth, &mut KilledBy)>)
+fn apply_damage<T: GameEntity>(mut messages: MessageReader<DamageDealt<T>>, mut query: Query<(&mut CellHealth, &mut KilledBy)>)
 ```
 
-Sets KilledBy only on killing blow.
+Sets KilledBy only on killing blow. One instance per victim type: `apply_damage::<Cell>`, `apply_damage::<Bolt>`, `apply_damage::<Wall>`.
+
+**Ordering**: apply_damage for cells must run AFTER `check_lock_release` (unlock system) to avoid eating damage before a cell unlocks in the same frame. Locked cells skip damage entirely.
 
 Reference: [death-pipeline.md](death-pipeline.md) apply_damage section
 
-### 5b. detect_deaths system (depends on 5a)
-New file: `new_effect/damage/systems.rs`
+### 5b. detect_deaths systems (depends on 5a)
+New files: per-domain in their respective domains (cells/, bolt/, wall/)
+
+N specialized systems — one per domain. Each queries its domain's health component + marker:
 
 ```rust
-fn detect_deaths(query: Query<(Entity, &KilledBy, &CellHealth), Changed<CellHealth>>)
-// Sends KillYourself<S, T>
+// cells/systems/detect_cell_deaths.rs
+fn detect_cell_deaths(query: Query<(Entity, &KilledBy, &CellHealth), (Changed<CellHealth>, With<Cell>)>)
+// Classifies killer type from KilledBy.dealer entity's components
+// Sends KillYourself<Cell>
 ```
+
+Killer type determined at runtime from the dealer entity's components (is it a Bolt? Breaker? Cell?).
 
 ### 5c. bridge_destroyed system (parallel with 5b after 5a)
 New file: `new_effect/dispatch/death_bridge.rs`
 
 ```rust
-fn bridge_destroyed<S, T>(mut reader: MessageReader<Destroyed<S, T>>, ...)
+fn bridge_destroyed<T: GameEntity>(mut reader: MessageReader<Destroyed<T>>, ...)
 // Fires: Died on victim, Killed on killer (if alive), DeathOccurred globally
 ```
+
+No S generic — killer is Option<Entity>, type determined at runtime.
 
 Reference: [death-pipeline.md](death-pipeline.md) Death Chain section
 
@@ -331,7 +365,7 @@ Phase 6 sweep: convert all `.despawn()`/`.try_despawn()` calls across effect fir
 
 ## Wave 6: Effect Implementations (depends on Waves 1-4)
 
-Port each effect's `fire()` and `reverse()` to use the new types and `DamageMessage`. These are mostly mechanical — same logic, new message types.
+**Clean-room rewrite** of each effect from its behavioral spec. Each effect has a spec file in [effects/](effects/) that defines config struct, fire behavior, reverse behavior, components, and messages. The implementing agent reads ONLY the spec file — not the old `src/effect/effects/` code. The spec IS the source of truth. Damage-dealing effects send `DamageDealt<Cell>` (not the old `DamageCell`).
 
 **All effect implementations can be built in parallel.** They don't depend on each other.
 
@@ -349,7 +383,7 @@ Port each effect's `fire()` and `reverse()` to use the new types and `DamageMess
 
 Each effect implements `Effect` (and optionally `Reversible`) per [builder-design.md](builder-design.md) traits section.
 
-### Damage-dealing effects (send DamageMessage, propagate dealer from TriggerContext)
+### Damage-dealing effects (send DamageDealt<T>, propagate dealer from TriggerContext)
 - `shockwave/` — expanding circle area damage
 - `explode/` — instant area burst
 - `piercing_beam/` — beam rectangle
@@ -409,7 +443,7 @@ New folder: `new_effect/dispatch/bridges/impact/`
 New file: `new_effect/dispatch/bridges/death.rs`
 
 ```rust
-// New: single generic bridge_destroyed<S, T> (see Wave 5c)
+// New: single generic bridge_destroyed<T: GameEntity> (see Wave 5c)
 ```
 
 ### Other bridges
@@ -430,9 +464,26 @@ New file: `new_effect/plugin.rs`
 ```rust
 pub struct NewEffectPlugin;
 impl Plugin for NewEffectPlugin { ... }
+
+#[derive(SystemSet, Clone, Hash, PartialEq, Eq, Debug)]
+pub enum EffectSystems {
+    /// apply_damage<T> systems
+    Damage,
+    /// detect_*_deaths, domain kill handlers, bridge_destroyed
+    Death,
+    /// Trigger bridges, walk_effects, condition monitors, timer tick
+    Dispatch,
+    /// Added<T> bridges (PostFixedUpdate)
+    Spawned,
+    /// process_despawn_requests (PostFixedUpdate, runs last)
+    Despawn,
+}
+
+// Ordering: Physics → Damage → Death → Dispatch → Spawned → Despawn
+// Damage/Death/Dispatch in FixedUpdate, Spawned/Despawn in PostFixedUpdate
 ```
 
-Register: all bridge systems, walk_effects dependencies, condition monitor, apply_damage, detect_deaths, despawn_pending, spawned bridges.
+Register: all bridge systems, condition monitors, apply_damage<Cell>/apply_damage<Bolt>/apply_damage<Wall>, spawned bridges, process_despawn_requests. Register messages: DamageDealt<Cell>, DamageDealt<Bolt>, DamageDealt<Wall>, KillYourself<Cell>, KillYourself<Bolt>, KillYourself<Wall>, Destroyed<Cell>, Destroyed<Bolt>, Destroyed<Wall>, DespawnEntity. Bridge systems use EffectCommandsExt via Commands — no exclusive systems needed.
 
 ---
 
@@ -448,7 +499,7 @@ After swap is verified, update architecture and design docs to reflect the new e
 - How to add a new trigger (create participant enum variant, add bridge system, register in plugin)
 - How to add a new effect (implement `Effect` trait, optionally `Reversible`, add to `EffectType` enum)
 - How to add a new condition (add `Condition` variant, add monitor system)
-- Updated message flow diagrams (DamageMessage -> apply_damage -> KilledBy -> KillYourself -> Destroyed -> bridge_destroyed)
+- Updated message flow diagrams (DamageDealt<T> -> apply_damage<T> -> KilledBy -> KillYourself<T> -> Destroyed<T> -> bridge_destroyed<T>)
 - BoundEffects/StagedEffects storage shape and dispatch ordering
 - Route/Stamp/Transfer semantics
 
@@ -490,4 +541,4 @@ Wave 8 (serial):        plugin wiring
 Phase 6 (serial):       swap
 ```
 
-Maximum parallelism: Waves 1, 2, 6, and 7 are fully parallel (12, 5, ~20, and ~10 tasks respectively). Waves 5 and 6 can overlap since effect implementations don't depend on the damage system (they just need to know the DamageMessage type from Wave 1).
+Maximum parallelism: Waves 1, 2, 6, and 7 are fully parallel (12, 5, ~20, and ~10 tasks respectively). Waves 5 and 6 can overlap since effect implementations don't depend on the damage system (they just need to know the DamageDealt<T> type from Wave 1).

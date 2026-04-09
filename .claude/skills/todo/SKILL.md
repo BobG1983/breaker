@@ -88,8 +88,18 @@ docs/todos/
 1. Find the item in `TODO.md` (by number or name)
 2. Remove the entry from `TODO.md`
 3. Append `- ~~Short description~~ — one-line summary of what was delivered` to `DONE.md` (create if it doesn't exist)
-4. Delete the detail file (or detail directory if it has research/design docs)
-5. Renumber remaining backlog entries sequentially
+4. **Promote relevant documentation** from the detail file/directory:
+   a. Read the detail file (and any design docs in the directory)
+   b. Identify content that belongs in `docs/architecture/` (technical decisions, system design, data structures, ordering, patterns) or `docs/design/` (game design, terminology, player-facing mechanics)
+   c. For each piece of promotable content:
+      - If a matching architecture/design doc already exists: update it with the new information
+      - If no matching doc exists but the content is substantial: create a new doc in the appropriate location
+      - If the content is trivial or already covered: skip
+   d. Update any `index.md` files that reference the promoted docs
+5. After promotion, delete the detail file (or detail directory). The knowledge now lives in the canonical docs, not in todos.
+6. Renumber remaining backlog entries sequentially
+
+**Why promote instead of just delete?** Detail files accumulate design decisions, research findings, and architectural context during planning. Deleting them loses that knowledge. Promoting to `docs/architecture/` and `docs/design/` keeps the project documentation evergreen — future sessions can find the decisions without re-deriving them.
 
 ### `/todo reorder` — Full Reorder
 

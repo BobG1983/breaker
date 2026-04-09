@@ -317,9 +317,9 @@ fn walk_effects(
     trigger: &Trigger,
     context: &TriggerContext,
     entity: Entity,
-    bound: &mut BoundEffects,
-    staged: &mut StagedEffects,
-    world: &mut World,
+    bound: &BoundEffects,      // immutable — read only
+    staged: &mut StagedEffects, // mutable for drain_filter on armed entries
+    commands: &mut Commands,    // defer fire/stamp/transfer via EffectCommandsExt
 ) {
     if context.depth >= MAX_DISPATCH_DEPTH {
         warn!("Dispatch depth limit reached for {:?}", trigger);
@@ -329,7 +329,7 @@ fn walk_effects(
     // Step A: consume armed entries from StagedEffects
     if let Some(entries) = staged.entries.remove(trigger) {
         for entry in entries {
-            execute_tree(&entry.tree, entity, context, bound, staged, world);
+            execute_tree(&entry.tree, entity, context, bound, staged, commands);
         }
     }
 
@@ -349,7 +349,7 @@ fn walk_effects(
                 }
                 other => {
                     // Bare Fire, Sequence, On — execute directly
-                    execute_tree(other, entity, context, bound, staged, world);
+                    execute_tree(other, entity, context, bound, staged, commands);
                 }
             }
         }
@@ -359,14 +359,27 @@ fn walk_effects(
 }
 ```
 
+## Command Extension Dispatch Model
+
+walk_effects defers all effect execution and cross-entity mutation through `EffectCommandsExt` on Bevy `Commands`. Bridge systems are regular Bevy systems — they take `Query` + `Commands` parameters, no exclusive world access needed.
+
+Same-entity StagedEffects mutations (drain matching entries) happen inline during the walk. Cross-entity operations (Stamp/Transfer onto another entity) and effect execution (Fire/Reverse) are deferred via command extensions. Bevy applies commands at schedule flush points, at which point the commands have exclusive world access.
+
+See [command-extensions.md](command-extensions.md) for the full behavioral spec of each command extension.
+
+This solves three problems:
+- Bridge systems are regular Bevy systems (not exclusive)
+- No aliased mutable borrows (Stamp/Transfer target other entities via deferred commands)
+- Once removal collected during walk, applied after walk completes (same entity)
+
 ### Bridge system example
 
 ```rust
 /// Bridge for PerfectBumped (local trigger — fires on both bolt and breaker)
 fn bridge_perfect_bumped(
-    mut bump_events: EventReader<BumpGraded>,
-    mut query: Query<(&mut BoundEffects, &mut StagedEffects)>,
-    world: &mut World,
+    mut bump_events: MessageReader<BumpGraded>,
+    mut query: Query<(Entity, &BoundEffects, &mut StagedEffects)>,
+    mut commands: Commands,
 ) {
     for event in bump_events.read() {
         if event.grade != BumpGrade::Perfect { continue; }
@@ -380,9 +393,9 @@ fn bridge_perfect_bumped(
 
         // Walk both participant entities
         for entity in [event.bolt, event.breaker] {
-            if let Ok((mut bound, mut staged)) = query.get_mut(entity) {
+            if let Ok((entity, bound, mut staged)) = query.get_mut(entity) {
                 walk_effects(&Trigger::PerfectBumped, &context, entity,
-                    &mut bound, &mut staged, world);
+                    &bound, &mut staged, &mut commands);
             }
         }
     }
@@ -390,9 +403,9 @@ fn bridge_perfect_bumped(
 
 /// Bridge for PerfectBumpOccurred (global trigger — fires on ALL entities)
 fn bridge_perfect_bump_occurred(
-    mut bump_events: EventReader<BumpGraded>,
-    mut query: Query<(Entity, &mut BoundEffects, &mut StagedEffects)>,
-    world: &mut World,
+    mut bump_events: MessageReader<BumpGraded>,
+    mut query: Query<(Entity, &BoundEffects, &mut StagedEffects)>,
+    mut commands: Commands,
 ) {
     for event in bump_events.read() {
         if event.grade != BumpGrade::Perfect { continue; }
@@ -405,10 +418,36 @@ fn bridge_perfect_bump_occurred(
         });
 
         // Walk ALL entities with effects
-        for (entity, mut bound, mut staged) in &mut query {
+        for (entity, bound, mut staged) in &mut query {
             walk_effects(&Trigger::PerfectBumpOccurred, &context, entity,
-                &mut bound, &mut staged, world);
+                &bound, &mut staged, &mut commands);
         }
     }
 }
 ```
+
+### NodeTimerThreshold bridge
+
+```rust
+fn bridge_node_timer_threshold(
+    timer: Res<NodeTimer>,
+    mut prev: Local<f32>,
+    query: Query<(Entity, &BoundEffects, &mut StagedEffects)>,
+    mut commands: Commands,
+) {
+    let ratio = timer.ratio();
+    for (entity, bound, mut staged) in &query {
+        for entry in &bound.triggers {
+            if let Trigger::NodeTimerThresholdOccurred(x) = entry.key {
+                if *prev < x && x <= ratio {
+                    walk_effects(&Trigger::NodeTimerThresholdOccurred(x), 
+                        &TriggerContext::None { depth: 0 }, entity,
+                        &bound, &mut staged, &mut commands);
+                }
+            }
+        }
+    }
+    *prev = ratio;
+}
+```
+Tracks previous ratio in `Local<f32>`. Scans entities' BoundEffects for threshold entries where `prev < threshold <= current_ratio`. Fires for each crossed threshold.

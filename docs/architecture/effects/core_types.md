@@ -148,7 +148,7 @@ pub enum EffectKind {
     SecondWind,           // unit variant — no fields
     SpawnPhantom { duration: f32, max_active: u32 },
     GravityWell { strength: f32, duration: f32, radius: f32, max: u32 },
-    RandomEffect(Vec<(f32, EffectNode)>),
+    RandomEffect(Vec<(f32, Box<EffectType>)>),  // weighted pool of flat effects, Box avoids infinite size
     EntropyEngine { max_effects: u32, pool: Vec<(f32, EffectNode)> },   // note: max_effects, not threshold
     RampingDamage { damage_per_trigger: f32 },
     Explode { range: f32, damage_mult: f32 },
@@ -210,6 +210,18 @@ pub fn chip_attribution(source_chip: &str) -> Option<String> { ... }
 Lives in `effect/core/types/definitions/enums.rs`. Used by AoE/spawn effects that need to carry chip attribution
 from dispatch time to damage-application time (since those effects damage cells on a later tick).
 
+## GameEntity
+
+```rust
+/// Marker trait for entity types that participate in the death pipeline.
+/// Used as the generic bound on KillYourself<T> and Destroyed<T>.
+trait GameEntity: Component {}
+impl GameEntity for Bolt {}
+impl GameEntity for Cell {}
+impl GameEntity for Wall {}
+impl GameEntity for Breaker {}
+```
+
 ## fire() and reverse()
 
 The enum has `fire()` and `reverse()` methods on `EffectKind`. Both take a `source_chip: &str`
@@ -218,7 +230,7 @@ free function:
 
 ```rust
 impl EffectKind {
-    pub(crate) fn fire(&self, entity: Entity, source_chip: &str, world: &mut World) {
+    pub(crate) fn fire(&self, entity: Entity, source_chip: &str, context: &TriggerContext, world: &mut World) {
         match self {
             Self::Shockwave { base_range, range_per_level, stacks, speed } => {
                 shockwave::fire(entity, *base_range, *range_per_level, *stacks, *speed, source_chip, world)
@@ -259,10 +271,11 @@ Each effect module (`effect/effects/<name>.rs` or `effect/effects/<name>/` direc
 // Active state component (tracks applied multipliers on the entity)
 pub struct ActiveSpeedBoosts(pub Vec<f32>);
 
-pub(crate) fn fire(entity: Entity, multiplier: f32, source_chip: &str, world: &mut World) {
+pub(crate) fn fire(entity: Entity, multiplier: f32, source_chip: &str, context: &TriggerContext, world: &mut World) {
     // push multiplier to ActiveSpeedBoosts component, then call recalculate_velocity
     // (calls apply_velocity_formula immediately so bolt speed reflects the new boost)
     // source_chip is accepted for API uniformity but not used by stat effects
+    // context is accepted for API uniformity — effects that deal damage use it for attribution
 }
 
 pub(crate) fn reverse(entity: Entity, multiplier: f32, source_chip: &str, world: &mut World) {

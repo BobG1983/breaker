@@ -32,6 +32,11 @@ No layer reaches into another's internals.
 - [Adding Triggers](adding_triggers.md) — step-by-step guide
 - [Adding Collisions](adding_collisions.md) — step-by-step guide
 
+## Breaking Changes
+
+- `DamageDealt<T: GameEntity>` — typed damage message (replaces any prior DamageMessage concept)
+- `KillYourself<T>/Destroyed<T>` — S generic removed, killer is `Option<Entity>` (see [Death Pipeline](death_pipeline.md))
+
 ## Design Reference
 
 - [design/effects/](../../design/effects/index.md) — what each effect IS and does (game design)

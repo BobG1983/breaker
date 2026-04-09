@@ -124,7 +124,7 @@ trait Reversible: Effect {
 
 // ── Definition entry point (Route required) ──
 impl EffectDef {
-    fn stamp(target: impl Into<RouteTarget>) -> RouteContext;
+    fn route(target: impl Into<RouteTarget>) -> RouteContext;
 }
 
 // ── RouteContext (sets This for the subtree) ──
@@ -291,7 +291,7 @@ enum EffectType {
     TetherBeam(TetherBeamConfig),
     LoseLife, TimePenalty(f32), Die,
     CircuitBreaker(CircuitBreakerConfig), EntropyEngine(EntropyConfig),
-    RandomEffect,
+    RandomEffect(Vec<(f32, Box<EffectType>)>),
 }
 
 enum ReversibleEffectType {
@@ -347,6 +347,8 @@ enum ValidScopedTerminal {
 //   → stages: When(NodeEndOccurred, Reverse(SpeedBoost))
 
 ```
+
+**Derive requirements:** All validated types (`ValidTree`, `ValidDef`, `EffectType`, `ReversibleEffectType`, `Trigger`, `Condition`, participant enums) require `Clone`, `Debug`, `PartialEq`. Config structs additionally require `Deserialize`. Raw types require `Serialize` + `Deserialize`.
 
 ## Raw Types (RON schema — permissive, for serde)
 
@@ -435,6 +437,12 @@ fn load_tree(raw: &RawTree, trigger_ctx: Option<&Trigger>) -> Result<ValidTree, 
             let term = load_terminal(terminal)?;
             Ok(ValidTree::On(target, term))
         }
+        RawTree::Sequence(children) => {
+            let trees: Result<Vec<_>, _> = children.iter()
+                .map(|c| load_tree(c, trigger_ctx))
+                .collect();
+            Ok(ValidTree::Sequence(trees?))
+        }
     }
 }
 
@@ -453,6 +461,15 @@ fn load_scoped_tree(raw: &RawTree, trigger_ctx: Option<&Trigger>) -> Result<Vali
             let target = validate_participant(trigger_ctx, participant)?;
             let term = load_scoped_terminal(terminal)?;
             Ok(ValidScopedTree::On(target, term))
+        }
+        RawTree::Sequence(children) => {
+            let effects: Result<Vec<_>, _> = children.iter()
+                .map(|c| match c {
+                    RawTree::Fire(effect) => to_reversible(effect),
+                    _ => Err(EffectError::InvalidInScopedContext),
+                })
+                .collect();
+            Ok(ValidScopedTree::Sequence(effects?))
         }
         _ => Err(EffectError::InvalidInScopedContext),
     }
@@ -801,10 +818,10 @@ This distinction is load-bearing: choosing Stamp vs Transfer for the same inner 
         Route(Bolt, When(Killed(Cell), Fire(EntropyEngine(
             max_effects: 3,
             pool: [
-                (0.3, Fire(SpawnBolts())),
-                (0.25, Fire(Shockwave(base_range: 48.0, range_per_level: 0.0, stacks: 1, speed: 400.0))),
-                (0.25, Fire(ChainBolt(tether_distance: 120.0))),
-                (0.20, Fire(SpeedBoost(multiplier: 1.3))),
+                (0.3, SpawnBolts()),
+                (0.25, Shockwave(base_range: 48.0, range_per_level: 0.0, stacks: 1, speed: 400.0)),
+                (0.25, ChainBolt(tether_distance: 120.0)),
+                (0.20, SpeedBoost(multiplier: 1.3)),
             ],
         )))),
     ],
