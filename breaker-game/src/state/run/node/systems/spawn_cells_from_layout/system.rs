@@ -1,6 +1,6 @@
 //! System to spawn cells from the active node layout.
 
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, HashSet};
 
 use bevy::{ecs::system::SystemParam, prelude::*};
 
@@ -14,7 +14,7 @@ use crate::{
     shared::PlayfieldConfig,
     state::run::{
         definition::NodeType,
-        node::{ActiveNodeLayout, NodeLayout, definition::LockMap, messages::CellsSpawned},
+        node::{ActiveNodeLayout, NodeLayout, messages::CellsSpawned},
         resources::{NodeOutcome, NodeSequence},
     },
 };
@@ -99,18 +99,18 @@ pub(crate) struct RenderAssets<'a> {
 }
 
 /// Pre-computed grid positions and dimensions shared across spawn helpers.
-struct GridSpawnParams {
-    step_x: f32,
-    step_y: f32,
-    start_x: f32,
-    start_y: f32,
-    cell_width: f32,
-    cell_height: f32,
+pub(super) struct GridSpawnParams {
+    pub(super) step_x: f32,
+    pub(super) step_y: f32,
+    pub(super) start_x: f32,
+    pub(super) start_y: f32,
+    pub(super) cell_width: f32,
+    pub(super) cell_height: f32,
 }
 
 impl GridSpawnParams {
     /// Computes the world-space position for a given grid coordinate.
-    fn cell_pos(&self, row_idx: usize, col_idx: usize) -> Vec2 {
+    pub(super) fn cell_pos(&self, row_idx: usize, col_idx: usize) -> Vec2 {
         let col_f = f32::from(u16::try_from(col_idx).unwrap_or(u16::MAX));
         let row_f = f32::from(u16::try_from(row_idx).unwrap_or(u16::MAX));
         let x = col_f.mul_add(self.step_x, self.start_x);
@@ -135,10 +135,10 @@ pub(crate) struct ToughnessHpData<'a> {
 
 /// Immutable context for cell spawning helpers. Bundles the shared read-only
 /// state so individual functions stay under clippy's argument limit.
-struct GridCellContext<'a> {
-    layout: &'a NodeLayout,
-    registry: &'a CellTypeRegistry,
-    params: GridSpawnParams,
+pub(super) struct GridCellContext<'a> {
+    pub(super) layout: &'a NodeLayout,
+    pub(super) registry: &'a CellTypeRegistry,
+    pub(super) params: GridSpawnParams,
     /// Precomputed HP scaling — tier scale computed once per batch, config
     /// reference kept for per-cell `base_hp()` lookup.
     hp_scale: HpScale<'a>,
@@ -178,7 +178,7 @@ impl<'a> HpScale<'a> {
 
 impl GridCellContext<'_> {
     /// Computes HP for a cell: `base_hp(toughness) * precomputed_scale`.
-    fn compute_hp(&self, toughness: Toughness) -> f32 {
+    pub(super) fn compute_hp(&self, toughness: Toughness) -> f32 {
         let base = self
             .hp_scale
             .config
@@ -357,171 +357,15 @@ pub(crate) fn spawn_cells_from_grid(
         &mut entity_map,
     );
 
-    required_count += resolve_and_spawn_locks(&ctx, commands, &mut entity_map, meshes, materials);
+    required_count += super::lock_resolution::resolve_and_spawn_locks(
+        &ctx,
+        commands,
+        &mut entity_map,
+        meshes,
+        materials,
+    );
 
     required_count
-}
-
-/// Pass 2: resolves lock dependencies via topological sort and spawns locked
-/// cells in dependency order. Returns the additional required-to-clear count.
-fn resolve_and_spawn_locks(
-    ctx: &GridCellContext<'_>,
-    commands: &mut Commands,
-    entity_map: &mut HashMap<(usize, usize), Entity>,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<ColorMaterial>,
-) -> u32 {
-    let Some(ref locks) = ctx.layout.locks else {
-        return 0;
-    };
-    if locks.is_empty() {
-        return 0;
-    }
-
-    // Filter out lock keys that reference cells already spawned in Pass 1.
-    let effective_locks: LockMap = locks
-        .iter()
-        .filter(|&(&(r, c), _)| !entity_map.contains_key(&(r, c)))
-        .map(|(&k, v)| (k, v.clone()))
-        .collect();
-
-    let (sorted, cyclic) = topological_sort_locks(&effective_locks);
-    let mut required_count = 0u32;
-
-    // Spawn sorted (acyclic) locked cells.
-    for coord in sorted {
-        required_count += spawn_locked_cell(
-            ctx,
-            commands,
-            &effective_locks,
-            entity_map,
-            coord,
-            meshes,
-            materials,
-        );
-    }
-
-    // Spawn cyclic entries as unlocked fallbacks.
-    for coord in cyclic {
-        required_count +=
-            spawn_unlocked_fallback(ctx, commands, entity_map, coord, meshes, materials);
-    }
-
-    required_count
-}
-
-/// Spawns a single locked cell, resolving its lock targets to entity IDs.
-/// Returns 1 if the cell is required-to-clear, 0 otherwise.
-fn spawn_locked_cell(
-    ctx: &GridCellContext<'_>,
-    commands: &mut Commands,
-    effective_locks: &LockMap,
-    entity_map: &mut HashMap<(usize, usize), Entity>,
-    coord: (usize, usize),
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<ColorMaterial>,
-) -> u32 {
-    let (row_idx, col_idx) = coord;
-    let Some(alias) = ctx
-        .layout
-        .grid
-        .get(row_idx)
-        .and_then(|row| row.get(col_idx))
-    else {
-        return 0;
-    };
-    if alias == "." {
-        return 0;
-    }
-    let Some(def) = ctx.registry.get(alias) else {
-        return 0;
-    };
-
-    let pos = ctx.params.cell_pos(row_idx, col_idx);
-    let scaled_hp = ctx.compute_hp(def.toughness);
-
-    // Resolve lock targets to entity IDs.
-    let targets = &effective_locks[&coord];
-    let resolved: Vec<Entity> = targets
-        .iter()
-        .filter_map(|target| {
-            entity_map.get(target).copied().or_else(|| {
-                debug!(
-                    "layout '{}': lock target ({}, {}) for cell ({}, {}) \
-                     has no spawned entity — skipping target",
-                    ctx.layout.name, target.0, target.1, row_idx, col_idx
-                );
-                None
-            })
-        })
-        .collect();
-
-    // If no targets resolved, spawn without Locked (graceful degradation).
-    let entity_id = if resolved.is_empty() {
-        Cell::builder()
-            .definition(def)
-            .position(pos)
-            .dimensions(ctx.params.cell_width, ctx.params.cell_height)
-            .override_hp(scaled_hp)
-            .alias(alias.clone())
-            .rendered(meshes, materials)
-            .spawn(commands)
-    } else {
-        Cell::builder()
-            .definition(def)
-            .position(pos)
-            .dimensions(ctx.params.cell_width, ctx.params.cell_height)
-            .override_hp(scaled_hp)
-            .alias(alias.clone())
-            .locked(resolved)
-            .rendered(meshes, materials)
-            .spawn(commands)
-    };
-
-    entity_map.insert(coord, entity_id);
-    u32::from(def.required_to_clear)
-}
-
-/// Spawns a cell as an unlocked fallback (used for cyclic lock entries).
-/// Returns 1 if the cell is required-to-clear, 0 otherwise.
-fn spawn_unlocked_fallback(
-    ctx: &GridCellContext<'_>,
-    commands: &mut Commands,
-    entity_map: &mut HashMap<(usize, usize), Entity>,
-    coord: (usize, usize),
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<ColorMaterial>,
-) -> u32 {
-    let (row_idx, col_idx) = coord;
-    let Some(alias) = ctx
-        .layout
-        .grid
-        .get(row_idx)
-        .and_then(|row| row.get(col_idx))
-    else {
-        return 0;
-    };
-    if alias == "." {
-        return 0;
-    }
-    let Some(def) = ctx.registry.get(alias) else {
-        return 0;
-    };
-
-    let pos = ctx.params.cell_pos(row_idx, col_idx);
-    let scaled_hp = ctx.compute_hp(def.toughness);
-
-    let entity_id = Cell::builder()
-        .definition(def)
-        .position(pos)
-        .dimensions(ctx.params.cell_width, ctx.params.cell_height)
-        .override_hp(scaled_hp)
-        .alias(alias.clone())
-        .rendered(meshes, materials)
-        .spawn(commands);
-
-    entity_map.insert(coord, entity_id);
-    u32::from(def.required_to_clear)
 }
 
 /// Builds a set of grid positions occupied by `gu` (guardian) aliases that are
@@ -608,74 +452,6 @@ fn collect_guardian_slots(grid: &[Vec<String>], center_row: usize, center_col: u
         }
     }
     slots
-}
-
-/// Performs a topological sort of lock entries using Kahn's algorithm.
-///
-/// Returns `(sorted, cyclic)`:
-/// - `sorted`: lock keys in an order where all dependencies come first.
-/// - `cyclic`: lock keys that participate in a cycle (could not be ordered).
-type GridCoord = (usize, usize);
-
-fn topological_sort_locks(locks: &LockMap) -> (Vec<GridCoord>, Vec<GridCoord>) {
-    // Build in-degree map. Only edges between lock-map keys matter.
-    let mut in_degree: HashMap<(usize, usize), usize> = HashMap::new();
-    // dependents[target] = list of lock keys that depend on target
-    let mut dependents: HashMap<(usize, usize), Vec<(usize, usize)>> = HashMap::new();
-
-    for &key in locks.keys() {
-        in_degree.entry(key).or_insert(0);
-    }
-
-    for (&key, targets) in locks {
-        for target in targets {
-            // Only count edges where the target is also a lock key.
-            if locks.contains_key(target) {
-                *in_degree.entry(key).or_insert(0) += 1;
-                dependents.entry(*target).or_default().push(key);
-            }
-        }
-    }
-
-    // Seed the queue with all lock keys that have in-degree 0.
-    let mut queue: VecDeque<(usize, usize)> = in_degree
-        .iter()
-        .filter(|entry| *entry.1 == 0)
-        .map(|entry| *entry.0)
-        .collect();
-
-    let mut sorted = Vec::with_capacity(locks.len());
-
-    while let Some(node) = queue.pop_front() {
-        sorted.push(node);
-        if let Some(deps) = dependents.get(&node) {
-            for &dep in deps {
-                if let Some(deg) = in_degree.get_mut(&dep) {
-                    *deg -= 1;
-                    if *deg == 0 {
-                        queue.push_back(dep);
-                    }
-                }
-            }
-        }
-    }
-
-    // Remaining nodes with in-degree > 0 are cyclic.
-    let cyclic: Vec<(usize, usize)> = in_degree
-        .into_iter()
-        .filter(|(_, deg)| *deg > 0)
-        .map(|(k, _)| k)
-        .collect();
-
-    if !cyclic.is_empty() {
-        debug!(
-            "topological_sort_locks: detected cycle among {} lock entries: {:?}",
-            cyclic.len(),
-            cyclic
-        );
-    }
-
-    (sorted, cyclic)
 }
 
 /// Resolves the HP context from the current run state and node sequence.
