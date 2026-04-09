@@ -44,14 +44,7 @@ fn integration_app() -> App {
     app
 }
 
-/// Accumulates one fixed timestep of overstep, then runs one update.
-fn tick(app: &mut App) {
-    let timestep = app.world().resource::<Time<Fixed>>().timestep();
-    app.world_mut()
-        .resource_mut::<Time<Fixed>>()
-        .accumulate_overstep(timestep);
-    app.update();
-}
+use crate::shared::test_utils::tick;
 
 fn spawn_breaker_at(app: &mut App, state: DashState, position: Vec2) -> Entity {
     let def = BreakerDefinition::default();

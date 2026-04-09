@@ -24,6 +24,7 @@ pub(crate) fn cleanup_cell(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::shared::test_utils::tick;
 
     // ---------------------------------------------------------------
     // Test helpers
@@ -69,14 +70,6 @@ mod tests {
                 (enqueue_requests, cleanup_cell, capture_cell_destroyed_at).chain(),
             );
         app
-    }
-
-    fn tick(app: &mut App) {
-        let timestep = app.world().resource::<Time<Fixed>>().timestep();
-        app.world_mut()
-            .resource_mut::<Time<Fixed>>()
-            .accumulate_overstep(timestep);
-        app.update();
     }
 
     // ---------------------------------------------------------------

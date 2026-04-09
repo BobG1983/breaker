@@ -62,7 +62,7 @@ mod tests {
     use rantzsoft_spatial2d::components::{GlobalPosition2D, Spatial2D};
 
     use super::*;
-    use crate::shared::{GameDrawLayer, PlayfieldConfig};
+    use crate::shared::{GameDrawLayer, PlayfieldConfig, test_utils::tick};
 
     // ── Helpers ──────────────────────────────────────────────────────
 
@@ -104,15 +104,6 @@ mod tests {
         };
         queue.apply(world);
         entity
-    }
-
-    /// Accumulates one fixed timestep then runs one update.
-    fn tick(app: &mut App) {
-        let timestep = app.world().resource::<Time<Fixed>>().timestep();
-        app.world_mut()
-            .resource_mut::<Time<Fixed>>()
-            .accumulate_overstep(timestep);
-        app.update();
     }
 
     fn spawn_cell(app: &mut App, pos: Vec2, half_extents: Vec2) -> Entity {

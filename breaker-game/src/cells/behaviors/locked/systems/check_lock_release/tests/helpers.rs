@@ -9,6 +9,7 @@ use crate::cells::{
     messages::{CellDestroyedAt, DamageCell},
     systems::handle_cell_hit,
 };
+pub(super) use crate::shared::test_utils::tick;
 
 // ---------------------------------------------------------------
 // Test helpers -- message injection for CellDestroyedAt
@@ -77,14 +78,6 @@ pub(super) fn hit_app() -> App {
             (enqueue_damage_cell.before(handle_cell_hit), handle_cell_hit),
         );
     app
-}
-
-pub(super) fn tick(app: &mut App) {
-    let timestep = app.world().resource::<Time<Fixed>>().timestep();
-    app.world_mut()
-        .resource_mut::<Time<Fixed>>()
-        .accumulate_overstep(timestep);
-    app.update();
 }
 
 pub(super) fn default_damage_visuals() -> CellDamageVisuals {

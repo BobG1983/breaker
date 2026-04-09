@@ -104,14 +104,7 @@ mod tests {
         app
     }
 
-    /// Accumulates one fixed timestep then runs one update.
-    fn tick(app: &mut App) {
-        let timestep = app.world().resource::<Time<Fixed>>().timestep();
-        app.world_mut()
-            .resource_mut::<Time<Fixed>>()
-            .accumulate_overstep(timestep);
-        app.update();
-    }
+    use crate::shared::test_utils::tick;
 
     fn spawn_breaker(app: &mut App, pos: Vec2) -> Entity {
         app.world_mut()

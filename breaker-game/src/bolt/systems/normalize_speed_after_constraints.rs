@@ -44,13 +44,7 @@ mod tests {
         app
     }
 
-    fn tick(app: &mut App) {
-        let timestep = app.world().resource::<Time<Fixed>>().timestep();
-        app.world_mut()
-            .resource_mut::<Time<Fixed>>()
-            .accumulate_overstep(timestep);
-        app.update();
-    }
+    use crate::shared::test_utils::tick;
 
     /// Creates a `BoltDefinition` with the specified speed parameters.
     fn bolt_definition(base_speed: f32, min_speed: f32, max_speed: f32) -> BoltDefinition {

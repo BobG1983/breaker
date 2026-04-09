@@ -21,13 +21,7 @@ fn test_app() -> App {
     app
 }
 
-fn tick(app: &mut App) {
-    let timestep = app.world().resource::<Time<Fixed>>().timestep();
-    app.world_mut()
-        .resource_mut::<Time<Fixed>>()
-        .accumulate_overstep(timestep);
-    app.update();
-}
+use crate::shared::test_utils::tick;
 
 /// Default playfield: width=800, height=600 -> left=-400, right=400, top=300, bottom=-300
 const RADIUS: f32 = 6.0;

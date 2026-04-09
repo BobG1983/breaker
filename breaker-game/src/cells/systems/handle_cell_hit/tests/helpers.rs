@@ -7,6 +7,7 @@ use crate::cells::{
     components::*,
     messages::{DamageCell, RequestCellDestroyed},
 };
+pub(super) use crate::shared::test_utils::tick;
 
 #[derive(Resource)]
 pub(super) struct TestMessage(pub(super) Option<DamageCell>);
@@ -73,14 +74,6 @@ pub(super) fn test_app_two_phase() -> App {
         .add_message::<RequestCellDestroyed>()
         .add_systems(FixedUpdate, handle_cell_hit);
     app
-}
-
-pub(super) fn tick(app: &mut App) {
-    let timestep = app.world().resource::<Time<Fixed>>().timestep();
-    app.world_mut()
-        .resource_mut::<Time<Fixed>>()
-        .accumulate_overstep(timestep);
-    app.update();
 }
 
 pub(super) fn default_damage_visuals() -> CellDamageVisuals {
