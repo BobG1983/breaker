@@ -4,6 +4,27 @@ description: Confirmed doc/code alignment state for current and recent sessions;
 type: project
 ---
 
+## Confirmed Correct (as of toughness-hp-scaling, 2026-04-08)
+
+- `docs/design/decisions/node-type-differentiation.md` — HP Scaling section updated: removed stale `TierDefinition.hp_mult` claim; now describes `Toughness` enum + `ToughnessConfig` model
+- `docs/design/terminology/run.md` — Tier row: removed "HP multiplier" from parameter list; added `Toughness` and `ToughnessConfig` as new glossary entries
+- `NodeAssignment` fields confirmed: `node_type`, `tier_index`, `timer_mult` — NO `hp_mult`
+- `TierDefinition` fields confirmed: `nodes`, `active_ratio`, `timer_mult`, `introduced_cells` — NO `hp_mult`
+- `DifficultyCurve` fields confirmed: `tiers`, `timer_reduction_per_boss` — NO `boss_hp_mult`
+- `NodeOutcome` fields confirmed: `node_index`, `result`, `cleared_this_frame` (NOT `transition_queued`), `tier`, `position_in_tier`
+- `ToughnessConfig` fields confirmed: `weak_base`, `standard_base`, `tough_base`, `tier_multiplier`, `node_multiplier`, `boss_multiplier`
+- Research snapshots in `docs/todos/detail/mod-system-design/research/` (run-state-flow.md, tier-stub-trace.md, message-component-patterns.md, chip-offering-flow.md) are intentionally historical — written before toughness landed, DO NOT flag their `hp_mult` / `transition_queued` references as drift
+
+### Key facts for toughness-hp-scaling
+
+- `Toughness` enum: `Weak` (default `Standard`), `Standard`, `Tough` — lives in `cells/definition/data.rs`
+- `ToughnessConfig` resource: lives in `cells/resources/data.rs`, loaded from `defaults.toughness.ron`
+- `boss_multiplier` (was `boss_hp_mult`) is now on `ToughnessConfig`, not on `DifficultyCurve` or `TierDefinition`
+- `cleared_this_frame` (was `transition_queued`) is the tie-frame guard on `NodeOutcome`
+- `stubbing-tiers.md` spec is STALE: proposes adding `current_tier` to `NodeOutcome`, but `tier` and `position_in_tier` were already added by the toughness feature. Also still shows `transition_queued` field name. Needs human decision on whether to update or archive.
+
+---
+
 ## Confirmed Correct (as of cell-builder-pattern, 2026-04-08)
 
 - `docs/todos/TODO.md` — item 1 changed from `[in-progress]` (labelled "shielded") to `[done]` (corrected to "guarded")

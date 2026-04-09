@@ -12,6 +12,7 @@
 - [Stray #[test] on helper fn — compile error](pattern_stray_test_attribute_on_helper.md) — #[test] placed before comment + helper fn causes "attribute on non-test fn" compile error at RED gate
 
 - [Route change behaviors missing when in existing file](pattern_route_change_test_missing.md) — writer-tests creates new system files but misses spec behaviors targeting existing files (e.g., state/plugin/tests.rs)
+- [Production validate() logic in stub breaks RED gate](pattern_production_validate_in_stub.md) — validate() with full range-check logic means all positive/negative validation tests pass at RED; stub must return Ok(()) unconditionally
 
 ## Session History
 See [ephemeral/](ephemeral/) — not committed.

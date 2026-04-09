@@ -124,6 +124,15 @@ cells/builder/core/{types,transitions,terminal}.rs, cells/definition.rs (Guarded
 Grepped all five new files for "unsafe": zero matches. No FFI, no raw pointers.
 Workspace lint unsafe_code = "deny" remains in force.
 
+Still confirmed for Toughness + HP Scaling (2026-04-08, commit cd6fb019):
+New/changed files include cells/resources/data.rs (ToughnessConfig), cells/definition/data.rs
+(Toughness enum, GuardedBehavior), state/run/node/systems/spawn_cells_from_layout/system.rs
+(HpContext, HpScale, ToughnessHpData, compute_hp), state/run/systems/advance_node.rs
+(tier/position_in_tier tracking), state/run/resources/definitions.rs (NodeOutcome fields),
+debug/hot_reload/systems/propagate_cell_type_changes.rs and propagate_node_layout_changes.rs.
+Grep for "unsafe" across all changed files: zero matches.
+Workspace lint unsafe_code = "deny" remains in force.
+
 Still confirmed for feature/bolt-birthing-animation (2026-04-08):
 New/changed files: rantzsoft_stateflow/src/transition/types.rs (TransitionType::None variant),
 rantzsoft_stateflow/src/transition/orchestration/system.rs (begin_transition + handle_transition_over),

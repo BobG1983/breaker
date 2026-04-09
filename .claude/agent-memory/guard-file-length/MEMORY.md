@@ -5,7 +5,7 @@
 
 ## Cross-Reference
 File length findings (per-phase open items) live in **reviewer-file-length/** not here.
-See `.claude/agent-memory/reviewer-file-length/phase8_findings.md` for current open findings (Wave 12, 2026-04-07 feature/scenario-runner-wiring).
+See `.claude/agent-memory/reviewer-file-length/phase10_findings.md` for current open findings (Wave 14, 2026-04-08 feature/cell-builder-pattern).
 
 ## Session History
 See [ephemeral/](ephemeral/) — not committed.

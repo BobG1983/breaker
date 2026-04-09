@@ -6,9 +6,9 @@ type: project
 
 ## Key Resources
 
-- **`NodeSequence`** (`state/run/resources/definitions.rs`): flat `Vec<NodeAssignment>` generated once per run `OnExit(MenuState::Main)`. Each `NodeAssignment` has `tier_index: u32`, `hp_mult`, `timer_mult`, `node_type`.
-- **`NodeOutcome`** (`state/run/resources/definitions.rs`): runtime progression tracker with `node_index: u32` (incremented by `advance_node`), `result: NodeResult`, `transition_queued: bool`.
-- **`DifficultyCurve`** (`state/run/resources/definitions.rs`): RON-loaded resource with `Vec<TierDefinition>` — source data for sequence generation.
+- **`NodeSequence`** (`state/run/resources/definitions.rs`): flat `Vec<NodeAssignment>` generated once per run `OnExit(MenuState::Main)`. Each `NodeAssignment` has `tier_index: u32`, `timer_mult: f32`, `node_type: NodeType`. NOTE: `hp_mult` was removed — cell HP is now computed from `ToughnessConfig`; `boss_hp_mult` moved to `ToughnessConfig::boss_multiplier`.
+- **`NodeOutcome`** (`state/run/resources/definitions.rs`): runtime progression tracker with `node_index: u32`, `result: NodeResult`, `cleared_this_frame: bool`, `tier: u32`, `position_in_tier: u32`. NOTE: `transition_queued: bool` was removed and replaced by `cleared_this_frame: bool`.
+- **`DifficultyCurve`** (`state/run/resources/definitions.rs`): RON-loaded resource with `Vec<TierDefinition>` — source data for sequence generation. NOTE: `boss_hp_mult` field removed from `DifficultyCurve`.
 
 ## Node Advancement
 
@@ -29,12 +29,13 @@ fn resolve_something(run_state: Option<&NodeOutcome>, node_sequence: Option<&Nod
 ```
 Falls back to default when NodeSequence is absent (tests/scenarios).
 
-## current_tier Does Not Exist Yet
+## current_tier / tier Field — NOW EXISTS
 
-`tier_index` is on `NodeAssignment` but is never surfaced to runtime systems. No `current_tier` resource or field exists. To add one, the recommended approach is adding `current_tier: u32` to `NodeOutcome` and updating `advance_node` to populate it from `NodeSequence.assignments[node_index].tier_index`.
+`NodeOutcome.tier: u32` and `NodeOutcome.position_in_tier: u32` were added in the Toughness + HP Scaling feature (2026-04-08, commit cd6fb019). `advance_node` now updates both fields:
+- After a Boss node clear: `tier += 1`, `position_in_tier = 0`
+- After any other node: `position_in_tier += 1`
 
-**Why:** The protocol/hazard system (mod-system-design) needs to query the current tier for scaling decisions.
-**How to apply:** When writing tier-stub spec or implementation, add to `NodeOutcome`, update `advance_node` with `Option<Res<NodeSequence>>`, and use the same fallback pattern.
+`advance_node` takes `Option<Res<NodeSequence>>` (same fallback pattern as other systems). The protocol/hazard system can query `NodeOutcome.tier` directly — no further work needed.
 
 ## State Routing (condensed)
 

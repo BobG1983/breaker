@@ -4,9 +4,9 @@ description: Crate versions at last audit (2026-04-06) — diff against this on 
 type: project
 ---
 
-Audit date: 2026-04-08 (second run — cell builder pattern feature)
-Branch: feature/bolt-birthing-animation
-Prior audit: 2026-04-08 (bolt-birthing-animation, first run)
+Audit date: 2026-04-08 (third run — Toughness + HP Scaling feature)
+Branch: develop (commit cd6fb019)
+Prior audit: 2026-04-08 (second run — cell builder pattern feature)
 
 ## Direct Dependencies
 
@@ -93,15 +93,14 @@ All entries below match known-findings.md — no new duplicates introduced by ra
 - rustc-hash v1.1.0 + v2.1.1 (known wontfix)
 - skrifa v0.37.0 + v0.39.0 (known wontfix)
 
-## Changes since prior audit (2026-04-08, first run)
-- No new direct dependencies added on cell builder pattern feature
-- No Cargo.toml files modified on this branch (git log confirms zero .toml commits)
+## Changes since prior audit (2026-04-08, second run — cell builder pattern)
+- No new direct dependencies added on Toughness + HP Scaling feature
+- No Cargo.toml files modified (git show cd6fb019 confirms zero .toml changes — only .rs and .ron)
 - cargo-machete: CLEAN
-- cargo outdated -R: same outdated list (rand 0.9→0.10 BREAKING, ron 0.12.0→0.12.1 patch)
-- cargo deny check licenses: PASS (same Unicode-DFS-2016 harmless pre-approval warning)
-- cargo deny check advisories: same RUSTSEC-2024-0436 (paste unmaintained, known wontfix)
-- Transitive dups: no new dups — all match known-findings.md exactly
-- Feature flags: unchanged; bevy/dynamic_linking aliases-only confirmed
+- cargo outdated -R: not re-run (no Cargo.toml changes; known outdated list unchanged)
+- cargo deny: not re-run (no Cargo.toml changes; license state unchanged)
+- Transitive dups: not re-run (dependency tree unchanged)
+- Feature flags: unchanged
 
 ## Known Outdated (as of audit)
 - rand: 0.9.2 → 0.10.0 (BREAKING — semver major; deferred, see known-findings.md)

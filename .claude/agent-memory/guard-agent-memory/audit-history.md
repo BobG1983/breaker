@@ -4,6 +4,34 @@ description: When full audits were run, what scope, and what was found — helps
 type: project
 ---
 
+## 2026-04-08 — Full Audit (develop, post cell-builder-pattern merge)
+
+**Scope:** All 27 agent memory directories.
+**Total stable files:** ~135 across all agents.
+**Issues found:** 4 (all fixed).
+
+### Fixes Applied
+
+1. **researcher-codebase/node-sequence-tier-architecture.md** — stale `hp_mult`, `boss_hp_mult`, and `transition_queued` field claims. `NodeAssignment` no longer has `hp_mult` (removed in Toughness + HP Scaling). `NodeOutcome` no longer has `transition_queued` — replaced by `cleared_this_frame: bool`, `tier: u32`, `position_in_tier: u32`. "current_tier Does Not Exist Yet" section was also stale — `tier` and `position_in_tier` now exist and `advance_node` already populates them. Updated all three sections.
+
+2. **reviewer-correctness/bug-patterns.md** — tombstone split file still contained 356 lines of duplicated content from both split children (bug-patterns-open.md and bug-patterns-resolved.md). Reduced to a 7-line redirect stub.
+
+3. **guard-file-length/split-patterns.md** — cross-reference pointed to `phase7_findings.md` (Wave 11, 2026-04-06) as "current" monitor list. Updated to `phase10_findings.md` (Wave 14, 2026-04-08).
+
+4. **guard-file-length/MEMORY.md** — cross-reference pointed to `phase8_findings.md` (Wave 12) as "current open findings." Updated to `phase10_findings.md` (Wave 14, 2026-04-08).
+
+### Staleness Patterns Observed
+
+- **researcher-codebase** files go stale when types are refactored (fields added/removed) without updating the memory. The `node-sequence-tier-architecture.md` file described removed fields (`hp_mult`, `transition_queued`) and a missing feature (`current_tier`) that had already been implemented.
+- **Split tombstone files** must be aggressively trimmed — if the content remains in the tombstone it defeats the purpose of splitting and the split file becomes stale as the children diverge.
+- **guard-file-length cross-reference** goes stale every phase boundary (confirmed pattern from prior audits).
+
+### Agents with No Issues Found
+
+orchestrator, planner-spec, planner-review, writer-code, writer-tests, researcher-system-dependencies, researcher-rust-idioms, researcher-bevy-api, reviewer-architecture, reviewer-performance, reviewer-quality, reviewer-scenarios, reviewer-tests, reviewer-file-length, reviewer-correctness (open + resolved files), reviewer-bevy-api, runner-linting, runner-scenarios, writer-scenarios, guard-security, guard-dependencies, guard-game-design, guard-docs, guard-file-length (after fix), researcher-crates, researcher-codebase (other files).
+
+---
+
 ## 2026-04-08 — Full Audit (feature/bolt-birthing-animation pre-merge gate)
 
 **Scope:** All 27 agent memory directories.

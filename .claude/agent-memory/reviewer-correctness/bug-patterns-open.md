@@ -138,3 +138,26 @@ this behavior. In production the `playing_gate` run_if condition prevents the sy
 at all during `!entered_playing`, so the inconsistency has no runtime impact.
 
 **Status**: OPEN inconsistency — intentional per test, but differs from all peers.
+
+## advance_node runs before set_active_layout and spawn_cells_from_layout — CONFIRMED BUG (2026-04-08)
+
+`advance_node` is registered on `OnEnter(RunState::Node)`. Sub-state `NodeState::Loading` is
+activated in the same frame as `RunState::Node` is entered. Bevy 0.18 fires `OnEnter(RunState::Node)`
+before `OnEnter(NodeState::Loading)` in the same state transition frame.
+
+Consequence: `advance_node` increments `node_index` (0→1) and updates `tier`/`position_in_tier`
+based on assignment[0] BEFORE `set_active_layout` and `spawn_cells_from_layout` run.
+
+**Three cascading effects**:
+1. `set_active_layout` selects layout at index 1 (second layout) for the FIRST node.
+2. `spawn_cells_from_layout` uses `assignments[1]` for `is_boss` — wrong assignment for the first node.
+3. `setup_run` checks `run_state.node_index == 0` to set `serving=true` (so bolt is served on first node).
+   After `advance_node`, `node_index=1`, so `serving=false` — bolt launches immediately on first node
+   instead of waiting for player serve input.
+
+**Location**:
+- `breaker-game/src/state/run/systems/advance_node.rs` — registered `OnEnter(RunState::Node)`
+- `breaker-game/src/state/run/plugin.rs:98-99`
+- `breaker-game/src/state/run/node/systems/set_active_layout.rs:41`
+- `breaker-game/src/state/run/systems/setup_run/system.rs:90`
+- `breaker-game/src/state/run/node/systems/spawn_cells_from_layout/system.rs` — `resolve_hp_context`

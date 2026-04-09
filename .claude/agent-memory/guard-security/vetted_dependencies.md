@@ -75,6 +75,12 @@ No new advisories. cargo machete: no unused dependencies found.
 Same RUSTSEC-2024-0436 (paste) recurring warning. No new advisories.
 cargo machete: no unused dependencies found.
 
+## cargo audit result — Toughness + HP Scaling (2026-04-08)
+
+`cargo audit` run successfully. Result: 1 warning (allowed), 0 errors.
+Same RUSTSEC-2024-0436 (paste — unmaintained, no CVE). No new direct-dep security advisories.
+cargo machete: no unused dependencies found. No new dependencies introduced by this feature.
+
 ## Vetted Patterns — rantzsoft_stateflow TransitionType::None (added 2026-04-08)
 
 - `TransitionType::None` variant: cloned safely (trivially `Clone`). `type_ids()` returns `vec![]` — correct.
@@ -91,6 +97,24 @@ cargo machete: no unused dependencies found.
   `MenuState::Main` to have been entered. Insertion is guaranteed to precede dispatch. Safe.
 - `world.resource::<NodeOutcome>()` in `resolve_node_next_state` (system.rs:223): `NodeOutcome`
   is `init_resource`'d in RunPlugin::build(). Safe (confirmed in prior audit, still holds).
+
+## Toughness + HP Scaling panic surface (added 2026-04-08)
+
+- `ToughnessConfig` has no `validate()` method. Fields (`tier_multiplier`, `boss_multiplier`,
+  `node_multiplier`, `*_base`) are raw f32 loaded from RON with no NaN/Inf/zero-guard.
+  - `tier_multiplier.powi(tier_i32)` in `tier_scale()`: if `tier_multiplier` is NaN/Inf (from
+    a bad RON), the result is NaN/Inf; this flows through to `CellHealth::max` and
+    `CellHealth::current`. No panic in f32 arithmetic, but HP becomes NaN, causing gameplay
+    corruption (cells never die). Warning-level.
+  - `tier_multiplier = 0.0` → `0.0^0 = 1.0` (safe), `0.0^n = 0.0` (tier ≥ 1: HP zeroes out).
+    Cells with 0.0 HP would immediately despawn on spawn. Not a panic, gameplay breakage only.
+  - `boss_multiplier = 0.0` → boss cells have same HP as normal cells. Undesirable but not a crash.
+  - `node_multiplier.mul_add(pos_f32, 1.0)` with very large `node_multiplier` and high
+    `position_in_tier` can produce Inf HP. No panic, game stall (cells never die).
+  - Threat model: these are shipped assets, not user-controlled. Info/Warning-level only.
+- Hot-reload path in `propagate_node_layout_changes` passes `toughness_config: None`,
+  falling back to `Toughness::default_base_hp()` (hardcoded). Safe — no NaN risk on hot-reload.
+- `propagate_cell_type_changes` also uses `default_base_hp()` (not `ToughnessConfig`). Safe.
 
 ## Cell builder / guarded behavior panic surface (added 2026-04-08)
 

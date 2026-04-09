@@ -44,6 +44,14 @@ fn node_edges() -> Vec<InternedRenderLabel> {
 
 This places the transition effect AFTER the UI pass — correct for a screen overlay that should cover everything including game UI. Previously was `Node2d::Tonemapping` (placed under UI). The change to `NodeUi::UiPass` is intentional and API-correct.
 
+## Option<Res<T>> as SystemParam field (verified by project-wide usage)
+
+- `Option<Res<'w, T>>` is a valid `SystemParam` and valid as a `#[derive(SystemParam)]` struct field
+- Returns `None` when the resource is not present in the world — correct for optional resources
+- Used extensively in this project: `CellSpawnContext`, `debug_ui`, `init_node_timer`, etc.
+- Also valid as a direct system parameter: `fn advance_node(sequence: Option<Res<NodeSequence>>)`
+- `.as_deref()` converts `Option<Res<T>>` → `Option<&T>` — correct pattern for passing to non-ECS helpers
+
 ## Messages::drain() as alternative to MessageReader in direct World access
 
 The orchestration system uses `world.resource_mut::<Messages<T>>().drain()` instead of

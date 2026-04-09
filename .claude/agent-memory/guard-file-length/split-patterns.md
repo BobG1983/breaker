@@ -36,6 +36,6 @@ Key files that grow back:
 ### Pure Test Files Over Threshold
 Many files in `tests/` directories are 400-800 lines. These are already extracted and under the 800-line Strategy C threshold. They don't need further splitting unless they exceed 800 lines.
 
-Monitor files approaching 800-line Strategy C threshold are tracked in reviewer-file-length/phase7_findings.md (current as of Wave 11, 2026-04-06 develop).
+Monitor files approaching 800-line Strategy C threshold are tracked in reviewer-file-length/phase10_findings.md (current as of Wave 14, 2026-04-08 feature/cell-builder-pattern).
 Note: `dispatch_breaker_effects` no longer exists — replaced by `spawn_or_reuse_breaker` in
 feature/breaker-builder-pattern. `bolt/builder.rs` monolith was split to `bolt/builder/` directory module.
