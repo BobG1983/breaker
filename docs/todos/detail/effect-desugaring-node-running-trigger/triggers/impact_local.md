@@ -1,7 +1,7 @@
 # Local Impact Trigger
 
 ## Trigger
-- `Impacted(ImpactTarget)` — you were in a collision with the specified entity type
+- `Impacted(EntityKind)` — you were in a collision with the specified entity type
 
 ## Locality: LOCAL
 Fires on **both collision participants**.
@@ -30,21 +30,20 @@ fn bridge_bolt_impacted_cell(impacts: MessageReader<BoltImpactCell>, ...) {
         let context = TriggerContext::Impact(ImpactContext {
             impactor: msg.bolt,
             impactee: msg.cell,
-            source: msg.source.clone(),
             depth: 0,
         });
         
         // Fire Impacted(Cell) on the bolt (bolt impacted a cell)
-        walk_effects(&Trigger::Impacted(ImpactTarget::Cell), &context, msg.bolt, ...);
+        walk_effects(&Trigger::Impacted(EntityKind::Cell), &context, msg.bolt, ...);
         
         // Fire Impacted(Bolt) on the cell (cell was impacted by a bolt)
-        walk_effects(&Trigger::Impacted(ImpactTarget::Bolt), &context, msg.cell, ...);
+        walk_effects(&Trigger::Impacted(EntityKind::Bolt), &context, msg.cell, ...);
     }
 }
 ```
 
 ## Trigger Matching
-The `ImpactTarget` parameter in the trigger matches the **other** entity type:
+The `EntityKind` parameter in the trigger matches the **other** entity type:
 - `Impacted(Cell)` fires on the bolt when bolt hits cell
 - `Impacted(Bolt)` fires on the cell when bolt hits cell
 - `Impacted(Wall)` fires on the bolt when bolt hits wall

@@ -13,9 +13,10 @@ New file: `new_effect/triggers/mod.rs`
 
 ```rust
 // Old has 18 variants with different naming. New has Occurred suffix for globals,
-// local/global distinction, ImpactTarget/KillTarget/DeathTarget params.
-enum Trigger { PerfectBumped, EarlyBumped, ..., PerfectBumpOccurred, ..., TimeExpires(f32) }
+// local/global distinction, EntityKind params for entity-type filtering.
+enum Trigger { PerfectBumped, EarlyBumped, ..., Impacted(EntityKind), Killed(EntityKind), ..., PerfectBumpOccurred, ..., ImpactOccurred(EntityKind), DeathOccurred(EntityKind), ..., TimeExpires(f32) }
 enum Condition { NodeActive, ShieldActive, ComboActive(u32) }
+enum EntityKind { Cell, Bolt, Wall, Breaker, Any }
 enum EntityType { Bolt, Cell, Wall, Breaker }
 ```
 
@@ -82,11 +83,12 @@ Reference: [builder-design.md](builder-design.md) Raw Types section
 New file: `new_effect/triggers/context.rs`
 
 ```rust
-// New: typed per-concept structs wrapped in an enum
-struct BumpContext { bolt: Entity, breaker: Entity, source: SourceId, depth: u32 }
-struct ImpactContext { impactor: Entity, impactee: Entity, source: SourceId, depth: u32 }
-struct DeathContext { victim: Entity, killer: Option<Entity>, source: SourceId, depth: u32 }
-struct BoltLostContext { bolt: Entity, breaker: Entity, source: SourceId, depth: u32 }
+// New: typed per-concept structs wrapped in an enum.
+// Chip attribution comes from BoundEntry.source, not TriggerContext.
+struct BumpContext { bolt: Entity, breaker: Entity, depth: u32 }
+struct ImpactContext { impactor: Entity, impactee: Entity, depth: u32 }
+struct DeathContext { victim: Entity, killer: Option<Entity>, depth: u32 }
+struct BoltLostContext { bolt: Entity, breaker: Entity, depth: u32 }
 enum TriggerContext { Bump(BumpContext), Impact(ImpactContext), Death(DeathContext), BoltLost(BoltLostContext), None { depth: u32 } }
 ```
 
@@ -312,10 +314,12 @@ New unified damage/death systems. These run alongside the old systems during dev
 New file: `new_effect/damage/systems.rs`
 
 ```rust
-fn apply_damage<T: GameEntity>(mut messages: MessageReader<DamageDealt<T>>, mut query: Query<(&mut CellHealth, &mut KilledBy)>)
+fn apply_damage<T: GameEntity>(mut messages: MessageReader<DamageDealt<T>>, mut query: Query<(&mut Hp, &mut KilledBy)>)
 ```
 
 Sets KilledBy only on killing blow. One instance per victim type: `apply_damage::<Cell>`, `apply_damage::<Bolt>`, `apply_damage::<Wall>`.
+
+> Unified `Hp { current: f32, max: f32 }` component used by all damageable entity types (cells, breakers with health). Replaces domain-specific CellHealth.
 
 **Ordering**: apply_damage for cells must run AFTER `check_lock_release` (unlock system) to avoid eating damage before a cell unlocks in the same frame. Locked cells skip damage entirely.
 
@@ -328,7 +332,7 @@ N specialized systems — one per domain. Each queries its domain's health compo
 
 ```rust
 // cells/systems/detect_cell_deaths.rs
-fn detect_cell_deaths(query: Query<(Entity, &KilledBy, &CellHealth), (Changed<CellHealth>, With<Cell>)>)
+fn detect_cell_deaths(query: Query<(Entity, &KilledBy, &Hp), (Changed<Hp>, With<Cell>)>)
 // Classifies killer type from KilledBy.dealer entity's components
 // Sends KillYourself<Cell>
 ```

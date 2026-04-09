@@ -3,12 +3,14 @@
 ## Architecture: Single Path, Round-Trip
 
 ```
-     Load:  RON file → deserialize → RawEffectTree → builder methods → Result<ValidEffect, EffectError>
-     Code:  ──────────────────────────────────────→ builder methods → Result<ValidEffect, EffectError>
-     Save:  ValidEffect → .to_raw() → RawEffectTree → serialize → RON file
+     Load:  RON file → deserialize → RawDef → builder methods → Result<ValidDef, EffectError>
+     Code:  ──────────────────────────────→ builder methods → Result<ValidDef, EffectError>
+     Save:  ValidDef → .to_raw() → RawDef → serialize → RON file
 ```
 
 One builder for everything. RON deserializes into permissive `Raw` structs (derive both `Serialize` + `Deserialize`), then a loader walks the raw tree and calls the builder programmatically. The builder returns `Result` at each step. Content tooling calls the same builder directly with compile-time enforcement.
+
+Note: `ValidDef` was previously called `ValidEffect`, and `RawDef` was previously called `RawEffectTree`. Renamed for clarity — "Def" better describes the definition-level wrapper.
 
 ## Typestate Machine
 
@@ -25,6 +27,7 @@ Two entry points: `EffectDef` for definition-level entries (Route required), `Ef
 │ RouteContext (sets This for the subtree)              │
 │                                                       │
 │ .fire(effect)             → ValidDef                 │
+│ .sequence(trees)          → ValidDef                 │
 │ .when(trigger)            → TriggerChain<AnyFire>    │
 │ .once(trigger)            → TriggerChain<AnyFire>    │
 │ .during(condition)        → DuringContext             │
@@ -47,6 +50,7 @@ Two entry points: `EffectDef` for definition-level entries (Route required), `Ef
 │                                                       │
 │ .when(event)   → TriggerChain<FireConstraint> (nest) │
 │ .fire(effect)  → ValidTree/ValidDef (targets This)   │
+│ .sequence()    → ValidTree/ValidDef (Sequence node)  │
 │ .on(target)    → TargetContext<FireConstraint>        │
 │                  (only for non-This targets)          │
 └─────────────────────────────────────────────────────┘
@@ -95,6 +99,8 @@ Two entry points: `EffectDef` for definition-level entries (Route required), `Ef
 ┌─────────────────────────────────────────────────────┐
 │ SpawnedContext                                        │
 │ .fire(any_effect) → ValidTree/ValidDef (implicit tgt)│
+│ .stamp(tree)      → ValidTree/ValidDef               │
+│ .transfer(tree)   → ValidTree/ValidDef               │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -132,6 +138,7 @@ struct RouteContext { target: RouteTarget }
 
 impl RouteContext {
     fn fire(self, effect: impl Effect) -> ValidDef;                     // passive effect
+    fn sequence(self, trees: Vec<ValidTree>) -> ValidDef;               // multiple children
     fn when(self, trigger: impl Into<Trigger>) -> TriggerChain<AnyFire>;
     fn once(self, trigger: impl Into<Trigger>) -> TriggerChain<AnyFire>;
     fn during(self, condition: impl Into<Condition>) -> DuringContext;
@@ -157,6 +164,7 @@ struct TriggerChain<C> {
 impl<C> TriggerChain<C> {
     fn when(self, event: impl Into<Trigger>) -> TriggerChain<C>;       // nest triggers
     fn fire(self, effect: impl Effect) -> ValidDef;                     // fire on This (implicit)
+    fn sequence(self, trees: Vec<ValidTree>) -> ValidDef;               // Sequence node
     fn on(self, target: impl Into<ParticipantTarget>) -> TargetContext<C>; // non-This target only
 }
 
@@ -210,31 +218,31 @@ impl TargetContext<ReversibleOnly> {
 // ── SpawnedContext ──
 impl SpawnedContext {
     fn fire(self, effect: impl Effect) -> ValidDef;                     // implicit target
+    fn stamp(self, inner: ValidTree) -> ValidDef;                       // permanent → BoundEffects
+    fn transfer(self, inner: ValidTree) -> ValidDef;                    // one-shot → StagedEffects
 }
 ```
 
 ## Validated Type Tree (what the builder produces)
 
-The builder produces `ValidEffect` — a separate type tree from the raw RON types. Structural enforcement: `During`/`Until` can only contain reversible effects in direct `Fire` position. Participant targets are per-trigger enums.
+The builder produces `ValidDef` — a separate type tree from the raw RON types. Structural enforcement: `During`/`Until` can only contain reversible effects in direct `Fire` position. Participant targets are per-trigger enums.
 
 ```rust
 // ── Shared leaf enums (same for Raw and Valid) ──
 
 enum Trigger {
     PerfectBumped, EarlyBumped, LateBumped, Bumped,
-    Impacted(ImpactTarget), Died, Killed(KillTarget),
+    Impacted(EntityKind), Died, Killed(EntityKind),
     PerfectBumpOccurred, EarlyBumpOccurred, LateBumpOccurred, BumpOccurred,
-    BumpWhiffOccurred, NoBumpOccurred, ImpactOccurred(ImpactTarget),
-    DeathOccurred(DeathTarget), BoltLostOccurred,
+    BumpWhiffOccurred, NoBumpOccurred, ImpactOccurred(EntityKind),
+    DeathOccurred(EntityKind), BoltLostOccurred,
     NodeStartOccurred, NodeEndOccurred, NodeTimerThresholdOccurred(f32),
     TimeExpires(f32),
 }
 
 enum Condition { NodeActive, ShieldActive, ComboActive(u32) }
-enum EntityType { Bolt, Cell, Wall, Breaker }
-enum ImpactTarget { Cell, Bolt, Wall, Breaker }
-enum KillTarget { Cell, Bolt, Wall, Breaker, Any }
-enum DeathTarget { Cell, Bolt, Wall, Breaker, Any }
+enum EntityKind { Cell, Bolt, Wall, Breaker, Any }   // trigger parameter — what entity type
+enum EntityType { Bolt, Cell, Wall, Breaker }         // for Spawned — no Any variant
 
 // ── RouteTarget: definition-time entity routing (no This, no participants) ──
 
@@ -246,18 +254,20 @@ enum RouteTarget {
     ActiveBreakers, EveryBreaker,
 }
 
-// ── Shared participant enums ──
+// ── Shared participant enums (for On() participant redirect) ──
 // Grouped by concept. Triggers sharing an enum live in the same folder.
+// These are ROLE enums (who in the event), NOT entity-type enums.
+// Entity-type filtering on triggers uses EntityKind (above).
 
 enum BumpTarget { Bolt, Breaker }          // triggers/bump/
 // Used by: PerfectBumped, EarlyBumped, LateBumped, Bumped,
 //          PerfectBumpOccurred, BumpOccurred, BumpWhiffOccurred, NoBumpOccurred
 
 enum ImpactTarget { Impactor, Impactee }   // triggers/impact/
-// Used by: Impacted, ImpactOccurred
+// Used by: Impacted, ImpactOccurred — participant ROLE redirect
 
 enum DeathTarget { Victim, Killer }        // triggers/death/
-// Used by: Died, Killed, DeathOccurred
+// Used by: Died, Killed, DeathOccurred — participant ROLE redirect
 
 enum BoltLostTarget { Bolt, Breaker }      // triggers/bolt_lost/
 // Used by: BoltLostOccurred
@@ -306,13 +316,14 @@ enum ReversibleEffectType {
 
 // Definition-level: Route wraps every top-level entry
 struct ValidDef {
-    stamp_target: RouteTarget,
+    route_target: RouteTarget,
     tree: ValidTree,
 }
 
 // Inner tree (lives inside Route, and inside Stamp/Transfer payloads)
 enum ValidTree {
     Fire(EffectType),                               // fire on This (implicit)
+    Sequence(Vec<ValidTree>),                        // multiple children at same level
     When(Trigger, Box<ValidTree>),
     Once(Trigger, Box<ValidTree>),                  // same as When, self-removes after first match
     During(Condition, ValidScopedTree),
@@ -323,6 +334,7 @@ enum ValidTree {
 
 enum ValidScopedTree {
     Fire(ReversibleEffectType),                      // direct fire in scoped context — reversible only
+    Sequence(Vec<ReversibleEffectType>),             // multiple reversible effects
     When(Trigger, Box<ValidTree>),                   // nested When → relaxed (any effect OK)
     On(ParticipantTarget, ValidScopedTerminal),      // direct to non-This — reversible only
 }
@@ -373,6 +385,7 @@ enum RawRouteTarget {
 #[derive(Serialize, Deserialize)]
 enum RawTree {
     Fire(EffectType),                       // fire on This (implicit)
+    Sequence(Vec<RawTree>),                 // multiple children at same level
     When(Trigger, Box<RawTree>),
     Once(Trigger, Box<RawTree>),
     During(Condition, Box<RawTree>),
@@ -404,9 +417,9 @@ RON uses fully qualified participant names: `On(BumpTarget::Bolt, ...)`, `On(Imp
 
 ```rust
 fn load_def(raw: &RawDef) -> Result<ValidDef, EffectError> {
-    let target = validate_stamp_target(&raw.stamp)?;
+    let target = validate_route_target(&raw.route)?;
     let tree = load_tree(&raw.tree, None)?; // no trigger context at root
-    Ok(ValidDef { stamp_target: target, tree })
+    Ok(ValidDef { route_target: target, tree })
 }
 
 fn load_tree(raw: &RawTree, trigger_ctx: Option<&Trigger>) -> Result<ValidTree, EffectError> {
@@ -496,7 +509,7 @@ fn load_terminal(raw: &RawTerminal) -> Result<ValidTerminal, EffectError> {
 impl ValidDef {
     fn to_raw(&self) -> RawDef {
         RawDef {
-            stamp: self.stamp_target.to_raw(),
+            route: self.route_target.to_raw(),
             tree: self.tree.to_raw(),
         }
     }
@@ -506,6 +519,7 @@ impl ValidTree {
     fn to_raw(&self) -> RawTree {
         match self {
             ValidTree::Fire(e) => RawTree::Fire(e.clone()),
+            ValidTree::Sequence(children) => RawTree::Sequence(children.iter().map(|c| c.to_raw()).collect()),
             ValidTree::When(t, inner) => RawTree::When(*t, Box::new(inner.to_raw())),
             ValidTree::Once(t, inner) => RawTree::Once(*t, Box::new(inner.to_raw())),
             ValidTree::During(c, inner) => RawTree::During(*c, Box::new(inner.to_raw_tree())),

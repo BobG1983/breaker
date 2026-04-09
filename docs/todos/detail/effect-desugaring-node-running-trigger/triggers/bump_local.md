@@ -28,7 +28,6 @@ fn bridge_<grade>_bumped(bump_events: MessageReader<BumpGraded>, ...) {
         let context = TriggerContext::Bump(BumpContext {
             bolt: event.bolt,
             breaker: event.breaker,
-            source: event.source.clone(),
             depth: 0,
         });
         
@@ -55,8 +54,8 @@ fn bridge_<grade>_bumped(bump_events: MessageReader<BumpGraded>, ...) {
 BumpContext {
     bolt: Entity,     // the bolt entity
     breaker: Entity,  // the breaker entity
-    source: SourceId, // chip attribution
     depth: u32,       // dispatch recursion depth
+    // Chip attribution comes from BoundEntry.source, not TriggerContext
 }
 ```
 

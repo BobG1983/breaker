@@ -2,16 +2,16 @@
 
 ## Triggers
 - `Died` — this entity died (LOCAL, fires on victim only)
-- `Killed(KillTarget)` — this entity killed something (LOCAL, fires on killer only) **NEW**
-- `DeathOccurred(DeathTarget)` — something died somewhere (GLOBAL, fires on all entities)
+- `Killed(EntityKind)` — this entity killed something (LOCAL, fires on killer only) **NEW**
+- `DeathOccurred(EntityKind)` — something died somewhere (GLOBAL, fires on all entities)
 
-## KillTarget / DeathTarget
+## EntityKind (trigger parameter)
 ```rust
-enum KillTarget { Cell, Bolt, Wall, Breaker, Any }
-enum DeathTarget { Cell, Bolt, Wall, Breaker, Any }
+enum EntityKind { Cell, Bolt, Wall, Breaker, Any }
 ```
+Replaces the old separate `KillTarget` and entity-type `DeathTarget` enums.
 
-## Participant Enum
+## Participant Enum (role redirect for On())
 ```rust
 enum DeathTarget { Victim, Killer }
 ```
@@ -28,7 +28,6 @@ fn bridge_destroyed<T: GameEntity>(destroyed: MessageReader<Destroyed<T: GameEnt
         let context = TriggerContext::Death(DeathContext {
             victim: msg.victim,
             killer: msg.killer,  // Option<Entity>
-            source: ...,
             depth: 0,
         });
         
@@ -39,15 +38,15 @@ fn bridge_destroyed<T: GameEntity>(destroyed: MessageReader<Destroyed<T: GameEnt
         if let Some(killer) = msg.killer {
             // Verify killer still alive before firing
             if world.get_entity(killer).is_ok() {
-                let kill_target = T::kill_target();  // Cell, Bolt, Wall, Breaker
-                walk_effects(&Trigger::Killed(kill_target), &context, killer, ...);
+                let entity_kind = T::entity_kind();  // Cell, Bolt, Wall, Breaker
+                walk_effects(&Trigger::Killed(entity_kind), &context, killer, ...);
             }
         }
         
         // DeathOccurred(target) — fires on ALL entities
-        let death_target = T::death_target();
+        let entity_kind = T::entity_kind();
         for (entity, mut bound, mut staged) in &mut all_query {
-            walk_effects(&Trigger::DeathOccurred(death_target), &context, entity, ...);
+            walk_effects(&Trigger::DeathOccurred(entity_kind), &context, entity, ...);
         }
     }
 }
@@ -65,7 +64,7 @@ DamageDealt<T> → apply_damage (sets KilledBy on killing blow)
 ```
 
 ## Notes
-- `Killed(KillTarget)` is NEW — the current system has no "I killed X" trigger
+- `Killed(EntityKind)` is NEW — the current system has no "I killed X" trigger
 - `Killed` does NOT fire when killer is `None` (environmental death — timer, lifespan expiry)
 - `Died` always fires on the victim regardless of killer presence
 - `DeathOccurred(Any)` matches any entity type death

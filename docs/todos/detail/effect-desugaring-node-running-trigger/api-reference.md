@@ -51,9 +51,9 @@ Both require `Reversible` effects for direct `Fire()`. Both relax to `AnyFire` w
 | `EarlyBumped` | Both bolt and breaker | `BumpTarget` | |
 | `LateBumped` | Both bolt and breaker | `BumpTarget` | |
 | `Bumped` | Both bolt and breaker | `BumpTarget` | Any successful bump grade |
-| `Impacted(ImpactTarget)` | Both entities in collision | `ImpactTarget` | |
+| `Impacted(EntityKind)` | Both entities in collision | `ImpactTarget` | |
 | `Died` | Victim only | `DeathTarget` | "I died" |
-| `Killed(KillTarget)` | Killer only | `DeathTarget` | **NEW** — "I killed X" |
+| `Killed(EntityKind)` | Killer only | `DeathTarget` | **NEW** — "I killed X" |
 
 ## Global Triggers (fire on ALL entities with BoundEffects)
 
@@ -65,8 +65,8 @@ Both require `Reversible` effects for direct `Fire()`. Both relax to `AnyFire` w
 | `BumpOccurred` | `BumpTarget` | `Bump` |
 | `BumpWhiffOccurred` | `BumpTarget` | `BumpWhiff` |
 | `NoBumpOccurred` | `BumpTarget` | `NoBump` |
-| `ImpactOccurred(ImpactTarget)` | `ImpactTarget` | `Impact(X)` |
-| `DeathOccurred(DeathTarget)` | `DeathTarget` | `Death` + `CellDestroyed` |
+| `ImpactOccurred(EntityKind)` | `ImpactTarget` | `Impact(X)` |
+| `DeathOccurred(EntityKind)` | `DeathTarget` | `Death` + `CellDestroyed` |
 | `BoltLostOccurred` | `BoltLostTarget` | `BoltLost` |
 | `NodeStartOccurred` | (none) | `NodeStart` |
 | `NodeEndOccurred` | (none) | `NodeEnd` |

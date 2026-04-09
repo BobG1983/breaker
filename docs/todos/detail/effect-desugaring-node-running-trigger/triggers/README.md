@@ -9,11 +9,11 @@ One file per trigger (or trigger group). Each file defines the bridge system tha
 - [bump_global.md](bump_global.md) — PerfectBumpOccurred, EarlyBumpOccurred, LateBumpOccurred, BumpOccurred, BumpWhiffOccurred, NoBumpOccurred (global)
 
 ### Impact triggers
-- [impact_local.md](impact_local.md) — Impacted(ImpactTarget) (local, both participants)
-- [impact_global.md](impact_global.md) — ImpactOccurred(ImpactTarget) (global)
+- [impact_local.md](impact_local.md) — Impacted(EntityKind) (local, both participants)
+- [impact_global.md](impact_global.md) — ImpactOccurred(EntityKind) (global)
 
 ### Death triggers
-- [death.md](death.md) — Died (local, victim), Killed(KillTarget) (local, killer), DeathOccurred(DeathTarget) (global)
+- [death.md](death.md) — Died (local, victim), Killed(EntityKind) (local, killer), DeathOccurred(EntityKind) (global)
 
 ### Other triggers
 - [bolt_lost.md](bolt_lost.md) — BoltLostOccurred (global)

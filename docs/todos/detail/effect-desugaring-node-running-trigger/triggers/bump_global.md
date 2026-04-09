@@ -29,7 +29,6 @@ fn bridge_<grade>_bump_occurred(bump_events: MessageReader<BumpGraded>, ...) {
         let context = TriggerContext::Bump(BumpContext {
             bolt: event.bolt,
             breaker: event.breaker,
-            source: event.source.clone(),
             depth: 0,
         });
         

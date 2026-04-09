@@ -78,8 +78,8 @@ All handlers follow: receive KillYourself → validate → send Destroyed → se
 Generic on T: GameEntity. Reads `Destroyed<T>` and fires death triggers:
 
 1. **Died** — fires on VICTIM entity only
-2. **Killed(KillTarget)** — fires on KILLER entity only (skip if killer is None or despawned)
-3. **DeathOccurred(DeathTarget)** — fires on ALL entities with BoundEffects
+2. **Killed(EntityKind)** — fires on KILLER entity only (skip if killer is None or despawned)
+3. **DeathOccurred(EntityKind)** — fires on ALL entities with BoundEffects
 
 ## Kill Attribution
 

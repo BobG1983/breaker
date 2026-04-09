@@ -45,9 +45,9 @@ Domain kill handler receives KillYourself<T>
   → does NOT despawn yet
 
 bridge_destroyed<T> receives Destroyed<T>
-  → fires Killed(KillTarget) on KILLER entity only
+  → fires Killed(EntityKind) on KILLER entity only
   → fires Died on VICTIM entity only
-  → fires DeathOccurred(DeathTarget) GLOBALLY on all entities with BoundEffects
+  → fires DeathOccurred(EntityKind) GLOBALLY on all entities with BoundEffects
   → entity survives through trigger evaluation + death animation
   → despawn after via DespawnEntity message (processed in PostFixedUpdate)
 ```
@@ -56,9 +56,9 @@ bridge_destroyed<T> receives Destroyed<T>
 
 | Trigger | Fires on | Participants |
 |---|---|---|
-| `Killed(KillTarget)` | Killer only | `::Killer`, `::Victim` |
+| `Killed(EntityKind)` | Killer only | `::Killer`, `::Victim` |
 | `Died` | Victim only | `::Victim`, `::Killer` |
-| `DeathOccurred(DeathTarget)` | All entities globally | `::Entity`, `::Killer` |
+| `DeathOccurred(EntityKind)` | All entities globally | `::Entity`, `::Killer` |
 
 ## DeathAttribution
 
@@ -66,10 +66,10 @@ Death attribution works via runtime killer classification. When `detect_*_deaths
 
 ```rust
 /// Classify the killer entity at runtime by inspecting its components.
-fn classify_killer(entity: Entity, world: &World) -> Option<KillTarget> {
-    if world.get::<Bolt>(entity).is_some() { return Some(KillTarget::Bolt); }
-    if world.get::<Breaker>(entity).is_some() { return Some(KillTarget::Breaker); }
-    if world.get::<Cell>(entity).is_some() { return Some(KillTarget::Cell); }
+fn classify_killer(entity: Entity, world: &World) -> Option<EntityKind> {
+    if world.get::<Bolt>(entity).is_some() { return Some(EntityKind::Bolt); }
+    if world.get::<Breaker>(entity).is_some() { return Some(EntityKind::Breaker); }
+    if world.get::<Cell>(entity).is_some() { return Some(EntityKind::Cell); }
     None // environmental death
 }
 ```
@@ -107,6 +107,8 @@ Usage: `DamageDealt<Cell>` replaces the old `DamageCell`. `DamageDealt<Bolt>`, `
 ### apply_damage system
 
 Processes all `DamageDealt<T>` messages, decrements HP, and sets KilledBy **only on the killing blow** — the hit that crosses HP from positive to zero.
+
+> Unified `Hp { current: f32, max: f32 }` component used by all damageable entity types (cells, breakers with health). Replaces domain-specific CellHealth.
 
 **Locked cells**: `apply_damage::<Cell>` skips entities with the `Locked` component — locked cells cannot take damage. This system must be ordered AFTER `check_lock_release` so that cells unlocked this frame can still receive damage.
 
@@ -228,7 +230,7 @@ fn process_despawn_requests(
 ## TriggerContext Integration
 
 `TriggerContext` fields map to named trigger participants. Bridges populate fields from `Destroyed<T>` messages:
-- `Killed(KillTarget)` fires on killer → `context` has DeathContext { victim, killer }
+- `Killed(EntityKind)` fires on killer → `context` has DeathContext { victim, killer }
 - `Died` fires on victim → same context, different perspective
 - `DeathOccurred` fires globally → same context on all entities
 - Killer is `Option<Entity>` — if None, `Killed` is not fired (environmental death)
@@ -242,7 +244,7 @@ fn process_despawn_requests(
 | `CellDestroyedAt` | `Destroyed<Cell>` |
 | `RequestBoltDestroyed` | `KillYourself<Bolt>` |
 | `Trigger::CellDestroyed` | `DeathOccurred(Cell)` |
-| `Trigger::Death` | `DeathOccurred(DeathTarget)` |
+| `Trigger::Death` | `DeathOccurred(EntityKind)` |
 | `bridge_cell_destroyed` | `bridge_destroyed::<Cell>` |
 | `bridge_death` | N × `bridge_destroyed::<T>` |
 | `bridge_died` | collapsed into `bridge_destroyed` |

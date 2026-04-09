@@ -59,7 +59,7 @@ In `breaker-game/src/lib.rs` (or `game.rs`):
 
 **`cleanup_cell`** (`cells/systems/cleanup_cell.rs`):
 - Currently reads `RequestCellDestroyed`, despawns entity, sends `CellDestroyedAt`
-- **Replace with:** reads `Destroyed<Cell>` from the unified death pipeline. The domain handler for cells (registered in `new_effect/damage/`) processes `KillYourself<Cell>`, checks shields/invuln/Locked, and sends `Destroyed<Cell>`. `cleanup_cell` reads `Destroyed<Cell>`, does domain-specific cleanup (if any), and marks entity with `DespawnEntity`.
+- **Replace with:** reads `Destroyed<Cell>` from the unified death pipeline. The domain handler for cells (registered in `new_effect/damage/`) processes `KillYourself<Cell>`, checks shields/invuln/Locked, and sends `Destroyed<Cell>`. `cleanup_cell` reads `Destroyed<Cell>`, does domain-specific cleanup (if any), and sends `DespawnEntity` message.
 - **Remove** `CellDestroyedAt` emission — replaced by `Destroyed<Cell>`.
 
 **`tick_cell_regen`** (`cells/systems/tick_cell_regen.rs`):
@@ -95,7 +95,7 @@ In `breaker-game/src/lib.rs` (or `game.rs`):
 
 **`cleanup_destroyed_bolts`** (`bolt/systems/cleanup_destroyed_bolts.rs`):
 - Currently reads `RequestBoltDestroyed`, despawns entity
-- **Replace with:** reads `Destroyed<Bolt>`, marks with `DespawnEntity`
+- **Replace with:** reads `Destroyed<Bolt>`, sends `DespawnEntity` message
 
 **Plugin** (`bolt/plugin.rs`):
 - Remove `RequestBoltDestroyed` message registration
@@ -134,7 +134,7 @@ These are inside `src/effect/triggers/` and will be **deleted with `src/effect/`
 
 | Old bridge | Old trigger | New bridge | New trigger(s) |
 |---|---|---|---|
-| `bridge_died` | `Trigger::Died` (targeted, on dying entity) | `bridge_destroyed` | `Died` (on victim) + `Killed(KillTarget)` (on killer) |
+| `bridge_died` | `Trigger::Died` (targeted, on dying entity) | `bridge_destroyed` | `Died` (on victim) + `Killed(EntityKind)` (on killer) |
 | `bridge_death` | `Trigger::Death` (global) | `bridge_destroyed` | `DeathOccurred(DeathTarget)` (global) |
 | `bridge_cell_destroyed` | `Trigger::CellDestroyed` (global, post-despawn) | **Removed** | Absorbed into `bridge_destroyed` — `DeathOccurred(Cell)` fires while entity is still alive (DespawnEntity) |
 
@@ -142,25 +142,25 @@ These are inside `src/effect/triggers/` and will be **deleted with `src/effect/`
 
 ---
 
-## Step 6: `DespawnEntity` system
+## Step 6: `DespawnEntity` message system
 
-New unified despawn system. Entities marked with `DespawnEntity` are despawned at the end of the frame (or in a dedicated cleanup system after all triggers have been evaluated).
+New unified despawn system using the message pattern. Any system that needs to despawn an entity writes a `DespawnEntity` message instead of calling `.despawn()` directly. A single system processes all pending despawn requests.
 
 ```rust
-#[derive(Component)]
-struct DespawnEntity;
+// shared/messages.rs
+struct DespawnEntity { pub entity: Entity }
 
-fn despawn_pending(
-    query: Query<Entity, With<DespawnEntity>>,
+fn process_despawn_requests(
+    mut reader: MessageReader<DespawnEntity>,
     mut commands: Commands,
 ) {
-    for entity in &query {
-        commands.entity(entity).despawn();
+    for msg in reader.read() {
+        commands.entity(msg.entity).try_despawn();
     }
 }
 ```
 
-Runs AFTER all trigger evaluation, AFTER all bridge systems, AFTER domain-specific cleanup. This replaces:
+Runs in **PostFixedUpdate**, AFTER all trigger evaluation, AFTER all bridge systems, AFTER domain-specific cleanup. Uses `try_despawn` to handle already-cleaned-up entities gracefully (e.g., `CleanupOnExit` races). This replaces:
 - `cleanup_cell` despawn call
 - `cleanup_destroyed_bolts` despawn call
 - Any other gameplay entity despawn triggered by death
@@ -188,12 +188,12 @@ The new ordering within FixedUpdate:
      → reads KillYourself<T>
      → checks shields/invuln/Locked
      → sends Destroyed<T>
-     → inserts DespawnEntity
+     → sends DespawnEntity message
 
 5. bridge_destroyed (new_effect/dispatch/)
      → reads Destroyed<T>
      → fires Died on victim, Killed on killer (if alive), DeathOccurred globally
-     → entity still alive (DespawnEntity, not yet despawned)
+     → entity still alive (DespawnEntity message not yet processed)
 
 6. Effect evaluation (walk_effects)
      → Died/Killed/DeathOccurred triggers fire here
@@ -204,8 +204,8 @@ The new ordering within FixedUpdate:
      → track_cells_destroyed reads Destroyed<Cell>
      → check_lock_release reads Destroyed<Cell>
 
-8. despawn_pending
-     → despawns all entities with DespawnEntity
+8. process_despawn_requests
+     → process_despawn_requests reads all DespawnEntity messages and despawns entities
 ```
 
 ---
@@ -251,8 +251,8 @@ After the swap:
 | Old system | Domain | Replaced by | Domain |
 |---|---|---|---|
 | `handle_cell_hit` | cells | `apply_damage` | new_effect/damage |
-| `cleanup_cell` (despawn part) | cells | `despawn_pending` | new_effect/damage |
-| `cleanup_destroyed_bolts` (despawn part) | bolt | `despawn_pending` | new_effect/damage |
+| `cleanup_cell` (despawn part) | cells | `process_despawn_requests` | new_effect/damage |
+| `cleanup_destroyed_bolts` (despawn part) | bolt | `process_despawn_requests` | new_effect/damage |
 | `bridge_died` | effect/triggers | `bridge_destroyed` | new_effect/dispatch |
 | `bridge_death` | effect/triggers | `bridge_destroyed` | new_effect/dispatch |
 | `bridge_cell_destroyed` | effect/triggers | **removed** (absorbed into `bridge_destroyed`) | — |

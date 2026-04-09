@@ -56,7 +56,7 @@ Non-reversible effects (Shockwave, Explode, SpawnBolts, LoseLife, Die, etc.) can
 ## Trigger
 
 ```rust
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize)]
 pub enum Trigger {
     // Local bump triggers (past-tense — "you were bumped")
     PerfectBumped,
@@ -65,11 +65,11 @@ pub enum Trigger {
     Bumped,
 
     // Local impact triggers
-    Impacted(ImpactTarget),     // "you were in an impact with X" (both participants)
+    Impacted(EntityKind),       // "you were in an impact with X" (both participants)
 
     // Local death triggers
     Died,                       // "I died"
-    Killed(KillTarget),         // "I killed X" (killer perspective)
+    Killed(EntityKind),         // "I killed X" (killer perspective)
 
     // Global bump triggers (Occurred suffix)
     PerfectBumpOccurred,
@@ -80,8 +80,8 @@ pub enum Trigger {
     NoBumpOccurred,
 
     // Global impact / death / loss triggers
-    ImpactOccurred(ImpactTarget),
-    DeathOccurred(DeathTarget),
+    ImpactOccurred(EntityKind),
+    DeathOccurred(EntityKind),
     BoltLostOccurred,
 
     // Node lifecycle (global)
@@ -96,33 +96,27 @@ pub enum Trigger {
 
 **Local vs global**: Local triggers (past-tense, no suffix) fire on the entities involved in the event. Global triggers (`Occurred` suffix) fire on all entities that have matching BoundEffects/StagedEffects entries.
 
-## ImpactTarget (trigger parameter)
+## EntityKind (trigger parameter)
 
 ```rust
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
-pub enum ImpactTarget {
+pub enum EntityKind {
     Cell,
     Bolt,
     Wall,
     Breaker,
+    Any,
 }
 ```
 
-Specifies **what type of entity** was involved in the impact. Used by `Impacted(ImpactTarget)` and `ImpactOccurred(ImpactTarget)` trigger variants.
+Specifies **what type of entity** is involved. Used as the trigger parameter for:
+- `Impacted(EntityKind)` and `ImpactOccurred(EntityKind)` — what entity type was in the impact
+- `Killed(EntityKind)` — "I killed X" (killer perspective)
+- `DeathOccurred(EntityKind)` — "something of type X died"
 
-**Note — naming collision**: This `ImpactTarget` (entity type filter on trigger variants) is distinct from the `ImpactTarget` participant enum used in `On(ParticipantTarget::Impact(ImpactTarget::Impactee), ...)` to redirect to a trigger participant. See [Participant Enums](#participant-enums) below.
+Includes `Any` to match all entity types. Replaces the old separate `KillTarget` and entity-type `ImpactTarget`/`DeathTarget` enums.
 
-## KillTarget / DeathTarget
-
-```rust
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
-pub enum KillTarget { Cell, Bolt, Wall, Breaker, Any }
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
-pub enum DeathTarget { Cell, Bolt, Wall, Breaker, Any }
-```
-
-`KillTarget` — used by local `Killed(KillTarget)` ("I killed X"). `DeathTarget` — used by global `DeathOccurred(DeathTarget)` ("something of type X died"). Both include `Any` to match all entity types.
+**Not to be confused with** the participant role enums (`ImpactTarget { Impactor, Impactee }`, `DeathTarget { Victim, Killer }`) used in `On(...)` for participant redirect. See [Participant Enums](#participant-enums) below.
 
 ## Condition
 
@@ -148,17 +142,17 @@ Used by `Spawned(EntityType, ...)` — fires when an entity of this type is adde
 
 ## Participant Enums
 
-Per-trigger enums that identify participants in an event. Used with `On(ParticipantTarget, ...)` to redirect fire/stamp/transfer to a specific participant instead of `This`.
+Per-trigger role enums that identify participants in an event. Used with `On(ParticipantTarget, ...)` to redirect fire/stamp/transfer to a specific participant instead of `This`. These are **role** enums (who in the event), not entity-type enums. Entity-type filtering uses `EntityKind` (above).
 
 ```rust
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BumpTarget { Bolt, Breaker }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ImpactTarget { Impactor, Impactee }    // NOTE: same name as the trigger param enum
+pub enum ImpactTarget { Impactor, Impactee }    // participant ROLE — not entity type
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum DeathTarget { Victim, Killer }
+pub enum DeathTarget { Victim, Killer }         // participant ROLE — not entity type
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BoltLostTarget { Bolt, Breaker }
@@ -166,9 +160,9 @@ pub enum BoltLostTarget { Bolt, Breaker }
 
 **`BumpTarget`** — participants in bump triggers (`PerfectBumped`, `Bumped`, etc. and their `Occurred` variants).
 
-**`ImpactTarget` (participant)** — `Impactor` / `Impactee` roles in impact triggers. Distinct from the trigger parameter `ImpactTarget { Cell, Bolt, Wall, Breaker }` above.
+**`ImpactTarget` (participant role)** — `Impactor` / `Impactee` roles in impact triggers. Entity-type filtering on triggers uses `EntityKind`, not this enum.
 
-**`DeathTarget` (participant)** — `Victim` / `Killer` roles in death triggers. Distinct from the trigger parameter `DeathTarget { Cell, Bolt, Wall, Breaker, Any }` above.
+**`DeathTarget` (participant role)** — `Victim` / `Killer` roles in death triggers. Entity-type filtering on triggers uses `EntityKind`, not this enum.
 
 **`BoltLostTarget`** — participants in bolt-lost triggers.
 
@@ -210,7 +204,7 @@ Definition-time entity routing. Required at the root of every `effects: []` entr
 ```rust
 #[derive(Clone, Debug, PartialEq)]
 pub struct ValidDef {
-    pub stamp_target: RouteTarget,
+    pub route_target: RouteTarget,
     pub tree: ValidTree,
 }
 ```
@@ -281,10 +275,11 @@ pub enum TriggerContext {
     None,
 }
 
-pub struct BumpContext { pub bolt: Entity, pub breaker: Entity, pub source: Entity }
-pub struct ImpactContext { pub impactor: Entity, pub impactee: Entity, pub source: Entity }
-pub struct DeathContext { pub victim: Entity, pub killer: Option<Entity>, pub source: Entity }
-pub struct BoltLostContext { pub bolt: Entity, pub breaker: Entity, pub source: Entity }
+// Chip attribution comes from BoundEntry.source, not TriggerContext.
+pub struct BumpContext { pub bolt: Entity, pub breaker: Entity, pub depth: u32 }
+pub struct ImpactContext { pub impactor: Entity, pub impactee: Entity, pub depth: u32 }
+pub struct DeathContext { pub victim: Entity, pub killer: Option<Entity>, pub depth: u32 }
+pub struct BoltLostContext { pub bolt: Entity, pub breaker: Entity, pub depth: u32 }
 ```
 
 `ParticipantTarget` resolves against `TriggerContext` at dispatch time: `BumpTarget::Bolt` extracts `BumpContext.bolt`, `DeathTarget::Killer` extracts `DeathContext.killer`, etc.

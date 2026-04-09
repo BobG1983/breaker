@@ -89,7 +89,7 @@ src/new_effect/
 - Typestate effect builder with `Reversible` marker trait
 - `Raw -> Builder -> Valid` + `Valid -> Raw -> RON` round-trip
 - 4 bridge systems for `Added<Bolt/Cell/Wall/Breaker>`
-- SpawnedRegistry resource for EveryBolt desugaring
+- OnSpawnEffectRegistry resource for EveryBolt desugaring
 - Source tracking (SourceId) for chip unequip cleanup
 - Runtime recursion depth limit (MAX_DISPATCH_DEPTH = 10)
 - Centralized `DespawnEntity` message + `process_despawn_requests` system (replaces PendingDespawn component + scattered `.despawn()` calls)

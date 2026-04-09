@@ -6,7 +6,7 @@ All 22 decisions resolved during interrogation. Referenced from the main overvie
 **REVISED — flat Vec storage.** ~~HashMap-indexed storage~~ → `Vec<BoundEntry>` with linear scan on trigger match. BoundEffects uses two Vecs (one for trigger-keyed entries, one for condition-keyed entries) plus a source reverse index. StagedEffects uses one Vec. Counts are small (no chip has hundreds of triggers), so linear scan is fast enough and avoids the `Hash + Eq` requirement that `HashMap<Trigger, ...>` would impose — `Trigger` contains `f32` variants (`TimeExpires`, `NodeTimerThresholdOccurred`) which don't implement Hash/Eq. For local triggers, fire on both participant entities if they have matching BoundEffects/StagedEffects entries.
 
 ## 2. TriggerContext
-**Typed per-trigger structs.** Each trigger concept has its own context struct with named fields. `BumpContext { bolt, breaker, source }`, `ImpactContext { impactor, impactee, source }`, `DeathContext { victim, killer, source }`, `BoltLostContext { bolt, breaker, source }`. Wrapped in `enum TriggerContext { Bump(BumpContext), Impact(ImpactContext), Death(DeathContext), BoltLost(BoltLostContext), None }`.
+**Typed per-trigger structs.** Each trigger concept has its own context struct with named fields. `BumpContext { bolt, breaker, depth }`, `ImpactContext { impactor, impactee, depth }`, `DeathContext { victim, killer, depth }`, `BoltLostContext { bolt, breaker, depth }`. Wrapped in `enum TriggerContext { Bump(BumpContext), Impact(ImpactContext), Death(DeathContext), BoltLost(BoltLostContext), None }`. Chip attribution comes from `BoundEntry.source`, not TriggerContext.
 
 ## 3. During/Until reversal
 **During is first-class, not desugared.** During stays as `During(condition, inner)` in BoundEffects. A condition-monitoring system watches for NodeState changes and fires/reverses During entries directly. No synthetic triggers (NodeActiveStarted/NodeActiveEnded don't exist). Condition cycling is handled by the monitor system.
@@ -19,10 +19,10 @@ All 22 decisions resolved during interrogation. Referenced from the main overvie
 **Remove inline during dispatch.** Dispatch uses `retain()` on the Vec — Once entries return false (removed), When entries return true (kept). Practically may need collect-then-remove due to ownership/borrow constraints, but same-frame semantics.
 
 ## 5. EveryBolt desugaring
-**Desugar at load time.** `Route(EveryBolt, tree)` expands to: (1) stamp tree onto all existing bolts via ActiveBolts query, (2) register tree in `SpawnedRegistry` resource for future bolts. SpawnedRegistry is a global `Resource<SpawnedRegistry>` holding `HashMap<EntityType, Vec<(SourceId, ValidTree)>>`.
+**Desugar at load time.** `Route(EveryBolt, tree)` expands to: (1) stamp tree onto all existing bolts via ActiveBolts query, (2) register tree in `OnSpawnEffectRegistry` resource for future bolts. OnSpawnEffectRegistry is a global `Resource<OnSpawnEffectRegistry>` holding `HashMap<EntityType, Vec<(SourceId, ValidTree)>>`.
 
 ## 6. Source tracking
-**Chip definition name (String).** `type SourceId = String`. BoundEffects entries are `(SourceId, ValidTree)` pairs. Reverse index `HashMap<SourceId, Vec<Trigger>>` enables fast removal on chip unequip. SpawnedRegistry also tracks SourceId for cleanup.
+**Chip definition name (String).** `type SourceId = String`. BoundEffects entries are `(SourceId, ValidTree)` pairs. Reverse index `HashMap<SourceId, Vec<Trigger>>` enables fast removal on chip unequip. OnSpawnEffectRegistry also tracks SourceId for cleanup.
 
 ## 7. Kill attribution — propagated through effect chains
 **KilledBy propagates from TriggerContext.** `KilledBy { dealer: Option<Entity> }`. The dealer is the originating bolt entity, propagated through effect chains:
@@ -41,7 +41,7 @@ All 22 decisions resolved during interrogation. Referenced from the main overvie
 - **Dealer despawns mid-chain**: Before firing Killed on the dealer, verify entity still exists. If despawned, skip Killed silently.
 
 ## 8. Bridge systems for Spawned
-**4 standard systems in PostFixedUpdate** (not Bevy Observers). One per entity type: `bridge_bolt_added`, `bridge_cell_added`, `bridge_wall_added`, `bridge_breaker_added`. Each queries `Added<Bolt/Cell/Wall/Breaker>`, reads SpawnedRegistry for matching entries, stamps/transfers trees onto the new entity's BoundEffects/StagedEffects.
+**4 standard systems in PostFixedUpdate** (not Bevy Observers). One per entity type: `bridge_bolt_added`, `bridge_cell_added`, `bridge_wall_added`, `bridge_breaker_added`. Each queries `Added<Bolt/Cell/Wall/Breaker>`, reads OnSpawnEffectRegistry for matching entries, stamps/transfers trees onto the new entity's BoundEffects/StagedEffects.
 
 ## 9. Build phasing
 **Bottom-up: types -> builder -> loader -> dispatch -> damage -> swap.** See [implementation-waves.md](implementation-waves.md) for detailed wave breakdown.
@@ -56,7 +56,7 @@ All 22 decisions resolved during interrogation. Referenced from the main overvie
 **Detach on transfer.** Once transferred/stamped onto another entity, the tree has no link back to the source. Unequipping the chip removes the bolt's BoundEffects entries (stops future transfers) but doesn't touch entities that already received trees.
 
 ## 13. Chip loading -> Route processing
-**Equip command processes Routes.** Same timing as today. The chip equip command reads each ValidDef, matches on RouteTarget, and stamps the tree into the target entity's BoundEffects with the chip's SourceId. EveryBolt desugars here: stamp existing + register in SpawnedRegistry.
+**Equip command processes Routes.** Same timing as today. The chip equip command reads each ValidDef, matches on RouteTarget, and stamps the tree into the target entity's BoundEffects with the chip's SourceId. EveryBolt desugars here: stamp existing + register in OnSpawnEffectRegistry.
 
 ## 14. During is first-class, not desugared
 During stays as a first-class node in BoundEffects. A condition-monitoring system watches for NodeState changes and fires/reverses During entries directly. No synthetic triggers.

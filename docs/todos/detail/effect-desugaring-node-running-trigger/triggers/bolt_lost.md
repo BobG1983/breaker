@@ -21,7 +21,6 @@ fn bridge_bolt_lost_occurred(events: MessageReader<BoltLost>, ...) {
         let context = TriggerContext::BoltLost(BoltLostContext {
             bolt: msg.bolt,
             breaker: msg.breaker,
-            source: ...,
             depth: 0,
         });
         

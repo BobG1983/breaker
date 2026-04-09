@@ -399,7 +399,6 @@ fn bridge_perfect_bumped(
         let context = TriggerContext::Bump(BumpContext {
             bolt: event.bolt,
             breaker: event.breaker,
-            source: event.source.clone(),
             depth: 0,
         });
 
@@ -425,7 +424,6 @@ fn bridge_perfect_bump_occurred(
         let context = TriggerContext::Bump(BumpContext {
             bolt: event.bolt,
             breaker: event.breaker,
-            source: event.source.clone(),
             depth: 0,
         });
 

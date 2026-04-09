@@ -1,7 +1,7 @@
 # Global Impact Trigger
 
 ## Trigger
-- `ImpactOccurred(ImpactTarget)` — a collision involving the specified entity type happened somewhere
+- `ImpactOccurred(EntityKind)` — a collision involving the specified entity type happened somewhere
 
 ## Locality: GLOBAL
 Fires on **ALL entities** with BoundEffects/StagedEffects.
@@ -23,13 +23,12 @@ fn bridge_bolt_impact_cell_occurred(impacts: MessageReader<BoltImpactCell>, ...)
         let context = TriggerContext::Impact(ImpactContext {
             impactor: msg.bolt,
             impactee: msg.cell,
-            source: msg.source.clone(),
             depth: 0,
         });
         
         // Walk ALL entities with effects
         for (entity, mut bound, mut staged) in &mut all_query {
-            walk_effects(&Trigger::ImpactOccurred(ImpactTarget::Cell), &context, entity, ...);
+            walk_effects(&Trigger::ImpactOccurred(EntityKind::Cell), &context, entity, ...);
         }
     }
 }
