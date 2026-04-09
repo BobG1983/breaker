@@ -3,8 +3,8 @@
 ## Backlog
 
 1. **[ready]** Test infrastructure consolidation — eliminate 73 duplicate `tick()`, 47 `spawn_in_world()`, 154 `test_app()` copies; create domain `test_utils.rs` modules — [detail](detail/test-infrastructure-consolidation.md)
-2. **[in-progress]** Effect system refactor: typestate builder, Spawn/During triggers, unified vocabulary, centralized despawn — [detail](detail/effect-desugaring-node-running-trigger/effect-desugaring-node-running-trigger.md)
-3. **[in-progress]** Scenario coverage gaps — birthing invariants, evolution lifecycle, trigger scenarios, runner RON field naming — [detail](detail/scenario-coverage-gaps.md)
+2. **[ready]** Remove game crate prelude module — replace glob imports with explicit per-domain imports — [detail](detail/remove-game-prelude.md)
+3. **[in-progress]** Effect system refactor: typestate builder, Spawn/During triggers, unified vocabulary, centralized despawn — [detail](detail/effect-desugaring-node-running-trigger/effect-desugaring-node-running-trigger.md)
 4. **[ready]** New cell modifiers (volatile, sequence, survival, armored, phantom, magnetic, portal) — [detail](detail/new-cell-modifiers.md)
 5. **[ready]** Legendary rarity removal — retune 8 as Rare (6 with Common/Uncommon tiers), cut 3, promote 2 to protocols, remove Anchor evolution — [detail](detail/legendary-removal.md)
 6. **[ready]** Protocol & hazard system — 15 protocols, 16 hazards, interface design, 31 per-item implementation guides, 10-wave plan — [detail](detail/mod-system-design/mod-system-design.md)
