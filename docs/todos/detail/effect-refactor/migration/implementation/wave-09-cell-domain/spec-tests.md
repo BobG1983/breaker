@@ -23,7 +23,7 @@ This spec covers the cell domain's participation in the death pipeline. It does 
 
 The cell kill handler is a new system in the cell domain. It reads `KillYourself<Cell>` messages and performs cell-specific death logic: inserts `Dead`, removes the cell from the spatial index, updates RequiredToClear tracking, sends `Destroyed<Cell>`, and sends `DespawnEntity`.
 
-File: `src/cells/systems/handle_cell_kill.rs`
+File: `src/cells/systems/handle_cell_kill/tests.rs`
 
 #### Behavior
 
@@ -131,7 +131,7 @@ File: where cells are spawned (cell builder/spawner)
 
 Locked cells are immune to damage. The `apply_damage::<Cell>` system (tested in wave 07) skips entities with the `Locked` component. This section tests the cell-domain-specific Locked interactions: that locked cells remain alive through the full pipeline, and that unlocking a cell makes it damageable.
 
-File: `src/cells/systems/handle_cell_kill.rs` (kill handler tests) and/or integration test file
+File: `src/cells/systems/handle_cell_kill/tests.rs` (kill handler tests) and/or integration test file
 
 #### Behavior
 
@@ -181,7 +181,7 @@ File: `src/cells/systems/cell_damage_visual/tests.rs` (new directory module)
 
 These tests verify the complete pipeline from collision to despawn. They exercise the full chain: `DamageDealt<Cell>` -> `apply_damage::<Cell>` -> `detect_cell_deaths` -> `KillYourself<Cell>` -> cell kill handler -> `Destroyed<Cell>` + `DespawnEntity` -> `process_despawn_requests`. These are integration tests.
 
-File: `src/cells/systems/handle_cell_kill.rs` (integration tests section) or a dedicated integration test file
+File: `src/cells/systems/handle_cell_kill/tests.rs` (integration tests section) or a dedicated integration test file
 
 #### Behavior
 
@@ -223,7 +223,7 @@ File: `src/cells/systems/handle_cell_kill.rs` (integration tests section) or a d
 
 The old `CellDestroyedAt` message carried `was_required_to_clear: bool`. The new `Destroyed<Cell>` does not have this field. The kill handler or a downstream system must preserve this information for node completion tracking.
 
-File: `src/cells/systems/handle_cell_kill.rs` or `src/run/node/systems/track_node_completion.rs`
+File: `src/cells/systems/handle_cell_kill/tests.rs` or `src/run/node/systems/track_node_completion.rs`
 
 #### Behavior
 
@@ -296,7 +296,7 @@ These are the wave 09 design docs that define the behaviors being tested:
 ### Constraints
 
 - Tests go in:
-  - `src/cells/systems/handle_cell_kill.rs` — cell kill handler system + unit tests (behaviors 1-7)
+  - `src/cells/systems/handle_cell_kill/tests.rs` — cell kill handler system + unit tests (behaviors 1-7)
   - `src/bolt/systems/bolt_cell_collision.rs` — updated collision tests (behaviors 8-10), within existing test module
   - Cell builder/spawner test file — Hp/KilledBy spawn tests (behaviors 11-13)
   - `src/cells/systems/cell_damage_visual/tests.rs` — damage visual system tests (behaviors 16-18)

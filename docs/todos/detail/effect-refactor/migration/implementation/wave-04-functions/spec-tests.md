@@ -258,6 +258,8 @@ src/effect/
 
 ### Sequence Node
 
+Note: `Fire(...)` inside `Sequence` is `Terminal::Fire(EffectType)`, not `Tree::Fire(EffectType)`. The Sequence node takes `Vec<Terminal>`. `Route(...)` inside Sequence is `Terminal::Route(RouteType, Box<Tree>)`.
+
 34. **Sequence evaluates Fire terminals left to right**
     - Given: Tree is `Sequence([Fire(SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) })), Fire(DamageBoost(DamageBoostConfig { multiplier: OrderedFloat(2.0) }))])`. Source is "chip_a".
     - When: The Sequence is evaluated
@@ -880,19 +882,19 @@ These are non-system helper functions used by `evaluate_conditions` (During) and
 
 111. **is_shield_active returns true when at least one ShieldWall entity exists**
      - Given: World with 1 entity that has the `ShieldWall` component.
-     - When: `is_shield_active(&world)` is called
+     - When: `is_shield_active(&mut world)` is called
      - Then: Returns `true`
      - Edge case: One shield wall is sufficient.
 
 112. **is_shield_active returns false when no ShieldWall entities exist**
      - Given: World with no entities that have the `ShieldWall` component.
-     - When: `is_shield_active(&world)` is called
+     - When: `is_shield_active(&mut world)` is called
      - Then: Returns `false`
      - Edge case: Zero shield walls returns false.
 
 113. **is_shield_active returns true with multiple ShieldWall entities**
      - Given: World with 3 entities that each have the `ShieldWall` component.
-     - When: `is_shield_active(&world)` is called
+     - When: `is_shield_active(&mut world)` is called
      - Then: Returns `true`
      - Edge case: Any non-zero count is true — does not distinguish between 1 and 3.
 
@@ -900,25 +902,25 @@ These are non-system helper functions used by `evaluate_conditions` (During) and
 
 114. **is_combo_active returns true when combo count is at threshold**
      - Given: World with `ComboStreak { count: 5 }` resource inserted. Threshold is 5.
-     - When: `is_combo_active(&world, 5)` is called
+     - When: `is_combo_active(&mut world, 5)` is called
      - Then: Returns `true`
      - Edge case: Exactly at threshold returns true (>= comparison).
 
 115. **is_combo_active returns true when combo count exceeds threshold**
      - Given: World with `ComboStreak { count: 8 }` resource inserted. Threshold is 5.
-     - When: `is_combo_active(&world, 5)` is called
+     - When: `is_combo_active(&mut world, 5)` is called
      - Then: Returns `true`
      - Edge case: Above threshold returns true.
 
 116. **is_combo_active returns false when combo count is below threshold**
      - Given: World with `ComboStreak { count: 3 }` resource inserted. Threshold is 5.
-     - When: `is_combo_active(&world, 5)` is called
+     - When: `is_combo_active(&mut world, 5)` is called
      - Then: Returns `false`
      - Edge case: Below threshold returns false.
 
 117. **is_combo_active returns false when combo count is zero**
      - Given: World with `ComboStreak { count: 0 }` resource inserted. Threshold is 1.
-     - When: `is_combo_active(&world, 1)` is called
+     - When: `is_combo_active(&mut world, 1)` is called
      - Then: Returns `false`
      - Edge case: Zero streak is always below any positive threshold.
 

@@ -420,8 +420,10 @@ The writer-code must update the following wiring files:
 12. **`src/effect/triggers/time/register.rs`**: `pub(crate) fn register(app: &mut App)` that registers time bridge, tick_timers, component, message.
 13. **`src/effect/triggers/mod.rs`**: `pub(crate) mod bump; pub(crate) mod impact; pub(crate) mod death; pub(crate) mod bolt_lost; pub(crate) mod node; pub(crate) mod time;` and re-exports.
 14. **`src/effect/plugin.rs`**: Ensure `EffectPlugin::build` calls all trigger `register` functions, registers `track_combo_streak`, `watch_spawn_registry`, and initializes `SpawnStampRegistry`, `ComboStreak`.
+15. **`src/effect/conditions/mod.rs`**: Add `pub(crate) mod track_combo_streak;` (new system file for combo tracking).
+16. **`src/effect/storage/mod.rs`**: Add `pub(crate) mod watch_spawn_registry;` (new system file for spawn watching).
 
-Note: These module files should already have stubs from Wave 2. The writer-code fills in the stub bodies, not the module declarations.
+Note: Trigger module files should already have stubs from Wave 2. The conditions and storage modules may need new file creation if Wave 2 only stubbed empty directories.
 
 ---
 

@@ -38,7 +38,7 @@ Note: `apply_damage::<Cell>` and `detect_cell_deaths` were implemented in Wave 7
 #### 3. Create `handle_cell_kill` system (NEW)
 - **File**: `src/cells/systems/handle_cell_kill/system.rs` (directory module with tests)
 - **Description**: Cell domain kill handler. Reads `KillYourself<Cell>` messages and performs domain-specific death logic.
-- **Signature**: `fn handle_cell_kill(messages: MessageReader<KillYourself<Cell>>, mut commands: Commands, query: Query<(&Position2D, Has<RequiredToClear>), (With<Cell>, Without<Dead>)>, killer_query: Query<&Position2D>, /* MessageWriter params as needed */)`
+- **Signature**: `fn handle_cell_kill(messages: MessageReader<KillYourself<Cell>>, mut commands: Commands, query: Query<(&Position2D, Has<RequiredToClear>), (With<Cell>, Without<Dead>)>, killer_query: Query<&Position2D>, mut destroyed_writer: MessageWriter<Destroyed<Cell>>, mut despawn_writer: MessageWriter<DespawnEntity>)`
 - **Dedup**: The `Without<Dead>` query filter is sufficient. If the same entity appears in two `KillYourself<Cell>` messages in one frame, the first processes it and inserts `Dead`. The query lookup for the second message fails (entity no longer matches `Without<Dead>`), so it is skipped. No `HashSet<Entity>` needed.
 - **Behavior for each `KillYourself<Cell>` message**:
   1. Look up the victim entity in the query. If entity not found or already `Dead`, skip (log debug warning in dev builds).
@@ -105,7 +105,8 @@ Note: `apply_damage::<Cell>` and `detect_cell_deaths` were implemented in Wave 7
 
 #### `cell_damage_visual`
 - **Schedule**: `Update` (not `FixedUpdate`)
-- **Rationale**: Visual feedback is a rendering concern. It reads `Changed<Hp>` which persists across the FixedUpdate→Update boundary. Running in Update means visuals update at display framerate, not physics framerate. If the project convention is to run visual systems in FixedUpdate alongside gameplay, use FixedUpdate instead — but check existing visual/fx system patterns.
+- **Rationale**: Visual feedback is a rendering concern. It reads `Changed<Hp>` which persists across the FixedUpdate→Update boundary. Running in Update means visuals update at display framerate, not physics framerate.
+- **Schedule**: `Update` (not FixedUpdate).
 - **No ordering constraints**: This system is read-only on Hp (no mutation), writes only to `ColorMaterial` assets via `ResMut<Assets<ColorMaterial>>`, and has no ordering dependencies with the death pipeline.
 
 ---

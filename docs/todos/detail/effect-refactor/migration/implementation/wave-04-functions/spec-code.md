@@ -53,9 +53,14 @@ Test file locations and counts will be established by the test spec. Tests will 
 Generic component for passive effect stacking. Monomorphized per config type.
 
 ```rust
-#[derive(Component, Default)]
+#[derive(Component)]
 pub struct EffectStack<T: PassiveEffect> {
     entries: Vec<(String, T)>,
+}
+
+// Manual Default impl — avoids T: Default bound from derive
+impl<T: PassiveEffect> Default for EffectStack<T> {
+    fn default() -> Self { Self { entries: Vec::new() } }
 }
 
 impl<T: PassiveEffect> EffectStack<T> {
@@ -683,10 +688,10 @@ Only `aggregate` differs between them.
 ##### 11a. is_node_active (conditions/node_active.rs)
 
 ```rust
-pub fn is_node_active(world: &mut World) -> bool;
+pub fn is_node_active(world: &World) -> bool;
 ```
 
-Reads `State<NodeState>` resource from world. Returns `true` when state is `NodeState::Playing`, `false` otherwise. Logically read-only, but takes `&mut World` because Bevy 0.18's `World::resource` / `World::get_resource` methods that return shared references are available on `&World`, so if `State<NodeState>` can be read via `world.get_resource::<State<NodeState>>()` with `&World`, the signature can stay `&World`. However, to be consistent with the other condition evaluators that need `&mut World` (see is_shield_active below), use `&mut World` for all three condition evaluators.
+Reads `State<NodeState>` resource from world via `world.get_resource::<State<NodeState>>()`. Returns `true` when state is `NodeState::Playing`, `false` otherwise. Takes `&World` (shared reference) — this function only reads a resource, no query needed. Note: `is_shield_active` and `is_combo_active` take `&mut World` because they use `World::query` which requires mutable access in Bevy 0.18.
 
 **File**: `src/effect/conditions/node_active.rs`
 
