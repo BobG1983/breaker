@@ -315,7 +315,7 @@ Each death dispatches three triggers in order: Died (local, victim) -> Killed(En
     - Given: victim_cell_entity with `BoundEffects` and `StagedEffects`; killer_bolt_entity with `Bolt` component, `BoundEffects` and `StagedEffects`; bystander_entity with `BoundEffects` and `StagedEffects`; `Destroyed<Cell> { victim: victim_cell_entity, killer: Some(killer_bolt_entity), victim_pos: Vec2::new(100.0, 200.0), killer_pos: Some(Vec2::new(50.0, 300.0)) }` message
     - When: `on_destroyed::<Cell>` runs
     - Then: (1) `walk_effects` called on victim_cell_entity with `Trigger::Died` and context `TriggerContext::Death { victim: victim_cell_entity, killer: Some(killer_bolt_entity) }`; (2) `walk_effects` called on killer_bolt_entity with `Trigger::Killed(EntityKind::Cell)` and same context; (3) `walk_effects` called on victim_cell_entity, killer_bolt_entity, AND bystander_entity with `Trigger::DeathOccurred(EntityKind::Cell)` and same context
-    - Edge case: Victim has no BoundEffects -- Died walk skipped, Killed and DeathOccurred still fire
+    - Edge case: Victim has no BoundEffects -- Died walk skipped, Killed and DeathOccurred still fire. Entities without BoundEffects/StagedEffects are excluded from the DeathOccurred global sweep (the query filters on those components).
 
 40. **on_destroyed_cell with killer=None skips Killed trigger**
     - Given: victim_cell_entity with `BoundEffects` and `StagedEffects`; bystander_entity with effects; `Destroyed<Cell> { victim: victim_cell_entity, killer: None, victim_pos: Vec2::new(100.0, 200.0), killer_pos: None }` message
@@ -433,7 +433,7 @@ Lives in `src/effect/triggers/node/bridges.rs`. Runs on `OnExit(NodeState::Playi
 
 ### E3: on_node_timer_threshold_occurred
 
-Lives in `src/effect/triggers/node/bridges.rs`. Runs in FixedUpdate, after `check_node_timer_thresholds`.
+Lives in `src/effect/triggers/node/bridges.rs`. Runs in FixedUpdate, in `EffectSystems::Bridge`. No explicit `.after(check_node_timer_thresholds)` — Bridge runs before Tick by set ordering; the one-frame delay is intentional (Bridge reads previous-frame messages from Tick).
 
 55. **on_node_timer_threshold_occurred walks all entities with matching threshold trigger**
     - Given: Entity A with effects; `NodeTimerThresholdCrossed { ratio: OrderedFloat(0.5) }` message
@@ -453,22 +453,28 @@ Lives in `src/effect/triggers/node/bridges.rs`. Runs in FixedUpdate, after `chec
 
 ### F1: on_time_expires
 
-Lives in `src/effect/triggers/time/bridges.rs`. Runs in FixedUpdate, after `tick_effect_timers`.
+Lives in `src/effect/triggers/time/bridges.rs`. Runs in FixedUpdate, in `EffectSystems::Bridge`. No explicit `.after(tick_effect_timers)` — Bridge runs before Tick by set ordering; the one-frame delay is intentional (Bridge reads previous-frame messages from Tick).
 
 57. **on_time_expires walks the specific entity referenced in the message**
-    - Given: entity_a with `BoundEffects` and `StagedEffects` and `EffectTimers`; entity_b with effects; `EffectTimerExpired { entity: entity_a }` message
+    - Given: entity_a with `BoundEffects` and `StagedEffects`; entity_b with effects; `EffectTimerExpired { entity: entity_a, original_duration: OrderedFloat(5.0) }` message
     - When: `on_time_expires` runs
-    - Then: `walk_effects` called on entity_a (Self scope) with `Trigger::TimeExpires(original_duration)` and context `TriggerContext::None`; entity_b NOT walked
-    - Edge case: Entity referenced in message no longer has EffectTimers (removed between tick and bridge) -- skip gracefully
+    - Then: `walk_effects` called on entity_a (Self scope) with `Trigger::TimeExpires(5.0)` and context `TriggerContext::None`; entity_b NOT walked
+    - Edge case: Entity referenced in message no longer has BoundEffects/StagedEffects -- skip gracefully
 
-58. **on_time_expires is Self-scoped, not global**
-    - Given: entity_a with effects and EffectTimers containing `(OrderedFloat(0.0), OrderedFloat(5.0))`; entity_b with effects; `EffectTimerExpired { entity: entity_a }` message
+58. **on_time_expires is Self-scoped, reads original_duration from message not entity**
+    - Given: entity_a with `BoundEffects` and `StagedEffects` (NO `EffectTimers` — tick already removed it); entity_b with effects; `EffectTimerExpired { entity: entity_a, original_duration: OrderedFloat(5.0) }` message
     - When: `on_time_expires` runs
-    - Then: Only entity_a is walked with `Trigger::TimeExpires(5.0)` -- the original_duration from the timer. entity_b is never walked.
-    - Edge case: Multiple EffectTimerExpired messages for same entity -- each triggers a separate walk
+    - Then: Only entity_a is walked with `Trigger::TimeExpires(5.0)` — the `original_duration` comes from the message, not the entity. entity_b is never walked.
+    - Edge case: Multiple EffectTimerExpired messages for same entity -- each triggers a separate walk with its own original_duration
+
+58a. **on_time_expires uses original_duration from message, not entity EffectTimers**
+    - Given: entity_a with `BoundEffects` and `StagedEffects` and `EffectTimers { timers: vec![(OrderedFloat(2.0), OrderedFloat(7.0))] }` (a different, still-active timer); `EffectTimerExpired { entity: entity_a, original_duration: OrderedFloat(5.0) }` message (from a different timer that already expired)
+    - When: `on_time_expires` runs
+    - Then: `walk_effects` called with `Trigger::TimeExpires(5.0)` — the 5.0 from the message, NOT 7.0 from the remaining EffectTimers entry
+    - Edge case: Entity has no EffectTimers at all (all timers expired) — bridge still fires using message's original_duration
 
 59. **on_time_expires context is TriggerContext::None**
-    - Given: entity_a with effects; `EffectTimerExpired { entity: entity_a }` message
+    - Given: entity_a with effects; `EffectTimerExpired { entity: entity_a, original_duration: OrderedFloat(3.0) }` message
     - When: `on_time_expires` runs
     - Then: Context is `TriggerContext::None`
     - Edge case: No messages -- no-op
@@ -487,10 +493,10 @@ Lives in `src/effect/triggers/time/tick_timers.rs`. Runs in FixedUpdate.
     - Then: Timer remaining is approximately `3.0 - 1.0/60.0` = `OrderedFloat(2.9833...)`; original duration unchanged at `OrderedFloat(5.0)`
     - Edge case: dt is 0.0 -- timer remains unchanged
 
-61. **tick_effect_timers sends EffectTimerExpired when timer reaches zero**
+61. **tick_effect_timers sends EffectTimerExpired with correct original_duration when timer reaches zero**
     - Given: entity with `EffectTimers { timers: vec![(OrderedFloat(0.01), OrderedFloat(5.0))] }`; `Time<Fixed>` with delta of 0.02
     - When: `tick_effect_timers` runs
-    - Then: `EffectTimerExpired { entity }` message sent; timer entry removed from the vec
+    - Then: `EffectTimerExpired { entity, original_duration: OrderedFloat(5.0) }` message sent; timer entry removed from the vec
     - Edge case: Timer goes negative (0.01 - 0.02 = -0.01) -- still fires and removes
 
 62. **tick_effect_timers removes EffectTimers component when vec is empty**
@@ -502,8 +508,14 @@ Lives in `src/effect/triggers/time/tick_timers.rs`. Runs in FixedUpdate.
 63. **tick_effect_timers handles multiple timers on one entity**
     - Given: entity with `EffectTimers { timers: vec![(OrderedFloat(1.0), OrderedFloat(3.0)), (OrderedFloat(0.005), OrderedFloat(10.0))] }`; dt of 0.016
     - When: `tick_effect_timers` runs
-    - Then: First timer decremented to ~0.984; second timer expires (0.005 - 0.016 <= 0.0), sends `EffectTimerExpired { entity }`, second entry removed; component remains with one timer
-    - Edge case: Both timers expire in same frame -- two EffectTimerExpired messages sent, both entries removed, component removed
+    - Then: First timer decremented to ~0.984; second timer expires (0.005 - 0.016 <= 0.0), sends `EffectTimerExpired { entity, original_duration: OrderedFloat(10.0) }`, second entry removed; component remains with one timer
+    - Edge case: Both timers expire in same frame -- two EffectTimerExpired messages sent (each with its own original_duration), both entries removed, component removed
+
+63a. **tick_effect_timers includes original_duration in EffectTimerExpired message for each timer**
+    - Given: entity with `EffectTimers { timers: vec![(OrderedFloat(0.001), OrderedFloat(3.0)), (OrderedFloat(0.001), OrderedFloat(10.0))] }`; dt of 0.016
+    - When: `tick_effect_timers` runs
+    - Then: Two `EffectTimerExpired` messages sent: `{ entity, original_duration: OrderedFloat(3.0) }` and `{ entity, original_duration: OrderedFloat(10.0) }`; each carries its own original_duration, not the other timer's
+    - Edge case: Two timers with same original_duration -- two separate messages both with that duration
 
 64. **tick_effect_timers with no entities having EffectTimers is a no-op**
     - Given: No entities with `EffectTimers` component
@@ -513,28 +525,34 @@ Lives in `src/effect/triggers/time/tick_timers.rs`. Runs in FixedUpdate.
 
 ### G2: check_node_timer_thresholds
 
-Lives in `src/effect/triggers/node/check_thresholds.rs`. Runs in FixedUpdate, after node timer tick.
+Lives in `src/effect/triggers/node/check_thresholds.rs`. Runs in FixedUpdate, in `EffectSystems::Tick`. Reads `Res<NodeTimer>` (from `crate::state::run::node::resources::NodeTimer`) and `ResMut<NodeTimerThresholdRegistry>`. Computes ratio as `(node_timer.total - node_timer.remaining) / node_timer.total`.
 
 65. **check_node_timer_thresholds sends message when ratio crosses threshold**
-    - Given: Node timer ratio is 0.55 (55% elapsed); `NodeTimerThresholdRegistry { thresholds: vec![OrderedFloat(0.25), OrderedFloat(0.5), OrderedFloat(0.75)], fired: HashSet::from([OrderedFloat(0.25)]) }`
+    - Given: `NodeTimer { remaining: 4.5, total: 10.0 }` (ratio = 0.55, 55% elapsed); `NodeTimerThresholdRegistry { thresholds: vec![OrderedFloat(0.25), OrderedFloat(0.5), OrderedFloat(0.75)], fired: HashSet::from([OrderedFloat(0.25)]) }`
     - When: `check_node_timer_thresholds` runs
     - Then: `NodeTimerThresholdCrossed { ratio: OrderedFloat(0.5) }` message sent; `OrderedFloat(0.5)` added to `fired`; 0.75 NOT fired (ratio 0.55 < 0.75); 0.25 NOT re-fired (already in fired set)
     - Edge case: Ratio exactly equals threshold (0.5 >= 0.5) -- fires
 
 66. **check_node_timer_thresholds does not re-fire already fired thresholds**
-    - Given: Node timer ratio is 0.8; `NodeTimerThresholdRegistry { thresholds: vec![OrderedFloat(0.5), OrderedFloat(0.75)], fired: HashSet::from([OrderedFloat(0.5), OrderedFloat(0.75)]) }`
+    - Given: `NodeTimer { remaining: 2.0, total: 10.0 }` (ratio = 0.8); `NodeTimerThresholdRegistry { thresholds: vec![OrderedFloat(0.5), OrderedFloat(0.75)], fired: HashSet::from([OrderedFloat(0.5), OrderedFloat(0.75)]) }`
     - When: `check_node_timer_thresholds` runs
     - Then: No messages sent -- both thresholds already in fired set
     - Edge case: All thresholds already fired -- no-op every frame until end
 
 67. **check_node_timer_thresholds fires multiple thresholds in one frame**
-    - Given: Node timer ratio jumped from 0.2 to 0.6 (large dt); `NodeTimerThresholdRegistry { thresholds: vec![OrderedFloat(0.25), OrderedFloat(0.5)], fired: HashSet::new() }`
+    - Given: `NodeTimer { remaining: 4.0, total: 10.0 }` (ratio = 0.6, jumped from 0.2 due to large dt); `NodeTimerThresholdRegistry { thresholds: vec![OrderedFloat(0.25), OrderedFloat(0.5)], fired: HashSet::new() }`
     - When: `check_node_timer_thresholds` runs
     - Then: Two messages sent: `NodeTimerThresholdCrossed { ratio: OrderedFloat(0.25) }` and `NodeTimerThresholdCrossed { ratio: OrderedFloat(0.5) }`; both added to fired set
     - Edge case: Timer penalty causes ratio to jump backwards past a threshold -- threshold was already fired so no duplicate fire
 
+67a. **check_node_timer_thresholds is a no-op when NodeTimer.total is 0.0**
+    - Given: `NodeTimer { remaining: 0.0, total: 0.0 }`; `NodeTimerThresholdRegistry { thresholds: vec![OrderedFloat(0.5)], fired: HashSet::new() }`
+    - When: `check_node_timer_thresholds` runs
+    - Then: No messages sent -- avoids division by zero
+    - Edge case: This can happen before a node timer is initialized
+
 68. **check_node_timer_thresholds with empty thresholds is a no-op**
-    - Given: Node timer ratio is 0.9; `NodeTimerThresholdRegistry { thresholds: vec![], fired: HashSet::new() }`
+    - Given: `NodeTimer { remaining: 1.0, total: 10.0 }` (ratio = 0.9); `NodeTimerThresholdRegistry { thresholds: vec![], fired: HashSet::new() }`
     - When: `check_node_timer_thresholds` runs
     - Then: No messages sent
     - Edge case: Registry exists but no trees use NodeTimerThresholdOccurred -- thresholds vec is empty
@@ -677,7 +695,7 @@ Lives in `src/effect/triggers/node/` (reset system). Runs on `OnEnter(NodeState:
 
 ### New types for this wave
 
-- `EffectTimerExpired { entity: Entity }` -- `#[derive(Message, Clone, Debug)]`. Sent by `tick_effect_timers`, consumed by `on_time_expires`. Source: `effect/triggers/time/messages.rs`
+- `EffectTimerExpired { entity: Entity, original_duration: OrderedFloat<f32> }` -- `#[derive(Message, Clone, Debug)]`. Sent by `tick_effect_timers` (includes the timer's original_duration before removing the expired entry), consumed by `on_time_expires` (reads original_duration from message, not from entity). Source: `effect/triggers/time/messages.rs`
 - `NodeTimerThresholdCrossed { ratio: OrderedFloat<f32> }` -- `#[derive(Message, Clone, Debug)]`. Sent by `check_node_timer_thresholds`, consumed by `on_node_timer_threshold_occurred`. Source: `effect/triggers/node/messages.rs`
 - `NodeTimerThresholdRegistry { thresholds: Vec<OrderedFloat<f32>>, fired: HashSet<OrderedFloat<f32>> }` -- `#[derive(Resource, Default)]`. Source: `effect/triggers/node/resources.rs`
 - `ComboStreak { count: u32 }` -- `#[derive(Resource, Default)]`. Source: `effect/conditions/` or `effect/triggers/`
@@ -685,7 +703,7 @@ Lives in `src/effect/triggers/node/` (reset system). Runs on `OnEnter(NodeState:
 
 ### Messages
 
-- `EffectTimerExpired { entity: Entity }` -- sent by `tick_effect_timers`, consumed by `on_time_expires`
+- `EffectTimerExpired { entity: Entity, original_duration: OrderedFloat<f32> }` -- sent by `tick_effect_timers`, consumed by `on_time_expires`
 - `NodeTimerThresholdCrossed { ratio: OrderedFloat<f32> }` -- sent by `check_node_timer_thresholds`, consumed by `on_node_timer_threshold_occurred`
 
 ---
@@ -752,9 +770,36 @@ Each system file has its own `#[cfg(test)] mod tests` block or sibling `tests.rs
 
 ---
 
+## Prerequisites (Wave 2 Scaffold Must Provide)
+
+Wave 5 tests depend on the following types being present as at least stubs from wave 2. If any are missing or have wrong signatures, flag it — do NOT create them in wave 5.
+
+**Message types with specific field requirements:**
+- `BoltImpactBreaker { bolt: Entity, breaker: Entity, bump_status: BumpStatus }` — must include `bump_status: BumpStatus` field
+- `BoltLost { bolt: Entity, breaker: Entity }` — must carry both entity fields (migrated from unit struct)
+- `EffectTimerExpired { entity: Entity, original_duration: OrderedFloat<f32> }` — must include `original_duration` field per authoritative type doc
+
+**Death pipeline types (in `src/shared/`):**
+- `GameEntity` trait — implemented on `Bolt`, `Cell`, `Wall`, `Breaker`
+- `Destroyed<T: GameEntity> { victim: Entity, killer: Option<Entity>, victim_pos: Vec2, killer_pos: Option<Vec2> }` — generic death message
+
+**Effect storage and walker:**
+- `BoundEffects`, `StagedEffects` components; `EffectTimers` component
+- `Trigger`, `TriggerContext`, `EntityKind` enums
+- `Tree`/`RootNode` types (wave 2)
+- `walk_effects` function (wave 4)
+
+**Entity markers:**
+- `Bolt`, `Cell`, `Wall`, `Breaker` marker components
+
+**Cross-domain resources:**
+- `NodeTimer { remaining: f32, total: f32 }` — from `crate::state::run::node::resources::NodeTimer`
+
+---
+
 ## Constraints
 
-- Tests go in: Test files parallel to source files within `src/effect/triggers/` and `src/effect/conditions/`
+- Tests go in: Test files parallel to source files within `src/effect/triggers/`, `src/effect/conditions/`, and `src/effect/storage/`
 - Do NOT test: Effect fire/reverse logic (wave 6), death pipeline systems (wave 7), walk_effects internals (wave 4), Until reversal logic, tree installation
 - Do NOT test: Rendering, VFX, audio
 - Do NOT modify: Any domain files outside `src/effect/` except shared type stubs that are needed to compile tests

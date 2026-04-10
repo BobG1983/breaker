@@ -1,5 +1,20 @@
 # Test Spec: Effect Domain — Wave 4 Non-System Functions
 
+## Prerequisites
+
+This wave requires the Wave 2 scaffold types to exist before writer-tests or writer-code can begin. Specifically:
+- `Tree`, `ScopedTree`, `Terminal`, `ScopedTerminal` enums
+- `Trigger`, `TriggerContext`, `ParticipantTarget` enums and sub-enums
+- `EffectType`, `ReversibleEffectType` enums
+- `RouteType`, `Condition`, `EntityKind` enums
+- `BoundEffects`, `BoundEntry`, `StagedEffects` components
+- `EffectStack<T>` generic component
+- All config structs (`SpeedBoostConfig`, `DamageBoostConfig`, etc.)
+- `Fireable`, `Reversible`, `PassiveEffect` traits
+- All command structs (`StampEffectCommand`, `FireEffectCommand`, `ReverseEffectCommand`, `RouteEffectCommand`, `StageEffectCommand`, `RemoveEffectCommand`)
+
+These types are defined in the Wave 2 type specs. If they do not exist when this wave starts, tests will not compile.
+
 ## Domain
 src/effect/
 
@@ -87,6 +102,12 @@ src/effect/
     - Then: Returns `2.5`
     - Edge case: Single multiplicative entry returns its value directly.
 
+13a. **aggregate with three entries returns the product of all three**
+     - Given: An `EffectStack<SpeedBoostConfig>` with entries: `[("chip_a", SpeedBoostConfig { multiplier: OrderedFloat(1.5) }), ("chip_b", SpeedBoostConfig { multiplier: OrderedFloat(2.0) }), ("chip_c", SpeedBoostConfig { multiplier: OrderedFloat(0.5) })]`
+     - When: `stack.aggregate()`
+     - Then: Returns `1.5` (1.5 * 2.0 * 0.5)
+     - Edge case: Three-entry case verifies fold behavior beyond the two-entry base case.
+
 ---
 
 ## Section B: Walking Algorithm (walk_effects)
@@ -96,7 +117,7 @@ src/effect/
 14. **walk_effects processes StagedEffects before BoundEffects**
     - Given: Entity with BoundEffects containing `[BoundEntry { source: "chip_a", tree: When(Bumped, Fire(SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) }))), condition_active: None }]` and StagedEffects containing `[("chip_b", When(Bumped, Fire(DamageBoost(DamageBoostConfig { multiplier: OrderedFloat(2.0) }))))]`. Trigger is `Trigger::Bumped`, context is `TriggerContext::Bump { bolt: Some(bolt_entity), breaker: breaker_entity }`.
     - When: `walk_effects(entity, &Trigger::Bumped, &context, &bound, &staged, &mut commands)` is called
-    - Then: The staged entry's inner `Fire(DamageBoost(...))` dispatches `fire_effect` BEFORE the bound entry's inner `Fire(SpeedBoost(...))`. Both entries produce fire_effect commands. Additionally, a `remove_effect(entity, Staged, "chip_b", ...)` command is queued for the staged entry. The bound entry is NOT removed.
+    - Then: The staged entry's inner `Fire(DamageBoost(...))` dispatches `fire_effect` BEFORE the bound entry's inner `Fire(SpeedBoost(...))`. Both entries produce fire_effect commands. Additionally, a `remove_effect(entity, RouteType::Staged, "chip_b", ...)` command is queued for the staged entry. The bound entry is NOT removed.
     - Edge case: Staged-first order prevents a single trigger from cascading through multiple stages in one pass.
 
 15. **walk_effects skips staged entries whose trigger does not match**
@@ -108,14 +129,26 @@ src/effect/
 16. **walk_effects consumes all matching staged entries, not just the first**
     - Given: Entity with StagedEffects containing `[("chip_a", When(Bumped, Fire(SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) })))), ("chip_b", When(Bumped, Fire(DamageBoost(DamageBoostConfig { multiplier: OrderedFloat(2.0) }))))]`. Trigger is `Trigger::Bumped`.
     - When: `walk_effects(entity, &Trigger::Bumped, &context, &bound, &staged, &mut commands)` is called
-    - Then: Both entries match. Two `fire_effect` commands are queued (one for SpeedBoost, one for DamageBoost). Two `remove_effect(entity, Staged, ...)` commands are queued (one for each consumed entry).
+    - Then: Both entries match. Two `fire_effect` commands are queued (one for SpeedBoost, one for DamageBoost). Two `remove_effect(entity, RouteType::Staged, ...)` commands are queued (one for each consumed entry).
     - Edge case: Multiple staged entries matching the same trigger all fire and all are consumed.
 
-17. **walk_effects skips BoundEntry with condition_active == Some(_)**
+16a. **walk_effects with mixed staged entries fires only those whose trigger matches**
+     - Given: Entity with StagedEffects containing `[("chip_a", When(Bumped, Fire(SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) })))), ("chip_b", When(Impacted(Cell), Fire(DamageBoost(DamageBoostConfig { multiplier: OrderedFloat(2.0) })))), ("chip_c", When(Bumped, Fire(SizeBoost(SizeBoostConfig { multiplier: OrderedFloat(0.5) }))))]`. Trigger is `Trigger::Bumped`.
+     - When: `walk_effects(entity, &Trigger::Bumped, &context, &bound, &staged, &mut commands)` is called
+     - Then: chip_a and chip_c match Bumped. Two `fire_effect` commands are queued (SpeedBoost for chip_a, SizeBoost for chip_c). Two `remove_effect(entity, RouteType::Staged, ...)` commands are queued (for chip_a and chip_c). chip_b does not match (Impacted(Cell) != Bumped) — no fire_effect or remove_effect for chip_b.
+     - Edge case: Non-matching staged entries are untouched while matching ones are consumed. Three entries, two match, one does not.
+
+17. **walk_effects skips BoundEntry with condition_active == Some(false)**
     - Given: Entity with BoundEffects containing `[BoundEntry { source: "chip_a", tree: During(NodeActive, Fire(SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) }))), condition_active: Some(false) }]`. Trigger is `Trigger::Bumped`.
     - When: `walk_effects(entity, &Trigger::Bumped, &context, &bound, &staged, &mut commands)` is called
-    - Then: No commands are queued. The During entry is skipped because `condition_active` is `Some(_)`.
-    - Edge case: During entries with `Some(true)` are also skipped by the walker — they are handled by `evaluate_conditions`, not trigger walking.
+    - Then: No commands are queued. The During entry is skipped because `condition_active` is `Some(false)`.
+    - Edge case: During entries are handled by `evaluate_conditions`, not trigger walking.
+
+17a. **walk_effects skips BoundEntry with condition_active == Some(true)**
+     - Given: Entity with BoundEffects containing `[BoundEntry { source: "chip_a", tree: During(NodeActive, Fire(SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) }))), condition_active: Some(true) }]`. Trigger is `Trigger::Bumped`.
+     - When: `walk_effects(entity, &Trigger::Bumped, &context, &bound, &staged, &mut commands)` is called
+     - Then: No commands are queued. The During entry is skipped because `condition_active` is `Some(true)`.
+     - Edge case: Both Some(true) and Some(false) are skipped — the check is `Some(_)`, not a specific bool value.
 
 18. **walk_effects does not remove bound entries on match (re-arms automatically)**
     - Given: Entity with BoundEffects containing `[BoundEntry { source: "chip_a", tree: When(Bumped, Fire(SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) }))), condition_active: None }]`. Trigger is `Trigger::Bumped`.
@@ -251,6 +284,8 @@ src/effect/
 
 ### On Node
 
+> **Clarification:** `Fire(...)` inside `On` is `Terminal::Fire(EffectType)`, not `Tree::Fire(EffectType)`. The On node evaluates a Terminal (Fire or Route), not a full Tree.
+
 38. **On resolves Bump(Bolt) participant from TriggerContext::Bump**
     - Given: Tree is `On(Bump(Bolt), Fire(SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) })))`. Context is `TriggerContext::Bump { bolt: Some(bolt_entity), breaker: breaker_entity }`. Source is "chip_a".
     - When: The On node is evaluated
@@ -347,6 +382,100 @@ src/effect/
 
 ---
 
+## Section C.5: Scoped Tree Functions (apply_scoped_tree / reverse_scoped_tree)
+
+These are non-system helper functions used by `evaluate_conditions` (During) and the walking algorithm (Until). They are called when a During condition transitions or when an Until is installed/reversed. They operate on `ScopedTree` variants, not `Tree` variants.
+
+### apply_scoped_tree
+
+52a. **apply_scoped_tree with ScopedTree::Fire queues fire_effect using reversible_to_effect_type**
+     - Given: Entity is entity_42. ScopedTree is `ScopedTree::Fire(ReversibleEffectType::SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) }))`. Source is "chip_a". Context is `TriggerContext::None`.
+     - When: `apply_scoped_tree(entity_42, &scoped, "chip_a", &context, &mut commands)` is called
+     - Then: A `fire_effect(entity_42, EffectType::SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) }), "chip_a")` command is queued. The `ReversibleEffectType::SpeedBoost(...)` is converted to `EffectType::SpeedBoost(...)` via `reversible_to_effect_type`.
+     - Edge case: ScopedTree::Fire holds a ReversibleEffectType, not an EffectType. The conversion to EffectType is required before calling fire_effect.
+
+52b. **apply_scoped_tree with ScopedTree::Sequence fires effects left to right**
+     - Given: Entity is entity_42. ScopedTree is `ScopedTree::Sequence(vec![ReversibleEffectType::SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) }), ReversibleEffectType::DamageBoost(DamageBoostConfig { multiplier: OrderedFloat(2.0) })])`. Source is "chip_a". Context is `TriggerContext::None`.
+     - When: `apply_scoped_tree(entity_42, &scoped, "chip_a", &context, &mut commands)` is called
+     - Then: Two `fire_effect` commands are queued in order: first `EffectType::SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) })`, then `EffectType::DamageBoost(DamageBoostConfig { multiplier: OrderedFloat(2.0) })`. Each ReversibleEffectType is converted via `reversible_to_effect_type`.
+     - Edge case: Left-to-right order matches the order in the Vec. Earlier effects may affect later ones.
+
+52c. **apply_scoped_tree with ScopedTree::When installs listener via stage_effect**
+     - Given: Entity is entity_42. ScopedTree is `ScopedTree::When(Trigger::Bumped, Box::new(Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) }))))`. Source is "chip_a". Context is `TriggerContext::None`.
+     - When: `apply_scoped_tree(entity_42, &scoped, "chip_a", &context, &mut commands)` is called
+     - Then: A `stage_effect(entity_42, "chip_a", Tree::When(Trigger::Bumped, Box::new(Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) })))))` command is queued. The inner When is installed as a listener in StagedEffects, NOT evaluated immediately.
+     - Edge case: When inside a scoped context is armed for later matching, not fired now.
+
+52d. **apply_scoped_tree with ScopedTree::On resolves participant and fires on that entity**
+     - Given: Entity is entity_42 (the owner). ScopedTree is `ScopedTree::On(ParticipantTarget::Bump(BumpTarget::Bolt), ScopedTerminal::Fire(ReversibleEffectType::SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) })))`. Source is "chip_a". Context is `TriggerContext::Bump { bolt: Some(bolt_entity), breaker: breaker_entity }`.
+     - When: `apply_scoped_tree(entity_42, &scoped, "chip_a", &context, &mut commands)` is called
+     - Then: A `fire_effect(bolt_entity, EffectType::SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) }), "chip_a")` command is queued. The target is bolt_entity (the resolved participant), NOT entity_42 (the owner).
+     - Edge case: On redirects the fire to the resolved participant. The ReversibleEffectType is converted to EffectType via `reversible_to_effect_type`.
+
+52e. **apply_scoped_tree with ScopedTree::On and Route terminal installs tree on participant**
+     - Given: Entity is entity_42 (the owner). ScopedTree is `ScopedTree::On(ParticipantTarget::Impact(ImpactTarget::Impactee), ScopedTerminal::Route(RouteType::Bound, Box::new(Tree::When(Trigger::Bumped, Box::new(Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) })))))))`. Source is "chip_a". Context is `TriggerContext::Impact { impactor: impactor_entity, impactee: impactee_entity }`.
+     - When: `apply_scoped_tree(entity_42, &scoped, "chip_a", &context, &mut commands)` is called
+     - Then: A `route_effect(impactee_entity, "chip_a", Tree::When(Trigger::Bumped, ...), RouteType::Bound)` command is queued. Target is impactee_entity.
+     - Edge case: ScopedTerminal::Route during apply installs the tree on the participant via route_effect.
+
+52f. **apply_scoped_tree with ScopedTree::On skips when participant is None**
+     - Given: Entity is entity_42. ScopedTree is `ScopedTree::On(ParticipantTarget::Bump(BumpTarget::Bolt), ScopedTerminal::Fire(ReversibleEffectType::SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) })))`. Source is "chip_a". Context is `TriggerContext::Bump { bolt: None, breaker: breaker_entity }`.
+     - When: `apply_scoped_tree(entity_42, &scoped, "chip_a", &context, &mut commands)` is called
+     - Then: No commands are queued. The On is skipped because the bolt participant is None.
+     - Edge case: Same None-participant skip behavior as regular On node evaluation.
+
+52g. **apply_scoped_tree with empty ScopedTree::Sequence produces no commands**
+     - Given: Entity is entity_42. ScopedTree is `ScopedTree::Sequence(vec![])`. Source is "chip_a". Context is `TriggerContext::None`.
+     - When: `apply_scoped_tree(entity_42, &scoped, "chip_a", &context, &mut commands)` is called
+     - Then: No commands are queued.
+     - Edge case: Empty scoped sequence is a no-op.
+
+### reverse_scoped_tree
+
+52h. **reverse_scoped_tree with ScopedTree::Fire queues reverse_effect**
+     - Given: Entity is entity_42. ScopedTree is `ScopedTree::Fire(ReversibleEffectType::SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) }))`. Source is "chip_a". Context is `TriggerContext::None`.
+     - When: `reverse_scoped_tree(entity_42, &scoped, "chip_a", &context, &mut commands)` is called
+     - Then: A `reverse_effect(entity_42, ReversibleEffectType::SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) }), "chip_a")` command is queued. Note: reverse_effect takes ReversibleEffectType directly (no conversion needed).
+     - Edge case: reverse_scoped_tree uses ReversibleEffectType directly, unlike apply which converts to EffectType.
+
+52i. **reverse_scoped_tree with ScopedTree::Sequence reverses in right-to-left order**
+     - Given: Entity is entity_42. ScopedTree is `ScopedTree::Sequence(vec![ReversibleEffectType::SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) }), ReversibleEffectType::DamageBoost(DamageBoostConfig { multiplier: OrderedFloat(2.0) })])`. Source is "chip_a". Context is `TriggerContext::None`.
+     - When: `reverse_scoped_tree(entity_42, &scoped, "chip_a", &context, &mut commands)` is called
+     - Then: Two `reverse_effect` commands are queued in REVERSE order: first `ReversibleEffectType::DamageBoost(DamageBoostConfig { multiplier: OrderedFloat(2.0) })`, then `ReversibleEffectType::SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) })`.
+     - Edge case: Reversal order is right-to-left, opposite of apply order. This ensures effects are undone in the opposite order they were applied.
+
+52j. **reverse_scoped_tree with ScopedTree::When removes listener via remove_effect**
+     - Given: Entity is entity_42. ScopedTree is `ScopedTree::When(Trigger::Bumped, Box::new(Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) }))))`. Source is "chip_a". Context is `TriggerContext::None`.
+     - When: `reverse_scoped_tree(entity_42, &scoped, "chip_a", &context, &mut commands)` is called
+     - Then: A `remove_effect(entity_42, RouteType::Staged, "chip_a", Tree::When(Trigger::Bumped, Box::new(Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) })))))` command is queued. The When listener is removed from StagedEffects. Individual effects that already fired from past trigger matches are NOT reversed.
+     - Edge case: Only the listener is removed, not the effects it produced in the past.
+
+52k. **reverse_scoped_tree with ScopedTree::On resolves participant and reverses on that entity**
+     - Given: Entity is entity_42 (the owner). ScopedTree is `ScopedTree::On(ParticipantTarget::Bump(BumpTarget::Bolt), ScopedTerminal::Fire(ReversibleEffectType::SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) })))`. Source is "chip_a". Context is `TriggerContext::Bump { bolt: Some(bolt_entity), breaker: breaker_entity }`.
+     - When: `reverse_scoped_tree(entity_42, &scoped, "chip_a", &context, &mut commands)` is called
+     - Then: A `reverse_effect(bolt_entity, ReversibleEffectType::SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) }), "chip_a")` command is queued. Target is bolt_entity (the resolved participant), NOT entity_42.
+     - Edge case: On redirects the reversal to the resolved participant.
+
+52l. **reverse_scoped_tree with ScopedTree::On and Route terminal removes tree from participant**
+     - Given: Entity is entity_42 (the owner). ScopedTree is `ScopedTree::On(ParticipantTarget::Impact(ImpactTarget::Impactee), ScopedTerminal::Route(RouteType::Bound, Box::new(Tree::When(Trigger::Bumped, Box::new(Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) })))))))`. Source is "chip_a". Context is `TriggerContext::Impact { impactor: impactor_entity, impactee: impactee_entity }`.
+     - When: `reverse_scoped_tree(entity_42, &scoped, "chip_a", &context, &mut commands)` is called
+     - Then: A `remove_effect(impactee_entity, RouteType::Bound, "chip_a", Tree::When(Trigger::Bumped, ...))` command is queued. The tree previously installed via route_effect during apply is now removed.
+     - Edge case: ScopedTerminal::Route during reverse calls remove_effect (not route_effect) on the participant.
+
+52m. **reverse_scoped_tree with ScopedTree::On skips when participant is None**
+     - Given: Entity is entity_42. ScopedTree is `ScopedTree::On(ParticipantTarget::Bump(BumpTarget::Bolt), ScopedTerminal::Fire(ReversibleEffectType::SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) })))`. Source is "chip_a". Context is `TriggerContext::Bump { bolt: None, breaker: breaker_entity }`.
+     - When: `reverse_scoped_tree(entity_42, &scoped, "chip_a", &context, &mut commands)` is called
+     - Then: No commands are queued. The On is skipped because the bolt participant is None.
+     - Edge case: Same None-participant skip behavior as apply direction.
+
+52n. **reverse_scoped_tree with empty ScopedTree::Sequence produces no commands**
+     - Given: Entity is entity_42. ScopedTree is `ScopedTree::Sequence(vec![])`. Source is "chip_a". Context is `TriggerContext::None`.
+     - When: `reverse_scoped_tree(entity_42, &scoped, "chip_a", &context, &mut commands)` is called
+     - Then: No commands are queued.
+     - Edge case: Empty scoped sequence reversal is a no-op.
+
+---
+
 ## Section D: Command Extensions
 
 ### stamp_effect
@@ -374,6 +503,12 @@ src/effect/
     - When: `stamp_effect(entity, "chip_a", During(NodeActive, Fire(SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) }))))` is applied
     - Then: Entity's BoundEffects has 1 entry: `BoundEntry { source: "chip_a", tree: During(NodeActive, ...), condition_active: Some(false) }`
     - Edge case: During entries start with `condition_active: Some(false)`, not `None`.
+
+56a. **stamp_effect sets condition_active to None for Once trees**
+     - Given: Entity with `BoundEffects(vec![])` and `StagedEffects(vec![])`.
+     - When: `stamp_effect(entity, "chip_a", Once(Bumped, Fire(SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) }))))` is applied
+     - Then: Entity's BoundEffects has 1 entry: `BoundEntry { source: "chip_a", tree: Once(Bumped, Fire(SpeedBoost(...))), condition_active: None }`
+     - Edge case: Only During trees get `condition_active: Some(false)`. Once, When, Until, and all other tree variants get `condition_active: None`.
 
 57. **stamp_effect on nonexistent entity does nothing**
     - Given: Entity does not exist in the world.
@@ -440,6 +575,12 @@ src/effect/
     - When: `route_effect(entity, ...)` is applied
     - Then: No panic. No effect.
     - Edge case: Graceful no-op.
+
+66a. **route_effect with RouteType::Bound and During tree sets condition_active to Some(false)**
+     - Given: Entity with `BoundEffects(vec![])` and `StagedEffects(vec![])`.
+     - When: `route_effect(entity, "chip_a", During(NodeActive, Fire(SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) }))), RouteType::Bound)` is applied
+     - Then: Entity's BoundEffects has 1 entry: `BoundEntry { source: "chip_a", tree: During(NodeActive, ...), condition_active: Some(false) }`. The condition_active field is `Some(false)`, not `None`.
+     - Edge case: During trees routed to Bound always start with condition_active: Some(false), same as stamp_effect behavior #56.
 
 ### stage_effect
 
@@ -758,25 +899,25 @@ src/effect/
 ### is_combo_active
 
 114. **is_combo_active returns true when combo count is at threshold**
-     - Given: World with combo tracking resource showing 5 consecutive perfect bumps. Threshold is 5.
+     - Given: World with `ComboStreak { count: 5 }` resource inserted. Threshold is 5.
      - When: `is_combo_active(&world, 5)` is called
      - Then: Returns `true`
      - Edge case: Exactly at threshold returns true (>= comparison).
 
 115. **is_combo_active returns true when combo count exceeds threshold**
-     - Given: World with combo tracking resource showing 8 consecutive perfect bumps. Threshold is 5.
+     - Given: World with `ComboStreak { count: 8 }` resource inserted. Threshold is 5.
      - When: `is_combo_active(&world, 5)` is called
      - Then: Returns `true`
      - Edge case: Above threshold returns true.
 
 116. **is_combo_active returns false when combo count is below threshold**
-     - Given: World with combo tracking resource showing 3 consecutive perfect bumps. Threshold is 5.
+     - Given: World with `ComboStreak { count: 3 }` resource inserted. Threshold is 5.
      - When: `is_combo_active(&world, 5)` is called
      - Then: Returns `false`
      - Edge case: Below threshold returns false.
 
 117. **is_combo_active returns false when combo count is zero**
-     - Given: World with combo tracking resource showing 0 consecutive perfect bumps. Threshold is 1.
+     - Given: World with `ComboStreak { count: 0 }` resource inserted. Threshold is 1.
      - When: `is_combo_active(&world, 1)` is called
      - Then: Returns `false`
      - Edge case: Zero streak is always below any positive threshold.
@@ -906,6 +1047,7 @@ src/effect/
 - `RouteType` — `Bound`, `Staged`
 - `Condition` — `NodeActive`, `ShieldActive`, `ComboActive(u32)`
 - `EntityKind` — `Cell`, `Bolt`, `Wall`, `Breaker`, `Any`
+- `ComboStreak { count: u32 }` — resource tracking consecutive perfect bump streak, read by `is_combo_active`
 - `BoundEffects(Vec<BoundEntry>)` — component
 - `BoundEntry { source: String, tree: Tree, condition_active: Option<bool> }` — struct
 - `StagedEffects(Vec<(String, Tree)>)` — component
@@ -945,7 +1087,10 @@ src/effect/
 - `docs/todos/detail/effect-refactor/walking-effects/on.md` — On node behavior
 - `docs/todos/detail/effect-refactor/walking-effects/route.md` — Route node behavior
 - `docs/todos/detail/effect-refactor/walking-effects/fire.md` — Fire node behavior
+- `docs/todos/detail/effect-refactor/walking-effects/during.md` — During node scoped tree behavior (apply/reverse)
 - `docs/todos/detail/effect-refactor/walking-effects/arming-effects.md` — Arming mechanism
+- `docs/todos/detail/effect-refactor/rust-types/scoped-tree.md` — ScopedTree enum definition
+- `docs/todos/detail/effect-refactor/rust-types/scoped-terminal.md` — ScopedTerminal enum definition
 - `docs/todos/detail/effect-refactor/command-extensions/` — all 6 command extension specs
 - `docs/todos/detail/effect-refactor/creating-effects/effect-api/passive-effect.md` — passive effect pattern
 - `docs/todos/detail/effect-refactor/rust-types/effect-stacking/effect-stack.md` — EffectStack type
@@ -968,14 +1113,17 @@ src/effect/
 
 ## Constraints
 - Tests go in:
-  - `src/effect/core/types/` (EffectStack tests, in an appropriate test file/module)
-  - `src/effect/core/types/definitions/` (fire/reverse dispatch tests)
+  - `src/effect/stacking/effect_stack.rs` (EffectStack tests)
+  - `src/effect/dispatch/fire_dispatch.rs` (fire dispatch tests for all EffectType variants)
+  - `src/effect/dispatch/reverse_dispatch.rs` (reverse dispatch tests for all ReversibleEffectType variants)
   - `src/effect/` walking algorithm tests (new file for walk_effects function tests)
+  - `src/effect/` scoped tree tests (new file for apply_scoped_tree / reverse_scoped_tree function tests)
   - `src/effect/commands.rs` or `src/effect/commands/` (command extension tests)
   - `src/effect/effects/<effect_name>/` per-effect passive fire/reverse/aggregate tests
   - `src/effect/conditions/` (condition evaluator tests)
 - Do NOT test: System functions (bridges, tick systems, evaluate_conditions system). Those are Wave 5+.
 - Do NOT test: Non-passive effect fire/reverse implementations (Shockwave, Explode, etc.). Those spawn entities and are out of scope.
 - Do NOT test: RON deserialization of Tree, EffectType, or config structs. That is a separate concern.
-- Do NOT test: During node evaluation as part of walk_effects. During is handled by the evaluate_conditions system (out of scope), and walk_effects skips During entries (behavior #17 covers the skip).
-- Do NOT test: Until node installation/reversal lifecycle as part of walk_effects. Until entries in StagedEffects are consumed like any other staged entry. The Until-specific apply/reverse behavior happens when the Until is first encountered during walking from BoundEffects — testing the full Until lifecycle requires timer infrastructure (Wave 5+). Test the trigger matching and staged consumption only.
+- Do NOT test: During node evaluation as part of walk_effects. During is handled by the evaluate_conditions system (out of scope), and walk_effects skips During entries (behavior #17 covers the skip). DO test `apply_scoped_tree` and `reverse_scoped_tree` (the building blocks that evaluate_conditions calls) — see Section C.5.
+- Do NOT test: Until node installation/reversal lifecycle as part of walk_effects. Until entries in StagedEffects are consumed like any other staged entry. The Until-specific apply/reverse behavior happens when the Until is first encountered during walking from BoundEffects — testing the full Until lifecycle requires timer infrastructure (Wave 5+). Test the trigger matching and staged consumption only. DO test `apply_scoped_tree` and `reverse_scoped_tree` which Until also calls — see Section C.5.
+- Do NOT test: The `evaluate_conditions` system itself (Wave 5+). Section C.5 tests the helper functions it depends on, not the system loop.

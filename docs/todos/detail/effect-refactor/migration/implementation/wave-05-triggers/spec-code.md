@@ -13,8 +13,8 @@
 - `src/effect/triggers/node/resources.rs` — tests for reset_node_timer_thresholds
 - `src/effect/triggers/time/bridges.rs` (or `tests.rs`) — tests for on_time_expires
 - `src/effect/triggers/time/tick_timers.rs` (or `tests.rs`) — tests for tick_effect_timers game system
-- `src/effect/conditions/` — tests for track_combo_streak
-- `src/effect/storage/` — tests for watch_spawn_registry
+- `src/effect/conditions/track_combo_streak.rs` (or `tests.rs` if split) — tests for track_combo_streak
+- `src/effect/storage/watch_spawn_registry.rs` (or `tests.rs` if split) — tests for watch_spawn_registry
 
 Exact file paths will be determined by the test spec. The writer-code must find and satisfy all failing tests in these locations.
 
@@ -104,7 +104,7 @@ A single generic system `on_destroyed<T: GameEntity>` monomorphized for Cell, Bo
 
 #### Node Game System (1 in `src/effect/triggers/node/check_thresholds.rs`)
 
-31. **`check_node_timer_thresholds`**: Game system (not a bridge). Reads the current node timer ratio (current_elapsed / total_duration from the node timer). Reads `NodeTimerThresholdRegistry` resource. For each threshold in `thresholds` where `ratio >= threshold` and threshold NOT in `fired`: sends `NodeTimerThresholdCrossed { ratio: threshold.into_inner() }` message and inserts threshold into `fired`.
+31. **`check_node_timer_thresholds`**: Game system (not a bridge). Reads `Res<NodeTimer>` (from `crate::state::run::node::resources::NodeTimer`) to compute the current node timer ratio as `(node_timer.total - node_timer.remaining) / node_timer.total`. Reads `ResMut<NodeTimerThresholdRegistry>` resource. For each threshold in `thresholds` where `ratio >= threshold` and threshold NOT in `fired`: sends `NodeTimerThresholdCrossed { ratio: threshold.into_inner() }` message and inserts threshold into `fired`. If `node_timer.total` is `0.0`, the system is a no-op (avoids division by zero).
 
 #### Node Reset System (1 in `src/effect/triggers/node/register.rs` or separate file)
 
@@ -112,13 +112,13 @@ A single generic system `on_destroyed<T: GameEntity>` monomorphized for Cell, Bo
 
 #### Time Bridge System (1 in `src/effect/triggers/time/bridges.rs`)
 
-33. **`on_time_expires`**: Self-scoped bridge. Reads `EffectTimerExpired { entity }` message. Queries the referenced entity for `(&BoundEffects, &StagedEffects)`. Walks ONLY that entity with `Trigger::TimeExpires(original_duration)` and `TriggerContext::None`. The `original_duration` comes from the expired timer entry. Note: by the time this bridge runs, `tick_effect_timers` has already removed the expired timer from `EffectTimers`, so the bridge needs the duration from the message (see implementation note below).
+33. **`on_time_expires`**: Self-scoped bridge. Reads `EffectTimerExpired { entity, original_duration }` message. Queries the referenced entity for `(&BoundEffects, &StagedEffects)`. Walks ONLY that entity with `Trigger::TimeExpires(msg.original_duration.into_inner())` and `TriggerContext::None`. The `original_duration` is read from the message, NOT from the entity's `EffectTimers` component. By the time this bridge runs (next frame, due to Bridge < Tick set ordering), `tick_effect_timers` has already removed the expired timer entry from `EffectTimers`.
 
-**Implementation note on TimeExpires duration**: The `EffectTimerExpired` message must carry the `original_duration` so the bridge can construct `Trigger::TimeExpires(original_duration)`. The current message definition in the types doc shows `EffectTimerExpired { entity: Entity }` without a duration. The message must be extended to `EffectTimerExpired { entity: Entity, duration: OrderedFloat<f32> }` so the bridge can match the correct TimeExpires trigger. The `tick_effect_timers` system includes the `original_duration` when sending.
+**Implementation note on TimeExpires duration**: The `EffectTimerExpired` message carries the `original_duration` so the bridge can construct `Trigger::TimeExpires(original_duration)`. Per the authoritative type doc (`docs/todos/detail/effect-refactor/rust-types/messages/effect-timer-expired.md`), the message definition is `EffectTimerExpired { entity: Entity, original_duration: OrderedFloat<f32> }`. The `tick_effect_timers` system includes the `original_duration` when sending.
 
 #### Time Game System (1 in `src/effect/triggers/time/tick_timers.rs`)
 
-34. **`tick_effect_timers`**: Game system (not a bridge). Queries all entities with `&mut EffectTimers`. For each entity, iterates `timers` vec. Decrements `remaining_seconds` by `time.delta_secs()` (from `Time<Fixed>`). If `remaining_seconds <= 0.0`: sends `EffectTimerExpired { entity, duration: original_duration }` and marks the entry for removal. After iteration, removes all expired entries. If `timers` vec is now empty, removes the `EffectTimers` component from the entity.
+34. **`tick_effect_timers`**: Game system (not a bridge). Queries all entities with `&mut EffectTimers`. For each entity, iterates `timers` vec. Decrements `remaining_seconds` by `time.delta_secs()` (from `Time<Fixed>`). If `remaining_seconds <= 0.0`: sends `EffectTimerExpired { entity, original_duration }` and marks the entry for removal. After iteration, removes all expired entries. If `timers` vec is now empty, removes the `EffectTimers` component from the entity.
 
 #### Combo Streak Tracker (1 system, likely in `src/effect/conditions/`)
 
@@ -166,7 +166,7 @@ All of the following run in `FixedUpdate` within `EffectSystems::Bridge`, with `
 | `on_early_bump_occurred` | `BreakerSystems::GradeBump` | Global |
 | `on_late_bump_occurred` | `BreakerSystems::GradeBump` | Global |
 | `on_bump_whiff_occurred` | `BreakerSystems::GradeBump` | Global, reads BumpWhiffed |
-| `on_no_bump_occurred` | `BoltSystems::BreakerCollision` | Global, reads BoltImpactBreaker |
+| `on_no_bump_occurred` | `BreakerSystems::GradeBump` AND `BoltSystems::BreakerCollision` | Global, reads BoltImpactBreaker |
 | `on_impacted_bolt_cell` | `BoltSystems::CellCollision` | Local |
 | `on_impacted_bolt_wall` | `BoltSystems::WallCollision` | Local |
 | `on_impacted_bolt_breaker` | `BoltSystems::BreakerCollision` | Local |
@@ -184,8 +184,8 @@ All of the following run in `FixedUpdate` within `EffectSystems::Bridge`, with `
 | `on_destroyed::<Wall>` | (previous frame messages) | Mixed scope |
 | `on_destroyed::<Breaker>` | (previous frame messages) | Mixed scope |
 | `on_bolt_lost_occurred` | `BoltSystems::BoltLost` | Global |
-| `on_node_timer_threshold_occurred` | `check_node_timer_thresholds` | Global, reads NodeTimerThresholdCrossed |
-| `on_time_expires` | `tick_effect_timers` | Self-scoped |
+| `on_node_timer_threshold_occurred` | (none — one-frame delay from Tick) | Global, reads NodeTimerThresholdCrossed from previous frame |
+| `on_time_expires` | (none — one-frame delay from Tick) | Self-scoped, reads EffectTimerExpired from previous frame |
 | `track_combo_streak` | `BreakerSystems::GradeBump` | Reads BumpPerformed, BumpWhiffed, BoltImpactBreaker |
 | `watch_spawn_registry` | (after entity spawning systems) | Reads Added<T> |
 
@@ -196,7 +196,7 @@ All of the following run in `FixedUpdate` within `EffectSystems::Bridge`, with `
 | `tick_effect_timers` | (none within set) | Produces EffectTimerExpired messages |
 | `check_node_timer_thresholds` | (after node timer tick) | Produces NodeTimerThresholdCrossed messages |
 
-**Important**: `tick_effect_timers` and `check_node_timer_thresholds` live in `EffectSystems::Tick` (which runs AFTER `EffectSystems::Bridge`). Their messages are consumed by bridges `on_time_expires` and `on_node_timer_threshold_occurred` in the NEXT frame. This one-frame delay is by design.
+**Important**: `tick_effect_timers` and `check_node_timer_thresholds` live in `EffectSystems::Tick` (which runs AFTER `EffectSystems::Bridge` by set ordering). Their messages are consumed by bridges `on_time_expires` and `on_node_timer_threshold_occurred` in the NEXT frame via standard Bevy message persistence. This one-frame delay is by design. Do NOT add `.after(tick_effect_timers)` or `.after(check_node_timer_thresholds)` to the bridge registrations — the set ordering already enforces Bridge < Tick, and the bridges intentionally read previous-frame messages.
 
 #### OnEnter/OnExit — EffectSystems::Reset
 
@@ -241,7 +241,7 @@ These resources are initialized by `EffectPlugin::build`:
 
 **New messages produced by game systems (defined in effect/triggers/):**
 - `NodeTimerThresholdCrossed { ratio: f32 }` — sent by `check_node_timer_thresholds`, consumed by `on_node_timer_threshold_occurred`
-- `EffectTimerExpired { entity: Entity, duration: OrderedFloat<f32> }` — sent by `tick_effect_timers`, consumed by `on_time_expires`. Note: `duration` field added beyond the initial types doc to allow the bridge to construct `TimeExpires(duration)`.
+- `EffectTimerExpired { entity: Entity, original_duration: OrderedFloat<f32> }` — sent by `tick_effect_timers`, consumed by `on_time_expires`. Per the authoritative type doc the field is `original_duration`, not `duration`.
 
 ---
 
@@ -251,6 +251,7 @@ Each trigger category has a `register(app: &mut App)` function in its `register.
 
 **`triggers::bump::register(app)`** — registers all 10 bump bridges:
 ```
+// 9 bump bridges that only need .after(BreakerSystems::GradeBump)
 app.add_systems(FixedUpdate, (
     on_bumped,
     on_perfect_bumped,
@@ -261,13 +262,22 @@ app.add_systems(FixedUpdate, (
     on_early_bump_occurred,
     on_late_bump_occurred,
     on_bump_whiff_occurred,
-    on_no_bump_occurred,
 )
     .in_set(EffectSystems::Bridge)
     .after(BreakerSystems::GradeBump)
     .run_if(in_state(NodeState::Playing))
 );
-// on_no_bump_occurred also needs .after(BoltSystems::BreakerCollision)
+
+// on_no_bump_occurred needs BOTH .after constraints because it reads
+// BoltImpactBreaker (produced by BoltSystems::BreakerCollision) and
+// filters on BumpStatus (set by BreakerSystems::GradeBump)
+app.add_systems(FixedUpdate,
+    on_no_bump_occurred
+        .in_set(EffectSystems::Bridge)
+        .after(BreakerSystems::GradeBump)
+        .after(BoltSystems::BreakerCollision)
+        .run_if(in_state(NodeState::Playing))
+);
 ```
 
 **`triggers::impact::register(app)`** — registers all 12 impact bridges:
@@ -320,10 +330,12 @@ app.add_systems(FixedUpdate,
 // Bridges
 app.add_systems(OnEnter(NodeState::Playing), on_node_start_occurred);
 app.add_systems(OnExit(NodeState::Playing), on_node_end_occurred);
+// No .after(check_node_timer_thresholds) needed. Bridge runs in EffectSystems::Bridge
+// which is ordered before EffectSystems::Tick by set ordering. The one-frame delay
+// (Tick sends NodeTimerThresholdCrossed this frame, Bridge reads it next frame) is intentional.
 app.add_systems(FixedUpdate,
     on_node_timer_threshold_occurred
         .in_set(EffectSystems::Bridge)
-        .after(check_node_timer_thresholds)
         .run_if(in_state(NodeState::Playing))
 );
 
@@ -346,11 +358,12 @@ app.add_message::<NodeTimerThresholdCrossed>();
 
 **`triggers::time::register(app)`** — registers time bridge, game system, component, message:
 ```
-// Bridge
+// Bridge — no .after(tick_effect_timers) needed. Bridge runs in EffectSystems::Bridge
+// which is ordered before EffectSystems::Tick by set ordering. The one-frame delay
+// (Tick sends EffectTimerExpired this frame, Bridge reads it next frame) is intentional.
 app.add_systems(FixedUpdate,
     on_time_expires
         .in_set(EffectSystems::Bridge)
-        .after(tick_effect_timers)
         .run_if(in_state(NodeState::Playing))
 );
 
@@ -412,6 +425,41 @@ Note: These module files should already have stubs from Wave 2. The writer-code 
 
 ---
 
+### Prerequisites (Wave 2 Scaffold Must Provide)
+
+Wave 5 depends on the following types being present as at least stubs from wave 2. If any are missing or have wrong signatures, the writer-code must flag it — NOT create them in wave 5.
+
+**Message types with specific field requirements:**
+- `BoltImpactBreaker { bolt: Entity, breaker: Entity, bump_status: BumpStatus }` — must include `bump_status: BumpStatus` field. `on_no_bump_occurred` and `track_combo_streak` filter on this.
+- `BoltLost { bolt: Entity, breaker: Entity }` — must carry both `bolt` and `breaker` entity fields (migrated from unit struct). `on_bolt_lost_occurred` reads both.
+- `EffectTimerExpired { entity: Entity, original_duration: OrderedFloat<f32> }` — must include `original_duration` field per authoritative type doc.
+
+**Death pipeline types (in `src/shared/`):**
+- `GameEntity` trait — implemented on `Bolt`, `Cell`, `Wall`, `Breaker`
+- `Destroyed<T: GameEntity> { victim: Entity, killer: Option<Entity>, victim_pos: Vec2, killer_pos: Option<Vec2> }` message — generic death message read by death bridges
+- `Hp`, `KilledBy`, `Dead`, `DamageDealt`, `KillYourself`, `DespawnEntity` — other death pipeline types (not directly consumed by wave 5 bridges but must exist for compilation)
+
+**Effect storage types:**
+- `BoundEffects` component — `src/effect/storage/bound_effects.rs`
+- `StagedEffects` component — `src/effect/storage/staged_effects.rs`
+- `EffectTimers` component — `src/effect/triggers/time/components.rs`
+
+**Trigger and context types:**
+- `Trigger` enum with all variants listed in this spec
+- `TriggerContext` enum with `Bump`, `Impact`, `Death`, `BoltLost`, `None` variants
+- `EntityKind` enum with `Cell`, `Bolt`, `Wall`, `Breaker`, `Any` variants
+
+**Entity marker components:**
+- `Bolt`, `Cell`, `Wall`, `Breaker` marker components (for `Added<T>` queries in `watch_spawn_registry` and entity kind classification in death bridges)
+
+**Cross-domain resources:**
+- `NodeTimer { remaining: f32, total: f32 }` — from `crate::state::run::node::resources::NodeTimer`. Read by `check_node_timer_thresholds` to compute timer ratio.
+
+**Walker function:**
+- `walk_effects(entity, &Trigger, &TriggerContext, &BoundEffects, &StagedEffects, &mut Commands)` — implemented in wave 4, called by all bridges
+
+---
+
 ### Constraints
 
 - **Do NOT modify**: Test files. The writer-code must not change any test the test-writer produced.
@@ -435,7 +483,7 @@ Note: These module files should already have stubs from Wave 2. The writer-code 
    - Use a `classify_entity(entity, world)` helper that checks marker components. This is self-contained.
    - Prefer the approach that is already stubbed from Wave 2.
 
-2. **`on_time_expires` needs duration from message**: The `EffectTimerExpired` message must include the `original_duration` so the bridge can construct the correct `Trigger::TimeExpires(duration)`. If the message type from Wave 2 only has `entity`, it must be extended to include `duration: OrderedFloat<f32>`.
+2. **`on_time_expires` reads duration from message**: The `EffectTimerExpired` message includes `original_duration: OrderedFloat<f32>` so the bridge can construct the correct `Trigger::TimeExpires(original_duration)`. The bridge reads the duration from the message, not from the entity's `EffectTimers` component (which has already had the expired entry removed by `tick_effect_timers`).
 
 3. **Bolt field in BumpPerformed is Option<Entity>**: When `msg.bolt` is `None`, the Local bump bridges skip the bolt walk entirely but still walk the breaker. This is explicitly documented in the design docs.
 

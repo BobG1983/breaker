@@ -4,12 +4,26 @@
 src/bolt/
 
 ### Failing Tests
-- `src/bolt/systems/tick_bolt_lifespan/tests.rs` — tests for tick_bolt_lifespan sending KillYourself<Bolt> instead of RequestBoltDestroyed
-- `src/bolt/systems/bolt_lost/tests.rs` — tests for bolt_lost sending KillYourself<Bolt> and updated BoltLost { bolt, breaker }
-- `src/bolt/systems/handle_bolt_kill/tests.rs` — tests for new bolt domain kill handler
-- `src/bolt/systems/detect_bolt_deaths/tests.rs` — tests for detect_bolt_deaths (Hp-based path)
+- `src/bolt/systems/tick_bolt_lifespan/tests.rs` -- tests for tick_bolt_lifespan sending KillYourself<Bolt> instead of RequestBoltDestroyed
+- `src/bolt/systems/bolt_lost/tests.rs` -- tests for bolt_lost sending KillYourself<Bolt> (ExtraBolt only) and updated BoltLost { bolt, breaker }
+- `src/bolt/systems/handle_bolt_kill/tests.rs` -- tests for new bolt domain kill handler
+- Bolt builder tests -- tests for Hp/KilledBy on spawned bolts
 
-Exact test count will be determined by the test spec. Expect approximately 12-18 tests across all files.
+Exact test count will be determined by the test spec. Expect approximately 20-25 tests across all files.
+
+---
+
+### Prerequisites
+
+The following shared types and systems must exist from previous waves (wave 2 scaffold + wave 7 death pipeline) before wave 10 implementation can proceed:
+
+- `GameEntity` trait with `impl GameEntity for Bolt {}`
+- `Hp`, `KilledBy`, `Dead` components (src/shared/components/)
+- `KillYourself<T>`, `Destroyed<T>`, `DespawnEntity` messages (src/shared/messages/)
+- `DeathPipelineSystems` system set (src/shared/sets.rs)
+- `apply_damage::<Bolt>` and `detect_bolt_deaths` systems (wave 7)
+- `process_despawn_requests` system (src/shared/systems/)
+- `GlobalPosition2D` from `rantzsoft_spatial2d`
 
 ---
 
@@ -30,18 +44,20 @@ writer.write(KillYourself::<Bolt>::new(entity, None))
 
 The system continues to:
 - Tick `BoltLifespan` timers each frame using `time.delta()`
-- Skip bolts with `Birthing` component (via `Without<Birthing>` filter)
+- Skip bolts with `Birthing` component (via `Without<Birthing>` filter -- timer does NOT tick at all for birthing bolts)
 - Fire only on `just_finished()`
 - Skip bolts with `Dead` component (add `Without<Dead>` filter)
 
 The system does NOT:
-- Insert `Dead` — the domain kill handler does that
-- Despawn the bolt — `process_despawn_requests` does that
+- Insert `Dead` -- the domain kill handler does that
+- Despawn the bolt -- `process_despawn_requests` does that
 
 **Message writer change:** Replace `MessageWriter<RequestBoltDestroyed>` with `MessageWriter<KillYourself<Bolt>>` in the system parameters.
 
 #### 2. Update `bolt_lost` system
-Modify the existing system to send `KillYourself<Bolt>` instead of `RequestBoltDestroyed`, and update the `BoltLost` message to include `bolt` and `breaker` fields.
+Modify the existing system to send `KillYourself<Bolt>` instead of `RequestBoltDestroyed`, **but only for ExtraBolt entities**. Update the `BoltLost` message to include `bolt` and `breaker` fields.
+
+**Critical ExtraBolt guard**: `bolt_lost` ONLY sends `KillYourself<Bolt>` for bolts that have the `ExtraBolt` component. Baseline bolts (without `ExtraBolt`) are respawned, NOT killed. The system must check `Has<ExtraBolt>` (or equivalent query) and only send `KillYourself` when ExtraBolt is present.
 
 **Before:**
 ```rust
@@ -49,26 +65,33 @@ writer.write(RequestBoltDestroyed { bolt: entity });
 bolt_lost_writer.write(BoltLost);
 ```
 
-**After:**
+**After (ExtraBolt):**
 ```rust
-writer.write(KillYourself::<Bolt>::new(entity, None));
+if has_extra_bolt {
+    kill_writer.write(KillYourself::<Bolt>::new(entity, None));
+}
+// BoltLost fires for ALL bolt types (ExtraBolt and baseline)
 bolt_lost_writer.write(BoltLost { bolt: entity, breaker: breaker_entity });
 ```
 
 The system continues to:
 - Detect bolts that leave the play area (below breaker or off-screen)
-- Send `BoltLost` for the effect system's `on_bolt_lost_occurred` bridge
-- Handle respawn logic (unchanged)
+- Send `BoltLost` for the effect system's `on_bolt_lost_occurred` bridge (ALL bolt types)
+- Handle respawn logic for baseline bolts (unchanged)
 
 The system must query the breaker entity to populate `BoltLost.breaker`. The breaker entity is already available in the system's existing queries or can be obtained via a `Query<Entity, With<Breaker>>` (there is exactly one breaker entity during gameplay).
 
 Add `Without<Dead>` filter to the bolt query to skip bolts that are already dying.
 
-Killer is `None` — bolt loss is an environmental death with no dealer.
+Killer is `None` -- bolt loss is an environmental death with no dealer.
 
 The system does NOT:
 - Insert `Dead`
 - Despawn the bolt
+
+**SystemParam migration -- BoltLostWriters**: The existing system may use a `BoltLostWriters` SystemParam struct that bundles multiple MessageWriters. This struct must be updated:
+- Replace `MessageWriter<RequestBoltDestroyed>` with `MessageWriter<KillYourself<Bolt>>`
+- **Remove the old `BoltLostWriters` SystemParam struct entirely** if it existed only to bundle `RequestBoltDestroyed` + `BoltLost` writers. Replace with inline system parameters or a new SystemParam that reflects the new message types. Removing the struct is preferred for clarity.
 
 #### 3. Update `BoltLost` message type
 Change from a unit struct to a struct with fields.
@@ -88,21 +111,27 @@ pub struct BoltLost {
 }
 ```
 
-This lives in `src/bolt/messages.rs`. All consumers of `BoltLost` must be updated to destructure the new fields. The primary consumer is `on_bolt_lost_occurred` in `src/effect/triggers/bolt_lost/bridges.rs` — that system reads `msg.bolt` and `msg.breaker` to build its `TriggerContext::BoltLost { bolt, breaker }`.
+This lives in `src/bolt/messages.rs`. All consumers of `BoltLost` must be updated to destructure the new fields. The primary consumer is `on_bolt_lost_occurred` in `src/effect/triggers/bolt_lost/bridges.rs` -- that system reads `msg.bolt` and `msg.breaker` to build its `TriggerContext::BoltLost { bolt, breaker }`.
 
 Also update `spawn_bolt_lost_text` (if it consumes `BoltLost`) to accept the new struct shape.
+
+**Test update**: If there is an existing test file for the `BoltLost` message (e.g., in `src/bolt/messages.rs` tests), update the test to construct `BoltLost { bolt: ..., breaker: ... }` instead of `BoltLost`.
 
 #### 4. Remove `RequestBoltDestroyed` message type
 Delete the `RequestBoltDestroyed` message from `src/bolt/messages.rs`. Remove its registration from `src/bolt/plugin.rs`. Remove all imports referencing it.
 
 There are exactly two producers:
-- `tick_bolt_lifespan` — migrated in step 1
-- `bolt_lost` — migrated in step 2
+- `tick_bolt_lifespan` -- migrated in step 1
+- `bolt_lost` -- migrated in step 2
 
 There is one consumer:
-- `cleanup_destroyed_bolts` — removed in step 5
+- `cleanup_destroyed_bolts` -- removed in step 5
 
 After migration, this type has zero references and can be deleted.
+
+**Prelude update**: If `RequestBoltDestroyed` is re-exported in `src/prelude/messages.rs`, remove the re-export.
+
+**Test helper update**: If `bolt_lost/tests/helpers.rs` contains a `CapturedRequestBoltDestroyed` or similar test helper for the old message type, remove it.
 
 #### 5. Remove `cleanup_destroyed_bolts` system
 Delete `src/bolt/systems/cleanup_destroyed_bolts.rs`. Remove its `mod` declaration from `src/bolt/systems/mod.rs`. Remove its registration from `src/bolt/plugin.rs`. Remove all imports.
@@ -119,32 +148,34 @@ pub fn handle_bolt_kill(
     mut reader: MessageReader<KillYourself<Bolt>>,
     mut destroyed_writer: MessageWriter<Destroyed<Bolt>>,
     mut despawn_writer: MessageWriter<DespawnEntity>,
-    query: Query<&GlobalPosition2D, With<Bolt>>,
+    query: Query<&GlobalPosition2D, (With<Bolt>, Without<Dead>)>,
     killer_query: Query<&GlobalPosition2D>,
 ) {
 ```
 
 **Behavior:**
-1. Read each `KillYourself<Bolt>` message.
-2. For each message:
-   a. Check if the victim entity exists in the query. If not, skip (entity may have been despawned by another path — log a debug warning in debug builds).
-   b. Check if the victim already has the `Dead` component. If yes, skip (prevents double-processing).
-   c. Insert `Dead` component on the victim entity via `commands.entity(victim).insert(Dead)`.
-   d. Extract `victim_pos` from the victim's `GlobalPosition2D`.
-   e. If `killer` is `Some(entity)`, extract `killer_pos` from the killer's `GlobalPosition2D` (using `killer_query`). If the killer entity no longer exists, set `killer_pos` to `None`.
-   f. Remove the bolt from the spatial index. Use `commands.entity(victim).remove::<CollisionLayers>()` to exclude from future spatial queries, or follow the same pattern used by the cell domain kill handler from wave 9.
-   g. Send `Destroyed<Bolt>` with `victim`, `killer`, `victim_pos`, `killer_pos`.
-   h. Send `DespawnEntity { entity: victim }`.
+1. Create a local `HashSet<Entity>` to track entities already processed in this batch (for same-frame deduplication -- commands are deferred so `Dead` insertion is not immediately visible).
+2. Read each `KillYourself<Bolt>` message.
+3. For each message:
+   a. Check if the victim is already in the local HashSet. If yes, skip (duplicate in same frame).
+   b. Check if the victim entity exists in the query (which uses `Without<Dead>`). If not, skip (entity may have been despawned by another path, or already has `Dead` from a previous frame -- log a debug warning in debug builds).
+   c. Add victim to the local HashSet.
+   d. Insert `Dead` component on the victim entity via `commands.entity(victim).insert(Dead)`.
+   e. Extract `victim_pos` from the victim's `GlobalPosition2D`.
+   f. If `killer` is `Some(entity)`, extract `killer_pos` from the killer's `GlobalPosition2D` (using `killer_query`). If the killer entity no longer exists, set `killer_pos` to `None`.
+   g. Remove the bolt from the spatial index. Use `commands.entity(victim).remove::<CollisionLayers>()` to exclude from future spatial queries, or follow the same pattern used by the cell domain kill handler from wave 9.
+   h. Send `Destroyed<Bolt>` with `victim`, `killer`, `victim_pos`, `killer_pos`.
+   i. Send `DespawnEntity { entity: victim }`.
 
 **Key constraints:**
 - The entity must survive through this system. Only `DespawnEntity` triggers the actual despawn, which happens in PostFixedUpdate.
-- `Dead` insertion prevents other systems from double-processing this entity (via `Without<Dead>` filters).
-- The bolt entity is still alive when `Destroyed<Bolt>` is sent — the effect system's death bridge needs to walk the entity's `BoundEffects`/`StagedEffects`.
+- `Dead` insertion (deferred via commands) + local HashSet (immediate) together prevent double-processing within a frame.
+- The bolt entity is still alive when `Destroyed<Bolt>` is sent -- the effect system's death bridge needs to walk the entity's `BoundEffects`/`StagedEffects`.
 
 #### 7. Add `Hp` and `KilledBy` to bolt builder
 Update the bolt spawn function/builder to include `Hp` and `KilledBy` components on newly spawned bolt entities.
 
-Bolt Hp value: `Hp { current: 1.0, starting: 1.0, max: None }`. Bolts have 1 HP — they die from a single damage event (future mechanic). Most bolt deaths are environmental (lifespan expiry, falling off-screen) and bypass Hp entirely via direct `KillYourself<Bolt>`.
+Bolt Hp value: `Hp { current: 1.0, starting: 1.0, max: None }`. Bolts have 1 HP -- they die from a single damage event (future mechanic). Most bolt deaths are environmental (lifespan expiry, falling off-screen) and bypass Hp entirely via direct `KillYourself<Bolt>`.
 
 `KilledBy` should be inserted with `KilledBy::default()` (dealer: None).
 
@@ -171,53 +202,53 @@ Note: `KillYourself<Bolt>`, `Destroyed<Bolt>`, and `DespawnEntity` may already b
 ### Patterns to Follow
 
 - Follow the pattern established by wave 9's cell domain kill handler (`src/cells/systems/handle_cell_kill.rs` or equivalent) for the bolt kill handler structure. The bolt handler is simpler (no `RequiredToClear` tracking, no `Locked` checks).
-- Follow the existing `tick_bolt_lifespan` system structure for the message writer swap — minimal change, just replace the message type.
-- Follow the existing `bolt_lost` system structure — add the breaker query and populate the new `BoltLost` fields.
+- Follow the existing `tick_bolt_lifespan` system structure for the message writer swap -- minimal change, just replace the message type.
+- Follow the existing `bolt_lost` system structure -- add the breaker query, populate the new `BoltLost` fields, add the ExtraBolt guard on KillYourself.
 - For `Dead` insertion and spatial index removal, follow whatever pattern the cell domain kill handler established in wave 9.
-- Use `GlobalPosition2D` (not `Position2D`) for extracting positions in the kill handler — `GlobalPosition2D` is the resolved world-space position.
+- Use `GlobalPosition2D` (not `Position2D`) for extracting positions in the kill handler -- `GlobalPosition2D` is the resolved world-space position.
+- For same-frame deduplication, use a local `HashSet<Entity>` in the kill handler (same pattern as wave 9 cell kill handler).
 
 ---
 
 ### RON Data
-No RON data changes needed for this wave. Bolt Hp is hardcoded at 1.0 in the builder. If bolt Hp needs to be configurable in the future, it would go in the bolt config RON — but that is out of scope for this migration.
+No RON data changes needed for this wave. Bolt Hp is hardcoded at 1.0 in the builder. If bolt Hp needs to be configurable in the future, it would go in the bolt config RON -- but that is out of scope for this migration.
 
 ---
 
 ### Schedule
 
 #### Modified systems (schedule unchanged)
-- `tick_bolt_lifespan` — stays in FixedUpdate, same schedule position. Only the message type changes.
-- `bolt_lost` — stays in FixedUpdate, same schedule position. Only the message type and `BoltLost` fields change. Retains existing `Without<Birthing>` filter if present. Add `Without<Dead>` filter.
+- `tick_bolt_lifespan` -- stays in FixedUpdate, same schedule position. Only the message type changes. Add `Without<Dead>` filter.
+- `bolt_lost` -- stays in FixedUpdate, same schedule position. Only the message type and `BoltLost` fields change. Retains existing `Without<Birthing>` filter if present. Add `Without<Dead>` filter. Add ExtraBolt guard on KillYourself sending.
 
 #### New system
-- `handle_bolt_kill` — runs in **FixedUpdate**, after `DeathPipelineSystems::DetectDeaths`.
+- `handle_bolt_kill` -- runs in **FixedUpdate**, after `DeathPipelineSystems::DetectDeaths`.
 
 **Ordering constraints for `handle_bolt_kill`:**
-- AFTER `DeathPipelineSystems::DetectDeaths` — so that Hp-based deaths have sent `KillYourself<Bolt>`
-- AFTER `tick_bolt_lifespan` — so that lifespan-based `KillYourself<Bolt>` messages are available
-- AFTER `bolt_lost` — so that off-screen-based `KillYourself<Bolt>` messages are available
-- BEFORE `EffectSystems::Bridge` — so that `Destroyed<Bolt>` is available for the death bridge to read in the same frame (if the death bridge runs after kill handlers)
+- AFTER `DeathPipelineSystems::DetectDeaths` -- so that Hp-based deaths have sent `KillYourself<Bolt>`
+- AFTER `tick_bolt_lifespan` -- so that lifespan-based `KillYourself<Bolt>` messages are available
+- AFTER `bolt_lost` -- so that off-screen-based `KillYourself<Bolt>` messages are available
 
-The exact ordering constraint depends on the frame ordering established in wave 7:
+**Note on one-frame delay**: The `Destroyed<Bolt>` message sent by `handle_bolt_kill` will be consumed by `on_destroyed::<Bolt>` in the NEXT frame's `EffectSystems::Bridge` pass. There is NO ordering constraint "BEFORE EffectSystems::Bridge" -- the one-frame delay is acceptable and intentional per the death pipeline docs.
+
+The exact frame ordering:
 ```
 Game systems (tick_bolt_lifespan, bolt_lost, collision, etc.)
-    ↓
+    |
 EffectSystems::Bridge
-    ↓
+    |
 EffectSystems::Tick
-    ↓
+    |
 EffectSystems::Conditions
-    ↓
+    |
 DeathPipelineSystems::ApplyDamage
-    ↓
+    |
 DeathPipelineSystems::DetectDeaths
-    ↓
+    |
 Domain kill handlers (handle_bolt_kill, handle_cell_kill, etc.)
-    ↓
+    |
 PostFixedUpdate: process_despawn_requests
 ```
-
-Based on the frame ordering doc, domain kill handlers run AFTER `DetectDeaths` and BEFORE the effect bridge reads `Destroyed<T>`. The `Destroyed<Bolt>` message sent by `handle_bolt_kill` will be consumed by `on_destroyed::<Bolt>` in the NEXT frame's `EffectSystems::Bridge` pass (one-frame delay is acceptable per the death pipeline docs).
 
 Register `handle_bolt_kill` in `BoltPlugin::build()` with:
 ```rust
@@ -228,7 +259,7 @@ app.add_systems(
 ```
 
 #### Removed system
-- `cleanup_destroyed_bolts` — remove from FixedUpdate registration in `BoltPlugin`.
+- `cleanup_destroyed_bolts` -- remove from FixedUpdate registration in `BoltPlugin`.
 
 ---
 
@@ -236,7 +267,7 @@ app.add_systems(
 
 These types must already exist from previous waves (wave 2 scaffold + wave 7 death pipeline):
 
-- `GameEntity` trait (src/shared/) — with `impl GameEntity for Bolt {}`
+- `GameEntity` trait (src/shared/) -- with `impl GameEntity for Bolt {}`
 - `Hp` component (src/shared/components/)
 - `KilledBy` component (src/shared/components/)
 - `Dead` component (src/shared/components/)
@@ -250,8 +281,6 @@ These types must already exist from previous waves (wave 2 scaffold + wave 7 dea
 - `process_despawn_requests` system (src/shared/systems/)
 - `DeathDetectionData` QueryData (src/shared/queries.rs)
 - `DamageTargetData` QueryData (src/shared/queries.rs)
-
-If `detect_bolt_deaths` is in `src/bolt/systems/`, it was implemented in wave 7. If it's generic and in shared, it was also wave 7. Either way, it exists before wave 10.
 
 Additionally, `KillYourself<Bolt>` should have a convenience constructor:
 ```rust
@@ -290,38 +319,44 @@ These constructors should already exist from wave 2 scaffold.
 4. Add `pub(crate) use handle_bolt_kill::*;`
 
 #### `src/bolt/messages.rs`
-1. Remove `RequestBoltDestroyed` struct
+1. Remove `RequestBoltDestroyed` struct entirely
 2. Update `BoltLost` from unit struct to `BoltLost { bolt: Entity, breaker: Entity }`
 3. Add `Entity` import if not present
+4. Update any tests in this file to use the new `BoltLost` struct shape
+
+#### `src/bolt/systems/bolt_lost/tests/helpers.rs`
+1. Remove `CapturedRequestBoltDestroyed` test helper (or equivalent) if it exists
+2. Update any test helpers that construct or assert on `BoltLost` to use the new struct fields
+
+#### `src/prelude/messages.rs`
+1. Remove `RequestBoltDestroyed` re-export if present
+2. `BoltLost` re-export (if present) automatically reflects the updated struct shape
 
 #### `src/bolt/mod.rs`
 No changes needed if messages.rs is already re-exported.
 
 #### Consumers of `BoltLost` (cross-domain)
 The following files consume `BoltLost` and must be updated to handle the new struct fields:
-- `src/effect/triggers/bolt_lost/bridges.rs` — `on_bolt_lost_occurred`: should already expect `BoltLost { bolt, breaker }` per the effect-refactor design. If the bridge was stubbed in wave 2 with the new signature, no change needed. If it was stubbed with the old unit struct, update the destructuring.
-- `src/bolt/systems/spawn_bolt_lost_text.rs` (or wherever the bolt-lost text spawning lives): update to accept the new struct. The text spawning only needs to know a bolt was lost — the fields may be unused, but the destructuring must compile.
-
-#### Prelude
-If `BoltLost` is in the prelude (check `src/prelude/messages.rs`), the prelude re-export automatically reflects the updated struct.
+- `src/effect/triggers/bolt_lost/bridges.rs` -- `on_bolt_lost_occurred`: should already expect `BoltLost { bolt, breaker }` per the effect-refactor design. If the bridge was stubbed in wave 2 with the new signature, no change needed. If it was stubbed with the old unit struct, update the destructuring.
+- `src/bolt/systems/spawn_bolt_lost_text.rs` (or wherever the bolt-lost text spawning lives): update to accept the new struct. The text spawning only needs to know a bolt was lost -- the fields may be unused, but the destructuring must compile.
 
 ---
 
 ### Constraints
 
 #### Do NOT modify
-- `src/shared/` — types and death pipeline systems are already implemented from waves 2 and 7. Do not change Hp, KilledBy, Dead, DamageDealt, KillYourself, Destroyed, DespawnEntity, apply_damage, detect_bolt_deaths, process_despawn_requests.
-- `src/cells/` — cell domain migration is wave 9 (already complete)
-- `src/effect/` — effect domain systems are from waves 4-6. The `on_bolt_lost_occurred` bridge may need a field destructuring update if it was stubbed with the old `BoltLost` shape, but do NOT change the bridge's logic.
-- `src/breaker/` — breaker domain migration is wave 12 (future)
-- `src/run/` — not in scope for this wave
-- `src/walls/` — wall domain migration is wave 11 (future)
+- `src/shared/` -- types and death pipeline systems are already implemented from waves 2 and 7. Do not change Hp, KilledBy, Dead, DamageDealt, KillYourself, Destroyed, DespawnEntity, apply_damage, detect_bolt_deaths, process_despawn_requests.
+- `src/cells/` -- cell domain migration is wave 9 (already complete)
+- `src/effect/` -- effect domain systems are from waves 4-6. The `on_bolt_lost_occurred` bridge may need a field destructuring update if it was stubbed with the old `BoltLost` shape, but do NOT change the bridge's logic.
+- `src/breaker/` -- breaker domain migration is wave 12 (future)
+- `src/run/` -- not in scope for this wave
+- `src/walls/` -- wall domain migration is wave 11 (future)
 
 #### Do NOT add
-- Damage-to-bolt mechanics — `apply_damage::<Bolt>` exists for future use; this wave does not add any system that sends `DamageDealt<Bolt>`
-- Bolt invulnerability checks — the kill handler confirms every kill (no shield/second-wind for bolts)
-- Visual death effects for bolts — VFX is not part of this migration
-- Any changes to bolt collision systems (bolt-cell, bolt-wall, bolt-breaker) — those are unchanged
+- Damage-to-bolt mechanics -- `apply_damage::<Bolt>` exists for future use; this wave does not add any system that sends `DamageDealt<Bolt>`
+- Bolt invulnerability checks -- the kill handler confirms every kill (no shield/second-wind for bolts)
+- Visual death effects for bolts -- VFX is not part of this migration
+- Any changes to bolt collision systems (bolt-cell, bolt-wall, bolt-breaker) -- those are unchanged
 - Any changes to bolt spawning logic beyond adding Hp/KilledBy components
 
 ---
@@ -330,14 +365,15 @@ If `BoltLost` is in the prelude (check `src/prelude/messages.rs`), the prelude r
 
 Implement in this order to maintain compile-ability at each step:
 
-1. **Update `BoltLost` message type** in messages.rs — add fields. Fix all consumers that destructure it (compiler errors will guide you).
-2. **Create `handle_bolt_kill`** system — new file, new system. Wire in plugin.rs and systems/mod.rs.
-3. **Update `tick_bolt_lifespan`** — swap message writer from `RequestBoltDestroyed` to `KillYourself<Bolt>`. Add `Without<Dead>` filter.
-4. **Update `bolt_lost`** — swap message writer, populate new `BoltLost` fields, add breaker query, add `Without<Dead>` filter.
-5. **Remove `RequestBoltDestroyed`** — delete from messages.rs, remove all imports (should be zero references at this point).
-6. **Remove `cleanup_destroyed_bolts`** — delete file, remove mod/use from systems/mod.rs, remove registration from plugin.rs.
-7. **Add `Hp` and `KilledBy` to bolt builder** — update the bolt spawn function.
-8. **Verify** — all tests pass, no clippy warnings, no dead code.
+1. **Update `BoltLost` message type** in messages.rs -- add fields. Fix all consumers that destructure it (compiler errors will guide you). Update any tests in messages.rs.
+2. **Create `handle_bolt_kill`** system -- new file, new system. Wire in plugin.rs and systems/mod.rs.
+3. **Update `tick_bolt_lifespan`** -- swap message writer from `RequestBoltDestroyed` to `KillYourself<Bolt>`. Add `Without<Dead>` filter.
+4. **Update `bolt_lost`** -- swap message writer, populate new `BoltLost` fields, add breaker query, add `Without<Dead>` filter, **add ExtraBolt guard on KillYourself sending** (only ExtraBolts get killed, baseline bolts get respawned).
+5. **Remove `RequestBoltDestroyed`** -- delete from messages.rs, remove from prelude/messages.rs if present, remove all imports (should be zero references at this point).
+6. **Remove `cleanup_destroyed_bolts`** -- delete file, remove mod/use from systems/mod.rs, remove registration from plugin.rs.
+7. **Clean up bolt_lost test helpers** -- remove `CapturedRequestBoltDestroyed` from bolt_lost/tests/helpers.rs if it exists.
+8. **Add `Hp` and `KilledBy` to bolt builder** -- update the bolt spawn function.
+9. **Verify** -- all tests pass, no clippy warnings, no dead code.
 
 ---
 
@@ -346,36 +382,44 @@ Implement in this order to maintain compile-ability at each step:
 **Lifespan expiry path:**
 ```
 tick_bolt_lifespan
-  → KillYourself<Bolt> { victim, killer: None }
-    → handle_bolt_kill
-      → insert Dead
-      → Destroyed<Bolt> { victim, killer: None, victim_pos, killer_pos: None }
-      → DespawnEntity { entity: victim }
-        → process_despawn_requests (PostFixedUpdate)
-          → entity despawned
+  -> KillYourself<Bolt> { victim, killer: None }
+    -> handle_bolt_kill
+      -> insert Dead (deferred) + HashSet tracking (immediate)
+      -> Destroyed<Bolt> { victim, killer: None, victim_pos, killer_pos: None }
+      -> DespawnEntity { entity: victim }
+        -> process_despawn_requests (PostFixedUpdate)
+          -> entity despawned
 ```
 
-**Bolt lost (off-screen) path:**
+**ExtraBolt lost (off-screen) path:**
 ```
-bolt_lost
-  → KillYourself<Bolt> { victim, killer: None }
-  → BoltLost { bolt, breaker }
-    → handle_bolt_kill (processes KillYourself)
-      → insert Dead
-      → Destroyed<Bolt> { victim, killer: None, victim_pos, killer_pos: None }
-      → DespawnEntity { entity: victim }
-    → on_bolt_lost_occurred (processes BoltLost, evaluates triggers)
-      → effect tree walking (LoseLife, etc.)
+bolt_lost (ExtraBolt detected off-screen)
+  -> KillYourself<Bolt> { victim, killer: None }   (ExtraBolt ONLY)
+  -> BoltLost { bolt, breaker }                     (ALL bolt types)
+    -> handle_bolt_kill (processes KillYourself)
+      -> insert Dead + HashSet tracking
+      -> Destroyed<Bolt> { victim, killer: None, victim_pos, killer_pos: None }
+      -> DespawnEntity { entity: victim }
+    -> on_bolt_lost_occurred (processes BoltLost, evaluates triggers)
+      -> effect tree walking (LoseLife, etc.)
 ```
 
-**Hp-based death path (future):**
+**Baseline bolt lost (off-screen) path:**
+```
+bolt_lost (baseline bolt detected off-screen)
+  -> BoltLost { bolt, breaker }                     (effect triggers fire)
+  -> NO KillYourself<Bolt>                           (baseline bolt is respawned, not killed)
+  -> respawn logic (unchanged, out of scope)
+```
+
+**Hp-based death path (future, uses wave 7 systems):**
 ```
 DamageDealt<Bolt> (from some future source)
-  → apply_damage::<Bolt>
-    → decrement Hp, set KilledBy on killing blow
-  → detect_bolt_deaths
-    → KillYourself<Bolt> { victim, killer: Some(dealer) }
-      → handle_bolt_kill (same as above, but with killer attribution)
+  -> apply_damage::<Bolt> (wave 7)
+    -> decrement Hp, set KilledBy on killing blow
+  -> detect_bolt_deaths (wave 7)
+    -> KillYourself<Bolt> { victim, killer: Some(dealer) }
+      -> handle_bolt_kill (same as above, but with killer attribution)
 ```
 
 ---
@@ -384,11 +428,17 @@ DamageDealt<Bolt> (from some future source)
 
 Tests should verify:
 1. `tick_bolt_lifespan` sends `KillYourself<Bolt>` (not `RequestBoltDestroyed`) with `killer: None`
-2. `bolt_lost` sends `KillYourself<Bolt>` with `killer: None` AND `BoltLost { bolt, breaker }` with correct entity values
-3. `handle_bolt_kill` inserts `Dead`, sends `Destroyed<Bolt>` with correct position data, sends `DespawnEntity`
-4. `handle_bolt_kill` skips entities that already have `Dead` (no double-processing)
-5. `handle_bolt_kill` handles missing victim entity gracefully (skip with debug log)
-6. End-to-end: bolt lifespan expires → full pipeline to despawn
-7. End-to-end: bolt lost → full pipeline to despawn + effect trigger evaluation
-8. Bolt builder spawns entities with `Hp(1.0)` and `KilledBy(default)`
-9. `detect_bolt_deaths` sends `KillYourself<Bolt>` when Hp <= 0 (Hp-based path exists for future)
+2. `tick_bolt_lifespan` does NOT tick timer for bolts with `Birthing` (Without<Birthing> filter)
+3. `tick_bolt_lifespan` skips bolts with `Dead` (Without<Dead> filter)
+4. `bolt_lost` sends `KillYourself<Bolt>` with `killer: None` ONLY for ExtraBolt entities
+5. `bolt_lost` sends `BoltLost { bolt, breaker }` for ALL bolt types (ExtraBolt and baseline)
+6. `bolt_lost` does NOT send `KillYourself<Bolt>` for baseline bolts (no ExtraBolt component)
+7. `bolt_lost` skips bolts with `Dead` (Without<Dead> filter)
+8. `handle_bolt_kill` inserts `Dead`, sends `Destroyed<Bolt>` with correct position data, sends `DespawnEntity`
+9. `handle_bolt_kill` uses local HashSet for same-frame deduplication (two KillYourself messages for same entity -- only first processed)
+10. `handle_bolt_kill` skips entities that already have `Dead` component (from previous frame)
+11. `handle_bolt_kill` handles missing victim entity gracefully (skip with debug log)
+12. End-to-end: bolt lifespan expires -> full pipeline to despawn
+13. End-to-end: ExtraBolt lost -> full pipeline to despawn + effect trigger evaluation
+14. End-to-end: baseline bolt lost -> BoltLost fires, bolt is NOT killed
+15. Bolt builder spawns entities with `Hp(1.0)` and `KilledBy(default)`
