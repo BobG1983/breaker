@@ -11,3 +11,4 @@
 - [walking-effects/](walking-effects/index.md) — How to walk and evaluate effect trees at runtime
 - [dispatching-triggers/](dispatching-triggers/index.md) — How game events become trigger dispatches
 - [creating-effects/](creating-effects/index.md) — Effect API, wiring, and per-effect behavioral specs
+- [creating-triggers/](creating-triggers/index.md) — Trigger API, scoping, bridges, participants, wiring
