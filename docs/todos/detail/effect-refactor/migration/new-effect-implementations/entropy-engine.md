@@ -29,7 +29,5 @@ This effect is designed to be inside a `When(Killed(Cell), ...)` -- each fire ca
 
 # New Systems
 
-## reset_entropy_counter
-- **What it does**: For each entity with `EntropyCounter`, set `count` to 0.
-- **What it does NOT do**: Does not remove the counter component. Does not modify the pool. Does not fire any effects.
-- **Schedule**: OnEnter(NodeState), runs once at node start.
+## No separate reset system
+EntropyEngine resets its counter to 0 internally when `fire()` is called — after all effects are fired for the current count, the counter resets. No separate `reset_entropy_counter` system is needed.

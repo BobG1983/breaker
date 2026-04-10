@@ -54,14 +54,14 @@ pub fn handle_wall_kill(
 
 #### 2. Update shield effect `fire()` to add `Hp` and `KilledBy`
 - **File**: `src/effect/effects/shield/` (wherever the shield wall entity is spawned in the `fire()` function)
-- **What changes**: When the shield effect's `fire()` function spawns a `ShieldWall` entity, add `Hp` and `KilledBy` components alongside existing components.
+- **What changes**: When the shield effect's `fire()` function spawns a `ShieldWall` entity, add `Wall`, `Hp`, and `KilledBy` components alongside existing components. The `Wall` component is required for `Fire(Die)` to classify the entity type and for `handle_wall_kill`'s `With<Wall>` query filter.
 - **Hp construction**: `Hp { current: 1.0, starting: 1.0, max: None }` -- one-shot wall. Shield walls primarily expire via timer (`tick_shield_duration`) or reflection cost depletion, but adding Hp makes them eligible for the damage path as well.
 - **KilledBy construction**: `KilledBy::default()` (dealer is None initially -- set by `apply_damage::<Wall>` on the killing blow, if the wall dies via damage).
 - **Note**: The shield timer-expiry system (`tick_shield_duration`) still uses its existing path for now. Only the `Fire(Die)` and `DamageDealt<Wall>` paths go through the kill handler.
 
 #### 3. Update second-wind effect `fire()` to add `Hp` and `KilledBy`
 - **File**: `src/effect/effects/second_wind/` (wherever the second-wind wall entity is spawned in the `fire()` function)
-- **What changes**: When the second-wind effect's `fire()` function spawns a `SecondWindWall` entity, add `Hp` and `KilledBy` components alongside existing components.
+- **What changes**: When the second-wind effect's `fire()` function spawns a `SecondWindWall` entity, add `Wall`, `Hp`, and `KilledBy` components alongside existing components. The `Wall` component is required for `Fire(Die)` to classify the entity type and for `handle_wall_kill`'s `With<Wall>` query filter.
 - **Hp construction**: `Hp { current: 1.0, starting: 1.0, max: None }` -- one-shot wall. Second-wind walls die via `Fire(Die)` after their first bounce.
 - **KilledBy construction**: `KilledBy::default()`.
 - **Note**: The second-wind bounce handler still uses its existing path for now. Only the `Fire(Die)` and `DamageDealt<Wall>` paths go through the kill handler.

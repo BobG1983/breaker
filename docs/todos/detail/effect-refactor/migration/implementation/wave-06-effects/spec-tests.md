@@ -795,7 +795,7 @@ EntropyEngine resets its counter internally when fired -- no separate reset syst
 #### G8.2 **tick_pulse spawns shockwave when timer reaches zero**
 - Given: Entity with `PulseEmitter { base_range: 100.0, range_per_level: 20.0, stacks: 2, speed: 200.0, interval: 3.0, timer: 0.01 }` at position `(50.0, 50.0)`, `BoltBaseDamage(10.0)`, `EffectStack<DamageBoostConfig>` aggregating to `1.5`. dt = `1.0/60.0`.
 - When: `tick_pulse` runs (timer crosses zero)
-- Then: A shockwave entity spawned at `(50.0, 50.0)` with `ShockwaveMaxRadius(140.0)` (100.0 + 20.0 * 2), `ShockwaveSpeed(200.0)`. `PulseEmitter.timer` reset to `3.0`.
+- Then: A shockwave entity spawned at `(50.0, 50.0)` with `ShockwaveMaxRadius(120.0)` (100.0 + 20.0 * (2 - 1)), `ShockwaveSpeed(200.0)`. `PulseEmitter.timer` reset to `3.0`.
 
 #### G8.3 **tick_pulse does not spawn shockwave when timer still positive**
 - Given: Entity with `PulseEmitter { timer: 1.5, interval: 3.0, ... }`
