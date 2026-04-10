@@ -158,6 +158,49 @@ The following waves must be complete before wave 8 integration tests can be writ
 - Edge case: Bolt has `When(Killed(Bolt), Fire(SpeedBoost(...)))` — killing a cell does NOT trigger this tree because `Killed(Bolt)` does not match `Killed(Cell)`. `EffectStack<SpeedBoostConfig>` remains empty.
 - Edge case: Cell death with no killer (`killer: None`, environmental death). `Killed(Cell)` is NOT dispatched on any entity (no killer exists). The bolt's tree does not fire.
 
+### 16. **RON deserialization smoke test: all breaker definitions deserialize**
+- Given: All `.breaker.ron` files in `breaker-game/assets/breakers/`
+- When: For each file, read the contents and deserialize as `BreakerDefinition` using `ron::from_str`
+- Then: Every file deserializes successfully. If any file fails, the test panics with the filename and the deserialization error.
+- Edge case: An empty directory produces zero assertions (test passes vacuously — no files to check).
+- Note: The test dynamically discovers files at runtime using `std::fs::read_dir`. Adding a new `.breaker.ron` file automatically includes it in the test. Do NOT hardcode filenames.
+
+### 17. **RON deserialization smoke test: all bolt definitions deserialize**
+- Given: All `.bolt.ron` files in `breaker-game/assets/bolts/`
+- When: For each file, read the contents and deserialize as `BoltDefinition` using `ron::from_str`
+- Then: Every file deserializes successfully with filename in the error message on failure.
+- Note: Dynamic file discovery via `std::fs::read_dir`.
+
+### 18. **RON deserialization smoke test: all cell definitions deserialize**
+- Given: All `.cell.ron` files in `breaker-game/assets/cells/`
+- When: For each file, read the contents and deserialize as `CellDefinition` using `ron::from_str`
+- Then: Every file deserializes successfully with filename in the error message on failure.
+- Note: Dynamic file discovery via `std::fs::read_dir`.
+
+### 19. **RON deserialization smoke test: all chip definitions deserialize**
+- Given: All `.chip.ron` files in `breaker-game/assets/chips/standard/`
+- When: For each file, read the contents and deserialize as `ChipDefinition` using `ron::from_str`
+- Then: Every file deserializes successfully with filename in the error message on failure.
+- Note: Dynamic file discovery via `std::fs::read_dir`.
+
+### 20. **RON deserialization smoke test: all evolution definitions deserialize**
+- Given: All `.evolution.ron` files in `breaker-game/assets/chips/evolutions/`
+- When: For each file, read the contents and deserialize as `EvolutionDefinition` using `ron::from_str`
+- Then: Every file deserializes successfully with filename in the error message on failure.
+- Note: Dynamic file discovery via `std::fs::read_dir`.
+
+### 21. **RON deserialization smoke test: all node definitions deserialize**
+- Given: All `.node.ron` files in `breaker-game/assets/nodes/`
+- When: For each file, read the contents and deserialize as `NodeDefinition` using `ron::from_str`
+- Then: Every file deserializes successfully with filename in the error message on failure.
+- Note: Dynamic file discovery via `std::fs::read_dir`.
+
+### 22. **RON deserialization smoke test: all wall definitions deserialize**
+- Given: All `.wall.ron` files in `breaker-game/assets/walls/`
+- When: For each file, read the contents and deserialize as `WallDefinition` using `ron::from_str`
+- Then: Every file deserializes successfully with filename in the error message on failure.
+- Note: Dynamic file discovery via `std::fs::read_dir`.
+
 ---
 
 ## Types
