@@ -1,114 +1,147 @@
 # Spec Revision Plan
 
-All 18 specs written, all 17 reviews complete. This document tracks the specific revisions needed before launching writer-tests/writer-code.
+All 18 specs written, all 17 reviews complete. This document tracks revisions needed.
+
+## Global Rules for ALL Revision Agents
+
+Every revision agent prompt MUST include:
+
+```
+## CLEAN ROOM RULES
+1. Do NOT reference src/ code. Source of truth is docs/todos/detail/ ONLY.
+2. IF YOU REFERENCE ANYTHING UNDER src/ YOUR WORK WILL BE DELETED AND REDONE.
+3. Assume the following types/systems already exist from earlier waves — do NOT flag their absence:
+   - All types from wave 2 scaffold (Tree, ScopedTree, Trigger, TriggerContext, EffectType, 
+     BoundEffects, StagedEffects, all config structs, all traits, all death pipeline types)
+   - All systems from earlier waves (walk_effects, fire_dispatch, apply_damage, detect_deaths, etc.)
+4. Add a Prerequisites section listing which waves must be complete, but do NOT treat 
+   missing code as a spec error.
+```
 
 ## Status
-- Specs written: 18/18 (9 test + 9 code, wave 8 has no code spec)
+- Specs written: 18/18
 - Reviews complete: 17/17
-- Revisions applied: 0/17
+- Revisions applied: 4/17 (waves 4 test, 10 both, 12 both)
+- Revisions still needed: 13 (waves 4 code, 5 both, 6 both, 7 both, 8 test, 9 both, 11 both)
 
-## Class 1: Prerequisites (ALL specs)
-Every spec needs an explicit prerequisites section stating which waves must be complete before it can compile. This is inherent in clean-room — not a spec error, just needs to be explicit.
+## User Corrections (override reviewer findings)
+
+### All bolts treated the same through death pipeline
+bolt_lost sends KillYourself<Bolt> for ALL lost bolts — no ExtraBolt distinction. If too punishing later, BoltLost gains a Primary/Extra identifier and the effect system decides whether to reduce lives. For now: all bolts die the same way.
+
+**Wave 10 needs re-revision**: undo the ExtraBolt distinction that was added. Remove behavior 10 (baseline bolt not killed) and behavior 11 (BoltLost for baseline). Make all bolt_lost behaviors apply to all bolts uniformly.
+
+### Without<Dead> IS sufficient for dedup
+Each entity only gets one KillYourself per frame because detect systems query different marker components (With<Cell>, With<Bolt>, etc.). Dead is inserted by the kill handler, visible next frame. No HashSet needed.
+
+**Remove HashSet dedup from ALL kill handler specs** (waves 9, 10, 11, 12 code specs).
+
+## Class 1: Clean-room context (ALL specs)
+Add prerequisites section to every spec. Use the global rules above. NOT a spec rewrite — just add context.
 
 ## Class 2: Position/Spatial (waves 9-12 code specs)
-- `Transform` → `Position2D` / `GlobalPosition2D` (entities use rantzsoft_spatial2d, not Bevy Transform)
-- `SpatialIndex` → doesn't exist. Use `commands.entity(e).remove::<Aabb2D>()` — quadtree auto-deregisters via maintain_quadtree's RemovedComponents<Aabb2D> handler
-- Affects: wave 9 code, wave 10 code, wave 11 code, wave 12 code
+- `Transform` → `Position2D` / `GlobalPosition2D`
+- `SpatialIndex` → `commands.entity(e).remove::<Aabb2D>()` (quadtree auto-deregisters)
 
 ## Class 3: File path alignment (ALL specs)
-- Test spec "Tests go in" must match code spec file paths
-- Use directory module layout per project convention (mod.rs + system.rs + tests.rs)
-- Affects: every spec pair
+- Align test spec "Tests go in" with code spec file paths
+- Use directory module layout per project convention
 
-## Class 4: Same-frame deduplication (waves 9-12)
-- Kill handlers need local `HashSet<Entity>` for same-frame dedup
-- `commands.insert(Dead)` is deferred — `Without<Dead>` won't catch duplicates within one system run
-- Affects: all kill handler specs
+## Wave-specific fixes
 
-## Class 5: Wave-specific fixes
+### Wave 4 (functions) — test spec DONE, code spec needs revision
+- [x] Fix Constraints file paths
+- [x] Add During/Until test behaviors
+- [x] Fix ComboStreak resource name
+- [x] Fix naming consistency
+- [x] Add On section note
+- [x] Add missing behaviors
+- [x] Add prerequisites
+- [ ] Code spec: fix EffectStack<T> generic Component bound
+- [ ] Code spec: clarify is_shield_active Bevy API
+- [ ] Code spec: fix naming inconsistency
+- [ ] Code spec: add ComboStreak name
+- [ ] Code spec: add On-context-separation note
 
-### Wave 4 (functions)
-- [ ] Fix Constraints file paths (core/types → stacking/dispatch)
-- [ ] Add During/Until test behaviors (apply_scoped_tree, reverse_scoped_tree)
-- [ ] Fix ComboStreak resource name → `ComboStreak { count: u32 }`
-- [ ] Fix naming: `reversible_to_effect_type` consistently
-- [ ] Add On section note: Terminal::Fire not Tree::Fire
-- [ ] Add missing behaviors: route_effect During, condition_active Some(true) skip, stamp Once, 3-entry aggregate, mixed staged
-- [ ] Add EffectStack<T> generic Component bound note (`T: 'static`)
-- [ ] Clarify is_shield_active Bevy API (may need &mut World)
-
-### Wave 5 (triggers)
-- [ ] Remove `.after(tick_effect_timers)` from on_time_expires register (Bridge before Tick by set ordering)
-- [ ] Remove `.after(check_node_timer_thresholds)` from threshold bridge register
-- [ ] Split on_no_bump_occurred into separate registration with both .after() constraints
-- [ ] Fix EffectTimerExpired field: `duration` → `original_duration`
-- [ ] Add `Res<NodeTimer>` as explicit parameter for check_node_timer_thresholds
-- [ ] Fix file paths: watch_spawn_registry, track_combo_streak
-- [ ] Fix behavior 58 Given (message not EffectTimers state)
-- [ ] Add missing behaviors: tick sends original_duration, bridge reads from message
-- [ ] Resolve NodeTimerThresholdCrossed.ratio type (f32 vs OrderedFloat)
+### Wave 5 (triggers) — revision IN FLIGHT
+- [ ] Remove .after(tick_effect_timers) from on_time_expires
+- [ ] Remove .after(check_node_timer_thresholds) from threshold bridge
+- [ ] Split on_no_bump_occurred registration
+- [ ] Fix EffectTimerExpired field name
+- [ ] Add Res<NodeTimer> parameter
+- [ ] Fix file paths
+- [ ] Fix behavior 58 Given
+- [ ] Add missing behaviors
+- [ ] Resolve NodeTimerThresholdCrossed.ratio type
 
 ### Wave 6 (effects)
 - [ ] Remove tick_effect_timers (G15) — wave 5 scope
-- [ ] Add dispatch test section (fire_dispatch 30 arms, reverse_dispatch 16 arms)
-- [ ] Fix AnchorActive: add `source: String` field for tick_anchor to use
-- [ ] Fix sync_shockwave_visual mapping: specify Scale2D = ShockwaveRadius (diameter)
+- [ ] Add dispatch test section
+- [ ] Fix AnchorActive: add `source: String` field
+- [ ] Fix sync_shockwave_visual mapping
 - [ ] Add despawned-entity guard tests
-- [ ] Fix test file paths to match code spec
-- [ ] Fix OrderedFloat inconsistency in spawner configs (spawners use plain f32 per design docs)
-- [ ] Fix EntropyEngine: does NOT have separate reset system (resets on fire per system-sets.md)
+- [ ] Fix test file paths
+- [ ] Fix OrderedFloat inconsistency in spawner configs
+- [ ] Fix EntropyEngine reset (no separate system)
 
 ### Wave 7 (death pipeline)
 - [ ] Add EffectSystems::Tick to prerequisites
-- [ ] Fix apply_damage_to_targets helper signature (remove invalid `impl QueryFilter`)
-- [ ] Resolve RequiredToClear: add scope deferral note (wave 9 handles it)
-- [ ] Resolve Changed<Hp>: explicitly state it's omitted, Without<Dead> is the filter
+- [ ] Fix apply_damage helper signature
+- [ ] Resolve RequiredToClear (scope deferral to wave 9)
+- [ ] State Changed<Hp> is omitted deliberately
 - [ ] Add src/shared/systems/ module creation to wiring
-- [ ] Fix game.rs plugin wiring to use PluginGroupBuilder .add() pattern
-- [ ] Align Hp/KilledBy/Dead file paths between test and code specs
+- [ ] Fix game.rs plugin wiring pattern
+- [ ] Align component file paths
+
+### Wave 8 (integration tests)
+- [ ] Fix behavior 10 garbled text
+- [ ] Fix behavior 11 cascade test mechanism
+- [ ] Scope behaviors 9/10 to testable assertions (or add stub kill handlers)
+- [ ] Fix BumpPerformed missing breaker field
+- [ ] Fix behavior 5 concrete NodeState values
 
 ### Wave 9 (cell domain)
-- [ ] Fix Locked cell filtering: collision sends DamageDealt, apply_damage drops (behavior 9)
-- [ ] Fix system name: cell_damage_feedback → cell_damage_visual
-- [ ] Fix Sprite → MeshMaterial2d<ColorMaterial> + ResMut<Assets<ColorMaterial>>
-- [ ] Fix SpatialIndex → remove::<Aabb2D>() pattern
+- [ ] Fix Locked cell filtering (pipeline drops, not collision)
+- [ ] Fix system name → cell_damage_visual
+- [ ] Fix Sprite → MeshMaterial2d<ColorMaterial>
+- [ ] Fix SpatialIndex → remove::<Aabb2D>()
 - [ ] Fix Transform → Position2D
-- [ ] Add same-frame dedup (local HashSet) to kill handler
-- [ ] Expand wiring: prelude, node plugin, guardian cells, bolt_cell_collision pierce query
-- [ ] Resolve and remove Open Questions section
-- [ ] Fix behavior 21 self-correction prose
-- [ ] Narrow behaviors 24-25 to cell domain outputs only
+- [ ] Remove HashSet dedup (Without<Dead> sufficient)
+- [ ] Expand wiring section
+- [ ] Remove Open Questions section
+- [ ] Fix behavior 21 prose
+- [ ] Narrow behaviors 24-25 to cell domain outputs
 - [ ] Add hp.starting=0.0 edge case
 
-### Wave 10 (bolt domain) — MOST CRITICAL
-- [ ] **ExtraBolt distinction**: bolt_lost only kills extra bolts, baseline bolts respawn
-- [ ] Fix behavior 3 timer semantics (Without<Birthing> = no tick, not suppressed tick)
-- [ ] Add Without<Dead> filter tests for tick_bolt_lifespan and bolt_lost
-- [ ] Fix GlobalPosition2D test setup
-- [ ] Remove compile-time guarantee behaviors (6, 12, 37)
-- [ ] Fix same-frame dedup in kill handler
-- [ ] Remove Sections E/F (wave 7 scope)
-- [ ] Fix BoltLostWriters SystemParam migration
-- [ ] Fix prelude/messages.rs, bolt_lost/tests/helpers.rs updates
-- [ ] Remove "BEFORE EffectSystems::Bridge" ordering constraint
+### Wave 10 (bolt domain) — REVISED but needs re-revision
+- [x] ~~ExtraBolt distinction~~ → UNDO: all bolts treated the same
+- [x] Fix timer semantics
+- [x] Add Without<Dead> filter tests
+- [x] Fix GlobalPosition2D setup
+- [x] Remove compile-time guarantee behaviors
+- [x] Remove wave-7 scope sections
+- [x] Fix BoltLostWriters migration
+- [x] Fix prelude updates
+- [x] Remove ordering constraint
+- [ ] UNDO ExtraBolt distinction — all bolts go through death pipeline uniformly
+- [ ] Remove HashSet dedup (Without<Dead> sufficient)
 
 ### Wave 11 (wall domain)
 - [ ] Fix Transform → Position2D
 - [ ] Fix SpatialIndex → remove::<Aabb2D>()
-- [ ] Resolve shield/second-wind scope: add Hp but timer-expiry stays direct despawn for now
-- [ ] Fix test file path to directory module layout
-- [ ] Remove behavior 9 (contradicts "Do NOT test apply_damage" constraint)
-- [ ] Add Fire(Die) path behavior (wall without Hp killed via Die)
+- [ ] Resolve shield/second-wind scope
+- [ ] Fix test file path
+- [ ] Remove behavior 9 (contradicts constraint)
+- [ ] Add Fire(Die) path behavior
 - [ ] Add nonexistent victim behavior
-- [ ] Fix builder ambiguity (callers insert Hp, not builder method)
+- [ ] Fix builder ambiguity
+- [ ] Remove HashSet dedup (Without<Dead> sufficient)
 
-### Wave 12 (breaker domain) 
-- [ ] **Remove DespawnEntity** from kill handler (breaker persists)
-- [ ] Fix system name → handle_breaker_kill
-- [ ] Remove Sections A & B (wave 7 scope)
-- [ ] Add LivesCount removal note
-- [ ] Add missing edge cases (killer gone, stale victim)
-- [ ] Point to concrete builder file (terminal.rs build_core)
-
-## Approach
-For each wave: send revision instructions to spec writers, they update specs in-place, then re-review.
+### Wave 12 (breaker domain) — DONE
+- [x] Remove DespawnEntity
+- [x] Fix system name
+- [x] Remove Sections A & B
+- [x] Add LivesCount removal
+- [x] Add missing edge cases
+- [x] Point to concrete builder file
+- [ ] Remove HashSet dedup if present (Without<Dead> sufficient)
