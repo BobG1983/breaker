@@ -2,10 +2,10 @@
 bridge_destroyed::\<Wall\>
 
 # SystemSet
-`DeathPipelineSystems::BridgeDestroyed`. Runs in FixedUpdate.
+`EffectSystems::Bridge`. Runs in FixedUpdate.
 
 # Filepath
-`src/shared/systems/bridge_destroyed.rs` — same generic system, monomorphized for Wall.
+`src/effect/bridges/destroyed.rs` — lives in the effect domain because it calls `walk_effects`. Registered by EffectPlugin, not the death pipeline plugin. — same generic system, monomorphized for Wall.
 
 # Queries/Filters
 No queries — reads `Destroyed<Wall>` messages only.

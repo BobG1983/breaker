@@ -2,10 +2,10 @@
 bridge_destroyed::\<Cell\>
 
 # SystemSet
-New: `DeathPipelineSystems::BridgeDestroyed`. Runs in FixedUpdate, after domain kill handlers have sent `Destroyed<T>`.
+New: `EffectSystems::Bridge`. Runs in FixedUpdate, after domain kill handlers have sent `Destroyed<T>`.
 
 # Filepath
-`src/shared/systems/bridge_destroyed.rs` — generic system, monomorphized per T.
+`src/effect/bridges/destroyed.rs` — lives in the effect domain because it calls `walk_effects`. Registered by EffectPlugin, not the death pipeline plugin. — generic system, monomorphized per T.
 
 # Queries/Filters
 No queries — reads `Destroyed<Cell>` messages only. Dispatches triggers via the effect system's walking algorithm.
