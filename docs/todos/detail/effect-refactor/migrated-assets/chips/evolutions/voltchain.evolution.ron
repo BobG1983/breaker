@@ -1,0 +1,15 @@
+(
+    name: "Voltchain",
+    description: "Destroying cells unleashes chain lightning to nearby targets",
+    effects: [
+        Stamp(Bolt,
+            When(Killed(Cell),
+                Fire(ChainLightning(arcs: 6, range: 128.0, damage_mult: 0.5)),
+            ),
+        ),
+    ],
+    ingredients: [
+        (chip_name: "Chain Reaction", stacks_required: 1),
+        (chip_name: "Aftershock", stacks_required: 2),
+    ],
+)

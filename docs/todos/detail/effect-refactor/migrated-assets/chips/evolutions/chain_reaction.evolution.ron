@@ -1,0 +1,16 @@
+(
+    name: "Shock Chain",
+    description: "Destroyed cells trigger recursive shockwaves — each kill spawns another wave",
+    effects: [
+        Stamp(Bolt,
+            When(Killed(Cell),
+                Fire(Shockwave(ShockwaveConfig(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 400.0))),
+            ),
+        ),
+    ],
+    ingredients: [
+        (chip_name: "Chain Reaction", stacks_required: 1),
+        (chip_name: "Aftershock", stacks_required: 2),
+        (chip_name: "Cascade", stacks_required: 2),
+    ],
+)

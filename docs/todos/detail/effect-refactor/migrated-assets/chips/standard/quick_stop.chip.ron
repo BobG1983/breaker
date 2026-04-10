@@ -1,0 +1,28 @@
+(
+    name: "Quick Stop",
+    max_taken: 3,
+    common: (
+        prefix: "Sluggish",
+        effects: [
+            Stamp(Breaker,
+                Fire(QuickStop(multiplier: 1.5)),
+            ),
+        ],
+    ),
+    uncommon: (
+        prefix: "Responsive",
+        effects: [
+            Stamp(Breaker,
+                Fire(QuickStop(multiplier: 2.0)),
+            ),
+        ],
+    ),
+    rare: (
+        prefix: "Instant",
+        effects: [
+            Stamp(Breaker,
+                Fire(QuickStop(multiplier: 3.0)),
+            ),
+        ],
+    ),
+)

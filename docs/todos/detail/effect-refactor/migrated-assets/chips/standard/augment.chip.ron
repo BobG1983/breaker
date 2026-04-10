@@ -1,0 +1,38 @@
+(
+    name: "Augment",
+    max_taken: 2,
+    common: (
+        prefix: "Basic",
+        effects: [
+            Stamp(Breaker,
+                Sequence([
+                    Fire(SizeBoost(1.15)),
+                    Fire(BumpForce(1.15)),
+                ]),
+            ),
+        ],
+    ),
+    uncommon: (
+        prefix: "Sturdy",
+        effects: [
+            Stamp(Breaker,
+                Sequence([
+                    Fire(SizeBoost(1.25)),
+                    Fire(BumpForce(1.25)),
+                ]),
+            ),
+        ],
+    ),
+    rare: (
+        prefix: "Fortified",
+        effects: [
+            Stamp(Breaker,
+                Sequence([
+                    Fire(SizeBoost(1.4)),
+                    Fire(BumpForce(1.35)),
+                    Fire(SpeedBoost(1.15)),
+                ]),
+            ),
+        ],
+    ),
+)

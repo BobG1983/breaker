@@ -1,0 +1,11 @@
+/* @[brickbreaker::breaker::definition::BreakerDefinition] */
+(
+    name: "Chrono",
+    life_pool: None,
+    effects: [
+        Stamp(Breaker, When(BoltLostOccurred, Fire(TimePenalty(seconds: 5.0)))),
+        Stamp(Bolt, When(PerfectBumped, Fire(SpeedBoost(1.5)))),
+        Stamp(Bolt, When(EarlyBumped, Fire(SpeedBoost(1.1)))),
+        Stamp(Bolt, When(LateBumped, Fire(SpeedBoost(1.1)))),
+    ],
+)

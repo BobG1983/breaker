@@ -1,0 +1,14 @@
+(
+    name: "Deadline",
+    max_taken: 1,
+    legendary: (
+        prefix: "",
+        effects: [
+            Stamp(Bolt,
+                When(NodeTimerThreshold(0.25),
+                    Fire(SpeedBoost(2.0)),
+                ),
+            ),
+        ],
+    ),
+)

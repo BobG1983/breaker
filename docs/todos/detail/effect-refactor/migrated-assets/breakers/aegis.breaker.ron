@@ -1,0 +1,11 @@
+/* @[brickbreaker::breaker::definition::BreakerDefinition] */
+(
+    name: "Aegis",
+    life_pool: Some(3),
+    effects: [
+        Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife))),
+        Stamp(Bolt, When(PerfectBumped, Fire(SpeedBoost(1.5)))),
+        Stamp(Bolt, When(EarlyBumped, Fire(SpeedBoost(1.1)))),
+        Stamp(Bolt, When(LateBumped, Fire(SpeedBoost(1.1)))),
+    ],
+)

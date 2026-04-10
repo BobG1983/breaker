@@ -1,0 +1,16 @@
+(
+    name: "Gauntlet",
+    max_taken: 1,
+    legendary: (
+        prefix: "",
+        effects: [
+            Stamp(Bolt,
+                Sequence([
+                    Fire(SizeBoost(1.5)),
+                    Fire(SpeedBoost(1.4)),
+                    Fire(DamageBoost(0.5)),
+                ]),
+            ),
+        ],
+    ),
+)

@@ -1,0 +1,20 @@
+(
+    name: "Feedback Loop",
+    max_taken: 1,
+    legendary: (
+        prefix: "",
+        effects: [
+            Stamp(Bolt,
+                When(PerfectBumped,
+                    When(Impacted(Cell),
+                        When(Killed(Cell),
+                            Until(TimeExpires(3.0),
+                                SpeedBoost(1.5),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ],
+    ),
+)

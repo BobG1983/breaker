@@ -1,0 +1,49 @@
+(
+    name: "Overclock",
+    max_taken: 2,
+    common: (
+        prefix: "Basic",
+        effects: [
+            Stamp(Bolt,
+                When(PerfectBumped,
+                    Until(TimeExpires(3.0),
+                        Sequence([
+                            SpeedBoost(1.2),
+                            DamageBoost(1.15),
+                        ]),
+                    ),
+                ),
+            ),
+        ],
+    ),
+    uncommon: (
+        prefix: "Charged",
+        effects: [
+            Stamp(Bolt,
+                When(PerfectBumped,
+                    Until(TimeExpires(4.0),
+                        Sequence([
+                            SpeedBoost(1.3),
+                            DamageBoost(1.25),
+                        ]),
+                    ),
+                ),
+            ),
+        ],
+    ),
+    rare: (
+        prefix: "Supercharged",
+        effects: [
+            Stamp(Bolt,
+                When(PerfectBumped,
+                    Until(TimeExpires(5.0),
+                        Sequence([
+                            SpeedBoost(1.4),
+                            DamageBoost(1.4),
+                        ]),
+                    ),
+                ),
+            ),
+        ],
+    ),
+)

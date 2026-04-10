@@ -1,0 +1,17 @@
+(
+    name: "Glass Cannon",
+    max_taken: 1,
+    legendary: (
+        prefix: "",
+        effects: [
+            Stamp(Bolt,
+                Fire(DamageBoost(3.0)),
+            ),
+            Stamp(Breaker,
+                When(BoltLostOccurred,
+                    Fire(LoseLife),
+                ),
+            ),
+        ],
+    ),
+)

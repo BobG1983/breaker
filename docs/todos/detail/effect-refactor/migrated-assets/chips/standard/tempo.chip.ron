@@ -1,0 +1,16 @@
+(
+    name: "Tempo",
+    max_taken: 1,
+    legendary: (
+        prefix: "",
+        effects: [
+            Stamp(AllBolts,
+                When(Bumped,
+                    Until(BumpWhiff,
+                        SpeedBoost(1.2),
+                    ),
+                ),
+            ),
+        ],
+    ),
+)

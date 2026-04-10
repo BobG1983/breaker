@@ -1,0 +1,123 @@
+// ============================================================================
+// Breaker Definition Template
+// ============================================================================
+//
+// Reference for all available fields in a .breaker.ron file.
+// This file is NOT loaded by the game — it exists as documentation only.
+//
+// Required fields (no default):
+//   name, effects
+//
+// Optional fields (shown with their defaults):
+//   bolt                      — "Bolt"
+//   width                     — 120.0
+//   height                    — 20.0
+//   max_speed                 — 500.0
+//   acceleration              — 3000.0
+//   deceleration              — 2500.0
+//   dash_speed_multiplier     — 4.0
+//   dash_duration             — 0.15
+//   dash_tilt_angle           — 15.0 (degrees)
+//   dash_tilt_ease            — QuadraticInOut
+//   brake_decel_multiplier    — 2.0
+//   brake_tilt_angle          — 25.0 (degrees)
+//   brake_tilt_duration       — 0.2
+//   brake_tilt_ease           — CubicInOut
+//   settle_duration           — 0.25
+//   settle_tilt_ease          — CubicOut
+//   y_position                — -250.0
+//   color_rgb                 — (0.2, 2.0, 3.0)
+//   reflection_spread         — 75.0 (degrees)
+//   decel_ease                — QuadraticIn
+//   decel_ease_strength       — 1.0
+//   perfect_bump_cooldown     — 0.0
+//   weak_bump_cooldown        — 0.15
+//   perfect_window            — 0.15
+//   early_window              — 0.15
+//   late_window               — 0.15
+//   bump_visual_duration      — 0.15
+//   bump_visual_peak          — 24.0
+//   bump_visual_peak_fraction — 0.3
+//   bump_visual_rise_ease     — CubicOut
+//   bump_visual_fall_ease     — QuadraticIn
+//   life_pool                 — None (infinite lives)
+//
+// Loaded from: assets/breakers/*.breaker.ron
+// Struct:      BreakerDefinition (breaker-game/src/breaker/definition.rs)
+// ============================================================================
+
+(
+    // REQUIRED: Display name of the breaker.
+    name: "MyBreaker",
+
+    // REQUIRED: Effect chains for this breaker.
+    // Each entry is Stamp(<Target>, <EffectTree>).
+    // Use [] for no effects.
+    //
+    // Targets: Breaker, Bolt, AllBolts, Cell, AllCells, Wall, AllWalls
+    // Triggers: PerfectBump, EarlyBump, LateBump, Bumped,
+    //           PerfectBumped, EarlyBumped, LateBumped, Bumped,
+    //           Impact(Cell/Bolt/Wall/Breaker), Impacted(Cell/Bolt/Wall/Breaker),
+    //           Death, Died, BoltLostOccurred, Killed(Cell),
+    //           NodeStart, NodeEnd, NodeTimerThreshold(f32), TimeExpires(f32)
+    effects: [
+        // Example: Lose a life when the bolt is lost
+        Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife))),
+        // Example: Speed boost on perfect bump
+        Stamp(Bolt, When(PerfectBumped, Fire(SpeedBoost(1.5)))),
+    ],
+
+    // --- Everything below is optional (defaults shown) ---
+
+    // Name of the bolt definition this breaker launches. Default: "Bolt"
+    bolt: "Bolt",
+
+    // Number of lives. None = infinite lives. Default: None
+    life_pool: Some(3),
+
+    // --- Dimensions ---
+    width: 120.0,              // Full width in world units
+    height: 20.0,              // Full height in world units
+    y_position: -250.0,        // Resting Y position
+
+    // --- Movement ---
+    max_speed: 500.0,          // Max horizontal speed (units/sec)
+    acceleration: 3000.0,      // Horizontal acceleration (units/sec^2)
+    deceleration: 2500.0,      // Horizontal deceleration / friction (units/sec^2)
+    decel_ease: QuadraticIn,   // Easing applied to deceleration
+    decel_ease_strength: 1.0,  // 0.0 = constant decel, higher = more speed-dependent
+
+    // --- Dash ---
+    dash_speed_multiplier: 4.0,   // Speed multiplier relative to max_speed
+    dash_duration: 0.15,          // Seconds
+    dash_tilt_angle: 15.0,        // Max tilt during dash (degrees)
+    dash_tilt_ease: QuadraticInOut,
+
+    // --- Brake ---
+    brake_decel_multiplier: 2.0,  // Decel multiplier relative to normal
+    brake_tilt_angle: 25.0,       // Max tilt during brake (degrees)
+    brake_tilt_duration: 0.2,     // Ease duration (seconds)
+    brake_tilt_ease: CubicInOut,
+
+    // --- Settle ---
+    settle_duration: 0.25,        // Duration of settle phase (seconds)
+    settle_tilt_ease: CubicOut,   // Easing for tilt return to zero
+
+    // --- Bump timing ---
+    perfect_window: 0.15,         // Perfect window (seconds, each side of T=0)
+    early_window: 0.15,           // Early window (seconds, before perfect)
+    late_window: 0.15,            // Late window (seconds, after perfect)
+    perfect_bump_cooldown: 0.0,   // Cooldown after perfect bump (seconds)
+    weak_bump_cooldown: 0.15,     // Cooldown after early/late/whiff (seconds)
+
+    // --- Bump feedback animation ---
+    bump_visual_duration: 0.15,       // Pop animation duration (seconds)
+    bump_visual_peak: 24.0,           // Max Y offset at peak (world units)
+    bump_visual_peak_fraction: 0.3,   // Fraction of duration spent rising (0.0-1.0)
+    bump_visual_rise_ease: CubicOut,  // Easing for rise phase
+    bump_visual_fall_ease: QuadraticIn, // Easing for fall phase
+
+    // --- Rendering ---
+    color_rgb: (0.2, 2.0, 3.0),      // HDR color. Values above 1.0 produce bloom.
+    reflection_spread: 75.0,          // Max reflection angle from vertical (degrees)
+)

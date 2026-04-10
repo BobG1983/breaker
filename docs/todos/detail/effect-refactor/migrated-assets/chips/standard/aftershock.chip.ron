@@ -1,0 +1,34 @@
+(
+    name: "Aftershock",
+    max_taken: 3,
+    common: (
+        prefix: "Minor",
+        effects: [
+            Stamp(Bolt,
+                When(Impacted(Wall),
+                    Fire(Shockwave(ShockwaveConfig(base_range: 16.0, range_per_level: 4.0, stacks: 1, speed: 400.0))),
+                ),
+            ),
+        ],
+    ),
+    uncommon: (
+        prefix: "Rumbling",
+        effects: [
+            Stamp(Bolt,
+                When(Impacted(Wall),
+                    Fire(Shockwave(ShockwaveConfig(base_range: 24.0, range_per_level: 6.0, stacks: 1, speed: 400.0))),
+                ),
+            ),
+        ],
+    ),
+    rare: (
+        prefix: "Thundering",
+        effects: [
+            Stamp(Bolt,
+                When(Impacted(Wall),
+                    Fire(Shockwave(ShockwaveConfig(base_range: 32.0, range_per_level: 10.0, stacks: 1, speed: 400.0))),
+                ),
+            ),
+        ],
+    ),
+)

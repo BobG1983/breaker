@@ -1,0 +1,19 @@
+(
+    name: "Whiplash",
+    max_taken: 1,
+    legendary: (
+        prefix: "",
+        effects: [
+            Stamp(Bolt,
+                When(BumpWhiff,
+                    When(Impacted(Cell),
+                        Sequence([
+                            Once(Impacted(Cell), Fire(DamageBoost(2.5))),
+                            Fire(Shockwave(ShockwaveConfig(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 500.0))),
+                        ]),
+                    ),
+                ),
+            ),
+        ],
+    ),
+)

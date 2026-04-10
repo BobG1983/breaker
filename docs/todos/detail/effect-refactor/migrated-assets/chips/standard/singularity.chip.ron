@@ -1,0 +1,16 @@
+(
+    name: "Singularity",
+    max_taken: 1,
+    legendary: (
+        prefix: "",
+        effects: [
+            Stamp(Bolt,
+                Sequence([
+                    Fire(SizeBoost(0.6)),
+                    Fire(DamageBoost(2.5)),
+                    Fire(SpeedBoost(1.4)),
+                ]),
+            ),
+        ],
+    ),
+)

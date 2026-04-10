@@ -1,0 +1,31 @@
+(
+    name: "Magnetism",
+    max_taken: 3,
+    common: (
+        prefix: "Faint",
+        effects: [
+            Stamp(Bolt,
+                Fire(Attraction(attraction_type: Cell, force: 0.5, max_force: Some(50.0))),
+            ),
+        ],
+    ),
+    uncommon: (
+        prefix: "Steady",
+        effects: [
+            Stamp(Bolt,
+                Fire(Attraction(attraction_type: Cell, force: 1.0, max_force: Some(80.0))),
+            ),
+        ],
+    ),
+    rare: (
+        prefix: "Powerful",
+        effects: [
+            Stamp(Bolt,
+                Sequence([
+                    Fire(Attraction(attraction_type: Cell, force: 1.5, max_force: Some(120.0))),
+                    Fire(SizeBoost(1.1)),
+                ]),
+            ),
+        ],
+    ),
+)
