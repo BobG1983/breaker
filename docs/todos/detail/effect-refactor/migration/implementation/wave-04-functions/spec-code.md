@@ -1,5 +1,13 @@
 ## Implementation Spec: Effect — Wave 4 Non-System Functions
 
+### Prerequisites
+
+The following waves must be complete before Wave 4 begins:
+
+- **Wave 1** (delete old) — old effect code removed
+- **Wave 2** (scaffold) — all type definitions exist (Tree, ScopedTree, Terminal, ScopedTerminal, Trigger, TriggerContext, Condition, EffectType, ReversibleEffectType, EntityKind, RouteType, ParticipantTarget, BumpTarget, ImpactTarget, DeathTarget, BoltLostTarget, BoundEffects, BoundEntry, StagedEffects, EffectSourceChip, NodeState, ShieldWall)
+- **Wave 3** (RON assets) — RON data files in place
+
 ### Domain
 `src/effect/`
 
@@ -57,6 +65,8 @@ impl<T: PassiveEffect> EffectStack<T> {
 }
 ```
 
+**Generic Component derive note**: Bevy's `#[derive(Component)]` on a generic struct requires the type parameter to satisfy `T: 'static` at minimum (Bevy's Component trait bound). Since `PassiveEffect` already requires `Clone + PartialEq + Eq + Sized`, the writer-code must ensure the trait bound includes `'static` — i.e., `pub trait PassiveEffect: Fireable + Reversible + Sized + Clone + PartialEq + Eq + 'static`. Alternatively, add `T: 'static` directly on the struct. The `Default` derive also requires `T: Default` OR the writer-code must implement `Default` manually (preferred: implement manually with `entries: Vec::new()` so there is no `T: Default` bound). If Bevy's derive macro emits errors for the generic, consider `#[component(storage = "SparseSet")]` which may work better for generic types, or implement `Component` manually.
+
 - `push`: Append `(source, config)` to `entries`.
 - `remove`: Find and remove the **first** entry where `entry.0 == source && entry.1 == *config`. If no match, do nothing.
 - `aggregate`: Delegate to `T::aggregate(&self.entries)`. Returns identity value when empty (1.0 for multiplicative, 0 for additive).
@@ -67,10 +77,12 @@ impl<T: PassiveEffect> EffectStack<T> {
 #### 2. PassiveEffect trait (traits/passive_effect.rs)
 
 ```rust
-pub trait PassiveEffect: Fireable + Reversible + Sized + Clone + PartialEq + Eq {
+pub trait PassiveEffect: Fireable + Reversible + Sized + Clone + PartialEq + Eq + 'static {
     fn aggregate(entries: &[(String, Self)]) -> f32;
 }
 ```
+
+The `'static` bound is required because `EffectStack<T: PassiveEffect>` derives `Component`, and Bevy's `Component` trait requires `'static`.
 
 **File**: `src/effect/traits/passive_effect.rs`
 **Module wiring**: `src/effect/traits/mod.rs` re-exports `PassiveEffect`.
@@ -222,7 +234,7 @@ pub fn reverse_scoped_tree(
 ```
 
 **apply_scoped_tree** (condition becomes true, or Until installation):
-- `ScopedTree::Fire(reversible_effect)` -> `commands.fire_effect(entity, reversible_effect_to_effect_type(reversible_effect), source)`
+- `ScopedTree::Fire(reversible_effect)` -> `commands.fire_effect(entity, reversible_to_effect_type(reversible_effect), source)`
 - `ScopedTree::Sequence(effects)` -> for each effect left to right, `commands.fire_effect(...)` 
 - `ScopedTree::When(trigger, tree)` -> `commands.stage_effect(entity, source, Tree::When(trigger, tree))` — install the When as a listener
 - `ScopedTree::On(participant, scoped_terminal)` -> resolve participant from context, apply the scoped terminal on the resolved entity
@@ -231,7 +243,7 @@ pub fn reverse_scoped_tree(
 - `ScopedTree::Fire(reversible_effect)` -> `commands.reverse_effect(entity, reversible_effect, source)`
 - `ScopedTree::Sequence(effects)` -> for each effect in **reverse order** (right to left), `commands.reverse_effect(...)`
 - `ScopedTree::When(trigger, tree)` -> `commands.remove_effect(entity, RouteType::Staged, source, Tree::When(trigger, tree))` — remove the listener. Do NOT reverse individual effects that already fired from past matches.
-- `ScopedTree::On(participant, scoped_terminal)` -> resolve participant, reverse the scoped terminal on the resolved entity
+- `ScopedTree::On(participant, scoped_terminal)` -> resolve participant from context, reverse the scoped terminal on the resolved entity. **Edge case**: if the participant entity is gone (context resolution returns `None`), do nothing — same behavior as `Tree::On` during application when the participant cannot be resolved. This can happen when a condition deactivates after the participant entity has been despawned (e.g., a Cell that was destroyed).
 
 **ScopedTerminal evaluation** (used by On within ScopedTree):
 - `ScopedTerminal::Fire(reversible_effect)` -> fire or reverse depending on direction
@@ -293,6 +305,8 @@ Iterate terminals left to right. For each:
 - `Terminal::Route(route_type, tree)` -> `commands.route_effect(entity, source.to_string(), (*tree).clone(), route_type.clone())`
 
 ##### 6g. evaluate_on (walking/on.rs)
+
+**Context separation note**: This function handles `Tree::On(ParticipantTarget, Terminal)` only. `ScopedTree::On(ParticipantTarget, ScopedTerminal)` is handled separately within `apply_scoped_tree`/`reverse_scoped_tree` — do not reuse `evaluate_on` there. The scoped variant deals with `ScopedTerminal` (which contains `ReversibleEffectType` and needs reversal support), while this function deals with `Terminal` (fire-and-forget).
 
 ```rust
 fn evaluate_on(
@@ -669,30 +683,43 @@ Only `aggregate` differs between them.
 ##### 11a. is_node_active (conditions/node_active.rs)
 
 ```rust
-pub fn is_node_active(world: &World) -> bool;
+pub fn is_node_active(world: &mut World) -> bool;
 ```
 
-Reads `State<NodeState>` resource from world. Returns `true` when state is `NodeState::Playing`, `false` otherwise. Pure read-only.
+Reads `State<NodeState>` resource from world. Returns `true` when state is `NodeState::Playing`, `false` otherwise. Logically read-only, but takes `&mut World` because Bevy 0.18's `World::resource` / `World::get_resource` methods that return shared references are available on `&World`, so if `State<NodeState>` can be read via `world.get_resource::<State<NodeState>>()` with `&World`, the signature can stay `&World`. However, to be consistent with the other condition evaluators that need `&mut World` (see is_shield_active below), use `&mut World` for all three condition evaluators.
 
 **File**: `src/effect/conditions/node_active.rs`
 
 ##### 11b. is_shield_active (conditions/shield_active.rs)
 
 ```rust
-pub fn is_shield_active(world: &World) -> bool;
+pub fn is_shield_active(world: &mut World) -> bool;
 ```
 
-Queries world for any entity with the `ShieldWall` component. Returns `true` if at least one exists, `false` otherwise. Pure read-only.
+Queries world for any entity with the `ShieldWall` component. Returns `true` if at least one exists, `false` otherwise. Logically read-only.
+
+**Bevy 0.18 API note**: `World::query` and `World::query_filtered` require `&mut World` in Bevy 0.18 — there is no way to run an entity query on `&World`. The design doc at `docs/todos/detail/effect-refactor/evaluating-conditions/is-shield-active.md` shows `&World` but the implementation must use `&mut World` to compile. Use `world.query::<&ShieldWall>().iter(world).next().is_some()` or equivalent — the `QueryState` approach requires splitting the borrow: `let mut query = world.query::<&ShieldWall>(); query.iter(world).next().is_some()`.
 
 **File**: `src/effect/conditions/shield_active.rs`
 
 ##### 11c. is_combo_active (conditions/combo_active.rs)
 
 ```rust
-pub fn is_combo_active(world: &World, threshold: u32) -> bool;
+pub fn is_combo_active(world: &mut World, threshold: u32) -> bool;
 ```
 
-Reads a combo tracking resource from world. Returns `true` when the current consecutive perfect bump streak >= threshold, `false` otherwise. Pure read-only.
+Reads the `ComboStreak` resource from world. The resource is defined as:
+
+```rust
+#[derive(Resource, Default)]
+pub struct ComboStreak {
+    pub count: u32,
+}
+```
+
+Returns `true` when `combo_streak.count >= threshold`, `false` otherwise. If the `ComboStreak` resource does not exist, returns `false`. Logically read-only, takes `&mut World` for consistency with other condition evaluators.
+
+**ComboStreak location**: The resource definition goes in `src/effect/conditions/combo_active.rs` (or a shared `src/effect/conditions/resources.rs` re-exported from `src/effect/conditions/mod.rs`). It is updated by a `track_combo_streak` system (out of scope for this wave — Wave 5+).
 
 **File**: `src/effect/conditions/combo_active.rs`
 
@@ -813,7 +840,9 @@ This wave depends on types defined in earlier waves (Wave 1-3). The following ty
 **External types (from other domains, already existing):**
 - `NodeState` (for is_node_active condition evaluator)
 - `ShieldWall` component (for is_shield_active condition evaluator)
-- Combo tracking resource (for is_combo_active — exact name TBD, depends on bump bridge infrastructure)
+
+**Defined in this wave:**
+- `ComboStreak { count: u32 }` resource (defined in `src/effect/conditions/combo_active.rs`, used by is_combo_active evaluator, updated by `track_combo_streak` system in Wave 5+)
 
 ---
 

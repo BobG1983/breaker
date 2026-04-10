@@ -2,6 +2,18 @@
 
 This spec covers the core death pipeline: `apply_damage<T>`, `detect_*_deaths`, `process_despawn_requests`, and `Dead` marker component integration. Domain kill handlers (wave 9-12), trigger bridges, and effects are out of scope.
 
+### Prerequisites
+
+This wave assumes all types and systems from waves 2-6 already exist:
+
+- **Wave 2 (Scaffold)**: All death pipeline types are created as stubs — `GameEntity` trait, `Hp`, `KilledBy`, `Dead`, `Locked`, `DamageDealt<T>`, `KillYourself<T>`, `DespawnEntity`, `Destroyed<T>`, `DamageTargetData`, `DeathDetectionData`, `DeathPipelineSystems` system set enum. Entity marker components (`Bolt`, `Cell`, `Wall`, `Breaker`) already exist from the original codebase. Plugin wiring stubs for `DeathPipelinePlugin` are in place.
+- **Wave 3 (RON Assets)**: RON asset migration complete. No direct dependency for this wave but the build must compile.
+- **Wave 4 (Functions)**: `EffectStack`, walking algorithm, dispatch, command extensions, passive effects — all implemented and tested.
+- **Wave 5 (Triggers)**: All trigger bridge systems implemented and tested. `EffectSystems::Tick` system set exists and is configured.
+- **Wave 6 (Effects)**: All 30 effects implemented and tested. Tick systems and condition evaluators operational. Effects that send `DamageDealt<T>` messages (shockwave, explode, pulse, chain_lightning, piercing_beam, tether_beam) are operational — though their messages are not yet consumed until this wave implements `apply_damage`.
+
+All types listed in the Types section below were created in wave 2. This wave implements the **systems** that use them, not the types themselves.
+
 ---
 
 ### Part A: apply_damage Generic System
@@ -27,7 +39,7 @@ This spec covers the core death pipeline: `apply_damage<T>`, `detect_*_deaths`, 
    - Given: Cell entity with `Hp { current: 10.0, starting: 30.0, max: None }`, `KilledBy { dealer: None }`. Two `DamageDealt<Cell>` messages pending: first `{ dealer: Some(bolt_a), target: cell_entity, amount: 10.0, source_chip: None }`, second `{ dealer: Some(bolt_b), target: cell_entity, amount: 5.0, source_chip: None }`.
    - When: `apply_damage::<Cell>` runs
    - Then: Cell's `Hp.current` is `-5.0`. `KilledBy.dealer` is `Some(bolt_a)` (first message killed it; second message's dealer is NOT written).
-   - Edge case: Both messages are killing blows independently (`amount: 15.0` and `amount: 20.0` with `Hp.current: 10.0`) — first processed message wins.
+   - Edge case: First message is the killing blow, second message is overkill on an already-dead entity (`amount: 15.0` and `amount: 20.0` with `Hp.current: 10.0`). Messages are processed sequentially: first message brings Hp from 10.0 to -5.0 (killing blow, sets KilledBy to bolt_a). Second message brings Hp from -5.0 to -25.0 — hp_before is already negative so this is NOT a killing blow, KilledBy is NOT overwritten. Result: `KilledBy.dealer` is `Some(bolt_a)`.
 
 4. **apply_damage<Cell> processes multiple damage messages in one frame**
    - Given: Cell entity with `Hp { current: 30.0, starting: 30.0, max: None }`, `KilledBy { dealer: None }`. Three `DamageDealt<Cell>` messages for same target: amounts `5.0`, `10.0`, `8.0`.
@@ -96,6 +108,12 @@ This spec covers the core death pipeline: `apply_damage<T>`, `detect_*_deaths`, 
     - When: `apply_damage::<Cell>` runs
     - Then: `Hp.current` is `20.0`. `Hp.starting` remains `30.0`. `Hp.max` remains `Some(50.0)`.
 
+17. **apply_damage does NOT set KilledBy when Hp is already at 0.0 before damage**
+    - Given: Cell entity with `Hp { current: 0.0, starting: 30.0, max: None }`, `KilledBy { dealer: None }`, `Cell` component (NO `Dead` component). A `DamageDealt<Cell> { dealer: Some(bolt_entity), target: cell_entity, amount: 5.0, source_chip: None }` message is pending.
+    - When: `apply_damage::<Cell>` runs
+    - Then: `Hp.current` is `-5.0`. `KilledBy.dealer` remains `None`. The killing blow check requires `hp_before > 0.0` — since `hp_before` was `0.0` (not positive), this is NOT a killing blow and KilledBy is not set.
+    - Edge case: `Hp.current` is `-3.0` before damage (already negative, no Dead yet) — `hp_before` is negative, damage brings it to `-8.0`, still NOT a killing blow, KilledBy not set.
+
 ---
 
 ### Part B: detect_cell_deaths
@@ -103,43 +121,50 @@ This spec covers the core death pipeline: `apply_damage<T>`, `detect_*_deaths`, 
 #### Domain
 `src/cells/systems/detect_cell_deaths.rs`
 
+**Scope note on RequiredToClear**: The design doc for `detect_cell_deaths` includes `Has<RequiredToClear>` in the query for downstream use. However, `detect_cell_deaths` in this wave does NOT read `Has<RequiredToClear>`. That is deferred to wave 9 where the cell domain kill handler reads it from the still-alive entity (the entity survives through the kill handler before being despawned in PostFixedUpdate). Tests in this wave do not set up or assert on `RequiredToClear`.
+
 #### Behavior
 
-17. **detect_cell_deaths sends KillYourself<Cell> when Hp <= 0**
+18. **detect_cell_deaths sends KillYourself<Cell> when Hp <= 0**
     - Given: Cell entity with `Hp { current: 0.0, starting: 30.0, max: None }`, `KilledBy { dealer: Some(bolt_entity) }`, `Cell` component.
     - When: `detect_cell_deaths` runs
     - Then: A `KillYourself<Cell> { victim: cell_entity, killer: Some(bolt_entity) }` message is sent.
     - Edge case: `Hp.current` is `-5.0` (overkill) — still sends `KillYourself<Cell>`.
 
-18. **detect_cell_deaths does NOT send KillYourself when Hp > 0**
+19. **detect_cell_deaths does NOT send KillYourself when Hp > 0**
     - Given: Cell entity with `Hp { current: 10.0, starting: 30.0, max: None }`, `KilledBy { dealer: None }`, `Cell` component.
     - When: `detect_cell_deaths` runs
     - Then: No `KillYourself<Cell>` message is sent.
 
-19. **detect_cell_deaths skips Dead cells**
+20. **detect_cell_deaths skips Dead cells**
     - Given: Cell entity with `Hp { current: 0.0, starting: 30.0, max: None }`, `KilledBy { dealer: Some(bolt_entity) }`, `Cell` component, AND `Dead` component.
     - When: `detect_cell_deaths` runs
     - Then: No `KillYourself<Cell>` message is sent (entity already dead, filtered out by `Without<Dead>`).
 
-20. **detect_cell_deaths does NOT insert Dead component**
+21. **detect_cell_deaths does NOT insert Dead component**
     - Given: Cell entity with `Hp { current: 0.0, starting: 30.0, max: None }`, `KilledBy { dealer: Some(bolt_entity) }`, `Cell` component.
     - When: `detect_cell_deaths` runs
     - Then: The cell entity does NOT have a `Dead` component after the system runs. (Domain kill handler inserts Dead, not this system.)
 
-21. **detect_cell_deaths does NOT despawn the entity**
+22. **detect_cell_deaths does NOT despawn the entity**
     - Given: Cell entity with `Hp { current: 0.0, starting: 30.0, max: None }`, `KilledBy { dealer: Some(bolt_entity) }`, `Cell` component.
     - When: `detect_cell_deaths` runs
     - Then: The cell entity still exists in the world.
 
-22. **detect_cell_deaths sends KillYourself with killer=None for environmental kills**
+23. **detect_cell_deaths sends KillYourself with killer=None for environmental kills**
     - Given: Cell entity with `Hp { current: 0.0, starting: 30.0, max: None }`, `KilledBy { dealer: None }`, `Cell` component.
     - When: `detect_cell_deaths` runs
     - Then: A `KillYourself<Cell> { victim: cell_entity, killer: None }` message is sent.
 
-23. **detect_cell_deaths processes multiple dead cells in one frame**
+24. **detect_cell_deaths processes multiple dead cells in one frame**
     - Given: Cell A with `Hp { current: 0.0, ... }`, `KilledBy { dealer: Some(bolt_a) }`, `Cell`. Cell B with `Hp { current: -3.0, ... }`, `KilledBy { dealer: Some(bolt_b) }`, `Cell`. Cell C with `Hp { current: 15.0, ... }`, `KilledBy { dealer: None }`, `Cell`.
     - When: `detect_cell_deaths` runs
     - Then: `KillYourself<Cell>` sent for Cell A (killer: Some(bolt_a)) and Cell B (killer: Some(bolt_b)). No message for Cell C (still alive).
+
+25. **detect_cell_deaths ignores Cell entity without Hp component**
+    - Given: Cell entity with `Cell` component but NO `Hp` component and NO `KilledBy` component (e.g., a special non-damageable cell type). No `Dead` component.
+    - When: `detect_cell_deaths` runs
+    - Then: No panic. No `KillYourself<Cell>` message sent. The entity is not matched by the query (which requires `Hp` and `KilledBy`).
 
 ---
 
@@ -150,26 +175,31 @@ This spec covers the core death pipeline: `apply_damage<T>`, `detect_*_deaths`, 
 
 #### Behavior
 
-24. **detect_bolt_deaths sends KillYourself<Bolt> when Hp <= 0**
+26. **detect_bolt_deaths sends KillYourself<Bolt> when Hp <= 0**
     - Given: Bolt entity with `Hp { current: 0.0, starting: 1.0, max: None }`, `KilledBy { dealer: None }`, `Bolt` component.
     - When: `detect_bolt_deaths` runs
     - Then: A `KillYourself<Bolt> { victim: bolt_entity, killer: None }` message is sent.
     - Edge case: `Hp.current` is `-1.0` — still sends `KillYourself<Bolt>`.
 
-25. **detect_bolt_deaths does NOT send KillYourself when Hp > 0**
+27. **detect_bolt_deaths does NOT send KillYourself when Hp > 0**
     - Given: Bolt entity with `Hp { current: 1.0, starting: 1.0, max: None }`, `KilledBy { dealer: None }`, `Bolt` component.
     - When: `detect_bolt_deaths` runs
     - Then: No `KillYourself<Bolt>` message is sent.
 
-26. **detect_bolt_deaths skips Dead bolts**
+28. **detect_bolt_deaths skips Dead bolts**
     - Given: Bolt entity with `Hp { current: 0.0, starting: 1.0, max: None }`, `KilledBy { dealer: None }`, `Bolt` component, AND `Dead` component.
     - When: `detect_bolt_deaths` runs
     - Then: No `KillYourself<Bolt>` message is sent.
 
-27. **detect_bolt_deaths does NOT insert Dead or despawn**
+29. **detect_bolt_deaths does NOT insert Dead or despawn**
     - Given: Bolt entity with `Hp { current: 0.0, starting: 1.0, max: None }`, `KilledBy { dealer: None }`, `Bolt` component.
     - When: `detect_bolt_deaths` runs
     - Then: Bolt entity still exists, no `Dead` component inserted.
+
+30. **detect_bolt_deaths ignores Bolt entity without Hp component**
+    - Given: Bolt entity with `Bolt` component but NO `Hp` component and NO `KilledBy` component. No `Dead` component.
+    - When: `detect_bolt_deaths` runs
+    - Then: No panic. No `KillYourself<Bolt>` message sent. The entity is not matched by the query (which requires `Hp` and `KilledBy`).
 
 ---
 
@@ -180,25 +210,30 @@ This spec covers the core death pipeline: `apply_damage<T>`, `detect_*_deaths`, 
 
 #### Behavior
 
-28. **detect_wall_deaths sends KillYourself<Wall> when Hp <= 0**
+31. **detect_wall_deaths sends KillYourself<Wall> when Hp <= 0**
     - Given: Wall entity with `Hp { current: 0.0, starting: 1.0, max: None }`, `KilledBy { dealer: Some(bolt_entity) }`, `Wall` component.
     - When: `detect_wall_deaths` runs
     - Then: A `KillYourself<Wall> { victim: wall_entity, killer: Some(bolt_entity) }` message is sent.
 
-29. **detect_wall_deaths does NOT send KillYourself when Hp > 0**
+32. **detect_wall_deaths does NOT send KillYourself when Hp > 0**
     - Given: Wall entity with `Hp { current: 1.0, starting: 1.0, max: None }`, `KilledBy { dealer: None }`, `Wall` component.
     - When: `detect_wall_deaths` runs
     - Then: No `KillYourself<Wall>` message is sent.
 
-30. **detect_wall_deaths skips Dead walls**
+33. **detect_wall_deaths skips Dead walls**
     - Given: Wall entity with `Hp { current: 0.0, starting: 1.0, max: None }`, `KilledBy { dealer: Some(bolt_entity) }`, `Wall` component, AND `Dead` component.
     - When: `detect_wall_deaths` runs
     - Then: No `KillYourself<Wall>` message is sent.
 
-31. **detect_wall_deaths does NOT insert Dead or despawn**
+34. **detect_wall_deaths does NOT insert Dead or despawn**
     - Given: Wall entity with `Hp { current: 0.0, starting: 1.0, max: None }`, `KilledBy { dealer: Some(bolt_entity) }`, `Wall` component.
     - When: `detect_wall_deaths` runs
     - Then: Wall entity still exists, no `Dead` component inserted.
+
+35. **detect_wall_deaths ignores Wall entity without Hp component (permanent wall)**
+    - Given: Wall entity with `Wall` component but NO `Hp` component and NO `KilledBy` component (permanent, indestructible wall). No `Dead` component.
+    - When: `detect_wall_deaths` runs
+    - Then: No panic. No `KillYourself<Wall>` message sent. The entity is not matched by the query (which requires `Hp` and `KilledBy`).
 
 ---
 
@@ -209,25 +244,30 @@ This spec covers the core death pipeline: `apply_damage<T>`, `detect_*_deaths`, 
 
 #### Behavior
 
-32. **detect_breaker_deaths sends KillYourself<Breaker> when Hp <= 0**
+36. **detect_breaker_deaths sends KillYourself<Breaker> when Hp <= 0**
     - Given: Breaker entity with `Hp { current: 0.0, starting: 3.0, max: None }`, `KilledBy { dealer: None }`, `Breaker` component.
     - When: `detect_breaker_deaths` runs
     - Then: A `KillYourself<Breaker> { victim: breaker_entity, killer: None }` message is sent.
 
-33. **detect_breaker_deaths does NOT send KillYourself when Hp > 0**
+37. **detect_breaker_deaths does NOT send KillYourself when Hp > 0**
     - Given: Breaker entity with `Hp { current: 2.0, starting: 3.0, max: None }`, `KilledBy { dealer: None }`, `Breaker` component.
     - When: `detect_breaker_deaths` runs
     - Then: No `KillYourself<Breaker>` message is sent.
 
-34. **detect_breaker_deaths skips Dead breakers**
+38. **detect_breaker_deaths skips Dead breakers**
     - Given: Breaker entity with `Hp { current: 0.0, starting: 3.0, max: None }`, `KilledBy { dealer: None }`, `Breaker` component, AND `Dead` component.
     - When: `detect_breaker_deaths` runs
     - Then: No `KillYourself<Breaker>` message is sent.
 
-35. **detect_breaker_deaths does NOT insert Dead or despawn**
+39. **detect_breaker_deaths does NOT insert Dead or despawn**
     - Given: Breaker entity with `Hp { current: 0.0, starting: 3.0, max: None }`, `KilledBy { dealer: None }`, `Breaker` component.
     - When: `detect_breaker_deaths` runs
     - Then: Breaker entity still exists, no `Dead` component inserted.
+
+40. **detect_breaker_deaths ignores Breaker entity without Hp component (infinite lives)**
+    - Given: Breaker entity with `Breaker` component but NO `Hp` component and NO `KilledBy` component (infinite lives breaker — `LivesCount(None)` mapped to no Hp component). No `Dead` component.
+    - When: `detect_breaker_deaths` runs
+    - Then: No panic. No `KillYourself<Breaker>` message sent. The entity is not matched by the query (which requires `Hp` and `KilledBy`).
 
 ---
 
@@ -238,27 +278,27 @@ This spec covers the core death pipeline: `apply_damage<T>`, `detect_*_deaths`, 
 
 #### Behavior
 
-36. **process_despawn_requests despawns entities from DespawnEntity messages**
+41. **process_despawn_requests despawns entities from DespawnEntity messages**
     - Given: Entity A exists in the world. A `DespawnEntity { entity: entity_a }` message is pending.
     - When: `process_despawn_requests` runs (and commands are applied)
     - Then: Entity A no longer exists in the world.
 
-37. **process_despawn_requests handles multiple DespawnEntity messages**
+42. **process_despawn_requests handles multiple DespawnEntity messages**
     - Given: Entity A and Entity B exist in the world. Two `DespawnEntity` messages pending: one for entity_a, one for entity_b.
     - When: `process_despawn_requests` runs (and commands are applied)
     - Then: Neither Entity A nor Entity B exist in the world.
 
-38. **process_despawn_requests uses try_despawn — no panic on already-despawned entity**
+43. **process_despawn_requests uses try_despawn (not try_despawn_recursive) — no panic on already-despawned entity**
     - Given: Entity A does NOT exist in the world (already despawned or never existed). A `DespawnEntity { entity: entity_a }` message is pending.
     - When: `process_despawn_requests` runs (and commands are applied)
     - Then: No panic. System completes normally.
 
-39. **process_despawn_requests handles duplicate DespawnEntity for same entity**
+44. **process_despawn_requests handles duplicate DespawnEntity for same entity**
     - Given: Entity A exists in the world. Two `DespawnEntity { entity: entity_a }` messages are pending.
     - When: `process_despawn_requests` runs (and commands are applied)
     - Then: Entity A no longer exists. No panic from the second despawn (try_despawn).
 
-40. **process_despawn_requests with no messages is a no-op**
+45. **process_despawn_requests with no messages is a no-op**
     - Given: Entity A exists in the world. No `DespawnEntity` messages pending.
     - When: `process_despawn_requests` runs
     - Then: Entity A still exists. Nothing happens.
@@ -272,22 +312,22 @@ This spec covers the core death pipeline: `apply_damage<T>`, `detect_*_deaths`, 
 
 #### Behavior
 
-41. **Dead prevents apply_damage from processing further damage**
+46. **Dead prevents apply_damage from processing further damage**
     - Given: Cell entity with `Hp { current: -5.0, starting: 30.0, max: None }`, `KilledBy { dealer: Some(bolt_a) }`, `Cell`, `Dead`. A `DamageDealt<Cell> { dealer: Some(bolt_b), target: cell_entity, amount: 10.0, source_chip: None }` message is pending.
     - When: `apply_damage::<Cell>` runs
     - Then: `Hp.current` remains `-5.0`. `KilledBy.dealer` remains `Some(bolt_a)`.
 
-42. **Dead prevents detect_cell_deaths from re-sending KillYourself**
+47. **Dead prevents detect_cell_deaths from re-sending KillYourself**
     - Given: Cell entity with `Hp { current: -5.0, starting: 30.0, max: None }`, `KilledBy { dealer: Some(bolt_a) }`, `Cell`, `Dead`.
     - When: `detect_cell_deaths` runs
     - Then: No `KillYourself<Cell>` message is sent.
 
-43. **Entity without Dead IS processed by apply_damage (positive check)**
+48. **Entity without Dead IS processed by apply_damage (positive check)**
     - Given: Cell entity with `Hp { current: 20.0, starting: 30.0, max: None }`, `KilledBy { dealer: None }`, `Cell` (NO `Dead` component). A `DamageDealt<Cell> { dealer: Some(bolt_entity), target: cell_entity, amount: 5.0, source_chip: None }` message is pending.
     - When: `apply_damage::<Cell>` runs
     - Then: `Hp.current` is `15.0`.
 
-44. **Entity without Dead IS processed by detect_cell_deaths (positive check)**
+49. **Entity without Dead IS processed by detect_cell_deaths (positive check)**
     - Given: Cell entity with `Hp { current: -5.0, starting: 30.0, max: None }`, `KilledBy { dealer: Some(bolt_entity) }`, `Cell` (NO `Dead` component).
     - When: `detect_cell_deaths` runs
     - Then: `KillYourself<Cell>` IS sent for this entity.
@@ -296,12 +336,12 @@ This spec covers the core death pipeline: `apply_damage<T>`, `detect_*_deaths`, 
 
 ### Types
 
-All types are new in this wave:
+All types below were created in wave 2 (scaffold). They are listed here for reference — this wave implements systems that use them, not the types themselves:
 
-- `Hp { current: f32, starting: f32, max: Option<f32> }` — `#[derive(Component, Debug, Clone)]`. Unified health. Location: `src/shared/components/hp.rs`.
-- `KilledBy { dealer: Option<Entity> }` — `#[derive(Component, Default, Debug)]`. Kill attribution. Location: `src/shared/components/killed_by.rs`.
-- `Dead` — `#[derive(Component)]`. Death marker. Location: `src/shared/components/dead.rs`.
-- `GameEntity` — marker trait: `trait GameEntity: Component {}` with impls for `Bolt`, `Cell`, `Wall`, `Breaker`. Location: `src/shared/traits.rs` (or `src/shared/game_entity.rs`).
+- `Hp { current: f32, starting: f32, max: Option<f32> }` — `#[derive(Component, Debug, Clone)]`. Unified health. Location: `src/shared/components/hp.rs` (directory module under `src/shared/components/`).
+- `KilledBy { dealer: Option<Entity> }` — `#[derive(Component, Default, Debug)]`. Kill attribution. Location: `src/shared/components/killed_by.rs` (directory module under `src/shared/components/`).
+- `Dead` — `#[derive(Component)]`. Death marker. Location: `src/shared/components/dead.rs` (directory module under `src/shared/components/`).
+- `GameEntity` — marker trait: `trait GameEntity: Component {}` with impls for `Bolt`, `Cell`, `Wall`, `Breaker`. Location: `src/shared/traits.rs`.
 - `DamageDealt<T: GameEntity> { dealer: Option<Entity>, target: Entity, amount: f32, source_chip: Option<String>, _marker: PhantomData<T> }` — `#[derive(Message, Clone, Debug)]`. Location: `src/shared/messages.rs`.
 - `KillYourself<T: GameEntity> { victim: Entity, killer: Option<Entity>, _marker: PhantomData<T> }` — `#[derive(Message, Clone, Debug)]`. Location: `src/shared/messages.rs`.
 - `DespawnEntity { entity: Entity }` — `#[derive(Message, Clone, Debug)]`. Location: `src/shared/messages.rs`.
@@ -344,7 +384,9 @@ All types are new in this wave:
 - Tests for `detect_wall_deaths` go in: `src/walls/systems/detect_wall_deaths.rs`
 - Tests for `detect_breaker_deaths` go in: `src/breaker/systems/detect_breaker_deaths.rs`
 - Tests for `process_despawn_requests` go in: `src/shared/systems/process_despawn_requests.rs`
-- Tests for Dead integration can go in `src/shared/systems/apply_damage.rs` (behaviors 41-44 are tested there and in the relevant detect_*_deaths file)
+- Tests for Dead integration can go in `src/shared/systems/apply_damage.rs` (behaviors 46-49 are tested there and in the relevant detect_*_deaths file)
+- **Changed\<Hp\> is deliberately omitted**: detect systems do NOT use `Changed<Hp>` — they check all non-Dead entities with `Hp <= 0` each frame. `Without<Dead>` is the only filter beyond the entity marker (`With<Cell>`, `With<Bolt>`, etc.). This is intentional: `Changed<Hp>` would miss entities whose Hp was set to zero before they entered the world (e.g., spawned dead), and the cost of scanning all entities with Hp is negligible given the entity counts in this game.
+- **process_despawn_requests uses `try_despawn` not `try_despawn_recursive`**: Death pipeline entities have no children requiring recursive despawn. The system calls `commands.entity(msg.entity).try_despawn()`, not `try_despawn_recursive()`.
 - Do NOT test: domain kill handlers, trigger bridges, Destroyed<T> dispatch, death animations, visual feedback, node completion tracking
 - Do NOT test: scheduling/ordering — ordering is wiring, tested by the plugin, not by unit tests
 - Do NOT reference: existing `src/` code. This is a clean-room implementation. All types and systems are new.

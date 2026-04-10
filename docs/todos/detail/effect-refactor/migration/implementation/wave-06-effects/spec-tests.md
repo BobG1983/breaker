@@ -1,5 +1,17 @@
 # Test Spec: Effect Domain -- Wave 6: Effects + Tick Systems + Conditions
 
+## Prerequisites
+
+The following waves MUST be complete before wave 6 begins:
+
+- **Wave 1**: Delete old effect code (clean slate)
+- **Wave 2**: Scaffold -- all config structs, component types, EffectStack<T>, EffectType/ReversibleEffectType enums, Fireable/Reversible/PassiveEffect traits, EffectSystems system sets, message types (ApplyTimePenalty, EffectTimerExpired), plugin skeleton
+- **Wave 3**: RON asset pipeline -- deserialization of config structs from chip/augment RON
+- **Wave 4**: Functions -- EffectStack methods (push, remove, aggregate), walk_effects tree walker, fire_effect/reverse_effect commands
+- **Wave 5**: Triggers -- all bridge systems in EffectSystems::Bridge, tick_effect_timers in EffectSystems::Tick, TriggerContext types, Condition enum, BoundEffects/StagedEffects storage
+
+All types from waves 2-5 are assumed to exist and be functional: EffectStack, Fireable, Reversible, PassiveEffect, all config structs, all tree types, all triggers.
+
 ## Domain
 `src/effect/`
 
@@ -25,22 +37,22 @@ All 8 passive effects follow the same EffectStack pattern. Each config implement
 #### A1.3 **SpeedBoost multiple fires from different sources stack**
 - Given: Entity with `EffectStack<SpeedBoostConfig>` containing `("chip_a", SpeedBoostConfig { multiplier: OrderedFloat(1.5) })`
 - When: `SpeedBoostConfig { multiplier: OrderedFloat(2.0) }.fire(entity, "chip_b", world)`
-- Then: Stack contains 2 entries: `("chip_a", 1.5)` and `("chip_b", 2.0)`
+- Then: Stack contains 2 entries: `("chip_a", OrderedFloat(1.5))` and `("chip_b", OrderedFloat(2.0))`
 
 #### A1.4 **SpeedBoost multiple fires from same source stack**
 - Given: Entity with `EffectStack<SpeedBoostConfig>` containing `("chip_a", SpeedBoostConfig { multiplier: OrderedFloat(1.5) })`
 - When: `SpeedBoostConfig { multiplier: OrderedFloat(1.5) }.fire(entity, "chip_a", world)`
-- Then: Stack contains 2 entries, both `("chip_a", 1.5)` -- duplicate sources are allowed
+- Then: Stack contains 2 entries, both `("chip_a", OrderedFloat(1.5))` -- duplicate sources are allowed
 
 #### A1.5 **SpeedBoost reverse removes matching entry**
-- Given: Entity with `EffectStack<SpeedBoostConfig>` containing `[("chip_a", 1.5), ("chip_b", 2.0)]`
+- Given: Entity with `EffectStack<SpeedBoostConfig>` containing `[("chip_a", OrderedFloat(1.5)), ("chip_b", OrderedFloat(2.0))]`
 - When: `SpeedBoostConfig { multiplier: OrderedFloat(1.5) }.reverse(entity, "chip_a", world)`
-- Then: Stack contains 1 entry: `("chip_b", 2.0)`
+- Then: Stack contains 1 entry: `("chip_b", OrderedFloat(2.0))`
 
 #### A1.6 **SpeedBoost reverse does nothing when no match**
-- Given: Entity with `EffectStack<SpeedBoostConfig>` containing `[("chip_b", 2.0)]`
+- Given: Entity with `EffectStack<SpeedBoostConfig>` containing `[("chip_b", OrderedFloat(2.0))]`
 - When: `SpeedBoostConfig { multiplier: OrderedFloat(1.5) }.reverse(entity, "chip_a", world)`
-- Then: Stack still contains 1 entry: `("chip_b", 2.0)` -- no panic, no change
+- Then: Stack still contains 1 entry: `("chip_b", OrderedFloat(2.0))` -- no panic, no change
 
 #### A1.7 **SpeedBoost reverse does nothing when stack is absent**
 - Given: Entity with no `EffectStack<SpeedBoostConfig>`
@@ -48,7 +60,7 @@ All 8 passive effects follow the same EffectStack pattern. Each config implement
 - Then: No panic. Entity still has no `EffectStack<SpeedBoostConfig>`.
 
 #### A1.8 **SpeedBoost aggregate is multiplicative**
-- Given: `EffectStack<SpeedBoostConfig>` with entries `[("a", 1.5), ("b", 2.0), ("c", 0.5)]`
+- Given: `EffectStack<SpeedBoostConfig>` with entries `[("a", OrderedFloat(1.5)), ("b", OrderedFloat(2.0)), ("c", OrderedFloat(0.5))]`
 - When: `stack.aggregate()` called
 - Then: Returns `1.5 * 2.0 * 0.5 = 1.5`
 - Edge case: Empty stack returns `1.0` (multiplicative identity)
@@ -61,12 +73,12 @@ All 8 passive effects follow the same EffectStack pattern. Each config implement
 - Then: Entity has `EffectStack<SizeBoostConfig>` with 1 entry `("chip_x", SizeBoostConfig { multiplier: OrderedFloat(1.3) })`
 
 #### A2.2 **SizeBoost reverse removes matching entry**
-- Given: Entity with `EffectStack<SizeBoostConfig>` containing `[("chip_x", 1.3), ("chip_y", 0.8)]`
+- Given: Entity with `EffectStack<SizeBoostConfig>` containing `[("chip_x", OrderedFloat(1.3)), ("chip_y", OrderedFloat(0.8))]`
 - When: `SizeBoostConfig { multiplier: OrderedFloat(1.3) }.reverse(entity, "chip_x", world)`
-- Then: Stack contains 1 entry: `("chip_y", 0.8)`
+- Then: Stack contains 1 entry: `("chip_y", OrderedFloat(0.8))`
 
 #### A2.3 **SizeBoost aggregate is multiplicative**
-- Given: `EffectStack<SizeBoostConfig>` with entries `[("a", 1.3), ("b", 0.7)]`
+- Given: `EffectStack<SizeBoostConfig>` with entries `[("a", OrderedFloat(1.3)), ("b", OrderedFloat(0.7))]`
 - When: `stack.aggregate()` called
 - Then: Returns `1.3 * 0.7 = 0.91`
 - Edge case: Empty stack returns `1.0`
@@ -79,12 +91,12 @@ All 8 passive effects follow the same EffectStack pattern. Each config implement
 - Then: Entity has `EffectStack<DamageBoostConfig>` with 1 entry `("chip_dmg", DamageBoostConfig { multiplier: OrderedFloat(2.5) })`
 
 #### A3.2 **DamageBoost reverse removes matching entry**
-- Given: Entity with `EffectStack<DamageBoostConfig>` containing `[("chip_dmg", 2.5)]`
+- Given: Entity with `EffectStack<DamageBoostConfig>` containing `[("chip_dmg", OrderedFloat(2.5))]`
 - When: `DamageBoostConfig { multiplier: OrderedFloat(2.5) }.reverse(entity, "chip_dmg", world)`
 - Then: Stack is empty
 
 #### A3.3 **DamageBoost aggregate is multiplicative**
-- Given: `EffectStack<DamageBoostConfig>` with entries `[("a", 2.0), ("b", 3.0)]`
+- Given: `EffectStack<DamageBoostConfig>` with entries `[("a", OrderedFloat(2.0)), ("b", OrderedFloat(3.0))]`
 - When: `stack.aggregate()` called
 - Then: Returns `2.0 * 3.0 = 6.0`
 - Edge case: Empty stack returns `1.0`
@@ -97,12 +109,12 @@ All 8 passive effects follow the same EffectStack pattern. Each config implement
 - Then: Entity has `EffectStack<BumpForceConfig>` with 1 entry
 
 #### A4.2 **BumpForce reverse removes matching entry**
-- Given: Entity with `EffectStack<BumpForceConfig>` containing `[("chip_bump", 1.8)]`
+- Given: Entity with `EffectStack<BumpForceConfig>` containing `[("chip_bump", OrderedFloat(1.8))]`
 - When: `BumpForceConfig { multiplier: OrderedFloat(1.8) }.reverse(entity, "chip_bump", world)`
 - Then: Stack is empty
 
 #### A4.3 **BumpForce aggregate is multiplicative**
-- Given: `EffectStack<BumpForceConfig>` with entries `[("a", 1.8), ("b", 1.2)]`
+- Given: `EffectStack<BumpForceConfig>` with entries `[("a", OrderedFloat(1.8)), ("b", OrderedFloat(1.2))]`
 - When: `stack.aggregate()` called
 - Then: Returns `1.8 * 1.2 = 2.16`
 - Edge case: Empty stack returns `1.0`
@@ -115,12 +127,12 @@ All 8 passive effects follow the same EffectStack pattern. Each config implement
 - Then: Entity has `EffectStack<QuickStopConfig>` with 1 entry
 
 #### A5.2 **QuickStop reverse removes matching entry**
-- Given: Entity with `EffectStack<QuickStopConfig>` containing `[("chip_qs", 2.0)]`
+- Given: Entity with `EffectStack<QuickStopConfig>` containing `[("chip_qs", OrderedFloat(2.0))]`
 - When: `QuickStopConfig { multiplier: OrderedFloat(2.0) }.reverse(entity, "chip_qs", world)`
 - Then: Stack is empty
 
 #### A5.3 **QuickStop aggregate is multiplicative**
-- Given: `EffectStack<QuickStopConfig>` with entries `[("a", 2.0), ("b", 1.5)]`
+- Given: `EffectStack<QuickStopConfig>` with entries `[("a", OrderedFloat(2.0)), ("b", OrderedFloat(1.5))]`
 - When: `stack.aggregate()` called
 - Then: Returns `2.0 * 1.5 = 3.0`
 - Edge case: Empty stack returns `1.0`
@@ -133,12 +145,12 @@ All 8 passive effects follow the same EffectStack pattern. Each config implement
 - Then: Entity has `EffectStack<VulnerableConfig>` with 1 entry
 
 #### A6.2 **Vulnerable reverse removes matching entry**
-- Given: Entity with `EffectStack<VulnerableConfig>` containing `[("chip_vuln", 2.0)]`
+- Given: Entity with `EffectStack<VulnerableConfig>` containing `[("chip_vuln", OrderedFloat(2.0))]`
 - When: `VulnerableConfig { multiplier: OrderedFloat(2.0) }.reverse(entity, "chip_vuln", world)`
 - Then: Stack is empty
 
 #### A6.3 **Vulnerable aggregate is multiplicative**
-- Given: `EffectStack<VulnerableConfig>` with entries `[("a", 2.0), ("b", 1.5)]`
+- Given: `EffectStack<VulnerableConfig>` with entries `[("a", OrderedFloat(2.0)), ("b", OrderedFloat(1.5))]`
 - When: `stack.aggregate()` called
 - Then: Returns `2.0 * 1.5 = 3.0`
 - Edge case: Empty stack returns `1.0`
@@ -180,22 +192,22 @@ All 8 passive effects follow the same EffectStack pattern. Each config implement
 - Then: Entity has `EffectStack<RampingDamageConfig>` with 1 entry. Entity has `RampingDamageAccumulator(OrderedFloat(0.0))`.
 
 #### A8.2 **RampingDamage fire does not overwrite existing accumulator**
-- Given: Entity with `EffectStack<RampingDamageConfig>` containing `[("chip_a", increment: 5.0)]` and `RampingDamageAccumulator(OrderedFloat(15.0))`
+- Given: Entity with `EffectStack<RampingDamageConfig>` containing `[("chip_a", increment: OrderedFloat(5.0))]` and `RampingDamageAccumulator(OrderedFloat(15.0))`
 - When: `RampingDamageConfig { increment: OrderedFloat(3.0) }.fire(entity, "chip_b", world)`
 - Then: Stack contains 2 entries. `RampingDamageAccumulator` is still `OrderedFloat(15.0)` -- not reset.
 
 #### A8.3 **RampingDamage reverse removes matching entry, removes accumulator when stack is empty**
-- Given: Entity with `EffectStack<RampingDamageConfig>` containing `[("chip_ramp", increment: 5.0)]` and `RampingDamageAccumulator(OrderedFloat(20.0))`
+- Given: Entity with `EffectStack<RampingDamageConfig>` containing `[("chip_ramp", increment: OrderedFloat(5.0))]` and `RampingDamageAccumulator(OrderedFloat(20.0))`
 - When: `RampingDamageConfig { increment: OrderedFloat(5.0) }.reverse(entity, "chip_ramp", world)`
 - Then: Stack is empty. `RampingDamageAccumulator` is removed from entity.
 
 #### A8.4 **RampingDamage reverse with remaining sources does not remove accumulator**
-- Given: Entity with `EffectStack<RampingDamageConfig>` containing `[("chip_a", increment: 5.0), ("chip_b", increment: 3.0)]` and `RampingDamageAccumulator(OrderedFloat(10.0))`
+- Given: Entity with `EffectStack<RampingDamageConfig>` containing `[("chip_a", increment: OrderedFloat(5.0)), ("chip_b", increment: OrderedFloat(3.0))]` and `RampingDamageAccumulator(OrderedFloat(10.0))`
 - When: `RampingDamageConfig { increment: OrderedFloat(5.0) }.reverse(entity, "chip_a", world)`
 - Then: Stack contains 1 entry. `RampingDamageAccumulator` still present with value `OrderedFloat(10.0)`.
 
 #### A8.5 **RampingDamage aggregate is additive**
-- Given: `EffectStack<RampingDamageConfig>` with entries `[("a", increment: 5.0), ("b", increment: 3.0)]`
+- Given: `EffectStack<RampingDamageConfig>` with entries `[("a", increment: OrderedFloat(5.0)), ("b", increment: OrderedFloat(3.0))]`
 - When: `stack.aggregate()` called
 - Then: Returns `8.0` (sum of increments: 5.0 + 3.0)
 - Edge case: Empty stack returns `0.0` (additive identity)
@@ -287,23 +299,23 @@ All 8 passive effects follow the same EffectStack pattern. Each config implement
 
 ### D1: Anchor
 
-#### D1.1 **Anchor fire inserts AnchorActive component**
+#### D1.1 **Anchor fire inserts AnchorActive component with source**
 - Given: Entity (breaker) with no `AnchorActive`
 - When: `AnchorConfig { bump_force_multiplier: OrderedFloat(2.0), perfect_window_multiplier: OrderedFloat(1.5), plant_delay: OrderedFloat(1.0) }.fire(entity, "chip_anchor", world)`
-- Then: Entity has `AnchorActive { bump_force_multiplier: 2.0, perfect_window_multiplier: 1.5, plant_delay: 1.0 }`
+- Then: Entity has `AnchorActive { bump_force_multiplier: 2.0, perfect_window_multiplier: 1.5, plant_delay: 1.0, source: "chip_anchor".to_string() }`
 
 #### D1.2 **Anchor reverse removes AnchorActive, AnchorTimer, and AnchorPlanted**
-- Given: Entity with `AnchorActive { ... }`, `AnchorTimer(0.5)`, and `AnchorPlanted`
+- Given: Entity with `AnchorActive { bump_force_multiplier: 2.0, perfect_window_multiplier: 1.5, plant_delay: 1.0, source: "chip_anchor".to_string() }`, `AnchorTimer(0.5)`, and `AnchorPlanted`
 - When: `AnchorConfig { ... }.reverse(entity, "chip_anchor", world)`
 - Then: Entity has none of: `AnchorActive`, `AnchorTimer`, `AnchorPlanted`
 
 #### D1.3 **Anchor reverse removes bump force boost if was planted**
-- Given: Entity with `AnchorActive { bump_force_multiplier: 2.0, ... }`, `AnchorPlanted`, and `EffectStack<BumpForceConfig>` containing `[("chip_anchor", BumpForceConfig { multiplier: OrderedFloat(2.0) })]`
+- Given: Entity with `AnchorActive { bump_force_multiplier: 2.0, ..., source: "chip_anchor".to_string() }`, `AnchorPlanted`, and `EffectStack<BumpForceConfig>` containing `[("chip_anchor", BumpForceConfig { multiplier: OrderedFloat(2.0) })]`
 - When: `AnchorConfig { ... }.reverse(entity, "chip_anchor", world)`
 - Then: `EffectStack<BumpForceConfig>` no longer contains the entry sourced from `"chip_anchor"`
 
 #### D1.4 **Anchor reverse is safe when components are partially absent**
-- Given: Entity with `AnchorActive { ... }` only (no AnchorTimer, no AnchorPlanted)
+- Given: Entity with `AnchorActive { ..., source: "chip_anchor".to_string() }` only (no AnchorTimer, no AnchorPlanted)
 - When: `AnchorConfig { ... }.reverse(entity, "chip_anchor", world)`
 - Then: `AnchorActive` removed. No panic from missing AnchorTimer or AnchorPlanted.
 
@@ -337,23 +349,26 @@ All 8 passive effects follow the same EffectStack pattern. Each config implement
 
 ### D3: EntropyEngine
 
+EntropyEngine resets its counter internally when fired -- no separate reset system is needed. Each fire call increments the count, fires `count` random effects from the pool, then resets count to 0.
+
 #### D3.1 **EntropyEngine fire inserts counter on first activation**
 - Given: Entity with no `EntropyCounter`
 - When: `EntropyConfig { max_effects: 5, pool: vec![(OrderedFloat(1.0), Box::new(EffectType::SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) })))] }.fire(entity, "chip_entropy", world)`
-- Then: Entity has `EntropyCounter { count: 1, max_effects: 5, pool: [...] }`
+- Then: Entity has `EntropyCounter { count: 0, max_effects: 5, pool: [...] }` (count reset to 0 after firing 1 effect). `EffectStack<SpeedBoostConfig>` has 1 entry (the random effect was fired once for count=1).
 
-#### D3.2 **EntropyEngine fire increments existing counter and fires random effects**
-- Given: Entity with `EntropyCounter { count: 2, max_effects: 5, pool: [(1.0, SpeedBoost(1.5))] }`
-- When: `EntropyConfig { max_effects: 5, pool: [...] }.fire(entity, "chip_entropy", world)`
-- Then: `EntropyCounter.count` is `3`. Three random effects from pool were fired (one per count).
+#### D3.2 **EntropyEngine fire increments count, fires that many effects, resets to zero**
+- Given: Entity with `EntropyCounter { count: 0, max_effects: 5, pool: [(OrderedFloat(1.0), SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) }))] }`
+- When: `EntropyConfig { max_effects: 5, pool: [...] }.fire(entity, "chip_entropy", world)` called 3 times sequentially
+- Then: After each fire: count increments from 0 to 1, fires 1 effect, resets to 0. After 3 fires: `EntropyCounter.count` is `0` (reset after each fire). 3 total effects have been fired (one per activation).
+- Edge case: The count increments from whatever it was before the reset. On first fire after node start, count goes 0->1, fires 1 effect, resets to 0.
 
 #### D3.3 **EntropyEngine fire caps count at max_effects**
-- Given: Entity with `EntropyCounter { count: 5, max_effects: 5, pool: [...] }`
+- Given: Entity with `EntropyCounter { count: 4, max_effects: 5, pool: [(OrderedFloat(1.0), SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) }))] }`
 - When: `EntropyConfig { max_effects: 5, pool: [...] }.fire(entity, "chip_entropy", world)`
-- Then: `EntropyCounter.count` remains `5` (capped at max_effects). Five effects fired.
+- Then: Count increments to 5 (capped at max_effects), 5 effects fired, count resets to 0. `EntropyCounter.count` is `0`.
 
 #### D3.4 **EntropyEngine reverse removes counter**
-- Given: Entity with `EntropyCounter { count: 3, ... }`
+- Given: Entity with `EntropyCounter { count: 0, max_effects: 5, pool: [...] }`
 - When: `EntropyConfig { ... }.reverse(entity, "chip_entropy", world)`
 - Then: Entity no longer has `EntropyCounter`. Does NOT reverse any previously fired effects.
 
@@ -397,7 +412,7 @@ All 8 passive effects follow the same EffectStack pattern. Each config implement
 
 #### E1.1 **Shockwave fire spawns shockwave entity with correct components**
 - Given: Entity at position `(100.0, 200.0)` with `BoltBaseDamage(10.0)` and `EffectStack<DamageBoostConfig>` aggregating to `2.0`
-- When: `ShockwaveConfig { base_range: 50.0, range_per_level: 10.0, stacks: 3, speed: 300.0 }.fire(entity, "chip_shock", world)`
+- When: `ShockwaveConfig { base_range: OrderedFloat(50.0), range_per_level: OrderedFloat(10.0), stacks: 3, speed: OrderedFloat(300.0) }.fire(entity, "chip_shock", world)`
 - Then: A new entity exists with:
   - `ShockwaveSource`
   - `ShockwaveRadius(0.0)`
@@ -412,49 +427,49 @@ All 8 passive effects follow the same EffectStack pattern. Each config implement
 
 #### E1.2 **Shockwave fire range calculation with stacks=1**
 - Given: Entity at position `(0.0, 0.0)` with `BoltBaseDamage(5.0)`, empty `EffectStack<DamageBoostConfig>`
-- When: `ShockwaveConfig { base_range: 80.0, range_per_level: 15.0, stacks: 1, speed: 200.0 }.fire(entity, "chip_shock", world)`
+- When: `ShockwaveConfig { base_range: OrderedFloat(80.0), range_per_level: OrderedFloat(15.0), stacks: 1, speed: OrderedFloat(200.0) }.fire(entity, "chip_shock", world)`
 - Then: `ShockwaveMaxRadius` is `80.0` (80.0 + 15.0 * (1 - 1) = 80.0)
 
 ### E2: Explode
 
 #### E2.1 **Explode fire sends DamageDealt for cells in range**
-- Given: Entity at position `(100.0, 200.0)`. Cell entity at `(120.0, 210.0)` (within range 50.0). Cell entity at `(300.0, 400.0)` (outside range 50.0).
-- When: `ExplodeConfig { range: 50.0, damage: 25.0 }.fire(entity, "chip_explode", world)`
+- Given: Entity at position `(100.0, 200.0)`. Cell entity at `(120.0, 210.0)` (within range `OrderedFloat(50.0)`). Cell entity at `(300.0, 400.0)` (outside range `OrderedFloat(50.0)`).
+- When: `ExplodeConfig { range: OrderedFloat(50.0), damage: OrderedFloat(25.0) }.fire(entity, "chip_explode", world)`
 - Then: `DamageDealt<Cell>` message sent for the nearby cell with `damage = 25.0`. No message sent for the far cell.
 - Edge case: No cells in range -- no messages sent, no panic
 
 #### E2.2 **Explode damage is flat, ignores damage boosts**
 - Given: Entity at position `(0.0, 0.0)` with `EffectStack<DamageBoostConfig>` aggregating to `3.0`. Cell at `(10.0, 0.0)`.
-- When: `ExplodeConfig { range: 50.0, damage: 25.0 }.fire(entity, "chip_explode", world)`
+- When: `ExplodeConfig { range: OrderedFloat(50.0), damage: OrderedFloat(25.0) }.fire(entity, "chip_explode", world)`
 - Then: `DamageDealt<Cell>` for the cell has `damage = 25.0` (not `75.0`)
 
 ### E3: ChainLightning
 
 #### E3.1 **ChainLightning fire deals immediate damage to first target and spawns chain entity**
 - Given: Entity at position `(100.0, 200.0)` with `BoltBaseDamage(10.0)` and `EffectStack<DamageBoostConfig>` aggregating to `1.5`. Cell at `(120.0, 210.0)`.
-- When: `ChainLightningConfig { arcs: 3, range: 100.0, damage_mult: 2.0, arc_speed: 500.0 }.fire(entity, "chip_chain", world)`
+- When: `ChainLightningConfig { arcs: 3, range: OrderedFloat(100.0), damage_mult: OrderedFloat(2.0), arc_speed: OrderedFloat(500.0) }.fire(entity, "chip_chain", world)`
 - Then: `DamageDealt<Cell>` sent for first target with damage `2.0 * 10.0 * 1.5 = 30.0`. A `ChainLightningChain` entity spawned with `remaining_jumps: 2`, `damage: 30.0`, `hit_set` containing the first target, `state: ChainState::Idle`, `range: 100.0`, `arc_speed: 500.0`, `source_pos` at first target's position, and `CleanupOnExit<NodeState>`.
 
 #### E3.2 **ChainLightning fire with arcs=1 deals damage but does not spawn chain entity**
 - Given: Entity at position `(0.0, 0.0)` with `BoltBaseDamage(10.0)`, empty damage boost stack. Cell at `(10.0, 0.0)`.
-- When: `ChainLightningConfig { arcs: 1, range: 100.0, damage_mult: 1.0, arc_speed: 500.0 }.fire(entity, "chip_chain", world)`
+- When: `ChainLightningConfig { arcs: 1, range: OrderedFloat(100.0), damage_mult: OrderedFloat(1.0), arc_speed: OrderedFloat(500.0) }.fire(entity, "chip_chain", world)`
 - Then: `DamageDealt<Cell>` sent for the cell. No `ChainLightningChain` entity spawned (remaining_jumps would be 0).
 
 #### E3.3 **ChainLightning fire with no cells in range does nothing**
-- Given: Entity at position `(0.0, 0.0)`. No cells within range `50.0`.
-- When: `ChainLightningConfig { arcs: 3, range: 50.0, damage_mult: 1.0, arc_speed: 500.0 }.fire(entity, "chip_chain", world)`
+- Given: Entity at position `(0.0, 0.0)`. No cells within range `OrderedFloat(50.0)`.
+- When: `ChainLightningConfig { arcs: 3, range: OrderedFloat(50.0), damage_mult: OrderedFloat(1.0), arc_speed: OrderedFloat(500.0) }.fire(entity, "chip_chain", world)`
 - Then: No `DamageDealt<Cell>` sent. No `ChainLightningChain` entity spawned.
 
 ### E4: PiercingBeam
 
 #### E4.1 **PiercingBeam fire deals damage to cells along velocity direction**
 - Given: Entity at position `(100.0, 200.0)` with velocity direction `(0.0, 1.0)`, `BoltBaseDamage(10.0)`, `EffectStack<DamageBoostConfig>` aggregating to `2.0`. Cell at `(100.0, 300.0)` (in beam path). Cell at `(500.0, 300.0)` (outside beam width).
-- When: `PiercingBeamConfig { damage_mult: 1.5, width: 20.0 }.fire(entity, "chip_beam", world)`
+- When: `PiercingBeamConfig { damage_mult: OrderedFloat(1.5), width: OrderedFloat(20.0) }.fire(entity, "chip_beam", world)`
 - Then: `DamageDealt<Cell>` sent for in-beam cell with damage `1.5 * 10.0 * 2.0 = 30.0`. No message for out-of-beam cell.
 
 #### E4.2 **PiercingBeam fire with no cells in path does nothing**
 - Given: Entity at `(0.0, 0.0)` with velocity direction `(0.0, 1.0)`. No cells in beam path.
-- When: `PiercingBeamConfig { damage_mult: 1.0, width: 10.0 }.fire(entity, "chip_beam", world)`
+- When: `PiercingBeamConfig { damage_mult: OrderedFloat(1.0), width: OrderedFloat(10.0) }.fire(entity, "chip_beam", world)`
 - Then: No `DamageDealt<Cell>` messages sent.
 
 ### E5: SpawnBolts
@@ -466,7 +481,7 @@ All 8 passive effects follow the same EffectStack pattern. Each config implement
 
 #### E5.2 **SpawnBolts fire with lifespan attaches timer**
 - Given: Entity at position `(100.0, 200.0)`
-- When: `SpawnBoltsConfig { count: 2, lifespan: Some(5.0), inherit: false }.fire(entity, "chip_spawn", world)`
+- When: `SpawnBoltsConfig { count: 2, lifespan: Some(OrderedFloat(5.0)), inherit: false }.fire(entity, "chip_spawn", world)`
 - Then: 2 new bolt entities, each with a lifespan timer set to `5.0` seconds
 
 #### E5.3 **SpawnBolts fire with inherit copies BoundEffects**
@@ -483,24 +498,24 @@ All 8 passive effects follow the same EffectStack pattern. Each config implement
 
 #### E6.1 **SpawnPhantom fire spawns phantom bolt entity**
 - Given: Entity at position `(100.0, 200.0)`, no existing `PhantomBolt` entities with `PhantomOwner(entity)`
-- When: `SpawnPhantomConfig { duration: 8.0, max_active: 3 }.fire(entity, "chip_phantom", world)`
+- When: `SpawnPhantomConfig { duration: OrderedFloat(8.0), max_active: 3 }.fire(entity, "chip_phantom", world)`
 - Then: A new entity exists with `PhantomBolt`, `PhantomLifetime(8.0)`, `PhantomOwner(entity)`, `CleanupOnExit<NodeState>`
 
 #### E6.2 **SpawnPhantom fire despawns oldest when at max_active**
 - Given: Entity with 3 existing `PhantomBolt` entities owned by it: phantom_a `PhantomLifetime(2.0)`, phantom_b `PhantomLifetime(5.0)`, phantom_c `PhantomLifetime(7.0)`. `max_active = 3`.
-- When: `SpawnPhantomConfig { duration: 8.0, max_active: 3 }.fire(entity, "chip_phantom", world)`
+- When: `SpawnPhantomConfig { duration: OrderedFloat(8.0), max_active: 3 }.fire(entity, "chip_phantom", world)`
 - Then: phantom_a (lowest lifetime = oldest) is despawned. A new phantom exists. Total count is still 3.
 
 #### E6.3 **SpawnPhantom fire with max_active=1 replaces existing**
 - Given: Entity with 1 existing `PhantomBolt` entity owned by it with `PhantomLifetime(3.0)`
-- When: `SpawnPhantomConfig { duration: 5.0, max_active: 1 }.fire(entity, "chip_phantom", world)`
+- When: `SpawnPhantomConfig { duration: OrderedFloat(5.0), max_active: 1 }.fire(entity, "chip_phantom", world)`
 - Then: Old phantom despawned. New phantom with `PhantomLifetime(5.0)` exists. Total count is 1.
 
 ### E7: ChainBolt
 
 #### E7.1 **ChainBolt fire spawns tethered bolt**
 - Given: Bolt entity at position `(100.0, 200.0)`
-- When: `ChainBoltConfig { tether_distance: 80.0 }.fire(entity, "chip_chain_bolt", world)`
+- When: `ChainBoltConfig { tether_distance: OrderedFloat(80.0) }.fire(entity, "chip_chain_bolt", world)`
 - Then: A new bolt entity at position `(100.0, 200.0)` marked `ExtraBolt`. A `DistanceConstraint` exists between the original bolt and the new bolt with `max_distance = 80.0`.
 
 ### E8: MirrorProtocol
@@ -525,34 +540,34 @@ All 8 passive effects follow the same EffectStack pattern. Each config implement
 
 #### E9.1 **TetherBeam fire with chain=false spawns new bolt and beam**
 - Given: Bolt entity at position `(100.0, 200.0)` with `BoltBaseDamage(10.0)`
-- When: `TetherBeamConfig { damage_mult: 1.5, chain: false }.fire(entity, "chip_tether", world)`
+- When: `TetherBeamConfig { damage_mult: OrderedFloat(1.5), chain: false }.fire(entity, "chip_tether", world)`
 - Then: A new bolt entity at `(100.0, 200.0)` marked `ExtraBolt`. A tether beam entity with `TetherBeamSource { bolt_a: entity, bolt_b: new_bolt }`, `TetherBeamDamage(15.0)` (1.5 * 10.0), and `CleanupOnExit<NodeState>`.
 
 #### E9.2 **TetherBeam fire with chain=true connects to nearest existing bolt**
 - Given: Bolt entity_a at `(100.0, 200.0)` with `BoltBaseDamage(10.0)`. Another bolt entity_b at `(120.0, 210.0)`.
-- When: `TetherBeamConfig { damage_mult: 2.0, chain: true }.fire(entity_a, "chip_tether", world)`
+- When: `TetherBeamConfig { damage_mult: OrderedFloat(2.0), chain: true }.fire(entity_a, "chip_tether", world)`
 - Then: A tether beam entity with `TetherBeamSource { bolt_a: entity_a, bolt_b: entity_b }`, `TetherBeamDamage(20.0)` (2.0 * 10.0), `CleanupOnExit<NodeState>`. No new bolt spawned.
 
 #### E9.3 **TetherBeam fire with chain=true and no other bolts does nothing**
 - Given: Only bolt entity in world at `(100.0, 200.0)` with `BoltBaseDamage(10.0)`
-- When: `TetherBeamConfig { damage_mult: 1.0, chain: true }.fire(entity, "chip_tether", world)`
+- When: `TetherBeamConfig { damage_mult: OrderedFloat(1.0), chain: true }.fire(entity, "chip_tether", world)`
 - Then: No tether beam entity created. No new bolt spawned. No panic.
 
 ### E10: GravityWell
 
 #### E10.1 **GravityWell fire spawns gravity well entity**
 - Given: Entity at position `(100.0, 200.0)`, no existing `GravityWellSource` entities with `GravityWellOwner(entity)`
-- When: `GravityWellConfig { strength: 50.0, duration: 5.0, radius: 120.0, max: 2 }.fire(entity, "chip_grav", world)`
+- When: `GravityWellConfig { strength: OrderedFloat(50.0), duration: OrderedFloat(5.0), radius: OrderedFloat(120.0), max: 2 }.fire(entity, "chip_grav", world)`
 - Then: A new entity exists with `GravityWellSource`, `GravityWellStrength(50.0)`, `GravityWellRadius(120.0)`, `GravityWellLifetime(5.0)`, `GravityWellOwner(entity)`, `CleanupOnExit<NodeState>`
 
 #### E10.2 **GravityWell fire despawns oldest when at max**
 - Given: Entity with 2 existing `GravityWellSource` entities: well_a `GravityWellLifetime(1.0)`, well_b `GravityWellLifetime(3.0)`. `max = 2`.
-- When: `GravityWellConfig { strength: 50.0, duration: 5.0, radius: 120.0, max: 2 }.fire(entity, "chip_grav", world)`
+- When: `GravityWellConfig { strength: OrderedFloat(50.0), duration: OrderedFloat(5.0), radius: OrderedFloat(120.0), max: 2 }.fire(entity, "chip_grav", world)`
 - Then: well_a (lowest lifetime = oldest) despawned. New well exists. Total count is 2.
 
 #### E10.3 **GravityWell fire when under max does not despawn anything**
 - Given: Entity with 1 existing gravity well. `max = 3`.
-- When: `GravityWellConfig { strength: 50.0, duration: 5.0, radius: 120.0, max: 3 }.fire(entity, "chip_grav", world)`
+- When: `GravityWellConfig { strength: OrderedFloat(50.0), duration: OrderedFloat(5.0), radius: OrderedFloat(120.0), max: 3 }.fire(entity, "chip_grav", world)`
 - Then: Now 2 gravity wells. None despawned.
 
 ---
@@ -623,7 +638,7 @@ All 8 passive effects follow the same EffectStack pattern. Each config implement
 - Then: No effect applied. No panic.
 
 #### F4.3 **RandomEffect fire selects weighted**
-- Given: Entity. Pool = `[(OrderedFloat(0.0), SpeedBoost(1.5)), (OrderedFloat(1.0), DamageBoost(2.0))]` (first has weight 0, second has weight 1).
+- Given: Entity. Pool = `[(OrderedFloat(0.0), SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) })), (OrderedFloat(1.0), DamageBoost(DamageBoostConfig { multiplier: OrderedFloat(2.0) }))]` (first has weight 0, second has weight 1).
 - When: `RandomEffectConfig { pool: [...] }.fire(entity, "chip_random", world)` (run multiple times or with deterministic seed)
 - Then: Only `DamageBoost` is ever selected because `SpeedBoost` has weight 0.0.
 
@@ -646,10 +661,11 @@ All 8 passive effects follow the same EffectStack pattern. Each config implement
 
 ### G2: sync_shockwave_visual
 
-#### G2.1 **sync_shockwave_visual sets scale to match radius**
+#### G2.1 **sync_shockwave_visual sets Scale2D to diameter of shockwave**
 - Given: Shockwave entity with `ShockwaveSource`, `ShockwaveRadius(50.0)`
 - When: `sync_shockwave_visual` runs
-- Then: Entity `Scale2D` matches `ShockwaveRadius(50.0)` (exact mapping TBD by implementation)
+- Then: Entity `Scale2D` is `(100.0, 100.0)` (ShockwaveRadius * 2.0 for diameter, uniform scale on both axes)
+- Edge case: `ShockwaveRadius(0.0)` -- `Scale2D` is `(0.0, 0.0)`
 
 ### G3: apply_shockwave_damage
 
@@ -718,32 +734,32 @@ All 8 passive effects follow the same EffectStack pattern. Each config implement
 ### G6: tick_anchor
 
 #### G6.1 **tick_anchor starts timer when breaker stops moving**
-- Given: Entity with `AnchorActive { plant_delay: 1.0, bump_force_multiplier: 2.0, perfect_window_multiplier: 1.5 }`, velocity `(0.0, 0.0)`, no `AnchorTimer`, no `AnchorPlanted`
+- Given: Entity with `AnchorActive { plant_delay: 1.0, bump_force_multiplier: 2.0, perfect_window_multiplier: 1.5, source: "chip_anchor".to_string() }`, velocity `(0.0, 0.0)`, no `AnchorTimer`, no `AnchorPlanted`
 - When: `tick_anchor` runs
 - Then: Entity has `AnchorTimer(1.0)`
 
 #### G6.2 **tick_anchor decrements timer while stationary**
-- Given: Entity with `AnchorActive { plant_delay: 1.0, ... }`, `AnchorTimer(0.5)`, velocity `(0.0, 0.0)`. dt = `1.0/60.0`.
+- Given: Entity with `AnchorActive { plant_delay: 1.0, ..., source: "chip_anchor".to_string() }`, `AnchorTimer(0.5)`, velocity `(0.0, 0.0)`. dt = `1.0/60.0`.
 - When: `tick_anchor` runs one frame
 - Then: `AnchorTimer` value decreased by `1.0/60.0`
 
 #### G6.3 **tick_anchor plants breaker when timer reaches zero**
-- Given: Entity with `AnchorActive { plant_delay: 1.0, bump_force_multiplier: 2.0, ... }`, `AnchorTimer(0.01)`, velocity `(0.0, 0.0)`, source string `"chip_anchor"`. dt = `1.0/60.0`.
+- Given: Entity with `AnchorActive { plant_delay: 1.0, bump_force_multiplier: 2.0, ..., source: "chip_anchor".to_string() }`, `AnchorTimer(0.01)`, velocity `(0.0, 0.0)`. dt = `1.0/60.0`.
 - When: `tick_anchor` runs (timer will reach 0)
-- Then: `AnchorTimer` removed. `AnchorPlanted` inserted. `EffectStack<BumpForceConfig>` has entry `("chip_anchor", BumpForceConfig { multiplier: OrderedFloat(2.0) })` pushed.
+- Then: `AnchorTimer` removed. `AnchorPlanted` inserted. `EffectStack<BumpForceConfig>` has entry `("chip_anchor", BumpForceConfig { multiplier: OrderedFloat(2.0) })` pushed via the `source` field from `AnchorActive`.
 
 #### G6.4 **tick_anchor unplants when breaker starts moving**
-- Given: Entity with `AnchorActive { bump_force_multiplier: 2.0, ... }`, `AnchorPlanted`, velocity `(100.0, 0.0)`, `EffectStack<BumpForceConfig>` containing `("chip_anchor", 2.0)`
+- Given: Entity with `AnchorActive { bump_force_multiplier: 2.0, ..., source: "chip_anchor".to_string() }`, `AnchorPlanted`, velocity `(100.0, 0.0)`, `EffectStack<BumpForceConfig>` containing `("chip_anchor", BumpForceConfig { multiplier: OrderedFloat(2.0) })`
 - When: `tick_anchor` runs
-- Then: `AnchorPlanted` removed. `AnchorTimer` removed (if present). Bump force entry `("chip_anchor", 2.0)` removed from `EffectStack<BumpForceConfig>`.
+- Then: `AnchorPlanted` removed. `AnchorTimer` removed (if present). Bump force entry `("chip_anchor", OrderedFloat(2.0))` removed from `EffectStack<BumpForceConfig>` using the `source` field from `AnchorActive`.
 
 #### G6.5 **tick_anchor resets timer when breaker starts moving before planting**
-- Given: Entity with `AnchorActive { ... }`, `AnchorTimer(0.3)`, velocity `(50.0, 0.0)`, no `AnchorPlanted`
+- Given: Entity with `AnchorActive { ..., source: "chip_anchor".to_string() }`, `AnchorTimer(0.3)`, velocity `(50.0, 0.0)`, no `AnchorPlanted`
 - When: `tick_anchor` runs
 - Then: `AnchorTimer` removed. No `AnchorPlanted` inserted.
 
 #### G6.6 **tick_anchor no-op when already planted and stationary**
-- Given: Entity with `AnchorActive { ... }`, `AnchorPlanted`, velocity `(0.0, 0.0)`, `EffectStack<BumpForceConfig>` with entry
+- Given: Entity with `AnchorActive { ..., source: "chip_anchor".to_string() }`, `AnchorPlanted`, velocity `(0.0, 0.0)`, `EffectStack<BumpForceConfig>` with entry
 - When: `tick_anchor` runs
 - Then: No changes. `AnchorPlanted` remains. Stack unchanged.
 
@@ -893,56 +909,22 @@ All 8 passive effects follow the same EffectStack pattern. Each config implement
 - When: `despawn_expired_wells` runs
 - Then: Entity still exists
 
-### G15: tick_effect_timers
+### G15: reset_ramping_damage
 
-#### G15.1 **tick_effect_timers decrements all timer entries**
-- Given: Entity with `EffectTimers { timers: vec![(OrderedFloat(5.0), OrderedFloat(10.0)), (OrderedFloat(3.0), OrderedFloat(3.0))] }`. dt = `1.0/60.0`.
-- When: `tick_effect_timers` runs one frame
-- Then: First entry remaining is `5.0 - 1.0/60.0`. Second entry remaining is `3.0 - 1.0/60.0`.
-
-#### G15.2 **tick_effect_timers sends EffectTimerExpired and removes expired entry**
-- Given: Entity with `EffectTimers { timers: vec![(OrderedFloat(0.01), OrderedFloat(5.0))] }`. dt = `1.0/60.0`.
-- When: `tick_effect_timers` runs
-- Then: `EffectTimerExpired { entity }` message sent. The expired entry is removed from the vec.
-
-#### G15.3 **tick_effect_timers removes component when all timers expire**
-- Given: Entity with `EffectTimers { timers: vec![(OrderedFloat(0.005), OrderedFloat(1.0))] }`. dt = `1.0/60.0`.
-- When: `tick_effect_timers` runs
-- Then: `EffectTimerExpired { entity }` sent. `EffectTimers` component removed from entity.
-
-#### G15.4 **tick_effect_timers keeps non-expired entries while removing expired ones**
-- Given: Entity with `EffectTimers { timers: vec![(OrderedFloat(0.005), OrderedFloat(1.0)), (OrderedFloat(5.0), OrderedFloat(10.0))] }`. dt = `1.0/60.0`.
-- When: `tick_effect_timers` runs
-- Then: First entry expired and removed, `EffectTimerExpired` sent. Second entry remains with decremented time. `EffectTimers` component still present.
-
-### G16: reset_ramping_damage
-
-#### G16.1 **reset_ramping_damage resets accumulator to zero**
+#### G15.1 **reset_ramping_damage resets accumulator to zero**
 - Given: Entity with `RampingDamageAccumulator(OrderedFloat(25.0))`
 - When: `reset_ramping_damage` runs (on NodeState::Playing enter)
 - Then: `RampingDamageAccumulator` is `OrderedFloat(0.0)`
 
-#### G16.2 **reset_ramping_damage does not remove the component**
+#### G15.2 **reset_ramping_damage does not remove the component**
 - Given: Entity with `RampingDamageAccumulator(OrderedFloat(0.0))`
 - When: `reset_ramping_damage` runs
 - Then: `RampingDamageAccumulator` still present with value `OrderedFloat(0.0)`
 
-#### G16.3 **reset_ramping_damage handles multiple entities**
+#### G15.3 **reset_ramping_damage handles multiple entities**
 - Given: Entity_a with `RampingDamageAccumulator(OrderedFloat(10.0))`, Entity_b with `RampingDamageAccumulator(OrderedFloat(30.0))`
 - When: `reset_ramping_damage` runs
 - Then: Both accumulators reset to `OrderedFloat(0.0)`
-
-### G17: reset_entropy_counter
-
-#### G17.1 **reset_entropy_counter resets count to zero**
-- Given: Entity with `EntropyCounter { count: 4, max_effects: 5, pool: [...] }`
-- When: `reset_entropy_counter` runs (on NodeState enter)
-- Then: `EntropyCounter.count` is `0`. `max_effects` and `pool` unchanged.
-
-#### G17.2 **reset_entropy_counter does not remove the component**
-- Given: Entity with `EntropyCounter { count: 0, max_effects: 3, pool: [...] }`
-- When: `reset_entropy_counter` runs
-- Then: `EntropyCounter` still present with `count: 0`
 
 ---
 
@@ -1006,12 +988,12 @@ All 8 passive effects follow the same EffectStack pattern. Each config implement
 #### H4.1 **evaluate_conditions fires effects on false-to-true transition**
 - Given: Entity with `BoundEffects` containing a During entry for `Condition::NodeActive` with `condition_active: Some(false)`. Scoped effect = `SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) })`. World with `State<NodeState>` = `Playing`.
 - When: `evaluate_conditions` runs
-- Then: `SpeedBoostConfig { multiplier: 1.5 }` is fired on the entity. `condition_active` updated to `Some(true)`.
+- Then: `SpeedBoostConfig { multiplier: OrderedFloat(1.5) }` is fired on the entity. `condition_active` updated to `Some(true)`.
 
 #### H4.2 **evaluate_conditions reverses effects on true-to-false transition**
 - Given: Entity with `BoundEffects` containing a During entry for `Condition::NodeActive` with `condition_active: Some(true)`. Scoped effect = `SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) })`. World with `State<NodeState>` = `ChipSelect` (not Playing).
 - When: `evaluate_conditions` runs
-- Then: `SpeedBoostConfig { multiplier: 1.5 }` is reversed on the entity. `condition_active` updated to `Some(false)`.
+- Then: `SpeedBoostConfig { multiplier: OrderedFloat(1.5) }` is reversed on the entity. `condition_active` updated to `Some(false)`.
 
 #### H4.3 **evaluate_conditions does nothing when condition unchanged (true -> true)**
 - Given: Entity with `BoundEffects` containing a During entry for `Condition::ShieldActive` with `condition_active: Some(true)`. World with 1 `ShieldWall` entity (condition still true).
@@ -1035,14 +1017,14 @@ All 8 passive effects follow the same EffectStack pattern. Each config implement
 
 #### H4.7 **evaluate_conditions handles multiple During entries on same entity**
 - Given: Entity with `BoundEffects` containing:
-  - During entry for `NodeActive` with `condition_active: Some(false)` and scoped effect SpeedBoost(1.5)
-  - During entry for `ShieldActive` with `condition_active: Some(false)` and scoped effect DamageBoost(2.0)
+  - During entry for `NodeActive` with `condition_active: Some(false)` and scoped effect SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) })
+  - During entry for `ShieldActive` with `condition_active: Some(false)` and scoped effect DamageBoost(DamageBoostConfig { multiplier: OrderedFloat(2.0) })
   World with `NodeState::Playing` and 1 `ShieldWall` entity.
 - When: `evaluate_conditions` runs
-- Then: Both transitions fire: SpeedBoost(1.5) fired AND DamageBoost(2.0) fired. Both `condition_active` updated to `Some(true)`.
+- Then: Both transitions fire: SpeedBoost(OrderedFloat(1.5)) fired AND DamageBoost(OrderedFloat(2.0)) fired. Both `condition_active` updated to `Some(true)`.
 
 #### H4.8 **evaluate_conditions processes multiple entities independently**
-- Given: Entity_a with During `NodeActive` with `condition_active: Some(false)` and scoped SpeedBoost(1.5). Entity_b with During `NodeActive` with `condition_active: Some(true)` and scoped SizeBoost(1.3). World with `NodeState::Playing`.
+- Given: Entity_a with During `NodeActive` with `condition_active: Some(false)` and scoped SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) }). Entity_b with During `NodeActive` with `condition_active: Some(true)` and scoped SizeBoost(SizeBoostConfig { multiplier: OrderedFloat(1.3) }). World with `NodeState::Playing`.
 - When: `evaluate_conditions` runs
 - Then: Entity_a gets SpeedBoost fired (false->true). Entity_b gets no change (true->true, no action).
 
@@ -1061,6 +1043,118 @@ All 8 passive effects follow the same EffectStack pattern. Each config implement
 - When: FixedUpdate runs full schedule
 - Then: `evaluate_conditions` sees the ShieldWall spawned by the tick system. `condition_active` transitions to `Some(true)`.
 - Note: Ordering guarantee: `EffectSystems::Conditions` runs after `EffectSystems::Tick`.
+
+---
+
+## Section J: Dispatch Functions
+
+### J1: fire_dispatch routes to correct effect fire
+
+Each test verifies that `fire_dispatch` matches on the `EffectType` variant and delegates to the correct config's `fire` method. One representative test per effect category.
+
+#### J1.1 **fire_dispatch routes passive effect (SpeedBoost)**
+- Given: Entity with no `EffectStack<SpeedBoostConfig>`. `EffectType::SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) })`.
+- When: `fire_dispatch(EffectType::SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) }), entity, "chip_a", world)`
+- Then: Entity has `EffectStack<SpeedBoostConfig>` with 1 entry `("chip_a", SpeedBoostConfig { multiplier: OrderedFloat(1.5) })`
+
+#### J1.2 **fire_dispatch routes spawner effect (Shockwave)**
+- Given: Entity at position `(50.0, 50.0)` with `BoltBaseDamage(10.0)`, empty `EffectStack<DamageBoostConfig>`.
+- When: `fire_dispatch(EffectType::Shockwave(ShockwaveConfig { base_range: OrderedFloat(80.0), range_per_level: OrderedFloat(10.0), stacks: 1, speed: OrderedFloat(200.0) }), entity, "chip_s", world)`
+- Then: A shockwave entity exists with `ShockwaveSource`, `ShockwaveMaxRadius(80.0)`, `ShockwaveSpeed(200.0)`
+
+#### J1.3 **fire_dispatch routes toggle effect (FlashStep)**
+- Given: Entity with no `FlashStepActive`.
+- When: `fire_dispatch(EffectType::FlashStep(FlashStepConfig {}), entity, "chip_f", world)`
+- Then: Entity has `FlashStepActive` component
+
+#### J1.4 **fire_dispatch routes protector effect (Shield)**
+- Given: Entity (bolt).
+- When: `fire_dispatch(EffectType::Shield(ShieldConfig { duration: OrderedFloat(10.0), reflection_cost: OrderedFloat(2.0) }), entity, "chip_sh", world)`
+- Then: A `ShieldWall` entity exists with `ShieldOwner(entity)`, `ShieldDuration(10.0)`
+
+#### J1.5 **fire_dispatch routes stateful effect (CircuitBreaker)**
+- Given: Entity with no `CircuitBreakerCounter`.
+- When: `fire_dispatch(EffectType::CircuitBreaker(CircuitBreakerConfig { bumps_required: 3, spawn_count: 2, inherit: true, shockwave_range: OrderedFloat(150.0), shockwave_speed: OrderedFloat(300.0) }), entity, "chip_cb", world)`
+- Then: Entity has `CircuitBreakerCounter { remaining: 2, bumps_required: 3, ... }`
+
+#### J1.6 **fire_dispatch routes message effect (LoseLife)**
+- Given: Entity (breaker).
+- When: `fire_dispatch(EffectType::LoseLife(LoseLifeConfig {}), entity, "chip_ll", world)`
+- Then: `DamageDealt<Breaker>` message sent
+
+#### J1.7 **fire_dispatch routes meta effect (RandomEffect)**
+- Given: Entity. Pool = `[(OrderedFloat(1.0), SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) }))]`.
+- When: `fire_dispatch(EffectType::RandomEffect(RandomEffectConfig { pool: [...] }), entity, "chip_r", world)`
+- Then: Entity has `EffectStack<SpeedBoostConfig>` with 1 entry (the delegated fire ran)
+
+### J2: reverse_dispatch routes to correct effect reverse
+
+Each test verifies that `reverse_dispatch` matches on the `ReversibleEffectType` variant and delegates to the correct config's `reverse` method. Representative tests only.
+
+#### J2.1 **reverse_dispatch routes passive effect (SpeedBoost)**
+- Given: Entity with `EffectStack<SpeedBoostConfig>` containing `[("chip_a", SpeedBoostConfig { multiplier: OrderedFloat(1.5) })]`.
+- When: `reverse_dispatch(ReversibleEffectType::SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) }), entity, "chip_a", world)`
+- Then: `EffectStack<SpeedBoostConfig>` is empty
+
+#### J2.2 **reverse_dispatch routes toggle effect (FlashStep)**
+- Given: Entity with `FlashStepActive`.
+- When: `reverse_dispatch(ReversibleEffectType::FlashStep(FlashStepConfig {}), entity, "chip_f", world)`
+- Then: Entity no longer has `FlashStepActive`
+
+#### J2.3 **reverse_dispatch routes protector effect (Shield)**
+- Given: World with `ShieldWall` entity having `ShieldOwner(entity)`.
+- When: `reverse_dispatch(ReversibleEffectType::Shield(ShieldConfig { duration: OrderedFloat(10.0), reflection_cost: OrderedFloat(2.0) }), entity, "chip_sh", world)`
+- Then: ShieldWall entity despawned
+
+#### J2.4 **reverse_dispatch routes stateful effect (Anchor)**
+- Given: Entity with `AnchorActive { bump_force_multiplier: 2.0, perfect_window_multiplier: 1.5, plant_delay: 1.0, source: "chip_anchor".to_string() }`.
+- When: `reverse_dispatch(ReversibleEffectType::Anchor(AnchorConfig { bump_force_multiplier: OrderedFloat(2.0), perfect_window_multiplier: OrderedFloat(1.5), plant_delay: OrderedFloat(1.0) }), entity, "chip_anchor", world)`
+- Then: Entity no longer has `AnchorActive`
+
+---
+
+## Section K: Despawned-Entity Guard Tests
+
+These tests verify that fire/reverse on a despawned entity does not panic. The entity ID exists in the world but has been despawned before the fire/reverse call runs.
+
+### K1: Passive effect fire on despawned entity
+
+#### K1.1 **SpeedBoost fire on despawned entity does not panic**
+- Given: Entity spawned, then despawned (entity ID is stale)
+- When: `SpeedBoostConfig { multiplier: OrderedFloat(1.5) }.fire(entity, "chip_a", world)`
+- Then: No panic. No component inserted (entity does not exist).
+- Edge case: Same applies to `reverse` on a stale entity -- no panic
+
+### K2: Toggle effect fire on despawned entity
+
+#### K2.1 **FlashStep fire on despawned entity does not panic**
+- Given: Entity spawned, then despawned (entity ID is stale)
+- When: `FlashStepConfig {}.fire(entity, "chip_flash", world)`
+- Then: No panic. No `FlashStepActive` inserted.
+
+#### K2.2 **FlashStep reverse on despawned entity does not panic**
+- Given: Entity spawned, then despawned (entity ID is stale)
+- When: `FlashStepConfig {}.reverse(entity, "chip_flash", world)`
+- Then: No panic.
+
+### K3: Spawner effect fire on despawned entity
+
+#### K3.1 **Shockwave fire on despawned entity does not panic**
+- Given: Entity spawned at `(100.0, 200.0)` with `BoltBaseDamage(10.0)`, then despawned (entity ID is stale)
+- When: `ShockwaveConfig { base_range: OrderedFloat(50.0), range_per_level: OrderedFloat(10.0), stacks: 1, speed: OrderedFloat(300.0) }.fire(entity, "chip_shock", world)`
+- Then: No panic. No shockwave entity spawned (source entity does not exist, cannot read position).
+
+#### K3.2 **SpawnBolts fire on despawned entity does not panic**
+- Given: Entity spawned, then despawned (entity ID is stale)
+- When: `SpawnBoltsConfig { count: 3, lifespan: None, inherit: false }.fire(entity, "chip_spawn", world)`
+- Then: No panic. No bolt entities spawned.
+
+### K4: Protector effect reverse on despawned entity
+
+#### K4.1 **Shield reverse on despawned entity does not panic**
+- Given: Entity spawned, then despawned. A `ShieldWall` entity exists with `ShieldOwner(entity)` (references the stale entity).
+- When: `ShieldConfig { duration: OrderedFloat(10.0), reflection_cost: OrderedFloat(2.0) }.reverse(entity, "chip_shield", world)`
+- Then: No panic. The ShieldWall matching the stale owner is still despawned correctly (reverse queries by ShieldOwner value, not by whether owner is alive).
 
 ---
 
@@ -1083,16 +1177,16 @@ All 8 passive effects follow the same EffectStack pattern. Each config implement
 - `CircuitBreakerConfig { bumps_required: u32, spawn_count: u32, inherit: bool, shockwave_range: OrderedFloat<f32>, shockwave_speed: OrderedFloat<f32> }`
 - `EntropyConfig { max_effects: u32, pool: Vec<(OrderedFloat<f32>, Box<EffectType>)> }`
 - `AttractionConfig { attraction_type: AttractionType, force: OrderedFloat<f32>, max_force: Option<OrderedFloat<f32>> }`
-- `ShockwaveConfig { base_range: f32, range_per_level: f32, stacks: u32, speed: f32 }`
-- `ExplodeConfig { range: f32, damage: f32 }`
-- `ChainLightningConfig { arcs: u32, range: f32, damage_mult: f32, arc_speed: f32 }`
-- `PiercingBeamConfig { damage_mult: f32, width: f32 }`
-- `SpawnBoltsConfig { count: u32, lifespan: Option<f32>, inherit: bool }`
-- `SpawnPhantomConfig { duration: f32, max_active: u32 }`
-- `ChainBoltConfig { tether_distance: f32 }`
+- `ShockwaveConfig { base_range: OrderedFloat<f32>, range_per_level: OrderedFloat<f32>, stacks: u32, speed: OrderedFloat<f32> }`
+- `ExplodeConfig { range: OrderedFloat<f32>, damage: OrderedFloat<f32> }`
+- `ChainLightningConfig { arcs: u32, range: OrderedFloat<f32>, damage_mult: OrderedFloat<f32>, arc_speed: OrderedFloat<f32> }`
+- `PiercingBeamConfig { damage_mult: OrderedFloat<f32>, width: OrderedFloat<f32> }`
+- `SpawnBoltsConfig { count: u32, lifespan: Option<OrderedFloat<f32>>, inherit: bool }`
+- `SpawnPhantomConfig { duration: OrderedFloat<f32>, max_active: u32 }`
+- `ChainBoltConfig { tether_distance: OrderedFloat<f32> }`
 - `MirrorConfig { inherit: bool }`
-- `TetherBeamConfig { damage_mult: f32, chain: bool }`
-- `GravityWellConfig { strength: f32, duration: f32, radius: f32, max: u32 }`
+- `TetherBeamConfig { damage_mult: OrderedFloat<f32>, chain: bool }`
+- `GravityWellConfig { strength: OrderedFloat<f32>, duration: OrderedFloat<f32>, radius: OrderedFloat<f32>, max: u32 }`
 - `LoseLifeConfig {}`
 - `TimePenaltyConfig { seconds: OrderedFloat<f32> }`
 - `DieConfig {}`
@@ -1110,7 +1204,7 @@ All 8 passive effects follow the same EffectStack pattern. Each config implement
 - `SecondWindWall` -- Component (marker)
 - `SecondWindOwner(Entity)` -- Component
 - `PulseEmitter { base_range: f32, range_per_level: f32, stacks: u32, speed: f32, interval: f32, timer: f32 }` -- Component
-- `AnchorActive { bump_force_multiplier: f32, perfect_window_multiplier: f32, plant_delay: f32 }` -- Component
+- `AnchorActive { bump_force_multiplier: f32, perfect_window_multiplier: f32, plant_delay: f32, source: String }` -- Component (NOTE: `source` field stores the chip source string for push/remove of BumpForceConfig entries by tick_anchor)
 - `AnchorTimer(f32)` -- Component
 - `AnchorPlanted` -- Component (marker)
 - `CircuitBreakerCounter { remaining: u32, bumps_required: u32, spawn_count: u32, inherit: bool, shockwave_range: f32, shockwave_speed: f32 }` -- Component
@@ -1137,18 +1231,18 @@ All 8 passive effects follow the same EffectStack pattern. Each config implement
 - `GravityWellRadius(f32)` -- Component
 - `GravityWellLifetime(f32)` -- Component
 - `GravityWellOwner(Entity)` -- Component
-- `EffectTimers { timers: Vec<(OrderedFloat<f32>, OrderedFloat<f32>)> }` -- Component
 - `BoltBaseDamage(f32)` -- Component
 - `ComboStreak { count: u32 }` -- Resource
 
 ### Message Types
 - `ApplyTimePenalty { seconds: f32 }` -- Message
-- `EffectTimerExpired { entity: Entity }` -- Message
 - `DamageDealt<T: GameEntity>` -- Message (from death pipeline, wave 7)
 - `KillYourself<T: GameEntity>` -- Message (from death pipeline, wave 7)
 - `BoltImpactWall { bolt: Entity, wall: Entity }` -- Message (existing)
 
 ### Enum Types
+- `EffectType` -- 30-variant enum for fire_dispatch (all fire-capable effects)
+- `ReversibleEffectType` -- 16-variant enum for reverse_dispatch (only reversible effects)
 - `Condition` -- enum: `NodeActive`, `ShieldActive`, `ComboActive(u32)`
 - `AttractionType` -- enum: `Breaker`, `Bolt`, `Cell`, `Wall`
 - `EntityKind` -- enum: `Cell`, `Bolt`, `Wall`, `Breaker`, `Any`
@@ -1157,7 +1251,7 @@ All 8 passive effects follow the same EffectStack pattern. Each config implement
 ---
 
 ## Messages (new to this wave)
-- No new message types. All messages referenced above are defined in earlier waves (wave 2 scaffold or wave 7 death pipeline). `ApplyTimePenalty` and `EffectTimerExpired` are defined in wave 2. `DamageDealt<T>` and `KillYourself<T>` are from the death pipeline (wave 7 -- these may need to be stubbed during wave 6 RED phase).
+- No new message types. All messages referenced above are defined in earlier waves (wave 2 scaffold or wave 7 death pipeline). `ApplyTimePenalty` is defined in wave 2. `DamageDealt<T>` and `KillYourself<T>` are from the death pipeline (wave 7 -- these may need to be stubbed during wave 6 RED phase).
 
 ---
 
@@ -1169,6 +1263,7 @@ All 8 passive effects follow the same EffectStack pattern. Each config implement
 - `docs/todos/detail/effect-refactor/evaluating-conditions/` -- condition evaluation specs
 - `docs/todos/detail/effect-refactor/rust-types/components/` -- component definitions
 - `docs/todos/detail/effect-refactor/rust-types/effect-stacking/` -- EffectStack and aggregation
+- `docs/todos/detail/effect-refactor/migration/plugin-wiring/system-sets.md` -- system set definitions and ordering
 
 ---
 
@@ -1184,9 +1279,9 @@ All 8 passive effects follow the same EffectStack pattern. Each config implement
 ## Constraints
 
 ### Test File Locations
-Tests are organized per-effect, matching the source layout:
+Tests are organized per-effect in directory module layout (`effects/<name>/tests.rs`):
 
-**Passive effects**: `src/effect/effects/<name>/tests.rs` (or `tests/` directory if large)
+**Passive effects**: `src/effect/effects/<name>/tests.rs`
 - `speed_boost/tests.rs`, `size_boost/tests.rs`, `damage_boost/tests.rs`, `bump_force/tests.rs`, `quick_stop/tests.rs`, `vulnerable/tests.rs`, `piercing/tests.rs`, `ramping_damage/tests.rs`
 
 **Toggle effects**: `src/effect/effects/flash_step/tests.rs`
@@ -1199,19 +1294,18 @@ Tests are organized per-effect, matching the source layout:
 
 **Message/meta effects**: `src/effect/effects/lose_life/tests.rs`, `time_penalty/tests.rs`, `die/tests.rs`, `random_effect/tests.rs`
 
-**Tick systems**: Tests co-located with their system files (same effect directory):
+**Tick systems**: Tests co-located in the same effect directory's `tests.rs`:
 - `shockwave/tests.rs` -- tick_shockwave, sync_shockwave_visual, apply_shockwave_damage, despawn_finished_shockwave
 - `chain_lightning/tests.rs` -- tick_chain_lightning
 - `anchor/tests.rs` -- tick_anchor
 - `attraction/tests.rs` -- apply_attraction
 - `pulse/tests.rs` -- tick_pulse
 - `shield/tests.rs` -- tick_shield_duration
-- `spawn_phantom/tests.rs` -- tick_phantom_lifetime
+- `spawn_phantom/tests.rs` -- tick_phantom_lifetime (note: phantom_bolt directory, tests.rs)
 - `tether_beam/tests.rs` -- tick_tether_beam_damage, cleanup_tether_beams
 - `gravity_well/tests.rs` -- tick_gravity_wells, despawn_expired_wells
-- `src/effect/triggers/time/tests.rs` -- tick_effect_timers
 
-**Reset systems**: `src/effect/effects/ramping_damage/tests.rs`, `entropy_engine/tests.rs`
+**Reset systems**: `src/effect/effects/ramping_damage/tests.rs`
 
 **Condition evaluators**: `src/effect/conditions/tests.rs` or per-file:
 - `src/effect/conditions/node_active.rs` (tests inline or adjacent)
@@ -1219,8 +1313,15 @@ Tests are organized per-effect, matching the source layout:
 - `src/effect/conditions/combo_active.rs`
 - `src/effect/conditions/evaluate_conditions/tests.rs`
 
+**Dispatch functions**:
+- `src/effect/dispatch/fire_dispatch/tests.rs`
+- `src/effect/dispatch/reverse_dispatch/tests.rs`
+
+**Despawned-entity guard tests**: Co-located in each effect's `tests.rs` (e.g., K1 in `speed_boost/tests.rs`, K2 in `flash_step/tests.rs`, K3 in `shockwave/tests.rs` and `spawn_bolts/tests.rs`, K4 in `shield/tests.rs`)
+
 ### Do NOT Test
 - Trigger bridge systems (wave 5 scope)
+- tick_effect_timers (wave 5 scope)
 - Death pipeline systems: apply_damage, detect_deaths, process_despawn (wave 7 scope)
 - EffectStack generic methods: push, remove, aggregate (wave 4 scope -- tested as non-system functions)
 - Tree walking: walk_effects (wave 4 scope)

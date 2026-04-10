@@ -19,6 +19,22 @@ Test counts are determined by the test spec; the writer-code must make all tests
 
 ---
 
+### Prerequisites
+
+This wave assumes the following are already complete before writer-code runs:
+
+| Prerequisite | Wave | What must exist |
+|-------------|------|-----------------|
+| Wave 2 scaffold | 2 | All death pipeline types stubbed: `GameEntity` trait, `Hp`, `KilledBy`, `Dead`, `DamageDealt<T>`, `KillYourself<T>`, `DespawnEntity`, `Destroyed<T>`. All system stubs with empty bodies. `DeathPipelinePlugin` registered in `game.rs`. `EffectSystems::Tick` system set defined in `src/effect/sets.rs`. |
+| Wave 2 scaffold | 2 | `src/shared/systems/mod.rs` exists (created in wave 2 scaffold). `pub(crate) mod systems;` declared in `src/shared/mod.rs`. |
+| Wave 2 scaffold | 2 | `src/shared/queries.rs` exists with `DamageTargetData` and `DeathDetectionData` stubs. |
+| Wave 2 scaffold | 2 | `src/shared/sets.rs` exists with `DeathPipelineSystems` enum. |
+| Wave 2 scaffold | 2 | `src/shared/components/` directory module exists with `hp.rs`, `killed_by.rs`, `dead.rs`. |
+
+**Critical**: `EffectSystems::Tick` must already be defined and configured as a system set in the effect domain (wave 2 scaffold). `DeathPipelineSystems::ApplyDamage` orders `.after(EffectSystems::Tick)`, so the set must exist at plugin build time or Bevy will panic.
+
+---
+
 ### What to Implement
 
 #### 1. `apply_damage::<T>` (generic system)
@@ -55,29 +71,29 @@ The generic system signature uses `(With<T>, Without<Dead>)`. For the Cell monom
 
 **Approach B**: Make the system fully generic with a second trait bound or a custom filter trait that yields `Without<Locked>` for Cell and an always-true filter for others.
 
-The writer-code should use **Approach A** — a thin wrapper is simpler than a trait-based filter abstraction. The wrapper calls the same core logic:
+The writer-code should use **Approach A** — a thin wrapper is simpler than a trait-based filter abstraction.
+
+Duplicate the ~10-line body in both `apply_damage_cell` and the generic `apply_damage::<T>`. No helper function needed — the body is short enough that duplication is clearer than trying to abstract over different query filters (Bevy's `Query` type with different filter tuples cannot be passed to a shared function without complex trait gymnastics).
 
 ```rust
-// Core logic (private helper or inline)
-fn apply_damage_to_targets(
-    targets: &mut Query<DamageTargetData, impl QueryFilter>,
-    messages: &mut MessageReader<DamageDealt<T>>,
-) { ... }
-
-// Public system for Cell
+// Public system for Cell — includes Without<Locked>
 pub fn apply_damage_cell(
     mut targets: Query<DamageTargetData, (With<Cell>, Without<Dead>, Without<Locked>)>,
     mut messages: MessageReader<DamageDealt<Cell>>,
-) { ... }
+) {
+    // ~10 lines: iterate messages, lookup target, decrement hp, set killed_by on killing blow
+}
 
 // Public generic system for Bolt/Wall/Breaker
 pub fn apply_damage<T: GameEntity>(
     mut targets: Query<DamageTargetData, (With<T>, Without<Dead>)>,
     mut messages: MessageReader<DamageDealt<T>>,
-) { ... }
+) {
+    // Same ~10-line body as apply_damage_cell
+}
 ```
 
-Alternatively, if the writer-code can express the shared logic cleanly without a helper function (the function body is only ~10 lines), duplicating the logic in `apply_damage_cell` and `apply_damage` is acceptable. Prefer whatever is simplest.
+Both functions contain identical logic. The only difference is the query filter tuple.
 
 ---
 
@@ -97,6 +113,8 @@ pub fn detect_cell_deaths(
 1. Iterate all entities matching the query.
 2. For each entity where `hp.current <= 0.0`, send `KillYourself::<Cell>` with `victim: entity`, `killer: killed_by.dealer`.
 3. Do NOT insert `Dead`. Do NOT despawn.
+
+**RequiredToClear — scope deferral**: The design docs specify that `detect_cell_deaths` should read `Has<RequiredToClear>` for downstream node completion tracking. However, this wave does NOT include `RequiredToClear` in the query. Wave 9 (cell domain migration) adds it when the cell kill handler and node completion tracking are implemented. For this wave, the query is simply `(With<Cell>, Without<Dead>)` with `DeathDetectionData` fields only.
 
 ---
 
@@ -208,9 +226,9 @@ The following types are prerequisites that must be created in an earlier wave or
 | Type | Kind | Location | Description |
 |------|------|----------|-------------|
 | `GameEntity` | Trait | `src/shared/traits.rs` | Marker trait: `trait GameEntity: Component {}` with impls for `Bolt`, `Cell`, `Wall`, `Breaker` |
-| `Hp` | Component | `src/shared/components.rs` | `{ current: f32, starting: f32, max: Option<f32> }` with `#[derive(Component, Debug, Clone)]` |
-| `KilledBy` | Component | `src/shared/components.rs` | `{ dealer: Option<Entity> }` with `#[derive(Component, Default, Debug)]` |
-| `Dead` | Component | `src/shared/components.rs` | Marker: `#[derive(Component)] struct Dead;` |
+| `Hp` | Component | `src/shared/components/hp.rs` | `{ current: f32, starting: f32, max: Option<f32> }` with `#[derive(Component, Debug, Clone)]` |
+| `KilledBy` | Component | `src/shared/components/killed_by.rs` | `{ dealer: Option<Entity> }` with `#[derive(Component, Default, Debug)]` |
+| `Dead` | Component | `src/shared/components/dead.rs` | Marker: `#[derive(Component)] struct Dead;` |
 | `Locked` | Component | Existing in cells domain | Already exists — lock cells use this |
 | `DamageDealt<T>` | Message | `src/shared/messages.rs` | `{ dealer: Option<Entity>, target: Entity, amount: f32, source_chip: Option<String>, _marker: PhantomData<T> }` |
 | `KillYourself<T>` | Message | `src/shared/messages.rs` | `{ victim: Entity, killer: Option<Entity>, _marker: PhantomData<T> }` |
@@ -338,7 +356,7 @@ impl Plugin for DeathPipelinePlugin {
 }
 ```
 
-**Registration**: `DeathPipelinePlugin` must be added in `src/game.rs` (the game plugin aggregator). It should be added after domain plugins that define entity types (bolt, cells, walls, breaker) and the effect plugin (which defines `EffectSystems::Tick`).
+**Registration**: `DeathPipelinePlugin` must be wired in `src/game.rs` via `.add(DeathPipelinePlugin)` in the `PluginGroupBuilder` chain (see Module Wiring below). It should appear after domain plugins that define entity types (bolt, cells, walls, breaker) and after the effect plugin (which defines `EffectSystems::Tick`). This should already be stubbed from wave 2 scaffold.
 
 Note: The detect_*_deaths systems are registered by the `DeathPipelinePlugin`, NOT by their respective domain plugins. Even though `detect_cell_deaths` lives in `src/cells/systems/`, it is the death pipeline plugin that registers it. This keeps all death pipeline ordering in one place.
 
@@ -347,6 +365,12 @@ Note: The detect_*_deaths systems are registered by the `DeathPipelinePlugin`, N
 ### Module Wiring
 
 Each new system file and the shared queries file need `mod` declarations and re-exports.
+
+**If `src/shared/systems/` does not already exist** (i.e., wave 2 scaffold did not create it):
+1. Create `src/shared/systems/mod.rs`
+2. Add `pub(crate) mod systems;` to `src/shared/mod.rs`
+
+This should already exist from wave 2 scaffold (see Prerequisites), but verify before assuming.
 
 #### `src/shared/systems/mod.rs`
 Add:
@@ -386,11 +410,11 @@ pub(crate) mod detect_breaker_deaths;
 ```
 
 #### `src/game.rs`
-Add:
+`game.rs` uses a `PluginGroupBuilder` chain (not `app.add_plugins()`). Add `DeathPipelinePlugin` using `.add()` in the builder chain:
 ```rust
-app.add_plugins(DeathPipelinePlugin);
+.add(DeathPipelinePlugin)
 ```
-After the shared plugin and domain plugins are added.
+Place it after the shared plugin and domain plugins (bolt, cells, walls, breaker) and after the effect plugin (which defines `EffectSystems::Tick`). This should already be stubbed from wave 2 scaffold — verify the stub exists and ensure it is wired correctly.
 
 ---
 
@@ -410,7 +434,7 @@ After the shared plugin and domain plugins are added.
 - `Destroyed<T>` sending — that is the domain kill handler's job (later wave)
 - `Dead` insertion — that is the domain kill handler's job (later wave)
 - Visual feedback (damage flash, health bars) — separate concern
-- Any `Changed<Hp>` filter on detect systems — the design docs mention this in the QueryData spec but the system specs do not require it; the detect systems simply check `hp.current <= 0.0` on all non-Dead entities each frame
+- Any `Changed<Hp>` filter on detect systems — detect systems deliberately omit `Changed<Hp>`. `Without<Dead>` is the only filter beyond entity markers (`With<Cell>`, `With<Bolt>`, etc.). The detect systems check `hp.current <= 0.0` on all non-Dead entities each frame. This is intentional: `Changed<Hp>` would miss entities whose Hp was set to zero in a previous frame but whose `Dead` component was not yet inserted by the domain kill handler
 
 #### Scope Clarification
 - `apply_damage` decrements Hp and sets KilledBy. That is ALL it does.

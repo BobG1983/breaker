@@ -4,9 +4,11 @@
 src/bolt/
 
 ### Overview
-Migrate the bolt domain from the ad-hoc `RequestBoltDestroyed` / `cleanup_destroyed_bolts` death path to the unified death pipeline. After migration, bolt death flows through: `KillYourself<Bolt>` -> bolt kill handler (inserts `Dead`, removes from spatial index, sends `Destroyed<Bolt>` + `DespawnEntity`) -> `process_despawn_requests` (despawns entity). Two producers send `KillYourself<Bolt>`: `tick_bolt_lifespan` (timer expiry) and `bolt_lost` (off-screen, ExtraBolt only — baseline bolts get respawned, not killed). A third producer, `detect_bolt_deaths`, handles Hp-based death for future damage-to-bolt mechanics but is wave 7 scope, not wave 10.
+Migrate the bolt domain from the ad-hoc `RequestBoltDestroyed` / `cleanup_destroyed_bolts` death path to the unified death pipeline. After migration, bolt death flows through: `KillYourself<Bolt>` -> bolt kill handler (inserts `Dead`, removes from spatial index, sends `Destroyed<Bolt>` + `DespawnEntity`) -> `process_despawn_requests` (despawns entity). Two producers send `KillYourself<Bolt>`: `tick_bolt_lifespan` (timer expiry) and `bolt_lost` (off-screen -- ALL bolts, both baseline and ExtraBolt). A third producer, `detect_bolt_deaths`, handles Hp-based death for future damage-to-bolt mechanics but is wave 7 scope, not wave 10.
 
-**Scope note**: `apply_damage::<Bolt>` and `detect_bolt_deaths` are tested in wave 7 (death pipeline systems). This spec does NOT cover them. This spec covers: `tick_bolt_lifespan` migration, `bolt_lost` migration (including ExtraBolt distinction), `BoltLost` message field migration, the bolt domain kill handler, bolt builder Hp/KilledBy, and end-to-end flows.
+**Key distinction**: `bolt_lost` sends `KillYourself<Bolt>` for ALL lost bolts -- no ExtraBolt distinction in the kill path. ALL bolts die the same way through the death pipeline. The difference: baseline bolts ALSO get respawned (a new bolt is spawned). Extra bolts just die (no respawn).
+
+**Scope note**: `apply_damage::<Bolt>` and `detect_bolt_deaths` are tested in wave 7 (death pipeline systems). This spec does NOT cover them. This spec covers: `tick_bolt_lifespan` migration, `bolt_lost` migration (including respawn distinction for baseline vs ExtraBolt), `BoltLost` message field migration, the bolt domain kill handler, bolt builder Hp/KilledBy, and end-to-end flows.
 
 ---
 
@@ -72,61 +74,67 @@ The following shared types and systems must exist from previous waves (wave 2 sc
 
 ### Section B: bolt_lost Migration
 
-**Critical distinction**: `bolt_lost` handles two kinds of bolts differently:
-- **ExtraBolt** entities (spawned by Prism breaker on perfect bump): `bolt_lost` sends `KillYourself<Bolt>` to kill them via the death pipeline. They are NOT respawned.
-- **Baseline bolts** (no `ExtraBolt` component): `bolt_lost` does NOT send `KillYourself<Bolt>`. Instead, the baseline bolt is respawned (existing respawn logic, unchanged). Baseline bolts are never killed by going off-screen.
+**Critical distinction**: `bolt_lost` sends `KillYourself<Bolt>` for ALL lost bolts -- baseline and ExtraBolt alike. ALL bolts die the same way through the death pipeline. The difference is in respawning:
+- **Baseline bolts** (no `ExtraBolt` component): `bolt_lost` sends `KillYourself<Bolt>` AND respawns a new bolt.
+- **ExtraBolt** entities (spawned by Prism breaker on perfect bump): `bolt_lost` sends `KillYourself<Bolt>` but does NOT respawn.
 
-All behaviors in this section specify `ExtraBolt` in the Given state unless testing baseline bolt behavior explicitly.
+Both types also get `BoltLost { bolt, breaker }` for the effect system.
 
 #### Behavior
 
-7. **bolt_lost sends KillYourself\<Bolt\> for ExtraBolt when bolt leaves play area**
-   - Given: A bolt entity with `ExtraBolt` component at position (100.0, -400.0) which is below the breaker/playfield bottom, a breaker entity at position (100.0, -300.0), no `Dead` component
+7. **bolt_lost sends KillYourself\<Bolt\> for ANY bolt when bolt leaves play area**
+   - Given: A bolt entity at position (100.0, -400.0) which is below the breaker/playfield bottom, a breaker entity at position (100.0, -300.0), no `Dead` component, no `ExtraBolt` component (baseline bolt)
    - When: `bolt_lost` detects the bolt is out of bounds
    - Then: Exactly one `KillYourself::<Bolt>` message is sent with `victim` equal to the bolt entity and `killer` equal to `None`
    - Edge case: Bolt at exactly the boundary position (e.g., y == playfield_bottom) -- depends on the boundary check being strictly less-than or less-than-or-equal; test the boundary
 
-8. **bolt_lost sends BoltLost message with bolt and breaker fields populated**
-   - Given: A bolt entity with `ExtraBolt` component (entity A) at position (100.0, -400.0), a breaker entity (entity B) at position (100.0, -300.0)
+8. **bolt_lost sends KillYourself\<Bolt\> for ExtraBolt when bolt leaves play area**
+   - Given: A bolt entity with `ExtraBolt` component at position (100.0, -400.0) which is below the breaker/playfield bottom, a breaker entity at position (100.0, -300.0), no `Dead` component
+   - When: `bolt_lost` detects the bolt is out of bounds
+   - Then: Exactly one `KillYourself::<Bolt>` message is sent with `victim` equal to the bolt entity and `killer` equal to `None`
+   - Edge case: Multiple ExtraBolts lost in the same frame -- each gets its own KillYourself message
+
+9. **bolt_lost sends BoltLost message with bolt and breaker fields populated**
+   - Given: A bolt entity (entity A) at position (100.0, -400.0), a breaker entity (entity B) at position (100.0, -300.0)
    - When: `bolt_lost` detects the bolt is out of bounds
    - Then: A `BoltLost { bolt: entity_A, breaker: entity_B }` message is sent with both fields correctly populated
-   - Edge case: Multiple ExtraBolts lost in the same frame -- each generates its own `BoltLost` message with the correct bolt entity
+   - Edge case: Multiple bolts lost in the same frame -- each generates its own `BoltLost` message with the correct bolt entity
 
-9. **bolt_lost sends both KillYourself and BoltLost for same ExtraBolt**
-   - Given: A bolt entity with `ExtraBolt` component at position (100.0, -400.0) that is below the playfield
-   - When: `bolt_lost` runs
-   - Then: Both a `KillYourself::<Bolt>` AND a `BoltLost` message are sent for the same bolt entity. The `KillYourself` feeds the death pipeline; the `BoltLost` feeds the effect system's `on_bolt_lost_occurred` bridge.
-   - Edge case: N/A -- both messages always fire together for ExtraBolt off-screen events
+10. **bolt_lost sends both KillYourself and BoltLost for same bolt**
+    - Given: A bolt entity at position (100.0, -400.0) that is below the playfield
+    - When: `bolt_lost` runs
+    - Then: Both a `KillYourself::<Bolt>` AND a `BoltLost` message are sent for the same bolt entity. The `KillYourself` feeds the death pipeline; the `BoltLost` feeds the effect system's `on_bolt_lost_occurred` bridge.
+    - Edge case: N/A -- both messages always fire together for all off-screen bolt events
 
-10. **bolt_lost does NOT send KillYourself for baseline bolt (no ExtraBolt component)**
+11. **bolt_lost respawns baseline bolt after sending KillYourself**
     - Given: A bolt entity WITHOUT `ExtraBolt` component at position (100.0, -400.0) below the playfield, a breaker entity at position (100.0, -300.0)
     - When: `bolt_lost` detects the bolt is out of bounds
-    - Then: NO `KillYourself::<Bolt>` message is sent. The baseline bolt is respawned instead (respawn logic is unchanged and out of scope for this spec).
-    - Edge case: Single bolt in play (baseline) goes off-screen -- must NOT be killed, must be respawned
+    - Then: `KillYourself::<Bolt>` is sent for the old bolt entity (it enters the death pipeline), AND a new bolt is respawned. Both `KillYourself` and respawn happen for baseline bolts.
+    - Edge case: Single bolt in play (baseline) goes off-screen -- gets killed AND respawned
 
-11. **bolt_lost sends BoltLost for baseline bolt too (effect triggers still fire)**
-    - Given: A bolt entity WITHOUT `ExtraBolt` component (entity A) at position (100.0, -400.0), a breaker entity (entity B) at position (100.0, -300.0)
+12. **bolt_lost does NOT respawn ExtraBolt**
+    - Given: A bolt entity WITH `ExtraBolt` component at position (100.0, -400.0) below the playfield, a breaker entity at position (100.0, -300.0)
     - When: `bolt_lost` detects the bolt is out of bounds
-    - Then: A `BoltLost { bolt: entity_A, breaker: entity_B }` message IS sent. The effect system needs to know a bolt was lost regardless of whether it is an ExtraBolt or baseline (LoseLife trigger, etc.).
-    - Edge case: N/A -- BoltLost fires for ALL bolt types
+    - Then: `KillYourself::<Bolt>` is sent (bolt enters death pipeline), `BoltLost` is sent, but NO respawn occurs. Extra bolts just die.
+    - Edge case: Last ExtraBolt in play goes off-screen -- no respawn, only the baseline bolt (if any) remains
 
-12. **bolt_lost does NOT insert Dead component**
-    - Given: A bolt entity with `ExtraBolt` component that will be detected as lost
+13. **bolt_lost does NOT insert Dead component**
+    - Given: A bolt entity that will be detected as lost
     - When: `bolt_lost` runs
     - Then: The bolt entity does NOT have a `Dead` component. The kill handler inserts `Dead`.
     - Edge case: N/A -- negative assertion
 
-13. **bolt_lost does NOT despawn the bolt**
-    - Given: A bolt entity with `ExtraBolt` component that will be detected as lost
+14. **bolt_lost does NOT despawn the bolt**
+    - Given: A bolt entity that will be detected as lost
     - When: `bolt_lost` runs
     - Then: The bolt entity still exists in the world
     - Edge case: N/A -- negative assertion
 
-14. **bolt_lost skips bolts with Dead component (Without\<Dead\> filter)**
-    - Given: A bolt entity with `ExtraBolt` component at position (100.0, -400.0) AND a `Dead` component (already killed by another path this frame)
+15. **bolt_lost skips bolts with Dead component (Without\<Dead\> filter)**
+    - Given: A bolt entity at position (100.0, -400.0) AND a `Dead` component (already killed by another path this frame)
     - When: `bolt_lost` runs
     - Then: No `KillYourself::<Bolt>` message is sent. No `BoltLost` message is sent. The already-dead bolt is not re-processed.
-    - Edge case: ExtraBolt marked Dead at boundary position -- still skipped
+    - Edge case: Bolt marked Dead at boundary position -- still skipped
 
 ---
 
@@ -134,7 +142,7 @@ All behaviors in this section specify `ExtraBolt` in the Given state unless test
 
 #### Behavior
 
-15. **BoltLost is a struct with bolt and breaker fields, not a unit struct**
+16. **BoltLost is a struct with bolt and breaker fields, not a unit struct**
     - Given: N/A -- type definition test
     - When: `BoltLost { bolt: Entity::PLACEHOLDER, breaker: Entity::PLACEHOLDER }` is constructed
     - Then: Compiles. The struct has two named `Entity` fields: `bolt` and `breaker`.
@@ -146,43 +154,43 @@ All behaviors in this section specify `ExtraBolt` in the Given state unless test
 
 #### Behavior
 
-16. **Bolt kill handler inserts Dead on victim when processing KillYourself\<Bolt\>**
+17. **Bolt kill handler inserts Dead on victim when processing KillYourself\<Bolt\>**
     - Given: A bolt entity (entity A) with `Bolt` component, `GlobalPosition2D` at (50.0, 200.0) inserted directly on the entity, no `Dead` component
     - When: A `KillYourself::<Bolt> { victim: entity_A, killer: None }` message is processed by the bolt kill handler
     - Then: Entity A has a `Dead` component inserted
     - Edge case: `KillYourself` with a victim entity that does not have the `Bolt` component -- the kill handler should skip it (query uses `With<Bolt>` filter)
 
-17. **Bolt kill handler removes bolt from spatial index**
+18. **Bolt kill handler removes bolt from spatial index**
     - Given: A bolt entity (entity A) inserted into the spatial index at position (50.0, 200.0)
     - When: A `KillYourself::<Bolt> { victim: entity_A, killer: None }` message is processed
     - Then: Entity A is no longer present in the spatial index query results
     - Edge case: Bolt not in the spatial index (already removed by another system) -- handler should not panic
 
-18. **Bolt kill handler sends Destroyed\<Bolt\> with correct fields**
+19. **Bolt kill handler sends Destroyed\<Bolt\> with correct fields**
     - Given: A bolt entity (entity A) with `GlobalPosition2D` at (75.0, 150.0) inserted directly on the entity, killer is `None` (environmental death)
     - When: A `KillYourself::<Bolt> { victim: entity_A, killer: None }` message is processed
     - Then: A `Destroyed::<Bolt>` message is sent with `victim: entity_A`, `killer: None`, `victim_pos: Vec2::new(75.0, 150.0)`, `killer_pos: None`
     - Edge case: Bolt at position (0.0, 0.0) -- origin position still produces a valid Destroyed message
 
-19. **Bolt kill handler sends Destroyed\<Bolt\> with killer position when killer exists**
+20. **Bolt kill handler sends Destroyed\<Bolt\> with killer position when killer exists**
     - Given: A bolt entity (entity A) with `GlobalPosition2D` at (75.0, 150.0) inserted directly on the entity, a killer entity (entity B) with `GlobalPosition2D` at (200.0, 300.0) inserted directly on it
     - When: A `KillYourself::<Bolt> { victim: entity_A, killer: Some(entity_B) }` message is processed
     - Then: A `Destroyed::<Bolt>` message is sent with `victim: entity_A`, `killer: Some(entity_B)`, `victim_pos: Vec2::new(75.0, 150.0)`, `killer_pos: Some(Vec2::new(200.0, 300.0))`
     - Edge case: Killer entity no longer exists in world at time of handler execution -- `killer_pos` should be `None` (entity despawned between KillYourself send and handler execution), but `killer` field still carries `Some(entity_B)` from the message
 
-20. **Bolt kill handler sends DespawnEntity for the victim**
+21. **Bolt kill handler sends DespawnEntity for the victim**
     - Given: A bolt entity (entity A)
     - When: A `KillYourself::<Bolt> { victim: entity_A, killer: None }` message is processed
     - Then: A `DespawnEntity { entity: entity_A }` message is sent
     - Edge case: N/A
 
-21. **Bolt kill handler skips entities already marked Dead (same-frame double-kill prevention)**
-    - Given: A bolt entity (entity A) with `Bolt` component AND `Dead` component already inserted (e.g., already killed by another path this frame)
+22. **Bolt kill handler skips entities already marked Dead (Without\<Dead\> filter)**
+    - Given: A bolt entity (entity A) with `Bolt` component AND `Dead` component already inserted (e.g., already killed by another path in a previous frame)
     - When: A `KillYourself::<Bolt> { victim: entity_A, killer: None }` message is processed
     - Then: No `Destroyed::<Bolt>` message is sent. No `DespawnEntity` message is sent. No additional `Dead` component is inserted.
-    - Edge case: Two `KillYourself::<Bolt>` messages for the same entity in the same frame -- only the first is processed. Because commands are deferred (Dead insertion is not visible until commands are applied), the kill handler must use a local `HashSet<Entity>` to track entities already processed in the current batch. The second message sees the entity in the HashSet and skips it, even though `Dead` is not yet visible on the entity.
+    - Edge case: `Without<Dead>` is sufficient for dedup -- each entity receives at most one `KillYourself` per frame (from one source: lifespan expiry OR bolt_lost, not both in practice). `Dead` is inserted by the kill handler via commands and becomes visible next frame. No local `HashSet<Entity>` is needed.
 
-22. **Bolt kill handler does NOT despawn the entity directly**
+23. **Bolt kill handler does NOT despawn the entity directly**
     - Given: A bolt entity (entity A) that receives `KillYourself::<Bolt>`
     - When: The kill handler runs
     - Then: Entity A still exists in the world (has `Dead` but is not despawned). Despawn is deferred to `process_despawn_requests` in PostFixedUpdate.
@@ -194,13 +202,13 @@ All behaviors in this section specify `ExtraBolt` in the Given state unless test
 
 #### Behavior
 
-23. **Bolt builder includes Hp component on spawned bolts**
+24. **Bolt builder includes Hp component on spawned bolts**
     - Given: A bolt is spawned through the bolt builder (standard spawn path)
     - When: The bolt entity is inspected after spawn
     - Then: The entity has an `Hp` component with `current: 1.0`, `starting: 1.0`, `max: None` (bolts have 1 HP by default -- they die from any damage event, though most bolt deaths are environmental and bypass Hp)
     - Edge case: Bolt spawned with `Birthing` component -- still has `Hp` and `KilledBy` from spawn
 
-24. **Bolt builder includes KilledBy component defaulting to None**
+25. **Bolt builder includes KilledBy component defaulting to None**
     - Given: A bolt is spawned through the bolt builder
     - When: The bolt entity is inspected after spawn
     - Then: The entity has a `KilledBy { dealer: None }` component
@@ -212,7 +220,7 @@ All behaviors in this section specify `ExtraBolt` in the Given state unless test
 
 #### Behavior
 
-25. **Lifespan expiry e2e: tick_bolt_lifespan through full death pipeline to despawn**
+26. **Lifespan expiry e2e: tick_bolt_lifespan through full death pipeline to despawn**
     - Given: A bolt entity with `BoltLifespan` timer at 0.49 seconds remaining (total duration 0.5), `Hp { current: 1.0, starting: 1.0, max: None }`, `KilledBy { dealer: None }`, registered in spatial index, `GlobalPosition2D` at (100.0, 200.0), delta time 0.02 seconds
     - When: The full FixedUpdate + PostFixedUpdate pipeline runs (tick_bolt_lifespan -> bolt kill handler -> process_despawn_requests)
     - Then:
@@ -222,30 +230,32 @@ All behaviors in this section specify `ExtraBolt` in the Given state unless test
       4. After full pipeline: bolt entity no longer exists in the world
     - Edge case: Bolt also has `Birthing` -- `tick_bolt_lifespan` should NOT fire (entity excluded from query), so the bolt survives
 
-26. **ExtraBolt lost e2e: bolt_lost through full death pipeline to despawn**
+27. **ExtraBolt lost e2e: bolt_lost through full death pipeline to despawn (no respawn)**
     - Given: A bolt entity with `ExtraBolt` component at position (100.0, -400.0) below the playfield, a breaker entity at position (100.0, -300.0), bolt registered in spatial index, `Hp { current: 1.0, ... }`, `KilledBy { dealer: None }`
     - When: The full FixedUpdate + PostFixedUpdate pipeline runs (bolt_lost -> bolt kill handler -> process_despawn_requests)
     - Then:
       1. `bolt_lost` sends `KillYourself::<Bolt> { victim: bolt_entity, killer: None }` AND `BoltLost { bolt: bolt_entity, breaker: breaker_entity }`
-      2. Bolt kill handler: inserts `Dead`, removes from spatial index, sends `Destroyed::<Bolt> { victim: bolt_entity, killer: None, victim_pos: Vec2::new(100.0, -400.0), killer_pos: None }`, sends `DespawnEntity { entity: bolt_entity }`
-      3. `process_despawn_requests`: despawns the bolt entity
-      4. After full pipeline: bolt entity no longer exists
+      2. `bolt_lost` does NOT respawn (ExtraBolt)
+      3. Bolt kill handler: inserts `Dead`, removes from spatial index, sends `Destroyed::<Bolt> { victim: bolt_entity, killer: None, victim_pos: Vec2::new(100.0, -400.0), killer_pos: None }`, sends `DespawnEntity { entity: bolt_entity }`
+      4. `process_despawn_requests`: despawns the bolt entity
+      5. After full pipeline: bolt entity no longer exists, no replacement spawned
     - Edge case: Multiple ExtraBolts lost in the same frame -- each independently goes through the full pipeline
 
-27. **Baseline bolt lost e2e: bolt_lost respawns, does NOT kill**
-    - Given: A bolt entity WITHOUT `ExtraBolt` at position (100.0, -400.0) below the playfield, a breaker entity at position (100.0, -300.0)
-    - When: The full FixedUpdate pipeline runs
+28. **Baseline bolt lost e2e: bolt_lost kills old bolt AND respawns new bolt**
+    - Given: A bolt entity WITHOUT `ExtraBolt` at position (100.0, -400.0) below the playfield, a breaker entity at position (100.0, -300.0), bolt registered in spatial index, `Hp { current: 1.0, ... }`, `KilledBy { dealer: None }`
+    - When: The full FixedUpdate + PostFixedUpdate pipeline runs
     - Then:
-      1. `bolt_lost` sends `BoltLost { bolt: bolt_entity, breaker: breaker_entity }` (for effect triggers)
-      2. `bolt_lost` does NOT send `KillYourself::<Bolt>` -- baseline bolt is respawned instead
-      3. The bolt entity still exists (not killed, not despawned)
-    - Edge case: N/A -- baseline bolt behavior is distinct from ExtraBolt
+      1. `bolt_lost` sends `KillYourself::<Bolt> { victim: bolt_entity, killer: None }` AND `BoltLost { bolt: bolt_entity, breaker: breaker_entity }` (for effect triggers)
+      2. `bolt_lost` respawns a new bolt (baseline bolt respawn logic, unchanged)
+      3. Bolt kill handler processes `KillYourself` for the old bolt: inserts `Dead`, removes from spatial index, sends `Destroyed::<Bolt>`, sends `DespawnEntity`
+      4. After full pipeline: old bolt entity is despawned, new bolt entity exists
+    - Edge case: N/A -- baseline bolt is killed AND respawned, both happen
 
-28. **Dead prevents double-processing across pipeline stages**
-    - Given: A bolt entity with `ExtraBolt` that receives `KillYourself::<Bolt>` from BOTH `tick_bolt_lifespan` and `bolt_lost` in the same frame (unlikely but theoretically possible if lifespan expires the same frame the bolt goes out of bounds)
+29. **Without\<Dead\> prevents double-processing across pipeline stages**
+    - Given: A bolt entity that theoretically receives `KillYourself::<Bolt>` from BOTH `tick_bolt_lifespan` and `bolt_lost` in the same frame (unlikely but theoretically possible if lifespan expires the same frame the bolt goes out of bounds)
     - When: The bolt kill handler processes both messages
-    - Then: Only the FIRST `KillYourself` is processed (inserts `Dead` via commands + tracked in local HashSet, sends `Destroyed`, sends `DespawnEntity`). The SECOND is skipped because the handler's local HashSet catches the duplicate within the same message batch. Only one `Destroyed::<Bolt>` and one `DespawnEntity` message are sent.
-    - Edge case: Three KillYourself messages for same entity in one frame (two environmental + one Hp-based) -- only first processed
+    - Then: `Without<Dead>` is sufficient for dedup. Each entity receives at most one `KillYourself` per frame from one source. `Dead` is inserted by the kill handler via commands and is visible next frame, preventing re-processing. No local `HashSet<Entity>` is needed.
+    - Edge case: If both sources did send KillYourself in the same frame, one of the two sources should have been filtered by `Without<Dead>` in its own query -- `tick_bolt_lifespan` and `bolt_lost` both use `Without<Dead>` filters, so the bolt can only be detected by one of them per frame once `Dead` is applied.
 
 ---
 
@@ -253,7 +263,7 @@ All behaviors in this section specify `ExtraBolt` in the Given state unless test
 
 #### Behavior
 
-29. **cleanup_destroyed_bolts system no longer exists**
+30. **cleanup_destroyed_bolts system no longer exists**
     - Given: N/A -- structural assertion
     - When: The bolt plugin is built
     - Then: No system named `cleanup_destroyed_bolts` is registered. The domain kill handler replaces its functionality.
@@ -300,7 +310,7 @@ Wave 10 tests MAY use these systems in e2e integration tests (Section F) but doe
 
 ### Messages
 
-- `KillYourself::<Bolt> { victim: Entity, killer: Option<Entity> }` -- sent by `tick_bolt_lifespan`, `bolt_lost` (ExtraBolt only); consumed by bolt kill handler
+- `KillYourself::<Bolt> { victim: Entity, killer: Option<Entity> }` -- sent by `tick_bolt_lifespan`, `bolt_lost` (ALL bolt types); consumed by bolt kill handler
 - `Destroyed::<Bolt> { victim: Entity, killer: Option<Entity>, victim_pos: Vec2, killer_pos: Option<Vec2> }` -- sent by bolt kill handler; consumed by `on_destroyed::<Bolt>` bridge (effect system)
 - `DespawnEntity { entity: Entity }` -- sent by bolt kill handler; consumed by `process_despawn_requests`
 - `BoltLost { bolt: Entity, breaker: Entity }` -- sent by `bolt_lost` (ALL bolt types); consumed by `on_bolt_lost_occurred` bridge, `spawn_bolt_lost_text`
@@ -343,4 +353,4 @@ These are the design docs that define the behavior being tested. Writer-tests sh
 
 - Compile-time guarantees (NOT runtime tests): The removal of `RequestBoltDestroyed` means any code referencing it will fail to compile. This is enforced by the type system, not by assertions. Similarly, the BoltLost struct field change is enforced by the compiler on all consumers.
 
-- **GlobalPosition2D in tests**: Tests for the kill handler (Section D behaviors 16, 18, 19) must insert `GlobalPosition2D` directly on test entities rather than relying on transform propagation (which requires `rantzsoft_spatial2d` plugin systems to run). Use `entity.insert(GlobalPosition2D::new(Vec2::new(x, y)))` or equivalent direct construction.
+- **GlobalPosition2D in tests**: Tests for the kill handler (Section D behaviors 17, 19, 20) must insert `GlobalPosition2D` directly on test entities rather than relying on transform propagation (which requires `rantzsoft_spatial2d` plugin systems to run). Use `entity.insert(GlobalPosition2D::new(Vec2::new(x, y)))` or equivalent direct construction.

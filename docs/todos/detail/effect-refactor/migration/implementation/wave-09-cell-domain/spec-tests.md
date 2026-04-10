@@ -3,11 +3,19 @@
 ### Domain
 src/cells/
 
+### Prerequisites
+
+The following waves must be complete before wave 9 tests can compile and run:
+
+- **Wave 2 (scaffold)**: All shared types exist — `Hp`, `KilledBy`, `Dead`, `DamageDealt<T>`, `KillYourself<T>`, `Destroyed<T>`, `DespawnEntity`, `GameEntity` trait, `Cell` impl of `GameEntity`
+- **Wave 7 (death pipeline)**: `apply_damage::<Cell>`, `detect_cell_deaths`, `process_despawn_requests` are implemented and tested. `DamageTargetData` and `DeathDetectionData` query types exist in `src/shared/queries.rs`. The `DeathPipelineSystems::ApplyDamage` and `DeathPipelineSystems::DetectDeaths` system sets exist.
+- **Wave 5 (triggers)**: `on_destroyed::<Cell>` effect bridge exists (consumes `Destroyed<Cell>`)
+
 ### Overview
 
 Wave 9 migrates the cell domain from the old damage/cleanup model (`handle_cell_hit` + `cleanup_cell`) to the unified death pipeline. The old model combined damage application, visual feedback, death detection, spatial index removal, and node completion tracking into two monolithic systems. The new model splits these into discrete pipeline stages: `apply_damage::<Cell>` (shared, generic), `detect_cell_deaths` (cell-specific), a cell domain kill handler (cell-specific), and a separate damage visual feedback system. The `bolt_cell_collision` system is updated to send `DamageDealt<Cell>` instead of `DamageCell`. Cell entities gain `Hp` and `KilledBy` components.
 
-This spec covers the cell domain's participation in the death pipeline. It does NOT cover `apply_damage::<Cell>` or `detect_cell_deaths` directly — those are tested in wave 07 (death pipeline systems). This spec covers: the cell kill handler, `bolt_cell_collision` sending `DamageDealt<Cell>`, cell builder producing Hp/KilledBy, Locked cell interaction with the pipeline, RequiredToClear tracking through the kill handler, damage visual feedback, and end-to-end cell death flows.
+This spec covers the cell domain's participation in the death pipeline. It does NOT cover `apply_damage::<Cell>` or `detect_cell_deaths` directly — those are tested in wave 07 (death pipeline systems). This spec covers: the cell kill handler, `bolt_cell_collision` sending `DamageDealt<Cell>`, cell builder producing Hp/KilledBy, Locked cell interaction with the pipeline, RequiredToClear tracking through the kill handler, cell damage visual system, and end-to-end cell death flows.
 
 ---
 
@@ -77,17 +85,17 @@ File: `src/bolt/systems/bolt_cell_collision.rs` (or wherever bolt-cell collision
    - Then: `DamageDealt<Cell> { dealer: Some(B1), target: C1, amount: 10.0, source_chip: None }` is sent. (The damage amount comes from the bolt's current damage value — use a concrete test value of 10.0.)
    - Edge case: Bolt has a source chip (e.g., from a damage boost effect) — `source_chip` should be `Some("Surge".to_string())` or whatever the chip name is, propagated from the bolt's `EffectSourceChip` component if present.
 
-9. **bolt_cell_collision does NOT send DamageDealt<Cell> for Locked cells**
-   - Given: A Bolt entity B1 at position (100.0, 195.0) and a Cell entity C1 at position (100.0, 200.0) with the `Locked` component
+9. **bolt_cell_collision sends DamageDealt<Cell> even for Locked cells**
+   - Given: A Bolt entity B1 at position (100.0, 195.0) and a Cell entity C1 at position (100.0, 200.0) with the `Locked` component and `Hp { current: 30.0, starting: 30.0, max: None }`
    - When: Bolt B1 collides with Cell C1
-   - Then: No `DamageDealt<Cell>` is sent for this collision. The bolt still bounces (impact still occurs for physics), but no damage message is produced.
-   - Edge case: Locked cell does NOT have Hp — collision still produces a bounce and `BoltImpactCell` for effect bridges, but zero DamageDealt. (Note: if the decision is that bolt_cell_collision sends DamageDealt regardless and apply_damage skips Locked, then this test should verify the message IS sent but apply_damage drops it. Confirm which approach the implementation uses — the apply-damage-cell.md doc says apply_damage skips Locked, suggesting the collision system does send the message. Update this behavior accordingly.)
+   - Then: `DamageDealt<Cell> { dealer: Some(B1), target: C1, amount: 10.0, source_chip: None }` IS sent. The collision system does not filter by Locked. `apply_damage::<Cell>` silently drops damage for Locked cells via its `Without<Locked>` filter (tested in wave 7).
+   - Edge case: Locked cell also receives `BoltImpactCell` — both messages sent regardless of lock status.
 
 10. **bolt_cell_collision still sends BoltImpactCell for effect bridge**
     - Given: A Bolt entity B1 colliding with Cell entity C1
     - When: Collision occurs
     - Then: Both `DamageDealt<Cell>` AND `BoltImpactCell { cell: C1, bolt: B1 }` are sent. The impact message is for the effect bridge (triggers), the damage message is for the death pipeline.
-    - Edge case: Cell is Locked — `BoltImpactCell` is still sent (effects may care about impacts on locked cells), but DamageDealt may or may not be sent depending on the filtering approach (see behavior 9 note).
+    - Edge case: Cell is Locked — both `BoltImpactCell` and `DamageDealt<Cell>` are still sent. The collision system does not filter by lock status. Damage is silently dropped downstream by `apply_damage::<Cell>` (wave 7).
 
 ---
 
@@ -143,27 +151,27 @@ File: `src/cells/systems/handle_cell_kill.rs` (kill handler tests) and/or integr
 
 ### Section E: Damage Visual Feedback
 
-The old `handle_cell_hit` combined damage application with visual feedback (material color update based on remaining health). The new pipeline splits these: `apply_damage` handles HP, and a separate damage response system handles visual feedback. This system reads Hp changes and updates the cell's material/color to reflect remaining health fraction.
+The old `handle_cell_hit` combined damage application with visual updates (material color update based on remaining health). The new pipeline splits these: `apply_damage` handles HP, and a separate `cell_damage_visual` system handles the visual response. This system reads Hp changes and updates the cell's material color to reflect remaining health fraction.
 
-File: `src/cells/systems/cell_damage_feedback.rs` (new file)
+File: `src/cells/systems/cell_damage_visual/tests.rs` (new directory module)
 
 #### Behavior
 
 16. **Cell material updates based on health fraction**
     - Given: A Cell entity with `Hp { current: 15.0, starting: 30.0, max: None }` (50% health)
-    - When: The damage feedback system runs
+    - When: The damage visual system runs
     - Then: The cell's visual representation reflects 50% health. The health fraction is `current / starting = 0.5`.
-    - Edge case: `Hp { current: 30.0, starting: 30.0 }` (100% health, full color). `Hp { current: 1.0, starting: 30.0 }` (3.3% health, nearly dead appearance). `Hp { current: 0.0, starting: 30.0 }` (dead — should not be processed because entity will have `Dead` component by this point, or the feedback system uses `Without<Dead>` filter).
+    - Edge case: `Hp { current: 30.0, starting: 30.0 }` (100% health, full color). `Hp { current: 1.0, starting: 30.0 }` (3.3% health, nearly dead appearance). `Hp { current: 0.0, starting: 30.0 }` (dead — should not be processed because entity will have `Dead` component by this point, or the visual system uses `Without<Dead>` filter). `Hp { current: 0.0, starting: 0.0 }` (starting=0 — health fraction is undefined; system should treat as 0.0 or skip to avoid division by zero).
 
-17. **Damage feedback skips Dead cells**
+17. **Damage visual skips Dead cells**
     - Given: A Cell entity with `Hp { current: 0.0, starting: 30.0, max: None }` and the `Dead` component
-    - When: The damage feedback system runs
+    - When: The damage visual system runs
     - Then: No visual update is applied. The `Without<Dead>` filter (or equivalent) prevents processing.
     - Edge case: Cell has Dead but nonzero Hp (killed by Die effect directly, Hp not at 0) — still skipped.
 
-18. **Damage feedback responds to Hp changes within a frame**
+18. **Damage visual responds to Hp changes within a frame**
     - Given: A Cell entity starts the frame with `Hp { current: 30.0, starting: 30.0 }`, then `apply_damage` decrements to `Hp { current: 20.0, ... }`
-    - When: The damage feedback system runs (after apply_damage)
+    - When: The damage visual system runs (after apply_damage)
     - Then: The health fraction reflects the new value: `20.0 / 30.0 = 0.667`
     - Edge case: Multiple damage events in one frame reduce Hp from 30.0 to 5.0 — visual shows 5.0/30.0 = 0.167.
 
@@ -194,8 +202,7 @@ File: `src/cells/systems/handle_cell_kill.rs` (integration tests section) or a d
 21. **Multiple damage sources in one frame — first killing blow wins attribution**
     - Given: A Cell entity C1 with `Hp { current: 15.0, starting: 30.0, max: None }`. Bolt B1 and shockwave effect (dealer: B2) both send damage in the same frame.
     - When: `DamageDealt<Cell> { dealer: Some(B1), target: C1, amount: 10.0, ... }` and `DamageDealt<Cell> { dealer: Some(B2), target: C1, amount: 10.0, ... }` are both sent in the same frame. `apply_damage::<Cell>` processes both.
-    - Then: Hp goes to -5.0. `KilledBy.dealer` is `Some(B1)` (first message crossed the zero threshold — Hp went from 15.0 to 5.0 to -5.0, but the killing blow is the one that takes Hp from positive to <= 0, which is the first message: 15.0 - 10.0 = 5.0, still positive. Second message: 5.0 - 10.0 = -5.0, this crosses zero). Wait — recalculating: Hp starts at 15.0. First DamageDealt subtracts 10.0 -> Hp becomes 5.0 (positive, not the killing blow). Second DamageDealt subtracts 10.0 -> Hp becomes -5.0 (crosses zero, this IS the killing blow). So KilledBy.dealer = Some(B2).
-    - Corrected Then: Hp ends at -5.0. `KilledBy.dealer` is `Some(B2)` because the second damage message is the one that crosses Hp from positive to <= 0. `Destroyed<Cell>` has `killer: Some(B2)`.
+    - Then: Hp ends at -5.0. `KilledBy.dealer` is `Some(B2)` because the second damage message is the one that crosses Hp from positive to <= 0. First DamageDealt: 15.0 - 10.0 = 5.0 (still positive, not the killing blow). Second DamageDealt: 5.0 - 10.0 = -5.0 (crosses zero, this IS the killing blow). `Destroyed<Cell>` has `killer: Some(B2)`.
     - Edge case: Both messages individually would kill (amount: 20.0 each, Hp: 15.0). First message: 15.0 - 20.0 = -5.0 (kills). KilledBy set to Some(B1). Second message: entity Hp already <= 0, KilledBy already set, do not overwrite. Final KilledBy.dealer = Some(B1).
 
 22. **Cell death with no killer (environmental/Die effect)**
@@ -220,17 +227,19 @@ File: `src/cells/systems/handle_cell_kill.rs` or `src/run/node/systems/track_nod
 
 #### Behavior
 
-24. **Required cell death updates node completion tracking**
-    - Given: A Cell entity C1 with `RequiredToClear` component. The node has 5 required cells remaining (including C1).
+24. **Required cell sends Destroyed<Cell> while RequiredToClear is still present**
+    - Given: A Cell entity C1 with `RequiredToClear` component
     - When: C1 is killed via the full pipeline (KillYourself<Cell> -> kill handler -> Destroyed<Cell>)
-    - Then: The node completion tracker sees that a required cell was destroyed. Required cells remaining decrements to 4.
-    - Edge case: Last required cell is destroyed — remaining goes to 0, triggering NodeCleared.
+    - Then: `Destroyed<Cell>` is sent while the victim entity C1 still has the `RequiredToClear` component. Downstream consumers (run-domain node completion tracking) can query `Has<RequiredToClear>` on the victim entity from the `Destroyed<Cell>` message.
+    - Edge case: No edge case — the entity is still alive when `Destroyed<Cell>` is sent, so all components are still present.
+    - Note: Whether "required cells remaining decrements" is the run-domain's responsibility, not the cell domain's. The cell domain's contract is that `Destroyed<Cell>` is sent before despawn, while the entity's components are intact.
 
-25. **Non-required cell death does not affect node completion tracking**
-    - Given: A Cell entity C1 WITHOUT `RequiredToClear` component. The node has 5 required cells remaining.
+25. **Non-required cell sends Destroyed<Cell> without RequiredToClear**
+    - Given: A Cell entity C1 WITHOUT `RequiredToClear` component
     - When: C1 is killed via the full pipeline
-    - Then: Required cells remaining stays at 5. No NodeCleared message.
-    - Edge case: All non-required cells destroyed, required cells remain — node is not cleared.
+    - Then: `Destroyed<Cell>` is sent. The victim entity C1 does NOT have `RequiredToClear`, so downstream consumers querying `Has<RequiredToClear>` on the victim entity will see `false`.
+    - Edge case: No edge case — this is the complement of behavior 24.
+    - Note: The run-domain node completion tracker decides how to handle required vs non-required. The cell kill handler treats both the same.
 
 ---
 
@@ -290,7 +299,7 @@ These are the wave 09 design docs that define the behaviors being tested:
   - `src/cells/systems/handle_cell_kill.rs` — cell kill handler system + unit tests (behaviors 1-7)
   - `src/bolt/systems/bolt_cell_collision.rs` — updated collision tests (behaviors 8-10), within existing test module
   - Cell builder/spawner test file — Hp/KilledBy spawn tests (behaviors 11-13)
-  - `src/cells/systems/cell_damage_feedback.rs` — damage visual feedback system + tests (behaviors 16-18)
+  - `src/cells/systems/cell_damage_visual/tests.rs` — damage visual system tests (behaviors 16-18)
   - Integration test file (within cells domain) — end-to-end tests (behaviors 19-25)
 - Do NOT test: `apply_damage::<Cell>` or `detect_cell_deaths` in isolation — those are wave 07 tests
 - Do NOT test: Effect system internals (trigger bridges, effect firing)
@@ -299,12 +308,3 @@ These are the wave 09 design docs that define the behaviors being tested:
 - Do NOT modify: `src/shared/systems/apply_damage.rs`, `src/shared/systems/process_despawn_requests.rs` — those are wave 07 code
 - Locked cell filtering in `apply_damage::<Cell>` is tested in wave 07 (the `Without<Locked>` filter). Wave 09 tests verify the Locked cell path end-to-end (behavior 14-15) to confirm the full pipeline respects locks.
 
----
-
-### Open Questions
-
-1. **RequiredToClear propagation**: The `Destroyed<Cell>` message type does not include a `was_required_to_clear: bool` field. How does the node completion tracker (`track_node_completion`) determine whether a destroyed cell was required? Options: (a) the tracker reads `Has<RequiredToClear>` directly from the victim entity (which is still alive when Destroyed is sent), (b) add a `was_required_to_clear` field to `Destroyed<Cell>`, (c) the kill handler sends a separate `RequiredCellDestroyed` message. Option (a) is cleanest per the existing Destroyed docs ("The entity is still alive when Destroyed is sent"). Behaviors 24-25 assume option (a).
-
-2. **bolt_cell_collision damage filtering for Locked cells**: The `apply-damage-cell.md` doc says apply_damage skips Locked cells. This means bolt_cell_collision CAN send DamageDealt for Locked cells and it will be silently dropped. But it might be more efficient to not send the message at all. Behavior 9 currently tests that NO DamageDealt is sent for Locked cells (collision system filters). If the design prefers "send and drop", behavior 9 should be inverted to verify the message IS sent, and behavior 14 (Locked cell end-to-end) covers the actual immunity.
-
-3. **Damage visual feedback trigger**: Should the feedback system use `Changed<Hp>` filter (only update visuals when Hp actually changed) or run every frame? `Changed<Hp>` is more efficient. Behaviors 16-18 assume the system uses `Changed<Hp>` or runs only when relevant, but the exact filter is an implementation detail for the code spec.

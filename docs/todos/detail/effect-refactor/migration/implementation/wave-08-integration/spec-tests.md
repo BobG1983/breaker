@@ -9,12 +9,25 @@ Integration tests that exercise end-to-end flows across system boundaries: trigg
 
 ---
 
+## Prerequisites
+
+The following waves must be complete before wave 8 integration tests can be written and run:
+
+- **Wave 2** (scaffold) — all type definitions exist: Tree, ScopedTree, Terminal, ScopedTerminal, Trigger, TriggerContext, Condition, EffectType, ReversibleEffectType, EntityKind, RouteType, ParticipantTarget, BumpTarget, ImpactTarget, DeathTarget, BoltLostTarget, BoundEffects, BoundEntry, StagedEffects, EffectStack, SpawnStampRegistry, EffectTimers, Hp, KilledBy, Dead, DamageDealt, KillYourself, Destroyed, DespawnEntity, all config structs (SpeedBoostConfig, DamageBoostConfig, DieConfig, LoseLifeConfig, etc.), all marker components (Bolt, Breaker, Cell, Wall), GameEntity trait, Fireable/Reversible traits, PassiveEffect trait, NodeState, BumpPerformed, BumpGrade, OrderedFloat
+- **Wave 3** (RON assets) — RON deserialization for tree syntax
+- **Wave 4** (functions) — EffectStack methods (aggregate, push, remove_by_source), walk_effects, fire_effect/reverse_effect/stage_effect/remove_effect commands, evaluate_conditions helper functions (is_node_active, etc.), PassiveEffect implementations
+- **Wave 5** (triggers) — all bridge systems (on_bumped, on_bump_occurred, on_destroyed, on_impacted, on_time_expires, on_node_start_occurred, etc.), tick_effect_timers, track_combo_streak
+- **Wave 6** (effects) — all 30 effect fire/reverse implementations (SpeedBoost, DamageBoost, Die, LoseLife, Shockwave, etc.), spawn watcher system, condition evaluation
+- **Wave 7** (death pipeline) — apply_damage, detect_cell_deaths, detect_bolt_deaths, detect_wall_deaths, detect_breaker_deaths, process_despawn_requests
+
+---
+
 ## Behavior
 
 ### 1. **Bump triggers walk BoundEffects and fire effects**
 
 - Given: A bolt entity with `BoundEffects` containing one entry: `BoundEntry { source: "chip_a", tree: When(Bumped, Fire(SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) }))), condition_active: None }`. The bolt has `EffectStack<SpeedBoostConfig>` initialized empty (default). A breaker entity exists.
-- When: `BumpPerformed { grade: BumpGrade::Perfect, bolt: bolt_entity }` message is sent. The `on_bumped` bridge system runs (dispatches `Trigger::Bumped` with `TriggerContext::Bump { bolt: Some(bolt_entity), breaker: breaker_entity }` on the bolt). Then `walk_effects` evaluates the bolt's BoundEffects. The `fire_effect` command is applied.
+- When: `BumpPerformed { grade: BumpGrade::Perfect, bolt: Some(bolt_entity), breaker: breaker_entity }` message is sent. The `on_bumped` bridge system runs (dispatches `Trigger::Bumped` with `TriggerContext::Bump { bolt: Some(bolt_entity), breaker: breaker_entity }` on the bolt). Then `walk_effects` evaluates the bolt's BoundEffects. The `fire_effect` command is applied.
 - Then: `EffectStack<SpeedBoostConfig>` on the bolt contains exactly one entry: `("chip_a", SpeedBoostConfig { multiplier: OrderedFloat(1.5) })`. `aggregate()` returns `1.5`. The BoundEntry remains in BoundEffects (When re-arms, not consumed).
 - Edge case: If the bolt has no BoundEffects entries matching `Bumped` (e.g., only `When(Impacted(Cell), ...)`), the stack remains empty after the bump.
 
@@ -45,14 +58,14 @@ Integration tests that exercise end-to-end flows across system boundaries: trigg
 
 ### 5. **During condition lifecycle: fire on true, reverse on false, re-fire on true again**
 
-- Given: A bolt entity with `BoundEffects` containing: `BoundEntry { source: "chip_e", tree: During(NodeActive, Box::new(ScopedTree::Fire(ReversibleEffectType::SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.8) })))), condition_active: Some(false) }`. Empty `EffectStack<SpeedBoostConfig>`. The world's node state is NOT active (e.g., `NodeState` resource indicates not playing).
-- When: The node becomes active (NodeState transitions to Playing). `evaluate_conditions` runs and detects the transition from false to true.
+- Given: A bolt entity with `BoundEffects` containing: `BoundEntry { source: "chip_e", tree: During(NodeActive, Box::new(ScopedTree::Fire(ReversibleEffectType::SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.8) })))), condition_active: Some(false) }`. Empty `EffectStack<SpeedBoostConfig>`. The world has `State<NodeState>` set to `NodeState::Loading` (not active).
+- When: `State<NodeState>` transitions to `NodeState::Playing`. `evaluate_conditions` runs and detects the transition from false to true (because `is_node_active` now returns true).
 - Then: `EffectStack<SpeedBoostConfig>` has one entry `("chip_e", SpeedBoostConfig { multiplier: OrderedFloat(1.8) })`. `condition_active` on the BoundEntry is now `Some(true)`.
-- When: The node ends (NodeState transitions away from Playing). `evaluate_conditions` detects true-to-false transition.
+- When: `State<NodeState>` transitions from `NodeState::Playing` to `NodeState::Loading`. `evaluate_conditions` detects true-to-false transition.
 - Then: `EffectStack<SpeedBoostConfig>` is empty. `condition_active` is `Some(false)`. The BoundEntry is still in BoundEffects (During entries persist).
-- When: The node becomes active again.
+- When: `State<NodeState>` transitions back to `NodeState::Playing`.
 - Then: `EffectStack<SpeedBoostConfig>` has one entry again. Verifies During cycling.
-- Edge case: If the condition is already true when the During entry is first installed (condition_active starts as `Some(false)` but the world condition is true), evaluate_conditions should detect the initial false-to-true transition and fire. This is the "first frame" behavior.
+- Edge case: If `State<NodeState>` is already `NodeState::Playing` when the During entry is first installed (condition_active starts as `Some(false)` but `is_node_active` returns true), evaluate_conditions should detect the initial false-to-true transition and fire. This is the "first frame" behavior.
 
 ### 6. **Once consumption: fires on first trigger match, removed on second**
 
@@ -84,38 +97,32 @@ Integration tests that exercise end-to-end flows across system boundaries: trigg
 - When: `DamageDealt<Cell> { dealer: Some(bolt_entity), target: cell_entity, amount: 1.0, source_chip: Some("chip_i".to_string()), _marker: PhantomData }` message is sent.
 - When: `apply_damage::<Cell>` runs. Hp.current goes from 1.0 to 0.0. Since Hp crossed from positive to zero, `KilledBy.dealer` is set to `Some(bolt_entity)`.
 - When: `detect_cell_deaths` runs. Cell has `Hp.current <= 0` and no `Dead` marker. `KillYourself<Cell> { victim: cell_entity, killer: Some(bolt_entity), _marker: PhantomData }` is sent.
-- When: Domain kill handler processes `KillYourself<Cell>`. Inserts `Dead` on cell_entity. Sends `Destroyed<Cell> { victim: cell_entity, killer: Some(bolt_entity), victim_pos: Vec2::new(100.0, 200.0), killer_pos: Some(Vec2::new(50.0, 300.0)), _marker: PhantomData }`. Sends `DespawnEntity { entity: cell_entity }`.
+- When: Stub kill handler processes `KillYourself<Cell>`. Inserts `Dead` on cell_entity. Sends `Destroyed<Cell> { victim: cell_entity, killer: Some(bolt_entity), victim_pos: Vec2::new(100.0, 200.0), killer_pos: Some(Vec2::new(50.0, 300.0)), _marker: PhantomData }`. Sends `DespawnEntity { entity: cell_entity }`.
 - When: `on_destroyed::<Cell>` bridge dispatches `Trigger::Died` on cell_entity (Local), `Trigger::Killed(EntityKind::Cell)` on bolt_entity (Local), `Trigger::DeathOccurred(EntityKind::Cell)` globally.
 - When: `process_despawn_requests` runs in PostFixedUpdate. Cell entity is despawned.
-- Then: Cell entity no longer exists in the world. Bolt entity still exists. The full chain DamageDealt -> apply_damage -> detect_deaths -> KillYourself -> domain handler -> Destroyed -> triggers -> DespawnEntity -> despawn completed in one frame (except the death bridge reads Destroyed next frame per the standard Bevy message persistence pattern).
+- Then: Cell entity no longer exists in the world. Bolt entity still exists. The full chain DamageDealt -> apply_damage -> detect_deaths -> KillYourself -> stub kill handler -> Destroyed -> triggers -> DespawnEntity -> despawn completed in one frame (except the death bridge reads Destroyed next frame per the standard Bevy message persistence pattern).
 - Edge case: Cell with `Hp { current: 2.0, ... }` receiving `DamageDealt` with `amount: 1.0`. Hp goes to 1.0. `detect_cell_deaths` does NOT send KillYourself (Hp > 0). Cell survives. Send another `DamageDealt` with `amount: 1.0`. Now Hp reaches 0. Death pipeline fires.
 
 ### 10. **Die bypass: Fire(Die) sends KillYourself directly, no Hp change**
 
-- Given: A cell entity with `Hp { current: 5.0, starting: 5.0, max: None }`, `Cell` component, no `Dead`, `KilledBy { dealer: None }`. A bolt entity with `BoundEffects` containing: `BoundEntry { source: "chip_j", tree: When(Bumped, On(Impact(Impactee), Fire(Die(DieConfig {})))), condition_active: None }`. TriggerContext must carry impact info — actually, Die is fired via `When(Bumped, ...)` with Bump context. The On uses `Impact(Impactee)` which requires Impact context. **Correction**: For Die to target the cell, the tree must use a death-compatible context. The plan says "When(Bumped, Fire(Die))" — this fires Die on the **owner** (the bolt), not on a cell. Let me re-read the plan.
-
-  **Re-reading plan**: "When(Bumped, Fire(Die)). KillYourself sent directly, no Hp change." This means the bolt itself has `When(Bumped, Fire(Die))` — when bumped, the bolt sends itself into the death pipeline.
-
-- Given (corrected): A bolt entity with `Hp { current: 3.0, starting: 3.0, max: None }`, `Bolt` component, `KilledBy { dealer: None }`, no `Dead`. BoundEffects containing: `BoundEntry { source: "chip_j", tree: When(Bumped, Fire(Die(DieConfig {}))), condition_active: None }`.
-- When: `Trigger::Bumped` dispatched on bolt. Fire evaluates `Die(DieConfig {})`. The `DieConfig::fire` inspects the bolt entity, finds `Bolt` component, sends `KillYourself<Bolt> { victim: bolt_entity, killer: None, _marker: PhantomData }`.
-- Then: `KillYourself<Bolt>` is in the message queue. `Hp` on the bolt is still `{ current: 3.0, starting: 3.0, max: None }` — Die does NOT change Hp. The bolt's Hp is irrelevant; it dies from KillYourself regardless. After the domain handler processes KillYourself, `Dead` is inserted, `Destroyed<Bolt>` is sent, and `DespawnEntity` follows.
+- Given: A bolt entity with `Hp { current: 3.0, starting: 3.0, max: None }`, `Bolt` component, `KilledBy { dealer: None }`, no `Dead`. A breaker entity exists. BoundEffects on bolt containing: `BoundEntry { source: "chip_j", tree: When(Bumped, Fire(Die(DieConfig {}))), condition_active: None }`.
+- When: `BumpPerformed { grade: BumpGrade::Perfect, bolt: Some(bolt_entity), breaker: breaker_entity }` is sent. `on_bumped` bridge dispatches `Trigger::Bumped` on bolt. Fire evaluates `Die(DieConfig {})`. The `DieConfig::fire` inspects the bolt entity, finds `Bolt` component, sends `KillYourself<Bolt> { victim: bolt_entity, killer: None, _marker: PhantomData }`.
+- Then: `KillYourself<Bolt>` is in the message queue. `Hp` on the bolt is still `{ current: 3.0, starting: 3.0, max: None }` — Die does NOT change Hp. The bolt's Hp is irrelevant; it dies from KillYourself regardless. After the stub kill handler processes KillYourself, `Dead` is inserted, `Destroyed<Bolt>` is sent, and `DespawnEntity` follows.
 - Edge case: An entity with no `Hp` component. `Fire(Die)` still sends `KillYourself` — Die does not check Hp. The entity enters the death pipeline via KillYourself, bypassing the Hp-based detection entirely.
 
 ### 11. **Cascade delay: death-triggered DamageDealt is processed next frame**
 
-- Given: Cell A at position (100.0, 200.0) with `Hp { current: 1.0, ... }`, `Cell`, `KilledBy { dealer: None }`. Cell B at position (120.0, 200.0) with `Hp { current: 1.0, ... }`, `Cell`, `KilledBy { dealer: None }`. Cell A has `BoundEffects` containing: `BoundEntry { source: "chip_k", tree: When(Died, On(Death(Killer), Fire(Shockwave(ShockwaveConfig { ... })))), condition_active: None }` (or some effect that sends `DamageDealt<Cell>` targeting Cell B). For simplicity, use a tree that fires `DamageDealt<Cell>` on death.
+  The cascade delay test verifies that when Cell A dies and its death bridge fires a tree that sends `DamageDealt<Cell>` targeting Cell B, that damage is NOT processed in the same frame as Cell A's death. The mechanism:
+  - Frame 1: Game systems send DamageDealt for Cell A. ApplyDamage decrements A's Hp. DetectDeaths sends KillYourself for A. Stub kill handler inserts Dead, sends Destroyed for A.
+  - Frame 2: `on_destroyed::<Cell>` bridge reads `Destroyed<Cell>` (persisted from frame 1). Dispatches `Trigger::Died` on Cell A. Cell A's tree fires `LoseLife(LoseLifeConfig {})` which sends `DamageDealt<Cell> { target: cell_b, amount: 1.0, ... }`. Since Bridge runs before ApplyDamage, this DamageDealt is processed by `apply_damage::<Cell>` in the same frame 2.
+  - The key assertion: Cell B is NOT damaged in frame 1 (the frame Cell A took its fatal hit). Cell B IS damaged in frame 2.
 
-  **Clarification**: The cascade delay test verifies that when Cell A dies and its death trigger fires an effect that sends `DamageDealt<Cell>` targeting Cell B, that damage is NOT processed in the same frame. Per the system ordering docs:
-  - Frame N: Game systems send DamageDealt for Cell A. ApplyDamage decrements A's Hp. DetectDeaths sends KillYourself for A. Domain handler sends Destroyed for A.
-  - Frame N+1: `on_destroyed::<Cell>` bridge reads `Destroyed<Cell>` (persisted from frame N). Dispatches `Trigger::Died` on Cell A. Cell A's tree fires an effect that sends `DamageDealt<Cell>` for Cell B. This DamageDealt is consumed by ApplyDamage in the same frame N+1 (Bridge runs before ApplyDamage). So the damage to Cell B IS processed in frame N+1.
-  - The key assertion: Cell B is NOT damaged in frame N (the frame Cell A took its fatal hit). Cell B IS damaged in frame N+1.
-
-- Given: Cell A with `Hp { current: 1.0, starting: 1.0, max: None }`, Cell B with `Hp { current: 1.0, starting: 1.0, max: None }`. Cell A has a death-triggered effect tree that, upon Died trigger, fires an effect producing `DamageDealt<Cell> { target: cell_b, amount: 1.0, ... }`. A bolt entity exists as the initial killer.
-- When: Frame 1: `DamageDealt<Cell> { target: cell_a, amount: 1.0, dealer: Some(bolt) }` is sent. `apply_damage::<Cell>` processes it. Cell A Hp -> 0. `detect_cell_deaths` sends KillYourself. Domain handler sends `Destroyed<Cell>` for Cell A.
-- Then: After frame 1: Cell A is dead (has `Dead` marker). Cell B Hp is still 1.0 — no damage processed on B this frame. The `Destroyed<Cell>` for Cell A is in the message queue.
-- When: Frame 2: `on_destroyed::<Cell>` bridge reads `Destroyed<Cell>` for A. Dispatches `Trigger::Died` on Cell A. Cell A's tree fires and produces `DamageDealt<Cell> { target: cell_b, amount: 1.0 }`. Since Bridge runs before ApplyDamage, this DamageDealt is processed by `apply_damage::<Cell>` in the same frame 2.
-- Then: After frame 2: Cell B Hp is 0. `detect_cell_deaths` sends KillYourself for Cell B. Cell B enters the death pipeline.
-- Edge case: If the death-triggered effect fires `DamageDealt` in the Bridge set (same frame), and ApplyDamage also runs in the same frame (it does, after Bridge), the cascade IS processed in frame N+1 total from the initial damage. Verify the one-frame delay from initial damage to cascade damage.
+- Given: Cell A at position (100.0, 200.0) with `Hp { current: 1.0, starting: 1.0, max: None }`, `Cell`, `KilledBy { dealer: None }`, no `Dead`. Cell A has `BoundEffects` containing: `BoundEntry { source: "chip_k", tree: When(Died, Fire(LoseLife(LoseLifeConfig {}))), condition_active: None }`. The `LoseLife` fire implementation sends `DamageDealt<Cell> { dealer: None, target: cell_b, amount: 1.0, source_chip: Some("chip_k".to_string()), _marker: PhantomData }`. Cell B at position (120.0, 200.0) with `Hp { current: 1.0, starting: 1.0, max: None }`, `Cell`, `KilledBy { dealer: None }`, no `Dead`. A bolt entity exists as the initial killer.
+- When: Frame 1: `DamageDealt<Cell> { target: cell_a, amount: 1.0, dealer: Some(bolt_entity), source_chip: None, _marker: PhantomData }` is sent. `apply_damage::<Cell>` processes it. Cell A Hp goes to 0.0. `detect_cell_deaths` sends `KillYourself<Cell>` for Cell A. Stub kill handler inserts `Dead` on Cell A, sends `Destroyed<Cell> { victim: cell_a, killer: Some(bolt_entity), victim_pos: Vec2::new(100.0, 200.0), killer_pos: Some(Vec2::new(50.0, 300.0)), _marker: PhantomData }`, sends `DespawnEntity { entity: cell_a }`.
+- Then: After frame 1: Cell A has `Dead` marker. Cell B Hp is still 1.0 — no damage processed on B this frame. The `Destroyed<Cell>` for Cell A is in the message queue.
+- When: Frame 2: `on_destroyed::<Cell>` bridge reads `Destroyed<Cell>` for Cell A. Dispatches `Trigger::Died` on Cell A with `TriggerContext::Death { victim: cell_a, killer: Some(bolt_entity) }`. Cell A's tree `When(Died, Fire(LoseLife(LoseLifeConfig {})))` matches. Fire sends `DamageDealt<Cell> { target: cell_b, amount: 1.0, dealer: None, source_chip: Some("chip_k".to_string()), _marker: PhantomData }`. Since Bridge runs before ApplyDamage in system ordering, `apply_damage::<Cell>` processes this DamageDealt in the same frame 2. Cell B Hp goes to 0.0.
+- Then: After frame 2: Cell B Hp is 0.0. `detect_cell_deaths` sends `KillYourself<Cell>` for Cell B. Cell B enters the death pipeline.
+- Edge case: Verify the one-frame delay from initial damage to cascade damage — Cell B must NOT have `Dead` or reduced Hp after frame 1, only after frame 2.
 
 ### 12. **Global trigger with On: DeathOccurred(Cell) with On(Death(Killer)) fires on killer**
 
@@ -142,6 +149,15 @@ Integration tests that exercise end-to-end flows across system boundaries: trigg
 - Edge case: Registry has `EntityKind::Cell` watcher. Spawning a bolt does NOT trigger it. The bolt has no BoundEffects from this watcher.
 - Edge case: Registry has `EntityKind::Any` watcher. Spawning a bolt triggers it. Spawning a cell triggers it. Both receive the tree.
 
+### 15. **Killed(EntityKind) trigger: killer entity's tree fires on kill**
+
+- Given: A bolt entity with `Bolt` component, `BoundEffects` containing: `BoundEntry { source: "chip_q", tree: When(Killed(Cell), Fire(SpeedBoost(SpeedBoostConfig { multiplier: OrderedFloat(1.5) }))), condition_active: None }`, `StagedEffects` (default), empty `EffectStack<SpeedBoostConfig>`. A cell entity with `Hp { current: 1.0, starting: 1.0, max: None }`, `Cell`, `KilledBy { dealer: None }`, no `Dead`. A breaker entity exists.
+- When: `DamageDealt<Cell> { dealer: Some(bolt_entity), target: cell_entity, amount: 1.0, source_chip: None, _marker: PhantomData }` is sent. `apply_damage::<Cell>` decrements cell Hp to 0.0. `detect_cell_deaths` sends `KillYourself<Cell>`. Stub kill handler inserts `Dead`, sends `Destroyed<Cell> { victim: cell_entity, killer: Some(bolt_entity), victim_pos: Vec2::new(100.0, 200.0), killer_pos: Some(Vec2::new(50.0, 300.0)), _marker: PhantomData }`, sends `DespawnEntity { entity: cell_entity }`.
+- When: Next frame: `on_destroyed::<Cell>` bridge reads `Destroyed<Cell>`. Dispatches `Trigger::Killed(EntityKind::Cell)` on bolt_entity (Local, on killer) with `TriggerContext::Death { victim: cell_entity, killer: Some(bolt_entity) }`.
+- Then: `EffectStack<SpeedBoostConfig>` on the bolt has one entry `("chip_q", SpeedBoostConfig { multiplier: OrderedFloat(1.5) })`. The bolt's BoundEffects entry persists (When re-arms).
+- Edge case: Bolt has `When(Killed(Bolt), Fire(SpeedBoost(...)))` — killing a cell does NOT trigger this tree because `Killed(Bolt)` does not match `Killed(Cell)`. `EffectStack<SpeedBoostConfig>` remains empty.
+- Edge case: Cell death with no killer (`killer: None`, environmental death). `Killed(Cell)` is NOT dispatched on any entity (no killer exists). The bolt's tree does not fire.
+
 ---
 
 ## Types
@@ -154,7 +170,7 @@ All types referenced in these tests come from the effect-refactor and unified-de
 - `Trigger`, `TriggerContext` — trigger dispatch types
 - `EffectType`, `ReversibleEffectType` — effect type enums
 - `EffectStack<T>`, `PassiveEffect` — generic stacking component and trait
-- `SpeedBoostConfig`, `DamageBoostConfig`, `DieConfig`, `ShockwaveConfig` — effect configs
+- `SpeedBoostConfig`, `DamageBoostConfig`, `DieConfig`, `LoseLifeConfig`, `ShockwaveConfig` — effect configs
 - `Hp`, `KilledBy`, `Dead` — death pipeline components
 - `DamageDealt<T>`, `KillYourself<T>`, `Destroyed<T>`, `DespawnEntity` — death pipeline messages
 - `EffectTimers`, `EffectTimerExpired` — timer lifecycle types
@@ -163,14 +179,15 @@ All types referenced in these tests come from the effect-refactor and unified-de
 - `GameEntity` — marker trait for entity types
 - `Fireable`, `Reversible` — effect dispatch traits
 - `OrderedFloat<f32>` — from `ordered-float` crate, for f32 equality
-- `BumpPerformed`, `BumpGrade` — bump message and grade enum
+- `BumpPerformed { grade: BumpGrade, bolt: Option<Entity>, breaker: Entity }`, `BumpGrade` — bump message and grade enum
 - `Bolt`, `Breaker`, `Cell`, `Wall` — entity marker components
 - `RouteType` — bound vs staged routing
 
 ### Test helpers needed:
-- A minimal test app builder that registers the effect systems (Bridge, Tick, Conditions), death pipeline systems (ApplyDamage, DetectDeaths), and process_despawn_requests
+- A minimal test app builder that registers the effect systems (Bridge, Tick, Conditions), death pipeline systems (ApplyDamage, DetectDeaths), process_despawn_requests, and stub kill handlers for Cell, Bolt, Wall, Breaker
 - Helper to send messages and advance the app by one or more FixedUpdate frames
 - Helper to set up BoundEffects with specific entries on entities
+- `stub_kill_handler::<T>` system — reads `KillYourself<T>`, inserts `Dead`, sends `Destroyed<T>` and `DespawnEntity`
 
 ---
 
@@ -205,6 +222,10 @@ Since this is a clean-room implementation, reference files point to the design d
 - `docs/todos/detail/effect-refactor/storing-effects/bound-effects.md` — BoundEffects storage
 - `docs/todos/detail/effect-refactor/storing-effects/staged-effects.md` — StagedEffects storage
 - `docs/todos/detail/effect-refactor/storing-effects/spawn-stamp-registry.md` — SpawnStampRegistry
+- `docs/todos/detail/effect-refactor/dispatching-triggers/death/killed.md` — Killed(EntityKind) trigger
+- `docs/todos/detail/effect-refactor/dispatching-triggers/death/died.md` — Died trigger
+- `docs/todos/detail/effect-refactor/migration/new-effect-implementations/die.md` — Die effect fire behavior
+- `docs/todos/detail/effect-refactor/migration/new-effect-implementations/lose-life.md` — LoseLife effect fire behavior
 
 ---
 
@@ -232,6 +253,15 @@ Each test function sets up a minimal Bevy App with:
 4. Messages sent via `MessageWriter` or by directly invoking the bridge system
 5. App advanced via `app.update()` for one or more frames
 6. Assertions on component state (`EffectStack`, `BoundEffects`, `StagedEffects`, `Hp`, `Dead`, entity existence)
+
+### Stub kill handlers for death pipeline tests:
+Behaviors 9, 10, 11, 12, and 15 exercise the full death pipeline, which requires domain kill handlers (implemented in waves 9-12). Since wave 8 runs before those waves, integration tests must register **stub kill handlers** in the test app. Each stub kill handler:
+1. Reads `KillYourself<T>` messages (one per entity type: `KillYourself<Cell>`, `KillYourself<Bolt>`, etc.)
+2. For each message: inserts `Dead` on `msg.victim`
+3. Sends `Destroyed<T> { victim: msg.victim, killer: msg.killer, victim_pos: <query Position2D or use hardcoded Vec2>, killer_pos: <query killer Position2D or None>, _marker: PhantomData }`
+4. Sends `DespawnEntity { entity: msg.victim }`
+
+This is the minimal behavior needed to complete the pipeline. The stubs skip all domain-specific logic (invulnerability checks, shield walls, VFX, audio, stats tracking). A single generic stub function `stub_kill_handler::<T: GameEntity + Component>` can serve all entity types.
 
 ### Do NOT test:
 - Individual system unit behavior (covered in waves 4-7 unit tests)

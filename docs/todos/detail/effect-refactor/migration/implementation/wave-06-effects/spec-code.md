@@ -1,54 +1,54 @@
 ## Implementation Spec: Effect — All 30 Effects + Tick Systems + Conditions
 
+### Prerequisites
+
+This wave depends on the completion of:
+- **Wave 2 (Scaffold)**: All types, traits, components, resources, stubs, and plugin wiring must exist. In particular, `EffectSystems::Bridge`, `EffectSystems::Tick`, `EffectSystems::Conditions`, and `EffectSystems::Reset` system sets must exist in `src/effect/sets.rs`.
+- **Wave 3 (RON Assets)**: RON asset files must use new syntax.
+- **Wave 4 (Functions)**: `EffectStack<T>` methods (push, remove, aggregate), walking algorithm, dispatch functions, command extensions, and passive effect trait definitions (`Fireable`, `Reversible`, `PassiveEffect`) must be implemented.
+- **Wave 5 (Triggers)**: All trigger bridge systems and game systems must be implemented. This includes `tick_effect_timers` and `check_node_timer_thresholds` (which are wave 5 scope, NOT wave 6).
+
+Do NOT start wave 6 until waves 2-5 are complete.
+
 ### Domain
 `src/effect/`
 
 ### Failing Tests
-- `src/effect/effects/speed_boost/config.rs` — passive fire/reverse/aggregate tests
-- `src/effect/effects/size_boost/config.rs` — passive fire/reverse/aggregate tests
-- `src/effect/effects/damage_boost/config.rs` — passive fire/reverse/aggregate tests
-- `src/effect/effects/bump_force/config.rs` — passive fire/reverse/aggregate tests
-- `src/effect/effects/quick_stop/config.rs` — passive fire/reverse/aggregate tests
-- `src/effect/effects/vulnerable/config.rs` — passive fire/reverse/aggregate tests
-- `src/effect/effects/piercing/config.rs` — passive fire/reverse/aggregate + PiercingRemaining tests
-- `src/effect/effects/ramping_damage/config.rs` — passive fire/reverse/aggregate + RampingDamageAccumulator tests
-- `src/effect/effects/lose_life/config.rs` — fire sends DamageDealt<Breaker> test
-- `src/effect/effects/time_penalty/config.rs` — fire sends ApplyTimePenalty test
-- `src/effect/effects/die/config.rs` — fire sends KillYourself<T> test
-- `src/effect/effects/spawn_bolts/config.rs` — fire spawns bolts tests
-- `src/effect/effects/chain_bolt/config.rs` — fire spawns tethered bolt test
-- `src/effect/effects/mirror_protocol/config.rs` — fire spawns mirrored bolt tests
-- `src/effect/effects/random_effect/config.rs` — fire delegates to random selection tests
-- `src/effect/effects/explode/config.rs` — fire damages cells in range test
-- `src/effect/effects/piercing_beam/config.rs` — fire damages cells in beam test
-- `src/effect/effects/shockwave/config.rs` — fire spawns shockwave entity test
-- `src/effect/effects/shockwave/systems.rs` — tick/sync/damage/despawn tests
-- `src/effect/effects/chain_lightning/config.rs` — fire spawns chain entity test
-- `src/effect/effects/chain_lightning/systems.rs` — tick state machine tests
-- `src/effect/effects/anchor/config.rs` — fire/reverse tests
-- `src/effect/effects/anchor/systems.rs` — tick plant/unplant state machine tests
-- `src/effect/effects/attraction/config.rs` — fire/reverse tests
-- `src/effect/effects/attraction/systems.rs` — apply attraction force tests
-- `src/effect/effects/pulse/config.rs` — fire/reverse tests
-- `src/effect/effects/pulse/systems.rs` — tick periodic emission tests
-- `src/effect/effects/shield/config.rs` — fire/reverse tests
-- `src/effect/effects/shield/systems.rs` — tick countdown + reflection cost tests
-- `src/effect/effects/second_wind/config.rs` — fire/reverse tests
-- `src/effect/effects/flash_step/config.rs` — fire/reverse toggle tests
-- `src/effect/effects/circuit_breaker/config.rs` — fire counter + reward tests
-- `src/effect/effects/entropy_engine/config.rs` — fire counter + random pool tests
-- `src/effect/effects/entropy_engine/systems.rs` — reset counter on node start test
-- `src/effect/effects/gravity_well/config.rs` — fire spawns well entity test
-- `src/effect/effects/gravity_well/systems.rs` — tick force + despawn tests
-- `src/effect/effects/phantom_bolt/config.rs` — fire spawns phantom entity test
-- `src/effect/effects/phantom_bolt/systems.rs` — tick lifetime + despawn tests
-- `src/effect/effects/tether_beam/config.rs` — fire spawns beam entity test
-- `src/effect/effects/tether_beam/systems.rs` — tick damage + cleanup tests
-- `src/effect/effects/ramping_damage/systems.rs` — reset accumulator on node start test
-- `src/effect/conditions/evaluate_conditions.rs` — condition transition fire/reverse tests
-- `src/effect/conditions/node_active.rs` — NodeActive evaluator tests
-- `src/effect/conditions/shield_active.rs` — ShieldActive evaluator tests
-- `src/effect/conditions/combo_active.rs` — ComboActive evaluator tests
+- `src/effect/effects/speed_boost/tests.rs` — passive fire/reverse/aggregate tests
+- `src/effect/effects/size_boost/tests.rs` — passive fire/reverse/aggregate tests
+- `src/effect/effects/damage_boost/tests.rs` — passive fire/reverse/aggregate tests
+- `src/effect/effects/bump_force/tests.rs` — passive fire/reverse/aggregate tests
+- `src/effect/effects/quick_stop/tests.rs` — passive fire/reverse/aggregate tests
+- `src/effect/effects/vulnerable/tests.rs` — passive fire/reverse/aggregate tests
+- `src/effect/effects/piercing/tests.rs` — passive fire/reverse/aggregate + PiercingRemaining tests
+- `src/effect/effects/ramping_damage/tests.rs` — passive fire/reverse/aggregate + RampingDamageAccumulator tests
+- `src/effect/effects/lose_life/tests.rs` — fire sends DamageDealt<Breaker> test
+- `src/effect/effects/time_penalty/tests.rs` — fire sends ApplyTimePenalty test
+- `src/effect/effects/die/tests.rs` — fire sends KillYourself<T> test
+- `src/effect/effects/spawn_bolts/tests.rs` — fire spawns bolts tests
+- `src/effect/effects/chain_bolt/tests.rs` — fire spawns tethered bolt test
+- `src/effect/effects/mirror_protocol/tests.rs` — fire spawns mirrored bolt tests
+- `src/effect/effects/random_effect/tests.rs` — fire delegates to random selection tests
+- `src/effect/effects/explode/tests.rs` — fire damages cells in range test
+- `src/effect/effects/piercing_beam/tests.rs` — fire damages cells in beam test
+- `src/effect/effects/shockwave/tests.rs` — fire spawns shockwave entity + tick/sync/damage/despawn tests
+- `src/effect/effects/chain_lightning/tests.rs` — fire spawns chain entity + tick state machine tests
+- `src/effect/effects/anchor/tests.rs` — fire/reverse + tick plant/unplant state machine tests
+- `src/effect/effects/attraction/tests.rs` — fire/reverse + apply attraction force tests
+- `src/effect/effects/pulse/tests.rs` — fire/reverse + tick periodic emission tests
+- `src/effect/effects/shield/tests.rs` — fire/reverse + tick countdown + reflection cost tests
+- `src/effect/effects/second_wind/tests.rs` — fire/reverse tests
+- `src/effect/effects/flash_step/tests.rs` — fire/reverse toggle tests
+- `src/effect/effects/circuit_breaker/tests.rs` — fire counter + reward tests
+- `src/effect/effects/entropy_engine/tests.rs` — fire counter + random pool tests
+- `src/effect/effects/gravity_well/tests.rs` — fire spawns well entity + tick force + despawn tests
+- `src/effect/effects/phantom_bolt/tests.rs` — fire spawns phantom entity + tick lifetime + despawn tests (note: directory name is `phantom_bolt` but the config struct is `SpawnPhantomConfig`)
+- `src/effect/effects/tether_beam/tests.rs` — fire spawns beam entity + tick damage + cleanup tests
+- `src/effect/effects/ramping_damage/tests.rs` — reset accumulator on node start test (shares file with passive tests)
+- `src/effect/conditions/evaluate_conditions/tests.rs` — condition transition fire/reverse tests
+- `src/effect/conditions/node_active.rs` — NodeActive evaluator tests (inline)
+- `src/effect/conditions/shield_active.rs` — ShieldActive evaluator tests (inline)
+- `src/effect/conditions/combo_active.rs` — ComboActive evaluator tests (inline)
 - `src/effect/dispatch/fire_dispatch.rs` — 30 match arm dispatch tests
 - `src/effect/dispatch/reverse_dispatch.rs` — 16 match arm dispatch tests
 
@@ -207,11 +207,11 @@ Each passive effect follows the identical pattern. Implement `Fireable`, `Revers
 **17. AnchorConfig**
 - File: `src/effect/effects/anchor/config.rs`
 - Struct: `AnchorConfig { bump_force_multiplier: OrderedFloat<f32>, perfect_window_multiplier: OrderedFloat<f32>, plant_delay: OrderedFloat<f32> }`
-- `Fireable::fire`: insert `AnchorActive { bump_force_multiplier: self.bump_force_multiplier.0, perfect_window_multiplier: self.perfect_window_multiplier.0, plant_delay: self.plant_delay.0 }` on entity
-- `Reversible::reverse`: remove `AnchorActive`, `AnchorTimer`, `AnchorPlanted` from entity. If `AnchorPlanted` was present, also remove the bump force boost from `EffectStack<BumpForceConfig>` using the same chip source string.
+- `Fireable::fire`: insert `AnchorActive { source: source.to_string(), bump_force_multiplier: self.bump_force_multiplier.0, perfect_window_multiplier: self.perfect_window_multiplier.0, plant_delay: self.plant_delay.0 }` on entity
+- `Reversible::reverse`: remove `AnchorActive`, `AnchorTimer`, `AnchorPlanted` from entity. If `AnchorPlanted` was present, also remove the bump force boost from `EffectStack<BumpForceConfig>` using the source string stored in `AnchorActive.source`.
 - `register`: register `tick_anchor` in `EffectSystems::Tick`
 - Components in `src/effect/effects/anchor/components.rs`:
-  - `AnchorActive { bump_force_multiplier: f32, perfect_window_multiplier: f32, plant_delay: f32 }`
+  - `AnchorActive { source: String, bump_force_multiplier: f32, perfect_window_multiplier: f32, plant_delay: f32 }` — the `source` field stores the chip source string so that `tick_anchor` can push/remove `BumpForceConfig` entries with the correct source key
   - `AnchorTimer(pub f32)`
   - `AnchorPlanted` — marker
 
@@ -237,9 +237,9 @@ Each passive effect follows the identical pattern. Implement `Fireable`, `Revers
 **20. EntropyConfig**
 - File: `src/effect/effects/entropy_engine/config.rs`
 - Struct: `EntropyConfig { max_effects: u32, pool: Vec<(OrderedFloat<f32>, Box<EffectType>)> }`
-- `Fireable::fire`: designed to be inside `When(Killed(Cell), ...)`. If `EntropyCounter` present, increment `count` (capped at `max_effects`). If absent, insert with `count = 1`. For `count` times: pick weighted random from pool and call its fire. Counter resets to 0 on fire (EntropyEngine resets internally when fired).
+- `Fireable::fire`: designed to be inside `When(Killed(Cell), ...)`. If `EntropyCounter` present, increment `count` (capped at `max_effects`). If absent, insert with `count = 1`. For `count` times: pick weighted random from pool and call its fire. EntropyEngine resets its counter internally when fired — the counter resets to 0 after firing all effects.
 - `Reversible::reverse`: remove `EntropyCounter` from entity
-- `register`: register `reset_entropy_counter` on `OnEnter(NodeState::Playing)` in `EffectSystems::Reset`
+- No `register` override — EntropyEngine resets internally when fired, so no separate reset system is needed
 - Component in `src/effect/effects/entropy_engine/components.rs`:
   - `EntropyCounter { count: u32, max_effects: u32, pool: Vec<(OrderedFloat<f32>, Box<EffectType>)> }`
 
@@ -357,7 +357,7 @@ Each passive effect follows the identical pattern. Implement `Fireable`, `Revers
 
 #### GROUP H: Tick Systems
 
-All tick systems run in `FixedUpdate`, in `EffectSystems::Tick`, with `run_if(in_state(NodeState::Playing))`.
+All tick systems run in `FixedUpdate`, in `EffectSystems::Tick`, with `run_if(in_state(NodeState::Playing))`. The `EffectSystems::Tick` set is ordered after `EffectSystems::Bridge` by the set-level ordering constraint established in wave 2. Individual tick systems do NOT need additional `.after()` calls beyond those required for chaining within the same effect (e.g., the 4 shockwave systems are chained together).
 
 **tick_shockwave**
 - File: `src/effect/effects/shockwave/systems.rs`
@@ -394,9 +394,9 @@ All tick systems run in `FixedUpdate`, in `EffectSystems::Tick`, with `run_if(in
 - File: `src/effect/effects/anchor/systems.rs`
 - Query: entities with `AnchorActive`
 - Logic: state machine based on breaker velocity:
-  1. Moving (nonzero velocity or dashing): remove `AnchorTimer` and `AnchorPlanted`. If was planted, remove bump force boost from `EffectStack<BumpForceConfig>`.
+  1. Moving (nonzero velocity or dashing): remove `AnchorTimer` and `AnchorPlanted`. If was planted, remove bump force boost from `EffectStack<BumpForceConfig>` using `AnchorActive.source` as the source key.
   2. Stationary + no timer + not planted: insert `AnchorTimer(plant_delay)`.
-  3. Stationary + timer active: decrement by `dt`. When reaches 0: remove timer, insert `AnchorPlanted`, push bump force boost to `EffectStack<BumpForceConfig>` using same chip source string as Anchor effect.
+  3. Stationary + timer active: decrement by `dt`. When reaches 0: remove timer, insert `AnchorPlanted`, push bump force boost to `EffectStack<BumpForceConfig>` using `AnchorActive.source` as the source key with `BumpForceConfig { multiplier: OrderedFloat(AnchorActive.bump_force_multiplier) }`.
   4. Stationary + planted: no-op.
 - Does NOT modify perfect window directly — bump timing system reads `AnchorActive.perfect_window_multiplier` when `AnchorPlanted` present
 
@@ -414,7 +414,7 @@ All tick systems run in `FixedUpdate`, in `EffectSystems::Tick`, with `run_if(in
 - File: `src/effect/effects/shield/systems.rs`
 - Query: entities with `ShieldWall`, `ShieldDuration`, `ShieldReflectionCost`
 - Logic: decrement `ShieldDuration.0` by `dt`. Read bolt-wall collision messages — for each bounce involving this shield wall, subtract `ShieldReflectionCost.0` from `ShieldDuration.0`. When `ShieldDuration.0 <= 0.0`, despawn entity.
-- Schedule: after wall collision systems
+- Schedule: in `EffectSystems::Tick` — no additional `.after()` needed beyond set-level ordering. The set runs after Bridge, which runs after collision systems.
 
 **tick_phantom_lifetime**
 - File: `src/effect/effects/phantom_bolt/systems.rs`
@@ -453,11 +453,7 @@ All tick systems run in `FixedUpdate`, in `EffectSystems::Tick`, with `run_if(in
 - Logic: set value to `OrderedFloat(0.0)`
 - Schedule: `OnEnter(NodeState::Playing)`
 
-**reset_entropy_counter**
-- File: `src/effect/effects/entropy_engine/systems.rs`
-- Query: entities with `EntropyCounter`
-- Logic: set `count` to 0. Does NOT remove component, does NOT modify pool.
-- Schedule: `OnEnter(NodeState::Playing)`
+Note: There is NO `reset_entropy_counter` system. EntropyEngine resets its counter internally when fired (counter resets to 0 after firing all effects in `EntropyConfig::fire()`). No separate reset system is needed.
 
 ---
 
@@ -507,11 +503,15 @@ All tick systems run in `FixedUpdate`, in `EffectSystems::Tick`, with `run_if(in
 - File: `src/effect/dispatch/fire_dispatch.rs`
 - Function: takes an `EffectType`, entity, source, world. Match on all 30 variants, call `config.fire(entity, source, world)` for each.
 - Every arm has the same shape: `EffectType::Variant(config) => config.fire(entity, source, world)`
+- This is a single `match` statement with exactly 30 arms — one per `EffectType` variant. All arms are mechanical dispatch, no branching logic within any arm.
 
 **reverse_dispatch**
 - File: `src/effect/dispatch/reverse_dispatch.rs`
 - Function: takes a `ReversibleEffectType`, entity, source, world. Match on all 16 variants, call `config.reverse(entity, source, world)` for each.
 - Every arm has the same shape: `ReversibleEffectType::Variant(config) => config.reverse(entity, source, world)`
+- This is a single `match` statement with exactly 16 arms — one per `ReversibleEffectType` variant. All arms are mechanical dispatch, no branching logic within any arm.
+
+**Dispatch guidance**: `fire_dispatch` and `reverse_dispatch` are the central routing points. They must be exhaustive — every variant of their respective enums must have an arm. When adding a new effect, both files must be updated (fire for all effects, reverse only for reversible effects). The match statements are intentionally flat and repetitive — do not attempt to DRY them up with macros or indirection.
 
 ---
 
@@ -526,6 +526,7 @@ All tick systems run in `FixedUpdate`, in `EffectSystems::Tick`, with `run_if(in
 - Fire methods use exclusive `&mut World` access. They are called from the tree walker/dispatch, not from systems.
 - Follow the folder-per-effect pattern: `src/effect/effects/<name>/` with `mod.rs`, `config.rs`, optionally `components.rs`, `systems.rs`
 - Module `mod.rs` files are wiring-only: `pub(crate) mod config;` etc. + re-exports
+- Tests go in `effects/<name>/tests.rs` (directory module pattern), NOT in `config.rs`
 
 ### RON Data
 - No new RON files in this wave. All config values come from the effect tree definitions in `BoundEffects`/`StagedEffects`, which are loaded from existing chip/augment RON files.
@@ -538,17 +539,18 @@ All tick systems run in `FixedUpdate`, in `EffectSystems::Tick`, with `run_if(in
 - `tick_anchor`
 - `apply_attraction`
 - `tick_pulse`
-- `tick_shield_duration` (after wall collision systems)
+- `tick_shield_duration`
 - `tick_phantom_lifetime`
 - `tick_tether_beam_damage` -> `cleanup_tether_beams` (chained)
 - `tick_gravity_wells` -> `despawn_expired_wells` (chained)
+
+Note: `tick_effect_timers` and `check_node_timer_thresholds` are wave 5 scope and already implemented by this point. They are NOT part of this wave.
 
 **FixedUpdate, EffectSystems::Conditions** (after EffectSystems::Tick):
 - `evaluate_conditions`
 
 **OnEnter(NodeState::Playing), EffectSystems::Reset**:
 - `reset_ramping_damage`
-- `reset_entropy_counter`
 
 ### Wiring
 
@@ -575,7 +577,7 @@ PulseConfig::register(app);        // registers tick_pulse
 AnchorConfig::register(app);       // registers tick_anchor
 AttractionConfig::register(app);   // registers apply_attraction
 CircuitBreakerConfig::register(app); // no-op
-EntropyConfig::register(app);      // registers reset_entropy_counter
+EntropyConfig::register(app);      // no-op (EntropyEngine resets internally when fired)
 ShockwaveConfig::register(app);    // registers 4 chained shockwave systems
 ExplodeConfig::register(app);      // no-op
 ChainLightningConfig::register(app); // registers tick_chain_lightning
@@ -646,6 +648,8 @@ pub(crate) mod combo_active;
 - Do NOT add: trigger bridge systems (those belong to Wave 5)
 - Do NOT add: death pipeline handlers (those belong to Wave 7)
 - Do NOT add: RON chip definitions (those belong to later integration waves)
+- Do NOT add: `tick_effect_timers` or `check_node_timer_thresholds` (those belong to Wave 5)
+- Do NOT add: `reset_entropy_counter` system (EntropyEngine resets internally when fired — no separate reset system exists)
 - Do NOT implement: non-system helper functions that already exist from prior waves (fire_effect, reverse_effect, walk_effects)
 - fire/reverse methods take `&mut World` — they are called from exclusive-access contexts, not from normal systems
 - The `source` parameter in fire/reverse is `&str`, not `String` — the config clones it when needed (e.g., `source.to_string()` for EffectStack entries)

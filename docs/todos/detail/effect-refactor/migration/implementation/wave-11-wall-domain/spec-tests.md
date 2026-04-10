@@ -3,11 +3,20 @@
 ### Domain
 src/walls/
 
+### Prerequisites
+
+The following must be complete before this wave:
+
+- **Wave 2 (scaffold)**: `GameEntity` trait with `impl GameEntity for Wall {}`, `Hp`, `KilledBy`, `Dead` components, `DamageDealt<T>`, `KillYourself<T>`, `Destroyed<T>`, `DespawnEntity` messages
+- **Wave 7 (death pipeline)**: `apply_damage::<Wall>`, `detect_wall_deaths`, `process_despawn_requests` systems, `DeathPipelineSystems` system set
+- **Wave 5 (triggers)**: Trigger bridge infrastructure including `on_destroyed::<Wall>` bridge
+- **Wave 6 (effects)**: Shield and Second Wind effect `fire()` functions that spawn wall entities
+
 ### Overview
 
 Migrate the wall domain to the unified death pipeline. This involves:
 1. A wall kill handler system that processes `KillYourself<Wall>` messages
-2. Adding `Hp` and `KilledBy` components to destructible wall builders
+2. Shield and second-wind effect `fire()` functions insert `Hp` and `KilledBy` when spawning wall entities
 3. Permanent walls remain unaffected (no Hp, not queryable by damage/death systems)
 4. Shield walls and second-wind walls (effect-spawned, with Hp) work through the death pipeline
 
@@ -17,16 +26,16 @@ Migrate the wall domain to the unified death pipeline. This involves:
 
 #### Wall Kill Handler (`handle_wall_kill`)
 
-The wall kill handler reads `KillYourself<Wall>` messages and performs domain-specific cleanup before confirming the kill. It inserts `Dead`, removes the wall from the spatial index, sends `Destroyed<Wall>` with position data, and sends `DespawnEntity`.
+The wall kill handler reads `KillYourself<Wall>` messages and performs domain-specific cleanup before confirming the kill. It inserts `Dead`, removes the wall's `Aabb2D` component (quadtree auto-deregisters), sends `Destroyed<Wall>` with position data, and sends `DespawnEntity`.
 
 1. **Wall kill handler inserts Dead marker on victim**
-   - Given: A wall entity with `Wall` component, `Hp { current: 0.0, starting: 1.0, max: None }`, `KilledBy { dealer: Some(bolt_entity) }`, at position `Vec2::new(0.0, 300.0)`. A `KillYourself<Wall> { victim: wall_entity, killer: Some(bolt_entity) }` message is pending.
+   - Given: A wall entity with `Wall` component, `Hp { current: 0.0, starting: 1.0, max: None }`, `KilledBy { dealer: Some(bolt_entity) }`, `Position2D(Vec2::new(0.0, 300.0))`. A `KillYourself<Wall> { victim: wall_entity, killer: Some(bolt_entity) }` message is pending.
    - When: `handle_wall_kill` runs
    - Then: The wall entity has the `Dead` component inserted
-   - Edge case: Wall entity that already has `Dead` component -- `KillYourself<Wall>` message is silently ignored (no double-processing, no panic)
+   - Edge case: Wall entity that already has `Dead` component -- `KillYourself<Wall>` message is silently ignored (no double-processing, no panic). The `Without<Dead>` filter on the victim query excludes it.
 
 2. **Wall kill handler sends Destroyed<Wall> with correct positions**
-   - Given: A wall entity with `Wall` component at position `Vec2::new(-200.0, 300.0)`. A killer bolt entity at position `Vec2::new(-180.0, 280.0)`. A `KillYourself<Wall> { victim: wall_entity, killer: Some(bolt_entity) }` message is pending.
+   - Given: A wall entity with `Wall` component, `Position2D(Vec2::new(-200.0, 300.0))`. A killer bolt entity with `Position2D(Vec2::new(-180.0, 280.0))`. A `KillYourself<Wall> { victim: wall_entity, killer: Some(bolt_entity) }` message is pending.
    - When: `handle_wall_kill` runs
    - Then: A `Destroyed<Wall>` message is sent with `victim: wall_entity`, `killer: Some(bolt_entity)`, `victim_pos: Vec2::new(-200.0, 300.0)`, `killer_pos: Some(Vec2::new(-180.0, 280.0))`
    - Edge case: Killer entity has been despawned before the kill handler runs -- `Destroyed<Wall>` is still sent with `killer: Some(bolt_entity)` and `killer_pos: None`
@@ -37,34 +46,47 @@ The wall kill handler reads `KillYourself<Wall>` messages and performs domain-sp
    - Then: A `DespawnEntity { entity: wall_entity }` message is sent
    - Edge case: Environmental kill (killer is None) -- `DespawnEntity` is still sent, `Destroyed<Wall>` has `killer: None` and `killer_pos: None`
 
-4. **Wall kill handler removes wall from spatial index**
-   - Given: A wall entity with `Wall` component registered in the spatial index (has `SpatialEntity` or equivalent spatial component). A `KillYourself<Wall> { victim: wall_entity, killer: Some(bolt_entity) }` message is pending.
+4. **Wall kill handler removes Aabb2D from victim (spatial deregistration)**
+   - Given: A wall entity with `Wall` component and `Aabb2D` component (registered in the quadtree). A `KillYourself<Wall> { victim: wall_entity, killer: Some(bolt_entity) }` message is pending.
    - When: `handle_wall_kill` runs
-   - Then: The wall entity is removed from the spatial index (spatial component removed or entity deregistered) so collision queries no longer find it
-   - Edge case: Wall entity has no spatial index entry (already removed) -- handler does not panic, continues normally
+   - Then: The wall entity's `Aabb2D` component is removed. The quadtree auto-deregisters the entity so collision queries no longer find it.
+   - Edge case: Wall entity has no `Aabb2D` component (already removed) -- handler does not panic, continues normally. The `remove::<Aabb2D>()` command is a no-op on entities without the component.
 
 5. **Wall kill handler processes multiple kills in one frame**
-   - Given: Two wall entities (wall_a at `Vec2::new(-200.0, 300.0)` and wall_b at `Vec2::new(200.0, 300.0)`), each with `Wall` component and Hp. Two `KillYourself<Wall>` messages, one per wall, both with `killer: Some(bolt_entity)`.
+   - Given: Two wall entities (wall_a with `Position2D(Vec2::new(-200.0, 300.0))` and wall_b with `Position2D(Vec2::new(200.0, 300.0))`), each with `Wall` component and Hp. Two `KillYourself<Wall>` messages, one per wall, both with `killer: Some(bolt_entity)`.
    - When: `handle_wall_kill` runs
    - Then: Both wall entities get `Dead` inserted. Two `Destroyed<Wall>` messages sent (one per wall with correct victim_pos). Two `DespawnEntity` messages sent.
    - Edge case: Same bolt kills both walls in one frame -- both `Destroyed<Wall>` messages correctly attribute the same killer entity
 
+6. **Wall kill handler: Fire(Die) path -- wall without Hp killed via KillYourself**
+   - Given: A wall entity with `Wall` component, `Position2D(Vec2::new(0.0, -280.0))`, NO `Hp` component, NO `KilledBy` component. A `KillYourself<Wall> { victim: wall_entity, killer: None }` message is pending (sent directly by `Fire(Die)` bypassing the damage/Hp path).
+   - When: `handle_wall_kill` runs
+   - Then: `Dead` inserted on the wall entity. `Aabb2D` removed. `Destroyed<Wall>` sent with `killer: None`, `victim_pos: Vec2::new(0.0, -280.0)`, `killer_pos: None`. `DespawnEntity` sent.
+   - Note: The kill handler does NOT require `Hp` on the victim. It processes `KillYourself<Wall>` regardless of whether the entity has Hp. The `Fire(Die)` effect sends `KillYourself<Wall>` directly, bypassing detect_wall_deaths which requires Hp.
+
+7. **Wall kill handler: nonexistent victim entity -- no panic**
+   - Given: A `KillYourself<Wall> { victim: stale_entity, killer: None }` message is pending, but `stale_entity` has already been despawned (does not exist in the world).
+   - When: `handle_wall_kill` runs
+   - Then: The message is gracefully skipped. No panic, no error. The system continues processing any remaining messages. In debug builds, a debug warning is logged.
+
 ---
 
-#### Destructible Wall Builder Hp/KilledBy
+#### Shield/Second-Wind Wall Spawning with Hp/KilledBy
 
-Destructible walls (walls that can be damaged and destroyed) must spawn with `Hp` and `KilledBy` components so the unified death pipeline can process them.
+Shield walls and second-wind walls are spawned by their respective effect `fire()` functions. These functions must insert `Hp` and `KilledBy` components when spawning the wall entity, so the entity can participate in the death pipeline.
 
-6. **Destructible wall spawns with Hp(1) and KilledBy(default)**
-   - Given: A destructible wall definition (one-hit wall, e.g., a shield wall or second-wind wall)
-   - When: The wall builder spawns the entity
-   - Then: The entity has `Hp { current: 1.0, starting: 1.0, max: None }` and `KilledBy { dealer: None }` components
+Note: The timer-based expiry systems (`tick_shield_duration`, second-wind bounce handler) still use their existing despawn paths for now. Only the `Fire(Die)` path and `DamageDealt<Wall>` path go through the kill handler. Adding `Hp`/`KilledBy` makes these walls consistent with the death pipeline and enables damage-based destruction as an additional pathway.
+
+8. **Shield wall fire() spawns entity with Hp(1) and KilledBy(default)**
+   - Given: The shield effect's `fire()` function is called to spawn a shield wall
+   - When: The shield wall entity is spawned
+   - Then: The entity has `Hp { current: 1.0, starting: 1.0, max: None }` and `KilledBy { dealer: None }` components alongside existing shield wall components (`Wall`, `ShieldWall`, etc.)
    - Edge case: Hp starting value matches current exactly at spawn time
 
-7. **Destructible wall with higher Hp spawns correctly**
-   - Given: A destructible wall definition with Hp(3) (multi-hit destructible wall)
-   - When: The wall builder spawns the entity
-   - Then: The entity has `Hp { current: 3.0, starting: 3.0, max: None }` and `KilledBy { dealer: None }` components
+9. **Second-wind wall fire() spawns entity with Hp(1) and KilledBy(default)**
+   - Given: The second-wind effect's `fire()` function is called to spawn a second-wind wall
+   - When: The second-wind wall entity is spawned
+   - Then: The entity has `Hp { current: 1.0, starting: 1.0, max: None }` and `KilledBy { dealer: None }` components alongside existing second-wind wall components (`Wall`, `SecondWindWall`, etc.)
    - Edge case: Hp max is None -- no upper bound on healing for walls (matches Hp convention)
 
 ---
@@ -73,19 +95,13 @@ Destructible walls (walls that can be damaged and destroyed) must spawn with `Hp
 
 Permanent walls (side walls, top wall) have no Hp and are not matched by `apply_damage<Wall>` or `detect_wall_deaths`.
 
-8. **Permanent wall has no Hp component**
-   - Given: A permanent wall definition (side wall, top wall)
-   - When: The wall builder spawns the entity
-   - Then: The entity has `Wall` component but does NOT have `Hp` or `KilledBy` components
-   - Edge case: Permanent wall is never matched by `Query<..., With<Wall>, Without<Dead>>` that also requires `&Hp` -- the missing `Hp` component excludes it from the query
+10. **Permanent wall has no Hp component**
+    - Given: A permanent wall definition (side wall, top wall)
+    - When: The wall spawn system spawns the entity
+    - Then: The entity has `Wall` component but does NOT have `Hp` or `KilledBy` components
+    - Edge case: Permanent wall is never matched by `Query<..., With<Wall>, Without<Dead>>` that also requires `&Hp` -- the missing `Hp` component excludes it from the query
 
-9. **DamageDealt<Wall> targeting a permanent wall is silently dropped**
-   - Given: A permanent wall entity with `Wall` component and no `Hp` component. A `DamageDealt<Wall> { target: permanent_wall_entity, amount: 10.0, dealer: Some(bolt_entity), source_chip: None }` message is pending.
-   - When: `apply_damage::<Wall>` runs
-   - Then: Nothing happens -- the permanent wall is not queryable (no `Hp` component) so the message is effectively dropped. No panic, no error, no log.
-   - Edge case: Multiple `DamageDealt<Wall>` messages targeting the same permanent wall in one frame -- all silently dropped
-
-10. **detect_wall_deaths does not process permanent walls**
+11. **detect_wall_deaths does not process permanent walls**
     - Given: A permanent wall entity with `Wall` component, no `Hp` component, no `KilledBy` component
     - When: `detect_wall_deaths` runs
     - Then: No `KillYourself<Wall>` message is sent for the permanent wall. The system's query requires `&Hp` which excludes the permanent wall.
@@ -97,20 +113,20 @@ Permanent walls (side walls, top wall) have no Hp and are not matched by `apply_
 
 Shield walls are spawned by the Shield effect with `Hp(1)` (conceptually one-shot for the death pipeline path when destroyed by damage, though their primary expiry is timer-based via `tick_shield_duration`). When a shield wall is killed through the death pipeline (e.g., by a `Fire(Die)` effect), it flows through `KillYourself<Wall>` like any destructible wall.
 
-11. **Shield wall with Hp works through apply_damage**
-    - Given: A shield wall entity with `Wall`, `ShieldWall`, `Hp { current: 1.0, starting: 1.0, max: None }`, `KilledBy { dealer: None }`, at position `Vec2::new(0.0, -280.0)`. A `DamageDealt<Wall> { target: shield_wall_entity, amount: 1.0, dealer: Some(bolt_entity), source_chip: None }` message is pending.
+12. **Shield wall with Hp works through apply_damage**
+    - Given: A shield wall entity with `Wall`, `ShieldWall`, `Hp { current: 1.0, starting: 1.0, max: None }`, `KilledBy { dealer: None }`, `Position2D(Vec2::new(0.0, -280.0))`. A `DamageDealt<Wall> { target: shield_wall_entity, amount: 1.0, dealer: Some(bolt_entity), source_chip: None }` message is pending.
     - When: `apply_damage::<Wall>` runs
     - Then: `Hp.current` is decremented to `0.0`. `KilledBy.dealer` is set to `Some(bolt_entity)`.
     - Edge case: Shield wall takes fractional damage (0.5) from an effect -- Hp decrements from 1.0 to 0.5, KilledBy is NOT set (not a killing blow)
 
-12. **Shield wall death detected after Hp reaches zero**
+13. **Shield wall death detected after Hp reaches zero**
     - Given: A shield wall entity with `Wall`, `ShieldWall`, `Hp { current: 0.0, starting: 1.0, max: None }`, `KilledBy { dealer: Some(bolt_entity) }`, without `Dead`
     - When: `detect_wall_deaths` runs
     - Then: A `KillYourself<Wall> { victim: shield_wall_entity, killer: Some(bolt_entity) }` message is sent
     - Edge case: Shield wall already has `Dead` -- `detect_wall_deaths` skips it (Without<Dead> filter)
 
-13. **Shield wall kill handler completes the death pipeline**
-    - Given: A shield wall entity with `Wall`, `ShieldWall`, at position `Vec2::new(0.0, -280.0)`. A `KillYourself<Wall> { victim: shield_wall_entity, killer: Some(bolt_entity) }` message is pending. Bolt entity at position `Vec2::new(10.0, -260.0)`.
+14. **Shield wall kill handler completes the death pipeline**
+    - Given: A shield wall entity with `Wall`, `ShieldWall`, `Position2D(Vec2::new(0.0, -280.0))`. A `KillYourself<Wall> { victim: shield_wall_entity, killer: Some(bolt_entity) }` message is pending. Bolt entity with `Position2D(Vec2::new(10.0, -260.0))`.
     - When: `handle_wall_kill` runs
     - Then: `Dead` inserted on shield wall, `Destroyed<Wall> { victim: shield_wall_entity, killer: Some(bolt_entity), victim_pos: Vec2::new(0.0, -280.0), killer_pos: Some(Vec2::new(10.0, -260.0)) }` sent, `DespawnEntity { entity: shield_wall_entity }` sent
     - Edge case: Shield wall expires via timer before kill handler processes KillYourself -- if entity is already despawned, handler should not panic (use defensive entity access)
@@ -119,17 +135,17 @@ Shield walls are spawned by the Shield effect with `Hp(1)` (conceptually one-sho
 
 #### Destructible Wall End-to-End: Full Pipeline
 
-14. **Destructible wall e2e: Hp(1), DamageDealt<Wall>, full pipeline to despawn**
-    - Given: A destructible wall entity with `Wall`, `Hp { current: 1.0, starting: 1.0, max: None }`, `KilledBy { dealer: None }`, at position `Vec2::new(100.0, 300.0)`. A bolt entity at position `Vec2::new(100.0, 280.0)`.
+15. **Destructible wall e2e: Hp(1), DamageDealt<Wall>, full pipeline to despawn**
+    - Given: A destructible wall entity with `Wall`, `Hp { current: 1.0, starting: 1.0, max: None }`, `KilledBy { dealer: None }`, `Position2D(Vec2::new(100.0, 300.0))`. A bolt entity with `Position2D(Vec2::new(100.0, 280.0))`.
     - When: `DamageDealt<Wall> { target: wall_entity, amount: 1.0, dealer: Some(bolt_entity), source_chip: None }` is sent
     - Then (after apply_damage): `Hp.current == 0.0`, `KilledBy.dealer == Some(bolt_entity)`
     - Then (after detect_wall_deaths): `KillYourself<Wall> { victim: wall_entity, killer: Some(bolt_entity) }` sent
-    - Then (after handle_wall_kill): `Dead` inserted, wall removed from spatial index, `Destroyed<Wall>` sent with `victim_pos: Vec2::new(100.0, 300.0)` and `killer_pos: Some(Vec2::new(100.0, 280.0))`, `DespawnEntity` sent
+    - Then (after handle_wall_kill): `Dead` inserted, wall's `Aabb2D` removed, `Destroyed<Wall>` sent with `victim_pos: Vec2::new(100.0, 300.0)` and `killer_pos: Some(Vec2::new(100.0, 280.0))`, `DespawnEntity` sent
     - Then (after process_despawn_requests): wall entity is despawned from the world
     - Edge case: Bolt despawns between damage and despawn processing -- pipeline still completes, killer_pos may be None in Destroyed<Wall> if bolt is gone by kill handler time
 
-15. **Destructible wall e2e: Hp(3), three damage messages, dies on third**
-    - Given: A destructible wall entity with `Wall`, `Hp { current: 3.0, starting: 3.0, max: None }`, `KilledBy { dealer: None }`, at position `Vec2::new(-100.0, 300.0)`. Bolt entities bolt_a, bolt_b, bolt_c.
+16. **Destructible wall e2e: Hp(3), three damage messages, dies on third**
+    - Given: A destructible wall entity with `Wall`, `Hp { current: 3.0, starting: 3.0, max: None }`, `KilledBy { dealer: None }`, `Position2D(Vec2::new(-100.0, 300.0))`. Bolt entities bolt_a, bolt_b, bolt_c.
     - When: Three `DamageDealt<Wall>` messages are sent in sequence across three frames:
       - Frame 1: `{ target: wall_entity, amount: 1.0, dealer: Some(bolt_a) }` -- Hp goes to 2.0
       - Frame 2: `{ target: wall_entity, amount: 1.0, dealer: Some(bolt_b) }` -- Hp goes to 1.0
@@ -137,11 +153,11 @@ Shield walls are spawned by the Shield effect with `Hp(1)` (conceptually one-sho
     - Then (frame 3): `KilledBy.dealer == Some(bolt_c)` (third bolt gets the kill credit). `detect_wall_deaths` sends `KillYourself<Wall>`. Kill handler completes the pipeline with `killer: Some(bolt_c)`.
     - Edge case: Two damage messages in the same frame total enough to kill -- only the first message that crosses zero sets KilledBy (first kill wins)
 
-16. **Dead prevents double-processing of already-dead wall**
+17. **Dead prevents double-processing of already-dead wall**
     - Given: A destructible wall entity with `Wall`, `Hp { current: 0.0, starting: 1.0, max: None }`, `KilledBy { dealer: Some(bolt_entity) }`, and `Dead` component already inserted. A `DamageDealt<Wall> { target: wall_entity, amount: 1.0, dealer: Some(other_bolt) }` message is pending.
     - When: `apply_damage::<Wall>` runs, then `detect_wall_deaths` runs
     - Then: Neither system processes this wall entity -- the `Without<Dead>` filter excludes it from both queries. No additional `KillYourself<Wall>` message is sent.
-    - Edge case: Dead wall that also receives a `KillYourself<Wall>` message (duplicate kill request) -- the kill handler should check for Dead and skip the entity (idempotent)
+    - Edge case: Dead wall that also receives a `KillYourself<Wall>` message (duplicate kill request) -- the kill handler checks `Without<Dead>` and skips the entity (idempotent)
 
 ---
 
@@ -160,10 +176,12 @@ All types below are defined by the unified death pipeline and should already exi
 - `Wall` -- `#[derive(Component)]` -- entity marker. From `src/walls/components.rs`.
 - `ShieldWall` -- `#[derive(Component)]` -- marker for shield wall entities. From `src/effect/effects/shield/`.
 - `SecondWindWall` -- `#[derive(Component)]` -- marker for second-wind wall entities. From `src/effect/effects/second_wind/`.
+- `Position2D(Vec2)` -- `#[derive(Component)]` -- 2D position component. From `rantzsoft_spatial2d`.
+- `Aabb2D` -- `#[derive(Component)]` -- axis-aligned bounding box for spatial indexing. From `rantzsoft_spatial2d`. Removing this component auto-deregisters the entity from the quadtree.
 
 ### Messages
 
-No new message types. All messages used (`DamageDealt<Wall>`, `KillYourself<Wall>`, `Destroyed<Wall>`, `DespawnEntity`) are generic instantiations of existing pipeline types created in Wave 7.
+No new message types. All messages used (`DamageDealt<Wall>`, `KillYourself<Wall>`, `Destroyed<Wall>`, `DespawnEntity`) are generic instantiations of existing pipeline types created in Wave 2/7.
 
 ### Reference Files
 
@@ -186,13 +204,13 @@ For test patterns, follow the test structure established in Wave 7 (death pipeli
 
 ### Constraints
 
-- Tests for the wall kill handler go in: `src/walls/systems/handle_wall_kill.rs` (new file -- system + tests, or directory module if tests exceed threshold)
-- Tests for destructible wall builder Hp/KilledBy go in: the existing wall builder test file (wherever the wall builder is defined in `src/walls/`)
-- Tests for permanent wall exclusion go alongside the wall kill handler tests or builder tests as appropriate
+- Tests for the wall kill handler go in: `src/walls/systems/handle_wall_kill/tests.rs` (directory module)
+- Tests for shield wall / second-wind wall spawning with Hp/KilledBy go in: the existing test files for the shield and second-wind effect `fire()` functions respectively
+- Tests for permanent wall exclusion go alongside the wall kill handler tests (they exercise the query filter behavior)
 - Tests for shield wall / second-wind wall through-pipeline go in the wall kill handler test file (they exercise the same kill handler)
 - Do NOT test: `apply_damage::<Wall>` or `detect_wall_deaths` in isolation -- those are generic pipeline systems tested in Wave 7. This wave tests the wall-domain-specific kill handler and builder changes.
 - Do NOT test: `on_destroyed::<Wall>` (death bridge to effect triggers) -- that is an effect domain concern tested in the trigger bridge wave.
 - Do NOT test: `tick_shield_duration` or shield timer expiry -- that is the shield effect's concern, not the death pipeline.
 - Do NOT test: bolt-wall collision producing `DamageDealt<Wall>` -- that is the collision system's concern, tested in its own wave.
-- Do NOT modify: any existing test files outside `src/walls/`
-- The e2e tests (behaviors 14-16) are integration tests that compose the full pipeline: they set up a minimal app with `apply_damage::<Wall>`, `detect_wall_deaths`, `handle_wall_kill`, and `process_despawn_requests` to verify the chain from damage to despawn.
+- Do NOT modify: any existing test files outside `src/walls/` and the shield/second-wind effect test files
+- The e2e tests (behaviors 15-17) are integration tests that compose the full pipeline: they set up a minimal app with `apply_damage::<Wall>`, `detect_wall_deaths`, `handle_wall_kill`, and `process_despawn_requests` to verify the chain from damage to despawn.
