@@ -31,4 +31,4 @@
 | [Die](die.md) | `Die` | Send entity into death pipeline. Not reversible. |
 | [CircuitBreaker](circuit-breaker.md) | `CircuitBreaker(CircuitBreakerConfig)` | Charge counter -- fires reward (spawn + shockwave) at threshold, resets. Reversible. |
 | [EntropyEngine](entropy-engine.md) | `EntropyEngine(EntropyConfig)` | Escalating chaos. Fires more random effects as cells die. Counter resets each node. Reversible. |
-| [RandomEffect](random-effect.md) | `RandomEffect([(RandomWeight, Effect), ...])` | Weighted random selection. Fires exactly one from pool. Not reversible. |
+| [RandomEffect](random-effect.md) | `RandomEffect([(f32, Effect), ...])` | Weighted random selection. Fires exactly one from pool. Not reversible. |
