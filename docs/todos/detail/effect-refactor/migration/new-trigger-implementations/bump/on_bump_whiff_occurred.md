@@ -22,8 +22,8 @@ FixedUpdate, in `EffectSystems::Bridge`, after `BreakerSystems::GradeBump`, with
 # Behavior
 1. Read each `BumpWhiffed` message (unit struct, no fields).
 2. Build context: `TriggerContext::default()`.
-3. Iterate all entities with `(Entity, &BoundEffects, &mut StagedEffects)`.
-4. For each entity, call `evaluate_bound_effects` and `evaluate_staged_effects` with `Trigger::BumpWhiffOccurred`.
+3. Iterate all entities with `(Entity, &BoundEffects, &StagedEffects)`.
+4. For each entity, call `walk_effects(entity, &Trigger::BumpWhiffOccurred, &context, bound, staged, &mut commands)`.
 
 This bridge does NOT:
 - Modify any entities

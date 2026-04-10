@@ -15,7 +15,7 @@ Die
 4. Fire does NOT despawn the entity.
 5. Fire does NOT check invulnerability.
 6. Fire does NOT fire death triggers.
-7. All of that is the death pipeline's job (`KillYourself` -> domain handler -> `Destroyed` -> `bridge_destroyed` -> triggers -> `DespawnEntity`).
+7. All of that is the death pipeline's job (`KillYourself` -> domain handler -> `Destroyed` -> `on_destroyed` -> triggers -> `DespawnEntity`).
 
 # Reverse
 Not applicable -- Die is not reversible.

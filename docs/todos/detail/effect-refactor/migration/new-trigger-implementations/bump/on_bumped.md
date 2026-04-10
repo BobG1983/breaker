@@ -11,10 +11,9 @@ on_bumped
 Local — walks only the bolt entity and the breaker entity from the message.
 
 # TriggerContext
-For bolt entity: `TriggerContext { breaker: Some(msg.breaker), ..default() }`
-For breaker entity: `TriggerContext { bolt: msg.bolt, ..default() }` (bolt may be None if msg.bolt is None — skip bolt walk in that case)
+`TriggerContext::Bump { bolt: msg.bolt, breaker: msg.breaker }`
 
-Note: The current implementation only walks the bolt entity (via `query.get_mut(bolt)`). The new implementation should walk both bolt and breaker as participants. If `msg.bolt` is `None`, skip the bolt walk entirely but still walk the breaker.
+If `msg.bolt` is `None`, skip the bolt walk entirely but still walk the breaker.
 
 # Source Location
 `src/effect/triggers/bump/bridges.rs`
@@ -25,16 +24,15 @@ FixedUpdate, in `EffectSystems::Bridge`, after `BreakerSystems::GradeBump`, with
 # Behavior
 1. Read each `BumpPerformed` message.
 2. Check grade: if grade is `Perfect`, `Early`, or `Late` (any success), proceed. This trigger fires on ALL successful bumps regardless of timing grade.
-3. If `msg.bolt` is `Some(bolt)`:
-   a. Query bolt entity for `(Entity, &BoundEffects, &mut StagedEffects)`.
-   b. Build context with `breaker: Some(msg.breaker)`.
-   c. Call `evaluate_bound_effects` and `evaluate_staged_effects` with `Trigger::Bumped` on the bolt entity.
-4. Query breaker entity (`msg.breaker`) for `(Entity, &BoundEffects, &mut StagedEffects)`.
-5. Build context with `bolt: msg.bolt`.
-6. Call `evaluate_bound_effects` and `evaluate_staged_effects` with `Trigger::Bumped` on the breaker entity.
+3. Build context: `TriggerContext::Bump { bolt: msg.bolt, breaker: msg.breaker }`.
+4. If `msg.bolt` is `Some(bolt)`:
+   a. Query bolt entity for `(Entity, &BoundEffects, &StagedEffects)`.
+   b. Call `walk_effects(bolt, &Trigger::Bumped, &context, bound, staged, &mut commands)`.
+5. Query breaker entity for `(Entity, &BoundEffects, &StagedEffects)`.
+6. Call `walk_effects(breaker, &Trigger::Bumped, &context, bound, staged, &mut commands)`.
 
 This bridge does NOT:
-- Modify any entities
+- Modify any entities or components directly — all mutations are deferred via commands
 - Send any messages
 - Decide bump grades
 - Handle game logic

@@ -33,10 +33,12 @@ Bridge systems that translate game events to trigger dispatches. Each reads a me
 | `on_node_end_occurred` | Node state transition |
 | `on_node_timer_threshold_occurred` | `NodeTimerThresholdCrossed` |
 | `on_time_expires` | `EffectTimerExpired` |
-| `bridge_destroyed::<Cell>` | `Destroyed<Cell>` |
-| `bridge_destroyed::<Bolt>` | `Destroyed<Bolt>` |
-| `bridge_destroyed::<Wall>` | `Destroyed<Wall>` |
-| `bridge_destroyed::<Breaker>` | `Destroyed<Breaker>` |
+| `on_destroyed::<Cell>` | `Destroyed<Cell>` (from previous frame) |
+| `on_destroyed::<Bolt>` | `Destroyed<Bolt>` (from previous frame) |
+| `on_destroyed::<Wall>` | `Destroyed<Wall>` (from previous frame) |
+| `on_destroyed::<Breaker>` | `Destroyed<Breaker>` (from previous frame) |
+
+Note: Death bridges read `Destroyed<T>` messages sent by domain kill handlers in the previous frame. This is the standard Bevy message pattern — messages persist for one frame. Death-triggered effects have a one-frame delay, which is acceptable at 60fps.
 
 ## EffectSystems::Tick
 

@@ -5,7 +5,7 @@
         prefix: "",
         effects: [
             Stamp(Bolt,
-                When(NodeTimerThreshold(0.25),
+                When(NodeTimerThresholdOccurred(0.25),
                     Fire(SpeedBoost(SpeedBoostConfig(multiplier: 2.0))),
                 ),
             ),

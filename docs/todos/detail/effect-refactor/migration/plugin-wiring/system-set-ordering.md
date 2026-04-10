@@ -29,8 +29,9 @@ EffectSystems::Conditions
 | `BoltSystems::BreakerCollision` | Produces `BoltImpactBreaker` | `on_impacted` (bolt-breaker), `on_no_bump_occurred` |
 | `BoltSystems::BoltLost` | Produces `BoltLost` | `on_bolt_lost_occurred` |
 | `BreakerSystems::GradeBump` | Produces `BumpPerformed`, `BumpWhiffed` | All bump bridges |
-| `DeathPipelineSystems::ApplyDamage` | Must process damage before death detection | Bridge set (bridge_destroyed reads Destroyed, which comes after detect_deaths) |
-| `DeathPipelineSystems::DetectDeaths` | Produces `KillYourself<T>` | Domain kill handlers produce `Destroyed<T>` read by bridge_destroyed |
+| `DeathPipelineSystems::ApplyDamage` | Must process damage before death detection | Not a direct ordering dependency — death bridges read `Destroyed<T>` from the previous frame via standard Bevy message persistence |
+
+Note: Death bridges (`on_destroyed::<T>`) read `Destroyed<T>` messages from the **previous frame**. They do NOT need to run after the death pipeline in the same frame. This is the standard Bevy message pattern. Death-triggered effects have a one-frame delay, which is acceptable at 60fps.
 
 ### Must run BEFORE
 

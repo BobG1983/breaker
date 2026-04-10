@@ -11,7 +11,7 @@
 | **DespawnEntity** | Message requesting deferred despawn. Processed in PostFixedUpdate. |
 | **apply_damage\<T\>** | System that processes `DamageDealt<T>`, decrements Hp, sets KilledBy on the killing blow. |
 | **detect_deaths\<T\>** | Per-domain system that detects Hp ≤ 0 and sends `KillYourself<T>`. |
-| **bridge_destroyed\<T\>** | Bridge system that receives `Destroyed<T>` and dispatches Died/Killed/DeathOccurred triggers to the effect system. |
+| **on_destroyed\<T\>** | Bridge system that receives `Destroyed<T>` and dispatches Died/Killed/DeathOccurred triggers to the effect system. |
 | **process_despawn_requests** | System that reads `DespawnEntity` and despawns entities. Runs in PostFixedUpdate. |
 | **Killing blow** | The damage message that crosses Hp from positive to zero. Only this message sets KilledBy. |
 | **Dealer** | The entity that originated the damage. Propagated through effect chains (shockwave inherits bolt, explosion inherits killer). |

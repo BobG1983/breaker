@@ -29,7 +29,7 @@ The trigger context carries the entities involved in the event so that On nodes 
 | LateBumpOccurred | Global | `Bump { bolt, breaker }` |
 | BumpOccurred | Global | `Bump { bolt, breaker }` |
 | BumpWhiffOccurred | Global | `None` (no participants in a whiff) |
-| NoBumpOccurred | Global | `Bump { bolt: None, breaker }` |
+| NoBumpOccurred | Global | `Bump { bolt: msg.bolt, breaker }` |
 | Impacted(EntityKind) | Local | `Impact { impactor, impactee }` |
 | ImpactOccurred(EntityKind) | Global | `Impact { impactor, impactee }` |
 | Died | Local | `Death { victim, killer }` |

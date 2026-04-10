@@ -23,8 +23,8 @@ FixedUpdate, in `EffectSystems::Bridge`, after `BreakerSystems::GradeBump`, with
 1. Read each `BumpPerformed` message.
 2. If `msg.grade != BumpGrade::Late`, skip this message.
 3. Build context: `TriggerContext { bolt: msg.bolt, breaker: Some(msg.breaker), ..default() }`.
-4. Iterate all entities with `(Entity, &BoundEffects, &mut StagedEffects)`.
-5. For each entity, call `evaluate_bound_effects` and `evaluate_staged_effects` with `Trigger::LateBumpOccurred`.
+4. Iterate all entities with `(Entity, &BoundEffects, &StagedEffects)`.
+5. For each entity, call `walk_effects(entity, &Trigger::LateBumpOccurred, &context, bound, staged, &mut commands)`.
 
 This bridge does NOT:
 - Modify any entities

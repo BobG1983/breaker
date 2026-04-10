@@ -11,9 +11,9 @@ on_bump_occurred
 Global — walks all entities with `BoundEffects`/`StagedEffects`.
 
 # TriggerContext
-`TriggerContext { bolt: msg.bolt, breaker: Some(msg.breaker), ..default() }`
+`TriggerContext::Bump { bolt: msg.bolt, breaker: msg.breaker }`
 
-Note: Global bump triggers DO populate bolt and breaker context (unlike global impact triggers). This matches the current `bridge_bump` implementation, which sets `bolt: msg.bolt, breaker: Some(msg.breaker)` on the context. This allows `On(Bolt)` and `On(Breaker)` target resolution within global bump trigger trees.
+All global triggers populate their participant context.
 
 # Source Location
 `src/effect/triggers/bump/bridges.rs`
@@ -24,12 +24,12 @@ FixedUpdate, in `EffectSystems::Bridge`, after `BreakerSystems::GradeBump`, with
 # Behavior
 1. Read each `BumpPerformed` message.
 2. Check grade: if grade is `Perfect`, `Early`, or `Late` (any success), proceed. Always fires alongside exactly one timing-graded global variant.
-3. Build context: `TriggerContext { bolt: msg.bolt, breaker: Some(msg.breaker), ..default() }`.
-4. Iterate all entities with `(Entity, &BoundEffects, &mut StagedEffects)`.
-5. For each entity, call `evaluate_bound_effects` and `evaluate_staged_effects` with `Trigger::BumpOccurred`.
+3. Build context: `TriggerContext::Bump { bolt: msg.bolt, breaker: msg.breaker }`.
+4. Iterate all entities with `(Entity, &BoundEffects, &StagedEffects)`.
+5. For each entity, call `walk_effects(entity, &Trigger::BumpOccurred, &context, bound, staged, &mut commands)`.
 
 This bridge does NOT:
-- Modify any entities
+- Modify any entities or components directly — all mutations are deferred via commands
 - Send any messages
 - Decide bump grades
 - Handle game logic

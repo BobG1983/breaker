@@ -21,7 +21,7 @@ Sent after the domain kill handler confirms the kill. Replaces `CellDestroyedAt`
 - victim_pos: World position of the victim at time of death. Extracted while entity is still alive.
 - killer_pos: World position of the killer, if it exists. Used for directional VFX.
 
-Consumed by: `bridge_destroyed<T>` which dispatches Died/Killed/DeathOccurred triggers to the effect system. Also consumed by VFX, audio, tracking systems.
+Consumed by: `on_destroyed::<T>` which dispatches Died/Killed/DeathOccurred triggers to the effect system. Also consumed by VFX, audio, tracking systems.
 
 The entity is still alive when Destroyed is sent. It survives through trigger evaluation and death animation. Despawn happens later via DespawnEntity in PostFixedUpdate.
 
