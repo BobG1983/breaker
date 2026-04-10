@@ -1,5 +1,18 @@
 # Walking Algorithm
 
+## Signature
+
+```rust
+fn walk_effects(
+    entity: Entity,
+    trigger: &Trigger,
+    context: &TriggerContext,
+    world: &mut World,
+);
+```
+
+Called by bridge systems. Walks the entity's StagedEffects then BoundEffects for matching trees.
+
 When a trigger fires on an entity, walk that entity's effect trees in this order.
 
 ## Step 1: Walk StagedEffects
