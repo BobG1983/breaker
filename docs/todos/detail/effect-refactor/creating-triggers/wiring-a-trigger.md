@@ -1,6 +1,6 @@
 # Wiring a Trigger
 
-Step-by-step checklist for adding a new trigger to the system.
+Step-by-step checklist for adding a new trigger to the system. Follow [naming-convention.md](naming-convention.md) for system names.
 
 ## 1. Add variant to Trigger enum
 

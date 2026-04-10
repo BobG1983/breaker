@@ -12,4 +12,4 @@ The global counterpart of PerfectBumped. Fires on all entities so that effects n
 
 Fired alongside BumpOccurred (global catch-all) in the same frame.
 
-DO NOT populate bump participant context for global triggers — On(Bump(...)) inside a PerfectBumpOccurred tree would have no participant to resolve.
+Bump participant context IS populated for global bump triggers — On(Bump(Bolt)) and On(Bump(Breaker)) resolve to the bolt and breaker from the bump event.
