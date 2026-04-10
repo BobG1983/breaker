@@ -33,3 +33,9 @@ The `effect/` domain is being deleted entirely. These are the types **outside** 
 | `ActiveVulnerability` | `EffectStack<VulnerableConfig>` | Was `Vec<f32>` |
 | `ActivePiercings` | `EffectStack<PiercingConfig>` | Was `Vec<u32>` |
 | (none) | `EffectStack<RampingDamageConfig>` | New — previously a different accumulation pattern |
+
+## Message Changes (non-effect domains)
+
+| Struct | Change | File |
+|--------|--------|------|
+| `BoltImpactBreaker` | Add `bump_status: BumpStatus` field where `enum BumpStatus { Active, Inactive }` | `src/bolt/messages.rs` |

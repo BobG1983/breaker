@@ -13,3 +13,6 @@ Rust type definitions representing the RON syntax.
 - [effect-stacking/](effect-stacking/index.md) — PassiveEffect trait, EffectStack\<T\>, and all concrete stack types
 - [enums/](enums/index.md) — All enum types
 - [configs/](configs/index.md) — All config structs
+- [components/](components/index.md) — All effect component types
+- [resources/](resources/index.md) — All resource types
+- [messages/](messages/index.md) — All message types

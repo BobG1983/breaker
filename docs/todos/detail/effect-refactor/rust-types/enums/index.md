@@ -8,4 +8,5 @@
 - [entity-kind.md](entity-kind.md) — EntityKind
 - [attraction-type.md](attraction-type.md) — AttractionType
 - [route-type.md](route-type.md) — RouteType (Bound or Staged)
+- [bump-status.md](bump-status.md) — BumpStatus
 - [participants/](participants/index.md) — Participant role enums
