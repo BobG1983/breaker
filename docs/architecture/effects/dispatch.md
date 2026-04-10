@@ -59,6 +59,6 @@ There is no `Selected` trigger. The dispatch system fires bare Do children direc
 
 walk_effects defers all effect execution and cross-entity mutation through `EffectCommandsExt` on Bevy `Commands`. Bridge systems are regular Bevy systems with `Query` + `Commands` parameters — no exclusive world access required.
 
-Same-entity StagedEffects mutations (drain matching entries) happen inline during the walk. Cross-entity operations (Stamp/Transfer onto another entity) and effect execution (Fire/Reverse) are deferred via command extensions. Bevy applies commands at schedule flush points with exclusive `&mut World` access.
+Same-entity StagedEffects mutations (drain matching entries) happen inline during the walk. Cross-entity operations (Stamp/Route onto another entity) and effect execution (Fire/Reverse) are deferred via command extensions. Bevy applies commands at schedule flush points with exclusive `&mut World` access.
 
 See [Commands](commands.md) for the EffectCommandsExt trait and each command's behavior.

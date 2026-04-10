@@ -4,7 +4,7 @@
 effect/
   mod.rs
   plugin.rs              — EffectPlugin, registers all effects and triggers
-  commands.rs             — EffectCommandsExt trait, FireEffectCommand, ReverseEffectCommand, TransferCommand, PushBoundEffects
+  commands.rs             — EffectCommandsExt trait, FireEffectCommand, ReverseEffectCommand, RouteCommand, PushBoundEffects
   core/
     types/                — directory module (split from types.rs)
       definitions/        — directory module (split from definitions.rs for fire/reverse line count)
@@ -30,7 +30,7 @@ effect/
 
 **Dispatch pipeline** (`effect/dispatch/` or co-located):
 - `death_bridge.rs` — `bridge_destroyed<T: GameEntity>` system
-- Command extensions (`effect/commands.rs`) — `EffectCommandsExt` trait implementing EntityCommand for fire/reverse/stamp/transfer/equip/unequip
+- Command extensions (`effect/commands.rs`) — `EffectCommandsExt` trait implementing EntityCommand for fire/reverse/stamp/route/equip/unequip
 
 **Outside effect domain**:
 - Dispatch lives in entity domains (`chips/`, `breaker/`, `cells/`)

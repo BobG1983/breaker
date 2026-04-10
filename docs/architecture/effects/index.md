@@ -14,7 +14,7 @@ No layer reaches into another's internals.
 
 ## Contents
 
-- [Core Types](core_types.md) — all type definitions: EffectKind, Trigger, EffectNode, Target, RootEffect, BoundEffects, StagedEffects
+- [Core Types](core_types.md) — all type definitions: EffectType, Trigger, ValidTree, Target, ValidDef, BoundEffects, StagedEffects
 - [Components](components.md) — BoundEffects and StagedEffects struct definitions and semantics
 - [Node Types](node_types.md) — When, Do, Once, On (with brief Until/Reverse summaries)
 - [Until and Desugaring](until.md) — Until mechanics, desugaring system, Reverse node, detailed examples

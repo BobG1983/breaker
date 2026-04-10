@@ -2,7 +2,7 @@
 
 ## BoundEffects (Component)
 
-Permanent effect trees. Populated by Route at chip equip time and Stamp at runtime. Never consumed — When entries re-arm after firing.
+Permanent effect trees. Populated by Stamp at chip equip time and Stamp at runtime. Never consumed — When entries re-arm after firing.
 
 ```rust
 #[derive(Component, Default)]
@@ -37,15 +37,15 @@ Both `BoundEffects` and `StagedEffects` are **always present** on any entity tha
 
 | Origin | When | Example |
 |---|---|---|
-| Route at chip equip | Equip command | `Route(Bolt, When(Impacted(Cell), Fire(Shockwave(...))))` |
-| Route at breaker spawn | Breaker spawn | `Route(Breaker, When(BoltLostOccurred, Fire(LoseLife)))` |
+| Stamp at chip equip | Equip command | `Stamp(Bolt, When(Impacted(Cell), Fire(Shockwave(...))))` |
+| Stamp at breaker spawn | Breaker spawn | `Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife)))` |
 | Stamp terminal at runtime | Trigger fires | `On(ImpactTarget::Impactee, Stamp(When(Died, Fire(Explode(...)))))` |
 | Until reversal | Until fires | `Once(Died, Reverse(SpeedBoost(1.5)))` |
 | During nested When | Condition activates | Scope-registered When entries |
 
 ### What does NOT go in BoundEffects
 
-- Transfer payloads → go to StagedEffects (one-shot)
+- Route payloads → go to StagedEffects (one-shot)
 - Armed inner trees from nested When → go to StagedEffects
 - Fire terminals → execute immediately, not stored
 
@@ -53,7 +53,7 @@ Both `BoundEffects` and `StagedEffects` are **always present** on any entity tha
 
 ## StagedEffects (Component)
 
-Armed inner trees waiting for a trigger match. Populated by Transfer at runtime and by nested When arming. Consumed when triggered.
+Armed inner trees waiting for a trigger match. Populated by Route at runtime and by nested When arming. Consumed when triggered.
 
 ```rust
 #[derive(Component, Default)]
@@ -77,7 +77,7 @@ struct StagedEntry {
 | Origin | When | Consumed when |
 |---|---|---|
 | Nested When arming | Outer trigger fires | Inner trigger fires |
-| Transfer terminal | Trigger fires | Transferred tree's trigger fires |
+| Route terminal | Trigger fires | Routed tree's trigger fires |
 | Until desugaring | Until fires immediately | Reversal trigger fires |
 
 ## OnSpawnEffectRegistry (Resource)
@@ -87,9 +87,9 @@ Global registry of Spawned listeners. Populated by EveryBolt desugaring at chip 
 ```rust
 #[derive(Resource, Default)]
 struct OnSpawnEffectRegistry {
-    /// EntityType → trees to stamp onto new entities of that type.
-    /// HashMap is fine — EntityType impls Hash + Eq.
-    entries: HashMap<EntityType, Vec<SpawnedEntry>>,
+    /// EntityKind → trees to stamp onto new entities of that type.
+    /// HashMap is fine — EntityKind impls Hash + Eq.
+    entries: HashMap<EntityKind, Vec<SpawnedEntry>>,
 }
 
 struct SpawnedEntry {
@@ -106,6 +106,6 @@ Flat Vec with linear scan on `trigger == key` avoids this entirely. Performance 
 
 ## Command Extensions
 
-Effect execution and cross-entity mutation are deferred through `EffectCommandsExt` on Bevy `Commands`. Bridge systems take `Commands` as a parameter and call extension methods (fire_effect, stamp_effect, transfer_effect, etc.). Each command implements `EntityCommand` and executes with `&mut World` when Bevy flushes the command queue.
+Effect execution and cross-entity mutation are deferred through `EffectCommandsExt` on Bevy `Commands`. Bridge systems take `Commands` as a parameter and call extension methods (fire_effect, stamp_effect, route_effect, etc.). Each command implements `EntityCommand` and executes with `&mut World` when Bevy flushes the command queue.
 
 See [Commands](commands.md) for the full EffectCommandsExt trait.

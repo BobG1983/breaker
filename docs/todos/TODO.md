@@ -2,10 +2,10 @@
 
 ## Backlog
 
-1. **[NEEDS DETAIL]** Effect refactor A: Core types + builder + loader (Waves 1-3) — [detail](detail/effect-desugaring-node-running-trigger/effect-desugaring-node-running-trigger.md)
-2. **[NEEDS DETAIL]** Effect refactor B: Dispatch + storage (Wave 4) — [detail](detail/effect-desugaring-node-running-trigger/effect-desugaring-node-running-trigger.md)
-3. **[NEEDS DETAIL]** Effect refactor C: Death pipeline (Wave 5) — [detail](detail/effect-desugaring-node-running-trigger/effect-desugaring-node-running-trigger.md)
-4. **[NEEDS DETAIL]** Effect refactor D: Effects + bridges + wiring + swap (Waves 6-8 + Phase 6) — [detail](detail/effect-desugaring-node-running-trigger/effect-desugaring-node-running-trigger.md)
+1. **[NEEDS DETAIL]** Effect refactor A: Core types + builder + loader (Waves 1-3) — [detail](detail/effect-refactor/index.md)
+2. **[NEEDS DETAIL]** Effect refactor B: Dispatch + storage (Wave 4) — [detail](detail/effect-refactor/index.md)
+3. **[NEEDS DETAIL]** Effect refactor C: Death pipeline (Wave 5) — [detail](detail/effect-refactor/index.md)
+4. **[NEEDS DETAIL]** Effect refactor D: Effects + bridges + wiring + swap (Waves 6-8 + Phase 6) — [detail](detail/effect-refactor/index.md)
 5. **[NEEDS DETAIL]** New effect domain test migration — migrate `new_effect/` tests to TestAppBuilder after effect refactor ships — [detail](detail/new-effect-test-migration.md)
 6. **[ready]** Remove game crate prelude module — replace glob imports with explicit per-domain imports — [detail](detail/remove-game-prelude.md)
 7. **[ready]** New cell modifiers (volatile, sequence, survival, armored, phantom, magnetic, portal) — [detail](detail/new-cell-modifiers.md)
