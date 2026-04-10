@@ -55,14 +55,15 @@ pub fn handle_wall_kill(
 #### 2. Update shield effect `fire()` to add `Hp` and `KilledBy`
 - **File**: `src/effect/effects/shield/config.rs` — the `fire()` function
 - **What changes**: The shield fire() spawns a wall entity using the wall builder (`WallBuilder`). After `builder.spawn(commands)` returns the entity ID, insert additional components via `commands.entity(id).insert((Hp { current: 1.0, starting: 1.0, max: None }, KilledBy::default()))`. The `Wall` component is already provided by the wall builder — do NOT insert it manually.
-- **Hp note**: One-shot wall. Shield walls primarily expire via timer (`tick_shield_duration`) or reflection cost depletion, but adding Hp makes them eligible for the damage path as well.
-- **Note**: The shield timer-expiry system (`tick_shield_duration`) still uses its existing direct-despawn path for now. Only the `Fire(Die)` and `DamageDealt<Wall>` paths go through the kill handler.
+- **Hp note**: One-shot wall. Shield walls die when their timer expires or reflection cost is depleted.
+- **Migrate tick_shield_duration**: Update the shield timer-expiry system to send `KillYourself<Wall>` instead of calling `commands.entity(e).despawn()` directly. ALL wall deaths go through the unified death pipeline — no direct despawn. The kill handler inserts Dead, sends Destroyed<Wall>, removes Aabb2D, and sends DespawnEntity.
+- **Migrate deduct_shield_on_reflection**: If reflection cost depletion causes death, send `KillYourself<Wall>` instead of direct despawn.
 
 #### 3. Update second-wind effect `fire()` to add `Hp` and `KilledBy`
 - **File**: `src/effect/effects/second_wind/config.rs` — the `fire()` function
 - **What changes**: The second-wind fire() spawns a wall entity using the wall builder (`WallBuilder`). After `builder.spawn(commands)` returns the entity ID, insert additional components via `commands.entity(id).insert((Hp { current: 1.0, starting: 1.0, max: None }, KilledBy::default()))`. The `Wall` component is already provided by the wall builder — do NOT insert it manually.
-- **Hp note**: One-shot wall. Second-wind walls die via `Fire(Die)` after their first bounce.
-- **Note**: The second-wind bounce handler still uses its existing direct-despawn path for now. Only the `Fire(Die)` and `DamageDealt<Wall>` paths go through the kill handler.
+- **Hp note**: One-shot wall. Second-wind walls die after their first bolt bounce.
+- **Migrate despawn_second_wind_on_contact**: Update the bounce handler to send `KillYourself<Wall>` instead of calling `commands.entity(msg.wall).despawn()` directly. ALL wall deaths go through the unified death pipeline.
 
 #### 4. Permanent walls: no changes
 - Permanent walls (side walls, top wall) are spawned by the wall spawn system without `Hp` or `KilledBy`.
