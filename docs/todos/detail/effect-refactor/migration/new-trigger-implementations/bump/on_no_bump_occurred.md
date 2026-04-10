@@ -2,7 +2,7 @@
 on_no_bump_occurred
 
 # Reads
-`BoltImpactBreaker` message where `bump_status == false`. See `types.md` for the migration adding `bump_status` to `BoltImpactBreaker`.
+`BoltImpactBreaker` message where `bump_status == BumpStatus::Inactive`. See `types.md` for the migration adding `bump_status` to `BoltImpactBreaker`.
 
 # Dispatches
 `NoBumpOccurred` trigger variant
@@ -21,7 +21,7 @@ FixedUpdate, in `EffectSystems::Bridge`, after `BoltSystems::BreakerCollision`, 
 
 # Behavior
 1. Read each `BoltImpactBreaker` message.
-2. If `bump_status` is true, skip — this is a bump event handled by the other bump bridges.
+2. If `bump_status` is `BumpStatus::Active`, skip — this is a bump event handled by the other bump bridges.
 3. Build context: `TriggerContext::Bump { bolt: msg.bolt, breaker: msg.breaker }`.
 4. Walk all entities with BoundEffects/StagedEffects with `Trigger::NoBumpOccurred` and the context.
 
