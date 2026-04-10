@@ -5,7 +5,7 @@
         prefix: "Firm",
         effects: [
             Stamp(Breaker,
-                Fire(BumpForce(1.1)),
+                Fire(BumpForce(BumpForceConfig(multiplier: 1.1))),
             ),
         ],
     ),
@@ -13,7 +13,7 @@
         prefix: "Strong",
         effects: [
             Stamp(Breaker,
-                Fire(BumpForce(1.2)),
+                Fire(BumpForce(BumpForceConfig(multiplier: 1.2))),
             ),
         ],
     ),
@@ -21,7 +21,7 @@
         prefix: "Crushing",
         effects: [
             Stamp(Breaker,
-                Fire(BumpForce(1.35)),
+                Fire(BumpForce(BumpForceConfig(multiplier: 1.35))),
             ),
         ],
     ),

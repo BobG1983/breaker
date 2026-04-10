@@ -3,7 +3,7 @@
     description: "Reverse-dash while settling to teleport — skip the slowdown, flash to position",
     effects: [
         Stamp(Breaker,
-            Fire(FlashStep),
+            Fire(FlashStep(FlashStepConfig())),
         ),
     ],
     ingredients: [

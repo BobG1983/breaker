@@ -7,7 +7,7 @@
             Stamp(Breaker,
                 When(BoltLostOccurred,
                     Sequence([
-                        Fire(SpeedBoost(2.0)),
+                        Fire(SpeedBoost(SpeedBoostConfig(multiplier: 2.0))),
                         Fire(SpawnBolts(SpawnBoltsConfig(count: 1, lifespan: None, inherit: true))),
                     ]),
                 ),

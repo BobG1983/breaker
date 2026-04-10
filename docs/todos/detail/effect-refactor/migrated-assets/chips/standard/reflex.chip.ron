@@ -18,7 +18,7 @@
                 When(PerfectBump,
                     Sequence([
                         Fire(SpawnBolts(SpawnBoltsConfig(count: 1, lifespan: None, inherit: false))),
-                        Fire(SpeedBoost(1.2)),
+                        Fire(SpeedBoost(SpeedBoostConfig(multiplier: 1.2))),
                     ]),
                 ),
             ),

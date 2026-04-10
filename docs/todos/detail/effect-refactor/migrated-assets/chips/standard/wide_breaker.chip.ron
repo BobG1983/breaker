@@ -5,7 +5,7 @@
         prefix: "Slight",
         effects: [
             Stamp(Breaker,
-                Fire(SizeBoost(1.05)),
+                Fire(SizeBoost(SizeBoostConfig(multiplier: 1.05))),
             ),
         ],
     ),
@@ -13,7 +13,7 @@
         prefix: "Sturdy",
         effects: [
             Stamp(Breaker,
-                Fire(SizeBoost(1.1)),
+                Fire(SizeBoost(SizeBoostConfig(multiplier: 1.1))),
             ),
         ],
     ),
@@ -21,7 +21,7 @@
         prefix: "Massive",
         effects: [
             Stamp(Breaker,
-                Fire(SizeBoost(1.15)),
+                Fire(SizeBoost(SizeBoostConfig(multiplier: 1.15))),
             ),
         ],
     ),

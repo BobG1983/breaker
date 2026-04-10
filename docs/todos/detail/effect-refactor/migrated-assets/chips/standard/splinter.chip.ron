@@ -8,7 +8,7 @@
                 When(Killed(Cell),
                     Sequence([
                         Fire(SpawnBolts(SpawnBoltsConfig(count: 1, lifespan: Some(2.0), inherit: false))),
-                        Fire(SizeBoost(0.5)),
+                        Fire(SizeBoost(SizeBoostConfig(multiplier: 0.5))),
                     ]),
                 ),
             ),
@@ -21,7 +21,7 @@
                 When(Killed(Cell),
                     Sequence([
                         Fire(SpawnBolts(SpawnBoltsConfig(count: 2, lifespan: Some(2.5), inherit: false))),
-                        Fire(SizeBoost(0.55)),
+                        Fire(SizeBoost(SizeBoostConfig(multiplier: 0.55))),
                     ]),
                 ),
             ),
@@ -34,7 +34,7 @@
                 When(Killed(Cell),
                     Sequence([
                         Fire(SpawnBolts(SpawnBoltsConfig(count: 3, lifespan: Some(3.0), inherit: false))),
-                        Fire(SizeBoost(0.6)),
+                        Fire(SizeBoost(SizeBoostConfig(multiplier: 0.6))),
                     ]),
                 ),
             ),

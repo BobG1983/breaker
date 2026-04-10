@@ -5,7 +5,7 @@
         prefix: "Minor",
         effects: [
             Stamp(Bolt,
-                Fire(DamageBoost(1.1)),
+                Fire(DamageBoost(DamageBoostConfig(multiplier: 1.1))),
             ),
         ],
     ),
@@ -13,7 +13,7 @@
         prefix: "Potent",
         effects: [
             Stamp(Bolt,
-                Fire(DamageBoost(1.2)),
+                Fire(DamageBoost(DamageBoostConfig(multiplier: 1.2))),
             ),
         ],
     ),
@@ -21,7 +21,7 @@
         prefix: "Savage",
         effects: [
             Stamp(Bolt,
-                Fire(DamageBoost(1.35)),
+                Fire(DamageBoost(DamageBoostConfig(multiplier: 1.35))),
             ),
         ],
     ),

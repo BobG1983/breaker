@@ -5,7 +5,7 @@
 | Node | Syntax | Description |
 |------|--------|-------------|
 | [Stamp](stamp.md) | `Stamp(StampTarget, Tree)` | Root node. Declares which entity receives the effect tree. Required at the top level of every `effects: []` list. |
-| [Spawn](spawned.md) | `Spawn(EntityKind, Tree)` | Root node. Watches for new entities of a given kind and applies the tree to each one. |
+| [Spawn](spawn.md) | `Spawn(EntityKind, Tree)` | Root node. Watches for new entities of a given kind and applies the tree to each one. |
 
 ## Tree Nodes
 

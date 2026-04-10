@@ -5,11 +5,11 @@
         prefix: "",
         effects: [
             Stamp(Bolt,
-                Fire(DamageBoost(3.0)),
+                Fire(DamageBoost(DamageBoostConfig(multiplier: 3.0))),
             ),
             Stamp(Breaker,
                 When(BoltLostOccurred,
-                    Fire(LoseLife),
+                    Fire(LoseLife(LoseLifeConfig())),
                 ),
             ),
         ],

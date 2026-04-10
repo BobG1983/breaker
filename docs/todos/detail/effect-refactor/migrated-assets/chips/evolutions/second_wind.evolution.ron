@@ -4,7 +4,7 @@
     effects: [
         Stamp(Breaker,
             When(BoltLostOccurred,
-                Fire(SecondWind),
+                Fire(SecondWind(SecondWindConfig())),
             ),
         ),
     ],

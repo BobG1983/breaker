@@ -5,7 +5,7 @@
         prefix: "Basic",
         effects: [
             Stamp(Bolt,
-                Fire(RampingDamage(damage_per_trigger: 0.02)),
+                Fire(RampingDamage(RampingDamageConfig(increment: 0.02))),
             ),
         ],
     ),
@@ -13,7 +13,7 @@
         prefix: "Potent",
         effects: [
             Stamp(Bolt,
-                Fire(RampingDamage(damage_per_trigger: 0.04)),
+                Fire(RampingDamage(RampingDamageConfig(increment: 0.04))),
             ),
         ],
     ),
@@ -21,7 +21,7 @@
         prefix: "Savage",
         effects: [
             Stamp(Bolt,
-                Fire(RampingDamage(damage_per_trigger: 0.06)),
+                Fire(RampingDamage(RampingDamageConfig(increment: 0.06))),
             ),
         ],
     ),

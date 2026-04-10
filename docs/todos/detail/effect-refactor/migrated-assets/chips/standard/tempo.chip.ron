@@ -7,7 +7,7 @@
             Stamp(AllBolts,
                 When(Bumped,
                     Until(BumpWhiff,
-                        SpeedBoost(1.2),
+                        SpeedBoost(SpeedBoostConfig(multiplier: 1.2)),
                     ),
                 ),
             ),

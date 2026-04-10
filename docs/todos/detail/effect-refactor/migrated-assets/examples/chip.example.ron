@@ -40,7 +40,7 @@
         // Effects applied when this variant is selected.
         // Each entry is Stamp(<Target>, <EffectTree>).
         effects: [
-            Stamp(Bolt, Fire(DamageBoost(1.1))),
+            Stamp(Bolt, Fire(DamageBoost(DamageBoostConfig(multiplier: 1.1)))),
         ],
     ),
 
@@ -48,7 +48,7 @@
     uncommon: (
         prefix: "Keen",
         effects: [
-            Stamp(Bolt, Fire(DamageBoost(1.25))),
+            Stamp(Bolt, Fire(DamageBoost(DamageBoostConfig(multiplier: 1.25)))),
         ],
     ),
 
@@ -56,7 +56,7 @@
     rare: (
         prefix: "Brutal",
         effects: [
-            Stamp(Bolt, Fire(DamageBoost(1.5))),
+            Stamp(Bolt, Fire(DamageBoost(DamageBoostConfig(multiplier: 1.5)))),
         ],
     ),
 
@@ -64,7 +64,7 @@
     legendary: (
         prefix: "Mythic",
         effects: [
-            Stamp(Bolt, Fire(DamageBoost(2.0))),
+            Stamp(Bolt, Fire(DamageBoost(DamageBoostConfig(multiplier: 2.0)))),
         ],
     ),
 )

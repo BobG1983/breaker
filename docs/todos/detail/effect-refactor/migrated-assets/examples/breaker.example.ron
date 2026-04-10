@@ -62,9 +62,9 @@
     //           NodeStart, NodeEnd, NodeTimerThreshold(f32), TimeExpires(f32)
     effects: [
         // Example: Lose a life when the bolt is lost
-        Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife))),
+        Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(LoseLifeConfig())))),
         // Example: Speed boost on perfect bump
-        Stamp(Bolt, When(PerfectBumped, Fire(SpeedBoost(1.5)))),
+        Stamp(Bolt, When(PerfectBumped, Fire(SpeedBoost(SpeedBoostConfig(multiplier: 1.5))))),
     ],
 
     // --- Everything below is optional (defaults shown) ---

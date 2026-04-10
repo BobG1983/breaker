@@ -5,7 +5,7 @@
         prefix: "Broad",
         effects: [
             Stamp(Bolt,
-                Fire(SizeBoost(1.15)),
+                Fire(SizeBoost(SizeBoostConfig(multiplier: 1.15))),
             ),
         ],
     ),
@@ -13,7 +13,7 @@
         prefix: "Expanded",
         effects: [
             Stamp(Bolt,
-                Fire(SizeBoost(1.25)),
+                Fire(SizeBoost(SizeBoostConfig(multiplier: 1.25))),
             ),
         ],
     ),
@@ -21,7 +21,7 @@
         prefix: "Massive",
         effects: [
             Stamp(Bolt,
-                Fire(SizeBoost(1.4)),
+                Fire(SizeBoost(SizeBoostConfig(multiplier: 1.4))),
             ),
         ],
     ),

@@ -6,8 +6,8 @@
         effects: [
             Stamp(Breaker,
                 Sequence([
-                    Fire(SizeBoost(1.15)),
-                    Fire(BumpForce(1.15)),
+                    Fire(SizeBoost(SizeBoostConfig(multiplier: 1.15))),
+                    Fire(BumpForce(BumpForceConfig(multiplier: 1.15))),
                 ]),
             ),
         ],
@@ -17,8 +17,8 @@
         effects: [
             Stamp(Breaker,
                 Sequence([
-                    Fire(SizeBoost(1.25)),
-                    Fire(BumpForce(1.25)),
+                    Fire(SizeBoost(SizeBoostConfig(multiplier: 1.25))),
+                    Fire(BumpForce(BumpForceConfig(multiplier: 1.25))),
                 ]),
             ),
         ],
@@ -28,9 +28,9 @@
         effects: [
             Stamp(Breaker,
                 Sequence([
-                    Fire(SizeBoost(1.4)),
-                    Fire(BumpForce(1.35)),
-                    Fire(SpeedBoost(1.15)),
+                    Fire(SizeBoost(SizeBoostConfig(multiplier: 1.4))),
+                    Fire(BumpForce(BumpForceConfig(multiplier: 1.35))),
+                    Fire(SpeedBoost(SpeedBoostConfig(multiplier: 1.15))),
                 ]),
             ),
         ],

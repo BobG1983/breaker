@@ -7,7 +7,7 @@
             Stamp(Bolt,
                 When(Impacted(Wall),
                     Until(Impacted(Wall),
-                        DamageBoost(3.0),
+                        DamageBoost(DamageBoostConfig(multiplier: 3.0)),
                     ),
                 ),
             ),

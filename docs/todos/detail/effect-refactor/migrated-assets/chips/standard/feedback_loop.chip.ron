@@ -9,7 +9,7 @@
                     When(Impacted(Cell),
                         When(Killed(Cell),
                             Until(TimeExpires(3.0),
-                                SpeedBoost(1.5),
+                                SpeedBoost(SpeedBoostConfig(multiplier: 1.5)),
                             ),
                         ),
                     ),

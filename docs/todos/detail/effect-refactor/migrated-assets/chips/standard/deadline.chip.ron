@@ -6,7 +6,7 @@
         effects: [
             Stamp(Bolt,
                 When(NodeTimerThreshold(0.25),
-                    Fire(SpeedBoost(2.0)),
+                    Fire(SpeedBoost(SpeedBoostConfig(multiplier: 2.0))),
                 ),
             ),
         ],

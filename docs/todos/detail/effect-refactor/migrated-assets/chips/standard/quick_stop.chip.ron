@@ -5,7 +5,7 @@
         prefix: "Sluggish",
         effects: [
             Stamp(Breaker,
-                Fire(QuickStop(multiplier: 1.5)),
+                Fire(QuickStop(QuickStopConfig(multiplier: 1.5))),
             ),
         ],
     ),
@@ -13,7 +13,7 @@
         prefix: "Responsive",
         effects: [
             Stamp(Breaker,
-                Fire(QuickStop(multiplier: 2.0)),
+                Fire(QuickStop(QuickStopConfig(multiplier: 2.0))),
             ),
         ],
     ),
@@ -21,7 +21,7 @@
         prefix: "Instant",
         effects: [
             Stamp(Breaker,
-                Fire(QuickStop(multiplier: 3.0)),
+                Fire(QuickStop(QuickStopConfig(multiplier: 3.0))),
             ),
         ],
     ),

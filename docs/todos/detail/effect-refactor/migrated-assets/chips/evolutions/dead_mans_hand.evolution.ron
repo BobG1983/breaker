@@ -6,7 +6,7 @@
             When(BoltLostOccurred,
                 Sequence([
                     Fire(Shockwave(ShockwaveConfig(base_range: 128.0, range_per_level: 0.0, stacks: 1, speed: 500.0))),
-                    Fire(SpeedBoost(1.5)),
+                    Fire(SpeedBoost(SpeedBoostConfig(multiplier: 1.5))),
                 ]),
             ),
         ),
