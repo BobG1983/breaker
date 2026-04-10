@@ -6,8 +6,10 @@ Stamp
 - Tree: The effect tree to apply
 
 # Description
-Stamp is the top-level wrapper for every effect definition. It declares which entity type the effect tree should be applied to. Every entry in an `effects: []` list must begin with Stamp — you cannot have a bare When or Fire at the top level.
+Stamp is a root node — it appears at the top level of an `effects: []` list. It declares which entity type the effect tree should be applied to.
 
-When a chip, breaker, or cell definition is loaded, each Stamp entry is resolved: the StampTarget is matched to actual game entities, and the inner tree is permanently installed on those entities. The tree stays on the entity for as long as the source (chip, breaker definition, etc.) is active.
+When a chip, breaker, or cell definition is loaded, each Stamp entry is resolved: the StampTarget is matched to actual game entities, and the inner tree is installed on those entities. The tree stays on the entity for as long as the source (chip, breaker definition, etc.) is active.
 
-Stamp also appears as a terminal inside On() — in that context it permanently installs a tree onto another entity at runtime. For example, "when I bump perfectly, permanently give the breaker a speed boost" would use On(BumpTarget::Breaker, Stamp(Fire(SpeedBoost(1.5)))). The stamped tree persists and re-arms just like a definition-level Stamp.
+Stamp(Bolt, When(Impacted(Wall), Fire(Shockwave(ShockwaveConfig(...))))) means "on the bolt, every time it hits a wall, fire a shockwave."
+
+Stamp(Breaker, During(NodeActive, Fire(SpeedBoost(1.5)))) means "on the breaker, while the node is active, apply a speed boost."

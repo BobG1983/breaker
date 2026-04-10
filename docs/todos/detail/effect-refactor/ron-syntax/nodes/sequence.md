@@ -11,4 +11,4 @@ Use Sequence when order matters — for example, if one effect should be applied
 
 A Sequence is considered reversible if all its children are reversible. When reversed (inside During or Until), the children are reversed in reverse order — last applied, first removed.
 
-Each child in a Sequence must be a Terminal (Fire, Stamp, or Route).
+Each child in a Sequence must be a Terminal (Fire or Route).

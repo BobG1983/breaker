@@ -2,11 +2,18 @@
 Route
 
 # Parameters
+- RouteType: Where to install the tree — Bound (permanent) or Staged (one-shot)
 - Tree: The effect tree to install
 
 # Description
-Route is a one-shot terminal that installs an effect tree on another entity. The tree is consumed after its trigger matches once — it doesn't re-arm like a Stamped tree does.
+Route installs an effect tree on another entity. It only appears inside On() — you redirect to a participant, then Route a tree onto them.
 
-Route only appears inside On() — you redirect to a participant, then Route a tree onto them. The classic example is the powder keg pattern: When(Impacted(Cell), On(ImpactTarget::Impactee, Route(When(Died, Fire(Explode(...)))))) means "when I hit a cell, give that cell a one-shot 'explode when you die' effect." If the cell dies, it explodes and the routed tree is consumed. If the bolt hits another cell, it gets its own separate powder keg.
+Route has two modes controlled by RouteType:
 
-Contrast with Stamp inside On() — Stamp permanently installs a tree that re-arms. Route installs a tree that fires once and is gone.
+**Bound** — permanently installs the tree. It re-arms after each trigger match, just like a definition-level Stamp. Use when you want a lasting effect on the participant.
+
+When(Impacted(Cell), On(Impact(Impactee), Route(Bound, When(Died, Fire(SpeedBoost(2.0)))))) means "when I hit a cell, permanently give that cell a 'speed boost on death' effect."
+
+**Staged** — installs a one-shot tree that is consumed after its trigger matches once.
+
+When(Impacted(Cell), On(Impact(Impactee), Route(Staged, When(Died, Fire(Explode(ExplodeConfig(...))))))) means "when I hit a cell, give that cell a one-shot 'explode when you die' effect." If the cell dies, it explodes and the routed tree is consumed.

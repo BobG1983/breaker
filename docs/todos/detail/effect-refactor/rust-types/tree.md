@@ -11,7 +11,6 @@ enum Tree {
     Until(Trigger, Box<ScopedTree>),
     Sequence(Vec<Terminal>),
     On(ParticipantTarget, Terminal),
-    Spawned(EntityKind, Box<Tree>),
 }
 ```
 
@@ -23,4 +22,3 @@ enum Tree {
 - Until: Event-scoped. Applies inner effects immediately, reverses them when the trigger fires. See [trigger.md](enums/trigger.md), [scoped-tree.md](scoped-tree.md)
 - Sequence: Ordered multi-execute. Runs children left to right. See [terminal.md](terminal.md)
 - On: Redirects a terminal to a different entity involved in the trigger event. See [participant-target.md](enums/participants/participant-target.md), [terminal.md](terminal.md)
-- Spawned: Fires inner tree when a new entity of the given kind is added to the world. See [entity-kind.md](enums/entity-kind.md)

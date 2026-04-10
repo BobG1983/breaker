@@ -2,7 +2,7 @@
 
 Defines and gives examples of the acceptable RON syntax for effect definitions.
 
-- [nodes/](nodes/index.md) — Effect tree node types: Stamp, Fire, When, Once, During, Until, Sequence, On, Spawned, Route
+- [nodes/](nodes/index.md) — Effect tree node types: Stamp, Spawn, Fire, When, Once, During, Until, Sequence, On, Route
 - [definitions.md](definitions.md) — Definitions for all terms used in RON syntax with references to sub files
 - [scoping-rules.md](scoping-rules.md) — What can nest inside what
 - [stamp-targets/](stamp-targets/index.md) — Every valid StampTarget and what it means
