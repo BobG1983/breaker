@@ -60,11 +60,12 @@ Note: `apply_damage::<Cell>` and `detect_cell_deaths` were implemented in Wave 7
 - **Also**: Continue sending `BoltImpactCell { cell, bolt }` — the impact message is separate from the damage message and is consumed by the effect trigger bridges. Do NOT remove or modify impact message sending.
 
 #### 5. Add `Hp` and `KilledBy` to cell builder
-- **File**: Wherever cells are spawned (cell builder / spawn system in `src/cells/` or `src/run/node/`)
-- **What changes**: When spawning a cell entity, add `Hp` and `KilledBy` components alongside existing components.
-- **Hp construction**: `Hp { current: cell_health_value, starting: cell_health_value, max: None }` where `cell_health_value` is the value that was previously used for `CellHealth::new(value)`. The starting value equals current at spawn time. No max — cells have no healing mechanic.
+- **File**: `src/cells/builder/core/terminal.rs` — modify the builder's internal `build_core()` and `spawn()` functions
+- **What changes**: Replace `CellHealth` with `Hp` and add `KilledBy` in the builder internals. Callers of the builder continue to use `builder.spawn(commands)` — they do NOT manually insert Hp/KilledBy. The builder handles everything.
+- **Also update**: `spawn_guardian_children()` in the same file — guardians construct bundles independently and also need Hp/KilledBy.
+- **Hp construction**: `Hp { current: cell_health_value, starting: cell_health_value, max: None }` where `cell_health_value` is the value that was previously used for `CellHealth::new(value)`.
 - **KilledBy construction**: `KilledBy::default()` (dealer is None initially — set by `apply_damage` on the killing blow).
-- **Remove**: `CellHealth` component from the spawn. `Hp` replaces `CellHealth` entirely.
+- **Remove**: `CellHealth` component. `Hp` replaces it entirely. Callers that read `CellHealth` must be updated to read `Hp`.
 
 #### 6. Create `cell_damage_visual` system (NEW)
 - **File**: `src/cells/systems/cell_damage_visual/system.rs` (directory module with tests)

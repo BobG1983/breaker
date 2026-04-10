@@ -178,20 +178,11 @@ pub fn handle_bolt_kill(
 - The bolt entity is still alive when `Destroyed<Bolt>` is sent -- the effect system's death bridge needs to walk the entity's `BoundEffects`/`StagedEffects`.
 
 #### 7. Add `Hp` and `KilledBy` to bolt builder
-Update the bolt spawn function/builder to include `Hp` and `KilledBy` components on newly spawned bolt entities.
-
-Bolt Hp value: `Hp { current: 1.0, starting: 1.0, max: None }`. Bolts have 1 HP -- they die from a single damage event (future mechanic). Most bolt deaths are environmental (lifespan expiry, falling off-screen) and bypass Hp entirely via direct `KillYourself<Bolt>`.
-
-`KilledBy` should be inserted with `KilledBy::default()` (dealer: None).
-
-The bolt builder is the function/system that spawns bolt entities (primary bolts, chain bolts, extra bolts, phantom bolts). All bolt entity spawning paths must include `Hp` and `KilledBy`. Identify all spawn paths:
-- Primary bolt spawn (e.g., `spawn_bolt`)
-- Chain bolt spawn (in `effect/effects/chain_bolt/`)
-- Extra bolt spawn (Prism breaker)
-- Phantom bolt spawn (in `effect/effects/phantom_bolt/` or `spawn_phantom/`)
-- SpawnBolts effect (in `effect/effects/spawn_bolts/`)
-
-For this wave, update only the bolt domain's own spawn function. The effect domain's spawn paths (chain bolt, spawn bolts, phantom) are the effect domain's responsibility and should already have been handled or will be handled separately.
+- **File**: `src/bolt/builder/core/terminal.rs` — modify the builder's internal `build_core()` and `spawn()` functions
+- **What changes**: Add `Hp` and `KilledBy` in the builder internals. Callers of the builder continue to use `builder.spawn(commands)` — they do NOT manually insert Hp/KilledBy. The builder handles everything.
+- **Hp construction**: `Hp { current: 1.0, starting: 1.0, max: None }`. Bolts have 1 HP — they die from a single damage event (future mechanic). Most bolt deaths are environmental (lifespan expiry, falling off-screen) and bypass Hp entirely via direct `KillYourself<Bolt>`.
+- **KilledBy construction**: `KilledBy::default()` (dealer: None).
+- **All bolt spawn paths go through this builder**: primary bolts, chain bolts, extra bolts, phantom bolts, SpawnBolts effect. All paths get Hp/KilledBy automatically via the builder.
 
 #### 8. Register new message types in bolt plugin
 In `src/bolt/plugin.rs`:

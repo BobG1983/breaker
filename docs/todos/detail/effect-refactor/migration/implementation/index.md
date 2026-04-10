@@ -10,6 +10,12 @@ Ordered sequence of 15 implementation waves. Each wave is self-contained — com
 
 **Wave 13 step 1** removes ALL `#[expect(...)]` annotations. If removing an expect causes a lint failure, the underlying issue must be fixed — not re-suppressed.
 
+## Builder and Test Infrastructure Rules
+
+**Production code** MUST use the domain builders (`BoltBuilder`, `CellBuilder`, `WallBuilder`, `BreakerBuilder`) to spawn entities. Call `builder.spawn(commands)` to get the entity ID. If additional components are needed (e.g., Hp, KilledBy), insert them after spawn via `commands.entity(id).insert(...)`. Do NOT bypass builders with raw `commands.spawn()` for domain entities.
+
+**Test code** MUST use `TestAppBuilder` from `src/shared/test_utils/` to set up test apps. Use the domain builders (bolt, cell, wall, breaker builders) to spawn test entities — do NOT manually construct entity bundles. This ensures test entities have all required components that the builders provide.
+
 ## Waves
 
 ### Scaffold
