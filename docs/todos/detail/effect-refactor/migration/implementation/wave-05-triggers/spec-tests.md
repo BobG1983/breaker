@@ -7,7 +7,7 @@
 
 ## Section A: Bump Bridge Systems (10 systems)
 
-All bump bridges live in `src/effect/triggers/bump/bridges.rs`. All run in FixedUpdate, in `EffectSystems::Bridge`, after `BreakerSystems::GradeBump`, with `run_if(in_state(NodeState::Playing))` (except `on_no_bump_occurred` which runs after `BoltSystems::BreakerCollision`).
+All bump bridges live in `src/effect/triggers/bump/bridges.rs`. All run in FixedUpdate, in `EffectSystems::Bridge`, after `BreakerSystems::GradeBump`, with `run_if(in_state(NodeState::Playing))`. `on_no_bump_occurred` additionally runs after `BoltSystems::BreakerCollision` (it reads `BoltImpactBreaker` which is produced there).
 
 ### A1: Global Bump Bridges (6 systems)
 
@@ -559,7 +559,7 @@ Lives in `src/effect/triggers/node/check_thresholds.rs`. Runs in FixedUpdate, in
 
 ### G3: track_combo_streak
 
-Lives in `src/effect/conditions/` (or `src/effect/triggers/` -- follows design doc location). Runs in FixedUpdate, in `EffectSystems::Bridge`, after `BreakerSystems::GradeBump`.
+Lives in `src/effect/conditions/track_combo_streak.rs`. Runs in FixedUpdate, in `EffectSystems::Bridge`, after `BreakerSystems::GradeBump`.
 
 69. **track_combo_streak increments count on Perfect bump**
     - Given: `ComboStreak { count: 3 }` resource; `BumpPerformed { grade: BumpGrade::Perfect, bolt: Some(bolt_entity), breaker: breaker_entity }` message
@@ -605,7 +605,7 @@ Lives in `src/effect/conditions/` (or `src/effect/triggers/` -- follows design d
 
 ### G4: watch_spawn_registry
 
-Lives in `src/effect/triggers/` (likely `src/effect/triggers/spawn/watch.rs` or similar). Runs in FixedUpdate, after entity spawning systems, in `EffectSystems::Bridge`.
+Lives in `src/effect/storage/watch_spawn_registry.rs`. Runs in FixedUpdate, after entity spawning systems, in `EffectSystems::Bridge`.
 
 76. **watch_spawn_registry stamps tree on newly spawned bolt**
     - Given: `SpawnStampRegistry` resource containing entry `("chip_a".to_string(), EntityKind::Bolt, tree_clone)`; new entity spawned with `Bolt` component this frame (detected via `Added<Bolt>`)
@@ -754,8 +754,8 @@ Tests should follow the module layout in `src/effect/triggers/`:
 - `src/effect/triggers/bolt_lost/` -- bolt lost bridge tests
 - `src/effect/triggers/node/` -- node bridge tests + check_thresholds tests + reset tests
 - `src/effect/triggers/time/` -- time bridge tests + tick_timers tests
-- `src/effect/triggers/spawn/` or similar -- watch_spawn_registry tests
-- `src/effect/conditions/` -- combo_streak tests
+- `src/effect/storage/` -- watch_spawn_registry tests
+- `src/effect/conditions/` -- track_combo_streak tests
 
 Each system file has its own `#[cfg(test)] mod tests` block or sibling `tests.rs`.
 
