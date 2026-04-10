@@ -60,7 +60,9 @@ src/effect/
     fire.rs                         # fire_effect
     reverse.rs                      # reverse_effect
     route.rs                        # route_effect
-    stamp.rs                        # stamp_effect
+    stamp.rs                        # stamp_effect (sugar for route_effect Bound)
+    stage.rs                        # stage_effect (sugar for route_effect Staged)
+    remove.rs                       # remove_effect (removes from Bound or Staged)
 
   walking/
     mod.rs
