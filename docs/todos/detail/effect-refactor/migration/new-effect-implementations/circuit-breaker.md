@@ -22,7 +22,7 @@ This effect is designed to be inside a `When(PerfectBumped, ...)` -- each fire c
 1. Remove `CircuitBreakerCounter` from the target entity.
 
 # Source Location
-`src/effect/configs/circuit_breaker.rs`
+`src/effect/effects/circuit_breaker/config.rs`
 
 # New Types
 - `CircuitBreakerCounter` -- component tracking progress toward the next reward. Fields: `remaining: u32`, `bumps_required: u32`, `spawn_count: u32`, `inherit: bool`, `shockwave_range: f32`, `shockwave_speed: f32`.

@@ -21,7 +21,7 @@ RandomEffect
 Not applicable -- RandomEffect is not reversible. The effect it fired may or may not be reversible, but RandomEffect itself has no reverse because you'd need to know which effect was selected, and that's not tracked.
 
 # Source Location
-`src/effect/configs/random_effect.rs`
+`src/effect/effects/random_effect/config.rs`
 
 # New Types
 None.

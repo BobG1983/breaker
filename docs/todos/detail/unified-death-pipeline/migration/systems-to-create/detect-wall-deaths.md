@@ -8,11 +8,12 @@ detect_wall_deaths
 `src/walls/systems/detect_wall_deaths.rs`
 
 # Queries/Filters
-- A list of `(Entity, &KilledBy, &Hp)` with `Wall` component, filtered to `Changed<Hp>`
+- A list of `(Entity, &KilledBy, &Hp)` with `Wall` component, `Without<Dead>`
 
 # Description
-Find all wall entities whose Hp just changed and is now ≤ 0. For each, send `KillYourself<Wall>` with the victim entity and killer from KilledBy.dealer.
+Find all living wall entities whose Hp is ≤ 0. For each, send `KillYourself<Wall>` with the victim entity and killer from KilledBy.dealer.
 
 Only walls that have Hp are queryable. Permanent walls without Hp are unaffected. One-shot walls (shield walls) have Hp and die on first hit.
 
+DO NOT insert `Dead`. The domain kill handler decides whether the entity actually dies.
 DO NOT despawn the entity.

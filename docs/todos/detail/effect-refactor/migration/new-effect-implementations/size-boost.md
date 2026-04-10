@@ -19,7 +19,7 @@ SizeBoost
 3. Reverse does NOT change Scale2D -- that is sync_bolt_scale's job.
 
 # Source Location
-`src/effect/configs/size_boost.rs`
+`src/effect/effects/size_boost/config.rs`
 
 # New Types
 None beyond `EffectStack<SizeBoostConfig>`.

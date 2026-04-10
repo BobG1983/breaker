@@ -1,5 +1,9 @@
 # Walking Algorithm
 
+## What it is
+
+A helper function called by bridge systems. Not a system itself. Bridges are regular systems that read messages, determine which entities to walk, and call this function for each entity.
+
 ## Signature
 
 ```rust
@@ -7,47 +11,71 @@ fn walk_effects(
     entity: Entity,
     trigger: &Trigger,
     context: &TriggerContext,
-    world: &mut World,
+    bound: &BoundEffects,
+    staged: &StagedEffects,
+    commands: &mut Commands,
 );
 ```
 
-Called by bridge systems. Walks the entity's StagedEffects then BoundEffects for matching trees.
-
-When a trigger fires on an entity, walk that entity's effect trees in this order.
+Bridges have `&BoundEffects` and `&StagedEffects` (read-only). All mutations happen through deferred commands (`fire_effect`, `reverse_effect`, `route_effect`, `stage_effect`, `remove_effect`). This means bridges are regular systems that can run in parallel — no exclusive world access needed.
 
 ## Step 1: Walk StagedEffects
 
 Iterate every entry in StagedEffects. For each (source, tree):
 
-1. Check if the tree's outermost node matches the trigger.
+1. Check if the tree's outermost node matches the trigger (see Trigger Matching below).
 2. If it matches, evaluate the tree (see the per-node files).
-3. Mark the entry for removal — it has been consumed.
+3. Queue `remove_effect(entity, Staged, source, tree)` — the entry has been consumed.
 
-After iterating, remove all marked entries from StagedEffects.
+All matching entries fire and are consumed, not just the first. If two chips both staged a `When(Bumped, ...)`, both fire on the same bump.
 
-**Why staged first:** Effects can be multi-stage with more than one trigger in the chain. When a staged entry matches, its inner tree may produce new entries in BoundEffects or StagedEffects (via Route). If we walked BoundEffects first, a tree like `When(Bumped, ...)` in BoundEffects could evaluate and route a `When(Bumped, ...)` into StagedEffects — and if we then walked StagedEffects, that inner When would match the same Bumped trigger in the same frame. Walking staged first prevents a single trigger from cascading through multiple stages in one pass.
+**Exception:** During nodes in StagedEffects have special lifecycle handling — see `walking-effects/during.md`. They are NOT consumed on first match.
+
+**Why staged first:** Effects can be multi-stage with more than one trigger in the chain. Walking staged first prevents a single trigger from cascading through multiple stages in one pass. If a BoundEffects entry matches and routes a new `When(Bumped, ...)` into StagedEffects, that inner When does NOT match the same Bumped trigger this frame — it will match on the next Bumped.
 
 ## Step 2: Walk BoundEffects
 
-Iterate every entry in BoundEffects. For each (source, tree):
+Iterate every entry in BoundEffects. For each BoundEntry { source, tree, condition_active }:
 
-1. Check if the tree's outermost node matches the trigger.
-2. If it matches, evaluate the tree (see the per-node files).
-3. DO NOT remove the entry — bound entries persist and re-arm.
+1. If `condition_active` is `Some(_)`, skip — this is a During entry handled by `evaluate_conditions`, not by trigger walking.
+2. Check if the tree's outermost node matches the trigger.
+3. If it matches, evaluate the tree (see the per-node files).
+4. DO NOT remove the entry — bound entries persist and re-arm.
 
-Exception: Once nodes remove themselves from BoundEffects after matching. The per-node evaluation for Once handles this.
+Exception: Once nodes queue `remove_effect(entity, Bound, source, tree)` after matching. The per-node evaluation for Once handles this.
 
 ## When to call command extensions
 
-- Call `fire_effect` when the walker reaches a Fire leaf and needs to execute an effect on an entity.
-- Call `reverse_effect` when a During condition becomes false or an Until trigger fires and scoped effects need undoing.
-- Call `route_effect` when the walker reaches a Route terminal inside On and needs to install a tree on another entity.
-- DO NOT call `stamp_effect` during walking. Stamp is for initial installation from definitions, not for runtime tree evaluation. Route(Bound) handles the runtime equivalent.
+All mutations are deferred via commands. The walker never mutates BoundEffects, StagedEffects, or the World directly.
+
+| Situation | Command |
+|-----------|---------|
+| Fire leaf reached | `fire_effect(entity, effect_type, source)` |
+| During/Until scoped effect needs reversing | `reverse_effect(entity, effect_type, source)` |
+| Route terminal reached (install tree on another entity) | `route_effect(target_entity, source, tree, route_type)` |
+| Nested trigger gate needs arming | `stage_effect(entity, source, inner_tree)` |
+| Once matched (remove from Bound) | `remove_effect(entity, Bound, source, tree)` |
+| Staged entry consumed | `remove_effect(entity, Staged, source, tree)` |
+
+## Trigger Matching
+
+Exact equality match on the Trigger enum variant and its parameters.
+
+- `Trigger::Bumped` matches only `Trigger::Bumped`
+- `Trigger::Impacted(Cell)` matches only `Trigger::Impacted(Cell)`, not `Trigger::Impacted(Bolt)`
+- `Trigger::TimeExpires(5.0)` matches only `Trigger::TimeExpires(5.0)` (OrderedFloat equality)
+- `Trigger::DeathOccurred(Cell)` matches only `Trigger::DeathOccurred(Cell)`
+
+No wildcards. No partial matching. The Trigger enum derives `PartialEq` and `Eq`.
+
+## Entity Safety
+
+Entities are never despawned during FixedUpdate. The death pipeline defers despawn to PostFixedUpdate via `process_despawn_requests`. The walker can safely iterate all entries without checking entity validity mid-walk.
 
 ## Constraints
 
 - DO iterate StagedEffects before BoundEffects, always.
-- DO NOT modify the Vec while iterating — collect removals and apply after.
-- DO NOT remove BoundEffects entries on match (except Once).
-- DO remove StagedEffects entries on match.
-- DO pass the trigger context (which entities were involved in the event) through to On node evaluation so participants can be resolved.
+- DO NOT mutate BoundEffects or StagedEffects directly — use command extensions.
+- DO NOT remove BoundEffects entries on match (except Once via remove_effect command).
+- DO remove StagedEffects entries on match (via remove_effect command).
+- DO pass the trigger context through to On node evaluation so participants can be resolved.

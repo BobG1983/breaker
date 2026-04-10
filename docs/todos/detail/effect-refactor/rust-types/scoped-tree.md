@@ -1,6 +1,9 @@
 # Name
 ScopedTree
 
+# Derives
+`Debug, Clone, PartialEq, Eq, Serialize, Deserialize`
+
 # Syntax
 ```rust
 enum ScopedTree {

@@ -1,6 +1,9 @@
 # Name
 Tree
 
+# Derives
+`Debug, Clone, PartialEq, Eq, Serialize, Deserialize`
+
 # Syntax
 ```rust
 enum Tree {

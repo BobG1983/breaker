@@ -1,6 +1,9 @@
 # Name
 Trigger
 
+# Derives
+`Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize`
+
 # Syntax
 ```rust
 enum Trigger {

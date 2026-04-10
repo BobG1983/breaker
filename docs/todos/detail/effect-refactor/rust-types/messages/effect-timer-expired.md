@@ -10,7 +10,7 @@ struct EffectTimerExpired {
 ```
 
 # Location
-`src/effect/messages/`
+`src/effect/triggers/time/messages.rs`
 
 # Description
 Sent by `tick_effect_timers` when an entry in `EffectTimers` reaches zero. Read by the `on_time_expires` bridge which dispatches `TimeExpires` on the entity (Self scope).

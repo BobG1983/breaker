@@ -20,7 +20,7 @@ SpawnBolts
 Not reversible.
 
 # Source Location
-`src/effect/configs/spawn_bolts.rs`
+`src/effect/effects/spawn_bolts/config.rs`
 
 # New Types
 None -- uses existing bolt builder and existing `ExtraBolt` marker.

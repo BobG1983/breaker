@@ -3,7 +3,7 @@
     description: "Perfect bumps spawn mirrored piercing bolts that spread in controlled directions",
     effects: [
         Stamp(Bolt,
-            When(PerfectBump,
+            When(PerfectBumped,
                 Fire(MirrorProtocol(MirrorConfig(inherit: true))),
             ),
         ),

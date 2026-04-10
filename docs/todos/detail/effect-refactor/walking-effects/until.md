@@ -12,22 +12,32 @@ Until applies its scoped effects immediately and keeps them active until the tri
 1. Apply the ScopedTree's immediate children, same as During's "condition becomes true" behavior:
    - `Fire(ReversibleEffectType)` — call `fire_effect`.
    - `Sequence([ReversibleEffectType, ...])` — call `fire_effect` for each effect in order.
-   - `When(Trigger, Tree)` — install the When as a listener.
+   - `When(Trigger, Tree)` — install the When as a listener via `stage_effect`.
    - `On(ParticipantTarget, ScopedTerminal)` — resolve participant, evaluate the scoped terminal.
+
+2. If the Until's trigger is `TimeExpires(duration)`, register a timer:
+   - Push `(duration, duration)` onto the entity's `EffectTimers` component (insert the component if absent).
+   - The `tick_effect_timers` system counts down the timer each frame.
+   - When remaining reaches 0, `EffectTimerExpired` is sent, and `on_time_expires` dispatches `TimeExpires(duration)`.
+   - That dispatch matches this Until's trigger and triggers reversal (step below).
 
 **When the Until's trigger fires:**
 
 1. Reverse the ScopedTree's immediate children, same as During's "condition becomes false" behavior:
    - `Fire(ReversibleEffectType)` — call `reverse_effect`.
    - `Sequence([ReversibleEffectType, ...])` — call `reverse_effect` in reverse order.
-   - `When(Trigger, Tree)` — remove the listener.
+   - `When(Trigger, Tree)` — remove the listener via `remove_effect`.
    - `On(ParticipantTarget, ScopedTerminal)` — reverse on the participant.
-2. Remove the Until entry from BoundEffects. It is one-shot — it does not re-arm.
+2. Queue `remove_effect(entity, Bound, source, tree)` to remove the Until entry from BoundEffects. It is one-shot — it does not re-arm.
+
+**Multiple Until entries with the same TimeExpires duration:** If two different Until entries on the same entity both use `TimeExpires(5.0)`, both will match when the timer fires. Both reverse their scoped effects. This is correct behavior — independent effects with the same duration are independent.
 
 ## Constraints
 
 - DO apply effects immediately on installation, not on a trigger match.
+- DO register a timer on installation when the trigger is TimeExpires.
 - DO reverse and remove when the trigger fires. Until is one-shot, not cycling like During.
 - DO NOT re-arm. Once reversed, the Until is gone.
 - DO reverse in the opposite order of application for Sequence children.
 - DO NOT reverse individual effects that fired from a When listener inside the scope.
+- DO use deferred commands (fire_effect, reverse_effect, remove_effect) for all mutations.

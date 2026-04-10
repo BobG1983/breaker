@@ -8,13 +8,13 @@ New: `DeathPipelineSystems::ApplyDamage`. Runs in FixedUpdate, after `BoltSystem
 `src/shared/systems/apply_damage.rs` — generic system, monomorphized per T.
 
 # Queries/Filters
-- A list of `(&mut Hp, &mut KilledBy)` with `Cell` component, without `Locked` component
+- A list of `(&mut Hp, &mut KilledBy)` with `Cell` component, `Without<Locked>`, `Without<Dead>`
 
 # Description
 Read all `DamageDealt<Cell>` messages. For each message, look up the target entity. Decrement Hp.current by the damage amount.
 
 If Hp was positive before this message and is now ≤ 0, this is the killing blow. Set `KilledBy.dealer` to the message's dealer field. If KilledBy.dealer is already set (another message killed it first this frame), DO NOT overwrite — first kill wins.
 
-DO skip entities with the `Locked` component — locked cells cannot take damage.
+DO skip entities with the `Locked` component — locked cells cannot take damage. Effects (shockwave, chain lightning, etc.) may send `DamageDealt<Cell>` for locked cells — apply_damage silently drops them. Effects do not pre-filter.
 DO NOT despawn the entity. DO NOT send KillYourself. That is detect_cell_deaths' job.
 DO NOT update visual feedback — that is a separate concern.

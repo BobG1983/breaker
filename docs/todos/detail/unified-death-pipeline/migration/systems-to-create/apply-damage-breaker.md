@@ -8,7 +8,7 @@ apply_damage::\<Breaker\>
 `src/shared/systems/apply_damage.rs` — same generic system, monomorphized for Breaker.
 
 # Queries/Filters
-- A list of `(&mut Hp, &mut KilledBy)` with `Breaker` component
+- A list of `(&mut Hp, &mut KilledBy)` with `Breaker` component, `Without<Dead>`
 
 # Description
 Read all `DamageDealt<Breaker>` messages. For each message, look up the target entity. Decrement Hp.current by the damage amount.

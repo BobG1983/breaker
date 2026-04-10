@@ -8,7 +8,7 @@ apply_damage::\<Bolt\>
 `src/shared/systems/apply_damage.rs` — same generic system as Cell, monomorphized for Bolt.
 
 # Queries/Filters
-- A list of `(&mut Hp, &mut KilledBy)` with `Bolt` component
+- A list of `(&mut Hp, &mut KilledBy)` with `Bolt` component, `Without<Dead>`
 
 # Description
 Read all `DamageDealt<Bolt>` messages. For each message, look up the target entity. Decrement Hp.current by the damage amount.

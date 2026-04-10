@@ -6,7 +6,7 @@
         effects: [
             Stamp(AllBolts,
                 When(Bumped,
-                    Until(BumpWhiff,
+                    Until(BumpWhiffOccurred,
                         SpeedBoost(SpeedBoostConfig(multiplier: 1.2)),
                     ),
                 ),

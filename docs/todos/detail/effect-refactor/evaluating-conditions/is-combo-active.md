@@ -7,7 +7,7 @@ fn is_combo_active(world: &World, threshold: u32) -> bool;
 ```
 
 # Source Location
-`src/effect/systems/conditions/combo_active.rs`
+`src/effect/conditions/combo_active.rs`
 
 # Description
 Returns true when the current consecutive perfect bump streak is at or above the given threshold. Reads a combo tracking resource from the world.

@@ -15,7 +15,7 @@ For bolt entity: `TriggerContext { breaker: Some(msg.breaker), ..default() }`
 For breaker entity: `TriggerContext { bolt: msg.bolt, ..default() }` (bolt may be None — skip bolt walk in that case)
 
 # Source Location
-`src/effect/bridges/bump.rs`
+`src/effect/triggers/bump/bridges.rs`
 
 # Schedule
 FixedUpdate, in `EffectSystems::Bridge`, after `BreakerSystems::GradeBump`, with `run_if(in_state(NodeState::Playing))`

@@ -18,7 +18,7 @@ The trigger fires on every entity in the world that has BoundEffects or StagedEf
 
 Use Global when the trigger is a world-level event that any entity might want to react to — a node started, a cell died somewhere, a bump happened somewhere. The entities being walked are NOT necessarily involved in the event.
 
-TriggerContext is None for most global triggers — On() nodes have no participant to resolve. Exception: BoltLostOccurred is global but carries bolt and breaker participants because both need to react and the specific entities are known.
+All global triggers populate their TriggerContext with participant entities from the event. On() nodes can resolve participants even inside global trigger trees. For example, On(Death(Killer)) inside a DeathOccurred tree resolves to the killer entity.
 
 Examples: PerfectBumpOccurred, BumpOccurred, ImpactOccurred(EntityKind), DeathOccurred(EntityKind), BoltLostOccurred, NodeStartOccurred, NodeEndOccurred, NodeTimerThresholdOccurred.
 

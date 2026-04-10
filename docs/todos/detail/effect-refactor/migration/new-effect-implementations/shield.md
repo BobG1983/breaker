@@ -13,6 +13,7 @@ Shield
 2. Insert `ShieldDuration` initialized to `duration` (ticks down over time).
 3. Insert `ShieldReflectionCost` initialized to `reflection_cost`.
 4. Insert `ShieldOwner(entity)` so reverse can find it.
+   Insert `CleanupOnExit<NodeState>` as safety net.
 5. Fire does NOT handle bolt reflections -- that is the wall collision system's job.
 6. Fire does NOT tick the timer -- `tick_shield_duration` does.
 
@@ -21,7 +22,7 @@ Shield
 2. Despawn them.
 
 # Source Location
-`src/effect/configs/shield.rs`
+`src/effect/effects/shield/config.rs`
 
 # New Types
 - `ShieldWall` -- marker component for the shield wall entity.

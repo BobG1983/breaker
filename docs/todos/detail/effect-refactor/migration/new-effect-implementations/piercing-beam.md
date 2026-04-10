@@ -11,7 +11,7 @@ PiercingBeam
 1. Read the source entity's position and velocity direction.
 2. Calculate the beam rectangle: origin at source position, extending along the velocity direction, with `config.width` perpendicular extent.
 3. Query the quadtree for all cells within the beam rectangle.
-4. For each cell found, send `DamageDealt<Cell>` with `damage_mult * base_damage * damage_boosts`.
+4. For each cell found, send `DamageDealt<Cell>` with `damage_mult * BoltBaseDamage * EffectStack<DamageBoostConfig>.aggregate()`.
 5. Spawn a visual beam entity at the source position along the velocity direction (short-lived VFX, not persistent).
 6. Fire does NOT spawn a persistent entity -- beam is instant damage plus a short VFX.
 
@@ -19,7 +19,7 @@ PiercingBeam
 Not reversible.
 
 # Source Location
-`src/effect/configs/piercing_beam.rs`
+`src/effect/effects/piercing_beam/config.rs`
 
 # New Types
 None persistent. The visual beam is a short-lived VFX entity using existing VFX infrastructure.

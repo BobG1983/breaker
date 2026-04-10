@@ -3,6 +3,7 @@
 - [game-entity.md](game-entity.md) — GameEntity trait
 - [hp.md](hp.md) — Unified health component
 - [killed-by.md](killed-by.md) — Kill attribution component
+- [dead.md](dead.md) — Death pipeline marker component
 - [damage-dealt.md](damage-dealt.md) — Generic damage message
 - [kill-yourself.md](kill-yourself.md) — Death request message
 - [destroyed.md](destroyed.md) — Death confirmed message

@@ -20,7 +20,7 @@ Vulnerable
 3. Reverse does NOT change incoming damage -- that is apply_damage's job.
 
 # Source Location
-`src/effect/configs/vulnerable.rs`
+`src/effect/effects/vulnerable/config.rs`
 
 # New Types
 None beyond `EffectStack<VulnerableConfig>`.

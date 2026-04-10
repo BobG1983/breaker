@@ -17,13 +17,14 @@ GravityWell
    - `GravityWellRadius(config.radius)`
    - `GravityWellLifetime(config.duration)`
    - `GravityWellOwner(source_entity)`
+   - `CleanupOnExit<NodeState>`
 5. Fire does NOT pull bolts -- `tick_gravity_wells` does.
 
 # Reverse
 Not reversible.
 
 # Source Location
-`src/effect/configs/gravity_well.rs`
+`src/effect/effects/gravity_well/config.rs`
 
 # New Types
 - `GravityWellSource` -- marker component identifying gravity well entities
@@ -37,7 +38,7 @@ Not reversible.
 ## tick_gravity_wells
 - **What it does**: For each entity with `GravityWellSource`, query for bolt entities within `GravityWellRadius`. For each bolt, apply a force toward the well center scaled by `GravityWellStrength`. Decrement `GravityWellLifetime` by `dt`.
 - **What it does NOT do**: Does not despawn wells. Does not spawn wells.
-- **Schedule**: FixedUpdate, after `fire_effect`.
+- **Schedule**: FixedUpdate, in `EffectSystems::Tick`, with `run_if(in_state(NodeState::Playing))`.
 
 ## despawn_expired_wells
 - **What it does**: For each entity with `GravityWellSource`, if `GravityWellLifetime <= 0.0`, despawn the entity.

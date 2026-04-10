@@ -46,7 +46,7 @@ Each collision fires two global sweeps (one per participant kind), both with the
 - Sweep 2: `ImpactOccurred(Cell)`, context: `Impact { impactor: cell, impactee: wall }`
 
 # Source Location
-`src/effect/bridges/impact.rs`
+`src/effect/triggers/impact/bridges.rs`
 
 # Schedule
 FixedUpdate, in `EffectSystems::Bridge`, with `run_if(in_state(NodeState::Playing))`.

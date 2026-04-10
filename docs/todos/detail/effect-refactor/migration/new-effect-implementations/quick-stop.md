@@ -19,7 +19,7 @@ QuickStop
 3. Reverse does NOT change deceleration rate -- that is the breaker movement system's job.
 
 # Source Location
-`src/effect/configs/quick_stop.rs`
+`src/effect/effects/quick_stop/config.rs`
 
 # New Types
 None beyond `EffectStack<QuickStopConfig>`.

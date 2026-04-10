@@ -8,7 +8,7 @@ apply_damage::\<Wall\>
 `src/shared/systems/apply_damage.rs` — same generic system, monomorphized for Wall.
 
 # Queries/Filters
-- A list of `(&mut Hp, &mut KilledBy)` with `Wall` component
+- A list of `(&mut Hp, &mut KilledBy)` with `Wall` component, `Without<Dead>`
 
 # Description
 Read all `DamageDealt<Wall>` messages. For each message, look up the target entity. Decrement Hp.current by the damage amount.

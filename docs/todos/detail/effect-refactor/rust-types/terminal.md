@@ -1,6 +1,9 @@
 # Name
 Terminal
 
+# Derives
+`Debug, Clone, PartialEq, Eq, Serialize, Deserialize`
+
 # Syntax
 ```rust
 enum Terminal {

@@ -4,6 +4,6 @@
     life_pool: None,
     effects: [
         Stamp(Breaker, When(BoltLostOccurred, Fire(TimePenalty(TimePenaltyConfig(seconds: 7.0))))),
-        Stamp(Breaker, When(PerfectBump, Fire(SpawnBolts(SpawnBoltsConfig(count: 1, lifespan: None, inherit: false))))),
+        Stamp(Breaker, When(PerfectBumped, Fire(SpawnBolts(SpawnBoltsConfig(count: 1, lifespan: None, inherit: false))))),
     ],
 )

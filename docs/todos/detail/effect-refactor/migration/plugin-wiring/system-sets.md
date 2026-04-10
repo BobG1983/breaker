@@ -40,7 +40,7 @@ Bridge systems that translate game events to trigger dispatches. Each reads a me
 
 ## EffectSystems::Tick
 
-Runtime systems for spawned effect entities. Advance state each frame.
+Runtime systems for spawned effect entities. Advance state each frame. All systems in this set run with `run_if(in_state(NodeState::Playing))` — effects freeze during node transitions and teardown.
 
 | System | Purpose | Chained with |
 |--------|---------|-------------|
@@ -71,9 +71,11 @@ Condition monitoring for During nodes.
 
 ## EffectSystems::Reset
 
-Per-node reset systems. Run on `OnEnter(NodeState)`, not in FixedUpdate.
+Per-node reset systems. Each effect defines its own reset timing. These run on state transition hooks, not in FixedUpdate.
 
-| System | Purpose |
-|--------|---------|
-| `reset_ramping_damage` | Zero out RampingDamageAccumulator |
-| `reset_entropy_counter` | Zero out EntropyCounter |
+| System | Purpose | Schedule |
+|--------|---------|----------|
+| `reset_ramping_damage` | Zero out RampingDamageAccumulator | `OnEnter(NodeState::Playing)` |
+| `reset_node_timer_thresholds` | Clear `fired` set in NodeTimerThresholdRegistry | `OnEnter(NodeState::Playing)` |
+
+Note: EntropyEngine resets its counter internally when fired — no separate reset system needed.

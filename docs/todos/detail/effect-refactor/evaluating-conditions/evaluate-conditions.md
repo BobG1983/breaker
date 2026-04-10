@@ -12,7 +12,7 @@ N/A — this is not a bridge. It directly calls `fire_effect` and `reverse_effec
 All entities with BoundEffects that have During entries.
 
 # Source Location
-`src/effect/systems/evaluate_conditions.rs`
+`src/effect/conditions/evaluate_conditions.rs`
 
 # Schedule
 FixedUpdate, in `EffectSystems::Conditions`, after `EffectSystems::Tick`.

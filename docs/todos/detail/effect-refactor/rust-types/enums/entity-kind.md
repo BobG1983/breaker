@@ -1,6 +1,9 @@
 # Name
 EntityKind
 
+# Derives
+`Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize`
+
 # Syntax
 ```rust
 enum EntityKind {

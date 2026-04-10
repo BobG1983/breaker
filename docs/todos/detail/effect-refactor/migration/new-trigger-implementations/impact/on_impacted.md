@@ -46,7 +46,7 @@ Local — walks only the two participant entities from each collision message.
 Both participants receive the same context — On(Impact(Impactor)) resolves to the impactor entity regardless of which participant is being walked.
 
 # Source Location
-`src/effect/bridges/impact.rs`
+`src/effect/triggers/impact/bridges.rs`
 
 # Schedule
 FixedUpdate, in `EffectSystems::Bridge`, with `run_if(in_state(NodeState::Playing))`.

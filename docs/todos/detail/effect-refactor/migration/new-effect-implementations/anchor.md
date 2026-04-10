@@ -16,10 +16,10 @@ Anchor
 
 # Reverse
 1. Remove `AnchorActive`, `AnchorTimer`, and `AnchorPlanted` from the target entity.
-2. If `AnchorPlanted` was present, remove the bump force boost from `EffectStack<BumpForceConfig>`.
+2. If `AnchorPlanted` was present, remove the bump force boost from `EffectStack<BumpForceConfig>` using the same chip source string that was used when the boost was pushed.
 
 # Source Location
-`src/effect/configs/anchor.rs`
+`src/effect/effects/anchor/config.rs`
 
 # New Types
 - `AnchorActive` -- component storing anchor config. Fields: `bump_force_multiplier: f32`, `perfect_window_multiplier: f32`, `plant_delay: f32`.
@@ -30,6 +30,6 @@ Anchor
 - `tick_anchor` -- state machine based on breaker velocity. Runs in `FixedUpdate`.
   1. Moving (nonzero velocity or dashing): remove `AnchorTimer` and `AnchorPlanted`. If was planted, remove bump force boost from `EffectStack<BumpForceConfig>`.
   2. Stationary + no timer + not planted: insert `AnchorTimer(plant_delay)`.
-  3. Stationary + timer active: decrement by `dt`. When timer reaches 0: remove timer, insert `AnchorPlanted`, push bump force boost to `EffectStack<BumpForceConfig>`.
+  3. Stationary + timer active: decrement by `dt`. When timer reaches 0: remove timer, insert `AnchorPlanted`, push bump force boost to `EffectStack<BumpForceConfig>` using the same chip source string as the Anchor effect.
   4. Stationary + planted: no-op.
   5. Does NOT modify perfect window directly -- bump timing system reads `AnchorActive.perfect_window_multiplier` when `AnchorPlanted` is present.

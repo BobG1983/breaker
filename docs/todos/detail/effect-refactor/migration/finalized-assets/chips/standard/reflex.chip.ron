@@ -5,7 +5,7 @@
         prefix: "Quick",
         effects: [
             Stamp(Breaker,
-                When(PerfectBump,
+                When(PerfectBumped,
                     Fire(SpawnBolts(SpawnBoltsConfig(count: 1, lifespan: None, inherit: false))),
                 ),
             ),
@@ -15,7 +15,7 @@
         prefix: "Lightning",
         effects: [
             Stamp(Breaker,
-                When(PerfectBump,
+                When(PerfectBumped,
                     Sequence([
                         Fire(SpawnBolts(SpawnBoltsConfig(count: 1, lifespan: None, inherit: false))),
                         Fire(SpeedBoost(SpeedBoostConfig(multiplier: 1.2))),

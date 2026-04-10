@@ -1,8 +1,16 @@
 # Types
 
-No new types needed. `BoltLost` message already exists.
+## Message migration
+
+`BoltLost` changes from a unit struct to a struct with fields:
+
+| Before | After |
+|--------|-------|
+| `BoltLost` (unit struct) | `BoltLost { bolt: Entity, breaker: Entity }` |
+
+The bolt domain's `bolt_lost` system must populate both fields when sending the message.
 
 ## Notes
 
-- `BoltLostOccurred` is a Global trigger but carries participants (both bolt and breaker are known).
-- `BoltLost` is currently a unit struct. The bridge system may need to query for the breaker entity at dispatch time since it is not carried in the message. If `BoltLost` is extended to carry `bolt: Entity` and `breaker: Entity`, the query becomes unnecessary -- but that is a separate migration concern. The bridge must handle whichever form exists at implementation time.
+- `BoltLostOccurred` is a Global trigger that carries participants (both bolt and breaker are known).
+- The bridge reads `bolt` and `breaker` directly from the message — no query needed.

@@ -21,7 +21,7 @@ Die
 Not applicable -- Die is not reversible.
 
 # Source Location
-`src/effect/configs/die.rs`
+`src/effect/effects/die/config.rs`
 
 # New Types
 None -- uses `KillYourself<T>` from the unified death pipeline.

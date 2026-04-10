@@ -18,7 +18,7 @@ ChainBolt
 Not reversible.
 
 # Source Location
-`src/effect/configs/chain_bolt.rs`
+`src/effect/effects/chain_bolt/config.rs`
 
 # New Types
 None -- uses existing bolt builder and `DistanceConstraint` from `rantzsoft_physics2d`.

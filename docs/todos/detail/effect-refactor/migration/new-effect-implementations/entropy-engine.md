@@ -22,7 +22,7 @@ This effect is designed to be inside a `When(Killed(Cell), ...)` -- each fire ca
 2. Does NOT reverse the individual effects that were fired.
 
 # Source Location
-`src/effect/configs/entropy_engine.rs`
+`src/effect/effects/entropy_engine/config.rs`
 
 # New Types
 - `EntropyCounter` -- component tracking accumulated activations. Fields: `count: u32`, `max_effects: u32`, `pool: Vec<(OrderedFloat<f32>, Box<EffectType>)>` (clone of config pool).

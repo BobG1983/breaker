@@ -14,7 +14,32 @@ A game event happens. It becomes a Trigger. The trigger's scope determines which
 
 ## Trigger Context
 
-The trigger context carries the entities involved in the event so that On nodes can resolve ParticipantTargets during tree walking. Each trigger category populates different context fields — see the per-trigger files for specifics.
+The trigger context carries the entities involved in the event so that On nodes can resolve ParticipantTargets during tree walking. **All triggers populate their context** — including global triggers. On() nodes can resolve participants even inside global trigger trees.
+
+### Context Population Table
+
+| Trigger | Scope | TriggerContext |
+|---------|-------|---------------|
+| PerfectBumped | Local | `Bump { bolt, breaker }` |
+| EarlyBumped | Local | `Bump { bolt, breaker }` |
+| LateBumped | Local | `Bump { bolt, breaker }` |
+| Bumped | Local | `Bump { bolt, breaker }` |
+| PerfectBumpOccurred | Global | `Bump { bolt, breaker }` |
+| EarlyBumpOccurred | Global | `Bump { bolt, breaker }` |
+| LateBumpOccurred | Global | `Bump { bolt, breaker }` |
+| BumpOccurred | Global | `Bump { bolt, breaker }` |
+| BumpWhiffOccurred | Global | `None` (no participants in a whiff) |
+| NoBumpOccurred | Global | `Bump { bolt: None, breaker }` |
+| Impacted(EntityKind) | Local | `Impact { impactor, impactee }` |
+| ImpactOccurred(EntityKind) | Global | `Impact { impactor, impactee }` |
+| Died | Local | `Death { victim, killer }` |
+| Killed(EntityKind) | Local | `Death { victim, killer }` |
+| DeathOccurred(EntityKind) | Global | `Death { victim, killer }` |
+| BoltLostOccurred | Global | `BoltLost { bolt, breaker }` |
+| NodeStartOccurred | Global | `None` |
+| NodeEndOccurred | Global | `None` |
+| NodeTimerThresholdOccurred(f32) | Global | `None` |
+| TimeExpires(f32) | Self | `None` |
 
 ## Multiple Triggers from One Event
 

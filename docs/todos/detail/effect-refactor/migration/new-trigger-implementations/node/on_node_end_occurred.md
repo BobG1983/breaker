@@ -2,7 +2,7 @@
 on_node_end_occurred
 
 # Reads
-Node state transition (exited Playing state or node cleared).
+Node state transition via `OnExit(NodeState::Playing)`.
 
 # Dispatches
 `Trigger::NodeEndOccurred`
@@ -10,21 +10,19 @@ Node state transition (exited Playing state or node cleared).
 # Scope
 Global.
 
-Walk ALL entities with `NodeEndOccurred` trigger attached.
+Walk ALL entities with BoundEffects/StagedEffects.
 
 # TriggerContext
 `TriggerContext::None`
 
 # Source Location
-`src/effect/bridges/node.rs`
+`src/effect/triggers/node/bridges.rs`
 
 # Schedule
-FixedUpdate, on node state exit.
+`OnExit(NodeState::Playing)` — runs once when the node transitions out of Playing. This is NOT a FixedUpdate system — it fires as a one-shot state transition hook.
 
 # Behavior
-1. Detect that the node has exited the Playing state (state transition or node cleared).
-2. Walk ALL entities that have `NodeEndOccurred` in their trigger set.
-3. For each match, invoke the tree walker with `TriggerContext::None`.
+1. Walk ALL entities with BoundEffects/StagedEffects with `NodeEndOccurred` and `TriggerContext::None`.
 
 - Does NOT tear down the node.
 - Does NOT despawn cells or clean up node resources.

@@ -55,11 +55,13 @@
     // Use [] for no effects.
     //
     // Targets: Breaker, Bolt, AllBolts, Cell, AllCells, Wall, AllWalls
-    // Triggers: PerfectBump, EarlyBump, LateBump, Bumped,
-    //           PerfectBumped, EarlyBumped, LateBumped, Bumped,
-    //           Impact(Cell/Bolt/Wall/Breaker), Impacted(Cell/Bolt/Wall/Breaker),
-    //           Death, Died, BoltLostOccurred, Killed(Cell),
-    //           NodeStart, NodeEnd, NodeTimerThreshold(f32), TimeExpires(f32)
+    // Triggers: PerfectBumped, EarlyBumped, LateBumped, Bumped,
+    //           PerfectBumpOccurred, EarlyBumpOccurred, LateBumpOccurred, BumpOccurred,
+    //           BumpWhiffOccurred, NoBumpOccurred,
+    //           Impacted(Cell/Bolt/Wall/Breaker), ImpactOccurred(Cell/Bolt/Wall/Breaker),
+    //           Died, Killed(Cell/Bolt/Wall/Breaker), DeathOccurred(Cell/Bolt/Wall/Breaker),
+    //           BoltLostOccurred,
+    //           NodeStartOccurred, NodeEndOccurred, NodeTimerThresholdOccurred(f32), TimeExpires(f32)
     effects: [
         // Example: Lose a life when the bolt is lost
         Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(LoseLifeConfig())))),

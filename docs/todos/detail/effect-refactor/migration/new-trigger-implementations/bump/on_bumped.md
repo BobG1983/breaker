@@ -17,7 +17,7 @@ For breaker entity: `TriggerContext { bolt: msg.bolt, ..default() }` (bolt may b
 Note: The current implementation only walks the bolt entity (via `query.get_mut(bolt)`). The new implementation should walk both bolt and breaker as participants. If `msg.bolt` is `None`, skip the bolt walk entirely but still walk the breaker.
 
 # Source Location
-`src/effect/bridges/bump.rs`
+`src/effect/triggers/bump/bridges.rs`
 
 # Schedule
 FixedUpdate, in `EffectSystems::Bridge`, after `BreakerSystems::GradeBump`, with `run_if(in_state(NodeState::Playing))`

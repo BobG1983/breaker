@@ -1,10 +1,13 @@
 # Name
 TriggerContext
 
+# Derives
+`Debug, Clone`
+
 # Syntax
 ```rust
 enum TriggerContext {
-    Bump { bolt: Entity, breaker: Entity },
+    Bump { bolt: Option<Entity>, breaker: Entity },
     Impact { impactor: Entity, impactee: Entity },
     Death { victim: Entity, killer: Option<Entity> },
     BoltLost { bolt: Entity, breaker: Entity },
@@ -15,7 +18,7 @@ enum TriggerContext {
 # Description
 Carries the entities involved in a trigger event so that On nodes can resolve ParticipantTargets during tree walking.
 
-- Bump: Both participants in a bump event. `On(Bump(Bolt))` resolves to `bolt`. `On(Bump(Breaker))` resolves to `breaker`.
+- Bump: Participants in a bump event. `On(Bump(Bolt))` resolves to `bolt` — if None (NoBump, BumpWhiff without a bolt), the On is skipped. `On(Bump(Breaker))` resolves to `breaker`.
 - Impact: Both participants in a collision. `On(Impact(Impactor))` resolves to `impactor`. `On(Impact(Impactee))` resolves to `impactee`.
 - Death: The victim and optionally the killer. `On(Death(Victim))` resolves to `victim`. `On(Death(Killer))` resolves to `killer` — if None (environmental death), the On is skipped.
 - BoltLost: The bolt that was lost and the breaker that lost it. `On(BoltLost(Bolt))` resolves to `bolt`. `On(BoltLost(Breaker))` resolves to `breaker`.

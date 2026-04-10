@@ -19,9 +19,11 @@ Each entry is a (source, entity_kind, tree) triple. When a new entity of the mat
 
 ## How entries are watched
 
-When a new entity is spawned with a Bolt, Cell, Wall, or Breaker component, the system checks the registry for matching EntityKind entries. For each match, the tree is cloned and stamped onto the new entity via stamp_effect. EntityKind::Any matches all entity types.
+A per-frame system queries for entities with `Added<Bolt>`, `Added<Cell>`, `Added<Wall>`, or `Added<Breaker>`. For each newly added entity, the system checks the registry for matching EntityKind entries. For each match, the tree is cloned and stamped onto the new entity via stamp_effect.
 
 Each spawned entity gets its own independent copy of the tree.
+
+This system runs in FixedUpdate, after entity spawning systems, in `EffectSystems::Bridge`.
 
 ## How entries are removed
 

@@ -17,13 +17,14 @@ SpawnPhantom
    - `PhantomOwner(source_entity)`
    - Infinite piercing (passes through all cells without bouncing)
    - A distinct visual (phantom appearance)
+   - `CleanupOnExit<NodeState>`
 5. Fire does NOT manage phantom lifetime -- `tick_phantom_lifetime` does.
 
 # Reverse
 Not reversible.
 
 # Source Location
-`src/effect/configs/spawn_phantom.rs`
+`src/effect/effects/phantom_bolt/config.rs`
 
 # New Types
 - `PhantomBolt` -- marker component identifying phantom bolt entities
@@ -35,4 +36,4 @@ Not reversible.
 ## tick_phantom_lifetime
 - **What it does**: For each entity with `PhantomBolt`, decrement `PhantomLifetime` by `dt`. If `PhantomLifetime <= 0.0`, despawn the entity.
 - **What it does NOT do**: Does not spawn phantoms. Does not cap active phantom count (fire does that).
-- **Schedule**: FixedUpdate, after `fire_effect`.
+- **Schedule**: FixedUpdate, in `EffectSystems::Tick`, with `run_if(in_state(NodeState::Playing))`.

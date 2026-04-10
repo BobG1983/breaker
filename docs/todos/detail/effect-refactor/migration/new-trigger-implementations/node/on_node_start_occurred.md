@@ -2,7 +2,7 @@
 on_node_start_occurred
 
 # Reads
-Node state transition (entered Playing state or equivalent).
+Node state transition via `OnEnter(NodeState::Playing)`.
 
 # Dispatches
 `Trigger::NodeStartOccurred`
@@ -10,21 +10,20 @@ Node state transition (entered Playing state or equivalent).
 # Scope
 Global.
 
-Walk ALL entities with `NodeStartOccurred` trigger attached.
+Walk ALL entities with BoundEffects/StagedEffects.
 
 # TriggerContext
 `TriggerContext::None`
 
 # Source Location
-`src/effect/bridges/node.rs`
+`src/effect/triggers/node/bridges.rs`
 
 # Schedule
-FixedUpdate, on node state enter.
+`OnEnter(NodeState::Playing)` — runs once when the node transitions to Playing. This is NOT a FixedUpdate system — it fires as a one-shot state transition hook.
 
 # Behavior
-1. Detect that the node has entered the Playing state (state transition).
-2. Walk ALL entities with BoundEffects/StagedEffects with `NodeStartOccurred` and `TriggerContext::None`.
+1. Walk ALL entities with BoundEffects/StagedEffects with `NodeStartOccurred` and `TriggerContext::None`.
 
 - Does NOT spawn cells or set up the node.
 - Does NOT modify the node timer.
-- Does NOT reset the NodeTimerThresholdRegistry — that is `check_node_timer_thresholds`' responsibility on node start.
+- Does NOT reset the NodeTimerThresholdRegistry — that is a separate reset system's responsibility.

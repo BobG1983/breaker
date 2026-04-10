@@ -16,7 +16,7 @@ Global — walks all entities with `BoundEffects`/`StagedEffects`.
 Note: Global bump triggers DO populate bolt and breaker context (unlike global impact triggers). This matches the current `bridge_bump` implementation, which sets `bolt: msg.bolt, breaker: Some(msg.breaker)` on the context. This allows `On(Bolt)` and `On(Breaker)` target resolution within global bump trigger trees.
 
 # Source Location
-`src/effect/bridges/bump.rs`
+`src/effect/triggers/bump/bridges.rs`
 
 # Schedule
 FixedUpdate, in `EffectSystems::Bridge`, after `BreakerSystems::GradeBump`, with `run_if(in_state(NodeState::Playing))`

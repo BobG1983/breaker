@@ -3,7 +3,7 @@
 Bridge systems that dispatch Died, Killed, and DeathOccurred triggers from `Destroyed<T>` messages.
 
 - [types.md](types.md) — Types consumed (from unified death pipeline)
-- [bridge-destroyed-cell.md](bridge-destroyed-cell.md) — Dispatch death triggers for cells
-- [bridge-destroyed-bolt.md](bridge-destroyed-bolt.md) — Dispatch death triggers for bolts
-- [bridge-destroyed-wall.md](bridge-destroyed-wall.md) — Dispatch death triggers for walls
-- [bridge-destroyed-breaker.md](bridge-destroyed-breaker.md) — Dispatch death triggers for breakers
+- [on_destroyed_cell.md](on_destroyed_cell.md) — Dispatch death triggers for cells
+- [on_destroyed_bolt.md](on_destroyed_bolt.md) — Dispatch death triggers for bolts
+- [on_destroyed_wall.md](on_destroyed_wall.md) — Dispatch death triggers for walls
+- [on_destroyed_breaker.md](on_destroyed_breaker.md) — Dispatch death triggers for breakers

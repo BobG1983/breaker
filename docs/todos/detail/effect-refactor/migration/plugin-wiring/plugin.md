@@ -2,36 +2,17 @@
 
 ## What it is
 
-A Bevy plugin that registers the entire effect system: tree walking, trigger bridges, effect tick systems, condition evaluation, and all supporting resources.
+A Bevy plugin that registers the entire effect system. Each effect and trigger category owns its own registration — the plugin orchestrates the calls.
 
 ## What it does
 
-1. Registers the `EffectSystems` system sets with ordering constraints.
-2. Registers all bridge systems in `EffectSystems::Bridge`.
-3. Registers all tick systems in `EffectSystems::Tick`.
+1. Configures the `EffectSystems` system sets with ordering constraints.
+2. Calls `Fireable::register(app)` on every effect config struct.
+3. Calls `register(app)` on every trigger category.
 4. Registers `evaluate_conditions` in `EffectSystems::Conditions`.
-5. Registers reset systems on `OnEnter(NodeState)`.
-6. Initializes resources: `SpawnStampRegistry`, `NodeTimerThresholdRegistry`, `ComboStreak`.
-7. Registers death bridge systems (`bridge_destroyed<Cell>`, `bridge_destroyed<Bolt>`, `bridge_destroyed<Wall>`, `bridge_destroyed<Breaker>`) — these live in the effect domain because they call `walk_effects`.
+5. Initializes shared resources: `SpawnStampRegistry`, `ComboStreak`.
 
-## How it registers systems
-
-Each effect config struct that has runtime systems provides a registration function:
-
-```rust
-impl ShockwaveConfig {
-    pub fn register_systems(app: &mut App) {
-        app.add_systems(FixedUpdate, (
-            tick_shockwave,
-            sync_shockwave_visual,
-            apply_shockwave_damage,
-            despawn_finished_shockwave,
-        ).chain().in_set(EffectSystems::Tick));
-    }
-}
-```
-
-The plugin calls each config's `register_systems` during build:
+## How it registers
 
 ```rust
 impl Plugin for EffectPlugin {
@@ -43,36 +24,65 @@ impl Plugin for EffectPlugin {
             EffectSystems::Conditions,
         ));
 
-        // Bridges
-        // ... register all on_* bridge systems ...
+        // Effects — each config registers its own systems via Fireable::register
+        SpeedBoostConfig::register(app);
+        SizeBoostConfig::register(app);
+        DamageBoostConfig::register(app);
+        BumpForceConfig::register(app);
+        QuickStopConfig::register(app);
+        VulnerableConfig::register(app);
+        LoseLifeConfig::register(app);
+        TimePenaltyConfig::register(app);
+        DieConfig::register(app);
+        SpawnBoltsConfig::register(app);
+        ChainBoltConfig::register(app);
+        MirrorConfig::register(app);
+        RandomEffectConfig::register(app);
+        ExplodeConfig::register(app);
+        PiercingBeamConfig::register(app);
+        ShockwaveConfig::register(app);
+        ChainLightningConfig::register(app);
+        AnchorConfig::register(app);
+        AttractionConfig::register(app);
+        PulseConfig::register(app);
+        ShieldConfig::register(app);
+        SecondWindConfig::register(app);
+        FlashStepConfig::register(app);
+        CircuitBreakerConfig::register(app);
+        EntropyConfig::register(app);
+        GravityWellConfig::register(app);
+        SpawnPhantomConfig::register(app);
+        TetherBeamConfig::register(app);
+        PiercingConfig::register(app);
+        RampingDamageConfig::register(app);
 
-        // Per-effect systems
-        ShockwaveConfig::register_systems(app);
-        ChainLightningConfig::register_systems(app);
-        AnchorConfig::register_systems(app);
-        // ... etc for each config with systems ...
+        // Triggers — each category registers its own bridges and game systems
+        triggers::bump::register(app);
+        triggers::impact::register(app);
+        triggers::death::register(app);
+        triggers::bolt_lost::register(app);
+        triggers::node::register(app);
+        triggers::time::register(app);
 
         // Condition evaluation
         app.add_systems(FixedUpdate,
             evaluate_conditions.in_set(EffectSystems::Conditions)
         );
 
-        // Reset systems
-        app.add_systems(OnEnter(NodeState::Running), (
-            reset_ramping_damage,
-            reset_entropy_counter,
-        ).in_set(EffectSystems::Reset));
-
-        // Resources
+        // Shared resources
         app.init_resource::<SpawnStampRegistry>();
-        app.init_resource::<NodeTimerThresholdRegistry>();
         app.init_resource::<ComboStreak>();
     }
 }
 ```
+
+Most effect configs use the default no-op `register` (passive effects, fire-and-forget). Only configs with runtime systems override it. The plugin calls all 30 regardless — the no-ops compile away.
+
+Each trigger `register` function handles its own bridges, game systems, resources, and messages. Adding a new trigger category means adding one line here.
 
 ## What it does NOT do
 
 - Does NOT register death pipeline types or systems (Hp, KilledBy, apply_damage, detect_deaths, process_despawn_requests). Those are shared/domain systems.
 - Does NOT register game systems (collision, bump grading, bolt lost). Those belong to their domains.
 - Does NOT register message types. Messages are registered by whoever defines them.
+- Does NOT list individual bridge or tick systems. That is each effect's and trigger's responsibility.

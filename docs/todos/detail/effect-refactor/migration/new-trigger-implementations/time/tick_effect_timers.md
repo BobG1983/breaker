@@ -15,7 +15,7 @@ N/A (game system).
 N/A (game system).
 
 # Source Location
-`src/effect/bridges/time.rs`
+`src/effect/triggers/time/tick_timers.rs`
 
 # Schedule
 FixedUpdate.

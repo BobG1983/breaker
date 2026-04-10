@@ -20,3 +20,5 @@ The type system enforces that only reversible effects can be passed — Reversib
 The source string must match the source used in the original fire_effect call so the correct instance is reversed when multiple sources apply the same effect type.
 
 If the entity does not exist in the world, do nothing.
+
+If no matching entry exists (already reversed, entity changed, or effect was never fired), do nothing.
