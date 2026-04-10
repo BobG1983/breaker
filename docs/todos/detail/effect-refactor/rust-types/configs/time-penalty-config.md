@@ -4,7 +4,7 @@ TimePenaltyConfig
 # Syntax
 ```rust
 struct TimePenaltyConfig {
-    seconds: f32,
+    seconds: OrderedFloat<f32>,
 }
 ```
 

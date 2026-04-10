@@ -4,8 +4,8 @@ ExplodeConfig
 # Syntax
 ```rust
 struct ExplodeConfig {
-    range: f32,
-    damage: f32,
+    range: OrderedFloat<f32>,
+    damage: OrderedFloat<f32>,
 }
 ```
 

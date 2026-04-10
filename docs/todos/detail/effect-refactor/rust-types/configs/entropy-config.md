@@ -5,7 +5,7 @@ EntropyConfig
 ```rust
 struct EntropyConfig {
     max_effects: u32,
-    pool: Vec<(f32, Box<EffectType>)>,
+    pool: Vec<(OrderedFloat<f32>, Box<EffectType>)>,
 }
 ```
 

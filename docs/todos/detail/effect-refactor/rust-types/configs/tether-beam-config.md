@@ -4,7 +4,7 @@ TetherBeamConfig
 # Syntax
 ```rust
 struct TetherBeamConfig {
-    damage_mult: f32,
+    damage_mult: OrderedFloat<f32>,
     chain: bool,
 }
 ```

@@ -4,7 +4,7 @@ DamageBoostConfig
 # Syntax
 ```rust
 struct DamageBoostConfig {
-    multiplier: f32,
+    multiplier: OrderedFloat<f32>,
 }
 ```
 

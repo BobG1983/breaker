@@ -4,7 +4,7 @@ RandomEffectConfig
 # Syntax
 ```rust
 struct RandomEffectConfig {
-    pool: Vec<(f32, Box<EffectType>)>,
+    pool: Vec<(OrderedFloat<f32>, Box<EffectType>)>,
 }
 ```
 

@@ -4,7 +4,7 @@ QuickStopConfig
 # Syntax
 ```rust
 struct QuickStopConfig {
-    multiplier: f32,
+    multiplier: OrderedFloat<f32>,
 }
 ```
 

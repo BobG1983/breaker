@@ -5,7 +5,7 @@ SpawnBoltsConfig
 ```rust
 struct SpawnBoltsConfig {
     count: u32,
-    lifespan: Option<f32>,
+    lifespan: Option<OrderedFloat<f32>>,
     inherit: bool,
 }
 ```

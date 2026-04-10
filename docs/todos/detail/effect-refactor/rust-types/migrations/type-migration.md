@@ -1,6 +1,6 @@
 # Type Migration
 
-Replace `RootEffect` with `RootNode` in every struct field listed below. The `effect/` domain is being deleted entirely — these are the types **outside** `effect/` that reference it.
+The `effect/` domain is being deleted entirely. These are the types **outside** `effect/` that reference it.
 
 ## Definition Structs (RON-deserialized)
 
@@ -20,3 +20,16 @@ Replace `RootEffect` with `RootNode` in every struct field listed below. The `ef
 | OptionalWallData | definition_effects | `Option<Vec<RootEffect>>` | `Option<Vec<RootNode>>` | `src/walls/builder/core/types.rs` |
 | OptionalWallData | override_effects | `Option<Vec<RootEffect>>` | `Option<Vec<RootNode>>` | `src/walls/builder/core/types.rs` |
 | CellDefinitionParams | effects | `Option<Vec<RootEffect>>` | `Option<Vec<RootNode>>` | `src/cells/builder/core/types.rs` |
+
+## EffectStack Components (passive effects)
+
+| Current Type | New Type | Notes |
+|-------------|----------|-------|
+| `ActiveSpeedBoosts` | `EffectStack<SpeedBoostConfig>` | Was `Vec<f32>`, now `Vec<(String, SpeedBoostConfig)>` with source tracking |
+| `ActiveSizeBoosts` | `EffectStack<SizeBoostConfig>` | Was `Vec<f32>` |
+| `ActiveDamageBoosts` | `EffectStack<DamageBoostConfig>` | Was `Vec<f32>` |
+| `ActiveBumpForces` | `EffectStack<BumpForceConfig>` | Was `Vec<f32>` |
+| `ActiveQuickStops` | `EffectStack<QuickStopConfig>` | Was `Vec<f32>` |
+| `ActiveVulnerability` | `EffectStack<VulnerableConfig>` | Was `Vec<f32>` |
+| `ActivePiercings` | `EffectStack<PiercingConfig>` | Was `Vec<u32>` |
+| (none) | `EffectStack<RampingDamageConfig>` | New — previously a different accumulation pattern |

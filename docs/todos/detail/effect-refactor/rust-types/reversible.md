@@ -16,10 +16,10 @@ The contract for undoing an effect on an entity. Config structs in ReversibleEff
 - world: Exclusive world access.
 
 What reverse does depends on the effect type:
-- Multiplicative boosts (SpeedBoost, DamageBoost, etc.): divide instead of multiply, or remove the boost entry.
+- Passive effects (SpeedBoost, DamageBoost, Piercing, etc.): remove the matching (source, config) entry from the entity's EffectStack\<T\>. See [passive-effects](../creating-effects/passive-effects.md) and [effect-stacking/](effect-stacking/index.md).
 - Spawned entities (Shield, Pulse, SecondWind): despawn what fire spawned.
 - Boolean toggles (FlashStep): remove the marker component.
-- Accumulators (RampingDamage): decrement or remove the accumulated value.
+- Stateful effects (CircuitBreaker, EntropyEngine): reset internal state.
 
 Called by the match dispatch inside ReverseEffectCommand::apply. Each arm unwraps the config and calls `config.reverse(entity, source, world)`.
 

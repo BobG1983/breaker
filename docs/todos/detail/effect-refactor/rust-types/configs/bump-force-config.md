@@ -4,7 +4,7 @@ BumpForceConfig
 # Syntax
 ```rust
 struct BumpForceConfig {
-    multiplier: f32,
+    multiplier: OrderedFloat<f32>,
 }
 ```
 

@@ -4,7 +4,7 @@ SizeBoostConfig
 # Syntax
 ```rust
 struct SizeBoostConfig {
-    multiplier: f32,
+    multiplier: OrderedFloat<f32>,
 }
 ```
 

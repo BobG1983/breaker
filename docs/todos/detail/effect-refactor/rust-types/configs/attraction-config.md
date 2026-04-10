@@ -5,8 +5,8 @@ AttractionConfig
 ```rust
 struct AttractionConfig {
     attraction_type: AttractionType,
-    force: f32,
-    max_force: Option<f32>,
+    force: OrderedFloat<f32>,
+    max_force: Option<OrderedFloat<f32>>,
 }
 ```
 

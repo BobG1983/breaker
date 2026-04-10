@@ -4,9 +4,9 @@ AnchorConfig
 # Syntax
 ```rust
 struct AnchorConfig {
-    bump_force_multiplier: f32,
-    perfect_window_multiplier: f32,
-    plant_delay: f32,
+    bump_force_multiplier: OrderedFloat<f32>,
+    perfect_window_multiplier: OrderedFloat<f32>,
+    plant_delay: OrderedFloat<f32>,
 }
 ```
 

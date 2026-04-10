@@ -4,7 +4,7 @@ SpawnPhantomConfig
 # Syntax
 ```rust
 struct SpawnPhantomConfig {
-    duration: f32,
+    duration: OrderedFloat<f32>,
     max_active: u32,
 }
 ```

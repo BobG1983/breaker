@@ -4,7 +4,7 @@ SpeedBoostConfig
 # Syntax
 ```rust
 struct SpeedBoostConfig {
-    multiplier: f32,
+    multiplier: OrderedFloat<f32>,
 }
 ```
 

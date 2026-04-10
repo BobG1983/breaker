@@ -7,8 +7,8 @@ struct CircuitBreakerConfig {
     bumps_required: u32,
     spawn_count: u32,
     inherit: bool,
-    shockwave_range: f32,
-    shockwave_speed: f32,
+    shockwave_range: OrderedFloat<f32>,
+    shockwave_speed: OrderedFloat<f32>,
 }
 ```
 

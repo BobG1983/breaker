@@ -4,7 +4,7 @@ ChainBoltConfig
 # Syntax
 ```rust
 struct ChainBoltConfig {
-    tether_distance: f32,
+    tether_distance: OrderedFloat<f32>,
 }
 ```
 

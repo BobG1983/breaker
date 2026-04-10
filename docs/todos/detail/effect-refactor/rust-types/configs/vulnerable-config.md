@@ -4,7 +4,7 @@ VulnerableConfig
 # Syntax
 ```rust
 struct VulnerableConfig {
-    multiplier: f32,
+    multiplier: OrderedFloat<f32>,
 }
 ```
 

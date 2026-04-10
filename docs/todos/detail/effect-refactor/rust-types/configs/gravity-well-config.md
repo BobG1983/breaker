@@ -4,9 +4,9 @@ GravityWellConfig
 # Syntax
 ```rust
 struct GravityWellConfig {
-    strength: f32,
-    duration: f32,
-    radius: f32,
+    strength: OrderedFloat<f32>,
+    duration: OrderedFloat<f32>,
+    radius: OrderedFloat<f32>,
     max: u32,
 }
 ```

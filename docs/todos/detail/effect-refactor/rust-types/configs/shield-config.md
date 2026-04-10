@@ -4,8 +4,8 @@ ShieldConfig
 # Syntax
 ```rust
 struct ShieldConfig {
-    duration: f32,
-    reflection_cost: f32,
+    duration: OrderedFloat<f32>,
+    reflection_cost: OrderedFloat<f32>,
 }
 ```
 

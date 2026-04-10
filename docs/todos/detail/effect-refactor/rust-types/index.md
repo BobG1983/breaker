@@ -10,6 +10,7 @@ Rust type definitions representing the RON syntax.
 - [trigger-context.md](trigger-context.md) — Trigger event context for On resolution
 - [fireable.md](fireable.md) — Fireable trait: the fire contract for all effects
 - [reversible.md](reversible.md) — Reversible trait: the reverse contract for reversible effects
+- [effect-stacking/](effect-stacking/index.md) — PassiveEffect trait, EffectStack\<T\>, and all concrete stack types
 - [enums/](enums/index.md) — All enum types
 - [configs/](configs/index.md) — All config structs
-- [type-migration.md](type-migration.md) — Where to replace RootEffect with RootNode
+- [migrations/](migrations/index.md) — Type migrations and new dependencies

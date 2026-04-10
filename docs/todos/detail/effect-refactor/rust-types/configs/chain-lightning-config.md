@@ -5,9 +5,9 @@ ChainLightningConfig
 ```rust
 struct ChainLightningConfig {
     arcs: u32,
-    range: f32,
-    damage_mult: f32,
-    arc_speed: f32,
+    range: OrderedFloat<f32>,
+    damage_mult: OrderedFloat<f32>,
+    arc_speed: OrderedFloat<f32>,
 }
 ```
 

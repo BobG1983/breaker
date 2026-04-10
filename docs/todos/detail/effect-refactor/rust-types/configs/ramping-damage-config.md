@@ -4,7 +4,7 @@ RampingDamageConfig
 # Syntax
 ```rust
 struct RampingDamageConfig {
-    increment: f32,
+    increment: OrderedFloat<f32>,
 }
 ```
 

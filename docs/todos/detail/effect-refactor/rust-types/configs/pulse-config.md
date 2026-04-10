@@ -4,11 +4,11 @@ PulseConfig
 # Syntax
 ```rust
 struct PulseConfig {
-    base_range: f32,
-    range_per_level: f32,
+    base_range: OrderedFloat<f32>,
+    range_per_level: OrderedFloat<f32>,
     stacks: u32,
-    speed: f32,
-    interval: f32,
+    speed: OrderedFloat<f32>,
+    interval: OrderedFloat<f32>,
 }
 ```
 

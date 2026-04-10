@@ -4,8 +4,8 @@ PiercingBeamConfig
 # Syntax
 ```rust
 struct PiercingBeamConfig {
-    damage_mult: f32,
-    width: f32,
+    damage_mult: OrderedFloat<f32>,
+    width: OrderedFloat<f32>,
 }
 ```
 
