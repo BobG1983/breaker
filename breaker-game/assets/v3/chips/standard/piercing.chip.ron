@@ -1,0 +1,31 @@
+(
+    name: "Piercing Shot",
+    max_taken: 3,
+    common: (
+        prefix: "Basic",
+        effects: [
+            Stamp(Bolt,
+                Fire(Piercing(PiercingConfig(charges: 1))),
+            ),
+        ],
+    ),
+    uncommon: (
+        prefix: "Keen",
+        effects: [
+            Stamp(Bolt,
+                Fire(Piercing(PiercingConfig(charges: 2))),
+            ),
+        ],
+    ),
+    rare: (
+        prefix: "Brutal",
+        effects: [
+            Stamp(Bolt,
+                Sequence([
+                    Fire(Piercing(PiercingConfig(charges: 3))),
+                    Fire(DamageBoost(DamageBoostConfig(multiplier: 1.1))),
+                ]),
+            ),
+        ],
+    ),
+)

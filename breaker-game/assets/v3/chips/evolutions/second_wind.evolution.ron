@@ -1,0 +1,15 @@
+(
+    name: "Second Wind",
+    description: "Losing a bolt grants temporary invulnerability — cheat death once",
+    effects: [
+        Stamp(Breaker,
+            When(BoltLostOccurred,
+                Fire(SecondWind(SecondWindConfig())),
+            ),
+        ),
+    ],
+    ingredients: [
+        (chip_name: "Wide Breaker", stacks_required: 2),
+        (chip_name: "Last Stand", stacks_required: 1),
+    ],
+)

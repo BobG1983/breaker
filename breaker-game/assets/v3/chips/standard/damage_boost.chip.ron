@@ -1,0 +1,28 @@
+(
+    name: "Damage Boost",
+    max_taken: 5,
+    common: (
+        prefix: "Minor",
+        effects: [
+            Stamp(Bolt,
+                Fire(DamageBoost(DamageBoostConfig(multiplier: 1.1))),
+            ),
+        ],
+    ),
+    uncommon: (
+        prefix: "Potent",
+        effects: [
+            Stamp(Bolt,
+                Fire(DamageBoost(DamageBoostConfig(multiplier: 1.2))),
+            ),
+        ],
+    ),
+    rare: (
+        prefix: "Savage",
+        effects: [
+            Stamp(Bolt,
+                Fire(DamageBoost(DamageBoostConfig(multiplier: 1.35))),
+            ),
+        ],
+    ),
+)

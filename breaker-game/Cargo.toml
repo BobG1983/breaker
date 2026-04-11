@@ -21,6 +21,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 serde = { version = "1", features = ["derive"] }
 ron = "0.12"
 iyes_progress = "0.16"
+ordered-float = { version = "5", features = ["serde"] }
 rand = "0.9"
 rand_chacha = "0.9"
 

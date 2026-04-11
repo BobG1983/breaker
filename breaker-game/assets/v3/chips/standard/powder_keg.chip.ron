@@ -1,0 +1,20 @@
+(
+    name: "Powder Keg",
+    max_taken: 1,
+    legendary: (
+        prefix: "",
+        effects: [
+            Stamp(Bolt,
+                When(Impacted(Cell),
+                    On(Impact(Impactee),
+                        Route(Staged,
+                            When(Died,
+                                Fire(Explode(ExplodeConfig(range: 48.0, damage: 10.0))),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ],
+    ),
+)

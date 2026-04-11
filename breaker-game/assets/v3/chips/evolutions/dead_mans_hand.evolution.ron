@@ -1,0 +1,18 @@
+(
+    name: "Dead Man's Hand",
+    description: "Losing a bolt triggers a shockwave and boosts all remaining bolts",
+    effects: [
+        Stamp(Breaker,
+            When(BoltLostOccurred,
+                Sequence([
+                    Fire(Shockwave(ShockwaveConfig(base_range: 128.0, range_per_level: 0.0, stacks: 1, speed: 500.0))),
+                    Fire(SpeedBoost(SpeedBoostConfig(multiplier: 1.5))),
+                ]),
+            ),
+        ),
+    ],
+    ingredients: [
+        (chip_name: "Damage Boost", stacks_required: 3),
+        (chip_name: "Last Stand", stacks_required: 1),
+    ],
+)

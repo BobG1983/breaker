@@ -1,0 +1,17 @@
+(
+    name: "Nova Lance",
+    description: "Perfect bumps unleash a devastating piercing beam through all cells in the bolt's path",
+    effects: [
+        Stamp(Bolt,
+            When(PerfectBumped,
+                When(Impacted(Cell),
+                    Fire(PiercingBeam(PiercingBeamConfig(damage_mult: 2.5, width: 40.0))),
+                ),
+            ),
+        ),
+    ],
+    ingredients: [
+        (chip_name: "Impact", stacks_required: 2),
+        (chip_name: "Bolt Speed", stacks_required: 3),
+    ],
+)

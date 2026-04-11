@@ -1,0 +1,17 @@
+(
+    name: "Desperation",
+    max_taken: 1,
+    legendary: (
+        prefix: "",
+        effects: [
+            Stamp(Breaker,
+                When(BoltLostOccurred,
+                    Sequence([
+                        Fire(SpeedBoost(SpeedBoostConfig(multiplier: 2.0))),
+                        Fire(SpawnBolts(SpawnBoltsConfig(count: 1, lifespan: None, inherit: true))),
+                    ]),
+                ),
+            ),
+        ],
+    ),
+)

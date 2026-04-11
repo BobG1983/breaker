@@ -1,0 +1,16 @@
+(
+    name: "Ricochet Protocol",
+    max_taken: 1,
+    legendary: (
+        prefix: "",
+        effects: [
+            Stamp(Bolt,
+                When(Impacted(Wall),
+                    Until(Impacted(Wall),
+                        DamageBoost(DamageBoostConfig(multiplier: 3.0)),
+                    ),
+                ),
+            ),
+        ],
+    ),
+)

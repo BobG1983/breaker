@@ -1,0 +1,70 @@
+// ============================================================================
+// Chip Template — Reference
+// ============================================================================
+//
+// Reference for all available fields in a .chip.ron file.
+// This file is NOT loaded by the game — it exists as documentation only.
+//
+// Chip templates expand into one ChipDefinition per non-None rarity slot.
+// Each slot's prefix is prepended to the template name.
+//
+// Required fields (no default):
+//   name, max_taken
+//
+// Optional fields (have defaults):
+//   common     — default: None (no common variant)
+//   uncommon   — default: None (no uncommon variant)
+//   rare       — default: None (no rare variant)
+//   legendary  — default: None (no legendary variant)
+//
+// At least one rarity slot should be Some, otherwise the template
+// produces no chip definitions.
+//
+// Loaded from: assets/chips/standard/*.chip.ron
+// Struct:      ChipTemplate (breaker-game/src/chips/definition/types.rs)
+// ============================================================================
+
+(
+    // REQUIRED: Base name shared by all rarity variants.
+    // Final name = "<prefix> <name>" (e.g., "Basic Piercing Shot").
+    // If prefix is empty, final name = just the base name.
+    name: "My Chip",
+
+    // REQUIRED: Maximum total chips from this template the player may hold.
+    max_taken: 3,
+
+    // OPTIONAL: Common-rarity variant.
+    common: (
+        // Prefix prepended to the base name. Use "" for no prefix.
+        prefix: "Basic",
+        // Effects applied when this variant is selected.
+        // Each entry is Stamp(<Target>, <EffectTree>).
+        effects: [
+            Stamp(Bolt, Fire(DamageBoost(DamageBoostConfig(multiplier: 1.1)))),
+        ],
+    ),
+
+    // OPTIONAL: Uncommon-rarity variant.
+    uncommon: (
+        prefix: "Keen",
+        effects: [
+            Stamp(Bolt, Fire(DamageBoost(DamageBoostConfig(multiplier: 1.25)))),
+        ],
+    ),
+
+    // OPTIONAL: Rare-rarity variant.
+    rare: (
+        prefix: "Brutal",
+        effects: [
+            Stamp(Bolt, Fire(DamageBoost(DamageBoostConfig(multiplier: 1.5)))),
+        ],
+    ),
+
+    // OPTIONAL: Legendary-rarity variant.
+    legendary: (
+        prefix: "Mythic",
+        effects: [
+            Stamp(Bolt, Fire(DamageBoost(DamageBoostConfig(multiplier: 2.0)))),
+        ],
+    ),
+)

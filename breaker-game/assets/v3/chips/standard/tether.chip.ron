@@ -1,0 +1,40 @@
+(
+    name: "Tether",
+    max_taken: 2,
+    common: (
+        prefix: "Short",
+        effects: [
+            Stamp(Bolt,
+                When(PerfectBumped,
+                    When(Impacted(Cell),
+                        Fire(ChainBolt(ChainBoltConfig(tether_distance: 80.0))),
+                    ),
+                ),
+            ),
+        ],
+    ),
+    uncommon: (
+        prefix: "Extended",
+        effects: [
+            Stamp(Bolt,
+                When(PerfectBumped,
+                    When(Impacted(Cell),
+                        Fire(ChainBolt(ChainBoltConfig(tether_distance: 120.0))),
+                    ),
+                ),
+            ),
+        ],
+    ),
+    rare: (
+        prefix: "Long",
+        effects: [
+            Stamp(Bolt,
+                When(PerfectBumped,
+                    When(Impacted(Cell),
+                        Fire(ChainBolt(ChainBoltConfig(tether_distance: 160.0))),
+                    ),
+                ),
+            ),
+        ],
+    ),
+)
