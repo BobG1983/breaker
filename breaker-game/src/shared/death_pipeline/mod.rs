@@ -22,3 +22,4 @@ pub use kill_yourself::KillYourself;
 pub use killed_by::KilledBy;
 pub use plugin::DeathPipelinePlugin;
 pub use sets::DeathPipelineSystems;
+pub use systems::{apply_damage, detect_deaths, process_despawn_requests};
