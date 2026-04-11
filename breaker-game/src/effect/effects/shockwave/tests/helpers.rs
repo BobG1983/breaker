@@ -1,0 +1,112 @@
+pub(super) use std::collections::HashSet;
+
+pub(super) use bevy::prelude::*;
+pub(super) use rantzsoft_physics2d::{
+    aabb::Aabb2D, collision_layers::CollisionLayers, plugin::RantzPhysics2dPlugin,
+};
+pub(super) use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D};
+
+pub(super) use crate::{
+    cells::{components::Cell, messages::DamageCell},
+    effect::effects::shockwave::effect::*,
+    shared::CELL_LAYER,
+};
+
+/// Collects [`DamageCell`] messages into a resource for test assertions.
+#[derive(Resource, Default)]
+pub(super) struct DamageCellCollector(pub(super) Vec<DamageCell>);
+
+pub(super) fn collect_damage_cells(
+    mut reader: MessageReader<DamageCell>,
+    mut collector: ResMut<DamageCellCollector>,
+) {
+    for msg in reader.read() {
+        collector.0.push(msg.clone());
+    }
+}
+
+pub(super) fn test_app() -> App {
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins);
+    app.add_plugins(bevy::state::app::StatesPlugin);
+    app.init_state::<crate::state::types::AppState>();
+    app.add_sub_state::<crate::state::types::GameState>();
+    app.add_sub_state::<crate::state::types::RunState>();
+    app.add_sub_state::<crate::state::types::NodeState>();
+    app.add_systems(Update, tick_shockwave);
+    app.add_systems(Update, despawn_finished_shockwave);
+    app
+}
+
+pub(super) fn enter_playing(app: &mut App) {
+    use crate::state::types::{AppState, GameState, NodeState, RunState};
+    app.world_mut()
+        .resource_mut::<NextState<AppState>>()
+        .set(AppState::Game);
+    app.update();
+    app.world_mut()
+        .resource_mut::<NextState<GameState>>()
+        .set(GameState::Run);
+    app.update();
+    app.world_mut()
+        .resource_mut::<NextState<RunState>>()
+        .set(RunState::Node);
+    app.update();
+    app.world_mut()
+        .resource_mut::<NextState<NodeState>>()
+        .set(NodeState::Playing);
+    app.update();
+}
+
+pub(super) fn damage_test_app() -> App {
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins);
+    app.add_plugins(RantzPhysics2dPlugin);
+    app.add_message::<DamageCell>();
+    app.insert_resource(DamageCellCollector::default());
+    app.add_systems(Update, apply_shockwave_damage);
+    app.add_systems(Update, collect_damage_cells.after(apply_shockwave_damage));
+    app
+}
+
+/// Accumulates one fixed timestep then runs one update (ensures quadtree maintenance runs).
+pub(super) fn tick(app: &mut App) {
+    let timestep = app.world().resource::<Time<Fixed>>().timestep();
+    app.world_mut()
+        .resource_mut::<Time<Fixed>>()
+        .accumulate_overstep(timestep);
+    app.update();
+}
+
+pub(super) fn spawn_test_cell(app: &mut App, x: f32, y: f32) -> Entity {
+    let pos = Vec2::new(x, y);
+    app.world_mut()
+        .spawn((
+            Cell,
+            Aabb2D::new(Vec2::ZERO, Vec2::new(5.0, 5.0)),
+            CollisionLayers::new(CELL_LAYER, 0),
+            Position2D(pos),
+            GlobalPosition2D(pos),
+            Spatial2D,
+        ))
+        .id()
+}
+
+pub(super) fn spawn_shockwave(
+    app: &mut App,
+    x: f32,
+    y: f32,
+    radius: f32,
+    damaged: HashSet<Entity>,
+) -> Entity {
+    app.world_mut()
+        .spawn((
+            ShockwaveSource,
+            ShockwaveRadius(radius),
+            ShockwaveMaxRadius(100.0),
+            ShockwaveSpeed(50.0),
+            ShockwaveDamaged(damaged),
+            Position2D(Vec2::new(x, y)),
+        ))
+        .id()
+}

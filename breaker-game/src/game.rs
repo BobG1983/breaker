@@ -13,6 +13,7 @@ use crate::{
     cells::CellsPlugin,
     chips::ChipsPlugin,
     debug::DebugPlugin,
+    effect::EffectPlugin,
     fx::FxPlugin,
     input::InputPlugin,
     shared::{GameDrawLayer, PlayfieldConfig},
@@ -52,6 +53,7 @@ impl PluginGroup for Game {
             .add(rantzsoft_physics2d::plugin::RantzPhysics2dPlugin)
             .add(WallPlugin)
             .add(BreakerPlugin)
+            .add(EffectPlugin)
             .add(BoltPlugin)
             .add(CellsPlugin)
             .add(ChipsPlugin)

@@ -24,6 +24,8 @@ pub mod breaker;
 pub mod cells;
 pub mod chips;
 pub(crate) mod debug;
+/// Data-driven trigger→effect pipeline.
+pub mod effect;
 pub(crate) mod fx;
 pub mod input;
 pub mod walls;
