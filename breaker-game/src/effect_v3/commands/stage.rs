@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::effect_v3::types::Tree;
+use crate::effect_v3::{storage::StagedEffects, types::Tree};
 
 /// Deferred command that stages (one-shot installs) a tree on an entity.
 /// Sugar for `RouteEffectCommand` with `RouteType::Staged`.
@@ -16,7 +16,15 @@ pub struct StageEffectCommand {
 }
 
 impl Command for StageEffectCommand {
-    fn apply(self, _world: &mut World) {
-        todo!()
+    fn apply(self, world: &mut World) {
+        let has_staged = world.get::<StagedEffects>(self.entity).is_some();
+        if !has_staged {
+            world
+                .entity_mut(self.entity)
+                .insert(StagedEffects::default());
+        }
+        if let Some(mut staged) = world.get_mut::<StagedEffects>(self.entity) {
+            staged.0.push((self.name, self.tree));
+        }
     }
 }

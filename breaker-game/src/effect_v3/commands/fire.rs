@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::effect_v3::types::EffectType;
+use crate::effect_v3::{dispatch::fire_dispatch, types::EffectType};
 
 /// Deferred command that fires an effect on an entity.
 pub struct FireEffectCommand {
@@ -15,7 +15,7 @@ pub struct FireEffectCommand {
 }
 
 impl Command for FireEffectCommand {
-    fn apply(self, _world: &mut World) {
-        todo!()
+    fn apply(self, world: &mut World) {
+        fire_dispatch(&self.effect, self.entity, &self.source, world);
     }
 }

@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::effect_v3::types::Tree;
+use crate::effect_v3::{storage::BoundEffects, types::Tree};
 
 /// Deferred command that stamps (permanently installs) a tree on an entity.
 /// Sugar for `RouteEffectCommand` with `RouteType::Bound`.
@@ -16,7 +16,15 @@ pub struct StampEffectCommand {
 }
 
 impl Command for StampEffectCommand {
-    fn apply(self, _world: &mut World) {
-        todo!()
+    fn apply(self, world: &mut World) {
+        let has_bound = world.get::<BoundEffects>(self.entity).is_some();
+        if !has_bound {
+            world
+                .entity_mut(self.entity)
+                .insert(BoundEffects::default());
+        }
+        if let Some(mut bound) = world.get_mut::<BoundEffects>(self.entity) {
+            bound.0.push((self.name, self.tree));
+        }
     }
 }

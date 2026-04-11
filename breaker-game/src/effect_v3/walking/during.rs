@@ -6,6 +6,14 @@ use crate::effect_v3::types::{Condition, ScopedTree, TriggerContext};
 
 /// Evaluate a `Tree::During` node: apply inner effects while the condition
 /// is true, reverse them when it becomes false.
+///
+/// NOTE: State tracking (was-true/was-false transitions) is deferred to a
+/// future wave. This node type requires per-entity, per-source condition
+/// state that is not yet implemented.
+#[allow(
+    clippy::missing_const_for_fn,
+    reason = "deferred implementation will use &mut Commands"
+)]
 pub fn evaluate_during(
     _entity: Entity,
     _condition: &Condition,
@@ -14,5 +22,9 @@ pub fn evaluate_during(
     _source: &str,
     _commands: &mut Commands,
 ) {
-    todo!()
+    // TODO: implement During state tracking.
+    // Needs per-entity state to track previous condition value:
+    // - If condition just became true: fire inner scoped tree
+    // - If condition just became false: reverse inner scoped tree
+    // - If condition unchanged: no-op
 }

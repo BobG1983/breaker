@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::effect_v3::types::ReversibleEffectType;
+use crate::effect_v3::{dispatch::reverse_dispatch, types::ReversibleEffectType};
 
 /// Deferred command that reverses a reversible effect on an entity.
 pub struct ReverseEffectCommand {
@@ -15,7 +15,7 @@ pub struct ReverseEffectCommand {
 }
 
 impl Command for ReverseEffectCommand {
-    fn apply(self, _world: &mut World) {
-        todo!()
+    fn apply(self, world: &mut World) {
+        reverse_dispatch(&self.effect, self.entity, &self.source, world);
     }
 }

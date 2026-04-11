@@ -2,6 +2,10 @@
 
 use bevy::prelude::*;
 
+use super::{
+    FireEffectCommand, RemoveEffectCommand, ReverseEffectCommand, RouteEffectCommand,
+    StageEffectCommand, StampEffectCommand,
+};
 use crate::effect_v3::types::{EffectType, ReversibleEffectType, RouteType, Tree};
 
 /// Extension trait for `Commands` providing effect operations.
@@ -29,33 +33,43 @@ pub trait EffectCommandsExt {
 }
 
 impl EffectCommandsExt for Commands<'_, '_> {
-    fn fire_effect(&mut self, _entity: Entity, _effect: EffectType, _source: String) {
-        todo!()
+    fn fire_effect(&mut self, entity: Entity, effect: EffectType, source: String) {
+        self.queue(FireEffectCommand {
+            entity,
+            effect,
+            source,
+        });
     }
 
-    fn reverse_effect(&mut self, _entity: Entity, _effect: ReversibleEffectType, _source: String) {
-        todo!()
+    fn reverse_effect(&mut self, entity: Entity, effect: ReversibleEffectType, source: String) {
+        self.queue(ReverseEffectCommand {
+            entity,
+            effect,
+            source,
+        });
     }
 
-    fn route_effect(
-        &mut self,
-        _entity: Entity,
-        _name: String,
-        _tree: Tree,
-        _route_type: RouteType,
-    ) {
-        todo!()
+    fn route_effect(&mut self, entity: Entity, name: String, tree: Tree, route_type: RouteType) {
+        self.queue(RouteEffectCommand {
+            entity,
+            name,
+            tree,
+            route_type,
+        });
     }
 
-    fn stamp_effect(&mut self, _entity: Entity, _name: String, _tree: Tree) {
-        todo!()
+    fn stamp_effect(&mut self, entity: Entity, name: String, tree: Tree) {
+        self.queue(StampEffectCommand { entity, name, tree });
     }
 
-    fn stage_effect(&mut self, _entity: Entity, _name: String, _tree: Tree) {
-        todo!()
+    fn stage_effect(&mut self, entity: Entity, name: String, tree: Tree) {
+        self.queue(StageEffectCommand { entity, name, tree });
     }
 
-    fn remove_effect(&mut self, _entity: Entity, _name: &str) {
-        todo!()
+    fn remove_effect(&mut self, entity: Entity, name: &str) {
+        self.queue(RemoveEffectCommand {
+            entity,
+            name: name.to_owned(),
+        });
     }
 }
