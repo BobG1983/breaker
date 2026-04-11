@@ -25,7 +25,17 @@ impl Reversible for PiercingConfig {
 }
 
 impl PassiveEffect for PiercingConfig {
-    fn aggregate(_entries: &[(String, Self)]) -> f32 {
-        todo!()
+    fn aggregate(entries: &[(String, Self)]) -> f32 {
+        entries
+            .iter()
+            .map(|(_, c)| {
+                #[allow(
+                    clippy::cast_precision_loss,
+                    reason = "piercing charges are small u32 values"
+                )]
+                let v = c.charges as f32;
+                v
+            })
+            .sum()
     }
 }

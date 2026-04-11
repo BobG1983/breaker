@@ -26,7 +26,10 @@ impl Reversible for BumpForceConfig {
 }
 
 impl PassiveEffect for BumpForceConfig {
-    fn aggregate(_entries: &[(String, Self)]) -> f32 {
-        todo!()
+    fn aggregate(entries: &[(String, Self)]) -> f32 {
+        entries
+            .iter()
+            .map(|(_, c)| c.multiplier.into_inner())
+            .product::<f32>()
     }
 }

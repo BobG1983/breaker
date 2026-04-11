@@ -26,7 +26,7 @@ impl Reversible for RampingDamageConfig {
 }
 
 impl PassiveEffect for RampingDamageConfig {
-    fn aggregate(_entries: &[(String, Self)]) -> f32 {
-        todo!()
+    fn aggregate(entries: &[(String, Self)]) -> f32 {
+        entries.iter().map(|(_, c)| c.increment.into_inner()).sum()
     }
 }
