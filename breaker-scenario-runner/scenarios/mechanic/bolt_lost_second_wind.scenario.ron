@@ -18,10 +18,6 @@
     allow_early_end: false,
     seed: 8888,
     initial_effects: [
-        On(target: Bolt, then: [
-            When(trigger: BoltLost, then: [
-                Do(SecondWind),
-            ]),
-        ]),
+        Stamp(Bolt, When(BoltLost, Fire(SecondWind(())))),
     ],
 )

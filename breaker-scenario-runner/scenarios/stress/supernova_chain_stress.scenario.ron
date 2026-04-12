@@ -15,15 +15,6 @@
     allow_early_end: false,
     seed: 1337,
     initial_effects: [
-        On(target: Bolt, then: [
-            When(trigger: PerfectBumped, then: [
-                When(trigger: Impacted(Cell), then: [
-                    When(trigger: CellDestroyed, then: [
-                        Do(SpawnBolts(base_count: 1, count_per_level: 0, stacks: 1)),
-                        Do(Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 400.0)),
-                    ]),
-                ]),
-            ]),
-        ]),
+        Stamp(Bolt, When(PerfectBumped, When(Impacted(Cell), When(CellDestroyed, Sequence([Fire(SpawnBolts((base_count: 1, count_per_level: 0, stacks: 1))), Fire(Shockwave((base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 400.0)))]))))),
     ],
 )

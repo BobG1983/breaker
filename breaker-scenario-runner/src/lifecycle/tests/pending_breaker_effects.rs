@@ -15,7 +15,7 @@ fn pending_breaker_effects_applied_to_tagged_breaker_entities() {
 
     app.insert_resource(PendingBreakerEffects(vec![(
         String::new(),
-        EffectNode::Do(EffectKind::Piercing(21)),
+        Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 21 })),
     )]));
 
     app.add_systems(Update, apply_pending_breaker_effects);
@@ -42,7 +42,10 @@ fn pending_breaker_effects_applied_to_tagged_breaker_entities() {
     );
     assert_eq!(
         chains.0[0],
-        (String::new(), EffectNode::Do(EffectKind::Piercing(21))),
+        (
+            String::new(),
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 21 }))
+        ),
         "expected (\"\", Do(Piercing(21))), got {:?}",
         chains.0[0]
     );
@@ -65,7 +68,7 @@ fn pending_breaker_effects_extends_existing_bound_effects() {
 
     app.insert_resource(PendingBreakerEffects(vec![(
         String::new(),
-        EffectNode::Do(EffectKind::Piercing(22)),
+        Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 22 })),
     )]));
 
     app.add_systems(Update, apply_pending_breaker_effects);
@@ -73,7 +76,9 @@ fn pending_breaker_effects_extends_existing_bound_effects() {
     // Spawn breaker WITH existing BoundEffects
     let existing_entries = vec![(
         "existing".to_owned(),
-        EffectNode::Do(EffectKind::DamageBoost(5.0)),
+        Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
+            multiplier: ordered_float::OrderedFloat(5.0),
+        })),
     )];
     let breaker = app
         .world_mut()
@@ -99,14 +104,19 @@ fn pending_breaker_effects_extends_existing_bound_effects() {
         chains.0[0],
         (
             "existing".to_owned(),
-            EffectNode::Do(EffectKind::DamageBoost(5.0))
+            Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
+                multiplier: ordered_float::OrderedFloat(5.0)
+            }))
         ),
         "expected first entry to be the pre-existing one, got {:?}",
         chains.0[0]
     );
     assert_eq!(
         chains.0[1],
-        (String::new(), EffectNode::Do(EffectKind::Piercing(22))),
+        (
+            String::new(),
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 22 }))
+        ),
         "expected second entry to be the pending one, got {:?}",
         chains.0[1]
     );
@@ -146,7 +156,7 @@ fn pending_breaker_effects_local_guard_prevents_reapplication() {
 
     app.insert_resource(PendingBreakerEffects(vec![(
         String::new(),
-        EffectNode::Do(EffectKind::Piercing(23)),
+        Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 23 })),
     )]));
 
     app.add_systems(Update, apply_pending_breaker_effects);
@@ -171,7 +181,7 @@ fn pending_breaker_effects_local_guard_prevents_reapplication() {
     // Insert new pending effects and update again
     app.insert_resource(PendingBreakerEffects(vec![(
         String::new(),
-        EffectNode::Do(EffectKind::Piercing(99)),
+        Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 99 })),
     )]));
 
     app.update();

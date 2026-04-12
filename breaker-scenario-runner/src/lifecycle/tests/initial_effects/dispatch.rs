@@ -9,10 +9,10 @@ use crate::lifecycle::tests::helpers::*;
 #[test]
 fn initial_effects_breaker_target_pushed_to_effect_chains() {
     let mut definition = make_scenario(100);
-    definition.initial_effects = Some(vec![RootEffect::On {
-        target: Target::Breaker,
-        then: vec![EffectNode::Do(EffectKind::Piercing(1))],
-    }]);
+    definition.initial_effects = Some(vec![RootNode::Stamp(
+        StampTarget::Breaker,
+        Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
+    )]);
 
     let mut app = bypass_app(definition);
     app.update();
@@ -33,7 +33,10 @@ fn initial_effects_breaker_target_pushed_to_effect_chains() {
     // The On wrapper is unwrapped — only inner `then` children are pushed
     assert_eq!(
         pending.0[0],
-        (String::new(), EffectNode::Do(EffectKind::Piercing(1))),
+        (
+            String::new(),
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 }))
+        ),
         "expected (\"\", Do(Piercing(1))), got {:?}",
         pending.0[0]
     );
@@ -43,10 +46,10 @@ fn initial_effects_breaker_target_pushed_to_effect_chains() {
 #[test]
 fn initial_effects_bolt_target_stored_in_pending_bolt_effects() {
     let mut definition = make_scenario(100);
-    definition.initial_effects = Some(vec![RootEffect::On {
-        target: Target::Bolt,
-        then: vec![EffectNode::Do(EffectKind::Piercing(2))],
-    }]);
+    definition.initial_effects = Some(vec![RootNode::Stamp(
+        StampTarget::Bolt,
+        Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 2 })),
+    )]);
 
     let mut app = bypass_app(definition);
     app.update();
@@ -65,7 +68,10 @@ fn initial_effects_bolt_target_stored_in_pending_bolt_effects() {
     );
     assert_eq!(
         pending.0[0],
-        (String::new(), EffectNode::Do(EffectKind::Piercing(2))),
+        (
+            String::new(),
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 2 }))
+        ),
         "expected (\"\", Do(Piercing(2))), got {:?}",
         pending.0[0]
     );
@@ -118,22 +124,22 @@ fn initial_effects_none_leaves_effect_chains_empty() {
 fn initial_effects_mixed_targets_route_correctly() {
     let mut definition = make_scenario(100);
     definition.initial_effects = Some(vec![
-        RootEffect::On {
-            target: Target::Breaker,
-            then: vec![EffectNode::Do(EffectKind::Piercing(1))],
-        },
-        RootEffect::On {
-            target: Target::Bolt,
-            then: vec![EffectNode::Do(EffectKind::Piercing(2))],
-        },
-        RootEffect::On {
-            target: Target::AllCells,
-            then: vec![EffectNode::Do(EffectKind::Piercing(3))],
-        },
-        RootEffect::On {
-            target: Target::Wall,
-            then: vec![EffectNode::Do(EffectKind::Piercing(4))],
-        },
+        RootNode::Stamp(
+            StampTarget::Breaker,
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
+        ),
+        RootNode::Stamp(
+            StampTarget::Bolt,
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 2 })),
+        ),
+        RootNode::Stamp(
+            StampTarget::ActiveCells,
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 3 })),
+        ),
+        RootNode::Stamp(
+            StampTarget::ActiveWalls,
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 4 })),
+        ),
     ]);
 
     let mut app = bypass_app(definition);
@@ -149,7 +155,10 @@ fn initial_effects_mixed_targets_route_correctly() {
     );
     assert_eq!(
         breaker_pending.0[0],
-        (String::new(), EffectNode::Do(EffectKind::Piercing(1))),
+        (
+            String::new(),
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 }))
+        ),
         "expected breaker pending (\"\", Do(Piercing(1))), got {:?}",
         breaker_pending.0[0]
     );
@@ -164,7 +173,10 @@ fn initial_effects_mixed_targets_route_correctly() {
     );
     assert_eq!(
         bolt_pending.0[0],
-        (String::new(), EffectNode::Do(EffectKind::Piercing(2))),
+        (
+            String::new(),
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 2 }))
+        ),
         "expected bolt pending (\"\", Do(Piercing(2))), got {:?}",
         bolt_pending.0[0]
     );
@@ -179,7 +191,10 @@ fn initial_effects_mixed_targets_route_correctly() {
     );
     assert_eq!(
         cell_pending.0[0],
-        (String::new(), EffectNode::Do(EffectKind::Piercing(3))),
+        (
+            String::new(),
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 3 }))
+        ),
         "expected cell pending (\"\", Do(Piercing(3))), got {:?}",
         cell_pending.0[0]
     );
@@ -194,7 +209,10 @@ fn initial_effects_mixed_targets_route_correctly() {
     );
     assert_eq!(
         wall_pending.0[0],
-        (String::new(), EffectNode::Do(EffectKind::Piercing(4))),
+        (
+            String::new(),
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 4 }))
+        ),
         "expected wall pending (\"\", Do(Piercing(4))), got {:?}",
         wall_pending.0[0]
     );
@@ -212,10 +230,10 @@ fn initial_effects_mixed_targets_route_correctly() {
 #[test]
 fn bypass_stores_breaker_target_in_pending_breaker_effects() {
     let mut definition = make_scenario(100);
-    definition.initial_effects = Some(vec![RootEffect::On {
-        target: Target::Breaker,
-        then: vec![EffectNode::Do(EffectKind::Piercing(20))],
-    }]);
+    definition.initial_effects = Some(vec![RootNode::Stamp(
+        StampTarget::Breaker,
+        Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 20 })),
+    )]);
 
     let mut app = bypass_app(definition);
 
@@ -237,7 +255,10 @@ fn bypass_stores_breaker_target_in_pending_breaker_effects() {
     );
     assert_eq!(
         pending.0[0],
-        (String::new(), EffectNode::Do(EffectKind::Piercing(20))),
+        (
+            String::new(),
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 20 }))
+        ),
         "expected (\"\", Do(Piercing(20))), got {:?}",
         pending.0[0]
     );

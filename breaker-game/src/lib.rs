@@ -29,11 +29,11 @@ pub mod effect;
 /// New effect domain (v3) — coexists with old domain during migration.
 #[allow(
     dead_code,
-    unreachable_pub,
     unused,
-    reason = "effect_v3 scaffold — no callsites yet"
+    missing_docs,
+    reason = "effect_v3 — some stubs still unused during migration"
 )]
-pub(crate) mod effect_v3;
+pub mod effect_v3;
 pub(crate) mod fx;
 pub mod input;
 pub mod walls;

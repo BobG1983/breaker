@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use breaker::{
     breaker::components::BaseWidth,
-    effect::EffectNode,
+    effect_v3::types::Tree,
     state::run::{NodeLayout, node::definition::NodePool},
 };
 use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
@@ -62,7 +62,7 @@ pub struct ChipSelectionIndex(pub usize);
 /// `Target::Bolt` entry. Applied once by [`super::pending_effects::apply_pending_bolt_effects`]
 /// after tagged bolt entities exist; cleared after application.
 #[derive(Resource, Default)]
-pub struct PendingBoltEffects(pub Vec<(String, EffectNode)>);
+pub struct PendingBoltEffects(pub Vec<(String, Tree)>);
 
 /// Holds cell-targeted initial effects until cell entities are spawned and tagged.
 ///
@@ -71,7 +71,7 @@ pub struct PendingBoltEffects(pub Vec<(String, EffectNode)>);
 /// [`super::pending_effects::apply_pending_cell_effects`] after tagged cell entities exist; cleared
 /// after application.
 #[derive(Resource, Default)]
-pub struct PendingCellEffects(pub Vec<(String, EffectNode)>);
+pub struct PendingCellEffects(pub Vec<(String, Tree)>);
 
 /// Holds wall-targeted initial effects until wall entities are spawned and tagged.
 ///
@@ -80,7 +80,7 @@ pub struct PendingCellEffects(pub Vec<(String, EffectNode)>);
 /// [`super::pending_effects::apply_pending_wall_effects`] after tagged wall entities exist; cleared
 /// after application.
 #[derive(Resource, Default)]
-pub struct PendingWallEffects(pub Vec<(String, EffectNode)>);
+pub struct PendingWallEffects(pub Vec<(String, Tree)>);
 
 /// Holds breaker-targeted initial effects until breaker entities are spawned and tagged.
 ///
@@ -89,7 +89,7 @@ pub struct PendingWallEffects(pub Vec<(String, EffectNode)>);
 /// [`super::pending_effects::apply_pending_breaker_effects`] after tagged breaker entities exist;
 /// cleared after application.
 #[derive(Resource, Default)]
-pub struct PendingBreakerEffects(pub Vec<(String, EffectNode)>);
+pub struct PendingBreakerEffects(pub Vec<(String, Tree)>);
 
 /// Sentinel breaker name for scenarios that need an indestructible breaker.
 ///

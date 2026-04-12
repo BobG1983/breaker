@@ -1,32 +1,34 @@
+use ordered_float::OrderedFloat;
+
 use crate::{
     chips::definition::types::*,
-    effect::{EffectKind, EffectNode, RootEffect, Target},
+    effect_v3::{
+        effects::{PiercingConfig, SizeBoostConfig, SpeedBoostConfig},
+        types::{EffectType, RootNode, StampTarget, Tree},
+    },
 };
 
 // =========================================================================
-// ChipDefinition with Vec<RootEffect>
+// ChipDefinition with Vec<RootNode>
 // =========================================================================
 
 #[test]
-fn chip_definition_effects_is_vec_root_effect() {
+fn chip_definition_effects_is_vec_root_node() {
     let def = ChipDefinition {
         name: "Test".to_owned(),
         description: String::new(),
         rarity: Rarity::Common,
         max_stacks: 3,
-        effects: vec![RootEffect::On {
-            target: Target::Bolt,
-            then: vec![EffectNode::Do(EffectKind::Piercing(1))],
-        }],
+        effects: vec![RootNode::Stamp(
+            StampTarget::Bolt,
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
+        )],
         ingredients: None,
         template_name: None,
     };
     assert!(matches!(
         def.effects[0],
-        RootEffect::On {
-            target: Target::Bolt,
-            ..
-        }
+        RootNode::Stamp(StampTarget::Bolt, _)
     ));
 }
 
@@ -45,25 +47,24 @@ fn chip_definition_empty_effects_is_valid() {
 }
 
 // =========================================================================
-// RaritySlot with Vec<RootEffect>
+// RaritySlot with Vec<RootNode>
 // =========================================================================
 
 #[test]
-fn rarity_slot_effects_is_vec_root_effect() {
+fn rarity_slot_effects_is_vec_root_node() {
     let slot = RaritySlot {
         prefix: "Basic".to_owned(),
-        effects: vec![RootEffect::On {
-            target: Target::Bolt,
-            then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.2 })],
-        }],
+        effects: vec![RootNode::Stamp(
+            StampTarget::Bolt,
+            Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+                multiplier: OrderedFloat(1.2),
+            })),
+        )],
     };
     assert_eq!(slot.effects.len(), 1);
     assert!(matches!(
         slot.effects[0],
-        RootEffect::On {
-            target: Target::Bolt,
-            ..
-        }
+        RootNode::Stamp(StampTarget::Bolt, _)
     ));
 }
 
@@ -72,38 +73,30 @@ fn rarity_slot_effects_is_vec_root_effect() {
 // =========================================================================
 
 #[test]
-fn test_constructor_wraps_in_root_effect() {
-    let def = ChipDefinition::test("P", EffectNode::Do(EffectKind::Piercing(1)), 3);
+fn test_constructor_wraps_in_root_node() {
+    let def = ChipDefinition::test(
+        "P",
+        Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
+        3,
+    );
     assert_eq!(def.name, "P");
     assert_eq!(def.max_stacks, 3);
     assert_eq!(def.effects.len(), 1);
     assert!(
-        matches!(
-            &def.effects[0],
-            RootEffect::On {
-                target: Target::Bolt,
-                ..
-            }
-        ),
-        "test() should wrap effect in RootEffect::On(Bolt)"
+        matches!(&def.effects[0], RootNode::Stamp(StampTarget::Bolt, _)),
+        "test() should wrap effect in RootNode::Stamp(Bolt, _)"
     );
 }
 
 #[test]
-fn test_simple_wraps_in_root_effect() {
+fn test_simple_wraps_in_root_node() {
     let def = ChipDefinition::test_simple("T");
     assert_eq!(def.name, "T");
     assert_eq!(def.max_stacks, 1);
     assert_eq!(def.effects.len(), 1);
     assert!(
-        matches!(
-            &def.effects[0],
-            RootEffect::On {
-                target: Target::Bolt,
-                ..
-            }
-        ),
-        "test_simple() should wrap effect in RootEffect::On(Bolt)"
+        matches!(&def.effects[0], RootNode::Stamp(StampTarget::Bolt, _)),
+        "test_simple() should wrap effect in RootNode::Stamp(Bolt, _)"
     );
 }
 
@@ -111,21 +104,17 @@ fn test_simple_wraps_in_root_effect() {
 fn test_on_uses_specified_target() {
     let def = ChipDefinition::test_on(
         "W",
-        Target::Breaker,
-        EffectNode::Do(EffectKind::SizeBoost(20.0)),
+        StampTarget::Breaker,
+        Tree::Fire(EffectType::SizeBoost(SizeBoostConfig {
+            multiplier: OrderedFloat(20.0),
+        })),
         3,
     );
     assert_eq!(def.name, "W");
     assert_eq!(def.max_stacks, 3);
     assert_eq!(def.effects.len(), 1);
     assert!(
-        matches!(
-            &def.effects[0],
-            RootEffect::On {
-                target: Target::Breaker,
-                ..
-            }
-        ),
-        "test_on() with Target::Breaker should create RootEffect::On(Breaker)"
+        matches!(&def.effects[0], RootNode::Stamp(StampTarget::Breaker, _)),
+        "test_on() with StampTarget::Breaker should create RootNode::Stamp(Breaker, _)"
     );
 }

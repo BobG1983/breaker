@@ -7,7 +7,10 @@ use crate::{
         definition::{ChipTemplate, EvolutionIngredient, EvolutionTemplate, RaritySlot},
         resources::{ChipCatalog, ChipTemplateRegistry, EvolutionTemplateRegistry},
     },
-    effect::{EffectKind, EffectNode, RootEffect, Target},
+    effect_v3::{
+        effects::PiercingConfig,
+        types::{EffectType, RootNode, StampTarget, Tree},
+    },
 };
 
 // ── Test helpers ────────────────────────────────────────────────────
@@ -36,8 +39,8 @@ fn insert_loaded_handles(app: &mut App) {
 fn make_template(
     name: &str,
     max_taken: u32,
-    common: Option<(&str, Vec<RootEffect>)>,
-    uncommon: Option<(&str, Vec<RootEffect>)>,
+    common: Option<(&str, Vec<RootNode>)>,
+    uncommon: Option<(&str, Vec<RootNode>)>,
 ) -> ChipTemplate {
     ChipTemplate {
         name: name.to_owned(),
@@ -55,11 +58,11 @@ fn make_template(
     }
 }
 
-fn piercing_effects(count: u32) -> Vec<RootEffect> {
-    vec![RootEffect::On {
-        target: Target::Bolt,
-        then: vec![EffectNode::Do(EffectKind::Piercing(count))],
-    }]
+fn piercing_effects(count: u32) -> Vec<RootNode> {
+    vec![RootNode::Stamp(
+        StampTarget::Bolt,
+        Tree::Fire(EffectType::Piercing(PiercingConfig { charges: count })),
+    )]
 }
 
 fn make_evolution(name: &str, ingredients: Vec<EvolutionIngredient>) -> EvolutionTemplate {
@@ -67,10 +70,10 @@ fn make_evolution(name: &str, ingredients: Vec<EvolutionIngredient>) -> Evolutio
         name: name.to_owned(),
         description: String::new(),
         max_stacks: 1,
-        effects: vec![RootEffect::On {
-            target: Target::Bolt,
-            then: vec![EffectNode::Do(EffectKind::Piercing(5))],
-        }],
+        effects: vec![RootNode::Stamp(
+            StampTarget::Bolt,
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 5 })),
+        )],
         ingredients,
     }
 }

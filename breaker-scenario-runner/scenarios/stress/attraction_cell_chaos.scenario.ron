@@ -17,8 +17,6 @@
     allow_early_end: false,
     seed: 2222,
     initial_effects: [
-        On(target: Bolt, then: [
-            Do(Attraction(attraction_type: Cell, force: 600.0, max_force: Some(400.0))),
-        ]),
+        Stamp(Bolt, Fire(Attraction((attraction_type: Cell, force: 600.0, max_force: Some(400.0))))),
     ],
 )

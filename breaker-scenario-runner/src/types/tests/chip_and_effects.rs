@@ -50,7 +50,10 @@ fn chip_selections_defaults_to_none() {
 
 #[test]
 fn initial_effects_parses_from_ron() {
-    use breaker::effect::{EffectKind, EffectNode, RootEffect, Target};
+    use breaker::effect_v3::{
+        effects::PiercingConfig,
+        types::{EffectType, RootNode, StampTarget, Tree},
+    };
 
     let ron = r#"(
         breaker: "aegis",
@@ -60,7 +63,7 @@ fn initial_effects_parses_from_ron() {
         disallowed_failures: [],
         allowed_failures: None,
         debug_setup: None,
-        initial_effects: Some([On(target: Bolt, then: [Do(Piercing(1))])]),
+        initial_effects: Some([Stamp(Bolt, Fire(Piercing((charges: 1))))]),
     )"#;
     let result: ScenarioDefinition =
         ron::de::from_str(ron).expect("ScenarioDefinition with initial_effects should parse");
@@ -70,10 +73,10 @@ fn initial_effects_parses_from_ron() {
     assert_eq!(effects.len(), 1, "expected 1 root effect");
     assert_eq!(
         effects[0],
-        RootEffect::On {
-            target: Target::Bolt,
-            then: vec![EffectNode::Do(EffectKind::Piercing(1))],
-        },
+        RootNode::Stamp(
+            StampTarget::Bolt,
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
+        ),
         "initial_effects must contain On(target: Bolt, then: [Do(Piercing(1))])"
     );
 }

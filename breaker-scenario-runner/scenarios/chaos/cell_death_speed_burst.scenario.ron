@@ -23,10 +23,6 @@
     allow_early_end: false,
     seed: 4271,
     initial_effects: [
-        On(target: AllBolts, then: [
-            When(trigger: Death, then: [
-                Do(SpeedBoost(multiplier: 1.05)),
-            ]),
-        ]),
+        Stamp(ActiveBolts, When(Death, Fire(SpeedBoost((multiplier: 1.05))))),
     ],
 )

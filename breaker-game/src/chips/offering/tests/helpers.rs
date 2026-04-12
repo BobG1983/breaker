@@ -12,7 +12,10 @@ use crate::{
         definition::{ChipDefinition, Rarity},
         offering::system::*,
     },
-    effect::{EffectKind, EffectNode},
+    effect_v3::{
+        effects::PiercingConfig,
+        types::{EffectType, Tree},
+    },
 };
 
 /// Lower-level draw primitive -- test-only.
@@ -54,13 +57,21 @@ pub(super) fn test_config() -> OfferingConfig {
 }
 
 pub(super) fn test_chip(name: &str, max_stacks: u32) -> ChipDefinition {
-    ChipDefinition::test(name, EffectNode::Do(EffectKind::Piercing(1)), max_stacks)
+    ChipDefinition::test(
+        name,
+        Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
+        max_stacks,
+    )
 }
 
 pub(super) fn test_chip_rarity(name: &str, rarity: Rarity, max_stacks: u32) -> ChipDefinition {
     ChipDefinition {
         rarity,
-        ..ChipDefinition::test(name, EffectNode::Do(EffectKind::Piercing(1)), max_stacks)
+        ..ChipDefinition::test(
+            name,
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
+            max_stacks,
+        )
     }
 }
 
@@ -72,6 +83,10 @@ pub(super) fn test_chip_template(
 ) -> ChipDefinition {
     ChipDefinition {
         template_name: template_name.map(str::to_owned),
-        ..ChipDefinition::test(name, EffectNode::Do(EffectKind::Piercing(1)), max_stacks)
+        ..ChipDefinition::test(
+            name,
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
+            max_stacks,
+        )
     }
 }

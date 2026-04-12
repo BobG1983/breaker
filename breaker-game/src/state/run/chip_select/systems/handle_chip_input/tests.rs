@@ -6,7 +6,10 @@ use rantzsoft_stateflow::ChangeState;
 use super::*;
 use crate::{
     chips::{ChipDefinition, definition::EvolutionIngredient},
-    effect::{EffectKind, EffectNode},
+    effect_v3::{
+        effects::{DamageBoostConfig, PiercingConfig},
+        types::{EffectType, Tree},
+    },
     shared::test_utils::TestAppBuilder,
     state::run::chip_select::resources::ChipOffering,
 };
@@ -24,7 +27,7 @@ fn make_offers(count: usize) -> ChipOffers {
     let all = vec![
         ChipOffering::Normal(ChipDefinition::test(
             "Piercing Shot",
-            EffectNode::Do(EffectKind::Piercing(1)),
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
             3,
         )),
         ChipOffering::Normal(ChipDefinition::test_simple("Wide Breaker")),
@@ -256,7 +259,11 @@ fn make_evolution_offering() -> ChipOffering {
                 stacks_required: 1,
             },
         ],
-        result: ChipDefinition::test("Barrage", EffectNode::Do(EffectKind::Piercing(5)), 1),
+        result: ChipDefinition::test(
+            "Barrage",
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 5 })),
+            1,
+        ),
     }
 }
 
@@ -265,10 +272,20 @@ fn test_app_with_evolution_inventory() -> App {
     let mut app = test_app_with_offers(offers);
 
     // Seed inventory with ingredient stacks
-    let ps_def = ChipDefinition::test("Piercing Shot", EffectNode::Do(EffectKind::Piercing(1)), 5)
-        .with_template("Piercing Shot");
-    let du_def = ChipDefinition::test("Damage Up", EffectNode::Do(EffectKind::DamageBoost(0.5)), 5)
-        .with_template("Damage Up");
+    let ps_def = ChipDefinition::test(
+        "Piercing Shot",
+        Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
+        5,
+    )
+    .with_template("Piercing Shot");
+    let du_def = ChipDefinition::test(
+        "Damage Up",
+        Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
+            multiplier: ordered_float::OrderedFloat(0.5),
+        })),
+        5,
+    )
+    .with_template("Damage Up");
     let mut inventory = app.world_mut().resource_mut::<ChipInventory>();
     let _ = inventory.add_chip("Piercing Shot", &ps_def);
     let _ = inventory.add_chip("Piercing Shot", &ps_def);
@@ -332,13 +349,17 @@ fn confirm_normal_does_not_consume_ingredient_stacks() {
     // Set up a Normal offering with inventory pre-populated
     let offers = ChipOffers(vec![ChipOffering::Normal(ChipDefinition::test(
         "Piercing Shot",
-        EffectNode::Do(EffectKind::Piercing(1)),
+        Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
         3,
     ))]);
     let mut app = test_app_with_offers(offers);
 
     // Pre-populate inventory with Piercing Shot at 3 stacks
-    let ps_def = ChipDefinition::test("Piercing Shot", EffectNode::Do(EffectKind::Piercing(1)), 5);
+    let ps_def = ChipDefinition::test(
+        "Piercing Shot",
+        Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
+        5,
+    );
     let mut inventory = app.world_mut().resource_mut::<ChipInventory>();
     let _ = inventory.add_chip("Piercing Shot", &ps_def);
     let _ = inventory.add_chip("Piercing Shot", &ps_def);

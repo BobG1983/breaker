@@ -276,7 +276,10 @@ fn non_requested_checker_not_registered_when_lists_nonempty() {
 fn chip_offer_expected_always_registered_regardless_of_lists() {
     use breaker::{
         chips::definition::{ChipDefinition, Rarity},
-        effect::{EffectKind, EffectNode, RootEffect, Target},
+        effect_v3::{
+            effects::PiercingConfig,
+            types::{EffectType, RootNode, StampTarget, Tree},
+        },
         state::run::chip_select::{ChipOffering, ChipOffers},
     };
 
@@ -305,10 +308,10 @@ fn chip_offer_expected_always_registered_regardless_of_lists() {
         description: String::new(),
         rarity: Rarity::Common,
         max_stacks: 3,
-        effects: vec![RootEffect::On {
-            target: Target::Bolt,
-            then: vec![EffectNode::Do(EffectKind::Piercing(1))],
-        }],
+        effects: vec![RootNode::Stamp(
+            StampTarget::Bolt,
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
+        )],
         ingredients: None,
         template_name: None,
     };

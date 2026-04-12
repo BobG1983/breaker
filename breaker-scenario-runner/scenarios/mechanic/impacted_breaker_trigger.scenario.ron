@@ -14,10 +14,6 @@
     allow_early_end: false,
     seed: 4242,
     initial_effects: [
-        On(target: Bolt, then: [
-            When(trigger: Impacted(Breaker), then: [
-                Do(SizeBoost(1.1)),
-            ]),
-        ]),
+        Stamp(Bolt, When(Impacted(Breaker), Fire(SizeBoost((1.1))))),
     ],
 )

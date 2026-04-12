@@ -1,6 +1,6 @@
 use crate::{
     chips::definition::types::*,
-    effect::{ImpactTarget, Target},
+    effect_v3::types::{EntityKind, StampTarget},
 };
 
 // =========================================================================
@@ -32,54 +32,57 @@ fn rarity_deserializes_legendary() {
 }
 
 // =========================================================================
-// Preserved tests: ImpactTarget deserialization
+// Preserved tests: EntityKind deserialization (was ImpactTarget)
 // =========================================================================
 
 #[test]
-fn impact_target_deserializes_cell() {
-    let t: ImpactTarget = ron::de::from_str("Cell").expect("should parse Cell");
-    assert_eq!(t, ImpactTarget::Cell);
+fn entity_kind_deserializes_cell() {
+    let t: EntityKind = ron::de::from_str("Cell").expect("should parse Cell");
+    assert_eq!(t, EntityKind::Cell);
 }
 
 #[test]
-fn impact_target_deserializes_breaker() {
-    let t: ImpactTarget = ron::de::from_str("Breaker").expect("should parse Breaker");
-    assert_eq!(t, ImpactTarget::Breaker);
+fn entity_kind_deserializes_breaker() {
+    let t: EntityKind = ron::de::from_str("Breaker").expect("should parse Breaker");
+    assert_eq!(t, EntityKind::Breaker);
 }
 
 #[test]
-fn impact_target_deserializes_wall() {
-    let t: ImpactTarget = ron::de::from_str("Wall").expect("should parse Wall");
-    assert_eq!(t, ImpactTarget::Wall);
+fn entity_kind_deserializes_wall() {
+    let t: EntityKind = ron::de::from_str("Wall").expect("should parse Wall");
+    assert_eq!(t, EntityKind::Wall);
 }
 
 // =========================================================================
-// Preserved tests: Target deserialization
+// Preserved tests: StampTarget deserialization (was Target)
 // =========================================================================
 
 #[test]
-fn target_deserializes_bolt() {
-    let t: Target = ron::de::from_str("Bolt").expect("should parse Bolt");
-    assert_eq!(t, Target::Bolt);
+fn stamp_target_deserializes_bolt() {
+    let t: StampTarget = ron::de::from_str("Bolt").expect("should parse Bolt");
+    assert_eq!(t, StampTarget::Bolt);
 }
 
 #[test]
-fn target_deserializes_breaker() {
-    let t: Target = ron::de::from_str("Breaker").expect("should parse Breaker");
-    assert_eq!(t, Target::Breaker);
+fn stamp_target_deserializes_breaker() {
+    let t: StampTarget = ron::de::from_str("Breaker").expect("should parse Breaker");
+    assert_eq!(t, StampTarget::Breaker);
 }
 
 #[test]
-fn target_deserializes_all_bolts() {
-    let t: Target = ron::de::from_str("AllBolts").expect("should parse AllBolts");
-    assert_eq!(t, Target::AllBolts);
+fn stamp_target_deserializes_active_bolts() {
+    let t: StampTarget = ron::de::from_str("ActiveBolts").expect("should parse ActiveBolts");
+    assert_eq!(t, StampTarget::ActiveBolts);
 }
 
 #[test]
-fn target_cell_is_valid_variant() {
-    let result = ron::de::from_str::<Target>("Cell");
-    assert!(result.is_ok(), "Target::Cell should be a valid variant");
-    assert_eq!(result.unwrap(), Target::Cell);
+fn stamp_target_active_cells_is_valid_variant() {
+    let result = ron::de::from_str::<StampTarget>("ActiveCells");
+    assert!(
+        result.is_ok(),
+        "StampTarget::ActiveCells should be a valid variant"
+    );
+    assert_eq!(result.unwrap(), StampTarget::ActiveCells);
 }
 
 // =========================================================================

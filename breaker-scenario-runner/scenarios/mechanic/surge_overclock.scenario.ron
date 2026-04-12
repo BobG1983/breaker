@@ -14,12 +14,6 @@
     allow_early_end: false,
     seed: 42,
     initial_effects: [
-        On(target: Bolt, then: [
-            When(trigger: PerfectBumped, then: [
-                When(trigger: Impacted(Cell), then: [
-                    Do(Shockwave(base_range: 64.0, range_per_level: 32.0, stacks: 1, speed: 400.0)),
-                ]),
-            ]),
-        ]),
+        Stamp(Bolt, When(PerfectBumped, When(Impacted(Cell), Fire(Shockwave((base_range: 64.0, range_per_level: 32.0, stacks: 1, speed: 400.0)))))),
     ],
 )

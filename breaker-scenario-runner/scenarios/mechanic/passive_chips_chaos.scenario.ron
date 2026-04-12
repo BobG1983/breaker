@@ -14,13 +14,6 @@
     allow_early_end: false,
     seed: 7331,
     initial_effects: [
-        On(target: Bolt, then: [
-            When(trigger: Bumped, then: [
-                Do(Piercing(1)),
-                Do(DamageBoost(0.5)),
-                Do(SpeedBoost(multiplier: 1.2)),
-                Do(SizeBoost(0.2)),
-            ]),
-        ]),
+        Stamp(Bolt, When(Bumped, Sequence([Fire(Piercing((1))), Fire(DamageBoost((0.5))), Fire(SpeedBoost((multiplier: 1.2))), Fire(SizeBoost((0.2)))]))),
     ],
 )

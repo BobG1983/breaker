@@ -249,17 +249,20 @@ pub fn apply_inject_duplicate_offers(
 ) {
     use breaker::{
         chips::definition::{ChipDefinition, Rarity},
-        effect::{EffectKind, EffectNode, RootEffect, Target},
+        effect_v3::{
+            effects::PiercingConfig,
+            types::{EffectType, RootNode, StampTarget, Tree},
+        },
     };
     let def = ChipDefinition {
         name: chip_name.to_owned(),
         description: String::new(),
         rarity: Rarity::Common,
         max_stacks: 3,
-        effects: vec![RootEffect::On {
-            target: Target::Bolt,
-            then: vec![EffectNode::Do(EffectKind::Piercing(1))],
-        }],
+        effects: vec![RootNode::Stamp(
+            StampTarget::Bolt,
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
+        )],
         ingredients: None,
         template_name: None,
     };
@@ -284,17 +287,20 @@ pub fn apply_inject_maxed_chip_offer(
 ) {
     use breaker::{
         chips::definition::{ChipDefinition, Rarity},
-        effect::{EffectKind, EffectNode, RootEffect, Target},
+        effect_v3::{
+            effects::PiercingConfig,
+            types::{EffectType, RootNode, StampTarget, Tree},
+        },
     };
     let def = ChipDefinition {
         name: chip_name.to_owned(),
         description: String::new(),
         rarity: Rarity::Common,
         max_stacks: 1,
-        effects: vec![RootEffect::On {
-            target: Target::Bolt,
-            then: vec![EffectNode::Do(EffectKind::Piercing(1))],
-        }],
+        effects: vec![RootNode::Stamp(
+            StampTarget::Bolt,
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
+        )],
         ingredients: None,
         template_name: None,
     };

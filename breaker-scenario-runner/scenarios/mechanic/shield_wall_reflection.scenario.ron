@@ -16,10 +16,6 @@
     allow_early_end: false,
     seed: 5555,
     initial_effects: [
-        On(target: Breaker, then: [
-            When(trigger: NodeStart, then: [
-                Do(Shield(duration: 5.0)),
-            ]),
-        ]),
+        Stamp(Breaker, When(NodeStart, Fire(Shield((duration: 5.0))))),
     ],
 )

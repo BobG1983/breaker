@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     chips::{definition::ChipDefinition, inventory::ChipInventory, resources::ChipCatalog},
-    effect::{BoundEffects, StagedEffects},
+    effect_v3::storage::{BoundEffects, StagedEffects},
     state::run::chip_select::messages::ChipSelected,
 };
 
@@ -76,10 +76,7 @@ pub(super) fn select_chip(app: &mut App, name: &str) {
 pub(super) fn spawn_bolt(app: &mut App) -> Entity {
     use rantzsoft_spatial2d::components::Velocity2D;
 
-    use crate::{
-        bolt::{components::Bolt, definition::BoltDefinition},
-        effect::effects::{damage_boost::ActiveDamageBoosts, speed_boost::ActiveSpeedBoosts},
-    };
+    use crate::bolt::{components::Bolt, definition::BoltDefinition};
 
     let def = BoltDefinition {
         name: "Bolt".to_string(),
@@ -109,51 +106,25 @@ pub(super) fn spawn_bolt(app: &mut App) -> Entity {
     };
 
     // Test-specific effect components not handled by builder
-    app.world_mut().entity_mut(entity).insert((
-        BoundEffects::default(),
-        StagedEffects::default(),
-        ActiveDamageBoosts::default(),
-        ActiveSpeedBoosts::default(),
-    ));
+    app.world_mut()
+        .entity_mut(entity)
+        .insert((BoundEffects::default(), StagedEffects::default()));
 
     entity
 }
 
 /// Spawn a Breaker entity with effect components.
 pub(super) fn spawn_breaker(app: &mut App) -> Entity {
-    use crate::effect::effects::{
-        bump_force::ActiveBumpForces, damage_boost::ActiveDamageBoosts,
-        size_boost::ActiveSizeBoosts, speed_boost::ActiveSpeedBoosts,
-    };
-
     let entity = crate::breaker::test_utils::spawn_breaker(app, 0.0, 0.0);
-    app.world_mut().entity_mut(entity).insert((
-        BoundEffects::default(),
-        StagedEffects::default(),
-        ActiveBumpForces::default(),
-        ActiveSizeBoosts::default(),
-        ActiveDamageBoosts::default(),
-        ActiveSpeedBoosts::default(),
-    ));
+    app.world_mut()
+        .entity_mut(entity)
+        .insert((BoundEffects::default(), StagedEffects::default()));
     entity
 }
 
 /// Spawn a Breaker entity without `BoundEffects` or `StagedEffects`.
 pub(super) fn spawn_breaker_bare(app: &mut App) -> Entity {
-    use crate::effect::effects::{
-        bump_force::ActiveBumpForces, damage_boost::ActiveDamageBoosts,
-        size_boost::ActiveSizeBoosts, speed_boost::ActiveSpeedBoosts,
-    };
-
-    let entity = crate::breaker::test_utils::spawn_breaker(app, 0.0, 0.0);
-    app.world_mut().entity_mut(entity).insert((
-        ActiveBumpForces::default(),
-        ActiveSizeBoosts::default(),
-        ActiveDamageBoosts::default(),
-        ActiveSpeedBoosts::default(),
-    ));
-
-    entity
+    crate::breaker::test_utils::spawn_breaker(app, 0.0, 0.0)
 }
 
 /// Spawn a Cell entity with effect components.

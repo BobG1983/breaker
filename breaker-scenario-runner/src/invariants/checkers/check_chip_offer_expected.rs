@@ -63,7 +63,10 @@ mod tests {
     use bevy::prelude::*;
     use breaker::{
         chips::definition::{ChipDefinition, EvolutionIngredient, Rarity},
-        effect::{EffectKind, EffectNode, RootEffect, Target},
+        effect_v3::{
+            effects::PiercingConfig,
+            types::{EffectType, RootNode, StampTarget, Tree},
+        },
         state::run::chip_select::{ChipOffering, ChipOffers},
     };
 
@@ -100,10 +103,10 @@ mod tests {
             description: String::new(),
             rarity: Rarity::Common,
             max_stacks: 3,
-            effects: vec![RootEffect::On {
-                target: Target::Bolt,
-                then: vec![EffectNode::Do(EffectKind::Piercing(1))],
-            }],
+            effects: vec![RootNode::Stamp(
+                StampTarget::Bolt,
+                Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
+            )],
             ingredients: None,
             template_name: None,
         }
@@ -138,10 +141,10 @@ mod tests {
                 description: String::new(),
                 rarity: Rarity::Evolution,
                 max_stacks: 1,
-                effects: vec![RootEffect::On {
-                    target: Target::Bolt,
-                    then: vec![EffectNode::Do(EffectKind::Piercing(5))],
-                }],
+                effects: vec![RootNode::Stamp(
+                    StampTarget::Bolt,
+                    Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 5 })),
+                )],
                 ingredients: None,
                 template_name: None,
             },

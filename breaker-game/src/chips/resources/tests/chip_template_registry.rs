@@ -8,7 +8,10 @@ use crate::{
         definition::{ChipTemplate, RaritySlot},
         resources::ChipTemplateRegistry,
     },
-    effect::{EffectKind, EffectNode, RootEffect, Target},
+    effect_v3::{
+        effects::PiercingConfig,
+        types::{EffectType, RootNode, StampTarget, Tree},
+    },
 };
 
 fn make_chip_template(name: &str, max_taken: u32, prefix: &str) -> ChipTemplate {
@@ -17,10 +20,10 @@ fn make_chip_template(name: &str, max_taken: u32, prefix: &str) -> ChipTemplate 
         max_taken,
         common: Some(RaritySlot {
             prefix: prefix.to_owned(),
-            effects: vec![RootEffect::On {
-                target: Target::Bolt,
-                then: vec![EffectNode::Do(EffectKind::Piercing(1))],
-            }],
+            effects: vec![RootNode::Stamp(
+                StampTarget::Bolt,
+                Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
+            )],
         }),
         uncommon: None,
         rare: None,

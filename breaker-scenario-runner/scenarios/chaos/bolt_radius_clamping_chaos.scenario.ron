@@ -14,10 +14,6 @@
     allow_early_end: false,
     seed: 9002,
     initial_effects: [
-        On(target: Bolt, then: [
-            When(trigger: Bumped, then: [
-                Do(SizeBoost(3.0)),
-            ]),
-        ]),
+        Stamp(Bolt, When(Bumped, Fire(SizeBoost((3.0))))),
     ],
 )

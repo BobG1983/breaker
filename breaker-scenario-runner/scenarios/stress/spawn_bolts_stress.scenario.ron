@@ -15,10 +15,6 @@
     allow_early_end: false,
     seed: 5050,
     initial_effects: [
-        On(target: Bolt, then: [
-            When(trigger: PerfectBumped, then: [
-                Do(SpawnBolts(count: 1, lifespan: 3.0, inherit: true)),
-            ]),
-        ]),
+        Stamp(Bolt, When(PerfectBumped, Fire(SpawnBolts((count: 1, lifespan: 3.0, inherit: true))))),
     ],
 )

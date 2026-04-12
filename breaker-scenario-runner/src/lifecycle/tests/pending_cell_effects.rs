@@ -14,7 +14,7 @@ fn pending_cell_effects_applied_to_tagged_cell_entities() {
 
     app.insert_resource(PendingCellEffects(vec![(
         String::new(),
-        EffectNode::Do(EffectKind::Piercing(7)),
+        Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 7 })),
     )]));
 
     app.add_systems(Update, apply_pending_cell_effects);
@@ -39,7 +39,10 @@ fn pending_cell_effects_applied_to_tagged_cell_entities() {
     );
     assert_eq!(
         chains.0[0],
-        (String::new(), EffectNode::Do(EffectKind::Piercing(7))),
+        (
+            String::new(),
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 7 }))
+        ),
         "expected (\"\", Do(Piercing(7))), got {:?}",
         chains.0[0]
     );
@@ -55,7 +58,7 @@ fn pending_cell_effects_applied_to_tagged_cell_entities() {
     // --- Local<bool> guard: a second update must NOT re-apply new pending effects ---
     app.insert_resource(PendingCellEffects(vec![(
         String::new(),
-        EffectNode::Do(EffectKind::Piercing(99)),
+        Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 99 })),
     )]));
 
     app.update();
@@ -69,7 +72,10 @@ fn pending_cell_effects_applied_to_tagged_cell_entities() {
     );
     assert_eq!(
         chains.0[0],
-        (String::new(), EffectNode::Do(EffectKind::Piercing(7))),
+        (
+            String::new(),
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 7 }))
+        ),
         "expected original (\"\", Do(Piercing(7))) preserved, got {:?}",
         chains.0[0]
     );
@@ -84,7 +90,7 @@ fn pending_cell_effects_applied_to_multiple_cell_entities() {
 
     app.insert_resource(PendingCellEffects(vec![(
         String::new(),
-        EffectNode::Do(EffectKind::Piercing(8)),
+        Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 8 })),
     )]));
 
     app.add_systems(Update, apply_pending_cell_effects);
@@ -117,7 +123,10 @@ fn pending_cell_effects_applied_to_multiple_cell_entities() {
     );
     assert_eq!(
         chains_a.0[0],
-        (String::new(), EffectNode::Do(EffectKind::Piercing(8))),
+        (
+            String::new(),
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 8 }))
+        ),
         "expected cell A to have (\"\", Do(Piercing(8))), got {:?}",
         chains_a.0[0]
     );
@@ -131,7 +140,10 @@ fn pending_cell_effects_applied_to_multiple_cell_entities() {
     );
     assert_eq!(
         chains_b.0[0],
-        (String::new(), EffectNode::Do(EffectKind::Piercing(8))),
+        (
+            String::new(),
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 8 }))
+        ),
         "expected cell B to have (\"\", Do(Piercing(8))), got {:?}",
         chains_b.0[0]
     );
@@ -173,7 +185,7 @@ fn pending_cell_effects_waits_for_tagged_entities_then_applies() {
 
     app.insert_resource(PendingCellEffects(vec![(
         String::new(),
-        EffectNode::Do(EffectKind::Piercing(9)),
+        Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 9 })),
     )]));
 
     app.add_systems(Update, apply_pending_cell_effects);
@@ -210,7 +222,10 @@ fn pending_cell_effects_waits_for_tagged_entities_then_applies() {
     );
     assert_eq!(
         chains.0[0],
-        (String::new(), EffectNode::Do(EffectKind::Piercing(9))),
+        (
+            String::new(),
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 9 }))
+        ),
         "expected (\"\", Do(Piercing(9))), got {:?}",
         chains.0[0]
     );
@@ -234,7 +249,7 @@ fn pending_cell_effects_inserts_bound_and_staged_if_absent() {
 
     app.insert_resource(PendingCellEffects(vec![(
         String::new(),
-        EffectNode::Do(EffectKind::Piercing(10)),
+        Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 10 })),
     )]));
 
     app.add_systems(Update, apply_pending_cell_effects);
@@ -261,7 +276,10 @@ fn pending_cell_effects_inserts_bound_and_staged_if_absent() {
     );
     assert_eq!(
         chains.0[0],
-        (String::new(), EffectNode::Do(EffectKind::Piercing(10))),
+        (
+            String::new(),
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 10 }))
+        ),
         "expected (\"\", Do(Piercing(10))), got {:?}",
         chains.0[0]
     );
@@ -280,7 +298,7 @@ fn pending_cell_effects_inserts_bound_and_staged_if_absent() {
 
     app2.insert_resource(PendingCellEffects(vec![(
         String::new(),
-        EffectNode::Do(EffectKind::Piercing(10)),
+        Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 10 })),
     )]));
 
     app2.add_systems(Update, apply_pending_cell_effects);
@@ -288,7 +306,9 @@ fn pending_cell_effects_inserts_bound_and_staged_if_absent() {
     // Spawn with existing BoundEffects that has a pre-existing entry
     let existing_entries = vec![(
         "existing".to_owned(),
-        EffectNode::Do(EffectKind::DamageBoost(5.0)),
+        Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
+            multiplier: ordered_float::OrderedFloat(5.0),
+        })),
     )];
     let cell2 = app2
         .world_mut()
@@ -313,14 +333,19 @@ fn pending_cell_effects_inserts_bound_and_staged_if_absent() {
         chains2.0[0],
         (
             "existing".to_owned(),
-            EffectNode::Do(EffectKind::DamageBoost(5.0))
+            Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
+                multiplier: ordered_float::OrderedFloat(5.0)
+            }))
         ),
         "expected first entry to be the pre-existing one, got {:?}",
         chains2.0[0]
     );
     assert_eq!(
         chains2.0[1],
-        (String::new(), EffectNode::Do(EffectKind::Piercing(10))),
+        (
+            String::new(),
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 10 }))
+        ),
         "expected second entry to be the pending one, got {:?}",
         chains2.0[1]
     );

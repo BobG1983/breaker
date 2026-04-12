@@ -14,7 +14,7 @@ fn pending_wall_effects_applied_to_tagged_wall_entities() {
 
     app.insert_resource(PendingWallEffects(vec![(
         String::new(),
-        EffectNode::Do(EffectKind::Piercing(11)),
+        Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 11 })),
     )]));
 
     app.add_systems(Update, apply_pending_wall_effects);
@@ -39,7 +39,10 @@ fn pending_wall_effects_applied_to_tagged_wall_entities() {
     );
     assert_eq!(
         chains.0[0],
-        (String::new(), EffectNode::Do(EffectKind::Piercing(11))),
+        (
+            String::new(),
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 11 }))
+        ),
         "expected (\"\", Do(Piercing(11))), got {:?}",
         chains.0[0]
     );
@@ -55,7 +58,7 @@ fn pending_wall_effects_applied_to_tagged_wall_entities() {
     // --- Local<bool> guard: a second update must NOT re-apply new pending effects ---
     app.insert_resource(PendingWallEffects(vec![(
         String::new(),
-        EffectNode::Do(EffectKind::Piercing(99)),
+        Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 99 })),
     )]));
 
     app.update();
@@ -69,7 +72,10 @@ fn pending_wall_effects_applied_to_tagged_wall_entities() {
     );
     assert_eq!(
         chains.0[0],
-        (String::new(), EffectNode::Do(EffectKind::Piercing(11))),
+        (
+            String::new(),
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 11 }))
+        ),
         "expected original (\"\", Do(Piercing(11))) preserved, got {:?}",
         chains.0[0]
     );
@@ -84,7 +90,7 @@ fn pending_wall_effects_applied_to_multiple_wall_entities() {
 
     app.insert_resource(PendingWallEffects(vec![(
         String::new(),
-        EffectNode::Do(EffectKind::Piercing(12)),
+        Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 12 })),
     )]));
 
     app.add_systems(Update, apply_pending_wall_effects);
@@ -126,7 +132,10 @@ fn pending_wall_effects_applied_to_multiple_wall_entities() {
         );
         assert_eq!(
             chains.0[0],
-            (String::new(), EffectNode::Do(EffectKind::Piercing(12))),
+            (
+                String::new(),
+                Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 12 }))
+            ),
             "expected wall {name} to have (\"\", Do(Piercing(12))), got {:?}",
             chains.0[0]
         );
@@ -169,7 +178,7 @@ fn pending_wall_effects_waits_for_tagged_entities_then_applies() {
 
     app.insert_resource(PendingWallEffects(vec![(
         String::new(),
-        EffectNode::Do(EffectKind::Piercing(13)),
+        Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 13 })),
     )]));
 
     app.add_systems(Update, apply_pending_wall_effects);
@@ -206,7 +215,10 @@ fn pending_wall_effects_waits_for_tagged_entities_then_applies() {
     );
     assert_eq!(
         chains.0[0],
-        (String::new(), EffectNode::Do(EffectKind::Piercing(13))),
+        (
+            String::new(),
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 13 }))
+        ),
         "expected (\"\", Do(Piercing(13))), got {:?}",
         chains.0[0]
     );
@@ -230,7 +242,7 @@ fn pending_wall_effects_inserts_bound_and_staged_if_absent() {
 
     app.insert_resource(PendingWallEffects(vec![(
         String::new(),
-        EffectNode::Do(EffectKind::Piercing(14)),
+        Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 14 })),
     )]));
 
     app.add_systems(Update, apply_pending_wall_effects);
@@ -257,7 +269,10 @@ fn pending_wall_effects_inserts_bound_and_staged_if_absent() {
     );
     assert_eq!(
         chains.0[0],
-        (String::new(), EffectNode::Do(EffectKind::Piercing(14))),
+        (
+            String::new(),
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 14 }))
+        ),
         "expected (\"\", Do(Piercing(14))), got {:?}",
         chains.0[0]
     );
@@ -276,7 +291,7 @@ fn pending_wall_effects_inserts_bound_and_staged_if_absent() {
 
     app2.insert_resource(PendingWallEffects(vec![(
         String::new(),
-        EffectNode::Do(EffectKind::Piercing(14)),
+        Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 14 })),
     )]));
 
     app2.add_systems(Update, apply_pending_wall_effects);
@@ -284,7 +299,9 @@ fn pending_wall_effects_inserts_bound_and_staged_if_absent() {
     // Spawn with existing BoundEffects that has a pre-existing entry
     let existing_entries = vec![(
         "existing".to_owned(),
-        EffectNode::Do(EffectKind::DamageBoost(5.0)),
+        Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
+            multiplier: ordered_float::OrderedFloat(5.0),
+        })),
     )];
     let wall2 = app2
         .world_mut()
@@ -309,14 +326,19 @@ fn pending_wall_effects_inserts_bound_and_staged_if_absent() {
         chains2.0[0],
         (
             "existing".to_owned(),
-            EffectNode::Do(EffectKind::DamageBoost(5.0))
+            Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
+                multiplier: ordered_float::OrderedFloat(5.0)
+            }))
         ),
         "expected first entry to be the pre-existing one, got {:?}",
         chains2.0[0]
     );
     assert_eq!(
         chains2.0[1],
-        (String::new(), EffectNode::Do(EffectKind::Piercing(14))),
+        (
+            String::new(),
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 14 }))
+        ),
         "expected second entry to be the pending one, got {:?}",
         chains2.0[1]
     );

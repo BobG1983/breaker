@@ -13,10 +13,6 @@
     allow_early_end: false,
     seed: 7777,
     initial_effects: [
-        On(target: Bolt, then: [
-            When(trigger: Impact(Bolt), then: [
-                Do(SpeedBoost(multiplier: 1.05)),
-            ]),
-        ]),
+        Stamp(Bolt, When(Impact(Bolt), Fire(SpeedBoost((multiplier: 1.05))))),
     ],
 )

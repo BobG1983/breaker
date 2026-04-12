@@ -1,5 +1,5 @@
 //! Thin dispatcher: reads [`ChipSelected`] messages, looks up the chip in the
-//! [`ChipRegistry`], and dispatches effects via `RootEffect::On` target routing.
+//! [`ChipRegistry`], and dispatches effects via `RootNode::Stamp` target routing.
 
 mod system;
 

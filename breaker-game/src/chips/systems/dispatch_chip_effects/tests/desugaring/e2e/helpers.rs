@@ -1,33 +1,20 @@
-//! Shared helpers for end-to-end desugaring tests.
+//! Shared helpers for end-to-end dispatch tests.
+//!
+//! The old e2e tests tested desugaring + trigger evaluation. In the new system,
+//! trigger evaluation happens via `effect_v3` bridges. These helpers are retained
+//! for future e2e integration tests.
 
 use bevy::prelude::*;
 
-use crate::effect::{BoundEffects, StagedEffects, Trigger, TriggerContext};
+use crate::effect_v3::storage::BoundEffects;
 
-/// System that evaluates `NodeStart` trigger on all entities with `BoundEffects`.
-/// Mirrors `bridge_node_start` from `effect::triggers::node_start` (which is
-/// module-private), using the public(crate) evaluate helpers.
-pub(super) fn sys_evaluate_node_start(
-    mut query: Query<(Entity, &BoundEffects, &mut StagedEffects)>,
-    mut commands: Commands,
-) {
-    use crate::effect::triggers::evaluate::{evaluate_bound_effects, evaluate_staged_effects};
-
-    for (entity, bound, mut staged) in &mut query {
-        evaluate_bound_effects(
-            &Trigger::NodeStart,
-            entity,
-            bound,
-            &mut staged,
-            &mut commands,
-            TriggerContext::default(),
-        );
-        evaluate_staged_effects(
-            &Trigger::NodeStart,
-            entity,
-            &mut staged,
-            &mut commands,
-            TriggerContext::default(),
-        );
-    }
+/// Assert that an entity has exactly `count` `BoundEffects` entries.
+pub(super) fn assert_bound_count(world: &World, entity: Entity, count: usize) {
+    let bound = world.get::<BoundEffects>(entity).unwrap();
+    assert_eq!(
+        bound.0.len(),
+        count,
+        "Expected {count} BoundEffects entries, got {}",
+        bound.0.len()
+    );
 }

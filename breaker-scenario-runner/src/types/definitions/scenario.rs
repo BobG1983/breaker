@@ -1,6 +1,6 @@
 //! Top-level scenario definition and supporting config types.
 
-use breaker::effect::RootEffect;
+use breaker::effect_v3::types::RootNode;
 use serde::Deserialize;
 
 use super::{
@@ -210,10 +210,10 @@ pub struct ScenarioDefinition {
     pub chip_selections: Option<Vec<String>>,
     /// Optional root effects to pre-populate at scenario start.
     ///
-    /// Each [`RootEffect`] is injected into the active effects before the run
+    /// Each [`RootNode`] is injected into the active effects before the run
     /// begins.
     #[serde(default)]
-    pub initial_effects: Option<Vec<RootEffect>>,
+    pub initial_effects: Option<Vec<RootNode>>,
     /// Chip names that MUST appear in offerings when chip select is entered.
     ///
     /// Checked by the [`InvariantKind::ChipOfferExpected`] invariant. Each name

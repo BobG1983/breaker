@@ -23,10 +23,6 @@
     stress: (runs: 4, parallelism: 4),
     seed: 7331,
     initial_effects: [
-        On(target: Bolt, then: [
-            When(trigger: Impacted(Cell), then: [
-                Do(ChainLightning(arcs: 5, range: 112.0, damage_mult: 1.5, arc_speed: 50.0)),
-            ]),
-        ]),
+        Stamp(Bolt, When(Impacted(Cell), Fire(ChainLightning((arcs: 5, range: 112.0, damage_mult: 1.5, arc_speed: 50.0))))),
     ],
 )

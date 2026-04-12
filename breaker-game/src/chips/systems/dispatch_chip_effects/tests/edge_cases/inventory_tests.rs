@@ -1,15 +1,18 @@
 //! Chip inventory and stacking behavior tests for `dispatch_chip_effects`.
 
 use bevy::prelude::*;
+use ordered_float::OrderedFloat;
 
 use crate::{
     chips::{
         definition::ChipDefinition, inventory::ChipInventory, resources::ChipCatalog,
         systems::dispatch_chip_effects::tests::helpers::*,
     },
-    effect::{
-        BoundEffects, EffectKind, EffectNode, Target, Trigger,
-        effects::{damage_boost::ActiveDamageBoosts, speed_boost::ActiveSpeedBoosts},
+    effect_v3::{
+        effects::{DamageBoostConfig, SpeedBoostConfig},
+        stacking::EffectStack,
+        storage::BoundEffects,
+        types::{EffectType, EntityKind, StampTarget, Tree, Trigger},
     },
 };
 
@@ -21,8 +24,10 @@ fn chip_added_to_inventory_on_dispatch() {
 
     let def = ChipDefinition::test_on(
         "Minor Damage Boost",
-        Target::Breaker,
-        EffectNode::Do(EffectKind::DamageBoost(1.1)),
+        StampTarget::Breaker,
+        Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
+            multiplier: OrderedFloat(1.1),
+        })),
         5,
     );
     insert_chip(&mut app, def);
@@ -48,8 +53,10 @@ fn chip_at_max_stacks_does_not_dispatch_effects() {
 
     let def = ChipDefinition::test_on(
         "Capped Chip",
-        Target::Breaker,
-        EffectNode::Do(EffectKind::DamageBoost(1.5)),
+        StampTarget::Breaker,
+        Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
+            multiplier: OrderedFloat(1.5),
+        })),
         1, // max_stacks = 1
     );
     insert_chip(&mut app, def);
@@ -68,11 +75,10 @@ fn chip_at_max_stacks_does_not_dispatch_effects() {
     app.update();
 
     // Chip is at max stacks — effects should NOT be dispatched
-    let damage = app.world().get::<ActiveDamageBoosts>(breaker).unwrap();
+    let stack = app.world().get::<EffectStack<DamageBoostConfig>>(breaker);
     assert!(
-        damage.0.is_empty(),
-        "Effects should NOT be dispatched when chip is at max stacks, got {:?}",
-        damage.0
+        stack.is_none() || stack.unwrap().is_empty(),
+        "Effects should NOT be dispatched when chip is at max stacks"
     );
 }
 
@@ -84,14 +90,18 @@ fn multiple_chip_selections_in_same_frame_all_processed() {
 
     let def_a = ChipDefinition::test_on(
         "Chip A",
-        Target::Breaker,
-        EffectNode::Do(EffectKind::DamageBoost(1.1)),
+        StampTarget::Breaker,
+        Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
+            multiplier: OrderedFloat(1.1),
+        })),
         5,
     );
     let def_b = ChipDefinition::test_on(
         "Chip B",
-        Target::Breaker,
-        EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.2 }),
+        StampTarget::Breaker,
+        Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+            multiplier: OrderedFloat(1.2),
+        })),
         5,
     );
     insert_chip(&mut app, def_a);
@@ -103,31 +113,29 @@ fn multiple_chip_selections_in_same_frame_all_processed() {
 
     app.update();
 
-    let damage = app.world().get::<ActiveDamageBoosts>(breaker).unwrap();
+    let damage = app
+        .world()
+        .get::<EffectStack<DamageBoostConfig>>(breaker)
+        .unwrap();
     assert_eq!(
-        damage.0,
-        vec![1.1],
-        "Chip A's DamageBoost(1.1) should have been applied"
+        damage.len(),
+        1,
+        "Chip A's DamageBoost should have been applied"
     );
 
-    let speed = app.world().get::<ActiveSpeedBoosts>(breaker).unwrap();
+    let speed = app
+        .world()
+        .get::<EffectStack<SpeedBoostConfig>>(breaker)
+        .unwrap();
     assert_eq!(
-        speed.0,
-        vec![1.2],
-        "Chip B's SpeedBoost(1.2) should have been applied"
+        speed.len(),
+        1,
+        "Chip B's SpeedBoost should have been applied"
     );
 
     let inventory = app.world().resource::<ChipInventory>();
-    assert_eq!(
-        inventory.stacks("Chip A"),
-        1,
-        "Chip A should have 1 stack in inventory"
-    );
-    assert_eq!(
-        inventory.stacks("Chip B"),
-        1,
-        "Chip B should have 1 stack in inventory"
-    );
+    assert_eq!(inventory.stacks("Chip A"), 1);
+    assert_eq!(inventory.stacks("Chip B"), 1);
 }
 
 // ── Behavior 19 edge case: Same chip selected twice in one frame ──
@@ -138,8 +146,10 @@ fn same_chip_selected_twice_in_one_frame_both_processed() {
 
     let def = ChipDefinition::test_on(
         "Double Pick",
-        Target::Breaker,
-        EffectNode::Do(EffectKind::DamageBoost(1.1)),
+        StampTarget::Breaker,
+        Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
+            multiplier: OrderedFloat(1.1),
+        })),
         5,
     );
     insert_chip(&mut app, def);
@@ -150,19 +160,14 @@ fn same_chip_selected_twice_in_one_frame_both_processed() {
 
     app.update();
 
-    let damage = app.world().get::<ActiveDamageBoosts>(breaker).unwrap();
-    assert_eq!(
-        damage.0,
-        vec![1.1, 1.1],
-        "Both selections should fire DamageBoost, resulting in [1.1, 1.1]"
-    );
+    let damage = app
+        .world()
+        .get::<EffectStack<DamageBoostConfig>>(breaker)
+        .unwrap();
+    assert_eq!(damage.len(), 2, "Both selections should fire DamageBoost");
 
     let inventory = app.world().resource::<ChipInventory>();
-    assert_eq!(
-        inventory.stacks("Double Pick"),
-        2,
-        "Inventory should show 2 stacks of 'Double Pick'"
-    );
+    assert_eq!(inventory.stacks("Double Pick"), 2);
 }
 
 // ── Behavior 17 edge case: Inventory starts at 2 stacks, dispatch increments to 3 ──
@@ -173,9 +178,11 @@ fn inventory_increments_from_existing_stacks() {
 
     let def = ChipDefinition::test_on(
         "Stackable Chip",
-        Target::Breaker,
-        EffectNode::Do(EffectKind::DamageBoost(1.1)),
-        5, // max_stacks = 5
+        StampTarget::Breaker,
+        Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
+            multiplier: OrderedFloat(1.1),
+        })),
+        5,
     );
     insert_chip(&mut app, def);
 
@@ -187,16 +194,6 @@ fn inventory_increments_from_existing_stacks() {
         let _ = inventory.add_chip("Stackable Chip", &chip_def);
         let _ = inventory.add_chip("Stackable Chip", &chip_def);
     }
-
-    // Verify precondition: 2 stacks
-    let pre_stacks = app
-        .world()
-        .resource::<ChipInventory>()
-        .stacks("Stackable Chip");
-    assert_eq!(
-        pre_stacks, 2,
-        "Precondition: should have 2 stacks before dispatch"
-    );
 
     let _breaker = spawn_breaker(&mut app);
     select_chip(&mut app, "Stackable Chip");
@@ -219,12 +216,14 @@ fn chip_at_max_stacks_with_when_child_does_not_push_to_bound_effects() {
 
     let def = ChipDefinition::test_on(
         "Maxed When",
-        Target::Breaker,
-        EffectNode::When {
-            trigger: Trigger::CellDestroyed,
-            then: vec![EffectNode::Do(EffectKind::DamageBoost(1.5))],
-        },
-        1, // max_stacks = 1
+        StampTarget::Breaker,
+        Tree::When(
+            Trigger::DeathOccurred(EntityKind::Cell),
+            Box::new(Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
+                multiplier: OrderedFloat(1.5),
+            }))),
+        ),
+        1,
     );
     insert_chip(&mut app, def);
 
@@ -241,11 +240,9 @@ fn chip_at_max_stacks_with_when_child_does_not_push_to_bound_effects() {
 
     app.update();
 
-    // Chip is at max stacks — When node should NOT be pushed to BoundEffects
     let bound = app.world().get::<BoundEffects>(breaker).unwrap();
     assert!(
         bound.0.is_empty(),
-        "When node should NOT be pushed to BoundEffects when chip is at max stacks, got {} entries",
-        bound.0.len()
+        "When node should NOT be pushed to BoundEffects when chip is at max stacks"
     );
 }

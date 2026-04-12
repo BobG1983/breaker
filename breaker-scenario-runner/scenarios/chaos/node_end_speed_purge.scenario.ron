@@ -18,12 +18,6 @@
     allow_early_end: false,
     seed: 1301,
     initial_effects: [
-        On(target: Bolt, then: [
-            When(trigger: NodeStart, then: [
-                Until(trigger: NodeEnd, then: [
-                    Do(SpeedBoost(multiplier: 1.3)),
-                ]),
-            ]),
-        ]),
+        Stamp(Bolt, When(NodeStart, Until(NodeEnd, (Fire(SpeedBoost((multiplier: 1.3))))))),
     ],
 )

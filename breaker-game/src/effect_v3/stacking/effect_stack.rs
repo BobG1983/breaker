@@ -48,16 +48,19 @@ impl<T: PassiveEffect> EffectStack<T> {
     ///
     /// Delegates to `T::aggregate(&self.entries)`. Returns the identity
     /// value (1.0 for multiplicative, 0 for additive) when the stack is empty.
+    #[must_use]
     pub fn aggregate(&self) -> f32 {
         T::aggregate(&self.entries)
     }
 
     /// Returns `true` if the stack contains no entries.
+    #[must_use]
     pub const fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
 
     /// Returns the number of entries in the stack.
+    #[must_use]
     pub const fn len(&self) -> usize {
         self.entries.len()
     }

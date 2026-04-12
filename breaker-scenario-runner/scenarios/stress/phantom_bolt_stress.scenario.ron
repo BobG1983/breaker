@@ -17,10 +17,6 @@
     allow_early_end: false,
     seed: 3333,
     initial_effects: [
-        On(target: Bolt, then: [
-            When(trigger: PerfectBumped, then: [
-                Do(SpawnPhantom(duration: 2.0, max_active: 3)),
-            ]),
-        ]),
+        Stamp(Bolt, When(PerfectBumped, Fire(SpawnPhantom((duration: 2.0, max_active: 3))))),
     ],
 )

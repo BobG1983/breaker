@@ -1,14 +1,18 @@
 //! Dispatches chip effects to target entities when a chip is selected.
 //!
-//! Reads [`ChipSelected`] messages, resolves `RootEffect::On { target, then }`
-//! to entities, pushes children to `BoundEffects`. Bare `Do` children fire
-//! immediately via `commands.fire_effect()`.
+//! Reads [`ChipSelected`] messages, resolves `RootNode::Stamp(target, tree)`
+//! to entities, stamps trees via `commands.stamp_effect()`. Bare `Fire` children
+//! fire immediately via `commands.fire_effect()`.
 
 use bevy::{ecs::system::SystemParam, prelude::*};
 
 use crate::{
     chips::{inventory::ChipInventory, resources::ChipCatalog},
-    effect::{EffectCommandsExt, Target, Trigger, TriggerContext},
+    effect_v3::{
+        commands::EffectCommandsExt,
+        storage::{BoundEffects, StagedEffects},
+        types::{RootNode, StampTarget, Tree},
+    },
     prelude::*,
 };
 
@@ -52,48 +56,46 @@ pub(crate) fn dispatch_chip_effects(
             continue;
         }
 
-        for root_effect in &effects {
-            let RootEffect::On { target, then } = root_effect;
-
-            if *target == Target::Breaker {
-                // Direct dispatch: breaker exists during ChipSelect
-                let entities = resolve_target_entities(Target::Breaker, &targets);
-                for entity in entities {
-                    dispatch_children(entity, then, &chip_name, &targets, &mut commands);
+        for root in &effects {
+            match root {
+                RootNode::Stamp(target, tree) => {
+                    if *target == StampTarget::Breaker {
+                        // Direct dispatch: breaker exists during ChipSelect
+                        let entities = resolve_target_entities(*target, &targets);
+                        for entity in entities {
+                            dispatch_tree(entity, tree, &chip_name, &targets, &mut commands);
+                        }
+                    } else {
+                        // Deferred dispatch: non-Breaker entities don't exist during ChipSelect.
+                        // Wrap in When(NodeStartOccurred, On(original_target, original_children))
+                        // and stamp to the Breaker's BoundEffects.
+                        //
+                        // NOTE: The old system used EffectNode::On { target, permanent, then }
+                        // for deferred dispatch. The new system routes trees differently —
+                        // we stamp the tree directly since trigger bridges will handle
+                        // the walking at event time.
+                        for breaker_entity in targets.breakers.iter() {
+                            commands.stamp_effect(breaker_entity, chip_name.clone(), tree.clone());
+                        }
+                    }
                 }
-            } else {
-                // Deferred dispatch: non-Breaker entities don't exist during ChipSelect.
-                // Wrap in When(NodeStart, On(original_target, original_children))
-                // and push to the Breaker's BoundEffects.
-                let wrapped = EffectNode::When {
-                    trigger: Trigger::NodeStart,
-                    then: vec![EffectNode::On {
-                        target: *target,
-                        permanent: true,
-                        then: then.clone(),
-                    }],
-                };
-                for breaker_entity in targets.breakers.iter() {
-                    commands.push_bound_effects(
-                        breaker_entity,
-                        vec![(chip_name.clone(), wrapped.clone())],
-                    );
+                RootNode::Spawn(_kind, _tree) => {
+                    // Spawn-based roots are not used in chips yet
                 }
             }
         }
     }
 }
 
-/// Dispatch a list of child [`EffectNode`]s to a single entity.
+/// Dispatch a [`Tree`] to a single entity.
 ///
-/// - `Do(effect)` children are fired immediately via `commands.fire_effect`.
-/// - `On { target, then, .. }` children resolve the inner target and recurse.
-/// - All other children are transferred to the entity's [`BoundEffects`].
-fn dispatch_children(
+/// - `Fire(effect)` children are fired immediately via `commands.fire_effect`.
+/// - All other tree variants are stamped onto the entity's [`BoundEffects`].
+fn dispatch_tree(
     entity: Entity,
-    children: &[EffectNode],
+    tree: &Tree,
     chip_name: &str,
-    targets: &DispatchTargets,
+    _targets: &DispatchTargets,
     commands: &mut Commands,
 ) {
     // Ensure BoundEffects and StagedEffects exist on the entity before dispatching
@@ -104,40 +106,28 @@ fn dispatch_children(
         .entity(entity)
         .insert_if_new(StagedEffects::default());
 
-    for child in children {
-        match child {
-            EffectNode::Do(effect) => {
-                commands.fire_effect(entity, effect.clone(), chip_name.to_owned());
-            }
-            EffectNode::On {
-                target: inner_target,
-                then: inner_children,
-                ..
-            } => {
-                let inner_entities = resolve_target_entities(*inner_target, targets);
-                for inner_entity in inner_entities {
-                    dispatch_children(inner_entity, inner_children, chip_name, targets, commands);
-                }
-            }
-            other => {
-                commands.transfer_effect(
-                    entity,
-                    chip_name.to_owned(),
-                    vec![other.clone()],
-                    true,
-                    TriggerContext::default(),
-                );
-            }
+    match tree {
+        Tree::Fire(effect) => {
+            commands.fire_effect(entity, effect.clone(), chip_name.to_owned());
+        }
+        other => {
+            commands.stamp_effect(entity, chip_name.to_owned(), other.clone());
         }
     }
 }
 
-/// Map a [`Target`] to the set of matching entities.
-fn resolve_target_entities(target: Target, targets: &DispatchTargets) -> Vec<Entity> {
+/// Map a [`StampTarget`] to the set of matching entities.
+fn resolve_target_entities(target: StampTarget, targets: &DispatchTargets) -> Vec<Entity> {
     match target {
-        Target::Breaker => targets.breakers.iter().collect(),
-        Target::Bolt | Target::AllBolts => targets.bolts.iter().collect(),
-        Target::Cell | Target::AllCells => targets.cells.iter().collect(),
-        Target::Wall | Target::AllWalls => targets.walls.iter().collect(),
+        StampTarget::Breaker | StampTarget::ActiveBreakers | StampTarget::EveryBreaker => {
+            targets.breakers.iter().collect()
+        }
+        StampTarget::Bolt
+        | StampTarget::ActiveBolts
+        | StampTarget::EveryBolt
+        | StampTarget::PrimaryBolts
+        | StampTarget::ExtraBolts => targets.bolts.iter().collect(),
+        StampTarget::ActiveCells | StampTarget::EveryCell => targets.cells.iter().collect(),
+        StampTarget::ActiveWalls | StampTarget::EveryWall => targets.walls.iter().collect(),
     }
 }

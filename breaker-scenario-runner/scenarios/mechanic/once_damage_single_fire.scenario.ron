@@ -19,12 +19,8 @@
     allow_early_end: false,
     seed: 1337,
     initial_effects: [
-        On(target: AllBolts, then: [
-            When(trigger: Impacted(Cell), then: [
-                Once([
+        Stamp(ActiveBolts, When(Impacted(Cell), Once([
                     Do(DamageBoost(3.0)),
-                ]),
-            ]),
-        ]),
+                ]))),
     ],
 )

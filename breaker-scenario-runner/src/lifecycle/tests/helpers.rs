@@ -8,7 +8,11 @@ pub(super) use breaker::{
         resources::ForceBumpGrade,
     },
     cells::components::Cell,
-    effect::{BoundEffects, EffectKind, EffectNode, RootEffect, StagedEffects, Target},
+    effect_v3::{
+        effects::{DamageBoostConfig, PiercingConfig},
+        storage::{BoundEffects, StagedEffects},
+        types::{EffectType, RootNode, StampTarget, Tree},
+    },
     input::resources::InputActions,
     shared::PlayfieldConfig,
     state::{
@@ -19,6 +23,7 @@ pub(super) use breaker::{
     },
     walls::components::Wall,
 };
+pub(super) use ordered_float::OrderedFloat;
 pub(super) use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 pub(super) use super::*;

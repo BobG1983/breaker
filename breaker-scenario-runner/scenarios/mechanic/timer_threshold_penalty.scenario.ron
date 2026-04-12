@@ -20,10 +20,6 @@
     allow_early_end: false,
     seed: 4096,
     initial_effects: [
-        On(target: Bolt, then: [
-            When(trigger: NodeTimerThreshold(0.5), then: [
-                Do(TimePenalty(seconds: 5.0)),
-            ]),
-        ]),
+        Stamp(Bolt, When(NodeTimerThreshold(0.5), Fire(TimePenalty((seconds: 5.0))))),
     ],
 )

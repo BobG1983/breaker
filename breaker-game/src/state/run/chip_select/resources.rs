@@ -133,7 +133,10 @@ mod tests {
     use super::*;
     use crate::{
         chips::definition::EvolutionIngredient,
-        effect::{EffectKind, EffectNode},
+        effect_v3::{
+            effects::PiercingConfig,
+            types::{EffectType, Tree},
+        },
     };
 
     #[test]
@@ -157,14 +160,22 @@ mod tests {
 
     #[test]
     fn normal_offering_name_returns_inner_definition_name() {
-        let def = ChipDefinition::test("Piercing Shot", EffectNode::Do(EffectKind::Piercing(1)), 3);
+        let def = ChipDefinition::test(
+            "Piercing Shot",
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
+            3,
+        );
         let offering = ChipOffering::Normal(def);
         assert_eq!(offering.name(), "Piercing Shot");
     }
 
     #[test]
     fn normal_offering_definition_returns_inner_definition() {
-        let def = ChipDefinition::test("Piercing Shot", EffectNode::Do(EffectKind::Piercing(1)), 3);
+        let def = ChipDefinition::test(
+            "Piercing Shot",
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
+            3,
+        );
         let offering = ChipOffering::Normal(def);
         assert_eq!(offering.definition().name, "Piercing Shot");
     }
@@ -178,7 +189,11 @@ mod tests {
                 chip_name: "A".to_owned(),
                 stacks_required: 2,
             }],
-            result: ChipDefinition::test("A+", EffectNode::Do(EffectKind::Piercing(5)), 1),
+            result: ChipDefinition::test(
+                "A+",
+                Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 5 })),
+                1,
+            ),
         };
         assert_eq!(offering.name(), "A+");
     }
@@ -190,7 +205,11 @@ mod tests {
                 chip_name: "A".to_owned(),
                 stacks_required: 2,
             }],
-            result: ChipDefinition::test("Barrage", EffectNode::Do(EffectKind::Piercing(5)), 1),
+            result: ChipDefinition::test(
+                "Barrage",
+                Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 5 })),
+                1,
+            ),
         };
         assert_eq!(offering.definition().name, "Barrage");
     }

@@ -1,6 +1,11 @@
+use ordered_float::OrderedFloat;
+
 use crate::{
     chips::definition::types::*,
-    effect::{EffectKind, EffectNode, RootEffect, Target},
+    effect_v3::{
+        effects::{PiercingConfig, SizeBoostConfig},
+        types::{EffectType, RootNode, StampTarget, Tree},
+    },
 };
 
 // =========================================================================
@@ -13,10 +18,10 @@ fn expand_evolution_template_produces_evolution_rarity() {
         name: "Voltaic Piercer".to_owned(),
         description: "Evolved piercing".to_owned(),
         max_stacks: 1,
-        effects: vec![RootEffect::On {
-            target: Target::Bolt,
-            then: vec![EffectNode::Do(EffectKind::Piercing(3))],
-        }],
+        effects: vec![RootNode::Stamp(
+            StampTarget::Bolt,
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 3 })),
+        )],
         ingredients: vec![EvolutionIngredient {
             chip_name: "Piercing Shot".to_owned(),
             stacks_required: 3,
@@ -51,10 +56,10 @@ fn expand_evolution_template_max_stacks_from_template() {
         name: "Multi Stack Evo".to_owned(),
         description: "Stackable evolution".to_owned(),
         max_stacks: 5,
-        effects: vec![RootEffect::On {
-            target: Target::Bolt,
-            then: vec![EffectNode::Do(EffectKind::Piercing(1))],
-        }],
+        effects: vec![RootNode::Stamp(
+            StampTarget::Bolt,
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
+        )],
         ingredients: vec![EvolutionIngredient {
             chip_name: "Splinter".to_owned(),
             stacks_required: 2,
@@ -72,10 +77,10 @@ fn expand_evolution_template_max_stacks_from_template() {
         name: "Single Stack Evo".to_owned(),
         description: String::new(),
         max_stacks: 1,
-        effects: vec![RootEffect::On {
-            target: Target::Bolt,
-            then: vec![EffectNode::Do(EffectKind::Piercing(1))],
-        }],
+        effects: vec![RootNode::Stamp(
+            StampTarget::Bolt,
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
+        )],
         ingredients: vec![EvolutionIngredient {
             chip_name: "X".to_owned(),
             stacks_required: 1,
@@ -100,14 +105,16 @@ fn expand_evolution_template_copies_effects_unchanged() {
         description: String::new(),
         max_stacks: 1,
         effects: vec![
-            RootEffect::On {
-                target: Target::Bolt,
-                then: vec![EffectNode::Do(EffectKind::Piercing(2))],
-            },
-            RootEffect::On {
-                target: Target::Breaker,
-                then: vec![EffectNode::Do(EffectKind::SizeBoost(15.0))],
-            },
+            RootNode::Stamp(
+                StampTarget::Bolt,
+                Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 2 })),
+            ),
+            RootNode::Stamp(
+                StampTarget::Breaker,
+                Tree::Fire(EffectType::SizeBoost(SizeBoostConfig {
+                    multiplier: OrderedFloat(15.0),
+                })),
+            ),
         ],
         ingredients: vec![EvolutionIngredient {
             chip_name: "A".to_owned(),
@@ -123,23 +130,11 @@ fn expand_evolution_template_copies_effects_unchanged() {
         def.effects.len()
     );
     assert!(
-        matches!(
-            &def.effects[0],
-            RootEffect::On {
-                target: Target::Bolt,
-                ..
-            }
-        ),
+        matches!(&def.effects[0], RootNode::Stamp(StampTarget::Bolt, _)),
         "first effect should target Bolt"
     );
     assert!(
-        matches!(
-            &def.effects[1],
-            RootEffect::On {
-                target: Target::Breaker,
-                ..
-            }
-        ),
+        matches!(&def.effects[1], RootNode::Stamp(StampTarget::Breaker, _)),
         "second effect should target Breaker"
     );
 
@@ -171,10 +166,10 @@ fn expand_evolution_template_sets_template_name_to_none() {
         name: "Storm Piercer".to_owned(),
         description: "Storm desc".to_owned(),
         max_stacks: 1,
-        effects: vec![RootEffect::On {
-            target: Target::Bolt,
-            then: vec![EffectNode::Do(EffectKind::Piercing(1))],
-        }],
+        effects: vec![RootNode::Stamp(
+            StampTarget::Bolt,
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
+        )],
         ingredients: vec![EvolutionIngredient {
             chip_name: "X".to_owned(),
             stacks_required: 1,
@@ -199,10 +194,10 @@ fn expand_evolution_template_copies_ingredients_as_some_vec() {
         name: "Fusion Chip".to_owned(),
         description: String::new(),
         max_stacks: 1,
-        effects: vec![RootEffect::On {
-            target: Target::Bolt,
-            then: vec![EffectNode::Do(EffectKind::Piercing(1))],
-        }],
+        effects: vec![RootNode::Stamp(
+            StampTarget::Bolt,
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
+        )],
         ingredients: vec![
             EvolutionIngredient {
                 chip_name: "Alpha".to_owned(),
@@ -237,10 +232,10 @@ fn expand_evolution_template_copies_ingredients_as_some_vec() {
         name: "Empty Ingredients Evo".to_owned(),
         description: String::new(),
         max_stacks: 1,
-        effects: vec![RootEffect::On {
-            target: Target::Bolt,
-            then: vec![EffectNode::Do(EffectKind::Piercing(1))],
-        }],
+        effects: vec![RootNode::Stamp(
+            StampTarget::Bolt,
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
+        )],
         ingredients: vec![],
     };
     let empty_def = expand_evolution_template(&empty_template);

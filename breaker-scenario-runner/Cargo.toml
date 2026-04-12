@@ -18,6 +18,7 @@ clap = { version = "4", features = ["derive"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 ron = "0.12"
+ordered-float = "5"
 serde = { version = "1", features = ["derive"] }
 rand = "0.9"
 

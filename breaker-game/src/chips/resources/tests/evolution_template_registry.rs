@@ -8,7 +8,10 @@ use crate::{
         definition::{EvolutionIngredient, EvolutionTemplate},
         resources::EvolutionTemplateRegistry,
     },
-    effect::{EffectKind, EffectNode, RootEffect, Target},
+    effect_v3::{
+        effects::PiercingConfig,
+        types::{EffectType, RootNode, StampTarget, Tree},
+    },
 };
 
 fn make_evolution_template(name: &str) -> EvolutionTemplate {
@@ -16,10 +19,10 @@ fn make_evolution_template(name: &str) -> EvolutionTemplate {
         name: name.to_owned(),
         description: String::new(),
         max_stacks: 1,
-        effects: vec![RootEffect::On {
-            target: Target::Bolt,
-            then: vec![EffectNode::Do(EffectKind::Piercing(5))],
-        }],
+        effects: vec![RootNode::Stamp(
+            StampTarget::Bolt,
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 5 })),
+        )],
         ingredients: vec![EvolutionIngredient {
             chip_name: "Piercing Shot".to_owned(),
             stacks_required: 2,

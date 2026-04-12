@@ -4,7 +4,7 @@ use bevy::{ecs::system::SystemParam, prelude::*};
 use breaker::{
     breaker::{BreakerDefinition, BreakerRegistry, SelectedBreaker},
     chips::{ChipCatalog, inventory::ChipInventory},
-    effect::{EffectNode, RootEffect, Target},
+    effect_v3::types::{RootNode, StampTarget, Tree},
     shared::RunSeed,
     state::{
         run::{
@@ -95,24 +95,34 @@ pub fn bypass_menu_to_playing(
     // All targets use deferred pending resources because no game entities
     // exist when this system runs (OnEnter(MenuState::Main)).
     if let Some(ref effects) = config.definition.initial_effects {
-        let mut bolt_entries: Vec<(String, EffectNode)> = Vec::new();
-        let mut breaker_entries: Vec<(String, EffectNode)> = Vec::new();
-        let mut cell_entries: Vec<(String, EffectNode)> = Vec::new();
-        let mut wall_entries: Vec<(String, EffectNode)> = Vec::new();
-        for root_effect in effects {
-            let RootEffect::On { target, then } = root_effect;
-            match target {
-                Target::Bolt | Target::AllBolts => {
-                    bolt_entries.extend(then.iter().cloned().map(|node| (String::new(), node)));
-                }
-                Target::Breaker => {
-                    breaker_entries.extend(then.iter().cloned().map(|node| (String::new(), node)));
-                }
-                Target::Cell | Target::AllCells => {
-                    cell_entries.extend(then.iter().cloned().map(|node| (String::new(), node)));
-                }
-                Target::Wall | Target::AllWalls => {
-                    wall_entries.extend(then.iter().cloned().map(|node| (String::new(), node)));
+        let mut bolt_entries: Vec<(String, Tree)> = Vec::new();
+        let mut breaker_entries: Vec<(String, Tree)> = Vec::new();
+        let mut cell_entries: Vec<(String, Tree)> = Vec::new();
+        let mut wall_entries: Vec<(String, Tree)> = Vec::new();
+        for root in effects {
+            match root {
+                RootNode::Stamp(target, tree) => match target {
+                    StampTarget::Bolt
+                    | StampTarget::ActiveBolts
+                    | StampTarget::EveryBolt
+                    | StampTarget::PrimaryBolts
+                    | StampTarget::ExtraBolts => {
+                        bolt_entries.push((String::new(), tree.clone()));
+                    }
+                    StampTarget::Breaker
+                    | StampTarget::ActiveBreakers
+                    | StampTarget::EveryBreaker => {
+                        breaker_entries.push((String::new(), tree.clone()));
+                    }
+                    StampTarget::ActiveCells | StampTarget::EveryCell => {
+                        cell_entries.push((String::new(), tree.clone()));
+                    }
+                    StampTarget::ActiveWalls | StampTarget::EveryWall => {
+                        wall_entries.push((String::new(), tree.clone()));
+                    }
+                },
+                RootNode::Spawn(..) => {
+                    // Spawn-based roots not used in scenarios yet
                 }
             }
         }

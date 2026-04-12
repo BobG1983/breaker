@@ -1,97 +1,106 @@
 //! Breaker target dispatch tests — behavior 8.
 //!
-//! Breaker targets are NOT desugared; they dispatch directly.
+//! Breaker targets dispatch directly — Fire effects fire immediately,
+//! other trees stamp to `BoundEffects`.
 
 use bevy::prelude::*;
+use ordered_float::OrderedFloat;
 
 use crate::{
     chips::{definition::ChipDefinition, systems::dispatch_chip_effects::tests::helpers::*},
-    effect::{BoundEffects, EffectKind, EffectNode, RootEffect, Target, Trigger},
+    effect_v3::{
+        effects::{SizeBoostConfig, SpeedBoostConfig},
+        stacking::EffectStack,
+        storage::BoundEffects,
+        types::{EffectType, StampTarget, Tree, Trigger},
+    },
 };
 
-// ── Behavior 8: Breaker dispatches directly (no desugaring) ──
-
 #[test]
-fn breaker_target_dispatches_directly_not_desugared() {
+fn breaker_fire_dispatches_immediately() {
     let mut app = test_app();
 
     let def = ChipDefinition::test_on(
-        "Breaker Shield",
-        Target::Breaker,
-        EffectNode::When {
-            trigger: Trigger::PerfectBump,
-            then: vec![EffectNode::Do(EffectKind::Shield {
-                duration: 5.0,
-                reflection_cost: 0.0,
-            })],
-        },
+        "Speed Up",
+        StampTarget::Breaker,
+        Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+            multiplier: OrderedFloat(1.3),
+        })),
         5,
     );
     insert_chip(&mut app, def);
 
     let breaker = spawn_breaker(&mut app);
-    select_chip(&mut app, "Breaker Shield");
+    select_chip(&mut app, "Speed Up");
 
     app.update();
 
-    let bound = app.world().get::<BoundEffects>(breaker).unwrap();
-    assert_eq!(bound.0.len(), 1, "Breaker should have 1 BoundEffects entry");
-
-    let (chip_name, node) = &bound.0[0];
-    assert_eq!(chip_name, "Breaker Shield");
-    // The node should be the direct When(PerfectBump, ...) — NOT wrapped in When(NodeStart, ...)
-    assert!(
-        matches!(
-            node,
-            EffectNode::When {
-                trigger: Trigger::PerfectBump,
-                then,
-            } if then.len() == 1 && matches!(&then[0], EffectNode::Do(EffectKind::Shield { duration: 5.0, reflection_cost: 0.0 }))
-        ),
-        "Breaker target should NOT be desugared — expected When(PerfectBump, [Do(Shield(1))]), got {node:?}"
-    );
-}
-
-// ── Behavior 8 edge case: Breaker bare Do fires immediately ──
-
-#[test]
-fn breaker_target_bare_do_fires_immediately() {
-    let mut app = test_app();
-
-    let def = ChipDefinition {
-        name: "Breaker Size".to_owned(),
-        description: String::new(),
-        rarity: crate::chips::definition::Rarity::Common,
-        max_stacks: 5,
-        effects: vec![RootEffect::On {
-            target: Target::Breaker,
-            then: vec![EffectNode::Do(EffectKind::SizeBoost(1.15))],
-        }],
-        ingredients: None,
-        template_name: None,
-    };
-    insert_chip(&mut app, def);
-
-    let breaker = spawn_breaker(&mut app);
-    select_chip(&mut app, "Breaker Size");
-
-    app.update();
-
-    // SizeBoost should have fired immediately on Breaker
-    let sizes = app
+    let stack = app
         .world()
-        .get::<crate::effect::effects::size_boost::ActiveSizeBoosts>(breaker)
+        .get::<EffectStack<SpeedBoostConfig>>(breaker)
         .unwrap();
-    assert_eq!(
-        sizes.0,
-        vec![1.15],
-        "SizeBoost(1.15) should fire immediately on Breaker (not desugared)"
-    );
+    assert_eq!(stack.len(), 1, "SpeedBoost should fire immediately");
 
-    // BoundEffects should be empty (bare Do fires, not pushed)
     let bound = app.world().get::<BoundEffects>(breaker).unwrap();
     assert!(
         bound.0.is_empty(),
-        "BoundEffects should remain empty for bare Do on Breaker target"
+        "BoundEffects should be empty for bare Fire"
+    );
+}
+
+#[test]
+fn breaker_size_boost_fires_immediately() {
+    let mut app = test_app();
+
+    let def = ChipDefinition::test_on(
+        "Size Up",
+        StampTarget::Breaker,
+        Tree::Fire(EffectType::SizeBoost(SizeBoostConfig {
+            multiplier: OrderedFloat(1.2),
+        })),
+        5,
+    );
+    insert_chip(&mut app, def);
+
+    let breaker = spawn_breaker(&mut app);
+    select_chip(&mut app, "Size Up");
+
+    app.update();
+
+    let stack = app
+        .world()
+        .get::<EffectStack<SizeBoostConfig>>(breaker)
+        .unwrap();
+    assert_eq!(stack.len(), 1, "SizeBoost should fire immediately");
+}
+
+#[test]
+fn breaker_when_stamps_to_bound_effects() {
+    let mut app = test_app();
+
+    let def = ChipDefinition::test_on(
+        "Triggered",
+        StampTarget::Breaker,
+        Tree::When(
+            Trigger::PerfectBumped,
+            Box::new(Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+                multiplier: OrderedFloat(1.5),
+            }))),
+        ),
+        5,
+    );
+    insert_chip(&mut app, def);
+
+    let breaker = spawn_breaker(&mut app);
+    select_chip(&mut app, "Triggered");
+
+    app.update();
+
+    let bound = app.world().get::<BoundEffects>(breaker).unwrap();
+    assert_eq!(bound.0.len(), 1, "When tree should stamp to BoundEffects");
+    assert!(
+        matches!(&bound.0[0].1, Tree::When(Trigger::PerfectBumped, _)),
+        "Should be When(PerfectBumped, ...), got {:?}",
+        bound.0[0].1
     );
 }

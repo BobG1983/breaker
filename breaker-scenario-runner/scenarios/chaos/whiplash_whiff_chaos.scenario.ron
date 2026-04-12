@@ -21,13 +21,8 @@
     allow_early_end: false,
     seed: 2311,
     initial_effects: [
-        On(target: AllBolts, then: [
-            When(trigger: BumpWhiff, then: [
-                Once([
+        Stamp(ActiveBolts, When(BumpWhiff, Sequence([Once([
                     Do(DamageBoost(2.5)),
-                ]),
-                Do(Shockwave(base_range: 50.0, range_per_level: 0.0, stacks: 1, speed: 200.0)),
-            ]),
-        ]),
+                ]), Fire(Shockwave((base_range: 50.0, range_per_level: 0.0, stacks: 1, speed: 200.0)))]))),
     ],
 )

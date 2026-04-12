@@ -1,42 +1,46 @@
+use ordered_float::OrderedFloat;
+
 use crate::{
     chips::definition::types::*,
-    effect::{EffectKind, EffectNode, RootEffect, Target, Trigger},
+    effect_v3::{
+        effects::{DamageBoostConfig, PiercingConfig, SizeBoostConfig, SpeedBoostConfig},
+        types::{EffectType, RootNode, StampTarget, Tree, Trigger},
+    },
 };
 
 // =========================================================================
-// ChipTemplate with Vec<RootEffect>
+// ChipTemplate with Vec<RootNode>
 // =========================================================================
 
 #[test]
-fn chip_template_ron_with_root_effect() {
-    let ron_str = r#"(name: "Surge", max_taken: 3, common: Some((prefix: "Basic", effects: [On(target: Bolt, then: [When(trigger: PerfectBump, then: [Do(SpeedBoost(multiplier: 1.2))])])])), uncommon: None, rare: None, legendary: None)"#;
+fn chip_template_ron_with_root_node() {
+    let ron_str = r#"(name: "Surge", max_taken: 3, common: Some((prefix: "Basic", effects: [Stamp(Bolt, When(PerfectBumped, Fire(SpeedBoost((multiplier: 1.2)))))])), uncommon: None, rare: None, legendary: None)"#;
     let template: ChipTemplate =
-        ron::de::from_str(ron_str).expect("ChipTemplate with RootEffect RON should parse");
+        ron::de::from_str(ron_str).expect("ChipTemplate with RootNode RON should parse");
     assert_eq!(template.name, "Surge");
     let common = template.common.unwrap();
     assert!(matches!(
         common.effects[0],
-        RootEffect::On {
-            target: Target::Bolt,
-            ..
-        }
+        RootNode::Stamp(StampTarget::Bolt, _)
     ));
 }
 
 #[test]
-fn expand_chip_template_produces_root_effect() {
+fn expand_chip_template_produces_root_node() {
     let template = ChipTemplate {
         name: "Surge".to_owned(),
         max_taken: 3,
         common: Some(RaritySlot {
             prefix: "Basic".to_owned(),
-            effects: vec![RootEffect::On {
-                target: Target::Bolt,
-                then: vec![EffectNode::When {
-                    trigger: Trigger::PerfectBump,
-                    then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.2 })],
-                }],
-            }],
+            effects: vec![RootNode::Stamp(
+                StampTarget::Bolt,
+                Tree::When(
+                    Trigger::PerfectBumped,
+                    Box::new(Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+                        multiplier: OrderedFloat(1.2),
+                    }))),
+                ),
+            )],
         }),
         uncommon: None,
         rare: None,
@@ -49,10 +53,7 @@ fn expand_chip_template_produces_root_effect() {
     assert_eq!(defs[0].max_stacks, 3);
     assert!(matches!(
         defs[0].effects[0],
-        RootEffect::On {
-            target: Target::Bolt,
-            ..
-        }
+        RootNode::Stamp(StampTarget::Bolt, _)
     ));
 }
 
@@ -63,10 +64,12 @@ fn expand_chip_template_preserves_target() {
         max_taken: 3,
         common: Some(RaritySlot {
             prefix: "Basic".to_owned(),
-            effects: vec![RootEffect::On {
-                target: Target::Breaker,
-                then: vec![EffectNode::Do(EffectKind::SizeBoost(20.0))],
-            }],
+            effects: vec![RootNode::Stamp(
+                StampTarget::Breaker,
+                Tree::Fire(EffectType::SizeBoost(SizeBoostConfig {
+                    multiplier: OrderedFloat(20.0),
+                })),
+            )],
         }),
         uncommon: None,
         rare: None,
@@ -75,25 +78,19 @@ fn expand_chip_template_preserves_target() {
     let defs = expand_chip_template(&template);
     assert_eq!(defs.len(), 1);
     assert!(
-        matches!(
-            defs[0].effects[0],
-            RootEffect::On {
-                target: Target::Breaker,
-                ..
-            }
-        ),
-        "expand_chip_template should preserve Target::Breaker from slot"
+        matches!(defs[0].effects[0], RootNode::Stamp(StampTarget::Breaker, _)),
+        "expand_chip_template should preserve StampTarget::Breaker from slot"
     );
 }
 
 #[test]
-fn expanded_defs_have_correct_rarities_with_root_effect() {
+fn expanded_defs_have_correct_rarities_with_root_node() {
     let make_slot = |prefix: &str, val: u32| RaritySlot {
         prefix: prefix.to_owned(),
-        effects: vec![RootEffect::On {
-            target: Target::Bolt,
-            then: vec![EffectNode::Do(EffectKind::Piercing(val))],
-        }],
+        effects: vec![RootNode::Stamp(
+            StampTarget::Bolt,
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: val })),
+        )],
     };
     let template = ChipTemplate {
         name: "AllSlots".to_owned(),
@@ -139,10 +136,12 @@ fn expanded_chip_empty_prefix_uses_template_name() {
         rare: None,
         legendary: Some(RaritySlot {
             prefix: String::new(),
-            effects: vec![RootEffect::On {
-                target: Target::Bolt,
-                then: vec![EffectNode::Do(EffectKind::DamageBoost(1.0))],
-            }],
+            effects: vec![RootNode::Stamp(
+                StampTarget::Bolt,
+                Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
+                    multiplier: OrderedFloat(1.0),
+                })),
+            )],
         }),
     };
     let defs = expand_chip_template(&template);
@@ -161,10 +160,12 @@ fn expanded_chip_whitespace_prefix_uses_template_name() {
         rare: None,
         legendary: Some(RaritySlot {
             prefix: "   ".to_owned(),
-            effects: vec![RootEffect::On {
-                target: Target::Bolt,
-                then: vec![EffectNode::Do(EffectKind::DamageBoost(1.0))],
-            }],
+            effects: vec![RootNode::Stamp(
+                StampTarget::Bolt,
+                Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
+                    multiplier: OrderedFloat(1.0),
+                })),
+            )],
         }),
     };
     let defs = expand_chip_template(&template);
@@ -184,10 +185,10 @@ fn expanded_chip_whitespace_prefix_uses_template_name() {
 fn expand_chip_template_sets_template_name_on_all_variants() {
     let make_slot = |prefix: &str| RaritySlot {
         prefix: prefix.to_owned(),
-        effects: vec![RootEffect::On {
-            target: Target::Bolt,
-            then: vec![EffectNode::Do(EffectKind::Piercing(1))],
-        }],
+        effects: vec![RootNode::Stamp(
+            StampTarget::Bolt,
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
+        )],
     };
     let template = ChipTemplate {
         name: "Surge".to_owned(),

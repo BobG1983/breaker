@@ -13,7 +13,7 @@ fn pending_bolt_effects_applied_to_bolt_entities() {
     // Insert pending effects
     app.insert_resource(PendingBoltEffects(vec![(
         String::new(),
-        EffectNode::Do(EffectKind::Piercing(3)),
+        Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 3 })),
     )]));
 
     app.add_systems(Update, apply_pending_bolt_effects);
@@ -35,7 +35,10 @@ fn pending_bolt_effects_applied_to_bolt_entities() {
     );
     assert_eq!(
         chains.0[0],
-        (String::new(), EffectNode::Do(EffectKind::Piercing(3))),
+        (
+            String::new(),
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 3 }))
+        ),
         "expected (\"\", Do(Piercing(3))), got {:?}",
         chains.0[0]
     );
@@ -51,7 +54,7 @@ fn pending_bolt_effects_applied_to_bolt_entities() {
     // --- Local<bool> guard: a second update must NOT re-apply new pending effects ---
     app.insert_resource(PendingBoltEffects(vec![(
         String::new(),
-        EffectNode::Do(EffectKind::Piercing(99)),
+        Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 99 })),
     )]));
 
     app.update();
@@ -66,7 +69,10 @@ fn pending_bolt_effects_applied_to_bolt_entities() {
     );
     assert_eq!(
         chains.0[0],
-        (String::new(), EffectNode::Do(EffectKind::Piercing(3))),
+        (
+            String::new(),
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 3 }))
+        ),
         "expected original (\"\", Do(Piercing(3))) preserved, got {:?}",
         chains.0[0]
     );
@@ -82,7 +88,7 @@ fn pending_bolt_effects_applied_to_multiple_bolts() {
     // Insert pending effects with one entry
     app.insert_resource(PendingBoltEffects(vec![(
         String::new(),
-        EffectNode::Do(EffectKind::Piercing(5)),
+        Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 5 })),
     )]));
 
     app.add_systems(Update, apply_pending_bolt_effects);
@@ -108,7 +114,10 @@ fn pending_bolt_effects_applied_to_multiple_bolts() {
     );
     assert_eq!(
         chains_a.0[0],
-        (String::new(), EffectNode::Do(EffectKind::Piercing(5))),
+        (
+            String::new(),
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 5 }))
+        ),
         "expected bolt A to have (\"\", Do(Piercing(5))), got {:?}",
         chains_a.0[0]
     );
@@ -122,7 +131,10 @@ fn pending_bolt_effects_applied_to_multiple_bolts() {
     );
     assert_eq!(
         chains_b.0[0],
-        (String::new(), EffectNode::Do(EffectKind::Piercing(5))),
+        (
+            String::new(),
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 5 }))
+        ),
         "expected bolt B to have (\"\", Do(Piercing(5))), got {:?}",
         chains_b.0[0]
     );
@@ -170,7 +182,7 @@ fn apply_pending_bolt_effects_inserts_bound_effects_on_bolt_without_it() {
 
     app.insert_resource(PendingBoltEffects(vec![(
         String::new(),
-        EffectNode::Do(EffectKind::Piercing(15)),
+        Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 15 })),
     )]));
 
     app.add_systems(Update, apply_pending_bolt_effects);
@@ -197,7 +209,10 @@ fn apply_pending_bolt_effects_inserts_bound_effects_on_bolt_without_it() {
     );
     assert_eq!(
         chains.0[0],
-        (String::new(), EffectNode::Do(EffectKind::Piercing(15))),
+        (
+            String::new(),
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 15 }))
+        ),
         "expected (\"\", Do(Piercing(15))), got {:?}",
         chains.0[0]
     );
@@ -220,7 +235,7 @@ fn apply_pending_bolt_effects_extends_existing_bound_effects() {
 
     app.insert_resource(PendingBoltEffects(vec![(
         String::new(),
-        EffectNode::Do(EffectKind::Piercing(16)),
+        Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 16 })),
     )]));
 
     app.add_systems(Update, apply_pending_bolt_effects);
@@ -228,7 +243,9 @@ fn apply_pending_bolt_effects_extends_existing_bound_effects() {
     // Spawn bolt WITH existing BoundEffects containing a pre-existing entry
     let existing_entries = vec![(
         "existing".to_owned(),
-        EffectNode::Do(EffectKind::DamageBoost(5.0)),
+        Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
+            multiplier: ordered_float::OrderedFloat(5.0),
+        })),
     )];
     let bolt = app
         .world_mut()
@@ -255,14 +272,19 @@ fn apply_pending_bolt_effects_extends_existing_bound_effects() {
         chains.0[0],
         (
             "existing".to_owned(),
-            EffectNode::Do(EffectKind::DamageBoost(5.0))
+            Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
+                multiplier: ordered_float::OrderedFloat(5.0)
+            }))
         ),
         "expected first entry to be the pre-existing one, got {:?}",
         chains.0[0]
     );
     assert_eq!(
         chains.0[1],
-        (String::new(), EffectNode::Do(EffectKind::Piercing(16))),
+        (
+            String::new(),
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 16 }))
+        ),
         "expected second entry to be the pending one, got {:?}",
         chains.0[1]
     );

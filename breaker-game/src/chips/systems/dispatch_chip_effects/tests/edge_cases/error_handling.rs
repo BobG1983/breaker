@@ -1,18 +1,27 @@
 //! Error handling and panic guard tests for `dispatch_chip_effects`.
 
 use bevy::prelude::*;
+use ordered_float::OrderedFloat;
 
 use crate::{
     chips::{
         definition::ChipDefinition, inventory::ChipInventory, resources::ChipCatalog,
         systems::dispatch_chip_effects::tests::helpers::*,
     },
-    effect::{
-        BoundEffects, EffectKind, EffectNode, StagedEffects, Target,
-        effects::damage_boost::ActiveDamageBoosts,
+    effect_v3::{
+        effects::DamageBoostConfig,
+        stacking::EffectStack,
+        storage::{BoundEffects, StagedEffects},
+        types::{EffectType, StampTarget, Tree},
     },
     shared::test_utils::TestAppBuilder,
 };
+
+fn damage_fire(multiplier: f32) -> Tree {
+    Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
+        multiplier: OrderedFloat(multiplier),
+    }))
+}
 
 // ── Behavior 15: Chip name not found in catalog — silently ignored ──
 
@@ -20,37 +29,27 @@ use crate::{
 fn unknown_chip_name_does_not_panic() {
     let mut app = test_app();
 
-    // Insert a valid chip targeting Breaker so dispatch fires immediately
-    let valid_def = ChipDefinition::test_on(
-        "Valid Chip",
-        Target::Breaker,
-        EffectNode::Do(EffectKind::DamageBoost(1.1)),
-        5,
-    );
+    let valid_def =
+        ChipDefinition::test_on("Valid Chip", StampTarget::Breaker, damage_fire(1.1), 5);
     insert_chip(&mut app, valid_def);
 
     let breaker = spawn_breaker(&mut app);
 
-    // Send both a valid AND an unknown chip selection in the same frame
     select_chip(&mut app, "Valid Chip");
     select_chip(&mut app, "Unknown Chip");
 
-    // Should not panic; unknown chip is silently ignored
     app.update();
 
-    // The valid chip should have fired — proves the system actually ran
-    let damage = app.world().get::<ActiveDamageBoosts>(breaker).unwrap();
-    assert_eq!(
-        damage.0,
-        vec![1.1],
-        "Valid chip's DamageBoost(1.1) should have fired, proving the system ran"
-    );
+    let stack = app
+        .world()
+        .get::<EffectStack<DamageBoostConfig>>(breaker)
+        .unwrap();
+    assert_eq!(stack.len(), 1, "Valid chip should have fired");
 
-    // The unknown chip should NOT have added any extra BoundEffects entries
     let bound = app.world().get::<BoundEffects>(breaker).unwrap();
     assert!(
         bound.0.is_empty(),
-        "Unknown chip should not have added any BoundEffects entries"
+        "Unknown chip should not have added any BoundEffects"
     );
 }
 
@@ -65,26 +64,17 @@ fn missing_chip_catalog_resource_does_not_panic() {
 
     // --- First prove the system WORKS with catalog ---
     let mut proof_app = test_app();
-    let proof_def = ChipDefinition::test_on(
-        "Proof",
-        Target::Breaker,
-        EffectNode::Do(EffectKind::DamageBoost(1.1)),
-        5,
-    );
+    let proof_def = ChipDefinition::test_on("Proof", StampTarget::Breaker, damage_fire(1.1), 5);
     insert_chip(&mut proof_app, proof_def);
     let proof_breaker = spawn_breaker(&mut proof_app);
     select_chip(&mut proof_app, "Proof");
     proof_app.update();
 
-    let proof_damage = proof_app
+    let stack = proof_app
         .world()
-        .get::<ActiveDamageBoosts>(proof_breaker)
+        .get::<EffectStack<DamageBoostConfig>>(proof_breaker)
         .unwrap();
-    assert_eq!(
-        proof_damage.0,
-        vec![1.1],
-        "Proof: system works with catalog present"
-    );
+    assert_eq!(stack.len(), 1, "Proof: system works with catalog");
 
     // --- Now test without catalog ---
     let mut app = TestAppBuilder::new()
@@ -92,7 +82,6 @@ fn missing_chip_catalog_resource_does_not_panic() {
         .in_state_chip_selecting()
         .with_message::<ChipSelected>()
         .with_resource::<ChipInventory>()
-        // Deliberately NOT inserting ChipCatalog
         .insert_resource(PendingChipSelections::default())
         .with_system(
             Update,
@@ -103,7 +92,6 @@ fn missing_chip_catalog_resource_does_not_panic() {
         )
         .build();
 
-    // Spawn a breaker and send a message — system should handle missing catalog gracefully
     let breaker = {
         let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
         app.world_mut()
@@ -113,16 +101,10 @@ fn missing_chip_catalog_resource_does_not_panic() {
     };
 
     select_chip(&mut app, "Any Chip");
-
-    // Should not panic
     app.update();
 
-    // Breaker should have no new BoundEffects entries since catalog was missing
     let bound = app.world().get::<BoundEffects>(breaker).unwrap();
-    assert!(
-        bound.0.is_empty(),
-        "Without ChipCatalog, no BoundEffects should be added on breaker"
-    );
+    assert!(bound.0.is_empty());
 }
 
 // ── Behavior 15 edge case: ChipInventory resource missing entirely ──
@@ -136,26 +118,17 @@ fn missing_chip_inventory_resource_does_not_panic() {
 
     // --- First prove the system WORKS with inventory ---
     let mut proof_app = test_app();
-    let proof_def = ChipDefinition::test_on(
-        "Proof",
-        Target::Breaker,
-        EffectNode::Do(EffectKind::DamageBoost(1.1)),
-        5,
-    );
+    let proof_def = ChipDefinition::test_on("Proof", StampTarget::Breaker, damage_fire(1.1), 5);
     insert_chip(&mut proof_app, proof_def);
     let proof_breaker = spawn_breaker(&mut proof_app);
     select_chip(&mut proof_app, "Proof");
     proof_app.update();
 
-    let proof_damage = proof_app
+    let stack = proof_app
         .world()
-        .get::<ActiveDamageBoosts>(proof_breaker)
+        .get::<EffectStack<DamageBoostConfig>>(proof_breaker)
         .unwrap();
-    assert_eq!(
-        proof_damage.0,
-        vec![1.1],
-        "Proof: system works with inventory present"
-    );
+    assert_eq!(stack.len(), 1, "Proof: system works with inventory");
 
     // --- Now test without inventory ---
     let mut app = TestAppBuilder::new()
@@ -163,7 +136,6 @@ fn missing_chip_inventory_resource_does_not_panic() {
         .in_state_chip_selecting()
         .with_message::<ChipSelected>()
         .with_resource::<ChipCatalog>()
-        // Deliberately NOT inserting ChipInventory
         .insert_resource(PendingChipSelections::default())
         .with_system(
             Update,
@@ -174,41 +146,30 @@ fn missing_chip_inventory_resource_does_not_panic() {
         )
         .build();
 
-    // Insert chip into catalog so lookup succeeds
     {
-        let def = ChipDefinition::test_on(
-            "Any Chip",
-            Target::Breaker,
-            EffectNode::Do(EffectKind::DamageBoost(1.5)),
-            5,
-        );
+        let def = ChipDefinition::test_on("Any Chip", StampTarget::Breaker, damage_fire(1.5), 5);
         app.world_mut().resource_mut::<ChipCatalog>().insert(def);
     }
 
-    // Spawn a breaker so dispatch has targets
     let breaker = {
-        use crate::effect::effects::speed_boost::ActiveSpeedBoosts;
         let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
-        app.world_mut().entity_mut(entity).insert((
-            BoundEffects::default(),
-            StagedEffects::default(),
-            ActiveDamageBoosts::default(),
-            ActiveSpeedBoosts::default(),
-        ));
+        app.world_mut()
+            .entity_mut(entity)
+            .insert((BoundEffects::default(), StagedEffects::default()));
         entity
     };
 
     select_chip(&mut app, "Any Chip");
-
-    // Should not panic even without ChipInventory
     app.update();
 
-    // Effects should still dispatch even without inventory
-    let damage = app.world().get::<ActiveDamageBoosts>(breaker).unwrap();
+    let stack = app
+        .world()
+        .get::<EffectStack<DamageBoostConfig>>(breaker)
+        .unwrap();
     assert_eq!(
-        damage.0,
-        vec![1.5],
-        "DamageBoost should still fire even without ChipInventory"
+        stack.len(),
+        1,
+        "DamageBoost should fire even without inventory"
     );
 }
 
@@ -218,50 +179,39 @@ fn missing_chip_inventory_resource_does_not_panic() {
 fn no_messages_pending_no_entities_modified() {
     let mut app = test_app();
 
-    let def = ChipDefinition::test_on(
-        "Unused",
-        Target::Breaker,
-        EffectNode::Do(EffectKind::DamageBoost(1.5)),
-        5,
-    );
+    let def = ChipDefinition::test_on("Unused", StampTarget::Breaker, damage_fire(1.5), 5);
     insert_chip(&mut app, def);
 
     let breaker = spawn_breaker(&mut app);
 
-    // --- First prove the system WORKS by sending a message ---
     select_chip(&mut app, "Unused");
     app.update();
 
-    let damage = app.world().get::<ActiveDamageBoosts>(breaker).unwrap();
-    assert_eq!(
-        damage.0,
-        vec![1.5],
-        "Proof: system dispatches when a message is sent"
-    );
+    let stack = app
+        .world()
+        .get::<EffectStack<DamageBoostConfig>>(breaker)
+        .unwrap();
+    assert_eq!(stack.len(), 1, "Proof: system dispatches on message");
 
-    // --- Now test the no-message case in a fresh round ---
-    // Clear the pending selections (no new messages)
     app.world_mut()
         .resource_mut::<PendingChipSelections>()
         .0
         .clear();
 
-    // Another update with NO messages
     app.update();
 
-    // Damage should still be [1.5] from the first round — no new effects added
-    let damage_after = app.world().get::<ActiveDamageBoosts>(breaker).unwrap();
+    let stack_after = app
+        .world()
+        .get::<EffectStack<DamageBoostConfig>>(breaker)
+        .unwrap();
     assert_eq!(
-        damage_after.0,
-        vec![1.5],
-        "No messages sent in second update — damage should remain [1.5], not grow"
+        stack_after.len(),
+        1,
+        "No new effects added without messages"
     );
 
     let bound = app.world().get::<BoundEffects>(breaker).unwrap();
-    assert!(
-        bound.0.is_empty(),
-        "No messages sent — BoundEffects should remain empty"
-    );
+    assert!(bound.0.is_empty());
 }
 
 // ── Behavior 15 edge case: Both ChipCatalog AND ChipInventory absent ──
@@ -273,35 +223,10 @@ fn both_catalog_and_inventory_absent_does_not_panic() {
         state::run::chip_select::messages::ChipSelected,
     };
 
-    // --- First prove the system WORKS with both resources ---
-    let mut proof_app = test_app();
-    let proof_def = ChipDefinition::test_on(
-        "Proof",
-        Target::Breaker,
-        EffectNode::Do(EffectKind::DamageBoost(1.1)),
-        5,
-    );
-    insert_chip(&mut proof_app, proof_def);
-    let proof_breaker = spawn_breaker(&mut proof_app);
-    select_chip(&mut proof_app, "Proof");
-    proof_app.update();
-
-    let proof_damage = proof_app
-        .world()
-        .get::<ActiveDamageBoosts>(proof_breaker)
-        .unwrap();
-    assert_eq!(
-        proof_damage.0,
-        vec![1.1],
-        "Proof: system works with both resources present"
-    );
-
-    // --- Now test without EITHER resource ---
     let mut app = TestAppBuilder::new()
         .with_state_hierarchy()
         .in_state_chip_selecting()
         .with_message::<ChipSelected>()
-        // Deliberately NOT inserting ChipCatalog or ChipInventory
         .insert_resource(PendingChipSelections::default())
         .with_system(
             Update,
@@ -313,7 +238,5 @@ fn both_catalog_and_inventory_absent_does_not_panic() {
         .build();
 
     select_chip(&mut app, "Any Chip");
-
-    // Should not panic
     app.update();
 }

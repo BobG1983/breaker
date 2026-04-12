@@ -18,10 +18,6 @@
     allow_early_end: false,
     seed: 8191,
     initial_effects: [
-        On(target: Breaker, then: [
-            When(trigger: Bumped, then: [
-                Do(QuickStop(multiplier: 3.0)),
-            ]),
-        ]),
+        Stamp(Breaker, When(Bumped, Fire(QuickStop((multiplier: 3.0))))),
     ],
 )

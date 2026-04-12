@@ -1,7 +1,7 @@
 //! Deferred pending effect application for bolt, breaker, cell, and wall entities.
 
 use bevy::prelude::*;
-use breaker::effect::{BoundEffects, StagedEffects};
+use breaker::effect_v3::storage::{BoundEffects, StagedEffects};
 
 use super::types::{
     PendingBoltEffects, PendingBreakerEffects, PendingCellEffects, PendingWallEffects,

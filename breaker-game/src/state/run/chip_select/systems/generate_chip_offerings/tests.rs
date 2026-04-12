@@ -8,7 +8,10 @@ use crate::{
         ChipDefinition, Recipe,
         definition::{EvolutionIngredient, Rarity},
     },
-    effect::{EffectKind, EffectNode, RootEffect, Target},
+    effect_v3::{
+        effects::PiercingConfig,
+        types::{EffectType, RootNode, StampTarget, Tree},
+    },
     state::run::node::{ActiveNodeLayout, NodeLayout, definition::NodePool},
 };
 
@@ -18,7 +21,7 @@ fn make_registry(count: usize) -> ChipCatalog {
     for i in 0..count {
         registry.insert(ChipDefinition::test(
             &format!("Chip_{i}"),
-            EffectNode::Do(EffectKind::Piercing(1)),
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
             3,
         ));
     }
@@ -33,14 +36,18 @@ fn make_mixed_registry() -> ChipCatalog {
             rarity: Rarity::Common,
             ..ChipDefinition::test(
                 &format!("Common_{i}"),
-                EffectNode::Do(EffectKind::Piercing(1)),
+                Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
                 3,
             )
         });
     }
     registry.insert(ChipDefinition {
         rarity: Rarity::Legendary,
-        ..ChipDefinition::test("Legendary_0", EffectNode::Do(EffectKind::Piercing(1)), 3)
+        ..ChipDefinition::test(
+            "Legendary_0",
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
+            3,
+        )
     });
     registry
 }
@@ -109,17 +116,17 @@ fn generate_excludes_maxed_chips() {
     let mut registry = ChipCatalog::default();
     let chip_a = ChipDefinition::test(
         "MaxedChip",
-        EffectNode::Do(EffectKind::Piercing(1)),
+        Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
         1, // max_stacks = 1
     );
     let chip_b = ChipDefinition::test(
         "AvailableChip_0",
-        EffectNode::Do(EffectKind::Piercing(1)),
+        Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
         3,
     );
     let chip_c = ChipDefinition::test(
         "AvailableChip_1",
-        EffectNode::Do(EffectKind::Piercing(1)),
+        Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
         3,
     );
     registry.insert(chip_a.clone());
@@ -191,8 +198,12 @@ fn make_test_layout(pool: NodePool) -> ActiveNodeLayout {
 fn test_app_for_evolution(pool: NodePool, evolution_eligible: bool) -> App {
     use crate::shared::test_utils::TestAppBuilder;
 
-    let ps_def = ChipDefinition::test("Piercing Shot", EffectNode::Do(EffectKind::Piercing(1)), 5)
-        .with_template("Piercing Shot");
+    let ps_def = ChipDefinition::test(
+        "Piercing Shot",
+        Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
+        5,
+    )
+    .with_template("Piercing Shot");
     let mut inventory = ChipInventory::default();
     if evolution_eligible {
         let _ = inventory.add_chip("Piercing Shot", &ps_def);
@@ -207,10 +218,10 @@ fn test_app_for_evolution(pool: NodePool, evolution_eligible: bool) -> App {
         description: "Combined piercing power".into(),
         rarity: Rarity::Evolution,
         max_stacks: 1,
-        effects: vec![RootEffect::On {
-            target: Target::Bolt,
-            then: vec![EffectNode::Do(EffectKind::Piercing(5))],
-        }],
+        effects: vec![RootNode::Stamp(
+            StampTarget::Bolt,
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 5 })),
+        )],
         ingredients: Some(vec![EvolutionIngredient {
             chip_name: "Piercing Shot".into(),
             stacks_required: 2,
@@ -348,21 +359,34 @@ fn boss_node_remaining_slots_filled_with_normal() {
 
 /// Setup: 3 distinct evolution recipes, all with satisfied ingredients,
 /// on a Boss node with `offers_per_node`=3.
+#[allow(clippy::too_many_lines, reason = "complex test setup")]
 fn app_with_3_eligible_evolutions() -> App {
     let mut app = App::new();
 
     // Create 3 ingredient chip definitions with templates
-    let ps_def = ChipDefinition::test("Piercing Shot", EffectNode::Do(EffectKind::Piercing(1)), 5)
-        .with_template("Piercing Shot");
+    let ps_def = ChipDefinition::test(
+        "Piercing Shot",
+        Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
+        5,
+    )
+    .with_template("Piercing Shot");
     let sb_def = ChipDefinition::test(
         "Speed Boost",
-        EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 }),
+        Tree::Fire(EffectType::SpeedBoost(
+            crate::effect_v3::effects::SpeedBoostConfig {
+                multiplier: ordered_float::OrderedFloat(1.5),
+            },
+        )),
         5,
     )
     .with_template("Speed Boost");
     let db_def = ChipDefinition::test(
         "Damage Boost",
-        EffectNode::Do(EffectKind::DamageBoost(0.5)),
+        Tree::Fire(EffectType::DamageBoost(
+            crate::effect_v3::effects::DamageBoostConfig {
+                multiplier: ordered_float::OrderedFloat(0.5),
+            },
+        )),
         5,
     )
     .with_template("Damage Boost");
@@ -383,10 +407,10 @@ fn app_with_3_eligible_evolutions() -> App {
         description: "Combined piercing".into(),
         rarity: Rarity::Evolution,
         max_stacks: 1,
-        effects: vec![RootEffect::On {
-            target: Target::Bolt,
-            then: vec![EffectNode::Do(EffectKind::Piercing(5))],
-        }],
+        effects: vec![RootNode::Stamp(
+            StampTarget::Bolt,
+            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 5 })),
+        )],
         ingredients: Some(vec![EvolutionIngredient {
             chip_name: "Piercing Shot".into(),
             stacks_required: 2,
@@ -398,10 +422,14 @@ fn app_with_3_eligible_evolutions() -> App {
         description: "Combined speed".into(),
         rarity: Rarity::Evolution,
         max_stacks: 1,
-        effects: vec![RootEffect::On {
-            target: Target::Bolt,
-            then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 2.0 })],
-        }],
+        effects: vec![RootNode::Stamp(
+            StampTarget::Bolt,
+            Tree::Fire(EffectType::SpeedBoost(
+                crate::effect_v3::effects::SpeedBoostConfig {
+                    multiplier: ordered_float::OrderedFloat(2.0),
+                },
+            )),
+        )],
         ingredients: Some(vec![EvolutionIngredient {
             chip_name: "Speed Boost".into(),
             stacks_required: 2,
@@ -413,10 +441,14 @@ fn app_with_3_eligible_evolutions() -> App {
         description: "Combined damage".into(),
         rarity: Rarity::Evolution,
         max_stacks: 1,
-        effects: vec![RootEffect::On {
-            target: Target::Bolt,
-            then: vec![EffectNode::Do(EffectKind::DamageBoost(2.0))],
-        }],
+        effects: vec![RootNode::Stamp(
+            StampTarget::Bolt,
+            Tree::Fire(EffectType::DamageBoost(
+                crate::effect_v3::effects::DamageBoostConfig {
+                    multiplier: ordered_float::OrderedFloat(2.0),
+                },
+            )),
+        )],
         ingredients: Some(vec![EvolutionIngredient {
             chip_name: "Damage Boost".into(),
             stacks_required: 2,

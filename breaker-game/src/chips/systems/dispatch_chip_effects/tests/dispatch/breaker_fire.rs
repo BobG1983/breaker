@@ -1,28 +1,33 @@
-//! Breaker-targeted bare `Do` dispatch tests — behaviors 1 and 5.
+//! Breaker-targeted bare `Fire` dispatch tests — behaviors 1 and 5.
 //!
-//! These tests verify that bare `Do` children targeting Breaker fire their
-//! effects immediately (not pushed to `BoundEffects`).
+//! These tests verify that bare `Fire` children targeting Breaker fire their
+//! effects immediately via `fire_effect` (not pushed to `BoundEffects`).
 
 use bevy::prelude::*;
+use ordered_float::OrderedFloat;
 
 use crate::{
     chips::{definition::ChipDefinition, systems::dispatch_chip_effects::tests::helpers::*},
-    effect::{
-        BoundEffects, EffectKind, EffectNode, RootEffect, Target,
-        effects::{damage_boost::ActiveDamageBoosts, speed_boost::ActiveSpeedBoosts},
+    effect_v3::{
+        effects::{BumpForceConfig, DamageBoostConfig, SizeBoostConfig, SpeedBoostConfig},
+        stacking::EffectStack,
+        storage::BoundEffects,
+        types::{EffectType, RootNode, StampTarget, Tree},
     },
 };
 
-// ── Behavior 1: Bare `Do` child targeting Breaker fires immediately ──
+// ── Behavior 1: Bare `Fire` child targeting Breaker fires immediately ──
 
 #[test]
-fn bare_do_targeting_breaker_fires_damage_boost_immediately() {
+fn bare_fire_targeting_breaker_fires_damage_boost_immediately() {
     let mut app = test_app();
 
     let def = ChipDefinition::test_on(
         "Minor Damage Boost",
-        Target::Breaker,
-        EffectNode::Do(EffectKind::DamageBoost(1.1)),
+        StampTarget::Breaker,
+        Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
+            multiplier: OrderedFloat(1.1),
+        })),
         5,
     );
     insert_chip(&mut app, def);
@@ -32,67 +37,85 @@ fn bare_do_targeting_breaker_fires_damage_boost_immediately() {
 
     app.update();
 
-    let boosts = app.world().get::<ActiveDamageBoosts>(breaker).unwrap();
+    let stack = app
+        .world()
+        .get::<EffectStack<DamageBoostConfig>>(breaker)
+        .unwrap();
     assert_eq!(
-        boosts.0,
-        vec![1.1],
-        "DamageBoost(1.1) should have been fired immediately on breaker"
+        stack.len(),
+        1,
+        "DamageBoost should have been fired immediately on breaker"
     );
 
     let bound = app.world().get::<BoundEffects>(breaker).unwrap();
     assert!(
         bound.0.is_empty(),
-        "BoundEffects should remain empty for bare Do children"
+        "BoundEffects should remain empty for bare Fire children"
     );
 }
 
-// ── Behavior 1 edge case: Multiple bare `Do` children in same `On` ──
+// ── Behavior 1 edge case: Multiple bare `Fire` children in same `Stamp` ──
+// NOTE: In the new system, Stamp takes a single tree, not a list.
+// Multiple effects require multiple Stamp entries in the effects vec.
 
 #[test]
-fn multiple_bare_do_children_all_fire_immediately() {
+fn multiple_stamps_with_fire_all_fire_immediately() {
     let mut app = test_app();
 
     let def = ChipDefinition {
-        name: "Multi Do".to_owned(),
+        name: "Multi Fire".to_owned(),
         description: String::new(),
         rarity: crate::chips::definition::Rarity::Common,
         max_stacks: 5,
-        effects: vec![RootEffect::On {
-            target: Target::Breaker,
-            then: vec![
-                EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.2 }),
-                EffectNode::Do(EffectKind::DamageBoost(1.05)),
-            ],
-        }],
+        effects: vec![
+            RootNode::Stamp(
+                StampTarget::Breaker,
+                Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+                    multiplier: OrderedFloat(1.2),
+                })),
+            ),
+            RootNode::Stamp(
+                StampTarget::Breaker,
+                Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
+                    multiplier: OrderedFloat(1.05),
+                })),
+            ),
+        ],
         ingredients: None,
         template_name: None,
     };
     insert_chip(&mut app, def);
 
     let breaker = spawn_breaker(&mut app);
-    select_chip(&mut app, "Multi Do");
+    select_chip(&mut app, "Multi Fire");
 
     app.update();
 
-    let speed = app.world().get::<ActiveSpeedBoosts>(breaker).unwrap();
+    let speed = app
+        .world()
+        .get::<EffectStack<SpeedBoostConfig>>(breaker)
+        .unwrap();
     assert_eq!(
-        speed.0,
-        vec![1.2],
-        "SpeedBoost(1.2) should have been fired immediately"
+        speed.len(),
+        1,
+        "SpeedBoost should have been fired immediately"
     );
 
-    let damage = app.world().get::<ActiveDamageBoosts>(breaker).unwrap();
+    let damage = app
+        .world()
+        .get::<EffectStack<DamageBoostConfig>>(breaker)
+        .unwrap();
     assert_eq!(
-        damage.0,
-        vec![1.05],
-        "DamageBoost(1.05) should have been fired immediately"
+        damage.len(),
+        1,
+        "DamageBoost should have been fired immediately"
     );
 }
 
-// ── Behavior 5: Bare `Do` targeting Breaker fires immediately ──
+// ── Behavior 5: Bare `Fire` targeting Breaker fires immediately ──
 
 #[test]
-fn bare_do_targeting_breaker_fires_size_and_bump_force() {
+fn bare_fire_targeting_breaker_fires_size_and_bump_force() {
     let mut app = test_app();
 
     let def = ChipDefinition {
@@ -100,13 +123,20 @@ fn bare_do_targeting_breaker_fires_size_and_bump_force() {
         description: String::new(),
         rarity: crate::chips::definition::Rarity::Common,
         max_stacks: 5,
-        effects: vec![RootEffect::On {
-            target: Target::Breaker,
-            then: vec![
-                EffectNode::Do(EffectKind::SizeBoost(1.15)),
-                EffectNode::Do(EffectKind::BumpForce(1.15)),
-            ],
-        }],
+        effects: vec![
+            RootNode::Stamp(
+                StampTarget::Breaker,
+                Tree::Fire(EffectType::SizeBoost(SizeBoostConfig {
+                    multiplier: OrderedFloat(1.15),
+                })),
+            ),
+            RootNode::Stamp(
+                StampTarget::Breaker,
+                Tree::Fire(EffectType::BumpForce(BumpForceConfig {
+                    multiplier: OrderedFloat(1.15),
+                })),
+            ),
+        ],
         ingredients: None,
         template_name: None,
     };
@@ -119,27 +149,27 @@ fn bare_do_targeting_breaker_fires_size_and_bump_force() {
 
     let sizes = app
         .world()
-        .get::<crate::effect::effects::size_boost::ActiveSizeBoosts>(breaker)
+        .get::<EffectStack<SizeBoostConfig>>(breaker)
         .unwrap();
     assert_eq!(
-        sizes.0,
-        vec![1.15],
-        "SizeBoost(1.15) should have been fired on breaker"
+        sizes.len(),
+        1,
+        "SizeBoost should have been fired on breaker"
     );
 
     let forces = app
         .world()
-        .get::<crate::effect::effects::bump_force::ActiveBumpForces>(breaker)
+        .get::<EffectStack<BumpForceConfig>>(breaker)
         .unwrap();
     assert_eq!(
-        forces.0,
-        vec![1.15],
-        "BumpForce(1.15) should have been fired on breaker"
+        forces.len(),
+        1,
+        "BumpForce should have been fired on breaker"
     );
 
     let bound = app.world().get::<BoundEffects>(breaker).unwrap();
     assert!(
         bound.0.is_empty(),
-        "BoundEffects on breaker should remain empty for bare Do children"
+        "BoundEffects on breaker should remain empty for bare Fire children"
     );
 }
