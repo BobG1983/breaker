@@ -5,7 +5,7 @@ use rantzsoft_spatial2d::components::Spatial;
 
 use super::types::*;
 use crate::{
-    effect::EffectCommandsExt,
+    effect_v3::{commands::EffectCommandsExt, types::RootNode},
     prelude::*,
     shared::{BOLT_LAYER, GameDrawLayer, WALL_LAYER},
 };
@@ -21,7 +21,7 @@ fn resolve_half_thickness(optional: &OptionalWallData) -> f32 {
 }
 
 /// Resolves the final effects: override > definition > empty.
-fn resolve_effects(optional: &OptionalWallData) -> Option<Vec<RootEffect>> {
+fn resolve_effects(optional: &OptionalWallData) -> Option<Vec<RootNode>> {
     optional
         .override_effects
         .clone()
@@ -29,17 +29,20 @@ fn resolve_effects(optional: &OptionalWallData) -> Option<Vec<RootEffect>> {
         .filter(|e| !e.is_empty())
 }
 
-/// Dispatches resolved effects to a wall entity via `push_bound_effects`.
-fn dispatch_effects(commands: &mut Commands, entity: Entity, effects: Option<Vec<RootEffect>>) {
+/// Dispatches resolved effects to a wall entity via `stamp_effect`.
+fn dispatch_effects(commands: &mut Commands, entity: Entity, effects: Option<Vec<RootNode>>) {
     if let Some(effects) = effects {
-        let entries: Vec<(String, EffectNode)> = effects
-            .into_iter()
-            .flat_map(|root| {
-                let RootEffect::On { then, .. } = root;
-                then.into_iter().map(|node| (String::new(), node))
-            })
-            .collect();
-        commands.push_bound_effects(entity, entries);
+        for root in effects {
+            match root {
+                RootNode::Stamp(_target, tree) => {
+                    commands.stamp_effect(entity, String::new(), tree);
+                }
+                RootNode::Spawn(_kind, _tree) => {
+                    // Spawn-type effects are handled by the SpawnStampRegistry,
+                    // not by direct entity stamping. Deferred.
+                }
+            }
+        }
     }
 }
 

@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use serde::Deserialize;
 
-use crate::effect::RootEffect;
+use crate::effect_v3::types::RootNode;
 
 // ── Default value functions ─────────────────────────────────────────────────
 
@@ -28,7 +28,7 @@ pub struct WallDefinition {
     pub color_rgb: Option<[f32; 3]>,
     /// Effect chains bound to this wall type.
     #[serde(default)]
-    pub effects: Vec<RootEffect>,
+    pub effects: Vec<RootNode>,
 }
 
 impl Default for WallDefinition {
@@ -207,27 +207,23 @@ mod tests {
         let ron_str = r#"(
             name: "EffectWall",
             effects: [
-                On(target: Bolt, then: [
-                    When(trigger: Bumped, then: [
-                        Do(SpeedBoost(multiplier: 1.5)),
-                    ]),
-                ]),
+                Stamp(Bolt, When(Bumped, Fire(SpeedBoost((multiplier: 1.5))))),
             ],
         )"#;
         let def: WallDefinition =
             ron::de::from_str(ron_str).expect("RON with effects should parse");
         assert_eq!(def.effects.len(), 1, "should have 1 root effect");
         match &def.effects[0] {
-            RootEffect::On { target, then } => {
-                assert_eq!(*target, crate::effect::Target::Bolt);
-                assert!(!then.is_empty(), "then clause should not be empty");
-                match &then[0] {
-                    crate::effect::EffectNode::When { trigger, .. } => {
-                        assert_eq!(*trigger, crate::effect::Trigger::Bumped);
+            RootNode::Stamp(target, tree) => {
+                assert_eq!(*target, crate::effect_v3::types::StampTarget::Bolt);
+                match tree {
+                    crate::effect_v3::types::Tree::When(trigger, _) => {
+                        assert_eq!(*trigger, crate::effect_v3::types::Trigger::Bumped);
                     }
                     other => panic!("expected When node, got {other:?}"),
                 }
             }
+            other @ RootNode::Spawn(..) => panic!("expected Stamp node, got {other:?}"),
         }
     }
 
@@ -236,12 +232,8 @@ mod tests {
         let ron_str = r#"(
             name: "MultiEffectWall",
             effects: [
-                On(target: Bolt, then: [
-                    Do(SpeedBoost(multiplier: 1.5)),
-                ]),
-                On(target: Bolt, then: [
-                    Do(SpeedBoost(multiplier: 2.0)),
-                ]),
+                Stamp(Bolt, Fire(SpeedBoost((multiplier: 1.5)))),
+                Stamp(Bolt, Fire(SpeedBoost((multiplier: 2.0)))),
             ],
         )"#;
         let def: WallDefinition =
@@ -280,9 +272,7 @@ mod tests {
         let ron_str = r#"(
             name: "EffectWall",
             effects: [
-                On(target: Bolt, then: [
-                    Do(SpeedBoost(multiplier: 1.5)),
-                ]),
+                Stamp(Bolt, Fire(SpeedBoost((multiplier: 1.5)))),
             ],
         )"#;
         let def: WallDefinition = ron::de::from_str(ron_str).expect("test RON should parse");

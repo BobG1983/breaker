@@ -116,7 +116,7 @@ impl<S: SideData, V> WallBuilder<S, V> {
         not(test),
         allow(dead_code, reason = "future API: Phase 5j / Shield chip")
     )]
-    pub(crate) fn with_effects(mut self, effects: Vec<RootEffect>) -> Self {
+    pub(crate) fn with_effects(mut self, effects: Vec<RootNode>) -> Self {
         self.optional.override_effects = Some(effects);
         self
     }

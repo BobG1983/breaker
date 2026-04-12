@@ -1,5 +1,10 @@
+use ordered_float::OrderedFloat;
+
 use crate::{
-    effect::{EffectKind, EffectNode, RootEffect, Target, Trigger},
+    effect_v3::{
+        effects::SpeedBoostConfig,
+        types::{EffectType, RootNode, StampTarget, Tree, Trigger},
+    },
     shared::PlayfieldConfig,
     walls::definition::WallDefinition,
 };
@@ -22,13 +27,15 @@ pub(super) fn custom_wall_definition() -> WallDefinition {
         name: "CustomWall".to_string(),
         half_thickness: 45.0,
         color_rgb: Some([0.2, 2.0, 3.0]),
-        effects: vec![RootEffect::On {
-            target: Target::Wall,
-            then: vec![EffectNode::When {
-                trigger: Trigger::Bumped,
-                then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
-            }],
-        }],
+        effects: vec![RootNode::Stamp(
+            StampTarget::ActiveWalls,
+            Tree::When(
+                Trigger::Bumped,
+                Box::new(Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+                    multiplier: OrderedFloat(1.5),
+                }))),
+            ),
+        )],
     }
 }
 

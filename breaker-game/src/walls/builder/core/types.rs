@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::effect::RootEffect;
+pub(in crate::walls::builder) use crate::effect_v3::types::RootNode;
 
 // ── Default half_thickness constant ────────────────────────────────────────
 
@@ -128,10 +128,10 @@ pub(crate) enum Lifetime {
 pub(crate) struct OptionalWallData {
     pub(crate) definition_half_thickness: Option<f32>,
     pub(crate) definition_color_rgb: Option<[f32; 3]>,
-    pub(crate) definition_effects: Option<Vec<RootEffect>>,
+    pub(crate) definition_effects: Option<Vec<RootNode>>,
     pub(crate) override_half_thickness: Option<f32>,
     pub(crate) override_color_rgb: Option<[f32; 3]>,
-    pub(crate) override_effects: Option<Vec<RootEffect>>,
+    pub(crate) override_effects: Option<Vec<RootNode>>,
 }
 
 // ── Builder ────────────────────────────────────────────────────────────────

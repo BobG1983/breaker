@@ -104,18 +104,25 @@ fn with_color_hdr_stored_without_clamping() {
 
 #[test]
 fn with_effects_stores_override() {
-    use crate::effect::{EffectKind, EffectNode, RootEffect, Target, Trigger};
+    use ordered_float::OrderedFloat;
 
-    let pf = default_playfield();
-    let root_effect = RootEffect::On {
-        target: Target::Wall,
-        then: vec![EffectNode::When {
-            trigger: Trigger::Bumped,
-            then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
-        }],
+    use crate::effect_v3::{
+        effects::SpeedBoostConfig,
+        types::{EffectType, RootNode, StampTarget, Tree, Trigger},
     };
 
-    let builder = Wall::builder().left(&pf).with_effects(vec![root_effect]);
+    let pf = default_playfield();
+    let root_node = RootNode::Stamp(
+        StampTarget::ActiveWalls,
+        Tree::When(
+            Trigger::Bumped,
+            Box::new(Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+                multiplier: OrderedFloat(1.5),
+            }))),
+        ),
+    );
+
+    let builder = Wall::builder().left(&pf).with_effects(vec![root_node]);
     assert!(
         builder.optional.override_effects.is_some(),
         "override_effects should be Some"

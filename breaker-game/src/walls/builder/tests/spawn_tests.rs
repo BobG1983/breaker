@@ -1,9 +1,14 @@
 use bevy::prelude::*;
+use ordered_float::OrderedFloat;
 use rantzsoft_spatial2d::components::Position2D;
 
 use super::helpers::{custom_wall_definition, default_playfield};
 use crate::{
-    effect::{BoundEffects, EffectKind, EffectNode, RootEffect, Target, Trigger},
+    effect_v3::{
+        effects::SpeedBoostConfig,
+        storage::BoundEffects,
+        types::{EffectType, RootNode, StampTarget, Tree, Trigger},
+    },
     shared::GameDrawLayer,
     walls::{components::Wall, definition::WallDefinition},
 };
@@ -207,13 +212,15 @@ fn spawn_dispatches_override_effects_not_definition() {
     let def = custom_wall_definition();
 
     // Override effects: SpeedBoost multiplier 2.0
-    let override_effects = vec![RootEffect::On {
-        target: Target::Wall,
-        then: vec![EffectNode::When {
-            trigger: Trigger::Bumped,
-            then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 2.0 })],
-        }],
-    }];
+    let override_effects = vec![RootNode::Stamp(
+        StampTarget::ActiveWalls,
+        Tree::When(
+            Trigger::Bumped,
+            Box::new(Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+                multiplier: OrderedFloat(2.0),
+            }))),
+        ),
+    )];
 
     let mut app = test_app();
     app.add_systems(Update, move |mut commands: Commands| {
@@ -276,13 +283,15 @@ fn spawn_override_empty_vec_means_no_effects_even_with_definition() {
 fn spawn_dispatches_override_effects_without_definition() {
     let pf = default_playfield();
 
-    let override_effects = vec![RootEffect::On {
-        target: Target::Wall,
-        then: vec![EffectNode::When {
-            trigger: Trigger::Bumped,
-            then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
-        }],
-    }];
+    let override_effects = vec![RootNode::Stamp(
+        StampTarget::ActiveWalls,
+        Tree::When(
+            Trigger::Bumped,
+            Box::new(Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+                multiplier: OrderedFloat(1.5),
+            }))),
+        ),
+    )];
 
     let mut app = test_app();
     app.add_systems(Update, move |mut commands: Commands| {
