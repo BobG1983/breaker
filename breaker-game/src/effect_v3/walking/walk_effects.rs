@@ -64,7 +64,15 @@ pub fn evaluate_tree(
             evaluate_during(entity, condition, inner, context, source, commands);
         }
         Tree::Until(gate_trigger, inner) => {
-            evaluate_until(entity, gate_trigger, inner, context, source, commands);
+            evaluate_until(
+                entity,
+                gate_trigger,
+                inner,
+                trigger,
+                context,
+                source,
+                commands,
+            );
         }
         Tree::Sequence(terminals) => {
             evaluate_sequence(entity, terminals, context, source, commands);

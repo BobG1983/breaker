@@ -16,6 +16,6 @@ pub use on::evaluate_on;
 pub use once::evaluate_once;
 pub use route::evaluate_route;
 pub use sequence::{evaluate_sequence, evaluate_terminal};
-pub use until::evaluate_until;
+pub use until::{UntilApplied, evaluate_until};
 pub use walk_effects::{evaluate_tree, walk_effects};
 pub use when::evaluate_when;
