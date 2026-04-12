@@ -10,6 +10,7 @@ use crate::{
         BoltAngleSpread, BoltBaseDamage, BoltDefinitionRef, BoltLifespan, BoltSpawnOffsetY,
         ExtraBolt, PrimaryBolt, SpawnedByEvolution,
     },
+    effect_v3::{storage::BoundEffects, types::Tree},
     prelude::*,
     shared::{
         BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, GameDrawLayer, WALL_LAYER,
@@ -118,7 +119,7 @@ fn spawn_inner(
     let has_explicit = optional.with_effects.is_some();
     let has_inherited = optional.inherited_effects.is_some();
     if has_explicit || has_inherited {
-        let mut effect_entries: Vec<(String, EffectNode)> = Vec::new();
+        let mut effect_entries: Vec<(String, Tree)> = Vec::new();
         if let Some(with_effects) = optional.with_effects {
             effect_entries.extend(with_effects);
         }

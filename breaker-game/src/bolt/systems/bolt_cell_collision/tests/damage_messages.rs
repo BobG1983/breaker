@@ -1,9 +1,9 @@
 use bevy::prelude::*;
 
 use super::helpers::*;
-use crate::{
-    bolt::components::PiercingRemaining,
-    effect::effects::{damage_boost::ActiveDamageBoosts, piercing::ActivePiercings},
+use crate::bolt::{
+    components::PiercingRemaining,
+    test_utils::{damage_stack, piercing_stack},
 };
 
 #[test]
@@ -82,7 +82,7 @@ fn cell_collision_emits_damage_cell_with_boosted_damage() {
     let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
     app.world_mut()
         .entity_mut(bolt_entity)
-        .insert(ActiveDamageBoosts(vec![1.5]));
+        .insert(damage_stack(&[1.5]));
 
     tick(&mut app);
 
@@ -109,7 +109,7 @@ fn cell_collision_emits_damage_cell_with_identity_effective_damage_multiplier() 
     let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
     app.world_mut()
         .entity_mut(bolt_entity)
-        .insert(ActiveDamageBoosts(vec![1.0]));
+        .insert(damage_stack(&[1.0]));
 
     tick(&mut app);
 
@@ -191,7 +191,7 @@ fn piercing_bolt_emits_damage_cell_for_each_pierced_cell() {
     let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 10000.0);
     app.world_mut()
         .entity_mut(bolt_entity)
-        .insert((ActivePiercings(vec![2]), PiercingRemaining(2)));
+        .insert((piercing_stack(&[2]), PiercingRemaining(2)));
 
     tick(&mut app);
 
@@ -256,7 +256,7 @@ fn cell_hit_emits_both_bolt_hit_cell_and_damage_cell() {
 
 /// Behavior 1: `bolt_cell_collision` uses `ActiveDamageBoosts.multiplier()` for damage.
 ///
-/// Given: Bolt with `ActiveDamageBoosts(vec![3.0])`, cell entity.
+/// Given: Bolt with `damage_stack(&[3.0])`, cell entity.
 /// When: bolt collides with cell.
 /// Then: `DamageCell` message has damage = 10.0 * 3.0 = 30.0.
 #[test]
@@ -272,7 +272,7 @@ fn cell_collision_uses_active_damage_boosts_multiplier() {
     let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
     app.world_mut()
         .entity_mut(bolt_entity)
-        .insert(ActiveDamageBoosts(vec![3.0]));
+        .insert(damage_stack(&[3.0]));
 
     tick(&mut app);
 

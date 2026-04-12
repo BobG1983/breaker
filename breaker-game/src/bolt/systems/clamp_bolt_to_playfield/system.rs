@@ -69,7 +69,12 @@ pub(crate) fn clamp_bolt_to_playfield(
             bolt.spatial.velocity.0 = new_vel;
 
             // Apply the canonical velocity formula after clamping
-            apply_velocity_formula(&mut bolt.spatial, bolt.collision.active_speed_boosts);
+            apply_velocity_formula(
+                &mut bolt.spatial,
+                bolt.collision
+                    .active_speed_boosts
+                    .map_or(1.0, crate::effect_v3::stacking::EffectStack::aggregate),
+            );
         }
     }
 }

@@ -3,8 +3,7 @@ use rantzsoft_spatial2d::components::Scale2D;
 
 use super::system::*;
 use crate::{
-    bolt::components::Bolt,
-    effect::effects::size_boost::ActiveSizeBoosts,
+    bolt::{components::Bolt, test_utils::size_stack},
     shared::{
         NodeScalingFactor,
         size::{BaseRadius, MaxRadius, MinRadius},
@@ -75,7 +74,7 @@ fn sync_bolt_scale_applies_boost() {
         .spawn((
             Bolt,
             BaseRadius(8.0),
-            ActiveSizeBoosts(vec![2.0]),
+            size_stack(&[2.0]),
             Scale2D { x: 1.0, y: 1.0 },
         ))
         .id();
@@ -100,7 +99,7 @@ fn sync_bolt_scale_identity_boost() {
         .spawn((
             Bolt,
             BaseRadius(8.0),
-            ActiveSizeBoosts(vec![1.0]),
+            size_stack(&[1.0]),
             Scale2D { x: 1.0, y: 1.0 },
         ))
         .id();
@@ -179,7 +178,7 @@ fn sync_bolt_scale_boost_and_node_scale_multiply() {
         .spawn((
             Bolt,
             BaseRadius(8.0),
-            ActiveSizeBoosts(vec![2.0]),
+            size_stack(&[2.0]),
             NodeScalingFactor(0.5),
             Scale2D { x: 1.0, y: 1.0 },
         ))
@@ -205,7 +204,7 @@ fn sync_bolt_scale_large_boost_with_fractional_scale() {
         .spawn((
             Bolt,
             BaseRadius(14.0),
-            ActiveSizeBoosts(vec![3.0]),
+            size_stack(&[3.0]),
             NodeScalingFactor(0.7),
             Scale2D { x: 1.0, y: 1.0 },
         ))
@@ -233,7 +232,7 @@ fn sync_bolt_scale_large_boost_no_constraints_unclamped() {
         .spawn((
             Bolt,
             BaseRadius(8.0),
-            ActiveSizeBoosts(vec![10.0]),
+            size_stack(&[10.0]),
             Scale2D { x: 1.0, y: 1.0 },
         ))
         .id();
@@ -285,7 +284,7 @@ fn sync_bolt_scale_clamps_to_max() {
         .spawn((
             Bolt,
             BaseRadius(8.0),
-            ActiveSizeBoosts(vec![10.0]),
+            size_stack(&[10.0]),
             MinRadius(4.0),
             MaxRadius(20.0),
             Scale2D { x: 1.0, y: 1.0 },

@@ -11,8 +11,9 @@ use crate::{
         resources::{DEFAULT_BOLT_ANGLE_SPREAD, DEFAULT_BOLT_SPAWN_OFFSET_Y},
     },
     breaker::components::Breaker,
-    effect::effects::{
-        damage_boost::ActiveDamageBoosts, piercing::ActivePiercings, speed_boost::ActiveSpeedBoosts,
+    effect_v3::{
+        effects::{DamageBoostConfig, SpeedBoostConfig},
+        stacking::EffectStack,
     },
     shared::{GameDrawLayer, GameRng},
     state::run::NodeOutcome,
@@ -245,9 +246,10 @@ fn reset_bolt_removes_serving_on_subsequent_nodes() {
 fn reset_bolt_resets_piercing_remaining_to_active_piercings_total() {
     let mut app = test_app();
     let bolt_id = spawn_bolt_entity(&mut app, Vec2::ZERO, Velocity2D(Vec2::ZERO));
-    app.world_mut()
-        .entity_mut(bolt_id)
-        .insert((ActivePiercings(vec![3]), PiercingRemaining(0)));
+    app.world_mut().entity_mut(bolt_id).insert((
+        crate::bolt::test_utils::piercing_stack(&[3]),
+        PiercingRemaining(0),
+    ));
     spawn_breaker(&mut app, 0.0, -250.0);
 
     app.update();
@@ -258,7 +260,7 @@ fn reset_bolt_resets_piercing_remaining_to_active_piercings_total() {
         .expect("bolt should have PiercingRemaining");
     assert_eq!(
         remaining.0, 3,
-        "PiercingRemaining should be reset to ActivePiercings.total() (3), got {}",
+        "PiercingRemaining should be reset to aggregate = 3.0, got {}",
         remaining.0
     );
 }
@@ -268,9 +270,9 @@ fn reset_bolt_preserves_effect_state() {
     let mut app = test_app();
     let bolt_id = spawn_bolt_entity(&mut app, Vec2::ZERO, Velocity2D(Vec2::ZERO));
     app.world_mut().entity_mut(bolt_id).insert((
-        ActiveDamageBoosts(vec![1.5]),
-        ActiveSpeedBoosts(vec![1.2]),
-        ActivePiercings(vec![3]),
+        crate::bolt::test_utils::damage_stack(&[1.5]),
+        crate::bolt::test_utils::speed_stack(&[1.2]),
+        crate::bolt::test_utils::piercing_stack(&[3]),
         PiercingRemaining(0),
     ));
     spawn_breaker(&mut app, 0.0, -250.0);
@@ -280,27 +282,26 @@ fn reset_bolt_preserves_effect_state() {
     let world = app.world();
 
     let active_dmg = world
-        .get::<ActiveDamageBoosts>(bolt_id)
-        .expect("ActiveDamageBoosts should be present");
+        .get::<EffectStack<DamageBoostConfig>>(bolt_id)
+        .expect("EffectStack<DamageBoostConfig> should be present");
     assert_eq!(
-        active_dmg.0,
-        vec![1.5],
-        "ActiveDamageBoosts should be unchanged after reset"
+        active_dmg.len(),
+        1,
+        "EffectStack<DamageBoostConfig> should have 1 entry after reset"
+    );
+    assert!(
+        (active_dmg.aggregate() - 1.5).abs() < f32::EPSILON,
+        "DamageBoostConfig aggregate should be 1.5 after reset, got {}",
+        active_dmg.aggregate()
     );
 
     let active_spd = world
-        .get::<ActiveSpeedBoosts>(bolt_id)
-        .expect("ActiveSpeedBoosts should be present");
+        .get::<EffectStack<SpeedBoostConfig>>(bolt_id)
+        .expect("EffectStack<SpeedBoostConfig> should be present");
     assert_eq!(
-        active_spd.0,
-        vec![1.2],
-        "ActiveSpeedBoosts should be unchanged after reset"
-    );
-
-    assert!(
-        (active_dmg.multiplier() - 1.5).abs() < f32::EPSILON,
-        "ActiveDamageBoosts multiplier should be 1.5 after reset, got {}",
-        active_dmg.multiplier()
+        active_spd.len(),
+        1,
+        "EffectStack<SpeedBoostConfig> should have 1 entry after reset"
     );
 
     let pr = world
@@ -308,7 +309,7 @@ fn reset_bolt_preserves_effect_state() {
         .expect("PiercingRemaining should be present");
     assert_eq!(
         pr.0, 3,
-        "PiercingRemaining should be reset to ActivePiercings.total() (3), got {}",
+        "PiercingRemaining should be reset to aggregate = 3.0, got {}",
         pr.0
     );
 }
@@ -378,9 +379,10 @@ fn reset_bolt_ignores_extra_bolt_entities() {
 fn reset_bolt_resets_piercing_remaining_from_multi_entry_active_piercings() {
     let mut app = test_app();
     let bolt_id = spawn_bolt_entity(&mut app, Vec2::ZERO, Velocity2D(Vec2::ZERO));
-    app.world_mut()
-        .entity_mut(bolt_id)
-        .insert((ActivePiercings(vec![2, 1]), PiercingRemaining(0)));
+    app.world_mut().entity_mut(bolt_id).insert((
+        crate::bolt::test_utils::piercing_stack(&[2, 1]),
+        PiercingRemaining(0),
+    ));
     spawn_breaker(&mut app, 0.0, -250.0);
 
     app.update();
@@ -391,7 +393,7 @@ fn reset_bolt_resets_piercing_remaining_from_multi_entry_active_piercings() {
         .expect("bolt should have PiercingRemaining");
     assert_eq!(
         remaining.0, 3,
-        "PiercingRemaining should be reset to ActivePiercings.total() (2 + 1 = 3), got {}",
+        "PiercingRemaining should be reset to aggregate = 3.0, got {}",
         remaining.0
     );
 }

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Velocity2D;
 
-use crate::effect::{BoundEffects, EffectNode};
+use crate::effect_v3::{storage::BoundEffects, types::Tree};
 
 /// Default bolt radius when neither `definition()` nor `with_radius()` is called.
 pub(in crate::bolt::builder) const DEFAULT_RADIUS: f32 = 8.0;
@@ -67,7 +67,7 @@ pub(in crate::bolt::builder) struct OptionalBoltData {
     pub(in crate::bolt::builder) lifespan: Option<f32>,
     pub(in crate::bolt::builder) radius: Option<f32>,
     pub(in crate::bolt::builder) inherited_effects: Option<BoundEffects>,
-    pub(in crate::bolt::builder) with_effects: Option<Vec<(String, EffectNode)>>,
+    pub(in crate::bolt::builder) with_effects: Option<Vec<(String, Tree)>>,
     pub(in crate::bolt::builder) definition_params: Option<BoltDefinitionParams>,
     pub(in crate::bolt::builder) override_base_damage: Option<f32>,
     pub(in crate::bolt::builder) override_definition_name: Option<String>,

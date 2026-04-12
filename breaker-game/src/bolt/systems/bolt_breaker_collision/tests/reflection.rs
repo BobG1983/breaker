@@ -3,9 +3,8 @@ use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use super::helpers::*;
 use crate::{
-    bolt::components::Bolt,
+    bolt::{components::Bolt, test_utils::speed_stack},
     breaker::components::{Breaker, BreakerTilt},
-    effect::effects::speed_boost::ActiveSpeedBoosts,
     shared::GameDrawLayer,
 };
 
@@ -104,7 +103,7 @@ fn tilt_affects_reflection() {
 
 /// Behavior 7: `reflect_top_hit` uses `base_speed * ActiveSpeedBoosts.multiplier()` as speed floor.
 ///
-/// Given: Bolt with `BaseSpeed(400.0)`, `ActiveSpeedBoosts(vec![2.0])`,
+/// Given: Bolt with `BaseSpeed(400.0)`, `speed_stack(&[2.0])`,
 ///        velocity (0.0, 300.0) (speed=300, below boosted base of 800), hitting breaker center.
 /// When: bolt hits breaker top surface.
 /// Then: post-reflection speed >= 800.0 (400.0 * 2.0).
@@ -128,7 +127,7 @@ fn reflect_top_hit_uses_active_speed_boosts_as_speed_floor() {
     });
     app.world_mut()
         .entity_mut(bolt_entity)
-        .insert(ActiveSpeedBoosts(vec![2.0]));
+        .insert(speed_stack(&[2.0]));
 
     tick(&mut app);
 
@@ -183,7 +182,7 @@ fn reflect_top_hit_without_speed_boosts_uses_raw_base_speed() {
 
 /// Behavior 8: `reflect_top_hit` ignores `BaseSpeed` alone when boost active.
 ///
-/// Given: Bolt with `BaseSpeed(400.0)`, `ActiveSpeedBoosts(vec![2.0])`,
+/// Given: Bolt with `BaseSpeed(400.0)`, `speed_stack(&[2.0])`,
 ///        velocity (0.0, 500.0) (speed=500, above raw base but below boosted base of 800).
 /// When: bolt hits breaker top surface.
 /// Then: post-reflection speed >= 800.0 (not just 400.0).
@@ -207,7 +206,7 @@ fn reflect_top_hit_ignores_base_speed_alone_when_boost_active() {
     });
     app.world_mut()
         .entity_mut(bolt_entity)
-        .insert(ActiveSpeedBoosts(vec![2.0]));
+        .insert(speed_stack(&[2.0]));
 
     tick(&mut app);
 

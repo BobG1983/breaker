@@ -463,8 +463,8 @@ fn bolt_lost_respawn_velocity_uses_base_speed() {
 
 #[test]
 fn bolt_lost_respawn_velocity_with_speed_boost() {
-    // Edge case: ActiveSpeedBoosts(vec![1.2]) -> 720.0 * 1.2 = 864.0
-    use crate::effect::effects::speed_boost::ActiveSpeedBoosts;
+    // Edge case: EffectStack<SpeedBoostConfig> with 1.2 -> 720.0 * 1.2 = 864.0
+    use crate::bolt::test_utils::speed_stack;
 
     let mut app = test_app();
     let playfield = PlayfieldConfig::default();
@@ -482,7 +482,7 @@ fn bolt_lost_respawn_velocity_with_speed_boost() {
     );
     app.world_mut()
         .entity_mut(entity)
-        .insert(ActiveSpeedBoosts(vec![1.2]));
+        .insert(speed_stack(&[1.2]));
     tick(&mut app);
 
     let vel = app.world().get::<Velocity2D>(entity).unwrap();

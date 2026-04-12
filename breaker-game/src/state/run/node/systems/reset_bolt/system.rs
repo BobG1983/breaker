@@ -59,7 +59,11 @@ pub(crate) fn reset_bolt(
             bolt.spatial.velocity.0 = Vec2::new(angle.sin(), angle.cos());
 
             // Apply the canonical velocity formula after setting launch velocity
-            apply_velocity_formula(&mut bolt.spatial, bolt.active_speed_boosts);
+            apply_velocity_formula(
+                &mut bolt.spatial,
+                bolt.active_speed_boosts
+                    .map_or(1.0, crate::effect_v3::stacking::EffectStack::aggregate),
+            );
 
             commands.entity(bolt.entity).remove::<BoltServing>();
         }
@@ -67,7 +71,14 @@ pub(crate) fn reset_bolt(
         if let (Some(ref mut remaining), Some(ap)) =
             (bolt.piercing_remaining, bolt.active_piercings)
         {
-            remaining.0 = ap.total();
+            #[allow(
+                clippy::cast_sign_loss,
+                clippy::cast_possible_truncation,
+                reason = "piercing aggregate is always non-negative small integer"
+            )]
+            {
+                remaining.0 = ap.aggregate().round() as u32;
+            }
         }
 
         bolt_spawned.write(BoltSpawned);

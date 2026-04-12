@@ -1,6 +1,7 @@
 //! Behaviors 11-13: mixed targets, missing definition, component insertion.
 
 use bevy::prelude::*;
+use ordered_float::OrderedFloat;
 
 use super::helpers::{TEST_BOLT_NAME, test_app_with_dispatch};
 use crate::{
@@ -10,11 +11,15 @@ use crate::{
         registry::BoltRegistry,
         systems::dispatch_bolt_effects::dispatch_bolt_effects,
     },
-    effect::{BoundEffects, EffectKind, EffectNode, RootEffect, StagedEffects, Target, Trigger},
+    effect_v3::{
+        effects::{DamageBoostConfig, SpeedBoostConfig},
+        storage::BoundEffects,
+        types::{EffectType, RootNode, StampTarget, Tree, Trigger},
+    },
 };
 
 /// Helper: creates a minimal `BoltDefinition` with the given effects.
-fn make_bolt_def(name: &str, effects: Vec<RootEffect>) -> BoltDefinition {
+fn make_bolt_def(name: &str, effects: Vec<RootNode>) -> BoltDefinition {
     BoltDefinition {
         name: name.to_owned(),
         base_speed: 720.0,
@@ -31,41 +36,46 @@ fn make_bolt_def(name: &str, effects: Vec<RootEffect>) -> BoltDefinition {
     }
 }
 
+fn speed_boost_tree(multiplier: f32) -> Tree {
+    Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+        multiplier: OrderedFloat(multiplier),
+    }))
+}
+
+fn damage_boost_tree(multiplier: f32) -> Tree {
+    Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
+        multiplier: OrderedFloat(multiplier),
+    }))
+}
+
 // ---- Behavior 11: Mixed targets dispatched correctly (Aegis-style bolt definition) ----
 
 #[test]
 fn dispatch_handles_mixed_targets_aegis_style() {
+    use crate::effect_v3::effects::LoseLifeConfig;
+
     let def = make_bolt_def(
         "AegisBolt",
         vec![
-            RootEffect::On {
-                target: Target::Breaker,
-                then: vec![EffectNode::When {
-                    trigger: Trigger::BoltLost,
-                    then: vec![EffectNode::Do(EffectKind::LoseLife)],
-                }],
-            },
-            RootEffect::On {
-                target: Target::Bolt,
-                then: vec![EffectNode::When {
-                    trigger: Trigger::PerfectBumped,
-                    then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
-                }],
-            },
-            RootEffect::On {
-                target: Target::Bolt,
-                then: vec![EffectNode::When {
-                    trigger: Trigger::EarlyBumped,
-                    then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.1 })],
-                }],
-            },
-            RootEffect::On {
-                target: Target::Bolt,
-                then: vec![EffectNode::When {
-                    trigger: Trigger::LateBumped,
-                    then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.1 })],
-                }],
-            },
+            RootNode::Stamp(
+                StampTarget::Breaker,
+                Tree::When(
+                    Trigger::BoltLostOccurred,
+                    Box::new(Tree::Fire(EffectType::LoseLife(LoseLifeConfig {}))),
+                ),
+            ),
+            RootNode::Stamp(
+                StampTarget::Bolt,
+                Tree::When(Trigger::PerfectBumped, Box::new(speed_boost_tree(1.5))),
+            ),
+            RootNode::Stamp(
+                StampTarget::Bolt,
+                Tree::When(Trigger::EarlyBumped, Box::new(speed_boost_tree(1.1))),
+            ),
+            RootNode::Stamp(
+                StampTarget::Bolt,
+                Tree::When(Trigger::LateBumped, Box::new(speed_boost_tree(1.1))),
+            ),
         ],
     );
     let mut app = test_app_with_dispatch(def);
@@ -95,32 +105,26 @@ fn dispatch_handles_mixed_targets_aegis_style() {
         3,
         "bolt should have exactly 3 effects (PerfectBumped, EarlyBumped, LateBumped)"
     );
-
-    assert!(
-        app.world().get::<StagedEffects>(bolt).is_some(),
-        "bolt should have StagedEffects inserted"
-    );
 }
 
 #[test]
 fn dispatch_mixed_targets_no_breaker_entity_only_bolt_effects_dispatched() {
+    use crate::effect_v3::effects::LoseLifeConfig;
+
     let def = make_bolt_def(
         "AegisBolt",
         vec![
-            RootEffect::On {
-                target: Target::Breaker,
-                then: vec![EffectNode::When {
-                    trigger: Trigger::BoltLost,
-                    then: vec![EffectNode::Do(EffectKind::LoseLife)],
-                }],
-            },
-            RootEffect::On {
-                target: Target::Bolt,
-                then: vec![EffectNode::When {
-                    trigger: Trigger::PerfectBumped,
-                    then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
-                }],
-            },
+            RootNode::Stamp(
+                StampTarget::Breaker,
+                Tree::When(
+                    Trigger::BoltLostOccurred,
+                    Box::new(Tree::Fire(EffectType::LoseLife(LoseLifeConfig {}))),
+                ),
+            ),
+            RootNode::Stamp(
+                StampTarget::Bolt,
+                Tree::When(Trigger::PerfectBumped, Box::new(speed_boost_tree(1.5))),
+            ),
         ],
     );
     let mut app = test_app_with_dispatch(def);
@@ -193,22 +197,17 @@ fn dispatch_with_registry_missing_specific_name_is_noop() {
     );
 }
 
-// ---- Behavior 13: BoundEffects and StagedEffects inserted on target entities that lack them ----
+// ---- Behavior 13: BoundEffects inserted on target entities that lack them ----
 
 #[test]
-fn dispatch_inserts_bound_effects_and_staged_effects_when_absent() {
+fn dispatch_inserts_bound_effects_when_absent() {
+    let tree = Tree::When(Trigger::PerfectBumped, Box::new(speed_boost_tree(1.5)));
     let def = make_bolt_def(
         TEST_BOLT_NAME,
-        vec![RootEffect::On {
-            target: Target::Bolt,
-            then: vec![EffectNode::When {
-                trigger: Trigger::PerfectBumped,
-                then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
-            }],
-        }],
+        vec![RootNode::Stamp(StampTarget::Bolt, tree)],
     );
     let mut app = test_app_with_dispatch(def);
-    // Spawn bolt with Bolt marker only -- no BoundEffects, no StagedEffects
+    // Spawn bolt with Bolt marker only -- no BoundEffects
     let bolt = app
         .world_mut()
         .spawn((Bolt, BoltDefinitionRef(TEST_BOLT_NAME.to_owned())))
@@ -220,33 +219,18 @@ fn dispatch_inserts_bound_effects_and_staged_effects_when_absent() {
         .get::<BoundEffects>(bolt)
         .expect("BoundEffects should be inserted on bolt");
     assert_eq!(bound.0.len(), 1, "bolt should have 1 dispatched entry");
-
-    let staged = app
-        .world()
-        .get::<StagedEffects>(bolt)
-        .expect("StagedEffects should be inserted on bolt");
-    assert_eq!(
-        staged.0.len(),
-        0,
-        "newly inserted StagedEffects should be empty"
-    );
 }
 
 #[test]
-fn dispatch_inserts_staged_effects_when_bound_effects_present_but_staged_absent() {
+fn dispatch_appends_to_existing_bound_effects() {
+    let tree = Tree::When(Trigger::PerfectBumped, Box::new(speed_boost_tree(1.5)));
     let def = make_bolt_def(
         TEST_BOLT_NAME,
-        vec![RootEffect::On {
-            target: Target::Bolt,
-            then: vec![EffectNode::When {
-                trigger: Trigger::PerfectBumped,
-                then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
-            }],
-        }],
+        vec![RootNode::Stamp(StampTarget::Bolt, tree)],
     );
 
     let mut app = test_app_with_dispatch(def);
-    // Spawn bolt WITH BoundEffects but WITHOUT StagedEffects
+    // Spawn bolt WITH BoundEffects already present
     let bolt = app
         .world_mut()
         .spawn((
@@ -254,10 +238,7 @@ fn dispatch_inserts_staged_effects_when_bound_effects_present_but_staged_absent(
             BoltDefinitionRef(TEST_BOLT_NAME.to_owned()),
             BoundEffects(vec![(
                 "prior_chip".to_owned(),
-                EffectNode::When {
-                    trigger: Trigger::Bump,
-                    then: vec![EffectNode::Do(EffectKind::DamageBoost(1.5))],
-                },
+                Tree::When(Trigger::Bumped, Box::new(damage_boost_tree(1.5))),
             )]),
         ))
         .id();
@@ -275,10 +256,5 @@ fn dispatch_inserts_staged_effects_when_bound_effects_present_but_staged_absent(
     assert_eq!(
         &bound.0[0].0, "prior_chip",
         "prior entry should be preserved at index 0"
-    );
-
-    assert!(
-        app.world().get::<StagedEffects>(bolt).is_some(),
-        "StagedEffects should be inserted even though only BoundEffects was present initially"
     );
 }

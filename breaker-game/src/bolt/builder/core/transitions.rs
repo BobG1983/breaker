@@ -7,6 +7,7 @@ use crate::{
         definition::BoltDefinition,
         resources::{DEFAULT_BOLT_ANGLE_SPREAD, DEFAULT_BOLT_SPAWN_OFFSET_Y},
     },
+    effect_v3::{storage::BoundEffects, types::Tree},
     prelude::*,
 };
 
@@ -256,7 +257,7 @@ impl<P, S, A, M, R, V> BoltBuilder<P, S, A, M, R, V> {
     }
 
     #[must_use]
-    pub fn with_effects(mut self, nodes: Vec<(String, EffectNode)>) -> Self {
+    pub fn with_effects(mut self, nodes: Vec<(String, Tree)>) -> Self {
         self.optional.with_effects = Some(nodes);
         self
     }

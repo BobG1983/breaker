@@ -4,9 +4,16 @@
 //! Suite-specific helpers remain in their local `tests/helpers.rs`.
 
 use bevy::prelude::*;
+use ordered_float::OrderedFloat;
 use rantzsoft_spatial2d::components::Velocity2D;
 
-use crate::bolt::{components::Bolt, definition::BoltDefinition};
+use crate::{
+    bolt::{components::Bolt, definition::BoltDefinition},
+    effect_v3::{
+        effects::{DamageBoostConfig, PiercingConfig, SizeBoostConfig, SpeedBoostConfig},
+        stacking::EffectStack,
+    },
+};
 
 /// Standard bolt definition matching values previously provided by
 /// `BoltConfig::default()`, so existing position calculations remain valid.
@@ -28,6 +35,57 @@ pub(crate) fn default_bolt_definition() -> BoltDefinition {
         min_radius: None,
         max_radius: None,
     }
+}
+
+/// Builds an `EffectStack<SpeedBoostConfig>` from a slice of f32 multipliers.
+pub(crate) fn speed_stack(values: &[f32]) -> EffectStack<SpeedBoostConfig> {
+    let mut stack = EffectStack::default();
+    for &v in values {
+        stack.push(
+            "test".into(),
+            SpeedBoostConfig {
+                multiplier: OrderedFloat(v),
+            },
+        );
+    }
+    stack
+}
+
+/// Builds an `EffectStack<DamageBoostConfig>` from a slice of f32 multipliers.
+pub(crate) fn damage_stack(values: &[f32]) -> EffectStack<DamageBoostConfig> {
+    let mut stack = EffectStack::default();
+    for &v in values {
+        stack.push(
+            "test".into(),
+            DamageBoostConfig {
+                multiplier: OrderedFloat(v),
+            },
+        );
+    }
+    stack
+}
+
+/// Builds an `EffectStack<SizeBoostConfig>` from a slice of f32 multipliers.
+pub(crate) fn size_stack(values: &[f32]) -> EffectStack<SizeBoostConfig> {
+    let mut stack = EffectStack::default();
+    for &v in values {
+        stack.push(
+            "test".into(),
+            SizeBoostConfig {
+                multiplier: OrderedFloat(v),
+            },
+        );
+    }
+    stack
+}
+
+/// Builds an `EffectStack<PiercingConfig>` from a slice of u32 charge values.
+pub(crate) fn piercing_stack(values: &[u32]) -> EffectStack<PiercingConfig> {
+    let mut stack = EffectStack::default();
+    for &v in values {
+        stack.push("test".into(), PiercingConfig { charges: v });
+    }
+    stack
 }
 
 /// Spawns a bolt at the given position with the given velocity using the

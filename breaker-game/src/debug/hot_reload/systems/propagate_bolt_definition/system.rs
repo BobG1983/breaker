@@ -12,7 +12,7 @@ use crate::{
         components::{Bolt, BoltBaseDamage, BoltDefinitionRef},
         registry::BoltRegistry,
     },
-    effect::{BoundEffects, EffectCommandsExt, EffectNode, RootEffect, Target},
+    effect::BoundEffects,
     shared::size::BaseRadius,
 };
 
@@ -77,37 +77,9 @@ pub(crate) fn propagate_bolt_definition(mut ctx: BoltDefinitionChangeContext) {
             MinAngleVertical(def.min_angle_vertical.to_radians()),
         ));
 
-        // Rebuild definition-sourced BoundEffects via direct mutation
-        if let Some(mut chains) = bound_effects {
-            // Preserve chip-sourced entries (non-empty chip name), remove definition-sourced
-            chains.0.retain(|(chip_name, _)| !chip_name.is_empty());
-
-            // Push new definition-sourced entries for Bolt-targeted effects
-            for root in &def.effects {
-                let RootEffect::On { target, then } = root;
-                match target {
-                    Target::Bolt => {
-                        for child in then {
-                            match child {
-                                EffectNode::Do(effect) => {
-                                    ctx.commands
-                                        .fire_effect(entity, effect.clone(), String::new());
-                                }
-                                other => {
-                                    chains.0.push((String::new(), other.clone()));
-                                }
-                            }
-                        }
-                    }
-                    // Non-bolt targets are not resolved at hot-reload time
-                    Target::Breaker
-                    | Target::AllBolts
-                    | Target::Cell
-                    | Target::AllCells
-                    | Target::Wall
-                    | Target::AllWalls => {}
-                }
-            }
-        }
+        // TODO(effect_v3 migration): Re-stamp bolt definition effects.
+        // Deferred until all domains use effect_v3 BoundEffects.
+        let _ = bound_effects;
+        let _ = &def.effects;
     }
 }

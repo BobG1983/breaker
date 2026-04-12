@@ -14,7 +14,10 @@ use crate::{
         Bolt, BoltAngleSpread, BoltBaseDamage, BoltRadius, BoltSpawnOffsetY, ExtraBolt, LastImpact,
         PiercingRemaining, SpawnedByEvolution,
     },
-    effect::effects::piercing::ActivePiercings,
+    effect_v3::{
+        effects::{DamageBoostConfig, PiercingConfig, SizeBoostConfig, SpeedBoostConfig},
+        stacking::EffectStack,
+    },
     prelude::*,
 };
 
@@ -28,7 +31,7 @@ pub(crate) struct BoltSpeedData {
     /// Spatial position, velocity, and constraint data.
     pub spatial: SpatialData,
     /// Active speed boost multipliers.
-    pub active_speed_boosts: Option<&'static ActiveSpeedBoosts>,
+    pub active_speed_boosts: Option<&'static EffectStack<SpeedBoostConfig>>,
 }
 
 /// Collision-specific bolt data: radius, piercing, damage, speed boosts,
@@ -41,11 +44,11 @@ pub(crate) struct BoltCollisionParams {
     /// Remaining pierce charges (decremented on cell pierce-through).
     pub piercing_remaining: Option<&'static mut PiercingRemaining>,
     /// Active piercing effects (sum determines max charges).
-    pub active_piercings: Option<&'static ActivePiercings>,
+    pub active_piercings: Option<&'static EffectStack<PiercingConfig>>,
     /// Active damage boost multipliers.
-    pub active_damage_boosts: Option<&'static ActiveDamageBoosts>,
+    pub active_damage_boosts: Option<&'static EffectStack<DamageBoostConfig>>,
     /// Active speed boost multipliers.
-    pub active_speed_boosts: Option<&'static ActiveSpeedBoosts>,
+    pub active_speed_boosts: Option<&'static EffectStack<SpeedBoostConfig>>,
     /// Node scaling factor for entity dimensions.
     pub node_scale: Option<&'static NodeScalingFactor>,
     /// Evolution chip that spawned this bolt (for damage attribution).
@@ -78,11 +81,11 @@ pub(crate) struct ResetBoltData {
     /// Spatial position, velocity, and constraint data.
     pub spatial: SpatialData,
     /// Speed boost multipliers for the velocity formula.
-    pub active_speed_boosts: Option<&'static ActiveSpeedBoosts>,
+    pub active_speed_boosts: Option<&'static EffectStack<SpeedBoostConfig>>,
     /// Remaining pierce charges to reset.
     pub piercing_remaining: Option<&'static mut PiercingRemaining>,
     /// Active piercing effects (sum determines reset value).
-    pub active_piercings: Option<&'static ActivePiercings>,
+    pub active_piercings: Option<&'static EffectStack<PiercingConfig>>,
     /// Previous position snapshot (reset to prevent interpolation teleport).
     pub previous_position: Option<&'static mut PreviousPosition>,
     /// Angle spread from vertical for launch/respawn (from definition).
@@ -100,7 +103,7 @@ pub(crate) struct LostBoltData {
     /// Spatial position, velocity, and constraint data.
     pub spatial: SpatialData,
     /// Speed boost multipliers for the velocity formula.
-    pub active_speed_boosts: Option<&'static ActiveSpeedBoosts>,
+    pub active_speed_boosts: Option<&'static EffectStack<SpeedBoostConfig>>,
     /// Bolt radius for below-playfield detection.
     pub radius: &'static BoltRadius,
     /// Vertical offset above breaker for respawn.
@@ -124,7 +127,7 @@ pub(crate) struct SyncBoltScaleData {
     /// Mutable scale for rendering.
     pub scale: &'static mut rantzsoft_spatial2d::components::Scale2D,
     /// Active size boost multipliers.
-    pub size_boosts: Option<&'static crate::effect::effects::size_boost::ActiveSizeBoosts>,
+    pub size_boosts: Option<&'static EffectStack<SizeBoostConfig>>,
     /// Node scaling factor.
     pub node_scale: Option<&'static NodeScalingFactor>,
     /// Minimum radius constraint.
@@ -140,12 +143,8 @@ pub(crate) struct SyncBoltScaleData {
 /// `(base_speed * boost_mult).clamp(min, max)`.
 /// This is the single source of truth for bolt speed — every system that
 /// modifies bolt velocity calls this after setting direction.
-pub(crate) fn apply_velocity_formula(
-    spatial: &mut SpatialDataItem<'_, '_>,
-    active_speed_boosts: Option<&ActiveSpeedBoosts>,
-) {
-    let mult = active_speed_boosts.map_or(1.0, ActiveSpeedBoosts::multiplier);
-    let effective_base = BaseSpeed(spatial.base_speed.0 * mult);
+pub(crate) fn apply_velocity_formula(spatial: &mut SpatialDataItem<'_, '_>, speed_multiplier: f32) {
+    let effective_base = BaseSpeed(spatial.base_speed.0 * speed_multiplier);
     *spatial.velocity = spatial.velocity.constrained(
         &effective_base,
         spatial.min_speed,

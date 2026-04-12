@@ -1,11 +1,10 @@
 //! Tests for `PiercingRemaining` reset on breaker hit via `ActivePiercings`.
 
-use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Velocity2D;
 
-use crate::{
-    bolt::{components::PiercingRemaining, systems::bolt_breaker_collision::tests::helpers::*},
-    effect::effects::piercing::ActivePiercings,
+use crate::bolt::{
+    components::PiercingRemaining, systems::bolt_breaker_collision::tests::helpers::*,
+    test_utils::piercing_stack,
 };
 
 // --- Piercing reset tests (using ActivePiercings) ---
@@ -22,7 +21,7 @@ fn breaker_hit_resets_piercing_remaining_to_effective_piercing() {
     let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, -400.0);
     app.world_mut()
         .entity_mut(bolt_entity)
-        .insert((ActivePiercings(vec![3]), PiercingRemaining(0)));
+        .insert((piercing_stack(&[3]), PiercingRemaining(0)));
 
     tick(&mut app);
 
@@ -75,7 +74,7 @@ fn piercing_remaining_without_effective_piercing_does_not_reset_on_breaker_hit()
 
 /// Behavior 3: `bolt_breaker_collision` resets `PiercingRemaining` from `ActivePiercings.total()`.
 ///
-/// Given: Bolt with `ActivePiercings(vec![2, 1])`, `PiercingRemaining(0)`, no stale cache.
+/// Given: Bolt with `piercing_stack(&[2, 1])`, `PiercingRemaining(0)`, no stale cache.
 /// When: bolt hits breaker top surface.
 /// Then: `PiercingRemaining` = 3 (2 + 1).
 #[test]
@@ -89,7 +88,7 @@ fn breaker_hit_resets_piercing_remaining_from_active_piercings_total() {
     let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, -400.0);
     app.world_mut()
         .entity_mut(bolt_entity)
-        .insert((ActivePiercings(vec![2, 1]), PiercingRemaining(0)));
+        .insert((piercing_stack(&[2, 1]), PiercingRemaining(0)));
 
     tick(&mut app);
 

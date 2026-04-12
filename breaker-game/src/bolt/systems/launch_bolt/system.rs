@@ -6,6 +6,7 @@ use rantzsoft_spatial2d::queries::SpatialData;
 
 use crate::{
     bolt::{components::*, filters::LaunchFilter, queries::apply_velocity_formula},
+    effect_v3::{effects::SpeedBoostConfig, stacking::EffectStack},
     input::resources::GameAction,
     prelude::*,
 };
@@ -15,6 +16,10 @@ use crate::{
 /// Removes [`BoltServing`] and sets the launch velocity using a random
 /// angle within the bolt's [`BoltAngleSpread`]. Only affects bolts that
 /// are currently serving.
+#[allow(
+    clippy::type_complexity,
+    reason = "Bevy query with multiple components"
+)]
 pub(crate) fn launch_bolt(
     actions: Res<InputActions>,
     mut commands: Commands,
@@ -23,7 +28,7 @@ pub(crate) fn launch_bolt(
         (
             Entity,
             SpatialData,
-            Option<&ActiveSpeedBoosts>,
+            Option<&EffectStack<SpeedBoostConfig>>,
             &BoltAngleSpread,
         ),
         LaunchFilter,
@@ -39,7 +44,7 @@ pub(crate) fn launch_bolt(
         spatial.velocity.0 = Vec2::new(angle.sin(), angle.cos());
 
         // Apply the canonical velocity formula
-        apply_velocity_formula(&mut spatial, boosts);
+        apply_velocity_formula(&mut spatial, boosts.map_or(1.0, EffectStack::aggregate));
 
         commands.entity(entity).remove::<BoltServing>();
     }

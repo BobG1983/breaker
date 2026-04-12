@@ -8,15 +8,15 @@ use crate::{
         components::{Bolt, BoltDefinitionRef},
         registry::BoltRegistry,
     },
-    effect::*,
+    effect_v3::{commands::EffectCommandsExt, types::*},
     prelude::*,
 };
 
 /// Dispatches bolt-defined effects to target entities.
 ///
-/// Resolves `RootEffect::On { target, then }` from the bolt definition
-/// and pushes non-`Do` children to target entity's `BoundEffects`.
-/// Bare `Do` children are fired immediately via `commands.fire_effect()`.
+/// Resolves `RootNode::Stamp(target, tree)` from the bolt definition
+/// and stamps the tree onto matching target entities via
+/// `commands.stamp_effect()`.
 ///
 /// Triggered by `Added<BoltDefinitionRef>` -- only runs when a new bolt
 /// entity is spawned with a definition reference.
@@ -35,37 +35,33 @@ pub(crate) fn dispatch_bolt_effects(
             continue;
         };
 
-        for root_effect in &def.effects {
-            let RootEffect::On { target, then } = root_effect;
+        for root in &def.effects {
+            match root {
+                RootNode::Stamp(target, tree) => {
+                    let target_entities: Vec<Entity> = match target {
+                        StampTarget::Breaker
+                        | StampTarget::ActiveBreakers
+                        | StampTarget::EveryBreaker => breaker_query.iter().collect(),
+                        StampTarget::Bolt
+                        | StampTarget::ActiveBolts
+                        | StampTarget::EveryBolt
+                        | StampTarget::PrimaryBolts
+                        | StampTarget::ExtraBolts => bolt_query.iter().collect(),
+                        StampTarget::ActiveCells | StampTarget::EveryCell => {
+                            cell_query.iter().collect()
+                        }
+                        StampTarget::ActiveWalls | StampTarget::EveryWall => {
+                            wall_query.iter().collect()
+                        }
+                    };
 
-            let mut do_effects = Vec::new();
-            let mut bound_children = Vec::new();
-            for child in then {
-                match child {
-                    EffectNode::Do(effect) => do_effects.push(effect.clone()),
-                    // Bolt-sourced effects use empty source_chip -- they come from
-                    // the bolt definition, not from an evolution chip.
-                    other => bound_children.push((String::new(), other.clone())),
+                    for entity in target_entities {
+                        commands.stamp_effect(entity, String::new(), tree.clone());
+                    }
                 }
-            }
-
-            // Determine target entities based on target type
-            let target_entities: Vec<Entity> = match target {
-                Target::Breaker => breaker_query.iter().collect(),
-                Target::Bolt | Target::AllBolts => bolt_query.iter().collect(),
-                Target::Cell | Target::AllCells => cell_query.iter().collect(),
-                Target::Wall | Target::AllWalls => wall_query.iter().collect(),
-            };
-
-            for entity in target_entities {
-                // Fire bare Do children immediately. Empty source_chip because
-                // bolt-sourced effects are not attributed to any evolution chip.
-                for effect in &do_effects {
-                    commands.fire_effect(entity, effect.clone(), String::new());
-                }
-
-                if !bound_children.is_empty() {
-                    commands.push_bound_effects(entity, bound_children.clone());
+                RootNode::Spawn(_kind, _tree) => {
+                    // Spawn-based roots are not dispatched at bolt spawn time.
+                    // They are handled by the spawn stamp registry.
                 }
             }
         }

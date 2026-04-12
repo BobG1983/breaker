@@ -1,4 +1,5 @@
 use bevy::{ecs::world::CommandQueue, prelude::*};
+use ordered_float::OrderedFloat;
 use rantzsoft_physics2d::aabb::Aabb2D;
 use rantzsoft_spatial2d::components::{PreviousScale, Scale2D, Velocity2D};
 
@@ -7,7 +8,11 @@ use crate::{
         components::{Bolt, BoltLifespan, BoltRadius, SpawnedByEvolution},
         definition::BoltDefinition,
     },
-    effect::EffectKind,
+    effect_v3::{
+        effects::{DamageBoostConfig, SpeedBoostConfig},
+        storage::BoundEffects,
+        types::{EffectType, Tree},
+    },
 };
 
 /// Creates a `BoltDefinition` matching the values previously provided by
@@ -211,12 +216,12 @@ fn with_radius_small_value() {
 // Behavior 15: .with_effects() stores effect nodes as BoundEffects
 #[test]
 fn with_effects_stores_bound_effects() {
-    use crate::effect::BoundEffects;
-
     let mut world = World::new();
     let effects = vec![(
         "chip_a".to_string(),
-        crate::effect::EffectNode::Do(EffectKind::DamageBoost(5.0)),
+        Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
+            multiplier: OrderedFloat(5.0),
+        })),
     )];
     let entity = spawn_bolt_in_world(&mut world, |commands| {
         Bolt::builder()
@@ -245,8 +250,6 @@ fn with_effects_stores_bound_effects() {
 
 #[test]
 fn with_effects_empty_vec_inserts_empty_bound_effects() {
-    use crate::effect::BoundEffects;
-
     let mut world = World::new();
     let entity = spawn_bolt_in_world(&mut world, |commands| {
         Bolt::builder()
@@ -271,10 +274,12 @@ fn with_effects_empty_vec_inserts_empty_bound_effects() {
 // Behavior 16: .with_effects() and .with_inherited_effects() combine
 #[test]
 fn with_effects_and_inherited_effects_combine() {
-    use crate::effect::{BoundEffects, EffectNode};
-
-    let node_a = EffectNode::Do(EffectKind::DamageBoost(5.0));
-    let node_b = EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 });
+    let node_a = Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
+        multiplier: OrderedFloat(5.0),
+    }));
+    let node_b = Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+        multiplier: OrderedFloat(1.5),
+    }));
     let inherited = BoundEffects(vec![("chip_b".to_string(), node_b)]);
 
     let mut world = World::new();
@@ -312,10 +317,12 @@ fn with_effects_and_inherited_effects_combine() {
 
 #[test]
 fn inherited_effects_before_with_effects_same_result() {
-    use crate::effect::{BoundEffects, EffectNode};
-
-    let node_a = EffectNode::Do(EffectKind::DamageBoost(5.0));
-    let node_b = EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 });
+    let node_a = Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
+        multiplier: OrderedFloat(5.0),
+    }));
+    let node_b = Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+        multiplier: OrderedFloat(1.5),
+    }));
     let inherited = BoundEffects(vec![("chip_b".to_string(), node_b)]);
 
     let mut world = World::new();

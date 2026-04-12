@@ -37,7 +37,8 @@ use crate::{
         resources::DEFAULT_BOLT_BASE_DAMAGE,
     },
     cells::components::CellHealth,
-    prelude::{components::ActiveVulnerability, *},
+    effect_v3::{effects::VulnerableConfig, stacking::EffectStack},
+    prelude::*,
     shared::CELL_LAYER,
 };
 
@@ -63,7 +64,7 @@ type CandidateLookup<'w, 's> = Query<
     (
         Has<Cell>,
         Option<&'static CellHealth>,
-        Option<&'static ActiveVulnerability>,
+        Option<&'static EffectStack<VulnerableConfig>>,
     ),
     Without<Bolt>,
 >;
@@ -121,7 +122,7 @@ pub(crate) fn bolt_cell_collision(
             * bolt
                 .collision
                 .active_damage_boosts
-                .map_or(1.0, ActiveDamageBoosts::multiplier);
+                .map_or(1.0, EffectStack::aggregate);
 
         // Clear per-bolt pierce skip set
         pierced_this_frame.clear();
@@ -170,8 +171,7 @@ pub(crate) fn bolt_cell_collision(
             }
 
             // Per-cell damage including vulnerability
-            let cell_damage =
-                effective_damage * vulnerability.map_or(1.0, ActiveVulnerability::multiplier);
+            let cell_damage = effective_damage * vulnerability.map_or(1.0, EffectStack::aggregate);
 
             // Check if this bolt can pierce this cell
             let can_pierce = bolt
@@ -220,6 +220,11 @@ pub(crate) fn bolt_cell_collision(
         bolt.spatial.velocity.0 = velocity;
 
         // Apply the canonical velocity formula after all CCD bounces are resolved
-        apply_velocity_formula(&mut bolt.spatial, bolt.collision.active_speed_boosts);
+        apply_velocity_formula(
+            &mut bolt.spatial,
+            bolt.collision
+                .active_speed_boosts
+                .map_or(1.0, EffectStack::aggregate),
+        );
     }
 }

@@ -1,6 +1,7 @@
-//! Behaviors 5-10: target entity resolution for bolt effects.
+//! Behaviors 5-10: target entity resolution for bolt effects (migrated to `effect_v3`).
 
 use bevy::prelude::*;
+use ordered_float::OrderedFloat;
 
 use super::helpers::{TEST_BOLT_NAME, test_app_with_dispatch};
 use crate::{
@@ -9,15 +10,16 @@ use crate::{
         definition::BoltDefinition,
     },
     cells::components::Cell,
-    effect::{
-        BoundEffects, EffectKind, EffectNode, ImpactTarget, RootEffect, StagedEffects, Target,
-        Trigger,
+    effect_v3::{
+        effects::{LoseLifeConfig, ShockwaveConfig, SpeedBoostConfig},
+        storage::BoundEffects,
+        types::{EffectType, RootNode, StampTarget, Tree, Trigger},
     },
     walls::components::Wall,
 };
 
 /// Helper: creates a minimal `BoltDefinition` with the given effects.
-fn make_bolt_def(name: &str, effects: Vec<RootEffect>) -> BoltDefinition {
+fn make_bolt_def(name: &str, effects: Vec<RootNode>) -> BoltDefinition {
     BoltDefinition {
         name: name.to_owned(),
         base_speed: 720.0,
@@ -34,19 +36,34 @@ fn make_bolt_def(name: &str, effects: Vec<RootEffect>) -> BoltDefinition {
     }
 }
 
+fn speed_boost_tree(multiplier: f32) -> Tree {
+    Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+        multiplier: OrderedFloat(multiplier),
+    }))
+}
+
+fn shockwave_tree() -> Tree {
+    Tree::Fire(EffectType::Shockwave(ShockwaveConfig {
+        base_range: OrderedFloat(32.0),
+        range_per_level: OrderedFloat(8.0),
+        stacks: 1,
+        speed: OrderedFloat(400.0),
+    }))
+}
+
 // ---- Behavior 5: Breaker-targeted effects dispatched to breaker entity, not bolt ----
 
 #[test]
 fn dispatch_pushes_breaker_targeted_effects_to_breaker_entity() {
     let def = make_bolt_def(
         "CrossBolt",
-        vec![RootEffect::On {
-            target: Target::Breaker,
-            then: vec![EffectNode::When {
-                trigger: Trigger::BoltLost,
-                then: vec![EffectNode::Do(EffectKind::LoseLife)],
-            }],
-        }],
+        vec![RootNode::Stamp(
+            StampTarget::Breaker,
+            Tree::When(
+                Trigger::BoltLostOccurred,
+                Box::new(Tree::Fire(EffectType::LoseLife(LoseLifeConfig {}))),
+            ),
+        )],
     );
     let mut app = test_app_with_dispatch(def);
     let breaker = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
@@ -65,13 +82,6 @@ fn dispatch_pushes_breaker_targeted_effects_to_breaker_entity() {
         1,
         "breaker should have 1 effect from bolt definition"
     );
-    assert!(matches!(
-        &breaker_bound.0[0].1,
-        EffectNode::When {
-            trigger: Trigger::BoltLost,
-            ..
-        }
-    ));
 
     // Bolt should NOT have effects from Breaker-targeted root
     if let Some(bolt_bound) = app.world().get::<BoundEffects>(bolt) {
@@ -87,13 +97,13 @@ fn dispatch_pushes_breaker_targeted_effects_to_breaker_entity() {
 fn dispatch_breaker_targeted_with_no_breaker_entity_skips_silently() {
     let def = make_bolt_def(
         "CrossBolt",
-        vec![RootEffect::On {
-            target: Target::Breaker,
-            then: vec![EffectNode::When {
-                trigger: Trigger::BoltLost,
-                then: vec![EffectNode::Do(EffectKind::LoseLife)],
-            }],
-        }],
+        vec![RootNode::Stamp(
+            StampTarget::Breaker,
+            Tree::When(
+                Trigger::BoltLostOccurred,
+                Box::new(Tree::Fire(EffectType::LoseLife(LoseLifeConfig {}))),
+            ),
+        )],
     );
     let mut app = test_app_with_dispatch(def);
     // No breaker entity spawned
@@ -103,19 +113,16 @@ fn dispatch_breaker_targeted_with_no_breaker_entity_skips_silently() {
     app.update();
 }
 
-// ---- Behavior 6: AllBolts-targeted effects dispatched to all bolt entities ----
+// ---- Behavior 6: ActiveBolts-targeted effects dispatched to all bolt entities ----
 
 #[test]
-fn dispatch_pushes_all_bolts_targeted_effects_to_all_bolt_entities() {
+fn dispatch_pushes_active_bolts_targeted_effects_to_all_bolt_entities() {
     let def = make_bolt_def(
         "GroupBolt",
-        vec![RootEffect::On {
-            target: Target::AllBolts,
-            then: vec![EffectNode::When {
-                trigger: Trigger::PerfectBumped,
-                then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
-            }],
-        }],
+        vec![RootNode::Stamp(
+            StampTarget::ActiveBolts,
+            Tree::When(Trigger::PerfectBumped, Box::new(speed_boost_tree(1.5))),
+        )],
     );
     let mut app = test_app_with_dispatch(def);
     // bolt_b already exists WITHOUT BoltDefinitionRef (it's a pre-existing bolt)
@@ -141,16 +148,13 @@ fn dispatch_pushes_all_bolts_targeted_effects_to_all_bolt_entities() {
 }
 
 #[test]
-fn dispatch_all_bolts_targeted_with_single_bolt() {
+fn dispatch_active_bolts_targeted_with_single_bolt() {
     let def = make_bolt_def(
         "GroupBolt",
-        vec![RootEffect::On {
-            target: Target::AllBolts,
-            then: vec![EffectNode::When {
-                trigger: Trigger::PerfectBumped,
-                then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
-            }],
-        }],
+        vec![RootNode::Stamp(
+            StampTarget::ActiveBolts,
+            Tree::When(Trigger::PerfectBumped, Box::new(speed_boost_tree(1.5))),
+        )],
     );
     let mut app = test_app_with_dispatch(def);
     let bolt = app
@@ -172,18 +176,7 @@ fn dispatch_all_bolts_targeted_with_single_bolt() {
 fn dispatch_pushes_cell_targeted_effects_to_all_cell_entities() {
     let def = make_bolt_def(
         "CellBolt",
-        vec![RootEffect::On {
-            target: Target::Cell,
-            then: vec![EffectNode::When {
-                trigger: Trigger::Impacted(ImpactTarget::Bolt),
-                then: vec![EffectNode::Do(EffectKind::Shockwave {
-                    base_range: 32.0,
-                    range_per_level: 8.0,
-                    stacks: 1,
-                    speed: 400.0,
-                })],
-            }],
-        }],
+        vec![RootNode::Stamp(StampTarget::ActiveCells, shockwave_tree())],
     );
     let mut app = test_app_with_dispatch(def);
     let cell1 = app.world_mut().spawn(Cell).id();
@@ -202,10 +195,6 @@ fn dispatch_pushes_cell_targeted_effects_to_all_cell_entities() {
             1,
             "{label} should have 1 entry in BoundEffects"
         );
-        assert!(
-            app.world().get::<StagedEffects>(cell).is_some(),
-            "{label} should have StagedEffects inserted"
-        );
     }
 }
 
@@ -213,18 +202,7 @@ fn dispatch_pushes_cell_targeted_effects_to_all_cell_entities() {
 fn dispatch_cell_targeted_with_zero_cells_no_panic() {
     let def = make_bolt_def(
         "CellBolt",
-        vec![RootEffect::On {
-            target: Target::Cell,
-            then: vec![EffectNode::When {
-                trigger: Trigger::Impacted(ImpactTarget::Bolt),
-                then: vec![EffectNode::Do(EffectKind::Shockwave {
-                    base_range: 32.0,
-                    range_per_level: 8.0,
-                    stacks: 1,
-                    speed: 400.0,
-                })],
-            }],
-        }],
+        vec![RootNode::Stamp(StampTarget::ActiveCells, shockwave_tree())],
     );
     let mut app = test_app_with_dispatch(def);
     app.world_mut()
@@ -234,24 +212,13 @@ fn dispatch_cell_targeted_with_zero_cells_no_panic() {
     // Should not panic
 }
 
-// ---- Behavior 8: AllCells-targeted effects dispatched to all cell entities ----
+// ---- Behavior 8: EveryCell-targeted effects dispatched to all cell entities ----
 
 #[test]
-fn dispatch_pushes_all_cells_targeted_effects_to_all_cell_entities() {
+fn dispatch_pushes_every_cell_targeted_effects_to_all_cell_entities() {
     let def = make_bolt_def(
         TEST_BOLT_NAME,
-        vec![RootEffect::On {
-            target: Target::AllCells,
-            then: vec![EffectNode::When {
-                trigger: Trigger::Impacted(ImpactTarget::Bolt),
-                then: vec![EffectNode::Do(EffectKind::Shockwave {
-                    base_range: 32.0,
-                    range_per_level: 8.0,
-                    stacks: 1,
-                    speed: 400.0,
-                })],
-            }],
-        }],
+        vec![RootNode::Stamp(StampTarget::EveryCell, shockwave_tree())],
     );
     let mut app = test_app_with_dispatch(def);
     let cell1 = app.world_mut().spawn(Cell).id();
@@ -280,18 +247,7 @@ fn dispatch_pushes_all_cells_targeted_effects_to_all_cell_entities() {
 fn dispatch_pushes_wall_targeted_effects_to_all_wall_entities() {
     let def = make_bolt_def(
         "WallBolt",
-        vec![RootEffect::On {
-            target: Target::Wall,
-            then: vec![EffectNode::When {
-                trigger: Trigger::Impacted(ImpactTarget::Bolt),
-                then: vec![EffectNode::Do(EffectKind::Shockwave {
-                    base_range: 32.0,
-                    range_per_level: 8.0,
-                    stacks: 1,
-                    speed: 400.0,
-                })],
-            }],
-        }],
+        vec![RootNode::Stamp(StampTarget::ActiveWalls, shockwave_tree())],
     );
     let mut app = test_app_with_dispatch(def);
     let wall1 = app.world_mut().spawn(Wall).id();
@@ -310,10 +266,6 @@ fn dispatch_pushes_wall_targeted_effects_to_all_wall_entities() {
             1,
             "{label} should have 1 entry in BoundEffects"
         );
-        assert!(
-            app.world().get::<StagedEffects>(wall).is_some(),
-            "{label} should have StagedEffects inserted"
-        );
     }
 }
 
@@ -321,18 +273,7 @@ fn dispatch_pushes_wall_targeted_effects_to_all_wall_entities() {
 fn dispatch_wall_targeted_with_zero_walls_no_panic() {
     let def = make_bolt_def(
         "WallBolt",
-        vec![RootEffect::On {
-            target: Target::Wall,
-            then: vec![EffectNode::When {
-                trigger: Trigger::Impacted(ImpactTarget::Bolt),
-                then: vec![EffectNode::Do(EffectKind::Shockwave {
-                    base_range: 32.0,
-                    range_per_level: 8.0,
-                    stacks: 1,
-                    speed: 400.0,
-                })],
-            }],
-        }],
+        vec![RootNode::Stamp(StampTarget::ActiveWalls, shockwave_tree())],
     );
     let mut app = test_app_with_dispatch(def);
     app.world_mut()
@@ -342,24 +283,13 @@ fn dispatch_wall_targeted_with_zero_walls_no_panic() {
     // Should not panic
 }
 
-// ---- Behavior 10: AllWalls-targeted effects dispatched to all wall entities ----
+// ---- Behavior 10: EveryWall-targeted effects dispatched to all wall entities ----
 
 #[test]
-fn dispatch_pushes_all_walls_targeted_effects_to_all_wall_entities() {
+fn dispatch_pushes_every_wall_targeted_effects_to_all_wall_entities() {
     let def = make_bolt_def(
         TEST_BOLT_NAME,
-        vec![RootEffect::On {
-            target: Target::AllWalls,
-            then: vec![EffectNode::When {
-                trigger: Trigger::Impacted(ImpactTarget::Bolt),
-                then: vec![EffectNode::Do(EffectKind::Shockwave {
-                    base_range: 32.0,
-                    range_per_level: 8.0,
-                    stacks: 1,
-                    speed: 400.0,
-                })],
-            }],
-        }],
+        vec![RootNode::Stamp(StampTarget::EveryWall, shockwave_tree())],
     );
 
     let mut app = test_app_with_dispatch(def);

@@ -101,7 +101,11 @@ pub(crate) fn bolt_lost(
             // Set direction only; speed is applied by the velocity formula.
             if let Ok(mut bolt) = bolt_query.get_mut(entry.entity) {
                 bolt.spatial.velocity.0 = Vec2::new(angle.sin(), angle.cos());
-                apply_velocity_formula(&mut bolt.spatial, bolt.active_speed_boosts);
+                apply_velocity_formula(
+                    &mut bolt.spatial,
+                    bolt.active_speed_boosts
+                        .map_or(1.0, crate::effect_v3::stacking::EffectStack::aggregate),
+                );
                 let new_pos = Vec2::new(breaker_pos.x, breaker_pos.y + entry.spawn_offset);
                 bolt.spatial.position.0 = new_pos;
 

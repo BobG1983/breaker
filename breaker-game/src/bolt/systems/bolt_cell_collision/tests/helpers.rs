@@ -17,7 +17,7 @@ use crate::{
         messages::DamageCell,
         test_utils as cell_test_utils,
     },
-    effect::effects::vulnerable::ActiveVulnerability,
+    effect_v3::{effects::VulnerableConfig, stacking::EffectStack},
     shared::{BOLT_LAYER, CELL_LAYER, GameDrawLayer},
 };
 
@@ -102,7 +102,7 @@ pub(super) fn spawn_cell_with_custom_aabb(
         .id()
 }
 
-/// Spawns a cell with explicit [`CellHealth`] and [`ActiveVulnerability`].
+/// Spawns a cell with explicit [`CellHealth`] and [`EffectStack<VulnerableConfig>`].
 pub(super) fn spawn_vulnerable_cell(
     app: &mut App,
     x: f32,
@@ -110,16 +110,25 @@ pub(super) fn spawn_vulnerable_cell(
     hp: f32,
     vulnerability: f32,
 ) -> Entity {
+    use ordered_float::OrderedFloat;
+
     let (cw, ch) = default_cell_dims();
     let half_extents = Vec2::new(cw.half_width(), ch.half_height());
     let pos = Vec2::new(x, y);
+    let mut vuln_stack = EffectStack::<VulnerableConfig>::default();
+    vuln_stack.push(
+        "test".into(),
+        VulnerableConfig {
+            multiplier: OrderedFloat(vulnerability),
+        },
+    );
     app.world_mut()
         .spawn((
             Cell,
             cw,
             ch,
             CellHealth::new(hp),
-            ActiveVulnerability(vec![vulnerability]),
+            vuln_stack,
             Aabb2D::new(Vec2::ZERO, half_extents),
             CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
             Position2D(pos),

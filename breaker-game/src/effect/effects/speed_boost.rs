@@ -50,7 +50,10 @@ fn recalculate_velocity(entity: Entity, world: &mut World) {
     let Ok(mut spatial) = query.get_mut(world, entity) else {
         return;
     };
-    apply_velocity_formula(&mut spatial, boosts.as_ref());
+    apply_velocity_formula(
+        &mut spatial,
+        boosts.as_ref().map_or(1.0, ActiveSpeedBoosts::multiplier),
+    );
 }
 
 impl ActiveSpeedBoosts {

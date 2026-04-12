@@ -14,8 +14,7 @@ use crate::{
         queries::{BoltCollisionData, apply_velocity_formula},
     },
     breaker::{filters::CollisionFilterBreaker, queries::BreakerCollisionData},
-    effect::effects::piercing::ActivePiercings,
-    effect_v3::stacking::EffectStack,
+    effect_v3::{effects::PiercingConfig, stacking::EffectStack},
     shared::BREAKER_LAYER,
 };
 
@@ -69,14 +68,14 @@ impl BreakerSurface {
         writer: &mut MessageWriter<BoltImpactBreaker>,
         bolt: Entity,
         piercing_remaining: &mut Option<Mut<'_, PiercingRemaining>>,
-        active_piercings: Option<&ActivePiercings>,
+        active_piercings: Option<&EffectStack<PiercingConfig>>,
     ) {
         writer.write(BoltImpactBreaker {
             bolt,
             breaker: self.entity,
         });
         if let (Some(pr), Some(ap)) = (piercing_remaining, active_piercings) {
-            pr.0 = ap.total();
+            pr.0 = piercing_aggregate_to_u32(ap.aggregate());
         }
     }
 
@@ -200,6 +199,19 @@ impl BreakerSurface {
     }
 }
 
+/// Converts the piercing aggregate (f32 sum of small u32 charges) back to u32.
+///
+/// Piercing charges are always non-negative and small enough for lossless
+/// round-trip through f32.
+#[allow(
+    clippy::cast_sign_loss,
+    clippy::cast_possible_truncation,
+    reason = "piercing charges are small non-negative u32 values"
+)]
+const fn piercing_aggregate_to_u32(aggregate: f32) -> u32 {
+    aggregate.round().max(0.0) as u32
+}
+
 /// Returns `true` when `point` lies inside the axis-aligned box centred on
 /// `center` with half-extents `half`.
 fn is_inside_aabb(point: Vec2, center: Vec2, half: Vec2) -> bool {
@@ -321,7 +333,12 @@ pub(crate) fn bolt_breaker_collision(
             &mut bolt.collision.last_impact,
         ) {
             // Apply the canonical velocity formula after reflection
-            apply_velocity_formula(&mut bolt.spatial, bolt.collision.active_speed_boosts);
+            apply_velocity_formula(
+                &mut bolt.spatial,
+                bolt.collision
+                    .active_speed_boosts
+                    .map_or(1.0, EffectStack::aggregate),
+            );
             surface.emit_bump(
                 &mut writer,
                 bolt.entity,

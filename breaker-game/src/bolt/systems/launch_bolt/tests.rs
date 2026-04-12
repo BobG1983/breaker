@@ -432,8 +432,8 @@ fn launch_bolt_skips_birthing_but_launches_non_birthing() {
 
 #[test]
 fn launch_bolt_velocity_with_speed_boost() {
-    // Edge case: ActiveSpeedBoosts(vec![1.5]) -> speed = 720.0 * 1.5 = 1080.0
-    use crate::effect::effects::speed_boost::ActiveSpeedBoosts;
+    // Edge case: EffectStack<SpeedBoostConfig> with 1.5 -> speed = 720.0 * 1.5 = 1080.0
+    use crate::bolt::test_utils::speed_stack;
 
     let mut app = test_app();
     let def = BoltDefinition {
@@ -459,7 +459,7 @@ fn launch_bolt_velocity_with_speed_boost() {
     };
     app.world_mut()
         .entity_mut(bolt_id)
-        .insert((BoltAngleSpread(0.0), ActiveSpeedBoosts(vec![1.5])));
+        .insert((BoltAngleSpread(0.0), speed_stack(&[1.5])));
 
     app.world_mut()
         .resource_mut::<InputActions>()

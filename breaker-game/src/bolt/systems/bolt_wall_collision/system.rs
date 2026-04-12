@@ -15,6 +15,7 @@ use crate::{
         messages::BoltImpactWall,
         queries::{BoltCollisionData, apply_velocity_formula},
     },
+    effect_v3::stacking::EffectStack,
     prelude::*,
     shared::WALL_LAYER,
 };
@@ -28,7 +29,7 @@ type WallLookup<'w, 's> =
 /// For each active bolt, queries the quadtree for walls within the bolt's radius.
 /// If a wall overlap is confirmed, the bolt is pushed out to a safe position,
 /// its velocity is reflected off the nearest wall face, and `PiercingRemaining`
-/// is reset to `ActivePiercings.total()`.
+/// is reset to `EffectStack<PiercingConfig>::aggregate()`.
 pub(crate) fn bolt_wall_collision(
     mut commands: Commands,
     quadtree: Res<CollisionQuadtree>,
@@ -107,7 +108,12 @@ pub(crate) fn bolt_wall_collision(
             bolt.spatial.velocity.0 = reflect(velocity, normal);
 
             // Apply the canonical velocity formula after reflection
-            apply_velocity_formula(&mut bolt.spatial, bolt.collision.active_speed_boosts);
+            apply_velocity_formula(
+                &mut bolt.spatial,
+                bolt.collision
+                    .active_speed_boosts
+                    .map_or(1.0, EffectStack::aggregate),
+            );
 
             // Stamp LastImpact at the push-out position with the side
             // derived from the wall push-out normal (inverted mapping).
@@ -122,12 +128,19 @@ pub(crate) fn bolt_wall_collision(
                 });
             }
 
-            // Reset PiercingRemaining to ActivePiercings.total()
+            // Reset PiercingRemaining to EffectStack<PiercingConfig>::aggregate()
             if let (Some(pr), Some(ap)) = (
                 &mut bolt.collision.piercing_remaining,
                 bolt.collision.active_piercings,
             ) {
-                pr.0 = ap.total();
+                #[allow(
+                    clippy::cast_sign_loss,
+                    clippy::cast_possible_truncation,
+                    reason = "piercing charges are small non-negative u32 values"
+                )]
+                {
+                    pr.0 = ap.aggregate().round().max(0.0) as u32;
+                }
             }
 
             writer.write(BoltImpactWall {

@@ -1,11 +1,9 @@
 use bevy::prelude::*;
 
 pub(super) use crate::bolt::test_utils::spawn_bolt;
-use crate::{
-    bolt::{
-        components::PiercingRemaining, messages::BoltImpactWall, systems::bolt_wall_collision::*,
-    },
-    effect::effects::piercing::ActivePiercings,
+use crate::bolt::{
+    components::PiercingRemaining, messages::BoltImpactWall, systems::bolt_wall_collision::*,
+    test_utils::piercing_stack,
 };
 
 pub(super) fn test_app() -> App {
@@ -26,7 +24,7 @@ pub(super) fn test_app() -> App {
 
 pub(super) use crate::shared::test_utils::tick;
 
-/// Spawns a bolt with `ActivePiercings` and `PiercingRemaining` components.
+/// Spawns a bolt with `EffectStack<PiercingConfig>` and `PiercingRemaining` components.
 pub(super) fn spawn_piercing_bolt(
     app: &mut App,
     x: f32,
@@ -38,7 +36,7 @@ pub(super) fn spawn_piercing_bolt(
 ) -> Entity {
     let entity = spawn_bolt(app, x, y, vx, vy);
     app.world_mut().entity_mut(entity).insert((
-        ActivePiercings(active_piercings),
+        piercing_stack(&active_piercings),
         PiercingRemaining(piercing_remaining),
     ));
     entity

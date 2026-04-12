@@ -20,7 +20,11 @@ pub(crate) fn normalize_bolt_speed_after_constraints(
     mut bolt_query: Query<BoltSpeedData, ActiveFilter>,
 ) {
     for mut bolt in &mut bolt_query {
-        apply_velocity_formula(&mut bolt.spatial, bolt.active_speed_boosts);
+        apply_velocity_formula(
+            &mut bolt.spatial,
+            bolt.active_speed_boosts
+                .map_or(1.0, crate::effect_v3::stacking::EffectStack::aggregate),
+        );
     }
 }
 
@@ -30,10 +34,7 @@ mod tests {
     use rantzsoft_spatial2d::components::Velocity2D;
 
     use super::*;
-    use crate::{
-        bolt::{components::Bolt, definition::BoltDefinition},
-        effect::effects::speed_boost::ActiveSpeedBoosts,
-    };
+    use crate::bolt::{components::Bolt, definition::BoltDefinition, test_utils::speed_stack};
 
     const TOLERANCE: f32 = 0.5;
 
@@ -102,7 +103,7 @@ mod tests {
         let entity = spawn_bolt(app, velocity, base_speed, min_speed, max_speed);
         app.world_mut()
             .entity_mut(entity)
-            .insert(ActiveSpeedBoosts(boost_multipliers));
+            .insert(speed_stack(&boost_multipliers));
         entity
     }
 

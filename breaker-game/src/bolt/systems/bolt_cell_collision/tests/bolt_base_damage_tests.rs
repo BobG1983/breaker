@@ -5,13 +5,11 @@ use bevy::{ecs::world::CommandQueue, prelude::*};
 use rantzsoft_spatial2d::components::Velocity2D;
 
 use super::helpers::*;
-use crate::{
-    bolt::{
-        components::{Bolt, BoltBaseDamage, PiercingRemaining},
-        definition::BoltDefinition,
-        resources::DEFAULT_BOLT_BASE_DAMAGE,
-    },
-    effect::effects::{damage_boost::ActiveDamageBoosts, piercing::ActivePiercings},
+use crate::bolt::{
+    components::{Bolt, BoltBaseDamage, PiercingRemaining},
+    definition::BoltDefinition,
+    resources::DEFAULT_BOLT_BASE_DAMAGE,
+    test_utils::{damage_stack, piercing_stack},
 };
 
 fn make_default_bolt_definition() -> BoltDefinition {
@@ -137,7 +135,7 @@ fn collision_uses_bolt_base_damage_with_damage_boost() {
     let bolt_entity = spawn_bolt_from_definition(&mut app, 0.0, start_y, 0.0, 400.0);
     app.world_mut()
         .entity_mut(bolt_entity)
-        .insert(ActiveDamageBoosts(vec![1.5]));
+        .insert(damage_stack(&[1.5]));
 
     tick(&mut app);
 
@@ -152,7 +150,7 @@ fn collision_uses_bolt_base_damage_with_damage_boost() {
 
 #[test]
 fn collision_high_base_damage_with_boost() {
-    // Edge case: BoltBaseDamage(25.0) with ActiveDamageBoosts(vec![2.0]) = 50.0
+    // Edge case: BoltBaseDamage(25.0) with damage_stack(&[2.0]) = 50.0
     let mut app = test_app_with_damage_and_wall_messages();
     let cc = crate::cells::resources::CellConfig::default();
 
@@ -163,7 +161,7 @@ fn collision_high_base_damage_with_boost() {
     let bolt_entity = spawn_bolt_with_damage(&mut app, 0.0, start_y, 0.0, 400.0, 25.0);
     app.world_mut()
         .entity_mut(bolt_entity)
-        .insert(ActiveDamageBoosts(vec![2.0]));
+        .insert(damage_stack(&[2.0]));
 
     tick(&mut app);
 
@@ -190,7 +188,7 @@ fn collision_piercing_uses_bolt_base_damage_for_lookahead() {
     let bolt_entity = spawn_bolt_from_definition(&mut app, 0.0, start_y, 0.0, 10000.0);
     app.world_mut()
         .entity_mut(bolt_entity)
-        .insert((ActivePiercings(vec![1]), PiercingRemaining(1)));
+        .insert((piercing_stack(&[1]), PiercingRemaining(1)));
 
     tick(&mut app);
 
@@ -226,7 +224,7 @@ fn collision_piercing_low_damage_does_not_pierce() {
     let bolt_entity = spawn_bolt_with_damage(&mut app, 0.0, start_y, 0.0, 10000.0, 5.0);
     app.world_mut()
         .entity_mut(bolt_entity)
-        .insert((ActivePiercings(vec![1]), PiercingRemaining(1)));
+        .insert((piercing_stack(&[1]), PiercingRemaining(1)));
 
     tick(&mut app);
 
@@ -315,7 +313,7 @@ fn collision_two_bolts_different_base_damage() {
 
 #[test]
 fn collision_two_bolts_different_damage_with_boosts() {
-    // Edge case: Both bolts with ActiveDamageBoosts(vec![2.0])
+    // Edge case: Both bolts with damage_stack(&[2.0])
     let mut app = test_app_with_damage_and_wall_messages();
     let cc = crate::cells::resources::CellConfig::default();
 
@@ -327,12 +325,12 @@ fn collision_two_bolts_different_damage_with_boosts() {
     let bolt_a = spawn_bolt_from_definition(&mut app, -100.0, start_y, 0.0, 400.0);
     app.world_mut()
         .entity_mut(bolt_a)
-        .insert(ActiveDamageBoosts(vec![2.0]));
+        .insert(damage_stack(&[2.0]));
 
     let bolt_b = spawn_bolt_with_damage(&mut app, 100.0, start_y, 0.0, 400.0, 25.0);
     app.world_mut()
         .entity_mut(bolt_b)
-        .insert(ActiveDamageBoosts(vec![2.0]));
+        .insert(damage_stack(&[2.0]));
 
     tick(&mut app);
 
@@ -396,7 +394,7 @@ fn collision_without_bolt_base_damage_with_boost_uses_fallback() {
     let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
     app.world_mut()
         .entity_mut(bolt_entity)
-        .insert(ActiveDamageBoosts(vec![2.0]));
+        .insert(damage_stack(&[2.0]));
 
     tick(&mut app);
 
@@ -425,7 +423,7 @@ fn collision_pierce_lookahead_uses_fallback_when_no_bolt_base_damage() {
     let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 10000.0);
     app.world_mut()
         .entity_mut(bolt_entity)
-        .insert((ActivePiercings(vec![1]), PiercingRemaining(1)));
+        .insert((piercing_stack(&[1]), PiercingRemaining(1)));
 
     tick(&mut app);
 
@@ -456,7 +454,7 @@ fn collision_pierce_lookahead_fallback_insufficient_damage() {
     let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 10000.0);
     app.world_mut()
         .entity_mut(bolt_entity)
-        .insert((ActivePiercings(vec![1]), PiercingRemaining(1)));
+        .insert((piercing_stack(&[1]), PiercingRemaining(1)));
 
     tick(&mut app);
 

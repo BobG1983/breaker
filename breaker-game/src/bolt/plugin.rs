@@ -14,7 +14,7 @@ use crate::{
         },
     },
     breaker::BreakerSystems,
-    effect::EffectSystems,
+    effect_v3::EffectV3Systems,
     prelude::*,
     state::run::node::{
         sets::NodeSystems,
@@ -58,7 +58,7 @@ impl Plugin for BoltPlugin {
                     hover_bolt.after(BreakerSystems::Move),
                     spawn_bolt_lost_text,
                     // Dispatch bolt-definition effects to target entities
-                    dispatch_bolt_effects.before(EffectSystems::Bridge),
+                    dispatch_bolt_effects.before(EffectV3Systems::Bridge),
                     // Renormalize bolt speed after tether constraints redistribute velocity
                     normalize_bolt_speed_after_constraints.after(
                         rantzsoft_physics2d::plugin::PhysicsSystems::EnforceDistanceConstraints,
@@ -87,7 +87,7 @@ impl Plugin for BoltPlugin {
                     // Tick bolt lifespan timers and request destruction on expiry
                     tick_bolt_lifespan.before(BoltSystems::BoltLost),
                     // Cleanup destroyed bolts after effect bridges evaluate
-                    cleanup_destroyed_bolts.after(EffectSystems::Bridge),
+                    cleanup_destroyed_bolts.after(EffectV3Systems::Bridge),
                 )
                     .run_if(in_state(NodeState::Playing)),
             )

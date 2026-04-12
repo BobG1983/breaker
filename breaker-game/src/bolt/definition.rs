@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use serde::Deserialize;
 
-use crate::effect::RootEffect;
+use crate::effect_v3::types::RootNode;
 
 /// Default value for `min_angle_horizontal` when omitted from RON.
 const fn default_min_angle_horizontal() -> f32 {
@@ -34,7 +34,7 @@ pub struct BoltDefinition {
     /// Base damage per hit.
     pub base_damage: f32,
     /// Effect chains bound to this bolt archetype.
-    pub effects: Vec<RootEffect>,
+    pub effects: Vec<RootNode>,
     /// RGB values for the bolt HDR color.
     pub color_rgb: [f32; 3],
     /// Minimum angle from horizontal in degrees.
@@ -201,7 +201,9 @@ mod tests {
 
     #[test]
     fn bolt_definition_clone_with_effects_preserves_entries() {
-        use crate::effect::{EffectKind, EffectNode, Target};
+        use ordered_float::OrderedFloat;
+
+        use crate::effect_v3::types::{EffectType, StampTarget, Tree};
 
         let def = BoltDefinition {
             name: "EffectBolt".to_string(),
@@ -210,10 +212,14 @@ mod tests {
             max_speed: 1440.0,
             radius: 14.0,
             base_damage: 10.0,
-            effects: vec![RootEffect::On {
-                target: Target::Bolt,
-                then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 })],
-            }],
+            effects: vec![RootNode::Stamp(
+                StampTarget::Bolt,
+                Tree::Fire(EffectType::SpeedBoost(
+                    crate::effect_v3::effects::SpeedBoostConfig {
+                        multiplier: OrderedFloat(1.5),
+                    },
+                )),
+            )],
             color_rgb: [6.0, 5.0, 0.5],
             min_angle_horizontal: 5.0,
             min_angle_vertical: 5.0,
@@ -258,6 +264,8 @@ mod tests {
 
     #[test]
     fn bolt_definition_parses_with_effects() {
+        use crate::effect_v3::types::StampTarget;
+
         let ron_str = r#"(
             name: "EffectBolt",
             base_speed: 720.0,
@@ -266,11 +274,7 @@ mod tests {
             radius: 14.0,
             base_damage: 10.0,
             effects: [
-                On(target: Bolt, then: [
-                    When(trigger: PerfectBumped, then: [
-                        Do(SpeedBoost(multiplier: 1.5)),
-                    ]),
-                ]),
+                Stamp(Bolt, When(PerfectBumped, Fire(SpeedBoost((multiplier: 1.5))))),
             ],
             color_rgb: (6.0, 5.0, 0.5),
             min_angle_horizontal: 5.0,
@@ -280,10 +284,10 @@ mod tests {
             ron::de::from_str(ron_str).expect("RON with effects should parse");
         assert_eq!(def.effects.len(), 1, "should have 1 root effect");
         match &def.effects[0] {
-            RootEffect::On { target, then } => {
-                assert_eq!(*target, crate::effect::Target::Bolt);
-                assert!(!then.is_empty(), "then clause should not be empty");
+            RootNode::Stamp(target, _tree) => {
+                assert_eq!(*target, StampTarget::Bolt);
             }
+            RootNode::Spawn(..) => panic!("expected RootNode::Stamp"),
         }
     }
 

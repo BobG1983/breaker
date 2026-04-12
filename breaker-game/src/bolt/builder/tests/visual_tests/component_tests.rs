@@ -1,11 +1,16 @@
 use bevy::{ecs::world::CommandQueue, prelude::*};
+use ordered_float::OrderedFloat;
 use rantzsoft_spatial2d::components::{Position2D, Scale2D, Velocity2D};
 use rantzsoft_stateflow::CleanupOnExit;
 
 use super::helpers::test_bolt_definition;
 use crate::{
     bolt::components::{Bolt, BoltServing, ExtraBolt, PrimaryBolt},
-    effect::{BoundEffects, EffectKind, EffectNode},
+    effect_v3::{
+        effects::SpeedBoostConfig,
+        storage::BoundEffects,
+        types::{EffectType, Tree},
+    },
     shared::{GameDrawLayer, size::BaseRadius},
     state::types::{NodeState, RunState},
 };
@@ -112,7 +117,9 @@ fn headless_spawn_with_effects_has_bound_effects() {
             .at_position(Vec2::new(0.0, 50.0))
             .with_effects(vec![(
                 "test".to_string(),
-                EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 }),
+                Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+                    multiplier: OrderedFloat(1.5),
+                })),
             )])
             .serving()
             .primary()

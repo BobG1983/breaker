@@ -1,4 +1,5 @@
 use bevy::{ecs::world::CommandQueue, prelude::*};
+use ordered_float::OrderedFloat;
 use rantzsoft_physics2d::collision_layers::CollisionLayers;
 use rantzsoft_spatial2d::components::{
     BaseSpeed, InterpolateTransform2D, MaxSpeed, MinSpeed, Position2D, Spatial, Spatial2D,
@@ -13,7 +14,11 @@ use crate::{
         },
         definition::BoltDefinition,
     },
-    effect::{BoundEffects, EffectKind, EffectNode},
+    effect_v3::{
+        effects::{DamageBoostConfig, SpeedBoostConfig},
+        storage::BoundEffects,
+        types::{EffectType, Tree},
+    },
     shared::GameDrawLayer,
     state::types::{NodeState, RunState},
 };
@@ -215,8 +220,12 @@ fn spawn_with_lifespan_inserts_timer() {
 // Behavior 31: with_inherited_effects() stores effects for spawn-time insertion
 #[test]
 fn spawn_with_inherited_effects_inserts_bound_effects() {
-    let node_a = EffectNode::Do(EffectKind::DamageBoost(5.0));
-    let node_b = EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 });
+    let node_a = Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
+        multiplier: OrderedFloat(5.0),
+    }));
+    let node_b = Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+        multiplier: OrderedFloat(1.5),
+    }));
     let inherited = BoundEffects(vec![
         ("chip_a".to_string(), node_a),
         ("chip_b".to_string(), node_b),
@@ -299,11 +308,15 @@ fn spawn_without_effects_has_no_bound_effects() {
 fn spawn_with_both_effects_orders_explicit_before_inherited() {
     let explicit = vec![(
         "explicit_chip".to_string(),
-        EffectNode::Do(EffectKind::DamageBoost(2.0)),
+        Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
+            multiplier: OrderedFloat(2.0),
+        })),
     )];
     let inherited = BoundEffects(vec![(
         "inherited_chip".to_string(),
-        EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.5 }),
+        Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+            multiplier: OrderedFloat(1.5),
+        })),
     )]);
 
     let mut world = World::new();
@@ -336,7 +349,9 @@ fn spawn_with_both_effects_orders_explicit_before_inherited() {
 // Behavior 33: with_inherited_effects() clones effects
 #[test]
 fn inherited_effects_are_cloned_not_moved() {
-    let node = EffectNode::Do(EffectKind::DamageBoost(5.0));
+    let node = Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
+        multiplier: OrderedFloat(5.0),
+    }));
     let inherited = BoundEffects(vec![("chip".to_string(), node)]);
 
     let mut world = World::new();

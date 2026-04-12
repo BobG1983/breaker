@@ -18,7 +18,9 @@ pub(crate) fn sync_bolt_scale(
     use crate::shared::size::{ClampRange, effective_radius};
 
     for mut data in &mut query {
-        let boost = data.size_boosts.map_or(1.0, ActiveSizeBoosts::multiplier);
+        let boost = data
+            .size_boosts
+            .map_or(1.0, crate::effect_v3::stacking::EffectStack::aggregate);
         let node = data.node_scale.map_or(1.0, |s| s.0);
         let range = ClampRange {
             min: data.min_radius.map(|m| m.0),

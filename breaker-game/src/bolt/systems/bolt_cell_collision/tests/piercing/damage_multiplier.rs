@@ -1,15 +1,15 @@
 //! Tests for `ActiveDamageBoosts` interaction with piercing lookahead.
 
-use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Velocity2D;
 
-use crate::{
-    bolt::{components::PiercingRemaining, systems::bolt_cell_collision::tests::helpers::*},
-    effect::effects::{damage_boost::ActiveDamageBoosts, piercing::ActivePiercings},
+use crate::bolt::{
+    components::PiercingRemaining,
+    systems::bolt_cell_collision::tests::helpers::*,
+    test_utils::{damage_stack, piercing_stack},
 };
 
 /// Spec behavior 3: Piercing lookahead uses `ActiveDamageBoosts` — pierce succeeds.
-/// Bolt with `ActivePiercings(vec![1])`, `PiercingRemaining(1)`, `ActiveDamageBoosts(vec![1.5])`,
+/// Bolt with `piercing_stack(&[1])`, `PiercingRemaining(1)`, `damage_stack(&[1.5])`,
 /// cell with `CellHealth(12.0)`.
 /// Boosted damage = 10.0 * 1.5 = 15.0 >= 12.0 => would destroy => bolt pierces.
 /// `PiercingRemaining` decremented to 0.
@@ -25,9 +25,9 @@ fn piercing_with_effective_damage_multiplier_uses_boosted_damage_for_lookahead()
     let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
     let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
     app.world_mut().entity_mut(bolt_entity).insert((
-        ActivePiercings(vec![1]),
+        piercing_stack(&[1]),
         PiercingRemaining(1),
-        ActiveDamageBoosts(vec![1.5]),
+        damage_stack(&[1.5]),
     ));
 
     tick(&mut app);
@@ -52,7 +52,7 @@ fn piercing_with_effective_damage_multiplier_uses_boosted_damage_for_lookahead()
 }
 
 /// Spec behavior 4: Piercing lookahead without `ActiveDamageBoosts` — pierce fails, bolt reflects.
-/// Bolt with `ActivePiercings(vec![1])`, `PiercingRemaining(1)`, NO `ActiveDamageBoosts`,
+/// Bolt with `piercing_stack(&[1])`, `PiercingRemaining(1)`, NO `ActiveDamageBoosts`,
 /// cell with `CellHealth(12.0)`.
 /// Base damage = 10.0 < 12.0 => cell not destroyed => bolt reflects.
 /// `PiercingRemaining` unchanged at 1.
@@ -69,7 +69,7 @@ fn piercing_without_effective_damage_multiplier_reflects_off_tough_cell() {
     let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
     app.world_mut()
         .entity_mut(bolt_entity)
-        .insert((ActivePiercings(vec![1]), PiercingRemaining(1)));
+        .insert((piercing_stack(&[1]), PiercingRemaining(1)));
     // NO ActiveDamageBoosts => default base damage 10.0
 
     tick(&mut app);

@@ -3,11 +3,7 @@ use std::collections::HashMap;
 use bevy::prelude::*;
 use rantzsoft_spatial2d::prelude::*;
 
-use crate::{
-    bolt::queries::{BoltSpeedData, apply_velocity_formula},
-    prelude::*,
-    shared::GameDrawLayer,
-};
+use crate::{bolt::queries::BoltSpeedData, prelude::*, shared::GameDrawLayer};
 
 /// Placeholder gravity well color — HDR purple.
 const GRAVITY_WELL_COLOR: Color = Color::linear_rgb(1.0, 0.2, 2.0);
@@ -164,7 +160,11 @@ pub(crate) fn apply_gravity_pull(
                 let direction = delta / distance;
                 let steering = direction * config.strength * dt;
                 bolt.spatial.velocity.0 = (bolt.spatial.velocity.0 + steering).normalize_or_zero();
-                apply_velocity_formula(&mut bolt.spatial, bolt.active_speed_boosts);
+                crate::bolt::queries::apply_velocity_formula(
+                    &mut bolt.spatial,
+                    bolt.active_speed_boosts
+                        .map_or(1.0, crate::effect_v3::stacking::EffectStack::aggregate),
+                );
             }
         }
     }

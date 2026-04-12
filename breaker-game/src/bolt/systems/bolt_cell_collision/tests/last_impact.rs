@@ -7,9 +7,9 @@
 use bevy::prelude::*;
 
 use super::helpers::*;
-use crate::{
-    bolt::components::{ImpactSide, LastImpact, PiercingRemaining},
-    effect::effects::piercing::ActivePiercings,
+use crate::bolt::{
+    components::{ImpactSide, LastImpact, PiercingRemaining},
+    test_utils::piercing_stack,
 };
 
 // ── Behavior 3: bottom face rebound stamps ImpactSide::Bottom ──
@@ -188,7 +188,7 @@ fn cell_right_rebound_stamps_last_impact_with_right_side() {
 
 #[test]
 fn piercing_bolt_through_destroyable_cell_does_not_stamp_last_impact() {
-    // Given: Bolt with ActivePiercings(vec![2]), PiercingRemaining(2).
+    // Given: Bolt with piercing_stack(&[2]), PiercingRemaining(2).
     //        Cell at (0.0, 100.0) with CellHealth(10.0) — bolt base damage 10.0 would destroy it.
     //        No pre-existing LastImpact on the bolt.
     // When: bolt_cell_collision runs for one fixed tick
@@ -204,7 +204,7 @@ fn piercing_bolt_through_destroyable_cell_does_not_stamp_last_impact() {
     let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
     app.world_mut()
         .entity_mut(bolt_entity)
-        .insert((ActivePiercings(vec![2]), PiercingRemaining(2)));
+        .insert((piercing_stack(&[2]), PiercingRemaining(2)));
 
     tick(&mut app);
 
@@ -230,7 +230,7 @@ fn piercing_bolt_through_cell_preserves_existing_last_impact() {
     let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
     app.world_mut()
         .entity_mut(bolt_entity)
-        .insert((ActivePiercings(vec![2]), PiercingRemaining(2)));
+        .insert((piercing_stack(&[2]), PiercingRemaining(2)));
     // Insert a pre-existing LastImpact
     let original = LastImpact {
         position: Vec2::new(50.0, 300.0),
@@ -260,7 +260,7 @@ fn piercing_bolt_through_cell_preserves_existing_last_impact() {
 
 #[test]
 fn piercing_bolt_reflecting_off_tough_cell_stamps_last_impact() {
-    // Given: Bolt with ActivePiercings(vec![1]), PiercingRemaining(1).
+    // Given: Bolt with piercing_stack(&[1]), PiercingRemaining(1).
     //        Cell at (0.0, 100.0) with CellHealth(30.0) — bolt base damage 10.0, cell survives.
     //        Cannot pierce because cell would survive.
     // When: bolt_cell_collision runs for one fixed tick
@@ -276,7 +276,7 @@ fn piercing_bolt_reflecting_off_tough_cell_stamps_last_impact() {
     let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
     app.world_mut()
         .entity_mut(bolt_entity)
-        .insert((ActivePiercings(vec![1]), PiercingRemaining(1)));
+        .insert((piercing_stack(&[1]), PiercingRemaining(1)));
 
     tick(&mut app);
 
@@ -296,7 +296,7 @@ fn piercing_bolt_reflecting_off_tough_cell_stamps_last_impact() {
 
 #[test]
 fn exhausted_piercing_bolt_reflecting_off_destroyable_cell_stamps_last_impact() {
-    // Given: Bolt with ActivePiercings(vec![1]), PiercingRemaining(0).
+    // Given: Bolt with piercing_stack(&[1]), PiercingRemaining(0).
     //        Cell at (0.0, 100.0) with CellHealth(10.0) — bolt base damage 10.0 would destroy it,
     //        but piercing is exhausted so it cannot pierce through.
     // When: bolt_cell_collision runs for one fixed tick
@@ -312,7 +312,7 @@ fn exhausted_piercing_bolt_reflecting_off_destroyable_cell_stamps_last_impact() 
     let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
     app.world_mut()
         .entity_mut(bolt_entity)
-        .insert((ActivePiercings(vec![1]), PiercingRemaining(0)));
+        .insert((piercing_stack(&[1]), PiercingRemaining(0)));
 
     tick(&mut app);
 
@@ -330,7 +330,7 @@ fn exhausted_piercing_bolt_reflecting_off_destroyable_cell_stamps_last_impact() 
 
 #[test]
 fn exhausted_piercing_zero_effective_also_reflects_and_stamps() {
-    // Edge case: PiercingRemaining(0) with ActivePiercings(vec![]) — same behavior.
+    // Edge case: PiercingRemaining(0) with piercing_stack(&[]) — same behavior.
     let mut app = test_app();
     let bc = super::helpers::test_bolt_definition();
     let cc = crate::cells::resources::CellConfig::default();
@@ -342,7 +342,7 @@ fn exhausted_piercing_zero_effective_also_reflects_and_stamps() {
     let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
     app.world_mut()
         .entity_mut(bolt_entity)
-        .insert((ActivePiercings(vec![]), PiercingRemaining(0)));
+        .insert((piercing_stack(&[]), PiercingRemaining(0)));
 
     tick(&mut app);
 

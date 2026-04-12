@@ -4,9 +4,9 @@
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Velocity2D;
 
-use crate::{
-    bolt::{components::PiercingRemaining, systems::bolt_cell_collision::tests::helpers::*},
-    effect::effects::piercing::ActivePiercings,
+use crate::bolt::{
+    components::PiercingRemaining, systems::bolt_cell_collision::tests::helpers::*,
+    test_utils::piercing_stack,
 };
 
 #[test]
@@ -49,7 +49,7 @@ fn non_piercing_bolt_reflects_off_cell() {
 }
 
 /// Spec behavior 8: `bolt_cell_collision` uses `ActivePiercings` for pierce check.
-/// Bolt with `ActivePiercings(vec![2])`, `PiercingRemaining(2)`, cell with `CellHealth(10.0)`.
+/// Bolt with `piercing_stack(&[2])`, `PiercingRemaining(2)`, cell with `CellHealth(10.0)`.
 /// Bolt pierces through, `PiercingRemaining` decremented to 1.
 #[test]
 fn piercing_bolt_passes_through_cell_it_would_destroy() {
@@ -69,7 +69,7 @@ fn piercing_bolt_passes_through_cell_it_would_destroy() {
     let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
     app.world_mut()
         .entity_mut(bolt_entity)
-        .insert((ActivePiercings(vec![2]), PiercingRemaining(2)));
+        .insert((piercing_stack(&[2]), PiercingRemaining(2)));
 
     tick(&mut app);
 
@@ -115,7 +115,7 @@ fn piercing_bolt_reflects_off_cell_it_would_not_destroy() {
     let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
     app.world_mut()
         .entity_mut(bolt_entity)
-        .insert((ActivePiercings(vec![1]), PiercingRemaining(1)));
+        .insert((piercing_stack(&[1]), PiercingRemaining(1)));
 
     tick(&mut app);
 

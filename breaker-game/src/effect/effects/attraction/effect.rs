@@ -3,7 +3,6 @@ use rantzsoft_physics2d::resources::CollisionQuadtree;
 use rantzsoft_spatial2d::{components::GlobalPosition2D, queries::SpatialData};
 
 use crate::{
-    bolt::queries::apply_velocity_formula,
     effect::core::AttractionType,
     prelude::*,
     shared::{BREAKER_LAYER, CELL_LAYER, WALL_LAYER},
@@ -129,7 +128,13 @@ pub(crate) fn apply_attraction(
                 nearest_max_force.map_or(nearest_force, |cap| nearest_force.min(cap));
             let steering = direction * effective_force * dt;
             spatial.velocity.0 = (spatial.velocity.0 + steering).normalize_or_zero();
-            apply_velocity_formula(&mut spatial, speed_boosts);
+            crate::bolt::queries::apply_velocity_formula(
+                &mut spatial,
+                speed_boosts.map_or(
+                    1.0,
+                    crate::effect::effects::speed_boost::ActiveSpeedBoosts::multiplier,
+                ),
+            );
         }
     }
 }
