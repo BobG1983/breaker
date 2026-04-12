@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use breaker::effect::effects::pulse::PulseRing;
+use breaker::effect_v3::effects::pulse::PulseRing;
 
 use crate::{invariants::*, lifecycle::ScenarioConfig, types::InvariantKind};
 

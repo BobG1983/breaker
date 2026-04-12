@@ -12,7 +12,7 @@ use crate::{
         components::{Bolt, BoltBaseDamage, BoltDefinitionRef},
         registry::BoltRegistry,
     },
-    effect::BoundEffects,
+    effect_v3::storage::BoundEffects,
     shared::size::BaseRadius,
 };
 

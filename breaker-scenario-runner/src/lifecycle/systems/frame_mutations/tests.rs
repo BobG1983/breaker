@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use breaker::effect::effects::gravity_well::GravityWell;
+use breaker::effect_v3::effects::gravity_well::GravityWellSource;
 use rantzsoft_physics2d::aabb::Aabb2D;
 
 use super::mutations::*;
@@ -74,7 +74,7 @@ fn apply_spawn_extra_gravity_wells_spawns_n_entities() {
 
     let count = app
         .world_mut()
-        .query_filtered::<Entity, With<GravityWell>>()
+        .query_filtered::<Entity, With<GravityWellSource>>()
         .iter(app.world())
         .count();
     assert_eq!(
@@ -95,7 +95,7 @@ fn apply_spawn_extra_gravity_wells_zero_spawns_nothing() {
 
     let count = app
         .world_mut()
-        .query_filtered::<Entity, With<GravityWell>>()
+        .query_filtered::<Entity, With<GravityWellSource>>()
         .iter(app.world())
         .count();
     assert_eq!(

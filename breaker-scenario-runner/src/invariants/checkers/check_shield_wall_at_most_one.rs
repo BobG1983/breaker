@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use breaker::effect::effects::shield::ShieldWall;
+use breaker::effect_v3::effects::shield::ShieldWall;
 
 use crate::{invariants::*, types::InvariantKind};
 

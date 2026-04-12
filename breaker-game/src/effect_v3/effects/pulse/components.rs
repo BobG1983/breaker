@@ -18,3 +18,7 @@ pub struct PulseEmitter {
     /// Current countdown timer until next pulse.
     pub timer: f32,
 }
+
+/// An expanding pulse ring spawned by a [`PulseEmitter`].
+#[derive(Component, Debug)]
+pub struct PulseRing;

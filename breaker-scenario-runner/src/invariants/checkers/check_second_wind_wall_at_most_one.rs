@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use breaker::effect::effects::second_wind::SecondWindWall;
+use breaker::effect_v3::effects::second_wind::SecondWindWall;
 
 use crate::{invariants::*, types::InvariantKind};
 

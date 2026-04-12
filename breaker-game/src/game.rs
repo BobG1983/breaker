@@ -13,7 +13,6 @@ use crate::{
     cells::CellsPlugin,
     chips::ChipsPlugin,
     debug::DebugPlugin,
-    effect::EffectPlugin,
     effect_v3::EffectV3Plugin,
     fx::FxPlugin,
     input::InputPlugin,
@@ -54,7 +53,6 @@ impl PluginGroup for Game {
             .add(rantzsoft_physics2d::plugin::RantzPhysics2dPlugin)
             .add(WallPlugin)
             .add(BreakerPlugin)
-            .add(EffectPlugin)
             .add(EffectV3Plugin)
             .add(DeathPipelinePlugin)
             .add(BoltPlugin)

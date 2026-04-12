@@ -14,13 +14,12 @@ pub(crate) use crate::{
         },
         components::Cell,
     },
-    effect::{
-        AnchorActive, AnchorPlanted, BoundEffects, EffectNode, RootEffect, StagedEffects,
+    effect_v3::{
         effects::{
-            damage_boost::ActiveDamageBoosts, flash_step::FlashStepActive,
-            size_boost::ActiveSizeBoosts, speed_boost::ActiveSpeedBoosts,
-            vulnerable::ActiveVulnerability,
+            anchor::{AnchorActive, AnchorPlanted},
+            flash_step::FlashStepActive,
         },
+        storage::{BoundEffects, StagedEffects},
     },
     shared::{birthing::Birthing, components::NodeScalingFactor},
     walls::components::Wall,

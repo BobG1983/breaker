@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use breaker::effect::effects::gravity_well::GravityWell;
+use breaker::effect_v3::effects::gravity_well::GravityWellSource;
 
 use crate::{invariants::*, lifecycle::ScenarioConfig, types::InvariantKind};
 
@@ -11,7 +11,7 @@ use crate::{invariants::*, lifecycle::ScenarioConfig, types::InvariantKind};
 /// Fires when gravity well count exceeds
 /// `invariant_params.max_gravity_well_count` (default 10).
 pub fn check_gravity_well_count_reasonable(
-    wells: Query<Entity, With<GravityWell>>,
+    wells: Query<Entity, With<GravityWellSource>>,
     config: Res<ScenarioConfig>,
     frame: Res<ScenarioFrame>,
     mut log: ResMut<ViolationLog>,
@@ -88,7 +88,7 @@ mod tests {
     fn no_violation_at_exactly_max_wells() {
         let mut app = test_app(5);
         for _ in 0..5 {
-            app.world_mut().spawn(GravityWell);
+            app.world_mut().spawn(GravityWellSource);
         }
         tick(&mut app);
         let log = app.world().resource::<ViolationLog>();
@@ -102,7 +102,7 @@ mod tests {
     fn fires_when_well_count_exceeds_max() {
         let mut app = test_app(5);
         for _ in 0..6 {
-            app.world_mut().spawn(GravityWell);
+            app.world_mut().spawn(GravityWellSource);
         }
         tick(&mut app);
         let log = app.world().resource::<ViolationLog>();
@@ -122,7 +122,7 @@ mod tests {
     fn violation_message_includes_count_and_max() {
         let mut app = test_app(5);
         for _ in 0..8 {
-            app.world_mut().spawn(GravityWell);
+            app.world_mut().spawn(GravityWellSource);
         }
         app.world_mut().resource_mut::<ScenarioFrame>().0 = 42;
         tick(&mut app);
@@ -155,7 +155,7 @@ mod tests {
         // max=20 (custom high ceiling) — 15 wells should be OK
         let mut app = test_app(20);
         for _ in 0..15 {
-            app.world_mut().spawn(GravityWell);
+            app.world_mut().spawn(GravityWellSource);
         }
         tick(&mut app);
         let log = app.world().resource::<ViolationLog>();
@@ -170,7 +170,7 @@ mod tests {
         // Same entity count (15) but with a lower max (14) — should fire
         let mut app = test_app(14);
         for _ in 0..15 {
-            app.world_mut().spawn(GravityWell);
+            app.world_mut().spawn(GravityWellSource);
         }
         tick(&mut app);
         let log = app.world().resource::<ViolationLog>();

@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use breaker::effect::effects::speed_boost::ActiveSpeedBoosts;
+use breaker::effect_v3::{effects::SpeedBoostConfig, stacking::EffectStack};
 use rantzsoft_spatial2d::components::{BaseSpeed, MaxSpeed, MinSpeed, Velocity2D};
 
 use crate::{invariants::*, types::InvariantKind};
@@ -13,7 +13,7 @@ type BoltSpeedQuery<'w, 's> = Query<
         &'static BaseSpeed,
         &'static MinSpeed,
         &'static MaxSpeed,
-        Option<&'static ActiveSpeedBoosts>,
+        Option<&'static EffectStack<SpeedBoostConfig>>,
     ),
     With<ScenarioTagBolt>,
 >;
@@ -42,7 +42,7 @@ pub fn check_bolt_speed_accurate(
         if speed < f32::EPSILON {
             continue;
         }
-        let mult = active_boosts.map_or(1.0, ActiveSpeedBoosts::multiplier);
+        let mult = active_boosts.map_or(1.0, EffectStack::aggregate);
         let expected = (base_speed.0 * mult).clamp(min_speed.0, max_speed.0);
         if (speed - expected).abs() > SPEED_TOLERANCE {
             log.0.push(ViolationEntry {
@@ -60,6 +60,8 @@ pub fn check_bolt_speed_accurate(
 
 #[cfg(test)]
 mod tests {
+    use ordered_float::OrderedFloat;
+
     use super::*;
 
     fn tick(app: &mut App) {
@@ -79,8 +81,19 @@ mod tests {
         app
     }
 
-    /// Bolt at expected speed — no violation.
-    /// expected = (400 * 1.0).clamp(200, 800) = 400. speed = 400. OK.
+    fn speed_stack(values: &[f32]) -> EffectStack<SpeedBoostConfig> {
+        let mut stack = EffectStack::default();
+        for &v in values {
+            stack.push(
+                String::new(),
+                SpeedBoostConfig {
+                    multiplier: OrderedFloat(v),
+                },
+            );
+        }
+        stack
+    }
+
     #[test]
     fn no_violation_when_speed_matches_expected() {
         let mut app = test_app_bolt_speed();
@@ -96,8 +109,6 @@ mod tests {
         assert!(log.0.is_empty());
     }
 
-    /// Bolt speed doesn't match expected — violation fires.
-    /// expected = (400 * 1.0).clamp(200, 800) = 400. speed = 600. delta = 200 > 1.0.
     #[test]
     fn fires_when_speed_does_not_match_expected() {
         let mut app = test_app_bolt_speed();
@@ -114,8 +125,6 @@ mod tests {
         assert_eq!(log.0[0].invariant, InvariantKind::BoltSpeedAccurate);
     }
 
-    /// Speed within tolerance of expected — no violation.
-    /// expected = 400. speed = 400.5. delta = 0.5 < 1.0. OK.
     #[test]
     fn no_violation_within_tolerance() {
         let mut app = test_app_bolt_speed();
@@ -131,7 +140,6 @@ mod tests {
         assert!(log.0.is_empty());
     }
 
-    /// Zero speed is skipped (serving/dead bolt).
     #[test]
     fn skips_zero_speed() {
         let mut app = test_app_bolt_speed();
@@ -147,8 +155,6 @@ mod tests {
         assert!(log.0.is_empty());
     }
 
-    /// With speed boost, expected = (400 * 2.0).clamp(200, 800) = 800.
-    /// speed = 800. OK.
     #[test]
     fn no_violation_with_speed_boost_at_expected() {
         let mut app = test_app_bolt_speed();
@@ -158,14 +164,13 @@ mod tests {
             BaseSpeed(400.0),
             MinSpeed(200.0),
             MaxSpeed(800.0),
-            ActiveSpeedBoosts(vec![2.0]),
+            speed_stack(&[2.0]),
         ));
         tick(&mut app);
         let log = app.world().resource::<ViolationLog>();
         assert!(log.0.is_empty());
     }
 
-    /// With speed boost, expected = 800 but speed = 400. Violation.
     #[test]
     fn fires_with_speed_boost_when_speed_wrong() {
         let mut app = test_app_bolt_speed();
@@ -175,15 +180,13 @@ mod tests {
             BaseSpeed(400.0),
             MinSpeed(200.0),
             MaxSpeed(800.0),
-            ActiveSpeedBoosts(vec![2.0]),
+            speed_stack(&[2.0]),
         ));
         tick(&mut app);
         let log = app.world().resource::<ViolationLog>();
         assert_eq!(log.0.len(), 1);
     }
 
-    /// Base speed below min — expected clamped to min.
-    /// expected = (100 * 1.0).clamp(200, 800) = 200. speed = 200. OK.
     #[test]
     fn base_below_min_clamps_to_min() {
         let mut app = test_app_bolt_speed();
@@ -199,8 +202,6 @@ mod tests {
         assert!(log.0.is_empty());
     }
 
-    /// Base speed above max — expected clamped to max.
-    /// expected = (1000 * 1.0).clamp(200, 800) = 800. speed = 800. OK.
     #[test]
     fn base_above_max_clamps_to_max() {
         let mut app = test_app_bolt_speed();
@@ -216,8 +217,6 @@ mod tests {
         assert!(log.0.is_empty());
     }
 
-    /// Boost pushes base*mult above max — expected clamped to max.
-    /// expected = (400 * 3.0).clamp(200, 800) = 800. speed = 800. OK.
     #[test]
     fn boost_above_max_clamps_to_max() {
         let mut app = test_app_bolt_speed();
@@ -227,7 +226,7 @@ mod tests {
             BaseSpeed(400.0),
             MinSpeed(200.0),
             MaxSpeed(800.0),
-            ActiveSpeedBoosts(vec![3.0]),
+            speed_stack(&[3.0]),
         ));
         tick(&mut app);
         let log = app.world().resource::<ViolationLog>();

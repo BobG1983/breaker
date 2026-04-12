@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use breaker::{
-    breaker::components::BaseWidth, effect::effects::size_boost::ActiveSizeBoosts,
+    breaker::components::BaseWidth,
+    effect_v3::{effects::SizeBoostConfig, stacking::EffectStack},
     shared::PlayfieldConfig,
 };
 use rantzsoft_spatial2d::components::Position2D;
@@ -8,14 +9,22 @@ use rantzsoft_spatial2d::components::Position2D;
 use crate::{invariants::*, types::InvariantKind};
 
 /// Checks that the tagged breaker's x position stays within `playfield.right() - half_width`.
-///
+type BreakerPositionQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        &'static Position2D,
+        &'static BaseWidth,
+        Option<&'static EffectStack<SizeBoostConfig>>,
+    ),
+    With<ScenarioTagBreaker>,
+>;
+
 /// Appends a [`ViolationEntry`] with [`InvariantKind::BreakerPositionClamped`] when the
 /// breaker is outside the tight clamping bounds (with 1px tolerance).
 pub fn check_breaker_position_clamped(
-    breakers: Query<
-        (Entity, &Position2D, &BaseWidth, Option<&ActiveSizeBoosts>),
-        With<ScenarioTagBreaker>,
-    >,
+    breakers: BreakerPositionQuery,
     playfield: Res<PlayfieldConfig>,
     frame: Res<ScenarioFrame>,
     mut log: ResMut<ViolationLog>,
@@ -26,7 +35,7 @@ pub fn check_breaker_position_clamped(
     }
     let tolerance = 1.0_f32;
     for (entity, position, width, size_boosts) in &breakers {
-        let boost_mult = size_boosts.map_or(1.0, ActiveSizeBoosts::multiplier);
+        let boost_mult = size_boosts.map_or(1.0, EffectStack::aggregate);
         let effective_half_width = width.half_width() * boost_mult;
         let max_x = playfield.right() - effective_half_width;
         let min_x = playfield.left() + effective_half_width;
@@ -47,7 +56,20 @@ pub fn check_breaker_position_clamped(
 
 #[cfg(test)]
 mod tests {
-    use breaker::effect::effects::size_boost::ActiveSizeBoosts;
+    use ordered_float::OrderedFloat;
+
+    fn size_stack(values: &[f32]) -> EffectStack<SizeBoostConfig> {
+        let mut stack = EffectStack::default();
+        for &v in values {
+            stack.push(
+                String::new(),
+                SizeBoostConfig {
+                    multiplier: OrderedFloat(v),
+                },
+            );
+        }
+        stack
+    }
 
     use super::*;
 
@@ -155,7 +177,7 @@ mod tests {
             ScenarioTagBreaker,
             Position2D(Vec2::new(270.0, -250.0)),
             BaseWidth(120.0),
-            ActiveSizeBoosts(vec![2.0]),
+            size_stack(&[2.0]),
         ));
 
         tick(&mut app);
@@ -177,7 +199,7 @@ mod tests {
             ScenarioTagBreaker,
             Position2D(Vec2::new(280.0, -250.0)),
             BaseWidth(120.0),
-            ActiveSizeBoosts(vec![2.0]),
+            size_stack(&[2.0]),
         ));
 
         tick(&mut app);
@@ -200,7 +222,7 @@ mod tests {
             ScenarioTagBreaker,
             Position2D(Vec2::new(300.0, -250.0)),
             BaseWidth(120.0),
-            ActiveSizeBoosts(vec![2.0]),
+            size_stack(&[2.0]),
         ));
 
         tick(&mut app);
@@ -224,7 +246,7 @@ mod tests {
             ScenarioTagBreaker,
             Position2D(Vec2::new(281.5, -250.0)),
             BaseWidth(120.0),
-            ActiveSizeBoosts(vec![2.0]),
+            size_stack(&[2.0]),
         ));
 
         tick(&mut app);
@@ -248,7 +270,7 @@ mod tests {
             ScenarioTagBreaker,
             Position2D(Vec2::new(280.5, -250.0)),
             BaseWidth(120.0),
-            ActiveSizeBoosts(vec![2.0]),
+            size_stack(&[2.0]),
         ));
 
         tick(&mut app);
@@ -270,7 +292,7 @@ mod tests {
             ScenarioTagBreaker,
             Position2D(Vec2::new(281.0, -250.0)),
             BaseWidth(120.0),
-            ActiveSizeBoosts(vec![2.0]),
+            size_stack(&[2.0]),
         ));
 
         tick(&mut app);
@@ -293,7 +315,7 @@ mod tests {
             ScenarioTagBreaker,
             Position2D(Vec2::new(250.0, -250.0)),
             BaseWidth(120.0),
-            ActiveSizeBoosts(vec![1.5, 2.0]),
+            size_stack(&[1.5, 2.0]),
         ));
 
         tick(&mut app);
@@ -317,7 +339,7 @@ mod tests {
             ScenarioTagBreaker,
             Position2D(Vec2::new(215.0, -250.0)),
             BaseWidth(120.0),
-            ActiveSizeBoosts(vec![1.5, 2.0]),
+            size_stack(&[1.5, 2.0]),
         ));
 
         tick(&mut app);
@@ -340,7 +362,7 @@ mod tests {
             ScenarioTagBreaker,
             Position2D(Vec2::new(-270.0, -250.0)),
             BaseWidth(120.0),
-            ActiveSizeBoosts(vec![2.0]),
+            size_stack(&[2.0]),
         ));
 
         tick(&mut app);
@@ -362,7 +384,7 @@ mod tests {
             ScenarioTagBreaker,
             Position2D(Vec2::new(-300.0, -250.0)),
             BaseWidth(120.0),
-            ActiveSizeBoosts(vec![2.0]),
+            size_stack(&[2.0]),
         ));
 
         tick(&mut app);
@@ -387,7 +409,7 @@ mod tests {
             ScenarioTagBreaker,
             Position2D(Vec2::new(335.0, -250.0)),
             BaseWidth(120.0),
-            ActiveSizeBoosts(vec![]),
+            size_stack(&[]),
         ));
 
         tick(&mut app);

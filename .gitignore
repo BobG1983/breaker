@@ -9,4 +9,3 @@ rustc-ice-*.txt
 .claude/plans/
 /logs/
 /recordings/
-/graphify-out/

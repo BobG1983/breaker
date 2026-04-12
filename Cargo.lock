@@ -1847,6 +1847,7 @@ dependencies = [
  "bevy",
  "breaker",
  "clap",
+ "ordered-float",
  "rand 0.9.2",
  "rantzsoft_physics2d",
  "rantzsoft_spatial2d",

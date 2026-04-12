@@ -6,9 +6,9 @@ use bevy::{ecs::system::SystemParam, prelude::*};
 use breaker::{
     breaker::components::{DashState, PrimaryBreaker},
     chips::inventory::ChipInventory,
-    effect::effects::{
+    effect_v3::effects::{
         chain_lightning::{ChainLightningArc, ChainLightningChain, ChainState},
-        gravity_well::{GravityWell, GravityWellConfig},
+        gravity_well::GravityWellSource,
         pulse::PulseRing,
         second_wind::SecondWindWall,
         shield::ShieldWall,
@@ -194,7 +194,7 @@ fn apply_spawn_extra_chain_arcs(count: usize, commands: &mut Commands) {
     for _ in 0..count {
         commands.spawn((
             ChainLightningChain {
-                source: Vec2::ZERO,
+                source_pos: Vec2::ZERO,
                 remaining_jumps: 0,
                 damage: 0.0,
                 hit_set: HashSet::new(),
@@ -325,21 +325,12 @@ pub fn apply_inject_mismatched_bolt_aabb(bolts: &mut Query<&mut Aabb2D, With<Sce
     }
 }
 
-/// Spawns `count` extra [`GravityWell`] entities.
+/// Spawns `count` extra [`GravityWellSource`] entities.
 ///
 /// Used exclusively by the `gravity_well_count_reasonable` self-test scenario.
 pub fn apply_spawn_extra_gravity_wells(count: usize, commands: &mut Commands) {
     for _ in 0..count {
-        commands.spawn((
-            GravityWell,
-            GravityWellConfig {
-                strength: 0.0,
-                radius: 0.0,
-                remaining: 999.0,
-                owner: Entity::PLACEHOLDER,
-            },
-            CleanupOnExit::<NodeState>::default(),
-        ));
+        commands.spawn((GravityWellSource, CleanupOnExit::<NodeState>::default()));
     }
 }
 

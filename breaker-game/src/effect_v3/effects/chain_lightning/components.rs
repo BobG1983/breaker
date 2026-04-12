@@ -23,6 +23,10 @@ pub struct ChainLightningChain {
     pub source_pos: Vec2,
 }
 
+/// Visual arc entity traveling between chain lightning targets.
+#[derive(Component, Debug)]
+pub struct ChainLightningArc;
+
 /// State machine for a single chain lightning arc.
 #[derive(Debug, Clone)]
 pub enum ChainState {

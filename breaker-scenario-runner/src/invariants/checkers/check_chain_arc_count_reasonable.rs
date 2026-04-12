@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use breaker::effect::effects::chain_lightning::{ChainLightningArc, ChainLightningChain};
+use breaker::effect_v3::effects::chain_lightning::{ChainLightningArc, ChainLightningChain};
 
 use crate::{invariants::*, lifecycle::ScenarioConfig, types::InvariantKind};
 
@@ -41,7 +41,7 @@ pub fn check_chain_arc_count_reasonable(
 mod tests {
     use std::collections::HashSet;
 
-    use breaker::{effect::effects::chain_lightning::ChainState, state::types::NodeState};
+    use breaker::{effect_v3::effects::chain_lightning::ChainState, state::types::NodeState};
     use rantzsoft_stateflow::CleanupOnExit;
 
     use super::*;
@@ -82,7 +82,7 @@ mod tests {
         world
             .spawn((
                 ChainLightningChain {
-                    source: Vec2::ZERO,
+                    source_pos: Vec2::ZERO,
                     remaining_jumps: 0,
                     damage: 0.0,
                     hit_set: HashSet::new(),

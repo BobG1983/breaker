@@ -24,8 +24,6 @@ pub mod breaker;
 pub mod cells;
 pub mod chips;
 pub(crate) mod debug;
-/// Data-driven trigger→effect pipeline (old domain — active until migration complete).
-pub mod effect;
 /// New effect domain (v3) — coexists with old domain during migration.
 #[allow(
     dead_code,

@@ -13,7 +13,7 @@ use crate::lifecycle::tests::helpers::*;
 #[test]
 fn apply_debug_frame_mutations_spawn_extra_chain_arcs_at_matching_frame() {
     use breaker::{
-        effect::effects::chain_lightning::{ChainLightningArc, ChainLightningChain},
+        effect_v3::effects::chain_lightning::{ChainLightningArc, ChainLightningChain},
         state::types::NodeState,
     };
     use rantzsoft_stateflow::CleanupOnExit;
@@ -87,7 +87,7 @@ fn apply_debug_frame_mutations_spawn_extra_chain_arcs_at_matching_frame() {
 /// entities should be spawned.
 #[test]
 fn apply_debug_frame_mutations_spawn_extra_chain_arcs_zero_spawns_nothing() {
-    use breaker::effect::effects::chain_lightning::{ChainLightningArc, ChainLightningChain};
+    use breaker::effect_v3::effects::chain_lightning::{ChainLightningArc, ChainLightningChain};
 
     let definition = ScenarioDefinition {
         breaker: "Aegis".to_owned(),
@@ -139,7 +139,7 @@ fn apply_debug_frame_mutations_spawn_extra_chain_arcs_zero_spawns_nothing() {
 /// current frame is 29, no entities should be spawned.
 #[test]
 fn apply_debug_frame_mutations_spawn_extra_chain_arcs_skips_non_matching_frame() {
-    use breaker::effect::effects::chain_lightning::{ChainLightningArc, ChainLightningChain};
+    use breaker::effect_v3::effects::chain_lightning::{ChainLightningArc, ChainLightningChain};
 
     let definition = ScenarioDefinition {
         breaker: "Aegis".to_owned(),
@@ -186,7 +186,7 @@ fn apply_debug_frame_mutations_spawn_extra_chain_arcs_skips_non_matching_frame()
 /// Frame 31 also does not trigger the mutation at frame 30.
 #[test]
 fn apply_debug_frame_mutations_spawn_extra_chain_arcs_skips_frame_after() {
-    use breaker::effect::effects::chain_lightning::{ChainLightningArc, ChainLightningChain};
+    use breaker::effect_v3::effects::chain_lightning::{ChainLightningArc, ChainLightningChain};
 
     let definition = ScenarioDefinition {
         breaker: "Aegis".to_owned(),
