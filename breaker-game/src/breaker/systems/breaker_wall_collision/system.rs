@@ -10,6 +10,7 @@ use rantzsoft_physics2d::resources::CollisionQuadtree;
 
 use crate::{
     breaker::queries::BreakerSizeData,
+    effect_v3::{effects::SizeBoostConfig, stacking::EffectStack},
     prelude::*,
     shared::{BREAKER_LAYER, WALL_LAYER},
 };
@@ -36,7 +37,7 @@ pub(crate) fn breaker_wall_collision(
 
     let size_mult = breaker
         .size_boosts
-        .map_or(1.0, ActiveSizeBoosts::multiplier);
+        .map_or(1.0, EffectStack::<SizeBoostConfig>::aggregate);
     let scale = breaker.node_scale.map_or(1.0, |s| s.0);
     let half_w = breaker.base_width.half_width() * size_mult * scale;
     let half_h = breaker.base_height.half_height() * size_mult * scale;

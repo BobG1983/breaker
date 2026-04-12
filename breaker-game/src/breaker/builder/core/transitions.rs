@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use super::types::*;
 use crate::{
     breaker::{components::Breaker, definition::BreakerDefinition},
-    effect::RootEffect,
+    effect_v3::types::RootNode,
 };
 
 // ── Entry point ─────────────────────────────────────────────────────────────
@@ -322,7 +322,7 @@ impl<D, Mv, Da, Sp, Bm, V, R> BreakerBuilder<D, Mv, Da, Sp, Bm, V, R> {
 
     /// Sets the effect chains.
     #[must_use]
-    pub fn with_effects(mut self, effects: Vec<RootEffect>) -> Self {
+    pub fn with_effects(mut self, effects: Vec<RootNode>) -> Self {
         self.optional.effects = Some(effects);
         self
     }

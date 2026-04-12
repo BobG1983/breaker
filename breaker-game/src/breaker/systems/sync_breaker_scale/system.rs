@@ -7,7 +7,7 @@ use bevy::prelude::*;
 
 use crate::{
     breaker::{components::Breaker, queries::SyncBreakerScaleData},
-    effect::effects::size_boost::ActiveSizeBoosts,
+    effect_v3::{effects::SizeBoostConfig, stacking::EffectStack},
     shared::size::{ClampRange, effective_size},
 };
 
@@ -21,7 +21,8 @@ pub(crate) fn sync_breaker_scale(mut query: Query<SyncBreakerScaleData, With<Bre
         let size = effective_size(
             data.base_width.0,
             data.base_height.0,
-            data.size_boosts.map_or(1.0, ActiveSizeBoosts::multiplier),
+            data.size_boosts
+                .map_or(1.0, EffectStack::<SizeBoostConfig>::aggregate),
             data.node_scale.map_or(1.0, |s| s.0),
             ClampRange {
                 min: data.min_w.map(|m| m.0),

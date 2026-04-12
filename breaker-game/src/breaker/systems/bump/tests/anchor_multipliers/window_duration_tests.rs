@@ -11,7 +11,7 @@ use crate::{
         },
         systems::bump::tests::helpers::*,
     },
-    effect::{AnchorActive, AnchorPlanted},
+    effect_v3::effects::anchor::{AnchorActive, AnchorPlanted},
 };
 
 // -- Behavior 4: Forward window total duration includes widened perfect window --

@@ -1,4 +1,5 @@
 use bevy::{math::curve::easing::EaseFunction, prelude::*};
+use ordered_float::OrderedFloat;
 use rantzsoft_spatial2d::components::{MaxSpeed, Position2D, Velocity2D};
 
 use super::{super::data::*, helpers::*};
@@ -6,8 +7,37 @@ use crate::{
     breaker::components::{
         BaseWidth, Breaker, BreakerAcceleration, BreakerDeceleration, DashState, DecelEasing,
     },
-    effect::effects::{size_boost::ActiveSizeBoosts, speed_boost::ActiveSpeedBoosts},
+    effect_v3::{
+        effects::{SizeBoostConfig, SpeedBoostConfig},
+        stacking::EffectStack,
+    },
 };
+
+fn speed_stack(values: &[f32]) -> EffectStack<SpeedBoostConfig> {
+    let mut stack = EffectStack::default();
+    for &v in values {
+        stack.push(
+            "test".into(),
+            SpeedBoostConfig {
+                multiplier: OrderedFloat(v),
+            },
+        );
+    }
+    stack
+}
+
+fn size_stack(values: &[f32]) -> EffectStack<SizeBoostConfig> {
+    let mut stack = EffectStack::default();
+    for &v in values {
+        stack.push(
+            "test".into(),
+            SizeBoostConfig {
+                multiplier: OrderedFloat(v),
+            },
+        );
+    }
+    stack
+}
 
 // ── Part C: BreakerMovementData (mutable) ───────────────────────
 
@@ -102,8 +132,8 @@ fn breaker_movement_data_optional_boosts_present() {
             strength: 1.0,
         },
         BaseWidth(120.0),
-        ActiveSpeedBoosts(vec![1.5]),
-        ActiveSizeBoosts(vec![2.0]),
+        speed_stack(&[1.5]),
+        size_stack(&[2.0]),
     ));
 
     app.add_systems(

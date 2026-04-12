@@ -8,7 +8,7 @@ use crate::{
         DashSpeedMultiplier, DashState, DashStateTimer, DashTilt, DashTiltEase, DecelEasing,
         SettleDuration, SettleTiltEase,
     },
-    effect::effects::flash_step::FlashStepActive,
+    effect_v3::effects::flash_step::FlashStepActive,
 };
 
 // ── Part D: BreakerDashData (mutable) ───────────────────────────

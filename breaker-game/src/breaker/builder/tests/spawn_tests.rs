@@ -4,7 +4,11 @@ use rantzsoft_spatial2d::components::MaxSpeed;
 use super::helpers::test_breaker_definition;
 use crate::{
     breaker::components::{Breaker, BreakerBaseY, PrimaryBreaker},
-    effect::{BoundEffects, EffectKind, EffectNode, RootEffect, Target, Trigger},
+    effect_v3::{
+        effects::LoseLifeConfig,
+        storage::BoundEffects,
+        types::{EffectType, RootNode, StampTarget, Tree, Trigger},
+    },
 };
 
 fn test_app() -> App {
@@ -61,13 +65,13 @@ fn spawn_creates_entity_with_build_components() {
 #[test]
 fn spawn_dispatches_effects_when_present() {
     let mut def = test_breaker_definition();
-    def.effects = vec![RootEffect::On {
-        target: Target::Breaker,
-        then: vec![EffectNode::When {
-            trigger: Trigger::BoltLost,
-            then: vec![EffectNode::Do(EffectKind::LoseLife)],
-        }],
-    }];
+    def.effects = vec![RootNode::Stamp(
+        StampTarget::Breaker,
+        Tree::When(
+            Trigger::BoltLostOccurred,
+            Box::new(Tree::Fire(EffectType::LoseLife(LoseLifeConfig {}))),
+        ),
+    )];
 
     let mut app = test_app();
     app.add_systems(Update, move |mut commands: Commands| {
@@ -91,7 +95,7 @@ fn spawn_dispatches_effects_when_present() {
     );
     assert!(
         !bound.unwrap().0.is_empty(),
-        "BoundEffects should contain the When/Do chain"
+        "BoundEffects should contain the When/Fire chain"
     );
 }
 
@@ -140,13 +144,13 @@ fn spawn_does_not_dispatch_effects_when_empty() {
 #[test]
 fn spawn_passes_source_chip_none_to_dispatch() {
     let mut def = test_breaker_definition();
-    def.effects = vec![RootEffect::On {
-        target: Target::Breaker,
-        then: vec![EffectNode::When {
-            trigger: Trigger::BoltLost,
-            then: vec![EffectNode::Do(EffectKind::LoseLife)],
-        }],
-    }];
+    def.effects = vec![RootNode::Stamp(
+        StampTarget::Breaker,
+        Tree::When(
+            Trigger::BoltLostOccurred,
+            Box::new(Tree::Fire(EffectType::LoseLife(LoseLifeConfig {}))),
+        ),
+    )];
 
     let mut app = test_app();
     app.add_systems(Update, move |mut commands: Commands| {

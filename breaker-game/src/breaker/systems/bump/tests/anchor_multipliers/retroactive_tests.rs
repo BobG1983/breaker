@@ -12,7 +12,7 @@ use crate::{
         messages::BumpGrade,
         systems::bump::tests::helpers::*,
     },
-    effect::{AnchorActive, AnchorPlanted},
+    effect_v3::effects::anchor::{AnchorActive, AnchorPlanted},
 };
 
 // -- Behavior 3b: Retroactive grade uses widened perfect window via pre-seeded post_hit_timer --

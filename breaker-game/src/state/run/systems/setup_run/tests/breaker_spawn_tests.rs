@@ -15,7 +15,7 @@ use crate::{
         registry::BreakerRegistry,
         resources::SelectedBreaker,
     },
-    effect::effects::life_lost::LivesCount,
+    shared::death_pipeline::Hp,
     state::types::{NodeState, RunState},
 };
 
@@ -268,10 +268,10 @@ fn spawned_breaker_has_max_speed_from_definition() {
     );
 }
 
-// ── Behavior 9: Spawned breaker has LivesCount from definition ────────
+// ── Behavior 9: Spawned breaker has Hp from definition ────────
 
 #[test]
-fn spawned_breaker_has_lives_count_some_3() {
+fn spawned_breaker_has_hp_from_definition() {
     // Aegis definition has life_pool: Some(3)
     let mut app = test_app();
     app.update();
@@ -282,21 +282,20 @@ fn spawned_breaker_has_lives_count_some_3() {
         .iter(app.world())
         .next()
         .expect("breaker should exist");
-    let lives = app
+    let hp = app
         .world()
-        .get::<LivesCount>(entity)
-        .expect("breaker should have LivesCount");
-    assert_eq!(
-        lives.0,
-        Some(3),
-        "LivesCount should be Some(3) for Aegis, got {:?}",
-        lives.0
+        .get::<Hp>(entity)
+        .expect("Aegis breaker should have Hp (life_pool: Some(3))");
+    assert!(
+        (hp.current - 3.0).abs() < f32::EPSILON,
+        "Hp.current should be 3.0 for Aegis (3 lives), got {}",
+        hp.current
     );
 }
 
 #[test]
-fn spawned_breaker_has_lives_count_none_for_chrono() {
-    // Edge case: Chrono has life_pool: None
+fn spawned_breaker_has_no_hp_for_chrono() {
+    // Edge case: Chrono has life_pool: None → no Hp component
     let mut app = test_app();
     let chrono_def: BreakerDefinition =
         ron::de::from_str(r#"(name: "Chrono", life_pool: None, effects: [])"#)
@@ -314,14 +313,9 @@ fn spawned_breaker_has_lives_count_none_for_chrono() {
         .iter(app.world())
         .next()
         .expect("breaker should exist");
-    let lives = app
-        .world()
-        .get::<LivesCount>(entity)
-        .expect("breaker should have LivesCount");
-    assert_eq!(
-        lives.0, None,
-        "LivesCount should be None for Chrono, got {:?}",
-        lives.0
+    assert!(
+        app.world().get::<Hp>(entity).is_none(),
+        "Chrono breaker should NOT have Hp (life_pool: None)"
     );
 }
 

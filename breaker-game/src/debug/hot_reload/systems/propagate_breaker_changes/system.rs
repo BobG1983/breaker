@@ -5,9 +5,11 @@ use rantzsoft_spatial2d::components::MaxSpeed;
 
 use crate::{
     breaker::{BreakerRegistry, SelectedBreaker, components::*},
-    effect::{Target, effects::life_lost::LivesCount},
     prelude::*,
-    shared::size::{MaxHeight, MaxWidth, MinHeight, MinWidth},
+    shared::{
+        death_pipeline::Hp,
+        size::{MaxHeight, MaxWidth, MinHeight, MinWidth},
+    },
 };
 
 /// Bundled system parameters for the breaker change propagation system.
@@ -20,6 +22,11 @@ pub(crate) struct BreakerChangeContext<'w, 's> {
     /// Breaker entities for re-stamping components.
     breaker_query: Query<'w, 's, Entity, With<Breaker>>,
     /// Breaker `BoundEffects` for populating from definition.
+    /// Deferred until `effect_v3` `BoundEffects` migration is complete.
+    #[allow(
+        dead_code,
+        reason = "deferred until effect_v3 BoundEffects migration complete"
+    )]
     breaker_chains_query: Query<'w, 's, &'static mut BoundEffects, With<Breaker>>,
     /// Command buffer for entity modifications.
     commands: Commands<'w, 's>,
@@ -28,7 +35,7 @@ pub(crate) struct BreakerChangeContext<'w, 's> {
 /// Detects when `propagate_registry` has rebuilt the `BreakerRegistry`
 /// and if the selected breaker was modified:
 /// 1. Re-stamps all definition-derived components on breaker entities
-/// 2. Resets `LivesCount` if breaker has `life_pool`
+/// 2. Inserts `Hp` if breaker has `life_pool`
 /// 3. Rebuilds breaker entity `BoundEffects`
 pub(crate) fn propagate_breaker_changes(mut ctx: BreakerChangeContext) {
     if !ctx.registry.is_changed() || ctx.registry.is_added() {
@@ -90,32 +97,18 @@ pub(crate) fn propagate_breaker_changes(mut ctx: BreakerChangeContext) {
                     rise_ease: def.bump_visual_rise_ease,
                     fall_ease: def.bump_visual_fall_ease,
                 },
-                LivesCount(def.life_pool),
             ));
-    }
 
-    // Resolve On targets to entity BoundEffects
-    // Preserve chip-sourced entries (non-empty chip name), remove definition-sourced
-    for mut chains in &mut ctx.breaker_chains_query {
-        chains.0.retain(|(chip_name, _)| !chip_name.is_empty());
-    }
-    for root in &def.effects {
-        let RootEffect::On { target, then } = root;
-        match target {
-            Target::Breaker => {
-                for mut chains in &mut ctx.breaker_chains_query {
-                    for child in then {
-                        chains.0.push((String::new(), child.clone()));
-                    }
-                }
-            }
-            // At hot-reload time, bolt/cell/wall targets are not resolved here
-            Target::Bolt
-            | Target::AllBolts
-            | Target::Cell
-            | Target::AllCells
-            | Target::Wall
-            | Target::AllWalls => {}
+        // Insert Hp if breaker has a finite life pool
+        if let Some(pool) = def.life_pool {
+            #[allow(clippy::cast_precision_loss, reason = "life pool values are small u32")]
+            ctx.commands.entity(entity).insert(Hp::new(pool as f32));
         }
     }
+
+    // TODO(effect_v3 migration): Re-stamp breaker definition effects.
+    // Hot-reload propagation of effect trees is deferred until all domains
+    // use effect_v3 BoundEffects. Currently the entity still has old-domain
+    // BoundEffects which is incompatible with new RootNode/Tree types.
+    let _ = &def.effects;
 }

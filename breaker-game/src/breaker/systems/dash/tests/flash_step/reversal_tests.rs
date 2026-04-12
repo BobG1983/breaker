@@ -11,7 +11,7 @@ use crate::{
         },
         definition::BreakerDefinition,
     },
-    effect::effects::flash_step::FlashStepActive,
+    effect_v3::effects::flash_step::FlashStepActive,
     input::resources::{GameAction, InputActions},
 };
 

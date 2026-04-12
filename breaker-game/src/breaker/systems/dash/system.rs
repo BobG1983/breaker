@@ -15,6 +15,10 @@ use crate::{
         },
         queries::BreakerDashData,
     },
+    effect_v3::{
+        effects::{SizeBoostConfig, SpeedBoostConfig, flash_step::FlashStepActive},
+        stacking::EffectStack,
+    },
     input::resources::GameAction,
     prelude::*,
     shared::BaseWidth,
@@ -44,8 +48,8 @@ struct SettleContext<'a> {
     position: Option<&'a mut Position2D>,
     breaker_width: Option<&'a BaseWidth>,
     playfield: &'a PlayfieldConfig,
-    speed_mult: Option<&'a ActiveSpeedBoosts>,
-    size_mult: Option<&'a ActiveSizeBoosts>,
+    speed_mult: Option<&'a EffectStack<SpeedBoostConfig>>,
+    size_mult: Option<&'a EffectStack<SizeBoostConfig>>,
 }
 
 /// Handles dash input and the Dashing → Braking → Settling → Idle state machine.
@@ -176,15 +180,19 @@ fn handle_idle_or_settling(
         && direction * ease_start_before_tick > 0.0
         && let Some(pos) = ctx.position.as_deref_mut()
     {
-        let effective_max_speed =
-            p.max_speed.0 * ctx.speed_mult.map_or(1.0, ActiveSpeedBoosts::multiplier);
+        let effective_max_speed = p.max_speed.0
+            * ctx
+                .speed_mult
+                .map_or(1.0, EffectStack::<SpeedBoostConfig>::aggregate);
         let teleport_distance =
             direction * effective_max_speed * p.dash_speed.0 * p.dash_duration.0;
         pos.0.x += teleport_distance;
 
         // Clamp to playfield bounds accounting for effective half-width
         let effective_half_width = ctx.breaker_width.map_or(0.0, BaseWidth::half_width)
-            * ctx.size_mult.map_or(1.0, ActiveSizeBoosts::multiplier);
+            * ctx
+                .size_mult
+                .map_or(1.0, EffectStack::<SizeBoostConfig>::aggregate);
         let min_x = ctx.playfield.left() + effective_half_width;
         let max_x = ctx.playfield.right() - effective_half_width;
         pos.0.x = pos.0.x.clamp(min_x, max_x);

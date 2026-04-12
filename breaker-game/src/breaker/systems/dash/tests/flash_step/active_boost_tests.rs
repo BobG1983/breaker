@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use ordered_float::OrderedFloat;
 use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use super::helpers::*;
@@ -7,18 +8,45 @@ use crate::{
         components::{BaseWidth, Breaker, BreakerTilt, DashState, DashStateTimer},
         definition::BreakerDefinition,
     },
-    effect::effects::{
-        flash_step::FlashStepActive, size_boost::ActiveSizeBoosts, speed_boost::ActiveSpeedBoosts,
+    effect_v3::{
+        effects::{SizeBoostConfig, SpeedBoostConfig, flash_step::FlashStepActive},
+        stacking::EffectStack,
     },
     input::resources::{GameAction, InputActions},
 };
+
+fn speed_stack(values: &[f32]) -> EffectStack<SpeedBoostConfig> {
+    let mut stack = EffectStack::default();
+    for &v in values {
+        stack.push(
+            "test".into(),
+            SpeedBoostConfig {
+                multiplier: OrderedFloat(v),
+            },
+        );
+    }
+    stack
+}
+
+fn size_stack(values: &[f32]) -> EffectStack<SizeBoostConfig> {
+    let mut stack = EffectStack::default();
+    for &v in values {
+        stack.push(
+            "test".into(),
+            SizeBoostConfig {
+                multiplier: OrderedFloat(v),
+            },
+        );
+    }
+    stack
+}
 
 // -- Behavior 9: ActiveSpeedBoosts affects teleport distance --
 
 #[test]
 fn flash_step_teleport_respects_speed_multiplier_for_distance() {
     // Given: Breaker at (200, -250), Settling from rightward dash (ease_start=-0.35),
-    //        FlashStepActive, ActiveSpeedBoosts(vec![1.5]), MaxSpeed(1000),
+    //        FlashStepActive, speed_stack(&[1.5]), MaxSpeed(1000),
     //        DashSpeedMultiplier(4), DashDuration(0.15)
     // When: DashLeft
     // Then: Position2D.x == -340.0 (clamped: unclamped 200 - 900 = -700, playfield left -400 + half_width 60 = -340)
@@ -39,7 +67,7 @@ fn flash_step_teleport_respects_speed_multiplier_for_distance() {
             Position2D(Vec2::new(200.0, config.y_position)),
             BaseWidth(config.width),
             FlashStepActive,
-            ActiveSpeedBoosts(vec![1.5]),
+            speed_stack(&[1.5]),
             breaker_param_bundle(&config),
         ))
         .id();
@@ -62,7 +90,7 @@ fn flash_step_teleport_respects_speed_multiplier_for_distance() {
 
 #[test]
 fn flash_step_teleport_with_speed_multiplier_one_matches_no_multiplier() {
-    // Edge case: ActiveSpeedBoosts(vec![1.0]) same result as no multiplier (600 distance, clamped)
+    // Edge case: speed_stack(&[1.0]) same result as no multiplier (600 distance, clamped)
     let mut app = test_app();
     let config = BreakerDefinition::default();
     let entity = app
@@ -80,7 +108,7 @@ fn flash_step_teleport_with_speed_multiplier_one_matches_no_multiplier() {
             Position2D(Vec2::new(0.0, config.y_position)),
             BaseWidth(config.width),
             FlashStepActive,
-            ActiveSpeedBoosts(vec![1.0]),
+            speed_stack(&[1.0]),
             breaker_param_bundle(&config),
         ))
         .id();
@@ -106,7 +134,7 @@ fn flash_step_teleport_with_speed_multiplier_one_matches_no_multiplier() {
 #[test]
 fn flash_step_teleport_reads_active_speed_boosts_for_distance() {
     // Given: Breaker at (200.0, y_position), Settling from rightward dash (ease_start=-0.35),
-    //        FlashStepActive, ActiveSpeedBoosts(vec![1.5])
+    //        FlashStepActive, speed_stack(&[1.5])
     // When: DashLeft
     // Then: Position2D.x clamped to playfield left + half_width
     let mut app = test_app();
@@ -126,7 +154,7 @@ fn flash_step_teleport_reads_active_speed_boosts_for_distance() {
             Position2D(Vec2::new(200.0, config.y_position)),
             BaseWidth(config.width),
             FlashStepActive,
-            ActiveSpeedBoosts(vec![1.5]),
+            speed_stack(&[1.5]),
             breaker_param_bundle(&config),
         ))
         .id();
@@ -153,7 +181,7 @@ fn flash_step_teleport_reads_active_speed_boosts_for_distance() {
 #[test]
 fn flash_step_teleport_reads_active_size_boosts_for_clamp_half_width() {
     // Given: Breaker at (300.0, y_position), Settling from leftward dash (ease_start=0.35),
-    //        FlashStepActive, ActiveSizeBoosts(vec![2.0]), BaseWidth(default),
+    //        FlashStepActive, size_stack(&[2.0]), BaseWidth(default),
     //        DashRight input, playfield right = 400.0
     // When: dash system clamps after flash step teleport
     // Then: effective_half_w = half_width * 2.0 -> max_x = 400.0 - effective_half_w
@@ -175,7 +203,7 @@ fn flash_step_teleport_reads_active_size_boosts_for_clamp_half_width() {
             Position2D(Vec2::new(300.0, config.y_position)),
             BaseWidth(config.width),
             FlashStepActive,
-            ActiveSizeBoosts(vec![2.0]),
+            size_stack(&[2.0]),
             breaker_param_bundle(&config),
         ))
         .id();

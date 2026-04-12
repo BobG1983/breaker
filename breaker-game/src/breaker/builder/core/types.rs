@@ -2,7 +2,7 @@
 
 use bevy::{math::curve::easing::EaseFunction, prelude::*};
 
-use crate::effect::RootEffect;
+use crate::effect_v3::types::RootNode;
 
 // ── Typestate markers ───────────────────────────────────────────────────────
 
@@ -180,7 +180,7 @@ pub(crate) enum LivesSetting {
 #[derive(Default)]
 pub(crate) struct OptionalBreakerData {
     pub(crate) lives: LivesSetting,
-    pub(crate) effects: Option<Vec<RootEffect>>,
+    pub(crate) effects: Option<Vec<RootNode>>,
     pub(crate) color_rgb: Option<[f32; 3]>,
     pub(crate) override_width: Option<f32>,
     pub(crate) override_height: Option<f32>,

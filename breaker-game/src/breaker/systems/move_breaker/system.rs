@@ -4,6 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     breaker::{components::DashState, queries::BreakerMovementData},
+    effect_v3::{effects::*, stacking::EffectStack},
     input::resources::GameAction,
     prelude::*,
 };
@@ -22,8 +23,10 @@ pub(crate) fn move_breaker(
     let dt = time.delta_secs();
 
     for mut data in &mut query {
-        let effective_max =
-            data.max_speed.0 * data.speed_boosts.map_or(1.0, ActiveSpeedBoosts::multiplier);
+        let effective_max = data.max_speed.0
+            * data
+                .speed_boosts
+                .map_or(1.0, EffectStack::<SpeedBoostConfig>::aggregate);
 
         // Only allow direct input movement in Idle and Settling states
         let can_move = matches!(*data.state, DashState::Idle | DashState::Settling);
@@ -60,7 +63,9 @@ pub(crate) fn move_breaker(
 
         // Clamp to playfield bounds (accounting for breaker effective half-width)
         let effective_half_w = data.base_width.half_width()
-            * data.size_boosts.map_or(1.0, ActiveSizeBoosts::multiplier);
+            * data
+                .size_boosts
+                .map_or(1.0, EffectStack::<SizeBoostConfig>::aggregate);
         let min_x = playfield.left() + effective_half_w;
         let max_x = playfield.right() - effective_half_w;
         data.position.0.x = data.position.0.x.clamp(min_x, max_x);

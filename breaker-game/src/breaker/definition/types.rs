@@ -3,7 +3,7 @@
 use bevy::{math::curve::easing::EaseFunction, prelude::*};
 use serde::Deserialize;
 
-use crate::effect::RootEffect;
+use crate::effect_v3::types::RootNode;
 
 // ── Default value functions ─────────────────────────────────────────────────
 
@@ -120,7 +120,7 @@ pub struct BreakerDefinition {
     pub life_pool: Option<u32>,
     /// All effect chains for this breaker.
     #[serde(default)]
-    pub effects: Vec<RootEffect>,
+    pub effects: Vec<RootNode>,
 
     // ── Dimensions ──────────────────────────────────────────────────────
     /// Full width of the breaker in world units.

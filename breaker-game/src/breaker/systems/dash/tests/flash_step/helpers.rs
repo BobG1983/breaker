@@ -11,7 +11,7 @@ use crate::{
         systems::dash::system::update_breaker_state,
         test_utils::default_breaker_definition,
     },
-    effect::effects::flash_step::FlashStepActive,
+    effect_v3::effects::flash_step::FlashStepActive,
     input::resources::InputActions,
     shared::{PlayfieldConfig, test_utils::TestAppBuilder},
 };

@@ -10,8 +10,7 @@ use crate::{
         components::{Breaker, BreakerBaseY, BreakerReflectionSpread},
         definition::BreakerDefinition,
     },
-    effect::effects::life_lost::LivesCount,
-    shared::{BaseHeight, BaseWidth},
+    shared::{BaseHeight, BaseWidth, death_pipeline::Hp},
 };
 
 // ── Behavior 19: .with_max_speed() overrides definition max_speed ──
@@ -281,7 +280,7 @@ fn with_reflection_spread_overrides_definition_value() {
 // ── Behavior 24: .with_lives() sets LivesCount ──
 
 #[test]
-fn with_lives_some_sets_lives_count() {
+fn with_lives_some_sets_hp() {
     let def = test_breaker_definition();
     let mut world = World::new();
     let entity = Breaker::builder()
@@ -292,9 +291,16 @@ fn with_lives_some_sets_lives_count() {
         .spawn(&mut world.commands());
     world.flush();
 
-    let lives = world.get::<LivesCount>(entity);
-    assert!(lives.is_some(), "entity should have LivesCount");
-    assert_eq!(lives.unwrap().0, Some(3), "LivesCount should be Some(3)");
+    let hp = world.get::<Hp>(entity);
+    assert!(hp.is_some(), "entity should have Hp");
+    assert!(
+        (hp.unwrap().current - 3.0).abs() < f32::EPSILON,
+        "Hp.current should be 3.0"
+    );
+    assert!(
+        (hp.unwrap().starting - 3.0).abs() < f32::EPSILON,
+        "Hp.starting should be 3.0"
+    );
 }
 
 #[test]
@@ -309,12 +315,10 @@ fn with_lives_none_sets_infinite_lives() {
         .spawn(&mut world.commands());
     world.flush();
 
-    let lives = world.get::<LivesCount>(entity);
-    assert!(lives.is_some(), "entity should have LivesCount");
-    assert_eq!(
-        lives.unwrap().0,
-        None,
-        "LivesCount should be None (infinite)"
+    let hp = world.get::<Hp>(entity);
+    assert!(
+        hp.is_none(),
+        "entity should NOT have Hp when lives are infinite"
     );
 }
 
@@ -330,9 +334,12 @@ fn with_lives_zero_stores_zero() {
         .spawn(&mut world.commands());
     world.flush();
 
-    let lives = world.get::<LivesCount>(entity);
-    assert!(lives.is_some(), "entity should have LivesCount");
-    assert_eq!(lives.unwrap().0, Some(0), "LivesCount should be Some(0)");
+    let hp = world.get::<Hp>(entity);
+    assert!(hp.is_some(), "entity should have Hp");
+    assert!(
+        (hp.unwrap().current - 0.0).abs() < f32::EPSILON,
+        "Hp.current should be 0.0"
+    );
 }
 
 // ── Behavior 25: Without .with_lives(), LivesCount uses definition's life_pool ──
@@ -349,12 +356,11 @@ fn without_with_lives_uses_definition_life_pool() {
         .spawn(&mut world.commands());
     world.flush();
 
-    let lives = world.get::<LivesCount>(entity);
-    assert!(lives.is_some(), "entity should have LivesCount");
-    assert_eq!(
-        lives.unwrap().0,
-        Some(3),
-        "LivesCount should be Some(3) from definition"
+    let hp = world.get::<Hp>(entity);
+    assert!(hp.is_some(), "entity should have Hp");
+    assert!(
+        (hp.unwrap().current - 3.0).abs() < f32::EPSILON,
+        "Hp.current should be 3.0 from definition"
     );
 }
 
@@ -369,12 +375,10 @@ fn without_with_lives_definition_none_produces_infinite() {
         .spawn(&mut world.commands());
     world.flush();
 
-    let lives = world.get::<LivesCount>(entity);
-    assert!(lives.is_some(), "entity should have LivesCount");
-    assert_eq!(
-        lives.unwrap().0,
-        None,
-        "LivesCount should be None from definition"
+    let hp = world.get::<Hp>(entity);
+    assert!(
+        hp.is_none(),
+        "entity should NOT have Hp when definition has no life pool"
     );
 }
 
@@ -451,15 +455,10 @@ fn without_definition_without_with_lives_defaults_to_infinite() {
         .spawn(&mut world.commands());
     world.flush();
 
-    let lives = world.get::<LivesCount>(entity);
+    let hp = world.get::<Hp>(entity);
     assert!(
-        lives.is_some(),
-        "entity should have LivesCount even without definition"
-    );
-    assert_eq!(
-        lives.unwrap().0,
-        None,
-        "LivesCount should default to None (infinite) without definition or with_lives"
+        hp.is_none(),
+        "entity should NOT have Hp without definition or with_lives (infinite lives)"
     );
 }
 
@@ -484,15 +483,17 @@ fn with_effects_overrides_definition_effects() {
     // This is tested more thoroughly in spawn_tests.rs where we verify
     // the dispatched effects. Here we just verify the chain compiles.
     let mut def = test_breaker_definition();
-    def.effects = vec![crate::effect::RootEffect::On {
-        target: crate::effect::Target::Breaker,
-        then: vec![crate::effect::EffectNode::When {
-            trigger: crate::effect::Trigger::BoltLost,
-            then: vec![crate::effect::EffectNode::Do(
-                crate::effect::EffectKind::LoseLife,
-            )],
-        }],
-    }];
+    def.effects = vec![crate::effect_v3::types::RootNode::Stamp(
+        crate::effect_v3::types::StampTarget::Breaker,
+        crate::effect_v3::types::Tree::When(
+            crate::effect_v3::types::Trigger::BoltLostOccurred,
+            Box::new(crate::effect_v3::types::Tree::Fire(
+                crate::effect_v3::types::EffectType::LoseLife(
+                    crate::effect_v3::effects::LoseLifeConfig {},
+                ),
+            )),
+        ),
+    )];
 
     let _builder = Breaker::builder()
         .definition(&def)

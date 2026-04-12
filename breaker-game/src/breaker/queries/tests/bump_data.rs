@@ -6,7 +6,7 @@ use crate::{
         Breaker, BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown, BumpPerfectWindow,
         BumpState, BumpWeakCooldown,
     },
-    effect::{AnchorActive, AnchorPlanted},
+    effect_v3::effects::anchor::{AnchorActive, AnchorPlanted},
 };
 
 // ── Part E: BreakerBumpTimingData (mutable) ─────────────────────

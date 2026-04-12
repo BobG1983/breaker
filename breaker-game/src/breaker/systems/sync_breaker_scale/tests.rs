@@ -1,16 +1,30 @@
 use bevy::prelude::*;
+use ordered_float::OrderedFloat;
 use rantzsoft_spatial2d::components::Scale2D;
 
 use super::system::*;
 use crate::{
     breaker::components::{BaseHeight, BaseWidth, Breaker},
-    effect::effects::size_boost::ActiveSizeBoosts,
+    effect_v3::{effects::SizeBoostConfig, stacking::EffectStack},
     shared::{
         NodeScalingFactor,
         size::{MaxHeight, MaxWidth, MinHeight, MinWidth},
         test_utils::TestAppBuilder,
     },
 };
+
+fn size_stack(values: &[f32]) -> EffectStack<SizeBoostConfig> {
+    let mut stack = EffectStack::default();
+    for &v in values {
+        stack.push(
+            "test".into(),
+            SizeBoostConfig {
+                multiplier: OrderedFloat(v),
+            },
+        );
+    }
+    stack
+}
 
 fn test_app() -> App {
     TestAppBuilder::new()
@@ -54,7 +68,7 @@ fn sync_breaker_scale_sets_base_dimensions_with_no_boosts() {
 
 #[test]
 fn sync_breaker_scale_applies_boost_to_both_axes() {
-    // Given: BaseWidth(120.0), BaseHeight(20.0), ActiveSizeBoosts(vec![4/3])
+    // Given: BaseWidth(120.0), BaseHeight(20.0), size_stack(&[4/3])
     // When: sync_breaker_scale runs
     // Then: Scale2D { x: 160.0, y: ~26.666 } (boost on BOTH axes)
     let mut app = test_app();
@@ -65,7 +79,7 @@ fn sync_breaker_scale_applies_boost_to_both_axes() {
             Breaker,
             BaseWidth(120.0),
             BaseHeight(20.0),
-            ActiveSizeBoosts(vec![4.0_f32 / 3.0]),
+            size_stack(&[4.0_f32 / 3.0]),
             Scale2D { x: 1.0, y: 1.0 },
         ))
         .id();
@@ -89,7 +103,7 @@ fn sync_breaker_scale_applies_boost_to_both_axes() {
 
 #[test]
 fn sync_breaker_scale_with_1_5_boost_on_both_axes() {
-    // Edge case: ActiveSizeBoosts(vec![1.5])
+    // Edge case: size_stack(&[1.5])
     // Scale2D { x: 180.0, y: 30.0 }
     let mut app = test_app();
 
@@ -99,7 +113,7 @@ fn sync_breaker_scale_with_1_5_boost_on_both_axes() {
             Breaker,
             BaseWidth(120.0),
             BaseHeight(20.0),
-            ActiveSizeBoosts(vec![1.5]),
+            size_stack(&[1.5]),
             Scale2D { x: 1.0, y: 1.0 },
         ))
         .id();
@@ -184,7 +198,7 @@ fn sync_breaker_scale_identity_node_scale() {
 
 #[test]
 fn sync_breaker_scale_with_boost_and_node_scale() {
-    // Given: BaseWidth(120.0), BaseHeight(20.0), ActiveSizeBoosts(vec![4/3]), NodeScalingFactor(0.7)
+    // Given: BaseWidth(120.0), BaseHeight(20.0), size_stack(&[4/3]), NodeScalingFactor(0.7)
     // Then: Scale2D { x: 112.0, y: ~18.666 }
     let mut app = test_app();
 
@@ -194,7 +208,7 @@ fn sync_breaker_scale_with_boost_and_node_scale() {
             Breaker,
             BaseWidth(120.0),
             BaseHeight(20.0),
-            ActiveSizeBoosts(vec![4.0_f32 / 3.0]),
+            size_stack(&[4.0_f32 / 3.0]),
             NodeScalingFactor(0.7),
             Scale2D { x: 1.0, y: 1.0 },
         ))
@@ -227,7 +241,7 @@ fn sync_breaker_scale_boost_with_identity_node_scale() {
             Breaker,
             BaseWidth(120.0),
             BaseHeight(20.0),
-            ActiveSizeBoosts(vec![4.0_f32 / 3.0]),
+            size_stack(&[4.0_f32 / 3.0]),
             NodeScalingFactor(1.0),
             Scale2D { x: 1.0, y: 1.0 },
         ))
@@ -253,7 +267,7 @@ fn sync_breaker_scale_boost_with_identity_node_scale() {
 
 #[test]
 fn sync_breaker_scale_large_boost_no_constraints_unclamped() {
-    // Given: BaseWidth(120.0), BaseHeight(20.0), ActiveSizeBoosts(vec![10.0]), no min/max
+    // Given: BaseWidth(120.0), BaseHeight(20.0), size_stack(&[10.0]), no min/max
     // Then: Scale2D { x: 1200.0, y: 200.0 } (unclamped)
     let mut app = test_app();
 
@@ -263,7 +277,7 @@ fn sync_breaker_scale_large_boost_no_constraints_unclamped() {
             Breaker,
             BaseWidth(120.0),
             BaseHeight(20.0),
-            ActiveSizeBoosts(vec![10.0]),
+            size_stack(&[10.0]),
             Scale2D { x: 1.0, y: 1.0 },
         ))
         .id();
@@ -319,7 +333,7 @@ fn sync_breaker_scale_small_node_scale_no_constraints_unclamped() {
 
 #[test]
 fn sync_breaker_scale_clamps_to_constraints() {
-    // Given: BaseWidth(120.0), BaseHeight(20.0), ActiveSizeBoosts(vec![3.0]),
+    // Given: BaseWidth(120.0), BaseHeight(20.0), size_stack(&[3.0]),
     //        MinWidth(60.0), MaxWidth(200.0), MinHeight(10.0), MaxHeight(50.0)
     // width: 120.0 * 3.0 = 360.0 -> clamped to 200.0
     // height: 20.0 * 3.0 = 60.0 -> clamped to 50.0
@@ -331,7 +345,7 @@ fn sync_breaker_scale_clamps_to_constraints() {
             Breaker,
             BaseWidth(120.0),
             BaseHeight(20.0),
-            ActiveSizeBoosts(vec![3.0]),
+            size_stack(&[3.0]),
             MinWidth(60.0),
             MaxWidth(200.0),
             MinHeight(10.0),

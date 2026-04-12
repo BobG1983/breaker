@@ -9,6 +9,7 @@ use crate::{
         queries::{BreakerBumpGradingData, BreakerBumpTimingData},
         resources::ForceBumpGrade,
     },
+    effect_v3::effects::anchor::{AnchorActive, AnchorPlanted},
     input::resources::GameAction,
     prelude::*,
 };

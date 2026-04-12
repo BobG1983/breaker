@@ -1,15 +1,29 @@
 use bevy::prelude::*;
+use ordered_float::OrderedFloat;
 use rantzsoft_spatial2d::components::Scale2D;
 
 use super::{super::data::*, helpers::*};
 use crate::{
     breaker::components::{BaseHeight, BaseWidth, Breaker},
-    effect::effects::size_boost::ActiveSizeBoosts,
+    effect_v3::{effects::SizeBoostConfig, stacking::EffectStack},
     shared::{
         NodeScalingFactor,
         size::{MaxHeight, MaxWidth, MinHeight, MinWidth},
     },
 };
+
+fn size_stack(values: &[f32]) -> EffectStack<SizeBoostConfig> {
+    let mut stack = EffectStack::default();
+    for &v in values {
+        stack.push(
+            "test".into(),
+            SizeBoostConfig {
+                multiplier: OrderedFloat(v),
+            },
+        );
+    }
+    stack
+}
 
 // ── Part H: SyncBreakerScaleData (mutable) ──────────────────────
 
@@ -22,7 +36,7 @@ fn sync_breaker_scale_data_named_field_access() {
         BaseWidth(120.0),
         BaseHeight(20.0),
         Scale2D { x: 1.0, y: 1.0 },
-        ActiveSizeBoosts(vec![1.5]),
+        size_stack(&[1.5]),
         NodeScalingFactor(0.8),
         MinWidth(60.0),
         MaxWidth(200.0),

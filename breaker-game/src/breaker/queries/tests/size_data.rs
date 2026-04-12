@@ -1,12 +1,26 @@
 use bevy::prelude::*;
+use ordered_float::OrderedFloat;
 use rantzsoft_spatial2d::components::Position2D;
 
 use super::{super::data::*, helpers::*};
 use crate::{
     breaker::components::{BaseHeight, BaseWidth, Breaker},
-    effect::effects::size_boost::ActiveSizeBoosts,
+    effect_v3::{effects::SizeBoostConfig, stacking::EffectStack},
     shared::NodeScalingFactor,
 };
+
+fn size_stack(values: &[f32]) -> EffectStack<SizeBoostConfig> {
+    let mut stack = EffectStack::default();
+    for &v in values {
+        stack.push(
+            "test".into(),
+            SizeBoostConfig {
+                multiplier: OrderedFloat(v),
+            },
+        );
+    }
+    stack
+}
 
 // ── Part B: BreakerSizeData (read-only) ─────────────────────────
 
@@ -21,7 +35,7 @@ fn breaker_size_data_query_matches_with_all_components() {
             Position2D(Vec2::new(50.0, -200.0)),
             BaseWidth(120.0),
             BaseHeight(20.0),
-            ActiveSizeBoosts(vec![1.5]),
+            size_stack(&[1.5]),
             NodeScalingFactor(0.8),
         ))
         .id();

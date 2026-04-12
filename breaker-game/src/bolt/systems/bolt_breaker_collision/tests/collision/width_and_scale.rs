@@ -2,14 +2,28 @@
 //! behavior on the breaker.
 
 use bevy::prelude::*;
+use ordered_float::OrderedFloat;
 use rantzsoft_spatial2d::components::{Position2D, Spatial2D, Velocity2D};
 
 use crate::{
     bolt::systems::bolt_breaker_collision::tests::helpers::*,
     breaker::components::{Breaker, BreakerTilt},
-    effect::effects::size_boost::ActiveSizeBoosts,
+    effect_v3::{effects::SizeBoostConfig, stacking::EffectStack},
     shared::{GameDrawLayer, NodeScalingFactor},
 };
+
+fn size_stack(values: &[f32]) -> EffectStack<SizeBoostConfig> {
+    let mut stack = EffectStack::default();
+    for &v in values {
+        stack.push(
+            "test".into(),
+            SizeBoostConfig {
+                multiplier: OrderedFloat(v),
+            },
+        );
+    }
+    stack
+}
 
 // --- WidthBoost tests ---
 
@@ -25,7 +39,7 @@ fn active_size_boosts_widens_breaker_collision_width() {
         default_breaker_width(),
         default_breaker_height(),
         default_reflection_spread(),
-        ActiveSizeBoosts(vec![4.0_f32 / 3.0]),
+        size_stack(&[4.0_f32 / 3.0]),
         Position2D(Vec2::new(0.0, y_pos)),
         Spatial2D,
         GameDrawLayer::Breaker,
@@ -96,7 +110,7 @@ fn active_size_boosts_stacks_with_entity_scale_in_collision() {
         default_breaker_width(),
         default_breaker_height(),
         default_reflection_spread(),
-        ActiveSizeBoosts(vec![4.0_f32 / 3.0]),
+        size_stack(&[4.0_f32 / 3.0]),
         NodeScalingFactor(0.7),
         Position2D(Vec2::new(0.0, y_pos)),
         Spatial2D,

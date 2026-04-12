@@ -13,7 +13,15 @@ use crate::{
         DashSpeedMultiplier, DashState, DashStateTimer, DashTilt, DashTiltEase, DecelEasing,
         SettleDuration, SettleTiltEase,
     },
-    prelude::{components::FlashStepActive, *},
+    effect_v3::{
+        effects::{
+            SizeBoostConfig, SpeedBoostConfig,
+            anchor::{AnchorActive, AnchorPlanted},
+            flash_step::FlashStepActive,
+        },
+        stacking::EffectStack,
+    },
+    prelude::*,
 };
 
 // ── QueryData structs ───────────────────────────────────────────────────
@@ -32,7 +40,7 @@ pub(crate) struct BreakerCollisionData {
     /// Maximum reflection angle.
     pub reflection_spread: &'static BreakerReflectionSpread,
     /// Active size boost multipliers.
-    pub size_boosts: Option<&'static ActiveSizeBoosts>,
+    pub size_boosts: Option<&'static EffectStack<SizeBoostConfig>>,
     /// Node scaling factor.
     pub node_scale: Option<&'static NodeScalingFactor>,
 }
@@ -51,7 +59,7 @@ pub(crate) struct BreakerSizeData {
     /// Node scaling factor.
     pub node_scale: Option<&'static NodeScalingFactor>,
     /// Active size boost multipliers.
-    pub size_boosts: Option<&'static ActiveSizeBoosts>,
+    pub size_boosts: Option<&'static EffectStack<SizeBoostConfig>>,
 }
 
 /// Breaker movement data — mutable position/velocity, read-only config.
@@ -75,9 +83,9 @@ pub(crate) struct BreakerMovementData {
     /// Base width for playfield clamping.
     pub base_width: &'static BaseWidth,
     /// Active speed boost multipliers.
-    pub speed_boosts: Option<&'static ActiveSpeedBoosts>,
+    pub speed_boosts: Option<&'static EffectStack<SpeedBoostConfig>>,
     /// Active size boost multipliers.
-    pub size_boosts: Option<&'static ActiveSizeBoosts>,
+    pub size_boosts: Option<&'static EffectStack<SizeBoostConfig>>,
 }
 
 /// Breaker dash state machine data — full state, velocity, tilt, and all timing params.
@@ -121,9 +129,9 @@ pub(crate) struct BreakerDashData {
     /// Base width (optional — for flash step playfield clamping).
     pub base_width: Option<&'static BaseWidth>,
     /// Active speed boost multipliers.
-    pub speed_boosts: Option<&'static ActiveSpeedBoosts>,
+    pub speed_boosts: Option<&'static EffectStack<SpeedBoostConfig>>,
     /// Active size boost multipliers.
-    pub size_boosts: Option<&'static ActiveSizeBoosts>,
+    pub size_boosts: Option<&'static EffectStack<SizeBoostConfig>>,
 }
 
 /// Breaker reset data — mutable state cleared at node start.
@@ -201,7 +209,7 @@ pub(crate) struct SyncBreakerScaleData {
     /// Mutable scale for rendering.
     pub scale: &'static mut Scale2D,
     /// Active size boost multipliers.
-    pub size_boosts: Option<&'static ActiveSizeBoosts>,
+    pub size_boosts: Option<&'static EffectStack<SizeBoostConfig>>,
     /// Node scaling factor.
     pub node_scale: Option<&'static NodeScalingFactor>,
     /// Minimum width constraint.

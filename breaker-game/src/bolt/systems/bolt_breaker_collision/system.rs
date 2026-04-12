@@ -14,7 +14,8 @@ use crate::{
         queries::{BoltCollisionData, apply_velocity_formula},
     },
     breaker::{filters::CollisionFilterBreaker, queries::BreakerCollisionData},
-    effect::effects::{piercing::ActivePiercings, size_boost::ActiveSizeBoosts},
+    effect::effects::piercing::ActivePiercings,
+    effect_v3::stacking::EffectStack,
     shared::BREAKER_LAYER,
 };
 
@@ -288,9 +289,7 @@ pub(crate) fn bolt_breaker_collision(
     let surface = BreakerSurface {
         pos: breaker.position.0,
         half_w: breaker.base_width.half_width()
-            * breaker
-                .size_boosts
-                .map_or(1.0, ActiveSizeBoosts::multiplier)
+            * breaker.size_boosts.map_or(1.0, EffectStack::aggregate)
             * breaker_scale,
         half_h: breaker.base_height.half_height() * breaker_scale,
         tilt_angle: breaker.tilt.angle,

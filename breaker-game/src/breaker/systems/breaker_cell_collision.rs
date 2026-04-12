@@ -10,6 +10,7 @@ use rantzsoft_physics2d::resources::CollisionQuadtree;
 
 use crate::{
     breaker::queries::BreakerSizeData,
+    effect_v3::{effects::SizeBoostConfig, stacking::EffectStack},
     prelude::*,
     shared::{BREAKER_LAYER, CELL_LAYER},
 };
@@ -34,7 +35,7 @@ pub(crate) fn breaker_cell_collision(
 
     let size_mult = breaker
         .size_boosts
-        .map_or(1.0, ActiveSizeBoosts::multiplier);
+        .map_or(1.0, EffectStack::<SizeBoostConfig>::aggregate);
     let scale = breaker.node_scale.map_or(1.0, |s| s.0);
     let half_w = breaker.base_width.half_width() * size_mult * scale;
     let half_h = breaker.base_height.half_height() * size_mult * scale;
@@ -63,13 +64,28 @@ pub(crate) fn breaker_cell_collision(
 #[cfg(test)]
 mod tests {
     use bevy::prelude::*;
+    use ordered_float::OrderedFloat;
     use rantzsoft_spatial2d::components::{GlobalPosition2D, Spatial2D};
 
     use super::*;
     use crate::{
         breaker::components::{BaseHeight, BaseWidth},
+        effect_v3::{effects::SizeBoostConfig, stacking::EffectStack},
         shared::{GameDrawLayer, NodeScalingFactor, test_utils::TestAppBuilder},
     };
+
+    fn size_stack(values: &[f32]) -> EffectStack<SizeBoostConfig> {
+        let mut stack = EffectStack::default();
+        for &v in values {
+            stack.push(
+                "test".into(),
+                SizeBoostConfig {
+                    multiplier: OrderedFloat(v),
+                },
+            );
+        }
+        stack
+    }
 
     // ── Helpers ──────────────────────────────────────────────────────
 
@@ -245,9 +261,9 @@ mod tests {
         let mut app = test_app();
 
         let breaker_entity = spawn_breaker(&mut app, Vec2::new(0.0, 0.0));
-        app.world_mut().entity_mut(breaker_entity).insert(
-            crate::effect::effects::size_boost::ActiveSizeBoosts(vec![2.0]),
-        );
+        app.world_mut()
+            .entity_mut(breaker_entity)
+            .insert(size_stack(&[2.0]));
 
         let cell_entity = spawn_cell(&mut app, Vec2::new(100.0, 0.0), Vec2::new(35.0, 12.0));
 
@@ -271,9 +287,9 @@ mod tests {
         let mut app = test_app();
 
         let breaker_entity = spawn_breaker(&mut app, Vec2::new(0.0, 0.0));
-        app.world_mut().entity_mut(breaker_entity).insert(
-            crate::effect::effects::size_boost::ActiveSizeBoosts(vec![1.0]),
-        );
+        app.world_mut()
+            .entity_mut(breaker_entity)
+            .insert(size_stack(&[1.0]));
 
         let cell_entity = spawn_cell(&mut app, Vec2::new(90.0, 0.0), Vec2::new(35.0, 12.0));
 
@@ -297,9 +313,9 @@ mod tests {
         let mut app = test_app();
 
         let breaker_entity = spawn_breaker(&mut app, Vec2::new(0.0, 0.0));
-        app.world_mut().entity_mut(breaker_entity).insert(
-            crate::effect::effects::size_boost::ActiveSizeBoosts(vec![1.5]),
-        );
+        app.world_mut()
+            .entity_mut(breaker_entity)
+            .insert(size_stack(&[1.5]));
 
         spawn_cell(&mut app, Vec2::new(130.0, 0.0), Vec2::new(35.0, 12.0));
 
@@ -321,9 +337,9 @@ mod tests {
         let mut app = test_app();
 
         let breaker_entity = spawn_breaker(&mut app, Vec2::new(0.0, 0.0));
-        app.world_mut().entity_mut(breaker_entity).insert(
-            crate::effect::effects::size_boost::ActiveSizeBoosts(vec![1.5]),
-        );
+        app.world_mut()
+            .entity_mut(breaker_entity)
+            .insert(size_stack(&[1.5]));
 
         spawn_cell(&mut app, Vec2::new(125.0, 0.0), Vec2::new(35.0, 12.0));
 
@@ -345,10 +361,9 @@ mod tests {
         let mut app = test_app();
 
         let breaker_entity = spawn_breaker(&mut app, Vec2::new(0.0, 0.0));
-        app.world_mut().entity_mut(breaker_entity).insert((
-            crate::effect::effects::size_boost::ActiveSizeBoosts(vec![1.5]),
-            NodeScalingFactor(2.0),
-        ));
+        app.world_mut()
+            .entity_mut(breaker_entity)
+            .insert((size_stack(&[1.5]), NodeScalingFactor(2.0)));
 
         let cell_entity = spawn_cell(&mut app, Vec2::new(200.0, 0.0), Vec2::new(35.0, 12.0));
 

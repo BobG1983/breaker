@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use ordered_float::OrderedFloat;
 use rantzsoft_spatial2d::components::{MaxSpeed, Position2D, Velocity2D};
 
 use super::system::*;
@@ -10,10 +11,39 @@ use crate::{
         definition::BreakerDefinition,
         test_utils::default_breaker_definition,
     },
-    effect::effects::{size_boost::ActiveSizeBoosts, speed_boost::ActiveSpeedBoosts},
+    effect_v3::{
+        effects::{SizeBoostConfig, SpeedBoostConfig},
+        stacking::EffectStack,
+    },
     input::resources::{GameAction, InputActions},
     shared::{PlayfieldConfig, test_utils::TestAppBuilder},
 };
+
+fn speed_stack(values: &[f32]) -> EffectStack<SpeedBoostConfig> {
+    let mut stack = EffectStack::default();
+    for &v in values {
+        stack.push(
+            "test".into(),
+            SpeedBoostConfig {
+                multiplier: OrderedFloat(v),
+            },
+        );
+    }
+    stack
+}
+
+fn size_stack(values: &[f32]) -> EffectStack<SizeBoostConfig> {
+    let mut stack = EffectStack::default();
+    for &v in values {
+        stack.push(
+            "test".into(),
+            SizeBoostConfig {
+                multiplier: OrderedFloat(v),
+            },
+        );
+    }
+    stack
+}
 
 #[test]
 fn deceleration_toward_zero_positive() {
@@ -140,7 +170,7 @@ fn position_clamped_to_playfield_bounds() {
 
 #[test]
 fn speed_multiplier_raises_effective_max_speed() {
-    // Given: MaxSpeed(500.0) + ActiveSpeedBoosts(vec![1.2]), velocity.x = 590.0
+    // Given: MaxSpeed(500.0) + speed_stack(&[1.2]), velocity.x = 590.0
     //        MoveRight input active (so the acceleration+clamp path runs)
     // When: move_breaker system runs
     // Then: velocity.x > 500 AND velocity.x <= 600 (effective max = 500 * 1.2 = 600)
@@ -160,7 +190,7 @@ fn speed_multiplier_raises_effective_max_speed() {
                 strength: def.decel_ease_strength,
             },
             BaseWidth(def.width),
-            ActiveSpeedBoosts(vec![1.2]),
+            speed_stack(&[1.2]),
             Position2D(Vec2::new(0.0, def.y_position)),
         ))
         .id();
@@ -223,7 +253,7 @@ fn no_speed_boost_base_max_speed_clamps_velocity() {
 
 #[test]
 fn size_multiplier_increases_effective_half_width_for_clamping() {
-    // Given: BaseWidth(120.0), ActiveSizeBoosts(vec![4/3]), PlayfieldConfig default (right=400)
+    // Given: BaseWidth(120.0), size_stack(&[4/3]), PlayfieldConfig default (right=400)
     //        effective half_w = 60.0 * (4/3) = 80
     //        Breaker placed far right (9999.0) — position will be clamped during tick
     // When: move_breaker runs
@@ -252,7 +282,7 @@ fn size_multiplier_increases_effective_half_width_for_clamping() {
                 strength: def.decel_ease_strength,
             },
             BaseWidth(120.0),
-            ActiveSizeBoosts(vec![4.0_f32 / 3.0]),
+            size_stack(&[4.0_f32 / 3.0]),
             Position2D(Vec2::new(9999.0, def.y_position)),
         ))
         .id();
@@ -272,7 +302,7 @@ fn size_multiplier_increases_effective_half_width_for_clamping() {
 
 #[test]
 fn move_breaker_reads_active_speed_boosts_for_max_speed() {
-    // Given: Breaker with ActiveSpeedBoosts(vec![2.0]), MaxSpeed(300.0),
+    // Given: Breaker with speed_stack(&[2.0]), MaxSpeed(300.0),
     //        Velocity2D(Vec2::new(590.0, 0.0)), MoveRight active
     // When: move_breaker runs
     // Then: velocity.x clamped to 600.0 (300.0 * 2.0), not 300.0
@@ -291,7 +321,7 @@ fn move_breaker_reads_active_speed_boosts_for_max_speed() {
                 strength: 1.0,
             },
             BaseWidth(120.0),
-            ActiveSpeedBoosts(vec![2.0]),
+            speed_stack(&[2.0]),
             Position2D(Vec2::new(0.0, -250.0)),
         ))
         .id();
@@ -317,7 +347,7 @@ fn move_breaker_reads_active_speed_boosts_for_max_speed() {
 
 #[test]
 fn move_breaker_reads_active_size_boosts_for_playfield_clamping() {
-    // Given: Breaker with ActiveSizeBoosts(vec![2.0]), BaseWidth(120.0) (half_width=60.0),
+    // Given: Breaker with size_stack(&[2.0]), BaseWidth(120.0) (half_width=60.0),
     //        Position2D far right (9999.0)
     // When: move_breaker clamps position
     // Then: position clamped using effective_half_w = 60.0 * 2.0 = 120.0
@@ -337,7 +367,7 @@ fn move_breaker_reads_active_size_boosts_for_playfield_clamping() {
                 strength: 1.0,
             },
             BaseWidth(120.0),
-            ActiveSizeBoosts(vec![2.0]),
+            size_stack(&[2.0]),
             Position2D(Vec2::new(9999.0, -250.0)),
         ))
         .id();

@@ -1,12 +1,26 @@
 use bevy::prelude::*;
+use ordered_float::OrderedFloat;
 use rantzsoft_spatial2d::components::Position2D;
 
 use super::{super::data::*, helpers::*};
 use crate::{
     breaker::components::{BaseHeight, BaseWidth, Breaker, BreakerReflectionSpread, BreakerTilt},
-    effect::effects::size_boost::ActiveSizeBoosts,
+    effect_v3::{effects::SizeBoostConfig, stacking::EffectStack},
     shared::NodeScalingFactor,
 };
+
+fn size_stack(values: &[f32]) -> EffectStack<SizeBoostConfig> {
+    let mut stack = EffectStack::default();
+    for &v in values {
+        stack.push(
+            "test".into(),
+            SizeBoostConfig {
+                multiplier: OrderedFloat(v),
+            },
+        );
+    }
+    stack
+}
 
 // ── Part A: BreakerCollisionData (read-only) ────────────────────
 
@@ -77,7 +91,7 @@ fn breaker_collision_data_query_includes_optional_components() {
         BaseWidth(120.0),
         BaseHeight(20.0),
         BreakerReflectionSpread(0.5),
-        ActiveSizeBoosts(vec![1.5]),
+        size_stack(&[1.5]),
         NodeScalingFactor(0.8),
     ));
 

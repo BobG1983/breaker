@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use ordered_float::OrderedFloat;
 use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use super::helpers::*;
@@ -7,9 +8,25 @@ use crate::{
         components::{BaseWidth, Breaker, BreakerTilt, DashState, DashStateTimer},
         definition::BreakerDefinition,
     },
-    effect::effects::{flash_step::FlashStepActive, size_boost::ActiveSizeBoosts},
+    effect_v3::{
+        effects::{SizeBoostConfig, flash_step::FlashStepActive},
+        stacking::EffectStack,
+    },
     input::resources::{GameAction, InputActions},
 };
+
+fn size_stack(values: &[f32]) -> EffectStack<SizeBoostConfig> {
+    let mut stack = EffectStack::default();
+    for &v in values {
+        stack.push(
+            "test".into(),
+            SizeBoostConfig {
+                multiplier: OrderedFloat(v),
+            },
+        );
+    }
+    stack
+}
 
 #[test]
 fn reversal_dash_left_clamps_to_playfield_left_bound() {
@@ -133,7 +150,7 @@ fn flash_step_teleport_at_left_boundary_stays_at_boundary() {
 #[test]
 fn flash_step_teleport_with_size_multiplier_adjusts_clamp_half_width() {
     // Given: Breaker at (300, -250), Settling from leftward dash, FlashStepActive,
-    //        BaseWidth(120), ActiveSizeBoosts(vec![2.0]), playfield right=400
+    //        BaseWidth(120), size_stack(&[2.0]), playfield right=400
     // When: DashRight
     // Then: Position2D.x == 280 (400 - 120 effective half-width from 60*2.0), NOT 900
     let mut app = test_app();
@@ -153,7 +170,7 @@ fn flash_step_teleport_with_size_multiplier_adjusts_clamp_half_width() {
             Position2D(Vec2::new(300.0, -250.0)),
             BaseWidth(120.0),
             FlashStepActive,
-            ActiveSizeBoosts(vec![2.0]),
+            size_stack(&[2.0]),
             breaker_param_bundle(&config),
         ))
         .id();
@@ -174,7 +191,7 @@ fn flash_step_teleport_with_size_multiplier_adjusts_clamp_half_width() {
 
 #[test]
 fn flash_step_teleport_with_size_multiplier_one_matches_no_multiplier() {
-    // Edge case: ActiveSizeBoosts(vec![1.0]) behaves same as no multiplier
+    // Edge case: size_stack(&[1.0]) behaves same as no multiplier
     let mut app = test_app();
     let config = BreakerDefinition::default();
     let entity = app
@@ -192,7 +209,7 @@ fn flash_step_teleport_with_size_multiplier_one_matches_no_multiplier() {
             Position2D(Vec2::new(350.0, -250.0)),
             BaseWidth(120.0),
             FlashStepActive,
-            ActiveSizeBoosts(vec![1.0]),
+            size_stack(&[1.0]),
             breaker_param_bundle(&config),
         ))
         .id();

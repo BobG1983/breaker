@@ -7,7 +7,7 @@ use crate::{
         components::{BaseWidth, Breaker, BreakerTilt, DashState, DashStateTimer},
         definition::BreakerDefinition,
     },
-    effect::effects::flash_step::FlashStepActive,
+    effect_v3::effects::flash_step::FlashStepActive,
     input::resources::{GameAction, InputActions},
 };
 

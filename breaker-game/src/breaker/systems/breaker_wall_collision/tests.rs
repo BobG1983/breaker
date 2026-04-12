@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use ordered_float::OrderedFloat;
 use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D};
 
@@ -8,9 +9,23 @@ use crate::{
         components::{BaseHeight, BaseWidth, Breaker},
         messages::BreakerImpactWall,
     },
+    effect_v3::{effects::SizeBoostConfig, stacking::EffectStack},
     shared::{BREAKER_LAYER, GameDrawLayer, NodeScalingFactor, WALL_LAYER},
     walls::test_utils::{spawn_ceiling_wall, spawn_left_wall, spawn_right_wall},
 };
+
+fn size_stack(values: &[f32]) -> EffectStack<SizeBoostConfig> {
+    let mut stack = EffectStack::default();
+    for &v in values {
+        stack.push(
+            "test".into(),
+            SizeBoostConfig {
+                multiplier: OrderedFloat(v),
+            },
+        );
+    }
+    stack
+}
 
 // ── Helpers ──────────────────────────────────────────────────────
 
@@ -204,9 +219,9 @@ fn breaker_wall_collision_uses_active_size_boosts_in_size() {
     let mut app = test_app();
 
     let breaker_entity = spawn_breaker(&mut app, Vec2::new(-400.0, -250.0));
-    app.world_mut().entity_mut(breaker_entity).insert(
-        crate::effect::effects::size_boost::ActiveSizeBoosts(vec![2.0]),
-    );
+    app.world_mut()
+        .entity_mut(breaker_entity)
+        .insert(size_stack(&[2.0]));
 
     let wall_entity = spawn_left_wall(&mut app);
 
@@ -231,9 +246,9 @@ fn breaker_wall_collision_identity_boost_still_overlaps() {
     let mut app = test_app();
 
     let breaker_entity = spawn_breaker(&mut app, Vec2::new(-425.0, -250.0));
-    app.world_mut().entity_mut(breaker_entity).insert(
-        crate::effect::effects::size_boost::ActiveSizeBoosts(vec![1.0]),
-    );
+    app.world_mut()
+        .entity_mut(breaker_entity)
+        .insert(size_stack(&[1.0]));
 
     let wall_entity = spawn_left_wall(&mut app);
 
@@ -258,9 +273,9 @@ fn breaker_wall_collision_boosted_does_not_overlap_beyond_range() {
     let mut app = test_app();
 
     let breaker_entity = spawn_breaker(&mut app, Vec2::new(-300.0, -250.0));
-    app.world_mut().entity_mut(breaker_entity).insert(
-        crate::effect::effects::size_boost::ActiveSizeBoosts(vec![1.5]),
-    );
+    app.world_mut()
+        .entity_mut(breaker_entity)
+        .insert(size_stack(&[1.5]));
 
     spawn_left_wall(&mut app);
 
@@ -283,9 +298,9 @@ fn breaker_wall_collision_boosted_tangent_emits_no_message() {
     let mut app = test_app();
 
     let breaker_entity = spawn_breaker(&mut app, Vec2::new(-310.0, -250.0));
-    app.world_mut().entity_mut(breaker_entity).insert(
-        crate::effect::effects::size_boost::ActiveSizeBoosts(vec![1.5]),
-    );
+    app.world_mut()
+        .entity_mut(breaker_entity)
+        .insert(size_stack(&[1.5]));
 
     spawn_left_wall(&mut app);
 
@@ -307,10 +322,9 @@ fn breaker_wall_collision_boost_and_node_scale_combined() {
     let mut app = test_app();
 
     let breaker_entity = spawn_breaker(&mut app, Vec2::new(-350.0, -250.0));
-    app.world_mut().entity_mut(breaker_entity).insert((
-        crate::effect::effects::size_boost::ActiveSizeBoosts(vec![1.5]),
-        NodeScalingFactor(2.0),
-    ));
+    app.world_mut()
+        .entity_mut(breaker_entity)
+        .insert((size_stack(&[1.5]), NodeScalingFactor(2.0)));
 
     let wall_entity = spawn_left_wall(&mut app);
 

@@ -12,7 +12,7 @@ use crate::{
         messages::BumpGrade,
         systems::bump::tests::helpers::*,
     },
-    effect::{AnchorActive, AnchorPlanted},
+    effect_v3::effects::anchor::{AnchorActive, AnchorPlanted},
 };
 
 // -- Behavior 1: Forward grade uses widened perfect window when planted --

@@ -12,10 +12,11 @@ use crate::{
         DashDuration, DashSpeedMultiplier, DashState, DashStateTimer, DashTilt, DashTiltEase,
         DecelEasing, ExtraBreaker, PrimaryBreaker, SettleDuration, SettleTiltEase,
     },
-    effect::{EffectCommandsExt, effects::life_lost::LivesCount},
+    effect_v3::{commands::EffectCommandsExt, types::RootNode},
     prelude::*,
     shared::{
         BOLT_LAYER, BREAKER_LAYER, BaseHeight, BaseWidth, GameDrawLayer,
+        death_pipeline::Hp,
         size::{MaxHeight, MaxWidth, MinHeight, MinWidth},
     },
 };
@@ -85,12 +86,7 @@ fn core_params_from(
 }
 
 /// Builds the core component tuple shared by all terminal states.
-fn build_core(params: &CoreParams, optional: &OptionalBreakerData) -> impl Bundle + use<> {
-    let lives = match &optional.lives {
-        LivesSetting::Unset | LivesSetting::Infinite => None,
-        LivesSetting::Count(n) => Some(*n),
-    };
-
+fn build_core(params: &CoreParams, _optional: &OptionalBreakerData) -> impl Bundle + use<> {
     // Core identity + state (does NOT include GameDrawLayer — added by Rendered builds only)
     let core = (
         Breaker,
@@ -186,9 +182,6 @@ fn build_core(params: &CoreParams, optional: &OptionalBreakerData) -> impl Bundl
         },
     );
 
-    // Lives — always present
-    let lives_component = LivesCount(lives);
-
     (
         core,
         spatial,
@@ -199,8 +192,15 @@ fn build_core(params: &CoreParams, optional: &OptionalBreakerData) -> impl Bundl
         dash_stats,
         spread_component,
         bump_stats,
-        lives_component,
     )
+}
+
+/// Insert `Hp` on the entity if the breaker has a finite life pool.
+fn apply_hp(commands: &mut Commands, entity: Entity, optional: &OptionalBreakerData) {
+    if let LivesSetting::Count(n) = &optional.lives {
+        #[allow(clippy::cast_precision_loss, reason = "life pool values are small u32")]
+        commands.entity(entity).insert(Hp::new(*n as f32));
+    }
 }
 
 // ── spawn() terminal impls ────────────────────────────────────────────────
@@ -228,8 +228,9 @@ impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, 
                 MeshMaterial2d(self.visual.material),
             ))
             .id();
+        apply_hp(commands, entity, &self.optional);
         if let Some(effects) = effects.filter(|e| !e.is_empty()) {
-            commands.dispatch_initial_effects(effects, None);
+            stamp_root_nodes(commands, entity, &effects);
         }
         entity
     }
@@ -258,8 +259,9 @@ impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, 
                 MeshMaterial2d(self.visual.material),
             ))
             .id();
+        apply_hp(commands, entity, &self.optional);
         if let Some(effects) = effects.filter(|e| !e.is_empty()) {
-            commands.dispatch_initial_effects(effects, None);
+            stamp_root_nodes(commands, entity, &effects);
         }
         entity
     }
@@ -281,8 +283,9 @@ impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, 
         let entity = commands
             .spawn((core, PrimaryBreaker, CleanupOnExit::<RunState>::default()))
             .id();
+        apply_hp(commands, entity, &self.optional);
         if let Some(effects) = effects.filter(|e| !e.is_empty()) {
-            commands.dispatch_initial_effects(effects, None);
+            stamp_root_nodes(commands, entity, &effects);
         }
         entity
     }
@@ -304,9 +307,27 @@ impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, 
         let entity = commands
             .spawn((core, ExtraBreaker, CleanupOnExit::<NodeState>::default()))
             .id();
+        apply_hp(commands, entity, &self.optional);
         if let Some(effects) = effects.filter(|e| !e.is_empty()) {
-            commands.dispatch_initial_effects(effects, None);
+            stamp_root_nodes(commands, entity, &effects);
         }
         entity
+    }
+}
+
+/// Stamps root node effects onto the spawned entity.
+///
+/// For each `Stamp(target, tree)` in `effects`, calls `stamp_effect` on the entity.
+/// `Spawn` root nodes are ignored at builder spawn time (they register observers separately).
+fn stamp_root_nodes(commands: &mut Commands, entity: Entity, effects: &[RootNode]) {
+    for root in effects {
+        match root {
+            RootNode::Stamp(_target, tree) => {
+                commands.stamp_effect(entity, String::new(), tree.clone());
+            }
+            RootNode::Spawn(..) => {
+                // Spawn root nodes register observers — not handled at builder spawn time.
+            }
+        }
     }
 }
