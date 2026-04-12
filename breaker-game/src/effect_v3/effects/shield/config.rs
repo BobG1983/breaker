@@ -2,27 +2,67 @@
 
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
+use rantzsoft_stateflow::CleanupOnExit;
 use serde::{Deserialize, Serialize};
 
-use crate::effect_v3::traits::{Fireable, Reversible};
+use super::components::*;
+use crate::{
+    effect_v3::{
+        components::EffectSourceChip,
+        traits::{Fireable, Reversible},
+    },
+    state::types::NodeState,
+};
 
 /// Configuration for a temporary shield wall that reflects bolts.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ShieldConfig {
     /// How long the shield wall lasts in seconds.
-    pub duration: OrderedFloat<f32>,
+    pub duration:        OrderedFloat<f32>,
     /// Seconds subtracted from the shield's remaining time each time a bolt bounces off it.
     pub reflection_cost: OrderedFloat<f32>,
 }
 
 impl Fireable for ShieldConfig {
-    fn fire(&self, _entity: Entity, _source: &str, _world: &mut World) {
-        todo!()
+    fn fire(&self, entity: Entity, source: &str, world: &mut World) {
+        let chip = EffectSourceChip(if source.is_empty() {
+            None
+        } else {
+            Some(source.to_owned())
+        });
+
+        world.spawn((
+            ShieldWall,
+            ShieldOwner(entity),
+            ShieldDuration(self.duration.0),
+            ShieldReflectionCost(self.reflection_cost.0),
+            chip,
+            CleanupOnExit::<NodeState>::default(),
+        ));
+    }
+
+    fn register(app: &mut App) {
+        use super::systems::tick_shield_duration;
+        use crate::effect_v3::EffectV3Systems;
+
+        app.add_systems(
+            FixedUpdate,
+            tick_shield_duration.in_set(EffectV3Systems::Tick),
+        );
     }
 }
 
 impl Reversible for ShieldConfig {
-    fn reverse(&self, _entity: Entity, _source: &str, _world: &mut World) {
-        todo!()
+    fn reverse(&self, entity: Entity, _source: &str, world: &mut World) {
+        // Despawn all shield walls owned by this entity.
+        let to_despawn: Vec<Entity> = world
+            .query_filtered::<(Entity, &ShieldOwner), With<ShieldWall>>()
+            .iter(world)
+            .filter(|(_, owner)| owner.0 == entity)
+            .map(|(e, _)| e)
+            .collect();
+        for e in to_despawn {
+            world.despawn(e);
+        }
     }
 }

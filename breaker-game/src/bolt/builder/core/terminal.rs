@@ -154,13 +154,13 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, Serving, Primary, Headless> {
     /// Spawns a headless primary serving bolt entity with all components.
     pub fn spawn(self, commands: &mut Commands) -> Entity {
         let params = CoreParams {
-            pos: self.position.pos,
-            base_speed: self.speed.base,
-            min_speed: self.speed.min,
-            max_speed: self.speed.max,
+            pos:         self.position.pos,
+            base_speed:  self.speed.base,
+            min_speed:   self.speed.min,
+            max_speed:   self.speed.max,
             min_angle_h: self.angle.min_angle_h,
             min_angle_v: self.angle.min_angle_v,
-            vel: Velocity2D(Vec2::ZERO),
+            vel:         Velocity2D(Vec2::ZERO),
         };
         let core = build_core(&params, &self.optional);
         spawn_inner(commands, core, true, true, self.optional)
@@ -171,13 +171,13 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, Serving, Extra, Headless> {
     /// Spawns a headless extra serving bolt entity with all components.
     pub fn spawn(self, commands: &mut Commands) -> Entity {
         let params = CoreParams {
-            pos: self.position.pos,
-            base_speed: self.speed.base,
-            min_speed: self.speed.min,
-            max_speed: self.speed.max,
+            pos:         self.position.pos,
+            base_speed:  self.speed.base,
+            min_speed:   self.speed.min,
+            max_speed:   self.speed.max,
             min_angle_h: self.angle.min_angle_h,
             min_angle_v: self.angle.min_angle_v,
-            vel: Velocity2D(Vec2::ZERO),
+            vel:         Velocity2D(Vec2::ZERO),
         };
         let core = build_core(&params, &self.optional);
         spawn_inner(commands, core, true, false, self.optional)
@@ -188,13 +188,13 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, HasVelocity, Primary, Headless
     /// Spawns a headless primary bolt entity with velocity and all components.
     pub fn spawn(self, commands: &mut Commands) -> Entity {
         let params = CoreParams {
-            pos: self.position.pos,
-            base_speed: self.speed.base,
-            min_speed: self.speed.min,
-            max_speed: self.speed.max,
+            pos:         self.position.pos,
+            base_speed:  self.speed.base,
+            min_speed:   self.speed.min,
+            max_speed:   self.speed.max,
             min_angle_h: self.angle.min_angle_h,
             min_angle_v: self.angle.min_angle_v,
-            vel: self.motion.vel,
+            vel:         self.motion.vel,
         };
         let core = build_core(&params, &self.optional);
         spawn_inner(commands, core, false, true, self.optional)
@@ -205,13 +205,13 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, HasVelocity, Extra, Headless> 
     /// Spawns a headless extra bolt entity with velocity and all components.
     pub fn spawn(self, commands: &mut Commands) -> Entity {
         let params = CoreParams {
-            pos: self.position.pos,
-            base_speed: self.speed.base,
-            min_speed: self.speed.min,
-            max_speed: self.speed.max,
+            pos:         self.position.pos,
+            base_speed:  self.speed.base,
+            min_speed:   self.speed.min,
+            max_speed:   self.speed.max,
             min_angle_h: self.angle.min_angle_h,
             min_angle_v: self.angle.min_angle_v,
-            vel: self.motion.vel,
+            vel:         self.motion.vel,
         };
         let core = build_core(&params, &self.optional);
         spawn_inner(commands, core, false, false, self.optional)
@@ -226,13 +226,13 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, Serving, Primary, Rendered> {
         let mesh = self.visual.mesh.clone();
         let material = self.visual.material.clone();
         let params = CoreParams {
-            pos: self.position.pos,
-            base_speed: self.speed.base,
-            min_speed: self.speed.min,
-            max_speed: self.speed.max,
+            pos:         self.position.pos,
+            base_speed:  self.speed.base,
+            min_speed:   self.speed.min,
+            max_speed:   self.speed.max,
             min_angle_h: self.angle.min_angle_h,
             min_angle_v: self.angle.min_angle_v,
-            vel: Velocity2D(Vec2::ZERO),
+            vel:         Velocity2D(Vec2::ZERO),
         };
         let core = build_core(&params, &self.optional);
         let entity = spawn_inner(commands, core, true, true, self.optional);
@@ -251,13 +251,13 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, Serving, Extra, Rendered> {
         let mesh = self.visual.mesh.clone();
         let material = self.visual.material.clone();
         let params = CoreParams {
-            pos: self.position.pos,
-            base_speed: self.speed.base,
-            min_speed: self.speed.min,
-            max_speed: self.speed.max,
+            pos:         self.position.pos,
+            base_speed:  self.speed.base,
+            min_speed:   self.speed.min,
+            max_speed:   self.speed.max,
             min_angle_h: self.angle.min_angle_h,
             min_angle_v: self.angle.min_angle_v,
-            vel: Velocity2D(Vec2::ZERO),
+            vel:         Velocity2D(Vec2::ZERO),
         };
         let core = build_core(&params, &self.optional);
         let entity = spawn_inner(commands, core, true, false, self.optional);
@@ -276,13 +276,13 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, HasVelocity, Primary, Rendered
         let mesh = self.visual.mesh.clone();
         let material = self.visual.material.clone();
         let params = CoreParams {
-            pos: self.position.pos,
-            base_speed: self.speed.base,
-            min_speed: self.speed.min,
-            max_speed: self.speed.max,
+            pos:         self.position.pos,
+            base_speed:  self.speed.base,
+            min_speed:   self.speed.min,
+            max_speed:   self.speed.max,
             min_angle_h: self.angle.min_angle_h,
             min_angle_v: self.angle.min_angle_v,
-            vel: self.motion.vel,
+            vel:         self.motion.vel,
         };
         let core = build_core(&params, &self.optional);
         let entity = spawn_inner(commands, core, false, true, self.optional);
@@ -301,13 +301,13 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, HasVelocity, Extra, Rendered> 
         let mesh = self.visual.mesh.clone();
         let material = self.visual.material.clone();
         let params = CoreParams {
-            pos: self.position.pos,
-            base_speed: self.speed.base,
-            min_speed: self.speed.min,
-            max_speed: self.speed.max,
+            pos:         self.position.pos,
+            base_speed:  self.speed.base,
+            min_speed:   self.speed.min,
+            max_speed:   self.speed.max,
             min_angle_h: self.angle.min_angle_h,
             min_angle_v: self.angle.min_angle_v,
-            vel: self.motion.vel,
+            vel:         self.motion.vel,
         };
         let core = build_core(&params, &self.optional);
         let entity = spawn_inner(commands, core, false, false, self.optional);

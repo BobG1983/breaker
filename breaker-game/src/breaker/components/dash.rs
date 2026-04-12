@@ -18,11 +18,11 @@ pub struct DashTilt(pub f32);
 #[derive(Component, Debug)]
 pub struct BrakeTilt {
     /// Maximum tilt angle during brake in radians.
-    pub angle: f32,
+    pub angle:    f32,
     /// Duration of the brake tilt ease in seconds.
     pub duration: f32,
     /// Easing function for the brake tilt.
-    pub ease: EaseFunction,
+    pub ease:     EaseFunction,
 }
 
 /// Brake deceleration multiplier relative to normal deceleration.

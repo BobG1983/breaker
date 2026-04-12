@@ -27,7 +27,7 @@ fn apply_debug_setup_sets_node_timer_remaining() {
     app.add_systems(Update, apply_debug_setup);
     app.world_mut().insert_resource(NodeTimer {
         remaining: 60.0,
-        total: 60.0,
+        total:     60.0,
     });
 
     app.update();

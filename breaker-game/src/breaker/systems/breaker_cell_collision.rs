@@ -55,7 +55,7 @@ pub(crate) fn breaker_cell_collision(
         if dx < half_w + cell_aabb.half_extents.x && dy < half_h + cell_aabb.half_extents.y {
             writer.write(BreakerImpactCell {
                 breaker: breaker.entity,
-                cell: cell_entity,
+                cell:    cell_entity,
             });
         }
     }

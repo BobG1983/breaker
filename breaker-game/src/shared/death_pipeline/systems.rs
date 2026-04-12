@@ -13,13 +13,13 @@ use super::{
 /// the killing blow. Uses `Without<Dead>` to skip entities already confirmed dead.
 ///
 /// Generic over the entity marker type — monomorphized for Cell, Bolt, Wall, Breaker.
-#[allow(
-    clippy::type_complexity,
-    reason = "Bevy query with generic filter cannot use type alias"
-)]
-pub fn apply_damage<T: GameEntity>(
+/// Query for entities with HP and kill-tracking — excludes already-dead entities.
+type DamageTargetQuery<'w, 's, T> =
+    Query<'w, 's, (&'static mut Hp, &'static mut KilledBy), (With<T>, Without<Dead>)>;
+
+pub(crate) fn apply_damage<T: GameEntity>(
     mut reader: MessageReader<DamageDealt<T>>,
-    mut query: Query<(&mut Hp, &mut KilledBy), (With<T>, Without<Dead>)>,
+    mut query: DamageTargetQuery<T>,
 ) {
     for msg in reader.read() {
         let Ok((mut hp, mut killed_by)) = query.get_mut(msg.target) else {
@@ -41,19 +41,19 @@ pub fn apply_damage<T: GameEntity>(
 ///
 /// Uses `Without<Dead>` to skip entities already confirmed dead by their domain
 /// kill handler, preventing double-processing.
-#[allow(
-    clippy::type_complexity,
-    reason = "Bevy query with generic filter cannot use type alias"
-)]
-pub fn detect_deaths<T: GameEntity>(
-    query: Query<(Entity, &KilledBy, &Hp), (With<T>, Without<Dead>)>,
+/// Query for entities that might have died — HP and kill-tracking, excludes already-dead.
+type DeathDetectionQuery<'w, 's, T> =
+    Query<'w, 's, (Entity, &'static KilledBy, &'static Hp), (With<T>, Without<Dead>)>;
+
+pub(crate) fn detect_deaths<T: GameEntity>(
+    query: DeathDetectionQuery<T>,
     mut writer: MessageWriter<KillYourself<T>>,
 ) {
     for (entity, killed_by, hp) in &query {
         if hp.current <= 0.0 {
             writer.write(KillYourself {
-                victim: entity,
-                killer: killed_by.dealer,
+                victim:  entity,
+                killer:  killed_by.dealer,
                 _marker: PhantomData,
             });
         }
@@ -64,7 +64,10 @@ pub fn detect_deaths<T: GameEntity>(
 ///
 /// This is the ONLY system that despawns entities in the death pipeline.
 /// Runs in `FixedPostUpdate`.
-pub fn process_despawn_requests(mut reader: MessageReader<DespawnEntity>, mut commands: Commands) {
+pub(crate) fn process_despawn_requests(
+    mut reader: MessageReader<DespawnEntity>,
+    mut commands: Commands,
+) {
     for msg in reader.read() {
         commands.entity(msg.entity).try_despawn();
     }
@@ -361,9 +364,9 @@ mod tests {
             .spawn((
                 TestEntity,
                 Hp {
-                    current: 0.0,
+                    current:  0.0,
                     starting: 10.0,
-                    max: None,
+                    max:      None,
                 },
                 KilledBy::default(),
             ))
@@ -393,9 +396,9 @@ mod tests {
             .spawn((
                 TestEntity,
                 Hp {
-                    current: -5.0,
+                    current:  -5.0,
                     starting: 10.0,
-                    max: None,
+                    max:      None,
                 },
                 KilledBy::default(),
             ))
@@ -433,9 +436,9 @@ mod tests {
         app.world_mut().spawn((
             TestEntity,
             Hp {
-                current: 0.0,
+                current:  0.0,
                 starting: 10.0,
-                max: None,
+                max:      None,
             },
             KilledBy::default(),
             Dead,
@@ -459,9 +462,9 @@ mod tests {
         app.world_mut().spawn((
             TestEntity,
             Hp {
-                current: 0.0,
+                current:  0.0,
                 starting: 10.0,
-                max: None,
+                max:      None,
             },
             KilledBy {
                 dealer: Some(dealer),

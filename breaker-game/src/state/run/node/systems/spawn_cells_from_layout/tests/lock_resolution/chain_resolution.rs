@@ -82,15 +82,15 @@ fn three_deep_chain_all_cells_spawn_correctly() {
     locks.insert((0, 1), vec![(0, 2)]);
     locks.insert((0, 2), vec![(0, 3)]);
     let layout = NodeLayout {
-        name: "three_deep_chain".to_owned(),
-        timer_secs: 60.0,
-        cols: 4,
-        rows: 1,
+        name:            "three_deep_chain".to_owned(),
+        timer_secs:      60.0,
+        cols:            4,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S"), s("S"), s("S"), s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: Some(locks),
+        grid:            vec![vec![s("S"), s("S"), s("S"), s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           Some(locks),
     };
     let mut app = test_app(layout.clone());
     app.update();
@@ -170,15 +170,15 @@ fn multiple_independent_lock_groups_resolve_correctly() {
     locks.insert((0, 0), vec![(0, 1)]);
     locks.insert((0, 2), vec![(0, 3)]);
     let layout = NodeLayout {
-        name: "independent_groups".to_owned(),
-        timer_secs: 60.0,
-        cols: 4,
-        rows: 1,
+        name:            "independent_groups".to_owned(),
+        timer_secs:      60.0,
+        cols:            4,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S"), s("S"), s("T"), s("T")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: Some(locks),
+        grid:            vec![vec![s("S"), s("S"), s("T"), s("T")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           Some(locks),
     };
     let mut app = test_app(layout.clone());
     app.update();

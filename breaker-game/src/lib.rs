@@ -24,13 +24,7 @@ pub mod breaker;
 pub mod cells;
 pub mod chips;
 pub(crate) mod debug;
-/// New effect domain (v3) — coexists with old domain during migration.
-#[allow(
-    dead_code,
-    unused,
-    missing_docs,
-    reason = "effect_v3 — some stubs still unused during migration"
-)]
+/// New effect domain (v3).
 pub mod effect_v3;
 pub(crate) mod fx;
 pub mod input;

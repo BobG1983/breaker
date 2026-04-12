@@ -41,10 +41,10 @@ pub(crate) fn detect_close_save(
 
             // Record in stats — selection happens at run-end
             stats.highlights.push(RunHighlight {
-                kind: HighlightKind::CloseSave,
+                kind:       HighlightKind::CloseSave,
                 node_index: run_state.node_index,
-                value: distance,
-                detail: None,
+                value:      distance,
+                detail:     None,
             });
         }
     }
@@ -127,8 +127,8 @@ mod tests {
             ))
             .id();
         app.insert_resource(TestMessages(vec![BumpPerformed {
-            grade: BumpGrade::Perfect,
-            bolt: Some(bolt_entity),
+            grade:   BumpGrade::Perfect,
+            bolt:    Some(bolt_entity),
             breaker: Entity::PLACEHOLDER,
         }]));
         tick(&mut app);
@@ -177,8 +177,8 @@ mod tests {
             ))
             .id();
         app.insert_resource(TestMessages(vec![BumpPerformed {
-            grade: BumpGrade::Perfect,
-            bolt: Some(bolt_entity),
+            grade:   BumpGrade::Perfect,
+            bolt:    Some(bolt_entity),
             breaker: Entity::PLACEHOLDER,
         }]));
         tick(&mut app);
@@ -211,8 +211,8 @@ mod tests {
         let mut app = test_app();
         // BumpPerformed with no bolt — no matching bolt entity exists
         app.insert_resource(TestMessages(vec![BumpPerformed {
-            grade: BumpGrade::Perfect,
-            bolt: None,
+            grade:   BumpGrade::Perfect,
+            bolt:    None,
             breaker: Entity::PLACEHOLDER,
         }]));
         tick(&mut app);
@@ -234,10 +234,10 @@ mod tests {
             .resource_mut::<RunStats>()
             .highlights
             .push(RunHighlight {
-                kind: HighlightKind::CloseSave,
+                kind:       HighlightKind::CloseSave,
                 node_index: 0,
-                value: 10.0,
-                detail: None,
+                value:      10.0,
+                detail:     None,
             });
 
         let bolt_entity = app
@@ -250,8 +250,8 @@ mod tests {
             ))
             .id();
         app.insert_resource(TestMessages(vec![BumpPerformed {
-            grade: BumpGrade::Perfect,
-            bolt: Some(bolt_entity),
+            grade:   BumpGrade::Perfect,
+            bolt:    Some(bolt_entity),
             breaker: Entity::PLACEHOLDER,
         }]));
         tick(&mut app);
@@ -289,10 +289,10 @@ mod tests {
             let mut stats = app.world_mut().resource_mut::<RunStats>();
             for i in 0..5 {
                 stats.highlights.push(RunHighlight {
-                    kind: HighlightKind::MassDestruction,
+                    kind:       HighlightKind::MassDestruction,
                     node_index: i,
-                    value: 10.0,
-                    detail: None,
+                    value:      10.0,
+                    detail:     None,
                 });
             }
         }
@@ -307,8 +307,8 @@ mod tests {
             ))
             .id();
         app.insert_resource(TestMessages(vec![BumpPerformed {
-            grade: BumpGrade::Perfect,
-            bolt: Some(bolt_entity),
+            grade:   BumpGrade::Perfect,
+            bolt:    Some(bolt_entity),
             breaker: Entity::PLACEHOLDER,
         }]));
         tick(&mut app);

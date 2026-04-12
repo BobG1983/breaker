@@ -10,11 +10,11 @@ use crate::effect_v3::{
 /// Deferred command that routes a tree to an entity.
 pub struct RouteEffectCommand {
     /// The entity to install the tree on.
-    pub entity: Entity,
+    pub entity:     Entity,
     /// The name identifying the source of the tree.
-    pub name: String,
+    pub name:       String,
     /// The tree to install.
-    pub tree: Tree,
+    pub tree:       Tree,
     /// Whether the tree is permanent (Bound) or one-shot (Staged).
     pub route_type: RouteType,
 }

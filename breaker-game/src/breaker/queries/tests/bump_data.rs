@@ -59,9 +59,9 @@ fn breaker_bump_timing_data_with_anchors_present() {
         BumpWeakCooldown(0.2),
         AnchorPlanted,
         AnchorActive {
-            bump_force_multiplier: 1.5,
+            bump_force_multiplier:     1.5,
             perfect_window_multiplier: 2.0,
-            plant_delay: 0.5,
+            plant_delay:               0.5,
         },
     ));
 
@@ -197,9 +197,9 @@ fn breaker_bump_grading_data_with_anchors() {
         BumpWeakCooldown(0.2),
         AnchorPlanted,
         AnchorActive {
-            bump_force_multiplier: 1.5,
+            bump_force_multiplier:     1.5,
             perfect_window_multiplier: 2.0,
-            plant_delay: 0.5,
+            plant_delay:               0.5,
         },
     ));
 

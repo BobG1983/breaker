@@ -36,8 +36,8 @@ mod tests {
     /// Helper to create a `Birthing` component for tests.
     fn test_birthing() -> Birthing {
         Birthing {
-            timer: Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
-            target_scale: Scale2D { x: 8.0, y: 8.0 },
+            timer:          Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
+            target_scale:   Scale2D { x: 8.0, y: 8.0 },
             stashed_layers: CollisionLayers::default(),
         }
     }

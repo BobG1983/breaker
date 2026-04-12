@@ -120,8 +120,8 @@ fn reversal_dash_right_with_custom_dash_params_uses_entity_values() {
             DashState::Settling,
             Velocity2D(Vec2::ZERO),
             BreakerTilt {
-                angle: 0.35,
-                ease_start: 0.35,
+                angle:       0.35,
+                ease_start:  0.35,
                 ease_target: 0.0,
             },
             DashStateTimer { remaining: 0.2 },
@@ -131,7 +131,7 @@ fn reversal_dash_right_with_custom_dash_params_uses_entity_values() {
             MaxSpeed(500.0),
             BreakerDeceleration(config.deceleration),
             DecelEasing {
-                ease: config.decel_ease,
+                ease:     config.decel_ease,
                 strength: config.decel_ease_strength,
             },
             DashSpeedMultiplier(2.0),
@@ -141,9 +141,9 @@ fn reversal_dash_right_with_custom_dash_params_uses_entity_values() {
         .insert((
             DashTiltEase(config.dash_tilt_ease),
             BrakeTilt {
-                angle: config.brake_tilt_angle.to_radians(),
+                angle:    config.brake_tilt_angle.to_radians(),
                 duration: config.brake_tilt_duration,
-                ease: config.brake_tilt_ease,
+                ease:     config.brake_tilt_ease,
             },
             BrakeDecel(config.brake_decel_multiplier),
             SettleDuration(config.settle_duration),

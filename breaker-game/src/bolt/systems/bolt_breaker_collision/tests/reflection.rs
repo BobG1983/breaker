@@ -73,8 +73,8 @@ fn tilt_affects_reflection() {
     app.world_mut().spawn((
         Breaker,
         BreakerTilt {
-            angle: 0.3,
-            ease_start: 0.0,
+            angle:       0.3,
+            ease_start:  0.0,
             ease_target: 0.0,
         },
         default_breaker_width(),

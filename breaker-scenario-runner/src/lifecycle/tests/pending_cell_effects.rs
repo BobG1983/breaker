@@ -334,7 +334,7 @@ fn pending_cell_effects_inserts_bound_and_staged_if_absent() {
         (
             "existing".to_owned(),
             Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
-                multiplier: ordered_float::OrderedFloat(5.0)
+                multiplier: ordered_float::OrderedFloat(5.0),
             }))
         ),
         "expected first entry to be the pre-existing one, got {:?}",

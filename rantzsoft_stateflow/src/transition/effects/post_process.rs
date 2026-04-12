@@ -27,15 +27,15 @@ use bevy::{
 #[derive(Component, ExtractComponent, Clone, Copy, Default, ShaderType)]
 pub struct TransitionEffect {
     /// Effect color as linear RGBA Vec4.
-    pub color: Vec4,
+    pub color:       Vec4,
     /// Direction vector (used by wipe: normalized axis; slide: UV offset
     /// direction).
-    pub direction: Vec4,
+    pub direction:   Vec4,
     /// Effect type discriminator: 0=none, 1=fade, 2=dissolve, 3=pixelate,
     /// 4=iris, 5=wipe, 6=slide.
     pub effect_type: u32,
     /// Animation progress, 0.0 to 1.0.
-    pub progress: f32,
+    pub progress:    f32,
 }
 
 impl FullscreenMaterial for TransitionEffect {
@@ -181,10 +181,10 @@ mod tests {
         let mut world = World::new();
         let entity = world
             .spawn(TransitionEffect {
-                color: Vec4::new(0.0, 0.0, 0.0, 1.0),
-                direction: Vec4::ZERO,
+                color:       Vec4::new(0.0, 0.0, 0.0, 1.0),
+                direction:   Vec4::ZERO,
                 effect_type: EffectType::FADE,
-                progress: 0.5,
+                progress:    0.5,
             })
             .id();
 
@@ -202,10 +202,10 @@ mod tests {
         let mut world = World::new();
         let entity = world
             .spawn(TransitionEffect {
-                color: Vec4::new(0.0, 0.0, 0.0, 1.0),
-                direction: Vec4::ZERO,
+                color:       Vec4::new(0.0, 0.0, 0.0, 1.0),
+                direction:   Vec4::ZERO,
                 effect_type: EffectType::FADE,
-                progress: 0.5,
+                progress:    0.5,
             })
             .id();
 
@@ -227,10 +227,10 @@ mod tests {
     #[test]
     fn transition_effect_is_copy_and_clone() {
         let original = TransitionEffect {
-            color: Vec4::new(1.0, 0.0, 0.0, 1.0),
-            direction: Vec4::ZERO,
+            color:       Vec4::new(1.0, 0.0, 0.0, 1.0),
+            direction:   Vec4::ZERO,
             effect_type: EffectType::FADE,
-            progress: 0.5,
+            progress:    0.5,
         };
         let copied = original;
         // Verify Copy works (original still usable after copy)

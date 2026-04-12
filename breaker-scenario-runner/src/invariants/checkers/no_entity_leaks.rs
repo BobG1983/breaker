@@ -40,10 +40,10 @@ pub fn check_no_entity_leaks(
     // Check every 120 frames (~1.9 s at 64 Hz fixed timestep)
     if needs_check && count > base * 2 {
         log.0.push(ViolationEntry {
-            frame: frame.0,
+            frame:     frame.0,
             invariant: InvariantKind::NoEntityLeaks,
-            entity: None,
-            message: format!(
+            entity:    None,
+            message:   format!(
                 "NoEntityLeaks FAIL frame={} count={count} baseline={base} (>{} threshold)",
                 frame.0,
                 base * 2,

@@ -14,37 +14,37 @@ use crate::chips::{ChipDefinition, definition::EvolutionIngredient};
 )]
 pub(crate) struct ChipSelectConfig {
     /// Time in seconds for the selection countdown.
-    pub timer_secs: f32,
+    pub timer_secs:                 f32,
     /// Font size for card title text.
-    pub card_title_font_size: f32,
+    pub card_title_font_size:       f32,
     /// Font size for card description text.
     pub card_description_font_size: f32,
     /// Font size for the countdown timer display.
-    pub timer_font_size: f32,
+    pub timer_font_size:            f32,
     /// RGB color for the selected card border.
-    pub selected_color_rgb: [f32; 3],
+    pub selected_color_rgb:         [f32; 3],
     /// RGB color for unselected card borders.
-    pub normal_color_rgb: [f32; 3],
+    pub normal_color_rgb:           [f32; 3],
     /// RGB color for the timer text.
-    pub timer_color_rgb: [f32; 3],
+    pub timer_color_rgb:            [f32; 3],
     /// Number of chips to offer per node.
-    pub offers_per_node: usize,
+    pub offers_per_node:            usize,
     /// Base weight for Common rarity chips.
-    pub rarity_weight_common: f32,
+    pub rarity_weight_common:       f32,
     /// Base weight for Uncommon rarity chips.
-    pub rarity_weight_uncommon: f32,
+    pub rarity_weight_uncommon:     f32,
     /// Base weight for Rare rarity chips.
-    pub rarity_weight_rare: f32,
+    pub rarity_weight_rare:         f32,
     /// Base weight for Legendary rarity chips.
-    pub rarity_weight_legendary: f32,
+    pub rarity_weight_legendary:    f32,
     /// Weight decay factor for chips offered but not selected.
-    pub seen_decay_factor: f32,
+    pub seen_decay_factor:          f32,
     /// RGB color for Common rarity card border.
-    pub rarity_color_common_rgb: [f32; 3],
+    pub rarity_color_common_rgb:    [f32; 3],
     /// RGB color for Uncommon rarity card border.
-    pub rarity_color_uncommon_rgb: [f32; 3],
+    pub rarity_color_uncommon_rgb:  [f32; 3],
     /// RGB color for Rare rarity card border.
-    pub rarity_color_rare_rgb: [f32; 3],
+    pub rarity_color_rare_rgb:      [f32; 3],
     /// RGB color for Legendary rarity card border.
     pub rarity_color_legendary_rgb: [f32; 3],
 }
@@ -52,22 +52,22 @@ pub(crate) struct ChipSelectConfig {
 impl Default for ChipSelectConfig {
     fn default() -> Self {
         Self {
-            timer_secs: 10.0,
-            card_title_font_size: 36.0,
+            timer_secs:                 10.0,
+            card_title_font_size:       36.0,
             card_description_font_size: 20.0,
-            timer_font_size: 48.0,
-            selected_color_rgb: [0.4, 0.8, 1.0],
-            normal_color_rgb: [0.3, 0.3, 0.4],
-            timer_color_rgb: [1.0, 0.8, 0.2],
-            offers_per_node: 3,
-            rarity_weight_common: 100.0,
-            rarity_weight_uncommon: 50.0,
-            rarity_weight_rare: 15.0,
-            rarity_weight_legendary: 3.0,
-            seen_decay_factor: 0.8,
-            rarity_color_common_rgb: [0.5, 0.5, 0.5],
-            rarity_color_uncommon_rgb: [0.2, 0.8, 0.3],
-            rarity_color_rare_rgb: [0.3, 0.4, 1.0],
+            timer_font_size:            48.0,
+            selected_color_rgb:         [0.4, 0.8, 1.0],
+            normal_color_rgb:           [0.3, 0.3, 0.4],
+            timer_color_rgb:            [1.0, 0.8, 0.2],
+            offers_per_node:            3,
+            rarity_weight_common:       100.0,
+            rarity_weight_uncommon:     50.0,
+            rarity_weight_rare:         15.0,
+            rarity_weight_legendary:    3.0,
+            seen_decay_factor:          0.8,
+            rarity_color_common_rgb:    [0.5, 0.5, 0.5],
+            rarity_color_uncommon_rgb:  [0.2, 0.8, 0.3],
+            rarity_color_rare_rgb:      [0.3, 0.4, 1.0],
             rarity_color_legendary_rgb: [1.0, 0.85, 0.2],
         }
     }
@@ -98,7 +98,7 @@ pub enum ChipOffering {
         /// Ingredients consumed from the player's inventory.
         ingredients: Vec<EvolutionIngredient>,
         /// The chip produced by this evolution.
-        result: ChipDefinition,
+        result:      ChipDefinition,
     },
 }
 
@@ -186,10 +186,10 @@ mod tests {
     fn evolution_offering_name_returns_result_name() {
         let offering = ChipOffering::Evolution {
             ingredients: vec![EvolutionIngredient {
-                chip_name: "A".to_owned(),
+                chip_name:       "A".to_owned(),
                 stacks_required: 2,
             }],
-            result: ChipDefinition::test(
+            result:      ChipDefinition::test(
                 "A+",
                 Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 5 })),
                 1,
@@ -202,10 +202,10 @@ mod tests {
     fn evolution_offering_definition_returns_result_definition() {
         let offering = ChipOffering::Evolution {
             ingredients: vec![EvolutionIngredient {
-                chip_name: "A".to_owned(),
+                chip_name:       "A".to_owned(),
                 stacks_required: 2,
             }],
-            result: ChipDefinition::test(
+            result:      ChipDefinition::test(
                 "Barrage",
                 Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 5 })),
                 1,

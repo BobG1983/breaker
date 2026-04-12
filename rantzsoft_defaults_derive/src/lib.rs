@@ -17,22 +17,22 @@ use syn::{DeriveInput, Fields, Meta, parse_macro_input};
 /// Parsed attributes from `#[game_config(...)]`.
 struct GameConfigAttrs {
     /// Legacy path: `name = "ConfigName"` — derive is on the Defaults struct.
-    name: Option<syn::Ident>,
+    name:     Option<syn::Ident>,
     /// Reversed path: `defaults = "DefaultsName"` — derive is on the Config struct.
     defaults: Option<syn::Ident>,
     /// Optional asset path for `SeedableConfig`.
-    path: Option<String>,
+    path:     Option<String>,
     /// Optional file extension for `SeedableConfig`.
-    ext: Option<String>,
+    ext:      Option<String>,
 }
 
 /// Extracts all `game_config` attributes from the derive input.
 fn parse_game_config_attrs(input: &DeriveInput) -> GameConfigAttrs {
     let mut attrs = GameConfigAttrs {
-        name: None,
+        name:     None,
         defaults: None,
-        path: None,
-        ext: None,
+        path:     None,
+        ext:      None,
     };
 
     for attr in &input.attrs {

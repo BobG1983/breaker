@@ -71,14 +71,7 @@ pub(crate) fn reset_bolt(
         if let (Some(ref mut remaining), Some(ap)) =
             (bolt.piercing_remaining, bolt.active_piercings)
         {
-            #[allow(
-                clippy::cast_sign_loss,
-                clippy::cast_possible_truncation,
-                reason = "piercing aggregate is always non-negative small integer"
-            )]
-            {
-                remaining.0 = ap.aggregate().round() as u32;
-            }
+            remaining.0 = ap.aggregate().round() as u32;
         }
 
         bolt_spawned.write(BoltSpawned);

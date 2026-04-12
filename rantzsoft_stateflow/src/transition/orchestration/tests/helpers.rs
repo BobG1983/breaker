@@ -141,7 +141,7 @@ pub(super) fn add_outin_route(app: &mut App, from: TestState, to: TestState) {
                 .to(to)
                 .with_transition(TransitionType::OutIn {
                     out_e: Arc::new(TestEffectOut),
-                    in_e: Arc::new(TestEffectIn),
+                    in_e:  Arc::new(TestEffectIn),
                 }),
         )
         .ok();

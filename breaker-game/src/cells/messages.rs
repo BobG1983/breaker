@@ -9,7 +9,7 @@ use bevy::prelude::*;
 #[derive(Message, Clone, Debug)]
 pub(crate) struct RequestCellDestroyed {
     /// The cell entity to be destroyed.
-    pub cell: Entity,
+    pub cell:                  Entity,
     /// Whether this cell had the `RequiredToClear` component.
     pub was_required_to_clear: bool,
 }
@@ -44,9 +44,9 @@ pub(crate) struct CellImpactWall {
 #[derive(Message, Clone, Debug)]
 pub(crate) struct DamageCell {
     /// The cell entity to damage.
-    pub cell: Entity,
+    pub cell:        Entity,
     /// Pre-calculated damage amount.
-    pub damage: f32,
+    pub damage:      f32,
     /// The chip name that originated this damage, for evolution attribution.
     pub source_chip: Option<String>,
 }
@@ -62,7 +62,7 @@ mod tests {
     #[test]
     fn request_cell_destroyed_debug_format() {
         let msg = RequestCellDestroyed {
-            cell: Entity::PLACEHOLDER,
+            cell:                  Entity::PLACEHOLDER,
             was_required_to_clear: false,
         };
         let debug = format!("{msg:?}");
@@ -91,8 +91,8 @@ mod tests {
     #[test]
     fn damage_cell_debug_format() {
         let msg = DamageCell {
-            cell: Entity::PLACEHOLDER,
-            damage: 10.0,
+            cell:        Entity::PLACEHOLDER,
+            damage:      10.0,
             source_chip: None,
         };
         assert!(format!("{msg:?}").contains("DamageCell"));

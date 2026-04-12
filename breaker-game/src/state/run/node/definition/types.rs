@@ -35,28 +35,28 @@ pub enum NodePool {
 #[derive(Asset, TypePath, Deserialize, Clone, Debug)]
 pub struct NodeLayout {
     /// Display name.
-    pub name: String,
+    pub name:            String,
     /// Timer duration in seconds for this node.
-    pub timer_secs: f32,
+    pub timer_secs:      f32,
     /// Number of columns.
-    pub cols: u32,
+    pub cols:            u32,
     /// Number of rows.
-    pub rows: u32,
+    pub rows:            u32,
     /// Y offset from playfield top for grid start.
     pub grid_top_offset: f32,
     /// Grid rows — each inner vec is a row, each String is alias or "." (empty).
-    pub grid: Vec<Vec<String>>,
+    pub grid:            Vec<Vec<String>>,
     /// Which pool this layout belongs to. Defaults to `Passive` for backward compatibility.
     #[serde(default)]
-    pub pool: NodePool,
+    pub pool:            NodePool,
     /// Scale factor for breaker and bolt entities (0.5..=1.0). Defaults to 1.0.
     #[serde(default = "default_entity_scale")]
-    pub entity_scale: f32,
+    pub entity_scale:    f32,
     /// Lock groups: maps each locked cell position `(row, col)` to the positions
     /// of cells that must be destroyed to unlock it.
     /// Absent or `None` means no locks in this layout.
     #[serde(default)]
-    pub locks: Option<LockMap>,
+    pub locks:           Option<LockMap>,
 }
 
 #[cfg(test)]

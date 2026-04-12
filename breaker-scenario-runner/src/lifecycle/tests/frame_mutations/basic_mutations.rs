@@ -45,7 +45,7 @@ fn apply_debug_frame_mutations_set_breaker_state_at_matching_frame() {
         max_frames: 1000,
         disallowed_failures: vec![],
         frame_mutations: Some(vec![FrameMutation {
-            frame: 3,
+            frame:    3,
             mutation: MutationKind::SetDashState(ScenarioDashState::Braking),
         }]),
         ..Default::default()
@@ -91,7 +91,7 @@ fn apply_debug_frame_mutations_set_breaker_state_skips_non_matching_frame() {
         max_frames: 1000,
         disallowed_failures: vec![],
         frame_mutations: Some(vec![FrameMutation {
-            frame: 3,
+            frame:    3,
             mutation: MutationKind::SetDashState(ScenarioDashState::Braking),
         }]),
         ..Default::default()
@@ -137,7 +137,7 @@ fn apply_debug_frame_mutations_set_timer_remaining_at_matching_frame() {
         max_frames: 1000,
         disallowed_failures: vec![],
         frame_mutations: Some(vec![FrameMutation {
-            frame: 5,
+            frame:    5,
             mutation: MutationKind::SetTimerRemaining(61.0),
         }]),
         ..Default::default()
@@ -149,7 +149,7 @@ fn apply_debug_frame_mutations_set_timer_remaining_at_matching_frame() {
         .insert_resource(ScenarioFrame(5))
         .insert_resource(NodeTimer {
             remaining: 55.0,
-            total: 60.0,
+            total:     60.0,
         })
         .add_systems(Update, apply_debug_frame_mutations);
 
@@ -178,7 +178,7 @@ fn apply_debug_frame_mutations_set_timer_remaining_noop_when_no_timer() {
         max_frames: 1000,
         disallowed_failures: vec![],
         frame_mutations: Some(vec![FrameMutation {
-            frame: 5,
+            frame:    5,
             mutation: MutationKind::SetTimerRemaining(61.0),
         }]),
         ..Default::default()

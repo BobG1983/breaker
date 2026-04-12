@@ -194,7 +194,7 @@ fn breaker_missing_bound_effects_inserted_before_push() {
         Tree::When(
             Trigger::PerfectBumped,
             Box::new(Tree::Fire(EffectType::Shield(ShieldConfig {
-                duration: OrderedFloat(5.0),
+                duration:        OrderedFloat(5.0),
                 reflection_cost: OrderedFloat(0.0),
             }))),
         ),
@@ -231,7 +231,7 @@ fn cells_target_stamps_to_breaker_bound_effects() {
         Tree::When(
             Trigger::Impacted(EntityKind::Bolt),
             Box::new(Tree::Fire(EffectType::Shield(ShieldConfig {
-                duration: OrderedFloat(5.0),
+                duration:        OrderedFloat(5.0),
                 reflection_cost: OrderedFloat(0.0),
             }))),
         ),

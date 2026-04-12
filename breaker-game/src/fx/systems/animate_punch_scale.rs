@@ -56,8 +56,8 @@ mod tests {
             .world_mut()
             .spawn((
                 PunchScale {
-                    timer: 0.1,
-                    duration: 0.1,
+                    timer:     0.1,
+                    duration:  0.1,
                     overshoot: 1.15,
                 },
                 Transform::from_scale(Vec3::splat(1.15)),
@@ -99,8 +99,8 @@ mod tests {
             .world_mut()
             .spawn((
                 PunchScale {
-                    timer: 0.1,
-                    duration: 0.1,
+                    timer:     0.1,
+                    duration:  0.1,
                     overshoot: 1.0,
                 },
                 Transform::default(),
@@ -139,8 +139,8 @@ mod tests {
             .world_mut()
             .spawn((
                 PunchScale {
-                    timer: 0.0,
-                    duration: 0.1,
+                    timer:     0.0,
+                    duration:  0.1,
                     overshoot: 1.15,
                 },
                 Transform::from_scale(Vec3::splat(1.15)),
@@ -184,8 +184,8 @@ mod tests {
             .world_mut()
             .spawn((
                 PunchScale {
-                    timer: 0.001,
-                    duration: 0.1,
+                    timer:     0.001,
+                    duration:  0.1,
                     overshoot: 1.15,
                 },
                 Transform::from_scale(Vec3::splat(1.15)),
@@ -230,8 +230,8 @@ mod tests {
             .world_mut()
             .spawn((
                 PunchScale {
-                    timer: 0.0,
-                    duration: 0.0,
+                    timer:     0.0,
+                    duration:  0.0,
                     overshoot: 1.15,
                 },
                 Transform::from_scale(Vec3::splat(1.15)),
@@ -275,8 +275,8 @@ mod tests {
         let entity = app
             .world_mut()
             .spawn(PunchScale {
-                timer: 0.1,
-                duration: 0.1,
+                timer:     0.1,
+                duration:  0.1,
                 overshoot: 1.15,
             })
             .id();
@@ -307,8 +307,8 @@ mod tests {
             .world_mut()
             .spawn((
                 PunchScale {
-                    timer: 0.05,
-                    duration: 0.1,
+                    timer:     0.05,
+                    duration:  0.1,
                     overshoot: 1.15,
                 },
                 Transform::from_scale(Vec3::splat(1.15)),
@@ -320,8 +320,8 @@ mod tests {
             .world_mut()
             .spawn((
                 PunchScale {
-                    timer: 0.2,
-                    duration: 0.2,
+                    timer:     0.2,
+                    duration:  0.2,
                     overshoot: 1.3,
                 },
                 Transform::from_scale(Vec3::splat(1.3)),

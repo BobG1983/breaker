@@ -57,7 +57,7 @@ pub(crate) fn breaker_wall_collision(
         if dx < half_w + wall_aabb.half_extents.x && dy < half_h + wall_aabb.half_extents.y {
             writer.write(BreakerImpactWall {
                 breaker: breaker.entity,
-                wall: wall_entity,
+                wall:    wall_entity,
             });
         }
     }

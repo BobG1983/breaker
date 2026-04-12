@@ -30,8 +30,8 @@ fn effect_test_app() -> (App, Entity) {
 #[test]
 fn progress_fraction_computes_correctly() {
     let progress = TransitionProgress {
-        elapsed: 0.3,
-        duration: 0.5,
+        elapsed:   0.3,
+        duration:  0.5,
         completed: false,
     };
     let fraction = (progress.elapsed / progress.duration).clamp(0.0, 1.0);
@@ -44,8 +44,8 @@ fn progress_fraction_computes_correctly() {
 #[test]
 fn progress_fraction_clamps_to_one_on_overshoot() {
     let progress = TransitionProgress {
-        elapsed: 0.6,
-        duration: 0.5,
+        elapsed:   0.6,
+        duration:  0.5,
         completed: false,
     };
     let fraction = (progress.elapsed / progress.duration).clamp(0.0, 1.0);
@@ -61,15 +61,15 @@ fn progress_fraction_clamps_to_one_on_overshoot() {
 fn zero_duration_effect_completes_immediately_via_fade_out() {
     let (mut app, camera) = effect_test_app();
     app.world_mut().entity_mut(camera).insert(TransitionEffect {
-        color: Vec4::new(0.0, 0.0, 0.0, 1.0),
-        direction: Vec4::ZERO,
+        color:       Vec4::new(0.0, 0.0, 0.0, 1.0),
+        direction:   Vec4::ZERO,
         effect_type: EffectType::FADE,
-        progress: 0.0,
+        progress:    0.0,
     });
     app.insert_resource(crate::transition::resources::RunningTransition::<FadeOut>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 0.0,
-        duration: 0.0,
+        elapsed:   0.0,
+        duration:  0.0,
         completed: false,
     });
     app.add_systems(Update, fade::fade_out_run);
@@ -149,8 +149,8 @@ fn end_system_does_not_panic_when_camera_lacks_transition_effect() {
     // Camera exists but has no TransitionEffect
     app.insert_resource(crate::transition::resources::EndingTransition::<FadeOut>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 0.5,
-        duration: 0.5,
+        elapsed:   0.5,
+        duration:  0.5,
         completed: true,
     });
     app.add_systems(Update, fade::fade_out_end);
@@ -182,8 +182,8 @@ fn end_system_does_not_despawn_any_entities() {
 
     app.insert_resource(crate::transition::resources::EndingTransition::<FadeOut>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 0.5,
-        duration: 0.5,
+        elapsed:   0.5,
+        duration:  0.5,
         completed: true,
     });
     app.add_systems(Update, fade::fade_out_end);
@@ -226,7 +226,7 @@ fn inserting_fade_out_marker_causes_only_fade_out_start_to_fire() {
     app.insert_resource(StartingTransition::<FadeOut>::new());
     app.insert_resource(FadeOutConfig {
         duration: 0.5,
-        color: Color::BLACK,
+        color:    Color::BLACK,
     });
     app.update();
 

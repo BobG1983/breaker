@@ -30,7 +30,7 @@ fn effect_test_app() -> (App, Entity) {
 fn slide_start_inserts_transition_effect_on_camera_with_left_direction() {
     let (mut app, _camera) = effect_test_app();
     app.insert_resource(SlideConfig {
-        duration: 0.4,
+        duration:  0.4,
         direction: SlideDirection::Left,
     });
     app.insert_resource(StartingTransition::<Slide>::new());
@@ -69,7 +69,7 @@ fn slide_start_inserts_transition_effect_on_camera_with_left_direction() {
 fn slide_start_does_not_insert_slide_start_end_resource() {
     let (mut app, _camera) = effect_test_app();
     app.insert_resource(SlideConfig {
-        duration: 0.4,
+        duration:  0.4,
         direction: SlideDirection::Left,
     });
     app.insert_resource(StartingTransition::<Slide>::new());
@@ -86,7 +86,7 @@ fn slide_start_does_not_insert_slide_start_end_resource() {
 fn slide_start_encodes_right_as_positive_x() {
     let (mut app, _camera) = effect_test_app();
     app.insert_resource(SlideConfig {
-        duration: 0.4,
+        duration:  0.4,
         direction: SlideDirection::Right,
     });
     app.insert_resource(StartingTransition::<Slide>::new());
@@ -109,7 +109,7 @@ fn slide_start_encodes_right_as_positive_x() {
 fn slide_start_encodes_up_as_negative_y_uv_inverted() {
     let (mut app, _camera) = effect_test_app();
     app.insert_resource(SlideConfig {
-        duration: 0.4,
+        duration:  0.4,
         direction: SlideDirection::Up,
     });
     app.insert_resource(StartingTransition::<Slide>::new());
@@ -132,7 +132,7 @@ fn slide_start_encodes_up_as_negative_y_uv_inverted() {
 fn slide_start_encodes_down_as_positive_y_uv_inverted() {
     let (mut app, _camera) = effect_test_app();
     app.insert_resource(SlideConfig {
-        duration: 0.4,
+        duration:  0.4,
         direction: SlideDirection::Down,
     });
     app.insert_resource(StartingTransition::<Slide>::new());
@@ -157,15 +157,15 @@ fn slide_start_encodes_down_as_positive_y_uv_inverted() {
 fn slide_run_updates_progress_on_camera() {
     let (mut app, camera) = effect_test_app();
     app.world_mut().entity_mut(camera).insert(TransitionEffect {
-        color: Vec4::ZERO,
-        direction: Vec4::new(-1.0, 0.0, 0.0, 0.0),
+        color:       Vec4::ZERO,
+        direction:   Vec4::new(-1.0, 0.0, 0.0, 0.0),
         effect_type: EffectType::SLIDE,
-        progress: 0.0,
+        progress:    0.0,
     });
     app.insert_resource(RunningTransition::<Slide>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 0.25,
-        duration: 1.0,
+        elapsed:   0.25,
+        duration:  1.0,
         completed: false,
     });
     app.add_systems(Update, slide_run);
@@ -187,15 +187,15 @@ fn slide_run_updates_progress_on_camera() {
 fn slide_run_sends_complete_at_full_progress() {
     let (mut app, camera) = effect_test_app();
     app.world_mut().entity_mut(camera).insert(TransitionEffect {
-        color: Vec4::ZERO,
-        direction: Vec4::new(-1.0, 0.0, 0.0, 0.0),
+        color:       Vec4::ZERO,
+        direction:   Vec4::new(-1.0, 0.0, 0.0, 0.0),
         effect_type: EffectType::SLIDE,
-        progress: 0.0,
+        progress:    0.0,
     });
     app.insert_resource(RunningTransition::<Slide>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 1.0,
-        duration: 1.0,
+        elapsed:   1.0,
+        duration:  1.0,
         completed: false,
     });
     app.add_systems(Update, slide_run);
@@ -215,8 +215,8 @@ fn slide_run_does_not_double_send_when_already_completed() {
         .insert(TransitionEffect::default());
     app.insert_resource(RunningTransition::<Slide>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 1.0,
-        duration: 1.0,
+        elapsed:   1.0,
+        duration:  1.0,
         completed: true,
     });
     app.add_systems(Update, slide_run);
@@ -238,15 +238,15 @@ fn slide_run_does_not_move_camera_position() {
         .entity_mut(camera)
         .insert(Transform::from_xyz(100.0, 50.0, 0.0));
     app.world_mut().entity_mut(camera).insert(TransitionEffect {
-        color: Vec4::ZERO,
-        direction: Vec4::new(-1.0, 0.0, 0.0, 0.0),
+        color:       Vec4::ZERO,
+        direction:   Vec4::new(-1.0, 0.0, 0.0, 0.0),
         effect_type: EffectType::SLIDE,
-        progress: 0.0,
+        progress:    0.0,
     });
     app.insert_resource(RunningTransition::<Slide>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 0.5,
-        duration: 1.0,
+        elapsed:   0.5,
+        duration:  1.0,
         completed: false,
     });
     app.add_systems(Update, slide_run);
@@ -279,8 +279,8 @@ fn slide_end_removes_transition_effect_and_sends_transition_over() {
         .insert(TransitionEffect::default());
     app.insert_resource(EndingTransition::<Slide>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 0.4,
-        duration: 0.4,
+        elapsed:   0.4,
+        duration:  0.4,
         completed: true,
     });
     app.add_systems(Update, slide_end);
@@ -306,8 +306,8 @@ fn slide_end_does_not_remove_slide_start_end_resource() {
     // SlideStartEnd should never be present in the new implementation
     app.insert_resource(EndingTransition::<Slide>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 0.4,
-        duration: 0.4,
+        elapsed:   0.4,
+        duration:  0.4,
         completed: true,
     });
     app.add_systems(Update, slide_end);
@@ -322,7 +322,7 @@ fn slide_end_does_not_remove_slide_start_end_resource() {
 fn slide_satisfies_transition_and_oneshot_transition() {
     use crate::transition::traits::OneShotTransition;
     let _effect: Box<dyn OneShotTransition> = Box::new(Slide {
-        duration: 0.4,
+        duration:  0.4,
         direction: SlideDirection::Left,
     });
 }
@@ -353,7 +353,7 @@ fn slide_insert_starting_inserts_marker_and_config() {
     use crate::transition::traits::Transition;
     let mut world = World::new();
     let effect = Slide {
-        duration: 0.4,
+        duration:  0.4,
         direction: SlideDirection::Right,
     };
     effect.insert_starting(&mut world);

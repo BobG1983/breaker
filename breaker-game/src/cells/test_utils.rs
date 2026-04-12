@@ -25,10 +25,10 @@ pub(crate) fn default_cell_dims() -> (CellWidth, CellHeight) {
 /// Returns a standard `CellDamageVisuals` for tests that need visual components.
 pub(crate) fn default_damage_visuals() -> CellDamageVisuals {
     CellDamageVisuals {
-        hdr_base: 4.0,
-        green_min: 0.2,
+        hdr_base:   4.0,
+        green_min:  0.2,
         blue_range: 0.4,
-        blue_base: 0.2,
+        blue_base:  0.2,
     }
 }
 
@@ -39,17 +39,17 @@ pub(crate) fn default_damage_visuals() -> CellDamageVisuals {
 /// standard damage visual parameters.
 pub(crate) fn test_cell_definition() -> CellTypeDefinition {
     CellTypeDefinition {
-        id: "test".to_owned(),
-        alias: "T".to_owned(),
-        toughness: Toughness::default(),
-        color_rgb: [1.0, 0.5, 0.2],
+        id:                "test".to_owned(),
+        alias:             "T".to_owned(),
+        toughness:         Toughness::default(),
+        color_rgb:         [1.0, 0.5, 0.2],
         required_to_clear: true,
-        damage_hdr_base: 4.0,
-        damage_green_min: 0.2,
+        damage_hdr_base:   4.0,
+        damage_green_min:  0.2,
         damage_blue_range: 0.4,
-        damage_blue_base: 0.2,
-        behaviors: None,
-        effects: None,
+        damage_blue_base:  0.2,
+        behaviors:         None,
+        effects:           None,
     }
 }
 

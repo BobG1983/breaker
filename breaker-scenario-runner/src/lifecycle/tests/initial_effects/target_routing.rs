@@ -129,7 +129,7 @@ fn initial_effects_all_cells_target_stored_in_pending_cell_effects() {
         (
             String::new(),
             Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
-                multiplier: ordered_float::OrderedFloat(1.5)
+                multiplier: ordered_float::OrderedFloat(1.5),
             }))
         ),
         "expected (\"\", Do(DamageBoost(1.5))), got {:?}",
@@ -234,7 +234,7 @@ fn initial_effects_all_walls_target_stored_in_pending_wall_effects() {
         (
             String::new(),
             Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
-                multiplier: ordered_float::OrderedFloat(2.0)
+                multiplier: ordered_float::OrderedFloat(2.0),
             }))
         ),
         "expected (\"\", Do(DamageBoost(2.0))), got {:?}",
@@ -299,7 +299,7 @@ fn initial_effects_multiple_same_target_accumulate() {
         (
             String::new(),
             Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
-                multiplier: ordered_float::OrderedFloat(3.0)
+                multiplier: ordered_float::OrderedFloat(3.0),
             }))
         ),
         "expected second entry (\"\", Do(DamageBoost(3.0))), got {:?}",

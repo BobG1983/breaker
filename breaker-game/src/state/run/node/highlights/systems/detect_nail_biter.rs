@@ -52,10 +52,10 @@ pub(crate) fn detect_nail_biter(
                 .any(|h| h.kind == HighlightKind::NailBiter);
             if !already {
                 stats.highlights.push(RunHighlight {
-                    kind: HighlightKind::NailBiter,
+                    kind:       HighlightKind::NailBiter,
                     node_index: run_state.node_index,
-                    value: min_distance,
-                    detail: None,
+                    value:      min_distance,
+                    detail:     None,
                 });
             }
         }
@@ -270,10 +270,10 @@ mod tests {
             .resource_mut::<RunStats>()
             .highlights
             .push(RunHighlight {
-                kind: HighlightKind::NailBiter,
+                kind:       HighlightKind::NailBiter,
                 node_index: 0,
-                value: 20.0,
-                detail: None,
+                value:      20.0,
+                detail:     None,
             });
 
         app.world_mut().spawn((

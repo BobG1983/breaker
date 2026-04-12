@@ -26,8 +26,8 @@ pub(super) fn test_temp_dir(test_name: &str) -> PathBuf {
 pub(super) fn clean_snapshot(_scenario_name: &str) -> EvalSnapshot {
     EvalSnapshot {
         violations: vec![],
-        logs: vec![],
-        stats: ScenarioStats {
+        logs:       vec![],
+        stats:      ScenarioStats {
             actions_injected: 0,
             invariant_checks: 10,
             max_frame: 50,

@@ -15,9 +15,9 @@ pub struct TransitionOverlay;
 #[derive(Resource)]
 pub struct TransitionProgress {
     /// Time elapsed since the transition started.
-    pub elapsed: f32,
+    pub elapsed:   f32,
     /// Total duration of the transition.
-    pub duration: f32,
+    pub duration:  f32,
     /// Whether the transition has completed (guards against double-sending
     /// `TransitionRunComplete`).
     pub completed: bool,
@@ -72,8 +72,8 @@ mod tests {
     fn transition_progress_can_be_inserted_as_resource() {
         let mut world = World::new();
         world.insert_resource(TransitionProgress {
-            elapsed: 0.0,
-            duration: 0.5,
+            elapsed:   0.0,
+            duration:  0.5,
             completed: false,
         });
         assert!(world.contains_resource::<TransitionProgress>());
@@ -83,8 +83,8 @@ mod tests {
     fn transition_progress_fields_are_accessible() {
         let mut world = World::new();
         world.insert_resource(TransitionProgress {
-            elapsed: 0.3,
-            duration: 0.5,
+            elapsed:   0.3,
+            duration:  0.5,
             completed: false,
         });
         let progress = world.resource::<TransitionProgress>();

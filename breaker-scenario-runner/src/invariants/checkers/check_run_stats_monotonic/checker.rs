@@ -6,21 +6,21 @@ use crate::{invariants::*, types::InvariantKind};
 /// Snapshot of [`RunStats`] numeric counters from the previous frame.
 #[derive(Default, Clone, Copy)]
 pub struct PreviousRunStats {
-    nodes_cleared: u32,
+    nodes_cleared:   u32,
     cells_destroyed: u32,
     bumps_performed: u32,
-    perfect_bumps: u32,
-    bolts_lost: u32,
+    perfect_bumps:   u32,
+    bolts_lost:      u32,
 }
 
 impl PreviousRunStats {
     const fn from_run_stats(stats: &RunStats) -> Self {
         Self {
-            nodes_cleared: stats.nodes_cleared,
+            nodes_cleared:   stats.nodes_cleared,
             cells_destroyed: stats.cells_destroyed,
             bumps_performed: stats.bumps_performed,
-            perfect_bumps: stats.perfect_bumps,
-            bolts_lost: stats.bolts_lost,
+            perfect_bumps:   stats.perfect_bumps,
+            bolts_lost:      stats.bolts_lost,
         }
     }
 
@@ -77,10 +77,10 @@ pub fn check_run_stats_monotonic(
     // Check each monotonic counter.
     if current.nodes_cleared < prev.nodes_cleared {
         log.0.push(ViolationEntry {
-            frame: frame.0,
+            frame:     frame.0,
             invariant: InvariantKind::RunStatsMonotonic,
-            entity: None,
-            message: format!(
+            entity:    None,
+            message:   format!(
                 "RunStatsMonotonic FAIL frame={} nodes_cleared decreased {} → {}",
                 frame.0, prev.nodes_cleared, current.nodes_cleared,
             ),
@@ -88,10 +88,10 @@ pub fn check_run_stats_monotonic(
     }
     if current.cells_destroyed < prev.cells_destroyed {
         log.0.push(ViolationEntry {
-            frame: frame.0,
+            frame:     frame.0,
             invariant: InvariantKind::RunStatsMonotonic,
-            entity: None,
-            message: format!(
+            entity:    None,
+            message:   format!(
                 "RunStatsMonotonic FAIL frame={} cells_destroyed decreased {} → {}",
                 frame.0, prev.cells_destroyed, current.cells_destroyed,
             ),
@@ -99,10 +99,10 @@ pub fn check_run_stats_monotonic(
     }
     if current.bumps_performed < prev.bumps_performed {
         log.0.push(ViolationEntry {
-            frame: frame.0,
+            frame:     frame.0,
             invariant: InvariantKind::RunStatsMonotonic,
-            entity: None,
-            message: format!(
+            entity:    None,
+            message:   format!(
                 "RunStatsMonotonic FAIL frame={} bumps_performed decreased {} → {}",
                 frame.0, prev.bumps_performed, current.bumps_performed,
             ),
@@ -110,10 +110,10 @@ pub fn check_run_stats_monotonic(
     }
     if current.perfect_bumps < prev.perfect_bumps {
         log.0.push(ViolationEntry {
-            frame: frame.0,
+            frame:     frame.0,
             invariant: InvariantKind::RunStatsMonotonic,
-            entity: None,
-            message: format!(
+            entity:    None,
+            message:   format!(
                 "RunStatsMonotonic FAIL frame={} perfect_bumps decreased {} → {}",
                 frame.0, prev.perfect_bumps, current.perfect_bumps,
             ),
@@ -121,10 +121,10 @@ pub fn check_run_stats_monotonic(
     }
     if current.bolts_lost < prev.bolts_lost {
         log.0.push(ViolationEntry {
-            frame: frame.0,
+            frame:     frame.0,
             invariant: InvariantKind::RunStatsMonotonic,
-            entity: None,
-            message: format!(
+            entity:    None,
+            message:   format!(
                 "RunStatsMonotonic FAIL frame={} bolts_lost decreased {} → {}",
                 frame.0, prev.bolts_lost, current.bolts_lost,
             ),

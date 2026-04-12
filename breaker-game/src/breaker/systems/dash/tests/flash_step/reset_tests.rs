@@ -29,8 +29,8 @@ fn flash_step_teleport_resets_tilt_and_timer_to_idle() {
             DashState::Settling,
             Velocity2D(Vec2::ZERO),
             BreakerTilt {
-                angle: -0.25,
-                ease_start: -0.35,
+                angle:       -0.25,
+                ease_start:  -0.35,
                 ease_target: 0.0,
             },
             DashStateTimer { remaining: 0.15 },
@@ -88,8 +88,8 @@ fn flash_step_teleport_resets_cleanly_with_nearly_expired_timer() {
             DashState::Settling,
             Velocity2D(Vec2::ZERO),
             BreakerTilt {
-                angle: -0.25,
-                ease_start: -0.35,
+                angle:       -0.25,
+                ease_start:  -0.35,
                 ease_target: 0.0,
             },
             DashStateTimer { remaining: 0.001 },

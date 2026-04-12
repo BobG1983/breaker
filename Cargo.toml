@@ -70,7 +70,9 @@ unimplemented                   = "warn"
 needless_pass_by_value  = "allow" # Bevy systems take ownership by convention
 module_name_repetitions = "allow" # DashState in breaker/ is intentional domain naming
 wildcard_imports        = "allow" # Project convention: globs for 4+ items from same path
-
+cast_precision_loss       = "allow" # A lot of small f32 to u32 conversions
+cast_sign_loss            = "allow" # Piercing charges, HP — small non-negative f32→u32
+cast_possible_truncation  = "allow" # Piercing charges, HP — small non-negative f32→u32
 [profile.dev]
 opt-level = 1
 

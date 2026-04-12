@@ -26,10 +26,10 @@ pub fn check_chain_arc_count_reasonable(
     let count = chains.iter().count() + arcs.iter().count();
     if count > max {
         log.0.push(ViolationEntry {
-            frame: frame.0,
+            frame:     frame.0,
             invariant: InvariantKind::ChainArcCountReasonable,
-            entity: None,
-            message: format!(
+            entity:    None,
+            message:   format!(
                 "ChainArcCountReasonable FAIL frame={} count={count} max={max}",
                 frame.0,
             ),
@@ -82,13 +82,13 @@ mod tests {
         world
             .spawn((
                 ChainLightningChain {
-                    source_pos: Vec2::ZERO,
+                    source_pos:      Vec2::ZERO,
                     remaining_jumps: 0,
-                    damage: 0.0,
-                    hit_set: HashSet::new(),
-                    state: ChainState::Idle,
-                    range: 0.0,
-                    arc_speed: 0.0,
+                    damage:          0.0,
+                    hit_set:         HashSet::new(),
+                    state:           ChainState::Idle,
+                    range:           0.0,
+                    arc_speed:       0.0,
                 },
                 CleanupOnExit::<NodeState>::default(),
             ))

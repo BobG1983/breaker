@@ -19,7 +19,7 @@ fn make_chip_template(name: &str, max_taken: u32, prefix: &str) -> ChipTemplate 
         name: name.to_owned(),
         max_taken,
         common: Some(RaritySlot {
-            prefix: prefix.to_owned(),
+            prefix:  prefix.to_owned(),
             effects: vec![RootNode::Stamp(
                 StampTarget::Bolt,
                 Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),

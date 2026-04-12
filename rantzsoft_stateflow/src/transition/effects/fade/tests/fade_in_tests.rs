@@ -21,7 +21,7 @@ fn fade_in_start_inserts_transition_effect_on_camera_at_full_progress() {
     let (mut app, _camera) = effect_test_app();
     app.insert_resource(FadeInConfig {
         duration: 0.5,
-        color: Color::BLACK,
+        color:    Color::BLACK,
     });
     app.insert_resource(StartingTransition::<FadeIn>::new());
     app.add_systems(Update, fade_in_start);
@@ -54,7 +54,7 @@ fn fade_in_start_sends_transition_ready() {
     let (mut app, _camera) = effect_test_app();
     app.insert_resource(FadeInConfig {
         duration: 0.5,
-        color: Color::BLACK,
+        color:    Color::BLACK,
     });
     app.insert_resource(StartingTransition::<FadeIn>::new());
     app.add_systems(Update, fade_in_start);
@@ -71,7 +71,7 @@ fn fade_in_start_inserts_transition_progress() {
     let (mut app, _camera) = effect_test_app();
     app.insert_resource(FadeInConfig {
         duration: 0.5,
-        color: Color::BLACK,
+        color:    Color::BLACK,
     });
     app.insert_resource(StartingTransition::<FadeIn>::new());
     app.add_systems(Update, fade_in_start);
@@ -89,7 +89,7 @@ fn fade_in_start_removes_config() {
     let (mut app, _camera) = effect_test_app();
     app.insert_resource(FadeInConfig {
         duration: 0.5,
-        color: Color::BLACK,
+        color:    Color::BLACK,
     });
     app.insert_resource(StartingTransition::<FadeIn>::new());
     app.add_systems(Update, fade_in_start);
@@ -107,15 +107,15 @@ fn fade_in_start_removes_config() {
 fn fade_in_run_decreases_progress_on_camera() {
     let (mut app, camera) = effect_test_app();
     app.world_mut().entity_mut(camera).insert(TransitionEffect {
-        color: Vec4::new(0.0, 0.0, 0.0, 1.0),
-        direction: Vec4::ZERO,
+        color:       Vec4::new(0.0, 0.0, 0.0, 1.0),
+        direction:   Vec4::ZERO,
         effect_type: EffectType::FADE,
-        progress: 1.0,
+        progress:    1.0,
     });
     app.insert_resource(RunningTransition::<FadeIn>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 0.25,
-        duration: 1.0,
+        elapsed:   0.25,
+        duration:  1.0,
         completed: false,
     });
     app.add_systems(Update, fade_in_run);
@@ -137,15 +137,15 @@ fn fade_in_run_decreases_progress_on_camera() {
 fn fade_in_run_clamps_progress_to_zero_on_overshoot() {
     let (mut app, camera) = effect_test_app();
     app.world_mut().entity_mut(camera).insert(TransitionEffect {
-        color: Vec4::new(0.0, 0.0, 0.0, 1.0),
-        direction: Vec4::ZERO,
+        color:       Vec4::new(0.0, 0.0, 0.0, 1.0),
+        direction:   Vec4::ZERO,
         effect_type: EffectType::FADE,
-        progress: 1.0,
+        progress:    1.0,
     });
     app.insert_resource(RunningTransition::<FadeIn>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 0.5,
-        duration: 0.4,
+        elapsed:   0.5,
+        duration:  0.4,
         completed: false,
     });
     app.add_systems(Update, fade_in_run);
@@ -173,15 +173,15 @@ fn fade_in_run_clamps_progress_to_zero_on_overshoot() {
 fn fade_in_run_sends_complete_at_full_progress() {
     let (mut app, camera) = effect_test_app();
     app.world_mut().entity_mut(camera).insert(TransitionEffect {
-        color: Vec4::new(0.0, 0.0, 0.0, 1.0),
-        direction: Vec4::ZERO,
+        color:       Vec4::new(0.0, 0.0, 0.0, 1.0),
+        direction:   Vec4::ZERO,
         effect_type: EffectType::FADE,
-        progress: 1.0,
+        progress:    1.0,
     });
     app.insert_resource(RunningTransition::<FadeIn>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 1.0,
-        duration: 1.0,
+        elapsed:   1.0,
+        duration:  1.0,
         completed: false,
     });
     app.add_systems(Update, fade_in_run);
@@ -207,15 +207,15 @@ fn fade_in_run_sends_complete_at_full_progress() {
 fn fade_in_run_does_not_double_send_complete_when_already_completed() {
     let (mut app, camera) = effect_test_app();
     app.world_mut().entity_mut(camera).insert(TransitionEffect {
-        color: Vec4::new(0.0, 0.0, 0.0, 1.0),
-        direction: Vec4::ZERO,
+        color:       Vec4::new(0.0, 0.0, 0.0, 1.0),
+        direction:   Vec4::ZERO,
         effect_type: EffectType::FADE,
-        progress: 0.0,
+        progress:    0.0,
     });
     app.insert_resource(RunningTransition::<FadeIn>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 1.0,
-        duration: 1.0,
+        elapsed:   1.0,
+        duration:  1.0,
         completed: true,
     });
     app.add_systems(Update, fade_in_run);
@@ -241,8 +241,8 @@ fn fade_in_end_removes_transition_effect_and_sends_transition_over() {
         .insert(TransitionEffect::default());
     app.insert_resource(EndingTransition::<FadeIn>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 0.5,
-        duration: 0.5,
+        elapsed:   0.5,
+        duration:  0.5,
         completed: true,
     });
     app.add_systems(Update, fade_in_end);
@@ -268,8 +268,8 @@ fn fade_in_end_does_not_panic_when_camera_lacks_transition_effect() {
     // Camera exists but has no TransitionEffect
     app.insert_resource(EndingTransition::<FadeIn>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 0.5,
-        duration: 0.5,
+        elapsed:   0.5,
+        duration:  0.5,
         completed: true,
     });
     app.add_systems(Update, fade_in_end);
@@ -305,7 +305,7 @@ fn fade_in_satisfies_transition_and_in_transition() {
     use crate::transition::traits::InTransition;
     let _effect: Box<dyn InTransition> = Box::new(FadeIn {
         duration: 0.5,
-        color: Color::BLACK,
+        color:    Color::BLACK,
     });
 }
 
@@ -317,7 +317,7 @@ fn fade_in_insert_starting_inserts_marker_and_config() {
     let mut world = World::new();
     let effect = FadeIn {
         duration: 0.7,
-        color: Color::srgba(1.0, 0.0, 0.0, 1.0),
+        color:    Color::srgba(1.0, 0.0, 0.0, 1.0),
     };
     effect.insert_starting(&mut world);
 

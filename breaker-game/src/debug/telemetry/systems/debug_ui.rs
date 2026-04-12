@@ -15,10 +15,10 @@ use crate::{
 /// Bundled state queries for the state chain display.
 #[derive(SystemParam)]
 pub(crate) struct StateChain<'w> {
-    app: Option<Res<'w, State<AppState>>>,
+    app:  Option<Res<'w, State<AppState>>>,
     game: Option<Res<'w, State<GameState>>>,
     menu: Option<Res<'w, State<MenuState>>>,
-    run: Option<Res<'w, State<RunState>>>,
+    run:  Option<Res<'w, State<RunState>>>,
     node: Option<Res<'w, State<NodeState>>>,
     chip: Option<Res<'w, State<ChipSelectState>>>,
 }

@@ -10,9 +10,9 @@ use bevy::prelude::*;
 #[derive(Component, Clone, Debug)]
 pub struct DistanceConstraint {
     /// First entity in the tethered pair.
-    pub entity_a: Entity,
+    pub entity_a:     Entity,
     /// Second entity in the tethered pair.
-    pub entity_b: Entity,
+    pub entity_b:     Entity,
     /// Maximum allowed distance between the two entities.
     pub max_distance: f32,
 }
@@ -26,8 +26,8 @@ mod tests {
         let a = Entity::PLACEHOLDER;
         let b = Entity::PLACEHOLDER;
         let constraint = DistanceConstraint {
-            entity_a: a,
-            entity_b: b,
+            entity_a:     a,
+            entity_b:     b,
             max_distance: 200.0,
         };
         assert_eq!(constraint.entity_a, a);
@@ -38,8 +38,8 @@ mod tests {
     #[test]
     fn distance_constraint_debug_format() {
         let constraint = DistanceConstraint {
-            entity_a: Entity::PLACEHOLDER,
-            entity_b: Entity::PLACEHOLDER,
+            entity_a:     Entity::PLACEHOLDER,
+            entity_b:     Entity::PLACEHOLDER,
             max_distance: 150.0,
         };
         let debug = format!("{constraint:?}");
@@ -56,8 +56,8 @@ mod tests {
     #[test]
     fn distance_constraint_clone_is_independent() {
         let original = DistanceConstraint {
-            entity_a: Entity::PLACEHOLDER,
-            entity_b: Entity::PLACEHOLDER,
+            entity_a:     Entity::PLACEHOLDER,
+            entity_b:     Entity::PLACEHOLDER,
             max_distance: 200.0,
         };
         let cloned = original;
@@ -71,8 +71,8 @@ mod tests {
         let entity = app
             .world_mut()
             .spawn(DistanceConstraint {
-                entity_a: Entity::PLACEHOLDER,
-                entity_b: Entity::PLACEHOLDER,
+                entity_a:     Entity::PLACEHOLDER,
+                entity_b:     Entity::PLACEHOLDER,
                 max_distance: 100.0,
             })
             .id();

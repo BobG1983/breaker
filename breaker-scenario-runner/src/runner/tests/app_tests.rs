@@ -174,10 +174,10 @@ fn snapshot_eval_data_captures_results_into_shared_buffer() {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .insert_resource(ViolationLog(vec![ViolationEntry {
-            frame: 42,
+            frame:     42,
             invariant: InvariantKind::BoltInBounds,
-            entity: None,
-            message: "test violation".into(),
+            entity:    None,
+            message:   "test violation".into(),
         }]))
         .insert_resource(CapturedLogs::default())
         .insert_resource(ScenarioStats {
@@ -479,10 +479,10 @@ fn should_fail_fast_returns_true_when_allowed_failures_is_empty_vec() {
 #[test]
 fn should_fail_fast_returns_false_when_violation_is_in_allowed_failures() {
     let log = violation_log_with(vec![ViolationEntry {
-        frame: 10,
+        frame:     10,
         invariant: InvariantKind::BoltInBounds,
-        entity: None,
-        message: "expected violation".into(),
+        entity:    None,
+        message:   "expected violation".into(),
     }]);
     let definition = definition_with_allowed_failures(Some(vec![InvariantKind::BoltInBounds]));
 
@@ -522,10 +522,10 @@ fn should_fail_fast_returns_false_when_violation_covered_by_multiple_allowed() {
 fn should_fail_fast_returns_true_when_violation_not_in_allowed_failures() {
     // Self-test allows BoltInBounds but gets NoNaN — should fail-fast
     let log = violation_log_with(vec![ViolationEntry {
-        frame: 10,
+        frame:     10,
         invariant: InvariantKind::NoNaN,
-        entity: None,
-        message: "unexpected NaN".into(),
+        entity:    None,
+        message:   "unexpected NaN".into(),
     }]);
     let definition = definition_with_allowed_failures(Some(vec![InvariantKind::BoltInBounds]));
 
@@ -547,10 +547,10 @@ fn should_fail_fast_returns_true_when_any_violation_not_in_allowed_failures() {
     let log = violation_log_with(vec![
         bolt_oob_violation(5),
         ViolationEntry {
-            frame: 10,
+            frame:     10,
             invariant: InvariantKind::NoNaN,
-            entity: None,
-            message: "unexpected NaN".into(),
+            entity:    None,
+            message:   "unexpected NaN".into(),
         },
     ]);
     let definition = definition_with_allowed_failures(Some(vec![InvariantKind::BoltInBounds]));
@@ -714,10 +714,10 @@ fn collect_and_evaluate_reports_failure_for_early_exit_snapshot_with_violations(
     };
     let snapshot = EvalSnapshot {
         violations: vec![ViolationEntry {
-            frame: 5,
+            frame:     5,
             invariant: InvariantKind::BoltInBounds,
-            entity: None,
-            message: "bolt OOB at (999.0, 0.0)".into(),
+            entity:    None,
+            message:   "bolt OOB at (999.0, 0.0)".into(),
         }],
         logs: vec![],
         stats,

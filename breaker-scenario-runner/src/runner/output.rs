@@ -137,19 +137,19 @@ pub(super) fn is_invariant_fail_reason(reason: &str) -> bool {
 
 #[derive(Debug, PartialEq)]
 pub(super) struct ViolationGroup {
-    pub(super) invariant: InvariantKind,
-    pub(super) count: u32,
+    pub(super) invariant:   InvariantKind,
+    pub(super) count:       u32,
     pub(super) first_frame: u32,
-    pub(super) last_frame: u32,
+    pub(super) last_frame:  u32,
 }
 
 #[derive(Debug, PartialEq)]
 pub(super) struct LogGroup {
-    pub(super) level: bevy::log::Level,
-    pub(super) message: String,
-    pub(super) count: u32,
+    pub(super) level:       bevy::log::Level,
+    pub(super) message:     String,
+    pub(super) count:       u32,
     pub(super) first_frame: u32,
-    pub(super) last_frame: u32,
+    pub(super) last_frame:  u32,
 }
 
 pub(super) fn group_violations(violations: &[ViolationEntry]) -> Vec<ViolationGroup> {

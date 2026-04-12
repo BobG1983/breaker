@@ -175,7 +175,7 @@ fn scenario_definition_stress_some_with_explicit_values_parses() {
     assert_eq!(
         result.stress,
         Some(StressConfig {
-            runs: 64,
+            runs:        64,
             parallelism: 4,
         })
     );
@@ -198,7 +198,7 @@ fn scenario_definition_stress_some_empty_uses_defaults() {
     assert_eq!(
         result.stress,
         Some(StressConfig {
-            runs: 32,
+            runs:        32,
             parallelism: 32,
         })
     );
@@ -290,7 +290,7 @@ fn scenario_definition_with_frame_mutations_parses_from_ron() {
     assert_eq!(
         result.frame_mutations,
         Some(vec![FrameMutation {
-            frame: 3,
+            frame:    3,
             mutation: MutationKind::TogglePause,
         }])
     );

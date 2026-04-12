@@ -22,7 +22,7 @@ fn clutch_clear_uses_config_threshold() {
     // remaining=4.5 < 5.0 -> ClutchClear
     app.insert_resource(NodeTimer {
         remaining: 4.5,
-        total: 30.0,
+        total:     30.0,
     });
     app.insert_resource(TestNodeCleared(true));
     tick(&mut app);
@@ -56,7 +56,7 @@ fn fast_clear_uses_config_fraction() {
     // total=30, remaining=22 -> elapsed=8, threshold=30*0.3=9.0, 8<9 -> FastClear
     app.insert_resource(NodeTimer {
         remaining: 22.0,
-        total: 30.0,
+        total:     30.0,
     });
     app.insert_resource(TestNodeCleared(true));
     tick(&mut app);

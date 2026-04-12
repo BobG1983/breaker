@@ -10,11 +10,11 @@ use crate::chips::definition::{ChipDefinition, Rarity};
 #[derive(Debug, Clone)]
 pub struct ChipEntry {
     /// Current number of stacks held.
-    pub stacks: u32,
+    pub stacks:        u32,
     /// Maximum stacks allowed for this chip.
-    pub max_stacks: u32,
+    pub max_stacks:    u32,
     /// Rarity of this chip.
-    pub rarity: Rarity,
+    pub rarity:        Rarity,
     /// Template this chip belongs to, if any.
     pub template_name: Option<String>,
 }
@@ -27,8 +27,8 @@ pub struct ChipEntry {
 /// `template_maxes` stores the maximum allowed per template name.
 #[derive(Resource, Debug, Default)]
 pub struct ChipInventory {
-    held: HashMap<String, ChipEntry>,
-    decay_weights: HashMap<String, f32>,
+    held:           HashMap<String, ChipEntry>,
+    decay_weights:  HashMap<String, f32>,
     /// Current count of chips taken per template name.
     template_taken: HashMap<String, u32>,
     /// Maximum allowed per template name.
@@ -64,9 +64,9 @@ impl ChipInventory {
             self.held.insert(
                 name.to_owned(),
                 ChipEntry {
-                    stacks: 1,
-                    max_stacks: def.max_stacks,
-                    rarity: def.rarity,
+                    stacks:        1,
+                    max_stacks:    def.max_stacks,
+                    rarity:        def.rarity,
                     template_name: def.template_name.clone(),
                 },
             );

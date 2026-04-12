@@ -27,11 +27,11 @@ fn lifecycle_test_app_with_definition(definition: ScenarioDefinition) -> App {
         .add_sub_state::<breaker::state::types::RunEndState>()
         .insert_resource(ScenarioConfig { definition })
         .insert_resource(PlayfieldConfig {
-            width: 800.0,
-            height: 700.0,
+            width:                800.0,
+            height:               700.0,
             background_color_rgb: [0.0, 0.0, 0.0],
-            wall_thickness: 180.0,
-            zone_fraction: 0.667,
+            wall_thickness:       180.0,
+            zone_fraction:        0.667,
         });
     // Resources required by bypass_menu_to_playing
     app.insert_resource(breaker::breaker::SelectedBreaker("Aegis".to_owned()))
@@ -304,15 +304,15 @@ fn chip_offer_expected_always_registered_regardless_of_lists() {
 
     // Insert ChipOffers with a chip NOT named "Railgun"
     let chip_def = ChipDefinition {
-        name: "Piercing Shot".to_owned(),
-        description: String::new(),
-        rarity: Rarity::Common,
-        max_stacks: 3,
-        effects: vec![RootNode::Stamp(
+        name:          "Piercing Shot".to_owned(),
+        description:   String::new(),
+        rarity:        Rarity::Common,
+        max_stacks:    3,
+        effects:       vec![RootNode::Stamp(
             StampTarget::Bolt,
             Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
         )],
-        ingredients: None,
+        ingredients:   None,
         template_name: None,
     };
     app.insert_resource(ChipOffers(vec![ChipOffering::Normal(chip_def)]));

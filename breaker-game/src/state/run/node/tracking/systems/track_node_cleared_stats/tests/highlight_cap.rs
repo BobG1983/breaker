@@ -19,28 +19,28 @@ fn highlights_stored_beyond_four_existing() {
     let mut stats = app.world_mut().resource_mut::<RunStats>();
     stats.highlights = vec![
         RunHighlight {
-            kind: HighlightKind::FastClear,
+            kind:       HighlightKind::FastClear,
             node_index: 0,
-            value: 0.0,
-            detail: None,
+            value:      0.0,
+            detail:     None,
         },
         RunHighlight {
-            kind: HighlightKind::NoDamageNode,
+            kind:       HighlightKind::NoDamageNode,
             node_index: 1,
-            value: 0.0,
-            detail: None,
+            value:      0.0,
+            detail:     None,
         },
         RunHighlight {
-            kind: HighlightKind::PerfectStreak,
+            kind:       HighlightKind::PerfectStreak,
             node_index: 2,
-            value: 5.0,
-            detail: None,
+            value:      5.0,
+            detail:     None,
         },
         RunHighlight {
-            kind: HighlightKind::ClutchClear,
+            kind:       HighlightKind::ClutchClear,
             node_index: 3,
-            value: 1.0,
-            detail: None,
+            value:      1.0,
+            detail:     None,
         },
     ];
 
@@ -50,7 +50,7 @@ fn highlights_stored_beyond_four_existing() {
         .node_bolts_lost = 0;
     app.insert_resource(NodeTimer {
         remaining: 15.0,
-        total: 30.0,
+        total:     30.0,
     });
     app.insert_resource(TestNodeCleared(true));
     tick(&mut app);
@@ -71,41 +71,41 @@ fn sixth_highlight_stored_beyond_old_cap() {
     let mut stats = app.world_mut().resource_mut::<RunStats>();
     stats.highlights = vec![
         RunHighlight {
-            kind: HighlightKind::FastClear,
+            kind:       HighlightKind::FastClear,
             node_index: 0,
-            value: 0.0,
-            detail: None,
+            value:      0.0,
+            detail:     None,
         },
         RunHighlight {
-            kind: HighlightKind::NoDamageNode,
+            kind:       HighlightKind::NoDamageNode,
             node_index: 1,
-            value: 0.0,
-            detail: None,
+            value:      0.0,
+            detail:     None,
         },
         RunHighlight {
-            kind: HighlightKind::PerfectStreak,
+            kind:       HighlightKind::PerfectStreak,
             node_index: 2,
-            value: 5.0,
-            detail: None,
+            value:      5.0,
+            detail:     None,
         },
         RunHighlight {
-            kind: HighlightKind::ClutchClear,
+            kind:       HighlightKind::ClutchClear,
             node_index: 3,
-            value: 1.0,
-            detail: None,
+            value:      1.0,
+            detail:     None,
         },
         RunHighlight {
-            kind: HighlightKind::FastClear,
+            kind:       HighlightKind::FastClear,
             node_index: 4,
-            value: 0.0,
-            detail: None,
+            value:      0.0,
+            detail:     None,
         },
     ];
 
     // Set up conditions that would produce a ClutchClear
     app.insert_resource(NodeTimer {
         remaining: 1.0,
-        total: 30.0,
+        total:     30.0,
     });
     app.insert_resource(TestNodeCleared(true));
     tick(&mut app);
@@ -127,34 +127,34 @@ fn same_kind_stored_across_nodes_beyond_old_cap() {
     let mut stats = app.world_mut().resource_mut::<RunStats>();
     stats.highlights = vec![
         RunHighlight {
-            kind: HighlightKind::ClutchClear,
+            kind:       HighlightKind::ClutchClear,
             node_index: 0,
-            value: 2.0,
-            detail: None,
+            value:      2.0,
+            detail:     None,
         },
         RunHighlight {
-            kind: HighlightKind::NoDamageNode,
+            kind:       HighlightKind::NoDamageNode,
             node_index: 1,
-            value: 0.0,
-            detail: None,
+            value:      0.0,
+            detail:     None,
         },
         RunHighlight {
-            kind: HighlightKind::PerfectStreak,
+            kind:       HighlightKind::PerfectStreak,
             node_index: 2,
-            value: 5.0,
-            detail: None,
+            value:      5.0,
+            detail:     None,
         },
         RunHighlight {
-            kind: HighlightKind::FastClear,
+            kind:       HighlightKind::FastClear,
             node_index: 3,
-            value: 0.0,
-            detail: None,
+            value:      0.0,
+            detail:     None,
         },
         RunHighlight {
-            kind: HighlightKind::NoDamageNode,
+            kind:       HighlightKind::NoDamageNode,
             node_index: 4,
-            value: 0.0,
-            detail: None,
+            value:      0.0,
+            detail:     None,
         },
     ];
 
@@ -162,7 +162,7 @@ fn same_kind_stored_across_nodes_beyond_old_cap() {
     app.world_mut().resource_mut::<NodeOutcome>().node_index = 5;
     app.insert_resource(NodeTimer {
         remaining: 1.0,
-        total: 30.0,
+        total:     30.0,
     });
     app.insert_resource(TestNodeCleared(true));
     tick(&mut app);

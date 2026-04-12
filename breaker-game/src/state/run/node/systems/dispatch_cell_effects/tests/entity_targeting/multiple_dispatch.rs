@@ -29,7 +29,7 @@ fn multiple_cells_dispatched_independently() {
                 Tree::When(
                     Trigger::Died,
                     Box::new(Tree::Fire(EffectType::Explode(ExplodeConfig {
-                        range: OrderedFloat(48.0),
+                        range:  OrderedFloat(48.0),
                         damage: OrderedFloat(1.0),
                     }))),
                 ),

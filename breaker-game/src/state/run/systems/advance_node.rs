@@ -105,17 +105,17 @@ mod tests {
             true,
             vec![
                 NodeAssignment {
-                    node_type: NodeType::Active,
+                    node_type:  NodeType::Active,
                     tier_index: 0,
                     timer_mult: 1.0,
                 },
                 NodeAssignment {
-                    node_type: NodeType::Active,
+                    node_type:  NodeType::Active,
                     tier_index: 0,
                     timer_mult: 1.0,
                 },
                 NodeAssignment {
-                    node_type: NodeType::Boss,
+                    node_type:  NodeType::Boss,
                     tier_index: 0,
                     timer_mult: 1.0,
                 },
@@ -142,22 +142,22 @@ mod tests {
             true,
             vec![
                 NodeAssignment {
-                    node_type: NodeType::Active,
+                    node_type:  NodeType::Active,
                     tier_index: 0,
                     timer_mult: 1.0,
                 },
                 NodeAssignment {
-                    node_type: NodeType::Active,
+                    node_type:  NodeType::Active,
                     tier_index: 0,
                     timer_mult: 1.0,
                 },
                 NodeAssignment {
-                    node_type: NodeType::Boss,
+                    node_type:  NodeType::Boss,
                     tier_index: 0,
                     timer_mult: 1.0,
                 },
                 NodeAssignment {
-                    node_type: NodeType::Active,
+                    node_type:  NodeType::Active,
                     tier_index: 1,
                     timer_mult: 0.9,
                 },
@@ -184,17 +184,17 @@ mod tests {
             true,
             vec![
                 NodeAssignment {
-                    node_type: NodeType::Active,
+                    node_type:  NodeType::Active,
                     tier_index: 0,
                     timer_mult: 1.0,
                 },
                 NodeAssignment {
-                    node_type: NodeType::Active,
+                    node_type:  NodeType::Active,
                     tier_index: 0,
                     timer_mult: 1.0,
                 },
                 NodeAssignment {
-                    node_type: NodeType::Boss,
+                    node_type:  NodeType::Boss,
                     tier_index: 0,
                     timer_mult: 1.0,
                 },
@@ -219,17 +219,17 @@ mod tests {
             true,
             vec![
                 NodeAssignment {
-                    node_type: NodeType::Passive,
+                    node_type:  NodeType::Passive,
                     tier_index: 0,
                     timer_mult: 1.0,
                 },
                 NodeAssignment {
-                    node_type: NodeType::Passive,
+                    node_type:  NodeType::Passive,
                     tier_index: 0,
                     timer_mult: 1.0,
                 },
                 NodeAssignment {
-                    node_type: NodeType::Boss,
+                    node_type:  NodeType::Boss,
                     tier_index: 0,
                     timer_mult: 1.0,
                 },
@@ -255,7 +255,7 @@ mod tests {
             0,
             true,
             vec![NodeAssignment {
-                node_type: NodeType::Active,
+                node_type:  NodeType::Active,
                 tier_index: 0,
                 timer_mult: 1.0,
             }],
@@ -278,7 +278,7 @@ mod tests {
             0,
             false,
             vec![NodeAssignment {
-                node_type: NodeType::Active,
+                node_type:  NodeType::Active,
                 tier_index: 0,
                 timer_mult: 1.0,
             }],
@@ -327,27 +327,27 @@ mod tests {
             true,
             vec![
                 NodeAssignment {
-                    node_type: NodeType::Active,
+                    node_type:  NodeType::Active,
                     tier_index: 0,
                     timer_mult: 1.0,
                 },
                 NodeAssignment {
-                    node_type: NodeType::Active,
+                    node_type:  NodeType::Active,
                     tier_index: 0,
                     timer_mult: 1.0,
                 },
                 NodeAssignment {
-                    node_type: NodeType::Boss,
+                    node_type:  NodeType::Boss,
                     tier_index: 0,
                     timer_mult: 1.0,
                 },
                 NodeAssignment {
-                    node_type: NodeType::Active,
+                    node_type:  NodeType::Active,
                     tier_index: 1,
                     timer_mult: 0.9,
                 },
                 NodeAssignment {
-                    node_type: NodeType::Boss,
+                    node_type:  NodeType::Boss,
                     tier_index: 1,
                     timer_mult: 0.9,
                 },
@@ -377,17 +377,17 @@ mod tests {
             true,
             vec![
                 NodeAssignment {
-                    node_type: NodeType::Active,
+                    node_type:  NodeType::Active,
                     tier_index: 0,
                     timer_mult: 1.0,
                 },
                 NodeAssignment {
-                    node_type: NodeType::Boss,
+                    node_type:  NodeType::Boss,
                     tier_index: 0,
                     timer_mult: 1.0,
                 },
                 NodeAssignment {
-                    node_type: NodeType::Active,
+                    node_type:  NodeType::Active,
                     tier_index: 1,
                     timer_mult: 0.9,
                 },

@@ -46,11 +46,11 @@ impl TierNodeCount {
 #[derive(Deserialize, Clone, Debug, PartialEq)]
 pub struct TierDefinition {
     /// How many nodes this tier contains.
-    pub nodes: TierNodeCount,
+    pub nodes:            TierNodeCount,
     /// Fraction of nodes in this tier that are active (0.0 to 1.0).
-    pub active_ratio: f32,
+    pub active_ratio:     f32,
     /// Timer multiplier applied to node timers in this tier.
-    pub timer_mult: f32,
+    pub timer_mult:       f32,
     /// Cell-type aliases introduced in this tier.
     pub introduced_cells: Vec<char>,
 }
@@ -65,118 +65,118 @@ pub struct TierDefinition {
 #[game_config(name = "HighlightConfig")]
 pub struct HighlightDefaults {
     /// Seconds remaining for `ClutchClear` detection.
-    pub clutch_clear_secs: f32,
+    pub clutch_clear_secs:            f32,
     /// Fraction of total time for `FastClear` detection.
-    pub fast_clear_fraction: f32,
+    pub fast_clear_fraction:          f32,
     /// Consecutive perfect bumps for `PerfectStreak`.
-    pub perfect_streak_count: u32,
+    pub perfect_streak_count:         u32,
     /// Cells destroyed in window for `MassDestruction`.
-    pub mass_destruction_count: u32,
+    pub mass_destruction_count:       u32,
     /// Window duration (seconds) for `MassDestruction`.
     pub mass_destruction_window_secs: f32,
     /// Cells destroyed between breaker impacts for `ComboKing`.
-    pub combo_king_cells: u32,
+    pub combo_king_cells:             u32,
     /// Cell bounces without breaker for `PinballWizard`.
-    pub pinball_wizard_bounces: u32,
+    pub pinball_wizard_bounces:       u32,
     /// Seconds for fastest node clear (`SpeedDemon`).
-    pub speed_demon_secs: f32,
+    pub speed_demon_secs:             f32,
     /// Pixels from bottom boundary for `CloseSave`.
-    pub close_save_pixels: f32,
+    pub close_save_pixels:            f32,
     /// Bolts lost in node for `Comeback`.
-    pub comeback_bolts_lost: u32,
+    pub comeback_bolts_lost:          u32,
     /// Pixels from bottom boundary for `NailBiter`.
-    pub nail_biter_pixels: f32,
+    pub nail_biter_pixels:            f32,
     /// Consecutive no-damage nodes for `Untouchable`.
-    pub untouchable_nodes: u32,
+    pub untouchable_nodes:            u32,
     /// Maximum highlights recorded per run.
-    pub highlight_cap: u32,
+    pub highlight_cap:                u32,
 
     // -- Popup animation --
     /// Maximum visible highlight popups at once.
-    pub popup_max_visible: u32,
+    pub popup_max_visible:             u32,
     /// Popup fade-out duration (seconds).
-    pub popup_fade_duration_secs: f32,
+    pub popup_fade_duration_secs:      f32,
     /// Popup scale overshoot animation duration (seconds).
     pub popup_overshoot_duration_secs: f32,
     /// Popup initial scale overshoot multiplier (e.g. 1.15).
-    pub popup_overshoot_scale: f32,
+    pub popup_overshoot_scale:         f32,
     /// Popup base y-position (above playfield center).
-    pub popup_base_y: f32,
+    pub popup_base_y:                  f32,
     /// Vertical spacing between stacked popups.
-    pub popup_vertical_spacing: f32,
+    pub popup_vertical_spacing:        f32,
     /// Minimum horizontal jitter (pixels, can be negative).
-    pub popup_jitter_min_x: f32,
+    pub popup_jitter_min_x:            f32,
     /// Maximum horizontal jitter (pixels, can be positive).
-    pub popup_jitter_max_x: f32,
+    pub popup_jitter_max_x:            f32,
     /// Cascade stagger delay between simultaneous popups (seconds).
-    pub popup_cascade_stagger_secs: f32,
+    pub popup_cascade_stagger_secs:    f32,
 
     // -- Scoring --
     /// Diversity penalty base for same-category highlights (0.0–1.0).
-    pub diversity_penalty: f32,
+    pub diversity_penalty:             f32,
     /// Max expected raw score for `ClutchClear` normalization.
-    pub max_expected_clutch_clear: f32,
+    pub max_expected_clutch_clear:     f32,
     /// Max expected raw score for `SpeedDemon` normalization.
-    pub max_expected_speed_demon: f32,
+    pub max_expected_speed_demon:      f32,
     /// Max expected raw score for `CloseSave` normalization.
-    pub max_expected_close_save: f32,
+    pub max_expected_close_save:       f32,
     /// Max expected raw score for `NailBiter` normalization.
-    pub max_expected_nail_biter: f32,
+    pub max_expected_nail_biter:       f32,
     /// Max expected raw score for `MassDestruction` normalization.
     pub max_expected_mass_destruction: f32,
     /// Max expected raw score for `PerfectStreak` normalization.
-    pub max_expected_perfect_streak: f32,
+    pub max_expected_perfect_streak:   f32,
     /// Max expected raw score for `ComboKing` normalization.
-    pub max_expected_combo_king: f32,
+    pub max_expected_combo_king:       f32,
     /// Max expected raw score for `PinballWizard` normalization.
-    pub max_expected_pinball_wizard: f32,
+    pub max_expected_pinball_wizard:   f32,
     /// Max expected raw score for `Untouchable` normalization.
-    pub max_expected_untouchable: f32,
+    pub max_expected_untouchable:      f32,
     /// Max expected raw score for `Comeback` normalization.
-    pub max_expected_comeback: f32,
+    pub max_expected_comeback:         f32,
     /// Max expected raw score for `PerfectNode` normalization.
-    pub max_expected_perfect_node: f32,
+    pub max_expected_perfect_node:     f32,
 }
 
 impl Default for HighlightDefaults {
     fn default() -> Self {
         Self {
-            clutch_clear_secs: 3.0,
-            fast_clear_fraction: 0.5,
-            perfect_streak_count: 5,
-            mass_destruction_count: 10,
-            mass_destruction_window_secs: 2.0,
-            combo_king_cells: 8,
-            pinball_wizard_bounces: 12,
-            speed_demon_secs: 5.0,
-            close_save_pixels: 20.0,
-            comeback_bolts_lost: 3,
-            nail_biter_pixels: 30.0,
-            untouchable_nodes: 2,
-            highlight_cap: 5,
+            clutch_clear_secs:             3.0,
+            fast_clear_fraction:           0.5,
+            perfect_streak_count:          5,
+            mass_destruction_count:        10,
+            mass_destruction_window_secs:  2.0,
+            combo_king_cells:              8,
+            pinball_wizard_bounces:        12,
+            speed_demon_secs:              5.0,
+            close_save_pixels:             20.0,
+            comeback_bolts_lost:           3,
+            nail_biter_pixels:             30.0,
+            untouchable_nodes:             2,
+            highlight_cap:                 5,
             // Popup animation
-            popup_max_visible: 3,
-            popup_fade_duration_secs: 0.8,
+            popup_max_visible:             3,
+            popup_fade_duration_secs:      0.8,
             popup_overshoot_duration_secs: 0.1,
-            popup_overshoot_scale: 1.15,
-            popup_base_y: 100.0,
-            popup_vertical_spacing: 50.0,
-            popup_jitter_min_x: -10.0,
-            popup_jitter_max_x: 10.0,
-            popup_cascade_stagger_secs: 0.1,
+            popup_overshoot_scale:         1.15,
+            popup_base_y:                  100.0,
+            popup_vertical_spacing:        50.0,
+            popup_jitter_min_x:            -10.0,
+            popup_jitter_max_x:            10.0,
+            popup_cascade_stagger_secs:    0.1,
             // Scoring
-            diversity_penalty: 0.5,
-            max_expected_clutch_clear: 10.0,
-            max_expected_speed_demon: 10.0,
-            max_expected_close_save: 10.0,
-            max_expected_nail_biter: 10.0,
+            diversity_penalty:             0.5,
+            max_expected_clutch_clear:     10.0,
+            max_expected_speed_demon:      10.0,
+            max_expected_close_save:       10.0,
+            max_expected_nail_biter:       10.0,
             max_expected_mass_destruction: 5.0,
-            max_expected_perfect_streak: 4.0,
-            max_expected_combo_king: 4.0,
-            max_expected_pinball_wizard: 4.0,
-            max_expected_untouchable: 5.0,
-            max_expected_comeback: 3.0,
-            max_expected_perfect_node: 20.0,
+            max_expected_perfect_streak:   4.0,
+            max_expected_combo_king:       4.0,
+            max_expected_pinball_wizard:   4.0,
+            max_expected_untouchable:      5.0,
+            max_expected_comeback:         3.0,
+            max_expected_perfect_node:     20.0,
         }
     }
 }
@@ -191,9 +191,9 @@ mod tests {
     #[test]
     fn tier_definition_without_hp_mult_compiles() {
         let tier = TierDefinition {
-            nodes: TierNodeCount::Fixed(3),
-            active_ratio: 0.5,
-            timer_mult: 1.0,
+            nodes:            TierNodeCount::Fixed(3),
+            active_ratio:     0.5,
+            timer_mult:       1.0,
             introduced_cells: vec![],
         };
         let _ = tier.nodes;

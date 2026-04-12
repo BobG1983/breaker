@@ -7,12 +7,6 @@ pub mod birthing;
 pub mod collision_layers;
 pub mod color;
 pub mod components;
-#[allow(
-    dead_code,
-    unreachable_pub,
-    unused,
-    reason = "scaffold — no callsites yet"
-)]
 pub(crate) mod death_pipeline;
 pub mod draw_layer;
 pub mod playfield;

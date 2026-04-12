@@ -376,7 +376,7 @@ mod tests {
             &(
                 "overclock".to_string(),
                 SpeedBoostConfig {
-                    multiplier: OrderedFloat(1.5)
+                    multiplier: OrderedFloat(1.5),
                 }
             )
         );
@@ -385,7 +385,7 @@ mod tests {
             &(
                 "feedback_loop".to_string(),
                 SpeedBoostConfig {
-                    multiplier: OrderedFloat(2.0)
+                    multiplier: OrderedFloat(2.0),
                 }
             )
         );

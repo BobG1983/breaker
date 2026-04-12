@@ -21,9 +21,9 @@ use crate::transition::{
 /// Wipe overlay slides in to cover the screen.
 pub struct WipeOut {
     /// Duration in seconds.
-    pub duration: f32,
+    pub duration:  f32,
     /// Overlay color.
-    pub color: Color,
+    pub color:     Color,
     /// Direction the wipe slides from.
     pub direction: WipeDirection,
 }
@@ -31,8 +31,8 @@ pub struct WipeOut {
 impl Default for WipeOut {
     fn default() -> Self {
         Self {
-            duration: 0.3,
-            color: Color::BLACK,
+            duration:  0.3,
+            color:     Color::BLACK,
             direction: WipeDirection::Left,
         }
     }
@@ -42,8 +42,8 @@ impl Transition for WipeOut {
     fn insert_starting(&self, world: &mut World) {
         world.insert_resource(StartingTransition::<Self>::new());
         world.insert_resource(WipeOutConfig {
-            color: self.color,
-            duration: self.duration,
+            color:     self.color,
+            duration:  self.duration,
             direction: self.direction,
         });
     }
@@ -53,9 +53,9 @@ impl OutTransition for WipeOut {}
 /// Wipe overlay retracts off-screen to reveal content.
 pub struct WipeIn {
     /// Duration in seconds.
-    pub duration: f32,
+    pub duration:  f32,
     /// Overlay color.
-    pub color: Color,
+    pub color:     Color,
     /// Direction the wipe slides toward.
     pub direction: WipeDirection,
 }
@@ -63,8 +63,8 @@ pub struct WipeIn {
 impl Default for WipeIn {
     fn default() -> Self {
         Self {
-            duration: 0.3,
-            color: Color::BLACK,
+            duration:  0.3,
+            color:     Color::BLACK,
             direction: WipeDirection::Left,
         }
     }
@@ -74,8 +74,8 @@ impl Transition for WipeIn {
     fn insert_starting(&self, world: &mut World) {
         world.insert_resource(StartingTransition::<Self>::new());
         world.insert_resource(WipeInConfig {
-            color: self.color,
-            duration: self.duration,
+            color:     self.color,
+            duration:  self.duration,
             direction: self.direction,
         });
     }
@@ -90,9 +90,9 @@ impl InTransition for WipeIn {}
 #[derive(Resource)]
 pub struct WipeOutConfig {
     /// Duration in seconds.
-    pub duration: f32,
+    pub duration:  f32,
     /// Overlay color.
-    pub color: Color,
+    pub color:     Color,
     /// Direction the wipe slides from.
     pub direction: WipeDirection,
 }
@@ -101,9 +101,9 @@ pub struct WipeOutConfig {
 #[derive(Resource)]
 pub struct WipeInConfig {
     /// Duration in seconds.
-    pub duration: f32,
+    pub duration:  f32,
     /// Overlay color.
-    pub color: Color,
+    pub color:     Color,
     /// Direction the wipe slides toward.
     pub direction: WipeDirection,
 }
@@ -122,15 +122,15 @@ pub(crate) fn wipe_out_start(
 ) {
     if let Some(camera) = cameras.iter().next() {
         commands.entity(camera).insert(TransitionEffect {
-            color: color_to_linear_vec4(config.color),
-            direction: wipe_direction_to_vec4(&config.direction),
+            color:       color_to_linear_vec4(config.color),
+            direction:   wipe_direction_to_vec4(&config.direction),
             effect_type: EffectType::WIPE,
-            progress: 0.0,
+            progress:    0.0,
         });
     }
     commands.insert_resource(TransitionProgress {
-        elapsed: 0.0,
-        duration: config.duration,
+        elapsed:   0.0,
+        duration:  config.duration,
         completed: false,
     });
     commands.remove_resource::<WipeOutConfig>();
@@ -190,15 +190,15 @@ pub(crate) fn wipe_in_start(
 ) {
     if let Some(camera) = cameras.iter().next() {
         commands.entity(camera).insert(TransitionEffect {
-            color: color_to_linear_vec4(config.color),
-            direction: wipe_direction_to_vec4(&config.direction),
+            color:       color_to_linear_vec4(config.color),
+            direction:   wipe_direction_to_vec4(&config.direction),
             effect_type: EffectType::WIPE,
-            progress: 1.0,
+            progress:    1.0,
         });
     }
     commands.insert_resource(TransitionProgress {
-        elapsed: 0.0,
-        duration: config.duration,
+        elapsed:   0.0,
+        duration:  config.duration,
         completed: false,
     });
     commands.remove_resource::<WipeInConfig>();

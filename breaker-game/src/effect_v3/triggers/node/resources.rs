@@ -15,5 +15,5 @@ pub struct NodeTimerThresholdRegistry {
     /// All registered threshold ratios (0.0-1.0).
     pub thresholds: Vec<OrderedFloat<f32>>,
     /// Thresholds that have already fired this node.
-    pub fired: HashSet<OrderedFloat<f32>>,
+    pub fired:      HashSet<OrderedFloat<f32>>,
 }

@@ -12,10 +12,10 @@ impl Wall {
     #[must_use]
     pub(crate) fn builder() -> WallBuilder<NoSide> {
         WallBuilder {
-            side: NoSide,
+            side:     NoSide,
             optional: OptionalWallData::default(),
             lifetime: Lifetime::default(),
-            visual: Invisible,
+            visual:   Invisible,
         }
     }
 }
@@ -27,13 +27,13 @@ impl WallBuilder<NoSide> {
     #[must_use]
     pub(crate) fn left(self, playfield: &PlayfieldConfig) -> WallBuilder<Left> {
         WallBuilder {
-            side: Left {
+            side:     Left {
                 playfield_left: playfield.left(),
-                half_height: playfield.height / 2.0,
+                half_height:    playfield.height / 2.0,
             },
             optional: self.optional,
             lifetime: self.lifetime,
-            visual: Invisible,
+            visual:   Invisible,
         }
     }
 
@@ -41,13 +41,13 @@ impl WallBuilder<NoSide> {
     #[must_use]
     pub(crate) fn right(self, playfield: &PlayfieldConfig) -> WallBuilder<Right> {
         WallBuilder {
-            side: Right {
+            side:     Right {
                 playfield_right: playfield.right(),
-                half_height: playfield.height / 2.0,
+                half_height:     playfield.height / 2.0,
             },
             optional: self.optional,
             lifetime: self.lifetime,
-            visual: Invisible,
+            visual:   Invisible,
         }
     }
 
@@ -55,27 +55,28 @@ impl WallBuilder<NoSide> {
     #[must_use]
     pub(crate) fn ceiling(self, playfield: &PlayfieldConfig) -> WallBuilder<Ceiling> {
         WallBuilder {
-            side: Ceiling {
+            side:     Ceiling {
                 playfield_top: playfield.top(),
-                half_width: playfield.width / 2.0,
+                half_width:    playfield.width / 2.0,
             },
             optional: self.optional,
             lifetime: self.lifetime,
-            visual: Invisible,
+            visual:   Invisible,
         }
     }
 
     /// Transitions to a Floor wall, capturing playfield data.
+    #[cfg(test)]
     #[must_use]
     pub(crate) fn floor(self, playfield: &PlayfieldConfig) -> WallBuilder<Floor> {
         WallBuilder {
-            side: Floor {
+            side:     Floor {
                 playfield_bottom: playfield.bottom(),
-                half_width: playfield.width / 2.0,
+                half_width:       playfield.width / 2.0,
             },
             optional: self.optional,
             lifetime: self.lifetime,
-            visual: Invisible,
+            visual:   Invisible,
         }
     }
 }
@@ -96,6 +97,7 @@ impl<S: SideData, V> WallBuilder<S, V> {
     }
 
     /// Overrides the `half_thickness`.
+    #[cfg(test)]
     #[must_use]
     pub(crate) const fn with_half_thickness(mut self, ht: f32) -> Self {
         self.optional.override_half_thickness = Some(ht);
@@ -122,6 +124,7 @@ impl<S: SideData, V> WallBuilder<S, V> {
     }
 
     /// No-op for self-documentation — wall has no visual components.
+    #[cfg(test)]
     #[must_use]
     pub(crate) const fn invisible(self) -> Self {
         self
@@ -149,11 +152,11 @@ impl<S: SideData> WallBuilder<S, Invisible> {
             .unwrap_or([1.0, 1.0, 1.0]);
         let color = crate::shared::color_from_rgb(color_rgb);
         WallBuilder {
-            side: self.side,
+            side:     self.side,
             optional: self.optional,
             lifetime: self.lifetime,
-            visual: Visible {
-                mesh: meshes.add(Rectangle::new(1.0, 1.0)),
+            visual:   Visible {
+                mesh:     meshes.add(Rectangle::new(1.0, 1.0)),
                 material: materials.add(ColorMaterial::from_color(color)),
             },
         }
@@ -163,6 +166,7 @@ impl<S: SideData> WallBuilder<S, Invisible> {
 // ── Floor-only lifetime methods ────────────────────────────────────────────
 // Generic over V so timed/one_shot work on both Invisible and Visible floors.
 
+#[cfg(test)]
 impl<V> WallBuilder<Floor, V> {
     /// Sets the wall lifetime to timed.
     #[must_use]

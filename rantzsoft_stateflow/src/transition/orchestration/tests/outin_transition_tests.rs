@@ -132,8 +132,8 @@ fn outin_transition_unpauses_time_virtual_after_in_phase_completes() {
 #[derive(Resource, Default)]
 struct MessageLog {
     transition_starts: Vec<(TestState, TestState)>,
-    state_changed: Vec<(TestState, TestState)>,
-    transition_ends: Vec<(TestState, TestState)>,
+    state_changed:     Vec<(TestState, TestState)>,
+    transition_ends:   Vec<(TestState, TestState)>,
 }
 
 fn capture_transition_start(

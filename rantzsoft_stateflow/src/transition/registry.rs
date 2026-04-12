@@ -15,13 +15,13 @@ type WorldFn = Box<dyn Fn(&mut World) + Send + Sync>;
 /// A single registry entry storing closures for all four lifecycle operations.
 struct TransitionEntry {
     /// Inserts `StartingTransition<T>`.
-    insert_starting: WorldFn,
+    insert_starting:    WorldFn,
     /// Removes `StartingTransition<T>`, inserts `RunningTransition<T>`.
     advance_to_running: WorldFn,
     /// Removes `RunningTransition<T>`, inserts `EndingTransition<T>`.
-    advance_to_ending: WorldFn,
+    advance_to_ending:  WorldFn,
     /// Removes `EndingTransition<T>`.
-    remove_ending: WorldFn,
+    remove_ending:      WorldFn,
 }
 
 /// Registry mapping concrete transition effect `TypeId`s to their lifecycle
@@ -48,18 +48,18 @@ impl TransitionRegistry {
         self.entries
             .entry(type_id)
             .or_insert_with(|| TransitionEntry {
-                insert_starting: Box::new(|world: &mut World| {
+                insert_starting:    Box::new(|world: &mut World| {
                     world.insert_resource(StartingTransition::<T>::new());
                 }),
                 advance_to_running: Box::new(|world: &mut World| {
                     world.remove_resource::<StartingTransition<T>>();
                     world.insert_resource(RunningTransition::<T>::new());
                 }),
-                advance_to_ending: Box::new(|world: &mut World| {
+                advance_to_ending:  Box::new(|world: &mut World| {
                     world.remove_resource::<RunningTransition<T>>();
                     world.insert_resource(EndingTransition::<T>::new());
                 }),
-                remove_ending: Box::new(|world: &mut World| {
+                remove_ending:      Box::new(|world: &mut World| {
                     world.remove_resource::<EndingTransition<T>>();
                 }),
             });

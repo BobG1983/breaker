@@ -20,7 +20,7 @@ use crate::{
 #[derive(SystemParam)]
 pub(crate) struct BoltDefinitionChangeContext<'w, 's> {
     /// Bolt registry (rebuilt by `propagate_registry`).
-    registry: Res<'w, BoltRegistry>,
+    registry:   Res<'w, BoltRegistry>,
     /// Combined query: bolt entities with definition ref + optional [`BoundEffects`].
     /// Single query avoids Bevy query conflict from two overlapping queries.
     bolt_query: Query<
@@ -34,7 +34,7 @@ pub(crate) struct BoltDefinitionChangeContext<'w, 's> {
         With<Bolt>,
     >,
     /// Command buffer for component inserts and firing Do effects.
-    commands: Commands<'w, 's>,
+    commands:   Commands<'w, 's>,
 }
 
 /// Detects when `propagate_registry` has rebuilt the `BoltRegistry`

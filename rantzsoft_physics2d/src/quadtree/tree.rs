@@ -17,7 +17,7 @@ enum QuadNode {
         children: Box<[Self; 4]>,
         /// Items stored at this branch level because they span multiple child
         /// quadrants and cannot be pushed down.
-        items: Vec<(Entity, Aabb2D, CollisionLayers)>,
+        items:    Vec<(Entity, Aabb2D, CollisionLayers)>,
     },
 }
 
@@ -27,11 +27,11 @@ enum QuadNode {
 /// Items are stored in leaf nodes and split when a leaf exceeds
 /// `max_items_per_leaf`, up to `max_depth` levels.
 pub struct Quadtree {
-    root: QuadNode,
-    bounds: Aabb2D,
+    root:               QuadNode,
+    bounds:             Aabb2D,
     max_items_per_leaf: usize,
-    max_depth: usize,
-    len: usize,
+    max_depth:          usize,
+    len:                usize,
 }
 
 /// Returns the `Aabb2D` for child quadrant `index` (0..4) within `parent_bounds`.
@@ -84,8 +84,8 @@ fn fitting_quadrant(parent_bounds: &Aabb2D, item_bounds: &Aabb2D) -> Option<usiz
 #[derive(Clone, Copy)]
 struct TreeConfig {
     max_items_per_leaf: usize,
-    max_depth: usize,
-    depth: usize,
+    max_depth:          usize,
+    depth:              usize,
 }
 
 fn insert_into_node(
@@ -129,8 +129,8 @@ fn insert_into_node(
                     layers,
                     TreeConfig {
                         max_items_per_leaf: cfg.max_items_per_leaf,
-                        max_depth: cfg.max_depth,
-                        depth: cfg.depth + 1,
+                        max_depth:          cfg.max_depth,
+                        depth:              cfg.depth + 1,
                     },
                 );
             } else {
@@ -280,8 +280,8 @@ impl Quadtree {
             layers,
             TreeConfig {
                 max_items_per_leaf: self.max_items_per_leaf,
-                max_depth: self.max_depth,
-                depth: 0,
+                max_depth:          self.max_depth,
+                depth:              0,
             },
         );
         self.len += 1;

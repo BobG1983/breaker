@@ -28,7 +28,7 @@ pub(crate) const GAMEPLAY_ACTIONS: &[GameAction] = &[
 /// randomly-chosen gameplay action. The sequence is fully deterministic given
 /// the same `seed`.
 pub struct ChaosDriver {
-    rng: SmallRng,
+    rng:         SmallRng,
     action_prob: f32,
 }
 
@@ -37,7 +37,7 @@ impl ChaosDriver {
     #[must_use]
     pub fn new(seed: u64, params: &ChaosParams) -> Self {
         Self {
-            rng: SmallRng::seed_from_u64(seed),
+            rng:         SmallRng::seed_from_u64(seed),
             action_prob: params.action_prob,
         }
     }
@@ -104,7 +104,7 @@ pub struct HybridInput {
     /// Number of frames in the scripted (silent) phase.
     pub scripted_frames: u32,
     /// Inner chaos driver used after the scripted phase.
-    pub chaos: ChaosDriver,
+    pub chaos:           ChaosDriver,
 }
 
 impl HybridInput {
@@ -113,7 +113,7 @@ impl HybridInput {
     pub fn new(seed: u64, params: &HybridParams) -> Self {
         Self {
             scripted_frames: params.scripted_frames,
-            chaos: ChaosDriver::new(
+            chaos:           ChaosDriver::new(
                 seed,
                 &ChaosParams {
                     action_prob: params.action_prob,
@@ -143,7 +143,7 @@ pub struct PerfectDriver {
     /// Which bump timing mode to use.
     pub bump_mode: BumpMode,
     /// Seeded RNG for the `Random` mode.
-    pub rng: SmallRng,
+    pub rng:       SmallRng,
 }
 
 impl PerfectDriver {
@@ -152,7 +152,7 @@ impl PerfectDriver {
     pub fn new(seed: u64, mode: BumpMode) -> Self {
         Self {
             bump_mode: mode,
-            rng: SmallRng::seed_from_u64(seed),
+            rng:       SmallRng::seed_from_u64(seed),
         }
     }
 

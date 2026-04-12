@@ -8,7 +8,7 @@ use rantzsoft_spatial2d::components::Spatial2D;
 #[require(Spatial2D)]
 pub struct Aabb2D {
     /// Center position of the bounding box.
-    pub center: Vec2,
+    pub center:       Vec2,
     /// Half-extents (half-width, half-height) from center to each edge.
     pub half_extents: Vec2,
 }
@@ -27,7 +27,7 @@ impl Aabb2D {
     #[must_use]
     pub fn from_min_max(min: Vec2, max: Vec2) -> Self {
         Self {
-            center: (min + max) / 2.0,
+            center:       (min + max) / 2.0,
             half_extents: (max - min) / 2.0,
         }
     }
@@ -65,7 +65,7 @@ impl Aabb2D {
     #[must_use]
     pub fn expand_by(&self, amount: f32) -> Self {
         Self {
-            center: self.center,
+            center:       self.center,
             half_extents: self.half_extents + Vec2::splat(amount),
         }
     }

@@ -20,34 +20,34 @@ use crate::{
 
 /// Data bundling a CCD sweep result for breaker reflection.
 struct CcdHit {
-    normal: Vec2,
+    normal:   Vec2,
     safe_pos: Vec2,
-    above_y: f32,
+    above_y:  f32,
 }
 
 /// Shared per-frame physics context for CCD sweeps.
 struct SweepContext<'a> {
     quadtree: &'a CollisionQuadtree,
-    dt: f32,
+    dt:       f32,
 }
 
 /// Precomputed per-bolt geometry for collision checks.
 struct BoltGeometry {
-    entity: Entity,
-    bolt_pos: Vec2,
-    r: f32,
+    entity:        Entity,
+    bolt_pos:      Vec2,
+    r:             f32,
     expanded_half: Vec2,
-    above_y: f32,
+    above_y:       f32,
 }
 
 /// Precomputed breaker surface properties used for bolt reflection.
 struct BreakerSurface {
-    pos: Vec2,
-    half_w: f32,
-    half_h: f32,
+    pos:        Vec2,
+    half_w:     f32,
+    half_h:     f32,
     tilt_angle: f32,
-    max_angle: f32,
-    entity: Entity,
+    max_angle:  f32,
+    entity:     Entity,
 }
 
 impl BreakerSurface {
@@ -203,11 +203,6 @@ impl BreakerSurface {
 ///
 /// Piercing charges are always non-negative and small enough for lossless
 /// round-trip through f32.
-#[allow(
-    clippy::cast_sign_loss,
-    clippy::cast_possible_truncation,
-    reason = "piercing charges are small non-negative u32 values"
-)]
 const fn piercing_aggregate_to_u32(aggregate: f32) -> u32 {
     aggregate.round().max(0.0) as u32
 }
@@ -299,18 +294,18 @@ pub(crate) fn bolt_breaker_collision(
 
     let breaker_scale = breaker.node_scale.map_or(1.0, |s| s.0);
     let surface = BreakerSurface {
-        pos: breaker.position.0,
-        half_w: breaker.base_width.half_width()
+        pos:        breaker.position.0,
+        half_w:     breaker.base_width.half_width()
             * breaker.size_boosts.map_or(1.0, EffectStack::aggregate)
             * breaker_scale,
-        half_h: breaker.base_height.half_height() * breaker_scale,
+        half_h:     breaker.base_height.half_height() * breaker_scale,
         tilt_angle: breaker.tilt.angle,
-        max_angle: breaker.reflection_spread.0,
-        entity: breaker_entity,
+        max_angle:  breaker.reflection_spread.0,
+        entity:     breaker_entity,
     };
     let sweep = SweepContext {
         quadtree: &quadtree,
-        dt: time.delta_secs(),
+        dt:       time.delta_secs(),
     };
 
     for mut bolt in &mut bolt_query {

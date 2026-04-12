@@ -28,10 +28,10 @@ pub fn check_pulse_ring_accumulation(
     let count = rings.iter().count();
     if count > max {
         log.0.push(ViolationEntry {
-            frame: frame.0,
+            frame:     frame.0,
             invariant: InvariantKind::PulseRingAccumulation,
-            entity: None,
-            message: format!(
+            entity:    None,
+            message:   format!(
                 "PulseRingAccumulation FAIL frame={} count={count} max={max}",
                 frame.0,
             ),

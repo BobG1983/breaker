@@ -20,9 +20,9 @@ pub(crate) const BIRTHING_DURATION: f32 = 0.15;
 #[derive(Component, Debug)]
 pub struct Birthing {
     /// Timer tracking animation progress.
-    pub(crate) timer: Timer,
+    pub(crate) timer:          Timer,
     /// The scale the entity will reach when birthing completes.
-    pub(crate) target_scale: Scale2D,
+    pub(crate) target_scale:   Scale2D,
     /// The collision layers to restore when birthing completes.
     pub(crate) stashed_layers: CollisionLayers,
 }
@@ -56,8 +56,8 @@ mod tests {
     #[test]
     fn birthing_stores_timer_target_scale_and_stashed_layers() {
         let birthing = Birthing {
-            timer: Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
-            target_scale: Scale2D { x: 8.0, y: 8.0 },
+            timer:          Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
+            target_scale:   Scale2D { x: 8.0, y: 8.0 },
             stashed_layers: CollisionLayers::new(0x01, 0x0E),
         };
 
@@ -87,8 +87,8 @@ mod tests {
     #[test]
     fn birthing_stashed_layers_default_stored_exactly() {
         let birthing = Birthing {
-            timer: Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
-            target_scale: Scale2D { x: 8.0, y: 8.0 },
+            timer:          Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
+            target_scale:   Scale2D { x: 8.0, y: 8.0 },
             stashed_layers: CollisionLayers::default(),
         };
 

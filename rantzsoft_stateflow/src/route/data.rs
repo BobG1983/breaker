@@ -62,11 +62,11 @@ pub enum TriggerKind {
 /// Fluent builder for a single route. Consumed by
 /// [`RoutingTable::add`](crate::RoutingTable::add).
 pub struct RouteBuilder<S: States, Dest, Trans, Trigger> {
-    pub(crate) from: S,
+    pub(crate) from:        S,
     pub(crate) destination: DestinationKind<S>,
-    pub(crate) transition: TransitionKind,
-    pub(crate) trigger: TriggerKind,
-    _phantom: PhantomData<(Dest, Trans, Trigger)>,
+    pub(crate) transition:  TransitionKind,
+    pub(crate) trigger:     TriggerKind,
+    _phantom:               PhantomData<(Dest, Trans, Trigger)>,
 }
 
 // -- Entry point ----------
@@ -77,11 +77,11 @@ impl Route {
         state: S,
     ) -> RouteBuilder<S, NoDest, NoTransition, MessageTrigger> {
         RouteBuilder {
-            from: state,
+            from:        state,
             destination: DestinationKind::None,
-            transition: TransitionKind::None,
-            trigger: TriggerKind::Message,
-            _phantom: PhantomData,
+            transition:  TransitionKind::None,
+            trigger:     TriggerKind::Message,
+            _phantom:    PhantomData,
         }
     }
 }
@@ -95,11 +95,11 @@ impl<S: States, Trans, Trigger> RouteBuilder<S, NoDest, Trans, Trigger> {
     /// Set a fixed destination state.
     pub fn to(self, dest: S) -> RouteBuilder<S, StaticDest, Trans, Trigger> {
         RouteBuilder {
-            from: self.from,
+            from:        self.from,
             destination: DestinationKind::Static(dest),
-            transition: self.transition,
-            trigger: self.trigger,
-            _phantom: PhantomData,
+            transition:  self.transition,
+            trigger:     self.trigger,
+            _phantom:    PhantomData,
         }
     }
 
@@ -109,11 +109,11 @@ impl<S: States, Trans, Trigger> RouteBuilder<S, NoDest, Trans, Trigger> {
         f: impl Fn(&World) -> S + Send + Sync + 'static,
     ) -> RouteBuilder<S, DynamicDest, Trans, Trigger> {
         RouteBuilder {
-            from: self.from,
+            from:        self.from,
             destination: DestinationKind::Dynamic(Box::new(f)),
-            transition: self.transition,
-            trigger: self.trigger,
-            _phantom: PhantomData,
+            transition:  self.transition,
+            trigger:     self.trigger,
+            _phantom:    PhantomData,
         }
     }
 }
@@ -127,11 +127,11 @@ impl<S: States, Dest, Trigger> RouteBuilder<S, Dest, NoTransition, Trigger> {
         transition: TransitionType,
     ) -> RouteBuilder<S, Dest, StaticTransition, Trigger> {
         RouteBuilder {
-            from: self.from,
+            from:        self.from,
             destination: self.destination,
-            transition: TransitionKind::Static(transition),
-            trigger: self.trigger,
-            _phantom: PhantomData,
+            transition:  TransitionKind::Static(transition),
+            trigger:     self.trigger,
+            _phantom:    PhantomData,
         }
     }
 
@@ -141,11 +141,11 @@ impl<S: States, Dest, Trigger> RouteBuilder<S, Dest, NoTransition, Trigger> {
         f: impl Fn(&World) -> TransitionType + Send + Sync + 'static,
     ) -> RouteBuilder<S, Dest, DynamicTransition, Trigger> {
         RouteBuilder {
-            from: self.from,
+            from:        self.from,
             destination: self.destination,
-            transition: TransitionKind::Dynamic(Box::new(f)),
-            trigger: self.trigger,
-            _phantom: PhantomData,
+            transition:  TransitionKind::Dynamic(Box::new(f)),
+            trigger:     self.trigger,
+            _phantom:    PhantomData,
         }
     }
 }
@@ -162,11 +162,11 @@ impl<S: States, Dest, Trans> RouteBuilder<S, Dest, Trans, MessageTrigger> {
         f: impl Fn(&World) -> bool + Send + Sync + 'static,
     ) -> RouteBuilder<S, Dest, Trans, ConditionTrigger> {
         RouteBuilder {
-            from: self.from,
+            from:        self.from,
             destination: self.destination,
-            transition: self.transition,
-            trigger: TriggerKind::Condition(Box::new(f)),
-            _phantom: PhantomData,
+            transition:  self.transition,
+            trigger:     TriggerKind::Condition(Box::new(f)),
+            _phantom:    PhantomData,
         }
     }
 }
@@ -179,13 +179,13 @@ impl<S: States, Dest, Trans> RouteBuilder<S, Dest, Trans, MessageTrigger> {
 #[doc(hidden)]
 pub struct FinalizedRoute<S: States> {
     /// The source state variant.
-    pub from: S,
+    pub from:        S,
     /// How to determine the destination.
     pub destination: DestinationKind<S>,
     /// How the transition effect is configured.
-    pub transition: TransitionKind,
+    pub transition:  TransitionKind,
     /// How the route is triggered.
-    pub trigger: TriggerKind,
+    pub trigger:     TriggerKind,
 }
 
 /// Trait for converting a `RouteBuilder` with a destination into a `FinalizedRoute`.
@@ -202,10 +202,10 @@ impl<S: States, Trans, Trigger> IntoFinalizedRoute<S>
 {
     fn finalize(self) -> FinalizedRoute<S> {
         FinalizedRoute {
-            from: self.from,
+            from:        self.from,
             destination: self.destination,
-            transition: self.transition,
-            trigger: self.trigger,
+            transition:  self.transition,
+            trigger:     self.trigger,
         }
     }
 }
@@ -215,10 +215,10 @@ impl<S: States, Trans, Trigger> IntoFinalizedRoute<S>
 {
     fn finalize(self) -> FinalizedRoute<S> {
         FinalizedRoute {
-            from: self.from,
+            from:        self.from,
             destination: self.destination,
-            transition: self.transition,
-            trigger: self.trigger,
+            transition:  self.transition,
+            trigger:     self.trigger,
         }
     }
 }

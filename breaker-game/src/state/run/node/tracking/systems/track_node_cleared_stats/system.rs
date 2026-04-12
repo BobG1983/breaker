@@ -10,12 +10,12 @@ use crate::state::run::{
 /// Bundled resources for node-clear highlight detection.
 #[derive(SystemParam)]
 pub(crate) struct NodeClearContext<'w> {
-    stats: ResMut<'w, RunStats>,
-    tracker: ResMut<'w, HighlightTracker>,
-    run_state: Res<'w, NodeOutcome>,
+    stats:      ResMut<'w, RunStats>,
+    tracker:    ResMut<'w, HighlightTracker>,
+    run_state:  Res<'w, NodeOutcome>,
     node_timer: Res<'w, NodeTimer>,
-    config: Res<'w, HighlightConfig>,
-    time: Res<'w, Time<Fixed>>,
+    config:     Res<'w, HighlightConfig>,
+    time:       Res<'w, Time<Fixed>>,
 }
 
 /// Reads [`NodeCleared`] messages and updates [`RunStats`] with node

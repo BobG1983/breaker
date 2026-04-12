@@ -168,7 +168,7 @@ mod tests {
             .resource_mut::<HighlightTracker>()
             .cells_since_last_breaker_hit = 8;
         app.insert_resource(TestBoltImpactBreaker(vec![BoltImpactBreaker {
-            bolt: Entity::PLACEHOLDER,
+            bolt:    Entity::PLACEHOLDER,
             breaker: Entity::PLACEHOLDER,
         }]));
         tick(&mut app);
@@ -210,7 +210,7 @@ mod tests {
             .resource_mut::<HighlightTracker>()
             .cells_since_last_breaker_hit = 7;
         app.insert_resource(TestBoltImpactBreaker(vec![BoltImpactBreaker {
-            bolt: Entity::PLACEHOLDER,
+            bolt:    Entity::PLACEHOLDER,
             breaker: Entity::PLACEHOLDER,
         }]));
         tick(&mut app);
@@ -248,7 +248,7 @@ mod tests {
             tracker.cells_since_last_breaker_hit = 5;
         }
         app.insert_resource(TestBoltImpactBreaker(vec![BoltImpactBreaker {
-            bolt: Entity::PLACEHOLDER,
+            bolt:    Entity::PLACEHOLDER,
             breaker: Entity::PLACEHOLDER,
         }]));
         tick(&mut app);
@@ -269,10 +269,10 @@ mod tests {
         {
             let mut stats = app.world_mut().resource_mut::<RunStats>();
             stats.highlights.push(RunHighlight {
-                kind: HighlightKind::ComboKing,
+                kind:       HighlightKind::ComboKing,
                 node_index: 0,
-                value: 10.0,
-                detail: None,
+                value:      10.0,
+                detail:     None,
             });
         }
 
@@ -281,7 +281,7 @@ mod tests {
             tracker.cells_since_last_breaker_hit = 10;
         }
         app.insert_resource(TestBoltImpactBreaker(vec![BoltImpactBreaker {
-            bolt: Entity::PLACEHOLDER,
+            bolt:    Entity::PLACEHOLDER,
             breaker: Entity::PLACEHOLDER,
         }]));
         tick(&mut app);

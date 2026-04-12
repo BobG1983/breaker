@@ -15,8 +15,8 @@ use crate::{
 #[test]
 fn stress_result_passed_returns_true_when_all_copies_pass() {
     let result = StressResult {
-        name: "test".into(),
-        total: 64,
+        name:     "test".into(),
+        total:    64,
         failures: vec![],
     };
     assert!(
@@ -29,28 +29,28 @@ fn stress_result_passed_returns_true_when_all_copies_pass() {
 #[test]
 fn stress_result_passed_returns_false_when_any_copy_fails() {
     let result = StressResult {
-        name: "test".into(),
-        total: 64,
+        name:     "test".into(),
+        total:    64,
         failures: vec![
             StressFailure {
                 copy_index: 3,
-                stdout: "output".into(),
-                stderr: "err".into(),
+                stdout:     "output".into(),
+                stderr:     "err".into(),
             },
             StressFailure {
                 copy_index: 7,
-                stdout: "output".into(),
-                stderr: "err".into(),
+                stdout:     "output".into(),
+                stderr:     "err".into(),
             },
             StressFailure {
                 copy_index: 12,
-                stdout: "output".into(),
-                stderr: "err".into(),
+                stdout:     "output".into(),
+                stderr:     "err".into(),
             },
             StressFailure {
                 copy_index: 55,
-                stdout: "output".into(),
-                stderr: "err".into(),
+                stdout:     "output".into(),
+                stderr:     "err".into(),
             },
         ],
     };
@@ -68,8 +68,8 @@ fn stress_result_passed_returns_false_when_any_copy_fails() {
 #[test]
 fn stress_result_summary_line_all_pass() {
     let result = StressResult {
-        name: "my_scenario".into(),
-        total: 32,
+        name:     "my_scenario".into(),
+        total:    32,
         failures: vec![],
     };
     assert_eq!(
@@ -84,28 +84,28 @@ fn stress_result_summary_line_all_pass() {
 #[test]
 fn stress_result_summary_line_with_failures() {
     let result = StressResult {
-        name: "my_scenario".into(),
-        total: 32,
+        name:     "my_scenario".into(),
+        total:    32,
         failures: vec![
             StressFailure {
                 copy_index: 1,
-                stdout: String::new(),
-                stderr: String::new(),
+                stdout:     String::new(),
+                stderr:     String::new(),
             },
             StressFailure {
                 copy_index: 5,
-                stdout: String::new(),
-                stderr: String::new(),
+                stdout:     String::new(),
+                stderr:     String::new(),
             },
             StressFailure {
                 copy_index: 10,
-                stdout: String::new(),
-                stderr: String::new(),
+                stdout:     String::new(),
+                stderr:     String::new(),
             },
             StressFailure {
                 copy_index: 20,
-                stdout: String::new(),
-                stderr: String::new(),
+                stdout:     String::new(),
+                stderr:     String::new(),
             },
         ],
     };
@@ -224,7 +224,7 @@ fn partition_stress_scenarios_empty_input_returns_empty() {
 fn partition_stress_scenarios_preserves_synthesized_stress_config() {
     let def = ScenarioDefinition {
         stress: Some(StressConfig {
-            runs: 32,
+            runs:        32,
             parallelism: 32,
         }),
         ..Default::default()
@@ -284,7 +284,7 @@ fn partition_stress_scenarios_stress_entries_are_name_path_config() {
         breaker: "TestBreaker".to_owned(),
         layout: "TestLayout".to_owned(),
         stress: Some(StressConfig {
-            runs: 10,
+            runs:        10,
             parallelism: 5,
         }),
         ..Default::default()
@@ -312,18 +312,18 @@ fn partition_stress_scenarios_stress_entries_are_name_path_config() {
 #[test]
 fn stress_result_pass_count_derived_from_total_minus_failures() {
     let result = StressResult {
-        name: "test".into(),
-        total: 10,
+        name:     "test".into(),
+        total:    10,
         failures: vec![
             StressFailure {
                 copy_index: 2,
-                stdout: String::new(),
-                stderr: String::new(),
+                stdout:     String::new(),
+                stderr:     String::new(),
             },
             StressFailure {
                 copy_index: 7,
-                stdout: String::new(),
-                stderr: String::new(),
+                stdout:     String::new(),
+                stderr:     String::new(),
             },
         ],
     };

@@ -218,10 +218,10 @@ mod tests {
             )),
             ChipOffering::Evolution {
                 ingredients: vec![EvolutionIngredient {
-                    chip_name: "X".to_owned(),
+                    chip_name:       "X".to_owned(),
                     stacks_required: 2,
                 }],
-                result: ChipDefinition::test(
+                result:      ChipDefinition::test(
                     "B+",
                     Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 5 })),
                     1,

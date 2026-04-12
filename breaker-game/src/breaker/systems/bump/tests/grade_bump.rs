@@ -22,7 +22,7 @@ fn bolt_hit_with_active_forward_perfect() {
     });
 
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
-        bolt: Entity::PLACEHOLDER,
+        bolt:    Entity::PLACEHOLDER,
         breaker: Entity::PLACEHOLDER,
     })));
     tick(&mut app);
@@ -55,7 +55,7 @@ fn bolt_hit_with_active_forward_early() {
     });
 
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
-        bolt: Entity::PLACEHOLDER,
+        bolt:    Entity::PLACEHOLDER,
         breaker: Entity::PLACEHOLDER,
     })));
     tick(&mut app);
@@ -81,7 +81,7 @@ fn bolt_hit_without_active_sets_post_hit_timer_no_message() {
     let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
 
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
-        bolt: Entity::PLACEHOLDER,
+        bolt:    Entity::PLACEHOLDER,
         breaker: Entity::PLACEHOLDER,
     })));
     tick(&mut app);
@@ -136,7 +136,7 @@ fn grade_bump_forward_sends_bolt_entity() {
 
     // Use a dedicated resource with the specific bolt entity
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
-        bolt: bolt_entity,
+        bolt:    bolt_entity,
         breaker: Entity::PLACEHOLDER,
     })));
     app.add_systems(
@@ -183,7 +183,7 @@ fn grade_bump_sets_last_hit_bolt_when_no_active_bump() {
     let bolt_entity = app.world_mut().spawn_empty().id();
 
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
-        bolt: bolt_entity,
+        bolt:    bolt_entity,
         breaker: Entity::PLACEHOLDER,
     })));
     app.add_systems(
@@ -229,7 +229,7 @@ fn grade_bump_uses_force_grade_when_some() {
     }
 
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
-        bolt: Entity::PLACEHOLDER,
+        bolt:    Entity::PLACEHOLDER,
         breaker: Entity::PLACEHOLDER,
     })));
     tick(&mut app);
@@ -263,7 +263,7 @@ fn grade_bump_ignores_force_grade_when_none() {
     }
 
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
-        bolt: Entity::PLACEHOLDER,
+        bolt:    Entity::PLACEHOLDER,
         breaker: Entity::PLACEHOLDER,
     })));
     tick(&mut app);
@@ -297,7 +297,7 @@ fn grade_bump_works_without_force_grade_resource() {
     }
 
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
-        bolt: Entity::PLACEHOLDER,
+        bolt:    Entity::PLACEHOLDER,
         breaker: Entity::PLACEHOLDER,
     })));
 

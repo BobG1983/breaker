@@ -63,11 +63,11 @@ fn multiple_stamps_with_fire_all_fire_immediately() {
     let mut app = test_app();
 
     let def = ChipDefinition {
-        name: "Multi Fire".to_owned(),
-        description: String::new(),
-        rarity: crate::chips::definition::Rarity::Common,
-        max_stacks: 5,
-        effects: vec![
+        name:          "Multi Fire".to_owned(),
+        description:   String::new(),
+        rarity:        crate::chips::definition::Rarity::Common,
+        max_stacks:    5,
+        effects:       vec![
             RootNode::Stamp(
                 StampTarget::Breaker,
                 Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
@@ -81,7 +81,7 @@ fn multiple_stamps_with_fire_all_fire_immediately() {
                 })),
             ),
         ],
-        ingredients: None,
+        ingredients:   None,
         template_name: None,
     };
     insert_chip(&mut app, def);
@@ -119,11 +119,11 @@ fn bare_fire_targeting_breaker_fires_size_and_bump_force() {
     let mut app = test_app();
 
     let def = ChipDefinition {
-        name: "Basic Augment".to_owned(),
-        description: String::new(),
-        rarity: crate::chips::definition::Rarity::Common,
-        max_stacks: 5,
-        effects: vec![
+        name:          "Basic Augment".to_owned(),
+        description:   String::new(),
+        rarity:        crate::chips::definition::Rarity::Common,
+        max_stacks:    5,
+        effects:       vec![
             RootNode::Stamp(
                 StampTarget::Breaker,
                 Tree::Fire(EffectType::SizeBoost(SizeBoostConfig {
@@ -137,7 +137,7 @@ fn bare_fire_targeting_breaker_fires_size_and_bump_force() {
                 })),
             ),
         ],
-        ingredients: None,
+        ingredients:   None,
         template_name: None,
     };
     insert_chip(&mut app, def);

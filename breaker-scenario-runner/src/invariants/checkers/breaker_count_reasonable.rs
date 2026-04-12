@@ -35,10 +35,10 @@ pub fn check_breaker_count_reasonable(
     let count = breakers.iter().count();
     if count != 1 {
         log.0.push(ViolationEntry {
-            frame: frame.0,
+            frame:     frame.0,
             invariant: InvariantKind::BreakerCountReasonable,
-            entity: None,
-            message: format!(
+            entity:    None,
+            message:   format!(
                 "BreakerCountReasonable FAIL frame={} count={count}",
                 frame.0,
             ),

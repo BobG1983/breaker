@@ -43,7 +43,7 @@ pub(crate) fn handle_cell_hit(
         if destroyed {
             // Two-phase destruction: write request (entity stays alive for bridge evaluation)
             request_destroyed_writer.write(RequestCellDestroyed {
-                cell: msg.cell,
+                cell:                  msg.cell,
                 was_required_to_clear: is_required,
             });
             despawned.push(msg.cell);

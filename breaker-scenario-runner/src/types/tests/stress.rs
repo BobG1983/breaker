@@ -11,7 +11,7 @@ fn stress_config_parses_full_ron() {
     assert_eq!(
         result,
         StressConfig {
-            runs: 64,
+            runs:        64,
             parallelism: 8,
         }
     );
@@ -25,7 +25,7 @@ fn stress_config_defaults_both_fields_from_empty_struct() {
     assert_eq!(
         result,
         StressConfig {
-            runs: 32,
+            runs:        32,
             parallelism: 32,
         }
     );
@@ -38,7 +38,7 @@ fn stress_config_partial_override_only_runs() {
     assert_eq!(
         result,
         StressConfig {
-            runs: 64,
+            runs:        64,
             parallelism: 32,
         }
     );
@@ -52,7 +52,7 @@ fn stress_config_partial_override_only_parallelism() {
     assert_eq!(
         result,
         StressConfig {
-            runs: 32,
+            runs:        32,
             parallelism: 4,
         }
     );

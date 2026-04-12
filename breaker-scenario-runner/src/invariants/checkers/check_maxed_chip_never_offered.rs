@@ -25,10 +25,10 @@ pub fn check_maxed_chip_never_offered(
         let name = offering.name();
         if inventory.is_maxed(name) {
             log.0.push(ViolationEntry {
-                frame: frame.0,
+                frame:     frame.0,
                 invariant: InvariantKind::MaxedChipNeverOffered,
-                entity: None,
-                message: format!(
+                entity:    None,
+                message:   format!(
                     "MaxedChipNeverOffered FAIL frame={} maxed chip in offering: {name}",
                     frame.0,
                 ),

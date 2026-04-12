@@ -18,10 +18,10 @@ pub fn check_timer_non_negative(
     let Some(timer) = timer else { return };
     if timer.remaining < 0.0 {
         log.0.push(ViolationEntry {
-            frame: frame.0,
+            frame:     frame.0,
             invariant: InvariantKind::TimerNonNegative,
-            entity: None,
-            message: format!(
+            entity:    None,
+            message:   format!(
                 "TimerNonNegative FAIL frame={} remaining={:.3}",
                 frame.0, timer.remaining,
             ),
@@ -49,7 +49,7 @@ mod tests {
             .insert_resource(ScenarioFrame::default())
             .insert_resource(NodeTimer {
                 remaining: -1.0,
-                total: 60.0,
+                total:     60.0,
             })
             .add_systems(FixedUpdate, check_timer_non_negative);
 
@@ -68,7 +68,7 @@ mod tests {
             .insert_resource(ScenarioFrame::default())
             .insert_resource(NodeTimer {
                 remaining: 0.0,
-                total: 60.0,
+                total:     60.0,
             })
             .add_systems(FixedUpdate, check_timer_non_negative);
 

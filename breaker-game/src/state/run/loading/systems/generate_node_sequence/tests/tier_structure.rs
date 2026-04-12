@@ -216,7 +216,7 @@ fn timer_mult_still_correctly_set_with_cumulative_reduction() {
 #[test]
 fn difficulty_curve_without_boss_hp_mult_compiles() {
     let curve = DifficultyCurve {
-        tiers: vec![make_tier(TierNodeCount::Fixed(1), 0.0, 1.0)],
+        tiers:                    vec![make_tier(TierNodeCount::Fixed(1), 0.0, 1.0)],
         timer_reduction_per_boss: 0.1,
     };
     let mut rng = rng_from_seed(42);

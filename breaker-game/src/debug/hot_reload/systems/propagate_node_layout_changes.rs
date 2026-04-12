@@ -18,23 +18,23 @@ use crate::{
 #[derive(SystemParam)]
 pub(crate) struct LayoutChangeContext<'w, 's> {
     /// Cell dimensions and padding configuration.
-    cell_config: Res<'w, CellConfig>,
+    cell_config:        Res<'w, CellConfig>,
     /// Playfield boundaries.
-    playfield: Res<'w, PlayfieldConfig>,
+    playfield:          Res<'w, PlayfieldConfig>,
     /// Currently active layout (if any).
-    active_layout: Option<Res<'w, ActiveNodeLayout>>,
+    active_layout:      Option<Res<'w, ActiveNodeLayout>>,
     /// Node layout registry (rebuilt by `propagate_registry`).
-    registry: Res<'w, NodeLayoutRegistry>,
+    registry:           Res<'w, NodeLayoutRegistry>,
     /// Cell type definitions for spawning.
     cell_type_registry: Res<'w, CellTypeRegistry>,
     /// Existing cell entities to despawn on layout change.
-    cell_query: Query<'w, 's, Entity, With<Cell>>,
+    cell_query:         Query<'w, 's, Entity, With<Cell>>,
     /// Command buffer for entity spawn/despawn.
-    commands: Commands<'w, 's>,
+    commands:           Commands<'w, 's>,
     /// Mesh asset storage.
-    meshes: ResMut<'w, Assets<Mesh>>,
+    meshes:             ResMut<'w, Assets<Mesh>>,
     /// Material asset storage.
-    materials: ResMut<'w, Assets<ColorMaterial>>,
+    materials:          ResMut<'w, Assets<ColorMaterial>>,
 }
 
 /// Detects when `propagate_registry` has rebuilt the `NodeLayoutRegistry`
@@ -77,15 +77,15 @@ pub(crate) fn propagate_node_layout_changes(mut ctx: LayoutChangeContext) {
         &layout,
         &ctx.cell_type_registry,
         RenderAssets {
-            meshes: &mut ctx.meshes,
+            meshes:    &mut ctx.meshes,
             materials: &mut ctx.materials,
         },
         ToughnessHpData {
             toughness_config: None,
-            hp_context: HpContext {
-                tier: 0,
+            hp_context:       HpContext {
+                tier:             0,
                 position_in_tier: 0,
-                is_boss: false,
+                is_boss:          false,
             },
         },
     );
@@ -110,16 +110,16 @@ mod tests {
         registry.insert(
             "S".to_owned(),
             CellTypeDefinition {
-                id: "standard".to_owned(),
-                alias: "S".to_owned(),
-                toughness: Toughness::default(),
-                color_rgb: [4.0, 0.2, 0.5],
+                id:                "standard".to_owned(),
+                alias:             "S".to_owned(),
+                toughness:         Toughness::default(),
+                color_rgb:         [4.0, 0.2, 0.5],
                 required_to_clear: true,
-                damage_hdr_base: 4.0,
-                damage_green_min: 0.2,
+                damage_hdr_base:   4.0,
+                damage_green_min:  0.2,
                 damage_blue_range: 0.4,
-                damage_blue_base: 0.2,
-                behaviors: None,
+                damage_blue_base:  0.2,
+                behaviors:         None,
 
                 effects: None,
             },
@@ -127,16 +127,16 @@ mod tests {
         registry.insert(
             "T".to_owned(),
             CellTypeDefinition {
-                id: "tough".to_owned(),
-                alias: "T".to_owned(),
-                toughness: Toughness::Tough,
-                color_rgb: [2.5, 0.2, 4.0],
+                id:                "tough".to_owned(),
+                alias:             "T".to_owned(),
+                toughness:         Toughness::Tough,
+                color_rgb:         [2.5, 0.2, 4.0],
                 required_to_clear: true,
-                damage_hdr_base: 4.0,
-                damage_green_min: 0.2,
+                damage_hdr_base:   4.0,
+                damage_green_min:  0.2,
                 damage_blue_range: 0.4,
-                damage_blue_base: 0.2,
-                behaviors: None,
+                damage_blue_base:  0.2,
+                behaviors:         None,
 
                 effects: None,
             },

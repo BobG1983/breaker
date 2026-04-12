@@ -57,7 +57,7 @@ mod tests {
 
         app.world_mut().spawn((
             FadeOut {
-                timer: 1.0,
+                timer:    1.0,
                 duration: 1.0,
             },
             TextColor(Color::srgba(1.0, 1.0, 1.0, 1.0)),
@@ -83,7 +83,7 @@ mod tests {
 
         app.world_mut().spawn((
             FadeOut {
-                timer: 0.0,
+                timer:    0.0,
                 duration: 1.0,
             },
             TextColor(Color::srgba(1.0, 1.0, 1.0, 1.0)),
@@ -110,7 +110,7 @@ mod tests {
             .world_mut()
             .spawn((
                 FadeOut {
-                    timer: 0.001,
+                    timer:    0.001,
                     duration: 1.0,
                 },
                 TextColor(Color::srgba(1.0, 1.0, 1.0, 0.5)),
@@ -136,7 +136,7 @@ mod tests {
             .world_mut()
             .spawn((
                 FadeOut {
-                    timer: 1.0,
+                    timer:    1.0,
                     duration: 1.0,
                 },
                 TextColor(Color::srgba(1.0, 1.0, 1.0, 1.0)),
@@ -175,7 +175,7 @@ mod tests {
             .world_mut()
             .spawn((
                 FadeOut {
-                    timer: 1.0,
+                    timer:    1.0,
                     duration: 1.0,
                 },
                 TextColor(Color::srgba(1.0, 1.0, 1.0, 1.0)),
@@ -202,7 +202,7 @@ mod tests {
             .world_mut()
             .spawn((
                 FadeOut {
-                    timer: 0.5,
+                    timer:    0.5,
                     duration: 0.5,
                 },
                 TextColor(Color::srgba(1.0, 1.0, 1.0, 1.0)),
@@ -214,7 +214,7 @@ mod tests {
             .world_mut()
             .spawn((
                 FadeOut {
-                    timer: 2.0,
+                    timer:    2.0,
                     duration: 2.0,
                 },
                 TextColor(Color::srgba(1.0, 1.0, 1.0, 1.0)),
@@ -245,7 +245,7 @@ mod tests {
         let entity = app
             .world_mut()
             .spawn(FadeOut {
-                timer: 1.0,
+                timer:    1.0,
                 duration: 1.0,
             })
             .id();

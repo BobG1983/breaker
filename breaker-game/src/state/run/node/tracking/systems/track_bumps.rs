@@ -60,8 +60,8 @@ mod tests {
     fn increments_bumps_performed_for_any_grade() {
         let mut app = test_app();
         app.insert_resource(TestMessages(vec![BumpPerformed {
-            grade: BumpGrade::Early,
-            bolt: None,
+            grade:   BumpGrade::Early,
+            bolt:    None,
             breaker: Entity::PLACEHOLDER,
         }]));
         tick(&mut app);
@@ -77,8 +77,8 @@ mod tests {
     fn increments_perfect_bumps_only_for_perfect_grade() {
         let mut app = test_app();
         app.insert_resource(TestMessages(vec![BumpPerformed {
-            grade: BumpGrade::Perfect,
-            bolt: None,
+            grade:   BumpGrade::Perfect,
+            bolt:    None,
             breaker: Entity::PLACEHOLDER,
         }]));
         tick(&mut app);
@@ -100,8 +100,8 @@ mod tests {
         // Send 3 consecutive perfect bumps across 3 ticks
         for _ in 0..3 {
             app.insert_resource(TestMessages(vec![BumpPerformed {
-                grade: BumpGrade::Perfect,
-                bolt: None,
+                grade:   BumpGrade::Perfect,
+                bolt:    None,
                 breaker: Entity::PLACEHOLDER,
             }]));
             tick(&mut app);
@@ -123,8 +123,8 @@ mod tests {
             .consecutive_perfect_bumps = 6;
 
         app.insert_resource(TestMessages(vec![BumpPerformed {
-            grade: BumpGrade::Early,
-            bolt: None,
+            grade:   BumpGrade::Early,
+            bolt:    None,
             breaker: Entity::PLACEHOLDER,
         }]));
         tick(&mut app);
@@ -149,8 +149,8 @@ mod tests {
             .consecutive_perfect_bumps = 3;
 
         app.insert_resource(TestMessages(vec![BumpPerformed {
-            grade: BumpGrade::Late,
-            bolt: None,
+            grade:   BumpGrade::Late,
+            bolt:    None,
             breaker: Entity::PLACEHOLDER,
         }]));
         tick(&mut app);
@@ -173,13 +173,13 @@ mod tests {
         let mut app = test_app();
         app.insert_resource(TestMessages(vec![
             BumpPerformed {
-                grade: BumpGrade::Early,
-                bolt: None,
+                grade:   BumpGrade::Early,
+                bolt:    None,
                 breaker: Entity::PLACEHOLDER,
             },
             BumpPerformed {
-                grade: BumpGrade::Late,
-                bolt: None,
+                grade:   BumpGrade::Late,
+                bolt:    None,
                 breaker: Entity::PLACEHOLDER,
             },
         ]));
@@ -199,18 +199,18 @@ mod tests {
         let mut app = test_app();
         app.insert_resource(TestMessages(vec![
             BumpPerformed {
-                grade: BumpGrade::Perfect,
-                bolt: None,
+                grade:   BumpGrade::Perfect,
+                bolt:    None,
                 breaker: Entity::PLACEHOLDER,
             },
             BumpPerformed {
-                grade: BumpGrade::Early,
-                bolt: None,
+                grade:   BumpGrade::Early,
+                bolt:    None,
                 breaker: Entity::PLACEHOLDER,
             },
             BumpPerformed {
-                grade: BumpGrade::Late,
-                bolt: None,
+                grade:   BumpGrade::Late,
+                bolt:    None,
                 breaker: Entity::PLACEHOLDER,
             },
         ]));

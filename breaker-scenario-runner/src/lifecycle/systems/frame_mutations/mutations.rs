@@ -48,15 +48,15 @@ pub struct PauseControl<'w> {
 #[derive(SystemParam)]
 pub struct MutationTargets<'w, 's> {
     /// [`RunStats`] resource -- absent before a run starts.
-    run_stats: Option<ResMut<'w, RunStats>>,
+    run_stats:            Option<ResMut<'w, RunStats>>,
     /// [`ChipInventory`] resource -- absent before a run starts.
-    chip_inventory: Option<ResMut<'w, ChipInventory>>,
+    chip_inventory:       Option<ResMut<'w, ChipInventory>>,
     /// [`ChipOffers`] resource -- present only during chip select.
-    chip_offers: Option<ResMut<'w, ChipOffers>>,
+    chip_offers:          Option<ResMut<'w, ChipOffers>>,
     /// [`Commands`] for inserting resources when the optional resource is absent.
-    commands: Commands<'w, 's>,
+    commands:             Commands<'w, 's>,
     /// Bolt entities with `Aabb2D` -- for [`MutationKind::InjectMismatchedBoltAabb`].
-    bolt_aabbs: Query<'w, 's, &'static mut Aabb2D, With<ScenarioTagBolt>>,
+    bolt_aabbs:           Query<'w, 's, &'static mut Aabb2D, With<ScenarioTagBolt>>,
     /// Birthing bolt entities -- for [`MutationKind::InjectNonZeroBirthingLayers`].
     birthing_bolt_layers:
         Query<'w, 's, &'static mut CollisionLayers, (With<ScenarioTagBolt>, With<Birthing>)>,
@@ -194,13 +194,13 @@ fn apply_spawn_extra_chain_arcs(count: usize, commands: &mut Commands) {
     for _ in 0..count {
         commands.spawn((
             ChainLightningChain {
-                source_pos: Vec2::ZERO,
+                source_pos:      Vec2::ZERO,
                 remaining_jumps: 0,
-                damage: 0.0,
-                hit_set: HashSet::new(),
-                state: ChainState::Idle,
-                range: 0.0,
-                arc_speed: 0.0,
+                damage:          0.0,
+                hit_set:         HashSet::new(),
+                state:           ChainState::Idle,
+                range:           0.0,
+                arc_speed:       0.0,
             },
             CleanupOnExit::<NodeState>::default(),
         ));
@@ -255,15 +255,15 @@ pub fn apply_inject_duplicate_offers(
         },
     };
     let def = ChipDefinition {
-        name: chip_name.to_owned(),
-        description: String::new(),
-        rarity: Rarity::Common,
-        max_stacks: 3,
-        effects: vec![RootNode::Stamp(
+        name:          chip_name.to_owned(),
+        description:   String::new(),
+        rarity:        Rarity::Common,
+        max_stacks:    3,
+        effects:       vec![RootNode::Stamp(
             StampTarget::Bolt,
             Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
         )],
-        ingredients: None,
+        ingredients:   None,
         template_name: None,
     };
     let offers = ChipOffers(vec![
@@ -293,15 +293,15 @@ pub fn apply_inject_maxed_chip_offer(
         },
     };
     let def = ChipDefinition {
-        name: chip_name.to_owned(),
-        description: String::new(),
-        rarity: Rarity::Common,
-        max_stacks: 1,
-        effects: vec![RootNode::Stamp(
+        name:          chip_name.to_owned(),
+        description:   String::new(),
+        rarity:        Rarity::Common,
+        max_stacks:    1,
+        effects:       vec![RootNode::Stamp(
             StampTarget::Bolt,
             Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
         )],
-        ingredients: None,
+        ingredients:   None,
         template_name: None,
     };
     if let Some(inventory) = chip_inventory {

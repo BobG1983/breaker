@@ -26,26 +26,26 @@ use crate::{
 /// Extracted values from typestate markers, ready for `build_core`.
 struct CoreParams {
     // Dimensions
-    width: f32,
-    height: f32,
-    x_position: f32,
-    y_position: f32,
-    min_w: f32,
-    max_w: f32,
-    min_h: f32,
-    max_h: f32,
+    width:               f32,
+    height:              f32,
+    x_position:          f32,
+    y_position:          f32,
+    min_w:               f32,
+    max_w:               f32,
+    min_h:               f32,
+    max_h:               f32,
     // Movement
-    max_speed: f32,
-    acceleration: f32,
-    deceleration: f32,
-    decel_ease: EaseFunction,
+    max_speed:           f32,
+    acceleration:        f32,
+    deceleration:        f32,
+    decel_ease:          EaseFunction,
     decel_ease_strength: f32,
     // Dashing
-    dash: DashSettings,
+    dash:                DashSettings,
     // Spread
-    spread_degrees: f32,
+    spread_degrees:      f32,
     // Bump
-    bump: BumpSettings,
+    bump:                BumpSettings,
 }
 
 fn core_params_from(
@@ -142,7 +142,7 @@ fn build_core(params: &CoreParams, _optional: &OptionalBreakerData) -> impl Bund
         BreakerAcceleration(params.acceleration),
         BreakerDeceleration(params.deceleration),
         DecelEasing {
-            ease: params.decel_ease,
+            ease:     params.decel_ease,
             strength: params.decel_ease_strength,
         },
     );
@@ -154,9 +154,9 @@ fn build_core(params: &CoreParams, _optional: &OptionalBreakerData) -> impl Bund
         DashTilt(params.dash.dash.tilt_angle.to_radians()),
         DashTiltEase(params.dash.dash.tilt_ease),
         BrakeTilt {
-            angle: params.dash.brake.tilt_angle.to_radians(),
+            angle:    params.dash.brake.tilt_angle.to_radians(),
             duration: params.dash.brake.tilt_duration,
-            ease: params.dash.brake.tilt_ease,
+            ease:     params.dash.brake.tilt_ease,
         },
         BrakeDecel(params.dash.brake.decel_multiplier),
         SettleDuration(params.dash.settle.duration),
@@ -174,11 +174,11 @@ fn build_core(params: &CoreParams, _optional: &OptionalBreakerData) -> impl Bund
         BumpPerfectCooldown(params.bump.perfect_cooldown),
         BumpWeakCooldown(params.bump.weak_cooldown),
         BumpFeedback {
-            duration: params.bump.feedback.duration,
-            peak: params.bump.feedback.peak,
+            duration:      params.bump.feedback.duration,
+            peak:          params.bump.feedback.peak,
             peak_fraction: params.bump.feedback.peak_fraction,
-            rise_ease: params.bump.feedback.rise_ease,
-            fall_ease: params.bump.feedback.fall_ease,
+            rise_ease:     params.bump.feedback.rise_ease,
+            fall_ease:     params.bump.feedback.fall_ease,
         },
     );
 
@@ -198,7 +198,6 @@ fn build_core(params: &CoreParams, _optional: &OptionalBreakerData) -> impl Bund
 /// Insert `Hp` on the entity if the breaker has a finite life pool.
 fn apply_hp(commands: &mut Commands, entity: Entity, optional: &OptionalBreakerData) {
     if let LivesSetting::Count(n) = &optional.lives {
-        #[allow(clippy::cast_precision_loss, reason = "life pool values are small u32")]
         commands.entity(entity).insert(Hp::new(*n as f32));
     }
 }

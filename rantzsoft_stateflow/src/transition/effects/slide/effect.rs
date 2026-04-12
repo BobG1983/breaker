@@ -43,7 +43,7 @@ pub enum SlideDirection {
 /// [`SlideDirection`].
 pub struct Slide {
     /// Duration in seconds.
-    pub duration: f32,
+    pub duration:  f32,
     /// Direction of the slide.
     pub direction: SlideDirection,
 }
@@ -51,7 +51,7 @@ pub struct Slide {
 impl Default for Slide {
     fn default() -> Self {
         Self {
-            duration: 0.3,
+            duration:  0.3,
             direction: SlideDirection::Left,
         }
     }
@@ -61,7 +61,7 @@ impl Transition for Slide {
     fn insert_starting(&self, world: &mut World) {
         world.insert_resource(StartingTransition::<Self>::new());
         world.insert_resource(SlideConfig {
-            duration: self.duration,
+            duration:  self.duration,
             direction: self.direction,
         });
     }
@@ -76,7 +76,7 @@ impl OneShotTransition for Slide {}
 #[derive(Resource)]
 pub struct SlideConfig {
     /// Duration in seconds.
-    pub duration: f32,
+    pub duration:  f32,
     /// Direction of the slide.
     pub direction: SlideDirection,
 }
@@ -95,15 +95,15 @@ pub(crate) fn slide_start(
 ) {
     if let Some(camera) = cameras.iter().next() {
         commands.entity(camera).insert(TransitionEffect {
-            color: Vec4::ZERO,
-            direction: slide_direction_to_vec4(&config.direction),
+            color:       Vec4::ZERO,
+            direction:   slide_direction_to_vec4(&config.direction),
             effect_type: EffectType::SLIDE,
-            progress: 0.0,
+            progress:    0.0,
         });
     }
     commands.insert_resource(TransitionProgress {
-        elapsed: 0.0,
-        duration: config.duration,
+        elapsed:   0.0,
+        duration:  config.duration,
         completed: false,
     });
     commands.remove_resource::<SlideConfig>();

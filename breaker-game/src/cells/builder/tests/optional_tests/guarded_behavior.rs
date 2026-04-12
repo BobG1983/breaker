@@ -16,8 +16,8 @@ fn behavior_guarded_inserts_guarded_cell_marker() {
         Cell::builder()
             .with_behavior(CellBehavior::Guarded(GuardedBehavior {
                 guardian_hp_fraction: 0.5,
-                guardian_color_rgb: [0.5, 0.8, 1.0],
-                slide_speed: 30.0,
+                guardian_color_rgb:   [0.5, 0.8, 1.0],
+                slide_speed:          30.0,
             }))
             .position(Vec2::ZERO)
             .dimensions(70.0, 24.0)
@@ -40,8 +40,8 @@ fn behavior_guarded_does_not_spawn_children() {
         Cell::builder()
             .with_behavior(CellBehavior::Guarded(GuardedBehavior {
                 guardian_hp_fraction: 0.5,
-                guardian_color_rgb: [0.5, 0.8, 1.0],
-                slide_speed: 30.0,
+                guardian_color_rgb:   [0.5, 0.8, 1.0],
+                slide_speed:          30.0,
             }))
             .position(Vec2::ZERO)
             .dimensions(70.0, 24.0)

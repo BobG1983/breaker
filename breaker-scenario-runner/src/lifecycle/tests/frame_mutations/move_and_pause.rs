@@ -17,7 +17,7 @@ fn apply_debug_frame_mutations_move_bolt_at_matching_frame() {
         max_frames: 1000,
         disallowed_failures: vec![],
         frame_mutations: Some(vec![FrameMutation {
-            frame: 5,
+            frame:    5,
             mutation: MutationKind::MoveBolt(999.0, 999.0),
         }]),
         ..Default::default()
@@ -64,7 +64,7 @@ fn apply_debug_frame_mutations_toggle_pause_pauses_virtual_time() {
         max_frames: 1000,
         disallowed_failures: vec![],
         frame_mutations: Some(vec![FrameMutation {
-            frame: 3,
+            frame:    3,
             mutation: MutationKind::TogglePause,
         }]),
         ..Default::default()

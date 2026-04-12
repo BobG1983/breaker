@@ -70,7 +70,7 @@ mod tests {
             .insert_resource(TimerUiConfig::default())
             .insert_resource(NodeTimer {
                 remaining: 60.0,
-                total: 60.0,
+                total:     60.0,
             });
         // Spawn a StatusPanel for the HUD to parent under
         app.add_systems(Startup, |mut commands: Commands| {

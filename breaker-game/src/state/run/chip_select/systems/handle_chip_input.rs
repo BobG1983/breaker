@@ -20,15 +20,15 @@ use crate::{
 #[derive(SystemParam)]
 pub(crate) struct ChipInputActions<'w> {
     /// Current chip selection index.
-    selection: ResMut<'w, ChipSelectSelection>,
+    selection:    ResMut<'w, ChipSelectSelection>,
     /// State transition control.
     state_writer: MessageWriter<'w, ChangeState<ChipSelectState>>,
     /// Message writer for chip selection events.
-    writer: MessageWriter<'w, ChipSelected>,
+    writer:       MessageWriter<'w, ChipSelected>,
     /// Inventory for recording decay on non-selected chips.
-    inventory: ResMut<'w, ChipInventory>,
+    inventory:    ResMut<'w, ChipInventory>,
     /// Chip select configuration (decay factor, etc.).
-    chip_config: Res<'w, ChipSelectConfig>,
+    chip_config:  Res<'w, ChipSelectConfig>,
 }
 
 /// Handles left/right card navigation and confirmation.

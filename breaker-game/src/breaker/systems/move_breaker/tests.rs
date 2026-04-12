@@ -87,7 +87,7 @@ fn spawn_breaker_at(app: &mut App, state: DashState, position: Vec2) -> Entity {
             BreakerAcceleration(def.acceleration),
             BreakerDeceleration(def.deceleration),
             DecelEasing {
-                ease: def.decel_ease,
+                ease:     def.decel_ease,
                 strength: def.decel_ease_strength,
             },
             BaseWidth(def.width),
@@ -186,7 +186,7 @@ fn speed_multiplier_raises_effective_max_speed() {
             BreakerAcceleration(def.acceleration),
             BreakerDeceleration(def.deceleration),
             DecelEasing {
-                ease: def.decel_ease,
+                ease:     def.decel_ease,
                 strength: def.decel_ease_strength,
             },
             BaseWidth(def.width),
@@ -229,7 +229,7 @@ fn no_speed_boost_base_max_speed_clamps_velocity() {
             BreakerAcceleration(0.0),
             BreakerDeceleration(0.0),
             DecelEasing {
-                ease: def.decel_ease,
+                ease:     def.decel_ease,
                 strength: def.decel_ease_strength,
             },
             BaseWidth(def.width),
@@ -278,7 +278,7 @@ fn size_multiplier_increases_effective_half_width_for_clamping() {
             BreakerAcceleration(0.0),
             BreakerDeceleration(0.0),
             DecelEasing {
-                ease: def.decel_ease,
+                ease:     def.decel_ease,
                 strength: def.decel_ease_strength,
             },
             BaseWidth(120.0),
@@ -317,7 +317,7 @@ fn move_breaker_reads_active_speed_boosts_for_max_speed() {
             BreakerAcceleration(5000.0),
             BreakerDeceleration(3000.0),
             DecelEasing {
-                ease: bevy::math::curve::easing::EaseFunction::QuadraticIn,
+                ease:     bevy::math::curve::easing::EaseFunction::QuadraticIn,
                 strength: 1.0,
             },
             BaseWidth(120.0),
@@ -363,7 +363,7 @@ fn move_breaker_reads_active_size_boosts_for_playfield_clamping() {
             BreakerAcceleration(0.0),
             BreakerDeceleration(0.0),
             DecelEasing {
-                ease: bevy::math::curve::easing::EaseFunction::QuadraticIn,
+                ease:     bevy::math::curve::easing::EaseFunction::QuadraticIn,
                 strength: 1.0,
             },
             BaseWidth(120.0),

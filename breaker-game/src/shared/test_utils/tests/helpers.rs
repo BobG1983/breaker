@@ -25,8 +25,8 @@ pub(super) fn increment(mut counter: ResMut<Counter>) {
 
 pub(super) fn damage_sender_system(mut writer: MessageWriter<DamageCell>) {
     writer.write(DamageCell {
-        cell: Entity::PLACEHOLDER,
-        damage: 25.0,
+        cell:        Entity::PLACEHOLDER,
+        damage:      25.0,
         source_chip: None,
     });
 }
@@ -37,8 +37,8 @@ pub(super) fn conditional_damage_sender(
 ) {
     if flag.0 {
         writer.write(DamageCell {
-            cell: Entity::PLACEHOLDER,
-            damage: 10.0,
+            cell:        Entity::PLACEHOLDER,
+            damage:      10.0,
             source_chip: None,
         });
     }
@@ -47,8 +47,8 @@ pub(super) fn conditional_damage_sender(
 pub(super) fn triple_damage_sender(mut writer: MessageWriter<DamageCell>) {
     for i in 0_i16..3 {
         writer.write(DamageCell {
-            cell: Entity::PLACEHOLDER,
-            damage: f32::from(i + 1),
+            cell:        Entity::PLACEHOLDER,
+            damage:      f32::from(i + 1),
             source_chip: None,
         });
     }
@@ -59,8 +59,8 @@ pub(super) fn damage_and_bolt_lost_sender(
     mut bolt_lost_writer: MessageWriter<BoltLost>,
 ) {
     damage_writer.write(DamageCell {
-        cell: Entity::PLACEHOLDER,
-        damage: 5.0,
+        cell:        Entity::PLACEHOLDER,
+        damage:      5.0,
         source_chip: None,
     });
     bolt_lost_writer.write(BoltLost);
@@ -101,16 +101,16 @@ pub(super) fn make_bolt_definition(name: &str, base_speed: f32) -> BoltDefinitio
 /// Helper: constructs a `CellTypeDefinition` with all required fields.
 pub(super) fn make_cell_definition(alias: &str) -> CellTypeDefinition {
     CellTypeDefinition {
-        id: alias.to_lowercase(),
-        alias: alias.to_string(),
-        toughness: Toughness::Standard,
-        color_rgb: [1.0, 1.0, 1.0],
+        id:                alias.to_lowercase(),
+        alias:             alias.to_string(),
+        toughness:         Toughness::Standard,
+        color_rgb:         [1.0, 1.0, 1.0],
         required_to_clear: true,
-        damage_hdr_base: 2.0,
-        damage_green_min: 0.1,
+        damage_hdr_base:   2.0,
+        damage_green_min:  0.1,
         damage_blue_range: 0.5,
-        damage_blue_base: 0.2,
-        behaviors: None,
-        effects: None,
+        damage_blue_base:  0.2,
+        behaviors:         None,
+        effects:           None,
     }
 }

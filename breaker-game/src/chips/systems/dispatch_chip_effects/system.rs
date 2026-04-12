@@ -20,9 +20,9 @@ use crate::{
 #[derive(SystemParam)]
 pub(crate) struct DispatchTargets<'w, 's> {
     breakers: Query<'w, 's, Entity, With<Breaker>>,
-    bolts: Query<'w, 's, Entity, With<Bolt>>,
-    cells: Query<'w, 's, Entity, With<Cell>>,
-    walls: Query<'w, 's, Entity, With<Wall>>,
+    bolts:    Query<'w, 's, Entity, With<Bolt>>,
+    cells:    Query<'w, 's, Entity, With<Cell>>,
+    walls:    Query<'w, 's, Entity, With<Wall>>,
 }
 
 /// Reads [`ChipSelected`] messages, looks up each chip in the [`ChipCatalog`],

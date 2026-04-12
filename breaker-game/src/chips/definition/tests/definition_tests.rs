@@ -15,15 +15,15 @@ use crate::{
 #[test]
 fn chip_definition_effects_is_vec_root_node() {
     let def = ChipDefinition {
-        name: "Test".to_owned(),
-        description: String::new(),
-        rarity: Rarity::Common,
-        max_stacks: 3,
-        effects: vec![RootNode::Stamp(
+        name:          "Test".to_owned(),
+        description:   String::new(),
+        rarity:        Rarity::Common,
+        max_stacks:    3,
+        effects:       vec![RootNode::Stamp(
             StampTarget::Bolt,
             Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
         )],
-        ingredients: None,
+        ingredients:   None,
         template_name: None,
     };
     assert!(matches!(
@@ -35,12 +35,12 @@ fn chip_definition_effects_is_vec_root_node() {
 #[test]
 fn chip_definition_empty_effects_is_valid() {
     let def = ChipDefinition {
-        name: "Empty".to_owned(),
-        description: String::new(),
-        rarity: Rarity::Common,
-        max_stacks: 1,
-        effects: vec![],
-        ingredients: None,
+        name:          "Empty".to_owned(),
+        description:   String::new(),
+        rarity:        Rarity::Common,
+        max_stacks:    1,
+        effects:       vec![],
+        ingredients:   None,
         template_name: None,
     };
     assert!(def.effects.is_empty());
@@ -53,7 +53,7 @@ fn chip_definition_empty_effects_is_valid() {
 #[test]
 fn rarity_slot_effects_is_vec_root_node() {
     let slot = RaritySlot {
-        prefix: "Basic".to_owned(),
+        prefix:  "Basic".to_owned(),
         effects: vec![RootNode::Stamp(
             StampTarget::Bolt,
             Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {

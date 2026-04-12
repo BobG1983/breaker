@@ -26,10 +26,10 @@ pub(crate) fn detect_most_powerful_evolution(
     };
 
     stats.highlights.push(RunHighlight {
-        kind: HighlightKind::MostPowerfulEvolution,
+        kind:       HighlightKind::MostPowerfulEvolution,
         node_index: 0,
-        value: *max_damage,
-        detail: Some(max_name.clone()),
+        value:      *max_damage,
+        detail:     Some(max_name.clone()),
     });
 }
 
@@ -246,10 +246,10 @@ mod tests {
             let mut stats = app.world_mut().resource_mut::<RunStats>();
             for i in 0..3 {
                 stats.highlights.push(RunHighlight {
-                    kind: HighlightKind::MassDestruction,
+                    kind:       HighlightKind::MassDestruction,
                     node_index: i,
-                    value: 10.0,
-                    detail: None,
+                    value:      10.0,
+                    detail:     None,
                 });
             }
         }

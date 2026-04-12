@@ -10,21 +10,21 @@ pub struct ScenarioStats {
     /// Total number of invariant check evaluations performed.
     pub invariant_checks: u32,
     /// Highest [`ScenarioFrame`] value reached.
-    pub max_frame: u32,
+    pub max_frame:        u32,
     /// Whether [`NodeState::Playing`] was entered at least once.
     ///
     /// Defaults to `false`. Set to `true` when `SpawnNodeComplete` fires.
     /// Invariant checkers are gated on this flag to prevent false positives
     /// during initial loading states.
-    pub entered_playing: bool,
+    pub entered_playing:  bool,
     /// Number of bolt entities that were tagged with [`ScenarioTagBolt`].
-    pub bolts_tagged: u32,
+    pub bolts_tagged:     u32,
     /// Number of breaker entities that were tagged with [`ScenarioTagBreaker`].
-    pub breakers_tagged: u32,
+    pub breakers_tagged:  u32,
     /// Number of cell entities that were tagged with [`ScenarioTagCell`].
-    pub cells_tagged: u32,
+    pub cells_tagged:     u32,
     /// Number of wall entities that were tagged with [`ScenarioTagWall`].
-    pub walls_tagged: u32,
+    pub walls_tagged:     u32,
 }
 
 /// Marker — attached by the lifecycle plugin to the bolt entity for invariant checking.
@@ -53,13 +53,13 @@ pub struct ScenarioFrame(pub u32);
 #[derive(Debug, Clone)]
 pub struct ViolationEntry {
     /// Fixed-update frame when the violation was detected.
-    pub frame: u32,
+    pub frame:     u32,
     /// Which invariant was violated.
     pub invariant: InvariantKind,
     /// Entity involved, if applicable.
-    pub entity: Option<Entity>,
+    pub entity:    Option<Entity>,
     /// Human-readable description with concrete values.
-    pub message: String,
+    pub message:   String,
 }
 
 /// Accumulated violations from all invariant checks.

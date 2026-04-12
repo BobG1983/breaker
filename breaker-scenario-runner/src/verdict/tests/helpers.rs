@@ -19,10 +19,10 @@ pub(super) fn make_violation(invariant: InvariantKind) -> ViolationEntry {
 
 pub(super) fn make_log_entry(message: &str) -> LogEntry {
     LogEntry {
-        level: Level::WARN,
-        target: "breaker::test".to_owned(),
+        level:   Level::WARN,
+        target:  "breaker::test".to_owned(),
         message: message.to_owned(),
-        frame: 10,
+        frame:   10,
     }
 }
 

@@ -9,7 +9,7 @@ pub enum TriggerContext {
     /// Participants in a bump event.
     Bump {
         /// The bolt that was bumped (None for NoBump/BumpWhiff without a bolt).
-        bolt: Option<Entity>,
+        bolt:    Option<Entity>,
         /// The breaker that did the bumping.
         breaker: Entity,
     },
@@ -30,7 +30,7 @@ pub enum TriggerContext {
     /// The bolt that was lost and the breaker that lost it.
     BoltLost {
         /// The bolt that was lost.
-        bolt: Entity,
+        bolt:    Entity,
         /// The breaker that lost the bolt.
         breaker: Entity,
     },

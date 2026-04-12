@@ -10,9 +10,9 @@ pub struct StampEffectCommand {
     /// The entity to install the tree on.
     pub entity: Entity,
     /// The name identifying the source of the tree.
-    pub name: String,
+    pub name:   String,
     /// The tree to install.
-    pub tree: Tree,
+    pub tree:   Tree,
 }
 
 impl Command for StampEffectCommand {

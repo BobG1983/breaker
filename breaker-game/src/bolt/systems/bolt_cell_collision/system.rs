@@ -210,8 +210,8 @@ pub(crate) fn bolt_cell_collision(
                 bolt: bolt.entity,
             });
             damage_writer.write(DamageCell {
-                cell: hit.entity,
-                damage: cell_damage,
+                cell:        hit.entity,
+                damage:      cell_damage,
                 source_chip: bolt.collision.spawned_by_evolution.map(|s| s.0.clone()),
             });
         }

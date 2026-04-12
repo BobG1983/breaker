@@ -152,7 +152,7 @@ fn build_chip_catalog_inserts_evolution_definitions() {
     let evolution = make_evolution(
         "Barrage",
         vec![EvolutionIngredient {
-            chip_name: "Piercing Shot".to_owned(),
+            chip_name:       "Piercing Shot".to_owned(),
             stacks_required: 2,
         }],
     );
@@ -183,7 +183,7 @@ fn build_chip_catalog_extracts_recipes_from_evolution_chips() {
     let evolution = make_evolution(
         "Barrage",
         vec![EvolutionIngredient {
-            chip_name: "Piercing Shot".to_owned(),
+            chip_name:       "Piercing Shot".to_owned(),
             stacks_required: 2,
         }],
     );
@@ -242,7 +242,7 @@ fn build_chip_catalog_processes_both_templates_and_evolutions() {
     let evolution = make_evolution(
         "Barrage",
         vec![EvolutionIngredient {
-            chip_name: "Piercing Shot".to_owned(),
+            chip_name:       "Piercing Shot".to_owned(),
             stacks_required: 2,
         }],
     );

@@ -20,9 +20,9 @@ pub enum BumpGrade {
 #[derive(Message, Clone, Debug)]
 pub struct BumpPerformed {
     /// The timing grade of the bump.
-    pub grade: BumpGrade,
+    pub grade:   BumpGrade,
     /// The bolt entity involved in this bump, if known.
-    pub bolt: Option<Entity>,
+    pub bolt:    Option<Entity>,
     /// The breaker entity that performed the bump.
     pub breaker: Entity,
 }
@@ -47,7 +47,7 @@ pub(crate) struct BreakerImpactCell {
     /// The breaker entity that collided with the cell.
     pub breaker: Entity,
     /// The cell entity that was hit.
-    pub cell: Entity,
+    pub cell:    Entity,
 }
 
 /// Sent when the breaker collides with a wall.
@@ -58,7 +58,7 @@ pub(crate) struct BreakerImpactWall {
     /// The breaker entity that collided with the wall.
     pub breaker: Entity,
     /// The wall entity that was hit.
-    pub wall: Entity,
+    pub wall:    Entity,
 }
 
 #[cfg(test)]
@@ -77,8 +77,8 @@ mod tests {
     #[test]
     fn bump_performed_debug_format() {
         let msg = BumpPerformed {
-            grade: BumpGrade::Perfect,
-            bolt: None,
+            grade:   BumpGrade::Perfect,
+            bolt:    None,
             breaker: Entity::PLACEHOLDER,
         };
         assert!(format!("{msg:?}").contains("Perfect"));

@@ -17,25 +17,26 @@ pub(crate) struct NoSide;
 /// Left wall marker — stores playfield data for left edge.
 pub(crate) struct Left {
     pub(crate) playfield_left: f32,
-    pub(crate) half_height: f32,
+    pub(crate) half_height:    f32,
 }
 
 /// Right wall marker — stores playfield data for right edge.
 pub(crate) struct Right {
     pub(crate) playfield_right: f32,
-    pub(crate) half_height: f32,
+    pub(crate) half_height:     f32,
 }
 
 /// Ceiling wall marker — stores playfield data for top edge.
 pub(crate) struct Ceiling {
     pub(crate) playfield_top: f32,
-    pub(crate) half_width: f32,
+    pub(crate) half_width:    f32,
 }
 
 /// Floor wall marker — stores playfield data for bottom edge.
+#[cfg(test)]
 pub(crate) struct Floor {
     pub(crate) playfield_bottom: f32,
-    pub(crate) half_width: f32,
+    pub(crate) half_width:       f32,
 }
 
 // ── Visual typestate markers ──────────────────────────────────────────────
@@ -52,7 +53,7 @@ pub(crate) struct Invisible;
     )
 )]
 pub(crate) struct Visible {
-    pub(crate) mesh: Handle<Mesh>,
+    pub(crate) mesh:     Handle<Mesh>,
     pub(crate) material: Handle<ColorMaterial>,
 }
 
@@ -97,6 +98,7 @@ impl SideData for Ceiling {
     }
 }
 
+#[cfg(test)]
 impl SideData for Floor {
     fn compute_position(&self, _ht: f32) -> Vec2 {
         Vec2::new(0.0, self.playfield_bottom)
@@ -116,8 +118,10 @@ pub(crate) enum Lifetime {
     #[default]
     Permanent,
     /// Wall despawns after the given duration in seconds.
+    #[cfg(test)]
     Timed(f32),
     /// Wall despawns after one rebound.
+    #[cfg(test)]
     OneShot,
 }
 
@@ -127,11 +131,11 @@ pub(crate) enum Lifetime {
 #[derive(Default)]
 pub(crate) struct OptionalWallData {
     pub(crate) definition_half_thickness: Option<f32>,
-    pub(crate) definition_color_rgb: Option<[f32; 3]>,
-    pub(crate) definition_effects: Option<Vec<RootNode>>,
-    pub(crate) override_half_thickness: Option<f32>,
-    pub(crate) override_color_rgb: Option<[f32; 3]>,
-    pub(crate) override_effects: Option<Vec<RootNode>>,
+    pub(crate) definition_color_rgb:      Option<[f32; 3]>,
+    pub(crate) definition_effects:        Option<Vec<RootNode>>,
+    pub(crate) override_half_thickness:   Option<f32>,
+    pub(crate) override_color_rgb:        Option<[f32; 3]>,
+    pub(crate) override_effects:          Option<Vec<RootNode>>,
 }
 
 // ── Builder ────────────────────────────────────────────────────────────────
@@ -141,7 +145,7 @@ pub(crate) struct OptionalWallData {
 /// `S` determines wall placement (Left/Right/Ceiling/Floor).
 /// `V` determines visual rendering (Invisible/Visible). Defaults to Invisible.
 pub(crate) struct WallBuilder<S, V = Invisible> {
-    pub(crate) side: S,
+    pub(crate) side:     S,
     pub(crate) optional: OptionalWallData,
     pub(crate) lifetime: Lifetime,
     #[cfg_attr(
@@ -151,5 +155,5 @@ pub(crate) struct WallBuilder<S, V = Invisible> {
             reason = "read by Visible build — test-only until system-param callers exist"
         )
     )]
-    pub(crate) visual: V,
+    pub(crate) visual:   V,
 }

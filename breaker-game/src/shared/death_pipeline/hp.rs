@@ -11,20 +11,20 @@ use bevy::prelude::*;
 ///   (health fraction = `current / starting`).
 /// - `max`: optional upper bound. If `Some`, healing cannot exceed this value.
 #[derive(Component, Debug, Clone)]
-pub struct Hp {
+pub(crate) struct Hp {
     /// Hit points remaining.
-    pub current: f32,
+    pub current:  f32,
     /// The HP this entity spawned with.
     pub starting: f32,
     /// Optional upper bound for healing.
-    pub max: Option<f32>,
+    pub max:      Option<f32>,
 }
 
 impl Hp {
     /// Creates a new `Hp` with `current` and `starting` set to the given value,
     /// and `max` set to `None`.
     #[must_use]
-    pub const fn new(starting: f32) -> Self {
+    pub(crate) const fn new(starting: f32) -> Self {
         Self {
             current: starting,
             starting,

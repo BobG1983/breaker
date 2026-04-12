@@ -20,8 +20,8 @@ fn breaker_reset_data_full_mutable_reset() {
             DashState::Dashing,
             Velocity2D(Vec2::new(300.0, 0.0)),
             BreakerTilt {
-                angle: 15.0,
-                ease_start: 0.0,
+                angle:       15.0,
+                ease_start:  0.0,
                 ease_target: 15.0,
             },
             DashStateTimer { remaining: 0.1 },

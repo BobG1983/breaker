@@ -20,21 +20,21 @@ fn active_cells_target_stamps_tree_to_breaker() {
     let mut app = test_app();
 
     let def = ChipDefinition {
-        name: "Cell Fortify".to_owned(),
-        description: String::new(),
-        rarity: crate::chips::definition::Rarity::Common,
-        max_stacks: 5,
-        effects: vec![RootNode::Stamp(
+        name:          "Cell Fortify".to_owned(),
+        description:   String::new(),
+        rarity:        crate::chips::definition::Rarity::Common,
+        max_stacks:    5,
+        effects:       vec![RootNode::Stamp(
             StampTarget::ActiveCells,
             Tree::When(
                 Trigger::Impacted(EntityKind::Bolt),
                 Box::new(Tree::Fire(EffectType::Shield(ShieldConfig {
-                    duration: OrderedFloat(5.0),
+                    duration:        OrderedFloat(5.0),
                     reflection_cost: OrderedFloat(0.0),
                 }))),
             ),
         )],
-        ingredients: None,
+        ingredients:   None,
         template_name: None,
     };
     insert_chip(&mut app, def);
@@ -71,7 +71,7 @@ fn active_cells_target_with_zero_breakers_no_panic() {
         Tree::When(
             Trigger::Impacted(EntityKind::Bolt),
             Box::new(Tree::Fire(EffectType::Shield(ShieldConfig {
-                duration: OrderedFloat(5.0),
+                duration:        OrderedFloat(5.0),
                 reflection_cost: OrderedFloat(0.0),
             }))),
         ),
@@ -93,17 +93,17 @@ fn active_cells_with_fire_stamps_to_breaker() {
     let mut app = test_app();
 
     let def = ChipDefinition {
-        name: "Cell Damage".to_owned(),
-        description: String::new(),
-        rarity: crate::chips::definition::Rarity::Common,
-        max_stacks: 5,
-        effects: vec![RootNode::Stamp(
+        name:          "Cell Damage".to_owned(),
+        description:   String::new(),
+        rarity:        crate::chips::definition::Rarity::Common,
+        max_stacks:    5,
+        effects:       vec![RootNode::Stamp(
             StampTarget::ActiveCells,
             Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
                 multiplier: OrderedFloat(1.5),
             })),
         )],
-        ingredients: None,
+        ingredients:   None,
         template_name: None,
     };
     insert_chip(&mut app, def);
@@ -128,11 +128,11 @@ fn multiple_active_cells_stamps_all_stamped() {
     let mut app = test_app();
 
     let def = ChipDefinition {
-        name: "Dual Cell".to_owned(),
-        description: String::new(),
-        rarity: crate::chips::definition::Rarity::Common,
-        max_stacks: 5,
-        effects: vec![
+        name:          "Dual Cell".to_owned(),
+        description:   String::new(),
+        rarity:        crate::chips::definition::Rarity::Common,
+        max_stacks:    5,
+        effects:       vec![
             RootNode::Stamp(
                 StampTarget::ActiveCells,
                 Tree::When(
@@ -149,7 +149,7 @@ fn multiple_active_cells_stamps_all_stamped() {
                 })),
             ),
         ],
-        ingredients: None,
+        ingredients:   None,
         template_name: None,
     };
     insert_chip(&mut app, def);
@@ -174,11 +174,11 @@ fn breaker_fire_still_fires_immediately_alongside_cells() {
     let mut app = test_app();
 
     let def = ChipDefinition {
-        name: "Mixed Target".to_owned(),
-        description: String::new(),
-        rarity: crate::chips::definition::Rarity::Common,
-        max_stacks: 5,
-        effects: vec![
+        name:          "Mixed Target".to_owned(),
+        description:   String::new(),
+        rarity:        crate::chips::definition::Rarity::Common,
+        max_stacks:    5,
+        effects:       vec![
             RootNode::Stamp(
                 StampTarget::Breaker,
                 Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
@@ -195,7 +195,7 @@ fn breaker_fire_still_fires_immediately_alongside_cells() {
                 ),
             ),
         ],
-        ingredients: None,
+        ingredients:   None,
         template_name: None,
     };
     insert_chip(&mut app, def);

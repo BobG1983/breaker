@@ -50,10 +50,10 @@ pub(crate) fn detect_first_evolution(
 
             // Record in stats — selection happens at run-end
             stats.highlights.push(RunHighlight {
-                kind: HighlightKind::FirstEvolution,
+                kind:       HighlightKind::FirstEvolution,
                 node_index: run_state.node_index,
-                value: 1.0,
-                detail: None,
+                value:      1.0,
+                detail:     None,
             });
         }
     }
@@ -97,7 +97,7 @@ mod tests {
         let mut registry = ChipCatalog::default();
         registry.insert_recipe(Recipe {
             ingredients: vec![EvolutionIngredient {
-                chip_name: "Piercing Shot".to_owned(),
+                chip_name:       "Piercing Shot".to_owned(),
                 stacks_required: 2,
             }],
             result_name: "Piercing Barrage".to_owned(),
@@ -299,10 +299,10 @@ mod tests {
             let mut stats = app.world_mut().resource_mut::<RunStats>();
             for i in 0..5 {
                 stats.highlights.push(RunHighlight {
-                    kind: HighlightKind::MassDestruction,
+                    kind:       HighlightKind::MassDestruction,
                     node_index: i,
-                    value: 10.0,
-                    detail: None,
+                    value:      10.0,
+                    detail:     None,
                 });
             }
         }

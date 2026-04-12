@@ -237,13 +237,13 @@ pub(crate) fn begin_transition<S: FreelyMutableState + Copy>(
         TransitionType::Out(effect) => {
             let type_id = (*effect).type_id();
             let pending = PendingTransition {
-                phase: TransitionPhase::Starting,
+                phase:                  TransitionPhase::Starting,
                 current_effect_type_id: type_id,
-                apply_state_change: Some(make_state_change_closure(from, to)),
-                send_transition_end: Some(make_transition_end_closure(from, to)),
-                out_in_in_effect: None,
-                out_in_state: None,
-                unpause_at_end: false, // Out does NOT unpause
+                apply_state_change:     Some(make_state_change_closure(from, to)),
+                send_transition_end:    Some(make_transition_end_closure(from, to)),
+                out_in_in_effect:       None,
+                out_in_state:           None,
+                unpause_at_end:         false, // Out does NOT unpause
             };
             world.insert_resource(pending);
             effect.insert_starting(world);
@@ -253,13 +253,13 @@ pub(crate) fn begin_transition<S: FreelyMutableState + Copy>(
             // Apply state change NOW (In reveals new content)
             (make_state_change_closure(from, to))(world);
             let pending = PendingTransition {
-                phase: TransitionPhase::Starting,
+                phase:                  TransitionPhase::Starting,
                 current_effect_type_id: type_id,
-                apply_state_change: None, // Already applied
-                send_transition_end: Some(make_transition_end_closure(from, to)),
-                out_in_in_effect: None,
-                out_in_state: None,
-                unpause_at_end: true, // In unpauses at end
+                apply_state_change:     None, // Already applied
+                send_transition_end:    Some(make_transition_end_closure(from, to)),
+                out_in_in_effect:       None,
+                out_in_state:           None,
+                unpause_at_end:         true, // In unpauses at end
             };
             world.insert_resource(pending);
             effect.insert_starting(world);
@@ -268,16 +268,16 @@ pub(crate) fn begin_transition<S: FreelyMutableState + Copy>(
             let out_type_id = (*out_e).type_id();
             let in_type_id = (*in_e).type_id();
             let pending = PendingTransition {
-                phase: TransitionPhase::Starting,
+                phase:                  TransitionPhase::Starting,
                 current_effect_type_id: out_type_id,
-                apply_state_change: Some(make_state_change_closure(from, to)),
-                send_transition_end: Some(make_transition_end_closure(from, to)),
-                out_in_in_effect: Some(OutInData {
+                apply_state_change:     Some(make_state_change_closure(from, to)),
+                send_transition_end:    Some(make_transition_end_closure(from, to)),
+                out_in_in_effect:       Some(OutInData {
                     in_effect_type_id: in_type_id,
-                    in_effect: in_e,
+                    in_effect:         in_e,
                 }),
-                out_in_state: Some(OutInState::Out),
-                unpause_at_end: true, // `OutIn` unpauses after In completes
+                out_in_state:           Some(OutInState::Out),
+                unpause_at_end:         true, // `OutIn` unpauses after In completes
             };
             world.insert_resource(pending);
             out_e.insert_starting(world);
@@ -287,13 +287,13 @@ pub(crate) fn begin_transition<S: FreelyMutableState + Copy>(
             // Apply state change NOW (both states coexist during effect)
             (make_state_change_closure(from, to))(world);
             let pending = PendingTransition {
-                phase: TransitionPhase::Starting,
+                phase:                  TransitionPhase::Starting,
                 current_effect_type_id: type_id,
-                apply_state_change: None, // Already applied
-                send_transition_end: Some(make_transition_end_closure(from, to)),
-                out_in_in_effect: None,
-                out_in_state: None,
-                unpause_at_end: true, // OneShot unpauses at end
+                apply_state_change:     None, // Already applied
+                send_transition_end:    Some(make_transition_end_closure(from, to)),
+                out_in_in_effect:       None,
+                out_in_state:           None,
+                unpause_at_end:         true, // OneShot unpauses at end
             };
             world.insert_resource(pending);
             effect.insert_starting(world);

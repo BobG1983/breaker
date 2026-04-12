@@ -13,12 +13,12 @@ pub(in crate::runner) struct SubprocessSpec {
     pub(in crate::runner) display_name: String,
     /// CLI arguments specific to this work item (e.g. `["-s", "name"]`).
     /// Shared flags (`--visual`, `-v`) are added by [`spawn_batched`].
-    pub(in crate::runner) extra_args: Vec<String>,
+    pub(in crate::runner) extra_args:   Vec<String>,
 }
 
 /// Result of a single subprocess run.
 pub(in crate::runner) struct ChildResult {
-    pub(in crate::runner) name: String,
+    pub(in crate::runner) name:   String,
     pub(in crate::runner) passed: bool,
     pub(in crate::runner) stdout: String,
     pub(in crate::runner) stderr: String,
@@ -66,7 +66,7 @@ pub(in crate::runner) fn spawn_batched(
                         spec.display_name
                     );
                     all_results.push(ChildResult {
-                        name: spec.display_name.clone(),
+                        name:   spec.display_name.clone(),
                         passed: false,
                         stdout: String::new(),
                         stderr: format!("spawn error: {e}"),
@@ -84,7 +84,7 @@ pub(in crate::runner) fn spawn_batched(
                         spec.display_name
                     );
                     all_results.push(ChildResult {
-                        name: spec.display_name.clone(),
+                        name:   spec.display_name.clone(),
                         passed: false,
                         stdout: String::new(),
                         stderr: format!("wait error: {e}"),

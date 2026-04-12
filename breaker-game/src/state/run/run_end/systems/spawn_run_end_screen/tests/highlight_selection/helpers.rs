@@ -33,10 +33,10 @@ pub(super) fn make_highlights(count: usize) -> Vec<RunHighlight> {
     ];
     (0..count)
         .map(|i| RunHighlight {
-            kind: kinds[i % kinds.len()].clone(),
+            kind:       kinds[i % kinds.len()].clone(),
             node_index: u32::try_from(i).unwrap_or(u32::MAX),
-            value: 1.0,
-            detail: None,
+            value:      1.0,
+            detail:     None,
         })
         .collect()
 }

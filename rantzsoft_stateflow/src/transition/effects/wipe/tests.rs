@@ -30,8 +30,8 @@ fn effect_test_app() -> (App, Entity) {
 fn wipe_out_start_inserts_transition_effect_on_camera_with_left_direction() {
     let (mut app, _camera) = effect_test_app();
     app.insert_resource(WipeOutConfig {
-        duration: 0.5,
-        color: Color::BLACK,
+        duration:  0.5,
+        color:     Color::BLACK,
         direction: WipeDirection::Left,
     });
     app.insert_resource(StartingTransition::<WipeOut>::new());
@@ -69,8 +69,8 @@ fn wipe_out_start_inserts_transition_effect_on_camera_with_left_direction() {
 fn wipe_out_start_removes_config_resource() {
     let (mut app, _camera) = effect_test_app();
     app.insert_resource(WipeOutConfig {
-        duration: 0.5,
-        color: Color::BLACK,
+        duration:  0.5,
+        color:     Color::BLACK,
         direction: WipeDirection::Left,
     });
     app.insert_resource(StartingTransition::<WipeOut>::new());
@@ -89,8 +89,8 @@ fn wipe_out_start_removes_config_resource() {
 fn wipe_out_start_encodes_right_as_positive_x() {
     let (mut app, _camera) = effect_test_app();
     app.insert_resource(WipeOutConfig {
-        duration: 0.5,
-        color: Color::BLACK,
+        duration:  0.5,
+        color:     Color::BLACK,
         direction: WipeDirection::Right,
     });
     app.insert_resource(StartingTransition::<WipeOut>::new());
@@ -113,8 +113,8 @@ fn wipe_out_start_encodes_right_as_positive_x() {
 fn wipe_out_start_encodes_up_as_positive_y() {
     let (mut app, _camera) = effect_test_app();
     app.insert_resource(WipeOutConfig {
-        duration: 0.5,
-        color: Color::BLACK,
+        duration:  0.5,
+        color:     Color::BLACK,
         direction: WipeDirection::Up,
     });
     app.insert_resource(StartingTransition::<WipeOut>::new());
@@ -137,8 +137,8 @@ fn wipe_out_start_encodes_up_as_positive_y() {
 fn wipe_out_start_encodes_down_as_negative_y() {
     let (mut app, _camera) = effect_test_app();
     app.insert_resource(WipeOutConfig {
-        duration: 0.5,
-        color: Color::BLACK,
+        duration:  0.5,
+        color:     Color::BLACK,
         direction: WipeDirection::Down,
     });
     app.insert_resource(StartingTransition::<WipeOut>::new());
@@ -163,16 +163,16 @@ fn wipe_out_start_encodes_down_as_negative_y() {
 fn wipe_out_run_updates_progress_on_camera() {
     let (mut app, camera) = effect_test_app();
     app.world_mut().entity_mut(camera).insert(TransitionEffect {
-        color: Vec4::new(0.0, 0.0, 0.0, 1.0),
-        direction: Vec4::new(-1.0, 0.0, 0.0, 0.0),
+        color:       Vec4::new(0.0, 0.0, 0.0, 1.0),
+        direction:   Vec4::new(-1.0, 0.0, 0.0, 0.0),
         effect_type: EffectType::WIPE,
-        progress: 0.0,
+        progress:    0.0,
     });
     // Note: config resource is NOT present in world (removed by start system)
     app.insert_resource(RunningTransition::<WipeOut>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 0.5,
-        duration: 1.0,
+        elapsed:   0.5,
+        duration:  1.0,
         completed: false,
     });
     app.add_systems(Update, wipe_out_run);
@@ -194,15 +194,15 @@ fn wipe_out_run_updates_progress_on_camera() {
 fn wipe_out_run_sends_complete_at_full_progress() {
     let (mut app, camera) = effect_test_app();
     app.world_mut().entity_mut(camera).insert(TransitionEffect {
-        color: Vec4::new(0.0, 0.0, 0.0, 1.0),
-        direction: Vec4::new(-1.0, 0.0, 0.0, 0.0),
+        color:       Vec4::new(0.0, 0.0, 0.0, 1.0),
+        direction:   Vec4::new(-1.0, 0.0, 0.0, 0.0),
         effect_type: EffectType::WIPE,
-        progress: 0.0,
+        progress:    0.0,
     });
     app.insert_resource(RunningTransition::<WipeOut>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 1.0,
-        duration: 1.0,
+        elapsed:   1.0,
+        duration:  1.0,
         completed: false,
     });
     app.add_systems(Update, wipe_out_run);
@@ -222,8 +222,8 @@ fn wipe_out_run_does_not_double_send_when_already_completed() {
         .insert(TransitionEffect::default());
     app.insert_resource(RunningTransition::<WipeOut>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 1.0,
-        duration: 1.0,
+        elapsed:   1.0,
+        duration:  1.0,
         completed: true,
     });
     app.add_systems(Update, wipe_out_run);
@@ -245,8 +245,8 @@ fn wipe_out_end_removes_transition_effect_and_sends_transition_over() {
         .insert(TransitionEffect::default());
     app.insert_resource(EndingTransition::<WipeOut>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 0.5,
-        duration: 0.5,
+        elapsed:   0.5,
+        duration:  0.5,
         completed: true,
     });
     app.add_systems(Update, wipe_out_end);
@@ -276,8 +276,8 @@ fn wipe_out_end_removes_transition_effect_and_sends_transition_over() {
 fn wipe_in_start_inserts_transition_effect_on_camera_at_full_progress() {
     let (mut app, _camera) = effect_test_app();
     app.insert_resource(WipeInConfig {
-        duration: 0.5,
-        color: Color::BLACK,
+        duration:  0.5,
+        color:     Color::BLACK,
         direction: WipeDirection::Left,
     });
     app.insert_resource(StartingTransition::<WipeIn>::new());
@@ -313,8 +313,8 @@ fn wipe_in_start_inserts_transition_effect_on_camera_at_full_progress() {
 fn wipe_in_start_removes_config_resource() {
     let (mut app, _camera) = effect_test_app();
     app.insert_resource(WipeInConfig {
-        duration: 0.5,
-        color: Color::BLACK,
+        duration:  0.5,
+        color:     Color::BLACK,
         direction: WipeDirection::Left,
     });
     app.insert_resource(StartingTransition::<WipeIn>::new());
@@ -333,16 +333,16 @@ fn wipe_in_start_removes_config_resource() {
 fn wipe_in_run_decreases_progress_on_camera() {
     let (mut app, camera) = effect_test_app();
     app.world_mut().entity_mut(camera).insert(TransitionEffect {
-        color: Vec4::new(0.0, 0.0, 0.0, 1.0),
-        direction: Vec4::new(-1.0, 0.0, 0.0, 0.0),
+        color:       Vec4::new(0.0, 0.0, 0.0, 1.0),
+        direction:   Vec4::new(-1.0, 0.0, 0.0, 0.0),
         effect_type: EffectType::WIPE,
-        progress: 1.0,
+        progress:    1.0,
     });
     // Note: config resource NOT present (removed by start)
     app.insert_resource(RunningTransition::<WipeIn>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 1.0,
-        duration: 1.0,
+        elapsed:   1.0,
+        duration:  1.0,
         completed: false,
     });
     app.add_systems(Update, wipe_in_run);
@@ -373,8 +373,8 @@ fn wipe_in_run_does_not_double_send_when_already_completed() {
         .insert(TransitionEffect::default());
     app.insert_resource(RunningTransition::<WipeIn>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 1.0,
-        duration: 1.0,
+        elapsed:   1.0,
+        duration:  1.0,
         completed: true,
     });
     app.add_systems(Update, wipe_in_run);
@@ -396,8 +396,8 @@ fn wipe_in_end_removes_transition_effect_and_sends_transition_over() {
         .insert(TransitionEffect::default());
     app.insert_resource(EndingTransition::<WipeIn>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 0.5,
-        duration: 0.5,
+        elapsed:   0.5,
+        duration:  0.5,
         completed: true,
     });
     app.add_systems(Update, wipe_in_end);
@@ -423,8 +423,8 @@ fn wipe_in_end_removes_transition_effect_and_sends_transition_over() {
 fn wipe_out_satisfies_transition_and_out_transition() {
     use crate::transition::traits::OutTransition;
     let _effect: Box<dyn OutTransition> = Box::new(WipeOut {
-        duration: 0.5,
-        color: Color::BLACK,
+        duration:  0.5,
+        color:     Color::BLACK,
         direction: WipeDirection::Left,
     });
 }
@@ -433,8 +433,8 @@ fn wipe_out_satisfies_transition_and_out_transition() {
 fn wipe_in_satisfies_transition_and_in_transition() {
     use crate::transition::traits::InTransition;
     let _effect: Box<dyn InTransition> = Box::new(WipeIn {
-        duration: 0.5,
-        color: Color::BLACK,
+        duration:  0.5,
+        color:     Color::BLACK,
         direction: WipeDirection::Left,
     });
 }
@@ -479,8 +479,8 @@ fn wipe_out_insert_starting_inserts_marker_and_config() {
     use crate::transition::traits::Transition;
     let mut world = World::new();
     let effect = WipeOut {
-        duration: 0.5,
-        color: Color::BLACK,
+        duration:  0.5,
+        color:     Color::BLACK,
         direction: WipeDirection::Left,
     };
     effect.insert_starting(&mut world);
@@ -494,8 +494,8 @@ fn wipe_in_insert_starting_inserts_marker_and_config() {
     use crate::transition::traits::Transition;
     let mut world = World::new();
     let effect = WipeIn {
-        duration: 0.5,
-        color: Color::BLACK,
+        duration:  0.5,
+        color:     Color::BLACK,
         direction: WipeDirection::Right,
     };
     effect.insert_starting(&mut world);

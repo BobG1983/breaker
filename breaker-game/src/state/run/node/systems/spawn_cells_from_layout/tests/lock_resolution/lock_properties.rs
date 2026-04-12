@@ -44,15 +44,15 @@ fn locked_cell_hp_scaled_by_hp_mult() {
     let mut locks: LockMap = HashMap::new();
     locks.insert((0, 0), vec![(0, 1)]);
     let layout = NodeLayout {
-        name: "hp_mult_locked".to_owned(),
-        timer_secs: 60.0,
-        cols: 2,
-        rows: 1,
+        name:            "hp_mult_locked".to_owned(),
+        timer_secs:      60.0,
+        cols:            2,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("T"), s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: Some(locks),
+        grid:            vec![vec![s("T"), s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           Some(locks),
     };
     let mut app = test_app_with_sequence(layout.clone());
     app.update();
@@ -96,15 +96,15 @@ fn locked_cell_hp_unscaled_when_hp_mult_is_one() {
     let mut locks: LockMap = HashMap::new();
     locks.insert((0, 0), vec![(0, 1)]);
     let layout = NodeLayout {
-        name: "hp_mult_one_locked".to_owned(),
-        timer_secs: 60.0,
-        cols: 2,
-        rows: 1,
+        name:            "hp_mult_one_locked".to_owned(),
+        timer_secs:      60.0,
+        cols:            2,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("T"), s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: Some(locks),
+        grid:            vec![vec![s("T"), s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           Some(locks),
     };
     let mut app = test_app_with_sequence(layout.clone());
     app.update();
@@ -137,15 +137,15 @@ fn required_to_clear_count_includes_locked_cells() {
     let mut locks: LockMap = HashMap::new();
     locks.insert((0, 0), vec![(0, 1)]);
     let layout = NodeLayout {
-        name: "rtc_mixed".to_owned(),
-        timer_secs: 60.0,
-        cols: 3,
-        rows: 1,
+        name:            "rtc_mixed".to_owned(),
+        timer_secs:      60.0,
+        cols:            3,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S"), s("T"), s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: Some(locks),
+        grid:            vec![vec![s("S"), s("T"), s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           Some(locks),
     };
     let mut app = test_app(layout);
     app.update();
@@ -168,15 +168,15 @@ fn required_to_clear_excludes_cells_with_false_flag() {
     // We need a cell type with required_to_clear=false
     // Create a custom registry with an "N" type that has required_to_clear=false
     let layout = NodeLayout {
-        name: "rtc_false".to_owned(),
-        timer_secs: 60.0,
-        cols: 3,
-        rows: 1,
+        name:            "rtc_false".to_owned(),
+        timer_secs:      60.0,
+        cols:            3,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("F"), s("S"), s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: Some({
+        grid:            vec![vec![s("F"), s("S"), s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           Some({
             let mut locks: LockMap = HashMap::new();
             locks.insert((0, 0), vec![(0, 1)]);
             locks

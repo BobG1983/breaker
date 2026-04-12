@@ -31,7 +31,7 @@ fn iris_out_start_inserts_transition_effect_on_camera() {
     let (mut app, _camera) = effect_test_app();
     app.insert_resource(IrisOutConfig {
         duration: 0.5,
-        color: Color::BLACK,
+        color:    Color::BLACK,
     });
     app.insert_resource(StartingTransition::<IrisOut>::new());
     app.add_systems(Update, iris_out_start);
@@ -66,15 +66,15 @@ fn iris_out_start_inserts_transition_effect_on_camera() {
 fn iris_out_run_increases_progress_on_camera() {
     let (mut app, camera) = effect_test_app();
     app.world_mut().entity_mut(camera).insert(TransitionEffect {
-        color: Vec4::new(0.0, 0.0, 0.0, 1.0),
-        direction: Vec4::ZERO,
+        color:       Vec4::new(0.0, 0.0, 0.0, 1.0),
+        direction:   Vec4::ZERO,
         effect_type: EffectType::IRIS,
-        progress: 0.0,
+        progress:    0.0,
     });
     app.insert_resource(RunningTransition::<IrisOut>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 0.25,
-        duration: 1.0,
+        elapsed:   0.25,
+        duration:  1.0,
         completed: false,
     });
     app.add_systems(Update, iris_out_run);
@@ -96,15 +96,15 @@ fn iris_out_run_increases_progress_on_camera() {
 fn iris_out_run_sends_complete_at_full_progress() {
     let (mut app, camera) = effect_test_app();
     app.world_mut().entity_mut(camera).insert(TransitionEffect {
-        color: Vec4::new(0.0, 0.0, 0.0, 1.0),
-        direction: Vec4::ZERO,
+        color:       Vec4::new(0.0, 0.0, 0.0, 1.0),
+        direction:   Vec4::ZERO,
         effect_type: EffectType::IRIS,
-        progress: 0.0,
+        progress:    0.0,
     });
     app.insert_resource(RunningTransition::<IrisOut>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 1.0,
-        duration: 1.0,
+        elapsed:   1.0,
+        duration:  1.0,
         completed: false,
     });
     app.add_systems(Update, iris_out_run);
@@ -134,8 +134,8 @@ fn iris_out_run_does_not_double_send_when_already_completed() {
         .insert(TransitionEffect::default());
     app.insert_resource(RunningTransition::<IrisOut>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 1.0,
-        duration: 1.0,
+        elapsed:   1.0,
+        duration:  1.0,
         completed: true,
     });
     app.add_systems(Update, iris_out_run);
@@ -157,8 +157,8 @@ fn iris_out_end_removes_transition_effect_and_sends_transition_over() {
         .insert(TransitionEffect::default());
     app.insert_resource(EndingTransition::<IrisOut>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 0.5,
-        duration: 0.5,
+        elapsed:   0.5,
+        duration:  0.5,
         completed: true,
     });
     app.add_systems(Update, iris_out_end);
@@ -189,7 +189,7 @@ fn iris_in_start_inserts_transition_effect_on_camera_at_full_progress() {
     let (mut app, _camera) = effect_test_app();
     app.insert_resource(IrisInConfig {
         duration: 0.5,
-        color: Color::BLACK,
+        color:    Color::BLACK,
     });
     app.insert_resource(StartingTransition::<IrisIn>::new());
     app.add_systems(Update, iris_in_start);
@@ -220,15 +220,15 @@ fn iris_in_start_inserts_transition_effect_on_camera_at_full_progress() {
 fn iris_in_run_decreases_progress_on_camera() {
     let (mut app, camera) = effect_test_app();
     app.world_mut().entity_mut(camera).insert(TransitionEffect {
-        color: Vec4::new(0.0, 0.0, 0.0, 1.0),
-        direction: Vec4::ZERO,
+        color:       Vec4::new(0.0, 0.0, 0.0, 1.0),
+        direction:   Vec4::ZERO,
         effect_type: EffectType::IRIS,
-        progress: 1.0,
+        progress:    1.0,
     });
     app.insert_resource(RunningTransition::<IrisIn>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 0.5,
-        duration: 1.0,
+        elapsed:   0.5,
+        duration:  1.0,
         completed: false,
     });
     app.add_systems(Update, iris_in_run);
@@ -250,15 +250,15 @@ fn iris_in_run_decreases_progress_on_camera() {
 fn iris_in_run_sends_complete_at_full_progress() {
     let (mut app, camera) = effect_test_app();
     app.world_mut().entity_mut(camera).insert(TransitionEffect {
-        color: Vec4::new(0.0, 0.0, 0.0, 1.0),
-        direction: Vec4::ZERO,
+        color:       Vec4::new(0.0, 0.0, 0.0, 1.0),
+        direction:   Vec4::ZERO,
         effect_type: EffectType::IRIS,
-        progress: 1.0,
+        progress:    1.0,
     });
     app.insert_resource(RunningTransition::<IrisIn>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 1.0,
-        duration: 1.0,
+        elapsed:   1.0,
+        duration:  1.0,
         completed: false,
     });
     app.add_systems(Update, iris_in_run);
@@ -278,8 +278,8 @@ fn iris_in_run_does_not_double_send_when_already_completed() {
         .insert(TransitionEffect::default());
     app.insert_resource(RunningTransition::<IrisIn>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 1.0,
-        duration: 1.0,
+        elapsed:   1.0,
+        duration:  1.0,
         completed: true,
     });
     app.add_systems(Update, iris_in_run);
@@ -301,8 +301,8 @@ fn iris_in_end_removes_transition_effect_and_sends_transition_over() {
         .insert(TransitionEffect::default());
     app.insert_resource(EndingTransition::<IrisIn>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 0.5,
-        duration: 0.5,
+        elapsed:   0.5,
+        duration:  0.5,
         completed: true,
     });
     app.add_systems(Update, iris_in_end);
@@ -329,7 +329,7 @@ fn iris_out_satisfies_transition_and_out_transition() {
     use crate::transition::traits::OutTransition;
     let _effect: Box<dyn OutTransition> = Box::new(IrisOut {
         duration: 0.5,
-        color: Color::BLACK,
+        color:    Color::BLACK,
     });
 }
 
@@ -338,7 +338,7 @@ fn iris_in_satisfies_transition_and_in_transition() {
     use crate::transition::traits::InTransition;
     let _effect: Box<dyn InTransition> = Box::new(IrisIn {
         duration: 0.5,
-        color: Color::BLACK,
+        color:    Color::BLACK,
     });
 }
 
@@ -364,7 +364,7 @@ fn iris_out_insert_starting_inserts_marker_and_config() {
     let mut world = World::new();
     let effect = IrisOut {
         duration: 0.5,
-        color: Color::BLACK,
+        color:    Color::BLACK,
     };
     effect.insert_starting(&mut world);
 
@@ -378,7 +378,7 @@ fn iris_in_insert_starting_inserts_marker_and_config() {
     let mut world = World::new();
     let effect = IrisIn {
         duration: 0.5,
-        color: Color::BLACK,
+        color:    Color::BLACK,
     };
     effect.insert_starting(&mut world);
 

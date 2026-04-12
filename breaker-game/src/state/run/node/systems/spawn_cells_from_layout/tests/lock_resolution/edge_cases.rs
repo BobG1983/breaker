@@ -23,15 +23,15 @@ fn lock_target_pointing_to_empty_spawns_without_locked() {
     let mut locks: LockMap = HashMap::new();
     locks.insert((0, 0), vec![(0, 1)]);
     let layout = NodeLayout {
-        name: "lock_target_empty".to_owned(),
-        timer_secs: 60.0,
-        cols: 3,
-        rows: 1,
+        name:            "lock_target_empty".to_owned(),
+        timer_secs:      60.0,
+        cols:            3,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S"), s("."), s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: Some(locks),
+        grid:            vec![vec![s("S"), s("."), s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           Some(locks),
     };
     let mut app = test_app(layout);
     app.update();
@@ -68,15 +68,15 @@ fn lock_target_out_of_bounds_spawns_without_locked() {
     let mut locks: LockMap = HashMap::new();
     locks.insert((0, 0), vec![(5, 5)]);
     let layout = NodeLayout {
-        name: "lock_target_oob".to_owned(),
-        timer_secs: 60.0,
-        cols: 2,
-        rows: 1,
+        name:            "lock_target_oob".to_owned(),
+        timer_secs:      60.0,
+        cols:            2,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S"), s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: Some(locks),
+        grid:            vec![vec![s("S"), s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           Some(locks),
     };
     let mut app = test_app(layout);
     app.update();
@@ -101,15 +101,15 @@ fn lock_key_out_of_bounds_is_ignored() {
     let mut locks: LockMap = HashMap::new();
     locks.insert((5, 5), vec![(0, 0)]);
     let layout = NodeLayout {
-        name: "lock_key_oob".to_owned(),
-        timer_secs: 60.0,
-        cols: 2,
-        rows: 1,
+        name:            "lock_key_oob".to_owned(),
+        timer_secs:      60.0,
+        cols:            2,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S"), s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: Some(locks),
+        grid:            vec![vec![s("S"), s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           Some(locks),
     };
     let mut app = test_app(layout);
     app.update();
@@ -136,15 +136,15 @@ fn empty_grid_with_locks_map_spawns_no_cells() {
     let mut locks: LockMap = HashMap::new();
     locks.insert((0, 0), vec![(0, 1)]);
     let layout = NodeLayout {
-        name: "empty_grid_with_locks".to_owned(),
-        timer_secs: 60.0,
-        cols: 2,
-        rows: 1,
+        name:            "empty_grid_with_locks".to_owned(),
+        timer_secs:      60.0,
+        cols:            2,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("."), s(".")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: Some(locks),
+        grid:            vec![vec![s("."), s(".")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           Some(locks),
     };
     let mut app = test_app(layout);
     app.update();
@@ -157,15 +157,15 @@ fn empty_grid_with_locks_map_spawns_no_cells() {
 fn empty_locks_with_all_dot_grid_spawns_no_cells() {
     // Edge case: locks: Some({}) with all-dot grid
     let layout = NodeLayout {
-        name: "empty_both".to_owned(),
-        timer_secs: 60.0,
-        cols: 2,
-        rows: 1,
+        name:            "empty_both".to_owned(),
+        timer_secs:      60.0,
+        cols:            2,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("."), s(".")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: Some(HashMap::new()),
+        grid:            vec![vec![s("."), s(".")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           Some(HashMap::new()),
     };
     let mut app = test_app(layout);
     app.update();

@@ -35,16 +35,16 @@ pub(super) fn test_registry() -> CellTypeRegistry {
     registry.insert(
         "S".to_owned(),
         CellTypeDefinition {
-            id: "standard".to_owned(),
-            alias: "S".to_owned(),
-            toughness: Toughness::default(),
-            color_rgb: [4.0, 0.2, 0.5],
+            id:                "standard".to_owned(),
+            alias:             "S".to_owned(),
+            toughness:         Toughness::default(),
+            color_rgb:         [4.0, 0.2, 0.5],
             required_to_clear: true,
-            damage_hdr_base: 4.0,
-            damage_green_min: 0.2,
+            damage_hdr_base:   4.0,
+            damage_green_min:  0.2,
             damage_blue_range: 0.4,
-            damage_blue_base: 0.2,
-            behaviors: None,
+            damage_blue_base:  0.2,
+            behaviors:         None,
 
             effects: None,
         },
@@ -52,16 +52,16 @@ pub(super) fn test_registry() -> CellTypeRegistry {
     registry.insert(
         "T".to_owned(),
         CellTypeDefinition {
-            id: "tough".to_owned(),
-            alias: "T".to_owned(),
-            toughness: crate::cells::definition::Toughness::Tough,
-            color_rgb: [2.5, 0.2, 4.0],
+            id:                "tough".to_owned(),
+            alias:             "T".to_owned(),
+            toughness:         crate::cells::definition::Toughness::Tough,
+            color_rgb:         [2.5, 0.2, 4.0],
             required_to_clear: true,
-            damage_hdr_base: 4.0,
-            damage_green_min: 0.2,
+            damage_hdr_base:   4.0,
+            damage_green_min:  0.2,
             damage_blue_range: 0.4,
-            damage_blue_base: 0.2,
-            behaviors: None,
+            damage_blue_base:  0.2,
+            behaviors:         None,
 
             effects: None,
         },
@@ -72,30 +72,30 @@ pub(super) fn test_registry() -> CellTypeRegistry {
 /// A full 3x2 layout with no gaps.
 pub(super) fn full_layout() -> NodeLayout {
     NodeLayout {
-        name: "full".to_owned(),
-        timer_secs: 60.0,
-        cols: 3,
-        rows: 2,
+        name:            "full".to_owned(),
+        timer_secs:      60.0,
+        cols:            3,
+        rows:            2,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("T"), s("S"), s("S")], vec![s("S"), s("S"), s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec![s("T"), s("S"), s("S")], vec![s("S"), s("S"), s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     }
 }
 
 /// A 3x2 layout with gaps (dots).
 pub(super) fn sparse_layout() -> NodeLayout {
     NodeLayout {
-        name: "sparse".to_owned(),
-        timer_secs: 60.0,
-        cols: 3,
-        rows: 2,
+        name:            "sparse".to_owned(),
+        timer_secs:      60.0,
+        cols:            3,
+        rows:            2,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("."), s("S"), s(".")], vec![s("T"), s("."), s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec![s("."), s("S"), s(".")], vec![s("T"), s("."), s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     }
 }
 
@@ -140,8 +140,8 @@ pub(super) fn assert_positions_match(actual: &[(f32, f32)], expected: &[(f32, f3
 /// Returns a `CellConfig` with RON-like values (not Rust `Default`).
 pub(super) fn ron_like_cell_config() -> CellConfig {
     CellConfig {
-        width: 126.0,
-        height: 43.0,
+        width:     126.0,
+        height:    43.0,
         padding_x: 7.0,
         padding_y: 7.0,
     }
@@ -150,10 +150,10 @@ pub(super) fn ron_like_cell_config() -> CellConfig {
 /// Returns a `PlayfieldConfig` with RON-like values (not Rust `Default`).
 pub(super) fn ron_like_playfield_config() -> PlayfieldConfig {
     PlayfieldConfig {
-        width: 1440.0,
-        height: 1080.0,
-        zone_fraction: 0.667,
-        wall_thickness: 180.0,
+        width:                1440.0,
+        height:               1080.0,
+        zone_fraction:        0.667,
+        wall_thickness:       180.0,
         background_color_rgb: [0.02, 0.01, 0.04],
     }
 }
@@ -197,15 +197,15 @@ pub(super) fn locked_layout_3x2_single() -> NodeLayout {
     let mut locks: LockMap = HashMap::new();
     locks.insert((0, 1), vec![(1, 0)]);
     NodeLayout {
-        name: "locked_3x2_single".to_owned(),
-        timer_secs: 60.0,
-        cols: 3,
-        rows: 2,
+        name:            "locked_3x2_single".to_owned(),
+        timer_secs:      60.0,
+        cols:            3,
+        rows:            2,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S"), s("S"), s("S")], vec![s("S"), s("S"), s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: Some(locks),
+        grid:            vec![vec![s("S"), s("S"), s("S")], vec![s("S"), s("S"), s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           Some(locks),
     }
 }
 
@@ -214,15 +214,15 @@ pub(super) fn simple_locked_layout() -> NodeLayout {
     let mut locks: LockMap = HashMap::new();
     locks.insert((0, 0), vec![(0, 1)]);
     NodeLayout {
-        name: "simple_locked".to_owned(),
-        timer_secs: 60.0,
-        cols: 2,
-        rows: 1,
+        name:            "simple_locked".to_owned(),
+        timer_secs:      60.0,
+        cols:            2,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S"), s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: Some(locks),
+        grid:            vec![vec![s("S"), s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           Some(locks),
     }
 }
 
@@ -232,15 +232,15 @@ pub(super) fn chain_locked_layout() -> NodeLayout {
     locks.insert((0, 0), vec![(0, 1)]);
     locks.insert((0, 1), vec![(0, 2)]);
     NodeLayout {
-        name: "chain_locked".to_owned(),
-        timer_secs: 60.0,
-        cols: 3,
-        rows: 1,
+        name:            "chain_locked".to_owned(),
+        timer_secs:      60.0,
+        cols:            3,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S"), s("S"), s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: Some(locks),
+        grid:            vec![vec![s("S"), s("S"), s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           Some(locks),
     }
 }
 
@@ -254,15 +254,15 @@ pub(super) fn diamond_locked_layout() -> NodeLayout {
     locks.insert((0, 1), vec![(1, 1)]);
     locks.insert((1, 0), vec![(1, 1)]);
     NodeLayout {
-        name: "diamond_locked".to_owned(),
-        timer_secs: 60.0,
-        cols: 2,
-        rows: 2,
+        name:            "diamond_locked".to_owned(),
+        timer_secs:      60.0,
+        cols:            2,
+        rows:            2,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S"), s("S")], vec![s("S"), s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: Some(locks),
+        grid:            vec![vec![s("S"), s("S")], vec![s("S"), s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           Some(locks),
     }
 }
 
@@ -272,15 +272,15 @@ pub(super) fn circular_locked_layout() -> NodeLayout {
     locks.insert((0, 0), vec![(0, 1)]);
     locks.insert((0, 1), vec![(0, 0)]);
     NodeLayout {
-        name: "circular_locked".to_owned(),
-        timer_secs: 60.0,
-        cols: 2,
-        rows: 1,
+        name:            "circular_locked".to_owned(),
+        timer_secs:      60.0,
+        cols:            2,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S"), s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: Some(locks),
+        grid:            vec![vec![s("S"), s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           Some(locks),
     }
 }
 
@@ -357,7 +357,7 @@ pub(super) fn test_app_with_sequence(layout: NodeLayout) -> App {
         })
         .insert_resource(NodeSequence {
             assignments: vec![NodeAssignment {
-                node_type: NodeType::Active,
+                node_type:  NodeType::Active,
                 tier_index: 0,
                 timer_mult: 1.0,
             }],
@@ -397,7 +397,7 @@ pub(super) fn test_app_with_toughness(
         })
         .insert_resource(NodeSequence {
             assignments: vec![NodeAssignment {
-                node_type: if is_boss {
+                node_type:  if is_boss {
                     NodeType::Boss
                 } else {
                     NodeType::Active
@@ -418,16 +418,16 @@ pub(super) fn test_app_with_non_required_cell(layout: NodeLayout) -> App {
     registry.insert(
         "F".to_owned(),
         CellTypeDefinition {
-            id: "filler".to_owned(),
-            alias: "F".to_owned(),
-            toughness: Toughness::default(),
-            color_rgb: [0.5, 0.5, 0.5],
+            id:                "filler".to_owned(),
+            alias:             "F".to_owned(),
+            toughness:         Toughness::default(),
+            color_rgb:         [0.5, 0.5, 0.5],
             required_to_clear: false,
-            damage_hdr_base: 4.0,
-            damage_green_min: 0.2,
+            damage_hdr_base:   4.0,
+            damage_green_min:  0.2,
             damage_blue_range: 0.4,
-            damage_blue_base: 0.2,
-            behaviors: None,
+            damage_blue_base:  0.2,
+            behaviors:         None,
 
             effects: None,
         },

@@ -57,7 +57,7 @@ pub enum BumpMode {
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct ScriptedFrame {
     /// The fixed-update frame on which these actions are injected.
-    pub frame: u32,
+    pub frame:   u32,
     /// Actions to inject on that frame.
     pub actions: Vec<GameAction>,
 }
@@ -82,7 +82,7 @@ pub struct HybridParams {
     /// Number of frames to play back scripted actions before switching to chaos.
     pub scripted_frames: u32,
     /// Probability (0.0--1.0) for the random phase.
-    pub action_prob: f32,
+    pub action_prob:     f32,
 }
 
 /// Input injection strategy for a scenario run.

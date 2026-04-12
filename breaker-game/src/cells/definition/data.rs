@@ -37,9 +37,9 @@ pub(crate) struct GuardedBehavior {
     /// Fraction of parent cell HP assigned to each guardian (0.0, 1.0].
     pub guardian_hp_fraction: f32,
     /// HDR RGB color for guardian cells.
-    pub guardian_color_rgb: [f32; 3],
+    pub guardian_color_rgb:   [f32; 3],
     /// Slide speed in world units per second.
-    pub slide_speed: f32,
+    pub slide_speed:          f32,
 }
 
 impl GuardedBehavior {
@@ -94,30 +94,30 @@ pub(crate) enum CellBehavior {
 #[derive(Asset, TypePath, Deserialize, Clone, Debug)]
 pub(crate) struct CellTypeDefinition {
     /// Unique identifier.
-    pub id: String,
+    pub id:                String,
     /// Alias used in node layout grids — may be multi-character.
-    pub alias: String,
+    pub alias:             String,
     /// Toughness category — determines base HP via `ToughnessConfig`.
     #[serde(default)]
-    pub toughness: Toughness,
+    pub toughness:         Toughness,
     /// HDR RGB color.
-    pub color_rgb: [f32; 3],
+    pub color_rgb:         [f32; 3],
     /// Whether this cell counts toward node completion.
     pub required_to_clear: bool,
     /// HDR intensity multiplier for damaged cells at full health.
-    pub damage_hdr_base: f32,
+    pub damage_hdr_base:   f32,
     /// Minimum green channel value for damage color feedback.
-    pub damage_green_min: f32,
+    pub damage_green_min:  f32,
     /// Blue channel range added based on health fraction.
     pub damage_blue_range: f32,
     /// Base blue channel value for damage color feedback.
-    pub damage_blue_base: f32,
+    pub damage_blue_base:  f32,
     /// Optional behavior list (regen, guarded, etc.). Defaults to `None`.
     #[serde(default)]
-    pub behaviors: Option<Vec<CellBehavior>>,
+    pub behaviors:         Option<Vec<CellBehavior>>,
     /// Optional effect chains for this cell type. Defaults to `None`.
     #[serde(default)]
-    pub effects: Option<Vec<RootNode>>,
+    pub effects:           Option<Vec<RootNode>>,
 }
 
 impl CellTypeDefinition {

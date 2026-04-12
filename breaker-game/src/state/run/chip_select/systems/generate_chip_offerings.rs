@@ -24,11 +24,11 @@ use crate::{
 /// Bundled parameters for chip offering generation.
 #[derive(SystemParam)]
 pub(crate) struct ChipOfferingParams<'w, 's> {
-    commands: Commands<'w, 's>,
-    registry: Res<'w, ChipCatalog>,
-    inventory: Res<'w, ChipInventory>,
-    config: Res<'w, ChipSelectConfig>,
-    rng: ResMut<'w, GameRng>,
+    commands:      Commands<'w, 's>,
+    registry:      Res<'w, ChipCatalog>,
+    inventory:     Res<'w, ChipInventory>,
+    config:        Res<'w, ChipSelectConfig>,
+    rng:           ResMut<'w, GameRng>,
     active_layout: Option<Res<'w, ActiveNodeLayout>>,
 }
 
@@ -56,7 +56,7 @@ pub(crate) fn generate_chip_offerings(mut params: ChipOfferingParams) {
             if let Some(result_def) = params.registry.get(&recipe.result_name) {
                 evolution_offers.push(ChipOffering::Evolution {
                     ingredients: recipe.ingredients.clone(),
-                    result: result_def.clone(),
+                    result:      result_def.clone(),
                 });
             }
         }

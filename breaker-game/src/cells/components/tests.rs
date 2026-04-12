@@ -35,7 +35,7 @@ fn cell_health_not_destroyed_at_positive_hp() {
 fn cell_health_is_destroyed_at_exactly_zero() {
     let health = CellHealth {
         current: 0.0,
-        max: 10.0,
+        max:     10.0,
     };
     assert!(
         health.is_destroyed(),
@@ -48,7 +48,7 @@ fn cell_health_is_destroyed_when_negative_current() {
     // Edge case: overkill drives current below 0.0 — must still be destroyed.
     let health = CellHealth {
         current: -5.0,
-        max: 10.0,
+        max:     10.0,
     };
     assert!(
         health.is_destroyed(),
@@ -154,7 +154,7 @@ fn cell_health_fraction_with_zero_max_returns_zero() {
     // Edge case: max == 0.0 guard prevents divide-by-zero.
     let health = CellHealth {
         current: 0.0,
-        max: 0.0,
+        max:     0.0,
     };
     assert!(
         (health.fraction() - 0.0).abs() < f32::EPSILON,
@@ -167,7 +167,7 @@ fn cell_health_fraction_with_negative_current_clamped() {
     // Negative current (overkill) — fraction should not go below 0.0.
     let health = CellHealth {
         current: -5.0,
-        max: 10.0,
+        max:     10.0,
     };
     assert!(
         health.fraction() <= 0.0,

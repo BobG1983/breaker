@@ -14,11 +14,11 @@ fn bolt_in_bounds_increments_invariant_checks_in_scenario_stats() {
     let mut app = test_app_bolt_in_bounds();
 
     app.world_mut().insert_resource(PlayfieldConfig {
-        width: 800.0,
-        height: 700.0,
+        width:                800.0,
+        height:               700.0,
         background_color_rgb: [0.0, 0.0, 0.0],
-        wall_thickness: 180.0,
-        zone_fraction: 0.667,
+        wall_thickness:       180.0,
+        zone_fraction:        0.667,
     });
     app.world_mut().insert_resource(ScenarioStats {
         entered_playing: true,
@@ -49,11 +49,11 @@ fn violation_entry_contains_frame_invariant_entity_and_message_with_values() {
     let mut app = test_app_bolt_in_bounds();
 
     app.world_mut().insert_resource(PlayfieldConfig {
-        width: 800.0,
-        height: 700.0,
+        width:                800.0,
+        height:               700.0,
         background_color_rgb: [0.0, 0.0, 0.0],
-        wall_thickness: 180.0,
-        zone_fraction: 0.667,
+        wall_thickness:       180.0,
+        zone_fraction:        0.667,
     });
     app.world_mut().insert_resource(ScenarioFrame(1842));
 

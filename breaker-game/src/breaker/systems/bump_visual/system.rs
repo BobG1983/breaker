@@ -23,8 +23,8 @@ pub fn trigger_bump_visual(
     }
     for (entity, params) in &query {
         commands.entity(entity).insert(BumpFeedbackState {
-            timer: params.duration,
-            duration: params.duration,
+            timer:       params.duration,
+            duration:    params.duration,
             peak_offset: params.peak,
         });
     }

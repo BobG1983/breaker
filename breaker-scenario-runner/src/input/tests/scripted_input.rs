@@ -16,11 +16,11 @@ fn scripted_input_fires_at_exact_frame_numbers() {
     let params = ScriptedParams {
         actions: vec![
             ScriptedFrame {
-                frame: 5,
+                frame:   5,
                 actions: vec![GameAction::MoveLeft],
             },
             ScriptedFrame {
-                frame: 10,
+                frame:   10,
                 actions: vec![GameAction::Bump, GameAction::MoveRight],
             },
         ],

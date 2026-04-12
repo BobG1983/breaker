@@ -3,7 +3,7 @@
 //! Each bridge reads collision messages, builds a [`TriggerContext`], and dispatches
 //! the corresponding trigger to entities with bound effects.
 
-use bevy::prelude::*;
+use bevy::{ecs::system::SystemParam, prelude::*};
 
 use crate::{
     bolt::messages::{BoltImpactBreaker, BoltImpactCell, BoltImpactWall},
@@ -16,26 +16,28 @@ use crate::{
     },
 };
 
+/// Bundled message readers for all collision types — avoids `too_many_arguments`.
+#[derive(SystemParam)]
+pub(crate) struct ImpactReaders<'w, 's> {
+    bolt_cell:    MessageReader<'w, 's, BoltImpactCell>,
+    bolt_wall:    MessageReader<'w, 's, BoltImpactWall>,
+    bolt_breaker: MessageReader<'w, 's, BoltImpactBreaker>,
+    breaker_cell: MessageReader<'w, 's, BreakerImpactCell>,
+    breaker_wall: MessageReader<'w, 's, BreakerImpactWall>,
+    cell_wall:    MessageReader<'w, 's, CellImpactWall>,
+}
+
 /// Local bridge: fires `Impacted(entity_kind)` on entities involved in a collision.
 ///
 /// For each collision message, both participants receive the trigger with the
 /// `EntityKind` of the *other* entity. E.g., when a bolt hits a cell, the bolt
 /// gets `Impacted(Cell)` and the cell gets `Impacted(Bolt)`.
-#[allow(
-    clippy::too_many_arguments,
-    reason = "reads all 6 collision message types"
-)]
-pub fn on_impacted(
-    mut bolt_cell: MessageReader<BoltImpactCell>,
-    mut bolt_wall: MessageReader<BoltImpactWall>,
-    mut bolt_breaker: MessageReader<BoltImpactBreaker>,
-    mut breaker_cell: MessageReader<BreakerImpactCell>,
-    mut breaker_wall: MessageReader<BreakerImpactWall>,
-    mut cell_wall: MessageReader<CellImpactWall>,
+pub(crate) fn on_impacted(
+    mut readers: ImpactReaders,
     bound_query: Query<&BoundEffects>,
     mut commands: Commands,
 ) {
-    for msg in bolt_cell.read() {
+    for msg in readers.bolt_cell.read() {
         let ctx = TriggerContext::Impact {
             impactor: msg.bolt,
             impactee: msg.cell,
@@ -50,7 +52,7 @@ pub fn on_impacted(
             &mut commands,
         );
     }
-    for msg in bolt_wall.read() {
+    for msg in readers.bolt_wall.read() {
         let ctx = TriggerContext::Impact {
             impactor: msg.bolt,
             impactee: msg.wall,
@@ -65,7 +67,7 @@ pub fn on_impacted(
             &mut commands,
         );
     }
-    for msg in bolt_breaker.read() {
+    for msg in readers.bolt_breaker.read() {
         let ctx = TriggerContext::Impact {
             impactor: msg.bolt,
             impactee: msg.breaker,
@@ -80,7 +82,7 @@ pub fn on_impacted(
             &mut commands,
         );
     }
-    for msg in breaker_cell.read() {
+    for msg in readers.breaker_cell.read() {
         let ctx = TriggerContext::Impact {
             impactor: msg.breaker,
             impactee: msg.cell,
@@ -95,7 +97,7 @@ pub fn on_impacted(
             &mut commands,
         );
     }
-    for msg in breaker_wall.read() {
+    for msg in readers.breaker_wall.read() {
         let ctx = TriggerContext::Impact {
             impactor: msg.breaker,
             impactee: msg.wall,
@@ -110,7 +112,7 @@ pub fn on_impacted(
             &mut commands,
         );
     }
-    for msg in cell_wall.read() {
+    for msg in readers.cell_wall.read() {
         let ctx = TriggerContext::Impact {
             impactor: msg.cell,
             impactee: msg.wall,
@@ -129,23 +131,14 @@ pub fn on_impacted(
 
 /// Global bridge: fires `ImpactOccurred(entity_kind)` on all entities with bound
 /// effects when a collision involving the given entity kind happens.
-#[allow(
-    clippy::too_many_arguments,
-    reason = "reads all 6 collision message types"
-)]
-pub fn on_impact_occurred(
-    mut bolt_cell: MessageReader<BoltImpactCell>,
-    mut bolt_wall: MessageReader<BoltImpactWall>,
-    mut bolt_breaker: MessageReader<BoltImpactBreaker>,
-    mut breaker_cell: MessageReader<BreakerImpactCell>,
-    mut breaker_wall: MessageReader<BreakerImpactWall>,
-    mut cell_wall: MessageReader<CellImpactWall>,
+pub(crate) fn on_impact_occurred(
+    mut readers: ImpactReaders,
     bound_query: Query<(Entity, &BoundEffects)>,
     mut commands: Commands,
 ) {
     // Collect all entity kinds involved in collisions this frame
     let mut kinds = Vec::new();
-    for msg in bolt_cell.read() {
+    for msg in readers.bolt_cell.read() {
         let ctx = TriggerContext::Impact {
             impactor: msg.bolt,
             impactee: msg.cell,
@@ -153,7 +146,7 @@ pub fn on_impact_occurred(
         kinds.push((EntityKind::Bolt, ctx.clone()));
         kinds.push((EntityKind::Cell, ctx));
     }
-    for msg in bolt_wall.read() {
+    for msg in readers.bolt_wall.read() {
         let ctx = TriggerContext::Impact {
             impactor: msg.bolt,
             impactee: msg.wall,
@@ -161,7 +154,7 @@ pub fn on_impact_occurred(
         kinds.push((EntityKind::Bolt, ctx.clone()));
         kinds.push((EntityKind::Wall, ctx));
     }
-    for msg in bolt_breaker.read() {
+    for msg in readers.bolt_breaker.read() {
         let ctx = TriggerContext::Impact {
             impactor: msg.bolt,
             impactee: msg.breaker,
@@ -169,7 +162,7 @@ pub fn on_impact_occurred(
         kinds.push((EntityKind::Bolt, ctx.clone()));
         kinds.push((EntityKind::Breaker, ctx));
     }
-    for msg in breaker_cell.read() {
+    for msg in readers.breaker_cell.read() {
         let ctx = TriggerContext::Impact {
             impactor: msg.breaker,
             impactee: msg.cell,
@@ -177,7 +170,7 @@ pub fn on_impact_occurred(
         kinds.push((EntityKind::Breaker, ctx.clone()));
         kinds.push((EntityKind::Cell, ctx));
     }
-    for msg in breaker_wall.read() {
+    for msg in readers.breaker_wall.read() {
         let ctx = TriggerContext::Impact {
             impactor: msg.breaker,
             impactee: msg.wall,
@@ -185,7 +178,7 @@ pub fn on_impact_occurred(
         kinds.push((EntityKind::Breaker, ctx.clone()));
         kinds.push((EntityKind::Wall, ctx));
     }
-    for msg in cell_wall.read() {
+    for msg in readers.cell_wall.read() {
         let ctx = TriggerContext::Impact {
             impactor: msg.cell,
             impactee: msg.wall,

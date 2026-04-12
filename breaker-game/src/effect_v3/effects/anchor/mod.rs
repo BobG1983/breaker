@@ -1,3 +1,5 @@
+//! Anchor effect — locks breaker position after a delay.
+
 pub mod components;
 pub mod config;
 pub mod systems;

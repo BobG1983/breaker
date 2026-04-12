@@ -178,10 +178,10 @@ fn damage_visuals_override_definition() {
     def.damage_blue_base = 0.1;
 
     let override_visuals = CellDamageVisuals {
-        hdr_base: 8.0,
-        green_min: 0.1,
+        hdr_base:   8.0,
+        green_min:  0.1,
         blue_range: 0.6,
-        blue_base: 0.3,
+        blue_base:  0.3,
     };
 
     let mut world = World::new();
@@ -221,10 +221,10 @@ fn damage_visuals_override_definition() {
 #[test]
 fn damage_visuals_without_definition_sets_directly() {
     let visuals = CellDamageVisuals {
-        hdr_base: 8.0,
-        green_min: 0.1,
+        hdr_base:   8.0,
+        green_min:  0.1,
         blue_range: 0.6,
-        blue_base: 0.3,
+        blue_base:  0.3,
     };
 
     let mut world = World::new();

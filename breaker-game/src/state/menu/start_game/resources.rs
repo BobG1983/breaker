@@ -13,7 +13,7 @@ pub(crate) struct RunSetupSelection {
 #[derive(Resource, Debug, Default)]
 pub(crate) struct SeedEntry {
     /// The typed seed digits (empty = random).
-    pub value: String,
+    pub value:   String,
     /// Whether the seed field is focused for input.
     pub focused: bool,
 }

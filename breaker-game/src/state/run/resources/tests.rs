@@ -18,17 +18,17 @@ fn default_outcome_is_in_progress() {
 #[test]
 fn difficulty_curve_from_defaults_copies_all_fields() {
     let defaults = DifficultyCurveDefaults {
-        tiers: vec![
+        tiers:                    vec![
             TierDefinition {
-                nodes: TierNodeCount::Fixed(3),
-                active_ratio: 0.0,
-                timer_mult: 1.0,
+                nodes:            TierNodeCount::Fixed(3),
+                active_ratio:     0.0,
+                timer_mult:       1.0,
                 introduced_cells: vec![],
             },
             TierDefinition {
-                nodes: TierNodeCount::Range(4, 6),
-                active_ratio: 0.5,
-                timer_mult: 0.8,
+                nodes:            TierNodeCount::Range(4, 6),
+                active_ratio:     0.5,
+                timer_mult:       0.8,
                 introduced_cells: vec!['T'],
             },
         ],

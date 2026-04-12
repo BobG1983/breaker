@@ -251,15 +251,15 @@ fn make_evolution_offering() -> ChipOffering {
     ChipOffering::Evolution {
         ingredients: vec![
             EvolutionIngredient {
-                chip_name: "Piercing Shot".to_owned(),
+                chip_name:       "Piercing Shot".to_owned(),
                 stacks_required: 2,
             },
             EvolutionIngredient {
-                chip_name: "Damage Up".to_owned(),
+                chip_name:       "Damage Up".to_owned(),
                 stacks_required: 1,
             },
         ],
-        result: ChipDefinition::test(
+        result:      ChipDefinition::test(
             "Barrage",
             Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 5 })),
             1,

@@ -29,7 +29,7 @@ pub enum VerdictStatus {
 #[derive(Resource, Debug, Clone)]
 pub struct ScenarioVerdict {
     /// Overall result of the scenario.
-    pub status: VerdictStatus,
+    pub status:  VerdictStatus,
     /// Human-readable reasons for failure (empty when passing).
     pub reasons: Vec<String>,
 }
@@ -37,7 +37,7 @@ pub struct ScenarioVerdict {
 impl Default for ScenarioVerdict {
     fn default() -> Self {
         Self {
-            status: VerdictStatus::Fail,
+            status:  VerdictStatus::Fail,
             reasons: vec!["scenario did not complete evaluation".into()],
         }
     }

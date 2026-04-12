@@ -54,15 +54,15 @@ fn self_referencing_lock_spawns_without_locked() {
     let mut locks: LockMap = HashMap::new();
     locks.insert((0, 0), vec![(0, 0)]);
     let layout = NodeLayout {
-        name: "self_ref".to_owned(),
-        timer_secs: 60.0,
-        cols: 1,
-        rows: 1,
+        name:            "self_ref".to_owned(),
+        timer_secs:      60.0,
+        cols:            1,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: Some(locks),
+        grid:            vec![vec![s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           Some(locks),
     };
     let mut app = test_app(layout);
     app.update();
@@ -92,15 +92,15 @@ fn partial_circular_chain_all_spawn_unlocked() {
     locks.insert((0, 1), vec![(0, 2)]);
     locks.insert((0, 2), vec![(0, 1)]);
     let layout = NodeLayout {
-        name: "partial_cycle".to_owned(),
-        timer_secs: 60.0,
-        cols: 3,
-        rows: 1,
+        name:            "partial_cycle".to_owned(),
+        timer_secs:      60.0,
+        cols:            3,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S"), s("S"), s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: Some(locks),
+        grid:            vec![vec![s("S"), s("S"), s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           Some(locks),
     };
     let mut app = test_app(layout);
     app.update();
@@ -137,15 +137,15 @@ fn large_cycle_four_nodes_all_spawn_without_locks() {
     locks.insert((0, 2), vec![(0, 3)]);
     locks.insert((0, 3), vec![(0, 0)]);
     let layout = NodeLayout {
-        name: "four_node_cycle".to_owned(),
-        timer_secs: 60.0,
-        cols: 4,
-        rows: 1,
+        name:            "four_node_cycle".to_owned(),
+        timer_secs:      60.0,
+        cols:            4,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S"), s("S"), s("S"), s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: Some(locks),
+        grid:            vec![vec![s("S"), s("S"), s("S"), s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           Some(locks),
     };
     let mut app = test_app(layout);
     app.update();

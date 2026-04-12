@@ -21,13 +21,13 @@ use crate::{
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ShockwaveConfig {
     /// How far the shockwave ring expands before disappearing.
-    pub base_range: OrderedFloat<f32>,
+    pub base_range:      OrderedFloat<f32>,
     /// Extra range added per stack beyond the first.
     pub range_per_level: OrderedFloat<f32>,
     /// Current stack count — effective range is `base_range` + `range_per_level` * (stacks - 1).
-    pub stacks: u32,
+    pub stacks:          u32,
     /// How fast the ring expands outward in world units per second.
-    pub speed: OrderedFloat<f32>,
+    pub speed:           OrderedFloat<f32>,
 }
 
 impl Fireable for ShockwaveConfig {
@@ -41,7 +41,6 @@ impl Fireable for ShockwaveConfig {
             .map_or(1.0, EffectStack::aggregate);
 
         // Calculate effective max radius from stacking
-        #[allow(clippy::cast_precision_loss, reason = "stacks is a small u32")]
         let stacks_f32 = self.stacks.saturating_sub(1) as f32;
         let max_radius = self
             .range_per_level

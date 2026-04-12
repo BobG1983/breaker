@@ -27,8 +27,8 @@ fn scale_increases_from_zero_after_one_tick() {
             Scale2D { x: 0.0, y: 0.0 },
             CollisionLayers::default(),
             Birthing {
-                timer: Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
-                target_scale: Scale2D { x: 8.0, y: 8.0 },
+                timer:          Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
+                target_scale:   Scale2D { x: 8.0, y: 8.0 },
                 stashed_layers: CollisionLayers::new(
                     BOLT_LAYER,
                     CELL_LAYER | WALL_LAYER | BREAKER_LAYER,
@@ -94,8 +94,8 @@ fn scale_reaches_exact_target_after_full_duration() {
             Scale2D { x: 0.0, y: 0.0 },
             CollisionLayers::default(),
             Birthing {
-                timer: Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
-                target_scale: Scale2D { x: 8.0, y: 8.0 },
+                timer:          Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
+                target_scale:   Scale2D { x: 8.0, y: 8.0 },
                 stashed_layers: CollisionLayers::new(
                     BOLT_LAYER,
                     CELL_LAYER | WALL_LAYER | BREAKER_LAYER,
@@ -157,8 +157,8 @@ fn restores_stashed_layers_on_completion() {
             Scale2D { x: 0.0, y: 0.0 },
             CollisionLayers::default(),
             Birthing {
-                timer: Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
-                target_scale: Scale2D { x: 8.0, y: 8.0 },
+                timer:          Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
+                target_scale:   Scale2D { x: 8.0, y: 8.0 },
                 stashed_layers: CollisionLayers::new(
                     BOLT_LAYER,
                     CELL_LAYER | WALL_LAYER | BREAKER_LAYER,
@@ -197,8 +197,8 @@ fn restores_stashed_layers_with_zero_mask() {
             Scale2D { x: 0.0, y: 0.0 },
             CollisionLayers::default(),
             Birthing {
-                timer: Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
-                target_scale: Scale2D { x: 8.0, y: 8.0 },
+                timer:          Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
+                target_scale:   Scale2D { x: 8.0, y: 8.0 },
                 stashed_layers: CollisionLayers::new(0x01, 0x00),
             },
         ))
@@ -233,8 +233,8 @@ fn handles_non_square_target_scale() {
             Scale2D { x: 0.0, y: 0.0 },
             CollisionLayers::default(),
             Birthing {
-                timer: Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
-                target_scale: Scale2D { x: 12.0, y: 6.0 },
+                timer:          Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
+                target_scale:   Scale2D { x: 12.0, y: 6.0 },
                 stashed_layers: CollisionLayers::new(0x01, 0x0E),
             },
         ))
@@ -271,8 +271,8 @@ fn handles_zero_y_target_scale() {
             Scale2D { x: 0.0, y: 0.0 },
             CollisionLayers::default(),
             Birthing {
-                timer: Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
-                target_scale: Scale2D { x: 8.0, y: 0.0 },
+                timer:          Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
+                target_scale:   Scale2D { x: 8.0, y: 0.0 },
                 stashed_layers: CollisionLayers::new(0x01, 0x0E),
             },
         ))
@@ -311,8 +311,8 @@ fn non_default_layers_stay_zeroed_during_birthing() {
             Scale2D { x: 0.0, y: 0.0 },
             CollisionLayers::new(BOLT_LAYER, CELL_LAYER | WALL_LAYER | BREAKER_LAYER),
             Birthing {
-                timer: Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
-                target_scale: Scale2D { x: 8.0, y: 8.0 },
+                timer:          Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
+                target_scale:   Scale2D { x: 8.0, y: 8.0 },
                 stashed_layers: CollisionLayers::new(
                     BOLT_LAYER,
                     CELL_LAYER | WALL_LAYER | BREAKER_LAYER,
@@ -368,8 +368,8 @@ fn does_not_affect_entities_without_birthing() {
         Scale2D { x: 0.0, y: 0.0 },
         CollisionLayers::default(),
         Birthing {
-            timer: Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
-            target_scale: Scale2D { x: 8.0, y: 8.0 },
+            timer:          Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
+            target_scale:   Scale2D { x: 8.0, y: 8.0 },
             stashed_layers: CollisionLayers::new(0x01, 0x0E),
         },
     ));
@@ -422,8 +422,8 @@ fn handles_multiple_birthing_entities() {
             Scale2D { x: 0.0, y: 0.0 },
             CollisionLayers::default(),
             Birthing {
-                timer: Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
-                target_scale: Scale2D { x: 8.0, y: 8.0 },
+                timer:          Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
+                target_scale:   Scale2D { x: 8.0, y: 8.0 },
                 stashed_layers: CollisionLayers::new(0x01, 0x0E),
             },
         ))
@@ -435,8 +435,8 @@ fn handles_multiple_birthing_entities() {
             Scale2D { x: 0.0, y: 0.0 },
             CollisionLayers::default(),
             Birthing {
-                timer: Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
-                target_scale: Scale2D { x: 16.0, y: 16.0 },
+                timer:          Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
+                target_scale:   Scale2D { x: 16.0, y: 16.0 },
                 stashed_layers: CollisionLayers::new(0x02, 0x0D),
             },
         ))
@@ -510,8 +510,8 @@ fn scale_lerp_is_linear_at_midpoint() {
             Scale2D { x: 0.0, y: 0.0 },
             CollisionLayers::default(),
             Birthing {
-                timer: Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
-                target_scale: Scale2D { x: 10.0, y: 10.0 },
+                timer:          Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
+                target_scale:   Scale2D { x: 10.0, y: 10.0 },
                 stashed_layers: CollisionLayers::new(0x01, 0x0E),
             },
         ))
@@ -548,18 +548,18 @@ fn full_birthing_lifecycle_from_builder() {
     let mut app = test_app();
 
     let def = BoltDefinition {
-        name: "Bolt".to_string(),
-        base_speed: 400.0,
-        min_speed: 200.0,
-        max_speed: 800.0,
-        radius: 8.0,
-        base_damage: 10.0,
-        effects: vec![],
-        color_rgb: [6.0, 5.0, 0.5],
+        name:                 "Bolt".to_string(),
+        base_speed:           400.0,
+        min_speed:            200.0,
+        max_speed:            800.0,
+        radius:               8.0,
+        base_damage:          10.0,
+        effects:              vec![],
+        color_rgb:            [6.0, 5.0, 0.5],
         min_angle_horizontal: 5.0,
-        min_angle_vertical: 5.0,
-        min_radius: None,
-        max_radius: None,
+        min_angle_vertical:   5.0,
+        min_radius:           None,
+        max_radius:           None,
     };
 
     // Spawn a bolt with .birthed() through the builder

@@ -27,7 +27,7 @@ pub fn on_bumped(
 ) {
     for msg in reader.read() {
         let context = TriggerContext::Bump {
-            bolt: msg.bolt,
+            bolt:    msg.bolt,
             breaker: msg.breaker,
         };
         walk_local_bump(
@@ -53,7 +53,7 @@ pub fn on_perfect_bumped(
             continue;
         }
         let context = TriggerContext::Bump {
-            bolt: msg.bolt,
+            bolt:    msg.bolt,
             breaker: msg.breaker,
         };
         walk_local_bump(
@@ -79,7 +79,7 @@ pub fn on_early_bumped(
             continue;
         }
         let context = TriggerContext::Bump {
-            bolt: msg.bolt,
+            bolt:    msg.bolt,
             breaker: msg.breaker,
         };
         walk_local_bump(
@@ -105,7 +105,7 @@ pub fn on_late_bumped(
             continue;
         }
         let context = TriggerContext::Bump {
-            bolt: msg.bolt,
+            bolt:    msg.bolt,
             breaker: msg.breaker,
         };
         walk_local_bump(
@@ -132,7 +132,7 @@ pub fn on_bump_occurred(
 ) {
     for msg in reader.read() {
         let context = TriggerContext::Bump {
-            bolt: msg.bolt,
+            bolt:    msg.bolt,
             breaker: msg.breaker,
         };
         walk_global(
@@ -156,7 +156,7 @@ pub fn on_perfect_bump_occurred(
             continue;
         }
         let context = TriggerContext::Bump {
-            bolt: msg.bolt,
+            bolt:    msg.bolt,
             breaker: msg.breaker,
         };
         walk_global(
@@ -180,7 +180,7 @@ pub fn on_early_bump_occurred(
             continue;
         }
         let context = TriggerContext::Bump {
-            bolt: msg.bolt,
+            bolt:    msg.bolt,
             breaker: msg.breaker,
         };
         walk_global(
@@ -204,7 +204,7 @@ pub fn on_late_bump_occurred(
             continue;
         }
         let context = TriggerContext::Bump {
-            bolt: msg.bolt,
+            bolt:    msg.bolt,
             breaker: msg.breaker,
         };
         walk_global(

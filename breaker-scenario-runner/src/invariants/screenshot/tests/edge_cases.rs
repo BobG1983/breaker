@@ -30,34 +30,34 @@ fn capture_violation_screenshots_no_update_with_five_duplicate_entries() {
     app.insert_resource(tracker)
         .insert_resource(ViolationLog(vec![
             ViolationEntry {
-                frame: 1,
+                frame:     1,
                 invariant: InvariantKind::BoltInBounds,
-                entity: None,
-                message: "oob 1".into(),
+                entity:    None,
+                message:   "oob 1".into(),
             },
             ViolationEntry {
-                frame: 2,
+                frame:     2,
                 invariant: InvariantKind::BoltInBounds,
-                entity: None,
-                message: "oob 2".into(),
+                entity:    None,
+                message:   "oob 2".into(),
             },
             ViolationEntry {
-                frame: 3,
+                frame:     3,
                 invariant: InvariantKind::BoltInBounds,
-                entity: None,
-                message: "oob 3".into(),
+                entity:    None,
+                message:   "oob 3".into(),
             },
             ViolationEntry {
-                frame: 4,
+                frame:     4,
                 invariant: InvariantKind::BoltInBounds,
-                entity: None,
-                message: "oob 4".into(),
+                entity:    None,
+                message:   "oob 4".into(),
             },
             ViolationEntry {
-                frame: 5,
+                frame:     5,
                 invariant: InvariantKind::BoltInBounds,
-                entity: None,
-                message: "oob 5".into(),
+                entity:    None,
+                message:   "oob 5".into(),
             },
         ]))
         .insert_resource(ScreenshotOutputDir(PathBuf::from(
@@ -89,28 +89,28 @@ fn capture_violation_screenshots_filters_already_captured_second_tick_unchanged(
     app.insert_resource(tracker)
         .insert_resource(ViolationLog(vec![
             ViolationEntry {
-                frame: 1,
+                frame:     1,
                 invariant: InvariantKind::BoltInBounds,
-                entity: None,
-                message: "a".into(),
+                entity:    None,
+                message:   "a".into(),
             },
             ViolationEntry {
-                frame: 2,
+                frame:     2,
                 invariant: InvariantKind::NoNaN,
-                entity: None,
-                message: "b".into(),
+                entity:    None,
+                message:   "b".into(),
             },
             ViolationEntry {
-                frame: 3,
+                frame:     3,
                 invariant: InvariantKind::TimerNonNegative,
-                entity: None,
-                message: "c".into(),
+                entity:    None,
+                message:   "c".into(),
             },
             ViolationEntry {
-                frame: 4,
+                frame:     4,
                 invariant: InvariantKind::BreakerInBounds,
-                entity: None,
-                message: "d".into(),
+                entity:    None,
+                message:   "d".into(),
             },
         ]))
         .insert_resource(ScreenshotOutputDir(PathBuf::from(
@@ -147,10 +147,10 @@ fn capture_violation_screenshots_no_crash_when_both_optional_resources_absent() 
     let mut app = test_app();
     app.insert_resource(ScreenshotTracker::default())
         .insert_resource(ViolationLog(vec![ViolationEntry {
-            frame: 1,
+            frame:     1,
             invariant: InvariantKind::NoNaN,
-            entity: None,
-            message: "nan".into(),
+            entity:    None,
+            message:   "nan".into(),
         }]))
         // No ScreenshotOutputDir inserted
         // No ScenarioName inserted
@@ -178,10 +178,10 @@ fn capture_violation_screenshots_no_error_when_output_dir_already_exists() {
     let mut app = test_app();
     app.insert_resource(ScreenshotTracker::default())
         .insert_resource(ViolationLog(vec![ViolationEntry {
-            frame: 1,
+            frame:     1,
             invariant: InvariantKind::BoltInBounds,
-            entity: None,
-            message: "oob".into(),
+            entity:    None,
+            message:   "oob".into(),
         }]))
         .insert_resource(ScreenshotOutputDir(temp_base.clone()))
         .insert_resource(ScenarioName("preexist_test".into()))
@@ -209,10 +209,10 @@ fn detect_new_violations_returns_exactly_23_variants_from_empty_tracker() {
             .iter()
             .enumerate()
             .map(|(i, &kind)| ViolationEntry {
-                frame: u32::try_from(i).expect("frame index fits u32"),
+                frame:     u32::try_from(i).expect("frame index fits u32"),
                 invariant: kind,
-                entity: None,
-                message: format!("{kind:?}"),
+                entity:    None,
+                message:   format!("{kind:?}"),
             })
             .collect(),
     );

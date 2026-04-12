@@ -28,7 +28,7 @@ fn excess_popups_culled_to_max_visible() {
         HighlightPopup,
         Text2d::new("OLD1"),
         FadeOut {
-            timer: 0.1,
+            timer:    0.1,
             duration: 0.8,
         },
         Transform::from_xyz(0.0, 100.0, 10.0),
@@ -37,7 +37,7 @@ fn excess_popups_culled_to_max_visible() {
         HighlightPopup,
         Text2d::new("OLD2"),
         FadeOut {
-            timer: 0.2,
+            timer:    0.2,
             duration: 0.8,
         },
         Transform::from_xyz(0.0, 150.0, 10.0),

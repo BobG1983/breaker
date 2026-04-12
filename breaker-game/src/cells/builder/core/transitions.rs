@@ -23,11 +23,11 @@ impl Cell {
     #[must_use]
     pub(crate) fn builder() -> CellBuilder<NoPosition, NoDimensions, NoHealth, Unvisual> {
         CellBuilder {
-            position: NoPosition,
+            position:   NoPosition,
             dimensions: NoDimensions,
-            health: NoHealth,
-            visual: Unvisual,
-            optional: OptionalCellData::default(),
+            health:     NoHealth,
+            visual:     Unvisual,
+            optional:   OptionalCellData::default(),
         }
     }
 }
@@ -38,11 +38,11 @@ impl<D, H, V> CellBuilder<NoPosition, D, H, V> {
     #[must_use]
     pub(crate) fn position(self, pos: Vec2) -> CellBuilder<HasPosition, D, H, V> {
         CellBuilder {
-            position: HasPosition { pos },
+            position:   HasPosition { pos },
             dimensions: self.dimensions,
-            health: self.health,
-            visual: self.visual,
-            optional: self.optional,
+            health:     self.health,
+            visual:     self.visual,
+            optional:   self.optional,
         }
     }
 }
@@ -53,11 +53,11 @@ impl<P, H, V> CellBuilder<P, NoDimensions, H, V> {
     #[must_use]
     pub(crate) fn dimensions(self, width: f32, height: f32) -> CellBuilder<P, HasDimensions, H, V> {
         CellBuilder {
-            position: self.position,
+            position:   self.position,
             dimensions: HasDimensions { width, height },
-            health: self.health,
-            visual: self.visual,
-            optional: self.optional,
+            health:     self.health,
+            visual:     self.visual,
+            optional:   self.optional,
         }
     }
 }
@@ -69,11 +69,11 @@ impl<P, D, V> CellBuilder<P, D, NoHealth, V> {
     #[must_use]
     pub(crate) fn hp(self, value: f32) -> CellBuilder<P, D, HasHealth, V> {
         CellBuilder {
-            position: self.position,
+            position:   self.position,
             dimensions: self.dimensions,
-            health: HasHealth { hp: value },
-            visual: self.visual,
-            optional: self.optional,
+            health:     HasHealth { hp: value },
+            visual:     self.visual,
+            optional:   self.optional,
         }
     }
 }
@@ -90,26 +90,26 @@ impl<P, D, V> CellBuilder<P, D, NoHealth, V> {
         def: &CellTypeDefinition,
     ) -> CellBuilder<P, D, HasHealth, V> {
         self.optional.definition_params = Some(CellDefinitionParams {
-            alias: def.alias.clone(),
+            alias:             def.alias.clone(),
             required_to_clear: def.required_to_clear,
-            damage_visuals: CellDamageVisuals {
-                hdr_base: def.damage_hdr_base,
-                green_min: def.damage_green_min,
+            damage_visuals:    CellDamageVisuals {
+                hdr_base:   def.damage_hdr_base,
+                green_min:  def.damage_green_min,
                 blue_range: def.damage_blue_range,
-                blue_base: def.damage_blue_base,
+                blue_base:  def.damage_blue_base,
             },
-            behaviors: def.behaviors.clone().unwrap_or_default(),
-            effects: def.effects.clone(),
-            color_rgb: def.color_rgb,
+            behaviors:         def.behaviors.clone().unwrap_or_default(),
+            effects:           def.effects.clone(),
+            color_rgb:         def.color_rgb,
         });
         CellBuilder {
-            position: self.position,
+            position:   self.position,
             dimensions: self.dimensions,
-            health: HasHealth {
+            health:     HasHealth {
                 hp: def.toughness.default_base_hp(),
             },
-            visual: self.visual,
-            optional: self.optional,
+            visual:     self.visual,
+            optional:   self.optional,
         }
     }
 }
@@ -151,14 +151,14 @@ impl<P, D, H> CellBuilder<P, D, H, Unvisual> {
         }
 
         CellBuilder {
-            position: self.position,
+            position:   self.position,
             dimensions: self.dimensions,
-            health: self.health,
-            visual: Rendered {
-                mesh: meshes.add(Rectangle::new(1.0, 1.0)),
+            health:     self.health,
+            visual:     Rendered {
+                mesh:     meshes.add(Rectangle::new(1.0, 1.0)),
                 material: materials.add(ColorMaterial::from_color(color)),
             },
-            optional: self.optional,
+            optional:   self.optional,
         }
     }
 
@@ -167,11 +167,11 @@ impl<P, D, H> CellBuilder<P, D, H, Unvisual> {
     #[must_use]
     pub(crate) fn headless(self) -> CellBuilder<P, D, H, Headless> {
         CellBuilder {
-            position: self.position,
+            position:   self.position,
             dimensions: self.dimensions,
-            health: self.health,
-            visual: Headless,
-            optional: self.optional,
+            health:     self.health,
+            visual:     Headless,
+            optional:   self.optional,
         }
     }
 }
@@ -192,11 +192,11 @@ impl<P, D, V> CellBuilder<P, D, NoHealth, V> {
         let toughness = self.optional.toughness.unwrap_or_default();
         let hp = config.hp_for(toughness, tier, position_in_tier);
         CellBuilder {
-            position: self.position,
+            position:   self.position,
             dimensions: self.dimensions,
-            health: HasHealth { hp },
-            visual: self.visual,
-            optional: self.optional,
+            health:     HasHealth { hp },
+            visual:     self.visual,
+            optional:   self.optional,
         }
     }
 }

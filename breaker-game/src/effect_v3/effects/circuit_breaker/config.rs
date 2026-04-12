@@ -4,17 +4,18 @@ use bevy::prelude::*;
 use ordered_float::OrderedFloat;
 use serde::{Deserialize, Serialize};
 
+use super::components::CircuitBreakerCounter;
 use crate::effect_v3::traits::{Fireable, Reversible};
 
 /// Configuration for the circuit breaker counter mechanic.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct CircuitBreakerConfig {
     /// Bumps needed per cycle before the reward fires.
-    pub bumps_required: u32,
+    pub bumps_required:  u32,
     /// Number of extra bolts spawned as the reward.
-    pub spawn_count: u32,
+    pub spawn_count:     u32,
     /// Whether spawned bolts inherit effect trees.
-    pub inherit: bool,
+    pub inherit:         bool,
     /// Maximum radius of the reward shockwave.
     pub shockwave_range: OrderedFloat<f32>,
     /// Expansion speed of the reward shockwave.
@@ -22,13 +23,25 @@ pub struct CircuitBreakerConfig {
 }
 
 impl Fireable for CircuitBreakerConfig {
-    fn fire(&self, _entity: Entity, _source: &str, _world: &mut World) {
-        todo!()
+    fn fire(&self, entity: Entity, _source: &str, world: &mut World) {
+        if world.get_entity(entity).is_err() {
+            return;
+        }
+        world.entity_mut(entity).insert(CircuitBreakerCounter {
+            remaining:       self.bumps_required,
+            bumps_required:  self.bumps_required,
+            spawn_count:     self.spawn_count,
+            inherit:         self.inherit,
+            shockwave_range: self.shockwave_range.0,
+            shockwave_speed: self.shockwave_speed.0,
+        });
     }
 }
 
 impl Reversible for CircuitBreakerConfig {
-    fn reverse(&self, _entity: Entity, _source: &str, _world: &mut World) {
-        todo!()
+    fn reverse(&self, entity: Entity, _source: &str, world: &mut World) {
+        if world.get_entity(entity).is_ok() {
+            world.entity_mut(entity).remove::<CircuitBreakerCounter>();
+        }
     }
 }

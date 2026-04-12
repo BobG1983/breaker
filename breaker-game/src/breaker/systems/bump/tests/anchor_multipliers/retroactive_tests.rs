@@ -28,9 +28,9 @@ fn retroactive_grade_uses_widened_perfect_window_via_pre_seeded_timer() {
         Breaker,
         AnchorPlanted,
         AnchorActive {
-            bump_force_multiplier: 2.0,
+            bump_force_multiplier:     2.0,
             perfect_window_multiplier: 2.0,
-            plant_delay: 0.3,
+            plant_delay:               0.3,
         },
         BumpState {
             post_hit_timer: 0.45,
@@ -121,9 +121,9 @@ fn unplant_before_retroactive_press_still_uses_widened_window() {
             Breaker,
             AnchorPlanted,
             AnchorActive {
-                bump_force_multiplier: 2.0,
+                bump_force_multiplier:     2.0,
                 perfect_window_multiplier: 2.0,
-                plant_delay: 0.3,
+                plant_delay:               0.3,
             },
             BumpState::default(),
             BumpPerfectWindow(0.15),
@@ -137,7 +137,7 @@ fn unplant_before_retroactive_press_still_uses_widened_window() {
 
     // Step 1: Bolt hits while planted -- grade_bump sets post_hit_timer to widened value
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
-        bolt: Entity::PLACEHOLDER,
+        bolt:    Entity::PLACEHOLDER,
         breaker: Entity::PLACEHOLDER,
     })));
     app.insert_resource(TestInputActive(false));
@@ -187,9 +187,9 @@ fn bolt_hit_after_unplanting_uses_unwidened_timer() {
         Breaker,
         // NO AnchorPlanted -- bolt hits after un-planting
         AnchorActive {
-            bump_force_multiplier: 2.0,
+            bump_force_multiplier:     2.0,
             perfect_window_multiplier: 2.0,
-            plant_delay: 0.3,
+            plant_delay:               0.3,
         },
         BumpState::default(),
         BumpPerfectWindow(0.15),
@@ -202,7 +202,7 @@ fn bolt_hit_after_unplanting_uses_unwidened_timer() {
 
     // Bolt hits with no AnchorPlanted -- post_hit_timer = 0.30 (un-widened)
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
-        bolt: Entity::PLACEHOLDER,
+        bolt:    Entity::PLACEHOLDER,
         breaker: Entity::PLACEHOLDER,
     })));
     app.insert_resource(TestInputActive(false));

@@ -24,13 +24,13 @@ pub(crate) struct CellTypeAlias(pub String);
 #[derive(Component, Debug, Clone)]
 pub(crate) struct CellDamageVisuals {
     /// HDR intensity multiplier at full health.
-    pub hdr_base: f32,
+    pub hdr_base:   f32,
     /// Minimum green channel value.
-    pub green_min: f32,
+    pub green_min:  f32,
     /// Blue channel range added based on health fraction.
     pub blue_range: f32,
     /// Base blue channel value.
-    pub blue_base: f32,
+    pub blue_base:  f32,
 }
 
 /// Full width of a cell in world units.
@@ -93,7 +93,7 @@ pub(crate) struct CellHealth {
     /// Current hit points.
     pub current: f32,
     /// Maximum hit points (used for visual damage feedback).
-    pub max: f32,
+    pub max:     f32,
 }
 
 impl CellHealth {
@@ -101,7 +101,7 @@ impl CellHealth {
     pub(crate) const fn new(hp: f32) -> Self {
         Self {
             current: hp,
-            max: hp,
+            max:     hp,
         }
     }
 

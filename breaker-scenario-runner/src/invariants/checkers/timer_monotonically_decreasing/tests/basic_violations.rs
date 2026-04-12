@@ -13,7 +13,7 @@ fn timer_monotonically_decreasing_fires_when_timer_increases() {
 
     app.insert_resource(NodeTimer {
         remaining: 50.0,
-        total: 60.0,
+        total:     60.0,
     });
 
     // Tick 1: seeds Local with 50.0
@@ -50,7 +50,7 @@ fn timer_monotonically_decreasing_does_not_fire_when_timer_decreases() {
 
     app.insert_resource(NodeTimer {
         remaining: 50.0,
-        total: 60.0,
+        total:     60.0,
     });
 
     // Tick 1: seeds Local with 50.0
@@ -93,7 +93,7 @@ fn timer_monotonically_decreasing_resets_local_when_timer_removed() {
     // Start with NodeTimer present
     app.insert_resource(NodeTimer {
         remaining: 50.0,
-        total: 60.0,
+        total:     60.0,
     });
 
     // Tick 1: seeds Local with 50.0
@@ -114,7 +114,7 @@ fn timer_monotonically_decreasing_resets_local_when_timer_removed() {
     // Reinsert NodeTimer at 60.0 (higher than old 50.0, but Local was reset)
     app.insert_resource(NodeTimer {
         remaining: 60.0,
-        total: 60.0,
+        total:     60.0,
     });
 
     // Tick 3: 60.0 appears fresh — no previous value → no violation

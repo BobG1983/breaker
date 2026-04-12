@@ -36,8 +36,8 @@ const VISUAL_SPEED_MULTIPLIER: f64 = 10.0;
 /// survive `App::run()` (which replaces self with `App::empty()`).
 pub(super) struct EvalSnapshot {
     pub(super) violations: Vec<ViolationEntry>,
-    pub(super) logs: Vec<LogEntry>,
-    pub(super) stats: ScenarioStats,
+    pub(super) logs:       Vec<LogEntry>,
+    pub(super) stats:      ScenarioStats,
     pub(super) definition: ScenarioDefinition,
 }
 
@@ -62,8 +62,8 @@ pub(super) fn snapshot_eval_data(
     if let Ok(mut guard) = shared.0.lock() {
         *guard = Some(EvalSnapshot {
             violations: vl.0.clone(),
-            logs: cl.0.clone(),
-            stats: stats.clone(),
+            logs:       cl.0.clone(),
+            stats:      stats.clone(),
             definition: config.definition.clone(),
         });
     }
@@ -85,8 +85,8 @@ fn snapshot_eval_data_from_world(world: &World, shared: &SharedEvalBuffer) {
     if let Ok(mut guard) = shared.0.lock() {
         *guard = Some(EvalSnapshot {
             violations: vl.0.clone(),
-            logs: cl.0.clone(),
-            stats: stats.clone(),
+            logs:       cl.0.clone(),
+            stats:      stats.clone(),
             definition: config.definition.clone(),
         });
     }

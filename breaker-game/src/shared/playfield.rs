@@ -14,25 +14,25 @@ use super::color_from_rgb;
 )]
 pub struct PlayfieldConfig {
     /// Width of the playfield in world units.
-    pub width: f32,
+    pub width:                f32,
     /// Height of the playfield in world units.
-    pub height: f32,
+    pub height:               f32,
     /// RGB values for the background clear color.
     pub background_color_rgb: [f32; 3],
     /// Thickness of boundary walls in world units.
-    pub wall_thickness: f32,
+    pub wall_thickness:       f32,
     /// Fraction of height reserved for the cell zone (0.0 to 1.0).
-    pub zone_fraction: f32,
+    pub zone_fraction:        f32,
 }
 
 impl Default for PlayfieldConfig {
     fn default() -> Self {
         Self {
-            width: 800.0,
-            height: 600.0,
+            width:                800.0,
+            height:               600.0,
             background_color_rgb: [0.02, 0.01, 0.04],
-            wall_thickness: 180.0,
-            zone_fraction: 0.667,
+            wall_thickness:       180.0,
+            zone_fraction:        0.667,
         }
     }
 }

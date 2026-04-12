@@ -10,7 +10,7 @@ use ordered_float::OrderedFloat;
 #[derive(Message, Clone, Debug)]
 pub struct EffectTimerExpired {
     /// The entity whose timer expired.
-    pub entity: Entity,
+    pub entity:            Entity,
     /// The timer's original duration, used to construct the correct trigger variant.
     pub original_duration: OrderedFloat<f32>,
 }

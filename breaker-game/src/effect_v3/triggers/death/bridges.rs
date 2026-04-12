@@ -61,7 +61,7 @@ fn on_destroyed_inner<T: GameEntity>(
 }
 
 /// Bridge for cell deaths.
-pub fn on_cell_destroyed(
+pub(crate) fn on_cell_destroyed(
     mut reader: MessageReader<Destroyed<Cell>>,
     bound_query: Query<&BoundEffects>,
     global_query: Query<(Entity, &BoundEffects)>,
@@ -77,7 +77,7 @@ pub fn on_cell_destroyed(
 }
 
 /// Bridge for bolt deaths.
-pub fn on_bolt_destroyed(
+pub(crate) fn on_bolt_destroyed(
     mut reader: MessageReader<Destroyed<Bolt>>,
     bound_query: Query<&BoundEffects>,
     global_query: Query<(Entity, &BoundEffects)>,
@@ -93,7 +93,7 @@ pub fn on_bolt_destroyed(
 }
 
 /// Bridge for wall deaths.
-pub fn on_wall_destroyed(
+pub(crate) fn on_wall_destroyed(
     mut reader: MessageReader<Destroyed<Wall>>,
     bound_query: Query<&BoundEffects>,
     global_query: Query<(Entity, &BoundEffects)>,
@@ -109,7 +109,7 @@ pub fn on_wall_destroyed(
 }
 
 /// Bridge for breaker deaths.
-pub fn on_breaker_destroyed(
+pub(crate) fn on_breaker_destroyed(
     mut reader: MessageReader<Destroyed<Breaker>>,
     bound_query: Query<&BoundEffects>,
     global_query: Query<(Entity, &BoundEffects)>,

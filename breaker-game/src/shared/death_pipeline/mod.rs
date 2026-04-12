@@ -1,25 +1,20 @@
 //! Unified death pipeline — generic damage, death detection, and despawn for all entity types.
 
-pub mod damage_dealt;
-pub mod dead;
-pub mod despawn_entity;
-pub mod destroyed;
-pub mod game_entity;
-pub mod hp;
-pub mod kill_yourself;
-pub mod killed_by;
-pub mod plugin;
-pub mod sets;
-pub mod systems;
+pub(crate) mod damage_dealt;
+pub(crate) mod dead;
+pub(crate) mod despawn_entity;
+pub(crate) mod destroyed;
+pub(crate) mod game_entity;
+pub(crate) mod hp;
+pub(crate) mod kill_yourself;
+pub(crate) mod killed_by;
+pub(crate) mod plugin;
+pub(crate) mod sets;
+pub(crate) mod systems;
 
-pub use damage_dealt::DamageDealt;
-pub use dead::Dead;
-pub use despawn_entity::DespawnEntity;
-pub use destroyed::Destroyed;
-pub use game_entity::GameEntity;
-pub use hp::Hp;
-pub use kill_yourself::KillYourself;
-pub use killed_by::KilledBy;
-pub use plugin::DeathPipelinePlugin;
-pub use sets::DeathPipelineSystems;
-pub use systems::{apply_damage, detect_deaths, process_despawn_requests};
+pub(crate) use damage_dealt::DamageDealt;
+pub(crate) use dead::Dead;
+pub(crate) use destroyed::Destroyed;
+pub(crate) use game_entity::GameEntity;
+pub(crate) use hp::Hp;
+pub(crate) use plugin::DeathPipelinePlugin;

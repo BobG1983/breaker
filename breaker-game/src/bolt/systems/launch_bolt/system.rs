@@ -11,28 +11,29 @@ use crate::{
     prelude::*,
 };
 
+/// Query for serving bolts eligible for launch.
+type LaunchQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        SpatialData,
+        Option<&'static EffectStack<SpeedBoostConfig>>,
+        &'static BoltAngleSpread,
+    ),
+    LaunchFilter,
+>;
+
 /// Launches the bolt when the player activates bump.
 ///
 /// Removes [`BoltServing`] and sets the launch velocity using a random
 /// angle within the bolt's [`BoltAngleSpread`]. Only affects bolts that
 /// are currently serving.
-#[allow(
-    clippy::type_complexity,
-    reason = "Bevy query with multiple components"
-)]
 pub(crate) fn launch_bolt(
     actions: Res<InputActions>,
     mut commands: Commands,
     mut rng: ResMut<GameRng>,
-    mut query: Query<
-        (
-            Entity,
-            SpatialData,
-            Option<&EffectStack<SpeedBoostConfig>>,
-            &BoltAngleSpread,
-        ),
-        LaunchFilter,
-    >,
+    mut query: LaunchQuery,
 ) {
     if !actions.active(GameAction::Bump) {
         return;

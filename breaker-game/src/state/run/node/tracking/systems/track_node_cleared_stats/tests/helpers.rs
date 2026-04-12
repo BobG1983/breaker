@@ -35,7 +35,7 @@ pub(super) fn test_app() -> App {
         .insert_resource(HighlightConfig::default())
         .insert_resource(NodeTimer {
             remaining: 15.0,
-            total: 30.0,
+            total:     30.0,
         })
         .with_system(
             FixedUpdate,

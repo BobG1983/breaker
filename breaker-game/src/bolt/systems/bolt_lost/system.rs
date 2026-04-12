@@ -21,7 +21,7 @@ use crate::{
 /// `too_many_arguments` lint.
 #[derive(SystemParam)]
 pub(crate) struct BoltLostWriters<'w> {
-    writer: MessageWriter<'w, BoltLost>,
+    writer:                   MessageWriter<'w, BoltLost>,
     request_destroyed_writer:
         Result<MessageWriter<'w, RequestBoltDestroyed>, SystemParamValidationError>,
 }
@@ -30,13 +30,13 @@ pub(crate) struct BoltLostWriters<'w> {
 /// the filter pass and the command-application pass.
 #[derive(Clone, Copy)]
 pub(crate) struct LostBoltEntry {
-    entity: Entity,
+    entity:       Entity,
     spawn_offset: f32,
     angle_spread: f32,
-    is_extra: bool,
-    radius: f32,
-    node_scale: f32,
-    layers: CollisionLayers,
+    is_extra:     bool,
+    radius:       f32,
+    node_scale:   f32,
+    layers:       CollisionLayers,
 }
 
 /// Detects when the bolt falls below the playfield.
@@ -72,15 +72,15 @@ pub(crate) fn bolt_lost(
                 bolt.spatial.position.0.y < playfield.bottom() - r
             })
             .map(|bolt| LostBoltEntry {
-                entity: bolt.entity,
+                entity:       bolt.entity,
                 spawn_offset: bolt.spawn_offset.0,
                 angle_spread: bolt
                     .angle_spread
                     .map_or(crate::bolt::resources::DEFAULT_BOLT_ANGLE_SPREAD, |a| a.0),
-                is_extra: bolt.is_extra,
-                radius: bolt.radius.0,
-                node_scale: bolt.node_scale.map_or(1.0, |s| s.0),
-                layers: *bolt.layers,
+                is_extra:     bolt.is_extra,
+                radius:       bolt.radius.0,
+                node_scale:   bolt.node_scale.map_or(1.0, |s| s.0),
+                layers:       *bolt.layers,
             }),
     );
 

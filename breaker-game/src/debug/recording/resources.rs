@@ -8,7 +8,7 @@ use crate::input::resources::GameAction;
 #[derive(Resource, Debug, Default)]
 pub(crate) struct RecordingConfig {
     /// Whether recording is active.
-    pub enabled: bool,
+    pub enabled:      bool,
     /// If set, only record while `ActiveNodeLayout.name` equals this string.
     pub level_filter: Option<String>,
 }
@@ -17,7 +17,7 @@ pub(crate) struct RecordingConfig {
 #[derive(Debug, Clone)]
 pub(super) struct RecordedFrame {
     /// Fixed-update frame index.
-    pub frame: u32,
+    pub frame:   u32,
     /// Actions that were active on this frame.
     pub actions: Vec<GameAction>,
 }

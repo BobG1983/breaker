@@ -382,16 +382,16 @@ fn combined_definition_and_guarded_spawns_exactly_n_guardians() {
     let mut guarded_def = test_cell_definition();
     guarded_def.behaviors = Some(vec![CellBehavior::Guarded(GuardedBehavior {
         guardian_hp_fraction: 0.5,
-        guardian_color_rgb: [0.5, 0.8, 1.0],
-        slide_speed: 30.0,
+        guardian_color_rgb:   [0.5, 0.8, 1.0],
+        slide_speed:          30.0,
     })]);
     let config = GuardianSpawnConfig {
-        hp: 10.0,
-        color_rgb: [0.5, 0.8, 1.0],
+        hp:          10.0,
+        color_rgb:   [0.5, 0.8, 1.0],
         slide_speed: 30.0,
         cell_height: 24.0,
-        step_x: 72.0,
-        step_y: 26.0,
+        step_x:      72.0,
+        step_y:      26.0,
     };
 
     let mut world = World::new();
@@ -431,12 +431,12 @@ fn guardian_has_cleanup_on_exit_node_state() {
     use crate::state::types::NodeState;
 
     let config = GuardianSpawnConfig {
-        hp: 10.0,
-        color_rgb: [0.5, 0.8, 1.0],
+        hp:          10.0,
+        color_rgb:   [0.5, 0.8, 1.0],
         slide_speed: 30.0,
         cell_height: 24.0,
-        step_x: 72.0,
-        step_y: 26.0,
+        step_x:      72.0,
+        step_y:      26.0,
     };
 
     let mut world = World::new();

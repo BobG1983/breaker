@@ -132,9 +132,9 @@ fn tile_position_top_left_in_2x2_on_1920x1080() {
     assert_eq!(
         pos,
         TilePosition {
-            x: 0,
-            y: 0,
-            width: 960,
+            x:      0,
+            y:      0,
+            width:  960,
             height: 540,
         }
     );
@@ -150,9 +150,9 @@ fn tile_position_top_right_in_2x2_on_1920x1080() {
     assert_eq!(
         pos,
         TilePosition {
-            x: 960,
-            y: 0,
-            width: 960,
+            x:      960,
+            y:      0,
+            width:  960,
             height: 540,
         }
     );
@@ -168,9 +168,9 @@ fn tile_position_bottom_left_in_2x2_on_1920x1080() {
     assert_eq!(
         pos,
         TilePosition {
-            x: 0,
-            y: 540,
-            width: 960,
+            x:      0,
+            y:      540,
+            width:  960,
             height: 540,
         }
     );
@@ -186,9 +186,9 @@ fn tile_position_bottom_right_in_2x2_on_1920x1080() {
     assert_eq!(
         pos,
         TilePosition {
-            x: 960,
-            y: 540,
-            width: 960,
+            x:      960,
+            y:      540,
+            width:  960,
             height: 540,
         }
     );
@@ -204,9 +204,9 @@ fn tile_position_single_tile_fills_entire_screen() {
     assert_eq!(
         pos,
         TilePosition {
-            x: 0,
-            y: 0,
-            width: 1920,
+            x:      0,
+            y:      0,
+            width:  1920,
             height: 1080,
         }
     );
@@ -222,9 +222,9 @@ fn tile_position_middle_first_row_in_3x2_on_1920x1080() {
     assert_eq!(
         pos,
         TilePosition {
-            x: 640,
-            y: 0,
-            width: 640,
+            x:      640,
+            y:      0,
+            width:  640,
             height: 540,
         }
     );
@@ -240,9 +240,9 @@ fn tile_position_first_slot_second_row_in_3x2_on_1920x1080() {
     assert_eq!(
         pos,
         TilePosition {
-            x: 0,
-            y: 540,
-            width: 640,
+            x:      0,
+            y:      540,
+            width:  640,
             height: 540,
         }
     );
@@ -258,9 +258,9 @@ fn tile_position_non_divisible_screen_uses_integer_truncation() {
     assert_eq!(
         pos,
         TilePosition {
-            x: 0,
-            y: 0,
-            width: 333,
+            x:      0,
+            y:      0,
+            width:  333,
             height: 333,
         }
     );
@@ -276,9 +276,9 @@ fn tile_position_last_slot_in_non_full_3x2_grid() {
     assert_eq!(
         pos,
         TilePosition {
-            x: 640,
-            y: 540,
-            width: 640,
+            x:      640,
+            y:      540,
+            width:  640,
             height: 540,
         }
     );
@@ -455,9 +455,9 @@ fn parse_tile_env_returns_tile_position_when_all_four_keys_valid() {
     assert_eq!(
         result,
         Some(TilePosition {
-            x: 960,
-            y: 540,
-            width: 960,
+            x:      960,
+            y:      540,
+            width:  960,
             height: 540,
         }),
     );
@@ -523,9 +523,9 @@ fn parse_tile_env_returns_full_screen_tile_when_all_values_full_hd() {
     assert_eq!(
         result,
         Some(TilePosition {
-            x: 0,
-            y: 0,
-            width: 1920,
+            x:      0,
+            y:      0,
+            width:  1920,
             height: 1080,
         }),
     );
@@ -542,9 +542,9 @@ fn parse_tile_env_returns_full_screen_tile_when_all_values_full_hd() {
 #[test]
 fn window_from_tile_produces_correct_position_and_resolution_for_tiled_window() {
     let tile = TilePosition {
-        x: 640,
-        y: 0,
-        width: 640,
+        x:      640,
+        y:      0,
+        width:  640,
         height: 540,
     };
     let window = window_from_tile(&tile);
@@ -573,9 +573,9 @@ fn window_from_tile_produces_correct_position_and_resolution_for_tiled_window() 
 #[test]
 fn window_from_tile_produces_correct_fields_for_full_screen_tile() {
     let tile = TilePosition {
-        x: 0,
-        y: 0,
-        width: 1920,
+        x:      0,
+        y:      0,
+        width:  1920,
         height: 1080,
     };
     let window = window_from_tile(&tile);
@@ -604,9 +604,9 @@ fn window_from_tile_produces_correct_fields_for_full_screen_tile() {
 #[test]
 fn window_from_tile_sets_title_to_scenario_runner() {
     let tile = TilePosition {
-        x: 0,
-        y: 0,
-        width: 960,
+        x:      0,
+        y:      0,
+        width:  960,
         height: 540,
     };
     let window = window_from_tile(&tile);
@@ -624,9 +624,9 @@ fn window_from_tile_sets_title_to_scenario_runner() {
 #[test]
 fn window_from_tile_produces_correct_fields_for_bottom_right_in_2x2() {
     let tile = TilePosition {
-        x: 960,
-        y: 540,
-        width: 960,
+        x:      960,
+        y:      540,
+        width:  960,
         height: 540,
     };
     let window = window_from_tile(&tile);

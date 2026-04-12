@@ -10,7 +10,7 @@ use super::*;
 /// Test asset type for registry tests.
 #[derive(Asset, TypePath, Deserialize, Clone, Debug)]
 struct TestRegistryAsset {
-    name: String,
+    name:  String,
     value: f32,
 }
 
@@ -55,11 +55,11 @@ fn seed_populates_registry_from_assets() {
     let (id_alpha, id_beta) = {
         let mut assets = app.world_mut().resource_mut::<Assets<TestRegistryAsset>>();
         let h_alpha = assets.add(TestRegistryAsset {
-            name: "alpha".to_string(),
+            name:  "alpha".to_string(),
             value: 1.0,
         });
         let h_beta = assets.add(TestRegistryAsset {
-            name: "beta".to_string(),
+            name:  "beta".to_string(),
             value: 2.0,
         });
         (h_alpha.id(), h_beta.id())
@@ -70,14 +70,14 @@ fn seed_populates_registry_from_assets() {
         (
             id_alpha,
             TestRegistryAsset {
-                name: "alpha".to_string(),
+                name:  "alpha".to_string(),
                 value: 1.0,
             },
         ),
         (
             id_beta,
             TestRegistryAsset {
-                name: "beta".to_string(),
+                name:  "beta".to_string(),
                 value: 2.0,
             },
         ),
@@ -107,11 +107,11 @@ fn seed_replaces_existing_entries() {
     let (id_alpha, id_beta) = {
         let mut assets = app.world_mut().resource_mut::<Assets<TestRegistryAsset>>();
         let h_alpha = assets.add(TestRegistryAsset {
-            name: "alpha".to_string(),
+            name:  "alpha".to_string(),
             value: 1.0,
         });
         let h_beta = assets.add(TestRegistryAsset {
-            name: "beta".to_string(),
+            name:  "beta".to_string(),
             value: 2.0,
         });
         (h_alpha.id(), h_beta.id())
@@ -125,14 +125,14 @@ fn seed_replaces_existing_entries() {
         (
             id_alpha,
             TestRegistryAsset {
-                name: "alpha".to_string(),
+                name:  "alpha".to_string(),
                 value: 1.0,
             },
         ),
         (
             id_beta,
             TestRegistryAsset {
-                name: "beta".to_string(),
+                name:  "beta".to_string(),
                 value: 2.0,
             },
         ),
@@ -164,11 +164,11 @@ fn update_all_resets_and_reseeds() {
     let (id_new_a, id_new_b) = {
         let mut assets = app.world_mut().resource_mut::<Assets<TestRegistryAsset>>();
         let h_a = assets.add(TestRegistryAsset {
-            name: "new_a".to_string(),
+            name:  "new_a".to_string(),
             value: 1.0,
         });
         let h_b = assets.add(TestRegistryAsset {
-            name: "new_b".to_string(),
+            name:  "new_b".to_string(),
             value: 2.0,
         });
         (h_a.id(), h_b.id())
@@ -181,14 +181,14 @@ fn update_all_resets_and_reseeds() {
         (
             id_new_a,
             TestRegistryAsset {
-                name: "new_a".to_string(),
+                name:  "new_a".to_string(),
                 value: 1.0,
             },
         ),
         (
             id_new_b,
             TestRegistryAsset {
-                name: "new_b".to_string(),
+                name:  "new_b".to_string(),
                 value: 2.0,
             },
         ),
@@ -230,11 +230,11 @@ fn update_single_updates_existing_entry() {
     let (id_alpha, id_beta) = {
         let mut assets = app.world_mut().resource_mut::<Assets<TestRegistryAsset>>();
         let h_alpha = assets.add(TestRegistryAsset {
-            name: "alpha".to_string(),
+            name:  "alpha".to_string(),
             value: 1.0,
         });
         let h_beta = assets.add(TestRegistryAsset {
-            name: "beta".to_string(),
+            name:  "beta".to_string(),
             value: 2.0,
         });
         (h_alpha.id(), h_beta.id())
@@ -245,14 +245,14 @@ fn update_single_updates_existing_entry() {
         (
             id_alpha,
             TestRegistryAsset {
-                name: "alpha".to_string(),
+                name:  "alpha".to_string(),
                 value: 1.0,
             },
         ),
         (
             id_beta,
             TestRegistryAsset {
-                name: "beta".to_string(),
+                name:  "beta".to_string(),
                 value: 2.0,
             },
         ),
@@ -263,7 +263,7 @@ fn update_single_updates_existing_entry() {
     registry.update_single(
         id_alpha,
         &TestRegistryAsset {
-            name: "alpha".to_string(),
+            name:  "alpha".to_string(),
             value: 99.0,
         },
     );
@@ -291,7 +291,7 @@ fn update_single_inserts_new_entry() {
         let mut assets = app.world_mut().resource_mut::<Assets<TestRegistryAsset>>();
         assets
             .add(TestRegistryAsset {
-                name: "gamma".to_string(),
+                name:  "gamma".to_string(),
                 value: 3.0,
             })
             .id()
@@ -303,7 +303,7 @@ fn update_single_inserts_new_entry() {
     registry.update_single(
         id_gamma,
         &TestRegistryAsset {
-            name: "gamma".to_string(),
+            name:  "gamma".to_string(),
             value: 3.0,
         },
     );

@@ -22,33 +22,33 @@ const fn default_min_angle_vertical() -> f32 {
 #[derive(Asset, TypePath, Deserialize, Clone, Debug)]
 pub struct BoltDefinition {
     /// Display name of the bolt archetype.
-    pub name: String,
+    pub name:                 String,
     /// Base movement speed in world units per second.
-    pub base_speed: f32,
+    pub base_speed:           f32,
     /// Minimum speed cap.
-    pub min_speed: f32,
+    pub min_speed:            f32,
     /// Maximum speed cap.
-    pub max_speed: f32,
+    pub max_speed:            f32,
     /// Bolt radius in world units.
-    pub radius: f32,
+    pub radius:               f32,
     /// Base damage per hit.
-    pub base_damage: f32,
+    pub base_damage:          f32,
     /// Effect chains bound to this bolt archetype.
-    pub effects: Vec<RootNode>,
+    pub effects:              Vec<RootNode>,
     /// RGB values for the bolt HDR color.
-    pub color_rgb: [f32; 3],
+    pub color_rgb:            [f32; 3],
     /// Minimum angle from horizontal in degrees.
     #[serde(default = "default_min_angle_horizontal")]
     pub min_angle_horizontal: f32,
     /// Minimum angle from vertical in degrees.
     #[serde(default = "default_min_angle_vertical")]
-    pub min_angle_vertical: f32,
+    pub min_angle_vertical:   f32,
     /// Minimum bolt radius after boosts and scaling.
     #[serde(default)]
-    pub min_radius: Option<f32>,
+    pub min_radius:           Option<f32>,
     /// Maximum bolt radius after boosts and scaling.
     #[serde(default)]
-    pub max_radius: Option<f32>,
+    pub max_radius:           Option<f32>,
 }
 
 #[cfg(test)]
@@ -179,18 +179,18 @@ mod tests {
     #[test]
     fn bolt_definition_clone_preserves_fields() {
         let def = BoltDefinition {
-            name: "Heavy".to_string(),
-            base_speed: 500.0,
-            min_speed: 250.0,
-            max_speed: 1000.0,
-            radius: 20.0,
-            base_damage: 20.0,
-            effects: vec![],
-            color_rgb: [6.0, 5.0, 0.5],
+            name:                 "Heavy".to_string(),
+            base_speed:           500.0,
+            min_speed:            250.0,
+            max_speed:            1000.0,
+            radius:               20.0,
+            base_damage:          20.0,
+            effects:              vec![],
+            color_rgb:            [6.0, 5.0, 0.5],
             min_angle_horizontal: 5.0,
-            min_angle_vertical: 5.0,
-            min_radius: None,
-            max_radius: None,
+            min_angle_vertical:   5.0,
+            min_radius:           None,
+            max_radius:           None,
         };
         let cloned = def.clone();
         assert_eq!(cloned.name, "Heavy");
@@ -206,13 +206,13 @@ mod tests {
         use crate::effect_v3::types::{EffectType, StampTarget, Tree};
 
         let def = BoltDefinition {
-            name: "EffectBolt".to_string(),
-            base_speed: 720.0,
-            min_speed: 360.0,
-            max_speed: 1440.0,
-            radius: 14.0,
-            base_damage: 10.0,
-            effects: vec![RootNode::Stamp(
+            name:                 "EffectBolt".to_string(),
+            base_speed:           720.0,
+            min_speed:            360.0,
+            max_speed:            1440.0,
+            radius:               14.0,
+            base_damage:          10.0,
+            effects:              vec![RootNode::Stamp(
                 StampTarget::Bolt,
                 Tree::Fire(EffectType::SpeedBoost(
                     crate::effect_v3::effects::SpeedBoostConfig {
@@ -220,11 +220,11 @@ mod tests {
                     },
                 )),
             )],
-            color_rgb: [6.0, 5.0, 0.5],
+            color_rgb:            [6.0, 5.0, 0.5],
             min_angle_horizontal: 5.0,
-            min_angle_vertical: 5.0,
-            min_radius: None,
-            max_radius: None,
+            min_angle_vertical:   5.0,
+            min_radius:           None,
+            max_radius:           None,
         };
         let cloned = def.clone();
         assert_eq!(
@@ -240,18 +240,18 @@ mod tests {
     #[test]
     fn bolt_definition_debug_contains_name() {
         let def = BoltDefinition {
-            name: "Bolt".to_string(),
-            base_speed: 720.0,
-            min_speed: 360.0,
-            max_speed: 1440.0,
-            radius: 14.0,
-            base_damage: 10.0,
-            effects: vec![],
-            color_rgb: [6.0, 5.0, 0.5],
+            name:                 "Bolt".to_string(),
+            base_speed:           720.0,
+            min_speed:            360.0,
+            max_speed:            1440.0,
+            radius:               14.0,
+            base_damage:          10.0,
+            effects:              vec![],
+            color_rgb:            [6.0, 5.0, 0.5],
             min_angle_horizontal: 5.0,
-            min_angle_vertical: 5.0,
-            min_radius: None,
-            max_radius: None,
+            min_angle_vertical:   5.0,
+            min_radius:           None,
+            max_radius:           None,
         };
         let debug_str = format!("{def:?}");
         assert!(

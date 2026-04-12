@@ -13,11 +13,11 @@ use super::game_entity::GameEntity;
 /// The entity must stay alive through domain handling, trigger evaluation,
 /// and death animation.
 #[derive(Message, Clone, Debug)]
-pub struct KillYourself<T: GameEntity> {
+pub(crate) struct KillYourself<T: GameEntity> {
     /// The entity to kill.
-    pub victim: Entity,
+    pub victim:  Entity,
     /// The entity that caused the death (from `KilledBy`).
-    pub killer: Option<Entity>,
+    pub killer:  Option<Entity>,
     /// Marker for the victim entity type.
     pub _marker: PhantomData<T>,
 }

@@ -19,11 +19,11 @@ impl Bolt {
     pub fn builder() -> BoltBuilder<NoPosition, NoSpeed, NoAngle, NoMotion, NoRole, Unvisual> {
         BoltBuilder {
             position: NoPosition,
-            speed: NoSpeed,
-            angle: NoAngle,
-            motion: NoMotion,
-            role: NoRole,
-            visual: Unvisual,
+            speed:    NoSpeed,
+            angle:    NoAngle,
+            motion:   NoMotion,
+            role:     NoRole,
+            visual:   Unvisual,
             optional: OptionalBoltData::default(),
         }
     }
@@ -36,11 +36,11 @@ impl<S, A, M, R, V> BoltBuilder<NoPosition, S, A, M, R, V> {
     pub fn at_position(self, pos: Vec2) -> BoltBuilder<HasPosition, S, A, M, R, V> {
         BoltBuilder {
             position: HasPosition { pos },
-            speed: self.speed,
-            angle: self.angle,
-            motion: self.motion,
-            role: self.role,
-            visual: self.visual,
+            speed:    self.speed,
+            angle:    self.angle,
+            motion:   self.motion,
+            role:     self.role,
+            visual:   self.visual,
             optional: self.optional,
         }
     }
@@ -53,11 +53,11 @@ impl<P, A, M, R, V> BoltBuilder<P, NoSpeed, A, M, R, V> {
     pub fn with_speed(self, base: f32, min: f32, max: f32) -> BoltBuilder<P, HasSpeed, A, M, R, V> {
         BoltBuilder {
             position: self.position,
-            speed: HasSpeed { base, min, max },
-            angle: self.angle,
-            motion: self.motion,
-            role: self.role,
-            visual: self.visual,
+            speed:    HasSpeed { base, min, max },
+            angle:    self.angle,
+            motion:   self.motion,
+            role:     self.role,
+            visual:   self.visual,
             optional: self.optional,
         }
     }
@@ -74,14 +74,14 @@ impl<P, S, M, R, V> BoltBuilder<P, S, NoAngle, M, R, V> {
     ) -> BoltBuilder<P, S, HasAngle, M, R, V> {
         BoltBuilder {
             position: self.position,
-            speed: self.speed,
-            angle: HasAngle {
+            speed:    self.speed,
+            angle:    HasAngle {
                 min_angle_h,
                 min_angle_v,
             },
-            motion: self.motion,
-            role: self.role,
-            visual: self.visual,
+            motion:   self.motion,
+            role:     self.role,
+            visual:   self.visual,
             optional: self.optional,
         }
     }
@@ -94,11 +94,11 @@ impl<P, S, A, R, V> BoltBuilder<P, S, A, NoMotion, R, V> {
     pub fn serving(self) -> BoltBuilder<P, S, A, Serving, R, V> {
         BoltBuilder {
             position: self.position,
-            speed: self.speed,
-            angle: self.angle,
-            motion: Serving,
-            role: self.role,
-            visual: self.visual,
+            speed:    self.speed,
+            angle:    self.angle,
+            motion:   Serving,
+            role:     self.role,
+            visual:   self.visual,
             optional: self.optional,
         }
     }
@@ -107,11 +107,11 @@ impl<P, S, A, R, V> BoltBuilder<P, S, A, NoMotion, R, V> {
     pub fn with_velocity(self, vel: Velocity2D) -> BoltBuilder<P, S, A, HasVelocity, R, V> {
         BoltBuilder {
             position: self.position,
-            speed: self.speed,
-            angle: self.angle,
-            motion: HasVelocity { vel },
-            role: self.role,
-            visual: self.visual,
+            speed:    self.speed,
+            angle:    self.angle,
+            motion:   HasVelocity { vel },
+            role:     self.role,
+            visual:   self.visual,
             optional: self.optional,
         }
     }
@@ -124,11 +124,11 @@ impl<P, S, A, M, V> BoltBuilder<P, S, A, M, NoRole, V> {
     pub fn primary(self) -> BoltBuilder<P, S, A, M, Primary, V> {
         BoltBuilder {
             position: self.position,
-            speed: self.speed,
-            angle: self.angle,
-            motion: self.motion,
-            role: Primary,
-            visual: self.visual,
+            speed:    self.speed,
+            angle:    self.angle,
+            motion:   self.motion,
+            role:     Primary,
+            visual:   self.visual,
             optional: self.optional,
         }
     }
@@ -137,11 +137,11 @@ impl<P, S, A, M, V> BoltBuilder<P, S, A, M, NoRole, V> {
     pub fn extra(self) -> BoltBuilder<P, S, A, M, Extra, V> {
         BoltBuilder {
             position: self.position,
-            speed: self.speed,
-            angle: self.angle,
-            motion: self.motion,
-            role: Extra,
-            visual: self.visual,
+            speed:    self.speed,
+            angle:    self.angle,
+            motion:   self.motion,
+            role:     Extra,
+            visual:   self.visual,
             optional: self.optional,
         }
     }
@@ -161,12 +161,12 @@ impl<P, S, A, M, R> BoltBuilder<P, S, A, M, R, Unvisual> {
         let color = Color::linear_rgb(color_rgb[0], color_rgb[1], color_rgb[2]);
         BoltBuilder {
             position: self.position,
-            speed: self.speed,
-            angle: self.angle,
-            motion: self.motion,
-            role: self.role,
-            visual: Rendered {
-                mesh: meshes.add(Circle::new(1.0)),
+            speed:    self.speed,
+            angle:    self.angle,
+            motion:   self.motion,
+            role:     self.role,
+            visual:   Rendered {
+                mesh:     meshes.add(Circle::new(1.0)),
                 material: materials.add(ColorMaterial::from_color(color)),
             },
             optional: self.optional,
@@ -178,11 +178,11 @@ impl<P, S, A, M, R> BoltBuilder<P, S, A, M, R, Unvisual> {
     pub fn headless(self) -> BoltBuilder<P, S, A, M, R, Headless> {
         BoltBuilder {
             position: self.position,
-            speed: self.speed,
-            angle: self.angle,
-            motion: self.motion,
-            role: self.role,
-            visual: Headless,
+            speed:    self.speed,
+            angle:    self.angle,
+            motion:   self.motion,
+            role:     self.role,
+            visual:   Headless,
             optional: self.optional,
         }
     }
@@ -201,12 +201,12 @@ impl<P, M, R, V> BoltBuilder<P, NoSpeed, NoAngle, M, R, V> {
     pub fn definition(self, def: &BoltDefinition) -> BoltBuilder<P, HasSpeed, HasAngle, M, R, V> {
         let mut optional = self.optional;
         optional.definition_params = Some(BoltDefinitionParams {
-            name: def.name.clone(),
-            base_damage: def.base_damage,
-            angle_spread: DEFAULT_BOLT_ANGLE_SPREAD,
+            name:           def.name.clone(),
+            base_damage:    def.base_damage,
+            angle_spread:   DEFAULT_BOLT_ANGLE_SPREAD,
             spawn_offset_y: DEFAULT_BOLT_SPAWN_OFFSET_Y,
-            min_radius: def.min_radius,
-            max_radius: def.max_radius,
+            min_radius:     def.min_radius,
+            max_radius:     def.max_radius,
         });
         optional.radius = optional.radius.or(Some(def.radius));
         optional.color_rgb = optional.color_rgb.or(Some(def.color_rgb));
@@ -214,8 +214,8 @@ impl<P, M, R, V> BoltBuilder<P, NoSpeed, NoAngle, M, R, V> {
             position: self.position,
             speed: HasSpeed {
                 base: def.base_speed,
-                min: def.min_speed,
-                max: def.max_speed,
+                min:  def.min_speed,
+                max:  def.max_speed,
             },
             angle: HasAngle {
                 min_angle_h: def.min_angle_horizontal.to_radians(),

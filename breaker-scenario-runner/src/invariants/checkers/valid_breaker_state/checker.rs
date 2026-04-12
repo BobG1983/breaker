@@ -50,10 +50,10 @@ pub fn check_valid_breaker_state(
                 );
             if !legal {
                 log.0.push(ViolationEntry {
-                    frame: frame.0,
+                    frame:     frame.0,
                     invariant: InvariantKind::ValidDashState,
-                    entity: None,
-                    message: format!(
+                    entity:    None,
+                    message:   format!(
                         "ValidDashState FAIL frame={} {prev:?} -> {current:?}",
                         frame.0,
                     ),

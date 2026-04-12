@@ -193,9 +193,9 @@ fn reflection_preserves_speed_off_positive_x() {
 #[test]
 fn sweep_hit_fields_are_publicly_accessible() {
     let sweep = SweepHit {
-        entity: Entity::PLACEHOLDER,
-        position: Vec2::new(10.0, 35.0),
-        normal: Vec2::NEG_Y,
+        entity:    Entity::PLACEHOLDER,
+        position:  Vec2::new(10.0, 35.0),
+        normal:    Vec2::NEG_Y,
         remaining: 165.0,
     };
 
@@ -211,7 +211,7 @@ fn sweep_hit_fields_are_publicly_accessible() {
 fn ray_hit_safe_position_offsets_by_epsilon() {
     let hit = RayHit {
         distance: 10.0,
-        normal: Vec2::NEG_Y,
+        normal:   Vec2::NEG_Y,
     };
     let pos = hit.safe_position(Vec2::new(0.0, -30.0), Vec2::Y);
     // 10.0 - 0.01 = 9.99, so position = (0, -30) + Y * 9.99 = (0, -20.01)
@@ -222,7 +222,7 @@ fn ray_hit_safe_position_offsets_by_epsilon() {
 fn ray_hit_safe_position_clamps_at_zero() {
     let hit = RayHit {
         distance: 0.005,
-        normal: Vec2::NEG_Y,
+        normal:   Vec2::NEG_Y,
     };
     let pos = hit.safe_position(Vec2::ZERO, Vec2::Y);
     // (0.005 - 0.01).max(0.0) = 0.0, so position = origin
@@ -235,7 +235,7 @@ fn ray_hit_safe_position_clamps_at_zero() {
 fn ray_hit_remaining_distance() {
     let hit = RayHit {
         distance: 35.0,
-        normal: Vec2::NEG_Y,
+        normal:   Vec2::NEG_Y,
     };
     let rem = hit.remaining(200.0);
     assert!((rem - 165.0).abs() < 1e-4);
@@ -245,7 +245,7 @@ fn ray_hit_remaining_distance() {
 fn ray_hit_remaining_clamps_at_zero() {
     let hit = RayHit {
         distance: 200.0,
-        normal: Vec2::NEG_Y,
+        normal:   Vec2::NEG_Y,
     };
     let rem = hit.remaining(100.0);
     assert!(rem.abs() < f32::EPSILON);

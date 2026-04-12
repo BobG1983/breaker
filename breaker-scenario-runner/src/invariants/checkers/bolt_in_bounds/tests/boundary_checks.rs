@@ -17,11 +17,11 @@ fn bolt_in_bounds_appends_violation_when_bolt_is_above_top_bound() {
 
     // height 700.0 -> top() = 350.0
     app.world_mut().insert_resource(PlayfieldConfig {
-        width: 800.0,
-        height: 700.0,
+        width:                800.0,
+        height:               700.0,
         background_color_rgb: [0.0, 0.0, 0.0],
-        wall_thickness: 180.0,
-        zone_fraction: 0.667,
+        wall_thickness:       180.0,
+        zone_fraction:        0.667,
     });
     app.world_mut().insert_resource(ScenarioFrame(1842));
 
@@ -68,11 +68,11 @@ fn bolt_in_bounds_does_not_fire_when_bolt_is_within_bounds() {
     let mut app = test_app_bolt_in_bounds();
 
     app.world_mut().insert_resource(PlayfieldConfig {
-        width: 800.0,
-        height: 700.0,
+        width:                800.0,
+        height:               700.0,
         background_color_rgb: [0.0, 0.0, 0.0],
-        wall_thickness: 180.0,
-        zone_fraction: 0.667,
+        wall_thickness:       180.0,
+        zone_fraction:        0.667,
     });
     app.world_mut().insert_resource(ScenarioFrame(10));
 
@@ -96,11 +96,11 @@ fn bolt_in_bounds_does_not_fire_when_bolt_is_exactly_at_bottom_bound() {
     let mut app = test_app_bolt_in_bounds();
 
     app.world_mut().insert_resource(PlayfieldConfig {
-        width: 800.0,
-        height: 700.0,
+        width:                800.0,
+        height:               700.0,
         background_color_rgb: [0.0, 0.0, 0.0],
-        wall_thickness: 180.0,
-        zone_fraction: 0.667,
+        wall_thickness:       180.0,
+        zone_fraction:        0.667,
     });
     app.world_mut().insert_resource(ScenarioFrame(0));
 
@@ -126,11 +126,11 @@ fn bolt_in_bounds_fires_when_bolt_is_above_top_bound() {
 
     // width=800.0, height=700.0 -> top() = 350.0
     app.world_mut().insert_resource(PlayfieldConfig {
-        width: 800.0,
-        height: 700.0,
+        width:                800.0,
+        height:               700.0,
         background_color_rgb: [0.0, 0.0, 0.0],
-        wall_thickness: 180.0,
-        zone_fraction: 0.667,
+        wall_thickness:       180.0,
+        zone_fraction:        0.667,
     });
     app.world_mut().insert_resource(ScenarioFrame(1));
 
@@ -157,11 +157,11 @@ fn bolt_in_bounds_does_not_fire_when_bolt_is_exactly_at_top_bound() {
 
     // top() = 700.0 / 2.0 = 350.0
     app.world_mut().insert_resource(PlayfieldConfig {
-        width: 800.0,
-        height: 700.0,
+        width:                800.0,
+        height:               700.0,
         background_color_rgb: [0.0, 0.0, 0.0],
-        wall_thickness: 180.0,
-        zone_fraction: 0.667,
+        wall_thickness:       180.0,
+        zone_fraction:        0.667,
     });
     app.world_mut().insert_resource(ScenarioFrame(1));
 
@@ -186,11 +186,11 @@ fn bolt_in_bounds_fires_when_bolt_is_left_of_left_bound() {
 
     // width=800.0 -> left() = -400.0
     app.world_mut().insert_resource(PlayfieldConfig {
-        width: 800.0,
-        height: 700.0,
+        width:                800.0,
+        height:               700.0,
         background_color_rgb: [0.0, 0.0, 0.0],
-        wall_thickness: 180.0,
-        zone_fraction: 0.667,
+        wall_thickness:       180.0,
+        zone_fraction:        0.667,
     });
     app.world_mut().insert_resource(ScenarioFrame(1));
 
@@ -218,11 +218,11 @@ fn bolt_in_bounds_fires_when_bolt_is_right_of_right_bound() {
 
     // width=800.0 -> right() = 400.0
     app.world_mut().insert_resource(PlayfieldConfig {
-        width: 800.0,
-        height: 700.0,
+        width:                800.0,
+        height:               700.0,
         background_color_rgb: [0.0, 0.0, 0.0],
-        wall_thickness: 180.0,
-        zone_fraction: 0.667,
+        wall_thickness:       180.0,
+        zone_fraction:        0.667,
     });
     app.world_mut().insert_resource(ScenarioFrame(1));
 

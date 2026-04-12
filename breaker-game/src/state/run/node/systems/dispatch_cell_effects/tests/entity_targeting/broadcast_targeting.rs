@@ -128,7 +128,7 @@ fn cell_with_target_all_cells_dispatches_to_all_cells() {
                 Tree::When(
                     Trigger::Died,
                     Box::new(Tree::Fire(EffectType::Explode(ExplodeConfig {
-                        range: OrderedFloat(32.0),
+                        range:  OrderedFloat(32.0),
                         damage: OrderedFloat(0.5),
                     }))),
                 ),
@@ -199,7 +199,7 @@ fn single_cell_with_all_cells_targets_itself() {
                 Tree::When(
                     Trigger::Died,
                     Box::new(Tree::Fire(EffectType::Explode(ExplodeConfig {
-                        range: OrderedFloat(32.0),
+                        range:  OrderedFloat(32.0),
                         damage: OrderedFloat(0.5),
                     }))),
                 ),

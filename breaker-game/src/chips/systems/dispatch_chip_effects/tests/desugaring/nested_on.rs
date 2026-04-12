@@ -24,11 +24,11 @@ fn multi_target_stamps_breaker_fires_bolt_defers() {
     let mut app = test_app();
 
     let def = ChipDefinition {
-        name: "Multi Target".to_owned(),
-        description: String::new(),
-        rarity: crate::chips::definition::Rarity::Common,
-        max_stacks: 5,
-        effects: vec![
+        name:          "Multi Target".to_owned(),
+        description:   String::new(),
+        rarity:        crate::chips::definition::Rarity::Common,
+        max_stacks:    5,
+        effects:       vec![
             RootNode::Stamp(
                 StampTarget::Breaker,
                 Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
@@ -45,7 +45,7 @@ fn multi_target_stamps_breaker_fires_bolt_defers() {
                 ),
             ),
         ],
-        ingredients: None,
+        ingredients:   None,
         template_name: None,
     };
     insert_chip(&mut app, def);

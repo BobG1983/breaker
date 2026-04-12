@@ -40,7 +40,7 @@ pub fn spawn_bump_grade_text(
             TextFont::from_font_size(font_size),
             Transform::from_translation(pos),
             FadeOut {
-                timer: FADE_DURATION,
+                timer:    FADE_DURATION,
                 duration: FADE_DURATION,
             },
             CleanupOnExit::<NodeState>::default(),
@@ -71,7 +71,7 @@ pub fn spawn_whiff_text(
             TextFont::from_font_size(36.0),
             Transform::from_translation(pos),
             FadeOut {
-                timer: FADE_DURATION,
+                timer:    FADE_DURATION,
                 duration: FADE_DURATION,
             },
             CleanupOnExit::<NodeState>::default(),
@@ -120,8 +120,8 @@ mod tests {
         let mut app = test_app();
         spawn_breaker(&mut app);
         app.insert_resource(TestBumpMsg(Some(BumpPerformed {
-            grade: BumpGrade::Perfect,
-            bolt: None,
+            grade:   BumpGrade::Perfect,
+            bolt:    None,
             breaker: Entity::PLACEHOLDER,
         })));
         tick(&mut app);
@@ -139,8 +139,8 @@ mod tests {
         let mut app = test_app();
         spawn_breaker(&mut app);
         app.insert_resource(TestBumpMsg(Some(BumpPerformed {
-            grade: BumpGrade::Early,
-            bolt: None,
+            grade:   BumpGrade::Early,
+            bolt:    None,
             breaker: Entity::PLACEHOLDER,
         })));
         tick(&mut app);
@@ -158,8 +158,8 @@ mod tests {
         let mut app = test_app();
         spawn_breaker(&mut app);
         app.insert_resource(TestBumpMsg(Some(BumpPerformed {
-            grade: BumpGrade::Late,
-            bolt: None,
+            grade:   BumpGrade::Late,
+            bolt:    None,
             breaker: Entity::PLACEHOLDER,
         })));
         tick(&mut app);

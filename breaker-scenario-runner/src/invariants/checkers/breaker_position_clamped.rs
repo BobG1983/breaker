@@ -87,11 +87,11 @@ mod tests {
             .insert_resource(ViolationLog::default())
             .insert_resource(ScenarioFrame::default())
             .insert_resource(PlayfieldConfig {
-                width: 800.0,
-                height: 700.0,
+                width:                800.0,
+                height:               700.0,
                 background_color_rgb: [0.0, 0.0, 0.0],
-                wall_thickness: 180.0,
-                zone_fraction: 0.667,
+                wall_thickness:       180.0,
+                zone_fraction:        0.667,
             })
             .add_systems(FixedUpdate, check_breaker_position_clamped);
         app

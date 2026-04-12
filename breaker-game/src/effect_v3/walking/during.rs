@@ -10,11 +10,7 @@ use crate::effect_v3::types::{Condition, ScopedTree, TriggerContext};
 /// NOTE: State tracking (was-true/was-false transitions) is deferred to a
 /// future wave. This node type requires per-entity, per-source condition
 /// state that is not yet implemented.
-#[allow(
-    clippy::missing_const_for_fn,
-    reason = "deferred implementation will use &mut Commands"
-)]
-pub fn evaluate_during(
+pub const fn evaluate_during(
     _entity: Entity,
     _condition: &Condition,
     _inner: &ScopedTree,

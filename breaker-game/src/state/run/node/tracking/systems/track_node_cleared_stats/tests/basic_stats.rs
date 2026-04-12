@@ -25,7 +25,7 @@ fn detects_clutch_clear_when_timer_below_threshold() {
     let mut app = test_app();
     app.insert_resource(NodeTimer {
         remaining: 2.5,
-        total: 30.0,
+        total:     30.0,
     });
     app.world_mut().resource_mut::<NodeOutcome>().node_index = 3;
     app.insert_resource(TestNodeCleared(true));
@@ -55,7 +55,7 @@ fn no_clutch_clear_when_timer_above_threshold() {
     // Default clutch_clear_secs is 3.0, so 5.0 remaining should not trigger
     app.insert_resource(NodeTimer {
         remaining: 5.0,
-        total: 30.0,
+        total:     30.0,
     });
     app.insert_resource(TestNodeCleared(true));
     tick(&mut app);
@@ -119,7 +119,7 @@ fn detects_fast_clear_when_elapsed_below_half_total() {
     // remaining=20 means elapsed=10, total=30 -> 10/30 = 0.33 < 0.5 (default fast_clear_fraction)
     app.insert_resource(NodeTimer {
         remaining: 20.0,
-        total: 30.0,
+        total:     30.0,
     });
     app.world_mut().resource_mut::<NodeOutcome>().node_index = 1;
     app.insert_resource(TestNodeCleared(true));

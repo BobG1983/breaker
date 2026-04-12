@@ -55,8 +55,8 @@ pub struct SpeedOnly {
 /// Base speed configured with min/max clamping bounds.
 pub struct ClampedSpeed {
     base: f32,
-    min: f32,
-    max: f32,
+    min:  f32,
+    max:  f32,
 }
 
 /// No angle constraint configured.
@@ -76,8 +76,8 @@ pub struct WithAngle {
 /// configure, then `.build()` to get the component tuple.
 pub struct SpatialDataBuilder<Position, Speed, Angle> {
     position: Position,
-    speed: Speed,
-    angle: Angle,
+    speed:    Speed,
+    angle:    Angle,
 }
 
 impl Spatial {
@@ -86,8 +86,8 @@ impl Spatial {
     pub const fn builder() -> SpatialDataBuilder<NoPosition, NoSpeed, NoAngle> {
         SpatialDataBuilder {
             position: NoPosition,
-            speed: NoSpeed,
-            angle: NoAngle,
+            speed:    NoSpeed,
+            angle:    NoAngle,
         }
     }
 }
@@ -100,8 +100,8 @@ impl<S, A> SpatialDataBuilder<NoPosition, S, A> {
     pub fn at_position(self, pos: Vec2) -> SpatialDataBuilder<HasPosition, S, A> {
         SpatialDataBuilder {
             position: HasPosition { pos },
-            speed: self.speed,
-            angle: self.angle,
+            speed:    self.speed,
+            angle:    self.angle,
         }
     }
 }
@@ -113,8 +113,8 @@ impl<P, A> SpatialDataBuilder<P, NoSpeed, A> {
     pub fn with_speed(self, base: f32) -> SpatialDataBuilder<P, SpeedOnly, A> {
         SpatialDataBuilder {
             position: self.position,
-            speed: SpeedOnly { base },
-            angle: self.angle,
+            speed:    SpeedOnly { base },
+            angle:    self.angle,
         }
     }
 
@@ -127,8 +127,8 @@ impl<P, A> SpatialDataBuilder<P, NoSpeed, A> {
     ) -> SpatialDataBuilder<P, ClampedSpeed, A> {
         SpatialDataBuilder {
             position: self.position,
-            speed: ClampedSpeed { base, min, max },
-            angle: self.angle,
+            speed:    ClampedSpeed { base, min, max },
+            angle:    self.angle,
         }
     }
 }
@@ -140,12 +140,12 @@ impl<P, A> SpatialDataBuilder<P, SpeedOnly, A> {
     pub fn clamped(self, min: f32, max: f32) -> SpatialDataBuilder<P, ClampedSpeed, A> {
         SpatialDataBuilder {
             position: self.position,
-            speed: ClampedSpeed {
+            speed:    ClampedSpeed {
                 base: self.speed.base,
                 min,
                 max,
             },
-            angle: self.angle,
+            angle:    self.angle,
         }
     }
 }
@@ -157,8 +157,8 @@ impl<P, S> SpatialDataBuilder<P, S, NoAngle> {
     pub fn with_clamped_angle(self, h: f32, v: f32) -> SpatialDataBuilder<P, S, WithAngle> {
         SpatialDataBuilder {
             position: self.position,
-            speed: self.speed,
-            angle: WithAngle { h, v },
+            speed:    self.speed,
+            angle:    WithAngle { h, v },
         }
     }
 }

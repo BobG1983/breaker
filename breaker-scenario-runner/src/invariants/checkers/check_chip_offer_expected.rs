@@ -39,10 +39,10 @@ pub fn check_chip_offer_expected(
         let found = offers.0.iter().any(|o| o.name() == expected_name);
         if !found {
             log.0.push(ViolationEntry {
-                frame: frame.0,
+                frame:     frame.0,
                 invariant: InvariantKind::ChipOfferExpected,
-                entity: None,
-                message: format!(
+                entity:    None,
+                message:   format!(
                     "ChipOfferExpected FAIL frame={} expected='{}' not found in offerings: [{}]",
                     frame.0,
                     expected_name,
@@ -99,15 +99,15 @@ mod tests {
 
     fn make_chip_def(name: &str) -> ChipDefinition {
         ChipDefinition {
-            name: name.to_owned(),
-            description: String::new(),
-            rarity: Rarity::Common,
-            max_stacks: 3,
-            effects: vec![RootNode::Stamp(
+            name:          name.to_owned(),
+            description:   String::new(),
+            rarity:        Rarity::Common,
+            max_stacks:    3,
+            effects:       vec![RootNode::Stamp(
                 StampTarget::Bolt,
                 Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
             )],
-            ingredients: None,
+            ingredients:   None,
             template_name: None,
         }
     }
@@ -133,19 +133,19 @@ mod tests {
         let config = make_config(Some(vec!["Railgun"]));
         let offers = ChipOffers(vec![ChipOffering::Evolution {
             ingredients: vec![EvolutionIngredient {
-                chip_name: "Piercing Shot".to_owned(),
+                chip_name:       "Piercing Shot".to_owned(),
                 stacks_required: 3,
             }],
-            result: ChipDefinition {
-                name: "Railgun".to_owned(),
-                description: String::new(),
-                rarity: Rarity::Evolution,
-                max_stacks: 1,
-                effects: vec![RootNode::Stamp(
+            result:      ChipDefinition {
+                name:          "Railgun".to_owned(),
+                description:   String::new(),
+                rarity:        Rarity::Evolution,
+                max_stacks:    1,
+                effects:       vec![RootNode::Stamp(
                     StampTarget::Bolt,
                     Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 5 })),
                 )],
-                ingredients: None,
+                ingredients:   None,
                 template_name: None,
             },
         }]);

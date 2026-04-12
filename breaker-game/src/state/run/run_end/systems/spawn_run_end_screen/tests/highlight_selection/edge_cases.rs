@@ -26,22 +26,22 @@ fn highlight_cap_zero_produces_no_highlights() {
     let stats = RunStats {
         highlights: vec![
             RunHighlight {
-                kind: HighlightKind::ClutchClear,
+                kind:       HighlightKind::ClutchClear,
                 node_index: 0,
-                value: 1.0,
-                detail: None,
+                value:      1.0,
+                detail:     None,
             },
             RunHighlight {
-                kind: HighlightKind::NoDamageNode,
+                kind:       HighlightKind::NoDamageNode,
                 node_index: 1,
-                value: 0.0,
-                detail: None,
+                value:      0.0,
+                detail:     None,
             },
             RunHighlight {
-                kind: HighlightKind::PerfectStreak,
+                kind:       HighlightKind::PerfectStreak,
                 node_index: 2,
-                value: 5.0,
-                detail: None,
+                value:      5.0,
+                detail:     None,
             },
         ],
         ..Default::default()
@@ -64,10 +64,10 @@ fn highlight_cap_zero_produces_no_highlights() {
 fn single_highlight_with_config_uses_selection() {
     let stats = RunStats {
         highlights: vec![RunHighlight {
-            kind: HighlightKind::NoDamageNode,
+            kind:       HighlightKind::NoDamageNode,
             node_index: 0,
-            value: 0.0,
-            detail: None,
+            value:      0.0,
+            detail:     None,
         }],
         ..Default::default()
     };
@@ -93,10 +93,10 @@ fn single_highlight_with_config_uses_selection() {
 fn most_powerful_evolution_shows_chip_name_from_run_stats() {
     let stats = RunStats {
         highlights: vec![RunHighlight {
-            kind: HighlightKind::MostPowerfulEvolution,
+            kind:       HighlightKind::MostPowerfulEvolution,
             node_index: 0,
-            value: 400.0,
-            detail: Some("Chain Lightning".to_owned()),
+            value:      400.0,
+            detail:     Some("Chain Lightning".to_owned()),
         }],
         ..Default::default()
     };

@@ -187,11 +187,11 @@ mod tests {
                 .world_mut()
                 .resource_mut::<EnqueueRequestCellDestroyed>();
             enqueue.0.push(RequestCellDestroyed {
-                cell: cell_a,
+                cell:                  cell_a,
                 was_required_to_clear: true,
             });
             enqueue.0.push(RequestCellDestroyed {
-                cell: cell_b,
+                cell:                  cell_b,
                 was_required_to_clear: false,
             });
         }

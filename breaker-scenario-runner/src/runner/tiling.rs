@@ -30,11 +30,11 @@ pub const ENV_WINDOW_H: &str = "SCENARIO_WINDOW_H";
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TilePosition {
     /// Horizontal offset in pixels from the left edge of the screen.
-    pub x: u32,
+    pub x:      u32,
     /// Vertical offset in pixels from the top edge of the screen.
-    pub y: u32,
+    pub y:      u32,
     /// Width of the tile in pixels.
-    pub width: u32,
+    pub width:  u32,
     /// Height of the tile in pixels.
     pub height: u32,
 }
@@ -89,9 +89,9 @@ pub const fn tile_position(
     let tile_w = screen_w / cols;
     let tile_h = screen_h / rows;
     TilePosition {
-        x: col * tile_w,
-        y: row * tile_h,
-        width: tile_w,
+        x:      col * tile_w,
+        y:      row * tile_h,
+        width:  tile_w,
         height: tile_h,
     }
 }

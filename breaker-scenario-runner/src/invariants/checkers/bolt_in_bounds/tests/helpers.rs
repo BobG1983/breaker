@@ -19,11 +19,11 @@ pub(super) fn test_app_bolt_in_bounds_with_radius() -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .insert_resource(PlayfieldConfig {
-            width: 800.0,
-            height: 700.0,
+            width:                800.0,
+            height:               700.0,
             background_color_rgb: [0.0, 0.0, 0.0],
-            wall_thickness: 180.0,
-            zone_fraction: 0.667,
+            wall_thickness:       180.0,
+            zone_fraction:        0.667,
         })
         .insert_resource(ViolationLog::default())
         .insert_resource(ScenarioFrame::default())

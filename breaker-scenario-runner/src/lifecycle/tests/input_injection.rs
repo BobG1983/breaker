@@ -26,7 +26,7 @@ fn inject_scenario_input_writes_bump_for_scripted_frame() {
 
     let scripted = ScriptedInput::new(&ScriptedParams {
         actions: vec![ScriptedFrame {
-            frame: 10,
+            frame:   10,
             actions: vec![ScenarioGameAction::Bump],
         }],
     });
@@ -68,7 +68,7 @@ fn inject_scenario_input_empty_for_unmatched_frame() {
 
     let scripted = ScriptedInput::new(&ScriptedParams {
         actions: vec![ScriptedFrame {
-            frame: 10,
+            frame:   10,
             actions: vec![ScenarioGameAction::Bump],
         }],
     });
@@ -152,7 +152,7 @@ fn scenario_stats_actions_injected_incremented_by_inject_scenario_input() {
 
     let scripted = ScriptedInput::new(&ScriptedParams {
         actions: vec![ScriptedFrame {
-            frame: 5,
+            frame:   5,
             actions: vec![ScenarioGameAction::Bump],
         }],
     });

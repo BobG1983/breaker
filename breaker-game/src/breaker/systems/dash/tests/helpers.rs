@@ -35,7 +35,7 @@ pub(super) fn breaker_param_bundle(
         MaxSpeed(def.max_speed),
         BreakerDeceleration(def.deceleration),
         DecelEasing {
-            ease: def.decel_ease,
+            ease:     def.decel_ease,
             strength: def.decel_ease_strength,
         },
         DashSpeedMultiplier(def.dash_speed_multiplier),
@@ -43,9 +43,9 @@ pub(super) fn breaker_param_bundle(
         DashTilt(def.dash_tilt_angle.to_radians()),
         DashTiltEase(def.dash_tilt_ease),
         BrakeTilt {
-            angle: def.brake_tilt_angle.to_radians(),
+            angle:    def.brake_tilt_angle.to_radians(),
             duration: def.brake_tilt_duration,
-            ease: def.brake_tilt_ease,
+            ease:     def.brake_tilt_ease,
         },
         BrakeDecel(def.brake_decel_multiplier),
         SettleDuration(def.settle_duration),

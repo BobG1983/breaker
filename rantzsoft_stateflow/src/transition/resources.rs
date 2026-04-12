@@ -113,23 +113,23 @@ pub(crate) type WorldCallback = Option<Box<dyn FnOnce(&mut bevy::ecs::world::Wor
 #[derive(Resource)]
 pub(crate) struct PendingTransition {
     /// The current phase of the transition.
-    pub(crate) phase: TransitionPhase,
+    pub(crate) phase:                  TransitionPhase,
     /// The `TypeId` of the currently active effect (for registry lookup
     /// during phase advances).
     pub(crate) current_effect_type_id: std::any::TypeId,
     /// Closure that applies `NextState<S>::set` and sends `StateChanged<S>`.
     /// Called once. `None` means the state change was already applied (`In`,
     /// `OneShot`, or `OutIn` after Out phase).
-    pub(crate) apply_state_change: WorldCallback,
+    pub(crate) apply_state_change:     WorldCallback,
     /// Closure that sends `TransitionEnd<S>`. Called once at final
     /// completion.
-    pub(crate) send_transition_end: WorldCallback,
+    pub(crate) send_transition_end:    WorldCallback,
     /// For `OutIn`: data about the In phase effect.
-    pub(crate) out_in_in_effect: Option<OutInData>,
+    pub(crate) out_in_in_effect:       Option<OutInData>,
     /// For `OutIn`: which sub-phase we're in (Out or In).
-    pub(crate) out_in_state: Option<OutInState>,
+    pub(crate) out_in_state:           Option<OutInState>,
     /// Whether to unpause `Time<Virtual>` when the transition completes.
-    pub(crate) unpause_at_end: bool,
+    pub(crate) unpause_at_end:         bool,
 }
 
 /// Current phase within a transition lifecycle.
@@ -149,7 +149,7 @@ pub(crate) struct OutInData {
     pub(crate) in_effect_type_id: std::any::TypeId,
     /// The In effect trait object, stored so the orchestrator can call
     /// `insert_starting` on it when transitioning from Out to In phase.
-    pub(crate) in_effect: std::sync::Arc<dyn super::traits::InTransition>,
+    pub(crate) in_effect:         std::sync::Arc<dyn super::traits::InTransition>,
 }
 
 /// Tracks whether we're in the Out or In phase of an `OutIn` transition.

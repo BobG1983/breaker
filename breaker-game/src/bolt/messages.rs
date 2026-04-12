@@ -14,7 +14,7 @@ pub struct BoltSpawned;
 #[derive(Message, Clone, Debug)]
 pub(crate) struct BoltImpactBreaker {
     /// The bolt entity that hit the breaker.
-    pub bolt: Entity,
+    pub bolt:    Entity,
     /// The breaker entity that was hit.
     pub breaker: Entity,
 }
@@ -102,7 +102,7 @@ mod tests {
     #[test]
     fn collision_messages_debug_format() {
         let a = BoltImpactBreaker {
-            bolt: Entity::PLACEHOLDER,
+            bolt:    Entity::PLACEHOLDER,
             breaker: Entity::PLACEHOLDER,
         };
         let a_fmt = format!("{a:?}");

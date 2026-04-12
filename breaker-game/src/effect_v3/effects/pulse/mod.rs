@@ -1,3 +1,5 @@
+//! Pulse effect — periodic expanding damage rings.
+
 pub mod components;
 pub mod config;
 pub mod systems;

@@ -12,7 +12,7 @@ use serde::de::DeserializeOwned;
 /// Each instance is configured with a set of file extensions it recognizes.
 pub struct RonAssetLoader<T> {
     extensions: Vec<&'static str>,
-    _marker: std::marker::PhantomData<T>,
+    _marker:    std::marker::PhantomData<T>,
 }
 
 impl<T: Asset + DeserializeOwned> TypePath for RonAssetLoader<T> {
@@ -33,7 +33,7 @@ impl<T> RonAssetLoader<T> {
     pub fn new(extensions: &[&'static str]) -> Self {
         Self {
             extensions: extensions.to_vec(),
-            _marker: std::marker::PhantomData,
+            _marker:    std::marker::PhantomData,
         }
     }
 }

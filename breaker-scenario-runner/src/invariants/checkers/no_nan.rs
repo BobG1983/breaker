@@ -28,10 +28,10 @@ pub fn check_no_nan(
         let p = position.0;
         if !p.is_finite() {
             log.0.push(ViolationEntry {
-                frame: frame.0,
+                frame:     frame.0,
                 invariant: InvariantKind::NoNaN,
-                entity: Some(entity),
-                message: format!(
+                entity:    Some(entity),
+                message:   format!(
                     "NoNaN FAIL frame={} entity={entity:?} position={p:?}",
                     frame.0,
                 ),

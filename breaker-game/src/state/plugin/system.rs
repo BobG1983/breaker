@@ -133,7 +133,7 @@ fn register_parent_routes(app: &mut App) {
             .to(GameState::Menu)
             .with_transition(TransitionType::Out(Arc::new(FadeOut {
                 duration: 0.6,
-                color: Color::WHITE,
+                color:    Color::WHITE,
             })))
             .when(|_| true),
     );
@@ -154,14 +154,14 @@ fn register_parent_routes(app: &mut App) {
                 let Some(selection) = world.get_resource::<MainMenuSelection>() else {
                     return TransitionType::Out(Arc::new(FadeOut {
                         duration: 0.6,
-                        color: Color::WHITE,
+                        color:    Color::WHITE,
                     }));
                 };
                 match selection.selected {
                     MenuItem::Quit => TransitionType::None,
                     _ => TransitionType::Out(Arc::new(FadeOut {
                         duration: 0.6,
-                        color: Color::WHITE,
+                        color:    Color::WHITE,
                     })),
                 }
             })
@@ -176,7 +176,7 @@ fn register_parent_routes(app: &mut App) {
             .to(GameState::Menu)
             .with_transition(TransitionType::Out(Arc::new(FadeOut {
                 duration: 0.6,
-                color: Color::WHITE,
+                color:    Color::WHITE,
             })))
             .when(|world| {
                 world
@@ -191,7 +191,7 @@ fn register_parent_routes(app: &mut App) {
             .to(MenuState::Main)
             .with_transition(TransitionType::In(Arc::new(FadeIn {
                 duration: 0.6,
-                color: Color::WHITE,
+                color:    Color::WHITE,
             })))
             .when(|_| true),
     );
@@ -214,14 +214,14 @@ fn register_parent_routes(app: &mut App) {
                 let Some(selection) = world.get_resource::<MainMenuSelection>() else {
                     return TransitionType::Out(Arc::new(FadeOut {
                         duration: 0.6,
-                        color: Color::WHITE,
+                        color:    Color::WHITE,
                     }));
                 };
                 match selection.selected {
                     MenuItem::Quit => TransitionType::None,
                     _ => TransitionType::Out(Arc::new(FadeOut {
                         duration: 0.6,
-                        color: Color::WHITE,
+                        color:    Color::WHITE,
                     })),
                 }
             }),
@@ -254,7 +254,7 @@ fn register_run_routes(app: &mut App) {
             .to(RunState::Node)
             .with_transition(TransitionType::In(Arc::new(FadeIn {
                 duration: 0.6,
-                color: Color::WHITE,
+                color:    Color::WHITE,
             })))
             .when(|_| true),
     );
@@ -264,7 +264,7 @@ fn register_run_routes(app: &mut App) {
             .to_dynamic(resolve_node_next_state)
             .with_transition(TransitionType::Out(Arc::new(FadeOut {
                 duration: 0.6,
-                color: Color::WHITE,
+                color:    Color::WHITE,
             })))
             .when(|world| {
                 world
@@ -278,7 +278,7 @@ fn register_run_routes(app: &mut App) {
             .to(RunState::Node)
             .with_transition(TransitionType::Out(Arc::new(FadeOut {
                 duration: 0.6,
-                color: Color::WHITE,
+                color:    Color::WHITE,
             })))
             .when(|world| {
                 world

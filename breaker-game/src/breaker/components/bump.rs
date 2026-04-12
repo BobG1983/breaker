@@ -6,25 +6,25 @@ use bevy::{math::curve::easing::EaseFunction, prelude::*};
 #[derive(Component, Debug)]
 pub struct BumpState {
     /// Whether a forward bump window is open (pressed, waiting for bolt).
-    pub active: bool,
+    pub active:         bool,
     /// Countdown from (`early_window` + `perfect_window`) — forward window.
-    pub timer: f32,
+    pub timer:          f32,
     /// Countdown from (`perfect_window` + `late_window`) after bolt hit — retroactive window.
     pub post_hit_timer: f32,
     /// Cooldown remaining before another bump can be triggered (seconds).
-    pub cooldown: f32,
+    pub cooldown:       f32,
     /// The bolt entity from the most recent hit, used for retroactive bump grading.
-    pub last_hit_bolt: Option<Entity>,
+    pub last_hit_bolt:  Option<Entity>,
 }
 
 impl Default for BumpState {
     fn default() -> Self {
         Self {
-            active: false,
-            timer: 0.0,
+            active:         false,
+            timer:          0.0,
             post_hit_timer: 0.0,
-            cooldown: 0.0,
-            last_hit_bolt: None,
+            cooldown:       0.0,
+            last_hit_bolt:  None,
         }
     }
 }
@@ -33,9 +33,9 @@ impl Default for BumpState {
 #[derive(Component, Debug)]
 pub struct BumpFeedbackState {
     /// Time remaining in the animation (seconds).
-    pub timer: f32,
+    pub timer:       f32,
     /// Total duration of the animation (seconds).
-    pub duration: f32,
+    pub duration:    f32,
     /// Maximum Y offset at peak (world units).
     pub peak_offset: f32,
 }
@@ -64,15 +64,15 @@ pub struct BumpWeakCooldown(pub f32);
 #[derive(Component, Debug, Clone)]
 pub struct BumpFeedback {
     /// Total duration of the animation (seconds).
-    pub duration: f32,
+    pub duration:      f32,
     /// Maximum Y offset at peak (world units).
-    pub peak: f32,
+    pub peak:          f32,
     /// Fraction of duration spent rising (0.0–1.0).
     pub peak_fraction: f32,
     /// Easing for the rise phase.
-    pub rise_ease: EaseFunction,
+    pub rise_ease:     EaseFunction,
     /// Easing for the fall phase.
-    pub fall_ease: EaseFunction,
+    pub fall_ease:     EaseFunction,
 }
 
 #[cfg(test)]

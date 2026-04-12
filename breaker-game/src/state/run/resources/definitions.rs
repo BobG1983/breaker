@@ -9,7 +9,7 @@ use crate::state::run::definition::{NodeType, TierDefinition};
 #[derive(Debug, Clone, PartialEq)]
 pub struct NodeAssignment {
     /// The type of this node (`Passive`, `Active`, or `Boss`).
-    pub node_type: NodeType,
+    pub node_type:  NodeType,
     /// Which tier this node belongs to (0-indexed).
     pub tier_index: u32,
     /// Timer multiplier for this node.
@@ -36,7 +36,7 @@ pub struct NodeSequence {
 )]
 pub struct DifficultyCurve {
     /// Ordered list of tier definitions.
-    pub tiers: Vec<TierDefinition>,
+    pub tiers:                    Vec<TierDefinition>,
     /// Timer reduction applied after each boss encounter.
     pub timer_reduction_per_boss: f32,
 }
@@ -44,7 +44,7 @@ pub struct DifficultyCurve {
 impl Default for DifficultyCurve {
     fn default() -> Self {
         Self {
-            tiers: vec![],
+            tiers:                    vec![],
             timer_reduction_per_boss: 0.0,
         }
     }
@@ -70,16 +70,16 @@ pub enum NodeResult {
 #[derive(Resource, Debug, Clone, Default)]
 pub struct NodeOutcome {
     /// Zero-indexed node within the current run.
-    pub node_index: u32,
+    pub node_index:         u32,
     /// How the current node ended.
-    pub result: NodeResult,
+    pub result:             NodeResult,
     /// `true` when `handle_node_cleared` fires this frame — tells
     /// `handle_timer_expired` to yield (player wins tie-frame: clear beats loss).
     pub cleared_this_frame: bool,
     /// Current tier in the run (increments after boss clear).
-    pub tier: u32,
+    pub tier:               u32,
     /// Position within the current tier (resets after boss clear).
-    pub position_in_tier: u32,
+    pub position_in_tier:   u32,
 }
 
 /// Thematic categories for highlight diversity scoring.
@@ -161,38 +161,38 @@ impl HighlightKind {
 #[derive(Clone, Debug)]
 pub struct RunHighlight {
     /// What kind of highlight.
-    pub kind: HighlightKind,
+    pub kind:       HighlightKind,
     /// Which node (0-indexed) it occurred on.
     pub node_index: u32,
     /// Associated value (e.g., seconds remaining for `ClutchClear`, streak count).
-    pub value: f32,
+    pub value:      f32,
     /// Optional human-readable detail (e.g., chip name for `MostPowerfulEvolution`).
-    pub detail: Option<String>,
+    pub detail:     Option<String>,
 }
 
 /// Cumulative statistics for the current run.
 #[derive(Resource, Debug, Clone, Default)]
 pub struct RunStats {
     /// Number of nodes cleared.
-    pub nodes_cleared: u32,
+    pub nodes_cleared:        u32,
     /// Total cells destroyed across all nodes.
-    pub cells_destroyed: u32,
+    pub cells_destroyed:      u32,
     /// Total bumps performed.
-    pub bumps_performed: u32,
+    pub bumps_performed:      u32,
     /// Total perfect bumps.
-    pub perfect_bumps: u32,
+    pub perfect_bumps:        u32,
     /// Total bolts lost.
-    pub bolts_lost: u32,
+    pub bolts_lost:           u32,
     /// Names of chips collected (in order).
-    pub chips_collected: Vec<String>,
+    pub chips_collected:      Vec<String>,
     /// Number of chip evolutions performed.
     pub evolutions_performed: u32,
     /// Cumulative simulation time elapsed (seconds).
-    pub time_elapsed: f32,
+    pub time_elapsed:         f32,
     /// The seed used for this run (0 = not yet captured).
-    pub seed: u64,
+    pub seed:                 u64,
     /// Memorable moments from the run.
-    pub highlights: Vec<RunHighlight>,
+    pub highlights:           Vec<RunHighlight>,
 }
 
 impl RunStats {
@@ -215,57 +215,57 @@ impl RunStats {
 pub struct HighlightTracker {
     // -- Per-node fields (reset between nodes) --
     /// Consecutive perfect bumps in the current node.
-    pub consecutive_perfect_bumps: u32,
+    pub consecutive_perfect_bumps:    u32,
     /// Bolts lost in the current node.
-    pub node_bolts_lost: u32,
+    pub node_bolts_lost:              u32,
     /// Cell destruction timestamps (simulation time) within the current node.
-    pub cell_destroyed_times: Vec<f32>,
+    pub cell_destroyed_times:         Vec<f32>,
     /// Simulation time when the current node started.
-    pub node_start_time: f32,
+    pub node_start_time:              f32,
     /// Non-perfect bumps in the current node (for `PerfectNode`).
-    pub non_perfect_bumps_this_node: u32,
+    pub non_perfect_bumps_this_node:  u32,
     /// Total bumps in the current node (for `PerfectNode`).
-    pub total_bumps_this_node: u32,
+    pub total_bumps_this_node:        u32,
     /// Cells destroyed since last breaker impact (for `ComboKing`).
     pub cells_since_last_breaker_hit: u32,
     /// Best combo this node (for `ComboKing`).
-    pub best_combo: u32,
+    pub best_combo:                   u32,
     /// Cell bounces since last breaker contact (for `PinballWizard`).
-    pub cell_bounces_since_breaker: u32,
+    pub cell_bounces_since_breaker:   u32,
     /// Best pinball rally this node (for `PinballWizard`).
-    pub best_pinball_rally: u32,
+    pub best_pinball_rally:           u32,
 
     // -- Cross-node fields (persist across node resets) --
     /// Best perfect streak across the entire run.
-    pub best_perfect_streak: u32,
+    pub best_perfect_streak:         u32,
     /// Consecutive no-damage nodes (for `Untouchable`).
     pub consecutive_no_damage_nodes: u32,
     /// Fastest node clear in seconds (for `SpeedDemon`).
-    pub fastest_node_clear_secs: f32,
+    pub fastest_node_clear_secs:     f32,
     /// Whether the first evolution has been recorded (for `FirstEvolution`).
-    pub first_evolution_recorded: bool,
+    pub first_evolution_recorded:    bool,
     /// Cumulative damage dealt per evolution chip name (for `MostPowerfulEvolution`).
-    pub evolution_damage: std::collections::HashMap<String, f32>,
+    pub evolution_damage:            std::collections::HashMap<String, f32>,
 }
 
 impl Default for HighlightTracker {
     fn default() -> Self {
         Self {
-            consecutive_perfect_bumps: 0,
-            node_bolts_lost: 0,
-            cell_destroyed_times: Vec::new(),
-            node_start_time: 0.0,
-            non_perfect_bumps_this_node: 0,
-            total_bumps_this_node: 0,
+            consecutive_perfect_bumps:    0,
+            node_bolts_lost:              0,
+            cell_destroyed_times:         Vec::new(),
+            node_start_time:              0.0,
+            non_perfect_bumps_this_node:  0,
+            total_bumps_this_node:        0,
             cells_since_last_breaker_hit: 0,
-            best_combo: 0,
-            cell_bounces_since_breaker: 0,
-            best_pinball_rally: 0,
-            best_perfect_streak: 0,
-            consecutive_no_damage_nodes: 0,
-            fastest_node_clear_secs: f32::MAX,
-            first_evolution_recorded: false,
-            evolution_damage: std::collections::HashMap::new(),
+            best_combo:                   0,
+            cell_bounces_since_breaker:   0,
+            best_pinball_rally:           0,
+            best_perfect_streak:          0,
+            consecutive_no_damage_nodes:  0,
+            fastest_node_clear_secs:      f32::MAX,
+            first_evolution_recorded:     false,
+            evolution_damage:             std::collections::HashMap::new(),
         }
     }
 }
@@ -351,7 +351,7 @@ mod tests {
     #[test]
     fn node_assignment_without_hp_mult_compiles() {
         let assignment = NodeAssignment {
-            node_type: crate::state::run::definition::NodeType::Active,
+            node_type:  crate::state::run::definition::NodeType::Active,
             tier_index: 0,
             timer_mult: 1.0,
         };
@@ -366,7 +366,7 @@ mod tests {
     #[test]
     fn difficulty_curve_without_boss_hp_mult_compiles() {
         let curve = DifficultyCurve {
-            tiers: vec![],
+            tiers:                    vec![],
             timer_reduction_per_boss: 0.0,
         };
         drop(curve.tiers);

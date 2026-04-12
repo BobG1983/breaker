@@ -27,10 +27,10 @@ fn active_bolts_target_stamps_to_breaker_bound_effects() {
         Tree::When(
             Trigger::PerfectBumped,
             Box::new(Tree::Fire(EffectType::Shockwave(ShockwaveConfig {
-                base_range: OrderedFloat(64.0),
+                base_range:      OrderedFloat(64.0),
                 range_per_level: OrderedFloat(0.0),
-                stacks: 1,
-                speed: OrderedFloat(500.0),
+                stacks:          1,
+                speed:           OrderedFloat(500.0),
             }))),
         ),
         5,
@@ -122,7 +122,7 @@ fn active_cells_target_stamps_to_breaker_bound_effects() {
         Tree::When(
             Trigger::Impacted(EntityKind::Bolt),
             Box::new(Tree::Fire(EffectType::Shield(ShieldConfig {
-                duration: OrderedFloat(5.0),
+                duration:        OrderedFloat(5.0),
                 reflection_cost: OrderedFloat(0.0),
             }))),
         ),

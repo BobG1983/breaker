@@ -13,11 +13,11 @@ pub struct ActiveAttractions(pub Vec<AttractionEntry>);
 #[derive(Debug, Clone)]
 pub struct AttractionEntry {
     /// Identifier for the source of this attraction (for removal by reverse).
-    pub source: String,
+    pub source:          String,
     /// Type of attraction behavior.
     pub attraction_type: AttractionType,
     /// Base force magnitude.
-    pub force: f32,
+    pub force:           f32,
     /// Optional cap on the applied force.
-    pub max_force: Option<f32>,
+    pub max_force:       Option<f32>,
 }

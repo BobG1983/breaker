@@ -104,8 +104,8 @@ fn frame_mutation_inject_over_stacked_chip_parses_from_ron() {
     assert_eq!(
         result.mutation,
         MutationKind::InjectOverStackedChip {
-            chip_name: "TestChip".to_owned(),
-            stacks: 3,
+            chip_name:  "TestChip".to_owned(),
+            stacks:     3,
             max_stacks: 2,
         }
     );

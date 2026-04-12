@@ -10,18 +10,18 @@ use crate::{
 
 fn make_default_bolt_definition() -> BoltDefinition {
     BoltDefinition {
-        name: "Bolt".to_string(),
-        base_speed: 720.0,
-        min_speed: 360.0,
-        max_speed: 1440.0,
-        radius: 14.0,
-        base_damage: 10.0,
-        effects: vec![],
-        color_rgb: [6.0, 5.0, 0.5],
+        name:                 "Bolt".to_string(),
+        base_speed:           720.0,
+        min_speed:            360.0,
+        max_speed:            1440.0,
+        radius:               14.0,
+        base_damage:          10.0,
+        effects:              vec![],
+        color_rgb:            [6.0, 5.0, 0.5],
         min_angle_horizontal: 5.0,
-        min_angle_vertical: 5.0,
-        min_radius: None,
-        max_radius: None,
+        min_angle_vertical:   5.0,
+        min_radius:           None,
+        max_radius:           None,
     }
 }
 
@@ -358,8 +358,8 @@ fn test_birthing() -> crate::shared::birthing::Birthing {
     use crate::shared::birthing::BIRTHING_DURATION;
 
     crate::shared::birthing::Birthing {
-        timer: Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
-        target_scale: Scale2D { x: 8.0, y: 8.0 },
+        timer:          Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
+        target_scale:   Scale2D { x: 8.0, y: 8.0 },
         stashed_layers: CollisionLayers::default(),
     }
 }

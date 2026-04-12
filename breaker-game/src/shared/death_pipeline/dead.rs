@@ -10,4 +10,4 @@ use bevy::prelude::*;
 /// through trigger evaluation and death bridges. It is finally despawned by
 /// `process_despawn_requests` in `PostFixedUpdate`.
 #[derive(Component)]
-pub struct Dead;
+pub(crate) struct Dead;

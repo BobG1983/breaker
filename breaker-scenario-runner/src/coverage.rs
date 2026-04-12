@@ -12,11 +12,11 @@ pub struct CoverageReport {
     /// `InvariantKind` variants that have no self-test scenario.
     pub missing_self_tests: Vec<InvariantKind>,
     /// Layout names (from `.node.ron` files) that no scenario references.
-    pub unused_layouts: Vec<String>,
+    pub unused_layouts:     Vec<String>,
     /// `InvariantKind` variants that have at least one self-test scenario.
     pub covered_self_tests: Vec<InvariantKind>,
     /// Layout names that are referenced by at least one scenario, with counts.
-    pub used_layouts: Vec<(String, usize)>,
+    pub used_layouts:       Vec<(String, usize)>,
 }
 
 /// Checks self-test parity and layout coverage from loaded scenario definitions.
@@ -383,9 +383,9 @@ mod tests {
     fn print_coverage_report_returns_true_when_missing_self_tests() {
         let report = CoverageReport {
             missing_self_tests: vec![InvariantKind::BoltInBounds],
-            unused_layouts: vec![],
+            unused_layouts:     vec![],
             covered_self_tests: vec![],
-            used_layouts: vec![],
+            used_layouts:       vec![],
         };
 
         let has_gaps = print_coverage_report(&report, false);
@@ -400,9 +400,9 @@ mod tests {
     fn print_coverage_report_returns_true_when_unused_layouts() {
         let report = CoverageReport {
             missing_self_tests: vec![],
-            unused_layouts: vec!["Fortress".to_owned()],
+            unused_layouts:     vec!["Fortress".to_owned()],
             covered_self_tests: vec![],
-            used_layouts: vec![],
+            used_layouts:       vec![],
         };
 
         let has_gaps = print_coverage_report(&report, false);
@@ -421,9 +421,9 @@ mod tests {
     fn print_coverage_report_returns_false_when_no_gaps() {
         let report = CoverageReport {
             missing_self_tests: vec![],
-            unused_layouts: vec![],
+            unused_layouts:     vec![],
             covered_self_tests: vec![],
-            used_layouts: vec![],
+            used_layouts:       vec![],
         };
 
         let has_gaps = print_coverage_report(&report, false);
@@ -899,8 +899,8 @@ mod tests {
         let report = CoverageReport {
             covered_self_tests: InvariantKind::ALL.to_vec(),
             missing_self_tests: vec![],
-            used_layouts: vec![("Corridor".to_owned(), 2)],
-            unused_layouts: vec![],
+            used_layouts:       vec![("Corridor".to_owned(), 2)],
+            unused_layouts:     vec![],
         };
         assert!(format_coverage_report(&report, false).is_empty());
     }
@@ -910,8 +910,8 @@ mod tests {
         let report = CoverageReport {
             covered_self_tests: vec![InvariantKind::BoltInBounds, InvariantKind::BreakerInBounds],
             missing_self_tests: vec![],
-            used_layouts: vec![("Corridor".to_owned(), 2), ("Fortress".to_owned(), 1)],
-            unused_layouts: vec![],
+            used_layouts:       vec![("Corridor".to_owned(), 2), ("Fortress".to_owned(), 1)],
+            unused_layouts:     vec![],
         };
         let output = format_coverage_report(&report, true);
         assert!(output.contains("2/2 invariants have self-tests"));
@@ -923,8 +923,8 @@ mod tests {
         let report = CoverageReport {
             covered_self_tests: vec![InvariantKind::BoltInBounds],
             missing_self_tests: vec![InvariantKind::NoNaN],
-            used_layouts: vec![("Corridor".to_owned(), 3)],
-            unused_layouts: vec!["Fortress".to_owned()],
+            used_layouts:       vec![("Corridor".to_owned(), 3)],
+            unused_layouts:     vec!["Fortress".to_owned()],
         };
         let output = format_coverage_report(&report, false);
         assert!(output.contains("[ ] NoNaN"));
@@ -937,17 +937,17 @@ mod tests {
     fn print_coverage_report_returns_correct_bool() {
         let gaps = CoverageReport {
             missing_self_tests: vec![InvariantKind::NoNaN],
-            unused_layouts: vec![],
+            unused_layouts:     vec![],
             covered_self_tests: vec![],
-            used_layouts: vec![],
+            used_layouts:       vec![],
         };
         assert!(print_coverage_report(&gaps, false));
 
         let clean = CoverageReport {
             missing_self_tests: vec![],
-            unused_layouts: vec![],
+            unused_layouts:     vec![],
             covered_self_tests: vec![InvariantKind::BoltInBounds],
-            used_layouts: vec![],
+            used_layouts:       vec![],
         };
         assert!(!print_coverage_report(&clean, false));
     }

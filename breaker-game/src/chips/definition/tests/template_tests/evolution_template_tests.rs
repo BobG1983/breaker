@@ -15,15 +15,15 @@ use crate::{
 #[test]
 fn expand_evolution_template_produces_evolution_rarity() {
     let template = EvolutionTemplate {
-        name: "Voltaic Piercer".to_owned(),
+        name:        "Voltaic Piercer".to_owned(),
         description: "Evolved piercing".to_owned(),
-        max_stacks: 1,
-        effects: vec![RootNode::Stamp(
+        max_stacks:  1,
+        effects:     vec![RootNode::Stamp(
             StampTarget::Bolt,
             Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 3 })),
         )],
         ingredients: vec![EvolutionIngredient {
-            chip_name: "Piercing Shot".to_owned(),
+            chip_name:       "Piercing Shot".to_owned(),
             stacks_required: 3,
         }],
     };
@@ -53,15 +53,15 @@ fn expand_evolution_template_produces_evolution_rarity() {
 #[test]
 fn expand_evolution_template_max_stacks_from_template() {
     let template = EvolutionTemplate {
-        name: "Multi Stack Evo".to_owned(),
+        name:        "Multi Stack Evo".to_owned(),
         description: "Stackable evolution".to_owned(),
-        max_stacks: 5,
-        effects: vec![RootNode::Stamp(
+        max_stacks:  5,
+        effects:     vec![RootNode::Stamp(
             StampTarget::Bolt,
             Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
         )],
         ingredients: vec![EvolutionIngredient {
-            chip_name: "Splinter".to_owned(),
+            chip_name:       "Splinter".to_owned(),
             stacks_required: 2,
         }],
     };
@@ -74,15 +74,15 @@ fn expand_evolution_template_max_stacks_from_template() {
 
     // Edge case: max_stacks = 1 (the serde default)
     let template_one = EvolutionTemplate {
-        name: "Single Stack Evo".to_owned(),
+        name:        "Single Stack Evo".to_owned(),
         description: String::new(),
-        max_stacks: 1,
-        effects: vec![RootNode::Stamp(
+        max_stacks:  1,
+        effects:     vec![RootNode::Stamp(
             StampTarget::Bolt,
             Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
         )],
         ingredients: vec![EvolutionIngredient {
-            chip_name: "X".to_owned(),
+            chip_name:       "X".to_owned(),
             stacks_required: 1,
         }],
     };
@@ -101,10 +101,10 @@ fn expand_evolution_template_max_stacks_from_template() {
 #[test]
 fn expand_evolution_template_copies_effects_unchanged() {
     let template = EvolutionTemplate {
-        name: "Combo Evo".to_owned(),
+        name:        "Combo Evo".to_owned(),
         description: String::new(),
-        max_stacks: 1,
-        effects: vec![
+        max_stacks:  1,
+        effects:     vec![
             RootNode::Stamp(
                 StampTarget::Bolt,
                 Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 2 })),
@@ -117,7 +117,7 @@ fn expand_evolution_template_copies_effects_unchanged() {
             ),
         ],
         ingredients: vec![EvolutionIngredient {
-            chip_name: "A".to_owned(),
+            chip_name:       "A".to_owned(),
             stacks_required: 1,
         }],
     };
@@ -140,12 +140,12 @@ fn expand_evolution_template_copies_effects_unchanged() {
 
     // Edge case: empty effects
     let empty_template = EvolutionTemplate {
-        name: "Empty Evo".to_owned(),
+        name:        "Empty Evo".to_owned(),
         description: String::new(),
-        max_stacks: 1,
-        effects: vec![],
+        max_stacks:  1,
+        effects:     vec![],
         ingredients: vec![EvolutionIngredient {
-            chip_name: "Z".to_owned(),
+            chip_name:       "Z".to_owned(),
             stacks_required: 1,
         }],
     };
@@ -163,15 +163,15 @@ fn expand_evolution_template_copies_effects_unchanged() {
 #[test]
 fn expand_evolution_template_sets_template_name_to_none() {
     let template = EvolutionTemplate {
-        name: "Storm Piercer".to_owned(),
+        name:        "Storm Piercer".to_owned(),
         description: "Storm desc".to_owned(),
-        max_stacks: 1,
-        effects: vec![RootNode::Stamp(
+        max_stacks:  1,
+        effects:     vec![RootNode::Stamp(
             StampTarget::Bolt,
             Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
         )],
         ingredients: vec![EvolutionIngredient {
-            chip_name: "X".to_owned(),
+            chip_name:       "X".to_owned(),
             stacks_required: 1,
         }],
     };
@@ -191,20 +191,20 @@ fn expand_evolution_template_sets_template_name_to_none() {
 #[test]
 fn expand_evolution_template_copies_ingredients_as_some_vec() {
     let template = EvolutionTemplate {
-        name: "Fusion Chip".to_owned(),
+        name:        "Fusion Chip".to_owned(),
         description: String::new(),
-        max_stacks: 1,
-        effects: vec![RootNode::Stamp(
+        max_stacks:  1,
+        effects:     vec![RootNode::Stamp(
             StampTarget::Bolt,
             Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
         )],
         ingredients: vec![
             EvolutionIngredient {
-                chip_name: "Alpha".to_owned(),
+                chip_name:       "Alpha".to_owned(),
                 stacks_required: 2,
             },
             EvolutionIngredient {
-                chip_name: "Beta".to_owned(),
+                chip_name:       "Beta".to_owned(),
                 stacks_required: 3,
             },
         ],
@@ -229,10 +229,10 @@ fn expand_evolution_template_copies_ingredients_as_some_vec() {
 
     // Edge case: empty ingredients list -> Some(vec![]), not None
     let empty_template = EvolutionTemplate {
-        name: "Empty Ingredients Evo".to_owned(),
+        name:        "Empty Ingredients Evo".to_owned(),
         description: String::new(),
-        max_stacks: 1,
-        effects: vec![RootNode::Stamp(
+        max_stacks:  1,
+        effects:     vec![RootNode::Stamp(
             StampTarget::Bolt,
             Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
         )],

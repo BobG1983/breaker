@@ -14,6 +14,10 @@ pub struct MirrorConfig {
 
 impl Fireable for MirrorConfig {
     fn fire(&self, _entity: Entity, _source: &str, _world: &mut World) {
-        todo!()
+        // TODO: full implementation requires bolt builder integration
+        warn!(
+            "MirrorProtocol::fire() called but bolt builder is not yet integrated (inherit={})",
+            self.inherit,
+        );
     }
 }

@@ -107,7 +107,7 @@ fn route_with_out_in_transition_completes_full_lifecycle() {
             .to(TestState::B)
             .with_transition(crate::TransitionType::OutIn {
                 out_e: Arc::new(FadeOut::default()),
-                in_e: Arc::new(FadeIn::default()),
+                in_e:  Arc::new(FadeIn::default()),
             })
             .when(|_| true),
     );
@@ -335,7 +335,7 @@ fn full_hierarchy_with_outin_and_in_transitions() {
             .to(Grand::Run)
             .with_transition(crate::TransitionType::OutIn {
                 out_e: Arc::new(crate::FadeOut::default()),
-                in_e: Arc::new(FadeIn::default()),
+                in_e:  Arc::new(FadeIn::default()),
             })
             .when(|_| true),
     );

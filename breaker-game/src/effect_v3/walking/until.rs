@@ -10,11 +10,7 @@ use crate::effect_v3::types::{ScopedTree, Trigger, TriggerContext};
 /// NOTE: Reversal logic is deferred to a future wave. Until nodes need
 /// state tracking to know whether inner effects have been applied, and
 /// reversal dispatch for scoped trees.
-#[allow(
-    clippy::missing_const_for_fn,
-    reason = "deferred implementation will use &mut Commands"
-)]
-pub fn evaluate_until(
+pub const fn evaluate_until(
     _entity: Entity,
     _trigger: &Trigger,
     _inner: &ScopedTree,

@@ -169,12 +169,12 @@ mod tests {
 
         let entity = app.world_mut().spawn_empty().id();
         let msg = KeyboardInput {
-            key_code: KeyCode::Unidentified(bevy::input::keyboard::NativeKeyCode::Unidentified),
+            key_code:    KeyCode::Unidentified(bevy::input::keyboard::NativeKeyCode::Unidentified),
             logical_key: Key::Character("5".into()),
-            state: ButtonState::Released,
-            text: Some("5".into()),
-            repeat: false,
-            window: entity,
+            state:       ButtonState::Released,
+            text:        Some("5".into()),
+            repeat:      false,
+            window:      entity,
         };
         app.world_mut().write_message(msg);
         app.update();

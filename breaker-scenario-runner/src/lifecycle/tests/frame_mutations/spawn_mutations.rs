@@ -17,7 +17,7 @@ fn apply_debug_frame_mutations_spawn_extra_entities_at_matching_frame() {
         max_frames: 1000,
         disallowed_failures: vec![],
         frame_mutations: Some(vec![FrameMutation {
-            frame: 10,
+            frame:    10,
             mutation: MutationKind::SpawnExtraEntities(5),
         }]),
         ..Default::default()

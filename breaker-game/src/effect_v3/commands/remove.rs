@@ -10,7 +10,7 @@ pub struct RemoveEffectCommand {
     /// The entity to remove effect trees from.
     pub entity: Entity,
     /// The name to match against.
-    pub name: String,
+    pub name:   String,
 }
 
 impl Command for RemoveEffectCommand {

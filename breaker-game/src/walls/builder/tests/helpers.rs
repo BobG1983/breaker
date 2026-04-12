@@ -24,10 +24,10 @@ pub(super) fn test_wall_definition() -> WallDefinition {
 /// specific field propagation.
 pub(super) fn custom_wall_definition() -> WallDefinition {
     WallDefinition {
-        name: "CustomWall".to_string(),
+        name:           "CustomWall".to_string(),
         half_thickness: 45.0,
-        color_rgb: Some([0.2, 2.0, 3.0]),
-        effects: vec![RootNode::Stamp(
+        color_rgb:      Some([0.2, 2.0, 3.0]),
+        effects:        vec![RootNode::Stamp(
             StampTarget::ActiveWalls,
             Tree::When(
                 Trigger::Bumped,

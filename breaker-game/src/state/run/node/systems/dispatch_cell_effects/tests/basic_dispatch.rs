@@ -27,7 +27,7 @@ fn cell_with_target_cell_effect_gets_bound_effects_populated() {
                 Tree::When(
                     Trigger::Died,
                     Box::new(Tree::Fire(EffectType::Explode(ExplodeConfig {
-                        range: OrderedFloat(48.0),
+                        range:  OrderedFloat(48.0),
                         damage: OrderedFloat(1.0),
                     }))),
                 ),
@@ -94,7 +94,7 @@ fn cell_with_existing_bound_effects_but_no_marker_still_gets_dispatched() {
                 Tree::When(
                     Trigger::Died,
                     Box::new(Tree::Fire(EffectType::Explode(ExplodeConfig {
-                        range: OrderedFloat(48.0),
+                        range:  OrderedFloat(48.0),
                         damage: OrderedFloat(1.0),
                     }))),
                 ),
@@ -167,7 +167,7 @@ fn cell_with_no_effects_is_unchanged() {
                 Tree::When(
                     Trigger::Died,
                     Box::new(Tree::Fire(EffectType::Explode(ExplodeConfig {
-                        range: OrderedFloat(48.0),
+                        range:  OrderedFloat(48.0),
                         damage: OrderedFloat(1.0),
                     }))),
                 ),
@@ -216,7 +216,7 @@ fn cell_with_empty_effects_vec_is_unchanged() {
                 Tree::When(
                     Trigger::Died,
                     Box::new(Tree::Fire(EffectType::Explode(ExplodeConfig {
-                        range: OrderedFloat(48.0),
+                        range:  OrderedFloat(48.0),
                         damage: OrderedFloat(1.0),
                     }))),
                 ),
@@ -275,7 +275,7 @@ fn cell_with_unknown_alias_is_skipped_no_panic() {
                 Tree::When(
                     Trigger::Died,
                     Box::new(Tree::Fire(EffectType::Explode(ExplodeConfig {
-                        range: OrderedFloat(48.0),
+                        range:  OrderedFloat(48.0),
                         damage: OrderedFloat(1.0),
                     }))),
                 ),
@@ -329,7 +329,7 @@ fn cell_with_alias_not_in_registry_skipped_while_known_alias_dispatched() {
                 Tree::When(
                     Trigger::Died,
                     Box::new(Tree::Fire(EffectType::Explode(ExplodeConfig {
-                        range: OrderedFloat(48.0),
+                        range:  OrderedFloat(48.0),
                         damage: OrderedFloat(1.0),
                     }))),
                 ),

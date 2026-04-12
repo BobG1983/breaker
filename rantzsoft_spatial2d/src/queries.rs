@@ -20,23 +20,23 @@ use crate::components::{
 #[query_data(mutable)]
 pub struct SpatialData {
     /// Mutable world-space position.
-    pub position: &'static mut Position2D,
+    pub position:        &'static mut Position2D,
     /// Mutable velocity vector.
-    pub velocity: &'static mut Velocity2D,
+    pub velocity:        &'static mut Velocity2D,
     /// Read-only global position (from parent hierarchy).
     pub global_position: &'static GlobalPosition2D,
     /// Base speed before multipliers.
-    pub base_speed: &'static BaseSpeed,
+    pub base_speed:      &'static BaseSpeed,
     /// Optional minimum speed constraint.
-    pub min_speed: Option<&'static MinSpeed>,
+    pub min_speed:       Option<&'static MinSpeed>,
     /// Optional maximum speed constraint.
-    pub max_speed: Option<&'static MaxSpeed>,
+    pub max_speed:       Option<&'static MaxSpeed>,
     /// Optional minimum angle from horizontal.
-    pub min_angle_h: Option<&'static MinAngleHorizontal>,
+    pub min_angle_h:     Option<&'static MinAngleHorizontal>,
     /// Optional minimum angle from vertical.
-    pub min_angle_v: Option<&'static MinAngleVertical>,
+    pub min_angle_v:     Option<&'static MinAngleVertical>,
     /// Optional local scale (non-uniform 2D).
-    pub scale: Option<&'static Scale2D>,
+    pub scale:           Option<&'static Scale2D>,
     /// Optional previous-frame scale for interpolation.
-    pub previous_scale: Option<&'static PreviousScale>,
+    pub previous_scale:  Option<&'static PreviousScale>,
 }

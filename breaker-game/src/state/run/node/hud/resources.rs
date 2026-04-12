@@ -14,31 +14,31 @@ use crate::shared::color_from_rgb;
 )]
 pub(crate) struct TimerUiConfig {
     /// Font size for the timer display.
-    pub font_size: f32,
+    pub font_size:         f32,
     /// Asset path for the timer font.
-    pub font_path: String,
+    pub font_path:         String,
     /// RGB color when plenty of time remains.
-    pub normal_color_rgb: [f32; 3],
+    pub normal_color_rgb:  [f32; 3],
     /// RGB color when time is running low.
     pub warning_color_rgb: [f32; 3],
     /// RGB color when time is critically low.
-    pub urgent_color_rgb: [f32; 3],
+    pub urgent_color_rgb:  [f32; 3],
     /// Fraction of total time below which warning color activates.
     pub warning_threshold: f32,
     /// Fraction of total time below which urgent color activates.
-    pub urgent_threshold: f32,
+    pub urgent_threshold:  f32,
 }
 
 impl Default for TimerUiConfig {
     fn default() -> Self {
         Self {
-            font_size: 48.0,
-            font_path: "fonts/Rajdhani-Medium.ttf".to_owned(),
-            normal_color_rgb: [0.8, 0.8, 0.9],
+            font_size:         48.0,
+            font_path:         "fonts/Rajdhani-Medium.ttf".to_owned(),
+            normal_color_rgb:  [0.8, 0.8, 0.9],
             warning_color_rgb: [4.0, 3.0, 0.2],
-            urgent_color_rgb: [5.0, 0.3, 0.2],
+            urgent_color_rgb:  [5.0, 0.3, 0.2],
             warning_threshold: 0.33,
-            urgent_threshold: 0.15,
+            urgent_threshold:  0.15,
         }
     }
 }

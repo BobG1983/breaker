@@ -11,7 +11,7 @@ use rantzsoft_defaults::GameConfig;
 #[derive(Resource, Debug)]
 pub struct DoubleTapState {
     /// Wall-clock time of the last left-direction press.
-    pub last_left_tap: f64,
+    pub last_left_tap:  f64,
     /// Wall-clock time of the last right-direction press.
     pub last_right_tap: f64,
 }
@@ -19,7 +19,7 @@ pub struct DoubleTapState {
 impl Default for DoubleTapState {
     fn default() -> Self {
         Self {
-            last_left_tap: f64::NEG_INFINITY,
+            last_left_tap:  f64::NEG_INFINITY,
             last_right_tap: f64::NEG_INFINITY,
         }
     }
@@ -75,21 +75,21 @@ impl InputActions {
 )]
 pub struct InputConfig {
     /// Keys that move the breaker left.
-    pub move_left: Vec<KeyCode>,
+    pub move_left:         Vec<KeyCode>,
     /// Keys that move the breaker right.
-    pub move_right: Vec<KeyCode>,
+    pub move_right:        Vec<KeyCode>,
     /// Keys that activate bump / launch bolt.
-    pub bump: Vec<KeyCode>,
+    pub bump:              Vec<KeyCode>,
     /// Keys that navigate up in menus.
-    pub menu_up: Vec<KeyCode>,
+    pub menu_up:           Vec<KeyCode>,
     /// Keys that navigate down in menus.
-    pub menu_down: Vec<KeyCode>,
+    pub menu_down:         Vec<KeyCode>,
     /// Keys that navigate left in horizontal menus.
-    pub menu_left: Vec<KeyCode>,
+    pub menu_left:         Vec<KeyCode>,
     /// Keys that navigate right in horizontal menus.
-    pub menu_right: Vec<KeyCode>,
+    pub menu_right:        Vec<KeyCode>,
     /// Keys that confirm the current menu selection.
-    pub menu_confirm: Vec<KeyCode>,
+    pub menu_confirm:      Vec<KeyCode>,
     /// Time window for double-tap dash detection (seconds).
     pub double_tap_window: f32,
 }
@@ -97,14 +97,14 @@ pub struct InputConfig {
 impl Default for InputConfig {
     fn default() -> Self {
         Self {
-            move_left: vec![KeyCode::ArrowLeft, KeyCode::KeyA],
-            move_right: vec![KeyCode::ArrowRight, KeyCode::KeyD],
-            bump: vec![KeyCode::ArrowUp, KeyCode::KeyW],
-            menu_up: vec![KeyCode::ArrowUp, KeyCode::KeyW],
-            menu_down: vec![KeyCode::ArrowDown, KeyCode::KeyS],
-            menu_left: vec![KeyCode::ArrowLeft, KeyCode::KeyA],
-            menu_right: vec![KeyCode::ArrowRight, KeyCode::KeyD],
-            menu_confirm: vec![KeyCode::Enter, KeyCode::Space],
+            move_left:         vec![KeyCode::ArrowLeft, KeyCode::KeyA],
+            move_right:        vec![KeyCode::ArrowRight, KeyCode::KeyD],
+            bump:              vec![KeyCode::ArrowUp, KeyCode::KeyW],
+            menu_up:           vec![KeyCode::ArrowUp, KeyCode::KeyW],
+            menu_down:         vec![KeyCode::ArrowDown, KeyCode::KeyS],
+            menu_left:         vec![KeyCode::ArrowLeft, KeyCode::KeyA],
+            menu_right:        vec![KeyCode::ArrowRight, KeyCode::KeyD],
+            menu_confirm:      vec![KeyCode::Enter, KeyCode::Space],
             double_tap_window: 0.25,
         }
     }

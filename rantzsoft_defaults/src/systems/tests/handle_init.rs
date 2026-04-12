@@ -34,7 +34,7 @@ use crate::registry::{RegistryHandles, SeedableRegistry};
 
 #[derive(Asset, TypePath, Deserialize, Clone, Debug)]
 struct TestRegistryAsset {
-    name: String,
+    name:  String,
     value: f32,
 }
 

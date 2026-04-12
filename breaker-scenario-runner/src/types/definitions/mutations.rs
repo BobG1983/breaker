@@ -9,7 +9,7 @@ use serde::Deserialize;
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct FrameMutation {
     /// The fixed-update frame on which this mutation is applied.
-    pub frame: u32,
+    pub frame:    u32,
     /// The kind of mutation to apply.
     pub mutation: MutationKind,
 }
@@ -60,9 +60,9 @@ pub enum MutationKind {
     /// [`InvariantKind::ChipStacksConsistent`] violation.
     InjectOverStackedChip {
         /// Name of the chip to inject.
-        chip_name: String,
+        chip_name:  String,
         /// Stack count to set (should exceed `max_stacks` to trigger violation).
-        stacks: u32,
+        stacks:     u32,
         /// Maximum stacks declared for this chip.
         max_stacks: u32,
     },

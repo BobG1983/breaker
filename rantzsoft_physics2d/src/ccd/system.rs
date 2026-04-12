@@ -20,7 +20,7 @@ pub struct RayHit {
     /// Distance along the ray to the entry point.
     pub distance: f32,
     /// Outward face normal at the entry point.
-    pub normal: Vec2,
+    pub normal:   Vec2,
 }
 
 impl RayHit {
@@ -41,11 +41,11 @@ impl RayHit {
 /// Result of a swept circle (or ray) cast against the quadtree.
 pub struct SweepHit {
     /// The entity that was hit.
-    pub entity: Entity,
+    pub entity:    Entity,
     /// Safe position for the moving object just before contact.
-    pub position: Vec2,
+    pub position:  Vec2,
     /// Outward face normal at the contact point.
-    pub normal: Vec2,
+    pub normal:    Vec2,
     /// Remaining travel distance after the hit.
     pub remaining: f32,
 }

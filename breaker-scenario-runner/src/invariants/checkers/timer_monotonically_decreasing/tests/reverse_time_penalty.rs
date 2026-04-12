@@ -12,7 +12,7 @@ fn timer_monotonically_decreasing_no_violation_when_reverse_time_penalty_sent() 
 
     app.insert_resource(NodeTimer {
         remaining: 20.0,
-        total: 60.0,
+        total:     60.0,
     });
 
     // Tick 1: seeds Local with (20.0, 60.0)
@@ -59,7 +59,7 @@ fn timer_monotonically_decreasing_fires_when_no_reverse_penalty_despite_increase
 
     app.insert_resource(NodeTimer {
         remaining: 20.0,
-        total: 60.0,
+        total:     60.0,
     });
 
     // Tick 1: seeds Local with (20.0, 60.0)

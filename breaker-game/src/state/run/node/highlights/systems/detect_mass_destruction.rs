@@ -48,10 +48,10 @@ pub(crate) fn detect_mass_destruction(
             .any(|h| h.kind == HighlightKind::MassDestruction);
         if !already_recorded {
             stats.highlights.push(RunHighlight {
-                kind: HighlightKind::MassDestruction,
+                kind:       HighlightKind::MassDestruction,
                 node_index: run_state.node_index,
-                value: f32::from(u16::try_from(count).unwrap_or(u16::MAX)),
-                detail: None,
+                value:      f32::from(u16::try_from(count).unwrap_or(u16::MAX)),
+                detail:     None,
             });
         }
     }
@@ -329,10 +329,10 @@ mod tests {
             .resource_mut::<RunStats>()
             .highlights
             .push(RunHighlight {
-                kind: HighlightKind::MassDestruction,
+                kind:       HighlightKind::MassDestruction,
                 node_index: 0,
-                value: 10.0,
-                detail: None,
+                value:      10.0,
+                detail:     None,
             });
 
         // Advance time to ~5.0s

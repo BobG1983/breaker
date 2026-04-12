@@ -23,7 +23,7 @@ fn fade_out_start_inserts_transition_effect_on_camera() {
     let (mut app, _camera) = effect_test_app();
     app.insert_resource(FadeOutConfig {
         duration: 0.5,
-        color: Color::BLACK,
+        color:    Color::BLACK,
     });
     app.insert_resource(StartingTransition::<FadeOut>::new());
     app.add_systems(Update, fade_out_start);
@@ -60,7 +60,7 @@ fn fade_out_start_does_not_spawn_new_entities() {
     let count_before = app.world().entities().len();
     app.insert_resource(FadeOutConfig {
         duration: 0.5,
-        color: Color::BLACK,
+        color:    Color::BLACK,
     });
     app.insert_resource(StartingTransition::<FadeOut>::new());
     app.add_systems(Update, fade_out_start);
@@ -80,7 +80,7 @@ fn fade_out_start_sends_transition_ready() {
     let (mut app, _camera) = effect_test_app();
     app.insert_resource(FadeOutConfig {
         duration: 0.5,
-        color: Color::BLACK,
+        color:    Color::BLACK,
     });
     app.insert_resource(StartingTransition::<FadeOut>::new());
     app.add_systems(Update, fade_out_start);
@@ -98,7 +98,7 @@ fn fade_out_start_inserts_transition_progress() {
     let (mut app, _camera) = effect_test_app();
     app.insert_resource(FadeOutConfig {
         duration: 0.5,
-        color: Color::BLACK,
+        color:    Color::BLACK,
     });
     app.insert_resource(StartingTransition::<FadeOut>::new());
     app.add_systems(Update, fade_out_start);
@@ -125,7 +125,7 @@ fn fade_out_start_removes_config_resource() {
     let (mut app, _camera) = effect_test_app();
     app.insert_resource(FadeOutConfig {
         duration: 0.5,
-        color: Color::BLACK,
+        color:    Color::BLACK,
     });
     app.insert_resource(StartingTransition::<FadeOut>::new());
     app.add_systems(Update, fade_out_start);
@@ -144,7 +144,7 @@ fn fade_out_start_with_red_color_preserves_color_in_transition_effect() {
     let (mut app, _camera) = effect_test_app();
     app.insert_resource(FadeOutConfig {
         duration: 0.5,
-        color: Color::srgba(1.0, 0.0, 0.0, 1.0),
+        color:    Color::srgba(1.0, 0.0, 0.0, 1.0),
     });
     app.insert_resource(StartingTransition::<FadeOut>::new());
     app.add_systems(Update, fade_out_start);
@@ -175,15 +175,15 @@ fn fade_out_start_overwrites_stale_transition_effect_on_camera() {
     let (mut app, camera) = effect_test_app();
     // Pre-insert a stale TransitionEffect on the camera
     app.world_mut().entity_mut(camera).insert(TransitionEffect {
-        color: Vec4::new(1.0, 1.0, 1.0, 1.0),
-        direction: Vec4::new(1.0, 0.0, 0.0, 0.0),
+        color:       Vec4::new(1.0, 1.0, 1.0, 1.0),
+        direction:   Vec4::new(1.0, 0.0, 0.0, 0.0),
         effect_type: EffectType::WIPE,
-        progress: 0.75,
+        progress:    0.75,
     });
 
     app.insert_resource(FadeOutConfig {
         duration: 0.5,
-        color: Color::BLACK,
+        color:    Color::BLACK,
     });
     app.insert_resource(StartingTransition::<FadeOut>::new());
     app.add_systems(Update, fade_out_start);
@@ -213,15 +213,15 @@ fn fade_out_start_overwrites_stale_transition_effect_on_camera() {
 fn fade_out_run_updates_progress_on_camera() {
     let (mut app, camera) = effect_test_app();
     app.world_mut().entity_mut(camera).insert(TransitionEffect {
-        color: Vec4::new(0.0, 0.0, 0.0, 1.0),
-        direction: Vec4::ZERO,
+        color:       Vec4::new(0.0, 0.0, 0.0, 1.0),
+        direction:   Vec4::ZERO,
         effect_type: EffectType::FADE,
-        progress: 0.0,
+        progress:    0.0,
     });
     app.insert_resource(RunningTransition::<FadeOut>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 0.25,
-        duration: 1.0,
+        elapsed:   0.25,
+        duration:  1.0,
         completed: false,
     });
     app.add_systems(Update, fade_out_run);
@@ -245,15 +245,15 @@ fn fade_out_run_updates_progress_on_camera() {
 fn fade_out_run_does_not_send_complete_when_in_progress() {
     let (mut app, camera) = effect_test_app();
     app.world_mut().entity_mut(camera).insert(TransitionEffect {
-        color: Vec4::new(0.0, 0.0, 0.0, 1.0),
-        direction: Vec4::ZERO,
+        color:       Vec4::new(0.0, 0.0, 0.0, 1.0),
+        direction:   Vec4::ZERO,
         effect_type: EffectType::FADE,
-        progress: 0.0,
+        progress:    0.0,
     });
     app.insert_resource(RunningTransition::<FadeOut>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 0.25,
-        duration: 1.0,
+        elapsed:   0.25,
+        duration:  1.0,
         completed: false,
     });
     app.add_systems(Update, fade_out_run);
@@ -275,15 +275,15 @@ fn fade_out_run_does_not_send_complete_when_in_progress() {
 fn fade_out_run_sends_complete_when_elapsed_equals_duration() {
     let (mut app, camera) = effect_test_app();
     app.world_mut().entity_mut(camera).insert(TransitionEffect {
-        color: Vec4::new(0.0, 0.0, 0.0, 1.0),
-        direction: Vec4::ZERO,
+        color:       Vec4::new(0.0, 0.0, 0.0, 1.0),
+        direction:   Vec4::ZERO,
         effect_type: EffectType::FADE,
-        progress: 0.0,
+        progress:    0.0,
     });
     app.insert_resource(RunningTransition::<FadeOut>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 0.5,
-        duration: 0.5,
+        elapsed:   0.5,
+        duration:  0.5,
         completed: false,
     });
     app.add_systems(Update, fade_out_run);
@@ -316,15 +316,15 @@ fn fade_out_run_sends_complete_when_elapsed_equals_duration() {
 fn fade_out_run_clamps_progress_to_one_when_overshooting() {
     let (mut app, camera) = effect_test_app();
     app.world_mut().entity_mut(camera).insert(TransitionEffect {
-        color: Vec4::new(0.0, 0.0, 0.0, 1.0),
-        direction: Vec4::ZERO,
+        color:       Vec4::new(0.0, 0.0, 0.0, 1.0),
+        direction:   Vec4::ZERO,
         effect_type: EffectType::FADE,
-        progress: 0.0,
+        progress:    0.0,
     });
     app.insert_resource(RunningTransition::<FadeOut>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 0.6,
-        duration: 0.5,
+        elapsed:   0.6,
+        duration:  0.5,
         completed: false,
     });
     app.add_systems(Update, fade_out_run);
@@ -348,15 +348,15 @@ fn fade_out_run_clamps_progress_to_one_when_overshooting() {
 fn fade_out_run_does_not_double_send_complete_when_already_completed() {
     let (mut app, camera) = effect_test_app();
     app.world_mut().entity_mut(camera).insert(TransitionEffect {
-        color: Vec4::new(0.0, 0.0, 0.0, 1.0),
-        direction: Vec4::ZERO,
+        color:       Vec4::new(0.0, 0.0, 0.0, 1.0),
+        direction:   Vec4::ZERO,
         effect_type: EffectType::FADE,
-        progress: 1.0,
+        progress:    1.0,
     });
     app.insert_resource(RunningTransition::<FadeOut>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 1.0,
-        duration: 1.0,
+        elapsed:   1.0,
+        duration:  1.0,
         completed: true,
     });
     app.add_systems(Update, fade_out_run);
@@ -384,8 +384,8 @@ fn fade_out_end_sends_transition_over() {
         .insert(TransitionEffect::default());
     app.insert_resource(EndingTransition::<FadeOut>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 0.5,
-        duration: 0.5,
+        elapsed:   0.5,
+        duration:  0.5,
         completed: true,
     });
     app.add_systems(Update, fade_out_end);
@@ -411,8 +411,8 @@ fn fade_out_end_does_not_despawn_camera_entity() {
         .insert(TransitionEffect::default());
     app.insert_resource(EndingTransition::<FadeOut>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 0.5,
-        duration: 0.5,
+        elapsed:   0.5,
+        duration:  0.5,
         completed: true,
     });
     app.add_systems(Update, fade_out_end);
@@ -452,7 +452,7 @@ fn fade_out_satisfies_transition_and_out_transition() {
     use crate::transition::traits::OutTransition;
     let _effect: Box<dyn OutTransition> = Box::new(FadeOut {
         duration: 0.5,
-        color: Color::BLACK,
+        color:    Color::BLACK,
     });
 }
 
@@ -464,7 +464,7 @@ fn fade_out_insert_starting_inserts_marker_and_config() {
     let mut world = World::new();
     let effect = FadeOut {
         duration: 0.5,
-        color: Color::BLACK,
+        color:    Color::BLACK,
     };
     effect.insert_starting(&mut world);
 

@@ -24,10 +24,10 @@ pub fn check_second_wind_wall_at_most_one(
     let count = walls.iter().count();
     if count > 1 {
         log.0.push(ViolationEntry {
-            frame: frame.0,
+            frame:     frame.0,
             invariant: InvariantKind::SecondWindWallAtMostOne,
-            entity: None,
-            message: format!(
+            entity:    None,
+            message:   format!(
                 "SecondWindWallAtMostOne FAIL frame={} count={count} (expected ≤ 1)",
                 frame.0,
             ),

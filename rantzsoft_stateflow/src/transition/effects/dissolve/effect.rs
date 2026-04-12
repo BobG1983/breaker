@@ -24,14 +24,14 @@ pub struct DissolveOut {
     /// Duration in seconds.
     pub duration: f32,
     /// Overlay color.
-    pub color: Color,
+    pub color:    Color,
 }
 
 impl Default for DissolveOut {
     fn default() -> Self {
         Self {
             duration: 0.3,
-            color: Color::BLACK,
+            color:    Color::BLACK,
         }
     }
 }
@@ -40,7 +40,7 @@ impl Transition for DissolveOut {
     fn insert_starting(&self, world: &mut World) {
         world.insert_resource(StartingTransition::<Self>::new());
         world.insert_resource(DissolveOutConfig {
-            color: self.color,
+            color:    self.color,
             duration: self.duration,
         });
     }
@@ -52,14 +52,14 @@ pub struct DissolveIn {
     /// Duration in seconds.
     pub duration: f32,
     /// Overlay color.
-    pub color: Color,
+    pub color:    Color,
 }
 
 impl Default for DissolveIn {
     fn default() -> Self {
         Self {
             duration: 0.3,
-            color: Color::BLACK,
+            color:    Color::BLACK,
         }
     }
 }
@@ -68,7 +68,7 @@ impl Transition for DissolveIn {
     fn insert_starting(&self, world: &mut World) {
         world.insert_resource(StartingTransition::<Self>::new());
         world.insert_resource(DissolveInConfig {
-            color: self.color,
+            color:    self.color,
             duration: self.duration,
         });
     }
@@ -85,7 +85,7 @@ pub struct DissolveOutConfig {
     /// Duration in seconds.
     pub duration: f32,
     /// Overlay color.
-    pub color: Color,
+    pub color:    Color,
 }
 
 /// Configuration resource inserted by `DissolveIn::insert_starting`.
@@ -94,7 +94,7 @@ pub struct DissolveInConfig {
     /// Duration in seconds.
     pub duration: f32,
     /// Overlay color.
-    pub color: Color,
+    pub color:    Color,
 }
 
 // ---------------------------------------------------------------------------
@@ -111,15 +111,15 @@ pub(crate) fn dissolve_out_start(
 ) {
     if let Some(camera) = cameras.iter().next() {
         commands.entity(camera).insert(TransitionEffect {
-            color: color_to_linear_vec4(config.color),
-            direction: Vec4::ZERO,
+            color:       color_to_linear_vec4(config.color),
+            direction:   Vec4::ZERO,
             effect_type: EffectType::DISSOLVE,
-            progress: 0.0,
+            progress:    0.0,
         });
     }
     commands.insert_resource(TransitionProgress {
-        elapsed: 0.0,
-        duration: config.duration,
+        elapsed:   0.0,
+        duration:  config.duration,
         completed: false,
     });
     commands.remove_resource::<DissolveOutConfig>();
@@ -179,15 +179,15 @@ pub(crate) fn dissolve_in_start(
 ) {
     if let Some(camera) = cameras.iter().next() {
         commands.entity(camera).insert(TransitionEffect {
-            color: color_to_linear_vec4(config.color),
-            direction: Vec4::ZERO,
+            color:       color_to_linear_vec4(config.color),
+            direction:   Vec4::ZERO,
             effect_type: EffectType::DISSOLVE,
-            progress: 1.0,
+            progress:    1.0,
         });
     }
     commands.insert_resource(TransitionProgress {
-        elapsed: 0.0,
-        duration: config.duration,
+        elapsed:   0.0,
+        duration:  config.duration,
         completed: false,
     });
     commands.remove_resource::<DissolveInConfig>();

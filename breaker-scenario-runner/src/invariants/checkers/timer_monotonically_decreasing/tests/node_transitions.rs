@@ -13,7 +13,7 @@ fn timer_monotonically_decreasing_no_violation_when_remaining_increases_with_new
     // Start: NodeTimer { remaining: 5.0, total: 30.0 }
     app.insert_resource(NodeTimer {
         remaining: 5.0,
-        total: 30.0,
+        total:     30.0,
     });
 
     // Tick 1: seeds Local with (5.0, 30.0)
@@ -55,7 +55,7 @@ fn timer_monotonically_decreasing_fires_when_remaining_increases_with_same_total
 
     app.insert_resource(NodeTimer {
         remaining: 10.0,
-        total: 30.0,
+        total:     30.0,
     });
 
     // Tick 1: seeds Local with (10.0, 30.0)
@@ -100,7 +100,7 @@ fn timer_monotonically_decreasing_no_violation_on_same_duration_node_transition(
     // First node: total=60.0, remaining starts at 53.7 (partway through)
     app.insert_resource(NodeTimer {
         remaining: 53.7,
-        total: 60.0,
+        total:     60.0,
     });
 
     // Tick 1: seeds Local with (53.7, 60.0)
@@ -146,7 +146,7 @@ fn timer_monotonically_decreasing_fires_when_timer_increases_from_zero() {
     // Start with a zero-initialized NodeTimer (both fields zero)
     app.insert_resource(NodeTimer {
         remaining: 0.0,
-        total: 0.0,
+        total:     0.0,
     });
 
     // Tick 1: seeds Local with (0.0, 0.0)

@@ -64,7 +64,7 @@ fn hybrid_input_strategy_parses_from_ron() {
         result,
         InputStrategy::Hybrid(HybridParams {
             scripted_frames: 100,
-            action_prob: 0.5,
+            action_prob:     0.5,
         })
     );
 }
@@ -98,7 +98,7 @@ fn hybrid_params_without_seed_parses() {
         result,
         HybridParams {
             scripted_frames: 100,
-            action_prob: 0.5,
+            action_prob:     0.5,
         },
         "HybridParams must contain only scripted_frames and action_prob"
     );

@@ -80,11 +80,11 @@ pub(super) fn lifecycle_test_app() -> App {
             definition: make_lifecycle_test_scenario(),
         })
         .insert_resource(PlayfieldConfig {
-            width: 800.0,
-            height: 700.0,
+            width:                800.0,
+            height:               700.0,
             background_color_rgb: [0.0, 0.0, 0.0],
-            wall_thickness: 180.0,
-            zone_fraction: 0.667,
+            wall_thickness:       180.0,
+            zone_fraction:        0.667,
         });
     // Resources required by bypass_menu_to_playing
     app.insert_resource(breaker::breaker::SelectedBreaker("Aegis".to_owned()))

@@ -17,13 +17,13 @@ impl Breaker {
     -> BreakerBuilder<NoDimensions, NoMovement, NoDashing, NoSpread, NoBump, Unvisual, NoRole> {
         BreakerBuilder {
             dimensions: NoDimensions,
-            movement: NoMovement,
-            dashing: NoDashing,
-            spread: NoSpread,
-            bump: NoBump,
-            visual: Unvisual,
-            role: NoRole,
-            optional: OptionalBreakerData::default(),
+            movement:   NoMovement,
+            dashing:    NoDashing,
+            spread:     NoSpread,
+            bump:       NoBump,
+            visual:     Unvisual,
+            role:       NoRole,
+            optional:   OptionalBreakerData::default(),
         }
     }
 }
@@ -48,13 +48,13 @@ impl<Mv, Da, Sp, Bm, V, R> BreakerBuilder<NoDimensions, Mv, Da, Sp, Bm, V, R> {
                 min_h: height * 0.5,
                 max_h: height * 5.0,
             },
-            movement: self.movement,
-            dashing: self.dashing,
-            spread: self.spread,
-            bump: self.bump,
-            visual: self.visual,
-            role: self.role,
-            optional: self.optional,
+            movement:   self.movement,
+            dashing:    self.dashing,
+            spread:     self.spread,
+            bump:       self.bump,
+            visual:     self.visual,
+            role:       self.role,
+            optional:   self.optional,
         }
     }
 }
@@ -69,19 +69,19 @@ impl<D, Da, Sp, Bm, V, R> BreakerBuilder<D, NoMovement, Da, Sp, Bm, V, R> {
     ) -> BreakerBuilder<D, HasMovement, Da, Sp, Bm, V, R> {
         BreakerBuilder {
             dimensions: self.dimensions,
-            movement: HasMovement {
-                max_speed: settings.max_speed,
-                acceleration: settings.acceleration,
-                deceleration: settings.deceleration,
-                decel_ease: settings.decel_ease,
+            movement:   HasMovement {
+                max_speed:           settings.max_speed,
+                acceleration:        settings.acceleration,
+                deceleration:        settings.deceleration,
+                decel_ease:          settings.decel_ease,
                 decel_ease_strength: settings.decel_ease_strength,
             },
-            dashing: self.dashing,
-            spread: self.spread,
-            bump: self.bump,
-            visual: self.visual,
-            role: self.role,
-            optional: self.optional,
+            dashing:    self.dashing,
+            spread:     self.spread,
+            bump:       self.bump,
+            visual:     self.visual,
+            role:       self.role,
+            optional:   self.optional,
         }
     }
 }
@@ -96,13 +96,13 @@ impl<D, Mv, Sp, Bm, V, R> BreakerBuilder<D, Mv, NoDashing, Sp, Bm, V, R> {
     ) -> BreakerBuilder<D, Mv, HasDashing, Sp, Bm, V, R> {
         BreakerBuilder {
             dimensions: self.dimensions,
-            movement: self.movement,
-            dashing: HasDashing { settings },
-            spread: self.spread,
-            bump: self.bump,
-            visual: self.visual,
-            role: self.role,
-            optional: self.optional,
+            movement:   self.movement,
+            dashing:    HasDashing { settings },
+            spread:     self.spread,
+            bump:       self.bump,
+            visual:     self.visual,
+            role:       self.role,
+            optional:   self.optional,
         }
     }
 }
@@ -114,15 +114,15 @@ impl<D, Mv, Da, Bm, V, R> BreakerBuilder<D, Mv, Da, NoSpread, Bm, V, R> {
     pub fn spread(self, degrees: f32) -> BreakerBuilder<D, Mv, Da, HasSpread, Bm, V, R> {
         BreakerBuilder {
             dimensions: self.dimensions,
-            movement: self.movement,
-            dashing: self.dashing,
-            spread: HasSpread {
+            movement:   self.movement,
+            dashing:    self.dashing,
+            spread:     HasSpread {
                 spread_degrees: degrees,
             },
-            bump: self.bump,
-            visual: self.visual,
-            role: self.role,
-            optional: self.optional,
+            bump:       self.bump,
+            visual:     self.visual,
+            role:       self.role,
+            optional:   self.optional,
         }
     }
 }
@@ -134,13 +134,13 @@ impl<D, Mv, Da, Sp, V, R> BreakerBuilder<D, Mv, Da, Sp, NoBump, V, R> {
     pub fn bump(self, settings: BumpSettings) -> BreakerBuilder<D, Mv, Da, Sp, HasBump, V, R> {
         BreakerBuilder {
             dimensions: self.dimensions,
-            movement: self.movement,
-            dashing: self.dashing,
-            spread: self.spread,
-            bump: HasBump { settings },
-            visual: self.visual,
-            role: self.role,
-            optional: self.optional,
+            movement:   self.movement,
+            dashing:    self.dashing,
+            spread:     self.spread,
+            bump:       HasBump { settings },
+            visual:     self.visual,
+            role:       self.role,
+            optional:   self.optional,
         }
     }
 }
@@ -161,16 +161,16 @@ impl<D, Mv, Da, Sp, Bm, R> BreakerBuilder<D, Mv, Da, Sp, Bm, Unvisual, R> {
         let color = crate::shared::color_from_rgb(color_rgb);
         BreakerBuilder {
             dimensions: self.dimensions,
-            movement: self.movement,
-            dashing: self.dashing,
-            spread: self.spread,
-            bump: self.bump,
-            visual: Rendered {
-                mesh: meshes.add(Rectangle::new(1.0, 1.0)),
+            movement:   self.movement,
+            dashing:    self.dashing,
+            spread:     self.spread,
+            bump:       self.bump,
+            visual:     Rendered {
+                mesh:     meshes.add(Rectangle::new(1.0, 1.0)),
                 material: materials.add(ColorMaterial::from_color(color)),
             },
-            role: self.role,
-            optional: self.optional,
+            role:       self.role,
+            optional:   self.optional,
         }
     }
 
@@ -178,13 +178,13 @@ impl<D, Mv, Da, Sp, Bm, R> BreakerBuilder<D, Mv, Da, Sp, Bm, Unvisual, R> {
     pub fn headless(self) -> BreakerBuilder<D, Mv, Da, Sp, Bm, Headless, R> {
         BreakerBuilder {
             dimensions: self.dimensions,
-            movement: self.movement,
-            dashing: self.dashing,
-            spread: self.spread,
-            bump: self.bump,
-            visual: Headless,
-            role: self.role,
-            optional: self.optional,
+            movement:   self.movement,
+            dashing:    self.dashing,
+            spread:     self.spread,
+            bump:       self.bump,
+            visual:     Headless,
+            role:       self.role,
+            optional:   self.optional,
         }
     }
 }
@@ -196,13 +196,13 @@ impl<D, Mv, Da, Sp, Bm, V> BreakerBuilder<D, Mv, Da, Sp, Bm, V, NoRole> {
     pub fn primary(self) -> BreakerBuilder<D, Mv, Da, Sp, Bm, V, Primary> {
         BreakerBuilder {
             dimensions: self.dimensions,
-            movement: self.movement,
-            dashing: self.dashing,
-            spread: self.spread,
-            bump: self.bump,
-            visual: self.visual,
-            role: Primary,
-            optional: self.optional,
+            movement:   self.movement,
+            dashing:    self.dashing,
+            spread:     self.spread,
+            bump:       self.bump,
+            visual:     self.visual,
+            role:       Primary,
+            optional:   self.optional,
         }
     }
 
@@ -210,13 +210,13 @@ impl<D, Mv, Da, Sp, Bm, V> BreakerBuilder<D, Mv, Da, Sp, Bm, V, NoRole> {
     pub fn extra(self) -> BreakerBuilder<D, Mv, Da, Sp, Bm, V, Extra> {
         BreakerBuilder {
             dimensions: self.dimensions,
-            movement: self.movement,
-            dashing: self.dashing,
-            spread: self.spread,
-            bump: self.bump,
-            visual: self.visual,
-            role: Extra,
-            optional: self.optional,
+            movement:   self.movement,
+            dashing:    self.dashing,
+            spread:     self.spread,
+            bump:       self.bump,
+            visual:     self.visual,
+            role:       Extra,
+            optional:   self.optional,
         }
     }
 }
@@ -246,63 +246,63 @@ impl<V, R> BreakerBuilder<NoDimensions, NoMovement, NoDashing, NoSpread, NoBump,
 
         BreakerBuilder {
             dimensions: HasDimensions {
-                width: def.width,
-                height: def.height,
+                width:      def.width,
+                height:     def.height,
                 y_position: def.y_position,
-                min_w: def.min_w.unwrap_or(def.width * 0.5),
-                max_w: def.max_w.unwrap_or(def.width * 5.0),
-                min_h: def.min_h.unwrap_or(def.height * 0.5),
-                max_h: def.max_h.unwrap_or(def.height * 5.0),
+                min_w:      def.min_w.unwrap_or(def.width * 0.5),
+                max_w:      def.max_w.unwrap_or(def.width * 5.0),
+                min_h:      def.min_h.unwrap_or(def.height * 0.5),
+                max_h:      def.max_h.unwrap_or(def.height * 5.0),
             },
-            movement: HasMovement {
-                max_speed: def.max_speed,
-                acceleration: def.acceleration,
-                deceleration: def.deceleration,
-                decel_ease: def.decel_ease,
+            movement:   HasMovement {
+                max_speed:           def.max_speed,
+                acceleration:        def.acceleration,
+                deceleration:        def.deceleration,
+                decel_ease:          def.decel_ease,
                 decel_ease_strength: def.decel_ease_strength,
             },
-            dashing: HasDashing {
+            dashing:    HasDashing {
                 settings: DashSettings {
-                    dash: DashParams {
+                    dash:   DashParams {
                         speed_multiplier: def.dash_speed_multiplier,
-                        duration: def.dash_duration,
-                        tilt_angle: def.dash_tilt_angle,
-                        tilt_ease: def.dash_tilt_ease,
+                        duration:         def.dash_duration,
+                        tilt_angle:       def.dash_tilt_angle,
+                        tilt_ease:        def.dash_tilt_ease,
                     },
-                    brake: BrakeParams {
-                        tilt_angle: def.brake_tilt_angle,
-                        tilt_duration: def.brake_tilt_duration,
-                        tilt_ease: def.brake_tilt_ease,
+                    brake:  BrakeParams {
+                        tilt_angle:       def.brake_tilt_angle,
+                        tilt_duration:    def.brake_tilt_duration,
+                        tilt_ease:        def.brake_tilt_ease,
                         decel_multiplier: def.brake_decel_multiplier,
                     },
                     settle: SettleParams {
-                        duration: def.settle_duration,
+                        duration:  def.settle_duration,
                         tilt_ease: def.settle_tilt_ease,
                     },
                 },
             },
-            spread: HasSpread {
+            spread:     HasSpread {
                 spread_degrees: def.reflection_spread,
             },
-            bump: HasBump {
+            bump:       HasBump {
                 settings: BumpSettings {
-                    perfect_window: def.perfect_window,
-                    early_window: def.early_window,
-                    late_window: def.late_window,
+                    perfect_window:   def.perfect_window,
+                    early_window:     def.early_window,
+                    late_window:      def.late_window,
                     perfect_cooldown: def.perfect_bump_cooldown,
-                    weak_cooldown: def.weak_bump_cooldown,
-                    feedback: BumpFeedbackSettings {
-                        duration: def.bump_visual_duration,
-                        peak: def.bump_visual_peak,
+                    weak_cooldown:    def.weak_bump_cooldown,
+                    feedback:         BumpFeedbackSettings {
+                        duration:      def.bump_visual_duration,
+                        peak:          def.bump_visual_peak,
                         peak_fraction: def.bump_visual_peak_fraction,
-                        rise_ease: def.bump_visual_rise_ease,
-                        fall_ease: def.bump_visual_fall_ease,
+                        rise_ease:     def.bump_visual_rise_ease,
+                        fall_ease:     def.bump_visual_fall_ease,
                     },
                 },
             },
-            visual: self.visual,
-            role: self.role,
-            optional: self.optional,
+            visual:     self.visual,
+            role:       self.role,
+            optional:   self.optional,
         }
     }
 }

@@ -19,9 +19,9 @@ use crate::{
 /// Bundled parameters for run confirmation (breaker, state transition, seed).
 #[derive(SystemParam)]
 pub(crate) struct RunConfirmation<'w> {
-    breaker: ResMut<'w, SelectedBreaker>,
+    breaker:      ResMut<'w, SelectedBreaker>,
     state_writer: MessageWriter<'w, ChangeState<MenuState>>,
-    seed: ResMut<'w, RunSeed>,
+    seed:         ResMut<'w, RunSeed>,
 }
 
 /// Handles keyboard navigation and confirmation on the run setup screen.

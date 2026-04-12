@@ -102,12 +102,12 @@ pub(crate) fn spawn_highlight_text(
             TextLayout::new_with_justify(Justify::Center),
             Transform::from_xyz(x, y, 10.0),
             FadeOut {
-                timer: fade_timer,
+                timer:    fade_timer,
                 duration: config.popup_fade_duration_secs,
             },
             PunchScale {
-                timer: config.popup_overshoot_duration_secs,
-                duration: config.popup_overshoot_duration_secs,
+                timer:     config.popup_overshoot_duration_secs,
+                duration:  config.popup_overshoot_duration_secs,
                 overshoot: config.popup_overshoot_scale,
             },
             CleanupOnExit::<NodeState>::default(),

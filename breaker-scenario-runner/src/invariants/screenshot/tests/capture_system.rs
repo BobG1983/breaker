@@ -25,10 +25,10 @@ fn capture_violation_screenshots_marks_tracker_on_new_violation() {
     let mut app = test_app();
     app.insert_resource(ScreenshotTracker::default())
         .insert_resource(ViolationLog(vec![ViolationEntry {
-            frame: 5,
+            frame:     5,
             invariant: InvariantKind::BoltInBounds,
-            entity: None,
-            message: "oob".into(),
+            entity:    None,
+            message:   "oob".into(),
         }]))
         .insert_resource(ScreenshotOutputDir(PathBuf::from(
             "/tmp/test-output/2026-04-07/0",
@@ -59,10 +59,10 @@ fn capture_violation_screenshots_no_update_when_no_new_violations() {
     let mut app = test_app();
     app.insert_resource(tracker)
         .insert_resource(ViolationLog(vec![ViolationEntry {
-            frame: 5,
+            frame:     5,
             invariant: InvariantKind::BoltInBounds,
-            entity: None,
-            message: "oob".into(),
+            entity:    None,
+            message:   "oob".into(),
         }]))
         .insert_resource(ScreenshotOutputDir(PathBuf::from(
             "/tmp/test-output/2026-04-07/0",
@@ -112,29 +112,29 @@ fn capture_violation_screenshots_marks_all_new_kinds_in_one_tick() {
     app.insert_resource(ScreenshotTracker::default())
         .insert_resource(ViolationLog(vec![
             ViolationEntry {
-                frame: 10,
+                frame:     10,
                 invariant: InvariantKind::BoltInBounds,
-                entity: None,
-                message: "oob".into(),
+                entity:    None,
+                message:   "oob".into(),
             },
             ViolationEntry {
-                frame: 10,
+                frame:     10,
                 invariant: InvariantKind::NoNaN,
-                entity: None,
-                message: "nan".into(),
+                entity:    None,
+                message:   "nan".into(),
             },
             ViolationEntry {
-                frame: 10,
+                frame:     10,
                 invariant: InvariantKind::TimerNonNegative,
-                entity: None,
-                message: "neg".into(),
+                entity:    None,
+                message:   "neg".into(),
             },
             // Duplicate BoltInBounds entry — should not affect count
             ViolationEntry {
-                frame: 10,
+                frame:     10,
                 invariant: InvariantKind::BoltInBounds,
-                entity: None,
-                message: "oob again".into(),
+                entity:    None,
+                message:   "oob again".into(),
             },
         ]))
         .insert_resource(ScreenshotOutputDir(PathBuf::from(
@@ -168,28 +168,28 @@ fn capture_violation_screenshots_filters_already_captured_and_adds_new() {
     app.insert_resource(tracker)
         .insert_resource(ViolationLog(vec![
             ViolationEntry {
-                frame: 1,
+                frame:     1,
                 invariant: InvariantKind::BoltInBounds,
-                entity: None,
-                message: "a".into(),
+                entity:    None,
+                message:   "a".into(),
             },
             ViolationEntry {
-                frame: 2,
+                frame:     2,
                 invariant: InvariantKind::NoNaN,
-                entity: None,
-                message: "b".into(),
+                entity:    None,
+                message:   "b".into(),
             },
             ViolationEntry {
-                frame: 3,
+                frame:     3,
                 invariant: InvariantKind::TimerNonNegative,
-                entity: None,
-                message: "c".into(),
+                entity:    None,
+                message:   "c".into(),
             },
             ViolationEntry {
-                frame: 4,
+                frame:     4,
                 invariant: InvariantKind::BreakerInBounds,
-                entity: None,
-                message: "d".into(),
+                entity:    None,
+                message:   "d".into(),
             },
         ]))
         .insert_resource(ScreenshotOutputDir(PathBuf::from(
@@ -223,10 +223,10 @@ fn capture_violation_screenshots_early_returns_without_output_dir() {
     positive_app
         .insert_resource(ScreenshotTracker::default())
         .insert_resource(ViolationLog(vec![ViolationEntry {
-            frame: 1,
+            frame:     1,
             invariant: InvariantKind::NoNaN,
-            entity: None,
-            message: "nan".into(),
+            entity:    None,
+            message:   "nan".into(),
         }]))
         .insert_resource(ScreenshotOutputDir(PathBuf::from(
             "/tmp/test-output/2026-04-07/0",
@@ -247,10 +247,10 @@ fn capture_violation_screenshots_early_returns_without_output_dir() {
     negative_app
         .insert_resource(ScreenshotTracker::default())
         .insert_resource(ViolationLog(vec![ViolationEntry {
-            frame: 1,
+            frame:     1,
             invariant: InvariantKind::NoNaN,
-            entity: None,
-            message: "nan".into(),
+            entity:    None,
+            message:   "nan".into(),
         }]))
         .insert_resource(ScenarioName("headless_test".into()))
         // No ScreenshotOutputDir inserted
@@ -275,10 +275,10 @@ fn capture_violation_screenshots_early_returns_without_scenario_name() {
     positive_app
         .insert_resource(ScreenshotTracker::default())
         .insert_resource(ViolationLog(vec![ViolationEntry {
-            frame: 1,
+            frame:     1,
             invariant: InvariantKind::NoNaN,
-            entity: None,
-            message: "nan".into(),
+            entity:    None,
+            message:   "nan".into(),
         }]))
         .insert_resource(ScreenshotOutputDir(PathBuf::from(
             "/tmp/test-output/2026-04-07/0",
@@ -299,10 +299,10 @@ fn capture_violation_screenshots_early_returns_without_scenario_name() {
     negative_app
         .insert_resource(ScreenshotTracker::default())
         .insert_resource(ViolationLog(vec![ViolationEntry {
-            frame: 1,
+            frame:     1,
             invariant: InvariantKind::NoNaN,
-            entity: None,
-            message: "nan".into(),
+            entity:    None,
+            message:   "nan".into(),
         }]))
         .insert_resource(ScreenshotOutputDir(PathBuf::from(
             "/tmp/test-output/2026-04-07/0",
@@ -334,10 +334,10 @@ fn capture_violation_screenshots_creates_output_directory() {
     let mut app = test_app();
     app.insert_resource(ScreenshotTracker::default())
         .insert_resource(ViolationLog(vec![ViolationEntry {
-            frame: 1,
+            frame:     1,
             invariant: InvariantKind::BoltInBounds,
-            entity: None,
-            message: "oob".into(),
+            entity:    None,
+            message:   "oob".into(),
         }]))
         .insert_resource(ScreenshotOutputDir(temp_base.clone()))
         .insert_resource(ScenarioName("dir_test".into()))
@@ -367,10 +367,10 @@ fn capture_violation_screenshots_idempotent_across_frames() {
     let mut app = test_app();
     app.insert_resource(ScreenshotTracker::default())
         .insert_resource(ViolationLog(vec![ViolationEntry {
-            frame: 1,
+            frame:     1,
             invariant: InvariantKind::NoNaN,
-            entity: None,
-            message: "nan".into(),
+            entity:    None,
+            message:   "nan".into(),
         }]))
         .insert_resource(ScreenshotOutputDir(PathBuf::from(
             "/tmp/test-output/2026-04-07/0",
@@ -405,10 +405,10 @@ fn capture_violation_screenshots_picks_up_new_kind_added_between_ticks() {
     let mut app = test_app();
     app.insert_resource(ScreenshotTracker::default())
         .insert_resource(ViolationLog(vec![ViolationEntry {
-            frame: 1,
+            frame:     1,
             invariant: InvariantKind::NoNaN,
-            entity: None,
-            message: "nan".into(),
+            entity:    None,
+            message:   "nan".into(),
         }]))
         .insert_resource(ScreenshotOutputDir(PathBuf::from(
             "/tmp/test-output/2026-04-07/0",
@@ -431,10 +431,10 @@ fn capture_violation_screenshots_picks_up_new_kind_added_between_ticks() {
         .resource_mut::<ViolationLog>()
         .0
         .push(ViolationEntry {
-            frame: 2,
+            frame:     2,
             invariant: InvariantKind::BreakerInBounds,
-            entity: None,
-            message: "breaker oob".into(),
+            entity:    None,
+            message:   "breaker oob".into(),
         });
 
     // Second tick

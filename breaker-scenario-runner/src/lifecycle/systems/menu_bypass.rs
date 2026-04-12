@@ -30,11 +30,11 @@ pub struct BypassExtras<'w, 's> {
     /// Breaker registry for godmode sentinel.
     breaker_registry: ResMut<'w, BreakerRegistry>,
     /// Layout registry for quick-clear sentinel.
-    layout_registry: ResMut<'w, NodeLayoutRegistry>,
+    layout_registry:  ResMut<'w, NodeLayoutRegistry>,
     /// Commands for inserting resources (e.g. `PendingBoltEffects`).
-    commands: Commands<'w, 's>,
+    commands:         Commands<'w, 's>,
     /// Chip selection index -- reset on each run.
-    chip_index: ResMut<'w, ChipSelectionIndex>,
+    chip_index:       ResMut<'w, ChipSelectionIndex>,
 }
 
 /// Sets the breaker and layout override, then immediately transitions

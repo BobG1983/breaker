@@ -17,7 +17,7 @@ pub fn spawn_bolt_lost_text(mut reader: MessageReader<BoltLost>, mut commands: C
             TextFont::from_font_size(86.0),
             Transform::from_xyz(0.0, 0.0, 10.0),
             FadeOut {
-                timer: FADE_DURATION,
+                timer:    FADE_DURATION,
                 duration: FADE_DURATION,
             },
             CleanupOnExit::<NodeState>::default(),

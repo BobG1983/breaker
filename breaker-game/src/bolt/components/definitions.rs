@@ -91,7 +91,7 @@ pub struct LastImpact {
     /// World position of the impact point.
     pub position: Vec2,
     /// Which side of the surface was hit.
-    pub side: ImpactSide,
+    pub side:     ImpactSide,
 }
 
 /// Converts a CCD hit normal to the corresponding [`ImpactSide`].

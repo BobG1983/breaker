@@ -17,9 +17,9 @@ use super::super::definition::{CellTypeDefinition, Toughness};
 )]
 pub(crate) struct CellConfig {
     /// Full width of a cell in world units.
-    pub width: f32,
+    pub width:     f32,
     /// Full height of a cell in world units.
-    pub height: f32,
+    pub height:    f32,
     /// Horizontal padding between cells.
     pub padding_x: f32,
     /// Vertical padding between cells.
@@ -29,8 +29,8 @@ pub(crate) struct CellConfig {
 impl Default for CellConfig {
     fn default() -> Self {
         Self {
-            width: 70.0,
-            height: 24.0,
+            width:     70.0,
+            height:    24.0,
             padding_x: 4.0,
             padding_y: 4.0,
         }
@@ -46,11 +46,11 @@ impl Default for CellConfig {
 )]
 pub(crate) struct ToughnessConfig {
     /// Base HP for Weak cells.
-    pub weak_base: f32,
+    pub weak_base:       f32,
     /// Base HP for Standard cells.
-    pub standard_base: f32,
+    pub standard_base:   f32,
     /// Base HP for Tough cells.
-    pub tough_base: f32,
+    pub tough_base:      f32,
     /// Exponential multiplier per tier.
     pub tier_multiplier: f32,
     /// Linear multiplier per position within a tier.
@@ -62,9 +62,9 @@ pub(crate) struct ToughnessConfig {
 impl Default for ToughnessConfig {
     fn default() -> Self {
         Self {
-            weak_base: 10.0,
-            standard_base: 20.0,
-            tough_base: 30.0,
+            weak_base:       10.0,
+            standard_base:   20.0,
+            tough_base:      30.0,
             tier_multiplier: 1.2,
             node_multiplier: 0.05,
             boss_multiplier: 3.0,

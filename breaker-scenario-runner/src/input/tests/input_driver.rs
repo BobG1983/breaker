@@ -36,7 +36,7 @@ fn input_driver_from_chaos_strategy_constructs_without_panic() {
 fn input_driver_from_scripted_strategy_fires_at_configured_frame() {
     let strategy = InputStrategy::Scripted(ScriptedParams {
         actions: vec![ScriptedFrame {
-            frame: 5,
+            frame:   5,
             actions: vec![GameAction::Bump],
         }],
     });
@@ -67,7 +67,7 @@ fn input_driver_from_scripted_strategy_fires_at_configured_frame() {
 fn input_driver_from_hybrid_strategy_respects_phase_boundary() {
     let strategy = InputStrategy::Hybrid(HybridParams {
         scripted_frames: 10,
-        action_prob: 1.0,
+        action_prob:     1.0,
     });
     let mut driver = InputDriver::from_strategy(&strategy, 42);
 

@@ -119,27 +119,27 @@ mod tests {
 
     fn send_key_press(app: &mut App, key: KeyCode) {
         app.world_mut().write_message(KeyboardInput {
-            key_code: key,
+            key_code:    key,
             logical_key: bevy::input::keyboard::Key::Unidentified(
                 bevy::input::keyboard::NativeKey::Unidentified,
             ),
-            state: ButtonState::Pressed,
-            text: None,
-            window: Entity::PLACEHOLDER,
-            repeat: false,
+            state:       ButtonState::Pressed,
+            text:        None,
+            window:      Entity::PLACEHOLDER,
+            repeat:      false,
         });
     }
 
     fn send_key_release(app: &mut App, key: KeyCode) {
         app.world_mut().write_message(KeyboardInput {
-            key_code: key,
+            key_code:    key,
             logical_key: bevy::input::keyboard::Key::Unidentified(
                 bevy::input::keyboard::NativeKey::Unidentified,
             ),
-            state: ButtonState::Released,
-            text: None,
-            window: Entity::PLACEHOLDER,
-            repeat: false,
+            state:       ButtonState::Released,
+            text:        None,
+            window:      Entity::PLACEHOLDER,
+            repeat:      false,
         });
     }
 
@@ -195,14 +195,14 @@ mod tests {
     fn repeat_key_events_ignored() {
         let mut app = test_app();
         app.world_mut().write_message(KeyboardInput {
-            key_code: KeyCode::ArrowUp,
+            key_code:    KeyCode::ArrowUp,
             logical_key: bevy::input::keyboard::Key::Unidentified(
                 bevy::input::keyboard::NativeKey::Unidentified,
             ),
-            state: ButtonState::Pressed,
-            text: None,
-            window: Entity::PLACEHOLDER,
-            repeat: true,
+            state:       ButtonState::Pressed,
+            text:        None,
+            window:      Entity::PLACEHOLDER,
+            repeat:      true,
         });
         app.update();
         let actions = app.world().resource::<InputActions>();
@@ -216,14 +216,14 @@ mod tests {
     fn repeat_key_event_does_not_produce_toggle_pause() {
         let mut app = test_app();
         app.world_mut().write_message(KeyboardInput {
-            key_code: KeyCode::Escape,
+            key_code:    KeyCode::Escape,
             logical_key: bevy::input::keyboard::Key::Unidentified(
                 bevy::input::keyboard::NativeKey::Unidentified,
             ),
-            state: ButtonState::Pressed,
-            text: None,
-            window: Entity::PLACEHOLDER,
-            repeat: true,
+            state:       ButtonState::Pressed,
+            text:        None,
+            window:      Entity::PLACEHOLDER,
+            repeat:      true,
         });
         app.update();
         let actions = app.world().resource::<InputActions>();

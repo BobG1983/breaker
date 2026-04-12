@@ -34,7 +34,7 @@ impl std::fmt::Display for Rarity {
 #[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct EvolutionIngredient {
     /// Name of the chip required.
-    pub chip_name: String,
+    pub chip_name:       String,
     /// Minimum stacks the player must hold.
     pub stacks_required: u32,
 }
@@ -44,7 +44,7 @@ pub struct EvolutionIngredient {
 #[derive(Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct RaritySlot {
     /// Display prefix prepended to the template name (e.g., "Basic", "Keen").
-    pub prefix: String,
+    pub prefix:  String,
     /// The effects applied when this rarity variant is selected.
     pub effects: Vec<crate::effect_v3::types::RootNode>,
 }
@@ -56,18 +56,18 @@ pub struct RaritySlot {
 #[derive(Asset, TypePath, Deserialize, Clone, Debug)]
 pub struct ChipTemplate {
     /// Base name shared by all rarity variants.
-    pub name: String,
+    pub name:      String,
     /// Maximum total chips from this template the player may hold.
     pub max_taken: u32,
     /// Common-rarity variant, if any.
     #[serde(default)]
-    pub common: Option<RaritySlot>,
+    pub common:    Option<RaritySlot>,
     /// Uncommon-rarity variant, if any.
     #[serde(default)]
-    pub uncommon: Option<RaritySlot>,
+    pub uncommon:  Option<RaritySlot>,
     /// Rare-rarity variant, if any.
     #[serde(default)]
-    pub rare: Option<RaritySlot>,
+    pub rare:      Option<RaritySlot>,
     /// Legendary-rarity variant, if any.
     #[serde(default)]
     pub legendary: Option<RaritySlot>,
@@ -80,14 +80,14 @@ pub struct ChipTemplate {
 #[derive(Asset, TypePath, Deserialize, Clone, Debug)]
 pub struct EvolutionTemplate {
     /// Display name of the evolution.
-    pub name: String,
+    pub name:        String,
     /// Flavor text shown below the name.
     pub description: String,
     /// Maximum stacks. Defaults to 1.
     #[serde(default = "one")]
-    pub max_stacks: u32,
+    pub max_stacks:  u32,
     /// The effects applied when this evolution is selected.
-    pub effects: Vec<crate::effect_v3::types::RootNode>,
+    pub effects:     Vec<crate::effect_v3::types::RootNode>,
     /// Required ingredient chips.
     pub ingredients: Vec<EvolutionIngredient>,
 }
@@ -136,12 +136,12 @@ pub(crate) fn expand_chip_template(template: &ChipTemplate) -> Vec<ChipDefinitio
 #[must_use]
 pub(crate) fn expand_evolution_template(evolution: &EvolutionTemplate) -> ChipDefinition {
     ChipDefinition {
-        name: evolution.name.clone(),
-        description: evolution.description.clone(),
-        rarity: Rarity::Evolution,
-        max_stacks: evolution.max_stacks,
-        effects: evolution.effects.clone(),
-        ingredients: Some(evolution.ingredients.clone()),
+        name:          evolution.name.clone(),
+        description:   evolution.description.clone(),
+        rarity:        Rarity::Evolution,
+        max_stacks:    evolution.max_stacks,
+        effects:       evolution.effects.clone(),
+        ingredients:   Some(evolution.ingredients.clone()),
         template_name: None,
     }
 }
@@ -153,17 +153,17 @@ pub(crate) fn expand_evolution_template(evolution: &EvolutionTemplate) -> ChipDe
 #[derive(Clone, Debug)]
 pub struct ChipDefinition {
     /// Display name shown on the chip card.
-    pub name: String,
+    pub name:          String,
     /// Flavor text shown below the name.
-    pub description: String,
+    pub description:   String,
     /// How rare this chip is.
-    pub rarity: Rarity,
+    pub rarity:        Rarity,
     /// Maximum number of times this chip can be stacked.
-    pub max_stacks: u32,
+    pub max_stacks:    u32,
     /// The effects applied when this chip is selected.
-    pub effects: Vec<crate::effect_v3::types::RootNode>,
+    pub effects:       Vec<crate::effect_v3::types::RootNode>,
     /// Evolution ingredients. `None` for non-evolution chips.
-    pub ingredients: Option<Vec<EvolutionIngredient>>,
+    pub ingredients:   Option<Vec<EvolutionIngredient>>,
     /// Template this chip was expanded from, if any.
     pub template_name: Option<String>,
 }
@@ -193,10 +193,10 @@ impl ChipDefinition {
             Tree::When(
                 Trigger::PerfectBumped,
                 Box::new(Tree::Fire(EffectType::Shockwave(ShockwaveConfig {
-                    base_range: OrderedFloat(64.0),
+                    base_range:      OrderedFloat(64.0),
                     range_per_level: OrderedFloat(0.0),
-                    stacks: 1,
-                    speed: OrderedFloat(400.0),
+                    stacks:          1,
+                    speed:           OrderedFloat(400.0),
                 }))),
             ),
             1,

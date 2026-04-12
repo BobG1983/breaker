@@ -41,8 +41,8 @@ pub(super) fn spawn_settling_breaker_rightward_dash(
         DashState::Settling,
         Velocity2D(Vec2::ZERO),
         BreakerTilt {
-            angle: -0.35,
-            ease_start: -0.35,
+            angle:       -0.35,
+            ease_start:  -0.35,
             ease_target: 0.0,
         },
         DashStateTimer { remaining: 0.2 },
@@ -71,8 +71,8 @@ pub(super) fn spawn_settling_breaker_leftward_dash(
         DashState::Settling,
         Velocity2D(Vec2::ZERO),
         BreakerTilt {
-            angle: 0.35,
-            ease_start: 0.35,
+            angle:       0.35,
+            ease_start:  0.35,
             ease_target: 0.0,
         },
         DashStateTimer { remaining: 0.2 },

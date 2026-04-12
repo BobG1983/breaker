@@ -92,7 +92,7 @@ fn existing_popups_offset_spawn_order() {
     app.world_mut().spawn((
         HighlightPopup,
         FadeOut {
-            timer: 0.5,
+            timer:    0.5,
             duration: 0.8,
         },
         Transform::from_xyz(0.0, 100.0, 10.0),
@@ -100,7 +100,7 @@ fn existing_popups_offset_spawn_order() {
     app.world_mut().spawn((
         HighlightPopup,
         FadeOut {
-            timer: 0.4,
+            timer:    0.4,
             duration: 0.8,
         },
         Transform::from_xyz(0.0, 150.0, 10.0),

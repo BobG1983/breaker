@@ -153,8 +153,8 @@ mod tests {
                 PreviousScale { x: 3.0, y: 3.0 },
                 CollisionLayers::default(),
                 Birthing {
-                    timer: partially_elapsed_timer,
-                    target_scale: Scale2D { x: 8.0, y: 8.0 },
+                    timer:          partially_elapsed_timer,
+                    target_scale:   Scale2D { x: 8.0, y: 8.0 },
                     stashed_layers: CollisionLayers::new(0x01, 0x0E),
                 },
             ))

@@ -55,17 +55,17 @@ fn multiple_stamps_preserve_chip_name() {
     let mut app = test_app();
 
     let def = ChipDefinition {
-        name: "Parry Multi".to_owned(),
-        description: String::new(),
-        rarity: crate::chips::definition::Rarity::Common,
-        max_stacks: 5,
-        effects: vec![
+        name:          "Parry Multi".to_owned(),
+        description:   String::new(),
+        rarity:        crate::chips::definition::Rarity::Common,
+        max_stacks:    5,
+        effects:       vec![
             RootNode::Stamp(
                 StampTarget::Breaker,
                 Tree::When(
                     Trigger::PerfectBumped,
                     Box::new(Tree::Fire(EffectType::Shield(ShieldConfig {
-                        duration: OrderedFloat(5.0),
+                        duration:        OrderedFloat(5.0),
                         reflection_cost: OrderedFloat(0.0),
                     }))),
                 ),
@@ -75,15 +75,15 @@ fn multiple_stamps_preserve_chip_name() {
                 Tree::When(
                     Trigger::PerfectBumped,
                     Box::new(Tree::Fire(EffectType::Shockwave(ShockwaveConfig {
-                        base_range: OrderedFloat(64.0),
+                        base_range:      OrderedFloat(64.0),
                         range_per_level: OrderedFloat(0.0),
-                        stacks: 1,
-                        speed: OrderedFloat(500.0),
+                        stacks:          1,
+                        speed:           OrderedFloat(500.0),
                     }))),
                 ),
             ),
         ],
-        ingredients: None,
+        ingredients:   None,
         template_name: None,
     };
     insert_chip(&mut app, def);
@@ -141,11 +141,11 @@ fn mixed_breaker_and_non_breaker_stamps() {
     let mut app = test_app();
 
     let def = ChipDefinition {
-        name: "Hybrid".to_owned(),
-        description: String::new(),
-        rarity: crate::chips::definition::Rarity::Common,
-        max_stacks: 5,
-        effects: vec![
+        name:          "Hybrid".to_owned(),
+        description:   String::new(),
+        rarity:        crate::chips::definition::Rarity::Common,
+        max_stacks:    5,
+        effects:       vec![
             RootNode::Stamp(
                 StampTarget::Breaker,
                 Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
@@ -166,15 +166,15 @@ fn mixed_breaker_and_non_breaker_stamps() {
                 Tree::When(
                     Trigger::Impacted(EntityKind::Bolt),
                     Box::new(Tree::Fire(EffectType::Shockwave(ShockwaveConfig {
-                        base_range: OrderedFloat(32.0),
+                        base_range:      OrderedFloat(32.0),
                         range_per_level: OrderedFloat(0.0),
-                        stacks: 1,
-                        speed: OrderedFloat(400.0),
+                        stacks:          1,
+                        speed:           OrderedFloat(400.0),
                     }))),
                 ),
             ),
         ],
-        ingredients: None,
+        ingredients:   None,
         template_name: None,
     };
     insert_chip(&mut app, def);

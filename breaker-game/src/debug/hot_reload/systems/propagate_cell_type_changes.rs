@@ -52,16 +52,16 @@ mod tests {
 
     fn make_standard_def() -> CellTypeDefinition {
         CellTypeDefinition {
-            id: "standard".to_owned(),
-            alias: "S".to_owned(),
-            toughness: Toughness::default(),
-            color_rgb: [4.0, 0.2, 0.5],
+            id:                "standard".to_owned(),
+            alias:             "S".to_owned(),
+            toughness:         Toughness::default(),
+            color_rgb:         [4.0, 0.2, 0.5],
             required_to_clear: true,
-            damage_hdr_base: 4.0,
-            damage_green_min: 0.2,
+            damage_hdr_base:   4.0,
+            damage_green_min:  0.2,
             damage_blue_range: 0.4,
-            damage_blue_base: 0.2,
-            behaviors: None,
+            damage_blue_base:  0.2,
+            behaviors:         None,
 
             effects: None,
         }
@@ -69,16 +69,16 @@ mod tests {
 
     fn make_tough_def() -> CellTypeDefinition {
         CellTypeDefinition {
-            id: "tough".to_owned(),
-            alias: "T".to_owned(),
-            toughness: Toughness::Tough,
-            color_rgb: [2.5, 0.2, 4.0],
+            id:                "tough".to_owned(),
+            alias:             "T".to_owned(),
+            toughness:         Toughness::Tough,
+            color_rgb:         [2.5, 0.2, 4.0],
             required_to_clear: true,
-            damage_hdr_base: 4.0,
-            damage_green_min: 0.2,
+            damage_hdr_base:   4.0,
+            damage_green_min:  0.2,
             damage_blue_range: 0.4,
-            damage_blue_base: 0.2,
-            behaviors: None,
+            damage_blue_base:  0.2,
+            behaviors:         None,
 
             effects: None,
         }
@@ -117,10 +117,10 @@ mod tests {
                 CellTypeAlias("S".to_owned()),
                 CellHealth::new(1.0),
                 CellDamageVisuals {
-                    hdr_base: 4.0,
-                    green_min: 0.2,
+                    hdr_base:   4.0,
+                    green_min:  0.2,
                     blue_range: 0.4,
-                    blue_base: 0.2,
+                    blue_base:  0.2,
                 },
                 MeshMaterial2d(material_handle),
             ))
@@ -184,10 +184,10 @@ mod tests {
                 CellTypeAlias("T".to_owned()),
                 CellHealth::new(30.0),
                 CellDamageVisuals {
-                    hdr_base: 4.0,
-                    green_min: 0.2,
+                    hdr_base:   4.0,
+                    green_min:  0.2,
                     blue_range: 0.4,
-                    blue_base: 0.2,
+                    blue_base:  0.2,
                 },
                 MeshMaterial2d(material_handle),
             ))
@@ -238,13 +238,13 @@ mod tests {
                 CellTypeAlias("T".to_owned()),
                 CellHealth {
                     current: 30.0,
-                    max: 30.0,
+                    max:     30.0,
                 },
                 CellDamageVisuals {
-                    hdr_base: 4.0,
-                    green_min: 0.2,
+                    hdr_base:   4.0,
+                    green_min:  0.2,
                     blue_range: 0.4,
-                    blue_base: 0.2,
+                    blue_base:  0.2,
                 },
                 MeshMaterial2d(material_handle),
             ))

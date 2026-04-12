@@ -15,11 +15,11 @@ fn check_bolt_in_bounds_is_registered_in_scenario_lifecycle() {
 
     // Override playfield so top() = 350.0
     app.world_mut().insert_resource(PlayfieldConfig {
-        width: 800.0,
-        height: 700.0,
+        width:                800.0,
+        height:               700.0,
         background_color_rgb: [0.0, 0.0, 0.0],
-        wall_thickness: 180.0,
-        zone_fraction: 0.667,
+        wall_thickness:       180.0,
+        zone_fraction:        0.667,
     });
 
     // Set entered_playing so invariant checkers are active
@@ -105,11 +105,11 @@ fn invariant_checkers_do_not_fire_when_entered_playing_is_false() {
         .insert_resource(ViolationLog::default())
         .insert_resource(ScenarioFrame(1))
         .insert_resource(breaker::shared::PlayfieldConfig {
-            width: 800.0,
-            height: 700.0,
+            width:                800.0,
+            height:               700.0,
             background_color_rgb: [0.0, 0.0, 0.0],
-            wall_thickness: 180.0,
-            zone_fraction: 0.667,
+            wall_thickness:       180.0,
+            zone_fraction:        0.667,
         })
         .insert_resource(ScenarioStats {
             entered_playing: false,
@@ -150,11 +150,11 @@ fn invariant_checkers_fire_when_entered_playing_is_true() {
         .insert_resource(ViolationLog::default())
         .insert_resource(ScenarioFrame(1))
         .insert_resource(breaker::shared::PlayfieldConfig {
-            width: 800.0,
-            height: 700.0,
+            width:                800.0,
+            height:               700.0,
             background_color_rgb: [0.0, 0.0, 0.0],
-            wall_thickness: 180.0,
-            zone_fraction: 0.667,
+            wall_thickness:       180.0,
+            zone_fraction:        0.667,
         })
         .insert_resource(ScenarioStats {
             entered_playing: true,
@@ -192,11 +192,11 @@ fn invariant_checkers_remain_gated_across_multiple_frames_while_not_playing() {
         .insert_resource(ViolationLog::default())
         .insert_resource(ScenarioFrame(1))
         .insert_resource(breaker::shared::PlayfieldConfig {
-            width: 800.0,
-            height: 700.0,
+            width:                800.0,
+            height:               700.0,
             background_color_rgb: [0.0, 0.0, 0.0],
-            wall_thickness: 180.0,
-            zone_fraction: 0.667,
+            wall_thickness:       180.0,
+            zone_fraction:        0.667,
         })
         .insert_resource(ScenarioStats {
             entered_playing: false,

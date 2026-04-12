@@ -25,7 +25,7 @@ struct TestConfig {
 /// Test asset type for registry builder tests.
 #[derive(Asset, TypePath, Deserialize, Clone, Debug)]
 struct TestRegistryAsset {
-    name: String,
+    name:  String,
     value: f32,
 }
 
@@ -400,7 +400,7 @@ fn add_registry_wires_propagate_registry_on_hot_reload() {
     let h_alpha = {
         let mut assets = app.world_mut().resource_mut::<Assets<TestRegistryAsset>>();
         assets.add(TestRegistryAsset {
-            name: "alpha".to_string(),
+            name:  "alpha".to_string(),
             value: 1.0,
         })
     };

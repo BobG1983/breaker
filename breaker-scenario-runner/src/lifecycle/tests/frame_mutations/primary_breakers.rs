@@ -21,7 +21,7 @@ fn apply_debug_frame_mutations_spawn_extra_primary_breakers_at_matching_frame() 
         max_frames: 1000,
         disallowed_failures: vec![],
         frame_mutations: Some(vec![FrameMutation {
-            frame: 5,
+            frame:    5,
             mutation: MutationKind::SpawnExtraPrimaryBreakers(1),
         }]),
         ..Default::default()
@@ -65,7 +65,7 @@ fn apply_debug_frame_mutations_spawn_extra_primary_breakers_skips_non_matching_f
         max_frames: 1000,
         disallowed_failures: vec![],
         frame_mutations: Some(vec![FrameMutation {
-            frame: 10,
+            frame:    10,
             mutation: MutationKind::SpawnExtraPrimaryBreakers(1),
         }]),
         ..Default::default()
@@ -127,7 +127,7 @@ fn apply_debug_frame_mutations_spawn_extra_primary_breakers_zero_spawns_nothing(
         max_frames: 1000,
         disallowed_failures: vec![],
         frame_mutations: Some(vec![FrameMutation {
-            frame: 5,
+            frame:    5,
             mutation: MutationKind::SpawnExtraPrimaryBreakers(0),
         }]),
         ..Default::default()

@@ -40,7 +40,7 @@ pub(crate) fn capture_frame(
     }
 
     buffer.0.push(RecordedFrame {
-        frame: frame.0,
+        frame:   frame.0,
         actions: actions.0.clone(),
     });
 }
@@ -113,15 +113,15 @@ mod tests {
         // Insert wrong layout
         app.world_mut()
             .insert_resource(ActiveNodeLayout(NodeLayout {
-                name: "open".to_owned(),
-                timer_secs: 60.0,
-                cols: 10,
-                rows: 5,
+                name:            "open".to_owned(),
+                timer_secs:      60.0,
+                cols:            10,
+                rows:            5,
                 grid_top_offset: 0.0,
-                grid: vec![],
-                pool: NodePool::default(),
-                entity_scale: 1.0,
-                locks: None,
+                grid:            vec![],
+                pool:            NodePool::default(),
+                entity_scale:    1.0,
+                locks:           None,
             }));
         run_with_actions(&mut app, vec![GameAction::MoveRight]);
 
@@ -134,15 +134,15 @@ mod tests {
         let mut app = test_app_with_config(true, Some("corridor"));
         app.world_mut()
             .insert_resource(ActiveNodeLayout(NodeLayout {
-                name: "corridor".to_owned(),
-                timer_secs: 60.0,
-                cols: 10,
-                rows: 5,
+                name:            "corridor".to_owned(),
+                timer_secs:      60.0,
+                cols:            10,
+                rows:            5,
                 grid_top_offset: 0.0,
-                grid: vec![],
-                pool: NodePool::default(),
-                entity_scale: 1.0,
-                locks: None,
+                grid:            vec![],
+                pool:            NodePool::default(),
+                entity_scale:    1.0,
+                locks:           None,
             }));
         run_with_actions(&mut app, vec![GameAction::DashLeft]);
 

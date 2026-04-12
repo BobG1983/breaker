@@ -56,7 +56,7 @@ fn breaker_movement_data_position_mutation_takes_effect() {
             BreakerAcceleration(2000.0),
             BreakerDeceleration(1500.0),
             DecelEasing {
-                ease: EaseFunction::QuadraticIn,
+                ease:     EaseFunction::QuadraticIn,
                 strength: 1.0,
             },
             BaseWidth(120.0),
@@ -90,7 +90,7 @@ fn breaker_movement_data_readonly_fields_accessible() {
         BreakerAcceleration(2000.0),
         BreakerDeceleration(1500.0),
         DecelEasing {
-            ease: EaseFunction::QuadraticIn,
+            ease:     EaseFunction::QuadraticIn,
             strength: 1.0,
         },
         BaseWidth(120.0),
@@ -128,7 +128,7 @@ fn breaker_movement_data_optional_boosts_present() {
         BreakerAcceleration(2000.0),
         BreakerDeceleration(1500.0),
         DecelEasing {
-            ease: EaseFunction::QuadraticIn,
+            ease:     EaseFunction::QuadraticIn,
             strength: 1.0,
         },
         BaseWidth(120.0),
@@ -172,7 +172,7 @@ fn breaker_movement_data_velocity_mutation_takes_effect() {
             BreakerAcceleration(2000.0),
             BreakerDeceleration(1500.0),
             DecelEasing {
-                ease: EaseFunction::QuadraticIn,
+                ease:     EaseFunction::QuadraticIn,
                 strength: 1.0,
             },
             BaseWidth(120.0),
@@ -208,7 +208,7 @@ fn breaker_movement_data_both_position_and_velocity_mutable() {
             BreakerAcceleration(2000.0),
             BreakerDeceleration(1500.0),
             DecelEasing {
-                ease: EaseFunction::QuadraticIn,
+                ease:     EaseFunction::QuadraticIn,
                 strength: 1.0,
             },
             BaseWidth(120.0),

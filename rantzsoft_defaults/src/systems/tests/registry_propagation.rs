@@ -12,7 +12,7 @@ use crate::{
 
 #[derive(Asset, TypePath, Deserialize, Clone, Debug)]
 struct TestRegistryAsset {
-    name: String,
+    name:  String,
     value: f32,
 }
 
@@ -62,7 +62,7 @@ fn seeded_app() -> (App, Handle<TestRegistryAsset>) {
     let h_alpha = {
         let mut assets = app.world_mut().resource_mut::<Assets<TestRegistryAsset>>();
         assets.add(TestRegistryAsset {
-            name: "alpha".to_string(),
+            name:  "alpha".to_string(),
             value: 1.0,
         })
     };
@@ -144,7 +144,7 @@ fn registry_unchanged_on_added_event_only() {
     {
         let mut assets = app.world_mut().resource_mut::<Assets<TestRegistryAsset>>();
         assets.add(TestRegistryAsset {
-            name: "beta".to_string(),
+            name:  "beta".to_string(),
             value: 50.0,
         });
     }

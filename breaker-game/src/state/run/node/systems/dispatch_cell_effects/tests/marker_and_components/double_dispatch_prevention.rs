@@ -29,7 +29,7 @@ fn cell_effects_dispatched_marker_prevents_double_dispatch() {
                 Tree::When(
                     Trigger::Died,
                     Box::new(Tree::Fire(EffectType::Explode(ExplodeConfig {
-                        range: OrderedFloat(48.0),
+                        range:  OrderedFloat(48.0),
                         damage: OrderedFloat(1.0),
                     }))),
                 ),
@@ -50,7 +50,7 @@ fn cell_effects_dispatched_marker_prevents_double_dispatch() {
                 Tree::When(
                     Trigger::Died,
                     Box::new(Tree::Fire(EffectType::Explode(ExplodeConfig {
-                        range: OrderedFloat(48.0),
+                        range:  OrderedFloat(48.0),
                         damage: OrderedFloat(1.0),
                     }))),
                 ),
@@ -87,7 +87,7 @@ fn marker_on_one_cell_skips_it_while_other_is_dispatched() {
                 Tree::When(
                     Trigger::Died,
                     Box::new(Tree::Fire(EffectType::Explode(ExplodeConfig {
-                        range: OrderedFloat(48.0),
+                        range:  OrderedFloat(48.0),
                         damage: OrderedFloat(1.0),
                     }))),
                 ),
@@ -108,7 +108,7 @@ fn marker_on_one_cell_skips_it_while_other_is_dispatched() {
                 Tree::When(
                     Trigger::Died,
                     Box::new(Tree::Fire(EffectType::Explode(ExplodeConfig {
-                        range: OrderedFloat(48.0),
+                        range:  OrderedFloat(48.0),
                         damage: OrderedFloat(1.0),
                     }))),
                 ),

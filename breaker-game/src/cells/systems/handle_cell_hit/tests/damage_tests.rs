@@ -304,13 +304,13 @@ fn two_damage_cell_different_cells_different_damage() {
     app.init_resource::<TestMessages>();
     app.world_mut().resource_mut::<TestMessages>().0 = vec![
         DamageCell {
-            cell: cell_a,
-            damage: 20.0,
+            cell:        cell_a,
+            damage:      20.0,
             source_chip: None,
         },
         DamageCell {
-            cell: cell_b,
-            damage: 10.0,
+            cell:        cell_b,
+            damage:      10.0,
             source_chip: None,
         },
     ];

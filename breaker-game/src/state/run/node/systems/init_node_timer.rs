@@ -32,7 +32,7 @@ pub(crate) fn init_node_timer(
     let secs = layout.0.timer_secs * timer_mult;
     commands.insert_resource(NodeTimer {
         remaining: secs,
-        total: secs,
+        total:     secs,
     });
 }
 

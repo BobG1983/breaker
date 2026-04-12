@@ -61,7 +61,7 @@ fn breaker_top_rebound_overwrites_existing_last_impact() {
     let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, -400.0);
     app.world_mut().entity_mut(bolt_entity).insert(LastImpact {
         position: Vec2::new(999.0, 999.0),
-        side: ImpactSide::Left,
+        side:     ImpactSide::Left,
     });
 
     tick(&mut app);

@@ -143,8 +143,8 @@ mod tests {
         use crate::prelude::DistanceConstraint;
 
         let constraint = DistanceConstraint {
-            entity_a: Entity::PLACEHOLDER,
-            entity_b: Entity::PLACEHOLDER,
+            entity_a:     Entity::PLACEHOLDER,
+            entity_b:     Entity::PLACEHOLDER,
             max_distance: 200.0,
         };
         assert!((constraint.max_distance - 200.0).abs() < f32::EPSILON);
@@ -201,8 +201,8 @@ mod tests {
 
         // Distance constraint
         let _ = DistanceConstraint {
-            entity_a: Entity::PLACEHOLDER,
-            entity_b: Entity::PLACEHOLDER,
+            entity_a:     Entity::PLACEHOLDER,
+            entity_b:     Entity::PLACEHOLDER,
             max_distance: 100.0,
         };
 
@@ -218,9 +218,9 @@ mod tests {
 
         // SweepHit
         let _ = SweepHit {
-            entity: Entity::PLACEHOLDER,
-            position: Vec2::ZERO,
-            normal: Vec2::Y,
+            entity:    Entity::PLACEHOLDER,
+            position:  Vec2::ZERO,
+            normal:    Vec2::Y,
             remaining: 100.0,
         };
     }
@@ -233,7 +233,7 @@ mod tests {
 
         let ray_hit = RayHit {
             distance: 42.0,
-            normal: Vec2::NEG_Y,
+            normal:   Vec2::NEG_Y,
         };
         assert!((ray_hit.distance - 42.0).abs() < f32::EPSILON);
         assert_eq!(ray_hit.normal, Vec2::NEG_Y);
@@ -246,9 +246,9 @@ mod tests {
         use crate::prelude::SweepHit;
 
         let sweep_hit = SweepHit {
-            entity: Entity::PLACEHOLDER,
-            position: Vec2::new(10.0, 20.0),
-            normal: Vec2::NEG_X,
+            entity:    Entity::PLACEHOLDER,
+            position:  Vec2::new(10.0, 20.0),
+            normal:    Vec2::NEG_X,
             remaining: 55.5,
         };
         assert_eq!(sweep_hit.entity, Entity::PLACEHOLDER);
@@ -286,8 +286,8 @@ mod tests {
             ))
             .id();
         app.world_mut().spawn(DistanceConstraint {
-            entity_a: a,
-            entity_b: b,
+            entity_a:     a,
+            entity_b:     b,
             max_distance: 200.0,
         });
 

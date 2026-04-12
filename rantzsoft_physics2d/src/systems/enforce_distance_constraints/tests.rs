@@ -44,8 +44,8 @@ fn slack_constraint_leaves_positions_unchanged() {
         ))
         .id();
     app.world_mut().spawn(DistanceConstraint {
-        entity_a: a,
-        entity_b: b,
+        entity_a:     a,
+        entity_b:     b,
         max_distance: 200.0,
     });
 
@@ -103,8 +103,8 @@ fn taut_constraint_corrects_positions_symmetrically() {
         ))
         .id();
     app.world_mut().spawn(DistanceConstraint {
-        entity_a: a,
-        entity_b: b,
+        entity_a:     a,
+        entity_b:     b,
         max_distance: 200.0,
     });
 
@@ -161,8 +161,8 @@ fn taut_constraint_redistributes_velocity_along_axis() {
         ))
         .id();
     app.world_mut().spawn(DistanceConstraint {
-        entity_a: a,
-        entity_b: b,
+        entity_a:     a,
+        entity_b:     b,
         max_distance: 200.0,
     });
 
@@ -210,8 +210,8 @@ fn taut_constraint_preserves_perpendicular_velocity() {
         ))
         .id();
     app.world_mut().spawn(DistanceConstraint {
-        entity_a: a,
-        entity_b: b,
+        entity_a:     a,
+        entity_b:     b,
         max_distance: 200.0,
     });
 
@@ -258,8 +258,8 @@ fn taut_constraint_no_velocity_redistribution_when_converging() {
         ))
         .id();
     app.world_mut().spawn(DistanceConstraint {
-        entity_a: a,
-        entity_b: b,
+        entity_a:     a,
+        entity_b:     b,
         max_distance: 200.0,
     });
 
@@ -301,8 +301,8 @@ fn missing_entity_skipped_gracefully() {
     let stale_entity = app.world_mut().spawn_empty().id();
     app.world_mut().despawn(stale_entity);
     app.world_mut().spawn(DistanceConstraint {
-        entity_a: a,
-        entity_b: stale_entity,
+        entity_a:     a,
+        entity_b:     stale_entity,
         max_distance: 200.0,
     });
 
@@ -339,8 +339,8 @@ fn zero_distance_same_position_skips_correction() {
         ))
         .id();
     app.world_mut().spawn(DistanceConstraint {
-        entity_a: a,
-        entity_b: b,
+        entity_a:     a,
+        entity_b:     b,
         max_distance: 200.0,
     });
 

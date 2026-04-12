@@ -23,14 +23,14 @@ pub struct IrisOut {
     /// Duration in seconds.
     pub duration: f32,
     /// Overlay color.
-    pub color: Color,
+    pub color:    Color,
 }
 
 impl Default for IrisOut {
     fn default() -> Self {
         Self {
             duration: 0.3,
-            color: Color::BLACK,
+            color:    Color::BLACK,
         }
     }
 }
@@ -39,7 +39,7 @@ impl Transition for IrisOut {
     fn insert_starting(&self, world: &mut World) {
         world.insert_resource(StartingTransition::<Self>::new());
         world.insert_resource(IrisOutConfig {
-            color: self.color,
+            color:    self.color,
             duration: self.duration,
         });
     }
@@ -51,14 +51,14 @@ pub struct IrisIn {
     /// Duration in seconds.
     pub duration: f32,
     /// Overlay color.
-    pub color: Color,
+    pub color:    Color,
 }
 
 impl Default for IrisIn {
     fn default() -> Self {
         Self {
             duration: 0.3,
-            color: Color::BLACK,
+            color:    Color::BLACK,
         }
     }
 }
@@ -67,7 +67,7 @@ impl Transition for IrisIn {
     fn insert_starting(&self, world: &mut World) {
         world.insert_resource(StartingTransition::<Self>::new());
         world.insert_resource(IrisInConfig {
-            color: self.color,
+            color:    self.color,
             duration: self.duration,
         });
     }
@@ -84,7 +84,7 @@ pub struct IrisOutConfig {
     /// Duration in seconds.
     pub duration: f32,
     /// Overlay color.
-    pub color: Color,
+    pub color:    Color,
 }
 
 /// Configuration resource inserted by `IrisIn::insert_starting`.
@@ -93,7 +93,7 @@ pub struct IrisInConfig {
     /// Duration in seconds.
     pub duration: f32,
     /// Overlay color.
-    pub color: Color,
+    pub color:    Color,
 }
 
 // ---------------------------------------------------------------------------
@@ -110,15 +110,15 @@ pub(crate) fn iris_out_start(
 ) {
     if let Some(camera) = cameras.iter().next() {
         commands.entity(camera).insert(TransitionEffect {
-            color: color_to_linear_vec4(config.color),
-            direction: Vec4::ZERO,
+            color:       color_to_linear_vec4(config.color),
+            direction:   Vec4::ZERO,
             effect_type: EffectType::IRIS,
-            progress: 0.0,
+            progress:    0.0,
         });
     }
     commands.insert_resource(TransitionProgress {
-        elapsed: 0.0,
-        duration: config.duration,
+        elapsed:   0.0,
+        duration:  config.duration,
         completed: false,
     });
     commands.remove_resource::<IrisOutConfig>();
@@ -178,15 +178,15 @@ pub(crate) fn iris_in_start(
 ) {
     if let Some(camera) = cameras.iter().next() {
         commands.entity(camera).insert(TransitionEffect {
-            color: color_to_linear_vec4(config.color),
-            direction: Vec4::ZERO,
+            color:       color_to_linear_vec4(config.color),
+            direction:   Vec4::ZERO,
             effect_type: EffectType::IRIS,
-            progress: 1.0,
+            progress:    1.0,
         });
     }
     commands.insert_resource(TransitionProgress {
-        elapsed: 0.0,
-        duration: config.duration,
+        elapsed:   0.0,
+        duration:  config.duration,
         completed: false,
     });
     commands.remove_resource::<IrisInConfig>();

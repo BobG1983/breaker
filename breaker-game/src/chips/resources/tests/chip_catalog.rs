@@ -53,7 +53,7 @@ fn ordered_values_preserves_insertion_order() {
 
 fn ingredient(name: &str, stacks: u32) -> EvolutionIngredient {
     EvolutionIngredient {
-        chip_name: name.to_owned(),
+        chip_name:       name.to_owned(),
         stacks_required: stacks,
     }
 }
@@ -84,7 +84,7 @@ fn insert_recipe_adds_recipe() {
     let mut registry = ChipCatalog::default();
     registry.insert_recipe(Recipe {
         ingredients: vec![EvolutionIngredient {
-            chip_name: "Piercing Shot".to_owned(),
+            chip_name:       "Piercing Shot".to_owned(),
             stacks_required: 2,
         }],
         result_name: "Piercing Barrage".to_owned(),

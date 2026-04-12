@@ -12,15 +12,15 @@ fn s(val: &str) -> String {
 #[test]
 fn validate_passes_valid_layout() {
     let layout = NodeLayout {
-        name: "test".to_owned(),
-        timer_secs: 60.0,
-        cols: 3,
-        rows: 2,
+        name:            "test".to_owned(),
+        timer_secs:      60.0,
+        cols:            3,
+        rows:            2,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S"), s("T"), s(".")], vec![s("."), s("S"), s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec![s("S"), s("T"), s(".")], vec![s("."), s("S"), s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     let registry = test_registry();
     assert!(layout.validate(&registry).is_ok());
@@ -29,15 +29,15 @@ fn validate_passes_valid_layout() {
 #[test]
 fn validate_rejects_unknown_alias() {
     let layout = NodeLayout {
-        name: "bad".to_owned(),
-        timer_secs: 60.0,
-        cols: 2,
-        rows: 1,
+        name:            "bad".to_owned(),
+        timer_secs:      60.0,
+        cols:            2,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("X"), s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec![s("X"), s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     let registry = test_registry();
     assert!(layout.validate(&registry).is_err());
@@ -46,15 +46,15 @@ fn validate_rejects_unknown_alias() {
 #[test]
 fn validate_rejects_wrong_row_count() {
     let layout = NodeLayout {
-        name: "bad".to_owned(),
-        timer_secs: 60.0,
-        cols: 2,
-        rows: 3,
+        name:            "bad".to_owned(),
+        timer_secs:      60.0,
+        cols:            2,
+        rows:            3,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S"), s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec![s("S"), s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     let registry = test_registry();
     assert!(layout.validate(&registry).is_err());
@@ -63,15 +63,15 @@ fn validate_rejects_wrong_row_count() {
 #[test]
 fn validate_rejects_wrong_col_count() {
     let layout = NodeLayout {
-        name: "bad".to_owned(),
-        timer_secs: 60.0,
-        cols: 2,
-        rows: 1,
+        name:            "bad".to_owned(),
+        timer_secs:      60.0,
+        cols:            2,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec![s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     let registry = test_registry();
     assert!(layout.validate(&registry).is_err());
@@ -80,15 +80,15 @@ fn validate_rejects_wrong_col_count() {
 #[test]
 fn cell_count_skips_dots() {
     let layout = NodeLayout {
-        name: "test".to_owned(),
-        timer_secs: 60.0,
-        cols: 3,
-        rows: 2,
+        name:            "test".to_owned(),
+        timer_secs:      60.0,
+        cols:            3,
+        rows:            2,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S"), s("."), s("T")], vec![s("."), s("S"), s(".")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec![s("S"), s("."), s("T")], vec![s("."), s("S"), s(".")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     assert_eq!(layout.cell_count(), 3);
 }
@@ -96,15 +96,15 @@ fn cell_count_skips_dots() {
 #[test]
 fn validate_rejects_cols_above_max() {
     let layout = NodeLayout {
-        name: "big_cols".to_owned(),
-        timer_secs: 60.0,
-        cols: 129,
-        rows: 5,
+        name:            "big_cols".to_owned(),
+        timer_secs:      60.0,
+        cols:            129,
+        rows:            5,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S"); 129]; 5],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec![s("S"); 129]; 5],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     let registry = test_registry();
     assert!(
@@ -116,15 +116,15 @@ fn validate_rejects_cols_above_max() {
 #[test]
 fn validate_rejects_rows_above_max() {
     let layout = NodeLayout {
-        name: "big_rows".to_owned(),
-        timer_secs: 60.0,
-        cols: 5,
-        rows: 129,
+        name:            "big_rows".to_owned(),
+        timer_secs:      60.0,
+        cols:            5,
+        rows:            129,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S"); 5]; 129],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec![s("S"); 5]; 129],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     let registry = test_registry();
     assert!(
@@ -136,15 +136,15 @@ fn validate_rejects_rows_above_max() {
 #[test]
 fn validate_rejects_zero_cols() {
     let layout = NodeLayout {
-        name: "zero_cols".to_owned(),
-        timer_secs: 60.0,
-        cols: 0,
-        rows: 1,
+        name:            "zero_cols".to_owned(),
+        timer_secs:      60.0,
+        cols:            0,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec![]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     let registry = test_registry();
     assert!(
@@ -156,15 +156,15 @@ fn validate_rejects_zero_cols() {
 #[test]
 fn validate_rejects_zero_rows() {
     let layout = NodeLayout {
-        name: "zero_rows".to_owned(),
-        timer_secs: 60.0,
-        cols: 5,
-        rows: 0,
+        name:            "zero_rows".to_owned(),
+        timer_secs:      60.0,
+        cols:            5,
+        rows:            0,
         grid_top_offset: 50.0,
-        grid: vec![],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     let registry = test_registry();
     assert!(
@@ -176,15 +176,15 @@ fn validate_rejects_zero_rows() {
 #[test]
 fn validate_accepts_max_dimensions() {
     let layout = NodeLayout {
-        name: "max_grid".to_owned(),
-        timer_secs: 60.0,
-        cols: 128,
-        rows: 128,
+        name:            "max_grid".to_owned(),
+        timer_secs:      60.0,
+        cols:            128,
+        rows:            128,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S"); 128]; 128],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec![s("S"); 128]; 128],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     let registry = test_registry();
     assert!(
@@ -196,15 +196,15 @@ fn validate_accepts_max_dimensions() {
 #[test]
 fn validate_accepts_minimum_dimensions() {
     let layout = NodeLayout {
-        name: "tiny".to_owned(),
-        timer_secs: 60.0,
-        cols: 1,
-        rows: 1,
+        name:            "tiny".to_owned(),
+        timer_secs:      60.0,
+        cols:            1,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec![s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     let registry = test_registry();
     assert!(
@@ -218,15 +218,15 @@ fn validate_accepts_minimum_dimensions() {
 #[test]
 fn validate_accepts_single_char_string_aliases() {
     let layout = NodeLayout {
-        name: "single_char".to_owned(),
-        timer_secs: 60.0,
-        cols: 3,
-        rows: 1,
+        name:            "single_char".to_owned(),
+        timer_secs:      60.0,
+        cols:            3,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S"), s("."), s("T")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec![s("S"), s("."), s("T")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     let registry = test_registry();
     assert!(layout.validate(&registry).is_ok());
@@ -235,15 +235,15 @@ fn validate_accepts_single_char_string_aliases() {
 #[test]
 fn validate_accepts_all_dot_grid() {
     let layout = NodeLayout {
-        name: "all_dots".to_owned(),
-        timer_secs: 60.0,
-        cols: 2,
-        rows: 1,
+        name:            "all_dots".to_owned(),
+        timer_secs:      60.0,
+        cols:            2,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("."), s(".")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec![s("."), s(".")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     let registry = test_registry();
     assert!(
@@ -258,30 +258,30 @@ fn validate_accepts_multi_char_string_alias() {
     registry.insert(
         "Gu".to_owned(),
         crate::cells::CellTypeDefinition {
-            id: "guard".to_owned(),
-            alias: "Gu".to_owned(),
-            toughness: Toughness::default(),
-            color_rgb: [1.0, 1.0, 1.0],
+            id:                "guard".to_owned(),
+            alias:             "Gu".to_owned(),
+            toughness:         Toughness::default(),
+            color_rgb:         [1.0, 1.0, 1.0],
             required_to_clear: true,
-            damage_hdr_base: 4.0,
-            damage_green_min: 0.2,
+            damage_hdr_base:   4.0,
+            damage_green_min:  0.2,
             damage_blue_range: 0.4,
-            damage_blue_base: 0.2,
-            behaviors: None,
+            damage_blue_base:  0.2,
+            behaviors:         None,
 
             effects: None,
         },
     );
     let layout = NodeLayout {
-        name: "multi_char".to_owned(),
-        timer_secs: 60.0,
-        cols: 2,
-        rows: 1,
+        name:            "multi_char".to_owned(),
+        timer_secs:      60.0,
+        cols:            2,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("Gu"), s(".")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec![s("Gu"), s(".")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     assert!(layout.validate(&registry).is_ok());
 }
@@ -292,30 +292,30 @@ fn validate_accepts_three_char_alias_in_registry() {
     registry.insert(
         "Shd".to_owned(),
         crate::cells::CellTypeDefinition {
-            id: "shielded".to_owned(),
-            alias: "Shd".to_owned(),
-            toughness: Toughness::default(),
-            color_rgb: [1.0, 1.0, 1.0],
+            id:                "shielded".to_owned(),
+            alias:             "Shd".to_owned(),
+            toughness:         Toughness::default(),
+            color_rgb:         [1.0, 1.0, 1.0],
             required_to_clear: true,
-            damage_hdr_base: 4.0,
-            damage_green_min: 0.2,
+            damage_hdr_base:   4.0,
+            damage_green_min:  0.2,
             damage_blue_range: 0.4,
-            damage_blue_base: 0.2,
-            behaviors: None,
+            damage_blue_base:  0.2,
+            behaviors:         None,
 
             effects: None,
         },
     );
     let layout = NodeLayout {
-        name: "three_char".to_owned(),
-        timer_secs: 60.0,
-        cols: 1,
-        rows: 1,
+        name:            "three_char".to_owned(),
+        timer_secs:      60.0,
+        cols:            1,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("Shd")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec![s("Shd")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     assert!(layout.validate(&registry).is_ok());
 }
@@ -323,15 +323,15 @@ fn validate_accepts_three_char_alias_in_registry() {
 #[test]
 fn validate_rejects_unknown_string_alias() {
     let layout = NodeLayout {
-        name: "unknown".to_owned(),
-        timer_secs: 60.0,
-        cols: 2,
-        rows: 1,
+        name:            "unknown".to_owned(),
+        timer_secs:      60.0,
+        cols:            2,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("X"), s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec![s("X"), s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     let registry = test_registry();
     let err = layout
@@ -346,15 +346,15 @@ fn validate_rejects_unknown_string_alias() {
 #[test]
 fn validate_rejects_unknown_multi_char_alias() {
     let layout = NodeLayout {
-        name: "unknown_multi".to_owned(),
-        timer_secs: 60.0,
-        cols: 1,
-        rows: 1,
+        name:            "unknown_multi".to_owned(),
+        timer_secs:      60.0,
+        cols:            1,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("Xx")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec![s("Xx")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     let registry = test_registry();
     let err = layout
@@ -369,15 +369,15 @@ fn validate_rejects_unknown_multi_char_alias() {
 #[test]
 fn cell_count_with_string_grid() {
     let layout = NodeLayout {
-        name: "count".to_owned(),
-        timer_secs: 60.0,
-        cols: 3,
-        rows: 2,
+        name:            "count".to_owned(),
+        timer_secs:      60.0,
+        cols:            3,
+        rows:            2,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S"), s("."), s("T")], vec![s("."), s("S"), s(".")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec![s("S"), s("."), s("T")], vec![s("."), s("S"), s(".")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     assert_eq!(layout.cell_count(), 3);
 }
@@ -385,15 +385,15 @@ fn cell_count_with_string_grid() {
 #[test]
 fn cell_count_all_dots_returns_zero() {
     let layout = NodeLayout {
-        name: "empty".to_owned(),
-        timer_secs: 60.0,
-        cols: 2,
-        rows: 2,
+        name:            "empty".to_owned(),
+        timer_secs:      60.0,
+        cols:            2,
+        rows:            2,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("."), s(".")], vec![s("."), s(".")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec![s("."), s(".")], vec![s("."), s(".")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     assert_eq!(layout.cell_count(), 0);
 }
@@ -401,15 +401,15 @@ fn cell_count_all_dots_returns_zero() {
 #[test]
 fn cell_count_no_dots_returns_total() {
     let layout = NodeLayout {
-        name: "full".to_owned(),
-        timer_secs: 60.0,
-        cols: 2,
-        rows: 2,
+        name:            "full".to_owned(),
+        timer_secs:      60.0,
+        cols:            2,
+        rows:            2,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S"), s("T")], vec![s("S"), s("T")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec![s("S"), s("T")], vec![s("S"), s("T")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     assert_eq!(layout.cell_count(), 4);
 }
@@ -417,15 +417,15 @@ fn cell_count_no_dots_returns_total() {
 #[test]
 fn validate_still_checks_row_count_against_declared_rows() {
     let layout = NodeLayout {
-        name: "mismatch".to_owned(),
-        timer_secs: 60.0,
-        cols: 2,
-        rows: 3,
+        name:            "mismatch".to_owned(),
+        timer_secs:      60.0,
+        cols:            2,
+        rows:            3,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S"), s("S")], vec![s("S"), s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec![s("S"), s("S")], vec![s("S"), s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     let registry = test_registry();
     assert!(layout.validate(&registry).is_err());
@@ -434,15 +434,15 @@ fn validate_still_checks_row_count_against_declared_rows() {
 #[test]
 fn validate_still_checks_col_count_per_row() {
     let layout = NodeLayout {
-        name: "jagged".to_owned(),
-        timer_secs: 60.0,
-        cols: 3,
-        rows: 2,
+        name:            "jagged".to_owned(),
+        timer_secs:      60.0,
+        cols:            3,
+        rows:            2,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S"), s("S"), s("S")], vec![s("S"), s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec![s("S"), s("S"), s("S")], vec![s("S"), s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     let registry = test_registry();
     let err = layout

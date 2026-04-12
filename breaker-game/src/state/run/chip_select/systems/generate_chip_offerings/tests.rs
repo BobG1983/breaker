@@ -214,23 +214,23 @@ fn test_app_for_evolution(pool: NodePool, evolution_eligible: bool) -> App {
     // Build unified ChipCatalog with 5 normal chips + Barrage evolution + recipe
     let mut registry = make_registry(5);
     registry.insert(ChipDefinition {
-        name: "Barrage".into(),
-        description: "Combined piercing power".into(),
-        rarity: Rarity::Evolution,
-        max_stacks: 1,
-        effects: vec![RootNode::Stamp(
+        name:          "Barrage".into(),
+        description:   "Combined piercing power".into(),
+        rarity:        Rarity::Evolution,
+        max_stacks:    1,
+        effects:       vec![RootNode::Stamp(
             StampTarget::Bolt,
             Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 5 })),
         )],
-        ingredients: Some(vec![EvolutionIngredient {
-            chip_name: "Piercing Shot".into(),
+        ingredients:   Some(vec![EvolutionIngredient {
+            chip_name:       "Piercing Shot".into(),
             stacks_required: 2,
         }]),
         template_name: None,
     });
     registry.insert_recipe(Recipe {
         ingredients: vec![EvolutionIngredient {
-            chip_name: "Piercing Shot".into(),
+            chip_name:       "Piercing Shot".into(),
             stacks_required: 2,
         }],
         result_name: "Barrage".to_owned(),
@@ -357,13 +357,29 @@ fn boss_node_remaining_slots_filled_with_normal() {
 
 // --- Behavior: All slots filled by evolutions when eligible count >= offers_per_node ---
 
-/// Setup: 3 distinct evolution recipes, all with satisfied ingredients,
-/// on a Boss node with `offers_per_node`=3.
-#[allow(clippy::too_many_lines, reason = "complex test setup")]
-fn app_with_3_eligible_evolutions() -> App {
-    let mut app = App::new();
+/// Creates an evolution chip definition with a single ingredient recipe.
+fn make_evolution_def(
+    name: &str,
+    description: &str,
+    effect: EffectType,
+    ingredient_name: &str,
+) -> ChipDefinition {
+    ChipDefinition {
+        name:          name.into(),
+        description:   description.into(),
+        rarity:        Rarity::Evolution,
+        max_stacks:    1,
+        effects:       vec![RootNode::Stamp(StampTarget::Bolt, Tree::Fire(effect))],
+        ingredients:   Some(vec![EvolutionIngredient {
+            chip_name:       ingredient_name.into(),
+            stacks_required: 2,
+        }]),
+        template_name: None,
+    }
+}
 
-    // Create 3 ingredient chip definitions with templates
+/// Builds the registry and inventory for 3 distinct eligible evolutions.
+fn make_3_evolution_registry_and_inventory() -> (ChipCatalog, ChipInventory) {
     let ps_def = ChipDefinition::test(
         "Piercing Shot",
         Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
@@ -391,7 +407,6 @@ fn app_with_3_eligible_evolutions() -> App {
     )
     .with_template("Damage Boost");
 
-    // Inventory satisfies all 3 recipes
     let mut inventory = ChipInventory::default();
     let _ = inventory.add_chip("Piercing Shot", &ps_def);
     let _ = inventory.add_chip("Piercing Shot", &ps_def);
@@ -400,84 +415,53 @@ fn app_with_3_eligible_evolutions() -> App {
     let _ = inventory.add_chip("Damage Boost", &db_def);
     let _ = inventory.add_chip("Damage Boost", &db_def);
 
-    // Build registry with 5 normal chips + 3 evolution chips + 3 recipes
     let mut registry = make_registry(5);
-    registry.insert(ChipDefinition {
-        name: "Barrage".into(),
-        description: "Combined piercing".into(),
-        rarity: Rarity::Evolution,
-        max_stacks: 1,
-        effects: vec![RootNode::Stamp(
-            StampTarget::Bolt,
-            Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 5 })),
-        )],
-        ingredients: Some(vec![EvolutionIngredient {
-            chip_name: "Piercing Shot".into(),
-            stacks_required: 2,
-        }]),
-        template_name: None,
-    });
-    registry.insert(ChipDefinition {
-        name: "Velocity".into(),
-        description: "Combined speed".into(),
-        rarity: Rarity::Evolution,
-        max_stacks: 1,
-        effects: vec![RootNode::Stamp(
-            StampTarget::Bolt,
-            Tree::Fire(EffectType::SpeedBoost(
-                crate::effect_v3::effects::SpeedBoostConfig {
-                    multiplier: ordered_float::OrderedFloat(2.0),
-                },
-            )),
-        )],
-        ingredients: Some(vec![EvolutionIngredient {
-            chip_name: "Speed Boost".into(),
-            stacks_required: 2,
-        }]),
-        template_name: None,
-    });
-    registry.insert(ChipDefinition {
-        name: "Devastation".into(),
-        description: "Combined damage".into(),
-        rarity: Rarity::Evolution,
-        max_stacks: 1,
-        effects: vec![RootNode::Stamp(
-            StampTarget::Bolt,
-            Tree::Fire(EffectType::DamageBoost(
-                crate::effect_v3::effects::DamageBoostConfig {
-                    multiplier: ordered_float::OrderedFloat(2.0),
-                },
-            )),
-        )],
-        ingredients: Some(vec![EvolutionIngredient {
-            chip_name: "Damage Boost".into(),
-            stacks_required: 2,
-        }]),
-        template_name: None,
-    });
+    registry.insert(make_evolution_def(
+        "Barrage",
+        "Combined piercing",
+        EffectType::Piercing(PiercingConfig { charges: 5 }),
+        "Piercing Shot",
+    ));
+    registry.insert(make_evolution_def(
+        "Velocity",
+        "Combined speed",
+        EffectType::SpeedBoost(crate::effect_v3::effects::SpeedBoostConfig {
+            multiplier: ordered_float::OrderedFloat(2.0),
+        }),
+        "Speed Boost",
+    ));
+    registry.insert(make_evolution_def(
+        "Devastation",
+        "Combined damage",
+        EffectType::DamageBoost(crate::effect_v3::effects::DamageBoostConfig {
+            multiplier: ordered_float::OrderedFloat(2.0),
+        }),
+        "Damage Boost",
+    ));
 
-    registry.insert_recipe(Recipe {
-        ingredients: vec![EvolutionIngredient {
-            chip_name: "Piercing Shot".into(),
-            stacks_required: 2,
-        }],
-        result_name: "Barrage".to_owned(),
-    });
-    registry.insert_recipe(Recipe {
-        ingredients: vec![EvolutionIngredient {
-            chip_name: "Speed Boost".into(),
-            stacks_required: 2,
-        }],
-        result_name: "Velocity".to_owned(),
-    });
-    registry.insert_recipe(Recipe {
-        ingredients: vec![EvolutionIngredient {
-            chip_name: "Damage Boost".into(),
-            stacks_required: 2,
-        }],
-        result_name: "Devastation".to_owned(),
-    });
+    for (ingredient, result) in [
+        ("Piercing Shot", "Barrage"),
+        ("Speed Boost", "Velocity"),
+        ("Damage Boost", "Devastation"),
+    ] {
+        registry.insert_recipe(Recipe {
+            ingredients: vec![EvolutionIngredient {
+                chip_name:       ingredient.into(),
+                stacks_required: 2,
+            }],
+            result_name: result.to_owned(),
+        });
+    }
 
+    (registry, inventory)
+}
+
+/// Setup: 3 distinct evolution recipes, all with satisfied ingredients,
+/// on a Boss node with `offers_per_node`=3.
+fn app_with_3_eligible_evolutions() -> App {
+    let (registry, inventory) = make_3_evolution_registry_and_inventory();
+
+    let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .insert_resource(registry)
         .insert_resource(inventory)

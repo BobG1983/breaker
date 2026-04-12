@@ -25,7 +25,7 @@ fn apply_debug_frame_mutations_spawn_extra_chain_arcs_at_matching_frame() {
         max_frames: 1000,
         disallowed_failures: vec![],
         frame_mutations: Some(vec![FrameMutation {
-            frame: 30,
+            frame:    30,
             mutation: MutationKind::SpawnExtraChainArcs(3),
         }]),
         ..Default::default()
@@ -96,7 +96,7 @@ fn apply_debug_frame_mutations_spawn_extra_chain_arcs_zero_spawns_nothing() {
         max_frames: 1000,
         disallowed_failures: vec![],
         frame_mutations: Some(vec![FrameMutation {
-            frame: 30,
+            frame:    30,
             mutation: MutationKind::SpawnExtraChainArcs(0),
         }]),
         ..Default::default()
@@ -148,7 +148,7 @@ fn apply_debug_frame_mutations_spawn_extra_chain_arcs_skips_non_matching_frame()
         max_frames: 1000,
         disallowed_failures: vec![],
         frame_mutations: Some(vec![FrameMutation {
-            frame: 30,
+            frame:    30,
             mutation: MutationKind::SpawnExtraChainArcs(5),
         }]),
         ..Default::default()
@@ -195,7 +195,7 @@ fn apply_debug_frame_mutations_spawn_extra_chain_arcs_skips_frame_after() {
         max_frames: 1000,
         disallowed_failures: vec![],
         frame_mutations: Some(vec![FrameMutation {
-            frame: 30,
+            frame:    30,
             mutation: MutationKind::SpawnExtraChainArcs(5),
         }]),
         ..Default::default()

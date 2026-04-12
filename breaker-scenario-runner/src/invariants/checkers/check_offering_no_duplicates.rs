@@ -25,10 +25,10 @@ pub fn check_offering_no_duplicates(
         let name = offering.name();
         if !seen.insert(name.to_owned()) {
             log.0.push(ViolationEntry {
-                frame: frame.0,
+                frame:     frame.0,
                 invariant: InvariantKind::OfferingNoDuplicates,
-                entity: None,
-                message: format!(
+                entity:    None,
+                message:   format!(
                     "OfferingNoDuplicates FAIL frame={} duplicate chip name: {name}",
                     frame.0,
                 ),

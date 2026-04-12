@@ -27,12 +27,12 @@ pub(crate) fn grid_extent(step: f32, count_f: f32, padding: f32) -> f32 {
 /// Pre-computed scaled grid dimensions returned by [`compute_grid_scale`].
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct ScaledGridDims {
-    pub cell_width: f32,
+    pub cell_width:  f32,
     pub cell_height: f32,
-    pub padding_x: f32,
-    pub step_x: f32,
-    pub step_y: f32,
-    pub scale: f32,
+    pub padding_x:   f32,
+    pub step_x:      f32,
+    pub step_y:      f32,
+    pub scale:       f32,
 }
 
 /// Computes the uniform scale factor for a grid layout so that all cells fit
@@ -61,12 +61,12 @@ pub(crate) fn compute_grid_scale(
              grid extent is zero or negative"
         );
         return ScaledGridDims {
-            cell_width: 0.0,
+            cell_width:  0.0,
             cell_height: 0.0,
-            padding_x: 0.0,
-            step_x: 0.0,
-            step_y: 0.0,
-            scale: 0.0,
+            padding_x:   0.0,
+            step_x:      0.0,
+            step_y:      0.0,
+            scale:       0.0,
         };
     }
 
@@ -94,17 +94,17 @@ pub(crate) fn compute_grid_scale(
 
 /// Bundled mutable access to mesh and material asset stores for cell spawning.
 pub(crate) struct RenderAssets<'a> {
-    pub meshes: &'a mut Assets<Mesh>,
+    pub meshes:    &'a mut Assets<Mesh>,
     pub materials: &'a mut Assets<ColorMaterial>,
 }
 
 /// Pre-computed grid positions and dimensions shared across spawn helpers.
 pub(super) struct GridSpawnParams {
-    pub(super) step_x: f32,
-    pub(super) step_y: f32,
-    pub(super) start_x: f32,
-    pub(super) start_y: f32,
-    pub(super) cell_width: f32,
+    pub(super) step_x:      f32,
+    pub(super) step_y:      f32,
+    pub(super) start_x:     f32,
+    pub(super) start_y:     f32,
+    pub(super) cell_width:  f32,
     pub(super) cell_height: f32,
 }
 
@@ -121,27 +121,27 @@ impl GridSpawnParams {
 
 /// Context for toughness-based HP resolution at spawn time.
 pub(crate) struct HpContext {
-    pub tier: u32,
+    pub tier:             u32,
     pub position_in_tier: u32,
-    pub is_boss: bool,
+    pub is_boss:          bool,
 }
 
 /// Bundles toughness config and HP context to reduce argument count on
 /// [`spawn_cells_from_grid`].
 pub(crate) struct ToughnessHpData<'a> {
     pub toughness_config: Option<&'a ToughnessConfig>,
-    pub hp_context: HpContext,
+    pub hp_context:       HpContext,
 }
 
 /// Immutable context for cell spawning helpers. Bundles the shared read-only
 /// state so individual functions stay under clippy's argument limit.
 pub(super) struct GridCellContext<'a> {
-    pub(super) layout: &'a NodeLayout,
+    pub(super) layout:   &'a NodeLayout,
     pub(super) registry: &'a CellTypeRegistry,
-    pub(super) params: GridSpawnParams,
+    pub(super) params:   GridSpawnParams,
     /// Precomputed HP scaling — tier scale computed once per batch, config
     /// reference kept for per-cell `base_hp()` lookup.
-    hp_scale: HpScale<'a>,
+    hp_scale:            HpScale<'a>,
 }
 
 /// Precomputed HP scaling for a spawn batch. Caches the tier scale factor
@@ -151,7 +151,7 @@ pub(super) struct GridCellContext<'a> {
 struct HpScale<'a> {
     config: Option<&'a ToughnessConfig>,
     /// `tier_scale * boss_multiplier` (if boss) or `tier_scale` (if not).
-    scale: f32,
+    scale:  f32,
 }
 
 impl<'a> HpScale<'a> {
@@ -159,13 +159,13 @@ impl<'a> HpScale<'a> {
         config.map_or(
             Self {
                 config: None,
-                scale: 1.0,
+                scale:  1.0,
             },
             |c| {
                 let tier = c.tier_scale(hp_context.tier, hp_context.position_in_tier);
                 Self {
                     config: Some(c),
-                    scale: if hp_context.is_boss {
+                    scale:  if hp_context.is_boss {
                         tier * c.boss_multiplier
                     } else {
                         tier
@@ -229,12 +229,12 @@ impl GridCellContext<'_> {
                     let parent_hp = self.compute_hp(def.toughness);
                     let guardian_hp = parent_hp * guarded.guardian_hp_fraction;
                     let config = GuardianSpawnConfig {
-                        hp: guardian_hp,
-                        color_rgb: guarded.guardian_color_rgb,
+                        hp:          guardian_hp,
+                        color_rgb:   guarded.guardian_color_rgb,
                         slide_speed: guarded.slide_speed,
                         cell_height: self.params.cell_height,
-                        step_x: self.params.step_x,
-                        step_y: self.params.step_y,
+                        step_x:      self.params.step_x,
+                        step_y:      self.params.step_y,
                     };
                     let pos = self.params.cell_pos(row_idx, col_idx);
                     let entity_id = Cell::builder()
@@ -334,11 +334,11 @@ pub(crate) fn spawn_cells_from_grid(
         registry,
         hp_scale,
         params: GridSpawnParams {
-            step_x: dims.step_x,
-            step_y: dims.step_y,
-            start_x: -grid_width / 2.0 + dims.cell_width / 2.0,
-            start_y: playfield.top() - layout.grid_top_offset - dims.cell_height / 2.0,
-            cell_width: dims.cell_width,
+            step_x:      dims.step_x,
+            step_y:      dims.step_y,
+            start_x:     -grid_width / 2.0 + dims.cell_width / 2.0,
+            start_y:     playfield.top() - layout.grid_top_offset - dims.cell_height / 2.0,
+            cell_width:  dims.cell_width,
             cell_height: dims.cell_height,
         },
     };
@@ -480,11 +480,11 @@ fn resolve_hp_context(
 /// within clippy's argument-count limit.
 #[derive(SystemParam)]
 pub(crate) struct CellSpawnContext<'w> {
-    cell_config: Res<'w, CellConfig>,
+    cell_config:      Res<'w, CellConfig>,
     playfield_config: Res<'w, PlayfieldConfig>,
-    cell_registry: Res<'w, CellTypeRegistry>,
-    run_state: Option<Res<'w, NodeOutcome>>,
-    node_sequence: Option<Res<'w, NodeSequence>>,
+    cell_registry:    Res<'w, CellTypeRegistry>,
+    run_state:        Option<Res<'w, NodeOutcome>>,
+    node_sequence:    Option<Res<'w, NodeSequence>>,
     toughness_config: Option<Res<'w, ToughnessConfig>>,
 }
 
@@ -508,7 +508,7 @@ pub(crate) fn spawn_cells_from_layout(
         &layout.0,
         &ctx.cell_registry,
         RenderAssets {
-            meshes: &mut render_assets.0,
+            meshes:    &mut render_assets.0,
             materials: &mut render_assets.1,
         },
         ToughnessHpData {

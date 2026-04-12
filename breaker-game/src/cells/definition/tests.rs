@@ -4,25 +4,25 @@ use super::data::*;
 /// Individual tests override fields to test specific validation rules.
 fn valid_definition() -> CellTypeDefinition {
     CellTypeDefinition {
-        id: "test".to_owned(),
-        alias: "T".to_owned(),
-        toughness: Toughness::Standard,
-        color_rgb: [1.0, 0.5, 0.2],
+        id:                "test".to_owned(),
+        alias:             "T".to_owned(),
+        toughness:         Toughness::Standard,
+        color_rgb:         [1.0, 0.5, 0.2],
         required_to_clear: true,
-        damage_hdr_base: 4.0,
-        damage_green_min: 0.2,
+        damage_hdr_base:   4.0,
+        damage_green_min:  0.2,
         damage_blue_range: 0.4,
-        damage_blue_base: 0.2,
-        behaviors: None,
-        effects: None,
+        damage_blue_base:  0.2,
+        behaviors:         None,
+        effects:           None,
     }
 }
 
 fn valid_guarded_behavior() -> GuardedBehavior {
     GuardedBehavior {
         guardian_hp_fraction: 0.5,
-        guardian_color_rgb: [0.5, 0.8, 1.0],
-        slide_speed: 30.0,
+        guardian_color_rgb:   [0.5, 0.8, 1.0],
+        slide_speed:          30.0,
     }
 }
 
@@ -138,17 +138,17 @@ fn toughness_serialize_round_trip() {
 #[test]
 fn definition_has_toughness_field() {
     let def = CellTypeDefinition {
-        id: "test".to_owned(),
-        alias: "T".to_owned(),
-        toughness: Toughness::Standard,
-        color_rgb: [1.0, 0.5, 0.2],
+        id:                "test".to_owned(),
+        alias:             "T".to_owned(),
+        toughness:         Toughness::Standard,
+        color_rgb:         [1.0, 0.5, 0.2],
         required_to_clear: true,
-        damage_hdr_base: 4.0,
-        damage_green_min: 0.2,
+        damage_hdr_base:   4.0,
+        damage_green_min:  0.2,
         damage_blue_range: 0.4,
-        damage_blue_base: 0.2,
-        behaviors: None,
-        effects: None,
+        damage_blue_base:  0.2,
+        behaviors:         None,
+        effects:           None,
     };
     assert_eq!(def.toughness, Toughness::Standard);
 }
@@ -214,8 +214,8 @@ fn definition_deserializes_with_toughness_weak() {
 fn guarded_behavior_has_guardian_hp_fraction() {
     let gb = GuardedBehavior {
         guardian_hp_fraction: 0.5,
-        guardian_color_rgb: [0.5, 0.8, 1.0],
-        slide_speed: 30.0,
+        guardian_color_rgb:   [0.5, 0.8, 1.0],
+        slide_speed:          30.0,
     };
     assert!((gb.guardian_hp_fraction - 0.5).abs() < f32::EPSILON);
 }
@@ -289,8 +289,8 @@ fn cell_behavior_guarded_deserializes_with_fraction() {
         result,
         CellBehavior::Guarded(GuardedBehavior {
             guardian_hp_fraction: 0.5,
-            guardian_color_rgb: [0.5, 0.8, 1.0],
-            slide_speed: 30.0,
+            guardian_color_rgb:   [0.5, 0.8, 1.0],
+            slide_speed:          30.0,
         })
     );
 }
@@ -371,8 +371,8 @@ fn cell_definition_validate_delegates_to_guarded_validate() {
     let mut def = valid_definition();
     def.behaviors = Some(vec![CellBehavior::Guarded(GuardedBehavior {
         guardian_hp_fraction: 0.0, // invalid
-        guardian_color_rgb: [0.5, 0.8, 1.0],
-        slide_speed: 30.0,
+        guardian_color_rgb:   [0.5, 0.8, 1.0],
+        slide_speed:          30.0,
     })]);
     assert!(def.validate().is_err());
 }

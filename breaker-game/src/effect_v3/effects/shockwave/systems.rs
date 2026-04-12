@@ -9,6 +9,10 @@ use crate::{
     shared::death_pipeline::{DamageDealt, Dead},
 };
 
+/// Alive cell lookup — entity + position, excludes dead cells.
+type AliveCellQuery<'w, 's> =
+    Query<'w, 's, (Entity, &'static Position2D), (With<Cell>, Without<Dead>)>;
+
 /// Expands shockwave radius each frame based on speed.
 pub fn tick_shockwave(mut query: Query<(&mut ShockwaveRadius, &ShockwaveSpeed)>, time: Res<Time>) {
     let dt = time.delta_secs();
@@ -18,11 +22,7 @@ pub fn tick_shockwave(mut query: Query<(&mut ShockwaveRadius, &ShockwaveSpeed)>,
 }
 
 /// Applies damage to cells within the expanding shockwave radius.
-#[allow(
-    clippy::type_complexity,
-    reason = "Bevy query with many shockwave components"
-)]
-pub fn apply_shockwave_damage(
+pub(crate) fn apply_shockwave_damage(
     mut shockwave_query: Query<(
         Entity,
         &Position2D,
@@ -31,7 +31,7 @@ pub fn apply_shockwave_damage(
         &ShockwaveDamageMultiplier,
         &mut ShockwaveDamaged,
     )>,
-    cell_query: Query<(Entity, &Position2D), (With<Cell>, Without<Dead>)>,
+    cell_query: AliveCellQuery,
     mut damage_writer: MessageWriter<DamageDealt<Cell>>,
 ) {
     for (sw_entity, sw_pos, sw_radius, base_dmg, dmg_mult, mut damaged) in &mut shockwave_query {
@@ -44,11 +44,11 @@ pub fn apply_shockwave_damage(
                 damaged.0.insert(cell_entity);
                 let damage = base_dmg.0 * dmg_mult.0;
                 damage_writer.write(DamageDealt {
-                    dealer: Some(sw_entity),
-                    target: cell_entity,
-                    amount: damage,
+                    dealer:      Some(sw_entity),
+                    target:      cell_entity,
+                    amount:      damage,
                     source_chip: None,
-                    _marker: std::marker::PhantomData,
+                    _marker:     std::marker::PhantomData,
                 });
             }
         }

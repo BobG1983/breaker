@@ -162,8 +162,8 @@ fn flash_step_teleport_with_size_multiplier_adjusts_clamp_half_width() {
             DashState::Settling,
             Velocity2D(Vec2::ZERO),
             BreakerTilt {
-                angle: 0.35,
-                ease_start: 0.35,
+                angle:       0.35,
+                ease_start:  0.35,
                 ease_target: 0.0,
             },
             DashStateTimer { remaining: 0.2 },
@@ -201,8 +201,8 @@ fn flash_step_teleport_with_size_multiplier_one_matches_no_multiplier() {
             DashState::Settling,
             Velocity2D(Vec2::ZERO),
             BreakerTilt {
-                angle: 0.35,
-                ease_start: 0.35,
+                angle:       0.35,
+                ease_start:  0.35,
                 ease_target: 0.0,
             },
             DashStateTimer { remaining: 0.2 },

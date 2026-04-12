@@ -171,7 +171,7 @@ fn quit_chain_app() -> App {
             .with_transition(TransitionType::Out(Arc::new(
                 rantzsoft_stateflow::FadeOut {
                     duration: 0.6,
-                    color: Color::WHITE,
+                    color:    Color::WHITE,
                 },
             )))
             .when(|_| true),
@@ -193,7 +193,7 @@ fn quit_chain_app() -> App {
             .to(MenuState::Main)
             .with_transition(TransitionType::In(Arc::new(rantzsoft_stateflow::FadeIn {
                 duration: 0.6,
-                color: Color::WHITE,
+                color:    Color::WHITE,
             })))
             .when(|_| true),
     );

@@ -26,30 +26,30 @@ use crate::{
 
 /// Read-only dash configuration components, bundled to reduce argument count.
 struct DashParams<'a> {
-    max_speed: &'a MaxSpeed,
-    decel: &'a BreakerDeceleration,
-    easing: &'a DecelEasing,
-    dash_speed: &'a DashSpeedMultiplier,
-    dash_duration: &'a DashDuration,
-    dash_tilt: &'a DashTilt,
-    dash_tilt_ease: &'a DashTiltEase,
-    brake_tilt: &'a BrakeTilt,
-    brake_decel: &'a BrakeDecel,
-    settle_duration: &'a SettleDuration,
+    max_speed:        &'a MaxSpeed,
+    decel:            &'a BreakerDeceleration,
+    easing:           &'a DecelEasing,
+    dash_speed:       &'a DashSpeedMultiplier,
+    dash_duration:    &'a DashDuration,
+    dash_tilt:        &'a DashTilt,
+    dash_tilt_ease:   &'a DashTiltEase,
+    brake_tilt:       &'a BrakeTilt,
+    brake_decel:      &'a BrakeDecel,
+    settle_duration:  &'a SettleDuration,
     settle_tilt_ease: &'a SettleTiltEase,
 }
 
 /// Idle/Settling context — input, timing, and optional `FlashStep` teleport data.
 /// Bundled to keep `handle_idle_or_settling` under the argument-count lint threshold.
 struct SettleContext<'a> {
-    actions: &'a InputActions,
-    dt: f32,
-    flash_step: Option<&'a FlashStepActive>,
-    position: Option<&'a mut Position2D>,
+    actions:       &'a InputActions,
+    dt:            f32,
+    flash_step:    Option<&'a FlashStepActive>,
+    position:      Option<&'a mut Position2D>,
     breaker_width: Option<&'a BaseWidth>,
-    playfield: &'a PlayfieldConfig,
-    speed_mult: Option<&'a EffectStack<SpeedBoostConfig>>,
-    size_mult: Option<&'a EffectStack<SizeBoostConfig>>,
+    playfield:     &'a PlayfieldConfig,
+    speed_mult:    Option<&'a EffectStack<SpeedBoostConfig>>,
+    size_mult:     Option<&'a EffectStack<SizeBoostConfig>>,
 }
 
 /// Handles dash input and the Dashing → Braking → Settling → Idle state machine.
@@ -68,16 +68,16 @@ pub(crate) fn update_breaker_state(
 
     for mut data in &mut query {
         let params = DashParams {
-            max_speed: data.max_speed,
-            decel: data.deceleration,
-            easing: data.decel_easing,
-            dash_speed: data.dash_speed,
-            dash_duration: data.dash_duration,
-            dash_tilt: data.dash_tilt,
-            dash_tilt_ease: data.dash_tilt_ease,
-            brake_tilt: data.brake_tilt,
-            brake_decel: data.brake_decel,
-            settle_duration: data.settle_duration,
+            max_speed:        data.max_speed,
+            decel:            data.deceleration,
+            easing:           data.decel_easing,
+            dash_speed:       data.dash_speed,
+            dash_duration:    data.dash_duration,
+            dash_tilt:        data.dash_tilt,
+            dash_tilt_ease:   data.dash_tilt_ease,
+            brake_tilt:       data.brake_tilt,
+            brake_decel:      data.brake_decel,
+            settle_duration:  data.settle_duration,
             settle_tilt_ease: data.settle_tilt_ease,
         };
 

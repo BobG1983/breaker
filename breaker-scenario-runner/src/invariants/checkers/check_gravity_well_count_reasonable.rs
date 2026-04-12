@@ -24,10 +24,10 @@ pub fn check_gravity_well_count_reasonable(
     let count = wells.iter().count();
     if count > max {
         log.0.push(ViolationEntry {
-            frame: frame.0,
+            frame:     frame.0,
             invariant: InvariantKind::GravityWellCountReasonable,
-            entity: None,
-            message: format!(
+            entity:    None,
+            message:   format!(
                 "GravityWellCountReasonable FAIL frame={} count={count} max={max}",
                 frame.0,
             ),

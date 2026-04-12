@@ -13,17 +13,17 @@ pub struct StressFailure {
     /// Zero-based index of this copy within the stress run.
     pub copy_index: usize,
     /// Captured stdout from the child process.
-    pub stdout: String,
+    pub stdout:     String,
     /// Captured stderr from the child process.
-    pub stderr: String,
+    pub stderr:     String,
 }
 
 /// Result of running a stress scenario (multiple copies of the same scenario).
 pub struct StressResult {
     /// Name of the scenario under stress.
-    pub name: String,
+    pub name:     String,
     /// Total number of copies that were run.
-    pub total: usize,
+    pub total:    usize,
     /// Details for every copy that failed.
     pub failures: Vec<StressFailure>,
 }
@@ -123,12 +123,12 @@ pub fn run_stress_scenario(
         Err(e) => {
             eprintln!("{e}");
             return StressResult {
-                name: name.to_owned(),
-                total: runs,
+                name:     name.to_owned(),
+                total:    runs,
                 failures: vec![StressFailure {
                     copy_index: 0,
-                    stdout: String::new(),
-                    stderr: e,
+                    stdout:     String::new(),
+                    stderr:     e,
                 }],
             };
         }

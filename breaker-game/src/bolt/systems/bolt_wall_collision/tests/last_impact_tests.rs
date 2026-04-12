@@ -148,7 +148,7 @@ fn wall_rebound_overwrites_previous_last_impact() {
     // Insert a pre-existing LastImpact
     app.world_mut().entity_mut(bolt_entity).insert(LastImpact {
         position: Vec2::new(50.0, 300.0),
-        side: ImpactSide::Top,
+        side:     ImpactSide::Top,
     });
 
     tick(&mut app);

@@ -44,10 +44,10 @@ fn speed_boost_tree(multiplier: f32) -> Tree {
 
 fn shockwave_tree() -> Tree {
     Tree::Fire(EffectType::Shockwave(ShockwaveConfig {
-        base_range: OrderedFloat(32.0),
+        base_range:      OrderedFloat(32.0),
         range_per_level: OrderedFloat(8.0),
-        stacks: 1,
-        speed: OrderedFloat(400.0),
+        stacks:          1,
+        speed:           OrderedFloat(400.0),
     }))
 }
 

@@ -57,8 +57,8 @@ mod tests {
     fn accumulates_damage_for_single_evolution_chip() {
         let mut app = test_app();
         app.insert_resource(TestMessages(vec![DamageCell {
-            cell: Entity::PLACEHOLDER,
-            damage: 25.0,
+            cell:        Entity::PLACEHOLDER,
+            damage:      25.0,
             source_chip: Some("Piercing Barrage".to_owned()),
         }]));
         tick(&mut app);
@@ -83,18 +83,18 @@ mod tests {
         let mut app = test_app();
         app.insert_resource(TestMessages(vec![
             DamageCell {
-                cell: Entity::PLACEHOLDER,
-                damage: 10.0,
+                cell:        Entity::PLACEHOLDER,
+                damage:      10.0,
                 source_chip: Some("Piercing Barrage".to_owned()),
             },
             DamageCell {
-                cell: Entity::PLACEHOLDER,
-                damage: 15.0,
+                cell:        Entity::PLACEHOLDER,
+                damage:      15.0,
                 source_chip: Some("Piercing Barrage".to_owned()),
             },
             DamageCell {
-                cell: Entity::PLACEHOLDER,
-                damage: 5.0,
+                cell:        Entity::PLACEHOLDER,
+                damage:      5.0,
                 source_chip: Some("Piercing Barrage".to_owned()),
             },
         ]));
@@ -125,8 +125,8 @@ mod tests {
             .insert("Piercing Barrage".to_owned(), 20.0);
 
         app.insert_resource(TestMessages(vec![DamageCell {
-            cell: Entity::PLACEHOLDER,
-            damage: 10.0,
+            cell:        Entity::PLACEHOLDER,
+            damage:      10.0,
             source_chip: Some("Piercing Barrage".to_owned()),
         }]));
         tick(&mut app);
@@ -151,13 +151,13 @@ mod tests {
         let mut app = test_app();
         app.insert_resource(TestMessages(vec![
             DamageCell {
-                cell: Entity::PLACEHOLDER,
-                damage: 25.0,
+                cell:        Entity::PLACEHOLDER,
+                damage:      25.0,
                 source_chip: Some("Piercing Barrage".to_owned()),
             },
             DamageCell {
-                cell: Entity::PLACEHOLDER,
-                damage: 40.0,
+                cell:        Entity::PLACEHOLDER,
+                damage:      40.0,
                 source_chip: Some("Chain Lightning".to_owned()),
             },
         ]));
@@ -193,8 +193,8 @@ mod tests {
     fn ignores_damage_cell_with_no_source_chip() {
         let mut app = test_app();
         app.insert_resource(TestMessages(vec![DamageCell {
-            cell: Entity::PLACEHOLDER,
-            damage: 50.0,
+            cell:        Entity::PLACEHOLDER,
+            damage:      50.0,
             source_chip: None,
         }]));
         tick(&mut app);

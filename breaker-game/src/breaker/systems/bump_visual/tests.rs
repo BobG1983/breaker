@@ -14,19 +14,19 @@ use crate::{
 fn default_bump_feedback() -> BumpFeedback {
     let config = default_breaker_definition();
     BumpFeedback {
-        duration: config.bump_visual_duration,
-        peak: config.bump_visual_peak,
+        duration:      config.bump_visual_duration,
+        peak:          config.bump_visual_peak,
         peak_fraction: config.bump_visual_peak_fraction,
-        rise_ease: config.bump_visual_rise_ease,
-        fall_ease: config.bump_visual_fall_ease,
+        rise_ease:     config.bump_visual_rise_ease,
+        fall_ease:     config.bump_visual_fall_ease,
     }
 }
 
 fn test_bump_offset(timer_fraction: f32) -> f32 {
     let params = default_bump_feedback();
     let visual = BumpFeedbackState {
-        timer: params.duration * timer_fraction,
-        duration: params.duration,
+        timer:       params.duration * timer_fraction,
+        duration:    params.duration,
         peak_offset: params.peak,
     };
     bump_offset(&visual, &params)
@@ -71,8 +71,8 @@ fn bump_offset_asymmetric_shape() {
     let params = default_bump_feedback();
     let rise_mid = bump_offset(
         &BumpFeedbackState {
-            timer: params.duration * (1.0 - 0.15),
-            duration: params.duration,
+            timer:       params.duration * (1.0 - 0.15),
+            duration:    params.duration,
             peak_offset: params.peak,
         },
         &params,
@@ -80,8 +80,8 @@ fn bump_offset_asymmetric_shape() {
 
     let fall_mid = bump_offset(
         &BumpFeedbackState {
-            timer: params.duration * (1.0 - 0.65),
-            duration: params.duration,
+            timer:       params.duration * (1.0 - 0.65),
+            duration:    params.duration,
             peak_offset: params.peak,
         },
         &params,
@@ -173,8 +173,8 @@ fn trigger_does_not_retrigger_while_animating() {
     app.world_mut()
         .entity_mut(entity)
         .insert(BumpFeedbackState {
-            timer: 0.1,
-            duration: params.duration,
+            timer:       0.1,
+            duration:    params.duration,
             peak_offset: params.peak,
         });
 
@@ -213,8 +213,8 @@ fn animate_applies_position2d_y_offset_during_animation() {
     app.world_mut()
         .entity_mut(entity)
         .insert(BumpFeedbackState {
-            timer: params.duration,
-            duration: params.duration,
+            timer:       params.duration,
+            duration:    params.duration,
             peak_offset: params.peak,
         });
 
@@ -248,8 +248,8 @@ fn animate_removes_bump_visual_when_done() {
         .entity_mut(entity)
         .insert(BumpFeedbackState {
             // Zero timer — will expire on next tick
-            timer: 0.0,
-            duration: params.duration,
+            timer:       0.0,
+            duration:    params.duration,
             peak_offset: params.peak,
         });
 
@@ -284,8 +284,8 @@ fn animate_snaps_position2d_to_base_after_expiry() {
         Position2D(Vec2::new(0.0, config.y_position + 5.0)),
         BumpFeedbackState {
             // Near-expired timer — will complete within a few test updates
-            timer: 0.0001,
-            duration: params.duration,
+            timer:       0.0001,
+            duration:    params.duration,
             peak_offset: params.peak,
         },
     ));

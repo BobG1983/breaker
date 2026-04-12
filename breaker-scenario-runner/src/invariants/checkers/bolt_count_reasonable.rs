@@ -19,10 +19,10 @@ pub fn check_bolt_count_reasonable(
     let count = bolts.iter().count();
     if count > max {
         log.0.push(ViolationEntry {
-            frame: frame.0,
+            frame:     frame.0,
             invariant: InvariantKind::BoltCountReasonable,
-            entity: None,
-            message: format!("BoltCountReasonable FAIL frame={} count={count}", frame.0),
+            entity:    None,
+            message:   format!("BoltCountReasonable FAIL frame={} count={count}", frame.0),
         });
     }
 }

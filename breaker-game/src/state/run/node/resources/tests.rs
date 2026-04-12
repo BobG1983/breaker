@@ -8,15 +8,15 @@ use super::{
 
 fn make_layout(name: &str) -> NodeLayout {
     NodeLayout {
-        name: name.to_owned(),
-        timer_secs: 60.0,
-        cols: 2,
-        rows: 1,
+        name:            name.to_owned(),
+        timer_secs:      60.0,
+        cols:            2,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![".".to_owned(), ".".to_owned()]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec![".".to_owned(), ".".to_owned()]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     }
 }
 
@@ -236,15 +236,15 @@ fn seed_clears_existing_entries() {
 #[test]
 fn seed_inserts_without_cross_registry_validation() {
     let layout_with_unknown_alias = NodeLayout {
-        name: "unknown_chars".to_owned(),
-        timer_secs: 60.0,
-        cols: 2,
-        rows: 1,
+        name:            "unknown_chars".to_owned(),
+        timer_secs:      60.0,
+        cols:            2,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec!["Z".to_owned(), "Q".to_owned()]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec!["Z".to_owned(), "Q".to_owned()]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     let (_app, pairs) = asset_ids_for(&[layout_with_unknown_alias]);
 

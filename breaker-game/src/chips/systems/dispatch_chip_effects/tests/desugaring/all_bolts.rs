@@ -24,10 +24,10 @@ fn active_bolts_target_stamps_tree_to_breaker() {
         Tree::When(
             Trigger::PerfectBumped,
             Box::new(Tree::Fire(EffectType::Shockwave(ShockwaveConfig {
-                base_range: OrderedFloat(64.0),
+                base_range:      OrderedFloat(64.0),
                 range_per_level: OrderedFloat(0.0),
-                stacks: 1,
-                speed: OrderedFloat(500.0),
+                stacks:          1,
+                speed:           OrderedFloat(500.0),
             }))),
         ),
         5,
@@ -62,17 +62,17 @@ fn active_bolts_with_fire_child_deferred_to_breaker() {
     let mut app = test_app();
 
     let def = ChipDefinition {
-        name: "Bolt Damage".to_owned(),
-        description: String::new(),
-        rarity: crate::chips::definition::Rarity::Common,
-        max_stacks: 5,
-        effects: vec![RootNode::Stamp(
+        name:          "Bolt Damage".to_owned(),
+        description:   String::new(),
+        rarity:        crate::chips::definition::Rarity::Common,
+        max_stacks:    5,
+        effects:       vec![RootNode::Stamp(
             StampTarget::ActiveBolts,
             Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
                 multiplier: OrderedFloat(1.3),
             })),
         )],
-        ingredients: None,
+        ingredients:   None,
         template_name: None,
     };
     insert_chip(&mut app, def);

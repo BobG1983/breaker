@@ -65,15 +65,15 @@ fn drive_transition(app: &mut App, max_frames: usize) -> usize {
 fn fade_out_end_preserves_overlay_on_camera() {
     let (mut app, camera) = effect_test_app();
     app.world_mut().entity_mut(camera).insert(TransitionEffect {
-        color: Vec4::new(1.0, 1.0, 1.0, 1.0),
-        direction: Vec4::ZERO,
+        color:       Vec4::new(1.0, 1.0, 1.0, 1.0),
+        direction:   Vec4::ZERO,
         effect_type: crate::transition::effects::post_process::EffectType::FADE,
-        progress: 1.0,
+        progress:    1.0,
     });
     app.insert_resource(EndingTransition::<FadeOut>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 0.5,
-        duration: 0.5,
+        elapsed:   0.5,
+        duration:  0.5,
         completed: true,
     });
     app.add_systems(Update, fade_out_end);
@@ -104,8 +104,8 @@ fn fade_out_end_sends_transition_over() {
         .insert(TransitionEffect::default());
     app.insert_resource(EndingTransition::<FadeOut>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 0.5,
-        duration: 0.5,
+        elapsed:   0.5,
+        duration:  0.5,
         completed: true,
     });
     app.add_systems(Update, fade_out_end);
@@ -130,8 +130,8 @@ fn fade_out_end_removes_transition_progress() {
         .insert(TransitionEffect::default());
     app.insert_resource(EndingTransition::<FadeOut>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 0.5,
-        duration: 0.5,
+        elapsed:   0.5,
+        duration:  0.5,
         completed: true,
     });
     app.add_systems(Update, fade_out_end);
@@ -148,14 +148,14 @@ fn fade_out_end_removes_transition_progress() {
 fn fade_in_start_replaces_existing_overlay() {
     let (mut app, camera) = effect_test_app();
     app.world_mut().entity_mut(camera).insert(TransitionEffect {
-        color: Vec4::ONE,
-        direction: Vec4::ZERO,
+        color:       Vec4::ONE,
+        direction:   Vec4::ZERO,
         effect_type: crate::transition::effects::post_process::EffectType::FADE,
-        progress: 1.0,
+        progress:    1.0,
     });
     app.insert_resource(FadeInConfig {
         duration: 0.6,
-        color: Color::BLACK,
+        color:    Color::BLACK,
     });
     app.insert_resource(crate::transition::resources::StartingTransition::<FadeIn>::new());
     app.add_systems(Update, fade_in_start);
@@ -178,15 +178,15 @@ fn fade_in_start_replaces_existing_overlay() {
 fn fade_in_end_removes_overlay_from_camera() {
     let (mut app, camera) = effect_test_app();
     app.world_mut().entity_mut(camera).insert(TransitionEffect {
-        color: Vec4::new(0.0, 0.0, 0.0, 1.0),
-        direction: Vec4::ZERO,
+        color:       Vec4::new(0.0, 0.0, 0.0, 1.0),
+        direction:   Vec4::ZERO,
         effect_type: crate::transition::effects::post_process::EffectType::FADE,
-        progress: 0.0,
+        progress:    0.0,
     });
     app.insert_resource(EndingTransition::<FadeIn>::new());
     app.insert_resource(TransitionProgress {
-        elapsed: 0.6,
-        duration: 0.6,
+        elapsed:   0.6,
+        duration:  0.6,
         completed: true,
     });
     app.add_systems(Update, fade_in_end);
@@ -226,7 +226,7 @@ fn out_then_in_lifecycle() {
             .with_transition(crate::transition::types::TransitionType::Out(Arc::new(
                 FadeOut {
                     duration: 0.5,
-                    color: Color::WHITE,
+                    color:    Color::WHITE,
                 },
             )))
             .when(|_| true),
@@ -239,7 +239,7 @@ fn out_then_in_lifecycle() {
             .with_transition(crate::transition::types::TransitionType::In(Arc::new(
                 FadeIn {
                     duration: 0.6,
-                    color: Color::WHITE,
+                    color:    Color::WHITE,
                 },
             )))
             .when(|_| true),

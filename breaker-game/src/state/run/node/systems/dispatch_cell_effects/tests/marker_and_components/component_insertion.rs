@@ -30,7 +30,7 @@ fn bound_effects_and_staged_effects_inserted_on_cell_if_absent() {
                 Tree::When(
                     Trigger::Died,
                     Box::new(Tree::Fire(EffectType::Explode(ExplodeConfig {
-                        range: OrderedFloat(48.0),
+                        range:  OrderedFloat(48.0),
                         damage: OrderedFloat(1.0),
                     }))),
                 ),
@@ -68,7 +68,7 @@ fn staged_effects_inserted_when_bound_effects_already_exists() {
                 Tree::When(
                     Trigger::Died,
                     Box::new(Tree::Fire(EffectType::Explode(ExplodeConfig {
-                        range: OrderedFloat(48.0),
+                        range:  OrderedFloat(48.0),
                         damage: OrderedFloat(1.0),
                     }))),
                 ),

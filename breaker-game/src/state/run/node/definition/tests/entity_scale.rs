@@ -53,15 +53,15 @@ fn s(val: &str) -> String {
 #[test]
 fn validate_rejects_entity_scale_below_minimum() {
     let layout = NodeLayout {
-        name: "scale_low".to_owned(),
-        timer_secs: 60.0,
-        cols: 2,
-        rows: 1,
+        name:            "scale_low".to_owned(),
+        timer_secs:      60.0,
+        cols:            2,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S"), s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 0.49,
-        locks: None,
+        grid:            vec![vec![s("S"), s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    0.49,
+        locks:           None,
     };
     let registry = test_registry();
     let err = layout
@@ -76,15 +76,15 @@ fn validate_rejects_entity_scale_below_minimum() {
 #[test]
 fn validate_rejects_entity_scale_zero() {
     let layout = NodeLayout {
-        name: "scale_zero".to_owned(),
-        timer_secs: 60.0,
-        cols: 2,
-        rows: 1,
+        name:            "scale_zero".to_owned(),
+        timer_secs:      60.0,
+        cols:            2,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S"), s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 0.0,
-        locks: None,
+        grid:            vec![vec![s("S"), s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    0.0,
+        locks:           None,
     };
     let registry = test_registry();
     let err = layout
@@ -99,15 +99,15 @@ fn validate_rejects_entity_scale_zero() {
 #[test]
 fn validate_rejects_entity_scale_above_maximum() {
     let layout = NodeLayout {
-        name: "scale_high".to_owned(),
-        timer_secs: 60.0,
-        cols: 2,
-        rows: 1,
+        name:            "scale_high".to_owned(),
+        timer_secs:      60.0,
+        cols:            2,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S"), s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 1.01,
-        locks: None,
+        grid:            vec![vec![s("S"), s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.01,
+        locks:           None,
     };
     let registry = test_registry();
     let err = layout
@@ -122,15 +122,15 @@ fn validate_rejects_entity_scale_above_maximum() {
 #[test]
 fn validate_rejects_entity_scale_far_above_maximum() {
     let layout = NodeLayout {
-        name: "scale_double".to_owned(),
-        timer_secs: 60.0,
-        cols: 2,
-        rows: 1,
+        name:            "scale_double".to_owned(),
+        timer_secs:      60.0,
+        cols:            2,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S"), s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 2.0,
-        locks: None,
+        grid:            vec![vec![s("S"), s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    2.0,
+        locks:           None,
     };
     let registry = test_registry();
     let err = layout
@@ -145,15 +145,15 @@ fn validate_rejects_entity_scale_far_above_maximum() {
 #[test]
 fn validate_accepts_entity_scale_at_minimum() {
     let layout = NodeLayout {
-        name: "scale_min".to_owned(),
-        timer_secs: 60.0,
-        cols: 2,
-        rows: 1,
+        name:            "scale_min".to_owned(),
+        timer_secs:      60.0,
+        cols:            2,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S"), s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 0.5,
-        locks: None,
+        grid:            vec![vec![s("S"), s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    0.5,
+        locks:           None,
     };
     let registry = test_registry();
     assert!(
@@ -165,15 +165,15 @@ fn validate_accepts_entity_scale_at_minimum() {
 #[test]
 fn validate_accepts_entity_scale_at_maximum() {
     let layout = NodeLayout {
-        name: "scale_max".to_owned(),
-        timer_secs: 60.0,
-        cols: 2,
-        rows: 1,
+        name:            "scale_max".to_owned(),
+        timer_secs:      60.0,
+        cols:            2,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S"), s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec![s("S"), s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     let registry = test_registry();
     assert!(

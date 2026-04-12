@@ -59,15 +59,15 @@ mod tests {
 
     fn make_layout(name: &str) -> NodeLayout {
         NodeLayout {
-            name: name.to_owned(),
-            timer_secs: 60.0,
-            cols: 2,
-            rows: 1,
+            name:            name.to_owned(),
+            timer_secs:      60.0,
+            cols:            2,
+            rows:            1,
             grid_top_offset: 50.0,
-            grid: vec![vec!["S".to_owned(), "S".to_owned()]],
-            pool: NodePool::default(),
-            entity_scale: 1.0,
-            locks: None,
+            grid:            vec![vec!["S".to_owned(), "S".to_owned()]],
+            pool:            NodePool::default(),
+            entity_scale:    1.0,
+            locks:           None,
         }
     }
 
@@ -191,7 +191,7 @@ mod tests {
         NodeSequence {
             assignments: (0..count)
                 .map(|_| NodeAssignment {
-                    node_type: NodeType::Passive,
+                    node_type:  NodeType::Passive,
                     tier_index: 0,
                     timer_mult: 1.0,
                 })

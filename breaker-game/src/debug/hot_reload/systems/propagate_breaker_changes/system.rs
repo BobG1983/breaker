@@ -16,20 +16,15 @@ use crate::{
 #[derive(SystemParam)]
 pub(crate) struct BreakerChangeContext<'w, 's> {
     /// Currently selected breaker name.
-    selected: Res<'w, SelectedBreaker>,
+    selected:              Res<'w, SelectedBreaker>,
     /// Breaker registry (rebuilt by `propagate_registry`).
-    registry: Res<'w, BreakerRegistry>,
+    registry:              Res<'w, BreakerRegistry>,
     /// Breaker entities for re-stamping components.
-    breaker_query: Query<'w, 's, Entity, With<Breaker>>,
+    breaker_query:         Query<'w, 's, Entity, With<Breaker>>,
     /// Breaker `BoundEffects` for populating from definition.
-    /// Deferred until `effect_v3` `BoundEffects` migration is complete.
-    #[allow(
-        dead_code,
-        reason = "deferred until effect_v3 BoundEffects migration complete"
-    )]
-    breaker_chains_query: Query<'w, 's, &'static mut BoundEffects, With<Breaker>>,
+    _breaker_chains_query: Query<'w, 's, &'static mut BoundEffects, With<Breaker>>,
     /// Command buffer for entity modifications.
-    commands: Commands<'w, 's>,
+    commands:              Commands<'w, 's>,
 }
 
 /// Detects when `propagate_registry` has rebuilt the `BreakerRegistry`
@@ -58,7 +53,7 @@ pub(crate) fn propagate_breaker_changes(mut ctx: BreakerChangeContext) {
                 BreakerAcceleration(def.acceleration),
                 BreakerDeceleration(def.deceleration),
                 DecelEasing {
-                    ease: def.decel_ease,
+                    ease:     def.decel_ease,
                     strength: def.decel_ease_strength,
                 },
                 BaseWidth(def.width),
@@ -76,9 +71,9 @@ pub(crate) fn propagate_breaker_changes(mut ctx: BreakerChangeContext) {
                 DashTilt(def.dash_tilt_angle.to_radians()),
                 DashTiltEase(def.dash_tilt_ease),
                 BrakeTilt {
-                    angle: def.brake_tilt_angle.to_radians(),
+                    angle:    def.brake_tilt_angle.to_radians(),
                     duration: def.brake_tilt_duration,
-                    ease: def.brake_tilt_ease,
+                    ease:     def.brake_tilt_ease,
                 },
                 BrakeDecel(def.brake_decel_multiplier),
                 SettleDuration(def.settle_duration),
@@ -91,17 +86,16 @@ pub(crate) fn propagate_breaker_changes(mut ctx: BreakerChangeContext) {
                 BumpPerfectCooldown(def.perfect_bump_cooldown),
                 BumpWeakCooldown(def.weak_bump_cooldown),
                 BumpFeedback {
-                    duration: def.bump_visual_duration,
-                    peak: def.bump_visual_peak,
+                    duration:      def.bump_visual_duration,
+                    peak:          def.bump_visual_peak,
                     peak_fraction: def.bump_visual_peak_fraction,
-                    rise_ease: def.bump_visual_rise_ease,
-                    fall_ease: def.bump_visual_fall_ease,
+                    rise_ease:     def.bump_visual_rise_ease,
+                    fall_ease:     def.bump_visual_fall_ease,
                 },
             ));
 
         // Insert Hp if breaker has a finite life pool
         if let Some(pool) = def.life_pool {
-            #[allow(clippy::cast_precision_loss, reason = "life pool values are small u32")]
             ctx.commands.entity(entity).insert(Hp::new(pool as f32));
         }
     }

@@ -97,18 +97,18 @@ fn build_active_pool_applies_weights_and_decay() {
 fn draw_offerings_returns_all_distinct_names() {
     let pool = vec![
         PoolEntry {
-            name: "A".to_owned(),
-            weight: 100.0,
+            name:          "A".to_owned(),
+            weight:        100.0,
             template_name: None,
         },
         PoolEntry {
-            name: "B".to_owned(),
-            weight: 100.0,
+            name:          "B".to_owned(),
+            weight:        100.0,
             template_name: None,
         },
         PoolEntry {
-            name: "C".to_owned(),
-            weight: 100.0,
+            name:          "C".to_owned(),
+            weight:        100.0,
             template_name: None,
         },
     ];

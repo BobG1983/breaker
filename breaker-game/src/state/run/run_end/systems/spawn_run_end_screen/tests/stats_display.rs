@@ -155,16 +155,16 @@ fn displays_highlight_entries() {
     let stats = RunStats {
         highlights: vec![
             RunHighlight {
-                kind: HighlightKind::ClutchClear,
+                kind:       HighlightKind::ClutchClear,
                 node_index: 3,
-                value: 1.5,
-                detail: None,
+                value:      1.5,
+                detail:     None,
             },
             RunHighlight {
-                kind: HighlightKind::NoDamageNode,
+                kind:       HighlightKind::NoDamageNode,
                 node_index: 1,
-                value: 0.0,
-                detail: None,
+                value:      0.0,
+                detail:     None,
             },
         ],
         ..Default::default()
@@ -191,28 +191,28 @@ fn caps_highlights_at_three_when_four_provided() {
     let stats = RunStats {
         highlights: vec![
             RunHighlight {
-                kind: HighlightKind::ClutchClear,
+                kind:       HighlightKind::ClutchClear,
                 node_index: 0,
-                value: 2.0,
-                detail: None,
+                value:      2.0,
+                detail:     None,
             },
             RunHighlight {
-                kind: HighlightKind::NoDamageNode,
+                kind:       HighlightKind::NoDamageNode,
                 node_index: 1,
-                value: 0.0,
-                detail: None,
+                value:      0.0,
+                detail:     None,
             },
             RunHighlight {
-                kind: HighlightKind::FastClear,
+                kind:       HighlightKind::FastClear,
                 node_index: 2,
-                value: 0.3,
-                detail: None,
+                value:      0.3,
+                detail:     None,
             },
             RunHighlight {
-                kind: HighlightKind::PerfectStreak,
+                kind:       HighlightKind::PerfectStreak,
                 node_index: 3,
-                value: 7.0,
-                detail: None,
+                value:      7.0,
+                detail:     None,
             },
         ],
         ..Default::default()

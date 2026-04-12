@@ -12,7 +12,7 @@ use crate::{
 
 #[derive(Asset, TypePath, Deserialize, Clone, Debug)]
 struct TestRegistryAsset {
-    name: String,
+    name:  String,
     value: f32,
 }
 
@@ -105,11 +105,11 @@ fn seeds_registry_when_loaded_folder_available() {
     let (h_alpha, h_beta) = {
         let mut assets = app.world_mut().resource_mut::<Assets<TestRegistryAsset>>();
         let h_alpha = assets.add(TestRegistryAsset {
-            name: "alpha".to_string(),
+            name:  "alpha".to_string(),
             value: 1.0,
         });
         let h_beta = assets.add(TestRegistryAsset {
-            name: "beta".to_string(),
+            name:  "beta".to_string(),
             value: 2.0,
         });
         (h_alpha, h_beta)
@@ -164,11 +164,11 @@ fn seeds_from_pre_loaded_handles() {
     let (h_alpha, h_beta) = {
         let mut assets = app.world_mut().resource_mut::<Assets<TestRegistryAsset>>();
         let h_alpha = assets.add(TestRegistryAsset {
-            name: "alpha".to_string(),
+            name:  "alpha".to_string(),
             value: 1.0,
         });
         let h_beta = assets.add(TestRegistryAsset {
-            name: "beta".to_string(),
+            name:  "beta".to_string(),
             value: 2.0,
         });
         (h_alpha, h_beta)
@@ -202,11 +202,11 @@ fn seed_registry_is_idempotent() {
     let (h_alpha, h_beta) = {
         let mut assets = app.world_mut().resource_mut::<Assets<TestRegistryAsset>>();
         let h_alpha = assets.add(TestRegistryAsset {
-            name: "alpha".to_string(),
+            name:  "alpha".to_string(),
             value: 1.0,
         });
         let h_beta = assets.add(TestRegistryAsset {
-            name: "beta".to_string(),
+            name:  "beta".to_string(),
             value: 2.0,
         });
         (h_alpha, h_beta)
@@ -247,13 +247,13 @@ fn returns_zero_when_asset_missing() {
     let (h_alpha, h_beta_dangling) = {
         let mut assets = app.world_mut().resource_mut::<Assets<TestRegistryAsset>>();
         let h_alpha = assets.add(TestRegistryAsset {
-            name: "alpha".to_string(),
+            name:  "alpha".to_string(),
             value: 1.0,
         });
         // Create a handle for beta, then remove the asset to simulate
         // missing.
         let h_beta = assets.add(TestRegistryAsset {
-            name: "beta".to_string(),
+            name:  "beta".to_string(),
             value: 2.0,
         });
         let beta_id = h_beta.id();

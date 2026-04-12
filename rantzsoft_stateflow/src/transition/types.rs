@@ -28,7 +28,7 @@ pub enum TransitionType {
         /// The effect that hides the current content.
         out_e: Arc<dyn OutTransition>,
         /// The effect that reveals the new content.
-        in_e: Arc<dyn InTransition>,
+        in_e:  Arc<dyn InTransition>,
     },
     /// Change state while playing an effect over both old and new content.
     OneShot(Arc<dyn OneShotTransition>),
@@ -60,7 +60,7 @@ impl Clone for TransitionType {
             Self::In(t) => Self::In(Arc::clone(t)),
             Self::OutIn { out_e, in_e } => Self::OutIn {
                 out_e: Arc::clone(out_e),
-                in_e: Arc::clone(in_e),
+                in_e:  Arc::clone(in_e),
             },
             Self::OneShot(t) => Self::OneShot(Arc::clone(t)),
         }
@@ -128,7 +128,7 @@ mod tests {
     fn outin_requires_both_out_and_in_effects() {
         let tt = TransitionType::OutIn {
             out_e: Arc::new(TestEffectOut),
-            in_e: Arc::new(TestEffectIn),
+            in_e:  Arc::new(TestEffectIn),
         };
         assert!(matches!(tt, TransitionType::OutIn { .. }));
     }
@@ -137,7 +137,7 @@ mod tests {
     fn outin_accepts_type_implementing_both_traits_for_both_fields() {
         let tt = TransitionType::OutIn {
             out_e: Arc::new(TestEffectBoth),
-            in_e: Arc::new(TestEffectBoth),
+            in_e:  Arc::new(TestEffectBoth),
         };
         assert!(matches!(tt, TransitionType::OutIn { .. }));
     }
@@ -172,7 +172,7 @@ mod tests {
     fn type_ids_returns_two_type_ids_for_outin() {
         let tt = TransitionType::OutIn {
             out_e: Arc::new(TestEffectOut),
-            in_e: Arc::new(TestEffectIn),
+            in_e:  Arc::new(TestEffectIn),
         };
         let ids = tt.type_ids();
         assert_eq!(

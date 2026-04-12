@@ -13,7 +13,7 @@ pub struct CollisionLayers {
     /// Bitmask of layers this entity belongs to.
     pub membership: u32,
     /// Bitmask of layers this entity can interact with.
-    pub mask: u32,
+    pub mask:       u32,
 }
 
 impl CollisionLayers {

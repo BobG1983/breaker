@@ -19,25 +19,25 @@ const fn default_half_thickness() -> f32 {
 #[serde(deny_unknown_fields)]
 pub struct WallDefinition {
     /// Display name of the wall.
-    pub name: String,
+    pub name:           String,
     /// Half-thickness of the wall in world units.
     #[serde(default = "default_half_thickness")]
     pub half_thickness: f32,
     /// Optional HDR color override (values may exceed 1.0 for bloom).
     #[serde(default)]
-    pub color_rgb: Option<[f32; 3]>,
+    pub color_rgb:      Option<[f32; 3]>,
     /// Effect chains bound to this wall type.
     #[serde(default)]
-    pub effects: Vec<RootNode>,
+    pub effects:        Vec<RootNode>,
 }
 
 impl Default for WallDefinition {
     fn default() -> Self {
         Self {
-            name: String::new(),
+            name:           String::new(),
             half_thickness: default_half_thickness(),
-            color_rgb: None,
-            effects: vec![],
+            color_rgb:      None,
+            effects:        vec![],
         }
     }
 }

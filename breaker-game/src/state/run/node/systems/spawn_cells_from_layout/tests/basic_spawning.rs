@@ -153,15 +153,15 @@ fn all_cells_have_dimensions_and_damage_visuals() {
 #[test]
 fn unrecognized_alias_produces_no_entity() {
     let layout = NodeLayout {
-        name: "unknown".to_owned(),
-        timer_secs: 60.0,
-        cols: 3,
-        rows: 1,
+        name:            "unknown".to_owned(),
+        timer_secs:      60.0,
+        cols:            3,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S"), s("X"), s("S")]], // "X" not in registry
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec![s("S"), s("X"), s("S")]], // "X" not in registry
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     let mut app = test_app(layout);
     app.update();

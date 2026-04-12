@@ -30,7 +30,7 @@ pub struct DuplicateRouteError {
     /// The state type name.
     pub state_type: &'static str,
     /// The `from` variant that was duplicated.
-    pub variant: String,
+    pub variant:    String,
 }
 
 impl fmt::Display for DuplicateRouteError {
@@ -56,7 +56,7 @@ impl<S: States + Eq + std::hash::Hash> RoutingTable<S> {
         if self.routes.contains_key(&from) {
             return Err(DuplicateRouteError {
                 state_type: std::any::type_name::<S>(),
-                variant: format!("{from:?}"),
+                variant:    format!("{from:?}"),
             });
         }
         self.routes.insert(from, route);

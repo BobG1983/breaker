@@ -104,11 +104,11 @@ mod tests {
     fn serialise_buffer_produces_scripted_input_ron_format() {
         let frames = vec![
             RecordedFrame {
-                frame: 42,
+                frame:   42,
                 actions: vec![GameAction::MoveLeft],
             },
             RecordedFrame {
-                frame: 43,
+                frame:   43,
                 actions: vec![GameAction::MoveLeft, GameAction::Bump],
             },
         ];
@@ -129,11 +129,11 @@ mod tests {
     fn serialised_output_has_correct_variant_and_field_structure() {
         let frames = vec![
             RecordedFrame {
-                frame: 10,
+                frame:   10,
                 actions: vec![GameAction::Bump],
             },
             RecordedFrame {
-                frame: 20,
+                frame:   20,
                 actions: vec![GameAction::MoveRight],
             },
         ];

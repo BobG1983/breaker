@@ -166,10 +166,10 @@ impl CellBuilder<HasPosition, HasDimensions, HasHealth, Headless> {
     pub(crate) fn spawn(mut self, commands: &mut Commands) -> Entity {
         let guarded_data = self.optional.guarded_data.take();
         let params = CoreParams {
-            pos: self.position.pos,
-            width: self.dimensions.width,
+            pos:    self.position.pos,
+            width:  self.dimensions.width,
             height: self.dimensions.height,
-            hp: self.health.hp,
+            hp:     self.health.hp,
         };
         let core = build_core(&params, &self.optional);
         let entity = spawn_inner(commands, core, self.optional);
@@ -190,10 +190,10 @@ impl CellBuilder<HasPosition, HasDimensions, HasHealth, Rendered> {
         let material = self.visual.material.clone();
         let guarded_data = self.optional.guarded_data.take();
         let params = CoreParams {
-            pos: self.position.pos,
-            width: self.dimensions.width,
+            pos:    self.position.pos,
+            width:  self.dimensions.width,
             height: self.dimensions.height,
-            hp: self.health.hp,
+            hp:     self.health.hp,
         };
         let core = build_core(&params, &self.optional);
         let entity = spawn_inner(commands, core, self.optional);

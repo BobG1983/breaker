@@ -30,7 +30,7 @@ fn same_frame_hit_and_expiry_grades_not_whiffs() {
 
     // Bolt hits the same frame the window would expire
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
-        bolt: Entity::PLACEHOLDER,
+        bolt:    Entity::PLACEHOLDER,
         breaker: Entity::PLACEHOLDER,
     })));
     tick(&mut app);
@@ -81,8 +81,8 @@ fn perfect_bump_cancels_dash() {
         .id();
 
     app.insert_resource(TestBumpMessage(Some(BumpPerformed {
-        grade: BumpGrade::Perfect,
-        bolt: None,
+        grade:   BumpGrade::Perfect,
+        bolt:    None,
         breaker: entity,
     })));
 

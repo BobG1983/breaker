@@ -27,8 +27,8 @@ fn count_damage_messages(mut reader: MessageReader<DamageCell>, mut count: ResMu
 
 fn damage_sender_10(mut writer: MessageWriter<DamageCell>) {
     writer.write(DamageCell {
-        cell: Entity::PLACEHOLDER,
-        damage: 10.0,
+        cell:        Entity::PLACEHOLDER,
+        damage:      10.0,
         source_chip: None,
     });
 }

@@ -15,10 +15,10 @@ use super::{
 /// how many have been dispatched, and how many have completed.
 #[derive(Debug)]
 pub struct StreamingPool {
-    max_concurrent: usize,
-    total: usize,
-    next_index: usize,
-    active_count: usize,
+    max_concurrent:  usize,
+    total:           usize,
+    next_index:      usize,
+    active_count:    usize,
     completed_count: usize,
 }
 
@@ -132,7 +132,7 @@ pub(super) fn spawn_streaming(
                         spec.display_name
                     );
                     results[idx] = Some(ChildResult {
-                        name: spec.display_name.clone(),
+                        name:   spec.display_name.clone(),
                         passed: false,
                         stdout: String::new(),
                         stderr: format!("spawn error: {e}"),
@@ -189,7 +189,7 @@ fn poll_active_children(
                             specs[idx].display_name
                         );
                         results[idx] = Some(ChildResult {
-                            name: specs[idx].display_name.clone(),
+                            name:   specs[idx].display_name.clone(),
                             passed: false,
                             stdout: String::new(),
                             stderr: format!("wait error: {e}"),
@@ -209,7 +209,7 @@ fn poll_active_children(
                     specs[idx].display_name
                 );
                 results[idx] = Some(ChildResult {
-                    name: specs[idx].display_name.clone(),
+                    name:   specs[idx].display_name.clone(),
                     passed: false,
                     stdout: String::new(),
                     stderr: format!("try_wait error: {e}"),

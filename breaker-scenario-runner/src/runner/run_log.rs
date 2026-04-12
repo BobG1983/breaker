@@ -30,8 +30,8 @@ enum LogOp {
 /// All clones share the same underlying channel and log file.
 #[derive(Clone)]
 pub struct RunLog {
-    sender: Arc<mpsc::Sender<LogOp>>,
-    path: PathBuf,
+    sender:      Arc<mpsc::Sender<LogOp>>,
+    path:        PathBuf,
     join_handle: Arc<Mutex<Option<std::thread::JoinHandle<()>>>>,
 }
 
@@ -76,8 +76,8 @@ impl RunLog {
         });
 
         Ok(Self {
-            sender: Arc::new(sender),
-            path: path.to_path_buf(),
+            sender:      Arc::new(sender),
+            path:        path.to_path_buf(),
             join_handle: Arc::new(Mutex::new(Some(handle))),
         })
     }

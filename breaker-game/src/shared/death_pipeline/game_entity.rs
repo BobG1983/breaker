@@ -6,7 +6,7 @@ use bevy::prelude::*;
 ///
 /// Each `impl` creates a separate Bevy message queue — `DamageDealt<Cell>` and
 /// `DamageDealt<Bolt>` are independent message types.
-pub trait GameEntity: Component {}
+pub(crate) trait GameEntity: Component {}
 
 impl GameEntity for crate::cells::components::Cell {}
 impl GameEntity for crate::bolt::components::Bolt {}

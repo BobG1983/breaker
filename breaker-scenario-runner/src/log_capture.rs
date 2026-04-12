@@ -17,13 +17,13 @@ use tracing_subscriber::{Layer, layer::Context, registry::LookupSpan};
 #[derive(Debug, Clone)]
 pub struct LogEntry {
     /// Log level (WARN or ERROR).
-    pub level: Level,
+    pub level:   Level,
     /// Module target (e.g. `breaker::bolt::systems`).
-    pub target: String,
+    pub target:  String,
     /// Log message text.
     pub message: String,
     /// Fixed-update frame when captured (populated by the poll system).
-    pub frame: u32,
+    pub frame:   u32,
 }
 
 /// Accumulated log entries captured during the scenario run.

@@ -28,10 +28,10 @@ fn chip_template_ron_with_root_node() {
 #[test]
 fn expand_chip_template_produces_root_node() {
     let template = ChipTemplate {
-        name: "Surge".to_owned(),
+        name:      "Surge".to_owned(),
         max_taken: 3,
-        common: Some(RaritySlot {
-            prefix: "Basic".to_owned(),
+        common:    Some(RaritySlot {
+            prefix:  "Basic".to_owned(),
             effects: vec![RootNode::Stamp(
                 StampTarget::Bolt,
                 Tree::When(
@@ -42,8 +42,8 @@ fn expand_chip_template_produces_root_node() {
                 ),
             )],
         }),
-        uncommon: None,
-        rare: None,
+        uncommon:  None,
+        rare:      None,
         legendary: None,
     };
     let defs = expand_chip_template(&template);
@@ -60,10 +60,10 @@ fn expand_chip_template_produces_root_node() {
 #[test]
 fn expand_chip_template_preserves_target() {
     let template = ChipTemplate {
-        name: "Wide".to_owned(),
+        name:      "Wide".to_owned(),
         max_taken: 3,
-        common: Some(RaritySlot {
-            prefix: "Basic".to_owned(),
+        common:    Some(RaritySlot {
+            prefix:  "Basic".to_owned(),
             effects: vec![RootNode::Stamp(
                 StampTarget::Breaker,
                 Tree::Fire(EffectType::SizeBoost(SizeBoostConfig {
@@ -71,8 +71,8 @@ fn expand_chip_template_preserves_target() {
                 })),
             )],
         }),
-        uncommon: None,
-        rare: None,
+        uncommon:  None,
+        rare:      None,
         legendary: None,
     };
     let defs = expand_chip_template(&template);
@@ -86,18 +86,18 @@ fn expand_chip_template_preserves_target() {
 #[test]
 fn expanded_defs_have_correct_rarities_with_root_node() {
     let make_slot = |prefix: &str, val: u32| RaritySlot {
-        prefix: prefix.to_owned(),
+        prefix:  prefix.to_owned(),
         effects: vec![RootNode::Stamp(
             StampTarget::Bolt,
             Tree::Fire(EffectType::Piercing(PiercingConfig { charges: val })),
         )],
     };
     let template = ChipTemplate {
-        name: "AllSlots".to_owned(),
+        name:      "AllSlots".to_owned(),
         max_taken: 5,
-        common: Some(make_slot("C", 1)),
-        uncommon: Some(make_slot("U", 2)),
-        rare: Some(make_slot("R", 3)),
+        common:    Some(make_slot("C", 1)),
+        uncommon:  Some(make_slot("U", 2)),
+        rare:      Some(make_slot("R", 3)),
         legendary: Some(make_slot("L", 4)),
     };
     let defs = expand_chip_template(&template);
@@ -115,11 +115,11 @@ fn expanded_defs_have_correct_rarities_with_root_node() {
 #[test]
 fn expand_chip_template_all_none_returns_empty() {
     let template = ChipTemplate {
-        name: "Empty".to_owned(),
+        name:      "Empty".to_owned(),
         max_taken: 1,
-        common: None,
-        uncommon: None,
-        rare: None,
+        common:    None,
+        uncommon:  None,
+        rare:      None,
         legendary: None,
     };
     let defs = expand_chip_template(&template);
@@ -129,13 +129,13 @@ fn expand_chip_template_all_none_returns_empty() {
 #[test]
 fn expanded_chip_empty_prefix_uses_template_name() {
     let template = ChipTemplate {
-        name: "Glass Cannon".to_owned(),
+        name:      "Glass Cannon".to_owned(),
         max_taken: 1,
-        common: None,
-        uncommon: None,
-        rare: None,
+        common:    None,
+        uncommon:  None,
+        rare:      None,
         legendary: Some(RaritySlot {
-            prefix: String::new(),
+            prefix:  String::new(),
             effects: vec![RootNode::Stamp(
                 StampTarget::Bolt,
                 Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
@@ -153,13 +153,13 @@ fn expanded_chip_empty_prefix_uses_template_name() {
 #[test]
 fn expanded_chip_whitespace_prefix_uses_template_name() {
     let template = ChipTemplate {
-        name: "Glass Cannon".to_owned(),
+        name:      "Glass Cannon".to_owned(),
         max_taken: 1,
-        common: None,
-        uncommon: None,
-        rare: None,
+        common:    None,
+        uncommon:  None,
+        rare:      None,
         legendary: Some(RaritySlot {
-            prefix: "   ".to_owned(),
+            prefix:  "   ".to_owned(),
             effects: vec![RootNode::Stamp(
                 StampTarget::Bolt,
                 Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
@@ -184,18 +184,18 @@ fn expanded_chip_whitespace_prefix_uses_template_name() {
 #[test]
 fn expand_chip_template_sets_template_name_on_all_variants() {
     let make_slot = |prefix: &str| RaritySlot {
-        prefix: prefix.to_owned(),
+        prefix:  prefix.to_owned(),
         effects: vec![RootNode::Stamp(
             StampTarget::Bolt,
             Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
         )],
     };
     let template = ChipTemplate {
-        name: "Surge".to_owned(),
+        name:      "Surge".to_owned(),
         max_taken: 3,
-        common: Some(make_slot("Basic")),
-        uncommon: Some(make_slot("Keen")),
-        rare: Some(make_slot("Honed")),
+        common:    Some(make_slot("Basic")),
+        uncommon:  Some(make_slot("Keen")),
+        rare:      Some(make_slot("Honed")),
         legendary: Some(make_slot("Mythic")),
     };
     let defs = expand_chip_template(&template);
@@ -213,11 +213,11 @@ fn expand_chip_template_sets_template_name_on_all_variants() {
 
     // Edge case: single slot template still gets template_name
     let single_template = ChipTemplate {
-        name: "Surge".to_owned(),
+        name:      "Surge".to_owned(),
         max_taken: 3,
-        common: Some(make_slot("Basic")),
-        uncommon: None,
-        rare: None,
+        common:    Some(make_slot("Basic")),
+        uncommon:  None,
+        rare:      None,
         legendary: None,
     };
     let single_defs = expand_chip_template(&single_template);

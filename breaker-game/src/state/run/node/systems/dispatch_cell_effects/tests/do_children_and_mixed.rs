@@ -35,7 +35,7 @@ fn do_children_are_not_stored_in_bound_effects() {
                     Tree::When(
                         Trigger::Died,
                         Box::new(Tree::Fire(EffectType::Explode(ExplodeConfig {
-                            range: OrderedFloat(48.0),
+                            range:  OrderedFloat(48.0),
                             damage: OrderedFloat(1.0),
                         }))),
                     ),
@@ -147,7 +147,7 @@ fn cell_with_multiple_root_effects_gets_all_dispatched() {
                     Tree::When(
                         Trigger::Died,
                         Box::new(Tree::Fire(EffectType::Explode(ExplodeConfig {
-                            range: OrderedFloat(48.0),
+                            range:  OrderedFloat(48.0),
                             damage: OrderedFloat(1.0),
                         }))),
                     ),
@@ -222,7 +222,7 @@ fn cell_with_mixed_targets_dispatches_to_correct_entities() {
                     Tree::When(
                         Trigger::Died,
                         Box::new(Tree::Fire(EffectType::Explode(ExplodeConfig {
-                            range: OrderedFloat(48.0),
+                            range:  OrderedFloat(48.0),
                             damage: OrderedFloat(1.0),
                         }))),
                     ),

@@ -48,7 +48,7 @@ pub struct StateChanged<S: States> {
     /// The state we transitioned from.
     pub from: S,
     /// The state we transitioned to.
-    pub to: S,
+    pub to:   S,
 }
 
 /// Sent at the start of a transition lifecycle.
@@ -61,7 +61,7 @@ pub struct TransitionStart<S: States> {
     /// The state we are transitioning from.
     pub from: S,
     /// The state we are transitioning to.
-    pub to: S,
+    pub to:   S,
 }
 
 /// Sent at the end of a transition lifecycle.
@@ -73,7 +73,7 @@ pub struct TransitionEnd<S: States> {
     /// The state we transitioned from.
     pub from: S,
     /// The state we transitioned to.
-    pub to: S,
+    pub to:   S,
 }
 
 #[cfg(test)]
@@ -106,7 +106,7 @@ mod tests {
     fn state_changed_carries_from_and_to() {
         let msg = StateChanged {
             from: NodeState::Loading,
-            to: NodeState::AnimateIn,
+            to:   NodeState::AnimateIn,
         };
         assert_eq!(msg.from, NodeState::Loading);
         assert_eq!(msg.to, NodeState::AnimateIn);
@@ -143,7 +143,7 @@ mod tests {
     fn transition_start_carries_from_and_to() {
         let msg = TransitionStart {
             from: NodeState::Loading,
-            to: NodeState::AnimateIn,
+            to:   NodeState::AnimateIn,
         };
         assert_eq!(msg.from, NodeState::Loading);
         assert_eq!(msg.to, NodeState::AnimateIn);
@@ -153,11 +153,11 @@ mod tests {
     fn transition_start_different_state_types_are_independent() {
         let node_msg = TransitionStart {
             from: NodeState::Loading,
-            to: NodeState::AnimateIn,
+            to:   NodeState::AnimateIn,
         };
         let menu_msg = TransitionStart {
             from: MenuState::Main,
-            to: MenuState::Main,
+            to:   MenuState::Main,
         };
         // Both compile and instantiate independently — verify fields accessible
         let _ = &node_msg;
@@ -168,7 +168,7 @@ mod tests {
     fn transition_end_carries_from_and_to() {
         let msg = TransitionEnd {
             from: NodeState::Loading,
-            to: NodeState::AnimateIn,
+            to:   NodeState::AnimateIn,
         };
         assert_eq!(msg.from, NodeState::Loading);
         assert_eq!(msg.to, NodeState::AnimateIn);
@@ -178,11 +178,11 @@ mod tests {
     fn transition_end_different_state_types_are_independent() {
         let node_msg = TransitionEnd {
             from: NodeState::Loading,
-            to: NodeState::AnimateIn,
+            to:   NodeState::AnimateIn,
         };
         let menu_msg = TransitionEnd {
             from: MenuState::Main,
-            to: MenuState::Main,
+            to:   MenuState::Main,
         };
         // Both compile and instantiate independently — verify fields accessible
         let _ = &node_msg;
@@ -201,7 +201,7 @@ mod tests {
             .resource_mut::<bevy::ecs::message::Messages<TransitionStart<NodeState>>>()
             .write(TransitionStart {
                 from: NodeState::Loading,
-                to: NodeState::AnimateIn,
+                to:   NodeState::AnimateIn,
             });
         app.update();
 
@@ -226,13 +226,13 @@ mod tests {
             .resource_mut::<bevy::ecs::message::Messages<TransitionStart<NodeState>>>()
             .write(TransitionStart {
                 from: NodeState::Loading,
-                to: NodeState::AnimateIn,
+                to:   NodeState::AnimateIn,
             });
         app.world_mut()
             .resource_mut::<bevy::ecs::message::Messages<TransitionEnd<NodeState>>>()
             .write(TransitionEnd {
                 from: NodeState::Loading,
-                to: NodeState::AnimateIn,
+                to:   NodeState::AnimateIn,
             });
         app.update();
 

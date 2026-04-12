@@ -53,15 +53,15 @@ fn non_locked_cells_spawn_normally_when_locks_present() {
 fn empty_locks_map_spawns_all_cells_without_locked() {
     // Edge case: locks: Some({}) (empty map) — all 6 cells spawn without Locked
     let layout = NodeLayout {
-        name: "empty_locks".to_owned(),
-        timer_secs: 60.0,
-        cols: 3,
-        rows: 2,
+        name:            "empty_locks".to_owned(),
+        timer_secs:      60.0,
+        cols:            3,
+        rows:            2,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S"), s("S"), s("S")], vec![s("S"), s("S"), s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: Some(HashMap::new()),
+        grid:            vec![vec![s("S"), s("S"), s("S")], vec![s("S"), s("S"), s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           Some(HashMap::new()),
     };
     let mut app = test_app(layout);
     app.update();
@@ -88,15 +88,15 @@ fn locked_cell_lock_adjacents_references_correct_entity() {
     let mut locks: LockMap = HashMap::new();
     locks.insert((0, 2), vec![(0, 0)]);
     let layout = NodeLayout {
-        name: "pos_map_test".to_owned(),
-        timer_secs: 60.0,
-        cols: 3,
-        rows: 1,
+        name:            "pos_map_test".to_owned(),
+        timer_secs:      60.0,
+        cols:            3,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S"), s("T"), s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: Some(locks),
+        grid:            vec![vec![s("S"), s("T"), s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           Some(locks),
     };
     let mut app = test_app(layout.clone());
     app.update();
@@ -138,15 +138,15 @@ fn locked_cell_has_locked_and_lock_adjacents_with_two_targets() {
     let mut locks: LockMap = HashMap::new();
     locks.insert((0, 0), vec![(1, 0), (1, 1)]);
     let layout = NodeLayout {
-        name: "two_targets".to_owned(),
-        timer_secs: 60.0,
-        cols: 3,
-        rows: 2,
+        name:            "two_targets".to_owned(),
+        timer_secs:      60.0,
+        cols:            3,
+        rows:            2,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S"), s("S"), s("S")], vec![s("S"), s("S"), s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: Some(locks),
+        grid:            vec![vec![s("S"), s("S"), s("S")], vec![s("S"), s("S"), s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           Some(locks),
     };
     let mut app = test_app(layout.clone());
     app.update();

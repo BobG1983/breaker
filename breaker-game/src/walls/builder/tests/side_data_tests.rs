@@ -6,7 +6,7 @@ use crate::walls::builder::core::*;
 fn left_compute_position_default_ht() {
     let left = Left {
         playfield_left: -400.0,
-        half_height: 300.0,
+        half_height:    300.0,
     };
     let pos = left.compute_position(90.0);
     assert!(
@@ -25,7 +25,7 @@ fn left_compute_position_default_ht() {
 fn left_compute_position_zero_ht() {
     let left = Left {
         playfield_left: -400.0,
-        half_height: 300.0,
+        half_height:    300.0,
     };
     let pos = left.compute_position(0.0);
     assert!(
@@ -42,7 +42,7 @@ fn left_compute_position_zero_ht() {
 fn left_compute_half_extents_default_ht() {
     let left = Left {
         playfield_left: -400.0,
-        half_height: 300.0,
+        half_height:    300.0,
     };
     let he = left.compute_half_extents(90.0);
     assert!(
@@ -61,7 +61,7 @@ fn left_compute_half_extents_default_ht() {
 fn left_compute_half_extents_zero_ht() {
     let left = Left {
         playfield_left: -400.0,
-        half_height: 300.0,
+        half_height:    300.0,
     };
     let he = left.compute_half_extents(0.0);
     assert!(
@@ -81,7 +81,7 @@ fn left_compute_half_extents_zero_ht() {
 fn right_compute_position_default_ht() {
     let right = Right {
         playfield_right: 400.0,
-        half_height: 300.0,
+        half_height:     300.0,
     };
     let pos = right.compute_position(90.0);
     assert!(
@@ -96,7 +96,7 @@ fn right_compute_position_default_ht() {
 fn right_compute_position_zero_ht() {
     let right = Right {
         playfield_right: 400.0,
-        half_height: 300.0,
+        half_height:     300.0,
     };
     let pos = right.compute_position(0.0);
     assert!(
@@ -112,7 +112,7 @@ fn right_compute_position_zero_ht() {
 fn right_compute_half_extents_default_ht() {
     let right = Right {
         playfield_right: 400.0,
-        half_height: 300.0,
+        half_height:     300.0,
     };
     let he = right.compute_half_extents(90.0);
     assert!(
@@ -130,7 +130,7 @@ fn right_compute_half_extents_default_ht() {
 fn right_compute_half_extents_zero_ht() {
     let right = Right {
         playfield_right: 400.0,
-        half_height: 300.0,
+        half_height:     300.0,
     };
     let he = right.compute_half_extents(0.0);
     assert!(
@@ -149,7 +149,7 @@ fn right_compute_half_extents_zero_ht() {
 fn ceiling_compute_position_default_ht() {
     let ceiling = Ceiling {
         playfield_top: 300.0,
-        half_width: 400.0,
+        half_width:    400.0,
     };
     let pos = ceiling.compute_position(90.0);
     assert!(
@@ -168,7 +168,7 @@ fn ceiling_compute_position_default_ht() {
 fn ceiling_compute_position_zero_ht() {
     let ceiling = Ceiling {
         playfield_top: 300.0,
-        half_width: 400.0,
+        half_width:    400.0,
     };
     let pos = ceiling.compute_position(0.0);
     assert!(
@@ -184,7 +184,7 @@ fn ceiling_compute_position_zero_ht() {
 fn ceiling_compute_half_extents_default_ht() {
     let ceiling = Ceiling {
         playfield_top: 300.0,
-        half_width: 400.0,
+        half_width:    400.0,
     };
     let he = ceiling.compute_half_extents(90.0);
     assert!(
@@ -203,7 +203,7 @@ fn ceiling_compute_half_extents_default_ht() {
 fn ceiling_compute_half_extents_zero_ht() {
     let ceiling = Ceiling {
         playfield_top: 300.0,
-        half_width: 400.0,
+        half_width:    400.0,
     };
     let he = ceiling.compute_half_extents(0.0);
     assert!(
@@ -222,7 +222,7 @@ fn ceiling_compute_half_extents_zero_ht() {
 fn floor_compute_position_default_ht() {
     let floor = Floor {
         playfield_bottom: -300.0,
-        half_width: 400.0,
+        half_width:       400.0,
     };
     let pos = floor.compute_position(90.0);
     assert!(
@@ -241,7 +241,7 @@ fn floor_compute_position_default_ht() {
 fn floor_compute_position_zero_ht() {
     let floor = Floor {
         playfield_bottom: -300.0,
-        half_width: 400.0,
+        half_width:       400.0,
     };
     let pos = floor.compute_position(0.0);
     assert!(
@@ -257,7 +257,7 @@ fn floor_compute_position_zero_ht() {
 fn floor_compute_half_extents_default_ht() {
     let floor = Floor {
         playfield_bottom: -300.0,
-        half_width: 400.0,
+        half_width:       400.0,
     };
     let he = floor.compute_half_extents(90.0);
     assert!(
@@ -276,7 +276,7 @@ fn floor_compute_half_extents_default_ht() {
 fn floor_compute_half_extents_zero_ht() {
     let floor = Floor {
         playfield_bottom: -300.0,
-        half_width: 400.0,
+        half_width:       400.0,
     };
     let he = floor.compute_half_extents(0.0);
     assert!(

@@ -111,53 +111,53 @@ const fn default_color_rgb() -> [f32; 3] {
 #[serde(deny_unknown_fields)]
 pub struct BreakerDefinition {
     /// Display name of the breaker.
-    pub name: String,
+    pub name:      String,
     /// Name of the bolt definition this breaker uses.
     #[serde(default = "default_bolt_name")]
-    pub bolt: String,
+    pub bolt:      String,
     /// Number of lives, if the breaker uses a life pool. None = infinite.
     #[serde(default)]
     pub life_pool: Option<u32>,
     /// All effect chains for this breaker.
     #[serde(default)]
-    pub effects: Vec<RootNode>,
+    pub effects:   Vec<RootNode>,
 
     // ── Dimensions ──────────────────────────────────────────────────────
     /// Full width of the breaker in world units.
     #[serde(default = "default_width")]
-    pub width: f32,
+    pub width:      f32,
     /// Full height of the breaker in world units.
     #[serde(default = "default_height")]
-    pub height: f32,
+    pub height:     f32,
     /// Y position of the breaker at rest.
     #[serde(default = "default_y_position")]
     pub y_position: f32,
     /// Min width clamp. None = computed as 0.5 × width at build time.
     #[serde(default)]
-    pub min_w: Option<f32>,
+    pub min_w:      Option<f32>,
     /// Max width clamp. None = computed as 5.0 × width at build time.
     #[serde(default)]
-    pub max_w: Option<f32>,
+    pub max_w:      Option<f32>,
     /// Min height clamp. None = computed as 0.5 × height at build time.
     #[serde(default)]
-    pub min_h: Option<f32>,
+    pub min_h:      Option<f32>,
     /// Max height clamp. None = computed as 5.0 × height at build time.
     #[serde(default)]
-    pub max_h: Option<f32>,
+    pub max_h:      Option<f32>,
 
     // ── Movement ────────────────────────────────────────────────────────
     /// Maximum horizontal speed in world units per second.
     #[serde(default = "default_max_speed")]
-    pub max_speed: f32,
+    pub max_speed:           f32,
     /// Horizontal acceleration in world units per second squared.
     #[serde(default = "default_acceleration")]
-    pub acceleration: f32,
+    pub acceleration:        f32,
     /// Horizontal deceleration in world units per second squared.
     #[serde(default = "default_deceleration")]
-    pub deceleration: f32,
+    pub deceleration:        f32,
     /// Easing applied to deceleration based on speed ratio.
     #[serde(default = "default_decel_ease")]
-    pub decel_ease: EaseFunction,
+    pub decel_ease:          EaseFunction,
     /// Strength of eased deceleration.
     #[serde(default = "default_decel_ease_strength")]
     pub decel_ease_strength: f32,
@@ -165,66 +165,66 @@ pub struct BreakerDefinition {
     // ── Dash ────────────────────────────────────────────────────────────
     /// Dash speed multiplier relative to max speed.
     #[serde(default = "default_dash_speed_multiplier")]
-    pub dash_speed_multiplier: f32,
+    pub dash_speed_multiplier:  f32,
     /// Duration of the dash in seconds.
     #[serde(default = "default_dash_duration")]
-    pub dash_duration: f32,
+    pub dash_duration:          f32,
     /// Maximum tilt angle during dash in degrees.
     #[serde(default = "default_dash_tilt_angle")]
-    pub dash_tilt_angle: f32,
+    pub dash_tilt_angle:        f32,
     /// Easing for dash tilt ramp-up.
     #[serde(default = "default_dash_tilt_ease")]
-    pub dash_tilt_ease: EaseFunction,
+    pub dash_tilt_ease:         EaseFunction,
     /// Maximum tilt angle during brake in degrees.
     #[serde(default = "default_brake_tilt_angle")]
-    pub brake_tilt_angle: f32,
+    pub brake_tilt_angle:       f32,
     /// Duration of the brake tilt ease in seconds.
     #[serde(default = "default_brake_tilt_duration")]
-    pub brake_tilt_duration: f32,
+    pub brake_tilt_duration:    f32,
     /// Easing for brake tilt.
     #[serde(default = "default_brake_tilt_ease")]
-    pub brake_tilt_ease: EaseFunction,
+    pub brake_tilt_ease:        EaseFunction,
     /// Brake deceleration multiplier relative to normal deceleration.
     #[serde(default = "default_brake_decel_multiplier")]
     pub brake_decel_multiplier: f32,
     /// Duration of the settle phase in seconds.
     #[serde(default = "default_settle_duration")]
-    pub settle_duration: f32,
+    pub settle_duration:        f32,
     /// Easing for settle tilt return to zero.
     #[serde(default = "default_settle_tilt_ease")]
-    pub settle_tilt_ease: EaseFunction,
+    pub settle_tilt_ease:       EaseFunction,
 
     // ── Bump ────────────────────────────────────────────────────────────
     /// Perfect bump timing window in seconds.
     #[serde(default = "default_perfect_window")]
-    pub perfect_window: f32,
+    pub perfect_window:            f32,
     /// Early bump window in seconds.
     #[serde(default = "default_early_window")]
-    pub early_window: f32,
+    pub early_window:              f32,
     /// Late bump window in seconds.
     #[serde(default = "default_late_window")]
-    pub late_window: f32,
+    pub late_window:               f32,
     /// Cooldown after a perfect bump in seconds.
     #[serde(default = "default_perfect_bump_cooldown")]
-    pub perfect_bump_cooldown: f32,
+    pub perfect_bump_cooldown:     f32,
     /// Cooldown after an early/late bump or whiff in seconds.
     #[serde(default = "default_weak_bump_cooldown")]
-    pub weak_bump_cooldown: f32,
+    pub weak_bump_cooldown:        f32,
     /// Duration of the bump pop animation in seconds.
     #[serde(default = "default_bump_visual_duration")]
-    pub bump_visual_duration: f32,
+    pub bump_visual_duration:      f32,
     /// Maximum Y offset at the peak of the bump pop animation.
     #[serde(default = "default_bump_visual_peak")]
-    pub bump_visual_peak: f32,
+    pub bump_visual_peak:          f32,
     /// Fraction of bump pop duration spent rising (0.0–1.0).
     #[serde(default = "default_bump_visual_peak_fraction")]
     pub bump_visual_peak_fraction: f32,
     /// Easing for the rise phase of the bump pop.
     #[serde(default = "default_bump_visual_rise_ease")]
-    pub bump_visual_rise_ease: EaseFunction,
+    pub bump_visual_rise_ease:     EaseFunction,
     /// Easing for the fall phase of the bump pop.
     #[serde(default = "default_bump_visual_fall_ease")]
-    pub bump_visual_fall_ease: EaseFunction,
+    pub bump_visual_fall_ease:     EaseFunction,
 
     // ── Spread ──────────────────────────────────────────────────────────
     /// Maximum reflection angle from vertical in degrees.
@@ -240,44 +240,44 @@ pub struct BreakerDefinition {
 impl Default for BreakerDefinition {
     fn default() -> Self {
         Self {
-            name: String::new(),
-            bolt: default_bolt_name(),
-            life_pool: None,
-            effects: vec![],
-            width: default_width(),
-            height: default_height(),
-            y_position: default_y_position(),
-            min_w: None,
-            max_w: None,
-            min_h: None,
-            max_h: None,
-            max_speed: default_max_speed(),
-            acceleration: default_acceleration(),
-            deceleration: default_deceleration(),
-            decel_ease: default_decel_ease(),
-            decel_ease_strength: default_decel_ease_strength(),
-            dash_speed_multiplier: default_dash_speed_multiplier(),
-            dash_duration: default_dash_duration(),
-            dash_tilt_angle: default_dash_tilt_angle(),
-            dash_tilt_ease: default_dash_tilt_ease(),
-            brake_tilt_angle: default_brake_tilt_angle(),
-            brake_tilt_duration: default_brake_tilt_duration(),
-            brake_tilt_ease: default_brake_tilt_ease(),
-            brake_decel_multiplier: default_brake_decel_multiplier(),
-            settle_duration: default_settle_duration(),
-            settle_tilt_ease: default_settle_tilt_ease(),
-            perfect_window: default_perfect_window(),
-            early_window: default_early_window(),
-            late_window: default_late_window(),
-            perfect_bump_cooldown: default_perfect_bump_cooldown(),
-            weak_bump_cooldown: default_weak_bump_cooldown(),
-            bump_visual_duration: default_bump_visual_duration(),
-            bump_visual_peak: default_bump_visual_peak(),
+            name:                      String::new(),
+            bolt:                      default_bolt_name(),
+            life_pool:                 None,
+            effects:                   vec![],
+            width:                     default_width(),
+            height:                    default_height(),
+            y_position:                default_y_position(),
+            min_w:                     None,
+            max_w:                     None,
+            min_h:                     None,
+            max_h:                     None,
+            max_speed:                 default_max_speed(),
+            acceleration:              default_acceleration(),
+            deceleration:              default_deceleration(),
+            decel_ease:                default_decel_ease(),
+            decel_ease_strength:       default_decel_ease_strength(),
+            dash_speed_multiplier:     default_dash_speed_multiplier(),
+            dash_duration:             default_dash_duration(),
+            dash_tilt_angle:           default_dash_tilt_angle(),
+            dash_tilt_ease:            default_dash_tilt_ease(),
+            brake_tilt_angle:          default_brake_tilt_angle(),
+            brake_tilt_duration:       default_brake_tilt_duration(),
+            brake_tilt_ease:           default_brake_tilt_ease(),
+            brake_decel_multiplier:    default_brake_decel_multiplier(),
+            settle_duration:           default_settle_duration(),
+            settle_tilt_ease:          default_settle_tilt_ease(),
+            perfect_window:            default_perfect_window(),
+            early_window:              default_early_window(),
+            late_window:               default_late_window(),
+            perfect_bump_cooldown:     default_perfect_bump_cooldown(),
+            weak_bump_cooldown:        default_weak_bump_cooldown(),
+            bump_visual_duration:      default_bump_visual_duration(),
+            bump_visual_peak:          default_bump_visual_peak(),
             bump_visual_peak_fraction: default_bump_visual_peak_fraction(),
-            bump_visual_rise_ease: default_bump_visual_rise_ease(),
-            bump_visual_fall_ease: default_bump_visual_fall_ease(),
-            reflection_spread: default_reflection_spread(),
-            color_rgb: default_color_rgb(),
+            bump_visual_rise_ease:     default_bump_visual_rise_ease(),
+            bump_visual_fall_ease:     default_bump_visual_fall_ease(),
+            reflection_spread:         default_reflection_spread(),
+            color_rgb:                 default_color_rgb(),
         }
     }
 }

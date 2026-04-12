@@ -27,10 +27,10 @@ pub fn check_bolt_birthing_layers_zeroed(
     for (entity, layers) in &bolts {
         if layers.membership != 0 || layers.mask != 0 {
             log.0.push(ViolationEntry {
-                frame: frame.0,
+                frame:     frame.0,
                 invariant: InvariantKind::BoltBirthingLayersZeroed,
-                entity: Some(entity),
-                message: format!(
+                entity:    Some(entity),
+                message:   format!(
                     "BoltBirthingLayersZeroed FAIL frame={} entity={entity:?} \
                      membership={:#06x} mask={:#06x} (expected both 0)",
                     frame.0, layers.membership, layers.mask,

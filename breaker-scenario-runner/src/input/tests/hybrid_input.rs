@@ -14,7 +14,7 @@ use crate::{input::drivers::*, types::HybridParams};
 fn hybrid_input_returns_empty_during_scripted_phase() {
     let params = HybridParams {
         scripted_frames: 100,
-        action_prob: 1.0,
+        action_prob:     1.0,
     };
     let mut hybrid = HybridInput::new(42, &params);
 
@@ -46,7 +46,7 @@ fn hybrid_input_returns_empty_during_scripted_phase() {
 fn hybrid_input_switches_to_chaos_after_scripted_phase() {
     let params = HybridParams {
         scripted_frames: 10,
-        action_prob: 1.0,
+        action_prob:     1.0,
     };
     let mut hybrid = HybridInput::new(42, &params);
 
@@ -76,7 +76,7 @@ fn hybrid_input_switches_to_chaos_after_scripted_phase() {
 fn hybrid_input_respects_is_active_false_in_chaos_phase() {
     let params = HybridParams {
         scripted_frames: 10,
-        action_prob: 1.0,
+        action_prob:     1.0,
     };
     let mut hybrid = HybridInput::new(42, &params);
 
@@ -97,7 +97,7 @@ fn hybrid_input_respects_is_active_false_in_chaos_phase() {
 fn hybrid_input_new_takes_seed() {
     let params = HybridParams {
         scripted_frames: 100,
-        action_prob: 0.5,
+        action_prob:     0.5,
     };
     let mut hybrid = HybridInput::new(7, &params);
 

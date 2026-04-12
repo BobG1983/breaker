@@ -6,10 +6,10 @@ use crate::breaker::{builder::core::*, definition::BreakerDefinition};
 fn movement_settings_construction() {
     let defaults = BreakerDefinition::default();
     let settings = MovementSettings {
-        max_speed: defaults.max_speed,
-        acceleration: defaults.acceleration,
-        deceleration: defaults.deceleration,
-        decel_ease: defaults.decel_ease,
+        max_speed:           defaults.max_speed,
+        acceleration:        defaults.acceleration,
+        deceleration:        defaults.deceleration,
+        decel_ease:          defaults.decel_ease,
         decel_ease_strength: defaults.decel_ease_strength,
     };
     assert!((settings.max_speed - defaults.max_speed).abs() < f32::EPSILON);
@@ -25,20 +25,20 @@ fn movement_settings_construction() {
 fn dash_settings_construction() {
     let defaults = BreakerDefinition::default();
     let settings = DashSettings {
-        dash: DashParams {
+        dash:   DashParams {
             speed_multiplier: defaults.dash_speed_multiplier,
-            duration: defaults.dash_duration,
-            tilt_angle: defaults.dash_tilt_angle,
-            tilt_ease: defaults.dash_tilt_ease,
+            duration:         defaults.dash_duration,
+            tilt_angle:       defaults.dash_tilt_angle,
+            tilt_ease:        defaults.dash_tilt_ease,
         },
-        brake: BrakeParams {
-            tilt_angle: defaults.brake_tilt_angle,
-            tilt_duration: defaults.brake_tilt_duration,
-            tilt_ease: defaults.brake_tilt_ease,
+        brake:  BrakeParams {
+            tilt_angle:       defaults.brake_tilt_angle,
+            tilt_duration:    defaults.brake_tilt_duration,
+            tilt_ease:        defaults.brake_tilt_ease,
             decel_multiplier: defaults.brake_decel_multiplier,
         },
         settle: SettleParams {
-            duration: defaults.settle_duration,
+            duration:  defaults.settle_duration,
             tilt_ease: defaults.settle_tilt_ease,
         },
     };
@@ -62,17 +62,17 @@ fn dash_settings_construction() {
 fn bump_settings_construction() {
     let defaults = BreakerDefinition::default();
     let settings = BumpSettings {
-        perfect_window: defaults.perfect_window,
-        early_window: defaults.early_window,
-        late_window: defaults.late_window,
+        perfect_window:   defaults.perfect_window,
+        early_window:     defaults.early_window,
+        late_window:      defaults.late_window,
         perfect_cooldown: defaults.perfect_bump_cooldown,
-        weak_cooldown: defaults.weak_bump_cooldown,
-        feedback: BumpFeedbackSettings {
-            duration: defaults.bump_visual_duration,
-            peak: defaults.bump_visual_peak,
+        weak_cooldown:    defaults.weak_bump_cooldown,
+        feedback:         BumpFeedbackSettings {
+            duration:      defaults.bump_visual_duration,
+            peak:          defaults.bump_visual_peak,
             peak_fraction: defaults.bump_visual_peak_fraction,
-            rise_ease: defaults.bump_visual_rise_ease,
-            fall_ease: defaults.bump_visual_fall_ease,
+            rise_ease:     defaults.bump_visual_rise_ease,
+            fall_ease:     defaults.bump_visual_fall_ease,
         },
     };
     assert!((settings.perfect_window - defaults.perfect_window).abs() < f32::EPSILON);

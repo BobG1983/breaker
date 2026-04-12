@@ -24,8 +24,8 @@ pub struct Recipe {
 /// from `ChipTemplateRegistry` and `EvolutionTemplateRegistry`.
 #[derive(Resource, Debug, Default)]
 pub struct ChipCatalog {
-    chips: HashMap<String, ChipDefinition>,
-    order: Vec<String>,
+    chips:   HashMap<String, ChipDefinition>,
+    order:   Vec<String>,
     recipes: Vec<Recipe>,
 }
 

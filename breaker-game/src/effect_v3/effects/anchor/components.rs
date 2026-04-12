@@ -6,11 +6,11 @@ use bevy::prelude::*;
 #[derive(Component, Debug, Clone)]
 pub struct AnchorActive {
     /// Multiplier applied to bump force while anchored.
-    pub bump_force_multiplier: f32,
+    pub bump_force_multiplier:     f32,
     /// Multiplier applied during the perfect-hit window.
     pub perfect_window_multiplier: f32,
     /// Delay in seconds before the anchor plants after activation.
-    pub plant_delay: f32,
+    pub plant_delay:               f32,
 }
 
 /// Countdown timer tracking how long until the anchor plants.

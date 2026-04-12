@@ -10,11 +10,7 @@ use crate::effect_v3::types::{RouteType, Tree, TriggerContext};
 /// NOTE: Route installation is deferred to a future wave. Route nodes
 /// need the `RouteEffectCommand` to install the tree into the target's
 /// `BoundEffects` or `StagedEffects`.
-#[allow(
-    clippy::missing_const_for_fn,
-    reason = "deferred implementation will use &mut Commands"
-)]
-pub fn evaluate_route(
+pub const fn evaluate_route(
     _entity: Entity,
     _route_type: RouteType,
     _tree: &Tree,

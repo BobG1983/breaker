@@ -28,9 +28,9 @@ fn forward_grade_uses_widened_perfect_window_when_planted() {
         Breaker,
         AnchorPlanted,
         AnchorActive {
-            bump_force_multiplier: 2.0,
+            bump_force_multiplier:     2.0,
             perfect_window_multiplier: 2.0,
-            plant_delay: 0.3,
+            plant_delay:               0.3,
         },
         BumpState {
             active: true,
@@ -46,7 +46,7 @@ fn forward_grade_uses_widened_perfect_window_when_planted() {
     ));
 
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
-        bolt: Entity::PLACEHOLDER,
+        bolt:    Entity::PLACEHOLDER,
         breaker: Entity::PLACEHOLDER,
     })));
     tick(&mut app);
@@ -70,9 +70,9 @@ fn forward_grade_without_anchor_planted_does_not_widen() {
         Breaker,
         // NO AnchorPlanted
         AnchorActive {
-            bump_force_multiplier: 2.0,
+            bump_force_multiplier:     2.0,
             perfect_window_multiplier: 2.0,
-            plant_delay: 0.3,
+            plant_delay:               0.3,
         },
         BumpState {
             active: true,
@@ -88,7 +88,7 @@ fn forward_grade_without_anchor_planted_does_not_widen() {
     ));
 
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
-        bolt: Entity::PLACEHOLDER,
+        bolt:    Entity::PLACEHOLDER,
         breaker: Entity::PLACEHOLDER,
     })));
     tick(&mut app);
@@ -114,9 +114,9 @@ fn forward_grade_at_widened_boundary_is_perfect() {
         Breaker,
         AnchorPlanted,
         AnchorActive {
-            bump_force_multiplier: 1.5,
+            bump_force_multiplier:     1.5,
             perfect_window_multiplier: 2.0,
-            plant_delay: 0.3,
+            plant_delay:               0.3,
         },
         BumpState {
             active: true,
@@ -132,7 +132,7 @@ fn forward_grade_at_widened_boundary_is_perfect() {
     ));
 
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
-        bolt: Entity::PLACEHOLDER,
+        bolt:    Entity::PLACEHOLDER,
         breaker: Entity::PLACEHOLDER,
     })));
     tick(&mut app);
@@ -155,9 +155,9 @@ fn forward_grade_just_above_widened_boundary_is_early() {
         Breaker,
         AnchorPlanted,
         AnchorActive {
-            bump_force_multiplier: 1.5,
+            bump_force_multiplier:     1.5,
             perfect_window_multiplier: 2.0,
-            plant_delay: 0.3,
+            plant_delay:               0.3,
         },
         BumpState {
             active: true,
@@ -173,7 +173,7 @@ fn forward_grade_just_above_widened_boundary_is_early() {
     ));
 
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
-        bolt: Entity::PLACEHOLDER,
+        bolt:    Entity::PLACEHOLDER,
         breaker: Entity::PLACEHOLDER,
     })));
     tick(&mut app);
@@ -202,9 +202,9 @@ fn grade_bump_sets_widened_post_hit_timer_when_planted() {
             Breaker,
             AnchorPlanted,
             AnchorActive {
-                bump_force_multiplier: 2.0,
+                bump_force_multiplier:     2.0,
                 perfect_window_multiplier: 2.0,
-                plant_delay: 0.3,
+                plant_delay:               0.3,
             },
             BumpState::default(),
             BumpPerfectWindow(0.15),
@@ -217,7 +217,7 @@ fn grade_bump_sets_widened_post_hit_timer_when_planted() {
         .id();
 
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
-        bolt: Entity::PLACEHOLDER,
+        bolt:    Entity::PLACEHOLDER,
         breaker: Entity::PLACEHOLDER,
     })));
     tick(&mut app);
@@ -242,9 +242,9 @@ fn grade_bump_sets_unwidened_post_hit_timer_without_anchor_planted() {
             Breaker,
             // NO AnchorPlanted
             AnchorActive {
-                bump_force_multiplier: 2.0,
+                bump_force_multiplier:     2.0,
                 perfect_window_multiplier: 2.0,
-                plant_delay: 0.3,
+                plant_delay:               0.3,
             },
             BumpState::default(),
             BumpPerfectWindow(0.15),
@@ -257,7 +257,7 @@ fn grade_bump_sets_unwidened_post_hit_timer_without_anchor_planted() {
         .id();
 
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
-        bolt: Entity::PLACEHOLDER,
+        bolt:    Entity::PLACEHOLDER,
         breaker: Entity::PLACEHOLDER,
     })));
     tick(&mut app);
@@ -281,9 +281,9 @@ fn anchor_active_without_planted_does_not_widen_forward_grade() {
     app.world_mut().spawn((
         Breaker,
         AnchorActive {
-            bump_force_multiplier: 2.0,
+            bump_force_multiplier:     2.0,
             perfect_window_multiplier: 2.0,
-            plant_delay: 0.3,
+            plant_delay:               0.3,
         },
         // NO AnchorPlanted
         BumpState {
@@ -300,7 +300,7 @@ fn anchor_active_without_planted_does_not_widen_forward_grade() {
     ));
 
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
-        bolt: Entity::PLACEHOLDER,
+        bolt:    Entity::PLACEHOLDER,
         breaker: Entity::PLACEHOLDER,
     })));
     tick(&mut app);
@@ -322,9 +322,9 @@ fn anchor_active_without_planted_within_raw_window_is_perfect() {
     app.world_mut().spawn((
         Breaker,
         AnchorActive {
-            bump_force_multiplier: 2.0,
+            bump_force_multiplier:     2.0,
             perfect_window_multiplier: 2.0,
-            plant_delay: 0.3,
+            plant_delay:               0.3,
         },
         BumpState {
             active: true,
@@ -340,7 +340,7 @@ fn anchor_active_without_planted_within_raw_window_is_perfect() {
     ));
 
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
-        bolt: Entity::PLACEHOLDER,
+        bolt:    Entity::PLACEHOLDER,
         breaker: Entity::PLACEHOLDER,
     })));
     tick(&mut app);
@@ -377,7 +377,7 @@ fn no_anchor_components_unchanged_default_behavior() {
     ));
 
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
-        bolt: Entity::PLACEHOLDER,
+        bolt:    Entity::PLACEHOLDER,
         breaker: Entity::PLACEHOLDER,
     })));
     tick(&mut app);

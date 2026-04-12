@@ -37,7 +37,7 @@ impl StateStatus for WithStates {}
 
 /// Typestate builder for test `App` instances.
 pub(crate) struct TestAppBuilder<S: StateStatus = NoStates> {
-    app: App,
+    app:    App,
     _state: PhantomData<S>,
 }
 
@@ -64,7 +64,7 @@ impl TestAppBuilder<NoStates> {
         self.app.add_sub_state::<ChipSelectState>();
         self.app.add_sub_state::<RunEndState>();
         TestAppBuilder {
-            app: self.app,
+            app:    self.app,
             _state: PhantomData,
         }
     }

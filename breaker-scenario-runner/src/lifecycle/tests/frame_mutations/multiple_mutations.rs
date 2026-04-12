@@ -19,11 +19,11 @@ fn apply_debug_frame_mutations_multiple_mutations_on_same_frame() {
         disallowed_failures: vec![],
         frame_mutations: Some(vec![
             FrameMutation {
-                frame: 5,
+                frame:    5,
                 mutation: MutationKind::SetDashState(ScenarioDashState::Braking),
             },
             FrameMutation {
-                frame: 5,
+                frame:    5,
                 mutation: MutationKind::MoveBolt(100.0, 200.0),
             },
         ]),

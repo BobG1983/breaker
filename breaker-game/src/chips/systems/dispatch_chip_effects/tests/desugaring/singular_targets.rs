@@ -22,17 +22,17 @@ fn bolt_target_stamps_to_breaker() {
     let mut app = test_app();
 
     let def = ChipDefinition {
-        name: "Bolt Speed".to_owned(),
-        description: String::new(),
-        rarity: crate::chips::definition::Rarity::Common,
-        max_stacks: 5,
-        effects: vec![RootNode::Stamp(
+        name:          "Bolt Speed".to_owned(),
+        description:   String::new(),
+        rarity:        crate::chips::definition::Rarity::Common,
+        max_stacks:    5,
+        effects:       vec![RootNode::Stamp(
             StampTarget::Bolt,
             Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
                 multiplier: OrderedFloat(1.1),
             })),
         )],
-        ingredients: None,
+        ingredients:   None,
         template_name: None,
     };
     insert_chip(&mut app, def);
@@ -94,7 +94,7 @@ fn active_cells_stamps_to_breaker() {
         Tree::When(
             Trigger::Impacted(EntityKind::Bolt),
             Box::new(Tree::Fire(EffectType::Shield(ShieldConfig {
-                duration: OrderedFloat(3.0),
+                duration:        OrderedFloat(3.0),
                 reflection_cost: OrderedFloat(0.0),
             }))),
         ),

@@ -242,15 +242,15 @@ fn spawned_cell_has_aabb2d_with_half_extents_matching_cell_dimensions() {
     // Then: cell entity has Aabb2D { center: Vec2::ZERO, half_extents: Vec2::new(35.0, 12.0) }
 
     let layout = NodeLayout {
-        name: "aabb_test".to_owned(),
-        timer_secs: 60.0,
-        cols: 1,
-        rows: 1,
+        name:            "aabb_test".to_owned(),
+        timer_secs:      60.0,
+        cols:            1,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec!["S".to_owned()]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec!["S".to_owned()]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     let config = CellConfig::default(); // width=70.0, height=24.0
     let mut app = test_app(layout);
@@ -362,16 +362,16 @@ fn locked_cell_has_same_collision_layers_as_normal_cell() {
     registry.insert(
         "L".to_owned(),
         CellTypeDefinition {
-            id: "locked".to_owned(),
-            alias: "L".to_owned(),
-            toughness: Toughness::default(),
-            color_rgb: [1.0, 1.0, 1.0],
+            id:                "locked".to_owned(),
+            alias:             "L".to_owned(),
+            toughness:         Toughness::default(),
+            color_rgb:         [1.0, 1.0, 1.0],
             required_to_clear: true,
-            damage_hdr_base: 4.0,
-            damage_green_min: 0.2,
+            damage_hdr_base:   4.0,
+            damage_green_min:  0.2,
             damage_blue_range: 0.4,
-            damage_blue_base: 0.2,
-            behaviors: None,
+            damage_blue_base:  0.2,
+            behaviors:         None,
 
             effects: None,
         },
@@ -379,31 +379,31 @@ fn locked_cell_has_same_collision_layers_as_normal_cell() {
     registry.insert(
         "N".to_owned(),
         CellTypeDefinition {
-            id: "normal".to_owned(),
-            alias: "N".to_owned(),
-            toughness: Toughness::default(),
-            color_rgb: [1.0, 0.5, 0.5],
+            id:                "normal".to_owned(),
+            alias:             "N".to_owned(),
+            toughness:         Toughness::default(),
+            color_rgb:         [1.0, 0.5, 0.5],
             required_to_clear: true,
-            damage_hdr_base: 4.0,
-            damage_green_min: 0.2,
+            damage_hdr_base:   4.0,
+            damage_green_min:  0.2,
             damage_blue_range: 0.4,
-            damage_blue_base: 0.2,
-            behaviors: None,
+            damage_blue_base:  0.2,
+            behaviors:         None,
 
             effects: None,
         },
     );
 
     let layout = NodeLayout {
-        name: "lock_layers_test".to_owned(),
-        timer_secs: 60.0,
-        cols: 2,
-        rows: 1,
+        name:            "lock_layers_test".to_owned(),
+        timer_secs:      60.0,
+        cols:            2,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec!["L".to_owned(), "N".to_owned()]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec!["L".to_owned(), "N".to_owned()]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)

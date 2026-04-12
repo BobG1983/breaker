@@ -24,14 +24,14 @@ pub struct PixelateOut {
     /// Duration in seconds.
     pub duration: f32,
     /// Overlay color.
-    pub color: Color,
+    pub color:    Color,
 }
 
 impl Default for PixelateOut {
     fn default() -> Self {
         Self {
             duration: 0.3,
-            color: Color::BLACK,
+            color:    Color::BLACK,
         }
     }
 }
@@ -40,7 +40,7 @@ impl Transition for PixelateOut {
     fn insert_starting(&self, world: &mut World) {
         world.insert_resource(StartingTransition::<Self>::new());
         world.insert_resource(PixelateOutConfig {
-            color: self.color,
+            color:    self.color,
             duration: self.duration,
         });
     }
@@ -53,14 +53,14 @@ pub struct PixelateIn {
     /// Duration in seconds.
     pub duration: f32,
     /// Overlay color.
-    pub color: Color,
+    pub color:    Color,
 }
 
 impl Default for PixelateIn {
     fn default() -> Self {
         Self {
             duration: 0.3,
-            color: Color::BLACK,
+            color:    Color::BLACK,
         }
     }
 }
@@ -69,7 +69,7 @@ impl Transition for PixelateIn {
     fn insert_starting(&self, world: &mut World) {
         world.insert_resource(StartingTransition::<Self>::new());
         world.insert_resource(PixelateInConfig {
-            color: self.color,
+            color:    self.color,
             duration: self.duration,
         });
     }
@@ -86,7 +86,7 @@ pub struct PixelateOutConfig {
     /// Duration in seconds.
     pub duration: f32,
     /// Overlay color.
-    pub color: Color,
+    pub color:    Color,
 }
 
 /// Configuration resource inserted by `PixelateIn::insert_starting`.
@@ -95,7 +95,7 @@ pub struct PixelateInConfig {
     /// Duration in seconds.
     pub duration: f32,
     /// Overlay color.
-    pub color: Color,
+    pub color:    Color,
 }
 
 // ---------------------------------------------------------------------------
@@ -112,15 +112,15 @@ pub(crate) fn pixelate_out_start(
 ) {
     if let Some(camera) = cameras.iter().next() {
         commands.entity(camera).insert(TransitionEffect {
-            color: color_to_linear_vec4(config.color),
-            direction: Vec4::ZERO,
+            color:       color_to_linear_vec4(config.color),
+            direction:   Vec4::ZERO,
             effect_type: EffectType::PIXELATE,
-            progress: 0.0,
+            progress:    0.0,
         });
     }
     commands.insert_resource(TransitionProgress {
-        elapsed: 0.0,
-        duration: config.duration,
+        elapsed:   0.0,
+        duration:  config.duration,
         completed: false,
     });
     commands.remove_resource::<PixelateOutConfig>();
@@ -180,15 +180,15 @@ pub(crate) fn pixelate_in_start(
 ) {
     if let Some(camera) = cameras.iter().next() {
         commands.entity(camera).insert(TransitionEffect {
-            color: color_to_linear_vec4(config.color),
-            direction: Vec4::ZERO,
+            color:       color_to_linear_vec4(config.color),
+            direction:   Vec4::ZERO,
             effect_type: EffectType::PIXELATE,
-            progress: 1.0,
+            progress:    1.0,
         });
     }
     commands.insert_resource(TransitionProgress {
-        elapsed: 0.0,
-        duration: config.duration,
+        elapsed:   0.0,
+        duration:  config.duration,
         completed: false,
     });
     commands.remove_resource::<PixelateInConfig>();

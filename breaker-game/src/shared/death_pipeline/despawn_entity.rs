@@ -8,7 +8,7 @@ use bevy::prelude::*;
 /// Use this instead of calling `commands.entity(e).despawn()` directly in death
 /// handling. The entity must survive through the full death chain.
 #[derive(Message, Clone, Debug)]
-pub struct DespawnEntity {
+pub(crate) struct DespawnEntity {
     /// The entity to despawn.
     pub entity: Entity,
 }

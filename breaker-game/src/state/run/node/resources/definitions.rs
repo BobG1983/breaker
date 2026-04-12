@@ -18,8 +18,8 @@ pub struct ActiveNodeLayout(pub NodeLayout);
 #[derive(Resource, Debug, Default, Clone)]
 pub struct NodeLayoutRegistry {
     layouts: HashMap<String, NodeLayout>,
-    order: Vec<String>,
-    pools: HashMap<NodePool, Vec<String>>,
+    order:   Vec<String>,
+    pools:   HashMap<NodePool, Vec<String>>,
 }
 
 impl NodeLayoutRegistry {
@@ -110,7 +110,7 @@ pub struct NodeTimer {
     /// Seconds remaining.
     pub remaining: f32,
     /// Total seconds for this node (used for ratio calculations).
-    pub total: f32,
+    pub total:     f32,
 }
 
 /// When set, overrides normal index-based layout selection in `set_active_layout`.

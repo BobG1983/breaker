@@ -133,14 +133,7 @@ pub(crate) fn bolt_wall_collision(
                 &mut bolt.collision.piercing_remaining,
                 bolt.collision.active_piercings,
             ) {
-                #[allow(
-                    clippy::cast_sign_loss,
-                    clippy::cast_possible_truncation,
-                    reason = "piercing charges are small non-negative u32 values"
-                )]
-                {
-                    pr.0 = ap.aggregate().round().max(0.0) as u32;
-                }
+                pr.0 = ap.aggregate().round().max(0.0) as u32;
             }
 
             writer.write(BoltImpactWall {

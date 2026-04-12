@@ -89,7 +89,7 @@ impl<S: SideData> WallBuilder<S, Invisible> {
 
 // ── Visible spawn ────────────────────────────────────────────────────────
 
-#[allow(dead_code, reason = "test-only until system-param callers exist")]
+#[cfg(test)]
 impl<S: SideData> WallBuilder<S, Visible> {
     /// Spawns a visible wall entity and dispatches initial effects if present.
     pub(crate) fn spawn(self, commands: &mut Commands) -> Entity {

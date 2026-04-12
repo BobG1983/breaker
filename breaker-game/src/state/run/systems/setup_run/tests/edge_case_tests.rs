@@ -196,18 +196,18 @@ fn setup_run_reads_bolt_name_from_breaker_definition() {
         .insert("TestBreaker".to_string(), test_breaker_def);
 
     let heavy_bolt_def = BoltDefinition {
-        name: "HeavyBolt".to_string(),
-        base_speed: 500.0,
-        min_speed: 250.0,
-        max_speed: 1000.0,
-        radius: 20.0,
-        base_damage: 25.0,
-        effects: vec![],
-        color_rgb: [6.0, 5.0, 0.5],
+        name:                 "HeavyBolt".to_string(),
+        base_speed:           500.0,
+        min_speed:            250.0,
+        max_speed:            1000.0,
+        radius:               20.0,
+        base_damage:          25.0,
+        effects:              vec![],
+        color_rgb:            [6.0, 5.0, 0.5],
         min_angle_horizontal: 5.0,
-        min_angle_vertical: 5.0,
-        min_radius: None,
-        max_radius: None,
+        min_angle_vertical:   5.0,
+        min_radius:           None,
+        max_radius:           None,
     };
     app.world_mut()
         .resource_mut::<BoltRegistry>()

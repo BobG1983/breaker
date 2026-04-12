@@ -17,10 +17,10 @@ fn detect_new_violations_returns_all_variants_from_empty_tracker() {
             .iter()
             .enumerate()
             .map(|(i, &kind)| ViolationEntry {
-                frame: u32::try_from(i).expect("frame index fits u32"),
+                frame:     u32::try_from(i).expect("frame index fits u32"),
                 invariant: kind,
-                entity: None,
-                message: format!("{kind:?}"),
+                entity:    None,
+                message:   format!("{kind:?}"),
             })
             .collect(),
     );

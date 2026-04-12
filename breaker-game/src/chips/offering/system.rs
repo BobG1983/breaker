@@ -18,9 +18,9 @@ use crate::chips::{
 #[derive(Clone, Debug)]
 pub(crate) struct PoolEntry {
     /// Chip name.
-    pub name: String,
+    pub name:          String,
     /// Effective weight for weighted draw.
-    pub weight: f32,
+    pub weight:        f32,
     /// Template this chip belongs to, if any.
     pub template_name: Option<String>,
 }
@@ -29,7 +29,7 @@ pub(crate) struct PoolEntry {
 #[derive(Debug, Clone)]
 pub(crate) struct OfferingConfig {
     /// Base weight per rarity tier.
-    pub rarity_weights: HashMap<Rarity, f32>,
+    pub rarity_weights:  HashMap<Rarity, f32>,
     /// Number of chips to offer per node.
     pub offers_per_node: usize,
 }
@@ -64,8 +64,8 @@ pub(crate) fn build_active_pool(
         let decay = inventory.weight_decay(&chip.name);
         let effective_weight = compute_weight(base_weight, decay);
         pool.push(PoolEntry {
-            name: chip.name.clone(),
-            weight: effective_weight,
+            name:          chip.name.clone(),
+            weight:        effective_weight,
             template_name: chip.template_name.clone(),
         });
     }

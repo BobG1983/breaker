@@ -9,7 +9,7 @@ use bevy::prelude::*;
 #[derive(Component, Debug)]
 pub(crate) struct FadeOut {
     /// Remaining time in the fade animation (seconds).
-    pub timer: f32,
+    pub timer:    f32,
     /// Total duration of the fade animation (seconds).
     pub duration: f32,
 }
@@ -30,9 +30,9 @@ pub(crate) struct EffectFlashTimer(pub f32);
 #[derive(Component, Debug)]
 pub(crate) struct PunchScale {
     /// Remaining time in the animation (seconds).
-    pub timer: f32,
+    pub timer:     f32,
     /// Total duration of the animation (seconds).
-    pub duration: f32,
+    pub duration:  f32,
     /// Initial scale multiplier (e.g. 1.15 for a 15% overshoot).
     pub overshoot: f32,
 }

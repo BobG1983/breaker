@@ -173,7 +173,7 @@ mod tests {
             .resource_mut::<HighlightTracker>()
             .cell_bounces_since_breaker = 12;
         app.insert_resource(TestBoltImpactBreaker(vec![BoltImpactBreaker {
-            bolt: Entity::PLACEHOLDER,
+            bolt:    Entity::PLACEHOLDER,
             breaker: Entity::PLACEHOLDER,
         }]));
         tick(&mut app);
@@ -209,7 +209,7 @@ mod tests {
             .resource_mut::<HighlightTracker>()
             .cell_bounces_since_breaker = 11;
         app.insert_resource(TestBoltImpactBreaker(vec![BoltImpactBreaker {
-            bolt: Entity::PLACEHOLDER,
+            bolt:    Entity::PLACEHOLDER,
             breaker: Entity::PLACEHOLDER,
         }]));
         tick(&mut app);
@@ -244,10 +244,10 @@ mod tests {
         {
             let mut stats = app.world_mut().resource_mut::<RunStats>();
             stats.highlights.push(RunHighlight {
-                kind: HighlightKind::PinballWizard,
+                kind:       HighlightKind::PinballWizard,
                 node_index: 0,
-                value: 15.0,
-                detail: None,
+                value:      15.0,
+                detail:     None,
             });
         }
 
@@ -256,7 +256,7 @@ mod tests {
             tracker.cell_bounces_since_breaker = 15;
         }
         app.insert_resource(TestBoltImpactBreaker(vec![BoltImpactBreaker {
-            bolt: Entity::PLACEHOLDER,
+            bolt:    Entity::PLACEHOLDER,
             breaker: Entity::PLACEHOLDER,
         }]));
         tick(&mut app);

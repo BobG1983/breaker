@@ -234,7 +234,7 @@ fn piercing_bolt_through_cell_preserves_existing_last_impact() {
     // Insert a pre-existing LastImpact
     let original = LastImpact {
         position: Vec2::new(50.0, 300.0),
-        side: ImpactSide::Top,
+        side:     ImpactSide::Top,
     };
     app.world_mut().entity_mut(bolt_entity).insert(original);
 

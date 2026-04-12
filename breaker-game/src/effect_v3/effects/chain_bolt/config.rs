@@ -15,6 +15,10 @@ pub struct ChainBoltConfig {
 
 impl Fireable for ChainBoltConfig {
     fn fire(&self, _entity: Entity, _source: &str, _world: &mut World) {
-        todo!()
+        // TODO: full implementation requires bolt builder integration
+        warn!(
+            "ChainBolt::fire() called but bolt builder is not yet integrated (tether_distance={})",
+            self.tether_distance,
+        );
     }
 }

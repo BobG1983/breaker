@@ -22,7 +22,7 @@ fn active_cells_when_stamps_to_breaker() {
         Tree::When(
             Trigger::Impacted(EntityKind::Bolt),
             Box::new(Tree::Fire(EffectType::Shield(ShieldConfig {
-                duration: OrderedFloat(5.0),
+                duration:        OrderedFloat(5.0),
                 reflection_cost: OrderedFloat(0.0),
             }))),
         ),

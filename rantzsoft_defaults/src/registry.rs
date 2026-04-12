@@ -53,11 +53,11 @@ pub trait SeedableRegistry: Resource + Default + Send + Sync + 'static {
 #[derive(Resource)]
 pub struct RegistryHandles<A: Asset> {
     /// Handle to the [`LoadedFolder`] for this registry's asset directory.
-    pub folder: Handle<LoadedFolder>,
+    pub folder:  Handle<LoadedFolder>,
     /// Typed handles extracted from the loaded folder.
     pub handles: Vec<Handle<A>>,
     /// Whether the folder has been resolved and handles extracted.
-    pub loaded: bool,
+    pub loaded:  bool,
 }
 
 impl<A: Asset> RegistryHandles<A> {

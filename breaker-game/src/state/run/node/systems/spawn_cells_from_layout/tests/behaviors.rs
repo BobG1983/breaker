@@ -29,16 +29,16 @@ fn behavior_registry() -> CellTypeRegistry {
     registry.insert(
         "R".to_owned(),
         CellTypeDefinition {
-            id: "regen".to_owned(),
-            alias: "R".to_owned(),
-            toughness: Toughness::default(),
-            color_rgb: [0.5, 1.0, 0.5],
+            id:                "regen".to_owned(),
+            alias:             "R".to_owned(),
+            toughness:         Toughness::default(),
+            color_rgb:         [0.5, 1.0, 0.5],
             required_to_clear: true,
-            damage_hdr_base: 4.0,
-            damage_green_min: 0.2,
+            damage_hdr_base:   4.0,
+            damage_green_min:  0.2,
             damage_blue_range: 0.4,
-            damage_blue_base: 0.2,
-            behaviors: Some(vec![CellBehavior::Regen { rate: 2.0 }]),
+            damage_blue_base:  0.2,
+            behaviors:         Some(vec![CellBehavior::Regen { rate: 2.0 }]),
 
             effects: None,
         },
@@ -46,16 +46,16 @@ fn behavior_registry() -> CellTypeRegistry {
     registry.insert(
         "N".to_owned(),
         CellTypeDefinition {
-            id: "normal".to_owned(),
-            alias: "N".to_owned(),
-            toughness: Toughness::default(),
-            color_rgb: [1.0, 0.5, 0.5],
+            id:                "normal".to_owned(),
+            alias:             "N".to_owned(),
+            toughness:         Toughness::default(),
+            color_rgb:         [1.0, 0.5, 0.5],
             required_to_clear: true,
-            damage_hdr_base: 4.0,
-            damage_green_min: 0.2,
+            damage_hdr_base:   4.0,
+            damage_green_min:  0.2,
             damage_blue_range: 0.4,
-            damage_blue_base: 0.2,
-            behaviors: None,
+            damage_blue_base:  0.2,
+            behaviors:         None,
 
             effects: None,
         },
@@ -85,15 +85,15 @@ fn behavior_test_app(layout: NodeLayout, registry: CellTypeRegistry) -> App {
 #[test]
 fn regen_cell_definition_spawns_with_cell_regen_component() {
     let layout = NodeLayout {
-        name: "regen_test".to_owned(),
-        timer_secs: 60.0,
-        cols: 2,
-        rows: 1,
+        name:            "regen_test".to_owned(),
+        timer_secs:      60.0,
+        cols:            2,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("R"), s("N")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec![s("R"), s("N")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     let mut app = behavior_test_app(layout, behavior_registry());
     app.update();
@@ -119,15 +119,15 @@ fn regen_cell_definition_spawns_with_cell_regen_component() {
 #[test]
 fn non_regen_cell_does_not_have_cell_regen_component() {
     let layout = NodeLayout {
-        name: "no_regen_test".to_owned(),
-        timer_secs: 60.0,
-        cols: 2,
-        rows: 1,
+        name:            "no_regen_test".to_owned(),
+        timer_secs:      60.0,
+        cols:            2,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("N"), s("N")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec![s("N"), s("N")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     let mut app = behavior_test_app(layout, behavior_registry());
     app.update();
@@ -148,15 +148,15 @@ fn non_regen_cell_does_not_have_cell_regen_component() {
 #[test]
 fn cell_hp_falls_back_to_default_base_hp_without_config() {
     let layout = NodeLayout {
-        name: "hp_mult_test".to_owned(),
-        timer_secs: 60.0,
-        cols: 1,
-        rows: 1,
+        name:            "hp_mult_test".to_owned(),
+        timer_secs:      60.0,
+        cols:            1,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec![s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
@@ -173,7 +173,7 @@ fn cell_hp_falls_back_to_default_base_hp_without_config() {
         })
         .insert_resource(NodeSequence {
             assignments: vec![NodeAssignment {
-                node_type: NodeType::Active,
+                node_type:  NodeType::Active,
                 tier_index: 0,
 
                 timer_mult: 1.0,
@@ -204,15 +204,15 @@ fn cell_hp_falls_back_to_default_base_hp_without_config() {
 #[test]
 fn cell_hp_tough_falls_back_to_default_base_hp() {
     let layout = NodeLayout {
-        name: "hp_mult_one_test".to_owned(),
-        timer_secs: 60.0,
-        cols: 1,
-        rows: 1,
+        name:            "hp_mult_one_test".to_owned(),
+        timer_secs:      60.0,
+        cols:            1,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("T")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec![s("T")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
@@ -229,7 +229,7 @@ fn cell_hp_tough_falls_back_to_default_base_hp() {
         })
         .insert_resource(NodeSequence {
             assignments: vec![NodeAssignment {
-                node_type: NodeType::Passive,
+                node_type:  NodeType::Passive,
                 tier_index: 0,
 
                 timer_mult: 1.0,
@@ -297,38 +297,38 @@ fn toughness_registry_with_guarded() -> CellTypeRegistry {
     registry.insert(
         "Gu".to_owned(),
         CellTypeDefinition {
-            id: "guarded".to_owned(),
-            alias: "Gu".to_owned(),
-            toughness: Toughness::Tough,
-            color_rgb: [1.0, 0.8, 0.2],
+            id:                "guarded".to_owned(),
+            alias:             "Gu".to_owned(),
+            toughness:         Toughness::Tough,
+            color_rgb:         [1.0, 0.8, 0.2],
             required_to_clear: true,
-            damage_hdr_base: 4.0,
-            damage_green_min: 0.2,
+            damage_hdr_base:   4.0,
+            damage_green_min:  0.2,
             damage_blue_range: 0.4,
-            damage_blue_base: 0.2,
-            behaviors: Some(vec![CellBehavior::Guarded(GuardedBehavior {
+            damage_blue_base:  0.2,
+            behaviors:         Some(vec![CellBehavior::Guarded(GuardedBehavior {
                 guardian_hp_fraction: 0.5,
-                guardian_color_rgb: [0.5, 0.8, 1.0],
-                slide_speed: 30.0,
+                guardian_color_rgb:   [0.5, 0.8, 1.0],
+                slide_speed:          30.0,
             })]),
-            effects: None,
+            effects:           None,
         },
     );
     // "gu" is the guardian child cell type consumed by the guarded parent
     registry.insert(
         "gu".to_owned(),
         CellTypeDefinition {
-            id: "guardian".to_owned(),
-            alias: "gu".to_owned(),
-            toughness: Toughness::Weak,
-            color_rgb: [0.5, 0.8, 1.0],
+            id:                "guardian".to_owned(),
+            alias:             "gu".to_owned(),
+            toughness:         Toughness::Weak,
+            color_rgb:         [0.5, 0.8, 1.0],
             required_to_clear: false,
-            damage_hdr_base: 4.0,
-            damage_green_min: 0.2,
+            damage_hdr_base:   4.0,
+            damage_green_min:  0.2,
             damage_blue_range: 0.4,
-            damage_blue_base: 0.2,
-            behaviors: None,
-            effects: None,
+            damage_blue_base:  0.2,
+            behaviors:         None,
+            effects:           None,
         },
     );
     registry
@@ -338,15 +338,15 @@ fn toughness_registry_with_guarded() -> CellTypeRegistry {
 #[test]
 fn spawn_standard_cell_tier0_pos0_has_correct_hp() {
     let layout = NodeLayout {
-        name: "toughness_test".to_owned(),
-        timer_secs: 60.0,
-        cols: 1,
-        rows: 1,
+        name:            "toughness_test".to_owned(),
+        timer_secs:      60.0,
+        cols:            1,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec![s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     let mut app = test_app_with_toughness(layout, test_registry(), 0, 0, false);
     app.update();
@@ -373,15 +373,15 @@ fn spawn_standard_cell_tier0_pos0_has_correct_hp() {
 #[test]
 fn spawn_tough_cell_tier3_pos4_has_scaled_hp() {
     let layout = NodeLayout {
-        name: "toughness_scaled_test".to_owned(),
-        timer_secs: 60.0,
-        cols: 1,
-        rows: 1,
+        name:            "toughness_scaled_test".to_owned(),
+        timer_secs:      60.0,
+        cols:            1,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("T")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec![s("T")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     let mut app = test_app_with_toughness(layout, test_registry(), 3, 4, false);
     app.update();
@@ -410,15 +410,15 @@ fn spawn_tough_cell_tier3_pos4_has_scaled_hp() {
 #[test]
 fn spawn_cell_without_toughness_config_falls_back_to_default_base_hp() {
     let layout = NodeLayout {
-        name: "no_config_test".to_owned(),
-        timer_secs: 60.0,
-        cols: 1,
-        rows: 1,
+        name:            "no_config_test".to_owned(),
+        timer_secs:      60.0,
+        cols:            1,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("S")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec![s("S")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     // Deliberately do NOT insert ToughnessConfig resource
     let mut app = App::new();
@@ -453,15 +453,15 @@ fn spawn_cell_without_toughness_config_falls_back_to_default_base_hp() {
 fn spawn_guarded_cell_tier0_pos0_guardian_hp_is_parent_times_fraction() {
     // Layout: 3x1 with guarded cell in center flanked by guardian children
     let layout = NodeLayout {
-        name: "guarded_hp_test".to_owned(),
-        timer_secs: 60.0,
-        cols: 3,
-        rows: 1,
+        name:            "guarded_hp_test".to_owned(),
+        timer_secs:      60.0,
+        cols:            3,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("gu"), s("Gu"), s("gu")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec![s("gu"), s("Gu"), s("gu")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     let mut app = test_app_with_toughness(layout, toughness_registry_with_guarded(), 0, 0, false);
     app.update();
@@ -504,15 +504,15 @@ fn spawn_guarded_cell_tier0_pos0_guardian_hp_is_parent_times_fraction() {
 #[test]
 fn spawn_guarded_cell_tier3_pos0_guardian_hp_scales_with_tier() {
     let layout = NodeLayout {
-        name: "guarded_scaled_test".to_owned(),
-        timer_secs: 60.0,
-        cols: 3,
-        rows: 1,
+        name:            "guarded_scaled_test".to_owned(),
+        timer_secs:      60.0,
+        cols:            3,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("gu"), s("Gu"), s("gu")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec![s("gu"), s("Gu"), s("gu")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     let mut app = test_app_with_toughness(layout, toughness_registry_with_guarded(), 3, 0, false);
     app.update();
@@ -552,15 +552,15 @@ fn spawn_guarded_cell_tier3_pos0_guardian_hp_scales_with_tier() {
 #[test]
 fn spawn_boss_guarded_cell_applies_boss_multiplier_before_guardian_fraction() {
     let layout = NodeLayout {
-        name: "boss_guarded_test".to_owned(),
-        timer_secs: 60.0,
-        cols: 3,
-        rows: 1,
+        name:            "boss_guarded_test".to_owned(),
+        timer_secs:      60.0,
+        cols:            3,
+        rows:            1,
         grid_top_offset: 50.0,
-        grid: vec![vec![s("gu"), s("Gu"), s("gu")]],
-        pool: NodePool::default(),
-        entity_scale: 1.0,
-        locks: None,
+        grid:            vec![vec![s("gu"), s("Gu"), s("gu")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
     };
     let mut app = test_app_with_toughness(
         layout,
