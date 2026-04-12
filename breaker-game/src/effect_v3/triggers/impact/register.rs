@@ -2,7 +2,13 @@
 
 use bevy::prelude::*;
 
-/// Registers all impact trigger bridge systems.
-///
-/// Currently a no-op — systems will be registered in Phase 2.
-pub const fn register(_app: &mut App) {}
+use super::bridges;
+use crate::effect_v3::EffectV3Systems;
+
+/// Registers all impact trigger bridge systems in `EffectV3Systems::Bridge`.
+pub fn register(app: &mut App) {
+    app.add_systems(
+        FixedUpdate,
+        (bridges::on_impacted, bridges::on_impact_occurred).in_set(EffectV3Systems::Bridge),
+    );
+}

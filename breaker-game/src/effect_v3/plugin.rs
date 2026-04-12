@@ -1,14 +1,13 @@
-//! `EffectV3Plugin` — registers the effect v3 system sets and shared resources.
+//! `EffectV3Plugin` — registers the effect v3 system sets, triggers, and shared resources.
 
 use bevy::prelude::*;
 
-use super::{sets::EffectV3Systems, storage::SpawnStampRegistry};
+use super::{sets::EffectV3Systems, storage::SpawnStampRegistry, triggers};
 
 /// Plugin for the effect v3 domain.
 ///
-/// Configures `EffectV3Systems` system sets with ordering and initializes
-/// shared resources. System registration is deferred to Phase 2 — this
-/// plugin currently registers no systems.
+/// Configures `EffectV3Systems` system sets with ordering, registers all trigger
+/// bridge systems, and initializes shared resources.
 pub struct EffectV3Plugin;
 
 impl Plugin for EffectV3Plugin {
@@ -25,5 +24,13 @@ impl Plugin for EffectV3Plugin {
 
         // Shared resources
         app.init_resource::<SpawnStampRegistry>();
+
+        // Triggers — each category registers its own bridges and game systems
+        triggers::bump::register::register(app);
+        triggers::impact::register::register(app);
+        triggers::death::register::register(app);
+        triggers::bolt_lost::register::register(app);
+        triggers::node::register::register(app);
+        triggers::time::register::register(app);
     }
 }

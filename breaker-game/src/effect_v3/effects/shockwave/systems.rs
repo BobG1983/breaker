@@ -1,21 +1,68 @@
 //! Shockwave systems — tick expansion, damage application, despawn.
 
-/// Expands shockwave radius each frame based on speed.
-pub fn tick_shockwave() {
-    todo!()
-}
+use bevy::prelude::*;
+use rantzsoft_spatial2d::components::Position2D;
 
-/// Synchronizes visual representation with current shockwave radius.
-pub fn sync_shockwave_visual() {
-    todo!()
+use super::components::*;
+use crate::{
+    cells::components::Cell,
+    shared::death_pipeline::{DamageDealt, Dead},
+};
+
+/// Expands shockwave radius each frame based on speed.
+pub fn tick_shockwave(mut query: Query<(&mut ShockwaveRadius, &ShockwaveSpeed)>, time: Res<Time>) {
+    let dt = time.delta_secs();
+    for (mut radius, speed) in &mut query {
+        radius.0 = speed.0.mul_add(dt, radius.0);
+    }
 }
 
 /// Applies damage to cells within the expanding shockwave radius.
-pub fn apply_shockwave_damage() {
-    todo!()
+#[allow(
+    clippy::type_complexity,
+    reason = "Bevy query with many shockwave components"
+)]
+pub fn apply_shockwave_damage(
+    mut shockwave_query: Query<(
+        Entity,
+        &Position2D,
+        &ShockwaveRadius,
+        &ShockwaveBaseDamage,
+        &ShockwaveDamageMultiplier,
+        &mut ShockwaveDamaged,
+    )>,
+    cell_query: Query<(Entity, &Position2D), (With<Cell>, Without<Dead>)>,
+    mut damage_writer: MessageWriter<DamageDealt<Cell>>,
+) {
+    for (sw_entity, sw_pos, sw_radius, base_dmg, dmg_mult, mut damaged) in &mut shockwave_query {
+        for (cell_entity, cell_pos) in &cell_query {
+            if damaged.0.contains(&cell_entity) {
+                continue;
+            }
+            let distance = sw_pos.0.distance(cell_pos.0);
+            if distance <= sw_radius.0 {
+                damaged.0.insert(cell_entity);
+                let damage = base_dmg.0 * dmg_mult.0;
+                damage_writer.write(DamageDealt {
+                    dealer: Some(sw_entity),
+                    target: cell_entity,
+                    amount: damage,
+                    source_chip: None,
+                    _marker: std::marker::PhantomData,
+                });
+            }
+        }
+    }
 }
 
 /// Despawns shockwaves that have reached their maximum radius.
-pub fn despawn_finished_shockwave() {
-    todo!()
+pub fn despawn_finished_shockwave(
+    query: Query<(Entity, &ShockwaveRadius, &ShockwaveMaxRadius)>,
+    mut commands: Commands,
+) {
+    for (entity, radius, max_radius) in &query {
+        if radius.0 >= max_radius.0 {
+            commands.entity(entity).despawn();
+        }
+    }
 }

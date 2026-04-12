@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use ordered_float::OrderedFloat;
 use serde::{Deserialize, Serialize};
 
-use crate::effect_v3::traits::Fireable;
+use crate::{effect_v3::traits::Fireable, state::run::node::resources::NodeTimer};
 
 /// Subtracts seconds from the node timer.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -14,7 +14,9 @@ pub struct TimePenaltyConfig {
 }
 
 impl Fireable for TimePenaltyConfig {
-    fn fire(&self, _entity: Entity, _source: &str, _world: &mut World) {
-        todo!()
+    fn fire(&self, _entity: Entity, _source: &str, world: &mut World) {
+        if let Some(mut timer) = world.get_resource_mut::<NodeTimer>() {
+            timer.remaining = (timer.remaining - self.seconds.0).max(0.0);
+        }
     }
 }
