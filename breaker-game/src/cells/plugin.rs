@@ -12,7 +12,7 @@ use crate::{
         resources::CellConfig,
         systems::{cell_wall_collision, cleanup_cell, handle_cell_hit},
     },
-    effect::EffectSystems,
+    effect_v3::EffectV3Systems,
     prelude::*,
     state::run::node::{sets::NodeSystems, systems::dispatch_cell_effects},
 };
@@ -40,7 +40,7 @@ impl Plugin for CellsPlugin {
                     check_lock_release.after(handle_cell_hit),
                     tick_cell_regen,
                     slide_guardian_cells,
-                    cleanup_cell.after(EffectSystems::Bridge),
+                    cleanup_cell.after(EffectV3Systems::Bridge),
                     cell_wall_collision,
                 )
                     .run_if(in_state(NodeState::Playing)),

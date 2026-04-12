@@ -8,7 +8,11 @@ use crate::{
         components::{Cell, CellDamageVisuals, CellTypeAlias, RegenRate, RequiredToClear},
         definition::CellBehavior,
     },
-    effect::{BoundEffects, EffectKind, EffectNode, RootEffect, Target},
+    effect_v3::{
+        effects::DamageBoostConfig,
+        storage::BoundEffects,
+        types::{EffectType, RootNode, StampTarget, Tree},
+    },
 };
 
 // Behavior 24: .with_behavior(CellBehavior::Regen { rate: 3.0 }) inserts RegenRate
@@ -117,15 +121,17 @@ fn with_behavior_without_definition_behaviors() {
 // Behavior 26: .with_effects(vec![root_effect]) sets effects
 #[test]
 fn with_effects_stores_effects_for_dispatch() {
-    let root_effect = RootEffect::On {
-        target: Target::Bolt,
-        then: vec![EffectNode::Do(EffectKind::DamageBoost(5.0))],
-    };
+    let root_node = RootNode::Stamp(
+        StampTarget::Bolt,
+        Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
+            multiplier: ordered_float::OrderedFloat(5.0),
+        })),
+    );
 
     let mut world = World::new();
     let entity = spawn_cell_in_world(&mut world, |commands| {
         Cell::builder()
-            .with_effects(vec![root_effect])
+            .with_effects(vec![root_node])
             .position(Vec2::ZERO)
             .dimensions(70.0, 24.0)
             .hp(20.0)

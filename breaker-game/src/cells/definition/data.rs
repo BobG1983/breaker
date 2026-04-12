@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::effect::RootEffect;
+use crate::effect_v3::types::RootNode;
 
 /// Categorizes cell durability with a fallback base HP method.
 ///
@@ -117,7 +117,7 @@ pub(crate) struct CellTypeDefinition {
     pub behaviors: Option<Vec<CellBehavior>>,
     /// Optional effect chains for this cell type. Defaults to `None`.
     #[serde(default)]
-    pub effects: Option<Vec<RootEffect>>,
+    pub effects: Option<Vec<RootNode>>,
 }
 
 impl CellTypeDefinition {

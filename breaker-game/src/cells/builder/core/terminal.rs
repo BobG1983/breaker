@@ -12,7 +12,7 @@ use crate::{
     cells::{
         behaviors::guarded::components::ring_slot_offset, components::*, definition::CellBehavior,
     },
-    effect::{EffectCommandsExt, EffectNode, RootEffect},
+    effect_v3::{commands::EffectCommandsExt, types::RootNode},
     shared::{BOLT_LAYER, CELL_LAYER, GameDrawLayer},
 };
 
@@ -46,7 +46,7 @@ fn resolve_damage_visuals(optional: &OptionalCellData) -> Option<CellDamageVisua
     })
 }
 
-fn resolve_effects(optional: &OptionalCellData) -> Option<Vec<RootEffect>> {
+fn resolve_effects(optional: &OptionalCellData) -> Option<Vec<RootNode>> {
     optional
         .effects
         .clone()
@@ -73,16 +73,19 @@ fn resolve_hp(hp: f32, optional: &OptionalCellData) -> f32 {
     optional.override_hp.unwrap_or(hp)
 }
 
-fn dispatch_effects(commands: &mut Commands, entity: Entity, effects: Option<Vec<RootEffect>>) {
+fn dispatch_effects(commands: &mut Commands, entity: Entity, effects: Option<Vec<RootNode>>) {
     if let Some(effects) = effects {
-        let entries: Vec<(String, EffectNode)> = effects
-            .into_iter()
-            .flat_map(|root| {
-                let RootEffect::On { then, .. } = root;
-                then.into_iter().map(|node| (String::new(), node))
-            })
-            .collect();
-        commands.push_bound_effects(entity, entries);
+        for root in effects {
+            match root {
+                RootNode::Stamp(_target, tree) => {
+                    commands.stamp_effect(entity, String::new(), tree);
+                }
+                RootNode::Spawn(_kind, _tree) => {
+                    // Spawn-type effects are handled by the SpawnStampRegistry,
+                    // not by direct entity stamping. Deferred.
+                }
+            }
+        }
     }
 }
 

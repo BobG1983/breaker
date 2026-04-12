@@ -1,15 +1,20 @@
-//! Tests for `Target::Bolt` effect dispatch to bolt entities.
+//! Tests for `StampTarget::Bolt` effect dispatch to bolt entities.
 
 use bevy::prelude::*;
+use ordered_float::OrderedFloat;
 
 use crate::{
     bolt::components::Bolt,
     cells::components::{Cell, CellEffectsDispatched, CellTypeAlias},
-    effect::{BoundEffects, EffectKind, EffectNode, RootEffect, StagedEffects, Target, Trigger},
+    effect_v3::{
+        effects::SpeedBoostConfig,
+        storage::BoundEffects,
+        types::{EffectType, RootNode, StampTarget, Tree, Trigger},
+    },
     state::run::node::systems::dispatch_cell_effects::tests::helpers::{make_cell_def, test_app},
 };
 
-// ── Behavior 5: Cell with Target::Bolt effect dispatches to bolt entity ──
+// ── Behavior 5: Cell with StampTarget::Bolt effect dispatches to bolt entity ──
 
 #[test]
 fn cell_with_target_bolt_dispatches_to_bolt_entity() {
@@ -20,13 +25,15 @@ fn cell_with_target_bolt_dispatches_to_bolt_entity() {
             "bolt_boost_cell",
             "B",
             10.0,
-            Some(vec![RootEffect::On {
-                target: Target::Bolt,
-                then: vec![EffectNode::When {
-                    trigger: Trigger::Bumped,
-                    then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.2 })],
-                }],
-            }]),
+            Some(vec![RootNode::Stamp(
+                StampTarget::Bolt,
+                Tree::When(
+                    Trigger::Bumped,
+                    Box::new(Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+                        multiplier: OrderedFloat(1.2),
+                    }))),
+                ),
+            )]),
         ),
     );
 
@@ -61,18 +68,12 @@ fn cell_with_target_bolt_dispatches_to_bolt_entity() {
     assert!(
         matches!(
             node,
-            EffectNode::When {
-                trigger: Trigger::Bumped,
-                then,
-            } if then.len() == 1 && matches!(then[0], EffectNode::Do(EffectKind::SpeedBoost { multiplier }) if (multiplier - 1.2).abs() < f32::EPSILON)
+            Tree::When(
+                Trigger::Bumped,
+                inner,
+            ) if matches!(inner.as_ref(), Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig { multiplier })) if (multiplier.0 - 1.2).abs() < f32::EPSILON)
         ),
-        "expected When {{ Bumped, [Do(SpeedBoost {{ multiplier: 1.2 }})] }}, got {node:?}"
-    );
-
-    // Bolt should have StagedEffects
-    assert!(
-        app.world().get::<StagedEffects>(bolt_entity).is_some(),
-        "bolt should have StagedEffects after dispatch"
+        "expected When(Bumped, Fire(SpeedBoost {{ multiplier: 1.2 }})), got {node:?}"
     );
 
     // Cell itself should NOT get BoundEffects from bolt-targeted effect
@@ -93,13 +94,15 @@ fn cell_with_target_bolt_no_bolt_present_no_panic() {
             "bolt_boost_cell",
             "B",
             10.0,
-            Some(vec![RootEffect::On {
-                target: Target::Bolt,
-                then: vec![EffectNode::When {
-                    trigger: Trigger::Bumped,
-                    then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.2 })],
-                }],
-            }]),
+            Some(vec![RootNode::Stamp(
+                StampTarget::Bolt,
+                Tree::When(
+                    Trigger::Bumped,
+                    Box::new(Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+                        multiplier: OrderedFloat(1.2),
+                    }))),
+                ),
+            )]),
         ),
     );
 

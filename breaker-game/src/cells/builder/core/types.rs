@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use crate::cells::definition::Toughness;
 use crate::{
     cells::{components::CellDamageVisuals, definition::CellBehavior},
-    effect::RootEffect,
+    effect_v3::types::RootNode,
 };
 
 /// Default cell color (linear RGB) -- white.
@@ -55,7 +55,7 @@ pub(in crate::cells::builder) struct CellDefinitionParams {
     pub(in crate::cells::builder) required_to_clear: bool,
     pub(in crate::cells::builder) damage_visuals: CellDamageVisuals,
     pub(in crate::cells::builder) behaviors: Vec<CellBehavior>,
-    pub(in crate::cells::builder) effects: Option<Vec<RootEffect>>,
+    pub(in crate::cells::builder) effects: Option<Vec<RootNode>>,
     pub(in crate::cells::builder) color_rgb: [f32; 3],
 }
 
@@ -92,7 +92,7 @@ pub(in crate::cells::builder) struct OptionalCellData {
     pub(in crate::cells::builder) alias: Option<String>,
     pub(in crate::cells::builder) required_to_clear: Option<bool>,
     pub(in crate::cells::builder) damage_visuals: Option<CellDamageVisuals>,
-    pub(in crate::cells::builder) effects: Option<Vec<RootEffect>>,
+    pub(in crate::cells::builder) effects: Option<Vec<RootNode>>,
     pub(in crate::cells::builder) color_rgb: Option<[f32; 3]>,
     pub(in crate::cells::builder) behaviors: Vec<CellBehavior>,
     pub(in crate::cells::builder) locked_entities: Option<Vec<Entity>>,

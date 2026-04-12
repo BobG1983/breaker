@@ -1,13 +1,18 @@
 use bevy::prelude::*;
+use ordered_float::OrderedFloat;
 
 use super::helpers::{make_cell_def, test_app};
 use crate::{
     bolt::components::Bolt,
     cells::components::{Cell, CellEffectsDispatched, CellTypeAlias},
-    effect::{BoundEffects, EffectKind, EffectNode, ImpactTarget, RootEffect, Target, Trigger},
+    effect_v3::{
+        effects::{DamageBoostConfig, ExplodeConfig, SpeedBoostConfig},
+        storage::BoundEffects,
+        types::{EffectType, EntityKind, RootNode, StampTarget, Tree, Trigger},
+    },
 };
 
-// ── Behavior 8: Do children are fired immediately, not stored in BoundEffects ──
+// ── Behavior 8: Fire children are stamped into BoundEffects alongside When children ──
 
 #[test]
 fn do_children_are_not_stored_in_bound_effects() {
@@ -18,19 +23,24 @@ fn do_children_are_not_stored_in_bound_effects() {
             "immediate_effect_cell",
             "D",
             10.0,
-            Some(vec![RootEffect::On {
-                target: Target::Cell,
-                then: vec![
-                    EffectNode::Do(EffectKind::DamageBoost(1.5)),
-                    EffectNode::When {
-                        trigger: Trigger::Died,
-                        then: vec![EffectNode::Do(EffectKind::Explode {
-                            range: 48.0,
-                            damage: 1.0,
-                        })],
-                    },
-                ],
-            }]),
+            Some(vec![
+                RootNode::Stamp(
+                    StampTarget::ActiveCells,
+                    Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
+                        multiplier: OrderedFloat(1.5),
+                    })),
+                ),
+                RootNode::Stamp(
+                    StampTarget::ActiveCells,
+                    Tree::When(
+                        Trigger::Died,
+                        Box::new(Tree::Fire(EffectType::Explode(ExplodeConfig {
+                            range: OrderedFloat(48.0),
+                            damage: OrderedFloat(1.0),
+                        }))),
+                    ),
+                ),
+            ]),
         ),
     );
 
@@ -41,31 +51,30 @@ fn do_children_are_not_stored_in_bound_effects() {
         .id();
     app.update();
 
-    // BoundEffects should have exactly 1 entry (the When node), NOT the Do node
+    // BoundEffects should have 2 entries (Fire + When), both stored by stamp_effect
     let bound = app
         .world()
         .get::<BoundEffects>(cell_entity)
         .expect("cell should have BoundEffects");
     assert_eq!(
         bound.0.len(),
-        1,
-        "BoundEffects should have 1 entry (When), not the Do child; got {}",
+        2,
+        "BoundEffects should have 2 entries (Fire + When); got {}",
         bound.0.len()
     );
     assert!(
-        matches!(
-            &bound.0[0].1,
-            EffectNode::When {
-                trigger: Trigger::Died,
-                ..
-            }
-        ),
-        "the single BoundEffects entry should be the When {{ Died }} node, got {:?}",
+        matches!(&bound.0[0].1, Tree::Fire(EffectType::DamageBoost(..))),
+        "the first BoundEffects entry should be the Fire(DamageBoost) node, got {:?}",
         bound.0[0].1
+    );
+    assert!(
+        matches!(&bound.0[1].1, Tree::When(Trigger::Died, ..)),
+        "the second BoundEffects entry should be the When(Died) node, got {:?}",
+        bound.0[1].1
     );
 }
 
-// ── Behavior 8 edge case: All children are Do nodes ──
+// ── Behavior 8 edge case: All children are Fire nodes ──
 
 #[test]
 fn all_do_children_results_in_no_bound_effects_entries() {
@@ -76,13 +85,20 @@ fn all_do_children_results_in_no_bound_effects_entries() {
             "all_do_cell",
             "D",
             10.0,
-            Some(vec![RootEffect::On {
-                target: Target::Cell,
-                then: vec![
-                    EffectNode::Do(EffectKind::DamageBoost(1.5)),
-                    EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.1 }),
-                ],
-            }]),
+            Some(vec![
+                RootNode::Stamp(
+                    StampTarget::ActiveCells,
+                    Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
+                        multiplier: OrderedFloat(1.5),
+                    })),
+                ),
+                RootNode::Stamp(
+                    StampTarget::ActiveCells,
+                    Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+                        multiplier: OrderedFloat(1.1),
+                    })),
+                ),
+            ]),
         ),
     );
 
@@ -93,23 +109,24 @@ fn all_do_children_results_in_no_bound_effects_entries() {
         .id();
     app.update();
 
-    // If BoundEffects was inserted, it should be empty (all children were Do nodes)
-    // Or BoundEffects might not be inserted at all -- both are acceptable
-    if let Some(bound) = app.world().get::<BoundEffects>(cell_entity) {
-        assert_eq!(
-            bound.0.len(),
-            0,
-            "BoundEffects should be empty when all children are Do nodes, got {}",
-            bound.0.len()
-        );
-    }
+    // Both Fire nodes are stamped into BoundEffects
+    let bound = app
+        .world()
+        .get::<BoundEffects>(cell_entity)
+        .expect("BoundEffects should be present when all children are Fire nodes");
+    assert_eq!(
+        bound.0.len(),
+        2,
+        "BoundEffects should have 2 entries (both Fire nodes stamped), got {}",
+        bound.0.len()
+    );
 
     // Cell should still have marker since it had effects
     assert!(
         app.world()
             .get::<CellEffectsDispatched>(cell_entity)
             .is_some(),
-        "cell should have CellEffectsDispatched even when all children are Do nodes"
+        "cell should have CellEffectsDispatched even when all children are Fire nodes"
     );
 }
 
@@ -125,23 +142,25 @@ fn cell_with_multiple_root_effects_gets_all_dispatched() {
             "M",
             20.0,
             Some(vec![
-                RootEffect::On {
-                    target: Target::Cell,
-                    then: vec![EffectNode::When {
-                        trigger: Trigger::Died,
-                        then: vec![EffectNode::Do(EffectKind::Explode {
-                            range: 48.0,
-                            damage: 1.0,
-                        })],
-                    }],
-                },
-                RootEffect::On {
-                    target: Target::Cell,
-                    then: vec![EffectNode::When {
-                        trigger: Trigger::Impacted(ImpactTarget::Bolt),
-                        then: vec![EffectNode::Do(EffectKind::DamageBoost(0.5))],
-                    }],
-                },
+                RootNode::Stamp(
+                    StampTarget::ActiveCells,
+                    Tree::When(
+                        Trigger::Died,
+                        Box::new(Tree::Fire(EffectType::Explode(ExplodeConfig {
+                            range: OrderedFloat(48.0),
+                            damage: OrderedFloat(1.0),
+                        }))),
+                    ),
+                ),
+                RootNode::Stamp(
+                    StampTarget::ActiveCells,
+                    Tree::When(
+                        Trigger::Impacted(EntityKind::Bolt),
+                        Box::new(Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
+                            multiplier: OrderedFloat(0.5),
+                        }))),
+                    ),
+                ),
             ]),
         ),
     );
@@ -170,14 +189,8 @@ fn cell_with_multiple_root_effects_gets_all_dispatched() {
 
     // First: Died->Explode
     assert!(
-        matches!(
-            &bound.0[0].1,
-            EffectNode::When {
-                trigger: Trigger::Died,
-                ..
-            }
-        ),
-        "first entry should be When {{ Died }}, got {:?}",
+        matches!(&bound.0[0].1, Tree::When(Trigger::Died, ..)),
+        "first entry should be When(Died), got {:?}",
         bound.0[0].1
     );
 
@@ -185,17 +198,14 @@ fn cell_with_multiple_root_effects_gets_all_dispatched() {
     assert!(
         matches!(
             &bound.0[1].1,
-            EffectNode::When {
-                trigger: Trigger::Impacted(ImpactTarget::Bolt),
-                ..
-            }
+            Tree::When(Trigger::Impacted(EntityKind::Bolt), ..)
         ),
-        "second entry should be When {{ Impacted(Bolt) }}, got {:?}",
+        "second entry should be When(Impacted(Bolt)), got {:?}",
         bound.0[1].1
     );
 }
 
-// ── Behavior 9 edge case: Mix of Target::Cell and Target::Bolt ──
+// ── Behavior 9 edge case: Mix of StampTarget::ActiveCells and StampTarget::Bolt ──
 
 #[test]
 fn cell_with_mixed_targets_dispatches_to_correct_entities() {
@@ -207,23 +217,25 @@ fn cell_with_mixed_targets_dispatches_to_correct_entities() {
             "M",
             10.0,
             Some(vec![
-                RootEffect::On {
-                    target: Target::Cell,
-                    then: vec![EffectNode::When {
-                        trigger: Trigger::Died,
-                        then: vec![EffectNode::Do(EffectKind::Explode {
-                            range: 48.0,
-                            damage: 1.0,
-                        })],
-                    }],
-                },
-                RootEffect::On {
-                    target: Target::Bolt,
-                    then: vec![EffectNode::When {
-                        trigger: Trigger::Bumped,
-                        then: vec![EffectNode::Do(EffectKind::SpeedBoost { multiplier: 1.2 })],
-                    }],
-                },
+                RootNode::Stamp(
+                    StampTarget::ActiveCells,
+                    Tree::When(
+                        Trigger::Died,
+                        Box::new(Tree::Fire(EffectType::Explode(ExplodeConfig {
+                            range: OrderedFloat(48.0),
+                            damage: OrderedFloat(1.0),
+                        }))),
+                    ),
+                ),
+                RootNode::Stamp(
+                    StampTarget::Bolt,
+                    Tree::When(
+                        Trigger::Bumped,
+                        Box::new(Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+                            multiplier: OrderedFloat(1.2),
+                        }))),
+                    ),
+                ),
             ]),
         ),
     );

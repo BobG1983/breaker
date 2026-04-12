@@ -13,7 +13,7 @@ use crate::{
         definition::{CellBehavior, Toughness},
         resources::ToughnessConfig,
     },
-    effect::RootEffect,
+    effect_v3::types::RootNode,
 };
 
 // ── Entry point ─────────────────────────────────────────────────────────────
@@ -251,7 +251,7 @@ impl<P, D, H, V> CellBuilder<P, D, H, V> {
     }
 
     #[must_use]
-    pub(crate) fn with_effects(mut self, effects: Vec<RootEffect>) -> Self {
+    pub(crate) fn with_effects(mut self, effects: Vec<RootNode>) -> Self {
         self.optional.effects = Some(effects);
         self
     }

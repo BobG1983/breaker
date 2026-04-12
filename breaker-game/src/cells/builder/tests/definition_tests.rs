@@ -12,7 +12,11 @@ use crate::{
         definition::{CellBehavior, Toughness},
         test_utils::{spawn_cell_in_world, test_cell_definition},
     },
-    effect::{BoundEffects, EffectKind, EffectNode, RootEffect, Target},
+    effect_v3::{
+        effects::DamageBoostConfig,
+        storage::BoundEffects,
+        types::{EffectType, RootNode, StampTarget, Tree},
+    },
 };
 
 // ── Section D: .definition(&def) ────────────────────────────────────────────
@@ -327,10 +331,12 @@ fn definition_behaviors_empty_vec_has_no_regen() {
 #[test]
 fn definition_stores_effects() {
     let mut def = test_cell_definition();
-    def.effects = Some(vec![RootEffect::On {
-        target: Target::Bolt,
-        then: vec![EffectNode::Do(EffectKind::DamageBoost(5.0))],
-    }]);
+    def.effects = Some(vec![RootNode::Stamp(
+        StampTarget::Bolt,
+        Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
+            multiplier: ordered_float::OrderedFloat(5.0),
+        })),
+    )]);
 
     let mut world = World::new();
     let entity = spawn_cell_in_world(&mut world, |commands| {

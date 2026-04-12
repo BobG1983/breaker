@@ -1,8 +1,7 @@
 //! Dispatches cell-defined effects to target entities when spawned.
 //!
-//! Reads each cell's `CellTypeDefinition.effects` (optional) and pushes
-//! children to the appropriate target entity's `BoundEffects`.
-//! Bare `Do` children are fired immediately via `commands.fire_effect()`.
+//! Reads each cell's `CellTypeDefinition.effects` (optional) and stamps
+//! trees onto the appropriate target entities.
 
 use bevy::prelude::*;
 
@@ -11,7 +10,10 @@ use crate::{
         components::{CellEffectsDispatched, CellTypeAlias},
         resources::CellTypeRegistry,
     },
-    effect::{EffectCommandsExt, Target},
+    effect_v3::{
+        commands::EffectCommandsExt,
+        types::{RootNode, StampTarget},
+    },
     prelude::*,
 };
 
@@ -22,9 +24,9 @@ type CellDispatchQuery<'w, 's> =
 /// Dispatches effects from cell type definitions to target entities.
 ///
 /// For each cell entity without `CellEffectsDispatched`, looks up the cell's
-/// definition in `CellTypeRegistry` and processes `RootEffect::On { target, then }`:
-/// - `Do` children are fired immediately
-/// - Non-`Do` children are pushed to the target entity's `BoundEffects`
+/// definition in `CellTypeRegistry` and processes each `RootNode`:
+/// - `Stamp(target, tree)` — stamps the tree onto the resolved target entities
+/// - `Spawn(kind, tree)` — deferred (spawn-watching not yet implemented)
 ///
 /// Inserts `CellEffectsDispatched` marker after processing to prevent double-dispatch.
 pub(crate) fn dispatch_cell_effects(
@@ -50,41 +52,34 @@ pub(crate) fn dispatch_cell_effects(
             Some(effects) => effects,
         };
 
-        for root_effect in effects {
-            let RootEffect::On { target, then } = root_effect;
+        for root in effects {
+            match root {
+                RootNode::Stamp(target, tree) => {
+                    let target_entities: Vec<Entity> = match target {
+                        StampTarget::Bolt
+                        | StampTarget::ActiveBolts
+                        | StampTarget::EveryBolt
+                        | StampTarget::PrimaryBolts
+                        | StampTarget::ExtraBolts => bolt_query.iter().collect(),
+                        StampTarget::Breaker
+                        | StampTarget::ActiveBreakers
+                        | StampTarget::EveryBreaker => breaker_query
+                            .single()
+                            .map_or_else(|_| Vec::new(), |b| vec![b]),
+                        StampTarget::ActiveCells | StampTarget::EveryCell => {
+                            all_cells_query.iter().collect()
+                        }
+                        StampTarget::ActiveWalls | StampTarget::EveryWall => {
+                            wall_query.iter().collect()
+                        }
+                    };
 
-            let mut non_do_children: Vec<(String, EffectNode)> = Vec::new();
-            let mut do_children = Vec::new();
-            for child in then {
-                match child {
-                    EffectNode::Do(effect) => do_children.push(effect.clone()),
-                    // Cell-sourced effects use empty source_chip — they come from
-                    // the cell type definition, not from an evolution chip.
-                    other => non_do_children.push((String::new(), other.clone())),
+                    for target_entity in target_entities {
+                        commands.stamp_effect(target_entity, String::new(), tree.clone());
+                    }
                 }
-            }
-
-            // Resolve target entities
-            let target_entities: Vec<Entity> = match target {
-                Target::Cell => vec![entity],
-                Target::Bolt | Target::AllBolts => bolt_query.iter().collect(),
-                Target::Breaker => breaker_query
-                    .single()
-                    .map_or_else(|_| Vec::new(), |breaker| vec![breaker]),
-                Target::AllCells => all_cells_query.iter().collect(),
-                Target::Wall | Target::AllWalls => wall_query.iter().collect(),
-            };
-
-            for target_entity in &target_entities {
-                // Fire Do children immediately. Empty source_chip because
-                // cell-sourced effects are not attributed to any evolution chip.
-                for effect in &do_children {
-                    commands.fire_effect(*target_entity, effect.clone(), String::new());
-                }
-
-                // Push non-Do children to BoundEffects
-                if !non_do_children.is_empty() {
-                    commands.push_bound_effects(*target_entity, non_do_children.clone());
+                RootNode::Spawn(_kind, _tree) => {
+                    // Spawn-type effects handled by SpawnStampRegistry — deferred.
                 }
             }
         }

@@ -1,10 +1,15 @@
 //! Tests for `CellEffectsDispatched` marker preventing double-dispatch.
 
 use bevy::prelude::*;
+use ordered_float::OrderedFloat;
 
 use crate::{
     cells::components::{Cell, CellEffectsDispatched, CellTypeAlias},
-    effect::{BoundEffects, EffectKind, EffectNode, RootEffect, Target, Trigger},
+    effect_v3::{
+        effects::ExplodeConfig,
+        storage::BoundEffects,
+        types::{EffectType, RootNode, StampTarget, Tree, Trigger},
+    },
     state::run::node::systems::dispatch_cell_effects::tests::helpers::{make_cell_def, test_app},
 };
 
@@ -19,16 +24,16 @@ fn cell_effects_dispatched_marker_prevents_double_dispatch() {
             "effect_cell",
             "E",
             10.0,
-            Some(vec![RootEffect::On {
-                target: Target::Cell,
-                then: vec![EffectNode::When {
-                    trigger: Trigger::Died,
-                    then: vec![EffectNode::Do(EffectKind::Explode {
-                        range: 48.0,
-                        damage: 1.0,
-                    })],
-                }],
-            }]),
+            Some(vec![RootNode::Stamp(
+                StampTarget::ActiveCells,
+                Tree::When(
+                    Trigger::Died,
+                    Box::new(Tree::Fire(EffectType::Explode(ExplodeConfig {
+                        range: OrderedFloat(48.0),
+                        damage: OrderedFloat(1.0),
+                    }))),
+                ),
+            )]),
         ),
     );
 
@@ -42,13 +47,13 @@ fn cell_effects_dispatched_marker_prevents_double_dispatch() {
             CellEffectsDispatched,
             BoundEffects(vec![(
                 String::new(),
-                EffectNode::When {
-                    trigger: Trigger::Died,
-                    then: vec![EffectNode::Do(EffectKind::Explode {
-                        range: 48.0,
-                        damage: 1.0,
-                    })],
-                },
+                Tree::When(
+                    Trigger::Died,
+                    Box::new(Tree::Fire(EffectType::Explode(ExplodeConfig {
+                        range: OrderedFloat(48.0),
+                        damage: OrderedFloat(1.0),
+                    }))),
+                ),
             )]),
         ))
         .id();
@@ -77,16 +82,16 @@ fn marker_on_one_cell_skips_it_while_other_is_dispatched() {
             "effect_cell",
             "E",
             10.0,
-            Some(vec![RootEffect::On {
-                target: Target::Cell,
-                then: vec![EffectNode::When {
-                    trigger: Trigger::Died,
-                    then: vec![EffectNode::Do(EffectKind::Explode {
-                        range: 48.0,
-                        damage: 1.0,
-                    })],
-                }],
-            }]),
+            Some(vec![RootNode::Stamp(
+                StampTarget::ActiveCells,
+                Tree::When(
+                    Trigger::Died,
+                    Box::new(Tree::Fire(EffectType::Explode(ExplodeConfig {
+                        range: OrderedFloat(48.0),
+                        damage: OrderedFloat(1.0),
+                    }))),
+                ),
+            )]),
         ),
     );
 
@@ -100,13 +105,13 @@ fn marker_on_one_cell_skips_it_while_other_is_dispatched() {
             CellEffectsDispatched,
             BoundEffects(vec![(
                 String::new(),
-                EffectNode::When {
-                    trigger: Trigger::Died,
-                    then: vec![EffectNode::Do(EffectKind::Explode {
-                        range: 48.0,
-                        damage: 1.0,
-                    })],
-                },
+                Tree::When(
+                    Trigger::Died,
+                    Box::new(Tree::Fire(EffectType::Explode(ExplodeConfig {
+                        range: OrderedFloat(48.0),
+                        damage: OrderedFloat(1.0),
+                    }))),
+                ),
             )]),
         ))
         .id();
@@ -117,18 +122,18 @@ fn marker_on_one_cell_skips_it_while_other_is_dispatched() {
         .id();
     app.update();
 
-    // Cell A unchanged (still 1 entry)
+    // Cell A: gets 1 additional entry from Cell B's dispatch (ActiveCells targets all cells)
     let bound_a = app
         .world()
         .get::<BoundEffects>(cell_a)
         .expect("Cell A should have BoundEffects");
     assert_eq!(
         bound_a.0.len(),
-        1,
-        "Cell A should be unchanged (skipped by marker)"
+        2,
+        "Cell A should have 2 entries (1 existing + 1 from Cell B's ActiveCells dispatch)"
     );
 
-    // Cell B dispatched (now has 1 entry)
+    // Cell B dispatched (now has 1 entry from its own dispatch to ActiveCells)
     let bound_b = app
         .world()
         .get::<BoundEffects>(cell_b)

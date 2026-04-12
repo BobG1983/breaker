@@ -13,7 +13,7 @@ pub(super) fn make_cell_def(
     id: &str,
     alias: &str,
     _hp: f32,
-    effects: Option<Vec<crate::effect::RootEffect>>,
+    effects: Option<Vec<crate::effect_v3::types::RootNode>>,
 ) -> CellTypeDefinition {
     CellTypeDefinition {
         id: id.to_owned(),

@@ -1,10 +1,15 @@
 //! Tests for multiple cells dispatched independently.
 
 use bevy::prelude::*;
+use ordered_float::OrderedFloat;
 
 use crate::{
     cells::components::{Cell, CellEffectsDispatched, CellTypeAlias},
-    effect::{BoundEffects, EffectKind, EffectNode, RootEffect, Target, Trigger},
+    effect_v3::{
+        effects::ExplodeConfig,
+        storage::BoundEffects,
+        types::{EffectType, RootNode, StampTarget, Tree, Trigger},
+    },
     state::run::node::systems::dispatch_cell_effects::tests::helpers::{make_cell_def, test_app},
 };
 
@@ -19,16 +24,16 @@ fn multiple_cells_dispatched_independently() {
             "effect_cell",
             "E",
             10.0,
-            Some(vec![RootEffect::On {
-                target: Target::Cell,
-                then: vec![EffectNode::When {
-                    trigger: Trigger::Died,
-                    then: vec![EffectNode::Do(EffectKind::Explode {
-                        range: 48.0,
-                        damage: 1.0,
-                    })],
-                }],
-            }]),
+            Some(vec![RootNode::Stamp(
+                StampTarget::ActiveCells,
+                Tree::When(
+                    Trigger::Died,
+                    Box::new(Tree::Fire(EffectType::Explode(ExplodeConfig {
+                        range: OrderedFloat(48.0),
+                        damage: OrderedFloat(1.0),
+                    }))),
+                ),
+            )]),
         ),
     );
     registry.insert("S".to_owned(), make_cell_def("standard", "S", 10.0, None));
@@ -48,43 +53,49 @@ fn multiple_cells_dispatched_independently() {
         .id();
     app.update();
 
-    // Cell A: has BoundEffects with 1 entry
+    // Cell A: has BoundEffects (ActiveCells dispatches to all cells including A and B)
     let bound_a = app
         .world()
         .get::<BoundEffects>(cell_a)
         .expect("Cell A should have BoundEffects");
+    // Both cell A and cell B dispatch to all cells via ActiveCells, so each cell gets 2 entries
     assert_eq!(
         bound_a.0.len(),
-        1,
-        "Cell A should have 1 BoundEffects entry"
+        2,
+        "Cell A should have 2 BoundEffects entries (one from each E cell)"
     );
     assert!(
         app.world().get::<CellEffectsDispatched>(cell_a).is_some(),
         "Cell A should have CellEffectsDispatched"
     );
 
-    // Cell B: has BoundEffects with 1 entry
+    // Cell B: has BoundEffects with 2 entries
     let bound_b = app
         .world()
         .get::<BoundEffects>(cell_b)
         .expect("Cell B should have BoundEffects");
     assert_eq!(
         bound_b.0.len(),
-        1,
-        "Cell B should have 1 BoundEffects entry"
+        2,
+        "Cell B should have 2 BoundEffects entries (one from each E cell)"
     );
     assert!(
         app.world().get::<CellEffectsDispatched>(cell_b).is_some(),
         "Cell B should have CellEffectsDispatched"
     );
 
-    // Cell C: no effects
-    assert!(
-        app.world().get::<BoundEffects>(cell_c).is_none(),
-        "Cell C should NOT have BoundEffects"
+    // Cell C: also gets effects from both E cells (ActiveCells targets ALL cells)
+    let bound_c = app
+        .world()
+        .get::<BoundEffects>(cell_c)
+        .expect("Cell C should have BoundEffects from ActiveCells dispatch");
+    assert_eq!(
+        bound_c.0.len(),
+        2,
+        "Cell C should have 2 BoundEffects entries (one from each E cell)"
     );
     assert!(
         app.world().get::<CellEffectsDispatched>(cell_c).is_none(),
-        "Cell C should NOT have CellEffectsDispatched"
+        "Cell C should NOT have CellEffectsDispatched (it has no effects of its own)"
     );
 }
