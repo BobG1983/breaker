@@ -29,9 +29,9 @@ use crate::{
 /// spawning or sending any messages.
 ///
 /// Breaker effects are handled by the breaker builder's `.spawn()` call
-/// via [`EffectCommandsExt::dispatch_initial_effects`](crate::effect::EffectCommandsExt).
+/// via [`EffectCommandsExt`](crate::effect_v3::commands::EffectCommandsExt).
 /// Bolt effects are handled by the bolt builder's `.definition()` call which
-/// stores them as [`BoundEffects`](crate::effect::BoundEffects) during spawn.
+/// stores them as [`BoundEffects`](crate::effect_v3::storage::BoundEffects) during spawn.
 /// No manual effect dispatch is needed.
 ///
 /// Runs on `OnEnter(NodeState::Loading)` (first node) alongside other node setup.
