@@ -15,8 +15,10 @@ use super::game_entity::GameEntity;
 #[derive(Message, Clone, Debug)]
 pub(crate) struct KillYourself<T: GameEntity> {
     /// The entity to kill.
+    #[expect(dead_code, reason = "awaiting domain kill handler consumers")]
     pub victim:  Entity,
     /// The entity that caused the death (from `KilledBy`).
+    #[expect(dead_code, reason = "awaiting domain kill handler consumers")]
     pub killer:  Option<Entity>,
     /// Marker for the victim entity type.
     pub _marker: PhantomData<T>,

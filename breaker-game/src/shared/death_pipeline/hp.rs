@@ -15,6 +15,7 @@ pub(crate) struct Hp {
     /// Hit points remaining.
     pub current:  f32,
     /// The HP this entity spawned with.
+    #[expect(dead_code, reason = "awaiting UI health bar consumer")]
     pub starting: f32,
     /// Optional upper bound for healing.
     #[expect(dead_code, reason = "awaiting healing system consumer")]
