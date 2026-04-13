@@ -4,34 +4,40 @@
     common: (
         prefix: "Minor",
         effects: [
-            On(target: Bolt, then: [
-                When(trigger: CellDestroyed, then: [
-                    Do(SpawnBolts(count: 1, lifespan: Some(2.0), inherit: false)),
-                    Do(SizeBoost(0.5)),
-                ]),
-            ]),
+            Stamp(Bolt,
+                When(Killed(Cell),
+                    Sequence([
+                        Fire(SpawnBolts(SpawnBoltsConfig(count: 1, lifespan: Some(2.0), inherit: false))),
+                        Fire(SizeBoost(SizeBoostConfig(multiplier: 0.5))),
+                    ]),
+                ),
+            ),
         ],
     ),
     uncommon: (
         prefix: "Spreading",
         effects: [
-            On(target: Bolt, then: [
-                When(trigger: CellDestroyed, then: [
-                    Do(SpawnBolts(count: 2, lifespan: Some(2.5), inherit: false)),
-                    Do(SizeBoost(0.55)),
-                ]),
-            ]),
+            Stamp(Bolt,
+                When(Killed(Cell),
+                    Sequence([
+                        Fire(SpawnBolts(SpawnBoltsConfig(count: 2, lifespan: Some(2.5), inherit: false))),
+                        Fire(SizeBoost(SizeBoostConfig(multiplier: 0.55))),
+                    ]),
+                ),
+            ),
         ],
     ),
     rare: (
         prefix: "Devastating",
         effects: [
-            On(target: Bolt, then: [
-                When(trigger: CellDestroyed, then: [
-                    Do(SpawnBolts(count: 3, lifespan: Some(3.0), inherit: false)),
-                    Do(SizeBoost(0.6)),
-                ]),
-            ]),
+            Stamp(Bolt,
+                When(Killed(Cell),
+                    Sequence([
+                        Fire(SpawnBolts(SpawnBoltsConfig(count: 3, lifespan: Some(3.0), inherit: false))),
+                        Fire(SizeBoost(SizeBoostConfig(multiplier: 0.6))),
+                    ]),
+                ),
+            ),
         ],
     ),
 )

@@ -38,7 +38,7 @@ pub struct BumpWhiffed;
 /// This means a bolt hit the breaker, but the player never pressed bump during
 /// the post-hit window. Consumed by effect bridges for `NoBumpOccurred` trigger.
 #[derive(Message, Clone, Debug)]
-pub(crate) struct NoBump {
+pub struct NoBump {
     /// The bolt entity that hit the breaker.
     pub bolt:    Entity,
     /// The breaker entity that was hit.

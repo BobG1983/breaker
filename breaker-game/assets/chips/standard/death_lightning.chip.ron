@@ -4,15 +4,17 @@
     legendary: (
         prefix: "",
         effects: [
-            On(target: Bolt, then: [
-                When(trigger: Impacted(Cell), then: [
-                    On(target: Cell, then: [
-                        When(trigger: Died, then: [
-                            Do(ChainLightning(arcs: 3, range: 64.0, damage_mult: 1.0)),
-                        ]),
-                    ]),
-                ]),
-            ]),
+            Stamp(Bolt,
+                When(Impacted(Cell),
+                    On(Impact(Impactee),
+                        Route(Staged,
+                            When(Died,
+                                Fire(ChainLightning(ChainLightningConfig(arcs: 3, range: 64.0, damage_mult: 1.0, arc_speed: 300.0))),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
         ],
     ),
 )

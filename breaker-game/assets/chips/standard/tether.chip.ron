@@ -4,37 +4,37 @@
     common: (
         prefix: "Short",
         effects: [
-            On(target: Bolt, then: [
-                When(trigger: PerfectBumped, then: [
-                    When(trigger: Impacted(Cell), then: [
-                        Do(ChainBolt(tether_distance: 80.0)),
-                    ]),
-                ]),
-            ]),
+            Stamp(Bolt,
+                When(PerfectBumped,
+                    When(Impacted(Cell),
+                        Fire(ChainBolt(ChainBoltConfig(tether_distance: 80.0))),
+                    ),
+                ),
+            ),
         ],
     ),
     uncommon: (
         prefix: "Extended",
         effects: [
-            On(target: Bolt, then: [
-                When(trigger: PerfectBumped, then: [
-                    When(trigger: Impacted(Cell), then: [
-                        Do(ChainBolt(tether_distance: 120.0)),
-                    ]),
-                ]),
-            ]),
+            Stamp(Bolt,
+                When(PerfectBumped,
+                    When(Impacted(Cell),
+                        Fire(ChainBolt(ChainBoltConfig(tether_distance: 120.0))),
+                    ),
+                ),
+            ),
         ],
     ),
     rare: (
         prefix: "Long",
         effects: [
-            On(target: Bolt, then: [
-                When(trigger: PerfectBumped, then: [
-                    When(trigger: Impacted(Cell), then: [
-                        Do(ChainBolt(tether_distance: 160.0)),
-                    ]),
-                ]),
-            ]),
+            Stamp(Bolt,
+                When(PerfectBumped,
+                    When(Impacted(Cell),
+                        Fire(ChainBolt(ChainBoltConfig(tether_distance: 160.0))),
+                    ),
+                ),
+            ),
         ],
     ),
 )

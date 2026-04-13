@@ -4,37 +4,37 @@
     common: (
         prefix: "Basic",
         effects: [
-            On(target: Bolt, then: [
-                When(trigger: PerfectBumped, then: [
-                    Until(trigger: TimeExpires(1.5), then: [
-                        Do(SpeedBoost(multiplier: 1.5)),
-                    ]),
-                ]),
-            ]),
+            Stamp(Bolt,
+                When(PerfectBumped,
+                    Until(TimeExpires(1.5),
+                        Fire(SpeedBoost(SpeedBoostConfig(multiplier: 1.5))),
+                    ),
+                ),
+            ),
         ],
     ),
     uncommon: (
         prefix: "Strong",
         effects: [
-            On(target: Bolt, then: [
-                When(trigger: PerfectBumped, then: [
-                    Until(trigger: TimeExpires(1.5), then: [
-                        Do(SpeedBoost(multiplier: 1.75)),
-                    ]),
-                ]),
-            ]),
+            Stamp(Bolt,
+                When(PerfectBumped,
+                    Until(TimeExpires(1.5),
+                        Fire(SpeedBoost(SpeedBoostConfig(multiplier: 1.75))),
+                    ),
+                ),
+            ),
         ],
     ),
     rare: (
         prefix: "Extreme",
         effects: [
-            On(target: Bolt, then: [
-                When(trigger: PerfectBumped, then: [
-                    Until(trigger: TimeExpires(1.5), then: [
-                        Do(SpeedBoost(multiplier: 2.0)),
-                    ]),
-                ]),
-            ]),
+            Stamp(Bolt,
+                When(PerfectBumped,
+                    Until(TimeExpires(1.5),
+                        Fire(SpeedBoost(SpeedBoostConfig(multiplier: 2.0))),
+                    ),
+                ),
+            ),
         ],
     ),
 )

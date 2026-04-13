@@ -4,11 +4,13 @@
     legendary: (
         prefix: "",
         effects: [
-            On(target: Bolt, then: [
-                Do(SizeBoost(1.5)),
-                Do(SpeedBoost(multiplier: 1.4)),
-                Do(DamageBoost(0.5)),
-            ]),
+            Stamp(Bolt,
+                Sequence([
+                    Fire(SizeBoost(SizeBoostConfig(multiplier: 1.5))),
+                    Fire(SpeedBoost(SpeedBoostConfig(multiplier: 1.4))),
+                    Fire(DamageBoost(DamageBoostConfig(multiplier: 0.5))),
+                ]),
+            ),
         ],
     ),
 )

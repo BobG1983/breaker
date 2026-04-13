@@ -2,13 +2,13 @@
     name: "Nova Lance",
     description: "Perfect bumps unleash a devastating piercing beam through all cells in the bolt's path",
     effects: [
-        On(target: Bolt, then: [
-            When(trigger: PerfectBumped, then: [
-                When(trigger: Impacted(Cell), then: [
-                    Do(PiercingBeam(damage_mult: 2.5, width: 40.0)),
-                ]),
-            ]),
-        ]),
+        Stamp(Bolt,
+            When(PerfectBumped,
+                When(Impacted(Cell),
+                    Fire(PiercingBeam(PiercingBeamConfig(damage_mult: 2.5, width: 40.0))),
+                ),
+            ),
+        ),
     ],
     ingredients: [
         (chip_name: "Impact", stacks_required: 2),

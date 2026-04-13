@@ -2,9 +2,9 @@
     name: "Resonance Cascade",
     description: "The bolt constantly emits damage pulses — a walking field of destruction",
     effects: [
-        On(target: Bolt, then: [
-            Do(Pulse(base_range: 64.0, range_per_level: 16.0, stacks: 1, speed: 300.0)),
-        ]),
+        Stamp(Bolt,
+            Fire(Pulse(PulseConfig(base_range: 64.0, range_per_level: 16.0, stacks: 1, speed: 300.0, interval: 0.5))),
+        ),
     ],
     ingredients: [
         (chip_name: "Pulse", stacks_required: 2),

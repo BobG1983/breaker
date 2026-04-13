@@ -2,11 +2,11 @@
     name: "Second Wind",
     description: "Losing a bolt grants temporary invulnerability — cheat death once",
     effects: [
-        On(target: Breaker, then: [
-            When(trigger: BoltLost, then: [
-                Do(SecondWind),
-            ]),
-        ]),
+        Stamp(Breaker,
+            When(BoltLostOccurred,
+                Fire(SecondWind(SecondWindConfig())),
+            ),
+        ),
     ],
     ingredients: [
         (chip_name: "Wide Breaker", stacks_required: 2),

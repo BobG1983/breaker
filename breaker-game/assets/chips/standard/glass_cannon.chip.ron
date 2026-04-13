@@ -4,14 +4,14 @@
     legendary: (
         prefix: "",
         effects: [
-            On(target: Bolt, then: [
-                Do(DamageBoost(3.0)),
-            ]),
-            On(target: Breaker, then: [
-                When(trigger: BoltLost, then: [
-                    Do(LoseLife),
-                ]),
-            ]),
+            Stamp(Bolt,
+                Fire(DamageBoost(DamageBoostConfig(multiplier: 3.0))),
+            ),
+            Stamp(Breaker,
+                When(BoltLostOccurred,
+                    Fire(LoseLife(LoseLifeConfig())),
+                ),
+            ),
         ],
     ),
 )

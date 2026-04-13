@@ -2,16 +2,18 @@
     name: "Supernova",
     description: "Perfect bumps trigger chain explosions — cells destroyed spawn bolts and shockwaves",
     effects: [
-        On(target: Bolt, then: [
-            When(trigger: PerfectBumped, then: [
-                When(trigger: Impacted(Cell), then: [
-                    When(trigger: CellDestroyed, then: [
-                        Do(SpawnBolts(count: 2, inherit: true)),
-                        Do(Shockwave(base_range: 96.0, range_per_level: 0.0, stacks: 1, speed: 400.0)),
-                    ]),
-                ]),
-            ]),
-        ]),
+        Stamp(Bolt,
+            When(PerfectBumped,
+                When(Impacted(Cell),
+                    When(Killed(Cell),
+                        Sequence([
+                            Fire(SpawnBolts(SpawnBoltsConfig(count: 2, lifespan: None, inherit: true))),
+                            Fire(Shockwave(ShockwaveConfig(base_range: 96.0, range_per_level: 0.0, stacks: 1, speed: 400.0))),
+                        ]),
+                    ),
+                ),
+            ),
+        ),
     ],
     ingredients: [
         (chip_name: "Piercing Shot", stacks_required: 3),

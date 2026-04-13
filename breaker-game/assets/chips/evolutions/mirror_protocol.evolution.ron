@@ -2,11 +2,11 @@
     name: "Mirror Protocol",
     description: "Perfect bumps spawn mirrored piercing bolts that spread in controlled directions",
     effects: [
-        On(target: Bolt, then: [
-            When(trigger: PerfectBump, then: [
-                Do(MirrorProtocol(inherit: true)),
-            ]),
-        ]),
+        Stamp(Bolt,
+            When(PerfectBumped,
+                Fire(MirrorProtocol(MirrorConfig(inherit: true))),
+            ),
+        ),
     ],
     ingredients: [
         (chip_name: "Reflex", stacks_required: 1),

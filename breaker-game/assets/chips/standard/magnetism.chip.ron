@@ -4,26 +4,28 @@
     common: (
         prefix: "Faint",
         effects: [
-            On(target: Bolt, then: [
-                Do(Attraction(attraction_type: Cell, force: 0.5, max_force: Some(50.0))),
-            ]),
+            Stamp(Bolt,
+                Fire(Attraction(AttractionConfig(attraction_type: Cell, force: 0.5, max_force: Some(50.0)))),
+            ),
         ],
     ),
     uncommon: (
         prefix: "Steady",
         effects: [
-            On(target: Bolt, then: [
-                Do(Attraction(attraction_type: Cell, force: 1.0, max_force: Some(80.0))),
-            ]),
+            Stamp(Bolt,
+                Fire(Attraction(AttractionConfig(attraction_type: Cell, force: 1.0, max_force: Some(80.0)))),
+            ),
         ],
     ),
     rare: (
         prefix: "Powerful",
         effects: [
-            On(target: Bolt, then: [
-                Do(Attraction(attraction_type: Cell, force: 1.5, max_force: Some(120.0))),
-                Do(SizeBoost(1.1)),
-            ]),
+            Stamp(Bolt,
+                Sequence([
+                    Fire(Attraction(AttractionConfig(attraction_type: Cell, force: 1.5, max_force: Some(120.0)))),
+                    Fire(SizeBoost(SizeBoostConfig(multiplier: 1.1))),
+                ]),
+            ),
         ],
     ),
 )

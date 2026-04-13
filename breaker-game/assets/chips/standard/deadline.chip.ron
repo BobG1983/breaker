@@ -4,11 +4,11 @@
     legendary: (
         prefix: "",
         effects: [
-            On(target: Bolt, then: [
-                When(trigger: NodeTimerThreshold(0.25), then: [
-                    Do(SpeedBoost(multiplier: 2.0)),
-                ]),
-            ]),
+            Stamp(Bolt,
+                When(NodeTimerThresholdOccurred(0.25),
+                    Fire(SpeedBoost(SpeedBoostConfig(multiplier: 2.0))),
+                ),
+            ),
         ],
     ),
 )

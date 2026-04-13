@@ -2,11 +2,11 @@
     name: "Arcwelder",
     description: "All your bolts connected by crackling neon beams that damage everything they intersect",
     effects: [
-        On(target: Bolt, then: [
-            When(trigger: Bumped, then: [
-                Do(TetherBeam(damage_mult: 1.5, chain: true)),
-            ]),
-        ]),
+        Stamp(Bolt,
+            When(Bumped,
+                Fire(TetherBeam(TetherBeamConfig(damage_mult: 1.5, chain: true))),
+            ),
+        ),
     ],
     ingredients: [
         (chip_name: "Tether", stacks_required: 2),

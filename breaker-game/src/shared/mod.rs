@@ -25,4 +25,7 @@ pub use rng::GameRng;
 pub use crate::state::types::GameState;
 
 #[cfg(test)]
+mod asset_ron_parsing;
+
+#[cfg(test)]
 pub(crate) mod test_utils;

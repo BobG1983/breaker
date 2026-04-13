@@ -23,7 +23,6 @@ pub(super) use breaker::{
     },
     walls::components::Wall,
 };
-pub(super) use ordered_float::OrderedFloat;
 pub(super) use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 pub(super) use super::*;

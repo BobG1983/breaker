@@ -2,9 +2,9 @@
     name: "FlashStep",
     description: "Reverse-dash while settling to teleport — skip the slowdown, flash to position",
     effects: [
-        On(target: Breaker, then: [
-            Do(FlashStep),
-        ]),
+        Stamp(Breaker,
+            Fire(FlashStep(FlashStepConfig())),
+        ),
     ],
     ingredients: [
         (chip_name: "Breaker Speed", stacks_required: 2),

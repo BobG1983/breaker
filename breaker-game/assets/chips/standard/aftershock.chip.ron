@@ -4,31 +4,31 @@
     common: (
         prefix: "Minor",
         effects: [
-            On(target: Bolt, then: [
-                When(trigger: Impacted(Wall), then: [
-                    Do(Shockwave(base_range: 16.0, range_per_level: 4.0, stacks: 1, speed: 400.0)),
-                ]),
-            ]),
+            Stamp(Bolt,
+                When(Impacted(Wall),
+                    Fire(Shockwave(ShockwaveConfig(base_range: 16.0, range_per_level: 4.0, stacks: 1, speed: 400.0))),
+                ),
+            ),
         ],
     ),
     uncommon: (
         prefix: "Rumbling",
         effects: [
-            On(target: Bolt, then: [
-                When(trigger: Impacted(Wall), then: [
-                    Do(Shockwave(base_range: 24.0, range_per_level: 6.0, stacks: 1, speed: 400.0)),
-                ]),
-            ]),
+            Stamp(Bolt,
+                When(Impacted(Wall),
+                    Fire(Shockwave(ShockwaveConfig(base_range: 24.0, range_per_level: 6.0, stacks: 1, speed: 400.0))),
+                ),
+            ),
         ],
     ),
     rare: (
         prefix: "Thundering",
         effects: [
-            On(target: Bolt, then: [
-                When(trigger: Impacted(Wall), then: [
-                    Do(Shockwave(base_range: 32.0, range_per_level: 10.0, stacks: 1, speed: 400.0)),
-                ]),
-            ]),
+            Stamp(Bolt,
+                When(Impacted(Wall),
+                    Fire(Shockwave(ShockwaveConfig(base_range: 32.0, range_per_level: 10.0, stacks: 1, speed: 400.0))),
+                ),
+            ),
         ],
     ),
 )

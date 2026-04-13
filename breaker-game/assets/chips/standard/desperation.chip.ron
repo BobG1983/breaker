@@ -4,12 +4,14 @@
     legendary: (
         prefix: "",
         effects: [
-            On(target: Breaker, then: [
-                When(trigger: BoltLost, then: [
-                    Do(SpeedBoost(multiplier: 2.0)),
-                    Do(SpawnBolts(count: 1, inherit: true)),
-                ]),
-            ]),
+            Stamp(Breaker,
+                When(BoltLostOccurred,
+                    Sequence([
+                        Fire(SpeedBoost(SpeedBoostConfig(multiplier: 2.0))),
+                        Fire(SpawnBolts(SpawnBoltsConfig(count: 1, lifespan: None, inherit: true))),
+                    ]),
+                ),
+            ),
         ],
     ),
 )

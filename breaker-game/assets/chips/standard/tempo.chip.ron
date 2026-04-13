@@ -4,13 +4,13 @@
     legendary: (
         prefix: "",
         effects: [
-            On(target: AllBolts, then: [
-                When(trigger: Bumped, then: [
-                    Until(trigger: BumpWhiff, then: [
-                        Do(SpeedBoost(multiplier: 1.2)),
-                    ]),
-                ]),
-            ]),
+            Stamp(EveryBolt,
+                When(Bumped,
+                    Until(BumpWhiffOccurred,
+                        Fire(SpeedBoost(SpeedBoostConfig(multiplier: 1.2))),
+                    ),
+                ),
+            ),
         ],
     ),
 )

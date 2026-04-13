@@ -4,22 +4,24 @@
     uncommon: (
         prefix: "Quick",
         effects: [
-            On(target: Breaker, then: [
-                When(trigger: PerfectBump, then: [
-                    Do(SpawnBolts()),
-                ]),
-            ]),
+            Stamp(Breaker,
+                When(PerfectBumped,
+                    Fire(SpawnBolts(SpawnBoltsConfig(count: 1, lifespan: None, inherit: false))),
+                ),
+            ),
         ],
     ),
     rare: (
         prefix: "Lightning",
         effects: [
-            On(target: Breaker, then: [
-                When(trigger: PerfectBump, then: [
-                    Do(SpawnBolts()),
-                    Do(SpeedBoost(multiplier: 1.2)),
-                ]),
-            ]),
+            Stamp(Breaker,
+                When(PerfectBumped,
+                    Sequence([
+                        Fire(SpawnBolts(SpawnBoltsConfig(count: 1, lifespan: None, inherit: false))),
+                        Fire(SpeedBoost(SpeedBoostConfig(multiplier: 1.2))),
+                    ]),
+                ),
+            ),
         ],
     ),
 )

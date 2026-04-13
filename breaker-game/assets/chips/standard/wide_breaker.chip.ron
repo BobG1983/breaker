@@ -4,25 +4,25 @@
     common: (
         prefix: "Slight",
         effects: [
-            On(target: Breaker, then: [
-                Do(SizeBoost(1.05)),
-            ]),
+            Stamp(Breaker,
+                Fire(SizeBoost(SizeBoostConfig(multiplier: 1.05))),
+            ),
         ],
     ),
     uncommon: (
         prefix: "Sturdy",
         effects: [
-            On(target: Breaker, then: [
-                Do(SizeBoost(1.1)),
-            ]),
+            Stamp(Breaker,
+                Fire(SizeBoost(SizeBoostConfig(multiplier: 1.1))),
+            ),
         ],
     ),
     rare: (
         prefix: "Massive",
         effects: [
-            On(target: Breaker, then: [
-                Do(SizeBoost(1.15)),
-            ]),
+            Stamp(Breaker,
+                Fire(SizeBoost(SizeBoostConfig(multiplier: 1.15))),
+            ),
         ],
     ),
 )

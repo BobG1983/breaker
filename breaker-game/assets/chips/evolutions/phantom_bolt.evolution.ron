@@ -2,11 +2,11 @@
     name: "Phantom Bolt",
     description: "Successful bumps summon a spectral phantom bolt",
     effects: [
-        On(target: Breaker, then: [
-            When(trigger: Bump, then: [
-                Do(SpawnPhantom(duration: 5.0, max_active: 5)),
-            ]),
-        ]),
+        Stamp(Breaker,
+            When(Bumped,
+                Fire(SpawnPhantom(SpawnPhantomConfig(duration: 5.0, max_active: 5))),
+            ),
+        ),
     ],
     ingredients: [
         (chip_name: "Wide Breaker", stacks_required: 2),

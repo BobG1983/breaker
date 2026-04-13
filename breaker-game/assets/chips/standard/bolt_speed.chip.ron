@@ -4,26 +4,28 @@
     common: (
         prefix: "Slight",
         effects: [
-            On(target: Bolt, then: [
-                Do(SpeedBoost(multiplier: 1.1)),
-            ]),
+            Stamp(Bolt,
+                Fire(SpeedBoost(SpeedBoostConfig(multiplier: 1.1))),
+            ),
         ],
     ),
     uncommon: (
         prefix: "Swift",
         effects: [
-            On(target: Bolt, then: [
-                Do(SpeedBoost(multiplier: 1.2)),
-            ]),
+            Stamp(Bolt,
+                Fire(SpeedBoost(SpeedBoostConfig(multiplier: 1.2))),
+            ),
         ],
     ),
     rare: (
         prefix: "Blazing",
         effects: [
-            On(target: Bolt, then: [
-                Do(SpeedBoost(multiplier: 1.3)),
-                Do(DamageBoost(1.05)),
-            ]),
+            Stamp(Bolt,
+                Sequence([
+                    Fire(SpeedBoost(SpeedBoostConfig(multiplier: 1.3))),
+                    Fire(DamageBoost(DamageBoostConfig(multiplier: 1.05))),
+                ]),
+            ),
         ],
     ),
 )

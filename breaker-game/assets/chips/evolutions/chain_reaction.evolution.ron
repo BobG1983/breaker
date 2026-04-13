@@ -2,11 +2,11 @@
     name: "Shock Chain",
     description: "Destroyed cells trigger recursive shockwaves — each kill spawns another wave",
     effects: [
-        On(target: Bolt, then: [
-            When(trigger: CellDestroyed, then: [
-                Do(Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 400.0)),
-            ]),
-        ]),
+        Stamp(Bolt,
+            When(Killed(Cell),
+                Fire(Shockwave(ShockwaveConfig(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 400.0))),
+            ),
+        ),
     ],
     ingredients: [
         (chip_name: "Chain Reaction", stacks_required: 1),

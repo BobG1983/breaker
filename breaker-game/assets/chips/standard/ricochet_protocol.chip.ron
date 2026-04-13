@@ -4,13 +4,13 @@
     legendary: (
         prefix: "",
         effects: [
-            On(target: Bolt, then: [
-                When(trigger: Impacted(Wall), then: [
-                    Until(trigger: Impacted(Wall), then: [
-                        Do(DamageBoost(3.0)),
-                    ]),
-                ]),
-            ]),
+            Stamp(Bolt,
+                When(Impacted(Wall),
+                    Until(Impacted(Wall),
+                        Fire(DamageBoost(DamageBoostConfig(multiplier: 3.0))),
+                    ),
+                ),
+            ),
         ],
     ),
 )

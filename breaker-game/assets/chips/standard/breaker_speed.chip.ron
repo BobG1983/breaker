@@ -4,26 +4,28 @@
     common: (
         prefix: "Quick",
         effects: [
-            On(target: Breaker, then: [
-                Do(SpeedBoost(multiplier: 1.1)),
-            ]),
+            Stamp(Breaker,
+                Fire(SpeedBoost(SpeedBoostConfig(multiplier: 1.1))),
+            ),
         ],
     ),
     uncommon: (
         prefix: "Agile",
         effects: [
-            On(target: Breaker, then: [
-                Do(SpeedBoost(multiplier: 1.2)),
-            ]),
+            Stamp(Breaker,
+                Fire(SpeedBoost(SpeedBoostConfig(multiplier: 1.2))),
+            ),
         ],
     ),
     rare: (
         prefix: "Lightning",
         effects: [
-            On(target: Breaker, then: [
-                Do(SpeedBoost(multiplier: 1.3)),
-                Do(BumpForce(1.1)),
-            ]),
+            Stamp(Breaker,
+                Sequence([
+                    Fire(SpeedBoost(SpeedBoostConfig(multiplier: 1.3))),
+                    Fire(BumpForce(BumpForceConfig(multiplier: 1.1))),
+                ]),
+            ),
         ],
     ),
 )

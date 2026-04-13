@@ -4,26 +4,28 @@
     common: (
         prefix: "Basic",
         effects: [
-            On(target: Bolt, then: [
-                Do(Piercing(1)),
-            ]),
+            Stamp(Bolt,
+                Fire(Piercing(PiercingConfig(charges: 1))),
+            ),
         ],
     ),
     uncommon: (
         prefix: "Keen",
         effects: [
-            On(target: Bolt, then: [
-                Do(Piercing(2)),
-            ]),
+            Stamp(Bolt,
+                Fire(Piercing(PiercingConfig(charges: 2))),
+            ),
         ],
     ),
     rare: (
         prefix: "Brutal",
         effects: [
-            On(target: Bolt, then: [
-                Do(Piercing(3)),
-                Do(DamageBoost(1.1)),
-            ]),
+            Stamp(Bolt,
+                Sequence([
+                    Fire(Piercing(PiercingConfig(charges: 3))),
+                    Fire(DamageBoost(DamageBoostConfig(multiplier: 1.1))),
+                ]),
+            ),
         ],
     ),
 )

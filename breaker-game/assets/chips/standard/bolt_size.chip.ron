@@ -4,25 +4,25 @@
     common: (
         prefix: "Broad",
         effects: [
-            On(target: Bolt, then: [
-                Do(SizeBoost(1.15)),
-            ]),
+            Stamp(Bolt,
+                Fire(SizeBoost(SizeBoostConfig(multiplier: 1.15))),
+            ),
         ],
     ),
     uncommon: (
         prefix: "Expanded",
         effects: [
-            On(target: Bolt, then: [
-                Do(SizeBoost(1.25)),
-            ]),
+            Stamp(Bolt,
+                Fire(SizeBoost(SizeBoostConfig(multiplier: 1.25))),
+            ),
         ],
     ),
     rare: (
         prefix: "Massive",
         effects: [
-            On(target: Bolt, then: [
-                Do(SizeBoost(1.4)),
-            ]),
+            Stamp(Bolt,
+                Fire(SizeBoost(SizeBoostConfig(multiplier: 1.4))),
+            ),
         ],
     ),
 )

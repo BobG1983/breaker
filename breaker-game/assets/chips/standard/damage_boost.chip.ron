@@ -4,25 +4,25 @@
     common: (
         prefix: "Minor",
         effects: [
-            On(target: Bolt, then: [
-                Do(DamageBoost(1.1)),
-            ]),
+            Stamp(Bolt,
+                Fire(DamageBoost(DamageBoostConfig(multiplier: 1.1))),
+            ),
         ],
     ),
     uncommon: (
         prefix: "Potent",
         effects: [
-            On(target: Bolt, then: [
-                Do(DamageBoost(1.2)),
-            ]),
+            Stamp(Bolt,
+                Fire(DamageBoost(DamageBoostConfig(multiplier: 1.2))),
+            ),
         ],
     ),
     rare: (
         prefix: "Savage",
         effects: [
-            On(target: Bolt, then: [
-                Do(DamageBoost(1.35)),
-            ]),
+            Stamp(Bolt,
+                Fire(DamageBoost(DamageBoostConfig(multiplier: 1.35))),
+            ),
         ],
     ),
 )

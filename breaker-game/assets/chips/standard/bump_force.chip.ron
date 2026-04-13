@@ -4,25 +4,25 @@
     common: (
         prefix: "Firm",
         effects: [
-            On(target: Breaker, then: [
-                Do(BumpForce(1.1)),
-            ]),
+            Stamp(Breaker,
+                Fire(BumpForce(BumpForceConfig(multiplier: 1.1))),
+            ),
         ],
     ),
     uncommon: (
         prefix: "Strong",
         effects: [
-            On(target: Breaker, then: [
-                Do(BumpForce(1.2)),
-            ]),
+            Stamp(Breaker,
+                Fire(BumpForce(BumpForceConfig(multiplier: 1.2))),
+            ),
         ],
     ),
     rare: (
         prefix: "Crushing",
         effects: [
-            On(target: Breaker, then: [
-                Do(BumpForce(1.35)),
-            ]),
+            Stamp(Breaker,
+                Fire(BumpForce(BumpForceConfig(multiplier: 1.35))),
+            ),
         ],
     ),
 )

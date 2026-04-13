@@ -4,25 +4,25 @@
     common: (
         prefix: "Sluggish",
         effects: [
-            On(target: Breaker, then: [
-                Do(QuickStop(multiplier: 1.5)),
-            ]),
+            Stamp(Breaker,
+                Fire(QuickStop(QuickStopConfig(multiplier: 1.5))),
+            ),
         ],
     ),
     uncommon: (
         prefix: "Responsive",
         effects: [
-            On(target: Breaker, then: [
-                Do(QuickStop(multiplier: 2.0)),
-            ]),
+            Stamp(Breaker,
+                Fire(QuickStop(QuickStopConfig(multiplier: 2.0))),
+            ),
         ],
     ),
     rare: (
         prefix: "Instant",
         effects: [
-            On(target: Breaker, then: [
-                Do(QuickStop(multiplier: 3.0)),
-            ]),
+            Stamp(Breaker,
+                Fire(QuickStop(QuickStopConfig(multiplier: 3.0))),
+            ),
         ],
     ),
 )

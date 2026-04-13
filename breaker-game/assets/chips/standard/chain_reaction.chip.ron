@@ -4,13 +4,13 @@
     legendary: (
         prefix: "",
         effects: [
-            On(target: Bolt, then: [
-                When(trigger: CellDestroyed, then: [
-                    When(trigger: CellDestroyed, then: [
-                        Do(SpawnBolts()),
-                    ]),
-                ]),
-            ]),
+            Stamp(Bolt,
+                When(Killed(Cell),
+                    When(Killed(Cell),
+                        Fire(SpawnBolts(SpawnBoltsConfig(count: 1, lifespan: None, inherit: false))),
+                    ),
+                ),
+            ),
         ],
     ),
 )
