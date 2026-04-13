@@ -66,7 +66,6 @@ impl WallBuilder<NoSide> {
     }
 
     /// Transitions to a Floor wall, capturing playfield data.
-    #[cfg(test)]
     #[must_use]
     pub(crate) fn floor(self, playfield: &PlayfieldConfig) -> WallBuilder<Floor> {
         WallBuilder {

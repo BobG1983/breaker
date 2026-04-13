@@ -51,6 +51,7 @@ impl Plugin for EffectV3Plugin {
         effects::GravityWellConfig::register(app);
         effects::PulseConfig::register(app);
         effects::RampingDamageConfig::register(app);
+        effects::SecondWindConfig::register(app);
         effects::ShieldConfig::register(app);
         effects::ShockwaveConfig::register(app);
         effects::SpawnPhantomConfig::register(app);

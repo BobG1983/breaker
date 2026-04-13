@@ -33,7 +33,6 @@ pub(crate) struct Ceiling {
 }
 
 /// Floor wall marker — stores playfield data for bottom edge.
-#[cfg(test)]
 pub(crate) struct Floor {
     pub(crate) playfield_bottom: f32,
     pub(crate) half_width:       f32,
@@ -98,7 +97,6 @@ impl SideData for Ceiling {
     }
 }
 
-#[cfg(test)]
 impl SideData for Floor {
     fn compute_position(&self, _ht: f32) -> Vec2 {
         Vec2::new(0.0, self.playfield_bottom)
