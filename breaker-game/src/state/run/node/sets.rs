@@ -22,4 +22,9 @@ pub enum NodeSystems {
     ApplyTimePenalty,
     /// The `init_node_timer` system — initializes the node countdown timer.
     InitTimer,
+    /// Cell cleanup on node teardown (`cleanup_on_exit::<NodeState>`). Runs
+    /// in `OnEnter(NodeState::Teardown)`. Systems that need to observe a
+    /// cleaned-up world (e.g. `effect_v3::triggers::node::on_node_end_occurred`)
+    /// should run `.after(NodeSystems::Cleanup)`.
+    Cleanup,
 }

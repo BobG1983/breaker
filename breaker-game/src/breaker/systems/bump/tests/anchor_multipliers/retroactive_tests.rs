@@ -24,6 +24,8 @@ fn retroactive_grade_uses_widened_perfect_window_via_pre_seeded_timer() {
     // Effective perfect window = 0.30. Since 0.171875 <= 0.30, grade is Perfect.
     let mut app = combined_bump_test_app();
 
+    let bolt_entity = app.world_mut().spawn_empty().id();
+
     app.world_mut().spawn((
         Breaker,
         AnchorPlanted,
@@ -34,6 +36,7 @@ fn retroactive_grade_uses_widened_perfect_window_via_pre_seeded_timer() {
         },
         BumpState {
             post_hit_timer: 0.45,
+            last_hit_bolt: Some(bolt_entity),
             ..Default::default()
         },
         BumpPerfectWindow(0.15),
@@ -71,11 +74,14 @@ fn retroactive_grade_with_unwidened_timer_is_late() {
     // raw perfect_window = 0.15. Since 0.171875 > 0.15, grade is Late.
     let mut app = combined_bump_test_app();
 
+    let bolt_entity = app.world_mut().spawn_empty().id();
+
     app.world_mut().spawn((
         Breaker,
         // NO AnchorPlanted -- unwidened post_hit_timer
         BumpState {
             post_hit_timer: 0.30,
+            last_hit_bolt: Some(bolt_entity),
             ..Default::default()
         },
         BumpPerfectWindow(0.15),

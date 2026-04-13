@@ -7,6 +7,7 @@ use super::helpers::*;
 use crate::breaker::{
     components::{Breaker, BumpState},
     definition::BreakerDefinition,
+    messages::BumpGrade,
 };
 
 // ---------------------------------------------------------------------------
@@ -411,5 +412,144 @@ fn no_bump_sent_when_bolt_serving_present() {
         captured.0.len(),
         1,
         "NoBump should be sent even when BoltServing is present (serving only blocks input activation)"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Behavior 11: NoBump NOT sent when retroactive press lands on the exact
+// post_hit_timer expiry frame (Late grade)
+//
+// `NoBump` contract (doc on the message in `breaker/messages.rs`): "Sent when
+// the retroactive bump window expires without the player pressing bump." A
+// press that lands on the exact expiry frame IS the player pressing bump
+// during the post-hit window, so a Late-grade BumpPerformed MUST fire instead
+// of NoBump.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn no_bump_not_sent_when_retroactive_press_lands_on_exact_expiry_frame() {
+    let mut app = update_bump_with_no_bump_test_app();
+
+    let bolt_entity = app.world_mut().spawn_empty().id();
+    let breaker_entity = app
+        .world_mut()
+        .spawn((
+            Breaker,
+            BumpState {
+                // Exactly one fixed tick at 64 Hz — ticks down to exactly 0.0
+                // on a single `tick(&mut app)` call. The literal `1.0 / 64.0`
+                // communicates intent and stays robust to power-of-two fixed
+                // timestep reconfiguration.
+                post_hit_timer: 1.0 / 64.0,
+                last_hit_bolt:  Some(bolt_entity),
+                active:         false,
+                timer:          0.0,
+                cooldown:       0.0,
+            },
+            bump_param_bundle(&BreakerDefinition::default()),
+        ))
+        .id();
+
+    app.insert_resource(TestInputActive(true));
+    tick(&mut app);
+
+    let no_bumps = app.world().resource::<CapturedNoBumps>();
+    assert_eq!(
+        no_bumps.0.len(),
+        0,
+        "NoBump must not fire when retroactive press lands on the exact expiry frame"
+    );
+
+    let bumps = app.world().resource::<CapturedBumps>();
+    assert_eq!(
+        bumps.0.len(),
+        1,
+        "retroactive BumpPerformed must fire instead of NoBump on the boundary"
+    );
+    // time_since_hit = (perfect_window + late_window) - post_hit_timer
+    //                = (0.15 + 0.15) - 0.0 = 0.30 > perfect_window (0.15)
+    // so retroactive_grade returns Late.
+    assert_eq!(
+        bumps.0[0].grade,
+        BumpGrade::Late,
+        "boundary retroactive press should grade as Late, not Perfect"
+    );
+    assert_eq!(bumps.0[0].bolt, Some(bolt_entity));
+    assert_eq!(bumps.0[0].breaker, breaker_entity);
+
+    let bump = app.world().get::<BumpState>(breaker_entity).unwrap();
+    assert!(
+        bump.last_hit_bolt.is_none(),
+        "last_hit_bolt should be cleared by the retroactive path"
+    );
+    assert!(
+        bump.post_hit_timer <= 0.0,
+        "post_hit_timer should be cleared by the retroactive path"
+    );
+    // Load-bearing: under the buggy code, `active` is `true` because the press
+    // fell through to the `else if !active` forward-window branch.
+    assert!(
+        !bump.active,
+        "no forward window should be opened when the press was consumed retroactively"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Behavior 12: NoBump IS sent when post_hit_timer expires on the exact tick
+// boundary with no input
+//
+// Complementary to Behavior 11: pins the no-input expiry path at the same
+// exact tick boundary to guard against regressions from the Behavior 11 fix.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn no_bump_sent_when_post_hit_timer_expires_on_exact_tick_boundary_without_input() {
+    let mut app = update_bump_with_no_bump_test_app();
+
+    let bolt_entity = app.world_mut().spawn_empty().id();
+    let breaker_entity = app
+        .world_mut()
+        .spawn((
+            Breaker,
+            BumpState {
+                // Same exact-boundary starting condition as Behavior 11.
+                post_hit_timer: 1.0 / 64.0,
+                last_hit_bolt:  Some(bolt_entity),
+                active:         false,
+                timer:          0.0,
+                cooldown:       0.0,
+            },
+            bump_param_bundle(&BreakerDefinition::default()),
+        ))
+        .id();
+
+    app.insert_resource(TestInputActive(false));
+    tick(&mut app);
+
+    let no_bumps = app.world().resource::<CapturedNoBumps>();
+    assert_eq!(
+        no_bumps.0.len(),
+        1,
+        "NoBump must fire when retroactive window expires on the exact tick boundary with no input"
+    );
+    assert_eq!(no_bumps.0[0].bolt, bolt_entity);
+    assert_eq!(no_bumps.0[0].breaker, breaker_entity);
+
+    let bumps = app.world().resource::<CapturedBumps>();
+    assert_eq!(
+        bumps.0.len(),
+        0,
+        "no BumpPerformed should be emitted when the player did not press"
+    );
+
+    let bump = app.world().get::<BumpState>(breaker_entity).unwrap();
+    assert!(
+        bump.last_hit_bolt.is_none(),
+        "last_hit_bolt should be consumed by the NoBump expiry block"
+    );
+    assert!(bump.post_hit_timer <= 0.0);
+    assert!(
+        !bump.active,
+        "no forward window should be opened when there was no input"
     );
 }

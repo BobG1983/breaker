@@ -10,6 +10,8 @@ fn retroactive_perfect_grades_and_sets_zero_cooldown() {
     let mut app = update_bump_test_app();
     let config = BreakerDefinition::default();
 
+    let bolt_entity = app.world_mut().spawn_empty().id();
+
     // post_hit_timer at max — just hit, pressing immediately
     let entity = app
         .world_mut()
@@ -17,6 +19,7 @@ fn retroactive_perfect_grades_and_sets_zero_cooldown() {
             Breaker,
             BumpState {
                 post_hit_timer: config.perfect_window + config.late_window,
+                last_hit_bolt: Some(bolt_entity),
                 ..Default::default()
             },
             bump_param_bundle(&config),
@@ -45,12 +48,15 @@ fn retroactive_late_grades_correctly() {
     let mut app = update_bump_test_app();
     let config = BreakerDefinition::default();
 
+    let bolt_entity = app.world_mut().spawn_empty().id();
+
     // post_hit_timer low — hit happened a while ago, pressing late
     let remaining = config.late_window * 0.5; // some time left but past perfect
     app.world_mut().spawn((
         Breaker,
         BumpState {
             post_hit_timer: remaining,
+            last_hit_bolt: Some(bolt_entity),
             ..Default::default()
         },
         bump_param_bundle(&config),

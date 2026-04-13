@@ -6,7 +6,10 @@ use super::{
     bridges, check_thresholds, messages::NodeTimerThresholdCrossed, reset_fired,
     resources::NodeTimerThresholdRegistry, scan_thresholds,
 };
-use crate::{effect_v3::EffectV3Systems, state::types::NodeState};
+use crate::{
+    effect_v3::EffectV3Systems,
+    state::{run::node::sets::NodeSystems, types::NodeState},
+};
 
 /// Registers node trigger bridge systems, the threshold checker, and resources.
 pub fn register(app: &mut App) {
@@ -23,7 +26,10 @@ pub fn register(app: &mut App) {
         )
             .chain(),
     );
-    app.add_systems(OnExit(NodeState::Playing), bridges::on_node_end_occurred);
+    app.add_systems(
+        OnEnter(NodeState::Teardown),
+        bridges::on_node_end_occurred.after(NodeSystems::Cleanup),
+    );
 
     // Threshold checker and its bridge run in FixedUpdate
     app.add_systems(

@@ -43,6 +43,7 @@ Domains MAY define a `pub enum {Domain}Systems` with `#[derive(SystemSet)]` in `
 | `NodeSystems::ApplyTimePenalty` | `state/run/node/sets.rs` | `apply_time_penalty` |
 | `NodeSystems::Spawn` | `state/run/node/sets.rs` | `spawn_cells_from_layout` (OnEnter) |
 | `NodeSystems::InitTimer` | `state/run/node/sets.rs` | `init_node_timer` (OnEnter) |
+| `NodeSystems::Cleanup` | `state/run/node/sets.rs` | `cleanup_on_exit::<NodeState>` (OnEnter Teardown — effect bridges that need a cleaned-up world order `.after(NodeSystems::Cleanup)`) |
 
 **Example:**
 

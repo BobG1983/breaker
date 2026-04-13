@@ -44,7 +44,10 @@ impl Plugin for NodePlugin {
                 .to(NodeState::Teardown)
                 .when(|_| true),
         );
-        app.add_systems(OnEnter(NodeState::Teardown), cleanup_on_exit::<NodeState>);
+        app.add_systems(
+            OnEnter(NodeState::Teardown),
+            cleanup_on_exit::<NodeState>.in_set(NodeSystems::Cleanup),
+        );
 
         app.init_resource::<ClearRemainingCount>()
             .init_resource::<NodeTimer>()

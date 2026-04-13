@@ -97,7 +97,7 @@ pub(crate) fn update_bump(
 
         // Bump input — skip when bolt is still serving (launch_bolt handles that press)
         if actions.active(GameAction::Bump) && data.bump.cooldown <= 0.0 && !bolt_serving {
-            if data.bump.post_hit_timer > 0.0 {
+            if data.bump.last_hit_bolt.is_some() {
                 // Retroactive path: bolt already hit, player pressing after
                 let time_since_hit = (effective_pw + data.late_window.0) - data.bump.post_hit_timer;
                 let grade = retroactive_grade(time_since_hit, effective_pw);
