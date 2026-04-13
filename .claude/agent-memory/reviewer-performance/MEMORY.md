@@ -19,3 +19,8 @@
 - [Birthing animation query patterns](birthing_animation_patterns.md) — tick_birthing/all_animate_in_complete/begin_node_birthing and Without<Birthing> proliferation — all acceptable at 1-few bolt scale
 - [Toughness + HP Scaling patterns](toughness_hp_scaling.md) — HpScale precomputed once per spawn batch (powi() + mul_add()); advance_node is OnEnter-only array index; all spawn-time, no per-frame cost
 - [test_utils patterns](test_utils_patterns.md) — TestAppBuilder used only in self-tests; 42 domain helpers define own test_app(); tick() duplicated verbatim across domains; all patterns are correct at test scale
+- [BoundEffects clone pattern in bridge systems](effect_v3_bound_effects_clone.md) — bound.0.clone() per entity per collision event; acceptable now, watch at Phase 3 with cells-as-effect-carriers
+- [scan_threshold_triggers per-frame pattern](effect_v3_scan_threshold_pattern.md) — HashSet alloc + recursive tree walk every FixedUpdate; acceptable at 1 breaker + few chips; Phase 3 risk if cells get BoundEffects
+- [death bridge double global_query walk](effect_v3_death_bridge_double_global_walk.md) — Specific+Any requires two global_query.iter() per death; intentional design, negligible now, revisit at Phase 3 teardown
+- [entropy_engine and circuit_breaker Vec alloc](effect_v3_entropy_vec_alloc.md) — collect() gated by bump_count > 0; real cost is fire_dispatch inside inner loop; acceptable at current counter/bump counts
+- [AnchorPlanted archetype churn pattern](anchor_archetype_pattern.md) — insert/remove marker on single Breaker entity; correct Without<> filtering; negligible at 1 entity scale
