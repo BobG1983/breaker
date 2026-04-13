@@ -23,6 +23,16 @@ pub struct CircuitBreakerConfig {
 }
 
 impl Fireable for CircuitBreakerConfig {
+    fn register(app: &mut App) {
+        use super::systems::tick_circuit_breaker;
+        use crate::effect_v3::EffectV3Systems;
+
+        app.add_systems(
+            FixedUpdate,
+            tick_circuit_breaker.in_set(EffectV3Systems::Tick),
+        );
+    }
+
     fn fire(&self, entity: Entity, _source: &str, world: &mut World) {
         if world.get_entity(entity).is_err() {
             return;

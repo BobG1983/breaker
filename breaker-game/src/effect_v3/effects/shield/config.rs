@@ -56,12 +56,14 @@ impl Fireable for ShieldConfig {
     }
 
     fn register(app: &mut App) {
-        use super::systems::tick_shield_duration;
+        use super::systems::{apply_shield_reflection_cost, tick_shield_duration};
         use crate::effect_v3::EffectV3Systems;
 
         app.add_systems(
             FixedUpdate,
-            tick_shield_duration.in_set(EffectV3Systems::Tick),
+            (tick_shield_duration, apply_shield_reflection_cost)
+                .chain()
+                .in_set(EffectV3Systems::Tick),
         );
     }
 }

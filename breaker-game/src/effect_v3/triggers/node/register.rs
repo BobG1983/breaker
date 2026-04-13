@@ -3,8 +3,8 @@
 use bevy::prelude::*;
 
 use super::{
-    bridges, check_thresholds, messages::NodeTimerThresholdCrossed,
-    resources::NodeTimerThresholdRegistry,
+    bridges, check_thresholds, messages::NodeTimerThresholdCrossed, reset_fired,
+    resources::NodeTimerThresholdRegistry, scan_thresholds,
 };
 use crate::{effect_v3::EffectV3Systems, state::types::NodeState};
 
@@ -14,7 +14,15 @@ pub fn register(app: &mut App) {
     app.add_message::<NodeTimerThresholdCrossed>();
 
     // NodeStart/NodeEnd are state-transition-based, not FixedUpdate
-    app.add_systems(OnEnter(NodeState::Playing), bridges::on_node_start_occurred);
+    app.add_systems(
+        OnEnter(NodeState::Playing),
+        (
+            scan_thresholds::scan_threshold_triggers,
+            reset_fired::reset_threshold_fired,
+            bridges::on_node_start_occurred,
+        )
+            .chain(),
+    );
     app.add_systems(OnExit(NodeState::Playing), bridges::on_node_end_occurred);
 
     // Threshold checker and its bridge run in FixedUpdate

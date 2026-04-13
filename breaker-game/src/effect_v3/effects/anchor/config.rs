@@ -5,7 +5,11 @@ use ordered_float::OrderedFloat;
 use serde::{Deserialize, Serialize};
 
 use super::components::{AnchorActive, AnchorPlanted, AnchorTimer};
-use crate::effect_v3::traits::{Fireable, Reversible};
+use crate::effect_v3::{
+    effects::piercing::PiercingConfig,
+    stacking::EffectStack,
+    traits::{Fireable, Reversible},
+};
 
 /// Configuration for the anchor effect on the breaker.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -34,10 +38,15 @@ impl Fireable for AnchorConfig {
     }
 
     fn register(app: &mut App) {
-        use super::systems::tick_anchor;
+        use super::systems::{detect_breaker_movement, tick_anchor};
         use crate::effect_v3::EffectV3Systems;
 
-        app.add_systems(FixedUpdate, tick_anchor.in_set(EffectV3Systems::Tick));
+        app.add_systems(
+            FixedUpdate,
+            (detect_breaker_movement, tick_anchor)
+                .chain()
+                .in_set(EffectV3Systems::Tick),
+        );
     }
 }
 
@@ -51,5 +60,9 @@ impl Reversible for AnchorConfig {
             .remove::<AnchorActive>()
             .remove::<AnchorTimer>()
             .remove::<AnchorPlanted>();
+
+        if let Some(mut stack) = world.get_mut::<EffectStack<PiercingConfig>>(entity) {
+            stack.remove("anchor_piercing", &PiercingConfig { charges: 1 });
+        }
     }
 }

@@ -46,9 +46,11 @@ impl Plugin for EffectV3Plugin {
         effects::AnchorConfig::register(app);
         effects::AttractionConfig::register(app);
         effects::ChainLightningConfig::register(app);
+        effects::CircuitBreakerConfig::register(app);
         effects::EntropyConfig::register(app);
         effects::GravityWellConfig::register(app);
         effects::PulseConfig::register(app);
+        effects::RampingDamageConfig::register(app);
         effects::ShieldConfig::register(app);
         effects::ShockwaveConfig::register(app);
         effects::SpawnPhantomConfig::register(app);

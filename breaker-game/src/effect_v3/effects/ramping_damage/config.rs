@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use ordered_float::OrderedFloat;
 use serde::{Deserialize, Serialize};
 
+use super::components::RampingDamageAccumulator;
 use crate::effect_v3::{
     stacking::EffectStack,
     traits::{Fireable, PassiveEffect, Reversible},
@@ -27,6 +28,22 @@ impl Fireable for RampingDamageConfig {
         if let Some(mut stack) = world.get_mut::<EffectStack<Self>>(entity) {
             stack.push(source.to_owned(), self.clone());
         }
+        // Insert accumulator if not already present.
+        if world.get::<RampingDamageAccumulator>(entity).is_none() {
+            world
+                .entity_mut(entity)
+                .insert(RampingDamageAccumulator(OrderedFloat(0.0)));
+        }
+    }
+
+    fn register(app: &mut App) {
+        use super::systems::reset_ramping_damage;
+        use crate::{effect_v3::EffectV3Systems, state::types::NodeState};
+
+        app.add_systems(
+            OnEnter(NodeState::Loading),
+            reset_ramping_damage.in_set(EffectV3Systems::Reset),
+        );
     }
 }
 
@@ -34,6 +51,12 @@ impl Reversible for RampingDamageConfig {
     fn reverse(&self, entity: Entity, source: &str, world: &mut World) {
         if let Some(mut stack) = world.get_mut::<EffectStack<Self>>(entity) {
             stack.remove(source, self);
+            // Remove accumulator when stack is empty.
+            if stack.is_empty() {
+                world
+                    .entity_mut(entity)
+                    .remove::<RampingDamageAccumulator>();
+            }
         }
     }
 }
