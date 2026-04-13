@@ -19,6 +19,7 @@ pub(crate) struct DamageDealt<T: GameEntity> {
     /// Pre-calculated damage amount (includes any multipliers from the sender).
     pub amount:      f32,
     /// Which chip originated this damage chain, for UI/stats.
+    #[expect(dead_code, reason = "awaiting UI/stats consumer")]
     pub source_chip: Option<String>,
     /// Marker for the victim entity type.
     pub _marker:     PhantomData<T>,

@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use super::{sets::EffectV3Systems, storage::SpawnStampRegistry, triggers};
+use super::{conditions, sets::EffectV3Systems, storage::SpawnStampRegistry, triggers};
 
 /// Plugin for the effect v3 domain.
 ///
@@ -20,6 +20,12 @@ impl Plugin for EffectV3Plugin {
                 EffectV3Systems::Tick.after(EffectV3Systems::Bridge),
                 EffectV3Systems::Conditions.after(EffectV3Systems::Tick),
             ),
+        );
+
+        // Condition evaluation
+        app.add_systems(
+            FixedUpdate,
+            conditions::evaluate_conditions.in_set(EffectV3Systems::Conditions),
         );
 
         // Shared resources

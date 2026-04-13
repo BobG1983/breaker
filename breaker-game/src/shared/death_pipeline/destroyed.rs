@@ -18,8 +18,10 @@ pub(crate) struct Destroyed<T: GameEntity> {
     /// The entity that caused the death (`None` for environmental deaths).
     pub killer:     Option<Entity>,
     /// World position of the victim at time of death.
+    #[expect(dead_code, reason = "awaiting VFX consumer")]
     pub victim_pos: Vec2,
     /// World position of the killer, if it exists. Used for directional VFX.
+    #[expect(dead_code, reason = "awaiting VFX consumer")]
     pub killer_pos: Option<Vec2>,
     /// Marker for the victim entity type.
     pub _marker:    PhantomData<T>,
