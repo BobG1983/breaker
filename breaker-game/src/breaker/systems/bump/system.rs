@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use crate::{
     breaker::{
         components::{Breaker, DashState, DashStateTimer, SettleDuration},
-        messages::{BumpGrade, BumpPerformed, BumpWhiffed},
+        messages::{BumpGrade, BumpPerformed, BumpWhiffed, NoBump},
         queries::{BreakerBumpGradingData, BreakerBumpTimingData},
         resources::ForceBumpGrade,
     },
@@ -67,6 +67,7 @@ pub(crate) fn update_bump(
     time: Res<Time<Fixed>>,
     mut query: Query<(Entity, BreakerBumpTimingData), With<Breaker>>,
     mut writer: MessageWriter<BumpPerformed>,
+    mut no_bump_writer: MessageWriter<NoBump>,
     serving_query: Query<(), With<BoltServing>>,
 ) {
     let bolt_serving = !serving_query.is_empty();
@@ -115,6 +116,17 @@ pub(crate) fn update_bump(
                 data.bump.active = true;
                 data.bump.timer = data.early_window.0 + effective_pw;
             }
+        }
+
+        // Detect retroactive window expiry without bump input.
+        // Runs AFTER the input block so retroactive bump takes priority on same-frame expiry.
+        if data.bump.post_hit_timer <= 0.0
+            && let Some(bolt) = data.bump.last_hit_bolt.take()
+        {
+            no_bump_writer.write(NoBump {
+                bolt,
+                breaker: breaker_entity,
+            });
         }
     }
 }

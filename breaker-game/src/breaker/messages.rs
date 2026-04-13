@@ -33,6 +33,18 @@ pub struct BumpPerformed {
 #[derive(Message, Clone, Debug)]
 pub struct BumpWhiffed;
 
+/// Sent when the retroactive bump window expires without the player pressing bump.
+///
+/// This means a bolt hit the breaker, but the player never pressed bump during
+/// the post-hit window. Consumed by effect bridges for `NoBumpOccurred` trigger.
+#[derive(Message, Clone, Debug)]
+pub(crate) struct NoBump {
+    /// The bolt entity that hit the breaker.
+    pub bolt:    Entity,
+    /// The breaker entity that was hit.
+    pub breaker: Entity,
+}
+
 /// Sent by `spawn_breaker` after the breaker entity is spawned or confirmed to exist.
 ///
 /// Consumed by the spawn coordinator in the node subdomain.

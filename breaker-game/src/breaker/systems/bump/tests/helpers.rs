@@ -8,7 +8,7 @@ use crate::{
             BumpWeakCooldown, SettleDuration,
         },
         definition::BreakerDefinition,
-        messages::{BumpPerformed, BumpWhiffed},
+        messages::{BumpPerformed, BumpWhiffed, NoBump},
         systems::bump::{grade_bump, update_bump},
     },
     input::resources::{GameAction, InputActions},
@@ -48,6 +48,18 @@ pub(super) fn capture_whiffs(
     }
 }
 
+#[derive(Resource, Default)]
+pub(super) struct CapturedNoBumps(pub Vec<NoBump>);
+
+pub(super) fn capture_no_bumps(
+    mut reader: MessageReader<NoBump>,
+    mut captured: ResMut<CapturedNoBumps>,
+) {
+    for msg in reader.read() {
+        captured.0.push(msg.clone());
+    }
+}
+
 pub(super) fn bump_param_bundle(
     def: &BreakerDefinition,
 ) -> (
@@ -73,6 +85,7 @@ pub(super) fn update_bump_test_app() -> App {
         .with_resource::<InputActions>()
         .with_message::<BumpPerformed>()
         .with_message::<BumpWhiffed>()
+        .with_message::<NoBump>()
         .with_resource::<CapturedBumps>()
         .with_resource::<CapturedWhiffs>()
         .insert_resource(TestInputActive(false))
@@ -82,6 +95,28 @@ pub(super) fn update_bump_test_app() -> App {
                 set_bump_action.before(update_bump),
                 update_bump,
                 (capture_bumps, capture_whiffs).after(update_bump),
+            ),
+        )
+        .build()
+}
+
+/// Like `update_bump_test_app` but also registers `NoBump` message capture.
+pub(super) fn update_bump_with_no_bump_test_app() -> App {
+    TestAppBuilder::new()
+        .with_resource::<InputActions>()
+        .with_message::<BumpPerformed>()
+        .with_message::<BumpWhiffed>()
+        .with_message::<NoBump>()
+        .with_resource::<CapturedBumps>()
+        .with_resource::<CapturedWhiffs>()
+        .with_resource::<CapturedNoBumps>()
+        .insert_resource(TestInputActive(false))
+        .with_system(
+            FixedUpdate,
+            (
+                set_bump_action.before(update_bump),
+                update_bump,
+                (capture_bumps, capture_whiffs, capture_no_bumps).after(update_bump),
             ),
         )
         .build()
@@ -127,6 +162,7 @@ pub(super) fn combined_bump_test_app() -> App {
         .with_message::<BoltImpactBreaker>()
         .with_message::<BumpPerformed>()
         .with_message::<BumpWhiffed>()
+        .with_message::<NoBump>()
         .with_resource::<CapturedBumps>()
         .with_resource::<CapturedWhiffs>()
         .insert_resource(TestInputActive(false))

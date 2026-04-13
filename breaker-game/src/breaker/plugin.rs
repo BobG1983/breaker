@@ -8,6 +8,7 @@ use crate::{
         BreakerSystems, ForceBumpGrade, SelectedBreaker,
         messages::{
             BreakerImpactCell, BreakerImpactWall, BreakerSpawned, BumpPerformed, BumpWhiffed,
+            NoBump,
         },
         systems::{
             animate_bump_visual, animate_tilt_visual, breaker_cell_collision,
@@ -32,6 +33,7 @@ impl Plugin for BreakerPlugin {
     fn build(&self, app: &mut App) {
         app.add_message::<BumpPerformed>()
             .add_message::<BumpWhiffed>()
+            .add_message::<NoBump>()
             .add_message::<BreakerSpawned>()
             .add_message::<BreakerImpactCell>()
             .add_message::<BreakerImpactWall>()
