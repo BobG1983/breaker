@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use super::components::{TetherBeamDamage, TetherBeamSource};
 use crate::{
     bolt::components::{Bolt, ExtraBolt},
-    effect_v3::traits::Fireable,
+    effect_v3::{components::EffectSourceChip, traits::Fireable},
     shared::{birthing::Birthing, rng::GameRng},
     state::types::NodeState,
 };
@@ -28,11 +28,11 @@ pub struct TetherBeamConfig {
 }
 
 impl Fireable for TetherBeamConfig {
-    fn fire(&self, entity: Entity, _source: &str, world: &mut World) {
+    fn fire(&self, entity: Entity, source: &str, world: &mut World) {
         if self.chain {
-            self.fire_chain(entity, world);
+            self.fire_chain(entity, source, world);
         } else {
-            self.fire_spawn(entity, world);
+            self.fire_spawn(entity, source, world);
         }
     }
 
@@ -51,7 +51,7 @@ impl Fireable for TetherBeamConfig {
 
 impl TetherBeamConfig {
     /// Spawn a new bolt and connect it to the source with a tether beam.
-    fn fire_spawn(&self, entity: Entity, world: &mut World) {
+    fn fire_spawn(&self, entity: Entity, source: &str, world: &mut World) {
         // Phase 1: Generate random angle (mutable borrow of GameRng)
         let angle: f32 = {
             let mut rng = world.resource_mut::<GameRng>();
@@ -70,6 +70,8 @@ impl TetherBeamConfig {
             .spawn((Bolt, ExtraBolt, Position2D(pos), Velocity2D(vel), birthing))
             .id();
 
+        let chip = EffectSourceChip::from_source(source);
+
         // Spawn tether beam source entity (NOT a bolt)
         world.spawn((
             TetherBeamSource {
@@ -77,12 +79,13 @@ impl TetherBeamConfig {
                 bolt_b: new_bolt,
             },
             TetherBeamDamage(self.damage_mult.0),
+            chip,
             CleanupOnExit::<NodeState>::default(),
         ));
     }
 
     /// Connect the source bolt to the nearest existing bolt with a tether beam.
-    fn fire_chain(&self, entity: Entity, world: &mut World) {
+    fn fire_chain(&self, entity: Entity, source: &str, world: &mut World) {
         // Read source position
         let source_pos = world.get::<Position2D>(entity).map_or(Vec2::ZERO, |p| p.0);
 
@@ -106,6 +109,8 @@ impl TetherBeamConfig {
             return;
         };
 
+        let chip = EffectSourceChip::from_source(source);
+
         // Spawn tether beam source entity
         world.spawn((
             TetherBeamSource {
@@ -113,6 +118,7 @@ impl TetherBeamConfig {
                 bolt_b: nearest_bolt,
             },
             TetherBeamDamage(self.damage_mult.0),
+            chip,
             CleanupOnExit::<NodeState>::default(),
         ));
     }
@@ -128,6 +134,7 @@ mod tests {
     use crate::{
         bolt::components::{Bolt, ExtraBolt},
         effect_v3::{
+            components::EffectSourceChip,
             effects::tether_beam::components::{TetherBeamDamage, TetherBeamSource},
             traits::Fireable,
         },
@@ -288,6 +295,200 @@ mod tests {
         assert_eq!(
             birthing_count, 1,
             "spawned bolt (bolt_b) should have Birthing component"
+        );
+    }
+
+    // ── Group D — fire() spawn-time chip attachment ────────────────────────
+
+    #[test]
+    fn fire_spawn_with_non_empty_source_attaches_chip_some() {
+        let mut world = World::new();
+        world.insert_resource(GameRng::from_seed(42));
+        let source = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
+
+        let config = TetherBeamConfig {
+            damage_mult: OrderedFloat(1.5),
+            chain:       false,
+        };
+        config.fire(source, "coil_chip", &mut world);
+        world.flush();
+
+        let chips: Vec<Option<String>> = world
+            .query_filtered::<&EffectSourceChip, With<TetherBeamSource>>()
+            .iter(&world)
+            .map(|c| c.0.clone())
+            .collect();
+        assert_eq!(chips.len(), 1, "exactly 1 TetherBeamSource entity expected");
+        assert_eq!(chips[0], Some("coil_chip".to_string()));
+
+        // The spawned ExtraBolt must NOT carry an EffectSourceChip.
+        let extra_bolt_chip_count = world
+            .query_filtered::<&EffectSourceChip, With<ExtraBolt>>()
+            .iter(&world)
+            .count();
+        assert_eq!(
+            extra_bolt_chip_count, 0,
+            "EffectSourceChip must be on the TetherBeamSource entity, not the ExtraBolt"
+        );
+    }
+
+    #[test]
+    fn fire_spawn_with_empty_source_attaches_chip_none() {
+        let mut world = World::new();
+        world.insert_resource(GameRng::from_seed(42));
+        let source = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
+
+        let config = TetherBeamConfig {
+            damage_mult: OrderedFloat(1.5),
+            chain:       false,
+        };
+        config.fire(source, "", &mut world);
+        world.flush();
+
+        let chips: Vec<Option<String>> = world
+            .query_filtered::<&EffectSourceChip, With<TetherBeamSource>>()
+            .iter(&world)
+            .map(|c| c.0.clone())
+            .collect();
+        assert_eq!(chips.len(), 1);
+        assert_eq!(
+            chips[0], None,
+            "empty source string must map to EffectSourceChip(None)"
+        );
+    }
+
+    #[test]
+    fn fire_chain_with_non_empty_source_attaches_chip_some() {
+        let mut world = World::new();
+        world.insert_resource(GameRng::from_seed(42));
+        let source = spawn_source(&mut world, Vec2::new(0.0, 0.0), Vec2::new(0.0, 400.0));
+        let _other = spawn_source(&mut world, Vec2::new(50.0, 0.0), Vec2::new(0.0, 400.0));
+
+        let config = TetherBeamConfig {
+            damage_mult: OrderedFloat(1.5),
+            chain:       true,
+        };
+        config.fire(source, "coil_chip", &mut world);
+        world.flush();
+
+        let chips: Vec<Option<String>> = world
+            .query_filtered::<&EffectSourceChip, With<TetherBeamSource>>()
+            .iter(&world)
+            .map(|c| c.0.clone())
+            .collect();
+        assert_eq!(chips.len(), 1, "exactly 1 TetherBeamSource entity expected");
+        assert_eq!(chips[0], Some("coil_chip".to_string()));
+    }
+
+    #[test]
+    fn fire_chain_with_empty_source_attaches_chip_none() {
+        let mut world = World::new();
+        world.insert_resource(GameRng::from_seed(42));
+        let source = spawn_source(&mut world, Vec2::new(0.0, 0.0), Vec2::new(0.0, 400.0));
+        let _other = spawn_source(&mut world, Vec2::new(50.0, 0.0), Vec2::new(0.0, 400.0));
+
+        let config = TetherBeamConfig {
+            damage_mult: OrderedFloat(1.5),
+            chain:       true,
+        };
+        config.fire(source, "", &mut world);
+        world.flush();
+
+        let chips: Vec<Option<String>> = world
+            .query_filtered::<&EffectSourceChip, With<TetherBeamSource>>()
+            .iter(&world)
+            .map(|c| c.0.clone())
+            .collect();
+        assert_eq!(chips.len(), 1);
+        assert_eq!(chips[0], None);
+    }
+
+    // ── Group E — fire_chain target selection ──────────────────────────────
+
+    #[test]
+    fn fire_chain_picks_nearest_other_bolt_by_squared_distance() {
+        let mut world = World::new();
+        world.insert_resource(GameRng::from_seed(42));
+        let source = spawn_source(&mut world, Vec2::new(0.0, 0.0), Vec2::new(0.0, 400.0));
+        let nearest_bolt_entity =
+            spawn_source(&mut world, Vec2::new(10.0, 0.0), Vec2::new(0.0, 400.0));
+        let _mid = spawn_source(&mut world, Vec2::new(50.0, 0.0), Vec2::new(0.0, 400.0));
+        let _far = spawn_source(&mut world, Vec2::new(200.0, 0.0), Vec2::new(0.0, 400.0));
+
+        let config = TetherBeamConfig {
+            damage_mult: OrderedFloat(1.5),
+            chain:       true,
+        };
+        config.fire(source, "coil_chip", &mut world);
+        world.flush();
+
+        let beams: Vec<TetherBeamSource> = world
+            .query::<&TetherBeamSource>()
+            .iter(&world)
+            .cloned()
+            .collect();
+        assert_eq!(beams.len(), 1);
+        assert_eq!(beams[0].bolt_a, source);
+        assert_eq!(
+            beams[0].bolt_b, nearest_bolt_entity,
+            "chain target must be the nearest other bolt"
+        );
+    }
+
+    #[test]
+    fn fire_chain_with_only_source_bolt_is_noop() {
+        let mut world = World::new();
+        world.insert_resource(GameRng::from_seed(42));
+        let source = spawn_source(&mut world, Vec2::new(0.0, 0.0), Vec2::new(0.0, 400.0));
+
+        let config = TetherBeamConfig {
+            damage_mult: OrderedFloat(1.5),
+            chain:       true,
+        };
+        config.fire(source, "coil_chip", &mut world);
+        world.flush();
+
+        let beam_count = world.query::<&TetherBeamSource>().iter(&world).count();
+        assert_eq!(
+            beam_count, 0,
+            "no beam should be spawned with only the source bolt"
+        );
+
+        let chip_count = world
+            .query_filtered::<&EffectSourceChip, With<TetherBeamSource>>()
+            .iter(&world)
+            .count();
+        assert_eq!(
+            chip_count, 0,
+            "no EffectSourceChip should be spawned either"
+        );
+    }
+
+    #[test]
+    fn fire_chain_with_two_equidistant_bolts_spawns_exactly_one_beam() {
+        let mut world = World::new();
+        world.insert_resource(GameRng::from_seed(42));
+        let source = spawn_source(&mut world, Vec2::new(0.0, 0.0), Vec2::new(0.0, 400.0));
+        let right_bolt = spawn_source(&mut world, Vec2::new(50.0, 0.0), Vec2::new(0.0, 400.0));
+        let left_bolt = spawn_source(&mut world, Vec2::new(-50.0, 0.0), Vec2::new(0.0, 400.0));
+
+        let config = TetherBeamConfig {
+            damage_mult: OrderedFloat(1.5),
+            chain:       true,
+        };
+        config.fire(source, "coil_chip", &mut world);
+        world.flush();
+
+        let beams: Vec<TetherBeamSource> = world
+            .query::<&TetherBeamSource>()
+            .iter(&world)
+            .cloned()
+            .collect();
+        assert_eq!(beams.len(), 1, "exactly 1 beam should be spawned");
+        assert_eq!(beams[0].bolt_a, source);
+        assert!(
+            beams[0].bolt_b == left_bolt || beams[0].bolt_b == right_bolt,
+            "beam target must be one of the two equidistant bolts"
         );
     }
 }
