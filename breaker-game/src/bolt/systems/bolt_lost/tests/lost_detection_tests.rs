@@ -5,7 +5,9 @@ use super::helpers::*;
 use crate::{
     bolt::{
         components::{Bolt, BoltAngleSpread, BoltSpawnOffsetY},
+        messages::BoltLost,
         resources::{DEFAULT_BOLT_ANGLE_SPREAD, DEFAULT_BOLT_SPAWN_OFFSET_Y},
+        systems::bolt_lost::system::bolt_lost,
     },
     breaker::components::Breaker,
     shared::{GameDrawLayer, NodeScalingFactor, PlayfieldConfig, birthing::Birthing},
@@ -591,5 +593,127 @@ fn bolt_lost_respawn_inserts_birthing_component() {
     assert!(
         app.world().get::<Birthing>(entity).is_some(),
         "respawned bolt must have Birthing component for scale-up animation"
+    );
+}
+
+// ── BoltLost message carries entity fields ──
+
+#[test]
+fn bolt_lost_sends_correct_bolt_and_breaker_entities_for_baseline() {
+    use crate::shared::test_utils::TestAppBuilder;
+
+    let mut app = TestAppBuilder::new()
+        .with_playfield()
+        .with_resource::<crate::shared::GameRng>()
+        .with_message::<BoltLost>()
+        .with_system(FixedUpdate, (bolt_lost, capture_bolt_lost.after(bolt_lost)))
+        .build();
+
+    app.init_resource::<CapturedBoltLost>();
+
+    let playfield = PlayfieldConfig::default();
+    let breaker_entity = app
+        .world_mut()
+        .spawn((
+            Breaker,
+            Position2D(Vec2::new(0.0, -250.0)),
+            rantzsoft_spatial2d::components::Spatial2D,
+            GameDrawLayer::Breaker,
+        ))
+        .id();
+
+    let bolt_entity = spawn_bolt(
+        &mut app,
+        Vec2::new(0.0, playfield.bottom() - 100.0),
+        Vec2::new(0.0, -400.0),
+    );
+    tick(&mut app);
+
+    let captured = app.world().resource::<CapturedBoltLost>();
+    assert_eq!(
+        captured.0.len(),
+        1,
+        "exactly one BoltLost message should be captured"
+    );
+    assert_eq!(
+        captured.0[0].bolt, bolt_entity,
+        "BoltLost.bolt should equal the bolt entity"
+    );
+    assert_eq!(
+        captured.0[0].breaker, breaker_entity,
+        "BoltLost.breaker should equal the breaker entity"
+    );
+
+    // Baseline bolt should still be alive (respawned, not despawned)
+    assert!(
+        app.world().get_entity(bolt_entity).is_ok(),
+        "baseline bolt entity should still be alive after respawn"
+    );
+}
+
+#[test]
+fn bolt_lost_sends_correct_entities_when_multiple_bolts_lost_in_same_frame() {
+    use crate::shared::test_utils::TestAppBuilder;
+
+    let mut app = TestAppBuilder::new()
+        .with_playfield()
+        .with_resource::<crate::shared::GameRng>()
+        .with_message::<BoltLost>()
+        .with_system(FixedUpdate, (bolt_lost, capture_bolt_lost.after(bolt_lost)))
+        .build();
+
+    app.init_resource::<CapturedBoltLost>();
+
+    let playfield = PlayfieldConfig::default();
+    let breaker_entity = app
+        .world_mut()
+        .spawn((
+            Breaker,
+            Position2D(Vec2::new(0.0, -250.0)),
+            rantzsoft_spatial2d::components::Spatial2D,
+            GameDrawLayer::Breaker,
+        ))
+        .id();
+
+    let bolt_a = spawn_bolt(
+        &mut app,
+        Vec2::new(0.0, playfield.bottom() - 100.0),
+        Vec2::new(0.0, -400.0),
+    );
+    let bolt_b = spawn_bolt(
+        &mut app,
+        Vec2::new(50.0, playfield.bottom() - 100.0),
+        Vec2::new(0.0, -400.0),
+    );
+    tick(&mut app);
+
+    let captured = app.world().resource::<CapturedBoltLost>();
+    assert_eq!(
+        captured.0.len(),
+        2,
+        "exactly two BoltLost messages should be captured"
+    );
+
+    // Both messages should have breaker == breaker_entity
+    for msg in &captured.0 {
+        assert_eq!(
+            msg.breaker, breaker_entity,
+            "each BoltLost.breaker should equal the breaker entity"
+        );
+    }
+
+    // The bolt values should be distinct and match bolt_a and bolt_b (order may vary)
+    let bolt_entities: Vec<Entity> = captured.0.iter().map(|m| m.bolt).collect();
+    assert!(
+        bolt_entities.contains(&bolt_a),
+        "BoltLost bolt entities should contain bolt_a"
+    );
+    assert!(
+        bolt_entities.contains(&bolt_b),
+        "BoltLost bolt entities should contain bolt_b"
+    );
+    assert_ne!(
+        bolt_entities[0], bolt_entities[1],
+        "BoltLost bolt entities should be distinct"
     );
 }

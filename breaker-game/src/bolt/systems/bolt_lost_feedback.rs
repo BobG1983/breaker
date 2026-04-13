@@ -35,7 +35,10 @@ mod tests {
 
     fn enqueue_lost(trigger: Res<TriggerLost>, mut writer: MessageWriter<BoltLost>) {
         if trigger.0 {
-            writer.write(BoltLost);
+            writer.write(BoltLost {
+                bolt:    Entity::PLACEHOLDER,
+                breaker: Entity::PLACEHOLDER,
+            });
         }
     }
 

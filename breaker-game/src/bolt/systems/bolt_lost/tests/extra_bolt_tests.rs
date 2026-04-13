@@ -256,3 +256,51 @@ fn baseline_bolt_still_sends_bolt_lost_message() {
         "baseline bolt should still send BoltLost for game-logic purposes"
     );
 }
+
+// ── BoltLost entity fields for extra bolt ──
+
+#[test]
+fn extra_bolt_lost_sends_correct_bolt_and_breaker_entities() {
+    let mut app = test_app();
+
+    app.init_resource::<CapturedBoltLost>();
+    app.add_systems(FixedUpdate, capture_bolt_lost.after(bolt_lost));
+
+    let playfield = PlayfieldConfig::default();
+    let breaker_entity = app
+        .world_mut()
+        .spawn((
+            Breaker,
+            Position2D(Vec2::new(0.0, -250.0)),
+            Spatial2D,
+            GameDrawLayer::Breaker,
+        ))
+        .id();
+
+    let def = make_default_bolt_definition();
+    let extra_bolt_entity = spawn_bolt_in_app(&mut app, |commands| {
+        Bolt::builder()
+            .at_position(Vec2::new(0.0, playfield.bottom() - 100.0))
+            .definition(&def)
+            .with_velocity(Velocity2D(Vec2::new(0.0, -400.0)))
+            .extra()
+            .headless()
+            .spawn(commands)
+    });
+    tick(&mut app);
+
+    let captured = app.world().resource::<CapturedBoltLost>();
+    assert_eq!(
+        captured.0.len(),
+        1,
+        "exactly one BoltLost message should be captured for extra bolt"
+    );
+    assert_eq!(
+        captured.0[0].bolt, extra_bolt_entity,
+        "BoltLost.bolt should equal the extra bolt entity"
+    );
+    assert_eq!(
+        captured.0[0].breaker, breaker_entity,
+        "BoltLost.breaker should equal the breaker entity"
+    );
+}

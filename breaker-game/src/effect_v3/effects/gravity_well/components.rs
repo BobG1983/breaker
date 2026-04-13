@@ -21,3 +21,8 @@ pub struct GravityWellLifetime(pub f32);
 /// Entity that spawned this gravity well (for ownership tracking).
 #[derive(Component, Debug, Clone)]
 pub struct GravityWellOwner(pub Entity);
+
+/// Monotonically increasing counter tracking when each gravity well was spawned.
+/// Used for deterministic FIFO eviction — lowest order value = oldest well.
+#[derive(Component, Debug, Clone)]
+pub struct GravityWellSpawnOrder(pub u32);

@@ -56,7 +56,7 @@ pub(crate) fn bolt_lost(
     mut writers: BoltLostWriters,
     mut lost_bolts: Local<Vec<LostBoltEntry>>,
 ) {
-    let Ok((_breaker_entity, breaker_position)) = breaker_query.single_mut() else {
+    let Ok((breaker_entity, breaker_position)) = breaker_query.single_mut() else {
         return;
     };
     let breaker_pos = breaker_position.0;
@@ -85,7 +85,10 @@ pub(crate) fn bolt_lost(
     );
 
     for entry in &*lost_bolts {
-        writers.writer.write(BoltLost);
+        writers.writer.write(BoltLost {
+            bolt:    entry.entity,
+            breaker: breaker_entity,
+        });
         if entry.is_extra {
             if let Ok(ref mut destroyed_writer) = writers.request_destroyed_writer {
                 // Two-phase destruction: write request (entity stays alive for bridge evaluation)

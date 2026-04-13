@@ -34,7 +34,12 @@ pub(crate) struct BoltImpactCell {
 ///
 /// Consumed by the breaker plugin (applies penalty per breaker type).
 #[derive(Message, Clone, Debug)]
-pub struct BoltLost;
+pub struct BoltLost {
+    /// The bolt entity that was lost.
+    pub bolt:    Entity,
+    /// The breaker entity that lost the bolt.
+    pub breaker: Entity,
+}
 
 /// Sent when the bolt reflects off a wall.
 ///
@@ -123,8 +128,20 @@ mod tests {
             "debug format should include 'bolt' field name"
         );
 
-        let c = BoltLost;
-        assert!(format!("{c:?}").contains("BoltLost"));
+        let c = BoltLost {
+            bolt:    Entity::PLACEHOLDER,
+            breaker: Entity::PLACEHOLDER,
+        };
+        let c_fmt = format!("{c:?}");
+        assert!(c_fmt.contains("BoltLost"));
+        assert!(
+            c_fmt.contains("bolt"),
+            "BoltLost debug format should include 'bolt' field name"
+        );
+        assert!(
+            c_fmt.contains("breaker"),
+            "BoltLost debug format should include 'breaker' field name"
+        );
 
         let d = BoltImpactWall {
             bolt: Entity::PLACEHOLDER,
@@ -135,6 +152,43 @@ mod tests {
         assert!(
             d_fmt.contains("bolt"),
             "BoltImpactWall debug format should include 'bolt' field name"
+        );
+    }
+
+    #[test]
+    fn bolt_lost_carries_bolt_and_breaker_entity_fields() {
+        let mut world = World::new();
+        let bolt_entity = world.spawn_empty().id();
+        let breaker_entity = world.spawn_empty().id();
+        let msg = BoltLost {
+            bolt:    bolt_entity,
+            breaker: breaker_entity,
+        };
+        assert_eq!(
+            msg.bolt, bolt_entity,
+            "BoltLost.bolt should be accessible and match the entity passed in"
+        );
+        assert_eq!(
+            msg.breaker, breaker_entity,
+            "BoltLost.breaker should be accessible and match the entity passed in"
+        );
+    }
+
+    #[test]
+    fn bolt_lost_placeholder_entities_are_accessible() {
+        let msg = BoltLost {
+            bolt:    Entity::PLACEHOLDER,
+            breaker: Entity::PLACEHOLDER,
+        };
+        assert_eq!(
+            msg.bolt,
+            Entity::PLACEHOLDER,
+            "BoltLost.bolt should equal PLACEHOLDER"
+        );
+        assert_eq!(
+            msg.breaker,
+            Entity::PLACEHOLDER,
+            "BoltLost.breaker should equal PLACEHOLDER"
         );
     }
 }

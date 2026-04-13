@@ -48,7 +48,16 @@ mod tests {
     #[test]
     fn increments_bolts_lost_for_each_message() {
         let mut app = test_app();
-        app.insert_resource(TestMessages(vec![BoltLost, BoltLost]));
+        app.insert_resource(TestMessages(vec![
+            BoltLost {
+                bolt:    Entity::PLACEHOLDER,
+                breaker: Entity::PLACEHOLDER,
+            },
+            BoltLost {
+                bolt:    Entity::PLACEHOLDER,
+                breaker: Entity::PLACEHOLDER,
+            },
+        ]));
         tick(&mut app);
 
         let stats = app.world().resource::<RunStats>();
@@ -61,7 +70,10 @@ mod tests {
     #[test]
     fn increments_node_bolts_lost_in_tracker() {
         let mut app = test_app();
-        app.insert_resource(TestMessages(vec![BoltLost]));
+        app.insert_resource(TestMessages(vec![BoltLost {
+            bolt:    Entity::PLACEHOLDER,
+            breaker: Entity::PLACEHOLDER,
+        }]));
         tick(&mut app);
 
         let tracker = app.world().resource::<HighlightTracker>();

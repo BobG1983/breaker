@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 
 use super::components::*;
 use crate::{
+    bolt::{components::BoltBaseDamage, resources::DEFAULT_BOLT_BASE_DAMAGE},
     effect_v3::{
         components::EffectSourceChip, effects::DamageBoostConfig, stacking::EffectStack,
         traits::Fireable,
@@ -61,7 +62,11 @@ impl Fireable for ShockwaveConfig {
             ShockwaveMaxRadius(max_radius),
             ShockwaveSpeed(self.speed.0),
             ShockwaveDamaged(HashSet::new()),
-            ShockwaveBaseDamage(10.0), // base damage from bolt's base_damage
+            ShockwaveBaseDamage(
+                world
+                    .get::<BoltBaseDamage>(entity)
+                    .map_or(DEFAULT_BOLT_BASE_DAMAGE, |d| d.0),
+            ),
             ShockwaveDamageMultiplier(damage_mult),
             Position2D(pos),
             chip,
@@ -82,6 +87,119 @@ impl Fireable for ShockwaveConfig {
             )
                 .chain()
                 .in_set(EffectV3Systems::Tick),
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use bevy::prelude::*;
+    use ordered_float::OrderedFloat;
+    use rantzsoft_spatial2d::components::Position2D;
+
+    use super::*;
+    use crate::{
+        bolt::{components::BoltBaseDamage, resources::DEFAULT_BOLT_BASE_DAMAGE},
+        effect_v3::traits::Fireable,
+    };
+
+    fn make_config() -> ShockwaveConfig {
+        ShockwaveConfig {
+            base_range:      OrderedFloat(64.0),
+            range_per_level: OrderedFloat(16.0),
+            stacks:          1,
+            speed:           OrderedFloat(200.0),
+        }
+    }
+
+    // ── C1: Shockwave base damage reads BoltBaseDamage from source entity ──
+
+    #[test]
+    fn shockwave_uses_bolt_base_damage_from_source_entity() {
+        let mut world = World::new();
+        let source = world
+            .spawn((BoltBaseDamage(25.0), Position2D(Vec2::new(100.0, 200.0))))
+            .id();
+
+        make_config().fire(source, "test_chip", &mut world);
+        world.flush();
+
+        let base_dmg: Vec<f32> = world
+            .query::<&ShockwaveBaseDamage>()
+            .iter(&world)
+            .map(|d| d.0)
+            .collect();
+        assert_eq!(base_dmg.len(), 1, "expected 1 shockwave entity");
+        assert!(
+            (base_dmg[0] - 25.0).abs() < f32::EPSILON,
+            "shockwave base damage should be 25.0 (from BoltBaseDamage), got {}",
+            base_dmg[0],
+        );
+    }
+
+    #[test]
+    fn shockwave_uses_zero_bolt_base_damage() {
+        let mut world = World::new();
+        let source = world
+            .spawn((BoltBaseDamage(0.0), Position2D(Vec2::new(100.0, 200.0))))
+            .id();
+
+        make_config().fire(source, "test_chip", &mut world);
+        world.flush();
+
+        let base_dmg: Vec<f32> = world
+            .query::<&ShockwaveBaseDamage>()
+            .iter(&world)
+            .map(|d| d.0)
+            .collect();
+        assert_eq!(base_dmg.len(), 1);
+        assert!(
+            base_dmg[0].abs() < f32::EPSILON,
+            "shockwave base damage should be 0.0 for BoltBaseDamage(0.0), got {}",
+            base_dmg[0],
+        );
+    }
+
+    #[test]
+    fn shockwave_falls_back_to_default_when_bolt_base_damage_absent() {
+        let mut world = World::new();
+        let source = world.spawn(Position2D(Vec2::new(100.0, 200.0))).id();
+
+        make_config().fire(source, "test_chip", &mut world);
+        world.flush();
+
+        let base_dmg: Vec<f32> = world
+            .query::<&ShockwaveBaseDamage>()
+            .iter(&world)
+            .map(|d| d.0)
+            .collect();
+        assert_eq!(base_dmg.len(), 1);
+        assert!(
+            (base_dmg[0] - DEFAULT_BOLT_BASE_DAMAGE).abs() < f32::EPSILON,
+            "shockwave base damage should fall back to DEFAULT_BOLT_BASE_DAMAGE ({DEFAULT_BOLT_BASE_DAMAGE}), got {}",
+            base_dmg[0],
+        );
+    }
+
+    #[test]
+    fn shockwave_falls_back_when_source_entity_despawned() {
+        let mut world = World::new();
+        let source = world.spawn_empty().id();
+        world.despawn(source);
+
+        make_config().fire(source, "test_chip", &mut world);
+        world.flush();
+
+        let base_dmg: Vec<f32> = world
+            .query::<&ShockwaveBaseDamage>()
+            .iter(&world)
+            .map(|d| d.0)
+            .collect();
+        assert_eq!(base_dmg.len(), 1);
+        assert!(
+            (base_dmg[0] - DEFAULT_BOLT_BASE_DAMAGE).abs() < f32::EPSILON,
+            "shockwave should fall back to DEFAULT_BOLT_BASE_DAMAGE when entity despawned, got {}",
+            base_dmg[0],
         );
     }
 }

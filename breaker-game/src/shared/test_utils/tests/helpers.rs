@@ -63,7 +63,10 @@ pub(super) fn damage_and_bolt_lost_sender(
         damage:      5.0,
         source_chip: None,
     });
-    bolt_lost_writer.write(BoltLost);
+    bolt_lost_writer.write(BoltLost {
+        bolt:    Entity::PLACEHOLDER,
+        breaker: Entity::PLACEHOLDER,
+    });
 }
 
 pub(super) fn first_system(mut order: ResMut<Order>) {

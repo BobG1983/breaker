@@ -104,9 +104,9 @@ fn reverse_scoped_tree(inner: &ScopedTree, entity: Entity, source: &str, world: 
 #[must_use]
 pub fn evaluate_condition(condition: &Condition, world: &World) -> bool {
     match condition {
-        Condition::Node => is_node_active(world),
-        Condition::Shield => is_shield_active(world),
-        Condition::Combo(threshold) => is_combo_active(world, *threshold),
+        Condition::NodeActive => is_node_active(world),
+        Condition::ShieldActive => is_shield_active(world),
+        Condition::ComboActive(threshold) => is_combo_active(world, *threshold),
     }
 }
 
@@ -133,7 +133,7 @@ mod tests {
         (
             "chip_a".to_string(),
             Tree::During(
-                Condition::Node,
+                Condition::NodeActive,
                 Box::new(ScopedTree::Fire(ReversibleEffectType::SpeedBoost(
                     SpeedBoostConfig {
                         multiplier: OrderedFloat(1.5),
@@ -147,7 +147,7 @@ mod tests {
         (
             "chip_b".to_string(),
             Tree::During(
-                Condition::Shield,
+                Condition::ShieldActive,
                 Box::new(ScopedTree::Fire(ReversibleEffectType::DamageBoost(
                     DamageBoostConfig {
                         multiplier: OrderedFloat(2.0),
@@ -317,7 +317,7 @@ mod tests {
             .spawn(BoundEffects(vec![(
                 "chip_a".to_string(),
                 Tree::During(
-                    Condition::Node,
+                    Condition::NodeActive,
                     Box::new(ScopedTree::Sequence(vec![
                         ReversibleEffectType::SpeedBoost(SpeedBoostConfig {
                             multiplier: OrderedFloat(1.5),
@@ -360,7 +360,7 @@ mod tests {
             .spawn(BoundEffects(vec![(
                 "chip_a".to_string(),
                 Tree::During(
-                    Condition::Node,
+                    Condition::NodeActive,
                     Box::new(ScopedTree::Sequence(vec![
                         ReversibleEffectType::SpeedBoost(SpeedBoostConfig {
                             multiplier: OrderedFloat(1.5),

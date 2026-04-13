@@ -2,7 +2,10 @@
 
 use bevy::prelude::*;
 
-use super::{conditions, sets::EffectV3Systems, storage::SpawnStampRegistry, triggers};
+use super::{
+    conditions, effects, sets::EffectV3Systems, storage::SpawnStampRegistry, traits::Fireable,
+    triggers,
+};
 
 /// Plugin for the effect v3 domain.
 ///
@@ -38,5 +41,17 @@ impl Plugin for EffectV3Plugin {
         triggers::bolt_lost::register::register(app);
         triggers::node::register::register(app);
         triggers::time::register::register(app);
+
+        // Effects — each registers its own tick/update/cleanup/reset systems
+        effects::AnchorConfig::register(app);
+        effects::AttractionConfig::register(app);
+        effects::ChainLightningConfig::register(app);
+        effects::EntropyConfig::register(app);
+        effects::GravityWellConfig::register(app);
+        effects::PulseConfig::register(app);
+        effects::ShieldConfig::register(app);
+        effects::ShockwaveConfig::register(app);
+        effects::SpawnPhantomConfig::register(app);
+        effects::TetherBeamConfig::register(app);
     }
 }

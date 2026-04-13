@@ -9,9 +9,9 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Condition {
     /// True while a node is playing or paused.
-    Node,
+    NodeActive,
     /// True while at least one `ShieldWall` entity exists in the world.
-    Shield,
+    ShieldActive,
     /// True while the consecutive perfect bump streak is at or above the given count.
-    Combo(u32),
+    ComboActive(u32),
 }

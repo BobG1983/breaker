@@ -99,3 +99,15 @@ pub(super) fn capture_request_bolt_destroyed(
         captured.0.push(msg.clone());
     }
 }
+
+#[derive(Resource, Default)]
+pub(super) struct CapturedBoltLost(pub(super) Vec<BoltLost>);
+
+pub(super) fn capture_bolt_lost(
+    mut reader: MessageReader<BoltLost>,
+    mut captured: ResMut<CapturedBoltLost>,
+) {
+    for msg in reader.read() {
+        captured.0.push(msg.clone());
+    }
+}
