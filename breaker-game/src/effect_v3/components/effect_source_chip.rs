@@ -6,7 +6,7 @@ use bevy::prelude::*;
 ///
 /// Used for damage attribution and UI display.
 /// `None` indicates the effect was not chip-sourced (e.g., from a cell death cascade).
-#[derive(Component)]
+#[derive(Component, Debug, Clone)]
 pub struct EffectSourceChip(pub Option<String>);
 
 impl EffectSourceChip {
