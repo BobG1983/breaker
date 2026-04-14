@@ -8,6 +8,6 @@ use bevy::prelude::*;
 ///
 /// The entity still exists in the world after `Dead` is inserted. It survives
 /// through trigger evaluation and death bridges. It is finally despawned by
-/// `process_despawn_requests` in `PostFixedUpdate`.
+/// `process_despawn_requests` in `FixedPostUpdate`.
 #[derive(Component)]
 pub(crate) struct Dead;

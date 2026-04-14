@@ -8,7 +8,7 @@ pub(crate) mod collector;
 pub(crate) mod tick_helper;
 
 pub(crate) use builder::TestAppBuilder;
-pub(crate) use collector::MessageCollector;
+pub(crate) use collector::{MessageCollector, attach_message_capture};
 pub(crate) use tick_helper::tick;
 
 #[cfg(test)]

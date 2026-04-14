@@ -16,8 +16,8 @@ use super::{
             detect_pinball_wizard,
         },
         lifecycle::systems::{
-            handle_node_cleared, handle_run_lost, handle_timer_expired, reset_highlight_tracker,
-            spawn_highlight_text,
+            handle_breaker_death, handle_node_cleared, handle_run_lost, handle_timer_expired,
+            reset_highlight_tracker, spawn_highlight_text,
         },
         tracking::systems::{
             track_bolts_lost, track_bumps, track_cells_destroyed, track_evolution_damage,
@@ -28,7 +28,10 @@ use super::{
     run_end::systems::detect_most_powerful_evolution,
     systems::{advance_node, hide_gameplay_entities, setup_run, show_gameplay_entities},
 };
-use crate::{prelude::*, shared::RunSeed};
+use crate::{
+    prelude::*,
+    shared::{RunSeed, death_pipeline::sets::DeathPipelineSystems},
+};
 
 /// Plugin for the run domain.
 ///
@@ -47,6 +50,14 @@ impl Plugin for RunPlugin {
             .add_plugins(NodePlugin)
             .add_message::<RunLost>()
             .add_message::<HighlightTriggered>()
+            // Breaker death handler — runs in the death pipeline's HandleKill
+            // set, consuming `KillYourself<Breaker>` produced by
+            // `detect_deaths::<Breaker>`. Emits `RunLost` for the run state
+            // machine to turn into `NodeResult::LivesDepleted`.
+            .add_systems(
+                FixedUpdate,
+                handle_breaker_death.in_set(DeathPipelineSystems::HandleKill),
+            )
             .add_systems(
                 FixedUpdate,
                 (
@@ -113,10 +124,10 @@ mod tests {
     use super::*;
     use crate::{
         bolt::messages::{BoltImpactBreaker, BoltImpactCell, BoltLost},
-        breaker::messages::BumpPerformed,
+        breaker::{components::Breaker, messages::BumpPerformed},
         cells::messages::DamageCell,
         chips::inventory::ChipInventory,
-        shared::PlayfieldConfig,
+        shared::{PlayfieldConfig, death_pipeline::kill_yourself::KillYourself},
         state::run::chip_select::messages::ChipSelected,
     };
 
@@ -146,6 +157,7 @@ mod tests {
             .add_message::<BoltImpactBreaker>()
             .add_message::<BoltImpactCell>()
             .add_message::<ChipSelected>()
+            .add_message::<KillYourself<Breaker>>()
             // Resources required by run domain systems
             .init_resource::<ChipInventory>()
             .init_resource::<PlayfieldConfig>()

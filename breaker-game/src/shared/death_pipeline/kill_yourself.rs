@@ -12,20 +12,23 @@ use super::game_entity::GameEntity;
 ///
 /// The entity must stay alive through domain handling, trigger evaluation,
 /// and death animation.
-#[derive(Message, Clone, Debug)]
+#[derive(Message, Debug)]
 pub(crate) struct KillYourself<T: GameEntity> {
     /// The entity to kill.
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "awaiting per-domain kill handler consumer")
-    )]
     pub victim:  Entity,
     /// The entity that caused the death (from `KilledBy`).
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "awaiting per-domain kill handler consumer")
-    )]
     pub killer:  Option<Entity>,
     /// Marker for the victim entity type.
     pub _marker: PhantomData<T>,
+}
+
+// Manual Clone impl avoids requiring T: Clone (PhantomData is always Clone).
+impl<T: GameEntity> Clone for KillYourself<T> {
+    fn clone(&self) -> Self {
+        Self {
+            victim:  self.victim,
+            killer:  self.killer,
+            _marker: PhantomData,
+        }
+    }
 }

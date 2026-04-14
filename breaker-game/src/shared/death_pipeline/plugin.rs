@@ -38,12 +38,14 @@ impl Plugin for DeathPipelinePlugin {
 
         app.add_message::<DespawnEntity>();
 
-        // System set ordering: ApplyDamage after effect tick, DetectDeaths after ApplyDamage
+        // System set ordering: ApplyDamage after effect tick, DetectDeaths after
+        // ApplyDamage, HandleKill after DetectDeaths.
         app.configure_sets(
             FixedUpdate,
             (
                 DeathPipelineSystems::ApplyDamage.after(EffectV3Systems::Tick),
                 DeathPipelineSystems::DetectDeaths.after(DeathPipelineSystems::ApplyDamage),
+                DeathPipelineSystems::HandleKill.after(DeathPipelineSystems::DetectDeaths),
             ),
         );
 
@@ -69,6 +71,28 @@ impl Plugin for DeathPipelinePlugin {
                 systems::detect_deaths::<Breaker>,
             )
                 .in_set(DeathPipelineSystems::DetectDeaths),
+        );
+
+        // Kill handling — monomorphized per entity type. Consumes
+        // `KillYourself<T>`, marks `Dead`, emits `Destroyed<T>`, and
+        // enqueues `DespawnEntity`.
+        //
+        // `Cell` and `Bolt` are the active producers today. `Wall` is wired
+        // as a future-proofing measure: walls have no death producer in the
+        // current game, but the generic handler is harmless — if no
+        // `KillYourself<Wall>` messages are written, the system is a no-op.
+        // `Breaker` is handled separately by
+        // [`handle_breaker_death`](crate::state::run::node::lifecycle::systems::handle_breaker_death)
+        // because the breaker must survive through the end-of-run flow and
+        // therefore cannot use the generic `DespawnEntity`-emitting handler.
+        app.add_systems(
+            FixedUpdate,
+            (
+                systems::handle_kill::<Cell>,
+                systems::handle_kill::<Bolt>,
+                systems::handle_kill::<Wall>,
+            )
+                .in_set(DeathPipelineSystems::HandleKill),
         );
 
         // Deferred despawn — runs after all FixedUpdate processing

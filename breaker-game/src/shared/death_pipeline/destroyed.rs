@@ -10,7 +10,7 @@ use super::game_entity::GameEntity;
 ///
 /// The entity is still alive when `Destroyed` is sent. It survives through
 /// trigger evaluation and death animation. Despawn happens later via
-/// `DespawnEntity` in `PostFixedUpdate`.
+/// `DespawnEntity` in `FixedPostUpdate`.
 #[derive(Message, Debug)]
 pub(crate) struct Destroyed<T: GameEntity> {
     /// The entity that died (still alive at this point).

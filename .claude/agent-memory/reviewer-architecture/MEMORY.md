@@ -6,6 +6,7 @@
 - [ShieldActive cross-domain write — ELIMINATED](shield_cross_domain_write.md) — ShieldActive no longer exists; Shield is now a timed floor wall (ShieldWall) using normal bolt_wall_collision path
 - [Bolt builder typestate migration](pattern_bolt_builder_migration.md) — Bolt::builder() with 6 dims (P,S,A,M,R,V); Visual added; BoltRadius aliased to BaseRadius
 - [Breaker builder typestate migration](pattern_breaker_builder_migration.md) — Breaker::builder() with 7 dims (incl Role+Visual); fully wired; BreakerConfig eliminated
+- [Cross-plugin set registration (phase set)](pattern_cross_plugin_set_registration.md) — RunPlugin registers handle_breaker_death into DeathPipelineSystems::HandleKill owned by DeathPipelinePlugin; first production instance
 
 ## Known Gaps
 - [Cleanup marker status](known_gap_cleanup_markers.md) — all effect entities have CleanupOnNodeExit as of 2026-03-30; no open gaps

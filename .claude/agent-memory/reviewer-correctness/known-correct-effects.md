@@ -315,3 +315,43 @@ all piercing entries from that source are correctly cleaned up. Test
 variants of `ReversibleEffectType`. The enum and the dispatch match are in sync.
 `fire_dispatch` over `EffectType` (which has more variants) is a different enum and is
 not the comparison point. Do NOT flag 16 vs the full EffectType variant count as a bug.
+
+## Waves C/D/E/G2: FIFO remove-then-stage in once.rs — CONFIRMED CORRECT (2026-04-14)
+
+`evaluate_once` for gate-inner case queues `commands.remove_effect(entity, source)` FIRST,
+then `commands.stage_effect(...)`. Load-bearing ordering: `RemoveEffectCommand` sweeps both
+`BoundEffects` and `StagedEffects` by name. Queuing remove before stage means the outer
+`Once` entry is cleaned up without touching the subsequently staged inner subtree. Do NOT
+re-flag as wrong ordering.
+
+## Waves C/D/E/G2: TrackArmedFireCommand despawn guard — CONFIRMED CORRECT (2026-04-14)
+
+`TrackArmedFireCommand::apply` guards with `if world.get_entity(self.owner).is_err() { return; }`
+before inserting/mutating `ArmedFiredParticipants`. Correct and intentional.
+
+## Waves C/D/E/G2: RemoveStagedEffectCommand isolation — CONFIRMED CORRECT (2026-04-14)
+
+`RemoveStagedEffectCommand::apply` only touches `StagedEffects` — it does NOT sweep
+`BoundEffects`. It uses `iter().position()` + `Vec::remove()` for first-match-by-identity
+removal. Do NOT flag absence of BoundEffects sweep — this command is specifically for
+staged-only teardown.
+
+## Waves C/D/E/G2: source chip propagation in tick_entropy_engine — CONFIRMED CORRECT (2026-04-14)
+
+`chip.and_then(|c| c.0.clone()).unwrap_or_default()` correctly handles all three cases:
+- `None` component → `""`
+- `Some(EffectSourceChip(None))` → `""`
+- `Some(EffectSourceChip(Some("name")))` → `"name"`
+
+## Waves C/D/E/G2: evaluate_on TrackArmedFireCommand queued AFTER evaluate_terminal — CONFIRMED CORRECT (2026-04-14)
+
+`evaluate_on` in `walking/on.rs`: calls `evaluate_terminal(resolved, terminal, source, commands)`
+first, then `commands.track_armed_fire(owner, source.to_owned(), resolved)` if `is_armed_source`.
+Ordering doesn't matter for correctness (both are deferred); participant tracking on owner is
+logically after the fire. Correct.
+
+## Waves C/D/E/G2: 4 watcher systems registered in EffectV3Systems::Bridge — CONFIRMED CORRECT (2026-04-14)
+
+`stamp_spawned_bolts`, `stamp_spawned_cells`, `stamp_spawned_walls`, `stamp_spawned_breakers`
+are all imported from `storage` mod and registered in `FixedUpdate` / `EffectV3Systems::Bridge`
+in `effect_v3/plugin.rs`. Do NOT flag as missing wiring.

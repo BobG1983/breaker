@@ -16,6 +16,7 @@ Domains MAY define a `pub enum {Domain}Systems` with `#[derive(SystemSet)]` in `
 - **Never reference bare system function names across domain boundaries** — always use SystemSet enums. This keeps cross-domain ordering stable even if the underlying system is renamed or split.
 - Only create a SystemSet variant when another domain actually needs to order against it. Don't pre-create sets "just in case".
 - **Group systems sharing a constraint** with tuple syntax: `(sys_a, sys_b).after(Target)` rather than repeating `.after(Target)` on each system individually. Keeps the shared dependency visible in one place.
+- **Phase sets — exception to pivotal-system rule.** A SystemSet variant that represents a pipeline *phase* (not a single pivotal system) may be used as a tag target by other plugins. The owning plugin is still responsible for `configure_sets`; other plugins contribute systems via `.in_set(PhaseSet::Variant)`. Currently only `DeathPipelineSystems::{ApplyDamage, DetectDeaths, HandleKill}` qualify — each phase legitimately hosts multiple systems across plugins (e.g. `handle_kill::<Cell>` + `handle_kill::<Bolt>` + `handle_kill::<Wall>` from `DeathPipelinePlugin`, and `handle_breaker_death` from `RunPlugin`, all in `HandleKill`). Create a phase set only when multiple plugins legitimately need to contribute to the same pipeline stage — don't invent them speculatively.
 
 **Defined sets:**
 

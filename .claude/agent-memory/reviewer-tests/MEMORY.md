@@ -14,5 +14,7 @@
 - [Route change behaviors missing when in existing file](pattern_route_change_test_missing.md) — writer-tests creates new system files but misses spec behaviors targeting existing files (e.g., state/plugin/tests.rs)
 - [Production validate() logic in stub breaks RED gate](pattern_production_validate_in_stub.md) — validate() with full range-check logic means all positive/negative validation tests pass at RED; stub must return Ok(()) unconditionally
 
+- [Spec internal contradiction between behavior end-state and wipe-on-consume semantics](pattern_spec_internal_contradiction_end_state.md) — Behavior 21 asserts StagedEffects.0.is_empty() but FIFO queue ordering from Behavior 26 means it ends with 1 entry; writer drops wrong assertion but does not add correct one
+
 ## Session History
 See [ephemeral/](ephemeral/) — not committed.

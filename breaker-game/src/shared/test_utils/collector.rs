@@ -37,3 +37,17 @@ pub(super) fn collect_messages<M: Message + Clone>(
         collector.0.push(msg.clone());
     }
 }
+
+/// Attaches a `MessageCollector<M>` to an existing `App`. Mirrors
+/// `TestAppBuilder::with_message_capture`, but operates on a mutable `App`
+/// reference — use this when the message has already been registered by a
+/// plugin after the builder has been finalized. Idempotent.
+pub(crate) fn attach_message_capture<M: Message + Clone>(app: &mut App) {
+    if app.world().contains_resource::<MessageCollector<M>>() {
+        return;
+    }
+    app.add_message::<M>();
+    app.init_resource::<MessageCollector<M>>();
+    app.add_systems(First, clear_messages::<M>);
+    app.add_systems(Last, collect_messages::<M>);
+}

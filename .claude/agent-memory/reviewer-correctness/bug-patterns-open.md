@@ -139,6 +139,40 @@ at all during `!entered_playing`, so the inconsistency has no runtime impact.
 
 **Status**: OPEN inconsistency — intentional per test, but differs from all peers.
 
+## StageEffectCommand::apply no despawn guard — CONFIRMED BUG (2026-04-14)
+
+`StageEffectCommand::apply` in `breaker-game/src/effect_v3/commands/stage.rs` calls
+`world.entity_mut(self.entity).insert(BoundEffects::default())` when the entity lacks
+`BoundEffects`, without first checking entity existence. In Bevy 0.18, `entity_mut` on a
+despawned entity panics. Reachable when: bridge/evaluate_when/evaluate_once queues
+`StageEffectCommand` for entity E AND a despawn command for E flushes before stage in the
+same tick. Contrast: `TrackArmedFireCommand` (same wave) has `if world.get_entity(self.owner).is_err() { return; }`.
+
+**Fix**: add `if world.get_entity(self.entity).is_err() { return; }` at top of `apply`.
+**Location**: `breaker-game/src/effect_v3/commands/stage.rs:22`
+
+## death_pipeline: KillYourself<Breaker> dead-letter — RESOLVED (2026-04-14 Wave F1 scope expansion)
+
+`handle_kill<Wall>` is now registered in `plugin.rs` (Wall path handled by generic handler).
+`handle_breaker_death` is registered in `RunPlugin` in `DeathPipelineSystems::HandleKill`, consuming
+`KillYourself<Breaker>`, inserting `Dead`, writing `RunLost`. The Wall path is unreachable today
+(no `DamageDealt<Wall>` producer) but the handler is registered as future-proofing.
+
+**IMPORTANT RESIDUAL**: `handle_run_lost` has `.run_if(in_state(NodeState::Playing))` gate,
+but `handle_breaker_death` has NO state gate. If `KillYourself<Breaker>` fires outside
+`NodeState::Playing`, `RunLost` accumulates in the queue unread for that tick, and is
+consumed on the next `Playing` tick. Under current gameplay flow, death cannot occur outside
+`Playing` because `detect_deaths<Breaker>` runs unconditionally but `LoseLife` (the only Hp
+decrementer for Breaker) is dispatched from effect triggers, which only run in-game.
+Confirmed safe today but structurally fragile.
+
+**NEW RESIDUAL**: `Destroyed<Breaker>` is NEVER written by `handle_breaker_death`. The
+`on_breaker_destroyed` bridge in `effect_v3/triggers/death/bridges.rs` reads `Destroyed<Breaker>`
+and dispatches `Died`/`Killed(Breaker)`/`DeathOccurred(Breaker)` triggers. Currently NO
+production RON uses `DeathOccurred(Breaker)`, `Killed(Breaker)`, or `Died` on the Breaker
+entity. The bridge is a dead reader (no writer) but is NOT a dead-letter accumulation issue
+(the message queue is always empty). See confirmed-correct section once validated.
+
 ## advance_node runs before set_active_layout and spawn_cells_from_layout — CONFIRMED BUG (2026-04-08)
 
 `advance_node` is registered on `OnEnter(RunState::Node)`. Sub-state `NodeState::Loading` is
