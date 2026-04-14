@@ -38,6 +38,15 @@ When routing failures to writer-code or writer-tests, pass the runner/reviewer a
 | High | Regression spec hint → **writer-tests** → **writer-code** |
 | Low | Main agent investigates → writes spec → **writer-tests** → **writer-code** |
 
+## reviewer-completeness findings
+
+| Category | Route |
+|---|---|
+| MISSING | Spec gap → **planning-writer-specs-tests** + **planning-writer-specs-code** (add missing item) → full RED/GREEN cycle |
+| PARTIAL | Fix spec hint → **writer-code** (complete the stub/wiring) |
+| SCOPE_NARROWED | Orchestrator reviews — if legitimately in scope, treat as MISSING. If descoped by user, add decision revision to session-state |
+| DIVERGED | Orchestrator reviews — if undocumented, either revert to plan or add decision revision to session-state with user approval |
+
 ## reviewer-quality and reviewer-bevy-api findings
 
 | Finding type | Route |

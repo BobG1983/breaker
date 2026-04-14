@@ -60,6 +60,18 @@ Standardized output formats that verification agents produce and failure routing
 - Delegate: main agent routes back to writer-tests with test revision spec
 ```
 
+## Completeness finding (reviewer-completeness)
+
+```
+**Completeness finding:**
+- Category: MISSING | PARTIAL | SCOPE_NARROWED | DIVERGED
+- Item: [what was promised]
+- Source: [todo detail | plan wave item N]
+- Expected: [what should exist — file, system, type, test]
+- Found: [nothing | stub at file:line | different approach at file:line]
+- Delegate: orchestrator must implement (MISSING/PARTIAL/SCOPE_NARROWED) or document decision revision (DIVERGED)
+```
+
 ## Security finding (guard-security)
 
 ```

@@ -35,6 +35,7 @@ Every one of these events requires an immediate session-state update:
 | runner-tests (GREEN gate) | Specs table → GREEN column |
 | runner-linting | Verification Results table |
 | runner-tests (verification) | Verification Results table |
+| reviewer-completeness | Verification Results table |
 | Any reviewer (Standard tier) | Verification Results table |
 | Any guard (Full tier) | Verification Results table |
 | Fix agent | Active Failures → update attempt count and result |
@@ -51,6 +52,13 @@ Keep under 80 lines. Use this exact structure:
 
 ## Plan
 [The **FULL** filepath to the current plan that is being worked on]
+
+## Wave
+[Which wave of the plan is currently in flight — e.g., "Wave 1: bolt domain"]
+
+## Todo
+[The todo item being worked on]
+- Detail: [path to docs/todos/detail/<file>.md]
 
 ## Specs
 [The full file path to every fully completed, reviewed, and accepted spec with a one line description. One spec per line.]

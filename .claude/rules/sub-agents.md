@@ -18,6 +18,10 @@ Used during the delegated implementation pipeline (see `delegating-to-subagents.
 
 ## Verification Agents
 
+| Agent | Purpose | When to use |
+|-------|---------|-------------|
+| **reviewer-completeness** | Verifies implementation delivers what the todo detail and plan wave promised | Standard Verification Tier (commit gate) — parallel with other reviewers |
+
 See `.claude/rules/verification-tiers.md` for which agents run in each tier (Basic, Standard, Full), when each tier runs, and the pipeline flow.
 
 ## Research Agents
