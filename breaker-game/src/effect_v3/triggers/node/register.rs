@@ -31,14 +31,13 @@ pub fn register(app: &mut App) {
         bridges::on_node_end_occurred.after(NodeSystems::Cleanup),
     );
 
-    // Threshold checker and its bridge run in FixedUpdate
+    // Threshold checker monitors timers (Tick); bridge translates output (Bridge)
     app.add_systems(
         FixedUpdate,
-        (
-            check_thresholds::check_node_timer_thresholds,
-            bridges::on_node_timer_threshold_occurred,
-        )
-            .chain()
-            .in_set(EffectV3Systems::Bridge),
+        check_thresholds::check_node_timer_thresholds.in_set(EffectV3Systems::Tick),
+    );
+    app.add_systems(
+        FixedUpdate,
+        bridges::on_node_timer_threshold_occurred.in_set(EffectV3Systems::Bridge),
     );
 }

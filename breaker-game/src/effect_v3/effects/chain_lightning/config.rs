@@ -11,7 +11,10 @@ use serde::{Deserialize, Serialize};
 use super::components::*;
 use crate::{
     bolt::{components::BoltBaseDamage, resources::DEFAULT_BOLT_BASE_DAMAGE},
-    effect_v3::{components::EffectSourceChip, traits::Fireable},
+    effect_v3::{
+        components::EffectSourceChip, effects::DamageBoostConfig, stacking::EffectStack,
+        traits::Fireable,
+    },
     state::types::NodeState,
 };
 
@@ -34,17 +37,16 @@ impl Fireable for ChainLightningConfig {
         let base_damage = world
             .get::<BoltBaseDamage>(entity)
             .map_or(DEFAULT_BOLT_BASE_DAMAGE, |d| d.0);
+        let damage_boost = world
+            .get::<EffectStack<DamageBoostConfig>>(entity)
+            .map_or(1.0, EffectStack::aggregate);
 
-        let chip = EffectSourceChip(if source.is_empty() {
-            None
-        } else {
-            Some(source.to_owned())
-        });
+        let chip = EffectSourceChip::from_source(source);
 
         world.spawn((
             ChainLightningChain {
                 remaining_jumps: self.arcs,
-                damage:          base_damage * self.damage_mult.0,
+                damage:          base_damage * self.damage_mult.0 * damage_boost,
                 hit_set:         HashSet::new(),
                 state:           ChainState::Idle,
                 range:           self.range.0,

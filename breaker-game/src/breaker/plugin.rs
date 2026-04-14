@@ -17,6 +17,7 @@ use crate::{
             update_breaker_state, update_bump,
         },
     },
+    effect_v3::EffectV3Systems,
     prelude::*,
     state::run::node::{
         sets::NodeSystems,
@@ -60,7 +61,8 @@ impl Plugin for BreakerPlugin {
                     grade_bump
                         .after(update_bump)
                         .after(BoltSystems::BreakerCollision)
-                        .in_set(BreakerSystems::GradeBump),
+                        .in_set(BreakerSystems::GradeBump)
+                        .before(EffectV3Systems::Bridge),
                     (
                         perfect_bump_dash_cancel,
                         spawn_bump_grade_text,

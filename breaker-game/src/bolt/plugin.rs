@@ -68,20 +68,24 @@ impl Plugin for BoltPlugin {
                         .after(normalize_bolt_speed_after_constraints)
                         .after(BreakerSystems::Move)
                         .after(rantzsoft_physics2d::plugin::PhysicsSystems::MaintainQuadtree)
-                        .in_set(BoltSystems::CellCollision),
+                        .in_set(BoltSystems::CellCollision)
+                        .before(EffectV3Systems::Bridge),
                     bolt_wall_collision
                         .after(BoltSystems::CellCollision)
-                        .in_set(BoltSystems::WallCollision),
+                        .in_set(BoltSystems::WallCollision)
+                        .before(EffectV3Systems::Bridge),
                     bolt_breaker_collision
                         .after(BoltSystems::CellCollision)
-                        .in_set(BoltSystems::BreakerCollision),
+                        .in_set(BoltSystems::BreakerCollision)
+                        .before(EffectV3Systems::Bridge),
                     clamp_bolt_to_playfield.after(bolt_breaker_collision),
                     bolt_lost
                         .after(
                             rantzsoft_physics2d::plugin::PhysicsSystems::EnforceDistanceConstraints,
                         )
                         .after(clamp_bolt_to_playfield)
-                        .in_set(BoltSystems::BoltLost),
+                        .in_set(BoltSystems::BoltLost)
+                        .before(EffectV3Systems::Bridge),
                     // Tag late-spawned bolts with NodeScalingFactor
                     apply_node_scale_to_late_bolts,
                     // Tick bolt lifespan timers and request destruction on expiry

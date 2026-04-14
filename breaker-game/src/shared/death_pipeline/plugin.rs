@@ -8,7 +8,7 @@ use super::{
 };
 use crate::{
     bolt::components::Bolt, breaker::components::Breaker, cells::components::Cell,
-    walls::components::Wall,
+    effect_v3::sets::EffectV3Systems, walls::components::Wall,
 };
 
 /// Plugin for the unified death pipeline.
@@ -38,11 +38,11 @@ impl Plugin for DeathPipelinePlugin {
 
         app.add_message::<DespawnEntity>();
 
-        // System set ordering: ApplyDamage before DetectDeaths
+        // System set ordering: ApplyDamage after effect tick, DetectDeaths after ApplyDamage
         app.configure_sets(
             FixedUpdate,
             (
-                DeathPipelineSystems::ApplyDamage,
+                DeathPipelineSystems::ApplyDamage.after(EffectV3Systems::Tick),
                 DeathPipelineSystems::DetectDeaths.after(DeathPipelineSystems::ApplyDamage),
             ),
         );
