@@ -1,12 +1,12 @@
 //! Entropy engine systems — reset counter on node start and tick bump counting.
 
-use bevy::{ecs::message::Messages, prelude::*};
-use rand::Rng;
+use bevy::prelude::*;
+use rand_chacha::ChaCha8Rng;
 
 use super::components::EntropyCounter;
 use crate::{
     breaker::messages::BumpPerformed,
-    effect_v3::{dispatch::fire_dispatch, types::EffectType},
+    effect_v3::{commands::EffectCommandsExt, components::EffectSourceChip, types::EffectType},
     shared::rng::GameRng,
 };
 
@@ -20,29 +20,26 @@ pub fn reset_entropy_counter(mut query: Query<&mut EntropyCounter>) {
 /// Processes `BumpPerformed` messages to increment entropy counters and
 /// fire escalating random effects.
 ///
-/// For each bump: increments count (capped at `max_effects`), then fires
-/// N effects where N = current count, each selected from the weighted pool.
-///
-/// Exclusive system — requires `&mut World` for `fire_dispatch`.
-pub fn tick_entropy_engine(world: &mut World) {
-    // Phase 1: Count bumps this frame.
-    let bump_count = world
-        .resource::<Messages<BumpPerformed>>()
-        .iter_current_update_messages()
-        .count();
-
+/// For each bump: increments count (capped at `max_effects`), then queues
+/// N deferred fires where N = current count, each selected from the
+/// weighted pool via `GameRng`. Fires are queued through
+/// `commands.fire_effect`, which runs during the next command flush.
+pub fn tick_entropy_engine(
+    mut commands: Commands,
+    mut counters: Query<(Entity, &mut EntropyCounter, Option<&EffectSourceChip>)>,
+    mut bumps: MessageReader<BumpPerformed>,
+    mut rng: ResMut<GameRng>,
+) {
+    let bump_count = bumps.read().count();
     if bump_count == 0 {
         return;
     }
 
-    // Phase 2: Collect counter entities and their data.
-    let entries: Vec<(Entity, EntropyCounter)> = {
-        let mut query = world.query::<(Entity, &EntropyCounter)>();
-        query.iter(world).map(|(e, c)| (e, c.clone())).collect()
-    };
+    for (entity, mut counter, chip) in &mut counters {
+        // Resolve the source string once per entity.
+        // EffectSourceChip(None) and the absence of the component both map to "".
+        let source: String = chip.and_then(|c| c.0.clone()).unwrap_or_default();
 
-    // Phase 3: Process bumps sequentially per entity.
-    for (entity, mut counter) in entries {
         for _ in 0..bump_count {
             // Increment count (capped at max_effects).
             if counter.count < counter.max_effects {
@@ -60,35 +57,38 @@ pub fn tick_entropy_engine(world: &mut World) {
             }
 
             for _ in 0..counter.count {
-                let effect = pick_weighted_effect(&counter.pool, total_weight, world);
-                fire_dispatch(&effect, entity, "", world);
+                if let Some(effect_type) =
+                    pick_weighted_effect(&counter.pool, &mut rng.0, total_weight)
+                {
+                    commands.fire_effect(entity, effect_type, source.clone());
+                }
             }
-        }
-
-        // Write back updated counter.
-        if let Some(mut c) = world.get_mut::<EntropyCounter>(entity) {
-            c.count = counter.count;
         }
     }
 }
 
-/// Pick a random effect from a weighted pool using `GameRng`.
+/// Pick a random effect from a weighted pool using the supplied RNG.
 fn pick_weighted_effect(
     pool: &[(ordered_float::OrderedFloat<f32>, Box<EffectType>)],
+    rng: &mut ChaCha8Rng,
     total_weight: f32,
-    world: &mut World,
-) -> EffectType {
-    let roll: f32 = world.resource_mut::<GameRng>().0.random::<f32>() * total_weight;
+) -> Option<EffectType> {
+    use rand::Rng;
+
+    if pool.is_empty() || total_weight <= 0.0 {
+        return None;
+    }
+
+    let roll: f32 = rng.random::<f32>() * total_weight;
     let mut accumulated = 0.0;
     for (weight, effect) in pool {
         accumulated += weight.0;
         if roll < accumulated {
-            return (**effect).clone();
+            return Some((**effect).clone());
         }
     }
     // Fallback to last entry if floating-point imprecision causes no match.
-    // Caller guarantees pool is non-empty.
-    (*pool[pool.len() - 1].1).clone()
+    Some((*pool[pool.len() - 1].1).clone())
 }
 
 #[cfg(test)]
@@ -818,6 +818,157 @@ mod tests {
         assert_eq!(
             chips[0].0, None,
             "fire_dispatch called with source=\"\" should produce EffectSourceChip(None), got {:?}",
+            chips[0].0,
+        );
+    }
+
+    // ── Behavior 24: Runtime smoke test — normal-system scheduling ──
+
+    /// Spawns a counter with both `EntropyCounter` and an `EffectSourceChip`
+    /// component bundled on the same entity. Used by Behaviors 25 and 26.
+    fn spawn_counter_with_chip(
+        app: &mut App,
+        count: u32,
+        max_effects: u32,
+        pool: Vec<(OrderedFloat<f32>, Box<EffectType>)>,
+        chip: crate::effect_v3::components::EffectSourceChip,
+    ) -> Entity {
+        app.world_mut()
+            .spawn((
+                EntropyCounter {
+                    count,
+                    max_effects,
+                    pool,
+                },
+                chip,
+            ))
+            .id()
+    }
+
+    #[test]
+    fn tick_entropy_engine_schedules_as_normal_system_and_ticks_without_panic() {
+        // Fresh TestAppBuilder — deliberately NOT using entropy_app() because
+        // the goal of this smoke test is to lock in the refactored signature:
+        // `tick_entropy_engine` must be a normal Bevy system, schedulable via
+        // `add_systems(FixedUpdate, tick_entropy_engine)` directly (no tuple,
+        // no ordering companion), with its system params resolved from the
+        // app's resources and messages.
+        //
+        // `GameRng::from_seed(42)` is inserted because `ResMut<GameRng>` is
+        // a system param of the refactored function. `BumpPerformed` is
+        // registered because `MessageReader<BumpPerformed>` is a system param.
+        //
+        // Edge case: no `EntropyCounter` entities, no queued bumps — the
+        // system must early-out cleanly and `tick` must run without error.
+        let mut app = TestAppBuilder::new()
+            .with_message::<BumpPerformed>()
+            .insert_resource(GameRng::from_seed(42))
+            .with_system(FixedUpdate, tick_entropy_engine)
+            .build();
+
+        tick(&mut app);
+        // If we reach here, no panic occurred and the system scheduled
+        // successfully as a normal system.
+    }
+
+    // ── Behavior 25: EffectSourceChip(Some) propagates to spawned effects ──
+
+    #[test]
+    fn counter_entity_with_some_chip_propagates_name_to_spawned_effects() {
+        use crate::effect_v3::components::EffectSourceChip;
+
+        let mut app = entropy_app();
+
+        // Counter entity bundled with BOTH EntropyCounter and
+        // EffectSourceChip(Some("entropy_chip")). One queued bump.
+        // Single-entry pool ensures deterministic 1-shockwave outcome.
+        let counter_entity = spawn_counter_with_chip(
+            &mut app,
+            0,
+            3,
+            vec![make_shockwave_effect()],
+            EffectSourceChip(Some("entropy_chip".to_owned())),
+        );
+        queue_bump(&mut app);
+
+        tick(&mut app);
+
+        // Collect the EffectSourceChip components on every ShockwaveSource
+        // entity that currently exists.
+        let chips: Vec<EffectSourceChip> = app
+            .world_mut()
+            .query_filtered::<&EffectSourceChip, With<ShockwaveSource>>()
+            .iter(app.world())
+            .cloned()
+            .collect();
+
+        assert_eq!(
+            chips.len(),
+            1,
+            "expected 1 shockwave entity with EffectSourceChip, got {}",
+            chips.len(),
+        );
+        // EffectSourceChip does not derive PartialEq — assert on .0 directly.
+        assert_eq!(
+            chips[0].0,
+            Some("entropy_chip".to_owned()),
+            "spawned shockwave should carry the counter entity's chip name, got {:?}",
+            chips[0].0,
+        );
+
+        // Edge case: the counter entity retains its own EffectSourceChip
+        // after the tick (we clone, not move).
+        let counter_chip = app
+            .world()
+            .get::<EffectSourceChip>(counter_entity)
+            .expect("counter entity should still have its EffectSourceChip");
+        assert_eq!(
+            counter_chip.0,
+            Some("entropy_chip".to_owned()),
+            "counter entity's own EffectSourceChip must remain unchanged after tick, got {:?}",
+            counter_chip.0,
+        );
+    }
+
+    // ── Behavior 26: EffectSourceChip(None) on counter yields None on spawn ──
+
+    #[test]
+    fn counter_entity_with_none_chip_yields_none_on_spawned_effects() {
+        use crate::effect_v3::components::EffectSourceChip;
+
+        let mut app = entropy_app();
+
+        // Counter entity bundled with BOTH EntropyCounter and
+        // EffectSourceChip(None). Distinguishes from Behavior 23 where the
+        // entity has NO EffectSourceChip component at all.
+        spawn_counter_with_chip(
+            &mut app,
+            0,
+            3,
+            vec![make_shockwave_effect()],
+            EffectSourceChip(None),
+        );
+        queue_bump(&mut app);
+
+        tick(&mut app);
+
+        let chips: Vec<EffectSourceChip> = app
+            .world_mut()
+            .query_filtered::<&EffectSourceChip, With<ShockwaveSource>>()
+            .iter(app.world())
+            .cloned()
+            .collect();
+
+        assert_eq!(
+            chips.len(),
+            1,
+            "expected 1 shockwave entity with EffectSourceChip, got {}",
+            chips.len(),
+        );
+        // EffectSourceChip does not derive PartialEq — assert via .0.is_none().
+        assert!(
+            chips[0].0.is_none(),
+            "EffectSourceChip(None) on counter should produce EffectSourceChip(None) on spawn, got {:?}",
             chips[0].0,
         );
     }

@@ -10,9 +10,9 @@ use crate::{
     breaker::messages::{BreakerImpactCell, BreakerImpactWall},
     cells::messages::CellImpactWall,
     effect_v3::{
-        storage::BoundEffects,
+        storage::{BoundEffects, StagedEffects},
         types::{EntityKind, Trigger, TriggerContext},
-        walking::walk_effects,
+        walking::{walk_bound_effects, walk_staged_effects},
     },
 };
 
@@ -34,7 +34,7 @@ pub(crate) struct ImpactReaders<'w, 's> {
 /// gets `Impacted(Cell)` and the cell gets `Impacted(Bolt)`.
 pub(crate) fn on_impacted(
     mut readers: ImpactReaders,
-    bound_query: Query<&BoundEffects>,
+    bound_query: Query<(&BoundEffects, Option<&StagedEffects>)>,
     mut commands: Commands,
 ) {
     for msg in readers.bolt_cell.read() {
@@ -133,7 +133,7 @@ pub(crate) fn on_impacted(
 /// effects when a collision involving the given entity kind happens.
 pub(crate) fn on_impact_occurred(
     mut readers: ImpactReaders,
-    bound_query: Query<(Entity, &BoundEffects)>,
+    bound_query: Query<(Entity, &BoundEffects, Option<&StagedEffects>)>,
     mut commands: Commands,
 ) {
     // Collect all entity kinds involved in collisions this frame
@@ -195,56 +195,97 @@ pub(crate) fn on_impact_occurred(
 
     for (kind, ctx) in &kinds {
         let trigger = Trigger::ImpactOccurred(*kind);
-        for (entity, bound) in bound_query.iter() {
-            let trees = bound.0.clone();
-            walk_effects(entity, &trigger, ctx, &trees, &mut commands);
+        for (entity, bound, staged) in bound_query.iter() {
+            let staged_trees = staged.map(|s| s.0.clone()).unwrap_or_default();
+            let bound_trees = bound.0.clone();
+            walk_staged_effects(entity, &trigger, ctx, &staged_trees, &mut commands);
+            walk_bound_effects(entity, &trigger, ctx, &bound_trees, &mut commands);
         }
     }
 }
 
 /// Walk effects on both collision participants (local dispatch).
+///
+/// Walks staged entries before bound entries for each entity so a
+/// freshly-armed inner gate does not match the same-tick trigger.
 fn walk_local_impact(
     entity_a: Entity,
     kind_b: EntityKind,
     entity_b: Entity,
     kind_a: EntityKind,
     context: &TriggerContext,
-    bound_query: &Query<&BoundEffects>,
+    bound_query: &Query<(&BoundEffects, Option<&StagedEffects>)>,
     commands: &mut Commands,
 ) {
-    // Entity A gets Impacted(kind_of_B) — and also Impacted(Any)
-    if let Ok(bound) = bound_query.get(entity_a) {
-        let trees = bound.0.clone();
-        walk_effects(
+    // Entity A gets Impacted(kind_of_B) — and also Impacted(Any).
+    if let Ok((bound, staged)) = bound_query.get(entity_a) {
+        let staged_trees = staged.map(|s| s.0.clone()).unwrap_or_default();
+        let bound_trees = bound.0.clone();
+
+        // Walk staged first for both trigger variants against the same
+        // snapshot — matches the existing clone-once pattern for bound.
+        walk_staged_effects(
             entity_a,
             &Trigger::Impacted(kind_b),
             context,
-            &trees,
+            &staged_trees,
             commands,
         );
-        walk_effects(
+        walk_staged_effects(
             entity_a,
             &Trigger::Impacted(EntityKind::Any),
             context,
-            &trees,
+            &staged_trees,
+            commands,
+        );
+
+        walk_bound_effects(
+            entity_a,
+            &Trigger::Impacted(kind_b),
+            context,
+            &bound_trees,
+            commands,
+        );
+        walk_bound_effects(
+            entity_a,
+            &Trigger::Impacted(EntityKind::Any),
+            context,
+            &bound_trees,
             commands,
         );
     }
-    // Entity B gets Impacted(kind_of_A) — and also Impacted(Any)
-    if let Ok(bound) = bound_query.get(entity_b) {
-        let trees = bound.0.clone();
-        walk_effects(
+    // Entity B gets Impacted(kind_of_A) — and also Impacted(Any).
+    if let Ok((bound, staged)) = bound_query.get(entity_b) {
+        let staged_trees = staged.map(|s| s.0.clone()).unwrap_or_default();
+        let bound_trees = bound.0.clone();
+
+        walk_staged_effects(
             entity_b,
             &Trigger::Impacted(kind_a),
             context,
-            &trees,
+            &staged_trees,
             commands,
         );
-        walk_effects(
+        walk_staged_effects(
             entity_b,
             &Trigger::Impacted(EntityKind::Any),
             context,
-            &trees,
+            &staged_trees,
+            commands,
+        );
+
+        walk_bound_effects(
+            entity_b,
+            &Trigger::Impacted(kind_a),
+            context,
+            &bound_trees,
+            commands,
+        );
+        walk_bound_effects(
+            entity_b,
+            &Trigger::Impacted(EntityKind::Any),
+            context,
+            &bound_trees,
             commands,
         );
     }

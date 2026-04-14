@@ -4,12 +4,24 @@ use bevy::prelude::*;
 
 use super::walk_effects::evaluate_tree;
 use crate::effect_v3::{
-    commands::RemoveEffectCommand,
+    commands::EffectCommandsExt,
     types::{Tree, Trigger, TriggerContext},
 };
 
 /// Evaluate a `Tree::Once` node: if the trigger matches, evaluate the inner tree
 /// and then remove this node so it never fires again.
+///
+/// When the inner tree's root is itself a trigger gate (`When`, `Once`,
+/// `Until`), the outer `Once` ARMS the inner by staging it under the
+/// same source name BEFORE removing itself from `BoundEffects`. The
+/// remove-then-stage ordering is load-bearing: `RemoveEffectCommand`
+/// sweeps both `BoundEffects` and `StagedEffects` by name, so queuing
+/// the remove first clears the outer without touching the later staged
+/// entry.
+///
+/// `Once` always removes itself from `BoundEffects` on outer-trigger
+/// match, regardless of whether the inner was armed or recursed —
+/// preserving the existing one-shot invariant.
 pub fn evaluate_once(
     entity: Entity,
     gate_trigger: &Trigger,
@@ -19,12 +31,20 @@ pub fn evaluate_once(
     source: &str,
     commands: &mut Commands,
 ) {
-    if gate_trigger == active_trigger {
-        evaluate_tree(entity, inner, active_trigger, context, source, commands);
-        commands.queue(RemoveEffectCommand {
-            entity,
-            name: source.to_owned(),
-        });
+    if gate_trigger != active_trigger {
+        return;
+    }
+    match inner {
+        Tree::When(..) | Tree::Once(..) | Tree::Until(..) => {
+            // Remove the outer FIRST so the subsequent stage is not wiped
+            // by `RemoveEffectCommand`'s name-sweep of `StagedEffects`.
+            commands.remove_effect(entity, source);
+            commands.stage_effect(entity, source.to_owned(), inner.clone());
+        }
+        _ => {
+            evaluate_tree(entity, inner, active_trigger, context, source, commands);
+            commands.remove_effect(entity, source);
+        }
     }
 }
 
@@ -37,9 +57,9 @@ mod tests {
     use crate::effect_v3::{
         effects::{DamageBoostConfig, SpeedBoostConfig},
         stacking::EffectStack,
-        storage::BoundEffects,
+        storage::{BoundEffects, StagedEffects},
         types::{EffectType, Terminal},
-        walking::walk_effects::walk_effects,
+        walking::walk_effects::walk_bound_effects,
     };
 
     // ----- Behavior 1: Once fires inner tree on first matching trigger -----
@@ -64,7 +84,7 @@ mod tests {
         let mut queue = CommandQueue::default();
         {
             let mut commands = Commands::new(&mut queue, &world);
-            walk_effects(
+            walk_bound_effects(
                 entity,
                 &Trigger::Bumped,
                 &TriggerContext::None,
@@ -102,7 +122,7 @@ mod tests {
         let mut queue = CommandQueue::default();
         {
             let mut commands = Commands::new(&mut queue, &world);
-            walk_effects(
+            walk_bound_effects(
                 entity,
                 &Trigger::Bumped,
                 &TriggerContext::None,
@@ -141,7 +161,7 @@ mod tests {
         let mut queue = CommandQueue::default();
         {
             let mut commands = Commands::new(&mut queue, &world);
-            walk_effects(
+            walk_bound_effects(
                 entity,
                 &Trigger::BoltLostOccurred,
                 &TriggerContext::None,
@@ -187,7 +207,7 @@ mod tests {
         let mut queue = CommandQueue::default();
         {
             let mut commands = Commands::new(&mut queue, &world);
-            walk_effects(
+            walk_bound_effects(
                 entity,
                 &Trigger::Bumped,
                 &TriggerContext::None,
@@ -209,7 +229,7 @@ mod tests {
         let mut queue2 = CommandQueue::default();
         {
             let mut commands = Commands::new(&mut queue2, &world);
-            walk_effects(
+            walk_bound_effects(
                 entity,
                 &Trigger::Bumped,
                 &TriggerContext::None,
@@ -262,7 +282,7 @@ mod tests {
         let mut queue = CommandQueue::default();
         {
             let mut commands = Commands::new(&mut queue, &world);
-            walk_effects(
+            walk_bound_effects(
                 entity,
                 &Trigger::Bumped,
                 &TriggerContext::None,
@@ -315,7 +335,7 @@ mod tests {
         let mut queue = CommandQueue::default();
         {
             let mut commands = Commands::new(&mut queue, &world);
-            walk_effects(
+            walk_bound_effects(
                 entity,
                 &Trigger::Bumped,
                 &TriggerContext::None,
@@ -342,15 +362,20 @@ mod tests {
         );
     }
 
-    // ----- Edge case (reviewer): Once removes on trigger match even if inner tree produces no effect -----
+    // ----- Behavior 27 (Wave C): Once with gated inner arms the inner into
+    //       StagedEffects AND removes its own outer entry from BoundEffects.
+    //       Renamed from `once_removes_on_trigger_match_even_when_inner_tree_produces_no_effect`
+    //       to reflect the new arming semantic.
 
     #[test]
-    fn once_removes_on_trigger_match_even_when_inner_tree_produces_no_effect() {
+    fn once_arms_inner_when_gate_into_staged_and_removes_outer_from_bound() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
 
-        // Inner tree is a When(Died, ...) which won't match Bumped trigger
-        // So the inner tree produces no effect, but Once should still remove itself
+        // Inner tree is a When(Died, ...) which is a trigger gate — under the
+        // arming rules, Once(Bumped, When(Died, ...)) on an active Bumped
+        // trigger should stage the inner When(Died, ...) and remove the outer
+        // Once from BoundEffects.
         let bound = BoundEffects(vec![(
             "chip_a".to_string(),
             Tree::Once(
@@ -369,7 +394,7 @@ mod tests {
         let mut queue = CommandQueue::default();
         {
             let mut commands = Commands::new(&mut queue, &world);
-            walk_effects(
+            walk_bound_effects(
                 entity,
                 &Trigger::Bumped,
                 &TriggerContext::None,
@@ -379,18 +404,113 @@ mod tests {
         }
         queue.apply(&mut world);
 
-        // No effect should fire (inner When(Died) didn't match Bumped)
+        // No effect should fire — the inner is staged, not evaluated
         let stack = world.get::<EffectStack<SpeedBoostConfig>>(entity);
         assert!(
             stack.is_none(),
-            "No effect should fire because inner When(Died) didn't match Bumped"
+            "No effect should fire — inner When(Died, ...) is staged, not evaluated"
         );
 
-        // But the Once entry should still be removed because the outer trigger matched
+        // Outer Once entry should be removed from BoundEffects
         let remaining = &world.get::<BoundEffects>(entity).unwrap().0;
         assert!(
             !remaining.iter().any(|(name, _)| name == "chip_a"),
-            "chip_a should be removed from BoundEffects even though inner tree produced no effect"
+            "chip_a should be removed from BoundEffects — outer Once is one-shot"
+        );
+
+        // The inner When(Died, Fire(SpeedBoost)) should now be in StagedEffects
+        let staged = world
+            .get::<StagedEffects>(entity)
+            .expect("StagedEffects should be inserted when Once arms its inner gate");
+        assert_eq!(staged.0.len(), 1);
+        assert_eq!(
+            staged.0[0],
+            (
+                "chip_a".to_string(),
+                Tree::When(
+                    Trigger::Died,
+                    Box::new(Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+                        multiplier: OrderedFloat(1.5),
+                    }))),
+                ),
+            ),
+            "staged entry must be exactly the inner When(Died, Fire(SpeedBoost))"
+        );
+    }
+
+    // ----------------------------------------------------------------
+    // Wave C behavior 10: Once(Bumped, When(Bumped, Fire(X))) — outer
+    // Once arms the inner When, then removes itself from BoundEffects.
+    // ----------------------------------------------------------------
+    #[test]
+    fn once_arms_inner_when_and_removes_outer_from_bound_effects() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        // Seed BoundEffects with the outer Once so the queued RemoveEffectCommand
+        // has something to remove when applied.
+        world.entity_mut(entity).insert(BoundEffects(vec![(
+            "chip_a".to_string(),
+            Tree::Once(
+                Trigger::Bumped,
+                Box::new(Tree::When(
+                    Trigger::Bumped,
+                    Box::new(Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+                        multiplier: OrderedFloat(1.5),
+                    }))),
+                )),
+            ),
+        )]));
+
+        let inner = Tree::When(
+            Trigger::Bumped,
+            Box::new(Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+                multiplier: OrderedFloat(1.5),
+            }))),
+        );
+
+        let mut queue = CommandQueue::default();
+        {
+            let mut commands = Commands::new(&mut queue, &world);
+            evaluate_once(
+                entity,
+                &Trigger::Bumped,
+                &inner,
+                &Trigger::Bumped,
+                &TriggerContext::None,
+                "chip_a",
+                &mut commands,
+            );
+        }
+        queue.apply(&mut world);
+
+        let staged = world
+            .get::<StagedEffects>(entity)
+            .expect("StagedEffects should be inserted when Once arms its inner gate");
+        assert_eq!(staged.0.len(), 1);
+        assert_eq!(
+            staged.0[0],
+            (
+                "chip_a".to_string(),
+                Tree::When(
+                    Trigger::Bumped,
+                    Box::new(Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+                        multiplier: OrderedFloat(1.5),
+                    }))),
+                ),
+            ),
+            "staged entry must be exactly the inner When subtree"
+        );
+
+        let bound = world.get::<BoundEffects>(entity).unwrap();
+        assert!(
+            bound.0.iter().all(|(name, _)| name != "chip_a"),
+            "outer Once entry must be removed from BoundEffects"
+        );
+
+        assert!(
+            world.get::<EffectStack<SpeedBoostConfig>>(entity).is_none(),
+            "inner must NOT fire on the arming tick"
         );
     }
 }

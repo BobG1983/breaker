@@ -3,15 +3,24 @@
 use bevy::prelude::*;
 
 use super::sequence::evaluate_terminal;
-use crate::effect_v3::types::{
-    BoltLostTarget, BumpTarget, DeathTarget, ImpactTarget, ParticipantTarget, Terminal,
-    TriggerContext,
+use crate::effect_v3::{
+    commands::EffectCommandsExt,
+    conditions::is_armed_source,
+    types::{
+        BoltLostTarget, BumpTarget, DeathTarget, ImpactTarget, ParticipantTarget, Terminal,
+        TriggerContext,
+    },
 };
 
 /// Evaluate a `Tree::On` node: redirect the terminal to the entity
 /// identified by the participant target in the trigger context.
+///
+/// When the source string encodes an armed-entry key (see
+/// `is_armed_source`), this additionally queues a
+/// `TrackArmedFireCommand` on the owner so the Shape D disarm path can
+/// reverse effects on the exact participants they were fired on.
 pub fn evaluate_on(
-    _entity: Entity,
+    owner: Entity,
     target: ParticipantTarget,
     terminal: &Terminal,
     context: &TriggerContext,
@@ -20,6 +29,9 @@ pub fn evaluate_on(
 ) {
     if let Some(resolved) = resolve_participant(target, context) {
         evaluate_terminal(resolved, terminal, source, commands);
+        if is_armed_source(source) {
+            commands.track_armed_fire(owner, source.to_owned(), resolved);
+        }
     }
 }
 
@@ -67,6 +79,7 @@ mod tests {
     use crate::effect_v3::{
         effects::SpeedBoostConfig,
         stacking::EffectStack,
+        storage::ArmedFiredParticipants,
         types::{BoltLostTarget, BumpTarget, DeathTarget, EffectType, ImpactTarget},
     };
 
@@ -557,5 +570,143 @@ mod tests {
             .get::<EffectStack<SpeedBoostConfig>>(entity)
             .expect("EffectStack should exist when resolved entity is the owner");
         assert_eq!(stack.len(), 1);
+    }
+
+    // ----- Behavior 20: evaluate_on does NOT populate ArmedFiredParticipants
+    //                    for non-armed sources (spec behavior 18) -----
+
+    #[test]
+    fn evaluate_on_does_not_populate_armed_fired_participants_for_non_armed_source() {
+        let mut world = World::new();
+        let owner = world.spawn_empty().id();
+        let bolt = world.spawn_empty().id();
+
+        let context = TriggerContext::Bump {
+            bolt:    Some(bolt),
+            breaker: owner,
+        };
+        let terminal = Terminal::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+            multiplier: OrderedFloat(1.5),
+        }));
+
+        let mut queue = CommandQueue::default();
+        {
+            let mut commands = Commands::new(&mut queue, &world);
+            evaluate_on(
+                owner,
+                ParticipantTarget::Bump(BumpTarget::Bolt),
+                &terminal,
+                &context,
+                "chip_bare",
+                &mut commands,
+            );
+        }
+        queue.apply(&mut world);
+
+        // Non-armed source: owner must NOT gain an ArmedFiredParticipants
+        // component (or if present, must not contain the key).
+        let tracked = world.get::<ArmedFiredParticipants>(owner);
+        match tracked {
+            None => {
+                // Expected: no component at all
+            }
+            Some(afp) => {
+                assert!(
+                    !afp.0.contains_key("chip_bare"),
+                    "Non-armed source 'chip_bare' must not be tracked in ArmedFiredParticipants"
+                );
+            }
+        }
+    }
+
+    // ----- Behavior 21: evaluate_on DOES populate ArmedFiredParticipants
+    //                    for armed sources (spec behavior 19) -----
+
+    #[test]
+    fn evaluate_on_populates_armed_fired_participants_for_armed_source() {
+        let mut world = World::new();
+        let owner = world.spawn_empty().id();
+        let bolt = world.spawn_empty().id();
+
+        let context = TriggerContext::Bump {
+            bolt:    Some(bolt),
+            breaker: owner,
+        };
+        let terminal = Terminal::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+            multiplier: OrderedFloat(1.5),
+        }));
+
+        let mut queue = CommandQueue::default();
+        {
+            let mut commands = Commands::new(&mut queue, &world);
+            evaluate_on(
+                owner,
+                ParticipantTarget::Bump(BumpTarget::Bolt),
+                &terminal,
+                &context,
+                "chip_redirect#armed[0]",
+                &mut commands,
+            );
+        }
+        queue.apply(&mut world);
+
+        let tracked = world
+            .get::<ArmedFiredParticipants>(owner)
+            .expect("ArmedFiredParticipants should exist on owner after armed fire");
+        let vec = tracked
+            .0
+            .get("chip_redirect#armed[0]")
+            .expect("tracked map should contain the armed source key");
+        assert_eq!(vec.len(), 1, "Vec should contain exactly 1 entry");
+        assert_eq!(vec[0], bolt, "tracked participant should be the bolt");
+    }
+
+    // Edge case: call twice with the same bolt — Vec contains [bolt, bolt] (no dedup)
+    #[test]
+    fn evaluate_on_armed_source_appends_without_deduplication() {
+        let mut world = World::new();
+        let owner = world.spawn_empty().id();
+        let bolt = world.spawn_empty().id();
+
+        let context = TriggerContext::Bump {
+            bolt:    Some(bolt),
+            breaker: owner,
+        };
+        let terminal = Terminal::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+            multiplier: OrderedFloat(1.5),
+        }));
+
+        let mut queue = CommandQueue::default();
+        {
+            let mut commands = Commands::new(&mut queue, &world);
+            evaluate_on(
+                owner,
+                ParticipantTarget::Bump(BumpTarget::Bolt),
+                &terminal,
+                &context,
+                "chip_redirect#armed[0]",
+                &mut commands,
+            );
+            evaluate_on(
+                owner,
+                ParticipantTarget::Bump(BumpTarget::Bolt),
+                &terminal,
+                &context,
+                "chip_redirect#armed[0]",
+                &mut commands,
+            );
+        }
+        queue.apply(&mut world);
+
+        let tracked = world
+            .get::<ArmedFiredParticipants>(owner)
+            .expect("ArmedFiredParticipants should exist on owner");
+        let vec = tracked
+            .0
+            .get("chip_redirect#armed[0]")
+            .expect("tracked map should contain the armed source key");
+        assert_eq!(vec.len(), 2, "Vec should have 2 entries (no dedup)");
+        assert_eq!(vec[0], bolt);
+        assert_eq!(vec[1], bolt);
     }
 }

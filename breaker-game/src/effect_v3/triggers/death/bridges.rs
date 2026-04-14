@@ -10,9 +10,9 @@ use crate::{
     breaker::components::Breaker,
     cells::components::Cell,
     effect_v3::{
-        storage::BoundEffects,
+        storage::{BoundEffects, StagedEffects},
         types::{EntityKind, Trigger, TriggerContext},
-        walking::walk_effects,
+        walking::{walk_bound_effects, walk_staged_effects},
     },
     shared::death_pipeline::{Destroyed, GameEntity},
     walls::components::Wall,
@@ -27,8 +27,8 @@ use crate::{
 fn on_destroyed_inner<T: GameEntity>(
     kind: EntityKind,
     reader: &mut MessageReader<Destroyed<T>>,
-    bound_query: &Query<&BoundEffects>,
-    global_query: &Query<(Entity, &BoundEffects)>,
+    bound_query: &Query<(&BoundEffects, Option<&StagedEffects>)>,
+    global_query: &Query<(Entity, &BoundEffects, Option<&StagedEffects>)>,
     commands: &mut Commands,
 ) {
     for msg in reader.read() {
@@ -37,39 +37,75 @@ fn on_destroyed_inner<T: GameEntity>(
             killer: msg.killer,
         };
 
-        // Local: Died on victim
-        if let Ok(bound) = bound_query.get(msg.victim) {
-            let trees = bound.0.clone();
-            walk_effects(msg.victim, &Trigger::Died, &context, &trees, commands);
+        // Local: Died on victim — staged first, then bound.
+        if let Ok((bound, staged)) = bound_query.get(msg.victim) {
+            let staged_trees = staged.map(|s| s.0.clone()).unwrap_or_default();
+            let bound_trees = bound.0.clone();
+            walk_staged_effects(
+                msg.victim,
+                &Trigger::Died,
+                &context,
+                &staged_trees,
+                commands,
+            );
+            walk_bound_effects(msg.victim, &Trigger::Died, &context, &bound_trees, commands);
         }
 
-        // Local: Killed(kind) and Killed(Any) on killer
+        // Local: Killed(kind) and Killed(Any) on killer — staged first
+        // for both trigger variants against a single snapshot.
         if let Some(killer) = msg.killer
-            && let Ok(bound) = bound_query.get(killer)
+            && let Ok((bound, staged)) = bound_query.get(killer)
         {
-            let trees = bound.0.clone();
-            walk_effects(killer, &Trigger::Killed(kind), &context, &trees, commands);
-            walk_effects(
+            let staged_trees = staged.map(|s| s.0.clone()).unwrap_or_default();
+            let bound_trees = bound.0.clone();
+
+            walk_staged_effects(
+                killer,
+                &Trigger::Killed(kind),
+                &context,
+                &staged_trees,
+                commands,
+            );
+            walk_staged_effects(
                 killer,
                 &Trigger::Killed(EntityKind::Any),
                 &context,
-                &trees,
+                &staged_trees,
+                commands,
+            );
+
+            walk_bound_effects(
+                killer,
+                &Trigger::Killed(kind),
+                &context,
+                &bound_trees,
+                commands,
+            );
+            walk_bound_effects(
+                killer,
+                &Trigger::Killed(EntityKind::Any),
+                &context,
+                &bound_trees,
                 commands,
             );
         }
 
-        // Global: DeathOccurred(kind) on all entities
+        // Global: DeathOccurred(kind) on all entities.
         let trigger = Trigger::DeathOccurred(kind);
-        for (entity, bound) in global_query.iter() {
-            let trees = bound.0.clone();
-            walk_effects(entity, &trigger, &context, &trees, commands);
+        for (entity, bound, staged) in global_query.iter() {
+            let staged_trees = staged.map(|s| s.0.clone()).unwrap_or_default();
+            let bound_trees = bound.0.clone();
+            walk_staged_effects(entity, &trigger, &context, &staged_trees, commands);
+            walk_bound_effects(entity, &trigger, &context, &bound_trees, commands);
         }
 
-        // Global: DeathOccurred(Any) on all entities
+        // Global: DeathOccurred(Any) on all entities.
         let trigger_any = Trigger::DeathOccurred(EntityKind::Any);
-        for (entity, bound) in global_query.iter() {
-            let trees = bound.0.clone();
-            walk_effects(entity, &trigger_any, &context, &trees, commands);
+        for (entity, bound, staged) in global_query.iter() {
+            let staged_trees = staged.map(|s| s.0.clone()).unwrap_or_default();
+            let bound_trees = bound.0.clone();
+            walk_staged_effects(entity, &trigger_any, &context, &staged_trees, commands);
+            walk_bound_effects(entity, &trigger_any, &context, &bound_trees, commands);
         }
     }
 }
@@ -77,8 +113,8 @@ fn on_destroyed_inner<T: GameEntity>(
 /// Bridge for cell deaths.
 pub(crate) fn on_cell_destroyed(
     mut reader: MessageReader<Destroyed<Cell>>,
-    bound_query: Query<&BoundEffects>,
-    global_query: Query<(Entity, &BoundEffects)>,
+    bound_query: Query<(&BoundEffects, Option<&StagedEffects>)>,
+    global_query: Query<(Entity, &BoundEffects, Option<&StagedEffects>)>,
     mut commands: Commands,
 ) {
     on_destroyed_inner(
@@ -93,8 +129,8 @@ pub(crate) fn on_cell_destroyed(
 /// Bridge for bolt deaths.
 pub(crate) fn on_bolt_destroyed(
     mut reader: MessageReader<Destroyed<Bolt>>,
-    bound_query: Query<&BoundEffects>,
-    global_query: Query<(Entity, &BoundEffects)>,
+    bound_query: Query<(&BoundEffects, Option<&StagedEffects>)>,
+    global_query: Query<(Entity, &BoundEffects, Option<&StagedEffects>)>,
     mut commands: Commands,
 ) {
     on_destroyed_inner(
@@ -109,8 +145,8 @@ pub(crate) fn on_bolt_destroyed(
 /// Bridge for wall deaths.
 pub(crate) fn on_wall_destroyed(
     mut reader: MessageReader<Destroyed<Wall>>,
-    bound_query: Query<&BoundEffects>,
-    global_query: Query<(Entity, &BoundEffects)>,
+    bound_query: Query<(&BoundEffects, Option<&StagedEffects>)>,
+    global_query: Query<(Entity, &BoundEffects, Option<&StagedEffects>)>,
     mut commands: Commands,
 ) {
     on_destroyed_inner(
@@ -125,8 +161,8 @@ pub(crate) fn on_wall_destroyed(
 /// Bridge for breaker deaths.
 pub(crate) fn on_breaker_destroyed(
     mut reader: MessageReader<Destroyed<Breaker>>,
-    bound_query: Query<&BoundEffects>,
-    global_query: Query<(Entity, &BoundEffects)>,
+    bound_query: Query<(&BoundEffects, Option<&StagedEffects>)>,
+    global_query: Query<(Entity, &BoundEffects, Option<&StagedEffects>)>,
     mut commands: Commands,
 ) {
     on_destroyed_inner(
@@ -157,7 +193,7 @@ mod tests {
         effect_v3::{
             effects::SpeedBoostConfig,
             stacking::EffectStack,
-            storage::BoundEffects,
+            storage::{BoundEffects, StagedEffects},
             types::{EffectType, EntityKind, Tree, Trigger},
         },
         shared::{death_pipeline::Destroyed, test_utils::TestAppBuilder},
@@ -852,5 +888,83 @@ mod tests {
             1,
             "Died (local, no EntityKind) must still fire on the victim"
         );
+    }
+
+    // -- Behavior 20: StagedEffects path — Died (local dispatch) walks staged first --
+
+    #[test]
+    fn died_trigger_fires_staged_entry_and_consumes_it_entry_specifically() {
+        // Verifies the death bridge's local-dispatch staged path:
+        // `walk_staged_effects` runs before `walk_bound_effects`, fires the
+        // staged entry via `commands.remove_staged_effect` (entry-specific,
+        // BoundEffects untouched). Regression guard: a rewire of the bridge
+        // that skipped `walk_staged_effects` would silently drop staged
+        // entries on death events.
+        let mut app = cell_death_test_app();
+        let bolt_entity = app.world_mut().spawn_empty().id();
+        let staged_fire_tree = death_speed_tree("chip_a", Trigger::Died, 1.5).1;
+
+        let victim_entity = app
+            .world_mut()
+            .spawn((
+                BoundEffects(vec![]),
+                StagedEffects(vec![("chip_a".to_string(), staged_fire_tree)]),
+            ))
+            .id();
+
+        app.insert_resource(TestCellDestroyedMessages(vec![destroyed_cell(
+            victim_entity,
+            Some(bolt_entity),
+        )]));
+
+        tick(&mut app);
+
+        let stack = app
+            .world()
+            .get::<EffectStack<SpeedBoostConfig>>(victim_entity)
+            .expect("staged When(Died, Fire) must have fired on the victim");
+        assert_eq!(stack.len(), 1);
+
+        // Entry-specific consume removed the staged entry from StagedEffects
+        // but left BoundEffects untouched.
+        let staged = app.world().get::<StagedEffects>(victim_entity).unwrap();
+        assert!(staged.0.is_empty(), "staged entry should be consumed");
+        let bound = app.world().get::<BoundEffects>(victim_entity).unwrap();
+        assert!(bound.0.is_empty(), "BoundEffects must not be touched");
+    }
+
+    // -- Behavior 21: StagedEffects path — DeathOccurred(Any) global dispatch walks staged first --
+
+    #[test]
+    fn death_occurred_any_fires_staged_entries_on_all_entities() {
+        let mut app = cell_death_test_app();
+        let cell_entity = app.world_mut().spawn_empty().id();
+        let bolt_entity = app.world_mut().spawn_empty().id();
+        let staged_tree =
+            death_speed_tree("chip_a", Trigger::DeathOccurred(EntityKind::Any), 1.5).1;
+
+        let listener = app
+            .world_mut()
+            .spawn((
+                BoundEffects(vec![]),
+                StagedEffects(vec![("chip_a".to_string(), staged_tree)]),
+            ))
+            .id();
+
+        app.insert_resource(TestCellDestroyedMessages(vec![destroyed_cell(
+            cell_entity,
+            Some(bolt_entity),
+        )]));
+
+        tick(&mut app);
+
+        let stack = app
+            .world()
+            .get::<EffectStack<SpeedBoostConfig>>(listener)
+            .expect("global staged entry should fire on DeathOccurred(Any)");
+        assert_eq!(stack.len(), 1);
+
+        let staged = app.world().get::<StagedEffects>(listener).unwrap();
+        assert!(staged.0.is_empty(), "staged entry should be consumed");
     }
 }

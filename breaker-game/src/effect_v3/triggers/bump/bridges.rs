@@ -8,9 +8,9 @@ use bevy::prelude::*;
 use crate::{
     breaker::messages::{BumpGrade, BumpPerformed, BumpWhiffed, NoBump},
     effect_v3::{
-        storage::BoundEffects,
+        storage::{BoundEffects, StagedEffects},
         types::{Trigger, TriggerContext},
-        walking::walk_effects,
+        walking::{walk_bound_effects, walk_staged_effects},
     },
 };
 
@@ -22,7 +22,7 @@ use crate::{
 /// successful bump of any grade.
 pub fn on_bumped(
     mut reader: MessageReader<BumpPerformed>,
-    bound_query: Query<&BoundEffects>,
+    bound_query: Query<(&BoundEffects, Option<&StagedEffects>)>,
     mut commands: Commands,
 ) {
     for msg in reader.read() {
@@ -45,7 +45,7 @@ pub fn on_bumped(
 /// in a perfect-timed bump.
 pub fn on_perfect_bumped(
     mut reader: MessageReader<BumpPerformed>,
-    bound_query: Query<&BoundEffects>,
+    bound_query: Query<(&BoundEffects, Option<&StagedEffects>)>,
     mut commands: Commands,
 ) {
     for msg in reader.read() {
@@ -71,7 +71,7 @@ pub fn on_perfect_bumped(
 /// in an early-timed bump.
 pub fn on_early_bumped(
     mut reader: MessageReader<BumpPerformed>,
-    bound_query: Query<&BoundEffects>,
+    bound_query: Query<(&BoundEffects, Option<&StagedEffects>)>,
     mut commands: Commands,
 ) {
     for msg in reader.read() {
@@ -97,7 +97,7 @@ pub fn on_early_bumped(
 /// in a late-timed bump.
 pub fn on_late_bumped(
     mut reader: MessageReader<BumpPerformed>,
-    bound_query: Query<&BoundEffects>,
+    bound_query: Query<(&BoundEffects, Option<&StagedEffects>)>,
     mut commands: Commands,
 ) {
     for msg in reader.read() {
@@ -127,7 +127,7 @@ pub fn on_late_bumped(
 /// any successful bump happens.
 pub fn on_bump_occurred(
     mut reader: MessageReader<BumpPerformed>,
-    bound_query: Query<(Entity, &BoundEffects)>,
+    bound_query: Query<(Entity, &BoundEffects, Option<&StagedEffects>)>,
     mut commands: Commands,
 ) {
     for msg in reader.read() {
@@ -148,7 +148,7 @@ pub fn on_bump_occurred(
 /// when a perfect bump happens.
 pub fn on_perfect_bump_occurred(
     mut reader: MessageReader<BumpPerformed>,
-    bound_query: Query<(Entity, &BoundEffects)>,
+    bound_query: Query<(Entity, &BoundEffects, Option<&StagedEffects>)>,
     mut commands: Commands,
 ) {
     for msg in reader.read() {
@@ -172,7 +172,7 @@ pub fn on_perfect_bump_occurred(
 /// when an early bump happens.
 pub fn on_early_bump_occurred(
     mut reader: MessageReader<BumpPerformed>,
-    bound_query: Query<(Entity, &BoundEffects)>,
+    bound_query: Query<(Entity, &BoundEffects, Option<&StagedEffects>)>,
     mut commands: Commands,
 ) {
     for msg in reader.read() {
@@ -196,7 +196,7 @@ pub fn on_early_bump_occurred(
 /// when a late bump happens.
 pub fn on_late_bump_occurred(
     mut reader: MessageReader<BumpPerformed>,
-    bound_query: Query<(Entity, &BoundEffects)>,
+    bound_query: Query<(Entity, &BoundEffects, Option<&StagedEffects>)>,
     mut commands: Commands,
 ) {
     for msg in reader.read() {
@@ -220,7 +220,7 @@ pub fn on_late_bump_occurred(
 /// when a bump timing window expires without contact.
 pub fn on_bump_whiff_occurred(
     mut reader: MessageReader<BumpWhiffed>,
-    bound_query: Query<(Entity, &BoundEffects)>,
+    bound_query: Query<(Entity, &BoundEffects, Option<&StagedEffects>)>,
     mut commands: Commands,
 ) {
     for _ in reader.read() {
@@ -238,7 +238,7 @@ pub fn on_bump_whiff_occurred(
 /// when a bolt hits the breaker without any bump input.
 pub fn on_no_bump_occurred(
     mut reader: MessageReader<NoBump>,
-    bound_query: Query<(Entity, &BoundEffects)>,
+    bound_query: Query<(Entity, &BoundEffects, Option<&StagedEffects>)>,
     mut commands: Commands,
 ) {
     for msg in reader.read() {
@@ -260,38 +260,52 @@ pub fn on_no_bump_occurred(
 // ---------------------------------------------------------------------------
 
 /// Walk effects on both bolt and breaker (local dispatch).
+///
+/// Walks staged entries before bound entries for each entity so that a
+/// `When`/`Once`/`Until` that arms an inner gate during the bound walk
+/// does not match the freshly-staged entry in the same tick.
 fn walk_local_bump(
     trigger: &Trigger,
     context: &TriggerContext,
     bolt: Option<Entity>,
     breaker: Entity,
-    bound_query: &Query<&BoundEffects>,
+    bound_query: &Query<(&BoundEffects, Option<&StagedEffects>)>,
     commands: &mut Commands,
 ) {
-    // Walk breaker effects
-    if let Ok(bound) = bound_query.get(breaker) {
-        let trees = bound.0.clone();
-        walk_effects(breaker, trigger, context, &trees, commands);
+    // Walk breaker effects — snapshot both vecs before walking either.
+    if let Ok((bound, staged)) = bound_query.get(breaker) {
+        let staged_trees = staged.map(|s| s.0.clone()).unwrap_or_default();
+        let bound_trees = bound.0.clone();
+        walk_staged_effects(breaker, trigger, context, &staged_trees, commands);
+        walk_bound_effects(breaker, trigger, context, &bound_trees, commands);
     }
-    // Walk bolt effects (if bolt entity exists)
+    // Walk bolt effects (if bolt entity exists).
     if let Some(bolt_entity) = bolt
-        && let Ok(bound) = bound_query.get(bolt_entity)
+        && let Ok((bound, staged)) = bound_query.get(bolt_entity)
     {
-        let trees = bound.0.clone();
-        walk_effects(bolt_entity, trigger, context, &trees, commands);
+        let staged_trees = staged.map(|s| s.0.clone()).unwrap_or_default();
+        let bound_trees = bound.0.clone();
+        walk_staged_effects(bolt_entity, trigger, context, &staged_trees, commands);
+        walk_bound_effects(bolt_entity, trigger, context, &bound_trees, commands);
     }
 }
 
 /// Walk effects on all entities with `BoundEffects` (global dispatch).
+///
+/// Walks staged entries before bound entries for each entity so that a
+/// `When`/`Once`/`Until` that arms an inner gate during the bound walk
+/// does not match the freshly-staged entry in the same tick.
 fn walk_global(
     trigger: &Trigger,
     context: &TriggerContext,
-    bound_query: &Query<(Entity, &BoundEffects)>,
+    bound_query: &Query<(Entity, &BoundEffects, Option<&StagedEffects>)>,
     commands: &mut Commands,
 ) {
-    for (entity, bound) in bound_query.iter() {
-        let trees = bound.0.clone();
-        walk_effects(entity, trigger, context, &trees, commands);
+    for (entity, bound, staged) in bound_query.iter() {
+        let staged_trees = staged.map(|s| s.0.clone()).unwrap_or_default();
+        let bound_trees = bound.0.clone();
+        walk_staged_effects(entity, trigger, context, &staged_trees, commands);
+        walk_bound_effects(entity, trigger, context, &bound_trees, commands);
     }
 }
 
@@ -310,7 +324,7 @@ mod tests {
         effect_v3::{
             effects::SpeedBoostConfig,
             stacking::EffectStack,
-            storage::BoundEffects,
+            storage::{BoundEffects, StagedEffects},
             types::{BumpTarget, EffectType, ParticipantTarget, Terminal, Tree, Trigger},
         },
         shared::test_utils::TestAppBuilder,
@@ -2197,5 +2211,507 @@ mod tests {
             .get::<EffectStack<SpeedBoostConfig>>(entity)
             .expect("EffectStack should exist after two whiff messages");
         assert_eq!(stack.len(), 2);
+    }
+
+    // ================================================================
+    // Wave C — Staged effect dispatch on on_bumped bridge
+    // ================================================================
+
+    // ----------------------------------------------------------------
+    // Behavior 18: staged entry whose inner trigger matches fires and
+    //              is consumed on the same tick
+    // ----------------------------------------------------------------
+    #[test]
+    fn on_bumped_staged_entry_fires_and_is_consumed_on_match() {
+        let mut app = bump_performed_test_app((inject_bump_performed.before(on_bumped), on_bumped));
+
+        let breaker = app.world_mut().spawn_empty().id();
+        let bolt = app
+            .world_mut()
+            .spawn((
+                BoundEffects(vec![]),
+                StagedEffects(vec![(
+                    "chip_a".to_string(),
+                    Tree::When(
+                        Trigger::Bumped,
+                        Box::new(Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+                            multiplier: OrderedFloat(1.5),
+                        }))),
+                    ),
+                )]),
+            ))
+            .id();
+
+        app.insert_resource(TestBumpPerformedMessages(vec![BumpPerformed {
+            grade: BumpGrade::Perfect,
+            bolt: Some(bolt),
+            breaker,
+        }]));
+
+        tick(&mut app);
+
+        let stack = app
+            .world()
+            .get::<EffectStack<SpeedBoostConfig>>(bolt)
+            .expect("staged When should have fired on matching trigger");
+        assert_eq!(stack.len(), 1);
+
+        let staged = app
+            .world()
+            .get::<StagedEffects>(bolt)
+            .expect("StagedEffects should still exist (empty)");
+        assert!(
+            staged.0.is_empty(),
+            "staged entry must be consumed via commands.remove_effect"
+        );
+
+        let bound = app
+            .world()
+            .get::<BoundEffects>(bolt)
+            .expect("BoundEffects should still exist");
+        assert!(
+            bound.0.is_empty(),
+            "remove_effect only removed the staged copy"
+        );
+    }
+
+    // ----------------------------------------------------------------
+    // Behavior 19: staged entry whose inner trigger does NOT match the
+    //              active trigger remains staged
+    // ----------------------------------------------------------------
+    #[test]
+    fn on_bumped_staged_entry_non_matching_trigger_remains_staged() {
+        let mut app = bump_performed_test_app((inject_bump_performed.before(on_bumped), on_bumped));
+
+        let breaker = app.world_mut().spawn_empty().id();
+        let bolt = app
+            .world_mut()
+            .spawn((
+                BoundEffects(vec![]),
+                StagedEffects(vec![(
+                    "chip_a".to_string(),
+                    Tree::When(
+                        Trigger::BoltLostOccurred,
+                        Box::new(Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+                            multiplier: OrderedFloat(1.5),
+                        }))),
+                    ),
+                )]),
+            ))
+            .id();
+
+        app.insert_resource(TestBumpPerformedMessages(vec![BumpPerformed {
+            grade: BumpGrade::Perfect,
+            bolt: Some(bolt),
+            breaker,
+        }]));
+
+        tick(&mut app);
+
+        assert!(
+            app.world()
+                .get::<EffectStack<SpeedBoostConfig>>(bolt)
+                .is_none(),
+            "inner must not fire when its gate trigger does not match"
+        );
+
+        let staged = app.world().get::<StagedEffects>(bolt).unwrap();
+        assert_eq!(staged.0.len(), 1);
+        assert_eq!(staged.0[0].0, "chip_a");
+    }
+
+    // ----------------------------------------------------------------
+    // Behavior 20: staged entries are walked BEFORE bound entries
+    //              (snapshot semantics — no same-tick arming fire)
+    // ----------------------------------------------------------------
+    #[test]
+    fn on_bumped_staged_walks_before_bound_no_same_tick_fire() {
+        let mut app = bump_performed_test_app((inject_bump_performed.before(on_bumped), on_bumped));
+
+        let breaker = app.world_mut().spawn_empty().id();
+        let bolt = app
+            .world_mut()
+            .spawn(BoundEffects(vec![(
+                "chip_outer".to_string(),
+                Tree::When(
+                    Trigger::Bumped,
+                    Box::new(Tree::When(
+                        Trigger::Bumped,
+                        Box::new(Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+                            multiplier: OrderedFloat(1.5),
+                        }))),
+                    )),
+                ),
+            )]))
+            .id();
+
+        app.insert_resource(TestBumpPerformedMessages(vec![BumpPerformed {
+            grade: BumpGrade::Perfect,
+            bolt: Some(bolt),
+            breaker,
+        }]));
+
+        tick(&mut app);
+
+        let staged = app
+            .world()
+            .get::<StagedEffects>(bolt)
+            .expect("outer bound When should have armed the inner");
+        assert_eq!(staged.0.len(), 1);
+        assert_eq!(
+            staged.0[0],
+            (
+                "chip_outer".to_string(),
+                Tree::When(
+                    Trigger::Bumped,
+                    Box::new(Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+                        multiplier: OrderedFloat(1.5),
+                    }))),
+                ),
+            )
+        );
+
+        assert!(
+            app.world()
+                .get::<EffectStack<SpeedBoostConfig>>(bolt)
+                .is_none(),
+            "freshly armed staged entry MUST NOT fire in the same tick it was armed"
+        );
+    }
+
+    // ----------------------------------------------------------------
+    // Behavior 21: second bump fires the staged inner When (end-to-end
+    //              "two bumps → one fire")
+    //
+    // Under entry-specific staged consume
+    // (`RemoveStagedEffectCommand` = first-match `(name, Tree)` tuple
+    // removal, NOT a name-sweep), the outer bound `When` is never wiped
+    // by consume. After tick 2:
+    //   - the staged inner `When(Bumped, Fire)` fired once,
+    //   - the outer `When(Bumped, When(Bumped, Fire))` is UNTOUCHED in
+    //     `BoundEffects`,
+    //   - the bound walk re-armed a fresh `When(Bumped, Fire)` into
+    //     `StagedEffects` inside the same tick.
+    // FIFO queue order: `Fire` → `RemoveStaged("chip_a", inner)` →
+    // `Stage("chip_a", inner)`. The remove sweeps only `StagedEffects`
+    // entry-specifically, then the bound walk's fresh stage appends.
+    // ----------------------------------------------------------------
+    #[test]
+    fn on_bumped_second_bump_fires_staged_inner_when() {
+        let mut app = bump_performed_test_app((inject_bump_performed.before(on_bumped), on_bumped));
+
+        let breaker = app.world_mut().spawn_empty().id();
+        let bolt = app
+            .world_mut()
+            .spawn(BoundEffects(vec![(
+                "chip_a".to_string(),
+                Tree::When(
+                    Trigger::Bumped,
+                    Box::new(Tree::When(
+                        Trigger::Bumped,
+                        Box::new(Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+                            multiplier: OrderedFloat(1.5),
+                        }))),
+                    )),
+                ),
+            )]))
+            .id();
+
+        // Tick 1: inject one BumpPerformed → outer arms inner into StagedEffects
+        app.insert_resource(TestBumpPerformedMessages(vec![BumpPerformed {
+            grade: BumpGrade::Perfect,
+            bolt: Some(bolt),
+            breaker,
+        }]));
+        tick(&mut app);
+
+        {
+            let staged = app
+                .world()
+                .get::<StagedEffects>(bolt)
+                .expect("tick 1 should have armed the inner");
+            assert_eq!(staged.0.len(), 1);
+        }
+        assert!(
+            app.world()
+                .get::<EffectStack<SpeedBoostConfig>>(bolt)
+                .is_none(),
+            "no fire after tick 1"
+        );
+
+        // Tick 2: inject another BumpPerformed → staged inner fires + outer
+        // re-arms. Entry-specific consume leaves the freshly staged re-arm
+        // intact.
+        app.insert_resource(TestBumpPerformedMessages(vec![BumpPerformed {
+            grade: BumpGrade::Perfect,
+            bolt: Some(bolt),
+            breaker,
+        }]));
+        tick(&mut app);
+
+        let stack = app
+            .world()
+            .get::<EffectStack<SpeedBoostConfig>>(bolt)
+            .expect("staged inner When should have fired on tick 2");
+        assert_eq!(stack.len(), 1, "exactly one fire after two bumps");
+
+        // The outer bound When is UNTOUCHED — RemoveStagedEffectCommand
+        // never sweeps BoundEffects.
+        let bound = app
+            .world()
+            .get::<BoundEffects>(bolt)
+            .expect("outer bound When should still be present");
+        assert_eq!(bound.0.len(), 1, "outer bound When persists");
+
+        // StagedEffects has exactly one entry: the re-armed inner
+        // `When(Bumped, Fire(SpeedBoost))` installed by the bound walk
+        // after the entry-specific remove swept the just-consumed entry.
+        let staged = app
+            .world()
+            .get::<StagedEffects>(bolt)
+            .expect("bound walk should have re-armed inner into StagedEffects");
+        assert_eq!(staged.0.len(), 1, "single re-armed inner entry");
+        assert_eq!(
+            staged.0[0],
+            (
+                "chip_a".to_string(),
+                Tree::When(
+                    Trigger::Bumped,
+                    Box::new(Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+                        multiplier: OrderedFloat(1.5),
+                    }))),
+                ),
+            ),
+            "re-armed inner is the one-level-peeled inner When"
+        );
+    }
+
+    // ----------------------------------------------------------------
+    // Behavior 22: third bump fires again (repeating pattern)
+    //
+    // With entry-specific staged consume, the outer bound `When` is
+    // persistent and the staged inner re-arms every tick after the
+    // staged consume. The pattern `When(Bumped, When(Bumped, Fire))` is
+    // therefore REPEATING: after priming on tick 1, every subsequent
+    // bump fires exactly one more SpeedBoost.
+    //
+    // Tick 3 → Fire count 2 (double the tick-2 count).
+    // Tick 4 → Fire count 3 (cap the assertion here — locks in
+    // "+1 fire per bump forever" without looping forever).
+    // ----------------------------------------------------------------
+    #[test]
+    fn on_bumped_third_bump_fires_again_repeating_pattern() {
+        let mut app = bump_performed_test_app((inject_bump_performed.before(on_bumped), on_bumped));
+
+        let breaker = app.world_mut().spawn_empty().id();
+        let bolt = app
+            .world_mut()
+            .spawn(BoundEffects(vec![(
+                "chip_a".to_string(),
+                Tree::When(
+                    Trigger::Bumped,
+                    Box::new(Tree::When(
+                        Trigger::Bumped,
+                        Box::new(Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+                            multiplier: OrderedFloat(1.5),
+                        }))),
+                    )),
+                ),
+            )]))
+            .id();
+
+        // Tick 1: arm inner (staged.len == 1, no fire)
+        app.insert_resource(TestBumpPerformedMessages(vec![BumpPerformed {
+            grade: BumpGrade::Perfect,
+            bolt: Some(bolt),
+            breaker,
+        }]));
+        tick(&mut app);
+
+        // Tick 2: staged inner fires, outer bound re-arms (stack.len == 1)
+        app.insert_resource(TestBumpPerformedMessages(vec![BumpPerformed {
+            grade: BumpGrade::Perfect,
+            bolt: Some(bolt),
+            breaker,
+        }]));
+        tick(&mut app);
+
+        // Tick 3: inject third bump → staged inner fires AGAIN and
+        // outer bound re-arms a fresh inner.
+        app.insert_resource(TestBumpPerformedMessages(vec![BumpPerformed {
+            grade: BumpGrade::Perfect,
+            bolt: Some(bolt),
+            breaker,
+        }]));
+        tick(&mut app);
+
+        {
+            let stack = app
+                .world()
+                .get::<EffectStack<SpeedBoostConfig>>(bolt)
+                .expect("Fire should have run on tick 2 and tick 3");
+            assert_eq!(
+                stack.len(),
+                2,
+                "repeating pattern: each matching bump after priming adds one fire"
+            );
+
+            let staged = app
+                .world()
+                .get::<StagedEffects>(bolt)
+                .expect("bound walk re-armed inner on tick 3");
+            assert_eq!(staged.0.len(), 1, "single re-armed inner after tick 3");
+            assert_eq!(
+                staged.0[0],
+                (
+                    "chip_a".to_string(),
+                    Tree::When(
+                        Trigger::Bumped,
+                        Box::new(Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+                            multiplier: OrderedFloat(1.5),
+                        }))),
+                    ),
+                ),
+                "re-armed inner is the one-level-peeled inner When"
+            );
+
+            let bound = app
+                .world()
+                .get::<BoundEffects>(bolt)
+                .expect("outer bound When should still be present");
+            assert_eq!(bound.0.len(), 1, "outer bound When persists across ticks");
+        }
+
+        // Tick 4: inject a fourth bump — one more fire, capping the
+        // assertion at len == 3 to lock in "+1 per bump" without an
+        // unbounded loop.
+        app.insert_resource(TestBumpPerformedMessages(vec![BumpPerformed {
+            grade: BumpGrade::Perfect,
+            bolt: Some(bolt),
+            breaker,
+        }]));
+        tick(&mut app);
+
+        let stack = app
+            .world()
+            .get::<EffectStack<SpeedBoostConfig>>(bolt)
+            .expect("Fire should have run again on tick 4");
+        assert_eq!(
+            stack.len(),
+            3,
+            "repeating invariant: every matching bump adds exactly one fire"
+        );
+    }
+
+    // ================================================================
+    // Wave C Part D — same-source triple-nested `When` chain primes
+    //                 across 3 ticks then fires once per trigger
+    // ================================================================
+
+    // ----------------------------------------------------------------
+    // Behavior 26: Triple-nested When with same source — primes across
+    //              3 ticks, then fires once per matching trigger
+    //              (repeating)
+    //
+    // Under entry-specific staged consume
+    // (`RemoveStagedEffectCommand` = first-match `(name, Tree)` tuple
+    // removal), the outer bound `When(A, When(A, When(A, Fire)))` is
+    // persistent and peels one layer per tick. Fresh same-source stages
+    // queued in the same flush are NOT wiped, because the consume
+    // removes by exact `(name, Tree)` identity, not by name sweep.
+    //
+    // Expected timeline (A = Trigger::Bumped, chip = "chip_a"):
+    //   outer  = When(A, When(A, When(A, Fire(SpeedBoost))))
+    //   inner1 = When(A, When(A, Fire(SpeedBoost)))
+    //   inner2 = When(A, Fire(SpeedBoost))
+    //
+    //   Tick 1: staged walk no-op (empty); bound walk queues
+    //           Stage("chip_a", inner1). End: staged=[inner1], no fire.
+    //   Tick 2: staged walk sees [inner1], queues
+    //           Stage(inner2), RemoveStaged(inner1). Bound walk queues
+    //           Stage(inner1). FIFO flush:
+    //             Stage(inner2) → [inner1_old, inner2]
+    //             RemoveStaged(inner1) → [inner2]
+    //             Stage(inner1) → [inner2, inner1]
+    //           End: staged=[inner2, inner1], no fire.
+    //   Tick 3: staged walk sees snapshot [inner2, inner1]. inner2
+    //           fires SpeedBoost (first fire), queues Fire,
+    //           RemoveStaged(inner2). inner1 arms inner2, queues
+    //           Stage(inner2), RemoveStaged(inner1). Bound walk queues
+    //           Stage(inner1). FIFO flush:
+    //             Fire → stack=[1]
+    //             RemoveStaged(inner2) → [inner1]
+    //             Stage(inner2) → [inner1, inner2]
+    //             RemoveStaged(inner1) → [inner2]
+    //             Stage(inner1) → [inner2, inner1]
+    //           End: stack=[1], staged=[inner2, inner1].
+    //   Tick 4: same dynamic as tick 3. stack=[2].
+    //   Tick 5: same. stack=[3] (cap).
+    // ----------------------------------------------------------------
+    #[test]
+    fn on_bumped_triple_nested_when_same_source_primes_then_repeats() {
+        fn inject_and_tick(app: &mut App, bolt: Entity, breaker: Entity) {
+            app.insert_resource(TestBumpPerformedMessages(vec![BumpPerformed {
+                grade: BumpGrade::Perfect,
+                bolt: Some(bolt),
+                breaker,
+            }]));
+            tick(app);
+        }
+        fn stack_len(app: &App, bolt: Entity) -> Option<usize> {
+            app.world()
+                .get::<EffectStack<SpeedBoostConfig>>(bolt)
+                .map(EffectStack::len)
+        }
+        fn assert_bound_len_1(app: &App, bolt: Entity) {
+            assert_eq!(app.world().get::<BoundEffects>(bolt).unwrap().0.len(), 1);
+        }
+        fn assert_staged_pair(app: &App, bolt: Entity, a: &Tree, b: &Tree) {
+            let staged = app.world().get::<StagedEffects>(bolt).unwrap();
+            assert_eq!(staged.0.len(), 2);
+            assert_eq!(staged.0[0], ("chip_a".to_string(), a.clone()));
+            assert_eq!(staged.0[1], ("chip_a".to_string(), b.clone()));
+        }
+
+        let mut app = bump_performed_test_app((inject_bump_performed.before(on_bumped), on_bumped));
+        let breaker = app.world_mut().spawn_empty().id();
+
+        let fire_tree = Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+            multiplier: OrderedFloat(1.5),
+        }));
+        let inner2 = Tree::When(Trigger::Bumped, Box::new(fire_tree));
+        let inner1 = Tree::When(Trigger::Bumped, Box::new(inner2.clone()));
+        let outer = Tree::When(Trigger::Bumped, Box::new(inner1.clone()));
+
+        let bolt = app
+            .world_mut()
+            .spawn(BoundEffects(vec![("chip_a".to_string(), outer)]))
+            .id();
+
+        // Tick 1: bound walk arms inner1 → staged=[inner1], no fire.
+        inject_and_tick(&mut app, bolt, breaker);
+        assert_bound_len_1(&app, bolt);
+        let staged = app.world().get::<StagedEffects>(bolt).unwrap();
+        assert_eq!(staged.0.len(), 1);
+        assert_eq!(staged.0[0], ("chip_a".to_string(), inner1.clone()));
+        assert_eq!(stack_len(&app, bolt), None, "no fire after tick 1");
+
+        // Tick 2: staged walk arms inner2, bound re-arms inner1 → staged=[inner2, inner1], no fire.
+        inject_and_tick(&mut app, bolt, breaker);
+        assert_bound_len_1(&app, bolt);
+        assert_staged_pair(&app, bolt, &inner2, &inner1);
+        assert_eq!(stack_len(&app, bolt), None, "no fire after tick 2");
+
+        // Ticks 3, 4, 5: first/second/third fires. Staged layout stable at [inner2, inner1].
+        for expected_fires in 1..=3 {
+            inject_and_tick(&mut app, bolt, breaker);
+            assert_bound_len_1(&app, bolt);
+            assert_staged_pair(&app, bolt, &inner2, &inner1);
+            assert_eq!(
+                stack_len(&app, bolt),
+                Some(expected_fires),
+                "fire count should equal tick count past priming"
+            );
+        }
     }
 }

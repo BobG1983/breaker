@@ -6,7 +6,13 @@
 use bevy::prelude::*;
 
 use super::{
-    conditions, effects, sets::EffectV3Systems, storage::SpawnStampRegistry, traits::Fireable,
+    conditions, effects,
+    sets::EffectV3Systems,
+    storage::{
+        SpawnStampRegistry, stamp_spawned_bolts, stamp_spawned_breakers, stamp_spawned_cells,
+        stamp_spawned_walls,
+    },
+    traits::Fireable,
     triggers,
 };
 
@@ -36,6 +42,19 @@ impl Plugin for EffectV3Plugin {
 
         // Shared resources
         app.init_resource::<SpawnStampRegistry>();
+
+        // SpawnStampRegistry watchers — install matching entries on newly
+        // spawned entities.
+        app.add_systems(
+            FixedUpdate,
+            (
+                stamp_spawned_bolts,
+                stamp_spawned_cells,
+                stamp_spawned_walls,
+                stamp_spawned_breakers,
+            )
+                .in_set(EffectV3Systems::Bridge),
+        );
 
         // Triggers — each category registers its own bridges and game systems
         triggers::bump::register::register(app);

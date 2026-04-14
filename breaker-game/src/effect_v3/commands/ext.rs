@@ -3,8 +3,8 @@
 use bevy::prelude::*;
 
 use super::{
-    FireEffectCommand, RemoveEffectCommand, ReverseEffectCommand, RouteEffectCommand,
-    StageEffectCommand, StampEffectCommand,
+    FireEffectCommand, RemoveEffectCommand, RemoveStagedEffectCommand, ReverseEffectCommand,
+    RouteEffectCommand, StageEffectCommand, StampEffectCommand, TrackArmedFireCommand,
 };
 use crate::effect_v3::types::{EffectType, ReversibleEffectType, RouteType, Tree};
 
@@ -30,6 +30,23 @@ pub trait EffectCommandsExt {
 
     /// Remove all effect trees matching the given name from an entity.
     fn remove_effect(&mut self, entity: Entity, name: &str);
+
+    /// Remove the FIRST `StagedEffects` entry on `entity` whose source
+    /// name equals `name` AND whose tree equals `tree`. Removes exactly
+    /// one entry — not a name sweep. Does NOT touch `BoundEffects`.
+    ///
+    /// Used by `walk_staged_effects` to consume a staged entry that just
+    /// matched its trigger by entry-specific `(name, Tree)` tuple
+    /// identity, preserving any fresh same-name stages queued later in
+    /// the same command flush.
+    fn remove_staged_effect(&mut self, entity: Entity, name: String, tree: Tree);
+
+    /// Record `participant` as having received an armed On's fired effect
+    /// under `armed_source` on the `owner`'s `ArmedFiredParticipants`
+    /// component. Used by `evaluate_on` when firing through an armed
+    /// Shape-D scoped tree so the disarm path can reverse effects on the
+    /// exact participants they were fired on.
+    fn track_armed_fire(&mut self, owner: Entity, armed_source: String, participant: Entity);
 }
 
 impl EffectCommandsExt for Commands<'_, '_> {
@@ -70,6 +87,18 @@ impl EffectCommandsExt for Commands<'_, '_> {
         self.queue(RemoveEffectCommand {
             entity,
             name: name.to_owned(),
+        });
+    }
+
+    fn remove_staged_effect(&mut self, entity: Entity, name: String, tree: Tree) {
+        self.queue(RemoveStagedEffectCommand { entity, name, tree });
+    }
+
+    fn track_armed_fire(&mut self, owner: Entity, armed_source: String, participant: Entity) {
+        self.queue(TrackArmedFireCommand {
+            owner,
+            armed_source,
+            participant,
         });
     }
 }

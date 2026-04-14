@@ -94,7 +94,7 @@ mod tests {
             stacking::EffectStack,
             storage::BoundEffects,
             types::{ReversibleEffectType, Tree, Trigger},
-            walking::walk_effects::walk_effects,
+            walking::walk_effects::walk_bound_effects,
         },
         state::types::NodeState,
     };
@@ -133,7 +133,7 @@ mod tests {
         let mut queue = CommandQueue::default();
         {
             let mut commands = Commands::new(&mut queue, &world);
-            walk_effects(
+            walk_bound_effects(
                 entity,
                 &Trigger::Bumped,
                 &TriggerContext::None,
@@ -208,7 +208,7 @@ mod tests {
         let mut queue = CommandQueue::default();
         {
             let mut commands = Commands::new(&mut queue, &world);
-            walk_effects(
+            walk_bound_effects(
                 entity,
                 &Trigger::Bumped,
                 &TriggerContext::None,
@@ -270,7 +270,7 @@ mod tests {
         let mut queue = CommandQueue::default();
         {
             let mut commands = Commands::new(&mut queue, &world);
-            walk_effects(
+            walk_bound_effects(
                 entity,
                 &Trigger::Bumped,
                 &TriggerContext::None,
@@ -285,7 +285,7 @@ mod tests {
         let mut queue2 = CommandQueue::default();
         {
             let mut commands = Commands::new(&mut queue2, &world);
-            walk_effects(
+            walk_bound_effects(
                 entity,
                 &Trigger::Bumped,
                 &TriggerContext::None,
@@ -332,7 +332,7 @@ mod tests {
             let mut queue = CommandQueue::default();
             {
                 let mut commands = Commands::new(&mut queue, &world);
-                walk_effects(
+                walk_bound_effects(
                     entity,
                     &Trigger::Bumped,
                     &TriggerContext::None,
@@ -386,7 +386,7 @@ mod tests {
         let mut queue = CommandQueue::default();
         {
             let mut commands = Commands::new(&mut queue, &world);
-            walk_effects(
+            walk_bound_effects(
                 entity,
                 &Trigger::Bumped,
                 &TriggerContext::None,
@@ -456,7 +456,7 @@ mod tests {
         let mut queue = CommandQueue::default();
         {
             let mut commands = Commands::new(&mut queue, &world);
-            walk_effects(
+            walk_bound_effects(
                 entity,
                 &Trigger::BoltLostOccurred,
                 &TriggerContext::None,
@@ -571,7 +571,7 @@ mod tests {
         let mut queue = CommandQueue::default();
         {
             let mut commands = Commands::new(&mut queue, &world);
-            walk_effects(
+            walk_bound_effects(
                 entity,
                 &Trigger::Bumped,
                 &TriggerContext::None,
@@ -586,7 +586,7 @@ mod tests {
         let mut queue2 = CommandQueue::default();
         {
             let mut commands = Commands::new(&mut queue2, &world);
-            walk_effects(
+            walk_bound_effects(
                 entity,
                 &Trigger::PerfectBumped,
                 &TriggerContext::None,
