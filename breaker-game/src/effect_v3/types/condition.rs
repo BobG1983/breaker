@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 /// and reverse them when the condition becomes false.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Condition {
-    /// True while a node is playing or paused.
+    /// True while the current node is in the `Playing` state.
     NodeActive,
     /// True while at least one `ShieldWall` entity exists in the world.
     ShieldActive,

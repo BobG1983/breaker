@@ -16,7 +16,8 @@ Anchor
 
 # Reverse
 1. Remove `AnchorActive`, `AnchorTimer`, and `AnchorPlanted` from the target entity.
-2. If `AnchorPlanted` was present, remove the bump force boost from `EffectStack<BumpForceConfig>` using the same chip source string that was used when the boost was pushed.
+2. If planted, remove the piercing entry from `EffectStack<PiercingConfig>` matching source `"anchor_piercing"`.
+3. `reverse_all_by_source` uses `retain_by_source` to remove all piercing entries from the given source.
 
 # Source Location
 `src/effect_v3/effects/anchor/config.rs`
@@ -28,8 +29,8 @@ Anchor
 
 # New Systems
 - `tick_anchor` -- state machine based on breaker velocity. Runs in `FixedUpdate`.
-  1. Moving (nonzero velocity or dashing): remove `AnchorTimer` and `AnchorPlanted`. If was planted, remove bump force boost from `EffectStack<BumpForceConfig>`.
+  1. Moving (nonzero velocity or dashing): remove `AnchorTimer` and `AnchorPlanted`. If was planted, remove piercing entry from `EffectStack<PiercingConfig>`.
   2. Stationary + no timer + not planted: insert `AnchorTimer(plant_delay)`.
-  3. Stationary + timer active: decrement by `dt`. When timer reaches 0: remove timer, insert `AnchorPlanted`, push bump force boost to `EffectStack<BumpForceConfig>` using the same chip source string as the Anchor effect.
+  3. Stationary + timer active: decrement by `dt`. When timer reaches 0: remove timer, insert `AnchorPlanted`, push `PiercingConfig { charges: 1 }` to `EffectStack<PiercingConfig>` with source `"anchor_piercing"`.
   4. Stationary + planted: no-op.
-  5. Does NOT modify perfect window directly -- bump timing system reads `AnchorActive.perfect_window_multiplier` when `AnchorPlanted` is present.
+  5. Does NOT modify perfect window directly -- bump timing system should read `AnchorActive.perfect_window_multiplier` when `AnchorPlanted` is present (consumer not yet wired).

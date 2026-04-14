@@ -17,7 +17,8 @@ Note: Attraction does not use `EffectStack` because it has non-f32 fields (`Attr
 
 # Reverse
 1. Find and remove the matching `AttractionEntry` from `ActiveAttractions` by `(source, config match)`.
-2. If the Vec is empty after removal, remove the `ActiveAttractions` component.
+2. The `ActiveAttractions` component is left in place even when empty (an empty Vec is functionally equivalent to no component — `apply_attraction` has nothing to iterate).
+3. `reverse_all_by_source` uses `retain` to remove all entries matching the given source.
 
 # Source Location
 `src/effect_v3/effects/attraction/config.rs`

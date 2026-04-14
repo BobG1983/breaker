@@ -6,7 +6,7 @@ use crate::state::types::NodeState;
 
 /// Evaluate whether the `NodeActive` condition is currently true.
 ///
-/// Returns true while a node is playing or paused.
+/// Returns true while the current node is in the `Playing` state.
 pub fn is_node_active(world: &World) -> bool {
     world
         .get_resource::<State<NodeState>>()
