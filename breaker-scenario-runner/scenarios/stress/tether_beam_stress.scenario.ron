@@ -21,6 +21,6 @@
     allow_early_end: false,
     seed: 6561,
     initial_effects: [
-        Stamp(Bolt, When(Bumped, Fire(TetherBeam((damage_mult: 1.5))))),
+        Stamp(Bolt, When(Bumped, Fire(TetherBeam(TetherBeamConfig(damage_mult: 1.5, chain: false, width: 10.0))))),
     ],
 )

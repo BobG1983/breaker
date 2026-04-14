@@ -9,7 +9,7 @@ pub struct CircuitBreakerCounter {
     pub remaining:       u32,
     /// Total bumps required per cycle.
     pub bumps_required:  u32,
-    /// Number of shockwaves to spawn when the counter reaches zero.
+    /// Number of bolts spawned as the `SpawnBolts` reward when the counter reaches zero.
     pub spawn_count:     u32,
     /// Whether child bolts inherit this counter.
     pub inherit:         bool,

@@ -10,7 +10,7 @@ use rantzsoft_spatial2d::components::{BaseSpeed, Position2D, Scale2D, Velocity2D
 use rantzsoft_stateflow::CleanupOnExit;
 use serde::{Deserialize, Serialize};
 
-use super::components::{TetherBeamDamage, TetherBeamSource};
+use super::components::{TetherBeamDamage, TetherBeamSource, TetherBeamWidth};
 use crate::{
     bolt::components::{Bolt, ExtraBolt},
     effect_v3::{components::EffectSourceChip, traits::Fireable},
@@ -25,6 +25,10 @@ pub struct TetherBeamConfig {
     pub damage_mult: OrderedFloat<f32>,
     /// false = spawn a new bolt and beam to it; true = connect existing bolts.
     pub chain:       bool,
+    /// Beam half-width in world units (perpendicular distance from the
+    /// beam line). Stamped as `TetherBeamWidth` onto the spawned beam
+    /// entity. Required — no serde default.
+    pub width:       OrderedFloat<f32>,
 }
 
 impl Fireable for TetherBeamConfig {
@@ -79,6 +83,7 @@ impl TetherBeamConfig {
                 bolt_b: new_bolt,
             },
             TetherBeamDamage(self.damage_mult.0),
+            TetherBeamWidth(self.width.0),
             chip,
             CleanupOnExit::<NodeState>::default(),
         ));
@@ -118,6 +123,7 @@ impl TetherBeamConfig {
                 bolt_b: nearest_bolt,
             },
             TetherBeamDamage(self.damage_mult.0),
+            TetherBeamWidth(self.width.0),
             chip,
             CleanupOnExit::<NodeState>::default(),
         ));
@@ -156,6 +162,7 @@ mod tests {
         let config = TetherBeamConfig {
             damage_mult: OrderedFloat(1.5),
             chain:       false,
+            width:       OrderedFloat(10.0),
         };
         config.fire(source, "tether_beam", &mut world);
         world.flush();
@@ -179,6 +186,7 @@ mod tests {
         let config = TetherBeamConfig {
             damage_mult: OrderedFloat(1.5),
             chain:       false,
+            width:       OrderedFloat(10.0),
         };
         config.fire(source, "tether_beam", &mut world);
         world.flush();
@@ -201,6 +209,7 @@ mod tests {
         let config = TetherBeamConfig {
             damage_mult: OrderedFloat(1.5),
             chain:       false,
+            width:       OrderedFloat(10.0),
         };
         config.fire(source, "tether_beam", &mut world);
         world.flush();
@@ -235,6 +244,7 @@ mod tests {
         let config = TetherBeamConfig {
             damage_mult: OrderedFloat(2.5),
             chain:       false,
+            width:       OrderedFloat(10.0),
         };
         config.fire(source, "tether_beam", &mut world);
         world.flush();
@@ -261,6 +271,7 @@ mod tests {
         let config = TetherBeamConfig {
             damage_mult: OrderedFloat(1.5),
             chain:       false,
+            width:       OrderedFloat(10.0),
         };
         config.fire(source, "tether_beam", &mut world);
         world.flush();
@@ -284,6 +295,7 @@ mod tests {
         let config = TetherBeamConfig {
             damage_mult: OrderedFloat(1.5),
             chain:       false,
+            width:       OrderedFloat(10.0),
         };
         config.fire(source, "tether_beam", &mut world);
         world.flush();
@@ -309,6 +321,7 @@ mod tests {
         let config = TetherBeamConfig {
             damage_mult: OrderedFloat(1.5),
             chain:       false,
+            width:       OrderedFloat(10.0),
         };
         config.fire(source, "coil_chip", &mut world);
         world.flush();
@@ -341,6 +354,7 @@ mod tests {
         let config = TetherBeamConfig {
             damage_mult: OrderedFloat(1.5),
             chain:       false,
+            width:       OrderedFloat(10.0),
         };
         config.fire(source, "", &mut world);
         world.flush();
@@ -367,6 +381,7 @@ mod tests {
         let config = TetherBeamConfig {
             damage_mult: OrderedFloat(1.5),
             chain:       true,
+            width:       OrderedFloat(10.0),
         };
         config.fire(source, "coil_chip", &mut world);
         world.flush();
@@ -390,6 +405,7 @@ mod tests {
         let config = TetherBeamConfig {
             damage_mult: OrderedFloat(1.5),
             chain:       true,
+            width:       OrderedFloat(10.0),
         };
         config.fire(source, "", &mut world);
         world.flush();
@@ -418,6 +434,7 @@ mod tests {
         let config = TetherBeamConfig {
             damage_mult: OrderedFloat(1.5),
             chain:       true,
+            width:       OrderedFloat(10.0),
         };
         config.fire(source, "coil_chip", &mut world);
         world.flush();
@@ -444,6 +461,7 @@ mod tests {
         let config = TetherBeamConfig {
             damage_mult: OrderedFloat(1.5),
             chain:       true,
+            width:       OrderedFloat(10.0),
         };
         config.fire(source, "coil_chip", &mut world);
         world.flush();
@@ -475,6 +493,7 @@ mod tests {
         let config = TetherBeamConfig {
             damage_mult: OrderedFloat(1.5),
             chain:       true,
+            width:       OrderedFloat(10.0),
         };
         config.fire(source, "coil_chip", &mut world);
         world.flush();
@@ -489,6 +508,175 @@ mod tests {
         assert!(
             beams[0].bolt_b == left_bolt || beams[0].bolt_b == right_bolt,
             "beam target must be one of the two equidistant bolts"
+        );
+    }
+
+    // ── Group B (width) — fire_spawn/fire_chain stamp TetherBeamWidth ──────
+
+    /// Behavior 8: `fire_spawn` (chain=false) stamps `TetherBeamWidth` on
+    /// the `TetherBeamSource` entity with the exact config value.
+    #[test]
+    fn fire_spawn_stamps_tether_beam_width_from_config() {
+        use crate::effect_v3::effects::tether_beam::components::TetherBeamWidth;
+
+        let mut world = World::new();
+        world.insert_resource(GameRng::from_seed(42));
+        let source = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
+
+        let config = TetherBeamConfig {
+            damage_mult: OrderedFloat(1.5),
+            chain:       false,
+            width:       OrderedFloat(7.25),
+        };
+        config.fire(source, "tether_beam", &mut world);
+        world.flush();
+
+        let widths: Vec<f32> = world
+            .query_filtered::<&TetherBeamWidth, With<TetherBeamSource>>()
+            .iter(&world)
+            .map(|w| w.0)
+            .collect();
+        assert_eq!(
+            widths.len(),
+            1,
+            "exactly 1 TetherBeamSource entity must carry TetherBeamWidth"
+        );
+        assert!(
+            (widths[0] - 7.25).abs() < 1e-6,
+            "TetherBeamWidth must equal config.width.0 (7.25), got {}",
+            widths[0]
+        );
+
+        // The spawned ExtraBolt must NOT receive a TetherBeamWidth.
+        let extra_bolt_widths = world
+            .query_filtered::<&TetherBeamWidth, With<ExtraBolt>>()
+            .iter(&world)
+            .count();
+        assert_eq!(
+            extra_bolt_widths, 0,
+            "TetherBeamWidth must be on the TetherBeamSource entity, not the spawned ExtraBolt"
+        );
+    }
+
+    /// Behavior 9: `fire_chain` (chain=true) stamps `TetherBeamWidth` on
+    /// the `TetherBeamSource` entity with the exact config value.
+    #[test]
+    fn fire_chain_stamps_tether_beam_width_from_config() {
+        use crate::effect_v3::effects::tether_beam::components::TetherBeamWidth;
+
+        let mut world = World::new();
+        world.insert_resource(GameRng::from_seed(42));
+        let source = spawn_source(&mut world, Vec2::new(0.0, 0.0), Vec2::new(0.0, 400.0));
+        let _other = spawn_source(&mut world, Vec2::new(50.0, 0.0), Vec2::new(0.0, 400.0));
+
+        let config = TetherBeamConfig {
+            damage_mult: OrderedFloat(1.5),
+            chain:       true,
+            width:       OrderedFloat(12.0),
+        };
+        config.fire(source, "coil_chip", &mut world);
+        world.flush();
+
+        let widths: Vec<f32> = world
+            .query_filtered::<&TetherBeamWidth, With<TetherBeamSource>>()
+            .iter(&world)
+            .map(|w| w.0)
+            .collect();
+        assert_eq!(widths.len(), 1);
+        assert!(
+            (widths[0] - 12.0).abs() < 1e-6,
+            "fire_chain must stamp TetherBeamWidth(12.0), got {}",
+            widths[0]
+        );
+    }
+
+    /// Behavior 9 edge case: when `fire_chain` is a no-op (only source
+    /// bolt in world), NO `TetherBeamWidth` component is spawned either.
+    #[test]
+    fn fire_chain_noop_does_not_spawn_tether_beam_width() {
+        use crate::effect_v3::effects::tether_beam::components::TetherBeamWidth;
+
+        let mut world = World::new();
+        world.insert_resource(GameRng::from_seed(42));
+        let source = spawn_source(&mut world, Vec2::new(0.0, 0.0), Vec2::new(0.0, 400.0));
+
+        let config = TetherBeamConfig {
+            damage_mult: OrderedFloat(1.5),
+            chain:       true,
+            width:       OrderedFloat(12.0),
+        };
+        config.fire(source, "coil_chip", &mut world);
+        world.flush();
+
+        let width_count = world
+            .query_filtered::<&TetherBeamWidth, With<TetherBeamSource>>()
+            .iter(&world)
+            .count();
+        assert_eq!(
+            width_count, 0,
+            "fire_chain no-op (only source bolt) must not spawn TetherBeamWidth"
+        );
+    }
+
+    /// Behavior 10: `fire_spawn` with width 0.0 stamps
+    /// `TetherBeamWidth`(0.0) verbatim — no clamping or defaulting to 10.0.
+    #[test]
+    fn fire_spawn_with_width_zero_stamps_zero_verbatim() {
+        use crate::effect_v3::effects::tether_beam::components::TetherBeamWidth;
+
+        let mut world = World::new();
+        world.insert_resource(GameRng::from_seed(42));
+        let source = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
+
+        let config = TetherBeamConfig {
+            damage_mult: OrderedFloat(1.5),
+            chain:       false,
+            width:       OrderedFloat(0.0),
+        };
+        config.fire(source, "tether_beam", &mut world);
+        world.flush();
+
+        let widths: Vec<f32> = world
+            .query_filtered::<&TetherBeamWidth, With<TetherBeamSource>>()
+            .iter(&world)
+            .map(|w| w.0)
+            .collect();
+        assert_eq!(widths.len(), 1);
+        assert!(
+            widths[0].abs() < 1e-6,
+            "TetherBeamWidth must be exactly 0.0 — no clamp/floor/default, got {}",
+            widths[0]
+        );
+    }
+
+    /// Behavior 11: `fire_spawn` with width 1000.0 stamps
+    /// `TetherBeamWidth` verbatim — no upper clamp.
+    #[test]
+    fn fire_spawn_with_width_large_stamps_verbatim() {
+        use crate::effect_v3::effects::tether_beam::components::TetherBeamWidth;
+
+        let mut world = World::new();
+        world.insert_resource(GameRng::from_seed(42));
+        let source = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
+
+        let config = TetherBeamConfig {
+            damage_mult: OrderedFloat(1.5),
+            chain:       false,
+            width:       OrderedFloat(1000.0),
+        };
+        config.fire(source, "tether_beam", &mut world);
+        world.flush();
+
+        let widths: Vec<f32> = world
+            .query_filtered::<&TetherBeamWidth, With<TetherBeamSource>>()
+            .iter(&world)
+            .map(|w| w.0)
+            .collect();
+        assert_eq!(widths.len(), 1);
+        assert!(
+            (widths[0] - 1000.0).abs() < 1e-3,
+            "TetherBeamWidth must be 1000.0, got {}",
+            widths[0]
         );
     }
 }
