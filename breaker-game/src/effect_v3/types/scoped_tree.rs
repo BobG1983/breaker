@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::{ParticipantTarget, ReversibleEffectType, ScopedTerminal, Tree, Trigger};
+use super::{Condition, ParticipantTarget, ReversibleEffectType, ScopedTerminal, Tree, Trigger};
 
 /// A restricted tree that appears inside During/Until scoped contexts.
 /// Fire variants are limited to reversible effects.
@@ -16,4 +16,7 @@ pub enum ScopedTree {
     When(Trigger, Box<Tree>),
     /// Redirects a scoped terminal to a different entity involved in the trigger event.
     On(ParticipantTarget, ScopedTerminal),
+    /// Nested condition-scoped node inside During/Until contexts.
+    /// Installs as a top-level `Tree::During` when walked.
+    During(Condition, Box<Self>),
 }

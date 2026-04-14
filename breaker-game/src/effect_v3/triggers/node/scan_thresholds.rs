@@ -71,6 +71,9 @@ fn collect_thresholds_from_scoped_tree(
         ScopedTree::On(_target, scoped_terminal) => {
             collect_thresholds_from_scoped_terminal(scoped_terminal, seen);
         }
+        ScopedTree::During(_condition, inner) => {
+            collect_thresholds_from_scoped_tree(inner, seen);
+        }
     }
 }
 

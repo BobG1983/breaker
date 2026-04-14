@@ -74,9 +74,9 @@ fn fire_scoped_tree(inner: &ScopedTree, entity: Entity, source: &str, world: &mu
                 fire_reversible_dispatch(reversible, entity, source, world);
             }
         }
-        ScopedTree::When(..) | ScopedTree::On(..) => {
-            // Nested When/On inside During: conditional/redirected behavior that
-            // fires during future walks, not during initial application.
+        ScopedTree::When(..) | ScopedTree::On(..) | ScopedTree::During(..) => {
+            // Nested When/On/During inside During: conditional/redirected behavior
+            // that fires during future walks, not during initial application.
         }
     }
 }
@@ -92,8 +92,8 @@ fn reverse_scoped_tree(inner: &ScopedTree, entity: Entity, source: &str, world: 
                 reverse_dispatch(reversible, entity, source, world);
             }
         }
-        ScopedTree::When(..) | ScopedTree::On(..) => {
-            // Nested When/On inside During: no explicit reversal needed.
+        ScopedTree::When(..) | ScopedTree::On(..) | ScopedTree::During(..) => {
+            // Nested When/On/During inside During: no explicit reversal needed.
         }
     }
 }
@@ -120,7 +120,7 @@ mod tests {
             effects::{DamageBoostConfig, SpeedBoostConfig},
             stacking::EffectStack,
             storage::BoundEffects,
-            types::{EffectType, ReversibleEffectType, ScopedTree, Tree},
+            types::{EffectType, ReversibleEffectType, ScopedTree, Tree, Trigger},
         },
         state::types::NodeState,
     };
@@ -631,5 +631,306 @@ mod tests {
 
         // Second evaluation should not panic despite entity being gone
         evaluate_conditions(&mut world);
+    }
+
+    // ================================================================
+    // Wave 7b — Part A: Condition Poller Recursive Walk
+    // ================================================================
+
+    // ----------------------------------------------------------------
+    // Behavior 1 (regression lock): Nested During inside When is NOT
+    //            polled by condition poller
+    // ----------------------------------------------------------------
+
+    #[test]
+    fn nested_during_inside_when_is_not_polled_by_condition_poller() {
+        let mut world = World::new();
+        world.insert_resource(State::new(NodeState::Playing));
+
+        let entity = world
+            .spawn(BoundEffects(vec![(
+                "chip_siege".to_string(),
+                Tree::When(
+                    Trigger::Bumped,
+                    Box::new(Tree::During(
+                        Condition::NodeActive,
+                        Box::new(ScopedTree::Fire(ReversibleEffectType::SpeedBoost(
+                            SpeedBoostConfig {
+                                multiplier: OrderedFloat(1.5),
+                            },
+                        ))),
+                    )),
+                ),
+            )]))
+            .id();
+
+        evaluate_conditions(&mut world);
+
+        assert!(
+            world.get::<EffectStack<SpeedBoostConfig>>(entity).is_none(),
+            "No EffectStack should exist — the During is nested inside a When gate and should not be polled"
+        );
+    }
+
+    // ----------------------------------------------------------------
+    // Behavior 2: Installed nested During (from Shape A) is polled
+    //             by condition poller
+    // ----------------------------------------------------------------
+
+    #[test]
+    fn installed_nested_during_is_polled_by_condition_poller() {
+        let mut world = World::new();
+        world.insert_resource(State::new(NodeState::Playing));
+
+        let entity = world
+            .spawn(BoundEffects(vec![
+                (
+                    "chip_siege".to_string(),
+                    Tree::When(
+                        Trigger::Bumped,
+                        Box::new(Tree::During(
+                            Condition::NodeActive,
+                            Box::new(ScopedTree::Fire(ReversibleEffectType::SpeedBoost(
+                                SpeedBoostConfig {
+                                    multiplier: OrderedFloat(1.5),
+                                },
+                            ))),
+                        )),
+                    ),
+                ),
+                (
+                    "chip_siege#installed[0]".to_string(),
+                    Tree::During(
+                        Condition::NodeActive,
+                        Box::new(ScopedTree::Fire(ReversibleEffectType::SpeedBoost(
+                            SpeedBoostConfig {
+                                multiplier: OrderedFloat(1.5),
+                            },
+                        ))),
+                    ),
+                ),
+            ]))
+            .id();
+
+        evaluate_conditions(&mut world);
+
+        let stack = world
+            .get::<EffectStack<SpeedBoostConfig>>(entity)
+            .expect("EffectStack<SpeedBoostConfig> should exist after installed During is polled");
+        assert_eq!(
+            stack.len(),
+            1,
+            "Installed During should fire exactly 1 entry"
+        );
+
+        let da = world
+            .get::<DuringActive>(entity)
+            .expect("DuringActive should exist");
+        assert!(
+            da.0.contains("chip_siege#installed[0]"),
+            "DuringActive should contain the install key 'chip_siege#installed[0]'"
+        );
+    }
+
+    // ----------------------------------------------------------------
+    // Behavior 3: Installed nested During reverses when condition
+    //             becomes false
+    // ----------------------------------------------------------------
+
+    #[test]
+    fn installed_nested_during_reverses_when_condition_becomes_false() {
+        let mut world = World::new();
+        world.insert_resource(State::new(NodeState::Playing));
+
+        let entity = world
+            .spawn(BoundEffects(vec![(
+                "chip_siege#installed[0]".to_string(),
+                Tree::During(
+                    Condition::NodeActive,
+                    Box::new(ScopedTree::Fire(ReversibleEffectType::SpeedBoost(
+                        SpeedBoostConfig {
+                            multiplier: OrderedFloat(1.5),
+                        },
+                    ))),
+                ),
+            )]))
+            .id();
+
+        // Fire: condition true
+        evaluate_conditions(&mut world);
+        assert_eq!(
+            world
+                .get::<EffectStack<SpeedBoostConfig>>(entity)
+                .expect("Stack should exist after fire")
+                .len(),
+            1,
+            "Precondition: stack should have 1 entry after fire"
+        );
+
+        // Reverse: condition false
+        world.insert_resource(State::new(NodeState::Loading));
+        evaluate_conditions(&mut world);
+
+        let stack = world
+            .get::<EffectStack<SpeedBoostConfig>>(entity)
+            .expect("Stack component should still exist");
+        assert!(
+            stack.is_empty(),
+            "Stack should be empty after condition becomes false"
+        );
+
+        let da = world
+            .get::<DuringActive>(entity)
+            .expect("DuringActive should still exist");
+        assert!(
+            !da.0.contains("chip_siege#installed[0]"),
+            "DuringActive should no longer contain 'chip_siege#installed[0]'"
+        );
+    }
+
+    // ----------------------------------------------------------------
+    // Behavior 4: Multiple installed Durings with different install
+    //             keys track independently
+    // ----------------------------------------------------------------
+
+    #[test]
+    fn multiple_installed_durings_with_different_keys_track_independently() {
+        let mut world = World::new();
+        world.insert_resource(State::new(NodeState::Playing));
+        // No ShieldWall entity — Shield condition is false
+
+        let entity = world
+            .spawn(BoundEffects(vec![
+                (
+                    "chip_siege#installed[0]".to_string(),
+                    Tree::During(
+                        Condition::NodeActive,
+                        Box::new(ScopedTree::Fire(ReversibleEffectType::SpeedBoost(
+                            SpeedBoostConfig {
+                                multiplier: OrderedFloat(1.5),
+                            },
+                        ))),
+                    ),
+                ),
+                (
+                    "chip_guard#installed[0]".to_string(),
+                    Tree::During(
+                        Condition::ShieldActive,
+                        Box::new(ScopedTree::Fire(ReversibleEffectType::DamageBoost(
+                            DamageBoostConfig {
+                                multiplier: OrderedFloat(2.0),
+                            },
+                        ))),
+                    ),
+                ),
+                (
+                    "chip_other".to_string(),
+                    Tree::During(
+                        Condition::NodeActive,
+                        Box::new(ScopedTree::Fire(ReversibleEffectType::SpeedBoost(
+                            SpeedBoostConfig {
+                                multiplier: OrderedFloat(1.3),
+                            },
+                        ))),
+                    ),
+                ),
+            ]))
+            .id();
+
+        evaluate_conditions(&mut world);
+
+        // NodeActive is true: chip_siege#installed[0] and chip_other should fire SpeedBoost
+        let speed_stack = world
+            .get::<EffectStack<SpeedBoostConfig>>(entity)
+            .expect("SpeedBoost stack should exist");
+        assert_eq!(
+            speed_stack.len(),
+            2,
+            "SpeedBoost stack should have 2 entries (from chip_siege#installed[0] and chip_other)"
+        );
+
+        // ShieldActive is false: chip_guard#installed[0] should NOT fire DamageBoost
+        assert!(
+            world
+                .get::<EffectStack<DamageBoostConfig>>(entity)
+                .is_none(),
+            "DamageBoost stack should not exist (ShieldActive is false)"
+        );
+
+        let da = world
+            .get::<DuringActive>(entity)
+            .expect("DuringActive should exist");
+        assert!(
+            da.0.contains("chip_siege#installed[0]"),
+            "DuringActive should contain 'chip_siege#installed[0]'"
+        );
+        assert!(
+            da.0.contains("chip_other"),
+            "DuringActive should contain 'chip_other'"
+        );
+        assert!(
+            !da.0.contains("chip_guard#installed[0]"),
+            "DuringActive should NOT contain 'chip_guard#installed[0]' (Shield condition false)"
+        );
+    }
+
+    // ----------------------------------------------------------------
+    // Behavior 5: Installed During persists through condition cycling
+    //             (does not self-remove)
+    // ----------------------------------------------------------------
+
+    #[test]
+    fn installed_during_persists_through_condition_cycling() {
+        let mut world = World::new();
+        world.insert_resource(State::new(NodeState::Playing));
+
+        let entity = world
+            .spawn(BoundEffects(vec![(
+                "chip_siege#installed[0]".to_string(),
+                Tree::During(
+                    Condition::NodeActive,
+                    Box::new(ScopedTree::Fire(ReversibleEffectType::SpeedBoost(
+                        SpeedBoostConfig {
+                            multiplier: OrderedFloat(1.5),
+                        },
+                    ))),
+                ),
+            )]))
+            .id();
+
+        // Fire
+        evaluate_conditions(&mut world);
+
+        // Toggle off
+        world.insert_resource(State::new(NodeState::Loading));
+        evaluate_conditions(&mut world);
+
+        // Toggle back on
+        world.insert_resource(State::new(NodeState::Playing));
+        evaluate_conditions(&mut world);
+
+        // BoundEffects should still contain the entry
+        let bound = world
+            .get::<BoundEffects>(entity)
+            .expect("BoundEffects should still exist");
+        assert_eq!(
+            bound.0.len(),
+            1,
+            "BoundEffects should still contain the chip_siege#installed[0] entry"
+        );
+        assert_eq!(bound.0[0].0, "chip_siege#installed[0]");
+        assert!(
+            matches!(bound.0[0].1, Tree::During(..)),
+            "Entry should still be a During variant"
+        );
+
+        let stack = world
+            .get::<EffectStack<SpeedBoostConfig>>(entity)
+            .expect("Stack should exist after re-fire");
+        assert_eq!(
+            stack.len(),
+            1,
+            "Stack should have 1 entry after full true->false->true cycle"
+        );
     }
 }
