@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::ReversibleEffectType;
 use crate::effect_v3::effects::*;
 
 /// Every effect in the game. Each variant wraps a config struct that
@@ -69,4 +70,78 @@ pub enum EffectType {
     EntropyEngine(EntropyConfig),
     /// Fire-and-forget: pick a random effect.
     RandomEffect(RandomEffectConfig),
+}
+
+/// Widening conversion: every `ReversibleEffectType` variant has a
+/// corresponding `EffectType` variant with the same config.
+impl From<ReversibleEffectType> for EffectType {
+    fn from(reversible: ReversibleEffectType) -> Self {
+        match reversible {
+            ReversibleEffectType::SpeedBoost(c) => Self::SpeedBoost(c),
+            ReversibleEffectType::SizeBoost(c) => Self::SizeBoost(c),
+            ReversibleEffectType::DamageBoost(c) => Self::DamageBoost(c),
+            ReversibleEffectType::BumpForce(c) => Self::BumpForce(c),
+            ReversibleEffectType::QuickStop(c) => Self::QuickStop(c),
+            ReversibleEffectType::FlashStep(c) => Self::FlashStep(c),
+            ReversibleEffectType::Piercing(c) => Self::Piercing(c),
+            ReversibleEffectType::Vulnerable(c) => Self::Vulnerable(c),
+            ReversibleEffectType::RampingDamage(c) => Self::RampingDamage(c),
+            ReversibleEffectType::Attraction(c) => Self::Attraction(c),
+            ReversibleEffectType::Anchor(c) => Self::Anchor(c),
+            ReversibleEffectType::Pulse(c) => Self::Pulse(c),
+            ReversibleEffectType::Shield(c) => Self::Shield(c),
+            ReversibleEffectType::SecondWind(c) => Self::SecondWind(c),
+            ReversibleEffectType::CircuitBreaker(c) => Self::CircuitBreaker(c),
+            ReversibleEffectType::EntropyEngine(c) => Self::EntropyEngine(c),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use ordered_float::OrderedFloat;
+
+    use super::*;
+
+    // ================================================================
+    // Behavior 24: ReversibleEffectType widens to EffectType
+    // ================================================================
+
+    #[test]
+    fn reversible_speed_boost_converts_to_effect_type_speed_boost() {
+        let reversible = ReversibleEffectType::SpeedBoost(SpeedBoostConfig {
+            multiplier: OrderedFloat(1.5),
+        });
+        let widened = EffectType::from(reversible);
+        assert_eq!(
+            widened,
+            EffectType::SpeedBoost(SpeedBoostConfig {
+                multiplier: OrderedFloat(1.5),
+            }),
+            "SpeedBoost config should be preserved through widening conversion"
+        );
+    }
+
+    #[test]
+    fn reversible_circuit_breaker_converts_to_effect_type_circuit_breaker() {
+        let reversible = ReversibleEffectType::CircuitBreaker(CircuitBreakerConfig {
+            bumps_required:  5,
+            spawn_count:     2,
+            inherit:         false,
+            shockwave_range: OrderedFloat(64.0),
+            shockwave_speed: OrderedFloat(200.0),
+        });
+        let widened = EffectType::from(reversible);
+        assert_eq!(
+            widened,
+            EffectType::CircuitBreaker(CircuitBreakerConfig {
+                bumps_required:  5,
+                spawn_count:     2,
+                inherit:         false,
+                shockwave_range: OrderedFloat(64.0),
+                shockwave_speed: OrderedFloat(200.0),
+            }),
+            "CircuitBreaker config should be preserved through widening conversion"
+        );
+    }
 }

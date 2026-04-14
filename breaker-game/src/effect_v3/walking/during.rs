@@ -53,11 +53,20 @@ impl Command for DuringInstallCommand {
         let install_key = format!("{}#installed[0]", self.source);
         let tree = Tree::During(self.condition, Box::new(self.inner));
 
-        // Idempotent: skip if already installed
-        if let Some(bound) = world.get::<BoundEffects>(self.entity)
-            && bound.0.iter().any(|(name, _)| name == &install_key)
-        {
-            return;
+        // Idempotent: skip if already installed OR if this During is
+        // already a top-level entry (re-walked by walk_effects, not a
+        // Shape A installation from inside a When gate).
+        if let Some(bound) = world.get::<BoundEffects>(self.entity) {
+            if bound.0.iter().any(|(name, _)| name == &install_key) {
+                return;
+            }
+            if bound
+                .0
+                .iter()
+                .any(|(name, tree)| name == &self.source && matches!(tree, Tree::During(..)))
+            {
+                return;
+            }
         }
 
         // Install the During into BoundEffects for condition poller to manage
