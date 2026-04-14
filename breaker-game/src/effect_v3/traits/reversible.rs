@@ -16,4 +16,15 @@ pub trait Reversible: Fireable {
     /// - `source`: Must match the source used in the original fire call.
     /// - `world`: Exclusive world access.
     fn reverse(&self, entity: Entity, source: &str, world: &mut World);
+
+    /// Reverse ALL instances of this effect that were fired from the given source.
+    ///
+    /// For singleton/owner-indexed effects (`FlashStep`, `Pulse`, `Shield`, etc.)
+    /// this defaults to a single `reverse()` call — there is at most one active
+    /// instance. Stack-based passives (`SpeedBoost`, `Piercing`, etc.) override to
+    /// remove
+    /// all matching entries via `EffectStack::retain_by_source`.
+    fn reverse_all_by_source(&self, entity: Entity, source: &str, world: &mut World) {
+        self.reverse(entity, source, world);
+    }
 }

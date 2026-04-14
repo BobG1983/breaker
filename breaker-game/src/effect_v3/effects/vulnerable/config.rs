@@ -36,6 +36,12 @@ impl Reversible for VulnerableConfig {
             stack.remove(source, self);
         }
     }
+
+    fn reverse_all_by_source(&self, entity: Entity, source: &str, world: &mut World) {
+        if let Some(mut stack) = world.get_mut::<EffectStack<Self>>(entity) {
+            stack.retain_by_source(source);
+        }
+    }
 }
 
 impl PassiveEffect for VulnerableConfig {
@@ -112,5 +118,47 @@ mod tests {
         };
 
         config.reverse(entity, "test_source", &mut world);
+    }
+
+    // ── reverse_all_by_source ─────────────────────────────────────────
+
+    #[test]
+    fn reverse_all_by_source_removes_all_entries_from_matching_source_leaves_others() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        VulnerableConfig {
+            multiplier: OrderedFloat(1.5),
+        }
+        .fire(entity, "decay", &mut world);
+        VulnerableConfig {
+            multiplier: OrderedFloat(0.5),
+        }
+        .fire(entity, "shield_effect", &mut world);
+        VulnerableConfig {
+            multiplier: OrderedFloat(2.0),
+        }
+        .fire(entity, "decay", &mut world);
+
+        VulnerableConfig {
+            multiplier: OrderedFloat(1.5),
+        }
+        .reverse_all_by_source(entity, "decay", &mut world);
+
+        let stack = world.get::<EffectStack<VulnerableConfig>>(entity).unwrap();
+        assert_eq!(stack.len(), 1);
+        assert!((stack.aggregate() - 0.5).abs() < 1e-5);
+    }
+
+    #[test]
+    fn reverse_all_by_source_on_entity_without_stack_is_noop() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        VulnerableConfig {
+            multiplier: OrderedFloat(1.5),
+        }
+        .reverse_all_by_source(entity, "decay", &mut world);
+        // No panic.
     }
 }

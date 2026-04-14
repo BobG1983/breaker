@@ -98,7 +98,7 @@ mod tests {
                 },
             },
             stacking::EffectStack,
-            traits::Fireable,
+            traits::{Fireable, Reversible},
         },
         shared::test_utils::{TestAppBuilder, tick},
     };
@@ -715,6 +715,26 @@ mod tests {
             app.world().get::<ShockwaveDamageMultiplier>(ring).is_none(),
             "pulse ring must NOT carry ShockwaveDamageMultiplier",
         );
+    }
+
+    // ── reverse_all_by_source (default delegation) ──────────────────
+
+    #[test]
+    fn reverse_all_by_source_removes_pulse_emitter_via_default_delegation() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        make_config().fire(entity, "storm_chip", &mut world);
+        assert!(world.get::<PulseEmitter>(entity).is_some());
+
+        make_config().reverse_all_by_source(entity, "storm_chip", &mut world);
+        assert!(
+            world.get::<PulseEmitter>(entity).is_none(),
+            "PulseEmitter should be removed by default delegation"
+        );
+
+        // Calling twice does not panic.
+        make_config().reverse_all_by_source(entity, "storm_chip", &mut world);
     }
 
     // #37 — `tick_pulse` config-side cross-check (single-gate `if`, not `while`)

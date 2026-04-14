@@ -36,6 +36,12 @@ impl Reversible for SizeBoostConfig {
             stack.remove(source, self);
         }
     }
+
+    fn reverse_all_by_source(&self, entity: Entity, source: &str, world: &mut World) {
+        if let Some(mut stack) = world.get_mut::<EffectStack<Self>>(entity) {
+            stack.retain_by_source(source);
+        }
+    }
 }
 
 impl PassiveEffect for SizeBoostConfig {
@@ -112,5 +118,48 @@ mod tests {
         };
 
         config.reverse(entity, "test_source", &mut world);
+    }
+
+    // ── reverse_all_by_source ─────────────────────────────────────────
+
+    #[test]
+    fn reverse_all_by_source_removes_all_entries_from_matching_source_leaves_others() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        SizeBoostConfig {
+            multiplier: OrderedFloat(1.2),
+        }
+        .fire(entity, "augment", &mut world);
+        SizeBoostConfig {
+            multiplier: OrderedFloat(1.3),
+        }
+        .fire(entity, "other", &mut world);
+        SizeBoostConfig {
+            multiplier: OrderedFloat(1.4),
+        }
+        .fire(entity, "augment", &mut world);
+
+        SizeBoostConfig {
+            multiplier: OrderedFloat(1.2),
+        }
+        .reverse_all_by_source(entity, "augment", &mut world);
+
+        let stack = world.get::<EffectStack<SizeBoostConfig>>(entity).unwrap();
+        assert_eq!(stack.len(), 1);
+        assert!((stack.aggregate() - 1.3).abs() < 1e-5);
+    }
+
+    #[test]
+    fn reverse_all_by_source_on_entity_without_stack_is_noop() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        SizeBoostConfig {
+            multiplier: OrderedFloat(1.2),
+        }
+        .reverse_all_by_source(entity, "test_source", &mut world);
+        // No panic.
+        assert!(world.get::<EffectStack<SizeBoostConfig>>(entity).is_none());
     }
 }

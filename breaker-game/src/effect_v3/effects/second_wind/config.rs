@@ -456,4 +456,39 @@ mod tests {
             "owner_a's second-wind wall must have Wall marker",
         );
     }
+
+    // ── reverse_all_by_source (default delegation) ──────────────────
+
+    #[test]
+    fn reverse_all_by_source_despawns_walls_via_default_delegation() {
+        let mut world = World::new();
+        world.insert_resource(PlayfieldConfig::default());
+        let owner = world.spawn_empty().id();
+
+        SecondWindConfig {}.fire(owner, "last_stand", &mut world);
+        world.flush();
+
+        let count_before = world
+            .query_filtered::<Entity, With<SecondWindWall>>()
+            .iter(&world)
+            .count();
+        assert_eq!(
+            count_before, 1,
+            "should have 1 second wind wall before reverse"
+        );
+
+        SecondWindConfig {}.reverse_all_by_source(owner, "last_stand", &mut world);
+
+        let count_after = world
+            .query_filtered::<Entity, With<SecondWindWall>>()
+            .iter(&world)
+            .count();
+        assert_eq!(
+            count_after, 0,
+            "all SecondWindWall entities should be despawned"
+        );
+
+        // Calling twice does not panic.
+        SecondWindConfig {}.reverse_all_by_source(owner, "last_stand", &mut world);
+    }
 }

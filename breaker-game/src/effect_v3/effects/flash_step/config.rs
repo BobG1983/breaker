@@ -25,3 +25,32 @@ impl Reversible for FlashStepConfig {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use bevy::prelude::*;
+
+    use super::*;
+    use crate::effect_v3::{
+        effects::flash_step::FlashStepActive,
+        traits::{Fireable, Reversible},
+    };
+
+    #[test]
+    fn reverse_all_by_source_removes_flash_step_active_via_default_delegation() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        FlashStepConfig {}.fire(entity, "dash_chip", &mut world);
+        assert!(world.get::<FlashStepActive>(entity).is_some());
+
+        FlashStepConfig {}.reverse_all_by_source(entity, "dash_chip", &mut world);
+        assert!(
+            world.get::<FlashStepActive>(entity).is_none(),
+            "FlashStepActive should be removed by default delegation"
+        );
+
+        // Calling twice does not panic.
+        FlashStepConfig {}.reverse_all_by_source(entity, "dash_chip", &mut world);
+    }
+}

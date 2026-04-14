@@ -65,4 +65,106 @@ impl Reversible for AttractionConfig {
             active.0.remove(idx);
         }
     }
+
+    fn reverse_all_by_source(&self, entity: Entity, source: &str, world: &mut World) {
+        if let Some(mut active) = world.get_mut::<ActiveAttractions>(entity) {
+            active.0.retain(|e| e.source != source);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use bevy::prelude::*;
+    use ordered_float::OrderedFloat;
+
+    use super::*;
+    use crate::effect_v3::{
+        effects::attraction::components::ActiveAttractions,
+        traits::{Fireable, Reversible},
+        types::AttractionType,
+    };
+
+    // ── reverse_all_by_source ─────────────────────────────────────────
+
+    #[test]
+    fn reverse_all_by_source_removes_all_entries_from_matching_source() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        AttractionConfig {
+            attraction_type: AttractionType::Cell,
+            force:           OrderedFloat(100.0),
+            max_force:       None,
+        }
+        .fire(entity, "magnet", &mut world);
+        AttractionConfig {
+            attraction_type: AttractionType::Wall,
+            force:           OrderedFloat(50.0),
+            max_force:       Some(OrderedFloat(200.0)),
+        }
+        .fire(entity, "gravity_chip", &mut world);
+        AttractionConfig {
+            attraction_type: AttractionType::Breaker,
+            force:           OrderedFloat(75.0),
+            max_force:       None,
+        }
+        .fire(entity, "magnet", &mut world);
+
+        AttractionConfig {
+            attraction_type: AttractionType::Cell,
+            force:           OrderedFloat(100.0),
+            max_force:       None,
+        }
+        .reverse_all_by_source(entity, "magnet", &mut world);
+
+        let active = world.get::<ActiveAttractions>(entity).unwrap();
+        assert_eq!(active.0.len(), 1);
+        assert_eq!(active.0[0].source, "gravity_chip");
+        assert_eq!(active.0[0].attraction_type, AttractionType::Wall);
+    }
+
+    #[test]
+    fn reverse_all_by_source_on_entity_without_active_attractions_is_noop() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        AttractionConfig {
+            attraction_type: AttractionType::Cell,
+            force:           OrderedFloat(100.0),
+            max_force:       None,
+        }
+        .reverse_all_by_source(entity, "magnet", &mut world);
+        // No panic.
+        assert!(world.get::<ActiveAttractions>(entity).is_none());
+    }
+
+    #[test]
+    fn reverse_all_by_source_removes_all_entries_when_all_share_same_source() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        AttractionConfig {
+            attraction_type: AttractionType::Cell,
+            force:           OrderedFloat(100.0),
+            max_force:       None,
+        }
+        .fire(entity, "magnet", &mut world);
+        AttractionConfig {
+            attraction_type: AttractionType::Breaker,
+            force:           OrderedFloat(75.0),
+            max_force:       None,
+        }
+        .fire(entity, "magnet", &mut world);
+
+        AttractionConfig {
+            attraction_type: AttractionType::Cell,
+            force:           OrderedFloat(100.0),
+            max_force:       None,
+        }
+        .reverse_all_by_source(entity, "magnet", &mut world);
+
+        let active = world.get::<ActiveAttractions>(entity).unwrap();
+        assert_eq!(active.0.len(), 0);
+    }
 }

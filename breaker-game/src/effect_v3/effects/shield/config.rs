@@ -737,4 +737,36 @@ mod tests {
         assert_eq!(layers.membership, WALL_LAYER);
         assert_eq!(layers.mask, BOLT_LAYER);
     }
+
+    // ── reverse_all_by_source (default delegation) ──────────────────
+
+    #[test]
+    fn reverse_all_by_source_despawns_shield_walls_via_default_delegation() {
+        let mut world = World::new();
+        world.insert_resource(PlayfieldConfig::default());
+        let owner = world.spawn_empty().id();
+
+        make_config().fire(owner, "aegis", &mut world);
+        world.flush();
+
+        let count_before = world
+            .query_filtered::<Entity, With<ShieldWall>>()
+            .iter(&world)
+            .count();
+        assert_eq!(count_before, 1, "should have 1 shield wall before reverse");
+
+        make_config().reverse_all_by_source(owner, "aegis", &mut world);
+
+        let count_after = world
+            .query_filtered::<Entity, With<ShieldWall>>()
+            .iter(&world)
+            .count();
+        assert_eq!(
+            count_after, 0,
+            "all ShieldWall entities should be despawned"
+        );
+
+        // Calling twice does not panic.
+        make_config().reverse_all_by_source(owner, "aegis", &mut world);
+    }
 }

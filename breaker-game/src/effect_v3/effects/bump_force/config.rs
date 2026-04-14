@@ -36,6 +36,12 @@ impl Reversible for BumpForceConfig {
             stack.remove(source, self);
         }
     }
+
+    fn reverse_all_by_source(&self, entity: Entity, source: &str, world: &mut World) {
+        if let Some(mut stack) = world.get_mut::<EffectStack<Self>>(entity) {
+            stack.retain_by_source(source);
+        }
+    }
 }
 
 impl PassiveEffect for BumpForceConfig {
@@ -112,5 +118,47 @@ mod tests {
         };
 
         config.reverse(entity, "test_source", &mut world);
+    }
+
+    // ── reverse_all_by_source ─────────────────────────────────────────
+
+    #[test]
+    fn reverse_all_by_source_removes_all_entries_from_matching_source_leaves_others() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        BumpForceConfig {
+            multiplier: OrderedFloat(1.25),
+        }
+        .fire(entity, "augment", &mut world);
+        BumpForceConfig {
+            multiplier: OrderedFloat(1.5),
+        }
+        .fire(entity, "other", &mut world);
+        BumpForceConfig {
+            multiplier: OrderedFloat(1.25),
+        }
+        .fire(entity, "augment", &mut world);
+
+        BumpForceConfig {
+            multiplier: OrderedFloat(1.25),
+        }
+        .reverse_all_by_source(entity, "augment", &mut world);
+
+        let stack = world.get::<EffectStack<BumpForceConfig>>(entity).unwrap();
+        assert_eq!(stack.len(), 1);
+        assert!((stack.aggregate() - 1.5).abs() < 1e-5);
+    }
+
+    #[test]
+    fn reverse_all_by_source_on_entity_without_stack_is_noop() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        BumpForceConfig {
+            multiplier: OrderedFloat(1.25),
+        }
+        .reverse_all_by_source(entity, "augment", &mut world);
+        // No panic.
     }
 }

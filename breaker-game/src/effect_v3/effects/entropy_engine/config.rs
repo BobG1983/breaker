@@ -53,3 +53,36 @@ impl Reversible for EntropyConfig {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use bevy::prelude::*;
+
+    use super::*;
+    use crate::effect_v3::traits::{Fireable, Reversible};
+
+    fn make_config() -> EntropyConfig {
+        EntropyConfig {
+            max_effects: 3,
+            pool:        vec![],
+        }
+    }
+
+    #[test]
+    fn reverse_all_by_source_removes_counter_via_default_delegation() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        make_config().fire(entity, "entropy_chip", &mut world);
+        assert!(world.get::<EntropyCounter>(entity).is_some());
+
+        make_config().reverse_all_by_source(entity, "entropy_chip", &mut world);
+        assert!(
+            world.get::<EntropyCounter>(entity).is_none(),
+            "EntropyCounter should be removed by default delegation"
+        );
+
+        // Calling twice does not panic.
+        make_config().reverse_all_by_source(entity, "entropy_chip", &mut world);
+    }
+}

@@ -4,4 +4,6 @@ mod fire_dispatch;
 mod reverse_dispatch;
 
 pub use fire_dispatch::fire_dispatch;
-pub use reverse_dispatch::{fire_reversible_dispatch, reverse_dispatch};
+pub use reverse_dispatch::{
+    fire_reversible_dispatch, reverse_all_by_source_dispatch, reverse_dispatch,
+};

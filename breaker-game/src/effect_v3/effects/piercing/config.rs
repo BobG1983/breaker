@@ -35,6 +35,12 @@ impl Reversible for PiercingConfig {
             stack.remove(source, self);
         }
     }
+
+    fn reverse_all_by_source(&self, entity: Entity, source: &str, world: &mut World) {
+        if let Some(mut stack) = world.get_mut::<EffectStack<Self>>(entity) {
+            stack.retain_by_source(source);
+        }
+    }
 }
 
 impl PassiveEffect for PiercingConfig {
@@ -99,5 +105,32 @@ mod tests {
         let config = PiercingConfig { charges: 3 };
 
         config.reverse(entity, "test_source", &mut world);
+    }
+
+    // ── reverse_all_by_source ─────────────────────────────────────────
+
+    #[test]
+    fn reverse_all_by_source_removes_all_entries_from_matching_source_leaves_others() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        PiercingConfig { charges: 2 }.fire(entity, "splinter", &mut world);
+        PiercingConfig { charges: 5 }.fire(entity, "piercing_bolt", &mut world);
+        PiercingConfig { charges: 3 }.fire(entity, "splinter", &mut world);
+
+        PiercingConfig { charges: 2 }.reverse_all_by_source(entity, "splinter", &mut world);
+
+        let stack = world.get::<EffectStack<PiercingConfig>>(entity).unwrap();
+        assert_eq!(stack.len(), 1);
+        assert!((stack.aggregate() - 5.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn reverse_all_by_source_on_entity_without_stack_is_noop() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        PiercingConfig { charges: 2 }.reverse_all_by_source(entity, "splinter", &mut world);
+        // No panic.
     }
 }

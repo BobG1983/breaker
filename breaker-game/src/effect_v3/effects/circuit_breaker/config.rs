@@ -55,3 +55,40 @@ impl Reversible for CircuitBreakerConfig {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use bevy::prelude::*;
+    use ordered_float::OrderedFloat;
+
+    use super::*;
+    use crate::effect_v3::traits::{Fireable, Reversible};
+
+    fn make_config() -> CircuitBreakerConfig {
+        CircuitBreakerConfig {
+            bumps_required:  5,
+            spawn_count:     2,
+            inherit:         false,
+            shockwave_range: OrderedFloat(64.0),
+            shockwave_speed: OrderedFloat(200.0),
+        }
+    }
+
+    #[test]
+    fn reverse_all_by_source_removes_counter_via_default_delegation() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        make_config().fire(entity, "circuit_chip", &mut world);
+        assert!(world.get::<CircuitBreakerCounter>(entity).is_some());
+
+        make_config().reverse_all_by_source(entity, "circuit_chip", &mut world);
+        assert!(
+            world.get::<CircuitBreakerCounter>(entity).is_none(),
+            "CircuitBreakerCounter should be removed by default delegation"
+        );
+
+        // Calling twice does not panic.
+        make_config().reverse_all_by_source(entity, "circuit_chip", &mut world);
+    }
+}

@@ -36,6 +36,12 @@ impl Reversible for QuickStopConfig {
             stack.remove(source, self);
         }
     }
+
+    fn reverse_all_by_source(&self, entity: Entity, source: &str, world: &mut World) {
+        if let Some(mut stack) = world.get_mut::<EffectStack<Self>>(entity) {
+            stack.retain_by_source(source);
+        }
+    }
 }
 
 impl PassiveEffect for QuickStopConfig {
@@ -112,5 +118,47 @@ mod tests {
         };
 
         config.reverse(entity, "test_source", &mut world);
+    }
+
+    // ── reverse_all_by_source ─────────────────────────────────────────
+
+    #[test]
+    fn reverse_all_by_source_removes_all_entries_from_matching_source_leaves_others() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        QuickStopConfig {
+            multiplier: OrderedFloat(2.0),
+        }
+        .fire(entity, "chrono_passive", &mut world);
+        QuickStopConfig {
+            multiplier: OrderedFloat(1.5),
+        }
+        .fire(entity, "other_chip", &mut world);
+        QuickStopConfig {
+            multiplier: OrderedFloat(3.0),
+        }
+        .fire(entity, "chrono_passive", &mut world);
+
+        QuickStopConfig {
+            multiplier: OrderedFloat(2.0),
+        }
+        .reverse_all_by_source(entity, "chrono_passive", &mut world);
+
+        let stack = world.get::<EffectStack<QuickStopConfig>>(entity).unwrap();
+        assert_eq!(stack.len(), 1);
+        assert!((stack.aggregate() - 1.5).abs() < 1e-5);
+    }
+
+    #[test]
+    fn reverse_all_by_source_on_entity_without_stack_is_noop() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        QuickStopConfig {
+            multiplier: OrderedFloat(2.0),
+        }
+        .reverse_all_by_source(entity, "chrono_passive", &mut world);
+        // No panic.
     }
 }

@@ -59,6 +59,17 @@ impl Reversible for RampingDamageConfig {
             }
         }
     }
+
+    fn reverse_all_by_source(&self, entity: Entity, source: &str, world: &mut World) {
+        if let Some(mut stack) = world.get_mut::<EffectStack<Self>>(entity) {
+            stack.retain_by_source(source);
+            if stack.is_empty() {
+                world
+                    .entity_mut(entity)
+                    .remove::<RampingDamageAccumulator>();
+            }
+        }
+    }
 }
 
 impl PassiveEffect for RampingDamageConfig {
@@ -138,5 +149,92 @@ mod tests {
         };
 
         config.reverse(entity, "test_source", &mut world);
+    }
+
+    // ── reverse_all_by_source ─────────────────────────────────────────
+
+    #[test]
+    fn reverse_all_by_source_removes_all_entries_from_matching_source_leaves_others() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        RampingDamageConfig {
+            increment: OrderedFloat(0.5),
+        }
+        .fire(entity, "amp", &mut world);
+        RampingDamageConfig {
+            increment: OrderedFloat(0.25),
+        }
+        .fire(entity, "feedback_loop", &mut world);
+        RampingDamageConfig {
+            increment: OrderedFloat(1.0),
+        }
+        .fire(entity, "amp", &mut world);
+
+        // Manually set accumulator to a non-zero value.
+        world
+            .entity_mut(entity)
+            .insert(RampingDamageAccumulator(OrderedFloat(3.0)));
+
+        RampingDamageConfig {
+            increment: OrderedFloat(0.5),
+        }
+        .reverse_all_by_source(entity, "amp", &mut world);
+
+        let stack = world
+            .get::<EffectStack<RampingDamageConfig>>(entity)
+            .unwrap();
+        assert_eq!(stack.len(), 1);
+        assert!((stack.aggregate() - 0.25).abs() < 1e-5);
+        // Accumulator should still be present because the stack is non-empty.
+        assert!(
+            world.get::<RampingDamageAccumulator>(entity).is_some(),
+            "RampingDamageAccumulator should still be present when stack is non-empty"
+        );
+    }
+
+    #[test]
+    fn reverse_all_by_source_removes_accumulator_when_stack_becomes_empty() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        RampingDamageConfig {
+            increment: OrderedFloat(0.5),
+        }
+        .fire(entity, "amp", &mut world);
+        RampingDamageConfig {
+            increment: OrderedFloat(1.0),
+        }
+        .fire(entity, "amp", &mut world);
+
+        world
+            .entity_mut(entity)
+            .insert(RampingDamageAccumulator(OrderedFloat(2.5)));
+
+        RampingDamageConfig {
+            increment: OrderedFloat(0.5),
+        }
+        .reverse_all_by_source(entity, "amp", &mut world);
+
+        let stack = world
+            .get::<EffectStack<RampingDamageConfig>>(entity)
+            .unwrap();
+        assert!(stack.is_empty());
+        assert!(
+            world.get::<RampingDamageAccumulator>(entity).is_none(),
+            "RampingDamageAccumulator should be removed when stack becomes empty"
+        );
+    }
+
+    #[test]
+    fn reverse_all_by_source_on_entity_without_stack_is_noop() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        RampingDamageConfig {
+            increment: OrderedFloat(0.5),
+        }
+        .reverse_all_by_source(entity, "amp", &mut world);
+        // No panic.
     }
 }

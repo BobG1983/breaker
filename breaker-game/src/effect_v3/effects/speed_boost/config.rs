@@ -36,6 +36,12 @@ impl Reversible for SpeedBoostConfig {
             stack.remove(source, self);
         }
     }
+
+    fn reverse_all_by_source(&self, entity: Entity, source: &str, world: &mut World) {
+        if let Some(mut stack) = world.get_mut::<EffectStack<Self>>(entity) {
+            stack.retain_by_source(source);
+        }
+    }
 }
 
 impl PassiveEffect for SpeedBoostConfig {
@@ -113,5 +119,48 @@ mod tests {
 
         config.reverse(entity, "test_source", &mut world);
         // No panic — operation is a no-op.
+    }
+
+    // ── reverse_all_by_source ─────────────────────────────────────────
+
+    #[test]
+    fn reverse_all_by_source_removes_all_entries_from_matching_source_leaves_others() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        SpeedBoostConfig {
+            multiplier: OrderedFloat(1.5),
+        }
+        .fire(entity, "overclock", &mut world);
+        SpeedBoostConfig {
+            multiplier: OrderedFloat(2.0),
+        }
+        .fire(entity, "feedback_loop", &mut world);
+        SpeedBoostConfig {
+            multiplier: OrderedFloat(1.3),
+        }
+        .fire(entity, "overclock", &mut world);
+
+        SpeedBoostConfig {
+            multiplier: OrderedFloat(1.5),
+        }
+        .reverse_all_by_source(entity, "overclock", &mut world);
+
+        let stack = world.get::<EffectStack<SpeedBoostConfig>>(entity).unwrap();
+        assert_eq!(stack.len(), 1);
+        assert!((stack.aggregate() - 2.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn reverse_all_by_source_on_entity_without_stack_is_noop() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        SpeedBoostConfig {
+            multiplier: OrderedFloat(1.5),
+        }
+        .reverse_all_by_source(entity, "test_source", &mut world);
+        // No panic.
+        assert!(world.get::<EffectStack<SpeedBoostConfig>>(entity).is_none());
     }
 }
