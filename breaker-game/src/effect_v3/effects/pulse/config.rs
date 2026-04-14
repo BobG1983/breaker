@@ -111,6 +111,8 @@ mod tests {
             .build()
     }
 
+    // set_timestep alone does not advance Time<Fixed>; accumulate_overstep
+    // is required to make delta_secs() return dt during the next FixedUpdate.
     fn tick_with_dt(app: &mut App, dt: Duration) {
         app.world_mut()
             .resource_mut::<Time<Fixed>>()

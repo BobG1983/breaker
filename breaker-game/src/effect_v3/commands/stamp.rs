@@ -28,3 +28,52 @@ impl Command for StampEffectCommand {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use ordered_float::OrderedFloat;
+
+    use super::*;
+    use crate::effect_v3::{
+        effects::{PiercingConfig, SpeedBoostConfig},
+        types::EffectType,
+    };
+
+    #[test]
+    fn stamp_effect_command_inserts_tree_into_bound_effects() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        StampEffectCommand {
+            entity,
+            name: "stamp_chip".to_owned(),
+            tree: Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 3 })),
+        }
+        .apply(&mut world);
+
+        let bound = world.get::<BoundEffects>(entity).unwrap();
+        assert_eq!(bound.0.len(), 1);
+        assert_eq!(bound.0[0].0, "stamp_chip");
+    }
+
+    #[test]
+    fn stamp_effect_command_appends_to_existing_bound_effects() {
+        let mut world = World::new();
+        let existing_tree = Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+            multiplier: OrderedFloat(1.5),
+        }));
+        let entity = world
+            .spawn(BoundEffects(vec![("existing".to_owned(), existing_tree)]))
+            .id();
+
+        StampEffectCommand {
+            entity,
+            name: "stamp_chip".to_owned(),
+            tree: Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 3 })),
+        }
+        .apply(&mut world);
+
+        let bound = world.get::<BoundEffects>(entity).unwrap();
+        assert_eq!(bound.0.len(), 2);
+    }
+}

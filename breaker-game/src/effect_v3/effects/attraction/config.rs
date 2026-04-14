@@ -85,6 +85,113 @@ mod tests {
         types::AttractionType,
     };
 
+    // ── fire ──────────────────────────────────────────────────────────
+
+    #[test]
+    fn fire_creates_active_attractions_with_correct_fields() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        AttractionConfig {
+            attraction_type: AttractionType::Cell,
+            force:           OrderedFloat(100.0),
+            max_force:       Some(OrderedFloat(200.0)),
+        }
+        .fire(entity, "magnet", &mut world);
+
+        let active = world.get::<ActiveAttractions>(entity).unwrap();
+        assert_eq!(active.0.len(), 1);
+        assert_eq!(active.0[0].source, "magnet");
+        assert_eq!(active.0[0].attraction_type, AttractionType::Cell);
+        assert!((active.0[0].force - 100.0).abs() < f32::EPSILON);
+        assert_eq!(active.0[0].max_force, Some(200.0));
+    }
+
+    #[test]
+    fn fire_appends_to_existing_active_attractions() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        AttractionConfig {
+            attraction_type: AttractionType::Cell,
+            force:           OrderedFloat(100.0),
+            max_force:       None,
+        }
+        .fire(entity, "magnet_a", &mut world);
+        AttractionConfig {
+            attraction_type: AttractionType::Breaker,
+            force:           OrderedFloat(50.0),
+            max_force:       Some(OrderedFloat(75.0)),
+        }
+        .fire(entity, "magnet_b", &mut world);
+
+        let active = world.get::<ActiveAttractions>(entity).unwrap();
+        assert_eq!(active.0.len(), 2);
+        assert_eq!(active.0[0].source, "magnet_a");
+        assert_eq!(active.0[1].source, "magnet_b");
+    }
+
+    #[test]
+    fn fire_on_despawned_entity_is_noop() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+        world.despawn(entity);
+
+        AttractionConfig {
+            attraction_type: AttractionType::Cell,
+            force:           OrderedFloat(100.0),
+            max_force:       None,
+        }
+        .fire(entity, "magnet", &mut world);
+        // No panic.
+    }
+
+    // ── reverse ──────────────────────────────────────────────────────
+
+    #[test]
+    fn reverse_removes_first_matching_entry_by_source_and_type() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        AttractionConfig {
+            attraction_type: AttractionType::Cell,
+            force:           OrderedFloat(100.0),
+            max_force:       None,
+        }
+        .fire(entity, "magnet", &mut world);
+        AttractionConfig {
+            attraction_type: AttractionType::Breaker,
+            force:           OrderedFloat(50.0),
+            max_force:       None,
+        }
+        .fire(entity, "magnet", &mut world);
+
+        AttractionConfig {
+            attraction_type: AttractionType::Cell,
+            force:           OrderedFloat(100.0),
+            max_force:       None,
+        }
+        .reverse(entity, "magnet", &mut world);
+
+        let active = world.get::<ActiveAttractions>(entity).unwrap();
+        assert_eq!(active.0.len(), 1);
+        assert_eq!(active.0[0].attraction_type, AttractionType::Breaker);
+    }
+
+    #[test]
+    fn reverse_on_entity_without_active_attractions_is_noop() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        AttractionConfig {
+            attraction_type: AttractionType::Cell,
+            force:           OrderedFloat(100.0),
+            max_force:       None,
+        }
+        .reverse(entity, "magnet", &mut world);
+        // No panic.
+    }
+
     // ── reverse_all_by_source ─────────────────────────────────────────
 
     #[test]

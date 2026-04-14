@@ -124,20 +124,27 @@ pub fn reverse_all_by_source_dispatch(
 #[cfg(test)]
 mod tests {
     use ordered_float::OrderedFloat;
+    use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
     use super::*;
-    use crate::effect_v3::{
-        effects::{
-            AnchorConfig, AttractionConfig, FlashStepConfig, RampingDamageConfig, SpeedBoostConfig,
-            anchor::components::{AnchorActive, AnchorPlanted, AnchorTimer},
-            attraction::components::ActiveAttractions,
-            flash_step::FlashStepActive,
-            piercing::PiercingConfig,
-            ramping_damage::components::RampingDamageAccumulator,
+    use crate::{
+        effect_v3::{
+            effects::{
+                AnchorConfig, AttractionConfig, BumpForceConfig, CircuitBreakerConfig,
+                DamageBoostConfig, EntropyConfig, FlashStepConfig, PulseConfig, QuickStopConfig,
+                RampingDamageConfig, SecondWindConfig, ShieldConfig, SizeBoostConfig,
+                SpeedBoostConfig, VulnerableConfig,
+                anchor::components::{AnchorActive, AnchorPlanted, AnchorTimer},
+                attraction::components::ActiveAttractions,
+                flash_step::FlashStepActive,
+                piercing::PiercingConfig,
+                ramping_damage::components::RampingDamageAccumulator,
+            },
+            stacking::EffectStack,
+            traits::Fireable,
+            types::AttractionType,
         },
-        stacking::EffectStack,
-        traits::Fireable,
-        types::AttractionType,
+        shared::{PlayfieldConfig, rng::GameRng},
     };
 
     #[test]
@@ -303,5 +310,160 @@ mod tests {
         assert!(world.get::<AnchorActive>(entity).is_none());
         assert!(world.get::<AnchorTimer>(entity).is_none());
         assert!(world.get::<AnchorPlanted>(entity).is_none());
+    }
+
+    // ── Exhaustive smoke tests ────────────────────────────────────────
+
+    /// Returns one instance of every `ReversibleEffectType` variant with sensible test values.
+    fn all_reversible_effect_types() -> Vec<ReversibleEffectType> {
+        vec![
+            ReversibleEffectType::SpeedBoost(SpeedBoostConfig {
+                multiplier: OrderedFloat(1.5),
+            }),
+            ReversibleEffectType::SizeBoost(SizeBoostConfig {
+                multiplier: OrderedFloat(1.2),
+            }),
+            ReversibleEffectType::DamageBoost(DamageBoostConfig {
+                multiplier: OrderedFloat(2.0),
+            }),
+            ReversibleEffectType::BumpForce(BumpForceConfig {
+                multiplier: OrderedFloat(1.3),
+            }),
+            ReversibleEffectType::QuickStop(QuickStopConfig {
+                multiplier: OrderedFloat(1.1),
+            }),
+            ReversibleEffectType::FlashStep(FlashStepConfig {}),
+            ReversibleEffectType::Piercing(PiercingConfig { charges: 3 }),
+            ReversibleEffectType::Vulnerable(VulnerableConfig {
+                multiplier: OrderedFloat(1.5),
+            }),
+            ReversibleEffectType::RampingDamage(RampingDamageConfig {
+                increment: OrderedFloat(0.5),
+            }),
+            ReversibleEffectType::Attraction(AttractionConfig {
+                attraction_type: AttractionType::Cell,
+                force:           OrderedFloat(100.0),
+                max_force:       None,
+            }),
+            ReversibleEffectType::Anchor(AnchorConfig {
+                bump_force_multiplier:     OrderedFloat(2.0),
+                perfect_window_multiplier: OrderedFloat(1.5),
+                plant_delay:               OrderedFloat(0.5),
+            }),
+            ReversibleEffectType::Pulse(PulseConfig {
+                base_range:      OrderedFloat(64.0),
+                range_per_level: OrderedFloat(16.0),
+                stacks:          1,
+                speed:           OrderedFloat(200.0),
+                interval:        OrderedFloat(1.0),
+            }),
+            ReversibleEffectType::Shield(ShieldConfig {
+                duration:        OrderedFloat(5.0),
+                reflection_cost: OrderedFloat(1.0),
+            }),
+            ReversibleEffectType::SecondWind(SecondWindConfig {}),
+            ReversibleEffectType::CircuitBreaker(CircuitBreakerConfig {
+                bumps_required:  5,
+                spawn_count:     2,
+                inherit:         false,
+                shockwave_range: OrderedFloat(64.0),
+                shockwave_speed: OrderedFloat(200.0),
+            }),
+            ReversibleEffectType::EntropyEngine(EntropyConfig {
+                max_effects: 3,
+                pool:        vec![],
+            }),
+        ]
+    }
+
+    #[test]
+    fn reverse_dispatch_does_not_panic_for_any_reversible_effect_type_variant() {
+        let mut world = World::new();
+        world.insert_resource(GameRng::from_seed(42));
+        world.insert_resource(PlayfieldConfig::default());
+        assert_eq!(
+            all_reversible_effect_types().len(),
+            16,
+            "update all_reversible_effect_types when ReversibleEffectType gains variants"
+        );
+
+        // Loop 1: fire-then-reverse for each variant.
+        for effect in all_reversible_effect_types() {
+            let entity = world
+                .spawn((
+                    Position2D(Vec2::new(100.0, 200.0)),
+                    Velocity2D(Vec2::new(0.0, 300.0)),
+                ))
+                .id();
+
+            fire_reversible_dispatch(&effect, entity, "smoke_test", &mut world);
+            reverse_dispatch(&effect, entity, "smoke_test", &mut world);
+        }
+
+        // Loop 2: reverse-without-fire for each variant (edge case).
+        for effect in all_reversible_effect_types() {
+            let entity = world
+                .spawn((
+                    Position2D(Vec2::new(100.0, 200.0)),
+                    Velocity2D(Vec2::new(0.0, 300.0)),
+                ))
+                .id();
+
+            reverse_dispatch(&effect, entity, "smoke_test", &mut world);
+        }
+        // If we reach here, no variant panicked.
+    }
+
+    #[test]
+    fn fire_reversible_dispatch_does_not_panic_for_any_reversible_effect_type_variant() {
+        let mut world = World::new();
+        world.insert_resource(GameRng::from_seed(42));
+        world.insert_resource(PlayfieldConfig::default());
+
+        for effect in all_reversible_effect_types() {
+            let entity = world
+                .spawn((
+                    Position2D(Vec2::new(100.0, 200.0)),
+                    Velocity2D(Vec2::new(0.0, 300.0)),
+                ))
+                .id();
+
+            fire_reversible_dispatch(&effect, entity, "smoke_test", &mut world);
+        }
+        // If we reach here, no variant panicked.
+    }
+
+    #[test]
+    fn reverse_all_by_source_dispatch_does_not_panic_for_any_reversible_effect_type_variant() {
+        let mut world = World::new();
+        world.insert_resource(GameRng::from_seed(42));
+        world.insert_resource(PlayfieldConfig::default());
+
+        // Loop 1: fire twice, then reverse_all_by_source for each variant.
+        for effect in all_reversible_effect_types() {
+            let entity = world
+                .spawn((
+                    Position2D(Vec2::new(100.0, 200.0)),
+                    Velocity2D(Vec2::new(0.0, 300.0)),
+                ))
+                .id();
+
+            fire_reversible_dispatch(&effect, entity, "smoke_test", &mut world);
+            fire_reversible_dispatch(&effect, entity, "smoke_test", &mut world);
+            reverse_all_by_source_dispatch(&effect, entity, "smoke_test", &mut world);
+        }
+
+        // Loop 2: reverse_all_by_source without firing first (edge case).
+        for effect in all_reversible_effect_types() {
+            let entity = world
+                .spawn((
+                    Position2D(Vec2::new(100.0, 200.0)),
+                    Velocity2D(Vec2::new(0.0, 300.0)),
+                ))
+                .id();
+
+            reverse_all_by_source_dispatch(&effect, entity, "smoke_test", &mut world);
+        }
+        // If we reach here, no variant panicked.
     }
 }

@@ -133,4 +133,104 @@ mod tests {
         PiercingConfig { charges: 2 }.reverse_all_by_source(entity, "splinter", &mut world);
         // No panic.
     }
+
+    // ── fire idempotent stack insert ──────────────────────────────────
+
+    #[test]
+    fn fire_on_entity_with_existing_stack_appends_without_replacing() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        // Pre-populate with 1 entry from "splinter".
+        PiercingConfig { charges: 2 }.fire(entity, "splinter", &mut world);
+
+        // Fire from a different source.
+        PiercingConfig { charges: 5 }.fire(entity, "piercing_bolt", &mut world);
+
+        let stack = world.get::<EffectStack<PiercingConfig>>(entity).unwrap();
+        assert_eq!(stack.len(), 2, "stack should have 2 entries, not replace");
+        assert!((stack.aggregate() - 7.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn fire_same_source_again_appends_third_entry() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        PiercingConfig { charges: 2 }.fire(entity, "splinter", &mut world);
+        PiercingConfig { charges: 5 }.fire(entity, "piercing_bolt", &mut world);
+        PiercingConfig { charges: 5 }.fire(entity, "piercing_bolt", &mut world);
+
+        let stack = world.get::<EffectStack<PiercingConfig>>(entity).unwrap();
+        assert_eq!(stack.len(), 3, "stack should have 3 entries (2+5+5)");
+        assert!((stack.aggregate() - 12.0).abs() < 1e-5);
+    }
+
+    // ── aggregate mixed sources ───────────────────────────────────────
+
+    #[test]
+    fn aggregate_sums_charges_from_mixed_sources() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        PiercingConfig { charges: 1 }.fire(entity, "chip_a", &mut world);
+        PiercingConfig { charges: 4 }.fire(entity, "chip_b", &mut world);
+        PiercingConfig { charges: 2 }.fire(entity, "chip_a", &mut world);
+
+        let stack = world.get::<EffectStack<PiercingConfig>>(entity).unwrap();
+        assert_eq!(stack.len(), 3);
+        assert!((stack.aggregate() - 7.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn reverse_one_entry_from_mixed_sources_updates_aggregate() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        PiercingConfig { charges: 1 }.fire(entity, "chip_a", &mut world);
+        PiercingConfig { charges: 4 }.fire(entity, "chip_b", &mut world);
+        PiercingConfig { charges: 2 }.fire(entity, "chip_a", &mut world);
+
+        // Reverse the first chip_a entry (charges: 1).
+        PiercingConfig { charges: 1 }.reverse(entity, "chip_a", &mut world);
+
+        let stack = world.get::<EffectStack<PiercingConfig>>(entity).unwrap();
+        assert_eq!(stack.len(), 2);
+        assert!((stack.aggregate() - 6.0).abs() < 1e-5);
+    }
+
+    // ── reverse with non-empty stack preserves remaining ──────────────
+
+    #[test]
+    fn reverse_preserves_remaining_entries_in_stack() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        PiercingConfig { charges: 3 }.fire(entity, "a", &mut world);
+        PiercingConfig { charges: 5 }.fire(entity, "b", &mut world);
+        PiercingConfig { charges: 3 }.fire(entity, "a", &mut world);
+
+        PiercingConfig { charges: 3 }.reverse(entity, "a", &mut world);
+
+        let stack = world.get::<EffectStack<PiercingConfig>>(entity).unwrap();
+        assert_eq!(stack.len(), 2);
+        assert!((stack.aggregate() - 8.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn reverse_twice_leaves_single_entry() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        PiercingConfig { charges: 3 }.fire(entity, "a", &mut world);
+        PiercingConfig { charges: 5 }.fire(entity, "b", &mut world);
+        PiercingConfig { charges: 3 }.fire(entity, "a", &mut world);
+
+        PiercingConfig { charges: 3 }.reverse(entity, "a", &mut world);
+        PiercingConfig { charges: 3 }.reverse(entity, "a", &mut world);
+
+        let stack = world.get::<EffectStack<PiercingConfig>>(entity).unwrap();
+        assert_eq!(stack.len(), 1);
+        assert!((stack.aggregate() - 5.0).abs() < 1e-5);
+    }
 }
