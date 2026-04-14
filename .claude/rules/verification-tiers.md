@@ -23,6 +23,7 @@ Includes everything in Basic Verification Tier, plus:
 
 | Agent | Purpose |
 |-------|---------|
+| **reviewer-completeness** | Plan/todo deliverables actually implemented, no omissions or shortcuts |
 | **reviewer-correctness** | Logic bugs, state machine holes, math errors |
 | **reviewer-quality** | Rust idioms, game vocabulary, test coverage gaps |
 | **reviewer-bevy-api** | Correct Bevy API usage for project's version |
