@@ -16,7 +16,7 @@ Walk ALL entities with BoundEffects/StagedEffects.
 `TriggerContext::None`
 
 # Source Location
-`src/effect/triggers/node/bridges.rs`
+`src/effect_v3/triggers/node/bridges.rs`
 
 # Schedule
 `OnExit(NodeState::Playing)` — runs once when the node transitions out of Playing. This is NOT a FixedUpdate system — it fires as a one-shot state transition hook.

@@ -2,7 +2,7 @@
 
 ```rust
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-enum EffectSystems {
+enum EffectV3Systems {
     Bridge,
     Tick,
     Conditions,
@@ -10,7 +10,7 @@ enum EffectSystems {
 }
 ```
 
-## EffectSystems::Bridge
+## EffectV3Systems::Bridge
 
 Bridge systems that translate game events to trigger dispatches. Each reads a message, builds TriggerContext, and calls `walk_effects`.
 
@@ -40,7 +40,7 @@ Bridge systems that translate game events to trigger dispatches. Each reads a me
 
 Note: Death bridges read `Destroyed<T>` messages sent by domain kill handlers in the previous frame. This is the standard Bevy message pattern — messages persist for one frame. Death-triggered effects have a one-frame delay, which is acceptable at 60fps.
 
-## EffectSystems::Tick
+## EffectV3Systems::Tick
 
 Runtime systems for spawned effect entities. Advance state each frame. All systems in this set run with `run_if(in_state(NodeState::Playing))` — effects freeze during node transitions and teardown.
 
@@ -63,7 +63,7 @@ Runtime systems for spawned effect entities. Advance state each frame. All syste
 | `tick_effect_timers` | Tick EffectTimers, send EffectTimerExpired | |
 | `check_node_timer_thresholds` | Check timer ratio, send NodeTimerThresholdCrossed | |
 
-## EffectSystems::Conditions
+## EffectV3Systems::Conditions
 
 Condition monitoring for During nodes.
 
@@ -71,13 +71,12 @@ Condition monitoring for During nodes.
 |--------|---------|
 | `evaluate_conditions` | Poll NodeActive/ShieldActive/ComboActive, fire/reverse During entries on transitions |
 
-## EffectSystems::Reset
+## EffectV3Systems::Reset
 
 Per-node reset systems. Each effect defines its own reset timing. These run on state transition hooks, not in FixedUpdate.
 
 | System | Purpose | Schedule |
 |--------|---------|----------|
-| `reset_ramping_damage` | Zero out RampingDamageAccumulator | `OnEnter(NodeState::Playing)` |
+| `reset_ramping_damage` | Zero out RampingDamageAccumulator | `OnEnter(NodeState::Loading)` |
+| `reset_entropy_counter` | Reset EntropyCounter.count to 0 | `OnEnter(NodeState::Loading)` |
 | `reset_node_timer_thresholds` | Clear `fired` set in NodeTimerThresholdRegistry | `OnEnter(NodeState::Playing)` |
-
-Note: EntropyEngine resets its counter internally when fired — no separate reset system needed.

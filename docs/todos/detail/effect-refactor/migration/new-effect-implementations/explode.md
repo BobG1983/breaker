@@ -19,7 +19,7 @@ Explode
 Not reversible.
 
 # Source Location
-`src/effect/effects/explode/config.rs`
+`src/effect_v3/effects/explode/config.rs`
 
 # New Types
 None persistent. The visual flash is a short-lived VFX entity using existing VFX infrastructure.

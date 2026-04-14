@@ -59,3 +59,45 @@ The orchestration system uses `world.resource_mut::<Messages<T>>().drain()` inst
 cannot receive `SystemParam` arguments. `drain()` consumes all messages from both internal
 buffers — appropriate for the orchestrator which is the sole consumer of these internal
 lifecycle messages.
+
+## fire_dispatch() inside exclusive systems (Bevy 0.18)
+
+`fire_dispatch(&EffectType::Foo(config), entity, source, world)` is project-defined (not a
+Bevy built-in). Its signature is `fn fire_dispatch(effect: &EffectType, entity: Entity, source: &str, world: &mut World)`.
+It is correct and idiomatic to call it multiple times sequentially inside an exclusive system
+(`pub fn tick_circuit_breaker(world: &mut World)`). Each call completes and drops its internal
+borrows before the next call begins — no aliasing issue.
+
+## &Newtype(inner) destructure in Query for-loop (Bevy 0.18, Copy inner type)
+
+Pattern: `for (..., &MyNewtype(val), ...) in &query` where `MyNewtype(pub f32)` has no
+`#[derive(Copy)]`. This compiles because:
+- `&query` yields `&MyNewtype` for that position
+- The pattern `&MyNewtype(val)` match-dereferences the shared reference  
+- `f32: Copy` so Rust binds `val` as `f32` by copy (match ergonomics + Copy)
+- This does NOT require `MyNewtype` to implement `Copy` — only the inner field must be `Copy`
+Confirmed correct in `tick_tether_beam` for `&TetherBeamWidth(beam_width)` where `beam_width: f32`.
+
+## world.resource_mut::<T>() in exclusive system (Bevy 0.18)
+
+Exclusive systems (`fn my_sys(world: &mut World)`) can call `world.resource_mut::<T>()` freely.
+The returned `Mut<T>` borrow is bounded to a local scope — once it drops, `world` is unlocked
+again. Multiple sequential calls to `world.resource_mut::<GameRng>()` (or any resource) inside
+one exclusive system are safe as long as they don't overlap. Pattern confirmed correct in
+`SpawnBoltsConfig::fire()` and `TetherBeamConfig::fire_spawn()`.
+
+## derive_partial_eq_without_eq lint — only triggers when PartialEq IS derived
+
+The project has `derive_partial_eq_without_eq = "deny"`. This lint fires ONLY when `PartialEq`
+is derived without `Eq`. Components with `#[derive(Component, Debug, Clone)]` (no `PartialEq`)
+are completely exempt — the lint does not apply.
+
+## chip.and_then(|c| c.0.clone()) — Option<&EffectSourceChip> → Option<String>
+
+`EffectSourceChip(pub Option<String>)`. Pattern:
+```rust
+let source_chip: Option<String> = chip.and_then(|c| c.0.clone());
+```
+where `chip: Option<&EffectSourceChip>`. The closure receives `&EffectSourceChip`, accesses
+`.0` (the `Option<String>`), clones it to get `Option<String>`, and `and_then` flattens from
+`Option<Option<String>>` to `Option<String>`. Correct and idiomatic in Bevy 0.18.

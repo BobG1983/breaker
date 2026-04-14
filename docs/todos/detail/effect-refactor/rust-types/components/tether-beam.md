@@ -18,7 +18,7 @@ pub struct TetherBeamDamage(pub f32);
 ```
 
 # Location
-`src/effect/effects/tether_beam/`
+`src/effect_v3/effects/tether_beam/`
 
 # Description
 These components form the tether beam effect entity. A tether beam is a damage-dealing line between two bolts that hurts cells passing through it.

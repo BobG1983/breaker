@@ -25,7 +25,7 @@ pub struct GravityWellOwner(pub Entity);
 ```
 
 # Location
-`src/effect/effects/gravity_well/`
+`src/effect_v3/effects/gravity_well/`
 
 # Description
 These components form the gravity well effect entity bundle. A gravity well is a point attractor that pulls bolts toward it.

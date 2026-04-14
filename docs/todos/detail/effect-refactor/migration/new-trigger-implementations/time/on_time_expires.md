@@ -16,7 +16,7 @@ Walk the entity referenced in the message that has `TimeExpires(original_duratio
 `TriggerContext::None`
 
 # Source Location
-`src/effect/triggers/time/bridges.rs`
+`src/effect_v3/triggers/time/bridges.rs`
 
 # Schedule
 FixedUpdate, after `tick_effect_timers`.

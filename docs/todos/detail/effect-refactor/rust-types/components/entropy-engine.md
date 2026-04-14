@@ -16,7 +16,7 @@ pub struct EntropyCounter {
 ```
 
 # Location
-`src/effect/effects/entropy_engine/`
+`src/effect_v3/effects/entropy_engine/`
 
 # Description
 `EntropyCounter` is added to the bolt to implement the entropy engine mechanic -- a random effect trigger based on bump accumulation.

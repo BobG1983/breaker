@@ -38,7 +38,7 @@ enum TriggerContext {
 
 ## 5. Create the trigger folder
 
-If this is a new trigger category, create a folder in `src/effect/triggers/<category>/`:
+If this is a new trigger category, create a folder in `src/effect_v3/triggers/<category>/`:
 
 ```
 triggers/my_category/
@@ -70,11 +70,11 @@ pub(crate) fn register(app: &mut App) {
     app.add_systems(FixedUpdate, (
         on_my_event,
         on_my_event_occurred,
-    ).in_set(EffectSystems::Bridge));
+    ).in_set(EffectV3Systems::Bridge));
 
     // Game systems (if any)
     app.add_systems(FixedUpdate,
-        tick_my_thing.in_set(EffectSystems::Tick)
+        tick_my_thing.in_set(EffectV3Systems::Tick)
     );
 
     // Resources (if any)
@@ -100,14 +100,14 @@ The plugin calls this function during build. Each trigger category owns its own 
 
 | Step | Files touched |
 |------|--------------|
-| Trigger variant | `src/effect/types/trigger.rs` |
-| TriggerContext variant (if new category) | `src/effect/types/trigger_context.rs` |
-| Participant enum (if new) | `src/effect/types/participants.rs` |
-| Trigger folder | `src/effect/triggers/<category>/` (new folder, if new category) |
-| Bridge system | `src/effect/triggers/<category>/bridges.rs` |
-| Register function | `src/effect/triggers/<category>/register.rs` |
-| Game systems (if any) | `src/effect/triggers/<category>/<system_name>.rs` |
-| Resources (if any) | `src/effect/triggers/<category>/resources.rs` |
-| Messages (if any) | `src/effect/triggers/<category>/messages.rs` |
-| Module wiring | `src/effect/triggers/<category>/mod.rs` |
-| On() resolution (if new participants) | `src/effect/walking/on.rs` |
+| Trigger variant | `src/effect_v3/types/trigger.rs` |
+| TriggerContext variant (if new category) | `src/effect_v3/types/trigger_context.rs` |
+| Participant enum (if new) | `src/effect_v3/types/participants.rs` |
+| Trigger folder | `src/effect_v3/triggers/<category>/` (new folder, if new category) |
+| Bridge system | `src/effect_v3/triggers/<category>/bridges.rs` |
+| Register function | `src/effect_v3/triggers/<category>/register.rs` |
+| Game systems (if any) | `src/effect_v3/triggers/<category>/<system_name>.rs` |
+| Resources (if any) | `src/effect_v3/triggers/<category>/resources.rs` |
+| Messages (if any) | `src/effect_v3/triggers/<category>/messages.rs` |
+| Module wiring | `src/effect_v3/triggers/<category>/mod.rs` |
+| On() resolution (if new participants) | `src/effect_v3/walking/on.rs` |

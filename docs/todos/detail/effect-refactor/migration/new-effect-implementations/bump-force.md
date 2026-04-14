@@ -19,7 +19,7 @@ BumpForce
 3. Reverse does NOT change bump velocity -- that is grade_bump's job.
 
 # Source Location
-`src/effect/effects/bump_force/config.rs`
+`src/effect_v3/effects/bump_force/config.rs`
 
 # New Types
 None beyond `EffectStack<BumpForceConfig>`.

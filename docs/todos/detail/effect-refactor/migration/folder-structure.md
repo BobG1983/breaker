@@ -1,6 +1,6 @@
 # Folder Structure
 
-Complete directory tree for `src/effect/` post-refactor.
+Complete directory tree for `src/effect_v3/` post-refactor.
 
 ## Principles
 
@@ -13,7 +13,7 @@ Complete directory tree for `src/effect/` post-refactor.
 ## Tree
 
 ```
-src/effect/
+src/effect_v3/
   mod.rs
   plugin.rs
 

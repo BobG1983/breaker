@@ -24,7 +24,7 @@ Note: aggregation is additive (sum of increments), not multiplicative.
 4. Reverse does NOT change damage dealt -- that is the downstream system's job.
 
 # Source Location
-`src/effect/effects/ramping_damage/config.rs`
+`src/effect_v3/effects/ramping_damage/config.rs`
 
 # New Types
 - `RampingDamageAccumulator(OrderedFloat<f32>)` -- component that tracks accumulated bonus damage from repeated trigger activations. When the gating trigger fires again, the accumulator is incremented by the stack aggregate (sum of all increments). The accumulator value is added to damage by the downstream system. Resets to 0.0 at node start.
@@ -34,4 +34,4 @@ Note: aggregation is additive (sum of increments), not multiplicative.
 ## reset_ramping_damage
 - **What it does**: For each entity with `RampingDamageAccumulator`, set the value to `OrderedFloat(0.0)`.
 - **What it does NOT do**: Does not remove the accumulator. Does not modify the EffectStack. Does not change damage dealt.
-- **Schedule**: OnEnter(NodeState::Playing), runs when a new node starts.
+- **Schedule**: OnEnter(NodeState::Loading), runs when a new node starts loading. Registered in `EffectV3Systems::Reset`.

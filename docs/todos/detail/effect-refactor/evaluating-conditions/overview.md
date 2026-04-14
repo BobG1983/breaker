@@ -10,13 +10,13 @@ Conditions are polled every frame. A system checks whether each condition is tru
 
 ## Runtime state
 
-Each During entry in BoundEffects carries a `condition_active: Option<bool>` field:
-- `None` — not a During entry (When, Once, etc.)
-- `Some(false)` — condition was false last frame (initial state on install)
-- `Some(true)` — condition was true last frame
+`BoundEffects` is a plain `Vec<(String, Tree)>`. Condition state is NOT stored per-entry in BoundEffects. Instead, a separate `DuringActive(pub HashSet<String>)` component on the same entity tracks which During source strings are currently active (condition true). The evaluate_conditions system reads `DuringActive` to detect transitions:
+- Source absent from `DuringActive` — condition is currently false (or not yet evaluated)
+- Source present in `DuringActive` — condition was true last frame
 
-This field is runtime-only. It does not appear in RON — it defaults to `None` during deserialization and is set to `Some(false)` when a During entry is installed into BoundEffects.
+On transition false→true: insert the source into `DuringActive`, then fire all scoped effects under that During entry.
+On transition true→false: remove the source from `DuringActive`, then reverse all scoped effects under that During entry.
 
 ## Evaluation order
 
-The `evaluate_conditions` system runs in `EffectSystems::Conditions`, after `EffectSystems::Tick`. This ensures conditions like ShieldActive reflect shields spawned or despawned by tick systems this frame.
+The `evaluate_conditions` system runs in `EffectV3Systems::Conditions`, after `EffectV3Systems::Tick`. This ensures conditions like ShieldActive reflect shields spawned or despawned by tick systems this frame.

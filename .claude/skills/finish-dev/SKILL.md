@@ -73,16 +73,7 @@ After `/verify full` is clean:
 1. Run `git status` — verify clean working tree (background agents may have left dirty files)
 2. If dirty: stage and commit the changes, then re-run `/verify basic` to confirm
 
-### Step 6 — Finish the branch
-
-```bash
-git flow <type> finish
-git push
-```
-
-This merges to develop and deletes the topic branch.
-
-### Step 7 — Promote detail docs
+### Step 6 — Promote detail docs
 
 If this branch implemented a todo item that has a detail file/directory in `docs/todos/detail/`:
 
@@ -97,6 +88,15 @@ If this branch implemented a todo item that has a detail file/directory in `docs
 6. Commit the doc promotion: `docs: promote <feature> design docs to architecture/design`
 
 **Why?** Detail files accumulate design decisions, research, and architectural context during planning. Promoting to `docs/architecture/` and `docs/design/` keeps project documentation evergreen. Future sessions find decisions without re-deriving them.
+
+### Step 7 — Finish the branch
+
+```bash
+git flow <type> finish
+git push
+```
+
+This merges to develop and deletes the topic branch.
 
 ### Step 8 — Cleanup ephemeral artifacts
 

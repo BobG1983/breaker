@@ -9,7 +9,7 @@ pub struct FlashStepActive;
 ```
 
 # Location
-`src/effect/effects/flash_step/`
+`src/effect_v3/effects/flash_step/`
 
 # Description
 `FlashStepActive` is a marker component added to the breaker to enable flash-step movement (instant teleport-style repositioning instead of smooth sliding).

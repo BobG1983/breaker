@@ -19,7 +19,7 @@ Walk ALL entities with `BoltLostOccurred` trigger attached.
 - `breaker` -- the breaker entity that lost it (from `msg.breaker`).
 
 # Source Location
-`src/effect/triggers/bolt_lost/bridges.rs`
+`src/effect_v3/triggers/bolt_lost/bridges.rs`
 
 # Schedule
 FixedUpdate, after `BoltSystems::BoltLost`.

@@ -22,7 +22,7 @@ pub struct CircuitBreakerCounter {
 ```
 
 # Location
-`src/effect/effects/circuit_breaker/`
+`src/effect_v3/effects/circuit_breaker/`
 
 # Description
 `CircuitBreakerCounter` is added to the bolt to track bump events toward an automatic shockwave trigger.

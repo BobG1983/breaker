@@ -174,8 +174,8 @@ All types below are defined by the unified death pipeline and should already exi
 - `DespawnEntity { entity: Entity }` -- `#[derive(Message, Clone, Debug)]` -- deferred despawn. From `src/shared/messages.rs`.
 - `GameEntity` -- trait bound, `Wall` implements it. From `src/shared/`.
 - `Wall` -- `#[derive(Component)]` -- entity marker. From `src/walls/components.rs`.
-- `ShieldWall` -- `#[derive(Component)]` -- marker for shield wall entities. From `src/effect/effects/shield/`.
-- `SecondWindWall` -- `#[derive(Component)]` -- marker for second-wind wall entities. From `src/effect/effects/second_wind/`.
+- `ShieldWall` -- `#[derive(Component)]` -- marker for shield wall entities. From `src/effect_v3/effects/shield/`.
+- `SecondWindWall` -- `#[derive(Component)]` -- marker for second-wind wall entities. From `src/effect_v3/effects/second_wind/`.
 - `Position2D(Vec2)` -- `#[derive(Component)]` -- 2D position component. From `rantzsoft_spatial2d`.
 - `Aabb2D` -- `#[derive(Component)]` -- axis-aligned bounding box for spatial indexing. From `rantzsoft_spatial2d`. Removing this component auto-deregisters the entity from the quadtree.
 

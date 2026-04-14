@@ -85,7 +85,7 @@ Add prerequisites section to every spec. Use the global rules above. NOT a spec 
 - [ ] Fix EntropyEngine reset (no separate system)
 
 ### Wave 7 (death pipeline)
-- [ ] Add EffectSystems::Tick to prerequisites
+- [ ] Add EffectV3Systems::Tick to prerequisites
 - [ ] Fix apply_damage helper signature
 - [ ] Resolve RequiredToClear (scope deferral to wave 9)
 - [ ] State Changed<Hp> is omitted deliberately

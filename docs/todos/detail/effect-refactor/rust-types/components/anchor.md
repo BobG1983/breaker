@@ -24,7 +24,7 @@ pub struct AnchorPlanted;
 ```
 
 # Location
-`src/effect/effects/anchor/`
+`src/effect_v3/effects/anchor/`
 
 # Description
 These three components work together to implement the anchor effect on the breaker entity.

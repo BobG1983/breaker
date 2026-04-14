@@ -28,7 +28,7 @@ DO NOT store state between calls. Fire is stateless — each invocation is indep
 
 - app: The Bevy App, available during plugin build.
 
-Called by EffectPlugin::build for every config struct. The default implementation is a no-op. Override it when the effect has runtime systems, components, or resources to register.
+Called by EffectV3Plugin::build for every config struct. The default implementation is a no-op. Override it when the effect has runtime systems, components, or resources to register.
 
 Effects with no runtime infrastructure (passive effects, fire-and-forget effects) use the default no-op. Effects with tick systems, cleanup systems, or reset systems override register to add them to the app.
 
@@ -42,7 +42,7 @@ impl Fireable for ShockwaveConfig {
             sync_shockwave_visual,
             apply_shockwave_damage,
             despawn_finished_shockwave,
-        ).chain().in_set(EffectSystems::Tick));
+        ).chain().in_set(EffectV3Systems::Tick));
     }
 }
 ```

@@ -7,7 +7,7 @@ fn is_node_active(world: &World) -> bool;
 ```
 
 # Source Location
-`src/effect/conditions/node_active.rs`
+`src/effect_v3/conditions/node_active.rs`
 
 # Description
 Returns true when a node is currently playing. Reads the `State<NodeState>` resource from the world. Returns true when the state is `NodeState::Playing`, false otherwise.

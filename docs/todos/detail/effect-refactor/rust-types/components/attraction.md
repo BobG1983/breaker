@@ -22,7 +22,7 @@ pub struct AttractionEntry {
 ```
 
 # Location
-`src/effect/effects/attraction/`
+`src/effect_v3/effects/attraction/`
 
 # Description
 `ActiveAttractions` is a component added to the bolt that accumulates attraction force entries from multiple sources.

@@ -22,7 +22,7 @@ Shield
 2. Despawn them.
 
 # Source Location
-`src/effect/effects/shield/config.rs`
+`src/effect_v3/effects/shield/config.rs`
 
 # New Types
 - `ShieldWall` -- marker component for the shield wall entity.

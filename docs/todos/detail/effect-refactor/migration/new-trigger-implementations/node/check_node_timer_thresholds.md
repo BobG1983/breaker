@@ -15,7 +15,7 @@ N/A (game system).
 N/A (game system).
 
 # Source Location
-`src/effect/triggers/node/check_thresholds.rs`
+`src/effect_v3/triggers/node/check_thresholds.rs`
 
 # Schedule
 FixedUpdate, after node timer tick.

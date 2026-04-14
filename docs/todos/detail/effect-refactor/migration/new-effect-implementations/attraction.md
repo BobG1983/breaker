@@ -20,7 +20,7 @@ Note: Attraction does not use `EffectStack` because it has non-f32 fields (`Attr
 2. If the Vec is empty after removal, remove the `ActiveAttractions` component.
 
 # Source Location
-`src/effect/effects/attraction/config.rs`
+`src/effect_v3/effects/attraction/config.rs`
 
 # New Types
 - `ActiveAttractions` -- component containing `Vec<AttractionEntry>`. Each entry represents one active attraction effect on the entity.

@@ -4,7 +4,7 @@ Step-by-step checklist for adding a new effect to the system.
 
 ## 1. Create the effect folder
 
-Create a new folder in `src/effect/effects/<my_effect>/` with at minimum:
+Create a new folder in `src/effect_v3/effects/<my_effect>/` with at minimum:
 
 ```
 effects/my_effect/
@@ -66,7 +66,7 @@ impl Fireable for MyEffectConfig {
 
     fn register(app: &mut App) {
         app.add_systems(FixedUpdate,
-            tick_my_effect.in_set(EffectSystems::Tick)
+            tick_my_effect.in_set(EffectV3Systems::Tick)
         );
     }
 }
@@ -138,15 +138,15 @@ Every arm is the same shape — `config.fire()` / `config.reverse()`.
 
 | Step | Files touched |
 |------|--------------|
-| Effect folder | `src/effect/effects/my_effect/` (new folder) |
-| Config struct | `src/effect/effects/my_effect/config.rs` (new) |
-| Fireable impl (fire + register) | `src/effect/effects/my_effect/config.rs` |
-| Reversible impl | `src/effect/effects/my_effect/config.rs` (if reversible) |
-| PassiveEffect impl | `src/effect/effects/my_effect/config.rs` (if passive) |
-| Components | `src/effect/effects/my_effect/components.rs` (if needed) |
-| Systems | `src/effect/effects/my_effect/systems.rs` (if needed) |
-| Module wiring | `src/effect/effects/my_effect/mod.rs` (new) |
-| EffectType variant | `src/effect/types/effect_type.rs` |
-| ReversibleEffectType variant | `src/effect/types/reversible_effect_type.rs` (if reversible) |
-| Fire dispatch arm | `src/effect/dispatch/fire_dispatch.rs` |
-| Reverse dispatch arm | `src/effect/dispatch/reverse_dispatch.rs` (if reversible) |
+| Effect folder | `src/effect_v3/effects/my_effect/` (new folder) |
+| Config struct | `src/effect_v3/effects/my_effect/config.rs` (new) |
+| Fireable impl (fire + register) | `src/effect_v3/effects/my_effect/config.rs` |
+| Reversible impl | `src/effect_v3/effects/my_effect/config.rs` (if reversible) |
+| PassiveEffect impl | `src/effect_v3/effects/my_effect/config.rs` (if passive) |
+| Components | `src/effect_v3/effects/my_effect/components.rs` (if needed) |
+| Systems | `src/effect_v3/effects/my_effect/systems.rs` (if needed) |
+| Module wiring | `src/effect_v3/effects/my_effect/mod.rs` (new) |
+| EffectType variant | `src/effect_v3/types/effect_type.rs` |
+| ReversibleEffectType variant | `src/effect_v3/types/reversible_effect_type.rs` (if reversible) |
+| Fire dispatch arm | `src/effect_v3/dispatch/fire_dispatch.rs` |
+| Reverse dispatch arm | `src/effect_v3/dispatch/reverse_dispatch.rs` (if reversible) |

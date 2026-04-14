@@ -22,7 +22,7 @@ pub struct PulseEmitter {
 ```
 
 # Location
-`src/effect/effects/pulse/`
+`src/effect_v3/effects/pulse/`
 
 # Description
 `PulseEmitter` is added to the bolt to periodically spawn expanding pulse waves that damage nearby cells.

@@ -1,7 +1,7 @@
 # Test Spec: Effect + Death Pipeline — Integration Tests (Wave 8)
 
 ## Domain
-`src/effect/` (primary), `src/shared/` (death pipeline), cross-domain bridges
+`src/effect_v3/` (primary), `src/shared/` (death pipeline), cross-domain bridges
 
 ## Overview
 
@@ -284,7 +284,7 @@ Since this is a clean-room implementation, reference files point to the design d
 ## Constraints
 
 ### Tests go in:
-`src/effect/systems/integration_tests.rs` (or `src/effect/systems/integration_tests/` directory if the test file exceeds 400 lines)
+`src/effect_v3/systems/integration_tests.rs` (or `src/effect_v3/systems/integration_tests/` directory if the test file exceeds 400 lines)
 
 All integration tests are in a single test module within the effect domain, since the effect domain is the integration point for the pipeline.
 

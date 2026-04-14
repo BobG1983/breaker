@@ -19,7 +19,7 @@ MirrorProtocol
 Not reversible.
 
 # Source Location
-`src/effect/effects/mirror_protocol/config.rs`
+`src/effect_v3/effects/mirror_protocol/config.rs`
 
 # New Types
 None -- uses existing bolt builder and existing `ExtraBolt` marker.

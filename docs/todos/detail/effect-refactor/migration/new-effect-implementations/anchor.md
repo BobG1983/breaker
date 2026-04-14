@@ -19,7 +19,7 @@ Anchor
 2. If `AnchorPlanted` was present, remove the bump force boost from `EffectStack<BumpForceConfig>` using the same chip source string that was used when the boost was pushed.
 
 # Source Location
-`src/effect/effects/anchor/config.rs`
+`src/effect_v3/effects/anchor/config.rs`
 
 # New Types
 - `AnchorActive` -- component storing anchor config. Fields: `bump_force_multiplier: f32`, `perfect_window_multiplier: f32`, `plant_delay: f32`.

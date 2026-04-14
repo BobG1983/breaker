@@ -19,7 +19,7 @@ TimePenalty
 Not applicable — TimePenalty is not reversible.
 
 # Source Location
-`src/effect/effects/time_penalty/config.rs`
+`src/effect_v3/effects/time_penalty/config.rs`
 
 # New Types
 None — sends existing `ApplyTimePenalty` message.

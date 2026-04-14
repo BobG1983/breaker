@@ -28,7 +28,7 @@ Create the entire new effect domain structure, populate all types, stub all func
 - All bridge systems, game systems, tick systems, condition system, reset systems, death pipeline systems — empty bodies with `_` params
 
 ### 2f. Wire plugins
-- EffectPlugin: system sets, Config::register(), trigger register(), evaluate_conditions, resets, resources
+- EffectV3Plugin: system sets, Config::register(), trigger register(), evaluate_conditions, resets, resources
 - DeathPipelinePlugin: system sets, apply_damage, detect_deaths, process_despawn_requests
 
 ## Verification
@@ -44,7 +44,7 @@ Create the entire new effect domain structure, populate all types, stub all func
 - `effect-refactor/command-extensions/` — all command extension structs
 - `effect-refactor/creating-effects/effect-api/` — trait contracts
 - `effect-refactor/evaluating-conditions/` — condition evaluator signatures
-- `effect-refactor/migration/plugin-wiring/` — EffectPlugin registration
+- `effect-refactor/migration/plugin-wiring/` — EffectV3Plugin registration
 - `effect-refactor/migration/new-trigger-implementations/` — system signatures
 - `effect-refactor/migration/new-effect-implementations/` — tick system signatures
 - `unified-death-pipeline/rust-types/` — death pipeline types

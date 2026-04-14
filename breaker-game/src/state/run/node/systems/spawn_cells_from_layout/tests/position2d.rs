@@ -22,10 +22,6 @@ use crate::{
 // --- Position2D migration tests ---
 
 #[test]
-#[expect(
-    clippy::cast_precision_loss,
-    reason = "grid column index is always small"
-)]
 fn spawned_cell_has_position2d_at_grid_position() {
     // Given: full 3x2 layout with CellConfig default (width=70, height=24,
     //        padding_x=4, padding_y=4) and PlayfieldConfig default

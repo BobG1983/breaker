@@ -24,7 +24,7 @@ TetherBeam
 Not reversible.
 
 # Source Location
-`src/effect/effects/tether_beam/config.rs`
+`src/effect_v3/effects/tether_beam/config.rs`
 
 # New Types
 - `TetherBeamSource` -- component tracking the two bolt endpoint entities (bolt_a: Entity, bolt_b: Entity)
@@ -35,7 +35,7 @@ Not reversible.
 ## tick_tether_beam_damage
 - **What it does**: For each entity with `TetherBeamSource`, read positions of both endpoint bolts. Calculate the beam line segment between them. Query the quadtree for cells intersecting the line segment. Send `DamageDealt<Cell>` for each intersecting cell with `TetherBeamDamage` as the damage amount.
 - **What it does NOT do**: Does not despawn beams. Does not check if endpoints still exist (cleanup system does that).
-- **Schedule**: FixedUpdate, in `EffectSystems::Tick`, with `run_if(in_state(NodeState::Playing))`.
+- **Schedule**: FixedUpdate, in `EffectV3Systems::Tick`, with `run_if(in_state(NodeState::Playing))`.
 
 ## cleanup_tether_beams
 - **What it does**: For each entity with `TetherBeamSource`, check if either endpoint bolt entity has been despawned. If either endpoint is gone, despawn the beam entity.

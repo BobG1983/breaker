@@ -22,7 +22,7 @@ SecondWind
 2. Despawn them.
 
 # Source Location
-`src/effect/effects/second_wind/config.rs`
+`src/effect_v3/effects/second_wind/config.rs`
 
 # New Types
 - `SecondWindWall` -- marker component for the one-shot safety net wall.

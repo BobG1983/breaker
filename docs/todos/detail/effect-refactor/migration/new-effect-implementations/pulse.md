@@ -18,7 +18,7 @@ Pulse
 2. Active shockwaves already spawned continue to completion -- they are NOT despawned.
 
 # Source Location
-`src/effect/effects/pulse/config.rs`
+`src/effect_v3/effects/pulse/config.rs`
 
 # New Types
 - `PulseEmitter` -- component storing pulse config and timer state. Fields: `base_range: f32`, `range_per_level: f32`, `stacks: u32`, `speed: f32`, `interval: f32`, `timer: f32`.

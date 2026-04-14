@@ -4,7 +4,7 @@ Step-by-step reference for adding a trigger to the new effect system.
 
 ## 1. Add variant to Trigger enum
 
-In `effect/core/types/definitions/enums.rs`:
+In `effect_v3/core/types/definitions/enums.rs`:
 
 ```rust
 enum Trigger {
@@ -114,7 +114,7 @@ fn bridge_new_thing_occurred(
 
 Register in the effect plugin with correct ordering:
 - After physics / game systems that produce the source message
-- Within `EffectSystems::Dispatch` system set
+- Within `EffectV3Systems::Bridge` system set
 - Local and global variants are separate systems (same source message, different scope)
 
 ## 6. Write behavioral spec

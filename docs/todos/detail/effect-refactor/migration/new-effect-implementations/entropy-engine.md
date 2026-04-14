@@ -22,12 +22,19 @@ This effect is designed to be inside a `When(Killed(Cell), ...)` -- each fire ca
 2. Does NOT reverse the individual effects that were fired.
 
 # Source Location
-`src/effect/effects/entropy_engine/config.rs`
+`src/effect_v3/effects/entropy_engine/config.rs`
 
 # New Types
 - `EntropyCounter` -- component tracking accumulated activations. Fields: `count: u32`, `max_effects: u32`, `pool: Vec<(OrderedFloat<f32>, Box<EffectType>)>` (clone of config pool).
 
 # New Systems
 
-## No separate reset system
-EntropyEngine resets its counter to 0 internally when `fire()` is called — after all effects are fired for the current count, the counter resets. No separate `reset_entropy_counter` system is needed.
+## reset_entropy_counter
+- **What it does**: For each entity with `EntropyCounter`, set `count` to 0.
+- **What it does NOT do**: Does not remove the component. Does not modify the pool or max_effects.
+- **Schedule**: `OnEnter(NodeState::Loading)`, registered in `EffectV3Systems::Reset`.
+
+## tick_entropy_engine
+- **What it does**: For each `BumpPerformed` message this frame, increments all `EntropyCounter` counts (capped at `max_effects`) and fires N random effects from the pool where N = current count.
+- **What it does NOT do**: Does not reset the counter. Does not fire effects directly — delegates to `fire_dispatch`.
+- **Schedule**: FixedUpdate, in `EffectV3Systems::Tick`.

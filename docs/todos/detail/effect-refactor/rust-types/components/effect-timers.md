@@ -12,7 +12,7 @@ pub struct EffectTimers {
 ```
 
 # Location
-`src/effect/triggers/time/`
+`src/effect_v3/triggers/time/`
 
 # Description
 `EffectTimers` holds countdown timers for time-limited effects installed via `Until(TimeExpires(N))` conditions in the effect tree.

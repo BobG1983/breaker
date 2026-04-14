@@ -82,13 +82,13 @@ systems/my_system/
 
 ## Per-Effect Layout (Effect Domain)
 
-The `effect/` domain evaluates `EffectNode` trees and dispatches leaf effects using a **per-effect file** layout instead of the canonical category-based layout. Each effect gets its own file containing the relevant typed events, observers, and helper systems. This keeps each effect self-contained and scales cleanly as new effects are added.
+The `effect_v3/` domain evaluates `EffectNode` trees and dispatches leaf effects using a **per-effect file** layout instead of the canonical category-based layout. Each effect gets its own file containing the relevant typed events, observers, and helper systems. This keeps each effect self-contained and scales cleanly as new effects are added.
 
 ```
-src/effect/
+src/effect_v3/
 ├── mod.rs                 # Re-exports + pub mod declarations
-├── plugin.rs              # EffectPlugin — calls effects::register() and triggers::register()
-├── sets.rs                # EffectSystems set (Bridge variant for cross-domain ordering)
+├── plugin.rs              # EffectV3Plugin — calls Fireable::register() for all 30 configs and registers triggers
+├── sets.rs                # EffectV3Systems set (Bridge, Tick, Conditions, Reset variants)
 ├── commands.rs            # EffectCommandsExt trait (fire_effect, reverse_effect, transfer_effect)
 ├── core/                  # Core types (NOT a sub-domain — no plugin.rs)
 │   ├── mod.rs             # Re-exports from types/
@@ -130,42 +130,27 @@ src/effect/
 │   ├── mirror_protocol/   # Directory module (split for tests)
 │   ├── anchor/            # Directory module (split for tests)
 │   └── circuit_breaker/   # Directory module (split for tests)
-└── triggers/              # Bridge systems (one file or dir per trigger type — NOT a sub-domain)
+└── triggers/              # Bridge systems grouped by trigger category (NOT a sub-domain)
     ├── mod.rs             # pub mod declarations + register() dispatcher
-    ├── evaluate/          # Directory module — shared chain evaluation helpers (has tests)
-    ├── impact/            # Directory module — global impact triggers (has tests)
-    ├── impacted/          # Directory module — targeted impacted triggers (has tests)
-    ├── until/             # Directory module — Until desugaring system (has tests)
-    ├── bump.rs            # Global: any successful bump
-    ├── perfect_bump.rs    # Global: perfect bump
-    ├── early_bump.rs      # Global: early bump
-    ├── late_bump.rs       # Global: late bump
-    ├── bump_whiff.rs      # Global: bump timing missed
-    ├── no_bump.rs         # Global: bolt hit breaker with no bump input
-    ├── bumped.rs          # Targeted on bolt: any successful bump
-    ├── perfect_bumped.rs  # Targeted on bolt: perfect bump
-    ├── early_bumped.rs    # Targeted on bolt: early bump
-    ├── late_bumped.rs     # Targeted on bolt: late bump
-    ├── bolt_lost.rs       # Global: bolt was lost
-    ├── cell_destroyed.rs  # Global: cell was destroyed
-    ├── death.rs           # Global: something died
-    ├── died.rs            # Targeted: this entity died
-    ├── node_start.rs      # Global: node started
-    ├── node_end.rs        # Global: node ended
-    └── timer.rs           # TimeExpires ticker system
+    ├── bump/              # Directory module — bump trigger bridges (on_bump_occurred, on_bumped, etc.)
+    ├── impact/            # Directory module — impact trigger bridges (on_impact_occurred, on_impacted)
+    ├── death/             # Directory module — death trigger bridges (on_destroyed::<T> generic)
+    ├── bolt_lost/         # Directory module — bolt lost trigger bridges
+    ├── node/              # Directory module — node lifecycle bridges + check_node_timer_thresholds
+    └── time/              # Directory module — tick_effect_timers + on_time_expires
 ```
 
 **Rules:**
 - One module per effect type (either a single `.rs` file or a directory module split per the System File Split Convention above). The module owns any active-state `Component`s, plus `fire()`, `reverse()`, and `register(app: &mut App)` free functions.
-- `effects/` and `triggers/` and `core/` are **directory groupings**, not sub-domains — none have a `plugin.rs`. `EffectPlugin` registers all systems through `effects::register(app)` and `triggers::register(app)`.
+- `effects/` and `triggers/` and `core/` are **directory groupings**, not sub-domains — none have a `plugin.rs`. `EffectV3Plugin` registers all systems through `Fireable::register(app)` for each config and a `register(app)` call per trigger category.
 - `core/types/definitions/enums.rs` holds all shared data types: `Trigger`, `ImpactTarget`, `Target`, `AttractionType`, `RootEffect`, `EffectNode`, `EffectKind`, `BoundEffects`, `StagedEffects`, `EffectSourceChip`. No observers, no systems. `definitions/fire.rs` and `definitions/reverse.rs` hold the dispatch methods.
 - `commands.rs` holds `EffectCommandsExt` — the `Commands` extension trait for queuing fire/reverse/transfer operations.
 - `BreakerDefinition` lives in `breaker/definition.rs`. `BreakerRegistry` lives in `breaker/registry.rs`.
-- Adding a new leaf effect = new module in `effects/` (file or dir) + `pub mod` entry in `effects/mod.rs` + variant in `EffectKind` in `definitions/enums.rs` + `fire()`/`reverse()` arms in `definitions/fire.rs` and `definitions/reverse.rs` + `register()` call in `effects/mod.rs::register()`.
-- Adding a new trigger = new module in `triggers/` (file or dir) + `pub mod` in `triggers/mod.rs` + `register()` call in `triggers/mod.rs::register()`.
+- Adding a new leaf effect = new module in `effects/` (file or dir) + `pub mod` entry in `effects/mod.rs` + variant in `EffectKind` in `definitions/enums.rs` + `fire()`/`reverse()` arms in `definitions/fire.rs` and `definitions/reverse.rs` + `Fireable::register(app)` call in `plugin.rs`.
+- Adding a new trigger = new module in `triggers/` (file or dir) + `pub mod` in `triggers/mod.rs` + `register()` call in `plugin.rs`.
 - Adding a new breaker = new RON file only (if using existing trigger fields and effects).
-- This layout applies **only** to the `effect/` domain. Standard domains use the canonical category-based layout.
-- `effect/` is a **top-level domain** registered directly in `game.rs`. It is not nested under `breaker/`.
+- This layout applies **only** to the `effect_v3/` domain. Standard domains use the canonical category-based layout.
+- `effect_v3/` is a **top-level domain** registered directly in `game.rs`. It is not nested under `breaker/`.
 
 ## Nested Sub-Domains
 

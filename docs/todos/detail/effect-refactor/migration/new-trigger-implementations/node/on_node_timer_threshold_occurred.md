@@ -16,7 +16,7 @@ Walk ALL entities with `NodeTimerThresholdOccurred(ratio)` trigger attached, whe
 `TriggerContext::None`
 
 # Source Location
-`src/effect/triggers/node/bridges.rs`
+`src/effect_v3/triggers/node/bridges.rs`
 
 # Schedule
 FixedUpdate, after `check_node_timer_thresholds`.

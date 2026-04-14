@@ -23,7 +23,7 @@ A per-frame system queries for entities with `Added<Bolt>`, `Added<Cell>`, `Adde
 
 Each spawned entity gets its own independent copy of the tree.
 
-This system runs in FixedUpdate, after entity spawning systems, in `EffectSystems::Bridge`.
+This system runs in FixedUpdate, after entity spawning systems, in `EffectV3Systems::Bridge`.
 
 ## How entries are removed
 

@@ -18,7 +18,7 @@ FlashStep
 2. If `FlashStepActive` is not present, do nothing.
 
 # Source Location
-`src/effect/effects/flash_step/config.rs`
+`src/effect_v3/effects/flash_step/config.rs`
 
 # New Types
 - `FlashStepActive` -- marker component indicating the breaker has flash-step enabled. Read by the breaker movement system to decide whether to teleport instead of slide.

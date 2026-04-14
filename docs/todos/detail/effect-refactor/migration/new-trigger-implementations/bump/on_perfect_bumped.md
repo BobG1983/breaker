@@ -14,10 +14,10 @@ Local — walks only the bolt entity and the breaker entity from the message.
 `TriggerContext::Bump { bolt: msg.bolt, breaker: msg.breaker }`
 
 # Source Location
-`src/effect/triggers/bump/bridges.rs`
+`src/effect_v3/triggers/bump/bridges.rs`
 
 # Schedule
-FixedUpdate, in `EffectSystems::Bridge`, after `BreakerSystems::GradeBump`, with `run_if(in_state(NodeState::Playing))`
+FixedUpdate, in `EffectV3Systems::Bridge`, after `BreakerSystems::GradeBump`, with `run_if(in_state(NodeState::Playing))`
 
 # Behavior
 1. Read each `BumpPerformed` message.

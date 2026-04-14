@@ -48,6 +48,6 @@ enum Trigger {
 - DeathOccurred: Global. An entity of the given kind died somewhere. Fires on all entities. See [death-occurred](../ron-syntax/triggers/death-occurred.md), [EntityKind](entity-kind.md)
 - BoltLostOccurred: Global. A bolt fell off the bottom. Fires on all entities. See [bolt-lost-occurred](../ron-syntax/triggers/bolt-lost-occurred.md)
 - NodeStartOccurred: Global. A new node started. Fires on all entities. See [node-start-occurred](../ron-syntax/triggers/node-start-occurred.md)
-- NodeEndOccurred: Global. The current node ended. Fires on all entities. See [node-end-occurred](../ron-syntax/triggers/node-end-occurred.md)
+- NodeEndOccurred: Global. The current node ended. Fires on `OnEnter(NodeState::Teardown)`, after `AnimateOut` completes and cells have been cleaned up. Fires on all entities. See [node-end-occurred](../ron-syntax/triggers/node-end-occurred.md)
 - NodeTimerThresholdOccurred: Global. Node timer ratio crossed the given threshold (0.0-1.0). Fires on all entities. See [node-timer-threshold-occurred](../ron-syntax/triggers/node-timer-threshold-occurred.md)
 - TimeExpires: Self. Countdown of the given seconds reached zero. Fires on owner only. Internal -- used by Until desugaring. See [time-expires](../ron-syntax/triggers/time-expires.md)

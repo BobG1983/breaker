@@ -7,7 +7,7 @@ fn is_shield_active(world: &World) -> bool;
 ```
 
 # Source Location
-`src/effect/conditions/shield_active.rs`
+`src/effect_v3/conditions/shield_active.rs`
 
 # Description
 Returns true when at least one entity with the `ShieldWall` component exists in the world. Returns false when no shield walls exist.

@@ -24,3 +24,6 @@
 - [death bridge double global_query walk](effect_v3_death_bridge_double_global_walk.md) — Specific+Any requires two global_query.iter() per death; intentional design, negligible now, revisit at Phase 3 teardown
 - [entropy_engine and circuit_breaker Vec alloc](effect_v3_entropy_vec_alloc.md) — collect() gated by bump_count > 0; real cost is fire_dispatch inside inner loop; acceptable at current counter/bump counts
 - [AnchorPlanted archetype churn pattern](anchor_archetype_pattern.md) — insert/remove marker on single Breaker entity; correct Without<> filtering; negligible at 1 entity scale
+- [EffectSourceChip clone pattern in damage systems](effect_v3_source_chip_pattern.md) — chip.and_then clone required by MessageWriter ownership; hoist is correct (outer loop); negligible at current scale
+- [Pulse ring performance patterns](pulse_ring_patterns.md) — structural mirror of shockwave; HashSet+String alloc at spawn only; Option<EffectSourceChip> in query is harmless; all patterns acceptable
+- [TetherBeamWidth component and query pattern](tether_beam_width_pattern.md) — uniform stamp on beam archetype, 5-tuple query on few entities, no new allocations; confirmed clean

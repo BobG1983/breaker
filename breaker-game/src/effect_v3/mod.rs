@@ -1,6 +1,4 @@
-//! New effect domain (v3) — data-driven trigger->effect pipeline.
-//!
-//! Built alongside old `effect/` domain. Both coexist until migration is complete.
+//! Effect domain (v3) — data-driven trigger->effect pipeline.
 
 pub mod commands;
 pub mod components;

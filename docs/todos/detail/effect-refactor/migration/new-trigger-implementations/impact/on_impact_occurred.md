@@ -46,10 +46,10 @@ Each collision fires two global sweeps (one per participant kind), both with the
 - Sweep 2: `ImpactOccurred(Cell)`, context: `Impact { impactor: cell, impactee: wall }`
 
 # Source Location
-`src/effect/triggers/impact/bridges.rs`
+`src/effect_v3/triggers/impact/bridges.rs`
 
 # Schedule
-FixedUpdate, in `EffectSystems::Bridge`, with `run_if(in_state(NodeState::Playing))`.
+FixedUpdate, in `EffectV3Systems::Bridge`, with `run_if(in_state(NodeState::Playing))`.
 Per-system ordering:
 - `on_impact_occurred_bolt_cell` after `BoltSystems::CellCollision`
 - `on_impact_occurred_bolt_wall` after `BoltSystems::WallCollision`

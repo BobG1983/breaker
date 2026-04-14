@@ -38,7 +38,7 @@ pub enum ChainState {
 ```
 
 # Location
-`src/effect/effects/chain_lightning/`
+`src/effect_v3/effects/chain_lightning/`
 
 # Description
 `ChainLightningChain` is the primary component for a chain lightning effect entity. It drives a multi-hop damage chain that arcs between nearby cells.

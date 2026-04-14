@@ -25,13 +25,13 @@ This wave assumes the following are already complete before writer-code runs:
 
 | Prerequisite | Wave | What must exist |
 |-------------|------|-----------------|
-| Wave 2 scaffold | 2 | All death pipeline types stubbed: `GameEntity` trait, `Hp`, `KilledBy`, `Dead`, `DamageDealt<T>`, `KillYourself<T>`, `DespawnEntity`, `Destroyed<T>`. All system stubs with empty bodies. `DeathPipelinePlugin` registered in `game.rs`. `EffectSystems::Tick` system set defined in `src/effect/sets.rs`. |
+| Wave 2 scaffold | 2 | All death pipeline types stubbed: `GameEntity` trait, `Hp`, `KilledBy`, `Dead`, `DamageDealt<T>`, `KillYourself<T>`, `DespawnEntity`, `Destroyed<T>`. All system stubs with empty bodies. `DeathPipelinePlugin` registered in `game.rs`. `EffectV3Systems::Tick` system set defined in `src/effect_v3/sets.rs`. |
 | Wave 2 scaffold | 2 | `src/shared/systems/mod.rs` exists (created in wave 2 scaffold). `pub(crate) mod systems;` declared in `src/shared/mod.rs`. |
 | Wave 2 scaffold | 2 | `src/shared/queries.rs` exists with `DamageTargetData` and `DeathDetectionData` stubs. |
 | Wave 2 scaffold | 2 | `src/shared/sets.rs` exists with `DeathPipelineSystems` enum. |
 | Wave 2 scaffold | 2 | `src/shared/components/` directory module exists with `hp.rs`, `killed_by.rs`, `dead.rs`. |
 
-**Critical**: `EffectSystems::Tick` must already be defined and configured as a system set in the effect domain (wave 2 scaffold). `DeathPipelineSystems::ApplyDamage` orders `.after(EffectSystems::Tick)`, so the set must exist at plugin build time or Bevy will panic.
+**Critical**: `EffectV3Systems::Tick` must already be defined and configured as a system set in the effect domain (wave 2 scaffold). `DeathPipelineSystems::ApplyDamage` orders `.after(EffectV3Systems::Tick)`, so the set must exist at plugin build time or Bevy will panic.
 
 ---
 
@@ -265,10 +265,10 @@ None. No RON data changes are needed for this wave.
 
 | System | SystemSet | Ordering |
 |--------|-----------|----------|
-| `apply_damage::<Cell>` (or `apply_damage_cell`) | `DeathPipelineSystems::ApplyDamage` | After `EffectSystems::Tick` (configured on the set) |
-| `apply_damage::<Bolt>` | `DeathPipelineSystems::ApplyDamage` | After `EffectSystems::Tick` (configured on the set) |
-| `apply_damage::<Wall>` | `DeathPipelineSystems::ApplyDamage` | After `EffectSystems::Tick` (configured on the set) |
-| `apply_damage::<Breaker>` | `DeathPipelineSystems::ApplyDamage` | After `EffectSystems::Tick` (configured on the set) |
+| `apply_damage::<Cell>` (or `apply_damage_cell`) | `DeathPipelineSystems::ApplyDamage` | After `EffectV3Systems::Tick` (configured on the set) |
+| `apply_damage::<Bolt>` | `DeathPipelineSystems::ApplyDamage` | After `EffectV3Systems::Tick` (configured on the set) |
+| `apply_damage::<Wall>` | `DeathPipelineSystems::ApplyDamage` | After `EffectV3Systems::Tick` (configured on the set) |
+| `apply_damage::<Breaker>` | `DeathPipelineSystems::ApplyDamage` | After `EffectV3Systems::Tick` (configured on the set) |
 | `detect_cell_deaths` | `DeathPipelineSystems::DetectDeaths` | After `DeathPipelineSystems::ApplyDamage` (configured on the set) |
 | `detect_bolt_deaths` | `DeathPipelineSystems::DetectDeaths` | After `DeathPipelineSystems::ApplyDamage` (configured on the set) |
 | `detect_wall_deaths` | `DeathPipelineSystems::DetectDeaths` | After `DeathPipelineSystems::ApplyDamage` (configured on the set) |
@@ -285,7 +285,7 @@ None. No RON data changes are needed for this wave.
 ```rust
 app.configure_sets(FixedUpdate, (
     DeathPipelineSystems::ApplyDamage
-        .after(EffectSystems::Tick),
+        .after(EffectV3Systems::Tick),
     DeathPipelineSystems::DetectDeaths
         .after(DeathPipelineSystems::ApplyDamage),
 ));
@@ -329,7 +329,7 @@ impl Plugin for DeathPipelinePlugin {
         // System set ordering
         app.configure_sets(FixedUpdate, (
             DeathPipelineSystems::ApplyDamage
-                .after(EffectSystems::Tick),
+                .after(EffectV3Systems::Tick),
             DeathPipelineSystems::DetectDeaths
                 .after(DeathPipelineSystems::ApplyDamage),
         ));
@@ -356,7 +356,7 @@ impl Plugin for DeathPipelinePlugin {
 }
 ```
 
-**Registration**: `DeathPipelinePlugin` must be wired in `src/game.rs` via `.add(DeathPipelinePlugin)` in the `PluginGroupBuilder` chain (see Module Wiring below). It should appear after domain plugins that define entity types (bolt, cells, walls, breaker) and after the effect plugin (which defines `EffectSystems::Tick`). This should already be stubbed from wave 2 scaffold.
+**Registration**: `DeathPipelinePlugin` must be wired in `src/game.rs` via `.add(DeathPipelinePlugin)` in the `PluginGroupBuilder` chain (see Module Wiring below). It should appear after domain plugins that define entity types (bolt, cells, walls, breaker) and after the effect plugin (which defines `EffectV3Systems::Tick`). This should already be stubbed from wave 2 scaffold.
 
 Note: The detect_*_deaths systems are registered by the `DeathPipelinePlugin`, NOT by their respective domain plugins. Even though `detect_cell_deaths` lives in `src/cells/systems/`, it is the death pipeline plugin that registers it. This keeps all death pipeline ordering in one place.
 
@@ -414,7 +414,7 @@ pub(crate) mod detect_breaker_deaths;
 ```rust
 .add(DeathPipelinePlugin)
 ```
-Place it after the shared plugin and domain plugins (bolt, cells, walls, breaker) and after the effect plugin (which defines `EffectSystems::Tick`). This should already be stubbed from wave 2 scaffold — verify the stub exists and ensure it is wired correctly.
+Place it after the shared plugin and domain plugins (bolt, cells, walls, breaker) and after the effect plugin (which defines `EffectV3Systems::Tick`). This should already be stubbed from wave 2 scaffold — verify the stub exists and ensure it is wired correctly.
 
 ---
 
@@ -423,7 +423,7 @@ Place it after the shared plugin and domain plugins (bolt, cells, walls, breaker
 #### Off-Limits — Do NOT Modify
 - Any existing domain plugin files (`src/bolt/plugin.rs`, `src/cells/plugin.rs`, `src/walls/plugin.rs`, `src/breaker/plugin.rs`) — the death pipeline plugin handles registration
 - Any existing system files — this wave only creates new files
-- `src/effect/` — effect domain is entirely out of scope for this wave
+- `src/effect_v3/` — effect domain is entirely out of scope for this wave
 - Domain kill handlers — out of scope (they consume `KillYourself<T>` and send `Destroyed<T>`, but that is a later wave)
 - Death bridge systems (`on_destroyed::<T>`) — out of scope
 - VFX / audio systems — out of scope

@@ -21,7 +21,7 @@ pub struct ShieldReflectionCost(pub f32);
 ```
 
 # Location
-`src/effect/effects/shield/`
+`src/effect_v3/effects/shield/`
 
 # Description
 These components form the shield effect entity bundle. A shield is a temporary barrier that reflects bolts and protects the lower playfield.

@@ -49,7 +49,7 @@ Note: `apply_damage::<Cell>` and `detect_cell_deaths` were implemented in Wave 7
   6. Determine `killer_pos`: if `msg.killer` is `Some(killer_entity)`, try to read that entity's `Position2D` via `killer_query.get(killer_entity)` to get the killer position as `Some(position.0)`. If the killer entity no longer exists, use `None`.
   7. Send `Destroyed<Cell>` message with `victim: msg.victim`, `killer: msg.killer`, `victim_pos`, `killer_pos`.
   8. Send `DespawnEntity { entity: msg.victim }` message. The entity will be despawned in PostFixedUpdate by `process_despawn_requests`.
-- **Does NOT**: despawn the entity directly, modify Hp, modify KilledBy, deal damage, evaluate triggers. The entity must survive through trigger evaluation (which happens when `on_destroyed::<Cell>` reads the `Destroyed<Cell>` message in `EffectSystems::Bridge`).
+- **Does NOT**: despawn the entity directly, modify Hp, modify KilledBy, deal damage, evaluate triggers. The entity must survive through trigger evaluation (which happens when `on_destroyed::<Cell>` reads the `Destroyed<Cell>` message in `EffectV3Systems::Bridge`).
 
 #### 4. Update `bolt_cell_collision` to send `DamageDealt<Cell>`
 - **File**: `src/bolt/systems/bolt_cell_collision/system.rs` (or wherever the collision system lives)
@@ -100,8 +100,8 @@ Note: `apply_damage::<Cell>` and `detect_cell_deaths` were implemented in Wave 7
 #### `handle_cell_kill`
 - **Schedule**: `FixedUpdate`
 - **After**: `DeathPipelineSystems::DetectDeaths` — kill handlers consume `KillYourself<T>` messages produced by death detection
-- **Before**: `EffectSystems::Bridge` — the `Destroyed<Cell>` message must be available for `on_destroyed::<Cell>` to dispatch triggers. However, per the system-set-ordering doc, the domain kill handlers run after DetectDeaths and before the effect system's death bridges process `Destroyed<T>`.
-- **Note on ordering**: The full frame ordering is: collision systems produce `DamageDealt<Cell>` -> `ApplyDamage` set -> `DetectDeaths` set -> domain kill handlers -> `EffectSystems::Bridge` reads `Destroyed<Cell>` -> PostFixedUpdate despawn. The kill handler sits between DetectDeaths and Bridge.
+- **Before**: `EffectV3Systems::Bridge` — the `Destroyed<Cell>` message must be available for `on_destroyed::<Cell>` to dispatch triggers. However, per the system-set-ordering doc, the domain kill handlers run after DetectDeaths and before the effect system's death bridges process `Destroyed<T>`.
+- **Note on ordering**: The full frame ordering is: collision systems produce `DamageDealt<Cell>` -> `ApplyDamage` set -> `DetectDeaths` set -> domain kill handlers -> `EffectV3Systems::Bridge` reads `Destroyed<Cell>` -> PostFixedUpdate despawn. The kill handler sits between DetectDeaths and Bridge.
 
 #### `cell_damage_visual`
 - **Schedule**: `Update` (not `FixedUpdate`)
@@ -147,7 +147,7 @@ Note: `apply_damage::<Cell>` and `detect_cell_deaths` were implemented in Wave 7
 - Any system that was reading `RequestCellDestroyed` must now read `KillYourself<Cell>` (primarily `cleanup_cell` which is being removed, but check effect bridge)
 - Any system that was reading `CellDestroyedAt` must now read `Destroyed<Cell>`:
   - `src/run/node/systems/track_node_completion.rs` (or equivalent) — reads `CellDestroyedAt { was_required_to_clear }` for node completion tracking. Must be updated to read `Destroyed<Cell>` and check `RequiredToClear` on the victim entity (still alive at this point).
-  - `src/effect/triggers/cell_destroyed.rs` — triggers `Trigger::CellDestroyed` globally. Must be updated to read `Destroyed<Cell>` instead. (This may already be handled if Wave 5 migrated triggers.)
+  - `src/effect_v3/triggers/cell_destroyed.rs` — triggers `Trigger::CellDestroyed` globally. Must be updated to read `Destroyed<Cell>` instead. (This may already be handled if Wave 5 migrated triggers.)
 
 ---
 
@@ -159,7 +159,7 @@ Note: `apply_damage::<Cell>` and `detect_cell_deaths` were implemented in Wave 7
 - `src/shared/systems/process_despawn_requests.rs` — already implemented in Wave 7
 - `src/shared/components/` — Hp, KilledBy, Dead already defined
 - `src/shared/messages/` — DamageDealt, KillYourself, Destroyed, DespawnEntity already defined
-- `src/effect/triggers/death/` — on_destroyed::<Cell> bridge already implemented in Wave 5
+- `src/effect_v3/triggers/death/` — on_destroyed::<Cell> bridge already implemented in Wave 5
 - Any other domain (bolt, wall, breaker) except the specific `bolt_cell_collision` update
 
 #### Do NOT add

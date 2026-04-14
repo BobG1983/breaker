@@ -9,7 +9,7 @@ pub struct PiercingRemaining(pub u32);
 ```
 
 # Location
-`src/effect/effects/piercing/`
+`src/effect_v3/effects/piercing/`
 
 # Description
 `PiercingRemaining` is added to the bolt to track how many more cells it can pass through without reflecting.

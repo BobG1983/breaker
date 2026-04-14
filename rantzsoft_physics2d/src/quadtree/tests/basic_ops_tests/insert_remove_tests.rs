@@ -24,10 +24,6 @@ fn insert_increases_len() {
 }
 
 #[test]
-#[expect(
-    clippy::cast_precision_loss,
-    reason = "test loop index is always small"
-)]
 fn insert_multiple_entities() {
     let mut tree = test_tree();
     let entities = spawn_entities(5);

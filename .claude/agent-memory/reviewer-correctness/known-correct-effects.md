@@ -45,11 +45,31 @@ passes for both (deferred despawn hasn't flushed yet), so two deferred despawn c
 are queued. In Bevy 0.18, the second despawn is a no-op (logs warning). The test
 `despawn_second_wind_wall_two_bolts_same_frame` covers this edge case.
 
-## tick_pulse_emitter uses Time<Fixed>::timestep() — equivalent to Time::delta_secs() in FixedUpdate
+## Wave 4 pulse: PulseConfig::fire() guards entity existence — intentional difference from shockwave
 
-In Bevy 0.18 FixedUpdate, `Time<Fixed>::timestep()` and `Time::delta_secs()` produce
-the same value. The inconsistency between `tick_pulse_emitter` (using `timestep()`)
-and `tick_pulse_ring` (using `delta_secs()`) is cosmetic, not a runtime bug.
+`PulseConfig::fire()` returns early if `world.get_entity(entity).is_err()`. Shockwave does NOT
+have this guard (it spawns a shockwave entity with defaults even for despawned source). The difference
+is correct: pulse installs a persistent `PulseEmitter` on the source entity which must exist; shockwave
+spawns a self-contained entity at fire time with no ongoing dependency on the source.
+
+## Wave 4 pulse: single-gate `if timer <= 0.0` (not `while`) — intentional, Behavior #37
+
+`tick_pulse` uses `if emitter.timer <= 0.0 { emitter.timer += emitter.interval; spawn_ring(); }`.
+At most one ring per tick regardless of dt. Large dt does NOT burst multiple rings. Test #37 in both
+systems.rs and config.rs locks this invariant. Do NOT flag absence of `while` loop as a burst bug.
+
+## Wave 4 pulse: snapshot-at-ring-spawn, not at fire() — correct per D2
+
+`tick_pulse` reads `BoltBaseDamage` and `EffectStack<DamageBoostConfig>` from the emitter entity
+fresh each time a ring is spawned (inside the per-emitter loop). `PulseConfig::fire()` does NOT
+snapshot these — it only sets `source_chip`. Mid-emitter damage changes affect future rings but not
+already-spawned rings. Intentional. Tests #19–#27 cover this.
+
+## tick_pulse / tick_pulse_ring: both use Time::delta_secs() — consistent (Wave 4 rewrite, 2026-04-13)
+
+After the Wave 4 structural separation rewrite, `tick_pulse` and `tick_pulse_ring` both use
+`time.delta_secs()`. The prior note about a `timestep()` vs `delta_secs()` inconsistency
+is obsolete — it no longer exists. Do NOT re-flag this.
 
 ## Phase 5 tether_beam: zero-length beam uses origin_inside, not ray_vs_aabb
 
@@ -193,6 +213,27 @@ no arithmetic transformation between push and pop — same bit-pattern guarantee
 `bumps_required=1`: first call inserts counter with remaining=0, fires reward immediately, resets to 1.
 Subsequent calls decrement from 1 to 0, fire reward, reset to 1. Fires on EVERY call. Tested. Correct.
 
+## Wave 2a guard change: last_hit_bolt.is_some() replaces post_hit_timer > 0.0 — CONFIRMED CORRECT (2026-04-13)
+
+`update_bump` (system.rs:100): old guard `post_hit_timer > 0.0` was changed to `last_hit_bolt.is_some()`.
+These are semantically equivalent except at the exact tick boundary where the timer ticks from `1/dt` to
+exactly `0.0` (clamped). Under the old guard, input block was skipped on the expiry frame even though
+`last_hit_bolt` was still set. Under the new guard, `is_some()` is true and retroactive path fires
+correctly. The NoBump expiry block (line 123) still runs AFTER the input block — if `last_hit_bolt.take()`
+fires in the input block first, `.take()` returns `None` in the expiry block, no duplicate NoBump is sent.
+The two fields can diverge only if `post_hit_timer > 0` but `last_hit_bolt.is_none()` — this is an
+impossible combination: `post_hit_timer` is only set in `grade_bump` together with `last_hit_bolt`
+(lines 175-176), and only cleared together (lines 111-112 or take on 124). No state inconsistency possible.
+
+## Wave 2b: on_node_end_occurred in OnEnter(Teardown).after(cleanup_on_exit) — CONFIRMED CORRECT (2026-04-13)
+
+`.after(cleanup_on_exit::<NodeState>)` is NOT a cross-schedule no-op: both systems are registered in
+`OnEnter(NodeState::Teardown)` — `cleanup_on_exit` in `node/plugin.rs:47` and `on_node_end_occurred`
+in `effect_v3/triggers/node/register.rs:27-30`. Bevy 0.18 honors `.after()` within the same schedule.
+Tests mirror production wiring by registering `cleanup_on_exit::<NodeState>` BEFORE `register::register`
+in the same `OnEnter(NodeState::Teardown)` schedule. The `drive_to_teardown` two-step helper correctly
+isolates `OnExit(Playing)` from `OnEnter(Teardown)`.
+
 ## ShieldActive — ELIMINATED (Shield refactor, 2026-04-02)
 
 `ShieldActive` NO LONGER EXISTS. The charge-based shield mechanism was entirely redesigned.
@@ -201,3 +242,76 @@ Shield is now a timed visible floor wall (`ShieldWall` + `ShieldWallTimer`). `bo
 ShieldActive charge-decrement patterns — the component and its logic were deleted.
 
 See `reviewer-architecture/shield_cross_domain_write.md` for the full elimination record.
+
+## Wave 5 circuit_breaker SpawnBolts + Shockwave double-dispatch — CONFIRMED CORRECT (2026-04-13)
+
+`tick_circuit_breaker` fires `Shockwave` then `SpawnBolts` via `fire_dispatch` inside the
+`if counter.remaining == 0` block, before `counter.remaining = counter.bumps_required`.
+Both dispatches read from the locally-owned cloned `counter` struct — not from World — so
+values are never stale regardless of what either dispatch does to the world. Neither dispatch
+touches `CircuitBreakerCounter` on the source entity. The write-back `if let Some(...)` guard
+at line 68 is a no-op protection — the entity is never despawned by either dispatch.
+Counter wrapping fires SpawnBolts N times per frame with the same stable `spawn_count` each time.
+Tested by `wrapping_twice_in_one_frame_fires_spawn_bolts_twice` and adjacent tests.
+Do NOT re-flag the fire-order or stale-data concerns.
+
+## Wave 6 TetherBeamWidth required-component query — CONFIRMED CORRECT (2026-04-13)
+
+`tick_tether_beam` requires `&TetherBeamWidth` in its query. Any `TetherBeamSource` entity
+spawned without `TetherBeamWidth` is silently skipped. This is the intended required-component
+contract — not an Option fallback. Test `beam_without_tether_beam_width_is_silently_skipped_by_query`
+explicitly locks this behavior. The only beam-spawning code paths are `fire_spawn` and `fire_chain`
+in `config.rs` — both stamp `TetherBeamWidth(self.width.0)`. There is no path that spawns
+`TetherBeamSource` without `TetherBeamWidth`. Do NOT re-flag the silent-skip as a bug.
+
+## Wave 6 TetherBeamWidth destructure `&TetherBeamWidth(beam_width)` — CONFIRMED CORRECT (2026-04-13)
+
+`systems.rs:29` pattern `&TetherBeamWidth(beam_width)` on a `&TetherBeamWidth` query result
+is valid Rust. `f32` is `Copy`; the pattern deconstructs through the shared reference and
+binds `beam_width: f32` by copy. Correct.
+
+## Wave 6 `across <= beam_width` with width=0.0 — CONFIRMED CORRECT (2026-04-13)
+
+`across` is `offset.dot(perp).abs()` which is 0.0 for cells exactly on the beam line.
+`0.0 <= 0.0` is true — correctly includes the on-line cell. Test
+`width_zero_damages_only_cells_exactly_on_beam_line` covers this. Do NOT re-flag.
+
+## Wave 6 tether_beam_stress.scenario.ron chain:false — CONFIRMED CORRECT (2026-04-13)
+
+The scenario comment says "spawns two free-moving bolts connected by a damaging beam".
+`chain: false` means `fire_spawn` (spawn-a-new-bolt mode), which matches the stated intent.
+The `width: 10.0` field was added alongside `chain: false` to complete the RON after
+`TetherBeamConfig.width` became a required field. Do NOT re-flag chain:false as wrong.
+
+## Wave 7a: EffectStack::retain_by_source semantics — CONFIRMED CORRECT (2026-04-13)
+
+`retain_by_source(source)` calls `self.entries.retain(|(s, _)| s != source)`.
+`Vec::retain` keeps entries for which the closure returns `true`. The closure returns `true`
+when `s != source` — i.e., keeps entries that do NOT match the source. This is correct:
+the method removes all entries whose source equals the argument.
+
+## Wave 7a: RampingDamage::reverse_all_by_source borrow pattern — CONFIRMED CORRECT (2026-04-13)
+
+`reverse_all_by_source` holds `stack` via `world.get_mut()`, calls `stack.retain_by_source()`,
+checks `stack.is_empty()`, then calls `world.entity_mut(entity).remove()` while `stack` is
+still in scope. This is the same borrow pattern as the existing `reverse()` method (which
+has been compiling and passing tests for multiple waves). Bevy's `Mut<T>` is a mutable
+reference to world-cell-backed storage — the compiler allows `world.entity_mut()` on a
+different component type while `Mut<EffectStack<T>>` is still live because Bevy's safety
+model (world cell / unsafe interior mutability) separates these borrows at the type level.
+Do NOT re-flag this as a borrow violation.
+
+## Wave 7a: Anchor::reverse_all_by_source uses passed source, not hardcoded "anchor_piercing" — CONFIRMED CORRECT (2026-04-13)
+
+`AnchorConfig::reverse_all_by_source` calls `stack.retain_by_source(source)` where `source`
+is the parameter — NOT the hardcoded string "anchor_piercing" that `reverse()` uses.
+This is the P2-5 fix: when a chip fires Anchor with a non-"anchor_piercing" source name,
+all piercing entries from that source are correctly cleaned up. Test
+`reverse_all_by_source_uses_passed_source_not_hardcoded` covers this explicitly.
+
+## Wave 7a: reverse_all_by_source_dispatch — 16-variant match is exhaustive (2026-04-13)
+
+`reverse_all_by_source_dispatch` in `reverse_dispatch.rs` has 16 arms matching all 16
+variants of `ReversibleEffectType`. The enum and the dispatch match are in sync.
+`fire_dispatch` over `EffectType` (which has more variants) is a different enum and is
+not the comparison point. Do NOT flag 16 vs the full EffectType variant count as a bug.

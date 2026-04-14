@@ -19,7 +19,7 @@ LoseLife
 Not applicable -- LoseLife is not reversible.
 
 # Source Location
-`src/effect/effects/lose_life/config.rs`
+`src/effect_v3/effects/lose_life/config.rs`
 
 # New Types
 None -- uses `DamageDealt<Breaker>` from the unified death pipeline.

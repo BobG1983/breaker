@@ -81,7 +81,7 @@ Record wave structure and decisions in session-state.
 
 ### Step 2 — Research gate (conditional)
 
-**Skip if**: single-domain feature with familiar APIs and no new cross-domain communication.
+**Skip if**: single-domain feature with familiar APIs and no new cross-domain communication **OR** if the scope is already heavily documented and researched in the plan and docs.
 
 **Run if** any trigger from `delegating-to-subagents.md` Research Wave applies. Launch applicable research agents from `sub-agents.md` Research Agents table in parallel, if no applicable research agent exists use Explore or a General sub-agent. Feed results into Step 3 and Step 4 briefings. Write research output to `.claude/research/<plan>-<optional:wave>-<feature>-<research_area>.md`
 
@@ -158,15 +158,17 @@ Run `/verify standard`.
 
 Fix any failures per `routing-failures.md`, re-running `/verify basic` after each fix, then `/verify standard` again.
 
-### Step 10 — Commit
+### Step 10 - Repeat 
 
-When `/verify standard` is clean:
-1. Stage changed files
+1. Mark the work as complete in `session-state.md` and the plan file
+2. Repeat Steps 4-9 until the **entire** plan is complete
+
+### Step 11 — Commit
+
+When the final `/verify standard` passes for the entire plan:
+1. Stage *all* files
 2. Commit using the format in `commit-format.md`
 3. Update session-state to record completion
+4. Run `/finish-dev`
 
 
-### Step 11 - Repeat 
-
-1. Repeat Steps 1-10 until the **entire** plan is complete
-2. Run /finish-dev to run final verifications and merge

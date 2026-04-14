@@ -9,40 +9,40 @@ The following waves must be complete before Wave 4 begins:
 - **Wave 3** (RON assets) — RON data files in place
 
 ### Domain
-`src/effect/`
+`src/effect_v3/`
 
 ### Failing Tests
 Test file locations and counts will be established by the test spec. Tests will be distributed across the following files, matching the folder structure in `docs/todos/detail/effect-refactor/migration/folder-structure.md`:
 
-- `src/effect/stacking/effect_stack.rs` — EffectStack<T> push/remove/aggregate tests
-- `src/effect/walking/walk_effects.rs` — walk_effects outer loop tests (staged-before-bound ordering, trigger matching)
-- `src/effect/walking/fire.rs` — Fire node evaluation tests
-- `src/effect/walking/when.rs` — When node evaluation tests (match, skip, arming nested gates)
-- `src/effect/walking/once.rs` — Once node evaluation tests (match + removal)
-- `src/effect/walking/during.rs` — During node evaluation tests (condition transitions, apply/reverse)
-- `src/effect/walking/until.rs` — Until node evaluation tests (install + reversal on trigger)
-- `src/effect/walking/sequence.rs` — Sequence node evaluation tests
-- `src/effect/walking/on.rs` — On node evaluation tests (participant resolution, mismatch skip)
-- `src/effect/walking/route.rs` — Route node evaluation tests
-- `src/effect/dispatch/fire_dispatch.rs` — fire_dispatch tests (all 30 EffectType variants)
-- `src/effect/dispatch/reverse_dispatch.rs` — reverse_dispatch tests (all 16 ReversibleEffectType variants)
-- `src/effect/commands/stamp.rs` — stamp_effect tests
-- `src/effect/commands/fire.rs` — fire_effect command tests
-- `src/effect/commands/reverse.rs` — reverse_effect command tests
-- `src/effect/commands/route.rs` — route_effect command tests
-- `src/effect/commands/stage.rs` — stage_effect command tests
-- `src/effect/commands/remove.rs` — remove_effect command tests
-- `src/effect/effects/speed_boost/config.rs` — SpeedBoostConfig fire/reverse/aggregate tests
-- `src/effect/effects/size_boost/config.rs` — SizeBoostConfig fire/reverse/aggregate tests
-- `src/effect/effects/damage_boost/config.rs` — DamageBoostConfig fire/reverse/aggregate tests
-- `src/effect/effects/bump_force/config.rs` — BumpForceConfig fire/reverse/aggregate tests
-- `src/effect/effects/quick_stop/config.rs` — QuickStopConfig fire/reverse/aggregate tests
-- `src/effect/effects/vulnerable/config.rs` — VulnerableConfig fire/reverse/aggregate tests
-- `src/effect/effects/piercing/config.rs` — PiercingConfig fire/reverse/aggregate tests
-- `src/effect/effects/ramping_damage/config.rs` — RampingDamageConfig fire/reverse/aggregate tests
-- `src/effect/conditions/node_active.rs` — is_node_active evaluator tests
-- `src/effect/conditions/shield_active.rs` — is_shield_active evaluator tests
-- `src/effect/conditions/combo_active.rs` — is_combo_active evaluator tests
+- `src/effect_v3/stacking/effect_stack.rs` — EffectStack<T> push/remove/aggregate tests
+- `src/effect_v3/walking/walk_effects.rs` — walk_effects outer loop tests (staged-before-bound ordering, trigger matching)
+- `src/effect_v3/walking/fire.rs` — Fire node evaluation tests
+- `src/effect_v3/walking/when.rs` — When node evaluation tests (match, skip, arming nested gates)
+- `src/effect_v3/walking/once.rs` — Once node evaluation tests (match + removal)
+- `src/effect_v3/walking/during.rs` — During node evaluation tests (condition transitions, apply/reverse)
+- `src/effect_v3/walking/until.rs` — Until node evaluation tests (install + reversal on trigger)
+- `src/effect_v3/walking/sequence.rs` — Sequence node evaluation tests
+- `src/effect_v3/walking/on.rs` — On node evaluation tests (participant resolution, mismatch skip)
+- `src/effect_v3/walking/route.rs` — Route node evaluation tests
+- `src/effect_v3/dispatch/fire_dispatch.rs` — fire_dispatch tests (all 30 EffectType variants)
+- `src/effect_v3/dispatch/reverse_dispatch.rs` — reverse_dispatch tests (all 16 ReversibleEffectType variants)
+- `src/effect_v3/commands/stamp.rs` — stamp_effect tests
+- `src/effect_v3/commands/fire.rs` — fire_effect command tests
+- `src/effect_v3/commands/reverse.rs` — reverse_effect command tests
+- `src/effect_v3/commands/route.rs` — route_effect command tests
+- `src/effect_v3/commands/stage.rs` — stage_effect command tests
+- `src/effect_v3/commands/remove.rs` — remove_effect command tests
+- `src/effect_v3/effects/speed_boost/config.rs` — SpeedBoostConfig fire/reverse/aggregate tests
+- `src/effect_v3/effects/size_boost/config.rs` — SizeBoostConfig fire/reverse/aggregate tests
+- `src/effect_v3/effects/damage_boost/config.rs` — DamageBoostConfig fire/reverse/aggregate tests
+- `src/effect_v3/effects/bump_force/config.rs` — BumpForceConfig fire/reverse/aggregate tests
+- `src/effect_v3/effects/quick_stop/config.rs` — QuickStopConfig fire/reverse/aggregate tests
+- `src/effect_v3/effects/vulnerable/config.rs` — VulnerableConfig fire/reverse/aggregate tests
+- `src/effect_v3/effects/piercing/config.rs` — PiercingConfig fire/reverse/aggregate tests
+- `src/effect_v3/effects/ramping_damage/config.rs` — RampingDamageConfig fire/reverse/aggregate tests
+- `src/effect_v3/conditions/node_active.rs` — is_node_active evaluator tests
+- `src/effect_v3/conditions/shield_active.rs` — is_shield_active evaluator tests
+- `src/effect_v3/conditions/combo_active.rs` — is_combo_active evaluator tests
 
 ---
 
@@ -76,8 +76,8 @@ impl<T: PassiveEffect> EffectStack<T> {
 - `remove`: Find and remove the **first** entry where `entry.0 == source && entry.1 == *config`. If no match, do nothing.
 - `aggregate`: Delegate to `T::aggregate(&self.entries)`. Returns identity value when empty (1.0 for multiplicative, 0 for additive).
 
-**File**: `src/effect/stacking/effect_stack.rs`
-**Module wiring**: `src/effect/stacking/mod.rs` re-exports `EffectStack`.
+**File**: `src/effect_v3/stacking/effect_stack.rs`
+**Module wiring**: `src/effect_v3/stacking/mod.rs` re-exports `EffectStack`.
 
 #### 2. PassiveEffect trait (traits/passive_effect.rs)
 
@@ -89,8 +89,8 @@ pub trait PassiveEffect: Fireable + Reversible + Sized + Clone + PartialEq + Eq 
 
 The `'static` bound is required because `EffectStack<T: PassiveEffect>` derives `Component`, and Bevy's `Component` trait requires `'static`.
 
-**File**: `src/effect/traits/passive_effect.rs`
-**Module wiring**: `src/effect/traits/mod.rs` re-exports `PassiveEffect`.
+**File**: `src/effect_v3/traits/passive_effect.rs`
+**Module wiring**: `src/effect_v3/traits/mod.rs` re-exports `PassiveEffect`.
 
 #### 3. Fireable trait (traits/fireable.rs)
 
@@ -101,8 +101,8 @@ pub trait Fireable {
 }
 ```
 
-**File**: `src/effect/traits/fireable.rs`
-**Module wiring**: `src/effect/traits/mod.rs` re-exports `Fireable`.
+**File**: `src/effect_v3/traits/fireable.rs`
+**Module wiring**: `src/effect_v3/traits/mod.rs` re-exports `Fireable`.
 
 #### 4. Reversible trait (traits/reversible.rs)
 
@@ -112,8 +112,8 @@ pub trait Reversible: Fireable {
 }
 ```
 
-**File**: `src/effect/traits/reversible.rs`
-**Module wiring**: `src/effect/traits/mod.rs` re-exports `Reversible`.
+**File**: `src/effect_v3/traits/reversible.rs`
+**Module wiring**: `src/effect_v3/traits/mod.rs` re-exports `Reversible`.
 
 #### 5. walk_effects function (walking/walk_effects.rs)
 
@@ -155,8 +155,8 @@ Exact `==` on the `Trigger` enum. `Trigger::Bumped == Trigger::Bumped`. `Trigger
 - `Tree::Until(trigger, _)` -> `trigger`
 - `Tree::Fire(_)`, `Tree::Sequence(_)`, `Tree::On(_, _)`, `Tree::During(_, _)` -> no trigger to match (these are immediate nodes, not trigger-gated). They should not be the outermost node of a StagedEffects entry or a trigger-gated BoundEffects entry. If encountered, skip.
 
-**File**: `src/effect/walking/walk_effects.rs`
-**Module wiring**: `src/effect/walking/mod.rs` re-exports `walk_effects`.
+**File**: `src/effect_v3/walking/walk_effects.rs`
+**Module wiring**: `src/effect_v3/walking/mod.rs` re-exports `walk_effects`.
 
 #### 6. Per-Node Evaluators (walking/*.rs)
 
@@ -405,8 +405,8 @@ match effect {
 
 Every arm is identical in shape — the dispatch is purely mechanical.
 
-**File**: `src/effect/dispatch/fire_dispatch.rs`
-**Module wiring**: `src/effect/dispatch/mod.rs` re-exports `fire_dispatch`.
+**File**: `src/effect_v3/dispatch/fire_dispatch.rs`
+**Module wiring**: `src/effect_v3/dispatch/mod.rs` re-exports `fire_dispatch`.
 
 #### 8. Reverse Dispatch (dispatch/reverse_dispatch.rs)
 
@@ -442,8 +442,8 @@ match effect {
 }
 ```
 
-**File**: `src/effect/dispatch/reverse_dispatch.rs`
-**Module wiring**: `src/effect/dispatch/mod.rs` re-exports `reverse_dispatch`.
+**File**: `src/effect_v3/dispatch/reverse_dispatch.rs`
+**Module wiring**: `src/effect_v3/dispatch/mod.rs` re-exports `reverse_dispatch`.
 
 #### 9. Command Extensions (commands/*.rs)
 
@@ -466,7 +466,7 @@ impl EffectCommandsExt for Commands<'_, '_> { ... }
 
 Each method queues the corresponding command struct (described below).
 
-**File**: `src/effect/commands/ext.rs`
+**File**: `src/effect_v3/commands/ext.rs`
 
 ##### 9b. StampEffectCommand (commands/stamp.rs)
 
@@ -486,7 +486,7 @@ struct StampEffectCommand {
 
 stamp_effect always appends — no deduplication check.
 
-**File**: `src/effect/commands/stamp.rs`
+**File**: `src/effect_v3/commands/stamp.rs`
 
 ##### 9c. FireEffectCommand (commands/fire.rs)
 
@@ -502,7 +502,7 @@ struct FireEffectCommand {
 1. If entity does not exist in world, return.
 2. Call `fire_dispatch(&self.effect, self.entity, &self.source, world)`.
 
-**File**: `src/effect/commands/fire.rs`
+**File**: `src/effect_v3/commands/fire.rs`
 
 ##### 9d. ReverseEffectCommand (commands/reverse.rs)
 
@@ -520,7 +520,7 @@ struct ReverseEffectCommand {
 
 If no matching entry exists (already reversed, never fired), do nothing (the dispatch function handles this).
 
-**File**: `src/effect/commands/reverse.rs`
+**File**: `src/effect_v3/commands/reverse.rs`
 
 ##### 9e. RouteEffectCommand (commands/route.rs)
 
@@ -540,7 +540,7 @@ struct RouteEffectCommand {
    - `RouteType::Bound` -> determine `condition_active` (Some(false) if During, else None). Append `BoundEntry { source, tree, condition_active }` to `BoundEffects`.
    - `RouteType::Staged` -> append `(source, tree)` to `StagedEffects`.
 
-**File**: `src/effect/commands/route.rs`
+**File**: `src/effect_v3/commands/route.rs`
 
 ##### 9f. StageEffectCommand (commands/stage.rs)
 
@@ -558,7 +558,7 @@ struct StageEffectCommand {
 2. Ensure entity has both `BoundEffects` and `StagedEffects`.
 3. Append `(source, tree)` to `StagedEffects`.
 
-**File**: `src/effect/commands/stage.rs`
+**File**: `src/effect_v3/commands/stage.rs`
 
 ##### 9g. RemoveEffectCommand (commands/remove.rs)
 
@@ -577,7 +577,7 @@ struct RemoveEffectCommand {
    - `RouteType::Bound` -> find the **first** `BoundEntry` in `BoundEffects` where `entry.source == self.source && entry.tree == self.tree`. Remove it. If none found, do nothing.
    - `RouteType::Staged` -> find the **first** `(source, tree)` in `StagedEffects` where `source == self.source && tree == self.tree`. Remove it. If none found, do nothing.
 
-**File**: `src/effect/commands/remove.rs`
+**File**: `src/effect_v3/commands/remove.rs`
 
 #### 10. Passive Effect Implementations (8 configs)
 
@@ -693,7 +693,7 @@ pub fn is_node_active(world: &World) -> bool;
 
 Reads `State<NodeState>` resource from world via `world.get_resource::<State<NodeState>>()`. Returns `true` when state is `NodeState::Playing`, `false` otherwise. Takes `&World` (shared reference) — this function only reads a resource, no query needed. Note: `is_shield_active` and `is_combo_active` take `&mut World` because they use `World::query` which requires mutable access in Bevy 0.18.
 
-**File**: `src/effect/conditions/node_active.rs`
+**File**: `src/effect_v3/conditions/node_active.rs`
 
 ##### 11b. is_shield_active (conditions/shield_active.rs)
 
@@ -705,7 +705,7 @@ Queries world for any entity with the `ShieldWall` component. Returns `true` if 
 
 **Bevy 0.18 API note**: `World::query` and `World::query_filtered` require `&mut World` in Bevy 0.18 — there is no way to run an entity query on `&World`. The design doc at `docs/todos/detail/effect-refactor/evaluating-conditions/is-shield-active.md` shows `&World` but the implementation must use `&mut World` to compile. Use `world.query::<&ShieldWall>().iter(world).next().is_some()` or equivalent — the `QueryState` approach requires splitting the borrow: `let mut query = world.query::<&ShieldWall>(); query.iter(world).next().is_some()`.
 
-**File**: `src/effect/conditions/shield_active.rs`
+**File**: `src/effect_v3/conditions/shield_active.rs`
 
 ##### 11c. is_combo_active (conditions/combo_active.rs)
 
@@ -724,9 +724,9 @@ pub struct ComboStreak {
 
 Returns `true` when `combo_streak.count >= threshold`, `false` otherwise. If the `ComboStreak` resource does not exist, returns `false`. Logically read-only, takes `&mut World` for consistency with other condition evaluators.
 
-**ComboStreak location**: The resource definition goes in `src/effect/conditions/combo_active.rs` (or a shared `src/effect/conditions/resources.rs` re-exported from `src/effect/conditions/mod.rs`). It is updated by a `track_combo_streak` system (out of scope for this wave — Wave 5+).
+**ComboStreak location**: The resource definition goes in `src/effect_v3/conditions/combo_active.rs` (or a shared `src/effect_v3/conditions/resources.rs` re-exported from `src/effect_v3/conditions/mod.rs`). It is updated by a `track_combo_streak` system (out of scope for this wave — Wave 5+).
 
-**File**: `src/effect/conditions/combo_active.rs`
+**File**: `src/effect_v3/conditions/combo_active.rs`
 
 #### 12. Conversion helpers
 
@@ -736,7 +736,7 @@ A helper function to convert `ReversibleEffectType` to `EffectType` is needed fo
 pub fn reversible_to_effect_type(reversible: &ReversibleEffectType) -> EffectType;
 ```
 
-This is a mechanical mapping — each ReversibleEffectType variant maps to the corresponding EffectType variant with the same inner config. Place in `src/effect/dispatch/mod.rs` or a small helper file.
+This is a mechanical mapping — each ReversibleEffectType variant maps to the corresponding EffectType variant with the same inner config. Place in `src/effect_v3/dispatch/mod.rs` or a small helper file.
 
 ---
 
@@ -771,9 +771,9 @@ The only schedule-adjacent note: `evaluate_conditions` (which calls the conditio
 - Do NOT create or modify systems (Bevy system functions registered to schedules). This wave is non-system functions only.
 - Do NOT implement non-passive effect fire/reverse (Shockwave, Explode, Shield, etc.). Only the 8 passive effect configs get trait implementations in this wave.
 - Do NOT implement RON deserialization.
-- Do NOT touch any files outside `src/effect/`.
-- Do NOT modify `src/effect/plugin.rs` (system registration is Wave 5+).
-- Do NOT modify `src/effect/mod.rs` except to add new module declarations needed by the new folders (stacking, walking, dispatch, commands, conditions, traits, effects subfolders).
+- Do NOT touch any files outside `src/effect_v3/`.
+- Do NOT modify `src/effect_v3/plugin.rs` (system registration is Wave 5+).
+- Do NOT modify `src/effect_v3/mod.rs` except to add new module declarations needed by the new folders (stacking, walking, dispatch, commands, conditions, traits, effects subfolders).
 
 #### Out of Scope
 - Bridge systems (triggers/) — Wave 5+
@@ -781,14 +781,14 @@ The only schedule-adjacent note: `evaluate_conditions` (which calls the conditio
 - evaluate_conditions system — Wave 5+
 - Non-passive effect Fireable/Reversible implementations (Shockwave, Shield, Explode, etc.) — separate wave
 - SpawnStampRegistry resource — separate wave
-- EffectPlugin::build wiring — Wave 5+
+- EffectV3Plugin::build wiring — Wave 5+
 
 #### Module Wiring Required
 
-New `mod` declarations needed in `src/effect/mod.rs` (or appropriate parent mod.rs files):
+New `mod` declarations needed in `src/effect_v3/mod.rs` (or appropriate parent mod.rs files):
 
 ```
-src/effect/
+src/effect_v3/
   mod.rs          — add: pub mod traits; pub mod stacking; pub mod walking; pub mod dispatch; pub mod commands; pub mod conditions;
   traits/
     mod.rs        — pub mod fireable; pub mod reversible; pub mod passive_effect; + re-exports
@@ -847,7 +847,7 @@ This wave depends on types defined in earlier waves (Wave 1-3). The following ty
 - `ShieldWall` component (for is_shield_active condition evaluator)
 
 **Defined in this wave:**
-- `ComboStreak { count: u32 }` resource (defined in `src/effect/conditions/combo_active.rs`, used by is_combo_active evaluator, updated by `track_combo_streak` system in Wave 5+)
+- `ComboStreak { count: u32 }` resource (defined in `src/effect_v3/conditions/combo_active.rs`, used by is_combo_active evaluator, updated by `track_combo_streak` system in Wave 5+)
 
 ---
 

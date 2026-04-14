@@ -46,6 +46,9 @@ Keep under 80 lines. Use this exact structure:
 ```
 # Session State
 
+## Status
+[One of: In Planning/In Progress <Phase & Wave>/Complete]
+
 ## Plan
 [The **FULL** filepath to the current plan that is being worked on]
 

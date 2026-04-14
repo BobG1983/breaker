@@ -20,10 +20,10 @@ Mixed:
 `TriggerContext::Death { victim, killer }` for all three triggers. `killer` is `Some(entity)` when a killer exists, `None` for environmental deaths.
 
 # Source Location
-`src/effect/triggers/death/bridges.rs` — same generic system, monomorphized for Bolt. Registered by EffectPlugin.
+`src/effect_v3/triggers/death/bridges.rs` — same generic system, monomorphized for Bolt. Registered by EffectV3Plugin.
 
 # Schedule
-FixedUpdate, in `EffectSystems::Bridge`, after domain kill handlers have sent `Destroyed<T>`.
+FixedUpdate, in `EffectV3Systems::Bridge`, after domain kill handlers have sent `Destroyed<T>`.
 
 # Behavior
 1. Read each `Destroyed<Bolt>` message.

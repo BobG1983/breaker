@@ -17,7 +17,7 @@ pub struct PhantomOwner(pub Entity);
 ```
 
 # Location
-`src/effect/effects/spawn_phantom/`
+`src/effect_v3/effects/spawn_phantom/`
 
 # Description
 These components form the phantom bolt effect entity. A phantom bolt is a temporary secondary bolt spawned from the primary bolt's position.

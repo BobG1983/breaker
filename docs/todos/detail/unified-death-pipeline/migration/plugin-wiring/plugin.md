@@ -19,7 +19,7 @@ impl Plugin for DeathPipelinePlugin {
         // System sets — ApplyDamage before DetectDeaths
         app.configure_sets(FixedUpdate, (
             DeathPipelineSystems::ApplyDamage
-                .after(EffectSystems::Tick),
+                .after(EffectV3Systems::Tick),
             DeathPipelineSystems::DetectDeaths
                 .after(DeathPipelineSystems::ApplyDamage),
         ));

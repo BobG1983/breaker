@@ -21,7 +21,7 @@ ChainLightning
 Not reversible.
 
 # Source Location
-`src/effect/effects/chain_lightning/config.rs`
+`src/effect_v3/effects/chain_lightning/config.rs`
 
 # New Types
 - `ChainLightningChain` -- component tracking the chain state:
@@ -44,4 +44,4 @@ Not reversible.
   - `ArcTraveling`: advance `arc_pos` toward `target_pos` by `arc_speed * dt`. When `arc_pos` reaches `target_pos`: send `DamageDealt<Cell>` for the target, add target to `hit_set`, set `source_pos` to `target_pos`, decrement `remaining_jumps`, despawn the arc VFX entity, transition to `Idle`.
   - If `Idle` finds no valid targets, or `remaining_jumps == 0`: despawn the chain entity and any active arc VFX entity.
 - **What it does NOT do**: Does not handle the first arc (fire does that). Does not deal damage directly -- sends the message.
-- **Schedule**: FixedUpdate, in `EffectSystems::Tick`, with `run_if(in_state(NodeState::Playing))`.
+- **Schedule**: FixedUpdate, in `EffectV3Systems::Tick`, with `run_if(in_state(NodeState::Playing))`.

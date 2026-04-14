@@ -10,7 +10,7 @@ pub struct EffectSourceChip(pub Option<String>);
 ```
 
 # Location
-`src/effect/components/effect_source_chip.rs`
+`src/effect_v3/components/effect_source_chip.rs`
 
 # Description
 `EffectSourceChip` is a shared component added to spawned effect entities (shockwaves, chain lightning arcs, gravity wells, etc.) to track which chip was responsible for creating them.

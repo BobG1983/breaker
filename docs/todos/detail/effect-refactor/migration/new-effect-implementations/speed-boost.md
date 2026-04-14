@@ -19,7 +19,7 @@ SpeedBoost
 3. Reverse does NOT recalculate velocity -- that is the bolt velocity system's job.
 
 # Source Location
-`src/effect/effects/speed_boost/config.rs`
+`src/effect_v3/effects/speed_boost/config.rs`
 
 # New Types
 None beyond `EffectStack<SpeedBoostConfig>`.

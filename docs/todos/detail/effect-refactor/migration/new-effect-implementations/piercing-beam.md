@@ -19,7 +19,7 @@ PiercingBeam
 Not reversible.
 
 # Source Location
-`src/effect/effects/piercing_beam/config.rs`
+`src/effect_v3/effects/piercing_beam/config.rs`
 
 # New Types
 None persistent. The visual beam is a short-lived VFX entity using existing VFX infrastructure.

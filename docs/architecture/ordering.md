@@ -36,7 +36,7 @@ Domains MAY define a `pub enum {Domain}Systems` with `#[derive(SystemSet)]` in `
 | `BoltSystems::CellCollision` | `bolt/sets.rs` | `bolt_cell_collision` (bolt-cell CCD sweep — fires before WallCollision and BreakerCollision) |
 | `BoltSystems::WallCollision` | `bolt/sets.rs` | `bolt_wall_collision` (bolt-wall reflection — runs `.after(BoltSystems::CellCollision)`) |
 | `BreakerSystems::UpdateState` | `breaker/sets.rs` | `update_breaker_state` (intra-domain only — no cross-domain consumers yet) |
-| `EffectSystems::Bridge` | `effect/sets.rs` | `bridge_bump`, `bridge_bolt_lost`, `bridge_bump_whiff`, `bridge_no_bump`, `bridge_cell_impact`, `bridge_breaker_impact`, `bridge_wall_impact`, `bridge_cell_destroyed`, `bridge_bolt_death`, `bridge_timer_threshold` |
+| `EffectV3Systems::Bridge` | `effect_v3/sets.rs` | `bridge_bump`, `bridge_bolt_lost`, `bridge_bump_whiff`, `bridge_no_bump`, `bridge_cell_impact`, `bridge_breaker_impact`, `bridge_wall_impact`, `bridge_cell_destroyed`, `bridge_bolt_death`, `bridge_timer_threshold` |
 | `UiSystems::SpawnTimerHud` | `state/run/node/hud/sets.rs` | `spawn_timer_hud` |
 | `NodeSystems::TrackCompletion` | `state/run/node/sets.rs` | `track_node_completion` |
 | `NodeSystems::TickTimer` | `state/run/node/sets.rs` | `tick_node_timer` |
@@ -109,7 +109,7 @@ tick_birthing                            [bolt domain — lerps Scale2D from zer
   .run_if(in_state(NodeState::AnimateIn).or(in_state(NodeState::Playing)))
   [unordered — runs independently of physics chain]
 
-dispatch_bolt_effects .before(EffectSystems::Bridge)
+dispatch_bolt_effects .before(EffectV3Systems::Bridge)
   [bolt domain — processes Added<BoltDefinitionRef> each FixedUpdate tick]
 
 rantzsoft_physics2d::PhysicsSystems::MaintainQuadtree
@@ -132,36 +132,36 @@ move_breaker .after(update_bump)
               BreakerSystems::GradeBump
                 <- (perfect_bump_dash_cancel, spawn_bump_grade_text, spawn_whiff_text) .after(grade_bump)
                 <- bridge_bump .after(BreakerSystems::GradeBump)
-                   .in_set(EffectSystems::Bridge)              [effect domain]
+                   .in_set(EffectV3Systems::Bridge)              [effect domain]
                 <- bridge_bump_whiff .after(BreakerSystems::GradeBump)
-                   .in_set(EffectSystems::Bridge)              [effect domain]
+                   .in_set(EffectV3Systems::Bridge)              [effect domain]
                 <- bridge_no_bump .after(bridge_breaker_impact).after(bridge_bump)
-                   .in_set(EffectSystems::Bridge)              [effect domain]
+                   .in_set(EffectV3Systems::Bridge)              [effect domain]
                 <- bridge_cell_impact .after(BoltSystems::BreakerCollision)
-                   .in_set(EffectSystems::Bridge)              [effect domain]
+                   .in_set(EffectV3Systems::Bridge)              [effect domain]
                 <- bridge_breaker_impact .after(BoltSystems::BreakerCollision)
-                   .in_set(EffectSystems::Bridge)              [effect domain]
+                   .in_set(EffectV3Systems::Bridge)              [effect domain]
                 <- bridge_wall_impact .after(BoltSystems::BreakerCollision)
-                   .in_set(EffectSystems::Bridge)              [effect domain]
+                   .in_set(EffectV3Systems::Bridge)              [effect domain]
             <- clamp_bolt_to_playfield .after(bolt_breaker_collision)
             <- enforce_distance_constraints .after(clamp_bolt_to_playfield)  [bolt domain]
             <- bolt_lost .after(enforce_distance_constraints)
               BoltSystems::BoltLost
                 <- bridge_bolt_lost .after(BoltSystems::BoltLost)
-                   .in_set(EffectSystems::Bridge)          [effect domain]
+                   .in_set(EffectV3Systems::Bridge)          [effect domain]
                 <- break_chain_on_bolt_lost .after(BoltSystems::BoltLost)  [bolt domain]
-            <- bridge_cell_destroyed .in_set(EffectSystems::Bridge)
+            <- bridge_cell_destroyed .in_set(EffectV3Systems::Bridge)
                [effect domain, unordered relative to physics chain]
-            <- bridge_bolt_death .in_set(EffectSystems::Bridge)
+            <- bridge_bolt_death .in_set(EffectV3Systems::Bridge)
                [effect domain, unordered relative to physics chain]
-            <- bridge_timer_threshold .in_set(EffectSystems::Bridge)
+            <- bridge_timer_threshold .in_set(EffectV3Systems::Bridge)
                [effect domain, unordered relative to physics chain]
 
-cleanup_destroyed_bolts .after(EffectSystems::Bridge)
+cleanup_destroyed_bolts .after(EffectV3Systems::Bridge)
   [bolt domain — despawns RequestBoltDestroyed entities after effect bridges evaluate]
 ```
 
-Reading: the quadtree is maintained first (incremental — only changed entities re-inserted). Consumers read `Active*` components directly via `.multiplier()` / `.total()` methods. Then breaker moves, cell collisions run (reading quadtree for broad-phase, tagged `BoltSystems::CellCollision`), then breaker collision (`BoltSystems::BreakerCollision`), then bump grading (`BreakerSystems::GradeBump`), then distance constraints enforced (chain bolts), then bolt-lost detection (`BoltSystems::BoltLost`). Velocity is enforced by `apply_velocity_formula` at each collision/steering site — there is no separate velocity preparation step. All effect bridge systems run in `EffectSystems::Bridge` — downstream consumers order `.after(EffectSystems::Bridge)`.
+Reading: the quadtree is maintained first (incremental — only changed entities re-inserted). Consumers read `Active*` components directly via `.multiplier()` / `.total()` methods. Then breaker moves, cell collisions run (reading quadtree for broad-phase, tagged `BoltSystems::CellCollision`), then breaker collision (`BoltSystems::BreakerCollision`), then bump grading (`BreakerSystems::GradeBump`), then distance constraints enforced (chain bolts), then bolt-lost detection (`BoltSystems::BoltLost`). Velocity is enforced by `apply_velocity_formula` at each collision/steering site — there is no separate velocity preparation step. All effect bridge systems run in `EffectV3Systems::Bridge` — downstream consumers order `.after(EffectV3Systems::Bridge)`. The full effect pipeline order within FixedUpdate is: `EffectV3Systems::Bridge` → `EffectV3Systems::Tick` → `EffectV3Systems::Conditions`. `EffectV3Systems::Reset` runs on `OnEnter(NodeState::Loading)` — not in the FixedUpdate chain.
 
 ```
 NodeSystems::TrackCompletion

@@ -1,20 +1,20 @@
 ## Implementation Spec: Effect — Wave 5 Trigger Bridge Systems
 
 ### Domain
-`src/effect/triggers/`
+`src/effect_v3/triggers/`
 
 ### Failing Tests
-- `src/effect/triggers/bump/bridges.rs` (or `tests.rs` if split) — tests for all 10 bump bridge systems
-- `src/effect/triggers/impact/bridges.rs` (or `tests.rs`) — tests for 12 impact bridge systems (6 on_impacted + 6 on_impact_occurred)
-- `src/effect/triggers/death/bridges.rs` (or `tests.rs`) — tests for 4 monomorphized death bridge systems
-- `src/effect/triggers/bolt_lost/bridges.rs` (or `tests.rs`) — tests for on_bolt_lost_occurred
-- `src/effect/triggers/node/bridges.rs` (or `tests.rs`) — tests for on_node_start_occurred, on_node_end_occurred, on_node_timer_threshold_occurred
-- `src/effect/triggers/node/check_thresholds.rs` (or `tests.rs`) — tests for check_node_timer_thresholds game system
-- `src/effect/triggers/node/resources.rs` — tests for reset_node_timer_thresholds
-- `src/effect/triggers/time/bridges.rs` (or `tests.rs`) — tests for on_time_expires
-- `src/effect/triggers/time/tick_timers.rs` (or `tests.rs`) — tests for tick_effect_timers game system
-- `src/effect/conditions/track_combo_streak.rs` (or `tests.rs` if split) — tests for track_combo_streak
-- `src/effect/storage/watch_spawn_registry.rs` (or `tests.rs` if split) — tests for watch_spawn_registry
+- `src/effect_v3/triggers/bump/bridges.rs` (or `tests.rs` if split) — tests for all 10 bump bridge systems
+- `src/effect_v3/triggers/impact/bridges.rs` (or `tests.rs`) — tests for 12 impact bridge systems (6 on_impacted + 6 on_impact_occurred)
+- `src/effect_v3/triggers/death/bridges.rs` (or `tests.rs`) — tests for 4 monomorphized death bridge systems
+- `src/effect_v3/triggers/bolt_lost/bridges.rs` (or `tests.rs`) — tests for on_bolt_lost_occurred
+- `src/effect_v3/triggers/node/bridges.rs` (or `tests.rs`) — tests for on_node_start_occurred, on_node_end_occurred, on_node_timer_threshold_occurred
+- `src/effect_v3/triggers/node/check_thresholds.rs` (or `tests.rs`) — tests for check_node_timer_thresholds game system
+- `src/effect_v3/triggers/node/resources.rs` — tests for reset_node_timer_thresholds
+- `src/effect_v3/triggers/time/bridges.rs` (or `tests.rs`) — tests for on_time_expires
+- `src/effect_v3/triggers/time/tick_timers.rs` (or `tests.rs`) — tests for tick_effect_timers game system
+- `src/effect_v3/conditions/track_combo_streak.rs` (or `tests.rs` if split) — tests for track_combo_streak
+- `src/effect_v3/storage/watch_spawn_registry.rs` (or `tests.rs` if split) — tests for watch_spawn_registry
 
 Exact file paths will be determined by the test spec. The writer-code must find and satisfy all failing tests in these locations.
 
@@ -22,7 +22,7 @@ Exact file paths will be determined by the test spec. The writer-code must find 
 
 ### What to Implement
 
-#### Bump Bridge Systems (10 systems in `src/effect/triggers/bump/bridges.rs`)
+#### Bump Bridge Systems (10 systems in `src/effect_v3/triggers/bump/bridges.rs`)
 
 1. **`on_bumped`**: Local bridge. Reads `BumpPerformed` messages. For any successful grade (Perfect, Early, Late), builds `TriggerContext::Bump { bolt: msg.bolt, breaker: msg.breaker }`. If `msg.bolt` is `Some(bolt)`, queries bolt for `(&BoundEffects, &StagedEffects)` and calls `walk_effects(bolt, &Trigger::Bumped, &context, bound, staged, &mut commands)`. Then queries breaker and calls `walk_effects` on it.
 
@@ -44,7 +44,7 @@ Exact file paths will be determined by the test spec. The writer-code must find 
 
 10. **`on_no_bump_occurred`**: Global bridge. Reads `BoltImpactBreaker` messages. Filters `msg.bump_status == BumpStatus::Inactive`. Builds `TriggerContext::Bump { bolt: Some(msg.bolt), breaker: msg.breaker }`. Global walk with `Trigger::NoBumpOccurred`.
 
-#### Impact Bridge Systems (12 systems in `src/effect/triggers/impact/bridges.rs`)
+#### Impact Bridge Systems (12 systems in `src/effect_v3/triggers/impact/bridges.rs`)
 
 Six `on_impacted_*` systems (Local) and six `on_impact_occurred_*` systems (Global). One of each per collision message type.
 
@@ -72,7 +72,7 @@ Six `on_impacted_*` systems (Local) and six `on_impact_occurred_*` systems (Glob
 
 22. **`on_impact_occurred_cell_wall`**: Reads `CellImpactWall`. Context: `Impact { impactor: cell, impactee: wall }`. Sweep 1: `ImpactOccurred(Wall)`. Sweep 2: `ImpactOccurred(Cell)`.
 
-#### Death Bridge Systems (4 monomorphized in `src/effect/triggers/death/bridges.rs`)
+#### Death Bridge Systems (4 monomorphized in `src/effect_v3/triggers/death/bridges.rs`)
 
 A single generic system `on_destroyed<T: GameEntity>` monomorphized for Cell, Bolt, Wall, Breaker. Each reads `Destroyed<T>` messages (from previous frame via Bevy message persistence).
 
@@ -90,11 +90,11 @@ A single generic system `on_destroyed<T: GameEntity>` monomorphized for Cell, Bo
 
 **Killer classification helper**: A function (or inline match) that takes an `Entity` and a `&World` (or component queries) and returns `EntityKind` by checking which marker component (Bolt, Cell, Wall, Breaker) is present. Returns `EntityKind::Any` as fallback if none match (should not happen in practice, debug_assert against it).
 
-#### Bolt Lost Bridge System (1 system in `src/effect/triggers/bolt_lost/bridges.rs`)
+#### Bolt Lost Bridge System (1 system in `src/effect_v3/triggers/bolt_lost/bridges.rs`)
 
 27. **`on_bolt_lost_occurred`**: Global bridge. Reads `BoltLost { bolt, breaker }` message (note: migrated from unit struct to carry both entities). Builds `TriggerContext::BoltLost { bolt: msg.bolt, breaker: msg.breaker }`. Global walk all entities with `Trigger::BoltLostOccurred`.
 
-#### Node Bridge Systems (3 in `src/effect/triggers/node/bridges.rs`)
+#### Node Bridge Systems (3 in `src/effect_v3/triggers/node/bridges.rs`)
 
 28. **`on_node_start_occurred`**: Global bridge. Runs on `OnEnter(NodeState::Playing)` (NOT FixedUpdate). Walks all entities with BoundEffects/StagedEffects with `Trigger::NodeStartOccurred` and `TriggerContext::None`.
 
@@ -102,25 +102,25 @@ A single generic system `on_destroyed<T: GameEntity>` monomorphized for Cell, Bo
 
 30. **`on_node_timer_threshold_occurred`**: Global bridge. Reads `NodeTimerThresholdCrossed { ratio }` message. Walks all entities with `Trigger::NodeTimerThresholdOccurred(ratio)` and `TriggerContext::None`.
 
-#### Node Game System (1 in `src/effect/triggers/node/check_thresholds.rs`)
+#### Node Game System (1 in `src/effect_v3/triggers/node/check_thresholds.rs`)
 
 31. **`check_node_timer_thresholds`**: Game system (not a bridge). Reads `Res<NodeTimer>` (from `crate::state::run::node::resources::NodeTimer`) to compute the current node timer ratio as `(node_timer.total - node_timer.remaining) / node_timer.total`. Reads `ResMut<NodeTimerThresholdRegistry>` resource. For each threshold in `thresholds` where `ratio >= threshold` and threshold NOT in `fired`: sends `NodeTimerThresholdCrossed { ratio: threshold.into_inner() }` message and inserts threshold into `fired`. If `node_timer.total` is `0.0`, the system is a no-op (avoids division by zero).
 
-#### Node Reset System (1 in `src/effect/triggers/node/register.rs` or separate file)
+#### Node Reset System (1 in `src/effect_v3/triggers/node/register.rs` or separate file)
 
 32. **`reset_node_timer_thresholds`**: Runs on `OnEnter(NodeState::Playing)`. Clears `fired` set in `NodeTimerThresholdRegistry` by calling `registry.fired.clear()`. Does NOT clear `thresholds` — those persist across nodes since effect trees don't change mid-run.
 
-#### Time Bridge System (1 in `src/effect/triggers/time/bridges.rs`)
+#### Time Bridge System (1 in `src/effect_v3/triggers/time/bridges.rs`)
 
 33. **`on_time_expires`**: Self-scoped bridge. Reads `EffectTimerExpired { entity, original_duration }` message. Queries the referenced entity for `(&BoundEffects, &StagedEffects)`. Walks ONLY that entity with `Trigger::TimeExpires(msg.original_duration.into_inner())` and `TriggerContext::None`. The `original_duration` is read from the message, NOT from the entity's `EffectTimers` component. By the time this bridge runs (next frame, due to Bridge < Tick set ordering), `tick_effect_timers` has already removed the expired timer entry from `EffectTimers`.
 
 **Implementation note on TimeExpires duration**: The `EffectTimerExpired` message carries the `original_duration` so the bridge can construct `Trigger::TimeExpires(original_duration)`. Per the authoritative type doc (`docs/todos/detail/effect-refactor/rust-types/messages/effect-timer-expired.md`), the message definition is `EffectTimerExpired { entity: Entity, original_duration: OrderedFloat<f32> }`. The `tick_effect_timers` system includes the `original_duration` when sending.
 
-#### Time Game System (1 in `src/effect/triggers/time/tick_timers.rs`)
+#### Time Game System (1 in `src/effect_v3/triggers/time/tick_timers.rs`)
 
 34. **`tick_effect_timers`**: Game system (not a bridge). Queries all entities with `&mut EffectTimers`. For each entity, iterates `timers` vec. Decrements `remaining_seconds` by `time.delta_secs()` (from `Time<Fixed>`). If `remaining_seconds <= 0.0`: sends `EffectTimerExpired { entity, original_duration }` and marks the entry for removal. After iteration, removes all expired entries. If `timers` vec is now empty, removes the `EffectTimers` component from the entity.
 
-#### Combo Streak Tracker (1 system, likely in `src/effect/conditions/`)
+#### Combo Streak Tracker (1 system, likely in `src/effect_v3/conditions/`)
 
 35. **`track_combo_streak`**: Game system. Reads `BumpPerformed` and `BumpWhiffed` messages. Also reads `BoltImpactBreaker` where `bump_status == BumpStatus::Inactive` for NoBump resets.
     - On `BumpPerformed` with `BumpGrade::Perfect`: increment `ComboStreak.count`.
@@ -130,7 +130,7 @@ A single generic system `on_destroyed<T: GameEntity>` monomorphized for Cell, Bo
     - Does NOT persist across runs. Resource is `Default` initialized.
     - DOES persist across nodes within a run.
 
-#### Spawn Stamp Registry Watcher (1 system, likely in `src/effect/storage/`)
+#### Spawn Stamp Registry Watcher (1 system, likely in `src/effect_v3/storage/`)
 
 36. **`watch_spawn_registry`**: Game system. Queries for entities with `Added<Bolt>`, `Added<Cell>`, `Added<Wall>`, `Added<Breaker>` (newly spawned this frame). Reads `SpawnStampRegistry` resource. For each newly spawned entity, determines its `EntityKind` by checking which marker component it has. For each matching entry `(source, entity_kind, tree)` in the registry where `entity_kind` matches, clones the tree and calls `commands.stamp_effect(entity, source.clone(), tree.clone())`.
 
@@ -151,9 +151,9 @@ None. No RON data changes needed for trigger bridges. All tunable values are in 
 
 ### Schedule
 
-#### FixedUpdate — EffectSystems::Bridge
+#### FixedUpdate — EffectV3Systems::Bridge
 
-All of the following run in `FixedUpdate` within `EffectSystems::Bridge`, with `run_if(in_state(NodeState::Playing))`:
+All of the following run in `FixedUpdate` within `EffectV3Systems::Bridge`, with `run_if(in_state(NodeState::Playing))`:
 
 | System | After | Notes |
 |--------|-------|-------|
@@ -189,16 +189,16 @@ All of the following run in `FixedUpdate` within `EffectSystems::Bridge`, with `
 | `track_combo_streak` | `BreakerSystems::GradeBump` | Reads BumpPerformed, BumpWhiffed, BoltImpactBreaker |
 | `watch_spawn_registry` | (after entity spawning systems) | Reads Added<T> |
 
-#### FixedUpdate — EffectSystems::Tick
+#### FixedUpdate — EffectV3Systems::Tick
 
 | System | After | Notes |
 |--------|-------|-------|
 | `tick_effect_timers` | (none within set) | Produces EffectTimerExpired messages |
 | `check_node_timer_thresholds` | (after node timer tick) | Produces NodeTimerThresholdCrossed messages |
 
-**Important**: `tick_effect_timers` and `check_node_timer_thresholds` live in `EffectSystems::Tick` (which runs AFTER `EffectSystems::Bridge` by set ordering). Their messages are consumed by bridges `on_time_expires` and `on_node_timer_threshold_occurred` in the NEXT frame via standard Bevy message persistence. This one-frame delay is by design. Do NOT add `.after(tick_effect_timers)` or `.after(check_node_timer_thresholds)` to the bridge registrations — the set ordering already enforces Bridge < Tick, and the bridges intentionally read previous-frame messages.
+**Important**: `tick_effect_timers` and `check_node_timer_thresholds` live in `EffectV3Systems::Tick` (which runs AFTER `EffectV3Systems::Bridge` by set ordering). Their messages are consumed by bridges `on_time_expires` and `on_node_timer_threshold_occurred` in the NEXT frame via standard Bevy message persistence. This one-frame delay is by design. Do NOT add `.after(tick_effect_timers)` or `.after(check_node_timer_thresholds)` to the bridge registrations — the set ordering already enforces Bridge < Tick, and the bridges intentionally read previous-frame messages.
 
-#### OnEnter/OnExit — EffectSystems::Reset
+#### OnEnter/OnExit — EffectV3Systems::Reset
 
 | System | Schedule | Notes |
 |--------|----------|-------|
@@ -210,7 +210,7 @@ All of the following run in `FixedUpdate` within `EffectSystems::Bridge`, with `
 
 ### Resources to Initialize
 
-These resources are initialized by `EffectPlugin::build`:
+These resources are initialized by `EffectV3Plugin::build`:
 - `SpawnStampRegistry` — `Default` (empty Vec)
 - `ComboStreak` — `Default` (count: 0)
 - `NodeTimerThresholdRegistry` — `Default` (empty thresholds Vec, empty fired HashSet)
@@ -219,9 +219,9 @@ These resources are initialized by `EffectPlugin::build`:
 
 ### Components Used (already defined in Wave 2)
 
-- `BoundEffects` — `src/effect/storage/bound_effects.rs`
-- `StagedEffects` — `src/effect/storage/staged_effects.rs`
-- `EffectTimers` — `src/effect/triggers/time/components.rs`
+- `BoundEffects` — `src/effect_v3/storage/bound_effects.rs`
+- `StagedEffects` — `src/effect_v3/storage/staged_effects.rs`
+- `EffectTimers` — `src/effect_v3/triggers/time/components.rs`
 
 ---
 
@@ -247,7 +247,7 @@ These resources are initialized by `EffectPlugin::build`:
 
 ### Register Functions
 
-Each trigger category has a `register(app: &mut App)` function in its `register.rs` file. The writer-code must implement these. `EffectPlugin::build` calls each one.
+Each trigger category has a `register(app: &mut App)` function in its `register.rs` file. The writer-code must implement these. `EffectV3Plugin::build` calls each one.
 
 **`triggers::bump::register(app)`** — registers all 10 bump bridges:
 ```
@@ -263,7 +263,7 @@ app.add_systems(FixedUpdate, (
     on_late_bump_occurred,
     on_bump_whiff_occurred,
 )
-    .in_set(EffectSystems::Bridge)
+    .in_set(EffectV3Systems::Bridge)
     .after(BreakerSystems::GradeBump)
     .run_if(in_state(NodeState::Playing))
 );
@@ -273,7 +273,7 @@ app.add_systems(FixedUpdate, (
 // filters on BumpStatus (set by BreakerSystems::GradeBump)
 app.add_systems(FixedUpdate,
     on_no_bump_occurred
-        .in_set(EffectSystems::Bridge)
+        .in_set(EffectV3Systems::Bridge)
         .after(BreakerSystems::GradeBump)
         .after(BoltSystems::BreakerCollision)
         .run_if(in_state(NodeState::Playing))
@@ -296,7 +296,7 @@ app.add_systems(FixedUpdate, (
     on_impact_occurred_breaker_wall,
     on_impact_occurred_cell_wall,
 )
-    .in_set(EffectSystems::Bridge)
+    .in_set(EffectV3Systems::Bridge)
     .run_if(in_state(NodeState::Playing))
 );
 // Per-system after constraints for bolt collision bridges
@@ -310,7 +310,7 @@ app.add_systems(FixedUpdate, (
     on_destroyed::<Wall>,
     on_destroyed::<Breaker>,
 )
-    .in_set(EffectSystems::Bridge)
+    .in_set(EffectV3Systems::Bridge)
     .run_if(in_state(NodeState::Playing))
 );
 ```
@@ -319,7 +319,7 @@ app.add_systems(FixedUpdate, (
 ```
 app.add_systems(FixedUpdate,
     on_bolt_lost_occurred
-        .in_set(EffectSystems::Bridge)
+        .in_set(EffectV3Systems::Bridge)
         .after(BoltSystems::BoltLost)
         .run_if(in_state(NodeState::Playing))
 );
@@ -330,19 +330,19 @@ app.add_systems(FixedUpdate,
 // Bridges
 app.add_systems(OnEnter(NodeState::Playing), on_node_start_occurred);
 app.add_systems(OnExit(NodeState::Playing), on_node_end_occurred);
-// No .after(check_node_timer_thresholds) needed. Bridge runs in EffectSystems::Bridge
-// which is ordered before EffectSystems::Tick by set ordering. The one-frame delay
+// No .after(check_node_timer_thresholds) needed. Bridge runs in EffectV3Systems::Bridge
+// which is ordered before EffectV3Systems::Tick by set ordering. The one-frame delay
 // (Tick sends NodeTimerThresholdCrossed this frame, Bridge reads it next frame) is intentional.
 app.add_systems(FixedUpdate,
     on_node_timer_threshold_occurred
-        .in_set(EffectSystems::Bridge)
+        .in_set(EffectV3Systems::Bridge)
         .run_if(in_state(NodeState::Playing))
 );
 
 // Game system
 app.add_systems(FixedUpdate,
     check_node_timer_thresholds
-        .in_set(EffectSystems::Tick)
+        .in_set(EffectV3Systems::Tick)
         .run_if(in_state(NodeState::Playing))
 );
 
@@ -358,19 +358,19 @@ app.add_message::<NodeTimerThresholdCrossed>();
 
 **`triggers::time::register(app)`** — registers time bridge, game system, component, message:
 ```
-// Bridge — no .after(tick_effect_timers) needed. Bridge runs in EffectSystems::Bridge
-// which is ordered before EffectSystems::Tick by set ordering. The one-frame delay
+// Bridge — no .after(tick_effect_timers) needed. Bridge runs in EffectV3Systems::Bridge
+// which is ordered before EffectV3Systems::Tick by set ordering. The one-frame delay
 // (Tick sends EffectTimerExpired this frame, Bridge reads it next frame) is intentional.
 app.add_systems(FixedUpdate,
     on_time_expires
-        .in_set(EffectSystems::Bridge)
+        .in_set(EffectV3Systems::Bridge)
         .run_if(in_state(NodeState::Playing))
 );
 
 // Game system
 app.add_systems(FixedUpdate,
     tick_effect_timers
-        .in_set(EffectSystems::Tick)
+        .in_set(EffectV3Systems::Tick)
         .run_if(in_state(NodeState::Playing))
 );
 
@@ -378,12 +378,12 @@ app.add_systems(FixedUpdate,
 app.add_message::<EffectTimerExpired>();
 ```
 
-**Additional registrations in EffectPlugin::build (not in trigger register functions):**
+**Additional registrations in EffectV3Plugin::build (not in trigger register functions):**
 ```
 // Combo streak tracker
 app.add_systems(FixedUpdate,
     track_combo_streak
-        .in_set(EffectSystems::Bridge)
+        .in_set(EffectV3Systems::Bridge)
         .after(BreakerSystems::GradeBump)
         .run_if(in_state(NodeState::Playing))
 );
@@ -391,7 +391,7 @@ app.add_systems(FixedUpdate,
 // Spawn stamp watcher
 app.add_systems(FixedUpdate,
     watch_spawn_registry
-        .in_set(EffectSystems::Bridge)
+        .in_set(EffectV3Systems::Bridge)
         .run_if(in_state(NodeState::Playing))
 );
 
@@ -406,22 +406,22 @@ app.init_resource::<ComboStreak>();
 
 The writer-code must update the following wiring files:
 
-1. **`src/effect/triggers/bump/mod.rs`**: `pub(crate) mod bridges; pub(crate) mod register;` and re-exports.
-2. **`src/effect/triggers/bump/register.rs`**: `pub(crate) fn register(app: &mut App)` that registers all 10 bump bridges.
-3. **`src/effect/triggers/impact/mod.rs`**: `pub(crate) mod bridges; pub(crate) mod register;` and re-exports.
-4. **`src/effect/triggers/impact/register.rs`**: `pub(crate) fn register(app: &mut App)` that registers all 12 impact bridges.
-5. **`src/effect/triggers/death/mod.rs`**: `pub(crate) mod bridges; pub(crate) mod register;` and re-exports.
-6. **`src/effect/triggers/death/register.rs`**: `pub(crate) fn register(app: &mut App)` that registers all 4 death bridges.
-7. **`src/effect/triggers/bolt_lost/mod.rs`**: `pub(crate) mod bridges; pub(crate) mod register;` and re-exports.
-8. **`src/effect/triggers/bolt_lost/register.rs`**: `pub(crate) fn register(app: &mut App)`.
-9. **`src/effect/triggers/node/mod.rs`**: `pub(crate) mod bridges; pub(crate) mod register; pub(crate) mod check_thresholds; pub(crate) mod resources; pub(crate) mod messages;` and re-exports.
-10. **`src/effect/triggers/node/register.rs`**: `pub(crate) fn register(app: &mut App)` that registers node bridges, check_thresholds, reset, resource, message.
-11. **`src/effect/triggers/time/mod.rs`**: `pub(crate) mod bridges; pub(crate) mod register; pub(crate) mod tick_timers; pub(crate) mod components; pub(crate) mod messages;` and re-exports.
-12. **`src/effect/triggers/time/register.rs`**: `pub(crate) fn register(app: &mut App)` that registers time bridge, tick_timers, component, message.
-13. **`src/effect/triggers/mod.rs`**: `pub(crate) mod bump; pub(crate) mod impact; pub(crate) mod death; pub(crate) mod bolt_lost; pub(crate) mod node; pub(crate) mod time;` and re-exports.
-14. **`src/effect/plugin.rs`**: Ensure `EffectPlugin::build` calls all trigger `register` functions, registers `track_combo_streak`, `watch_spawn_registry`, and initializes `SpawnStampRegistry`, `ComboStreak`.
-15. **`src/effect/conditions/mod.rs`**: Add `pub(crate) mod track_combo_streak;` (new system file for combo tracking).
-16. **`src/effect/storage/mod.rs`**: Add `pub(crate) mod watch_spawn_registry;` (new system file for spawn watching).
+1. **`src/effect_v3/triggers/bump/mod.rs`**: `pub(crate) mod bridges; pub(crate) mod register;` and re-exports.
+2. **`src/effect_v3/triggers/bump/register.rs`**: `pub(crate) fn register(app: &mut App)` that registers all 10 bump bridges.
+3. **`src/effect_v3/triggers/impact/mod.rs`**: `pub(crate) mod bridges; pub(crate) mod register;` and re-exports.
+4. **`src/effect_v3/triggers/impact/register.rs`**: `pub(crate) fn register(app: &mut App)` that registers all 12 impact bridges.
+5. **`src/effect_v3/triggers/death/mod.rs`**: `pub(crate) mod bridges; pub(crate) mod register;` and re-exports.
+6. **`src/effect_v3/triggers/death/register.rs`**: `pub(crate) fn register(app: &mut App)` that registers all 4 death bridges.
+7. **`src/effect_v3/triggers/bolt_lost/mod.rs`**: `pub(crate) mod bridges; pub(crate) mod register;` and re-exports.
+8. **`src/effect_v3/triggers/bolt_lost/register.rs`**: `pub(crate) fn register(app: &mut App)`.
+9. **`src/effect_v3/triggers/node/mod.rs`**: `pub(crate) mod bridges; pub(crate) mod register; pub(crate) mod check_thresholds; pub(crate) mod resources; pub(crate) mod messages;` and re-exports.
+10. **`src/effect_v3/triggers/node/register.rs`**: `pub(crate) fn register(app: &mut App)` that registers node bridges, check_thresholds, reset, resource, message.
+11. **`src/effect_v3/triggers/time/mod.rs`**: `pub(crate) mod bridges; pub(crate) mod register; pub(crate) mod tick_timers; pub(crate) mod components; pub(crate) mod messages;` and re-exports.
+12. **`src/effect_v3/triggers/time/register.rs`**: `pub(crate) fn register(app: &mut App)` that registers time bridge, tick_timers, component, message.
+13. **`src/effect_v3/triggers/mod.rs`**: `pub(crate) mod bump; pub(crate) mod impact; pub(crate) mod death; pub(crate) mod bolt_lost; pub(crate) mod node; pub(crate) mod time;` and re-exports.
+14. **`src/effect_v3/plugin.rs`**: Ensure `EffectV3Plugin::build` calls all trigger `register` functions, registers `track_combo_streak`, `watch_spawn_registry`, and initializes `SpawnStampRegistry`, `ComboStreak`.
+15. **`src/effect_v3/conditions/mod.rs`**: Add `pub(crate) mod track_combo_streak;` (new system file for combo tracking).
+16. **`src/effect_v3/storage/mod.rs`**: Add `pub(crate) mod watch_spawn_registry;` (new system file for spawn watching).
 
 Note: Trigger module files should already have stubs from Wave 2. The conditions and storage modules may need new file creation if Wave 2 only stubbed empty directories.
 
@@ -442,9 +442,9 @@ Wave 5 depends on the following types being present as at least stubs from wave 
 - `Hp`, `KilledBy`, `Dead`, `DamageDealt`, `KillYourself`, `DespawnEntity` — other death pipeline types (not directly consumed by wave 5 bridges but must exist for compilation)
 
 **Effect storage types:**
-- `BoundEffects` component — `src/effect/storage/bound_effects.rs`
-- `StagedEffects` component — `src/effect/storage/staged_effects.rs`
-- `EffectTimers` component — `src/effect/triggers/time/components.rs`
+- `BoundEffects` component — `src/effect_v3/storage/bound_effects.rs`
+- `StagedEffects` component — `src/effect_v3/storage/staged_effects.rs`
+- `EffectTimers` component — `src/effect_v3/triggers/time/components.rs`
 
 **Trigger and context types:**
 - `Trigger` enum with all variants listed in this spec
@@ -465,16 +465,16 @@ Wave 5 depends on the following types being present as at least stubs from wave 
 ### Constraints
 
 - **Do NOT modify**: Test files. The writer-code must not change any test the test-writer produced.
-- **Do NOT modify**: `src/effect/types/` — all type definitions were created in Wave 2.
-- **Do NOT modify**: `src/effect/walking/` — the walking algorithm was implemented in Wave 4.
-- **Do NOT modify**: `src/effect/commands/` — command extensions were implemented in Wave 4.
-- **Do NOT modify**: `src/effect/dispatch/` — fire/reverse dispatch was implemented in Wave 4.
-- **Do NOT modify**: `src/effect/effects/` — effect implementations are Wave 6, not this wave.
-- **Do NOT modify**: `src/effect/conditions/evaluate_conditions.rs` — condition evaluation is a separate system, not part of this wave (except `track_combo_streak` which updates `ComboStreak`).
+- **Do NOT modify**: `src/effect_v3/types/` — all type definitions were created in Wave 2.
+- **Do NOT modify**: `src/effect_v3/walking/` — the walking algorithm was implemented in Wave 4.
+- **Do NOT modify**: `src/effect_v3/commands/` — command extensions were implemented in Wave 4.
+- **Do NOT modify**: `src/effect_v3/dispatch/` — fire/reverse dispatch was implemented in Wave 4.
+- **Do NOT modify**: `src/effect_v3/effects/` — effect implementations are Wave 6, not this wave.
+- **Do NOT modify**: `src/effect_v3/conditions/evaluate_conditions.rs` — condition evaluation is a separate system, not part of this wave (except `track_combo_streak` which updates `ComboStreak`).
 - **Do NOT modify**: `src/bolt/`, `src/breaker/`, `src/cells/`, `src/shared/` — domain code is off-limits. Bridges read messages from other domains but never modify them.
 - **Do NOT add**: Effect firing or reversing logic. Bridges call `walk_effects`, which calls command extensions. The walker handles all tree evaluation.
 - **Do NOT add**: Game logic in bridges. No damage calculation, no entity modification, no state changes. Bridges are pure translators.
-- **Do NOT add**: Tick systems for spawned effect entities (shockwave, chain_lightning, etc.). Those are in EffectSystems::Tick and belong to Wave 6.
+- **Do NOT add**: Tick systems for spawned effect entities (shockwave, chain_lightning, etc.). Those are in EffectV3Systems::Tick and belong to Wave 6.
 
 ---
 
@@ -493,7 +493,7 @@ Wave 5 depends on the following types being present as at least stubs from wave 
 
 5. **Entity safety**: Entities are never despawned during FixedUpdate. The death pipeline defers despawn to PostFixedUpdate via `process_despawn_requests`. The walker and bridges can safely iterate all entries without checking entity validity mid-walk.
 
-6. **All bridges within EffectSystems::Bridge can run in parallel**: They read different messages and write only through deferred commands. No shared mutable state.
+6. **All bridges within EffectV3Systems::Bridge can run in parallel**: They read different messages and write only through deferred commands. No shared mutable state.
 
 7. **ComboStreak updates from multiple message sources**: `track_combo_streak` must read three separate message types: `BumpPerformed`, `BumpWhiffed`, and `BoltImpactBreaker` (for NoBump detection). This requires three `MessageReader` parameters.
 

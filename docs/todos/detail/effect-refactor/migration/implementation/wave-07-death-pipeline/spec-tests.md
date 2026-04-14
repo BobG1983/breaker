@@ -9,7 +9,7 @@ This wave assumes all types and systems from waves 2-6 already exist:
 - **Wave 2 (Scaffold)**: All death pipeline types are created as stubs — `GameEntity` trait, `Hp`, `KilledBy`, `Dead`, `Locked`, `DamageDealt<T>`, `KillYourself<T>`, `DespawnEntity`, `Destroyed<T>`, `DamageTargetData`, `DeathDetectionData`, `DeathPipelineSystems` system set enum. Entity marker components (`Bolt`, `Cell`, `Wall`, `Breaker`) already exist from the original codebase. Plugin wiring stubs for `DeathPipelinePlugin` are in place.
 - **Wave 3 (RON Assets)**: RON asset migration complete. No direct dependency for this wave but the build must compile.
 - **Wave 4 (Functions)**: `EffectStack`, walking algorithm, dispatch, command extensions, passive effects — all implemented and tested.
-- **Wave 5 (Triggers)**: All trigger bridge systems implemented and tested. `EffectSystems::Tick` system set exists and is configured.
+- **Wave 5 (Triggers)**: All trigger bridge systems implemented and tested. `EffectV3Systems::Tick` system set exists and is configured.
 - **Wave 6 (Effects)**: All 30 effects implemented and tested. Tick systems and condition evaluators operational. Effects that send `DamageDealt<T>` messages (shockwave, explode, pulse, chain_lightning, piercing_beam, tether_beam) are operational — though their messages are not yet consumed until this wave implements `apply_damage`.
 
 All types listed in the Types section below were created in wave 2. This wave implements the **systems** that use them, not the types themselves.

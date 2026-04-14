@@ -43,7 +43,7 @@ Test count: approximately 15 tests covering kill handler behavior, builder Hp/Ki
 - **Types used**: `Hp` (from shared components), `KilledBy` (from shared components). Remove import of `LivesCount` from `crate::effect::effects::life_lost::LivesCount`.
 
 #### 3. LoseLife effect: update fire() to send DamageDealt\<Breaker\>
-- **Location**: `breaker-game/src/effect/effects/life_lost.rs`
+- **Location**: `breaker-game/src/effect_v3/effects/life_lost.rs`
 - **Behavior**: Instead of directly mutating `LivesCount`, the `fire()` function should send `DamageDealt<Breaker> { dealer: None, target: entity, amount: 1.0, source_chip }`. The `reverse()` function needs corresponding update (send a healing message or directly increment Hp — design decision deferred to implementation, but the simplest approach is to directly increment Hp.current by 1.0 in reverse since there is no "HealDealt" message).
 - **Remove**: Direct mutation of `LivesCount` and direct `RunLost` write from fire(). The death pipeline handles the RunLost transition now.
 - **Note**: The `LivesCount` component type itself may remain in this file temporarily if other code references it, or it may be removed entirely if wave 12 is the only consumer. The writer-code should check for remaining references.
@@ -97,11 +97,11 @@ Existing breaker RON values:
 
 #### Frame ordering context
 ```
-EffectSystems::Bridge (LoseLife fires, sends DamageDealt<Breaker>)
+EffectV3Systems::Bridge (LoseLife fires, sends DamageDealt<Breaker>)
     |
-EffectSystems::Tick
+EffectV3Systems::Tick
     |
-EffectSystems::Conditions
+EffectV3Systems::Conditions
     |
 DeathPipelineSystems::ApplyDamage (apply_damage::<Breaker> decrements Hp)
     |
@@ -109,10 +109,10 @@ DeathPipelineSystems::DetectDeaths (detect_breaker_deaths sends KillYourself<Bre
     |
 handle_breaker_kill (inserts Dead, sends Destroyed<Breaker> + RunLost)
     |
-EffectSystems::Bridge (on_destroyed::<Breaker> dispatches Died/Killed/DeathOccurred)
+EffectV3Systems::Bridge (on_destroyed::<Breaker> dispatches Died/Killed/DeathOccurred)
 ```
 
-Note: The `handle_breaker_kill` must run AFTER `DetectDeaths` but BEFORE the death bridges in `EffectSystems::Bridge` that consume `Destroyed<Breaker>`. Since `EffectSystems::Bridge` runs before `DeathPipelineSystems::ApplyDamage`, the `Destroyed<Breaker>` message sent this frame will be consumed by the death bridge next frame. This one-frame delay is by design and consistent with the cascade damage model described in `system-set-ordering.md`.
+Note: The `handle_breaker_kill` must run AFTER `DetectDeaths` but BEFORE the death bridges in `EffectV3Systems::Bridge` that consume `Destroyed<Breaker>`. Since `EffectV3Systems::Bridge` runs before `DeathPipelineSystems::ApplyDamage`, the `Destroyed<Breaker>` message sent this frame will be consumed by the death bridge next frame. This one-frame delay is by design and consistent with the cascade damage model described in `system-set-ordering.md`.
 
 ### Wiring Requirements
 
@@ -135,8 +135,8 @@ Note: The `handle_breaker_kill` must run AFTER `DetectDeaths` but BEFORE the dea
   - When `LivesSetting::Unset` or `LivesSetting::Infinite`: do NOT include `Hp` or `KilledBy`
 - Note: Since Bevy bundles are static tuples, conditional component insertion requires either using `Commands` after spawn or restructuring the bundle. The writer-code should use the same approach as the existing `lives` variable (lines 89-93) and spawn the optional components conditionally via a separate `commands.entity(id).insert(...)` call after the main spawn.
 
-#### `breaker-game/src/effect/effects/life_lost.rs`
-- **File to modify**: `breaker-game/src/effect/effects/life_lost.rs`
+#### `breaker-game/src/effect_v3/effects/life_lost.rs`
+- **File to modify**: `breaker-game/src/effect_v3/effects/life_lost.rs`
 - Update `fire()` to send `DamageDealt<Breaker>` instead of directly mutating `LivesCount`
 - Update `reverse()` to directly increment `Hp.current` by 1.0 (or send a reverse damage message if one exists)
 - Remove direct `RunLost` write from `fire()` — the death pipeline handles this now

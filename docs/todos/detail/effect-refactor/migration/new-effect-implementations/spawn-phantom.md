@@ -24,7 +24,7 @@ SpawnPhantom
 Not reversible.
 
 # Source Location
-`src/effect/effects/phantom_bolt/config.rs`
+`src/effect_v3/effects/phantom_bolt/config.rs`
 
 # New Types
 - `PhantomBolt` -- marker component identifying phantom bolt entities
@@ -36,4 +36,4 @@ Not reversible.
 ## tick_phantom_lifetime
 - **What it does**: For each entity with `PhantomBolt`, decrement `PhantomLifetime` by `dt`. If `PhantomLifetime <= 0.0`, despawn the entity.
 - **What it does NOT do**: Does not spawn phantoms. Does not cap active phantom count (fire does that).
-- **Schedule**: FixedUpdate, in `EffectSystems::Tick`, with `run_if(in_state(NodeState::Playing))`.
+- **Schedule**: FixedUpdate, in `EffectV3Systems::Tick`, with `run_if(in_state(NodeState::Playing))`.

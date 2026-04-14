@@ -15,7 +15,7 @@ N/A (game system).
 N/A (game system).
 
 # Source Location
-`src/effect/triggers/time/tick_timers.rs`
+`src/effect_v3/triggers/time/tick_timers.rs`
 
 # Schedule
 FixedUpdate.

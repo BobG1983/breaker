@@ -33,7 +33,7 @@ pub struct ShockwaveDamageMultiplier(pub f32);
 ```
 
 # Location
-`src/effect/effects/shockwave/`
+`src/effect_v3/effects/shockwave/`
 
 # Description
 These components form the shockwave effect entity bundle. A shockwave is a radially expanding area-of-effect that damages cells it reaches.

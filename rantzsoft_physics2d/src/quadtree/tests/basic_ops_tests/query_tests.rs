@@ -142,10 +142,6 @@ fn query_circle_excludes_aabb_outside_radius_at_corner() {
 }
 
 #[test]
-#[expect(
-    clippy::cast_precision_loss,
-    reason = "test loop index is always small"
-)]
 fn clear_empties_the_tree() {
     let mut tree = test_tree();
     let entities = spawn_entities(5);

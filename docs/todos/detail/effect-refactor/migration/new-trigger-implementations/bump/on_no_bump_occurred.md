@@ -14,10 +14,10 @@ Global — walks all entities with `BoundEffects`/`StagedEffects`.
 `TriggerContext::Bump { bolt: msg.bolt, breaker: msg.breaker }` — populated with bolt and breaker from the collision message.
 
 # Source Location
-`src/effect/triggers/bump/bridges.rs`
+`src/effect_v3/triggers/bump/bridges.rs`
 
 # Schedule
-FixedUpdate, in `EffectSystems::Bridge`, after `BoltSystems::BreakerCollision`, with `run_if(in_state(NodeState::Playing))`
+FixedUpdate, in `EffectV3Systems::Bridge`, after `BoltSystems::BreakerCollision`, with `run_if(in_state(NodeState::Playing))`
 
 # Behavior
 1. Read each `BoltImpactBreaker` message.

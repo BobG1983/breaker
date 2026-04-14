@@ -25,7 +25,7 @@ Note: aggregation is additive (sum of charges), not multiplicative.
 5. Reverse does NOT handle collision piercing logic -- that is bolt_cell_collision's job.
 
 # Source Location
-`src/effect/effects/piercing/config.rs`
+`src/effect_v3/effects/piercing/config.rs`
 
 # New Types
 - `PiercingRemaining(u32)` -- component that tracks remaining piercing charges consumed during gameplay. Reset at node start.

@@ -14,5 +14,5 @@ struct ChainLightningConfig {
 # Description
 - arcs: Number of times the lightning jumps between cells
 - range: Maximum distance each arc can jump to find a new target
-- damage_mult: Multiplier applied to base damage for each arc hit
+- damage_mult: Snapshot multiplier. Computed once at fire time as `source BoltBaseDamage * damage_mult * DamageBoost.aggregate()`. This snapshot value is stored on the spawned chain lightning entity and applied uniformly to every arc hit from this emission — it does not re-read passive stacks at tick time.
 - arc_speed: How fast each lightning arc travels between cells in world units per second

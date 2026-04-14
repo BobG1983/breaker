@@ -28,7 +28,7 @@ Shockwave
 Not reversible.
 
 # Source Location
-`src/effect/effects/shockwave/config.rs`
+`src/effect_v3/effects/shockwave/config.rs`
 
 # New Types
 - `ShockwaveSource` -- marker component identifying shockwave entities
@@ -45,19 +45,19 @@ Not reversible.
 ## tick_shockwave
 - **What it does**: For each entity with `ShockwaveSource`, increase `ShockwaveRadius` by `ShockwaveSpeed * dt`.
 - **What it does NOT do**: Does not deal damage. Does not despawn shockwaves. Does not check cells.
-- **Schedule**: FixedUpdate, in `EffectSystems::Tick`, with `run_if(in_state(NodeState::Playing))`.
+- **Schedule**: FixedUpdate, in `EffectV3Systems::Tick`, with `run_if(in_state(NodeState::Playing))`.
 
 ## sync_shockwave_visual
 - **What it does**: For each entity with `ShockwaveSource`, set `Scale2D` to match the current `ShockwaveRadius`.
 - **What it does NOT do**: Does not modify `ShockwaveRadius`. Does not deal damage.
-- **Schedule**: FixedUpdate, in `EffectSystems::Tick`, chained after `tick_shockwave`, with `run_if(in_state(NodeState::Playing))`.
+- **Schedule**: FixedUpdate, in `EffectV3Systems::Tick`, chained after `tick_shockwave`, with `run_if(in_state(NodeState::Playing))`.
 
 ## apply_shockwave_damage
 - **What it does**: For each entity with `ShockwaveSource`, query the quadtree for cells within `ShockwaveRadius`. For each cell not already in `ShockwaveDamaged`, send `DamageDealt<Cell>` with `ShockwaveBaseDamage * ShockwaveDamageMultiplier` and add the cell to the `ShockwaveDamaged` set.
 - **What it does NOT do**: Does not deal damage directly -- sends the message. Does not modify `ShockwaveRadius`.
-- **Schedule**: FixedUpdate, in `EffectSystems::Tick`, chained after `sync_shockwave_visual`, with `run_if(in_state(NodeState::Playing))`.
+- **Schedule**: FixedUpdate, in `EffectV3Systems::Tick`, chained after `sync_shockwave_visual`, with `run_if(in_state(NodeState::Playing))`.
 
 ## despawn_finished_shockwave
 - **What it does**: For each entity with `ShockwaveSource`, if `ShockwaveRadius >= ShockwaveMaxRadius`, despawn the entity.
 - **What it does NOT do**: Does not deal damage. Does not modify radius.
-- **Schedule**: FixedUpdate, in `EffectSystems::Tick`, chained after `apply_shockwave_damage`, with `run_if(in_state(NodeState::Playing))`.
+- **Schedule**: FixedUpdate, in `EffectV3Systems::Tick`, chained after `apply_shockwave_damage`, with `run_if(in_state(NodeState::Playing))`.

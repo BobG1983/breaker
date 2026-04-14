@@ -16,7 +16,12 @@ bump-gated, not frame-gated. At current scale (1–2 counter entities), the Vec 
 pool on every call. `EffectType` contains configs with `OrderedFloat` fields — clone is cheap
 (no heap allocation unless the effect is `ChainLightning` which contains a `Vec` in its config).
 
-**fire_dispatch inside inner loop:** Called up to `max_effects * bump_count` times per entity
-per frame. At max_effects=5 and 1 bump, that's 5 `fire_dispatch` calls. Each call does a
-`world.get_mut` or `world.spawn` (for shockwave effects). This is the real cost driver for
-EntropyEngine at high escalation — not the Vec alloc.
+**fire_dispatch inside inner loop (circuit_breaker now fires TWO effects):** Wave 5 updated
+`tick_circuit_breaker` to call `fire_dispatch` twice per counter-zero-reach (shockwave + spawn_bolts).
+SpawnBoltsConfig::fire allocates a `Vec<f32>` of random angles (one entry per bolt spawned),
+gated by `count > 0` early-exit. Both `fire_dispatch` calls are event-driven (only when
+counter hits zero), not per-frame. At current scale (1 circuit breaker chip, typical
+bumps_required=3–5), this fires rarely and the double dispatch is negligible.
+
+**GameRng access in SpawnBoltsConfig::fire:** Takes `world.resource_mut::<GameRng>()` inside
+the exclusive system body — no parallelism conflict since exclusive systems own the World.

@@ -4,14 +4,14 @@ Component types used by the effect system. Each file documents the Rust struct, 
 
 ## Shared Components
 
-These live in `src/effect/components/` and are used across multiple effects.
+These live in `src/effect_v3/components/` and are used across multiple effects.
 
 - [effect-source-chip.md](effect-source-chip.md) -- `EffectSourceChip`: damage attribution to originating chip
 - [effect-timers.md](effect-timers.md) -- `EffectTimers`: countdown timers for time-limited effects
 
 ## Per-Effect Components
 
-Each effect owns its components in its own module under `src/effect/effects/<name>/`.
+Each effect owns its components in its own module under `src/effect_v3/effects/<name>/`.
 
 - [shockwave.md](shockwave.md) -- `ShockwaveSource`, `ShockwaveRadius`, `ShockwaveMaxRadius`, `ShockwaveSpeed`, `ShockwaveDamaged`, `ShockwaveBaseDamage`, `ShockwaveDamageMultiplier`
 - [chain-lightning.md](chain-lightning.md) -- `ChainLightningChain`, `ChainState`

@@ -44,3 +44,21 @@ The trigger context carries the entities involved in the event so that On nodes 
 ## Multiple Triggers from One Event
 
 A single game event may produce multiple triggers. A perfect bump produces both PerfectBumped (Local) and PerfectBumpOccurred (Global). A cell death produces Died (Local, on victim), Killed(Cell) (Local, on killer), and DeathOccurred(Cell) (Global). Each trigger is dispatched independently.
+
+## `reverse_all_by_source_dispatch`
+
+A free function in `src/effect_v3/dispatch/reverse_dispatch.rs` that mirrors the trigger dispatch but for bulk reversal. Signature:
+
+```rust
+pub fn reverse_all_by_source_dispatch(
+    effect_type: &ReversibleEffectType,
+    entity: Entity,
+    source: &str,
+    world: &mut World,
+)
+```
+
+Routes to `reverse_all_by_source()` on each `ReversibleEffectType` variant. Called in two places:
+
+1. **Shape C/D disarm** — when `evaluate_conditions` detects an outer `During` condition has become false and the inner armed `When` or `On` entry is removed. All effects that fired from that scope while the condition was active are bulk-reversed by source.
+2. **Shape B interval teardown** — when an `Until(X, During(Cond, inner))` trigger fires and the installed During sub-tree is removed, any effects that fired while the During was active are bulk-reversed by source.

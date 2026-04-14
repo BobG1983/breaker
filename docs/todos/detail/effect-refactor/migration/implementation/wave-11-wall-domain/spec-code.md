@@ -53,14 +53,14 @@ pub fn handle_wall_kill(
 - **Dedup strategy**: `Without<Dead>` on the victim query is sufficient. Each entity only gets one `KillYourself<Wall>` per frame because `detect_wall_deaths` queries `With<Wall>` (distinct from other entity types) and `Dead` is inserted by the kill handler, visible next frame. No `HashSet` needed.
 
 #### 2. Update shield effect `fire()` to add `Hp` and `KilledBy`
-- **File**: `src/effect/effects/shield/config.rs` — the `fire()` function
+- **File**: `src/effect_v3/effects/shield/config.rs` — the `fire()` function
 - **What changes**: The shield fire() spawns a wall entity using the wall builder (`WallBuilder`). After `builder.spawn(commands)` returns the entity ID, insert additional components via `commands.entity(id).insert((Hp { current: 1.0, starting: 1.0, max: None }, KilledBy::default()))`. The `Wall` component is already provided by the wall builder — do NOT insert it manually.
 - **Hp note**: One-shot wall. Shield walls die when their timer expires or reflection cost is depleted.
 - **Migrate tick_shield_duration**: Update the shield timer-expiry system to send `KillYourself<Wall>` instead of calling `commands.entity(e).despawn()` directly. ALL wall deaths go through the unified death pipeline — no direct despawn. The kill handler inserts Dead, sends Destroyed<Wall>, removes Aabb2D, and sends DespawnEntity.
 - **Migrate deduct_shield_on_reflection**: If reflection cost depletion causes death, send `KillYourself<Wall>` instead of direct despawn.
 
 #### 3. Update second-wind effect `fire()` to add `Hp` and `KilledBy`
-- **File**: `src/effect/effects/second_wind/config.rs` — the `fire()` function
+- **File**: `src/effect_v3/effects/second_wind/config.rs` — the `fire()` function
 - **What changes**: The second-wind fire() spawns a wall entity using the wall builder (`WallBuilder`). After `builder.spawn(commands)` returns the entity ID, insert additional components via `commands.entity(id).insert((Hp { current: 1.0, starting: 1.0, max: None }, KilledBy::default()))`. The `Wall` component is already provided by the wall builder — do NOT insert it manually.
 - **Hp note**: One-shot wall. Second-wind walls die after their first bolt bounce.
 - **Migrate despawn_second_wind_on_contact**: Update the bounce handler to send `KillYourself<Wall>` instead of calling `commands.entity(msg.wall).despawn()` directly. ALL wall deaths go through the unified death pipeline.
@@ -96,14 +96,14 @@ pub fn handle_wall_kill(
 #### `handle_wall_kill`
 - **Schedule**: `FixedUpdate`
 - **After**: `DeathPipelineSystems::DetectDeaths` -- kill handlers consume `KillYourself<T>` messages produced by death detection systems. Also runs after `Fire(Die)` sends `KillYourself<Wall>` directly.
-- **Before**: `EffectSystems::Bridge` -- the `Destroyed<Wall>` message must be available for `on_destroyed::<Wall>` to dispatch triggers. Per the system-set-ordering doc, domain kill handlers run between DetectDeaths and the effect system's death bridges.
+- **Before**: `EffectV3Systems::Bridge` -- the `Destroyed<Wall>` message must be available for `on_destroyed::<Wall>` to dispatch triggers. Per the system-set-ordering doc, domain kill handlers run between DetectDeaths and the effect system's death bridges.
 - **Full frame ordering context**:
   ```
   collision systems produce DamageDealt<Wall>
       -> ApplyDamage set (apply_damage::<Wall> decrements Hp, sets KilledBy)
       -> DetectDeaths set (detect_wall_deaths sends KillYourself<Wall> when Hp <= 0)
       -> handle_wall_kill (this system: inserts Dead, removes Aabb2D, sends Destroyed<Wall> + DespawnEntity)
-      -> EffectSystems::Bridge (on_destroyed::<Wall> dispatches Died/Killed/DeathOccurred triggers)
+      -> EffectV3Systems::Bridge (on_destroyed::<Wall> dispatches Died/Killed/DeathOccurred triggers)
       -> PostFixedUpdate: process_despawn_requests (despawns entity)
   ```
 
@@ -112,7 +112,7 @@ pub fn handle_wall_kill(
 ### Wiring Requirements
 
 #### `src/walls/plugin.rs`
-1. **Add** registration of `handle_wall_kill` system in `FixedUpdate`, ordered after `DeathPipelineSystems::DetectDeaths` and before `EffectSystems::Bridge`.
+1. **Add** registration of `handle_wall_kill` system in `FixedUpdate`, ordered after `DeathPipelineSystems::DetectDeaths` and before `EffectV3Systems::Bridge`.
 2. **Add** `Destroyed<Wall>` message registration: `app.add_message::<Destroyed<Wall>>();` -- if not already registered by the death pipeline plugin or a prior wave. (Check if `Destroyed<Wall>` registration already exists. If the death pipeline plugin or Wave 7 registered it, do not duplicate.)
 
 #### `src/walls/systems/mod.rs`
@@ -121,8 +121,8 @@ pub fn handle_wall_kill(
 #### Effect-domain wall spawners
 These changes ensure that effect-spawned walls (ShieldWall, SecondWindWall) include `Hp` and `KilledBy` so they can participate in the death pipeline:
 
-1. `src/effect/effects/shield/` (wherever the shield wall is spawned in the `fire()` function) -- when spawning the `ShieldWall` entity, add `Hp { current: 1.0, starting: 1.0, max: None }` and `KilledBy::default()`.
-2. `src/effect/effects/second_wind/` (wherever the second-wind wall is spawned in the `fire()` function) -- when spawning the `SecondWindWall` entity, add `Hp { current: 1.0, starting: 1.0, max: None }` and `KilledBy::default()`.
+1. `src/effect_v3/effects/shield/` (wherever the shield wall is spawned in the `fire()` function) -- when spawning the `ShieldWall` entity, add `Hp { current: 1.0, starting: 1.0, max: None }` and `KilledBy::default()`.
+2. `src/effect_v3/effects/second_wind/` (wherever the second-wind wall is spawned in the `fire()` function) -- when spawning the `SecondWindWall` entity, add `Hp { current: 1.0, starting: 1.0, max: None }` and `KilledBy::default()`.
 3. `src/walls/` -- if there is a regular wall spawn system that spawns destructible walls (other than shield/second-wind), update it to add `Hp` and `KilledBy`. Permanent walls do NOT get these components.
 
 ---
@@ -135,7 +135,7 @@ These changes ensure that effect-spawned walls (ShieldWall, SecondWindWall) incl
 - `src/shared/systems/process_despawn_requests.rs` -- already implemented in Wave 7
 - `src/shared/components/` -- Hp, KilledBy, Dead already defined
 - `src/shared/messages/` -- DamageDealt, KillYourself, Destroyed, DespawnEntity already defined
-- `src/effect/triggers/death/` -- on_destroyed::<Wall> bridge already implemented in an earlier wave
+- `src/effect_v3/triggers/death/` -- on_destroyed::<Wall> bridge already implemented in an earlier wave
 - Any other domain (bolt, cells, breaker) -- this wave only touches the wall domain and effect wall spawners
 
 #### Do NOT add

@@ -1,13 +1,13 @@
 # Test Spec: Effect Domain -- Wave 5: Trigger Bridge Systems
 
 ## Domain
-`src/effect/triggers/`
+`src/effect_v3/triggers/`
 
 ---
 
 ## Section A: Bump Bridge Systems (10 systems)
 
-All bump bridges live in `src/effect/triggers/bump/bridges.rs`. All run in FixedUpdate, in `EffectSystems::Bridge`, after `BreakerSystems::GradeBump`, with `run_if(in_state(NodeState::Playing))`. `on_no_bump_occurred` additionally runs after `BoltSystems::BreakerCollision` (it reads `BoltImpactBreaker` which is produced there).
+All bump bridges live in `src/effect_v3/triggers/bump/bridges.rs`. All run in FixedUpdate, in `EffectV3Systems::Bridge`, after `BreakerSystems::GradeBump`, with `run_if(in_state(NodeState::Playing))`. `on_no_bump_occurred` additionally runs after `BoltSystems::BreakerCollision` (it reads `BoltImpactBreaker` which is produced there).
 
 ### A1: Global Bump Bridges (6 systems)
 
@@ -183,7 +183,7 @@ Local bridges walk only the bolt and breaker entities from the message, NOT all 
 
 ## Section B: Impact Bridge Systems (12 systems: 6 impacted + 6 impact_occurred)
 
-All impact bridges live in `src/effect/triggers/impact/bridges.rs`. All run in FixedUpdate, in `EffectSystems::Bridge`, with `run_if(in_state(NodeState::Playing))`.
+All impact bridges live in `src/effect_v3/triggers/impact/bridges.rs`. All run in FixedUpdate, in `EffectV3Systems::Bridge`, with `run_if(in_state(NodeState::Playing))`.
 
 ### B1: Local Impact Bridges (on_impacted -- 6 sub-systems)
 
@@ -305,7 +305,7 @@ Each sub-system reads one collision message type and walks ALL entities with Bou
 
 ## Section C: Death Bridge Systems (4 monomorphized instances of a generic system)
 
-All death bridges are generic: `on_destroyed::<T>` where T: GameEntity. The system lives in `src/effect/triggers/death/bridges.rs`. All run in FixedUpdate, in `EffectSystems::Bridge`, after domain kill handlers.
+All death bridges are generic: `on_destroyed::<T>` where T: GameEntity. The system lives in `src/effect_v3/triggers/death/bridges.rs`. All run in FixedUpdate, in `EffectV3Systems::Bridge`, after domain kill handlers.
 
 Each death dispatches three triggers in order: Died (local, victim) -> Killed(EntityKind) (local, killer) -> DeathOccurred(EntityKind) (global, all entities).
 
@@ -375,7 +375,7 @@ Each death dispatches three triggers in order: Died (local, victim) -> Killed(En
 
 ## Section D: Bolt Lost Bridge
 
-Lives in `src/effect/triggers/bolt_lost/bridges.rs`. Runs in FixedUpdate, after `BoltSystems::BoltLost`.
+Lives in `src/effect_v3/triggers/bolt_lost/bridges.rs`. Runs in FixedUpdate, after `BoltSystems::BoltLost`.
 
 48. **on_bolt_lost_occurred walks all entities with BoltLostOccurred trigger**
     - Given: Entity A with `BoundEffects` containing tree gated on `Trigger::BoltLostOccurred`; Entity B with `StagedEffects` containing tree gated on `Trigger::BoltLostOccurred`; Entity C with effects but no BoltLostOccurred trigger; `BoltLost { bolt: bolt_entity, breaker: breaker_entity }` message
@@ -401,7 +401,7 @@ Lives in `src/effect/triggers/bolt_lost/bridges.rs`. Runs in FixedUpdate, after 
 
 ### E1: on_node_start_occurred
 
-Lives in `src/effect/triggers/node/bridges.rs`. Runs on `OnEnter(NodeState::Playing)` -- NOT FixedUpdate.
+Lives in `src/effect_v3/triggers/node/bridges.rs`. Runs on `OnEnter(NodeState::Playing)` -- NOT FixedUpdate.
 
 51. **on_node_start_occurred walks all entities with BoundEffects/StagedEffects on node start**
     - Given: Entity A with `BoundEffects` and `StagedEffects`; Entity B with `BoundEffects` and `StagedEffects`; world state transitions to `NodeState::Playing`
@@ -417,7 +417,7 @@ Lives in `src/effect/triggers/node/bridges.rs`. Runs on `OnEnter(NodeState::Play
 
 ### E2: on_node_end_occurred
 
-Lives in `src/effect/triggers/node/bridges.rs`. Runs on `OnExit(NodeState::Playing)` -- NOT FixedUpdate.
+Lives in `src/effect_v3/triggers/node/bridges.rs`. Runs on `OnExit(NodeState::Playing)` -- NOT FixedUpdate.
 
 53. **on_node_end_occurred walks all entities with BoundEffects/StagedEffects on node end**
     - Given: Entity A and Entity B with `BoundEffects` and `StagedEffects`; world state exits `NodeState::Playing`
@@ -433,7 +433,7 @@ Lives in `src/effect/triggers/node/bridges.rs`. Runs on `OnExit(NodeState::Playi
 
 ### E3: on_node_timer_threshold_occurred
 
-Lives in `src/effect/triggers/node/bridges.rs`. Runs in FixedUpdate, in `EffectSystems::Bridge`. No explicit `.after(check_node_timer_thresholds)` — Bridge runs before Tick by set ordering; the one-frame delay is intentional (Bridge reads previous-frame messages from Tick).
+Lives in `src/effect_v3/triggers/node/bridges.rs`. Runs in FixedUpdate, in `EffectV3Systems::Bridge`. No explicit `.after(check_node_timer_thresholds)` — Bridge runs before Tick by set ordering; the one-frame delay is intentional (Bridge reads previous-frame messages from Tick).
 
 55. **on_node_timer_threshold_occurred walks all entities with matching threshold trigger**
     - Given: Entity A with effects; `NodeTimerThresholdCrossed { ratio: OrderedFloat(0.5) }` message
@@ -453,7 +453,7 @@ Lives in `src/effect/triggers/node/bridges.rs`. Runs in FixedUpdate, in `EffectS
 
 ### F1: on_time_expires
 
-Lives in `src/effect/triggers/time/bridges.rs`. Runs in FixedUpdate, in `EffectSystems::Bridge`. No explicit `.after(tick_effect_timers)` — Bridge runs before Tick by set ordering; the one-frame delay is intentional (Bridge reads previous-frame messages from Tick).
+Lives in `src/effect_v3/triggers/time/bridges.rs`. Runs in FixedUpdate, in `EffectV3Systems::Bridge`. No explicit `.after(tick_effect_timers)` — Bridge runs before Tick by set ordering; the one-frame delay is intentional (Bridge reads previous-frame messages from Tick).
 
 57. **on_time_expires walks the specific entity referenced in the message**
     - Given: entity_a with `BoundEffects` and `StagedEffects`; entity_b with effects; `EffectTimerExpired { entity: entity_a, original_duration: OrderedFloat(5.0) }` message
@@ -485,7 +485,7 @@ Lives in `src/effect/triggers/time/bridges.rs`. Runs in FixedUpdate, in `EffectS
 
 ### G1: tick_effect_timers
 
-Lives in `src/effect/triggers/time/tick_timers.rs`. Runs in FixedUpdate.
+Lives in `src/effect_v3/triggers/time/tick_timers.rs`. Runs in FixedUpdate.
 
 60. **tick_effect_timers decrements remaining time by dt**
     - Given: entity with `EffectTimers { timers: vec![(OrderedFloat(3.0), OrderedFloat(5.0))] }`; `Time<Fixed>` with delta of 1.0/60.0 (one frame at 60fps)
@@ -525,7 +525,7 @@ Lives in `src/effect/triggers/time/tick_timers.rs`. Runs in FixedUpdate.
 
 ### G2: check_node_timer_thresholds
 
-Lives in `src/effect/triggers/node/check_thresholds.rs`. Runs in FixedUpdate, in `EffectSystems::Tick`. Reads `Res<NodeTimer>` (from `crate::state::run::node::resources::NodeTimer`) and `ResMut<NodeTimerThresholdRegistry>`. Computes ratio as `(node_timer.total - node_timer.remaining) / node_timer.total`.
+Lives in `src/effect_v3/triggers/node/check_thresholds.rs`. Runs in FixedUpdate, in `EffectV3Systems::Tick`. Reads `Res<NodeTimer>` (from `crate::state::run::node::resources::NodeTimer`) and `ResMut<NodeTimerThresholdRegistry>`. Computes ratio as `(node_timer.total - node_timer.remaining) / node_timer.total`.
 
 65. **check_node_timer_thresholds sends message when ratio crosses threshold**
     - Given: `NodeTimer { remaining: 4.5, total: 10.0 }` (ratio = 0.55, 55% elapsed); `NodeTimerThresholdRegistry { thresholds: vec![OrderedFloat(0.25), OrderedFloat(0.5), OrderedFloat(0.75)], fired: HashSet::from([OrderedFloat(0.25)]) }`
@@ -559,7 +559,7 @@ Lives in `src/effect/triggers/node/check_thresholds.rs`. Runs in FixedUpdate, in
 
 ### G3: track_combo_streak
 
-Lives in `src/effect/conditions/track_combo_streak.rs`. Runs in FixedUpdate, in `EffectSystems::Bridge`, after `BreakerSystems::GradeBump`.
+Lives in `src/effect_v3/conditions/track_combo_streak.rs`. Runs in FixedUpdate, in `EffectV3Systems::Bridge`, after `BreakerSystems::GradeBump`.
 
 69. **track_combo_streak increments count on Perfect bump**
     - Given: `ComboStreak { count: 3 }` resource; `BumpPerformed { grade: BumpGrade::Perfect, bolt: Some(bolt_entity), breaker: breaker_entity }` message
@@ -605,7 +605,7 @@ Lives in `src/effect/conditions/track_combo_streak.rs`. Runs in FixedUpdate, in 
 
 ### G4: watch_spawn_registry
 
-Lives in `src/effect/storage/watch_spawn_registry.rs`. Runs in FixedUpdate, after entity spawning systems, in `EffectSystems::Bridge`.
+Lives in `src/effect_v3/storage/watch_spawn_registry.rs`. Runs in FixedUpdate, after entity spawning systems, in `EffectV3Systems::Bridge`.
 
 76. **watch_spawn_registry stamps tree on newly spawned bolt**
     - Given: `SpawnStampRegistry` resource containing entry `("chip_a".to_string(), EntityKind::Bolt, tree_clone)`; new entity spawned with `Bolt` component this frame (detected via `Added<Bolt>`)
@@ -651,7 +651,7 @@ Lives in `src/effect/storage/watch_spawn_registry.rs`. Runs in FixedUpdate, afte
 
 ### G5: reset_node_timer_thresholds
 
-Lives in `src/effect/triggers/node/` (reset system). Runs on `OnEnter(NodeState::Playing)`.
+Lives in `src/effect_v3/triggers/node/` (reset system). Runs on `OnEnter(NodeState::Playing)`.
 
 83. **reset_node_timer_thresholds clears fired set on node start**
     - Given: `NodeTimerThresholdRegistry { thresholds: vec![OrderedFloat(0.25), OrderedFloat(0.5), OrderedFloat(0.75)], fired: HashSet::from([OrderedFloat(0.25), OrderedFloat(0.5)]) }`; state transitions to `NodeState::Playing`
@@ -747,15 +747,15 @@ This tests the full bridge-to-walk path. If walk_effects is not yet implemented 
 
 ### Test file organization
 
-Tests should follow the module layout in `src/effect/triggers/`:
-- `src/effect/triggers/bump/` -- bump bridge tests
-- `src/effect/triggers/impact/` -- impact bridge tests
-- `src/effect/triggers/death/` -- death bridge tests
-- `src/effect/triggers/bolt_lost/` -- bolt lost bridge tests
-- `src/effect/triggers/node/` -- node bridge tests + check_thresholds tests + reset tests
-- `src/effect/triggers/time/` -- time bridge tests + tick_timers tests
-- `src/effect/storage/` -- watch_spawn_registry tests
-- `src/effect/conditions/` -- track_combo_streak tests
+Tests should follow the module layout in `src/effect_v3/triggers/`:
+- `src/effect_v3/triggers/bump/` -- bump bridge tests
+- `src/effect_v3/triggers/impact/` -- impact bridge tests
+- `src/effect_v3/triggers/death/` -- death bridge tests
+- `src/effect_v3/triggers/bolt_lost/` -- bolt lost bridge tests
+- `src/effect_v3/triggers/node/` -- node bridge tests + check_thresholds tests + reset tests
+- `src/effect_v3/triggers/time/` -- time bridge tests + tick_timers tests
+- `src/effect_v3/storage/` -- watch_spawn_registry tests
+- `src/effect_v3/conditions/` -- track_combo_streak tests
 
 Each system file has its own `#[cfg(test)] mod tests` block or sibling `tests.rs`.
 
@@ -799,8 +799,8 @@ Wave 5 tests depend on the following types being present as at least stubs from 
 
 ## Constraints
 
-- Tests go in: Test files parallel to source files within `src/effect/triggers/`, `src/effect/conditions/`, and `src/effect/storage/`
+- Tests go in: Test files parallel to source files within `src/effect_v3/triggers/`, `src/effect_v3/conditions/`, and `src/effect_v3/storage/`
 - Do NOT test: Effect fire/reverse logic (wave 6), death pipeline systems (wave 7), walk_effects internals (wave 4), Until reversal logic, tree installation
 - Do NOT test: Rendering, VFX, audio
-- Do NOT modify: Any domain files outside `src/effect/` except shared type stubs that are needed to compile tests
+- Do NOT modify: Any domain files outside `src/effect_v3/` except shared type stubs that are needed to compile tests
 - Dependencies from prior waves: `walk_effects` function (wave 4), `BoundEffects`/`StagedEffects`/`TriggerContext`/`Trigger` types (waves 1-3), `Tree`/`RootNode` types (wave 2). These must exist as at least stubs before wave 5 tests can compile.

@@ -118,7 +118,7 @@ pub struct BoltLost {
 }
 ```
 
-This lives in `src/bolt/messages.rs`. All consumers of `BoltLost` must be updated to destructure the new fields. The primary consumer is `on_bolt_lost_occurred` in `src/effect/triggers/bolt_lost/bridges.rs` -- that system reads `msg.bolt` and `msg.breaker` to build its `TriggerContext::BoltLost { bolt, breaker }`.
+This lives in `src/bolt/messages.rs`. All consumers of `BoltLost` must be updated to destructure the new fields. The primary consumer is `on_bolt_lost_occurred` in `src/effect_v3/triggers/bolt_lost/bridges.rs` -- that system reads `msg.bolt` and `msg.breaker` to build its `TriggerContext::BoltLost { bolt, breaker }`.
 
 Also update `spawn_bolt_lost_text` (if it consumes `BoltLost`) to accept the new struct shape.
 
@@ -225,17 +225,17 @@ No RON data changes needed for this wave. Bolt Hp is hardcoded at 1.0 in the bui
 - AFTER `tick_bolt_lifespan` -- so that lifespan-based `KillYourself<Bolt>` messages are available
 - AFTER `bolt_lost` -- so that off-screen-based `KillYourself<Bolt>` messages are available
 
-**Note on one-frame delay**: The `Destroyed<Bolt>` message sent by `handle_bolt_kill` will be consumed by `on_destroyed::<Bolt>` in the NEXT frame's `EffectSystems::Bridge` pass. There is NO ordering constraint "BEFORE EffectSystems::Bridge" -- the one-frame delay is acceptable and intentional per the death pipeline docs.
+**Note on one-frame delay**: The `Destroyed<Bolt>` message sent by `handle_bolt_kill` will be consumed by `on_destroyed::<Bolt>` in the NEXT frame's `EffectV3Systems::Bridge` pass. There is NO ordering constraint "BEFORE EffectV3Systems::Bridge" -- the one-frame delay is acceptable and intentional per the death pipeline docs.
 
 The exact frame ordering:
 ```
 Game systems (tick_bolt_lifespan, bolt_lost, collision, etc.)
     |
-EffectSystems::Bridge
+EffectV3Systems::Bridge
     |
-EffectSystems::Tick
+EffectV3Systems::Tick
     |
-EffectSystems::Conditions
+EffectV3Systems::Conditions
     |
 DeathPipelineSystems::ApplyDamage
     |
@@ -333,7 +333,7 @@ No changes needed if messages.rs is already re-exported.
 
 #### Consumers of `BoltLost` (cross-domain)
 The following files consume `BoltLost` and must be updated to handle the new struct fields:
-- `src/effect/triggers/bolt_lost/bridges.rs` -- `on_bolt_lost_occurred`: should already expect `BoltLost { bolt, breaker }` per the effect-refactor design. If the bridge was stubbed in wave 2 with the new signature, no change needed. If it was stubbed with the old unit struct, update the destructuring.
+- `src/effect_v3/triggers/bolt_lost/bridges.rs` -- `on_bolt_lost_occurred`: should already expect `BoltLost { bolt, breaker }` per the effect-refactor design. If the bridge was stubbed in wave 2 with the new signature, no change needed. If it was stubbed with the old unit struct, update the destructuring.
 - `src/bolt/systems/spawn_bolt_lost_text.rs` (or wherever the bolt-lost text spawning lives): update to accept the new struct. The text spawning only needs to know a bolt was lost -- the fields may be unused, but the destructuring must compile.
 
 ---
@@ -343,7 +343,7 @@ The following files consume `BoltLost` and must be updated to handle the new str
 #### Do NOT modify
 - `src/shared/` -- types and death pipeline systems are already implemented from waves 2 and 7. Do not change Hp, KilledBy, Dead, DamageDealt, KillYourself, Destroyed, DespawnEntity, apply_damage, detect_bolt_deaths, process_despawn_requests.
 - `src/cells/` -- cell domain migration is wave 9 (already complete)
-- `src/effect/` -- effect domain systems are from waves 4-6. The `on_bolt_lost_occurred` bridge may need a field destructuring update if it was stubbed with the old `BoltLost` shape, but do NOT change the bridge's logic.
+- `src/effect_v3/` -- effect domain systems are from waves 4-6. The `on_bolt_lost_occurred` bridge may need a field destructuring update if it was stubbed with the old `BoltLost` shape, but do NOT change the bridge's logic.
 - `src/breaker/` -- breaker domain migration is wave 12 (future)
 - `src/run/` -- not in scope for this wave
 - `src/walls/` -- wall domain migration is wave 11 (future)

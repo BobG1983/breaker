@@ -14,6 +14,6 @@ enum Condition {
 ```
 
 # Description
-- NodeActive: True while a node is playing or paused. Starts on node enter, ends on node teardown. See [node-active](../ron-syntax/conditions/node-active.md)
+- NodeActive: True while the current node is in the `Playing` state. Starts on `OnEnter(NodeState::Playing)`, ends on exit from `Playing` (i.e. when teardown begins). See [node-active](../ron-syntax/conditions/node-active.md)
 - ShieldActive: True while at least one ShieldWall entity exists in the world. See [shield-active](../ron-syntax/conditions/shield-active.md)
 - ComboActive: True while the consecutive perfect bump streak is at or above the given count. Ends when a non-perfect bump breaks the streak. See [combo-active](../ron-syntax/conditions/combo-active.md)

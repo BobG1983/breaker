@@ -10,10 +10,6 @@ use crate::{
 };
 
 #[test]
-#[expect(
-    clippy::cast_precision_loss,
-    reason = "test loop index is always small"
-)]
 fn handles_splitting_when_exceeding_leaf_capacity() {
     // Use a tree with max 4 items per leaf to force splits
     let mut tree = Quadtree::new(Aabb2D::new(Vec2::ZERO, Vec2::new(500.0, 500.0)), 4, 8);
@@ -40,10 +36,6 @@ fn handles_splitting_when_exceeding_leaf_capacity() {
 }
 
 #[test]
-#[expect(
-    clippy::cast_precision_loss,
-    reason = "test loop index is always small"
-)]
 fn query_returns_no_duplicates_for_entity_spanning_quadrants() {
     let mut tree = Quadtree::new(Aabb2D::new(Vec2::ZERO, Vec2::new(500.0, 500.0)), 4, 8);
 

@@ -39,7 +39,7 @@ Fire is called by the tree walker when it reaches a Fire leaf. The config struct
 
 - `app`: The Bevy App, available during plugin build.
 
-Called by EffectPlugin::build for every config struct. Override when the effect has runtime infrastructure to register. The default is a no-op.
+Called by EffectV3Plugin::build for every config struct. Override when the effect has runtime infrastructure to register. The default is a no-op.
 
 ```rust
 impl Fireable for ShockwaveConfig {
@@ -51,7 +51,7 @@ impl Fireable for ShockwaveConfig {
             sync_shockwave_visual,
             apply_shockwave_damage,
             despawn_finished_shockwave,
-        ).chain().in_set(EffectSystems::Tick));
+        ).chain().in_set(EffectV3Systems::Tick));
     }
 }
 ```

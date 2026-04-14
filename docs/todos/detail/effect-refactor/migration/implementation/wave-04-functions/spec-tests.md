@@ -16,7 +16,7 @@ This wave requires the Wave 2 scaffold types to exist before writer-tests or wri
 These types are defined in the Wave 2 type specs. If they do not exist when this wave starts, tests will not compile.
 
 ## Domain
-src/effect/
+src/effect_v3/
 
 ---
 
@@ -1115,14 +1115,14 @@ These are non-system helper functions used by `evaluate_conditions` (During) and
 
 ## Constraints
 - Tests go in:
-  - `src/effect/stacking/effect_stack.rs` (EffectStack tests)
-  - `src/effect/dispatch/fire_dispatch.rs` (fire dispatch tests for all EffectType variants)
-  - `src/effect/dispatch/reverse_dispatch.rs` (reverse dispatch tests for all ReversibleEffectType variants)
-  - `src/effect/` walking algorithm tests (new file for walk_effects function tests)
-  - `src/effect/` scoped tree tests (new file for apply_scoped_tree / reverse_scoped_tree function tests)
-  - `src/effect/commands.rs` or `src/effect/commands/` (command extension tests)
-  - `src/effect/effects/<effect_name>/` per-effect passive fire/reverse/aggregate tests
-  - `src/effect/conditions/` (condition evaluator tests)
+  - `src/effect_v3/stacking/effect_stack.rs` (EffectStack tests)
+  - `src/effect_v3/dispatch/fire_dispatch.rs` (fire dispatch tests for all EffectType variants)
+  - `src/effect_v3/dispatch/reverse_dispatch.rs` (reverse dispatch tests for all ReversibleEffectType variants)
+  - `src/effect_v3/` walking algorithm tests (new file for walk_effects function tests)
+  - `src/effect_v3/` scoped tree tests (new file for apply_scoped_tree / reverse_scoped_tree function tests)
+  - `src/effect_v3/commands.rs` or `src/effect_v3/commands/` (command extension tests)
+  - `src/effect_v3/effects/<effect_name>/` per-effect passive fire/reverse/aggregate tests
+  - `src/effect_v3/conditions/` (condition evaluator tests)
 - Do NOT test: System functions (bridges, tick systems, evaluate_conditions system). Those are Wave 5+.
 - Do NOT test: Non-passive effect fire/reverse implementations (Shockwave, Explode, etc.). Those spawn entities and are out of scope.
 - Do NOT test: RON deserialization of Tree, EffectType, or config structs. That is a separate concern.

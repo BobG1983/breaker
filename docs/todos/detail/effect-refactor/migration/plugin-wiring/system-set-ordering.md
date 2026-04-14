@@ -3,11 +3,11 @@
 ## Within the effect domain
 
 ```
-EffectSystems::Bridge
+EffectV3Systems::Bridge
     ↓ (after)
-EffectSystems::Tick
+EffectV3Systems::Tick
     ↓ (after)
-EffectSystems::Conditions
+EffectV3Systems::Conditions
 ```
 
 - **Bridge before Tick**: bridges dispatch triggers and fire effects (via commands). Effect entities are spawned after command flush. Tick systems need those entities to exist.
@@ -16,7 +16,7 @@ EffectSystems::Conditions
 
 ## Special case: timer systems
 
-`tick_effect_timers` and `check_node_timer_thresholds` live in `EffectSystems::Tick` but produce messages consumed by bridge systems (`on_time_expires`, `on_node_timer_threshold_occurred`). Since Tick runs AFTER Bridge, these messages are processed next frame by the bridges. This is acceptable — timer expiry and threshold crossing take effect one frame after detection.
+`tick_effect_timers` and `check_node_timer_thresholds` live in `EffectV3Systems::Tick` but produce messages consumed by bridge systems (`on_time_expires`, `on_node_timer_threshold_occurred`). Since Tick runs AFTER Bridge, these messages are processed next frame by the bridges. This is acceptable — timer expiry and threshold crossing take effect one frame after detection.
 
 ## External dependencies (non-effect system sets)
 

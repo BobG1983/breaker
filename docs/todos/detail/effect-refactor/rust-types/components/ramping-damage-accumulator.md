@@ -9,7 +9,7 @@ pub struct RampingDamageAccumulator(pub OrderedFloat<f32>);
 ```
 
 # Location
-`src/effect/effects/ramping_damage/`
+`src/effect_v3/effects/ramping_damage/`
 
 # Description
 `RampingDamageAccumulator` is added to the bolt to track bonus damage that increases with consecutive cell hits.

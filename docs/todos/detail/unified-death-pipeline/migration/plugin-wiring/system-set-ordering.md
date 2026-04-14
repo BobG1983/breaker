@@ -33,14 +33,14 @@ All four `detect_*_deaths` systems CAN run in parallel — they query different 
 | Tether beam damage system | `DamageDealt<Cell>` | `apply_damage::<Cell>` |
 | Any effect that sends `DamageDealt<T>` | `DamageDealt<T>` | `apply_damage::<T>` |
 
-The ApplyDamage set must run after ALL systems that produce `DamageDealt<T>` messages. In practice, this means after `EffectSystems::Tick` (which contains shockwave, chain lightning, tether beam damage systems).
+The ApplyDamage set must run after ALL systems that produce `DamageDealt<T>` messages. In practice, this means after `EffectV3Systems::Tick` (which contains shockwave, chain lightning, tether beam damage systems).
 
 ### Must run BEFORE (systems that consume death results)
 
 | Death pipeline output | External consumer |
 |----------------------|-------------------|
 | `KillYourself<T>` | Domain kill handlers (per-domain plugins) |
-| `Destroyed<T>` (from domain kill handlers) | `EffectSystems::Bridge` (death bridges: `on_destroyed::<T>`) |
+| `Destroyed<T>` (from domain kill handlers) | `EffectV3Systems::Bridge` (death bridges: `on_destroyed::<T>`) |
 | `DespawnEntity` (from domain kill handlers) | `process_despawn_requests` (PostFixedUpdate) |
 
 ### Full frame ordering
@@ -48,11 +48,11 @@ The ApplyDamage set must run after ALL systems that produce `DamageDealt<T>` mes
 ```
 Game systems (collision, bump grading, etc.)
     ↓
-EffectSystems::Bridge (trigger dispatch, effect firing)
+EffectV3Systems::Bridge (trigger dispatch, effect firing)
     ↓
-EffectSystems::Tick (shockwave, chain lightning, tether beam produce DamageDealt)
+EffectV3Systems::Tick (shockwave, chain lightning, tether beam produce DamageDealt)
     ↓
-EffectSystems::Conditions (condition polling)
+EffectV3Systems::Conditions (condition polling)
     ↓
 DeathPipelineSystems::ApplyDamage (process DamageDealt, decrement Hp)
     ↓

@@ -8,12 +8,12 @@ The following waves MUST be complete before wave 6 begins:
 - **Wave 2**: Scaffold -- all config structs, component types, EffectStack<T>, EffectType/ReversibleEffectType enums, Fireable/Reversible/PassiveEffect traits, EffectSystems system sets, message types (ApplyTimePenalty, EffectTimerExpired), plugin skeleton
 - **Wave 3**: RON asset pipeline -- deserialization of config structs from chip/augment RON
 - **Wave 4**: Functions -- EffectStack methods (push, remove, aggregate), walk_effects tree walker, fire_effect/reverse_effect commands
-- **Wave 5**: Triggers -- all bridge systems in EffectSystems::Bridge, tick_effect_timers in EffectSystems::Tick, TriggerContext types, Condition enum, BoundEffects/StagedEffects storage
+- **Wave 5**: Triggers -- all bridge systems in EffectV3Systems::Bridge, tick_effect_timers in EffectV3Systems::Tick, TriggerContext types, Condition enum, BoundEffects/StagedEffects storage
 
 All types from waves 2-5 are assumed to exist and be functional: EffectStack, Fireable, Reversible, PassiveEffect, all config structs, all tree types, all triggers.
 
 ## Domain
-`src/effect/`
+`src/effect_v3/`
 
 ---
 
@@ -1036,13 +1036,13 @@ EntropyEngine resets its counter internally when fired -- no separate reset syst
 - Given: Shockwave entity with `ShockwaveRadius(0.0)`, `ShockwaveSpeed(300.0)`. World NOT in `NodeState::Playing`.
 - When: one frame runs
 - Then: `ShockwaveRadius` is still `0.0` -- `tick_shockwave` did not run.
-- Note: This applies to ALL tick systems in `EffectSystems::Tick`: tick_shockwave, sync_shockwave_visual, apply_shockwave_damage, despawn_finished_shockwave, tick_chain_lightning, tick_pulse, tick_phantom_lifetime, tick_tether_beam_damage, cleanup_tether_beams, tick_gravity_wells, despawn_expired_wells.
+- Note: This applies to ALL tick systems in `EffectV3Systems::Tick`: tick_shockwave, sync_shockwave_visual, apply_shockwave_damage, despawn_finished_shockwave, tick_chain_lightning, tick_pulse, tick_phantom_lifetime, tick_tether_beam_damage, cleanup_tether_beams, tick_gravity_wells, despawn_expired_wells.
 
 ### I2: **evaluate_conditions runs after tick systems**
 - Given: Shield fired this frame (ShieldWall spawned by tick_pulse or fire). During entry for ShieldActive with `condition_active: Some(false)`.
 - When: FixedUpdate runs full schedule
 - Then: `evaluate_conditions` sees the ShieldWall spawned by the tick system. `condition_active` transitions to `Some(true)`.
-- Note: Ordering guarantee: `EffectSystems::Conditions` runs after `EffectSystems::Tick`.
+- Note: Ordering guarantee: `EffectV3Systems::Conditions` runs after `EffectV3Systems::Tick`.
 
 ---
 
@@ -1281,18 +1281,18 @@ These tests verify that fire/reverse on a despawned entity does not panic. The e
 ### Test File Locations
 Tests are organized per-effect in directory module layout (`effects/<name>/tests.rs`):
 
-**Passive effects**: `src/effect/effects/<name>/tests.rs`
+**Passive effects**: `src/effect_v3/effects/<name>/tests.rs`
 - `speed_boost/tests.rs`, `size_boost/tests.rs`, `damage_boost/tests.rs`, `bump_force/tests.rs`, `quick_stop/tests.rs`, `vulnerable/tests.rs`, `piercing/tests.rs`, `ramping_damage/tests.rs`
 
-**Toggle effects**: `src/effect/effects/flash_step/tests.rs`
+**Toggle effects**: `src/effect_v3/effects/flash_step/tests.rs`
 
-**Protector effects**: `src/effect/effects/shield/tests.rs`, `second_wind/tests.rs`, `pulse/tests.rs`
+**Protector effects**: `src/effect_v3/effects/shield/tests.rs`, `second_wind/tests.rs`, `pulse/tests.rs`
 
-**Stateful effects**: `src/effect/effects/anchor/tests.rs`, `circuit_breaker/tests.rs`, `entropy_engine/tests.rs`, `attraction/tests.rs`
+**Stateful effects**: `src/effect_v3/effects/anchor/tests.rs`, `circuit_breaker/tests.rs`, `entropy_engine/tests.rs`, `attraction/tests.rs`
 
-**Spawner effects**: `src/effect/effects/shockwave/tests.rs`, `explode/tests.rs`, `chain_lightning/tests.rs`, `piercing_beam/tests.rs`, `spawn_bolts/tests.rs`, `spawn_phantom/tests.rs`, `chain_bolt/tests.rs`, `mirror_protocol/tests.rs`, `tether_beam/tests.rs`, `gravity_well/tests.rs`
+**Spawner effects**: `src/effect_v3/effects/shockwave/tests.rs`, `explode/tests.rs`, `chain_lightning/tests.rs`, `piercing_beam/tests.rs`, `spawn_bolts/tests.rs`, `spawn_phantom/tests.rs`, `chain_bolt/tests.rs`, `mirror_protocol/tests.rs`, `tether_beam/tests.rs`, `gravity_well/tests.rs`
 
-**Message/meta effects**: `src/effect/effects/lose_life/tests.rs`, `time_penalty/tests.rs`, `die/tests.rs`, `random_effect/tests.rs`
+**Message/meta effects**: `src/effect_v3/effects/lose_life/tests.rs`, `time_penalty/tests.rs`, `die/tests.rs`, `random_effect/tests.rs`
 
 **Tick systems**: Tests co-located in the same effect directory's `tests.rs`:
 - `shockwave/tests.rs` -- tick_shockwave, sync_shockwave_visual, apply_shockwave_damage, despawn_finished_shockwave
@@ -1305,17 +1305,17 @@ Tests are organized per-effect in directory module layout (`effects/<name>/tests
 - `tether_beam/tests.rs` -- tick_tether_beam_damage, cleanup_tether_beams
 - `gravity_well/tests.rs` -- tick_gravity_wells, despawn_expired_wells
 
-**Reset systems**: `src/effect/effects/ramping_damage/tests.rs`
+**Reset systems**: `src/effect_v3/effects/ramping_damage/tests.rs`
 
-**Condition evaluators**: `src/effect/conditions/tests.rs` or per-file:
-- `src/effect/conditions/node_active.rs` (tests inline or adjacent)
-- `src/effect/conditions/shield_active.rs`
-- `src/effect/conditions/combo_active.rs`
-- `src/effect/conditions/evaluate_conditions/tests.rs`
+**Condition evaluators**: `src/effect_v3/conditions/tests.rs` or per-file:
+- `src/effect_v3/conditions/node_active.rs` (tests inline or adjacent)
+- `src/effect_v3/conditions/shield_active.rs`
+- `src/effect_v3/conditions/combo_active.rs`
+- `src/effect_v3/conditions/evaluate_conditions/tests.rs`
 
 **Dispatch functions**:
-- `src/effect/dispatch/fire_dispatch/tests.rs`
-- `src/effect/dispatch/reverse_dispatch/tests.rs`
+- `src/effect_v3/dispatch/fire_dispatch/tests.rs`
+- `src/effect_v3/dispatch/reverse_dispatch/tests.rs`
 
 **Despawned-entity guard tests**: Co-located in each effect's `tests.rs` (e.g., K1 in `speed_boost/tests.rs`, K2 in `flash_step/tests.rs`, K3 in `shockwave/tests.rs` and `spawn_bolts/tests.rs`, K4 in `shield/tests.rs`)
 

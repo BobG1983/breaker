@@ -19,7 +19,7 @@ DamageBoost
 3. Reverse does NOT change damage dealt -- that is the collision system's job.
 
 # Source Location
-`src/effect/effects/damage_boost/config.rs`
+`src/effect_v3/effects/damage_boost/config.rs`
 
 # New Types
 None beyond `EffectStack<DamageBoostConfig>`.

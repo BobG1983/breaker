@@ -61,7 +61,7 @@ src/
 ├── state/            # State lifecycle, routing, menus, pause, run/node management, HUD
 ├── input/            # Raw keyboard input to GameAction translation
 ├── breaker/          # Breaker mechanics, state machine, bump system
-├── effect/           # Effect system — data-driven EffectNode trigger/effect evaluation and dispatch (top-level domain)
+├── effect_v3/        # Effect system — data-driven EffectNode trigger/effect evaluation and dispatch (top-level domain)
 ├── bolt/             # Bolt physics, reflection model, speed management, CCD collision detection, chain bolts
 ├── cells/            # Cell types, grid layout, destruction
 ├── walls/            # Wall builder, wall types, boundary entities
@@ -73,11 +73,11 @@ src/
 
 **`lib.rs`** is the library root. It declares `app`, `game`, and `shared` as `pub mod` (needed by the binary and integration tests). Domain modules are `pub(crate) mod` to enforce plugin boundaries at the Rust visibility level. **`main.rs`** is the binary entry point — it calls `brickbreaker::app::build_app().run()`.
 
-**Scenario runner exception** — `bolt`, `breaker`, `cells`, `chips`, `effect`, `input`, `state`, and `walls` are declared as `pub mod` in `lib.rs` (not `pub(crate)`) because `breaker-scenario-runner` needs cross-crate access to their components, resources, and system sets for entity tagging, input injection, invariant checking, and ordering constraints. `state` is imported for `ChipOffers` and `ChipOffering` used in chip-selection invariant checks. This mirrors the existing debug domain exception.
+**Scenario runner exception** — `bolt`, `breaker`, `cells`, `chips`, `effect_v3`, `input`, `state`, and `walls` are declared as `pub mod` in `lib.rs` (not `pub(crate)`) because `breaker-scenario-runner` needs cross-crate access to their components, resources, and system sets for entity tagging, input injection, invariant checking, and ordering constraints. `state` is imported for `ChipOffers` and `ChipOffering` used in chip-selection invariant checks. This mirrors the existing debug domain exception.
 
 **`App`** (`app.rs`) is responsible for constructing the Bevy `App`, adding `DefaultPlugins`, and adding the `Game` plugin group.
 
-**`Game`** (`game.rs`) is a `PluginGroup` responsible for wiring together all domain plugins in the correct order. This is the single place that knows about all plugins. Plugin registration order: `InputPlugin`, `StatePlugin`, `RantzSpatial2dPlugin::<GameDrawLayer>`, `RantzPhysics2dPlugin`, `WallPlugin`, `BreakerPlugin`, `EffectPlugin`, `BoltPlugin`, `CellsPlugin`, `ChipsPlugin`, `FxPlugin`, `AudioPlugin`, `DebugPlugin`.
+**`Game`** (`game.rs`) is a `PluginGroup` responsible for wiring together all domain plugins in the correct order. This is the single place that knows about all plugins. Plugin registration order: `InputPlugin`, `StatePlugin`, `RantzSpatial2dPlugin::<GameDrawLayer>`, `RantzPhysics2dPlugin`, `WallPlugin`, `BreakerPlugin`, `EffectV3Plugin`, `BoltPlugin`, `CellsPlugin`, `ChipsPlugin`, `FxPlugin`, `AudioPlugin`, `DebugPlugin`.
 
 **Domain plugins** (breaker, bolt, cells, etc.) are self-contained:
 - Each defines its own `Plugin` struct implementing `bevy::app::Plugin`
@@ -88,7 +88,7 @@ src/
 
 **Nested sub-domain plugins** — a domain may contain child plugins for cohesive subsets of functionality (e.g., breaker archetypes). The parent plugin adds child plugins via `app.add_plugins()`. `game.rs` only knows about top-level plugins. See [layout.md](layout.md) for the full nesting rules and folder structure.
 
-**Cross-domain SystemSet exports** — domains that expose ordering anchors for other domains define a `pub enum {Domain}Systems` in `sets.rs`. Current exported sets: `BreakerSystems` (`breaker/sets.rs`), `BoltSystems` (`bolt/sets.rs`), `EffectSystems` (`effect/sets.rs`, variants: `Bridge`), `UiSystems` (`state/run/node/hud/sets.rs`), `NodeSystems` (`state/run/node/sets.rs`). The external crates also export ordering sets: `rantzsoft_physics2d::PhysicsSystems` (`MaintainQuadtree`, `EnforceDistanceConstraints`) for ordering against the quadtree; `rantzsoft_spatial2d::SpatialSystems` (`SavePrevious`, `ApplyVelocity`, `ComputeGlobals`, `DeriveTransform`) for ordering against the spatial pipeline stages; `rantzsoft_defaults::DefaultsSystems` (`Seed`, `PropagateDefaults`) for ordering config-seeding systems via `RantzDefaultsPlugin`. See [ordering.md](ordering.md) for the full table and usage rules.
+**Cross-domain SystemSet exports** — domains that expose ordering anchors for other domains define a `pub enum {Domain}Systems` in `sets.rs`. Current exported sets: `BreakerSystems` (`breaker/sets.rs`), `BoltSystems` (`bolt/sets.rs`), `EffectV3Systems` (`effect_v3/sets.rs`, variants: `Bridge`, `Tick`, `Conditions`, `Reset`), `UiSystems` (`state/run/node/hud/sets.rs`), `NodeSystems` (`state/run/node/sets.rs`). The external crates also export ordering sets: `rantzsoft_physics2d::PhysicsSystems` (`MaintainQuadtree`, `EnforceDistanceConstraints`) for ordering against the quadtree; `rantzsoft_spatial2d::SpatialSystems` (`SavePrevious`, `ApplyVelocity`, `ComputeGlobals`, `DeriveTransform`) for ordering against the spatial pipeline stages; `rantzsoft_defaults::DefaultsSystems` (`Seed`, `PropagateDefaults`) for ordering config-seeding systems via `RantzDefaultsPlugin`. See [ordering.md](ordering.md) for the full table and usage rules.
 
 ## Cross-Domain Read Access
 
@@ -105,9 +105,9 @@ The architectural boundary is about **writes** (mutations), not reads. Domains f
 
 `Velocity2D` (rantzsoft_spatial2d component) on bolt entities is written by effect domain systems as an accepted architectural exception. Three write paths exist:
 
-- **effect** (`apply_gravity_pull` in `effect/effects/gravity_well/effect.rs`): steers bolt velocity toward active gravity wells each FixedUpdate tick. Uses `SpatialData` query and calls `apply_velocity_formula` after steering to enforce speed constraints.
-- **effect** (`apply_attraction` in `effect/effects/attraction/effect.rs`): steers bolt velocity toward the nearest attraction target each FixedUpdate tick. Uses `SpatialData` query and calls `apply_velocity_formula` after steering. Ordered `.after(PhysicsSystems::MaintainQuadtree)` for quadtree lookups.
-- **effect** (`speed_boost::fire()` / `reverse()` in `effect/effects/speed_boost.rs`): immediately recalculates bolt velocity via `recalculate_velocity` (calls `apply_velocity_formula`) when a speed boost is applied or removed. This ensures bolt speed reflects the new multiplier without waiting for the next tick.
+- **effect** (`apply_gravity_pull` in `effect_v3/effects/gravity_well/effect.rs`): steers bolt velocity toward active gravity wells each FixedUpdate tick. Uses `SpatialData` query and calls `apply_velocity_formula` after steering to enforce speed constraints.
+- **effect** (`apply_attraction` in `effect_v3/effects/attraction/effect.rs`): steers bolt velocity toward the nearest attraction target each FixedUpdate tick. Uses `SpatialData` query and calls `apply_velocity_formula` after steering. Ordered `.after(PhysicsSystems::MaintainQuadtree)` for quadtree lookups.
+- **effect** (`speed_boost::fire()` / `reverse()` in `effect_v3/effects/speed_boost.rs`): immediately recalculates bolt velocity via `recalculate_velocity` (calls `apply_velocity_formula`) when a speed boost is applied or removed. This ensures bolt speed reflects the new multiplier without waiting for the next tick.
 
 All paths call `apply_velocity_formula` to enforce `(base_speed * boost_mult).clamp(min, max)` magnitude. This is the same velocity enforcement used by collision systems — there is no separate `prepare_bolt_velocity` step.
 
@@ -124,12 +124,12 @@ This exception does **not** extend to other domains. Production code still commu
 
 ## Effect Domain — Self-Registration Pattern
 
-The `effect/` domain uses a self-registration pattern where each leaf effect is fully self-contained in a single file and registers itself with the app.
+The `effect_v3/` domain uses a self-registration pattern where each leaf effect is fully self-contained in a single file and registers itself with the app.
 
 ### Actual Structure
 
 ```
-effect/
+effect_v3/
   core/
     mod.rs             # Re-exports from types/
     types/             # Directory module (split from types.rs)
@@ -155,19 +155,16 @@ effect/
     ... (directory modules — split per System File Split Convention when tests exceed ~400 lines)
   triggers/            # Bridge systems (one file or dir per trigger type)
     mod.rs             # pub mod declarations + register() dispatcher
-    evaluate/          # Directory module — shared chain evaluation helpers (has tests)
-    impact/            # Directory module — global impact triggers (has tests)
-    impacted/          # Directory module — targeted impacted triggers (has tests)
-    until/             # Directory module — Until desugaring system (has tests)
-    bump.rs / perfect_bump.rs / early_bump.rs / late_bump.rs
-    bump_whiff.rs / no_bump.rs
-    bumped.rs / perfect_bumped.rs / early_bumped.rs / late_bumped.rs
-    bolt_lost.rs / cell_destroyed.rs / death.rs / died.rs
-    node_start.rs / node_end.rs / timer.rs
+    bump/              # Directory module — bump trigger bridges
+    impact/            # Directory module — impact trigger bridges
+    death/             # Directory module — death trigger bridges
+    bolt_lost/         # Directory module — bolt lost trigger bridges
+    node/              # Directory module — node lifecycle bridges
+    time/              # Directory module — time/timer bridges
   commands.rs          # EffectCommandsExt trait (fire_effect, reverse_effect, transfer_effect)
   mod.rs               # Re-exports + pub mod declarations
-  plugin.rs            # EffectPlugin — calls effects::register() and triggers::register()
-  sets.rs              # EffectSystems::Bridge set
+  plugin.rs            # EffectV3Plugin — calls Fireable::register() for all 30 configs and registers triggers
+  sets.rs              # EffectV3Systems set (Bridge, Tick, Conditions, Reset variants)
 ```
 
 ### Effect File Pattern
@@ -195,7 +192,7 @@ pub(crate) fn reverse(entity: Entity, multiplier: f32, _source_chip: &str, world
 pub(crate) fn register(app: &mut App) { ... }
 ```
 
-`EffectKind` dispatches to each module via exhaustive match arms. `EffectPlugin::build()` calls `effects::register(app)` and `triggers::register(app)`.
+`EffectKind` dispatches to each module via exhaustive match arms. `EffectV3Plugin::build()` calls `Fireable::register(app)` for all 30 effect configs and registers all trigger categories.
 
 ### Effect Dispatch via Commands Extension
 
