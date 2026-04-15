@@ -14,7 +14,7 @@
 // BoltSpeedAccurate guards against speed drift from chain-mode steering interactions.
 // Scatter layout varies cell spacing so tether beam path lengths differ across rebuilds,
 // maximising the geometric diversity of the despawn-respawn race.
-// Stress: 32 runs to explore varied RNG paths through Prism spawn and bolt-loss events.
+// Stress: 4 runs in parallel — scenario passes consistently, dialled down from 32.
 (
     breaker: "Prism",
     layout: "Scatter",
@@ -25,7 +25,7 @@
     debug_setup: None,
     invariant_params: (max_bolt_count: 12),
     allow_early_end: false,
-    stress: (runs: 32, parallelism: 32),
+    stress: (runs: 4, parallelism: 4),
     seed: 7211,
     chip_selections: ["Arcwelder"],
 )

@@ -16,6 +16,6 @@
     allow_early_end: false,
     seed: 5555,
     initial_effects: [
-        Stamp(Breaker, When(NodeStart, Fire(Shield((duration: 5.0))))),
+        Stamp(Breaker, When(NodeStartOccurred, Fire(Shield((duration: 5.0, reflection_cost: 0.5))))),
     ],
 )

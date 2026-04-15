@@ -15,6 +15,6 @@
     allow_early_end: false,
     seed: 1111,
     initial_effects: [
-        Stamp(Bolt, When(NodeStart, Fire(SecondWind(())))),
+        Stamp(Bolt, When(NodeStartOccurred, Fire(SecondWind(())))),
     ],
 )

@@ -19,6 +19,6 @@
     allow_early_end: false,
     seed: 2357,
     initial_effects: [
-        Stamp(Bolt, When(Bumped, Fire(BumpForce((2.5))))),
+        Stamp(Bolt, When(Bumped, Fire(BumpForce((multiplier: 2.5))))),
     ],
 )

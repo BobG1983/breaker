@@ -13,6 +13,6 @@
     allow_early_end: false,
     seed: 7777,
     initial_effects: [
-        Stamp(Bolt, When(Impact(Bolt), Fire(SpeedBoost((multiplier: 1.05))))),
+        Stamp(Bolt, When(Impacted(Bolt), Fire(SpeedBoost((multiplier: 1.05))))),
     ],
 )

@@ -2,11 +2,11 @@
 
 use std::path::PathBuf;
 
-use super::{
-    super::run_log::RunLog,
-    subprocess::{SubprocessSpec, spawn_batched},
+use super::{super::run_log::RunLog, subprocess::SubprocessSpec};
+use crate::{
+    runner::streaming::spawn_streaming,
+    types::{ScenarioDefinition, StressConfig},
 };
-use crate::types::{ScenarioDefinition, StressConfig};
 
 /// A single failed stress copy's output.
 pub struct StressFailure {
@@ -86,8 +86,9 @@ pub fn partition_stress_scenarios(
     (normal, stress)
 }
 
-/// Runs a stress scenario by spawning `config.runs` copies as subprocesses,
-/// batched by `config.parallelism`.
+/// Runs a stress scenario by spawning `config.runs` copies as subprocesses
+/// through the streaming pool, capped at `config.parallelism` concurrent
+/// workers. Visual windows cycle through the same `parallelism` tile slots.
 ///
 /// Each subprocess gets `--stress-copy` so it runs in single in-process mode
 /// without recursively expanding stress config.
@@ -118,7 +119,7 @@ pub fn run_stress_scenario(
         })
         .collect();
 
-    let all_results = match spawn_batched(&specs, visual, verbose, parallelism) {
+    let all_results = match spawn_streaming(&specs, visual, verbose, parallelism) {
         Ok(results) => results,
         Err(e) => {
             eprintln!("{e}");

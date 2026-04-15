@@ -14,6 +14,6 @@
     allow_early_end: false,
     seed: 9999,
     initial_effects: [
-        Stamp(Bolt, When(CellDestroyed, Fire(Shockwave((base_range: 48.0, range_per_level: 0.0, stacks: 1, speed: 400.0))))),
+        Stamp(Bolt, When(DeathOccurred(Cell), Fire(Shockwave((base_range: 48.0, range_per_level: 0.0, stacks: 1, speed: 400.0))))),
     ],
 )

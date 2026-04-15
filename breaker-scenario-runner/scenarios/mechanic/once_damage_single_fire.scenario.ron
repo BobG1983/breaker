@@ -19,8 +19,6 @@
     allow_early_end: false,
     seed: 1337,
     initial_effects: [
-        Stamp(ActiveBolts, When(Impacted(Cell), Once([
-                    Do(DamageBoost(3.0)),
-                ]))),
+        Stamp(ActiveBolts, Once(Impacted(Cell), Fire(DamageBoost((multiplier: 3.0))))),
     ],
 )

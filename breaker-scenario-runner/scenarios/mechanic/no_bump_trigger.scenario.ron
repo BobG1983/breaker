@@ -15,6 +15,6 @@
     allow_early_end: false,
     seed: 9999,
     initial_effects: [
-        Stamp(Bolt, When(NoBump, Fire(SpeedBoost((multiplier: 0.8))))),
+        Stamp(Bolt, When(NoBumpOccurred, Fire(SpeedBoost((multiplier: 0.8))))),
     ],
 )

@@ -11,6 +11,55 @@ use super::{
     tiling,
 };
 
+/// A reusable free-list of visual tile slots.
+///
+/// Visual mode tiles child windows into a grid sized to the concurrency
+/// cap — not the total job count — so the screen stays fully populated
+/// even when running more scenarios than parallel workers. Each spawn
+/// acquires a slot; each completion releases it back for the next job.
+#[derive(Debug)]
+pub struct SlotPool {
+    free:     Vec<usize>,
+    capacity: usize,
+}
+
+impl SlotPool {
+    /// Creates a pool with `capacity` slots, all initially free.
+    #[must_use]
+    pub fn new(capacity: usize) -> Self {
+        // Reverse so `pop()` yields 0, 1, 2, ... in order.
+        let free = (0..capacity).rev().collect();
+        Self { free, capacity }
+    }
+
+    /// Returns the total slot capacity (never changes after construction).
+    #[must_use]
+    pub const fn capacity(&self) -> usize {
+        self.capacity
+    }
+
+    /// Pops the next free slot, or `None` if exhausted.
+    pub fn acquire(&mut self) -> Option<usize> {
+        self.free.pop()
+    }
+
+    /// Returns `slot` to the pool so a later `acquire` can reuse it.
+    ///
+    /// In debug builds, panics if `slot` is out of range or already free.
+    pub fn release(&mut self, slot: usize) {
+        debug_assert!(
+            slot < self.capacity,
+            "slot {slot} out of range for SlotPool capacity {}",
+            self.capacity
+        );
+        debug_assert!(
+            !self.free.contains(&slot),
+            "slot {slot} released twice (double-free)"
+        );
+        self.free.push(slot);
+    }
+}
+
 /// A pure state machine that tracks how many items can run concurrently,
 /// how many have been dispatched, and how many have completed.
 #[derive(Debug)]
@@ -84,9 +133,10 @@ impl StreamingPool {
 
 /// Spawns subprocesses using a streaming pool for concurrent execution.
 ///
-/// Unlike [`super::execution::spawn_batched`], which waits for an entire batch
-/// to finish before starting the next, this function continuously fills
-/// available slots as children complete — keeping utilisation high.
+/// Continuously fills available worker slots as children complete, so
+/// utilisation stays high. In visual mode, tile slots are bounded by
+/// `max_concurrent` (not `specs.len()`) and are recycled by [`SlotPool`]
+/// so the screen stays fully populated while jobs hand off.
 pub(super) fn spawn_streaming(
     specs: &[SubprocessSpec],
     visual: bool,
@@ -98,7 +148,12 @@ pub(super) fn spawn_streaming(
 
     let mut pool = StreamingPool::new(max_concurrent, specs.len());
     let mut results: Vec<Option<ChildResult>> = (0..specs.len()).map(|_| None).collect();
-    let mut active: Vec<(usize, std::process::Child)> = Vec::new();
+    let mut active: Vec<(usize, Option<usize>, std::process::Child)> = Vec::new();
+
+    // Visual tile grid is sized to the concurrency cap, not the total job
+    // count — so slots stay fully populated as workers hand off jobs.
+    let tile_count = max_concurrent.max(1).min(specs.len());
+    let mut slot_pool = visual.then(|| SlotPool::new(tile_count));
 
     while !pool.is_done() {
         // Spawn phase — fill available slots.
@@ -118,15 +173,19 @@ pub(super) fn spawn_streaming(
             }
             cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
 
-            if visual {
-                for (key, value) in tiling::tile_config_env_vars(idx, specs.len()) {
+            let slot = slot_pool.as_mut().and_then(SlotPool::acquire);
+            if let Some(s) = slot {
+                for (key, value) in tiling::tile_config_env_vars(s, tile_count) {
                     cmd.env(key, value);
                 }
             }
 
             match cmd.spawn() {
-                Ok(child) => active.push((idx, child)),
+                Ok(child) => active.push((idx, slot, child)),
                 Err(e) => {
+                    if let (Some(s), Some(sp)) = (slot, slot_pool.as_mut()) {
+                        sp.release(s);
+                    }
                     eprintln!(
                         "Failed to spawn subprocess for [{}]: {e}",
                         spec.display_name
@@ -142,7 +201,13 @@ pub(super) fn spawn_streaming(
             }
         }
 
-        let any_finished = poll_active_children(&mut active, specs, &mut results, &mut pool);
+        let any_finished = poll_active_children(
+            &mut active,
+            specs,
+            &mut results,
+            &mut pool,
+            slot_pool.as_mut(),
+        );
 
         // Sleep phase — avoid busy-waiting if no child finished this iteration.
         if !any_finished && !pool.is_done() {
@@ -156,20 +221,22 @@ pub(super) fn spawn_streaming(
 /// Polls active child processes for completion, collecting results.
 ///
 /// Iterates backwards for safe `swap_remove`. Returns `true` if any child
-/// finished during this poll cycle.
+/// finished during this poll cycle. When a child finishes, its visual tile
+/// slot (if any) is released back to `slot_pool` so the next spawn reuses it.
 fn poll_active_children(
-    active: &mut Vec<(usize, std::process::Child)>,
+    active: &mut Vec<(usize, Option<usize>, std::process::Child)>,
     specs: &[SubprocessSpec],
     results: &mut [Option<ChildResult>],
     pool: &mut StreamingPool,
+    mut slot_pool: Option<&mut SlotPool>,
 ) -> bool {
     let mut any_finished = false;
     let mut i = active.len();
     while i > 0 {
         i -= 1;
-        match active[i].1.try_wait() {
+        match active[i].2.try_wait() {
             Ok(Some(_status)) => {
-                let (idx, child) = active.swap_remove(i);
+                let (idx, slot, child) = active.swap_remove(i);
                 match child.wait_with_output() {
                     Ok(output) => {
                         let stdout = String::from_utf8(output.stdout)
@@ -196,6 +263,9 @@ fn poll_active_children(
                         });
                     }
                 }
+                if let (Some(s), Some(sp)) = (slot, slot_pool.as_deref_mut()) {
+                    sp.release(s);
+                }
                 pool.mark_complete();
                 any_finished = true;
             }
@@ -203,7 +273,7 @@ fn poll_active_children(
                 // Still running, skip.
             }
             Err(e) => {
-                let (idx, _child) = active.swap_remove(i);
+                let (idx, slot, _child) = active.swap_remove(i);
                 eprintln!(
                     "Failed to check child process [{}]: {e}",
                     specs[idx].display_name
@@ -214,6 +284,9 @@ fn poll_active_children(
                     stdout: String::new(),
                     stderr: format!("try_wait error: {e}"),
                 });
+                if let (Some(s), Some(sp)) = (slot, slot_pool.as_deref_mut()) {
+                    sp.release(s);
+                }
                 pool.mark_complete();
                 any_finished = true;
             }

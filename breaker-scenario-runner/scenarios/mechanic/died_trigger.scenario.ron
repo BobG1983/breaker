@@ -13,6 +13,6 @@
     allow_early_end: false,
     seed: 5555,
     initial_effects: [
-        Stamp(Bolt, When(Death, Fire(DamageBoost((1.1))))),
+        Stamp(Bolt, When(DeathOccurred(Any), Fire(DamageBoost((multiplier: 1.1))))),
     ],
 )

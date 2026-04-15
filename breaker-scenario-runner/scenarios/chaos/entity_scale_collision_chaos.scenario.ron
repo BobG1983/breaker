@@ -22,6 +22,6 @@
     allow_early_end: false,
     seed: 3317,
     initial_effects: [
-        Stamp(Bolt, When(Bumped, Fire(SizeBoost((0.3))))),
+        Stamp(Bolt, When(Bumped, Fire(SizeBoost((multiplier: 0.3))))),
     ],
 )

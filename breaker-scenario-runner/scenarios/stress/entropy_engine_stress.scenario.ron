@@ -14,10 +14,10 @@
     allow_early_end: false,
     seed: 4242,
     initial_effects: [
-        Stamp(Bolt, When(CellDestroyed, Fire(EntropyEngine((max_effects: 3,
+        Stamp(Bolt, When(DeathOccurred(Cell), Fire(EntropyEngine((max_effects: 3,
                     pool: [
-                        (0.5, Do(SpawnBolts(count: 1, lifespan: 2.0, inherit: false))),
-                        (0.5, Do(Shockwave(base_range: 32.0, range_per_level: 0.0, stacks: 1, speed: 400.0))),
+                        (0.5, SpawnBolts((count: 1, lifespan: Some(2.0), inherit: false))),
+                        (0.5, Shockwave((base_range: 32.0, range_per_level: 0.0, stacks: 1, speed: 400.0))),
                     ],))))),
     ],
 )
