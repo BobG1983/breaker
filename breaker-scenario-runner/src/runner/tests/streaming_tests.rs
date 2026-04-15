@@ -1,7 +1,10 @@
 //! Tests for `StreamingPool` — a pure count-based state machine for managing
-//! concurrent scenario dispatch.
+//! concurrent scenario dispatch — and for `SlotPool` — a reusable free-list
+//! of tile slots used by visual mode to keep the screen fully populated.
 
-use crate::runner::streaming::StreamingPool;
+use std::collections::HashSet;
+
+use crate::runner::streaming::{SlotPool, StreamingPool};
 
 // =========================================================================
 // Construction — behaviors 1-3
@@ -555,4 +558,185 @@ fn mark_complete_panics_when_no_active_items() {
     let mut pool = StreamingPool::new(2, 5);
     // No items started — active_count is 0 — this should panic.
     pool.mark_complete();
+}
+
+// =========================================================================
+// SlotPool — reusable visual tile slot free-list
+// =========================================================================
+//
+// `SlotPool` recycles a bounded set of tile slots so visual-mode scenarios
+// always occupy slots in `0..capacity` regardless of how many total jobs
+// run. Each `acquire` pops a slot; each `release` pushes it back for reuse.
+
+// -------------------------------------------------------------------------
+// Behavior S1: new pool reports capacity and can acquire `capacity` slots
+// -------------------------------------------------------------------------
+
+#[test]
+fn slot_pool_new_reports_capacity() {
+    let pool = SlotPool::new(4);
+    assert_eq!(pool.capacity(), 4);
+}
+
+#[test]
+fn slot_pool_new_zero_capacity_reports_zero() {
+    let pool = SlotPool::new(0);
+    assert_eq!(pool.capacity(), 0);
+}
+
+// -------------------------------------------------------------------------
+// Behavior S2: acquire yields capacity distinct slots, all in 0..capacity
+// -------------------------------------------------------------------------
+
+#[test]
+fn slot_pool_acquire_returns_distinct_slots_in_range() {
+    let mut pool = SlotPool::new(4);
+    let mut seen: HashSet<usize> = HashSet::new();
+    for _ in 0..4 {
+        let s = pool
+            .acquire()
+            .expect("acquire should succeed while free slots remain");
+        assert!(s < 4, "slot {s} must be within 0..4");
+        assert!(seen.insert(s), "slot {s} must be distinct until released");
+    }
+    assert_eq!(seen.len(), 4);
+}
+
+// -------------------------------------------------------------------------
+// Behavior S3: acquire returns None when exhausted
+// -------------------------------------------------------------------------
+
+#[test]
+fn slot_pool_acquire_exhausted_returns_none() {
+    let mut pool = SlotPool::new(2);
+    pool.acquire().expect("first acquire");
+    pool.acquire().expect("second acquire");
+    assert!(
+        pool.acquire().is_none(),
+        "third acquire on capacity-2 pool should be None"
+    );
+}
+
+#[test]
+fn slot_pool_zero_capacity_acquire_is_none() {
+    let mut pool = SlotPool::new(0);
+    assert!(
+        pool.acquire().is_none(),
+        "capacity-0 pool should never yield a slot"
+    );
+}
+
+// -------------------------------------------------------------------------
+// Behavior S4: release returns a slot to the pool; next acquire reuses it
+// -------------------------------------------------------------------------
+
+#[test]
+fn slot_pool_release_then_acquire_reuses_slot() {
+    let mut pool = SlotPool::new(3);
+    let a = pool.acquire().expect("acquire 1");
+    let b = pool.acquire().expect("acquire 2");
+    let c = pool.acquire().expect("acquire 3");
+    assert!(pool.acquire().is_none(), "pool exhausted");
+
+    pool.release(b);
+    let reused = pool.acquire().expect("acquire after release");
+    assert_eq!(reused, b, "released slot must be reusable");
+
+    // Ensure a and c are still considered in-use (no double-yield).
+    assert_ne!(reused, a);
+    assert_ne!(reused, c);
+}
+
+// -------------------------------------------------------------------------
+// Behavior S5: THE BUG FIX — across many job cycles, only `capacity`
+//              distinct slots are ever observed, and every slot stays
+//              within 0..capacity
+// -------------------------------------------------------------------------
+
+#[test]
+fn slot_pool_recycles_slots_across_many_cycles() {
+    // Simulates parallelism=4, total=32: acquire 4 slots, then for each
+    // remaining job release the oldest active slot and acquire a fresh one.
+    let capacity = 4;
+    let total_jobs = 32;
+    let mut pool = SlotPool::new(capacity);
+
+    let mut active: Vec<usize> = Vec::with_capacity(capacity);
+    let mut seen: HashSet<usize> = HashSet::new();
+
+    for _ in 0..capacity {
+        let s = pool.acquire().expect("initial fill");
+        active.push(s);
+        seen.insert(s);
+    }
+
+    for _ in 0..(total_jobs - capacity) {
+        let freed = active.remove(0);
+        pool.release(freed);
+        let s = pool
+            .acquire()
+            .expect("acquire after release during steady-state");
+        active.push(s);
+        seen.insert(s);
+    }
+
+    assert_eq!(
+        seen.len(),
+        capacity,
+        "only {capacity} distinct slots should be observed across {total_jobs} jobs — got {}",
+        seen.len()
+    );
+    for &s in &seen {
+        assert!(s < capacity, "slot {s} leaked outside 0..{capacity}");
+    }
+}
+
+// -------------------------------------------------------------------------
+// Behavior S6: acquire yields slots in ascending order on a fresh pool
+// -------------------------------------------------------------------------
+
+#[test]
+fn slot_pool_fresh_pool_yields_slots_in_ascending_order() {
+    let mut pool = SlotPool::new(4);
+    assert_eq!(pool.acquire(), Some(0));
+    assert_eq!(pool.acquire(), Some(1));
+    assert_eq!(pool.acquire(), Some(2));
+    assert_eq!(pool.acquire(), Some(3));
+}
+
+// -------------------------------------------------------------------------
+// Behavior S7: single-slot pool cycles indefinitely
+// -------------------------------------------------------------------------
+
+#[test]
+fn slot_pool_single_slot_cycles() {
+    let mut pool = SlotPool::new(1);
+    for _ in 0..10 {
+        let s = pool.acquire().expect("single-slot acquire");
+        assert_eq!(s, 0);
+        assert!(pool.acquire().is_none());
+        pool.release(s);
+    }
+}
+
+// -------------------------------------------------------------------------
+// Behavior S8: debug asserts for invalid release
+// -------------------------------------------------------------------------
+
+#[cfg(debug_assertions)]
+#[test]
+#[should_panic(expected = "slot")]
+fn slot_pool_release_out_of_range_panics() {
+    let mut pool = SlotPool::new(4);
+    pool.release(4);
+}
+
+#[cfg(debug_assertions)]
+#[test]
+#[should_panic(expected = "slot")]
+fn slot_pool_release_already_free_panics() {
+    let mut pool = SlotPool::new(4);
+    let s = pool.acquire().expect("acquire");
+    pool.release(s);
+    pool.release(s);
 }
