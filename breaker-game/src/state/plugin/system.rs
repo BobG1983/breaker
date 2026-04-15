@@ -11,7 +11,10 @@ use rantzsoft_stateflow::{
 };
 
 use crate::{
-    cells::{CellDefaults, ToughnessDefaults},
+    bolt::BoltRegistry,
+    breaker::BreakerRegistry,
+    cells::{CellDefaults, CellTypeRegistry, ToughnessDefaults},
+    chips::{ChipTemplateRegistry, EvolutionTemplateRegistry},
     input::InputDefaults,
     prelude::*,
     shared::PlayfieldDefaults,
@@ -23,13 +26,14 @@ use crate::{
         },
         pause::PauseMenuPlugin,
         run::{
-            RunPlugin,
+            NodeLayoutRegistry, RunPlugin,
             chip_select::{ChipSelectDefaults, ChipSelectPlugin},
             node::hud::TimerUiDefaults,
             resources::{DifficultyCurveDefaults, NodeOutcome, NodeResult},
             run_end::RunEndPlugin,
         },
     },
+    walls::WallRegistry,
 };
 
 /// Plugin for state lifecycle management.
@@ -91,13 +95,13 @@ fn defaults_plugin() -> impl Plugin {
         .add_config::<ChipSelectDefaults>()
         .add_config::<ToughnessDefaults>()
         .add_config::<DifficultyCurveDefaults>()
-        .add_registry::<crate::cells::CellTypeRegistry>()
-        .add_registry::<crate::breaker::BreakerRegistry>()
-        .add_registry::<crate::bolt::BoltRegistry>()
-        .add_registry::<crate::state::run::NodeLayoutRegistry>()
-        .add_registry::<crate::chips::ChipTemplateRegistry>()
-        .add_registry::<crate::chips::EvolutionTemplateRegistry>()
-        .add_registry::<crate::walls::WallRegistry>()
+        .add_registry::<CellTypeRegistry>()
+        .add_registry::<BreakerRegistry>()
+        .add_registry::<BoltRegistry>()
+        .add_registry::<NodeLayoutRegistry>()
+        .add_registry::<ChipTemplateRegistry>()
+        .add_registry::<EvolutionTemplateRegistry>()
+        .add_registry::<WallRegistry>()
         .build()
 }
 

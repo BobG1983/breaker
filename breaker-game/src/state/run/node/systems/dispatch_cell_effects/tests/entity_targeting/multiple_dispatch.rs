@@ -4,7 +4,10 @@ use bevy::prelude::*;
 use ordered_float::OrderedFloat;
 
 use crate::{
-    cells::components::{CellEffectsDispatched, CellTypeAlias},
+    cells::{
+        components::{CellEffectsDispatched, CellTypeAlias},
+        resources::CellTypeRegistry,
+    },
     effect_v3::{
         effects::ExplodeConfig,
         types::{EffectType, RootNode, StampTarget, Tree, Trigger},
@@ -17,7 +20,7 @@ use crate::{
 
 #[test]
 fn multiple_cells_dispatched_independently() {
-    let mut registry = crate::cells::resources::CellTypeRegistry::default();
+    let mut registry = CellTypeRegistry::default();
     registry.insert(
         "E".to_owned(),
         make_cell_def(

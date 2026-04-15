@@ -1,4 +1,5 @@
 use bevy::{ecs::world::CommandQueue, prelude::*};
+use rantzsoft_spatial2d::components::Spatial2D;
 
 use super::helpers::*;
 use crate::{
@@ -79,7 +80,7 @@ fn tilt_affects_reflection() {
         default_breaker_height(),
         default_reflection_spread(),
         Position2D(Vec2::new(0.0, y_pos)),
-        rantzsoft_spatial2d::components::Spatial2D,
+        Spatial2D,
         GameDrawLayer::Breaker,
     ));
 

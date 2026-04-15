@@ -11,13 +11,12 @@ use crate::{
         effects::PiercingConfig,
         types::{EffectType, RootNode, StampTarget, Tree},
     },
+    prelude::*,
 };
 
 // ── Test helpers ────────────────────────────────────────────────────
 
 fn test_app() -> App {
-    use crate::prelude::*;
-
     TestAppBuilder::new()
         .with_resource::<ChipTemplateRegistry>()
         .with_resource::<EvolutionTemplateRegistry>()

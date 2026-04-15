@@ -8,6 +8,7 @@ use crate::{
         components::PiercingRemaining, systems::bolt_cell_collision::tests::helpers::*,
         test_utils::piercing_stack,
     },
+    cells::resources::CellConfig,
     prelude::*,
 };
 
@@ -59,7 +60,7 @@ fn skip_set_is_per_bolt_two_bolts_pierce_independently() {
     // Each bolt pierces its cell independently. Two BoltImpactCell messages total.
     let mut app = test_app();
     let bc = crate::bolt::systems::bolt_cell_collision::tests::helpers::test_bolt_definition();
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
     app.insert_resource(FullHitMessages::default()).add_systems(
         FixedUpdate,
         collect_full_hits
@@ -113,7 +114,7 @@ fn bolt_with_exhausted_piercing_reflects_normally() {
     // It should reflect off a destroyable cell, not pierce through it.
     let mut app = test_app();
     let bc = crate::bolt::systems::bolt_cell_collision::tests::helpers::test_bolt_definition();
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
 
     let cell_y = 100.0;
     // CellHealth(10) — base damage 10 would destroy it, but piercing is exhausted.

@@ -130,7 +130,7 @@ fn description_for(name: &str) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::breaker::definition::BreakerDefinition;
+    use crate::{breaker::definition::BreakerDefinition, prelude::*};
 
     fn make_breaker(name: &str) -> BreakerDefinition {
         ron::de::from_str(&format!(
@@ -148,7 +148,6 @@ mod tests {
     }
 
     fn test_app(registry: BreakerRegistry) -> App {
-        use crate::prelude::*;
         TestAppBuilder::new()
             .insert_resource(registry)
             .with_system(Update, spawn_run_setup)

@@ -59,9 +59,9 @@ mod tests {
     use bevy::input::{ButtonState, keyboard::Key};
 
     use super::*;
+    use crate::prelude::*;
 
     fn test_app() -> App {
-        use crate::prelude::*;
         TestAppBuilder::new()
             .with_message::<KeyboardInput>()
             .with_resource::<SeedEntry>()

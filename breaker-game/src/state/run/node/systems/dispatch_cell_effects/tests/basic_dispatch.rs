@@ -3,7 +3,10 @@ use ordered_float::OrderedFloat;
 
 use super::helpers::{make_cell_def, test_app};
 use crate::{
-    cells::components::{CellEffectsDispatched, CellTypeAlias},
+    cells::{
+        components::{CellEffectsDispatched, CellTypeAlias},
+        resources::CellTypeRegistry,
+    },
     effect_v3::{
         effects::{DamageBoostConfig, ExplodeConfig},
         types::{EffectType, RootNode, StampTarget, Tree, Trigger},
@@ -15,7 +18,7 @@ use crate::{
 
 #[test]
 fn cell_with_target_cell_effect_gets_bound_effects_populated() {
-    let mut registry = crate::cells::resources::CellTypeRegistry::default();
+    let mut registry = CellTypeRegistry::default();
     registry.insert(
         "E".to_owned(),
         make_cell_def(
@@ -82,7 +85,7 @@ fn cell_with_target_cell_effect_gets_bound_effects_populated() {
 
 #[test]
 fn cell_with_existing_bound_effects_but_no_marker_still_gets_dispatched() {
-    let mut registry = crate::cells::resources::CellTypeRegistry::default();
+    let mut registry = CellTypeRegistry::default();
     registry.insert(
         "E".to_owned(),
         make_cell_def(
@@ -154,7 +157,7 @@ fn cell_with_existing_bound_effects_but_no_marker_still_gets_dispatched() {
 
 #[test]
 fn cell_with_no_effects_is_unchanged() {
-    let mut registry = crate::cells::resources::CellTypeRegistry::default();
+    let mut registry = CellTypeRegistry::default();
     registry.insert("S".to_owned(), make_cell_def("standard", "S", 10.0, None));
     registry.insert(
         "E".to_owned(),
@@ -200,7 +203,7 @@ fn cell_with_no_effects_is_unchanged() {
 
 #[test]
 fn cell_with_empty_effects_vec_is_unchanged() {
-    let mut registry = crate::cells::resources::CellTypeRegistry::default();
+    let mut registry = CellTypeRegistry::default();
     registry.insert(
         "S".to_owned(),
         make_cell_def("standard", "S", 10.0, Some(vec![])),
@@ -262,7 +265,7 @@ fn cell_with_empty_effects_vec_is_unchanged() {
 
 #[test]
 fn cell_with_unknown_alias_is_skipped_no_panic() {
-    let mut registry = crate::cells::resources::CellTypeRegistry::default();
+    let mut registry = CellTypeRegistry::default();
     registry.insert("S".to_owned(), make_cell_def("standard", "S", 10.0, None));
     registry.insert(
         "E".to_owned(),
@@ -317,7 +320,7 @@ fn cell_with_unknown_alias_is_skipped_no_panic() {
 
 #[test]
 fn cell_with_alias_not_in_registry_skipped_while_known_alias_dispatched() {
-    let mut registry = crate::cells::resources::CellTypeRegistry::default();
+    let mut registry = CellTypeRegistry::default();
     registry.insert(
         "E".to_owned(),
         make_cell_def(

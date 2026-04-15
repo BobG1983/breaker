@@ -2,7 +2,14 @@ use bevy::prelude::*;
 
 use super::helpers::*;
 use crate::{
-    breaker::{components::BumpState, definition::BreakerDefinition, messages::BumpWhiffed},
+    breaker::{
+        components::BumpState,
+        definition::BreakerDefinition,
+        messages::{BumpPerformed, BumpWhiffed, NoBump},
+        systems::bump::update_bump,
+        test_utils::spawn_breaker,
+    },
+    input::systems::clear_input_actions,
     prelude::*,
 };
 
@@ -11,7 +18,7 @@ fn input_opens_forward_window() {
     let mut app = update_bump_test_app();
     let config = BreakerDefinition::default();
 
-    let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
+    let entity = spawn_breaker(&mut app, 0.0, 0.0);
 
     app.insert_resource(TestInputActive(true));
     tick(&mut app);
@@ -29,7 +36,7 @@ fn input_opens_forward_window() {
 fn input_on_cooldown_ignored() {
     let mut app = update_bump_test_app();
 
-    let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
+    let entity = spawn_breaker(&mut app, 0.0, 0.0);
     app.world_mut().entity_mut(entity).insert(BumpState {
         cooldown: 0.5,
         ..Default::default()
@@ -47,7 +54,7 @@ fn input_while_active_ignored() {
     let mut app = update_bump_test_app();
     let config = BreakerDefinition::default();
 
-    let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
+    let entity = spawn_breaker(&mut app, 0.0, 0.0);
     app.world_mut().entity_mut(entity).insert(BumpState {
         active: true,
         timer: config.early_window, // mid-window
@@ -72,7 +79,7 @@ fn forward_window_expiry_sends_whiff_and_sets_cooldown() {
     let mut app = combined_bump_test_app();
     let config = BreakerDefinition::default();
 
-    let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
+    let entity = spawn_breaker(&mut app, 0.0, 0.0);
     app.world_mut().entity_mut(entity).insert(BumpState {
         active: true,
         timer: 0.001, // about to expire
@@ -101,7 +108,7 @@ fn forward_window_expiry_sends_whiff_and_sets_cooldown() {
 fn post_hit_timer_ticks_down() {
     let mut app = update_bump_test_app();
 
-    let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
+    let entity = spawn_breaker(&mut app, 0.0, 0.0);
     app.world_mut().entity_mut(entity).insert(BumpState {
         post_hit_timer: 0.1,
         ..Default::default()
@@ -118,7 +125,7 @@ fn post_hit_timer_ticks_down() {
 fn cooldown_ticks_down() {
     let mut app = update_bump_test_app();
 
-    let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
+    let entity = spawn_breaker(&mut app, 0.0, 0.0);
     app.world_mut().entity_mut(entity).insert(BumpState {
         cooldown: 0.1,
         ..Default::default()
@@ -137,7 +144,7 @@ fn cooldown_ticks_down() {
 fn bump_while_serving_does_not_open_forward_window() {
     let mut app = update_bump_test_app();
 
-    let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
+    let entity = spawn_breaker(&mut app, 0.0, 0.0);
 
     // Spawn a serving bolt
     app.world_mut().spawn(BoltServing);
@@ -157,7 +164,7 @@ fn bump_without_serving_bolt_opens_forward_window() {
     // Regression guard: normal bump still works when no BoltServing exists
     let mut app = update_bump_test_app();
 
-    let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
+    let entity = spawn_breaker(&mut app, 0.0, 0.0);
 
     // No BoltServing entity
     app.insert_resource(TestInputActive(true));
@@ -174,14 +181,12 @@ fn bump_without_serving_bolt_opens_forward_window() {
 
 /// App that mirrors production scheduling: input in `PreUpdate`, bump in `FixedUpdate`.
 fn fixed_schedule_bump_app() -> App {
-    use crate::input::systems::clear_input_actions;
-
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .init_resource::<InputActions>()
         .add_message::<BumpPerformed>()
         .add_message::<BumpWhiffed>()
-        .add_message::<crate::breaker::messages::NoBump>()
+        .add_message::<NoBump>()
         .add_message::<BoltImpactBreaker>()
         .init_resource::<CapturedBumps>()
         .init_resource::<CapturedWhiffs>()
@@ -194,7 +199,7 @@ fn fixed_schedule_bump_app() -> App {
     app.add_systems(FixedPostUpdate, clear_input_actions);
 
     // FixedUpdate: process bumps (production schedule)
-    app.add_systems(FixedUpdate, crate::breaker::systems::bump::update_bump);
+    app.add_systems(FixedUpdate, update_bump);
 
     // Update: capture results
     app.add_systems(Update, (capture_bumps, capture_whiffs));
@@ -206,7 +211,7 @@ fn fixed_schedule_bump_app() -> App {
 fn bump_not_lost_when_fixed_update_skips_frame() {
     let mut app = fixed_schedule_bump_app();
 
-    let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
+    let entity = spawn_breaker(&mut app, 0.0, 0.0);
 
     // Frame 1: bump input active, but FixedUpdate won't run (no overstep).
     app.insert_resource(TestInputActive(true));

@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use ordered_float::OrderedFloat;
 
 use crate::{
-    cells::components::CellTypeAlias,
+    cells::{components::CellTypeAlias, resources::CellTypeRegistry},
     effect_v3::{
         effects::{ExplodeConfig, SpeedBoostConfig},
         types::{EffectType, RootNode, StampTarget, Tree, Trigger},
@@ -17,7 +17,7 @@ use crate::{
 
 #[test]
 fn bound_effects_and_staged_effects_inserted_on_cell_if_absent() {
-    let mut registry = crate::cells::resources::CellTypeRegistry::default();
+    let mut registry = CellTypeRegistry::default();
     registry.insert(
         "E".to_owned(),
         make_cell_def(
@@ -55,7 +55,7 @@ fn bound_effects_and_staged_effects_inserted_on_cell_if_absent() {
 
 #[test]
 fn staged_effects_inserted_when_bound_effects_already_exists() {
-    let mut registry = crate::cells::resources::CellTypeRegistry::default();
+    let mut registry = CellTypeRegistry::default();
     registry.insert(
         "E".to_owned(),
         make_cell_def(
@@ -99,7 +99,7 @@ fn staged_effects_inserted_when_bound_effects_already_exists() {
 
 #[test]
 fn bolt_gets_bound_effects_and_staged_effects_pre_inserted() {
-    let mut registry = crate::cells::resources::CellTypeRegistry::default();
+    let mut registry = CellTypeRegistry::default();
     registry.insert(
         "B".to_owned(),
         make_cell_def(
@@ -134,7 +134,7 @@ fn bolt_gets_bound_effects_and_staged_effects_pre_inserted() {
 
 #[test]
 fn bolt_with_bound_effects_but_no_staged_effects_gets_staged_effects_inserted() {
-    let mut registry = crate::cells::resources::CellTypeRegistry::default();
+    let mut registry = CellTypeRegistry::default();
     registry.insert(
         "B".to_owned(),
         make_cell_def(

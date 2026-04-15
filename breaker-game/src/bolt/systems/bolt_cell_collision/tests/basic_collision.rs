@@ -1,7 +1,10 @@
 use bevy::{ecs::world::CommandQueue, prelude::*};
 
 use super::helpers::*;
-use crate::{cells::resources::CellConfig, prelude::*};
+use crate::{
+    bolt::systems::bolt_cell_collision::system::bolt_cell_collision, cells::resources::CellConfig,
+    prelude::*,
+};
 
 #[test]
 fn bolt_moves_full_distance_no_cells() {
@@ -141,11 +144,8 @@ fn bolt_hits_only_nearest_cell() {
     let bc = super::helpers::test_bolt_definition();
     let cc = CellConfig::default();
 
-    app.insert_resource(HitCells::default()).add_systems(
-        FixedUpdate,
-        collect_cell_hits
-            .after(crate::bolt::systems::bolt_cell_collision::system::bolt_cell_collision),
-    );
+    app.insert_resource(HitCells::default())
+        .add_systems(FixedUpdate, collect_cell_hits.after(bolt_cell_collision));
 
     // Two cells vertically, bolt path crosses both
     let near_y = 50.0;
@@ -169,11 +169,8 @@ fn bolt_hit_cell_message_sent() {
     let mut app = test_app();
     let bc = super::helpers::test_bolt_definition();
     let cc = CellConfig::default();
-    app.insert_resource(HitCells::default()).add_systems(
-        FixedUpdate,
-        collect_cell_hits
-            .after(crate::bolt::systems::bolt_cell_collision::system::bolt_cell_collision),
-    );
+    app.insert_resource(HitCells::default())
+        .add_systems(FixedUpdate, collect_cell_hits.after(bolt_cell_collision));
 
     let cell_y = 100.0;
     let cell_entity = spawn_cell(&mut app, 0.0, cell_y);
@@ -215,11 +212,8 @@ fn max_bounces_cap() {
     let mut app = test_app();
     let bc = super::helpers::test_bolt_definition();
     let cc = CellConfig::default();
-    app.insert_resource(HitCells::default()).add_systems(
-        FixedUpdate,
-        collect_cell_hits
-            .after(crate::bolt::systems::bolt_cell_collision::system::bolt_cell_collision),
-    );
+    app.insert_resource(HitCells::default())
+        .add_systems(FixedUpdate, collect_cell_hits.after(bolt_cell_collision));
 
     // Two cells very close together creating a narrow channel.
     // Bolt bouncing between them could loop forever without the cap.
@@ -245,11 +239,8 @@ fn multiple_bolts_each_hit_different_cells() {
     let mut app = test_app();
     let bc = super::helpers::test_bolt_definition();
     let cc = CellConfig::default();
-    app.insert_resource(HitCells::default()).add_systems(
-        FixedUpdate,
-        collect_cell_hits
-            .after(crate::bolt::systems::bolt_cell_collision::system::bolt_cell_collision),
-    );
+    app.insert_resource(HitCells::default())
+        .add_systems(FixedUpdate, collect_cell_hits.after(bolt_cell_collision));
 
     let cell_a = spawn_cell(&mut app, -100.0, 100.0);
     let cell_b = spawn_cell(&mut app, 100.0, 100.0);
@@ -310,11 +301,8 @@ fn bolt_cell_collision_populates_bolt_entity_in_message() {
     let mut app = test_app();
     let bc = super::helpers::test_bolt_definition();
     let cc = CellConfig::default();
-    app.insert_resource(FullHitMessages::default()).add_systems(
-        FixedUpdate,
-        collect_full_hits
-            .after(crate::bolt::systems::bolt_cell_collision::system::bolt_cell_collision),
-    );
+    app.insert_resource(FullHitMessages::default())
+        .add_systems(FixedUpdate, collect_full_hits.after(bolt_cell_collision));
 
     let cell_y = 100.0;
     spawn_cell(&mut app, 0.0, cell_y);

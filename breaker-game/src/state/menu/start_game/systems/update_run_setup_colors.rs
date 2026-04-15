@@ -39,9 +39,9 @@ pub(crate) fn update_run_setup_colors(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::prelude::*;
 
     fn test_app(selection_index: usize) -> App {
-        use crate::prelude::*;
         TestAppBuilder::new()
             .insert_resource(RunSetupSelection {
                 index: selection_index,

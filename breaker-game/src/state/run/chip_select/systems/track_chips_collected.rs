@@ -31,7 +31,6 @@ mod tests {
     /// Uses `Update` schedule (not `FixedUpdate`) since chip selection
     /// happens during the `ChipSelect` game state, not during physics.
     fn test_app() -> App {
-        use crate::prelude::*;
         TestAppBuilder::new()
             .with_message::<ChipSelected>()
             .with_resource::<RunStats>()

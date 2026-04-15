@@ -159,7 +159,7 @@ fn spawn_prompt(parent: &mut ChildSpawnerCommands<'_>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::chips::ChipDefinition;
+    use crate::{chips::ChipDefinition, prelude::*};
 
     fn make_offers(count: usize) -> ChipOffers {
         let all = vec![
@@ -173,7 +173,6 @@ mod tests {
     }
 
     fn test_app_with_offers(offers: ChipOffers) -> App {
-        use crate::prelude::*;
         TestAppBuilder::new()
             .insert_resource(ChipSelectConfig::default())
             .insert_resource(offers)

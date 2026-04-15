@@ -11,6 +11,7 @@ use crate::{
         filters::ActiveFilter,
         messages::BoltLost,
         queries::{LostBoltData, apply_velocity_formula},
+        resources::DEFAULT_BOLT_ANGLE_SPREAD,
     },
     breaker::filters::CollisionFilterBreaker,
     prelude::*,
@@ -48,10 +49,7 @@ pub(crate) fn bolt_lost(
     playfield: Res<PlayfieldConfig>,
     mut rng: ResMut<GameRng>,
     mut bolt_query: Query<LostBoltData, ActiveFilter>,
-    mut breaker_query: Query<
-        (Entity, &rantzsoft_spatial2d::components::Position2D),
-        CollisionFilterBreaker,
-    >,
+    mut breaker_query: Query<(Entity, &Position2D), CollisionFilterBreaker>,
     mut writers: BoltLostWriters,
     mut lost_bolts: Local<Vec<LostBoltEntry>>,
 ) {
@@ -73,9 +71,7 @@ pub(crate) fn bolt_lost(
             .map(|bolt| LostBoltEntry {
                 entity:       bolt.entity,
                 spawn_offset: bolt.spawn_offset.0,
-                angle_spread: bolt
-                    .angle_spread
-                    .map_or(crate::bolt::resources::DEFAULT_BOLT_ANGLE_SPREAD, |a| a.0),
+                angle_spread: bolt.angle_spread.map_or(DEFAULT_BOLT_ANGLE_SPREAD, |a| a.0),
                 is_extra:     bolt.is_extra,
                 radius:       bolt.radius.0,
                 node_scale:   bolt.node_scale.map_or(1.0, |s| s.0),

@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use rantzsoft_spatial2d::components::{GlobalPosition2D, Spatial2D};
 
 use super::helpers::*;
-use crate::{prelude::*, shared::GameDrawLayer};
+use crate::{cells::resources::CellConfig, prelude::*, shared::GameDrawLayer};
 
 // --- NodeScalingFactor collision tests ---
 
@@ -36,7 +36,7 @@ fn bolt_without_entity_scale_in_cell_collision_is_backward_compatible() {
     // Bolt should use full radius (8.0) and reflect normally.
     let mut app = test_app();
     let bc = super::helpers::test_bolt_definition();
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
 
     let cell_y = 100.0;
     spawn_cell(&mut app, 0.0, cell_y);
@@ -79,7 +79,7 @@ fn ccd_reads_cell_half_extents_from_aabb2d_not_cell_dimensions() {
     // If the system reads from CellWidth/CellHeight, the bolt hits and reflects.
     let mut app = test_app();
     let bc = super::helpers::test_bolt_definition();
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
 
     let cell_y = 100.0;
     let _cell = spawn_cell_with_custom_aabb(

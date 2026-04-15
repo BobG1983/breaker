@@ -31,9 +31,9 @@ pub(crate) fn update_seed_display(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::prelude::*;
 
     fn test_app() -> App {
-        use crate::prelude::*;
         TestAppBuilder::new()
             .with_resource::<SeedEntry>()
             .with_system(Update, update_seed_display)

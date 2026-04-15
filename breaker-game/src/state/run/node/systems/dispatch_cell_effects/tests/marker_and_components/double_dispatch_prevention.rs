@@ -4,7 +4,10 @@ use bevy::prelude::*;
 use ordered_float::OrderedFloat;
 
 use crate::{
-    cells::components::{CellEffectsDispatched, CellTypeAlias},
+    cells::{
+        components::{CellEffectsDispatched, CellTypeAlias},
+        resources::CellTypeRegistry,
+    },
     effect_v3::{
         effects::ExplodeConfig,
         types::{EffectType, RootNode, StampTarget, Tree, Trigger},
@@ -17,7 +20,7 @@ use crate::{
 
 #[test]
 fn cell_effects_dispatched_marker_prevents_double_dispatch() {
-    let mut registry = crate::cells::resources::CellTypeRegistry::default();
+    let mut registry = CellTypeRegistry::default();
     registry.insert(
         "E".to_owned(),
         make_cell_def(
@@ -75,7 +78,7 @@ fn cell_effects_dispatched_marker_prevents_double_dispatch() {
 
 #[test]
 fn marker_on_one_cell_skips_it_while_other_is_dispatched() {
-    let mut registry = crate::cells::resources::CellTypeRegistry::default();
+    let mut registry = CellTypeRegistry::default();
     registry.insert(
         "E".to_owned(),
         make_cell_def(

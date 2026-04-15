@@ -41,9 +41,9 @@ pub(crate) fn update_chip_display(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::prelude::*;
 
     fn test_app(timer_remaining: f32, selection_index: usize) -> App {
-        use crate::prelude::*;
         TestAppBuilder::new()
             .insert_resource(ChipSelectConfig::default())
             .insert_resource(ChipSelectTimer {

@@ -4,10 +4,7 @@ use ordered_float::OrderedFloat;
 use super::system::*;
 use crate::{
     effect_v3::{
-        effects::{
-            anchor::components::{AnchorActive, AnchorPlanted, AnchorTimer},
-            piercing::PiercingConfig,
-        },
+        effects::{anchor::components::AnchorTimer, piercing::PiercingConfig},
         stacking::EffectStack,
     },
     prelude::*,

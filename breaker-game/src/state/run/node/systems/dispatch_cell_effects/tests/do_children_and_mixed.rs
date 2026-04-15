@@ -3,7 +3,10 @@ use ordered_float::OrderedFloat;
 
 use super::helpers::{make_cell_def, test_app};
 use crate::{
-    cells::components::{CellEffectsDispatched, CellTypeAlias},
+    cells::{
+        components::{CellEffectsDispatched, CellTypeAlias},
+        resources::CellTypeRegistry,
+    },
     effect_v3::{
         effects::{DamageBoostConfig, ExplodeConfig, SpeedBoostConfig},
         types::{EffectType, EntityKind, RootNode, StampTarget, Tree, Trigger},
@@ -15,7 +18,7 @@ use crate::{
 
 #[test]
 fn do_children_are_not_stored_in_bound_effects() {
-    let mut registry = crate::cells::resources::CellTypeRegistry::default();
+    let mut registry = CellTypeRegistry::default();
     registry.insert(
         "D".to_owned(),
         make_cell_def(
@@ -77,7 +80,7 @@ fn do_children_are_not_stored_in_bound_effects() {
 
 #[test]
 fn all_do_children_results_in_no_bound_effects_entries() {
-    let mut registry = crate::cells::resources::CellTypeRegistry::default();
+    let mut registry = CellTypeRegistry::default();
     registry.insert(
         "D".to_owned(),
         make_cell_def(
@@ -133,7 +136,7 @@ fn all_do_children_results_in_no_bound_effects_entries() {
 
 #[test]
 fn cell_with_multiple_root_effects_gets_all_dispatched() {
-    let mut registry = crate::cells::resources::CellTypeRegistry::default();
+    let mut registry = CellTypeRegistry::default();
     registry.insert(
         "M".to_owned(),
         make_cell_def(
@@ -208,7 +211,7 @@ fn cell_with_multiple_root_effects_gets_all_dispatched() {
 
 #[test]
 fn cell_with_mixed_targets_dispatches_to_correct_entities() {
-    let mut registry = crate::cells::resources::CellTypeRegistry::default();
+    let mut registry = CellTypeRegistry::default();
     registry.insert(
         "M".to_owned(),
         make_cell_def(

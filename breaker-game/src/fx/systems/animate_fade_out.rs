@@ -35,11 +35,10 @@ mod tests {
     use bevy::time::TimeUpdateStrategy;
 
     use super::*;
+    use crate::prelude::*;
 
     /// Build a test app that advances time by `dt` each update.
     fn test_app(dt: Duration) -> App {
-        use crate::prelude::*;
-
         TestAppBuilder::new()
             .insert_resource(TimeUpdateStrategy::ManualDuration(dt))
             .with_system(Update, animate_fade_out)

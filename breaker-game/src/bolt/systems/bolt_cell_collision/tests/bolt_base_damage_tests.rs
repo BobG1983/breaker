@@ -11,6 +11,7 @@ use crate::{
         resources::DEFAULT_BOLT_BASE_DAMAGE,
         test_utils::{damage_stack, piercing_stack},
     },
+    cells::resources::CellConfig,
     prelude::*,
 };
 
@@ -77,7 +78,7 @@ fn spawn_bolt_with_damage(app: &mut App, x: f32, y: f32, vx: f32, vy: f32, damag
 #[test]
 fn collision_uses_bolt_base_damage_from_entity() {
     let mut app = test_app_with_damage_and_wall_messages();
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
 
     let cell_y = 100.0;
     spawn_cell(&mut app, 0.0, cell_y);
@@ -100,7 +101,7 @@ fn collision_uses_bolt_base_damage_from_entity() {
 fn collision_with_zero_base_damage() {
     // Edge case: BoltBaseDamage(0.0) -- damage is 0.0
     let mut app = test_app_with_damage_and_wall_messages();
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
 
     let cell_y = 100.0;
     spawn_cell(&mut app, 0.0, cell_y);
@@ -128,7 +129,7 @@ fn collision_with_zero_base_damage() {
 #[test]
 fn collision_uses_bolt_base_damage_with_damage_boost() {
     let mut app = test_app_with_damage_and_wall_messages();
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
 
     let cell_y = 100.0;
     spawn_cell(&mut app, 0.0, cell_y);
@@ -154,7 +155,7 @@ fn collision_uses_bolt_base_damage_with_damage_boost() {
 fn collision_high_base_damage_with_boost() {
     // Edge case: BoltBaseDamage(25.0) with damage_stack(&[2.0]) = 50.0
     let mut app = test_app_with_damage_and_wall_messages();
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
 
     let cell_y = 100.0;
     spawn_cell(&mut app, 0.0, cell_y);
@@ -252,7 +253,7 @@ fn collision_uses_entity_damage_not_constant() {
     // Given: BoltBaseDamage(25.0) on entity (different from default 10.0)
     // Then: damage is 25.0, NOT 10.0
     let mut app = test_app_with_damage_and_wall_messages();
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
 
     let cell_y = 100.0;
     spawn_cell(&mut app, 0.0, cell_y);
@@ -277,7 +278,7 @@ fn collision_uses_entity_damage_not_constant() {
 #[test]
 fn collision_two_bolts_different_base_damage() {
     let mut app = test_app_with_damage_and_wall_messages();
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
 
     let cell_a = spawn_cell(&mut app, -100.0, 100.0);
     let cell_b = spawn_cell(&mut app, 100.0, 100.0);
@@ -320,7 +321,7 @@ fn collision_two_bolts_different_base_damage() {
 fn collision_two_bolts_different_damage_with_boosts() {
     // Edge case: Both bolts with damage_stack(&[2.0])
     let mut app = test_app_with_damage_and_wall_messages();
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
 
     let cell_a = spawn_cell(&mut app, -100.0, 100.0);
     let cell_b = spawn_cell(&mut app, 100.0, 100.0);
@@ -368,7 +369,7 @@ fn collision_without_bolt_base_damage_falls_back_to_default() {
     // Given: Bolt with BoltBaseDamage(10.0) (from definition)
     // Then: damage is 10.0 (base_damage from definition)
     let mut app = test_app_with_damage_and_wall_messages();
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
     let bc = super::helpers::test_bolt_definition();
 
     let cell_y = 100.0;
@@ -393,7 +394,7 @@ fn collision_without_bolt_base_damage_falls_back_to_default() {
 fn collision_without_bolt_base_damage_with_boost_uses_fallback() {
     // Edge case: BoltBaseDamage(10.0), ActiveDamageBoosts(2.0) -> 10.0 * 2.0 = 20.0
     let mut app = test_app_with_damage_and_wall_messages();
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
     let bc = super::helpers::test_bolt_definition();
 
     let cell_y = 100.0;

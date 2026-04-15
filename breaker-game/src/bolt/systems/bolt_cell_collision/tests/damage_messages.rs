@@ -9,7 +9,6 @@ use crate::{
     },
     cells::resources::CellConfig,
     prelude::*,
-    shared::death_pipeline::invulnerable::Invulnerable,
 };
 
 #[test]

@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+use crate::shared::size::BaseRadius;
+
 /// Marker component identifying the bolt entity.
 #[derive(Component, Debug, Default)]
 pub struct Bolt;
@@ -20,7 +22,7 @@ pub struct BoltServing;
 /// Bolt radius in world units.
 ///
 /// Alias for `BaseRadius` -- bolt uses the shared radius component.
-pub type BoltRadius = crate::shared::size::BaseRadius;
+pub type BoltRadius = BaseRadius;
 
 /// Vertical offset above the breaker where the bolt spawns.
 #[derive(Component, Debug)]

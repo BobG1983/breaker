@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use super::helpers::*;
-use crate::bolt::components::SpawnedByEvolution;
+use crate::{bolt::components::SpawnedByEvolution, cells::resources::CellConfig};
 
 // ── SpawnedByEvolution → DamageDealt<Cell>.source_chip attribution tests ──
 
@@ -9,7 +9,7 @@ use crate::bolt::components::SpawnedByEvolution;
 fn damage_cell_carries_source_chip_from_bolt_spawned_by_evolution() {
     let mut app = test_app_with_damage_and_wall_messages();
     let bc = super::helpers::test_bolt_definition();
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
 
     let cell_y = 100.0;
     let cell_entity = spawn_cell(&mut app, 0.0, cell_y);
@@ -43,7 +43,7 @@ fn damage_cell_carries_source_chip_from_bolt_spawned_by_evolution() {
 fn damage_cell_carries_source_chip_none_when_bolt_has_no_spawned_by_evolution() {
     let mut app = test_app_with_damage_and_wall_messages();
     let bc = super::helpers::test_bolt_definition();
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
 
     let cell_y = 100.0;
     spawn_cell(&mut app, 0.0, cell_y);
@@ -69,7 +69,7 @@ fn damage_cell_carries_source_chip_none_when_bolt_has_no_spawned_by_evolution() 
 fn multiple_bolts_with_different_attributions_produce_correctly_attributed_damage_cells() {
     let mut app = test_app_with_damage_and_wall_messages();
     let bc = super::helpers::test_bolt_definition();
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
 
     let cell_a = spawn_cell(&mut app, -200.0, 100.0);
     let cell_b = spawn_cell(&mut app, 200.0, 100.0);

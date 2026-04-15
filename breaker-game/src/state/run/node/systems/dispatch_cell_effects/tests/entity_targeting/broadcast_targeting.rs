@@ -4,7 +4,10 @@ use bevy::prelude::*;
 use ordered_float::OrderedFloat;
 
 use crate::{
-    cells::components::{CellEffectsDispatched, CellTypeAlias},
+    cells::{
+        components::{CellEffectsDispatched, CellTypeAlias},
+        resources::CellTypeRegistry,
+    },
     effect_v3::{
         effects::{ExplodeConfig, SpeedBoostConfig},
         types::{EffectType, RootNode, StampTarget, Tree, Trigger},
@@ -17,7 +20,7 @@ use crate::{
 
 #[test]
 fn cell_with_target_all_bolts_dispatches_to_all_bolt_entities() {
-    let mut registry = crate::cells::resources::CellTypeRegistry::default();
+    let mut registry = CellTypeRegistry::default();
     registry.insert(
         "B".to_owned(),
         make_cell_def(
@@ -115,7 +118,7 @@ fn cell_with_target_all_bolts_dispatches_to_all_bolt_entities() {
 
 #[test]
 fn cell_with_target_all_cells_dispatches_to_all_cells() {
-    let mut registry = crate::cells::resources::CellTypeRegistry::default();
+    let mut registry = CellTypeRegistry::default();
     registry.insert(
         "A".to_owned(),
         make_cell_def(
@@ -186,7 +189,7 @@ fn cell_with_target_all_cells_dispatches_to_all_cells() {
 
 #[test]
 fn single_cell_with_all_cells_targets_itself() {
-    let mut registry = crate::cells::resources::CellTypeRegistry::default();
+    let mut registry = CellTypeRegistry::default();
     registry.insert(
         "A".to_owned(),
         make_cell_def(

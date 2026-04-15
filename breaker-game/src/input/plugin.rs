@@ -27,11 +27,10 @@ impl Plugin for InputPlugin {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::prelude::*;
 
     #[test]
     fn plugin_builds() {
-        use crate::prelude::*;
-
         let mut app = TestAppBuilder::new()
             .with_resource::<ButtonInput<KeyCode>>()
             .with_message::<bevy::input::keyboard::KeyboardInput>()

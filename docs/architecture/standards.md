@@ -20,7 +20,7 @@ The prelude is organized by category into submodules (`components`, `messages`, 
 ### When to Use
 
 - **Use the prelude** when a file imports 2+ types that are available through it. Replace the verbose cross-domain imports with `use crate::prelude::*` and keep domain-internal imports explicit.
-- **Don't use the prelude for same-domain imports** — even if a type is in the prelude, import it from your own domain's module path when you're within that domain.
+- **Prefer explicit same-domain imports in production files** — in `plugin.rs`, `systems/*.rs`, `components.rs`, etc., when a file only needs same-domain types plus a small fixed set of cross-domain types, import both explicitly. The prelude is acceptable in a same-domain file only when that file already needs 2+ cross-domain types available through it; the incidental same-domain re-export is not a violation. This rule's purpose is to prevent same-domain files from losing track of what they own — not to punish test helpers, filters, and cross-cutting utility files that legitimately live on the cross-domain frontier.
 
 ### What Belongs in the Prelude
 

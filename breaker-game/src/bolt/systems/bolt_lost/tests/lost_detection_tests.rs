@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::PreviousPosition;
+use rantzsoft_spatial2d::components::{PreviousPosition, Spatial2D};
 
 use super::helpers::*;
 use crate::{
@@ -21,7 +21,7 @@ fn bolt_below_floor_detected_via_position2d() {
     app.world_mut().spawn((
         Breaker,
         Position2D(Vec2::new(0.0, -250.0)),
-        rantzsoft_spatial2d::components::Spatial2D,
+        Spatial2D,
         GameDrawLayer::Breaker,
     ));
 
@@ -49,7 +49,7 @@ fn respawn_inserts_position2d_at_breaker_x() {
     app.world_mut().spawn((
         Breaker,
         Position2D(Vec2::new(breaker_x, -250.0)),
-        rantzsoft_spatial2d::components::Spatial2D,
+        Spatial2D,
         GameDrawLayer::Breaker,
     ));
 
@@ -95,7 +95,7 @@ fn respawn_with_zero_spread_launches_straight_up() {
     app.world_mut().spawn((
         Breaker,
         Position2D(Vec2::new(0.0, -250.0)),
-        rantzsoft_spatial2d::components::Spatial2D,
+        Spatial2D,
         GameDrawLayer::Breaker,
     ));
 
@@ -138,7 +138,7 @@ fn respawn_position2d_y_uses_spawn_offset() {
     app.world_mut().spawn((
         Breaker,
         Position2D(Vec2::new(0.0, breaker_y)),
-        rantzsoft_spatial2d::components::Spatial2D,
+        Spatial2D,
         GameDrawLayer::Breaker,
     ));
 
@@ -173,7 +173,7 @@ fn respawn_inserts_previous_position_matching_position2d() {
     app.world_mut().spawn((
         Breaker,
         Position2D(Vec2::new(breaker_x, breaker_y)),
-        rantzsoft_spatial2d::components::Spatial2D,
+        Spatial2D,
         GameDrawLayer::Breaker,
     ));
 
@@ -210,7 +210,7 @@ fn bolt_above_floor_not_lost() {
     app.world_mut().spawn((
         Breaker,
         Position2D(Vec2::new(0.0, -250.0)),
-        rantzsoft_spatial2d::components::Spatial2D,
+        Spatial2D,
         GameDrawLayer::Breaker,
     ));
 
@@ -235,7 +235,7 @@ fn scaled_bolt_uses_effective_radius_for_lost_detection() {
     app.world_mut().spawn((
         Breaker,
         Position2D(Vec2::new(0.0, -250.0)),
-        rantzsoft_spatial2d::components::Spatial2D,
+        Spatial2D,
         GameDrawLayer::Breaker,
     ));
 
@@ -268,7 +268,7 @@ fn bolt_without_entity_scale_in_lost_detection_is_backward_compatible() {
     app.world_mut().spawn((
         Breaker,
         Position2D(Vec2::new(0.0, -250.0)),
-        rantzsoft_spatial2d::components::Spatial2D,
+        Spatial2D,
         GameDrawLayer::Breaker,
     ));
 
@@ -303,7 +303,7 @@ fn bolt_lost_queries_bolt_angle_spread_for_respawn() {
     app.world_mut().spawn((
         Breaker,
         Position2D(Vec2::new(0.0, -250.0)),
-        rantzsoft_spatial2d::components::Spatial2D,
+        Spatial2D,
         GameDrawLayer::Breaker,
     ));
 
@@ -339,7 +339,7 @@ fn bolt_lost_queries_bolt_spawn_offset_y_for_respawn() {
     app.world_mut().spawn((
         Breaker,
         Position2D(Vec2::new(42.0, -250.0)),
-        rantzsoft_spatial2d::components::Spatial2D,
+        Spatial2D,
         GameDrawLayer::Breaker,
     ));
 
@@ -379,7 +379,7 @@ fn bolt_lost_zero_spawn_offset_respawns_at_breaker_y() {
     app.world_mut().spawn((
         Breaker,
         Position2D(Vec2::new(0.0, -250.0)),
-        rantzsoft_spatial2d::components::Spatial2D,
+        Spatial2D,
         GameDrawLayer::Breaker,
     ));
 
@@ -439,7 +439,7 @@ fn bolt_lost_respawn_velocity_uses_base_speed() {
     app.world_mut().spawn((
         Breaker,
         Position2D(Vec2::new(0.0, -250.0)),
-        rantzsoft_spatial2d::components::Spatial2D,
+        Spatial2D,
         GameDrawLayer::Breaker,
     ));
 
@@ -472,7 +472,7 @@ fn bolt_lost_respawn_velocity_with_speed_boost() {
     app.world_mut().spawn((
         Breaker,
         Position2D(Vec2::new(0.0, -250.0)),
-        rantzsoft_spatial2d::components::Spatial2D,
+        Spatial2D,
         GameDrawLayer::Breaker,
     ));
 
@@ -502,7 +502,7 @@ fn bolt_lost_respawn_previous_position_matches_new_position() {
     app.world_mut().spawn((
         Breaker,
         Position2D(Vec2::new(0.0, -250.0)),
-        rantzsoft_spatial2d::components::Spatial2D,
+        Spatial2D,
         GameDrawLayer::Breaker,
     ));
 
@@ -540,7 +540,7 @@ fn bolt_lost_works_without_old_respawn_components() {
     app.world_mut().spawn((
         Breaker,
         Position2D(Vec2::new(0.0, -250.0)),
-        rantzsoft_spatial2d::components::Spatial2D,
+        Spatial2D,
         GameDrawLayer::Breaker,
     ));
 
@@ -577,7 +577,7 @@ fn bolt_lost_respawn_inserts_birthing_component() {
     app.world_mut().spawn((
         Breaker,
         Position2D(Vec2::new(0.0, -250.0)),
-        rantzsoft_spatial2d::components::Spatial2D,
+        Spatial2D,
         GameDrawLayer::Breaker,
     ));
 
@@ -617,7 +617,7 @@ fn bolt_lost_sends_correct_bolt_and_breaker_entities_for_baseline() {
         .spawn((
             Breaker,
             Position2D(Vec2::new(0.0, -250.0)),
-            rantzsoft_spatial2d::components::Spatial2D,
+            Spatial2D,
             GameDrawLayer::Breaker,
         ))
         .id();
@@ -671,7 +671,7 @@ fn bolt_lost_sends_correct_entities_when_multiple_bolts_lost_in_same_frame() {
         .spawn((
             Breaker,
             Position2D(Vec2::new(0.0, -250.0)),
-            rantzsoft_spatial2d::components::Spatial2D,
+            Spatial2D,
             GameDrawLayer::Breaker,
         ))
         .id();

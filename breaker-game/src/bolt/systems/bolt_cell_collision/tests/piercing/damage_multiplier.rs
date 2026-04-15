@@ -6,6 +6,7 @@ use crate::{
         systems::bolt_cell_collision::tests::helpers::*,
         test_utils::{damage_stack, piercing_stack},
     },
+    cells::resources::CellConfig,
     prelude::*,
 };
 
@@ -18,7 +19,7 @@ use crate::{
 fn piercing_with_effective_damage_multiplier_uses_boosted_damage_for_lookahead() {
     let mut app = test_app();
     let bc = crate::bolt::systems::bolt_cell_collision::tests::helpers::test_bolt_definition();
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
 
     let cell_y = 100.0;
     spawn_cell_with_health(&mut app, 0.0, cell_y, 12.0);
@@ -61,7 +62,7 @@ fn piercing_with_effective_damage_multiplier_uses_boosted_damage_for_lookahead()
 fn piercing_without_effective_damage_multiplier_reflects_off_tough_cell() {
     let mut app = test_app();
     let bc = crate::bolt::systems::bolt_cell_collision::tests::helpers::test_bolt_definition();
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
 
     let cell_y = 100.0;
     spawn_cell_with_health(&mut app, 0.0, cell_y, 12.0);

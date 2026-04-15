@@ -1,17 +1,17 @@
 use bevy::prelude::*;
 
 use super::helpers::*;
+use crate::{
+    bolt::systems::bolt_cell_collision::system::bolt_cell_collision, cells::resources::CellConfig,
+};
 
 #[test]
 fn vertical_adjacent_cells_no_cascade() {
     let mut app = test_app();
     let bc = super::helpers::test_bolt_definition();
-    let cc = crate::cells::resources::CellConfig::default();
-    app.insert_resource(HitCells::default()).add_systems(
-        FixedUpdate,
-        collect_cell_hits
-            .after(crate::bolt::systems::bolt_cell_collision::system::bolt_cell_collision),
-    );
+    let cc = CellConfig::default();
+    app.insert_resource(HitCells::default())
+        .add_systems(FixedUpdate, collect_cell_hits.after(bolt_cell_collision));
 
     let upper_y = 100.0;
     let lower_y = upper_y - GRID_STEP_Y;
@@ -39,12 +39,9 @@ fn vertical_adjacent_cells_no_cascade() {
 fn horizontal_adjacent_cells_no_cascade() {
     let mut app = test_app();
     let bc = super::helpers::test_bolt_definition();
-    let cc = crate::cells::resources::CellConfig::default();
-    app.insert_resource(HitCells::default()).add_systems(
-        FixedUpdate,
-        collect_cell_hits
-            .after(crate::bolt::systems::bolt_cell_collision::system::bolt_cell_collision),
-    );
+    let cc = CellConfig::default();
+    app.insert_resource(HitCells::default())
+        .add_systems(FixedUpdate, collect_cell_hits.after(bolt_cell_collision));
 
     let left_x = 0.0;
     let right_x = left_x + GRID_STEP_X;
@@ -72,12 +69,9 @@ fn horizontal_adjacent_cells_no_cascade() {
 fn grid_entry_from_below_hits_one_cell() {
     let mut app = test_app();
     let bc = super::helpers::test_bolt_definition();
-    let cc = crate::cells::resources::CellConfig::default();
-    app.insert_resource(HitCells::default()).add_systems(
-        FixedUpdate,
-        collect_cell_hits
-            .after(crate::bolt::systems::bolt_cell_collision::system::bolt_cell_collision),
-    );
+    let cc = CellConfig::default();
+    app.insert_resource(HitCells::default())
+        .add_systems(FixedUpdate, collect_cell_hits.after(bolt_cell_collision));
 
     // 3x2 mini-grid at real spacing
     let base_y = 100.0;

@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use ordered_float::OrderedFloat;
 
 use crate::{
-    cells::components::CellTypeAlias,
+    cells::{components::CellTypeAlias, resources::CellTypeRegistry},
     effect_v3::{
         effects::SpeedBoostConfig,
         types::{EffectType, EntityKind, RootNode, StampTarget, Tree, Trigger},
@@ -18,7 +18,7 @@ use crate::{
 
 #[test]
 fn cell_with_target_bolt_dispatches_to_all_bolt_entities() {
-    let mut registry = crate::cells::resources::CellTypeRegistry::default();
+    let mut registry = CellTypeRegistry::default();
     registry.insert(
         "B".to_owned(),
         make_cell_def(
@@ -102,7 +102,7 @@ fn cell_with_target_bolt_dispatches_to_all_bolt_entities() {
 
 #[test]
 fn cell_with_target_wall_dispatches_to_all_wall_entities() {
-    let mut registry = crate::cells::resources::CellTypeRegistry::default();
+    let mut registry = CellTypeRegistry::default();
     registry.insert(
         "W".to_owned(),
         make_cell_def(

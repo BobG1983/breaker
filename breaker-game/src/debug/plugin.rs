@@ -44,11 +44,10 @@ impl Plugin for DebugPlugin {
 #[cfg(all(test, not(feature = "dev")))]
 mod tests {
     use super::*;
+    use crate::prelude::*;
 
     #[test]
     fn plugin_builds_headless() {
-        use crate::prelude::*;
-
         let mut app = TestAppBuilder::new().build();
         app.add_plugins(DebugPlugin);
         app.update();
