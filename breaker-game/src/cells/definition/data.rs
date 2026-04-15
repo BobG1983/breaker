@@ -145,26 +145,14 @@ impl CellTypeDefinition {
             for behavior in behaviors {
                 match behavior {
                     CellBehavior::Regen { rate } => {
-                        if *rate <= 0.0 || !rate.is_finite() {
-                            return Err(format!(
-                                "Regen rate must be positive and finite, got {rate}"
-                            ));
-                        }
+                        crate::shared::validation::positive_finite_f32("Regen rate", *rate)?;
                     }
                     CellBehavior::Guarded(guarded) => {
                         guarded.validate()?;
                     }
                     CellBehavior::Volatile { damage, radius } => {
-                        if *damage <= 0.0 || !damage.is_finite() {
-                            return Err(format!(
-                                "Volatile damage must be positive and finite, got {damage}"
-                            ));
-                        }
-                        if *radius <= 0.0 || !radius.is_finite() {
-                            return Err(format!(
-                                "Volatile radius must be positive and finite, got {radius}"
-                            ));
-                        }
+                        crate::shared::validation::positive_finite_f32("Volatile damage", *damage)?;
+                        crate::shared::validation::positive_finite_f32("Volatile radius", *radius)?;
                     }
                 }
             }

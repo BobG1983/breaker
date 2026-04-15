@@ -2,9 +2,13 @@
 
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
+use rantzsoft_physics2d::resources::CollisionQuadtree;
 use serde::{Deserialize, Serialize};
 
-use crate::{effect_v3::traits::Fireable, prelude::*};
+use crate::{
+    effect_v3::{components::EffectSourceChip, traits::Fireable},
+    prelude::*,
+};
 
 /// Area explosion dealing flat damage to all cells within range.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -17,24 +21,33 @@ pub struct ExplodeConfig {
 
 impl Fireable for ExplodeConfig {
     fn fire(&self, entity: Entity, source: &str, world: &mut World) {
-        // Snapshot position from the source entity.
         let pos = world.get::<Position2D>(entity).map_or(Vec2::ZERO, |p| p.0);
+        let source_chip = EffectSourceChip::from_source(source).0;
 
-        let source_chip = if source.is_empty() {
-            None
-        } else {
-            Some(source.to_owned())
-        };
+        // Broad phase: quadtree circle query filtered to the CELL layer.
+        let radius = self.range.0;
+        let query_layers = CollisionLayers::new(0, CELL_LAYER);
+        let candidates = world
+            .resource::<CollisionQuadtree>()
+            .quadtree
+            .query_circle_filtered(pos, radius, query_layers);
 
-        // Collect cells within range (flat damage, no boost multiplier).
-        let targets: Vec<Entity> = world
-            .query_filtered::<(Entity, &Position2D), (With<Cell>, Without<Dead>)>()
-            .iter(world)
-            .filter(|(_, cell_pos)| pos.distance(cell_pos.0) <= self.range.0)
-            .map(|(e, _)| e)
+        // Narrow phase: keep cells whose center is within `radius` (inclusive)
+        // and that are not already `Dead`. The center-distance test preserves
+        // the pre-quadtree semantics of the full-world scan.
+        let targets: Vec<Entity> = candidates
+            .into_iter()
+            .filter(|&e| {
+                let Some(cell_pos) = world.get::<Position2D>(e) else {
+                    return false;
+                };
+                if world.get::<Dead>(e).is_some() {
+                    return false;
+                }
+                pos.distance(cell_pos.0) <= radius
+            })
             .collect();
 
-        // Send damage messages.
         for target in targets {
             world.write_message(DamageDealt {
                 dealer: Some(entity),
@@ -53,6 +66,7 @@ mod tests {
 
     use bevy::prelude::*;
     use ordered_float::OrderedFloat;
+    use rantzsoft_spatial2d::components::{GlobalPosition2D, Spatial2D};
 
     use super::ExplodeConfig;
     use crate::{effect_v3::traits::Fireable, prelude::*};
@@ -61,16 +75,45 @@ mod tests {
 
     fn explode_test_app() -> App {
         TestAppBuilder::new()
+            .with_physics()
             .with_message_capture::<DamageDealt<Cell>>()
             .build()
     }
 
+    /// Spawns a cell with all components the quadtree needs to index it and
+    /// then runs one `FixedUpdate` schedule so `maintain_quadtree` inserts the
+    /// new entity.
     fn spawn_cell_at(app: &mut App, pos: Vec2) -> Entity {
-        app.world_mut().spawn((Cell, Position2D(pos))).id()
+        let e = app
+            .world_mut()
+            .spawn((
+                Cell,
+                Position2D(pos),
+                GlobalPosition2D(pos),
+                Spatial2D,
+                Aabb2D::new(Vec2::ZERO, Vec2::splat(5.0)),
+                CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
+            ))
+            .id();
+        app.world_mut().run_schedule(FixedUpdate);
+        e
     }
 
     fn spawn_dead_cell_at(app: &mut App, pos: Vec2) -> Entity {
-        app.world_mut().spawn((Cell, Position2D(pos), Dead)).id()
+        let e = app
+            .world_mut()
+            .spawn((
+                Cell,
+                Position2D(pos),
+                GlobalPosition2D(pos),
+                Spatial2D,
+                Aabb2D::new(Vec2::ZERO, Vec2::splat(5.0)),
+                CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
+                Dead,
+            ))
+            .id();
+        app.world_mut().run_schedule(FixedUpdate);
+        e
     }
 
     fn spawn_source_at(app: &mut App, pos: Vec2) -> Entity {
@@ -174,7 +217,7 @@ mod tests {
         assert_eq!(
             msgs.0.len(),
             0,
-            "Dead cells should be filtered by Without<Dead>"
+            "Dead cells should be filtered in narrow phase"
         );
     }
 

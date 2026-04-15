@@ -9,12 +9,11 @@
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
 
+use super::helpers::*;
 use crate::{
     cells::{
-        behaviors::volatile::stamp::STAMP_SOURCE,
-        components::VolatileCell,
+        behaviors::volatile::stamp::STAMP_SOURCE, components::VolatileCell,
         definition::CellBehavior,
-        test_utils::{spawn_cell_in_world, test_cell_definition},
     },
     effect_v3::{
         effects::ExplodeConfig,

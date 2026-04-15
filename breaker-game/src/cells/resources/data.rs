@@ -120,42 +120,17 @@ impl ToughnessConfig {
     ///
     /// Returns an error string describing the first invalid field found.
     pub(crate) fn validate(&self) -> Result<(), String> {
-        if self.weak_base <= 0.0 || !self.weak_base.is_finite() {
-            return Err(format!(
-                "weak_base must be positive and finite, got {}",
-                self.weak_base
-            ));
-        }
-        if self.standard_base <= 0.0 || !self.standard_base.is_finite() {
-            return Err(format!(
-                "standard_base must be positive and finite, got {}",
-                self.standard_base
-            ));
-        }
-        if self.tough_base <= 0.0 || !self.tough_base.is_finite() {
-            return Err(format!(
-                "tough_base must be positive and finite, got {}",
-                self.tough_base
-            ));
-        }
-        if self.tier_multiplier <= 0.0 || !self.tier_multiplier.is_finite() {
-            return Err(format!(
-                "tier_multiplier must be positive and finite, got {}",
-                self.tier_multiplier
-            ));
-        }
+        crate::shared::validation::positive_finite_f32("weak_base", self.weak_base)?;
+        crate::shared::validation::positive_finite_f32("standard_base", self.standard_base)?;
+        crate::shared::validation::positive_finite_f32("tough_base", self.tough_base)?;
+        crate::shared::validation::positive_finite_f32("tier_multiplier", self.tier_multiplier)?;
         if self.node_multiplier < 0.0 || !self.node_multiplier.is_finite() {
             return Err(format!(
                 "node_multiplier must be non-negative and finite, got {}",
                 self.node_multiplier
             ));
         }
-        if self.boss_multiplier <= 0.0 || !self.boss_multiplier.is_finite() {
-            return Err(format!(
-                "boss_multiplier must be positive and finite, got {}",
-                self.boss_multiplier
-            ));
-        }
+        crate::shared::validation::positive_finite_f32("boss_multiplier", self.boss_multiplier)?;
         Ok(())
     }
 }

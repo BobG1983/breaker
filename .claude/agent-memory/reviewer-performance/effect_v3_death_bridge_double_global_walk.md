@@ -18,3 +18,8 @@ teardown hitches appear.
 
 **The Specific+Any design is intentional** and was added in this refactor to support chips that
 react to "any death" vs. "cell death" separately — don't flag as a bug.
+
+**Follow-up 6 scheduling:** Death bridges now in `EffectV3Systems::Death` set ordered
+`.after(DeathPipelineSystems::HandleKill)`. Pure ordering correctness fix — zero performance delta.
+All four bridge functions have identical param signatures (no world-exclusive access), so they
+continue to run sequentially within the set. Confirmed clean.

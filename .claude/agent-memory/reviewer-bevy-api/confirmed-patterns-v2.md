@@ -111,6 +111,27 @@ are completely exempt — the lint does not apply.
 - `pub(crate) const fn sync_lock_invulnerable(_commands: Commands) {}` — valid in Rust; `const fn` on a system function that accepts `Commands` compiles because `const fn` just means "callable in const context", not "must be const-evaluated"; Bevy sees it as a normal function pointer
 - Used intentionally to force ApplyDeferred participation for command-flush ordering
 
+## World::run_schedule — return type and must_use (verified Bevy 0.18.1)
+
+- Signature: `pub fn run_schedule(&mut self, label: impl ScheduleLabel) -> Result<(), RunScheduleError>`
+- The return value is NOT marked `#[must_use]` — confirmed by codebase usage: `app.world_mut().run_schedule(TestSchedule)` and `app.world_mut().run_schedule(FixedUpdate)` both appear in passing tests under `unused_must_use = "deny"` lint
+- Ignoring the return value is valid and idiomatic in tests where schedule presence is guaranteed
+- `world.run_schedule(FixedUpdate)` directly executes the FixedUpdate schedule bypassing time accumulation — the correct pattern for one-shot schedule triggers in tests
+- `world.run_schedule(FixedUpdate)` after spawning entities is the correct way to trigger `maintain_quadtree` in tests when `RantzPhysics2dPlugin` is active
+
+## world.resource::<T>() vs world.get_resource::<T>() — panic semantics
+
+- `world.resource::<T>()` panics if resource is missing — appropriate when the resource MUST be present (plugin precondition)
+- `world.get_resource::<T>()` returns `Option<&T>` — appropriate for optional/conditional resources
+- `ExplodeConfig::fire()` calling `world.resource::<CollisionQuadtree>()` is intentionally strict: ExplodeConfig requires physics plugin to be active; panic-on-missing is the correct behavior (same as `Res<T>` in normal systems)
+- Alternative `world.get_resource::<CollisionQuadtree>()` would silently no-op if physics is absent — incorrect for a mandatory dependency
+
+## configure_sets — single-set (non-tuple) form (verified project-wide)
+
+- `app.configure_sets(FixedUpdate, MySet.after(OtherSet))` — valid for a single set; no tuple required
+- Tuple form `app.configure_sets(FixedUpdate, (A, B.after(A)))` — also valid for multiple sets in one call
+- Both forms coexist in the project (`node/plugin.rs:53`, `effect_v3/plugin.rs:28`)
+
 ## chip.and_then(|c| c.0.clone()) — Option<&EffectSourceChip> → Option<String>
 
 `EffectSourceChip(pub Option<String>)`. Pattern:

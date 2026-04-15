@@ -1,48 +1,48 @@
 ---
-name: Death bridges no longer in EffectV3Systems::Bridge set
-description: on_*_destroyed bridges moved to .after(DeathPipelineSystems::HandleKill); not in any cross-domain SystemSet; docs/architecture/ordering.md is stale
+name: Death bridges cross-domain ordering anchor (RESOLVED)
+description: EffectV3Systems::Death set added as the cross-domain tag surface for death-trigger bridges; ordering.md updated; gap closed
 type: project
 ---
 
-As of Wave 1 of the New Cell Modifiers feature (Volatile), the four death-trigger
-bridge systems were moved out of `EffectV3Systems::Bridge` and now live solely
-under `.after(DeathPipelineSystems::HandleKill)`:
+**Status: RESOLVED as of Follow-up 6 (quadtree migration branch).**
+
+The four death-trigger bridges are now tagged with `EffectV3Systems::Death`,
+which is configured as `.after(DeathPipelineSystems::HandleKill)` inside the
+death triggers' own register function:
 
 - `on_cell_destroyed`
 - `on_bolt_destroyed`
 - `on_wall_destroyed`
 - `on_breaker_destroyed`
 
-Registration site: `breaker-game/src/effect_v3/triggers/death/register.rs`
+Registration site: `breaker-game/src/effect_v3/triggers/death/register.rs:17-30`
+Set definition: `breaker-game/src/effect_v3/sets.rs:24` (`EffectV3Systems::Death`)
 
-**Why:** Latent bug fix — previously the bridges ran in `EffectV3Systems::Bridge`
-which precedes the death pipeline within a tick. That meant `Trigger::Died` was
-evaluated against the previous tick's `Destroyed<T>` messages, so victims that
-died this tick had their effects fire one tick late. Moving the bridges to
-`.after(HandleKill)` makes them read same-tick `Destroyed<T>` messages.
+**Why the set is legitimate** (per `ordering.md:19` phase-set exception):
+- Consistent with existing `EffectV3Systems::Bridge` / `Tick` / `Conditions`,
+  which also host multiple systems from a single plugin.
+- Cross-plugin consumer already in use: `cells/behaviors/volatile/tests/group_f.rs:24`
+  uses `before(EffectV3Systems::Death)` to inject test `Destroyed<Cell>` messages.
+- The set exists specifically to provide a single tag surface so consumers never
+  have to reference individual bridge function names across domain boundaries
+  (matches `ordering.md:16` "never reference bare system function names across
+  domain boundaries").
 
-**Side effect:** Effects fired by death bridges (e.g., volatile cell explosions
-that fire `DamageDealt<Cell>`) now apply on the *next* FixedUpdate tick instead
-of the same tick, because they are queued *after* `ApplyDamage` ran. This is
-acceptable for chain reactions but every test/scenario that asserts on chain
-timing must now expect a 1-tick delay between source death and target damage.
+**Why the tick-delay side effect still stands:** Moving bridges to `.after(HandleKill)`
+was a latent bug fix so `Trigger::Died` reads same-tick `Destroyed<T>`. Effects
+fired by death bridges (e.g., volatile cell explosions) still apply damage on
+the *next* FixedUpdate tick because they are queued after `ApplyDamage` ran.
+Tests/scenarios asserting chain timing must expect the 1-tick delay. See
+`docs/architecture/effects/death_pipeline.md` if/when step 7 documents this.
 
-**How to apply:**
+**Doc status:** `docs/architecture/ordering.md:40` notes "death bridges are
+tagged `EffectV3Systems::Death`, not `Bridge`"; row at line 43-44 documents the
+`Death` set; FixedUpdate chain at line 183-184 shows the `.after(HandleKill)`
+ordering. Ordering.md is current as of this PR.
 
-1. **Stale docs.** `docs/architecture/ordering.md:40` and lines 169-178 still
-   list the four bridges as members of `EffectV3Systems::Bridge`. This must be
-   corrected. `docs/architecture/effects/death_pipeline.md` step 7 also needs
-   the `.after(HandleKill)` annotation.
-
-2. **Missing ordering anchor.** The bridges are no longer in any cross-domain
-   SystemSet. If any future system needs to order against death-trigger
-   evaluation, there is no anchor. Recommend adding
-   `EffectV3Systems::Death` (or `DeathBridges`) and tagging the four bridges
-   with it. Do NOT silently drop the cross-domain ordering surface that the
-   previous Bridge membership accidentally provided.
-
-3. **Compatible consumers.** All known same-tick consumers of `Destroyed<T>`
-   (`track_cells_destroyed`, `check_lock_release`, `detect_mass_destruction`,
-   `detect_combo_king`, `track_node_completion`) also order
-   `.after(HandleKill)` — they run in the same parallel batch as the bridges.
-   No write conflicts exist (all are message readers).
+**Split configure_sets caveat:** `EffectV3Plugin::build` configures
+`Bridge → Tick → Conditions` in `plugin.rs:28-35`. `Death` is configured
+separately inside `triggers::death::register::register`, which is invoked from
+`plugin.rs:62` during plugin build. The owning plugin is still responsible for
+configure_sets (it happens transitively via the helper). Not a violation — the
+constraint is co-located with the systems that own it.

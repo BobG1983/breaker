@@ -208,6 +208,7 @@ mod tests {
         let mut world = World::new();
         world.insert_resource(GameRng::from_seed(42));
         world.insert_resource(PlayfieldConfig::default());
+        world.init_resource::<rantzsoft_physics2d::resources::CollisionQuadtree>();
 
         let types = all_effect_types();
         assert_eq!(
