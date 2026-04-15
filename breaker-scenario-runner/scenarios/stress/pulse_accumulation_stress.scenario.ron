@@ -16,6 +16,6 @@
     allow_early_end: false,
     seed: 4444,
     initial_effects: [
-        Stamp(Bolt, Until(TimeExpires(0.5), (Fire(Pulse((base_range: 48.0, range_per_level: 0.0, stacks: 1, speed: 300.0, interval: 0.2)))))),
+        Stamp(Bolt, Until(TimeExpires(0.5), Fire(Pulse((base_range: 48.0, range_per_level: 0.0, stacks: 1, speed: 300.0, interval: 0.2))))),
     ],
 )

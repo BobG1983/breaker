@@ -20,6 +20,6 @@
     allow_early_end: false,
     seed: 1984,
     initial_effects: [
-        Stamp(Bolt, When(Bumped, Until(TimeExpires(1.0), (Fire(DamageBoost((0.5))))))),
+        Stamp(Bolt, When(Bumped, Until(TimeExpires(1.0), Fire(DamageBoost((multiplier: 0.5)))))),
     ],
 )

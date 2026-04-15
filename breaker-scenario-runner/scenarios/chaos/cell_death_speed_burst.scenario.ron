@@ -23,6 +23,6 @@
     allow_early_end: false,
     seed: 4271,
     initial_effects: [
-        Stamp(ActiveBolts, When(Death, Fire(SpeedBoost((multiplier: 1.05))))),
+        Stamp(ActiveBolts, When(DeathOccurred(Any), Fire(SpeedBoost((multiplier: 1.05))))),
     ],
 )

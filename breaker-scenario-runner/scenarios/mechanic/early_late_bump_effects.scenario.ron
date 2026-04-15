@@ -19,6 +19,8 @@
     allow_early_end: false,
     seed: 6174,
     initial_effects: [
-        Stamp(Bolt, Sequence([When(EarlyBumped, Fire(SpeedBoost((multiplier: 0.85)))), When(PerfectBumped, Fire(SpeedBoost((multiplier: 1.3)))), When(LateBumped, Fire(SpeedBoost((multiplier: 0.9))))])),
+        Stamp(Bolt, When(EarlyBumped, Fire(SpeedBoost((multiplier: 0.85))))),
+        Stamp(Bolt, When(PerfectBumped, Fire(SpeedBoost((multiplier: 1.3))))),
+        Stamp(Bolt, When(LateBumped, Fire(SpeedBoost((multiplier: 0.9))))),
     ],
 )

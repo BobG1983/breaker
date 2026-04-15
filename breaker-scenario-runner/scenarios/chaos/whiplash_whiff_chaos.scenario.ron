@@ -1,10 +1,12 @@
-// Adversarial: BumpWhiff fires a DamageBoost(2.5) via Once (consumed on first whiff)
-// and a Shockwave on every whiff. Dense layout maximises bolt-breaker contact events,
-// and chaos 0.5 produces a natural mix of successful bumps and mistimed whiffs.
-// The adversarial risk: if the BumpWhiff bridge evaluates the When node more than once
-// per whiff event (e.g., due to double-read of BumpWhiffed), DamageBoost stacks
+// Adversarial: BumpWhiffOccurred fires a DamageBoost(2.5) via Once (consumed on first whiff)
+// and a Shockwave on every whiff. These are installed as two separate Stamps — Sequence
+// cannot hold a Once (Tree::Sequence takes Terminals only). Dense layout maximises
+// bolt-breaker contact events, and chaos 0.5 produces a natural mix of successful bumps
+// and mistimed whiffs.
+// The adversarial risk: if the BumpWhiffOccurred bridge evaluates the When/Once node more
+// than once per whiff event (e.g., due to double-read of BumpWhiffed), DamageBoost stacks
 // silently and the Shockwave spawns duplicate rings that are never cleaned up.
-// If BumpWhiff fires even when no bump input was registered, the Once is consumed
+// If BumpWhiffOccurred fires even when no bump input was registered, the Once is consumed
 // prematurely and the effect is lost. NoEntityLeaks detects leaked Shockwave ring
 // entities that fail to expand and despawn. BoltSpeedAccurate catches indirect
 // speed corruption from a runaway DamageBoost multiplier. NoNaN guards against
@@ -21,8 +23,7 @@
     allow_early_end: false,
     seed: 2311,
     initial_effects: [
-        Stamp(ActiveBolts, When(BumpWhiff, Sequence([Once([
-                    Do(DamageBoost(2.5)),
-                ]), Fire(Shockwave((base_range: 50.0, range_per_level: 0.0, stacks: 1, speed: 200.0)))]))),
+        Stamp(ActiveBolts, Once(BumpWhiffOccurred, Fire(DamageBoost((multiplier: 2.5))))),
+        Stamp(ActiveBolts, When(BumpWhiffOccurred, Fire(Shockwave((base_range: 50.0, range_per_level: 0.0, stacks: 1, speed: 200.0))))),
     ],
 )

@@ -19,6 +19,6 @@
     allow_early_end: false,
     seed: 1024,
     initial_effects: [
-        Stamp(Bolt, When(NodeStart, Fire(SpeedBoost((multiplier: 1.5))))),
+        Stamp(Bolt, When(NodeStartOccurred, Fire(SpeedBoost((multiplier: 1.5))))),
     ],
 )

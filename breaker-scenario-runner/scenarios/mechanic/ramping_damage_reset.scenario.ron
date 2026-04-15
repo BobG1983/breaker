@@ -19,6 +19,6 @@
     allow_early_end: false,
     seed: 3377,
     initial_effects: [
-        Stamp(Bolt, When(Impacted(Cell), Fire(RampingDamage((damage_per_trigger: 0.25))))),
+        Stamp(Bolt, When(Impacted(Cell), Fire(RampingDamage((increment: 0.25))))),
     ],
 )

@@ -16,6 +16,6 @@
     allow_early_end: false,
     seed: 3141,
     initial_effects: [
-        Stamp(Bolt, When(PerfectBumped, Until(TimeExpires(1.0), (Fire(SpeedBoost((multiplier: 2.0))))))),
+        Stamp(Bolt, When(PerfectBumped, Until(TimeExpires(1.0), Fire(SpeedBoost((multiplier: 2.0)))))),
     ],
 )

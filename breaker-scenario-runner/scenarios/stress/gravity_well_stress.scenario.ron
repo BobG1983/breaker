@@ -29,6 +29,6 @@
     allow_early_end: false,
     seed: 7411,
     initial_effects: [
-        Stamp(Bolt, When(CellDestroyed, Fire(GravityWell((strength: 600.0, duration: 2.0, radius: 150.0, max: 5))))),
+        Stamp(Bolt, When(DeathOccurred(Cell), Fire(GravityWell((strength: 600.0, duration: 2.0, radius: 150.0, max: 5))))),
     ],
 )

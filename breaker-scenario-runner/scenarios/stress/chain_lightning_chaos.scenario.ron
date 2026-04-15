@@ -16,6 +16,6 @@
     allow_early_end: false,
     seed: 5513,
     initial_effects: [
-        Stamp(Bolt, When(Impacted(Cell), Fire(ChainLightning((arcs: 3, range: 96.0, damage_mult: 1.5))))),
+        Stamp(Bolt, When(Impacted(Cell), Fire(ChainLightning((arcs: 3, range: 96.0, damage_mult: 1.5, arc_speed: 600.0))))),
     ],
 )

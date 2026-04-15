@@ -23,6 +23,6 @@
     allow_early_end: false,
     seed: 5003,
     initial_effects: [
-        Stamp(ActiveBolts, When(Impact(Breaker), Fire(SpeedBoost((multiplier: 1.05))))),
+        Stamp(ActiveBolts, When(Impacted(Breaker), Fire(SpeedBoost((multiplier: 1.05))))),
     ],
 )
