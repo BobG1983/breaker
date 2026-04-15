@@ -68,12 +68,12 @@ fn builder_new_does_not_register_sub_states() {
 
 #[test]
 fn builder_new_does_not_register_message_collector() {
-    use crate::cells::messages::DamageCell;
+    use crate::{cells::components::Cell, shared::death_pipeline::damage_dealt::DamageDealt};
 
     let app = TestAppBuilder::new().build();
     assert!(
         app.world()
-            .get_resource::<MessageCollector<DamageCell>>()
+            .get_resource::<MessageCollector<DamageDealt<Cell>>>()
             .is_none(),
         "TestAppBuilder::new() should not register any MessageCollector"
     );

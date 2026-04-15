@@ -29,3 +29,4 @@
 - [TetherBeamWidth component and query pattern](tether_beam_width_pattern.md) — uniform stamp on beam archetype, 5-tuple query on few entities, no new allocations; confirmed clean
 - [Wave C/D/E/G2 effect_v3 patterns](wave_cde_g2_patterns.md) — staged effects, armed fire, watcher loops, entropy engine, evaluate_conditions — all acceptable at current scale; Phase 3 notes inline
 - [death_pipeline handle_kill patterns](death_pipeline_handle_kill_patterns.md) — HashSet dedup, dual Position2D queries, Dead insert archetype churn — all acceptable; dead-letter Wall/Breaker systems are intentional scope exclusion
+- [Locked/Invulnerable archetype and scheduling patterns](locked_invulnerable_patterns.md) — Wave F2/F3: hook-driven Invulnerable churn, empty sync system, check_lock_release ordering, Changed<Hp> false-positive risk — all acceptable at current scale

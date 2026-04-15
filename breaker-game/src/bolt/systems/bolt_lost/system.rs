@@ -1,29 +1,28 @@
 //! Bolt-lost detection — bolt falls below the playfield.
 
-use bevy::{
-    ecs::system::{SystemParam, SystemParamValidationError},
-    prelude::*,
-};
+use std::marker::PhantomData;
+
+use bevy::{ecs::system::SystemParam, prelude::*};
 use rand::Rng;
 use rantzsoft_spatial2d::components::PreviousPosition;
 
 use crate::{
     bolt::{
         filters::ActiveFilter,
-        messages::{BoltLost, RequestBoltDestroyed},
+        messages::BoltLost,
         queries::{LostBoltData, apply_velocity_formula},
     },
     breaker::filters::CollisionFilterBreaker,
     prelude::*,
+    shared::death_pipeline::kill_yourself::KillYourself,
 };
 
 /// Bundled message writers for `bolt_lost` to satisfy clippy's
 /// `too_many_arguments` lint.
 #[derive(SystemParam)]
 pub(crate) struct BoltLostWriters<'w> {
-    writer:                   MessageWriter<'w, BoltLost>,
-    request_destroyed_writer:
-        Result<MessageWriter<'w, RequestBoltDestroyed>, SystemParamValidationError>,
+    writer:        MessageWriter<'w, BoltLost>,
+    kill_yourself: MessageWriter<'w, KillYourself<Bolt>>,
 }
 
 /// Collected data for a single lost bolt, used as scratch storage between
@@ -90,13 +89,15 @@ pub(crate) fn bolt_lost(
             breaker: breaker_entity,
         });
         if entry.is_extra {
-            if let Ok(ref mut destroyed_writer) = writers.request_destroyed_writer {
-                // Two-phase destruction: write request (entity stays alive for bridge evaluation)
-                destroyed_writer.write(RequestBoltDestroyed { bolt: entry.entity });
-            } else {
-                // Legacy path: despawn directly when RequestBoltDestroyed is not registered
-                commands.entity(entry.entity).despawn();
-            }
+            // Unified death pipeline: write KillYourself<Bolt>. handle_kill<Bolt>
+            // (registered by DeathPipelinePlugin) will mark Dead, emit
+            // Destroyed<Bolt> (read by the effect_v3 death bridge), and enqueue
+            // DespawnEntity for FixedPostUpdate.
+            writers.kill_yourself.write(KillYourself::<Bolt> {
+                victim:  entry.entity,
+                killer:  None,
+                _marker: PhantomData,
+            });
         } else {
             // Respawn above breaker
             let angle = rng.0.random_range(-entry.angle_spread..=entry.angle_spread);

@@ -10,13 +10,13 @@ use rantzsoft_stateflow::CleanupOnExit;
 use crate::{
     cells::{
         components::{
-            Cell, CellDamageVisuals, CellHealth, CellHeight, CellTypeAlias, CellWidth, Locked,
-            Locks, RegenRate, RequiredToClear,
+            Cell, CellDamageVisuals, CellHeight, CellTypeAlias, CellWidth, Locked, Locks,
+            RegenRate, RequiredToClear,
         },
         definition::CellBehavior,
         test_utils::{spawn_cell_in_world, test_cell_definition},
     },
-    shared::{BOLT_LAYER, CELL_LAYER, GameDrawLayer},
+    shared::{BOLT_LAYER, CELL_LAYER, GameDrawLayer, death_pipeline::hp::Hp},
     state::types::NodeState,
 };
 
@@ -41,11 +41,11 @@ fn spawn_headless_has_cell_marker_and_core_components() {
     );
     // Guard: also check a non-#[require] component to ensure builder actually ran
     let health = world
-        .get::<CellHealth>(entity)
-        .expect("entity should have CellHealth from builder");
+        .get::<Hp>(entity)
+        .expect("entity should have Hp from builder");
     assert!(
         (health.current - 20.0).abs() < f32::EPSILON,
-        "CellHealth.current should be 20.0"
+        "Hp.current should be 20.0"
     );
 }
 
@@ -158,12 +158,11 @@ fn spawn_headless_has_health() {
             .spawn(commands)
     });
 
-    let health = world
-        .get::<CellHealth>(entity)
-        .expect("entity should have CellHealth");
+    let health = world.get::<Hp>(entity).expect("entity should have Hp");
     assert!(
-        (health.current - 20.0).abs() < f32::EPSILON && (health.max - 20.0).abs() < f32::EPSILON,
-        "CellHealth should be {{ current: 20.0, max: 20.0 }}"
+        (health.current - 20.0).abs() < f32::EPSILON
+            && (health.starting - 20.0).abs() < f32::EPSILON,
+        "Hp should be {{ current: 20.0, starting: 20.0 }}"
     );
 }
 
@@ -233,8 +232,8 @@ fn spawn_headless_has_cleanup_on_exit_and_health() {
     );
     // Guard: also check non-#[require] component
     assert!(
-        world.get::<CellHealth>(entity).is_some(),
-        "entity should have CellHealth from builder"
+        world.get::<Hp>(entity).is_some(),
+        "entity should have Hp from builder"
     );
 }
 
@@ -253,8 +252,8 @@ fn spawn_headless_has_no_visual_components() {
 
     // Guard: non-#[require] component ensures builder ran
     assert!(
-        world.get::<CellHealth>(entity).is_some(),
-        "entity should have CellHealth from builder"
+        world.get::<Hp>(entity).is_some(),
+        "entity should have Hp from builder"
     );
 
     assert!(
@@ -290,8 +289,8 @@ fn spawn_returns_valid_entity_with_core_components() {
     );
     // Guard: non-#[require] component ensures builder actually populated the entity
     assert!(
-        world.get::<CellHealth>(entity).is_some(),
-        "spawned entity should have CellHealth from builder"
+        world.get::<Hp>(entity).is_some(),
+        "spawned entity should have Hp from builder"
     );
     assert!(
         world.get::<CollisionLayers>(entity).is_some(),
@@ -334,12 +333,11 @@ fn spawn_headless_with_definition_has_all_definition_components() {
     );
 
     // Definition-derived components
-    let health = world
-        .get::<CellHealth>(entity)
-        .expect("should have CellHealth");
+    let health = world.get::<Hp>(entity).expect("should have Hp");
     assert!(
-        (health.current - 20.0).abs() < f32::EPSILON && (health.max - 20.0).abs() < f32::EPSILON,
-        "CellHealth should be {{ current: 20.0, max: 20.0 }} (Standard toughness base)"
+        (health.current - 20.0).abs() < f32::EPSILON
+            && (health.starting - 20.0).abs() < f32::EPSILON,
+        "Hp should be {{ current: 20.0, starting: 20.0 }} (Standard toughness base)"
     );
 
     let visuals = world
@@ -397,13 +395,13 @@ fn spawn_headless_definition_required_false_no_marker() {
             .spawn(commands)
     });
 
-    // Guard: CellHealth ensures builder ran with definition hp
+    // Guard: Hp ensures builder ran with definition hp
     let health = world
-        .get::<CellHealth>(entity)
-        .expect("should have CellHealth from definition");
+        .get::<Hp>(entity)
+        .expect("should have Hp from definition");
     assert!(
         (health.current - 20.0).abs() < f32::EPSILON,
-        "CellHealth should come from definition hp"
+        "Hp should come from definition hp"
     );
 
     assert!(
@@ -428,13 +426,13 @@ fn spawn_headless_definition_behaviors_none_no_regen() {
             .spawn(commands)
     });
 
-    // Guard: CellHealth ensures builder ran with definition hp
+    // Guard: Hp ensures builder ran with definition hp
     let health = world
-        .get::<CellHealth>(entity)
-        .expect("should have CellHealth from definition");
+        .get::<Hp>(entity)
+        .expect("should have Hp from definition");
     assert!(
         (health.current - 20.0).abs() < f32::EPSILON,
-        "CellHealth should come from definition hp"
+        "Hp should come from definition hp"
     );
 
     assert!(
@@ -546,8 +544,8 @@ fn spawn_inner_empty_behaviors_no_regen() {
 
     // Guard: non-#[require] component
     assert!(
-        world.get::<CellHealth>(entity).is_some(),
-        "entity should have CellHealth from builder"
+        world.get::<Hp>(entity).is_some(),
+        "entity should have Hp from builder"
     );
     assert!(
         world.get::<RegenRate>(entity).is_none(),

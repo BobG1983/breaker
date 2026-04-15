@@ -69,16 +69,16 @@ impl Plugin for RunPlugin {
                         .after(handle_node_cleared)
                         .after(handle_timer_expired),
                     // Stats accumulation (passive message readers)
-                    track_cells_destroyed,
+                    track_cells_destroyed.after(DeathPipelineSystems::HandleKill),
                     track_bumps,
                     track_bolts_lost,
                     track_time_elapsed,
-                    track_evolution_damage,
+                    track_evolution_damage.after(DeathPipelineSystems::ApplyDamage),
                     track_node_cleared_stats.after(NodeSystems::TrackCompletion),
                     // Highlight detection
-                    detect_mass_destruction,
+                    detect_mass_destruction.after(DeathPipelineSystems::HandleKill),
                     detect_close_save.after(crate::breaker::BreakerSystems::GradeBump),
-                    detect_combo_king,
+                    detect_combo_king.after(DeathPipelineSystems::HandleKill),
                     detect_pinball_wizard,
                     detect_nail_biter.after(NodeSystems::TrackCompletion),
                 )
@@ -125,9 +125,14 @@ mod tests {
     use crate::{
         bolt::messages::{BoltImpactBreaker, BoltImpactCell, BoltLost},
         breaker::{components::Breaker, messages::BumpPerformed},
-        cells::messages::DamageCell,
+        cells::components::Cell,
         chips::inventory::ChipInventory,
-        shared::{PlayfieldConfig, death_pipeline::kill_yourself::KillYourself},
+        shared::{
+            PlayfieldConfig,
+            death_pipeline::{
+                DamageDealt, Destroyed, despawn_entity::DespawnEntity, kill_yourself::KillYourself,
+            },
+        },
         state::run::chip_select::messages::ChipSelected,
     };
 
@@ -150,8 +155,11 @@ mod tests {
                     .register_state::<ChipSelectState>()
                     .register_state::<RunEndState>(),
             )
-            // Messages read by run domain systems
-            .add_message::<DamageCell>()
+            // Messages read by run domain systems — registered explicitly here
+            // instead of via DeathPipelinePlugin to keep the test harness minimal.
+            .add_message::<DamageDealt<Cell>>()
+            .add_message::<Destroyed<Cell>>()
+            .add_message::<DespawnEntity>()
             .add_message::<BumpPerformed>()
             .add_message::<BoltLost>()
             .add_message::<BoltImpactBreaker>()

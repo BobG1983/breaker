@@ -7,7 +7,6 @@ pub(crate) mod definition;
 pub(crate) mod filters;
 pub(crate) mod messages;
 mod plugin;
-pub(crate) mod queries;
 pub(crate) mod resources;
 pub(crate) mod systems;
 

@@ -7,6 +7,7 @@ use bevy::prelude::*;
 use super::{super::helpers::*, helpers::*};
 use crate::{
     cells::components::*,
+    shared::death_pipeline::hp::Hp,
     state::run::node::{
         NodeLayout,
         definition::{LockMap, NodePool},
@@ -50,13 +51,13 @@ fn lock_target_pointing_to_empty_spawns_without_locked() {
         "cell should spawn without Locked when lock target is empty"
     );
 
-    // Cell at (0,0) should still have CellHealth
+    // Cell at (0,0) should still have Hp
     let health_count = app
         .world_mut()
-        .query::<(&Cell, &CellHealth)>()
+        .query::<(&Cell, &Hp)>()
         .iter(app.world())
         .count();
-    assert_eq!(health_count, 2, "all spawned cells should have CellHealth");
+    assert_eq!(health_count, 2, "all spawned cells should have Hp");
 }
 
 // -- Behavior 15: Lock target points to out-of-bounds grid position --

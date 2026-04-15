@@ -13,7 +13,10 @@ use crate::{
         behaviors::guarded::components::ring_slot_offset, components::*, definition::CellBehavior,
     },
     effect_v3::{commands::EffectCommandsExt, types::RootNode},
-    shared::{BOLT_LAYER, CELL_LAYER, GameDrawLayer},
+    shared::{
+        BOLT_LAYER, CELL_LAYER, GameDrawLayer,
+        death_pipeline::{hp::Hp, killed_by::KilledBy},
+    },
 };
 
 // ── Resolution helpers ────────────────────────────────────────────────────
@@ -112,7 +115,8 @@ fn build_core(params: &CoreParams, optional: &OptionalCellData) -> impl Bundle +
     );
 
     let health_components = (
-        CellHealth::new(hp),
+        Hp::new(hp),
+        KilledBy::default(),
         CellWidth::new(params.width),
         CellHeight::new(params.height),
     );
@@ -235,27 +239,32 @@ fn spawn_guardian_children(
         let initial_target = (slot + 1) % 8;
 
         let mut entity = commands.spawn((
-            Cell,
-            GuardianCell,
-            GuardianSlot(slot),
-            SlideTarget(initial_target),
-            GuardianSlideSpeed(config.slide_speed),
-            GuardianGridStep {
-                step_x: config.step_x,
-                step_y: config.step_y,
-            },
-            CellHealth::new(config.hp),
-            CellWidth::new(guardian_dim),
-            CellHeight::new(guardian_dim),
-            Position2D(world_pos),
-            PositionPropagation::Absolute,
-            Scale2D {
-                x: guardian_dim,
-                y: guardian_dim,
-            },
-            Aabb2D::new(Vec2::ZERO, Vec2::new(guardian_half, guardian_half)),
-            CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
-            ChildOf(parent_entity),
+            (
+                Cell,
+                GuardianCell,
+                GuardianSlot(slot),
+                SlideTarget(initial_target),
+                GuardianSlideSpeed(config.slide_speed),
+                GuardianGridStep {
+                    step_x: config.step_x,
+                    step_y: config.step_y,
+                },
+                Hp::new(config.hp),
+                KilledBy::default(),
+            ),
+            (
+                CellWidth::new(guardian_dim),
+                CellHeight::new(guardian_dim),
+                Position2D(world_pos),
+                PositionPropagation::Absolute,
+                Scale2D {
+                    x: guardian_dim,
+                    y: guardian_dim,
+                },
+                Aabb2D::new(Vec2::ZERO, Vec2::new(guardian_half, guardian_half)),
+                CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
+                ChildOf(parent_entity),
+            ),
         ));
 
         if let Some((ref mesh, ref material)) = guarded_data.guardian_visuals {

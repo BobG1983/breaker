@@ -8,14 +8,15 @@ use crate::{
         messages::{BoltLost, BoltSpawned},
         systems::{
             begin_node_birthing, bolt_breaker_collision, bolt_cell_collision, bolt_lost,
-            bolt_wall_collision, clamp_bolt_to_playfield, cleanup_destroyed_bolts,
-            dispatch_bolt_effects, hover_bolt, launch_bolt, normalize_bolt_speed_after_constraints,
-            spawn_bolt_lost_text, sync_bolt_scale, tick_birthing, tick_bolt_lifespan,
+            bolt_wall_collision, clamp_bolt_to_playfield, dispatch_bolt_effects, hover_bolt,
+            launch_bolt, normalize_bolt_speed_after_constraints, spawn_bolt_lost_text,
+            sync_bolt_scale, tick_birthing, tick_bolt_lifespan,
         },
     },
     breaker::BreakerSystems,
     effect_v3::EffectV3Systems,
     prelude::*,
+    shared::death_pipeline::sets::DeathPipelineSystems,
     state::run::node::{
         sets::NodeSystems,
         systems::{apply_node_scale_to_bolt, apply_node_scale_to_late_bolts, reset_bolt},
@@ -35,7 +36,6 @@ impl Plugin for BoltPlugin {
             .add_message::<BoltImpactCell>()
             .add_message::<BoltLost>()
             .add_message::<BoltImpactWall>()
-            .add_message::<RequestBoltDestroyed>()
             .add_systems(
                 OnEnter(NodeState::Loading),
                 (
@@ -89,9 +89,9 @@ impl Plugin for BoltPlugin {
                     // Tag late-spawned bolts with NodeScalingFactor
                     apply_node_scale_to_late_bolts,
                     // Tick bolt lifespan timers and request destruction on expiry
-                    tick_bolt_lifespan.before(BoltSystems::BoltLost),
-                    // Cleanup destroyed bolts after effect bridges evaluate
-                    cleanup_destroyed_bolts.after(EffectV3Systems::Bridge),
+                    tick_bolt_lifespan
+                        .before(BoltSystems::BoltLost)
+                        .before(DeathPipelineSystems::HandleKill),
                 )
                     .run_if(in_state(NodeState::Playing)),
             )

@@ -3,7 +3,10 @@
 use bevy::prelude::*;
 
 use super::helpers::*;
-use crate::cells::components::{Cell, CellHealth, Locked, Locks};
+use crate::{
+    cells::components::{Cell, Locked, Locks},
+    shared::death_pipeline::hp::Hp,
+};
 
 // Behavior 31: .locked(entities) stores lock data for spawn
 #[test]
@@ -80,8 +83,8 @@ fn no_locked_has_no_lock_components() {
 
     // Guard: non-#[require] component ensures builder actually ran
     assert!(
-        world.get::<CellHealth>(entity).is_some(),
-        "entity should have CellHealth from builder"
+        world.get::<Hp>(entity).is_some(),
+        "entity should have Hp from builder"
     );
 
     assert!(

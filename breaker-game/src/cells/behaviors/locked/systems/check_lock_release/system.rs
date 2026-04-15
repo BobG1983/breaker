@@ -2,9 +2,12 @@
 
 use bevy::{ecs::entity::Entities, prelude::*};
 
-use crate::cells::{
-    behaviors::locked::components::{LockCell, Locked, Locks, Unlocked},
-    messages::CellDestroyedAt,
+use crate::{
+    cells::{
+        behaviors::locked::components::{LockCell, Locked, Locks, Unlocked},
+        components::Cell,
+    },
+    shared::death_pipeline::{Dead, Destroyed},
 };
 
 type LockedCellQuery<'w, 's> =
@@ -12,13 +15,15 @@ type LockedCellQuery<'w, 's> =
 
 /// Removes [`Locked`] marker when all adjacent cells are destroyed.
 ///
-/// Listens for [`CellDestroyedAt`] messages and checks each locked cell's
-/// [`Locks`] list. If every entity in the list has been destroyed (no longer
-/// exists in the world), the [`Locked`] component is removed and [`Unlocked`]
-/// is inserted, allowing the cell to take damage.
+/// Listens for [`Destroyed<Cell>`] messages and checks each locked cell's
+/// [`Locks`] list. An adjacent is considered "gone" if it has been marked
+/// [`Dead`] (same tick as the `Destroyed<Cell>` emission) or has been
+/// despawned in a prior tick. When every adjacent is gone, [`Locked`] is
+/// removed and [`Unlocked`] is inserted, allowing the cell to take damage.
 pub(crate) fn check_lock_release(
-    mut reader: MessageReader<CellDestroyedAt>,
+    mut reader: MessageReader<Destroyed<Cell>>,
     query: LockedCellQuery,
+    dead_query: Query<(), With<Dead>>,
     mut commands: Commands,
     all_entities: &Entities,
 ) {
@@ -30,8 +35,11 @@ pub(crate) fn check_lock_release(
             // Empty locks list means the cell should always unlock.
             commands.entity(entity).remove::<Locked>().insert(Unlocked);
         } else if destroyed_count > 0 {
-            // Only scan entity existence when something was actually destroyed.
-            let all_gone = locks.0.iter().all(|adj| !all_entities.contains(*adj));
+            // Only scan when something was actually destroyed this tick.
+            let all_gone = locks
+                .0
+                .iter()
+                .all(|adj| !all_entities.contains(*adj) || dead_query.contains(*adj));
             if all_gone {
                 commands.entity(entity).remove::<Locked>().insert(Unlocked);
             }

@@ -15,16 +15,8 @@ pub(crate) struct Hp {
     /// Hit points remaining.
     pub current:  f32,
     /// The HP this entity spawned with.
-    #[cfg_attr(
-        not(test),
-        expect(
-            dead_code,
-            reason = "awaiting health-fraction visual feedback consumer"
-        )
-    )]
     pub starting: f32,
     /// Optional upper bound for healing.
-    #[expect(dead_code, reason = "awaiting healing system consumer")]
     pub max:      Option<f32>,
 }
 

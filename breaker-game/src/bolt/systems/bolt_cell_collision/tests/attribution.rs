@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use super::helpers::*;
 use crate::bolt::components::SpawnedByEvolution;
 
-// ── SpawnedByEvolution → DamageCell.source_chip attribution tests ──
+// ── SpawnedByEvolution → DamageDealt<Cell>.source_chip attribution tests ──
 
 #[test]
 fn damage_cell_carries_source_chip_from_bolt_spawned_by_evolution() {
@@ -22,20 +22,20 @@ fn damage_cell_carries_source_chip_from_bolt_spawned_by_evolution() {
 
     tick(&mut app);
 
-    let msgs = app.world().resource::<DamageCellMessages>();
+    let msgs = app.world().resource::<DamageDealtCellMessages>();
     assert_eq!(
         msgs.0.len(),
         1,
-        "should emit exactly one DamageCell message on cell hit"
+        "should emit exactly one DamageDealt<Cell> message on cell hit"
     );
     assert_eq!(
-        msgs.0[0].cell, cell_entity,
-        "DamageCell.cell should match the hit cell entity"
+        msgs.0[0].target, cell_entity,
+        "DamageDealt<Cell>.target should match the hit cell entity"
     );
     assert_eq!(
         msgs.0[0].source_chip,
         Some("chain_lightning".to_owned()),
-        "DamageCell.source_chip should carry the bolt's SpawnedByEvolution name"
+        "DamageDealt<Cell>.source_chip should carry the bolt's SpawnedByEvolution name"
     );
 }
 
@@ -53,15 +53,15 @@ fn damage_cell_carries_source_chip_none_when_bolt_has_no_spawned_by_evolution() 
 
     tick(&mut app);
 
-    let msgs = app.world().resource::<DamageCellMessages>();
+    let msgs = app.world().resource::<DamageDealtCellMessages>();
     assert_eq!(
         msgs.0.len(),
         1,
-        "should emit exactly one DamageCell message on cell hit"
+        "should emit exactly one DamageDealt<Cell> message on cell hit"
     );
     assert_eq!(
         msgs.0[0].source_chip, None,
-        "DamageCell.source_chip should be None when bolt has no SpawnedByEvolution"
+        "DamageDealt<Cell>.source_chip should be None when bolt has no SpawnedByEvolution"
     );
 }
 
@@ -87,25 +87,25 @@ fn multiple_bolts_with_different_attributions_produce_correctly_attributed_damag
 
     tick(&mut app);
 
-    let msgs = app.world().resource::<DamageCellMessages>();
+    let msgs = app.world().resource::<DamageDealtCellMessages>();
     assert_eq!(
         msgs.0.len(),
         2,
-        "two bolts hitting two cells should produce two DamageCell messages"
+        "two bolts hitting two cells should produce two DamageDealt<Cell> messages"
     );
 
-    let msg_a = msgs.0.iter().find(|m| m.cell == cell_a);
-    let msg_b = msgs.0.iter().find(|m| m.cell == cell_b);
-    assert!(msg_a.is_some(), "DamageCell for cell A should exist");
-    assert!(msg_b.is_some(), "DamageCell for cell B should exist");
+    let msg_a = msgs.0.iter().find(|m| m.target == cell_a);
+    let msg_b = msgs.0.iter().find(|m| m.target == cell_b);
+    assert!(msg_a.is_some(), "DamageDealt<Cell> for cell A should exist");
+    assert!(msg_b.is_some(), "DamageDealt<Cell> for cell B should exist");
     assert_eq!(
         msg_a.unwrap().source_chip,
         Some("alpha".to_owned()),
-        "DamageCell for cell A should have source_chip Some(\"alpha\") from bolt's SpawnedByEvolution"
+        "DamageDealt<Cell> for cell A should have source_chip Some(\"alpha\") from bolt's SpawnedByEvolution"
     );
     assert_eq!(
         msg_b.unwrap().source_chip,
         None,
-        "DamageCell for cell B should have source_chip None (bolt has no SpawnedByEvolution)"
+        "DamageDealt<Cell> for cell B should have source_chip None (bolt has no SpawnedByEvolution)"
     );
 }

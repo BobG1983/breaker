@@ -10,7 +10,10 @@ use crate::{
         systems::bolt_lost::system::bolt_lost,
     },
     breaker::components::Breaker,
-    shared::{GameDrawLayer, NodeScalingFactor, PlayfieldConfig, birthing::Birthing},
+    shared::{
+        GameDrawLayer, NodeScalingFactor, PlayfieldConfig, birthing::Birthing,
+        death_pipeline::kill_yourself::KillYourself,
+    },
 };
 
 #[test]
@@ -606,6 +609,9 @@ fn bolt_lost_sends_correct_bolt_and_breaker_entities_for_baseline() {
         .with_playfield()
         .with_resource::<crate::shared::GameRng>()
         .with_message::<BoltLost>()
+        // Required: `bolt_lost` takes `MessageWriter<KillYourself<Bolt>>` as a
+        // plain SystemParam, so the message MUST be registered.
+        .with_message::<KillYourself<Bolt>>()
         .with_system(FixedUpdate, (bolt_lost, capture_bolt_lost.after(bolt_lost)))
         .build();
 
@@ -659,6 +665,9 @@ fn bolt_lost_sends_correct_entities_when_multiple_bolts_lost_in_same_frame() {
         .with_playfield()
         .with_resource::<crate::shared::GameRng>()
         .with_message::<BoltLost>()
+        // Required: `bolt_lost` takes `MessageWriter<KillYourself<Bolt>>` as a
+        // plain SystemParam, so the message MUST be registered.
+        .with_message::<KillYourself<Bolt>>()
         .with_system(FixedUpdate, (bolt_lost, capture_bolt_lost.after(bolt_lost)))
         .build();
 

@@ -5,9 +5,12 @@ use bevy::prelude::*;
 use rantzsoft_physics2d::aabb::Aabb2D;
 use rantzsoft_spatial2d::components::{Position2D, Scale2D};
 
-use crate::cells::{
-    components::{Cell, CellHealth, CellHeight, CellWidth},
-    test_utils::spawn_cell_in_world,
+use crate::{
+    cells::{
+        components::{Cell, CellHeight, CellWidth},
+        test_utils::spawn_cell_in_world,
+    },
+    shared::death_pipeline::hp::Hp,
 };
 
 // ── Behavior 4: .position(pos) stores position for spawn ────────────────────
@@ -165,14 +168,13 @@ fn hp_stores_health_in_spawned_entity() {
             .spawn(commands)
     });
 
-    let health = world
-        .get::<CellHealth>(entity)
-        .expect("entity should have CellHealth");
+    let health = world.get::<Hp>(entity).expect("entity should have Hp");
     assert!(
-        (health.current - 20.0).abs() < f32::EPSILON && (health.max - 20.0).abs() < f32::EPSILON,
-        "CellHealth should be {{ current: 20.0, max: 20.0 }}, got {{ current: {}, max: {} }}",
+        (health.current - 20.0).abs() < f32::EPSILON
+            && (health.starting - 20.0).abs() < f32::EPSILON,
+        "Hp should be {{ current: 20.0, starting: 20.0 }}, got {{ current: {}, starting: {} }}",
         health.current,
-        health.max
+        health.starting
     );
 }
 
@@ -189,11 +191,9 @@ fn hp_one_stores_health_correctly() {
             .spawn(commands)
     });
 
-    let health = world
-        .get::<CellHealth>(entity)
-        .expect("entity should have CellHealth");
+    let health = world.get::<Hp>(entity).expect("entity should have Hp");
     assert!(
-        (health.current - 1.0).abs() < f32::EPSILON && (health.max - 1.0).abs() < f32::EPSILON,
-        "CellHealth should be {{ current: 1.0, max: 1.0 }}"
+        (health.current - 1.0).abs() < f32::EPSILON && (health.starting - 1.0).abs() < f32::EPSILON,
+        "Hp should be {{ current: 1.0, starting: 1.0 }}"
     );
 }

@@ -92,6 +92,25 @@ The project has `derive_partial_eq_without_eq = "deny"`. This lint fires ONLY wh
 is derived without `Eq`. Components with `#[derive(Component, Debug, Clone)]` (no `PartialEq`)
 are completely exempt — the lint does not apply.
 
+## Component Hooks — DeferredWorld + HookContext signature (verified docs.rs 0.18.1 + search)
+
+- `fn my_hook(mut world: DeferredWorld, context: HookContext)` — correct signature for `on_insert` / `on_remove`
+- `#[component(on_insert = fn_name, on_remove = fn_name)]` — correct attribute syntax for Bevy 0.18
+- `context.entity` — correct field to access the hooked entity
+- `world.get::<T>(entity)` + `world.commands().entity(entity).insert(...)` — correct DeferredWorld access pattern inside hooks
+- `world.commands().get_entity(entity)` returns `Result<EntityCommands, EntityDoesNotExistError>` — correct guard for potentially-despawned entities in on_remove
+
+## Query<(), With<T>> — empty data query (confirmed valid)
+
+- `Query<(), With<T>>` — valid; `()` as the data type parameter compiles and is iterable with `.contains(entity)`
+- `Query<(), (With<A>, With<B>)>` — valid multi-filter variant
+- Used idiomatically to check component presence without fetching data
+
+## `const fn` no-op system with Commands (verified compiles in project)
+
+- `pub(crate) const fn sync_lock_invulnerable(_commands: Commands) {}` — valid in Rust; `const fn` on a system function that accepts `Commands` compiles because `const fn` just means "callable in const context", not "must be const-evaluated"; Bevy sees it as a normal function pointer
+- Used intentionally to force ApplyDeferred participation for command-flush ordering
+
 ## chip.and_then(|c| c.0.clone()) — Option<&EffectSourceChip> → Option<String>
 
 `EffectSourceChip(pub Option<String>)`. Pattern:

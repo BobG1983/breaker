@@ -2,18 +2,22 @@
 
 use bevy::prelude::*;
 
-use crate::cells::{components::*, resources::CellTypeRegistry};
+use crate::{
+    cells::{components::*, resources::CellTypeRegistry},
+    shared::death_pipeline::hp::Hp,
+};
 
 /// Detects when `propagate_registry` has rebuilt the `CellTypeRegistry`
 /// and updates matching live cell entities.
 ///
-/// Updated per-cell: `CellHealth.max` (clamped), `CellDamageVisuals`, material color.
+/// Updated per-cell: `Hp.starting` (and clamps `current`), `CellDamageVisuals`,
+/// material color.
 pub(crate) fn propagate_cell_type_changes(
     registry: Res<CellTypeRegistry>,
     mut query: Query<
         (
             &CellTypeAlias,
-            &mut CellHealth,
+            &mut Hp,
             &mut CellDamageVisuals,
             &MeshMaterial2d<ColorMaterial>,
         ),
@@ -26,13 +30,14 @@ pub(crate) fn propagate_cell_type_changes(
     }
 
     // Update matching live cell entities
-    for (alias, mut health, mut visuals, mat_handle) in &mut query {
+    for (alias, mut hp, mut visuals, mat_handle) in &mut query {
         let Some(def) = registry.get(&alias.0) else {
             continue;
         };
 
-        health.max = def.toughness.default_base_hp();
-        health.current = health.current.min(def.toughness.default_base_hp());
+        let new_base = def.toughness.default_base_hp();
+        hp.starting = new_base;
+        hp.current = hp.current.min(new_base);
 
         visuals.hdr_base = def.damage_hdr_base;
         visuals.green_min = def.damage_green_min;
@@ -115,7 +120,7 @@ mod tests {
             .spawn((
                 Cell,
                 CellTypeAlias("S".to_owned()),
-                CellHealth::new(1.0),
+                Hp::new(1.0),
                 CellDamageVisuals {
                     hdr_base:   4.0,
                     green_min:  0.2,
@@ -141,15 +146,15 @@ mod tests {
 
         app.update();
 
-        let health = app.world().get::<CellHealth>(entity).unwrap();
+        let hp = app.world().get::<Hp>(entity).unwrap();
         assert!(
-            (health.max - 10.0).abs() < f32::EPSILON,
-            "CellHealth.max should update to Weak base 10.0, got {}",
-            health.max
+            (hp.starting - 10.0).abs() < f32::EPSILON,
+            "Hp.starting should update to Weak base 10.0, got {}",
+            hp.starting
         );
         assert!(
-            (health.current - 1.0).abs() < f32::EPSILON,
-            "CellHealth.current should remain 1.0 (already <= 10.0)"
+            (hp.current - 1.0).abs() < f32::EPSILON,
+            "Hp.current should remain 1.0 (already <= 10.0)"
         );
 
         let visuals = app.world().get::<CellDamageVisuals>(entity).unwrap();
@@ -182,7 +187,7 @@ mod tests {
             .spawn((
                 Cell,
                 CellTypeAlias("T".to_owned()),
-                CellHealth::new(30.0),
+                Hp::new(30.0),
                 CellDamageVisuals {
                     hdr_base:   4.0,
                     green_min:  0.2,
@@ -206,12 +211,12 @@ mod tests {
 
         app.update();
 
-        // 'T' cell recalculated from Tough toughness — max stays 30.0
-        let health = app.world().get::<CellHealth>(t_entity).unwrap();
+        // 'T' cell recalculated from Tough toughness — starting stays 30.0
+        let hp = app.world().get::<Hp>(t_entity).unwrap();
         assert!(
-            (health.max - 30.0).abs() < f32::EPSILON,
-            "Tough cell max HP should be Tough base 30.0, got {}",
-            health.max
+            (hp.starting - 30.0).abs() < f32::EPSILON,
+            "Tough cell Hp.starting should be Tough base 30.0, got {}",
+            hp.starting
         );
     }
 
@@ -230,15 +235,16 @@ mod tests {
             mats.add(ColorMaterial::from_color(Color::WHITE))
         };
 
-        // Spawn cell with current=30.0, max=30.0 (Tough base)
+        // Spawn cell with current=30.0, starting=30.0 (Tough base)
         let entity = app
             .world_mut()
             .spawn((
                 Cell,
                 CellTypeAlias("T".to_owned()),
-                CellHealth {
-                    current: 30.0,
-                    max:     30.0,
+                Hp {
+                    current:  30.0,
+                    starting: 30.0,
+                    max:      Some(30.0),
                 },
                 CellDamageVisuals {
                     hdr_base:   4.0,
@@ -264,16 +270,16 @@ mod tests {
 
         app.update();
 
-        let health = app.world().get::<CellHealth>(entity).unwrap();
+        let hp = app.world().get::<Hp>(entity).unwrap();
         assert!(
-            (health.max - 10.0).abs() < f32::EPSILON,
-            "max should be Weak base 10.0, got {}",
-            health.max
+            (hp.starting - 10.0).abs() < f32::EPSILON,
+            "Hp.starting should be Weak base 10.0, got {}",
+            hp.starting
         );
         assert!(
-            (health.current - 10.0).abs() < f32::EPSILON,
-            "current (30.0) should clamp to new max (10.0), got {}",
-            health.current
+            (hp.current - 10.0).abs() < f32::EPSILON,
+            "current (30.0) should clamp to new starting (10.0), got {}",
+            hp.current
         );
     }
 }

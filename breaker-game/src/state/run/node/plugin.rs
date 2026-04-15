@@ -5,6 +5,7 @@ use rantzsoft_stateflow::{Route, RoutingTableAppExt, cleanup_on_exit};
 
 use crate::{
     prelude::*,
+    shared::death_pipeline::sets::DeathPipelineSystems,
     state::run::node::{
         hud::{
             UiSystems,
@@ -49,10 +50,13 @@ impl Plugin for NodePlugin {
             cleanup_on_exit::<NodeState>.in_set(NodeSystems::Cleanup),
         );
 
+        app.configure_sets(
+            FixedUpdate,
+            NodeSystems::TrackCompletion.after(DeathPipelineSystems::HandleKill),
+        );
         app.init_resource::<ClearRemainingCount>()
             .init_resource::<NodeTimer>()
             .init_resource::<ScenarioLayoutOverride>()
-            .add_message::<CellDestroyedAt>()
             .add_message::<NodeCleared>()
             .add_message::<TimerExpired>()
             .add_message::<ApplyTimePenalty>()

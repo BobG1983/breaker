@@ -370,8 +370,8 @@ fn no_toughness_hp_path_still_works() {
             .spawn(commands)
     });
     let health = world
-        .get::<crate::cells::components::CellHealth>(entity)
-        .expect("should have CellHealth");
+        .get::<crate::shared::death_pipeline::hp::Hp>(entity)
+        .expect("should have Hp");
     assert!(
         (health.current - 20.0).abs() < f32::EPSILON,
         "legacy .hp() should still set health"

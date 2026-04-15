@@ -4,8 +4,11 @@ use bevy::prelude::*;
 
 use super::helpers::{
     PendingDamage, TestEntity, build_apply_damage_app, damage_msg, spawn_test_entity,
+    spawn_test_entity_invulnerable,
 };
-use crate::shared::death_pipeline::{dead::Dead, hp::Hp, killed_by::KilledBy};
+use crate::shared::death_pipeline::{
+    dead::Dead, hp::Hp, invulnerable::Invulnerable, killed_by::KilledBy,
+};
 
 #[test]
 fn apply_damage_reduces_hp() {
@@ -182,6 +185,191 @@ fn apply_damage_overkill_sets_negative_hp() {
     assert!(
         (hp.current - (-15.0)).abs() < f32::EPSILON,
         "Hp should be -15.0 after 25 damage to 10-HP entity, got {}",
+        hp.current
+    );
+}
+
+// ── Group I: Without<Invulnerable> filter ───────────────────────────────────
+
+/// I1: `apply_damage::<TestEntity>` skips entities that carry `Invulnerable`.
+#[test]
+fn apply_damage_skips_invulnerable_entity() {
+    let mut app = build_apply_damage_app();
+    let entity = spawn_test_entity_invulnerable(&mut app, 3.0);
+
+    app.insert_resource(PendingDamage(vec![damage_msg(entity, 1.0, None)]));
+    crate::shared::test_utils::tick(&mut app);
+
+    let hp = app.world().get::<Hp>(entity).unwrap();
+    assert!(
+        (hp.current - 3.0).abs() < f32::EPSILON,
+        "Invulnerable entity's Hp should remain 3.0, got {}",
+        hp.current
+    );
+
+    let killed_by = app.world().get::<KilledBy>(entity).unwrap();
+    assert_eq!(
+        killed_by.dealer, None,
+        "KilledBy.dealer should remain None because damage was filtered out"
+    );
+
+    // Marker still present — filter is non-destructive.
+    assert!(
+        app.world().get::<Invulnerable>(entity).is_some(),
+        "Invulnerable marker should still be present after the filtered tick"
+    );
+}
+
+/// I1 edge: overkill damage (1000.0) against an invulnerable entity still
+/// leaves HP unchanged at 3.0.
+#[test]
+fn apply_damage_skips_invulnerable_entity_against_overkill() {
+    let mut app = build_apply_damage_app();
+    let entity = spawn_test_entity_invulnerable(&mut app, 3.0);
+
+    app.insert_resource(PendingDamage(vec![damage_msg(entity, 1000.0, None)]));
+    crate::shared::test_utils::tick(&mut app);
+
+    let hp = app.world().get::<Hp>(entity).unwrap();
+    assert!(
+        (hp.current - 3.0).abs() < f32::EPSILON,
+        "Invulnerable entity should absorb overkill damage, Hp should remain 3.0, got {}",
+        hp.current
+    );
+}
+
+/// I1 edge: a dealer is NOT recorded in `KilledBy` because the victim is
+/// invulnerable.
+#[test]
+fn apply_damage_invulnerable_entity_does_not_record_dealer() {
+    let mut app = build_apply_damage_app();
+    let entity = spawn_test_entity_invulnerable(&mut app, 3.0);
+    let dealer = app.world_mut().spawn_empty().id();
+
+    app.insert_resource(PendingDamage(vec![damage_msg(
+        entity,
+        1000.0,
+        Some(dealer),
+    )]));
+    crate::shared::test_utils::tick(&mut app);
+
+    let killed_by = app.world().get::<KilledBy>(entity).unwrap();
+    assert_eq!(
+        killed_by.dealer, None,
+        "dealer should NOT be recorded because the victim is invulnerable"
+    );
+}
+
+/// I2: `apply_damage::<TestEntity>` applies damage to entities WITHOUT
+/// `Invulnerable` — positive assertion that the filter does not exclude
+/// non-invulnerable entities.
+#[test]
+fn apply_damage_applies_to_non_invulnerable_entity() {
+    let mut app = build_apply_damage_app();
+    let entity = spawn_test_entity(&mut app, 3.0);
+
+    app.insert_resource(PendingDamage(vec![damage_msg(entity, 1.0, None)]));
+    crate::shared::test_utils::tick(&mut app);
+
+    let hp = app.world().get::<Hp>(entity).unwrap();
+    assert!(
+        (hp.current - 2.0).abs() < f32::EPSILON,
+        "non-invulnerable entity should take 1.0 damage (3.0 -> 2.0), got {}",
+        hp.current
+    );
+}
+
+/// I2 edge: dealer IS recorded in `KilledBy.dealer` when a non-invulnerable
+/// entity takes the killing blow.
+#[test]
+fn apply_damage_non_invulnerable_entity_records_dealer_on_killing_blow() {
+    let mut app = build_apply_damage_app();
+    let entity = spawn_test_entity(&mut app, 3.0);
+    let dealer = app.world_mut().spawn_empty().id();
+
+    app.insert_resource(PendingDamage(vec![damage_msg(entity, 3.0, Some(dealer))]));
+    crate::shared::test_utils::tick(&mut app);
+
+    let killed_by = app.world().get::<KilledBy>(entity).unwrap();
+    assert_eq!(
+        killed_by.dealer,
+        Some(dealer),
+        "dealer should be recorded on the killing blow for a non-invulnerable entity"
+    );
+}
+
+/// I3: a mixed batch of invulnerable and vulnerable targets — only the
+/// vulnerable entity takes damage, filter is applied per-entity.
+#[test]
+fn apply_damage_filter_splits_invulnerable_from_vulnerable() {
+    let mut app = build_apply_damage_app();
+    let invulnerable_entity = spawn_test_entity_invulnerable(&mut app, 3.0);
+    let vulnerable_entity = spawn_test_entity(&mut app, 3.0);
+
+    app.insert_resource(PendingDamage(vec![
+        damage_msg(invulnerable_entity, 1.0, None),
+        damage_msg(vulnerable_entity, 1.0, None),
+    ]));
+    crate::shared::test_utils::tick(&mut app);
+
+    let inv_hp = app.world().get::<Hp>(invulnerable_entity).unwrap();
+    assert!(
+        (inv_hp.current - 3.0).abs() < f32::EPSILON,
+        "invulnerable entity Hp should remain 3.0, got {}",
+        inv_hp.current
+    );
+
+    let vul_hp = app.world().get::<Hp>(vulnerable_entity).unwrap();
+    assert!(
+        (vul_hp.current - 2.0).abs() < f32::EPSILON,
+        "vulnerable entity Hp should be 2.0 after 1.0 damage, got {}",
+        vul_hp.current
+    );
+}
+
+/// I3 edge: order reversed in the `PendingDamage` vec — same outcome, filter
+/// is order-independent.
+#[test]
+fn apply_damage_filter_order_independent_for_mixed_batch() {
+    let mut app = build_apply_damage_app();
+    let invulnerable_entity = spawn_test_entity_invulnerable(&mut app, 3.0);
+    let vulnerable_entity = spawn_test_entity(&mut app, 3.0);
+
+    app.insert_resource(PendingDamage(vec![
+        damage_msg(vulnerable_entity, 1.0, None),
+        damage_msg(invulnerable_entity, 1.0, None),
+    ]));
+    crate::shared::test_utils::tick(&mut app);
+
+    assert!(
+        (app.world().get::<Hp>(invulnerable_entity).unwrap().current - 3.0).abs() < f32::EPSILON,
+        "invulnerable entity Hp should remain 3.0 regardless of message order"
+    );
+    assert!(
+        (app.world().get::<Hp>(vulnerable_entity).unwrap().current - 2.0).abs() < f32::EPSILON,
+        "vulnerable entity Hp should be 2.0 regardless of message order"
+    );
+}
+
+/// I3 edge: multiple damage messages against the same invulnerable entity in
+/// the same tick — still unchanged because the filter drops the entity from
+/// the query entirely.
+#[test]
+fn apply_damage_multiple_messages_against_invulnerable_still_skipped() {
+    let mut app = build_apply_damage_app();
+    let entity = spawn_test_entity_invulnerable(&mut app, 3.0);
+
+    app.insert_resource(PendingDamage(vec![
+        damage_msg(entity, 1.0, None),
+        damage_msg(entity, 1.0, None),
+        damage_msg(entity, 1.0, None),
+    ]));
+    crate::shared::test_utils::tick(&mut app);
+
+    let hp = app.world().get::<Hp>(entity).unwrap();
+    assert!(
+        (hp.current - 3.0).abs() < f32::EPSILON,
+        "invulnerable entity should absorb ALL damage messages in the same tick, got {}",
         hp.current
     );
 }

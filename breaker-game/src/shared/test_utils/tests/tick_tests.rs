@@ -6,8 +6,8 @@ use super::{
 };
 use crate::{
     bolt::messages::BoltImpactCell,
-    cells::{messages::DamageCell, resources::CellTypeRegistry},
-    shared::{playfield::PlayfieldConfig, rng::GameRng},
+    cells::{components::Cell, resources::CellTypeRegistry},
+    shared::{death_pipeline::damage_dealt::DamageDealt, playfield::PlayfieldConfig, rng::GameRng},
 };
 
 // ════════════════════════════════════════════════════════════════════
@@ -121,7 +121,7 @@ fn maximal_builder_chain_compiles_and_builds() {
             ..Default::default()
         })
         .with_message::<BoltImpactCell>()
-        .with_message_capture::<DamageCell>()
+        .with_message_capture::<DamageDealt<Cell>>()
         .with_bolt_registry()
         .with_breaker_registry()
         .with_cell_registry()
@@ -161,9 +161,9 @@ fn maximal_builder_chain_compiles_and_builds() {
     );
     assert!(
         app.world()
-            .get_resource::<MessageCollector<DamageCell>>()
+            .get_resource::<MessageCollector<DamageDealt<Cell>>>()
             .is_some(),
-        "MessageCollector<DamageCell> should be present"
+        "MessageCollector<DamageDealt<Cell>> should be present"
     );
 
     // Verify the app actually works

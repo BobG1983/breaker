@@ -52,16 +52,6 @@ pub(crate) struct BoltImpactWall {
     pub wall: Entity,
 }
 
-/// Sent by `bolt_lost` when an extra bolt falls off screen. Entity is still alive.
-///
-/// Consumed by `bridge_bolt_death` (evaluates `OnDeath` `BoundEffects`) and
-/// `cleanup_destroyed_bolts` (despawns the entity).
-#[derive(Message, Clone, Debug)]
-pub(crate) struct RequestBoltDestroyed {
-    /// The bolt entity to be destroyed.
-    pub bolt: Entity,
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -88,20 +78,6 @@ mod tests {
             msg.bolt, bolt_entity,
             "BoltImpactCell.bolt should be accessible and match the entity passed in"
         );
-    }
-
-    // =========================================================================
-    // C7 Wave 2a: Two-Phase Destruction bolt message types
-    // =========================================================================
-
-    #[test]
-    fn request_bolt_destroyed_debug_format() {
-        let msg = RequestBoltDestroyed {
-            bolt: Entity::PLACEHOLDER,
-        };
-        let debug = format!("{msg:?}");
-        assert!(debug.contains("RequestBoltDestroyed"));
-        assert!(debug.contains("bolt"));
     }
 
     #[test]

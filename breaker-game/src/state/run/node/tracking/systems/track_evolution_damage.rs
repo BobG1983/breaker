@@ -2,37 +2,43 @@
 
 use bevy::prelude::*;
 
-use crate::{cells::messages::DamageCell, state::run::resources::HighlightTracker};
+use crate::{
+    cells::components::Cell, shared::death_pipeline::DamageDealt,
+    state::run::resources::HighlightTracker,
+};
 
-/// Reads [`DamageCell`] messages and accumulates damage per evolution chip name
+/// Reads [`DamageDealt<Cell>`] messages and accumulates damage per evolution chip name
 /// in [`HighlightTracker::evolution_damage`].
 ///
 /// Messages with `source_chip: None` are ignored.
 pub(crate) fn track_evolution_damage(
-    mut reader: MessageReader<DamageCell>,
+    mut reader: MessageReader<DamageDealt<Cell>>,
     mut tracker: ResMut<HighlightTracker>,
 ) {
     for msg in reader.read() {
         if let Some(name) = &msg.source_chip {
-            *tracker.evolution_damage.entry(name.clone()).or_insert(0.0) += msg.damage;
+            *tracker.evolution_damage.entry(name.clone()).or_insert(0.0) += msg.amount;
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::marker::PhantomData;
+
     use super::*;
     use crate::{
-        shared::test_utils::TestAppBuilder,
+        cells::components::Cell,
+        shared::{death_pipeline::damage_dealt::DamageDealt, test_utils::TestAppBuilder},
         state::run::{
             node::lifecycle::systems::reset_highlight_tracker, resources::HighlightTracker,
         },
     };
 
     #[derive(Resource)]
-    struct TestMessages(Vec<DamageCell>);
+    struct TestMessages(Vec<DamageDealt<Cell>>);
 
-    fn enqueue_messages(msg_res: Res<TestMessages>, mut writer: MessageWriter<DamageCell>) {
+    fn enqueue_messages(msg_res: Res<TestMessages>, mut writer: MessageWriter<DamageDealt<Cell>>) {
         for msg in &msg_res.0 {
             writer.write(msg.clone());
         }
@@ -40,7 +46,7 @@ mod tests {
 
     fn test_app() -> App {
         TestAppBuilder::new()
-            .with_message::<DamageCell>()
+            .with_message::<DamageDealt<Cell>>()
             .with_resource::<HighlightTracker>()
             .with_system(
                 FixedUpdate,
@@ -49,18 +55,27 @@ mod tests {
             .build()
     }
 
+    fn make_damage(amount: f32, source_chip: Option<String>) -> DamageDealt<Cell> {
+        DamageDealt::<Cell> {
+            dealer: None,
+            target: Entity::PLACEHOLDER,
+            amount,
+            source_chip,
+            _marker: PhantomData,
+        }
+    }
+
     use crate::shared::test_utils::tick;
 
-    // --- Behavior 1: Accumulates damage for a single evolution chip ---
+    // --- Behavior 14: Accumulates damage for a single evolution chip ---
 
     #[test]
     fn accumulates_damage_for_single_evolution_chip() {
         let mut app = test_app();
-        app.insert_resource(TestMessages(vec![DamageCell {
-            cell:        Entity::PLACEHOLDER,
-            damage:      25.0,
-            source_chip: Some("Piercing Barrage".to_owned()),
-        }]));
+        app.insert_resource(TestMessages(vec![make_damage(
+            25.0,
+            Some("Piercing Barrage".to_owned()),
+        )]));
         tick(&mut app);
 
         let tracker = app.world().resource::<HighlightTracker>();
@@ -76,27 +91,15 @@ mod tests {
         );
     }
 
-    // --- Behavior 2: Accumulates across multiple messages for same evolution ---
+    // --- Behavior 14: Accumulates across multiple messages for same evolution ---
 
     #[test]
     fn accumulates_across_multiple_messages_for_same_evolution() {
         let mut app = test_app();
         app.insert_resource(TestMessages(vec![
-            DamageCell {
-                cell:        Entity::PLACEHOLDER,
-                damage:      10.0,
-                source_chip: Some("Piercing Barrage".to_owned()),
-            },
-            DamageCell {
-                cell:        Entity::PLACEHOLDER,
-                damage:      15.0,
-                source_chip: Some("Piercing Barrage".to_owned()),
-            },
-            DamageCell {
-                cell:        Entity::PLACEHOLDER,
-                damage:      5.0,
-                source_chip: Some("Piercing Barrage".to_owned()),
-            },
+            make_damage(10.0, Some("Piercing Barrage".to_owned())),
+            make_damage(15.0, Some("Piercing Barrage".to_owned())),
+            make_damage(5.0, Some("Piercing Barrage".to_owned())),
         ]));
         tick(&mut app);
 
@@ -113,7 +116,7 @@ mod tests {
         );
     }
 
-    // --- Behavior 2 edge case: Pre-existing damage accumulates with new ---
+    // --- Behavior 14 edge case: Pre-existing damage accumulates with new ---
 
     #[test]
     fn pre_existing_damage_accumulates_with_new_messages() {
@@ -124,11 +127,10 @@ mod tests {
             .evolution_damage
             .insert("Piercing Barrage".to_owned(), 20.0);
 
-        app.insert_resource(TestMessages(vec![DamageCell {
-            cell:        Entity::PLACEHOLDER,
-            damage:      10.0,
-            source_chip: Some("Piercing Barrage".to_owned()),
-        }]));
+        app.insert_resource(TestMessages(vec![make_damage(
+            10.0,
+            Some("Piercing Barrage".to_owned()),
+        )]));
         tick(&mut app);
 
         let tracker = app.world().resource::<HighlightTracker>();
@@ -144,22 +146,14 @@ mod tests {
         );
     }
 
-    // --- Behavior 3: Tracks multiple chips independently ---
+    // --- Behavior 14: Tracks multiple chips independently ---
 
     #[test]
     fn tracks_multiple_chips_independently() {
         let mut app = test_app();
         app.insert_resource(TestMessages(vec![
-            DamageCell {
-                cell:        Entity::PLACEHOLDER,
-                damage:      25.0,
-                source_chip: Some("Piercing Barrage".to_owned()),
-            },
-            DamageCell {
-                cell:        Entity::PLACEHOLDER,
-                damage:      40.0,
-                source_chip: Some("Chain Lightning".to_owned()),
-            },
+            make_damage(25.0, Some("Piercing Barrage".to_owned())),
+            make_damage(40.0, Some("Chain Lightning".to_owned())),
         ]));
         tick(&mut app);
 
@@ -187,16 +181,12 @@ mod tests {
         );
     }
 
-    // --- Behavior 4: Ignores source_chip: None ---
+    // --- Behavior 14: Ignores source_chip: None ---
 
     #[test]
     fn ignores_damage_cell_with_no_source_chip() {
         let mut app = test_app();
-        app.insert_resource(TestMessages(vec![DamageCell {
-            cell:        Entity::PLACEHOLDER,
-            damage:      50.0,
-            source_chip: None,
-        }]));
+        app.insert_resource(TestMessages(vec![make_damage(50.0, None)]));
         tick(&mut app);
 
         let tracker = app.world().resource::<HighlightTracker>();
@@ -207,7 +197,7 @@ mod tests {
         );
     }
 
-    // --- Behavior 5: evolution_damage persists across reset_highlight_tracker ---
+    // --- Behavior 14: evolution_damage persists across reset_highlight_tracker ---
 
     #[test]
     fn evolution_damage_persists_across_reset_highlight_tracker() {

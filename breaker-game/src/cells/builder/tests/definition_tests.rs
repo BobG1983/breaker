@@ -6,9 +6,7 @@ use bevy::prelude::*;
 use crate::{
     cells::{
         builder::core::*,
-        components::{
-            Cell, CellDamageVisuals, CellHealth, CellTypeAlias, RegenRate, RequiredToClear,
-        },
+        components::{Cell, CellDamageVisuals, CellTypeAlias, RegenRate, RequiredToClear},
         definition::{CellBehavior, Toughness},
         test_utils::{spawn_cell_in_world, test_cell_definition},
     },
@@ -17,6 +15,7 @@ use crate::{
         storage::BoundEffects,
         types::{EffectType, RootNode, StampTarget, Tree},
     },
+    shared::death_pipeline::hp::Hp,
 };
 
 // ── Section D: .definition(&def) ────────────────────────────────────────────
@@ -63,14 +62,13 @@ fn definition_stores_hp_from_definition() {
             .spawn(commands)
     });
 
-    let health = world
-        .get::<CellHealth>(entity)
-        .expect("entity should have CellHealth");
+    let health = world.get::<Hp>(entity).expect("entity should have Hp");
     assert!(
-        (health.current - 20.0).abs() < f32::EPSILON && (health.max - 20.0).abs() < f32::EPSILON,
-        "CellHealth should be {{ current: 20.0, max: 20.0 }} (Standard default_base_hp), got {{ current: {}, max: {} }}",
+        (health.current - 20.0).abs() < f32::EPSILON
+            && (health.starting - 20.0).abs() < f32::EPSILON,
+        "Hp should be {{ current: 20.0, starting: 20.0 }} (Standard default_base_hp), got {{ current: {}, starting: {} }}",
         health.current,
-        health.max
+        health.starting
     );
 }
 
@@ -90,14 +88,13 @@ fn definition_stores_weak_toughness_hp() {
             .spawn(commands)
     });
 
-    let health = world
-        .get::<CellHealth>(entity)
-        .expect("entity should have CellHealth");
+    let health = world.get::<Hp>(entity).expect("entity should have Hp");
     assert!(
-        (health.current - 10.0).abs() < f32::EPSILON && (health.max - 10.0).abs() < f32::EPSILON,
-        "CellHealth should be {{ current: 10.0, max: 10.0 }} (Weak default_base_hp), got {{ current: {}, max: {} }}",
+        (health.current - 10.0).abs() < f32::EPSILON
+            && (health.starting - 10.0).abs() < f32::EPSILON,
+        "Hp should be {{ current: 10.0, starting: 10.0 }} (Weak default_base_hp), got {{ current: {}, starting: {} }}",
         health.current,
-        health.max
+        health.starting
     );
 }
 
@@ -182,11 +179,11 @@ fn definition_required_to_clear_false_has_no_marker() {
 
     // Guard: non-#[require] component ensures builder actually ran (hp from definition)
     let health = world
-        .get::<CellHealth>(entity)
-        .expect("entity should have CellHealth from definition");
+        .get::<Hp>(entity)
+        .expect("entity should have Hp from definition");
     assert!(
         (health.current - 20.0).abs() < f32::EPSILON,
-        "CellHealth should come from definition hp"
+        "Hp should come from definition hp"
     );
 
     assert!(
@@ -281,13 +278,11 @@ fn definition_behaviors_none_has_no_regen() {
             .spawn(commands)
     });
 
-    // Guard: CellHealth ensures builder ran with definition hp
-    let health = world
-        .get::<CellHealth>(entity)
-        .expect("entity should have CellHealth");
+    // Guard: Hp ensures builder ran with definition hp
+    let health = world.get::<Hp>(entity).expect("entity should have Hp");
     assert!(
         (health.current - 20.0).abs() < f32::EPSILON,
-        "CellHealth should come from definition"
+        "Hp should come from definition"
     );
 
     assert!(
@@ -312,13 +307,11 @@ fn definition_behaviors_empty_vec_has_no_regen() {
             .spawn(commands)
     });
 
-    // Guard: CellHealth ensures builder ran with definition hp
-    let health = world
-        .get::<CellHealth>(entity)
-        .expect("entity should have CellHealth");
+    // Guard: Hp ensures builder ran with definition hp
+    let health = world.get::<Hp>(entity).expect("entity should have Hp");
     assert!(
         (health.current - 20.0).abs() < f32::EPSILON,
-        "CellHealth should come from definition"
+        "Hp should come from definition"
     );
 
     assert!(
@@ -399,14 +392,13 @@ fn override_hp_after_definition_overrides() {
             .spawn(commands)
     });
 
-    let health = world
-        .get::<CellHealth>(entity)
-        .expect("entity should have CellHealth");
+    let health = world.get::<Hp>(entity).expect("entity should have Hp");
     assert!(
-        (health.current - 50.0).abs() < f32::EPSILON && (health.max - 50.0).abs() < f32::EPSILON,
-        "CellHealth should be {{ current: 50.0, max: 50.0 }} (override), got {{ current: {}, max: {} }}",
+        (health.current - 50.0).abs() < f32::EPSILON
+            && (health.starting - 50.0).abs() < f32::EPSILON,
+        "Hp should be {{ current: 50.0, starting: 50.0 }} (override), got {{ current: {}, starting: {} }}",
         health.current,
-        health.max
+        health.starting
     );
 }
 
@@ -426,12 +418,11 @@ fn override_hp_tiny_value() {
             .spawn(commands)
     });
 
-    let health = world
-        .get::<CellHealth>(entity)
-        .expect("entity should have CellHealth");
+    let health = world.get::<Hp>(entity).expect("entity should have Hp");
     assert!(
-        (health.current - 0.001).abs() < f32::EPSILON && (health.max - 0.001).abs() < f32::EPSILON,
-        "CellHealth should be {{ current: 0.001, max: 0.001 }}"
+        (health.current - 0.001).abs() < f32::EPSILON
+            && (health.starting - 0.001).abs() < f32::EPSILON,
+        "Hp should be {{ current: 0.001, starting: 0.001 }}"
     );
 }
 
@@ -449,14 +440,13 @@ fn override_hp_after_explicit_hp_overrides() {
             .spawn(commands)
     });
 
-    let health = world
-        .get::<CellHealth>(entity)
-        .expect("entity should have CellHealth");
+    let health = world.get::<Hp>(entity).expect("entity should have Hp");
     assert!(
-        (health.current - 50.0).abs() < f32::EPSILON && (health.max - 50.0).abs() < f32::EPSILON,
-        "CellHealth should be {{ current: 50.0, max: 50.0 }} (override), got {{ current: {}, max: {} }}",
+        (health.current - 50.0).abs() < f32::EPSILON
+            && (health.starting - 50.0).abs() < f32::EPSILON,
+        "Hp should be {{ current: 50.0, starting: 50.0 }} (override), got {{ current: {}, starting: {} }}",
         health.current,
-        health.max
+        health.starting
     );
 }
 
@@ -474,12 +464,10 @@ fn override_hp_to_smaller_value() {
             .spawn(commands)
     });
 
-    let health = world
-        .get::<CellHealth>(entity)
-        .expect("entity should have CellHealth");
+    let health = world.get::<Hp>(entity).expect("entity should have Hp");
     assert!(
-        (health.current - 1.0).abs() < f32::EPSILON && (health.max - 1.0).abs() < f32::EPSILON,
-        "CellHealth should be {{ current: 1.0, max: 1.0 }} (override to smaller)"
+        (health.current - 1.0).abs() < f32::EPSILON && (health.starting - 1.0).abs() < f32::EPSILON,
+        "Hp should be {{ current: 1.0, starting: 1.0 }} (override to smaller)"
     );
 }
 
@@ -506,12 +494,11 @@ fn definition_values_propagate_without_override() {
             .spawn(commands)
     });
 
-    let health = world
-        .get::<CellHealth>(entity)
-        .expect("should have CellHealth");
+    let health = world.get::<Hp>(entity).expect("should have Hp");
     assert!(
-        (health.current - 20.0).abs() < f32::EPSILON && (health.max - 20.0).abs() < f32::EPSILON,
-        "CellHealth should be {{ current: 20.0, max: 20.0 }} (Standard default_base_hp)"
+        (health.current - 20.0).abs() < f32::EPSILON
+            && (health.starting - 20.0).abs() < f32::EPSILON,
+        "Hp should be {{ current: 20.0, starting: 20.0 }} (Standard default_base_hp)"
     );
 
     let visuals = world
@@ -568,13 +555,14 @@ fn no_definition_no_override_uses_defaults() {
             .spawn(commands)
     });
 
-    // Guard: CellHealth is non-#[require] — verifies builder populated the entity
+    // Guard: Hp is non-#[require] — verifies builder populated the entity
     let health = world
-        .get::<CellHealth>(entity)
-        .expect("should have CellHealth from builder");
+        .get::<Hp>(entity)
+        .expect("should have Hp from builder");
     assert!(
-        (health.current - 20.0).abs() < f32::EPSILON && (health.max - 20.0).abs() < f32::EPSILON,
-        "CellHealth should be {{ current: 20.0, max: 20.0 }}"
+        (health.current - 20.0).abs() < f32::EPSILON
+            && (health.starting - 20.0).abs() < f32::EPSILON,
+        "Hp should be {{ current: 20.0, starting: 20.0 }}"
     );
 
     assert!(
@@ -625,9 +613,7 @@ fn tier_hp_standard_tier0_pos0_produces_20() {
             .spawn(commands)
     });
 
-    let health = world
-        .get::<CellHealth>(entity)
-        .expect("should have CellHealth");
+    let health = world.get::<Hp>(entity).expect("should have Hp");
     assert!(
         (health.current - 20.0).abs() < f32::EPSILON,
         "HP should be 20.0 (Standard, tier 0, pos 0), got {}",
@@ -650,9 +636,7 @@ fn tier_hp_without_toughness_uses_standard_default() {
             .spawn(commands)
     });
 
-    let health = world
-        .get::<CellHealth>(entity)
-        .expect("should have CellHealth");
+    let health = world.get::<Hp>(entity).expect("should have Hp");
     assert!(
         (health.current - 20.0).abs() < f32::EPSILON,
         "HP should be 20.0 (default Standard, tier 0, pos 0), got {}",
@@ -676,9 +660,7 @@ fn tier_hp_standard_tier3_pos4_produces_correct_hp() {
             .spawn(commands)
     });
 
-    let health = world
-        .get::<CellHealth>(entity)
-        .expect("should have CellHealth");
+    let health = world.get::<Hp>(entity).expect("should have Hp");
     // 20.0 * 1.2^3 * (1.0 + 0.05*4) = 20.0 * 1.728 * 1.2 = 41.472
     assert!(
         (health.current - 41.472).abs() < 0.01,
@@ -703,9 +685,7 @@ fn definition_stores_toughness_from_definition() {
             .spawn(commands)
     });
 
-    let health = world
-        .get::<CellHealth>(entity)
-        .expect("should have CellHealth");
+    let health = world.get::<Hp>(entity).expect("should have Hp");
     // .definition() sets HP to def.toughness.default_base_hp() = 10.0 for Weak
     assert!(
         (health.current - 10.0).abs() < f32::EPSILON,

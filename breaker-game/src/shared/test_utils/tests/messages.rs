@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use bevy::prelude::*;
 
 use super::{
@@ -7,7 +9,10 @@ use super::{
         triple_damage_sender,
     },
 };
-use crate::{bolt::messages::BoltLost, cells::messages::DamageCell};
+use crate::{
+    bolt::messages::BoltLost, cells::components::Cell,
+    shared::death_pipeline::damage_dealt::DamageDealt,
+};
 
 // ════════════════════════════════════════════════════════════════════
 // Section H: with_message()
@@ -15,28 +20,33 @@ use crate::{bolt::messages::BoltLost, cells::messages::DamageCell};
 
 // ── Behavior 14: with_message() registers a message type ──
 
-/// Helper: system that reads `DamageCell` messages and counts them in a resource.
+/// Helper: system that reads `DamageDealt<Cell>` messages and counts them in a resource.
 #[derive(Resource, Default)]
 struct DamageCount(usize);
 
-fn count_damage_messages(mut reader: MessageReader<DamageCell>, mut count: ResMut<DamageCount>) {
+fn count_damage_messages(
+    mut reader: MessageReader<DamageDealt<Cell>>,
+    mut count: ResMut<DamageCount>,
+) {
     for _msg in reader.read() {
         count.0 += 1;
     }
 }
 
-fn damage_sender_10(mut writer: MessageWriter<DamageCell>) {
-    writer.write(DamageCell {
-        cell:        Entity::PLACEHOLDER,
-        damage:      10.0,
+fn damage_sender_10(mut writer: MessageWriter<DamageDealt<Cell>>) {
+    writer.write(DamageDealt::<Cell> {
+        dealer:      None,
+        target:      Entity::PLACEHOLDER,
+        amount:      10.0,
         source_chip: None,
+        _marker:     PhantomData,
     });
 }
 
 #[test]
 fn with_message_enables_message_send_and_read() {
     let mut app = TestAppBuilder::new()
-        .with_message::<DamageCell>()
+        .with_message::<DamageDealt<Cell>>()
         .with_resource::<DamageCount>()
         .with_system(FixedUpdate, damage_sender_10)
         .with_system(FixedUpdate, count_damage_messages.after(damage_sender_10))
@@ -45,16 +55,18 @@ fn with_message_enables_message_send_and_read() {
     assert_eq!(
         app.world().resource::<DamageCount>().0,
         1,
-        "with_message should enable sending and reading DamageCell messages"
+        "with_message should enable sending and reading DamageDealt<Cell> messages"
     );
 }
 
 #[test]
 fn with_message_does_not_add_collector() {
-    let app = TestAppBuilder::new().with_message::<DamageCell>().build();
+    let app = TestAppBuilder::new()
+        .with_message::<DamageDealt<Cell>>()
+        .build();
     assert!(
         app.world()
-            .get_resource::<MessageCollector<DamageCell>>()
+            .get_resource::<MessageCollector<DamageDealt<Cell>>>()
             .is_none(),
         "with_message should NOT add a MessageCollector"
     );
@@ -69,12 +81,14 @@ fn with_message_does_not_add_collector() {
 #[test]
 fn with_message_capture_registers_collector() {
     let app = TestAppBuilder::new()
-        .with_message_capture::<DamageCell>()
+        .with_message_capture::<DamageDealt<Cell>>()
         .build();
-    let collector = app.world().get_resource::<MessageCollector<DamageCell>>();
+    let collector = app
+        .world()
+        .get_resource::<MessageCollector<DamageDealt<Cell>>>();
     assert!(
         collector.is_some(),
-        "with_message_capture must register MessageCollector<DamageCell>"
+        "with_message_capture must register MessageCollector<DamageDealt<Cell>>"
     );
     assert_eq!(
         collector.unwrap().0.len(),
@@ -88,33 +102,35 @@ fn with_message_capture_registers_collector() {
 #[test]
 fn message_collector_captures_messages_during_tick() {
     let mut app = TestAppBuilder::new()
-        .with_message_capture::<DamageCell>()
+        .with_message_capture::<DamageDealt<Cell>>()
         .with_system(FixedUpdate, damage_sender_system)
         .build();
     tick(&mut app);
-    let collector = app.world().resource::<MessageCollector<DamageCell>>();
+    let collector = app
+        .world()
+        .resource::<MessageCollector<DamageDealt<Cell>>>();
     assert_eq!(
         collector.0.len(),
         1,
         "MessageCollector should capture 1 message after tick"
     );
     assert!(
-        (collector.0[0].damage - 25.0).abs() < f32::EPSILON,
+        (collector.0[0].amount - 25.0).abs() < f32::EPSILON,
         "Captured message damage should be 25.0, got {}",
-        collector.0[0].damage
+        collector.0[0].amount
     );
 }
 
 #[test]
 fn message_collector_captures_multiple_messages_per_tick() {
     let mut app = TestAppBuilder::new()
-        .with_message_capture::<DamageCell>()
+        .with_message_capture::<DamageDealt<Cell>>()
         .with_system(FixedUpdate, triple_damage_sender)
         .build();
     tick(&mut app);
     assert_eq!(
         app.world()
-            .resource::<MessageCollector<DamageCell>>()
+            .resource::<MessageCollector<DamageDealt<Cell>>>()
             .0
             .len(),
         3,
@@ -127,7 +143,7 @@ fn message_collector_captures_multiple_messages_per_tick() {
 #[test]
 fn message_collector_auto_clears_between_ticks() {
     let mut app = TestAppBuilder::new()
-        .with_message_capture::<DamageCell>()
+        .with_message_capture::<DamageDealt<Cell>>()
         .insert_resource(ShouldSend(true))
         .with_system(FixedUpdate, conditional_damage_sender)
         .build();
@@ -136,7 +152,7 @@ fn message_collector_auto_clears_between_ticks() {
     tick(&mut app);
     assert_eq!(
         app.world()
-            .resource::<MessageCollector<DamageCell>>()
+            .resource::<MessageCollector<DamageDealt<Cell>>>()
             .0
             .len(),
         1,
@@ -148,7 +164,7 @@ fn message_collector_auto_clears_between_ticks() {
     tick(&mut app);
     assert_eq!(
         app.world()
-            .resource::<MessageCollector<DamageCell>>()
+            .resource::<MessageCollector<DamageDealt<Cell>>>()
             .0
             .len(),
         0,
@@ -160,7 +176,7 @@ fn message_collector_auto_clears_between_ticks() {
     tick(&mut app);
     assert_eq!(
         app.world()
-            .resource::<MessageCollector<DamageCell>>()
+            .resource::<MessageCollector<DamageDealt<Cell>>>()
             .0
             .len(),
         1,
@@ -173,24 +189,24 @@ fn message_collector_auto_clears_between_ticks() {
 #[test]
 fn message_collector_manual_clear() {
     let mut app = TestAppBuilder::new()
-        .with_message_capture::<DamageCell>()
+        .with_message_capture::<DamageDealt<Cell>>()
         .with_system(FixedUpdate, damage_sender_system)
         .build();
     tick(&mut app);
     assert_eq!(
         app.world()
-            .resource::<MessageCollector<DamageCell>>()
+            .resource::<MessageCollector<DamageDealt<Cell>>>()
             .0
             .len(),
         1,
     );
 
     app.world_mut()
-        .resource_mut::<MessageCollector<DamageCell>>()
+        .resource_mut::<MessageCollector<DamageDealt<Cell>>>()
         .clear();
     assert_eq!(
         app.world()
-            .resource::<MessageCollector<DamageCell>>()
+            .resource::<MessageCollector<DamageDealt<Cell>>>()
             .0
             .len(),
         0,
@@ -201,10 +217,10 @@ fn message_collector_manual_clear() {
 #[test]
 fn message_collector_clear_on_empty_does_not_panic() {
     let mut app = TestAppBuilder::new()
-        .with_message_capture::<DamageCell>()
+        .with_message_capture::<DamageDealt<Cell>>()
         .build();
     app.world_mut()
-        .resource_mut::<MessageCollector<DamageCell>>()
+        .resource_mut::<MessageCollector<DamageDealt<Cell>>>()
         .clear();
 }
 
@@ -213,18 +229,18 @@ fn message_collector_clear_on_empty_does_not_panic() {
 #[test]
 fn multiple_message_collectors_coexist() {
     let mut app = TestAppBuilder::new()
-        .with_message_capture::<DamageCell>()
+        .with_message_capture::<DamageDealt<Cell>>()
         .with_message_capture::<BoltLost>()
         .with_system(FixedUpdate, damage_and_bolt_lost_sender)
         .build();
     tick(&mut app);
     assert_eq!(
         app.world()
-            .resource::<MessageCollector<DamageCell>>()
+            .resource::<MessageCollector<DamageDealt<Cell>>>()
             .0
             .len(),
         1,
-        "DamageCell collector should have 1 message"
+        "DamageDealt<Cell> collector should have 1 message"
     );
     assert_eq!(
         app.world().resource::<MessageCollector<BoltLost>>().0.len(),
@@ -236,27 +252,27 @@ fn multiple_message_collectors_coexist() {
 #[test]
 fn clearing_one_collector_does_not_affect_other() {
     let mut app = TestAppBuilder::new()
-        .with_message_capture::<DamageCell>()
+        .with_message_capture::<DamageDealt<Cell>>()
         .with_message_capture::<BoltLost>()
         .with_system(FixedUpdate, damage_and_bolt_lost_sender)
         .build();
     tick(&mut app);
 
     app.world_mut()
-        .resource_mut::<MessageCollector<DamageCell>>()
+        .resource_mut::<MessageCollector<DamageDealt<Cell>>>()
         .clear();
     assert_eq!(
         app.world()
-            .resource::<MessageCollector<DamageCell>>()
+            .resource::<MessageCollector<DamageDealt<Cell>>>()
             .0
             .len(),
         0,
-        "DamageCell collector should be empty after clear"
+        "DamageDealt<Cell> collector should be empty after clear"
     );
     assert_eq!(
         app.world().resource::<MessageCollector<BoltLost>>().0.len(),
         1,
-        "BoltLost collector should be unaffected by clearing DamageCell"
+        "BoltLost collector should be unaffected by clearing DamageDealt<Cell>"
     );
 }
 
@@ -265,7 +281,7 @@ fn clearing_one_collector_does_not_affect_other() {
 #[test]
 fn message_collector_per_tick_isolation() {
     let mut app = TestAppBuilder::new()
-        .with_message_capture::<DamageCell>()
+        .with_message_capture::<DamageDealt<Cell>>()
         .with_system(FixedUpdate, damage_sender_system)
         .build();
 
@@ -274,7 +290,7 @@ fn message_collector_per_tick_isolation() {
         tick(&mut app);
         let count = app
             .world()
-            .resource::<MessageCollector<DamageCell>>()
+            .resource::<MessageCollector<DamageDealt<Cell>>>()
             .0
             .len();
         running_total += count;
@@ -291,14 +307,14 @@ fn message_collector_per_tick_isolation() {
 #[test]
 fn with_message_capture_twice_is_idempotent() {
     let mut app = TestAppBuilder::new()
-        .with_message_capture::<DamageCell>()
-        .with_message_capture::<DamageCell>()
+        .with_message_capture::<DamageDealt<Cell>>()
+        .with_message_capture::<DamageDealt<Cell>>()
         .with_system(FixedUpdate, damage_sender_system)
         .build();
     tick(&mut app);
     assert_eq!(
         app.world()
-            .resource::<MessageCollector<DamageCell>>()
+            .resource::<MessageCollector<DamageDealt<Cell>>>()
             .0
             .len(),
         1,
@@ -309,14 +325,14 @@ fn with_message_capture_twice_is_idempotent() {
 #[test]
 fn with_message_then_message_capture_does_not_panic() {
     let mut app = TestAppBuilder::new()
-        .with_message::<DamageCell>()
-        .with_message_capture::<DamageCell>()
+        .with_message::<DamageDealt<Cell>>()
+        .with_message_capture::<DamageDealt<Cell>>()
         .with_system(FixedUpdate, damage_sender_system)
         .build();
     tick(&mut app);
     assert_eq!(
         app.world()
-            .resource::<MessageCollector<DamageCell>>()
+            .resource::<MessageCollector<DamageDealt<Cell>>>()
             .0
             .len(),
         1,

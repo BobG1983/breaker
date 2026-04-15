@@ -5,15 +5,16 @@ use bevy::prelude::*;
 use crate::{
     cells::{
         behaviors::{
-            guarded::systems::slide_guardian_cells, locked::systems::check_lock_release,
+            guarded::systems::slide_guardian_cells,
+            locked::systems::{check_lock_release, sync_lock_invulnerable::sync_lock_invulnerable},
             regen::systems::tick_cell_regen,
         },
-        messages::{CellDestroyedAt, CellImpactWall, DamageCell, RequestCellDestroyed},
+        messages::CellImpactWall,
         resources::CellConfig,
-        systems::{cell_wall_collision, cleanup_cell, handle_cell_hit},
+        systems::{cell_wall_collision, update_cell_damage_visuals},
     },
-    effect_v3::EffectV3Systems,
     prelude::*,
+    shared::death_pipeline::sets::DeathPipelineSystems,
     state::run::node::{sets::NodeSystems, systems::dispatch_cell_effects},
 };
 
@@ -24,10 +25,7 @@ pub(crate) struct CellsPlugin;
 
 impl Plugin for CellsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_message::<RequestCellDestroyed>()
-            .add_message::<CellDestroyedAt>()
-            .add_message::<DamageCell>()
-            .add_message::<CellImpactWall>()
+        app.add_message::<CellImpactWall>()
             .init_resource::<CellConfig>()
             .add_systems(
                 OnEnter(NodeState::Loading),
@@ -36,12 +34,14 @@ impl Plugin for CellsPlugin {
             .add_systems(
                 FixedUpdate,
                 (
-                    handle_cell_hit,
-                    check_lock_release.after(handle_cell_hit),
+                    check_lock_release.after(DeathPipelineSystems::HandleKill),
+                    sync_lock_invulnerable.after(check_lock_release),
                     tick_cell_regen,
                     slide_guardian_cells,
-                    cleanup_cell.after(EffectV3Systems::Bridge),
                     cell_wall_collision,
+                    update_cell_damage_visuals
+                        .after(DeathPipelineSystems::ApplyDamage)
+                        .before(DeathPipelineSystems::HandleKill),
                 )
                     .run_if(in_state(NodeState::Playing)),
             );
@@ -53,12 +53,19 @@ mod tests {
     use rantzsoft_physics2d::resources::CollisionQuadtree;
 
     use super::*;
-    use crate::state::types::{AppState, GameState, RunState};
+    use crate::{
+        effect_v3::EffectV3Plugin,
+        shared::death_pipeline::{
+            plugin::DeathPipelinePlugin,
+            systems::tests::helpers::register_effect_v3_test_infrastructure,
+        },
+        state::types::{AppState, GameState, RunState},
+    };
 
     #[test]
     fn plugin_builds() {
-        App::new()
-            .add_plugins(MinimalPlugins)
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
             .add_plugins(bevy::state::app::StatesPlugin)
             .init_state::<AppState>()
             .add_sub_state::<GameState>()
@@ -66,9 +73,12 @@ mod tests {
             .add_sub_state::<NodeState>()
             // CellsPlugin reads BoltImpactCell messages from bolt domain
             .add_message::<crate::bolt::messages::BoltImpactCell>()
-            .insert_resource(CollisionQuadtree::default())
-            .add_plugins(CellsPlugin)
-            .update();
+            .insert_resource(CollisionQuadtree::default());
+        app.add_plugins(DeathPipelinePlugin);
+        register_effect_v3_test_infrastructure(&mut app);
+        app.add_plugins(EffectV3Plugin);
+        app.add_plugins(CellsPlugin);
+        app.update();
     }
 
     // ── Guardian system registration test ─────────────────────────
@@ -93,8 +103,11 @@ mod tests {
             .init_resource::<Assets<Mesh>>()
             .init_resource::<Assets<ColorMaterial>>()
             .add_message::<crate::bolt::messages::BoltImpactCell>()
-            .insert_resource(CollisionQuadtree::default())
-            .add_plugins(CellsPlugin);
+            .insert_resource(CollisionQuadtree::default());
+        app.add_plugins(DeathPipelinePlugin);
+        register_effect_v3_test_infrastructure(&mut app);
+        app.add_plugins(EffectV3Plugin);
+        app.add_plugins(CellsPlugin);
         // Navigate through state hierarchy to reach NodeState::Playing
         app.world_mut()
             .resource_mut::<NextState<AppState>>()

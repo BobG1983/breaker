@@ -3,6 +3,6 @@
 pub(crate) mod system;
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
 
 pub(crate) use system::{apply_damage, detect_deaths, handle_kill, process_despawn_requests};

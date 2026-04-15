@@ -8,7 +8,7 @@ use crate::{
         definition::{CellBehavior, GuardedBehavior, Toughness},
         resources::{CellConfig, CellTypeRegistry},
     },
-    shared::PlayfieldConfig,
+    shared::{PlayfieldConfig, death_pipeline::hp::Hp},
     state::run::{
         definition::NodeType,
         node::{ActiveNodeLayout, NodeLayout, definition::NodePool, messages::CellsSpawned},
@@ -183,11 +183,7 @@ fn cell_hp_falls_back_to_default_base_hp_without_config() {
     app.update();
 
     // 'S' is Standard toughness — without ToughnessConfig, falls back to default_base_hp = 20.0
-    let healths: Vec<&CellHealth> = app
-        .world_mut()
-        .query::<&CellHealth>()
-        .iter(app.world())
-        .collect();
+    let healths: Vec<&Hp> = app.world_mut().query::<&Hp>().iter(app.world()).collect();
     assert_eq!(healths.len(), 1);
     assert!(
         (healths[0].current - 20.0).abs() < f32::EPSILON,
@@ -195,9 +191,9 @@ fn cell_hp_falls_back_to_default_base_hp_without_config() {
         healths[0].current
     );
     assert!(
-        (healths[0].max - 20.0).abs() < f32::EPSILON,
+        (healths[0].starting - 20.0).abs() < f32::EPSILON,
         "cell max HP should be Standard default_base_hp = 20.0, got {}",
-        healths[0].max
+        healths[0].starting
     );
 }
 
@@ -239,11 +235,7 @@ fn cell_hp_tough_falls_back_to_default_base_hp() {
     app.update();
 
     // 'T' is Tough toughness — without ToughnessConfig, falls back to default_base_hp = 30.0
-    let healths: Vec<&CellHealth> = app
-        .world_mut()
-        .query::<&CellHealth>()
-        .iter(app.world())
-        .collect();
+    let healths: Vec<&Hp> = app.world_mut().query::<&Hp>().iter(app.world()).collect();
     assert_eq!(healths.len(), 1);
     assert!(
         (healths[0].current - 30.0).abs() < f32::EPSILON,
@@ -251,9 +243,9 @@ fn cell_hp_tough_falls_back_to_default_base_hp() {
         healths[0].current
     );
     assert!(
-        (healths[0].max - 30.0).abs() < f32::EPSILON,
+        (healths[0].starting - 30.0).abs() < f32::EPSILON,
         "cell max HP should be Tough default_base_hp = 30.0, got {}",
-        healths[0].max
+        healths[0].starting
     );
 }
 
@@ -351,11 +343,7 @@ fn spawn_standard_cell_tier0_pos0_has_correct_hp() {
     let mut app = test_app_with_toughness(layout, test_registry(), 0, 0, false);
     app.update();
 
-    let healths: Vec<&CellHealth> = app
-        .world_mut()
-        .query::<&CellHealth>()
-        .iter(app.world())
-        .collect();
+    let healths: Vec<&Hp> = app.world_mut().query::<&Hp>().iter(app.world()).collect();
     assert_eq!(healths.len(), 1, "should spawn exactly 1 cell");
     assert!(
         (healths[0].current - 20.0).abs() < 0.001,
@@ -363,9 +351,9 @@ fn spawn_standard_cell_tier0_pos0_has_correct_hp() {
         healths[0].current
     );
     assert!(
-        (healths[0].max - 20.0).abs() < 0.001,
+        (healths[0].starting - 20.0).abs() < 0.001,
         "Standard cell at tier 0, pos 0 should have max HP 20.0, got {}",
-        healths[0].max
+        healths[0].starting
     );
 }
 
@@ -386,11 +374,7 @@ fn spawn_tough_cell_tier3_pos4_has_scaled_hp() {
     let mut app = test_app_with_toughness(layout, test_registry(), 3, 4, false);
     app.update();
 
-    let healths: Vec<&CellHealth> = app
-        .world_mut()
-        .query::<&CellHealth>()
-        .iter(app.world())
-        .collect();
+    let healths: Vec<&Hp> = app.world_mut().query::<&Hp>().iter(app.world()).collect();
     assert_eq!(healths.len(), 1, "should spawn exactly 1 cell");
     // Tough base=30.0, tier_scale(3,4) = 1.2^3 * (1.0 + 0.05*4) = 1.728 * 1.2 = 2.0736
     // HP = 30.0 * 2.0736 ≈ 62.208
@@ -400,9 +384,9 @@ fn spawn_tough_cell_tier3_pos4_has_scaled_hp() {
         healths[0].current
     );
     assert!(
-        (healths[0].max - 62.208).abs() < 0.01,
+        (healths[0].starting - 62.208).abs() < 0.01,
         "Tough cell at tier 3, pos 4 should have max HP ~62.208, got {}",
-        healths[0].max
+        healths[0].starting
     );
 }
 
@@ -433,11 +417,7 @@ fn spawn_cell_without_toughness_config_falls_back_to_default_base_hp() {
         .add_systems(Startup, spawn_cells_from_layout);
     app.update();
 
-    let healths: Vec<&CellHealth> = app
-        .world_mut()
-        .query::<&CellHealth>()
-        .iter(app.world())
-        .collect();
+    let healths: Vec<&Hp> = app.world_mut().query::<&Hp>().iter(app.world()).collect();
     assert_eq!(healths.len(), 1, "should spawn exactly 1 cell");
     // Falls back to Standard.default_base_hp() = 20.0
     assert!(
@@ -471,7 +451,7 @@ fn spawn_guarded_cell_tier0_pos0_guardian_hp_is_parent_times_fraction() {
     // Guardian HP = 30.0 * 0.5 = 15.0
     let healths: Vec<f32> = app
         .world_mut()
-        .query::<&CellHealth>()
+        .query::<&Hp>()
         .iter(app.world())
         .map(|h| h.current)
         .collect();
@@ -522,7 +502,7 @@ fn spawn_guarded_cell_tier3_pos0_guardian_hp_scales_with_tier() {
     // Guardian HP = 51.84 * 0.5 ≈ 25.92
     let healths: Vec<f32> = app
         .world_mut()
-        .query::<&CellHealth>()
+        .query::<&Hp>()
         .iter(app.world())
         .map(|h| h.current)
         .collect();
@@ -576,7 +556,7 @@ fn spawn_boss_guarded_cell_applies_boss_multiplier_before_guardian_fraction() {
     // Guardian HP = 90.0 * 0.5 = 45.0
     let healths: Vec<f32> = app
         .world_mut()
-        .query::<&CellHealth>()
+        .query::<&Hp>()
         .iter(app.world())
         .map(|h| h.current)
         .collect();

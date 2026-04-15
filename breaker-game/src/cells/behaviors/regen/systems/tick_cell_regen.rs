@@ -2,29 +2,34 @@
 
 use bevy::prelude::*;
 
-use crate::cells::{
-    behaviors::regen::components::{NoRegen, Regen, RegenCell, RegenRate},
-    components::{Cell, CellHealth},
+use crate::{
+    cells::{
+        behaviors::regen::components::{NoRegen, Regen, RegenCell, RegenRate},
+        components::Cell,
+    },
+    shared::death_pipeline::hp::Hp,
 };
 
 type RegenCellQuery<'w, 's> = Query<
     'w,
     's,
-    (&'static mut CellHealth, &'static RegenRate),
+    (&'static mut Hp, &'static RegenRate),
     (With<Cell>, With<RegenCell>, With<Regen>, Without<NoRegen>),
 >;
 
 /// Regenerates HP on cells with regen behavior each fixed timestep.
 ///
-/// Adds `rate * dt` to the cell's current HP, clamped to max.
-/// Destroyed cells (HP == 0) are skipped.
+/// Adds `rate * dt` to the cell's current HP, clamped to `Hp.max` (or
+/// `Hp.starting` if no explicit ceiling is set). Destroyed cells (HP <= 0)
+/// are skipped.
 pub(crate) fn tick_cell_regen(time: Res<Time<Fixed>>, mut query: RegenCellQuery) {
     let dt = time.delta_secs();
-    for (mut health, regen_rate) in &mut query {
-        if health.is_destroyed() {
+    for (mut hp, regen_rate) in &mut query {
+        if hp.current <= 0.0 {
             continue;
         }
-        health.current = regen_rate.0.mul_add(dt, health.current).min(health.max);
+        let ceiling = hp.max.unwrap_or(hp.starting);
+        hp.current = regen_rate.0.mul_add(dt, hp.current).min(ceiling);
     }
 }
 
@@ -33,7 +38,10 @@ mod tests {
     use std::time::Duration;
 
     use super::*;
-    use crate::cells::{behaviors::regen::components::*, components::*};
+    use crate::{
+        cells::{behaviors::regen::components::*, components::*},
+        shared::death_pipeline::hp::Hp,
+    };
 
     fn test_app() -> App {
         use crate::shared::test_utils::TestAppBuilder;
@@ -58,7 +66,11 @@ mod tests {
         app.world_mut()
             .spawn((
                 Cell,
-                CellHealth { current, max },
+                Hp {
+                    current,
+                    starting: max,
+                    max: Some(max),
+                },
                 RegenCell,
                 Regen,
                 RegenRate(rate),
@@ -76,7 +88,7 @@ mod tests {
 
         tick_with_dt(&mut app, Duration::from_secs(1));
 
-        let health = app.world().get::<CellHealth>(entity).unwrap();
+        let health = app.world().get::<Hp>(entity).unwrap();
         assert!(
             (health.current - 7.0).abs() < f32::EPSILON,
             "cell with 5.0 HP and regen rate 2.0 after 1.0s should have 7.0 HP, got {}",
@@ -94,7 +106,7 @@ mod tests {
 
         tick_with_dt(&mut app, Duration::from_secs(1));
 
-        let health = app.world().get::<CellHealth>(entity).unwrap();
+        let health = app.world().get::<Hp>(entity).unwrap();
         assert!(
             (health.current - 20.0).abs() < f32::EPSILON,
             "regen should clamp to max HP 20.0, got {}",
@@ -112,7 +124,7 @@ mod tests {
 
         tick_with_dt(&mut app, Duration::from_secs(1));
 
-        let health = app.world().get::<CellHealth>(entity).unwrap();
+        let health = app.world().get::<Hp>(entity).unwrap();
         assert!(
             (health.current - 0.0).abs() < f32::EPSILON,
             "destroyed cell (0 HP) should not regenerate, got {}",
@@ -130,7 +142,7 @@ mod tests {
 
         tick_with_dt(&mut app, Duration::from_secs(1));
 
-        let health = app.world().get::<CellHealth>(entity).unwrap();
+        let health = app.world().get::<Hp>(entity).unwrap();
         assert!(
             (health.current - 20.0).abs() < f32::EPSILON,
             "cell at full HP should stay at 20.0, got {}",
@@ -148,7 +160,7 @@ mod tests {
 
         tick_with_dt(&mut app, Duration::from_secs(1));
 
-        let health = app.world().get::<CellHealth>(entity).unwrap();
+        let health = app.world().get::<Hp>(entity).unwrap();
         assert!(
             (health.current - 5.0).abs() < f32::EPSILON,
             "cell with zero regen rate should stay at 5.0 HP, got {}",

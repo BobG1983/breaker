@@ -4,17 +4,18 @@ use bevy::prelude::*;
 
 use crate::{
     bolt::messages::BoltImpactBreaker,
-    cells::messages::CellDestroyedAt,
+    cells::components::Cell,
+    shared::death_pipeline::Destroyed,
     state::run::{definition::HighlightConfig, messages::HighlightTriggered, resources::*},
 };
 
-/// Reads [`CellDestroyedAt`] and [`BoltImpactBreaker`] messages
+/// Reads [`Destroyed<Cell>`] and [`BoltImpactBreaker`] messages
 /// to detect `ComboKing` highlights.
 ///
-/// - `CellDestroyedAt` increments `cells_since_last_breaker_hit`.
+/// - `Destroyed<Cell>` increments `cells_since_last_breaker_hit`.
 /// - `BoltImpactBreaker` checks the combo threshold, records the highlight, and resets the counter.
 pub(crate) fn detect_combo_king(
-    mut cell_destroyed_reader: MessageReader<CellDestroyedAt>,
+    mut cell_destroyed_reader: MessageReader<Destroyed<Cell>>,
     mut bolt_hit_breaker_reader: MessageReader<BoltImpactBreaker>,
     config: Res<HighlightConfig>,
     mut tracker: ResMut<HighlightTracker>,
@@ -61,23 +62,26 @@ pub(crate) fn detect_combo_king(
 
 #[cfg(test)]
 mod tests {
+    use std::marker::PhantomData;
+
     use super::*;
     use crate::{
-        cells::messages::CellDestroyedAt,
+        cells::components::Cell,
+        shared::death_pipeline::destroyed::Destroyed,
         state::run::resources::{HighlightKind, RunHighlight},
     };
 
     // --- TestMessages resources for each message type ---
 
     #[derive(Resource, Default)]
-    struct TestCellDestroyed(Vec<CellDestroyedAt>);
+    struct TestCellDestroyed(Vec<Destroyed<Cell>>);
 
     #[derive(Resource, Default)]
     struct TestBoltImpactBreaker(Vec<BoltImpactBreaker>);
 
     fn enqueue_cell_destroyed(
         msg_res: Res<TestCellDestroyed>,
-        mut writer: MessageWriter<CellDestroyedAt>,
+        mut writer: MessageWriter<Destroyed<Cell>>,
     ) {
         for msg in &msg_res.0 {
             writer.write(msg.clone());
@@ -108,7 +112,7 @@ mod tests {
     fn test_app() -> App {
         use crate::shared::test_utils::TestAppBuilder;
         TestAppBuilder::new()
-            .with_message::<CellDestroyedAt>()
+            .with_message::<Destroyed<Cell>>()
             .with_message::<BoltImpactBreaker>()
             .with_message::<HighlightTriggered>()
             .with_resource::<RunStats>()
@@ -130,34 +134,38 @@ mod tests {
             .build()
     }
 
+    fn make_destroyed() -> Destroyed<Cell> {
+        Destroyed::<Cell> {
+            victim:     Entity::PLACEHOLDER,
+            killer:     None,
+            victim_pos: Vec2::ZERO,
+            killer_pos: None,
+            _marker:    PhantomData,
+        }
+    }
+
     use crate::shared::test_utils::tick;
 
-    // --- Behavior 6: CellDestroyedAt increments cells_since_last_breaker_hit ---
+    // --- Behavior 13: Destroyed<Cell> increments cells_since_last_breaker_hit ---
 
     #[test]
     fn cell_destroyed_increments_cells_since_last_breaker_hit() {
         let mut app = test_app();
         app.insert_resource(TestCellDestroyed(vec![
-            CellDestroyedAt {
-                was_required_to_clear: true,
-            },
-            CellDestroyedAt {
-                was_required_to_clear: true,
-            },
-            CellDestroyedAt {
-                was_required_to_clear: false,
-            },
+            make_destroyed(),
+            make_destroyed(),
+            make_destroyed(),
         ]));
         tick(&mut app);
 
         let tracker = app.world().resource::<HighlightTracker>();
         assert_eq!(
             tracker.cells_since_last_breaker_hit, 3,
-            "3 CellDestroyedAt messages should set counter to 3"
+            "3 Destroyed<Cell> messages should set counter to 3"
         );
     }
 
-    // --- Behavior 7: ComboKing detected when counter >= 8 ---
+    // --- Behavior 13: ComboKing detected when counter >= 8 ---
 
     #[test]
     fn combo_king_detected_when_counter_reaches_threshold() {
@@ -200,7 +208,7 @@ mod tests {
         );
     }
 
-    // --- Behavior 8: ComboKing NOT detected when counter < 8 ---
+    // --- Behavior 13: ComboKing NOT detected when counter < 8 ---
 
     #[test]
     fn combo_king_not_detected_when_counter_below_threshold() {
@@ -236,7 +244,7 @@ mod tests {
         );
     }
 
-    // --- Behavior 9: best_combo tracks maximum ---
+    // --- Behavior 13: best_combo tracks maximum ---
 
     #[test]
     fn best_combo_tracks_maximum_across_resets() {
@@ -260,7 +268,7 @@ mod tests {
         );
     }
 
-    // --- Behavior 14: Dedup — only one ComboKing in RunStats ---
+    // --- Behavior 13: Dedup — only one ComboKing in RunStats ---
 
     #[test]
     fn dedup_only_one_combo_king_in_run_stats() {

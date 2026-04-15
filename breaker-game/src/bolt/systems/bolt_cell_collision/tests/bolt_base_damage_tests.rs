@@ -85,12 +85,12 @@ fn collision_uses_bolt_base_damage_from_entity() {
 
     tick(&mut app);
 
-    let msgs = app.world().resource::<DamageCellMessages>();
-    assert_eq!(msgs.0.len(), 1, "should emit one DamageCell");
+    let msgs = app.world().resource::<DamageDealtCellMessages>();
+    assert_eq!(msgs.0.len(), 1, "should emit one DamageDealt<Cell>");
     assert!(
-        (msgs.0[0].damage - 10.0).abs() < f32::EPSILON,
-        "DamageCell.damage should be 10.0 (from BoltBaseDamage), got {}",
-        msgs.0[0].damage
+        (msgs.0[0].amount - 10.0).abs() < f32::EPSILON,
+        "DamageDealt<Cell>.amount should be 10.0 (from BoltBaseDamage), got {}",
+        msgs.0[0].amount
     );
 }
 
@@ -112,12 +112,12 @@ fn collision_with_zero_base_damage() {
 
     tick(&mut app);
 
-    let msgs = app.world().resource::<DamageCellMessages>();
-    assert_eq!(msgs.0.len(), 1, "should emit one DamageCell");
+    let msgs = app.world().resource::<DamageDealtCellMessages>();
+    assert_eq!(msgs.0.len(), 1, "should emit one DamageDealt<Cell>");
     assert!(
-        (msgs.0[0].damage).abs() < f32::EPSILON,
-        "DamageCell.damage should be 0.0, got {}",
-        msgs.0[0].damage
+        (msgs.0[0].amount).abs() < f32::EPSILON,
+        "DamageDealt<Cell>.amount should be 0.0, got {}",
+        msgs.0[0].amount
     );
 }
 
@@ -139,12 +139,12 @@ fn collision_uses_bolt_base_damage_with_damage_boost() {
 
     tick(&mut app);
 
-    let msgs = app.world().resource::<DamageCellMessages>();
-    assert_eq!(msgs.0.len(), 1, "should emit one DamageCell");
+    let msgs = app.world().resource::<DamageDealtCellMessages>();
+    assert_eq!(msgs.0.len(), 1, "should emit one DamageDealt<Cell>");
     assert!(
-        (msgs.0[0].damage - 15.0).abs() < f32::EPSILON,
-        "DamageCell.damage should be 10.0 * 1.5 = 15.0, got {}",
-        msgs.0[0].damage
+        (msgs.0[0].amount - 15.0).abs() < f32::EPSILON,
+        "DamageDealt<Cell>.amount should be 10.0 * 1.5 = 15.0, got {}",
+        msgs.0[0].amount
     );
 }
 
@@ -165,12 +165,12 @@ fn collision_high_base_damage_with_boost() {
 
     tick(&mut app);
 
-    let msgs = app.world().resource::<DamageCellMessages>();
-    assert_eq!(msgs.0.len(), 1, "should emit one DamageCell");
+    let msgs = app.world().resource::<DamageDealtCellMessages>();
+    assert_eq!(msgs.0.len(), 1, "should emit one DamageDealt<Cell>");
     assert!(
-        (msgs.0[0].damage - 50.0).abs() < f32::EPSILON,
-        "DamageCell.damage should be 25.0 * 2.0 = 50.0, got {}",
-        msgs.0[0].damage
+        (msgs.0[0].amount - 50.0).abs() < f32::EPSILON,
+        "DamageDealt<Cell>.amount should be 25.0 * 2.0 = 50.0, got {}",
+        msgs.0[0].amount
     );
 }
 
@@ -192,12 +192,15 @@ fn collision_piercing_uses_bolt_base_damage_for_lookahead() {
 
     tick(&mut app);
 
-    let msgs = app.world().resource::<DamageCellMessages>();
-    assert!(!msgs.0.is_empty(), "should emit at least one DamageCell");
+    let msgs = app.world().resource::<DamageDealtCellMessages>();
     assert!(
-        (msgs.0[0].damage - 10.0).abs() < f32::EPSILON,
-        "DamageCell.damage should be 10.0, got {}",
-        msgs.0[0].damage
+        !msgs.0.is_empty(),
+        "should emit at least one DamageDealt<Cell>"
+    );
+    assert!(
+        (msgs.0[0].amount - 10.0).abs() < f32::EPSILON,
+        "DamageDealt<Cell>.amount should be 10.0, got {}",
+        msgs.0[0].amount
     );
 
     // Verify pierce happened (PiercingRemaining decremented)
@@ -257,13 +260,13 @@ fn collision_uses_entity_damage_not_constant() {
 
     tick(&mut app);
 
-    let msgs = app.world().resource::<DamageCellMessages>();
-    assert_eq!(msgs.0.len(), 1, "should emit one DamageCell");
+    let msgs = app.world().resource::<DamageDealtCellMessages>();
+    assert_eq!(msgs.0.len(), 1, "should emit one DamageDealt<Cell>");
     assert!(
-        (msgs.0[0].damage - 25.0).abs() < f32::EPSILON,
-        "DamageCell.damage should be 25.0 (from BoltBaseDamage), NOT {} (default). Got {}",
+        (msgs.0[0].amount - 25.0).abs() < f32::EPSILON,
+        "DamageDealt<Cell>.amount should be 25.0 (from BoltBaseDamage), NOT {} (default). Got {}",
         DEFAULT_BOLT_BASE_DAMAGE,
-        msgs.0[0].damage
+        msgs.0[0].amount
     );
 }
 
@@ -286,28 +289,28 @@ fn collision_two_bolts_different_base_damage() {
 
     tick(&mut app);
 
-    let msgs = app.world().resource::<DamageCellMessages>();
+    let msgs = app.world().resource::<DamageDealtCellMessages>();
     assert_eq!(
         msgs.0.len(),
         2,
-        "should emit two DamageCell messages, got {}",
+        "should emit two DamageDealt<Cell> messages, got {}",
         msgs.0.len()
     );
 
-    let msg_a = msgs.0.iter().find(|m| m.cell == cell_a);
-    let msg_b = msgs.0.iter().find(|m| m.cell == cell_b);
-    assert!(msg_a.is_some(), "DamageCell for cell A should exist");
-    assert!(msg_b.is_some(), "DamageCell for cell B should exist");
+    let msg_a = msgs.0.iter().find(|m| m.target == cell_a);
+    let msg_b = msgs.0.iter().find(|m| m.target == cell_b);
+    assert!(msg_a.is_some(), "DamageDealt<Cell> for cell A should exist");
+    assert!(msg_b.is_some(), "DamageDealt<Cell> for cell B should exist");
 
     assert!(
-        (msg_a.unwrap().damage - 10.0).abs() < f32::EPSILON,
+        (msg_a.unwrap().amount - 10.0).abs() < f32::EPSILON,
         "cell A damage should be 10.0 (from bolt A), got {}",
-        msg_a.unwrap().damage
+        msg_a.unwrap().amount
     );
     assert!(
-        (msg_b.unwrap().damage - 25.0).abs() < f32::EPSILON,
+        (msg_b.unwrap().amount - 25.0).abs() < f32::EPSILON,
         "cell B damage should be 25.0 (from bolt B), got {}",
-        msg_b.unwrap().damage
+        msg_b.unwrap().amount
     );
 }
 
@@ -334,21 +337,25 @@ fn collision_two_bolts_different_damage_with_boosts() {
 
     tick(&mut app);
 
-    let msgs = app.world().resource::<DamageCellMessages>();
-    assert_eq!(msgs.0.len(), 2, "should emit two DamageCell messages");
+    let msgs = app.world().resource::<DamageDealtCellMessages>();
+    assert_eq!(
+        msgs.0.len(),
+        2,
+        "should emit two DamageDealt<Cell> messages"
+    );
 
-    let msg_a = msgs.0.iter().find(|m| m.cell == cell_a).unwrap();
-    let msg_b = msgs.0.iter().find(|m| m.cell == cell_b).unwrap();
+    let msg_a = msgs.0.iter().find(|m| m.target == cell_a).unwrap();
+    let msg_b = msgs.0.iter().find(|m| m.target == cell_b).unwrap();
 
     assert!(
-        (msg_a.damage - 20.0).abs() < f32::EPSILON,
+        (msg_a.amount - 20.0).abs() < f32::EPSILON,
         "cell A damage should be 10.0 * 2.0 = 20.0, got {}",
-        msg_a.damage
+        msg_a.amount
     );
     assert!(
-        (msg_b.damage - 50.0).abs() < f32::EPSILON,
+        (msg_b.amount - 50.0).abs() < f32::EPSILON,
         "cell B damage should be 25.0 * 2.0 = 50.0, got {}",
-        msg_b.damage
+        msg_b.amount
     );
 }
 
@@ -371,12 +378,12 @@ fn collision_without_bolt_base_damage_falls_back_to_default() {
 
     tick(&mut app);
 
-    let msgs = app.world().resource::<DamageCellMessages>();
-    assert_eq!(msgs.0.len(), 1, "should emit one DamageCell");
+    let msgs = app.world().resource::<DamageDealtCellMessages>();
+    assert_eq!(msgs.0.len(), 1, "should emit one DamageDealt<Cell>");
     assert!(
-        (msgs.0[0].damage - DEFAULT_BOLT_BASE_DAMAGE).abs() < f32::EPSILON,
-        "DamageCell.damage should fall back to DEFAULT_BOLT_BASE_DAMAGE ({DEFAULT_BOLT_BASE_DAMAGE}), got {}",
-        msgs.0[0].damage
+        (msgs.0[0].amount - DEFAULT_BOLT_BASE_DAMAGE).abs() < f32::EPSILON,
+        "DamageDealt<Cell>.amount should fall back to DEFAULT_BOLT_BASE_DAMAGE ({DEFAULT_BOLT_BASE_DAMAGE}), got {}",
+        msgs.0[0].amount
     );
 }
 
@@ -398,12 +405,12 @@ fn collision_without_bolt_base_damage_with_boost_uses_fallback() {
 
     tick(&mut app);
 
-    let msgs = app.world().resource::<DamageCellMessages>();
-    assert_eq!(msgs.0.len(), 1, "should emit one DamageCell");
+    let msgs = app.world().resource::<DamageDealtCellMessages>();
+    assert_eq!(msgs.0.len(), 1, "should emit one DamageDealt<Cell>");
     assert!(
-        (msgs.0[0].damage - 20.0).abs() < f32::EPSILON,
-        "DamageCell.damage should be DEFAULT_BOLT_BASE_DAMAGE * 2.0 = 20.0, got {}",
-        msgs.0[0].damage
+        (msgs.0[0].amount - 20.0).abs() < f32::EPSILON,
+        "DamageDealt<Cell>.amount should be DEFAULT_BOLT_BASE_DAMAGE * 2.0 = 20.0, got {}",
+        msgs.0[0].amount
     );
 }
 
@@ -427,8 +434,11 @@ fn collision_pierce_lookahead_uses_fallback_when_no_bolt_base_damage() {
 
     tick(&mut app);
 
-    let msgs = app.world().resource::<DamageCellMessages>();
-    assert!(!msgs.0.is_empty(), "should emit at least one DamageCell");
+    let msgs = app.world().resource::<DamageDealtCellMessages>();
+    assert!(
+        !msgs.0.is_empty(),
+        "should emit at least one DamageDealt<Cell>"
+    );
 
     let pr = app
         .world()

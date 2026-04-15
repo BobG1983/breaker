@@ -7,15 +7,21 @@ use rantzsoft_spatial2d::components::Position2D;
 
 use crate::shared::death_pipeline::{
     damage_dealt::DamageDealt, dead::Dead, despawn_entity::DespawnEntity, destroyed::Destroyed,
-    game_entity::GameEntity, hp::Hp, kill_yourself::KillYourself, killed_by::KilledBy,
+    game_entity::GameEntity, hp::Hp, invulnerable::Invulnerable, kill_yourself::KillYourself,
+    killed_by::KilledBy,
 };
 
 /// Processes `DamageDealt<T>` messages, decrements `Hp`, and sets `KilledBy` on
-/// the killing blow. Uses `Without<Dead>` to skip entities already confirmed dead.
+/// the killing blow. Uses `Without<Dead>` to skip entities already confirmed dead,
+/// and `Without<Invulnerable>` to silently absorb damage against immune entities.
 ///
 /// Generic over the entity marker type — monomorphized for Cell, Bolt, Wall, Breaker.
-type DamageTargetQuery<'w, 's, T> =
-    Query<'w, 's, (&'static mut Hp, &'static mut KilledBy), (With<T>, Without<Dead>)>;
+type DamageTargetQuery<'w, 's, T> = Query<
+    'w,
+    's,
+    (&'static mut Hp, &'static mut KilledBy),
+    (With<T>, Without<Dead>, Without<Invulnerable>),
+>;
 
 pub(crate) fn apply_damage<T: GameEntity>(
     mut reader: MessageReader<DamageDealt<T>>,

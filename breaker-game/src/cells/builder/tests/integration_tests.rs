@@ -7,13 +7,13 @@ use rantzsoft_spatial2d::components::{Position2D, Scale2D};
 use crate::{
     cells::{
         components::{
-            Cell, CellDamageVisuals, CellHealth, CellHeight, CellTypeAlias, CellWidth, Locked,
-            Locks, RegenRate, RequiredToClear,
+            Cell, CellDamageVisuals, CellHeight, CellTypeAlias, CellWidth, Locked, Locks,
+            RegenRate, RequiredToClear,
         },
         definition::CellBehavior,
         test_utils::{spawn_cell_in_world, test_cell_definition},
     },
-    shared::{BOLT_LAYER, CELL_LAYER},
+    shared::{BOLT_LAYER, CELL_LAYER, death_pipeline::hp::Hp},
 };
 
 // ── Behavior 44: Full definition with hp override and behavior addition ─────
@@ -44,14 +44,13 @@ fn full_definition_with_hp_override_and_behavior() {
     });
 
     // Override hp
-    let health = world
-        .get::<CellHealth>(entity)
-        .expect("should have CellHealth");
+    let health = world.get::<Hp>(entity).expect("should have Hp");
     assert!(
-        (health.current - 50.0).abs() < f32::EPSILON && (health.max - 50.0).abs() < f32::EPSILON,
-        "CellHealth should be {{ current: 50.0, max: 50.0 }} (override), got {{ current: {}, max: {} }}",
+        (health.current - 50.0).abs() < f32::EPSILON
+            && (health.starting - 50.0).abs() < f32::EPSILON,
+        "Hp should be {{ current: 50.0, starting: 50.0 }} (override), got {{ current: {}, starting: {} }}",
         health.current,
-        health.max
+        health.starting
     );
 
     // From definition
@@ -118,12 +117,11 @@ fn full_definition_override_hp_smaller() {
             .spawn(commands)
     });
 
-    let health = world
-        .get::<CellHealth>(entity)
-        .expect("should have CellHealth");
+    let health = world.get::<Hp>(entity).expect("should have Hp");
     assert!(
-        (health.current - 10.0).abs() < f32::EPSILON && (health.max - 10.0).abs() < f32::EPSILON,
-        "CellHealth should be {{ current: 10.0, max: 10.0 }} (override smaller)"
+        (health.current - 10.0).abs() < f32::EPSILON
+            && (health.starting - 10.0).abs() < f32::EPSILON,
+        "Hp should be {{ current: 10.0, starting: 10.0 }} (override smaller)"
     );
 }
 
@@ -178,12 +176,11 @@ fn minimal_builder_no_definition_no_optionals() {
         "Aabb2D half_extents should be (20.0, 10.0)"
     );
 
-    let health = world
-        .get::<CellHealth>(entity)
-        .expect("should have CellHealth");
+    let health = world.get::<Hp>(entity).expect("should have Hp");
     assert!(
-        (health.current - 10.0).abs() < f32::EPSILON && (health.max - 10.0).abs() < f32::EPSILON,
-        "CellHealth should be {{ current: 10.0, max: 10.0 }}"
+        (health.current - 10.0).abs() < f32::EPSILON
+            && (health.starting - 10.0).abs() < f32::EPSILON,
+        "Hp should be {{ current: 10.0, starting: 10.0 }}"
     );
 
     let layers = world
@@ -299,11 +296,11 @@ fn builder_defaults_no_optional_components() {
 
     // Guard: non-#[require] component ensures builder actually populated the entity
     let health = world
-        .get::<CellHealth>(entity)
-        .expect("entity should have CellHealth from builder");
+        .get::<Hp>(entity)
+        .expect("entity should have Hp from builder");
     assert!(
         (health.current - 20.0).abs() < f32::EPSILON,
-        "CellHealth.current should be 20.0, not default"
+        "Hp.current should be 20.0, not default"
     );
 
     assert!(

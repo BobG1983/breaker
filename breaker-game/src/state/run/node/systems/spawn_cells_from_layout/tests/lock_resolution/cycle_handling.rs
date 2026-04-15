@@ -7,6 +7,7 @@ use bevy::prelude::*;
 use super::{super::helpers::*, helpers::*};
 use crate::{
     cells::components::*,
+    shared::death_pipeline::hp::Hp,
     state::run::node::{
         NodeLayout,
         definition::{LockMap, NodePool},
@@ -119,13 +120,13 @@ fn partial_circular_chain_all_spawn_unlocked() {
         "all cells in or depending on cycle should spawn without Locked"
     );
 
-    // All cells should still have CellHealth (they spawn as unlocked fallbacks)
+    // All cells should still have Hp (they spawn as unlocked fallbacks)
     let health_count = app
         .world_mut()
-        .query::<(&Cell, &CellHealth)>()
+        .query::<(&Cell, &Hp)>()
         .iter(app.world())
         .count();
-    assert_eq!(health_count, 3, "all cells should have CellHealth");
+    assert_eq!(health_count, 3, "all cells should have Hp");
 }
 
 #[test]

@@ -12,12 +12,12 @@ use crate::{
     cells::{
         builder::core::types::GuardianSpawnConfig,
         components::{
-            Cell, CellHealth, CellHeight, CellWidth, GuardedCell, GuardianCell, GuardianGridStep,
+            Cell, CellHeight, CellWidth, GuardedCell, GuardianCell, GuardianGridStep,
             GuardianSlideSpeed, GuardianSlot, SlideTarget,
         },
         definition::{CellBehavior, GuardedBehavior},
     },
-    shared::{BOLT_LAYER, CELL_LAYER},
+    shared::{BOLT_LAYER, CELL_LAYER, death_pipeline::hp::Hp},
 };
 
 // Behavior 32: .guarded() stores guardian spawn data (compile test)
@@ -50,10 +50,7 @@ fn spawn_guarded_parent_has_guarded_cell_marker() {
         world.get::<Cell>(entity).is_some(),
         "parent should have Cell marker"
     );
-    assert!(
-        world.get::<CellHealth>(entity).is_some(),
-        "parent should have CellHealth"
-    );
+    assert!(world.get::<Hp>(entity).is_some(), "parent should have Hp");
 }
 
 // Behavior 34 (I): spawn() with .guarded() creates guardian children with correct components
@@ -89,8 +86,8 @@ fn spawn_guarded_creates_guardian_children_with_correct_components() {
             "guardian should have Cell marker"
         );
         assert!(
-            world.get::<CellHealth>(*entity).is_some(),
-            "guardian should have CellHealth"
+            world.get::<Hp>(*entity).is_some(),
+            "guardian should have Hp"
         );
         assert!(
             world.get::<Position2D>(*entity).is_some(),
@@ -188,20 +185,20 @@ fn guardian_health_matches_config() {
             .spawn(commands)
     });
 
-    let guardian_health: Vec<&CellHealth> = world
-        .query_filtered::<&CellHealth, With<GuardianCell>>()
+    let guardian_health: Vec<&Hp> = world
+        .query_filtered::<&Hp, With<GuardianCell>>()
         .iter(&world)
         .collect();
     assert_eq!(guardian_health.len(), 1);
     assert!(
         (guardian_health[0].current - 10.0).abs() < f32::EPSILON,
-        "guardian CellHealth.current should be 10.0, got {}",
+        "guardian Hp.current should be 10.0, got {}",
         guardian_health[0].current
     );
     assert!(
-        (guardian_health[0].max - 10.0).abs() < f32::EPSILON,
-        "guardian CellHealth.max should be 10.0, got {}",
-        guardian_health[0].max
+        (guardian_health[0].starting - 10.0).abs() < f32::EPSILON,
+        "guardian Hp.starting should be 10.0, got {}",
+        guardian_health[0].starting
     );
 }
 

@@ -13,12 +13,14 @@ use crate::{
         systems::bolt_cell_collision::system::bolt_cell_collision,
     },
     cells::{
-        components::{Cell, CellHealth, CellHeight, CellWidth},
-        messages::DamageCell,
+        components::{Cell, CellHeight, CellWidth},
         test_utils as cell_test_utils,
     },
     effect_v3::{effects::VulnerableConfig, stacking::EffectStack},
-    shared::{BOLT_LAYER, CELL_LAYER, GameDrawLayer},
+    shared::{
+        BOLT_LAYER, CELL_LAYER, GameDrawLayer,
+        death_pipeline::{damage_dealt::DamageDealt, hp::Hp, killed_by::KilledBy},
+    },
 };
 
 /// Real grid vertical spacing: `cell_height` (24) + padding (4) = 28
@@ -32,7 +34,7 @@ pub(super) fn test_app() -> App {
     TestAppBuilder::new()
         .with_physics()
         .with_message::<BoltImpactCell>()
-        .with_message::<DamageCell>()
+        .with_message::<DamageDealt<Cell>>()
         .with_message::<BoltImpactWall>()
         .with_system(
             FixedUpdate,
@@ -53,7 +55,7 @@ pub(super) fn spawn_cell(app: &mut App, x: f32, y: f32) -> Entity {
     cell_test_utils::spawn_cell(app, x, y)
 }
 
-/// Spawns a cell with explicit [`CellHealth`] for piercing lookahead tests.
+/// Spawns a cell with explicit [`Hp`] for piercing lookahead tests.
 pub(super) fn spawn_cell_with_health(app: &mut App, x: f32, y: f32, hp: f32) -> Entity {
     let (cw, ch) = default_cell_dims();
     let half_extents = Vec2::new(cw.half_width(), ch.half_height());
@@ -63,7 +65,8 @@ pub(super) fn spawn_cell_with_health(app: &mut App, x: f32, y: f32, hp: f32) -> 
             Cell,
             cw,
             ch,
-            CellHealth::new(hp),
+            Hp::new(hp),
+            KilledBy::default(),
             Aabb2D::new(Vec2::ZERO, half_extents),
             CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
             Position2D(pos),
@@ -102,7 +105,7 @@ pub(super) fn spawn_cell_with_custom_aabb(
         .id()
 }
 
-/// Spawns a cell with explicit [`CellHealth`] and [`EffectStack<VulnerableConfig>`].
+/// Spawns a cell with explicit [`Hp`] and [`EffectStack<VulnerableConfig>`].
 pub(super) fn spawn_vulnerable_cell(
     app: &mut App,
     x: f32,
@@ -127,7 +130,8 @@ pub(super) fn spawn_vulnerable_cell(
             Cell,
             cw,
             ch,
-            CellHealth::new(hp),
+            Hp::new(hp),
+            KilledBy::default(),
             vuln_stack,
             Aabb2D::new(Vec2::ZERO, half_extents),
             CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
@@ -165,13 +169,13 @@ pub(super) fn collect_full_hits(
     }
 }
 
-/// Collects [`DamageCell`] messages into a resource for test assertions.
+/// Collects [`DamageDealt<Cell>`] messages into a resource for test assertions.
 #[derive(Resource, Default)]
-pub(super) struct DamageCellMessages(pub(super) Vec<DamageCell>);
+pub(super) struct DamageDealtCellMessages(pub(super) Vec<DamageDealt<Cell>>);
 
 pub(super) fn collect_damage_cells(
-    mut reader: MessageReader<DamageCell>,
-    mut msgs: ResMut<DamageCellMessages>,
+    mut reader: MessageReader<DamageDealt<Cell>>,
+    mut msgs: ResMut<DamageDealtCellMessages>,
 ) {
     for msg in reader.read() {
         msgs.0.push(msg.clone());
@@ -191,7 +195,7 @@ pub(super) fn collect_wall_hits(
     }
 }
 
-/// Creates a test app with `DamageCell` and `BoltImpactWall` message capture
+/// Creates a test app with `DamageDealt<Cell>` and `BoltImpactWall` message capture
 /// in addition to the standard `BoltImpactCell`.
 pub(super) fn test_app_with_damage_and_wall_messages() -> App {
     use crate::shared::test_utils::TestAppBuilder;
@@ -199,9 +203,9 @@ pub(super) fn test_app_with_damage_and_wall_messages() -> App {
     TestAppBuilder::new()
         .with_physics()
         .with_message::<BoltImpactCell>()
-        .with_message::<DamageCell>()
+        .with_message::<DamageDealt<Cell>>()
         .with_message::<BoltImpactWall>()
-        .insert_resource(DamageCellMessages::default())
+        .insert_resource(DamageDealtCellMessages::default())
         .insert_resource(WallHitMessages::default())
         .insert_resource(FullHitMessages::default())
         .with_system(

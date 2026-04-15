@@ -7,6 +7,7 @@ use bevy::prelude::*;
 use super::{super::helpers::*, helpers::*};
 use crate::{
     cells::components::*,
+    shared::death_pipeline::hp::Hp,
     state::run::node::{
         NodeLayout,
         definition::{LockMap, NodePool},
@@ -61,16 +62,16 @@ fn locked_cell_hp_scaled_by_hp_mult() {
 
     // Locked cell at (0,0) — "T" Tough toughness, fallback base = 30.0
     let entity_t = cells_by_pos[&(0, 0)];
-    let health_t = app.world().get::<CellHealth>(entity_t).unwrap();
+    let health_t = app.world().get::<Hp>(entity_t).unwrap();
     assert!(
         (health_t.current - 30.0).abs() < f32::EPSILON,
         "locked cell 'T' current HP should be Tough base 30.0, got {}",
         health_t.current
     );
     assert!(
-        (health_t.max - 30.0).abs() < f32::EPSILON,
+        (health_t.starting - 30.0).abs() < f32::EPSILON,
         "locked cell 'T' max HP should be Tough base 30.0, got {}",
-        health_t.max
+        health_t.starting
     );
 
     // Locked cell should have Locked + Locks
@@ -81,7 +82,7 @@ fn locked_cell_hp_scaled_by_hp_mult() {
 
     // Non-locked cell at (0,1) — "S" Standard toughness, fallback base = 20.0
     let entity_s = cells_by_pos[&(0, 1)];
-    let health_s = app.world().get::<CellHealth>(entity_s).unwrap();
+    let health_s = app.world().get::<Hp>(entity_s).unwrap();
     assert!(
         (health_s.current - 20.0).abs() < f32::EPSILON,
         "non-locked cell 'S' current HP should be Standard base 20.0, got {}",
@@ -111,16 +112,16 @@ fn locked_cell_hp_unscaled_when_hp_mult_is_one() {
 
     let cells_by_pos = collect_cells_by_grid_position(&mut app, &layout);
     let entity_t = cells_by_pos[&(0, 0)];
-    let health_t = app.world().get::<CellHealth>(entity_t).unwrap();
+    let health_t = app.world().get::<Hp>(entity_t).unwrap();
     assert!(
         (health_t.current - 30.0).abs() < f32::EPSILON,
         "locked cell 'T' HP should be Tough base 30.0, got {}",
         health_t.current
     );
     assert!(
-        (health_t.max - 30.0).abs() < f32::EPSILON,
+        (health_t.starting - 30.0).abs() < f32::EPSILON,
         "locked cell 'T' max HP should be Tough base 30.0, got {}",
-        health_t.max
+        health_t.starting
     );
 }
 

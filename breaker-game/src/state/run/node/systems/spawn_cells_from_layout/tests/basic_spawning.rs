@@ -5,7 +5,7 @@ use rantzsoft_stateflow::CleanupOnExit;
 use super::{super::system::grid_extent, helpers::*};
 use crate::{
     cells::{components::*, resources::CellConfig},
-    shared::PlayfieldConfig,
+    shared::{PlayfieldConfig, death_pipeline::hp::Hp},
     state::{
         run::node::{NodeLayout, definition::NodePool, messages::CellsSpawned},
         types::NodeState,
@@ -49,11 +49,11 @@ fn cells_get_hp_from_type_definition() {
 
     let mut found_standard = false;
     let mut found_tough = false;
-    for health in app.world_mut().query::<&CellHealth>().iter(app.world()) {
-        if (health.max - 20.0).abs() < f32::EPSILON {
+    for health in app.world_mut().query::<&Hp>().iter(app.world()) {
+        if (health.starting - 20.0).abs() < f32::EPSILON {
             found_standard = true;
         }
-        if (health.max - 30.0).abs() < f32::EPSILON {
+        if (health.starting - 30.0).abs() < f32::EPSILON {
             found_tough = true;
         }
     }

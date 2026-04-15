@@ -16,8 +16,8 @@ use crate::{
     shared::{
         death_pipeline::{
             DeathPipelinePlugin, damage_dealt::DamageDealt, despawn_entity::DespawnEntity,
-            destroyed::Destroyed, game_entity::GameEntity, hp::Hp, kill_yourself::KillYourself,
-            killed_by::KilledBy,
+            destroyed::Destroyed, game_entity::GameEntity, hp::Hp, invulnerable::Invulnerable,
+            kill_yourself::KillYourself, killed_by::KilledBy,
         },
         rng::GameRng,
         test_utils::{TestAppBuilder, attach_message_capture},
@@ -53,7 +53,7 @@ use crate::{
 /// - `SpawnStampRegistry` — init'd by `EffectV3Plugin::build`
 /// - `NodeTimerThresholdRegistry` — init'd by `node::register::register`
 /// - `NodeTimer` — systems read it as `Option<Res<NodeTimer>>` and no-op when absent
-pub(super) fn register_effect_v3_test_infrastructure(app: &mut App) {
+pub(crate) fn register_effect_v3_test_infrastructure(app: &mut App) {
     // Impact bridges (`impact/bridges.rs::ImpactReaders`)
     app.add_message::<BoltImpactCell>();
     app.add_message::<BoltImpactWall>();
@@ -184,6 +184,19 @@ pub(super) fn spawn_test_entity(app: &mut App, hp_value: f32) -> Entity {
         .id()
 }
 
+/// Spawns a `TestEntity` with `Invulnerable` — used by Group I tests to
+/// exercise the `Without<Invulnerable>` filter on `apply_damage<T>`.
+pub(super) fn spawn_test_entity_invulnerable(app: &mut App, hp_value: f32) -> Entity {
+    app.world_mut()
+        .spawn((
+            TestEntity,
+            Hp::new(hp_value),
+            KilledBy::default(),
+            Invulnerable,
+        ))
+        .id()
+}
+
 pub(super) fn damage_msg(
     target: Entity,
     amount: f32,
@@ -232,6 +245,23 @@ pub(super) fn build_plugin_integration_app() -> App {
     register_effect_v3_test_infrastructure(&mut app);
     app.add_plugins(EffectV3Plugin);
     app
+}
+
+/// Pending `DamageDealt<Cell>` messages to enqueue each tick. Used by
+/// plugin-integration tests to inject damage at the top of the pipeline and
+/// verify the full `apply_damage<Cell>` → `detect_deaths<Cell>` →
+/// `handle_kill<Cell>` → `process_despawn_requests` chain in one tick.
+#[derive(Resource, Default)]
+pub(super) struct PendingCellDamage(pub Vec<DamageDealt<Cell>>);
+
+/// System that writes `DamageDealt<Cell>` from `PendingCellDamage` each tick.
+pub(super) fn enqueue_cell_damage(
+    pending: Res<PendingCellDamage>,
+    mut writer: MessageWriter<DamageDealt<Cell>>,
+) {
+    for msg in &pending.0 {
+        writer.write(msg.clone());
+    }
 }
 
 /// Pending `KillYourself<Cell>` messages to enqueue each tick.

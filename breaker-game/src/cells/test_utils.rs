@@ -9,27 +9,20 @@ use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D};
 
 use crate::{
     cells::{
-        components::{Cell, CellDamageVisuals, CellHeight, CellWidth},
+        components::{Cell, CellHeight, CellWidth},
         definition::{CellTypeDefinition, Toughness},
         resources::CellConfig,
     },
-    shared::{BOLT_LAYER, CELL_LAYER, GameDrawLayer},
+    shared::{
+        BOLT_LAYER, CELL_LAYER, GameDrawLayer,
+        death_pipeline::{hp::Hp, killed_by::KilledBy},
+    },
 };
 
 /// Returns default `(CellWidth, CellHeight)` from `CellConfig::default()`.
 pub(crate) fn default_cell_dims() -> (CellWidth, CellHeight) {
     let cc = CellConfig::default();
     (CellWidth::new(cc.width), CellHeight::new(cc.height))
-}
-
-/// Returns a standard `CellDamageVisuals` for tests that need visual components.
-pub(crate) fn default_damage_visuals() -> CellDamageVisuals {
-    CellDamageVisuals {
-        hdr_base:   4.0,
-        green_min:  0.2,
-        blue_range: 0.4,
-        blue_base:  0.2,
-    }
 }
 
 /// Creates a test `CellTypeDefinition` with known values.
@@ -56,7 +49,8 @@ pub(crate) fn test_cell_definition() -> CellTypeDefinition {
 /// Spawns a cell at the given position with standard physics components.
 ///
 /// Includes `Cell`, `CellWidth`, `CellHeight`, `Aabb2D`, `CollisionLayers`,
-/// `Position2D`, `GlobalPosition2D`, `Spatial2D`, and `GameDrawLayer::Cell`.
+/// `Position2D`, `GlobalPosition2D`, `Spatial2D`, `GameDrawLayer::Cell`,
+/// `Hp::new(10.0)`, and `KilledBy::default()`.
 /// Used by collision-oriented test suites (bolt-cell, cell-wall).
 pub(crate) fn spawn_cell(app: &mut App, x: f32, y: f32) -> Entity {
     let (cw, ch) = default_cell_dims();
@@ -67,6 +61,8 @@ pub(crate) fn spawn_cell(app: &mut App, x: f32, y: f32) -> Entity {
             Cell,
             cw,
             ch,
+            Hp::new(10.0),
+            KilledBy::default(),
             Aabb2D::new(Vec2::ZERO, half_extents),
             CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
             Position2D(pos),

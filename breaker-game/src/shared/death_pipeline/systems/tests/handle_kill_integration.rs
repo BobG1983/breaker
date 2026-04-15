@@ -13,16 +13,17 @@ use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Position2D;
 
 use super::helpers::{
-    PendingBoltKills, PendingCellKills, PendingWallKills, attach_bolt_destroyed_collector,
-    attach_cell_destroyed_collector, attach_despawn_collector, attach_wall_destroyed_collector,
-    build_plugin_integration_app, enqueue_bolt_kills, enqueue_cell_kills, enqueue_wall_kills,
+    PendingBoltKills, PendingCellDamage, PendingCellKills, PendingWallKills,
+    attach_bolt_destroyed_collector, attach_cell_destroyed_collector, attach_despawn_collector,
+    attach_wall_destroyed_collector, build_plugin_integration_app, enqueue_bolt_kills,
+    enqueue_cell_damage, enqueue_cell_kills, enqueue_wall_kills,
 };
 use crate::{
     bolt::components::Bolt,
     cells::components::Cell,
     shared::{
         death_pipeline::{
-            despawn_entity::DespawnEntity, destroyed::Destroyed, hp::Hp,
+            damage_dealt::DamageDealt, despawn_entity::DespawnEntity, destroyed::Destroyed, hp::Hp,
             kill_yourself::KillYourself, killed_by::KilledBy, sets::DeathPipelineSystems,
         },
         test_utils::{MessageCollector, tick},
@@ -218,5 +219,180 @@ fn plugin_integration_kill_yourself_wall_produces_destroyed_despawn() {
     assert!(
         app.world().get_entity(wall).is_err(),
         "Wall entity should be despawned by process_despawn_requests within the same tick"
+    );
+}
+
+// ── DamageDealt<Cell> drives full death chain ────────────────────────────
+
+/// Behavior 15: injecting `DamageDealt<Cell>` at the top of the pipeline drives
+/// `apply_damage<Cell>` → `detect_deaths<Cell>` → `handle_kill<Cell>` →
+/// `process_despawn_requests` all in a single tick.
+#[test]
+fn plugin_integration_damage_dealt_cell_drives_full_death_chain() {
+    let mut app = build_plugin_integration_app();
+    attach_cell_destroyed_collector(&mut app);
+    attach_despawn_collector(&mut app);
+
+    app.init_resource::<PendingCellDamage>();
+    app.add_systems(
+        FixedUpdate,
+        enqueue_cell_damage.before(DeathPipelineSystems::ApplyDamage),
+    );
+
+    let cell = app
+        .world_mut()
+        .spawn((
+            Cell,
+            Hp::new(5.0),
+            KilledBy::default(),
+            Position2D(Vec2::new(100.0, 200.0)),
+        ))
+        .id();
+
+    app.insert_resource(PendingCellDamage(vec![DamageDealt::<Cell> {
+        dealer:      None,
+        target:      cell,
+        amount:      5.0,
+        source_chip: None,
+        _marker:     PhantomData,
+    }]));
+
+    tick(&mut app);
+
+    assert!(
+        app.world().get_entity(cell).is_err(),
+        "cell should be despawned in FixedPostUpdate within the same tick"
+    );
+
+    let destroyed = app.world().resource::<MessageCollector<Destroyed<Cell>>>();
+    assert_eq!(
+        destroyed.0.len(),
+        1,
+        "exactly one Destroyed<Cell> should be emitted"
+    );
+    let msg = &destroyed.0[0];
+    assert_eq!(msg.victim, cell);
+    assert_eq!(msg.victim_pos, Vec2::new(100.0, 200.0));
+    assert_eq!(msg.killer, None);
+    assert_eq!(msg.killer_pos, None);
+
+    let despawns = app.world().resource::<MessageCollector<DespawnEntity>>();
+    assert_eq!(
+        despawns.0.len(),
+        1,
+        "exactly one DespawnEntity should be emitted"
+    );
+    assert_eq!(despawns.0[0].entity, cell);
+}
+
+/// Behavior 15 edge: overkill damage (100.0 on a 5 HP cell) — still produces
+/// exactly one `Destroyed<Cell>`, one `DespawnEntity`, one despawn.
+#[test]
+fn plugin_integration_damage_dealt_cell_overkill_produces_single_destroyed() {
+    let mut app = build_plugin_integration_app();
+    attach_cell_destroyed_collector(&mut app);
+    attach_despawn_collector(&mut app);
+
+    app.init_resource::<PendingCellDamage>();
+    app.add_systems(
+        FixedUpdate,
+        enqueue_cell_damage.before(DeathPipelineSystems::ApplyDamage),
+    );
+
+    let cell = app
+        .world_mut()
+        .spawn((
+            Cell,
+            Hp::new(5.0),
+            KilledBy::default(),
+            Position2D(Vec2::new(100.0, 200.0)),
+        ))
+        .id();
+
+    app.insert_resource(PendingCellDamage(vec![DamageDealt::<Cell> {
+        dealer:      None,
+        target:      cell,
+        amount:      100.0,
+        source_chip: None,
+        _marker:     PhantomData,
+    }]));
+
+    tick(&mut app);
+
+    assert!(
+        app.world().get_entity(cell).is_err(),
+        "overkill should still cleanly despawn the cell"
+    );
+
+    let destroyed = app.world().resource::<MessageCollector<Destroyed<Cell>>>();
+    assert_eq!(
+        destroyed.0.len(),
+        1,
+        "overkill should still emit exactly one Destroyed<Cell>"
+    );
+    let despawns = app.world().resource::<MessageCollector<DespawnEntity>>();
+    assert_eq!(
+        despawns.0.len(),
+        1,
+        "overkill should still emit exactly one DespawnEntity"
+    );
+}
+
+/// Behavior 15 edge: partial damage (2.0 on a 5 HP cell) — no `Destroyed`, no
+/// `DespawnEntity`, cell still alive with `Hp.current == 3.0`.
+#[test]
+fn plugin_integration_damage_dealt_cell_partial_damage_does_not_destroy() {
+    let mut app = build_plugin_integration_app();
+    attach_cell_destroyed_collector(&mut app);
+    attach_despawn_collector(&mut app);
+
+    app.init_resource::<PendingCellDamage>();
+    app.add_systems(
+        FixedUpdate,
+        enqueue_cell_damage.before(DeathPipelineSystems::ApplyDamage),
+    );
+
+    let cell = app
+        .world_mut()
+        .spawn((
+            Cell,
+            Hp::new(5.0),
+            KilledBy::default(),
+            Position2D(Vec2::new(100.0, 200.0)),
+        ))
+        .id();
+
+    app.insert_resource(PendingCellDamage(vec![DamageDealt::<Cell> {
+        dealer:      None,
+        target:      cell,
+        amount:      2.0,
+        source_chip: None,
+        _marker:     PhantomData,
+    }]));
+
+    tick(&mut app);
+
+    assert!(
+        app.world().get_entity(cell).is_ok(),
+        "cell should still exist after partial damage"
+    );
+    let hp = app.world().get::<Hp>(cell).unwrap();
+    assert!(
+        (hp.current - 3.0).abs() < f32::EPSILON,
+        "partial damage should leave Hp at 3.0, got {}",
+        hp.current
+    );
+
+    let destroyed = app.world().resource::<MessageCollector<Destroyed<Cell>>>();
+    assert!(
+        destroyed.0.is_empty(),
+        "partial damage should emit NO Destroyed<Cell>, got {}",
+        destroyed.0.len()
+    );
+    let despawns = app.world().resource::<MessageCollector<DespawnEntity>>();
+    assert!(
+        despawns.0.is_empty(),
+        "partial damage should emit NO DespawnEntity, got {}",
+        despawns.0.len()
     );
 }

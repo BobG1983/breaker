@@ -6,7 +6,15 @@ use crate::{
         components::Bolt, definition::BoltDefinition, messages::BoltLost,
         systems::bolt_lost::system::bolt_lost,
     },
-    shared::GameRng,
+    shared::{
+        GameRng,
+        death_pipeline::{
+            despawn_entity::DespawnEntity,
+            destroyed::Destroyed,
+            kill_yourself::KillYourself,
+            systems::{handle_kill, process_despawn_requests},
+        },
+    },
 };
 
 pub(super) fn make_default_bolt_definition() -> BoltDefinition {
@@ -33,7 +41,12 @@ pub(super) fn test_app() -> App {
         .with_playfield()
         .with_resource::<GameRng>()
         .with_message::<BoltLost>()
+        .with_message::<KillYourself<Bolt>>()
+        .with_message::<Destroyed<Bolt>>()
+        .with_message::<DespawnEntity>()
         .with_system(FixedUpdate, bolt_lost)
+        .with_system(FixedUpdate, handle_kill::<Bolt>.after(bolt_lost))
+        .with_system(FixedPostUpdate, process_despawn_requests)
         .build()
 }
 
@@ -87,13 +100,11 @@ pub(super) fn count_bolt_lost(
 }
 
 #[derive(Resource, Default)]
-pub(super) struct CapturedRequestBoltDestroyed(
-    pub(super) Vec<crate::bolt::messages::RequestBoltDestroyed>,
-);
+pub(super) struct CapturedKillYourselfBolt(pub(super) Vec<KillYourself<Bolt>>);
 
-pub(super) fn capture_request_bolt_destroyed(
-    mut reader: MessageReader<crate::bolt::messages::RequestBoltDestroyed>,
-    mut captured: ResMut<CapturedRequestBoltDestroyed>,
+pub(super) fn capture_kill_yourself_bolt(
+    mut reader: MessageReader<KillYourself<Bolt>>,
+    mut captured: ResMut<CapturedKillYourselfBolt>,
 ) {
     for msg in reader.read() {
         captured.0.push(msg.clone());

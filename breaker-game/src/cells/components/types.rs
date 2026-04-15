@@ -87,44 +87,6 @@ impl CellHeight {
     }
 }
 
-/// Health of a cell — hit points remaining before destruction.
-#[derive(Component, Debug, Clone)]
-pub(crate) struct CellHealth {
-    /// Current hit points.
-    pub current: f32,
-    /// Maximum hit points (used for visual damage feedback).
-    pub max:     f32,
-}
-
-impl CellHealth {
-    /// Creates a new cell health with the given max HP.
-    pub(crate) const fn new(hp: f32) -> Self {
-        Self {
-            current: hp,
-            max:     hp,
-        }
-    }
-
-    /// Returns true if the cell has been destroyed (HP at or below 0).
-    pub(crate) const fn is_destroyed(&self) -> bool {
-        self.current <= 0.0
-    }
-
-    /// Applies the given damage amount. Returns true if the cell was destroyed.
-    pub(crate) fn take_damage(&mut self, amount: f32) -> bool {
-        self.current -= amount;
-        self.is_destroyed()
-    }
-
-    /// Returns the health fraction (0.0 to 1.0) for visual feedback.
-    pub(crate) fn fraction(&self) -> f32 {
-        if self.max == 0.0 {
-            return 0.0;
-        }
-        (self.current / self.max).clamp(0.0, 1.0)
-    }
-}
-
 /// Marker component — cell has had its definition effects dispatched.
 ///
 /// Inserted by `dispatch_cell_effects` after processing. Prevents double-dispatch

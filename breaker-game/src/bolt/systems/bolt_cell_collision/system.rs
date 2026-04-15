@@ -13,9 +13,11 @@
 //! Piercing bolts (`PiercingRemaining > 0`) pass through cells without
 //! reflecting, decrementing `PiercingRemaining` on each hit.
 //!
-//! Cell damage and destruction are handled by the cells domain via
-//! [`BoltImpactCell`] and [`DamageCell`] messages. Wall overlap detection
-//! is handled by `bolt_wall_collision`.
+//! Cell damage and destruction are handled by the unified death pipeline via
+//! [`BoltImpactCell`] and [`DamageDealt<Cell>`] messages. Wall overlap
+//! detection is handled by `bolt_wall_collision`.
+
+use std::marker::PhantomData;
 
 use bevy::prelude::*;
 use rantzsoft_physics2d::{
@@ -36,10 +38,12 @@ use crate::{
         queries::{BoltCollisionData, apply_velocity_formula},
         resources::DEFAULT_BOLT_BASE_DAMAGE,
     },
-    cells::components::CellHealth,
     effect_v3::{effects::VulnerableConfig, stacking::EffectStack},
     prelude::*,
-    shared::CELL_LAYER,
+    shared::{
+        CELL_LAYER,
+        death_pipeline::{DamageDealt, hp::Hp},
+    },
 };
 
 /// Minimum remaining travel distance below which the CCD loop terminates.
@@ -51,7 +55,7 @@ const MIN_REMAINING: f32 = 0.01;
 /// Message writers used by the bolt-cell collision system.
 type CollisionWriters<'a> = (
     MessageWriter<'a, BoltImpactCell>,
-    MessageWriter<'a, DamageCell>,
+    MessageWriter<'a, DamageDealt<Cell>>,
 );
 
 /// Query for looking up game-specific data by entity ID after `cast_circle`
@@ -63,7 +67,7 @@ type CandidateLookup<'w, 's> = Query<
     's,
     (
         Has<Cell>,
-        Option<&'static CellHealth>,
+        Option<&'static Hp>,
         Option<&'static EffectStack<VulnerableConfig>>,
     ),
     Without<Bolt>,
@@ -92,7 +96,7 @@ fn find_first_non_pierced<'a>(
 /// direction. If a cell is hit, the bolt is placed just before the
 /// impact point, the velocity is reflected off the hit face, and tracing
 /// continues with the remaining movement distance. Sends [`BoltImpactCell`]
-/// and [`DamageCell`] messages for each cell hit.
+/// and [`DamageDealt<Cell>`] messages for each cell hit.
 pub(crate) fn bolt_cell_collision(
     mut commands: Commands,
     time: Res<Time<Fixed>>,
@@ -113,7 +117,7 @@ pub(crate) fn bolt_cell_collision(
         let mut remaining = velocity.length() * dt;
 
         // Effective damage for pierce lookahead (compared against cell HP).
-        // must match `handle_cell_hit` damage formula
+        // Must match the damage formula applied by `apply_damage::<Cell>`.
         let base_damage = bolt
             .collision
             .base_damage
@@ -160,7 +164,7 @@ pub(crate) fn bolt_cell_collision(
             remaining = hit.remaining;
 
             // Look up game-specific data for the hit entity
-            let Ok((is_cell, cell_health, vulnerability)) = candidate_lookup.get(hit.entity) else {
+            let Ok((is_cell, cell_hp, vulnerability)) = candidate_lookup.get(hit.entity) else {
                 // Entity not in lookup (shouldn't happen) — skip
                 continue;
             };
@@ -179,8 +183,8 @@ pub(crate) fn bolt_cell_collision(
                 .piercing_remaining
                 .as_deref()
                 .is_some_and(|pr| pr.0 > 0);
-            let cell_hp = cell_health.map(|h| h.current);
-            let would_destroy = cell_hp.is_some_and(|hp| hp <= cell_damage);
+            let cell_hp_value = cell_hp.map(|h| h.current);
+            let would_destroy = cell_hp_value.is_some_and(|hp| hp <= cell_damage);
 
             if can_pierce && would_destroy {
                 // PIERCE: do NOT reflect; decrement remaining pierces
@@ -209,10 +213,12 @@ pub(crate) fn bolt_cell_collision(
                 cell: hit.entity,
                 bolt: bolt.entity,
             });
-            damage_writer.write(DamageCell {
-                cell:        hit.entity,
-                damage:      cell_damage,
+            damage_writer.write(DamageDealt {
+                dealer:      Some(bolt.entity),
+                target:      hit.entity,
+                amount:      cell_damage,
                 source_chip: bolt.collision.spawned_by_evolution.map(|s| s.0.clone()),
+                _marker:     PhantomData::<Cell>,
             });
         }
 

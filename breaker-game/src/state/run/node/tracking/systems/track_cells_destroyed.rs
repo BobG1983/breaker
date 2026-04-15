@@ -2,12 +2,14 @@
 
 use bevy::prelude::*;
 
-use crate::{cells::messages::CellDestroyedAt, state::run::resources::RunStats};
+use crate::{
+    cells::components::Cell, shared::death_pipeline::Destroyed, state::run::resources::RunStats,
+};
 
-/// Reads [`CellDestroyedAt`] messages and increments
+/// Reads [`Destroyed<Cell>`] messages and increments
 /// [`RunStats::cells_destroyed`].
 pub(crate) fn track_cells_destroyed(
-    mut reader: MessageReader<CellDestroyedAt>,
+    mut reader: MessageReader<Destroyed<Cell>>,
     mut stats: ResMut<RunStats>,
 ) {
     for _msg in reader.read() {
@@ -17,13 +19,15 @@ pub(crate) fn track_cells_destroyed(
 
 #[cfg(test)]
 mod tests {
+    use std::marker::PhantomData;
+
     use super::*;
-    use crate::cells::messages::CellDestroyedAt;
+    use crate::{cells::components::Cell, shared::death_pipeline::destroyed::Destroyed};
 
     #[derive(Resource)]
-    struct TestMessages(Vec<CellDestroyedAt>);
+    struct TestMessages(Vec<Destroyed<Cell>>);
 
-    fn enqueue_messages(msg_res: Res<TestMessages>, mut writer: MessageWriter<CellDestroyedAt>) {
+    fn enqueue_messages(msg_res: Res<TestMessages>, mut writer: MessageWriter<Destroyed<Cell>>) {
         for msg in &msg_res.0 {
             writer.write(msg.clone());
         }
@@ -32,7 +36,7 @@ mod tests {
     fn test_app() -> App {
         use crate::shared::test_utils::TestAppBuilder;
         TestAppBuilder::new()
-            .with_message::<CellDestroyedAt>()
+            .with_message::<Destroyed<Cell>>()
             .with_resource::<RunStats>()
             .with_system(
                 FixedUpdate,
@@ -41,28 +45,32 @@ mod tests {
             .build()
     }
 
+    fn make_destroyed() -> Destroyed<Cell> {
+        Destroyed::<Cell> {
+            victim:     Entity::PLACEHOLDER,
+            killer:     None,
+            victim_pos: Vec2::ZERO,
+            killer_pos: None,
+            _marker:    PhantomData,
+        }
+    }
+
     use crate::shared::test_utils::tick;
 
     #[test]
     fn increments_cells_destroyed_for_each_message() {
         let mut app = test_app();
         app.insert_resource(TestMessages(vec![
-            CellDestroyedAt {
-                was_required_to_clear: true,
-            },
-            CellDestroyedAt {
-                was_required_to_clear: false,
-            },
-            CellDestroyedAt {
-                was_required_to_clear: true,
-            },
+            make_destroyed(),
+            make_destroyed(),
+            make_destroyed(),
         ]));
         tick(&mut app);
 
         let stats = app.world().resource::<RunStats>();
         assert_eq!(
             stats.cells_destroyed, 3,
-            "all 3 CellDestroyedAt messages should increment cells_destroyed"
+            "all 3 Destroyed<Cell> messages should increment cells_destroyed"
         );
     }
 }

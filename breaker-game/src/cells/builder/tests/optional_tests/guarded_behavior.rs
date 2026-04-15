@@ -3,9 +3,12 @@
 use bevy::prelude::*;
 
 use super::helpers::*;
-use crate::cells::{
-    components::{Cell, CellHealth, GuardedCell, GuardianCell},
-    definition::{CellBehavior, GuardedBehavior},
+use crate::{
+    cells::{
+        components::{Cell, GuardedCell, GuardianCell},
+        definition::{CellBehavior, GuardedBehavior},
+    },
+    shared::death_pipeline::hp::Hp,
 };
 
 // Behavior 38: CellBehavior::Guarded inserts GuardedCell marker
@@ -71,7 +74,7 @@ fn cell_without_guarded_behavior_has_no_guarded_cell() {
     });
 
     // Guard: builder ran
-    assert!(world.get::<CellHealth>(entity).is_some());
+    assert!(world.get::<Hp>(entity).is_some());
     assert!(
         world.get::<GuardedCell>(entity).is_none(),
         "cell without Guarded behavior should NOT have GuardedCell"
