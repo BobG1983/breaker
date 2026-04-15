@@ -34,7 +34,7 @@ type: reference
 - `query.single()` returns `Result` in Bevy 0.15+ — use `let Ok(x) = query.single() else { return; }`
 - `Query<BoltCollisionData, ActiveFilter>` — `#[derive(QueryData)]` named struct as query data, filter type alias — both valid (formerly `CollisionQueryBolt` tuple alias; same API fact applies)
 - `type WallLookup<'w, 's> = Query<'w, 's, (...), (With<Wall>, Without<Bolt>)>` — valid lifetime-annotated query alias
-- `Query<(Has<Cell>, Option<&'static CellHealth>), Without<Bolt>>` — Has<T> and Option<&T> as query data correct
+- `Query<(Has<Cell>, Option<&'static Hp>), Without<Bolt>>` — Has<T> and Option<&T> as query data correct (CellHealth replaced by Hp in unified death pipeline)
 - `candidate_lookup.get(hit.entity)` — valid query get by entity
 
 ## Component Spawning (post-0.15)

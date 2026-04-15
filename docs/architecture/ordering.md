@@ -37,7 +37,13 @@ Domains MAY define a `pub enum {Domain}Systems` with `#[derive(SystemSet)]` in `
 | `BoltSystems::CellCollision` | `bolt/sets.rs` | `bolt_cell_collision` (bolt-cell CCD sweep — fires before WallCollision and BreakerCollision) |
 | `BoltSystems::WallCollision` | `bolt/sets.rs` | `bolt_wall_collision` (bolt-wall reflection — runs `.after(BoltSystems::CellCollision)`) |
 | `BreakerSystems::UpdateState` | `breaker/sets.rs` | `update_breaker_state` (intra-domain only — no cross-domain consumers yet) |
-| `EffectV3Systems::Bridge` | `effect_v3/sets.rs` | `bridge_bump`, `bridge_bolt_lost`, `bridge_bump_whiff`, `bridge_no_bump`, `bridge_cell_impact`, `bridge_breaker_impact`, `bridge_wall_impact`, `bridge_cell_destroyed`, `bridge_bolt_death`, `bridge_timer_threshold` |
+| `EffectV3Systems::Bridge` | `effect_v3/sets.rs` | `bridge_bump`, `bridge_bolt_lost`, `bridge_bump_whiff`, `bridge_no_bump`, `bridge_cell_impact`, `bridge_breaker_impact`, `bridge_wall_impact`, `on_cell_destroyed`, `on_bolt_destroyed`, `on_wall_destroyed`, `on_breaker_destroyed`, `bridge_timer_threshold` |
+| `EffectV3Systems::Tick` | `effect_v3/sets.rs` | tick systems for active effects (e.g. `tick_shockwave`, `tick_chain_lightning`) — runs after `Bridge` in FixedUpdate |
+| `EffectV3Systems::Conditions` | `effect_v3/sets.rs` | condition evaluation systems (e.g. `evaluate_conditions`) — runs after `Tick` in FixedUpdate |
+| `EffectV3Systems::Reset` | `effect_v3/sets.rs` | effect state reset on `OnEnter(NodeState::Loading)` — not in FixedUpdate chain |
+| `DeathPipelineSystems::ApplyDamage` | `shared/death_pipeline/sets.rs` | `apply_damage::<Cell>`, `apply_damage::<Bolt>`, `apply_damage::<Wall>`, `apply_damage::<Breaker>` — phase set (see note) |
+| `DeathPipelineSystems::DetectDeaths` | `shared/death_pipeline/sets.rs` | `detect_deaths::<Cell>`, `detect_deaths::<Bolt>`, `detect_deaths::<Wall>`, `detect_deaths::<Breaker>` — phase set |
+| `DeathPipelineSystems::HandleKill` | `shared/death_pipeline/sets.rs` | `handle_kill::<Cell>`, `handle_kill::<Bolt>`, `handle_kill::<Wall>` from `DeathPipelinePlugin`; `handle_breaker_death` from `RunPlugin` — phase set |
 | `UiSystems::SpawnTimerHud` | `state/run/node/hud/sets.rs` | `spawn_timer_hud` |
 | `NodeSystems::TrackCompletion` | `state/run/node/sets.rs` | `track_node_completion` |
 | `NodeSystems::TickTimer` | `state/run/node/sets.rs` | `tick_node_timer` |
@@ -118,15 +124,23 @@ rantzsoft_physics2d::PhysicsSystems::MaintainQuadtree
     <- bolt_cell_collision .after(rantzsoft_physics2d::PhysicsSystems::MaintainQuadtree)
                            .after(rantzsoft_physics2d::PhysicsSystems::EnforceDistanceConstraints)
                            .after(BreakerSystems::Move)
+                           .before(EffectV3Systems::Bridge)
     <- shockwave_collision .after(tick_shockwave)
                            .after(rantzsoft_physics2d::PhysicsSystems::MaintainQuadtree)
 
 move_breaker .after(update_bump)
   BreakerSystems::Move
     <- hover_bolt .after(BreakerSystems::Move)
+    <- normalize_bolt_speed_after_constraints                [bolt domain — normalizes speed post-constraint enforcement]
             <- bolt_cell_collision .after(rantzsoft_physics2d::PhysicsSystems::MaintainQuadtree)
+                                   .after(normalize_bolt_speed_after_constraints)
+                                   .before(EffectV3Systems::Bridge)
               BoltSystems::CellCollision
+                <- bolt_wall_collision .after(BoltSystems::CellCollision)
+                                       .before(EffectV3Systems::Bridge)
+                  BoltSystems::WallCollision
                 <- bolt_breaker_collision .after(BoltSystems::CellCollision)
+                                          .before(EffectV3Systems::Bridge)
                   BoltSystems::BreakerCollision
             <- grade_bump .after(update_bump)
                           .after(BoltSystems::BreakerCollision)
@@ -147,22 +161,44 @@ move_breaker .after(update_bump)
             <- clamp_bolt_to_playfield .after(bolt_breaker_collision)
             <- enforce_distance_constraints .after(clamp_bolt_to_playfield)  [bolt domain]
             <- bolt_lost .after(enforce_distance_constraints)
+                         .before(EffectV3Systems::Bridge)
               BoltSystems::BoltLost
                 <- bridge_bolt_lost .after(BoltSystems::BoltLost)
                    .in_set(EffectV3Systems::Bridge)          [effect domain]
                 <- break_chain_on_bolt_lost .after(BoltSystems::BoltLost)  [bolt domain]
-            <- bridge_cell_destroyed .in_set(EffectV3Systems::Bridge)
+            <- on_cell_destroyed .in_set(EffectV3Systems::Bridge)
                [effect domain, unordered relative to physics chain]
-            <- bridge_bolt_death .in_set(EffectV3Systems::Bridge)
+            <- on_bolt_destroyed .in_set(EffectV3Systems::Bridge)
+               [effect domain, unordered relative to physics chain]
+            <- on_wall_destroyed .in_set(EffectV3Systems::Bridge)
+               [effect domain, unordered relative to physics chain]
+            <- on_breaker_destroyed .in_set(EffectV3Systems::Bridge)
                [effect domain, unordered relative to physics chain]
             <- bridge_timer_threshold .in_set(EffectV3Systems::Bridge)
                [effect domain, unordered relative to physics chain]
 
-cleanup_destroyed_bolts .after(EffectV3Systems::Bridge)
-  [bolt domain — despawns RequestBoltDestroyed entities after effect bridges evaluate]
+DeathPipelineSystems::ApplyDamage
+  .after(EffectV3Systems::Tick)                              [shared/death_pipeline domain]
+  (apply_damage::<Cell>, apply_damage::<Bolt>, apply_damage::<Wall>, apply_damage::<Breaker>)
+    <- update_cell_damage_visuals .after(DeathPipelineSystems::ApplyDamage)
+                                  .before(DeathPipelineSystems::HandleKill) [cells domain]
+    <- track_evolution_damage .after(DeathPipelineSystems::ApplyDamage)     [run domain]
+    <- DeathPipelineSystems::DetectDeaths .after(DeathPipelineSystems::ApplyDamage)
+       (detect_deaths::<Cell>, detect_deaths::<Bolt>, detect_deaths::<Wall>, detect_deaths::<Breaker>)
+         <- DeathPipelineSystems::HandleKill .after(DeathPipelineSystems::DetectDeaths)
+            (handle_kill::<Cell>, handle_kill::<Bolt>, handle_kill::<Wall>, handle_breaker_death)
+              <- track_cells_destroyed .after(DeathPipelineSystems::HandleKill)  [run domain]
+              <- detect_mass_destruction .after(DeathPipelineSystems::HandleKill) [run/node domain]
+              <- detect_combo_king .after(DeathPipelineSystems::HandleKill)       [run/node domain]
+              <- check_lock_release .after(DeathPipelineSystems::HandleKill)      [cells domain]
+              <- NodeSystems::TrackCompletion .after(DeathPipelineSystems::HandleKill)
+                 (track_node_completion)                                          [run/node domain]
+
+tick_bolt_lifespan .before(BoltSystems::BoltLost)
+                   .before(DeathPipelineSystems::HandleKill)  [bolt domain — writes KillYourself<Bolt> on timer expiry]
 ```
 
-Reading: the quadtree is maintained first (incremental — only changed entities re-inserted). Consumers read `Active*` components directly via `.multiplier()` / `.total()` methods. Then breaker moves, cell collisions run (reading quadtree for broad-phase, tagged `BoltSystems::CellCollision`), then breaker collision (`BoltSystems::BreakerCollision`), then bump grading (`BreakerSystems::GradeBump`), then distance constraints enforced (chain bolts), then bolt-lost detection (`BoltSystems::BoltLost`). Velocity is enforced by `apply_velocity_formula` at each collision/steering site — there is no separate velocity preparation step. All effect bridge systems run in `EffectV3Systems::Bridge` — downstream consumers order `.after(EffectV3Systems::Bridge)`. The full effect pipeline order within FixedUpdate is: `EffectV3Systems::Bridge` → `EffectV3Systems::Tick` → `EffectV3Systems::Conditions`. `EffectV3Systems::Reset` runs on `OnEnter(NodeState::Loading)` — not in the FixedUpdate chain.
+Reading: the quadtree is maintained first (incremental — only changed entities re-inserted). Consumers read `Active*` components directly via `.multiplier()` / `.total()` methods. Then breaker moves, speed is normalized post-constraint (`normalize_bolt_speed_after_constraints`), cell collisions run (tagged `BoltSystems::CellCollision`), wall collision (`BoltSystems::WallCollision`), breaker collision (`BoltSystems::BreakerCollision`), bump grading (`BreakerSystems::GradeBump`), distance constraints enforced (chain bolts), bolt-lost detection (`BoltSystems::BoltLost`). All collision systems run `.before(EffectV3Systems::Bridge)` so damage messages are present when bridges evaluate. Velocity is enforced by `apply_velocity_formula` at each collision/steering site — there is no separate velocity preparation step. All effect bridge systems run in `EffectV3Systems::Bridge`. After Bridge, the death pipeline runs: `DeathPipelineSystems::ApplyDamage` (reads `DamageDealt<T>`, reduces `Hp`) → `DetectDeaths` (reads `Hp`, writes `KillYourself<T>`) → `HandleKill` (marks `Dead`, writes `Destroyed<T>` + `DespawnEntity`). `update_cell_damage_visuals` runs after `ApplyDamage` and before `HandleKill` to update color feedback on still-living cells. Consumers of kill events (track_cells_destroyed, detect_mass_destruction, detect_combo_king, check_lock_release, track_node_completion) order `.after(DeathPipelineSystems::HandleKill)`. `process_despawn_requests` runs in `FixedPostUpdate` — sole despawn site. The full effect pipeline order within FixedUpdate is: `EffectV3Systems::Bridge` → `EffectV3Systems::Tick` → `EffectV3Systems::Conditions`. `EffectV3Systems::Reset` runs on `OnEnter(NodeState::Loading)` — not in the FixedUpdate chain.
 
 ```
 NodeSystems::TrackCompletion
@@ -180,6 +216,14 @@ handle_run_lost .after(handle_node_cleared)
 ```
 
 Reading: completion tracking runs first (cells consumed → NodeCleared sent), then run handles it. Timer ticks, then time penalties apply. Run checks for timer expiry after penalties and after node-cleared (clear beats a simultaneous timer expiry — player wins tie-frame). Run-lost is checked last.
+
+### FixedPostUpdate
+
+```
+process_despawn_requests   [shared/death_pipeline — sole despawn site; reads DespawnEntity messages written by handle_kill::<T> in FixedUpdate]
+```
+
+Reading: `DespawnEntity` messages are written during `HandleKill` in `FixedUpdate`. Deferring despawn to `FixedPostUpdate` ensures all `FixedUpdate` consumers (kill-event readers, effect bridges, node tracking) see the entity before it is removed from the world.
 
 ### FixedFirst
 

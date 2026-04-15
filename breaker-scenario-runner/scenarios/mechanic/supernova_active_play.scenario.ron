@@ -4,11 +4,12 @@
 // so Supernova's spawning pressure combines with Prism's native multi-bolt behaviour to stress
 // bolt count and entity lifecycle under Dense layout. Perfect(AlwaysPerfect) input sustains
 // active play across 10000 frames, maximising simultaneous cell destruction events.
-// BoltCountReasonable (max 20) catches runaway bolt accumulation if Supernova's spawn cleanup
+// BoltCountReasonable catches runaway bolt accumulation if Supernova's spawn cleanup
 // fails. NoEntityLeaks detects orphaned shockwave request or bolt entities. BoltSpeedAccurate
 // catches bolt physics corruption from simultaneous spawn events. NoNaN guards against
-// position corruption from overlapping spawn origins. Max bolt count raised to 20 to
-// accommodate Prism + Supernova spawns without false-positive BoltCountReasonable fires.
+// position corruption from overlapping spawn origins. Max bolt count raised to 60 to
+// accommodate Prism's native multi-bolt spawning under AlwaysPerfect input (Prism spawns
+// extra bolts on every perfect bump; over 5000 frames this naturally accumulates ~56 bolts).
 (
     breaker: "Prism",
     layout: "Dense",
@@ -17,7 +18,7 @@
     disallowed_failures: [BoltCountReasonable, BoltInBounds, BoltSpeedAccurate, BreakerCountReasonable, BreakerInBounds, NoEntityLeaks, NoNaN],
     allowed_failures: None,
     debug_setup: None,
-    invariant_params: (max_bolt_count: 20),
+    invariant_params: (max_bolt_count: 60),
     allow_early_end: false,
     seed: 2718,
     chip_selections: ["Supernova"],

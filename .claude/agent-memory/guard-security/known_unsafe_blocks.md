@@ -149,3 +149,10 @@ breaker-game/src/bolt/systems/begin_node_birthing.rs, tick_birthing.rs, shared/b
 state/plugin/system.rs, state/plugin/tests.rs, state/menu/main/systems/handle_main_menu_input.rs,
 breaker-scenario-runner/src/lifecycle/systems/frame_mutations/mutations.rs, app.rs.
 Grepped all changed files for "unsafe": zero matches. Workspace lint unsafe_code = "deny" remains in force.
+
+Still confirmed for feature/effect-system-refactor (2026-04-14):
+New module: breaker-game/src/effect_v3/ (~811 changed files, 126K+ line diff including tests).
+Grepped effect_v3/ for "unsafe": zero matches. Workspace lint unsafe_code = "deny" remains in force.
+NOTE: this branch downgrades `todo = "warn"` and `unimplemented = "warn"` (from "deny") — the
+unsafe_code deny is NOT affected. The downgrade affects panic surface via todo!/unimplemented!
+macros, not unsafe blocks. See vetted_dependencies.md for full lint-change analysis.

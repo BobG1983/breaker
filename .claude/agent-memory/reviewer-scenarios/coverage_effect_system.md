@@ -90,7 +90,7 @@ Properties with no invariant checker:
 - SizeBoost: SizeBoostInRange REMOVED (Effective* cache removal). No invariant checks multiplier stays within a plausible range (e.g., never exceeds 100x from runaway stacking)
 - RampingDamage accumulated bonus: NoNaN partially covers but no monotonicity invariant
 - Shield wall count invariant: ShieldWallAtMostOne checks count <= 1; no chaos scenario exercises sustained Shield firing
-- DamageCell.source_chip correctness end-to-end: no invariant
+- DamageDealt<Cell>.source_chip correctness end-to-end: no invariant (DamageCell replaced by DamageDealt<T>)
 - AllBolts/AllCells effect targeting correctness: no invariant verifies all entities received an effect
 - Quadtree layer filter correctness at runtime: no invariant
 

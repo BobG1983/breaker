@@ -32,7 +32,7 @@ type: project
 ### Collision Systems
 All in `systems/` as directory modules (mod.rs + system.rs + tests/ or tests.rs):
 - `bolt_breaker_collision` — CCD sweep + overlap resolution, reflects via BreakerSurface::reflect_top_hit, sends BoltImpactBreaker, resets PiercingRemaining
-- `bolt_cell_collision` — CCD loop (up to MAX_BOUNCES=4), sends BoltImpactCell + DamageCell, handles piercing pass-through
+- `bolt_cell_collision` — CCD loop (up to MAX_BOUNCES=4), sends BoltImpactCell + DamageDealt<Cell>, handles piercing pass-through
 - `bolt_wall_collision` — overlap detection via quadtree, reflects off nearest face, sends BoltImpactWall, resets PiercingRemaining
 
 ### System Sets (sets.rs)

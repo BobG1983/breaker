@@ -63,8 +63,8 @@ undocumented_unsafe_blocks      = "deny"
 unwrap_used                     = "deny"
 expect_used                     = "deny"
 panic                           = "deny"
-todo                            = "warn"
-unimplemented                   = "warn"
+todo                            = "deny"
+unimplemented                   = "deny"
 
 # Pedantic overrides — intentional project conventions
 needless_pass_by_value  = "allow" # Bevy systems take ownership by convention

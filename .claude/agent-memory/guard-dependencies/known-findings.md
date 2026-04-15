@@ -130,6 +130,15 @@ type: project
 
 ## Recommendations Deferred
 
+### ordered-float 5.1.0 → 5.3.0 (MINOR)
+- First surfaced: 2026-04-14 audit (fifth run)
+- Semver-compatible minor bump. No breaking changes expected.
+- Affects two Cargo.toml files: breaker-game (`ordered-float = { version = "5", features = ["serde"] }`)
+  and breaker-scenario-runner (`ordered-float = "5"`).
+- Both declare `"5"` (no `=` pin) so they pick up 5.3.0 on next `cargo update`.
+- Eligible for inclusion in any routine dependency maintenance pass.
+- Action: `cargo update -p ordered-float` in workspace root.
+
 ### rand 0.9 → 0.10 (BREAKING)
 - Deferred: rand 0.10 is a semver-breaking release. Widespread usage across the codebase
   (bolt, chips, effect, run, shared/rng). Needs a dedicated migration task — not a casual bump.

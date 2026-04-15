@@ -103,8 +103,8 @@ cargo machete: no unused dependencies found. No new dependencies introduced by t
 - `ToughnessConfig` has no `validate()` method. Fields (`tier_multiplier`, `boss_multiplier`,
   `node_multiplier`, `*_base`) are raw f32 loaded from RON with no NaN/Inf/zero-guard.
   - `tier_multiplier.powi(tier_i32)` in `tier_scale()`: if `tier_multiplier` is NaN/Inf (from
-    a bad RON), the result is NaN/Inf; this flows through to `CellHealth::max` and
-    `CellHealth::current`. No panic in f32 arithmetic, but HP becomes NaN, causing gameplay
+    a bad RON), the result is NaN/Inf; this flows through to `Hp::max` and
+    `Hp::current` (unified health component; `CellHealth` replaced by `Hp`). No panic in f32 arithmetic, but HP becomes NaN, causing gameplay
     corruption (cells never die). Warning-level.
   - `tier_multiplier = 0.0` → `0.0^0 = 1.0` (safe), `0.0^n = 0.0` (tier ≥ 1: HP zeroes out).
     Cells with 0.0 HP would immediately despawn on spawn. Not a panic, gameplay breakage only.
@@ -154,6 +154,59 @@ Implication: `#[allow(...)]` attributes in `#[cfg(test)]` code must now carry a 
 in `walls/test_utils.rs` (lines 55, 74, 93) require either an `#[allow]` with reason
 or replacement with `expect()` (but `expect_used` is now deny too) — need `.unwrap_or_else`
 or restructured logic to satisfy the new lint level. This is an existing clippy finding.
+
+## cargo audit result — feature/effect-system-refactor (2026-04-14)
+
+`cargo audit` run successfully. Result: 3 warnings, 0 errors.
+- RUSTSEC-2024-0436: `paste 1.0.15` — unmaintained, no CVE. Same transitive path (bevy_render). Expected recurring.
+- RUSTSEC-2026-0097: `rand 0.8.5` — NEW advisory. "Unsound with custom logger using rand::rng()". Severity: unknown.
+  Pulled in by new dep `ordered-float 5.1.0` which depends on `rand 0.8.x`. NOT the project's own `rand 0.9` dep.
+- RUSTSEC-2026-0097: `rand 0.9.2` — same advisory, different instance. This is the project's own `rand = "0.9"`.
+cargo machete: no unused dependencies found.
+
+Threat model assessment for RUSTSEC-2026-0097:
+- This is a single-player desktop game with no networking, no multi-threaded logging, no custom logger.
+- The advisory requires a custom logger that calls rand::rng() from within a Logger::log() implementation.
+- This game uses tracing/tracing-subscriber with standard formatting subscribers. No custom Logger impls.
+- Risk is theoretical-only in this codebase. Info-level for this threat model.
+
+### New dependency: ordered-float = "5" (added on feature/effect-system-refactor)
+- Version: 5.1.0
+- Purpose: provides `OrderedFloat<f32>` and `NotNan<f32>` wrappers enabling `Ord`/`Hash` on floats
+- Used for: `EffectType`, `SpeedBoostConfig`, `ChainLightningConfig`, `RandomEffectConfig` field types
+- Features: `serde` (serialize/deserialize support for effect configs)
+- Security notes:
+  - `OrderedFloat<f32>` allows NaN values (unlike `NotNan<f32>`). NaN propagates silently into gameplay math.
+  - Effect configs using `OrderedFloat` (SpeedBoostConfig.multiplier, ChainLightningConfig.damage_mult etc.)
+    have no NaN guards. A NaN-valued config causes gameplay corruption (cells never die, speed broken)
+    rather than a panic. Warning-level; mitigated because configs are Rust-authored, not RON-loaded.
+  - Pulls in RUSTSEC-2026-0097 via rand 0.8.x. See audit note above.
+  - No known CVEs against ordered-float itself.
+
+## Lint config changes — feature/effect-system-refactor (2026-04-14)
+
+Workspace `Cargo.toml` lint RELAXATIONS introduced on this branch:
+- `todo = "warn"` (was `"deny"` after feature/test-infrastructure-consolidation)
+- `unimplemented = "warn"` (was `"deny"` after feature/test-infrastructure-consolidation)
+- `cast_precision_loss = "allow"` (new allow — previously not present)
+- `cast_sign_loss = "allow"` (new allow — previously not present)
+- `cast_possible_truncation = "allow"` (new allow — previously not present)
+
+Security implication: `todo`/`unimplemented` downgrade means production code can now contain
+`todo!()` or `unimplemented!()` macros that compile but panic at runtime if a code path is
+reached. This is a regression from the 2026-04-09 hardening. The workspace previously denied these
+to guarantee no "not yet implemented" paths could reach production. With warn, they can ship.
+The three cast lints are arithmetic-only and have no direct security surface in a desktop game.
+
+## effect_v3 RON deserialization surface (added 2026-04-14)
+
+Tree/ScopedTree/Terminal/EffectType all derive Serialize/Deserialize. However, these types are NOT
+deserialized from RON files at runtime — chip effect trees are built programmatically in Rust (stamp
+commands, builder pattern). No user-facing or asset-facing RON parser touches these types at runtime.
+The recursive type structure (Tree→Terminal→Tree, ScopedTree→Tree, EffectType→RandomEffectConfig→EffectType)
+would create deep recursion under serde if deserialized from untrusted input. This risk is latent only
+— it is not exercised by any current code path. If a RON loading path is added in the future, these
+types must have a depth limit enforced before deserialization.
 
 ## Birthing animation panic surface (added 2026-04-08)
 

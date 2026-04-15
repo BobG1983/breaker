@@ -1,12 +1,12 @@
 ---
 name: dependency-snapshot
-description: Crate versions at last audit (2026-04-06) — diff against this on next run to detect changes
+description: Crate versions at last audit (2026-04-14) — diff against this on next run to detect changes
 type: project
 ---
 
-Audit date: 2026-04-09 (fourth run — lint config change only; no dep changes)
-Branch: develop (commit a663a96a)
-Prior audit: 2026-04-08 (third run — Toughness + HP Scaling feature)
+Audit date: 2026-04-14 (fifth run — feature/effect-system-refactor branch)
+Branch: feature/effect-system-refactor (commit 1beb7baf)
+Prior audit: 2026-04-09 (fourth run — develop, lint config change only)
 
 ## Direct Dependencies
 
@@ -23,6 +23,7 @@ Prior audit: 2026-04-08 (third run — Toughness + HP Scaling feature)
 - serde 1 (features = ["derive"])
 - ron 0.12
 - iyes_progress 0.16 → resolved 0.16.0
+- ordered-float 5 → resolved 5.1.0 (features = ["serde"])
 - rand 0.9 → resolved 0.9.2
 - rand_chacha 0.9 → resolved 0.9.0
 - [dev-dependencies]: EMPTY
@@ -30,17 +31,18 @@ Prior audit: 2026-04-08 (third run — Toughness + HP Scaling feature)
 ### breaker-scenario-runner
 - bevy 0.18.1 (default-features = false, features = ["2d"])
 - breaker (path, default-features = false)
-- rantzsoft_stateflow (path)  ← NEW since last audit
+- rantzsoft_stateflow (path)
 - rantzsoft_spatial2d (path)
 - rantzsoft_physics2d (path)
 - clap 4 (features = ["derive"])
 - tracing 0.1
 - tracing-subscriber 0.3 (features = ["env-filter"])
 - ron 0.12
+- ordered-float 5 → resolved 5.1.0
 - serde 1 (features = ["derive"])
 - rand 0.9 → resolved 0.9.2
 
-### rantzsoft_stateflow  ← NEW workspace member (added on feature/wall-builder-pattern)
+### rantzsoft_stateflow
 - bevy 0.18.1 (default-features = false, features = ["2d"])
 - tracing 0.1
 
@@ -63,14 +65,15 @@ Prior audit: 2026-04-08 (third run — Toughness + HP Scaling feature)
 - quote 1
 - proc-macro2 1 (ignored by machete — required for proc-macro crates)
 
-## Resolved versions (from cargo tree -d — verified 2026-04-06)
+## Resolved versions (from cargo outdated -R — 2026-04-14)
 - rand 0.9.2, rand_chacha 0.9.0
+- ordered-float 5.1.0 (5.3.0 available — minor bump; see known-findings)
 - bevy_egui 0.39.1
 - iyes_progress 0.16.0
-- ron 0.12.0 (0.12.1 now available — patch bump eligible, see known-findings)
+- ron 0.12.0 (0.12.1 still available — patch bump eligible)
 
-## Transitive duplicates (cargo tree -d — 2026-04-06)
-All entries below match known-findings.md — no new duplicates introduced by rantzsoft_stateflow:
+## Transitive duplicates (cargo tree -d — 2026-04-14)
+All entries below match known-findings.md — no new duplicates introduced on this branch:
 - bitflags v1.3.2 + v2.11.0 (known wontfix)
 - block2 v0.5.1 + v0.6.2 (known wontfix)
 - core-foundation v0.9.4 + v0.10.1 (known wontfix)
@@ -93,20 +96,19 @@ All entries below match known-findings.md — no new duplicates introduced by ra
 - rustc-hash v1.1.0 + v2.1.1 (known wontfix)
 - skrifa v0.37.0 + v0.39.0 (known wontfix)
 
-## Changes since prior audit (2026-04-08, third run — Toughness + HP Scaling)
-- Cargo.toml (workspace root) modified: [workspace.lints] section restructured only
-  — warn→deny promotions, specific nursery lint opt-ins replacing blanket nursery group
-  — NO dependency changes; [dependencies], [features], [profile] sections untouched
-- cargo-machete: not re-run (Bash denied this session); prior result CLEAN still valid
-- cargo outdated -R: not re-run (no dep version changes)
-- cargo deny: not re-run (no dep changes; license state unchanged)
-- Transitive dups: not re-run (dependency tree unchanged)
-- Feature flags: unchanged
+## Changes since prior audit (2026-04-09, fourth run)
+- No Cargo.toml changes on this branch relative to develop
+- ordered-float 5.3.0 is now available (was at latest 5.1.0 at last audit — new minor release)
+- cargo-machete: CLEAN
+- cargo outdated -R: ordered-float 5.1.0 → 5.3.0 (minor), rand 0.9.2 → 0.10.1 (breaking), rand_chacha 0.9.0 → 0.10.0 (breaking)
+- cargo deny check licenses: PASS (same Unicode-DFS-2016 harmless warning)
+- Transitive dups: unchanged from prior audit
 
 ## Known Outdated (as of audit)
-- rand: 0.9.2 → 0.10.0 (BREAKING — semver major; deferred, see known-findings.md)
+- ordered-float: 5.1.0 → 5.3.0 (MINOR — semver-compatible; eligible for bump)
+- rand: 0.9.2 → 0.10.1 (BREAKING — semver major; deferred, see known-findings.md)
 - rand_chacha: 0.9.0 → 0.10.0 (BREAKING — must match rand; deferred)
-- ron: 0.12.0 → 0.12.1 (PATCH — no breaking changes; low-risk bump; three Cargo.toml files)
+- ron: 0.12.0 → 0.12.1 (PATCH — no breaking changes; eligible for bump; three Cargo.toml files)
 
 ## Transitive Advisory
 - paste 1.0.15 (RUSTSEC-2024-0436, unmaintained) — pulled in by metal → wgpu-hal → wgpu → bevy_render
@@ -125,3 +127,4 @@ All entries below match known-findings.md — no new duplicates introduced by ra
 - iyes_progress: optional behind "progress" feature in rantzsoft_defaults. CLEAN.
 - hot-reload: feature-gated in rantzsoft_defaults; activated by breaker-game dev feature. CLEAN.
 - rantzsoft_stateflow: no features declared. CLEAN.
+- ordered-float "serde" feature: enabled in breaker-game (not in scenario runner). Appropriate — game needs serde for RON serialization of float values; scenario runner does not require it.

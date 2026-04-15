@@ -17,21 +17,28 @@ Messages are defined in the domain that **conceptually owns the event**. Usually
 | `BreakerImpactWall { breaker, wall }` | breaker (breaker_wall_collision) | effect (bridge_wall_impact, bridge_breaker_impacted) |
 | `CellImpactWall { cell, wall }` | cells (cell_wall_collision) | effect (bridge_wall_impact, bridge_cell_impacted) |
 | `BoltLost` | bolt (bolt_lost) | bolt (spawn_bolt_lost_text), effect (bridge_bolt_lost) |
-| `DamageCell { cell, damage, source_chip }` | bolt (bolt_cell_collision), effect/effects (shockwave, explode, pulse, chain_lightning, piercing_beam, tether_beam) | cells (handle_cell_hit) |
+| `DamageDealt<Cell> { dealer, target, amount, source_chip }` | bolt (bolt_cell_collision), effect/effects (shockwave, explode, pulse, chain_lightning, piercing_beam, tether_beam) | shared/death_pipeline (apply_damage::<Cell>) |
+| `DamageDealt<Bolt> { dealer, target, amount, source_chip }` | effect/effects (as applicable) | shared/death_pipeline (apply_damage::<Bolt>) |
+| `DamageDealt<Wall> { dealer, target, amount, source_chip }` | effect/effects (as applicable) | shared/death_pipeline (apply_damage::<Wall>) |
+| `DamageDealt<Breaker> { dealer, target, amount, source_chip }` | effect/effects (as applicable) | shared/death_pipeline (apply_damage::<Breaker>) |
+| `KillYourself<T> { entity }` | shared/death_pipeline (detect_deaths::<T>), bolt (bolt_lost for ExtraBolts, tick_bolt_lifespan on timer expiry) | shared/death_pipeline (handle_kill::<T>), run (handle_breaker_death for T=Breaker) |
+| `Destroyed<Cell> { position, was_required_to_clear }` | shared/death_pipeline (handle_kill::<Cell>) | run/node (track_node_completion), effect (on_cell_destroyed) |
+| `Destroyed<Bolt> { position }` | shared/death_pipeline (handle_kill::<Bolt>) | effect (on_bolt_destroyed) |
+| `Destroyed<Wall> { position }` | shared/death_pipeline (handle_kill::<Wall>) | effect (on_wall_destroyed) |
+| `Destroyed<Breaker> { position }` | shared/death_pipeline (handle_kill::<Breaker>) | effect (on_breaker_destroyed) |
+| `DespawnEntity { entity }` | shared/death_pipeline (handle_kill::<T> for Cell/Bolt/Wall/Breaker) | shared/death_pipeline (process_despawn_requests in FixedPostUpdate) |
 | `BumpPerformed { grade, bolt }` | breaker | breaker (spawn_bump_grade_text, perfect_bump_dash_cancel), effect (bridge_bump) |
 | `BumpWhiffed` | breaker | breaker (spawn_whiff_text), effect (bridge_bump_whiff) |
 | `BreakerSpawned` | breaker (spawn_or_reuse_breaker) | run/node (check_spawn_complete) |
-| `CellDestroyedAt { position, was_required_to_clear }` | cells (cleanup_cell) | run (track_node_completion), effect (bridge_cell_death evaluates trigger on remaining alive cell via RequestCellDestroyed) |
 | `CellsSpawned` | run/node (spawn_cells_from_layout) | run/node (check_spawn_complete) |
 | `BoltSpawned` | bolt (spawn_bolt) | run/node (check_spawn_complete) |
 | `WallsSpawned` | walls (state/run/node/systems/spawn_walls) | state/run/node (check_spawn_complete) |
 | `SpawnNodeComplete` | run/node (check_spawn_complete) | scenario runner (baseline entity count sampling) |
 | `NodeCleared` | run/node (track_node_completion) | run (handle_node_cleared) |
 | `TimerExpired` | run/node (tick_node_timer) | run (handle_timer_expired) |
-| `RunLost` | effect/effects/life_lost (handle_life_lost) | run (handle_run_lost) |
+| `RunLost` | run (handle_breaker_death — reads KillYourself<Breaker>) | run (handle_run_lost) |
 | `ApplyTimePenalty { seconds }` | effect/effects/time_penalty (fire) | run/node (apply_time_penalty) |
 | `ReverseTimePenalty { seconds }` | effect/effects/time_penalty (reverse) | run/node (reverse_time_penalty) |
-| `RequestBoltDestroyed { bolt }` | bolt (bolt_lost) | effect (bridge_bolt_death), bolt (cleanup_destroyed_bolts) |
 | `ChipSelected { name }` | state/run/chip_select (handle_chip_input) | chips (dispatch_chip_effects) |
 | `HighlightTriggered { kind }` | run (detect_mass_destruction, detect_close_save, detect_combo_king, detect_pinball_wizard, detect_nail_biter, detect_first_evolution, detect_most_powerful_evolution, track_node_cleared_stats) | run (spawn_highlight_text) |
 

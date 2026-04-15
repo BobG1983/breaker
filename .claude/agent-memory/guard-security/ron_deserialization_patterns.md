@@ -55,7 +55,7 @@ type: project
   prevents it in practice, but the guard is missing at the formula layer.
 
 ### Semantic bug: negative damage (Warning-level)
-- `handle_cell_hit/system.rs:45` — `health.take_damage(msg.damage)` with no sign guard
+- `shared/death_pipeline/systems/system.rs` — `apply_damage<T>` reads `DamageDealt<T>.damage` with no sign guard (`handle_cell_hit` no longer exists; unified death pipeline replaces it)
 - `effective_damage = BASE_BOLT_DAMAGE * ActiveDamageBoosts::multiplier()` (EffectiveDamageMultiplier removed; multiplier computed on demand)
 - `gauntlet.chip.ron` uses `DamageBoost(-0.5)` — a negative multiplier factor
 - Product of two `DamageBoost(-0.5)` stacks = 0.25 (fine); product with `DamageBoost(-0.5)`
@@ -129,7 +129,7 @@ type: project
 - `chip_attribution(" ")` returns `Some(" ".to_string())` (tested explicitly).
 - A chip RON file whose `name` field is a single space would produce a
   `EffectSourceChip(Some(" "))` attribution. This is not a panic or crash — the string is
-  stored as-is in the DamageCell message and used for display/scoring only.
+  stored as-is in the `DamageDealt<T>` message and used for display/scoring only.
 - No user-controlled input reaches chip names; they are hardcoded RON asset strings.
 
 ### remaining_jumps underflow in tick_chain_lightning (Safe)

@@ -7,7 +7,7 @@
                 When(Impacted(Cell),
                     When(Killed(Cell),
                         Sequence([
-                            Fire(SpawnBolts(SpawnBoltsConfig(count: 2, lifespan: None, inherit: true))),
+                            Fire(SpawnBolts(SpawnBoltsConfig(count: 2, lifespan: Some(3.0), inherit: true))),
                             Fire(Shockwave(ShockwaveConfig(base_range: 96.0, range_per_level: 0.0, stacks: 1, speed: 400.0))),
                         ]),
                     ),

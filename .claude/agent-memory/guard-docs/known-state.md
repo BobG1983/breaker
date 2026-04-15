@@ -105,6 +105,20 @@ type: project
 
 ---
 
+## Confirmed Correct (as of effect-system-refactor, 2026-04-14)
+
+- `docs/architecture/messages.md` — removed `DamageCell`, `CellDestroyedAt`, `RequestBoltDestroyed` rows; added `DamageDealt<T>`, `KillYourself<T>`, `Destroyed<T>`, `DespawnEntity` rows; fixed `RunLost` sender from `life_lost` to `handle_breaker_death`
+- `docs/architecture/ordering.md` — removed stale `cleanup_destroyed_bolts` entry; added `DeathPipelineSystems::{ApplyDamage,DetectDeaths,HandleKill}` and `EffectV3Systems::{Tick,Conditions,Reset}` to Defined sets table; updated death bridge names (`bridge_cell_destroyed`→`on_cell_destroyed`, `bridge_bolt_death`→`on_bolt_destroyed`, added `on_wall_destroyed`/`on_breaker_destroyed`); added `.before(EffectV3Systems::Bridge)` to collision systems; added `normalize_bolt_speed_after_constraints` to bolt ordering chain; added full death pipeline chain (ApplyDamage→DetectDeaths→HandleKill) with consumer ordering; added `FixedPostUpdate` section for `process_despawn_requests`; updated prose reading section
+- `docs/design/terminology/core.md` — added `Invulnerable` entry
+- `docs/architecture/ordering.md` — `BoltSystems::WallCollision` entry now includes `BoltSystems::WallCollision` set assignment (was previously missing from inline chain)
+- Unified death pipeline in effect: `DamageDealt<T>` → `apply_damage<T>` (ApplyDamage phase) → `detect_deaths<T>` (DetectDeaths phase) → `handle_kill<T>` (HandleKill phase) → `DespawnEntity` → `process_despawn_requests` (FixedPostUpdate)
+- `handle_cell_hit`, `cleanup_cell`, `cleanup_destroyed_bolts` systems DELETED; `CellHealth` component DELETED
+- `DamageCell`, `CellDestroyedAt`, `RequestBoltDestroyed`, `RequestCellDestroyed` messages DELETED
+- `Invulnerable` marker component in `shared/death_pipeline/invulnerable.rs`; auto-managed by `Locked` hooks via `sync_lock_invulnerable`
+- All waves A-G of plan `wiggly-swinging-pascal.md` marked DONE
+
+---
+
 ## Standing Structural Facts
 
 - `CleanupOnNodeExit` and `CleanupOnRunEnd` DO NOT EXIST in `breaker-game/src/`. Use `CleanupOnExit<NodeState>` and `CleanupOnExit<RunState>` from `rantzsoft_stateflow`.
@@ -112,7 +126,11 @@ type: project
 - `dispatch_breaker_effects` SUPERSEDED by `spawn_or_reuse_breaker` builder path.
 - `dispatch_wall_effects` DELETED. Effect dispatch is inline in Wall builder `spawn()`.
 - `SpawnAdditionalBolt` REMOVED from bolt/messages.rs — effects spawn directly via `&mut World`.
-- `EffectSystems::Recalculate` REMOVED. `EffectSystems` has only `Bridge`.
+- `EffectSystems::Recalculate` REMOVED. `EffectV3Systems` has 4 variants: `Bridge`, `Tick`, `Conditions`, `Reset`.
+- `DamageCell`, `CellDestroyedAt`, `RequestCellDestroyed`, `RequestBoltDestroyed` messages DELETED — replaced by `DamageDealt<T>`, `Destroyed<T>`, `KillYourself<T>`, `DespawnEntity`.
+- `handle_cell_hit`, `cleanup_cell`, `cleanup_destroyed_bolts` systems DELETED — unified death pipeline handles all cell/bolt death.
+- `CellHealth` component DELETED — cells use `Hp` from `shared/death_pipeline/hp.rs`.
+- `RunLost` sender is `handle_breaker_death` in `RunPlugin::HandleKill`, NOT `effect/effects/life_lost`.
 - All 6 `Effective*` components removed — consumers call `Active*.multiplier()` / `.total()` directly.
 - `BoltSystems::InitParams` and `BoltSystems::PrepareVelocity` DO NOT EXIST.
 - `BoltRadius` is a type alias for `BaseRadius` from `shared/size.rs`.

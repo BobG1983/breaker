@@ -73,11 +73,14 @@ The stored quadtree AABB uses GlobalPosition2D as center (not Position2D + cente
 offset). For static entities (walls, cells), GlobalPosition2D == Position2D,
 so the narrow-phase `wall_pos.0 + wall_aabb.center` is consistent.
 
-## cleanup_cell: writes CellDestroyedAt before despawn (correct two-phase)
+## handle_kill<Cell>: writes Destroyed<Cell> before despawn (correct two-phase)
 
-`commands.entity(msg.cell).despawn()` is deferred. `CellDestroyedAt` is written
-in the same iteration before despawn executes. Entity is still alive when message
-is emitted — correct per two-phase destruction design.
+`CellDestroyedAt` and `cleanup_cell` no longer exist — replaced by the unified death pipeline.
+`handle_kill<Cell>` writes `Destroyed<Cell>` and enqueues `DespawnEntity` via deferred commands.
+Entity is still alive when `Destroyed<Cell>` is emitted — `process_despawn_requests` runs after
+in `FixedPostUpdate`. Consumers of `Destroyed<Cell>` (effect bridges, node tracking, lock release)
+all read before despawn executes — correct per two-phase destruction design.
+**Location**: `breaker-game/src/shared/death_pipeline/systems/system.rs`
 
 ## ClampRange::apply: min before max ordering is correct
 

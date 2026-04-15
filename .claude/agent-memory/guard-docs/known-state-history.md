@@ -145,7 +145,7 @@ type: project
 
 ## Confirmed Correct (effect system rewrite, 2026-03-28)
 
-- `docs/architecture/messages.md` — Collision messages use `BoltImpactCell`, `BoltImpactWall`, `BreakerImpactCell`, `BreakerImpactWall`, `CellImpactWall`. `DamageCell.source_chip` (not `source_bolt`).
+- `docs/architecture/messages.md` — Collision messages use `BoltImpactCell`, `BoltImpactWall`, `BreakerImpactCell`, `BreakerImpactWall`, `CellImpactWall`. `DamageDealt<Cell>.source_chip` (not `source_bolt`; `DamageCell` replaced by unified `DamageDealt<T>`).
 - `docs/architecture/effects/core_types.md` — `EffectKind` enum includes `Explode`, `QuickStop`, `TetherBeam`. `SecondWind` is unit variant. `EntropyEngine` uses `max_effects: u32`.
 - `docs/architecture/messages.md` — SpawnAdditionalBolt REMOVED. Effects spawn directly via `&mut World`.
 - `docs/plan/index.md` — Runtime Effects entry marked Done.
@@ -157,12 +157,13 @@ type: project
 `spawn_bolts::fire()` and `chain_bolt::fire()` spawn directly via `&mut World`.
 Do NOT flag its absence as missing functionality — direct World spawning is the established pattern.
 
-## Key Architectural Fact: DamageCell pre-bakes multiplier
+## Key Architectural Fact: DamageDealt<Cell> pre-bakes multiplier
 
-`handle_cell_hit` (cells domain) does NOT read damage multipliers directly. `bolt_cell_collision`
+`apply_damage<Cell>` (unified death pipeline) does NOT read damage multipliers directly. `bolt_cell_collision`
 reads `ActiveDamageBoosts` (NOT `EffectiveDamageMultiplier` — that type no longer exists) and calls
 `.multiplier()` to compute `effective_damage = BASE_BOLT_DAMAGE * mult` — that pre-computed value
-goes into the `DamageCell.damage` field. Cells are decoupled from the effect stat model.
+goes into the `DamageDealt<Cell>.damage` field. The old `DamageCell` type and `handle_cell_hit`
+system are both gone; replaced by the unified `DamageDealt<T>` message and `apply_damage<T>` generic.
 **Do not flag cells reading `Active*` types as missing — it's correct.**
 
 ## Intentionally Forward-Looking (do NOT flag as drift)

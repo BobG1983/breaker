@@ -11,9 +11,13 @@ discriminant. One message type per phase, not a generic struct.
 
 **MessageReader is NOT consuming.** Each `MessageReader<T>` has an independent
 cursor. Multiple systems reading the same message type in the same frame each see all
-messages. PROOF: `RequestBoltDestroyed` is read independently by both `bridge_death`
-(effect triggers) and `cleanup_destroyed_bolts` (bolt domain) in the same
-`FixedUpdate` — both work correctly. The previous research was wrong to eliminate
+messages. PROOF: `Destroyed<Cell>` is read independently by `effect_v3/triggers/death/bridges.rs`
+(effect triggers), `state/run/node/tracking/systems/track_cells_destroyed.rs`,
+`state/run/node/highlights/systems/detect_mass_destruction.rs`,
+`state/run/node/highlights/systems/detect_combo_king.rs`,
+`state/run/node/systems/track_node_completion.rs`, and
+`cells/behaviors/locked/systems/check_lock_release/system.rs` — all in the same
+`FixedUpdate`, all work correctly. The previous research was wrong to eliminate
 enum-based queues on this basis.
 
 **Registration**: 2 calls total — `add_message::<KillRequest>()` +
@@ -48,9 +52,7 @@ let resolved_kind = msg.killer_kind.or_else(|| {
 ```
 
 **Precedent files**: 
-- `effect/triggers/death.rs:18` — existing 2-reader bridge_death; Option B collapses to 1
-- `bolt/systems/cleanup_destroyed_bolts.rs:14` AND `effect/triggers/death.rs:19` —
-  BOTH read `RequestBoltDestroyed` independently in same frame (proof of non-consuming)
+- `effect_v3/triggers/death/bridges.rs` — death bridge reads `Destroyed<Cell>` and `Destroyed<Bolt>` independently from multiple other consumer systems in same frame
 
 **How to apply**: When implementing the kill/die pattern, use `KillRequest` +
 `EntityDestroyed` with `EntityKind`. Do NOT parameterize on killer type. Do NOT

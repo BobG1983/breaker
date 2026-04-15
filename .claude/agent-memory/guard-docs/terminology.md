@@ -37,7 +37,7 @@ type: project
 - `BoltImpactCell`, `BoltImpactWall`, `BoltImpactBreaker` — correct collision message names (not BoltHit*)
 - `BreakerImpactCell`, `BreakerImpactWall` — breaker collision messages
 - `CellImpactWall` — cell collision message
-- `DamageCell.source_chip` — attribution field (not `source_bolt`)
+- `DamageDealt<Cell>.source_chip` — attribution field on unified damage message (not `source_bolt`; `DamageCell` type was removed)
 - `EffectKind::SecondWind` — unit variant (no fields)
 - `EffectKind::EntropyEngine { max_effects, pool }` — field is `max_effects`, NOT `threshold`
 - `BoundEffects` — permanent chains on entities (not `ActiveEffects` or `ArmedEffects`)

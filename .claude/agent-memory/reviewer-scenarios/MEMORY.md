@@ -12,5 +12,7 @@
 
 - [Toughness + HP Scaling Coverage Map](coverage_toughness_hp_scaling.md) — tier/boss HP scaling never exercised by scenarios; runner lacks ToughnessConfig injection; guardian_hp_fraction unit-tested but no scenario validates it
 
+- [Effect System Refactor Coverage Map](coverage_effect_system_refactor.md) — feature/effect-system-refactor: nested arming ADEQUATE, Shape D On(Participant) MISSING, SpawnStampRegistry STRUCTURAL GAP, Lock/Invulnerable MISSING
+
 ## Session History
 See [ephemeral/](ephemeral/) — not committed.

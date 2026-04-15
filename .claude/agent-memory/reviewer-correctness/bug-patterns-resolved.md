@@ -128,3 +128,13 @@ now find the breaker entity correctly. **Do NOT re-flag.**
 **Do NOT re-flag the absence of ShieldActive charge-decrement patterns.**
 
 See `reviewer-architecture/shield_cross_domain_write.md` for the full elimination record.
+
+## death_pipeline: KillYourself<Breaker> dead-letter — RESOLVED (2026-04-14 Wave F1 scope expansion)
+
+`handle_kill<Wall>` is now registered in `plugin.rs` (Wall path handled by generic handler).
+`handle_breaker_death` is registered in `RunPlugin` in `DeathPipelineSystems::HandleKill` order set.
+
+**Residual structural notes** (confirmed correct, do not re-flag):
+- `GameState::Playing` gate on `handle_kill<Wall>` / `handle_kill<Breaker>` vs. no gate on `handle_kill<Cell>` — intentional scope asymmetry; walls and breaker only die during active play.
+- `Destroyed<Breaker>` message is never written — `handle_breaker_death` does not send it. The breaker death path triggers `RunOutcome::Lost` directly; no downstream consumer reads `Destroyed<Breaker>`. Not a bug.
+- `KillYourself<Breaker>` sending its own death via `KillYourself` is the correct self-destruct pattern. The component is removed after fire. No infinite loop.
