@@ -218,7 +218,7 @@ impl GridCellContext<'_> {
                 let guarded_behavior = def.behaviors.as_ref().and_then(|behaviors| {
                     behaviors.iter().find_map(|b| match b {
                         CellBehavior::Guarded(g) => Some(g),
-                        CellBehavior::Regen { .. } => None,
+                        CellBehavior::Regen { .. } | CellBehavior::Volatile { .. } => None,
                     })
                 });
 

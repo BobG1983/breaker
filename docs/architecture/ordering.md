@@ -37,7 +37,7 @@ Domains MAY define a `pub enum {Domain}Systems` with `#[derive(SystemSet)]` in `
 | `BoltSystems::CellCollision` | `bolt/sets.rs` | `bolt_cell_collision` (bolt-cell CCD sweep — fires before WallCollision and BreakerCollision) |
 | `BoltSystems::WallCollision` | `bolt/sets.rs` | `bolt_wall_collision` (bolt-wall reflection — runs `.after(BoltSystems::CellCollision)`) |
 | `BreakerSystems::UpdateState` | `breaker/sets.rs` | `update_breaker_state` (intra-domain only — no cross-domain consumers yet) |
-| `EffectV3Systems::Bridge` | `effect_v3/sets.rs` | `bridge_bump`, `bridge_bolt_lost`, `bridge_bump_whiff`, `bridge_no_bump`, `bridge_cell_impact`, `bridge_breaker_impact`, `bridge_wall_impact`, `on_cell_destroyed`, `on_bolt_destroyed`, `on_wall_destroyed`, `on_breaker_destroyed`, `bridge_timer_threshold` |
+| `EffectV3Systems::Bridge` | `effect_v3/sets.rs` | `bridge_bump`, `bridge_bolt_lost`, `bridge_bump_whiff`, `bridge_no_bump`, `bridge_cell_impact`, `bridge_breaker_impact`, `bridge_wall_impact`, `bridge_timer_threshold`. (Note: death bridges `on_cell_destroyed`, `on_bolt_destroyed`, `on_wall_destroyed`, `on_breaker_destroyed` are NOT in this set — they run `.after(DeathPipelineSystems::HandleKill)` so they see `Destroyed<T>` messages while victims are still alive. See `effect_v3/triggers/death/register.rs`.) |
 | `EffectV3Systems::Tick` | `effect_v3/sets.rs` | tick systems for active effects (e.g. `tick_shockwave`, `tick_chain_lightning`) — runs after `Bridge` in FixedUpdate |
 | `EffectV3Systems::Conditions` | `effect_v3/sets.rs` | condition evaluation systems (e.g. `evaluate_conditions`) — runs after `Tick` in FixedUpdate |
 | `EffectV3Systems::Reset` | `effect_v3/sets.rs` | effect state reset on `OnEnter(NodeState::Loading)` — not in FixedUpdate chain |
@@ -166,14 +166,6 @@ move_breaker .after(update_bump)
                 <- bridge_bolt_lost .after(BoltSystems::BoltLost)
                    .in_set(EffectV3Systems::Bridge)          [effect domain]
                 <- break_chain_on_bolt_lost .after(BoltSystems::BoltLost)  [bolt domain]
-            <- on_cell_destroyed .in_set(EffectV3Systems::Bridge)
-               [effect domain, unordered relative to physics chain]
-            <- on_bolt_destroyed .in_set(EffectV3Systems::Bridge)
-               [effect domain, unordered relative to physics chain]
-            <- on_wall_destroyed .in_set(EffectV3Systems::Bridge)
-               [effect domain, unordered relative to physics chain]
-            <- on_breaker_destroyed .in_set(EffectV3Systems::Bridge)
-               [effect domain, unordered relative to physics chain]
             <- bridge_timer_threshold .in_set(EffectV3Systems::Bridge)
                [effect domain, unordered relative to physics chain]
 
@@ -187,6 +179,10 @@ DeathPipelineSystems::ApplyDamage
        (detect_deaths::<Cell>, detect_deaths::<Bolt>, detect_deaths::<Wall>, detect_deaths::<Breaker>)
          <- DeathPipelineSystems::HandleKill .after(DeathPipelineSystems::DetectDeaths)
             (handle_kill::<Cell>, handle_kill::<Bolt>, handle_kill::<Wall>, handle_breaker_death)
+              <- on_cell_destroyed .after(DeathPipelineSystems::HandleKill)       [effect_v3 death bridge]
+              <- on_bolt_destroyed .after(DeathPipelineSystems::HandleKill)       [effect_v3 death bridge]
+              <- on_wall_destroyed .after(DeathPipelineSystems::HandleKill)       [effect_v3 death bridge]
+              <- on_breaker_destroyed .after(DeathPipelineSystems::HandleKill)    [effect_v3 death bridge]
               <- track_cells_destroyed .after(DeathPipelineSystems::HandleKill)  [run domain]
               <- detect_mass_destruction .after(DeathPipelineSystems::HandleKill) [run/node domain]
               <- detect_combo_king .after(DeathPipelineSystems::HandleKill)       [run/node domain]

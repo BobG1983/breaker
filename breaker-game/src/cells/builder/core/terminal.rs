@@ -6,9 +6,17 @@ use rantzsoft_spatial2d::propagation::PositionPropagation;
 use super::types::*;
 use crate::{
     cells::{
-        behaviors::guarded::components::ring_slot_offset, components::*, definition::CellBehavior,
+        behaviors::{
+            guarded::components::ring_slot_offset,
+            volatile::stamp::{STAMP_SOURCE, volatile_tree},
+        },
+        components::*,
+        definition::CellBehavior,
     },
-    effect_v3::{commands::EffectCommandsExt, types::RootNode},
+    effect_v3::{
+        commands::EffectCommandsExt,
+        types::{RootNode, Tree},
+    },
     prelude::*,
     shared::GameDrawLayer,
 };
@@ -140,6 +148,9 @@ fn spawn_inner(commands: &mut Commands, core: impl Bundle, optional: OptionalCel
     }
 
     let behaviors = resolve_behaviors(&optional);
+    let entity_id = entity.id();
+    let mut volatile_stamps: Vec<(Entity, Tree)> = Vec::new();
+
     for behavior in behaviors {
         match behavior {
             CellBehavior::Regen { rate } => {
@@ -148,12 +159,20 @@ fn spawn_inner(commands: &mut Commands, core: impl Bundle, optional: OptionalCel
             CellBehavior::Guarded(_) => {
                 entity.insert(GuardedCell);
             }
+            CellBehavior::Volatile { damage, radius } => {
+                entity.insert(VolatileCell);
+                volatile_stamps.push((entity_id, volatile_tree(damage, radius)));
+            }
         }
     }
 
-    let id = entity.id();
-    dispatch_effects(commands, id, resolve_effects(&optional));
-    id
+    // Deferred: `entity` borrows `commands` for the duration of the loop.
+    for (id, tree) in volatile_stamps {
+        commands.stamp_effect(id, STAMP_SOURCE.to_owned(), tree);
+    }
+
+    dispatch_effects(commands, entity_id, resolve_effects(&optional));
+    entity_id
 }
 
 // ── Headless terminal impls (test-only — production uses rendered) ────────

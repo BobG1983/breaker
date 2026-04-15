@@ -296,4 +296,29 @@ Implement in infrastructure order (simpler modifiers first):
 (Survival and Portal are last despite lower tier because they introduce the most new infrastructure.)
 
 ## Status
-`ready`
+`in-progress` — branch `feature/new-cell-modifiers`, executing wave-by-wave.
+
+## Planning Decisions (2026-04-15)
+
+Decisions captured during planning that refine the design above:
+
+1. **Execution model**: one feature branch `feature/new-cell-modifiers`, 7 sequential waves in the order listed under "Implementation Order". Each wave runs its own `/implement` cycle and commits independently. Branch merges after all 7 waves pass the Full Verification Tier.
+
+2. **Volatile damage source (Wave 1)**: first cut ships `.volatile(damage, radius)` with explicit args and a constant default (e.g. `50.0` tuned to standard-cell HP). Neighbor-median computation is deferred — follow-up ticket once node-sequencing refactor provides grid context at cell-spawn time.
+
+3. **Sequence out-of-order mechanism (Wave 2)**: exact interceptor shape (pre-`apply_damage` filter vs `RepairCell` message vs `Invulnerable`-style hook) is a spec-time decision — left open for Wave 2 planning.
+
+4. **Armored collision prereq (Wave 3)**: `BoltImpactCell` will be extended with `impact_normal: Vec2` and `piercing_remaining: u32`. Producer is single (`bolt_cell_collision`); run `researcher-impact` at Wave 3 kickoff to verify no consumers break.
+
+5. **Magnetic shared utility (Wave 5)**: new `breaker-game/src/shared/physics/inverse_square.rs` utility with `inverse_square_attraction(source, target, strength, min_distance) -> Vec2`. Existing `gravity_well` (speed-preserving direction adjust) and `attraction` (linear force) systems refactor to use it. **Behavior-visible refactor** — expect test regeneration.
+
+6. **Projectile terminology (Wave 6)**: **"Salvo"** is the recommended name. Confirm at Wave 6 kickoff. Adds `EntityKind::Salvo`, `SALVO_LAYER` collision bit, `Trigger::Impacted(EntityKind::Salvo)` dispatch.
+
+7. **Breaker schema change compatibility (Wave 6)**: before committing to a layout for enforced `bolt_lost` + `projectile_hit` fields, run `researcher-git` on breaker definitions to check for churn from todo #3 (effect refactor).
+
+8. **Portal sub-level storage (Wave 7)**: ships with eager `NodeLayout` embedded in `PortalSettings` today. Refactor-compatible version (reference into pre-generated node-sequencing entries) is a follow-up to the node-sequencing refactor todo.
+
+9. **Shared cross-cutting concerns are handled inside their owning wave**, not as a separate prerequisite wave — keeps branch history linear.
+
+## Plan File
+`/Users/bgardner/.claude/plans/refactored-soaring-gem.md` (ephemeral — referenced for wave-by-wave execution)

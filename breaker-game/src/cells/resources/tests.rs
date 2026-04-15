@@ -317,7 +317,7 @@ fn guarded_cell_ron_has_guardian_hp_fraction() {
         .and_then(|b| {
             b.iter().find_map(|beh| match beh {
                 CellBehavior::Guarded(g) => Some(g),
-                CellBehavior::Regen { .. } => None,
+                CellBehavior::Regen { .. } | CellBehavior::Volatile { .. } => None,
             })
         })
         .expect("guarded.cell.ron should have Guarded behavior");
@@ -354,6 +354,88 @@ fn lock_cell_ron_has_toughness_weak() {
     let ron_str = include_str!("../../../assets/cells/lock.cell.ron");
     let def: CellTypeDefinition = ron::de::from_str(ron_str).expect("should parse");
     assert_eq!(def.toughness, Toughness::Weak);
+}
+
+// ── Volatile RON round-trip (Wave 1) ────────────────────────────
+
+#[test]
+fn volatile_cell_ron_parses_with_expected_fields() {
+    let ron_str = include_str!("../../../assets/cells/volatile.cell.ron");
+    let def: CellTypeDefinition =
+        ron::de::from_str(ron_str).expect("volatile.cell.ron should parse as CellTypeDefinition");
+    assert_eq!(def.id, "volatile");
+    assert_eq!(def.alias, "V");
+    assert_eq!(def.toughness, Toughness::Standard);
+    assert_eq!(
+        def.behaviors,
+        Some(vec![CellBehavior::Volatile {
+            damage: 25.0,
+            radius: 40.0,
+        }]),
+    );
+}
+
+#[test]
+fn volatile_cell_ron_passes_validation() {
+    let ron_str = include_str!("../../../assets/cells/volatile.cell.ron");
+    let def: CellTypeDefinition =
+        ron::de::from_str(ron_str).expect("volatile.cell.ron should parse");
+    assert!(
+        def.validate().is_ok(),
+        "parsed volatile.cell.ron should pass validate()"
+    );
+}
+
+#[test]
+fn inline_ron_with_volatile_deserializes_with_default_toughness() {
+    let ron_str = r#"(
+        id: "volatile",
+        alias: "V",
+        color_rgb: (4.0, 0.8, 0.2),
+        required_to_clear: true,
+        damage_hdr_base: 4.0,
+        damage_green_min: 0.3,
+        damage_blue_range: 0.3,
+        damage_blue_base: 0.1,
+        behaviors: Some([Volatile(damage: 25.0, radius: 40.0)]),
+    )"#;
+    let def: CellTypeDefinition =
+        ron::de::from_str(ron_str).expect("should deserialize inline volatile RON");
+    assert_eq!(def.toughness, Toughness::Standard);
+    assert_eq!(
+        def.behaviors,
+        Some(vec![CellBehavior::Volatile {
+            damage: 25.0,
+            radius: 40.0,
+        }]),
+    );
+}
+
+#[test]
+fn inline_ron_with_volatile_and_regen_deserializes_in_order() {
+    let ron_str = r#"(
+        id: "volatile",
+        alias: "V",
+        color_rgb: (4.0, 0.8, 0.2),
+        required_to_clear: true,
+        damage_hdr_base: 4.0,
+        damage_green_min: 0.3,
+        damage_blue_range: 0.3,
+        damage_blue_base: 0.1,
+        behaviors: Some([Volatile(damage: 0.5, radius: 1.0), Regen(rate: 0.1)]),
+    )"#;
+    let def: CellTypeDefinition =
+        ron::de::from_str(ron_str).expect("should deserialize two-behavior volatile+regen RON");
+    let behaviors = def.behaviors.expect("behaviors should be Some");
+    assert_eq!(behaviors.len(), 2);
+    assert_eq!(
+        behaviors[0],
+        CellBehavior::Volatile {
+            damage: 0.5,
+            radius: 1.0,
+        }
+    );
+    assert_eq!(behaviors[1], CellBehavior::Regen { rate: 0.1 });
 }
 
 // ── ToughnessConfig::validate() ─────────────────────────────────

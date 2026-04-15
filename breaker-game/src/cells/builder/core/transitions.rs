@@ -232,6 +232,24 @@ impl<P, D, H, V> CellBuilder<P, D, H, V> {
         });
         self
     }
+
+    /// Adds a volatile detonation behavior that fires on cell death.
+    ///
+    /// Pushes `CellBehavior::Volatile { damage, radius }` onto the optional
+    /// behaviors list. At spawn time, the match arm in `spawn_inner()` inserts
+    /// the `VolatileCell` marker and stamps a `BoundEffects` entry keyed
+    /// `"volatile"` whose tree fires an explosion on `Trigger::Died`.
+    ///
+    /// Test-only ergonomics — production cells acquire Volatile behavior via
+    /// `.definition(&def)` from the RON definition's `behaviors:` field.
+    #[cfg(test)]
+    #[must_use]
+    pub(crate) fn volatile(mut self, damage: f32, radius: f32) -> Self {
+        self.optional
+            .behaviors
+            .push(CellBehavior::Volatile { damage, radius });
+        self
+    }
 }
 
 // ── Test-only optional methods (production uses .definition() for these) ─────

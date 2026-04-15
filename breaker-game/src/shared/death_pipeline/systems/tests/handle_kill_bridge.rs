@@ -1,14 +1,14 @@
 //! `effect_v3` bridge-integration tests (Behaviors 15-16).
 //!
 //! These tests verify that `handle_kill<T>` → `Destroyed<T>` → `effect_v3` death
-//! bridge dispatch is wired end-to-end. Uses the 2-tick pattern due to the
-//! known 1-frame ordering lag (D12): tick 1 runs `handle_kill<T>` which writes
-//! `Destroyed<T>`; tick 2 runs `EffectV3Systems::Bridge` which reads the
-//! message and dispatches triggers.
+//! bridge dispatch is wired end-to-end. `handle_kill<T>` writes `Destroyed<T>`
+//! in `DeathPipelineSystems::HandleKill`, and the death bridge runs immediately
+//! after via `.after(DeathPipelineSystems::HandleKill)` within the same tick,
+//! dispatching triggers in the same fixed update as the kill.
 //!
 //! Because the victim is despawned by `process_despawn_requests` in
-//! `FixedPostUpdate` on tick 1, observable state must live on a **separate
-//! listener entity** that survives across ticks. The listener has a
+//! `FixedPostUpdate` on the same tick, observable state must live on a
+//! **separate listener entity** that survives despawn. The listener has a
 //! `BoundEffects` tree binding `DeathOccurred(EntityKind::Any)` →
 //! `Tree::Fire(EffectType::SpeedBoost(..))`, and the observable is an
 //! `EffectStack<SpeedBoostConfig>` on that listener.
@@ -92,18 +92,18 @@ fn bridge_handoff_cell_death_fires_death_occurred_any_on_listener() {
         _marker: PhantomData,
     }]));
 
-    // Tick 1: handle_kill<Cell> runs and writes Destroyed<Cell>;
-    // process_despawn_requests runs in FixedPostUpdate and despawns the cell.
+    // Tick 1: handle_kill<Cell> runs and writes Destroyed<Cell>; the death
+    // bridge runs same-tick via .after(HandleKill) and dispatches
+    // DeathOccurred(Any) to the listener; process_despawn_requests runs in
+    // FixedPostUpdate and despawns the cell.
     tick(&mut app);
 
-    // Assert that handle_kill<Cell> produced exactly one Destroyed<Cell> on tick 1.
-    // This is the degradation fallback — it proves the handle_kill → Destroyed
-    // handoff works even if the bridge observable fails on tick 2.
+    // handle_kill<Cell> should have produced exactly one Destroyed<Cell>.
     let destroyed = app.world().resource::<MessageCollector<Destroyed<Cell>>>();
     assert_eq!(
         destroyed.0.len(),
         1,
-        "tick 1: handle_kill<Cell> should emit exactly one Destroyed<Cell>"
+        "handle_kill<Cell> should emit exactly one Destroyed<Cell>"
     );
     assert_eq!(destroyed.0[0].victim, cell);
     assert_eq!(destroyed.0[0].victim_pos, Vec2::new(100.0, 200.0));
@@ -111,13 +111,9 @@ fn bridge_handoff_cell_death_fires_death_occurred_any_on_listener() {
     // Clear pending so the second tick doesn't re-enqueue.
     app.insert_resource(PendingCellKills(vec![]));
 
-    // Tick 2: EffectV3Systems::Bridge runs on_cell_destroyed and reads the
-    // pending Destroyed<Cell>, dispatching DeathOccurred(Any) to the listener.
-    //
-    // NOTE: the cell entity was already despawned by tick 1's
-    // FixedPostUpdate (`process_despawn_requests`). The 2-tick pattern
-    // here exists solely to wait for the bridge dispatch on tick 2 — we
-    // do NOT assert despawn here because that would be vacuous.
+    // Tick 2: extra tick for historical safety — under the current schedule
+    // the bridge has already dispatched during tick 1, but a second tick
+    // confirms no retroactive state changes.
     tick(&mut app);
 
     let stack = app
@@ -221,25 +217,23 @@ fn bridge_handoff_bolt_death_fires_death_occurred_any_on_listener() {
         _marker: PhantomData,
     }]));
 
-    // Tick 1: handle_kill<Bolt> emits Destroyed<Bolt>; process_despawn despawns bolt.
+    // Tick 1: handle_kill<Bolt> emits Destroyed<Bolt>; the death bridge runs
+    // same-tick via .after(HandleKill) and dispatches DeathOccurred(Any);
+    // process_despawn despawns bolt.
     tick(&mut app);
 
     let destroyed = app.world().resource::<MessageCollector<Destroyed<Bolt>>>();
     assert_eq!(
         destroyed.0.len(),
         1,
-        "tick 1: handle_kill<Bolt> should emit exactly one Destroyed<Bolt>"
+        "handle_kill<Bolt> should emit exactly one Destroyed<Bolt>"
     );
     assert_eq!(destroyed.0[0].victim, bolt);
     assert_eq!(destroyed.0[0].victim_pos, Vec2::new(0.0, -50.0));
 
     app.insert_resource(PendingBoltKills(vec![]));
-    // Tick 2: bridge dispatches DeathOccurred(Any).
-    //
-    // NOTE: the bolt entity was already despawned by tick 1's
-    // FixedPostUpdate (`process_despawn_requests`). The 2-tick pattern
-    // here exists solely to wait for the bridge dispatch on tick 2 — we
-    // do NOT assert despawn here because that would be vacuous.
+    // Tick 2: extra tick for historical safety — the bridge has already
+    // dispatched during tick 1 under the current schedule.
     tick(&mut app);
 
     let stack = app
@@ -250,11 +244,13 @@ fn bridge_handoff_bolt_death_fires_death_occurred_any_on_listener() {
 }
 
 #[test]
-fn bridge_handoff_bolt_death_late_listener_still_receives_dispatch() {
-    // Edge case: listener is spawned AFTER the bolt is killed but BEFORE
-    // tick 2 runs. The listener still receives the dispatch because
-    // on_bolt_destroyed iterates over all entities with BoundEffects at
-    // the time it runs.
+fn bridge_handoff_bolt_death_late_listener_does_not_retroactively_dispatch() {
+    // Edge case: listener is spawned AFTER the bolt has already died and the
+    // bridge has already dispatched. Under the same-tick schedule
+    // (bridge .after(HandleKill)), the bridge runs during tick 1 — the tick
+    // when the bolt dies. Any listener that appears only on tick 2 MUST NOT
+    // retroactively receive that dispatch, because the Destroyed<Bolt>
+    // message was already consumed on tick 1.
     let mut app = build_plugin_integration_app();
     attach_bolt_destroyed_collector(&mut app);
     app.init_resource::<PendingBoltKills>();
@@ -279,11 +275,13 @@ fn bridge_handoff_bolt_death_late_listener_still_receives_dispatch() {
         _marker: PhantomData,
     }]));
 
-    // Tick 1: bolt killed. No listener yet.
+    // Tick 1: handle_kill<Bolt> runs, Destroyed<Bolt> is written, the bridge
+    // runs same-tick and sees no listener entities, so nothing is dispatched.
+    // No listener has been spawned yet.
     tick(&mut app);
     app.insert_resource(PendingBoltKills(vec![]));
 
-    // Spawn the listener after tick 1 — before tick 2 runs.
+    // Spawn the listener AFTER the dispatch tick has already completed.
     let listener = app
         .world_mut()
         .spawn(BoundEffects(vec![death_speed_tree(
@@ -293,12 +291,27 @@ fn bridge_handoff_bolt_death_late_listener_still_receives_dispatch() {
         )]))
         .id();
 
-    // Tick 2: bridge reads Destroyed<Bolt> and dispatches to the listener.
+    // Tick 2: Destroyed<Bolt> has already been consumed on tick 1; the bridge
+    // has nothing new to dispatch. The late-joining listener must NOT
+    // retroactively receive dispatch.
     tick(&mut app);
 
-    let stack = app
-        .world()
-        .get::<EffectStack<SpeedBoostConfig>>(listener)
-        .expect("late-joining listener should still receive dispatch");
-    assert_eq!(stack.len(), 1);
+    // The listener MUST NOT have received any SpeedBoost effect — either the
+    // component is absent entirely (nothing was dispatched to create it) or,
+    // if present, the stack is empty.
+    let stack = app.world().get::<EffectStack<SpeedBoostConfig>>(listener);
+    match stack {
+        None => {
+            // Nothing was dispatched — component was never created. This is
+            // the expected shape: no retroactive dispatch.
+        }
+        Some(stack) => {
+            assert_eq!(
+                stack.len(),
+                0,
+                "late-joining listener must not retroactively receive dispatch — stack should be empty, got {}",
+                stack.len()
+            );
+        }
+    }
 }

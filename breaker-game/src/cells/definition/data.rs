@@ -88,6 +88,8 @@ pub(crate) enum CellBehavior {
     Regen { rate: f32 },
     /// Cell has guardian children that slide in a ring.
     Guarded(GuardedBehavior),
+    /// Cell detonates on death, dealing `damage` to all live cells within `radius`.
+    Volatile { damage: f32, radius: f32 },
 }
 
 /// A cell type definition loaded from RON.
@@ -127,6 +129,7 @@ impl CellTypeDefinition {
     /// - `alias` must not be empty or the reserved `"."`.
     /// - Each `CellBehavior::Regen { rate }` must have a finite positive rate.
     /// - Each `CellBehavior::Guarded` must pass `GuardedBehavior::validate()`.
+    /// - Each `CellBehavior::Volatile { damage, radius }` must have finite positive fields.
     ///
     /// # Errors
     ///
@@ -150,6 +153,18 @@ impl CellTypeDefinition {
                     }
                     CellBehavior::Guarded(guarded) => {
                         guarded.validate()?;
+                    }
+                    CellBehavior::Volatile { damage, radius } => {
+                        if *damage <= 0.0 || !damage.is_finite() {
+                            return Err(format!(
+                                "Volatile damage must be positive and finite, got {damage}"
+                            ));
+                        }
+                        if *radius <= 0.0 || !radius.is_finite() {
+                            return Err(format!(
+                                "Volatile radius must be positive and finite, got {radius}"
+                            ));
+                        }
                     }
                 }
             }

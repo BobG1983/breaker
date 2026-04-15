@@ -13,6 +13,7 @@
 - [Transform usage in effects](known_gap_transform_usage.md) — all previously flagged Transform usages FIXED (full-verification-fixes); chain_lightning arc entities use Transform correctly (rendering objects)
 - [Production logic in effects/mod.rs](known_gap_effects_mod_production_logic.md) — RESOLVED: extracted to fire_helpers.rs; mod.rs is routing-only; no open gaps
 - [Velocity2D cross-domain writes](known_gap_velocity_cross_domain_write.md) — gravity_well and attraction write bolt Velocity2D without documented exception
+- [Death bridges no longer in EffectV3Systems::Bridge set](known_gap_death_bridge_ordering_set.md) — moved to .after(HandleKill); ordering.md is stale; no replacement cross-domain anchor
 
 ## Session History
 See [ephemeral/](ephemeral/) — not committed.
