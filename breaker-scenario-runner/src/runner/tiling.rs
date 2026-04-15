@@ -1,12 +1,9 @@
 //! Window tiling utilities for parallel visual-mode scenario runs.
 //!
 //! Pure functions for computing grid dimensions and tile positions, plus
-//! environment variable constants used to pass window geometry to subprocesses.
+//! environment variable constants used to pass tile config to subprocesses.
 
-use bevy::{
-    math::IVec2,
-    window::{Window, WindowPosition, WindowResolution},
-};
+use bevy::prelude::Resource;
 
 /// Default screen width in pixels (Full HD).
 pub const DEFAULT_SCREEN_WIDTH: u32 = 1920;
@@ -14,17 +11,20 @@ pub const DEFAULT_SCREEN_WIDTH: u32 = 1920;
 /// Default screen height in pixels (Full HD).
 pub const DEFAULT_SCREEN_HEIGHT: u32 = 1080;
 
-/// Environment variable name for the window X position.
-pub const ENV_WINDOW_X: &str = "SCENARIO_WINDOW_X";
+/// Environment variable name for the tile index.
+pub const ENV_TILE_INDEX: &str = "SCENARIO_TILE_INDEX";
 
-/// Environment variable name for the window Y position.
-pub const ENV_WINDOW_Y: &str = "SCENARIO_WINDOW_Y";
+/// Environment variable name for the tile count.
+pub const ENV_TILE_COUNT: &str = "SCENARIO_TILE_COUNT";
 
-/// Environment variable name for the window width.
-pub const ENV_WINDOW_W: &str = "SCENARIO_WINDOW_W";
-
-/// Environment variable name for the window height.
-pub const ENV_WINDOW_H: &str = "SCENARIO_WINDOW_H";
+/// Tile configuration for a child subprocess: which tile index out of how many total.
+#[derive(Resource, Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TileConfig {
+    /// The zero-based tile index for this child process.
+    pub index: u32,
+    /// The total number of tile slots across all child processes.
+    pub count: u32,
+}
 
 /// A tile's position and dimensions within a tiled screen layout.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -96,63 +96,35 @@ pub const fn tile_position(
     }
 }
 
-/// Returns environment variable key-value pairs for a given slot in a tiled grid.
+/// Returns environment variable key-value pairs for passing tile config to a child process.
 ///
-/// Uses [`grid_dimensions`] and [`tile_position`] with [`DEFAULT_SCREEN_WIDTH`]
-/// and [`DEFAULT_SCREEN_HEIGHT`] to compute the tile geometry, then returns the
-/// four env var pairs that a subprocess needs to position its window.
+/// Returns a `Vec` of 2 pairs: `(ENV_TILE_INDEX, slot)` and `(ENV_TILE_COUNT, total)`.
 #[must_use]
-pub fn tile_env_vars(slot: usize, total: usize) -> Vec<(&'static str, String)> {
-    let (cols, rows) = grid_dimensions(total);
-    let tile = tile_position(
-        u32::try_from(slot).unwrap_or(u32::MAX),
-        u32::try_from(cols).unwrap_or(1),
-        u32::try_from(rows).unwrap_or(1),
-        DEFAULT_SCREEN_WIDTH,
-        DEFAULT_SCREEN_HEIGHT,
-    );
+pub fn tile_config_env_vars(slot: usize, total: usize) -> Vec<(&'static str, String)> {
     vec![
-        (ENV_WINDOW_X, tile.x.to_string()),
-        (ENV_WINDOW_Y, tile.y.to_string()),
-        (ENV_WINDOW_W, tile.width.to_string()),
-        (ENV_WINDOW_H, tile.height.to_string()),
+        (ENV_TILE_INDEX, slot.to_string()),
+        (ENV_TILE_COUNT, total.to_string()),
     ]
 }
 
-/// Reads tile position from environment variables through a dependency-injected getter.
+/// Parses a [`TileConfig`] from environment variables through a dependency-injected getter.
 ///
-/// Returns `Some(TilePosition)` if all four env var keys are present and parseable
-/// as `u32`, otherwise returns `None`.
+/// Returns `Some(TileConfig)` if both `ENV_TILE_INDEX` and `ENV_TILE_COUNT` are present,
+/// parseable as `u32`, and `count > 0`. Otherwise returns `None`.
 #[must_use]
-pub fn parse_tile_env(getter: impl Fn(&str) -> Option<String>) -> Option<TilePosition> {
-    let x = getter(ENV_WINDOW_X)?.parse::<u32>().ok()?;
-    let y = getter(ENV_WINDOW_Y)?.parse::<u32>().ok()?;
-    let width = getter(ENV_WINDOW_W)?.parse::<u32>().ok()?;
-    let height = getter(ENV_WINDOW_H)?.parse::<u32>().ok()?;
-    Some(TilePosition {
-        x,
-        y,
-        width,
-        height,
-    })
-}
-
-/// Reads tile position from actual environment variables.
-///
-/// Thin wrapper around [`parse_tile_env`] using `std::env::var`.
-#[must_use]
-pub fn read_tile_env() -> Option<TilePosition> {
-    parse_tile_env(|key| std::env::var(key).ok())
-}
-
-/// Converts a [`TilePosition`] into a Bevy [`Window`] with correct title,
-/// position, and resolution.
-#[must_use]
-pub fn window_from_tile(tile: &TilePosition) -> Window {
-    Window {
-        title: "Scenario Runner".into(),
-        position: WindowPosition::At(IVec2::new(tile.x.cast_signed(), tile.y.cast_signed())),
-        resolution: WindowResolution::new(tile.width, tile.height),
-        ..Default::default()
+pub fn parse_tile_config(getter: impl Fn(&str) -> Option<String>) -> Option<TileConfig> {
+    let index = getter(ENV_TILE_INDEX)?.parse::<u32>().ok()?;
+    let count = getter(ENV_TILE_COUNT)?.parse::<u32>().ok()?;
+    if count == 0 {
+        return None;
     }
+    Some(TileConfig { index, count })
+}
+
+/// Reads tile config from actual environment variables.
+///
+/// Thin wrapper around [`parse_tile_config`] using `std::env::var`.
+#[must_use]
+pub fn read_tile_config() -> Option<TileConfig> {
+    parse_tile_config(|key| std::env::var(key).ok())
 }

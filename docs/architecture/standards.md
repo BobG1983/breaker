@@ -139,7 +139,7 @@ Automated gameplay testing tool in `breaker-scenario-runner/`. A separate worksp
 - **Fail-fast mode**: `--fail-fast` stops the scenario on the first invariant violation; `--no-fail-fast` runs to completion; default is on for `--all`, off for `-s`
 - **Run log**: each run writes an async log to `/tmp/breaker-scenario-runner/<YYYY-MM-DD>/<N>.log` via `RunLog` (background mpsc + file IO thread)
 - **Output directory**: structured output at `<BASE_DIR>/<YYYY-MM-DD>/<N>/`; run number auto-increments; `--clean` removes all output
-- **Window tiling**: parallel visual-mode runs (`--visual --all`) tile game windows in a grid across the screen using `tiling::TilePosition` and env vars (`SCENARIO_WINDOW_X/Y/W/H`)
+- **Window tiling**: parallel visual-mode runs (`--visual --all`) tile game windows in a grid; parent passes tile index and count via env vars (`SCENARIO_TILE_INDEX/COUNT`), each child queries its `Monitor` component for real screen dimensions and positions itself using `tiling::grid_dimensions` and `tiling::tile_position`
 - **Screenshot-on-violation**: in visual mode with a run log, the runner captures one screenshot per `InvariantKind` on first violation via `ScreenshotTracker` + `capture_violation_screenshots`
 
 The scenario runner uses `ScenarioLayoutOverride` (a resource in `run/node/resources.rs`) to bypass the run-setup screen and inject the specified layout and archetype directly.

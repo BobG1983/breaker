@@ -10,5 +10,7 @@
 - [UI and Rendering](api-ui-and-rendering.md) — GlobalZIndex overlays, Val variants, UiScale, TextFont, Screenshot API
 - [FullscreenMaterial API](rendering-fullscreen-material.md) — FullscreenMaterial trait, ViewTarget ping-pong, PostProcessWrite, Node2d graph anchors
 
+- [Monitor and winit 0.30 API](api-monitor-and-winit.md) — No pre-run monitor query in winit 0.30; Monitor is a Component in Bevy; CoreGraphics blocked by unsafe_code=deny; use child self-tiling pattern
+
 ## Session History
 See [ephemeral/](ephemeral/) — not committed.

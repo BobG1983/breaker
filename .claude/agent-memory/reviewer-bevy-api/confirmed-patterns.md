@@ -99,11 +99,17 @@ type: reference
 - `commands.spawn(Screenshot::primary_window()).observe(save_to_disk(path))` — correct spawning pattern
 
 ## Window API (Bevy 0.18.1)
-- `WindowResolution::new(width: u32, height: u32)` — takes `u32` physical pixels (confirmed)
+- `WindowResolution::new(width: u32, height: u32)` — takes `u32` physical pixels (confirmed from docs.rs + github source)
+- `bevy::window::WindowResolution` — NOT in `bevy::prelude`; must use fully-qualified path
 - `WindowPosition::At(IVec2)` — correct; IVec2 holds pixel coordinates
+- `WindowPosition` — IS in `bevy::window::prelude` → re-exported through `bevy::prelude::*`; no need for fully-qualified path
 - `UiScale` — in `bevy::prelude`, struct with inner `f32`; `ui_scale.0` is the f32 multiplier
 - `PrimaryWindow` — correct marker component, in `bevy::window`; used as `With<PrimaryWindow>` query filter
 - `query.single()` — returns `Result` in Bevy 0.15+; use `let Ok(x) = query.single()` pattern
+- `Monitor` — Component (not Resource) in `bevy::window`; NOT in `bevy::prelude`; must use `bevy::window::Monitor`; fields: `physical_width: u32`, `physical_height: u32`, `physical_position: IVec2`, `scale_factor: f64`, `name: Option<String>`
+- `PrimaryMonitor` — marker Component in `bevy::window`; NOT in `bevy::prelude`; must use `bevy::window::PrimaryMonitor`; populated at runtime by bevy_winit (not available in Startup before winit runs)
+- `commands.remove_resource::<R>()` — valid Bevy 0.18 Commands API; `R: Resource`; removes resource from World
+- `Query<&bevy::window::Monitor, With<bevy::window::PrimaryMonitor>>` — correct pattern to query primary monitor as Component
 
 ## Run Conditions
 - `resource_exists::<T>` — in `bevy::prelude`; used as `system.run_if(resource_exists::<MyResource>)` (no call parens — it IS the condition function item)

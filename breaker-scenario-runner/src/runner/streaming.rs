@@ -119,7 +119,7 @@ pub(super) fn spawn_streaming(
             cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
 
             if visual {
-                for (key, value) in tiling::tile_env_vars(idx, specs.len()) {
+                for (key, value) in tiling::tile_config_env_vars(idx, specs.len()) {
                     cmd.env(key, value);
                 }
             }

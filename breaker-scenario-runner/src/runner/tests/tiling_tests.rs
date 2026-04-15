@@ -1,11 +1,11 @@
-//! Tests for `grid_dimensions`, `tile_position`, and environment variable constants.
+//! Tests for `grid_dimensions`, `tile_position`, environment variable constants,
+//! `TileConfig`, `tile_config_env_vars`, and `parse_tile_config`.
 
 use bevy::prelude::*;
 
 use crate::runner::tiling::{
-    DEFAULT_SCREEN_HEIGHT, DEFAULT_SCREEN_WIDTH, ENV_WINDOW_H, ENV_WINDOW_W, ENV_WINDOW_X,
-    ENV_WINDOW_Y, TilePosition, grid_dimensions, parse_tile_env, tile_env_vars, tile_position,
-    window_from_tile,
+    DEFAULT_SCREEN_HEIGHT, DEFAULT_SCREEN_WIDTH, ENV_TILE_COUNT, ENV_TILE_INDEX, TileConfig,
+    TilePosition, grid_dimensions, parse_tile_config, tile_config_env_vars, tile_position,
 };
 
 // =========================================================================
@@ -285,28 +285,8 @@ fn tile_position_last_slot_in_non_full_3x2_grid() {
 }
 
 // =========================================================================
-// Environment variable constants
-// =========================================================================
-
-// -------------------------------------------------------------------------
-// Behavior 19: env var constants have the correct string values
-// -------------------------------------------------------------------------
-
-#[test]
-fn env_var_constants_have_correct_values() {
-    assert_eq!(ENV_WINDOW_X, "SCENARIO_WINDOW_X");
-    assert_eq!(ENV_WINDOW_Y, "SCENARIO_WINDOW_Y");
-    assert_eq!(ENV_WINDOW_W, "SCENARIO_WINDOW_W");
-    assert_eq!(ENV_WINDOW_H, "SCENARIO_WINDOW_H");
-}
-
-// =========================================================================
 // DEFAULT_SCREEN_WIDTH / DEFAULT_SCREEN_HEIGHT — constants
 // =========================================================================
-
-// -------------------------------------------------------------------------
-// Behavior 17: default screen size constants have correct values
-// -------------------------------------------------------------------------
 
 #[test]
 fn default_screen_size_constants_have_correct_values() {
@@ -315,335 +295,267 @@ fn default_screen_size_constants_have_correct_values() {
 }
 
 // =========================================================================
-// tile_env_vars — pure function computing env var key-value pairs
+// Spec Behavior 1: New env var constants have correct string values
 // =========================================================================
 
-/// Helper: converts a `Vec<(&str, String)>` to a sorted list of `(key, value)`
-/// pairs for order-independent comparison.
-fn sorted_env_pairs(pairs: Vec<(&str, String)>) -> Vec<(String, String)> {
-    let mut v: Vec<(String, String)> = pairs.into_iter().map(|(k, v)| (k.to_owned(), v)).collect();
-    v.sort_by(|a, b| a.0.cmp(&b.0));
-    v
-}
-
-/// Helper: builds sorted expected pairs from four concrete values.
-fn expected_env_pairs(
-    pos_x: &str,
-    pos_y: &str,
-    width: &str,
-    height: &str,
-) -> Vec<(String, String)> {
-    let mut v = vec![
-        ("SCENARIO_WINDOW_X".to_owned(), pos_x.to_owned()),
-        ("SCENARIO_WINDOW_Y".to_owned(), pos_y.to_owned()),
-        ("SCENARIO_WINDOW_W".to_owned(), width.to_owned()),
-        ("SCENARIO_WINDOW_H".to_owned(), height.to_owned()),
-    ];
-    v.sort_by(|a, b| a.0.cmp(&b.0));
-    v
-}
-
-// -------------------------------------------------------------------------
-// Behavior 1: tile_env_vars returns correct pairs for slot 0 of 4
-// -------------------------------------------------------------------------
-
 #[test]
-fn tile_env_vars_slot_0_of_4_returns_top_left_half_screen() {
-    let pairs = tile_env_vars(0, 4);
-    assert_eq!(pairs.len(), 4, "expected 4 env var pairs");
+fn env_tile_index_constant_has_correct_value() {
     assert_eq!(
-        sorted_env_pairs(pairs),
-        expected_env_pairs("0", "0", "960", "540"),
+        ENV_TILE_INDEX, "SCENARIO_TILE_INDEX",
+        "ENV_TILE_INDEX must be 'SCENARIO_TILE_INDEX'"
     );
 }
 
-// -------------------------------------------------------------------------
-// Behavior 2: tile_env_vars returns correct pairs for slot 3 of 4
-// -------------------------------------------------------------------------
-
 #[test]
-fn tile_env_vars_slot_3_of_4_returns_bottom_right_half_screen() {
-    let pairs = tile_env_vars(3, 4);
-    assert_eq!(pairs.len(), 4, "expected 4 env var pairs");
+fn env_tile_count_constant_has_correct_value() {
     assert_eq!(
-        sorted_env_pairs(pairs),
-        expected_env_pairs("960", "540", "960", "540"),
-    );
-}
-
-// -------------------------------------------------------------------------
-// Behavior 3: tile_env_vars returns correct pairs for slot 2 of 5 (3x2)
-// -------------------------------------------------------------------------
-
-#[test]
-fn tile_env_vars_slot_2_of_5_returns_third_column_first_row() {
-    let pairs = tile_env_vars(2, 5);
-    assert_eq!(pairs.len(), 4, "expected 4 env var pairs");
-    assert_eq!(
-        sorted_env_pairs(pairs),
-        expected_env_pairs("1280", "0", "640", "540"),
-    );
-}
-
-// -------------------------------------------------------------------------
-// Behavior 4: tile_env_vars returns full-screen pairs for single scenario
-// -------------------------------------------------------------------------
-
-#[test]
-fn tile_env_vars_single_scenario_returns_full_screen() {
-    let pairs = tile_env_vars(0, 1);
-    assert_eq!(pairs.len(), 4, "expected 4 env var pairs");
-    assert_eq!(
-        sorted_env_pairs(pairs),
-        expected_env_pairs("0", "0", "1920", "1080"),
-    );
-}
-
-// -------------------------------------------------------------------------
-// Behavior 5: tile_env_vars returns correct pairs for slot 0 of 2 (2x1)
-// -------------------------------------------------------------------------
-
-#[test]
-fn tile_env_vars_slot_0_of_2_returns_left_half_full_height() {
-    let pairs = tile_env_vars(0, 2);
-    assert_eq!(pairs.len(), 4, "expected 4 env var pairs");
-    assert_eq!(
-        sorted_env_pairs(pairs),
-        expected_env_pairs("0", "0", "960", "1080"),
-    );
-}
-
-// -------------------------------------------------------------------------
-// Behavior 6: tile_env_vars with zero total does not panic
-// -------------------------------------------------------------------------
-
-#[test]
-fn tile_env_vars_zero_total_does_not_panic_and_returns_full_screen() {
-    let pairs = tile_env_vars(0, 0);
-    assert_eq!(pairs.len(), 4, "expected 4 env var pairs");
-    assert_eq!(
-        sorted_env_pairs(pairs),
-        expected_env_pairs("0", "0", "1920", "1080"),
+        ENV_TILE_COUNT, "SCENARIO_TILE_COUNT",
+        "ENV_TILE_COUNT must be 'SCENARIO_TILE_COUNT'"
     );
 }
 
 // =========================================================================
-// parse_tile_env — pure function with dependency-injected getter
+// Spec Behavior 2: tile_config_env_vars returns index and count for slot 0/4
 // =========================================================================
 
-// -------------------------------------------------------------------------
-// Behavior 7: parse_tile_env returns None when getter returns None for all
-// -------------------------------------------------------------------------
+#[test]
+fn tile_config_env_vars_slot_0_of_4_returns_index_and_count_pairs() {
+    let pairs = tile_config_env_vars(0, 4);
+    assert_eq!(pairs.len(), 2, "expected exactly 2 env var pairs");
+    assert_eq!(
+        pairs[0],
+        ("SCENARIO_TILE_INDEX", "0".to_owned()),
+        "first pair must be (SCENARIO_TILE_INDEX, '0')"
+    );
+    assert_eq!(
+        pairs[1],
+        ("SCENARIO_TILE_COUNT", "4".to_owned()),
+        "second pair must be (SCENARIO_TILE_COUNT, '4')"
+    );
+}
+
+// =========================================================================
+// Spec Behavior 3: tile_config_env_vars correct for slot 3/4 (last slot)
+// =========================================================================
 
 #[test]
-fn parse_tile_env_returns_none_when_no_env_vars_set() {
-    let result = parse_tile_env(|_| None);
+fn tile_config_env_vars_slot_3_of_4_returns_correct_pairs() {
+    let pairs = tile_config_env_vars(3, 4);
+    assert_eq!(pairs.len(), 2, "expected exactly 2 env var pairs");
+    assert_eq!(
+        pairs[0],
+        ("SCENARIO_TILE_INDEX", "3".to_owned()),
+        "first pair must be (SCENARIO_TILE_INDEX, '3')"
+    );
+    assert_eq!(
+        pairs[1],
+        ("SCENARIO_TILE_COUNT", "4".to_owned()),
+        "second pair must be (SCENARIO_TILE_COUNT, '4')"
+    );
+}
+
+// =========================================================================
+// Spec Behavior 4: tile_config_env_vars correct for single scenario
+// =========================================================================
+
+#[test]
+fn tile_config_env_vars_single_scenario_returns_correct_pairs() {
+    let pairs = tile_config_env_vars(0, 1);
+    assert_eq!(pairs.len(), 2, "expected exactly 2 env var pairs");
+    assert_eq!(
+        pairs[0],
+        ("SCENARIO_TILE_INDEX", "0".to_owned()),
+        "first pair must be (SCENARIO_TILE_INDEX, '0')"
+    );
+    assert_eq!(
+        pairs[1],
+        ("SCENARIO_TILE_COUNT", "1".to_owned()),
+        "second pair must be (SCENARIO_TILE_COUNT, '1')"
+    );
+}
+
+// =========================================================================
+// Spec Behavior 5: tile_config_env_vars correct for large total
+// =========================================================================
+
+#[test]
+fn tile_config_env_vars_large_total_returns_correct_pairs() {
+    let pairs = tile_config_env_vars(99, 100);
+    assert_eq!(pairs.len(), 2, "expected exactly 2 env var pairs");
+    assert_eq!(
+        pairs[0],
+        ("SCENARIO_TILE_INDEX", "99".to_owned()),
+        "first pair must be (SCENARIO_TILE_INDEX, '99')"
+    );
+    assert_eq!(
+        pairs[1],
+        ("SCENARIO_TILE_COUNT", "100".to_owned()),
+        "second pair must be (SCENARIO_TILE_COUNT, '100')"
+    );
+}
+
+// =========================================================================
+// Spec Behavior 6: TileConfig can be constructed with index and count
+// =========================================================================
+
+#[test]
+fn tile_config_construction_with_index_and_count() {
+    let config = TileConfig { index: 2, count: 9 };
+    assert_eq!(config.index, 2);
+    assert_eq!(config.count, 9);
+}
+
+#[test]
+fn tile_config_construction_single_scenario() {
+    let config = TileConfig { index: 0, count: 1 };
+    assert_eq!(config.index, 0);
+    assert_eq!(config.count, 1);
+}
+
+// =========================================================================
+// Spec Behavior 7: TileConfig is a Bevy Resource
+// =========================================================================
+
+#[test]
+fn tile_config_is_a_bevy_resource() {
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins);
+    app.insert_resource(TileConfig { index: 0, count: 4 });
+
+    let config = app.world().resource::<TileConfig>();
+    assert_eq!(config.index, 0);
+    assert_eq!(config.count, 4);
+}
+
+// =========================================================================
+// Spec Behavior 8: parse_tile_config returns None when getter returns None
+// =========================================================================
+
+#[test]
+fn parse_tile_config_returns_none_when_no_env_vars_set() {
+    let result = parse_tile_config(|_| None);
     assert_eq!(result, None);
 }
 
-// -------------------------------------------------------------------------
-// Behavior 8: parse_tile_env returns Some when all four keys are valid
-// -------------------------------------------------------------------------
+// =========================================================================
+// Spec Behavior 9: parse_tile_config returns Some when both keys are valid
+// =========================================================================
 
 #[test]
-fn parse_tile_env_returns_tile_position_when_all_four_keys_valid() {
-    let result = parse_tile_env(|key| match key {
-        "SCENARIO_WINDOW_X" | "SCENARIO_WINDOW_W" => Some("960".to_owned()),
-        "SCENARIO_WINDOW_Y" | "SCENARIO_WINDOW_H" => Some("540".to_owned()),
+fn parse_tile_config_returns_some_when_both_keys_valid() {
+    let result = parse_tile_config(|key| match key {
+        "SCENARIO_TILE_INDEX" => Some("2".to_owned()),
+        "SCENARIO_TILE_COUNT" => Some("9".to_owned()),
         _ => None,
     });
-    assert_eq!(
-        result,
-        Some(TilePosition {
-            x:      960,
-            y:      540,
-            width:  960,
-            height: 540,
-        }),
+    assert!(
+        result.is_some(),
+        "expected Some(TileConfig) when both keys are valid"
     );
+    let config = result.unwrap();
+    assert_eq!(config.index, 2);
+    assert_eq!(config.count, 9);
 }
 
-// -------------------------------------------------------------------------
-// Behavior 9: parse_tile_env returns None when only some keys present
-// -------------------------------------------------------------------------
-
 #[test]
-fn parse_tile_env_returns_none_when_only_x_and_y_present() {
-    let result = parse_tile_env(|key| match key {
-        "SCENARIO_WINDOW_X" | "SCENARIO_WINDOW_Y" => Some("0".to_owned()),
+fn parse_tile_config_returns_some_for_boundary_values() {
+    let result = parse_tile_config(|key| match key {
+        "SCENARIO_TILE_INDEX" => Some("0".to_owned()),
+        "SCENARIO_TILE_COUNT" => Some("1".to_owned()),
         _ => None,
     });
-    assert_eq!(result, None);
+    assert!(
+        result.is_some(),
+        "expected Some(TileConfig) for index=0, count=1"
+    );
+    let config = result.unwrap();
+    assert_eq!(config.index, 0);
+    assert_eq!(config.count, 1);
 }
 
-// -------------------------------------------------------------------------
-// Behavior 10: parse_tile_env returns None when a value is non-numeric
-// -------------------------------------------------------------------------
+// =========================================================================
+// Spec Behavior 10: parse_tile_config returns None when only index present
+// =========================================================================
 
 #[test]
-fn parse_tile_env_returns_none_when_x_is_non_numeric() {
-    let result = parse_tile_env(|key| match key {
-        "SCENARIO_WINDOW_X" => Some("abc".to_owned()),
-        "SCENARIO_WINDOW_Y" => Some("0".to_owned()),
-        "SCENARIO_WINDOW_W" => Some("960".to_owned()),
-        "SCENARIO_WINDOW_H" => Some("540".to_owned()),
+fn parse_tile_config_returns_none_when_only_index_present() {
+    let result = parse_tile_config(|key| match key {
+        "SCENARIO_TILE_INDEX" => Some("3".to_owned()),
         _ => None,
     });
-    assert_eq!(result, None);
+    assert_eq!(result, None, "expected None when only index is present");
 }
 
-// -------------------------------------------------------------------------
-// Behavior 11: parse_tile_env returns None when a value is negative
-// -------------------------------------------------------------------------
+// =========================================================================
+// Spec Behavior 11: parse_tile_config returns None when only count present
+// =========================================================================
 
 #[test]
-fn parse_tile_env_returns_none_when_x_is_negative() {
-    let result = parse_tile_env(|key| match key {
-        "SCENARIO_WINDOW_X" => Some("-1".to_owned()),
-        "SCENARIO_WINDOW_Y" => Some("0".to_owned()),
-        "SCENARIO_WINDOW_W" => Some("960".to_owned()),
-        "SCENARIO_WINDOW_H" => Some("540".to_owned()),
+fn parse_tile_config_returns_none_when_only_count_present() {
+    let result = parse_tile_config(|key| match key {
+        "SCENARIO_TILE_COUNT" => Some("4".to_owned()),
         _ => None,
     });
-    assert_eq!(result, None);
+    assert_eq!(result, None, "expected None when only count is present");
 }
 
-// -------------------------------------------------------------------------
-// Behavior 12: parse_tile_env returns Some for full-screen tile values
-// -------------------------------------------------------------------------
+// =========================================================================
+// Spec Behavior 12: parse_tile_config returns None when index non-numeric
+// =========================================================================
 
 #[test]
-fn parse_tile_env_returns_full_screen_tile_when_all_values_full_hd() {
-    let result = parse_tile_env(|key| match key {
-        "SCENARIO_WINDOW_X" | "SCENARIO_WINDOW_Y" => Some("0".to_owned()),
-        "SCENARIO_WINDOW_W" => Some("1920".to_owned()),
-        "SCENARIO_WINDOW_H" => Some("1080".to_owned()),
+fn parse_tile_config_returns_none_when_index_non_numeric() {
+    let result = parse_tile_config(|key| match key {
+        "SCENARIO_TILE_INDEX" => Some("abc".to_owned()),
+        "SCENARIO_TILE_COUNT" => Some("4".to_owned()),
+        _ => None,
+    });
+    assert_eq!(result, None, "expected None when index is non-numeric");
+}
+
+// =========================================================================
+// Spec Behavior 13: parse_tile_config returns None when index negative
+// =========================================================================
+
+#[test]
+fn parse_tile_config_returns_none_when_index_negative() {
+    let result = parse_tile_config(|key| match key {
+        "SCENARIO_TILE_INDEX" => Some("-1".to_owned()),
+        "SCENARIO_TILE_COUNT" => Some("4".to_owned()),
         _ => None,
     });
     assert_eq!(
-        result,
-        Some(TilePosition {
-            x:      0,
-            y:      0,
-            width:  1920,
-            height: 1080,
-        }),
+        result, None,
+        "expected None when index is negative (cannot parse as u32)"
     );
 }
 
 // =========================================================================
-// window_from_tile — pure function converting TilePosition to Window
+// Spec Behavior 14: parse_tile_config returns None when count is zero
 // =========================================================================
 
-// -------------------------------------------------------------------------
-// Behavior 13: window_from_tile produces correct position and resolution
-// -------------------------------------------------------------------------
-
 #[test]
-fn window_from_tile_produces_correct_position_and_resolution_for_tiled_window() {
-    let tile = TilePosition {
-        x:      640,
-        y:      0,
-        width:  640,
-        height: 540,
-    };
-    let window = window_from_tile(&tile);
-
+fn parse_tile_config_returns_none_when_count_is_zero() {
+    let result = parse_tile_config(|key| match key {
+        "SCENARIO_TILE_INDEX" | "SCENARIO_TILE_COUNT" => Some("0".to_owned()),
+        _ => None,
+    });
     assert_eq!(
-        window.position,
-        WindowPosition::At(IVec2::new(640, 0)),
-        "window position should match tile x,y"
-    );
-    assert!(
-        (window.resolution.width() - 640.0).abs() < f32::EPSILON,
-        "window width should be 640.0, got {}",
-        window.resolution.width()
-    );
-    assert!(
-        (window.resolution.height() - 540.0).abs() < f32::EPSILON,
-        "window height should be 540.0, got {}",
-        window.resolution.height()
+        result, None,
+        "expected None when count is zero (no scenarios to tile)"
     );
 }
 
-// -------------------------------------------------------------------------
-// Behavior 14: window_from_tile produces correct fields for full-screen
-// -------------------------------------------------------------------------
+// =========================================================================
+// Spec Behavior 15: parse_tile_config returns None when count non-numeric
+// =========================================================================
 
 #[test]
-fn window_from_tile_produces_correct_fields_for_full_screen_tile() {
-    let tile = TilePosition {
-        x:      0,
-        y:      0,
-        width:  1920,
-        height: 1080,
-    };
-    let window = window_from_tile(&tile);
-
-    assert_eq!(
-        window.position,
-        WindowPosition::At(IVec2::new(0, 0)),
-        "window position should be at origin"
-    );
-    assert!(
-        (window.resolution.width() - 1920.0).abs() < f32::EPSILON,
-        "window width should be 1920.0, got {}",
-        window.resolution.width()
-    );
-    assert!(
-        (window.resolution.height() - 1080.0).abs() < f32::EPSILON,
-        "window height should be 1080.0, got {}",
-        window.resolution.height()
-    );
-}
-
-// -------------------------------------------------------------------------
-// Behavior 15: window_from_tile sets the title to "Scenario Runner"
-// -------------------------------------------------------------------------
-
-#[test]
-fn window_from_tile_sets_title_to_scenario_runner() {
-    let tile = TilePosition {
-        x:      0,
-        y:      0,
-        width:  960,
-        height: 540,
-    };
-    let window = window_from_tile(&tile);
-
-    assert_eq!(
-        window.title, "Scenario Runner",
-        "window title should be 'Scenario Runner'"
-    );
-}
-
-// -------------------------------------------------------------------------
-// Behavior 16: window_from_tile produces correct fields for bottom-right 2x2
-// -------------------------------------------------------------------------
-
-#[test]
-fn window_from_tile_produces_correct_fields_for_bottom_right_in_2x2() {
-    let tile = TilePosition {
-        x:      960,
-        y:      540,
-        width:  960,
-        height: 540,
-    };
-    let window = window_from_tile(&tile);
-
-    assert_eq!(
-        window.position,
-        WindowPosition::At(IVec2::new(960, 540)),
-        "window position should match bottom-right tile"
-    );
-    assert!(
-        (window.resolution.width() - 960.0).abs() < f32::EPSILON,
-        "window width should be 960.0, got {}",
-        window.resolution.width()
-    );
-    assert!(
-        (window.resolution.height() - 540.0).abs() < f32::EPSILON,
-        "window height should be 540.0, got {}",
-        window.resolution.height()
-    );
+fn parse_tile_config_returns_none_when_count_non_numeric() {
+    let result = parse_tile_config(|key| match key {
+        "SCENARIO_TILE_INDEX" => Some("0".to_owned()),
+        "SCENARIO_TILE_COUNT" => Some("xyz".to_owned()),
+        _ => None,
+    });
+    assert_eq!(result, None, "expected None when count is non-numeric");
 }

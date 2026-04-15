@@ -57,4 +57,14 @@ This crate is diagnostic tooling, not gameplay. Performance standards are relaxe
 - `active_invariant_kinds()` builds a `HashSet<InvariantKind>` at app build time (in `register_scenario_systems`), not per-frame.
 - The HashSet is consumed immediately by `register_active_checkers` and dropped. No per-frame cost.
 
+**apply_tile_layout** (`src/runner/app.rs`):
+- Registered in Update schedule, runs every frame in visual mode.
+- Guards: `Option<Res<TileConfig>>` early-return (None after first successful apply); `monitors.single()` early-return; `windows.single_mut()` early-return.
+- `TileConfig` resource is removed via `commands.remove_resource::<TileConfig>()` after the first successful apply, so the system no-ops from the second frame onward (just the None check on Option<Res<TileConfig>>).
+- `monitors` query: `Query<&Monitor, With<PrimaryMonitor>>` — 1 entity, no archetypes concern.
+- `windows` query: `Query<&mut Window, With<PrimaryWindow>>` — `&mut Window` where `&Window` would suffice if only resolution is being read, but mutation is needed for `window.resolution = ...` and `window.position = ...`, so mutable is correct.
+- Resource removal does NOT cause archetype fragmentation: `TileConfig` is a `Resource`, not a component. Resources are not part of the archetype graph.
+- `warn!` macro inside the retry branch: string interpolation happens at the call site, but this only fires while PrimaryMonitor is unavailable (typically 0-1 frames on startup). Negligible.
+- **Overall**: clean one-shot pattern. After first apply, cost per frame = Option::is_none() check (a pointer read). No allocations. No archetype concerns. Visual mode only.
+
 **Why:** Scenario runner is diagnostic tooling. It runs once per test invocation, not continuously. Per-frame allocations in visual mode only; headless mode (the common path) still has the HashSet allocation.

@@ -14,6 +14,8 @@ pub mod streaming;
 mod tests;
 pub mod tiling;
 
-pub use app::{drain_remaining_logs, guarded_update, is_timed_out, sync_ui_scale};
+pub use app::{
+    apply_tile_layout, drain_remaining_logs, guarded_update, is_timed_out, sync_ui_scale,
+};
 pub use discovery::load_scenario;
 pub use execution::*;
