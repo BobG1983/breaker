@@ -121,12 +121,6 @@ pub(crate) struct CellTypeDefinition {
 }
 
 impl CellTypeDefinition {
-    /// Cell color as a Bevy [`Color`].
-    #[must_use]
-    pub(crate) const fn color(&self) -> Color {
-        crate::shared::color_from_rgb(self.color_rgb)
-    }
-
     /// Validates that all fields of this definition are well-formed at runtime.
     ///
     /// Checks:

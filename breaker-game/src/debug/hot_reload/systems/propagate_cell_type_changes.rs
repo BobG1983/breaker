@@ -45,7 +45,7 @@ pub(crate) fn propagate_cell_type_changes(
         visuals.blue_base = def.damage_blue_base;
 
         if let Some(mat) = materials.get_mut(&mat_handle.0) {
-            mat.color = def.color();
+            mat.color = crate::shared::color_from_rgb(def.color_rgb);
         }
     }
 }
