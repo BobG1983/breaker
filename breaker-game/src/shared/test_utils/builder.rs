@@ -16,7 +16,13 @@ use crate::{
         definition::CellTypeDefinition,
         resources::{CellConfig, CellTypeRegistry},
     },
-    shared::PlayfieldConfig,
+    effect_v3::EffectV3Plugin,
+    shared::{
+        PlayfieldConfig,
+        death_pipeline::{
+            DeathPipelinePlugin, systems::tests::helpers::register_effect_v3_test_infrastructure,
+        },
+    },
     state::types::*,
 };
 
@@ -239,6 +245,20 @@ impl<S: StateStatus> TestAppBuilder<S> {
             .world_mut()
             .resource_mut::<CellTypeRegistry>()
             .insert(alias.to_string(), def);
+        self
+    }
+
+    /// Registers the full effects pipeline: `DeathPipelinePlugin`,
+    /// cross-domain messages + `GameRng`, and `EffectV3Plugin`.
+    ///
+    /// Order matters: `DeathPipelinePlugin` configures sets that
+    /// `EffectV3Plugin` references, and `register_effect_v3_test_infrastructure`
+    /// registers messages that both plugins' systems read.
+    #[must_use]
+    pub(crate) fn with_effects_pipeline(mut self) -> Self {
+        self.app.add_plugins(DeathPipelinePlugin);
+        register_effect_v3_test_infrastructure(&mut self.app);
+        self.app.add_plugins(EffectV3Plugin);
         self
     }
 
