@@ -4,12 +4,11 @@ use bevy::prelude::*;
 
 use crate::{
     breaker::{
-        components::{Breaker, DashState, DashStateTimer, SettleDuration},
-        messages::{BumpGrade, BumpPerformed, BumpWhiffed, NoBump},
+        components::{DashState, DashStateTimer, SettleDuration},
+        messages::{BumpGrade, BumpWhiffed, NoBump},
         queries::{BreakerBumpGradingData, BreakerBumpTimingData},
         resources::ForceBumpGrade,
     },
-    effect_v3::effects::anchor::{AnchorActive, AnchorPlanted},
     input::resources::GameAction,
     prelude::*,
 };

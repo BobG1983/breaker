@@ -1,9 +1,10 @@
 use bevy::prelude::*;
-use rantzsoft_physics2d::aabb::Aabb2D;
-use rantzsoft_spatial2d::components::{Position2D, Scale2D};
 
 use super::helpers::{custom_wall_definition, default_playfield};
-use crate::walls::{components::Wall, definition::WallDefinition};
+use crate::{
+    prelude::*,
+    walls::{components::Wall, definition::WallDefinition},
+};
 
 // ── Behavior 8: .with_half_thickness() stores override ──
 

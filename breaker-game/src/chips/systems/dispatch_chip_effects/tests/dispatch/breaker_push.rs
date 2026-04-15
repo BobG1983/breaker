@@ -10,9 +10,9 @@ use crate::{
     chips::{definition::ChipDefinition, systems::dispatch_chip_effects::tests::helpers::*},
     effect_v3::{
         effects::{DamageBoostConfig, ShieldConfig, ShockwaveConfig, SpeedBoostConfig},
-        storage::BoundEffects,
         types::{EffectType, RootNode, StampTarget, Tree, Trigger},
     },
+    prelude::*,
 };
 
 // ── Behavior 2: `When` child targeting Breaker pushes to BoundEffects ──

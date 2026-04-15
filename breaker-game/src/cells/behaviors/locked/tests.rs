@@ -14,12 +14,9 @@ use crate::{
         },
         components::Cell,
     },
-    shared::{
-        death_pipeline::{
-            damage_dealt::DamageDealt, dead::Dead, hp::Hp, invulnerable::Invulnerable,
-            killed_by::KilledBy, systems::apply_damage,
-        },
-        test_utils::{TestAppBuilder, tick},
+    prelude::*,
+    shared::death_pipeline::{
+        damage_dealt::DamageDealt, invulnerable::Invulnerable, systems::apply_damage,
     },
 };
 

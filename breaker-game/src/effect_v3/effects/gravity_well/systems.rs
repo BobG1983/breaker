@@ -1,10 +1,9 @@
 //! Gravity well systems — tick force application, despawn expired.
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use super::components::*;
-use crate::bolt::components::Bolt;
+use crate::prelude::*;
 
 /// Applies gravitational pull to bolts within each well's radius.
 pub fn tick_gravity_well(
@@ -51,13 +50,8 @@ pub fn despawn_expired_wells(
 #[cfg(test)]
 mod tests {
     use bevy::prelude::*;
-    use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
     use super::*;
-    use crate::{
-        bolt::components::Bolt,
-        shared::test_utils::{TestAppBuilder, tick},
-    };
 
     fn gravity_test_app() -> App {
         TestAppBuilder::new()

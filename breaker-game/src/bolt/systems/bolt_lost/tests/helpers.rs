@@ -1,19 +1,12 @@
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::Velocity2D;
 
 use crate::{
-    bolt::{
-        components::Bolt, definition::BoltDefinition, messages::BoltLost,
-        systems::bolt_lost::system::bolt_lost,
-    },
-    shared::{
-        GameRng,
-        death_pipeline::{
-            despawn_entity::DespawnEntity,
-            destroyed::Destroyed,
-            kill_yourself::KillYourself,
-            systems::{handle_kill, process_despawn_requests},
-        },
+    bolt::{definition::BoltDefinition, messages::BoltLost, systems::bolt_lost::system::bolt_lost},
+    prelude::*,
+    shared::death_pipeline::{
+        despawn_entity::DespawnEntity,
+        kill_yourself::KillYourself,
+        systems::{handle_kill, process_despawn_requests},
     },
 };
 
@@ -35,8 +28,6 @@ pub(super) fn make_default_bolt_definition() -> BoltDefinition {
 }
 
 pub(super) fn test_app() -> App {
-    use crate::shared::test_utils::TestAppBuilder;
-
     TestAppBuilder::new()
         .with_playfield()
         .with_resource::<GameRng>()
@@ -49,8 +40,6 @@ pub(super) fn test_app() -> App {
         .with_system(FixedPostUpdate, process_despawn_requests)
         .build()
 }
-
-pub(super) use crate::shared::test_utils::tick;
 
 /// Spawns a bolt at the given position with the given velocity using the builder
 /// with `.definition()`.

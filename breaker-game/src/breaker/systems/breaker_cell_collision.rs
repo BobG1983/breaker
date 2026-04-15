@@ -12,7 +12,6 @@ use crate::{
     breaker::queries::BreakerSizeData,
     effect_v3::{effects::SizeBoostConfig, stacking::EffectStack},
     prelude::*,
-    shared::{BREAKER_LAYER, CELL_LAYER},
 };
 
 /// Cell entity lookup for narrow-phase overlap verification.
@@ -71,7 +70,7 @@ mod tests {
     use crate::{
         breaker::components::{BaseHeight, BaseWidth},
         effect_v3::{effects::SizeBoostConfig, stacking::EffectStack},
-        shared::{GameDrawLayer, NodeScalingFactor, test_utils::TestAppBuilder},
+        shared::GameDrawLayer,
     };
 
     fn size_stack(values: &[f32]) -> EffectStack<SizeBoostConfig> {
@@ -117,8 +116,6 @@ mod tests {
             )
             .build()
     }
-
-    use crate::shared::test_utils::tick;
 
     fn spawn_breaker(app: &mut App, pos: Vec2) -> Entity {
         app.world_mut()

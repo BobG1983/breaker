@@ -9,7 +9,7 @@ use super::{
         update_seed_display,
     },
 };
-use crate::state::{cleanup::cleanup_entities, types::MenuState};
+use crate::{prelude::*, state::cleanup::cleanup_entities};
 
 /// Plugin for the breaker selection screen.
 pub(crate) struct RunSetupPlugin;

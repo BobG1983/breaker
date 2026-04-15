@@ -5,15 +5,13 @@ use bevy::prelude::*;
 use ordered_float::OrderedFloat;
 
 use crate::{
-    bolt::components::Bolt,
-    cells::components::{Cell, CellTypeAlias},
+    cells::components::CellTypeAlias,
     effect_v3::{
         effects::SpeedBoostConfig,
-        storage::BoundEffects,
         types::{EffectType, EntityKind, RootNode, StampTarget, Tree, Trigger},
     },
+    prelude::*,
     state::run::node::systems::dispatch_cell_effects::tests::helpers::{make_cell_def, test_app},
-    walls::components::Wall,
 };
 
 // ── Regression: StampTarget::Bolt dispatches to ALL bolt entities, not just first ──

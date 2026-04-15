@@ -7,7 +7,7 @@ use super::{
     PauseMenuScreen,
     systems::{handle_pause_input, spawn_pause_menu, toggle_pause, update_pause_menu_colors},
 };
-use crate::state::{cleanup::cleanup_entities, types::NodeState};
+use crate::{prelude::*, state::cleanup::cleanup_entities};
 
 /// Run condition: `Time<Virtual>` is paused.
 fn is_time_paused(time: Res<Time<Virtual>>) -> bool {

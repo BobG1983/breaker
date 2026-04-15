@@ -8,9 +8,9 @@ use crate::{
     effect_v3::{
         effects::{DamageBoostConfig, ShieldConfig, SpeedBoostConfig},
         stacking::EffectStack,
-        storage::BoundEffects,
         types::{EffectType, EntityKind, RootNode, StampTarget, Tree, Trigger},
     },
+    prelude::*,
 };
 
 // ── Behavior 1: ActiveCells stamps tree directly to Breaker's BoundEffects ──

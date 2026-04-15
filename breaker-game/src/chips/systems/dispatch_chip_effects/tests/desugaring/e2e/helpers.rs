@@ -6,7 +6,7 @@
 
 use bevy::prelude::*;
 
-use crate::effect_v3::storage::BoundEffects;
+use crate::prelude::*;
 
 /// Assert that an entity has exactly `count` `BoundEffects` entries.
 pub(super) fn assert_bound_count(world: &World, entity: Entity, count: usize) {

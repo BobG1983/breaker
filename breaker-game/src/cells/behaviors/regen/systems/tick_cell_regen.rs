@@ -3,11 +3,8 @@
 use bevy::prelude::*;
 
 use crate::{
-    cells::{
-        behaviors::regen::components::{NoRegen, Regen, RegenCell, RegenRate},
-        components::Cell,
-    },
-    shared::death_pipeline::hp::Hp,
+    cells::{behaviors::regen::components::NoRegen, components::Cell},
+    prelude::*,
 };
 
 type RegenCellQuery<'w, 's> = Query<
@@ -38,14 +35,9 @@ mod tests {
     use std::time::Duration;
 
     use super::*;
-    use crate::{
-        cells::{behaviors::regen::components::*, components::*},
-        shared::death_pipeline::hp::Hp,
-    };
+    use crate::{cells::behaviors::regen::components::*, prelude::*};
 
     fn test_app() -> App {
-        use crate::shared::test_utils::TestAppBuilder;
-
         TestAppBuilder::new()
             .with_system(FixedUpdate, tick_cell_regen)
             .build()

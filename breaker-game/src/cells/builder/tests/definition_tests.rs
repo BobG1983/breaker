@@ -12,10 +12,9 @@ use crate::{
     },
     effect_v3::{
         effects::DamageBoostConfig,
-        storage::BoundEffects,
         types::{EffectType, RootNode, StampTarget, Tree},
     },
-    shared::death_pipeline::hp::Hp,
+    prelude::*,
 };
 
 // ── Section D: .definition(&def) ────────────────────────────────────────────

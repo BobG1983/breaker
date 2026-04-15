@@ -1,19 +1,16 @@
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, Velocity2D};
+use rantzsoft_spatial2d::components::PreviousPosition;
 
 use super::helpers::*;
 use crate::{
     bolt::{
-        components::{Bolt, BoltAngleSpread, BoltSpawnOffsetY},
+        components::{BoltAngleSpread, BoltSpawnOffsetY},
         messages::BoltLost,
         resources::{DEFAULT_BOLT_ANGLE_SPREAD, DEFAULT_BOLT_SPAWN_OFFSET_Y},
         systems::bolt_lost::system::bolt_lost,
     },
-    breaker::components::Breaker,
-    shared::{
-        GameDrawLayer, NodeScalingFactor, PlayfieldConfig, birthing::Birthing,
-        death_pipeline::kill_yourself::KillYourself,
-    },
+    prelude::*,
+    shared::{GameDrawLayer, death_pipeline::kill_yourself::KillYourself},
 };
 
 #[test]
@@ -603,11 +600,9 @@ fn bolt_lost_respawn_inserts_birthing_component() {
 
 #[test]
 fn bolt_lost_sends_correct_bolt_and_breaker_entities_for_baseline() {
-    use crate::shared::test_utils::TestAppBuilder;
-
     let mut app = TestAppBuilder::new()
         .with_playfield()
-        .with_resource::<crate::shared::GameRng>()
+        .with_resource::<GameRng>()
         .with_message::<BoltLost>()
         // Required: `bolt_lost` takes `MessageWriter<KillYourself<Bolt>>` as a
         // plain SystemParam, so the message MUST be registered.
@@ -659,11 +654,9 @@ fn bolt_lost_sends_correct_bolt_and_breaker_entities_for_baseline() {
 
 #[test]
 fn bolt_lost_sends_correct_entities_when_multiple_bolts_lost_in_same_frame() {
-    use crate::shared::test_utils::TestAppBuilder;
-
     let mut app = TestAppBuilder::new()
         .with_playfield()
-        .with_resource::<crate::shared::GameRng>()
+        .with_resource::<GameRng>()
         .with_message::<BoltLost>()
         // Required: `bolt_lost` takes `MessageWriter<KillYourself<Bolt>>` as a
         // plain SystemParam, so the message MUST be registered.

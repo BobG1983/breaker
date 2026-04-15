@@ -11,9 +11,8 @@ use crate::{
         definition::{CellBehavior, Toughness},
         resources::{CellConfig, CellTypeRegistry, ToughnessConfig},
     },
-    shared::PlayfieldConfig,
+    prelude::*,
     state::run::{
-        definition::NodeType,
         node::{ActiveNodeLayout, NodeLayout, messages::CellsSpawned},
         resources::{NodeOutcome, NodeSequence},
     },

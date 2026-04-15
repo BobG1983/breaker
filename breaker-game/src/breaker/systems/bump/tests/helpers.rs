@@ -1,18 +1,17 @@
 use bevy::prelude::*;
 
 use crate::{
-    bolt::messages::BoltImpactBreaker,
     breaker::{
         components::{
             BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown, BumpPerfectWindow,
             BumpWeakCooldown, SettleDuration,
         },
         definition::BreakerDefinition,
-        messages::{BumpPerformed, BumpWhiffed, NoBump},
+        messages::{BumpWhiffed, NoBump},
         systems::bump::{grade_bump, update_bump},
     },
-    input::resources::{GameAction, InputActions},
-    shared::test_utils::TestAppBuilder,
+    input::resources::GameAction,
+    prelude::*,
 };
 
 #[derive(Resource)]
@@ -121,8 +120,6 @@ pub(super) fn update_bump_with_no_bump_test_app() -> App {
         )
         .build()
 }
-
-pub(super) use crate::shared::test_utils::tick;
 
 #[derive(Resource)]
 pub(super) struct TestHitMessage(pub Option<BoltImpactBreaker>);

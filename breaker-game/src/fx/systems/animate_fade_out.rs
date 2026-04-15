@@ -38,7 +38,7 @@ mod tests {
 
     /// Build a test app that advances time by `dt` each update.
     fn test_app(dt: Duration) -> App {
-        use crate::shared::test_utils::TestAppBuilder;
+        use crate::prelude::*;
 
         TestAppBuilder::new()
             .insert_resource(TimeUpdateStrategy::ManualDuration(dt))

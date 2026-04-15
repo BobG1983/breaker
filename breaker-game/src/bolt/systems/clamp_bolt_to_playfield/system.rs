@@ -7,7 +7,7 @@ use crate::{
         filters::ActiveFilter,
         queries::{BoltCollisionData, apply_velocity_formula},
     },
-    shared::PlayfieldConfig,
+    prelude::*,
 };
 
 /// Sub-pixel inset applied when clamping bolt position to playfield walls.

@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use super::components::{ShieldDuration, ShieldReflectionCost, ShieldWall};
-use crate::bolt::messages::BoltImpactWall;
+use crate::prelude::*;
 
 /// Decrements shield duration each frame and despawns expired shields.
 pub fn tick_shield_duration(
@@ -41,12 +41,8 @@ mod tests {
     use bevy::prelude::*;
 
     use super::*;
-    use crate::{
-        bolt::messages::BoltImpactWall,
-        effect_v3::effects::shield::components::{
-            ShieldDuration, ShieldReflectionCost, ShieldWall,
-        },
-        shared::test_utils::{TestAppBuilder, tick},
+    use crate::effect_v3::effects::shield::components::{
+        ShieldDuration, ShieldReflectionCost, ShieldWall,
     };
 
     // -- Helpers ----------------------------------------------------------

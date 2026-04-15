@@ -16,7 +16,7 @@ use crate::{
         queries::BreakerDashData,
     },
     effect_v3::{
-        effects::{SizeBoostConfig, SpeedBoostConfig, flash_step::FlashStepActive},
+        effects::{SizeBoostConfig, SpeedBoostConfig},
         stacking::EffectStack,
     },
     input::resources::GameAction,

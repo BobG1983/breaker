@@ -32,6 +32,7 @@ pub struct BreakerInitialized;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::prelude::*;
 
     // ── Breaker #[require] tests ─────────────────────────────────
 
@@ -63,9 +64,6 @@ mod tests {
 
     #[test]
     fn primary_builder_inserts_cleanup_on_exit_run_state() {
-        use rantzsoft_stateflow::CleanupOnExit;
-
-        use crate::state::types::RunState;
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
@@ -78,9 +76,6 @@ mod tests {
 
     #[test]
     fn breaker_require_does_not_insert_cleanup_on_exit_node_state() {
-        use rantzsoft_stateflow::CleanupOnExit;
-
-        use crate::state::types::NodeState;
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
@@ -97,9 +92,6 @@ mod tests {
 
     #[test]
     fn breaker_collision_layers_have_correct_values() {
-        use rantzsoft_physics2d::collision_layers::CollisionLayers;
-
-        use crate::shared::{BOLT_LAYER, BREAKER_LAYER};
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);

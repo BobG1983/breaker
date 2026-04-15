@@ -3,8 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    cells::components::Cell,
-    shared::death_pipeline::Destroyed,
+    prelude::*,
     state::run::{definition::HighlightConfig, messages::HighlightTriggered, resources::*},
 };
 
@@ -63,11 +62,6 @@ mod tests {
     use std::marker::PhantomData;
 
     use super::*;
-    use crate::{
-        cells::components::Cell,
-        shared::death_pipeline::destroyed::Destroyed,
-        state::run::resources::{HighlightKind, RunHighlight},
-    };
 
     #[derive(Resource)]
     struct TestMessages(Vec<Destroyed<Cell>>);
@@ -91,7 +85,6 @@ mod tests {
     }
 
     fn test_app() -> App {
-        use crate::shared::test_utils::TestAppBuilder;
         TestAppBuilder::new()
             .with_message::<Destroyed<Cell>>()
             .with_message::<HighlightTriggered>()
@@ -111,8 +104,6 @@ mod tests {
             )
             .build()
     }
-
-    use crate::shared::test_utils::tick;
 
     fn make_destroyed() -> Destroyed<Cell> {
         Destroyed::<Cell> {

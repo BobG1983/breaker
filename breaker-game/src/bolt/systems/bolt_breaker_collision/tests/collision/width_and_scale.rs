@@ -3,13 +3,14 @@
 
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
-use rantzsoft_spatial2d::components::{Position2D, Spatial2D, Velocity2D};
+use rantzsoft_spatial2d::components::Spatial2D;
 
 use crate::{
     bolt::systems::bolt_breaker_collision::tests::helpers::*,
-    breaker::components::{Breaker, BreakerTilt},
+    breaker::components::BreakerTilt,
     effect_v3::{effects::SizeBoostConfig, stacking::EffectStack},
-    shared::{GameDrawLayer, NodeScalingFactor},
+    prelude::*,
+    shared::GameDrawLayer,
 };
 
 fn size_stack(values: &[f32]) -> EffectStack<SizeBoostConfig> {

@@ -44,7 +44,7 @@ Effect modules that spawn extra bolts (`SpawnBolts`, `SpawnPhantom`, `ChainBolt`
 
 `bolt_lost` runs in `FixedUpdate`. For each bolt below playfield bottom:
 - **Shield active**: Flips Y-velocity, calls `apply_velocity_formula`, clamps position. No `BoltLost` message.
-- **Extra bolt**: Sends `BoltLost`, writes `RequestBoltDestroyed`. Entity stays alive one frame for `OnDeath` effect evaluation, then `cleanup_destroyed_bolts` despawns.
+- **Extra bolt**: Sends `BoltLost`, writes `KillYourself<Bolt>`. The unified death pipeline (`handle_kill<Bolt>`) writes `DespawnEntity`; `process_despawn_requests` (FixedPostUpdate) despawns the entity.
 - **Baseline bolt**: Sends `BoltLost`. Respawns above breaker: reads `BoltSpawnOffsetY` and `BoltAngleSpread` from the bolt entity (constants-initialized components), calls `apply_velocity_formula`. Entity persists (no despawn/respawn cycle). `BoltRespawnOffsetY` was eliminated — `BoltSpawnOffsetY` covers both.
 
 ### Current Breaker → Bolt Relationship

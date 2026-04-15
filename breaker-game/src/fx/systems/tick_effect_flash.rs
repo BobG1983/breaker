@@ -29,7 +29,7 @@ mod tests {
 
     /// Build a test app that advances time by `dt` each update.
     fn test_app(dt: Duration) -> App {
-        use crate::shared::test_utils::TestAppBuilder;
+        use crate::prelude::*;
 
         TestAppBuilder::new()
             .insert_resource(TimeUpdateStrategy::ManualDuration(dt))
@@ -154,7 +154,7 @@ mod tests {
 
     #[test]
     fn fx_plugin_registers_tick_effect_flash_running_in_node_playing() {
-        use crate::shared::test_utils::TestAppBuilder;
+        use crate::prelude::*;
 
         let mut app = TestAppBuilder::new()
             .with_state_hierarchy()
@@ -181,7 +181,7 @@ mod tests {
 
     #[test]
     fn tick_effect_flash_does_not_run_outside_node_playing() {
-        use crate::shared::test_utils::TestAppBuilder;
+        use crate::prelude::*;
 
         let mut app = TestAppBuilder::new()
             .with_state_hierarchy()

@@ -74,7 +74,7 @@ pub(crate) fn spawn_pause_menu(mut commands: Commands) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::shared::test_utils::TestAppBuilder;
+    use crate::prelude::*;
 
     fn test_app() -> App {
         TestAppBuilder::new()

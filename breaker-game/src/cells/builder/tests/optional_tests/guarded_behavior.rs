@@ -8,7 +8,7 @@ use crate::{
         components::{Cell, GuardedCell, GuardianCell},
         definition::{CellBehavior, GuardedBehavior},
     },
-    shared::death_pipeline::hp::Hp,
+    prelude::*,
 };
 
 // Behavior 38: CellBehavior::Guarded inserts GuardedCell marker

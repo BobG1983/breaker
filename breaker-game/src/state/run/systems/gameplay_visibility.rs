@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::{bolt::components::Bolt, breaker::components::Breaker};
+use crate::prelude::*;
 
 /// Hides all breaker and bolt entities by setting [`Visibility::Hidden`].
 ///
@@ -39,7 +39,6 @@ pub(crate) fn show_gameplay_entities(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::shared::test_utils::TestAppBuilder;
 
     fn hide_app() -> App {
         TestAppBuilder::new()

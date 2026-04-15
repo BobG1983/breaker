@@ -11,9 +11,9 @@ use crate::{
     effect_v3::{
         effects::{BumpForceConfig, DamageBoostConfig, SizeBoostConfig, SpeedBoostConfig},
         stacking::EffectStack,
-        storage::BoundEffects,
         types::{EffectType, RootNode, StampTarget, Tree},
     },
+    prelude::*,
 };
 
 // ── Behavior 1: Bare `Fire` child targeting Breaker fires immediately ──

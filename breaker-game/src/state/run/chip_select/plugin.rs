@@ -10,7 +10,7 @@ use super::{
         update_chip_display,
     },
 };
-use crate::state::{cleanup::cleanup_entities, types::ChipSelectState};
+use crate::{prelude::*, state::cleanup::cleanup_entities};
 
 /// Plugin for the between-node chip selection screen.
 pub(crate) struct ChipSelectPlugin;

@@ -4,10 +4,9 @@
 //! the player pressing bump input during the window.
 
 use super::helpers::*;
-use crate::breaker::{
-    components::{Breaker, BumpState},
-    definition::BreakerDefinition,
-    messages::BumpGrade,
+use crate::{
+    breaker::{components::BumpState, definition::BreakerDefinition, messages::BumpGrade},
+    prelude::*,
 };
 
 // ---------------------------------------------------------------------------
@@ -381,8 +380,6 @@ fn no_bump_sent_even_when_cooldown_is_active() {
 
 #[test]
 fn no_bump_sent_when_bolt_serving_present() {
-    use crate::bolt::components::BoltServing;
-
     let mut app = update_bump_with_no_bump_test_app();
 
     let bolt_entity = app.world_mut().spawn_empty().id();

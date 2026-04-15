@@ -1,6 +1,5 @@
 use bevy::prelude::*;
-use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
-use rantzsoft_spatial2d::components::{InterpolateTransform2D, Position2D, Scale2D, Spatial2D};
+use rantzsoft_spatial2d::components::{InterpolateTransform2D, Spatial2D};
 
 use super::{
     super::system::{compute_grid_scale, grid_extent, spawn_cells_from_layout},
@@ -13,10 +12,9 @@ use crate::{
         definition::Toughness,
         resources::{CellConfig, CellTypeRegistry},
     },
-    shared::{BOLT_LAYER, CELL_LAYER, GameDrawLayer, PlayfieldConfig},
-    state::run::node::{
-        ActiveNodeLayout, NodeLayout, definition::NodePool, messages::CellsSpawned,
-    },
+    prelude::*,
+    shared::GameDrawLayer,
+    state::run::node::{ActiveNodeLayout, definition::NodePool, messages::CellsSpawned},
 };
 
 // --- Position2D migration tests ---

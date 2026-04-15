@@ -1,10 +1,9 @@
 use bevy::prelude::*;
-use rantzsoft_stateflow::CleanupOnExit;
 
 use super::helpers::test_breaker_definition;
 use crate::{
-    breaker::components::{Breaker, ExtraBreaker, PrimaryBreaker},
-    state::types::{NodeState, RunState},
+    breaker::components::{ExtraBreaker, PrimaryBreaker},
+    prelude::*,
 };
 
 // ── Behavior 36: .primary() produces PrimaryBreaker + CleanupOnExit<RunState> ──

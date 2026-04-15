@@ -38,7 +38,7 @@ impl Fireable for RampingDamageConfig {
 
     fn register(app: &mut App) {
         use super::super::systems::reset_ramping_damage;
-        use crate::{effect_v3::EffectV3Systems, state::types::NodeState};
+        use crate::{effect_v3::EffectV3Systems, prelude::*};
 
         app.add_systems(
             OnEnter(NodeState::Loading),

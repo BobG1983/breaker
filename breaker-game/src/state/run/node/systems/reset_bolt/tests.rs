@@ -1,21 +1,19 @@
 use bevy::{ecs::world::CommandQueue, prelude::*};
-use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, Velocity2D};
+use rantzsoft_spatial2d::components::PreviousPosition;
 
 use super::*;
 use crate::{
     bolt::{
-        components::{
-            Bolt, BoltAngleSpread, BoltServing, BoltSpawnOffsetY, ExtraBolt, PiercingRemaining,
-        },
+        components::{BoltAngleSpread, BoltSpawnOffsetY, ExtraBolt, PiercingRemaining},
         definition::BoltDefinition,
         resources::{DEFAULT_BOLT_ANGLE_SPREAD, DEFAULT_BOLT_SPAWN_OFFSET_Y},
     },
-    breaker::components::Breaker,
     effect_v3::{
         effects::{DamageBoostConfig, SpeedBoostConfig},
         stacking::EffectStack,
     },
-    shared::{GameDrawLayer, GameRng},
+    prelude::*,
+    shared::GameDrawLayer,
     state::run::NodeOutcome,
 };
 
@@ -37,7 +35,6 @@ fn make_default_bolt_definition() -> BoltDefinition {
 }
 
 fn test_app() -> App {
-    use crate::shared::test_utils::TestAppBuilder;
     TestAppBuilder::new()
         .with_message::<crate::bolt::messages::BoltSpawned>()
         .with_resource::<NodeOutcome>()

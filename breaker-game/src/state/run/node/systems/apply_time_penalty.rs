@@ -2,9 +2,9 @@
 
 use bevy::prelude::*;
 
-use crate::state::run::node::{
-    NodeTimer,
-    messages::{ApplyTimePenalty, TimerExpired},
+use crate::{
+    prelude::*,
+    state::run::node::messages::{ApplyTimePenalty, TimerExpired},
 };
 
 /// Reads [`ApplyTimePenalty`] messages and subtracts from [`NodeTimer::remaining`].
@@ -56,7 +56,6 @@ mod tests {
     }
 
     fn test_app_with_send(remaining: f32) -> App {
-        use crate::shared::test_utils::TestAppBuilder;
         TestAppBuilder::new()
             .with_message::<ApplyTimePenalty>()
             .with_message::<TimerExpired>()
@@ -72,8 +71,6 @@ mod tests {
             )
             .build()
     }
-
-    use crate::shared::test_utils::tick;
 
     #[test]
     fn subtracts_from_timer() {

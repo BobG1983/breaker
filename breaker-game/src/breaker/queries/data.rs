@@ -1,9 +1,7 @@
 //! Breaker domain `QueryData` structs — named-field query types.
 
 use bevy::{ecs::query::QueryData, prelude::*};
-use rantzsoft_spatial2d::components::{
-    MaxSpeed, Position2D, PreviousPosition, Scale2D, Velocity2D,
-};
+use rantzsoft_spatial2d::components::{MaxSpeed, PreviousPosition};
 
 use crate::{
     breaker::components::{
@@ -14,11 +12,7 @@ use crate::{
         SettleDuration, SettleTiltEase,
     },
     effect_v3::{
-        effects::{
-            SizeBoostConfig, SpeedBoostConfig,
-            anchor::{AnchorActive, AnchorPlanted},
-            flash_step::FlashStepActive,
-        },
+        effects::{SizeBoostConfig, SpeedBoostConfig},
         stacking::EffectStack,
     },
     prelude::*,

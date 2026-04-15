@@ -1,9 +1,8 @@
 //! Tests for multiple bolts reflecting off the breaker independently.
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::Velocity2D;
 
-use crate::bolt::systems::bolt_breaker_collision::tests::helpers::*;
+use crate::{bolt::systems::bolt_breaker_collision::tests::helpers::*, prelude::*};
 
 #[test]
 fn multiple_bolts_each_reflect_off_breaker() {

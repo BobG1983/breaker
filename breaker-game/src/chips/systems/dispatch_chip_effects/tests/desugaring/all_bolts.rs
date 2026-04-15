@@ -7,9 +7,9 @@ use crate::{
     chips::{definition::ChipDefinition, systems::dispatch_chip_effects::tests::helpers::*},
     effect_v3::{
         effects::{DamageBoostConfig, ShockwaveConfig},
-        storage::BoundEffects,
         types::{EffectType, RootNode, StampTarget, Tree, Trigger},
     },
+    prelude::*,
 };
 
 // ── Behavior 4: ActiveBolts stamps tree directly to Breaker's BoundEffects ──

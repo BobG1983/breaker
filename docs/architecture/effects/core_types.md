@@ -297,14 +297,14 @@ impl GameEntity for Breaker {}
 /// Deferred chip attribution stored on spawned effect entities (shockwave,
 /// pulse ring, explode request, chain lightning chain, piercing beam request,
 /// tether beam). Damage-application systems read this to populate
-/// DamageCell.source_chip.
+/// DamageDealt.source_chip.
 #[derive(Component, Debug, Clone, Default)]
 pub struct EffectSourceChip(pub Option<String>);
 
 impl EffectSourceChip {
     /// Create from a chip name: empty string → EffectSourceChip(None), non-empty → Some(owned).
     pub fn new(source_chip: &str) -> Self { ... }
-    /// Extract the chip attribution for DamageCell.source_chip.
+    /// Extract the chip attribution for DamageDealt.source_chip.
     pub fn source_chip(&self) -> Option<String> { ... }
 }
 

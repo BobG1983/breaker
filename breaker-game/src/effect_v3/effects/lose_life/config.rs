@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::{effect_v3::traits::Fireable, shared::death_pipeline::Hp};
+use crate::{effect_v3::traits::Fireable, prelude::*};
 
 /// Decrements the entity's Hp by 1. Empty struct for trait uniformity.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -22,7 +22,7 @@ mod tests {
     use bevy::prelude::*;
 
     use super::*;
-    use crate::{effect_v3::traits::Fireable, shared::death_pipeline::Hp};
+    use crate::effect_v3::traits::Fireable;
 
     #[test]
     fn fire_decrements_hp_by_one() {

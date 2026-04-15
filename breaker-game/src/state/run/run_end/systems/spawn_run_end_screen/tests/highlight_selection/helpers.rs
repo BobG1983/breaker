@@ -1,7 +1,4 @@
-use crate::state::run::{
-    resources::{HighlightKind, RunHighlight},
-    run_end::systems::spawn_run_end_screen::tests::helpers::*,
-};
+use crate::{prelude::*, state::run::run_end::systems::spawn_run_end_screen::tests::helpers::*};
 
 /// Known highlight text prefixes used in `spawn_highlights_section`.
 pub(super) fn is_highlight_text(text: &str) -> bool {

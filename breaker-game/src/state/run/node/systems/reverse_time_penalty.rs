@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::state::run::node::{NodeTimer, messages::ReverseTimePenalty};
+use crate::{prelude::*, state::run::node::messages::ReverseTimePenalty};
 
 /// Reads [`ReverseTimePenalty`] messages and adds seconds back to
 /// [`NodeTimer::remaining`], clamping to [`NodeTimer::total`].
@@ -33,7 +33,6 @@ mod tests {
     }
 
     fn test_app_with_send(remaining: f32, total: f32) -> App {
-        use crate::shared::test_utils::TestAppBuilder;
         TestAppBuilder::new()
             .with_message::<ReverseTimePenalty>()
             .insert_resource(NodeTimer { remaining, total })
@@ -41,8 +40,6 @@ mod tests {
             .with_system(FixedUpdate, (send_reverse, reverse_time_penalty).chain())
             .build()
     }
-
-    use crate::shared::test_utils::tick;
 
     // ── Behavior 3: adds seconds back to remaining ────────────────
 

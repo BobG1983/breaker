@@ -1,13 +1,9 @@
 //! Tests for bolt spawning on subsequent nodes (behaviors 22-23).
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::Velocity2D;
 
 use super::helpers::test_app;
-use crate::{
-    bolt::components::{Bolt, BoltServing},
-    state::run::NodeOutcome,
-};
+use crate::{prelude::*, state::run::NodeOutcome};
 
 // ── Behavior 22: Non-zero velocity on subsequent nodes ────────────────
 

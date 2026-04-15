@@ -1,13 +1,11 @@
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
-use rantzsoft_spatial2d::components::{MaxSpeed, Position2D, Velocity2D};
+use rantzsoft_spatial2d::components::MaxSpeed;
 
 use super::system::*;
 use crate::{
     breaker::{
-        components::{
-            BaseWidth, Breaker, BreakerAcceleration, BreakerDeceleration, DashState, DecelEasing,
-        },
+        components::{BaseWidth, BreakerAcceleration, BreakerDeceleration, DashState, DecelEasing},
         definition::BreakerDefinition,
         test_utils::default_breaker_definition,
     },
@@ -15,8 +13,8 @@ use crate::{
         effects::{SizeBoostConfig, SpeedBoostConfig},
         stacking::EffectStack,
     },
-    input::resources::{GameAction, InputActions},
-    shared::{PlayfieldConfig, test_utils::TestAppBuilder},
+    input::resources::GameAction,
+    prelude::*,
 };
 
 fn speed_stack(values: &[f32]) -> EffectStack<SpeedBoostConfig> {
@@ -73,8 +71,6 @@ fn integration_app() -> App {
         .with_system(FixedUpdate, move_breaker)
         .build()
 }
-
-use crate::shared::test_utils::tick;
 
 fn spawn_breaker_at(app: &mut App, state: DashState, position: Vec2) -> Entity {
     let def = default_breaker_definition();

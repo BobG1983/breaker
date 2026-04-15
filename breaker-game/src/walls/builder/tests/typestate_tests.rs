@@ -1,5 +1,5 @@
 use super::{super::core::*, helpers::default_playfield};
-use crate::{shared::PlayfieldConfig, walls::components::Wall};
+use crate::{prelude::*, walls::components::Wall};
 
 // ── Behavior 1: Wall::builder() returns a builder in the unconfigured side state ──
 

@@ -10,14 +10,12 @@ use rantzsoft_physics2d::{prelude::reflect, resources::CollisionQuadtree};
 
 use crate::{
     bolt::{
-        components::{Bolt, LastImpact, wall_normal_to_impact_side},
+        components::{LastImpact, wall_normal_to_impact_side},
         filters::ActiveFilter,
-        messages::BoltImpactWall,
         queries::{BoltCollisionData, apply_velocity_formula},
     },
     effect_v3::stacking::EffectStack,
     prelude::*,
-    shared::WALL_LAYER,
 };
 
 /// Wall entity lookup for overlap detection — avoids clippy `type_complexity`.

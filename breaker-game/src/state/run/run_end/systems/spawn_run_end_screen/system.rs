@@ -3,9 +3,14 @@
 use bevy::{ecs::hierarchy::ChildSpawnerCommands, prelude::*};
 use tracing::info;
 
-use crate::state::run::{
-    definition::HighlightConfig, resources::*, run_end::RunEndScreen,
-    systems::select_highlights::select_highlights,
+use crate::{
+    prelude::*,
+    state::run::{
+        definition::HighlightConfig,
+        resources::{NodeOutcome, NodeResult},
+        run_end::RunEndScreen,
+        systems::select_highlights::select_highlights,
+    },
 };
 
 const WON_SUBTITLES: [&str; 5] = [

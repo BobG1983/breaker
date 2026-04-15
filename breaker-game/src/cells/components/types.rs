@@ -2,9 +2,8 @@
 
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Spatial2D;
-use rantzsoft_stateflow::CleanupOnExit;
 
-use crate::state::types::NodeState;
+use crate::prelude::*;
 
 /// Marker component identifying a cell entity.
 #[derive(Component, Debug, Default)]

@@ -31,22 +31,20 @@ pub(crate) fn normalize_bolt_speed_after_constraints(
 #[cfg(test)]
 mod tests {
     use bevy::{ecs::world::CommandQueue, prelude::*};
-    use rantzsoft_spatial2d::components::Velocity2D;
 
     use super::*;
-    use crate::bolt::{components::Bolt, definition::BoltDefinition, test_utils::speed_stack};
+    use crate::{
+        bolt::{definition::BoltDefinition, test_utils::speed_stack},
+        prelude::*,
+    };
 
     const TOLERANCE: f32 = 0.5;
 
     fn test_app() -> App {
-        use crate::shared::test_utils::TestAppBuilder;
-
         TestAppBuilder::new()
             .with_system(FixedUpdate, normalize_bolt_speed_after_constraints)
             .build()
     }
-
-    use crate::shared::test_utils::tick;
 
     /// Creates a `BoltDefinition` with the specified speed parameters.
     fn bolt_definition(base_speed: f32, min_speed: f32, max_speed: f32) -> BoltDefinition {

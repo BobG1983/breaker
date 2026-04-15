@@ -6,7 +6,7 @@ use super::{
     MainMenuScreen,
     systems::{handle_main_menu_input, spawn_main_menu, update_menu_colors},
 };
-use crate::state::{cleanup::cleanup_entities, types::MenuState};
+use crate::{prelude::*, state::cleanup::cleanup_entities};
 
 /// Plugin for the main menu screen.
 pub(crate) struct MainMenuPlugin;

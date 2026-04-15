@@ -1,11 +1,11 @@
 //! Bump visual feedback — eased upward pop animation on the breaker.
 
 use bevy::{math::curve::Curve, prelude::*};
-use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
     breaker::{components::*, filters::BumpTriggerFilter},
-    input::resources::{GameAction, InputActions},
+    input::resources::GameAction,
+    prelude::*,
 };
 
 /// Triggers a bump pop animation when the player presses bump.

@@ -21,7 +21,7 @@ mod tests {
 
     #[test]
     fn cleanup_entities_despawns_marked_entities() {
-        use crate::shared::test_utils::TestAppBuilder;
+        use crate::prelude::*;
         let mut app = TestAppBuilder::new()
             .with_system(Update, cleanup_entities::<TestMarker>)
             .build();

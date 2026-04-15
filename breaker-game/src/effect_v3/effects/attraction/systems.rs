@@ -1,13 +1,9 @@
 //! Attraction systems — apply attraction forces.
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use super::components::ActiveAttractions;
-use crate::{
-    bolt::components::Bolt, breaker::components::Breaker, cells::components::Cell,
-    effect_v3::types::AttractionType, walls::components::Wall,
-};
+use crate::{effect_v3::types::AttractionType, prelude::*};
 
 /// Applies attraction forces from all entries to the bolt's velocity each frame.
 pub fn apply_attraction_forces(

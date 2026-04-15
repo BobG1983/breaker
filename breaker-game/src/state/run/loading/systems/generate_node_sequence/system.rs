@@ -2,9 +2,9 @@ use bevy::prelude::*;
 use rand::{Rng, seq::SliceRandom};
 use rand_chacha::ChaCha8Rng;
 
-use crate::state::run::{
-    definition::{NodeType, TierNodeCount},
-    resources::{DifficultyCurve, NodeAssignment, NodeSequence},
+use crate::{
+    prelude::*,
+    state::run::resources::{DifficultyCurve, NodeAssignment, NodeSequence},
 };
 
 /// Generates a deterministic node sequence from the difficulty curve.
@@ -81,7 +81,7 @@ pub(super) fn generate_node_sequence(
 /// Runs on `OnExit(GameState::MainMenu)`, after `reset_run_state` reseeds the RNG.
 pub(crate) fn generate_node_sequence_system(
     curve: Res<DifficultyCurve>,
-    mut rng: ResMut<crate::shared::GameRng>,
+    mut rng: ResMut<GameRng>,
     mut commands: Commands,
 ) {
     let sequence = generate_node_sequence(&curve, &mut rng.0);

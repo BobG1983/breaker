@@ -1,13 +1,10 @@
 use bevy::prelude::*;
-use rantzsoft_stateflow::CleanupOnExit;
 
 use super::helpers::*;
 use crate::{
     fx::{FadeOut, PunchScale},
-    state::{
-        run::{components::HighlightPopup, messages::HighlightTriggered, resources::HighlightKind},
-        types::NodeState,
-    },
+    prelude::*,
+    state::run::{components::HighlightPopup, messages::HighlightTriggered},
 };
 
 // ---------------------------------------------------------------

@@ -1,10 +1,9 @@
 use bevy::prelude::*;
-use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
-use rantzsoft_spatial2d::components::{Position2D, Scale2D};
 
 use super::helpers::default_playfield;
 use crate::{
-    shared::{BOLT_LAYER, GameDrawLayer, WALL_LAYER},
+    prelude::*,
+    shared::GameDrawLayer,
     walls::{components::Wall, definition::WallDefinition},
 };
 

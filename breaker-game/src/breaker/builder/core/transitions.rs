@@ -3,10 +3,7 @@
 use bevy::prelude::*;
 
 use super::types::*;
-use crate::{
-    breaker::{components::Breaker, definition::BreakerDefinition},
-    effect_v3::types::RootNode,
-};
+use crate::{breaker::definition::BreakerDefinition, effect_v3::types::RootNode, prelude::*};
 
 // ── Entry point ─────────────────────────────────────────────────────────────
 

@@ -11,9 +11,9 @@ use crate::{
     effect_v3::{
         effects::{DamageBoostConfig, ShieldConfig, ShockwaveConfig},
         stacking::EffectStack,
-        storage::BoundEffects,
         types::{EffectType, EntityKind, RootNode, StampTarget, Tree, Trigger},
     },
+    prelude::*,
 };
 
 // ── Behavior 13: Mixed Fire and When stamps on Breaker ──

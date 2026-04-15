@@ -3,12 +3,12 @@ use bevy::prelude::*;
 use super::*;
 use crate::{
     breaker::{
-        components::{Breaker, BumpFeedback, BumpFeedbackState, BumpState},
+        components::{BumpFeedback, BumpFeedbackState, BumpState},
         definition::BreakerDefinition,
         test_utils::default_breaker_definition,
     },
-    input::resources::{GameAction, InputActions},
-    shared::test_utils::TestAppBuilder,
+    input::resources::GameAction,
+    prelude::*,
 };
 
 fn default_bump_feedback() -> BumpFeedback {
@@ -106,8 +106,6 @@ fn trigger_test_app() -> App {
         .build()
 }
 
-use crate::shared::test_utils::tick;
-
 fn set_bump_action(app: &mut App) {
     app.world_mut()
         .resource_mut::<InputActions>()
@@ -203,8 +201,6 @@ fn animate_applies_position2d_y_offset_during_animation() {
     //        Position2D(Vec2::new(0.0, -250.0))
     // When: animate_bump_visual runs
     // Then: Position2D.0.y > -250.0 (popped up)
-    use rantzsoft_spatial2d::components::Position2D;
-
     let mut app = animate_test_app();
     let config = BreakerDefinition::default();
     let params = default_bump_feedback();
@@ -237,8 +233,6 @@ fn animate_applies_position2d_y_offset_during_animation() {
 
 #[test]
 fn animate_removes_bump_visual_when_done() {
-    use rantzsoft_spatial2d::components::Position2D;
-
     let mut app = animate_test_app();
     let config = BreakerDefinition::default();
     let params = default_bump_feedback();
@@ -272,8 +266,6 @@ fn animate_removes_bump_visual_when_done() {
 #[test]
 fn animate_snaps_position2d_to_base_after_expiry() {
     // Edge case: animation complete -> Position2D.0.y snaps to -250.0
-    use rantzsoft_spatial2d::components::Position2D;
-
     let mut app = animate_test_app();
     let config = BreakerDefinition::default();
     let params = default_bump_feedback();

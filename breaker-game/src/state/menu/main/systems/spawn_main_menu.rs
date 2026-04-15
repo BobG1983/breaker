@@ -95,10 +95,7 @@ mod tests {
     use bevy::state::app::StatesPlugin;
 
     use super::*;
-    use crate::state::{
-        cleanup::cleanup_entities,
-        types::{AppState, GameState, MenuState},
-    };
+    use crate::{prelude::*, state::cleanup::cleanup_entities};
 
     fn test_config() -> MainMenuConfig {
         MainMenuConfig {

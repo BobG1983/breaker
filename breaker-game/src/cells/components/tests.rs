@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 use super::*;
+use crate::prelude::*;
 
 #[test]
 fn cell_width_half_width() {
@@ -31,9 +32,6 @@ fn cell_require_inserts_spatial2d() {
 
 #[test]
 fn cell_require_inserts_cleanup_on_exit_node_state() {
-    use rantzsoft_stateflow::CleanupOnExit;
-
-    use crate::state::types::NodeState;
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
     let entity = app.world_mut().spawn(Cell).id();
@@ -61,7 +59,7 @@ fn cell_require_does_not_insert_interpolate_transform2d() {
 
 #[test]
 fn cell_explicit_values_override_defaults() {
-    use rantzsoft_spatial2d::components::{Position2D, Scale2D, Spatial2D};
+    use rantzsoft_spatial2d::components::Spatial2D;
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
     let entity = app
@@ -99,9 +97,6 @@ fn cell_explicit_values_override_defaults() {
 
 #[test]
 fn cell_collision_layers_have_correct_values() {
-    use rantzsoft_physics2d::collision_layers::CollisionLayers;
-
-    use crate::shared::{BOLT_LAYER, CELL_LAYER};
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
     let entity = app

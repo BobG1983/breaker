@@ -5,7 +5,7 @@ use bevy_egui::EguiContexts;
 
 use crate::{
     debug::resources::{DebugOverlays, Overlay},
-    input::resources::InputActions,
+    prelude::*,
 };
 
 /// Renders an "Input Actions" egui window listing active actions this frame.

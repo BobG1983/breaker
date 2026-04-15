@@ -1,9 +1,7 @@
 use bevy::prelude::*;
-use rantzsoft_physics2d::aabb::Aabb2D;
-use rantzsoft_spatial2d::components::{Position2D, Scale2D};
 
 use super::helpers::default_playfield;
-use crate::{shared::PlayfieldConfig, walls::components::Wall};
+use crate::{prelude::*, walls::components::Wall};
 
 // ── Behavior 40: Left wall position scales with custom playfield width ──
 

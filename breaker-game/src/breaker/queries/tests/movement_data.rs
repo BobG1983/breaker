@@ -1,16 +1,17 @@
 use bevy::{math::curve::easing::EaseFunction, prelude::*};
 use ordered_float::OrderedFloat;
-use rantzsoft_spatial2d::components::{MaxSpeed, Position2D, Velocity2D};
+use rantzsoft_spatial2d::components::MaxSpeed;
 
 use super::{super::data::*, helpers::*};
 use crate::{
     breaker::components::{
-        BaseWidth, Breaker, BreakerAcceleration, BreakerDeceleration, DashState, DecelEasing,
+        BaseWidth, BreakerAcceleration, BreakerDeceleration, DashState, DecelEasing,
     },
     effect_v3::{
         effects::{SizeBoostConfig, SpeedBoostConfig},
         stacking::EffectStack,
     },
+    prelude::*,
 };
 
 fn speed_stack(values: &[f32]) -> EffectStack<SpeedBoostConfig> {

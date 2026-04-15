@@ -12,7 +12,7 @@ use crate::{
         },
         types::{BumpTarget, EffectType, ParticipantTarget, Terminal, Tree, Trigger},
     },
-    shared::test_utils::TestAppBuilder,
+    prelude::*,
 };
 
 // -- Helpers ----------------------------------------------------------
@@ -43,10 +43,6 @@ fn bridge_test_app() -> App {
             ),
         )
         .build()
-}
-
-fn tick(app: &mut App) {
-    crate::shared::test_utils::tick(app);
 }
 
 /// Helper to build a When(TimeExpires(duration), Fire(SpeedBoost)) tree.

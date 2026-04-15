@@ -2,7 +2,7 @@
 //! and fractional rounding.
 
 use super::{super::system::generate_node_sequence, helpers::*};
-use crate::state::run::definition::{NodeType, TierNodeCount};
+use crate::prelude::*;
 
 // -- 5. active_ratio 0.0 produces all Passive --
 

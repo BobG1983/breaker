@@ -1,9 +1,9 @@
 //! Tests for `detect_deaths<T>`.
 
 use super::helpers::{TestEntity, build_detect_deaths_app};
-use crate::shared::{
-    death_pipeline::{dead::Dead, hp::Hp, kill_yourself::KillYourself, killed_by::KilledBy},
-    test_utils::MessageCollector,
+use crate::{
+    prelude::*,
+    shared::death_pipeline::{kill_yourself::KillYourself, killed_by::KilledBy},
 };
 
 #[test]
@@ -22,7 +22,7 @@ fn detect_deaths_sends_kill_yourself_when_hp_zero() {
         ))
         .id();
 
-    crate::shared::test_utils::tick(&mut app);
+    tick(&mut app);
 
     let collector = app
         .world()
@@ -54,7 +54,7 @@ fn detect_deaths_sends_kill_yourself_when_hp_negative() {
         ))
         .id();
 
-    crate::shared::test_utils::tick(&mut app);
+    tick(&mut app);
 
     let collector = app
         .world()
@@ -69,7 +69,7 @@ fn detect_deaths_does_not_send_for_positive_hp() {
     app.world_mut()
         .spawn((TestEntity, Hp::new(10.0), KilledBy::default()));
 
-    crate::shared::test_utils::tick(&mut app);
+    tick(&mut app);
 
     let collector = app
         .world()
@@ -94,7 +94,7 @@ fn detect_deaths_skips_dead_entities() {
         Dead,
     ));
 
-    crate::shared::test_utils::tick(&mut app);
+    tick(&mut app);
 
     let collector = app
         .world()
@@ -121,7 +121,7 @@ fn detect_deaths_includes_killer_from_killed_by() {
         },
     ));
 
-    crate::shared::test_utils::tick(&mut app);
+    tick(&mut app);
 
     let collector = app
         .world()

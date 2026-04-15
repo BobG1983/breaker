@@ -1,21 +1,17 @@
 //! Bolt-breaker collision detection and reflection via CCD.
 
 use bevy::prelude::*;
-use rantzsoft_physics2d::{
-    aabb::Aabb2D, collision_layers::CollisionLayers, resources::CollisionQuadtree,
-};
-use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
+use rantzsoft_physics2d::resources::CollisionQuadtree;
 
 use crate::{
     bolt::{
         components::{ImpactSide, LastImpact, PiercingRemaining, ccd_normal_to_impact_side},
         filters::ActiveFilter,
-        messages::BoltImpactBreaker,
         queries::{BoltCollisionData, apply_velocity_formula},
     },
     breaker::{filters::CollisionFilterBreaker, queries::BreakerCollisionData},
     effect_v3::{effects::PiercingConfig, stacking::EffectStack},
-    shared::BREAKER_LAYER,
+    prelude::*,
 };
 
 /// Data bundling a CCD sweep result for breaker reflection.

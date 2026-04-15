@@ -2,7 +2,7 @@
 //! empty tiers, and `Fixed(0)`.
 
 use super::{super::system::generate_node_sequence, helpers::*};
-use crate::state::run::definition::{NodeType, TierNodeCount};
+use crate::prelude::*;
 
 // -- 3. Fixed(5) produces 5 non-boss + 1 boss per tier --
 

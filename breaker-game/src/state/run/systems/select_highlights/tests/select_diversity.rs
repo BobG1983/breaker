@@ -4,7 +4,7 @@ use super::{
     super::system::select_highlights,
     helpers::{default_config, highlight},
 };
-use crate::state::run::resources::{HighlightKind, RunHighlight};
+use crate::prelude::*;
 
 #[test]
 fn select_highlights_different_categories_picks_top_by_score() {

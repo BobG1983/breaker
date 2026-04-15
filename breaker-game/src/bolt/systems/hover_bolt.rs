@@ -3,10 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    bolt::{
-        components::{Bolt, BoltSpawnOffsetY},
-        filters::ServingFilter,
-    },
+    bolt::{components::BoltSpawnOffsetY, filters::ServingFilter},
     prelude::*,
 };
 
@@ -30,13 +27,10 @@ pub fn hover_bolt(
 
 #[cfg(test)]
 mod tests {
-    use rantzsoft_spatial2d::components::{Position2D, Spatial2D, Velocity2D};
+    use rantzsoft_spatial2d::components::Spatial2D;
 
     use super::*;
-    use crate::{
-        bolt::components::BoltServing,
-        shared::{GameDrawLayer, test_utils::tick},
-    };
+    use crate::shared::GameDrawLayer;
 
     #[test]
     fn hover_bolt_writes_position2d_tracking_breaker() {
@@ -88,13 +82,10 @@ mod tests {
     // ── Behavior 7: hover_bolt still positions birthing+serving bolts ──
 
     /// Helper to create a `Birthing` component for tests.
-    fn test_birthing() -> crate::shared::birthing::Birthing {
-        use rantzsoft_physics2d::collision_layers::CollisionLayers;
-        use rantzsoft_spatial2d::components::Scale2D;
-
+    fn test_birthing() -> Birthing {
         use crate::shared::birthing::BIRTHING_DURATION;
 
-        crate::shared::birthing::Birthing {
+        Birthing {
             timer:          Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
             target_scale:   Scale2D { x: 8.0, y: 8.0 },
             stashed_layers: CollisionLayers::default(),

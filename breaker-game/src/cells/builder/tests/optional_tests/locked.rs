@@ -3,10 +3,7 @@
 use bevy::prelude::*;
 
 use super::helpers::*;
-use crate::{
-    cells::components::{Cell, Locked, Locks},
-    shared::death_pipeline::hp::Hp,
-};
+use crate::{cells::components::Cell, prelude::*};
 
 // Behavior 31: .locked(entities) stores lock data for spawn
 #[test]

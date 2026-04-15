@@ -2,9 +2,9 @@
 
 use bevy::prelude::*;
 
-use crate::state::run::{
-    definition::NodeType,
-    resources::{NodeOutcome, NodeSequence},
+use crate::{
+    prelude::*,
+    state::run::resources::{NodeOutcome, NodeSequence},
 };
 
 /// Increments the node index and resets the transition flag.
@@ -34,13 +34,9 @@ pub(crate) fn advance_node(mut outcome: ResMut<NodeOutcome>, sequence: Option<Re
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::run::{
-        definition::NodeType,
-        resources::{NodeAssignment, NodeSequence},
-    };
+    use crate::state::run::resources::{NodeAssignment, NodeSequence};
 
     fn test_app() -> App {
-        use crate::shared::test_utils::TestAppBuilder;
         TestAppBuilder::new()
             .insert_resource(NodeOutcome {
                 node_index: 0,
@@ -81,7 +77,6 @@ mod tests {
         cleared_this_frame: bool,
         assignments: Vec<NodeAssignment>,
     ) -> App {
-        use crate::shared::test_utils::TestAppBuilder;
         TestAppBuilder::new()
             .insert_resource(NodeOutcome {
                 node_index,
@@ -295,7 +290,6 @@ mod tests {
     // Behavior 27: advance_node gracefully handles missing NodeSequence resource
     #[test]
     fn advance_without_node_sequence_only_increments_index() {
-        use crate::shared::test_utils::TestAppBuilder;
         let mut app = TestAppBuilder::new()
             .insert_resource(NodeOutcome {
                 node_index: 0,

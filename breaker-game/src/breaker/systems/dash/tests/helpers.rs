@@ -1,10 +1,10 @@
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{MaxSpeed, Velocity2D};
+use rantzsoft_spatial2d::components::MaxSpeed;
 
 use crate::{
     breaker::{
         components::{
-            BrakeDecel, BrakeTilt, Breaker, BreakerDeceleration, BreakerTilt, DashDuration,
+            BrakeDecel, BrakeTilt, BreakerDeceleration, BreakerTilt, DashDuration,
             DashSpeedMultiplier, DashState, DashStateTimer, DashTilt, DashTiltEase, DecelEasing,
             SettleDuration, SettleTiltEase,
         },
@@ -12,8 +12,7 @@ use crate::{
         systems::dash::system::*,
         test_utils::default_breaker_definition,
     },
-    input::resources::InputActions,
-    shared::{PlayfieldConfig, test_utils::TestAppBuilder},
+    prelude::*,
 };
 
 pub(super) fn breaker_param_bundle(
@@ -74,5 +73,3 @@ pub(super) fn test_app() -> App {
         .with_system(FixedUpdate, update_breaker_state)
         .build()
 }
-
-pub(super) use crate::shared::test_utils::tick;

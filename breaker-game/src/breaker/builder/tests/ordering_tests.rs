@@ -3,10 +3,8 @@ use rantzsoft_spatial2d::components::MaxSpeed;
 
 use super::{super::core::*, helpers::test_breaker_definition};
 use crate::{
-    breaker::{
-        components::{Breaker, BreakerBaseY},
-        definition::BreakerDefinition,
-    },
+    breaker::{components::BreakerBaseY, definition::BreakerDefinition},
+    prelude::*,
     shared::BaseWidth,
 };
 

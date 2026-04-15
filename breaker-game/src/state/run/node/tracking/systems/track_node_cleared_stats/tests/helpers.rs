@@ -1,15 +1,15 @@
 use bevy::prelude::*;
 
 use crate::{
-    shared::test_utils::TestAppBuilder,
+    prelude::*,
     state::run::{
         definition::HighlightConfig,
         messages::HighlightTriggered,
         node::{
-            messages::NodeCleared, resources::NodeTimer,
+            messages::NodeCleared,
             tracking::systems::track_node_cleared_stats::system::track_node_cleared_stats,
         },
-        resources::{HighlightTracker, NodeOutcome, RunStats},
+        resources::{HighlightTracker, NodeOutcome},
     },
 };
 
@@ -43,5 +43,3 @@ pub(super) fn test_app() -> App {
         )
         .build()
 }
-
-pub(super) use crate::shared::test_utils::tick;

@@ -1,6 +1,5 @@
 use bevy::prelude::*;
-use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
-use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D};
+use rantzsoft_spatial2d::components::{GlobalPosition2D, Spatial2D};
 
 // Re-export constants used by test modules
 pub(super) use crate::bolt::systems::bolt_cell_collision::system::MAX_BOUNCES;
@@ -8,19 +7,14 @@ pub(super) use crate::bolt::test_utils::{
     default_bolt_definition as test_bolt_definition, spawn_bolt,
 };
 use crate::{
-    bolt::{
-        messages::{BoltImpactCell, BoltImpactWall},
-        systems::bolt_cell_collision::system::bolt_cell_collision,
-    },
+    bolt::systems::bolt_cell_collision::system::bolt_cell_collision,
     cells::{
-        components::{Cell, CellHeight, CellWidth},
+        components::{CellHeight, CellWidth},
         test_utils as cell_test_utils,
     },
     effect_v3::{effects::VulnerableConfig, stacking::EffectStack},
-    shared::{
-        BOLT_LAYER, CELL_LAYER, GameDrawLayer,
-        death_pipeline::{damage_dealt::DamageDealt, hp::Hp, killed_by::KilledBy},
-    },
+    prelude::*,
+    shared::GameDrawLayer,
 };
 
 /// Real grid vertical spacing: `cell_height` (24) + padding (4) = 28
@@ -29,8 +23,6 @@ pub(super) const GRID_STEP_Y: f32 = 28.0;
 pub(super) const GRID_STEP_X: f32 = 74.0;
 
 pub(super) fn test_app() -> App {
-    use crate::shared::test_utils::TestAppBuilder;
-
     TestAppBuilder::new()
         .with_physics()
         .with_message::<BoltImpactCell>()
@@ -48,7 +40,7 @@ pub(super) fn default_cell_dims() -> (CellWidth, CellHeight) {
     cell_test_utils::default_cell_dims()
 }
 
-pub(super) use crate::shared::test_utils::tick;
+pub(super) use crate::prelude::tick;
 
 /// Cell entities use `Position2D` as canonical position.
 pub(super) fn spawn_cell(app: &mut App, x: f32, y: f32) -> Entity {
@@ -198,8 +190,6 @@ pub(super) fn collect_wall_hits(
 /// Creates a test app with `DamageDealt<Cell>` and `BoltImpactWall` message capture
 /// in addition to the standard `BoltImpactCell`.
 pub(super) fn test_app_with_damage_and_wall_messages() -> App {
-    use crate::shared::test_utils::TestAppBuilder;
-
     TestAppBuilder::new()
         .with_physics()
         .with_message::<BoltImpactCell>()

@@ -1,16 +1,11 @@
 use std::{collections::HashSet, time::Duration};
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::Position2D;
 
 use super::system::*;
 use crate::{
-    cells::components::Cell,
     effect_v3::{components::EffectSourceChip, effects::shockwave::components::*},
-    shared::{
-        death_pipeline::{DamageDealt, Dead},
-        test_utils::{MessageCollector, TestAppBuilder, tick},
-    },
+    prelude::*,
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────

@@ -2,9 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::{
-    cells::components::Cell, shared::death_pipeline::Destroyed, state::run::resources::RunStats,
-};
+use crate::prelude::*;
 
 /// Reads [`Destroyed<Cell>`] messages and increments
 /// [`RunStats::cells_destroyed`].
@@ -22,7 +20,6 @@ mod tests {
     use std::marker::PhantomData;
 
     use super::*;
-    use crate::{cells::components::Cell, shared::death_pipeline::destroyed::Destroyed};
 
     #[derive(Resource)]
     struct TestMessages(Vec<Destroyed<Cell>>);
@@ -34,7 +31,6 @@ mod tests {
     }
 
     fn test_app() -> App {
-        use crate::shared::test_utils::TestAppBuilder;
         TestAppBuilder::new()
             .with_message::<Destroyed<Cell>>()
             .with_resource::<RunStats>()
@@ -54,8 +50,6 @@ mod tests {
             _marker:    PhantomData,
         }
     }
-
-    use crate::shared::test_utils::tick;
 
     #[test]
     fn increments_cells_destroyed_for_each_message() {

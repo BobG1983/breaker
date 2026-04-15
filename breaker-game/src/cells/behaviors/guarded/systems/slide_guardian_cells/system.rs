@@ -3,11 +3,13 @@
 use std::collections::HashMap;
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::Position2D;
 
-use crate::cells::behaviors::guarded::components::{
-    GuardedCell, GuardianCell, GuardianGridStep, GuardianSlideSpeed, GuardianSlot, SlideTarget,
-    ring_slot_offset,
+use crate::{
+    cells::behaviors::guarded::components::{
+        GuardedCell, GuardianCell, GuardianGridStep, GuardianSlideSpeed, GuardianSlot, SlideTarget,
+        ring_slot_offset,
+    },
+    prelude::*,
 };
 
 /// Slides guardian cells toward their target ring slot each fixed timestep.

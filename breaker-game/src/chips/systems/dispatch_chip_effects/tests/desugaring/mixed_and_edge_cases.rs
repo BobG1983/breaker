@@ -11,9 +11,9 @@ use crate::{
             DamageBoostConfig, PiercingConfig, ShieldConfig, ShockwaveConfig, SpeedBoostConfig,
         },
         stacking::EffectStack,
-        storage::BoundEffects,
         types::{EffectType, EntityKind, RootNode, StampTarget, Tree, Trigger},
     },
+    prelude::*,
 };
 
 // ── Behavior 10: chip_name is preserved in stamped BoundEffects entries ──

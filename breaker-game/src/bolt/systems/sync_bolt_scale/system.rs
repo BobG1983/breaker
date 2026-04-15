@@ -5,10 +5,7 @@
 
 use bevy::prelude::*;
 
-use crate::{
-    bolt::{components::Bolt, queries::SyncBoltScaleData},
-    prelude::*,
-};
+use crate::{bolt::queries::SyncBoltScaleData, prelude::*};
 
 /// Sets bolt [`Scale2D`] based on [`BaseRadius`], optional [`ActiveSizeBoosts`],
 /// optional [`NodeScalingFactor`], and optional min/max radius constraints.

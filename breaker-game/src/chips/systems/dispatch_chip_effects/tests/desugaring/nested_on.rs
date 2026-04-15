@@ -12,9 +12,9 @@ use crate::{
     effect_v3::{
         effects::{DamageBoostConfig, SpeedBoostConfig},
         stacking::EffectStack,
-        storage::BoundEffects,
         types::{EffectType, RootNode, StampTarget, Tree, Trigger},
     },
+    prelude::*,
 };
 
 // ── Multi-target chip with Breaker + Bolt stamps ──

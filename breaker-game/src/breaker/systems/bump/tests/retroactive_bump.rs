@@ -1,8 +1,7 @@
 use super::helpers::*;
-use crate::breaker::{
-    components::{Breaker, BumpState},
-    definition::BreakerDefinition,
-    messages::BumpGrade,
+use crate::{
+    breaker::{components::BumpState, definition::BreakerDefinition, messages::BumpGrade},
+    prelude::*,
 };
 
 #[test]

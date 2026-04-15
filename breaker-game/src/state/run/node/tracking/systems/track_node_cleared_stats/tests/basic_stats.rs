@@ -2,9 +2,9 @@
 //! `NoDamageNode`, `FastClear`, and `PerfectStreak`.
 
 use super::helpers::*;
-use crate::state::run::{
-    node::resources::NodeTimer,
-    resources::{HighlightKind, HighlightTracker, NodeOutcome, RunStats},
+use crate::{
+    prelude::*,
+    state::run::resources::{HighlightTracker, NodeOutcome},
 };
 
 #[test]

@@ -1,14 +1,13 @@
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
-use rantzsoft_spatial2d::components::Position2D;
 
 use super::helpers::{custom_wall_definition, default_playfield};
 use crate::{
     effect_v3::{
         effects::SpeedBoostConfig,
-        storage::BoundEffects,
         types::{EffectType, RootNode, StampTarget, Tree, Trigger},
     },
+    prelude::*,
     shared::GameDrawLayer,
     walls::{components::Wall, definition::WallDefinition},
 };

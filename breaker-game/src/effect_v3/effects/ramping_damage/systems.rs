@@ -18,7 +18,7 @@ mod tests {
     use ordered_float::OrderedFloat;
 
     use super::*;
-    use crate::shared::test_utils::{TestAppBuilder, tick};
+    use crate::prelude::*;
 
     fn reset_test_app() -> App {
         TestAppBuilder::new()

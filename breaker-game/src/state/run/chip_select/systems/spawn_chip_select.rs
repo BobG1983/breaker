@@ -173,7 +173,7 @@ mod tests {
     }
 
     fn test_app_with_offers(offers: ChipOffers) -> App {
-        use crate::shared::test_utils::TestAppBuilder;
+        use crate::prelude::*;
         TestAppBuilder::new()
             .insert_resource(ChipSelectConfig::default())
             .insert_resource(offers)

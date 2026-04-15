@@ -6,8 +6,9 @@ use super::helpers::{
     PendingDamage, TestEntity, build_apply_damage_app, damage_msg, spawn_test_entity,
     spawn_test_entity_invulnerable,
 };
-use crate::shared::death_pipeline::{
-    dead::Dead, hp::Hp, invulnerable::Invulnerable, killed_by::KilledBy,
+use crate::{
+    prelude::*,
+    shared::death_pipeline::{invulnerable::Invulnerable, killed_by::KilledBy},
 };
 
 #[test]
@@ -16,7 +17,7 @@ fn apply_damage_reduces_hp() {
     let entity = spawn_test_entity(&mut app, 30.0);
 
     app.insert_resource(PendingDamage(vec![damage_msg(entity, 10.0, None)]));
-    crate::shared::test_utils::tick(&mut app);
+    tick(&mut app);
 
     let hp = app.world().get::<Hp>(entity).unwrap();
     assert!(
@@ -34,7 +35,7 @@ fn apply_damage_inserts_dead_marker_is_not_its_job() {
     let entity = spawn_test_entity(&mut app, 10.0);
 
     app.insert_resource(PendingDamage(vec![damage_msg(entity, 10.0, None)]));
-    crate::shared::test_utils::tick(&mut app);
+    tick(&mut app);
 
     assert!(
         app.world().get::<Dead>(entity).is_none(),
@@ -49,7 +50,7 @@ fn apply_damage_sets_killed_by_on_killing_blow() {
     let dealer = app.world_mut().spawn_empty().id();
 
     app.insert_resource(PendingDamage(vec![damage_msg(entity, 10.0, Some(dealer))]));
-    crate::shared::test_utils::tick(&mut app);
+    tick(&mut app);
 
     let killed_by = app.world().get::<KilledBy>(entity).unwrap();
     assert_eq!(
@@ -66,7 +67,7 @@ fn apply_damage_sets_killed_by_when_dealer_is_none() {
     let entity = spawn_test_entity(&mut app, 10.0);
 
     app.insert_resource(PendingDamage(vec![damage_msg(entity, 10.0, None)]));
-    crate::shared::test_utils::tick(&mut app);
+    tick(&mut app);
 
     let killed_by = app.world().get::<KilledBy>(entity).unwrap();
     assert_eq!(
@@ -82,7 +83,7 @@ fn apply_damage_does_not_set_killed_by_when_hp_stays_positive() {
     let dealer = app.world_mut().spawn_empty().id();
 
     app.insert_resource(PendingDamage(vec![damage_msg(entity, 10.0, Some(dealer))]));
-    crate::shared::test_utils::tick(&mut app);
+    tick(&mut app);
 
     let killed_by = app.world().get::<KilledBy>(entity).unwrap();
     assert_eq!(
@@ -100,7 +101,7 @@ fn apply_damage_skips_entity_already_dead() {
         .id();
 
     app.insert_resource(PendingDamage(vec![damage_msg(entity, 5.0, None)]));
-    crate::shared::test_utils::tick(&mut app);
+    tick(&mut app);
 
     let hp = app.world().get::<Hp>(entity).unwrap();
     assert!(
@@ -118,7 +119,7 @@ fn apply_damage_skips_entity_without_hp() {
 
     app.insert_resource(PendingDamage(vec![damage_msg(entity, 5.0, None)]));
     // Should not panic
-    crate::shared::test_utils::tick(&mut app);
+    tick(&mut app);
 
     assert!(
         app.world().get::<Hp>(entity).is_none(),
@@ -139,7 +140,7 @@ fn apply_damage_first_kill_wins() {
         damage_msg(entity, 10.0, Some(dealer_a)),
         damage_msg(entity, 5.0, Some(dealer_b)),
     ]));
-    crate::shared::test_utils::tick(&mut app);
+    tick(&mut app);
 
     let killed_by = app.world().get::<KilledBy>(entity).unwrap();
     assert_eq!(
@@ -158,7 +159,7 @@ fn apply_damage_multiple_messages_accumulate() {
         damage_msg(entity, 10.0, None),
         damage_msg(entity, 8.0, None),
     ]));
-    crate::shared::test_utils::tick(&mut app);
+    tick(&mut app);
 
     let hp = app.world().get::<Hp>(entity).unwrap();
     assert!(
@@ -174,7 +175,7 @@ fn apply_damage_overkill_sets_negative_hp() {
     let entity = spawn_test_entity(&mut app, 10.0);
 
     app.insert_resource(PendingDamage(vec![damage_msg(entity, 25.0, None)]));
-    crate::shared::test_utils::tick(&mut app);
+    tick(&mut app);
 
     let hp = app.world().get::<Hp>(entity).unwrap();
     assert!(
@@ -198,7 +199,7 @@ fn apply_damage_skips_invulnerable_entity() {
     let entity = spawn_test_entity_invulnerable(&mut app, 3.0);
 
     app.insert_resource(PendingDamage(vec![damage_msg(entity, 1.0, None)]));
-    crate::shared::test_utils::tick(&mut app);
+    tick(&mut app);
 
     let hp = app.world().get::<Hp>(entity).unwrap();
     assert!(
@@ -228,7 +229,7 @@ fn apply_damage_skips_invulnerable_entity_against_overkill() {
     let entity = spawn_test_entity_invulnerable(&mut app, 3.0);
 
     app.insert_resource(PendingDamage(vec![damage_msg(entity, 1000.0, None)]));
-    crate::shared::test_utils::tick(&mut app);
+    tick(&mut app);
 
     let hp = app.world().get::<Hp>(entity).unwrap();
     assert!(
@@ -251,7 +252,7 @@ fn apply_damage_invulnerable_entity_does_not_record_dealer() {
         1000.0,
         Some(dealer),
     )]));
-    crate::shared::test_utils::tick(&mut app);
+    tick(&mut app);
 
     let killed_by = app.world().get::<KilledBy>(entity).unwrap();
     assert_eq!(
@@ -269,7 +270,7 @@ fn apply_damage_applies_to_non_invulnerable_entity() {
     let entity = spawn_test_entity(&mut app, 3.0);
 
     app.insert_resource(PendingDamage(vec![damage_msg(entity, 1.0, None)]));
-    crate::shared::test_utils::tick(&mut app);
+    tick(&mut app);
 
     let hp = app.world().get::<Hp>(entity).unwrap();
     assert!(
@@ -288,7 +289,7 @@ fn apply_damage_non_invulnerable_entity_records_dealer_on_killing_blow() {
     let dealer = app.world_mut().spawn_empty().id();
 
     app.insert_resource(PendingDamage(vec![damage_msg(entity, 3.0, Some(dealer))]));
-    crate::shared::test_utils::tick(&mut app);
+    tick(&mut app);
 
     let killed_by = app.world().get::<KilledBy>(entity).unwrap();
     assert_eq!(
@@ -310,7 +311,7 @@ fn apply_damage_filter_splits_invulnerable_from_vulnerable() {
         damage_msg(invulnerable_entity, 1.0, None),
         damage_msg(vulnerable_entity, 1.0, None),
     ]));
-    crate::shared::test_utils::tick(&mut app);
+    tick(&mut app);
 
     let inv_hp = app.world().get::<Hp>(invulnerable_entity).unwrap();
     assert!(
@@ -339,7 +340,7 @@ fn apply_damage_filter_order_independent_for_mixed_batch() {
         damage_msg(vulnerable_entity, 1.0, None),
         damage_msg(invulnerable_entity, 1.0, None),
     ]));
-    crate::shared::test_utils::tick(&mut app);
+    tick(&mut app);
 
     assert!(
         (app.world().get::<Hp>(invulnerable_entity).unwrap().current - 3.0).abs() < f32::EPSILON,
@@ -364,7 +365,7 @@ fn apply_damage_multiple_messages_against_invulnerable_still_skipped() {
         damage_msg(entity, 1.0, None),
         damage_msg(entity, 1.0, None),
     ]));
-    crate::shared::test_utils::tick(&mut app);
+    tick(&mut app);
 
     let hp = app.world().get::<Hp>(entity).unwrap();
     assert!(

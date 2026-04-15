@@ -33,7 +33,7 @@ impl Fireable for EntropyConfig {
 
     fn register(app: &mut App) {
         use super::systems::{reset_entropy_counter, tick_entropy_engine};
-        use crate::{effect_v3::EffectV3Systems, state::types::NodeState};
+        use crate::{effect_v3::EffectV3Systems, prelude::*};
 
         app.add_systems(
             OnEnter(NodeState::Loading),

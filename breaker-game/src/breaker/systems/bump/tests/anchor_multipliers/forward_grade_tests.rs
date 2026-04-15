@@ -3,16 +3,16 @@
 use bevy::prelude::*;
 
 use crate::{
-    bolt::messages::BoltImpactBreaker,
     breaker::{
         components::{
-            Breaker, BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown, BumpPerfectWindow,
-            BumpState, BumpWeakCooldown, SettleDuration,
+            BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown, BumpPerfectWindow, BumpState,
+            BumpWeakCooldown, SettleDuration,
         },
         messages::BumpGrade,
         systems::bump::tests::helpers::*,
     },
-    effect_v3::effects::anchor::{AnchorActive, AnchorPlanted},
+    effect_v3::effects::anchor::AnchorActive,
+    prelude::*,
 };
 
 // -- Behavior 1: Forward grade uses widened perfect window when planted --

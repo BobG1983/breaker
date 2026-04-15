@@ -1,18 +1,18 @@
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{MaxSpeed, Position2D, Velocity2D};
+use rantzsoft_spatial2d::components::MaxSpeed;
 
 use super::helpers::*;
 use crate::{
     breaker::{
         components::{
-            BaseWidth, BrakeDecel, BrakeTilt, Breaker, BreakerDeceleration, BreakerTilt,
-            DashDuration, DashSpeedMultiplier, DashState, DashStateTimer, DashTilt, DashTiltEase,
-            DecelEasing, SettleDuration, SettleTiltEase,
+            BaseWidth, BrakeDecel, BrakeTilt, BreakerDeceleration, BreakerTilt, DashDuration,
+            DashSpeedMultiplier, DashState, DashStateTimer, DashTilt, DashTiltEase, DecelEasing,
+            SettleDuration, SettleTiltEase,
         },
         definition::BreakerDefinition,
     },
-    effect_v3::effects::flash_step::FlashStepActive,
-    input::resources::{GameAction, InputActions},
+    input::resources::GameAction,
+    prelude::*,
 };
 
 /// Dash velocity: `max_speed * dash_speed_multiplier` (using default config).

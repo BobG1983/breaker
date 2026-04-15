@@ -3,16 +3,13 @@ use ordered_float::OrderedFloat;
 
 use super::system::on_impact_occurred;
 use crate::{
-    bolt::messages::{BoltImpactBreaker, BoltImpactCell, BoltImpactWall},
-    breaker::messages::{BreakerImpactCell, BreakerImpactWall},
-    cells::messages::CellImpactWall,
     effect_v3::{
         effects::SpeedBoostConfig,
         stacking::EffectStack,
         storage::BoundEffects,
         types::{EffectType, EntityKind, Tree, Trigger},
     },
-    shared::test_utils::TestAppBuilder,
+    prelude::*,
 };
 
 // -- Test message resource ------------------------------------------------
@@ -75,10 +72,6 @@ fn bridge_test_app() -> App {
             ),
         )
         .build()
-}
-
-fn tick(app: &mut App) {
-    crate::shared::test_utils::tick(app);
 }
 
 /// Helper to build a When(ImpactOccurred(kind), Fire(SpeedBoost)) tree.

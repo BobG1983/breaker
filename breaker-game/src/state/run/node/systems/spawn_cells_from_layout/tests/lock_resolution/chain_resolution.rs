@@ -7,10 +7,8 @@ use bevy::prelude::*;
 use super::{super::helpers::*, helpers::*};
 use crate::{
     cells::components::*,
-    state::run::node::{
-        NodeLayout,
-        definition::{LockMap, NodePool},
-    },
+    prelude::*,
+    state::run::node::definition::{LockMap, NodePool},
 };
 
 // -- Behavior 4: Simple chain A locked by B locked by C --

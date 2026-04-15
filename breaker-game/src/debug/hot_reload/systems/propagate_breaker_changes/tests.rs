@@ -7,16 +7,17 @@ use bevy::prelude::*;
 use rantzsoft_spatial2d::components::MaxSpeed;
 
 use super::system::*;
-use crate::breaker::{
-    SelectedBreaker,
-    components::{BreakerBaseY, BreakerReflectionSpread, DashTilt},
-    definition::BreakerDefinition,
-    registry::BreakerRegistry,
+use crate::{
+    breaker::{
+        SelectedBreaker,
+        components::{BreakerBaseY, BreakerReflectionSpread, DashTilt},
+        definition::BreakerDefinition,
+        registry::BreakerRegistry,
+    },
+    prelude::*,
 };
 
 fn test_app() -> App {
-    use crate::shared::test_utils::TestAppBuilder;
-
     TestAppBuilder::new()
         .with_resource::<BreakerRegistry>()
         .with_resource::<SelectedBreaker>()

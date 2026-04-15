@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::{bolt::components::Bolt, prelude::*};
+use crate::prelude::*;
 
 /// Query for bolt entities eligible for birthing (no existing `Birthing` component).
 type BirthingEligibleQuery<'w, 's> = Query<
@@ -33,13 +33,9 @@ pub(crate) fn begin_node_birthing(mut commands: Commands, query: BirthingEligibl
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::shared::{
-        BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, WALL_LAYER, birthing::BIRTHING_DURATION,
-    };
+    use crate::shared::birthing::BIRTHING_DURATION;
 
     fn test_app() -> App {
-        use crate::shared::test_utils::TestAppBuilder;
-
         TestAppBuilder::new()
             .with_system(Update, begin_node_birthing)
             .build()

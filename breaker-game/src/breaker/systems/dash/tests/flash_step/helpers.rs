@@ -2,18 +2,15 @@
 //! teleports the breaker instantly instead of doing a normal dash.
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 pub(super) use super::super::helpers::breaker_param_bundle;
 use crate::{
     breaker::{
-        components::{BaseWidth, Breaker, BreakerTilt, DashState, DashStateTimer},
+        components::{BaseWidth, BreakerTilt, DashState, DashStateTimer},
         systems::dash::system::update_breaker_state,
         test_utils::default_breaker_definition,
     },
-    effect_v3::effects::flash_step::FlashStepActive,
-    input::resources::InputActions,
-    shared::{PlayfieldConfig, test_utils::TestAppBuilder},
+    prelude::*,
 };
 
 pub(super) fn test_app() -> App {
@@ -23,8 +20,6 @@ pub(super) fn test_app() -> App {
         .with_system(FixedUpdate, update_breaker_state)
         .build()
 }
-
-pub(super) use crate::shared::test_utils::tick;
 
 /// Spawns a breaker in Settling state with a rightward-dash settle tilt
 /// (`ease_start` < 0, meaning last dash was rightward).

@@ -11,10 +11,9 @@ use crate::{
     effect_v3::{
         effects::DamageBoostConfig,
         stacking::EffectStack,
-        storage::{BoundEffects, StagedEffects},
         types::{EffectType, StampTarget, Tree},
     },
-    shared::test_utils::TestAppBuilder,
+    prelude::*,
 };
 
 fn damage_fire(multiplier: f32) -> Tree {
@@ -57,10 +56,7 @@ fn unknown_chip_name_does_not_panic() {
 
 #[test]
 fn missing_chip_catalog_resource_does_not_panic() {
-    use crate::{
-        chips::systems::dispatch_chip_effects::dispatch_chip_effects,
-        state::run::chip_select::messages::ChipSelected,
-    };
+    use crate::chips::systems::dispatch_chip_effects::dispatch_chip_effects;
 
     // --- First prove the system WORKS with catalog ---
     let mut proof_app = test_app();
@@ -111,10 +107,7 @@ fn missing_chip_catalog_resource_does_not_panic() {
 
 #[test]
 fn missing_chip_inventory_resource_does_not_panic() {
-    use crate::{
-        chips::systems::dispatch_chip_effects::dispatch_chip_effects,
-        state::run::chip_select::messages::ChipSelected,
-    };
+    use crate::chips::systems::dispatch_chip_effects::dispatch_chip_effects;
 
     // --- First prove the system WORKS with inventory ---
     let mut proof_app = test_app();
@@ -218,10 +211,7 @@ fn no_messages_pending_no_entities_modified() {
 
 #[test]
 fn both_catalog_and_inventory_absent_does_not_panic() {
-    use crate::{
-        chips::systems::dispatch_chip_effects::dispatch_chip_effects,
-        state::run::chip_select::messages::ChipSelected,
-    };
+    use crate::chips::systems::dispatch_chip_effects::dispatch_chip_effects;
 
     let mut app = TestAppBuilder::new()
         .with_state_hierarchy()

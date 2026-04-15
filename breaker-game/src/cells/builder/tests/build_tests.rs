@@ -2,15 +2,13 @@
 //! Behaviors 4, 6, 8: `.position()`, `.dimensions()`, `.hp()` store values in spawned entity.
 
 use bevy::prelude::*;
-use rantzsoft_physics2d::aabb::Aabb2D;
-use rantzsoft_spatial2d::components::{Position2D, Scale2D};
 
 use crate::{
     cells::{
         components::{Cell, CellHeight, CellWidth},
         test_utils::spawn_cell_in_world,
     },
-    shared::death_pipeline::hp::Hp,
+    prelude::*,
 };
 
 // ── Behavior 4: .position(pos) stores position for spawn ────────────────────

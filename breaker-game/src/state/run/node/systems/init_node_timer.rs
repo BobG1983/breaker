@@ -2,9 +2,12 @@
 
 use bevy::prelude::*;
 
-use crate::state::run::{
-    node::{ActiveNodeLayout, NodeTimer},
-    resources::{NodeOutcome, NodeSequence},
+use crate::{
+    prelude::*,
+    state::run::{
+        node::ActiveNodeLayout,
+        resources::{NodeOutcome, NodeSequence},
+    },
 };
 
 /// Initializes [`NodeTimer`] from the active node layout's `timer_secs`,
@@ -40,13 +43,11 @@ pub(crate) fn init_node_timer(
 mod tests {
     use super::*;
     use crate::state::run::{
-        definition::NodeType,
-        node::{NodeLayout, definition::NodePool},
+        node::definition::NodePool,
         resources::{NodeAssignment, NodeOutcome, NodeSequence},
     };
 
     fn test_app(timer_secs: f32) -> App {
-        use crate::shared::test_utils::TestAppBuilder;
         TestAppBuilder::new()
             .insert_resource(ActiveNodeLayout(NodeLayout {
                 name: "test".to_owned(),
@@ -85,7 +86,6 @@ mod tests {
     // --- A5: Timer multiplier tests ---
 
     fn test_app_with_node_sequence(timer_secs: f32, timer_mult: f32) -> App {
-        use crate::shared::test_utils::TestAppBuilder;
         TestAppBuilder::new()
             .insert_resource(ActiveNodeLayout(NodeLayout {
                 name: "timer_mult_test".to_owned(),

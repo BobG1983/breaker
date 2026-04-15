@@ -7,7 +7,7 @@ use super::types::*;
 use crate::{
     effect_v3::{commands::EffectCommandsExt, types::RootNode},
     prelude::*,
-    shared::{BOLT_LAYER, GameDrawLayer, WALL_LAYER},
+    shared::GameDrawLayer,
 };
 
 // ── Resolution helpers ────────────────────────────────────────────────────

@@ -3,9 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    bolt::messages::BoltImpactBreaker,
-    cells::components::Cell,
-    shared::death_pipeline::Destroyed,
+    prelude::*,
     state::run::{definition::HighlightConfig, messages::HighlightTriggered, resources::*},
 };
 
@@ -65,11 +63,6 @@ mod tests {
     use std::marker::PhantomData;
 
     use super::*;
-    use crate::{
-        cells::components::Cell,
-        shared::death_pipeline::destroyed::Destroyed,
-        state::run::resources::{HighlightKind, RunHighlight},
-    };
 
     // --- TestMessages resources for each message type ---
 
@@ -110,7 +103,6 @@ mod tests {
     }
 
     fn test_app() -> App {
-        use crate::shared::test_utils::TestAppBuilder;
         TestAppBuilder::new()
             .with_message::<Destroyed<Cell>>()
             .with_message::<BoltImpactBreaker>()
@@ -143,8 +135,6 @@ mod tests {
             _marker:    PhantomData,
         }
     }
-
-    use crate::shared::test_utils::tick;
 
     // --- Behavior 13: Destroyed<Cell> increments cells_since_last_breaker_hit ---
 

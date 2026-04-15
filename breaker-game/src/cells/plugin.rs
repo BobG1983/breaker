@@ -58,7 +58,6 @@ mod tests {
         shared::death_pipeline::{
             DeathPipelinePlugin, systems::tests::helpers::register_effect_v3_test_infrastructure,
         },
-        state::types::{AppState, GameState, RunState},
     };
 
     #[test]
@@ -71,7 +70,7 @@ mod tests {
             .add_sub_state::<RunState>()
             .add_sub_state::<NodeState>()
             // CellsPlugin reads BoltImpactCell messages from bolt domain
-            .add_message::<crate::bolt::messages::BoltImpactCell>()
+            .add_message::<BoltImpactCell>()
             .insert_resource(CollisionQuadtree::default());
         app.add_plugins(DeathPipelinePlugin);
         register_effect_v3_test_infrastructure(&mut app);
@@ -84,11 +83,10 @@ mod tests {
 
     use std::time::Duration;
 
-    use rantzsoft_spatial2d::components::{Position2D, Spatial2D};
+    use rantzsoft_spatial2d::components::Spatial2D;
 
     use crate::cells::components::{
-        Cell, GuardedCell, GuardianCell, GuardianGridStep, GuardianSlideSpeed, GuardianSlot,
-        SlideTarget,
+        GuardedCell, GuardianCell, GuardianGridStep, GuardianSlideSpeed, GuardianSlot, SlideTarget,
     };
 
     fn cells_plugin_app() -> App {
@@ -101,7 +99,7 @@ mod tests {
             .add_sub_state::<NodeState>()
             .init_resource::<Assets<Mesh>>()
             .init_resource::<Assets<ColorMaterial>>()
-            .add_message::<crate::bolt::messages::BoltImpactCell>()
+            .add_message::<BoltImpactCell>()
             .insert_resource(CollisionQuadtree::default());
         app.add_plugins(DeathPipelinePlugin);
         register_effect_v3_test_infrastructure(&mut app);

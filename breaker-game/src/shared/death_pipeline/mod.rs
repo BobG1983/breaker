@@ -19,4 +19,5 @@ pub(crate) use destroyed::Destroyed;
 pub(crate) use game_entity::GameEntity;
 pub(crate) use hp::Hp;
 pub(crate) use invulnerable::Invulnerable;
+pub(crate) use killed_by::KilledBy;
 pub(crate) use plugin::DeathPipelinePlugin;

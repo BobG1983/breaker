@@ -1,14 +1,14 @@
 use bevy::prelude::*;
 
 pub(super) use crate::bolt::test_utils::spawn_bolt;
-use crate::bolt::{
-    components::PiercingRemaining, messages::BoltImpactWall, systems::bolt_wall_collision::*,
-    test_utils::piercing_stack,
+use crate::{
+    bolt::{
+        components::PiercingRemaining, systems::bolt_wall_collision::*, test_utils::piercing_stack,
+    },
+    prelude::*,
 };
 
 pub(super) fn test_app() -> App {
-    use crate::shared::test_utils::TestAppBuilder;
-
     TestAppBuilder::new()
         .with_physics()
         .with_message::<BoltImpactWall>()
@@ -22,7 +22,7 @@ pub(super) fn test_app() -> App {
         .build()
 }
 
-pub(super) use crate::shared::test_utils::tick;
+pub(super) use crate::prelude::tick;
 
 /// Spawns a bolt with `EffectStack<PiercingConfig>` and `PiercingRemaining` components.
 pub(super) fn spawn_piercing_bolt(

@@ -1,11 +1,7 @@
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::Scale2D;
 
 use super::{super::system::compute_grid_scale, helpers::*};
-use crate::{
-    cells::components::*,
-    state::run::node::{NodeLayout, definition::NodePool},
-};
+use crate::{cells::components::*, prelude::*, state::run::node::definition::NodePool};
 
 // --- A: Pure function tests for compute_grid_scale ---
 
@@ -275,17 +271,9 @@ fn single_cell_grid_spawns_centered_at_full_scale() {
     let mut app = scaled_test_app(layout);
     app.update();
 
-    let cells: Vec<(
-        &CellWidth,
-        &CellHeight,
-        &rantzsoft_spatial2d::components::Position2D,
-    )> = app
+    let cells: Vec<(&CellWidth, &CellHeight, &Position2D)> = app
         .world_mut()
-        .query::<(
-            &CellWidth,
-            &CellHeight,
-            &rantzsoft_spatial2d::components::Position2D,
-        )>()
+        .query::<(&CellWidth, &CellHeight, &Position2D)>()
         .iter(app.world())
         .collect();
     assert_eq!(cells.len(), 1, "should spawn exactly 1 cell");

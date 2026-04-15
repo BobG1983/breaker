@@ -1,9 +1,6 @@
 use std::collections::HashMap;
 
-use crate::state::run::{
-    definition::HighlightConfig,
-    resources::{HighlightCategory, HighlightKind, RunHighlight},
-};
+use crate::{prelude::*, state::run::definition::HighlightConfig};
 
 /// Lossless u32→f32 for small config values (bounded by u16).
 fn config_f32(val: u32) -> f32 {

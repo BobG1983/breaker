@@ -2,10 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::{
-    breaker::messages::{BumpGrade, BumpPerformed},
-    state::run::resources::{HighlightTracker, RunStats},
-};
+use crate::{breaker::messages::BumpGrade, prelude::*, state::run::resources::HighlightTracker};
 
 /// Reads [`BumpPerformed`] messages and updates [`RunStats`] counters
 /// and [`HighlightTracker`] streak tracking.
@@ -45,7 +42,6 @@ mod tests {
     }
 
     fn test_app() -> App {
-        use crate::shared::test_utils::TestAppBuilder;
         TestAppBuilder::new()
             .with_message::<BumpPerformed>()
             .with_resource::<RunStats>()
@@ -53,8 +49,6 @@ mod tests {
             .with_system(FixedUpdate, (enqueue_messages, track_bumps).chain())
             .build()
     }
-
-    use crate::shared::test_utils::tick;
 
     #[test]
     fn increments_bumps_performed_for_any_grade() {

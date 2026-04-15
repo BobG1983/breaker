@@ -5,7 +5,7 @@ use std::collections::HashSet;
 use super::{super::system::*, helpers::*};
 use crate::{
     chips::{definition::Rarity, inventory::ChipInventory, resources::ChipCatalog},
-    shared::GameRng,
+    prelude::*,
 };
 
 // --- Behavior 10: Single chip offered alone ---

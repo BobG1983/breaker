@@ -6,10 +6,7 @@
 //! HP is now computed from `ToughnessConfig` at spawn time.
 
 use super::{super::system::generate_node_sequence, helpers::*};
-use crate::state::run::{
-    definition::{NodeType, TierNodeCount},
-    resources::DifficultyCurve,
-};
+use crate::{prelude::*, state::run::resources::DifficultyCurve};
 
 // -- 8. Each tier ends with a Boss node --
 

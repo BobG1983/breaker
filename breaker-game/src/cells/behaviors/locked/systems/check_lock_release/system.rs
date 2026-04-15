@@ -3,11 +3,8 @@
 use bevy::{ecs::entity::Entities, prelude::*};
 
 use crate::{
-    cells::{
-        behaviors::locked::components::{LockCell, Locked, Locks, Unlocked},
-        components::Cell,
-    },
-    shared::death_pipeline::{Dead, Destroyed},
+    cells::{behaviors::locked::components::Unlocked, components::Cell},
+    prelude::*,
 };
 
 type LockedCellQuery<'w, 's> =

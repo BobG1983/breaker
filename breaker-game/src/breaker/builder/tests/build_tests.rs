@@ -1,15 +1,11 @@
 use bevy::prelude::*;
-use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
-use rantzsoft_spatial2d::components::{
-    MaxSpeed, Position2D, PreviousPosition, PreviousScale, Scale2D, Velocity2D,
-};
-use rantzsoft_stateflow::CleanupOnExit;
+use rantzsoft_spatial2d::components::{MaxSpeed, PreviousPosition};
 
 use super::helpers::test_breaker_definition;
 use crate::{
     breaker::{
         components::{
-            BrakeDecel, BrakeTilt, Breaker, BreakerAcceleration, BreakerBaseY, BreakerDeceleration,
+            BrakeDecel, BrakeTilt, BreakerAcceleration, BreakerBaseY, BreakerDeceleration,
             BreakerInitialized, BreakerReflectionSpread, BreakerTilt, BumpEarlyWindow,
             BumpFeedback, BumpLateWindow, BumpPerfectCooldown, BumpPerfectWindow, BumpState,
             BumpWeakCooldown, DashDuration, DashSpeedMultiplier, DashState, DashStateTimer,
@@ -17,11 +13,11 @@ use crate::{
         },
         definition::BreakerDefinition,
     },
+    prelude::*,
     shared::{
         BaseHeight, BaseWidth, GameDrawLayer,
         size::{MaxHeight, MaxWidth, MinHeight, MinWidth},
     },
-    state::types::RunState,
 };
 
 // ── Behavior 28: build() on a headless primary breaker produces all core components ──
@@ -181,15 +177,10 @@ fn build_produces_correct_collision_layers() {
     assert!(layers.is_some(), "should have CollisionLayers");
     let layers = layers.unwrap();
     assert_eq!(
-        layers.membership,
-        crate::shared::BREAKER_LAYER,
+        layers.membership, BREAKER_LAYER,
         "membership should be BREAKER_LAYER"
     );
-    assert_eq!(
-        layers.mask,
-        crate::shared::BOLT_LAYER,
-        "mask should be BOLT_LAYER"
-    );
+    assert_eq!(layers.mask, BOLT_LAYER, "mask should be BOLT_LAYER");
 }
 
 // ── Behavior 31: build() produces correct dimension components ──

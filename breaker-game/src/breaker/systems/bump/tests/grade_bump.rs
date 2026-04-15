@@ -2,11 +2,11 @@ use bevy::prelude::*;
 
 use super::helpers::*;
 use crate::{
-    bolt::messages::BoltImpactBreaker,
     breaker::{
         components::BumpState, definition::BreakerDefinition, messages::BumpGrade,
         resources::ForceBumpGrade,
     },
+    prelude::*,
 };
 
 #[test]

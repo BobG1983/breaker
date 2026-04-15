@@ -104,7 +104,6 @@ mod tests {
     use rantzsoft_physics2d::resources::CollisionQuadtree;
 
     use super::*;
-    use crate::state::types::{AppState, GameState, RunState};
 
     #[test]
     fn plugin_builds() {

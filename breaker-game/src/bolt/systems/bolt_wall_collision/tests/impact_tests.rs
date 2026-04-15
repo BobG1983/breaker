@@ -1,6 +1,5 @@
-use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
-
 use super::helpers::*;
+use crate::prelude::*;
 
 // ── Behavior 2: bolt_wall_collision detects wall overlap and reflects velocity ──
 

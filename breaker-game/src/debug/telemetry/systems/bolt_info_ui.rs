@@ -2,11 +2,10 @@
 
 use bevy::prelude::*;
 use bevy_egui::EguiContexts;
-use rantzsoft_spatial2d::components::Velocity2D;
 
 use crate::{
-    bolt::components::Bolt,
     debug::resources::{DebugOverlays, Overlay},
+    prelude::*,
 };
 
 /// Renders a "Bolt Info" egui window with bolt telemetry.

@@ -5,11 +5,10 @@ use bevy::prelude::*;
 
 use crate::{
     fx::FadeOut,
-    shared::GameRng,
+    prelude::*,
     state::run::{
         components::HighlightPopup, messages::HighlightTriggered,
         node::lifecycle::systems::spawn_highlight_text::tests::helpers::*,
-        resources::HighlightKind,
     },
 };
 

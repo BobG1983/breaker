@@ -6,7 +6,7 @@ use std::collections::{HashMap, VecDeque};
 use bevy::prelude::*;
 
 use super::system::GridCellContext;
-use crate::{cells::components::Cell, state::run::node::definition::LockMap};
+use crate::{prelude::*, state::run::node::definition::LockMap};
 
 /// Pass 2: resolves lock dependencies via topological sort and spawns locked
 /// cells in dependency order. Returns the additional required-to-clear count.

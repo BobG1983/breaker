@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use crate::{
     bolt::{definition::BoltDefinition, registry::BoltRegistry},
     debug::hot_reload::systems::propagate_bolt_definition::system::propagate_bolt_definition,
+    prelude::*,
 };
 
 pub(super) const TEST_BOLT_NAME: &str = "TestBolt";
@@ -27,8 +28,6 @@ pub(super) fn make_bolt_def(name: &str) -> BoltDefinition {
 
 /// Creates a test app with the `propagate_bolt_definition` system.
 pub(super) fn test_app() -> App {
-    use crate::shared::test_utils::TestAppBuilder;
-
     TestAppBuilder::new()
         .with_resource::<BoltRegistry>()
         .with_system(Update, propagate_bolt_definition)

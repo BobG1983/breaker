@@ -3,10 +3,11 @@ use bevy::prelude::*;
 use super::{super::data::*, helpers::*};
 use crate::{
     breaker::components::{
-        Breaker, BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown, BumpPerfectWindow,
-        BumpState, BumpWeakCooldown,
+        BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown, BumpPerfectWindow, BumpState,
+        BumpWeakCooldown,
     },
-    effect_v3::effects::anchor::{AnchorActive, AnchorPlanted},
+    effect_v3::effects::anchor::AnchorActive,
+    prelude::*,
 };
 
 // ── Part E: BreakerBumpTimingData (mutable) ─────────────────────

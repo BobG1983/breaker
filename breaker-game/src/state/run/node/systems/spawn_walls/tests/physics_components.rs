@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use super::helpers::test_app;
-use crate::{shared::PlayfieldConfig, walls::components::Wall};
+use crate::prelude::*;
 
 // --- Aabb2D + CollisionLayers tests ---
 

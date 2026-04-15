@@ -4,8 +4,9 @@ use bevy::prelude::*;
 use bevy_egui::EguiContexts;
 
 use crate::{
-    breaker::{components::Breaker, queries::BreakerTelemetryData},
+    breaker::queries::BreakerTelemetryData,
     debug::resources::{DebugOverlays, LastBumpResult, Overlay},
+    prelude::*,
 };
 
 /// Renders a "Breaker State" egui window with breaker telemetry.

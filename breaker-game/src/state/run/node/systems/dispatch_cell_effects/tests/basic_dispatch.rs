@@ -3,12 +3,12 @@ use ordered_float::OrderedFloat;
 
 use super::helpers::{make_cell_def, test_app};
 use crate::{
-    cells::components::{Cell, CellEffectsDispatched, CellTypeAlias},
+    cells::components::{CellEffectsDispatched, CellTypeAlias},
     effect_v3::{
         effects::{DamageBoostConfig, ExplodeConfig},
-        storage::{BoundEffects, StagedEffects},
         types::{EffectType, RootNode, StampTarget, Tree, Trigger},
     },
+    prelude::*,
 };
 
 // ── Behavior 1: Cell with effects gets children pushed to BoundEffects (StampTarget::ActiveCells) ──

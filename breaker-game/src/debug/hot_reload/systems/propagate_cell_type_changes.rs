@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     cells::{components::*, resources::CellTypeRegistry},
-    shared::death_pipeline::hp::Hp,
+    prelude::*,
 };
 
 /// Detects when `propagate_registry` has rebuilt the `CellTypeRegistry`
@@ -90,8 +90,6 @@ mod tests {
     }
 
     fn test_app() -> App {
-        use crate::shared::test_utils::TestAppBuilder;
-
         let mut app = TestAppBuilder::new()
             .with_resource::<CellTypeRegistry>()
             .with_system(Update, propagate_cell_type_changes)

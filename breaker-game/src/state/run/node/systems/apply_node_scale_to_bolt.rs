@@ -2,9 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::{
-    bolt::components::Bolt, shared::NodeScalingFactor, state::run::node::ActiveNodeLayout,
-};
+use crate::{prelude::*, state::run::node::ActiveNodeLayout};
 
 /// Inserts [`NodeScalingFactor`] on all bolt entities from the active node layout.
 ///
@@ -43,14 +41,9 @@ pub(crate) fn apply_node_scale_to_late_bolts(
 #[cfg(test)]
 mod tests {
     use bevy::ecs::world::CommandQueue;
-    use rantzsoft_spatial2d::components::Velocity2D;
 
     use super::*;
-    use crate::{
-        bolt::definition::BoltDefinition,
-        shared::test_utils::TestAppBuilder,
-        state::run::node::{NodeLayout, definition::NodePool},
-    };
+    use crate::{bolt::definition::BoltDefinition, state::run::node::definition::NodePool};
 
     fn test_bolt_definition() -> BoltDefinition {
         BoltDefinition {

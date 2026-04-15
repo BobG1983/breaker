@@ -1,20 +1,17 @@
 use std::collections::HashMap;
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
     cells::{
         CellTypeDefinition,
-        components::Cell,
         definition::Toughness,
         resources::{CellConfig, CellTypeRegistry},
     },
-    shared::{PlayfieldConfig, test_utils::TestAppBuilder},
+    prelude::*,
     state::run::{
-        definition::NodeType,
         node::{
-            ActiveNodeLayout, NodeLayout,
+            ActiveNodeLayout,
             definition::{LockMap, NodePool},
             messages::CellsSpawned,
             systems::spawn_cells_from_layout::system::{
@@ -413,7 +410,6 @@ pub(super) fn test_app_with_toughness(
 /// Creates a test `App` with a registry containing an "F" type
 /// (`required_to_clear=false`) plus the standard "S" type.
 pub(super) fn test_app_with_non_required_cell(layout: NodeLayout) -> App {
-    use crate::shared::test_utils::TestAppBuilder;
     let mut registry = test_registry();
     registry.insert(
         "F".to_owned(),

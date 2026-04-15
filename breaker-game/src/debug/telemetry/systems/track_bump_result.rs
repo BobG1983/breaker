@@ -3,8 +3,9 @@
 use bevy::prelude::*;
 
 use crate::{
-    breaker::messages::{BumpGrade, BumpPerformed, BumpWhiffed},
+    breaker::messages::{BumpGrade, BumpWhiffed},
     debug::resources::LastBumpResult,
+    prelude::*,
 };
 
 /// Updates [`LastBumpResult`] from bump messages.

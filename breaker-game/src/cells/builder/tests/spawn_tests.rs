@@ -3,21 +3,18 @@
 //! Section J: `spawn_inner()` behavior insertion
 
 use bevy::prelude::*;
-use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
-use rantzsoft_spatial2d::components::{Position2D, Scale2D, Spatial2D};
-use rantzsoft_stateflow::CleanupOnExit;
+use rantzsoft_spatial2d::components::Spatial2D;
 
 use crate::{
     cells::{
         components::{
-            Cell, CellDamageVisuals, CellHeight, CellTypeAlias, CellWidth, Locked, Locks,
-            RegenRate, RequiredToClear,
+            Cell, CellDamageVisuals, CellHeight, CellTypeAlias, CellWidth, RequiredToClear,
         },
         definition::CellBehavior,
         test_utils::{spawn_cell_in_world, test_cell_definition},
     },
-    shared::{BOLT_LAYER, CELL_LAYER, GameDrawLayer, death_pipeline::hp::Hp},
-    state::types::NodeState,
+    prelude::*,
+    shared::GameDrawLayer,
 };
 
 // ── Section H: spawn() — Headless ──────────────────────────────────────────

@@ -5,7 +5,7 @@ use std::collections::HashSet;
 use super::{super::system::*, helpers::*};
 use crate::{
     chips::{inventory::ChipInventory, resources::ChipCatalog},
-    shared::GameRng,
+    prelude::*,
 };
 
 // --- Behavior 23: build_active_pool excludes chips whose template is maxed ---

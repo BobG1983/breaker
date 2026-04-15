@@ -26,7 +26,7 @@ pub(crate) fn reset_highlight_tracker(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::shared::test_utils::TestAppBuilder;
+    use crate::prelude::*;
 
     fn test_app() -> App {
         TestAppBuilder::new()

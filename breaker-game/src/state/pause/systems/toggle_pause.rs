@@ -27,7 +27,7 @@ pub(crate) fn toggle_pause(keyboard: Res<ButtonInput<KeyCode>>, mut time: ResMut
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::shared::test_utils::TestAppBuilder;
+    use crate::prelude::*;
 
     fn test_app() -> App {
         TestAppBuilder::new()

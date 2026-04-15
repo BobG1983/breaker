@@ -2,7 +2,7 @@
 //! different seeds produce different sequences.
 
 use super::{super::system::generate_node_sequence, helpers::*};
-use crate::state::run::definition::TierNodeCount;
+use crate::prelude::*;
 
 // -- 1. Determinism: same seed produces identical sequence --
 

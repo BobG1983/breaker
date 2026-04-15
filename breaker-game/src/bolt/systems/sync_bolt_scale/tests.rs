@@ -1,25 +1,17 @@
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::Scale2D;
 
 use super::system::*;
 use crate::{
-    bolt::{components::Bolt, test_utils::size_stack},
-    shared::{
-        NodeScalingFactor,
-        size::{BaseRadius, MaxRadius, MinRadius},
-    },
+    bolt::test_utils::size_stack,
+    prelude::*,
+    shared::size::{BaseRadius, MaxRadius, MinRadius},
 };
 
 fn test_app() -> App {
-    use crate::shared::test_utils::TestAppBuilder;
-
     TestAppBuilder::new()
         .with_system(Update, sync_bolt_scale)
         .build()
 }
-
-/// Runs one update tick.
-use crate::shared::test_utils::tick;
 
 // ── Behavior 9: Base radius with no boosts sets Scale2D to base radius ──
 
@@ -375,12 +367,10 @@ fn sync_bolt_scale_empty_world_no_panic() {
 // ── Behaviors 8-9: sync_bolt_scale skips bolts with Birthing ──
 
 /// Helper to create a `Birthing` component for tests.
-fn test_birthing() -> crate::shared::birthing::Birthing {
-    use rantzsoft_physics2d::collision_layers::CollisionLayers;
-
+fn test_birthing() -> Birthing {
     use crate::shared::birthing::BIRTHING_DURATION;
 
-    crate::shared::birthing::Birthing {
+    Birthing {
         timer:          Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
         target_scale:   Scale2D { x: 8.0, y: 8.0 },
         stashed_layers: CollisionLayers::default(),

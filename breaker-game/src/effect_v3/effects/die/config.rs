@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::{effect_v3::traits::Fireable, shared::death_pipeline::Dead};
+use crate::{effect_v3::traits::Fireable, prelude::*};
 
 /// Sends the entity into the death pipeline. Empty struct for trait uniformity.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

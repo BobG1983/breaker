@@ -4,12 +4,12 @@ use bevy::prelude::*;
 use rantzsoft_stateflow::ChangeState;
 use tracing::warn;
 
-use crate::state::{
-    run::{
+use crate::{
+    prelude::*,
+    state::run::{
         node::{NodeLayoutRegistry, messages::NodeCleared},
         resources::{NodeOutcome, NodeResult, NodeSequence},
     },
-    types::NodeState,
 };
 
 /// When [`NodeCleared`] is received, set [`NodeOutcome`] and transition to
@@ -52,10 +52,7 @@ mod tests {
     use rantzsoft_stateflow::ChangeState;
 
     use super::*;
-    use crate::state::{
-        run::node::{NodeLayout, definition::NodePool},
-        types::{AppState, GameState, RunState},
-    };
+    use crate::state::run::node::definition::NodePool;
 
     fn make_layout(name: &str) -> NodeLayout {
         NodeLayout {
@@ -81,7 +78,6 @@ mod tests {
     }
 
     fn test_app(node_index: u32, layout_count: usize) -> App {
-        use crate::shared::test_utils::TestAppBuilder;
         let mut registry = NodeLayoutRegistry::default();
         for i in 0..layout_count {
             registry.insert(make_layout(&format!("node_{i}")));
@@ -113,8 +109,6 @@ mod tests {
         app.update();
         app
     }
-
-    use crate::shared::test_utils::tick;
 
     #[test]
     fn non_final_node_transitions_to_animate_out() {
@@ -181,10 +175,7 @@ mod tests {
 
     // ── NodeSequence-length regression tests (A3) ─────────────────────
 
-    use crate::state::run::{
-        definition::NodeType,
-        resources::{NodeAssignment, NodeSequence},
-    };
+    use crate::state::run::resources::{NodeAssignment, NodeSequence};
 
     /// Helper: build a [`NodeSequence`] with `count` assignments (all Passive, tier 0).
     fn make_node_sequence(count: usize) -> NodeSequence {
@@ -201,7 +192,6 @@ mod tests {
 
     /// Helper: build an app with *both* a [`NodeLayoutRegistry`] and a [`NodeSequence`].
     fn test_app_with_sequence(node_index: u32, layout_count: usize, sequence_len: usize) -> App {
-        use crate::shared::test_utils::TestAppBuilder;
         let mut registry = NodeLayoutRegistry::default();
         for i in 0..layout_count {
             registry.insert(make_layout(&format!("node_{i}")));

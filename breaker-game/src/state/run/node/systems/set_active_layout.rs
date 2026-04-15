@@ -48,7 +48,10 @@ pub(crate) fn set_active_layout(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::run::node::{NodeLayout, ScenarioLayoutOverride, definition::NodePool};
+    use crate::{
+        prelude::*,
+        state::run::node::{ScenarioLayoutOverride, definition::NodePool},
+    };
 
     fn make_layout(name: &str) -> NodeLayout {
         NodeLayout {
@@ -73,7 +76,6 @@ mod tests {
     }
 
     fn test_app(node_index: u32, layouts: Vec<NodeLayout>) -> App {
-        use crate::shared::test_utils::TestAppBuilder;
         TestAppBuilder::new()
             .insert_resource(NodeOutcome {
                 node_index,

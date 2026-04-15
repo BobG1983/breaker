@@ -2,9 +2,8 @@
 
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Spatial2D;
-use rantzsoft_stateflow::CleanupOnExit;
 
-use crate::state::types::NodeState;
+use crate::prelude::*;
 
 /// Marker component identifying wall entities (left, right, ceiling).
 #[derive(Component, Debug, Default)]
@@ -32,9 +31,6 @@ mod tests {
 
     #[test]
     fn wall_require_inserts_cleanup_on_exit_node_state() {
-        use rantzsoft_stateflow::CleanupOnExit;
-
-        use crate::state::types::NodeState;
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         let entity = app.world_mut().spawn(Wall).id();
@@ -62,7 +58,7 @@ mod tests {
 
     #[test]
     fn wall_explicit_values_override_defaults() {
-        use rantzsoft_spatial2d::components::{Position2D, Scale2D, Spatial2D};
+        use rantzsoft_spatial2d::components::Spatial2D;
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         let entity = app
@@ -100,9 +96,6 @@ mod tests {
 
     #[test]
     fn wall_collision_layers_have_correct_values() {
-        use rantzsoft_physics2d::collision_layers::CollisionLayers;
-
-        use crate::shared::{BOLT_LAYER, WALL_LAYER};
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         let entity = app

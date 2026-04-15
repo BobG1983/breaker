@@ -1,9 +1,7 @@
 //! Basic bolt-breaker reflection tests — center hit, far above, upward skip,
 //! and `Position2D`-based breaker position.
 
-use rantzsoft_spatial2d::components::Velocity2D;
-
-use crate::bolt::systems::bolt_breaker_collision::tests::helpers::*;
+use crate::{bolt::systems::bolt_breaker_collision::tests::helpers::*, prelude::*};
 
 #[test]
 fn bolt_reflects_upward_on_center_hit() {

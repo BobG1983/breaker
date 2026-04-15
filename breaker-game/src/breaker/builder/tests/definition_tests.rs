@@ -7,11 +7,12 @@ use super::{
 };
 use crate::{
     breaker::components::{
-        BrakeDecel, BrakeTilt, Breaker, BreakerAcceleration, BreakerBaseY, BreakerDeceleration,
+        BrakeDecel, BrakeTilt, BreakerAcceleration, BreakerBaseY, BreakerDeceleration,
         BreakerReflectionSpread, BumpEarlyWindow, BumpFeedback, BumpLateWindow,
         BumpPerfectCooldown, BumpPerfectWindow, BumpWeakCooldown, DashDuration,
         DashSpeedMultiplier, DashTilt, DashTiltEase, DecelEasing, SettleDuration, SettleTiltEase,
     },
+    prelude::*,
     shared::{
         BaseHeight, BaseWidth,
         size::{MaxHeight, MaxWidth, MinHeight, MinWidth},

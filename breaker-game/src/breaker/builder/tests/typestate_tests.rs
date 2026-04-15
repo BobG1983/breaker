@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use super::{super::core::*, helpers::test_breaker_definition};
-use crate::breaker::{components::Breaker, definition::BreakerDefinition};
+use crate::{breaker::definition::BreakerDefinition, prelude::*};
 
 // ── Behavior 1: Breaker::builder() returns a builder in the fully-unconfigured state ──
 

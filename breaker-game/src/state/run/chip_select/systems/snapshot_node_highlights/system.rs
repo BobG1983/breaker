@@ -2,10 +2,13 @@
 
 use bevy::prelude::*;
 
-use crate::state::run::{
-    definition::HighlightConfig,
-    resources::{HighlightTracker, NodeOutcome, RunStats},
-    systems::select_highlights::select_highlights,
+use crate::{
+    prelude::*,
+    state::run::{
+        definition::HighlightConfig,
+        resources::{HighlightTracker, NodeOutcome},
+        systems::select_highlights::select_highlights,
+    },
 };
 
 /// Drains `RunStats.highlights`, partitions by current node, selects the best

@@ -52,14 +52,10 @@ pub(crate) fn detect_close_save(
 
 #[cfg(test)]
 mod tests {
-    use rantzsoft_spatial2d::components::{Position2D, Spatial2D};
+    use rantzsoft_spatial2d::components::Spatial2D;
 
     use super::*;
-    use crate::{
-        breaker::messages::BumpGrade,
-        shared::GameDrawLayer,
-        state::run::resources::{HighlightKind, RunHighlight},
-    };
+    use crate::{breaker::messages::BumpGrade, shared::GameDrawLayer};
 
     #[derive(Resource)]
     struct TestMessages(Vec<BumpPerformed>);
@@ -83,7 +79,6 @@ mod tests {
     }
 
     fn test_app() -> App {
-        use crate::shared::test_utils::TestAppBuilder;
         TestAppBuilder::new()
             .with_message::<BumpPerformed>()
             .with_message::<HighlightTriggered>()
@@ -106,8 +101,6 @@ mod tests {
             )
             .build()
     }
-
-    use crate::shared::test_utils::tick;
 
     // --- Behavior 1: CloseSave detected when bolt is near bottom ---
 

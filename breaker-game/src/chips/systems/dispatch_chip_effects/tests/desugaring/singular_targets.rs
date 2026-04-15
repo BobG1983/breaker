@@ -10,9 +10,9 @@ use crate::{
     chips::{definition::ChipDefinition, systems::dispatch_chip_effects::tests::helpers::*},
     effect_v3::{
         effects::{DamageBoostConfig, ShieldConfig, SpeedBoostConfig},
-        storage::BoundEffects,
         types::{EffectType, EntityKind, RootNode, StampTarget, Tree, Trigger},
     },
+    prelude::*,
 };
 
 // ── Behavior 5: Bolt target stamps to Breaker ──

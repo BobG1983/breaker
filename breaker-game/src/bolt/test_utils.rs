@@ -5,14 +5,14 @@
 
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
-use rantzsoft_spatial2d::components::Velocity2D;
 
 use crate::{
-    bolt::{components::Bolt, definition::BoltDefinition},
+    bolt::definition::BoltDefinition,
     effect_v3::{
         effects::{DamageBoostConfig, PiercingConfig, SizeBoostConfig, SpeedBoostConfig},
         stacking::EffectStack,
     },
+    prelude::*,
 };
 
 /// Standard bolt definition matching values previously provided by

@@ -33,7 +33,7 @@ pub(super) fn make_cell_def(
 
 /// Creates a test app with the dispatch system and the given registry.
 pub(super) fn test_app(registry: CellTypeRegistry) -> App {
-    use crate::shared::test_utils::TestAppBuilder;
+    use crate::prelude::*;
     TestAppBuilder::new()
         .insert_resource(registry)
         .with_system(Update, dispatch_cell_effects)

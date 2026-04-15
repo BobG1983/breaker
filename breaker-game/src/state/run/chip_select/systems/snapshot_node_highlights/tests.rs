@@ -2,10 +2,10 @@ use bevy::prelude::*;
 
 use super::system::*;
 use crate::{
-    shared::test_utils::TestAppBuilder,
+    prelude::*,
     state::run::{
         definition::HighlightConfig,
-        resources::{HighlightKind, HighlightTracker, NodeOutcome, RunHighlight, RunStats},
+        resources::{HighlightTracker, NodeOutcome},
     },
 };
 

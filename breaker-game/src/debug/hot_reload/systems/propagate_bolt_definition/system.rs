@@ -1,18 +1,17 @@
 //! System to propagate `BoltDefinition` registry changes to bolt entity components.
 
 use bevy::{ecs::system::SystemParam, prelude::*};
-use rantzsoft_physics2d::aabb::Aabb2D;
 use rantzsoft_spatial2d::components::{
-    BaseSpeed, MaxSpeed, MinAngleHorizontal, MinAngleVertical, MinSpeed, PreviousScale, Scale2D,
+    BaseSpeed, MaxSpeed, MinAngleHorizontal, MinAngleVertical, MinSpeed,
 };
 use tracing::warn;
 
 use crate::{
     bolt::{
-        components::{Bolt, BoltBaseDamage, BoltDefinitionRef},
+        components::{BoltBaseDamage, BoltDefinitionRef},
         registry::BoltRegistry,
     },
-    effect_v3::storage::BoundEffects,
+    prelude::*,
     shared::size::BaseRadius,
 };
 

@@ -2,10 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::{
-    cells::components::Cell, shared::death_pipeline::DamageDealt,
-    state::run::resources::HighlightTracker,
-};
+use crate::{prelude::*, state::run::resources::HighlightTracker};
 
 /// Reads [`DamageDealt<Cell>`] messages and accumulates damage per evolution chip name
 /// in [`HighlightTracker::evolution_damage`].
@@ -27,13 +24,7 @@ mod tests {
     use std::marker::PhantomData;
 
     use super::*;
-    use crate::{
-        cells::components::Cell,
-        shared::{death_pipeline::damage_dealt::DamageDealt, test_utils::TestAppBuilder},
-        state::run::{
-            node::lifecycle::systems::reset_highlight_tracker, resources::HighlightTracker,
-        },
-    };
+    use crate::state::run::node::lifecycle::systems::reset_highlight_tracker;
 
     #[derive(Resource)]
     struct TestMessages(Vec<DamageDealt<Cell>>);
@@ -64,8 +55,6 @@ mod tests {
             _marker: PhantomData,
         }
     }
-
-    use crate::shared::test_utils::tick;
 
     // --- Behavior 14: Accumulates damage for a single evolution chip ---
 

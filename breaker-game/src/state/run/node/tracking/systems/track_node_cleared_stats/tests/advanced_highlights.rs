@@ -4,9 +4,9 @@
 use bevy::prelude::*;
 
 use super::helpers::*;
-use crate::state::run::{
-    definition::HighlightConfig,
-    resources::{HighlightKind, HighlightTracker, RunStats},
+use crate::{
+    prelude::*,
+    state::run::{definition::HighlightConfig, resources::HighlightTracker},
 };
 
 // --- Behavior 9: SpeedDemon detected when elapsed < config.speed_demon_secs ---

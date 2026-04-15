@@ -6,7 +6,7 @@ use super::systems::{
     bolt_info_ui, breaker_state_ui, debug_ui_system, input_actions_ui, state_chain_ui,
     track_bump_result,
 };
-use crate::{bolt::BoltSystems, debug::resources::DebugOverlays, state::types::NodeState};
+use crate::{bolt::BoltSystems, debug::resources::DebugOverlays, prelude::*};
 
 /// Registers egui telemetry panels and bump result tracking.
 pub(crate) struct TelemetryPlugin;

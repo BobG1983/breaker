@@ -18,10 +18,7 @@ pub(crate) fn init_clear_remaining(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        cells::components::{Cell, RequiredToClear},
-        shared::test_utils::TestAppBuilder,
-    };
+    use crate::{cells::components::RequiredToClear, prelude::*};
 
     fn test_app() -> App {
         TestAppBuilder::new()

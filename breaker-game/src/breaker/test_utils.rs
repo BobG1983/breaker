@@ -6,7 +6,7 @@
 
 use bevy::prelude::*;
 
-use crate::breaker::{components::Breaker, definition::BreakerDefinition};
+use crate::{breaker::definition::BreakerDefinition, prelude::*};
 
 /// Standard test definition using `BreakerDefinition::default()` values.
 ///

@@ -3,12 +3,12 @@
 use bevy::prelude::*;
 use rantzsoft_stateflow::ChangeState;
 
-use crate::state::{
-    run::{
+use crate::{
+    prelude::*,
+    state::run::{
         node::messages::TimerExpired,
         resources::{NodeOutcome, NodeResult},
     },
-    types::NodeState,
 };
 
 /// When [`TimerExpired`] is received and the run is still in progress, end the run as lost.
@@ -44,10 +44,6 @@ mod tests {
     use rantzsoft_stateflow::ChangeState;
 
     use super::*;
-    use crate::{
-        shared::test_utils::TestAppBuilder,
-        state::types::{AppState, GameState, RunState},
-    };
 
     #[derive(Resource)]
     struct SendTimerExpired(bool);
@@ -86,8 +82,6 @@ mod tests {
         app.update();
         app
     }
-
-    use crate::shared::test_utils::tick;
 
     #[test]
     fn timer_expired_sets_lost_and_run_end() {

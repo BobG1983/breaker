@@ -7,10 +7,8 @@ use rantzsoft_stateflow::ChangeState;
 use crate::{
     bolt::messages::BoltSpawned,
     breaker::messages::BreakerSpawned,
-    state::{
-        run::node::messages::{CellsSpawned, SpawnNodeComplete},
-        types::NodeState,
-    },
+    prelude::*,
+    state::run::node::messages::{CellsSpawned, SpawnNodeComplete},
     walls::messages::WallsSpawned,
 };
 
@@ -68,7 +66,6 @@ mod tests {
     use super::*;
 
     fn test_app() -> App {
-        use crate::shared::test_utils::TestAppBuilder;
         TestAppBuilder::new()
             .with_message::<BoltSpawned>()
             .with_message::<BreakerSpawned>()
@@ -250,8 +247,6 @@ mod tests {
     #[test]
     fn sends_change_state_when_all_signals_received() {
         use rantzsoft_stateflow::ChangeState;
-
-        use crate::state::types::NodeState;
 
         let mut app = test_app();
 

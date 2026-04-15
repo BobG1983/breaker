@@ -1,11 +1,7 @@
 //! Section I: `.guarded()` Builder Integration
 
 use bevy::prelude::*;
-use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
-use rantzsoft_spatial2d::{
-    components::{Position2D, Scale2D},
-    propagation::PositionPropagation,
-};
+use rantzsoft_spatial2d::propagation::PositionPropagation;
 
 use super::helpers::*;
 use crate::{
@@ -17,7 +13,7 @@ use crate::{
         },
         definition::{CellBehavior, GuardedBehavior},
     },
-    shared::{BOLT_LAYER, CELL_LAYER, death_pipeline::hp::Hp},
+    prelude::*,
 };
 
 // Behavior 32: .guarded() stores guardian spawn data (compile test)
@@ -423,10 +419,6 @@ fn combined_definition_and_guarded_spawns_exactly_n_guardians() {
 
 #[test]
 fn guardian_has_cleanup_on_exit_node_state() {
-    use rantzsoft_stateflow::CleanupOnExit;
-
-    use crate::state::types::NodeState;
-
     let config = GuardianSpawnConfig {
         hp:          10.0,
         color_rgb:   [0.5, 0.8, 1.0],

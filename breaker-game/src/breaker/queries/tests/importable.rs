@@ -1,9 +1,11 @@
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::Velocity2D;
 
 use super::{super::data::*, helpers::test_app};
-use crate::breaker::components::{
-    Breaker, BreakerTilt, BumpEarlyWindow, BumpLateWindow, BumpPerfectWindow, BumpState, DashState,
+use crate::{
+    breaker::components::{
+        BreakerTilt, BumpEarlyWindow, BumpLateWindow, BumpPerfectWindow, BumpState, DashState,
+    },
+    prelude::*,
 };
 
 // ── Part I: BreakerTelemetryData (read-only, dev-only) ──────────

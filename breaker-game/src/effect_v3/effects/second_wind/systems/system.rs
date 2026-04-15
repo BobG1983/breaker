@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use super::super::components::SecondWindWall;
-use crate::bolt::messages::BoltImpactWall;
+use crate::prelude::*;
 
 /// Despawns a `SecondWindWall` entity on the first `BoltImpactWall` targeting it.
 ///

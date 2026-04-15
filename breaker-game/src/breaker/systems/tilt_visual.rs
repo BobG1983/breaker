@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Rotation2D;
 
-use crate::breaker::components::{Breaker, BreakerTilt};
+use crate::{breaker::components::BreakerTilt, prelude::*};
 
 /// Copies [`BreakerTilt::angle`] into the breaker's `Rotation2D` each frame.
 ///

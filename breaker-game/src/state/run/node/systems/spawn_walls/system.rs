@@ -4,8 +4,8 @@ use bevy::prelude::*;
 use tracing::warn;
 
 use crate::{
-    shared::PlayfieldConfig,
-    walls::{components::Wall, messages::WallsSpawned, registry::WallRegistry},
+    prelude::*,
+    walls::{messages::WallsSpawned, registry::WallRegistry},
 };
 
 /// Spawns left, right, and ceiling wall entities.

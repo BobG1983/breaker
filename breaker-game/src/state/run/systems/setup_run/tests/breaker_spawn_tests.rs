@@ -1,22 +1,18 @@
 //! Tests for breaker spawning behaviors (2-11).
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{MaxSpeed, Position2D, Scale2D};
-use rantzsoft_stateflow::CleanupOnExit;
+use rantzsoft_spatial2d::components::MaxSpeed;
 
 use super::helpers::{make_aegis_breaker_definition, test_app};
 use crate::{
     breaker::{
-        components::{
-            Breaker, BreakerInitialized, BreakerReflectionSpread, ExtraBreaker, PrimaryBreaker,
-        },
+        components::{BreakerInitialized, BreakerReflectionSpread, ExtraBreaker, PrimaryBreaker},
         definition::BreakerDefinition,
         messages::BreakerSpawned,
         registry::BreakerRegistry,
         resources::SelectedBreaker,
     },
-    shared::death_pipeline::Hp,
-    state::types::{NodeState, RunState},
+    prelude::*,
 };
 
 /// Convenience accessor for `BreakerDefinition::default()`.

@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::state::run::resources::HighlightKind;
+use crate::prelude::*;
 
 /// Sent when the run is lost (e.g. all lives depleted).
 ///

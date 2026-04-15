@@ -29,7 +29,7 @@ pub(crate) fn update_pause_menu_colors(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::shared::test_utils::TestAppBuilder;
+    use crate::prelude::*;
 
     fn test_app() -> App {
         TestAppBuilder::new()

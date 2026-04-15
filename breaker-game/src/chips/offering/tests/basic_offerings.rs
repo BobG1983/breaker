@@ -5,7 +5,7 @@ use std::collections::HashSet;
 use super::{super::system::*, helpers::*};
 use crate::{
     chips::{inventory::ChipInventory, resources::ChipCatalog},
-    shared::GameRng,
+    prelude::*,
 };
 
 // --- Behavior 1: Empty registry produces empty offerings ---

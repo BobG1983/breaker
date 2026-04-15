@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::state::run::node::{NodeTimer, messages::TimerExpired};
+use crate::{prelude::*, state::run::node::messages::TimerExpired};
 
 /// Decrements [`NodeTimer::remaining`] each fixed tick.
 /// Sends [`TimerExpired`] when the timer reaches zero.
@@ -30,7 +30,6 @@ mod tests {
     use super::*;
 
     fn test_app(remaining: f32) -> App {
-        use crate::shared::test_utils::TestAppBuilder;
         TestAppBuilder::new()
             .with_message::<TimerExpired>()
             .insert_resource(NodeTimer {
@@ -40,8 +39,6 @@ mod tests {
             .with_system(FixedUpdate, tick_node_timer)
             .build()
     }
-
-    use crate::shared::test_utils::tick;
 
     fn tick_with_delta(app: &mut App, delta: Duration) {
         app.world_mut()

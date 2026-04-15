@@ -1,18 +1,13 @@
 use std::collections::HashSet;
 
 use bevy::{ecs::world::CommandQueue, prelude::*};
-use rantzsoft_spatial2d::components::{Position2D, Spatial2D, Velocity2D};
+use rantzsoft_spatial2d::components::Spatial2D;
 
 use super::{super::system::bolt_lost, helpers::*};
 use crate::{
-    bolt::{
-        components::{Bolt, ExtraBolt},
-        messages::BoltLost,
-    },
-    breaker::components::Breaker,
-    shared::{
-        GameDrawLayer, GameRng, PlayfieldConfig, death_pipeline::kill_yourself::KillYourself,
-    },
+    bolt::{components::ExtraBolt, messages::BoltLost},
+    prelude::*,
+    shared::{GameDrawLayer, death_pipeline::kill_yourself::KillYourself},
 };
 
 fn spawn_bolt_in_app(app: &mut App, build_fn: impl FnOnce(&mut Commands) -> Entity) -> Entity {

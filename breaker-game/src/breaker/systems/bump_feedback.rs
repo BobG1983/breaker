@@ -82,7 +82,7 @@ pub fn spawn_whiff_text(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{fx::FadeOut, shared::test_utils::TestAppBuilder};
+    use crate::fx::FadeOut;
 
     #[derive(Resource)]
     struct TestBumpMsg(Option<BumpPerformed>);
@@ -105,8 +105,6 @@ mod tests {
             )
             .build()
     }
-
-    use crate::shared::test_utils::tick;
 
     fn spawn_breaker(app: &mut App) {
         let entity = crate::breaker::test_utils::spawn_breaker(app, 0.0, -450.0);

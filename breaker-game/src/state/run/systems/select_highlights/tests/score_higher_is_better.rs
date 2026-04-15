@@ -4,7 +4,7 @@ use super::{
     super::system::score_highlight,
     helpers::{default_config, highlight},
 };
-use crate::state::run::resources::{HighlightCategory, HighlightKind};
+use crate::prelude::*;
 
 #[test]
 fn score_perfect_streak_value_10_threshold_5_normalized_0_333() {

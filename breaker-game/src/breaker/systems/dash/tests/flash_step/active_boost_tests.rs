@@ -1,18 +1,18 @@
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
-use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use super::helpers::*;
 use crate::{
     breaker::{
-        components::{BaseWidth, Breaker, BreakerTilt, DashState, DashStateTimer},
+        components::{BaseWidth, BreakerTilt, DashState, DashStateTimer},
         definition::BreakerDefinition,
     },
     effect_v3::{
-        effects::{SizeBoostConfig, SpeedBoostConfig, flash_step::FlashStepActive},
+        effects::{SizeBoostConfig, SpeedBoostConfig},
         stacking::EffectStack,
     },
-    input::resources::{GameAction, InputActions},
+    input::resources::GameAction,
+    prelude::*,
 };
 
 fn speed_stack(values: &[f32]) -> EffectStack<SpeedBoostConfig> {

@@ -1,11 +1,7 @@
 //! Terminal methods: `build_core()`, `spawn_inner()`, and terminal impls.
 
 use bevy::prelude::*;
-use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
-use rantzsoft_spatial2d::{
-    components::{Position2D, Scale2D},
-    propagation::PositionPropagation,
-};
+use rantzsoft_spatial2d::propagation::PositionPropagation;
 
 use super::types::*;
 use crate::{
@@ -13,10 +9,8 @@ use crate::{
         behaviors::guarded::components::ring_slot_offset, components::*, definition::CellBehavior,
     },
     effect_v3::{commands::EffectCommandsExt, types::RootNode},
-    shared::{
-        BOLT_LAYER, CELL_LAYER, GameDrawLayer,
-        death_pipeline::{hp::Hp, killed_by::KilledBy},
-    },
+    prelude::*,
+    shared::GameDrawLayer,
 };
 
 // ── Resolution helpers ────────────────────────────────────────────────────

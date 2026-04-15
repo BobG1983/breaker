@@ -2,9 +2,9 @@
 
 use bevy::prelude::*;
 
-use crate::state::run::node::{
-    NodeTimer,
-    hud::{components::NodeTimerDisplay, resources::TimerUiConfig},
+use crate::{
+    prelude::*,
+    state::run::node::hud::{components::NodeTimerDisplay, resources::TimerUiConfig},
 };
 
 /// Updates the timer display text and color based on remaining time.
@@ -31,7 +31,6 @@ mod tests {
     use super::*;
 
     fn test_app(remaining: f32, total: f32) -> App {
-        use crate::shared::test_utils::TestAppBuilder;
         TestAppBuilder::new()
             .insert_resource(NodeTimer { remaining, total })
             .insert_resource(TimerUiConfig::default())

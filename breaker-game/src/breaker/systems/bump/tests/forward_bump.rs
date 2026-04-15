@@ -2,12 +2,8 @@ use bevy::prelude::*;
 
 use super::helpers::*;
 use crate::{
-    breaker::{
-        components::BumpState,
-        definition::BreakerDefinition,
-        messages::{BumpPerformed, BumpWhiffed},
-    },
-    input::resources::InputActions,
+    breaker::{components::BumpState, definition::BreakerDefinition, messages::BumpWhiffed},
+    prelude::*,
 };
 
 #[test]
@@ -139,8 +135,6 @@ fn cooldown_ticks_down() {
 
 #[test]
 fn bump_while_serving_does_not_open_forward_window() {
-    use crate::bolt::components::BoltServing;
-
     let mut app = update_bump_test_app();
 
     let entity = crate::breaker::test_utils::spawn_breaker(&mut app, 0.0, 0.0);
@@ -188,7 +182,7 @@ fn fixed_schedule_bump_app() -> App {
         .add_message::<BumpPerformed>()
         .add_message::<BumpWhiffed>()
         .add_message::<crate::breaker::messages::NoBump>()
-        .add_message::<crate::bolt::messages::BoltImpactBreaker>()
+        .add_message::<BoltImpactBreaker>()
         .init_resource::<CapturedBumps>()
         .init_resource::<CapturedWhiffs>()
         .insert_resource(TestInputActive(false));

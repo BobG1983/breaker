@@ -1,10 +1,13 @@
 use bevy::{ecs::system::SystemParam, prelude::*};
 
-use crate::state::run::{
-    definition::HighlightConfig,
-    messages::HighlightTriggered,
-    node::{messages::NodeCleared, resources::NodeTimer},
-    resources::{HighlightKind, HighlightTracker, NodeOutcome, RunHighlight, RunStats},
+use crate::{
+    prelude::*,
+    state::run::{
+        definition::HighlightConfig,
+        messages::HighlightTriggered,
+        node::messages::NodeCleared,
+        resources::{HighlightTracker, NodeOutcome},
+    },
 };
 
 /// Bundled resources for node-clear highlight detection.

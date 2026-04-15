@@ -3,13 +3,12 @@ use ordered_float::OrderedFloat;
 
 use super::helpers::{make_cell_def, test_app};
 use crate::{
-    bolt::components::Bolt,
-    cells::components::{Cell, CellEffectsDispatched, CellTypeAlias},
+    cells::components::{CellEffectsDispatched, CellTypeAlias},
     effect_v3::{
         effects::{DamageBoostConfig, ExplodeConfig, SpeedBoostConfig},
-        storage::BoundEffects,
         types::{EffectType, EntityKind, RootNode, StampTarget, Tree, Trigger},
     },
+    prelude::*,
 };
 
 // ── Behavior 8: Fire children are stamped into BoundEffects alongside When children ──

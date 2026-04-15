@@ -1,23 +1,20 @@
 use bevy::prelude::*;
-use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
-use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D};
+use rantzsoft_spatial2d::components::{GlobalPosition2D, Spatial2D};
 
 pub(super) use crate::bolt::test_utils::default_bolt_definition;
 use crate::{
     bolt::{
-        components::BoltRadius, messages::BoltImpactBreaker,
-        systems::bolt_breaker_collision::system::bolt_breaker_collision,
+        components::BoltRadius, systems::bolt_breaker_collision::system::bolt_breaker_collision,
     },
     breaker::{
-        components::{BaseHeight, BaseWidth, Breaker, BreakerReflectionSpread, BreakerTilt},
+        components::{BaseHeight, BaseWidth, BreakerReflectionSpread, BreakerTilt},
         definition::BreakerDefinition,
     },
-    shared::{BOLT_LAYER, BREAKER_LAYER, GameDrawLayer, NodeScalingFactor, size::BaseRadius},
+    prelude::*,
+    shared::{GameDrawLayer, size::BaseRadius},
 };
 
 pub(super) fn test_app() -> App {
-    use crate::shared::test_utils::TestAppBuilder;
-
     TestAppBuilder::new()
         .with_physics()
         .with_message::<BoltImpactBreaker>()

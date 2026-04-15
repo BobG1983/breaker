@@ -1,14 +1,14 @@
 use bevy::{math::curve::easing::EaseFunction, prelude::*};
-use rantzsoft_spatial2d::components::{MaxSpeed, Position2D, Velocity2D};
+use rantzsoft_spatial2d::components::MaxSpeed;
 
 use super::{super::data::*, helpers::*};
 use crate::{
     breaker::components::{
-        BrakeDecel, BrakeTilt, Breaker, BreakerDeceleration, BreakerTilt, DashDuration,
-        DashSpeedMultiplier, DashState, DashStateTimer, DashTilt, DashTiltEase, DecelEasing,
-        SettleDuration, SettleTiltEase,
+        BrakeDecel, BrakeTilt, BreakerDeceleration, BreakerTilt, DashDuration, DashSpeedMultiplier,
+        DashState, DashStateTimer, DashTilt, DashTiltEase, DecelEasing, SettleDuration,
+        SettleTiltEase,
     },
-    effect_v3::effects::flash_step::FlashStepActive,
+    prelude::*,
 };
 
 // ── Part D: BreakerDashData (mutable) ───────────────────────────

@@ -2,10 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::{
-    state::{run::node::systems::spawn_walls, types::NodeState},
-    walls::messages::WallsSpawned,
-};
+use crate::{prelude::*, state::run::node::systems::spawn_walls, walls::messages::WallsSpawned};
 
 /// Plugin for the wall domain.
 ///
@@ -23,7 +20,6 @@ impl Plugin for WallPlugin {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::types::{AppState, GameState, RunState};
 
     #[test]
     fn plugin_builds() {

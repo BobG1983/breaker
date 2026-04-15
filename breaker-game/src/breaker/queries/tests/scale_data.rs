@@ -1,15 +1,12 @@
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
-use rantzsoft_spatial2d::components::Scale2D;
 
 use super::{super::data::*, helpers::*};
 use crate::{
-    breaker::components::{BaseHeight, BaseWidth, Breaker},
+    breaker::components::{BaseHeight, BaseWidth},
     effect_v3::{effects::SizeBoostConfig, stacking::EffectStack},
-    shared::{
-        NodeScalingFactor,
-        size::{MaxHeight, MaxWidth, MinHeight, MinWidth},
-    },
+    prelude::*,
+    shared::size::{MaxHeight, MaxWidth, MinHeight, MinWidth},
 };
 
 fn size_stack(values: &[f32]) -> EffectStack<SizeBoostConfig> {

@@ -3,10 +3,7 @@
 use bevy::prelude::*;
 use rantzsoft_stateflow::ChangeState;
 
-use crate::{
-    input::resources::{GameAction, InputActions},
-    state::types::RunEndState,
-};
+use crate::{input::resources::GameAction, prelude::*};
 
 /// Returns to the main menu when the player confirms on the run-end screen.
 ///
@@ -27,10 +24,6 @@ mod tests {
     use rantzsoft_stateflow::ChangeState;
 
     use super::*;
-    use crate::{
-        shared::test_utils::TestAppBuilder,
-        state::types::{AppState, GameState, RunState},
-    };
 
     fn test_app() -> App {
         let mut app = TestAppBuilder::new()

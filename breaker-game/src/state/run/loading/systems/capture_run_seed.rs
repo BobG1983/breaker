@@ -4,10 +4,7 @@ use bevy::prelude::*;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 
-use crate::{
-    shared::{GameRng, RunSeed},
-    state::run::resources::RunStats,
-};
+use crate::{prelude::*, shared::RunSeed};
 
 /// Captures the [`RunSeed`] value into [`RunStats::seed`] on the first node.
 ///
@@ -33,7 +30,6 @@ pub(crate) fn capture_run_seed(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::shared::test_utils::TestAppBuilder;
 
     fn test_app() -> App {
         TestAppBuilder::new()

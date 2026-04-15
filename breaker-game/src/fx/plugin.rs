@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     fx::systems::{animate_fade_out, animate_punch_scale, tick_effect_flash},
-    state::types::NodeState,
+    prelude::*,
 };
 
 /// Plugin for the fx domain.
@@ -29,8 +29,6 @@ mod tests {
 
     #[test]
     fn plugin_builds() {
-        use crate::shared::test_utils::TestAppBuilder;
-
         let mut app = TestAppBuilder::new().with_state_hierarchy().build();
         app.add_plugins(FxPlugin);
         app.update();

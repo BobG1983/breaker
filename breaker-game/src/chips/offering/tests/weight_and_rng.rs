@@ -3,7 +3,7 @@
 use super::{super::system::*, helpers::*};
 use crate::{
     chips::{definition::Rarity, inventory::ChipInventory, resources::ChipCatalog},
-    shared::GameRng,
+    prelude::*,
 };
 
 // --- Behavior 5: Higher weight more frequent (statistical) ---

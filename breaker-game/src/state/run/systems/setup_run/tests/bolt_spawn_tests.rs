@@ -1,21 +1,18 @@
 //! Tests for bolt spawning behaviors on first node (12-21).
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{
-    BaseSpeed, MaxSpeed, MinSpeed, Position2D, Scale2D, Velocity2D,
-};
-use rantzsoft_stateflow::CleanupOnExit;
+use rantzsoft_spatial2d::components::{BaseSpeed, MaxSpeed, MinSpeed};
 
 use super::helpers::{make_aegis_breaker_definition, test_app};
 use crate::{
     bolt::{
-        components::{Bolt, BoltBaseDamage, BoltRadius, BoltServing, ExtraBolt, PrimaryBolt},
+        components::{BoltBaseDamage, BoltRadius, ExtraBolt, PrimaryBolt},
         definition::BoltDefinition,
         messages::BoltSpawned,
         registry::BoltRegistry,
     },
     breaker::registry::BreakerRegistry,
-    state::types::{NodeState, RunState},
+    prelude::*,
 };
 
 // ── Behavior 12: Spawns exactly one bolt entity (first node) ──────────

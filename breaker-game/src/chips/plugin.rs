@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use super::{inventory::ChipInventory, systems::dispatch_chip_effects};
-use crate::state::types::ChipSelectState;
+use crate::prelude::*;
 
 /// Plugin for the chips domain.
 ///
@@ -29,10 +29,6 @@ mod tests {
 
     #[test]
     fn plugin_builds() {
-        use crate::{
-            shared::test_utils::TestAppBuilder, state::run::chip_select::messages::ChipSelected,
-        };
-
         let mut app = TestAppBuilder::new()
             .with_state_hierarchy()
             // ChipSelected must be registered before ChipsPlugin (normally by UiPlugin)

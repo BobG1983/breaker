@@ -10,7 +10,6 @@ use crate::{
     chips::{inventory::ChipInventory, resources::ChipCatalog},
     effect_v3::{
         commands::EffectCommandsExt,
-        storage::{BoundEffects, StagedEffects},
         types::{RootNode, StampTarget, Tree},
     },
     prelude::*,

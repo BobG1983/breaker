@@ -1,9 +1,8 @@
 //! Visual feedback when the bolt is lost — spawns a "BOLT LOST" text that fades out.
 
 use bevy::prelude::*;
-use rantzsoft_stateflow::CleanupOnExit;
 
-use crate::{bolt::messages::BoltLost, fx::FadeOut, state::types::NodeState};
+use crate::{bolt::messages::BoltLost, fx::FadeOut, prelude::*};
 
 /// Duration of the "BOLT LOST" text fade in seconds.
 const FADE_DURATION: f32 = 1.5;
@@ -43,8 +42,6 @@ mod tests {
     }
 
     fn test_app() -> App {
-        use crate::shared::test_utils::TestAppBuilder;
-
         TestAppBuilder::new()
             .with_message::<BoltLost>()
             .with_system(

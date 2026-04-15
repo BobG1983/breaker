@@ -1,12 +1,12 @@
 use bevy::prelude::*;
-use rantzsoft_physics2d::aabb::Aabb2D;
 use rantzsoft_spatial2d::components::{
-    BaseSpeed, MaxSpeed, MinAngleHorizontal, MinAngleVertical, MinSpeed, Scale2D,
+    BaseSpeed, MaxSpeed, MinAngleHorizontal, MinAngleVertical, MinSpeed,
 };
 
 use super::helpers::*;
 use crate::{
-    bolt::components::{Bolt, BoltBaseDamage, BoltDefinitionRef},
+    bolt::components::{BoltBaseDamage, BoltDefinitionRef},
+    prelude::*,
     shared::size::BaseRadius,
 };
 

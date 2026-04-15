@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use ordered_float::OrderedFloat;
 use serde::{Deserialize, Serialize};
 
-use crate::{effect_v3::traits::Fireable, state::run::node::resources::NodeTimer};
+use crate::{effect_v3::traits::Fireable, prelude::*};
 
 /// Subtracts seconds from the node timer.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -27,7 +27,7 @@ mod tests {
     use ordered_float::OrderedFloat;
 
     use super::*;
-    use crate::{effect_v3::traits::Fireable, state::run::node::resources::NodeTimer};
+    use crate::effect_v3::traits::Fireable;
 
     #[test]
     fn fire_subtracts_configured_seconds_from_remaining() {

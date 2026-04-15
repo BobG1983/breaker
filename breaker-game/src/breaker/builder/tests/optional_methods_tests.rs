@@ -1,16 +1,14 @@
 use bevy::prelude::*;
-use rantzsoft_physics2d::aabb::Aabb2D;
-use rantzsoft_spatial2d::components::{
-    MaxSpeed, Position2D, PreviousPosition, PreviousScale, Scale2D,
-};
+use rantzsoft_spatial2d::components::{MaxSpeed, PreviousPosition};
 
 use super::helpers::test_breaker_definition;
 use crate::{
     breaker::{
-        components::{Breaker, BreakerBaseY, BreakerReflectionSpread},
+        components::{BreakerBaseY, BreakerReflectionSpread},
         definition::BreakerDefinition,
     },
-    shared::{BaseHeight, BaseWidth, death_pipeline::Hp},
+    prelude::*,
+    shared::{BaseHeight, BaseWidth},
 };
 
 // ── Behavior 19: .with_max_speed() overrides definition max_speed ──

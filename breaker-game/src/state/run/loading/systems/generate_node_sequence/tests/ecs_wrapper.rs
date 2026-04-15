@@ -4,9 +4,9 @@
 use bevy::prelude::*;
 
 use super::{super::system::generate_node_sequence_system, helpers::*};
-use crate::state::run::{
-    definition::TierNodeCount,
-    resources::{NodeAssignment, NodeSequence},
+use crate::{
+    prelude::*,
+    state::run::resources::{NodeAssignment, NodeSequence},
 };
 
 // -- 16. ECS wrapper: generate_node_sequence_system --
@@ -18,7 +18,7 @@ fn system_inserts_node_sequence_resource() {
 
     let curve = make_curve(vec![make_tier(TierNodeCount::Fixed(3), 0.5, 1.0)], 0.0);
     app.insert_resource(curve);
-    app.insert_resource(crate::shared::GameRng::from_seed(42));
+    app.insert_resource(GameRng::from_seed(42));
     app.add_systems(Update, generate_node_sequence_system);
     app.update();
 
@@ -48,7 +48,7 @@ fn system_generates_deterministic_sequence_from_game_rng() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         app.insert_resource(curve.clone());
-        app.insert_resource(crate::shared::GameRng::from_seed(seed));
+        app.insert_resource(GameRng::from_seed(seed));
         app.add_systems(Update, generate_node_sequence_system);
         app.update();
         app.world().resource::<NodeSequence>().assignments.clone()

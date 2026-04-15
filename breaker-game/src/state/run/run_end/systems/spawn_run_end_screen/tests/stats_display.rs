@@ -1,5 +1,5 @@
 use super::helpers::*;
-use crate::state::run::resources::{HighlightKind, NodeResult, RunHighlight, RunStats};
+use crate::{prelude::*, state::run::resources::NodeResult};
 
 #[test]
 fn displays_nodes_cleared_from_stats() {

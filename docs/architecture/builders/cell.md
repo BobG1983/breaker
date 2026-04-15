@@ -43,7 +43,7 @@ Test-only methods (`#[cfg(test)]`): `.hp()`, `.headless()`, `.required_to_clear(
 `spawn()` is the only public terminal. No `build()` is exposed.
 
 1. Resolves all optional data (override > definition > default)
-2. Spawns core entity: `Cell`, `Position2D`, `Scale2D`, `Aabb2D`, `CollisionLayers`, `CellHealth`, `CellWidth`, `CellHeight`
+2. Spawns core entity: `Cell`, `Position2D`, `Scale2D`, `Aabb2D`, `CollisionLayers`, `Hp`, `CellWidth`, `CellHeight`
 3. Inserts optional markers: `CellTypeAlias`, `RequiredToClear`, `CellDamageVisuals`
 4. Inserts lock components if `.locked()` was called
 5. Processes `CellBehavior` list from definition: `Regen` -> regen components, `Guarded` -> `GuardedCell` marker
@@ -57,7 +57,7 @@ When `.guarded(slots, config)` is called:
 - `slots: Vec<u8>` — ring slot indices (0-7) provided by the spawn pipeline from node layout data
 - `config: GuardianSpawnConfig` — hp, color, speed, dimensions, step sizes
 
-Guardian visual handles are pre-computed during `.rendered()` and stored in `GuardedSpawnData.guardian_visuals`. Each guardian gets: `Cell`, `GuardianCell`, `GuardianSlot`, `SlideTarget`, `GuardianSlideSpeed`, `GuardianGridStep`, `CellHealth`, square dimensions, `PositionPropagation::Absolute`, `ChildOf(parent)`.
+Guardian visual handles are pre-computed during `.rendered()` and stored in `GuardedSpawnData.guardian_visuals`. Each guardian gets: `Cell`, `GuardianCell`, `GuardianSlot`, `SlideTarget`, `GuardianSlideSpeed`, `GuardianGridStep`, `Hp`, square dimensions, `PositionPropagation::Absolute`, `ChildOf(parent)`.
 
 ## File Layout
 

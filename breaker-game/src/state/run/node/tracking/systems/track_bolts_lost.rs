@@ -2,10 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::{
-    bolt::messages::BoltLost,
-    state::run::resources::{HighlightTracker, RunStats},
-};
+use crate::{bolt::messages::BoltLost, prelude::*, state::run::resources::HighlightTracker};
 
 /// Reads [`BoltLost`] messages and increments counters in [`RunStats`]
 /// and [`HighlightTracker`].
@@ -34,7 +31,6 @@ mod tests {
     }
 
     fn test_app() -> App {
-        use crate::shared::test_utils::TestAppBuilder;
         TestAppBuilder::new()
             .with_message::<BoltLost>()
             .with_resource::<RunStats>()
@@ -42,8 +38,6 @@ mod tests {
             .with_system(FixedUpdate, (enqueue_messages, track_bolts_lost).chain())
             .build()
     }
-
-    use crate::shared::test_utils::tick;
 
     #[test]
     fn increments_bolts_lost_for_each_message() {

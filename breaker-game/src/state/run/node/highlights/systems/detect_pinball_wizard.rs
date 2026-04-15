@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    bolt::messages::{BoltImpactBreaker, BoltImpactCell},
+    prelude::*,
     state::run::{definition::HighlightConfig, messages::HighlightTriggered, resources::*},
 };
 
@@ -63,7 +63,6 @@ pub(crate) fn detect_pinball_wizard(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::run::resources::{HighlightKind, RunHighlight};
 
     // --- TestMessages resources for each message type ---
 
@@ -104,7 +103,6 @@ mod tests {
     }
 
     fn test_app() -> App {
-        use crate::shared::test_utils::TestAppBuilder;
         TestAppBuilder::new()
             .with_message::<BoltImpactCell>()
             .with_message::<BoltImpactBreaker>()
@@ -127,8 +125,6 @@ mod tests {
             )
             .build()
     }
-
-    use crate::shared::test_utils::tick;
 
     // --- Behavior 10: BoltImpactCell increments cell_bounces_since_breaker ---
 

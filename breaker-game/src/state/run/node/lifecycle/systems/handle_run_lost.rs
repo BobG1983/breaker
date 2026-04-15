@@ -3,12 +3,12 @@
 use bevy::prelude::*;
 use rantzsoft_stateflow::ChangeState;
 
-use crate::state::{
-    run::{
+use crate::{
+    prelude::*,
+    state::run::{
         messages::RunLost,
         resources::{NodeOutcome, NodeResult},
     },
-    types::NodeState,
 };
 
 /// When [`RunLost`] is received, sets the run outcome to lost and transitions
@@ -33,10 +33,6 @@ mod tests {
     use rantzsoft_stateflow::ChangeState;
 
     use super::*;
-    use crate::{
-        shared::test_utils::TestAppBuilder,
-        state::types::{AppState, GameState, RunState},
-    };
 
     #[derive(Resource)]
     struct SendRunLost(bool);
@@ -78,8 +74,6 @@ mod tests {
         app.update();
         app
     }
-
-    use crate::shared::test_utils::tick;
 
     #[test]
     fn run_lost_sets_outcome_and_transitions() {

@@ -3,7 +3,7 @@ use std::time::Duration;
 use bevy::{prelude::*, state::app::StatesPlugin, time::TimeUpdateStrategy};
 
 use super::system::*;
-use crate::shared::{GameRng, GameState};
+use crate::prelude::*;
 
 fn test_app() -> App {
     let mut app = App::new();

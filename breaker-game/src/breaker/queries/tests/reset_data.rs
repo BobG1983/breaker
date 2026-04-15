@@ -1,9 +1,10 @@
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{Position2D, PreviousPosition, Velocity2D};
+use rantzsoft_spatial2d::components::PreviousPosition;
 
 use super::{super::data::*, helpers::*};
-use crate::breaker::components::{
-    Breaker, BreakerBaseY, BreakerTilt, BumpState, DashState, DashStateTimer,
+use crate::{
+    breaker::components::{BreakerBaseY, BreakerTilt, BumpState, DashState, DashStateTimer},
+    prelude::*,
 };
 
 // ── Part G: BreakerResetData (mutable) ──────────────────────────

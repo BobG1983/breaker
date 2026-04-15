@@ -4,12 +4,8 @@ use bevy::prelude::*;
 use rantzsoft_spatial2d::components::PreviousPosition;
 
 use crate::{
-    breaker::{
-        components::{Breaker, DashState},
-        messages::BreakerSpawned,
-        queries::BreakerResetData,
-    },
-    shared::PlayfieldConfig,
+    breaker::{components::DashState, messages::BreakerSpawned, queries::BreakerResetData},
+    prelude::*,
 };
 
 /// Resets breaker state at the start of each node.

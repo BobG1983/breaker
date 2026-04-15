@@ -8,8 +8,8 @@ use super::{
     systems::{spawn_loading_screen, update_loading_bar},
 };
 use crate::{
-    chips::systems::build_chip_catalog::build_chip_catalog,
-    state::{cleanup::cleanup_entities, types::AppState},
+    chips::systems::build_chip_catalog::build_chip_catalog, prelude::*,
+    state::cleanup::cleanup_entities,
 };
 
 /// Plugin for the loading screen — UI and config seeding.

@@ -125,7 +125,7 @@ pub(crate) struct SyncBoltScaleData {
     /// Base radius in world units.
     pub base_radius: &'static crate::shared::size::BaseRadius,
     /// Mutable scale for rendering.
-    pub scale:       &'static mut rantzsoft_spatial2d::components::Scale2D,
+    pub scale:       &'static mut Scale2D,
     /// Active size boost multipliers.
     pub size_boosts: Option<&'static EffectStack<SizeBoostConfig>>,
     /// Node scaling factor.

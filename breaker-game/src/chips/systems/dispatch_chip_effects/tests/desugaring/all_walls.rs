@@ -7,9 +7,9 @@ use crate::{
     chips::{definition::ChipDefinition, systems::dispatch_chip_effects::tests::helpers::*},
     effect_v3::{
         effects::SpeedBoostConfig,
-        storage::BoundEffects,
         types::{EffectType, EntityKind, StampTarget, Tree, Trigger},
     },
+    prelude::*,
 };
 
 // ── Behavior 3: ActiveWalls stamps tree to Breaker's BoundEffects ──

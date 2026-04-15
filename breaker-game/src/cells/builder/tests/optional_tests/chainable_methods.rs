@@ -5,14 +5,14 @@ use bevy::prelude::*;
 use super::helpers::*;
 use crate::{
     cells::{
-        components::{Cell, CellDamageVisuals, CellTypeAlias, RegenRate, RequiredToClear},
+        components::{Cell, CellDamageVisuals, CellTypeAlias, RequiredToClear},
         definition::CellBehavior,
     },
     effect_v3::{
         effects::DamageBoostConfig,
-        storage::BoundEffects,
         types::{EffectType, RootNode, StampTarget, Tree},
     },
+    prelude::*,
 };
 
 // Behavior 24: .with_behavior(CellBehavior::Regen { rate: 3.0 }) inserts RegenRate
@@ -369,9 +369,7 @@ fn no_toughness_hp_path_still_works() {
             .headless()
             .spawn(commands)
     });
-    let health = world
-        .get::<crate::shared::death_pipeline::hp::Hp>(entity)
-        .expect("should have Hp");
+    let health = world.get::<Hp>(entity).expect("should have Hp");
     assert!(
         (health.current - 20.0).abs() < f32::EPSILON,
         "legacy .hp() should still set health"

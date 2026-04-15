@@ -2,9 +2,8 @@ use bevy::prelude::*;
 
 use super::super::system::*;
 use crate::{
-    breaker::messages::{BumpGrade, BumpPerformed},
-    effect_v3::effects::circuit_breaker::components::CircuitBreakerCounter,
-    shared::test_utils::TestAppBuilder,
+    breaker::messages::BumpGrade,
+    effect_v3::effects::circuit_breaker::components::CircuitBreakerCounter, prelude::*,
 };
 
 // -- Helpers ----------------------------------------------------------
@@ -27,7 +26,7 @@ pub(super) fn circuit_breaker_app() -> App {
     TestAppBuilder::new()
         .with_message::<BumpPerformed>()
         .with_resource::<TestBumpMessages>()
-        .with_resource::<crate::shared::rng::GameRng>()
+        .with_resource::<GameRng>()
         .with_system(
             FixedUpdate,
             (

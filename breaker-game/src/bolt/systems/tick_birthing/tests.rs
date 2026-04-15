@@ -1,20 +1,13 @@
 use bevy::prelude::*;
 
 use super::system::tick_birthing;
-use crate::{
-    prelude::*,
-    shared::{BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, WALL_LAYER, birthing::BIRTHING_DURATION},
-};
+use crate::{prelude::*, shared::birthing::BIRTHING_DURATION};
 
 fn test_app() -> App {
-    use crate::shared::test_utils::TestAppBuilder;
-
     TestAppBuilder::new()
         .with_system(FixedUpdate, tick_birthing)
         .build()
 }
-
-use crate::shared::test_utils::tick;
 
 // Behavior 3: tick_birthing lerps scale from zero toward target_scale each tick
 #[test]
@@ -541,9 +534,8 @@ fn scale_lerp_is_linear_at_midpoint() {
 #[test]
 fn full_birthing_lifecycle_from_builder() {
     use bevy::ecs::world::CommandQueue;
-    use rantzsoft_spatial2d::components::Velocity2D;
 
-    use crate::bolt::{components::Bolt as BoltMarker, definition::BoltDefinition};
+    use crate::bolt::definition::BoltDefinition;
 
     let mut app = test_app();
 
@@ -567,7 +559,7 @@ fn full_birthing_lifecycle_from_builder() {
         let mut queue = CommandQueue::default();
         let entity = {
             let mut commands = Commands::new(&mut queue, app.world_mut());
-            BoltMarker::builder()
+            Bolt::builder()
                 .definition(&def)
                 .at_position(Vec2::ZERO)
                 .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))

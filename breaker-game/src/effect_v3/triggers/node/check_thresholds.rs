@@ -6,7 +6,7 @@
 use bevy::prelude::*;
 
 use super::{messages::NodeTimerThresholdCrossed, resources::NodeTimerThresholdRegistry};
-use crate::state::run::node::resources::NodeTimer;
+use crate::prelude::*;
 
 /// Checks the node timer ratio against registered thresholds.
 ///

@@ -8,10 +8,7 @@
 use bevy::prelude::*;
 use rantzsoft_physics2d::resources::CollisionQuadtree;
 
-use crate::{
-    prelude::*,
-    shared::{CELL_LAYER, WALL_LAYER},
-};
+use crate::prelude::*;
 
 /// Wall entity lookup for narrow-phase overlap verification.
 type WallLookup<'w, 's> = Query<'w, 's, (&'static Position2D, &'static Aabb2D), With<Wall>>;
@@ -62,7 +59,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        shared::{GameDrawLayer, test_utils::tick},
+        shared::GameDrawLayer,
         walls::test_utils::{spawn_ceiling_wall, spawn_left_wall, spawn_right_wall},
     };
 
@@ -81,8 +78,6 @@ mod tests {
     }
 
     fn test_app() -> App {
-        use crate::shared::test_utils::TestAppBuilder;
-
         TestAppBuilder::new()
             .with_physics()
             .with_message::<CellImpactWall>()

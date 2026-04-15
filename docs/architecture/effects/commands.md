@@ -15,7 +15,7 @@ pub trait EffectCommandsExt {
 
 Implemented on Bevy's `Commands`. Each method queues a custom `Command` that gets `&mut World` when applied at the next `apply_deferred` sync point.
 
-The `source_chip` / `chip_name` parameter carries chip attribution for damage tracking. It is forwarded to `EffectKind::fire()`/`reverse()` and ultimately into `DamageCell.source_chip` for AoE effects.
+The `source_chip` / `chip_name` parameter carries chip attribution for damage tracking. It is forwarded to `EffectKind::fire()`/`reverse()` and ultimately into `DamageDealt.source_chip` for AoE effects.
 
 ## Custom Commands
 

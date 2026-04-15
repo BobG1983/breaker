@@ -2,9 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::{
-    breaker::components::Breaker, shared::NodeScalingFactor, state::run::node::ActiveNodeLayout,
-};
+use crate::{prelude::*, state::run::node::ActiveNodeLayout};
 
 /// Inserts or overwrites [`NodeScalingFactor`] on the breaker entity using the
 /// scale from the current [`ActiveNodeLayout`].
@@ -30,10 +28,9 @@ pub(crate) fn apply_node_scale_to_breaker(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::run::node::{NodeLayout, definition::NodePool};
+    use crate::state::run::node::definition::NodePool;
 
     fn test_app() -> App {
-        use crate::shared::test_utils::TestAppBuilder;
         TestAppBuilder::new()
             .with_system(Update, apply_node_scale_to_breaker)
             .build()

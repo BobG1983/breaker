@@ -1,17 +1,13 @@
 //! System to spawn the timer HUD on node entry.
 
 use bevy::prelude::*;
-use rantzsoft_stateflow::CleanupOnExit;
 
-use crate::state::{
-    run::node::{
-        NodeTimer,
-        hud::{
-            components::{NodeTimerDisplay, StatusPanel},
-            resources::TimerUiConfig,
-        },
+use crate::{
+    prelude::*,
+    state::run::node::hud::{
+        components::{NodeTimerDisplay, StatusPanel},
+        resources::TimerUiConfig,
     },
-    types::NodeState,
 };
 
 /// Spawns the timer display as a child of the [`StatusPanel`].

@@ -4,8 +4,7 @@
 //! across multiple cells test suites. Suite-specific helpers remain local.
 
 use bevy::prelude::*;
-use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
-use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D};
+use rantzsoft_spatial2d::components::{GlobalPosition2D, Spatial2D};
 
 use crate::{
     cells::{
@@ -13,10 +12,8 @@ use crate::{
         definition::{CellTypeDefinition, Toughness},
         resources::CellConfig,
     },
-    shared::{
-        BOLT_LAYER, CELL_LAYER, GameDrawLayer,
-        death_pipeline::{hp::Hp, killed_by::KilledBy},
-    },
+    prelude::*,
+    shared::GameDrawLayer,
 };
 
 /// Returns default `(CellWidth, CellHeight)` from `CellConfig::default()`.

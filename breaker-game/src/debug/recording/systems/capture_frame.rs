@@ -6,7 +6,7 @@ use crate::{
     debug::recording::resources::{
         RecordedFrame, RecordingBuffer, RecordingConfig, RecordingFrame,
     },
-    input::resources::InputActions,
+    prelude::*,
     state::run::node::ActiveNodeLayout,
 };
 

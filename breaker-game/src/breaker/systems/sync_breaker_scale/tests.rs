@@ -1,16 +1,12 @@
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
-use rantzsoft_spatial2d::components::Scale2D;
 
 use super::system::*;
 use crate::{
-    breaker::components::{BaseHeight, BaseWidth, Breaker},
+    breaker::components::{BaseHeight, BaseWidth},
     effect_v3::{effects::SizeBoostConfig, stacking::EffectStack},
-    shared::{
-        NodeScalingFactor,
-        size::{MaxHeight, MaxWidth, MinHeight, MinWidth},
-        test_utils::TestAppBuilder,
-    },
+    prelude::*,
+    shared::size::{MaxHeight, MaxWidth, MinHeight, MinWidth},
 };
 
 fn size_stack(values: &[f32]) -> EffectStack<SizeBoostConfig> {
@@ -31,8 +27,6 @@ fn test_app() -> App {
         .with_system(FixedUpdate, sync_breaker_scale)
         .build()
 }
-
-use crate::shared::test_utils::tick;
 
 // ── Behavior 16: Base dimensions with no boosts ─────────────────
 

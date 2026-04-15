@@ -1,9 +1,6 @@
 //! Shared test helpers for `select_highlights` tests.
 
-use crate::state::run::{
-    definition::HighlightConfig,
-    resources::{HighlightKind, RunHighlight},
-};
+use crate::{prelude::*, state::run::definition::HighlightConfig};
 
 pub(super) fn default_config() -> HighlightConfig {
     HighlightConfig::default()

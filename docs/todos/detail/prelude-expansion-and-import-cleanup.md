@@ -31,10 +31,10 @@ Three phases of work:
 - Blocks: nothing (but makes future cross-domain work easier by reducing import noise)
 
 ## Notes
-- The prelude should stay organized by domain (bolt, breaker, cells, effect, shared, etc.) with one re-export module per domain
-- Types that are truly domain-internal (used only within their own domain) should NOT be hoisted
-- Test-only types stay out of the main prelude — test utils have their own import patterns
+- The prelude is organized by category (components, messages, resources, states, death_pipeline, constants, test_utils) with one re-export module per category
+- Types need 3+ consumer files across the codebase to qualify for prelude inclusion
+- Test utilities (TestAppBuilder, tick, MessageCollector, attach_message_capture) go in a `#[cfg(test)]`-gated submodule
 - Keep `rantzsoft_*` types out of the game prelude — they have their own preludes
 
 ## Status
-`ready`
+`in-progress`

@@ -4,7 +4,8 @@ use bevy::prelude::*;
 
 use crate::{
     chips::ChipCatalog,
-    state::run::{chip_select::messages::ChipSelected, messages::HighlightTriggered, resources::*},
+    prelude::*,
+    state::run::{messages::HighlightTriggered, resources::*},
 };
 
 /// Reads [`ChipSelected`] messages and detects `FirstEvolution` highlight
@@ -64,10 +65,7 @@ mod tests {
     use super::*;
     use crate::{
         chips::{ChipCatalog, Recipe, definition::EvolutionIngredient},
-        state::run::{
-            definition::HighlightConfig,
-            resources::{HighlightKind, RunHighlight},
-        },
+        state::run::definition::HighlightConfig,
     };
 
     #[derive(Resource)]
@@ -108,7 +106,6 @@ mod tests {
     /// Uses `Update` schedule (not `FixedUpdate`) since chip selection
     /// happens during the `ChipSelect` game state.
     fn test_app() -> App {
-        use crate::shared::test_utils::TestAppBuilder;
         TestAppBuilder::new()
             .with_message::<ChipSelected>()
             .with_message::<HighlightTriggered>()

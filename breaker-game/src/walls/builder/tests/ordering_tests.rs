@@ -1,8 +1,8 @@
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::Position2D;
 
 use super::helpers::default_playfield;
 use crate::{
+    prelude::*,
     shared::GameDrawLayer,
     walls::{components::Wall, definition::WallDefinition},
 };

@@ -15,7 +15,7 @@ use crate::{
             ApplyTimePenalty, CellsSpawned, NodeCleared, ReverseTimePenalty, SpawnNodeComplete,
             TimerExpired,
         },
-        resources::{ClearRemainingCount, NodeTimer, ScenarioLayoutOverride},
+        resources::{ClearRemainingCount, ScenarioLayoutOverride},
         sets::NodeSystems,
         systems::{
             all_animate_in_complete, apply_time_penalty, check_spawn_complete,
@@ -115,7 +115,6 @@ impl Plugin for NodePlugin {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::types::{AppState, GameState, RunState};
 
     #[test]
     fn plugin_builds() {

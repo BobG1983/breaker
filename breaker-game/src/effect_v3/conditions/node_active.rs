@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::state::types::NodeState;
+use crate::prelude::*;
 
 /// Evaluate whether the `NodeActive` condition is currently true.
 ///

@@ -3,13 +3,12 @@
 use bevy::prelude::*;
 
 use super::super::system::check_lock_release;
-pub(super) use crate::shared::test_utils::tick;
 use crate::{
     cells::{
         behaviors::locked::systems::sync_lock_invulnerable::sync_lock_invulnerable,
         components::Cell,
     },
-    shared::death_pipeline::destroyed::Destroyed,
+    prelude::*,
 };
 
 // ---------------------------------------------------------------
@@ -34,8 +33,6 @@ pub(super) fn enqueue_destroyed(
 
 /// App for testing `check_lock_release`.
 pub(super) fn lock_release_app() -> App {
-    use crate::shared::test_utils::TestAppBuilder;
-
     TestAppBuilder::new()
         .with_message::<Destroyed<Cell>>()
         .with_resource::<TestDestroyedMessages>()

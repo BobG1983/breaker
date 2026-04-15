@@ -1,13 +1,8 @@
 use bevy::prelude::*;
-use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
-use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D, Velocity2D};
+use rantzsoft_spatial2d::components::{GlobalPosition2D, Spatial2D};
 
 use super::helpers::*;
-use crate::{
-    cells::components::Cell,
-    shared::{BOLT_LAYER, CELL_LAYER, GameDrawLayer, NodeScalingFactor, WALL_LAYER},
-    walls::components::Wall,
-};
+use crate::{prelude::*, shared::GameDrawLayer};
 
 // --- NodeScalingFactor collision tests ---
 

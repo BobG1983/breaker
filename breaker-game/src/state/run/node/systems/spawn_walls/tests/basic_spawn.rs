@@ -2,16 +2,11 @@
 //! and position matching.
 
 use bevy::prelude::*;
-use rantzsoft_stateflow::CleanupOnExit;
 
 use super::helpers::test_app;
 use crate::{
-    shared::PlayfieldConfig,
-    state::types::NodeState,
-    walls::{
-        components::Wall, definition::WallDefinition, messages::WallsSpawned,
-        registry::WallRegistry,
-    },
+    prelude::*,
+    walls::{definition::WallDefinition, messages::WallsSpawned, registry::WallRegistry},
 };
 
 #[test]

@@ -1,8 +1,7 @@
 use bevy::{ecs::world::CommandQueue, prelude::*};
-use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use super::helpers::*;
-use crate::bolt::components::Bolt;
+use crate::prelude::*;
 
 #[test]
 fn bolt_moves_full_distance_no_cells() {

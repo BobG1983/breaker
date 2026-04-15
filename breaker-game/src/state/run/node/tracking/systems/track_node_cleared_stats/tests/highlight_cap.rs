@@ -4,9 +4,9 @@
 use bevy::prelude::*;
 
 use super::helpers::*;
-use crate::state::run::{
-    node::resources::NodeTimer,
-    resources::{HighlightKind, HighlightTracker, NodeOutcome, RunHighlight, RunStats},
+use crate::{
+    prelude::*,
+    state::run::resources::{HighlightTracker, NodeOutcome},
 };
 
 // --- Behavior 7: highlight cap reads from config ---

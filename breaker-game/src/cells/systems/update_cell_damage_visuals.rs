@@ -5,7 +5,7 @@ use bevy::prelude::*;
 
 use crate::{
     cells::components::{Cell, CellDamageVisuals},
-    shared::death_pipeline::{Dead, hp::Hp},
+    prelude::*,
 };
 
 /// Updates the `ColorMaterial` of cells whose `Hp` changed this tick.
@@ -57,13 +57,7 @@ pub(crate) fn update_cell_damage_visuals(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        cells::components::{Cell, CellDamageVisuals},
-        shared::{
-            death_pipeline::{hp::Hp, killed_by::KilledBy},
-            test_utils::{TestAppBuilder, tick},
-        },
-    };
+    use crate::cells::components::{Cell, CellDamageVisuals};
 
     /// Canonical Group U test values — same across U1/U2/U3/U4 so per-test
     /// colors can be compared.

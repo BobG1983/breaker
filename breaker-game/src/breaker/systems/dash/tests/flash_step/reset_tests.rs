@@ -1,14 +1,13 @@
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use super::helpers::*;
 use crate::{
     breaker::{
-        components::{BaseWidth, Breaker, BreakerTilt, DashState, DashStateTimer},
+        components::{BaseWidth, BreakerTilt, DashState, DashStateTimer},
         definition::BreakerDefinition,
     },
-    effect_v3::effects::flash_step::FlashStepActive,
-    input::resources::{GameAction, InputActions},
+    input::resources::GameAction,
+    prelude::*,
 };
 
 // -- Behavior 10: Teleport resets tilt and timer cleanly to Idle ----

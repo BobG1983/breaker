@@ -18,5 +18,3 @@ pub(super) fn assert_query_matched(app: &App) {
         "QueryData system should have matched at least one entity"
     );
 }
-
-pub(super) use crate::shared::test_utils::tick;

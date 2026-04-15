@@ -5,7 +5,7 @@ use crate::{
         effects::SpeedBoostConfig,
         types::{EffectType, RootNode, StampTarget, Tree, Trigger},
     },
-    shared::PlayfieldConfig,
+    prelude::*,
     walls::definition::WallDefinition,
 };
 

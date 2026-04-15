@@ -3,12 +3,12 @@ use ordered_float::OrderedFloat;
 
 use super::super::system::*;
 use crate::{
-    breaker::messages::{BumpPerformed, BumpWhiffed, NoBump},
+    breaker::messages::{BumpWhiffed, NoBump},
     effect_v3::{
         effects::SpeedBoostConfig,
         types::{BumpTarget, EffectType, ParticipantTarget, Terminal, Tree, Trigger},
     },
-    shared::test_utils::TestAppBuilder,
+    prelude::*,
 };
 
 // -- Message injection resources -----------------------------------------

@@ -3,15 +3,15 @@
 use bevy::prelude::*;
 
 use crate::{
-    bolt::messages::BoltImpactBreaker,
     breaker::{
         components::{
-            Breaker, BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown, BumpPerfectWindow,
-            BumpState, BumpWeakCooldown, SettleDuration,
+            BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown, BumpPerfectWindow, BumpState,
+            BumpWeakCooldown, SettleDuration,
         },
         systems::bump::tests::helpers::*,
     },
-    effect_v3::effects::anchor::{AnchorActive, AnchorPlanted},
+    effect_v3::effects::anchor::AnchorActive,
+    prelude::*,
 };
 
 // -- Behavior 4: Forward window total duration includes widened perfect window --

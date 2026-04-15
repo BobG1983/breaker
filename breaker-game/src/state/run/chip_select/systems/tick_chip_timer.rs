@@ -5,12 +5,10 @@ use rantzsoft_stateflow::ChangeState;
 
 use crate::{
     chips::inventory::ChipInventory,
-    state::{
-        run::chip_select::{
-            ChipSelectConfig,
-            resources::{ChipOffering, ChipOffers, ChipSelectTimer},
-        },
-        types::ChipSelectState,
+    prelude::*,
+    state::run::chip_select::{
+        ChipSelectConfig,
+        resources::{ChipOffering, ChipOffers, ChipSelectTimer},
     },
 };
 
@@ -49,7 +47,6 @@ mod tests {
     use rantzsoft_stateflow::ChangeState;
 
     use super::*;
-    use crate::shared::test_utils::TestAppBuilder;
 
     fn test_app(remaining: f32) -> App {
         TestAppBuilder::new()

@@ -3,13 +3,12 @@
 use bevy::prelude::*;
 
 use crate::{
-    shared::PlayfieldConfig,
+    prelude::*,
     state::run::node::systems::spawn_walls::*,
     walls::{definition::WallDefinition, messages::WallsSpawned, registry::WallRegistry},
 };
 
 pub(super) fn test_app() -> App {
-    use crate::shared::test_utils::TestAppBuilder;
     let mut registry = WallRegistry::default();
     registry.insert(
         "Wall".to_string(),

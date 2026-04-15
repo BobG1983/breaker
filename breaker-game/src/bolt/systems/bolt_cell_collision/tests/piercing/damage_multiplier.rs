@@ -1,11 +1,12 @@
 //! Tests for `ActiveDamageBoosts` interaction with piercing lookahead.
 
-use rantzsoft_spatial2d::components::Velocity2D;
-
-use crate::bolt::{
-    components::PiercingRemaining,
-    systems::bolt_cell_collision::tests::helpers::*,
-    test_utils::{damage_stack, piercing_stack},
+use crate::{
+    bolt::{
+        components::PiercingRemaining,
+        systems::bolt_cell_collision::tests::helpers::*,
+        test_utils::{damage_stack, piercing_stack},
+    },
+    prelude::*,
 };
 
 /// Spec behavior 3: Piercing lookahead uses `ActiveDamageBoosts` — pierce succeeds.

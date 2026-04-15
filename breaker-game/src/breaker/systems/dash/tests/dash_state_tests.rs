@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::Velocity2D;
 
 use super::{super::system::*, helpers::*};
 use crate::{
@@ -7,7 +6,8 @@ use crate::{
         components::{BreakerTilt, DashState, DashStateTimer},
         definition::BreakerDefinition,
     },
-    input::resources::{GameAction, InputActions},
+    input::resources::GameAction,
+    prelude::*,
 };
 
 #[test]

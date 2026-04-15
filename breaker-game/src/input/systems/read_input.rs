@@ -105,7 +105,7 @@ mod tests {
     use super::*;
 
     fn test_app() -> App {
-        use crate::shared::test_utils::TestAppBuilder;
+        use crate::prelude::*;
 
         TestAppBuilder::new()
             .with_resource::<InputActions>()

@@ -11,9 +11,9 @@ use crate::{
     effect_v3::{
         effects::{SizeBoostConfig, SpeedBoostConfig},
         stacking::EffectStack,
-        storage::BoundEffects,
         types::{EffectType, StampTarget, Tree, Trigger},
     },
+    prelude::*,
 };
 
 #[test]

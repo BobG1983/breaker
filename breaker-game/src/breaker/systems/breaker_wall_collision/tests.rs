@@ -1,16 +1,13 @@
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
-use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
-use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D};
+use rantzsoft_spatial2d::components::{GlobalPosition2D, Spatial2D};
 
 use super::system::*;
 use crate::{
-    breaker::{
-        components::{BaseHeight, BaseWidth, Breaker},
-        messages::BreakerImpactWall,
-    },
+    breaker::components::{BaseHeight, BaseWidth},
     effect_v3::{effects::SizeBoostConfig, stacking::EffectStack},
-    shared::{BREAKER_LAYER, GameDrawLayer, NodeScalingFactor, WALL_LAYER},
+    prelude::*,
+    shared::GameDrawLayer,
     walls::test_utils::{spawn_ceiling_wall, spawn_left_wall, spawn_right_wall},
 };
 
@@ -42,8 +39,6 @@ fn collect_breaker_wall_hits(
 }
 
 fn test_app() -> App {
-    use crate::shared::test_utils::TestAppBuilder;
-
     TestAppBuilder::new()
         .with_physics()
         .with_message::<BreakerImpactWall>()
@@ -59,8 +54,6 @@ fn test_app() -> App {
         )
         .build()
 }
-
-use crate::shared::test_utils::tick;
 
 fn spawn_breaker(app: &mut App, pos: Vec2) -> Entity {
     app.world_mut()

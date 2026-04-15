@@ -2,11 +2,13 @@
 //! exhausted piercing, and grid-adjacent spacing.
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::Velocity2D;
 
-use crate::bolt::{
-    components::PiercingRemaining, systems::bolt_cell_collision::tests::helpers::*,
-    test_utils::piercing_stack,
+use crate::{
+    bolt::{
+        components::PiercingRemaining, systems::bolt_cell_collision::tests::helpers::*,
+        test_utils::piercing_stack,
+    },
+    prelude::*,
 };
 
 #[test]

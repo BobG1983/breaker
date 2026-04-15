@@ -2,14 +2,16 @@
 //! `BoltBaseDamage` from the entity component.
 
 use bevy::{ecs::world::CommandQueue, prelude::*};
-use rantzsoft_spatial2d::components::Velocity2D;
 
 use super::helpers::*;
-use crate::bolt::{
-    components::{Bolt, BoltBaseDamage, PiercingRemaining},
-    definition::BoltDefinition,
-    resources::DEFAULT_BOLT_BASE_DAMAGE,
-    test_utils::{damage_stack, piercing_stack},
+use crate::{
+    bolt::{
+        components::{BoltBaseDamage, PiercingRemaining},
+        definition::BoltDefinition,
+        resources::DEFAULT_BOLT_BASE_DAMAGE,
+        test_utils::{damage_stack, piercing_stack},
+    },
+    prelude::*,
 };
 
 fn make_default_bolt_definition() -> BoltDefinition {

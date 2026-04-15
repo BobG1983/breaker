@@ -11,9 +11,9 @@ use crate::{
     effect_v3::{
         effects::{DamageBoostConfig, SpeedBoostConfig},
         stacking::EffectStack,
-        storage::BoundEffects,
         types::{EffectType, EntityKind, StampTarget, Tree, Trigger},
     },
+    prelude::*,
 };
 
 // ── Behavior 17: System adds chip to ChipInventory on dispatch ──

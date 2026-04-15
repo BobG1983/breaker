@@ -41,7 +41,7 @@ mod tests {
     use super::*;
 
     fn test_app(selection_index: usize) -> App {
-        use crate::shared::test_utils::TestAppBuilder;
+        use crate::prelude::*;
         TestAppBuilder::new()
             .insert_resource(RunSetupSelection {
                 index: selection_index,

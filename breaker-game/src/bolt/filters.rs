@@ -2,10 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::{
-    bolt::components::{Bolt, BoltServing},
-    shared::birthing::Birthing,
-};
+use crate::prelude::*;
 
 /// Query filter for active (non-serving) bolts.
 ///
@@ -27,11 +24,9 @@ pub(crate) type LaunchFilter = (With<Bolt>, With<BoltServing>, Without<Birthing>
 #[cfg(test)]
 mod tests {
     use bevy::prelude::*;
-    use rantzsoft_physics2d::collision_layers::CollisionLayers;
-    use rantzsoft_spatial2d::components::Scale2D;
 
     use super::*;
-    use crate::shared::birthing::{BIRTHING_DURATION, Birthing};
+    use crate::shared::birthing::BIRTHING_DURATION;
 
     /// Helper to create a `Birthing` component for tests.
     fn test_birthing() -> Birthing {

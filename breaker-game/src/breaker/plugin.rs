@@ -6,10 +6,7 @@ use crate::{
     bolt::BoltSystems,
     breaker::{
         BreakerSystems, ForceBumpGrade, SelectedBreaker,
-        messages::{
-            BreakerImpactCell, BreakerImpactWall, BreakerSpawned, BumpPerformed, BumpWhiffed,
-            NoBump,
-        },
+        messages::{BreakerSpawned, BumpWhiffed, NoBump},
         systems::{
             animate_bump_visual, animate_tilt_visual, breaker_cell_collision,
             breaker_wall_collision, grade_bump, move_breaker, perfect_bump_dash_cancel,
@@ -90,7 +87,6 @@ mod tests {
     use rantzsoft_physics2d::resources::CollisionQuadtree;
 
     use super::*;
-    use crate::state::types::{AppState, GameState, RunState};
 
     #[test]
     fn plugin_builds() {
@@ -104,7 +100,7 @@ mod tests {
             .add_sub_state::<GameState>()
             .add_sub_state::<RunState>()
             .add_sub_state::<NodeState>()
-            .init_resource::<crate::shared::PlayfieldConfig>()
+            .init_resource::<PlayfieldConfig>()
             .init_resource::<crate::breaker::BreakerRegistry>()
             .init_resource::<SelectedBreaker>()
             // InputPlugin owns InputActions — init resources it provides
@@ -112,7 +108,7 @@ mod tests {
             .add_message::<bevy::input::keyboard::KeyboardInput>()
             .add_plugins(crate::input::InputPlugin)
             // BreakerPlugin reads BoltImpactBreaker from the bolt domain
-            .add_message::<crate::bolt::messages::BoltImpactBreaker>()
+            .add_message::<BoltImpactBreaker>()
             .insert_resource(CollisionQuadtree::default())
             .add_plugins(BreakerPlugin)
             .update();

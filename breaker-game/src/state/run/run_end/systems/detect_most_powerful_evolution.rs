@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::state::run::resources::*;
+use crate::{prelude::*, state::run::resources::HighlightTracker};
 
 /// Examines [`HighlightTracker::evolution_damage`] and records a
 /// `MostPowerfulEvolution` highlight in [`RunStats`] for the chip with the
@@ -36,10 +36,7 @@ pub(crate) fn detect_most_powerful_evolution(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::run::{
-        messages::HighlightTriggered,
-        resources::{HighlightKind, NodeOutcome, RunHighlight},
-    };
+    use crate::state::run::{messages::HighlightTriggered, resources::NodeOutcome};
 
     #[derive(Resource, Default)]
     struct CapturedHighlightTriggered(Vec<HighlightTriggered>);
@@ -54,7 +51,6 @@ mod tests {
     }
 
     fn test_app() -> App {
-        use crate::shared::test_utils::TestAppBuilder;
         TestAppBuilder::new()
             .with_message::<HighlightTriggered>()
             .with_resource::<RunStats>()

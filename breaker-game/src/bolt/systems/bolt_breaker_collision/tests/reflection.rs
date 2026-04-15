@@ -1,10 +1,8 @@
 use bevy::{ecs::world::CommandQueue, prelude::*};
-use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use super::helpers::*;
 use crate::{
-    bolt::{components::Bolt, test_utils::speed_stack},
-    breaker::components::{Breaker, BreakerTilt},
+    bolt::test_utils::speed_stack, breaker::components::BreakerTilt, prelude::*,
     shared::GameDrawLayer,
 };
 

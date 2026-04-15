@@ -17,12 +17,9 @@
 use std::{collections::HashSet, marker::PhantomData};
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
-    breaker::components::Breaker,
-    shared::death_pipeline::{dead::Dead, destroyed::Destroyed, kill_yourself::KillYourself},
-    state::run::messages::RunLost,
+    prelude::*, shared::death_pipeline::kill_yourself::KillYourself, state::run::messages::RunLost,
 };
 
 type BreakerVictimQuery<'w, 's> =
@@ -90,10 +87,7 @@ mod tests {
     use std::marker::PhantomData;
 
     use super::*;
-    use crate::shared::{
-        death_pipeline::{despawn_entity::DespawnEntity, hp::Hp, killed_by::KilledBy},
-        test_utils::{MessageCollector, TestAppBuilder, tick},
-    };
+    use crate::shared::death_pipeline::despawn_entity::DespawnEntity;
 
     // ── Test helpers ───────────────────────────────────────────────────────
 

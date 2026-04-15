@@ -1,11 +1,7 @@
 use bevy::{ecs::world::CommandQueue, prelude::*};
-use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use super::*;
-use crate::{
-    bolt::components::{Bolt, BoltServing},
-    shared::NodeScalingFactor,
-};
+use crate::prelude::*;
 
 /// Local alias for the CCD epsilon used in test expected values.
 ///
@@ -14,15 +10,11 @@ use crate::{
 const CCD_EPSILON: f32 = 0.01;
 
 fn test_app() -> App {
-    use crate::shared::test_utils::TestAppBuilder;
-
     TestAppBuilder::new()
         .with_playfield()
         .with_system(FixedUpdate, clamp_bolt_to_playfield)
         .build()
 }
-
-use crate::shared::test_utils::tick;
 
 /// Default playfield: width=800, height=600 -> left=-400, right=400, top=300, bottom=-300
 const RADIUS: f32 = 6.0;

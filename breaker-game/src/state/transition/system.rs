@@ -5,6 +5,8 @@ use rand::Rng;
 use rantzsoft_defaults::GameConfig;
 use serde::Deserialize;
 
+use crate::prelude::*;
+
 /// Visual style for a node transition.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum TransitionStyle {
@@ -69,7 +71,7 @@ impl Default for TransitionDefaults {
 pub(crate) fn spawn_transition_out(
     mut commands: Commands,
     config: Res<TransitionConfig>,
-    mut rng: ResMut<crate::shared::GameRng>,
+    mut rng: ResMut<GameRng>,
 ) {
     let style = pick_style(&mut rng);
     let duration = config.out_duration;
@@ -97,7 +99,7 @@ pub(crate) fn spawn_transition_out(
 pub(crate) fn spawn_transition_in(
     mut commands: Commands,
     config: Res<TransitionConfig>,
-    mut rng: ResMut<crate::shared::GameRng>,
+    mut rng: ResMut<GameRng>,
 ) {
     let style = pick_style(&mut rng);
     let duration = config.in_duration;
@@ -126,7 +128,7 @@ pub(crate) fn spawn_transition_in(
 pub(crate) fn animate_transition(
     mut timer_query: Query<(&mut TransitionTimer, &mut BackgroundColor, &mut Node)>,
     time: Res<Time>,
-    mut next_state: ResMut<NextState<crate::shared::GameState>>,
+    mut next_state: ResMut<NextState<GameState>>,
 ) {
     for (mut timer, mut bg_color, mut node) in &mut timer_query {
         timer.remaining -= time.delta_secs();
@@ -134,10 +136,10 @@ pub(crate) fn animate_transition(
         if timer.remaining <= 0.0 {
             match timer.direction {
                 TransitionDirection::Out => {
-                    next_state.set(crate::shared::GameState::ChipSelect);
+                    next_state.set(GameState::ChipSelect);
                 }
                 TransitionDirection::In => {
-                    next_state.set(crate::shared::GameState::Playing);
+                    next_state.set(GameState::Playing);
                 }
             }
         } else {
@@ -173,7 +175,7 @@ pub(crate) fn cleanup_transition(
 }
 
 /// Picks a random [`TransitionStyle`] from the game RNG.
-fn pick_style(rng: &mut ResMut<crate::shared::GameRng>) -> TransitionStyle {
+fn pick_style(rng: &mut ResMut<GameRng>) -> TransitionStyle {
     if rng.0.random_range(0..2) == 0 {
         TransitionStyle::Flash
     } else {

@@ -13,27 +13,32 @@ The `crate::prelude` module provides stable import points for types used across 
 
 ### Usage
 
-- **`use crate::prelude::*`** — curated glob of the most universally used cross-domain types: entity markers (Bolt, Breaker, Cell, Wall), all states, all cross-domain messages, effect containers and active-effect components, and common resources (GameRng, InputActions, PlayfieldConfig).
+- **`use crate::prelude::*`** — curated glob of the most universally used cross-domain types: entity markers (Bolt, Breaker, Cell, Wall), all states, all cross-domain messages, effect containers and active-effect components, death pipeline types (Hp, Dead, DamageDealt, Destroyed, KilledBy), collision layer constants (BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, WALL_LAYER), common resources (GameRng, InputActions, PlayfieldConfig), and high-frequency run/node types. In `#[cfg(test)]` builds it also exposes test infrastructure (TestAppBuilder, tick, MessageCollector, attach_message_capture).
 
-The prelude submodules (`components`, `messages`, `resources`, `states`) currently export the same set as the curated glob. As more cross-domain types are added, narrower types may be placed in submodules only (not the glob) for files that need them without pulling in everything.
+The prelude is organized by category into submodules (`components`, `messages`, `resources`, `states`, `death_pipeline`, `constants`, and `#[cfg(test)] test_utils`). All submodules are globbed through `prelude/mod.rs`, so `use crate::prelude::*` pulls in the full curated set.
 
 ### When to Use
 
-- **Use the prelude** when a file imports 3+ types from 2+ different domains. Replace the verbose cross-domain imports with `use crate::prelude::*` and keep domain-internal imports explicit.
-- **Don't use the prelude** for 1-2 cross-domain imports — explicit paths are clearer for small import sets.
+- **Use the prelude** when a file imports 2+ types that are available through it. Replace the verbose cross-domain imports with `use crate::prelude::*` and keep domain-internal imports explicit.
 - **Don't use the prelude for same-domain imports** — even if a type is in the prelude, import it from your own domain's module path when you're within that domain.
 
 ### What Belongs in the Prelude
 
-A type belongs in `crate::prelude` if it is used by **2+ domains** — add it to the appropriate submodule file (`components.rs`, `messages.rs`, `resources.rs`, or `states.rs`). Add it to the curated glob in `prelude/mod.rs` only if it is used by **3+ domains**. Only add re-exports for types that have active consumers through the prelude — unused re-exports cause clippy warnings.
+A type belongs in `crate::prelude` if it is used in **3+ files across the codebase**, regardless of whether those files all live in the same domain. The goal is reducing import boilerplate — any type that shows up in verbose import blocks repeatedly is a candidate. Add it to the appropriate submodule file:
 
-When adding new cross-domain types (components, messages, resources, states), add them to the prelude as consumers are migrated to use it.
+- `components.rs` — entity markers and cross-domain components
+- `messages.rs` — cross-domain messages
+- `resources.rs` — resources (including run/node internals with heavy consumer counts)
+- `states.rs` — game state types
+- `death_pipeline.rs` — Hp, Dead, DamageDealt, Destroyed, KilledBy
+- `constants.rs` — collision layer constants
+- `test_utils.rs` (gated by `#[cfg(test)]`) — TestAppBuilder, tick, MessageCollector, attach_message_capture
 
 ### What Does NOT Belong in the Prelude
 
-- Domain-internal types (only used within one domain)
+- Types used in fewer than 3 files
 - Plugins, system sets (wiring code only)
-- Constants (stay in `crate::shared`)
+- Domain-internal helpers that never cross boundaries
 - Effect dispatch enums (`EffectKind`, `Target`, `Trigger`, `TriggerContext`) — these are well-served by `use crate::effect::*` within the effect domain
 
 ### Import Style

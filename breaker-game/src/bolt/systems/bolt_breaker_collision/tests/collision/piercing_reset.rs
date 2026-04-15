@@ -1,10 +1,11 @@
 //! Tests for `PiercingRemaining` reset on breaker hit via `ActivePiercings`.
 
-use rantzsoft_spatial2d::components::Velocity2D;
-
-use crate::bolt::{
-    components::PiercingRemaining, systems::bolt_breaker_collision::tests::helpers::*,
-    test_utils::piercing_stack,
+use crate::{
+    bolt::{
+        components::PiercingRemaining, systems::bolt_breaker_collision::tests::helpers::*,
+        test_utils::piercing_stack,
+    },
+    prelude::*,
 };
 
 // --- Piercing reset tests (using ActivePiercings) ---

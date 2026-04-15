@@ -1,12 +1,10 @@
 //! Gizmo overlay for velocity vectors.
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::Velocity2D;
 
 use crate::{
-    bolt::components::Bolt,
-    breaker::components::Breaker,
     debug::resources::{DebugOverlays, Overlay},
+    prelude::*,
 };
 
 const VELOCITY_ARROW_SCALE: f32 = 0.25;

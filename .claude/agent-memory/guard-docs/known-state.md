@@ -97,11 +97,17 @@ type: project
 
 ---
 
-## Confirmed Correct (as of prelude refactor, 2026-04-06)
+## Confirmed Correct (as of prelude-expansion-and-import-cleanup, 2026-04-15)
 
-- `docs/architecture/standards.md` — Prelude section: submodule/glob threshold distinction (2+ for submodules, 3+ for curated glob) is now documented correctly
-- `docs/architecture/plugins.md` — prelude/ entry in Domain Layout matches actual prelude structure (re-exports only, no types)
-- `breaker-game/src/prelude/` — 5 files: mod.rs + components.rs + messages.rs + resources.rs + states.rs; all pure re-export files, no type definitions
+- `docs/architecture/standards.md` — Prelude section fully updated: 3+ files threshold for inclusion; collision layer constants and death_pipeline types explicitly allowed; `#[cfg(test)]`-gated `test_utils` submodule allowed; 7-submodule structure documented
+- `docs/architecture/testing.md` — Rule 8 updated: test infrastructure reachable via `crate::prelude` in `#[cfg(test)]` builds; direct `use crate::shared::test_utils::...` imports remain valid; code examples updated to use `DamageDealt<Cell>` / `BoltImpactCell` (replacing stale `DamageCell`)
+- `docs/architecture/plugins.md` — prelude/ entry accurate: "re-exports only, no types"; cross-domain read access bullets updated: `CellHealth` → `Hp`, `DamageCell` → `DamageDealt<Cell>`, `RequestCellDestroyed`/`CellDestroyedAt` → `Destroyed<Cell>`/`Destroyed<Bolt>`/etc.
+- `docs/architecture/bolt-definitions.md` — extra bolt path updated: `RequestBoltDestroyed`/`cleanup_destroyed_bolts` → `KillYourself<Bolt>` + unified death pipeline
+- `docs/architecture/builders/cell.md` — `CellHealth` → `Hp` in core entity and guardian spawning steps
+- `docs/architecture/content.md` — AoE effect description: `DamageCell` → `DamageDealt<Cell>`
+- `docs/architecture/effects/commands.md` + `core_types.md` — `DamageCell.source_chip` → `DamageDealt.source_chip`
+- `breaker-game/src/prelude/` — 8 files: mod.rs + components.rs + constants.rs + death_pipeline.rs + messages.rs + resources.rs + states.rs + test_utils.rs (last is `#[cfg(test)]` only); all pure re-export files, no type definitions
+- No stale "2+ domains" or "no test_utils in prelude" or "constants stay in crate::shared" rules found anywhere in docs/architecture/
 
 ---
 

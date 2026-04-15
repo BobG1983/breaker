@@ -5,12 +5,7 @@ use std::marker::PhantomData;
 use bevy::prelude::*;
 
 use super::helpers::*;
-use crate::{
-    cells::components::*,
-    shared::death_pipeline::{
-        dead::Dead, destroyed::Destroyed, hp::Hp, invulnerable::Invulnerable, killed_by::KilledBy,
-    },
-};
+use crate::{cells::components::*, prelude::*, shared::death_pipeline::invulnerable::Invulnerable};
 
 fn make_destroyed_msg() -> Destroyed<Cell> {
     Destroyed::<Cell> {

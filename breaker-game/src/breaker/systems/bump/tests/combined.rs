@@ -2,12 +2,12 @@ use bevy::prelude::*;
 
 use super::helpers::*;
 use crate::{
-    bolt::messages::BoltImpactBreaker,
     breaker::{
-        components::{Breaker, BumpState, DashState, DashStateTimer, SettleDuration},
+        components::{BumpState, DashState, DashStateTimer, SettleDuration},
         definition::BreakerDefinition,
-        messages::{BumpGrade, BumpPerformed},
+        messages::BumpGrade,
     },
+    prelude::*,
 };
 
 #[test]

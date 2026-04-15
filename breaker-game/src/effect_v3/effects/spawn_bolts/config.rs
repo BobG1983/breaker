@@ -5,14 +5,13 @@ use std::f32::consts::FRAC_PI_2;
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
 use rand::Rng;
-use rantzsoft_physics2d::collision_layers::CollisionLayers;
-use rantzsoft_spatial2d::components::{BaseSpeed, Position2D, Scale2D, Velocity2D};
+use rantzsoft_spatial2d::components::BaseSpeed;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    bolt::components::{Bolt, BoltLifespan, ExtraBolt, PrimaryBolt},
+    bolt::components::{BoltLifespan, ExtraBolt, PrimaryBolt},
     effect_v3::{storage::BoundEffects, traits::Fireable},
-    shared::{birthing::Birthing, rng::GameRng},
+    prelude::*,
 };
 
 /// Spawns extra bolts at the entity's position.
@@ -79,18 +78,17 @@ impl Fireable for SpawnBoltsConfig {
 mod tests {
     use bevy::prelude::*;
     use ordered_float::OrderedFloat;
-    use rantzsoft_spatial2d::components::{BaseSpeed, Position2D, Velocity2D};
+    use rantzsoft_spatial2d::components::BaseSpeed;
 
     use super::*;
     use crate::{
-        bolt::components::{Bolt, BoltLifespan, ExtraBolt, PrimaryBolt},
+        bolt::components::{BoltLifespan, ExtraBolt, PrimaryBolt},
         effect_v3::{
             effects::DamageBoostConfig,
             storage::BoundEffects,
             traits::Fireable,
             types::{EffectType, Tree},
         },
-        shared::{birthing::Birthing, rng::GameRng},
     };
 
     fn spawn_source(world: &mut World, pos: Vec2, vel: Vec2) -> Entity {

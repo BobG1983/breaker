@@ -1,15 +1,10 @@
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::Position2D;
-use rantzsoft_stateflow::CleanupOnExit;
 
 use super::{super::system::grid_extent, helpers::*};
 use crate::{
     cells::{components::*, resources::CellConfig},
-    shared::{PlayfieldConfig, death_pipeline::hp::Hp},
-    state::{
-        run::node::{NodeLayout, definition::NodePool, messages::CellsSpawned},
-        types::NodeState,
-    },
+    prelude::*,
+    state::run::node::{definition::NodePool, messages::CellsSpawned},
 };
 
 /// Helper to reduce verbosity of String grid construction.

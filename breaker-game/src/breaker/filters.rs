@@ -2,10 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::{
-    bolt::components::Bolt,
-    breaker::components::{Breaker, BumpFeedbackState},
-};
+use crate::{breaker::components::BumpFeedbackState, prelude::*};
 
 /// Query filter for breakers eligible for a new bump visual (not already animating).
 pub type BumpTriggerFilter = (With<Breaker>, Without<BumpFeedbackState>);

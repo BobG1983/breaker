@@ -3,12 +3,12 @@ use rantzsoft_spatial2d::components::MaxSpeed;
 
 use super::helpers::test_breaker_definition;
 use crate::{
-    breaker::components::{Breaker, BreakerBaseY, PrimaryBreaker},
+    breaker::components::{BreakerBaseY, PrimaryBreaker},
     effect_v3::{
         effects::LoseLifeConfig,
-        storage::BoundEffects,
         types::{EffectType, RootNode, StampTarget, Tree, Trigger},
     },
+    prelude::*,
 };
 
 fn test_app() -> App {

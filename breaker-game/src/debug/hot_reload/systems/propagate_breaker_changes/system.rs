@@ -6,10 +6,7 @@ use rantzsoft_spatial2d::components::MaxSpeed;
 use crate::{
     breaker::{BreakerRegistry, SelectedBreaker, components::*},
     prelude::*,
-    shared::{
-        death_pipeline::Hp,
-        size::{MaxHeight, MaxWidth, MinHeight, MinWidth},
-    },
+    shared::size::{MaxHeight, MaxWidth, MinHeight, MinWidth},
 };
 
 /// Bundled system parameters for the breaker change propagation system.

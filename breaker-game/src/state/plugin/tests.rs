@@ -1,9 +1,9 @@
 use bevy::prelude::*;
 
 use super::system::*;
-use crate::state::{
-    run::resources::{NodeOutcome, NodeResult},
-    types::RunState,
+use crate::{
+    prelude::*,
+    state::run::resources::{NodeOutcome, NodeResult},
 };
 
 #[test]
@@ -122,10 +122,7 @@ fn resolve_node_next_state_lives_depleted_returns_run_end() {
 
 // ── Quit teardown chain: MenuState → GameState → AppState ──────────
 
-use crate::state::{
-    menu::main::{MainMenuSelection, MenuItem},
-    types::{AppState, GameState, MenuState},
-};
+use crate::state::menu::main::{MainMenuSelection, MenuItem};
 
 fn send_test_app_exit(mut writer: MessageWriter<AppExit>) {
     writer.write(AppExit::Success);

@@ -148,7 +148,7 @@ mod tests {
     }
 
     fn test_app(registry: BreakerRegistry) -> App {
-        use crate::shared::test_utils::TestAppBuilder;
+        use crate::prelude::*;
         TestAppBuilder::new()
             .insert_resource(registry)
             .with_system(Update, spawn_run_setup)

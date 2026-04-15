@@ -6,13 +6,10 @@ use rantzsoft_stateflow::CleanupOnExit;
 
 use crate::{
     fx::{FadeOut, PunchScale},
-    state::{
-        run::{
-            components::HighlightPopup, messages::HighlightTriggered,
-            node::lifecycle::systems::spawn_highlight_text::tests::helpers::*,
-            resources::HighlightKind,
-        },
-        types::NodeState,
+    prelude::*,
+    state::run::{
+        components::HighlightPopup, messages::HighlightTriggered,
+        node::lifecycle::systems::spawn_highlight_text::tests::helpers::*,
     },
 };
 

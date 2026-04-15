@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use super::super::resources::NodeTimerThresholdRegistry;
-use crate::effect_v3::storage::BoundEffects;
+use crate::prelude::*;
 
 /// Scans all `BoundEffects` trees for `NodeTimerThresholdOccurred` triggers
 /// and populates `NodeTimerThresholdRegistry.thresholds` with unique ratios.

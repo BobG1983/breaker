@@ -11,7 +11,7 @@ use crate::{
         inventory::ChipInventory,
         offering::{OfferingConfig, generate_offerings},
     },
-    shared::GameRng,
+    prelude::*,
     state::run::{
         chip_select::{
             ChipSelectConfig,

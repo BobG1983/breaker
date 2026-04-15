@@ -3,10 +3,11 @@
 use bevy::prelude::*;
 
 use crate::{
-    bolt::components::{Bolt, BoltRadius},
-    breaker::components::{BaseHeight, BaseWidth, Breaker},
-    cells::components::{Cell, CellHeight, CellWidth},
+    bolt::components::BoltRadius,
+    breaker::components::{BaseHeight, BaseWidth},
+    cells::components::{CellHeight, CellWidth},
     debug::resources::{DebugOverlays, Overlay},
+    prelude::*,
 };
 
 const BOLT_HITBOX_COLOR: Color = Color::srgb(0.0, 1.0, 0.0);

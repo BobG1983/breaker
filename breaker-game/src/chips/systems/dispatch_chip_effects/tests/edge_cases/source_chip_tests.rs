@@ -8,9 +8,9 @@ use crate::{
     effect_v3::{
         effects::{DamageBoostConfig, ShieldConfig, SpeedBoostConfig},
         stacking::EffectStack,
-        storage::{BoundEffects, StagedEffects},
         types::{EffectType, EntityKind, StampTarget, Tree, Trigger},
     },
+    prelude::*,
 };
 
 // ── Behavior 18: source_chip passed to fire_effect is the chip's display name ──
@@ -139,8 +139,6 @@ fn existing_bound_effects_preserved_new_entry_appended() {
     insert_chip(&mut app, def);
 
     let breaker = {
-        use crate::breaker::components::Breaker;
-
         let existing = BoundEffects(vec![
             (
                 "OldChip1".to_owned(),

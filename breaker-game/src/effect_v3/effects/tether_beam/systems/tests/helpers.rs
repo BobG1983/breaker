@@ -1,14 +1,7 @@
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::Position2D;
 
 use super::super::system::*;
-use crate::{
-    cells::components::Cell,
-    shared::{
-        death_pipeline::{DamageDealt, Dead},
-        test_utils::TestAppBuilder,
-    },
-};
+use crate::prelude::*;
 
 pub(super) fn tether_test_app() -> App {
     TestAppBuilder::new()
@@ -40,7 +33,7 @@ pub(super) fn spawn_dead_cell(app: &mut App, pos: Vec2) -> Entity {
 
 pub(super) fn damage_msgs(app: &App) -> Vec<DamageDealt<Cell>> {
     app.world()
-        .resource::<crate::shared::test_utils::MessageCollector<DamageDealt<Cell>>>()
+        .resource::<MessageCollector<DamageDealt<Cell>>>()
         .0
         .clone()
 }

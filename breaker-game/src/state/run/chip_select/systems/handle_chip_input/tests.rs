@@ -10,7 +10,6 @@ use crate::{
         effects::{DamageBoostConfig, PiercingConfig},
         types::{EffectType, Tree},
     },
-    shared::test_utils::TestAppBuilder,
     state::run::chip_select::resources::ChipOffering,
 };
 

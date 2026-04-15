@@ -1,8 +1,10 @@
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::Position2D;
 
 use super::helpers::{custom_wall_definition, default_playfield, test_wall_definition};
-use crate::walls::{components::Wall, definition::WallDefinition};
+use crate::{
+    prelude::*,
+    walls::{components::Wall, definition::WallDefinition},
+};
 
 // ── Behavior 6: .definition() stores definition values ──
 

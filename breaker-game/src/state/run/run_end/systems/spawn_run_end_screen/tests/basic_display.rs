@@ -1,9 +1,12 @@
 use bevy::prelude::*;
 
 use super::{super::spawn_run_end_screen, helpers::*};
-use crate::state::run::{
-    resources::{NodeOutcome, NodeResult, RunStats},
-    run_end::RunEndScreen,
+use crate::{
+    prelude::*,
+    state::run::{
+        resources::{NodeOutcome, NodeResult},
+        run_end::RunEndScreen,
+    },
 };
 
 #[test]

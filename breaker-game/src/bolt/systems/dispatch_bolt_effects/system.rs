@@ -4,10 +4,7 @@ use bevy::prelude::*;
 use tracing::warn;
 
 use crate::{
-    bolt::{
-        components::{Bolt, BoltDefinitionRef},
-        registry::BoltRegistry,
-    },
+    bolt::{components::BoltDefinitionRef, registry::BoltRegistry},
     effect_v3::{commands::EffectCommandsExt, types::*},
     prelude::*,
 };

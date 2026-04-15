@@ -4,8 +4,8 @@ use bevy::prelude::*;
 use tracing::info;
 
 use crate::{
-    cells::components::{Cell, RequiredToClear},
-    shared::death_pipeline::Destroyed,
+    cells::components::RequiredToClear,
+    prelude::*,
     state::run::node::{ClearRemainingCount, messages::NodeCleared},
 };
 
@@ -49,13 +49,7 @@ mod tests {
     use std::marker::PhantomData;
 
     use super::*;
-    use crate::{
-        cells::components::{Cell, RequiredToClear},
-        shared::{
-            death_pipeline::{destroyed::Destroyed, hp::Hp, killed_by::KilledBy},
-            test_utils::{TestAppBuilder, tick},
-        },
-    };
+    use crate::cells::components::RequiredToClear;
 
     #[derive(Resource, Default)]
     struct TestDestroyedMessages(Vec<Destroyed<Cell>>);

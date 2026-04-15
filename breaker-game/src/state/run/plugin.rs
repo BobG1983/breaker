@@ -24,7 +24,7 @@ use super::{
             track_node_cleared_stats, track_time_elapsed,
         },
     },
-    resources::{DifficultyCurve, HighlightTracker, NodeOutcome, RunStats},
+    resources::{DifficultyCurve, HighlightTracker, NodeOutcome},
     run_end::systems::detect_most_powerful_evolution,
     systems::{advance_node, hide_gameplay_entities, setup_run, show_gameplay_entities},
 };
@@ -123,22 +123,13 @@ impl Plugin for RunPlugin {
 mod tests {
     use super::*;
     use crate::{
-        bolt::messages::{BoltImpactBreaker, BoltImpactCell, BoltLost},
-        breaker::{components::Breaker, messages::BumpPerformed},
-        cells::components::Cell,
+        bolt::messages::BoltLost,
         chips::inventory::ChipInventory,
-        shared::{
-            PlayfieldConfig,
-            death_pipeline::{
-                DamageDealt, Destroyed, despawn_entity::DespawnEntity, kill_yourself::KillYourself,
-            },
-        },
-        state::run::chip_select::messages::ChipSelected,
+        shared::death_pipeline::{despawn_entity::DespawnEntity, kill_yourself::KillYourself},
     };
 
     #[test]
     fn plugin_builds() {
-        use crate::state::types::{AppState, ChipSelectState, GameState, RunEndState, RunState};
         App::new()
             .add_plugins(MinimalPlugins)
             .add_plugins(bevy::state::app::StatesPlugin)

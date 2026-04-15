@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
-use rantzsoft_spatial2d::components::Velocity2D;
 
 use super::system::*;
 use crate::{
@@ -11,7 +10,7 @@ use crate::{
         },
         stacking::EffectStack,
     },
-    shared::test_utils::{TestAppBuilder, tick},
+    prelude::*,
 };
 
 fn anchor_movement_app() -> App {

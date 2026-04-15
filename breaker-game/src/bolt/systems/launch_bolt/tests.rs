@@ -1,11 +1,10 @@
 use bevy::{ecs::world::CommandQueue, prelude::*};
-use rantzsoft_spatial2d::components::Velocity2D;
 
 use super::system::*;
 use crate::{
     bolt::{components::*, definition::BoltDefinition, resources::DEFAULT_BOLT_ANGLE_SPREAD},
-    input::resources::{GameAction, InputActions},
-    shared::GameRng,
+    input::resources::GameAction,
+    prelude::*,
 };
 
 fn make_default_bolt_definition() -> BoltDefinition {
@@ -26,16 +25,12 @@ fn make_default_bolt_definition() -> BoltDefinition {
 }
 
 fn test_app() -> App {
-    use crate::shared::test_utils::TestAppBuilder;
-
     TestAppBuilder::new()
         .with_resource::<InputActions>()
         .with_resource::<GameRng>()
         .with_system(FixedUpdate, launch_bolt)
         .build()
 }
-
-use crate::shared::test_utils::tick;
 
 /// Spawns a serving bolt using the builder with `.definition()`.
 fn spawn_serving_bolt(app: &mut App) -> Entity {
@@ -351,13 +346,10 @@ fn launch_bolt_velocity_matches_base_speed() {
 // ── Behaviors 5-6: launch_bolt skips bolts with Birthing ──
 
 /// Helper to create a `Birthing` component for tests.
-fn test_birthing() -> crate::shared::birthing::Birthing {
-    use rantzsoft_physics2d::collision_layers::CollisionLayers;
-    use rantzsoft_spatial2d::components::Scale2D;
-
+fn test_birthing() -> Birthing {
     use crate::shared::birthing::BIRTHING_DURATION;
 
-    crate::shared::birthing::Birthing {
+    Birthing {
         timer:          Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
         target_scale:   Scale2D { x: 8.0, y: 8.0 },
         stashed_layers: CollisionLayers::default(),

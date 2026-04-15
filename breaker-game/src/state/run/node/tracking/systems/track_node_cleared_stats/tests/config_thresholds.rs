@@ -2,10 +2,9 @@
 //! `fast_clear_fraction`, and `perfect_streak_count`.
 
 use super::helpers::*;
-use crate::state::run::{
-    definition::HighlightConfig,
-    node::resources::NodeTimer,
-    resources::{HighlightKind, HighlightTracker, RunStats},
+use crate::{
+    prelude::*,
+    state::run::{definition::HighlightConfig, resources::HighlightTracker},
 };
 
 // --- Behavior 4: clutch_clear_secs reads from config ---

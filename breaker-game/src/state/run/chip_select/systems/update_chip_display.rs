@@ -43,7 +43,7 @@ mod tests {
     use super::*;
 
     fn test_app(timer_remaining: f32, selection_index: usize) -> App {
-        use crate::shared::test_utils::TestAppBuilder;
+        use crate::prelude::*;
         TestAppBuilder::new()
             .insert_resource(ChipSelectConfig::default())
             .insert_resource(ChipSelectTimer {

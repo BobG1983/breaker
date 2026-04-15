@@ -4,8 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     chips::{definition::ChipDefinition, inventory::ChipInventory, resources::ChipCatalog},
-    effect_v3::storage::{BoundEffects, StagedEffects},
-    state::run::chip_select::messages::ChipSelected,
+    prelude::*,
 };
 
 /// Resource holding messages to be sent before the dispatch system runs.
@@ -33,10 +32,7 @@ pub(super) fn send_chip_selections(
 /// - `PendingChipSelections` resource
 /// - `send_chip_selections` runs before `dispatch_chip_effects` in `Update`
 pub(super) fn test_app() -> App {
-    use crate::{
-        chips::systems::dispatch_chip_effects::dispatch_chip_effects,
-        shared::test_utils::TestAppBuilder,
-    };
+    use crate::chips::systems::dispatch_chip_effects::dispatch_chip_effects;
 
     TestAppBuilder::new()
         .with_state_hierarchy()
@@ -74,9 +70,7 @@ pub(super) fn select_chip(app: &mut App, name: &str) {
 
 /// Spawn a Bolt entity with effect components.
 pub(super) fn spawn_bolt(app: &mut App) -> Entity {
-    use rantzsoft_spatial2d::components::Velocity2D;
-
-    use crate::bolt::{components::Bolt, definition::BoltDefinition};
+    use crate::bolt::definition::BoltDefinition;
 
     let def = BoltDefinition {
         name:                 "Bolt".to_string(),
@@ -129,8 +123,6 @@ pub(super) fn spawn_breaker_bare(app: &mut App) -> Entity {
 
 /// Spawn a Cell entity with effect components.
 pub(super) fn spawn_cell(app: &mut App) -> Entity {
-    use crate::cells::components::Cell;
-
     app.world_mut()
         .spawn((Cell, BoundEffects::default(), StagedEffects::default()))
         .id()
@@ -138,8 +130,6 @@ pub(super) fn spawn_cell(app: &mut App) -> Entity {
 
 /// Spawn a Wall entity with effect components.
 pub(super) fn spawn_wall(app: &mut App) -> Entity {
-    use crate::walls::components::Wall;
-
     app.world_mut()
         .spawn((Wall, BoundEffects::default(), StagedEffects::default()))
         .id()

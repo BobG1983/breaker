@@ -1,7 +1,7 @@
 use super::{super::helpers::*, helpers::*};
-use crate::state::run::{
-    definition::HighlightConfig,
-    resources::{NodeResult, RunStats},
+use crate::{
+    prelude::*,
+    state::run::{definition::HighlightConfig, resources::NodeResult},
 };
 
 #[test]

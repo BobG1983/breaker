@@ -7,17 +7,13 @@ use super::system::{
     on_bolt_destroyed, on_breaker_destroyed, on_cell_destroyed, on_wall_destroyed,
 };
 use crate::{
-    bolt::components::Bolt,
-    breaker::components::Breaker,
-    cells::components::Cell,
     effect_v3::{
         effects::SpeedBoostConfig,
         stacking::EffectStack,
         storage::{BoundEffects, StagedEffects},
         types::{EffectType, EntityKind, Tree, Trigger},
     },
-    shared::{death_pipeline::Destroyed, test_utils::TestAppBuilder},
-    walls::components::Wall,
+    prelude::*,
 };
 
 // -- Test message resources -----------------------------------------------
@@ -124,10 +120,6 @@ fn wall_death_test_app() -> App {
             ),
         )
         .build()
-}
-
-fn tick(app: &mut App) {
-    crate::shared::test_utils::tick(app);
 }
 
 /// Helper to build a When(trigger, Fire(SpeedBoost)) tree.

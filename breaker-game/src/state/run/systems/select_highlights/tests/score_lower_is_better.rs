@@ -4,7 +4,7 @@ use super::{
     super::system::score_highlight,
     helpers::{default_config, highlight},
 };
-use crate::state::run::resources::{HighlightCategory, HighlightKind};
+use crate::prelude::*;
 
 #[test]
 fn score_clutch_clear_value_1_threshold_3_normalized_0_222() {

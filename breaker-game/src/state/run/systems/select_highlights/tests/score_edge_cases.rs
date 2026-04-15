@@ -4,7 +4,7 @@ use super::{
     super::system::score_highlight,
     helpers::{default_config, highlight},
 };
-use crate::state::run::resources::{HighlightCategory, HighlightKind};
+use crate::prelude::*;
 
 #[test]
 fn score_lower_is_better_value_zero_clamped_to_max() {

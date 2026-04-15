@@ -21,7 +21,6 @@ use std::marker::PhantomData;
 
 use bevy::prelude::*;
 use rantzsoft_physics2d::{
-    collision_layers::CollisionLayers,
     prelude::{SweepHit, reflect},
     resources::CollisionQuadtree,
 };
@@ -40,10 +39,6 @@ use crate::{
     },
     effect_v3::{effects::VulnerableConfig, stacking::EffectStack},
     prelude::*,
-    shared::{
-        CELL_LAYER,
-        death_pipeline::{DamageDealt, hp::Hp},
-    },
 };
 
 /// Minimum remaining travel distance below which the CCD loop terminates.

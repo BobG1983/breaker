@@ -6,8 +6,9 @@
 use bevy::prelude::*;
 
 use crate::{
-    breaker::{components::Breaker, queries::SyncBreakerScaleData},
+    breaker::queries::SyncBreakerScaleData,
     effect_v3::{effects::SizeBoostConfig, stacking::EffectStack},
+    prelude::*,
     shared::size::{ClampRange, effective_size},
 };
 

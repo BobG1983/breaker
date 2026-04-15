@@ -30,7 +30,7 @@ mod tests {
 
     #[test]
     fn plugin_builds() {
-        use crate::shared::test_utils::TestAppBuilder;
+        use crate::prelude::*;
 
         let mut app = TestAppBuilder::new()
             .with_resource::<ButtonInput<KeyCode>>()

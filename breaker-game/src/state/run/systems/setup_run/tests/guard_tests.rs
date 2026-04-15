@@ -3,10 +3,7 @@
 use bevy::prelude::*;
 
 use super::helpers::test_app;
-use crate::{
-    bolt::{components::Bolt, messages::BoltSpawned},
-    breaker::{components::Breaker, messages::BreakerSpawned},
-};
+use crate::{bolt::messages::BoltSpawned, breaker::messages::BreakerSpawned, prelude::*};
 
 // ── Behavior 1: setup_run early-returns when a breaker already exists ──
 

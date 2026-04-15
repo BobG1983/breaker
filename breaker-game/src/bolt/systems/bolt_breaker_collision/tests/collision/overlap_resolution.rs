@@ -1,9 +1,8 @@
 //! Overlap resolution and side-hit tests for bolt-breaker collision.
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
-use crate::bolt::systems::bolt_breaker_collision::tests::helpers::*;
+use crate::{bolt::systems::bolt_breaker_collision::tests::helpers::*, prelude::*};
 
 #[test]
 fn overlap_resolved_writes_position2d_y() {

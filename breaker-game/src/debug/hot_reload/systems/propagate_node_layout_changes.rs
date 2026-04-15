@@ -3,11 +3,8 @@
 use bevy::{ecs::system::SystemParam, prelude::*};
 
 use crate::{
-    cells::{
-        components::Cell,
-        resources::{CellConfig, CellTypeRegistry},
-    },
-    shared::PlayfieldConfig,
+    cells::resources::{CellConfig, CellTypeRegistry},
+    prelude::*,
     state::run::node::{
         ActiveNodeLayout, ClearRemainingCount, NodeLayoutRegistry,
         systems::{HpContext, RenderAssets, ToughnessHpData, spawn_cells_from_grid},
@@ -165,8 +162,6 @@ mod tests {
     }
 
     fn test_app() -> App {
-        use crate::shared::test_utils::TestAppBuilder;
-
         let mut app = TestAppBuilder::new()
             .with_resource::<CellConfig>()
             .with_resource::<PlayfieldConfig>()

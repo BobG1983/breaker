@@ -6,13 +6,9 @@
 //!   walls at default `PlayfieldConfig` positions with `GlobalPosition2D` sync
 
 use bevy::prelude::*;
-use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
-use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D};
+use rantzsoft_spatial2d::components::{GlobalPosition2D, Spatial2D};
 
-use crate::{
-    shared::{BOLT_LAYER, GameDrawLayer, PlayfieldConfig, WALL_LAYER},
-    walls::components::Wall,
-};
+use crate::{prelude::*, shared::GameDrawLayer, walls::components::Wall};
 
 /// Spawns a wall entity at `(x, y)` with the given half-extents.
 ///

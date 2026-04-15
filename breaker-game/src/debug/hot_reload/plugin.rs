@@ -9,7 +9,7 @@ use super::{
         propagate_node_layout_changes,
     },
 };
-use crate::{chips::systems::propagate_chip_catalog, state::types::NodeState};
+use crate::{chips::systems::propagate_chip_catalog, prelude::*};
 
 /// Plugin that enables live hot-reload of RON configuration and content files.
 ///

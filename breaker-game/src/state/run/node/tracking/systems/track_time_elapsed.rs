@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::state::run::resources::RunStats;
+use crate::prelude::*;
 
 /// Adds the fixed timestep delta to [`RunStats::time_elapsed`] each tick.
 pub(crate) fn track_time_elapsed(time: Res<Time<Fixed>>, mut stats: ResMut<RunStats>) {
@@ -14,14 +14,11 @@ mod tests {
     use super::*;
 
     fn test_app() -> App {
-        use crate::shared::test_utils::TestAppBuilder;
         TestAppBuilder::new()
             .with_resource::<RunStats>()
             .with_system(FixedUpdate, track_time_elapsed)
             .build()
     }
-
-    use crate::shared::test_utils::tick;
 
     #[test]
     fn accumulates_simulation_time_each_tick() {

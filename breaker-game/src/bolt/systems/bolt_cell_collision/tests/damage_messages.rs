@@ -6,8 +6,8 @@ use crate::{
         components::PiercingRemaining,
         test_utils::{damage_stack, piercing_stack},
     },
-    cells::{behaviors::locked::components::Locked, components::Cell},
-    shared::death_pipeline::{hp::Hp, invulnerable::Invulnerable, killed_by::KilledBy},
+    prelude::*,
+    shared::death_pipeline::invulnerable::Invulnerable,
 };
 
 #[test]

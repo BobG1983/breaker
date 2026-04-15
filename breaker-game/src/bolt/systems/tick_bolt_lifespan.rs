@@ -5,8 +5,7 @@ use std::marker::PhantomData;
 use bevy::prelude::*;
 
 use crate::{
-    bolt::components::{Bolt, BoltLifespan},
-    shared::{birthing::Birthing, death_pipeline::kill_yourself::KillYourself},
+    bolt::components::BoltLifespan, prelude::*, shared::death_pipeline::kill_yourself::KillYourself,
 };
 
 /// Query for active (non-birthing) bolts with lifespan timers.
@@ -35,17 +34,14 @@ pub(crate) fn tick_bolt_lifespan(
 #[cfg(test)]
 mod tests {
     use bevy::prelude::*;
-    use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
     use super::tick_bolt_lifespan;
     use crate::{
-        bolt::components::{Bolt, BoltLifespan, ExtraBolt},
-        shared::{
-            death_pipeline::{
-                despawn_entity::DespawnEntity, destroyed::Destroyed, kill_yourself::KillYourself,
-                sets::DeathPipelineSystems,
-            },
-            test_utils::{MessageCollector, TestAppBuilder, attach_message_capture, tick},
+        bolt::components::{BoltLifespan, ExtraBolt},
+        prelude::*,
+        shared::death_pipeline::{
+            despawn_entity::DespawnEntity, destroyed::Destroyed, kill_yourself::KillYourself,
+            sets::DeathPipelineSystems,
         },
     };
 
@@ -184,13 +180,10 @@ mod tests {
     // ── Behavior 9-10: tick_bolt_lifespan skips bolts with Birthing ──
 
     /// Helper to create a `Birthing` component for tests.
-    fn test_birthing() -> crate::shared::birthing::Birthing {
-        use rantzsoft_physics2d::collision_layers::CollisionLayers;
-        use rantzsoft_spatial2d::components::Scale2D;
-
+    fn test_birthing() -> Birthing {
         use crate::shared::birthing::BIRTHING_DURATION;
 
-        crate::shared::birthing::Birthing {
+        Birthing {
             timer:          Timer::from_seconds(BIRTHING_DURATION, TimerMode::Once),
             target_scale:   Scale2D { x: 8.0, y: 8.0 },
             stashed_layers: CollisionLayers::default(),

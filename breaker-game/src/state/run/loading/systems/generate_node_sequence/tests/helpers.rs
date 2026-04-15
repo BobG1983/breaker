@@ -1,9 +1,9 @@
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
-use crate::state::run::{
-    definition::{TierDefinition, TierNodeCount},
-    resources::DifficultyCurve,
+use crate::{
+    prelude::*,
+    state::run::{definition::TierDefinition, resources::DifficultyCurve},
 };
 
 pub(super) fn make_tier(

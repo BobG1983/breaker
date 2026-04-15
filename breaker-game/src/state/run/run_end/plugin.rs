@@ -7,7 +7,7 @@ use super::{
     RunEndScreen,
     systems::{handle_run_end_input, spawn_run_end_screen},
 };
-use crate::state::{cleanup::cleanup_entities, types::RunEndState};
+use crate::{prelude::*, state::cleanup::cleanup_entities};
 
 /// Plugin for the run-end screen.
 pub(crate) struct RunEndPlugin;

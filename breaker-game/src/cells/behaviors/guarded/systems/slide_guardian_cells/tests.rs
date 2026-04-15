@@ -1,14 +1,15 @@
 use std::time::Duration;
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{Position2D, Spatial2D};
+use rantzsoft_spatial2d::components::Spatial2D;
 
 use super::system::slide_guardian_cells;
-use crate::cells::{behaviors::guarded::components::*, components::Cell};
+use crate::{
+    cells::{behaviors::guarded::components::*, components::Cell},
+    prelude::*,
+};
 
 fn test_app() -> App {
-    use crate::shared::test_utils::TestAppBuilder;
-
     TestAppBuilder::new()
         .with_system(FixedUpdate, slide_guardian_cells)
         .build()

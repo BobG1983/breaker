@@ -4,7 +4,7 @@
 use bevy::prelude::*;
 use rantzsoft_stateflow::ChangeState;
 
-use crate::{shared::birthing::Birthing, state::types::NodeState};
+use crate::prelude::*;
 
 /// Sends [`ChangeState<NodeState>`] when no entities have [`Birthing`],
 /// signaling that all bolt birthing animations have completed and gameplay
@@ -21,7 +21,7 @@ pub(crate) fn all_animate_in_complete(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::shared::{birthing::BIRTHING_DURATION, test_utils::TestAppBuilder};
+    use crate::shared::birthing::BIRTHING_DURATION;
 
     fn test_app() -> App {
         TestAppBuilder::new()
@@ -151,10 +151,7 @@ mod tests {
         use rantzsoft_physics2d::collision_layers::CollisionLayers;
         use rantzsoft_spatial2d::components::{PreviousScale, Scale2D};
 
-        use crate::{
-            bolt::{components::Bolt, systems::tick_birthing},
-            shared::{BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, WALL_LAYER},
-        };
+        use crate::bolt::systems::tick_birthing;
 
         fn tick_fixed(app: &mut App) {
             let timestep = app.world().resource::<Time<Fixed>>().timestep();

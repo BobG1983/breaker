@@ -47,7 +47,7 @@ let mut app = TestAppBuilder::new()            // MinimalPlugins registered
     .with_playfield()                          // PlayfieldConfig, CellConfig, Assets<Mesh/ColorMaterial>
     .with_resource::<GameRng>()                // init_resource with Default
     .with_message::<BoltLost>()               // registers message type
-    .with_message_capture::<DamageCell>()      // registers + collector resource + collect system
+    .with_message_capture::<BoltImpactCell>()   // registers + collector resource + collect system
     .with_system(FixedUpdate, bolt_lost)
     .build();
 ```
@@ -91,7 +91,7 @@ Generic message collector for test assertions. Registered via `.with_message_cap
 
 ```rust
 // Assert after tick:
-let msgs = &app.world().resource::<MessageCollector<DamageCell>>().0;
+let msgs = &app.world().resource::<MessageCollector<BoltImpactCell>>().0;
 assert_eq!(msgs.len(), 1);
 ```
 
@@ -174,7 +174,7 @@ pub(super) fn test_app() -> App {
     TestAppBuilder::new()
         .with_physics()
         .with_message::<BoltImpactCell>()
-        .with_message::<DamageCell>()
+        .with_message::<DamageDealt<Cell>>()
         .with_message::<BoltImpactWall>()
         .with_system(FixedUpdate, bolt_cell_collision.after(PhysicsSystems::MaintainQuadtree))
         .build()
@@ -216,6 +216,6 @@ Domain spawners in `test_utils.rs` encapsulate this internally. Direct component
 5. **`spawn_in_world` is eliminated.** Use `World::commands()` + `World::flush()` directly or via domain spawners.
 6. **`pub(crate)` for test_utils, `pub(super)` for suite helpers.** Cross-domain tests can use another domain's `test_utils`. Suite helpers are private to the suite.
 7. **Suite-level `test_app()` still exists.** It calls `TestAppBuilder::new()....build()`. It's just shorter now.
-8. **No test_utils in `crate::prelude`.** Import explicitly: `use crate::shared::test_utils::tick`.
+8. **Test infrastructure is reachable through `crate::prelude`.** In `#[cfg(test)]` builds the prelude re-exports `TestAppBuilder`, `tick`, `MessageCollector`, and `attach_message_capture`. Test files that already import `use crate::prelude::*` for entity markers or state types get the test utilities for free. Direct `use crate::shared::test_utils::...` imports remain valid and are preferred when a file needs test_utils but nothing else from the prelude.
 9. **New code follows this convention immediately.** Legacy code migrates incrementally (see migration todo).
 10. **App builders don't spawn entities.** Spawning is the test's responsibility via domain spawners.

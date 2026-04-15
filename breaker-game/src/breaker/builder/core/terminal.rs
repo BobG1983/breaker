@@ -15,8 +15,7 @@ use crate::{
     effect_v3::{commands::EffectCommandsExt, types::RootNode},
     prelude::*,
     shared::{
-        BOLT_LAYER, BREAKER_LAYER, BaseHeight, BaseWidth, GameDrawLayer,
-        death_pipeline::Hp,
+        BaseHeight, BaseWidth, GameDrawLayer,
         size::{MaxHeight, MaxWidth, MinHeight, MinWidth},
     },
 };

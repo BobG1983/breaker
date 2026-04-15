@@ -5,10 +5,8 @@ use rantzsoft_stateflow::ChangeState;
 
 use crate::{
     input::InputConfig,
-    state::{
-        menu::main::{MENU_ITEMS, MainMenuSelection, MenuItem},
-        types::MenuState,
-    },
+    prelude::*,
+    state::menu::main::{MENU_ITEMS, MainMenuSelection, MenuItem},
 };
 
 /// Handles keyboard and mouse input for the main menu.
@@ -86,10 +84,6 @@ mod tests {
     use rantzsoft_stateflow::ChangeState;
 
     use super::*;
-    use crate::{
-        shared::test_utils::TestAppBuilder,
-        state::types::{AppState, GameState},
-    };
 
     fn test_app() -> App {
         let mut app = TestAppBuilder::new()

@@ -6,8 +6,9 @@ use rand_chacha::ChaCha8Rng;
 
 use crate::{
     chips::inventory::ChipInventory,
-    shared::{GameRng, RunSeed},
-    state::run::resources::{HighlightTracker, NodeOutcome, RunStats},
+    prelude::*,
+    shared::RunSeed,
+    state::run::resources::{HighlightTracker, NodeOutcome},
 };
 
 /// Resets [`NodeOutcome`] to defaults and reseeds [`GameRng`] when leaving the
@@ -34,10 +35,7 @@ pub(crate) fn reset_run_state(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        shared::test_utils::TestAppBuilder,
-        state::run::resources::{NodeOutcome, NodeResult},
-    };
+    use crate::state::run::resources::{NodeOutcome, NodeResult};
 
     fn test_app() -> App {
         TestAppBuilder::new()

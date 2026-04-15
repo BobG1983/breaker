@@ -2,11 +2,9 @@
 //! is near the bottom boundary.
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
-    bolt::components::{Bolt, BoltServing},
-    shared::PlayfieldConfig,
+    prelude::*,
     state::run::{
         definition::HighlightConfig, messages::HighlightTriggered, node::messages::NodeCleared,
         resources::*,
@@ -64,13 +62,10 @@ pub(crate) fn detect_nail_biter(
 
 #[cfg(test)]
 mod tests {
-    use rantzsoft_spatial2d::components::{Position2D, Spatial2D};
+    use rantzsoft_spatial2d::components::Spatial2D;
 
     use super::*;
-    use crate::{
-        shared::GameDrawLayer,
-        state::run::resources::{HighlightKind, RunHighlight},
-    };
+    use crate::shared::GameDrawLayer;
 
     #[derive(Resource)]
     struct TestMessages(Vec<NodeCleared>);
@@ -94,7 +89,6 @@ mod tests {
     }
 
     fn test_app() -> App {
-        use crate::shared::test_utils::TestAppBuilder;
         TestAppBuilder::new()
             .with_message::<NodeCleared>()
             .with_message::<HighlightTriggered>()
@@ -117,8 +111,6 @@ mod tests {
             )
             .build()
     }
-
-    use crate::shared::test_utils::tick;
 
     // --- Behavior 15: NailBiter detected when bolt near bottom at node clear ---
 

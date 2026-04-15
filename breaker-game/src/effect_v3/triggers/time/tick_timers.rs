@@ -54,7 +54,7 @@ mod tests {
     use super::tick_effect_timers;
     use crate::{
         effect_v3::triggers::time::{components::EffectTimers, messages::EffectTimerExpired},
-        shared::test_utils::{MessageCollector, TestAppBuilder},
+        prelude::*,
     };
 
     // -- Helpers ----------------------------------------------------------
@@ -64,10 +64,6 @@ mod tests {
             .with_message_capture::<EffectTimerExpired>()
             .with_system(FixedUpdate, tick_effect_timers)
             .build()
-    }
-
-    fn tick(app: &mut App) {
-        crate::shared::test_utils::tick(app);
     }
 
     // -- Behavior 1: single timer decrements by delta time each tick ------

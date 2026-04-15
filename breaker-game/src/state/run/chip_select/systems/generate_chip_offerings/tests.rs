@@ -12,7 +12,7 @@ use crate::{
         effects::PiercingConfig,
         types::{EffectType, RootNode, StampTarget, Tree},
     },
-    state::run::node::{ActiveNodeLayout, NodeLayout, definition::NodePool},
+    state::run::node::{ActiveNodeLayout, definition::NodePool},
 };
 
 /// Build a registry with `count` Common chips named `Chip_0`, `Chip_1`, etc.
@@ -53,7 +53,6 @@ fn make_mixed_registry() -> ChipCatalog {
 }
 
 fn test_app_with_registry(registry: ChipCatalog) -> App {
-    use crate::shared::test_utils::TestAppBuilder;
     TestAppBuilder::new()
         .insert_resource(registry)
         .with_resource::<ChipInventory>()
@@ -196,8 +195,6 @@ fn make_test_layout(pool: NodePool) -> ActiveNodeLayout {
 /// chip definition and a recipe requiring "Piercing Shot" x2.
 /// The `ActiveNodeLayout` pool controls whether evolutions are offered.
 fn test_app_for_evolution(pool: NodePool, evolution_eligible: bool) -> App {
-    use crate::shared::test_utils::TestAppBuilder;
-
     let ps_def = ChipDefinition::test(
         "Piercing Shot",
         Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),

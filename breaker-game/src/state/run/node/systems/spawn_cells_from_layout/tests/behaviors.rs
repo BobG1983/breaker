@@ -8,10 +8,9 @@ use crate::{
         definition::{CellBehavior, GuardedBehavior, Toughness},
         resources::{CellConfig, CellTypeRegistry},
     },
-    shared::{PlayfieldConfig, death_pipeline::hp::Hp},
+    prelude::*,
     state::run::{
-        definition::NodeType,
-        node::{ActiveNodeLayout, NodeLayout, definition::NodePool, messages::CellsSpawned},
+        node::{ActiveNodeLayout, definition::NodePool, messages::CellsSpawned},
         resources::{NodeAssignment, NodeOutcome, NodeSequence},
     },
 };
@@ -64,7 +63,6 @@ fn behavior_registry() -> CellTypeRegistry {
 }
 
 fn behavior_test_app(layout: NodeLayout, registry: CellTypeRegistry) -> App {
-    use crate::shared::test_utils::TestAppBuilder;
     TestAppBuilder::new()
         .with_message::<CellsSpawned>()
         .with_resource::<CellConfig>()

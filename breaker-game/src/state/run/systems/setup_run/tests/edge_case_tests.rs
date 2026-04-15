@@ -6,13 +6,12 @@ use rantzsoft_spatial2d::components::BaseSpeed;
 
 use super::helpers::{make_aegis_breaker_definition, test_app};
 use crate::{
-    bolt::{
-        components::Bolt, definition::BoltDefinition, messages::BoltSpawned, registry::BoltRegistry,
-    },
+    bolt::{definition::BoltDefinition, messages::BoltSpawned, registry::BoltRegistry},
     breaker::{
-        components::Breaker, definition::BreakerDefinition, messages::BreakerSpawned,
-        registry::BreakerRegistry, resources::SelectedBreaker,
+        definition::BreakerDefinition, messages::BreakerSpawned, registry::BreakerRegistry,
+        resources::SelectedBreaker,
     },
+    prelude::*,
 };
 
 // ════════════════════════════════════════════════════════════════════════
