@@ -1,5 +1,6 @@
 # Done
 
+- ~~Split oversized files (app_tests, tiling_tests, app)~~ — `app_tests.rs` (1110L/37 tests) → 8 sub-files by concern; `tiling_tests.rs` (562L/38 tests) → 4 sub-files (grid_dimensions, tile_position, tile_config, parse_tile_config); `app.rs` (546L) → 5 sub-files (types, build, run, evaluate, window). All under 400 lines, all tests preserved, scenarios pass.
 - ~~Prelude expansion & import cleanup~~ — expanded `crate::prelude` with death pipeline, collision constants, test utilities, and run/node types used in 3+ files; replaced verbose cross-domain import blocks with `use crate::prelude::*` across ~360 files; documented `NoBump` message/typestate collision exclusion and softened the same-domain prelude rule in `docs/architecture/standards.md`
 - ~~Scenario coverage gaps~~ — BoltBirthingLayersZeroed invariant (23rd), 7 new scenarios (birthing respawn, evolution lifecycle, NoBump/Death/Impact(Bolt)/Impacted(Breaker) triggers), --coverage verbose output. 117→124 scenarios.
 - ~~Distribute state routing to domain plugins~~ — Moved NodeState/ChipSelectState/RunEndState routes + cleanup from centralized system.rs to their respective domain plugins
