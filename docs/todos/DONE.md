@@ -1,5 +1,6 @@
 # Done
 
+- ~~Prelude expansion & import cleanup~~ — expanded `crate::prelude` with death pipeline, collision constants, test utilities, and run/node types used in 3+ files; replaced verbose cross-domain import blocks with `use crate::prelude::*` across ~360 files; documented `NoBump` message/typestate collision exclusion and softened the same-domain prelude rule in `docs/architecture/standards.md`
 - ~~Scenario coverage gaps~~ — BoltBirthingLayersZeroed invariant (23rd), 7 new scenarios (birthing respawn, evolution lifecycle, NoBump/Death/Impact(Bolt)/Impacted(Breaker) triggers), --coverage verbose output. 117→124 scenarios.
 - ~~Distribute state routing to domain plugins~~ — Moved NodeState/ChipSelectState/RunEndState routes + cleanup from centralized system.rs to their respective domain plugins
 - ~~Phase 5a: Rendering architecture~~ — Architecture docs written at docs/architecture/rendering/
