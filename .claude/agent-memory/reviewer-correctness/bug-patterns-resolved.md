@@ -129,6 +129,13 @@ now find the breaker entity correctly. **Do NOT re-flag.**
 
 See `reviewer-architecture/shield_cross_domain_write.md` for the full elimination record.
 
+## should_fail_fast suppresses fast-exit for ALL violations when any allowed_failures exists — RESOLVED (2026-04-15)
+
+Current code uses `is_none_or(|af| !af.contains(&v.invariant))` which correctly triggers
+fail-fast for violations whose invariant kind is NOT in the allowed-failures set.
+Mixed-allowed/disallowed case is handled correctly.
+**Location**: `breaker-scenario-runner/src/runner/app.rs`
+
 ## death_pipeline: KillYourself<Breaker> dead-letter — RESOLVED (2026-04-14 Wave F1 scope expansion)
 
 `handle_kill<Wall>` is now registered in `plugin.rs` (Wall path handled by generic handler).

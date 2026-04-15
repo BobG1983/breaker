@@ -30,8 +30,10 @@ type: reference
 
 The parent CLI cannot query the screen. The correct pattern:
 
-1. Pass `--tile-index N --tile-count M` as CLI args to each child subprocess
-2. Each child, inside a Bevy startup system that runs AFTER winit initializes, queries `PrimaryMonitor` entity → `Monitor` component to get screen dimensions
-3. Child computes its tile rect and applies it via `WindowPosition::At(...)` and `WindowResolution`
+1. Parent sets env vars `SCENARIO_TILE_INDEX` and `SCENARIO_TILE_COUNT` (via `tile_config_env_vars()`) before spawning each child subprocess
+2. Each child reads env vars via `read_tile_config()` → `TileConfig` resource; if absent, no tiling applied
+3. Each child, inside `apply_tile_layout` (Update, runs until TileConfig is present), queries `PrimaryMonitor` entity → `Monitor` component to get screen dimensions
+4. Child computes its tile rect and applies it via `WindowPosition::At(IVec2)` and `WindowResolution::new(width, height)`
+5. `TileConfig` resource is removed after first successful apply; system no-ops thereafter
 
 This uses no unsafe code, works cross-platform, and each child independently knows its own screen.

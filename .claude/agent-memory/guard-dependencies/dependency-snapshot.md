@@ -1,12 +1,12 @@
 ---
 name: dependency-snapshot
-description: Crate versions at last audit (2026-04-14) — diff against this on next run to detect changes
+description: Crate versions at last audit (2026-04-15) — diff against this on next run to detect changes
 type: project
 ---
 
-Audit date: 2026-04-14 (fifth run — feature/effect-system-refactor branch)
-Branch: feature/effect-system-refactor (commit 1beb7baf)
-Prior audit: 2026-04-09 (fourth run — develop, lint config change only)
+Audit date: 2026-04-15 (sixth run — develop branch, breaker-scenario-runner runner/ changes only)
+Branch: develop (commit 78778da5)
+Prior audit: 2026-04-14 (fifth run — feature/effect-system-refactor branch)
 
 ## Direct Dependencies
 

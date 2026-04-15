@@ -120,15 +120,6 @@ those nodes land on the wall entity's `BoundEffects` — never fired by the bolt
 **Status**: LATENT — safe with current data, unsafe if multi-target wall definitions appear.
 **Location**: `breaker-game/src/walls/builder/core/terminal.rs:38-40`.
 
-## should_fail_fast suppresses fast-exit for ALL violations when any allowed_failures exists — RESOLVED
-
-The old implementation was replaced. Current code uses `is_none_or(|af| !af.contains(&v.invariant))`
-which correctly triggers fail-fast for violations whose invariant kind is NOT in the allowed-failures set.
-Mixed-allowed/disallowed case is handled correctly.
-
-**Status**: RESOLVED — confirmed correct during tiling system review (2026-04-15).
-**Location**: `breaker-scenario-runner/src/runner/app.rs` (no longer at old lines 410-421)
-
 ## breaker_count_reasonable: invariant_checks increment AFTER early return (differs from all other checkers) — OPEN INCONSISTENCY
 
 `check_breaker_count_reasonable` increments `stats.invariant_checks` AFTER the `!entered_playing`

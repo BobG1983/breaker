@@ -10,16 +10,16 @@ This crate is diagnostic tooling, not gameplay. Performance standards are relaxe
 - Runs in `Last` every frame, gated by `resource_exists::<ScreenshotOutputDir>` (only in visual mode).
 - `detect_new_violations` allocates a `HashSet<InvariantKind>` every frame even when there are no new violations.
 - The early-return on `new_kinds.is_empty()` executes AFTER the HashSet is already built.
-- InvariantKind::ALL has 22 variants — ViolationLog grows only on actual violations, which are rare in passing scenarios.
+- InvariantKind::ALL has 23 variants — ViolationLog grows only on actual violations, which are rare in passing scenarios.
 - **Minor watch**: HashSet allocation happens every frame in visual mode even when ViolationLog is empty. Could short-circuit before building the set. Not worth fixing — visual mode is rare.
 
 **check_coverage** (`src/coverage.rs`):
 - `is_covered` closure does a linear `self_test_names.contains(name)` on a Vec for every scenario * InvariantKind combination.
 - Called once at startup/report time, not per-frame. Academic concern.
-- `format_coverage_report` calls `report.covered_self_tests.contains(variant)` (linear scan on Vec) for each of 22 variants. Also startup-only.
+- `format_coverage_report` calls `report.covered_self_tests.contains(variant)` (linear scan on Vec) for each of 23 variants. Also startup-only.
 
-**tile_env_vars** (`src/runner/tiling.rs`):
-- Allocates a `Vec<(&str, String)>` per subprocess spawn (4 elements, 4 String allocations for u32→string).
+**tile_config_env_vars** (`src/runner/tiling.rs`):
+- Allocates a `Vec<(&str, String)>` per subprocess spawn (2 elements, 2 String allocations for usize→string: `SCENARIO_TILE_INDEX` and `SCENARIO_TILE_COUNT`).
 - Called once per subprocess, not per-frame. Negligible.
 - `grid_dimensions` recomputed per subprocess (no caching), but it's pure integer arithmetic — free.
 
@@ -45,7 +45,7 @@ This crate is diagnostic tooling, not gameplay. Performance standards are relaxe
 
 **Checker pattern — unconditional `stats.invariant_checks += 1`**:
 - Every checker increments `invariant_checks` even when the resource being checked is absent (e.g. NodeTimer, ChipOffers).
-- This means all 21 checkers fire every FixedUpdate frame (minus the playing_gate), but the guards (`let Some(x) = x else { return }`) are extremely cheap — just a None check.
+- This means all 22 FixedUpdate checkers fire every FixedUpdate frame (minus the playing_gate), but the guards (`let Some(x) = x else { return }`) are extremely cheap — just a None check. (`check_chip_offer_expected` runs in Update separately — 23 total checkers, 22 in FixedUpdate.)
 - Confirmed as intentional (commit f736109b: "fix: all invariant checkers increment invariant_checks counter").
 
 **check_chain_arc_count_reasonable** (`src/invariants/checkers/check_chain_arc_count_reasonable.rs`):

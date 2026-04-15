@@ -150,6 +150,11 @@ state/plugin/system.rs, state/plugin/tests.rs, state/menu/main/systems/handle_ma
 breaker-scenario-runner/src/lifecycle/systems/frame_mutations/mutations.rs, app.rs.
 Grepped all changed files for "unsafe": zero matches. Workspace lint unsafe_code = "deny" remains in force.
 
+Still confirmed for tiling/visual-mode (2026-04-15):
+New/changed files: breaker-scenario-runner/src/runner/tiling.rs (new), app.rs (apply_tile_layout
+system + build_app TileConfig insertion), streaming.rs (tile_config_env_vars call).
+Grepped all three files for "unsafe": zero matches. Workspace lint unsafe_code = "deny" remains in force.
+
 Still confirmed for feature/effect-system-refactor (2026-04-14):
 New module: breaker-game/src/effect_v3/ (~811 changed files, 126K+ line diff including tests).
 Grepped effect_v3/ for "unsafe": zero matches. Workspace lint unsafe_code = "deny" remains in force.

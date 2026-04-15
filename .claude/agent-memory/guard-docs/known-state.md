@@ -87,7 +87,7 @@ type: project
 - `ScenarioStats::entered_playing` — all invariant checkers gated on this flag; prevents false positives during loading
 - `RunLog` — async mpsc + background thread, writes to `/tmp/breaker-scenario-runner/<date>/<N>.log`
 - `StreamingPool` — count-based streaming pool in `streaming.rs`
-- `tiling.rs` — pure grid math for parallel visual-mode window placement; `TilePosition`, env vars `SCENARIO_WINDOW_X/Y/W/H`
+- `tiling.rs` — pure grid math for parallel visual-mode window placement; `TilePosition`, env vars `SCENARIO_TILE_INDEX/COUNT` (`ENV_TILE_INDEX`/`ENV_TILE_COUNT`); functions `tile_config_env_vars`, `parse_tile_config`, `read_tile_config`, `grid_dimensions`, `tile_position`
 - `coverage.rs` — `CoverageReport`, `check_coverage()`, `print_coverage_report()`; prints gaps only
 - `discovery.rs` — RON parsed with `ron::Options::default().with_default_extension(Extensions::IMPLICIT_SOME)` (the "RON parse dedup" is really IMPLICIT_SOME extension)
 

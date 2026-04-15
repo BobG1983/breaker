@@ -155,6 +155,17 @@ in `walls/test_utils.rs` (lines 55, 74, 93) require either an `#[allow]` with re
 or replacement with `expect()` (but `expect_used` is now deny too) — need `.unwrap_or_else`
 or restructured logic to satisfy the new lint level. This is an existing clippy finding.
 
+## cargo audit result — tiling/visual-mode (2026-04-15)
+
+`cargo audit` run successfully. Result: 3 allowed warnings, 0 errors.
+- RUSTSEC-2024-0436: `paste 1.0.15` — unmaintained, no CVE. Same transitive path. Expected recurring.
+- RUSTSEC-2026-0097: `rand 0.8.5` and `rand 0.9.2` — same advisory as 2026-04-14 (custom logger unsound).
+  No new advisories introduced by this branch.
+cargo machete: no unused dependencies found.
+
+No new direct dependencies introduced by breaker-scenario-runner tiling feature (tiling.rs, app.rs,
+streaming.rs use only existing workspace deps: bevy, breaker, std).
+
 ## cargo audit result — feature/effect-system-refactor (2026-04-14)
 
 `cargo audit` run successfully. Result: 3 warnings, 0 errors.

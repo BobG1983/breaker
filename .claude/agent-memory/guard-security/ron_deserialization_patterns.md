@@ -549,8 +549,8 @@ in production code.
 - The scenario name passed via `-s <name>` is built from `scenario_name(path)` (file stem
   from OS), not from raw CLI input. Each argument is passed as a discrete `.arg()` call —
   no shell interpolation occurs. Rust's Command does not invoke a shell.
-- Visual mode env vars (SCENARIO_WINDOW_X/Y/W/H) are set only to numeric string values
-  derived from integer arithmetic in tiling.rs. No injection risk.
+- Visual mode env vars (`SCENARIO_TILE_INDEX` and `SCENARIO_TILE_COUNT`) are set only to numeric string values
+  derived from integer arithmetic in tiling.rs (`tile_config_env_vars`). No injection risk.
 
 ### resolve_log_file_path: suffix collision loop (Info-level)
 - `run_log.rs:resolve_log_file_path()` loops until a non-existent filename is found,
