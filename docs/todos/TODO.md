@@ -2,7 +2,7 @@
 
 ## Backlog
 
-1. **[ready]** Remove game crate prelude module — replace glob imports with explicit per-domain imports — [detail](detail/remove-game-prelude.md)
+1. **[ready]** Prelude expansion & import cleanup — simplify paths, hoist 3+ usage types into prelude, replace verbose imports with globs — [detail](detail/prelude-expansion-and-import-cleanup.md)
 2. **[ready]** New cell modifiers (volatile, sequence, survival, armored, phantom, magnetic, portal) — [detail](detail/new-cell-modifiers.md)
 3. **[ready]** Legendary rarity removal — retune 8 as Rare (6 with Common/Uncommon tiers), cut 3, promote 2 to protocols, remove Anchor evolution — [detail](detail/legendary-removal.md)
 4. **[ready]** Protocol & hazard system — 15 protocols, 16 hazards, interface design, 31 per-item implementation guides, 10-wave plan — [detail](detail/mod-system-design/mod-system-design.md)
