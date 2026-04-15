@@ -40,12 +40,10 @@ mod tests {
     use super::tick_bolt_lifespan;
     use crate::{
         bolt::components::{Bolt, BoltLifespan, ExtraBolt},
-        effect_v3::EffectV3Plugin,
         shared::{
             death_pipeline::{
-                DeathPipelinePlugin, despawn_entity::DespawnEntity, destroyed::Destroyed,
-                kill_yourself::KillYourself, sets::DeathPipelineSystems,
-                systems::tests::helpers::register_effect_v3_test_infrastructure,
+                despawn_entity::DespawnEntity, destroyed::Destroyed, kill_yourself::KillYourself,
+                sets::DeathPipelineSystems,
             },
             test_utils::{MessageCollector, TestAppBuilder, attach_message_capture, tick},
         },
@@ -78,10 +76,7 @@ mod tests {
     /// `DeathPipelineSystems::HandleKill` so the same-tick despawn assertion
     /// holds.
     fn build_lifespan_integration_app() -> App {
-        let mut app = TestAppBuilder::new().build();
-        app.add_plugins(DeathPipelinePlugin);
-        register_effect_v3_test_infrastructure(&mut app);
-        app.add_plugins(EffectV3Plugin);
+        let mut app = TestAppBuilder::new().with_effects_pipeline().build();
 
         app.add_systems(
             FixedUpdate,

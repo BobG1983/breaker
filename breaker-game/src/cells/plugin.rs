@@ -56,8 +56,7 @@ mod tests {
     use crate::{
         effect_v3::EffectV3Plugin,
         shared::death_pipeline::{
-            plugin::DeathPipelinePlugin,
-            systems::tests::helpers::register_effect_v3_test_infrastructure,
+            DeathPipelinePlugin, systems::tests::helpers::register_effect_v3_test_infrastructure,
         },
         state::types::{AppState, GameState, RunState},
     };

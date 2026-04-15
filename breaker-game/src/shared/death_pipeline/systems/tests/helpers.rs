@@ -12,11 +12,10 @@ use crate::{
     },
     breaker::messages::{BreakerImpactCell, BreakerImpactWall, BumpPerformed, BumpWhiffed, NoBump},
     cells::{components::Cell, messages::CellImpactWall},
-    effect_v3::EffectV3Plugin,
     shared::{
         death_pipeline::{
-            DeathPipelinePlugin, damage_dealt::DamageDealt, despawn_entity::DespawnEntity,
-            destroyed::Destroyed, game_entity::GameEntity, hp::Hp, invulnerable::Invulnerable,
+            damage_dealt::DamageDealt, despawn_entity::DespawnEntity, destroyed::Destroyed,
+            game_entity::GameEntity, hp::Hp, invulnerable::Invulnerable,
             kill_yourself::KillYourself, killed_by::KilledBy,
         },
         rng::GameRng,
@@ -227,24 +226,10 @@ pub(super) fn kill_msg(victim: Entity, killer: Option<Entity>) -> KillYourself<T
 // one place so the test files stay focused on scenario-specific setup and
 // assertions.
 
-/// Builds a plugin-integration app with `DeathPipelinePlugin` and
-/// `EffectV3Plugin`. `DeathPipelinePlugin::build` calls `configure_sets`
-/// referencing `EffectV3Systems::Tick`, so `EffectV3Plugin` MUST be added.
-///
-/// `EffectV3Plugin`'s `impact`/`bump`/`bolt_lost` bridges read messages owned by the
-/// `bolt`, `breaker`, and `cells` domain plugins, and its chain-lightning and
-/// entropy systems require `ResMut<GameRng>`. Those plugins/resources are NOT
-/// added by `EffectV3Plugin` itself (they bring unwanted state or live in the
-/// game setup pipeline). Instead, the needed messages and resources are
-/// registered directly via `register_effect_v3_test_infrastructure` so the
-/// bridge systems' `MessageReader`/`ResMut` params pass Bevy 0.18's system
-/// parameter validation.
+/// Builds a plugin-integration app with the full effects pipeline
+/// (`DeathPipelinePlugin` + cross-domain messages + `EffectV3Plugin`).
 pub(super) fn build_plugin_integration_app() -> App {
-    let mut app = TestAppBuilder::new().build();
-    app.add_plugins(DeathPipelinePlugin);
-    register_effect_v3_test_infrastructure(&mut app);
-    app.add_plugins(EffectV3Plugin);
-    app
+    TestAppBuilder::new().with_effects_pipeline().build()
 }
 
 /// Pending `DamageDealt<Cell>` messages to enqueue each tick. Used by
