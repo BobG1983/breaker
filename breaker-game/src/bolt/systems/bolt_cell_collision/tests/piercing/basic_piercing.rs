@@ -8,6 +8,7 @@ use crate::{
         components::PiercingRemaining, systems::bolt_cell_collision::tests::helpers::*,
         test_utils::piercing_stack,
     },
+    cells::resources::CellConfig,
     prelude::*,
 };
 
@@ -16,8 +17,8 @@ fn non_piercing_bolt_reflects_off_cell() {
     // Non-piercing bolt hitting a cell reflects (velocity.y < 0 after upward approach).
     // BoltImpactCell is sent. No PiercingRemaining component involved.
     let mut app = test_app();
-    let bc = crate::bolt::systems::bolt_cell_collision::tests::helpers::test_bolt_definition();
-    let cc = crate::cells::resources::CellConfig::default();
+    let bc = test_bolt_definition();
+    let cc = CellConfig::default();
     app.insert_resource(HitCells::default()).add_systems(
         FixedUpdate,
         collect_cell_hits
@@ -56,8 +57,8 @@ fn non_piercing_bolt_reflects_off_cell() {
 #[test]
 fn piercing_bolt_passes_through_cell_it_would_destroy() {
     let mut app = test_app();
-    let bc = crate::bolt::systems::bolt_cell_collision::tests::helpers::test_bolt_definition();
-    let cc = crate::cells::resources::CellConfig::default();
+    let bc = test_bolt_definition();
+    let cc = CellConfig::default();
     app.insert_resource(HitCells::default()).add_systems(
         FixedUpdate,
         collect_cell_hits
@@ -107,8 +108,8 @@ fn piercing_bolt_reflects_off_cell_it_would_not_destroy() {
     // Cell with CellHealth(30) — base damage 10, cell survives.
     // Bolt should reflect (velocity.y < 0). PiercingRemaining stays 1.
     let mut app = test_app();
-    let bc = crate::bolt::systems::bolt_cell_collision::tests::helpers::test_bolt_definition();
-    let cc = crate::cells::resources::CellConfig::default();
+    let bc = test_bolt_definition();
+    let cc = CellConfig::default();
 
     let cell_y = 100.0;
     spawn_cell_with_health(&mut app, 0.0, cell_y, 30.0);

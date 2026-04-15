@@ -2,17 +2,9 @@
 
 use bevy::prelude::*;
 use rand::Rng;
-use rantzsoft_spatial2d::components::Position2D;
 
 use super::super::components::*;
-use crate::{
-    cells::components::Cell,
-    effect_v3::components::EffectSourceChip,
-    shared::{
-        death_pipeline::{DamageDealt, Dead},
-        rng::GameRng,
-    },
-};
+use crate::{effect_v3::components::EffectSourceChip, prelude::*};
 
 /// Alive cell lookup — entity + position, excludes dead cells.
 type AliveCellQuery<'w, 's> =

@@ -16,6 +16,7 @@ use crate::{
         stacking::EffectStack,
     },
     prelude::*,
+    shared::size::{MaxHeight, MaxWidth, MinHeight, MinWidth},
 };
 
 // ── QueryData structs ───────────────────────────────────────────────────
@@ -207,13 +208,13 @@ pub(crate) struct SyncBreakerScaleData {
     /// Node scaling factor.
     pub node_scale:  Option<&'static NodeScalingFactor>,
     /// Minimum width constraint.
-    pub min_w:       Option<&'static crate::shared::size::MinWidth>,
+    pub min_w:       Option<&'static MinWidth>,
     /// Maximum width constraint.
-    pub max_w:       Option<&'static crate::shared::size::MaxWidth>,
+    pub max_w:       Option<&'static MaxWidth>,
     /// Minimum height constraint.
-    pub min_h:       Option<&'static crate::shared::size::MinHeight>,
+    pub min_h:       Option<&'static MinHeight>,
     /// Maximum height constraint.
-    pub max_h:       Option<&'static crate::shared::size::MaxHeight>,
+    pub max_h:       Option<&'static MaxHeight>,
 }
 
 /// Breaker bump telemetry — state, bump, tilt, velocity, and window sizes.

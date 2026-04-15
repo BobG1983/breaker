@@ -161,3 +161,8 @@ Grepped effect_v3/ for "unsafe": zero matches. Workspace lint unsafe_code = "den
 NOTE: this branch downgrades `todo = "warn"` and `unimplemented = "warn"` (from "deny") — the
 unsafe_code deny is NOT affected. The downgrade affects panic surface via todo!/unimplemented!
 macros, not unsafe blocks. See vetted_dependencies.md for full lint-change analysis.
+
+Still confirmed for refactor/prelude-expansion-and-import-cleanup (2026-04-15):
+363 files changed. All changes are `use` statement import consolidations via new prelude submodules.
+Diffed all added lines for "unsafe": zero matches. No new unsafe blocks, no FFI, no raw pointers.
+Workspace lint unsafe_code = "deny" remains in force and unchanged (no Cargo.toml changes).

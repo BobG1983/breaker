@@ -7,9 +7,12 @@
 use bevy::prelude::*;
 
 use super::helpers::*;
-use crate::bolt::{
-    components::{ImpactSide, LastImpact, PiercingRemaining},
-    test_utils::piercing_stack,
+use crate::{
+    bolt::{
+        components::{ImpactSide, LastImpact, PiercingRemaining},
+        test_utils::piercing_stack,
+    },
+    cells::resources::CellConfig,
 };
 
 // ── Behavior 3: bottom face rebound stamps ImpactSide::Bottom ──
@@ -24,7 +27,7 @@ fn cell_bottom_rebound_stamps_last_impact_with_bottom_side() {
     // Then: Bolt has LastImpact with side: ImpactSide::Bottom
     let mut app = test_app();
     let bc = super::helpers::test_bolt_definition();
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
 
     let cell_y = 100.0;
     spawn_cell_with_health(&mut app, 0.0, cell_y, 30.0);
@@ -64,7 +67,7 @@ fn cell_top_rebound_stamps_last_impact_with_top_side() {
     // Then: Bolt has LastImpact with side: ImpactSide::Top
     let mut app = test_app();
     let bc = super::helpers::test_bolt_definition();
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
 
     let cell_y = 100.0;
     spawn_cell_with_health(&mut app, 0.0, cell_y, 30.0);
@@ -94,7 +97,7 @@ fn cell_top_rebound_side_determined_by_normal_not_velocity() {
     // so it must start very close to the expanded AABB top edge.
     let mut app = test_app();
     let bc = super::helpers::test_bolt_definition();
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
 
     let cell_y = 100.0;
     spawn_cell_with_health(&mut app, 0.0, cell_y, 30.0);
@@ -131,7 +134,7 @@ fn cell_left_rebound_stamps_last_impact_with_left_side() {
     let cell_y = 100.0;
     spawn_cell_with_health(&mut app, cell_x, cell_y, 30.0);
 
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
     let bc = super::helpers::test_bolt_definition();
     let start_x = cell_x - cc.width / 2.0 - bc.radius - 2.0;
     let bolt_entity = spawn_bolt(&mut app, start_x, cell_y, 400.0, 0.0);
@@ -165,7 +168,7 @@ fn cell_right_rebound_stamps_last_impact_with_right_side() {
     let cell_y = 100.0;
     spawn_cell_with_health(&mut app, cell_x, cell_y, 30.0);
 
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
     let bc = super::helpers::test_bolt_definition();
     let start_x = cell_x + cc.width / 2.0 + bc.radius + 2.0;
     let bolt_entity = spawn_bolt(&mut app, start_x, cell_y, -400.0, 0.0);
@@ -195,7 +198,7 @@ fn piercing_bolt_through_destroyable_cell_does_not_stamp_last_impact() {
     // Then: Bolt entity does NOT have a LastImpact component
     let mut app = test_app();
     let bc = super::helpers::test_bolt_definition();
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
 
     let cell_y = 100.0;
     spawn_cell_with_health(&mut app, 0.0, cell_y, 10.0);
@@ -221,7 +224,7 @@ fn piercing_bolt_through_cell_preserves_existing_last_impact() {
     //            Pierce-through must leave it unchanged.
     let mut app = test_app();
     let bc = super::helpers::test_bolt_definition();
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
 
     let cell_y = 100.0;
     spawn_cell_with_health(&mut app, 0.0, cell_y, 10.0);
@@ -267,7 +270,7 @@ fn piercing_bolt_reflecting_off_tough_cell_stamps_last_impact() {
     // Then: Bolt has LastImpact with side: ImpactSide::Bottom (reflected off bottom face)
     let mut app = test_app();
     let bc = super::helpers::test_bolt_definition();
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
 
     let cell_y = 100.0;
     spawn_cell_with_health(&mut app, 0.0, cell_y, 30.0);
@@ -303,7 +306,7 @@ fn exhausted_piercing_bolt_reflecting_off_destroyable_cell_stamps_last_impact() 
     // Then: Bolt has LastImpact with side: ImpactSide::Bottom (reflected)
     let mut app = test_app();
     let bc = super::helpers::test_bolt_definition();
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
 
     let cell_y = 100.0;
     spawn_cell_with_health(&mut app, 0.0, cell_y, 10.0);
@@ -333,7 +336,7 @@ fn exhausted_piercing_zero_effective_also_reflects_and_stamps() {
     // Edge case: PiercingRemaining(0) with piercing_stack(&[]) — same behavior.
     let mut app = test_app();
     let bc = super::helpers::test_bolt_definition();
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
 
     let cell_y = 100.0;
     spawn_cell_with_health(&mut app, 0.0, cell_y, 10.0);

@@ -8,6 +8,7 @@ use crate::{
         messages::BoltLost,
         resources::{DEFAULT_BOLT_ANGLE_SPREAD, DEFAULT_BOLT_SPAWN_OFFSET_Y},
         systems::bolt_lost::system::bolt_lost,
+        test_utils::speed_stack,
     },
     prelude::*,
     shared::{GameDrawLayer, death_pipeline::kill_yourself::KillYourself},
@@ -466,8 +467,6 @@ fn bolt_lost_respawn_velocity_uses_base_speed() {
 #[test]
 fn bolt_lost_respawn_velocity_with_speed_boost() {
     // Edge case: EffectStack<SpeedBoostConfig> with 1.2 -> 720.0 * 1.2 = 864.0
-    use crate::bolt::test_utils::speed_stack;
-
     let mut app = test_app();
     let playfield = PlayfieldConfig::default();
     app.world_mut().spawn((

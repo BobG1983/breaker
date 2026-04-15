@@ -26,11 +26,10 @@ mod tests {
     use bevy::time::TimeUpdateStrategy;
 
     use super::*;
+    use crate::prelude::*;
 
     /// Build a test app that advances time by `dt` each update.
     fn test_app(dt: Duration) -> App {
-        use crate::prelude::*;
-
         TestAppBuilder::new()
             .insert_resource(TimeUpdateStrategy::ManualDuration(dt))
             .with_system(Update, tick_effect_flash)
@@ -154,8 +153,6 @@ mod tests {
 
     #[test]
     fn fx_plugin_registers_tick_effect_flash_running_in_node_playing() {
-        use crate::prelude::*;
-
         let mut app = TestAppBuilder::new()
             .with_state_hierarchy()
             .in_state_node_playing()
@@ -181,8 +178,6 @@ mod tests {
 
     #[test]
     fn tick_effect_flash_does_not_run_outside_node_playing() {
-        use crate::prelude::*;
-
         let mut app = TestAppBuilder::new()
             .with_state_hierarchy()
             // Stay in default AppState (Loading) - NOT NodeState::Playing

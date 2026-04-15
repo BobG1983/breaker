@@ -10,7 +10,6 @@ use crate::{
         },
         systems::bump::tests::helpers::*,
     },
-    effect_v3::effects::anchor::AnchorActive,
     prelude::*,
 };
 

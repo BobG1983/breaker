@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use rantzsoft_spatial2d::components::{GlobalPosition2D, Spatial2D};
 
 use super::helpers::*;
 use crate::{
@@ -6,6 +7,7 @@ use crate::{
         components::PiercingRemaining,
         test_utils::{damage_stack, piercing_stack},
     },
+    cells::resources::CellConfig,
     prelude::*,
     shared::death_pipeline::invulnerable::Invulnerable,
 };
@@ -14,7 +16,7 @@ use crate::{
 fn cell_collision_emits_damage_cell_with_base_damage() {
     let mut app = test_app_with_damage_and_wall_messages();
     let bc = super::helpers::test_bolt_definition();
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
 
     let cell_y = 100.0;
     let cell_entity = spawn_cell(&mut app, 0.0, cell_y);
@@ -52,7 +54,7 @@ fn cell_collision_emits_damage_cell_with_base_damage() {
 fn cell_collision_emits_damage_cell_with_no_effective_damage_multiplier() {
     let mut app = test_app_with_damage_and_wall_messages();
     let bc = super::helpers::test_bolt_definition();
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
 
     let cell_y = 100.0;
     spawn_cell(&mut app, 0.0, cell_y);
@@ -82,7 +84,7 @@ fn cell_collision_emits_damage_cell_with_no_effective_damage_multiplier() {
 fn cell_collision_emits_damage_cell_with_boosted_damage() {
     let mut app = test_app_with_damage_and_wall_messages();
     let bc = super::helpers::test_bolt_definition();
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
 
     let cell_y = 100.0;
     spawn_cell(&mut app, 0.0, cell_y);
@@ -113,7 +115,7 @@ fn cell_collision_emits_damage_cell_with_boosted_damage() {
 fn cell_collision_emits_damage_cell_with_identity_effective_damage_multiplier() {
     let mut app = test_app_with_damage_and_wall_messages();
     let bc = super::helpers::test_bolt_definition();
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
 
     let cell_y = 100.0;
     spawn_cell(&mut app, 0.0, cell_y);
@@ -143,7 +145,7 @@ fn cell_collision_emits_damage_cell_with_identity_effective_damage_multiplier() 
 fn two_bolts_emit_damage_cell_with_correct_source_bolt() {
     let mut app = test_app_with_damage_and_wall_messages();
     let bc = super::helpers::test_bolt_definition();
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
 
     let cell_a = spawn_cell(&mut app, -100.0, 100.0);
     let cell_b = spawn_cell(&mut app, 100.0, 100.0);
@@ -251,7 +253,7 @@ fn piercing_bolt_emits_damage_cell_for_each_pierced_cell() {
 fn cell_hit_emits_both_bolt_hit_cell_and_damage_cell() {
     let mut app = test_app_with_damage_and_wall_messages();
     let bc = super::helpers::test_bolt_definition();
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
 
     let cell_y = 100.0;
     let cell_entity = spawn_cell(&mut app, 0.0, cell_y);
@@ -288,7 +290,7 @@ fn cell_hit_emits_both_bolt_hit_cell_and_damage_cell() {
 fn cell_collision_uses_active_damage_boosts_multiplier() {
     let mut app = test_app_with_damage_and_wall_messages();
     let bc = super::helpers::test_bolt_definition();
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
 
     let cell_y = 100.0;
     spawn_cell(&mut app, 0.0, cell_y);
@@ -323,7 +325,7 @@ fn cell_collision_uses_active_damage_boosts_multiplier() {
 fn cell_collision_ignores_stale_effective_damage_multiplier() {
     let mut app = test_app_with_damage_and_wall_messages();
     let bc = super::helpers::test_bolt_definition();
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
 
     let cell_y = 100.0;
     spawn_cell(&mut app, 0.0, cell_y);
@@ -354,7 +356,7 @@ fn cell_collision_ignores_stale_effective_damage_multiplier() {
 fn cell_collision_sets_dealer_to_source_bolt_entity() {
     let mut app = test_app_with_damage_and_wall_messages();
     let bc = super::helpers::test_bolt_definition();
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
 
     let cell_y = 100.0;
     spawn_cell(&mut app, 0.0, cell_y);
@@ -384,12 +386,9 @@ fn cell_collision_sets_dealer_to_source_bolt_entity() {
 /// immunity is enforced downstream in `apply_damage::<Cell>`.
 #[test]
 fn cell_collision_emits_damage_cell_for_locked_invulnerable_cell() {
-    use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
-    use rantzsoft_spatial2d::components::{GlobalPosition2D, Position2D, Spatial2D};
-
     let mut app = test_app_with_damage_and_wall_messages();
     let bc = super::helpers::test_bolt_definition();
-    let cc = crate::cells::resources::CellConfig::default();
+    let cc = CellConfig::default();
 
     let (cw, ch) = default_cell_dims();
     let half_extents = Vec2::new(cw.half_width(), ch.half_height());
@@ -406,7 +405,7 @@ fn cell_collision_emits_damage_cell_for_locked_invulnerable_cell() {
             Locked,
             Invulnerable,
             Aabb2D::new(Vec2::ZERO, half_extents),
-            CollisionLayers::new(crate::shared::CELL_LAYER, crate::shared::BOLT_LAYER),
+            CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
             Position2D(pos),
             GlobalPosition2D(pos),
             Spatial2D,

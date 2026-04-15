@@ -2,14 +2,9 @@
 
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
-use rantzsoft_spatial2d::components::Position2D;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    cells::components::Cell,
-    effect_v3::traits::Fireable,
-    shared::death_pipeline::{DamageDealt, Dead},
-};
+use crate::{effect_v3::traits::Fireable, prelude::*};
 
 /// Area explosion dealing flat damage to all cells within range.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -58,17 +53,9 @@ mod tests {
 
     use bevy::prelude::*;
     use ordered_float::OrderedFloat;
-    use rantzsoft_spatial2d::components::Position2D;
 
-    use super::*;
-    use crate::{
-        cells::components::Cell,
-        effect_v3::traits::Fireable,
-        shared::{
-            death_pipeline::{DamageDealt, Dead},
-            test_utils::{MessageCollector, TestAppBuilder},
-        },
-    };
+    use super::ExplodeConfig;
+    use crate::{effect_v3::traits::Fireable, prelude::*};
 
     // ── Helpers ────────────────────────────────────────────────────────────
 

@@ -2,14 +2,12 @@
 
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
-use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     bolt::{components::BoltBaseDamage, resources::DEFAULT_BOLT_BASE_DAMAGE},
-    cells::components::Cell,
     effect_v3::traits::Fireable,
-    shared::death_pipeline::{DamageDealt, Dead},
+    prelude::*,
 };
 
 /// Fires a beam that damages all cells along a line.

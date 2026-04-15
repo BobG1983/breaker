@@ -3,8 +3,6 @@
 use std::collections::HashSet;
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::Position2D;
-use rantzsoft_stateflow::CleanupOnExit;
 
 use super::super::components::{
     PulseEmitter, PulseRing, PulseRingBaseDamage, PulseRingDamageMultiplier, PulseRingDamaged,
@@ -12,10 +10,8 @@ use super::super::components::{
 };
 use crate::{
     bolt::{components::BoltBaseDamage, resources::DEFAULT_BOLT_BASE_DAMAGE},
-    cells::components::Cell,
     effect_v3::{components::EffectSourceChip, effects::DamageBoostConfig, stacking::EffectStack},
-    shared::death_pipeline::{DamageDealt, Dead},
-    state::types::NodeState,
+    prelude::*,
 };
 
 /// Alive cell lookup — entity + position, excludes dead cells.

@@ -15,13 +15,13 @@ pub(crate) fn cleanup_entities<T: Component>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::prelude::*;
 
     #[derive(Component)]
     struct TestMarker;
 
     #[test]
     fn cleanup_entities_despawns_marked_entities() {
-        use crate::prelude::*;
         let mut app = TestAppBuilder::new()
             .with_system(Update, cleanup_entities::<TestMarker>)
             .build();

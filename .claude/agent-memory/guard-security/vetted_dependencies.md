@@ -155,6 +155,21 @@ in `walls/test_utils.rs` (lines 55, 74, 93) require either an `#[allow]` with re
 or replacement with `expect()` (but `expect_used` is now deny too) — need `.unwrap_or_else`
 or restructured logic to satisfy the new lint level. This is an existing clippy finding.
 
+## cargo audit result — refactor/prelude-expansion-and-import-cleanup (2026-04-15)
+
+`cargo audit` run successfully. Result: 3 allowed warnings, 0 errors.
+- RUSTSEC-2024-0436: `paste 1.0.15` — unmaintained, no CVE. Same recurring transitive (metal→wgpu-hal→bevy_render).
+- RUSTSEC-2026-0097: `rand 0.8.5` (via ordered-float→wgpu-hal) and `rand 0.9.2` (via bevy_math) — same recurring advisory.
+No new advisories. cargo machete: no unused dependencies found.
+
+No Cargo.toml changes at all on this branch. Pure import refactor:
+- 363 .rs files changed: only `use` statement consolidations via new `prelude::*` wildcard imports
+- New prelude submodules (`constants.rs`, `death_pipeline.rs`, `resources.rs`, `test_utils.rs`) are pure re-export wiring — no executable code
+- No new unsafe blocks, no new RON loading paths, no new build.rs, no new proc macros
+- The single `expect("should have Hp")` in the diff is a path-shortening refactor (identical semantics to prior `crate::shared::death_pipeline::hp::Hp` path)
+- `with_resource::<GameRng>()` additions are in `#[cfg(test)]`-gated test helpers only
+- `#[allow(unused_imports)]` in `prelude/mod.rs` is pre-existing and justified (prelude items consumed via wildcard)
+
 ## cargo audit result — tiling/visual-mode (2026-04-15)
 
 `cargo audit` run successfully. Result: 3 allowed warnings, 0 errors.

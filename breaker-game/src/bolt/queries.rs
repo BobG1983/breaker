@@ -19,6 +19,7 @@ use crate::{
         stacking::EffectStack,
     },
     prelude::*,
+    shared::size::{BaseRadius, MaxRadius, MinRadius},
 };
 
 /// Bolt spatial data with speed boosts for systems that modify bolt velocity
@@ -123,7 +124,7 @@ pub(crate) struct LostBoltData {
 #[query_data(mutable)]
 pub(crate) struct SyncBoltScaleData {
     /// Base radius in world units.
-    pub base_radius: &'static crate::shared::size::BaseRadius,
+    pub base_radius: &'static BaseRadius,
     /// Mutable scale for rendering.
     pub scale:       &'static mut Scale2D,
     /// Active size boost multipliers.
@@ -131,9 +132,9 @@ pub(crate) struct SyncBoltScaleData {
     /// Node scaling factor.
     pub node_scale:  Option<&'static NodeScalingFactor>,
     /// Minimum radius constraint.
-    pub min_radius:  Option<&'static crate::shared::size::MinRadius>,
+    pub min_radius:  Option<&'static MinRadius>,
     /// Maximum radius constraint.
-    pub max_radius:  Option<&'static crate::shared::size::MaxRadius>,
+    pub max_radius:  Option<&'static MaxRadius>,
 }
 
 /// Applies the canonical velocity formula to spatial data with optional

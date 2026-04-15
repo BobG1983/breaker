@@ -13,7 +13,7 @@ The `crate::prelude` module provides stable import points for types used across 
 
 ### Usage
 
-- **`use crate::prelude::*`** — curated glob of the most universally used cross-domain types: entity markers (Bolt, Breaker, Cell, Wall), all states, all cross-domain messages, effect containers and active-effect components, death pipeline types (Hp, Dead, DamageDealt, Destroyed, KilledBy), collision layer constants (BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, WALL_LAYER), common resources (GameRng, InputActions, PlayfieldConfig), and high-frequency run/node types. In `#[cfg(test)]` builds it also exposes test infrastructure (TestAppBuilder, tick, MessageCollector, attach_message_capture).
+- **`use crate::prelude::*`** — curated glob of the most universally used cross-domain types: entity markers (Bolt, Breaker, Cell, Wall), all states, the most widely-used cross-domain messages, effect containers and active-effect components, death pipeline types (Hp, Dead, DamageDealt, Destroyed, KilledBy, Invulnerable), collision layer constants (BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, WALL_LAYER), common resources (GameRng, InputActions, PlayfieldConfig), and high-frequency run/node types. In `#[cfg(test)]` builds it also exposes test infrastructure (TestAppBuilder, tick, MessageCollector, attach_message_capture). Types that would collide with existing type names (e.g. the `NoBump` message collides with the breaker builder's `NoBump` typestate marker) are excluded from the prelude and must be imported explicitly.
 
 The prelude is organized by category into submodules (`components`, `messages`, `resources`, `states`, `death_pipeline`, `constants`, and `#[cfg(test)] test_utils`). All submodules are globbed through `prelude/mod.rs`, so `use crate::prelude::*` pulls in the full curated set.
 
@@ -30,7 +30,7 @@ A type belongs in `crate::prelude` if it is used in **3+ files across the codeba
 - `messages.rs` — cross-domain messages
 - `resources.rs` — resources (including run/node internals with heavy consumer counts)
 - `states.rs` — game state types
-- `death_pipeline.rs` — Hp, Dead, DamageDealt, Destroyed, KilledBy
+- `death_pipeline.rs` — Hp, Dead, DamageDealt, Destroyed, KilledBy, Invulnerable
 - `constants.rs` — collision layer constants
 - `test_utils.rs` (gated by `#[cfg(test)]`) — TestAppBuilder, tick, MessageCollector, attach_message_capture
 

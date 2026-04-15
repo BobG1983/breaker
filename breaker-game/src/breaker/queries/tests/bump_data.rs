@@ -6,7 +6,6 @@ use crate::{
         BumpEarlyWindow, BumpLateWindow, BumpPerfectCooldown, BumpPerfectWindow, BumpState,
         BumpWeakCooldown,
     },
-    effect_v3::effects::anchor::AnchorActive,
     prelude::*,
 };
 

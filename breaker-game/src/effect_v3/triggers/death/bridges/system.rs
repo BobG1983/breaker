@@ -6,16 +6,12 @@
 use bevy::prelude::*;
 
 use crate::{
-    bolt::components::Bolt,
-    breaker::components::Breaker,
-    cells::components::Cell,
     effect_v3::{
-        storage::{BoundEffects, StagedEffects},
         types::{EntityKind, Trigger, TriggerContext},
         walking::{walk_bound_effects, walk_staged_effects},
     },
-    shared::death_pipeline::{Destroyed, GameEntity},
-    walls::components::Wall,
+    prelude::*,
+    shared::death_pipeline::GameEntity,
 };
 
 /// Generic death bridge — reads `Destroyed<T>` and dispatches death triggers.

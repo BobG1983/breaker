@@ -40,8 +40,7 @@ mod tests {
         bolt::components::{BoltLifespan, ExtraBolt},
         prelude::*,
         shared::death_pipeline::{
-            despawn_entity::DespawnEntity, destroyed::Destroyed, kill_yourself::KillYourself,
-            sets::DeathPipelineSystems,
+            despawn_entity::DespawnEntity, kill_yourself::KillYourself, sets::DeathPipelineSystems,
         },
     };
 
