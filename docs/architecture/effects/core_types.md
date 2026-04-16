@@ -1,396 +1,353 @@
 # Core Types
 
-All core types live in `effect/core/types/` (directory module: `definitions/enums.rs` holds the enum types; `definitions/fire.rs` and `definitions/reverse.rs` hold the dispatch functions; all exported via `definitions/mod.rs` → `types/mod.rs`).
+All effect-system types live in `breaker-game/src/effect_v3/types/`. Each type sits in its own file (`effect_type.rs`, `tree.rs`, `root_node.rs`, etc.) and is re-exported from `types/mod.rs`. The supporting traits live in `effect_v3/traits/` (`fireable.rs`, `reversible.rs`, `passive_effect.rs`).
 
 ## EffectType
 
-The full set of fireable effects. Simple effects use bare variants; complex effects use **config struct wrappers** (newtype variants). Each config struct is defined in its per-effect module with `#[derive(Clone, Debug, PartialEq, Deserialize)]`.
+Every effect in the game. Each variant **wraps a per-effect config struct** that implements the [`Fireable`](#fireable-and-reversible-traits) trait. The enum is the dispatch layer; the config struct is the implementation. There are no bare-scalar variants — even single-field configs (`SpeedBoostConfig { multiplier: OrderedFloat<f32> }`) are wrapped.
 
 ```rust
-#[derive(Clone, Debug, PartialEq, Deserialize)]
 pub enum EffectType {
-    // Stat effects (simple — bare variants)
-    SpeedBoost(f32), SizeBoost(f32), DamageBoost(f32),
-    BumpForce(f32), QuickStop(f32), FlashStep,
-    Piercing(u32), RampingDamage(f32), Vulnerable(f32),
-
-    // Stat effects (config structs)
-    Attraction(AttractionConfig), Anchor(AnchorConfig),
-    Pulse(PulseConfig), Shield(ShieldConfig), SecondWind,
-
-    // AoE / spawn effects (config structs)
-    Shockwave(ShockwaveConfig), Explode(ExplodeConfig),
-    ChainLightning(ChainLightningConfig), PiercingBeam(PiercingBeamConfig),
-    SpawnBolts(SpawnBoltsConfig), SpawnPhantom(SpawnPhantomConfig),
-    ChainBolt(ChainBoltConfig), MirrorProtocol(MirrorConfig),
+    SpeedBoost(SpeedBoostConfig),
+    SizeBoost(SizeBoostConfig),
+    DamageBoost(DamageBoostConfig),
+    BumpForce(BumpForceConfig),
+    QuickStop(QuickStopConfig),
+    FlashStep(FlashStepConfig),
+    Piercing(PiercingConfig),
+    Vulnerable(VulnerableConfig),
+    RampingDamage(RampingDamageConfig),
+    Attraction(AttractionConfig),
+    Anchor(AnchorConfig),
+    Pulse(PulseConfig),
+    Shield(ShieldConfig),
+    SecondWind(SecondWindConfig),
+    Shockwave(ShockwaveConfig),
+    Explode(ExplodeConfig),
+    ChainLightning(ChainLightningConfig),
+    PiercingBeam(PiercingBeamConfig),
+    SpawnBolts(SpawnBoltsConfig),
+    SpawnPhantom(SpawnPhantomConfig),
+    ChainBolt(ChainBoltConfig),
+    MirrorProtocol(MirrorConfig),
     TetherBeam(TetherBeamConfig),
-
-    // Penalty / lifecycle
-    LoseLife, TimePenalty(f32), Die,
-
-    // Meta effects
-    CircuitBreaker(CircuitBreakerConfig), EntropyEngine(EntropyConfig),
-    RandomEffect(Vec<(f32, Box<EffectType>)>),  // weighted pool, Box avoids infinite size
+    GravityWell(GravityWellConfig),
+    LoseLife(LoseLifeConfig),
+    TimePenalty(TimePenaltyConfig),
+    Die(DieConfig),
+    CircuitBreaker(CircuitBreakerConfig),
+    EntropyEngine(EntropyConfig),
+    RandomEffect(RandomEffectConfig),
 }
 ```
 
-RON syntax uses double parens for config struct variants: `Shockwave((base_range: 24.0, speed: 500.0))`. Simple variants stay clean: `SpeedBoost(1.5)`, `Piercing(3)`.
+All variants derive `Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize`. Float fields inside config structs use `OrderedFloat<f32>` so the whole enum can derive `Hash` and `Eq`.
+
+RON syntax wraps the config struct: `Fire(SpeedBoost(multiplier: 1.5))`, `Fire(Shockwave(base_range: 24.0, range_per_level: 6.0, stacks: 1, speed: 400.0))`.
+
+The variant count is checked by `fire_dispatch_does_not_panic_for_any_effect_type_variant` in `dispatch/fire_dispatch.rs` — that test asserts `types.len() == 30`, so adding a variant requires updating it.
 
 ## ReversibleEffectType
 
-Subset of `EffectType` restricted to effects that can be reversed (undone). Used in `During` and `Until` direct fire positions where the scoped context must reverse the effect on exit.
+The 16-variant subset of `EffectType` whose configs implement [`Reversible`](#fireable-and-reversible-traits). Used in `ScopedTree::Fire` (the only `Fire` position inside `During`/`Until` scoped contexts) and in `commands.reverse_effect()`.
 
 ```rust
-#[derive(Clone, Debug, PartialEq, Deserialize)]
 pub enum ReversibleEffectType {
-    SpeedBoost(f32), SizeBoost(f32), DamageBoost(f32),
-    BumpForce(f32), QuickStop(f32), FlashStep,
-    Piercing(u32), Attraction(AttractionConfig), RampingDamage(f32),
-    Anchor(AnchorConfig), Vulnerable(f32), Pulse(PulseConfig),
-    Shield(ShieldConfig), SecondWind,
+    SpeedBoost(SpeedBoostConfig),  SizeBoost(SizeBoostConfig),
+    DamageBoost(DamageBoostConfig), BumpForce(BumpForceConfig),
+    QuickStop(QuickStopConfig),     FlashStep(FlashStepConfig),
+    Piercing(PiercingConfig),       Vulnerable(VulnerableConfig),
+    RampingDamage(RampingDamageConfig),
+    Attraction(AttractionConfig),   Anchor(AnchorConfig),
+    Pulse(PulseConfig),             Shield(ShieldConfig),
+    SecondWind(SecondWindConfig),
+    CircuitBreaker(CircuitBreakerConfig),
+    EntropyEngine(EntropyConfig),
 }
 ```
 
-Non-reversible effects (Shockwave, Explode, SpawnBolts, LoseLife, Die, etc.) cannot appear in direct `During`/`Until` fire position. They can appear inside a nested `When` within a scoped context (the listener itself is reversed, not the effect).
+Two conversions sit alongside the enum:
+
+- `impl From<ReversibleEffectType> for EffectType` — widening, infallible (every reversible variant has an `EffectType` twin).
+- `impl TryFrom<EffectType> for ReversibleEffectType` — narrowing, returns `Err(())` for non-reversible variants (`Shockwave`, `Explode`, `LoseLife`, `Die`, etc.).
+
+Non-reversible effects can still appear inside a scoped context, but only nested under a `When` (where reversibility is not required because the listener — not the effect — is what gets removed). See `node_types.md` for the structural rules.
+
+## Tree
+
+The recursive effect tree. `Tree` is what gets stored inside `BoundEffects` and `StagedEffects`. It is also the payload of every `Stamp`/`Spawn` root node.
+
+```rust
+pub enum Tree {
+    Fire(EffectType),
+    When(Trigger, Box<Self>),
+    Once(Trigger, Box<Self>),
+    During(Condition, Box<ScopedTree>),
+    Until(Trigger, Box<ScopedTree>),
+    Sequence(Vec<Terminal>),
+    On(ParticipantTarget, Terminal),
+}
+```
+
+Variant semantics live in `node_types.md`. Walker entry points live in `walking/walk_effects/system.rs` (`walk_bound_effects`, `walk_staged_effects`, `evaluate_tree`).
+
+## ScopedTree
+
+The restricted tree that appears inside `During`/`Until`. Direct `Fire` is reversible-only; nested `When` re-opens the gate to the full `Tree`.
+
+```rust
+pub enum ScopedTree {
+    Fire(ReversibleEffectType),
+    Sequence(Vec<ReversibleEffectType>),
+    When(Trigger, Box<Tree>),
+    On(ParticipantTarget, ScopedTerminal),
+    During(Condition, Box<Self>),
+}
+```
+
+The structural restriction is the only thing that distinguishes `ScopedTree` from `Tree`. The reversibility constraint is enforced at the type level — the loader cannot construct a `ScopedTree::Fire(non_reversible)` because `ScopedTree::Fire` only takes `ReversibleEffectType`.
+
+## Terminal and ScopedTerminal
+
+Leaf operations used by `Tree::Sequence` and `Tree::On` (and their scoped equivalents).
+
+```rust
+pub enum Terminal {
+    Fire(EffectType),
+    Route(RouteType, Box<Tree>),
+}
+
+pub enum ScopedTerminal {
+    Fire(ReversibleEffectType),
+    Route(RouteType, Box<Tree>),
+}
+
+impl From<ScopedTerminal> for Terminal { /* widens Fire variant */ }
+```
+
+`Route(RouteType, Tree)` installs a tree onto a participant entity at runtime. `RouteType` controls permanence:
+
+```rust
+pub enum RouteType {
+    Bound,   // → target's BoundEffects (re-arms each match)
+    Staged,  // → target's StagedEffects (consumed on first match)
+}
+```
+
+## RootNode
+
+Top-level entry point for a chip/breaker/cell `effects:` list in RON. A `RootNode` either installs a tree onto entities that exist now, or watches for spawns of a given kind.
+
+```rust
+pub enum RootNode {
+    Stamp(StampTarget, Tree),
+    Spawn(EntityKind, Tree),
+}
+```
+
+`Stamp` is dispatched by `chips/systems/dispatch_chip_effects` (and the breaker/cell equivalents). `Spawn` is registered into `SpawnStampRegistry` and applied later by `stamp_spawned_*` watcher systems when matching entities are added. See `dispatch.md`.
+
+## StampTarget
+
+Identifies which entities a `Stamp` root installs onto. Used at root level only — not at runtime trigger redirection (that's `ParticipantTarget`).
+
+```rust
+pub enum StampTarget {
+    Bolt,                // primary bolt entity
+    Breaker,             // primary breaker entity
+    ActiveBolts,         // all bolts that exist right now
+    EveryBolt,           // existing + future bolts (registered via SpawnStampRegistry)
+    PrimaryBolts,        // bolts marked with PrimaryBolt
+    ExtraBolts,          // bolts marked with ExtraBolt
+    ActiveCells,         // all cells that exist right now
+    EveryCell,           // existing + future cells
+    ActiveWalls,         // all walls that exist right now
+    EveryWall,           // existing + future walls
+    ActiveBreakers,      // all breakers that exist right now
+    EveryBreaker,        // existing + future breakers
+}
+```
+
+The `Active*` and `Every*` distinction matters for chips equipped between nodes: cells/walls don't exist yet at chip-select time, so `Active*` is a no-op while `Every*` registers a `SpawnStampRegistry` entry that fires on the next spawn. See `dispatch.md` for the actual dispatch flow.
 
 ## Trigger
 
+A game event that gates effect tree evaluation. Local triggers fire on specific participating entities; global triggers (suffix `Occurred`) fire on every entity that has effects bound or staged.
+
 ```rust
-#[derive(Clone, Debug, PartialEq, Deserialize)]
 pub enum Trigger {
-    // Local bump triggers (past-tense — "you were bumped")
-    PerfectBumped,
-    EarlyBumped,
-    LateBumped,
-    Bumped,
+    // Local bump (fires on bolt + breaker)
+    PerfectBumped, EarlyBumped, LateBumped, Bumped,
 
-    // Local impact triggers
-    Impacted(EntityKind),       // "you were in an impact with X" (both participants)
+    // Global bump (fires on all entities)
+    PerfectBumpOccurred, EarlyBumpOccurred, LateBumpOccurred,
+    BumpOccurred, BumpWhiffOccurred, NoBumpOccurred,
 
-    // Local death triggers
-    Died,                       // "I died"
-    Killed(EntityKind),         // "I killed X" (killer perspective)
+    // Impact (collision)
+    Impacted(EntityKind),                // local — this entity collided
+    ImpactOccurred(EntityKind),          // global — a collision happened
 
-    // Global bump triggers (Occurred suffix)
-    PerfectBumpOccurred,
-    EarlyBumpOccurred,
-    LateBumpOccurred,
-    BumpOccurred,
-    BumpWhiffOccurred,
-    NoBumpOccurred,
+    // Death
+    Died,                                // local — this entity died
+    Killed(EntityKind),                  // local — this entity killed something
+    DeathOccurred(EntityKind),           // global — something of kind X died
 
-    // Global impact / death / loss triggers
-    ImpactOccurred(EntityKind),
-    DeathOccurred(EntityKind),
+    // Loss / lifecycle
     BoltLostOccurred,
-
-    // Node lifecycle (global)
     NodeStartOccurred,
     NodeEndOccurred,
-    NodeTimerThresholdOccurred(f32),    // ratio threshold
+    NodeTimerThresholdOccurred(OrderedFloat<f32>),
 
-    // Timer (special — timer system ticks this)
-    TimeExpires(f32),
+    // Self
+    TimeExpires(OrderedFloat<f32>),      // owner-only countdown
 }
 ```
 
-**Local vs global**: Local triggers (past-tense, no suffix) fire on the entities involved in the event. Global triggers (`Occurred` suffix) fire on all entities that have matching BoundEffects/StagedEffects entries.
-
-## EntityKind (trigger parameter)
-
-```rust
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
-pub enum EntityKind {
-    Cell,
-    Bolt,
-    Wall,
-    Breaker,
-    Any,
-}
-```
-
-Specifies **what type of entity** is involved. Used as the trigger parameter for:
-- `Impacted(EntityKind)` and `ImpactOccurred(EntityKind)` — what entity type was in the impact
-- `Killed(EntityKind)` — "I killed X" (killer perspective)
-- `DeathOccurred(EntityKind)` — "something of type X died"
-
-Includes `Any` to match all entity types. Replaces the old separate `KillTarget` and entity-type `ImpactTarget`/`DeathTarget` enums.
-
-**Not to be confused with** the participant role enums (`ImpactTarget { Impactor, Impactee }`, `DeathTarget { Victim, Killer }`) used in `On(...)` for participant redirect. See [Participant Enums](#participant-enums) below.
+All `f32` payloads are `OrderedFloat<f32>` so `Trigger` can derive `Hash` and `Eq` and be used as a dictionary key during equality comparison in walkers.
 
 ## Condition
 
+A state predicate evaluated each frame by `evaluate_conditions` for `During` nodes. Conditions are stateful (start/end), not edge-triggered like triggers.
+
 ```rust
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 pub enum Condition {
-    NodeActive,
-    ShieldActive,
-    ComboActive(u32),
+    NodeActive,             // node state machine in Playing
+    ShieldActive,           // at least one ShieldWall entity exists
+    ComboActive(u32),       // perfect-bump streak ≥ N
 }
 ```
 
-Used by `During(Condition, ...)` to scope effects to a boolean condition.
+Each condition has a free predicate function in `effect_v3/conditions/` (`is_node_active`, `is_shield_active`, `is_combo_active`) called by `evaluate_condition`.
 
-## EntityKind (Spawned parameter)
+## EntityKind
 
-`EntityKind` is also used by `Spawned(EntityKind, ...)` — fires when an entity of this type is added. The `Any` variant is not valid for Spawned (only for trigger parameters).
-
-## Participant Enums
-
-Per-trigger role enums that identify participants in an event. Used with `On(ParticipantTarget, ...)` to redirect fire/stamp/route to a specific participant instead of `This`. These are **role** enums (who in the event), not entity-type enums. Entity-type filtering uses `EntityKind` (above).
+Classifies entity *types* for trigger matching and for `Spawn` root nodes. Distinct from `ParticipantTarget` (which classifies *roles*).
 
 ```rust
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum BumpTarget { Bolt, Breaker }
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ImpactTarget { Impactor, Impactee }    // participant ROLE — not entity type
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum DeathTarget { Victim, Killer }         // participant ROLE — not entity type
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum BoltLostTarget { Bolt, Breaker }
+pub enum EntityKind {
+    Cell, Bolt, Wall, Breaker, Any,
+}
 ```
 
-**`BumpTarget`** — participants in bump triggers (`PerfectBumped`, `Bumped`, etc. and their `Occurred` variants).
+`Any` is valid in trigger payloads (`Impacted(Any)` matches any collision) but not in `Spawn(Any, ...)` — spawn watchers are per-kind.
 
-**`ImpactTarget` (participant role)** — `Impactor` / `Impactee` roles in impact triggers. Entity-type filtering on triggers uses `EntityKind`, not this enum.
+## ParticipantTarget
 
-**`DeathTarget` (participant role)** — `Victim` / `Killer` roles in death triggers. Entity-type filtering on triggers uses `EntityKind`, not this enum.
-
-**`BoltLostTarget`** — participants in bolt-lost triggers.
-
-### ParticipantTarget
-
-Wraps the per-trigger participant enums into a single type for `On(...)`:
+Identifies a *role* in a trigger event. Used by `Tree::On` to redirect a terminal to a specific participant. Wraps per-trigger role enums.
 
 ```rust
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BumpTarget       { Bolt, Breaker }
+pub enum ImpactTarget     { Impactor, Impactee }
+pub enum DeathTarget      { Victim, Killer }
+pub enum BoltLostTarget   { Bolt, Breaker }
+
 pub enum ParticipantTarget {
     Bump(BumpTarget),
-    Impact(ImpactTarget),       // ImpactTarget = { Impactor, Impactee }
-    Death(DeathTarget),         // DeathTarget = { Victim, Killer }
+    Impact(ImpactTarget),
+    Death(DeathTarget),
     BoltLost(BoltLostTarget),
 }
 ```
 
-No `This` variant — `Fire` targets `This` implicitly. No entity-type variants — `Route` handles routing at definition level.
-
-## Target
-
-```rust
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
-pub enum Target {
-    // Singular
-    Bolt, Breaker, Cell, Wall,
-    // Plural
-    ActiveBolts, EveryBolt, PrimaryBolts, ExtraBolts,
-    ActiveCells, EveryCells,
-    ActiveWalls, EveryWall,
-    ActiveBreakers, EveryBreaker,
-}
-```
-
-Definition-time entity routing. Required at the root of every `effects: []` entry. Determines which entity (or entities) the tree's `This` resolves to.
-
-## ValidDef
-
-```rust
-#[derive(Clone, Debug, PartialEq)]
-pub struct ValidDef {
-    pub target: Target,
-    pub tree: ValidTree,
-}
-```
-
-Top-level wrapper for breaker/chip/cell definitions. Ensures every effect chain explicitly names its target. Used in `BreakerDefinition`, `ChipDefinition`, and `CellDefinition` as `effects: Vec<ValidDef>`.
-
-Replaces the old `RootEffect` struct.
-
-## ValidTree
-
-The validated tree structure produced by the builder. Structural enforcement: `During`/`Until` can only contain reversible effects in direct `Fire` position.
-
-```rust
-#[derive(Clone, Debug, PartialEq)]
-pub enum ValidTree {
-    Fire(EffectType),                               // fire on This (implicit)
-    Sequence(Vec<ValidTree>),                        // multiple children at same level
-    When(Trigger, Box<ValidTree>),                   // trigger → subtree
-    Once(Trigger, Box<ValidTree>),                   // same as When, self-removes after first match
-    During(Condition, ValidScopedTree),              // condition-scoped (fire on start, reverse on end)
-    Until(Trigger, ValidScopedTree),                 // event-scoped (fire immediately, reverse when trigger fires)
-    Spawned(EntityKind, Box<ValidTree>),              // fires on entity add
-    On(ParticipantTarget, ValidTerminal),            // redirect to non-This target
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum ValidScopedTree {
-    Fire(ReversibleEffectType),                      // direct fire — reversible only
-    Sequence(Vec<ReversibleEffectType>),             // multiple reversible effects
-    When(Trigger, Box<ValidTree>),                   // nested When → relaxed (any effect OK)
-    On(ParticipantTarget, ValidScopedTerminal),      // redirect — reversible only
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum ValidTerminal {
-    Fire(EffectType),                               // any effect, immediate
-    Stamp(Box<ValidTree>),                           // permanent → target's BoundEffects
-    Route(Box<ValidTree>),                           // one-shot → target's StagedEffects
-    Reverse(ReversibleEffectType),                   // internal only — generated by During/Until desugaring
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum ValidScopedTerminal {
-    Fire(ReversibleEffectType),                      // reversible only
-    Stamp(Box<ValidTree>),                           // stamp always OK (removable via BoundEffects cleanup)
-    Route(Box<ValidTree>),                           // route always OK
-}
-```
-
-`Reverse` never appears in RON. It is generated internally when `During`/`Until` desugar their reversal entries into `StagedEffects`:
-
-```
-During(NodeActive, Fire(SpeedBoost(1.3)))
-  → fires SpeedBoost immediately
-  → stages: When(NodeEndOccurred, Reverse(SpeedBoost(1.3)))
-```
+Resolution happens in `walking/on/system.rs` via `resolve_participant`, which pattern-matches `(ParticipantTarget, TriggerContext)` and pulls the `Entity` out. Resolution returns `Option<Entity>` — a `Death(Killer)` against an environmental death resolves to `None` and the `On` is silently skipped.
 
 ## TriggerContext
 
-Typed per-trigger context structs. Each trigger concept has its own struct with named fields, wrapped in an enum:
+Carries the entities involved in a trigger event so `On` nodes can resolve `ParticipantTarget` values during walking. Bridge systems build a `TriggerContext` from their source message before calling `walk_bound_effects` / `walk_staged_effects`.
 
 ```rust
 pub enum TriggerContext {
-    Bump(BumpContext),
-    Impact(ImpactContext),
-    Death(DeathContext),
-    BoltLost(BoltLostContext),
+    Bump     { bolt: Option<Entity>, breaker: Entity },
+    Impact   { impactor: Entity,     impactee: Entity },
+    Death    { victim: Entity,       killer: Option<Entity> },
+    BoltLost { bolt: Entity,         breaker: Entity },
     None,
 }
-
-// Chip attribution comes from BoundEntry.source, not TriggerContext.
-pub struct BumpContext { pub bolt: Entity, pub breaker: Entity, pub depth: u32 }
-pub struct ImpactContext { pub impactor: Entity, pub impactee: Entity, pub depth: u32 }
-pub struct DeathContext { pub victim: Entity, pub killer: Option<Entity>, pub depth: u32 }
-pub struct BoltLostContext { pub bolt: Entity, pub breaker: Entity, pub depth: u32 }
 ```
 
-`ParticipantTarget` resolves against `TriggerContext` at dispatch time: `BumpTarget::Bolt` extracts `BumpContext.bolt`, `DeathTarget::Killer` extracts `DeathContext.killer`, etc.
+`Bump.bolt` is optional because `BumpWhiffOccurred` and `NoBumpOccurred` fire without a participating bolt. `Death.killer` is optional because environmental deaths have no killer. `None` is used by triggers with no participants (`NodeStartOccurred`, `NodeEndOccurred`, `NodeTimerThresholdOccurred`, `TimeExpires`).
 
-## GameEntity
-
-```rust
-/// Marker trait for entity types that participate in the death pipeline.
-/// Used as the generic bound on KillYourself<T> and Destroyed<T>.
-trait GameEntity: Component {}
-impl GameEntity for Bolt {}
-impl GameEntity for Cell {}
-impl GameEntity for Wall {}
-impl GameEntity for Breaker {}
-```
+There is no `depth` field. Recursion limiting, if needed, is handled by the walker, not the context.
 
 ## EffectSourceChip
 
+Marker component placed on spawned effect entities (shockwave rings, pulse emitters, gravity wells, etc.) so that downstream damage-application systems can attribute damage back to the chip that caused it. Lives in `effect_v3/components/effect_source_chip.rs`.
+
 ```rust
-/// Deferred chip attribution stored on spawned effect entities (shockwave,
-/// pulse ring, explode request, chain lightning chain, piercing beam request,
-/// tether beam). Damage-application systems read this to populate
-/// DamageDealt.source_chip.
-#[derive(Component, Debug, Clone, Default)]
+#[derive(Component, Debug, Clone)]
 pub struct EffectSourceChip(pub Option<String>);
 
 impl EffectSourceChip {
-    /// Create from a chip name: empty string → EffectSourceChip(None), non-empty → Some(owned).
-    pub fn new(source_chip: &str) -> Self { ... }
-    /// Extract the chip attribution for DamageDealt.source_chip.
-    pub fn source_chip(&self) -> Option<String> { ... }
+    pub fn from_source(source: &str) -> Self {
+        Self((!source.is_empty()).then(|| source.to_owned()))
+    }
 }
-
-/// Convert a source_chip string into Option<String>.
-/// Empty string → None; non-empty → Some(s.to_string()).
-pub fn chip_attribution(source_chip: &str) -> Option<String> { ... }
 ```
 
-Lives in `effect/core/types/definitions/enums.rs`. Used by AoE/spawn effects that carry chip attribution from dispatch time to damage-application time (since those effects damage cells on a later tick).
+Empty source strings map to `None` (effect not chip-sourced — e.g. cascade effects). Non-empty sources map to `Some(name)`.
 
-## dispatch_fire() and dispatch_reverse()
+## Fireable and Reversible traits
 
-Free functions that match on `EffectType` / `ReversibleEffectType` and delegate to per-effect module functions. Each takes a `source_chip: &str` parameter for chip attribution.
+Live in `effect_v3/traits/`. Every config struct in `EffectType` implements `Fireable`; every config struct in `ReversibleEffectType` additionally implements `Reversible`.
 
 ```rust
-pub(crate) fn dispatch_fire(
-    effect: &EffectType,
-    entity: Entity,
-    source_chip: &str,
-    context: &TriggerContext,
-    world: &mut World,
-) {
+pub trait Fireable {
+    fn fire(&self, entity: Entity, source: &str, world: &mut World);
+
+    fn register(_app: &mut App) {}
+}
+
+pub trait Reversible: Fireable {
+    fn reverse(&self, entity: Entity, source: &str, world: &mut World);
+
+    fn reverse_all_by_source(&self, entity: Entity, source: &str, world: &mut World) {
+        self.reverse(entity, source, world);
+    }
+}
+```
+
+`Fireable::register(app)` is the per-effect plugin hook. The default is a no-op. Effects with tick systems, cleanup systems, or reset systems override it. `EffectV3Plugin::build` calls `XxxConfig::register(&mut app)` for all 30 configs unconditionally so that "I added a system but forgot to wire it" never silently drops a system.
+
+`reverse_all_by_source` is the override point for stack-based passives (`SpeedBoostConfig`, `PiercingConfig`, etc.) — the default reverses one instance, but stack effects override it to remove every entry whose source matches via `EffectStack::retain_by_source`. Singleton effects (`Shield`, `Pulse`, etc.) keep the default because there is at most one active instance.
+
+## Dispatch functions
+
+`fire_dispatch` and `reverse_dispatch` are free functions in `effect_v3/dispatch/` that match on the enum variant and call the corresponding config's trait method.
+
+```rust
+// dispatch/fire_dispatch.rs
+pub fn fire_dispatch(effect: &EffectType, entity: Entity, source: &str, world: &mut World) {
     match effect {
-        EffectType::Shockwave(config) => shockwave::fire(entity, config, source_chip, world),
-        EffectType::SpeedBoost(multiplier) => speed_boost::fire(entity, *multiplier, source_chip, world),
-        EffectType::DamageBoost(v) => damage_boost::fire(entity, *v, source_chip, world),
-        EffectType::LoseLife => life_lost::fire(entity, source_chip, world),
+        EffectType::SpeedBoost(config) => config.fire(entity, source, world),
+        EffectType::SizeBoost(config)  => config.fire(entity, source, world),
         // ... one arm per variant
     }
 }
 
-pub(crate) fn dispatch_reverse(
-    effect: &ReversibleEffectType,
-    entity: Entity,
-    source_chip: &str,
-    world: &mut World,
-) {
+// dispatch/reverse_dispatch/system.rs
+pub fn reverse_dispatch(effect: &ReversibleEffectType, entity: Entity, source: &str, world: &mut World) {
     match effect {
-        ReversibleEffectType::SpeedBoost(multiplier) => speed_boost::reverse(entity, *multiplier, source_chip, world),
-        ReversibleEffectType::DamageBoost(v) => damage_boost::reverse(entity, *v, source_chip, world),
-        // ... one arm per variant (all reversible variants covered)
+        ReversibleEffectType::SpeedBoost(config) => config.reverse(entity, source, world),
+        // ... one arm per reversible variant
     }
 }
-```
 
-The `dispatch_fire` match is split across multiple private functions purely for line count. Both dispatches are exhaustive — add a variant and the compiler forces you to add arms.
+pub fn fire_reversible_dispatch(effect: &ReversibleEffectType, ...) { /* mirrors fire_dispatch */ }
 
-## Per-Effect Modules
-
-Each effect module (`effect/effects/<name>.rs` or `effect/effects/<name>/` directory module) defines free functions and any active-state components:
-
-```rust
-// effect/effects/speed_boost.rs
-
-// Active state component (tracks applied multipliers on the entity)
-pub struct ActiveSpeedBoosts(pub Vec<f32>);
-
-pub(crate) fn fire(entity: Entity, multiplier: f32, source_chip: &str, context: &TriggerContext, world: &mut World) {
-    // push multiplier to ActiveSpeedBoosts, recalculate velocity
-    // source_chip accepted for API uniformity but not used by stat effects
-    // context accepted for API uniformity — effects that deal damage use it for attribution
-}
-
-pub(crate) fn reverse(entity: Entity, multiplier: f32, source_chip: &str, world: &mut World) {
-    // remove matching entry from ActiveSpeedBoosts
-}
-
-pub(crate) fn register(app: &mut App) {
-    // simple stat effects have no runtime systems;
-    // effects with runtime behavior (shockwave tick, tether beam, etc.) add systems here
+pub fn reverse_all_by_source_dispatch(effect: &ReversibleEffectType, ...) {
+    // calls config.reverse_all_by_source — for stack-based passives
 }
 ```
 
-The module is self-contained: fire, reverse, components, runtime systems, registration. All logic lives in the module — the enum match in `dispatch_fire`/`dispatch_reverse` is mechanical dispatch only.
+These are the only places the enum-to-trait jump happens. The walker queues `FireEffectCommand` / `ReverseEffectCommand` (defined in `commands/`); those commands call `fire_dispatch` / `reverse_dispatch` from inside `Command::apply` where `&mut World` is available.
 
-## Config Structs
+## Why no `Effect` trait dispatch instead of an enum
 
-Each complex effect has a config struct defined in its per-effect module. Config structs derive `Clone, Debug, PartialEq, Deserialize`. They are not listed exhaustively here — see the individual effect modules under `effect/effects/`. Examples:
+Trait-object dispatch would require each effect to be a separate boxed type. The enum + match pattern gives:
 
-- `ShockwaveConfig { base_range: f32, range_per_level: f32, stacks: u32, speed: f32 }`
-- `ExplodeConfig { range: f32, damage: f32 }`
-- `AttractionConfig { attraction_type: ..., force: f32, max_force: Option<f32> }`
-- `SpawnBoltsConfig { count: u32, lifespan: Option<f32>, inherit: bool }`
+- **Compile-time exhaustiveness** — the `match` in `fire_dispatch` is exhaustive; adding a variant forces you to add the arm.
+- **No allocation** — `EffectType` is a stack-resident value, no `Box<dyn Effect>` per fire.
+- **Hash + Eq** — enum variants compare structurally; trait objects don't.
+- **Serde for free** — RON serialization round-trips through the enum without custom adapters.
 
-RON: `Shockwave((base_range: 24.0, range_per_level: 0.0, stacks: 1, speed: 400.0))` — the double parens are the newtype variant wrapping the struct.
-
-## Why No Trait
-
-An Effect trait would require each effect to be a **separate struct** implementing the trait. The enum would then need dynamic dispatch or a second layer of indirection. The exhaustive match on `EffectType` gives compile-time enforcement (add a variant, compiler forces you to add fire/reverse arms) without trait boilerplate. Config struct variants give acceptable RON: `Shockwave((base_range: 24.0))` — one layer of parens for the newtype. The trait does not add value beyond what the match already provides.
+The `Fireable` trait still exists, but it's the per-config implementation contract, not the dispatch layer. The enum is the dispatch layer.

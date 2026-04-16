@@ -1,13 +1,8 @@
 # Node Scaling Factor
 
-**Decision**: Per-layout breaker/bolt scaling via `entity_scale` / `NodeScalingFactor` (0.5..=1.0).
+**Decision**: Per-layout breaker/bolt scaling via `entity_scale` (0.5–1.0).
 
-## Mechanic
-
-Any node layout can optionally specify `entity_scale` to shrink the breaker and bolt proportionally. Both visual size (`Transform.scale`) AND collision hitboxes (`BaseWidth`, `BaseHeight`, `BaseRadius`) scale together — no visual-only tricks.
-
-- Defaults to `1.0` (no scaling) for all layouts
-- Minimum floor at `0.5` — below this, the bolt becomes visually illegible (~4px) and gameplay becomes "cheap" not "hard"
+For the implementation details (components, formula, application systems), see `docs/architecture/scaling.md`.
 
 ## Core Rule: Speed Is Constant
 
@@ -15,15 +10,8 @@ Bolt speed and breaker movement speed are **NOT** affected by entity scale. This
 
 ## Stacking with Chips
 
-Entity scale applies as a final multiplier on the total (base + boost):
-
-```
-effective_width = (base_width + width_boost) * node_scaling_factor
-effective_radius = base_radius * node_scaling_factor
-```
-
-This creates emergent chip synergies:
-- **WidthBoost** counters the scale penalty — strategically valuable for boss encounters
+Entity scale applies as a final multiplier on the total (base + boost). This creates emergent chip synergies:
+- **SizeBoost** counters the scale penalty — strategically valuable for boss encounters
 - **Piercing** hits more cells per traversal in dense scaled grids
 - **Shockwave** hits more cells in tight formations
 
@@ -37,4 +25,4 @@ This creates emergent chip synergies:
 
 ## Rationale
 
-Entity scale is infrastructure for boss encounters and progressive difficulty. A boss arena at `0.7` with a dense 40×25 grid feels mechanically distinct — the player is "zoomed out," the breaker is small, and every catch requires precision. This reinforces Pillar 1 (The Escalation) and Pillar 3 (Mechanical Floor, Strategic Ceiling) without adding new mechanics — it recontextualizes existing ones.
+Entity scale is infrastructure for boss encounters and progressive difficulty. A boss arena at `0.7` with a dense grid feels mechanically distinct — the player is "zoomed out," the breaker is small, and every catch requires precision. This reinforces Pillar 1 (The Escalation) and Pillar 3 (Mechanical Floor, Strategic Ceiling) without adding new mechanics — it recontextualizes existing ones.

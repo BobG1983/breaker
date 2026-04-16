@@ -95,7 +95,7 @@ pub struct BumpFeedbackSettings {
 ## Optional Methods (any typestate)
 
 - `.with_lives(Option<u32>)` — `None` = infinite lives, `Some(n)` = n lives. Also set by `.definition()` from `life_pool`.
-- `.with_effects(Vec<RootEffect>)` — breaker-specific effects (normally from `BreakerDefinition`)
+- `.with_effects(Vec<RootNode>)` — breaker-specific effects (normally from `BreakerDefinition`)
 - `.with_color([f32; 3])` — HDR color override (normally from `BreakerDefinition.color_rgb`)
 
 ## build() Output

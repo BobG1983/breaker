@@ -13,6 +13,5 @@ Visual identity documentation for the game's art direction, organized by concern
 | [UI & Screens](ui-screens.md) | Chip select, run-end, main menu, typography, HUD |
 | [Feedback & Juice](feedback-juice.md) | Bump grades, failure states, transitions, reactive elements |
 | [Audio-Visual Sync](audio-visual-sync.md) | How audio and visuals relate, layered intensity, per-event sounds |
-| [Data-Driven Graphics](data-driven-graphics.md) | RON-driven visual composition — how cells, breakers, and effects define their look |
+| [Data-Driven Graphics](data-driven-graphics.md) | Design principle for RON-driven visual composition (NOT IMPLEMENTED — see Phase 5 todos) |
 | [Decisions Required](decisions-required.md) | Open questions needing visual exploration or prototyping |
-| [Catalog](catalog/index.md) | Every visual element with status (none/placeholder/partial), priority ratings, and style guide coverage |

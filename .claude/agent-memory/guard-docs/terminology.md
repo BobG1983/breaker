@@ -38,12 +38,29 @@ type: project
 - `BreakerImpactCell`, `BreakerImpactWall` — breaker collision messages
 - `CellImpactWall` — cell collision message
 - `DamageDealt<Cell>.source_chip` — attribution field on unified damage message (not `source_bolt`; `DamageCell` type was removed)
-- `EffectKind::SecondWind` — unit variant (no fields)
-- `EffectKind::EntropyEngine { max_effects, pool }` — field is `max_effects`, NOT `threshold`
 - `BoundEffects` — permanent chains on entities (not `ActiveEffects` or `ArmedEffects`)
-- `StagedEffects` — one-shot chains on entities (not `EffectChains`)
+- `StagedEffects` — one-shot chains on entities (not `EffectChains`) — **NOTE: existence needs re-verification per 2026-04-15 audit**
 - `EffectCommandsExt` — Commands extension for firing/reversing effects
 - `SpawnBolts` — correct effect name (not `MultiBolt`)
+
+## Effect Type System — CORRECTED 2026-04-15
+
+The effect type system uses these actual types (verified from source 2026-04-15):
+
+- `EffectType` enum — NOT `EffectKind`. All variants wrap config structs: `SpeedBoost(SpeedBoostConfig)`, `SecondWind(SecondWindConfig)`, etc. NO bare scalar variants, NO bare unit variants.
+- `ReversibleEffectType` enum — subset of `EffectType` (16 reversible variants). DOES EXIST.
+- `Tree` enum — NOT `EffectNode`, NOT `ValidTree`. Variants: `Fire(EffectType)`, `When`, `Once`, `During`, `Until`, `Sequence`, `On`.
+- `ScopedTree` enum — NOT `ValidScopedTree`. Restricted tree for During/Until contexts.
+- `Terminal`, `ScopedTerminal` — terminal node types (not `ValidTerminal`/`ValidScopedTerminal`).
+- `RootNode` enum — NOT `RootEffect`, NOT `ValidDef`. Variants: `Stamp(StampTarget, Tree)`, `Spawn(EntityKind, Tree)`.
+- `StampTarget` enum — NOT `Target`. Variants: `Bolt`, `Breaker`, `ActiveBolts`, `EveryBolt`, `PrimaryBolts`, `ExtraBolts`, `ActiveCells`, `EveryCell`, `ActiveWalls`, `EveryWall`, `ActiveBreakers`, `EveryBreaker`.
+- `fire_dispatch(effect, entity, source, world)` — free function in `dispatch/fire_dispatch.rs`. NOT a method. NOT `dispatch_fire()`. Does NOT take a `context` parameter.
+- `BoundEffects(pub Vec<(String, Tree)>)` — stores Tree, not EffectNode.
+- `EffectCommandsExt` actual methods: `fire_effect(entity, EffectType, String)`, `reverse_effect(entity, ReversibleEffectType, String)`, `route_effect(entity, String, Tree, RouteType)`, `stamp_effect(entity, String, Tree)`, `stage_effect(entity, String, Tree)`, `remove_effect(entity, &str)`, `remove_staged_effect(entity, String, Tree)`, `track_armed_fire(owner, String, Entity)`.
+- NO `transfer_effect`, NO `push_bound_effects` methods on `EffectCommandsExt`.
+- Directory: `effect_v3/types/` (flat) — NO `core/` subdirectory, NO `definitions/enums.rs` monolith.
+
+**Correction to previous entries**: References to `EffectKind` in this memory file were wrong. The actual enum is `EffectType`.
 
 ## Active Component Types (Effective* cache REMOVED — direct-read model)
 

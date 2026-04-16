@@ -14,4 +14,4 @@
    }
    ```
 
-3. **Update the Impact and Impacted trigger systems** in `effect/triggers/` to listen for the new message. They already handle the four-trigger pattern (Impact global + Impacted targeted on both participants) — just add the new message reader.
+3. **Update the impact bridge systems** in `effect_v3/triggers/impact/bridges/system.rs` to listen for the new message. The bridge functions already handle the four-trigger pattern per collision type (`ImpactOccurred(EntityKind)` global on each participant kind + `Impacted(EntityKind)` local on each participant entity) — add a new `on_impact_<kind>_<kind>` bridge function and register it in `effect_v3/triggers/impact/register.rs`.

@@ -47,7 +47,7 @@ Test-only methods (`#[cfg(test)]`): `.hp()`, `.headless()`, `.required_to_clear(
 3. Inserts optional markers: `CellTypeAlias`, `RequiredToClear`, `CellDamageVisuals`
 4. Inserts lock components if `.locked()` was called
 5. Processes `CellBehavior` list from definition: `Regen` -> regen components, `Guarded` -> `GuardedCell` marker
-6. Dispatches effect chains via `push_bound_effects`
+6. Dispatches effect chains via `commands.stamp_effect` (one per `RootNode::Stamp` in the cell's effects list)
 7. If `.guarded()` was called: inserts `GuardedCell` on parent, spawns guardian children with `ChildOf`
 8. If rendered: adds `Mesh2d`, `MeshMaterial2d`, `GameDrawLayer::Cell` (and same on guardians)
 
