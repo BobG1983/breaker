@@ -19,23 +19,27 @@ DamageDealt<T> → apply_damage<T> (sets KilledBy on killing blow)
 ```rust
 /// Generic damage message — one Bevy message queue per victim type T.
 struct DamageDealt<T: GameEntity> {
-    dealer: Option<Entity>,     // who caused this damage (propagated through chains)
-    target: Entity,             // who takes the damage
-    amount: f32,                // damage amount
+    dealer:      Option<Entity>,     // who caused this damage (propagated through chains)
+    target:      Entity,             // who takes the damage
+    amount:      f32,                // damage amount (pre-calculated including multipliers)
+    source_chip: Option<String>,     // originating chip name for UI/stats
+    _marker:     PhantomData<T>,
 }
 
-/// Domain kill request — generic on victim type T (S generic removed; killer is Option<Entity>).
+/// Domain kill request — generic on victim type T.
 struct KillYourself<T: GameEntity> {
-    victim: Entity,
-    killer: Option<Entity>,
+    victim:  Entity,
+    killer:  Option<Entity>,
+    _marker: PhantomData<T>,
 }
 
-/// Death notification — sent after domain handler validates (S generic removed; killer is Option<Entity>).
+/// Death notification — sent after domain handler validates.
 struct Destroyed<T: GameEntity> {
-    victim: Entity,
-    killer: Option<Entity>,
+    victim:     Entity,
+    killer:     Option<Entity>,
     victim_pos: Vec2,
     killer_pos: Option<Vec2>,
+    _marker:    PhantomData<T>,
 }
 
 /// Deferred despawn request — processed in PostFixedUpdate.
@@ -62,6 +66,7 @@ Each T has a domain handler that sits between `KillYourself<T>` and `Destroyed<T
 | `Cell` | cells domain | Check invulnerability (guarded cells with active guardians); chain reaction — bolt attribution propagates via killer |
 | `Wall` | wall domain | One-shot walls, timer expiry |
 | `Bolt` | bolt domain | Environmental death (killer: None) — Killed trigger skipped |
+| `Salvo` | shared/death_pipeline (generic — no domain-specific handler) | Spawned by survival turrets; `Destroyed<Salvo>` is emitted but has no current consumers; despawned via `DespawnEntity` in FixedPostUpdate |
 
 All handlers follow: receive KillYourself → validate → send Destroyed → send DespawnEntity message. Entity MUST survive through `bridge_destroyed` trigger evaluation — despawn happens in PostFixedUpdate.
 

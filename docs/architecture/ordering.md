@@ -216,9 +216,33 @@ DeathPipelineSystems::ApplyDamage
 
 tick_bolt_lifespan .before(BoltSystems::BoltLost)
                    .before(DeathPipelineSystems::HandleKill)  [bolt domain — writes KillYourself<Bolt> on timer expiry]
+
+tick_survival_timer .before(DeathPipelineSystems::ApplyDamage)
+                    [cells domain — ticks SurvivalTimer; writes lethal DamageDealt<Cell> targeting the turret itself on expiry]
+    <- tick_salvo_fire_timer .after(tick_survival_timer)
+       [cells domain — ticks SalvoFireTimer countdown only; no firing logic]
+         <- fire_survival_turret .after(tick_salvo_fire_timer)
+            [cells domain — spawns Salvo entities per AttackPattern when SalvoFireTimer <= 0; skips Ghost-phase turrets]
+
+salvo_cell_collision .before(DeathPipelineSystems::ApplyDamage)
+  [cells domain — AABB overlap check; writes DamageDealt<Cell>; salvo passes through (not despawned)]
+salvo_bolt_collision
+  [cells domain — AABB overlap check; despawns salvo on contact; bolt unaffected; no ordering constraint]
+salvo_breaker_collision .before(EffectV3Systems::Bridge)
+  [cells domain — AABB overlap check; writes SalvoImpactBreaker; despawns salvo]
+salvo_wall_collision
+  [cells domain — boundary check against PlayfieldConfig; despawns salvo if outside playfield; no ordering constraint]
+
+check_portal_entry .after(BoltSystems::CellCollision)
+  [cells domain — reads BoltImpactCell, filters for PortalCell, writes PortalEntered]
+    <- handle_portal_entered .after(check_portal_entry)
+       [cells domain — mock handler: converts PortalEntered to PortalCompleted immediately]
+         <- handle_portal_completed .after(handle_portal_entered)
+                                    .before(DeathPipelineSystems::HandleKill)
+            [cells domain — reads PortalCompleted, writes KillYourself<Cell> for the portal entity]
 ```
 
-Reading: the quadtree is maintained first (incremental — only changed entities re-inserted). Consumers read `Active*` components directly via `.multiplier()` / `.total()` methods. Then breaker moves, speed is normalized post-constraint (`normalize_bolt_speed_after_constraints`), cell collisions run (tagged `BoltSystems::CellCollision`), wall collision (`BoltSystems::WallCollision`), breaker collision (`BoltSystems::BreakerCollision`), bump grading (`BreakerSystems::GradeBump`), distance constraints enforced (chain bolts), bolt-lost detection (`BoltSystems::BoltLost`). All collision systems run `.before(EffectV3Systems::Bridge)` so damage messages are present when bridges evaluate. Velocity is enforced by `apply_velocity_formula` at each collision/steering site — there is no separate velocity preparation step. All effect bridge systems run in `EffectV3Systems::Bridge`. After Bridge, the death pipeline runs: `DeathPipelineSystems::ApplyDamage` (reads `DamageDealt<T>`, reduces `Hp`) → `DetectDeaths` (reads `Hp`, writes `KillYourself<T>`) → `HandleKill` (marks `Dead`, writes `Destroyed<T>` + `DespawnEntity`). `update_cell_damage_visuals` runs after `ApplyDamage` and before `HandleKill` to update color feedback on still-living cells. Consumers of kill events (track_cells_destroyed, detect_mass_destruction, detect_combo_king, check_lock_release, track_node_completion) order `.after(DeathPipelineSystems::HandleKill)`. `process_despawn_requests` runs in `FixedPostUpdate` — sole despawn site. The full effect pipeline order within FixedUpdate is: `EffectV3Systems::Bridge` → `EffectV3Systems::Tick` → `EffectV3Systems::Conditions`. `EffectV3Systems::Reset` runs on `OnEnter(NodeState::Loading)` — not in the FixedUpdate chain.
+Reading: the quadtree is maintained first (incremental — only changed entities re-inserted). Consumers read `Active*` components directly via `.multiplier()` / `.total()` methods. Then breaker moves, speed is normalized post-constraint (`normalize_bolt_speed_after_constraints`), cell collisions run (tagged `BoltSystems::CellCollision`), wall collision (`BoltSystems::WallCollision`), breaker collision (`BoltSystems::BreakerCollision`), bump grading (`BreakerSystems::GradeBump`), distance constraints enforced (chain bolts), bolt-lost detection (`BoltSystems::BoltLost`). All collision systems run `.before(EffectV3Systems::Bridge)` so damage messages are present when bridges evaluate. Velocity is enforced by `apply_velocity_formula` at each collision/steering site — there is no separate velocity preparation step. All effect bridge systems run in `EffectV3Systems::Bridge`. After Bridge, the death pipeline runs: `DeathPipelineSystems::ApplyDamage` (reads `DamageDealt<T>`, reduces `Hp`) → `DetectDeaths` (reads `Hp`, writes `KillYourself<T>`) → `HandleKill` (marks `Dead`, writes `Destroyed<T>` + `DespawnEntity`). `update_cell_damage_visuals` runs after `ApplyDamage` and before `HandleKill` to update color feedback on still-living cells. Consumers of kill events (track_cells_destroyed, detect_mass_destruction, detect_combo_king, check_lock_release, track_node_completion) order `.after(DeathPipelineSystems::HandleKill)`. `process_despawn_requests` runs in `FixedPostUpdate` — sole despawn site. The full effect pipeline order within FixedUpdate is: `EffectV3Systems::Bridge` → `EffectV3Systems::Tick` → `EffectV3Systems::Conditions`. `EffectV3Systems::Reset` runs on `OnEnter(NodeState::Loading)` — not in the FixedUpdate chain. Survival turret systems: `tick_survival_timer` (self-destruct check) → `tick_salvo_fire_timer` (countdown) → `fire_survival_turret` (spawn salvos); all three run before `ApplyDamage`. Salvo collision systems: `salvo_cell_collision` (before `ApplyDamage`), `salvo_breaker_collision` (before `EffectV3Systems::Bridge`), `salvo_bolt_collision` and `salvo_wall_collision` (unordered). Portal systems: `check_portal_entry` (after `BoltSystems::CellCollision`) → `handle_portal_entered` → `handle_portal_completed` (before `DeathPipelineSystems::HandleKill`).
 
 ```
 NodeSystems::TrackCompletion

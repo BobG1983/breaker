@@ -16,17 +16,22 @@ Messages are defined in the domain that **conceptually owns the event**. Usually
 | `BreakerImpactCell { breaker, cell }` | breaker (breaker_cell_collision) | effect (bridge_cell_impact, bridge_breaker_impacted) |
 | `BreakerImpactWall { breaker, wall }` | breaker (breaker_wall_collision) | effect (bridge_wall_impact, bridge_breaker_impacted) |
 | `CellImpactWall { cell, wall }` | cells (cell_wall_collision) | effect (bridge_wall_impact, bridge_cell_impacted) |
+| `SalvoImpactBreaker { salvo, breaker }` | cells (salvo_breaker_collision) | effect bridges (Wave 6C — consumed by impact trigger systems) |
+| `PortalEntered { portal }` | cells (check_portal_entry — reads BoltImpactCell, filters for PortalCell) | cells (handle_portal_entered — mock: immediately emits PortalCompleted) |
+| `PortalCompleted { portal }` | cells (handle_portal_entered) | cells (handle_portal_completed — writes KillYourself<Cell> for the portal entity) |
 | `BoltLost` | bolt (bolt_lost) | bolt (spawn_bolt_lost_text), effect (bridge_bolt_lost) |
-| `DamageDealt<Cell> { dealer, target, amount, source_chip }` | bolt (bolt_cell_collision), effect/effects (shockwave, explode, pulse, chain_lightning, piercing_beam, tether_beam) | cells (check_armor_direction — mutating interceptor: drains, filters blocked hits, re-extends before apply_damage sees the queue), shared/death_pipeline (apply_damage::<Cell>) |
+| `DamageDealt<Cell> { dealer, target, amount, source_chip }` | bolt (bolt_cell_collision), cells (tick_survival_timer — self-destruct), cells (salvo_cell_collision), effect/effects (shockwave, explode, pulse, chain_lightning, piercing_beam, tether_beam) | cells (check_armor_direction — mutating interceptor: drains, filters blocked hits, re-extends before apply_damage sees the queue), shared/death_pipeline (apply_damage::<Cell>) |
 | `DamageDealt<Bolt> { dealer, target, amount, source_chip }` | effect/effects (as applicable) | shared/death_pipeline (apply_damage::<Bolt>) |
 | `DamageDealt<Wall> { dealer, target, amount, source_chip }` | effect/effects (as applicable) | shared/death_pipeline (apply_damage::<Wall>) |
 | `DamageDealt<Breaker> { dealer, target, amount, source_chip }` | effect/effects (as applicable) | shared/death_pipeline (apply_damage::<Breaker>) |
-| `KillYourself<T> { entity }` | shared/death_pipeline (detect_deaths::<T>), bolt (bolt_lost for ExtraBolts, tick_bolt_lifespan on timer expiry) | shared/death_pipeline (handle_kill::<T>), run (handle_breaker_death for T=Breaker) |
+| `DamageDealt<Salvo> { dealer, target, amount, source_chip }` | (no current production sender — pipeline registered for completeness) | shared/death_pipeline (apply_damage::<Salvo>) |
+| `KillYourself<T> { entity }` | shared/death_pipeline (detect_deaths::<T>), bolt (bolt_lost for ExtraBolts, tick_bolt_lifespan on timer expiry), cells (handle_portal_completed for T=Cell) | shared/death_pipeline (handle_kill::<T>), run (handle_breaker_death for T=Breaker) |
 | `Destroyed<Cell> { position, was_required_to_clear }` | shared/death_pipeline (handle_kill::<Cell>) | run/node (track_node_completion), effect (on_cell_destroyed) |
 | `Destroyed<Bolt> { position }` | shared/death_pipeline (handle_kill::<Bolt>) | effect (on_bolt_destroyed) |
 | `Destroyed<Wall> { position }` | shared/death_pipeline (handle_kill::<Wall>) | effect (on_wall_destroyed) |
 | `Destroyed<Breaker> { position }` | shared/death_pipeline (handle_kill::<Breaker>) | effect (on_breaker_destroyed) |
-| `DespawnEntity { entity }` | shared/death_pipeline (handle_kill::<T> for Cell/Bolt/Wall/Breaker) | shared/death_pipeline (process_despawn_requests in FixedPostUpdate) |
+| `Destroyed<Salvo> { position }` | shared/death_pipeline (handle_kill::<Salvo>) | (no current consumers — emitted for future effect bridge use) |
+| `DespawnEntity { entity }` | shared/death_pipeline (handle_kill::<T> for Cell/Bolt/Wall/Breaker/Salvo) | shared/death_pipeline (process_despawn_requests in FixedPostUpdate) |
 | `BumpPerformed { grade, bolt }` | breaker | breaker (spawn_bump_grade_text, perfect_bump_dash_cancel), effect (bridge_bump) |
 | `BumpWhiffed` | breaker | breaker (spawn_whiff_text), effect (bridge_bump_whiff) |
 | `BreakerSpawned` | breaker (spawn_or_reuse_breaker) | run/node (check_spawn_complete) |
