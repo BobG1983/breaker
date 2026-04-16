@@ -60,6 +60,7 @@ fn empty_locks_map_spawns_all_cells_without_locked() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           Some(HashMap::new()),
+        sequences:       None,
     };
     let mut app = test_app(layout);
     app.update();
@@ -95,6 +96,7 @@ fn locked_cell_lock_adjacents_references_correct_entity() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           Some(locks),
+        sequences:       None,
     };
     let mut app = test_app(layout.clone());
     app.update();
@@ -145,6 +147,7 @@ fn locked_cell_has_locked_and_lock_adjacents_with_two_targets() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           Some(locks),
+        sequences:       None,
     };
     let mut app = test_app(layout.clone());
     app.update();

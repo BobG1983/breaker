@@ -90,6 +90,12 @@ pub(crate) enum CellBehavior {
     Guarded(GuardedBehavior),
     /// Cell detonates on death, dealing `damage` to all live cells within `radius`.
     Volatile { damage: f32, radius: f32 },
+    /// Cell is part of a numbered sequence group. Only the cell at the
+    /// currently-active position accepts damage. When it dies, `position + 1`
+    /// becomes active. Group membership and position are pure `u32`;
+    /// cross-cell validation (one `position == 0` per group, no duplicate
+    /// positions) is a RON-load-time concern and is out of scope here.
+    Sequence { group: u32, position: u32 },
 }
 
 /// A cell type definition loaded from RON.
@@ -153,6 +159,12 @@ impl CellTypeDefinition {
                     CellBehavior::Volatile { damage, radius } => {
                         crate::shared::validation::positive_finite_f32("Volatile damage", *damage)?;
                         crate::shared::validation::positive_finite_f32("Volatile radius", *radius)?;
+                    }
+                    CellBehavior::Sequence { .. } => {
+                        // No per-variant validation — both fields are u32 and
+                        // structurally valid for any value. Cross-cell
+                        // invariants (one position-0 per group, no duplicates)
+                        // belong at RON load time and are out of scope here.
                     }
                 }
             }

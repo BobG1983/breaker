@@ -8,11 +8,16 @@ use crate::{
             guarded::systems::slide_guardian_cells,
             locked::systems::{check_lock_release, sync_lock_invulnerable::sync_lock_invulnerable},
             regen::systems::tick_cell_regen,
+            sequence::systems::{
+                advance_sequence::advance_sequence, init_sequence_groups::init_sequence_groups,
+                reset_inactive_sequence_hp::reset_inactive_sequence_hp,
+            },
         },
         messages::CellImpactWall,
         resources::CellConfig,
         systems::{cell_wall_collision, update_cell_damage_visuals},
     },
+    effect_v3::sets::EffectV3Systems,
     prelude::*,
     shared::death_pipeline::sets::DeathPipelineSystems,
     state::run::node::{sets::NodeSystems, systems::dispatch_cell_effects},
@@ -31,6 +36,7 @@ impl Plugin for CellsPlugin {
                 OnEnter(NodeState::Loading),
                 dispatch_cell_effects.after(NodeSystems::Spawn),
             )
+            .add_systems(OnEnter(NodeState::Playing), init_sequence_groups)
             .add_systems(
                 FixedUpdate,
                 (
@@ -42,6 +48,10 @@ impl Plugin for CellsPlugin {
                     update_cell_damage_visuals
                         .after(DeathPipelineSystems::ApplyDamage)
                         .before(DeathPipelineSystems::HandleKill),
+                    reset_inactive_sequence_hp
+                        .after(DeathPipelineSystems::ApplyDamage)
+                        .before(DeathPipelineSystems::DetectDeaths),
+                    advance_sequence.after(EffectV3Systems::Death),
                 )
                     .run_if(in_state(NodeState::Playing)),
             );
@@ -188,6 +198,181 @@ mod tests {
             slot.0, 4,
             "GuardianSlot should update to 4 via CellsPlugin, got {}",
             slot.0
+        );
+    }
+
+    // ── Sequence cross-plugin behaviors 30–32 ─────────────────────────
+
+    use std::marker::PhantomData;
+
+    use crate::cells::{components::SequenceActive, test_utils::spawn_cell_in_world};
+
+    /// Resource seeding `DamageDealt<Cell>` through a one-shot enqueue system
+    /// registered `before(ApplyDamage)`. Mirrors the scaffold in
+    /// `behaviors/sequence/tests/helpers.rs` so the cross-plugin tests can
+    /// deliver damage without depending on bolt collision.
+    #[derive(Resource, Default)]
+    struct PluginTestPendingCellDamage(Vec<DamageDealt<Cell>>);
+
+    fn enqueue_cell_damage_plugin_test(
+        mut pending: ResMut<PluginTestPendingCellDamage>,
+        mut writer: MessageWriter<DamageDealt<Cell>>,
+    ) {
+        for msg in pending.0.drain(..) {
+            writer.write(msg);
+        }
+    }
+
+    /// Builds a `cells_plugin_app`-style App but does NOT navigate into
+    /// `NodeState::Playing`. Tests drive the transition after spawning.
+    fn sequence_plugin_app_loading() -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_plugins(bevy::state::app::StatesPlugin)
+            .init_state::<AppState>()
+            .add_sub_state::<GameState>()
+            .add_sub_state::<RunState>()
+            .add_sub_state::<NodeState>()
+            .init_resource::<Assets<Mesh>>()
+            .init_resource::<Assets<ColorMaterial>>()
+            .add_message::<BoltImpactCell>()
+            .insert_resource(CollisionQuadtree::default());
+        app.add_plugins(DeathPipelinePlugin);
+        register_effect_v3_test_infrastructure(&mut app);
+        app.add_plugins(EffectV3Plugin);
+        app.add_plugins(CellsPlugin);
+        app.init_resource::<PluginTestPendingCellDamage>();
+        app.add_systems(
+            FixedUpdate,
+            enqueue_cell_damage_plugin_test.before(DeathPipelineSystems::ApplyDamage),
+        );
+        app
+    }
+
+    fn sequence_plugin_advance_to_playing(app: &mut App) {
+        app.world_mut()
+            .resource_mut::<NextState<AppState>>()
+            .set(AppState::Game);
+        app.update();
+        app.world_mut()
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Run);
+        app.update();
+        app.world_mut()
+            .resource_mut::<NextState<RunState>>()
+            .set(RunState::Node);
+        app.update();
+        app.world_mut()
+            .resource_mut::<NextState<NodeState>>()
+            .set(NodeState::Playing);
+        app.update();
+    }
+
+    fn spawn_plugin_sequence_cell(
+        app: &mut App,
+        pos: Vec2,
+        group: u32,
+        position: u32,
+        hp: f32,
+    ) -> Entity {
+        let entity = spawn_cell_in_world(app.world_mut(), |commands| {
+            Cell::builder()
+                .sequence(group, position)
+                .position(pos)
+                .dimensions(10.0, 10.0)
+                .hp(hp)
+                .headless()
+                .spawn(commands)
+        });
+        app.world_mut()
+            .entity_mut(entity)
+            .insert(rantzsoft_spatial2d::components::GlobalPosition2D(pos));
+        entity
+    }
+
+    fn plugin_damage_msg(target: Entity, amount: f32) -> DamageDealt<Cell> {
+        DamageDealt {
+            dealer: None,
+            target,
+            amount,
+            source_chip: None,
+            _marker: PhantomData,
+        }
+    }
+
+    /// Behavior 30: `CellsPlugin` registers `init_sequence_groups` in
+    /// `OnEnter(NodeState::Playing)`.
+    #[test]
+    fn cells_plugin_registers_init_sequence_groups_on_enter_playing() {
+        let mut app = sequence_plugin_app_loading();
+
+        let e0 = spawn_plugin_sequence_cell(&mut app, Vec2::new(0.0, 0.0), 1, 0, 20.0);
+        let e1 = spawn_plugin_sequence_cell(&mut app, Vec2::new(10.0, 0.0), 1, 1, 20.0);
+        let e2 = spawn_plugin_sequence_cell(&mut app, Vec2::new(20.0, 0.0), 1, 2, 20.0);
+
+        sequence_plugin_advance_to_playing(&mut app);
+
+        assert!(
+            app.world().get::<SequenceActive>(e0).is_some(),
+            "CellsPlugin should register init_sequence_groups on OnEnter(NodeState::Playing)"
+        );
+        assert!(app.world().get::<SequenceActive>(e1).is_none());
+        assert!(app.world().get::<SequenceActive>(e2).is_none());
+    }
+
+    /// Behavior 31: `CellsPlugin` registers `reset_inactive_sequence_hp`
+    /// between `ApplyDamage` and `DetectDeaths`.
+    #[test]
+    fn cells_plugin_registers_reset_inactive_sequence_hp_between_apply_and_detect() {
+        let mut app = sequence_plugin_app_loading();
+
+        let _e0 = spawn_plugin_sequence_cell(&mut app, Vec2::new(0.0, 0.0), 1, 0, 20.0);
+        let e1 = spawn_plugin_sequence_cell(&mut app, Vec2::new(10.0, 0.0), 1, 1, 20.0);
+
+        sequence_plugin_advance_to_playing(&mut app);
+
+        app.world_mut()
+            .resource_mut::<PluginTestPendingCellDamage>()
+            .0
+            .push(plugin_damage_msg(e1, 25.0));
+        tick(&mut app);
+
+        let hp = app.world().get::<Hp>(e1).expect("e1 should still have Hp");
+        assert!(
+            (hp.current - 20.0).abs() < f32::EPSILON,
+            "CellsPlugin should register reset_inactive_sequence_hp between ApplyDamage and DetectDeaths, got {}",
+            hp.current
+        );
+        assert!(app.world().get::<Dead>(e1).is_none());
+    }
+
+    /// Behavior 32: `CellsPlugin` registers `advance_sequence` after
+    /// `EffectV3Systems::Death`.
+    #[test]
+    fn cells_plugin_registers_advance_sequence_after_effect_v3_death() {
+        let mut app = sequence_plugin_app_loading();
+
+        let e0 = spawn_plugin_sequence_cell(&mut app, Vec2::new(0.0, 0.0), 1, 0, 20.0);
+        let e1 = spawn_plugin_sequence_cell(&mut app, Vec2::new(10.0, 0.0), 1, 1, 20.0);
+
+        sequence_plugin_advance_to_playing(&mut app);
+
+        app.world_mut()
+            .resource_mut::<PluginTestPendingCellDamage>()
+            .0
+            .push(plugin_damage_msg(e0, 25.0));
+
+        for _ in 0..2 {
+            tick(&mut app);
+        }
+
+        assert!(
+            app.world().get_entity(e0).is_err() || app.world().get::<Dead>(e0).is_some(),
+            "e0 should be dead after lethal damage"
+        );
+        assert!(
+            app.world().get::<SequenceActive>(e1).is_some(),
+            "CellsPlugin should register advance_sequence after EffectV3Systems::Death"
         );
     }
 }

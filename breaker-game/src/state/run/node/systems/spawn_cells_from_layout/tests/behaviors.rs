@@ -92,6 +92,7 @@ fn regen_cell_definition_spawns_with_cell_regen_component() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     let mut app = behavior_test_app(layout, behavior_registry());
     app.update();
@@ -126,6 +127,7 @@ fn non_regen_cell_does_not_have_cell_regen_component() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     let mut app = behavior_test_app(layout, behavior_registry());
     app.update();
@@ -155,6 +157,7 @@ fn cell_hp_falls_back_to_default_base_hp_without_config() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
@@ -207,6 +210,7 @@ fn cell_hp_tough_falls_back_to_default_base_hp() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
@@ -337,6 +341,7 @@ fn spawn_standard_cell_tier0_pos0_has_correct_hp() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     let mut app = test_app_with_toughness(layout, test_registry(), 0, 0, false);
     app.update();
@@ -368,6 +373,7 @@ fn spawn_tough_cell_tier3_pos4_has_scaled_hp() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     let mut app = test_app_with_toughness(layout, test_registry(), 3, 4, false);
     app.update();
@@ -401,6 +407,7 @@ fn spawn_cell_without_toughness_config_falls_back_to_default_base_hp() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     // Deliberately do NOT insert ToughnessConfig resource
     let mut app = App::new();
@@ -440,6 +447,7 @@ fn spawn_guarded_cell_tier0_pos0_guardian_hp_is_parent_times_fraction() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     let mut app = test_app_with_toughness(layout, toughness_registry_with_guarded(), 0, 0, false);
     app.update();
@@ -491,6 +499,7 @@ fn spawn_guarded_cell_tier3_pos0_guardian_hp_scales_with_tier() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     let mut app = test_app_with_toughness(layout, toughness_registry_with_guarded(), 3, 0, false);
     app.update();
@@ -539,6 +548,7 @@ fn spawn_boss_guarded_cell_applies_boss_multiplier_before_guardian_fraction() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     let mut app = test_app_with_toughness(
         layout,
@@ -585,3 +595,93 @@ fn spawn_boss_guarded_cell_applies_boss_multiplier_before_guardian_fraction() {
 // `resolve_hp_context` would fail to compile.
 // The function is private, so we cannot reference it directly. Instead, the
 // behavioral tests above verify the correct HP computation path.
+
+// --- A6: NodeLayout.sequences RON integration ---
+
+/// Layout with a single sequence group placing (0,0) at position 0 and (0,1)
+/// at position 1 should attach `SequenceCell`, `SequenceGroup(7)`, and
+/// `SequencePosition` to the matching cells.
+#[test]
+fn sequences_layout_field_attaches_group_and_position_components() {
+    use std::collections::HashMap;
+
+    use crate::{
+        cells::behaviors::sequence::components::{SequenceCell, SequenceGroup, SequencePosition},
+        state::run::node::definition::SequenceMap,
+    };
+
+    let mut sequences: SequenceMap = HashMap::new();
+    sequences.insert(7, vec![(0, 0), (0, 1)]);
+    let layout = NodeLayout {
+        name:            "sequence_layout".to_owned(),
+        timer_secs:      60.0,
+        cols:            2,
+        rows:            1,
+        grid_top_offset: 50.0,
+        grid:            vec![vec![s("N"), s("N")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
+        sequences:       Some(sequences),
+    };
+    let mut app = behavior_test_app(layout, behavior_registry());
+    app.update();
+
+    let members: Vec<(u32, u32)> = app
+        .world_mut()
+        .query::<(&SequenceCell, &SequenceGroup, &SequencePosition)>()
+        .iter(app.world())
+        .map(|(_, group, position)| (group.0, position.0))
+        .collect();
+    assert_eq!(
+        members.len(),
+        2,
+        "both cells in the group should have sequence components attached"
+    );
+    assert!(
+        members.contains(&(7, 0)),
+        "position 0 in group 7 should be attached, got {members:?}"
+    );
+    assert!(
+        members.contains(&(7, 1)),
+        "position 1 in group 7 should be attached, got {members:?}"
+    );
+}
+
+/// Cells outside the `sequences` map must not receive sequence components.
+#[test]
+fn cells_outside_sequences_map_do_not_receive_sequence_components() {
+    use std::collections::HashMap;
+
+    use crate::{
+        cells::behaviors::sequence::components::SequenceCell,
+        state::run::node::definition::SequenceMap,
+    };
+
+    let mut sequences: SequenceMap = HashMap::new();
+    sequences.insert(0, vec![(0, 0)]);
+    let layout = NodeLayout {
+        name:            "mixed_sequence".to_owned(),
+        timer_secs:      60.0,
+        cols:            2,
+        rows:            1,
+        grid_top_offset: 50.0,
+        grid:            vec![vec![s("N"), s("N")]],
+        pool:            NodePool::default(),
+        entity_scale:    1.0,
+        locks:           None,
+        sequences:       Some(sequences),
+    };
+    let mut app = behavior_test_app(layout, behavior_registry());
+    app.update();
+
+    let sequence_count = app
+        .world_mut()
+        .query::<&SequenceCell>()
+        .iter(app.world())
+        .count();
+    assert_eq!(
+        sequence_count, 1,
+        "only the cell at (0,0) should be a sequence member"
+    );
+}

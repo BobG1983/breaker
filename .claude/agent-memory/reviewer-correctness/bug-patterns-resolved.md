@@ -129,6 +129,16 @@ now find the breaker entity correctly. **Do NOT re-flag.**
 
 See `reviewer-architecture/shield_cross_domain_write.md` for the full elimination record.
 
+## reset_inactive_sequence_hp wrong guard — FIXED (2026-04-15)
+
+Guard changed from `if hp.current < hp.max.unwrap_or(hp.starting)` to `if hp.current < hp.starting`.
+This prevents idle cells with `hp.max > hp.starting` from receiving free unconditional heals every tick.
+Two new regression tests in `group_c.rs`:
+- `reset_is_noop_on_idle_cell_with_max_above_starting`
+- `damaged_non_active_cell_with_max_above_starting_heals_to_max`
+**Location**: `breaker-game/src/cells/behaviors/sequence/systems/reset_inactive_sequence_hp.rs:51`
+**Do NOT re-flag.**
+
 ## should_fail_fast suppresses fast-exit for ALL violations when any allowed_failures exists — RESOLVED (2026-04-15)
 
 Current code uses `is_none_or(|af| !af.contains(&v.invariant))` which correctly triggers

@@ -110,6 +110,14 @@ spawn_bolt                               [bolt domain — uses Bolt::builder() +
 
 Note: `spawn_or_reuse_breaker` is a single system that replaces the old 4-system chain (`spawn_breaker` → `init_breaker_params` → `init_breaker` → `dispatch_breaker_effects`). All components are emitted by `Breaker::builder()` in one call; effects are dispatched via `dispatch_initial_effects` command. `reset_bolt` is the last OnEnter system — it waits for both breaker reset and bolt init. `dispatch_cell_effects` runs after `NodeSystems::Spawn` to ensure cells are present before effects are dispatched. `spawn_walls` reads from `WallRegistry`, calls `Wall::builder()` three times (left, right, ceiling), and dispatches effects via `push_bound_effects` if the definition has any — the old `dispatch_wall_effects` stub was removed. `dispatch_bolt_effects` runs in FixedUpdate (not OnEnter) — it processes `Added<BoltDefinitionRef>` each tick, so it first fires the frame after the bolt spawns.
 
+### OnEnter(NodeState::Playing)
+
+```
+init_sequence_groups                     [cells domain — inserts SequenceActive on every cell with SequencePosition(0)]
+```
+
+Note: `init_sequence_groups` assumes all sequence cells are present (spawned during `OnEnter(NodeState::Loading)` via `NodeSystems::Spawn`) before `Playing` begins. The AnimateIn phase between Loading and Playing does not spawn or despawn cells, so the query sees the full set of sequence members.
+
 ### FixedUpdate
 
 ```
@@ -173,6 +181,10 @@ move_breaker .after(update_bump)
 DeathPipelineSystems::ApplyDamage
   .after(EffectV3Systems::Tick)                              [shared/death_pipeline domain]
   (apply_damage::<Cell>, apply_damage::<Bolt>, apply_damage::<Wall>, apply_damage::<Breaker>)
+    <- reset_inactive_sequence_hp .after(DeathPipelineSystems::ApplyDamage)
+                                  .before(DeathPipelineSystems::DetectDeaths)
+                                  .run_if(in_state(NodeState::Playing))
+       [cells domain — reverts damage on non-active Sequence cells before DetectDeaths observes it]
     <- update_cell_damage_visuals .after(DeathPipelineSystems::ApplyDamage)
                                   .before(DeathPipelineSystems::HandleKill) [cells domain]
     <- track_evolution_damage .after(DeathPipelineSystems::ApplyDamage)     [run domain]
@@ -182,6 +194,9 @@ DeathPipelineSystems::ApplyDamage
             (handle_kill::<Cell>, handle_kill::<Bolt>, handle_kill::<Wall>, handle_breaker_death)
               <- EffectV3Systems::Death .after(DeathPipelineSystems::HandleKill)  [effect_v3 death bridges]
                  (on_cell_destroyed, on_bolt_destroyed, on_wall_destroyed, on_breaker_destroyed)
+                   <- advance_sequence .after(EffectV3Systems::Death)
+                                       .run_if(in_state(NodeState::Playing))
+                      [cells domain — promotes position+1 on destroyed SequenceActive cells]
               <- track_cells_destroyed .after(DeathPipelineSystems::HandleKill)  [run domain]
               <- detect_mass_destruction .after(DeathPipelineSystems::HandleKill) [run/node domain]
               <- detect_combo_king .after(DeathPipelineSystems::HandleKill)       [run/node domain]

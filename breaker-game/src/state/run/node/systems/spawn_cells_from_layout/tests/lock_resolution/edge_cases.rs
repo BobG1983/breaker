@@ -30,6 +30,7 @@ fn lock_target_pointing_to_empty_spawns_without_locked() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           Some(locks),
+        sequences:       None,
     };
     let mut app = test_app(layout);
     app.update();
@@ -75,6 +76,7 @@ fn lock_target_out_of_bounds_spawns_without_locked() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           Some(locks),
+        sequences:       None,
     };
     let mut app = test_app(layout);
     app.update();
@@ -108,6 +110,7 @@ fn lock_key_out_of_bounds_is_ignored() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           Some(locks),
+        sequences:       None,
     };
     let mut app = test_app(layout);
     app.update();
@@ -143,6 +146,7 @@ fn empty_grid_with_locks_map_spawns_no_cells() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           Some(locks),
+        sequences:       None,
     };
     let mut app = test_app(layout);
     app.update();
@@ -164,6 +168,7 @@ fn empty_locks_with_all_dot_grid_spawns_no_cells() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           Some(HashMap::new()),
+        sequences:       None,
     };
     let mut app = test_app(layout);
     app.update();

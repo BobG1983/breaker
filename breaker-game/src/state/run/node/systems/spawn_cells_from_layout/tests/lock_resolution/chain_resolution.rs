@@ -89,6 +89,7 @@ fn three_deep_chain_all_cells_spawn_correctly() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           Some(locks),
+        sequences:       None,
     };
     let mut app = test_app(layout.clone());
     app.update();
@@ -177,6 +178,7 @@ fn multiple_independent_lock_groups_resolve_correctly() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           Some(locks),
+        sequences:       None,
     };
     let mut app = test_app(layout.clone());
     app.update();

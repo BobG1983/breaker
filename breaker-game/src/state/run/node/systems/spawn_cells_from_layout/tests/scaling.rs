@@ -267,6 +267,7 @@ fn single_cell_grid_spawns_centered_at_full_scale() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     let mut app = scaled_test_app(layout);
     app.update();

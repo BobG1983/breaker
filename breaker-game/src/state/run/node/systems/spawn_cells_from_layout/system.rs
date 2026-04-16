@@ -175,6 +175,14 @@ impl<'a> HpScale<'a> {
     }
 }
 
+/// Read-only lookup maps consumed by `spawn_pass1` — grouped so the method
+/// signature stays under clippy's argument-count ceiling.
+pub(super) struct Pass1Lookups<'a> {
+    pub lock_keys:       &'a HashMap<(usize, usize), &'a Vec<(usize, usize)>>,
+    pub sequence_lookup: &'a HashMap<(usize, usize), (u32, u32)>,
+    pub gu_skip:         &'a HashSet<(usize, usize)>,
+}
+
 impl GridCellContext<'_> {
     /// Computes HP for a cell: `base_hp(toughness) * precomputed_scale`.
     pub(super) fn compute_hp(&self, toughness: Toughness) -> f32 {
@@ -190,8 +198,7 @@ impl GridCellContext<'_> {
     fn spawn_pass1(
         &self,
         commands: &mut Commands,
-        lock_keys: &HashMap<(usize, usize), &Vec<(usize, usize)>>,
-        gu_skip: &HashSet<(usize, usize)>,
+        lookups: &Pass1Lookups<'_>,
         meshes: &mut Assets<Mesh>,
         materials: &mut Assets<ColorMaterial>,
         entity_map: &mut HashMap<(usize, usize), Entity>,
@@ -206,7 +213,7 @@ impl GridCellContext<'_> {
                 let coord = (row_idx, col_idx);
 
                 // Skip guardian grid positions — consumed by the guarded parent.
-                if gu_skip.contains(&coord) {
+                if lookups.gu_skip.contains(&coord) {
                     continue;
                 }
 
@@ -218,7 +225,9 @@ impl GridCellContext<'_> {
                 let guarded_behavior = def.behaviors.as_ref().and_then(|behaviors| {
                     behaviors.iter().find_map(|b| match b {
                         CellBehavior::Guarded(g) => Some(g),
-                        CellBehavior::Regen { .. } | CellBehavior::Volatile { .. } => None,
+                        CellBehavior::Regen { .. }
+                        | CellBehavior::Volatile { .. }
+                        | CellBehavior::Sequence { .. } => None,
                     })
                 });
 
@@ -253,7 +262,7 @@ impl GridCellContext<'_> {
                 }
 
                 // Skip cells that are in the locks map — handled in Pass 2.
-                if lock_keys.contains_key(&coord) {
+                if lookups.lock_keys.contains_key(&coord) {
                     continue;
                 }
 
@@ -261,14 +270,16 @@ impl GridCellContext<'_> {
                 let pos = self.params.cell_pos(row_idx, col_idx);
                 let scaled_hp = self.compute_hp(def.toughness);
 
-                let entity_id = Cell::builder()
+                let mut builder = Cell::builder()
                     .definition(def)
                     .position(pos)
                     .dimensions(self.params.cell_width, self.params.cell_height)
                     .override_hp(scaled_hp)
-                    .alias(alias.clone())
-                    .rendered(meshes, materials)
-                    .spawn(commands);
+                    .alias(alias.clone());
+                if let Some(&(group, position)) = lookups.sequence_lookup.get(&coord) {
+                    builder = builder.sequence(group, position);
+                }
+                let entity_id = builder.rendered(meshes, materials).spawn(commands);
 
                 if def.required_to_clear {
                     required_count += 1;
@@ -327,6 +338,22 @@ pub(crate) fn spawn_cells_from_grid(
         .map(|locks| locks.iter().map(|(k, v)| (*k, v)).collect())
         .unwrap_or_default();
 
+    let sequence_lookup: HashMap<(usize, usize), (u32, u32)> = layout
+        .sequences
+        .as_ref()
+        .map(|sequences| {
+            sequences
+                .iter()
+                .flat_map(|(&group, members)| {
+                    members.iter().enumerate().map(move |(idx, &coord)| {
+                        let position = u32::try_from(idx).unwrap_or(u32::MAX);
+                        (coord, (group, position))
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
     let hp_scale = HpScale::from_context(toughness_config, &hp_context);
     let ctx = GridCellContext {
         layout,
@@ -347,14 +374,13 @@ pub(crate) fn spawn_cells_from_grid(
 
     let mut entity_map: HashMap<(usize, usize), Entity> = HashMap::new();
 
-    let mut required_count = ctx.spawn_pass1(
-        commands,
-        &lock_keys,
-        &gu_skip,
-        meshes,
-        materials,
-        &mut entity_map,
-    );
+    let lookups = Pass1Lookups {
+        lock_keys:       &lock_keys,
+        sequence_lookup: &sequence_lookup,
+        gu_skip:         &gu_skip,
+    };
+    let mut required_count =
+        ctx.spawn_pass1(commands, &lookups, meshes, materials, &mut entity_map);
 
     required_count += super::lock_resolution::resolve_and_spawn_locks(
         &ctx,

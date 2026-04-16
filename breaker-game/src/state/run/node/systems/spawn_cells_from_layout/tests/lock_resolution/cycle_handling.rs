@@ -61,6 +61,7 @@ fn self_referencing_lock_spawns_without_locked() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           Some(locks),
+        sequences:       None,
     };
     let mut app = test_app(layout);
     app.update();
@@ -99,6 +100,7 @@ fn partial_circular_chain_all_spawn_unlocked() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           Some(locks),
+        sequences:       None,
     };
     let mut app = test_app(layout);
     app.update();
@@ -144,6 +146,7 @@ fn large_cycle_four_nodes_all_spawn_without_locks() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           Some(locks),
+        sequences:       None,
     };
     let mut app = test_app(layout);
     app.update();

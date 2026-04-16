@@ -51,6 +51,7 @@ fn locked_cell_hp_scaled_by_hp_mult() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           Some(locks),
+        sequences:       None,
     };
     let mut app = test_app_with_sequence(layout.clone());
     app.update();
@@ -103,6 +104,7 @@ fn locked_cell_hp_unscaled_when_hp_mult_is_one() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           Some(locks),
+        sequences:       None,
     };
     let mut app = test_app_with_sequence(layout.clone());
     app.update();
@@ -144,6 +146,7 @@ fn required_to_clear_count_includes_locked_cells() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           Some(locks),
+        sequences:       None,
     };
     let mut app = test_app(layout);
     app.update();
@@ -179,6 +182,7 @@ fn required_to_clear_excludes_cells_with_false_flag() {
             locks.insert((0, 0), vec![(0, 1)]);
             locks
         }),
+        sequences:       None,
     };
     let mut app = test_app_with_non_required_cell(layout);
     app.update();

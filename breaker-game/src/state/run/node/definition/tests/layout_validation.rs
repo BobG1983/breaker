@@ -21,6 +21,7 @@ fn validate_passes_valid_layout() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     let registry = test_registry();
     assert!(layout.validate(&registry).is_ok());
@@ -38,6 +39,7 @@ fn validate_rejects_unknown_alias() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     let registry = test_registry();
     assert!(layout.validate(&registry).is_err());
@@ -55,6 +57,7 @@ fn validate_rejects_wrong_row_count() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     let registry = test_registry();
     assert!(layout.validate(&registry).is_err());
@@ -72,6 +75,7 @@ fn validate_rejects_wrong_col_count() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     let registry = test_registry();
     assert!(layout.validate(&registry).is_err());
@@ -89,6 +93,7 @@ fn cell_count_skips_dots() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     assert_eq!(layout.cell_count(), 3);
 }
@@ -105,6 +110,7 @@ fn validate_rejects_cols_above_max() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     let registry = test_registry();
     assert!(
@@ -125,6 +131,7 @@ fn validate_rejects_rows_above_max() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     let registry = test_registry();
     assert!(
@@ -145,6 +152,7 @@ fn validate_rejects_zero_cols() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     let registry = test_registry();
     assert!(
@@ -165,6 +173,7 @@ fn validate_rejects_zero_rows() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     let registry = test_registry();
     assert!(
@@ -185,6 +194,7 @@ fn validate_accepts_max_dimensions() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     let registry = test_registry();
     assert!(
@@ -205,6 +215,7 @@ fn validate_accepts_minimum_dimensions() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     let registry = test_registry();
     assert!(
@@ -227,6 +238,7 @@ fn validate_accepts_single_char_string_aliases() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     let registry = test_registry();
     assert!(layout.validate(&registry).is_ok());
@@ -244,6 +256,7 @@ fn validate_accepts_all_dot_grid() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     let registry = test_registry();
     assert!(
@@ -282,6 +295,7 @@ fn validate_accepts_multi_char_string_alias() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     assert!(layout.validate(&registry).is_ok());
 }
@@ -316,6 +330,7 @@ fn validate_accepts_three_char_alias_in_registry() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     assert!(layout.validate(&registry).is_ok());
 }
@@ -332,6 +347,7 @@ fn validate_rejects_unknown_string_alias() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     let registry = test_registry();
     let err = layout
@@ -355,6 +371,7 @@ fn validate_rejects_unknown_multi_char_alias() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     let registry = test_registry();
     let err = layout
@@ -378,6 +395,7 @@ fn cell_count_with_string_grid() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     assert_eq!(layout.cell_count(), 3);
 }
@@ -394,6 +412,7 @@ fn cell_count_all_dots_returns_zero() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     assert_eq!(layout.cell_count(), 0);
 }
@@ -410,6 +429,7 @@ fn cell_count_no_dots_returns_total() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     assert_eq!(layout.cell_count(), 4);
 }
@@ -426,6 +446,7 @@ fn validate_still_checks_row_count_against_declared_rows() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     let registry = test_registry();
     assert!(layout.validate(&registry).is_err());
@@ -443,6 +464,7 @@ fn validate_still_checks_col_count_per_row() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     let registry = test_registry();
     let err = layout

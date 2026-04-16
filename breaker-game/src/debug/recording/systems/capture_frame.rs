@@ -122,6 +122,7 @@ mod tests {
                 pool:            NodePool::default(),
                 entity_scale:    1.0,
                 locks:           None,
+                sequences:       None,
             }));
         run_with_actions(&mut app, vec![GameAction::MoveRight]);
 
@@ -143,6 +144,7 @@ mod tests {
                 pool:            NodePool::default(),
                 entity_scale:    1.0,
                 locks:           None,
+                sequences:       None,
             }));
         run_with_actions(&mut app, vec![GameAction::DashLeft]);
 

@@ -157,6 +157,7 @@ fn unrecognized_alias_produces_no_entity() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     let mut app = test_app(layout);
     app.update();

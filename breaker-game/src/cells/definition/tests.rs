@@ -304,7 +304,9 @@ fn cell_behavior_guarded_fraction_one_deserializes() {
         CellBehavior::Guarded(g) => {
             assert!((g.guardian_hp_fraction - 1.0).abs() < f32::EPSILON);
         }
-        CellBehavior::Regen { .. } | CellBehavior::Volatile { .. } => {
+        CellBehavior::Regen { .. }
+        | CellBehavior::Volatile { .. }
+        | CellBehavior::Sequence { .. } => {
             panic!("expected Guarded variant")
         }
     }

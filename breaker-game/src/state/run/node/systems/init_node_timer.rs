@@ -59,6 +59,7 @@ mod tests {
                 pool: NodePool::default(),
                 entity_scale: 1.0,
                 locks: None,
+                sequences: None,
             }))
             .with_system(Startup, init_node_timer)
             .build()
@@ -97,6 +98,7 @@ mod tests {
                 pool: NodePool::default(),
                 entity_scale: 1.0,
                 locks: None,
+                sequences: None,
             }))
             .insert_resource(NodeOutcome {
                 node_index: 0,

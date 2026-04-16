@@ -245,6 +245,7 @@ fn spawned_cell_has_aabb2d_with_half_extents_matching_cell_dimensions() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     let config = CellConfig::default(); // width=70.0, height=24.0
     let mut app = test_app(layout);
@@ -398,6 +399,7 @@ fn locked_cell_has_same_collision_layers_as_normal_cell() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)

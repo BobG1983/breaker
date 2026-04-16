@@ -101,6 +101,7 @@ fn validate_accepts_locks_within_grid_bounds() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           Some(locks),
+        sequences:       None,
     };
     let registry = test_registry();
     assert!(
@@ -124,6 +125,7 @@ fn validate_accepts_lock_at_boundary_position() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           Some(locks),
+        sequences:       None,
     };
     let registry = test_registry();
     assert!(
@@ -148,6 +150,7 @@ fn validate_rejects_lock_key_row_out_of_bounds() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           Some(locks),
+        sequences:       None,
     };
     let registry = test_registry();
     assert!(
@@ -170,6 +173,7 @@ fn validate_rejects_lock_key_col_out_of_bounds() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           Some(locks),
+        sequences:       None,
     };
     let registry = test_registry();
     assert!(
@@ -194,6 +198,7 @@ fn validate_rejects_lock_target_row_out_of_bounds() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           Some(locks),
+        sequences:       None,
     };
     let registry = test_registry();
     assert!(
@@ -216,6 +221,7 @@ fn validate_rejects_lock_target_col_out_of_bounds() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           Some(locks),
+        sequences:       None,
     };
     let registry = test_registry();
     assert!(
@@ -238,6 +244,7 @@ fn validate_accepts_locks_none() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     let registry = test_registry();
     assert!(layout.validate(&registry).is_ok());
@@ -257,6 +264,7 @@ fn validate_accepts_empty_locks_map() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           Some(HashMap::new()),
+        sequences:       None,
     };
     let registry = test_registry();
     assert!(
@@ -281,6 +289,7 @@ fn validate_rejects_lock_key_pointing_to_empty_cell() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           Some(locks),
+        sequences:       None,
     };
     let registry = test_registry();
     assert!(
@@ -305,6 +314,7 @@ fn validate_rejects_lock_target_pointing_to_empty_cell() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           Some(locks),
+        sequences:       None,
     };
     let registry = test_registry();
     assert!(
@@ -327,6 +337,7 @@ fn validate_rejects_lock_with_one_empty_target_among_many() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           Some(locks),
+        sequences:       None,
     };
     let registry = test_registry();
     assert!(
@@ -351,6 +362,7 @@ fn validate_rejects_self_referencing_lock() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           Some(locks),
+        sequences:       None,
     };
     let registry = test_registry();
     let err = layout
@@ -376,6 +388,7 @@ fn validate_rejects_all_targets_equal_key() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           Some(locks),
+        sequences:       None,
     };
     let registry = test_registry();
     assert!(

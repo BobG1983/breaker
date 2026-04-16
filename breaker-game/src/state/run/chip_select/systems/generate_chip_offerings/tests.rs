@@ -186,6 +186,7 @@ fn make_test_layout(pool: NodePool) -> ActiveNodeLayout {
         pool,
         entity_scale: 1.0,
         locks: None,
+        sequences: None,
     })
 }
 

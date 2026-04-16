@@ -12,6 +12,12 @@ use crate::cells::CellTypeRegistry;
 /// must be destroyed to unlock them.
 pub type LockMap = HashMap<(usize, usize), Vec<(usize, usize)>>;
 
+/// Maps sequence group ids to ordered lists of cell positions. The index of
+/// each `(row, col)` in the inner vec is the cell's `SequencePosition` — so
+/// `sequences[group_id][0]` is the first-active member, `sequences[group_id][1]`
+/// is promoted next, and so on.
+pub type SequenceMap = HashMap<u32, Vec<(usize, usize)>>;
+
 #[cfg(test)]
 /// Maximum number of columns in a node grid.
 pub(crate) const MAX_GRID_COLS: u32 = 128;
@@ -57,6 +63,12 @@ pub struct NodeLayout {
     /// Absent or `None` means no locks in this layout.
     #[serde(default)]
     pub locks:           Option<LockMap>,
+    /// Sequence groups: maps each group id to an ordered list of cell
+    /// `(row, col)` positions. The position's index in the vec is its
+    /// `SequencePosition` — element 0 is first-active, element 1 is promoted
+    /// next, and so on. Absent or `None` means no sequences in this layout.
+    #[serde(default)]
+    pub sequences:       Option<SequenceMap>,
 }
 
 #[cfg(test)]
@@ -81,6 +93,15 @@ impl NodeLayout {
     /// dimensions or if the grid contains an alias not found in the registry.
     #[cfg(test)]
     pub(crate) fn validate(&self, registry: &CellTypeRegistry) -> Result<(), String> {
+        self.validate_dimensions()?;
+        self.validate_grid(registry)?;
+        self.validate_locks()?;
+        self.validate_sequences()?;
+        Ok(())
+    }
+
+    #[cfg(test)]
+    fn validate_dimensions(&self) -> Result<(), String> {
         if self.entity_scale < MIN_ENTITY_SCALE || self.entity_scale > MAX_ENTITY_SCALE {
             return Err(format!(
                 "layout '{}': entity_scale {} must be {}..={}",
@@ -107,6 +128,11 @@ impl NodeLayout {
                 self.rows,
             ));
         }
+        Ok(())
+    }
+
+    #[cfg(test)]
+    fn validate_grid(&self, registry: &CellTypeRegistry) -> Result<(), String> {
         for (i, row) in self.grid.iter().enumerate() {
             if row.len() != self.cols as usize {
                 return Err(format!(
@@ -126,42 +152,88 @@ impl NodeLayout {
                 }
             }
         }
-        if let Some(ref locks) = self.locks {
-            let max_row = self.rows as usize;
-            let max_col = self.cols as usize;
-            for (&(key_row, key_col), targets) in locks {
-                if key_row >= max_row || key_col >= max_col {
+        Ok(())
+    }
+
+    #[cfg(test)]
+    fn validate_locks(&self) -> Result<(), String> {
+        let Some(ref locks) = self.locks else {
+            return Ok(());
+        };
+        let max_row = self.rows as usize;
+        let max_col = self.cols as usize;
+        for (&(key_row, key_col), targets) in locks {
+            if key_row >= max_row || key_col >= max_col {
+                return Err(format!(
+                    "layout '{}': lock key ({}, {}) is out of grid bounds ({}x{})",
+                    self.name, key_row, key_col, self.rows, self.cols,
+                ));
+            }
+            if self.grid[key_row][key_col] == "." {
+                return Err(format!(
+                    "layout '{}': lock key ({}, {}) references an empty cell",
+                    self.name, key_row, key_col,
+                ));
+            }
+            for &(target_row, target_col) in targets {
+                if target_row >= max_row || target_col >= max_col {
                     return Err(format!(
-                        "layout '{}': lock key ({}, {}) is out of grid bounds ({}x{})",
-                        self.name, key_row, key_col, self.rows, self.cols,
+                        "layout '{}': lock target ({}, {}) is out of grid bounds ({}x{})",
+                        self.name, target_row, target_col, self.rows, self.cols,
                     ));
                 }
-                if self.grid[key_row][key_col] == "." {
+                if self.grid[target_row][target_col] == "." {
                     return Err(format!(
-                        "layout '{}': lock key ({}, {}) references an empty cell",
+                        "layout '{}': lock target ({}, {}) references an empty cell",
+                        self.name, target_row, target_col,
+                    ));
+                }
+                if target_row == key_row && target_col == key_col {
+                    return Err(format!(
+                        "layout '{}': lock at ({}, {}) has self-referencing target at same position",
                         self.name, key_row, key_col,
                     ));
                 }
-                for &(target_row, target_col) in targets {
-                    if target_row >= max_row || target_col >= max_col {
-                        return Err(format!(
-                            "layout '{}': lock target ({}, {}) is out of grid bounds ({}x{})",
-                            self.name, target_row, target_col, self.rows, self.cols,
-                        ));
-                    }
-                    if self.grid[target_row][target_col] == "." {
-                        return Err(format!(
-                            "layout '{}': lock target ({}, {}) references an empty cell",
-                            self.name, target_row, target_col,
-                        ));
-                    }
-                    if target_row == key_row && target_col == key_col {
-                        return Err(format!(
-                            "layout '{}': lock at ({}, {}) has self-referencing target at same position",
-                            self.name, key_row, key_col,
-                        ));
-                    }
+            }
+        }
+        Ok(())
+    }
+
+    #[cfg(test)]
+    fn validate_sequences(&self) -> Result<(), String> {
+        let Some(ref sequences) = self.sequences else {
+            return Ok(());
+        };
+        let max_row = self.rows as usize;
+        let max_col = self.cols as usize;
+        let mut claimed: HashMap<(usize, usize), u32> = HashMap::new();
+        for (&group_id, members) in sequences {
+            if members.is_empty() {
+                return Err(format!(
+                    "layout '{}': sequence group {} is empty",
+                    self.name, group_id,
+                ));
+            }
+            for &(row, col) in members {
+                if row >= max_row || col >= max_col {
+                    return Err(format!(
+                        "layout '{}': sequence group {} references ({}, {}) which is out of grid bounds ({}x{})",
+                        self.name, group_id, row, col, self.rows, self.cols,
+                    ));
                 }
+                if self.grid[row][col] == "." {
+                    return Err(format!(
+                        "layout '{}': sequence group {} references ({}, {}) which is an empty cell",
+                        self.name, group_id, row, col,
+                    ));
+                }
+                if let Some(&other_group) = claimed.get(&(row, col)) {
+                    return Err(format!(
+                        "layout '{}': cell ({}, {}) is claimed by sequence groups {} and {} — each cell may belong to at most one sequence",
+                        self.name, row, col, other_group, group_id,
+                    ));
+                }
+                claimed.insert((row, col), group_id);
             }
         }
         Ok(())

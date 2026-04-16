@@ -163,6 +163,13 @@ fn spawn_inner(commands: &mut Commands, core: impl Bundle, optional: OptionalCel
                 entity.insert(VolatileCell);
                 volatile_stamps.push((entity_id, volatile_tree(damage, radius)));
             }
+            CellBehavior::Sequence { group, position } => {
+                entity.insert((
+                    SequenceCell,
+                    SequenceGroup(group),
+                    SequencePosition(position),
+                ));
+            }
         }
     }
 

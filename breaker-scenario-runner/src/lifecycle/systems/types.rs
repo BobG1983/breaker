@@ -128,6 +128,7 @@ pub fn quick_clear_layout(pool: NodePool) -> NodeLayout {
         pool,
         entity_scale: 1.0,
         locks: None,
+        sequences: None,
     }
 }
 

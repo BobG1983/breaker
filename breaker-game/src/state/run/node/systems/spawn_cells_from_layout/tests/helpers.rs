@@ -78,6 +78,7 @@ pub(super) fn full_layout() -> NodeLayout {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     }
 }
 
@@ -93,6 +94,7 @@ pub(super) fn sparse_layout() -> NodeLayout {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     }
 }
 
@@ -182,6 +184,7 @@ pub(super) fn uniform_layout(cols: u32, rows: u32, grid_top_offset: f32) -> Node
         pool: NodePool::default(),
         entity_scale: 1.0,
         locks: None,
+        sequences: None,
     }
 }
 
@@ -203,6 +206,7 @@ pub(super) fn locked_layout_3x2_single() -> NodeLayout {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           Some(locks),
+        sequences:       None,
     }
 }
 
@@ -220,6 +224,7 @@ pub(super) fn simple_locked_layout() -> NodeLayout {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           Some(locks),
+        sequences:       None,
     }
 }
 
@@ -238,6 +243,7 @@ pub(super) fn chain_locked_layout() -> NodeLayout {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           Some(locks),
+        sequences:       None,
     }
 }
 
@@ -260,6 +266,7 @@ pub(super) fn diamond_locked_layout() -> NodeLayout {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           Some(locks),
+        sequences:       None,
     }
 }
 
@@ -278,6 +285,7 @@ pub(super) fn circular_locked_layout() -> NodeLayout {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           Some(locks),
+        sequences:       None,
     }
 }
 

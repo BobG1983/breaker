@@ -143,6 +143,14 @@ same tick. Contrast: `TrackArmedFireCommand` (same wave) has `if world.get_entit
 **Fix**: add `if world.get_entity(self.entity).is_err() { return; }` at top of `apply`.
 **Location**: `breaker-game/src/effect_v3/commands/stage.rs:22`
 
+## reset_inactive_sequence_hp wrong guard — FIXED (2026-04-15)
+
+Guard changed to `if hp.current < hp.starting`. Two new regression tests in group_c.rs:
+- `reset_is_noop_on_idle_cell_with_max_above_starting` — idle cell max=Some(30), starting=20, current=20 must NOT heal to 30; pre-seeded dealer must survive.
+- `damaged_non_active_cell_with_max_above_starting_heals_to_max` — damaged cell heals to ceiling (max=30), not just starting.
+Both tests confirmed sound and correctly discriminate old vs new guard.
+See bug-patterns-resolved.md for authoritative record.
+
 ## advance_node runs before set_active_layout and spawn_cells_from_layout — CONFIRMED BUG (2026-04-08)
 
 `advance_node` is registered on `OnEnter(RunState::Node)`. Sub-state `NodeState::Loading` is

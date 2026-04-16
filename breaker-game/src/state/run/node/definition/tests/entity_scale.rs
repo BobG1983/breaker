@@ -62,6 +62,7 @@ fn validate_rejects_entity_scale_below_minimum() {
         pool:            NodePool::default(),
         entity_scale:    0.49,
         locks:           None,
+        sequences:       None,
     };
     let registry = test_registry();
     let err = layout
@@ -85,6 +86,7 @@ fn validate_rejects_entity_scale_zero() {
         pool:            NodePool::default(),
         entity_scale:    0.0,
         locks:           None,
+        sequences:       None,
     };
     let registry = test_registry();
     let err = layout
@@ -108,6 +110,7 @@ fn validate_rejects_entity_scale_above_maximum() {
         pool:            NodePool::default(),
         entity_scale:    1.01,
         locks:           None,
+        sequences:       None,
     };
     let registry = test_registry();
     let err = layout
@@ -131,6 +134,7 @@ fn validate_rejects_entity_scale_far_above_maximum() {
         pool:            NodePool::default(),
         entity_scale:    2.0,
         locks:           None,
+        sequences:       None,
     };
     let registry = test_registry();
     let err = layout
@@ -154,6 +158,7 @@ fn validate_accepts_entity_scale_at_minimum() {
         pool:            NodePool::default(),
         entity_scale:    0.5,
         locks:           None,
+        sequences:       None,
     };
     let registry = test_registry();
     assert!(
@@ -174,6 +179,7 @@ fn validate_accepts_entity_scale_at_maximum() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     let registry = test_registry();
     assert!(

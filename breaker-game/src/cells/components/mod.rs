@@ -14,5 +14,6 @@ pub use crate::cells::behaviors::guarded::components::{
 pub use crate::cells::behaviors::{
     locked::components::{LockCell, Locked, Locks, Unlocked},
     regen::components::{NoRegen, Regen, RegenCell, RegenRate},
+    sequence::components::{SequenceActive, SequenceCell, SequenceGroup, SequencePosition},
     volatile::components::VolatileCell,
 };

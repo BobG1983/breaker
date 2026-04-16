@@ -17,6 +17,7 @@ fn make_layout(name: &str) -> NodeLayout {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     }
 }
 
@@ -90,6 +91,7 @@ fn make_pool_layout(name: &str, pool: NodePool) -> NodeLayout {
         pool,
         entity_scale: 1.0,
         locks: None,
+        sequences: None,
     }
 }
 
@@ -245,6 +247,7 @@ fn seed_inserts_without_cross_registry_validation() {
         pool:            NodePool::default(),
         entity_scale:    1.0,
         locks:           None,
+        sequences:       None,
     };
     let (_app, pairs) = asset_ids_for(&[layout_with_unknown_alias]);
 

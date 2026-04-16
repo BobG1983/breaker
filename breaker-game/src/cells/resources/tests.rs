@@ -317,7 +317,9 @@ fn guarded_cell_ron_has_guardian_hp_fraction() {
         .and_then(|b| {
             b.iter().find_map(|beh| match beh {
                 CellBehavior::Guarded(g) => Some(g),
-                CellBehavior::Regen { .. } | CellBehavior::Volatile { .. } => None,
+                CellBehavior::Regen { .. }
+                | CellBehavior::Volatile { .. }
+                | CellBehavior::Sequence { .. } => None,
             })
         })
         .expect("guarded.cell.ron should have Guarded behavior");

@@ -5,14 +5,11 @@ use bevy::prelude::*;
 use super::types::*;
 use crate::cells::{
     components::{Cell, CellDamageVisuals},
-    definition::CellTypeDefinition,
+    definition::{CellBehavior, CellTypeDefinition},
 };
 #[cfg(test)]
 use crate::{
-    cells::{
-        definition::{CellBehavior, Toughness},
-        resources::ToughnessConfig,
-    },
+    cells::{definition::Toughness, resources::ToughnessConfig},
     effect_v3::types::RootNode,
 };
 
@@ -248,6 +245,29 @@ impl<P, D, H, V> CellBuilder<P, D, H, V> {
         self.optional
             .behaviors
             .push(CellBehavior::Volatile { damage, radius });
+        self
+    }
+
+    /// Adds a sequence behavior for this cell, placing it in `group` at
+    /// `position`.
+    ///
+    /// Pushes `CellBehavior::Sequence { group, position }` onto the optional
+    /// behaviors list. At spawn time, the match arm in `spawn_inner()` will
+    /// insert `(SequenceCell, SequenceGroup(group), SequencePosition(position))`.
+    /// `SequenceActive` is inserted at `OnEnter(NodeState::Playing)` by
+    /// `init_sequence_groups`, NOT at spawn time.
+    ///
+    /// Production caller: `spawn_cells_from_grid` pass 1 resolves per-cell
+    /// `(group, position)` from `NodeLayout.sequences` and invokes this method
+    /// on the builder. Unlike `Regen`, `Guarded`, or `Volatile` whose config
+    /// comes from the RON cell-type definition, Sequence group/position varies
+    /// per layout placement — the cell type only signals "this type can be
+    /// used as a sequence member", while the layout assigns membership.
+    #[must_use]
+    pub(crate) fn sequence(mut self, group: u32, position: u32) -> Self {
+        self.optional
+            .behaviors
+            .push(CellBehavior::Sequence { group, position });
         self
     }
 }

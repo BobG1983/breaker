@@ -79,6 +79,7 @@ mod tests {
             pool: NodePool::default(),
             entity_scale,
             locks: None,
+            sequences: None,
         })
     }
 
