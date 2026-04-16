@@ -1,3 +1,0 @@
-- [vetted_dependencies.md](vetted_dependencies.md) — security baseline: paste RUSTSEC-2024-0436 recurring pattern, vetted Arc/Box/Mutex patterns in rantzsoft_stateflow, RON panic surface, unsafe_code = deny in workspace
-- [known_unsafe_blocks.md](known_unsafe_blocks.md) — unsafe block inventory: none found, workspace denies unsafe_code
-- [ron_deserialization_patterns.md](ron_deserialization_patterns.md) — confirmed safe RON deserialization patterns and panic surface
