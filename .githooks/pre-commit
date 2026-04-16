@@ -1,11 +1,19 @@
 #!/bin/sh
 # Pre-commit hook: format, lint, and test
 
-# Format all staged Rust files
+# Snapshot the list of staged .rs files BEFORE cargo fmt so we only re-add
+# files the user already included in this commit — not arbitrary unstaged
+# edits that happen to be in the working tree.
+STAGED_RS=$(git diff --name-only --cached --diff-filter=ACMR | grep '\.rs$')
+
+# Format the whole workspace (cargo fmt has no "format only these files" mode
+# without risking inconsistent style across the workspace).
 cargo fmt
 
-# Re-stage any files that were reformatted
-git diff --name-only | grep '\.rs$' | xargs -r git add
+# Re-stage only the .rs files that were already part of this commit.
+if [ -n "$STAGED_RS" ]; then
+    echo "$STAGED_RS" | xargs -r git add
+fi
 
 # Clippy — workspace lints in Cargo.toml enforce deny on all warnings
 echo "Running workspace clippy..."
