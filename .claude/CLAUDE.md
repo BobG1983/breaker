@@ -26,7 +26,7 @@ If the user's request doesn't fit a skill, proceed normally. But when it does fi
 
 ## Project Context
 
-See `docs/design/` for design pillars, `docs/architecture/` for technical decisions + code standards, `docs/plan/` for build roadmap, `docs/design/terminology/` for game vocabulary.
+See `docs/design/` for design pillars, `docs/architecture/` for technical decisions + code standards, `docs/todos/` for the active work list and per-item detail files, `docs/design/terminology/` for game vocabulary.
 
 All code identifiers MUST use game vocabulary — see `.claude/rules/project-context.md` Terminology.
 

@@ -62,5 +62,18 @@
       "WebFetch(domain:bevyengine.org)",
       "WebFetch(domain:github.com)"
     ]
+  },
+  "hooks": {
+    "PostCompact": [
+      {
+        "matcher": "auto",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Context was just auto-compacted. Recover your state before continuing.\n\n1. **Session state**: Read `.claude/state/session-state.md` if it exists. It contains your current status, plan filepath, active wave, specs table, active failures, and stuck items. Read the plan file it references. Determine exactly where you are in the pipeline (spec phase, RED, GREEN, REFACTOR, verification, etc.).\n\n2. **Active investigations**: Read `.claude/fixes/` for any in-progress debug reports. If an investigation was underway, read the most recent file to recover the hypothesis and progress.\n\n3. **In-flight agents**: Check if background agents were running before compaction. The session-state Specs table shows which agents have status `writing` or `reviewing`. If agents were in flight, you will receive their notifications — do NOT re-launch them.\n\n4. **No session state**: If `.claude/state/session-state.md` does not exist, read `docs/todos/TODO.md`. If it exists and has items, report the todo list to the user and ask if they want to continue with `/start-dev` on item 1. If no TODO.md exists either, ask the user what they'd like to work on.\n\n5. **Resume**: Once you've recovered state, tell the user in one sentence where you are and what the next action is. Then do it — do not wait for confirmation unless you're genuinely uncertain."
+          }
+        ]
+      }
+    ]
   }
 }
