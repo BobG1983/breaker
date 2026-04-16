@@ -2,6 +2,7 @@
 //! salvos at bolts. Bolt-immune, bump-vulnerable.
 
 pub(crate) mod components;
+pub(crate) mod salvo;
 pub(crate) mod systems;
 
 #[cfg(test)]

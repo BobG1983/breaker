@@ -11,6 +11,9 @@ pub use types::*;
 pub use crate::cells::behaviors::guarded::components::{
     GuardedCell, GuardianCell, GuardianGridStep, GuardianSlideSpeed, GuardianSlot, SlideTarget,
 };
+pub(crate) use crate::cells::behaviors::survival::salvo::components::{
+    SALVO_FIRE_INTERVAL, SalvoFireTimer,
+};
 pub use crate::cells::behaviors::{
     armored::components::{ArmorDirection, ArmorFacing, ArmorValue, ArmoredCell},
     locked::components::{LockCell, Locked, Locks, Unlocked},
@@ -18,8 +21,6 @@ pub use crate::cells::behaviors::{
     phantom::components::{PhantomCell, PhantomConfig, PhantomPhase, PhantomTimer},
     regen::components::{NoRegen, Regen, RegenCell, RegenRate},
     sequence::components::{SequenceActive, SequenceCell, SequenceGroup, SequencePosition},
-    survival::components::{
-        BoltImmune, BumpVulnerable, SurvivalPattern, SurvivalTimer, SurvivalTurret,
-    },
+    survival::components::{BoltImmune, SurvivalPattern, SurvivalTimer, SurvivalTurret},
     volatile::components::VolatileCell,
 };

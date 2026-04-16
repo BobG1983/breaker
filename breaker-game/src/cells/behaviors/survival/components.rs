@@ -30,10 +30,6 @@ pub struct SurvivalTimer {
 #[derive(Component, Debug)]
 pub struct BoltImmune;
 
-/// Marker: entity dies instantly when bumped by the breaker.
-#[derive(Component, Debug)]
-pub struct BumpVulnerable;
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -107,18 +103,6 @@ mod tests {
         assert!(
             debug_str.contains("BoltImmune"),
             "debug output should contain 'BoltImmune', got: {debug_str}"
-        );
-    }
-
-    // ── Behavior 26: BumpVulnerable is a marker Component with Debug ──
-
-    #[test]
-    fn bump_vulnerable_debug_contains_name() {
-        let marker = BumpVulnerable;
-        let debug_str = format!("{marker:?}");
-        assert!(
-            debug_str.contains("BumpVulnerable"),
-            "debug output should contain 'BumpVulnerable', got: {debug_str}"
         );
     }
 }

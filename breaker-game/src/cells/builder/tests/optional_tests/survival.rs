@@ -4,8 +4,8 @@
 //! `.survival_permanent(pattern)`, `.with_behavior(CellBehavior::Survival)`,
 //! `.with_behavior(CellBehavior::SurvivalPermanent)`, and `.definition(&def)`
 //! against the `spawn_inner()` match arms. They assert the `SurvivalTurret`
-//! marker, `SurvivalPattern`, `SurvivalTimer`, `BoltImmune`, and
-//! `BumpVulnerable` components are inserted correctly.
+//! marker, `SurvivalPattern`, `SurvivalTimer`, and `BoltImmune` components
+//! are inserted correctly.
 
 use bevy::prelude::*;
 
@@ -13,7 +13,7 @@ use super::helpers::*;
 use crate::{
     cells::{
         behaviors::survival::components::{
-            BoltImmune, BumpVulnerable, SurvivalPattern, SurvivalTimer, SurvivalTurret,
+            BoltImmune, SurvivalPattern, SurvivalTimer, SurvivalTurret,
         },
         components::RegenRate,
         definition::{AttackPattern, CellBehavior},
@@ -148,27 +148,6 @@ fn spawn_with_survival_sugar_inserts_bolt_immune() {
     );
 }
 
-// ── Behavior 31: .survival() inserts BumpVulnerable marker ──
-
-#[test]
-fn spawn_with_survival_sugar_inserts_bump_vulnerable() {
-    let mut world = World::new();
-    let entity = spawn_cell_in_world(&mut world, |commands| {
-        Cell::builder()
-            .survival(AttackPattern::StraightDown, 10.0)
-            .position(Vec2::ZERO)
-            .dimensions(70.0, 24.0)
-            .hp(20.0)
-            .headless()
-            .spawn(commands)
-    });
-
-    assert!(
-        world.get::<BumpVulnerable>(entity).is_some(),
-        "entity should have BumpVulnerable marker"
-    );
-}
-
 // ── Behavior 32: .survival_permanent() inserts markers but NO SurvivalTimer ──
 
 #[test]
@@ -195,10 +174,6 @@ fn spawn_with_survival_permanent_inserts_markers_without_timer() {
     assert!(
         world.get::<BoltImmune>(entity).is_some(),
         "entity should have BoltImmune"
-    );
-    assert!(
-        world.get::<BumpVulnerable>(entity).is_some(),
-        "entity should have BumpVulnerable"
     );
     assert!(
         world.get::<SurvivalTimer>(entity).is_none(),
@@ -248,7 +223,6 @@ fn spawn_without_survival_has_no_survival_components() {
     assert!(world.get::<SurvivalPattern>(entity).is_none());
     assert!(world.get::<SurvivalTimer>(entity).is_none());
     assert!(world.get::<BoltImmune>(entity).is_none());
-    assert!(world.get::<BumpVulnerable>(entity).is_none());
 
     // Guard: prove the builder ran
     let hp = world
@@ -290,7 +264,6 @@ fn spawn_with_behavior_survival_matches_survival_sugar() {
     assert!((timer.remaining - 5.0).abs() < f32::EPSILON);
     assert!(!timer.started);
     assert!(world.get::<BoltImmune>(entity).is_some());
-    assert!(world.get::<BumpVulnerable>(entity).is_some());
 }
 
 // ── Behavior 35: .with_behavior(CellBehavior::SurvivalPermanent) matches .survival_permanent() sugar ──
@@ -316,7 +289,6 @@ fn spawn_with_behavior_survival_permanent_matches_sugar() {
         .expect("should have SurvivalPattern");
     assert_eq!(pattern.0, AttackPattern::StraightDown);
     assert!(world.get::<BoltImmune>(entity).is_some());
-    assert!(world.get::<BumpVulnerable>(entity).is_some());
     assert!(
         world.get::<SurvivalTimer>(entity).is_none(),
         "SurvivalPermanent should NOT insert SurvivalTimer"
@@ -354,7 +326,6 @@ fn spawn_survival_through_definition_inserts_all_components() {
     assert!((timer.remaining - 8.0).abs() < f32::EPSILON);
     assert!(!timer.started);
     assert!(world.get::<BoltImmune>(entity).is_some());
-    assert!(world.get::<BumpVulnerable>(entity).is_some());
 }
 
 // ── Behavior 37: .definition(&def) with SurvivalPermanent behavior inserts components without timer ──
@@ -382,7 +353,6 @@ fn spawn_survival_permanent_through_definition_inserts_without_timer() {
         .expect("should have SurvivalPattern");
     assert_eq!(pattern.0, AttackPattern::StraightDown);
     assert!(world.get::<BoltImmune>(entity).is_some());
-    assert!(world.get::<BumpVulnerable>(entity).is_some());
     assert!(
         world.get::<SurvivalTimer>(entity).is_none(),
         "SurvivalPermanent through definition should NOT insert SurvivalTimer"
@@ -427,5 +397,4 @@ fn spawn_survival_with_regen_through_definition_inserts_both() {
     assert!((timer.remaining - 10.0).abs() < f32::EPSILON);
     assert!(!timer.started);
     assert!(world.get::<BoltImmune>(entity).is_some());
-    assert!(world.get::<BumpVulnerable>(entity).is_some());
 }

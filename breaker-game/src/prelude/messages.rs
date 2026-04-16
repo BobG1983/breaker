@@ -6,7 +6,7 @@
 pub(crate) use crate::{
     bolt::messages::{BoltImpactBreaker, BoltImpactCell, BoltImpactWall, BoltLost},
     breaker::messages::{BreakerImpactCell, BreakerImpactWall, BumpPerformed, BumpWhiffed},
-    cells::messages::CellImpactWall,
+    cells::messages::{CellImpactWall, SalvoImpactBreaker},
     state::run::{
         chip_select::messages::ChipSelected,
         messages::{HighlightTriggered, RunLost},

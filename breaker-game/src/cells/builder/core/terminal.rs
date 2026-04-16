@@ -206,16 +206,16 @@ fn spawn_inner(
                         remaining: timer_secs,
                         started:   false,
                     },
+                    SalvoFireTimer(SALVO_FIRE_INTERVAL),
                     BoltImmune,
-                    BumpVulnerable,
                 ));
             }
             CellBehavior::SurvivalPermanent { pattern } => {
                 entity.insert((
                     SurvivalTurret,
                     SurvivalPattern(pattern),
+                    SalvoFireTimer(SALVO_FIRE_INTERVAL),
                     BoltImmune,
-                    BumpVulnerable,
                 ));
             }
         }

@@ -8,10 +8,7 @@ use bevy::prelude::*;
 
 use crate::{
     cells::{
-        behaviors::survival::systems::{
-            kill_bump_vulnerable_cells::kill_bump_vulnerable_cells,
-            suppress_bolt_immune_damage::suppress_bolt_immune_damage,
-        },
+        behaviors::survival::systems::suppress_bolt_immune_damage::suppress_bolt_immune_damage,
         test_utils::spawn_cell_in_world,
     },
     prelude::*,
@@ -30,11 +27,6 @@ pub(super) struct PendingBoltImpactCell(pub(super) Vec<BoltImpactCell>);
 /// `ApplyDamage` runs. One-shot per `tick()`.
 #[derive(Resource, Default)]
 pub(super) struct PendingCellDamage(pub(super) Vec<DamageDealt<Cell>>);
-
-/// Seeded `BreakerImpactCell` messages drained into the queue before
-/// `kill_bump_vulnerable_cells` runs. One-shot per `tick()`.
-#[derive(Resource, Default)]
-pub(super) struct PendingBreakerImpactCell(pub(super) Vec<BreakerImpactCell>);
 
 /// Drains `PendingBoltImpactCell` into the `BoltImpactCell` message queue.
 pub(super) fn enqueue_bolt_impact(
@@ -56,16 +48,6 @@ pub(super) fn enqueue_cell_damage(
     }
 }
 
-/// Drains `PendingBreakerImpactCell` into the `BreakerImpactCell` message queue.
-pub(super) fn enqueue_breaker_impact(
-    mut pending: ResMut<PendingBreakerImpactCell>,
-    mut writer: MessageWriter<BreakerImpactCell>,
-) {
-    for msg in pending.0.drain(..) {
-        writer.write(msg);
-    }
-}
-
 /// Pushes a `BoltImpactCell` into the per-tick pending queue.
 pub(super) fn push_bolt_impact(app: &mut App, msg: BoltImpactCell) {
     app.world_mut()
@@ -78,14 +60,6 @@ pub(super) fn push_bolt_impact(app: &mut App, msg: BoltImpactCell) {
 pub(super) fn push_damage(app: &mut App, msg: DamageDealt<Cell>) {
     app.world_mut()
         .resource_mut::<PendingCellDamage>()
-        .0
-        .push(msg);
-}
-
-/// Pushes a `BreakerImpactCell` into the per-tick pending queue.
-pub(super) fn push_breaker_impact(app: &mut App, msg: BreakerImpactCell) {
-    app.world_mut()
-        .resource_mut::<PendingBreakerImpactCell>()
         .0
         .push(msg);
 }
@@ -127,11 +101,6 @@ pub(super) fn damage_msg_dealerless(target: Entity, amount: f32) -> DamageDealt<
     }
 }
 
-/// Constructs a `BreakerImpactCell` message.
-pub(super) fn breaker_impact(breaker: Entity, cell: Entity) -> BreakerImpactCell {
-    BreakerImpactCell { breaker, cell }
-}
-
 /// Spawns a bolt-immune cell with given HP.
 pub(super) fn spawn_bolt_immune_cell(app: &mut App, hp: f32) -> Entity {
     spawn_cell_in_world(app.world_mut(), |commands| {
@@ -162,11 +131,6 @@ pub(super) fn spawn_test_bolt(app: &mut App) -> Entity {
     app.world_mut().spawn(Bolt).id()
 }
 
-/// Spawns a headless breaker entity for impact messages.
-pub(super) fn spawn_test_breaker(app: &mut App) -> Entity {
-    app.world_mut().spawn(Breaker).id()
-}
-
 /// Builds the integration test `App` with bolt-immune wiring.
 pub(super) fn build_bolt_immune_test_app() -> App {
     let mut app = TestAppBuilder::new()
@@ -193,29 +157,6 @@ pub(super) fn build_bolt_immune_test_app() -> App {
         FixedUpdate,
         suppress_bolt_immune_damage
             .after(crate::bolt::sets::BoltSystems::CellCollision)
-            .before(DeathPipelineSystems::ApplyDamage)
-            .run_if(in_state(NodeState::Playing)),
-    );
-    app
-}
-
-/// Builds the integration test `App` with bump-vulnerable wiring.
-pub(super) fn build_bump_vulnerable_test_app() -> App {
-    let mut app = TestAppBuilder::new()
-        .with_state_hierarchy()
-        .with_physics()
-        .with_effects_pipeline()
-        .build();
-    attach_message_capture::<DamageDealt<Cell>>(&mut app);
-    attach_message_capture::<Destroyed<Cell>>(&mut app);
-    app.init_resource::<PendingBreakerImpactCell>();
-    app.add_systems(
-        FixedUpdate,
-        enqueue_breaker_impact.before(kill_bump_vulnerable_cells),
-    );
-    app.add_systems(
-        FixedUpdate,
-        kill_bump_vulnerable_cells
             .before(DeathPipelineSystems::ApplyDamage)
             .run_if(in_state(NodeState::Playing)),
     );

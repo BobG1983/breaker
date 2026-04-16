@@ -4,7 +4,6 @@ use bevy::prelude::*;
 
 use crate::{
     bolt::sets::BoltSystems,
-    breaker::sets::BreakerSystems,
     cells::{
         behaviors::{
             armored::systems::check_armor_direction::check_armor_direction,
@@ -17,12 +16,20 @@ use crate::{
                 advance_sequence::advance_sequence, init_sequence_groups::init_sequence_groups,
                 reset_inactive_sequence_hp::reset_inactive_sequence_hp,
             },
-            survival::systems::{
-                kill_bump_vulnerable_cells::kill_bump_vulnerable_cells,
-                suppress_bolt_immune_damage::suppress_bolt_immune_damage,
+            survival::{
+                salvo::systems::{
+                    fire_survival_turret::fire_survival_turret,
+                    salvo_bolt_collision::salvo_bolt_collision,
+                    salvo_breaker_collision::salvo_breaker_collision,
+                    salvo_cell_collision::salvo_cell_collision,
+                    salvo_wall_collision::salvo_wall_collision,
+                    tick_salvo_fire_timer::tick_salvo_fire_timer,
+                    tick_survival_timer::tick_survival_timer,
+                },
+                systems::suppress_bolt_immune_damage::suppress_bolt_immune_damage,
             },
         },
-        messages::CellImpactWall,
+        messages::{CellImpactWall, SalvoImpactBreaker},
         resources::CellConfig,
         systems::{cell_wall_collision, update_cell_damage_visuals},
     },
@@ -40,6 +47,7 @@ pub(crate) struct CellsPlugin;
 impl Plugin for CellsPlugin {
     fn build(&self, app: &mut App) {
         app.add_message::<CellImpactWall>()
+            .add_message::<SalvoImpactBreaker>()
             .init_resource::<CellConfig>()
             .add_systems(
                 OnEnter(NodeState::Loading),
@@ -69,9 +77,13 @@ impl Plugin for CellsPlugin {
                     suppress_bolt_immune_damage
                         .after(check_armor_direction)
                         .before(DeathPipelineSystems::ApplyDamage),
-                    kill_bump_vulnerable_cells
-                        .after(BreakerSystems::CellCollision)
-                        .before(DeathPipelineSystems::ApplyDamage),
+                    tick_survival_timer.before(DeathPipelineSystems::ApplyDamage),
+                    tick_salvo_fire_timer.after(tick_survival_timer),
+                    fire_survival_turret.after(tick_salvo_fire_timer),
+                    salvo_cell_collision.before(DeathPipelineSystems::ApplyDamage),
+                    salvo_bolt_collision,
+                    salvo_breaker_collision,
+                    salvo_wall_collision,
                 )
                     .run_if(in_state(NodeState::Playing)),
             );
@@ -133,7 +145,8 @@ mod tests {
             .init_resource::<Assets<ColorMaterial>>()
             .add_message::<BoltImpactCell>()
             .add_message::<BreakerImpactCell>()
-            .insert_resource(CollisionQuadtree::default());
+            .insert_resource(CollisionQuadtree::default())
+            .init_resource::<crate::shared::playfield::PlayfieldConfig>();
         app.add_plugins(DeathPipelinePlugin);
         register_effect_v3_test_infrastructure(&mut app);
         app.add_plugins(EffectV3Plugin);
@@ -260,7 +273,8 @@ mod tests {
             .init_resource::<Assets<ColorMaterial>>()
             .add_message::<BoltImpactCell>()
             .add_message::<BreakerImpactCell>()
-            .insert_resource(CollisionQuadtree::default());
+            .insert_resource(CollisionQuadtree::default())
+            .init_resource::<crate::shared::playfield::PlayfieldConfig>();
         app.add_plugins(DeathPipelinePlugin);
         register_effect_v3_test_infrastructure(&mut app);
         app.add_plugins(EffectV3Plugin);
@@ -459,7 +473,8 @@ mod tests {
             .init_resource::<Assets<ColorMaterial>>()
             .add_message::<BoltImpactCell>()
             .add_message::<BreakerImpactCell>()
-            .insert_resource(CollisionQuadtree::default());
+            .insert_resource(CollisionQuadtree::default())
+            .init_resource::<crate::shared::playfield::PlayfieldConfig>();
         // Configure BoltSystems::CellCollision so the set exists without BoltPlugin
         app.configure_sets(FixedUpdate, crate::bolt::sets::BoltSystems::CellCollision);
         app.add_plugins(DeathPipelinePlugin);
@@ -805,7 +820,8 @@ mod tests {
             .init_resource::<Assets<ColorMaterial>>()
             .add_message::<BoltImpactCell>()
             .add_message::<BreakerImpactCell>()
-            .insert_resource(CollisionQuadtree::default());
+            .insert_resource(CollisionQuadtree::default())
+            .init_resource::<crate::shared::playfield::PlayfieldConfig>();
         // Configure BoltSystems::CellCollision so the set exists without BoltPlugin
         app.configure_sets(FixedUpdate, crate::bolt::sets::BoltSystems::CellCollision);
         app.add_plugins(DeathPipelinePlugin);
@@ -923,59 +939,5 @@ mod tests {
 
         // No crash — system didn't run (gated by run_if). Damage also doesn't
         // apply since death pipeline is gated too.
-    }
-
-    /// Behavior 57: `CellsPlugin` registers `kill_bump_vulnerable_cells` in `FixedUpdate`.
-    #[test]
-    fn cells_plugin_registers_kill_bump_vulnerable_cells() {
-        let mut app = survival_plugin_app_loading();
-
-        let cell = spawn_plugin_survival_cell(&mut app, 20.0);
-        let breaker = app.world_mut().spawn(Breaker).id();
-
-        survival_plugin_advance_to_playing(&mut app);
-
-        app.world_mut()
-            .resource_mut::<PluginTestPendingBreakerImpact>()
-            .0
-            .push(BreakerImpactCell { breaker, cell });
-
-        // Multiple ticks for full death pipeline
-        for _ in 0..4 {
-            tick(&mut app);
-        }
-
-        let is_dead = app.world().get_entity(cell).is_err()
-            || app.world().get::<Dead>(cell).is_some()
-            || app.world().get::<Hp>(cell).is_none_or(|h| h.current <= 0.0);
-        assert!(
-            is_dead,
-            "CellsPlugin should register kill_bump_vulnerable_cells; \
-             BumpVulnerable cell should be dead after breaker contact"
-        );
-    }
-
-    /// Behavior 58: `kill_bump_vulnerable_cells` does not run in `NodeState::Loading`.
-    #[test]
-    fn cells_plugin_kill_bump_vulnerable_does_not_run_in_loading() {
-        let mut app = survival_plugin_app_loading();
-
-        let cell = spawn_plugin_survival_cell(&mut app, 20.0);
-        let breaker = app.world_mut().spawn(Breaker).id();
-
-        // Do NOT advance to Playing — stay in Loading
-        app.world_mut()
-            .resource_mut::<PluginTestPendingBreakerImpact>()
-            .0
-            .push(BreakerImpactCell { breaker, cell });
-
-        tick(&mut app);
-
-        let hp = app.world().get::<Hp>(cell).expect("cell should have Hp");
-        assert!(
-            (hp.current - 20.0).abs() < f32::EPSILON,
-            "kill_bump_vulnerable_cells should NOT run in Loading state, got hp.current == {}",
-            hp.current
-        );
     }
 }

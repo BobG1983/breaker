@@ -16,7 +16,7 @@ pub mod rng;
 pub mod size;
 pub(crate) mod validation;
 
-pub use collision_layers::{BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, WALL_LAYER};
+pub use collision_layers::{BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, SALVO_LAYER, WALL_LAYER};
 pub use color::color_from_rgb;
 pub use components::{BaseHeight, BaseWidth, NodeScalingFactor};
 pub use draw_layer::GameDrawLayer;
