@@ -1,0 +1,9 @@
+mod definition_with_toughness;
+mod deserialization;
+mod guarded_behavior;
+mod helpers;
+mod magnetic_validation;
+mod regen_validation;
+mod survival;
+mod toughness;
+mod volatile_validation;
