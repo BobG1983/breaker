@@ -1,89 +1,184 @@
 # Evaluation Flow
 
-There is no shared `evaluate()` function. Each trigger system walks chains directly. The pattern is the same across all triggers.
+Tree evaluation happens in two stages, both driven by trigger bridge systems:
 
-**Trigger systems never encounter `Until` nodes.** Until is desugared by a dedicated system that runs after all trigger systems — see [Until Desugaring System](#until-desugaring-system). By the time trigger systems walk chains, all Untils have been replaced with When+Reverse entries.
+1. **Walk** — a bridge system has just translated a game message into a `Trigger` and a `TriggerContext`. It calls `walk_staged_effects` followed by `walk_bound_effects` for each entity that should see this trigger.
+2. **Evaluate** — the walker iterates the entity's `(name, tree)` entries and calls `evaluate_tree`. `evaluate_tree` pattern-matches on the `Tree` variant and calls the appropriate per-node evaluator (`evaluate_fire`, `evaluate_when`, `evaluate_once`, `evaluate_during`, `evaluate_until`, `evaluate_sequence`, `evaluate_on`).
 
-## For Each Entity Being Evaluated
+All walker code lives under `effect_v3/walking/`. The walker queues commands via `EffectCommandsExt` — it never touches `&mut World` directly. Effect execution happens later, when the queued commands flush.
 
-### Step 1: Walk StagedEffects (entries consumed on match)
+## walk_bound_effects vs walk_staged_effects
 
-For each node in StagedEffects:
+```rust
+pub(in crate::effect_v3) fn walk_bound_effects(
+    entity: Entity,
+    trigger: &Trigger,
+    context: &TriggerContext,
+    trees: &[(String, Tree)],
+    commands: &mut Commands,
+);
 
-**When(trigger, children)**: If trigger matches, evaluate each child:
-- `Do(effect)` → `commands.fire_effect(entity, effect)`
-- `On(target, on_children, permanent)` → resolve target, transfer on_children to target (bare Do fires on target, non-Do pushes to target's StagedEffects or BoundEffects if `permanent: true`)
-- Any other child → push to this entity's StagedEffects (re-arm at deeper level)
-- Consume this entry
+pub(in crate::effect_v3) fn walk_staged_effects(
+    entity: Entity,
+    trigger: &Trigger,
+    context: &TriggerContext,
+    trees: &[(String, Tree)],
+    commands: &mut Commands,
+);
+```
 
-**Once(children)**: Evaluate children against trigger. A bare `Do` always matches (ready to fire). A `When(trigger, ...)` matches only if the current trigger matches. Other node types (`On`, `Once`, `Until`) are treated as non-Do children that get armed if any sibling matches.
-- If any child matches: fire/arm children, remove the Once
-- If no child matches: keep the Once
+Both are scoped to `pub(in crate::effect_v3)` so external callers must go through `EffectCommandsExt` rather than the walker directly.
 
-**On(target, children, permanent)**: Resolve target from the trigger system's message data:
-- Bare Do children → `commands.fire_effect(target_entity, effect)`
-- Non-Do children → push to target's StagedEffects (default) or BoundEffects (if `permanent: true`)
+`walk_bound_effects` simply iterates entries and calls `evaluate_tree` on each. Bound entries persist after evaluation — only `commands.remove_effect` (or `Tree::Once` self-removal) ever clears them.
 
-### Step 2: Walk BoundEffects (entries stay — permanent)
+`walk_staged_effects` adds two behaviors on top of the iteration:
 
-Same matching logic as StagedEffects, but entries are **never removed** (except by Reverse cleanup or Once consumption).
+1. **Top-level gate filter** — before evaluating, it checks that the entry's root variant is `When`/`Once`/`Until` and that the gate trigger equals the active trigger. Non-gate roots and non-matching gates are skipped without consumption. This avoids burning a staged entry that would otherwise no-op.
+2. **Entry-specific consumption** — after evaluating a matching entry, it queues `commands.remove_staged_effect(entity, source.clone(), tree.clone())`. The remove is keyed on the exact `(source, tree)` tuple, not on `source` alone. This preserves any fresh same-name stages queued during evaluation.
 
-When a When matches, evaluate each child:
-- `Do(effect)` → `commands.fire_effect(entity, effect)`
-- `On(target, on_children, permanent)` → resolve target, transfer on_children to target (StagedEffects or BoundEffects per permanent flag)
-- Any other child → push to StagedEffects
+## Bridge call order
 
-## On Unwrapping
+Bridge systems must call `walk_staged_effects` **before** `walk_bound_effects` for the same `(entity, trigger, context)` tuple. The reasoning is documented in the walker itself:
 
-When a `When` matches and one of its children is an `On`, the On is resolved **immediately** — its children go to the **target entity**, not back onto the current entity's StagedEffects. This applies in both StagedEffects and BoundEffects evaluation. The `permanent` flag controls whether non-Do children land in the target's StagedEffects (default) or BoundEffects (`permanent: true`).
+> *Bridge systems must call this BEFORE `walk_bound_effects` so that entries staged by a `When` / `Once` arming during the same trigger event do not erroneously match the trigger that staged them.*
 
-Example: `When(Impacted(Cell), [On(AllCells, [Do(Shockwave(...))])])`
+A bound `When(A, When(B, Fire(X)))` walked first would match `A`, arm a fresh `When(B, ...)` in `StagedEffects`, and if `walk_staged_effects` then runs against the still-active trigger `A`, the freshly-armed inner is walked too — but `B != A`, so the staged entry is skipped (correct). If however a bound `When(A, When(A, Fire(X)))` was walked first, the freshly-armed inner has the same trigger as the active one, so a subsequent staged walk would consume it on the same event, breaking the documented "two events required" semantics. Walking staged first prevents this entire class of issue.
 
-When Impacted(Cell) fires:
-1. When matches → child is `On(AllCells, [Do(Shockwave)])`
-2. On resolves AllCells → all cell entities
-3. Bare Do → `commands.fire_effect(each_cell, Shockwave)` — fires on each cell, not on the bolt whose chain triggered this
+This ordering is enforced inside each bridge system body, not at the schedule level — schedulers don't model "this happens before this within a single system tick."
 
-If the On child is non-Do:
-`When(Impacted(Cell), [On(Cell, [When(Died, [Do(Shockwave(...))])])])`
+## evaluate_tree dispatch
 
-1. When matches → child is `On(Cell, [When(Died, Do(Shockwave))])`
-2. On resolves Cell → the cell from the trigger context
-3. Non-Do → `commands.transfer_effect(cell_entity, [When(Died, Do(Shockwave))])` — pushes to the cell's StagedEffects
+```rust
+pub(in crate::effect_v3) fn evaluate_tree(
+    entity: Entity,
+    tree: &Tree,
+    trigger: &Trigger,
+    context: &TriggerContext,
+    source: &str,
+    commands: &mut Commands,
+) {
+    match tree {
+        Tree::Fire(effect_type)        => evaluate_fire(entity, effect_type, source, context, commands),
+        Tree::When(gate, inner)        => evaluate_when(entity, gate, inner, trigger, context, source, commands),
+        Tree::Once(gate, inner)        => evaluate_once(entity, gate, inner, trigger, context, source, commands),
+        Tree::During(condition, inner) => evaluate_during(entity, condition, inner, context, source, commands),
+        Tree::Until(gate, inner)       => evaluate_until(entity, gate, inner, trigger, context, source, commands),
+        Tree::Sequence(terminals)      => evaluate_sequence(entity, terminals, context, source, commands),
+        Tree::On(target, terminal)     => evaluate_on(entity, *target, terminal, context, source, commands),
+    }
+}
+```
 
-## Until Desugaring System
+## Per-node evaluators
 
-Until desugaring is handled by a **dedicated system**, not by trigger systems during chain walking. This system:
+### evaluate_fire (`walking/fire.rs`)
 
-1. Runs **after all trigger bridge systems** in FixedUpdate
-2. Queries all entities with BoundEffects and StagedEffects
-3. Finds any `Until` nodes in either component
-4. Desugars each Until:
-   - `Do` children → `commands.fire_effect(entity, effect)` (fire immediately)
-   - `When` children → push to the entity's BoundEffects (recurring)
-   - Replace the Until with `When(trigger, [Reverse(effects, chains)])` in StagedEffects
-5. The original Until entry is removed from whichever component it was in
+Queues a `FireEffectCommand`. No conditional logic — every walk of a `Fire` produces exactly one fire command.
 
-This means:
-- **Dispatch** can freely push Until nodes to BoundEffects — the desugaring system handles them on the next tick
-- **Trigger systems** never see Until — they only see When, Do, Once, On, and Reverse
-- **Ordering is explicit**: collision systems → trigger bridges → Until desugaring → apply_deferred
+### evaluate_when (`walking/when/system.rs`)
 
-## Timer System
+```rust
+if gate_trigger != active_trigger { return; }
+match inner {
+    Tree::When(..) | Tree::Once(..) | Tree::Until(..) => {
+        commands.stage_effect(entity, source.to_owned(), inner.clone());
+    }
+    _ => {
+        evaluate_tree(entity, inner, active_trigger, context, source, commands);
+    }
+}
+```
 
-The timer system (`effect/triggers/timer.rs`) is a normal Bevy system that runs every FixedUpdate tick after trigger bridges. It handles `TimeExpires` reversal:
+The "arm-on-nested-gate" branch is what makes nested gate trees ladder across trigger events instead of collapsing in a single tick. The staged entry is evaluated against the *next* matching trigger.
 
-1. Queries all entities with StagedEffects
-2. For each `When(TimeExpires(remaining), children)` entry:
-   - Decrements `remaining` by `delta_time`
-   - When `remaining <= 0`: evaluates children (which will be `[Reverse(...)]`), consuming the entry
-3. This is the **only trigger that modifies StagedEffects entries in-place** (decrementing the timer) rather than matching-and-consuming
+### evaluate_once (`walking/once/system.rs`)
 
-## Key Invariants
+Same gate check as `When`, plus self-removal:
 
-- StagedEffects entries are consumed when matched. BoundEffects entries are permanent.
-- StagedEffects is walked first, then BoundEffects.
-- Non-Do children of matching When push to StagedEffects, EXCEPT:
-  - `On` children are resolved immediately — their children go to the target entity
-- Trigger systems never encounter Until — the desugaring system handles it separately.
-- On never fires on the current entity — it only transfers to other entities.
+```rust
+if gate_trigger != active_trigger { return; }
+match inner {
+    Tree::When(..) | Tree::Once(..) | Tree::Until(..) => {
+        commands.remove_effect(entity, source);     // remove FIRST
+        commands.stage_effect(entity, source.to_owned(), inner.clone());
+    }
+    _ => {
+        evaluate_tree(entity, inner, active_trigger, context, source, commands);
+        commands.remove_effect(entity, source);
+    }
+}
+```
+
+The remove-first / stage-second ordering for the nested-gate case is load-bearing: `RemoveEffectCommand` sweeps both `BoundEffects` and `StagedEffects` by name, so queuing the remove first clears the outer entry without touching the freshly-staged inner.
+
+### evaluate_during (`walking/during/system.rs`)
+
+`During` is not a triggered node — it's a state-scoped install. `evaluate_during` queues a `DuringInstallCommand` that idempotently inserts the `During` as a top-level entry in `BoundEffects` under the key `format!("{source}#installed[0]")`. The condition poller (`evaluate_conditions`, in `EffectV3Systems::Conditions`) then takes over.
+
+If the source string already contains `"#installed"`, the walker skips re-installation — the entry being walked is a poller-managed installed entry, not an authoring path.
+
+See `conditions.md`.
+
+### evaluate_until (`walking/until/system.rs`)
+
+`Until` is also not a triggered node in the usual sense — `evaluate_until` queues an `UntilEvaluateCommand` that runs a state machine inside `Command::apply`. The state machine uses the per-entity `UntilApplied` component to track which sources have already fired their inner effects.
+
+The state machine handles four shapes (Fire/Sequence direct, plus Until-wrapping-During). See `until.md`.
+
+### evaluate_sequence and evaluate_terminal (`walking/sequence.rs`)
+
+```rust
+pub fn evaluate_sequence(entity: Entity, terminals: &[Terminal], _context: &TriggerContext, source: &str, commands: &mut Commands) {
+    for terminal in terminals {
+        evaluate_terminal(entity, terminal, source, commands);
+    }
+}
+
+pub fn evaluate_terminal(entity: Entity, terminal: &Terminal, source: &str, commands: &mut Commands) {
+    match terminal {
+        Terminal::Fire(effect_type) => commands.queue(FireEffectCommand { entity, effect: effect_type.clone(), source: source.to_owned() }),
+        Terminal::Route(route_type, tree) => commands.queue(RouteEffectCommand { entity, name: source.to_owned(), tree: (**tree).clone(), route_type: *route_type }),
+    }
+}
+```
+
+`Sequence` is unconditional ordered fire/route. There is no gate — the surrounding `When`/`Once` provides the gate.
+
+### evaluate_on (`walking/on/system.rs`)
+
+```rust
+if let Some(resolved) = resolve_participant(target, context) {
+    evaluate_terminal(resolved, terminal, source, commands);
+    if is_armed_source(source) {
+        commands.track_armed_fire(owner, source.to_owned(), resolved);
+    }
+}
+```
+
+Resolves the participant from the `TriggerContext`, calls `evaluate_terminal` on the resolved entity, and if the source is an armed key (Shape D), additionally tracks the participant on the owner's `ArmedFiredParticipants` so the disarm path can reverse effects on the right entity later.
+
+`is_armed_source` (in `conditions/armed_source.rs`) tests for the `#armed[` substring used by `evaluate_conditions` when installing scoped `On` entries.
+
+## Same-tick stage-then-consume
+
+Multiple commands queued in the same tick all flush together, in queue order. `walk_staged_effects` exploits this carefully:
+
+> *`evaluate_tree` may queue `Stage` commands for arm-push paths. Those MUST be enqueued BEFORE the consume below so the entry-specific remove hits the original staged entry (first match on `(source, tree)`) and not the freshly-armed inner.*
+
+So when a staged `When(A, When(A, Fire(X)))` matches against `A`:
+
+1. `evaluate_tree` → `evaluate_when` (matches) → inner is a gate → `commands.stage_effect(entity, source, When(A, Fire(X)))`
+2. After `evaluate_tree` returns, `walk_staged_effects` queues `commands.remove_staged_effect(entity, source, When(A, When(A, Fire(X))))`
+3. Both commands flush. The remove finds the original outer (exact tuple match), removes it. The freshly-armed inner survives (different `Tree` value).
+
+Next tick walks the inner `When(A, Fire(X))` against the next matching `A`, which fires `X` and removes the inner. Depth-N chains take N events to fully drain.
+
+## Trigger sources
+
+The bridge systems are the only callers of `walk_staged_effects` and `walk_bound_effects`. Bridge systems live in `effect_v3/triggers/<category>/bridges/system.rs` and follow a uniform pattern — see `trigger_systems.md`. Categories are `bump`, `impact`, `death`, `bolt_lost`, `node`, `time`. All bridges are registered into `EffectV3Systems::Bridge` via the per-category `register::register(app)` function called by `EffectV3Plugin::build`.
+
+## Where conditions and timers fit
+
+The condition poller (`evaluate_conditions`) runs in `EffectV3Systems::Conditions` after all bridges. It does not call `walk_*_effects` — it uses its own iteration over entries whose top-level variant is `Tree::During` and applies/reverses scoped trees directly. See `conditions.md`.
+
+`TimeExpires` is a regular `Trigger` variant. The `time` trigger category owns timer ticking systems plus a bridge that converts elapsed-timer messages into `Trigger::TimeExpires(seconds)` dispatches just like any other trigger.

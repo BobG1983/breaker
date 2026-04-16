@@ -4,7 +4,7 @@
 
 ## Chip Content System
 
-All chip content lives in the `chips/` domain. A single `ChipDefinition` type covers all chips. Every chip effect — whether passive (applied on selection) or triggered (fired on game events) — is expressed as an `EffectNode` tree. There is no separate `ChipEffect`, `AmpEffect`, or `AugmentEffect` enum.
+All chip content lives in the `chips/` domain. A single `ChipDefinition` type covers all chips. Every chip effect — whether passive (applied on selection) or triggered (fired on game events) — is expressed as a `RootNode` (`Stamp(StampTarget, Tree)` or `Spawn(EntityKind, Tree)`) carrying a `Tree`. There is no separate `ChipEffect`, `AmpEffect`, or `AugmentEffect` enum.
 
 ### Template-Based Authoring
 
@@ -15,9 +15,12 @@ Chips are authored as **templates** — one RON file per chip concept with per-r
 (
     name: "Piercing Shot",
     max_taken: 3,
-    common: (prefix: "Basic", effects: [On(target: Bolt, then: [Do(Piercing(1))])]),
-    uncommon: (prefix: "Keen", effects: [On(target: Bolt, then: [Do(Piercing(2))])]),
-    rare: (prefix: "Brutal", effects: [On(target: Bolt, then: [Do(Piercing(3)), Do(DamageBoost(1.1))])]),
+    common:   (prefix: "Basic",   effects: [Stamp(Bolt, Fire(Piercing(charges: 1)))]),
+    uncommon: (prefix: "Keen",    effects: [Stamp(Bolt, Fire(Piercing(charges: 2)))]),
+    rare:     (prefix: "Brutal",  effects: [Stamp(Bolt, Sequence([
+        Fire(Piercing(charges: 3)),
+        Fire(DamageBoost(multiplier: 1.1)),
+    ]))]),
 )
 ```
 
@@ -27,74 +30,74 @@ See `docs/design/decisions/chip-template-system.md` for the full design decision
 
 ### Unified Effect Model
 
-All chip and breaker effects are `EffectNode` trees referencing `EffectKind` — the actual action enum. There is no separate `Effect` enum. The canonical location is `effect/core/types/definitions/enums.rs`.
+All chip and breaker effects are `RootNode` lists. The inner `Tree` references `EffectType` variants — each variant wraps a per-effect config struct that implements `Fireable`. The canonical location is `effect_v3/types/`.
 
 ```rust
-// effect/core/types/definitions/enums.rs
-
-pub enum EffectNode {
-    When { trigger: Trigger, then: Vec<EffectNode> },
-    Do(EffectKind),
-    Once(Vec<EffectNode>),
-    On { target: Target, #[serde(default)] permanent: bool, then: Vec<EffectNode> },
-    Until { trigger: Trigger, then: Vec<EffectNode> },
-    Reverse { effects: Vec<EffectKind>, chains: Vec<EffectNode> },  // internal only
-}
-
-pub enum EffectKind {
-    // Stat effects — applied via fire(), reversed via reverse()
-    Piercing(u32),
-    DamageBoost(f32),
-    SpeedBoost { multiplier: f32 },
-    SizeBoost(f32),
-    BumpForce(f32),
-    Attraction { attraction_type: AttractionType, force: f32, #[serde(default)] max_force: Option<f32> },
-    RampingDamage { damage_per_trigger: f32 },
-    QuickStop { multiplier: f32 },
-
-    // AoE / spawn effects
-    Shockwave { base_range: f32, range_per_level: f32, stacks: u32, speed: f32 },
-    Pulse { base_range: f32, range_per_level: f32, stacks: u32, speed: f32, #[serde(default = "default_pulse_interval")] interval: f32 },
-    Explode { range: f32, damage_mult: f32 },
-    ChainLightning { arcs: u32, range: f32, damage_mult: f32, #[serde(default = "default_chain_lightning_arc_speed")] arc_speed: f32 },
-    PiercingBeam { damage_mult: f32, width: f32 },
-    TetherBeam { damage_mult: f32, #[serde(default)] chain: bool },
-
-    // Spawn effects
-    SpawnBolts { #[serde(default = "one")] count: u32, #[serde(default)] lifespan: Option<f32>, #[serde(default)] inherit: bool },
-    ChainBolt { tether_distance: f32 },
-    SpawnPhantom { duration: f32, max_active: u32 },
-    GravityWell { strength: f32, duration: f32, radius: f32, max: u32 },
-
-    // Protection / special
-    Shield { duration: f32 },          // spawns a timed floor wall (ShieldWall + ShieldWallTimer)
-    SecondWind,                        // unit variant — no fields
-    LoseLife,
-    TimePenalty { seconds: f32 },
-
-    // Breaker utility effects
-    FlashStep,                             // unit variant — teleport on reversal-during-settling
-    MirrorProtocol { #[serde(default)] inherit: bool },
-    Anchor { bump_force_multiplier: f32, perfect_window_multiplier: f32, plant_delay: f32 },
-    CircuitBreaker { bumps_required: u32, #[serde(default = "one")] spawn_count: u32, #[serde(default)] inherit: bool, shockwave_range: f32, shockwave_speed: f32 },
-
-    // Meta effects
-    RandomEffect(Vec<(f32, EffectNode)>),
-    EntropyEngine { max_effects: u32, pool: Vec<(f32, EffectNode)> },
+// effect_v3/types/effect_type.rs
+pub enum EffectType {
+    SpeedBoost(SpeedBoostConfig),       // multiplier
+    SizeBoost(SizeBoostConfig),
+    DamageBoost(DamageBoostConfig),
+    BumpForce(BumpForceConfig),
+    QuickStop(QuickStopConfig),
+    FlashStep(FlashStepConfig),
+    Piercing(PiercingConfig),
+    Vulnerable(VulnerableConfig),
+    RampingDamage(RampingDamageConfig),
+    Attraction(AttractionConfig),
+    Anchor(AnchorConfig),
+    Pulse(PulseConfig),
+    Shield(ShieldConfig),
+    SecondWind(SecondWindConfig),
+    Shockwave(ShockwaveConfig),
+    Explode(ExplodeConfig),
+    ChainLightning(ChainLightningConfig),
+    PiercingBeam(PiercingBeamConfig),
+    SpawnBolts(SpawnBoltsConfig),
+    SpawnPhantom(SpawnPhantomConfig),
+    ChainBolt(ChainBoltConfig),
+    MirrorProtocol(MirrorConfig),
+    TetherBeam(TetherBeamConfig),
+    GravityWell(GravityWellConfig),
+    LoseLife(LoseLifeConfig),
+    TimePenalty(TimePenaltyConfig),
+    Die(DieConfig),
+    CircuitBreaker(CircuitBreakerConfig),
+    EntropyEngine(EntropyConfig),
+    RandomEffect(RandomEffectConfig),
 }
 ```
 
-See `docs/architecture/effects/core_types.md` for full field-level documentation of each variant.
+```rust
+// effect_v3/types/tree.rs
+pub enum Tree {
+    Fire(EffectType),
+    When(Trigger, Box<Self>),
+    Once(Trigger, Box<Self>),
+    During(Condition, Box<ScopedTree>),
+    Until(Trigger, Box<ScopedTree>),
+    Sequence(Vec<Terminal>),
+    On(ParticipantTarget, Terminal),
+}
+
+// effect_v3/types/root_node.rs
+pub enum RootNode {
+    Stamp(StampTarget, Tree),
+    Spawn(EntityKind, Tree),
+}
+```
+
+See `docs/architecture/effects/core_types.md` for the full type system reference (including `ScopedTree`, `Terminal`, `StampTarget`, `Trigger`, `Condition`, `EntityKind`, `ParticipantTarget`, `TriggerContext`).
 
 ### Effect Application
 
-When a player selects a chip, the chip dispatch system pushes the chip's `EffectNode` trees onto the breaker/bolt entity's `BoundEffects`. Bridge systems in `effect/triggers/` evaluate `BoundEffects` and `StagedEffects` on every matching trigger, calling `commands.fire_effect(entity, effect_kind, chip_name)` for each `Do` leaf they encounter.
+When a player selects a chip, `dispatch_chip_effects` walks the chip's `effects: Vec<RootNode>`. For each `RootNode::Stamp(target, tree)`, it resolves the target via `DispatchTargets` and calls `commands.stamp_effect(entity, chip_name, tree)` on each resolved entity (or fires the effect immediately if `tree` is `Tree::Fire(_)`). Trigger bridge systems in `effect_v3/triggers/<category>/` later walk the entries on each matching trigger and queue `commands.fire_effect`.
 
-- **Stat effects** (`SpeedBoost`, `DamageBoost`, `Piercing`, `SizeBoost`, `BumpForce`, `QuickStop`): `fire()` pushes a value onto an `Active*` stack component (e.g., `ActiveSpeedBoosts(Vec<f32>)`). Consumers read these stacks directly via `.multiplier()` / `.total()` — there is no separate `Recalculate` step.
-- **AoE/spawn effects** (`Shockwave`, `ChainLightning`, `Explode`, etc.): `fire()` spawns a request entity or directly damages nearby cells via `DamageDealt<Cell>` message. These carry chip attribution via `EffectSourceChip` component (and `DamageDealt.source_chip` field) for damage tracking.
-- **Shield**: `fire()` spawns a `ShieldWall` entity (a timed visible floor wall) with a `ShieldWallTimer`. If a wall already exists, the timer is reset in-place. `tick_shield_wall_timer` despawns the wall when the timer expires. No component is inserted on the target entity.
+- **Stat effects** (`SpeedBoost`, `DamageBoost`, `Piercing`, `SizeBoost`, `BumpForce`, `QuickStop`, `Vulnerable`, `RampingDamage`, `Anchor`, `FlashStep`, `Attraction`): `Fireable::fire` pushes onto an `EffectStack<Config>` component on the entity. A per-effect recalculation system in `EffectV3Systems::Tick` reads the stack and applies the effective value.
+- **AoE/spawn effects** (`Shockwave`, `ChainLightning`, `Explode`, `Pulse`, `GravityWell`, `TetherBeam`, etc.): `Fireable::fire` spawns a child entity (or sends a `DamageDealt<Cell>` message). These carry chip attribution via the `EffectSourceChip` component for damage tracking.
+- **Shield**: `Fireable::fire` spawns a `ShieldWall` entity (a timed visible floor wall) with a `ShieldWallTimer`. If a wall already exists, the timer is reset in-place. `tick_shield_wall_timer` despawns the wall when the timer expires.
 
-**Adding new content:** new RON template file, no recompile. **Adding new behavior types:** new `EffectKind` variant in `effect/core/types/definitions/enums.rs` + new module in `effect/effects/` + fire/reverse arms in `definitions/fire.rs` and `definitions/reverse.rs` + `register()` call, requires recompile.
+**Adding new content:** new RON template file, no recompile. **Adding new behavior types:** new `EffectType` variant + new module in `effect_v3/effects/` + `Fireable` impl + dispatch arm + (optional) `ReversibleEffectType` variant + `Reversible` impl + `MyConfig::register(app)` call. See `docs/architecture/effects/adding_effects.md`.
 
 ### Registries
 

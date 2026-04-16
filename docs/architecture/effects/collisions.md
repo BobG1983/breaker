@@ -24,21 +24,6 @@ A single collision message produces four triggers. Example — `BoltImpactCell {
 3. `Impacted(Cell)` — targeted on the bolt ("you were in an impact with a cell")
 4. `Impacted(Bolt)` — targeted on the cell ("you were in an impact with a bolt")
 
-## Implementation Status
-
-**Existing collision systems** (need message rename + split):
-- `bolt/systems/bolt_cell_collision` — currently handles both bolt↔cell AND bolt↔wall. Split into two separate systems:
-  - `bolt/systems/bolt_cell_collision` — sends `BoltImpactCell` (was `BoltHitCell`)
-  - `bolt/systems/bolt_wall_collision` — sends `BoltImpactWall` (was `BoltHitWall`)
-- `bolt/systems/bolt_breaker_collision` — sends `BoltImpactBreaker` (was `BoltHitBreaker`)
-
-**New collision systems** (add as part of this refactor):
-- `breaker/` — `BreakerImpactCell` (breaker ↔ cell collision detection)
-- `breaker/` — `BreakerImpactWall` (breaker ↔ wall collision detection)
-- `cells/` — `CellImpactWall` (cell ↔ wall collision detection, for future moving cells)
-
-The new systems should NOT be minimal stubs initially (even though there are no moving cells or breaker-cell collisions yet), make sure the messages and trigger bridge systems should exist so the effect system is wired up and ready.
-
 ## Adding a New Collision Type
 
 See [Adding Collisions](adding_collisions.md).

@@ -82,72 +82,69 @@ systems/my_system/
 
 ## Per-Effect Layout (Effect Domain)
 
-The `effect_v3/` domain evaluates `EffectNode` trees and dispatches leaf effects using a **per-effect file** layout instead of the canonical category-based layout. Each effect gets its own file containing the relevant typed events, observers, and helper systems. This keeps each effect self-contained and scales cleanly as new effects are added.
+The `effect_v3/` domain organizes its source by concern (`types/`, `walking/`, `dispatch/`, `commands/`, `storage/`, `conditions/`, `triggers/`, `effects/`) rather than the canonical category-based layout. Each effect lives in its own subdirectory under `effects/` containing a config struct, optional components, optional runtime systems, and trait implementations (`Fireable` and optionally `Reversible`).
 
 ```
 src/effect_v3/
-├── mod.rs                 # Re-exports + pub mod declarations
-├── plugin.rs              # EffectV3Plugin — calls Fireable::register() for all 30 configs and registers triggers
-├── sets.rs                # EffectV3Systems set (Bridge, Tick, Conditions, Reset variants)
-├── commands.rs            # EffectCommandsExt trait (fire_effect, reverse_effect, transfer_effect)
-├── core/                  # Core types (NOT a sub-domain — no plugin.rs)
-│   ├── mod.rs             # Re-exports from types/
-│   └── types/             # Directory module (split from types.rs — has tests)
-│       ├── mod.rs         # Re-exports from definitions/
-│       └── definitions/   # Directory module (split from definitions.rs for fire/reverse line count)
-│           ├── mod.rs     # Re-exports from enums.rs
-│           ├── enums.rs   # Trigger, ImpactTarget, Target, AttractionType, RootEffect,
-│           │              #   EffectNode, EffectKind, BoundEffects, StagedEffects, EffectSourceChip
-│           ├── fire.rs    # EffectKind::fire() + 3 private helpers
-│           └── reverse.rs # EffectKind::reverse() + 3 private helpers
-├── effects/               # Per-effect modules (NOT a sub-domain — no plugin.rs)
-│   ├── mod.rs             # pub mod declarations + register() dispatcher
-│   ├── speed_boost.rs     # ActiveSpeedBoosts, fire(), reverse(), register()
-│   ├── damage_boost.rs    # fire(), reverse(), register()
-│   ├── life_lost.rs       # fire(), reverse(), register()
-│   ├── ramping_damage.rs  # fire(), reverse(), register()
-│   ├── quick_stop.rs      # fire(), reverse(), register()
-│   ├── piercing.rs        # fire(), reverse(), register()
-│   ├── size_boost.rs      # fire(), reverse(), register()
-│   ├── bump_force.rs      # fire(), reverse(), register()
-│   ├── shield.rs          # fire(), reverse(), register()
-│   ├── gravity_well/      # Directory module (split for tests)
-│   ├── time_penalty.rs    # fire(), reverse(), register()
-│   ├── shockwave/         # Directory module (split for tests)
-│   ├── chain_bolt/        # Directory module (split for tests)
-│   ├── chain_lightning/   # Directory module (split for tests)
-│   ├── explode/           # Directory module (split for tests)
-│   ├── tether_beam/       # Directory module (split for tests)
-│   ├── pulse/             # Directory module (split for tests)
-│   ├── piercing_beam/     # Directory module (split for tests)
-│   ├── attraction/        # Directory module (split for tests)
-│   ├── spawn_bolts/       # Directory module (split for tests)
-│   ├── spawn_phantom/     # Directory module (split for tests)
-│   ├── entropy_engine/    # Directory module (split for tests)
-│   ├── second_wind/       # Directory module (split for tests)
-│   ├── random_effect/     # Directory module
-│   ├── flash_step.rs      # fire(), reverse(), register()
-│   ├── mirror_protocol/   # Directory module (split for tests)
-│   ├── anchor/            # Directory module (split for tests)
-│   └── circuit_breaker/   # Directory module (split for tests)
-└── triggers/              # Bridge systems grouped by trigger category (NOT a sub-domain)
-    ├── mod.rs             # pub mod declarations + register() dispatcher
-    ├── bump/              # Directory module — bump trigger bridges (on_bump_occurred, on_bumped, etc.)
-    ├── impact/            # Directory module — impact trigger bridges (on_impact_occurred, on_impacted)
-    ├── death/             # Directory module — death trigger bridges (on_destroyed::<T> generic)
-    ├── bolt_lost/         # Directory module — bolt lost trigger bridges
-    ├── node/              # Directory module — node lifecycle bridges + check_node_timer_thresholds
-    └── time/              # Directory module — tick_effect_timers + on_time_expires
+├── mod.rs                 # Re-exports (EffectV3Plugin, EffectV3Systems)
+├── plugin.rs              # EffectV3Plugin — configures sets, registers all 30 effect
+│                          #   configs via Fireable::register, registers all trigger
+│                          #   categories via triggers::*::register::register
+├── sets.rs                # EffectV3Systems { Bridge, Tick, Conditions, Reset }
+├── types/                 # Flat directory of one type per file
+│   ├── mod.rs             # pub use of all types
+│   ├── effect_type.rs     # EffectType enum (30 variants, all wrap configs)
+│   ├── reversible_effect_type.rs  # ReversibleEffectType (16-variant subset) + From/TryFrom
+│   ├── tree.rs            # Tree enum (Fire, When, Once, During, Until, Sequence, On)
+│   ├── scoped_tree.rs     # ScopedTree (restricted Tree for During/Until)
+│   ├── terminal.rs        # Terminal (leaf for Sequence/On)
+│   ├── scoped_terminal.rs # ScopedTerminal (restricted leaf)
+│   ├── root_node.rs       # RootNode { Stamp(StampTarget, Tree), Spawn(EntityKind, Tree) }
+│   ├── stamp_target.rs    # StampTarget enum (Bolt, Breaker, Active*, Every*, ...)
+│   ├── trigger.rs         # Trigger enum (uses OrderedFloat<f32> for Hash)
+│   ├── condition.rs       # Condition { NodeActive, ShieldActive, ComboActive(u32) }
+│   ├── entity_kind.rs     # EntityKind { Cell, Bolt, Wall, Breaker, Any }
+│   ├── participants.rs    # BumpTarget/ImpactTarget/DeathTarget/BoltLostTarget + ParticipantTarget
+│   ├── trigger_context.rs # TriggerContext (Bump/Impact/Death/BoltLost/None)
+│   ├── route_type.rs      # RouteType { Bound, Staged }
+│   └── ...                # bump_status.rs, attraction_type.rs
+├── traits/                # Fireable + Reversible + PassiveEffect traits
+├── commands/              # EffectCommandsExt trait + concrete Command structs
+│   ├── ext/system.rs      # EffectCommandsExt impl on Commands
+│   ├── fire.rs            # FireEffectCommand (calls fire_dispatch)
+│   ├── reverse.rs         # ReverseEffectCommand (calls reverse_dispatch)
+│   ├── route.rs / stamp.rs / stage.rs / remove.rs / remove_staged.rs / track_armed_fire.rs
+├── dispatch/              # fire_dispatch, reverse_dispatch, fire_reversible_dispatch,
+│                          #   reverse_all_by_source_dispatch
+├── storage/               # BoundEffects, StagedEffects, ArmedFiredParticipants components +
+│                          #   SpawnStampRegistry resource and per-kind watchers
+├── walking/               # walk_bound_effects, walk_staged_effects, evaluate_tree, plus
+│                          #   per-node evaluators (when, once, during, until, on, fire, sequence)
+├── conditions/            # is_node_active, is_shield_active, is_combo_active, evaluate_conditions
+├── triggers/              # Bridge systems grouped by trigger category (NOT a sub-domain)
+│   ├── bump/              # bump trigger bridges (on_bumped, on_perfect_bumped, ...)
+│   ├── impact/            # impact trigger bridges
+│   ├── death/             # death trigger bridges (on_destroyed::<T> generic)
+│   ├── bolt_lost/         # bolt-lost trigger bridges
+│   ├── node/              # node lifecycle bridges + check_node_timer_thresholds
+│   └── time/              # tick_effect_timers + on_time_expires
+├── effects/               # One subdirectory per effect (30 total)
+│   ├── mod.rs             # pub use of all *Config types
+│   ├── speed_boost/{mod.rs, config.rs}    # SpeedBoostConfig + impl Fireable + impl Reversible
+│   ├── shockwave/{mod.rs, config.rs, components.rs, systems/}
+│   ├── chain_lightning/   # config + components + systems with tests
+│   └── ...                # 30 modules total — see structure.md for the per-effect shapes
+└── stacking/              # EffectStack<C> generic stack component for stack-based passives
 ```
 
 **Rules:**
-- One module per effect type (either a single `.rs` file or a directory module split per the System File Split Convention above). The module owns any active-state `Component`s, plus `fire()`, `reverse()`, and `register(app: &mut App)` free functions.
-- `effects/` and `triggers/` and `core/` are **directory groupings**, not sub-domains — none have a `plugin.rs`. `EffectV3Plugin` registers all systems through `Fireable::register(app)` for each config and a `register(app)` call per trigger category.
-- `core/types/definitions/enums.rs` holds all shared data types: `Trigger`, `ImpactTarget`, `Target`, `AttractionType`, `RootEffect`, `EffectNode`, `EffectKind`, `BoundEffects`, `StagedEffects`, `EffectSourceChip`. No observers, no systems. `definitions/fire.rs` and `definitions/reverse.rs` hold the dispatch methods.
-- `commands.rs` holds `EffectCommandsExt` — the `Commands` extension trait for queuing fire/reverse/transfer operations.
+- One module per effect type. The module owns its config struct, any per-effect components, runtime systems (if any), and `impl Fireable for Config` / `impl Reversible for Config` (if reversible).
+- `effects/`, `triggers/`, `walking/`, `conditions/`, `commands/`, `storage/`, and `types/` are **directory groupings**, not sub-domains — none have a `plugin.rs`. `EffectV3Plugin` registers all systems via `Fireable::register(app)` for each config and a `register(app)` call per trigger category.
+- The dispatch layer is **free functions** (`fire_dispatch`, `reverse_dispatch`, etc.) that match on `EffectType` / `ReversibleEffectType` and call the relevant `config.fire(...)` / `config.reverse(...)`. There is no `EffectKind` enum holding methods — the enum is `EffectType` and the per-effect config is the implementation.
+- `commands/ext/system.rs` holds `EffectCommandsExt` — the `Commands` extension trait with eight methods (`fire_effect`, `reverse_effect`, `route_effect`, `stamp_effect`, `stage_effect`, `remove_effect`, `remove_staged_effect`, `track_armed_fire`).
 - `BreakerDefinition` lives in `breaker/definition.rs`. `BreakerRegistry` lives in `breaker/registry.rs`.
-- Adding a new leaf effect = new module in `effects/` (file or dir) + `pub mod` entry in `effects/mod.rs` + variant in `EffectKind` in `definitions/enums.rs` + `fire()`/`reverse()` arms in `definitions/fire.rs` and `definitions/reverse.rs` + `Fireable::register(app)` call in `plugin.rs`.
-- Adding a new trigger = new module in `triggers/` (file or dir) + `pub mod` in `triggers/mod.rs` + `register()` call in `plugin.rs`.
+- Adding a new effect = new directory in `effects/` + `EffectType` variant + `fire_dispatch` arm + (optional) `ReversibleEffectType` variant + reverse-dispatch arms + `MyConfig::register(app)` call in `plugin.rs`. See `architecture/effects/adding_effects.md`.
+- Adding a new trigger = new variant in `Trigger` + bridge function + `register()` call. See `architecture/effects/adding_triggers.md`.
 - Adding a new breaker = new RON file only (if using existing trigger fields and effects).
 - This layout applies **only** to the `effect_v3/` domain. Standard domains use the canonical category-based layout.
 - `effect_v3/` is a **top-level domain** registered directly in `game.rs`. It is not nested under `breaker/`.

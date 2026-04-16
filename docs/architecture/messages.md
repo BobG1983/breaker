@@ -44,16 +44,20 @@ Messages are defined in the domain that **conceptually owns the event**. Usually
 
 ## Effect Dispatch (commands extension — not Message or observer)
 
-Effect firing does not use `#[derive(Message)]` or `commands.trigger()`. Instead, `EffectKind` exposes `fire(entity, world)` and `reverse(entity, world)` free functions dispatched via `EffectCommandsExt`:
+Effect firing does not use `#[derive(Message)]` or `commands.trigger()`. Instead, each per-effect config struct implements `Fireable::fire(entity, source, world)` (and optionally `Reversible::reverse(entity, source, world)`); the `EffectCommandsExt` extension trait queues commands that call free functions in `effect_v3/dispatch/` to dispatch the enum to the right config:
 
 | Method | Queued by | Applies via |
 |--------|-----------|-------------|
-| `commands.fire_effect(entity, effect, source_chip)` | trigger bridge systems evaluating `Do(effect)` nodes | `FireEffectCommand::apply` → `effect.fire(entity, &source_chip, world)` |
-| `commands.reverse_effect(entity, effect, source_chip)` | `Reverse` node unwinding | `ReverseEffectCommand::apply` → `effect.reverse(entity, &source_chip, world)` |
-| `commands.transfer_effect(entity, name, children, permanent, context)` | `On` node redirect | `TransferCommand::apply` → pushes to `BoundEffects` or `StagedEffects`; `context` carries trigger entity references for targeted `On` resolution |
-| `commands.push_bound_effects(entity, effects)` | `dispatch_cell_effects`, `dispatch_breaker_effects` dispatch systems | `PushBoundEffects::apply` → inserts `BoundEffects`/`StagedEffects` if absent, then appends entries |
+| `commands.fire_effect(entity, effect, source)` | trigger bridge systems / walker `evaluate_fire` / chip dispatch / sequence terminals | `FireEffectCommand::apply` → `fire_dispatch(&effect, entity, &source, world)` → `config.fire(entity, source, world)` |
+| `commands.reverse_effect(entity, effect, source)` | `evaluate_conditions` Shape D disarm | `ReverseEffectCommand::apply` → `reverse_dispatch(&effect, entity, &source, world)` → `config.reverse(entity, source, world)` |
+| `commands.route_effect(entity, name, tree, route_type)` | `evaluate_terminal` for `Terminal::Route` | `RouteEffectCommand::apply` → installs into `BoundEffects` (for `RouteType::Bound`) or `StagedEffects` (for `RouteType::Staged`) |
+| `commands.stamp_effect(entity, name, tree)` | chip dispatch (non-Fire roots), `evaluate_when`/`evaluate_once` arming, `SpawnStampRegistry` watchers, `evaluate_conditions` Shape A install | sugar for `route_effect(_, _, _, RouteType::Bound)` |
+| `commands.stage_effect(entity, name, tree)` | `evaluate_when`/`evaluate_once` arming nested gates | sugar for `route_effect(_, _, _, RouteType::Staged)` |
+| `commands.remove_effect(entity, name)` | chip unequip, `evaluate_once` self-removal | `RemoveEffectCommand::apply` → name-sweep across both `BoundEffects` and `StagedEffects` |
+| `commands.remove_staged_effect(entity, name, tree)` | `walk_staged_effects` consume | `RemoveStagedEffectCommand::apply` → first matching `(name, tree)` tuple removed from `StagedEffects` only |
+| `commands.track_armed_fire(owner, armed_source, participant)` | `evaluate_on` when source is an armed key | `TrackArmedFireCommand::apply` → appends participant to `ArmedFiredParticipants` |
 
-Each effect module in `effect/effects/` provides `fire()`, `reverse()`, and `register()`. The enum match in `EffectKind` is mechanical dispatch only.
+Each effect module in `effect_v3/effects/<name>/` provides a config struct + `impl Fireable` (+ `impl Reversible` if reversible) + optional runtime systems registered via `Fireable::register(app)`. The enum-to-trait jump happens exactly once, in `fire_dispatch` and `reverse_dispatch`.
 
 ## Registered Messages (no active producer/consumer)
 

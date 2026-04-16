@@ -1,67 +1,59 @@
-# Effects
+# Effects — Design Direction
 
-Effects are the actions that fire when triggers match. Each effect acts on the entity it lives on.
-
-Any effect can be used passively (bare `Do` at dispatch) or triggered (inside a `When`).
+Effects are the actions that fire when triggers match. This index organizes effects by **design category** for chip authoring reference. For the technical reference (config structs, fire/reverse behavior, stacking), see `docs/architecture/effects/effect_reference.md`.
 
 All multipliers use the **1.x standard**: 2.0 = 2x (double), 0.5 = 50% (half).
 
 ## Combat Effects
 
-- [Shockwave](shockwave.md) — expanding ring of area damage
-- [ChainLightning](chain_lightning.md) — arc damage jumping between random cells in range
-- [PiercingBeam](piercing_beam.md) — instant damage along velocity direction within a width
-- [Pulse](pulse.md) — timed bolt aura, repeatedly pulses small damage rings
-- [Explode](explode.md) — instant area damage burst
-- [TetherBeam](tether_beam.md) — damaging beam between bolts *(evolution)*
+- **Shockwave** — expanding ring of area damage
+- **ChainLightning** — arc damage jumping between random cells in range
+- **PiercingBeam** — instant damage along velocity direction within a width
+- **Pulse** — timed bolt aura, repeatedly pulses small damage rings
+- [Explode](explode.md) — instant area damage burst (VFX direction)
+- [TetherBeam](tether_beam.md) — damaging beam between bolts *(evolution)* (VFX direction)
 
 ## Bolt Spawning
 
-- [SpawnBolts](spawn_bolts.md) — spawn additional bolts
-- [ChainBolt](chain_bolt.md) — spawn two bolts chained together
-- [SpawnPhantom](spawn_phantom.md) — temporary phantom bolt with infinite piercing
-- [MirrorProtocol](mirror_protocol.md) — spawn mirrored bolts inheriting primary bolt's effects *(evolution)*
+- **SpawnBolts** — spawn additional bolts
+- **ChainBolt** — spawn two bolts chained together
+- **SpawnPhantom** — temporary phantom bolt with infinite piercing
+- [MirrorProtocol](mirror_protocol.md) — spawn mirrored bolts *(evolution)* (VFX direction)
 
 ## Stat Modifiers
 
-- [SpeedBoost](speed_boost.md) — multiplicative speed scaling
-- [DamageBoost](damage_boost.md) — multiplicative damage bonus
-- [Piercing](piercing.md) — pass through destroyed cells (counted down)
-- [SizeBoost](size_boost.md) — multiplicative size increase (varies by entity type)
-- [BumpForce](bump_force.md) — multiplicative bump force increase
-- [RampingDamage](ramping_damage.md) — stacking damage on any impact
-- [Attraction](attraction.md) — attract toward nearest entity of a type
+- **SpeedBoost** — multiplicative speed scaling
+- **DamageBoost** — multiplicative damage bonus
+- **Piercing** — pass through destroyed cells (counted down)
+- **SizeBoost** — multiplicative size increase (varies by entity type)
+- **BumpForce** — multiplicative bump force increase
+- **RampingDamage** — stacking damage on any impact
+- **Attraction** — attract toward nearest entity of a type
 
 ## Breaker Modifiers
 
-- [QuickStop](quick_stop.md) — breaker deceleration multiplier for precise stops
-- [Anchor](anchor.md) — plant mechanic: boosted bump force + wider perfect window while braking *(evolution)*
-- [FlashStep](flash_step.md) — teleport on dash reversal during settling *(evolution)*
+- [QuickStop](quick_stop.md) — breaker deceleration multiplier (evolution direction)
+- [Anchor](anchor.md) — plant mechanic *(evolution)* (VFX direction)
+- [FlashStep](flash_step.md) — teleport on dash reversal *(evolution)* (VFX direction)
 
 ## Defensive
 
-- [Shield](shield.md) — temporary protection (bolt loss immunity on breaker, damage immunity on HP entities)
-- [SecondWind](second_wind.md) — invisible bottom wall, bounces bolt once
-- [GravityWell](gravity_well.md) — attracts bolts within radius
+- **Shield** — temporary floor wall (bolt loss immunity)
+- **SecondWind** — invisible bottom wall, bounces bolt once
+- **GravityWell** — attracts bolts within radius
 
 ## Penalties
 
-- [LoseLife](lose_life.md) — decrements lives (reverse restores)
-- [TimePenalty](time_penalty.md) — subtracts time from node timer (reverse restores)
+- **LoseLife** — decrements lives
+- **TimePenalty** — subtracts time from node timer
 
 ## Meta
 
-- [RandomEffect](random_effect.md) — weighted random selection from a weighted pool of flat EffectType variants (not full trees)
-- [EntropyEngine](entropy_engine.md) — escalating chaos, multiple effects per cell destroyed
-- [CircuitBreaker](circuit_breaker.md) — charge counter on perfect bumps, fires spawn + shockwave on completion *(evolution)*
+- **RandomEffect** — weighted random selection from pool
+- **EntropyEngine** — escalating chaos, multiple effects per cell destroyed
+- [CircuitBreaker](circuit_breaker.md) — charge counter *(evolution)* (VFX direction)
 
-## Buff Stacking
+## Vulnerable / Die
 
-| Effect | Stacking | Recalculation |
-|--------|----------|---------------|
-| SpeedBoost | Multiplicative | `base_speed * product(boosts)`, clamped `[min, max]` |
-| DamageBoost | Multiplicative | `base_damage * product(boosts)` |
-| Piercing | Additive | `sum(pierce_counts)`, counted down on cell destroy |
-| SizeBoost | Multiplicative | `base_size * product(boosts)` (varies by entity type) |
-| BumpForce | Multiplicative | `base_force * product(boosts)` |
-| QuickStop | Multiplicative | `base_decel * product(boosts)` |
+- **Vulnerable** — multiplicative incoming damage amplification
+- **Die** — kill the target entity

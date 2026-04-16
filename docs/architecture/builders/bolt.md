@@ -39,7 +39,7 @@ After `.definition()` or after manually satisfying S/A, individual values can be
 
 - `.with_radius(f32)` — override bolt radius (default 8.0; `BoltDefinition.radius` overrides this when `.definition()` is called)
 - `.with_lifespan(f32)` — bolt expires after N seconds
-- `.with_effects(Vec<(String, EffectNode)>)` — attach effect nodes
+- `.with_effects(Vec<(String, Tree)>)` — attach effect trees (one `(name, tree)` pair per entry — populates the bolt's `BoundEffects`)
 - `.with_inherited_effects(&BoundEffects)` — clone effects from another bolt
 - `.spawned_by(&str)` — evolution attribution
 

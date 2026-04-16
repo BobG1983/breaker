@@ -91,7 +91,7 @@ pub struct BoltDefinition {
 
     /// All effect chains for this bolt, each scoped to a target entity.
     /// Dispatched onto the bolt entity at spawn, identical to breaker dispatch.
-    pub effects: Vec<RootEffect>,
+    pub effects: Vec<RootNode>,
 
     /// Visual rendering configuration.
     pub rendering: BoltRenderingConfig,
@@ -224,7 +224,7 @@ pub struct BreakerDefinition {
     #[serde(default)]
     pub life_pool: Option<u32>,          // default: None (infinite)
     #[serde(default)]
-    pub effects: Vec<RootEffect>,        // default: []
+    pub effects: Vec<RootNode>,          // default: []
     // 29+ gameplay fields with #[serde(default)]:
     pub width: f32, pub height: f32, pub y_position: f32,
     pub min_w: Option<f32>, pub max_w: Option<f32>,
@@ -408,7 +408,7 @@ fn init_bolt_params(
 
 New system: `dispatch_bolt_effects`, parallel to `dispatch_breaker_effects`.
 
-When a bolt spawns with a `BoltDefinitionRef`, the dispatch system reads the definition's `effects: Vec<RootEffect>` and dispatches them onto the bolt entity using the same pattern as breaker dispatch:
+When a bolt spawns with a `BoltDefinitionRef`, the dispatch system reads the definition's `effects: Vec<RootNode>` and dispatches them onto the bolt entity using the same pattern as breaker dispatch:
 
 ```rust
 fn dispatch_bolt_effects(
@@ -418,10 +418,17 @@ fn dispatch_bolt_effects(
 ) {
     for (entity, def_ref) in &query {
         let def = bolt_registry.get(&def_ref.0).unwrap();
-        for root_effect in &def.effects {
-            let RootEffect::On { target, then } = root_effect;
-            // Same dispatch logic as breaker: resolve target, fire bare Do, push non-Do to BoundEffects
-            // ...
+        for root in &def.effects {
+            match root {
+                RootNode::Stamp(target, tree) => {
+                    // Resolve target via DispatchTargets, then for each entity:
+                    //   - Tree::Fire(_)  → commands.fire_effect(...)
+                    //   - other          → commands.stamp_effect(entity, name, tree.clone())
+                }
+                RootNode::Spawn(kind, tree) => {
+                    // Register into SpawnStampRegistry for future spawns of `kind`.
+                }
+            }
         }
     }
 }

@@ -97,6 +97,23 @@ type: project
 
 ---
 
+## Architecture Audit Findings (2026-04-15)
+
+Full audit saved at `.claude/agent-memory/guard-docs/ephemeral/audit-2026-04-15-architecture.md`.
+
+**Effect system docs are extensively wrong.** The entire `docs/architecture/effects/` directory (except `death_pipeline.md`, `collisions.md`) contains either stale or wrong type names. Key divergences:
+- `EffectType` enum uses config-struct wrappers (e.g. `SpeedBoost(SpeedBoostConfig)`), NOT bare scalars
+- Types are named `Tree`/`ScopedTree`/`RootNode`/`StampTarget` — NOT `ValidTree`/`ValidScopedTree`/`ValidDef`/`Target`
+- `EffectCommandsExt` has 8 methods, completely different from the 4 methods documented
+- Directory is `effect_v3/types/` (flat files), NOT `effect_v3/core/types/definitions/`
+- `fire_dispatch()` is a free function (correct name) but does NOT take a `context` parameter
+
+**Two safe edits applied:**
+- `docs/architecture/standards.md` — Entity Cleanup section: replaced non-existent `PlayingCleanup`/`MainMenuCleanup` with `CleanupOnExit<S>` from `rantzsoft_stateflow`
+- `docs/architecture/effects/collisions.md` — removed stale "Implementation Status" section (rename work was completed)
+
+**Human decisions needed:** Whether the `Valid*`-prefixed types in tree_types.md/core_types.md are forward-looking (planned redesign) vs. stale (old design). The `commands.md`, `node_types.md`, `structure.md`, `targets.md`, `index.md`, `adding_effects.md`, `examples.md` docs all need rewrites.
+
 ## Confirmed Correct (as of prelude-expansion-and-import-cleanup, 2026-04-15)
 
 - `docs/architecture/standards.md` — Prelude section fully updated: 3+ files threshold for inclusion; collision layer constants and death_pipeline types explicitly allowed; `#[cfg(test)]`-gated `test_utils` submodule allowed; 7-submodule structure documented
@@ -128,7 +145,7 @@ type: project
 ## Standing Structural Facts
 
 - `CleanupOnNodeExit` and `CleanupOnRunEnd` DO NOT EXIST in `breaker-game/src/`. Use `CleanupOnExit<NodeState>` and `CleanupOnExit<RunState>` from `rantzsoft_stateflow`.
-- `ShieldActive` component NO LONGER EXISTS. Shield is now a timed floor wall (`ShieldWall` + `ShieldWallTimer`).
+- `ShieldActive` **NEEDS RE-VERIFICATION** — `effect_v3/conditions/shield_active.rs` EXISTS in source (2026-04-15 audit found). The earlier "eliminated" claim may be wrong. Read the file before deciding.
 - `dispatch_breaker_effects` SUPERSEDED by `spawn_or_reuse_breaker` builder path.
 - `dispatch_wall_effects` DELETED. Effect dispatch is inline in Wall builder `spawn()`.
 - `SpawnAdditionalBolt` REMOVED from bolt/messages.rs — effects spawn directly via `&mut World`.

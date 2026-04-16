@@ -39,7 +39,7 @@ A type belongs in `crate::prelude` if it is used in **3+ files across the codeba
 - Types used in fewer than 3 files
 - Plugins, system sets (wiring code only)
 - Domain-internal helpers that never cross boundaries
-- Effect dispatch enums (`EffectKind`, `Target`, `Trigger`, `TriggerContext`) — these are well-served by `use crate::effect::*` within the effect domain
+- Effect dispatch enums (`EffectType`, `Tree`, `RootNode`, `StampTarget`, `Trigger`, `Condition`, `TriggerContext`, `ParticipantTarget`) — these are well-served by `use crate::effect_v3::types::*` within the effect domain
 
 ### Import Style
 
@@ -91,27 +91,25 @@ The coverage manifest (`breaker-scenario-runner/src/coverage.rs`) runs with `--a
 
 ---
 
-## Entity Cleanup — Marker Components
+## Entity Cleanup — CleanupOnExit
 
-Entities are tagged with cleanup markers that indicate their lifecycle scope. `OnExit` systems query for markers and despawn.
+Entities are tagged with `CleanupOnExit<S>` (from `rantzsoft_stateflow`) where `S` is the state type that scopes the entity's lifetime. The stateflow plugin handles the `OnExit` despawn systems automatically.
 
 ```rust
-// Generic cleanup system — one instance per marker type
-pub fn cleanup_entities<T: Component>(
-    mut commands: Commands,
-    query: Query<Entity, With<T>>,
-) {
-    for entity in &query {
-        commands.entity(entity).despawn();
-    }
-}
+// Spawn an entity that lives only for the duration of NodeState::Playing
+commands.spawn((
+    MyComponent,
+    CleanupOnExit::<NodeState>::default(),
+));
 
-// Registered for each state exit that needs cleanup
-app.add_systems(OnExit(GameState::Playing), cleanup_entities::<PlayingCleanup>);
-app.add_systems(OnExit(GameState::MainMenu), cleanup_entities::<MainMenuCleanup>);
+// For run-scoped entities (survive node transitions within a run):
+commands.spawn((
+    MyComponent,
+    CleanupOnExit::<RunState>::default(),
+));
 ```
 
-Explicit, predictable, easy to debug. Every spawned entity gets a cleanup marker — no entity leaks.
+Explicit, predictable, easy to debug. Every spawned entity gets a `CleanupOnExit<S>` marker for the appropriate state scope — no entity leaks.
 
 ---
 

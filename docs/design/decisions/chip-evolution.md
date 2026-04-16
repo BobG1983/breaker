@@ -29,20 +29,4 @@ This proves the architecture handles same-type and cross-type evolutions.
 
 Evolution recipes create a discovery layer: players experiment to find which chip pairs evolve, and plan runs around recipes they know. The wiki effect — community knowledge-sharing — is a longevity multiplier.
 
-## Evolution Recipes
-
-### Shock Chain
-**Ingredients**: Chain Reaction x1 + Aftershock x2 + Cascade x2
-
-**Design notes**: Destroyed cells trigger recursive shockwaves — each shockwave kill spawns another shockwave. Combines the Chain Reaction template's destruction-chaining with Aftershock's area damage and Cascade's propagation.
-
-**Effect**: `On(Bolt) → When(CellDestroyed) → Do(Shockwave(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 400.0))`
-
-### Feedback Loop
-**Ingredients**: TBD
-
-**Design notes**: Counter-gated burst. Every 3rd perfect bump fires a bolt swarm + shockwave. Rewards consistent precision over time rather than single-hit spikes. Uses `EntropyEngine` internally as a counter mechanism with deterministic output instead of random selection.
-
-**Effect**: `When(OnPerfectBump, [Do(EntropyEngine(3, [(0.5, Do(SpawnBolts { count: 2 })), (0.5, Do(Shockwave(base_range: 96.0, ...)))]))])`
-
 See `docs/design/chip-catalog.md` for the full evolution catalog and `docs/design/evolutions.md` for design principles.

@@ -61,7 +61,7 @@ src/
 ├── state/            # State lifecycle, routing, menus, pause, run/node management, HUD
 ├── input/            # Raw keyboard input to GameAction translation
 ├── breaker/          # Breaker mechanics, state machine, bump system
-├── effect_v3/        # Effect system — data-driven EffectNode trigger/effect evaluation and dispatch (top-level domain)
+├── effect_v3/        # Effect system — data-driven Tree trigger/effect evaluation and dispatch (top-level domain)
 ├── bolt/             # Bolt physics, reflection model, speed management, CCD collision detection, chain bolts
 ├── cells/            # Cell types, grid layout, destruction
 ├── walls/            # Wall builder, wall types, boundary entities
@@ -122,92 +122,71 @@ The `debug/` domain (gated behind `#[cfg(feature = "dev")]`) is the **only domai
 
 This exception does **not** extend to other domains. Production code still communicates through messages only.
 
-## Effect Domain — Self-Registration Pattern
+## Effect Domain — Trait-Based Dispatch with Per-Effect Configs
 
-The `effect_v3/` domain uses a self-registration pattern where each leaf effect is fully self-contained in a single file and registers itself with the app.
+The `effect_v3/` domain stores effect trees in `Tree`-typed components (`BoundEffects`, `StagedEffects`), walks them via per-node evaluators in `walking/`, and dispatches each effect through a config struct that implements the `Fireable` (and optionally `Reversible`) trait. There is no `EffectKind` enum holding methods — the enum (`EffectType`) is the dispatch layer and the per-effect config struct is the implementation.
 
-### Actual Structure
+The full architecture (directory layout, type system, walker, conditions, dispatch) lives under `architecture/effects/`. This section captures only the high-level shape relevant to the plugin model.
 
-```
-effect_v3/
-  core/
-    mod.rs             # Re-exports from types/
-    types/             # Directory module (split from types.rs)
-      mod.rs           # Re-exports from definitions/
-      definitions/     # Directory module (split from definitions.rs for fire/reverse line count)
-        enums.rs       # All core types: Trigger, ImpactTarget, Target, AttractionType,
-                       #   RootEffect, EffectNode, EffectKind, BoundEffects, StagedEffects, EffectSourceChip
-        fire.rs        # EffectKind::fire() + 3 private helpers
-        reverse.rs     # EffectKind::reverse() + 3 private helpers
-  effects/             # Per-effect modules with fire(), reverse(), register()
-    mod.rs             # pub mod declarations + register() dispatcher
-    speed_boost.rs     # ActiveSpeedBoosts, fire(), reverse(), register()
-    damage_boost.rs    # fire(), reverse(), register()
-    life_lost.rs       # fire(), reverse(), register()
-    ramping_damage.rs  # fire(), reverse(), register()
-    quick_stop.rs      # fire(), reverse(), register()
-    flash_step.rs      # fire(), reverse(), register()
-    piercing.rs / size_boost.rs / bump_force.rs / shield.rs / time_penalty.rs
-    gravity_well/          # Directory module (split for tests)
-    shockwave/ chain_bolt/ chain_lightning/ explode/ tether_beam/ pulse/ piercing_beam/
-    attraction/ spawn_bolts/ spawn_phantom/ entropy_engine/ second_wind/ random_effect/
-    anchor/ circuit_breaker/ mirror_protocol/
-    ... (directory modules — split per System File Split Convention when tests exceed ~400 lines)
-  triggers/            # Bridge systems (one file or dir per trigger type)
-    mod.rs             # pub mod declarations + register() dispatcher
-    bump/              # Directory module — bump trigger bridges
-    impact/            # Directory module — impact trigger bridges
-    death/             # Directory module — death trigger bridges
-    bolt_lost/         # Directory module — bolt lost trigger bridges
-    node/              # Directory module — node lifecycle bridges
-    time/              # Directory module — time/timer bridges
-  commands.rs          # EffectCommandsExt trait (fire_effect, reverse_effect, transfer_effect)
-  mod.rs               # Re-exports + pub mod declarations
-  plugin.rs            # EffectV3Plugin — calls Fireable::register() for all 30 configs and registers triggers
-  sets.rs              # EffectV3Systems set (Bridge, Tick, Conditions, Reset variants)
-```
+### Plugin
 
-### Effect File Pattern
+`EffectV3Plugin` (`effect_v3/plugin.rs`) does four things in `build`:
 
-Each effect module provides three free functions and any active-state components it needs:
+1. Configures `EffectV3Systems` ordering (`Bridge → Tick → Conditions`).
+2. Registers `evaluate_conditions` into `EffectV3Systems::Conditions`.
+3. Inserts `SpawnStampRegistry` and registers the four spawn-watcher systems (`stamp_spawned_bolts/cells/walls/breakers`) into `EffectV3Systems::Bridge`.
+4. Calls each trigger category's `register::register(app)` (`bump`, `impact`, `death`, `bolt_lost`, `node`, `time`) and each effect config's `Fireable::register(app)` (all 30 configs called unconditionally so adding tick systems later cannot be silently dropped).
+
+### Type system at a glance
+
+- `EffectType` — 30-variant enum, each variant wraps a per-effect `Config` struct (`SpeedBoost(SpeedBoostConfig)`, etc.). Every config implements `Fireable`.
+- `ReversibleEffectType` — 16-variant subset for effects whose configs implement `Reversible`. Used in `ScopedTree::Fire` (the only `Fire` position inside `During`/`Until` scopes).
+- `Tree` — recursive node enum (`Fire`, `When`, `Once`, `During`, `Until`, `Sequence`, `On`). Stored in `BoundEffects` / `StagedEffects`.
+- `RootNode` — top-level entry point (`Stamp(StampTarget, Tree)` or `Spawn(EntityKind, Tree)`). Used by chip/breaker/cell definitions.
+- `Trigger` — game events bridged from messages.
+- `Condition` — state predicates polled by `evaluate_conditions`.
+- `EffectCommandsExt` — extension trait on `Commands` with eight methods: `fire_effect`, `reverse_effect`, `route_effect`, `stamp_effect`, `stage_effect`, `remove_effect`, `remove_staged_effect`, `track_armed_fire`.
+
+### Dispatch layer (free functions, not enum methods)
+
+`fire_dispatch` (`effect_v3/dispatch/fire_dispatch.rs`) is a free function that pattern-matches on `EffectType` and calls the relevant `config.fire(entity, source, world)`:
 
 ```rust
-// effect/effects/speed_boost.rs
-
-// Active state (vec of applied multipliers on the entity)
-pub struct ActiveSpeedBoosts(pub Vec<f32>);
-
-impl ActiveSpeedBoosts {
-    // Consumers call this inline — no separate cache component
-    pub fn multiplier(&self) -> f32 { ... }
+pub fn fire_dispatch(effect: &EffectType, entity: Entity, source: &str, world: &mut World) {
+    match effect {
+        EffectType::SpeedBoost(config) => config.fire(entity, source, world),
+        // ... one arm per variant
+    }
 }
-
-// Fire: push multiplier onto the vec (inserts component if absent), then recalculate_velocity
-pub(crate) fn fire(entity: Entity, multiplier: f32, _source_chip: &str, world: &mut World) { ... }
-
-// Reverse: remove matching entry from the vec, then recalculate_velocity
-pub(crate) fn reverse(entity: Entity, multiplier: f32, _source_chip: &str, world: &mut World) { ... }
-
-// Self-registration: wires app systems (effects with no runtime systems may be empty)
-pub(crate) fn register(app: &mut App) { ... }
 ```
 
-`EffectKind` dispatches to each module via exhaustive match arms. `EffectV3Plugin::build()` calls `Fireable::register(app)` for all 30 effect configs and registers all trigger categories.
+`reverse_dispatch`, `fire_reversible_dispatch`, and `reverse_all_by_source_dispatch` (in `dispatch/reverse_dispatch/system.rs`) handle `ReversibleEffectType` analogously. The walker queues `FireEffectCommand` / `ReverseEffectCommand`; those commands call the dispatch functions inside `Command::apply` where `&mut World` is available.
 
-### Effect Dispatch via Commands Extension
+### Chain storage
 
-Effects are fired through `EffectCommandsExt` on `Commands`:
+Two components, both flat tuple vecs:
 
-- `commands.fire_effect(entity, effect, source_chip)` — queues `FireEffectCommand` → calls `effect.fire(entity, &source_chip, world)` at apply
-- `commands.reverse_effect(entity, effect, source_chip)` — queues `ReverseEffectCommand` → calls `effect.reverse(entity, &source_chip, world)` at apply
-- `commands.transfer_effect(entity, name, children, permanent, context)` — pushes non-Do children to `BoundEffects` (permanent) or `StagedEffects` (one-shot); fires Do children immediately; `context` carries trigger entity references for targeted `On` resolution
-- `commands.push_bound_effects(entity, effects)` — inserts `BoundEffects` + `StagedEffects` if absent, then appends pre-built `(String, EffectNode)` entries to `BoundEffects`; used by dispatch systems that bypass the chip-name routing in `transfer_effect`
+- **`BoundEffects(pub Vec<(String, Tree)>)`** — permanent entries that re-arm on every matching trigger. Removed only by `commands.remove_effect`, `Tree::Once` self-removal, or condition disarm.
+- **`StagedEffects(pub Vec<(String, Tree)>)`** — one-shot entries consumed when their top-level gate matches. Walker uses entry-specific `(name, tree)` tuple matching to consume the right entry without wiping fresh same-name stages queued during the same evaluation.
 
-### Chain Ownership Model
+There is no internal indexing by trigger/condition/source — chip counts per entity are small enough that linear scan plus structural enum equality is the right trade-off.
 
-Two effect stores serve different roles:
+### Until and During: state machines, not desugaring
 
-- **`BoundEffects`** — component on entities (`Vec<(String, EffectNode)>`). Permanent chains that re-evaluate on every matching trigger. Populated at chip dispatch and by `On(permanent: true)` redirects.
-- **`StagedEffects`** — component on entities (`Vec<(String, EffectNode)>`). One-shot chains consumed when matched. Populated by `On(permanent: false)` redirects and `Once` wrappers.
+`Tree::Until` is **not** desugared into other node types. `evaluate_until` queues an `UntilEvaluateCommand` that runs a small state machine inside `Command::apply`, using a per-entity `UntilApplied` component to track which sources have already fired. There is no `Reverse` node and no separate desugaring pass.
 
-**Until desugaring**: `Until` nodes are desugared by a dedicated system. Fires Do children immediately (via `fire_effect`), installs non-Do children into `BoundEffects`, then replaces itself with `When(trigger, [Reverse(effects, chains)])`. When the trigger fires, the Reverse node calls `reverse_effect` for each fired effect and removes chains from `BoundEffects`.
+`Tree::During` is similarly not desugared. `evaluate_during` queues a `DuringInstallCommand` that idempotently inserts the During into `BoundEffects` under a `#installed[0]` key. The `evaluate_conditions` poller (in `EffectV3Systems::Conditions`) iterates installed Durings every tick and fires/reverses scoped trees on transitions tracked by a `DuringActive` component.
+
+Both state machines call `reverse_dispatch` directly from inside their command/system rather than going through `commands.reverse_effect`, because they already hold `&mut World`.
+
+See `architecture/effects/` for the full breakdown:
+
+- `structure.md` — directory layout
+- `core_types.md` — type system reference
+- `node_types.md` — Tree variants and ScopedTree restrictions
+- `evaluation.md` — walker entry points and per-node evaluators
+- `until.md` — Until state machine and the four shapes
+- `conditions.md` — During poller and the four shapes
+- `commands.md` — EffectCommandsExt and concrete commands
+- `dispatch.md` — chip dispatch flow and spawn watchers
+- `ordering.md` — EffectV3Systems sets and FixedUpdate placement

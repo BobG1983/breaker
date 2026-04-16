@@ -1,31 +1,8 @@
 # TetherBeam
 
-Bolts connected by crackling neon beams that damage everything they intersect.
+Bolts connected by crackling neon beams that damage everything they intersect. Standard mode spawns two bolts with a connecting beam; chain mode tethers all active bolts in sequence.
 
-## Parameters
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `damage_mult` | `f32` | Damage multiplier for beam contact (1.x format) |
-| `chain` | `bool` | If true, tethers ALL active bolts in sequence instead of spawning 2 new ones |
-
-## Behavior
-
-### Standard mode (`chain: false`)
-
-Evolution of ChainBolt. Spawns two bolts that move freely (no distance constraint). A crackling neon/electric beam connects them visually. The beam is a line segment between the two bolt positions — any cell whose bounds intersect the beam segment takes damage each tick. Each cell is damaged at most once per tick. Players position both bolts to maximize diagonal beam sweep across cell clusters.
-
-### Chain mode (`chain: true`)
-
-Instead of spawning new bolts, tethers ALL existing active bolts in sequence: bolt 1→2→3→4 etc. Creates N-1 beam entities for N bolts. Beams form a chain connecting all bolts on the field.
-
-When a bolt is lost, the chain repairs (bolt 1→3→4 if bolt 2 dies). When a new bolt spawns, it joins the chain at the end.
-
-Bolts are ordered by spawn time for consistent chain topology.
-
-## Reversal
-
-No-op. Beam bolts/entities have their own lifecycle.
+For technical details (config struct, standard vs chain mode mechanics, fire behavior), see `docs/architecture/effects/effect_reference.md`.
 
 ## VFX
 
