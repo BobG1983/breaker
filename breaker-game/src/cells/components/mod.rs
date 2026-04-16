@@ -18,5 +18,8 @@ pub use crate::cells::behaviors::{
     phantom::components::{PhantomCell, PhantomConfig, PhantomPhase, PhantomTimer},
     regen::components::{NoRegen, Regen, RegenCell, RegenRate},
     sequence::components::{SequenceActive, SequenceCell, SequenceGroup, SequencePosition},
+    survival::components::{
+        BoltImmune, BumpVulnerable, SurvivalPattern, SurvivalTimer, SurvivalTurret,
+    },
     volatile::components::VolatileCell,
 };

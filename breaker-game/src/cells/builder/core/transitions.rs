@@ -11,7 +11,7 @@ use crate::cells::{
 use crate::{
     cells::{
         behaviors::{armored::components::ArmorDirection, phantom::components::PhantomPhase},
-        definition::Toughness,
+        definition::{AttackPattern, Toughness},
         resources::ToughnessConfig,
     },
     effect_v3::types::RootNode,
@@ -318,6 +318,36 @@ impl<P, D, H, V> CellBuilder<P, D, H, V> {
         self.optional
             .behaviors
             .push(CellBehavior::Magnetic { radius, strength });
+        self
+    }
+
+    /// Adds a survival turret behavior with the given pattern and
+    /// self-destruct timer.
+    ///
+    /// Test-only ergonomics — production cells acquire Survival behavior
+    /// via `.definition(&def)` from the RON definition's `behaviors:` field.
+    #[cfg(test)]
+    #[must_use]
+    pub(crate) fn survival(mut self, pattern: AttackPattern, timer_secs: f32) -> Self {
+        self.optional.behaviors.push(CellBehavior::Survival {
+            pattern,
+            timer_secs,
+        });
+        self
+    }
+
+    /// Adds a permanent survival turret behavior with the given pattern.
+    /// No self-destruct timer (boss variant).
+    ///
+    /// Test-only ergonomics — production cells acquire `SurvivalPermanent`
+    /// behavior via `.definition(&def)` from the RON definition's
+    /// `behaviors:` field.
+    #[cfg(test)]
+    #[must_use]
+    pub(crate) fn survival_permanent(mut self, pattern: AttackPattern) -> Self {
+        self.optional
+            .behaviors
+            .push(CellBehavior::SurvivalPermanent { pattern });
         self
     }
 

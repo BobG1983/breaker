@@ -195,6 +195,29 @@ fn spawn_inner(
             CellBehavior::Magnetic { radius, strength } => {
                 entity.insert((MagneticCell, MagneticField { radius, strength }));
             }
+            CellBehavior::Survival {
+                pattern,
+                timer_secs,
+            } => {
+                entity.insert((
+                    SurvivalTurret,
+                    SurvivalPattern(pattern),
+                    SurvivalTimer {
+                        remaining: timer_secs,
+                        started:   false,
+                    },
+                    BoltImmune,
+                    BumpVulnerable,
+                ));
+            }
+            CellBehavior::SurvivalPermanent { pattern } => {
+                entity.insert((
+                    SurvivalTurret,
+                    SurvivalPattern(pattern),
+                    BoltImmune,
+                    BumpVulnerable,
+                ));
+            }
         }
     }
 

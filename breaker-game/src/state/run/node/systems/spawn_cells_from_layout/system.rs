@@ -230,7 +230,9 @@ impl GridCellContext<'_> {
                         | CellBehavior::Sequence { .. }
                         | CellBehavior::Armored { .. }
                         | CellBehavior::Phantom { .. }
-                        | CellBehavior::Magnetic { .. } => None,
+                        | CellBehavior::Magnetic { .. }
+                        | CellBehavior::Survival { .. }
+                        | CellBehavior::SurvivalPermanent { .. } => None,
                     })
                 });
 

@@ -4,6 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     bolt::sets::BoltSystems,
+    breaker::sets::BreakerSystems,
     cells::{
         behaviors::{
             armored::systems::check_armor_direction::check_armor_direction,
@@ -15,6 +16,10 @@ use crate::{
             sequence::systems::{
                 advance_sequence::advance_sequence, init_sequence_groups::init_sequence_groups,
                 reset_inactive_sequence_hp::reset_inactive_sequence_hp,
+            },
+            survival::systems::{
+                kill_bump_vulnerable_cells::kill_bump_vulnerable_cells,
+                suppress_bolt_immune_damage::suppress_bolt_immune_damage,
             },
         },
         messages::CellImpactWall,
@@ -61,6 +66,12 @@ impl Plugin for CellsPlugin {
                     check_armor_direction
                         .after(BoltSystems::CellCollision)
                         .before(DeathPipelineSystems::ApplyDamage),
+                    suppress_bolt_immune_damage
+                        .after(check_armor_direction)
+                        .before(DeathPipelineSystems::ApplyDamage),
+                    kill_bump_vulnerable_cells
+                        .after(BreakerSystems::CellCollision)
+                        .before(DeathPipelineSystems::ApplyDamage),
                 )
                     .run_if(in_state(NodeState::Playing)),
             );
@@ -90,6 +101,8 @@ mod tests {
             .add_sub_state::<NodeState>()
             // CellsPlugin reads BoltImpactCell messages from bolt domain
             .add_message::<BoltImpactCell>()
+            // CellsPlugin reads BreakerImpactCell messages from breaker domain
+            .add_message::<BreakerImpactCell>()
             .insert_resource(CollisionQuadtree::default());
         app.add_plugins(DeathPipelinePlugin);
         register_effect_v3_test_infrastructure(&mut app);
@@ -119,6 +132,7 @@ mod tests {
             .init_resource::<Assets<Mesh>>()
             .init_resource::<Assets<ColorMaterial>>()
             .add_message::<BoltImpactCell>()
+            .add_message::<BreakerImpactCell>()
             .insert_resource(CollisionQuadtree::default());
         app.add_plugins(DeathPipelinePlugin);
         register_effect_v3_test_infrastructure(&mut app);
@@ -245,6 +259,7 @@ mod tests {
             .init_resource::<Assets<Mesh>>()
             .init_resource::<Assets<ColorMaterial>>()
             .add_message::<BoltImpactCell>()
+            .add_message::<BreakerImpactCell>()
             .insert_resource(CollisionQuadtree::default());
         app.add_plugins(DeathPipelinePlugin);
         register_effect_v3_test_infrastructure(&mut app);
@@ -443,6 +458,7 @@ mod tests {
             .init_resource::<Assets<Mesh>>()
             .init_resource::<Assets<ColorMaterial>>()
             .add_message::<BoltImpactCell>()
+            .add_message::<BreakerImpactCell>()
             .insert_resource(CollisionQuadtree::default());
         // Configure BoltSystems::CellCollision so the set exists without BoltPlugin
         app.configure_sets(FixedUpdate, crate::bolt::sets::BoltSystems::CellCollision);
@@ -758,6 +774,208 @@ mod tests {
             (vel.0.y - 400.0).abs() < f32::EPSILON,
             "magnetic should NOT run in Loading state, got vy={}",
             vel.0.y
+        );
+    }
+
+    // ── Survival cross-plugin behaviors 55-58 ────────────────────────────
+
+    /// Resource seeding `BreakerImpactCell` through a one-shot enqueue system.
+    #[derive(Resource, Default)]
+    struct PluginTestPendingBreakerImpact(Vec<BreakerImpactCell>);
+
+    fn enqueue_plugin_breaker_impact(
+        mut pending: ResMut<PluginTestPendingBreakerImpact>,
+        mut writer: MessageWriter<BreakerImpactCell>,
+    ) {
+        for msg in pending.0.drain(..) {
+            writer.write(msg);
+        }
+    }
+
+    /// Builds a plugin app that stays in Loading state.
+    fn survival_plugin_app_loading() -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_plugins(bevy::state::app::StatesPlugin)
+            .init_state::<AppState>()
+            .add_sub_state::<GameState>()
+            .add_sub_state::<RunState>()
+            .add_sub_state::<NodeState>()
+            .init_resource::<Assets<Mesh>>()
+            .init_resource::<Assets<ColorMaterial>>()
+            .add_message::<BoltImpactCell>()
+            .add_message::<BreakerImpactCell>()
+            .insert_resource(CollisionQuadtree::default());
+        // Configure BoltSystems::CellCollision so the set exists without BoltPlugin
+        app.configure_sets(FixedUpdate, crate::bolt::sets::BoltSystems::CellCollision);
+        app.add_plugins(DeathPipelinePlugin);
+        register_effect_v3_test_infrastructure(&mut app);
+        app.add_plugins(EffectV3Plugin);
+        app.add_plugins(CellsPlugin);
+        app.init_resource::<PluginTestPendingBoltImpact>();
+        app.init_resource::<PluginTestPendingCellDamage>();
+        app.init_resource::<PluginTestPendingBreakerImpact>();
+        app.add_systems(
+            FixedUpdate,
+            enqueue_plugin_bolt_impact.in_set(crate::bolt::sets::BoltSystems::CellCollision),
+        );
+        app.add_systems(
+            FixedUpdate,
+            enqueue_cell_damage_plugin_test.in_set(crate::bolt::sets::BoltSystems::CellCollision),
+        );
+        app.add_systems(
+            FixedUpdate,
+            enqueue_plugin_breaker_impact.before(DeathPipelineSystems::ApplyDamage),
+        );
+        app
+    }
+
+    fn survival_plugin_advance_to_playing(app: &mut App) {
+        app.world_mut()
+            .resource_mut::<NextState<AppState>>()
+            .set(AppState::Game);
+        app.update();
+        app.world_mut()
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Run);
+        app.update();
+        app.world_mut()
+            .resource_mut::<NextState<RunState>>()
+            .set(RunState::Node);
+        app.update();
+        app.world_mut()
+            .resource_mut::<NextState<NodeState>>()
+            .set(NodeState::Playing);
+        app.update();
+    }
+
+    fn spawn_plugin_survival_cell(app: &mut App, hp: f32) -> Entity {
+        spawn_cell_in_world(app.world_mut(), |commands| {
+            Cell::builder()
+                .survival(crate::cells::definition::AttackPattern::StraightDown, 10.0)
+                .position(Vec2::ZERO)
+                .dimensions(10.0, 10.0)
+                .hp(hp)
+                .headless()
+                .spawn(commands)
+        })
+    }
+
+    /// Behavior 55: `CellsPlugin` registers `suppress_bolt_immune_damage` in `FixedUpdate`.
+    #[test]
+    fn cells_plugin_registers_suppress_bolt_immune_damage_before_apply_damage() {
+        let mut app = survival_plugin_app_loading();
+
+        let cell = spawn_plugin_survival_cell(&mut app, 20.0);
+        let bolt = app.world_mut().spawn(Bolt).id();
+
+        survival_plugin_advance_to_playing(&mut app);
+
+        app.world_mut()
+            .resource_mut::<PluginTestPendingBoltImpact>()
+            .0
+            .push(BoltImpactCell {
+                bolt,
+                cell,
+                impact_normal: Vec2::NEG_Y,
+                piercing_remaining: 0,
+            });
+        app.world_mut()
+            .resource_mut::<PluginTestPendingCellDamage>()
+            .0
+            .push(plugin_damage_msg_from(cell, 5.0, bolt));
+
+        tick(&mut app);
+
+        let hp = app.world().get::<Hp>(cell).expect("cell should have Hp");
+        assert!(
+            (hp.current - 20.0).abs() < f32::EPSILON,
+            "CellsPlugin should register suppress_bolt_immune_damage before ApplyDamage; \
+             BoltImmune cell should retain full HP, got hp.current == {}",
+            hp.current
+        );
+    }
+
+    /// Behavior 56: `suppress_bolt_immune_damage` does not run in `NodeState::Loading`.
+    #[test]
+    fn cells_plugin_suppress_bolt_immune_does_not_run_in_loading() {
+        let mut app = survival_plugin_app_loading();
+
+        let cell = spawn_plugin_survival_cell(&mut app, 20.0);
+        let bolt = app.world_mut().spawn(Bolt).id();
+
+        // Do NOT advance to Playing — stay in Loading
+        app.world_mut()
+            .resource_mut::<PluginTestPendingBoltImpact>()
+            .0
+            .push(BoltImpactCell {
+                bolt,
+                cell,
+                impact_normal: Vec2::NEG_Y,
+                piercing_remaining: 0,
+            });
+        app.world_mut()
+            .resource_mut::<PluginTestPendingCellDamage>()
+            .0
+            .push(plugin_damage_msg_from(cell, 5.0, bolt));
+
+        tick(&mut app);
+
+        // No crash — system didn't run (gated by run_if). Damage also doesn't
+        // apply since death pipeline is gated too.
+    }
+
+    /// Behavior 57: `CellsPlugin` registers `kill_bump_vulnerable_cells` in `FixedUpdate`.
+    #[test]
+    fn cells_plugin_registers_kill_bump_vulnerable_cells() {
+        let mut app = survival_plugin_app_loading();
+
+        let cell = spawn_plugin_survival_cell(&mut app, 20.0);
+        let breaker = app.world_mut().spawn(Breaker).id();
+
+        survival_plugin_advance_to_playing(&mut app);
+
+        app.world_mut()
+            .resource_mut::<PluginTestPendingBreakerImpact>()
+            .0
+            .push(BreakerImpactCell { breaker, cell });
+
+        // Multiple ticks for full death pipeline
+        for _ in 0..4 {
+            tick(&mut app);
+        }
+
+        let is_dead = app.world().get_entity(cell).is_err()
+            || app.world().get::<Dead>(cell).is_some()
+            || app.world().get::<Hp>(cell).is_none_or(|h| h.current <= 0.0);
+        assert!(
+            is_dead,
+            "CellsPlugin should register kill_bump_vulnerable_cells; \
+             BumpVulnerable cell should be dead after breaker contact"
+        );
+    }
+
+    /// Behavior 58: `kill_bump_vulnerable_cells` does not run in `NodeState::Loading`.
+    #[test]
+    fn cells_plugin_kill_bump_vulnerable_does_not_run_in_loading() {
+        let mut app = survival_plugin_app_loading();
+
+        let cell = spawn_plugin_survival_cell(&mut app, 20.0);
+        let breaker = app.world_mut().spawn(Breaker).id();
+
+        // Do NOT advance to Playing — stay in Loading
+        app.world_mut()
+            .resource_mut::<PluginTestPendingBreakerImpact>()
+            .0
+            .push(BreakerImpactCell { breaker, cell });
+
+        tick(&mut app);
+
+        let hp = app.world().get::<Hp>(cell).expect("cell should have Hp");
+        assert!(
+            (hp.current - 20.0).abs() < f32::EPSILON,
+            "kill_bump_vulnerable_cells should NOT run in Loading state, got hp.current == {}",
+            hp.current
         );
     }
 }

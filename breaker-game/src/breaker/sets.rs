@@ -13,4 +13,6 @@ pub enum BreakerSystems {
     GradeBump,
     /// The `update_breaker_state` system — updates breaker state machine each tick.
     UpdateState,
+    /// The `breaker_cell_collision` system — detects breaker-cell overlap.
+    CellCollision,
 }

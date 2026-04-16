@@ -7,4 +7,4 @@ mod tests;
 
 #[cfg(test)]
 pub(crate) use data::GuardedBehavior;
-pub(crate) use data::{CellBehavior, CellTypeDefinition, Toughness};
+pub(crate) use data::{AttackPattern, CellBehavior, CellTypeDefinition, Toughness};

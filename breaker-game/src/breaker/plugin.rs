@@ -69,7 +69,9 @@ impl Plugin for BreakerPlugin {
                         .before(BreakerSystems::UpdateState),
                     trigger_bump_visual.after(update_bump),
                     // Collision detection for effect triggers
-                    breaker_cell_collision.after(BreakerSystems::Move),
+                    breaker_cell_collision
+                        .after(BreakerSystems::Move)
+                        .in_set(BreakerSystems::CellCollision),
                     breaker_wall_collision.after(BreakerSystems::Move),
                 )
                     .run_if(in_state(NodeState::Playing)),

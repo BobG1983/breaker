@@ -81,6 +81,15 @@ impl GuardedBehavior {
     }
 }
 
+/// Describes how a survival turret fires its salvos.
+#[derive(Deserialize, Serialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub(crate) enum AttackPattern {
+    /// Single projectile straight down.
+    StraightDown,
+    /// N projectiles in a downward cone (count >= 2).
+    Spread(u32),
+}
+
 /// Behavioral variants that can be attached to a cell type.
 ///
 /// Each variant represents a distinct runtime behavior. A cell type may have
@@ -115,6 +124,21 @@ pub(crate) enum CellBehavior {
     /// toward its center within `radius`. `strength` is the force
     /// coefficient for the inverse-square formula.
     Magnetic { radius: f32, strength: f32 },
+    /// Cell is a turret that periodically fires salvos. Self-destruct
+    /// timer starts on first shot. Bolt-immune: bolt collisions do not
+    /// deal damage. Bump-vulnerable: breaker collision deals lethal damage.
+    Survival {
+        /// Attack pattern (`StraightDown` or `Spread`(count)).
+        pattern:    AttackPattern,
+        /// Self-destruct timer in seconds.
+        timer_secs: f32,
+    },
+    /// Like Survival, but the turret never self-destructs — permanent
+    /// turret (boss variant). Still bolt-immune and bump-vulnerable.
+    SurvivalPermanent {
+        /// Attack pattern (`StraightDown` or `Spread`(count)).
+        pattern: AttackPattern,
+    },
 }
 
 /// A cell type definition loaded from RON.
@@ -209,6 +233,29 @@ impl CellTypeDefinition {
                             "Magnetic strength",
                             *strength,
                         )?;
+                    }
+                    CellBehavior::Survival {
+                        timer_secs,
+                        pattern,
+                    } => {
+                        crate::shared::validation::positive_finite_f32(
+                            "Survival timer_secs",
+                            *timer_secs,
+                        )?;
+                        if let AttackPattern::Spread(n) = pattern
+                            && *n < 2
+                        {
+                            return Err(format!("Survival Spread count must be >= 2, got {n}"));
+                        }
+                    }
+                    CellBehavior::SurvivalPermanent { pattern } => {
+                        if let AttackPattern::Spread(n) = pattern
+                            && *n < 2
+                        {
+                            return Err(format!(
+                                "SurvivalPermanent Spread count must be >= 2, got {n}"
+                            ));
+                        }
                     }
                 }
             }
