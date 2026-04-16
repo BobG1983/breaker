@@ -46,12 +46,11 @@ Chip cards and evolution offerings use rarity colors that are fixed and immediat
 | Rarity | Color | Treatment |
 |--------|-------|-----------|
 | Common | White/silver | Clean glow border, no special effects |
+| Uncommon | (TBD) | Moderately brighter glow |
 | Rare | Electric blue | Brighter glow, subtle pulse |
-| Epic | Magenta/violet | Vivid glow, slight shimmer |
-| Legendary | Gold/amber | Intense glow, particle aura, special card treatment |
 | Evolution | Prismatic/holographic | Multi-color shift, unique holographic shader (Balatro polychrome reference) |
 
-Legendary and Evolution rarities receive special visual treatments on their chip cards — see `ui-screens.md` for card styling details.
+Evolution rarity receives special visual treatment on chip cards — see `ui-screens.md` for card styling details.
 
 ## Additive Blending
 

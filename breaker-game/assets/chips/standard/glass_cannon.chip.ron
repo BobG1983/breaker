@@ -5,7 +5,7 @@
         prefix: "",
         effects: [
             Stamp(Bolt,
-                Fire(DamageBoost(DamageBoostConfig(multiplier: 2.0))),
+                Fire(DamageBoost(DamageBoostConfig(multiplier: 3.0))),
             ),
             Stamp(Breaker,
                 When(BoltLostOccurred,

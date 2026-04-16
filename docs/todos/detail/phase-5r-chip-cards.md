@@ -67,9 +67,8 @@ Each rarity tier has a distinct visual treatment applied to the card background 
 | Rarity | Border Color | Border Brightness | Background Tint | Special Effect |
 |--------|-------------|-------------------|-----------------|----------------|
 | Common | White/Silver | HDR ~0.8 (dim) | Near-transparent (alpha ~0.05) | None — clean and simple |
+| Uncommon | (TBD) | HDR ~1.0 | Near-transparent (alpha ~0.06) | Subtle glow |
 | Rare | Electric blue (CornflowerBlue/DodgerBlue) | HDR ~1.2 | Faint blue tint (alpha ~0.08) | Subtle pulse: `AlphaOscillation { min: 0.9, max: 1.1, frequency: 1.5 }` on border |
-| Epic | Magenta (Fuchsia/MediumOrchid) | HDR ~1.5 | Faint magenta tint (alpha ~0.1) | Shimmer wave: animated brightness traveling across card (a modifier or per-frame uniform update that scrolls a brightness peak across the card's UV space) |
-| Legendary | Gold (Gold/DarkGoldenrod) | HDR ~2.0, thicker border | Warm amber tint (alpha ~0.12) | Particle aura: `ParticleEmitter` with `Continuous { rate: 4.0 }` spawning dim gold glow motes drifting outward from card edges, long lifetime. Animated energy. |
 | Evolution | Prismatic shifting border | HDR ~2.0+ | HolographicMaterial background | Full holographic treatment via `holographic.wgsl` — color shifts with time, rainbow reflections. GlitchText rarity label. Border color cycles through spectral hues. |
 
 Rarity treatment is applied by the card builder function based on `ChipDefinition.rarity`.
@@ -168,16 +167,15 @@ Positions cards on screen based on the number of options:
 ## Dependencies
 
 - **Requires**: 5e (visuals domain — EntityGlowMaterial, HolographicMaterial, GlitchMaterial, Shape enum, Hue, GlowParams, modifier messages, PunchScale, FadeOut), 5j (modifier computation — for dynamic card effects; temperature palette for base color tinting)
-- **Enhanced by**: 5c (rantzsoft_particles2d — particle aura for Legendary cards, shard particles for timer-expired shatter, energy bursts), 5m (GlitchText — for Evolution rarity label treatment)
+- **Enhanced by**: 5c (rantzsoft_particles2d — shard particles for timer-expired shatter, energy bursts), 5m (GlitchText — for Evolution rarity label treatment)
 - **Required by**: 5p (screens — breaker select and run-end screens reference chip card visual patterns)
 
 ## Verification
 
 - Each rarity tier is visually distinct at a glance — a player can identify rarity without reading text
 - Common: clean, simple, white/silver border, no effects
+- Uncommon: slightly brighter glow (TBD treatment)
 - Rare: blue border, subtle pulse
-- Epic: magenta border, shimmer wave
-- Legendary: gold thick border, particle aura around edges
 - Evolution: holographic prismatic background, shifting border, GlitchText label
 - Abstract symbol icons correctly represent effect categories
 - Timer pressure visualization escalates correctly at 50%, 25%, 10%, and 0% thresholds

@@ -13,13 +13,13 @@ Key architecture changes from the LEGACY plan:
 - **Visual types from visuals/ domain** (5e) — Hue, GlowParams, VisualModifier, ModifierStack.
 - **DR-9 corrections**:
   - Entropy Engine has no counter gauge (mechanic has no counter). VFX is prismatic flash per cell destroy, then selected random effect fires. Bolt has persistent prismatic shimmer.
-  - "Chain Reaction" and "Feedback Loop" in the old mapping refer to the evolution names Shock Chain and Circuit Breaker respectively (Chain Reaction and Feedback Loop are ingredient chip names).
+  - "Chain Reaction" in the old mapping refers to the evolution Shock Chain (Chain Reaction is an ingredient chip name).
 - **Unimplemented mechanics**: Shock Chain's recursive shockwave mechanic exists in RON but the recursive kill-triggers-more-shockwaves behavior may not be fully wired. Circuit Breaker's `CircuitBreaker` effect leaf exists in RON. Both have RON files — whether the underlying mechanics are complete is a Phase 7 concern. VFX should work with whatever the mechanic produces.
 
 Current RON files:
 - `chain_reaction.evolution.ron` (name: "Shock Chain"): CellDestroyed -> `Do(Shockwave(base_range: 64.0, stacks: 1, speed: 400.0))` — Ingredients: Chain Reaction x1 + Aftershock x2 + Cascade x2
 - `split_decision.evolution.ron` (name: "Split Decision"): CellDestroyed -> `Do(SpawnBolts(count: 2, inherit: true))` — Ingredients: Splinter x2 + Piercing Shot x2
-- `circuit_breaker.evolution.ron` (name: "Circuit Breaker"): PerfectBumped -> `Do(CircuitBreaker(bumps_required: 3, spawn_count: 1, inherit: true, shockwave_range: 160.0, shockwave_speed: 500.0))` — Ingredients: Feedback Loop x1 + Bump Force x2
+- `circuit_breaker.evolution.ron` (name: "Circuit Breaker"): PerfectBumped -> `Do(CircuitBreaker(bumps_required: 3, spawn_count: 1, inherit: true, shockwave_range: 160.0, shockwave_speed: 500.0))` — Ingredients: Overclock x1 + Bump Force x2
 - `entropy_engine.evolution.ron` (name: "Entropy Engine"): CellDestroyed -> `Do(EntropyEngine(max_effects: 3, pool: [...]))` — Ingredients: Cascade x2 + Flux x2
 
 ## Evolutions in This Batch

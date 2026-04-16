@@ -15,7 +15,7 @@
         ),
     ],
     ingredients: [
-        (chip_name: "Feedback Loop", stacks_required: 1),
+        (chip_name: "Overclock", stacks_required: 1),
         (chip_name: "Bump Force", stacks_required: 2),
     ],
 )

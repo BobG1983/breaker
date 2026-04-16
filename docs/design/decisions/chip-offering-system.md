@@ -5,7 +5,7 @@
 ## Model
 
 - Chip offerings are drawn from a weighted pool using the run seed + node index
-- Each chip has a rarity tier: Common, Uncommon, Rare, Legendary
+- Each chip has a rarity tier: Common, Uncommon, Rare
 - Rarity affects both offering weight (how often it appears) AND stats (rarer = stronger per-stack)
 - 3 chips offered per node (pick 1 of 3)
 - No duplicate chips within a single offering
@@ -19,7 +19,6 @@
 | Common | High | Baseline |
 | Uncommon | Medium | Moderate boost |
 | Rare | Low | Strong boost |
-| Legendary | Very low | Powerful |
 
 Exact weights are RON-configurable and will be tuned during playtesting.
 

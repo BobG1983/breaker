@@ -43,9 +43,8 @@ Cards have a **"cyber chip" outline** — not a standard rectangle. Think: circu
 | Rarity | Border | Background | Special Effect |
 |--------|--------|------------|----------------|
 | Common | White/silver glow line | Near-transparent | None |
+| Uncommon | (TBD) | Near-transparent | Subtle glow |
 | Rare | Electric blue glow line | Faint blue tint | Subtle pulse animation |
-| Epic | Magenta glow line | Faint magenta tint | Shimmer animation (brightness wave travels across card) |
-| Legendary | Gold glow line, thicker | Warm amber tint | Particle aura around card edges, animated energy |
 | Evolution | Prismatic/holographic shifting border | Holographic background shader (Balatro polychrome reference) | Full holographic treatment — color shifts with viewing angle / cursor position, rainbow reflections |
 
 ### Selection State

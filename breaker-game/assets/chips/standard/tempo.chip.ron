@@ -31,7 +31,10 @@
             Stamp(EveryBolt,
                 When(Bumped,
                     Until(BumpWhiffOccurred,
-                        Fire(SpeedBoost(SpeedBoostConfig(multiplier: 1.2))),
+                        Sequence([
+                            SpeedBoost(SpeedBoostConfig(multiplier: 1.2)),
+                            DamageBoost(DamageBoostConfig(multiplier: 1.15)),
+                        ]),
                     ),
                 ),
             ),

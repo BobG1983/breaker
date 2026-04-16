@@ -21,9 +21,9 @@ Bolt spawn is the Rare payoff. Lower tiers just get speed on bolt-lost.
 |--------|--------|---------|
 | Common | Minor | SizeBoost(0.85) + DamageBoost(1.3) + SpeedBoost(1.1) |
 | Uncommon | Keen | SizeBoost(0.8) + DamageBoost(1.5) + SpeedBoost(1.2) |
-| Rare | | SizeBoost(0.7) + DamageBoost(2.0) + SpeedBoost(1.3) |
+| Rare | | SizeBoost(0.7) + DamageBoost(2.0) + SpeedBoost(1.3) + Piercing(1) |
 
-Progressive shrink with progressive power. "Small fast hard-hitter" fantasy scales well.
+Progressive shrink with progressive power. "Small fast hard-hitter" fantasy scales well. Rare Piercing rider opens the cell-drill build (stacks with Piercing Shot).
 
 ### Parry — 3 tiers, max_taken: 3
 
@@ -31,9 +31,9 @@ Progressive shrink with progressive power. "Small fast hard-hitter" fantasy scal
 |--------|--------|---------|
 | Common | Minor | PerfectBump → Shield(duration: 1.5, reflection_cost: 0.5) |
 | Uncommon | Keen | PerfectBump → Shield(duration: 2.0, reflection_cost: 0.5) |
-| Rare | | PerfectBump → Shield(duration: 3.0, reflection_cost: 0.5) |
+| Rare | | PerfectBump → Shield(duration: 3.0, reflection_cost: 0.5) + pushes a staged Once(Impacted(Cell) → Shockwave(range: 32, speed: 400)) onto the bumped bolt |
 
-Progressive shield duration. Shockwave dropped (was the legendary bonus).
+Progressive shield duration. Rare also routes a one-shot shockwave-on-next-cell-impact to the bumped bolt — perfect bump becomes defensive AND offensive.
 
 ### Powder Keg — 3 tiers, max_taken: 3
 
@@ -61,25 +61,25 @@ Single arc at lower tiers. Rare gets 2 arcs. Progressive chain reach.
 |--------|--------|---------|
 | Common | Minor | Bumped → Until(BumpWhiff) → SpeedBoost(1.08) |
 | Uncommon | Keen | Bumped → Until(BumpWhiff) → SpeedBoost(1.12) |
-| Rare | | Bumped → Until(BumpWhiff) → SpeedBoost(1.2) |
+| Rare | | Bumped → Until(BumpWhiff) → SpeedBoost(1.2) + DamageBoost(1.15) |
 
-Progressive speed reward. The "maintain your streak" mechanic is the same at every tier.
+Progressive speed reward. Rare combo also applies a damage multiplier — whiffing loses both speed AND damage, raising the skill ceiling.
 
 ### Glass Cannon — Rare only, max_taken: 1
 
 | Rarity | Prefix | Effects |
 |--------|--------|---------|
-| Rare | | DamageBoost(2.0) + bolt-lost → LoseLife |
+| Rare | | DamageBoost(3.0) + bolt-lost → LoseLife |
 
-Risk/reward tradeoff doesn't scale well at lower tiers. Rare-only. Not stackable — double life loss is suicide.
+Risk/reward tradeoff doesn't scale well at lower tiers. Rare-only. Not stackable — double life loss is suicide. Damage multiplier kept at 3.0 so the life-loss penalty actually feels justified.
 
 ### Chain Reaction — Rare only, max_taken: 1
 
 | Rarity | Prefix | Effects |
 |--------|--------|---------|
-| Rare | | cell destroyed → cell destroyed → SpawnBolts(lifespan: 3.0) |
+| Rare | | cell destroyed → cell destroyed → SpawnBolts(lifespan: None) |
 
-Recursive chain identity can't be simplified. Rare-only. Not stackable — recursive spawning is already exponential.
+Recursive chain identity can't be simplified. Rare-only. Not stackable — recursive spawning is already exponential. No lifespan — trust the double-trigger structure to keep the chain scoped.
 
 ## Chips Cut (3)
 

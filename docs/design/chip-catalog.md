@@ -15,7 +15,6 @@ Effects are shown in condensed RON syntax matching the actual `.chip.ron` files.
 | Common | Weak adjective (Basic, Minor, Slight) |
 | Uncommon | Moderate adjective (Keen, Potent, Sturdy) |
 | Rare | Strong adjective (Brutal, Savage, Lethal) |
-| Legendary | Unique proper name |
 
 ## Passive Chips
 
@@ -244,93 +243,99 @@ Spawn tiny temporary bolts on cell destruction. Parent bolt shrinks as a trade-o
 
 `max_taken: 2`
 
-## Legendaries
-
-All legendaries are `max_taken: 1`. Template has only the `legendary` slot filled.
-
-### Ricochet Protocol
-Wall-bank damage boost until next cell hit.
-
-| Rarity | Effects | Design Notes |
-|--------|---------|-------------|
-| Legendary | `On(Bolt) → When(Impacted(Wall)) → Until(Impacted(Cell)) → Do(DamageBoost(3.0))` | Wall bounce grants 3x damage until next cell hit. Rewards precise wall-bank shots. |
+## Rare-Only Named Chips
 
 ### Glass Cannon
-Doubled damage, smaller bolt.
+2x damage but bolt is lost instead of bouncing on the floor (Rare only, `max_taken: 1`).
 
 | Rarity | Effects | Design Notes |
 |--------|---------|-------------|
-| Legendary | `On(Bolt) → Do(DamageBoost(2.0)), Do(SizeBoost(0.7))` | 2x damage but 0.7x bolt size. High risk / high reward. |
-
-### Desperation
-Breaker speeds up when a bolt is lost.
-
-| Rarity | Effects | Design Notes |
-|--------|---------|-------------|
-| Legendary | `On(Breaker) → When(BoltLost) → Do(SpeedBoost(multiplier: 2.0))` | 2x breaker speed on bolt loss. Snowballing risk/reward. |
-
-### Deadline
-Timer pressure = bolt speed.
-
-| Rarity | Effects | Design Notes |
-|--------|---------|-------------|
-| Legendary | `On(Bolt) → When(NodeTimerThreshold(0.25)) → Do(SpeedBoost(multiplier: 2.0))` | When timer drops below 25%, bolt speed 2x. Rewards playing on the edge. |
-
-### Whiplash
-Whiff redemption — miss a bump, but the next cell impact gets bonus damage + shockwave.
-
-| Rarity | Effects | Design Notes |
-|--------|---------|-------------|
-| Legendary | `On(Bolt) → When(BumpWhiff) → When(Impacted(Cell)) → Once([Do(DamageBoost(2.5))]), Do(Shockwave(base_range: 64, speed: 500))` | Turns whiffs into comebacks. DamageBoost fires once via `Once`, shockwave fires every time. |
-
-### Singularity
-Small bolt, big damage, fast.
-
-| Rarity | Effects | Design Notes |
-|--------|---------|-------------|
-| Legendary | `On(Bolt) → Do(SizeBoost(0.6)), Do(DamageBoost(2.5)), Do(SpeedBoost(multiplier: 1.4))` | Tiny bolt that hits like a truck. Hard to control, massive payoff. |
-
-### Gauntlet
-Large bolt, fast, weak hits.
-
-| Rarity | Effects | Design Notes |
-|--------|---------|-------------|
-| Legendary | `On(Bolt) → Do(SizeBoost(1.5)), Do(SpeedBoost(multiplier: 1.4)), Do(DamageBoost(0.5))` | 1.5x bolt size, 40% faster, but 0.5x damage. Safety-focused build-around. |
+| Rare | `On(Bolt) → Do(DamageBoost(2.0)), On(Breaker) → When(BoltLost) → Do(LoseLife)` | Risk/reward — can't stack, losing the bolt costs a life directly. |
 
 ### Chain Reaction
-Recursive destruction — nested cell destruction triggers spawn bolts.
+Recursive destruction — nested cell destruction triggers spawn temporary bolts (Rare only, `max_taken: 1`).
 
 | Rarity | Effects | Design Notes |
 |--------|---------|-------------|
-| Legendary | `On(Bolt) → When(DestroyedCell) → When(DestroyedCell) → Do(SpawnBolts())` | Cells destroyed by effects (shockwaves, chain lightning) from a cell destruction trigger spawn bolts. Requires an external destruction source to start the chain. |
+| Rare | `On(Bolt) → When(DestroyedCell) → When(DestroyedCell) → Do(SpawnBolts(lifespan: 3.0))` | Cells destroyed by effects (shockwaves, chain lightning) from a cell destruction trigger spawn bolts. Requires an external destruction source to start the chain. |
 
-### Feedback Loop
-Perfect bump → cell impact → cell destruction → timed speed burst.
+## Multi-Tier Named Chips
 
-| Rarity | Effects | Design Notes |
-|--------|---------|-------------|
-| Legendary | `On(Bolt) → When(PerfectBumped) → When(Impacted(Cell)) → When(DestroyedCell) → Until(TimeExpires(3.0)) → Do(SpeedBoost(multiplier: 1.5))` | Deep trigger chain rewards a full precision sequence with a 3s speed burst. |
+The following chips were formerly Legendary-only and have been retuned as multi-tier chips. All use `max_taken: 3` and standard prefixes (Common = "Minor", Uncommon = "Keen", Rare = "").
+
+### Desperation
+Breaker speeds up (and at Rare, spawns a bolt) when a bolt is lost.
+
+| Rarity | Effects |
+|--------|---------|
+| Common (Minor) | `On(Breaker) → When(BoltLost) → Do(SpeedBoost(multiplier: 1.2))` |
+| Uncommon (Keen) | `On(Breaker) → When(BoltLost) → Do(SpeedBoost(multiplier: 1.3))` |
+| Rare | `On(Breaker) → When(BoltLost) → Do(SpeedBoost(multiplier: 1.5)), Do(SpawnBolts(count: 1, inherit: true))` |
+
+`max_taken: 3`
+
+### Singularity
+Small bolt, escalating damage and speed per tier.
+
+| Rarity | Effects |
+|--------|---------|
+| Common (Minor) | `On(Bolt) → Do(SizeBoost(0.85)), Do(DamageBoost(1.3)), Do(SpeedBoost(multiplier: 1.1))` |
+| Uncommon (Keen) | `On(Bolt) → Do(SizeBoost(0.8)), Do(DamageBoost(1.5)), Do(SpeedBoost(multiplier: 1.2))` |
+| Rare | `On(Bolt) → Do(SizeBoost(0.7)), Do(DamageBoost(2.0)), Do(SpeedBoost(multiplier: 1.3))` |
+
+`max_taken: 3`
 
 ### Parry
-Perfect bump grants breaker immunity + all bolts emit shockwaves.
+Perfect bump grants timed shield. Progressive duration; shockwave bonus removed.
 
-| Rarity | Effects | Design Notes |
-|--------|---------|-------------|
-| Legendary | `On(Breaker) → When(PerfectBump) → Do(Shield(duration: 5.0))` + `On(AllBolts) → When(PerfectBump) → Do(Shockwave(base_range: 64, speed: 500))` | Two On targets: perfect bump spawns a timed floor wall, every bolt shockwaves. Rewards precision with brief invulnerability + area damage burst. |
+| Rarity | Effects |
+|--------|---------|
+| Common (Minor) | `On(Breaker) → When(PerfectBump) → Do(Shield(duration: 1.5, reflection_cost: 0.5))` |
+| Uncommon (Keen) | `On(Breaker) → When(PerfectBump) → Do(Shield(duration: 2.0, reflection_cost: 0.5))` |
+| Rare | `On(Breaker) → When(PerfectBump) → Do(Shield(duration: 3.0, reflection_cost: 0.5))` |
+
+`max_taken: 3`
 
 ### Powder Keg
-Cells hit by the bolt explode on death. Uses `Explode` effect *(not yet implemented)*.
+Cells hit by the bolt explode on death. Progressive range and damage.
 
-| Rarity | Effects | Design Notes |
-|--------|---------|-------------|
-| Legendary | `On(Bolt) → When(Impacted(Cell)) → On(Cell) → When(Died) → Do(Explode(range: 48, damage_mult: 1.0))` | Nested On: targets the impacted cell, arms a Died trigger on it. When that cell dies, instant area damage. Chain explosions possible if Explode kills adjacent cells that also have armed Died triggers. |
+| Rarity | Effects |
+|--------|---------|
+| Common (Minor) | `On(Bolt) → When(Impacted(Cell)) → On(Cell) → When(Died) → Do(Explode(range: 24, damage: 4))` |
+| Uncommon (Keen) | `On(Bolt) → When(Impacted(Cell)) → On(Cell) → When(Died) → Do(Explode(range: 28, damage: 6))` |
+| Rare | `On(Bolt) → When(Impacted(Cell)) → On(Cell) → When(Died) → Do(Explode(range: 36, damage: 8))` |
+
+`max_taken: 3`
+
+### Death Lightning
+Cell death arcs chain lightning to nearby cells. Progressive range and arc count.
+
+| Rarity | Effects |
+|--------|---------|
+| Common (Minor) | `On(Bolt) → When(DestroyedCell) → Do(ChainLightning(arcs: 1, range: 32, damage_mult: 0.5))` |
+| Uncommon (Keen) | `On(Bolt) → When(DestroyedCell) → Do(ChainLightning(arcs: 1, range: 40, damage_mult: 0.7))` |
+| Rare | `On(Bolt) → When(DestroyedCell) → Do(ChainLightning(arcs: 2, range: 48, damage_mult: 0.8))` |
+
+`max_taken: 3`
 
 ### Tempo
-Speed ramps on consecutive bumps, whiff removes all boosts.
+Speed ramps on consecutive bumps; whiff strips all stacks.
 
-| Rarity | Effects | Design Notes |
-|--------|---------|-------------|
-| Legendary | `On(AllBolts) → When(Bumped) → Until(BumpWhiff) → Do(SpeedBoost(multiplier: 1.2))` | Each bump adds a 1.2x speed layer to the bumped bolt. Whiff strips all layers from all bolts. High-skill momentum legendary — consecutive perfect play builds devastating speed. |
+| Rarity | Effects |
+|--------|---------|
+| Common (Minor) | `On(AllBolts) → When(Bumped) → Until(BumpWhiff) → Do(SpeedBoost(multiplier: 1.08))` |
+| Uncommon (Keen) | `On(AllBolts) → When(Bumped) → Until(BumpWhiff) → Do(SpeedBoost(multiplier: 1.12))` |
+| Rare | `On(AllBolts) → When(Bumped) → Until(BumpWhiff) → Do(SpeedBoost(multiplier: 1.2))` |
+
+`max_taken: 3`
+
+## Chips Promoted to Protocols
+
+Ricochet Protocol and Deadline were formerly Legendary chips. They are now protocols and no longer appear in the chip pool. See `docs/design/decisions/chip-rarity-rework.md` and the protocol system design for their current definitions.
+
+## Chips Removed
+
+Whiplash, Gauntlet, and Feedback Loop have been cut from the game entirely.
 
 ## Evolutions
 
