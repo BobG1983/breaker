@@ -177,6 +177,21 @@ fn spawn_inner(
             CellBehavior::Armored { value, facing } => {
                 entity.insert((ArmoredCell, ArmorValue(value), ArmorFacing(facing)));
             }
+            CellBehavior::Phantom {
+                cycle_secs,
+                telegraph_secs,
+                starting_phase,
+            } => {
+                let config = PhantomConfig {
+                    cycle_secs,
+                    telegraph_secs,
+                };
+                let timer = PhantomTimer(config.duration_for(starting_phase));
+                entity.insert((PhantomCell, starting_phase, timer, config));
+                if starting_phase == PhantomPhase::Ghost {
+                    entity.insert(CollisionLayers::new(0, 0));
+                }
+            }
         }
     }
 

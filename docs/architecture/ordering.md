@@ -125,6 +125,10 @@ tick_birthing                            [bolt domain — lerps Scale2D from zer
   .run_if(in_state(NodeState::AnimateIn).or(in_state(NodeState::Playing)))
   [unordered — runs independently of physics chain]
 
+tick_phantom_phase                         [cells domain — cycles Solid->Telegraph->Ghost phases; zeroes/restores CollisionLayers on Ghost/Solid transitions]
+  .run_if(in_state(NodeState::Playing))
+  [unordered — no data dependencies with collision or death pipeline]
+
 dispatch_bolt_effects .before(EffectV3Systems::Bridge)
   [bolt domain — processes Added<BoltDefinitionRef> each FixedUpdate tick]
 

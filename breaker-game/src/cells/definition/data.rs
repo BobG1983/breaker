@@ -3,7 +3,10 @@
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::{cells::behaviors::armored::components::ArmorDirection, effect_v3::types::RootNode};
+use crate::{
+    cells::behaviors::{armored::components::ArmorDirection, phantom::components::PhantomPhase},
+    effect_v3::types::RootNode,
+};
 
 /// Categorizes cell durability with a fallback base HP method.
 ///
@@ -101,6 +104,13 @@ pub(crate) enum CellBehavior {
     /// closed range `1..=3` (validated at RON load time); `facing` defaults
     /// to `ArmorDirection::Bottom` at the builder layer.
     Armored { value: u8, facing: ArmorDirection },
+    /// Cell cycles through Solid, Telegraph, and Ghost phases, becoming
+    /// intangible (collision layers zeroed) during the Ghost phase.
+    Phantom {
+        cycle_secs:     f32,
+        telegraph_secs: f32,
+        starting_phase: PhantomPhase,
+    },
 }
 
 /// A cell type definition loaded from RON.
@@ -176,6 +186,18 @@ impl CellTypeDefinition {
                         if *value == 0 || *value > 3 {
                             return Err(format!("Armored value must be in 1..=3, got {value}"));
                         }
+                    }
+                    CellBehavior::Phantom {
+                        cycle_secs,
+                        telegraph_secs,
+                        ..
+                    } => {
+                        use crate::cells::behaviors::phantom::components::PhantomConfig;
+                        PhantomConfig {
+                            cycle_secs:     *cycle_secs,
+                            telegraph_secs: *telegraph_secs,
+                        }
+                        .validate()?;
                     }
                 }
             }

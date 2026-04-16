@@ -228,7 +228,8 @@ impl GridCellContext<'_> {
                         CellBehavior::Regen { .. }
                         | CellBehavior::Volatile { .. }
                         | CellBehavior::Sequence { .. }
-                        | CellBehavior::Armored { .. } => None,
+                        | CellBehavior::Armored { .. }
+                        | CellBehavior::Phantom { .. } => None,
                     })
                 });
 

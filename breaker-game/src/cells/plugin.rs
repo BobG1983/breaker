@@ -9,6 +9,7 @@ use crate::{
             armored::systems::check_armor_direction::check_armor_direction,
             guarded::systems::slide_guardian_cells,
             locked::systems::{check_lock_release, sync_lock_invulnerable::sync_lock_invulnerable},
+            phantom::systems::tick_phantom_phase,
             regen::systems::tick_cell_regen,
             sequence::systems::{
                 advance_sequence::advance_sequence, init_sequence_groups::init_sequence_groups,
@@ -45,6 +46,7 @@ impl Plugin for CellsPlugin {
                     check_lock_release.after(DeathPipelineSystems::HandleKill),
                     sync_lock_invulnerable.after(check_lock_release),
                     tick_cell_regen,
+                    tick_phantom_phase,
                     slide_guardian_cells,
                     cell_wall_collision,
                     update_cell_damage_visuals
@@ -528,6 +530,98 @@ mod tests {
             hp.current
         );
         assert!(app.world().get::<Dead>(cell).is_none());
+    }
+
+    // ── Phantom cross-plugin behavior 43 ──────────────────────────
+
+    use crate::cells::behaviors::phantom::components::{
+        PhantomCell as PhantomCellMarker, PhantomConfig, PhantomPhase, PhantomTimer,
+    };
+
+    /// Behavior 43: `CellsPlugin` registers `tick_phantom_phase` in
+    /// `FixedUpdate` with `run_if(NodeState::Playing)`.
+    #[test]
+    fn cells_plugin_registers_tick_phantom_phase_in_fixed_update() {
+        let mut app = sequence_plugin_app_loading();
+
+        // Spawn a phantom cell with timer about to expire
+        let entity = app
+            .world_mut()
+            .spawn((
+                Cell,
+                PhantomCellMarker,
+                PhantomPhase::Solid,
+                PhantomTimer(0.01),
+                PhantomConfig {
+                    cycle_secs:     3.0,
+                    telegraph_secs: 0.5,
+                },
+                CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
+                Hp::new(20.0),
+                KilledBy::default(),
+            ))
+            .id();
+
+        sequence_plugin_advance_to_playing(&mut app);
+        tick(&mut app);
+
+        let phase = app
+            .world()
+            .get::<PhantomPhase>(entity)
+            .expect("entity should have PhantomPhase");
+        assert_eq!(
+            *phase,
+            PhantomPhase::Telegraph,
+            "CellsPlugin should register tick_phantom_phase; Solid phase with expired timer should transition to Telegraph"
+        );
+
+        let timer = app.world().get::<PhantomTimer>(entity).unwrap();
+        assert!(
+            (timer.0 - 0.5).abs() < f32::EPSILON,
+            "timer should reset to Telegraph duration 0.5, got {}",
+            timer.0
+        );
+    }
+
+    /// Behavior 43 edge (control): same setup but app stays in
+    /// `NodeState::Loading` — timer does NOT decrement, phase does NOT change.
+    #[test]
+    fn cells_plugin_phantom_does_not_tick_in_loading_state() {
+        let mut app = sequence_plugin_app_loading();
+
+        let entity = app
+            .world_mut()
+            .spawn((
+                Cell,
+                PhantomCellMarker,
+                PhantomPhase::Solid,
+                PhantomTimer(0.01),
+                PhantomConfig {
+                    cycle_secs:     3.0,
+                    telegraph_secs: 0.5,
+                },
+                CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
+                Hp::new(20.0),
+                KilledBy::default(),
+            ))
+            .id();
+
+        // Do NOT advance to playing — tick in Loading state
+        tick(&mut app);
+
+        let phase = app.world().get::<PhantomPhase>(entity).unwrap();
+        assert_eq!(
+            *phase,
+            PhantomPhase::Solid,
+            "phantom should NOT tick in Loading state — phase should remain Solid"
+        );
+
+        let timer = app.world().get::<PhantomTimer>(entity).unwrap();
+        assert!(
+            (timer.0 - 0.01).abs() < f32::EPSILON,
+            "timer should NOT decrement in Loading state, should remain 0.01, got {}",
+            timer.0
+        );
     }
 
     /// Behavior 27 edge (control): weak face hit passes through, proving

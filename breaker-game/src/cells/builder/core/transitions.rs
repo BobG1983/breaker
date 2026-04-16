@@ -10,7 +10,8 @@ use crate::cells::{
 #[cfg(test)]
 use crate::{
     cells::{
-        behaviors::armored::components::ArmorDirection, definition::Toughness,
+        behaviors::{armored::components::ArmorDirection, phantom::components::PhantomPhase},
+        definition::Toughness,
         resources::ToughnessConfig,
     },
     effect_v3::types::RootNode,
@@ -300,6 +301,42 @@ impl<P, D, H, V> CellBuilder<P, D, H, V> {
         self.optional
             .behaviors
             .push(CellBehavior::Armored { value, facing });
+        self
+    }
+
+    /// Adds a phantom behavior with default timing (`cycle_secs=3.0`,
+    /// `telegraph_secs=0.5`) and the given starting phase.
+    ///
+    /// Test-only ergonomics — production cells acquire Phantom behavior via
+    /// `.definition(&def)` from the RON definition's `behaviors:` field.
+    #[cfg(test)]
+    #[must_use]
+    pub(crate) fn phantom(mut self, starting_phase: PhantomPhase) -> Self {
+        self.optional.behaviors.push(CellBehavior::Phantom {
+            cycle_secs: 3.0,
+            telegraph_secs: 0.5,
+            starting_phase,
+        });
+        self
+    }
+
+    /// Adds a phantom behavior with explicit timing and starting phase.
+    ///
+    /// Test-only ergonomics — production cells acquire Phantom behavior via
+    /// `.definition(&def)` from the RON definition's `behaviors:` field.
+    #[cfg(test)]
+    #[must_use]
+    pub(crate) fn phantom_config(
+        mut self,
+        cycle_secs: f32,
+        telegraph_secs: f32,
+        starting_phase: PhantomPhase,
+    ) -> Self {
+        self.optional.behaviors.push(CellBehavior::Phantom {
+            cycle_secs,
+            telegraph_secs,
+            starting_phase,
+        });
         self
     }
 }
