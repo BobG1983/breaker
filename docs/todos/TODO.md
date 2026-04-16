@@ -2,8 +2,7 @@
 
 ## Backlog
 
-1. **[in-progress]** Split oversized files (8 HIGH, 15 MEDIUM) — [detail](detail/2026-04-16-file-splits.md)
-2. **[ready]** Legendary rarity removal — retune 8 as Rare (6 with Common/Uncommon tiers), cut 3, promote 2 to protocols, remove Anchor evolution — [detail](detail/legendary-removal.md)
+1. **[ready]** Legendary rarity removal — retune 8 as Rare (6 with Common/Uncommon tiers), cut 3, promote 2 to protocols, remove Anchor evolution — [detail](detail/legendary-removal.md)
 3. **[ready]** Protocol & hazard system — 15 protocols, 16 hazards, interface design, 31 per-item implementation guides, 10-wave plan — [detail](detail/mod-system-design/mod-system-design.md)
 4. **[ready]** Node sequencing refactor — per-tier batching, volatile nodes, portal cells, frame/block generation, RNG architecture — [detail](detail/node-sequencing-refactor/node-sequencing-refactor.md)
 5. **[ready]** Split spawn_cells_from_layout into separate concerns (grid geometry, lock resolution, entity spawning) — [detail](detail/split-spawn-cells-from-layout.md)

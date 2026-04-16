@@ -30,3 +30,4 @@
 - ~~Split oversized effect_v3 files~~ — 33 files split via Strategy A test extraction. Added TestAppBuilder.with_effects_pipeline(). Merged via refactor/effect-v3-file-splits-and-test-migration.
 - ~~Effect v3 test migration~~ — Migrated integration test helpers to use with_effects_pipeline(). TestAppBuilder pattern standardized across death pipeline + bolt lifespan tests.
 - ~~New cell modifiers~~ — 7 modifiers (Volatile, Sequence, Armored, Phantom, Magnetic, Survival, Portal). EntityKind::Salvo + death/impact bridges. Breaker schema: bolt_lost + salvo_hit required fields. Inverse-square refactor for attraction/gravity_well. Portal uses mock completion (PortalEntered→PortalCompleted); real sub-node wiring deferred to node refactor.
+- ~~Split oversized files (8 HIGH)~~ — 8 test files split into sub-directories: cells/definition, cells/plugin, cells/resources, shape_d, impact/death bridges, basic_until, until_during. All under 400 lines.
