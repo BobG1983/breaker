@@ -38,11 +38,11 @@ fn expand_evolution_template_produces_evolution_rarity() {
     assert_eq!(def.name, "Voltaic Piercer");
     assert_eq!(def.description, "Evolved piercing");
 
-    // Edge case: must be Evolution, not Legendary
+    // Edge case: must be Evolution, not any other variant
     assert_ne!(
         def.rarity,
-        Rarity::Legendary,
-        "evolution rarity must be distinct from Legendary"
+        Rarity::Rare,
+        "evolution rarity must be distinct from Rare"
     );
 }
 

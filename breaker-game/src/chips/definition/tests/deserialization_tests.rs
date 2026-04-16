@@ -25,12 +25,6 @@ fn rarity_deserializes_rare() {
     assert_eq!(r, Rarity::Rare);
 }
 
-#[test]
-fn rarity_deserializes_legendary() {
-    let r: Rarity = ron::de::from_str("Legendary").expect("should parse Legendary");
-    assert_eq!(r, Rarity::Legendary);
-}
-
 // =========================================================================
 // Preserved tests: EntityKind deserialization (was ImpactTarget)
 // =========================================================================

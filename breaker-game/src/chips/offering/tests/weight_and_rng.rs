@@ -12,7 +12,7 @@ use crate::{
 fn higher_weight_chip_appears_more_frequently() {
     let mut registry = ChipCatalog::default();
     registry.insert(test_chip_rarity("CommonChip", Rarity::Common, 99));
-    registry.insert(test_chip_rarity("LegendaryChip", Rarity::Legendary, 99));
+    registry.insert(test_chip_rarity("RareChip", Rarity::Rare, 99));
 
     let inventory = ChipInventory::default();
     let mut config = test_config();
@@ -27,8 +27,8 @@ fn higher_weight_chip_appears_more_frequently() {
         }
     }
     assert!(
-        common_count > 900,
-        "CommonChip (weight=100) should appear >900/1000 times, got {common_count}"
+        common_count > 800,
+        "CommonChip (weight=100) should appear >800/1000 times vs Rare (weight=15), got {common_count}"
     );
 }
 
@@ -115,11 +115,10 @@ fn same_seed_produces_same_offerings() {
 fn different_seed_produces_different_offerings() {
     let mut registry = ChipCatalog::default();
     for i in 0..10 {
-        let rarity = match i % 4 {
+        let rarity = match i % 3 {
             0 => Rarity::Common,
             1 => Rarity::Uncommon,
-            2 => Rarity::Rare,
-            _ => Rarity::Legendary,
+            _ => Rarity::Rare,
         };
         registry.insert(test_chip_rarity(&format!("Chip{i}"), rarity, 3));
     }

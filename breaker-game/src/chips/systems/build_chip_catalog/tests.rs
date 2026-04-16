@@ -53,7 +53,6 @@ fn make_template(
             effects,
         }),
         rare: None,
-        legendary: None,
     }
 }
 

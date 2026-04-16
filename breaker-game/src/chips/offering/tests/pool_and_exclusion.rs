@@ -55,7 +55,7 @@ fn build_active_pool_applies_weights_and_decay() {
     let mut registry = ChipCatalog::default();
     registry.insert(test_chip_rarity("A", Rarity::Common, 1)); // maxed
     registry.insert(test_chip_rarity("B", Rarity::Rare, 3)); // not maxed, decay 0.8
-    registry.insert(test_chip_rarity("C", Rarity::Legendary, 3)); // not maxed, no decay
+    registry.insert(test_chip_rarity("C", Rarity::Uncommon, 3)); // not maxed, no decay
 
     let mut inventory = ChipInventory::default();
     let a_def = test_chip_rarity("A", Rarity::Common, 1);
@@ -72,6 +72,14 @@ fn build_active_pool_applies_weights_and_decay() {
         "maxed chip A should be excluded from pool"
     );
 
+    // Pool should contain exactly 2 entries (B and C — A is maxed)
+    assert_eq!(
+        pool.len(),
+        2,
+        "pool should contain exactly 2 entries (B and C), got {}",
+        pool.len()
+    );
+
     // B is Rare (base=15.0), decay=0.8 => effective=12.0
     let b_entry = pool.iter().find(|e| e.name == "B");
     assert!(b_entry.is_some(), "B should be in pool");
@@ -81,13 +89,13 @@ fn build_active_pool_applies_weights_and_decay() {
         "B weight: expected 12.0 (15.0*0.8), got {b_weight}"
     );
 
-    // C is Legendary (base=3.0), no decay => effective=3.0
+    // C is Uncommon (base=50.0), no decay => effective=50.0
     let c_entry = pool.iter().find(|e| e.name == "C");
     assert!(c_entry.is_some(), "C should be in pool");
     let c_weight = c_entry.unwrap().weight;
     assert!(
-        (c_weight - 3.0).abs() < f32::EPSILON,
-        "C weight: expected 3.0 (3.0*1.0), got {c_weight}"
+        (c_weight - 50.0).abs() < f32::EPSILON,
+        "C weight: expected 50.0 (50.0*1.0), got {c_weight}"
     );
 }
 

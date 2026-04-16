@@ -1,11 +1,11 @@
 (
     name: "Glass Cannon",
     max_taken: 1,
-    legendary: (
+    rare: (
         prefix: "",
         effects: [
             Stamp(Bolt,
-                Fire(DamageBoost(DamageBoostConfig(multiplier: 3.0))),
+                Fire(DamageBoost(DamageBoostConfig(multiplier: 2.0))),
             ),
             Stamp(Breaker,
                 When(BoltLostOccurred,

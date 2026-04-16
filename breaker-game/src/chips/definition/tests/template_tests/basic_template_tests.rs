@@ -14,7 +14,7 @@ use crate::{
 
 #[test]
 fn chip_template_ron_with_root_node() {
-    let ron_str = r#"(name: "Surge", max_taken: 3, common: Some((prefix: "Basic", effects: [Stamp(Bolt, When(PerfectBumped, Fire(SpeedBoost((multiplier: 1.2)))))])), uncommon: None, rare: None, legendary: None)"#;
+    let ron_str = r#"(name: "Surge", max_taken: 3, common: Some((prefix: "Basic", effects: [Stamp(Bolt, When(PerfectBumped, Fire(SpeedBoost((multiplier: 1.2)))))])), uncommon: None, rare: None)"#;
     let template: ChipTemplate =
         ron::de::from_str(ron_str).expect("ChipTemplate with RootNode RON should parse");
     assert_eq!(template.name, "Surge");
@@ -23,6 +23,18 @@ fn chip_template_ron_with_root_node() {
         common.effects[0],
         RootNode::Stamp(StampTarget::Bolt, _)
     ));
+}
+
+#[test]
+fn chip_template_ron_with_all_slots_omitted_parses_to_empty_template() {
+    let ron_str = r#"(name: "X", max_taken: 1)"#;
+    let template: ChipTemplate =
+        ron::de::from_str(ron_str).expect("ChipTemplate with no rarity slots should parse");
+    assert_eq!(template.name, "X");
+    assert_eq!(template.max_taken, 1);
+    assert!(template.common.is_none());
+    assert!(template.uncommon.is_none());
+    assert!(template.rare.is_none());
 }
 
 #[test]
@@ -44,7 +56,6 @@ fn expand_chip_template_produces_root_node() {
         }),
         uncommon:  None,
         rare:      None,
-        legendary: None,
     };
     let defs = expand_chip_template(&template);
     assert_eq!(defs.len(), 1);
@@ -73,7 +84,6 @@ fn expand_chip_template_preserves_target() {
         }),
         uncommon:  None,
         rare:      None,
-        legendary: None,
     };
     let defs = expand_chip_template(&template);
     assert_eq!(defs.len(), 1);
@@ -98,14 +108,32 @@ fn expanded_defs_have_correct_rarities_with_root_node() {
         common:    Some(make_slot("C", 1)),
         uncommon:  Some(make_slot("U", 2)),
         rare:      Some(make_slot("R", 3)),
-        legendary: Some(make_slot("L", 4)),
     };
     let defs = expand_chip_template(&template);
-    assert_eq!(defs.len(), 4);
+    assert_eq!(defs.len(), 3);
     assert_eq!(defs[0].rarity, Rarity::Common);
     assert_eq!(defs[1].rarity, Rarity::Uncommon);
     assert_eq!(defs[2].rarity, Rarity::Rare);
-    assert_eq!(defs[3].rarity, Rarity::Legendary);
+}
+
+#[test]
+fn expanded_defs_single_common_slot_has_common_rarity() {
+    let template = ChipTemplate {
+        name:      "OneSlot".to_owned(),
+        max_taken: 1,
+        common:    Some(RaritySlot {
+            prefix:  "C".to_owned(),
+            effects: vec![RootNode::Stamp(
+                StampTarget::Bolt,
+                Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
+            )],
+        }),
+        uncommon:  None,
+        rare:      None,
+    };
+    let defs = expand_chip_template(&template);
+    assert_eq!(defs.len(), 1);
+    assert_eq!(defs[0].rarity, Rarity::Common);
 }
 
 // =========================================================================
@@ -120,7 +148,6 @@ fn expand_chip_template_all_none_returns_empty() {
         common:    None,
         uncommon:  None,
         rare:      None,
-        legendary: None,
     };
     let defs = expand_chip_template(&template);
     assert!(defs.is_empty());
@@ -133,8 +160,7 @@ fn expanded_chip_empty_prefix_uses_template_name() {
         max_taken: 1,
         common:    None,
         uncommon:  None,
-        rare:      None,
-        legendary: Some(RaritySlot {
+        rare:      Some(RaritySlot {
             prefix:  String::new(),
             effects: vec![RootNode::Stamp(
                 StampTarget::Bolt,
@@ -147,7 +173,7 @@ fn expanded_chip_empty_prefix_uses_template_name() {
     let defs = expand_chip_template(&template);
     assert_eq!(defs.len(), 1);
     assert_eq!(defs[0].name, "Glass Cannon");
-    assert_eq!(defs[0].rarity, Rarity::Legendary);
+    assert_eq!(defs[0].rarity, Rarity::Rare);
 }
 
 #[test]
@@ -157,8 +183,7 @@ fn expanded_chip_whitespace_prefix_uses_template_name() {
         max_taken: 1,
         common:    None,
         uncommon:  None,
-        rare:      None,
-        legendary: Some(RaritySlot {
+        rare:      Some(RaritySlot {
             prefix:  "   ".to_owned(),
             effects: vec![RootNode::Stamp(
                 StampTarget::Bolt,
@@ -174,7 +199,7 @@ fn expanded_chip_whitespace_prefix_uses_template_name() {
         defs[0].name, "Glass Cannon",
         "whitespace-only prefix should be treated as empty — name should equal template name"
     );
-    assert_eq!(defs[0].rarity, Rarity::Legendary);
+    assert_eq!(defs[0].rarity, Rarity::Rare);
 }
 
 // =========================================================================
@@ -196,10 +221,9 @@ fn expand_chip_template_sets_template_name_on_all_variants() {
         common:    Some(make_slot("Basic")),
         uncommon:  Some(make_slot("Keen")),
         rare:      Some(make_slot("Honed")),
-        legendary: Some(make_slot("Mythic")),
     };
     let defs = expand_chip_template(&template);
-    assert_eq!(defs.len(), 4);
+    assert_eq!(defs.len(), 3);
 
     for (i, def) in defs.iter().enumerate() {
         assert_eq!(
@@ -218,7 +242,6 @@ fn expand_chip_template_sets_template_name_on_all_variants() {
         common:    Some(make_slot("Basic")),
         uncommon:  None,
         rare:      None,
-        legendary: None,
     };
     let single_defs = expand_chip_template(&single_template);
     assert_eq!(single_defs.len(), 1);

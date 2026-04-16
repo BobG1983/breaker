@@ -43,7 +43,6 @@ pub(crate) fn generate_chip_offerings(mut params: ChipOfferingParams) {
         (Rarity::Common, params.config.rarity_weight_common),
         (Rarity::Uncommon, params.config.rarity_weight_uncommon),
         (Rarity::Rare, params.config.rarity_weight_rare),
-        (Rarity::Legendary, params.config.rarity_weight_legendary),
     ]);
 
     // Check for boss node with eligible evolutions

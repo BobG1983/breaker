@@ -42,9 +42,9 @@ fn make_mixed_registry() -> ChipCatalog {
         });
     }
     registry.insert(ChipDefinition {
-        rarity: Rarity::Legendary,
+        rarity: Rarity::Rare,
         ..ChipDefinition::test(
-            "Legendary_0",
+            "Rare_0",
             Tree::Fire(EffectType::Piercing(PiercingConfig { charges: 1 })),
             3,
         )

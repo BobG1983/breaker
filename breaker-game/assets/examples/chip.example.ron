@@ -5,7 +5,8 @@
 // Reference for all available fields in a .chip.ron file.
 // This file is NOT loaded by the game — it exists as documentation only.
 //
-// Chip templates expand into one ChipDefinition per non-None rarity slot.
+// Chip templates expand into one ChipDefinition per non-None rarity slot
+// (up to three tiers: Common, Uncommon, Rare).
 // Each slot's prefix is prepended to the template name.
 //
 // Required fields (no default):
@@ -15,7 +16,6 @@
 //   common     — default: None (no common variant)
 //   uncommon   — default: None (no uncommon variant)
 //   rare       — default: None (no rare variant)
-//   legendary  — default: None (no legendary variant)
 //
 // At least one rarity slot should be Some, otherwise the template
 // produces no chip definitions.
@@ -62,16 +62,6 @@
         effects: [
             On(target: Bolt, then: [
                 Do(DamageBoost(1.5)),
-            ]),
-        ],
-    ),
-
-    // OPTIONAL: Legendary-rarity variant.
-    legendary: (
-        prefix: "Mythic",
-        effects: [
-            On(target: Bolt, then: [
-                Do(DamageBoost(2.0)),
             ]),
         ],
     ),

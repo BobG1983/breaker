@@ -27,7 +27,6 @@ fn make_chip_template(name: &str, max_taken: u32, prefix: &str) -> ChipTemplate 
         }),
         uncommon: None,
         rare: None,
-        legendary: None,
     }
 }
 

@@ -11,10 +11,8 @@
     rarity_weight_common: 100.0,
     rarity_weight_uncommon: 50.0,
     rarity_weight_rare: 15.0,
-    rarity_weight_legendary: 3.0,
     seen_decay_factor: 0.8,
     rarity_color_common_rgb: (0.5, 0.5, 0.5),
     rarity_color_uncommon_rgb: (0.2, 0.8, 0.3),
     rarity_color_rare_rgb: (0.3, 0.4, 1.0),
-    rarity_color_legendary_rgb: (1.0, 0.85, 0.2),
 )

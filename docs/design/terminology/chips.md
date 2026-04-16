@@ -5,7 +5,7 @@
 | Term | Meaning | Code Examples |
 |------|---------|---------------|
 | **Chip** | Any upgrade offered during chip selection — all effects are expressed as `Tree` variants under `RootNode` entries | `ChipDefinition`, `ChipCatalog`, `ChipSelected` |
-| **ChipTemplate** | RON source type — one file per chip concept with per-rarity slots (`common`/`uncommon`/`rare`/`legendary`). Loader expands templates into individual `ChipDefinition`s at load time. `max_taken` is shared across all rarities. | `ChipTemplate`, `RaritySlot`, `expand_chip_template` |
+| **ChipTemplate** | RON source type — one file per chip concept with per-rarity slots (`common`/`uncommon`/`rare`). Loader expands templates into individual `ChipDefinition`s at load time. `max_taken` is shared across all rarities. | `ChipTemplate`, `RaritySlot`, `expand_chip_template` |
 | **ChipTemplateRegistry** | `SeedableRegistry` loading `.chip.ron` files from `assets/chips/standard/`. Stores `(AssetId, ChipTemplate)` pairs keyed by name. Hot-reload triggers `update_single` on file change. | `ChipTemplateRegistry`, `SeedableRegistry`, `chips/resources.rs` |
 | **ChipCatalog** | Runtime resource holding all expanded `ChipDefinition`s (built from templates) plus in-catalog `Recipe`s. Paired `Vec<String>` preserves insertion order for deterministic chip offers. NOT a `SeedableRegistry` — populated at load time by template expansion. | `ChipCatalog`, `ordered_values()`, `eligible_recipes()` |
 | **SeedableRegistry** | Trait from `rantzsoft_defaults` — folder-based RON asset loading for registries. Implementors define `asset_dir`, `extensions`, `seed`, and `update_single`. `add_registry::<R>()` on `RantzDefaultsPluginBuilder` wires loading, seeding, and hot-reload. | `SeedableRegistry`, `RegistryHandles`, `rantzsoft_defaults::registry` |
@@ -78,5 +78,4 @@
 | **EvolutionTemplate** | RON source type for evolutions (`.evolution.ron`). Has `name`, `description`, `effects`, `ingredients` (required), `max_stacks` (defaults to 1). Expanded into `ChipDefinition` with `rarity: Evolution` by `expand_evolution_template` at catalog-build time. | `EvolutionTemplate`, `expand_evolution_template` |
 | **EvolutionTemplateRegistry** | `SeedableRegistry` loading `.evolution.ron` files from `assets/chips/evolutions/`. Each file is an `EvolutionTemplate`. At catalog-build time, templates are expanded into `ChipDefinition`s and `Recipe`s. | `EvolutionTemplateRegistry`, `chips/resources.rs` |
 | **EntropyEngine** | Evolution chip — counter-gated random effect (every Nth cell destroyed, roll from weighted pool). Combines Cascade + Flux ingredients. | `EntropyEngine(EntropyConfig(...))`, `entropy_engine.evolution.ron` |
-| **Chain Reaction** | Legendary chip — recursive destruction triggers spawn bolts. Nested `DeathOccurred(Cell)` triggers. | `chain_reaction.chip.ron` |
-| **Feedback Loop** | Legendary chip — deep trigger chain: perfect bump → cell impact → cell destruction → timed speed burst. | `feedback_loop.chip.ron` |
+| **Chain Reaction** | Rare chip — recursive destruction triggers spawn bolts. Nested `DeathOccurred(Cell)` triggers. | `chain_reaction.chip.ron` |

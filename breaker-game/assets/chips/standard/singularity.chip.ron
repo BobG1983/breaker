@@ -1,14 +1,38 @@
 (
     name: "Singularity",
-    max_taken: 1,
-    legendary: (
+    max_taken: 3,
+    common: (
+        prefix: "Minor",
+        effects: [
+            Stamp(Bolt,
+                Sequence([
+                    Fire(SizeBoost(SizeBoostConfig(multiplier: 0.85))),
+                    Fire(DamageBoost(DamageBoostConfig(multiplier: 1.3))),
+                    Fire(SpeedBoost(SpeedBoostConfig(multiplier: 1.1))),
+                ]),
+            ),
+        ],
+    ),
+    uncommon: (
+        prefix: "Keen",
+        effects: [
+            Stamp(Bolt,
+                Sequence([
+                    Fire(SizeBoost(SizeBoostConfig(multiplier: 0.8))),
+                    Fire(DamageBoost(DamageBoostConfig(multiplier: 1.5))),
+                    Fire(SpeedBoost(SpeedBoostConfig(multiplier: 1.2))),
+                ]),
+            ),
+        ],
+    ),
+    rare: (
         prefix: "",
         effects: [
             Stamp(Bolt,
                 Sequence([
-                    Fire(SizeBoost(SizeBoostConfig(multiplier: 0.6))),
-                    Fire(DamageBoost(DamageBoostConfig(multiplier: 2.5))),
-                    Fire(SpeedBoost(SpeedBoostConfig(multiplier: 1.4))),
+                    Fire(SizeBoost(SizeBoostConfig(multiplier: 0.7))),
+                    Fire(DamageBoost(DamageBoostConfig(multiplier: 2.0))),
+                    Fire(SpeedBoost(SpeedBoostConfig(multiplier: 1.3))),
                 ]),
             ),
         ],

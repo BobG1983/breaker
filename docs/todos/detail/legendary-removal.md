@@ -41,4 +41,4 @@ That file is the source of truth for all values, cuts, and promotions.
 - Blocks: protocol & hazard system todo (assumes Legendary is already gone)
 
 ## Status
-`ready`
+`in-progress` (branch: `feature/legendary-rarity-removal`, started 2026-04-16)

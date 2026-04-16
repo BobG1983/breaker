@@ -35,8 +35,6 @@ pub(crate) struct ChipSelectConfig {
     pub rarity_weight_uncommon:     f32,
     /// Base weight for Rare rarity chips.
     pub rarity_weight_rare:         f32,
-    /// Base weight for Legendary rarity chips.
-    pub rarity_weight_legendary:    f32,
     /// Weight decay factor for chips offered but not selected.
     pub seen_decay_factor:          f32,
     /// RGB color for Common rarity card border.
@@ -45,8 +43,6 @@ pub(crate) struct ChipSelectConfig {
     pub rarity_color_uncommon_rgb:  [f32; 3],
     /// RGB color for Rare rarity card border.
     pub rarity_color_rare_rgb:      [f32; 3],
-    /// RGB color for Legendary rarity card border.
-    pub rarity_color_legendary_rgb: [f32; 3],
 }
 
 impl Default for ChipSelectConfig {
@@ -63,12 +59,10 @@ impl Default for ChipSelectConfig {
             rarity_weight_common:       100.0,
             rarity_weight_uncommon:     50.0,
             rarity_weight_rare:         15.0,
-            rarity_weight_legendary:    3.0,
             seen_decay_factor:          0.8,
             rarity_color_common_rgb:    [0.5, 0.5, 0.5],
             rarity_color_uncommon_rgb:  [0.2, 0.8, 0.3],
             rarity_color_rare_rgb:      [0.3, 0.4, 1.0],
-            rarity_color_legendary_rgb: [1.0, 0.85, 0.2],
         }
     }
 }

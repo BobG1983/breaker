@@ -12,8 +12,6 @@ pub enum Rarity {
     Uncommon,
     /// Hard to find chips.
     Rare,
-    /// Extremely rare, run-defining chips.
-    Legendary,
     /// Evolution-tier chips — produced by combining maxed ingredient chips.
     Evolution,
 }
@@ -24,7 +22,6 @@ impl std::fmt::Display for Rarity {
             Self::Common => write!(f, "Common"),
             Self::Uncommon => write!(f, "Uncommon"),
             Self::Rare => write!(f, "Rare"),
-            Self::Legendary => write!(f, "Legendary"),
             Self::Evolution => write!(f, "Evolution"),
         }
     }
@@ -51,7 +48,7 @@ pub struct RaritySlot {
 
 /// A chip template loaded from RON (`.chip.ron`).
 ///
-/// Each template defines up to four rarity variants. At load time,
+/// Each template defines up to three rarity variants. At load time,
 /// [`expand_chip_template`] converts each non-`None` slot into a [`ChipDefinition`].
 #[derive(Asset, TypePath, Deserialize, Clone, Debug)]
 pub struct ChipTemplate {
@@ -68,9 +65,6 @@ pub struct ChipTemplate {
     /// Rare-rarity variant, if any.
     #[serde(default)]
     pub rare:      Option<RaritySlot>,
-    /// Legendary-rarity variant, if any.
-    #[serde(default)]
-    pub legendary: Option<RaritySlot>,
 }
 
 /// An evolution template loaded from RON (`.evolution.ron`).
@@ -103,11 +97,10 @@ const fn one() -> u32 {
 /// (no prefix prepended).
 #[must_use]
 pub(crate) fn expand_chip_template(template: &ChipTemplate) -> Vec<ChipDefinition> {
-    let slots: [(Rarity, &Option<RaritySlot>); 4] = [
+    let slots: [(Rarity, &Option<RaritySlot>); 3] = [
         (Rarity::Common, &template.common),
         (Rarity::Uncommon, &template.uncommon),
         (Rarity::Rare, &template.rare),
-        (Rarity::Legendary, &template.legendary),
     ];
 
     slots

@@ -1,13 +1,13 @@
 (
     name: "Chain Reaction",
     max_taken: 1,
-    legendary: (
+    rare: (
         prefix: "",
         effects: [
             Stamp(Bolt,
                 When(Killed(Cell),
                     When(Killed(Cell),
-                        Fire(SpawnBolts(SpawnBoltsConfig(count: 1, lifespan: None, inherit: false))),
+                        Fire(SpawnBolts(SpawnBoltsConfig(count: 1, lifespan: Some(3.0), inherit: false))),
                     ),
                 ),
             ),

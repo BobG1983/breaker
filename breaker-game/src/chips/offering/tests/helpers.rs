@@ -49,7 +49,6 @@ pub(super) fn test_config() -> OfferingConfig {
     rarity_weights.insert(Rarity::Common, 100.0);
     rarity_weights.insert(Rarity::Uncommon, 50.0);
     rarity_weights.insert(Rarity::Rare, 15.0);
-    rarity_weights.insert(Rarity::Legendary, 3.0);
     OfferingConfig {
         rarity_weights,
         offers_per_node: 3,

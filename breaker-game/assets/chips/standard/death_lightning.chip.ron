@@ -1,7 +1,39 @@
 (
     name: "Death Lightning",
-    max_taken: 1,
-    legendary: (
+    max_taken: 3,
+    common: (
+        prefix: "Minor",
+        effects: [
+            Stamp(Bolt,
+                When(Impacted(Cell),
+                    On(Impact(Impactee),
+                        Route(Staged,
+                            When(Died,
+                                Fire(ChainLightning(ChainLightningConfig(arcs: 1, range: 32.0, damage_mult: 0.5, arc_speed: 300.0))),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ],
+    ),
+    uncommon: (
+        prefix: "Keen",
+        effects: [
+            Stamp(Bolt,
+                When(Impacted(Cell),
+                    On(Impact(Impactee),
+                        Route(Staged,
+                            When(Died,
+                                Fire(ChainLightning(ChainLightningConfig(arcs: 1, range: 40.0, damage_mult: 0.7, arc_speed: 300.0))),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ],
+    ),
+    rare: (
         prefix: "",
         effects: [
             Stamp(Bolt,
@@ -9,7 +41,7 @@
                     On(Impact(Impactee),
                         Route(Staged,
                             When(Died,
-                                Fire(ChainLightning(ChainLightningConfig(arcs: 3, range: 64.0, damage_mult: 1.0, arc_speed: 300.0))),
+                                Fire(ChainLightning(ChainLightningConfig(arcs: 2, range: 48.0, damage_mult: 0.8, arc_speed: 300.0))),
                             ),
                         ),
                     ),

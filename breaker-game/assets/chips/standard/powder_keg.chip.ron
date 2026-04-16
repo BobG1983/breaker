@@ -1,7 +1,39 @@
 (
     name: "Powder Keg",
-    max_taken: 1,
-    legendary: (
+    max_taken: 3,
+    common: (
+        prefix: "Minor",
+        effects: [
+            Stamp(Bolt,
+                When(Impacted(Cell),
+                    On(Impact(Impactee),
+                        Route(Staged,
+                            When(Died,
+                                Fire(Explode(ExplodeConfig(range: 24.0, damage: 4.0))),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ],
+    ),
+    uncommon: (
+        prefix: "Keen",
+        effects: [
+            Stamp(Bolt,
+                When(Impacted(Cell),
+                    On(Impact(Impactee),
+                        Route(Staged,
+                            When(Died,
+                                Fire(Explode(ExplodeConfig(range: 28.0, damage: 6.0))),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ],
+    ),
+    rare: (
         prefix: "",
         effects: [
             Stamp(Bolt,
@@ -9,7 +41,7 @@
                     On(Impact(Impactee),
                         Route(Staged,
                             When(Died,
-                                Fire(Explode(ExplodeConfig(range: 48.0, damage: 10.0))),
+                                Fire(Explode(ExplodeConfig(range: 36.0, damage: 8.0))),
                             ),
                         ),
                     ),

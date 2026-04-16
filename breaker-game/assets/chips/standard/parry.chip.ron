@@ -1,17 +1,32 @@
 (
     name: "Parry",
-    max_taken: 1,
-    legendary: (
+    max_taken: 3,
+    common: (
+        prefix: "Minor",
+        effects: [
+            Stamp(Breaker,
+                When(PerfectBumped,
+                    Fire(Shield(ShieldConfig(duration: 1.5, reflection_cost: 0.5))),
+                ),
+            ),
+        ],
+    ),
+    uncommon: (
+        prefix: "Keen",
+        effects: [
+            Stamp(Breaker,
+                When(PerfectBumped,
+                    Fire(Shield(ShieldConfig(duration: 2.0, reflection_cost: 0.5))),
+                ),
+            ),
+        ],
+    ),
+    rare: (
         prefix: "",
         effects: [
             Stamp(Breaker,
                 When(PerfectBumped,
                     Fire(Shield(ShieldConfig(duration: 3.0, reflection_cost: 0.5))),
-                ),
-            ),
-            Stamp(EveryBolt,
-                When(PerfectBumped,
-                    Fire(Shockwave(ShockwaveConfig(base_range: 64.0, range_per_level: 0.0, stacks: 1, speed: 500.0))),
                 ),
             ),
         ],
