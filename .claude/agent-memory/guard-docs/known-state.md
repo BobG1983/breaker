@@ -97,6 +97,29 @@ type: project
 
 ---
 
+## Confirmed Correct (as of salvo-wave-6a-6c, 2026-04-16)
+
+- `docs/architecture/messages.md` — Added `SalvoImpactBreaker`, `PortalEntered`, `PortalCompleted`, `DamageDealt<Salvo>`, `KillYourself<T>` (added handle_portal_completed sender), `Destroyed<Salvo>`, `DespawnEntity` (added Salvo to sender list); also updated `DamageDealt<Cell>` senders to include tick_survival_timer and salvo_cell_collision
+- `docs/architecture/ordering.md` — Added survival turret chain (tick_survival_timer → tick_salvo_fire_timer → fire_survival_turret), salvo collision systems (salvo_cell_collision, salvo_bolt_collision, salvo_breaker_collision, salvo_wall_collision), portal chain (check_portal_entry → handle_portal_entered → handle_portal_completed); updated prose reading section
+- `docs/architecture/effects/collisions.md` — Added Salvo collision rows (Salvo↔Cell, Bolt, Breaker, Wall); replaced stale "Implementation Status" section (those systems are done) with "Salvo Collisions" section describing AABB-based detection behavior
+- `docs/architecture/effects/death_pipeline.md` — Added Salvo to domain handlers table; fixed `DamageDealt` struct to include `source_chip` and `_marker`; fixed `KillYourself` and `Destroyed` structs to include `_marker`
+- `docs/design/terminology/core.md` — Added `SurvivalTurret`, `Salvo`, `PortalCell` entries; updated `CellBehavior` entry to list all current variants (was only listing Regen/Guarded/Volatile)
+
+### Key facts for salvo-wave-6a-6c
+
+- `Salvo` struct is a marker component in `cells/behaviors/survival/salvo/components.rs`; carries `SalvoDamage(f32)`, `SalvoSource(Entity)`, `SalvoFireTimer(f32)` components
+- `SALVO_FIRE_INTERVAL`, `SALVO_DAMAGE`, `SALVO_SPEED`, `SALVO_HALF_EXTENT` are constants in `salvo/components.rs`
+- Salvo collision systems use AABB overlap (not quadtree): `salvo_cell_collision`, `salvo_bolt_collision`, `salvo_breaker_collision`, `salvo_wall_collision` — all in `cells/behaviors/survival/salvo/systems/`
+- Salvo bypasses wall-entity collision; `salvo_wall_collision` checks against `PlayfieldConfig` bounds directly
+- `Salvo` implements `GameEntity` and has full death pipeline monomorphization (apply_damage/detect_deaths/handle_kill registered in DeathPipelinePlugin) — but no current production sender of `DamageDealt<Salvo>` exists; salvo-on-bolt/breaker/wall collisions despawn via `commands.try_despawn()` directly
+- `PortalEntered` has a `bolt` field gated behind `#[cfg(test)]` — production struct only has `portal: Entity`
+- `handle_portal_entered` is a mock: immediately converts `PortalEntered` → `PortalCompleted`; real sub-node logic is future work
+- `handle_portal_completed` writes `KillYourself<Cell>` for the portal entity
+- `SurvivalPermanent` variant: like Survival but turret never self-destructs (no timer expiry)
+- Portal behavior in `cells/definition/data.rs` — `CellBehavior::Portal { .. }` (no fields shown in validation match arm, grouped with Sequence as no-op validation)
+
+---
+
 ## Confirmed Correct (as of prelude-expansion-and-import-cleanup, 2026-04-15)
 
 - `docs/architecture/standards.md` — Prelude section fully updated: 3+ files threshold for inclusion; collision layer constants and death_pipeline types explicitly allowed; `#[cfg(test)]`-gated `test_utils` submodule allowed; 7-submodule structure documented
@@ -144,6 +167,8 @@ type: project
 - MutationKind total: 17 variants. First variant is `SetDashState`.
 - `chips/components.rs` is intentionally a stub (doc comment only).
 - `docs/architecture/rendering/` files are ALL forward-looking Phase 5 design docs. `rantzsoft_vfx` crate does NOT YET EXIST.
+- `Salvo` implements `GameEntity` and has `apply_damage<Salvo>`, `detect_deaths<Salvo>`, `handle_kill<Salvo>` registered — but no current production sender of `DamageDealt<Salvo>` exists. Salvo-collision despawns use `commands.try_despawn()` directly.
+- `CellBehavior` enum has 10 variants: `Regen`, `Guarded`, `Volatile`, `Sequence`, `Armored`, `Phantom`, `Magnetic`, `Survival`, `SurvivalPermanent`, `Portal`.
 - Deferred Wave 8 doc drift (do NOT flag until after Wave 8 merges): `docs/architecture/plugins.md` domain layout table still shows `screen/`, `ui/`, `run/`, `wall/`.
 
 For older session history, see [known-state-history.md](known-state-history.md).

@@ -170,6 +170,29 @@ No Cargo.toml changes at all on this branch. Pure import refactor:
 - `with_resource::<GameRng>()` additions are in `#[cfg(test)]`-gated test helpers only
 - `#[allow(unused_imports)]` in `prelude/mod.rs` is pre-existing and justified (prelude items consumed via wildcard)
 
+## cargo audit result — feature/new-cell-modifiers (2026-04-16)
+
+`cargo audit` run successfully. Result: 3 allowed warnings, 0 errors.
+- RUSTSEC-2024-0436: `paste 1.0.15` — unmaintained, no CVE. Same transitive path (bevy_render). Expected recurring.
+- RUSTSEC-2026-0097: `rand 0.8.5` and `rand 0.9.2` — same recurring advisory as prior audits.
+No new advisories. cargo machete: no unused dependencies found.
+
+No new direct dependencies introduced by this branch. breaker-game/Cargo.toml and workspace
+Cargo.toml are unchanged.
+
+New CellBehavior variants: Volatile, Sequence, Armored, Phantom, Magnetic, Survival,
+SurvivalPermanent, Portal — all covered by CellTypeDefinition::validate() before registration.
+
+BreakerDefinition schema change: `bolt_lost` and `salvo_hit` are now required fields (no
+`#[serde(default)]`). All 3 shipped .breaker.ron files (aegis, chrono, prism) updated.
+Missing field on future RON → serde error at asset load time (not a panic).
+
+Portal sub-node is a mock (PortalEntered → PortalCompleted directly). Warning-level.
+Survival salvo Spread(n) division: guarded by n>=2 branch structure AND validate() gate.
+unwrap_or(Entity::PLACEHOLDER) pattern: safe sentinel, not panic-risk.
+inverse_square_attraction: NaN-safe (normalize_or_zero), Inf-safe (d_squared.max(min_d)).
+All new despawn calls use try_despawn (non-panicking). No panic surface in new code.
+
 ## cargo audit result — tiling/visual-mode (2026-04-15)
 
 `cargo audit` run successfully. Result: 3 allowed warnings, 0 errors.

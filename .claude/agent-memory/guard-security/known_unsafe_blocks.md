@@ -166,3 +166,12 @@ Still confirmed for refactor/prelude-expansion-and-import-cleanup (2026-04-15):
 363 files changed. All changes are `use` statement import consolidations via new prelude submodules.
 Diffed all added lines for "unsafe": zero matches. No new unsafe blocks, no FFI, no raw pointers.
 Workspace lint unsafe_code = "deny" remains in force and unchanged (no Cargo.toml changes).
+
+Still confirmed for feature/new-cell-modifiers (2026-04-16):
+New behavior modules: cells/behaviors/volatile, cells/behaviors/sequence, cells/behaviors/armored,
+cells/behaviors/phantom, cells/behaviors/magnetic, cells/behaviors/portal,
+cells/behaviors/survival (including survival/salvo/ subsystem), shared/physics/inverse_square.rs,
+shared/validation.rs, breaker/definition/types.rs (BreakerDefinition schema addition).
+Grepped all new and changed files for "unsafe": zero matches.
+No FFI, no raw pointers, no new build.rs, no new proc macros.
+Workspace lint unsafe_code = "deny" remains in force and unchanged (Cargo.toml not touched).

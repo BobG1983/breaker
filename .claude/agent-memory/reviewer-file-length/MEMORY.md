@@ -5,6 +5,7 @@
 - [Phase 11 findings — toughness-hp-scaling](phase11_findings.md) -- Wave 15 scan (2026-04-08): 1 MEDIUM, 4 LOW. Detail at docs/todos/detail/2026-04-08-file-splits.md
 - [Phase 12 findings — effect-system-refactor](phase12_findings.md) -- Wave 16 scan (2026-04-14): 10 HIGH, 13 MEDIUM, 10 LOW in effect_v3. Detail at docs/todos/detail/2026-04-14-file-splits.md
 - [Phase 13 findings — scenario-runner-tiling-streaming](phase13_findings.md) -- Wave 17 scan (2026-04-15): 1 HIGH, 2 MEDIUM in runner/. Detail at docs/todos/detail/2026-04-15-file-splits.md
+- [Phase 14 findings — new-cell-modifiers](phase14_findings.md) -- Wave 18 scan (2026-04-16): 8 HIGH, 15 MEDIUM. Detail at docs/todos/detail/2026-04-16-file-splits.md
 
 ## Archived (superseded, no open items)
 - phase7_findings.md — Wave 11, all MEDIUM resolved in feature/scenario-runner-wiring
