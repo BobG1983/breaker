@@ -116,8 +116,10 @@ fn impact_occurred_any_fires_on_all_entities_for_bolt_impact_cell() {
 
     app.insert_resource(TestImpactMessages {
         bolt_cell: vec![BoltImpactCell {
-            bolt: bolt_entity,
-            cell: cell_entity,
+            bolt:               bolt_entity,
+            cell:               cell_entity,
+            impact_normal:      Vec2::ZERO,
+            piercing_remaining: 0,
         }],
         ..default()
     });
@@ -157,8 +159,10 @@ fn impact_occurred_specific_kind_fires_alongside_any_for_bolt_impact_cell() {
 
     app.insert_resource(TestImpactMessages {
         bolt_cell: vec![BoltImpactCell {
-            bolt: bolt_entity,
-            cell: cell_entity,
+            bolt:               bolt_entity,
+            cell:               cell_entity,
+            impact_normal:      Vec2::ZERO,
+            piercing_remaining: 0,
         }],
         ..default()
     });
@@ -390,8 +394,10 @@ fn impact_occurred_any_fires_once_per_collision_event() {
 
     app.insert_resource(TestImpactMessages {
         bolt_cell: vec![BoltImpactCell {
-            bolt: bolt_entity,
-            cell: cell_entity,
+            bolt:               bolt_entity,
+            cell:               cell_entity,
+            impact_normal:      Vec2::ZERO,
+            piercing_remaining: 0,
         }],
         ..default()
     });
@@ -430,8 +436,10 @@ fn impact_occurred_any_fires_once_per_collision_two_events() {
 
     app.insert_resource(TestImpactMessages {
         bolt_cell: vec![BoltImpactCell {
-            bolt: bolt_entity,
-            cell: cell_entity,
+            bolt:               bolt_entity,
+            cell:               cell_entity,
+            impact_normal:      Vec2::ZERO,
+            piercing_remaining: 0,
         }],
         bolt_wall: vec![BoltImpactWall {
             bolt: bolt_entity,
@@ -476,8 +484,10 @@ fn impact_occurred_any_does_not_fire_on_entities_without_bound_effects() {
 
     app.insert_resource(TestImpactMessages {
         bolt_cell: vec![BoltImpactCell {
-            bolt: bolt_entity,
-            cell: cell_entity,
+            bolt:               bolt_entity,
+            cell:               cell_entity,
+            impact_normal:      Vec2::ZERO,
+            piercing_remaining: 0,
         }],
         ..default()
     });
@@ -510,8 +520,10 @@ fn impact_occurred_any_empty_bound_effects_no_match() {
 
     app.insert_resource(TestImpactMessages {
         bolt_cell: vec![BoltImpactCell {
-            bolt: bolt_entity,
-            cell: cell_entity,
+            bolt:               bolt_entity,
+            cell:               cell_entity,
+            impact_normal:      Vec2::ZERO,
+            piercing_remaining: 0,
         }],
         ..default()
     });

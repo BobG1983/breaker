@@ -133,20 +133,28 @@ mod tests {
         let mut app = test_app();
         app.insert_resource(TestBoltImpactCell(vec![
             BoltImpactCell {
-                cell: Entity::PLACEHOLDER,
-                bolt: Entity::PLACEHOLDER,
+                cell:               Entity::PLACEHOLDER,
+                bolt:               Entity::PLACEHOLDER,
+                impact_normal:      Vec2::ZERO,
+                piercing_remaining: 0,
             },
             BoltImpactCell {
-                cell: Entity::PLACEHOLDER,
-                bolt: Entity::PLACEHOLDER,
+                cell:               Entity::PLACEHOLDER,
+                bolt:               Entity::PLACEHOLDER,
+                impact_normal:      Vec2::ZERO,
+                piercing_remaining: 0,
             },
             BoltImpactCell {
-                cell: Entity::PLACEHOLDER,
-                bolt: Entity::PLACEHOLDER,
+                cell:               Entity::PLACEHOLDER,
+                bolt:               Entity::PLACEHOLDER,
+                impact_normal:      Vec2::ZERO,
+                piercing_remaining: 0,
             },
             BoltImpactCell {
-                cell: Entity::PLACEHOLDER,
-                bolt: Entity::PLACEHOLDER,
+                cell:               Entity::PLACEHOLDER,
+                bolt:               Entity::PLACEHOLDER,
+                impact_normal:      Vec2::ZERO,
+                piercing_remaining: 0,
             },
         ]));
         tick(&mut app);

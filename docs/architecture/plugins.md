@@ -111,6 +111,14 @@ The architectural boundary is about **writes** (mutations), not reads. Domains f
 
 All paths call `apply_velocity_formula` to enforce `(base_speed * boost_mult).clamp(min, max)` magnitude. This is the same velocity enforcement used by collision systems — there is no separate `prepare_bolt_velocity` step.
 
+## PiercingRemaining Cross-Domain Write Exception
+
+`PiercingRemaining` (bolt domain component at `bolt/components/definitions.rs`) is written by the cells domain `check_armor_direction` system as an accepted architectural exception. One write path exists:
+
+- **cells** (`check_armor_direction` in `cells/behaviors/armored/systems/check_armor_direction.rs`): on an armored-face breakthrough (piercing >= armor_value), decrements the bolt's `PiercingRemaining` by `armor_value` via `saturating_sub`. The cells domain knows the armor cost; routing through messages (e.g., a `ConsumeArmorPiercing` message consumed by the bolt domain) would require bolt to participate in a pipeline it doesn't own for a simple decrement.
+
+Structurally identical rationale to the Velocity2D exception: the writing domain has the contextual data, the owning domain's component is a simple numeric, and message indirection adds complexity without benefit.
+
 ## Debug Domain — Cross-Domain Exception
 
 The `debug/` domain (gated behind `#[cfg(feature = "dev")]`) is the **only domain permitted to read AND write other domains' resources and components** directly. This is an accepted architectural exception because:

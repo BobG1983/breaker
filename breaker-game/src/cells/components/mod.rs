@@ -12,6 +12,7 @@ pub use crate::cells::behaviors::guarded::components::{
     GuardedCell, GuardianCell, GuardianGridStep, GuardianSlideSpeed, GuardianSlot, SlideTarget,
 };
 pub use crate::cells::behaviors::{
+    armored::components::{ArmorDirection, ArmorFacing, ArmorValue, ArmoredCell},
     locked::components::{LockCell, Locked, Locks, Unlocked},
     regen::components::{NoRegen, Regen, RegenCell, RegenRate},
     sequence::components::{SequenceActive, SequenceCell, SequenceGroup, SequencePosition},

@@ -21,13 +21,22 @@ pub(crate) struct BoltImpactBreaker {
 
 /// Sent when the bolt collides with a cell.
 ///
-/// Consumed by chips, cells, and audio.
+/// Consumed by `effect_v3` impact bridges, the pinball-wizard highlight
+/// detector, and (as of Wave 3) the cells-domain armor check system.
 #[derive(Message, Clone, Debug)]
 pub(crate) struct BoltImpactCell {
     /// The cell entity that was hit.
-    pub cell: Entity,
+    pub cell:               Entity,
     /// The bolt entity that caused the hit.
-    pub bolt: Entity,
+    pub bolt:               Entity,
+    /// The surface normal of the impact (points away from the cell surface
+    /// at the contact point). Used by the armor check system to determine
+    /// which face of the cell took the hit.
+    pub impact_normal:      Vec2,
+    /// The bolt's remaining piercing charges at the instant of impact —
+    /// captured BEFORE `bolt_cell_collision` decrements on a pierce-through
+    /// and BEFORE any cells-domain armor check consumes charges.
+    pub piercing_remaining: u32,
 }
 
 /// Sent when the bolt falls below the breaker.
@@ -67,8 +76,10 @@ mod tests {
         let cell_entity = Entity::PLACEHOLDER;
         let bolt_entity = Entity::PLACEHOLDER;
         let msg = BoltImpactCell {
-            cell: cell_entity,
-            bolt: bolt_entity,
+            cell:               cell_entity,
+            bolt:               bolt_entity,
+            impact_normal:      Vec2::ZERO,
+            piercing_remaining: 0,
         };
         assert_eq!(
             msg.cell, cell_entity,
@@ -94,8 +105,10 @@ mod tests {
         );
 
         let b = BoltImpactCell {
-            cell: Entity::PLACEHOLDER,
-            bolt: Entity::PLACEHOLDER,
+            cell:               Entity::PLACEHOLDER,
+            bolt:               Entity::PLACEHOLDER,
+            impact_normal:      Vec2::ZERO,
+            piercing_remaining: 0,
         };
         let b_fmt = format!("{b:?}");
         assert!(b_fmt.contains("BoltImpactCell"));

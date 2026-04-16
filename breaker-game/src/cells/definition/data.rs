@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::effect_v3::types::RootNode;
+use crate::{cells::behaviors::armored::components::ArmorDirection, effect_v3::types::RootNode};
 
 /// Categorizes cell durability with a fallback base HP method.
 ///
@@ -96,6 +96,11 @@ pub(crate) enum CellBehavior {
     /// cross-cell validation (one `position == 0` per group, no duplicate
     /// positions) is a RON-load-time concern and is out of scope here.
     Sequence { group: u32, position: u32 },
+    /// Cell absorbs hits from a specific facing direction unless the bolt
+    /// carries enough piercing to break through. `value` must be in the
+    /// closed range `1..=3` (validated at RON load time); `facing` defaults
+    /// to `ArmorDirection::Bottom` at the builder layer.
+    Armored { value: u8, facing: ArmorDirection },
 }
 
 /// A cell type definition loaded from RON.
@@ -136,6 +141,7 @@ impl CellTypeDefinition {
     /// - Each `CellBehavior::Regen { rate }` must have a finite positive rate.
     /// - Each `CellBehavior::Guarded` must pass `GuardedBehavior::validate()`.
     /// - Each `CellBehavior::Volatile { damage, radius }` must have finite positive fields.
+    /// - Each `CellBehavior::Armored { value }` must have `value` in `1..=3`.
     ///
     /// # Errors
     ///
@@ -165,6 +171,11 @@ impl CellTypeDefinition {
                         // structurally valid for any value. Cross-cell
                         // invariants (one position-0 per group, no duplicates)
                         // belong at RON load time and are out of scope here.
+                    }
+                    CellBehavior::Armored { value, facing: _ } => {
+                        if *value == 0 || *value > 3 {
+                            return Err(format!("Armored value must be in 1..=3, got {value}"));
+                        }
                     }
                 }
             }

@@ -11,13 +11,13 @@ Messages are defined in the domain that **conceptually owns the event**. Usually
 | Message | Sent By | Consumed By |
 |---------|---------|-------------|
 | `BoltImpactBreaker { bolt, breaker }` | bolt (bolt_breaker_collision) | breaker (grade_bump), effect (bridge_breaker_impact) |
-| `BoltImpactCell { cell, bolt }` | bolt (bolt_cell_collision) | effect (bridge_cell_impact) |
+| `BoltImpactCell { cell, bolt, impact_normal, piercing_remaining }` | bolt (bolt_cell_collision) | effect (bridge_cell_impact), cells (check_armor_direction — reads impact_normal + piercing_remaining), run/highlights (detect_pinball_wizard — count only) |
 | `BoltImpactWall { bolt, wall }` | bolt (bolt_wall_collision) | effect (bridge_wall_impact) |
 | `BreakerImpactCell { breaker, cell }` | breaker (breaker_cell_collision) | effect (bridge_cell_impact, bridge_breaker_impacted) |
 | `BreakerImpactWall { breaker, wall }` | breaker (breaker_wall_collision) | effect (bridge_wall_impact, bridge_breaker_impacted) |
 | `CellImpactWall { cell, wall }` | cells (cell_wall_collision) | effect (bridge_wall_impact, bridge_cell_impacted) |
 | `BoltLost` | bolt (bolt_lost) | bolt (spawn_bolt_lost_text), effect (bridge_bolt_lost) |
-| `DamageDealt<Cell> { dealer, target, amount, source_chip }` | bolt (bolt_cell_collision), effect/effects (shockwave, explode, pulse, chain_lightning, piercing_beam, tether_beam) | shared/death_pipeline (apply_damage::<Cell>) |
+| `DamageDealt<Cell> { dealer, target, amount, source_chip }` | bolt (bolt_cell_collision), effect/effects (shockwave, explode, pulse, chain_lightning, piercing_beam, tether_beam) | cells (check_armor_direction — mutating interceptor: drains, filters blocked hits, re-extends before apply_damage sees the queue), shared/death_pipeline (apply_damage::<Cell>) |
 | `DamageDealt<Bolt> { dealer, target, amount, source_chip }` | effect/effects (as applicable) | shared/death_pipeline (apply_damage::<Bolt>) |
 | `DamageDealt<Wall> { dealer, target, amount, source_chip }` | effect/effects (as applicable) | shared/death_pipeline (apply_damage::<Wall>) |
 | `DamageDealt<Breaker> { dealer, target, amount, source_chip }` | effect/effects (as applicable) | shared/death_pipeline (apply_damage::<Breaker>) |

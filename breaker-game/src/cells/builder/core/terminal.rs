@@ -128,7 +128,11 @@ fn build_core(params: &CoreParams, optional: &OptionalCellData) -> impl Bundle +
 
 // ── spawn_inner() ─────────────────────────────────────────────────────────
 
-fn spawn_inner(commands: &mut Commands, core: impl Bundle, optional: OptionalCellData) -> Entity {
+fn spawn_inner(
+    commands: &mut Commands,
+    core: impl Bundle,
+    mut optional: OptionalCellData,
+) -> Entity {
     let mut entity = commands.spawn(core);
 
     if let Some(alias) = resolve_alias(&optional) {
@@ -143,7 +147,7 @@ fn spawn_inner(commands: &mut Commands, core: impl Bundle, optional: OptionalCel
         entity.insert(visuals);
     }
 
-    if let Some(entities) = optional.locked_entities.clone() {
+    if let Some(entities) = optional.locked_entities.take() {
         entity.insert((LockCell, Locked, Locks(entities)));
     }
 
@@ -169,6 +173,9 @@ fn spawn_inner(commands: &mut Commands, core: impl Bundle, optional: OptionalCel
                     SequenceGroup(group),
                     SequencePosition(position),
                 ));
+            }
+            CellBehavior::Armored { value, facing } => {
+                entity.insert((ArmoredCell, ArmorValue(value), ArmorFacing(facing)));
             }
         }
     }

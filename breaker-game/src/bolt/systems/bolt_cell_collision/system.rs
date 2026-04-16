@@ -181,6 +181,15 @@ pub(crate) fn bolt_cell_collision(
             let cell_hp_value = cell_hp.map(|h| h.current);
             let would_destroy = cell_hp_value.is_some_and(|hp| hp <= cell_damage);
 
+            // Capture piercing charges BEFORE any pierce-through decrement so
+            // the armor check system sees the same value the bolt had at the
+            // instant of impact.
+            let piercing_at_impact = bolt
+                .collision
+                .piercing_remaining
+                .as_deref()
+                .map_or(0, |pr| pr.0);
+
             if can_pierce && would_destroy {
                 // PIERCE: do NOT reflect; decrement remaining pierces
                 // Do NOT stamp LastImpact on pierce-through.
@@ -205,8 +214,10 @@ pub(crate) fn bolt_cell_collision(
                 }
             }
             hit_writer.write(BoltImpactCell {
-                cell: hit.entity,
-                bolt: bolt.entity,
+                cell:               hit.entity,
+                bolt:               bolt.entity,
+                impact_normal:      hit.normal,
+                piercing_remaining: piercing_at_impact,
             });
             damage_writer.write(DamageDealt {
                 dealer:      Some(bolt.entity),

@@ -319,7 +319,8 @@ fn guarded_cell_ron_has_guardian_hp_fraction() {
                 CellBehavior::Guarded(g) => Some(g),
                 CellBehavior::Regen { .. }
                 | CellBehavior::Volatile { .. }
-                | CellBehavior::Sequence { .. } => None,
+                | CellBehavior::Sequence { .. }
+                | CellBehavior::Armored { .. } => None,
             })
         })
         .expect("guarded.cell.ron should have Guarded behavior");

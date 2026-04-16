@@ -9,7 +9,10 @@ use crate::cells::{
 };
 #[cfg(test)]
 use crate::{
-    cells::{definition::Toughness, resources::ToughnessConfig},
+    cells::{
+        behaviors::armored::components::ArmorDirection, definition::Toughness,
+        resources::ToughnessConfig,
+    },
     effect_v3::types::RootNode,
 };
 
@@ -268,6 +271,35 @@ impl<P, D, H, V> CellBuilder<P, D, H, V> {
         self.optional
             .behaviors
             .push(CellBehavior::Sequence { group, position });
+        self
+    }
+
+    /// Adds an armored behavior for this cell with facing defaulted to
+    /// `ArmorDirection::Bottom` (armor plates face the breaker; weak point
+    /// is the top of the cell).
+    ///
+    /// Test-only ergonomics — production cells acquire Armored behavior via
+    /// `.definition(&def)` from the RON definition's `behaviors:` field.
+    #[cfg(test)]
+    #[must_use]
+    pub(crate) fn armored(mut self, value: u8) -> Self {
+        self.optional.behaviors.push(CellBehavior::Armored {
+            value,
+            facing: ArmorDirection::Bottom,
+        });
+        self
+    }
+
+    /// Adds an armored behavior with an explicit facing direction.
+    ///
+    /// Test-only ergonomics — production cells acquire Armored behavior via
+    /// `.definition(&def)` from the RON definition's `behaviors:` field.
+    #[cfg(test)]
+    #[must_use]
+    pub(crate) fn armored_facing(mut self, value: u8, facing: ArmorDirection) -> Self {
+        self.optional
+            .behaviors
+            .push(CellBehavior::Armored { value, facing });
         self
     }
 }

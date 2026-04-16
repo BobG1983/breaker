@@ -306,7 +306,8 @@ fn cell_behavior_guarded_fraction_one_deserializes() {
         }
         CellBehavior::Regen { .. }
         | CellBehavior::Volatile { .. }
-        | CellBehavior::Sequence { .. } => {
+        | CellBehavior::Sequence { .. }
+        | CellBehavior::Armored { .. } => {
             panic!("expected Guarded variant")
         }
     }

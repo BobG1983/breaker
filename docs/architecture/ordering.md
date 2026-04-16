@@ -181,6 +181,12 @@ move_breaker .after(update_bump)
 DeathPipelineSystems::ApplyDamage
   .after(EffectV3Systems::Tick)                              [shared/death_pipeline domain]
   (apply_damage::<Cell>, apply_damage::<Bolt>, apply_damage::<Wall>, apply_damage::<Breaker>)
+    <- check_armor_direction .after(BoltSystems::CellCollision)
+                              .before(DeathPipelineSystems::ApplyDamage)
+                              .run_if(in_state(NodeState::Playing))
+       [cells domain — drops DamageDealt<Cell> for hits on armored faces
+        when piercing_remaining < armor_value; otherwise decrements bolt's
+        PiercingRemaining by armor_value]
     <- reset_inactive_sequence_hp .after(DeathPipelineSystems::ApplyDamage)
                                   .before(DeathPipelineSystems::DetectDeaths)
                                   .run_if(in_state(NodeState::Playing))

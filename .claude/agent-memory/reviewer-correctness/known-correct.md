@@ -121,3 +121,34 @@ Both systems call `.single()` on `Query<..., With<Breaker>>`. `ExtraBreaker` is 
 never inserted on any entity — only one `Breaker` entity exists. `.single()` returns `Ok`.
 If `ExtraBreaker` is later used (spawns a second `Breaker`-marked entity), `.single()` will
 return `Err` and both systems silently skip. This is a future concern, not a current bug.
+
+## Wave 3 check_armor_direction: drain+filter+re-extend is correct — CONFIRMED (2026-04-15)
+
+`Messages<T>::drain()` consumes BOTH internal buffers. `damage.write(msg)` re-inserts into
+the live buffer consumed by `apply_damage`. The fast-path `if blocklist.is_empty() { return; }`
+correctly skips the drain when nothing is blocked. Non-armored cells contribute nothing to
+the blocklist, so their damage messages survive the filter pass. Confirmed correct.
+
+## Wave 3 normal_hits_armored_face: direction mappings correct — CONFIRMED (2026-04-15)
+
+impact_normal is the outward surface normal at the contact point (from rantzsoft_physics2d).
+A bolt hitting the BOTTOM face (from below, moving up) receives normal pointing DOWN (negative y).
+`ArmorDirection::Bottom => impact_normal.y < 0.0` is therefore correct — it fires when the
+normal points away from the armored face (into the face from outside). Strict inequality means
+ZERO normal matches no facing — the zero-normal case is a pass-through, tested explicitly in group_c.
+
+## Wave 3 check_armor_direction: swap_remove blocklist semantics — CONFIRMED (2026-04-15)
+
+One blocklist entry per `(bolt, cell)` pair per blocked impact. `swap_remove` removes the FIRST
+matching entry when scanning the damage queue. Two bolts hitting the same cell produce two distinct
+entries (different bolt entities) — each matches its own damage message independently. One bolt
+hitting two cells produces two entries with distinct cell entities — same result.
+
+## Wave 3 piercing_remaining snapshot vs live — CONFIRMED intentional design (2026-04-15)
+
+`BoltImpactCell.piercing_remaining` is a snapshot captured BEFORE CCD decrements on pierce-through
+(per docstring in bolt/messages.rs). `check_armor_direction` uses snapshot for breakthrough threshold
+(correct — represents what bolt had at impact time), then decrements the live `PiercingRemaining`
+component by `armor_value` as an additional cost. `saturating_sub` prevents underflow. When one bolt
+hits two armored cells in one frame (both breakthrough), live `PiercingRemaining` is decremented
+sequentially — this is the intended mechanic (armor tax stacks). Tests in group_f cover this.
