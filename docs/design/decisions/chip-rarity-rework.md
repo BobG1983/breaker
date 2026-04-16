@@ -42,6 +42,23 @@ Evolutions are the pinnacle of the build system — above even Rare chips in pow
 | **Build impact** | Opens synergy paths | Transforms the run |
 | **VFX** | Normal chip VFX | Screen-readable spectacle moment |
 
+## Stacking Model — Both-Fire-Independently
+
+When a player owns multiple tiers of the same chip (e.g. Minor Powder Keg + Rare Powder Keg), each tier fires its own effect tree independently. This is the standard roguelite accumulation model — no merging, no replacement, no tier-upgrade semantics.
+
+Consequences per effect type:
+
+| Effect | Stacking behavior |
+|--------|------------------|
+| **Explode** | Each explosion staggers in time (0.05s between) and position (offset from tile center, spread based on stack count). Damage waits for FX — each explosion's damage begins when its ring starts expanding. |
+| **ChainLightning** | Force divergence — later chains exclude cells already hit by earlier chains via a `HashSet<Entity>` of already-hit cells. Arcs spread to different targets. |
+| **SpawnBolts** | Angular spread (±5°) and slight spawn-position offset so two distinct bolts are visually readable. Both spawn on the same frame. |
+| **Shield** | Additive duration merge — stacking adds durations into one shield (e.g. Common 1.5s + Rare 3.0s = 4.5s single shield). Single timer, single shield entity. Visual glow can scale with total duration. |
+| **SpeedBoost / DamageBoost** | Invisible — multiplicative stacking. Both boosts apply immediately with no visual concern. |
+| **Shockwave** | Same as Explode — time stagger + position offset. Damage waits for FX. |
+
+The gameplay contract: each stack is a separate `BoundEffects` entry. When the trigger fires, every matching entry fires. No new stacking mechanics are required — the chip system already supports this natively.
+
 ## Rationale
 
 - **Design efficiency** — designing Rare first gives a clear target; weakening is easier than strengthening
