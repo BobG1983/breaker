@@ -232,7 +232,8 @@ impl GridCellContext<'_> {
                         | CellBehavior::Phantom { .. }
                         | CellBehavior::Magnetic { .. }
                         | CellBehavior::Survival { .. }
-                        | CellBehavior::SurvivalPermanent { .. } => None,
+                        | CellBehavior::SurvivalPermanent { .. }
+                        | CellBehavior::Portal { .. } => None,
                     })
                 });
 

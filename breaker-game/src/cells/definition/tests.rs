@@ -311,7 +311,8 @@ fn cell_behavior_guarded_fraction_one_deserializes() {
         | CellBehavior::Phantom { .. }
         | CellBehavior::Magnetic { .. }
         | CellBehavior::Survival { .. }
-        | CellBehavior::SurvivalPermanent { .. } => {
+        | CellBehavior::SurvivalPermanent { .. }
+        | CellBehavior::Portal { .. } => {
             panic!("expected Guarded variant")
         }
     }

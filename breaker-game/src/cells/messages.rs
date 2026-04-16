@@ -14,6 +14,24 @@ pub(crate) struct CellImpactWall {
     pub wall: Entity,
 }
 
+/// Sent when a bolt hits a portal cell.
+///
+/// Consumed by `handle_portal_entered` (mock — immediately produces `PortalCompleted`).
+#[derive(Message, Clone, Debug)]
+pub(crate) struct PortalEntered {
+    pub(crate) portal: Entity,
+    #[cfg(test)]
+    pub(crate) bolt:   Entity,
+}
+
+/// Sent when a portal's sub-node is completed (or mock-completed).
+///
+/// Consumed by `handle_portal_completed` which kills the portal cell.
+#[derive(Message, Clone, Debug)]
+pub(crate) struct PortalCompleted {
+    pub(crate) portal: Entity,
+}
+
 /// Sent when a salvo projectile hits the breaker entity.
 ///
 /// Consumed by effect bridges in Wave 6C.

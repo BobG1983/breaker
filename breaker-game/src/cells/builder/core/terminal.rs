@@ -8,6 +8,7 @@ use crate::{
     cells::{
         behaviors::{
             guarded::components::ring_slot_offset,
+            portal::components::{PortalCell, PortalConfig},
             volatile::stamp::{STAMP_SOURCE, volatile_tree},
         },
         components::*,
@@ -18,7 +19,7 @@ use crate::{
         types::{RootNode, Tree},
     },
     prelude::*,
-    shared::GameDrawLayer,
+    shared::{GameDrawLayer, death_pipeline::invulnerable::Invulnerable},
 };
 
 // ── Resolution helpers ────────────────────────────────────────────────────
@@ -216,6 +217,17 @@ fn spawn_inner(
                     SurvivalPattern(pattern),
                     SalvoFireTimer(SALVO_FIRE_INTERVAL),
                     BoltImmune,
+                ));
+            }
+            CellBehavior::Portal {
+                sub_node_tier_offset,
+            } => {
+                entity.insert((
+                    PortalCell,
+                    PortalConfig {
+                        tier_offset: sub_node_tier_offset,
+                    },
+                    Invulnerable,
                 ));
             }
         }

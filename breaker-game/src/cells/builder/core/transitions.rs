@@ -386,6 +386,23 @@ impl<P, D, H, V> CellBuilder<P, D, H, V> {
         });
         self
     }
+
+    /// Adds a portal behavior with the given tier offset.
+    ///
+    /// Pushes `CellBehavior::Portal { sub_node_tier_offset }` onto the
+    /// optional behaviors list. At spawn time, the match arm in `spawn_inner()`
+    /// inserts the `PortalCell` marker and `PortalConfig { tier_offset }`.
+    ///
+    /// Test-only ergonomics — production cells acquire Portal behavior via
+    /// `.definition(&def)` from the RON definition's `behaviors:` field.
+    #[cfg(test)]
+    #[must_use]
+    pub(crate) fn portal(mut self, tier_offset: i32) -> Self {
+        self.optional.behaviors.push(CellBehavior::Portal {
+            sub_node_tier_offset: tier_offset,
+        });
+        self
+    }
 }
 
 // ── Test-only optional methods (production uses .definition() for these) ─────

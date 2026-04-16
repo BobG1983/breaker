@@ -324,7 +324,8 @@ fn guarded_cell_ron_has_guardian_hp_fraction() {
                 | CellBehavior::Phantom { .. }
                 | CellBehavior::Magnetic { .. }
                 | CellBehavior::Survival { .. }
-                | CellBehavior::SurvivalPermanent { .. } => None,
+                | CellBehavior::SurvivalPermanent { .. }
+                | CellBehavior::Portal { .. } => None,
             })
         })
         .expect("guarded.cell.ron should have Guarded behavior");

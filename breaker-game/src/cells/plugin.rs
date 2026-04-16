@@ -11,6 +11,7 @@ use crate::{
             locked::systems::{check_lock_release, sync_lock_invulnerable::sync_lock_invulnerable},
             magnetic::systems::apply_magnetic_fields,
             phantom::systems::tick_phantom_phase,
+            portal::systems::{check_portal_entry, handle_portal_completed, handle_portal_entered},
             regen::systems::tick_cell_regen,
             sequence::systems::{
                 advance_sequence::advance_sequence, init_sequence_groups::init_sequence_groups,
@@ -29,7 +30,7 @@ use crate::{
                 systems::suppress_bolt_immune_damage::suppress_bolt_immune_damage,
             },
         },
-        messages::{CellImpactWall, SalvoImpactBreaker},
+        messages::{CellImpactWall, PortalCompleted, PortalEntered, SalvoImpactBreaker},
         resources::CellConfig,
         systems::{cell_wall_collision, update_cell_damage_visuals},
     },
@@ -48,6 +49,8 @@ impl Plugin for CellsPlugin {
     fn build(&self, app: &mut App) {
         app.add_message::<CellImpactWall>()
             .add_message::<SalvoImpactBreaker>()
+            .add_message::<PortalEntered>()
+            .add_message::<PortalCompleted>()
             .init_resource::<CellConfig>()
             .add_systems(
                 OnEnter(NodeState::Loading),
@@ -77,6 +80,12 @@ impl Plugin for CellsPlugin {
                     suppress_bolt_immune_damage
                         .after(check_armor_direction)
                         .before(DeathPipelineSystems::ApplyDamage),
+                )
+                    .run_if(in_state(NodeState::Playing)),
+            )
+            .add_systems(
+                FixedUpdate,
+                (
                     tick_survival_timer.before(DeathPipelineSystems::ApplyDamage),
                     tick_salvo_fire_timer.after(tick_survival_timer),
                     fire_survival_turret.after(tick_salvo_fire_timer),
@@ -84,6 +93,11 @@ impl Plugin for CellsPlugin {
                     salvo_bolt_collision,
                     salvo_breaker_collision.before(EffectV3Systems::Bridge),
                     salvo_wall_collision,
+                    check_portal_entry.after(BoltSystems::CellCollision),
+                    handle_portal_entered.after(check_portal_entry),
+                    handle_portal_completed
+                        .after(handle_portal_entered)
+                        .before(DeathPipelineSystems::HandleKill),
                 )
                     .run_if(in_state(NodeState::Playing)),
             );

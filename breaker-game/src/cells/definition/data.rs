@@ -139,6 +139,14 @@ pub(crate) enum CellBehavior {
         /// Attack pattern (`StraightDown` or `Spread`(count)).
         pattern: AttackPattern,
     },
+    /// Cell spawns a portal entity on death. The portal allows the bolt
+    /// to enter a sub-node with a tier offset relative to the current node.
+    /// `sub_node_tier_offset` may be negative (easier sub-node) or positive
+    /// (harder sub-node). No validation constraint on the offset value.
+    Portal {
+        /// Tier offset for the sub-node. Positive = harder, negative = easier.
+        sub_node_tier_offset: i32,
+    },
 }
 
 /// A cell type definition loaded from RON.
@@ -204,11 +212,9 @@ impl CellTypeDefinition {
                         crate::shared::validation::positive_finite_f32("Volatile damage", *damage)?;
                         crate::shared::validation::positive_finite_f32("Volatile radius", *radius)?;
                     }
-                    CellBehavior::Sequence { .. } => {
-                        // No per-variant validation — both fields are u32 and
-                        // structurally valid for any value. Cross-cell
-                        // invariants (one position-0 per group, no duplicates)
-                        // belong at RON load time and are out of scope here.
+                    CellBehavior::Sequence { .. } | CellBehavior::Portal { .. } => {
+                        // No per-variant validation — all fields are
+                        // structurally valid for any value.
                     }
                     CellBehavior::Armored { value, facing: _ } => {
                         if *value == 0 || *value > 3 {

@@ -6,5 +6,6 @@ mod guarded_builder;
 mod locked;
 mod magnetic;
 mod phantom;
+mod portal;
 mod survival;
 mod volatile;

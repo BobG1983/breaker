@@ -19,6 +19,7 @@ pub use crate::cells::behaviors::{
     locked::components::{LockCell, Locked, Locks, Unlocked},
     magnetic::components::{MagneticCell, MagneticField},
     phantom::components::{PhantomCell, PhantomConfig, PhantomPhase, PhantomTimer},
+    portal::components::PortalCell,
     regen::components::{NoRegen, Regen, RegenCell, RegenRate},
     sequence::components::{SequenceActive, SequenceCell, SequenceGroup, SequencePosition},
     survival::components::{BoltImmune, SurvivalPattern, SurvivalTimer, SurvivalTurret},
