@@ -1,28 +1,18 @@
 ---
 name: start-dev
-description: Start a new development branch from develop using git-flow. Use when beginning any new feature, bug fix, or refactor. Guards against accidentally working on develop. Optionally takes a todo to drive the full lifecycle from todo → plan → implement.
+description: Start a new development branch from develop using git-flow. Use when beginning any new feature, bug fix, or refactor. Guards against accidentally working on develop. Drives the full lifecycle from context gathering → planning → implementation.
 ---
 
 # Start Dev
 
-Start a new git-flow topic branch from develop. Guards against working directly on develop or starting a branch when you're already on one. When given a `todo`, drives the full lifecycle: interrogate for missing detail → plan → `/implement`.
+Three things happen in order: **branch**, **plan**, **implement**. No step is ever skipped.
 
 ## Rules
 
 - **NEVER** use raw `git checkout -b` or `git branch` — always `git flow <type> start`
-- **ALWAYS**  read `.claude/rules/git.md` for the full git-flow workflow
-
-## When to Use
-
-- Beginning any new feature, bug fix, or refactor
-- User says "let's start working on X" and you're on develop
-- User wants to start working on a specific todo item
-
-## When NOT to Use
-
-- Already on a topic branch and don't need a new one — just work, or ask the user
-- Need to finish current work first — use `/finish-dev`
-- On main — switch to develop first
+- **ALWAYS** read `.claude/rules/git.md` for the full git-flow workflow
+- **NEVER** launch `/implement` without an approved plan
+- **NEVER** treat a todo detail file as a plan — it is input context for building a plan
 
 ## Usage
 
@@ -35,53 +25,56 @@ Start a new git-flow topic branch from develop. Guards against working directly 
 
 ## Procedure
 
-### Step 1 — Todo lifecycle (if `todo` provided)
+### Step 1 — Branch
 
-If `todo` was provided:
+Get onto a topic branch. Determine the current branch via `git branch --show-current`.
 
-1. Read the todo's detail file from `docs/todos/`
-2. If the todo is `[NEEDS DETAIL]`, run the `/todo interrogate` procedure for it — ask questions recursively until all open questions are resolved or the user says stop
-3. Update the todo detail file with anything captured
-4. Update the state of the todo to [in-progress]
-5. Enter `/plan` mode 
-6. **DO NOT** look at existing patterns **UNLESS** the todo is insufficiently detailed to create a full plan
-7. Create the plan with the **todo's details** as input
-8. After the plan is approved by the user, update the todo detail file with any new decisions or scope changes from the planning discussion
-
-If `todo` was NOT provided: move directly to Step 2
-
-### Step 2 — Check current branch
-
-Determine the current branch via `git branch --show-current`.
-
-- If on `develop`: proceed to Step 3
-- If on `main`: warn "You're on main. Switch to develop first." — stop
-- If on any other branch: warn "Already on branch `<name>`. Do you want to continue on this branch?": If the user says yes: proceed to Step 4
-
-### Step 3 — Pull latest
-
+**On `develop`:**
 ```bash
 git pull origin develop
-```
-
-Ensure develop is up to date before branching.
-
-### Step 4 — Start the branch
-
-```bash
 git flow <type> start <name>
 ```
+Report the new branch name. Proceed to Step 2.
 
-Where `<type>` is `feature`, `bugfix`, or `refactor` based on the argument.
+**On `main`:** Warn "You're on main. Switch to develop first." Stop.
+
+**On any other branch:** Warn "Already on branch `<name>`. Do you want to continue on this branch?" If yes, proceed to Step 2. If no, stop.
 
 **Type mapping:**
-- `feature` → `git flow feature start <name>`
-- `fix` → `git flow bugfix start <name>`
-- `refactor` → `git flow refactor start <name>`
+| Argument | Command |
+|----------|---------|
+| `feature` | `git flow feature start <name>` |
+| `fix` | `git flow bugfix start <name>` |
+| `refactor` | `git flow refactor start <name>` |
 
-### Step 5 — Confirm branch
+### Step 2 — Plan
 
-1. Report the new branch name.
-2. Launch `/implement` with the plan
+Every `/start-dev` produces a plan. The input context varies (todo detail file vs inline description) but the planning process is always the same.
 
+**If a `todo` was provided**, prepare the input context first:
+1. Read the todo item and its detail file from `docs/todos/`.
+2. If the todo is `[NEEDS DETAIL]`, run `/todo interrogate` — ask questions recursively until all open questions are resolved or the user says stop. Update the detail file.
+3. Mark the todo as `[in-progress]`.
 
+Now, regardless of whether a todo was provided or not:
+
+1. **Call `EnterPlanMode`.** This switches into plan mode where you can read files and explore the codebase but cannot write code.
+
+2. **Build the plan.** Read the input context (todo detail file, or the user's inline description). Explore the codebase as needed to understand existing structure, patterns, and constraints. Write an implementation plan to the plan file. The plan must include:
+   - **Scope** — what is in and out
+   - **Domains** — which plugins/modules are touched
+   - **Waves** — independent groups of work that can run in parallel
+   - **Per-wave detail** — what types, systems, components, or tests each wave produces
+   - **Shared prerequisites** — cross-domain types or wiring needed before waves begin
+   - **Open questions** — anything that needs the user's input before starting
+
+3. **Call `ExitPlanMode`.** The user sees the plan and either approves, requests changes, or rejects.
+   - Approved → proceed to Step 3.
+   - Changes requested → re-enter plan mode, revise, exit again.
+   - Rejected → stop.
+
+4. **Update the todo** (if one was provided) with any decisions or scope changes from the planning discussion.
+
+### Step 3 — Implement
+
+Launch `/implement` with the approved plan.
