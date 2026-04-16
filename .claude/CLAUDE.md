@@ -37,7 +37,7 @@ All code identifiers MUST use game vocabulary — see `.claude/rules/project-con
 **ALWAYS ask before**:
 - Creating new plugins, systems, or modules not in the architecture
 - Choosing between component vs resource vs message for new data
-- Any design decision not covered in `docs/plan/`
+- Any design decision not covered in `docs/design/` or `docs/architecture/`
 - Architectural changes or refactors affecting multiple systems
 
 **NEVER**:

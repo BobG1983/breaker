@@ -60,7 +60,7 @@ Keep under 80 lines. Use this exact structure:
 [The todo item being worked on]
 - Detail: [path to docs/todos/detail/<file>.md]
 
-## Specs
+## Completed Specs
 [The full file path to every fully completed, reviewed, and accepted spec with a one line description. One spec per line.]
 
 ## Task
@@ -70,7 +70,7 @@ Keep under 80 lines. Use this exact structure:
 - [key decisions with rationale]
 - REVISED: [old decision] → [new decision] — [why]
 
-## Specs
+## Spec Progress
 | Domain | Test Spec | Code Spec | Spec Review | Writer-Tests | Test Review | RED Gate | Writer-Code | GREEN | Notes |
 
 ## Verification Results
@@ -83,6 +83,11 @@ Keep under 80 lines. Use this exact structure:
   - Proven: [True/False]
   - Fix Attempted: [what fixwas tried] 
   → RESULT: [result]
+
+## Active Investigations
+- [issue]: `.claude/state/investigation-state.md`
+  — Status: [defining | exploring | hypothesizing | testing | fixing | resolved]
+  — Root cause: [pending | confirmed: description]
 
 ## Resolved
 - [failure]: fixed attempt N, verified by [test]

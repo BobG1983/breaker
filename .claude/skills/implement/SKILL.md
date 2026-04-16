@@ -19,7 +19,7 @@ Orchestrate the full delegated implementation pipeline for a feature. This skill
 - **Maximize parallelism** — waves are independent; only cargo commands serialize
 - **Always** move between plan steps without user input once verification passes clean
 - **NEVER** wait for user input to move forwards in a plan if verification passes clean
-- **Always** create a TaskList and keep it up to date whenever you update session state
+- **Always** keep session-state up to date — update it after every agent notification
 
 ## When to Use
 
@@ -66,7 +66,7 @@ When `todo` is provided, read the todo's detail file from `docs/todos/` and use 
 
 1. Verify you're on a topic branch (not develop or main). If on develop, run `/start-dev` to create a branch first.
 2. Parse the feature description (inline or from plan file)
-3. Create `.claude/state/investigations-state.md` using the format in the `.claude/rules/session-state.md`
+3. Create `.claude/state/session-state.md` using the format in the `.claude/rules/session-state.md`
 4. Record the task description and any initial decisions
 
 ### Step 1 — Analyze scope and identify waves
@@ -83,7 +83,7 @@ Record wave structure and decisions in session-state.
 
 **Skip if**: single-domain feature with familiar APIs and no new cross-domain communication **OR** if the scope is already heavily documented and researched in the plan and docs.
 
-**Run if** any trigger from `delegating-to-subagents.md` Research Wave applies. Launch applicable research agents from `sub-agents.md` Research Agents table in parallel, if no applicable research agent exists use Explore or a General sub-agent. Feed results into Step 3 and Step 4 briefings. Write research output to `.claude/research/<plan>-<optional:wave>-<feature>-<research_area>.md`
+**Run if** any trigger from `delegating-to-subagents.md` Research Wave applies. Launch applicable research agents from `sub-agents.md` Research Agents table in parallel, if no applicable research agent exists use a general-purpose sub-agent. Feed results into Step 3 and Step 4 briefings. Write research output to `.claude/research/<plan>-<optional:wave>-<feature>-<research_area>.md`
 
 ### Step 3 — Shared prerequisites
 

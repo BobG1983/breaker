@@ -74,20 +74,28 @@ Read the relevant source files based on which invariant fired.
 
 | Invariant | Where to look |
 |-----------|---------------|
-| `BoltInBounds` | `breaker-game/src/bolt/` — movement, velocity, reflection systems. `breaker-game/src/physics/` — integration, wall collision. |
+| `BoltInBounds` | `breaker-game/src/bolt/` — movement, velocity, reflection systems. `rantzsoft_physics2d/` — CCD, wall collision. |
+| `BoltSpeedAccurate` | `breaker-game/src/bolt/` — speed clamping, `apply_velocity_formula`. |
+| `BoltCountReasonable` | Bolt spawning and despawning across all domains — `SpawnBolts`, `SpawnPhantom`, death pipeline. |
 | `BreakerInBounds` | `breaker-game/src/breaker/` — movement systems, clamping. |
+| `BreakerPositionClamped` | `breaker-game/src/breaker/` — movement clamping. |
+| `ValidDashState` | `breaker-game/src/breaker/` — dash state machine transitions. |
 | `NoEntityLeaks` | Spawning systems across all domains — search for `commands.spawn` without corresponding despawn. |
 | `NoNaN` | Any system doing velocity math: division, normalization, reflection vectors. |
-| `ValidStateTransitions` | `breaker-game/src/shared/` — GameState transitions. |
-| `ValidBreakerState` | `breaker-game/src/breaker/` — state machine transitions. |
-| `TimerMonotonicallyDecreasing` | `breaker-game/src/run/node/` — timer tick systems. |
-| `BreakerPositionClamped` | `breaker-game/src/breaker/` — movement clamping. |
-| `PhysicsFrozenDuringPause` | `breaker-game/src/physics/` — pause state handling. |
-| `BoltSpeedInRange` | `breaker-game/src/bolt/` — speed clamping. |
-| `BoltCountReasonable` | Bolt spawning and despawning across all domains. |
-| `OfferingNoDuplicates` | `breaker-game/src/chips/offering.rs` — offering algorithm. |
-| `MaxedChipNeverOffered` | `breaker-game/src/chips/offering.rs` — pool filtering. |
-| `TimerNonNegative` | `breaker-game/src/run/node/` — timer tick systems. |
+| `TimerNonNegative` | `breaker-game/src/state/run/node/` — timer tick systems. |
+| `TimerMonotonicallyDecreasing` | `breaker-game/src/state/run/node/` — timer tick systems. |
+| `OfferingNoDuplicates` | `breaker-game/src/chips/offering/` — offering algorithm. |
+| `MaxedChipNeverOffered` | `breaker-game/src/chips/offering/` — pool filtering. |
+| `ChipStacksConsistent` | `breaker-game/src/chips/` — inventory stack tracking vs `max_stacks`. |
+| `RunStatsMonotonic` | `breaker-game/src/state/run/` — `RunStats` counter increments. |
+| `ChipOfferExpected` | `breaker-game/src/chips/offering/` — expected chip name in offerings. |
+| `SecondWindWallAtMostOne` | `breaker-game/src/effect_v3/effects/second_wind/` — single-wall constraint. |
+| `ShieldWallAtMostOne` | `breaker-game/src/effect_v3/effects/shield/` — single-wall constraint. |
+| `PulseRingAccumulation` | `breaker-game/src/effect_v3/effects/pulse/` — ring count vs max. |
+| `ChainArcCountReasonable` | `breaker-game/src/effect_v3/effects/chain_lightning/` — arc entity count. |
+| `AabbMatchesEntityDimensions` | `breaker-game/src/bolt/`, `breaker-game/src/breaker/`, `breaker-game/src/cells/` — AABB sync. |
+| `GravityWellCountReasonable` | `breaker-game/src/effect_v3/effects/gravity_well/` — well count vs max. |
+| `BoltBirthingLayersZeroed` | `breaker-game/src/bolt/` — `Birthing` component collision layer zeroing. |
 
 Also always read the failing scenario's `.scenario.ron` file to understand the input strategy, layout, and breaker archetype involved.
 
