@@ -82,7 +82,7 @@ impl Plugin for CellsPlugin {
                     fire_survival_turret.after(tick_salvo_fire_timer),
                     salvo_cell_collision.before(DeathPipelineSystems::ApplyDamage),
                     salvo_bolt_collision,
-                    salvo_breaker_collision,
+                    salvo_breaker_collision.before(EffectV3Systems::Bridge),
                     salvo_wall_collision,
                 )
                     .run_if(in_state(NodeState::Playing)),

@@ -7,3 +7,4 @@ mod handle_kill_integration;
 mod handle_kill_unit;
 pub(crate) mod helpers;
 mod process_despawn;
+mod salvo_pipeline;

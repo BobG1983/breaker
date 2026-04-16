@@ -188,6 +188,8 @@ pub(crate) struct OptionalBreakerData {
     pub(crate) override_y_position:        Option<f32>,
     pub(crate) override_max_speed:         Option<f32>,
     pub(crate) override_reflection_spread: Option<f32>,
+    pub(crate) bolt_lost:                  Option<RootNode>,
+    pub(crate) projectile_hit:             Option<RootNode>,
 }
 
 // ── Builder ─────────────────────────────────────────────────────────────────

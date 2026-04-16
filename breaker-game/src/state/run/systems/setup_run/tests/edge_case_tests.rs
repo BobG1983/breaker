@@ -187,7 +187,7 @@ fn setup_run_reads_bolt_name_from_breaker_definition() {
     let mut app = test_app();
 
     let test_breaker_def: BreakerDefinition = ron::de::from_str(
-        r#"(name: "TestBreaker", bolt: "HeavyBolt", life_pool: Some(3), effects: [])"#,
+        r#"(name: "TestBreaker", bolt: "HeavyBolt", life_pool: Some(3), bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))), projectile_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))), effects: [])"#,
     )
     .expect("test RON should parse");
     app.world_mut()

@@ -151,6 +151,36 @@ Guard changed to `if hp.current < hp.starting`. Two new regression tests in grou
 Both tests confirmed sound and correctly discriminate old vs new guard.
 See bug-patterns-resolved.md for authoritative record.
 
+## apply_magnetic_fields: normalize() must be normalize_or_zero() in cap guard — LATENT BUG (2026-04-15)
+
+`apply_magnetic_fields.rs` (line ~57): the acceleration cap guard uses `total_force.normalize() * max_accel`
+instead of `total_force.normalize_or_zero() * max_accel`. When `base_speed.0 < 0`:
+`max_accel = 2.0 * base_speed.0 < 0`, so `total_force.length() >= 0 > max_accel` is always true,
+causing the cap guard to always fire. If `total_force == Vec2::ZERO` at that point
+(all forces cancel, or bolt is coincident with a magnet), `Vec2::ZERO.normalize()` produces NaN in release
+(panics in debug), which then propagates into `Velocity2D`.
+
+Production RON always has positive `base_speed` (~720.0), so the trigger requires negative
+`base_speed` from an effect — currently not in production data.
+
+**Fix**: replace `total_force.normalize() * max_accel` with `total_force.normalize_or_zero() * max_accel`
+in `apply_magnetic_fields`.
+**Location**: `breaker-game/src/cells/behaviors/magnetic/systems/apply_magnetic_fields.rs` (cap guard block)
+
+## build_bolt_immune_test_app: enqueue_cell_damage not ordered before suppress_bolt_immune_damage — CONFIRMED BUG (2026-04-15)
+
+`build_bolt_immune_test_app()` in `helpers.rs:188`:
+```rust
+app.add_systems(FixedUpdate, enqueue_cell_damage.before(DeathPipelineSystems::ApplyDamage));
+```
+`enqueue_cell_damage` is constrained only to run before `ApplyDamage`, NOT before `suppress_bolt_immune_damage`.
+Both systems are in FixedUpdate, both before `ApplyDamage`. If the scheduler runs `suppress_bolt_immune_damage` first,
+it drains an empty `DamageDealt<Cell>` queue (fast-path skipped because blocklist is non-empty, drain returns nothing),
+then `enqueue_cell_damage` writes damage that bypasses the suppressor, flowing unsuppressed to `ApplyDamage`.
+Compare: `enqueue_bolt_impact` IS correctly constrained `.before(suppress_bolt_immune_damage)`.
+Fix: add `.before(suppress_bolt_immune_damage)` to the `enqueue_cell_damage` registration.
+**Location**: `breaker-game/src/cells/behaviors/survival/tests/helpers.rs:186-189`
+
 ## advance_node runs before set_active_layout and spawn_cells_from_layout — CONFIRMED BUG (2026-04-08)
 
 `advance_node` is registered on `OnEnter(RunState::Node)`. Sub-state `NodeState::Loading` is

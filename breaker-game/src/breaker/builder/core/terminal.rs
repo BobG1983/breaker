@@ -230,6 +230,7 @@ impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, 
         if let Some(effects) = effects.filter(|e| !e.is_empty()) {
             stamp_root_nodes(commands, entity, &effects);
         }
+        stamp_required_effects(commands, entity, &self.optional);
         entity
     }
 }
@@ -261,6 +262,7 @@ impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, 
         if let Some(effects) = effects.filter(|e| !e.is_empty()) {
             stamp_root_nodes(commands, entity, &effects);
         }
+        stamp_required_effects(commands, entity, &self.optional);
         entity
     }
 }
@@ -285,6 +287,7 @@ impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, 
         if let Some(effects) = effects.filter(|e| !e.is_empty()) {
             stamp_root_nodes(commands, entity, &effects);
         }
+        stamp_required_effects(commands, entity, &self.optional);
         entity
     }
 }
@@ -309,12 +312,25 @@ impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, 
         if let Some(effects) = effects.filter(|e| !e.is_empty()) {
             stamp_root_nodes(commands, entity, &effects);
         }
+        stamp_required_effects(commands, entity, &self.optional);
         entity
     }
 }
 
-/// Stamps root node effects onto the spawned entity.
-///
+/// Stamps `bolt_lost` and `projectile_hit` required-effect trees onto the entity.
+fn stamp_required_effects(commands: &mut Commands, entity: Entity, optional: &OptionalBreakerData) {
+    for root in optional
+        .bolt_lost
+        .iter()
+        .chain(optional.projectile_hit.iter())
+    {
+        if let RootNode::Stamp(_target, tree) = root {
+            commands.stamp_effect(entity, String::new(), tree.clone());
+        }
+        // Spawn root nodes register observers — not handled at builder spawn time.
+    }
+}
+
 /// For each `Stamp(target, tree)` in `effects`, calls `stamp_effect` on the entity.
 /// `Spawn` root nodes are ignored at builder spawn time (they register observers separately).
 fn stamp_root_nodes(commands: &mut Commands, entity: Entity, effects: &[RootNode]) {

@@ -11,7 +11,10 @@ use crate::{
         messages::{BoltImpactBreaker, BoltImpactCell, BoltImpactWall, BoltLost},
     },
     breaker::messages::{BreakerImpactCell, BreakerImpactWall, BumpPerformed, BumpWhiffed, NoBump},
-    cells::{components::Cell, messages::CellImpactWall},
+    cells::{
+        components::Cell,
+        messages::{CellImpactWall, SalvoImpactBreaker},
+    },
     shared::{
         death_pipeline::{
             damage_dealt::DamageDealt, despawn_entity::DespawnEntity, destroyed::Destroyed,
@@ -60,6 +63,7 @@ pub(crate) fn register_effect_v3_test_infrastructure(app: &mut App) {
     app.add_message::<BreakerImpactCell>();
     app.add_message::<BreakerImpactWall>();
     app.add_message::<CellImpactWall>();
+    app.add_message::<SalvoImpactBreaker>();
 
     // Bump bridges (`bump/bridges.rs`)
     app.add_message::<BumpPerformed>();

@@ -8,6 +8,8 @@ pub(super) fn test_breaker_definition() -> BreakerDefinition {
     ron::de::from_str(
         r#"(
             name: "TestBreaker",
+            bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))),
+            projectile_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))),
             effects: [],
         )"#,
     )
@@ -17,6 +19,11 @@ pub(super) fn test_breaker_definition() -> BreakerDefinition {
 /// Creates a `BreakerDefinition` with custom gameplay values for testing
 /// specific field propagation.
 pub(super) fn custom_breaker_definition() -> BreakerDefinition {
+    use crate::effect_v3::{
+        effects::LoseLifeConfig,
+        types::{EffectType, EntityKind, RootNode, StampTarget, Tree, Trigger},
+    };
+
     BreakerDefinition {
         name:                      "CustomBreaker".to_string(),
         bolt:                      "Bolt".to_string(),
@@ -52,6 +59,20 @@ pub(super) fn custom_breaker_definition() -> BreakerDefinition {
         color_rgb:                 [0.2, 2.0, 3.0],
         life_pool:                 None,
         effects:                   vec![],
+        bolt_lost:                 RootNode::Stamp(
+            StampTarget::Breaker,
+            Tree::When(
+                Trigger::BoltLostOccurred,
+                Box::new(Tree::Fire(EffectType::LoseLife(LoseLifeConfig {}))),
+            ),
+        ),
+        projectile_hit:            RootNode::Stamp(
+            StampTarget::Breaker,
+            Tree::When(
+                Trigger::Impacted(EntityKind::Salvo),
+                Box::new(Tree::Fire(EffectType::LoseLife(LoseLifeConfig {}))),
+            ),
+        ),
         min_w:                     None,
         max_w:                     None,
         min_h:                     None,

@@ -133,8 +133,9 @@ fn spawn_does_not_dispatch_effects_when_empty() {
     let bound = app.world().get::<BoundEffects>(entity);
     if let Some(bound) = bound {
         assert!(
-            bound.0.is_empty(),
-            "BoundEffects should be empty when definition has no effects"
+            bound.0.len() <= 2,
+            "BoundEffects should have at most 2 entries (bolt_lost + projectile_hit) when effects is empty, got {}",
+            bound.0.len()
         );
     }
 }

@@ -25,6 +25,7 @@ pub fn register(app: &mut App) {
             bridges::on_bolt_destroyed,
             bridges::on_wall_destroyed,
             bridges::on_breaker_destroyed,
+            bridges::on_salvo_destroyed,
         )
             .in_set(EffectV3Systems::Death),
     );

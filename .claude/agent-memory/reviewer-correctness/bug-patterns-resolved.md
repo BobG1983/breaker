@@ -146,6 +146,17 @@ fail-fast for violations whose invariant kind is NOT in the allowed-failures set
 Mixed-allowed/disallowed case is handled correctly.
 **Location**: `breaker-scenario-runner/src/runner/app.rs`
 
+## Wave 6C aegis.breaker.ron double-stamp — RESOLVED before review (2026-04-16)
+
+The duplicate `Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(()))))` entry was removed from
+`aegis.breaker.ron`'s `effects` array before this review session. The RON now has 3 effects entries
+(PerfectBumped, EarlyBumped, LateBumped). The bolt_lost field handles BoltLostOccurred exclusively.
+
+**Residual test stale assertion**: `ron_tests.rs:129` still asserts `def.effects.len() == 4` (stale).
+This will fail when cargo test runs. Fix: change the assertion to `3`.
+**Location**: `breaker-game/src/breaker/builder/tests/ron_tests.rs:129`
+**Do NOT re-flag the double-stamp as still present in the RON — it was already fixed.**
+
 ## death_pipeline: KillYourself<Breaker> dead-letter — RESOLVED (2026-04-14 Wave F1 scope expansion)
 
 `handle_kill<Wall>` is now registered in `plugin.rs` (Wall path handled by generic handler).

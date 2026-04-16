@@ -4,7 +4,7 @@ use crate::breaker::definition::BreakerDefinition;
 
 #[test]
 fn minimal_ron_parses_with_all_defaults() {
-    let ron_str = r#"(name: "TestBreaker", effects: [])"#;
+    let ron_str = r#"(name: "TestBreaker", bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))), projectile_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))), effects: [])"#;
     let def: BreakerDefinition = ron::de::from_str(ron_str).expect("minimal RON should parse");
     let defaults = BreakerDefinition::default();
 
@@ -74,6 +74,8 @@ fn ron_with_explicit_gameplay_fields_parses() {
         height: 25.0,
         max_speed: 600.0,
         reflection_spread: 60.0,
+        bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))),
+        projectile_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))),
         effects: [],
     )"#;
     let def: BreakerDefinition =
@@ -99,6 +101,8 @@ fn ron_with_explicit_min_max_size_parses() {
         max_w: Some(200.0),
         min_h: None,
         max_h: Some(50.0),
+        bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))),
+        projectile_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))),
         effects: [],
     )"#;
     let def: BreakerDefinition =
@@ -122,7 +126,7 @@ fn aegis_breaker_ron_parses_with_expanded_definition() {
     assert_eq!(def.name, "Aegis");
     assert_eq!(def.bolt, "Bolt");
     assert_eq!(def.life_pool, Some(3));
-    assert_eq!(def.effects.len(), 4);
+    assert_eq!(def.effects.len(), 3);
     // All gameplay fields should be defaults
     assert!((def.width - defaults.width).abs() < f32::EPSILON);
     assert!((def.max_speed - defaults.max_speed).abs() < f32::EPSILON);
@@ -160,7 +164,7 @@ fn prism_breaker_ron_parses_with_expanded_definition() {
 
 #[test]
 fn old_format_with_stat_overrides_fails_to_parse() {
-    let ron_str = r#"(name: "Test", stat_overrides: (), effects: [])"#;
+    let ron_str = r#"(name: "Test", stat_overrides: (), bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))), projectile_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))), effects: [])"#;
     let result = ron::de::from_str::<BreakerDefinition>(ron_str);
     assert!(
         result.is_err(),

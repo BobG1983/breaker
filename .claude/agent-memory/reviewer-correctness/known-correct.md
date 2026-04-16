@@ -144,6 +144,28 @@ matching entry when scanning the damage queue. Two bolts hitting the same cell p
 entries (different bolt entities) — each matches its own damage message independently. One bolt
 hitting two cells produces two entries with distinct cell entities — same result.
 
+## Wave 6A suppress_bolt_immune_damage: drain+filter pattern is correct — CONFIRMED (2026-04-15)
+
+Same drain+filter+re-extend pattern as `check_armor_direction` (confirmed correct in Wave 3).
+`Entity::PLACEHOLDER` for dealerless messages is correct — PLACEHOLDER never matches a real entity in the blocklist.
+`swap_remove` first-match-wins semantics are correct for (bolt, cell) pairs.
+Fast-path `if blocklist.is_empty() { return; }` is correct — skips drain entirely when nothing to block.
+Production ordering `.after(check_armor_direction).before(ApplyDamage)` is correct.
+
+## Wave 6A kill_bump_vulnerable_cells: f32::MAX lethal damage is safe — CONFIRMED (2026-04-15)
+
+`f32::MAX` as damage amount: `apply_damage` computes `hp.current - f32::MAX` which is a large negative
+finite number. No NaN produced. The `Without<Dead>` filter on `kill_bump_vulnerable_cells` query
+correctly prevents double-killing already-dead cells. `Without<Invulnerable>` is absent from the
+WRITING system (not needed — the kill writer doesn't need to check; `apply_damage` has `Without<Invulnerable>`
+and will silently skip applying it). This is the correct design.
+
+## Wave 6A SurvivalPermanent intentionally omits SurvivalTimer — CONFIRMED (2026-04-15)
+
+`CellBehavior::SurvivalPermanent` arm in `terminal.rs` inserts SurvivalTurret, SurvivalPattern, BoltImmune,
+BumpVulnerable but NO `SurvivalTimer`. This is by design — permanent turrets never self-destruct.
+The timer countdown systems will simply skip entities without `SurvivalTimer`. Do NOT flag this absence.
+
 ## Wave 3 piercing_remaining snapshot vs live — CONFIRMED intentional design (2026-04-15)
 
 `BoltImpactCell.piercing_remaining` is a snapshot captured BEFORE CCD decrements on pierce-through

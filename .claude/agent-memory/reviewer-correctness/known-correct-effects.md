@@ -355,3 +355,36 @@ logically after the fire. Correct.
 `stamp_spawned_bolts`, `stamp_spawned_cells`, `stamp_spawned_walls`, `stamp_spawned_breakers`
 are all imported from `storage` mod and registered in `FixedUpdate` / `EffectV3Systems::Bridge`
 in `effect_v3/plugin.rs`. Do NOT flag as missing wiring.
+
+## Wave 5 magnetic: `dist > field.radius` boundary check is intentional (2026-04-15)
+
+`apply_magnetic_fields` uses `if dist > field.radius { continue; }`. This means a bolt at
+exactly `field.radius` IS affected (the condition is false, so the bolt is NOT skipped).
+Test `bolt_at_radius_boundary_still_affected` in `single_magnet.rs` explicitly locks this behavior.
+Do NOT re-flag as an off-by-one error.
+
+## Wave 5 magnetic: cap guard uses `>` not `>=` — intentional (2026-04-15)
+
+The acceleration cap test `acceleration_exactly_at_cap_passes_through` confirms that the cap
+uses strict `>` (not `>=`). A force magnitude exactly equal to `max_accel` passes through
+without normalization+scaling. This is intentional — equal-to-cap is not over-cap.
+Do NOT re-flag the `>` as wrong.
+
+## Wave 5 magnetic: Dead cells excluded via Without<Dead> query filter — correct ECS pattern (2026-04-15)
+
+`MagnetQuery` has `Without<Dead>` in its filter tuple. Dead cells never enter the inner loop at all.
+No runtime `if dead { continue; }` check is needed or present. This is the correct ECS approach.
+Do NOT flag absence of a runtime dead-check.
+
+## Wave 5 magnetic: PhantomPhase::Ghost suppresses, Telegraph and Solid do not — confirmed (2026-04-15)
+
+`if phantom.is_some_and(|p| *p == PhantomPhase::Ghost) { continue; }` correctly skips only Ghost.
+Telegraph and Solid phases allow force through (cells behave as real magnets in those phases).
+Tests in `dead_and_phantom.rs` cover all three variants and the no-component case.
+
+## Wave 5 magnetic: Position2D (not GlobalPosition2D) is correct for both magnets and bolts (2026-04-15)
+
+Both magnetic cells and bolts are root entities with no parent hierarchy. `Position2D` is their
+world-space position. Using `GlobalPosition2D` would require the spatial hierarchy propagation
+to have run — `Position2D` is directly available and equivalent for root entities.
+Do NOT re-flag the use of `Position2D` instead of `GlobalPosition2D`.

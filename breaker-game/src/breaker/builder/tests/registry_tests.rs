@@ -24,10 +24,10 @@ fn extensions_returns_breaker_ron() {
 #[test]
 fn seed_populates_from_expanded_definitions() {
     let def_a: BreakerDefinition =
-        ron::de::from_str(r#"(name: "TestBreaker", width: 150.0, max_speed: 700.0, effects: [])"#)
+        ron::de::from_str(r#"(name: "TestBreaker", width: 150.0, max_speed: 700.0, bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))), projectile_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))), effects: [])"#)
             .expect("test RON should parse");
     let def_b: BreakerDefinition = ron::de::from_str(
-        r#"(name: "OtherBreaker", width: 120.0, max_speed: 1000.0, effects: [])"#,
+        r#"(name: "OtherBreaker", width: 120.0, max_speed: 1000.0, bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))), projectile_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))), effects: [])"#,
     )
     .expect("test RON should parse");
 

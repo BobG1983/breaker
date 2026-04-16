@@ -27,7 +27,7 @@ fn test_app() -> App {
 
 fn make_test_def(name: &str, life_pool: Option<u32>) -> BreakerDefinition {
     ron::de::from_str(&format!(
-        r#"(name: "{name}", life_pool: {lp}, effects: [])"#,
+        r#"(name: "{name}", life_pool: {lp}, bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))), projectile_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))), effects: [])"#,
         lp = life_pool.map_or_else(|| "None".to_string(), |n| format!("Some({n})")),
     ))
     .expect("test RON should parse")

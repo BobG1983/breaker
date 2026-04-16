@@ -19,9 +19,6 @@ pub(crate) struct SalvoSource(pub(crate) Entity);
 #[derive(Component, Debug, Clone, Copy)]
 pub(crate) struct SalvoFireTimer(pub(crate) f32);
 
-/// Collision layer bitmask for salvo entities.
-pub(crate) const SALVO_LAYER: u32 = 1 << 4;
-
 /// Default seconds between turret shots.
 pub(crate) const SALVO_FIRE_INTERVAL: f32 = 2.0;
 

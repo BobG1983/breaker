@@ -211,13 +211,13 @@ fn when_child_targeting_breaker_stamps_to_bound_effects_with_shield() {
     app.update();
 
     let bound = app.world().get::<BoundEffects>(breaker).unwrap();
-    assert_eq!(
-        bound.0.len(),
-        1,
-        "BoundEffects on breaker should have 1 entry for the When node"
-    );
+    let chip_entry = bound
+        .0
+        .iter()
+        .find(|(name, _)| name == "Parry")
+        .expect("BoundEffects should contain the chip's 'Parry' entry");
 
-    let (chip_name, tree) = &bound.0[0];
+    let (chip_name, tree) = chip_entry;
     assert_eq!(chip_name, "Parry");
     assert!(
         matches!(tree, Tree::When(Trigger::PerfectBumped, _)),

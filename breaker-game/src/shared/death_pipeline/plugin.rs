@@ -7,8 +7,11 @@ use super::{
     kill_yourself::KillYourself, sets::DeathPipelineSystems, systems,
 };
 use crate::{
-    bolt::components::Bolt, breaker::components::Breaker, cells::components::Cell,
-    effect_v3::sets::EffectV3Systems, walls::components::Wall,
+    bolt::components::Bolt,
+    breaker::components::Breaker,
+    cells::{behaviors::survival::salvo::components::Salvo, components::Cell},
+    effect_v3::sets::EffectV3Systems,
+    walls::components::Wall,
 };
 
 /// Plugin for the unified death pipeline.
@@ -25,16 +28,19 @@ impl Plugin for DeathPipelinePlugin {
         app.add_message::<DamageDealt<Bolt>>();
         app.add_message::<DamageDealt<Wall>>();
         app.add_message::<DamageDealt<Breaker>>();
+        app.add_message::<DamageDealt<Salvo>>();
 
         app.add_message::<KillYourself<Cell>>();
         app.add_message::<KillYourself<Bolt>>();
         app.add_message::<KillYourself<Wall>>();
         app.add_message::<KillYourself<Breaker>>();
+        app.add_message::<KillYourself<Salvo>>();
 
         app.add_message::<Destroyed<Cell>>();
         app.add_message::<Destroyed<Bolt>>();
         app.add_message::<Destroyed<Wall>>();
         app.add_message::<Destroyed<Breaker>>();
+        app.add_message::<Destroyed<Salvo>>();
 
         app.add_message::<DespawnEntity>();
 
@@ -57,6 +63,7 @@ impl Plugin for DeathPipelinePlugin {
                 systems::apply_damage::<Bolt>,
                 systems::apply_damage::<Wall>,
                 systems::apply_damage::<Breaker>,
+                systems::apply_damage::<Salvo>,
             )
                 .in_set(DeathPipelineSystems::ApplyDamage),
         );
@@ -69,6 +76,7 @@ impl Plugin for DeathPipelinePlugin {
                 systems::detect_deaths::<Bolt>,
                 systems::detect_deaths::<Wall>,
                 systems::detect_deaths::<Breaker>,
+                systems::detect_deaths::<Salvo>,
             )
                 .in_set(DeathPipelineSystems::DetectDeaths),
         );
@@ -91,6 +99,7 @@ impl Plugin for DeathPipelinePlugin {
                 systems::handle_kill::<Cell>,
                 systems::handle_kill::<Bolt>,
                 systems::handle_kill::<Wall>,
+                systems::handle_kill::<Salvo>,
             )
                 .in_set(DeathPipelineSystems::HandleKill),
         );

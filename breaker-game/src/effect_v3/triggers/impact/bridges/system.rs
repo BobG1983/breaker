@@ -8,7 +8,7 @@ use bevy::{ecs::system::SystemParam, prelude::*};
 use crate::{
     bolt::messages::{BoltImpactBreaker, BoltImpactCell, BoltImpactWall},
     breaker::messages::{BreakerImpactCell, BreakerImpactWall},
-    cells::messages::CellImpactWall,
+    cells::messages::{CellImpactWall, SalvoImpactBreaker},
     effect_v3::{
         storage::{BoundEffects, StagedEffects},
         types::{EntityKind, Trigger, TriggerContext},
@@ -19,12 +19,13 @@ use crate::{
 /// Bundled message readers for all collision types — avoids `too_many_arguments`.
 #[derive(SystemParam)]
 pub(crate) struct ImpactReaders<'w, 's> {
-    bolt_cell:    MessageReader<'w, 's, BoltImpactCell>,
-    bolt_wall:    MessageReader<'w, 's, BoltImpactWall>,
-    bolt_breaker: MessageReader<'w, 's, BoltImpactBreaker>,
-    breaker_cell: MessageReader<'w, 's, BreakerImpactCell>,
-    breaker_wall: MessageReader<'w, 's, BreakerImpactWall>,
-    cell_wall:    MessageReader<'w, 's, CellImpactWall>,
+    bolt_cell:     MessageReader<'w, 's, BoltImpactCell>,
+    bolt_wall:     MessageReader<'w, 's, BoltImpactWall>,
+    bolt_breaker:  MessageReader<'w, 's, BoltImpactBreaker>,
+    breaker_cell:  MessageReader<'w, 's, BreakerImpactCell>,
+    breaker_wall:  MessageReader<'w, 's, BreakerImpactWall>,
+    cell_wall:     MessageReader<'w, 's, CellImpactWall>,
+    salvo_breaker: MessageReader<'w, 's, SalvoImpactBreaker>,
 }
 
 /// Local bridge: fires `Impacted(entity_kind)` on entities involved in a collision.
@@ -38,91 +39,71 @@ pub(crate) fn on_impacted(
     mut commands: Commands,
 ) {
     for msg in readers.bolt_cell.read() {
-        let ctx = TriggerContext::Impact {
-            impactor: msg.bolt,
-            impactee: msg.cell,
-        };
-        walk_local_impact(
+        dispatch_local(
             msg.bolt,
-            EntityKind::Cell,
-            msg.cell,
             EntityKind::Bolt,
-            &ctx,
+            msg.cell,
+            EntityKind::Cell,
             &bound_query,
             &mut commands,
         );
     }
     for msg in readers.bolt_wall.read() {
-        let ctx = TriggerContext::Impact {
-            impactor: msg.bolt,
-            impactee: msg.wall,
-        };
-        walk_local_impact(
+        dispatch_local(
             msg.bolt,
-            EntityKind::Wall,
-            msg.wall,
             EntityKind::Bolt,
-            &ctx,
+            msg.wall,
+            EntityKind::Wall,
             &bound_query,
             &mut commands,
         );
     }
     for msg in readers.bolt_breaker.read() {
-        let ctx = TriggerContext::Impact {
-            impactor: msg.bolt,
-            impactee: msg.breaker,
-        };
-        walk_local_impact(
+        dispatch_local(
             msg.bolt,
-            EntityKind::Breaker,
-            msg.breaker,
             EntityKind::Bolt,
-            &ctx,
+            msg.breaker,
+            EntityKind::Breaker,
             &bound_query,
             &mut commands,
         );
     }
     for msg in readers.breaker_cell.read() {
-        let ctx = TriggerContext::Impact {
-            impactor: msg.breaker,
-            impactee: msg.cell,
-        };
-        walk_local_impact(
+        dispatch_local(
             msg.breaker,
-            EntityKind::Cell,
-            msg.cell,
             EntityKind::Breaker,
-            &ctx,
+            msg.cell,
+            EntityKind::Cell,
             &bound_query,
             &mut commands,
         );
     }
     for msg in readers.breaker_wall.read() {
-        let ctx = TriggerContext::Impact {
-            impactor: msg.breaker,
-            impactee: msg.wall,
-        };
-        walk_local_impact(
+        dispatch_local(
             msg.breaker,
-            EntityKind::Wall,
-            msg.wall,
             EntityKind::Breaker,
-            &ctx,
+            msg.wall,
+            EntityKind::Wall,
             &bound_query,
             &mut commands,
         );
     }
     for msg in readers.cell_wall.read() {
-        let ctx = TriggerContext::Impact {
-            impactor: msg.cell,
-            impactee: msg.wall,
-        };
-        walk_local_impact(
+        dispatch_local(
             msg.cell,
-            EntityKind::Wall,
-            msg.wall,
             EntityKind::Cell,
-            &ctx,
+            msg.wall,
+            EntityKind::Wall,
+            &bound_query,
+            &mut commands,
+        );
+    }
+    for msg in readers.salvo_breaker.read() {
+        dispatch_local(
+            msg.salvo,
+            EntityKind::Salvo,
+            msg.breaker,
+            EntityKind::Breaker,
             &bound_query,
             &mut commands,
         );
@@ -192,6 +173,15 @@ pub(crate) fn on_impact_occurred(
         kinds.push((EntityKind::Wall, ctx.clone()));
         kinds.push((EntityKind::Any, ctx));
     }
+    for msg in readers.salvo_breaker.read() {
+        let ctx = TriggerContext::Impact {
+            impactor: msg.salvo,
+            impactee: msg.breaker,
+        };
+        kinds.push((EntityKind::Salvo, ctx.clone()));
+        kinds.push((EntityKind::Breaker, ctx.clone()));
+        kinds.push((EntityKind::Any, ctx));
+    }
 
     for (kind, ctx) in &kinds {
         let trigger = Trigger::ImpactOccurred(*kind);
@@ -202,6 +192,29 @@ pub(crate) fn on_impact_occurred(
             walk_bound_effects(entity, &trigger, ctx, &bound_trees, &mut commands);
         }
     }
+}
+
+fn dispatch_local(
+    entity_a: Entity,
+    kind_a: EntityKind,
+    entity_b: Entity,
+    kind_b: EntityKind,
+    bound_query: &Query<(&BoundEffects, Option<&StagedEffects>)>,
+    commands: &mut Commands,
+) {
+    let ctx = TriggerContext::Impact {
+        impactor: entity_a,
+        impactee: entity_b,
+    };
+    walk_local_impact(
+        entity_a,
+        kind_b,
+        entity_b,
+        kind_a,
+        &ctx,
+        bound_query,
+        commands,
+    );
 }
 
 /// Walk effects on both collision participants (local dispatch).

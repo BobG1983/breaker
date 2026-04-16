@@ -106,10 +106,10 @@ fn bound_effects_inserted_on_entity_missing_it() {
         bound.is_some(),
         "BoundEffects should have been inserted on the entity"
     );
-    assert_eq!(
-        bound.unwrap().0.len(),
-        1,
-        "BoundEffects should have 1 entry after dispatch"
+    let bound = bound.unwrap();
+    assert!(
+        bound.0.iter().any(|(name, _)| name == "Test"),
+        "BoundEffects should contain the chip's 'Test' entry"
     );
 
     let staged = app.world().get::<StagedEffects>(breaker);
@@ -207,10 +207,13 @@ fn breaker_missing_bound_effects_inserted_before_push() {
 
     let bound = app.world().get::<BoundEffects>(breaker);
     assert!(bound.is_some(), "BoundEffects should have been inserted");
-    assert_eq!(
-        bound.unwrap().0.len(),
-        1,
-        "BoundEffects should have 1 entry"
+    assert!(
+        bound
+            .unwrap()
+            .0
+            .iter()
+            .any(|(name, _)| name == "Parry Bare"),
+        "BoundEffects should contain the chip's 'Parry Bare' entry"
     );
 
     let staged = app.world().get::<StagedEffects>(breaker);

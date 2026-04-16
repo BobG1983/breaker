@@ -55,7 +55,7 @@ fn timer_decrements_by_dt_when_started() {
 fn timer_just_above_one_dt_remains_positive() {
     let mut app = build_tick_survival_timer_app();
 
-    let dt = 1.0 / 64.0; // 0.015625
+    // dt = 1.0 / 64.0 = 0.015625
     let turret = spawn_turret_manual(
         &mut app,
         Vec2::new(0.0, 100.0),

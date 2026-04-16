@@ -35,3 +35,5 @@
 - [ExplodeConfig quadtree migration](explode_config_quadtree_migration.md) — Follow-up 6: world scan replaced by quadtree broad phase + world.get narrow phase; 5 allocs per fire() call; all patterns confirmed correct; Phase 3 watch under heavy chain reactions
 - [Sequence Wave 2 performance patterns](sequence_wave2_patterns.md) — reset/advance/init systems: zero allocations, bounded O(N×M) scan, 2-archetype split by SequenceActive — all acceptable at 50–200 cell scale
 - [Armored Wave 3 performance patterns](armored_wave3_patterns.md) — blocklist Vec alloc is free (Vec::new no heap), drain+collect is borrow-checker-forced, ArmoredCell archetype clean (no churn), With<ArmoredCell> filter correct — all acceptable
+- [Magnetic Wave 5 apply_magnetic_fields patterns](magnetic_wave5_patterns.md) — O(bolts×magnets) nested loop, sqrt in cull+cap, Option<PhantomPhase> check — all zero-allocation and acceptable at <20 bolts × <50 magnets
+- [Survival Wave 6A performance patterns](survival_wave6a_patterns.md) — suppress_bolt_immune_damage + kill_bump_vulnerable_cells: structural mirror of armored Wave 3; all patterns acceptable, no archetype churn

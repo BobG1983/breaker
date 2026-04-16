@@ -100,6 +100,8 @@ fn spawn_salvo(commands: &mut Commands, source: Entity, position: Vec2, velocity
             CELL_LAYER | BOLT_LAYER | BREAKER_LAYER | WALL_LAYER,
         ),
         ApplyVelocity,
+        Hp::new(1.0),
+        KilledBy::default(),
         CleanupOnExit::<NodeState>::default(),
     ));
 }

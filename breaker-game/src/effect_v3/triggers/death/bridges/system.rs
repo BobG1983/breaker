@@ -6,6 +6,7 @@
 use bevy::prelude::*;
 
 use crate::{
+    cells::behaviors::survival::salvo::components::Salvo,
     effect_v3::{
         types::{EntityKind, Trigger, TriggerContext},
         walking::{walk_bound_effects, walk_staged_effects},
@@ -163,6 +164,22 @@ pub(crate) fn on_breaker_destroyed(
 ) {
     on_destroyed_inner(
         EntityKind::Breaker,
+        &mut reader,
+        &bound_query,
+        &global_query,
+        &mut commands,
+    );
+}
+
+/// Bridge for salvo deaths.
+pub(crate) fn on_salvo_destroyed(
+    mut reader: MessageReader<Destroyed<Salvo>>,
+    bound_query: Query<(&BoundEffects, Option<&StagedEffects>)>,
+    global_query: Query<(Entity, &BoundEffects, Option<&StagedEffects>)>,
+    mut commands: Commands,
+) {
+    on_destroyed_inner(
+        EntityKind::Salvo,
         &mut reader,
         &bound_query,
         &global_query,

@@ -111,16 +111,22 @@ const fn default_color_rgb() -> [f32; 3] {
 #[serde(deny_unknown_fields)]
 pub struct BreakerDefinition {
     /// Display name of the breaker.
-    pub name:      String,
+    pub name:           String,
     /// Name of the bolt definition this breaker uses.
     #[serde(default = "default_bolt_name")]
-    pub bolt:      String,
+    pub bolt:           String,
     /// Number of lives, if the breaker uses a life pool. None = infinite.
     #[serde(default)]
-    pub life_pool: Option<u32>,
+    pub life_pool:      Option<u32>,
     /// All effect chains for this breaker.
     #[serde(default)]
-    pub effects:   Vec<RootNode>,
+    pub effects:        Vec<RootNode>,
+    /// Effect tree triggered when a bolt is lost. Required field — every breaker
+    /// must define its bolt-lost penalty.
+    pub bolt_lost:      RootNode,
+    /// Effect tree triggered when a projectile (salvo) hits the breaker.
+    /// Required field — every breaker must define its projectile-hit response.
+    pub projectile_hit: RootNode,
 
     // ── Dimensions ──────────────────────────────────────────────────────
     /// Full width of the breaker in world units.
@@ -239,11 +245,34 @@ pub struct BreakerDefinition {
 
 impl Default for BreakerDefinition {
     fn default() -> Self {
+        use crate::effect_v3::{
+            effects::LoseLifeConfig,
+            types::{StampTarget, Tree, Trigger},
+        };
+
         Self {
             name:                      String::new(),
             bolt:                      default_bolt_name(),
             life_pool:                 None,
             effects:                   vec![],
+            bolt_lost:                 RootNode::Stamp(
+                StampTarget::Breaker,
+                Tree::When(
+                    Trigger::BoltLostOccurred,
+                    Box::new(Tree::Fire(crate::effect_v3::types::EffectType::LoseLife(
+                        LoseLifeConfig {},
+                    ))),
+                ),
+            ),
+            projectile_hit:            RootNode::Stamp(
+                StampTarget::Breaker,
+                Tree::When(
+                    Trigger::Impacted(crate::effect_v3::types::EntityKind::Salvo),
+                    Box::new(Tree::Fire(crate::effect_v3::types::EffectType::LoseLife(
+                        LoseLifeConfig {},
+                    ))),
+                ),
+            ),
             width:                     default_width(),
             height:                    default_height(),
             y_position:                default_y_position(),
