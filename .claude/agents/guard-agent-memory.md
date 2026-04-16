@@ -65,7 +65,7 @@ A memory file is stale when it describes something that is no longer true, or if
 
 The same fact should not live in multiple agents' memories. Each fact belongs to the agent whose domain it serves:
 - Bevy API patterns → researcher-bevy-api
-- Architecture rules → reviewer-architecture or guard-architecture
+- Architecture rules → reviewer-architecture
 - System ordering → researcher-system-dependencies
 - Orchestration rules → orchestrator
 - Code style → reviewer-quality

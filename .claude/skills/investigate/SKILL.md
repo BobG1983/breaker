@@ -59,14 +59,14 @@ Gather information systematically:
 
 **THEN:** Use Research Agents or Explore (where no dedicated researcher exists) to trace execution paths, resources used, etc.
 
-1. **Console/Logs**: Check the console, or log files
-2. **Network**: Inspect API requests/responses
-3. **Database**: Query relevant data state
-4. **Code Path**: Trace the execution path
-5. **User Context**: Check user role, permissions, session
+1. **Console/Logs**: Check the console, compiler output, or log files
+2. **ECS State**: Inspect entity components, resources, and system ordering
+3. **Scenario Runner**: Run targeted scenarios to reproduce the issue
+4. **Code Path**: Trace the execution path through systems and commands
+5. **Git History**: Check recent changes to the affected files
 
 ```
-@reasearcher-codebase: What is the data flow for this function?
+@researcher-codebase: What is the data flow for this function?
 @researcher-git: What is the edit history for this file?
 ```
 
@@ -154,7 +154,7 @@ Only after root cause is confirmed:
 
 ```
 1. DEFINE: What's happening vs what should happen?
-2. EXPLORE: Console, network, database, code path
+2. EXPLORE: Console, ECS state, scenarios, code path
 3. BUILD: 2-3 hypotheses ranked by likelihood
 4. UNCOVER: Test hypotheses, use Five Whys
 5. GENERATE: Fix only after root cause confirmed
@@ -163,8 +163,9 @@ Only after root cause is confirmed:
 ## Output Format
 
 **ALWAYS:**
-- Write this output to .claude/fixes/[timestamp]-[short_name].md
-- Update the file as information changes, hypotheses are tested, tests written, fixes generated, etc.
+- Create `.claude/state/investigation-state.md` with the debug report below
+- Add the investigation to the Active Investigations section in `.claude/state/session-state.md` (create session-state if it doesn't exist)
+- Update the investigation-state file as information changes, hypotheses are tested, tests written, fixes generated, etc.
 
 
 ```markdown
@@ -177,7 +178,7 @@ Only after root cause is confirmed:
 
 ### Investigation
 - **Console**: [findings]
-- **Network**: [findings]
+- **ECS State**: [findings]
 - **Code Path**: [findings]
 
 ### Root Cause

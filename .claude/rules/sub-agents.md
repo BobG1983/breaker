@@ -16,11 +16,41 @@ Used during the delegated implementation pipeline (see `delegating-to-subagents.
 | **writer-code** | Implements production code to pass failing tests (GREEN phase) | After RED gate passes |
 | **reviewer-tests** | Verifies writer-tests output matches spec behaviors | After each writer-tests completes, before RED gate |
 
-## Verification Agents
+## Runner Agents
+
+Execute cargo commands and report results. Only runners run cargo — see `.claude/rules/cargo.md`.
+
+| Agent | Purpose | When to use |
+|-------|---------|-------------|
+| **runner-linting** | `cargo fmt` + `cargo all-dclippy` across all workspace crates | Basic Verification Tier — after each writer-code wave, after fixes |
+| **runner-tests** | `cargo all-dtest` across all workspace crates | Basic Verification Tier — RED gate, GREEN gate, after fixes |
+| **runner-scenarios** | `cargo scenario -- --all` automated gameplay testing under chaos input | Full Verification Tier — pre-merge gate |
+
+## Reviewer Agents
+
+Read-only code review. Safe to run concurrently with each other and with runners.
 
 | Agent | Purpose | When to use |
 |-------|---------|-------------|
 | **reviewer-completeness** | Verifies implementation delivers what the todo detail and plan wave promised | Standard Verification Tier (commit gate) — parallel with other reviewers |
+| **reviewer-correctness** | Logic bugs, state machine holes, math errors | Standard Verification Tier |
+| **reviewer-quality** | Rust idioms, game vocabulary, test coverage gaps | Standard Verification Tier |
+| **reviewer-bevy-api** | Correct Bevy API usage for project's version | Standard Verification Tier |
+| **reviewer-architecture** | Plugin boundaries, module structure, message patterns | Standard Verification Tier |
+| **reviewer-performance** | Archetype fragmentation, query efficiency, hot-path allocations | Standard Verification Tier |
+| **reviewer-file-length** | Finds oversized files, produces split spec | Full Verification Tier |
+
+## Guard Agents
+
+Cross-cutting concern validators. Read-only except for their own memory files.
+
+| Agent | Purpose | When to use |
+|-------|---------|-------------|
+| **guard-docs** | Documentation drift from code | Full Verification Tier |
+| **guard-game-design** | Mechanic changes against design pillars | Full Verification Tier |
+| **guard-security** | Unsafe blocks, deserialization, supply chain risks | Full Verification Tier |
+| **guard-dependencies** | Unused/outdated/duplicate deps, license compliance | Full Verification Tier |
+| **guard-agent-memory** | Stale/duplicated memories, MEMORY.md accuracy | Full Verification Tier |
 
 See `.claude/rules/verification-tiers.md` for which agents run in each tier (Basic, Standard, Full), when each tier runs, and the pipeline flow.
 

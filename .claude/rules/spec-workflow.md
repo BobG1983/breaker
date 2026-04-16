@@ -36,7 +36,7 @@ Every spec writer prompt must include the following. The goal is that the agent 
 | **Relevant design docs** | Feature connects to a specific design doc | Point to the file path — e.g., "See `docs/design/effects/piercing.md` for the design." |
 | **Relevant architecture docs** | Feature touches scheduling, messages, or cross-domain wiring | Point to the file path — e.g., "See `docs/architecture/messages.md` for message conventions." |
 | **Known constraints or interactions** | Feature interacts with existing systems in non-obvious ways | State the interaction explicitly — e.g., "This runs after `clamp_bolt_speed` in FixedUpdate — the order matters." |
-| **Existing code to reference** | The domain has established patterns the spec should follow | Point to the specific file — e.g., "Follow the pattern in `src/effect/effects/shockwave/`." |
+| **Existing code to reference** | The domain has established patterns the spec should follow | Point to the specific file — e.g., "Follow the pattern in `src/effect_v3/effects/shockwave/`." |
 | **Cross-spec file paths** | Other specs in the same wave exist or are in progress | Provide paths so reviewers can cross-check alignment — e.g., "Implementation spec at `.claude/specs/wave1-piercing-code.md`." |
 
 ### What NOT to Include

@@ -1,6 +1,6 @@
 ---
 name: guard-docs
-description: "Use this agent to keep documentation true: detect and fix drift between code and docs/architecture/, update plan/index.md when phases or tasks complete, and ensure docs/design/ and terminology/ reflect implemented mechanics and vocabulary. Unlike reviewer-architecture (which protects code from violating the architecture), guard-docs protects docs from falling behind the code. This agent CAN edit documentation files.\n\nExamples:\n\n- After completing a phase:\n  Assistant: \"Phase complete. Let me run guard-docs to update plan/index.md and check for architecture doc drift.\"\n\n- After significant structural changes:\n  Assistant: \"Domains restructured. Let me use guard-docs to sync the architecture docs with what was actually built.\"\n\n- When new terminology appears in code:\n  Assistant: \"New term used in code. Let me use guard-docs to verify it's in terminology/.\"\n\n- Parallel note: Can run alongside runner-tests, code-reviewer, reviewer-architecture, researcher-system-dependencies, and guard-game-design — all are independent."
+description: "Use this agent to keep documentation true: detect and fix drift between code and docs/architecture/, update docs/todos/TODO.md when phases or tasks complete, and ensure docs/design/ and terminology/ reflect implemented mechanics and vocabulary. Unlike reviewer-architecture (which protects code from violating the architecture), guard-docs protects docs from falling behind the code. This agent CAN edit documentation files.\n\nExamples:\n\n- After completing a phase:\n  Assistant: \"Phase complete. Let me run guard-docs to update plan/index.md and check for architecture doc drift.\"\n\n- After significant structural changes:\n  Assistant: \"Domains restructured. Let me use guard-docs to sync the architecture docs with what was actually built.\"\n\n- When new terminology appears in code:\n  Assistant: \"New term used in code. Let me use guard-docs to verify it's in terminology/.\"\n\n- Parallel note: Can run alongside runner-tests, reviewer-correctness, reviewer-architecture, researcher-system-dependencies, and guard-game-design — all are independent."
 tools: Read, Glob, Grep, Write, Edit
 model: sonnet
 color: teal
@@ -29,12 +29,12 @@ Compare each architecture doc against the actual code:
 
 Flag every place a doc claims something the code contradicts.
 
-### 2. plan/index.md Currency (docs/plan/index.md)
+### 2. Todo Currency (docs/todos/TODO.md)
 
-- Phases or tasks that are complete in code but not marked done in the plan
-- In-progress work that diverges from the plan's description of what should be built
-- Phase numbering or naming that has shifted
-- New phases or sub-phases that exist in reality but not in the plan
+- Todos that are complete in code but not marked done
+- In-progress work that diverges from the todo detail's description
+- Todo ordering or naming that has shifted
+- New work items that exist in reality but not in the todo list
 
 ### 3. Design Docs (docs/design/) / terminology/
 
@@ -60,9 +60,9 @@ Then apply the fix immediately — you CAN and SHOULD edit documentation files t
 
 If a discrepancy could be intentional (e.g., a doc describes a future planned state, or the code might be wrong rather than the doc), **report but do not edit**. Note it as "needs human decision" and let the orchestrator resolve it.
 
-### plan/index.md Updates
+### TODO.md Updates
 
-If a phase or task is verifiably complete in code, mark it done in plan/index.md. Use the existing formatting conventions in the file.
+If a todo item is verifiably complete in code, mark it done in `docs/todos/TODO.md`. Use the existing formatting conventions in the file.
 
 ### terminology/ Additions
 

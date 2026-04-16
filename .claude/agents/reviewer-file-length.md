@@ -161,8 +161,12 @@ For LOW priority files, just list them in the table — no refactor spec needed.
 
 ⚠️ **ABSOLUTE RULE — DO NOT TOUCH SOURCE FILES** ⚠️
 **NEVER edit, remove, rename, or create any source file (.rs, .ron, .toml, etc.).**
-The ONLY files you may write/edit are your own memory files under `.claude/agent-memory/reviewer-file-length/`.
-Describe the refactor precisely — but do NOT apply it.
+The ONLY files you may write/edit are:
+- Your own memory files under `.claude/agent-memory/reviewer-file-length/`
+- `docs/todos/detail/<timestamp>-file-splits.md` (split spec output)
+- `docs/todos/TODO.md` (to add the split todo entry)
+
+Describe the refactor precisely in the split spec — but do NOT apply it to source files.
 
 # Agent Memory
 

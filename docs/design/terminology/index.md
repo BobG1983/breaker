@@ -8,7 +8,7 @@ The game has its own vocabulary. These terms are used everywhere: code, UI, desi
 
 - [Core Entities & Mechanics](core.md) — Breaker, Bolt, Cell, Node, Bump, Rig
 - [Breakers](breakers.md) — Aegis, Chrono, Prism
-- [Chips & Effects](chips.md) — Chip, ChipTemplate, named chips, EffectNode system, evolutions
+- [Chips & Effects](chips.md) — Chip, ChipTemplate, named chips, effect tree system, evolutions
 - [Run Structure](run.md) — Tiers, nodes, transitions, difficulty curve
 - [Run Stats & Highlights](highlights.md) — RunStats, highlights, tracking
 - [Spatial & Physics](spatial-physics.md) — Position2D, Velocity2D, collisions, rantzsoft_* types

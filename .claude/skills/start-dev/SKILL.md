@@ -44,9 +44,9 @@ If `todo` was provided:
 3. Update the todo detail file with anything captured
 4. Update the state of the todo to [in-progress]
 5. Enter `/plan` mode 
-6. **DO NOT** look at existing patterns **UNLESS** the todo is unsufficiently detailed to create a full plan
+6. **DO NOT** look at existing patterns **UNLESS** the todo is insufficiently detailed to create a full plan
 7. Create the plan with the **todo's details** as input
-7. After the plan is approved by the user, update the todo detail file with any new decisions or scope changes from the planning discussion
+8. After the plan is approved by the user, update the todo detail file with any new decisions or scope changes from the planning discussion
 
 If `todo` was NOT provided: move directly to Step 2
 
@@ -54,7 +54,7 @@ If `todo` was NOT provided: move directly to Step 2
 
 Determine the current branch via `git branch --show-current`.
 
-- If on `develop`: proceed to Step 2
+- If on `develop`: proceed to Step 3
 - If on `main`: warn "You're on main. Switch to develop first." — stop
 - If on any other branch: warn "Already on branch `<name>`. Do you want to continue on this branch?": If the user says yes: proceed to Step 4
 
