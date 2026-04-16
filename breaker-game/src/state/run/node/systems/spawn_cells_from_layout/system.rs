@@ -229,7 +229,8 @@ impl GridCellContext<'_> {
                         | CellBehavior::Volatile { .. }
                         | CellBehavior::Sequence { .. }
                         | CellBehavior::Armored { .. }
-                        | CellBehavior::Phantom { .. } => None,
+                        | CellBehavior::Phantom { .. }
+                        | CellBehavior::Magnetic { .. } => None,
                     })
                 });
 

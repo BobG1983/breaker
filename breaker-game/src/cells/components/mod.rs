@@ -14,6 +14,7 @@ pub use crate::cells::behaviors::guarded::components::{
 pub use crate::cells::behaviors::{
     armored::components::{ArmorDirection, ArmorFacing, ArmorValue, ArmoredCell},
     locked::components::{LockCell, Locked, Locks, Unlocked},
+    magnetic::components::{MagneticCell, MagneticField},
     phantom::components::{PhantomCell, PhantomConfig, PhantomPhase, PhantomTimer},
     regen::components::{NoRegen, Regen, RegenCell, RegenRate},
     sequence::components::{SequenceActive, SequenceCell, SequenceGroup, SequencePosition},

@@ -103,13 +103,14 @@ The architectural boundary is about **writes** (mutations), not reads. Domains f
 
 ## Velocity2D Cross-Domain Write Exception
 
-`Velocity2D` (rantzsoft_spatial2d component) on bolt entities is written by effect domain systems as an accepted architectural exception. Three write paths exist:
+`Velocity2D` (rantzsoft_spatial2d component) on bolt entities is written by effect and cells domain systems as an accepted architectural exception. Four write paths exist:
 
 - **effect** (`apply_gravity_pull` in `effect_v3/effects/gravity_well/effect.rs`): steers bolt velocity toward active gravity wells each FixedUpdate tick. Uses `SpatialData` query and calls `apply_velocity_formula` after steering to enforce speed constraints.
 - **effect** (`apply_attraction` in `effect_v3/effects/attraction/effect.rs`): steers bolt velocity toward the nearest attraction target each FixedUpdate tick. Uses `SpatialData` query and calls `apply_velocity_formula` after steering. Ordered `.after(PhysicsSystems::MaintainQuadtree)` for quadtree lookups.
 - **effect** (`speed_boost::fire()` / `reverse()` in `effect_v3/effects/speed_boost.rs`): immediately recalculates bolt velocity via `recalculate_velocity` (calls `apply_velocity_formula`) when a speed boost is applied or removed. This ensures bolt speed reflects the new multiplier without waiting for the next tick.
+- **cells** (`apply_magnetic_fields` in `cells/behaviors/magnetic/systems/apply_magnetic_fields.rs`): steers bolt velocity toward active magnetic cells each FixedUpdate tick. The cells domain owns the magnetic field parameters; the force application is simple arithmetic on velocity. Uses `BaseSpeed` for acceleration capping at `2 * base_speed`.
 
-All paths call `apply_velocity_formula` to enforce `(base_speed * boost_mult).clamp(min, max)` magnitude. This is the same velocity enforcement used by collision systems — there is no separate `prepare_bolt_velocity` step.
+The effect paths call `apply_velocity_formula` to enforce `(base_speed * boost_mult).clamp(min, max)` magnitude. The magnetic path caps acceleration magnitude directly rather than calling `apply_velocity_formula` — the existing speed clamping systems handle final speed enforcement.
 
 ## PiercingRemaining Cross-Domain Write Exception
 

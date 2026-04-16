@@ -9,6 +9,7 @@ pub mod color;
 pub mod components;
 pub(crate) mod death_pipeline;
 pub mod draw_layer;
+pub(crate) mod physics;
 pub mod playfield;
 pub mod resources;
 pub mod rng;

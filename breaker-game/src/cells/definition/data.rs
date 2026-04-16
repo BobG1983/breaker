@@ -111,6 +111,10 @@ pub(crate) enum CellBehavior {
         telegraph_secs: f32,
         starting_phase: PhantomPhase,
     },
+    /// Cell emits an inverse-square attraction field that pulls bolts
+    /// toward its center within `radius`. `strength` is the force
+    /// coefficient for the inverse-square formula.
+    Magnetic { radius: f32, strength: f32 },
 }
 
 /// A cell type definition loaded from RON.
@@ -198,6 +202,13 @@ impl CellTypeDefinition {
                             telegraph_secs: *telegraph_secs,
                         }
                         .validate()?;
+                    }
+                    CellBehavior::Magnetic { radius, strength } => {
+                        crate::shared::validation::positive_finite_f32("Magnetic radius", *radius)?;
+                        crate::shared::validation::positive_finite_f32(
+                            "Magnetic strength",
+                            *strength,
+                        )?;
                     }
                 }
             }

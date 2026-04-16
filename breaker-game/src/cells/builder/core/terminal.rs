@@ -192,6 +192,9 @@ fn spawn_inner(
                     entity.insert(CollisionLayers::new(0, 0));
                 }
             }
+            CellBehavior::Magnetic { radius, strength } => {
+                entity.insert((MagneticCell, MagneticField { radius, strength }));
+            }
         }
     }
 

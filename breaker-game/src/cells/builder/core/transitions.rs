@@ -304,6 +304,23 @@ impl<P, D, H, V> CellBuilder<P, D, H, V> {
         self
     }
 
+    /// Adds a magnetic behavior with the given radius and strength.
+    ///
+    /// Pushes `CellBehavior::Magnetic { radius, strength }` onto the optional
+    /// behaviors list. At spawn time, the match arm in `spawn_inner()` inserts
+    /// the `MagneticCell` marker and `MagneticField { radius, strength }`.
+    ///
+    /// Test-only ergonomics — production cells acquire Magnetic behavior via
+    /// `.definition(&def)` from the RON definition's `behaviors:` field.
+    #[cfg(test)]
+    #[must_use]
+    pub(crate) fn magnetic(mut self, radius: f32, strength: f32) -> Self {
+        self.optional
+            .behaviors
+            .push(CellBehavior::Magnetic { radius, strength });
+        self
+    }
+
     /// Adds a phantom behavior with default timing (`cycle_secs=3.0`,
     /// `telegraph_secs=0.5`) and the given starting phase.
     ///
