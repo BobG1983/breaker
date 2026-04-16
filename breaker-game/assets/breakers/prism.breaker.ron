@@ -3,7 +3,7 @@
     name: "Prism",
     life_pool: None,
     bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(TimePenalty((seconds: 7.0))))),
-    projectile_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(TimePenalty((seconds: 5.0))))),
+    salvo_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(TimePenalty((seconds: 7.0))))),
     effects: [
         Stamp(Breaker, When(PerfectBumpOccurred, Fire(SpawnBolts((count: 1, lifespan: None, inherit: false))))),
     ],

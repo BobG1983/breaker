@@ -3,7 +3,10 @@
 use bevy::prelude::*;
 
 use super::components::ActiveAttractions;
-use crate::{effect_v3::types::AttractionType, prelude::*};
+use crate::{
+    effect_v3::types::AttractionType, prelude::*,
+    shared::physics::inverse_square::inverse_square_attraction,
+};
 
 /// Applies attraction forces from all entries to the bolt's velocity each frame.
 pub fn apply_attraction_forces(
@@ -29,16 +32,13 @@ pub fn apply_attraction_forces(
             };
 
             if let Some(target_pos) = nearest_pos {
-                let to_target = target_pos - bolt_pos.0;
-                let dist = to_target.length();
-                if dist > f32::EPSILON {
-                    let direction = to_target / dist;
-                    let mut force_magnitude = entry.force * dt;
-                    if let Some(max) = entry.max_force {
-                        force_magnitude = force_magnitude.min(max * dt);
-                    }
-                    total_force += direction * force_magnitude;
+                const MIN_DIST: f32 = 5.0;
+                let mut force =
+                    inverse_square_attraction(target_pos, bolt_pos.0, entry.force, MIN_DIST) * dt;
+                if let Some(max) = entry.max_force {
+                    force = force.clamp_length_max(max * dt);
                 }
+                total_force += force;
             }
         }
 

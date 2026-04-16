@@ -9,7 +9,7 @@ pub(super) fn test_breaker_definition() -> BreakerDefinition {
         r#"(
             name: "TestBreaker",
             bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))),
-            projectile_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))),
+            salvo_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))),
             effects: [],
         )"#,
     )
@@ -66,7 +66,7 @@ pub(super) fn custom_breaker_definition() -> BreakerDefinition {
                 Box::new(Tree::Fire(EffectType::LoseLife(LoseLifeConfig {}))),
             ),
         ),
-        projectile_hit:            RootNode::Stamp(
+        salvo_hit:                 RootNode::Stamp(
             StampTarget::Breaker,
             Tree::When(
                 Trigger::Impacted(EntityKind::Salvo),

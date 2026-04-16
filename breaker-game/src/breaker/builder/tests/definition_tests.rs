@@ -390,7 +390,7 @@ fn definition_uses_explicit_min_max_when_provided() {
 }
 
 // ==========================================================================
-// Wave 6C: definition() stamps bolt_lost and projectile_hit
+// Wave 6C: definition() stamps bolt_lost and salvo_hit
 // ==========================================================================
 
 // ── Behavior 35: definition() stores bolt_lost from BreakerDefinition ──
@@ -405,7 +405,7 @@ fn definition_stamps_bolt_lost_tree_in_bound_effects() {
     let ron_str = r#"(
         name: "TestBreaker",
         bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))),
-        projectile_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))),
+        salvo_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))),
         effects: [],
     )"#;
     let def: crate::breaker::definition::BreakerDefinition =
@@ -444,7 +444,7 @@ fn definition_stamps_bolt_lost_even_with_empty_effects() {
     let ron_str = r#"(
         name: "TestBreaker",
         bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))),
-        projectile_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))),
+        salvo_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))),
         effects: [],
     )"#;
     let def: crate::breaker::definition::BreakerDefinition =
@@ -473,10 +473,10 @@ fn definition_stamps_bolt_lost_even_with_empty_effects() {
     );
 }
 
-// ── Behavior 36: definition() stores projectile_hit from BreakerDefinition ──
+// ── Behavior 36: definition() stores salvo_hit from BreakerDefinition ──
 
 #[test]
-fn definition_stamps_projectile_hit_tree_in_bound_effects() {
+fn definition_stamps_salvo_hit_tree_in_bound_effects() {
     use crate::effect_v3::{
         storage::BoundEffects,
         types::{EntityKind, Tree, Trigger},
@@ -485,7 +485,7 @@ fn definition_stamps_projectile_hit_tree_in_bound_effects() {
     let ron_str = r#"(
         name: "TestBreaker",
         bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))),
-        projectile_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(TimePenalty((seconds: 3.0))))),
+        salvo_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(TimePenalty((seconds: 3.0))))),
         effects: [],
     )"#;
     let def: crate::breaker::definition::BreakerDefinition =
@@ -503,20 +503,20 @@ fn definition_stamps_projectile_hit_tree_in_bound_effects() {
         .get::<BoundEffects>(entity)
         .expect("entity should have BoundEffects");
 
-    let has_projectile_hit = bound
+    let has_salvo_hit = bound
         .0
         .iter()
         .any(|(_, tree)| matches!(tree, Tree::When(Trigger::Impacted(EntityKind::Salvo), _)));
     assert!(
-        has_projectile_hit,
-        "BoundEffects should contain a When(Impacted(Salvo), ...) tree from projectile_hit"
+        has_salvo_hit,
+        "BoundEffects should contain a When(Impacted(Salvo), ...) tree from salvo_hit"
     );
 }
 
-// ── Behavior 37: definition() stamps bolt_lost, projectile_hit, AND effects all together ──
+// ── Behavior 37: definition() stamps bolt_lost, salvo_hit, AND effects all together ──
 
 #[test]
-fn definition_stamps_bolt_lost_projectile_hit_and_effects_together() {
+fn definition_stamps_bolt_lost_salvo_hit_and_effects_together() {
     use crate::effect_v3::{
         storage::BoundEffects,
         types::{EntityKind, Tree, Trigger},
@@ -525,7 +525,7 @@ fn definition_stamps_bolt_lost_projectile_hit_and_effects_together() {
     let ron_str = r#"(
         name: "TestBreaker",
         bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))),
-        projectile_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))),
+        salvo_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))),
         effects: [
             Stamp(Bolt, When(PerfectBumped, Fire(SpeedBoost((multiplier: 1.5))))),
         ],
@@ -545,10 +545,10 @@ fn definition_stamps_bolt_lost_projectile_hit_and_effects_together() {
         .get::<BoundEffects>(entity)
         .expect("entity should have BoundEffects");
 
-    // Should have at least 3 trees: bolt_lost + projectile_hit + the SpeedBoost effect
+    // Should have at least 3 trees: bolt_lost + salvo_hit + the SpeedBoost effect
     assert!(
         bound.0.len() >= 3,
-        "BoundEffects should have at least 3 trees (bolt_lost + projectile_hit + effect), got {}",
+        "BoundEffects should have at least 3 trees (bolt_lost + salvo_hit + effect), got {}",
         bound.0.len()
     );
 
@@ -556,7 +556,7 @@ fn definition_stamps_bolt_lost_projectile_hit_and_effects_together() {
         .0
         .iter()
         .any(|(_, tree)| matches!(tree, Tree::When(Trigger::BoltLostOccurred, _)));
-    let has_projectile_hit = bound
+    let has_salvo_hit = bound
         .0
         .iter()
         .any(|(_, tree)| matches!(tree, Tree::When(Trigger::Impacted(EntityKind::Salvo), _)));
@@ -566,7 +566,7 @@ fn definition_stamps_bolt_lost_projectile_hit_and_effects_together() {
         .any(|(_, tree)| matches!(tree, Tree::When(Trigger::PerfectBumped, _)));
 
     assert!(has_bolt_lost, "bolt_lost tree should be stamped");
-    assert!(has_projectile_hit, "projectile_hit tree should be stamped");
+    assert!(has_salvo_hit, "salvo_hit tree should be stamped");
     assert!(
         has_speed_boost,
         "effects PerfectBumped tree should be stamped"
@@ -574,13 +574,13 @@ fn definition_stamps_bolt_lost_projectile_hit_and_effects_together() {
 }
 
 #[test]
-fn definition_stamps_only_bolt_lost_and_projectile_hit_when_effects_empty() {
+fn definition_stamps_only_bolt_lost_and_salvo_hit_when_effects_empty() {
     use crate::effect_v3::storage::BoundEffects;
 
     let ron_str = r#"(
         name: "TestBreaker",
         bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))),
-        projectile_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))),
+        salvo_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))),
         effects: [],
     )"#;
     let def: crate::breaker::definition::BreakerDefinition =
@@ -598,7 +598,7 @@ fn definition_stamps_only_bolt_lost_and_projectile_hit_when_effects_empty() {
         .get::<BoundEffects>(entity)
         .expect("entity should have BoundEffects");
 
-    // With empty effects, should have exactly 2 trees: bolt_lost + projectile_hit
+    // With empty effects, should have exactly 2 trees: bolt_lost + salvo_hit
     assert_eq!(
         bound.0.len(),
         2,
@@ -619,7 +619,7 @@ fn definition_does_not_duplicate_bolt_lost_tree() {
     let ron_str = r#"(
         name: "TestBreaker",
         bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))),
-        projectile_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))),
+        salvo_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))),
         effects: [],
     )"#;
     let def: crate::breaker::definition::BreakerDefinition =

@@ -111,22 +111,22 @@ const fn default_color_rgb() -> [f32; 3] {
 #[serde(deny_unknown_fields)]
 pub struct BreakerDefinition {
     /// Display name of the breaker.
-    pub name:           String,
+    pub name:      String,
     /// Name of the bolt definition this breaker uses.
     #[serde(default = "default_bolt_name")]
-    pub bolt:           String,
+    pub bolt:      String,
     /// Number of lives, if the breaker uses a life pool. None = infinite.
     #[serde(default)]
-    pub life_pool:      Option<u32>,
+    pub life_pool: Option<u32>,
     /// All effect chains for this breaker.
     #[serde(default)]
-    pub effects:        Vec<RootNode>,
+    pub effects:   Vec<RootNode>,
     /// Effect tree triggered when a bolt is lost. Required field — every breaker
     /// must define its bolt-lost penalty.
-    pub bolt_lost:      RootNode,
-    /// Effect tree triggered when a projectile (salvo) hits the breaker.
-    /// Required field — every breaker must define its projectile-hit response.
-    pub projectile_hit: RootNode,
+    pub bolt_lost: RootNode,
+    /// Effect tree triggered when a Salvo hits the Breaker.
+    /// Required field — every Breaker must define its salvo-hit response.
+    pub salvo_hit: RootNode,
 
     // ── Dimensions ──────────────────────────────────────────────────────
     /// Full width of the breaker in world units.
@@ -264,7 +264,7 @@ impl Default for BreakerDefinition {
                     ))),
                 ),
             ),
-            projectile_hit:            RootNode::Stamp(
+            salvo_hit:                 RootNode::Stamp(
                 StampTarget::Breaker,
                 Tree::When(
                     Trigger::Impacted(crate::effect_v3::types::EntityKind::Salvo),

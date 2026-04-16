@@ -32,7 +32,7 @@ pub(crate) struct PortalCompleted {
     pub(crate) portal: Entity,
 }
 
-/// Sent when a salvo projectile hits the breaker entity.
+/// Sent when a Salvo hits the Breaker entity.
 ///
 /// Consumed by effect bridges in Wave 6C.
 #[derive(Message, Clone, Debug)]

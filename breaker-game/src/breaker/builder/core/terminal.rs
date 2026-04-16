@@ -317,13 +317,9 @@ impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, 
     }
 }
 
-/// Stamps `bolt_lost` and `projectile_hit` required-effect trees onto the entity.
+/// Stamps `bolt_lost` and `salvo_hit` required-effect trees onto the entity.
 fn stamp_required_effects(commands: &mut Commands, entity: Entity, optional: &OptionalBreakerData) {
-    for root in optional
-        .bolt_lost
-        .iter()
-        .chain(optional.projectile_hit.iter())
-    {
+    for root in optional.bolt_lost.iter().chain(optional.salvo_hit.iter()) {
         if let RootNode::Stamp(_target, tree) = root {
             commands.stamp_effect(entity, String::new(), tree.clone());
         }

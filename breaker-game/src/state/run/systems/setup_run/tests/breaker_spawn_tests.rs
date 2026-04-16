@@ -40,7 +40,7 @@ fn setup_run_spawns_only_matching_breaker_from_registry() {
     let mut app = test_app();
     // Add a second definition to the registry
     let chrono_def: BreakerDefinition =
-        ron::de::from_str(r#"(name: "Chrono", life_pool: None, bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))), projectile_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))), effects: [])"#)
+        ron::de::from_str(r#"(name: "Chrono", life_pool: None, bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))), salvo_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))), effects: [])"#)
             .expect("test RON should parse");
     app.world_mut()
         .resource_mut::<BreakerRegistry>()
@@ -294,7 +294,7 @@ fn spawned_breaker_has_no_hp_for_chrono() {
     // Edge case: Chrono has life_pool: None → no Hp component
     let mut app = test_app();
     let chrono_def: BreakerDefinition =
-        ron::de::from_str(r#"(name: "Chrono", life_pool: None, bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))), projectile_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))), effects: [])"#)
+        ron::de::from_str(r#"(name: "Chrono", life_pool: None, bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))), salvo_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))), effects: [])"#)
             .expect("test RON should parse");
     app.world_mut()
         .resource_mut::<BreakerRegistry>()

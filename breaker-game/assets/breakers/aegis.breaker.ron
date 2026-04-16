@@ -3,7 +3,7 @@
     name: "Aegis",
     life_pool: Some(3),
     bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))),
-    projectile_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))),
+    salvo_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))),
     effects: [
         Stamp(Bolt, When(PerfectBumped, Fire(SpeedBoost((multiplier: 1.5))))),
         Stamp(Bolt, When(EarlyBumped, Fire(SpeedBoost((multiplier: 1.1))))),

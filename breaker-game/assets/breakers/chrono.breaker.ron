@@ -3,7 +3,7 @@
     name: "Chrono",
     life_pool: None,
     bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(TimePenalty((seconds: 5.0))))),
-    projectile_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(TimePenalty((seconds: 3.0))))),
+    salvo_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(TimePenalty((seconds: 5.0))))),
     effects: [
         Stamp(Bolt, When(PerfectBumped, Fire(SpeedBoost((multiplier: 1.5))))),
         Stamp(Bolt, When(EarlyBumped, Fire(SpeedBoost((multiplier: 1.1))))),

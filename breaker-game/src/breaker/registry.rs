@@ -117,7 +117,7 @@ mod tests {
     /// optional `life_pool`.
     fn make_breaker(name: &str, life_pool: Option<u32>) -> BreakerDefinition {
         ron::de::from_str(&format!(
-            r#"(name: "{name}", life_pool: {lp}, bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))), projectile_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))), effects: [])"#,
+            r#"(name: "{name}", life_pool: {lp}, bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))), salvo_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))), effects: [])"#,
             lp = life_pool.map_or_else(|| "None".to_string(), |n| format!("Some({n})")),
         ))
         .expect("test RON should parse")

@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use super::components::*;
-use crate::prelude::*;
+use crate::{prelude::*, shared::physics::inverse_square::inverse_square_attraction};
 
 /// Applies gravitational pull to bolts within each well's radius.
 pub fn tick_gravity_well(
@@ -18,13 +18,15 @@ pub fn tick_gravity_well(
 
     for (well_pos, strength, radius) in &well_query {
         for (mut velocity, bolt_pos) in &mut bolt_query {
-            let to_well = well_pos.0 - bolt_pos.0;
-            let dist = to_well.length();
+            let delta = well_pos.0 - bolt_pos.0;
+            let dist = delta.length();
             if dist > f32::EPSILON && dist <= radius.0 {
                 let original_speed = velocity.0.length();
                 if original_speed > f32::EPSILON {
-                    let direction = to_well / dist;
-                    velocity.0 += direction * strength.0 * dt;
+                    const MIN_DIST: f32 = 5.0;
+                    let force =
+                        inverse_square_attraction(well_pos.0, bolt_pos.0, strength.0, MIN_DIST);
+                    velocity.0 += force * dt;
                     velocity.0 = velocity.0.normalize_or(Vec2::ZERO) * original_speed;
                 }
             }

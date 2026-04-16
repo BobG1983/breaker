@@ -28,7 +28,7 @@ pub(super) fn make_default_bolt_definition() -> BoltDefinition {
 }
 
 pub(super) fn make_aegis_breaker_definition() -> BreakerDefinition {
-    ron::de::from_str(r#"(name: "Aegis", life_pool: Some(3), bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))), projectile_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))), effects: [])"#)
+    ron::de::from_str(r#"(name: "Aegis", life_pool: Some(3), bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))), salvo_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))), effects: [])"#)
         .expect("test RON should parse")
 }
 

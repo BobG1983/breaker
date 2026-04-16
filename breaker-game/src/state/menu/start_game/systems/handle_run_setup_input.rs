@@ -84,7 +84,7 @@ mod tests {
 
     fn make_breaker(name: &str) -> BreakerDefinition {
         ron::de::from_str(&format!(
-            r#"(name: "{name}", life_pool: None, bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))), projectile_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))), effects: [])"#,
+            r#"(name: "{name}", life_pool: None, bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))), salvo_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))), effects: [])"#,
         ))
         .expect("test RON should parse")
     }
