@@ -54,7 +54,7 @@ fn warn_pending_tier_regression(
         return;
     }
     if pending.is_some() {
-        warn!(
+        info!(
             "TierRegression activated — awaiting node sequencing refactor; \
              regression behaviour is a no-op for now."
         );
