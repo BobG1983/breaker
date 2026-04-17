@@ -25,6 +25,11 @@ Messages are defined in the domain that **conceptually owns the event**. Usually
 | `DamageDealt<Wall> { dealer, target, amount, source_chip }` | effect/effects (as applicable) | shared/death_pipeline (apply_damage::<Wall>) |
 | `DamageDealt<Breaker> { dealer, target, amount, source_chip }` | effect/effects (as applicable) | shared/death_pipeline (apply_damage::<Breaker>) |
 | `DamageDealt<Salvo> { dealer, target, amount, source_chip }` | (no current production sender — pipeline registered for completeness) | shared/death_pipeline (apply_damage::<Salvo>) |
+| `HealDealt<Cell> { healer, target, amount, source, cap }` | effect/effects (Cascade, Renewal, Sympathy, and other restorative effects) | shared/death_pipeline (apply_heal::<Cell>) |
+| `HealDealt<Bolt> { healer, target, amount, source, cap }` | effect/effects (as applicable) | shared/death_pipeline (apply_heal::<Bolt>) |
+| `HealDealt<Wall> { healer, target, amount, source, cap }` | effect/effects (as applicable) | shared/death_pipeline (apply_heal::<Wall>) |
+| `HealDealt<Breaker> { healer, target, amount, source, cap }` | effect/effects (as applicable) | shared/death_pipeline (apply_heal::<Breaker>) |
+| `HealDealt<Salvo> { healer, target, amount, source, cap }` | (no current production sender — pipeline registered for completeness) | shared/death_pipeline (apply_heal::<Salvo>) |
 | `KillYourself<T> { entity }` | shared/death_pipeline (detect_deaths::<T>), bolt (bolt_lost for ExtraBolts, tick_bolt_lifespan on timer expiry), cells (handle_portal_completed for T=Cell) | shared/death_pipeline (handle_kill::<T>), run (handle_breaker_death for T=Breaker) |
 | `Destroyed<Cell> { position, was_required_to_clear }` | shared/death_pipeline (handle_kill::<Cell>) | run/node (track_node_completion), effect (on_cell_destroyed) |
 | `Destroyed<Bolt> { position }` | shared/death_pipeline (handle_kill::<Bolt>) | effect (on_bolt_destroyed) |

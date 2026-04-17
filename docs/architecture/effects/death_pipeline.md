@@ -12,6 +12,8 @@ DamageDealt<T> → apply_damage<T> (sets KilledBy on killing blow)
   → Destroyed<T> { victim, killer, positions }
   → bridge_destroyed<T: GameEntity> (fires Died, Killed, DeathOccurred)
   → DespawnEntity message (deferred to PostFixedUpdate)
+
+HealDealt<T> → apply_heal<T> (runs AFTER handle_kill; Without<Dead> filter prevents revival)
 ```
 
 ## Messages
@@ -24,6 +26,24 @@ struct DamageDealt<T: GameEntity> {
     amount:      f32,                // damage amount (pre-calculated including multipliers)
     source_chip: Option<String>,     // originating chip name for UI/stats
     _marker:     PhantomData<T>,
+}
+
+/// Generic heal message — one Bevy message queue per target type T.
+struct HealDealt<T: GameEntity> {
+    healer:  Option<Entity>,     // entity that originated this heal (for attribution/UI)
+    target:  Entity,             // entity receiving the heal
+    amount:  f32,                // pre-calculated heal amount; values <= 0.0 are ignored
+    source:  Option<String>,     // free-form label (chip name, effect name, etc.)
+    cap:     HealCap,            // ceiling selector: Starting | Max
+    _marker: PhantomData<T>,
+}
+
+/// Per-message ceiling selector for apply_heal<T>.
+enum HealCap {
+    /// Cap Hp.current at Hp.starting (ignores Hp.max).
+    Starting,
+    /// Cap Hp.current at Hp.max.unwrap_or(Hp.starting).
+    Max,
 }
 
 /// Domain kill request — generic on victim type T.
@@ -56,6 +76,16 @@ struct KilledBy { dealer: Option<Entity> }
 ```
 
 Multi-source same frame: message processing order determines the killing blow. Deterministic (system ordering + message queue order).
+
+## apply_heal System
+
+Processes `HealDealt<T>` messages. Increments `Hp.current` bounded by the per-message `HealCap` selector:
+- `HealCap::Max` — caps at `Hp.max.unwrap_or(Hp.starting)`
+- `HealCap::Starting` — caps at `Hp.starting` (prevents neighbour-heals from pushing cells past pristine value)
+
+`apply_heal<T>` uses a `Without<Dead>` query filter. This is what prevents same-tick revival: `handle_kill<T>` runs before `ApplyHeal` and inserts `Dead` on killed entities, so heals that arrive in the same tick targeting a freshly killed entity are silently skipped. Values `<= 0.0` are ignored.
+
+`ApplyHeal` runs as the final stage of the four-stage FixedUpdate chain: `ApplyDamage → DetectDeaths → HandleKill → ApplyHeal`.
 
 ## Domain Handlers
 
