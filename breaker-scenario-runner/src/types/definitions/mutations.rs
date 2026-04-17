@@ -133,6 +133,18 @@ pub enum MutationKind {
         /// name, e.g. `"Decay"`, `"Drift"`).
         kind_name: String,
     },
+    /// Install a hazard with a real stack count, running the normal
+    /// activation path so the per-kind config resource is inserted. Used by
+    /// hazard-runtime scenarios that need to verify the gameplay effect of
+    /// a hazard without going through the `HazardSelect` UI.
+    InjectHazardStack {
+        /// Which hazard kind to inject (matches the [`HazardKind`] variant
+        /// name, e.g. `"Decay"`).
+        kind_name: String,
+        /// How many stacks to install. Each stack runs the full activation
+        /// path (increment `ActiveHazards`, insert/refresh config).
+        stacks:    u32,
+    },
 }
 
 /// Mirrors `DashState` for RON deserialization in the scenario runner crate.

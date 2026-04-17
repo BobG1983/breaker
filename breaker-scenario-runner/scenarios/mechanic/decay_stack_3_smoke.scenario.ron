@@ -1,0 +1,31 @@
+// Smoke test for Decay hazard runtime at stack 3.
+//
+// Injects 3 stacks of Decay at frame 10 (after the scenario reaches
+// NodeState::Playing), then runs with disable_physics so only the timer
+// logic is exercised. Decay's `decay_tick` should send `ApplyTimePenalty`
+// messages each FixedUpdate; `apply_time_penalty` should drain the node
+// timer faster than normal. The scenario passes if no invariants fire --
+// covers NaN, OOB, timer monotonicity, etc.
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 500,
+    disallowed_failures: [
+        NoNaN,
+        BoltInBounds,
+        BreakerInBounds,
+        TimerNonNegative,
+        TimerMonotonicallyDecreasing,
+        HazardStackValid,
+    ],
+    allowed_failures: None,
+    debug_setup: (
+        disable_physics: true,
+    ),
+    frame_mutations: [
+        (frame: 10, mutation: InjectHazardStack(kind_name: "Decay", stacks: 3)),
+    ],
+)

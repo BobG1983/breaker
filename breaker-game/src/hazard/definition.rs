@@ -170,7 +170,7 @@ impl HazardTuning {
 /// A complete hazard definition — the payload loaded from `.hazard.ron`
 /// (future commit) and stored in [`crate::hazard::resources::HazardRegistry`].
 #[derive(Asset, TypePath, Clone, Debug, Serialize, Deserialize)]
-pub(crate) struct HazardDefinition {
+pub struct HazardDefinition {
     /// Display name shown on the hazard card.
     pub(crate) name:        String,
     /// Flavor text shown below the name.

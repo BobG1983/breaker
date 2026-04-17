@@ -11,7 +11,7 @@ use super::definition::{HazardDefinition, HazardKind};
 
 /// Registry of hazard definitions, keyed on [`HazardKind`].
 #[derive(Resource, Debug, Default)]
-pub(crate) struct HazardRegistry {
+pub struct HazardRegistry {
     hazards: HashMap<HazardKind, HazardDefinition>,
 }
 
@@ -23,7 +23,7 @@ impl HazardRegistry {
 
     /// Look up a definition by kind.
     #[must_use]
-    pub(crate) fn get(&self, kind: HazardKind) -> Option<&HazardDefinition> {
+    pub fn get(&self, kind: HazardKind) -> Option<&HazardDefinition> {
         self.hazards.get(&kind)
     }
 
@@ -83,7 +83,7 @@ pub struct ActiveHazards {
 impl ActiveHazards {
     /// Increments the stack count for `kind`. Starts at 1 on first call.
     /// Returns the new stack count.
-    pub(crate) fn add_stack(&mut self, kind: HazardKind) -> u32 {
+    pub fn add_stack(&mut self, kind: HazardKind) -> u32 {
         let entry = self.stacks.entry(kind).or_insert(0);
         *entry += 1;
         *entry

@@ -13,7 +13,11 @@ use breaker::{
         second_wind::SecondWindWall,
         shield::ShieldWall,
     },
-    hazard::{definition::HazardKind, resources::ActiveHazards},
+    hazard::{
+        self,
+        definition::HazardKind,
+        resources::{ActiveHazards, HazardRegistry},
+    },
     shared::birthing::Birthing,
     state::{
         run::{
@@ -55,8 +59,11 @@ pub struct MutationTargets<'w, 's> {
     /// [`ChipOffers`] resource -- present only during chip select.
     chip_offers:          Option<ResMut<'w, ChipOffers>>,
     /// [`ActiveHazards`] resource -- always present; used by
-    /// [`MutationKind::InjectZeroStackHazard`].
+    /// [`MutationKind::InjectZeroStackHazard`] and [`MutationKind::InjectHazardStack`].
     active_hazards:       Option<ResMut<'w, ActiveHazards>>,
+    /// [`HazardRegistry`] resource -- used by
+    /// [`MutationKind::InjectHazardStack`] to look up tuning.
+    hazard_registry:      Option<Res<'w, HazardRegistry>>,
     /// [`Commands`] for inserting resources when the optional resource is absent.
     commands:             Commands<'w, 's>,
     /// Bolt entities with `Aabb2D` -- for [`MutationKind::InjectMismatchedBoltAabb`].
@@ -177,7 +184,54 @@ pub fn apply_debug_frame_mutations(
             MutationKind::InjectZeroStackHazard { kind_name } => {
                 apply_inject_zero_stack_hazard(kind_name, &mut targets.active_hazards);
             }
+            MutationKind::InjectHazardStack { kind_name, stacks } => {
+                apply_hazard_injection(kind_name, *stacks, &mut targets);
+            }
         }
+    }
+}
+
+fn apply_hazard_injection(kind_name: &str, stacks: u32, targets: &mut MutationTargets) {
+    apply_inject_hazard_stack(
+        kind_name,
+        stacks,
+        &mut targets.active_hazards,
+        targets.hazard_registry.as_deref(),
+        &mut targets.commands,
+    );
+}
+
+/// Installs `stacks` of the named hazard by calling the normal
+/// [`hazards::activate`] path once and then bumping the stack count to the
+/// requested total. No-op if [`ActiveHazards`] or [`HazardRegistry`] is
+/// absent or the name is unrecognised.
+fn apply_inject_hazard_stack(
+    kind_name: &str,
+    stacks: u32,
+    active_hazards: &mut Option<ResMut<ActiveHazards>>,
+    hazard_registry: Option<&HazardRegistry>,
+    commands: &mut Commands,
+) {
+    if stacks == 0 {
+        return;
+    }
+    let Some(kind) = parse_hazard_kind(kind_name) else {
+        warn!("InjectHazardStack: unknown kind {kind_name:?}");
+        return;
+    };
+    let Some(active) = active_hazards else {
+        return;
+    };
+    let Some(registry) = hazard_registry else {
+        warn!("InjectHazardStack: HazardRegistry absent — cannot activate {kind_name}");
+        return;
+    };
+    if !hazard::activate_from_registry(registry, kind, commands) {
+        warn!("InjectHazardStack: no definition for {kind_name}");
+        return;
+    }
+    for _ in 0..stacks {
+        active.add_stack(kind);
     }
 }
 
