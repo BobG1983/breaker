@@ -13,7 +13,7 @@ use crate::{
         messages::HazardSelected,
         resources::HazardOffers,
     },
-    prelude::*,
+    prelude::GameRng,
     state::run::hazard_select::resources::HazardSelectTimer,
 };
 

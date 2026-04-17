@@ -6,12 +6,9 @@ use std::collections::HashSet;
 use bevy::prelude::*;
 
 use super::*;
-use crate::{
-    hazard::{
-        definition::{HazardDefinition, HazardKind, HazardTuning},
-        resources::{ActiveHazards, HazardOffers, HazardRegistry},
-    },
-    prelude::*,
+use crate::hazard::{
+    definition::{HazardDefinition, HazardKind, HazardTuning},
+    resources::{ActiveHazards, HazardOffers, HazardRegistry},
 };
 
 // Local duplication of `hazard/definition.rs::tests::tuning_variants_*` —

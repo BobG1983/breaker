@@ -2,12 +2,9 @@
 
 use bevy::prelude::*;
 
-use crate::{
-    prelude::*,
-    protocol::{
-        definition::{ProtocolKind, ProtocolTuning},
-        resources::protocol_active,
-    },
+use crate::protocol::{
+    definition::{ProtocolKind, ProtocolTuning},
+    resources::protocol_active,
 };
 
 #[derive(Resource, Debug, Clone, Copy)]
@@ -55,6 +52,7 @@ fn warn_stub(cfg: Option<Res<EchoStrikeConfig>>, mut seen: Local<bool>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::prelude::TestAppBuilder;
 
     #[test]
     fn activate_with_matching_tuning_inserts_config() {

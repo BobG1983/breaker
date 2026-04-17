@@ -8,12 +8,9 @@
 
 use bevy::prelude::*;
 
-use crate::{
-    prelude::*,
-    protocol::{
-        definition::{ProtocolKind, ProtocolTuning},
-        resources::protocol_active,
-    },
+use crate::protocol::{
+    definition::{ProtocolKind, ProtocolTuning},
+    resources::protocol_active,
 };
 
 /// Tuning extracted from `ProtocolTuning::TierRegression` at activation time.
@@ -68,6 +65,7 @@ fn warn_pending_tier_regression(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::prelude::TestAppBuilder;
 
     #[test]
     fn activate_with_matching_tuning_inserts_config_and_marker() {
