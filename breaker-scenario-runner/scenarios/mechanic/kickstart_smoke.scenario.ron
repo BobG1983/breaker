@@ -1,0 +1,32 @@
+// Smoke test for Kickstart protocol runtime.
+//
+// Kickstart stamps an effect tree on each bolt: When(NodeStartOccurred,
+// Until(TimeExpires(3.0), Sequence([SpeedBoost(2x), DamageBoost(2x),
+// Piercing(2)]))). The trigger fires at the next NodeStartOccurred event,
+// which means we want to inject the protocol BEFORE the node starts. Since
+// the scenario reaches NodeState::Playing on its own, we inject as early as
+// frame 1 so the protocol is installed before the next NodeStartOccurred
+// event is observed. Even if no boundary occurs in this run, the install
+// path is still exercised.
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 500,
+    disallowed_failures: [
+        NoNaN,
+        BoltInBounds,
+        BreakerInBounds,
+        TimerNonNegative,
+        BoltSpeedAccurate,
+    ],
+    allowed_failures: None,
+    debug_setup: (
+        disable_physics: true,
+    ),
+    frame_mutations: [
+        (frame: 10, mutation: InjectProtocol(kind_name: "Kickstart")),
+    ],
+)

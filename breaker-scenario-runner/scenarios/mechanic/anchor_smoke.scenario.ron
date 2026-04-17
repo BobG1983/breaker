@@ -1,0 +1,30 @@
+// Smoke test for Anchor protocol runtime.
+//
+// Anchor stamps two effect trees: an Anchor(AnchorConfig{...}) on the
+// Breaker that runs Until(NodeEndOccurred), and a Piercing(1) on every
+// bolt that runs Until(NodeEndOccurred). This scenario activates the
+// protocol at frame 10 and runs for 500 frames with physics disabled.
+// The scenario validates that both Stamp(Breaker, ...) and Stamp(EveryBolt, ...)
+// roots are processed without panicking.
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 500,
+    disallowed_failures: [
+        NoNaN,
+        BoltInBounds,
+        BreakerInBounds,
+        TimerNonNegative,
+        BoltSpeedAccurate,
+    ],
+    allowed_failures: None,
+    debug_setup: (
+        disable_physics: true,
+    ),
+    frame_mutations: [
+        (frame: 10, mutation: InjectProtocol(kind_name: "Anchor")),
+    ],
+)

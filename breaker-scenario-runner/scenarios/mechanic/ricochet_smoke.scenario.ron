@@ -1,0 +1,29 @@
+// Smoke test for Ricochet protocol runtime.
+//
+// Ricochet stamps an effect tree on each bolt that fires DamageBoost(3x)
+// when the bolt impacts a wall, lasting until the bolt impacts a cell.
+// This scenario activates the protocol at frame 10 and runs with physics
+// disabled, so the protocol installs cleanly but the trigger never fires
+// (the scenario validates the install path, not the triggered branch).
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 500,
+    disallowed_failures: [
+        NoNaN,
+        BoltInBounds,
+        BreakerInBounds,
+        TimerNonNegative,
+        BoltSpeedAccurate,
+    ],
+    allowed_failures: None,
+    debug_setup: (
+        disable_physics: true,
+    ),
+    frame_mutations: [
+        (frame: 10, mutation: InjectProtocol(kind_name: "Ricochet")),
+    ],
+)
