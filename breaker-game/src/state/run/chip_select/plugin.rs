@@ -5,6 +5,7 @@ use rantzsoft_stateflow::{Route, RoutingTableAppExt, cleanup_on_exit};
 
 use super::{
     ChipSelectScreen,
+    sets::ChipSelectSystems,
     systems::{
         generate_chip_offerings, handle_chip_input, spawn_chip_select, tick_chip_timer,
         update_chip_display,
@@ -42,11 +43,20 @@ impl Plugin for ChipSelectPlugin {
 
         app.add_systems(
             OnEnter(ChipSelectState::Selecting),
-            (generate_chip_offerings, ApplyDeferred, spawn_chip_select).chain(),
+            (
+                generate_chip_offerings.in_set(ChipSelectSystems::GenerateOfferings),
+                ApplyDeferred,
+                spawn_chip_select.in_set(ChipSelectSystems::SpawnScreen),
+            )
+                .chain(),
         )
         .add_systems(
             Update,
-            (handle_chip_input, tick_chip_timer, update_chip_display)
+            (
+                handle_chip_input.in_set(ChipSelectSystems::HandleInput),
+                tick_chip_timer,
+                update_chip_display,
+            )
                 .chain()
                 .run_if(in_state(ChipSelectState::Selecting)),
         )

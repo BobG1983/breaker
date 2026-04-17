@@ -1,14 +1,17 @@
 //! Protocol domain plugin.
 
-use bevy::prelude::*;
+use bevy::{ecs::schedule::ApplyDeferred, prelude::*};
 
 use super::{
     messages::ProtocolSelected,
     resources::{ActiveProtocols, ProtocolOffer, UnlockedProtocols},
+    systems::{dispatch_protocol_selection, generate_protocol_offering},
 };
+use crate::{prelude::*, state::run::chip_select::sets::ChipSelectSystems};
 
-/// Registers protocol resources and messages. Per-protocol modules register
-/// themselves here from their own `register(app)` functions as they land.
+/// Registers protocol resources, messages, and systems. Per-protocol modules
+/// register themselves here from their own `register(app)` functions as they
+/// land.
 pub(crate) struct ProtocolPlugin;
 
 impl Plugin for ProtocolPlugin {
@@ -16,6 +19,19 @@ impl Plugin for ProtocolPlugin {
         app.init_resource::<ActiveProtocols>()
             .init_resource::<UnlockedProtocols>()
             .init_resource::<ProtocolOffer>()
-            .add_message::<ProtocolSelected>();
+            .add_message::<ProtocolSelected>()
+            .add_systems(
+                OnEnter(ChipSelectState::Selecting),
+                (generate_protocol_offering, ApplyDeferred)
+                    .chain()
+                    .after(ChipSelectSystems::GenerateOfferings)
+                    .before(ChipSelectSystems::SpawnScreen),
+            )
+            .add_systems(
+                Update,
+                dispatch_protocol_selection
+                    .after(ChipSelectSystems::HandleInput)
+                    .run_if(in_state(ChipSelectState::Selecting)),
+            );
     }
 }

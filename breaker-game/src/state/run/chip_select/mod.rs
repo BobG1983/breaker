@@ -4,6 +4,7 @@ mod components;
 pub mod messages;
 mod plugin;
 mod resources;
+pub(crate) mod sets;
 pub(crate) mod systems;
 
 pub(crate) use components::ChipSelectScreen;

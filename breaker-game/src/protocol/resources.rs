@@ -130,6 +130,16 @@ impl Default for UnlockedProtocols {
 }
 
 impl UnlockedProtocols {
+    /// Empty unlocked set — no protocols are unlocked. Used by tests that
+    /// need to force `generate_protocol_offering` into the empty-pool path
+    /// without touching the default list.
+    #[must_use]
+    pub(crate) fn empty() -> Self {
+        Self {
+            unlocked: HashSet::new(),
+        }
+    }
+
     /// True when `kind` is unlocked for offering.
     #[must_use]
     pub(crate) fn contains(&self, kind: ProtocolKind) -> bool {

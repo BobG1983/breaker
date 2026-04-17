@@ -8,7 +8,7 @@ use crate::{
     chips::inventory::ChipInventory,
     hazard::resources::ActiveHazards,
     prelude::*,
-    protocol::resources::ActiveProtocols,
+    protocol::resources::{ActiveProtocols, ProtocolOffer},
     shared::RunSeed,
     state::run::resources::{HighlightTracker, NodeOutcome},
 };
@@ -23,6 +23,7 @@ pub(crate) struct RunInventories<'w> {
     chips:     ResMut<'w, ChipInventory>,
     protocols: ResMut<'w, ActiveProtocols>,
     hazards:   ResMut<'w, ActiveHazards>,
+    offer:     ResMut<'w, ProtocolOffer>,
 }
 
 impl RunInventories<'_> {
@@ -30,6 +31,7 @@ impl RunInventories<'_> {
         self.chips.clear();
         self.protocols.clear();
         self.hazards.clear();
+        *self.offer = ProtocolOffer::default();
     }
 }
 
@@ -72,6 +74,7 @@ mod tests {
             .with_resource::<RunStats>()
             .with_resource::<HighlightTracker>()
             .with_resource::<crate::protocol::resources::ActiveProtocols>()
+            .with_resource::<crate::protocol::resources::ProtocolOffer>()
             .with_resource::<crate::hazard::resources::ActiveHazards>()
             .with_system(Update, reset_run_state)
             .build()
@@ -128,19 +131,18 @@ mod tests {
         let _ = (val1, val2);
     }
 
-    // ── Behavior 28: reset_run_state clears ActiveProtocols and ActiveHazards ─
+    // ── Reset clears per-run protocol and hazard state ─
 
-    /// Seed `ActiveProtocols` with a `Greed` definition and `ActiveHazards`
-    /// with `add_stack(Decay)` ×2, then run the system once. Both resources
-    /// should be emptied — replacing the per-run-reset coverage that a
-    /// `plugin_builds` smoke test would not give us.
+    /// Seed `ActiveProtocols` with a `Greed` definition, `ActiveHazards`
+    /// with `add_stack(Decay)` ×2, and `ProtocolOffer` with a stale value,
+    /// then run the system once. Every per-run resource should be cleared.
     #[test]
     fn clears_active_protocols_and_active_hazards() {
         use crate::{
             hazard::{definition::HazardKind, resources::ActiveHazards},
             protocol::{
                 definition::{ProtocolDefinition, ProtocolKind, ProtocolTuning},
-                resources::ActiveProtocols,
+                resources::{ActiveProtocols, ProtocolOffer},
             },
         };
 
@@ -163,6 +165,18 @@ mod tests {
             let mut hazards = app.world_mut().resource_mut::<ActiveHazards>();
             hazards.add_stack(HazardKind::Decay);
             hazards.add_stack(HazardKind::Decay);
+        }
+        // Seed ProtocolOffer with a stale offer to verify it is cleared.
+        {
+            let mut offer = app.world_mut().resource_mut::<ProtocolOffer>();
+            offer.0 = Some(ProtocolDefinition {
+                name:        "Stale".into(),
+                description: String::new(),
+                unlock_tier: 0,
+                tuning:      ProtocolTuning::Greed {
+                    rarity_boost_per_skip: 0.05,
+                },
+            });
         }
 
         app.update();
@@ -187,6 +201,10 @@ mod tests {
                 .stacks(HazardKind::Decay),
             0,
             "Decay stacks must be 0 after reset"
+        );
+        assert!(
+            app.world().resource::<ProtocolOffer>().0.is_none(),
+            "reset_run_state must clear ProtocolOffer"
         );
     }
 }

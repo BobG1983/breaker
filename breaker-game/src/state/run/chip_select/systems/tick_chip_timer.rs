@@ -255,6 +255,142 @@ mod tests {
         );
     }
 
+    // ─────────────────────────────────────────────────────────────────
+    // Regression guard: timer expiry with a `ProtocolOffer::Some(_)` MUST
+    // NOT emit `ProtocolSelected`. Timer-driven chip-select closure never
+    // auto-picks a protocol.
+    // ─────────────────────────────────────────────────────────────────
+
+    use crate::protocol::{
+        definition::{ProtocolDefinition, ProtocolKind, ProtocolTuning},
+        messages::ProtocolSelected,
+        resources::{ActiveProtocols, ProtocolOffer},
+    };
+
+    fn def_for(kind: ProtocolKind, name: &str) -> ProtocolDefinition {
+        let tuning = match kind {
+            ProtocolKind::Deadline => ProtocolTuning::Deadline { effects: vec![] },
+            ProtocolKind::Ricochet => ProtocolTuning::Ricochet { effects: vec![] },
+            ProtocolKind::Anchor => ProtocolTuning::Anchor { effects: vec![] },
+            ProtocolKind::Kickstart => ProtocolTuning::Kickstart { effects: vec![] },
+            ProtocolKind::DebtCollector => ProtocolTuning::DebtCollector {
+                stack_per_bump: 0.1,
+            },
+            ProtocolKind::IronCurtain => ProtocolTuning::IronCurtain {
+                damage_fraction: 0.25,
+                falloff_start:   0.5,
+            },
+            ProtocolKind::EchoStrike => ProtocolTuning::EchoStrike {
+                max_echoes:      3,
+                newest_fraction: 0.5,
+                middle_fraction: 0.25,
+                oldest_fraction: 0.125,
+            },
+            ProtocolKind::Siphon => ProtocolTuning::Siphon {
+                streak_window: 2.0,
+                time_per_kill: 0.25,
+            },
+            ProtocolKind::Greed => ProtocolTuning::Greed {
+                rarity_boost_per_skip: 0.05,
+            },
+            ProtocolKind::RecklessDash => ProtocolTuning::RecklessDash {
+                risky_zone_start:  0.3,
+                damage_multiplier: 4.0,
+                double_penalty:    true,
+            },
+            ProtocolKind::Burnout => ProtocolTuning::Burnout {
+                fill_duration:               3.0,
+                drain_duration:              5.0,
+                still_threshold:             0.25,
+                full_heat_damage_multiplier: 2.0,
+                speed_boost_duration:        1.0,
+            },
+            ProtocolKind::Conductor => ProtocolTuning::Conductor {
+                primary_swap_window: 0.2,
+            },
+            ProtocolKind::Afterimage => ProtocolTuning::Afterimage {
+                phantom_duration:      1.5,
+                phantom_bolt_duration: 0.75,
+            },
+            ProtocolKind::Fission => ProtocolTuning::Fission {
+                kills_per_split: 10,
+            },
+            ProtocolKind::TierRegression => ProtocolTuning::TierRegression { tiers_back: 1 },
+        };
+        ProtocolDefinition {
+            name: name.to_string(),
+            description: String::new(),
+            unlock_tier: 0,
+            tuning,
+        }
+    }
+
+    fn test_app_for_protocol_regression(protocol_offer: ProtocolOffer) -> App {
+        TestAppBuilder::new()
+            .with_state_hierarchy()
+            .with_message::<ChangeState<ChipSelectState>>()
+            .with_message::<ProtocolSelected>()
+            .insert_resource(ChipSelectTimer { remaining: 0.0 })
+            .insert_resource(make_offers_3())
+            .with_resource::<ChipInventory>()
+            .insert_resource(ChipSelectConfig::default())
+            .with_resource::<ActiveProtocols>()
+            .insert_resource(protocol_offer)
+            .with_system(Update, tick_chip_timer)
+            .build()
+    }
+
+    #[test]
+    fn timer_expiry_with_protocol_offer_some_does_not_send_protocol_selected() {
+        let offer = ProtocolOffer(Some(def_for(ProtocolKind::Greed, "Greed")));
+        let mut app = test_app_for_protocol_regression(offer);
+        app.update();
+
+        // Zero ProtocolSelected messages.
+        let protocol_msgs = app.world().resource::<Messages<ProtocolSelected>>();
+        assert_eq!(
+            protocol_msgs.iter_current_update_messages().count(),
+            0,
+            "timer expiry must not emit ProtocolSelected"
+        );
+
+        // ActiveProtocols must stay empty.
+        let active = app.world().resource::<ActiveProtocols>();
+        assert!(
+            active.is_empty(),
+            "ActiveProtocols must stay empty on timer expiry"
+        );
+
+        // One ChangeState<ChipSelectState> message (existing behavior).
+        let state_msgs = app
+            .world()
+            .resource::<Messages<ChangeState<ChipSelectState>>>();
+        assert_eq!(
+            state_msgs.iter_current_update_messages().count(),
+            1,
+            "timer expiry must still emit one ChangeState<ChipSelectState>"
+        );
+    }
+
+    #[test]
+    fn timer_expiry_with_protocol_offer_none_does_not_send_protocol_selected() {
+        // Edge case of E.1.
+        let mut app = test_app_for_protocol_regression(ProtocolOffer(None));
+        app.update();
+
+        let protocol_msgs = app.world().resource::<Messages<ProtocolSelected>>();
+        assert_eq!(
+            protocol_msgs.iter_current_update_messages().count(),
+            0,
+            "timer expiry with no protocol offer must also not emit ProtocolSelected"
+        );
+
+        let state_msgs = app
+            .world()
+            .resource::<Messages<ChangeState<ChipSelectState>>>();
+        assert_eq!(state_msgs.iter_current_update_messages().count(), 1);
+    }
+
     // --- Missing-resources path tests ---
 
     #[test]

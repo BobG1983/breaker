@@ -74,11 +74,27 @@ pub(super) struct ChipSelectTimer {
     pub remaining: f32,
 }
 
-/// Tracks which card is currently highlighted.
-#[derive(Resource, Debug)]
+/// Which row of the chip-select screen currently has focus — the chip card
+/// row or the single protocol card below it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub(super) enum SelectionRow {
+    /// Focus is on a chip card in the chip row.
+    #[default]
+    Chip,
+    /// Focus is on the protocol card below the chip row.
+    Protocol,
+}
+
+/// Tracks which card is currently highlighted — both the row (chip vs
+/// protocol) and the chip index. The `chip_index` is preserved when moving
+/// between rows so `Up` from Protocol returns focus to the same chip.
+#[derive(Resource, Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub(super) struct ChipSelectSelection {
-    /// Zero-based index of the selected card.
-    pub index: usize,
+    /// Which row currently has focus.
+    pub row:        SelectionRow,
+    /// Zero-based index of the selected chip card. Only meaningful when
+    /// `row == SelectionRow::Chip`; preserved across row moves.
+    pub chip_index: usize,
 }
 
 /// A single offering on the chip selection screen — either a normal chip

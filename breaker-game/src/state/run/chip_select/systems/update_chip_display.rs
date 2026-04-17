@@ -30,7 +30,7 @@ pub(crate) fn update_chip_display(
     let normal_color = color_from_rgb(config.normal_color_rgb);
 
     for (card, mut border) in &mut cards {
-        *border = if card.index == selection.index {
+        *border = if card.index == selection.chip_index {
             BorderColor::all(selected_color)
         } else {
             BorderColor::all(normal_color)
@@ -41,7 +41,7 @@ pub(crate) fn update_chip_display(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::prelude::*;
+    use crate::{prelude::*, state::run::chip_select::resources::SelectionRow};
 
     fn test_app(timer_remaining: f32, selection_index: usize) -> App {
         TestAppBuilder::new()
@@ -50,7 +50,8 @@ mod tests {
                 remaining: timer_remaining,
             })
             .insert_resource(ChipSelectSelection {
-                index: selection_index,
+                row:        SelectionRow::Chip,
+                chip_index: selection_index,
             })
             .with_system(Update, update_chip_display)
             .build()
