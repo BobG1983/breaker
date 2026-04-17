@@ -7,5 +7,6 @@ rustc-ice-*.txt
 .claude/fixes/
 .claude/state/
 .claude/plans/
+.claude/scheduled_tasks.lock
 /logs/
 /recordings/
