@@ -58,9 +58,9 @@ fn tuning_for_kind(kind: HazardKind) -> HazardTuning {
             per_level_reduction_frac: 0.2,
         },
         HazardKind::Volatility => HazardTuning::Volatility {
-            hp_per_5s:                1.0,
-            cap_multiplier:           2.0,
-            per_level_reduction_frac: 0.1,
+            hp_per_interval: 1.0,
+            interval_secs:   5.0,
+            max_multiplier:  2.0,
         },
         HazardKind::GravitySurge => HazardTuning::GravitySurge {
             base_duration_secs:      2.0,

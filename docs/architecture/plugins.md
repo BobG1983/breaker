@@ -120,6 +120,22 @@ The effect paths call `apply_velocity_formula` to enforce `(base_speed * boost_m
 
 Structurally identical rationale to the Velocity2D exception: the writing domain has the contextual data, the owning domain's component is a simple numeric, and message indirection adds complexity without benefit.
 
+## Hp.max Cross-Domain Write Exception
+
+`Hp.max` (`shared/death_pipeline` component) on cell entities is written by the hazard domain's `attach_volatility_timers` system as an accepted architectural exception. One write path exists:
+
+- **hazard** (`attach_volatility_timers` in `hazard/hazards/volatility.rs`): lifts each cell's `Hp.max` to `max(existing_max, hp.starting * max_multiplier)` when the Volatility hazard is active. Runs each FixedUpdate tick, gated by `hazard_active(HazardKind::Volatility)`.
+
+Message indirection would be worse here for two reasons: (1) routing through a `HealCap` variant would require adding a new dimension to the heal pipeline enum just for Volatility, a disproportionate API surface for one hazard; (2) a dedicated `RaiseHpMax` Bevy message + handler would exist solely for Volatility and would not generalize to any current or planned mechanic.
+
+The write is safe by three properties:
+
+- **Monotonic**: `hp.max.map_or(target, |m| m.max(target))` — never lowers `Hp.max`.
+- **Idempotent**: write is guarded by a value comparison (`if hp.max != new_max`) so already-lifted cells don't trigger spurious change detection.
+- **Scoped**: the enclosing `.run_if(hazard_active(HazardKind::Volatility))` gate ensures this path is unreachable when Volatility is inactive.
+
+Cleanup is implicit: cell entities are despawned on node end, so the `Hp.max` lift persists only for the lifetime of the current node.
+
 ## Debug Domain — Cross-Domain Exception
 
 The `debug/` domain (gated behind `#[cfg(feature = "dev")]`) is the **only domain permitted to read AND write other domains' resources and components** directly. This is an accepted architectural exception because:

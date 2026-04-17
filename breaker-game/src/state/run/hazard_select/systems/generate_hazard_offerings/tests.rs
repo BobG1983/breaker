@@ -83,9 +83,9 @@ fn tuning_variants_second_half() -> Vec<(HazardTuning, HazardKind)> {
     vec![
         (
             HazardTuning::Volatility {
-                hp_per_5s:                1.0,
-                cap_multiplier:           2.0,
-                per_level_reduction_frac: 0.1,
+                hp_per_interval: 1.0,
+                interval_secs:   5.0,
+                max_multiplier:  2.0,
             },
             HazardKind::Volatility,
         ),

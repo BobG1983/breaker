@@ -25,7 +25,7 @@ Messages are defined in the domain that **conceptually owns the event**. Usually
 | `DamageDealt<Wall> { dealer, target, amount, source_chip }` | effect/effects (as applicable) | shared/death_pipeline (apply_damage::<Wall>) |
 | `DamageDealt<Breaker> { dealer, target, amount, source_chip }` | effect/effects (as applicable) | shared/death_pipeline (apply_damage::<Breaker>) |
 | `DamageDealt<Salvo> { dealer, target, amount, source_chip }` | (no current production sender — pipeline registered for completeness) | shared/death_pipeline (apply_damage::<Salvo>) |
-| `HealDealt<Cell> { healer, target, amount, source, cap }` | effect/effects (Cascade, Renewal, Sympathy, and other restorative effects) | shared/death_pipeline (apply_heal::<Cell>) |
+| `HealDealt<Cell> { healer, target, amount, source, cap }` | hazard (`volatility_grow_cells`) — additional senders planned: Cascade, Renewal, Sympathy retrofits | shared/death_pipeline (apply_heal::<Cell>) |
 | `HealDealt<Bolt> { healer, target, amount, source, cap }` | effect/effects (as applicable) | shared/death_pipeline (apply_heal::<Bolt>) |
 | `HealDealt<Wall> { healer, target, amount, source, cap }` | effect/effects (as applicable) | shared/death_pipeline (apply_heal::<Wall>) |
 | `HealDealt<Breaker> { healer, target, amount, source, cap }` | effect/effects (as applicable) | shared/death_pipeline (apply_heal::<Breaker>) |

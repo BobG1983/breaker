@@ -43,17 +43,26 @@ pub(crate) struct VolatilityTimer {
 
 `VolatilityTimer` is added to all cell entities when the hazard is active. The cell's pristine HP is read from `Hp.starting` (unified death pipeline — no separate component).
 
+**Dynamic `Hp.max` lift**: When Volatility activates (or when a new cell spawns while Volatility is active), `attach_volatility_timers` also sets `Hp.max = Some(hp.starting * max_multiplier)` on each cell that does not already have a higher max. This allows `HealCap::Max` in the generic pipeline to permit growth up to `2× starting` without needing a bespoke cap variant. When Volatility is cleaned up at run-end, cells are despawned with the node, so no `Hp.max` restoration is needed.
+
 ## Messages
 
 **Reads**: `DamageDealt<Cell>` (to detect when a cell was hit and reset its timer)
-**Sends**: `HealDealt<Cell>` — generic heal pipeline message in `shared::death_pipeline`. Cap variant: `HealCap::Starting` with `amount = hp_per_interval`; Volatility's 2× limit is enforced at send-time by the hazard itself (only send if `hp.current < hp.starting * max_multiplier`), not by the pipeline cap.
+**Sends**: `HealDealt<Cell>` — generic heal pipeline message in `shared::death_pipeline`. Cap variant: `HealCap::Max` with `amount = hp_per_interval`. The 2× cap is expressed through the cell's `Hp.max` (lifted to `hp.starting * max_multiplier` at `attach_volatility_timers` time); `HealCap::Max` then clamps arriving heals at that value. Volatility also performs its OWN pre-send gate — it only emits a heal if `hp.current < hp.starting * max_multiplier` — so the cap is enforced twice: once at send-time (cheap), once by the pipeline (authoritative).
 
 ## Systems
 
 1. **`attach_volatility_timers`**
    - Schedule: Runs when cells are spawned (after cell builder, per node start)
    - Run if: `hazard_active(HazardKind::Volatility)` AND cells exist without `VolatilityTimer`
-   - Behavior: Insert `VolatilityTimer { elapsed: 0.0 }` on all cell entities. `Hp.starting` is already set by the cell builder — no extra component needed.
+   - Behavior:
+     1. Insert `VolatilityTimer { elapsed: 0.0 }` on all cell entities missing it.
+     2. Lift `Hp.max` to `max(existing_max, hp.starting * max_multiplier)` on each cell — i.e., take the HIGHER of the cell's current `Hp.max` (if any) and `2× starting`. Formula:
+        ```rust
+        let target = hp.starting * config.max_multiplier;
+        hp.max = Some(hp.max.map_or(target, |m| m.max(target)));
+        ```
+        This never lowers an existing cap (future buffs with higher max are preserved) and always ensures the ceiling is AT LEAST `2× starting` so Volatility's 2× growth path is reachable through `HealCap::Max` in the pipeline.
 
 2. **`reset_volatility_on_damage`**
    - Schedule: `FixedUpdate`
@@ -73,7 +82,7 @@ pub(crate) struct VolatilityTimer {
         a. Advance `elapsed` by `delta_secs`
         b. While `elapsed >= effective_interval`:
            - Check if `hp.current < hp.starting * max_multiplier`
-           - If under cap: send `HealDealt::<Cell> { healer: None, target: cell, amount: hp_per_interval, cap: HealCap::Starting, source: Some("hazard:volatility".into()), _marker: PhantomData }`. Note the `HealCap::Starting` clamp is belt-and-braces — the hazard's own 2×-starting check above is the true gate.
+           - If under cap: send `HealDealt::<Cell> { healer: None, target: cell, amount: hp_per_interval, cap: HealCap::Max, source: Some("hazard:volatility".into()), _marker: PhantomData }`. `HealCap::Max` clamps at `hp.max.unwrap_or(hp.starting)`, which (because `attach_volatility_timers` lifted `hp.max` to `starting * max_multiplier`) allows growth up to the 2× cap. The pre-send gate above is belt-and-braces.
            - Subtract `effective_interval` from `elapsed`
 
 ## Stacking Behavior
@@ -91,15 +100,15 @@ The growth rate is modest -- the threat is cumulative. In a node with 30+ cells,
 | Domain | Interaction | Message |
 |--------|------------|---------|
 | `shared::death_pipeline` | Reads cell HP to check cap | Direct query of `&Hp` |
-| `shared::death_pipeline` | Heals cells | `HealDealt<Cell>` with `HealCap::Starting` |
+| `shared::death_pipeline` | Heals cells | `HealDealt<Cell>` with `HealCap::Max` (relies on lifted `Hp.max`) |
 | `shared::death_pipeline` | Reads damage events to reset timer | `DamageDealt<Cell>` (read only) |
 
 ## Expected Behaviors (for test specs)
 
 1. **Cell gains HP after not being hit at stack=1**
-   - Given: Cell with 10 HP, starting HP 10, `VolatilityTimer` at 0.0, stack=1
+   - Given: Cell with 10 HP, starting HP 10, `Hp.max` lifted to `Some(20.0)` by `attach_volatility_timers`, `VolatilityTimer` at 0.0, stack=1
    - When: 5.0 seconds pass with no damage
-   - Then: `HealDealt::<Cell> { amount: 1.0, cap: HealCap::Starting, .. }` sent, cell now 11 HP
+   - Then: `HealDealt::<Cell> { amount: 1.0, cap: HealCap::Max, .. }` sent, cell now 11 HP
 
 2. **Timer resets on damage**
    - Given: Cell with `VolatilityTimer.elapsed = 4.5` (0.5s from next tick)
@@ -107,14 +116,14 @@ The growth rate is modest -- the threat is cumulative. In a node with 30+ cells,
    - Then: `VolatilityTimer.elapsed` resets to 0.0, next growth tick is 5.0s away
 
 3. **HP caps at 2x starting HP**
-   - Given: Cell with starting HP 10, current HP 19, stack=1
+   - Given: Cell with starting HP 10, `Hp.max = Some(20.0)`, current HP 19, stack=1
    - When: Volatility tick fires
-   - Then: `HealDealt::<Cell> { amount: 1.0, cap: HealCap::Starting, .. }` sent (cell goes to 20). Next tick: no `HealDealt<Cell>` sent (already at cap)
+   - Then: `HealDealt::<Cell> { amount: 1.0, cap: HealCap::Max, .. }` sent; `apply_heal` clamps at 20 so cell reaches exactly 20. Next tick: Volatility's pre-send gate suppresses emission because `hp.current >= hp.starting * max_multiplier`; no `HealDealt<Cell>` sent.
 
 4. **Growth rate increases with stacking at stack=3**
-   - Given: Cell with 10 HP, starting HP 10, stack=3 (interval=3.33s)
+   - Given: Cell with 10 HP, starting HP 10, `Hp.max = Some(20.0)`, stack=3 (interval=3.33s)
    - When: 3.33 seconds pass with no damage
-   - Then: `HealDealt::<Cell> { amount: 1.0, cap: HealCap::Starting, .. }` sent
+   - Then: `HealDealt::<Cell> { amount: 1.0, cap: HealCap::Max, .. }` sent
 
 5. **System does not run when hazard is inactive**
    - Given: Volatility not in `ActiveHazards`
