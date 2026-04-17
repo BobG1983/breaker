@@ -4,7 +4,9 @@ use super::{
     super::*,
     helpers::{Counter, increment},
 };
-use crate::state::types::{AppState, ChipSelectState, GameState, NodeState, RunState};
+use crate::state::types::{
+    AppState, ChipSelectState, GameState, HazardSelectState, NodeState, RunState,
+};
 
 // ════════════════════════════════════════════════════════════════════
 // Section C: State Navigation — in_state_node_playing()
@@ -240,5 +242,131 @@ fn chained_navigation_last_wins() {
     assert!(
         app.world().get_resource::<State<NodeState>>().is_none(),
         "NodeState should not exist after navigating away from RunState::Node"
+    );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Section E: State Navigation — in_state_hazard_selecting()
+// ════════════════════════════════════════════════════════════════════
+
+// ── Behavior E.1: in_state_hazard_selecting() drives into HazardSelectState::Selecting ──
+
+#[test]
+fn in_state_hazard_selecting_sets_app_state_to_game() {
+    let app = TestAppBuilder::new()
+        .with_state_hierarchy()
+        .in_state_hazard_selecting()
+        .build();
+    assert_eq!(
+        *app.world().resource::<State<AppState>>().get(),
+        AppState::Game,
+        "in_state_hazard_selecting() must set AppState::Game"
+    );
+}
+
+#[test]
+fn in_state_hazard_selecting_sets_game_state_to_run() {
+    let app = TestAppBuilder::new()
+        .with_state_hierarchy()
+        .in_state_hazard_selecting()
+        .build();
+    assert_eq!(
+        *app.world().resource::<State<GameState>>().get(),
+        GameState::Run,
+        "in_state_hazard_selecting() must set GameState::Run"
+    );
+}
+
+#[test]
+fn in_state_hazard_selecting_sets_run_state_to_hazard_select() {
+    let app = TestAppBuilder::new()
+        .with_state_hierarchy()
+        .in_state_hazard_selecting()
+        .build();
+    assert_eq!(
+        *app.world().resource::<State<RunState>>().get(),
+        RunState::HazardSelect,
+        "in_state_hazard_selecting() must set RunState::HazardSelect"
+    );
+}
+
+#[test]
+fn in_state_hazard_selecting_sets_hazard_select_state_to_selecting() {
+    let app = TestAppBuilder::new()
+        .with_state_hierarchy()
+        .in_state_hazard_selecting()
+        .build();
+    assert_eq!(
+        *app.world().resource::<State<HazardSelectState>>().get(),
+        HazardSelectState::Selecting,
+        "in_state_hazard_selecting() must set HazardSelectState::Selecting"
+    );
+}
+
+#[test]
+fn in_state_hazard_selecting_node_state_not_present() {
+    let app = TestAppBuilder::new()
+        .with_state_hierarchy()
+        .in_state_hazard_selecting()
+        .build();
+    assert!(
+        app.world().get_resource::<State<NodeState>>().is_none(),
+        "NodeState should not exist when RunState is HazardSelect"
+    );
+}
+
+#[test]
+fn in_state_node_playing_hazard_select_state_not_present() {
+    // Edge case of Domain G, Behavior 3: HazardSelectState is absent when
+    // the parent RunState is Node.
+    let app = TestAppBuilder::new()
+        .with_state_hierarchy()
+        .in_state_node_playing()
+        .build();
+    assert!(
+        app.world()
+            .get_resource::<State<HazardSelectState>>()
+            .is_none(),
+        "HazardSelectState should not exist when RunState is Node"
+    );
+}
+
+// ── Behavior E.2: state-gated system executes after in_state_hazard_selecting ──
+
+#[test]
+fn state_gated_system_runs_in_hazard_selecting() {
+    let mut app = TestAppBuilder::new()
+        .with_state_hierarchy()
+        .in_state_hazard_selecting()
+        .with_resource::<Counter>()
+        .with_system(
+            Update,
+            increment.run_if(in_state(HazardSelectState::Selecting)),
+        )
+        .build();
+    app.update();
+    assert_eq!(
+        app.world().resource::<Counter>().0,
+        1,
+        "System gated on HazardSelectState::Selecting should execute"
+    );
+}
+
+#[test]
+fn system_gated_on_hazard_select_loading_does_not_run() {
+    let mut app = TestAppBuilder::new()
+        .with_state_hierarchy()
+        .in_state_hazard_selecting()
+        .with_resource::<Counter>()
+        .with_system(
+            Update,
+            increment.run_if(in_state(HazardSelectState::Loading)),
+        )
+        .build();
+    app.update();
+    assert_eq!(
+        app.world().resource::<Counter>().0,
+        0,
+        "System gated on HazardSelectState::Loading should NOT run when in Selecting"
     );
 }

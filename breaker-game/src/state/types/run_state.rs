@@ -20,6 +20,8 @@ pub enum RunState {
     Node,
     /// Chip selection between nodes.
     ChipSelect,
+    /// Hazard selection between tiers — tier 9+.
+    HazardSelect,
     /// Run end screen — win or lose.
     RunEnd,
     /// Run teardown — parent `GameState` watches for this.
@@ -33,5 +35,15 @@ mod tests {
     #[test]
     fn default_run_state_is_loading() {
         assert_eq!(RunState::default(), RunState::Loading);
+    }
+
+    #[test]
+    fn run_state_has_hazard_select_variant() {
+        // Behavior: `RunState::HazardSelect` exists and is distinct from the
+        // other variants. Guards against the variant being renamed or removed.
+        let variant = RunState::HazardSelect;
+        assert_ne!(variant, RunState::ChipSelect);
+        assert_ne!(variant, RunState::Node);
+        assert_ne!(variant, RunState::RunEnd);
     }
 }

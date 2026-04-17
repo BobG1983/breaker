@@ -30,6 +30,7 @@ use crate::{
         run::{
             NodeLayoutRegistry, RunPlugin,
             chip_select::{ChipSelectDefaults, ChipSelectPlugin},
+            hazard_select::{HazardSelectDefaults, HazardSelectPlugin},
             node::hud::TimerUiDefaults,
             resources::{DifficultyCurveDefaults, NodeOutcome, NodeResult},
             run_end::RunEndPlugin,
@@ -54,6 +55,7 @@ impl Plugin for StatePlugin {
             .add_sub_state::<RunState>()
             .add_sub_state::<NodeState>()
             .add_sub_state::<ChipSelectState>()
+            .add_sub_state::<HazardSelectState>()
             .add_sub_state::<RunEndState>()
             // Lifecycle crate — routing tables + dispatch for all state types
             .add_plugins(
@@ -64,6 +66,7 @@ impl Plugin for StatePlugin {
                     .register_state::<RunState>()
                     .register_state::<NodeState>()
                     .register_state::<ChipSelectState>()
+                    .register_state::<HazardSelectState>()
                     .register_state::<RunEndState>(),
             )
             // Defaults + progress
@@ -79,6 +82,7 @@ impl Plugin for StatePlugin {
                 RunSetupPlugin,
                 PauseMenuPlugin,
                 ChipSelectPlugin,
+                HazardSelectPlugin,
                 RunEndPlugin,
                 RunPlugin,
             ));
@@ -95,6 +99,7 @@ pub(super) fn defaults_plugin() -> impl Plugin {
         .add_config::<MainMenuDefaults>()
         .add_config::<TimerUiDefaults>()
         .add_config::<ChipSelectDefaults>()
+        .add_config::<HazardSelectDefaults>()
         .add_config::<ToughnessDefaults>()
         .add_config::<DifficultyCurveDefaults>()
         .add_registry::<CellTypeRegistry>()
@@ -250,6 +255,24 @@ pub(crate) fn resolve_node_next_state(world: &World) -> RunState {
     }
 }
 
+/// Tier threshold (inclusive) at which hazard selection replaces the normal
+/// post-chip route. At tier ≥ [`HAZARD_TIER_THRESHOLD`] the player picks a
+/// hazard before the next node; below that, `ChipSelect` routes straight to `Node`.
+pub(crate) const HAZARD_TIER_THRESHOLD: u32 = 9;
+
+/// Resolves the next `RunState` when leaving `RunState::ChipSelect`.
+///
+/// Reads `NodeOutcome.tier`. At tier ≥ [`HAZARD_TIER_THRESHOLD`] routes to
+/// `RunState::HazardSelect`; otherwise routes to `RunState::Node`. Extracted
+/// so it can be unit tested without a full App.
+pub(crate) fn resolve_post_chip_state(world: &World) -> RunState {
+    if world.resource::<NodeOutcome>().tier >= HAZARD_TIER_THRESHOLD {
+        RunState::HazardSelect
+    } else {
+        RunState::Node
+    }
+}
+
 /// `RunState` routes — run lifecycle with transition effects.
 fn register_run_routes(app: &mut App) {
     app.add_route(
@@ -280,10 +303,10 @@ fn register_run_routes(app: &mut App) {
                     .is_some_and(|s| *s.get() == NodeState::Teardown)
             }),
     );
-    // ChipSelect → Node (parent watches ChipSelectState teardown)
+    // ChipSelect → dynamic (HazardSelect on tier ≥ HAZARD_TIER_THRESHOLD, else Node)
     app.add_route(
         Route::from(RunState::ChipSelect)
-            .to(RunState::Node)
+            .to_dynamic(resolve_post_chip_state)
             .with_transition(TransitionType::Out(Arc::new(FadeOut {
                 duration: 0.6,
                 color:    Color::WHITE,
@@ -292,6 +315,20 @@ fn register_run_routes(app: &mut App) {
                 world
                     .get_resource::<State<ChipSelectState>>()
                     .is_some_and(|s| *s.get() == ChipSelectState::Teardown)
+            }),
+    );
+    // HazardSelect → Node (parent watches HazardSelectState teardown)
+    app.add_route(
+        Route::from(RunState::HazardSelect)
+            .to(RunState::Node)
+            .with_transition(TransitionType::Out(Arc::new(FadeOut {
+                duration: 0.6,
+                color:    Color::WHITE,
+            })))
+            .when(|world| {
+                world
+                    .get_resource::<State<HazardSelectState>>()
+                    .is_some_and(|s| *s.get() == HazardSelectState::Teardown)
             }),
     );
     // RunEnd → Teardown (parent watches RunEndState teardown)

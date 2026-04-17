@@ -3,6 +3,7 @@
 pub mod chip_select;
 pub(crate) mod components;
 pub mod definition;
+pub mod hazard_select;
 pub(crate) mod loading;
 pub mod messages;
 pub mod node;

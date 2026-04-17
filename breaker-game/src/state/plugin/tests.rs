@@ -261,6 +261,128 @@ fn quit_teardown_chain_reaches_app_teardown() {
     );
 }
 
+// ── resolve_post_chip_state tier fork ─────────────────────────────────
+
+#[test]
+fn resolve_post_chip_state_tier_0_returns_node() {
+    let mut world = World::new();
+    world.insert_resource(NodeOutcome {
+        tier: 0,
+        ..default()
+    });
+
+    let next = resolve_post_chip_state(&world);
+    assert_eq!(
+        next,
+        RunState::Node,
+        "tier 0 must route ChipSelect → Node (below hazard threshold)"
+    );
+}
+
+#[test]
+fn resolve_post_chip_state_default_node_outcome_routes_to_node() {
+    // Edge case: NodeOutcome::default() has tier == 0.
+    let mut world = World::new();
+    world.insert_resource(NodeOutcome::default());
+
+    let next = resolve_post_chip_state(&world);
+    assert_eq!(
+        next,
+        RunState::Node,
+        "default NodeOutcome (tier 0) must not route to HazardSelect"
+    );
+}
+
+#[test]
+fn resolve_post_chip_state_tier_8_returns_node() {
+    // Boundary: one below threshold.
+    let mut world = World::new();
+    world.insert_resource(NodeOutcome {
+        tier: 8,
+        ..default()
+    });
+
+    let next = resolve_post_chip_state(&world);
+    assert_eq!(next, RunState::Node, "tier 8 must still route to Node");
+}
+
+#[test]
+fn resolve_post_chip_state_tier_9_returns_hazard_select() {
+    // Boundary: exactly at threshold.
+    let mut world = World::new();
+    world.insert_resource(NodeOutcome {
+        tier: 9,
+        ..default()
+    });
+
+    let next = resolve_post_chip_state(&world);
+    assert_eq!(
+        next,
+        RunState::HazardSelect,
+        "tier 9 must route ChipSelect → HazardSelect (at threshold)"
+    );
+}
+
+#[test]
+fn resolve_post_chip_state_tier_9_ignores_non_tier_fields() {
+    // Edge case: other NodeOutcome fields must not influence routing.
+    let mut world = World::new();
+    world.insert_resource(NodeOutcome {
+        tier: 9,
+        position_in_tier: 4,
+        cleared_this_frame: true,
+        ..default()
+    });
+
+    let next = resolve_post_chip_state(&world);
+    assert_eq!(
+        next,
+        RunState::HazardSelect,
+        "non-tier NodeOutcome fields must not influence hazard routing"
+    );
+}
+
+#[test]
+fn resolve_post_chip_state_tier_10_returns_hazard_select() {
+    let mut world = World::new();
+    world.insert_resource(NodeOutcome {
+        tier: 10,
+        ..default()
+    });
+
+    let next = resolve_post_chip_state(&world);
+    assert_eq!(
+        next,
+        RunState::HazardSelect,
+        "tier 10 must route to HazardSelect"
+    );
+}
+
+#[test]
+fn resolve_post_chip_state_tier_u32_max_returns_hazard_select() {
+    // Saturation guard: no overflow, no panic.
+    let mut world = World::new();
+    world.insert_resource(NodeOutcome {
+        tier: u32::MAX,
+        ..default()
+    });
+
+    let next = resolve_post_chip_state(&world);
+    assert_eq!(
+        next,
+        RunState::HazardSelect,
+        "tier u32::MAX must route to HazardSelect without overflow"
+    );
+}
+
+#[test]
+fn hazard_tier_threshold_constant_is_nine() {
+    assert_eq!(
+        HAZARD_TIER_THRESHOLD, 9,
+        "HAZARD_TIER_THRESHOLD must stay at 9 — guards against silent tuning drift"
+    );
+}
+
 // ── Behavior 27: defaults_plugin registers ProtocolRegistry + HazardRegistry ─
 
 /// Builds the minimum app required to run `defaults_plugin()` and verifies

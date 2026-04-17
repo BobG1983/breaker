@@ -66,6 +66,7 @@ impl StateChain<'_> {
                         }
                         RunState::Loading
                         | RunState::Setup
+                        | RunState::HazardSelect
                         | RunState::RunEnd
                         | RunState::Teardown => {}
                     }

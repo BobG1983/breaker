@@ -68,6 +68,7 @@ impl TestAppBuilder<NoStates> {
         self.app.add_sub_state::<RunState>();
         self.app.add_sub_state::<NodeState>();
         self.app.add_sub_state::<ChipSelectState>();
+        self.app.add_sub_state::<HazardSelectState>();
         self.app.add_sub_state::<RunEndState>();
         TestAppBuilder {
             app:    self.app,
@@ -129,6 +130,34 @@ impl TestAppBuilder<WithStates> {
             .world_mut()
             .resource_mut::<NextState<ChipSelectState>>()
             .set(ChipSelectState::Selecting);
+        self.app.update();
+        self
+    }
+
+    /// Drives the app into `HazardSelectState::Selecting` via four transitions:
+    /// `AppState::Game` → `GameState::Run` → `RunState::HazardSelect` → `HazardSelectState::Selecting`.
+    /// Each step sets `NextState` and calls `app.update()`.
+    #[must_use]
+    pub(crate) fn in_state_hazard_selecting(mut self) -> Self {
+        self.app
+            .world_mut()
+            .resource_mut::<NextState<AppState>>()
+            .set(AppState::Game);
+        self.app.update();
+        self.app
+            .world_mut()
+            .resource_mut::<NextState<GameState>>()
+            .set(GameState::Run);
+        self.app.update();
+        self.app
+            .world_mut()
+            .resource_mut::<NextState<RunState>>()
+            .set(RunState::HazardSelect);
+        self.app.update();
+        self.app
+            .world_mut()
+            .resource_mut::<NextState<HazardSelectState>>()
+            .set(HazardSelectState::Selecting);
         self.app.update();
         self
     }
