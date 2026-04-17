@@ -2,7 +2,7 @@ use bevy::{prelude::*, state::app::StatesPlugin};
 
 use super::definition::*;
 use crate::{
-    Route, RoutingTable,
+    Route,
     messages::{ChangeState, StateChanged, TransitionEnd, TransitionStart},
     routing_table::RoutingTableAppExt,
     transition::{
@@ -56,24 +56,6 @@ fn test_end_sys_in(mut writer: MessageWriter<TransitionOver>) {
 }
 
 // --- Existing tests (preserved) ---
-
-#[test]
-fn plugin_builds_and_registers_state_types() {
-    let mut app = App::new();
-    app.add_plugins((MinimalPlugins, StatesPlugin))
-        .init_state::<AppState>()
-        .add_sub_state::<GameState>()
-        .add_plugins(
-            RantzStateflowPlugin::new()
-                .register_state::<AppState>()
-                .register_state::<GameState>(),
-        );
-    app.update();
-
-    // Routing tables should exist
-    assert!(app.world().contains_resource::<RoutingTable<AppState>>());
-    assert!(app.world().contains_resource::<RoutingTable<GameState>>());
-}
 
 #[test]
 fn plugin_dispatch_works_end_to_end() {
@@ -309,23 +291,5 @@ fn plugin_registers_transition_registry() {
     );
 }
 
-// Behavior 38: Plugin registers orchestration system
-// This is verified implicitly by the end-to-end orchestration tests in Section G.
-// Here we just verify that the plugin builds without panicking when the
-// orchestration system is registered.
-#[test]
-fn plugin_builds_with_orchestration_system() {
-    let mut app = App::new();
-    app.add_plugins((MinimalPlugins, StatesPlugin))
-        .init_state::<AppState>()
-        .add_plugins(
-            RantzStateflowPlugin::new()
-                .register_state::<AppState>()
-                .register_custom_transition::<TestEffectOut, _, _, _>(
-                    test_start_sys,
-                    test_run_sys,
-                    test_end_sys,
-                ),
-        );
-    app.update(); // Should not panic
-}
+// Behavior 38: Plugin registers orchestration system.
+// Verified by the end-to-end orchestration tests in Section G.

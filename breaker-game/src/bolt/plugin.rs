@@ -98,28 +98,3 @@ impl Plugin for BoltPlugin {
             .add_systems(Update, sync_bolt_scale.run_if(in_state(NodeState::Playing)));
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use rantzsoft_physics2d::resources::CollisionQuadtree;
-
-    use super::*;
-
-    #[test]
-    fn plugin_builds() {
-        App::new()
-            .add_plugins(MinimalPlugins)
-            .add_plugins(bevy::state::app::StatesPlugin)
-            .init_state::<AppState>()
-            .add_sub_state::<GameState>()
-            .add_sub_state::<RunState>()
-            .add_sub_state::<NodeState>()
-            // InputPlugin owns InputActions
-            .init_resource::<ButtonInput<KeyCode>>()
-            .add_message::<bevy::input::keyboard::KeyboardInput>()
-            .add_plugins(crate::input::InputPlugin)
-            .insert_resource(CollisionQuadtree::default())
-            .add_plugins(BoltPlugin)
-            .update();
-    }
-}

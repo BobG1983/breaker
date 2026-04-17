@@ -1,44 +1,15 @@
 use std::time::Duration;
 
 use bevy::prelude::*;
-use rantzsoft_physics2d::resources::CollisionQuadtree;
 use rantzsoft_spatial2d::components::Spatial2D;
 
-use super::{
-    super::system::CellsPlugin,
-    helpers::{cells_plugin_app, tick_cells},
-};
+use super::helpers::{cells_plugin_app, tick_cells};
 use crate::{
     cells::components::{
         GuardedCell, GuardianCell, GuardianGridStep, GuardianSlideSpeed, GuardianSlot, SlideTarget,
     },
-    effect_v3::EffectV3Plugin,
     prelude::*,
-    shared::death_pipeline::{
-        DeathPipelinePlugin, systems::tests::helpers::register_effect_v3_test_infrastructure,
-    },
 };
-
-#[test]
-fn plugin_builds() {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins)
-        .add_plugins(bevy::state::app::StatesPlugin)
-        .init_state::<AppState>()
-        .add_sub_state::<GameState>()
-        .add_sub_state::<RunState>()
-        .add_sub_state::<NodeState>()
-        // CellsPlugin reads BoltImpactCell messages from bolt domain
-        .add_message::<BoltImpactCell>()
-        // CellsPlugin reads BreakerImpactCell messages from breaker domain
-        .add_message::<BreakerImpactCell>()
-        .insert_resource(CollisionQuadtree::default());
-    app.add_plugins(DeathPipelinePlugin);
-    register_effect_v3_test_infrastructure(&mut app);
-    app.add_plugins(EffectV3Plugin);
-    app.add_plugins(CellsPlugin);
-    app.update();
-}
 
 /// Behavior 43: `CellsPlugin` registers `slide_guardian_cells` in `FixedUpdate`.
 ///

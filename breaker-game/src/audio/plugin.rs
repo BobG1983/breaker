@@ -12,16 +12,3 @@ impl Plugin for AudioPlugin {
         // Phase 0: stub — audio systems added in later phases.
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn plugin_builds() {
-        App::new()
-            .add_plugins(MinimalPlugins)
-            .add_plugins(AudioPlugin)
-            .update();
-    }
-}

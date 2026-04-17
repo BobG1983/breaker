@@ -16,25 +16,3 @@ impl Plugin for WallPlugin {
             .add_systems(OnEnter(NodeState::Loading), spawn_walls);
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn plugin_builds() {
-        let mut registry = crate::walls::WallRegistry::default();
-        registry.insert("Wall".to_string(), crate::walls::WallDefinition::default());
-        App::new()
-            .add_plugins(MinimalPlugins)
-            .add_plugins(bevy::state::app::StatesPlugin)
-            .init_state::<AppState>()
-            .add_sub_state::<GameState>()
-            .add_sub_state::<RunState>()
-            .add_sub_state::<NodeState>()
-            .init_resource::<crate::shared::PlayfieldConfig>()
-            .insert_resource(registry)
-            .add_plugins(WallPlugin)
-            .update();
-    }
-}

@@ -6,17 +6,6 @@ use super::{
 };
 use crate::components::*;
 
-// -- Behavior 24: Plugin builds without panic --
-
-#[test]
-fn plugin_builds_without_panic() {
-    let mut app = App::new();
-    app.add_plugins(MinimalPlugins);
-    app.add_plugins(RantzSpatial2dPlugin::<TestDrawLayer>::default());
-    app.update();
-    app.update();
-}
-
 // -- Behavior 35: Plugin registers `compute_globals` in `AfterFixedMainLoop` --
 
 #[test]

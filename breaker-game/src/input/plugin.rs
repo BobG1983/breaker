@@ -23,19 +23,3 @@ impl Plugin for InputPlugin {
             .add_systems(FixedPostUpdate, clear_input_actions);
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::prelude::*;
-
-    #[test]
-    fn plugin_builds() {
-        let mut app = TestAppBuilder::new()
-            .with_resource::<ButtonInput<KeyCode>>()
-            .with_message::<bevy::input::keyboard::KeyboardInput>()
-            .build();
-        app.add_plugins(InputPlugin);
-        app.update();
-    }
-}

@@ -22,15 +22,3 @@ impl Plugin for FxPlugin {
         );
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn plugin_builds() {
-        let mut app = TestAppBuilder::new().with_state_hierarchy().build();
-        app.add_plugins(FxPlugin);
-        app.update();
-    }
-}

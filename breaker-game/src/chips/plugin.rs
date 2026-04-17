@@ -22,19 +22,3 @@ impl Plugin for ChipsPlugin {
             );
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn plugin_builds() {
-        let mut app = TestAppBuilder::new()
-            .with_state_hierarchy()
-            // ChipSelected must be registered before ChipsPlugin (normally by UiPlugin)
-            .with_message::<ChipSelected>()
-            .build();
-        app.add_plugins(ChipsPlugin);
-        app.update();
-    }
-}

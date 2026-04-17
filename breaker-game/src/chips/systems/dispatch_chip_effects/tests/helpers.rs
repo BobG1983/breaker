@@ -42,7 +42,6 @@ pub(super) fn test_app() -> App {
         .with_resource::<ChipCatalog>()
         .insert_resource(PendingChipSelections::default())
         // Add the system without run_if guard for direct testing.
-        // The plugin_builds test in plugin.rs covers the state guard.
         .with_system(
             Update,
             (

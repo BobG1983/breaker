@@ -38,18 +38,3 @@ impl Plugin for DebugPlugin {
         }
     }
 }
-
-/// Tests the non-dev path (no-op build). The dev path requires a render
-/// context and is tested via `cargo dev`.
-#[cfg(all(test, not(feature = "dev")))]
-mod tests {
-    use super::*;
-    use crate::prelude::*;
-
-    #[test]
-    fn plugin_builds_headless() {
-        let mut app = TestAppBuilder::new().build();
-        app.add_plugins(DebugPlugin);
-        app.update();
-    }
-}

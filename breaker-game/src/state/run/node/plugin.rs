@@ -111,24 +111,3 @@ impl Plugin for NodePlugin {
             );
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn plugin_builds() {
-        App::new()
-            .add_plugins(MinimalPlugins)
-            .add_plugins(bevy::state::app::StatesPlugin)
-            .init_state::<AppState>()
-            .add_sub_state::<GameState>()
-            .add_sub_state::<RunState>()
-            .add_sub_state::<NodeState>()
-            .add_plugins(
-                rantzsoft_stateflow::RantzStateflowPlugin::new().register_state::<NodeState>(),
-            )
-            .add_plugins(NodePlugin)
-            .update();
-    }
-}

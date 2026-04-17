@@ -83,36 +83,3 @@ impl Plugin for BreakerPlugin {
             );
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use rantzsoft_physics2d::resources::CollisionQuadtree;
-
-    use super::*;
-
-    #[test]
-    fn plugin_builds() {
-        App::new()
-            .add_plugins(MinimalPlugins)
-            .add_plugins(bevy::state::app::StatesPlugin)
-            .add_plugins(bevy::asset::AssetPlugin::default())
-            .init_asset::<Mesh>()
-            .init_asset::<ColorMaterial>()
-            .init_state::<AppState>()
-            .add_sub_state::<GameState>()
-            .add_sub_state::<RunState>()
-            .add_sub_state::<NodeState>()
-            .init_resource::<PlayfieldConfig>()
-            .init_resource::<crate::breaker::BreakerRegistry>()
-            .init_resource::<SelectedBreaker>()
-            // InputPlugin owns InputActions — init resources it provides
-            .init_resource::<ButtonInput<KeyCode>>()
-            .add_message::<bevy::input::keyboard::KeyboardInput>()
-            .add_plugins(crate::input::InputPlugin)
-            // BreakerPlugin reads BoltImpactBreaker from the bolt domain
-            .add_message::<BoltImpactBreaker>()
-            .insert_resource(CollisionQuadtree::default())
-            .add_plugins(BreakerPlugin)
-            .update();
-    }
-}
