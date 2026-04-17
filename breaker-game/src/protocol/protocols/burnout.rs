@@ -48,7 +48,7 @@ fn warn_stub(cfg: Option<Res<BurnoutConfig>>, mut seen: Local<bool>) {
     if *seen || cfg.is_none() {
         return;
     }
-    warn!("Burnout activated — heat-gauge plumbing pending.");
+    info!("Burnout activated — heat-gauge plumbing pending.");
     *seen = true;
 }
 

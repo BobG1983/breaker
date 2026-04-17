@@ -42,7 +42,7 @@ fn warn_stub(cfg: Option<Res<TetherConfig>>, mut seen: Local<bool>) {
     if *seen || cfg.is_none() {
         return;
     }
-    warn!("Tether activated — paired-cell damage-sharing plumbing pending.");
+    info!("Tether activated — paired-cell damage-sharing plumbing pending.");
     *seen = true;
 }
 

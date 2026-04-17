@@ -39,7 +39,7 @@ fn warn_stub(cfg: Option<Res<DebtCollectorConfig>>, mut seen: Local<bool>) {
     if *seen || cfg.is_none() {
         return;
     }
-    warn!("DebtCollector activated — runtime behaviour pending bump-grade plumbing.");
+    info!("DebtCollector activated — runtime behaviour pending bump-grade plumbing.");
     *seen = true;
 }
 

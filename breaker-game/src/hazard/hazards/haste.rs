@@ -36,7 +36,7 @@ fn warn_stub(cfg: Option<Res<HasteConfig>>, mut seen: Local<bool>) {
     if *seen || cfg.is_none() {
         return;
     }
-    warn!("Haste activated — cell-timer acceleration plumbing pending.");
+    info!("Haste activated — cell-timer acceleration plumbing pending.");
     *seen = true;
 }
 

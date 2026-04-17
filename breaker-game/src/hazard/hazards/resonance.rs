@@ -39,7 +39,7 @@ fn warn_stub(cfg: Option<Res<ResonanceConfig>>, mut seen: Local<bool>) {
     if *seen || cfg.is_none() {
         return;
     }
-    warn!("Resonance activated — bump-window narrowing plumbing pending.");
+    info!("Resonance activated — bump-window narrowing plumbing pending.");
     *seen = true;
 }
 

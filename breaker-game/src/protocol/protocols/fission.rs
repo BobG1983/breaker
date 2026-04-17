@@ -31,7 +31,7 @@ fn warn_stub(cfg: Option<Res<FissionConfig>>, mut seen: Local<bool>) {
     if *seen || cfg.is_none() {
         return;
     }
-    warn!("Fission activated — bolt-split plumbing pending.");
+    info!("Fission activated — bolt-split plumbing pending.");
     *seen = true;
 }
 

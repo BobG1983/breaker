@@ -36,7 +36,7 @@ fn warn_stub(cfg: Option<Res<CascadeConfig>>, mut seen: Local<bool>) {
     if *seen || cfg.is_none() {
         return;
     }
-    warn!("Cascade activated — cell-heal-on-clear plumbing pending.");
+    info!("Cascade activated — cell-heal-on-clear plumbing pending.");
     *seen = true;
 }
 

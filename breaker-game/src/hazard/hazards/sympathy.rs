@@ -42,7 +42,7 @@ fn warn_stub(cfg: Option<Res<SympathyConfig>>, mut seen: Local<bool>) {
     if *seen || cfg.is_none() {
         return;
     }
-    warn!("Sympathy activated — adjacent-cell heal plumbing pending.");
+    info!("Sympathy activated — adjacent-cell heal plumbing pending.");
     *seen = true;
 }
 

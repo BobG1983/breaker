@@ -39,7 +39,7 @@ fn warn_stub(cfg: Option<Res<OverchargeConfig>>, mut seen: Local<bool>) {
     if *seen || cfg.is_none() {
         return;
     }
-    warn!("Overcharge activated — bolt-damage ramp plumbing pending.");
+    info!("Overcharge activated — bolt-damage ramp plumbing pending.");
     *seen = true;
 }
 

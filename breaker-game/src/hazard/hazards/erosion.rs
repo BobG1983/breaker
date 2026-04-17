@@ -42,7 +42,7 @@ fn warn_stub(cfg: Option<Res<ErosionConfig>>, mut seen: Local<bool>) {
     if *seen || cfg.is_none() {
         return;
     }
-    warn!("Erosion activated — breaker-shrink plumbing pending.");
+    info!("Erosion activated — breaker-shrink plumbing pending.");
     *seen = true;
 }
 

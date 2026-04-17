@@ -39,7 +39,7 @@ fn warn_stub(cfg: Option<Res<AfterimageConfig>>, mut seen: Local<bool>) {
     if *seen || cfg.is_none() {
         return;
     }
-    warn!("Afterimage activated — phantom-bolt plumbing pending.");
+    info!("Afterimage activated — phantom-bolt plumbing pending.");
     *seen = true;
 }
 

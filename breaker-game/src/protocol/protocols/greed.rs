@@ -40,7 +40,7 @@ fn warn_stub(cfg: Option<Res<GreedConfig>>, mut seen: Local<bool>) {
     if *seen || cfg.is_none() {
         return;
     }
-    warn!("Greed activated — rarity weighting hook pending.");
+    info!("Greed activated — rarity weighting hook pending.");
     *seen = true;
 }
 

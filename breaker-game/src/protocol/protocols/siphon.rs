@@ -39,7 +39,7 @@ fn warn_stub(cfg: Option<Res<SiphonConfig>>, mut seen: Local<bool>) {
     if *seen || cfg.is_none() {
         return;
     }
-    warn!("Siphon activated — runtime behaviour pending kill-streak plumbing.");
+    info!("Siphon activated — runtime behaviour pending kill-streak plumbing.");
     *seen = true;
 }
 

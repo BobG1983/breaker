@@ -45,7 +45,7 @@ fn warn_stub(cfg: Option<Res<GravitySurgeConfig>>, mut seen: Local<bool>) {
     if *seen || cfg.is_none() {
         return;
     }
-    warn!("GravitySurge activated — periodic-gravity plumbing pending.");
+    info!("GravitySurge activated — periodic-gravity plumbing pending.");
     *seen = true;
 }
 

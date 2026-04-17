@@ -1,0 +1,30 @@
+// Smoke test for Momentum hazard scaffold at stack 3.
+//
+// Activates 3 stacks of Momentum via the InjectHazardStack mutation. The
+// hazard module is currently a config-insertion + warn-once scaffold;
+// this scenario validates that the activation path runs without
+// panicking and that no invariants regress as a side effect of the
+// installed config resource. When runtime behaviour lands, this
+// scenario will start exercising it without spec changes.
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 500,
+    disallowed_failures: [
+        NoNaN,
+        BoltInBounds,
+        BreakerInBounds,
+        TimerNonNegative,
+        HazardStackValid,
+    ],
+    allowed_failures: None,
+    debug_setup: (
+        disable_physics: true,
+    ),
+    frame_mutations: [
+        (frame: 10, mutation: InjectHazardStack(kind_name: "Momentum", stacks: 3)),
+    ],
+)

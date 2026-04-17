@@ -42,7 +42,7 @@ fn warn_stub(cfg: Option<Res<EchoCellsConfig>>, mut seen: Local<bool>) {
     if *seen || cfg.is_none() {
         return;
     }
-    warn!("EchoCells activated — ghost-cell respawn plumbing pending.");
+    info!("EchoCells activated — ghost-cell respawn plumbing pending.");
     *seen = true;
 }
 

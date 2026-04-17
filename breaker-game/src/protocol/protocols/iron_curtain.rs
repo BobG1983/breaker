@@ -39,7 +39,7 @@ fn warn_stub(cfg: Option<Res<IronCurtainConfig>>, mut seen: Local<bool>) {
     if *seen || cfg.is_none() {
         return;
     }
-    warn!("IronCurtain activated — runtime behaviour pending damage-pipeline plumbing.");
+    info!("IronCurtain activated — runtime behaviour pending damage-pipeline plumbing.");
     *seen = true;
 }
 

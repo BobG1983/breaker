@@ -36,7 +36,7 @@ fn warn_stub(cfg: Option<Res<ConductorConfig>>, mut seen: Local<bool>) {
     if *seen || cfg.is_none() {
         return;
     }
-    warn!("Conductor activated — primary-swap plumbing pending.");
+    info!("Conductor activated — primary-swap plumbing pending.");
     *seen = true;
 }
 

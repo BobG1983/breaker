@@ -45,7 +45,7 @@ fn warn_stub(cfg: Option<Res<EchoStrikeConfig>>, mut seen: Local<bool>) {
     if *seen || cfg.is_none() {
         return;
     }
-    warn!("EchoStrike activated — runtime behaviour pending echo-hit plumbing.");
+    info!("EchoStrike activated — runtime behaviour pending echo-hit plumbing.");
     *seen = true;
 }
 

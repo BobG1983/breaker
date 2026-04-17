@@ -39,7 +39,7 @@ fn warn_stub(cfg: Option<Res<FractureConfig>>, mut seen: Local<bool>) {
     if *seen || cfg.is_none() {
         return;
     }
-    warn!("Fracture activated — cell-split plumbing pending.");
+    info!("Fracture activated — cell-split plumbing pending.");
     *seen = true;
 }
 

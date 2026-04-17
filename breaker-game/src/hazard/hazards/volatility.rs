@@ -42,7 +42,7 @@ fn warn_stub(cfg: Option<Res<VolatilityConfig>>, mut seen: Local<bool>) {
     if *seen || cfg.is_none() {
         return;
     }
-    warn!("Volatility activated — cell-HP-growth plumbing pending.");
+    info!("Volatility activated — cell-HP-growth plumbing pending.");
     *seen = true;
 }
 

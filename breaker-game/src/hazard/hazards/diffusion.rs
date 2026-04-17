@@ -42,7 +42,7 @@ fn warn_stub(cfg: Option<Res<DiffusionConfig>>, mut seen: Local<bool>) {
     if *seen || cfg.is_none() {
         return;
     }
-    warn!("Diffusion activated — damage-pipeline redistribution plumbing pending.");
+    info!("Diffusion activated — damage-pipeline redistribution plumbing pending.");
     *seen = true;
 }
 

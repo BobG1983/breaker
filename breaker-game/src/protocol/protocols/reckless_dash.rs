@@ -42,7 +42,7 @@ fn warn_stub(cfg: Option<Res<RecklessDashConfig>>, mut seen: Local<bool>) {
     if *seen || cfg.is_none() {
         return;
     }
-    warn!("RecklessDash activated — risky-zone plumbing pending.");
+    info!("RecklessDash activated — risky-zone plumbing pending.");
     *seen = true;
 }
 

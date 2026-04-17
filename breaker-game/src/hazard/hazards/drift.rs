@@ -39,7 +39,7 @@ fn warn_stub(cfg: Option<Res<DriftConfig>>, mut seen: Local<bool>) {
     if *seen || cfg.is_none() {
         return;
     }
-    warn!("Drift activated — periodic-lateral-force plumbing pending.");
+    info!("Drift activated — periodic-lateral-force plumbing pending.");
     *seen = true;
 }
 

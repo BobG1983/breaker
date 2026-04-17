@@ -39,7 +39,7 @@ fn warn_stub(cfg: Option<Res<MomentumConfig>>, mut seen: Local<bool>) {
     if *seen || cfg.is_none() {
         return;
     }
-    warn!("Momentum activated — damage-pipeline non-lethal redistribution pending.");
+    info!("Momentum activated — damage-pipeline non-lethal redistribution pending.");
     *seen = true;
 }
 

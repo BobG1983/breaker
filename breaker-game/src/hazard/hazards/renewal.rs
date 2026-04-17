@@ -36,7 +36,7 @@ fn warn_stub(cfg: Option<Res<RenewalConfig>>, mut seen: Local<bool>) {
     if *seen || cfg.is_none() {
         return;
     }
-    warn!("Renewal activated — periodic-node-refresh plumbing pending.");
+    info!("Renewal activated — periodic-node-refresh plumbing pending.");
     *seen = true;
 }
 
