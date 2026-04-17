@@ -1,0 +1,11 @@
+(
+    name: "Echo Strike",
+    description: "Cell hits echo to your last three targets, each for a fraction of the damage.",
+    unlock_tier: 0,
+    tuning: EchoStrike(
+        max_echoes: 3,
+        newest_fraction: 0.5,
+        middle_fraction: 0.25,
+        oldest_fraction: 0.125,
+    ),
+)

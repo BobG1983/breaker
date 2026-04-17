@@ -1,0 +1,9 @@
+(
+    name: "Iron Curtain",
+    description: "Cells farther from the breaker take fractional damage.",
+    unlock_tier: 0,
+    tuning: IronCurtain(
+        damage_fraction: 0.25,
+        falloff_start: 0.5,
+    ),
+)

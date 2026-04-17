@@ -1,0 +1,8 @@
+(
+    name: "Debt Collector",
+    description: "Each successful bump adds damage debt; cash it out on the next cell kill.",
+    unlock_tier: 0,
+    tuning: DebtCollector(
+        stack_per_bump: 0.1,
+    ),
+)

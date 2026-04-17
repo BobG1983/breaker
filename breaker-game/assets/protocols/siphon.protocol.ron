@@ -1,0 +1,9 @@
+(
+    name: "Siphon",
+    description: "Chain cell kills within a short window to bleed time from the node timer.",
+    unlock_tier: 0,
+    tuning: Siphon(
+        streak_window: 2.0,
+        time_per_kill: 0.25,
+    ),
+)

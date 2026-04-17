@@ -1,0 +1,12 @@
+(
+    name: "Burnout",
+    description: "Move to build heat, stop to drain it into a bump-window speed and damage surge.",
+    unlock_tier: 0,
+    tuning: Burnout(
+        fill_duration: 3.0,
+        drain_duration: 5.0,
+        still_threshold: 0.25,
+        full_heat_damage_multiplier: 2.0,
+        speed_boost_duration: 1.0,
+    ),
+)

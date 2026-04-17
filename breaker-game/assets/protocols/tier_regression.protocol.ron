@@ -1,0 +1,8 @@
+(
+    name: "Tier Regression",
+    description: "Replay the previous tier's nodes on each boss clear.",
+    unlock_tier: 0,
+    tuning: TierRegression(
+        tiers_back: 1,
+    ),
+)

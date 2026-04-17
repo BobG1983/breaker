@@ -1,0 +1,23 @@
+(
+    name: "Anchor",
+    description: "Stand still to plant. While planted: stronger bumps, wider perfect window.",
+    unlock_tier: 0,
+    tuning: Anchor(
+        effects: [
+            Stamp(Breaker,
+                Until(NodeEndOccurred,
+                    Fire(Anchor(AnchorConfig(
+                        bump_force_multiplier: 2.0,
+                        perfect_window_multiplier: 1.5,
+                        plant_delay: 0.3,
+                    ))),
+                ),
+            ),
+            Stamp(EveryBolt,
+                Until(NodeEndOccurred,
+                    Fire(Piercing(PiercingConfig(charges: 1))),
+                ),
+            ),
+        ],
+    ),
+)

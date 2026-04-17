@@ -1,0 +1,8 @@
+(
+    name: "Fission",
+    description: "Every Nth cell kill splits the active bolt into two.",
+    unlock_tier: 0,
+    tuning: Fission(
+        kills_per_split: 10,
+    ),
+)

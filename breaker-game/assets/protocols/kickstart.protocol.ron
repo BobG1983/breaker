@@ -1,0 +1,20 @@
+(
+    name: "Kickstart",
+    description: "Each node opens with 3 seconds of 2x speed, 2x damage, and piercing.",
+    unlock_tier: 0,
+    tuning: Kickstart(
+        effects: [
+            Stamp(EveryBolt,
+                When(NodeStartOccurred,
+                    Until(TimeExpires(3.0),
+                        Sequence([
+                            SpeedBoost(SpeedBoostConfig(multiplier: 2.0)),
+                            DamageBoost(DamageBoostConfig(multiplier: 2.0)),
+                            Piercing(PiercingConfig(charges: 2)),
+                        ]),
+                    ),
+                ),
+            ),
+        ],
+    ),
+)

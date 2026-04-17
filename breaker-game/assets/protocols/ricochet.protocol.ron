@@ -1,0 +1,16 @@
+(
+    name: "Ricochet Protocol",
+    description: "After bouncing off a wall, deal 3x damage until hitting a cell.",
+    unlock_tier: 0,
+    tuning: Ricochet(
+        effects: [
+            Stamp(EveryBolt,
+                When(Impacted(Wall),
+                    Until(Impacted(Cell),
+                        Fire(DamageBoost(DamageBoostConfig(multiplier: 3.0))),
+                    ),
+                ),
+            ),
+        ],
+    ),
+)

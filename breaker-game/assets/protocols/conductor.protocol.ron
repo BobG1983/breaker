@@ -1,0 +1,8 @@
+(
+    name: "Conductor",
+    description: "Swap the primary bolt within a tight window on impact to inherit its buffs.",
+    unlock_tier: 0,
+    tuning: Conductor(
+        primary_swap_window: 0.2,
+    ),
+)

@@ -1,0 +1,8 @@
+(
+    name: "Greed",
+    description: "Skipping a chip offer boosts the rare-chip weight next visit.",
+    unlock_tier: 0,
+    tuning: Greed(
+        rarity_boost_per_skip: 0.05,
+    ),
+)

@@ -15,6 +15,7 @@ use crate::{
     prelude::*,
     protocol::{
         messages::ProtocolSelected,
+        protocols,
         resources::{ActiveProtocols, ProtocolRegistry},
     },
 };
@@ -36,11 +37,14 @@ pub(crate) fn dispatch_protocol_selection(
         };
 
         let effects = def.tuning.effects().map(<[RootNode]>::to_vec);
+        let tuning = def.tuning.clone();
         active.insert(def.clone());
 
         let Some(roots) = effects else {
-            // Custom-system protocol — its runtime systems are registered
-            // independently and gated by `protocol_active(kind)`; no stamping.
+            // Custom-system protocol — register its per-kind config + runtime
+            // via the `protocols::` fan-in; runtime systems are gated by
+            // `protocol_active(kind)`.
+            protocols::activate(kind, &tuning, &mut commands);
             continue;
         };
 

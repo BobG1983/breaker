@@ -4,5 +4,6 @@
 pub(crate) mod definition;
 pub(crate) mod messages;
 pub(crate) mod plugin;
+pub(crate) mod protocols;
 pub(crate) mod resources;
 pub(crate) mod systems;

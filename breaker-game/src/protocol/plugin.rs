@@ -4,6 +4,7 @@ use bevy::{ecs::schedule::ApplyDeferred, prelude::*};
 
 use super::{
     messages::ProtocolSelected,
+    protocols,
     resources::{ActiveProtocols, ProtocolOffer, UnlockedProtocols},
     systems::{dispatch_protocol_selection, generate_protocol_offering},
 };
@@ -16,6 +17,7 @@ pub(crate) struct ProtocolPlugin;
 
 impl Plugin for ProtocolPlugin {
     fn build(&self, app: &mut App) {
+        protocols::register(app);
         app.init_resource::<ActiveProtocols>()
             .init_resource::<UnlockedProtocols>()
             .init_resource::<ProtocolOffer>()

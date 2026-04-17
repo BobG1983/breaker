@@ -1,0 +1,19 @@
+(
+    name: "Deadline",
+    description: "When node timer drops below 25%, all bolts get 2x speed and 2x damage.",
+    unlock_tier: 0,
+    tuning: Deadline(
+        effects: [
+            Stamp(EveryBolt,
+                Once(NodeTimerThresholdOccurred(0.25),
+                    Until(NodeEndOccurred,
+                        Sequence([
+                            SpeedBoost(SpeedBoostConfig(multiplier: 2.0)),
+                            DamageBoost(DamageBoostConfig(multiplier: 2.0)),
+                        ]),
+                    ),
+                ),
+            ),
+        ],
+    ),
+)
