@@ -73,7 +73,7 @@ impl SeedableRegistry for ProtocolRegistry {
 /// Protocols active in the current run. Populated by the protocol-offering
 /// dispatch system on selection; cleared by `reset_run_state` on each new run.
 #[derive(Resource, Debug, Default)]
-pub(crate) struct ActiveProtocols {
+pub struct ActiveProtocols {
     protocols: HashMap<ProtocolKind, ProtocolDefinition>,
 }
 
@@ -85,7 +85,7 @@ impl ActiveProtocols {
 
     /// True when `kind` is currently active.
     #[must_use]
-    pub(crate) fn contains(&self, kind: ProtocolKind) -> bool {
+    pub fn contains(&self, kind: ProtocolKind) -> bool {
         self.protocols.contains_key(&kind)
     }
 
@@ -96,7 +96,7 @@ impl ActiveProtocols {
     }
 
     /// Iterate all (kind, definition) pairs of active protocols.
-    pub(crate) fn iter(&self) -> impl Iterator<Item = (&ProtocolKind, &ProtocolDefinition)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&ProtocolKind, &ProtocolDefinition)> {
         self.protocols.iter()
     }
 
@@ -105,9 +105,15 @@ impl ActiveProtocols {
         self.protocols.clear();
     }
 
+    /// Number of active protocols.
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.protocols.len()
+    }
+
     /// True when no protocols are active.
     #[must_use]
-    pub(crate) fn is_empty(&self) -> bool {
+    pub fn is_empty(&self) -> bool {
         self.protocols.is_empty()
     }
 }

@@ -76,7 +76,7 @@ impl SeedableRegistry for HazardRegistry {
 /// only insertion path and always increments to ≥1 before returning.
 /// `stacks(absent) == 0`.
 #[derive(Resource, Debug, Default)]
-pub(crate) struct ActiveHazards {
+pub struct ActiveHazards {
     stacks: HashMap<HazardKind, u32>,
 }
 
@@ -91,7 +91,7 @@ impl ActiveHazards {
 
     /// Returns the stack count, or 0 if the hazard is not active.
     #[must_use]
-    pub(crate) fn stacks(&self, kind: HazardKind) -> u32 {
+    pub fn stacks(&self, kind: HazardKind) -> u32 {
         self.stacks.get(&kind).copied().unwrap_or(0)
     }
 
@@ -102,7 +102,7 @@ impl ActiveHazards {
     }
 
     /// Iterate `(kind, stack_count)` pairs for every active hazard.
-    pub(crate) fn iter(&self) -> impl Iterator<Item = (HazardKind, u32)> + '_ {
+    pub fn iter(&self) -> impl Iterator<Item = (HazardKind, u32)> + '_ {
         self.stacks.iter().map(|(&k, &v)| (k, v))
     }
 
@@ -113,14 +113,21 @@ impl ActiveHazards {
 
     /// Number of distinct hazards with ≥1 stack.
     #[must_use]
-    pub(crate) fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.stacks.len()
     }
 
     /// True when no hazards are active.
     #[must_use]
-    pub(crate) fn is_empty(&self) -> bool {
+    pub fn is_empty(&self) -> bool {
         self.stacks.is_empty()
+    }
+
+    /// Test/scenario-runner backdoor: insert a raw (kind, stacks) entry
+    /// bypassing `add_stack`. Used by invariant self-test scenarios to force
+    /// the zero-stack violation that `add_stack` cannot produce.
+    pub fn force_insert_entry(&mut self, kind: HazardKind, stacks: u32) {
+        self.stacks.insert(kind, stacks);
     }
 }
 

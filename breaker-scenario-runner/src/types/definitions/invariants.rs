@@ -54,6 +54,10 @@ pub enum InvariantKind {
     BreakerCountReasonable,
     /// Bolts with `Birthing` component must have zeroed `CollisionLayers`.
     BoltBirthingLayersZeroed,
+    /// [`ActiveHazards`](breaker::hazard::resources::ActiveHazards) must never
+    /// contain an entry with 0 stacks — the map-insert path is `add_stack`
+    /// which always increments to ≥1.
+    HazardStackValid,
 }
 
 impl InvariantKind {
@@ -86,6 +90,7 @@ impl InvariantKind {
         Self::GravityWellCountReasonable,
         Self::BreakerCountReasonable,
         Self::BoltBirthingLayersZeroed,
+        Self::HazardStackValid,
     ];
 
     /// Standard human-readable fail reason for this invariant violation.
@@ -120,6 +125,7 @@ impl InvariantKind {
             Self::GravityWellCountReasonable => "gravity well entity count exceeds maximum",
             Self::BreakerCountReasonable => "primary breaker count is not exactly 1",
             Self::BoltBirthingLayersZeroed => "birthing bolt has non-zero collision layers",
+            Self::HazardStackValid => "hazard stack count is zero (should never happen)",
         }
     }
 }

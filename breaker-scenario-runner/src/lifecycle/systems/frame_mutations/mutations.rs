@@ -13,6 +13,7 @@ use breaker::{
         second_wind::SecondWindWall,
         shield::ShieldWall,
     },
+    hazard::{definition::HazardKind, resources::ActiveHazards},
     shared::birthing::Birthing,
     state::{
         run::{
@@ -53,6 +54,9 @@ pub struct MutationTargets<'w, 's> {
     chip_inventory:       Option<ResMut<'w, ChipInventory>>,
     /// [`ChipOffers`] resource -- present only during chip select.
     chip_offers:          Option<ResMut<'w, ChipOffers>>,
+    /// [`ActiveHazards`] resource -- always present; used by
+    /// [`MutationKind::InjectZeroStackHazard`].
+    active_hazards:       Option<ResMut<'w, ActiveHazards>>,
     /// [`Commands`] for inserting resources when the optional resource is absent.
     commands:             Commands<'w, 's>,
     /// Bolt entities with `Aabb2D` -- for [`MutationKind::InjectMismatchedBoltAabb`].
@@ -98,15 +102,10 @@ pub fn apply_debug_frame_mutations(
                 }
             }
             MutationKind::SpawnExtraEntities(count) => {
-                for _ in 0..*count {
-                    targets.commands.spawn(Transform::default());
-                }
+                apply_spawn_extra_entities(*count, &mut targets.commands);
             }
             MutationKind::MoveBolt(x, y) => {
-                for mut position in &mut bolts {
-                    position.0.x = *x;
-                    position.0.y = *y;
-                }
+                apply_move_bolt(*x, *y, &mut bolts);
             }
             MutationKind::TogglePause => {
                 apply_toggle_pause(&mut pause);
@@ -175,8 +174,49 @@ pub fn apply_debug_frame_mutations(
             MutationKind::InjectNonZeroBirthingLayers => {
                 apply_inject_non_zero_birthing_layers(&mut targets.birthing_bolt_layers);
             }
+            MutationKind::InjectZeroStackHazard { kind_name } => {
+                apply_inject_zero_stack_hazard(kind_name, &mut targets.active_hazards);
+            }
         }
     }
+}
+
+/// Spawns `count` entities with only a default [`Transform`].
+fn apply_spawn_extra_entities(count: usize, commands: &mut Commands) {
+    for _ in 0..count {
+        commands.spawn(Transform::default());
+    }
+}
+
+/// Moves every tagged bolt to world-space `(x, y)`, preserving z.
+fn apply_move_bolt(x: f32, y: f32, bolts: &mut Query<&mut Position2D, With<ScenarioTagBolt>>) {
+    for mut position in bolts {
+        position.0.x = x;
+        position.0.y = y;
+    }
+}
+
+/// Parses `kind_name` as a [`HazardKind`] and injects a 0-stack entry via
+/// `force_insert_entry`. No-op if [`ActiveHazards`] is absent or the name is
+/// unrecognised.
+fn apply_inject_zero_stack_hazard(
+    kind_name: &str,
+    active_hazards: &mut Option<ResMut<ActiveHazards>>,
+) {
+    let Some(kind) = parse_hazard_kind(kind_name) else {
+        warn!("InjectZeroStackHazard: unknown kind {kind_name:?}");
+        return;
+    };
+    if let Some(active) = active_hazards {
+        active.force_insert_entry(kind, 0);
+    }
+}
+
+fn parse_hazard_kind(name: &str) -> Option<HazardKind> {
+    HazardKind::ALL
+        .iter()
+        .copied()
+        .find(|k| format!("{k:?}") == name)
 }
 
 /// Toggles pause via `Time<Virtual>` -- pauses or unpauses the game clock.

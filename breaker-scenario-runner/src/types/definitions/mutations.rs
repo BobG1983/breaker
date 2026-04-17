@@ -124,6 +124,15 @@ pub enum MutationKind {
     /// Used by the `bolt_birthing_layers_zeroed` self-test to trigger a
     /// [`InvariantKind::BoltBirthingLayersZeroed`] violation.
     InjectNonZeroBirthingLayers,
+    /// Insert a 0-stack entry into [`ActiveHazards`] via the
+    /// `force_insert_entry` backdoor, bypassing `add_stack`. Used by the
+    /// `hazard_stack_valid` self-test to trigger a
+    /// [`InvariantKind::HazardStackValid`] violation.
+    InjectZeroStackHazard {
+        /// Which hazard kind to inject (matches the [`HazardKind`] variant
+        /// name, e.g. `"Decay"`, `"Drift"`).
+        kind_name: String,
+    },
 }
 
 /// Mirrors `DashState` for RON deserialization in the scenario runner crate.

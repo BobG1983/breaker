@@ -7,7 +7,7 @@ use crate::effect_v3::types::RootNode;
 
 /// Identifies a protocol by its variant.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub(crate) enum ProtocolKind {
+pub enum ProtocolKind {
     /// Deadline — node-timer protocol.
     Deadline,
     /// Ricochet — bolt-reflection protocol.
@@ -42,7 +42,7 @@ pub(crate) enum ProtocolKind {
 
 impl ProtocolKind {
     /// Canonical slice of every variant.
-    pub(crate) const ALL: &[Self] = &[
+    pub const ALL: &[Self] = &[
         Self::Deadline,
         Self::Ricochet,
         Self::Anchor,

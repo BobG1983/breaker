@@ -288,11 +288,11 @@ fn invariant_kind_gravity_well_count_reasonable_debug_round_trip() {
 // -------------------------------------------------------------------------
 
 #[test]
-fn invariant_kind_all_contains_23_variants() {
+fn invariant_kind_all_contains_24_variants() {
     assert_eq!(
         InvariantKind::ALL.len(),
-        23,
-        "InvariantKind::ALL should contain 23 variants"
+        24,
+        "InvariantKind::ALL should contain 24 variants"
     );
 }
 

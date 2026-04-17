@@ -1,0 +1,16 @@
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 120,
+    disallowed_failures: [HazardStackValid],
+    allowed_failures: [HazardStackValid],
+    debug_setup: (
+        disable_physics: true,
+    ),
+    frame_mutations: [
+        (frame: 30, mutation: InjectZeroStackHazard(kind_name: "Decay")),
+    ],
+)

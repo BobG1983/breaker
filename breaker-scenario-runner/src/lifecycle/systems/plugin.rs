@@ -40,11 +40,11 @@ use crate::{
         check_bolt_count_reasonable, check_bolt_in_bounds, check_bolt_speed_accurate,
         check_breaker_count_reasonable, check_breaker_in_bounds, check_breaker_position_clamped,
         check_chain_arc_count_reasonable, check_chip_offer_expected, check_chip_stacks_consistent,
-        check_gravity_well_count_reasonable, check_maxed_chip_never_offered, check_no_entity_leaks,
-        check_no_nan, check_offering_no_duplicates, check_pulse_ring_accumulation,
-        check_run_stats_monotonic, check_second_wind_wall_at_most_one,
-        check_shield_wall_at_most_one, check_timer_monotonically_decreasing,
-        check_timer_non_negative, check_valid_breaker_state,
+        check_gravity_well_count_reasonable, check_hazard_stack_valid,
+        check_maxed_chip_never_offered, check_no_entity_leaks, check_no_nan,
+        check_offering_no_duplicates, check_pulse_ring_accumulation, check_run_stats_monotonic,
+        check_second_wind_wall_at_most_one, check_shield_wall_at_most_one,
+        check_timer_monotonically_decreasing, check_timer_non_negative, check_valid_breaker_state,
     },
     types::{InvariantKind, ScenarioDefinition},
 };
@@ -203,6 +203,7 @@ fn register_active_checkers(app: &mut App, active: &HashSet<InvariantKind>) {
         InvariantKind::BoltBirthingLayersZeroed,
         check_bolt_birthing_layers_zeroed
     );
+    register_checker!(InvariantKind::HazardStackValid, check_hazard_stack_valid);
 }
 
 /// Registers all scenario systems: input, lifecycle hooks, invariant checkers.
@@ -314,7 +315,8 @@ pub(crate) const fn is_fixed_update_checker(kind: InvariantKind) -> bool {
         | InvariantKind::AabbMatchesEntityDimensions
         | InvariantKind::GravityWellCountReasonable
         | InvariantKind::BreakerCountReasonable
-        | InvariantKind::BoltBirthingLayersZeroed => true,
+        | InvariantKind::BoltBirthingLayersZeroed
+        | InvariantKind::HazardStackValid => true,
         InvariantKind::ChipOfferExpected => false,
     }
 }
@@ -396,12 +398,12 @@ mod tests {
         );
     }
 
-    /// Behavior 3: Exhaustive coverage — exactly 21 variants return `true`,
-    /// exactly 1 returns `false` (`ChipOfferExpected`), total = 22 = `ALL.len()`.
+    /// Behavior 3: Exhaustive coverage — exactly 23 variants return `true`,
+    /// exactly 1 returns `false` (`ChipOfferExpected`), total = 24 = `ALL.len()`.
     #[test]
     fn is_fixed_update_checker_covers_every_invariant_kind_variant() {
         let total = InvariantKind::ALL.len();
-        assert_eq!(total, 23, "expected 23 InvariantKind variants in ALL");
+        assert_eq!(total, 24, "expected 24 InvariantKind variants in ALL");
 
         let fixed_update_count = InvariantKind::ALL
             .iter()
@@ -410,8 +412,8 @@ mod tests {
         let non_fixed_update_count = total - fixed_update_count;
 
         assert_eq!(
-            fixed_update_count, 22,
-            "expected exactly 22 FixedUpdate checker kinds, got {fixed_update_count}"
+            fixed_update_count, 23,
+            "expected exactly 23 FixedUpdate checker kinds, got {fixed_update_count}"
         );
         assert_eq!(
             non_fixed_update_count, 1,
@@ -435,9 +437,9 @@ mod tests {
     // -----------------------------------------------------------------
 
     /// Behavior 4: Empty `disallowed_failures` and None `allowed_failures` returns
-    /// all 22 `FixedUpdate` kinds.
+    /// all 23 `FixedUpdate` kinds.
     #[test]
-    fn active_invariant_kinds_returns_all_21_when_both_lists_empty() {
+    fn active_invariant_kinds_returns_all_23_when_both_lists_empty() {
         let def = ScenarioDefinition {
             disallowed_failures: vec![],
             allowed_failures: None,
@@ -446,8 +448,8 @@ mod tests {
         let active = active_invariant_kinds(&def);
         assert_eq!(
             active.len(),
-            22,
-            "expected 22 active kinds when both lists empty, got {}",
+            23,
+            "expected 23 active kinds when both lists empty, got {}",
             active.len()
         );
         assert!(
@@ -456,9 +458,9 @@ mod tests {
         );
     }
 
-    /// Behavior 4 edge case: Empty vec with Some(vec![]) also returns all 21.
+    /// Behavior 4 edge case: Empty vec with Some(vec![]) also returns all 23.
     #[test]
-    fn active_invariant_kinds_returns_all_21_when_allowed_is_empty_some() {
+    fn active_invariant_kinds_returns_all_23_when_allowed_is_empty_some() {
         let def = ScenarioDefinition {
             disallowed_failures: vec![],
             allowed_failures: Some(vec![]),
@@ -467,8 +469,8 @@ mod tests {
         let active = active_invariant_kinds(&def);
         assert_eq!(
             active.len(),
-            22,
-            "expected 21 active kinds when both lists effectively empty, got {}",
+            23,
+            "expected 23 active kinds when both lists effectively empty, got {}",
             active.len()
         );
         assert!(
@@ -587,7 +589,7 @@ mod tests {
     }
 
     /// Behavior 9 edge case: `ChipOfferExpected` as the only entry triggers
-    /// fallback to all 22 `FixedUpdate` kinds.
+    /// fallback to all 23 `FixedUpdate` kinds.
     #[test]
     fn active_invariant_kinds_chip_offer_expected_only_triggers_fallback() {
         let def = ScenarioDefinition {
@@ -598,8 +600,8 @@ mod tests {
         let active = active_invariant_kinds(&def);
         assert_eq!(
             active.len(),
-            22,
-            "expected 21 active kinds (fallback) when only ChipOfferExpected is listed, got {}",
+            23,
+            "expected 23 active kinds (fallback) when only ChipOfferExpected is listed, got {}",
             active.len()
         );
         assert!(

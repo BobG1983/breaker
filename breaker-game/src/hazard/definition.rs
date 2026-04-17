@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 /// Identifies a hazard by its variant.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub(crate) enum HazardKind {
+pub enum HazardKind {
     /// Decay — cell-HP loss over time.
     Decay,
     /// Drift — periodic lateral force on bolts.
@@ -42,7 +42,7 @@ pub(crate) enum HazardKind {
 
 impl HazardKind {
     /// Canonical slice of every variant.
-    pub(crate) const ALL: &[Self] = &[
+    pub const ALL: &[Self] = &[
         Self::Decay,
         Self::Drift,
         Self::Haste,
