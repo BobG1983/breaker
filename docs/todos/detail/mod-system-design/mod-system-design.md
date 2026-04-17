@@ -363,4 +363,24 @@ All external dependencies (todo #2 effect refactor) are complete before this tod
 - Hazard select screen is timed — on expiry, a hazard is auto-picked at random
 
 ## Status
-`in-progress` — game design (15 protocols, 16 hazards), technical design (interface-design.md), per-item implementation guides (31 files in protocols/ and hazards/), cross-domain messages defined, 10-wave implementation order with dependency graph. Legendary retuning DONE in a prior todo. `NodeOutcome.tier` already exists — no tier-stub prerequisite work required.
+`in-progress` — infrastructure + scaffolds landed on develop 2026-04-17 via `feature/protocol-hazard-infrastructure`.
+
+### Delivered
+- Wave 1 plugin infrastructure: `ProtocolPlugin`, `HazardPlugin`, kinds/tuning/definition types, registries with `SeedableRegistry`, `ActiveProtocols`, `ActiveHazards`, `UnlockedProtocols`, `ProtocolOffer`, `HazardOffers`, run-condition helpers (`protocol_active`, `hazard_active`), `reset_run_state` clears active sets.
+- Wave 3 protocol offering: `generate_protocol_offering` on `OnEnter(ChipSelectState::Selecting)`, `dispatch_protocol_selection` calls `commands.stamp_effect(...)` for effect-tree protocols or `protocols::activate(...)` for custom-system protocols. Chip-select screen renders protocol row; up/down navigation; timer expiry does NOT auto-pick protocol.
+- Wave 6 hazard select: new `HazardSelect` run state + `HazardSelectState` substate mirroring `ChipSelectState`. `resolve_post_chip_state` forks to `HazardSelect` when `outcome.tier >= HAZARD_TIER_THRESHOLD (9)`. Offering, spawn, handle-input, and timer systems wired via `HazardSelectSystems` set. Timer expiry auto-picks a hazard (chip/protocol timers skip; hazard must pick).
+- Wave 4 effect-tree protocols (4): Deadline, Ricochet, Anchor, Kickstart — RON-authored, dispatched via `commands.stamp_effect`, cleaned up via `reverse_all_by_source_dispatch` on node end.
+- Wave 5 custom-system protocols (10): all 10 modules exist with config resource + `activate()` + warn-once stub + `register()` + tests; RON tuning files present. Runtime behaviour is a warn-log today.
+- Wave 7/7b hazards (16): all 16 modules exist with config resource + `activate()` + warn-once stub + `register()` + tests; RON tuning files present. Runtime behaviour (cell HP churn, damage-pipeline redistribution, breaker shrink, periodic effects) is a warn-log today.
+- Wave 8 Tier Regression: scaffold module + RON, blocked on todo #7 node sequencing refactor.
+- Wave 9 (partial): `InvariantKind::HazardStackValid` checker + self-test scenario. 15 per-protocol chaos scenarios, 48 hazard-stacking scenarios, 10+ trap-synergy scenarios are NOT yet written — intentionally deferred until runtime behaviour lands (stub-only scenarios would silently pass).
+
+### Remaining
+- Wave 5 runtime behaviour for all 10 custom-system protocols (debt_collector, iron_curtain, echo_strike, siphon, greed, reckless_dash, burnout, conductor, afterimage, fission).
+- Wave 7 runtime behaviour for the 12 simple-batch hazards (decay, drift, haste, echo_cells, erosion, cascade, fracture, renewal, volatility, gravity_surge, overcharge, resonance).
+- Wave 7b damage-pipeline integration for 4 redistribution hazards (diffusion, tether, momentum, sympathy) — requires `shared/death_pipeline/` pre-apply system set.
+- Cross-domain message handlers (`HealCell`, `SpawnGhostCell`, `ApplyBoltForce`, `ApplyBreakerShrink`, `ApplyBreakerRestore`) — land with their consuming domains.
+- Wave 9 adversarial scenarios (per-protocol chaos × 15, hazard stacking × 48 or consolidated, trap-synergy × 10+).
+- Tier Regression runtime body — blocked on todo #7.
+
+Next branch should slice a few protocol or hazard runtime behaviours + their scenarios at a time, not attempt another all-in-one wave.
