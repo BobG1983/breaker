@@ -15,7 +15,9 @@ use crate::{
     debug::DebugPlugin,
     effect_v3::EffectV3Plugin,
     fx::FxPlugin,
+    hazard::plugin::HazardPlugin,
     input::InputPlugin,
+    protocol::plugin::ProtocolPlugin,
     shared::{GameDrawLayer, PlayfieldConfig, death_pipeline::DeathPipelinePlugin},
     state::StatePlugin,
     walls::WallPlugin,
@@ -58,6 +60,8 @@ impl PluginGroup for Game {
             .add(BoltPlugin)
             .add(CellsPlugin)
             .add(ChipsPlugin)
+            .add(ProtocolPlugin)
+            .add(HazardPlugin)
             .add(FxPlugin)
             .add(AudioPlugin)
             .add(DebugPlugin);

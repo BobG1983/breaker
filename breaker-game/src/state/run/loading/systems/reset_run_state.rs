@@ -1,15 +1,37 @@
 //! System to reset run state at the start of a new run.
 
-use bevy::prelude::*;
+use bevy::{ecs::system::SystemParam, prelude::*};
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
 use crate::{
     chips::inventory::ChipInventory,
+    hazard::resources::ActiveHazards,
     prelude::*,
+    protocol::resources::ActiveProtocols,
     shared::RunSeed,
     state::run::resources::{HighlightTracker, NodeOutcome},
 };
+
+/// Per-run inventories cleared on each new run. Grouped by **lifecycle**
+/// (cleared on every new run), not by domain — callers outside
+/// [`reset_run_state`] should read the individual resources directly.
+/// Bundled here so [`reset_run_state`] stays within the system-parameter
+/// limit.
+#[derive(SystemParam)]
+pub(crate) struct RunInventories<'w> {
+    chips:     ResMut<'w, ChipInventory>,
+    protocols: ResMut<'w, ActiveProtocols>,
+    hazards:   ResMut<'w, ActiveHazards>,
+}
+
+impl RunInventories<'_> {
+    fn clear_all(&mut self) {
+        self.chips.clear();
+        self.protocols.clear();
+        self.hazards.clear();
+    }
+}
 
 /// Resets [`NodeOutcome`] to defaults and reseeds [`GameRng`] when leaving the
 /// main menu (starting a run).
@@ -17,14 +39,14 @@ pub(crate) fn reset_run_state(
     mut run_state: ResMut<NodeOutcome>,
     mut rng: ResMut<GameRng>,
     seed: Res<RunSeed>,
-    mut chip_inventory: ResMut<ChipInventory>,
     mut stats: ResMut<RunStats>,
     mut highlight_tracker: ResMut<HighlightTracker>,
+    mut inventories: RunInventories,
 ) {
     *run_state = NodeOutcome::default();
     *stats = RunStats::default();
     *highlight_tracker = HighlightTracker::default();
-    chip_inventory.clear();
+    inventories.clear_all();
     if let Some(s) = seed.0 {
         *rng = GameRng::from_seed(s);
     } else {
@@ -49,6 +71,8 @@ mod tests {
             .with_resource::<ChipInventory>()
             .with_resource::<RunStats>()
             .with_resource::<HighlightTracker>()
+            .with_resource::<crate::protocol::resources::ActiveProtocols>()
+            .with_resource::<crate::hazard::resources::ActiveHazards>()
             .with_system(Update, reset_run_state)
             .build()
     }
@@ -102,5 +126,67 @@ mod tests {
         // Not asserting inequality — OS entropy could theoretically match,
         // but we verify the code path runs without panic
         let _ = (val1, val2);
+    }
+
+    // ── Behavior 28: reset_run_state clears ActiveProtocols and ActiveHazards ─
+
+    /// Seed `ActiveProtocols` with a `Greed` definition and `ActiveHazards`
+    /// with `add_stack(Decay)` ×2, then run the system once. Both resources
+    /// should be emptied — replacing the per-run-reset coverage that a
+    /// `plugin_builds` smoke test would not give us.
+    #[test]
+    fn clears_active_protocols_and_active_hazards() {
+        use crate::{
+            hazard::{definition::HazardKind, resources::ActiveHazards},
+            protocol::{
+                definition::{ProtocolDefinition, ProtocolKind, ProtocolTuning},
+                resources::ActiveProtocols,
+            },
+        };
+
+        let mut app = test_app();
+
+        // Seed ActiveProtocols with one Greed definition.
+        {
+            let mut protocols = app.world_mut().resource_mut::<ActiveProtocols>();
+            protocols.insert(ProtocolDefinition {
+                name:        "Greed".into(),
+                description: String::new(),
+                unlock_tier: 0,
+                tuning:      ProtocolTuning::Greed {
+                    rarity_boost_per_skip: 0.05,
+                },
+            });
+        }
+        // Seed ActiveHazards with two Decay stacks.
+        {
+            let mut hazards = app.world_mut().resource_mut::<ActiveHazards>();
+            hazards.add_stack(HazardKind::Decay);
+            hazards.add_stack(HazardKind::Decay);
+        }
+
+        app.update();
+
+        assert!(
+            app.world().resource::<ActiveProtocols>().is_empty(),
+            "reset_run_state must clear ActiveProtocols"
+        );
+        assert!(
+            app.world().resource::<ActiveHazards>().is_empty(),
+            "reset_run_state must clear ActiveHazards"
+        );
+        assert!(
+            !app.world()
+                .resource::<ActiveProtocols>()
+                .contains(ProtocolKind::Greed),
+            "Greed must not be active after reset"
+        );
+        assert_eq!(
+            app.world()
+                .resource::<ActiveHazards>()
+                .stacks(HazardKind::Decay),
+            0,
+            "Decay stacks must be 0 after reset"
+        );
     }
 }

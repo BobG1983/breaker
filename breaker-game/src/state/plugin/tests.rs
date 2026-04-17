@@ -2,21 +2,11 @@ use bevy::prelude::*;
 
 use super::system::*;
 use crate::{
+    hazard::resources::HazardRegistry,
     prelude::*,
+    protocol::resources::ProtocolRegistry,
     state::run::resources::{NodeOutcome, NodeResult},
 };
-
-#[test]
-fn plugin_builds() {
-    App::new()
-        .add_plugins((
-            MinimalPlugins,
-            bevy::state::app::StatesPlugin,
-            bevy::asset::AssetPlugin::default(),
-        ))
-        .add_plugins(StatePlugin)
-        .update();
-}
 
 // ── Behavior 7a: Quit routes to RunState::Teardown ──────────────────
 
@@ -268,5 +258,38 @@ fn quit_teardown_chain_reaches_app_teardown() {
     assert!(
         msgs.iter_current_update_messages().count() > 0,
         "AppExit::Success should be sent on entering AppState::Teardown"
+    );
+}
+
+// ── Behavior 27: defaults_plugin registers ProtocolRegistry + HazardRegistry ─
+
+/// Builds the minimum app required to run `defaults_plugin()` and verifies
+/// that both `ProtocolRegistry` and `HazardRegistry` are present after the
+/// first update. This is the real wiring check for the defaults plugin — it
+/// catches a forgotten `.add_registry::<...>()` regression directly.
+#[test]
+fn defaults_plugin_registers_protocol_registry_and_hazard_registry() {
+    use bevy::{asset::AssetPlugin, state::app::StatesPlugin};
+    use iyes_progress::prelude::ProgressPlugin;
+
+    let mut app = App::new();
+    app.add_plugins((MinimalPlugins, AssetPlugin::default(), StatesPlugin));
+    app.init_state::<AppState>();
+    // `add_registry` wires progress-tracked systems behind the `progress`
+    // feature — mirror the real `StatePlugin` which adds this plugin too.
+    app.add_plugins(
+        ProgressPlugin::<AppState>::new().with_state_transition(AppState::Loading, AppState::Game),
+    );
+    app.add_plugins(defaults_plugin());
+
+    app.update();
+
+    assert!(
+        app.world().contains_resource::<ProtocolRegistry>(),
+        "defaults_plugin() must register ProtocolRegistry via .add_registry::<ProtocolRegistry>()"
+    );
+    assert!(
+        app.world().contains_resource::<HazardRegistry>(),
+        "defaults_plugin() must register HazardRegistry via .add_registry::<HazardRegistry>()"
     );
 }

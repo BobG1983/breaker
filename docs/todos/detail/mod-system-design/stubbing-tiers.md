@@ -1,94 +1,50 @@
-# Stubbing Tiers for Protocol & Hazard System
+# Tier Surface for Protocol & Hazard System
 
-The protocol/hazard system needs to query "what tier is the player on?" The full tier system (per-tier batching, frame/block generation) comes later in the node sequencing refactor. This document specifies the minimal stub needed to unblock protocol/hazard implementation.
+**Status**: Already done. No work required.
 
-Based on [tier-stub research](research/tier-stub-trace.md).
+When the protocol/hazard system needs to query "what tier is the player on?", it reads `NodeOutcome.tier`. The field already exists and is maintained by `advance_node`.
 
-## Key Finding: `tier_index` Already Exists
+## Current State
 
-Every `NodeAssignment` in `NodeSequence` already carries `tier_index: u32`. It's populated correctly by `generate_node_sequence_system` at run start. **No system reads it after generation.** We just need to surface it.
-
-## What to Change (3 files)
-
-### 1. Add `current_tier` to `NodeOutcome`
-
-**File**: `breaker-game/src/state/run/resources/definitions.rs`
+`NodeOutcome` (in `breaker-game/src/state/run/resources/definitions.rs`):
 
 ```rust
+#[derive(Resource, Debug, Clone, Default)]
 pub struct NodeOutcome {
-    pub node_index: u32,
-    pub result: NodeResult,
-    pub transition_queued: bool,
-    pub current_tier: u32,   // ← new field
+    pub node_index:         u32,
+    pub result:             NodeResult,
+    pub cleared_this_frame: bool,
+    /// Current tier in the run (increments after boss clear).
+    pub tier:               u32,
+    /// Position within the current tier (resets after boss clear).
+    pub position_in_tier:   u32,
 }
 ```
 
-`NodeOutcome` derives `Default` — `current_tier` defaults to `0`. No change to `reset_run_state` needed (it does `*run_state = NodeOutcome::default()` which zeros everything).
+`advance_node` (in `breaker-game/src/state/run/systems/advance_node.rs`) increments `tier` when the previous node was a `Boss` and resets `position_in_tier` to 0; otherwise it increments `position_in_tier`. Past the end of the sequence, both fields hold their last values.
 
-### 2. Set `current_tier` in `advance_node`
+This was put in place during the Toughness + HP Scaling work and is already unit-tested (see `advance_node` tests: `advance_from_boss_increments_tier_by_one`, `advance_past_end_of_sequence_holds_tier_and_position`, etc.).
 
-**File**: `breaker-game/src/state/run/systems/advance_node.rs`
-
-Add `Option<Res<NodeSequence>>` parameter. After incrementing `node_index`, look up the tier:
+## How Protocol / Hazard Systems Use It
 
 ```rust
-pub(crate) fn advance_node(
-    mut run_state: ResMut<NodeOutcome>,
-    node_sequence: Option<Res<NodeSequence>>,
-) {
-    run_state.node_index += 1;
-    run_state.transition_queued = false;
-    // Surface the tier from the existing NodeAssignment
-    run_state.current_tier = node_sequence
-        .and_then(|seq| seq.assignments.get(run_state.node_index as usize))
-        .map_or(0, |a| a.tier_index);
+fn some_protocol_system(outcome: Res<NodeOutcome>) {
+    let tier = outcome.tier;
+    // Gate eligibility, scale intensity, etc.
 }
 ```
 
-This follows the exact pattern used by `init_node_timer` and `spawn_cells_from_layout` for reading `NodeSequence` assignments.
+No new resources, no new systems, no new messages. `NodeOutcome` is already read across the codebase.
 
-### 3. No change to `reset_run_state`
+## Hazard Tier Gating
 
-**File**: `breaker-game/src/state/run/loading/systems/reset_run_state.rs`
+`HAZARD_TIER_THRESHOLD: u32 = 9` (see `research/interface-design.md` §10 and master detail Wave 6). The `resolve_post_chip_state` dynamic route reads `outcome.tier` and routes to `HazardSelect` when `tier >= 9`. With the current 5-tier difficulty curve, the route never fires; when todo #7 extends the curve, hazards activate automatically with zero code changes here.
 
-Already does `*run_state = NodeOutcome::default()` — zeroes `current_tier` automatically.
+## Historical Note
 
-## How Protocol/Hazard Systems Use It
+An earlier draft of this document proposed adding a new `current_tier: u32` field to `NodeOutcome` and wiring `advance_node` to populate it from `NodeSequence.assignments[node_index].tier_index`. That work was superseded when `NodeOutcome.tier` + `position_in_tier` were added directly during the Toughness + HP Scaling todo. The two approaches differ in semantics — `tier` is event-driven (incremented on boss clear), while the obsolete `current_tier` would have been index-driven (read from the current assignment). Event-driven is the correct semantics: it accounts for past-end-of-sequence behavior and doesn't drift when a node is regressed or skipped.
 
-Any system that needs the current tier just reads `Res<NodeOutcome>`:
+## What This Means for the Protocol & Hazard Todo
 
-```rust
-fn some_protocol_system(
-    run_state: Res<NodeOutcome>,
-) {
-    let tier = run_state.current_tier;
-    // Use tier for hazard selection, protocol eligibility, etc.
-}
-```
-
-No new resources, no new systems, no new messages. The tier is always up-to-date because `advance_node` runs on `OnEnter(RunState::Node)` before any `NodeState::Loading` systems.
-
-## Edge Cases
-
-| Scenario | Behavior |
-|----------|----------|
-| `NodeSequence` absent (tests, scenarios without sequence) | `Option<Res<NodeSequence>>` → falls back to tier 0 |
-| `node_index` out of bounds (scenario runner cycling) | `.get()` returns `None` → falls back to tier 0 |
-| Boss node | `tier_index` stays at the boss's tier — correct for scaling |
-| First node | `advance_node` increments to `node_index = 1`, so `current_tier = assignments[1].tier_index` — consistent with how `hp_mult`/`timer_mult` already work |
-
-## Tests
-
-- `advance_node` tests need `Option<Res<NodeSequence>>` — using `Option` means existing tests compile without inserting a sequence (they'll just get tier 0)
-- Add a test: insert `NodeSequence` with known tier assignments, verify `current_tier` updates after `advance_node`
-- Add a test: no `NodeSequence` → `current_tier` stays 0
-
-## What This Unlocks
-
-With `current_tier` on `NodeOutcome`, the protocol/hazard system can:
-- Offer hazards at tier boundaries (detect `current_tier` change)
-- Scale hazard intensity by tier
-- Gate protocol eligibility by tier
-- Implement tier regression (modify `current_tier` directly, or replay a lower tier's sequence)
-
-The full node sequencing refactor later replaces the flat `NodeSequence` with per-tier generation, upgrades `NodeOutcome` to the full `RunProgress` resource, and adds `TierConfig`. This stub is forward-compatible — `current_tier` on `NodeOutcome` becomes `RunProgress.tier` in the refactor.
+- **Tier stub prerequisite**: none. Skip the "Wave 0 / tier stub" step in the branch plan. Proceed directly to Wave 1 (plugin infrastructure).
+- **Tier Regression (Wave 8)**: when its real body lands (blocked on todo #7), it will mutate `NodeOutcome.tier` directly (or `NodeSequence`, depending on the regression semantics chosen in todo #7).

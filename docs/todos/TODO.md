@@ -2,7 +2,7 @@
 
 ## Backlog
 
-1. **[ready]** Protocol & hazard system — 15 protocols, 16 hazards, interface design, 31 per-item implementation guides, 10-wave plan — [detail](detail/mod-system-design/mod-system-design.md)
+1. **[in-progress]** Protocol & hazard system — 15 protocols, 16 hazards, interface design, 31 per-item implementation guides, 10-wave plan (branch 1/N: tier stub + Wave 1 infrastructure) — [detail](detail/mod-system-design/mod-system-design.md)
 2. **[ready]** Node sequencing refactor — per-tier batching, volatile nodes, portal cells, frame/block generation, RNG architecture — [detail](detail/node-sequencing-refactor/node-sequencing-refactor.md)
 3. **[ready]** Split spawn_cells_from_layout into separate concerns (grid geometry, lock resolution, entity spawning) — [detail](detail/split-spawn-cells-from-layout.md)
 4. **[ready]** Phase 5c: Crate setup + plugin separation — [detail](detail/phase-5c-render-plugin-separation.md)

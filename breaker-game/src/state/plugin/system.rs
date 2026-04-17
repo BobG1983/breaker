@@ -15,8 +15,10 @@ use crate::{
     breaker::BreakerRegistry,
     cells::{CellDefaults, CellTypeRegistry, ToughnessDefaults},
     chips::{ChipTemplateRegistry, EvolutionTemplateRegistry},
+    hazard::resources::HazardRegistry,
     input::InputDefaults,
     prelude::*,
+    protocol::resources::ProtocolRegistry,
     shared::PlayfieldDefaults,
     state::{
         app::loading::LoadingPlugin,
@@ -85,7 +87,7 @@ impl Plugin for StatePlugin {
 }
 
 /// Builds the defaults plugin with all config types and registries.
-fn defaults_plugin() -> impl Plugin {
+pub(super) fn defaults_plugin() -> impl Plugin {
     RantzDefaultsPluginBuilder::<AppState>::new(AppState::Loading)
         .add_config::<PlayfieldDefaults>()
         .add_config::<CellDefaults>()
@@ -102,6 +104,8 @@ fn defaults_plugin() -> impl Plugin {
         .add_registry::<ChipTemplateRegistry>()
         .add_registry::<EvolutionTemplateRegistry>()
         .add_registry::<WallRegistry>()
+        .add_registry::<ProtocolRegistry>()
+        .add_registry::<HazardRegistry>()
         .build()
 }
 

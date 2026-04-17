@@ -144,8 +144,8 @@ ALL tuning values in every protocol AND every hazard must be RON-configurable an
 - Out: chip system changes (chips are separate), tier system (separate todo), evolution catalog redesign (Phase 7)
 
 ## Dependencies
-- Depends on: stubbed `current_tier: u32` on `NodeOutcome` — 3-file change, see [stubbing-tiers.md](stubbing-tiers.md). Full tier system from node sequencing refactor is NOT required.
-- Depends on: legendary rarity removal (assumes Legendary is already gone)
+- Depends on: `NodeOutcome.tier` — already exists and is maintained by `advance_node` (boss-clear increments). See [stubbing-tiers.md](stubbing-tiers.md). No prerequisite work required.
+- Depends on: legendary rarity removal — DONE (prior todo)
 - Depends on: chip selection UI (protocols display on chip select screen), hazard selection UI (separate screen after chip selection, tier 9+ only)
 
 ## Design Files
@@ -160,8 +160,8 @@ ALL tuning values in every protocol AND every hazard must be RON-configurable an
 
 | File | Contents |
 |------|----------|
-| [stubbing-tiers.md](stubbing-tiers.md) | **Tier stub spec** — 3-file change to surface `current_tier: u32` on `NodeOutcome` from existing `NodeAssignment.tier_index`. Prerequisite for this todo. |
-| [research/tier-stub-trace.md](research/tier-stub-trace.md) | Full codebase trace of node sequence data flow, state machine, and tier surfacing options |
+| [stubbing-tiers.md](stubbing-tiers.md) | **Tier surface note** — documents that `NodeOutcome.tier` already exists and is maintained by `advance_node`; no prerequisite work. Superseded the earlier 3-file stub proposal. |
+| [research/tier-stub-trace.md](research/tier-stub-trace.md) | Full codebase trace of node sequence data flow, state machine, and tier surfacing options (historical — predates the `NodeOutcome.tier` addition in the Toughness + HP Scaling todo) |
 | [research/interface-design.md](research/interface-design.md) | **Interface design** — concrete Rust types, traits, enums, struct layouts, RON formats, system patterns, cross-domain message inventory. Reviewed by architecture + idiom agents. |
 | [research/chip-offering-flow.md](research/chip-offering-flow.md) | Full trace: ChipCatalog structure, offering algorithm, rarity weights, selection UI, effect dispatch, protocol integration point |
 | [research/effect-system-architecture.md](research/effect-system-architecture.md) | Current effect system trace + planned new system primitives (Route/Stamp/Transfer/During/Killed), protocol-to-category mapping (A=effect tree, B=custom system) |
@@ -363,4 +363,4 @@ All external dependencies (todo #2 effect refactor) are complete before this tod
 - Hazard select screen is timed — on expiry, a hazard is auto-picked at random
 
 ## Status
-`ready` — game design (15 protocols, 16 hazards), technical design (interface-design.md), per-item implementation guides (31 files in protocols/ and hazards/), cross-domain messages defined, 10-wave implementation order with dependency graph. One sub-item `[NEEDS DETAIL]`: legendary retuning values (legendary-retuning.md).
+`in-progress` — game design (15 protocols, 16 hazards), technical design (interface-design.md), per-item implementation guides (31 files in protocols/ and hazards/), cross-domain messages defined, 10-wave implementation order with dependency graph. Legendary retuning DONE in a prior todo. `NodeOutcome.tier` already exists — no tier-stub prerequisite work required.
