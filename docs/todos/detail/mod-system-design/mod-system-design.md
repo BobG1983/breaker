@@ -374,10 +374,11 @@ All external dependencies (todo #2 effect refactor) are complete before this tod
 - Wave 7/7b hazards (16): all 16 modules exist with config resource + `activate()` + warn-once stub + `register()` + tests; RON tuning files present. Runtime behaviour (cell HP churn, damage-pipeline redistribution, breaker shrink, periodic effects) is a warn-log today.
 - Wave 8 Tier Regression: scaffold module + RON, blocked on todo #7 node sequencing refactor.
 - Wave 9 (partial): `InvariantKind::HazardStackValid` checker + self-test scenario. 15 per-protocol chaos scenarios, 48 hazard-stacking scenarios, 10+ trap-synergy scenarios are NOT yet written — intentionally deferred until runtime behaviour lands (stub-only scenarios would silently pass).
+- Wave 7 runtime behaviour — Decay (2026-04-17): `decay_tick` in FixedUpdate sends `ApplyTimePenalty` with `delta_secs * (base_percent + per_level_percent * (stacks-1)) / 100.0`. Canonical tuning (15% base + 5%/stack) in `decay.hazard.ron`. 10 unit tests cover formula, gating, and numeric penalties.
 
 ### Remaining
 - Wave 5 runtime behaviour for all 10 custom-system protocols (debt_collector, iron_curtain, echo_strike, siphon, greed, reckless_dash, burnout, conductor, afterimage, fission).
-- Wave 7 runtime behaviour for the 12 simple-batch hazards (decay, drift, haste, echo_cells, erosion, cascade, fracture, renewal, volatility, gravity_surge, overcharge, resonance).
+- Wave 7 runtime behaviour for the remaining 11 simple-batch hazards (drift, haste, echo_cells, erosion, cascade, fracture, renewal, volatility, gravity_surge, overcharge, resonance). Decay done 2026-04-17.
 - Wave 7b damage-pipeline integration for 4 redistribution hazards (diffusion, tether, momentum, sympathy) — requires `shared/death_pipeline/` pre-apply system set.
 - Cross-domain message handlers (`HealCell`, `SpawnGhostCell`, `ApplyBoltForce`, `ApplyBreakerShrink`, `ApplyBreakerRestore`) — land with their consuming domains.
 - Wave 9 adversarial scenarios (per-protocol chaos × 15, hazard stacking × 48 or consolidated, trap-synergy × 10+).
