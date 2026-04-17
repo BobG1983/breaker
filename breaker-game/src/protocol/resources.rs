@@ -96,8 +96,15 @@ impl ActiveProtocols {
     }
 
     /// Iterate all (kind, definition) pairs of active protocols.
-    pub fn iter(&self) -> impl Iterator<Item = (&ProtocolKind, &ProtocolDefinition)> {
+    pub(crate) fn iter(&self) -> impl Iterator<Item = (&ProtocolKind, &ProtocolDefinition)> {
         self.protocols.iter()
+    }
+
+    /// Iterate only the kinds of active protocols. Exposed for
+    /// scenario-runner invariant checkers that do not need the full
+    /// definition payload.
+    pub fn iter_kinds(&self) -> impl Iterator<Item = ProtocolKind> + '_ {
+        self.protocols.keys().copied()
     }
 
     /// Remove every active protocol. Called by `reset_run_state` between runs.
