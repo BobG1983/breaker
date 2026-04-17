@@ -166,7 +166,7 @@ impl ProtocolTuning {
 /// A complete protocol definition — the payload loaded from `.protocol.ron`
 /// files and stored in [`crate::protocol::resources::ProtocolRegistry`].
 #[derive(Asset, TypePath, Clone, Debug, Serialize, Deserialize)]
-pub(crate) struct ProtocolDefinition {
+pub struct ProtocolDefinition {
     /// Display name shown on the protocol card.
     pub(crate) name:        String,
     /// Flavor text shown below the name.

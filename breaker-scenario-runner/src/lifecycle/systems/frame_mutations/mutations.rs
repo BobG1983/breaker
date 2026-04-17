@@ -18,6 +18,11 @@ use breaker::{
         definition::HazardKind,
         resources::{ActiveHazards, HazardRegistry},
     },
+    protocol::{
+        self,
+        definition::ProtocolKind,
+        resources::{ActiveProtocols, ProtocolRegistry},
+    },
     shared::birthing::Birthing,
     state::{
         run::{
@@ -64,6 +69,16 @@ pub struct MutationTargets<'w, 's> {
     /// [`HazardRegistry`] resource -- used by
     /// [`MutationKind::InjectHazardStack`] to look up tuning.
     hazard_registry:      Option<Res<'w, HazardRegistry>>,
+    /// [`ActiveProtocols`] resource -- used by
+    /// [`MutationKind::InjectProtocol`] to record activation.
+    active_protocols:     Option<ResMut<'w, ActiveProtocols>>,
+    /// [`ProtocolRegistry`] resource -- used by
+    /// [`MutationKind::InjectProtocol`] to look up tuning + effect trees.
+    protocol_registry:    Option<Res<'w, ProtocolRegistry>>,
+    /// Tagged breaker entities -- used by
+    /// [`MutationKind::InjectProtocol`] as the stamp target for
+    /// effect-tree protocols.
+    breaker_entities:     Query<'w, 's, Entity, With<ScenarioTagBreaker>>,
     /// [`Commands`] for inserting resources when the optional resource is absent.
     commands:             Commands<'w, 's>,
     /// Bolt entities with `Aabb2D` -- for [`MutationKind::InjectMismatchedBoltAabb`].
@@ -104,9 +119,7 @@ pub fn apply_debug_frame_mutations(
                 }
             }
             MutationKind::SetTimerRemaining(remaining) => {
-                if let Some(ref mut timer) = node_timer {
-                    timer.remaining = *remaining;
-                }
+                apply_set_timer_remaining(*remaining, &mut node_timer);
             }
             MutationKind::SpawnExtraEntities(count) => {
                 apply_spawn_extra_entities(*count, &mut targets.commands);
@@ -118,14 +131,10 @@ pub fn apply_debug_frame_mutations(
                 apply_toggle_pause(&mut pause);
             }
             MutationKind::SetRunStat(counter, value) => {
-                if let Some(ref mut stats) = targets.run_stats {
-                    apply_set_run_stat(stats, *counter, *value);
-                }
+                apply_set_run_stat_optional(*counter, *value, &mut targets.run_stats);
             }
             MutationKind::DecrementRunStat(counter) => {
-                if let Some(ref mut stats) = targets.run_stats {
-                    apply_decrement_run_stat(stats, *counter);
-                }
+                apply_decrement_run_stat_optional(*counter, &mut targets.run_stats);
             }
             MutationKind::InjectOverStackedChip {
                 chip_name,
@@ -187,6 +196,9 @@ pub fn apply_debug_frame_mutations(
             MutationKind::InjectHazardStack { kind_name, stacks } => {
                 apply_hazard_injection(kind_name, *stacks, &mut targets);
             }
+            MutationKind::InjectProtocol { kind_name } => {
+                apply_protocol_injection(kind_name, &mut targets);
+            }
         }
     }
 }
@@ -199,6 +211,31 @@ fn apply_hazard_injection(kind_name: &str, stacks: u32, targets: &mut MutationTa
         targets.hazard_registry.as_deref(),
         &mut targets.commands,
     );
+}
+
+fn apply_protocol_injection(kind_name: &str, targets: &mut MutationTargets) {
+    let Some(kind) = parse_protocol_kind(kind_name) else {
+        warn!("InjectProtocol: unknown kind {kind_name:?}");
+        return;
+    };
+    let Some(active) = targets.active_protocols.as_deref_mut() else {
+        return;
+    };
+    let Some(registry) = targets.protocol_registry.as_deref() else {
+        warn!("InjectProtocol: ProtocolRegistry absent — cannot activate {kind_name}");
+        return;
+    };
+    let breakers: Vec<Entity> = targets.breaker_entities.iter().collect();
+    if !protocol::activate_from_registry(registry, kind, &breakers, &mut targets.commands, active) {
+        warn!("InjectProtocol: no definition for {kind_name}");
+    }
+}
+
+fn parse_protocol_kind(name: &str) -> Option<ProtocolKind> {
+    ProtocolKind::ALL
+        .iter()
+        .copied()
+        .find(|k| format!("{k:?}") == name)
 }
 
 /// Installs `stacks` of the named hazard by calling the normal
@@ -232,6 +269,36 @@ fn apply_inject_hazard_stack(
     }
     for _ in 0..stacks {
         active.add_stack(kind);
+    }
+}
+
+/// Sets [`NodeTimer::remaining`] to the requested value when the timer
+/// resource exists, no-op otherwise.
+fn apply_set_timer_remaining(remaining: f32, node_timer: &mut Option<ResMut<NodeTimer>>) {
+    if let Some(timer) = node_timer {
+        timer.remaining = remaining;
+    }
+}
+
+/// Optional-aware wrapper around [`apply_set_run_stat`] for the
+/// dispatch-loop site, keeping that function under the line cap.
+fn apply_set_run_stat_optional(
+    counter: RunStatCounter,
+    value: u32,
+    run_stats: &mut Option<ResMut<RunStats>>,
+) {
+    if let Some(stats) = run_stats {
+        apply_set_run_stat(stats, counter, value);
+    }
+}
+
+/// Optional-aware wrapper around [`apply_decrement_run_stat`].
+fn apply_decrement_run_stat_optional(
+    counter: RunStatCounter,
+    run_stats: &mut Option<ResMut<RunStats>>,
+) {
+    if let Some(stats) = run_stats {
+        apply_decrement_run_stat(stats, counter);
     }
 }
 

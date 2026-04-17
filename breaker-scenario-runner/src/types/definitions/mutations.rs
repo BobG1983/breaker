@@ -145,6 +145,16 @@ pub enum MutationKind {
         /// path (increment `ActiveHazards`, insert/refresh config).
         stacks:    u32,
     },
+    /// Activate a protocol via the normal dispatch path: insert into
+    /// `ActiveProtocols`, stamp effect trees onto every tagged breaker, and
+    /// (for custom-system protocols) insert the per-kind config resource.
+    /// Used by protocol-runtime scenarios to install a protocol without
+    /// going through the chip-select UI.
+    InjectProtocol {
+        /// Which protocol kind to inject (matches the [`ProtocolKind`]
+        /// variant name, e.g. `"Deadline"`).
+        kind_name: String,
+    },
 }
 
 /// Mirrors `DashState` for RON deserialization in the scenario runner crate.

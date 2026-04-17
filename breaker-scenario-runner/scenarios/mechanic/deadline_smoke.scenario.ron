@@ -1,0 +1,32 @@
+// Smoke test for Deadline protocol runtime.
+//
+// Deadline stamps an effect tree on each bolt that fires SpeedBoost(2x) and
+// DamageBoost(2x) when the node timer drops below 25%. This scenario
+// activates the protocol at frame 10 (after entering NodeState::Playing),
+// then sets the timer low at frame 60 to drive the trigger. The scenario
+// passes if no invariants fire over the run -- proving the protocol
+// installs cleanly, the trigger fires without panicking, and the speed
+// + damage boosts respect the bolt's invariant constraints.
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 500,
+    disallowed_failures: [
+        NoNaN,
+        BoltInBounds,
+        BreakerInBounds,
+        TimerNonNegative,
+        BoltSpeedAccurate,
+    ],
+    allowed_failures: None,
+    debug_setup: (
+        disable_physics: true,
+    ),
+    frame_mutations: [
+        (frame: 10, mutation: InjectProtocol(kind_name: "Deadline")),
+        (frame: 60, mutation: SetTimerRemaining(5.0)),
+    ],
+)

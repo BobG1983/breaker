@@ -11,7 +11,7 @@ use super::definition::{ProtocolDefinition, ProtocolKind};
 
 /// Registry of protocol definitions, keyed on [`ProtocolKind`].
 #[derive(Resource, Debug, Default)]
-pub(crate) struct ProtocolRegistry {
+pub struct ProtocolRegistry {
     protocols: HashMap<ProtocolKind, ProtocolDefinition>,
 }
 
@@ -19,6 +19,14 @@ impl ProtocolRegistry {
     /// Insert or replace a definition keyed on its kind.
     pub(crate) fn insert(&mut self, def: ProtocolDefinition) {
         self.protocols.insert(def.kind(), def);
+    }
+
+    /// Returns `true` when a definition exists for `kind`. Used by the
+    /// scenario runner to validate `InjectProtocol` calls without leaking
+    /// the internal `ProtocolDefinition` type.
+    #[must_use]
+    pub fn contains(&self, kind: ProtocolKind) -> bool {
+        self.protocols.contains_key(&kind)
     }
 
     /// Look up a definition by kind.
