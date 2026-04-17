@@ -1,0 +1,9 @@
+(
+    name: "Momentum",
+    description: "Non-lethal damage bolsters cell HP. A second hit with double damage is required to break through.",
+    unlock_tier: 0,
+    tuning: Momentum(
+        base_hp_per_hit: 10.0,
+        per_level_hp_per_hit: 10.0,
+    ),
+)

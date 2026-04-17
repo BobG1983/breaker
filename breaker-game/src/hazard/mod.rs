@@ -2,6 +2,7 @@
 //! at tier 9 and above.
 
 pub(crate) mod definition;
+pub(crate) mod hazards;
 pub(crate) mod messages;
 pub(crate) mod plugin;
 pub(crate) mod resources;

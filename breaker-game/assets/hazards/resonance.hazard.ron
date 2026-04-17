@@ -1,0 +1,9 @@
+(
+    name: "Resonance",
+    description: "The bump window narrows — fewer frames to hit a grade.",
+    unlock_tier: 0,
+    tuning: Resonance(
+        base_window_secs: 0.05,
+        per_level_window_secs: 0.01,
+    ),
+)

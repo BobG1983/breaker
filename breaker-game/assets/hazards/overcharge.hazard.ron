@@ -1,0 +1,9 @@
+(
+    name: "Overcharge",
+    description: "Bolt damage ramps up after each clear — but so do the consequences of dropping a bolt.",
+    unlock_tier: 0,
+    tuning: Overcharge(
+        base_frac: 0.1,
+        per_level_frac: 0.05,
+    ),
+)

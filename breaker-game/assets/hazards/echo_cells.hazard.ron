@@ -1,0 +1,10 @@
+(
+    name: "Echo Cells",
+    description: "Killed cells respawn as ghosts after a delay, with escalating HP per stack.",
+    unlock_tier: 0,
+    tuning: EchoCells(
+        delay_secs: 1.5,
+        base_hp: 1.0,
+        per_level_multiplier: 2.0,
+    ),
+)

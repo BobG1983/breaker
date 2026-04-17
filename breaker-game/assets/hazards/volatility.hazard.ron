@@ -1,0 +1,10 @@
+(
+    name: "Volatility",
+    description: "Cells grow tougher over time, up to a cap.",
+    unlock_tier: 0,
+    tuning: Volatility(
+        hp_per_5s: 1.0,
+        cap_multiplier: 3.0,
+        per_level_reduction_frac: 0.1,
+    ),
+)

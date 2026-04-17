@@ -1,0 +1,10 @@
+(
+    name: "Sympathy",
+    description: "When a cell takes damage, its neighbors heal.",
+    unlock_tier: 0,
+    tuning: Sympathy(
+        base_heal_frac: 0.25,
+        per_level_heal_frac: 0.05,
+        depth_every_levels: 5,
+    ),
+)

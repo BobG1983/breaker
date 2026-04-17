@@ -1,0 +1,11 @@
+(
+    name: "Erosion",
+    description: "The breaker shrinks constantly. Non-whiff bumps claw some width back; perfects claw more.",
+    unlock_tier: 0,
+    tuning: Erosion(
+        shrink_rate: 0.05,
+        min_width_frac: 0.35,
+        restore_nonwhiff: 0.25,
+        restore_perfect: 0.5,
+    ),
+)

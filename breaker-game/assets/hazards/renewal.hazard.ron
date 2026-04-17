@@ -1,0 +1,9 @@
+(
+    name: "Renewal",
+    description: "On a timer, the node restocks — every stack shortens the period.",
+    unlock_tier: 0,
+    tuning: Renewal(
+        base_period_secs: 10.0,
+        per_level_reduction_frac: 0.2,
+    ),
+)

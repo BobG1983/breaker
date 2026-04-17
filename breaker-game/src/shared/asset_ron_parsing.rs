@@ -22,6 +22,7 @@ use crate::{
     breaker::definition::BreakerDefinition,
     cells::definition::CellTypeDefinition,
     chips::definition::{ChipTemplate, EvolutionTemplate},
+    hazard::definition::HazardDefinition,
     protocol::definition::ProtocolDefinition,
     walls::definition::WallDefinition,
 };
@@ -117,5 +118,13 @@ fn all_protocol_rons_parse() {
     assert_all_parse::<ProtocolDefinition>(
         concat!(env!("CARGO_MANIFEST_DIR"), "/assets/protocols"),
         "protocol",
+    );
+}
+
+#[test]
+fn all_hazard_rons_parse() {
+    assert_all_parse::<HazardDefinition>(
+        concat!(env!("CARGO_MANIFEST_DIR"), "/assets/hazards"),
+        "hazard",
     );
 }

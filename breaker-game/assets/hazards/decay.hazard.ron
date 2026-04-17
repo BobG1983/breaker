@@ -1,0 +1,9 @@
+(
+    name: "Decay",
+    description: "Cells lose HP over time. Clear them fast or watch them rot away.",
+    unlock_tier: 0,
+    tuning: Decay(
+        base_percent: 0.05,
+        per_level_percent: 0.03,
+    ),
+)

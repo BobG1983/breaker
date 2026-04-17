@@ -1,0 +1,9 @@
+(
+    name: "Cascade",
+    description: "Every cell clear heals the remaining cells a little.",
+    unlock_tier: 0,
+    tuning: Cascade(
+        base_heal: 1.0,
+        per_level_heal: 0.5,
+    ),
+)

@@ -160,6 +160,7 @@ fn message_outside_hazard_select_selecting_is_not_consumed() {
         .with_state_hierarchy()
         .in_state_node_playing()
         .with_resource::<ActiveHazards>()
+        .with_resource::<HazardRegistry>()
         .with_message::<HazardSelected>()
         .with_system(
             Update,
@@ -200,6 +201,7 @@ fn dispatch_after_handle_input_consumes_same_frame_message() {
         .with_state_hierarchy()
         .in_state_hazard_selecting()
         .with_resource::<ActiveHazards>()
+        .with_resource::<HazardRegistry>()
         .with_resource::<ButtonInput<KeyCode>>()
         .insert_resource(InputConfig::default())
         .insert_resource(HazardSelectSelection { card_index: 0 })
@@ -253,6 +255,7 @@ fn dispatch_after_tick_timer_consumes_expiry_message() {
         .with_state_hierarchy()
         .in_state_hazard_selecting()
         .with_resource::<ActiveHazards>()
+        .with_resource::<HazardRegistry>()
         .insert_resource(HazardSelectTimer { remaining: 0.0 })
         .insert_resource(offers)
         .with_resource::<GameRng>()

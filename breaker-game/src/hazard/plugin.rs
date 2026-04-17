@@ -3,6 +3,7 @@
 use bevy::prelude::*;
 
 use super::{
+    hazards,
     messages::HazardSelected,
     resources::{ActiveHazards, HazardOffers},
     systems::dispatch_hazard_selection,
@@ -25,5 +26,6 @@ impl Plugin for HazardPlugin {
                     .after(HazardSelectSystems::TickTimer)
                     .run_if(in_state(HazardSelectState::Selecting)),
             );
+        hazards::register(app);
     }
 }

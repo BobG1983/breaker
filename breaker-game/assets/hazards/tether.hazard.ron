@@ -1,0 +1,11 @@
+(
+    name: "Tether",
+    description: "Pairs of cells share damage. Kill one, the other takes a slice.",
+    unlock_tier: 0,
+    tuning: Tether(
+        base_share_frac: 0.25,
+        per_level_share_frac: 0.1,
+        base_coverage_frac: 0.4,
+        per_level_coverage_frac: 0.1,
+    ),
+)

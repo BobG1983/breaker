@@ -1,0 +1,9 @@
+(
+    name: "Fracture",
+    description: "Killed cells split into smaller cells. Each stack adds another split.",
+    unlock_tier: 0,
+    tuning: Fracture(
+        base_splits: 1,
+        per_level_splits: 1,
+    ),
+)

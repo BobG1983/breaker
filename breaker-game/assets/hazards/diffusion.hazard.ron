@@ -1,0 +1,10 @@
+(
+    name: "Diffusion",
+    description: "Damage spreads to neighboring cells, but each hit leaves the target less damaged.",
+    unlock_tier: 0,
+    tuning: Diffusion(
+        base_share_frac: 0.2,
+        per_level_share_frac: 0.1,
+        depth_every_levels: 5,
+    ),
+)

@@ -1,0 +1,10 @@
+(
+    name: "Drift",
+    description: "A periodic lateral force nudges bolts off-course.",
+    unlock_tier: 0,
+    tuning: Drift(
+        force: 100.0,
+        period_secs: 8.0,
+        per_level_force: 33.3,
+    ),
+)

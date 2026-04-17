@@ -1,0 +1,11 @@
+(
+    name: "Gravity Surge",
+    description: "Periodic downward pulls threaten to drop bolts into the bolt-lost zone.",
+    unlock_tier: 0,
+    tuning: GravitySurge(
+        base_duration_secs: 2.0,
+        per_level_duration_secs: 1.0,
+        base_strength: 100.0,
+        per_level_strength_frac: 0.2,
+    ),
+)
