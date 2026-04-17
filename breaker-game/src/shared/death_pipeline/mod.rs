@@ -1,10 +1,11 @@
-//! Unified death pipeline — generic damage, death detection, and despawn for all entity types.
+//! Unified death pipeline — generic damage, death detection, heal, and despawn for all entity types.
 
 pub(crate) mod damage_dealt;
 pub(crate) mod dead;
 pub(crate) mod despawn_entity;
 pub(crate) mod destroyed;
 pub(crate) mod game_entity;
+pub(crate) mod heal_dealt;
 pub(crate) mod hp;
 pub(crate) mod invulnerable;
 pub(crate) mod kill_yourself;
@@ -17,6 +18,7 @@ pub(crate) use damage_dealt::DamageDealt;
 pub(crate) use dead::Dead;
 pub(crate) use destroyed::Destroyed;
 pub(crate) use game_entity::GameEntity;
+pub(crate) use heal_dealt::{HealCap, HealDealt};
 pub(crate) use hp::Hp;
 pub(crate) use invulnerable::Invulnerable;
 pub(crate) use killed_by::KilledBy;

@@ -588,22 +588,24 @@ After the effect refactor (todo #2), `DamageCell` becomes `DamageDealt<Cell>`. T
 | Haste | Bolt speed increase | Effect system `SpeedBoost` via `During(HazardActive, ...)` or new message |
 | Echo Cells | Ghost cells spawn | New `SpawnGhostCell { position: Vec2, hp: f32 }` — owned by `cells` |
 | Erosion | Breaker shrinks | New `ApplyBreakerShrink { amount: f32 }` — owned by `breaker` |
-| Cascade | Destroyed cell heals adjacents | New `HealCell { cell: Entity, amount: f32 }` — owned by `cells` |
+| Cascade | Destroyed cell heals adjacents | `HealDealt<Cell>` — generic heal pipeline in `shared::death_pipeline` |
 | Fracture | Destroyed cells split | Cell spawn message — owned by `cells` |
-| Renewal | Cells regen on timer | `HealCell` — owned by `cells` |
+| Renewal | Cells regen on timer | `HealDealt<Cell>` — generic heal pipeline |
 | Diffusion | Damage shared with adjacents | **No hazard message** — `apply_damage::<Cell>` reads `ActiveHazards` + `DiffusionConfig` and handles redistribution internally, sending additional `DamageDealt<Cell>` for adjacent cells |
 | Tether | Linked cells share damage | **No hazard message** — `apply_damage::<Cell>` reads `ActiveHazards` + `TetherConfig` + `TetherLink` components and sends additional `DamageDealt<Cell>` for partners |
-| Volatility | Cells gain HP when idle | `HealCell` — owned by `cells`. Per-cell idle timer tracked by hazard domain. |
+| Volatility | Cells gain HP when idle | `HealDealt<Cell>` — generic heal pipeline. Per-cell idle timer tracked by hazard domain. |
 | GravitySurge | Gravity wells pull bolt | `ApplyBoltForce` — same as Drift |
 | Overcharge | Bolt speed per kill | Effect system `SpeedBoost` or per-bolt component tracked by hazard domain |
 | Resonance | Slow-waves toward breaker | Spawns wave entities in hazard domain, sends `DamageDealt<Cell>` for affected cells |
-| Momentum | Non-lethal hits add HP, split at 2x | `apply_damage::<Cell>` reads `MomentumConfig` on non-lethal hits, sends `HealCell` + cell spawn |
-| Sympathy | Damage dealt heals adjacents | `apply_damage::<Cell>` reads `SympathyConfig` and sends `HealCell` for adjacent cells |
+| Momentum | Non-lethal hits add HP, split at 2x | `apply_damage::<Cell>` reads `MomentumConfig` on non-lethal hits, sends `HealDealt<Cell>` + cell spawn |
+| Sympathy | Damage dealt heals adjacents | `apply_damage::<Cell>` reads `SympathyConfig` and sends `HealDealt<Cell>` for adjacent cells |
 
 **Key insight for Diffusion/Tether/Momentum/Sympathy**: These hazards modify how the cell damage system behaves. Rather than intercepting messages, the `apply_damage::<Cell>` system (in the cells domain, after the effect refactor) reads hazard config resources and handles the redistribution/healing as part of its own logic. The hazard domain provides the config resources and any components (like `TetherLink`); the cells domain does the actual processing.
 
-**New messages needed** (owned by the consuming domain):
-- `HealCell { cell: Entity, amount: f32 }` — owned by `cells`
+**Shared heal pipeline** (new, mirrors the damage pipeline):
+- `HealDealt<T: GameEntity>` — generic heal message in `shared::death_pipeline` with the same shape as `DamageDealt<T>` (`healer`, `target`, `amount`, `source`, `_marker`). `apply_heal<T>` runs in `DeathPipelineSystems::ApplyHeal` (ordered after `ApplyDamage`, before `DetectDeaths`), clamps `Hp.current` to `Hp.max.unwrap_or(Hp.starting)`, and skips `Dead`/`Invulnerable`. Register once; used by all healing hazards (Cascade, Renewal, Volatility, Sympathy, Momentum).
+
+**Other new messages** (owned by the consuming domain):
 - `SpawnGhostCell { position: Vec2, hp: f32 }` — owned by `cells`
 - `ApplyBoltForce { bolt: Entity, force: Vec2 }` — owned by `bolt`
 - `ApplyBreakerShrink { amount: f32 }` — owned by `breaker`

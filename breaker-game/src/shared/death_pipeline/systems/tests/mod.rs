@@ -1,6 +1,7 @@
 //! Tests for death pipeline systems.
 
 mod apply_damage;
+mod apply_heal;
 mod detect_deaths;
 mod handle_kill_bridge;
 mod handle_kill_integration;

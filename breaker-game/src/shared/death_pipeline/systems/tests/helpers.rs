@@ -4,7 +4,9 @@ use std::marker::PhantomData;
 
 use bevy::prelude::*;
 
-use super::super::system::{apply_damage, detect_deaths, handle_kill, process_despawn_requests};
+use super::super::system::{
+    apply_damage, apply_heal, detect_deaths, handle_kill, process_despawn_requests,
+};
 use crate::{
     bolt::{
         components::Bolt,
@@ -17,9 +19,16 @@ use crate::{
     },
     shared::{
         death_pipeline::{
-            damage_dealt::DamageDealt, despawn_entity::DespawnEntity, destroyed::Destroyed,
-            game_entity::GameEntity, hp::Hp, invulnerable::Invulnerable,
-            kill_yourself::KillYourself, killed_by::KilledBy,
+            damage_dealt::DamageDealt,
+            dead::Dead,
+            despawn_entity::DespawnEntity,
+            destroyed::Destroyed,
+            game_entity::GameEntity,
+            heal_dealt::{HealCap, HealDealt},
+            hp::Hp,
+            invulnerable::Invulnerable,
+            kill_yourself::KillYourself,
+            killed_by::KilledBy,
         },
         rng::GameRng,
         test_utils::{TestAppBuilder, attach_message_capture},
@@ -198,6 +207,58 @@ pub(super) fn spawn_test_entity_invulnerable(app: &mut App, hp_value: f32) -> En
             Invulnerable,
         ))
         .id()
+}
+
+/// Spawns a `TestEntity` already marked `Dead` with `Hp::new(hp_value)` and
+/// a default `KilledBy`. Used by Group D tests (`Without<Dead>` filter on
+/// `apply_heal<T>`).
+pub(super) fn spawn_test_entity_dead(app: &mut App, hp_value: f32) -> Entity {
+    app.world_mut()
+        .spawn((TestEntity, Hp::new(hp_value), KilledBy::default(), Dead))
+        .id()
+}
+
+// ── Heal-side test helpers ────────────────────────────────────────────
+
+/// Resource to hold heal messages that should be enqueued before the system runs.
+#[derive(Resource, Default)]
+pub(super) struct PendingHeal(pub Vec<HealDealt<TestEntity>>);
+
+/// System that writes `HealDealt<TestEntity>` from the `PendingHeal` resource.
+/// Borrow-based (mirrors `enqueue_damage`) so the same vector can be inspected
+/// after the tick.
+pub(super) fn enqueue_heal(
+    pending: Res<PendingHeal>,
+    mut writer: MessageWriter<HealDealt<TestEntity>>,
+) {
+    for msg in &pending.0 {
+        writer.write(msg.clone());
+    }
+}
+
+/// Builds a test app for `apply_heal::<TestEntity>`. Wires `enqueue_heal`
+/// `.before(apply_heal::<TestEntity>)` and adds both to `FixedUpdate`.
+pub(super) fn build_apply_heal_app() -> App {
+    TestAppBuilder::new()
+        .with_message::<HealDealt<TestEntity>>()
+        .with_resource::<PendingHeal>()
+        .with_system(FixedUpdate, enqueue_heal.before(apply_heal::<TestEntity>))
+        .with_system(FixedUpdate, apply_heal::<TestEntity>)
+        .build()
+}
+
+/// Builder fn for `HealDealt<TestEntity>`. `cap` is a REQUIRED positional
+/// parameter — no default overload exists. Writer-tests callsites must pass
+/// `HealCap::Starting` or `HealCap::Max` explicitly.
+pub(super) fn heal_msg(target: Entity, amount: f32, cap: HealCap) -> HealDealt<TestEntity> {
+    HealDealt {
+        healer: None,
+        target,
+        amount,
+        source: None,
+        cap,
+        _marker: PhantomData,
+    }
 }
 
 pub(super) fn damage_msg(

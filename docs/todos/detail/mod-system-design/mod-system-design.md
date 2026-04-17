@@ -185,7 +185,7 @@ Research completed 2026-04-08. All concrete interface designs, struct layouts, a
 | Document | What it covers |
 |----------|---------------|
 | [research/interface-design.md](research/interface-design.md) | **Primary reference**: all Rust types, enums, registries, resources, messages, system patterns, plugin structure, cross-domain rules |
-| [research/cross-domain-messages.md](research/cross-domain-messages.md) | New message struct definitions: `HealCell`, `SpawnGhostCell`, `ApplyBoltForce`, `ApplyBreakerShrink`, `ApplyBreakerRestore` |
+| [research/cross-domain-messages.md](research/cross-domain-messages.md) | New message struct definitions: `HealDealt<T>` (generic heal pipeline), `SpawnGhostCell`, `ApplyBoltForce`, `ApplyBreakerShrink`, `ApplyBreakerRestore` |
 | [legendary-retuning.md](legendary-retuning.md) | Legendary removal + per-chip retuning plan (11 chips need Rare values — `[NEEDS DETAIL]`) |
 | [protocols/](protocols/) | Per-protocol implementation guides (config, components, systems, behaviors, edge cases) |
 | [hazards/](hazards/) | Per-hazard implementation guides (config, components, systems, stacking, behaviors, edge cases) |
@@ -243,7 +243,7 @@ This todo splits into 10 waves. Waves within a group can run in parallel. Hard d
 - **Detail**: [research/interface-design.md](research/interface-design.md) sections 7, 9, 10; [research/chip-offering-flow.md](research/chip-offering-flow.md)
 
 **Wave 3b: Cross-domain messages** (parallel with Wave 3)
-- Define `HealCell`, `SpawnGhostCell`, `ApplyBoltForce`, `ApplyBreakerShrink`, `ApplyBreakerRestore` messages in their owning domains
+- Define `HealDealt<T>` (generic heal pipeline in `shared::death_pipeline`), `SpawnGhostCell`, `ApplyBoltForce`, `ApplyBreakerShrink`, `ApplyBreakerRestore` messages in their owning domains
 - Stub consuming systems (accept message, log, no-op) — real handlers come when hazards are implemented
 - **Files touched**: `cells/messages.rs`, `bolt/messages.rs`, `breaker/messages.rs`, + consuming system stubs
 - **Detail**: [research/cross-domain-messages.md](research/cross-domain-messages.md)
@@ -296,10 +296,10 @@ These hazards send messages to other domains and don't touch the damage pipeline
 - **Haste**: effect system `SpeedBoost` or message — [hazards/haste.md](hazards/haste.md)
 - **Echo Cells**: `SpawnGhostCell` — [hazards/echo_cells.md](hazards/echo_cells.md)
 - **Erosion**: `ApplyBreakerShrink` + `ApplyBreakerRestore` — [hazards/erosion.md](hazards/erosion.md)
-- **Cascade**: `HealCell` — [hazards/cascade.md](hazards/cascade.md)
+- **Cascade**: `HealDealt<Cell>` — [hazards/cascade.md](hazards/cascade.md)
 - **Fracture**: cell spawn — [hazards/fracture.md](hazards/fracture.md)
-- **Renewal**: `HealCell` — [hazards/renewal.md](hazards/renewal.md)
-- **Volatility**: `HealCell` — [hazards/volatility.md](hazards/volatility.md)
+- **Renewal**: `HealDealt<Cell>` — [hazards/renewal.md](hazards/renewal.md)
+- **Volatility**: `HealDealt<Cell>` — [hazards/volatility.md](hazards/volatility.md)
 - **Gravity Surge**: `ApplyBoltForce` — [hazards/gravity_surge.md](hazards/gravity_surge.md)
 - **Overcharge**: per-bolt speed tracking — [hazards/overcharge.md](hazards/overcharge.md)
 - **Resonance**: wave entity spawning — [hazards/resonance.md](hazards/resonance.md)
@@ -383,7 +383,7 @@ All external dependencies (todo #2 effect refactor) are complete before this tod
 - Wave 5 runtime behaviour for all 10 custom-system protocols (debt_collector, iron_curtain, echo_strike, siphon, greed, reckless_dash, burnout, conductor, afterimage, fission).
 - Wave 7 runtime behaviour for the remaining 11 simple-batch hazards (drift, haste, echo_cells, erosion, cascade, fracture, renewal, volatility, gravity_surge, overcharge, resonance). Decay done 2026-04-17.
 - Wave 7b damage-pipeline integration for 4 redistribution hazards (diffusion, tether, momentum, sympathy) — requires `shared/death_pipeline/` pre-apply system set.
-- Cross-domain message handlers (`HealCell`, `SpawnGhostCell`, `ApplyBoltForce`, `ApplyBreakerShrink`, `ApplyBreakerRestore`) — land with their consuming domains.
+- Cross-domain message handlers (`HealDealt<T>` heal pipeline, `SpawnGhostCell`, `ApplyBoltForce`, `ApplyBreakerShrink`, `ApplyBreakerRestore`) — heal pipeline lands in `shared::death_pipeline`; others land with their consuming domains.
 - Wave 9 adversarial scenarios (per-protocol chaos × 15, hazard stacking × 48 or consolidated, trap-synergy × 10+).
 - Tier Regression runtime body — blocked on todo #7.
 

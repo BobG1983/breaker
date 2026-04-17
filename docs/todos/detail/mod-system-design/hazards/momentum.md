@@ -19,46 +19,33 @@ pub(crate) struct MomentumConfig {
 
 ## Components
 
-```rust
-/// Records the cell's HP at spawn time. Used to compute the 2x split threshold.
-/// Shared with Volatility hazard -- if already exists, reuse.
-#[derive(Component, Debug)]
-pub(crate) struct CellStartingHp(pub f32);
-```
-
-No additional per-cell component needed. Momentum reads `DamageDealt<Cell>` (non-lethal) reactively and responds with `HealCell` + potential split. The cell's current HP is queried directly.
+None. Momentum reads `DamageDealt<Cell>` (non-lethal) and responds with `HealDealt<Cell>` + potential split. The cell's current HP is queried directly from `&Hp`; the pristine HP is `Hp.starting` (unified death pipeline — no separate component needed).
 
 ## Messages
 
-**Reads**: None directly for the heal-on-nonlethal logic — the cells domain's `apply_damage::<Cell>` reads `MomentumConfig` and handles it.
-**Sends**: None for healing. The cells domain sends `HealCell` internally when processing non-lethal hits with Momentum active.
+**Reads**: `DamageDealt<Cell>` (to detect non-lethal hits and compute heal amount).
+**Sends**: `HealDealt<Cell>` with `HealCap::Max` — the whole point of Momentum is to push cells *past* their pristine HP, so the pipeline cap uses `Hp.max.unwrap_or(Hp.starting)`. The split mechanic, not the heal cap, is what bounds runaway growth (cell resets to `Hp.starting` when it hits `Hp.starting * split_threshold_multiplier`).
 
-The split check is a hazard-domain system that reads cell HP and sends spawn messages.
+The split check is a hazard-domain system that reads cell HP and spawns new cells.
 
 ## Systems
 
-1. **`attach_starting_hp`** (hazard domain)
-   - Schedule: After cell spawn (per node start)
-   - Run if: `hazard_active(HazardKind::Momentum)` AND cells exist without `CellStartingHp`
-   - Behavior: Insert `CellStartingHp(current_hp)` on all cell entities
-   - Note: Shared with Volatility. If Volatility already attaches this, Momentum reuses it. A shared "hazard cell setup" system could handle this.
-
-2. **Heal-on-nonlethal** (cells domain — NOT a hazard system)
-   - The `apply_damage::<Cell>` system reads `Res<MomentumConfig>` + `Res<ActiveHazards>`
-   - On non-lethal hits (cell survived), computes heal: `base_hp_per_hit + hp_per_level * (stack - 1)`
-   - Sends `HealCell { cell, amount }` internally
-
-3. **`momentum_split_check`** (hazard domain)
+1. **Heal-on-nonlethal** (hazard domain)
    - Schedule: `FixedUpdate`
    - Run if: `hazard_active(HazardKind::Momentum)` AND `in_state(NodeState::Playing)`
-   - Ordering: After `momentum_heal_on_nonlethal` and after `HealCell` is processed
+   - Ordering: After `apply_damage::<Cell>` (so the damage is in), before `DetectDeaths` (so the heal target isn't marked `Dead` before receiving the heal — actually the heal pipeline runs after `HandleKill` so lethal hits are filtered out by `Without<Dead>` naturally; the Momentum trigger still reads damage + cell HP and decides whether to emit a heal).
+   - Behavior: Read `DamageDealt<Cell>` messages. For each entry, if the target's `hp.current > 0.0` after the damage was applied (non-lethal), compute `heal = base_hp_per_hit + hp_per_level * (stack - 1)` and emit `HealDealt::<Cell> { healer: None, target: cell, amount: heal, cap: HealCap::Max, source: Some("hazard:momentum".into()), _marker: PhantomData }`.
+
+2. **`momentum_split_check`** (hazard domain)
+   - Schedule: `FixedUpdate`
+   - Run if: `hazard_active(HazardKind::Momentum)` AND `in_state(NodeState::Playing)`
+   - Ordering: After `apply_heal::<Cell>` in the same tick, so the heal has already landed.
    - Behavior:
-     1. For each cell with `CellStartingHp`, check if current HP >= `starting_hp * split_threshold_multiplier`
+     1. For each cell with `Hp`, check `hp.current >= hp.starting * split_threshold_multiplier`
      2. If threshold reached:
         a. Find up to 2 adjacent empty grid positions
-        b. Spawn new cells at those positions, each with `starting_hp` HP (1x, not the inflated amount)
-        c. Set the original cell's HP back to `starting_hp` (it "splits" -- doesn't keep the excess)
-        d. New cells get their own `CellStartingHp` (set to `starting_hp` of the parent)
+        b. Spawn new cells at those positions, each built with `Hp::new(hp.starting)` (no special components)
+        c. Set the original cell's `hp.current` back to `hp.starting` (it "splits" -- doesn't keep the excess)
      3. If fewer than 2 empty adjacent positions exist, spawn as many as possible (1 or 0)
 
 ## Stacking Behavior
@@ -78,7 +65,7 @@ The key dynamic: low-HP cells split easily, high-HP cells resist. Stacking makes
 | Domain | Interaction | Message |
 |--------|------------|---------|
 | `cells` | Reads cell HP and alive status | Direct query |
-| `cells` | Heals cells | `HealCell` message (send) |
+| `shared::death_pipeline` | Heals cells | `HealDealt<Cell>` with `HealCap::Max` (send) |
 | `cells` | Spawns new cells on split | Cell spawn mechanism (message or direct, depends on cells domain API) |
 | `cells` | Reads damage events | `DamageDealt<Cell>` (read) |
 
@@ -89,22 +76,22 @@ The key dynamic: low-HP cells split easily, high-HP cells resist. Stacking makes
 1. **Non-lethal hit heals cell at stack=1**
    - Given: Cell with 10 HP (starting HP 10), bolt deals 5 damage (cell survives at 5 HP), stack=1
    - When: `momentum_heal_on_nonlethal` runs
-   - Then: `HealCell { cell, amount: 10.0 }` sent. Cell goes from 5 HP to 15 HP.
+   - Then: `HealDealt::<Cell> { target: cell, amount: 10.0, cap: HealCap::Max, .. }` sent. Cell goes from 5 HP to 15 HP.
 
 2. **Cell splits at 2x starting HP**
    - Given: Cell with 20 HP (starting HP 10), 2 empty adjacent positions
    - When: `momentum_split_check` runs
-   - Then: Original cell HP set to 10. Two new cells spawned at adjacent positions, each with 10 HP and `CellStartingHp(10.0)`.
+   - Then: Original cell `hp.current` set to `hp.starting` (10.0). Two new cells spawned at adjacent positions, each built with `Hp::new(10.0)` (so `starting = 10.0`).
 
 3. **Lethal hit does NOT trigger heal**
    - Given: Cell with 10 HP, bolt deals 15 damage (cell dies)
    - When: `momentum_heal_on_nonlethal` runs
-   - Then: No `HealCell` sent (cell is dead)
+   - Then: No `HealDealt<Cell>` sent (cell is dead)
 
 4. **HP per hit scales with stack at stack=3**
    - Given: Cell with 50 HP (starting HP 50), bolt deals 10 damage (survives at 40 HP), stack=3
    - When: `momentum_heal_on_nonlethal` runs
-   - Then: `HealCell { cell, amount: 30.0 }` sent. Cell goes from 40 to 70 HP.
+   - Then: `HealDealt::<Cell> { target: cell, amount: 30.0, cap: HealCap::Max, .. }` sent. Cell goes from 40 to 70 HP.
 
 5. **Split with limited empty positions**
    - Given: Cell at 2x HP, only 1 empty adjacent position
@@ -120,7 +107,7 @@ The key dynamic: low-HP cells split easily, high-HP cells resist. Stacking makes
 
 - **Momentum + Diffusion synergy**: Diffusion bleeds damage to neighbors, preventing one-shot kills. Non-lethal hits then feed Momentum's HP growth + split. This creates a feedback loop where trying to kill one cell strengthens its neighbors.
 - **Momentum + Fracture synergy**: Fracture creates split debris in empty cells. Momentum splits also create cells in empty cells. If both target the same empty positions, Fracture runs first (on cell death) and Momentum runs after (on survival). No conflict -- they use different triggers.
-- **Split cell inherits hazard components**: New cells from splits need `CellStartingHp` (and `VolatilityTimer` if Volatility is active). The spawn system must ensure hazard components are attached to dynamically spawned cells.
+- **Split cell inherits hazard components**: New cells from splits get `Hp::new(parent.hp.starting)` from the cell builder (so `starting` and `current` are both set correctly for the unified death pipeline). If Volatility is active, a `VolatilityTimer` must also be attached. The spawn system must ensure hazard components are attached to dynamically spawned cells.
 - **Cascade chain**: If a split cell is immediately adjacent to a cell that then dies, Cascade heals it. Combined with Momentum's HP growth, cells become very hard to kill. This is the intended trap synergy.
 - **Overflow prevention**: If a cell accumulates massive HP (e.g., 100x starting), the split mechanic still only resets to 1x. The system is self-regulating -- splits produce more cells but each at base HP.
-- **Cleanup**: `CellStartingHp` is on cell entities -- cleaned up on despawn. `MomentumConfig` removed at run end.
+- **Cleanup**: `Hp.starting` is part of the unified `Hp` component — cleaned up on cell despawn. `MomentumConfig` removed at run end.

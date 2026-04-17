@@ -40,13 +40,7 @@ Inserted on every cell entity when Renewal activates. The timer ticks down; on e
 ## Messages
 
 **Reads**: `ActiveHazards` for stack count (to compute current timer duration on reset)
-**Sends**: `HealCell { cell: Entity, amount: f32 }` — new message, owned by `cells` domain. Sent with `amount` equal to the cell's missing HP (heal to full).
-
-Note: Renewal needs to know how much HP the cell is missing. Options:
-1. Read cell HP via a cross-domain query (allowed for reads), compute `max_hp - current_hp`, send as `amount`.
-2. Send a `HealCellToFull { cell: Entity }` variant or use a sentinel value (e.g., `f32::MAX` meaning "heal to full").
-
-Option 1 is cleaner and avoids new message variants.
+**Sends**: `HealDealt<Cell>` — generic heal pipeline message in `shared::death_pipeline`. Sent with `amount` equal to the cell's missing HP (heal to full). Renewal reads `Hp` cross-domain (allowed) to compute `amount = hp.max.unwrap_or(hp.starting) - hp.current`. `apply_heal<Cell>` clamps to the ceiling, so even an over-estimated `amount` is safe — but send the exact missing amount for clarity.
 
 ## Systems
 
@@ -67,7 +61,7 @@ Also needs to run on `OnEnter(NodeState::Playing)` for subsequent nodes within t
   1. Tick `remaining` down by `delta_secs`.
   2. If `remaining <= 0.0`:
      a. Read the cell's current HP and max HP.
-     b. If current HP < max HP, send `HealCell { cell, amount: max_hp - current_hp }`.
+     b. If current HP < `Hp.starting`, send `HealDealt::<Cell> { healer: None, target: cell, amount: hp.starting - hp.current, cap: HealCap::Starting, source: Some("hazard:renewal".into()), _marker: PhantomData }`. (Renewal restores to pristine HP only — `HealCap::Starting` enforces this regardless of any buffed `Hp.max`.)
      c. Recompute timer duration for current stack count (stack may have increased since last reset).
      d. Reset `remaining` to the new duration.
 
@@ -96,17 +90,17 @@ The diminishing returns curve means early stacks have a large impact (10s -> 8s 
 
 | Domain | Direction | Message/Query |
 |--------|-----------|--------------|
-| `cells` | sends to | `HealCell` — heals cell to full HP |
+| `shared::death_pipeline` | sends to | `HealDealt<Cell>` with `HealCap::Starting` — heals cell back to `Hp.starting` |
 | `cells` | reads from | Cell HP query — needs current HP and max HP to compute heal amount |
 
-Renewal reads cell HP (cross-domain read, allowed) but never writes cell HP directly. The cells domain applies the heal via `HealCell`.
+Renewal reads cell HP (cross-domain read, allowed) but never writes cell HP directly. `apply_heal<Cell>` (in `shared::death_pipeline`) applies the heal.
 
 ## Expected Behaviors (for test specs)
 
 1. **Cell regens to full after timer expires at stack 1**
    - Given: Renewal active at stack 1, `base_timer=10.0`, cell with 30/100 HP, `RenewalTimer { remaining: 0.05, duration: 10.0 }`
    - When: `renewal_tick` runs with `delta_secs=0.1`
-   - Then: Timer expires, `HealCell { cell, amount: 70.0 }` sent, timer resets to `remaining=10.0`
+   - Then: Timer expires, `HealDealt::<Cell> { target: cell, amount: 70.0, cap: HealCap::Starting, .. }` sent, timer resets to `remaining=10.0`
 
 2. **Timer is shorter at stack 3**
    - Given: Renewal active at stack 3, `base_timer=10.0`, `per_level_reduction_percent=20.0`
@@ -116,7 +110,7 @@ Renewal reads cell HP (cross-domain read, allowed) but never writes cell HP dire
 3. **Full HP cell still resets timer but sends no heal**
    - Given: Renewal active, cell at 100/100 HP, timer expires
    - When: `renewal_tick` processes the expiry
-   - Then: No `HealCell` sent (missing HP is 0), timer resets normally
+   - Then: No `HealDealt<Cell>` sent (missing HP is 0), timer resets normally
 
 4. **Timer continues ticking between regens**
    - Given: `RenewalTimer { remaining: 5.0 }`, `delta_secs=0.1`

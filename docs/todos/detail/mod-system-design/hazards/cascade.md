@@ -25,7 +25,7 @@ None. Cascade is a reactive system — it responds to cell death events and send
 ## Messages
 
 **Reads**: Cell death message — a notification that a cell was destroyed, including its grid position or entity ID so adjacency can be determined. (The exact message depends on the effect refactor — todo #2. Currently `DamageDealt<Cell>` is a placeholder; the actual name may be `CellDestroyedAt { position: IVec2 }` or similar.)
-**Sends**: `HealCell { cell: Entity, amount: f32 }` — new message, owned by `cells` domain. One message per adjacent cell per death event.
+**Sends**: `HealDealt<Cell>` — generic heal pipeline message defined in `shared::death_pipeline`. Fields: `healer: Option<Entity>`, `target: Entity`, `amount: f32`, `source: Option<String>`, `_marker: PhantomData<Cell>`. One message per adjacent cell per death event.
 
 ## Systems
 
@@ -38,7 +38,7 @@ None. Cascade is a reactive system — it responds to cell death events and send
   1. Determine the grid position of the destroyed cell.
   2. Find all living adjacent cells (orthogonal neighbors: up, down, left, right).
   3. Compute heal amount: `base_heal + heal_per_level * (stack - 1)`.
-  4. Send `HealCell { cell, amount }` for each adjacent living cell.
+  4. Send `HealDealt::<Cell> { healer: None, target: cell, amount, source: Some("hazard:cascade".into()), _marker: PhantomData }` for each adjacent living cell.
 - **Adjacency query**: Reads the cell grid/spatial structure to find neighbors. This may require a query into the cells domain's grid data structure or a component-based neighbor lookup.
 
 ## Stacking Behavior
@@ -58,7 +58,7 @@ At stack 5, each death heals adjacents for 30 HP. A cell in the middle of a 3x3 
 | Domain | Direction | Message |
 |--------|-----------|---------|
 | `cells` | reads from | Cell death notification (cell destroyed at position) |
-| `cells` | sends to | `HealCell` — heals adjacent cells |
+| `shared::death_pipeline` | sends to | `HealDealt<Cell>` — generic heal; adjacent cells gain HP up to `Hp.starting` (or `Hp.max` if set) |
 
 Cascade needs to query cell adjacency. This requires either:
 1. Reading a grid resource from the cells domain (cross-domain read — allowed), or
@@ -71,27 +71,27 @@ The cells domain owns cell HP and applies the heal.
 1. **Adjacent cells healed on death at stack 1**
    - Given: Cascade active at stack 1, `base_heal=10.0`, `heal_per_level=5.0`, cell at grid (2,2) destroyed, living cells at (1,2), (3,2), (2,1), (2,3)
    - When: `cascade_heal_on_death` processes the death
-   - Then: 4x `HealCell { cell, amount: 10.0 }` sent, one per neighbor
+   - Then: 4x `HealDealt::<Cell> { target: cell, amount: 10.0, .. }` sent, one per neighbor
 
 2. **Adjacent cells healed more at stack 3**
    - Given: Cascade active at stack 3, same config, cell at (2,2) destroyed, 4 living neighbors
    - When: `cascade_heal_on_death` processes the death
-   - Then: 4x `HealCell { cell, amount: 20.0 }` sent (10.0 + 5.0 * 2)
+   - Then: 4x `HealDealt::<Cell> { target: cell, amount: 20.0, .. }` sent (10.0 + 5.0 * 2)
 
 3. **Corner cell has fewer neighbors**
    - Given: Cascade active at stack 1, cell at grid (0,0) destroyed, living cells at (1,0) and (0,1) only
    - When: `cascade_heal_on_death` processes the death
-   - Then: 2x `HealCell` sent (only existing neighbors)
+   - Then: 2x `HealDealt<Cell>` sent (only existing neighbors)
 
 4. **Dead neighbors are not healed**
    - Given: Cascade active, cell destroyed, one adjacent position is empty (already destroyed)
    - When: `cascade_heal_on_death` runs
-   - Then: No `HealCell` sent for the empty position
+   - Then: No `HealDealt<Cell>` sent for the empty position
 
 5. **Multiple deaths in same frame each trigger cascade**
    - Given: 2 cells destroyed in the same frame, sharing a common neighbor
    - When: `cascade_heal_on_death` processes both
-   - Then: The common neighbor receives 2 separate `HealCell` messages (one from each death)
+   - Then: The common neighbor receives 2 separate `HealDealt<Cell>` messages (one from each death)
 
 ## Edge Cases
 
@@ -100,4 +100,4 @@ The cells domain owns cell HP and applies the heal.
 - **Cascade does NOT cascade**: The name is about healing adjacent cells, not about chain reactions. Healing a cell to full HP does not trigger another Cascade event. Only cell DEATH triggers Cascade.
 - **Ghost cells (Echo Cells)**: Ghost cell deaths do trigger Cascade — they are destroyed cells. Their neighbors get healed. This makes Echo Cells + Cascade a mild synergy: cleaning up ghosts feeds heals to surviving cells.
 - **Node-end cleanup**: `CascadeConfig` resource removed at run end. No per-entity state to clean up.
-- **HP over-healing**: If Cascade heals a cell beyond its starting HP, behavior depends on the cells domain. Typically, HP is capped at starting HP (or some maximum). Cascade doesn't need to enforce this — the cells domain handles the cap when processing `HealCell`.
+- **HP over-healing**: If Cascade heals a cell beyond its starting HP, behavior depends on the cells domain. Typically, HP is capped at starting HP (or some maximum). Cascade doesn't need to enforce this — `apply_heal<Cell>` clamps to `Hp.max.unwrap_or(Hp.starting)`.

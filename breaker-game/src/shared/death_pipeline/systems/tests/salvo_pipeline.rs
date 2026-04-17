@@ -10,13 +10,22 @@ use std::marker::PhantomData;
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Position2D;
 
-use super::super::system::{apply_damage, detect_deaths, handle_kill};
+use super::{
+    super::system::{apply_damage, apply_heal, detect_deaths, handle_kill},
+    helpers::TestEntity,
+};
 use crate::{
     cells::behaviors::survival::salvo::components::Salvo,
     shared::{
         death_pipeline::{
-            damage_dealt::DamageDealt, dead::Dead, despawn_entity::DespawnEntity,
-            destroyed::Destroyed, hp::Hp, kill_yourself::KillYourself, killed_by::KilledBy,
+            damage_dealt::DamageDealt,
+            dead::Dead,
+            despawn_entity::DespawnEntity,
+            destroyed::Destroyed,
+            heal_dealt::{HealCap, HealDealt},
+            hp::Hp,
+            kill_yourself::KillYourself,
+            killed_by::KilledBy,
         },
         test_utils::{MessageCollector, TestAppBuilder, tick},
     },
@@ -265,5 +274,119 @@ fn handle_kill_salvo_skips_already_dead_entity() {
     assert!(
         collector.0.is_empty(),
         "handle_kill<Salvo> should NOT emit Destroyed for an already-Dead entity"
+    );
+}
+
+// ── Behavior 30: apply_heal::<Salvo> heals Salvo entities ──
+
+#[derive(Resource, Default)]
+struct PendingSalvoHeal(Vec<HealDealt<Salvo>>);
+
+fn enqueue_salvo_heal(pending: Res<PendingSalvoHeal>, mut writer: MessageWriter<HealDealt<Salvo>>) {
+    for msg in &pending.0 {
+        writer.write(msg.clone());
+    }
+}
+
+fn salvo_heal_msg(target: Entity, amount: f32, cap: HealCap) -> HealDealt<Salvo> {
+    HealDealt {
+        healer: None,
+        target,
+        amount,
+        source: None,
+        cap,
+        _marker: PhantomData,
+    }
+}
+
+/// Builds an app with `apply_heal::<Salvo>` wired.
+fn build_salvo_apply_heal_app() -> App {
+    TestAppBuilder::new()
+        .with_message::<HealDealt<Salvo>>()
+        .with_resource::<PendingSalvoHeal>()
+        .with_system(FixedUpdate, enqueue_salvo_heal.before(apply_heal::<Salvo>))
+        .with_system(FixedUpdate, apply_heal::<Salvo>)
+        .build()
+}
+
+#[test]
+fn apply_heal_salvo_heals_hp() {
+    let mut app = build_salvo_apply_heal_app();
+    let entity = spawn_salvo_entity(&mut app, 10.0);
+    // Pre-damage salvo to 2.0 (spawn_salvo_entity creates current=starting=10.0).
+    app.world_mut().get_mut::<Hp>(entity).unwrap().current = 2.0;
+
+    app.insert_resource(PendingSalvoHeal(vec![salvo_heal_msg(
+        entity,
+        3.0,
+        HealCap::Max,
+    )]));
+    tick(&mut app);
+
+    let hp = app.world().get::<Hp>(entity).unwrap();
+    assert!(
+        (hp.current - 5.0).abs() < f32::EPSILON,
+        "Salvo Hp should be 5.0 after 3.0 heal on 2.0 current, got {}",
+        hp.current
+    );
+}
+
+#[test]
+fn apply_heal_salvo_heals_hp_starting_cap_matches_max_when_max_none() {
+    let mut app = build_salvo_apply_heal_app();
+    let entity = spawn_salvo_entity(&mut app, 10.0);
+    // Pre-damage salvo to 2.0.
+    app.world_mut().get_mut::<Hp>(entity).unwrap().current = 2.0;
+
+    app.insert_resource(PendingSalvoHeal(vec![salvo_heal_msg(
+        entity,
+        3.0,
+        HealCap::Starting,
+    )]));
+    tick(&mut app);
+
+    let hp = app.world().get::<Hp>(entity).unwrap();
+    assert!(
+        (hp.current - 5.0).abs() < f32::EPSILON,
+        "Salvo Hp should be 5.0 with Starting cap (max=None round-trip), got {}",
+        hp.current
+    );
+}
+
+// ── Behavior 20: Heal of the wrong monomorphization is silently skipped ──
+//
+// Canonical per-T queue isolation proof from the Salvo side: a `TestEntity`
+// (NOT `Salvo`) receives a `HealDealt<Salvo>` message in a Salvo-only harness.
+// `apply_heal::<Salvo>`'s `With<Salvo>` filter must exclude the TestEntity, so
+// Hp stays unchanged.
+//
+// This harness deliberately does NOT register `TestEntity` systems or messages
+// — it reuses `build_salvo_apply_heal_app` exactly as the Salvo-side tests do.
+
+#[test]
+fn apply_heal_salvo_skips_test_entity_target_wrong_monomorphization() {
+    let mut app = build_salvo_apply_heal_app();
+
+    // Spawn a TestEntity (NOT Salvo) with Hp(5.0, 10.0): starting 10.0, current 5.0.
+    let entity = app
+        .world_mut()
+        .spawn((TestEntity, Hp::new(10.0), KilledBy::default()))
+        .id();
+    app.world_mut().get_mut::<Hp>(entity).unwrap().current = 5.0;
+
+    // Enqueue a HealDealt<Salvo> targeting the TestEntity (wrong monomorphization).
+    app.insert_resource(PendingSalvoHeal(vec![salvo_heal_msg(
+        entity,
+        3.0,
+        HealCap::Max,
+    )]));
+    tick(&mut app);
+
+    let hp = app.world().get::<Hp>(entity).unwrap();
+    assert!(
+        (hp.current - 5.0).abs() < f32::EPSILON,
+        "TestEntity Hp should remain 5.0 — apply_heal::<Salvo>'s With<Salvo> \
+         filter must exclude entities without the Salvo marker, got {}",
+        hp.current
     );
 }

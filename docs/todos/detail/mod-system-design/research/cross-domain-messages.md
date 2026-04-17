@@ -4,21 +4,29 @@ New messages needed by the protocol and hazard systems. Each is owned by the CON
 
 ---
 
-## `HealCell` — owned by `cells`
+## `HealDealt<T>` — owned by `shared::death_pipeline`
 
 ```rust
-// cells/messages.rs
-#[derive(Message, Clone, Debug)]
-pub(crate) struct HealCell {
-    /// The cell entity to heal.
-    pub cell: Entity,
-    /// Amount of HP to restore.
-    pub amount: f32,
+// shared/death_pipeline/heal_dealt.rs
+#[derive(Message, Debug)]
+pub(crate) struct HealDealt<T: GameEntity> {
+    /// Entity that originated the heal (optional — for attribution / FX).
+    pub healer:  Option<Entity>,
+    /// Entity to heal.
+    pub target:  Entity,
+    /// Amount of HP to restore (pre-cap).
+    pub amount:  f32,
+    /// Source identifier (chip/hazard/protocol name) for stats/UI.
+    pub source:  Option<String>,
+    /// Marker for the victim entity type.
+    pub _marker: PhantomData<T>,
 }
 ```
 
-**Sent by**: Cascade, Renewal, Volatility, Sympathy, Momentum hazard systems
-**Consumed by**: A new `apply_cell_healing` system in the cells domain that adds HP up to max.
+Mirrors `DamageDealt<T>` exactly. Monomorphized per entity type (`HealDealt<Cell>`, `HealDealt<Bolt>`, etc.).
+
+**Sent by**: Cascade, Renewal, Volatility, Sympathy, Momentum hazard systems (all send `HealDealt<Cell>`).
+**Consumed by**: the generic `apply_heal<T>` system in the death pipeline. Clamps `Hp.current` to `Hp.max.unwrap_or(Hp.starting)`, skips `Dead` and `Invulnerable` entities. Runs after `ApplyDamage` and before `DetectDeaths` so healing cannot revive same-tick kills.
 
 ---
 
@@ -111,7 +119,7 @@ These hazards do NOT send their own messages. Instead, the cell damage system (`
 |--------|---------------|------------------------|
 | Diffusion | Redistributes incoming damage to adjacents | `Res<DiffusionConfig>` + `Res<ActiveHazards>` |
 | Tether | Shares damage between linked pairs | `Res<TetherConfig>` + `Query<&TetherLink>` |
-| Momentum | Non-lethal hits add HP, split at 2x | `Res<MomentumConfig>` + sends `HealCell` |
-| Sympathy | Damage dealt heals adjacents | `Res<SympathyConfig>` + sends `HealCell` |
+| Momentum | Non-lethal hits add HP, split at 2x | `Res<MomentumConfig>` + sends `HealDealt<Cell>` |
+| Sympathy | Damage dealt heals adjacents | `Res<SympathyConfig>` + sends `HealDealt<Cell>` |
 
 The hazard domain provides the config resources. The cells domain reads them. This avoids message interception and keeps the damage pipeline in one place.

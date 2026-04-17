@@ -6,8 +6,15 @@ use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Position2D;
 
 use crate::shared::death_pipeline::{
-    damage_dealt::DamageDealt, dead::Dead, despawn_entity::DespawnEntity, destroyed::Destroyed,
-    game_entity::GameEntity, hp::Hp, invulnerable::Invulnerable, kill_yourself::KillYourself,
+    damage_dealt::DamageDealt,
+    dead::Dead,
+    despawn_entity::DespawnEntity,
+    destroyed::Destroyed,
+    game_entity::GameEntity,
+    heal_dealt::{HealCap, HealDealt},
+    hp::Hp,
+    invulnerable::Invulnerable,
+    kill_yourself::KillYourself,
     killed_by::KilledBy,
 };
 
@@ -156,5 +163,67 @@ pub(crate) fn process_despawn_requests(
 ) {
     for msg in reader.read() {
         commands.entity(msg.entity).try_despawn();
+    }
+}
+
+/// Processes `HealDealt<T>` messages and increments `Hp.current`, clamped to
+/// a per-message ceiling chosen by the sender via `msg.cap`:
+/// - `HealCap::Starting` → `hp.starting` (ignores `hp.max`)
+/// - `HealCap::Max`      → `hp.max.unwrap_or(hp.starting)`
+///
+/// Uses `Without<Dead>` to skip entities already confirmed dead, and
+/// `Without<Invulnerable>` to skip immune entities (mirrors
+/// `apply_damage<T>`'s filters). The `Invulnerable` marker is the SAME
+/// marker that blocks damage — a single shared shield, per design.
+///
+/// NOTE: under the chosen system-set ordering
+/// (`ApplyDamage → DetectDeaths → HandleKill → ApplyHeal`), `handle_kill<T>`
+/// has already inserted `Dead` on any entity that died this tick by the
+/// time `apply_heal<T>` runs. The `Without<Dead>` filter is therefore the
+/// mechanism that prevents same-tick in-tick revival — a 10-damage +
+/// 5-heal combo on a 10-HP entity leaves the entity dead no matter how
+/// large the heal amount.
+///
+/// Generic over the target marker type — monomorphized for Cell, Bolt, Wall,
+/// Breaker, Salvo.
+type HealTargetQuery<'w, 's, T> =
+    Query<'w, 's, &'static mut Hp, (With<T>, Without<Dead>, Without<Invulnerable>)>;
+
+pub(crate) fn apply_heal<T: GameEntity>(
+    mut reader: MessageReader<HealDealt<T>>,
+    mut query: HealTargetQuery<T>,
+) {
+    for msg in reader.read() {
+        // Guard: amount <= 0.0 (covers 0.0, negatives, NEG_INFINITY).
+        if msg.amount <= 0.0 {
+            continue;
+        }
+        // Guard: NaN. `f32::NAN <= 0.0` is false in IEEE 754, so NaN requires
+        // its own explicit guard.
+        if msg.amount.is_nan() {
+            continue;
+        }
+
+        // Target lookup; skipped entities (Dead, Invulnerable, missing T
+        // marker, missing Hp, despawned) silently drop through via the
+        // `Without<..>` filter + `get_mut()` failure.
+        let Ok(mut hp) = query.get_mut(msg.target) else {
+            continue;
+        };
+
+        // Per-message ceiling — must not be cached across messages.
+        let ceiling = match msg.cap {
+            HealCap::Starting => hp.starting,
+            HealCap::Max => hp.max.unwrap_or(hp.starting),
+        };
+
+        // Over-cap short-circuit: never lower HP via a heal. Without this,
+        // `(hp.current + amount).min(ceiling)` would turn a heal into a
+        // debuff when `hp.current > ceiling`.
+        if hp.current >= ceiling {
+            continue;
+        }
+
+        hp.current = (hp.current + msg.amount).min(ceiling);
     }
 }
