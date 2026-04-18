@@ -28,7 +28,7 @@ pub enum HazardKind {
     GravitySurge,
     /// Overcharge — bolt-damage boost and penalty.
     Overcharge,
-    /// Resonance — bump-window narrowing.
+    /// Resonance — kill chains spawn slow-moving waves toward the Breaker.
     Resonance,
     /// Diffusion — shared cell damage.
     Diffusion,
@@ -117,8 +117,26 @@ pub(crate) enum HazardTuning {
         per_level_frac: f32,
     },
     Resonance {
-        base_window_secs:      f32,
-        per_level_window_secs: f32,
+        /// Kills within the window required before additional kills spawn waves.
+        kills_to_trigger:      u32,
+        /// Base window (seconds) at stack 1.
+        base_window:           f32,
+        /// Additional window seconds per stack beyond the first.
+        window_per_level:      f32,
+        /// Wave travel speed in world units/second.
+        wave_speed:            f32,
+        /// Base slow duration (seconds) applied to the breaker at stack 1.
+        base_slow_duration:    f32,
+        /// Base slow strength at stack 1 (0.0..1.0).
+        base_slow_strength:    f32,
+        /// Logarithmic scaling coefficient on slow duration.
+        slow_duration_scaling: f32,
+        /// Logarithmic scaling coefficient on slow strength.
+        slow_strength_scaling: f32,
+        /// World-unit distance at which a wave counts as contacting the breaker.
+        contact_threshold:     f32,
+        /// Maximum wave lifetime (seconds) before despawn without applying slow.
+        wave_max_lifetime:     f32,
     },
     Diffusion {
         base_share_frac:      f32,
@@ -337,8 +355,16 @@ mod tests {
             ),
             (
                 HazardTuning::Resonance {
-                    base_window_secs:      0.5,
-                    per_level_window_secs: 0.3,
+                    kills_to_trigger:      2,
+                    base_window:           0.5,
+                    window_per_level:      0.3,
+                    wave_speed:            200.0,
+                    base_slow_duration:    1.5,
+                    base_slow_strength:    0.5,
+                    slow_duration_scaling: 0.2,
+                    slow_strength_scaling: 0.15,
+                    contact_threshold:     16.0,
+                    wave_max_lifetime:     10.0,
                 },
                 HazardKind::Resonance,
             ),

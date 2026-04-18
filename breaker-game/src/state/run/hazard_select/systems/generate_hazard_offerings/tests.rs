@@ -107,8 +107,16 @@ fn tuning_variants_second_half() -> Vec<(HazardTuning, HazardKind)> {
         ),
         (
             HazardTuning::Resonance {
-                base_window_secs:      0.5,
-                per_level_window_secs: 0.3,
+                kills_to_trigger:      2,
+                base_window:           0.5,
+                window_per_level:      0.3,
+                wave_speed:            200.0,
+                base_slow_duration:    1.5,
+                base_slow_strength:    0.5,
+                slow_duration_scaling: 0.2,
+                slow_strength_scaling: 0.15,
+                contact_threshold:     16.0,
+                wave_max_lifetime:     10.0,
             },
             HazardKind::Resonance,
         ),
