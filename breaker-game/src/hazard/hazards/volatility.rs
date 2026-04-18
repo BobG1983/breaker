@@ -191,7 +191,7 @@ mod tests {
     use super::*;
     use crate::{
         cells::behaviors::survival::salvo::components::Salvo,
-        hazard::hazards::renewal::RenewalConfig,
+        hazard::hazards::renewal::system::RenewalConfig,
         shared::death_pipeline::{HealCap, systems::apply_damage},
     };
 
