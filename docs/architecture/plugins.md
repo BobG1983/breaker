@@ -123,17 +123,18 @@ Structurally identical rationale to the Velocity2D exception: the writing domain
 
 ## Hp.max Cross-Domain Write Exception
 
-`Hp.max` (`shared/death_pipeline` component) on cell entities is written by the hazard domain's `attach_volatility_timers` system as an accepted architectural exception. One write path exists:
+`Hp.max` (`shared/death_pipeline` component) on cell entities is written by the hazard domain as an accepted architectural exception. Two write paths exist:
 
 - **hazard** (`attach_volatility_timers` in `hazard/hazards/volatility.rs`): lifts each cell's `Hp.max` to `max(existing_max, hp.starting * max_multiplier)` when the Volatility hazard is active. Runs each FixedUpdate tick, gated by `hazard_active(HazardKind::Volatility)`.
+- **hazard** (`attach_momentum_ceiling` in `hazard/hazards/momentum/system.rs`): lifts each cell's `Hp.max` to `max(existing_max, hp.starting * MOMENTUM_SPLIT_MULTIPLIER)` when the Momentum hazard is active. Enables `HealCap::Max` heals from `momentum_heal_on_nonlethal` to push `hp.current` past `hp.starting`, required for the cell-split mechanic. Runs each FixedUpdate tick before `momentum_heal_on_nonlethal`, gated by `hazard_active(HazardKind::Momentum) AND in_state(NodeState::Playing)`.
 
-Message indirection would be worse here for two reasons: (1) routing through a `HealCap` variant would require adding a new dimension to the heal pipeline enum just for Volatility, a disproportionate API surface for one hazard; (2) a dedicated `RaiseHpMax` Bevy message + handler would exist solely for Volatility and would not generalize to any current or planned mechanic.
+Message indirection would be worse for both writes for the same two reasons: (1) routing through a `HealCap` variant would require adding a new dimension to the heal pipeline enum just for per-hazard ceilings, a disproportionate API surface; (2) a dedicated `RaiseHpMax` Bevy message + handler would exist solely for these hazards and would not generalize to any other current or planned mechanic.
 
-The write is safe by three properties:
+Both writes are safe by three properties:
 
 - **Monotonic**: `hp.max.map_or(target, |m| m.max(target))` — never lowers `Hp.max`.
-- **Idempotent**: write is guarded by a value comparison (`if hp.max != new_max`) so already-lifted cells don't trigger spurious change detection.
-- **Scoped**: the enclosing `.run_if(hazard_active(HazardKind::Volatility))` gate ensures this path is unreachable when Volatility is inactive.
+- **Idempotent**: the write is guarded by a value comparison (`if hp.max != new_max`) so already-lifted cells don't trigger spurious change detection. Momentum additionally reads through `bypass_change_detection()` to keep the read path off the `Mut<Hp>` auto-deref.
+- **Scoped**: the enclosing `.run_if(hazard_active(HazardKind::Volatility))` / `.run_if(hazard_active(HazardKind::Momentum))` gate ensures each path is unreachable when its hazard is inactive.
 
 Cleanup is implicit: cell entities are despawned on node end, so the `Hp.max` lift persists only for the lifetime of the current node.
 

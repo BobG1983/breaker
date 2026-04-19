@@ -1,0 +1,51 @@
+// Adversarial stress: Momentum at 3 stacks under sustained chaos input.
+//
+// At 3 stacks the split threshold rises (more splits fire per cell), and the
+// Dense layout provides ~20 cells in a grid so multiple splits can chain
+// within a single frame: cell A splits into A1+A2, the bolt immediately
+// hits A1, A1 splits into A1a+A1b, and so on. Each split resets the child
+// HP to 50% of the original; if the reset is missing or racy, the child
+// qualifies for another split instantly, producing geometric growth that
+// exceeds any sane entity budget within a few hundred frames.
+//
+// Chaos input at action_prob 0.7 drives continuous bolt bumps and rapid
+// breaker movement, maximising the frequency of concurrent split events and
+// probing race conditions between:
+//   - the split spawn message and the parent cell despawn
+//   - two split messages arriving for the same cell in the same tick
+//     (one from the bolt, one from a Tether redirect -- no Tether here,
+//      but the message pipeline is shared and worth stressing alone)
+//   - HP-reset delivery order relative to the next DamageDealt message
+//
+// Invariants:
+//   BoltInBounds      — bolt must never escape the play field under rapid splits
+//   NoNaN             — child HP arithmetic must not produce NaN
+//   HazardStackValid  — 3 Momentum stacks must remain registered throughout
+//   NoEntityLeaks     — no orphaned split-message or child-cell entities
+//   BreakerInBounds   — chaos movement must not push breaker outside bounds
+//
+// 32 runs with different RNG seeds explore varied cell-damage ordering,
+// different initial bolt trajectories, and different split timing windows.
+// 2500 frames ensures the Dense layout cycles multiple times through
+// restocked (or exhausted) cell states.
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Chaos((action_prob: 0.7)),
+    max_frames: 2500,
+    disallowed_failures: [
+        BoltInBounds,
+        BreakerInBounds,
+        HazardStackValid,
+        NoEntityLeaks,
+        NoNaN,
+    ],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: false,
+    stress: (runs: 32, parallelism: 32),
+    seed: 7741,
+    frame_mutations: [
+        (frame: 5, mutation: InjectHazardStack(kind_name: "Momentum", stacks: 3)),
+    ],
+)

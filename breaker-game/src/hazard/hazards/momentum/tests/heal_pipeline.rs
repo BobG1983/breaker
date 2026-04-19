@@ -1,0 +1,211 @@
+//! Group E — Full heal pipeline integration (Behaviors 28–31).
+//!
+//! End-to-end: `attach_momentum_ceiling` → `apply_damage::<Cell>` →
+//! `momentum_heal_on_nonlethal` → `apply_heal::<Cell>`. Pins that the ceiling
+//! is lifted before heals land so heals can push `hp.current` past
+//! `hp.starting`. Behavior 30 is the negative control proving
+//! `attach_momentum_ceiling` is load-bearing.
+
+use bevy::prelude::*;
+
+use super::{
+    super::system::{MomentumConfig, attach_momentum_ceiling, momentum_heal_on_nonlethal},
+    helpers::{
+        add_momentum_stacks, canonical_momentum_config, heal_collector_len,
+        install_momentum_config, run_fixed_update, spawn_cell_at, test_app_playing,
+        write_cell_damage,
+    },
+};
+use crate::{
+    prelude::*,
+    shared::death_pipeline::{
+        Dead, HealCap, Hp,
+        sets::DeathPipelineSystems,
+        systems::{apply_damage, apply_heal, detect_deaths, handle_kill},
+    },
+};
+
+/// Wires the full pipeline in the correct order:
+/// `attach_momentum_ceiling` → `apply_damage` → `momentum_heal_on_nonlethal` → `apply_heal`.
+fn test_app_full_pipeline() -> App {
+    let mut app = test_app_playing();
+    app.configure_sets(
+        FixedUpdate,
+        (
+            DeathPipelineSystems::ApplyDamage,
+            DeathPipelineSystems::DetectDeaths.after(DeathPipelineSystems::ApplyDamage),
+            DeathPipelineSystems::HandleKill.after(DeathPipelineSystems::DetectDeaths),
+            DeathPipelineSystems::ApplyHeal.after(DeathPipelineSystems::HandleKill),
+        ),
+    );
+    app.add_systems(
+        FixedUpdate,
+        (
+            attach_momentum_ceiling.before(apply_damage::<Cell>),
+            apply_damage::<Cell>.in_set(DeathPipelineSystems::ApplyDamage),
+            momentum_heal_on_nonlethal
+                .in_set(DeathPipelineSystems::ApplyHeal)
+                .before(apply_heal::<Cell>),
+            apply_heal::<Cell>.in_set(DeathPipelineSystems::ApplyHeal),
+        ),
+    );
+    app
+}
+
+// ── Behavior 28 — non-lethal hit lands 10 HP at stack 1 end-to-end ──────────
+
+#[test]
+fn nonlethal_stack_one_end_to_end_lands_fifteen_hp() {
+    let mut app = test_app_full_pipeline();
+    install_momentum_config(&mut app, canonical_momentum_config());
+    add_momentum_stacks(&mut app, 1);
+
+    // Fresh cell — hp.max = None. attach_momentum_ceiling should lift it.
+    let cell = spawn_cell_at(&mut app, Vec2::ZERO, 10.0, 10.0);
+    write_cell_damage(&mut app, cell, 5.0);
+
+    run_fixed_update(&mut app);
+
+    let hp = app.world().get::<Hp>(cell).unwrap();
+    assert_eq!(
+        hp.max,
+        Some(20.0),
+        "attach_momentum_ceiling must lift hp.max to Some(20.0); got {:?}",
+        hp.max
+    );
+    assert!(
+        (hp.current - 15.0).abs() < f32::EPSILON,
+        "end-to-end tick must leave hp.current at 15.0 (=5 after damage +10 heal); got {}",
+        hp.current
+    );
+}
+
+// ── Behavior 29 — stack 3 pushes current from 40.0 → 70.0 end-to-end ────────
+
+#[test]
+fn nonlethal_stack_three_end_to_end_lands_seventy_hp() {
+    let mut app = test_app_full_pipeline();
+    install_momentum_config(&mut app, canonical_momentum_config());
+    add_momentum_stacks(&mut app, 3);
+
+    let cell = spawn_cell_at(&mut app, Vec2::ZERO, 50.0, 50.0);
+    write_cell_damage(&mut app, cell, 10.0);
+
+    run_fixed_update(&mut app);
+
+    let hp = app.world().get::<Hp>(cell).unwrap();
+    assert_eq!(
+        hp.max,
+        Some(100.0),
+        "attach must lift hp.max to Some(100.0) (=50 * 2); got {:?}",
+        hp.max
+    );
+    assert!(
+        (hp.current - 70.0).abs() < f32::EPSILON,
+        "end-to-end stack-3 must leave hp.current at 70.0; got {}",
+        hp.current
+    );
+}
+
+// ── Behavior 30 — without attach_momentum_ceiling, heal clamps at starting ──
+
+#[test]
+fn without_attach_ceiling_heal_clamps_at_starting() {
+    // Deliberately build a pipeline WITHOUT attach_momentum_ceiling — to prove
+    // it is load-bearing for the "heal past pristine" semantic.
+    let mut app = test_app_playing();
+    app.configure_sets(
+        FixedUpdate,
+        (
+            DeathPipelineSystems::ApplyDamage,
+            DeathPipelineSystems::DetectDeaths.after(DeathPipelineSystems::ApplyDamage),
+            DeathPipelineSystems::HandleKill.after(DeathPipelineSystems::DetectDeaths),
+            DeathPipelineSystems::ApplyHeal.after(DeathPipelineSystems::HandleKill),
+        ),
+    );
+    app.add_systems(
+        FixedUpdate,
+        (
+            apply_damage::<Cell>.in_set(DeathPipelineSystems::ApplyDamage),
+            momentum_heal_on_nonlethal
+                .in_set(DeathPipelineSystems::ApplyHeal)
+                .before(apply_heal::<Cell>),
+            apply_heal::<Cell>.in_set(DeathPipelineSystems::ApplyHeal),
+        ),
+    );
+    install_momentum_config(&mut app, canonical_momentum_config());
+    add_momentum_stacks(&mut app, 1);
+
+    let cell = spawn_cell_at(&mut app, Vec2::ZERO, 10.0, 10.0);
+    write_cell_damage(&mut app, cell, 5.0);
+
+    run_fixed_update(&mut app);
+
+    let hp = app.world().get::<Hp>(cell).unwrap();
+    assert!(
+        (hp.current - 10.0).abs() < f32::EPSILON,
+        "without attach_momentum_ceiling the heal is clamped at hp.starting \
+         (10.0); got {}. Without the ceiling system, Momentum's 'heal past \
+         pristine' semantic is neutralized.",
+        hp.current
+    );
+}
+
+// ── Behavior 31 — lethal hit: Dead-marked, no revival via Momentum ──────────
+
+#[test]
+fn lethal_hit_end_to_end_cell_stays_dead_no_revival() {
+    let mut app = test_app_full_pipeline();
+    // Also wire death detection + handle_kill so the cell actually becomes Dead.
+    app.add_systems(
+        FixedUpdate,
+        (
+            detect_deaths::<Cell>.in_set(DeathPipelineSystems::DetectDeaths),
+            handle_kill::<Cell>.in_set(DeathPipelineSystems::HandleKill),
+        ),
+    );
+    // Need to also register the KillYourself<Cell> message so handle_kill can consume it.
+    app.add_message::<crate::shared::death_pipeline::kill_yourself::KillYourself<Cell>>();
+    app.add_message::<crate::shared::death_pipeline::destroyed::Destroyed<Cell>>();
+    app.add_message::<crate::shared::death_pipeline::despawn_entity::DespawnEntity>();
+
+    install_momentum_config(&mut app, canonical_momentum_config());
+    add_momentum_stacks(&mut app, 1);
+
+    let cell = spawn_cell_at(&mut app, Vec2::ZERO, 10.0, 10.0);
+    write_cell_damage(&mut app, cell, 15.0); // lethal
+
+    run_fixed_update(&mut app);
+
+    // Cell should be Dead-marked after handle_kill runs.
+    assert!(
+        app.world().get::<Dead>(cell).is_some(),
+        "lethal hit must mark cell Dead via handle_kill"
+    );
+
+    let hp = app.world().get::<Hp>(cell).unwrap();
+    assert!(
+        (hp.current - (-5.0)).abs() < f32::EPSILON,
+        "hp.current must equal exactly -5.0 (10 starting - 15 damage, no revival); got {}",
+        hp.current
+    );
+
+    // Critical invariant for this behavior: ceiling MUST have been lifted
+    // before apply_damage so hp.max is Some(20.0). This is the positive signal
+    // that the Momentum pipeline ran end-to-end (attach_momentum_ceiling +
+    // momentum_heal_on_nonlethal both gated on Playing + stacks, both ran).
+    assert_eq!(
+        hp.max,
+        Some(20.0),
+        "attach_momentum_ceiling must have lifted hp.max to Some(20.0) \
+         on the same tick BEFORE apply_damage landed; got {:?}",
+        hp.max
+    );
+    let _ = heal_collector_len(&app);
+    // Use imports so clippy doesn't warn.
+    let _ = HealCap::Max;
+    let _ = MomentumConfig {
+        base_hp_per_hit:      0.0,
+        per_level_hp_per_hit: 0.0,
+    };
+}

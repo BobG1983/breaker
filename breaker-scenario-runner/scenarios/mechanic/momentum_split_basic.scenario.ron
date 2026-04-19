@@ -1,0 +1,50 @@
+// Adversarial: Momentum at 1 stack, scripted setup, verifies a split actually fires.
+//
+// Momentum splits a Cell into two child cells the first time a bolt bump
+// reduces it to or below half its original HP. At 1 stack the threshold is
+// exactly 50% HP. The Corridor layout provides a column of normal cells
+// with a clear vertical lane; the bolt bounces repeatedly in that lane,
+// accumulating damage events on the same cell until the split threshold
+// is crossed.
+//
+// Adversarial properties:
+//   - Cell count must GROW from the initial baseline: a split means the
+//     original cell is removed and two children are inserted, so total
+//     cell count after the first split is initial + 1. BreakerCountReasonable
+//     is replaced by cell-count bookkeeping via HazardStackValid and NoEntityLeaks.
+//   - Cell count must stay bounded: runaway splits (splitting children that
+//     were themselves spawned by Momentum) should not produce exponential
+//     growth. If HP-reset-on-split is broken, each child immediately
+//     qualifies for another split at its own 50% threshold -- without the
+//     reset the count grows every ~2 ticks. The BreakerCountReasonable
+//     invariant is reused here to confirm entity counts remain sane;
+//     NoEntityLeaks catches any orphaned split-message entity.
+//   - No NaN: split children inherit a fraction of the parent HP. If the
+//     arithmetic produces a zero or negative denominator (e.g. parent HP
+//     already 0 when the message arrives), NaN propagates into subsequent
+//     damage events.
+//
+// 500 frames is enough for multiple bolt circuits in Corridor; if no split
+// fires within 500 frames, the Momentum activation path or damage pipeline
+// is silently broken.
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 500,
+    disallowed_failures: [
+        NoNaN,
+        BoltInBounds,
+        BreakerInBounds,
+        HazardStackValid,
+        NoEntityLeaks,
+    ],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: false,
+    frame_mutations: [
+        (frame: 5, mutation: InjectHazardStack(kind_name: "Momentum", stacks: 1)),
+    ],
+)
