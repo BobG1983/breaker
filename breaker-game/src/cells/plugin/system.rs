@@ -32,7 +32,7 @@ use crate::{
         },
         messages::{CellImpactWall, PortalCompleted, PortalEntered, SalvoImpactBreaker},
         resources::CellConfig,
-        systems::{cell_wall_collision, update_cell_damage_visuals},
+        systems::{apply_damage_to_cells, cell_wall_collision, update_cell_damage_visuals},
     },
     effect_v3::sets::EffectV3Systems,
     prelude::*,
@@ -57,6 +57,14 @@ impl Plugin for CellsPlugin {
                 dispatch_cell_effects.after(NodeSystems::Spawn),
             )
             .add_systems(OnEnter(NodeState::Playing), init_sequence_groups)
+            // `apply_damage_to_cells` owns Cell damage application (replaces
+            // the generic `apply_damage::<Cell>` formerly in `DeathPipelinePlugin`).
+            // NOT gated on `NodeState::Playing` — the death pipeline's message
+            // queue is global, matching the prior generic wiring.
+            .add_systems(
+                FixedUpdate,
+                apply_damage_to_cells.in_set(DeathPipelineSystems::ApplyDamage),
+            )
             .add_systems(
                 FixedUpdate,
                 (

@@ -18,7 +18,7 @@ pub(crate) use damage_dealt::DamageDealt;
 pub(crate) use dead::Dead;
 pub(crate) use destroyed::Destroyed;
 pub(crate) use game_entity::GameEntity;
-pub(crate) use heal_dealt::{HealCap, HealDealt};
+pub(crate) use heal_dealt::HealCap;
 pub(crate) use hp::Hp;
 pub(crate) use invulnerable::Invulnerable;
 pub(crate) use killed_by::KilledBy;

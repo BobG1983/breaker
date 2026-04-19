@@ -42,7 +42,7 @@ Domains MAY define a `pub enum {Domain}Systems` with `#[derive(SystemSet)]` in `
 | `EffectV3Systems::Conditions` | `effect_v3/sets.rs` | condition evaluation systems (e.g. `evaluate_conditions`) — runs after `Tick` in FixedUpdate |
 | `EffectV3Systems::Death` | `effect_v3/sets.rs` | `on_cell_destroyed`, `on_bolt_destroyed`, `on_wall_destroyed`, `on_breaker_destroyed` — phase set ordered `.after(DeathPipelineSystems::HandleKill)` so bridges observe `Destroyed<T>` messages on the same tick while victims are still alive (despawn runs later in `FixedPostUpdate`). Cross-domain consumers order against `EffectV3Systems::Death` instead of individual bridge systems. |
 | `EffectV3Systems::Reset` | `effect_v3/sets.rs` | effect state reset on `OnEnter(NodeState::Loading)` — not in FixedUpdate chain |
-| `DeathPipelineSystems::ApplyDamage` | `shared/death_pipeline/sets.rs` | `apply_damage::<Cell>`, `apply_damage::<Bolt>`, `apply_damage::<Wall>`, `apply_damage::<Breaker>` — phase set (see note) |
+| `DeathPipelineSystems::ApplyDamage` | `shared/death_pipeline/sets.rs` | `apply_damage_to_cells` (cells domain), `apply_damage::<Bolt>`, `apply_damage::<Wall>`, `apply_damage::<Breaker>` — phase set (see note). Cell damage moved out of the generic pipeline so cells can own diffusion redistribution. |
 | `DeathPipelineSystems::DetectDeaths` | `shared/death_pipeline/sets.rs` | `detect_deaths::<Cell>`, `detect_deaths::<Bolt>`, `detect_deaths::<Wall>`, `detect_deaths::<Breaker>` — phase set |
 | `DeathPipelineSystems::HandleKill` | `shared/death_pipeline/sets.rs` | `handle_kill::<Cell>`, `handle_kill::<Bolt>`, `handle_kill::<Wall>` from `DeathPipelinePlugin`; `handle_breaker_death` from `RunPlugin` — phase set |
 | `DeathPipelineSystems::ApplyHeal` | `shared/death_pipeline/sets.rs` | `apply_heal::<Cell>`, `apply_heal::<Bolt>`, `apply_heal::<Wall>`, `apply_heal::<Breaker>`, `apply_heal::<Salvo>` — phase set; runs after `HandleKill` so `Dead` is visible to `apply_heal<T>`'s `Without<Dead>` filter, preventing same-tick revival |
@@ -185,7 +185,7 @@ move_breaker .after(update_bump)
 
 DeathPipelineSystems::ApplyDamage
   .after(EffectV3Systems::Tick)                              [shared/death_pipeline domain]
-  (apply_damage::<Cell>, apply_damage::<Bolt>, apply_damage::<Wall>, apply_damage::<Breaker>)
+  (apply_damage_to_cells [cells domain], apply_damage::<Bolt>, apply_damage::<Wall>, apply_damage::<Breaker>)
     <- check_armor_direction .after(BoltSystems::CellCollision)
                               .before(DeathPipelineSystems::ApplyDamage)
                               .run_if(in_state(NodeState::Playing))

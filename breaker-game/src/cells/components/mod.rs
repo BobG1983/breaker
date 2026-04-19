@@ -1,10 +1,12 @@
 //! Cells domain components.
 
+pub(crate) mod adjacency;
 mod types;
 
 #[cfg(test)]
 mod tests;
 
+pub(crate) use adjacency::ADJACENCY_RADIUS_SQ;
 pub use types::*;
 
 // Behavior components re-exported for cross-module access

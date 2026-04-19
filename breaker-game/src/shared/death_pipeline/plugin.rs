@@ -67,11 +67,16 @@ impl Plugin for DeathPipelinePlugin {
             ),
         );
 
-        // Damage application — monomorphized per entity type
+        // Damage application — monomorphized per entity type.
+        //
+        // NOTE: `Cell` is intentionally absent here. Cell damage application is
+        // owned by `cells::systems::apply_damage_to_cells` in the cells domain
+        // (registered by `CellsPlugin`) so that Diffusion's BFS redistribution
+        // logic lives alongside the cell-specific damage path. The other four
+        // monomorphizations continue to use the generic `apply_damage::<T>`.
         app.add_systems(
             FixedUpdate,
             (
-                systems::apply_damage::<Cell>,
                 systems::apply_damage::<Bolt>,
                 systems::apply_damage::<Wall>,
                 systems::apply_damage::<Breaker>,

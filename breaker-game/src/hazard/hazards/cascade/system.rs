@@ -10,7 +10,7 @@ use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
-    cells::components::Cell,
+    cells::components::{ADJACENCY_RADIUS_SQ, Cell},
     hazard::{
         definition::{HazardKind, HazardTuning},
         resources::{ActiveHazards, hazard_active},
@@ -20,12 +20,6 @@ use crate::{
         Destroyed, HealCap, Hp, heal_dealt::HealDealt, sets::DeathPipelineSystems,
     },
 };
-
-/// World-space distance (squared) within which a living cell counts as a
-/// neighbour of a destroyed cell. Tuned to ~1.25× a 50-unit cell width so
-/// horizontally + vertically adjacent grid neighbours register without
-/// pulling in diagonals across a wide gap.
-pub(crate) const ADJACENCY_RADIUS_SQ: f32 = 70.0 * 70.0;
 
 /// Per-run tuning extracted from [`HazardTuning::Cascade`] at activation.
 #[derive(Resource, Debug, Clone, Copy)]

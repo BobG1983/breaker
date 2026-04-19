@@ -15,6 +15,7 @@ use crate::{
     cells::{
         definition::CellTypeDefinition,
         resources::{CellConfig, CellTypeRegistry},
+        systems::apply_damage_to_cells,
     },
     effect_v3::EffectV3Plugin,
     shared::{
@@ -286,6 +287,17 @@ impl<S: StateStatus> TestAppBuilder<S> {
     #[must_use]
     pub(crate) fn with_effects_pipeline(mut self) -> Self {
         self.app.add_plugins(DeathPipelinePlugin);
+        // Register the cells-domain `apply_damage_to_cells` system in the
+        // `ApplyDamage` set — mirrors `CellsPlugin` wiring so tests that
+        // only opt into the effects pipeline still see Cell damage applied.
+        // Without this, `DamageDealt<Cell>` messages drain without effect
+        // because `DeathPipelinePlugin` no longer wires the generic
+        // `apply_damage::<Cell>` (moved to the cells domain).
+        self.app.add_systems(
+            FixedUpdate,
+            apply_damage_to_cells
+                .in_set(crate::shared::death_pipeline::sets::DeathPipelineSystems::ApplyDamage),
+        );
         register_effect_v3_test_infrastructure(&mut self.app);
         self.app.add_plugins(EffectV3Plugin);
         self
