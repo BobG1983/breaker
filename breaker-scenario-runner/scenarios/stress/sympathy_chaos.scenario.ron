@@ -1,0 +1,49 @@
+// Adversarial stress: Sympathy at 3 stacks under sustained chaos input — Dense layout.
+//
+// At stack 3, cascade_depth reaches 2 (depth_increase_interval=2 default, so
+// 1 + (3-1)/2 = 2). Every bolt bump triggers a two-ring BFS heal cascade over
+// the Dense cluster. The adversarial risks:
+//
+//   1. Multi-ring BFS racing the death pipeline: if a cell is hit, Dead-marked,
+//      and then reached as ring-1 OR ring-2 neighbour in the same tick, the BFS
+//      emits a HealDealt<Cell> for a despawned entity. The system's snapshot
+//      exclusion of Dead cells must hold under concurrent damage bursts.
+//
+//   2. Geometric ring attenuation NaN: ring-2 amount = amount * factor^2. If
+//      factor is 0.0 (stack 0 guard bypassed) or amount itself is NaN from a
+//      prior arithmetic fault, the product is NaN and propagates into HealDealt.
+//
+//   3. Entity leak from bulk HealDealt<Cell> writes: at stack 3, a Dense layout
+//      can produce O(neighbours) heals per bump per ring. Chaos drives rapid
+//      consecutive bumps, so message entities can accumulate if the write/read
+//      cycle has an off-by-one in cleanup ordering.
+//
+//   4. Breaker OOB under chaos: action_prob 0.7 drives rapid direction flips
+//      and dashes; the BFS heal computation must not stall the physics tick
+//      long enough to allow the breaker to tunnel through a wall boundary.
+//
+// 3000 frames with allow_early_end: false ensures the Dense cluster is worked
+// through multiple restock cycles, keeping the BFS snapshot non-trivial for
+// the entire run. 32 runs explore varied bolt trajectories, cell-damage
+// ordering, and BFS frontier shapes.
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Chaos((action_prob: 0.7)),
+    max_frames: 3000,
+    disallowed_failures: [
+        BoltInBounds,
+        BreakerInBounds,
+        HazardStackValid,
+        NoEntityLeaks,
+        NoNaN,
+    ],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: false,
+    stress: (runs: 32, parallelism: 32),
+    seed: 8831,
+    frame_mutations: [
+        (frame: 5, mutation: InjectHazardStack(kind_name: "Sympathy", stacks: 3)),
+    ],
+)

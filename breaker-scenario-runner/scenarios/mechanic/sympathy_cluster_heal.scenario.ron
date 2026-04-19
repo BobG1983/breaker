@@ -1,0 +1,42 @@
+// Adversarial: Sympathy cluster heal BFS at stack 1 — Dense layout.
+//
+// Dense layout provides ~20 adjacent cells so every bolt impact triggers a
+// multi-ring BFS heal cascade. At stack 1, cascade depth is 1 (ring-1 only);
+// the adversarial risk is that the BFS snapshot races the death pipeline:
+// if a cell's Dead marker is not yet applied when the snapshot is taken, the
+// cell appears as a valid BFS target and receives a heal, then the death
+// pipeline removes it. This can produce a HealDealt<Cell> referencing a
+// despawned entity — a NaN or panic path.
+//
+// Physics enabled (no debug_setup disable) so real bolt bumps drive actual
+// DamageDealt<Cell> messages that trigger the BFS. 1500 frames gives enough
+// time for the bolt to work through the Dense cluster and expose ring-heal
+// arithmetic on cells at various HP levels.
+//
+// Invariants:
+//   BoltInBounds     — bolt must stay in field during BFS churn
+//   NoNaN            — ring-attenuation arithmetic (amount * factor^N) must not NaN
+//   HazardStackValid — Sympathy stacks must stay registered throughout
+//   NoEntityLeaks    — every HealDealt<Cell> entity must clean up; no orphans
+//   BreakerInBounds  — breaker must not escape bounds during run
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 1500,
+    disallowed_failures: [
+        BoltInBounds,
+        NoNaN,
+        HazardStackValid,
+        NoEntityLeaks,
+        BreakerInBounds,
+    ],
+    allowed_failures: None,
+    debug_setup: None,
+    seed: 1117,
+    frame_mutations: [
+        (frame: 5, mutation: InjectHazardStack(kind_name: "Sympathy", stacks: 1)),
+    ],
+)
