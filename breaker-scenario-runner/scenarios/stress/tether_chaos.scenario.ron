@@ -1,0 +1,49 @@
+// Adversarial: Tether at maximum-practical stacks (7) under sustained chaos input.
+// At stack 7: damage redirect is 85% and coverage is capped at 100% -- every
+// eligible adjacent pair in the Dense layout is linked. The Dense layout provides
+// ~20 cells in a grid, maximising the number of tether links and the frequency
+// of simultaneous bilateral redirects.
+//
+// Bilateral redirect stress: A is linked to B, B is linked to A. When the bolt
+// hits both A and B in the same tick (e.g. pierce pass or two bolts), each hit
+// emits a redirect: A's redirect targets B (85% damage), B's redirect targets A
+// (85% damage). Both redirects carry source_chip = "hazard:tether" (sentinel).
+// On delivery, each redirect must be skipped by the sentinel check -- if the
+// check fails, B's redirect triggers another redirect back to A, and A's triggers
+// one back to B, producing geometrically-growing message chains that eventually
+// cause NoNaN (HP underflows NaN), NoEntityLeaks (message entity accumulation),
+// or a panic from infinite recursion.
+//
+// At 7 stacks with 100% coverage, many cells are central nodes in multiple eligible
+// pairs. The mutual-exclusion rule means each cell participates in exactly one pair,
+// so there is no multi-hop chain -- but the high redirect percentage (85%) means
+// the partner often takes more damage than the original target, creating cell kill
+// ordering races: A takes 100 damage and lives (HP 50), B takes 85 redirect damage
+// and dies (HP 0). If B's cleanup_broken_tether_links fires before A's next
+// redirect delivery, A loses its TetherLink and the sentinel is never needed --
+// but if the redirect is delivered before cleanup, A's link must still be valid.
+// Any ordering inversion here can leave stale TetherLink components (caught
+// indirectly by NoEntityLeaks via unexpected component accumulation).
+//
+// HazardStackValid confirms the 7 Tether stacks remain valid throughout.
+// NoNaN guards against HP underflow to NaN under the 85% redirect arithmetic.
+// NoEntityLeaks guards against stale message or component accumulation.
+//
+// Stress: 32 runs explore different RNG seeds, varying which pairs are linked
+// and which cells take damage first -- maximising coverage of the mutual-exclusion
+// matching and sentinel-guard paths in the redirect pipeline.
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Chaos((action_prob: 0.7)),
+    max_frames: 5000,
+    disallowed_failures: [BoltInBounds, BreakerCountReasonable, BreakerInBounds, HazardStackValid, NoEntityLeaks, NoNaN],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: false,
+    stress: (runs: 32, parallelism: 32),
+    seed: 3377,
+    frame_mutations: [
+        (frame: 5, mutation: InjectHazardStack(kind_name: "Tether", stacks: 7)),
+    ],
+)

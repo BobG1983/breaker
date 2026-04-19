@@ -12,15 +12,23 @@
 //! both are read here as `Option<Res<..>>` so the system is harness-safe when
 //! `HazardPlugin` is not installed.
 
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    marker::PhantomData,
+};
 
-use bevy::prelude::*;
+use bevy::{ecs::system::SystemParam, prelude::*};
 use rantzsoft_spatial2d::components::Position2D;
 
 use crate::{
     cells::components::{ADJACENCY_RADIUS_SQ, Cell},
     hazard::{
-        definition::HazardKind, hazards::diffusion::DiffusionConfig, resources::ActiveHazards,
+        definition::HazardKind,
+        hazards::{
+            diffusion::DiffusionConfig,
+            tether::{TETHER_SENTINEL, TetherConfig, TetherLink, TetherRedirectBuffer},
+        },
+        resources::ActiveHazards,
     },
     shared::death_pipeline::{DamageDealt, Hp, Invulnerable, KilledBy, dead::Dead},
 };
@@ -150,6 +158,28 @@ fn accumulate_message_deltas(
     primary_damage
 }
 
+type LivePartnerFilter = (With<Cell>, Without<Dead>, Without<Invulnerable>);
+
+type LiveCellTetherLinks<'w, 's> = Query<'w, 's, &'static TetherLink, LivePartnerFilter>;
+
+type LivePartnerCells<'w, 's> = Query<'w, 's, Entity, LivePartnerFilter>;
+
+/// Tether-related params, bundled so `apply_damage_to_cells` avoids the
+/// `clippy::too_many_arguments` threshold. All fields are optional at the
+/// resource level for harness-safety (an app without `HazardPlugin` has no
+/// `TetherConfig` / `TetherRedirectBuffer`); the query params are always
+/// present but typically empty.
+#[derive(SystemParam)]
+pub(crate) struct TetherSystemParams<'w, 's> {
+    config:        Option<Res<'w, TetherConfig>>,
+    buffer:        Option<ResMut<'w, TetherRedirectBuffer>>,
+    links:         LiveCellTetherLinks<'w, 's>,
+    // Partners must be live (not Dead, not Invulnerable) for a redirect to be
+    // meaningful — the DamageAppQuery would silently drop the redirect anyway,
+    // but filtering here prevents phantom message traffic.
+    partner_cells: LivePartnerCells<'w, 's>,
+}
+
 /// Applies `DamageDealt<Cell>` messages to cells. When Diffusion is active,
 /// the primary takes a reduced fraction of the incoming damage and the share
 /// pool is BFS-propagated to adjacent cells (and their unvisited neighbours
@@ -163,6 +193,7 @@ pub(crate) fn apply_damage_to_cells(
     active_hazards: Option<Res<ActiveHazards>>,
     mut reader: MessageReader<DamageDealt<Cell>>,
     mut cell_queries: ParamSet<(DamageAppQuery, AdjacencyQuery)>,
+    mut tether: TetherSystemParams,
 ) {
     // Buffer incoming messages so the adjacency scan can borrow the immutable
     // query independently of the later mutable application query.
@@ -184,6 +215,26 @@ pub(crate) fn apply_damage_to_cells(
         _ => (0.0, 0),
     };
     let diffusion_active = share_frac > 0.0 && depth > 0;
+
+    // ── Tether activation state (computed ONCE, before the accumulate loop) ──
+    // Per design doc `docs/todos/detail/mod-system-design/hazards/tether.md`
+    // §Edge Cases line 121: "If both are active, Diffusion runs first (shares/
+    // reduces damage), then Tether runs on the modified damage amounts." The
+    // redirect's `partner_amount` is computed from the `f32` that
+    // `accumulate_message_deltas` returns (the Diffusion-reduced primary
+    // damage), NOT from `msg.amount`.
+    let tether_stacks = active_hazards
+        .as_deref()
+        .map_or(0, |a| a.stacks(HazardKind::Tether));
+    let tether_pct = match (tether.config.as_deref(), tether_stacks) {
+        (Some(cfg), s) if s > 0 => cfg.damage_percent(s),
+        _ => 0.0,
+    };
+    // If the Tether plugin did not register `TetherRedirectBuffer`, we cannot
+    // buffer redirects regardless of config/stack state. The `is_some` guard
+    // short-circuits the per-iteration branch in a harness that omits the
+    // hazard plugin.
+    let tether_active = tether_pct > 0.0 && tether.buffer.is_some();
 
     // Snapshot the living-cell adjacency data if the BFS might run. The
     // snapshot is a point-in-time view of `hp.current > 0.0` cells (dead
@@ -241,6 +292,10 @@ pub(crate) fn apply_damage_to_cells(
                 killing_dealers.insert(msg.target, dealer);
             }
         }
+
+        if tether_active {
+            try_buffer_tether_redirect(msg, primary_damage, tether_pct, &mut tether);
+        }
     }
 
     // Apply accumulated deltas. `KilledBy::dealer` is attributed only for
@@ -260,4 +315,47 @@ pub(crate) fn apply_damage_to_cells(
             killed_by.dealer = Some(dealer);
         }
     }
+}
+
+/// Buffers one `DamageDealt<Cell>` onto `TetherRedirectBuffer` per qualifying
+/// primary hit. Extracted from `apply_damage_to_cells` so the caller stays
+/// under `clippy::too_many_lines`.
+///
+/// A dedicated `emit_tether_redirects` system (hazard domain) drains the
+/// buffer into `MessageWriter<DamageDealt<Cell>>` in the same `ApplyDamage`
+/// set — we cannot hold both `MessageReader` and `MessageWriter` for
+/// `DamageDealt<Cell>` in one system (Bevy 0.18 panics at schedule
+/// construction on that overlap).
+///
+/// Uses the DIFFUSION-REDUCED `primary_damage` the caller just computed.
+/// When Diffusion is inactive, `primary_damage == msg.amount`.
+fn try_buffer_tether_redirect(
+    msg: &DamageDealt<Cell>,
+    primary_damage: f32,
+    tether_pct: f32,
+    tether: &mut TetherSystemParams,
+) {
+    if msg.source_chip.as_deref() == Some(TETHER_SENTINEL) {
+        return;
+    }
+    let Ok(link) = tether.links.get(msg.target) else {
+        return;
+    };
+    if tether.partner_cells.get(link.partner).is_err() {
+        return;
+    }
+    let Some(buffer) = tether.buffer.as_deref_mut() else {
+        return;
+    };
+    let partner_amount = primary_damage * tether_pct / 100.0;
+    if partner_amount <= 0.0 {
+        return;
+    }
+    buffer.0.push(DamageDealt::<Cell> {
+        dealer:      msg.dealer,
+        target:      link.partner,
+        amount:      partner_amount,
+        source_chip: Some(TETHER_SENTINEL.to_string()),
+        _marker:     PhantomData,
+    });
 }

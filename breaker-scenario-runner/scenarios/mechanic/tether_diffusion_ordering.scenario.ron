@@ -1,0 +1,52 @@
+// Adversarial: Tether + Diffusion ordering with 2 stacks each. The design spec
+// §Edge Cases mandates: "Diffusion runs first, reducing what Tether redirects;
+// Tether's redirect message is a normal DamageDealt<Cell> and is itself subject
+// to Diffusion on its delivery tick."
+//
+// At stack 2: Diffusion share is ~30% (base 20% + 10% per level), Tether redirect
+// is 35% (base 25% + 10% per level). On every bolt hit:
+//   Tick N: Diffusion reduces A's primary damage, distributes a ring share to
+//            A's neighbours. Tether reads the Diffusion-reduced primary amount
+//            and queues a redirect DamageDealt<Cell> targeting A's linked partner B.
+//   Tick N+1: The redirect arrives; Diffusion processes it again, reducing B's
+//              received damage and sharing a ring to B's neighbours (including A).
+//              Tether skips re-emit on the redirect because source_chip is
+//              "hazard:tether" (sentinel guard).
+//
+// Scatter layout exercises varied cell spacings. Some pairs are tightly adjacent
+// (distance_sq << 4900) qualifying as both Tether-linkable AND Diffusion ring-1
+// neighbours. Others are at 50-60 unit spacing, qualifying as Diffusion ring-1
+// but NOT as Tether links (distance_sq > 4900). This asymmetry stresses the
+// ordering contract: a cell that receives Diffusion ring damage is NOT a Tether
+// redirect target; only explicit DamageDealt<Cell> messages trigger the redirect
+// branch (design doc §Edge Cases: "only original DamageDealt<Cell> entries from
+// the bolt/chip system trigger Tether, not Tether's own output").
+//
+// Adversarial risks:
+//   - If Tether reads pre-Diffusion damage instead of post-Diffusion, the
+//     redirect amount is too large (NoNaN if HP goes deeply negative).
+//   - If the sentinel check misses the tick-N+1 redirect, A gets hit by a
+//     second-order redirect from B, which spawns a third-order redirect back
+//     to A -- geometric explosion in message count (NoEntityLeaks).
+//   - If Diffusion's internal ring delta is incorrectly emitted as a separate
+//     DamageDealt<Cell> message, it triggers an extra Tether redirect to D
+//     (the ring neighbour's tether partner) -- caught by NoNaN via unexpected
+//     HP values and NoEntityLeaks via extra message entities.
+//
+// Chaos input 0.6 drives rapid hits across varied cell positions to exercise
+// as many ordering edge cases as possible across 5000 frames.
+(
+    breaker: "Aegis",
+    layout: "Scatter",
+    input: Chaos((action_prob: 0.6)),
+    max_frames: 5000,
+    disallowed_failures: [BoltInBounds, BreakerCountReasonable, BreakerInBounds, HazardStackValid, NoEntityLeaks, NoNaN],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: 7722,
+    frame_mutations: [
+        (frame: 5,  mutation: InjectHazardStack(kind_name: "Diffusion", stacks: 2)),
+        (frame: 10, mutation: InjectHazardStack(kind_name: "Tether",    stacks: 2)),
+    ],
+)

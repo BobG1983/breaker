@@ -14,7 +14,7 @@ use std::marker::PhantomData;
 
 use bevy::prelude::*;
 
-use super::system::apply_damage_to_cells;
+use super::super::system::apply_damage_to_cells;
 use crate::{
     cells::components::ADJACENCY_RADIUS_SQ,
     hazard::{

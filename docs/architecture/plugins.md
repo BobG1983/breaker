@@ -137,6 +137,18 @@ The write is safe by three properties:
 
 Cleanup is implicit: cell entities are despawned on node end, so the `Hp.max` lift persists only for the lifetime of the current node.
 
+## TetherRedirectBuffer Cross-Domain Write Exception
+
+`TetherRedirectBuffer` (hazard domain resource at `hazard/hazards/tether/system.rs`) is written by the cells domain `apply_damage_to_cells` system as an accepted architectural exception. One write path exists:
+
+- **cells** (`try_buffer_tether_redirect` inside `apply_damage_to_cells`): pushes a `DamageDealt<Cell>` onto the buffer when a primary target has a `TetherLink` and is hit by a non-hazard source. Accessed via `Option<ResMut<TetherRedirectBuffer>>` for harness-safety.
+
+The hazard domain drains the buffer in `emit_tether_redirects` into `MessageWriter<DamageDealt<Cell>>` inside the same `DeathPipelineSystems::ApplyDamage` set, ordered `.after(apply_damage_to_cells)`. The push/drain split exists because Bevy 0.18 panics at schedule construction when a single system holds both `MessageReader<T>` and `MessageWriter<T>` for the same `T` — `apply_damage_to_cells` already holds the reader for `DamageDealt<Cell>`.
+
+Rationale: the design doc (`docs/todos/detail/mod-system-design/hazards/tether.md` §Edge Cases — Tether + Diffusion ordering) mandates that Tether redirect uses the Diffusion-reduced `primary_damage`, which is only available inside the `accumulate_message_deltas` call in the cells-domain system. Routing via a `TetherRedirectRequested` message would add a message type and a hazard-domain consumer for no decoupling win — the data flow already goes hazard-owned-config → cells-domain-read → hazard-owned-buffer → hazard-owned-emit.
+
+Cleanup is implicit: the buffer is drained every `ApplyDamage` set; if Tether is inactive, nothing is ever pushed.
+
 ## Debug Domain — Cross-Domain Exception
 
 The `debug/` domain (gated behind `#[cfg(feature = "dev")]`) is the **only domain permitted to read AND write other domains' resources and components** directly. This is an accepted architectural exception because:

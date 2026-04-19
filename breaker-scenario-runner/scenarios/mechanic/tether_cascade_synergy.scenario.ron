@@ -1,0 +1,35 @@
+// Adversarial: Tether-Cascade synergy at 3 stacks each. Tether redirects 45% of every
+// damage event to the linked partner cell (non-lethal spread). When a linked partner
+// accumulates enough redirected damage to die, Cascade fires on all of its alive
+// neighbours, healing them -- including cells that are themselves in an active tether
+// pair. This creates a feedback loop: Cascade heals a cell back above zero, Tether
+// respreads the next bolt hit to its (now healthy) partner, Cascade heals again.
+//
+// Dense layout maximises the number of eligible adjacent pairs so Tether links ~60%
+// of all pairs at stack 3, and the Cascade ring reaches multiple linked cells
+// simultaneously. The adversarial risk: in the same tick that cell B dies from
+// redirected Tether damage, Cascade heals cell A (the primary hit target) whose
+// HP may have just reached 0 from a concurrent primary hit -- if Cascade heals a
+// Dead-marked cell, NaN can propagate into the heal arithmetic. If multiple Cascade
+// heals and Tether redirects land in the same tick, entity count grows transiently;
+// NoEntityLeaks catches any Cascade ring-heal entity that fails to clean up.
+// HazardStackValid confirms both Tether and Cascade entries stay ≥ 1 stack throughout.
+//
+// Chaos input 0.6 drives rapid bolt bumps to maximise the frequency of concurrent
+// Tether-redirect + Cascade-heal events. 6000 frames with allow_early_end: false
+// ensures the feedback loop runs long enough to expose timing bugs.
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Chaos((action_prob: 0.6)),
+    max_frames: 6000,
+    disallowed_failures: [BoltInBounds, BreakerCountReasonable, BreakerInBounds, HazardStackValid, NoEntityLeaks, NoNaN],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: 5513,
+    frame_mutations: [
+        (frame: 5,  mutation: InjectHazardStack(kind_name: "Tether",  stacks: 3)),
+        (frame: 10, mutation: InjectHazardStack(kind_name: "Cascade", stacks: 3)),
+    ],
+)
