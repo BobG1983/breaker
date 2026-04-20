@@ -77,6 +77,8 @@ pub(crate) struct BreakerMovementData {
     pub decel_easing: &'static DecelEasing,
     /// Base width for playfield clamping.
     pub base_width:   &'static BaseWidth,
+    /// Maximum width cap applied to the boosted effective width.
+    pub max_w:        Option<&'static MaxWidth>,
     /// Active speed boost multipliers.
     pub speed_boosts: Option<&'static EffectStack<SpeedBoostConfig>>,
     /// Active size boost multipliers.

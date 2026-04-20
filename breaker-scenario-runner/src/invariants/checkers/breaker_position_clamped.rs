@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use breaker::{
     breaker::components::BaseWidth,
     effect_v3::{effects::SizeBoostConfig, stacking::EffectStack},
-    shared::PlayfieldConfig,
+    shared::{PlayfieldConfig, size::MaxWidth},
 };
 use rantzsoft_spatial2d::components::Position2D;
 
@@ -16,6 +16,7 @@ type BreakerPositionQuery<'w, 's> = Query<
         Entity,
         &'static Position2D,
         &'static BaseWidth,
+        Option<&'static MaxWidth>,
         Option<&'static EffectStack<SizeBoostConfig>>,
     ),
     With<ScenarioTagBreaker>,
@@ -34,9 +35,14 @@ pub fn check_breaker_position_clamped(
         s.invariant_checks += 1;
     }
     let tolerance = 1.0_f32;
-    for (entity, position, width, size_boosts) in &breakers {
+    for (entity, position, width, max_width, size_boosts) in &breakers {
         let boost_mult = size_boosts.map_or(1.0, EffectStack::aggregate);
-        let effective_half_width = width.half_width() * boost_mult;
+        let boosted_half_width = width.half_width() * boost_mult;
+        // MaxWidth caps the boosted width so stacked SizeBoost effects can't
+        // invalidate the invariant — mirrors the clamp cap applied in
+        // breaker::move_breaker and sync_breaker_scale.
+        let effective_half_width =
+            max_width.map_or(boosted_half_width, |mw| boosted_half_width.min(mw.0 * 0.5));
         let max_x = playfield.right() - effective_half_width;
         let min_x = playfield.left() + effective_half_width;
         let x = position.0.x;
