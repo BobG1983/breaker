@@ -1,6 +1,6 @@
 (
     name: "Conductor",
-    description: "Swap the primary bolt within a tight window on impact to inherit its buffs.",
+    description: "Perfect-bump an extra bolt to inherit the primary bolt's chip effects.",
     unlock_tier: 0,
     tuning: Conductor(
         primary_swap_window: 0.2,
