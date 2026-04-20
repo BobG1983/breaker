@@ -17,6 +17,14 @@ impl std::fmt::Display for ChipSelected {
     }
 }
 
+/// Sent when the player skips a chip offering on the selection screen.
+///
+/// Consumed by the protocol domain's `greed_on_skip` system (increments
+/// `GreedStacks.skips`). The message itself is unit-payload — the receiver
+/// only needs to know a skip occurred this tick.
+#[derive(Message, Clone, Debug)]
+pub struct ChipOfferSkipped;
+
 #[cfg(test)]
 mod tests {
     use super::*;

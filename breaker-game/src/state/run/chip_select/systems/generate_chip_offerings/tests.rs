@@ -525,3 +525,360 @@ fn boss_node_3_eligible_evolutions_has_correct_names() {
         "expected all 3 evolution results, got {evo_names:?}"
     );
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// Group D — Greed rarity-boost integration (Behaviors 19–26)
+// ════════════════════════════════════════════════════════════════════════════
+
+mod greed_rarity_boost {
+    use std::collections::HashMap;
+
+    use bevy::prelude::*;
+
+    use super::{
+        super::generate_chip_offerings, make_mixed_registry, make_registry, test_app_with_registry,
+    };
+    use crate::{
+        chips::{ChipCatalog, definition::Rarity, inventory::ChipInventory},
+        prelude::*,
+        protocol::protocols::greed::{GreedConfig, GreedStacks, apply_greed_boost},
+        state::run::chip_select::{ChipOffers, ChipSelectConfig},
+    };
+
+    fn default_rarity_weights() -> HashMap<Rarity, f32> {
+        HashMap::from([
+            (Rarity::Common, 100.0),
+            (Rarity::Uncommon, 50.0),
+            (Rarity::Rare, 15.0),
+        ])
+    }
+
+    fn canonical_config() -> GreedConfig {
+        GreedConfig {
+            rarity_boost_per_skip: 5.0,
+        }
+    }
+
+    /// Builds the identical baseline app that `test_app_with_registry` builds,
+    /// so "no-Greed" offerings can be compared against Greed-app offerings.
+    fn baseline_names(registry: ChipCatalog) -> Vec<String> {
+        let mut app = test_app_with_registry(registry);
+        app.update();
+        app.world()
+            .resource::<ChipOffers>()
+            .0
+            .iter()
+            .map(|o| o.name().to_owned())
+            .collect()
+    }
+
+    /// Builds a test app with Greed resources installed (plus the baseline
+    /// `ChipCatalog`, `ChipInventory`, `ChipSelectConfig`, `GameRng`).
+    fn test_app_with_greed(
+        registry: ChipCatalog,
+        stacks: GreedStacks,
+        config: Option<GreedConfig>,
+    ) -> App {
+        let mut builder = TestAppBuilder::new()
+            .insert_resource(registry)
+            .with_resource::<ChipInventory>()
+            .insert_resource(ChipSelectConfig::default())
+            .insert_resource(GameRng::from_seed(42))
+            .insert_resource(stacks)
+            .with_system(Update, generate_chip_offerings);
+        if let Some(cfg) = config {
+            builder = builder.insert_resource(cfg);
+        }
+        builder.build()
+    }
+
+    // ── Behavior 19 — zero GreedStacks leaves rarity weights unchanged ──────
+
+    #[test]
+    fn zero_greed_stacks_produces_same_offers_as_no_greed_baseline() {
+        let baseline = baseline_names(make_registry(5));
+        let mut app = test_app_with_greed(
+            make_registry(5),
+            GreedStacks { skips: 0 },
+            Some(canonical_config()),
+        );
+        app.update();
+        let names: Vec<String> = app
+            .world()
+            .resource::<ChipOffers>()
+            .0
+            .iter()
+            .map(|o| o.name().to_owned())
+            .collect();
+        assert_eq!(
+            names, baseline,
+            "zero skips with Greed resources installed must produce identical \
+             offers to the no-Greed baseline (same seed 42)"
+        );
+    }
+
+    #[test]
+    fn greed_stacks_present_but_config_missing_matches_baseline() {
+        // Edge case: `GreedStacks` present but `GreedConfig` absent → no boost.
+        let baseline = baseline_names(make_registry(5));
+        let mut app = test_app_with_greed(make_registry(5), GreedStacks { skips: 5 }, None);
+        app.update();
+        let names: Vec<String> = app
+            .world()
+            .resource::<ChipOffers>()
+            .0
+            .iter()
+            .map(|o| o.name().to_owned())
+            .collect();
+        assert_eq!(
+            names, baseline,
+            "stacks present but config absent must not apply boost; expected \
+             baseline offers"
+        );
+    }
+
+    // ── Behavior 20 — one skip × 5.0 shifts 5 from Common → 2.5 each ────────
+
+    #[test]
+    fn apply_greed_boost_with_one_skip_five_per_skip_shifts_weights_correctly() {
+        let mut weights = default_rarity_weights();
+        let stacks = GreedStacks { skips: 1 };
+        let config = canonical_config();
+
+        apply_greed_boost(&mut weights, stacks, config);
+
+        assert!(
+            (weights[&Rarity::Common] - 95.0).abs() < f32::EPSILON,
+            "Common expected 95.0 (100 - 5), got {}",
+            weights[&Rarity::Common]
+        );
+        assert!(
+            (weights[&Rarity::Uncommon] - 52.5).abs() < f32::EPSILON,
+            "Uncommon expected 52.5 (50 + 2.5), got {}",
+            weights[&Rarity::Uncommon]
+        );
+        assert!(
+            (weights[&Rarity::Rare] - 17.5).abs() < f32::EPSILON,
+            "Rare expected 17.5 (15 + 2.5), got {}",
+            weights[&Rarity::Rare]
+        );
+    }
+
+    #[test]
+    fn apply_greed_boost_with_zero_skips_is_noop() {
+        let mut weights = default_rarity_weights();
+        let stacks = GreedStacks { skips: 0 };
+        let config = canonical_config();
+
+        apply_greed_boost(&mut weights, stacks, config);
+
+        assert!((weights[&Rarity::Common] - 100.0).abs() < f32::EPSILON);
+        assert!((weights[&Rarity::Uncommon] - 50.0).abs() < f32::EPSILON);
+        assert!((weights[&Rarity::Rare] - 15.0).abs() < f32::EPSILON);
+    }
+
+    // ── Behavior 21 — sum is preserved while not clamped ────────────────────
+
+    #[test]
+    fn apply_greed_boost_preserves_weight_sum_for_one_skip() {
+        let mut weights = default_rarity_weights();
+        let stacks = GreedStacks { skips: 1 };
+        let config = canonical_config();
+
+        apply_greed_boost(&mut weights, stacks, config);
+
+        let sum = weights[&Rarity::Common] + weights[&Rarity::Uncommon] + weights[&Rarity::Rare];
+        assert!(
+            (sum - 165.0).abs() < 1e-4,
+            "sum of weights must be preserved at 165.0, got {sum}"
+        );
+    }
+
+    #[test]
+    fn apply_greed_boost_preserves_weight_sum_for_five_skips() {
+        let mut weights = default_rarity_weights();
+        let stacks = GreedStacks { skips: 5 };
+        let config = canonical_config();
+
+        apply_greed_boost(&mut weights, stacks, config);
+
+        let sum = weights[&Rarity::Common] + weights[&Rarity::Uncommon] + weights[&Rarity::Rare];
+        // boost = 25.0, Common = 75.0 (above floor 10.0), sum preserved.
+        assert!(
+            (sum - 165.0).abs() < 1e-4,
+            "5-skip sum must still equal 165.0, got {sum}"
+        );
+    }
+
+    // ── Behavior 22 — floor clamp: Common never drops below original × 0.10 ──
+
+    #[test]
+    fn apply_greed_boost_clamps_common_to_floor_at_hundred_skips() {
+        let mut weights = default_rarity_weights();
+        let stacks = GreedStacks { skips: 100 };
+        let config = canonical_config();
+
+        apply_greed_boost(&mut weights, stacks, config);
+
+        assert!(
+            (weights[&Rarity::Common] - 10.0).abs() < f32::EPSILON,
+            "Common must be clamped to floor 10.0 (100 × 0.10), got {}",
+            weights[&Rarity::Common]
+        );
+        // removed = 100 - 10 = 90, each of Uncommon/Rare gains 45.
+        assert!(
+            (weights[&Rarity::Uncommon] - 95.0).abs() < f32::EPSILON,
+            "Uncommon expected 95.0 (50 + 45), got {}",
+            weights[&Rarity::Uncommon]
+        );
+        assert!(
+            (weights[&Rarity::Rare] - 60.0).abs() < f32::EPSILON,
+            "Rare expected 60.0 (15 + 45), got {}",
+            weights[&Rarity::Rare]
+        );
+    }
+
+    #[test]
+    fn apply_greed_boost_exactly_at_floor_no_truncation() {
+        // skips = 18, per-skip 5.0 → boost 90.0 → Common = 10.0 exactly.
+        let mut weights = default_rarity_weights();
+        let stacks = GreedStacks { skips: 18 };
+        let config = canonical_config();
+
+        apply_greed_boost(&mut weights, stacks, config);
+
+        assert!(
+            (weights[&Rarity::Common] - 10.0).abs() < f32::EPSILON,
+            "Common expected exactly 10.0 at boost 90, got {}",
+            weights[&Rarity::Common]
+        );
+        assert!(
+            (weights[&Rarity::Uncommon] - 95.0).abs() < f32::EPSILON,
+            "Uncommon expected 95.0, got {}",
+            weights[&Rarity::Uncommon]
+        );
+        assert!(
+            (weights[&Rarity::Rare] - 60.0).abs() < f32::EPSILON,
+            "Rare expected 60.0, got {}",
+            weights[&Rarity::Rare]
+        );
+    }
+
+    #[test]
+    fn apply_greed_boost_beyond_floor_caps_removed_not_boost() {
+        // skips = 91, per-skip 1.0 → desired boost 91.0, but floor clamps
+        // `removed` to 90.0.
+        let mut weights = default_rarity_weights();
+        let stacks = GreedStacks { skips: 91 };
+        let config = GreedConfig {
+            rarity_boost_per_skip: 1.0,
+        };
+
+        apply_greed_boost(&mut weights, stacks, config);
+
+        assert!(
+            (weights[&Rarity::Common] - 10.0).abs() < f32::EPSILON,
+            "Common must be pinned at 10.0, got {}",
+            weights[&Rarity::Common]
+        );
+        // removed is 90.0 (not 91.0), so +45.0 each not +45.5.
+        assert!(
+            (weights[&Rarity::Uncommon] - 95.0).abs() < f32::EPSILON,
+            "Uncommon expected 95.0 (removed is 90.0, not 91.0); got {}",
+            weights[&Rarity::Uncommon]
+        );
+        assert!(
+            (weights[&Rarity::Rare] - 60.0).abs() < f32::EPSILON,
+            "Rare expected 60.0 (removed is 90.0, not 91.0); got {}",
+            weights[&Rarity::Rare]
+        );
+    }
+
+    // ── Behavior 23 — floor stability across additional skips once pinned ──
+
+    #[test]
+    fn apply_greed_boost_stable_once_floor_pinned() {
+        let mut w20 = default_rarity_weights();
+        apply_greed_boost(&mut w20, GreedStacks { skips: 20 }, canonical_config());
+
+        let mut w30 = default_rarity_weights();
+        apply_greed_boost(&mut w30, GreedStacks { skips: 30 }, canonical_config());
+
+        assert!(
+            (w20[&Rarity::Common] - w30[&Rarity::Common]).abs() < f32::EPSILON,
+            "once floor is hit, Common must stay the same across additional skips"
+        );
+        assert!(
+            (w20[&Rarity::Uncommon] - w30[&Rarity::Uncommon]).abs() < f32::EPSILON,
+            "once floor is hit, Uncommon must stay the same across additional skips"
+        );
+        assert!(
+            (w20[&Rarity::Rare] - w30[&Rarity::Rare]).abs() < f32::EPSILON,
+            "once floor is hit, Rare must stay the same across additional skips"
+        );
+        // And the concrete values.
+        assert!((w20[&Rarity::Common] - 10.0).abs() < f32::EPSILON);
+        assert!((w20[&Rarity::Uncommon] - 95.0).abs() < f32::EPSILON);
+        assert!((w20[&Rarity::Rare] - 60.0).abs() < f32::EPSILON);
+    }
+
+    // ── Behavior 24 — end-to-end: offers differ from baseline under boost ──
+
+    #[test]
+    fn greed_changes_offer_sequence_end_to_end() {
+        let baseline = baseline_names(make_mixed_registry());
+        let mut app = test_app_with_greed(
+            make_mixed_registry(),
+            GreedStacks { skips: 10 },
+            Some(canonical_config()),
+        );
+        app.update();
+        let names: Vec<String> = app
+            .world()
+            .resource::<ChipOffers>()
+            .0
+            .iter()
+            .map(|o| o.name().to_owned())
+            .collect();
+        assert_ne!(
+            names, baseline,
+            "10 skips × 5.0/skip must shift the rarity distribution enough to \
+             change the seeded offer sequence; baseline and Greed output were \
+             identical"
+        );
+    }
+
+    // ── Behavior 25 — generate_chip_offerings without Greed must not panic ──
+
+    #[test]
+    fn generate_chip_offerings_does_not_panic_when_greed_resources_absent() {
+        let mut app = test_app_with_registry(make_registry(5));
+        app.update();
+
+        let offers = app.world().resource::<ChipOffers>();
+        assert!(
+            !offers.0.is_empty(),
+            "offers must still be generated when no Greed resources present"
+        );
+    }
+
+    // ── Behavior 26 — GreedStacks present, GreedConfig absent → baseline ──
+
+    #[test]
+    fn generate_chip_offerings_with_stacks_but_no_config_matches_baseline() {
+        let baseline = baseline_names(make_registry(5));
+        let mut app = test_app_with_greed(make_registry(5), GreedStacks { skips: 10 }, None);
+        app.update();
+        let names: Vec<String> = app
+            .world()
+            .resource::<ChipOffers>()
+            .0
+            .iter()
+            .map(|o| o.name().to_owned())
+            .collect();
+        assert_eq!(
+            names, baseline,
+            "partial activation (stacks without config) must not apply a boost"
+        );
+    }
+}

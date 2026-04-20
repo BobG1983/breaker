@@ -8,7 +8,7 @@ pub(crate) use crate::{
     breaker::messages::{BreakerImpactCell, BreakerImpactWall, BumpPerformed, BumpWhiffed},
     cells::messages::{CellImpactWall, SalvoImpactBreaker},
     state::run::{
-        chip_select::messages::ChipSelected,
+        chip_select::messages::{ChipOfferSkipped, ChipSelected},
         messages::{HighlightTriggered, RunLost},
     },
 };

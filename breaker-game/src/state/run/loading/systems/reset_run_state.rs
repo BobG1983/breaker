@@ -8,7 +8,10 @@ use crate::{
     chips::inventory::ChipInventory,
     hazard::resources::ActiveHazards,
     prelude::*,
-    protocol::resources::{ActiveProtocols, ProtocolOffer},
+    protocol::{
+        protocols::greed::GreedStacks,
+        resources::{ActiveProtocols, ProtocolOffer},
+    },
     shared::RunSeed,
     state::run::resources::{HighlightTracker, NodeOutcome},
 };
@@ -20,10 +23,11 @@ use crate::{
 /// limit.
 #[derive(SystemParam)]
 pub(crate) struct RunInventories<'w> {
-    chips:     ResMut<'w, ChipInventory>,
-    protocols: ResMut<'w, ActiveProtocols>,
-    hazards:   ResMut<'w, ActiveHazards>,
-    offer:     ResMut<'w, ProtocolOffer>,
+    chips:        ResMut<'w, ChipInventory>,
+    protocols:    ResMut<'w, ActiveProtocols>,
+    hazards:      ResMut<'w, ActiveHazards>,
+    offer:        ResMut<'w, ProtocolOffer>,
+    greed_stacks: ResMut<'w, GreedStacks>,
 }
 
 impl RunInventories<'_> {
@@ -32,6 +36,7 @@ impl RunInventories<'_> {
         self.protocols.clear();
         self.hazards.clear();
         *self.offer = ProtocolOffer::default();
+        *self.greed_stacks = GreedStacks::default();
     }
 }
 
@@ -76,6 +81,7 @@ mod tests {
             .with_resource::<crate::protocol::resources::ActiveProtocols>()
             .with_resource::<crate::protocol::resources::ProtocolOffer>()
             .with_resource::<crate::hazard::resources::ActiveHazards>()
+            .with_resource::<crate::protocol::protocols::greed::GreedStacks>()
             .with_system(Update, reset_run_state)
             .build()
     }
@@ -206,5 +212,94 @@ mod tests {
             app.world().resource::<ProtocolOffer>().0.is_none(),
             "reset_run_state must clear ProtocolOffer"
         );
+    }
+
+    // ── Reset clears GreedStacks ─
+
+    /// Behavior 27 — `reset_run_state` clears `GreedStacks` back to default
+    /// (skips = 0), while `GreedConfig` is preserved (not a per-run
+    /// inventory).
+    #[test]
+    fn reset_run_state_clears_greed_stacks_and_preserves_greed_config() {
+        use crate::protocol::protocols::greed::{GreedConfig, GreedStacks};
+
+        let mut app = test_app();
+
+        // Seed GreedStacks with a non-default value.
+        app.world_mut().insert_resource(GreedStacks { skips: 7 });
+        // Seed GreedConfig — must be preserved across reset.
+        app.world_mut().insert_resource(GreedConfig {
+            rarity_boost_per_skip: 5.0,
+        });
+
+        app.update();
+
+        assert_eq!(
+            app.world().resource::<GreedStacks>().skips,
+            0,
+            "reset_run_state must clear GreedStacks back to default (skips = 0)"
+        );
+        let cfg = app
+            .world()
+            .get_resource::<GreedConfig>()
+            .expect("GreedConfig must be preserved across reset_run_state");
+        assert!(
+            (cfg.rarity_boost_per_skip - 5.0).abs() < f32::EPSILON,
+            "GreedConfig.rarity_boost_per_skip must be preserved; expected 5.0, got {}",
+            cfg.rarity_boost_per_skip
+        );
+    }
+
+    /// Behavior 28 — `test_app()` builds with `GreedStacks` initialized so the
+    /// `RunInventories` `SystemParam` resolves; after `app.update()` the skips
+    /// field is zero (default).
+    #[test]
+    fn test_app_initializes_greed_stacks_and_reset_leaves_it_at_default() {
+        use crate::protocol::protocols::greed::GreedStacks;
+
+        let mut app = test_app();
+        assert!(
+            app.world().get_resource::<GreedStacks>().is_some(),
+            "test_app() must init GreedStacks so RunInventories SystemParam resolves"
+        );
+
+        app.update();
+
+        assert_eq!(
+            app.world().resource::<GreedStacks>().skips,
+            0,
+            "after reset_run_state, GreedStacks.skips must be 0"
+        );
+    }
+
+    /// Behavior 29 — large skip counts reset to 0 (reset uses assignment, not
+    /// subtraction).
+    #[test]
+    fn reset_run_state_clears_large_and_max_skip_counts_to_zero() {
+        use crate::protocol::protocols::greed::GreedStacks;
+
+        // Case A: 1000 skips.
+        {
+            let mut app = test_app();
+            app.world_mut().insert_resource(GreedStacks { skips: 1000 });
+            app.update();
+            assert_eq!(
+                app.world().resource::<GreedStacks>().skips,
+                0,
+                "1000 skips must reset to 0"
+            );
+        }
+        // Case B: u32::MAX skips.
+        {
+            let mut app = test_app();
+            app.world_mut()
+                .insert_resource(GreedStacks { skips: u32::MAX });
+            app.update();
+            assert_eq!(
+                app.world().resource::<GreedStacks>().skips,
+                0,
+                "u32::MAX skips must reset to 0 (confirms assignment, not subtraction)"
+            );
+        }
     }
 }

@@ -12,6 +12,7 @@ use crate::{
         offering::{OfferingConfig, generate_offerings},
     },
     prelude::*,
+    protocol::protocols::greed::{GreedConfig, GreedStacks, apply_greed_boost},
     state::run::{
         chip_select::{
             ChipSelectConfig,
@@ -30,6 +31,8 @@ pub(crate) struct ChipOfferingParams<'w, 's> {
     config:        Res<'w, ChipSelectConfig>,
     rng:           ResMut<'w, GameRng>,
     active_layout: Option<Res<'w, ActiveNodeLayout>>,
+    greed_config:  Option<Res<'w, GreedConfig>>,
+    greed_stacks:  Option<Res<'w, GreedStacks>>,
 }
 
 /// Generates chip offerings using weighted random selection and inserts `ChipOffers`.
@@ -39,11 +42,17 @@ pub(crate) struct ChipOfferingParams<'w, 's> {
 /// and remaining slots are filled with normal offerings.
 pub(crate) fn generate_chip_offerings(mut params: ChipOfferingParams) {
     // Build rarity weight map from config
-    let rarity_weights = HashMap::from([
+    let mut rarity_weights = HashMap::from([
         (Rarity::Common, params.config.rarity_weight_common),
         (Rarity::Uncommon, params.config.rarity_weight_uncommon),
         (Rarity::Rare, params.config.rarity_weight_rare),
     ]);
+
+    // Apply Greed rarity boost when the protocol is active. Harness-safe:
+    // both resources must be present for the boost to apply.
+    if let (Some(greed_config), Some(greed_stacks)) = (&params.greed_config, &params.greed_stacks) {
+        apply_greed_boost(&mut rarity_weights, **greed_stacks, **greed_config);
+    }
 
     // Check for boss node with eligible evolutions
     let mut evolution_offers: Vec<ChipOffering> = Vec::new();

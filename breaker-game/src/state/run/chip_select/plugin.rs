@@ -5,6 +5,7 @@ use rantzsoft_stateflow::{Route, RoutingTableAppExt, cleanup_on_exit};
 
 use super::{
     ChipSelectScreen,
+    messages::ChipOfferSkipped,
     sets::ChipSelectSystems,
     systems::{
         generate_chip_offerings, handle_chip_input, spawn_chip_select, tick_chip_timer,
@@ -18,6 +19,8 @@ pub(crate) struct ChipSelectPlugin;
 
 impl Plugin for ChipSelectPlugin {
     fn build(&self, app: &mut App) {
+        app.add_message::<ChipOfferSkipped>();
+
         // ChipSelectState routes — chip selection lifecycle
         app.add_route(
             Route::from(ChipSelectState::Loading)

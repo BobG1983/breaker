@@ -21,6 +21,7 @@ impl Plugin for ProtocolPlugin {
         app.init_resource::<ActiveProtocols>()
             .init_resource::<UnlockedProtocols>()
             .init_resource::<ProtocolOffer>()
+            .init_resource::<crate::protocol::protocols::greed::GreedStacks>()
             .add_message::<ProtocolSelected>()
             .add_systems(
                 OnEnter(ChipSelectState::Selecting),
