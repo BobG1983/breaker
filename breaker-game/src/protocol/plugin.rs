@@ -24,6 +24,7 @@ impl Plugin for ProtocolPlugin {
             .init_resource::<crate::protocol::protocols::greed::GreedStacks>()
             .init_resource::<crate::protocol::protocols::siphon::SiphonStreak>()
             .init_resource::<crate::protocol::protocols::fission::FissionCounter>()
+            .init_resource::<crate::protocol::protocols::reckless_dash::RecklessDashDoubledBolts>()
             .add_message::<ProtocolSelected>()
             .add_systems(
                 OnEnter(ChipSelectState::Selecting),

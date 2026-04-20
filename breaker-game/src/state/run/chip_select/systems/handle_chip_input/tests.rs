@@ -93,7 +93,7 @@ fn def_for(kind: ProtocolKind, name: &str) -> ProtocolDefinition {
             rarity_boost_per_skip: 0.05,
         },
         ProtocolKind::RecklessDash => ProtocolTuning::RecklessDash {
-            risky_zone_start:  0.3,
+            risky_zone_start:  0.7,
             damage_multiplier: 4.0,
             double_penalty:    true,
         },

@@ -3,7 +3,7 @@
     description: "Dashing into the risky zone massively boosts damage — at double the bolt-lost cost.",
     unlock_tier: 0,
     tuning: RecklessDash(
-        risky_zone_start: 0.3,
+        risky_zone_start: 0.7,
         damage_multiplier: 4.0,
         double_penalty: true,
     ),
