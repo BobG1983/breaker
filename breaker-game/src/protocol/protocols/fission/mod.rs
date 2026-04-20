@@ -1,0 +1,14 @@
+//! Fission protocol — kill-counter bolt-split.
+//!
+//! Design doc: `docs/todos/detail/mod-system-design/protocols/fission.md`.
+//!
+//! Owns `FissionConfig` (per-run tuning), `FissionCounter` (persistent-across-nodes
+//! kill tracker), `FISSION_DIVERGENCE_ANGLE_RAD`, `activate`, `register`, and the
+//! `fission_on_cell_destroyed` + `fission_cleanup_run` systems.
+
+pub(crate) mod system;
+
+#[cfg(test)]
+mod tests;
+
+pub(crate) use system::{FissionCounter, activate, register};

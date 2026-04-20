@@ -66,6 +66,7 @@ impl TestAppBuilder<NoStates> {
         self.app.add_plugins(bevy::state::app::StatesPlugin);
         self.app.init_state::<AppState>();
         self.app.add_sub_state::<GameState>();
+        self.app.add_sub_state::<MenuState>();
         self.app.add_sub_state::<RunState>();
         self.app.add_sub_state::<NodeState>();
         self.app.add_sub_state::<ChipSelectState>();
