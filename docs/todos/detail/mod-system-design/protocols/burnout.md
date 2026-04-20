@@ -68,8 +68,8 @@ pub(crate) struct BurnoutDamageBoost {
 ### `burnout_update_heat`
 - **Schedule**: `FixedUpdate`
 - **run_if**: `protocol_active(ProtocolKind::Burnout)`, `in_state(NodeState::Playing)`
-- **Behavior**: Each frame, checks breaker velocity. If breaker is moving (velocity magnitude > small epsilon): increases `heat` by `delta_secs / fill_duration`, clamps to 1.0, resets `still_timer` to 0.0. If `heat` reaches 1.0: sets `mega_bump_charged = true`. If breaker is stationary: increases `still_timer` by `delta_secs`, drains `heat` by `delta_secs / drain_duration`, clamps to 0.0. If `still_timer` >= `still_threshold`: instantly sets `heat = 0.0`, resets `still_timer = 0.0`, inserts `BurnoutSpeedBoost { remaining: speed_boost_duration }` on breaker, sets `mega_bump_charged = false`.
-- **Ordering**: After breaker movement systems (needs current frame velocity).
+- **Behavior**: Each frame, checks breaker velocity. If breaker is moving (velocity magnitude > small epsilon): increases `heat` by `delta_secs / fill_duration`, clamps to 1.0, resets `still_timer` to 0.0. If `heat` reaches 1.0: sets `mega_bump_charged = true`. If breaker is stationary: increases `still_timer` by `delta_secs`, drains `heat` by `delta_secs / drain_duration`, clamps to 0.0. If `still_timer` >= `still_threshold` **AND `heat > 0.0`**: instantly sets `heat = 0.0`, resets `still_timer = 0.0`, inserts `BurnoutSpeedBoost { remaining: speed_boost_duration }` on breaker, sets `mega_bump_charged = false`. The `heat > 0.0` guard prevents a still-threshold trigger on an already-empty gauge — standing still on 0 heat is not a "burnout" event and produces no speed boost.
+- **Ordering**: After breaker movement systems (needs current frame velocity). Explicit `.before(burnout_on_bump)` edge required because `BreakerSystems::Move` and `BreakerSystems::GradeBump` have no relative ordering; without this edge `burnout_on_bump` may run before `burnout_update_heat` in the same tick.
 
 ### `burnout_on_bump`
 - **Schedule**: `FixedUpdate`
@@ -135,6 +135,7 @@ pub(crate) struct BurnoutDamageBoost {
 ## Edge Cases
 - Heat clamps at 1.0 — moving beyond full does not overflow or accumulate extra charge.
 - Heat clamps at 0.0 — draining beyond empty does not go negative.
+- Still-threshold requires `heat > 0.0` — standing still on an empty gauge does not fire a speed boost. The still-timer continues accumulating but the speed-boost branch is bypassed.
 - Still-threshold drain resets `mega_bump_charged` even if heat was full (you chose to stand still instead of using the charge).
 - Movement after still-threshold drain: `still_timer` resets to 0 on next movement frame; heat begins filling again from 0.
 - Multiple bolts: mega-bump boost only applies to the bolt from the bump that consumed the charge. Other bolts are unaffected.
