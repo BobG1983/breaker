@@ -98,11 +98,11 @@ fn def_for(kind: ProtocolKind, name: &str) -> ProtocolDefinition {
             double_penalty:    true,
         },
         ProtocolKind::Burnout => ProtocolTuning::Burnout {
-            fill_duration:               3.0,
-            drain_duration:              5.0,
-            still_threshold:             0.25,
-            full_heat_damage_multiplier: 2.0,
-            speed_boost_duration:        1.0,
+            fill_duration:               4.0,
+            drain_duration:              2.0,
+            still_threshold:             1.5,
+            full_heat_damage_multiplier: 4.0,
+            speed_boost_duration:        2.0,
         },
         ProtocolKind::Conductor => ProtocolTuning::Conductor {
             primary_swap_window: 0.2,
