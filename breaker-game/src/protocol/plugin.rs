@@ -22,6 +22,7 @@ impl Plugin for ProtocolPlugin {
             .init_resource::<UnlockedProtocols>()
             .init_resource::<ProtocolOffer>()
             .init_resource::<crate::protocol::protocols::greed::GreedStacks>()
+            .init_resource::<crate::protocol::protocols::siphon::SiphonStreak>()
             .add_message::<ProtocolSelected>()
             .add_systems(
                 OnEnter(ChipSelectState::Selecting),

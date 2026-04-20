@@ -48,7 +48,7 @@ Messages are defined in the domain that **conceptually owns the event**. Usually
 | `TimerExpired` | run/node (tick_node_timer) | run (handle_timer_expired) |
 | `RunLost` | run (handle_breaker_death — reads KillYourself<Breaker>) | run (handle_run_lost) |
 | `ApplyTimePenalty { seconds }` | effect/effects/time_penalty (fire) | run/node (apply_time_penalty) |
-| `ReverseTimePenalty { seconds }` | effect/effects/time_penalty (reverse) | run/node (reverse_time_penalty) |
+| `ReverseTimePenalty { seconds }` | effect/effects/time_penalty (reverse), protocol/protocols/siphon (siphon_on_cell_destroyed) | run/node (reverse_time_penalty) |
 | `ChipSelected { name }` | state/run/chip_select (handle_chip_input) | chips (dispatch_chip_effects) |
 | `HighlightTriggered { kind }` | run (detect_mass_destruction, detect_close_save, detect_combo_king, detect_pinball_wizard, detect_nail_biter, detect_first_evolution, detect_most_powerful_evolution, track_node_cleared_stats) | run (spawn_highlight_text) |
 
