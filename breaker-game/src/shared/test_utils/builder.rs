@@ -1,10 +1,11 @@
 //! Typestate builder for test `App` instances.
 
-use std::marker::PhantomData;
+use std::{marker::PhantomData, time::Duration};
 
 use bevy::{
     ecs::schedule::{IntoScheduleConfigs, ScheduleLabel},
     prelude::*,
+    time::TimeUpdateStrategy,
 };
 use rantzsoft_physics2d::plugin::RantzPhysics2dPlugin;
 
@@ -49,11 +50,29 @@ pub(crate) struct TestAppBuilder<S: StateStatus = NoStates> {
 }
 
 impl TestAppBuilder<NoStates> {
-    /// Creates a new builder with `MinimalPlugins` registered.
+    /// Creates a new builder with `MinimalPlugins` registered and Bevy's
+    /// `TimeUpdateStrategy` pinned to `ManualDuration(Duration::ZERO)`.
+    ///
+    /// Pinning the time-update strategy is load-bearing for parallel-test
+    /// determinism. `MinimalPlugins` registers `TimeUpdateStrategy::Automatic`
+    /// by default, which calls `Instant::now()` on every `app.update()` and
+    /// feeds wall-clock elapsed time into `Time<Fixed>::overstep`. Under
+    /// parallel test load, the 4 `app.update()` calls in `in_state_*`
+    /// transitions accumulate measurable overstep before the test fires its
+    /// first `tick()`; `run_fixed_main_schedule` then drains that stray
+    /// overstep by running `FixedUpdate` extra times. This manifests as the
+    /// drift test reading `Vec2(1.1..1.4, 0.0)` instead of `(+0.1, 0.0)`, and
+    /// as siphon `window_remaining` off by `1/64s`.
+    ///
+    /// `ManualDuration(Duration::ZERO)` pins virtual-time delta to zero per
+    /// update, so real wall-clock time cannot leak into the fixed overstep.
+    /// Test helpers remain the sole source of fixed-time advancement via
+    /// `accumulate_overstep(dt)`.
     #[must_use]
     pub(crate) fn new() -> Self {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
+        app.insert_resource(TimeUpdateStrategy::ManualDuration(Duration::ZERO));
         Self {
             app,
             _state: PhantomData,

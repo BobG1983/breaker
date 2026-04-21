@@ -43,16 +43,28 @@ pub(crate) fn tick_chip_timer(
 
 #[cfg(test)]
 mod tests {
-    use bevy::ecs::message::Messages;
+    use std::time::Duration;
+
+    use bevy::{ecs::message::Messages, time::TimeUpdateStrategy};
     use rantzsoft_stateflow::ChangeState;
 
     use super::*;
+
+    /// Frame delta the chip/hazard timer tests assume when they call
+    /// `app.update()`. `TestAppBuilder::new()` pins `TimeUpdateStrategy` to
+    /// `ManualDuration(Duration::ZERO)` for parallel-test determinism (so
+    /// wall-clock time can't leak into `Time<Fixed>::overstep`). Tests that
+    /// read `Time::delta` in `Update` must override the strategy with a
+    /// concrete positive delta — 16ms (~one 60Hz frame) is enough for a
+    /// meaningful "did the timer decrement?" assertion.
+    const TEST_FRAME_DELTA: Duration = Duration::from_millis(16);
 
     fn test_app(remaining: f32) -> App {
         TestAppBuilder::new()
             .with_state_hierarchy()
             .with_message::<ChangeState<ChipSelectState>>()
             .insert_resource(ChipSelectTimer { remaining })
+            .insert_resource(TimeUpdateStrategy::ManualDuration(TEST_FRAME_DELTA))
             .with_system(Update, tick_chip_timer)
             .build()
     }
@@ -158,6 +170,7 @@ mod tests {
             .insert_resource(offers)
             .with_resource::<ChipInventory>()
             .insert_resource(ChipSelectConfig::default())
+            .insert_resource(TimeUpdateStrategy::ManualDuration(TEST_FRAME_DELTA))
             .with_system(Update, tick_chip_timer)
             .build()
     }
@@ -336,6 +349,7 @@ mod tests {
             .insert_resource(ChipSelectConfig::default())
             .with_resource::<ActiveProtocols>()
             .insert_resource(protocol_offer)
+            .insert_resource(TimeUpdateStrategy::ManualDuration(TEST_FRAME_DELTA))
             .with_system(Update, tick_chip_timer)
             .build()
     }

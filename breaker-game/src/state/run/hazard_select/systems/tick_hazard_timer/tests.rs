@@ -3,7 +3,9 @@
 //! CRITICAL: unlike `tick_chip_timer`, timer expiry MUST emit exactly one
 //! `HazardSelected` message (auto-pick). Players cannot skip hazards.
 
-use bevy::{ecs::message::Messages, prelude::*};
+use std::time::Duration;
+
+use bevy::{ecs::message::Messages, prelude::*, time::TimeUpdateStrategy};
 use rantzsoft_stateflow::ChangeState;
 
 use super::*;
@@ -16,6 +18,13 @@ use crate::{
     prelude::GameRng,
     state::run::hazard_select::resources::HazardSelectTimer,
 };
+
+/// Frame delta the hazard-timer tests assume per `app.update()`. See
+/// `tick_chip_timer::tests::TEST_FRAME_DELTA` for the rationale —
+/// `TestAppBuilder` pins `TimeUpdateStrategy::ManualDuration(ZERO)` for
+/// parallel determinism; `Update`-schedule tests that read `Time::delta` must
+/// override with a concrete positive value.
+const TEST_FRAME_DELTA: Duration = Duration::from_millis(16);
 
 fn tuning_for_kind(kind: HazardKind) -> HazardTuning {
     match kind {
@@ -64,6 +73,7 @@ fn test_app(remaining: f32, offers: HazardOffers, seed: u64) -> App {
         .insert_resource(HazardSelectTimer { remaining })
         .insert_resource(offers)
         .insert_resource(GameRng::from_seed(seed))
+        .insert_resource(TimeUpdateStrategy::ManualDuration(TEST_FRAME_DELTA))
         .with_system(Update, tick_hazard_timer)
         .build()
 }
