@@ -102,16 +102,17 @@ The architectural boundary is about **writes** (mutations), not reads. Domains f
 
 **The rule**: any domain may `use crate::other_domain::*` for read-only queries and message consumption. No domain writes to another domain's canonical components or resources directly — that flows through messages. The `debug/` domain is the accepted exception (read AND write, compiled out of release builds).
 
-## Velocity2D Cross-Domain Write Exception
+## Velocity2D / Position2D Cross-Domain Write Exception
 
-`Velocity2D` (rantzsoft_spatial2d component) on bolt entities is written by effect and cells domain systems as an accepted architectural exception. Four write paths exist:
+`Velocity2D` (and in one case `Position2D`, both rantzsoft_spatial2d components) on bolt entities are written by effect, cells, and protocol domain systems as an accepted architectural exception. Five write paths exist:
 
 - **effect** (`apply_gravity_pull` in `effect_v3/effects/gravity_well/effect.rs`): steers bolt velocity toward active gravity wells each FixedUpdate tick. Uses `SpatialData` query and calls `apply_velocity_formula` after steering to enforce speed constraints.
 - **effect** (`apply_attraction` in `effect_v3/effects/attraction/effect.rs`): steers bolt velocity toward the nearest attraction target each FixedUpdate tick. Uses `SpatialData` query and calls `apply_velocity_formula` after steering. Ordered `.after(PhysicsSystems::MaintainQuadtree)` for quadtree lookups.
 - **effect** (`speed_boost::fire()` / `reverse()` in `effect_v3/effects/speed_boost.rs`): immediately recalculates bolt velocity via `recalculate_velocity` (calls `apply_velocity_formula`) when a speed boost is applied or removed. This ensures bolt speed reflects the new multiplier without waiting for the next tick.
 - **cells** (`apply_magnetic_fields` in `cells/behaviors/magnetic/systems/apply_magnetic_fields.rs`): steers bolt velocity toward active magnetic cells each FixedUpdate tick. The cells domain owns the magnetic field parameters; the force application is simple arithmetic on velocity. Uses `BaseSpeed` for acceleration capping at `2 * base_speed`.
+- **protocol** (`afterimage_check_phantom_bounce` in `protocol/protocols/afterimage/system.rs`): on bolt-vs-`PhantomBreaker` AABB overlap, reflects the bolt by negating `Velocity2D.y` and snapping `Position2D.y` above the phantom's top face (`Position2D.y = phantom_pos.y + phantom_half.y + bolt_radius`). One system writes, writer reflects the bolt off the phantom AABB via velocity negation + position snap. The pattern mirrors `bolt_breaker_collision` but the phantom does NOT carry `Breaker`, so that system's `With<Breaker>` query does not match — routing via a synthetic collision message would duplicate the reflection machinery for a one-off case.
 
-The effect paths call `apply_velocity_formula` to enforce `(base_speed * boost_mult).clamp(min, max)` magnitude. The magnetic path caps acceleration magnitude directly rather than calling `apply_velocity_formula` — the existing speed clamping systems handle final speed enforcement.
+The effect paths call `apply_velocity_formula` to enforce `(base_speed * boost_mult).clamp(min, max)` magnitude. The magnetic path caps acceleration magnitude directly rather than calling `apply_velocity_formula` — the existing speed clamping systems handle final speed enforcement. The afterimage path writes a raw reflection + position snap and relies on downstream speed-clamp systems for final speed enforcement (identical to the real-breaker reflection pattern).
 
 ## PiercingRemaining Cross-Domain Write Exception
 
@@ -149,6 +150,20 @@ The hazard domain drains the buffer in `emit_tether_redirects` into `MessageWrit
 Rationale: the design doc (`docs/todos/detail/mod-system-design/hazards/tether.md` §Edge Cases — Tether + Diffusion ordering) mandates that Tether redirect uses the Diffusion-reduced `primary_damage`, which is only available inside the `accumulate_message_deltas` call in the cells-domain system. Routing via a `TetherRedirectRequested` message would add a message type and a hazard-domain consumer for no decoupling win — the data flow already goes hazard-owned-config → cells-domain-read → hazard-owned-buffer → hazard-owned-emit.
 
 Cleanup is implicit: the buffer is drained every `ApplyDamage` set; if Tether is inactive, nothing is ever pushed.
+
+## NodeSequence / NodeOutcome Cross-Domain Write Exception
+
+`NodeSequence` and `NodeOutcome` (run-domain resources at `state/run/resources.rs`) are written by protocol-domain systems as an accepted architectural exception. Two write paths exist:
+
+- **protocol** (`tier_regression::apply_tier_regression`): on `OnEnter(RunState::Node)` — when `TierRegressionPending` is present — splices a clone of the previous tier's `NodeAssignment`s into `NodeSequence.assignments` and rewrites `NodeOutcome.tier` / `NodeOutcome.position_in_tier`. One-shot per activation; the pending marker is consumed after execution. Ordered `.after(NodeSystems::AdvanceNode)` so apply is the final authority over `outcome.tier` / `outcome.position_in_tier` — prevents a Boss-boundary bug where `advance_node`'s post-Boss tier increment would silently cancel the rewind. A sibling system `snapshot_pre_advance_state` runs `.before(NodeSystems::AdvanceNode)` on the same edge to capture the pre-advance `NodeOutcome.tier` / `node_index` into the protocol-owned `TierRegressionPending` resource — it does NOT write run-domain state and is noted here only for ordering context.
+- **protocol** (`conductor::swap_primary_on_perfect_bump`): swaps `ExtraBolt` markers between bolt entities on `BumpPerformed { grade: Perfect }` — reads and writes bolt-domain markers to keep `ExactlyOnePrimaryBolt` invariant after the swap.
+
+Rationale: protocol activations are one-shot, pre-gated by `protocol_active(...)` + a per-run pending marker, and the mutation is a single transactional rewrite of run/bolt state. Routing via messages (e.g., `RegressTier { tiers_back: u32 }` or `RequestPrimarySwap { .. }`) would add a message type, a receiving-domain consumer, and a new schedule ordering constraint — for no decoupling win, because the protocol system already owns the activation semantics and has direct access to its own config. The write is safe because:
+- The run domain does not read these resources during the protocol's write window (`OnEnter(RunState::Node)` fires before any `FixedUpdate` readers).
+- The writing system holds no `MessageReader`/`MessageWriter` over the same resource, so there is no same-tick ordering ambiguity.
+- Cleanup is implicit — `TierRegressionPending` is `commands.remove_resource`-ed inside the writing system; `ExtraBolt` swap is idempotent (invariant-preserving).
+
+Protocol-domain systems that need to write run-domain resources MUST add themselves to this list and explain the rationale. Protocol systems that want to enqueue run-domain work should prefer existing messages (e.g., `DamageDealt<Cell>` from `debt_collector`, `iron_curtain`) over direct resource writes.
 
 ## Debug Domain — Cross-Domain Exception
 

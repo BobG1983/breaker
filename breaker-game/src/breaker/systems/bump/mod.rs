@@ -3,10 +3,7 @@
 mod system;
 
 pub use system::perfect_bump_dash_cancel;
-// Re-export for tests — child modules can see private `use` items.
-#[cfg(test)]
-use system::{forward_grade, retroactive_grade};
-pub(crate) use system::{grade_bump, update_bump};
+pub(crate) use system::{forward_grade, grade_bump, retroactive_grade, update_bump};
 
 #[cfg(test)]
 mod tests;

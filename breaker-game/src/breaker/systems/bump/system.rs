@@ -17,7 +17,12 @@ use crate::{
 ///
 /// Called when the bolt hits while a forward bump is active.
 /// Timer counts down from `early_window + perfect_window`.
-pub(super) fn forward_grade(timer: f32, perfect_window: f32) -> BumpGrade {
+///
+/// Also consumed by
+/// `protocol/protocols/afterimage::afterimage_check_phantom_bounce` for
+/// phantom-bump grading — keep signatures stable. Changes to this
+/// signature must be reflected in afterimage to preserve grade parity.
+pub(crate) fn forward_grade(timer: f32, perfect_window: f32) -> BumpGrade {
     if timer <= perfect_window {
         BumpGrade::Perfect
     } else {
@@ -28,7 +33,12 @@ pub(super) fn forward_grade(timer: f32, perfect_window: f32) -> BumpGrade {
 /// Determines the retroactive grade based on time elapsed since hit.
 ///
 /// Called when the player presses bump after the bolt has already hit.
-pub(super) fn retroactive_grade(time_since_hit: f32, perfect_window: f32) -> BumpGrade {
+///
+/// Also consumed by
+/// `protocol/protocols/afterimage::afterimage_check_phantom_bounce` for
+/// phantom-bump grading — keep signatures stable. Changes to this
+/// signature must be reflected in afterimage to preserve grade parity.
+pub(crate) fn retroactive_grade(time_since_hit: f32, perfect_window: f32) -> BumpGrade {
     if time_since_hit <= perfect_window {
         BumpGrade::Perfect
     } else {

@@ -107,7 +107,10 @@ impl Plugin for RunPlugin {
             .add_systems(OnExit(RunState::Node), hide_gameplay_entities)
             .add_systems(
                 OnEnter(RunState::Node),
-                (advance_node, show_gameplay_entities),
+                (
+                    advance_node.in_set(NodeSystems::AdvanceNode),
+                    show_gameplay_entities,
+                ),
             )
             .add_systems(
                 OnExit(MenuState::Main),

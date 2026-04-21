@@ -19,7 +19,7 @@
 
 use std::marker::PhantomData;
 
-use bevy::prelude::*;
+use bevy::{ecs::system::SystemParam, prelude::*};
 use rantzsoft_physics2d::{
     prelude::{SweepHit, reflect},
     resources::CollisionQuadtree,
@@ -34,10 +34,13 @@ use crate::{
     bolt::{
         components::{LastImpact, ccd_normal_to_impact_side},
         filters::ActiveFilter,
-        queries::{BoltCollisionData, apply_velocity_formula},
+        queries::{BoltCollisionData, BoltCollisionDataItem, apply_velocity_formula},
         resources::DEFAULT_BOLT_BASE_DAMAGE,
     },
-    effect_v3::{effects::VulnerableConfig, stacking::EffectStack},
+    effect_v3::{
+        effects::{VulnerableConfig, phantom_bolt::components::PhantomBolt},
+        stacking::EffectStack,
+    },
     prelude::*,
 };
 
@@ -53,11 +56,15 @@ type CollisionWriters<'a> = (
     MessageWriter<'a, DamageDealt<Cell>>,
 );
 
-/// Query for looking up game-specific data by entity ID after `cast_circle`
-/// identifies a hit.
+/// Bundled read-only queries consumed by `bolt_cell_collision`.
 ///
-/// Excludes bolts to avoid query conflicts with the mutable `bolt_query`.
-type CandidateLookup<'w, 's> = Query<
+/// Groups the hit-candidate lookup (cell marker, HP, vulnerability stack)
+/// alongside the phantom-bolt marker query so the outer system signature
+/// stays under the clippy argument-count threshold.
+///
+/// Excludes bolts from the candidate query to avoid conflicts with the
+/// mutable `bolt_query`.
+type CandidateQuery<'w, 's> = Query<
     'w,
     's,
     (
@@ -67,6 +74,35 @@ type CandidateLookup<'w, 's> = Query<
     ),
     Without<Bolt>,
 >;
+
+/// Triple returned by `CandidateLookup::get`:
+/// `(is_cell_marker_present, optional_hp, optional_vulnerability_stack)`.
+type CandidateData<'a> = (
+    bool,
+    Option<&'a Hp>,
+    Option<&'a EffectStack<VulnerableConfig>>,
+);
+
+#[derive(SystemParam)]
+pub(crate) struct CandidateLookup<'w, 's> {
+    candidates:    CandidateQuery<'w, 's>,
+    phantom_bolts: Query<'w, 's, (), With<PhantomBolt>>,
+}
+
+impl CandidateLookup<'_, '_> {
+    /// Looks up the hit-candidate data for `entity`.
+    ///
+    /// Returns the same tuple the underlying candidate query produces:
+    /// `(is_cell, optional Hp, optional vulnerability stack)`.
+    fn get(&self, entity: Entity) -> Result<CandidateData<'_>, bevy::ecs::query::QueryEntityError> {
+        self.candidates.get(entity)
+    }
+
+    /// Returns whether `entity` carries the `PhantomBolt` marker.
+    fn is_phantom(&self, entity: Entity) -> bool {
+        self.phantom_bolts.contains(entity)
+    }
+}
 
 /// Returns the first `SweepHit` whose entity is not a pierced cell.
 ///
@@ -105,11 +141,12 @@ pub(crate) fn bolt_cell_collision(
     let dt = time.delta_secs();
 
     for mut bolt in &mut bolt_query {
+        let is_phantom = candidate_lookup.is_phantom(bolt.entity);
         let bolt_scale = bolt.collision.node_scale.map_or(1.0, |s| s.0);
         let r = bolt.collision.radius.0 * bolt_scale;
         let mut position = bolt.spatial.position.0;
         let mut velocity = bolt.spatial.velocity.0;
-        let mut remaining = velocity.length() * dt;
+        let mut remaining_px = velocity.length() * dt;
 
         // Effective damage for pierce lookahead (compared against cell HP).
         // Must match the damage formula applied by `apply_damage::<Cell>`.
@@ -129,7 +166,7 @@ pub(crate) fn bolt_cell_collision(
         let collision_layers = CollisionLayers::new(0, CELL_LAYER);
 
         for _ in 0..MAX_BOUNCES {
-            if remaining <= MIN_REMAINING {
+            if remaining_px <= MIN_REMAINING {
                 break;
             }
 
@@ -140,92 +177,42 @@ pub(crate) fn bolt_cell_collision(
 
             // Swept circle cast: broad-phase + narrow-phase in one call.
             // Returns hits sorted nearest-first with safe position (epsilon applied).
-            let hits =
-                quadtree
-                    .quadtree
-                    .cast_circle(position, direction, remaining, r, collision_layers);
+            let hits = quadtree.quadtree.cast_circle(
+                position,
+                direction,
+                remaining_px,
+                r,
+                collision_layers,
+            );
 
             // Find the first hit that is not a pierced cell
-            let best = find_first_non_pierced(&hits, &candidate_lookup, &pierced_this_frame);
+            let first_hit = find_first_non_pierced(&hits, &candidate_lookup, &pierced_this_frame);
 
-            let Some(hit) = best else {
+            let Some(hit) = first_hit else {
                 // No target in path — move the full remaining distance
-                position += direction * remaining;
+                position += direction * remaining_px;
                 break;
             };
 
             // Advance to the safe position (epsilon already applied by cast_circle)
             position = hit.position;
-            remaining = hit.remaining;
+            remaining_px = hit.remaining;
 
-            // Look up game-specific data for the hit entity
-            let Ok((is_cell, cell_hp, vulnerability)) = candidate_lookup.get(hit.entity) else {
-                // Entity not in lookup (shouldn't happen) — skip
+            let Some(outcome) =
+                resolve_bolt_cell_hit(hit, &bolt, is_phantom, effective_damage, &candidate_lookup)
+            else {
                 continue;
             };
 
-            if !is_cell {
-                // Non-cell entity in cell-only query — skip
-                continue;
-            }
-
-            // Per-cell damage including vulnerability
-            let cell_damage = effective_damage * vulnerability.map_or(1.0, EffectStack::aggregate);
-
-            // Check if this bolt can pierce this cell
-            let can_pierce = bolt
-                .collision
-                .piercing_remaining
-                .as_deref()
-                .is_some_and(|pr| pr.0 > 0);
-            let cell_hp_value = cell_hp.map(|h| h.current);
-            let would_destroy = cell_hp_value.is_some_and(|hp| hp <= cell_damage);
-
-            // Capture piercing charges BEFORE any pierce-through decrement so
-            // the armor check system sees the same value the bolt had at the
-            // instant of impact.
-            let piercing_at_impact = bolt
-                .collision
-                .piercing_remaining
-                .as_deref()
-                .map_or(0, |pr| pr.0);
-
-            if can_pierce && would_destroy {
-                // PIERCE: do NOT reflect; decrement remaining pierces
-                // Do NOT stamp LastImpact on pierce-through.
-                if let Some(ref mut pr) = bolt.collision.piercing_remaining {
-                    pr.0 = pr.0.saturating_sub(1);
-                }
-                pierced_this_frame.push(hit.entity);
-                // Continue CCD loop — velocity unchanged, direction unchanged
-            } else {
-                // NORMAL: reflect
-                velocity = reflect(velocity, hit.normal);
-                // Stamp LastImpact on reflect only
-                let side = ccd_normal_to_impact_side(hit.normal);
-                if let Some(li) = bolt.collision.last_impact.as_mut() {
-                    li.position = hit.position;
-                    li.side = side;
-                } else {
-                    commands.entity(bolt.entity).insert(LastImpact {
-                        position: hit.position,
-                        side,
-                    });
-                }
-            }
-            hit_writer.write(BoltImpactCell {
-                cell:               hit.entity,
-                bolt:               bolt.entity,
-                impact_normal:      hit.normal,
-                piercing_remaining: piercing_at_impact,
-            });
-            damage_writer.write(DamageDealt {
-                dealer:      Some(bolt.entity),
-                target:      hit.entity,
-                amount:      cell_damage,
-                source_chip: bolt.collision.spawned_by_evolution.map(|s| s.0.clone()),
-                _marker:     PhantomData::<Cell>,
-            });
+            apply_hit_outcome(
+                &outcome,
+                hit,
+                &mut bolt,
+                &mut velocity,
+                &mut pierced_this_frame,
+                &mut commands,
+                (&mut *hit_writer, &mut *damage_writer),
+            );
         }
 
         bolt.spatial.position.0 = position;
@@ -239,4 +226,165 @@ pub(crate) fn bolt_cell_collision(
                 .map_or(1.0, EffectStack::aggregate),
         );
     }
+}
+
+/// Per-hit decision produced by [`resolve_bolt_cell_hit`].
+///
+/// Each variant carries the per-cell damage (including vulnerability) and the
+/// piercing-charge snapshot taken *before* any pierce-through decrement so
+/// downstream messages and effects see the charges the bolt had at the
+/// instant of impact.
+enum HitOutcome {
+    /// Phantom bolt passed through a cell — no reflect, no pierce
+    /// decrement, no `LastImpact` stamp.
+    PhantomPierce {
+        cell_damage:        f32,
+        piercing_at_impact: u32,
+    },
+    /// Normal bolt pierced a destroy-worthy cell — no reflect, pierce
+    /// charge consumed, no `LastImpact` stamp.
+    Pierce {
+        cell_damage:        f32,
+        piercing_at_impact: u32,
+    },
+    /// Normal bolt reflected off a cell face — velocity reflected,
+    /// `LastImpact` stamped with the impact side.
+    Reflect {
+        cell_damage:        f32,
+        piercing_at_impact: u32,
+    },
+}
+
+/// Decides how a confirmed `SweepHit` against a candidate entity should be
+/// resolved: phantom-pierce, pierce-through, or normal reflect.
+///
+/// Returns `None` when the hit entity is absent from `candidate_lookup` or is
+/// not a cell — the CCD loop skips such hits.
+///
+/// Pure function: reads bolt, cell, and stack state but performs no
+/// mutations and emits no messages. Mutation and message emission live in
+/// [`apply_hit_outcome`].
+fn resolve_bolt_cell_hit(
+    hit: &SweepHit,
+    bolt: &BoltCollisionDataItem<'_, '_>,
+    is_phantom: bool,
+    effective_damage: f32,
+    candidate_lookup: &CandidateLookup,
+) -> Option<HitOutcome> {
+    let Ok((is_cell, cell_hp, vulnerability)) = candidate_lookup.get(hit.entity) else {
+        return None;
+    };
+    if !is_cell {
+        return None;
+    }
+
+    let cell_damage = effective_damage * vulnerability.map_or(1.0, EffectStack::aggregate);
+
+    let can_pierce = bolt
+        .collision
+        .piercing_remaining
+        .as_deref()
+        .is_some_and(|pr| pr.0 > 0);
+    let would_destroy = cell_hp.is_some_and(|h| h.current <= cell_damage);
+
+    let piercing_at_impact = bolt
+        .collision
+        .piercing_remaining
+        .as_deref()
+        .map_or(0, |pr| pr.0);
+
+    Some(if is_phantom {
+        HitOutcome::PhantomPierce {
+            cell_damage,
+            piercing_at_impact,
+        }
+    } else if can_pierce && would_destroy {
+        HitOutcome::Pierce {
+            cell_damage,
+            piercing_at_impact,
+        }
+    } else {
+        HitOutcome::Reflect {
+            cell_damage,
+            piercing_at_impact,
+        }
+    })
+}
+
+/// Bundled message writers for [`apply_hit_outcome`] — keeps the helper's
+/// argument count under the `too_many_arguments` threshold without carrying
+/// `&mut Commands` in the same struct (which would cause lifetime
+/// invariance conflicts across independent `SystemParam` lifetimes).
+type HitWriters<'a, 'w> = (
+    &'a mut MessageWriter<'w, BoltImpactCell>,
+    &'a mut MessageWriter<'w, DamageDealt<Cell>>,
+);
+
+/// Applies a resolved [`HitOutcome`] to bolt state and emits the associated
+/// `BoltImpactCell` + `DamageDealt<Cell>` messages.
+///
+/// Mirrors the original resolve-helper's side-effects in order:
+/// 1. `PhantomPierce`: push to `pierced_this_frame`.
+/// 2. `Pierce`: decrement `piercing_remaining`, push to `pierced_this_frame`.
+/// 3. `Reflect`: reflect velocity off `hit.normal`, stamp `LastImpact`.
+///    Then always: write `BoltImpactCell`, then `DamageDealt<Cell>`.
+fn apply_hit_outcome(
+    outcome: &HitOutcome,
+    hit: &SweepHit,
+    bolt: &mut BoltCollisionDataItem<'_, '_>,
+    velocity: &mut Vec2,
+    pierced_this_frame: &mut Vec<Entity>,
+    commands: &mut Commands,
+    writers: HitWriters<'_, '_>,
+) {
+    let (hit_writer, damage_writer) = writers;
+    let (cell_damage, piercing_at_impact) = match outcome {
+        HitOutcome::PhantomPierce {
+            cell_damage,
+            piercing_at_impact,
+        } => {
+            pierced_this_frame.push(hit.entity);
+            (*cell_damage, *piercing_at_impact)
+        }
+        HitOutcome::Pierce {
+            cell_damage,
+            piercing_at_impact,
+        } => {
+            if let Some(ref mut pr) = bolt.collision.piercing_remaining {
+                pr.0 = pr.0.saturating_sub(1);
+            }
+            pierced_this_frame.push(hit.entity);
+            (*cell_damage, *piercing_at_impact)
+        }
+        HitOutcome::Reflect {
+            cell_damage,
+            piercing_at_impact,
+        } => {
+            *velocity = reflect(*velocity, hit.normal);
+            let side = ccd_normal_to_impact_side(hit.normal);
+            if let Some(li) = bolt.collision.last_impact.as_mut() {
+                li.position = hit.position;
+                li.side = side;
+            } else {
+                commands.entity(bolt.entity).insert(LastImpact {
+                    position: hit.position,
+                    side,
+                });
+            }
+            (*cell_damage, *piercing_at_impact)
+        }
+    };
+    hit_writer.write(BoltImpactCell {
+        cell:               hit.entity,
+        bolt:               bolt.entity,
+        impact_normal:      hit.normal,
+        piercing_remaining: piercing_at_impact,
+    });
+    damage_writer.write(DamageDealt {
+        dealer:      Some(bolt.entity),
+        target:      hit.entity,
+        amount:      cell_damage,
+        source_chip: bolt.collision.spawned_by_evolution.map(|s| s.0.clone()),
+        _marker:     PhantomData::<Cell>,
+    });
 }

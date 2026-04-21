@@ -1,9 +1,9 @@
 (
     name: "Afterimage",
-    description: "Each cell hit leaves a phantom bolt trailing behind that deals reduced damage.",
+    description: "Perfect-bump a phantom of yourself to split off a piercing bolt.",
     unlock_tier: 0,
     tuning: Afterimage(
-        phantom_duration: 1.5,
-        phantom_bolt_duration: 0.75,
+        phantom_duration: 2.0,
+        phantom_bolt_duration: 3.0,
     ),
 )

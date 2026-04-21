@@ -53,6 +53,7 @@ Domains MAY define a `pub enum {Domain}Systems` with `#[derive(SystemSet)]` in `
 | `NodeSystems::Spawn` | `state/run/node/sets.rs` | `spawn_cells_from_layout` (OnEnter) |
 | `NodeSystems::InitTimer` | `state/run/node/sets.rs` | `init_node_timer` (OnEnter) |
 | `NodeSystems::Cleanup` | `state/run/node/sets.rs` | `cleanup_on_exit::<NodeState>` (OnEnter Teardown — effect bridges that need a cleaned-up world order `.after(NodeSystems::Cleanup)`) |
+| `NodeSystems::AdvanceNode` | `state/run/node/sets.rs` | `advance_node` (OnEnter RunState::Node). Protocol systems pair around this anchor: `.before` to snapshot pre-advance state, `.after` to rewrite `NodeSequence` / `NodeOutcome` with final authority (see `tier_regression` for the canonical snapshot-then-apply pattern). |
 
 **Example:**
 
@@ -160,6 +161,10 @@ move_breaker .after(update_bump)
                           .after(BoltSystems::BreakerCollision)
               BreakerSystems::GradeBump
                 <- (perfect_bump_dash_cancel, spawn_bump_grade_text, spawn_whiff_text) .after(grade_bump)
+                <- conductor_swap_on_perfect_bump .after(BreakerSystems::GradeBump)
+                                                  .before(EffectV3Systems::Bridge)
+                   [protocol domain — swaps PrimaryBolt/ExtraBolt + BoundEffects/StagedEffects on Perfect bump;
+                    must precede Bridge so bridges walk the post-swap effect tree]
                 <- bridge_bump .after(BreakerSystems::GradeBump)
                    .in_set(EffectV3Systems::Bridge)              [effect domain]
                 <- bridge_bump_whiff .after(BreakerSystems::GradeBump)

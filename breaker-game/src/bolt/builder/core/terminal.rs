@@ -24,11 +24,8 @@ use crate::{
 fn build_core(params: &CoreParams, optional: &OptionalBoltData) -> impl Bundle + use<> {
     let radius = optional.radius.unwrap_or(DEFAULT_RADIUS);
 
-    let base_components = (
-        Bolt,
-        params.vel,
-        CollisionLayers::new(BOLT_LAYER, CELL_LAYER | WALL_LAYER | BREAKER_LAYER),
-    );
+    let mask = (CELL_LAYER | WALL_LAYER | BREAKER_LAYER) | optional.extra_mask_bits;
+    let base_components = (Bolt, params.vel, CollisionLayers::new(BOLT_LAYER, mask));
 
     let spatial_components = Spatial::builder()
         .at_position(params.pos)
@@ -134,8 +131,8 @@ fn spawn_inner(
             x: optional.radius.unwrap_or(DEFAULT_RADIUS),
             y: optional.radius.unwrap_or(DEFAULT_RADIUS),
         };
-        let stashed_layers =
-            CollisionLayers::new(BOLT_LAYER, CELL_LAYER | WALL_LAYER | BREAKER_LAYER);
+        let mask = (CELL_LAYER | WALL_LAYER | BREAKER_LAYER) | optional.extra_mask_bits;
+        let stashed_layers = CollisionLayers::new(BOLT_LAYER, mask);
 
         entity.insert((
             Scale2D { x: 0.0, y: 0.0 },

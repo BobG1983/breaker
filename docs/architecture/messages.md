@@ -37,7 +37,7 @@ Messages are defined in the domain that **conceptually owns the event**. Usually
 | `Destroyed<Breaker> { position }` | shared/death_pipeline (handle_kill::<Breaker>) | effect (on_breaker_destroyed) |
 | `Destroyed<Salvo> { position }` | shared/death_pipeline (handle_kill::<Salvo>) | (no current consumers — emitted for future effect bridge use) |
 | `DespawnEntity { entity }` | shared/death_pipeline (handle_kill::<T> for Cell/Bolt/Wall/Breaker/Salvo) | shared/death_pipeline (process_despawn_requests in FixedPostUpdate) |
-| `BumpPerformed { grade, bolt, breaker }` | breaker | breaker (spawn_bump_grade_text, perfect_bump_dash_cancel), effect (bridge_bump), protocol/protocols/reckless_dash (reckless_dash_on_bump) |
+| `BumpPerformed { grade, bolt, breaker }` | breaker, protocol/protocols/afterimage::afterimage_check_phantom_bounce (synthetic phantom bump — msg.breaker carries PhantomBreaker, not Breaker) | breaker (spawn_bump_grade_text, perfect_bump_dash_cancel), effect (bridge_bump), protocol/protocols/reckless_dash (reckless_dash_on_bump), protocol/protocols/conductor (conductor_swap_on_perfect_bump — Perfect grade only, ExtraBolt target only), protocol/protocols/afterimage::afterimage_spawn_phantom_bolt (reads Perfect-grade phantom bumps to spawn phantom-bolt clones) |
 | `BumpWhiffed` | breaker | breaker (spawn_whiff_text), effect (bridge_bump_whiff) |
 | `BreakerSpawned` | breaker (spawn_or_reuse_breaker) | run/node (check_spawn_complete) |
 | `CellsSpawned` | run/node (spawn_cells_from_layout) | run/node (check_spawn_complete) |
@@ -51,6 +51,10 @@ Messages are defined in the domain that **conceptually owns the event**. Usually
 | `ReverseTimePenalty { seconds }` | effect/effects/time_penalty (reverse), protocol/protocols/siphon (siphon_on_cell_destroyed) | run/node (reverse_time_penalty) |
 | `ChipSelected { name }` | state/run/chip_select (handle_chip_input) | chips (dispatch_chip_effects) |
 | `HighlightTriggered { kind }` | run (detect_mass_destruction, detect_close_save, detect_combo_king, detect_pinball_wizard, detect_nail_biter, detect_first_evolution, detect_most_powerful_evolution, track_node_cleared_stats) | run (spawn_highlight_text) |
+
+### Contract notes
+
+- `BumpPerformed.breaker: Entity` MAY carry `PhantomBreaker` instead of `Breaker` (afterimage protocol synthetic phantom bump). Consumers that query `With<Breaker>` on this entity will silently miss phantom bumps; consumers that deref by `Entity` get the phantom.
 
 ## Effect Dispatch (commands extension — not Message or observer)
 

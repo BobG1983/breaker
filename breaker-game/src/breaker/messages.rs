@@ -23,7 +23,15 @@ pub struct BumpPerformed {
     pub grade:   BumpGrade,
     /// The bolt entity involved in this bump, if known.
     pub bolt:    Option<Entity>,
-    /// The breaker entity that performed the bump.
+    /// Entity that performed the bump. MAY be a `PhantomBreaker`
+    /// (afterimage protocol synthetic bump) — consumers that need to
+    /// treat phantoms differently must check the `PhantomBreaker` marker
+    /// explicitly. Consumers currently known to react uniformly to
+    /// phantom bumps: conductor (primary swap),
+    /// `effect_v3::triggers::bump` (walks `BoundEffects` on
+    /// `msg.breaker` — chips bound to the real breaker do NOT fire on
+    /// phantom bumps; chip effects bound to `PhantomBreaker` would
+    /// fire, but no such binding path currently exists).
     pub breaker: Entity,
 }
 

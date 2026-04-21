@@ -244,8 +244,15 @@ fn query_aabb_filtered_node(
     }
 }
 
-/// Checks whether a circle (center, radius) overlaps an AABB.
-fn circle_overlaps_aabb(center: Vec2, radius: f32, aabb: &Aabb2D) -> bool {
+/// Returns `true` when the circle defined by `center` / `radius` overlaps
+/// `aabb`.
+///
+/// The test is inclusive — a circle whose edge exactly touches the AABB
+/// boundary counts as overlapping (`distance² <= radius²`). Intended for
+/// broad-phase / narrow-phase collision checks where edge-touching contacts
+/// should register as hits.
+#[must_use]
+pub fn circle_overlaps_aabb(center: Vec2, radius: f32, aabb: &Aabb2D) -> bool {
     let aabb_min = aabb.min();
     let aabb_max = aabb.max();
     // Find the closest point on the AABB to the circle center

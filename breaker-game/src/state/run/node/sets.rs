@@ -27,4 +27,16 @@ pub enum NodeSystems {
     /// cleaned-up world (e.g. `effect_v3::triggers::node::on_node_end_occurred`)
     /// should run `.after(NodeSystems::Cleanup)`.
     Cleanup,
+    /// The `advance_node` system — increments `NodeOutcome.node_index`,
+    /// updates `tier` / `position_in_tier` from the just-completed node's
+    /// type. Runs in `OnEnter(RunState::Node)`.
+    ///
+    /// Protocol systems that need to capture pre-advance state (e.g.
+    /// `tier_regression::snapshot_pre_advance_state`) should order
+    /// `.before(NodeSystems::AdvanceNode)`. Protocol systems that mutate
+    /// `NodeSequence` / `NodeOutcome` using the snapshotted state (e.g.
+    /// `tier_regression::apply_tier_regression`) should order
+    /// `.after(NodeSystems::AdvanceNode)` so their writes survive the
+    /// advance.
+    AdvanceNode,
 }

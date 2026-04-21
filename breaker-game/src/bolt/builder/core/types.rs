@@ -63,18 +63,43 @@ pub struct Headless;
 
 #[derive(Default)]
 pub(in crate::bolt::builder) struct OptionalBoltData {
+    /// Origin tag for telemetry and debug logs. Set via `.spawned_by(...)`.
     pub(in crate::bolt::builder) spawned_by:               Option<String>,
+    /// Seconds-to-live. Spawns a `Lifespan` component when present.
     pub(in crate::bolt::builder) lifespan:                 Option<f32>,
+    /// Explicit radius override. Wins over the definition's `(min, max)` radius
+    /// range and over `DEFAULT_RADIUS`.
     pub(in crate::bolt::builder) radius:                   Option<f32>,
+    /// `BoundEffects` copied verbatim from a parent bolt (e.g. split children
+    /// inherit the parent's `effect_v3` bindings). Applied during terminal build.
     pub(in crate::bolt::builder) inherited_effects:        Option<BoundEffects>,
+    /// Additional effect trees layered on top of `inherited_effects` and
+    /// definition-default effects. Set via `.with_effects(...)`.
     pub(in crate::bolt::builder) with_effects:             Option<Vec<(String, Tree)>>,
+    /// Snapshot of a `BoltDefinition`'s tuning values (name, base damage, angle
+    /// spread, spawn offset, radius range). Set via `.definition(...)`.
     pub(in crate::bolt::builder) definition_params:        Option<BoltDefinitionParams>,
+    /// Caller-provided base damage that overrides `definition_params.base_damage`.
     pub(in crate::bolt::builder) override_base_damage:     Option<f32>,
+    /// Caller-provided definition name that overrides `definition_params.name`.
     pub(in crate::bolt::builder) override_definition_name: Option<String>,
+    /// Caller-provided angle spread that overrides `definition_params.angle_spread`.
     pub(in crate::bolt::builder) override_angle_spread:    Option<f32>,
+    /// Caller-provided spawn-Y offset that overrides `definition_params.spawn_offset_y`.
     pub(in crate::bolt::builder) override_spawn_offset_y:  Option<f32>,
+    /// Linear-RGB color override. Falls back to `DEFAULT_BOLT_COLOR_RGB`.
     pub(in crate::bolt::builder) color_rgb:                Option<[f32; 3]>,
+    /// `true` once the terminal build has emitted a `BoltBirthed` message for
+    /// this entity. Used to guard against double-birth in split-and-respawn
+    /// paths.
     pub(in crate::bolt::builder) birthed:                  bool,
+    /// Extra bits `ORed` into the default `CollisionLayers` mask.
+    ///
+    /// The default mask is `CELL_LAYER | WALL_LAYER | BREAKER_LAYER`. Callers
+    /// that need additional mask bits (e.g. the afterimage protocol phantom
+    /// bolt, which also matches `BOLT_LAYER`) set them via
+    /// [`BoltBuilder::with_extra_mask_bits`].
+    pub(in crate::bolt::builder) extra_mask_bits:          u32,
 }
 
 pub(in crate::bolt::builder) struct BoltDefinitionParams {

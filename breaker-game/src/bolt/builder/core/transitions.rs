@@ -296,4 +296,19 @@ impl<P, S, A, M, R, V> BoltBuilder<P, S, A, M, R, V> {
         self.optional.birthed = true;
         self
     }
+
+    /// ORs extra bits into the default `CollisionLayers` mask.
+    ///
+    /// The built bolt's default mask is `CELL_LAYER | WALL_LAYER |
+    /// BREAKER_LAYER`. Callers that need additional bits in the mask (for
+    /// example the afterimage protocol phantom bolt, which must also collide
+    /// with other bolts by including `BOLT_LAYER` in its mask) set them here.
+    /// Calls are additive — multiple invocations accumulate.
+    ///
+    /// Membership is NOT changed by this method.
+    #[must_use]
+    pub const fn with_extra_mask_bits(mut self, bits: u32) -> Self {
+        self.optional.extra_mask_bits |= bits;
+        self
+    }
 }
