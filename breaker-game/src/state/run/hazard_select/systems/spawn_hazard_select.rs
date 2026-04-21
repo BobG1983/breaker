@@ -92,10 +92,7 @@ fn spawn_card_row(
                 let border_color = if i == 0 { selected_color } else { normal_color };
 
                 row.spawn((
-                    HazardCard {
-                        #[cfg(test)]
-                        index:              i,
-                    },
+                    HazardCard { index: i },
                     Button,
                     Node {
                         width: Val::Px(200.0),

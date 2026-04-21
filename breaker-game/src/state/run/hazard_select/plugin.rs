@@ -8,6 +8,7 @@ use super::{
     sets::HazardSelectSystems,
     systems::{
         generate_hazard_offerings, handle_hazard_input, spawn_hazard_select, tick_hazard_timer,
+        update_hazard_display,
     },
 };
 use crate::{prelude::*, state::cleanup::cleanup_entities};
@@ -54,6 +55,7 @@ impl Plugin for HazardSelectPlugin {
             (
                 handle_hazard_input.in_set(HazardSelectSystems::HandleInput),
                 tick_hazard_timer.in_set(HazardSelectSystems::TickTimer),
+                update_hazard_display,
             )
                 .chain()
                 .run_if(in_state(HazardSelectState::Selecting)),

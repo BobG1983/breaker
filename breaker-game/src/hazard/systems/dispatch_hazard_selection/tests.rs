@@ -30,6 +30,11 @@ fn tuning_for_kind(kind: HazardKind) -> HazardTuning {
             base_percent:      0.1,
             per_level_percent: 0.05,
         },
+        HazardKind::Sympathy => HazardTuning::Sympathy {
+            base_heal_frac:      0.25,
+            per_level_heal_frac: 0.05,
+            depth_every_levels:  5,
+        },
         _ => HazardTuning::Decay {
             base_percent:      0.05,
             per_level_percent: 0.03,
@@ -46,12 +51,29 @@ fn make_def(kind: HazardKind, name: &str) -> HazardDefinition {
     }
 }
 
+/// Seeds a [`HazardRegistry`] with every kind referenced by tests in this
+/// module so `dispatch_hazard_selection` can resolve the definition and
+/// increment the stack. Dispatch now fails closed on missing definitions —
+/// see `dispatch_with_missing_registry_definition_does_not_increment_stack`.
+fn seeded_registry() -> HazardRegistry {
+    let mut registry = HazardRegistry::default();
+    for kind in [
+        HazardKind::Decay,
+        HazardKind::Drift,
+        HazardKind::Haste,
+        HazardKind::Sympathy,
+    ] {
+        registry.insert(make_def(kind, "test"));
+    }
+    registry
+}
+
 fn test_app_selecting() -> App {
     TestAppBuilder::new()
         .with_state_hierarchy()
         .in_state_hazard_selecting()
         .with_resource::<ActiveHazards>()
-        .with_resource::<HazardRegistry>()
+        .insert_resource(seeded_registry())
         .with_message::<HazardSelected>()
         .with_system(
             Update,
@@ -160,7 +182,7 @@ fn message_outside_hazard_select_selecting_is_not_consumed() {
         .with_state_hierarchy()
         .in_state_node_playing()
         .with_resource::<ActiveHazards>()
-        .with_resource::<HazardRegistry>()
+        .insert_resource(seeded_registry())
         .with_message::<HazardSelected>()
         .with_system(
             Update,
@@ -201,7 +223,7 @@ fn dispatch_after_handle_input_consumes_same_frame_message() {
         .with_state_hierarchy()
         .in_state_hazard_selecting()
         .with_resource::<ActiveHazards>()
-        .with_resource::<HazardRegistry>()
+        .insert_resource(seeded_registry())
         .with_resource::<ButtonInput<KeyCode>>()
         .insert_resource(InputConfig::default())
         .insert_resource(HazardSelectSelection { card_index: 0 })
@@ -255,7 +277,7 @@ fn dispatch_after_tick_timer_consumes_expiry_message() {
         .with_state_hierarchy()
         .in_state_hazard_selecting()
         .with_resource::<ActiveHazards>()
-        .with_resource::<HazardRegistry>()
+        .insert_resource(seeded_registry())
         .insert_resource(HazardSelectTimer { remaining: 0.0 })
         .insert_resource(offers)
         .with_resource::<GameRng>()
@@ -323,5 +345,45 @@ fn dispatch_does_not_spawn_entities_or_install_bound_effects() {
     assert_eq!(
         bound_count, 0,
         "dispatch must not install BoundEffects — it only increments stacks"
+    );
+}
+
+// ── Fail-closed: missing registry definition does NOT increment stack ───────
+
+/// Regression pin for backlog #15 G2: previously `dispatch_hazard_selection`
+/// called `active.add_stack(msg.kind)` unconditionally and then skipped
+/// `activate()` when the registry lacked a definition, leaving a silent
+/// half-applied hazard (stack > 0, no runtime effect). After the fail-closed
+/// fix, a `HazardSelected` for an unregistered kind must NOT increment
+/// `ActiveHazards`.
+#[test]
+fn dispatch_with_missing_registry_definition_does_not_increment_stack() {
+    // Build an app with an EMPTY HazardRegistry (no definitions seeded) so
+    // `registry.get(Decay)` returns None and dispatch must fail closed.
+    let mut app = TestAppBuilder::new()
+        .with_state_hierarchy()
+        .in_state_hazard_selecting()
+        .with_resource::<ActiveHazards>()
+        .with_resource::<HazardRegistry>() // default = empty
+        .with_message::<HazardSelected>()
+        .with_system(
+            Update,
+            dispatch_hazard_selection.run_if(in_state(HazardSelectState::Selecting)),
+        )
+        .build();
+
+    send_hazard(&mut app, HazardKind::Decay);
+    app.update();
+
+    let active = app.world().resource::<ActiveHazards>();
+    assert_eq!(
+        active.stacks(HazardKind::Decay),
+        0,
+        "missing registry definition → fail closed → stack NOT incremented \
+         (silent half-apply bug fix)"
+    );
+    assert!(
+        active.is_empty(),
+        "ActiveHazards must remain empty when registry lookup returns None"
     );
 }

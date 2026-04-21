@@ -12,6 +12,12 @@ use crate::hazard::{
 /// Dispatch selected hazards: increment per-kind stack counts in
 /// [`ActiveHazards`], then call the hazard's `activate(tuning, commands)`
 /// fan-out so per-kind config resources are inserted.
+///
+/// Fails closed on missing `HazardRegistry` definitions: a
+/// `HazardSelected` for a kind without a registered definition logs a
+/// `warn!` and does NOT increment `ActiveHazards` — previously the stack
+/// was incremented even when activation was skipped, leaving a silent
+/// half-applied hazard (stack count > 0 with no runtime effect).
 pub(crate) fn dispatch_hazard_selection(
     mut reader: MessageReader<HazardSelected>,
     mut active: ResMut<ActiveHazards>,
@@ -19,15 +25,15 @@ pub(crate) fn dispatch_hazard_selection(
     mut commands: Commands,
 ) {
     for msg in reader.read() {
-        active.add_stack(msg.kind);
-        if let Some(def) = registry.get(msg.kind) {
-            hazards::activate(msg.kind, &def.tuning, &mut commands);
-        } else {
+        let Some(def) = registry.get(msg.kind) else {
             warn!(
-                "dispatch_hazard_selection: no definition for {:?} — skipping activate()",
+                "dispatch_hazard_selection: no definition for {:?} — skipping (stack NOT incremented)",
                 msg.kind
             );
-        }
+            continue;
+        };
+        active.add_stack(msg.kind);
+        hazards::activate(msg.kind, &def.tuning, &mut commands);
     }
 }
 

@@ -1,6 +1,6 @@
 use std::{marker::PhantomData, time::Duration};
 
-use bevy::prelude::*;
+use bevy::{prelude::*, time::TimeUpdateStrategy};
 use rantzsoft_physics2d::resources::CollisionQuadtree;
 
 use super::super::system::CellsPlugin;
@@ -27,6 +27,7 @@ pub(super) fn cells_plugin_app() -> App {
         .add_message::<BoltImpactCell>()
         .add_message::<BreakerImpactCell>()
         .insert_resource(CollisionQuadtree::default())
+        .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::ZERO))
         .init_resource::<crate::shared::playfield::PlayfieldConfig>();
     app.add_plugins(DeathPipelinePlugin);
     register_effect_v3_test_infrastructure(&mut app);
@@ -93,6 +94,7 @@ pub(super) fn sequence_plugin_app_loading() -> App {
         .add_message::<BoltImpactCell>()
         .add_message::<BreakerImpactCell>()
         .insert_resource(CollisionQuadtree::default())
+        .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::ZERO))
         .init_resource::<crate::shared::playfield::PlayfieldConfig>();
     app.add_plugins(DeathPipelinePlugin);
     register_effect_v3_test_infrastructure(&mut app);
