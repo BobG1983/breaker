@@ -1,0 +1,74 @@
+// Adversarial stress: Burnout protocol with Perfect-bump driver — Scatter layout.
+//
+// The heat contract is most meaningfully stressed when mega_bump_charged is
+// repeatedly consumed. AlwaysPerfect input guarantees every bump is a Perfect
+// grade, which in turn guarantees BumpPerformed fires with a grade the system
+// can act on. Combined with the Scatter layout (irregular cell spacing drives
+// non-trivial bolt trajectories and breaker movement), the breaker accumulates
+// heat quickly on moving ticks, arms mega_bump_charged at heat = 1.0, and fires
+// burnout_on_bump on the next BumpPerformed — resetting heat to 0.0 and
+// dispatching a shockwave and DamageBoost. This scenario targets three failure
+// paths not strongly exercised by burnout_chaos (which relies on probabilistic
+// bumps):
+//
+//   1. heat = 1.0 → bump → reset race per tick: with AlwaysPerfect the bolt
+//      reaches the breaker on every descent. If the breaker has been moving,
+//      heat reaches 1.0 before the bump and burnout_on_bump resets it. The
+//      sequencing contract — burnout_update_heat runs before burnout_on_bump —
+//      must hold every tick. If the ordering edge is lost, burnout_on_bump sees
+//      the OLD heat value (from the prior tick's update), does not see
+//      mega_bump_charged, and the reset is missed. On the next tick,
+//      burnout_update_heat finds heat >= 1.0 - EPSILON and re-arms the charge,
+//      but heat at 1.0 + dt/fill_duration would exceed 1.0 before the
+//      `.min(1.0)` clamp fires. BurnoutHeatClamped catches any momentary
+//      overshoot.
+//
+//   2. BurnoutDamageBoost single-shot pierce guard under repeated Perfect bumps:
+//      burnout_amplify_damage is single-shot — it removes BurnoutDamageBoost
+//      via deferred commands after the first BoltImpactCell. With AlwaysPerfect
+//      driving rapid bumps, a new BurnoutDamageBoost is installed every time
+//      mega_bump_charged is consumed. If the deferred removal from tick N-1
+//      does not flush before burnout_on_bump in tick N installs a new one, the
+//      bolt carries two overlapping DamageBoost components (or the ECS archetype
+//      collapses to the newer one silently). NoNaN catches NaN from a corrupted
+//      multiplier; NoEntityLeaks catches any double-installed component whose
+//      remove command misfired.
+//
+//   3. still_threshold + mega_bump_charged co-fire: if the breaker is stationary
+//      and heat reaches the still_threshold (1.5 s still), the instant-drain
+//      fires and sets heat = 0.0 and mega_bump_charged = false. On a frame where
+//      the breaker was ALSO stationary last tick AND AlwaysPerfect fires a
+//      BumpPerformed in the same FixedUpdate, burnout_on_bump checks
+//      mega_bump_charged (which was just set to false by the still-threshold
+//      branch) and skips the boost install. BurnoutHeatClamped validates that
+//      the co-fire path leaves heat exactly at 0.0 and still_timer at 0.0, not
+//      at any transient value.
+//
+// 3000 frames with allow_early_end: false sustains the mega-bump cycle across
+// node restarts. 16 runs with varied Scatter seeds explore diverse bolt
+// trajectories and bump-rate distributions.
+(
+    breaker: "Aegis",
+    layout: "Scatter",
+    input: Perfect(AlwaysPerfect),
+    max_frames: 3000,
+    disallowed_failures: [
+        NoNaN,
+        BoltInBounds,
+        BreakerInBounds,
+        BoltSpeedAccurate,
+        ValidDashState,
+        BreakerCountReasonable,
+        NoEntityLeaks,
+        BoltCountReasonable,
+        BurnoutHeatClamped,
+    ],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: false,
+    stress: (runs: 16, parallelism: 16),
+    seed: 8813,
+    frame_mutations: [
+        (frame: 10, mutation: InjectProtocol(kind_name: "Burnout")),
+    ],
+)

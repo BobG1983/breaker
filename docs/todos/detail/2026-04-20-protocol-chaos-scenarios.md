@@ -1,6 +1,6 @@
 # Custom-system protocols — upgrade smoke scenarios to chaos coverage
 
-**Status:** ready
+**Status:** in-progress — Siphon and Greed done (chaos + regression scenarios + 3 new invariants). Reckless Dash, Echo Strike, Fission, Iron Curtain, Debt Collector, Burnout multi-node still outstanding.
 **Found during:** Burnout protocol Full Verification Tier (2026-04-20, reviewer-scenarios)
 
 ## The gap

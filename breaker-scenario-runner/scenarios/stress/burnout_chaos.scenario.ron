@@ -1,0 +1,88 @@
+// Adversarial stress: Burnout protocol under sustained chaos input — Dense layout.
+//
+// Burnout's 4-system pipeline: burnout_update_heat (fills heat while moving,
+// drains while stationary, clamps to [0.0, 1.0], arms mega_bump_charged at full,
+// fires still-threshold instant-drain + BurnoutSpeedBoost + shockwave),
+// burnout_on_bump (consumes BumpPerformed, installs BurnoutDamageBoost on bolt,
+// resets heat, dispatches shockwave), burnout_amplify_damage (consumes
+// BoltImpactCell on boosted bolts, emits DamageDealt<Cell> with
+// BURNOUT_SENTINEL source_chip), and burnout_cleanup_node (OnExit, removes all
+// Burnout components). This stress scenario targets five failure paths:
+//
+//   1. Heat clamp boundary — moving/stationary race on the same frame:
+//      burnout_update_heat runs after BreakerSystems::Move. Chaos input
+//      produces frames where the breaker transitions from moving to stationary
+//      (or vice versa) and the speed-squared threshold (> EPSILON) is crossed
+//      exactly at the frame boundary. If the fill / drain arithmetic overshoots
+//      (e.g., dt / fill_duration > 1.0 - current heat when heat is near 1.0),
+//      heat can transiently exceed 1.0 before the `.min(1.0)` clamp in the
+//      moving branch. BurnoutHeatClamped fires if heat drifts outside [0.0,
+//      1.0]. Dense layout with action_prob 0.7 keeps the breaker oscillating
+//      rapidly between moving and still, maximising transition density.
+//
+//   2. still_timer sign — still-threshold fire + reset interaction:
+//      When still_timer crosses still_threshold (1.5 s), the system sets
+//      heat = 0.0 and still_timer = 0.0. If a subsequent tick adds dt again
+//      before the reset propagates (e.g., a double-execution bug or wrong
+//      ordering), still_timer can go negative. BurnoutHeatClamped checks
+//      still_timer >= 0.0 every frame.
+//
+//   3. mega_bump_charged double-consume path: burnout_on_bump runs after
+//      BreakerSystems::GradeBump and after burnout_update_heat. If the
+//      BumpPerformed reader is not drained when Burnout is inactive (before
+//      InjectProtocol fires at frame 10), retroactive message processing on
+//      frame 11 can fire burnout_on_bump against an entity that already had
+//      its charge set by burnout_update_heat in the same frame — resulting in
+//      a BurnoutDamageBoost on a bolt that has already bounced. The
+//      still_timer then gets doubly reset. NoNaN catches any NaN cascade; the
+//      in-body reader.clear() guard is the protection under test here.
+//
+//   4. Shockwave entity accumulation under rapid mega-bumps: each
+//      mega_bump_charged consume fires a shockwave via commands.fire_effect.
+//      Dense layout with action_prob 0.7 means the breaker reaches heat = 1.0
+//      repeatedly across 3000 frames and each still-threshold fire also
+//      dispatches a shockwave. NoEntityLeaks guards shockwave entity cleanup;
+//      NoNaN catches position NaN from a shockwave expanding beyond the
+//      playfield without bound checks.
+//
+//   5. burnout_cleanup_node cross-node isolation: allow_early_end: false
+//      triggers repeated node restarts. On each OnExit(NodeState::Playing),
+//      burnout_cleanup_node removes BurnoutHeat, BurnoutSpeedBoost, and
+//      BurnoutDamageBoost. If the node exit races with a BumpPerformed message
+//      buffered from the final tick of the dying node, burnout_on_bump (which
+//      runs every FixedUpdate, gated in-body) may install BurnoutDamageBoost on
+//      a bolt entity that is already mid-despawn. The next node's
+//      burnout_update_heat then lazy-inserts BurnoutHeat::default() — if the
+//      cleanup did not fully clear the prior breaker, the new node begins with
+//      heat > 0.0 and still_timer > 0.0. BurnoutHeatClamped catches any heat
+//      outside [0.0, 1.0]; NoEntityLeaks catches the orphaned DamageBoost
+//      component on a stale bolt entity.
+//
+// 3000 frames with allow_early_end: false sustains pressure across node
+// restarts. 16 runs explore diverse Dense cell arrangements and heat-fill
+// timing distributions.
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Chaos((action_prob: 0.7)),
+    max_frames: 3000,
+    disallowed_failures: [
+        NoNaN,
+        BoltInBounds,
+        BreakerInBounds,
+        BoltSpeedAccurate,
+        ValidDashState,
+        BreakerCountReasonable,
+        NoEntityLeaks,
+        BoltCountReasonable,
+        BurnoutHeatClamped,
+    ],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: false,
+    stress: (runs: 16, parallelism: 16),
+    seed: 6631,
+    frame_mutations: [
+        (frame: 10, mutation: InjectProtocol(kind_name: "Burnout")),
+    ],
+)

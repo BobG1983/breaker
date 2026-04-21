@@ -251,6 +251,10 @@ fn apply_resource_mutation(mutation: &MutationKind, targets: &mut MutationTarget
         MutationKind::SetGreedStacks { skips } => {
             if let Some(ref mut gs) = targets.greed_stacks {
                 gs.skips = *skips;
+            } else {
+                targets
+                    .commands
+                    .insert_resource(GreedStacks { skips: *skips });
             }
         }
         MutationKind::SetSiphonStreak {
@@ -260,6 +264,11 @@ fn apply_resource_mutation(mutation: &MutationKind, targets: &mut MutationTarget
             if let Some(ref mut ss) = targets.siphon_streak {
                 ss.kill_count = *kill_count;
                 ss.window_remaining = *window_remaining;
+            } else {
+                targets.commands.insert_resource(SiphonStreak {
+                    kill_count:       *kill_count,
+                    window_remaining: *window_remaining,
+                });
             }
         }
         _ => {} // handled by apply_single_mutation

@@ -16,17 +16,6 @@ fn burnout_sentinel_value_is_protocol_burnout() {
     );
 }
 
-// ── I1b — Byte-for-byte length match (not substring) ───────────────────────-
-
-#[test]
-fn burnout_sentinel_length_matches_exactly() {
-    assert_eq!(
-        BURNOUT_SENTINEL.len(),
-        "protocol:burnout".len(),
-        "BURNOUT_SENTINEL must be byte-for-byte identical to the literal"
-    );
-}
-
 // ── I2 — BURNOUT_SHOCKWAVE_SOURCE exact value ──────────────────────────────-
 
 #[test]
