@@ -77,8 +77,12 @@ pub(crate) struct BreakerMovementData {
     pub decel_easing: &'static DecelEasing,
     /// Base width for playfield clamping.
     pub base_width:   &'static BaseWidth,
+    /// Minimum width floor applied to the boosted effective width.
+    pub min_w:        Option<&'static MinWidth>,
     /// Maximum width cap applied to the boosted effective width.
     pub max_w:        Option<&'static MaxWidth>,
+    /// Node scaling factor applied before min/max clamping.
+    pub node_scale:   Option<&'static NodeScalingFactor>,
     /// Active speed boost multipliers.
     pub speed_boosts: Option<&'static EffectStack<SpeedBoostConfig>>,
     /// Active size boost multipliers.
@@ -125,6 +129,12 @@ pub(crate) struct BreakerDashData {
     pub position:         Option<&'static mut Position2D>,
     /// Base width (optional — for flash step playfield clamping).
     pub base_width:       Option<&'static BaseWidth>,
+    /// Minimum width floor applied to the boosted effective width.
+    pub min_w:            Option<&'static MinWidth>,
+    /// Maximum width cap applied to the boosted effective width.
+    pub max_w:            Option<&'static MaxWidth>,
+    /// Node scaling factor applied before min/max clamping.
+    pub node_scale:       Option<&'static NodeScalingFactor>,
     /// Active speed boost multipliers.
     pub speed_boosts:     Option<&'static EffectStack<SpeedBoostConfig>>,
     /// Active size boost multipliers.

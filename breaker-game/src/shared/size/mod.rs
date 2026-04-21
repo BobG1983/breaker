@@ -11,5 +11,6 @@ mod tests;
 
 pub use types::{
     BaseRadius, ClampRange, MaxHeight, MaxRadius, MaxWidth, MinHeight, MinRadius, MinWidth,
+    effective_half_width,
 };
 pub(crate) use types::{effective_radius, effective_size};

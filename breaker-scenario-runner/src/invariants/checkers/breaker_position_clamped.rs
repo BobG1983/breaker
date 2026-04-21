@@ -2,7 +2,10 @@ use bevy::prelude::*;
 use breaker::{
     breaker::components::BaseWidth,
     effect_v3::{effects::SizeBoostConfig, stacking::EffectStack},
-    shared::{PlayfieldConfig, size::MaxWidth},
+    shared::{
+        NodeScalingFactor, PlayfieldConfig,
+        size::{ClampRange, MaxWidth, MinWidth, effective_half_width},
+    },
 };
 use rantzsoft_spatial2d::components::Position2D;
 
@@ -16,7 +19,9 @@ type BreakerPositionQuery<'w, 's> = Query<
         Entity,
         &'static Position2D,
         &'static BaseWidth,
+        Option<&'static MinWidth>,
         Option<&'static MaxWidth>,
+        Option<&'static NodeScalingFactor>,
         Option<&'static EffectStack<SizeBoostConfig>>,
     ),
     With<ScenarioTagBreaker>,
@@ -35,16 +40,22 @@ pub fn check_breaker_position_clamped(
         s.invariant_checks += 1;
     }
     let tolerance = 1.0_f32;
-    for (entity, position, width, max_width, size_boosts) in &breakers {
-        let boost_mult = size_boosts.map_or(1.0, EffectStack::aggregate);
-        let boosted_half_width = width.half_width() * boost_mult;
-        // MaxWidth caps the boosted width so stacked SizeBoost effects can't
-        // invalidate the invariant — mirrors the clamp cap applied in
-        // breaker::move_breaker and sync_breaker_scale.
-        let effective_half_width =
-            max_width.map_or(boosted_half_width, |mw| boosted_half_width.min(mw.0 * 0.5));
-        let max_x = playfield.right() - effective_half_width;
-        let min_x = playfield.left() + effective_half_width;
+    for (entity, position, width, min_width, max_width, node_scale, size_boosts) in &breakers {
+        // Routed through the shared `effective_half_width` helper so this
+        // invariant stays identical to the clamp applied in `move_breaker`,
+        // the dash teleport clamp, and `sync_breaker_scale`'s visual width —
+        // all three must agree.
+        let effective_hw = effective_half_width(
+            width.0,
+            size_boosts.map_or(1.0, EffectStack::aggregate),
+            node_scale.map_or(1.0, |s| s.0),
+            ClampRange {
+                min: min_width.map(|m| m.0),
+                max: max_width.map(|m| m.0),
+            },
+        );
+        let max_x = playfield.right() - effective_hw;
+        let min_x = playfield.left() + effective_hw;
         let x = position.0.x;
         if x > max_x + tolerance || x < min_x - tolerance {
             log.0.push(ViolationEntry {
@@ -52,7 +63,7 @@ pub fn check_breaker_position_clamped(
                 invariant: InvariantKind::BreakerPositionClamped,
                 entity: Some(entity),
                 message: format!(
-                    "BreakerPositionClamped FAIL frame={} entity={entity:?} x={x:.1} bounds=[{min_x:.1}, {max_x:.1}] effective_hw={effective_half_width:.1}",
+                    "BreakerPositionClamped FAIL frame={} entity={entity:?} x={x:.1} bounds=[{min_x:.1}, {max_x:.1}] effective_hw={effective_hw:.1}",
                     frame.0,
                 ),
             });

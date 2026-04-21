@@ -95,3 +95,21 @@ pub(crate) fn effective_size(
     let h = height_range.apply(base_height * size_boost_multiplier * node_scaling_factor);
     Vec2::new(w, h)
 }
+
+/// Computes the effective half-width of a breaker-sized entity for
+/// playfield-clamp + collision bounds.
+///
+/// Mirrors [`effective_size`]'s width calculation but returns just the
+/// half-width `f32` that `move_breaker`, the dash teleport clamp, and the
+/// `breaker_position_clamped` invariant checker need. Factors in
+/// `size_boost_multiplier` and `node_scaling_factor`, then clamps via
+/// `width_range`.
+#[must_use]
+pub fn effective_half_width(
+    base_width: f32,
+    size_boost_multiplier: f32,
+    node_scaling_factor: f32,
+    width_range: ClampRange,
+) -> f32 {
+    width_range.apply(base_width * size_boost_multiplier * node_scaling_factor) * 0.5
+}

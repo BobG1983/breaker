@@ -21,7 +21,10 @@ use crate::{
     },
     input::resources::GameAction,
     prelude::*,
-    shared::BaseWidth,
+    shared::{
+        BaseWidth,
+        size::{ClampRange, MaxWidth, MinWidth, effective_half_width},
+    },
 };
 
 /// Read-only dash configuration components, bundled to reduce argument count.
@@ -47,6 +50,9 @@ struct SettleContext<'a> {
     flash_step:    Option<&'a FlashStepActive>,
     position:      Option<&'a mut Position2D>,
     breaker_width: Option<&'a BaseWidth>,
+    min_w:         Option<&'a MinWidth>,
+    max_w:         Option<&'a MaxWidth>,
+    node_scale:    Option<&'a NodeScalingFactor>,
     playfield:     &'a PlayfieldConfig,
     speed_mult:    Option<&'a EffectStack<SpeedBoostConfig>>,
     size_mult:     Option<&'a EffectStack<SizeBoostConfig>>,
@@ -87,6 +93,9 @@ pub(crate) fn update_breaker_state(
             flash_step: data.flash_step,
             position: data.position.as_deref_mut(),
             breaker_width: data.base_width,
+            min_w: data.min_w,
+            max_w: data.max_w,
+            node_scale: data.node_scale,
             playfield: &playfield,
             speed_mult: data.speed_boosts,
             size_mult: data.size_boosts,
@@ -188,13 +197,22 @@ fn handle_idle_or_settling(
             direction * effective_max_speed * p.dash_speed.0 * p.dash_duration.0;
         pos.0.x += teleport_distance;
 
-        // Clamp to playfield bounds accounting for effective half-width
-        let effective_half_width = ctx.breaker_width.map_or(0.0, BaseWidth::half_width)
-            * ctx
-                .size_mult
-                .map_or(1.0, EffectStack::<SizeBoostConfig>::aggregate);
-        let min_x = ctx.playfield.left() + effective_half_width;
-        let max_x = ctx.playfield.right() - effective_half_width;
+        // Clamp to playfield bounds accounting for effective half-width.
+        // Routed through the shared `effective_half_width` helper so this
+        // formula stays identical to `move_breaker`, `sync_breaker_scale`,
+        // and the `breaker_position_clamped` invariant checker.
+        let effective_hw = effective_half_width(
+            ctx.breaker_width.map_or(0.0, |w| w.0),
+            ctx.size_mult
+                .map_or(1.0, EffectStack::<SizeBoostConfig>::aggregate),
+            ctx.node_scale.map_or(1.0, |s| s.0),
+            ClampRange {
+                min: ctx.min_w.map(|m| m.0),
+                max: ctx.max_w.map(|m| m.0),
+            },
+        );
+        let min_x = ctx.playfield.left() + effective_hw;
+        let max_x = ctx.playfield.right() - effective_hw;
         pos.0.x = pos.0.x.clamp(min_x, max_x);
 
         // Reset to clean Idle state

@@ -164,10 +164,15 @@ pub(crate) fn debt_collector_on_bump(
 /// invocation so only ONE bonus is emitted per `DebtCashOut`.
 pub(crate) fn debt_collector_on_impact(
     mut reader: MessageReader<BoltImpactCell>,
+    config: Option<Res<DebtCollectorConfig>>,
     mut commands: Commands,
     bolts: Query<(&DebtCashOut, Option<&BoltBaseDamage>)>,
     mut damage_writer: MessageWriter<DamageDealt<Cell>>,
 ) {
+    if config.is_none() {
+        reader.clear();
+        return;
+    }
     // `commands.entity(...).remove::<DebtCashOut>()` (line 188) is deferred
     // until `apply_deferred`, so subsequent iterations in the same invocation
     // still see `DebtCashOut` on the query. The `cashed_this_frame` guard
@@ -203,9 +208,14 @@ pub(crate) fn debt_collector_on_impact(
 /// unconditional remove is safe.
 pub(crate) fn debt_collector_on_bolt_lost(
     mut reader: MessageReader<BoltLost>,
+    config: Option<Res<DebtCollectorConfig>>,
     mut commands: Commands,
     mut bolts: Query<&mut DebtStack>,
 ) {
+    if config.is_none() {
+        reader.clear();
+        return;
+    }
     for msg in reader.read() {
         if let Ok(mut stack) = bolts.get_mut(msg.bolt) {
             stack.0 = 0.0;

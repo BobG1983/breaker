@@ -424,7 +424,84 @@ fn effective_size_empty_boosts_identity_multiplier() {
     );
 }
 
-// ── Part B: effective_radius pure function tests ────────────────────
+// ── Part B: effective_half_width pure function tests ────────────────
+
+// Behavior: no boost + no node scale returns base_width / 2
+#[test]
+fn effective_half_width_no_boost_no_scale_returns_half_base() {
+    let result = effective_half_width(120.0, 1.0, 1.0, ClampRange::NONE);
+    assert!(
+        (result - 60.0).abs() < f32::EPSILON,
+        "expected 60.0 (120.0 / 2), got {result}",
+    );
+}
+
+// Behavior: MaxWidth caps the boosted width before halving
+#[test]
+fn effective_half_width_clamps_to_max() {
+    // 120.0 * 3.0 = 360.0, clamped to max 200.0, halved = 100.0
+    let result = effective_half_width(
+        120.0,
+        3.0,
+        1.0,
+        ClampRange {
+            min: None,
+            max: Some(200.0),
+        },
+    );
+    assert!(
+        (result - 100.0).abs() < f32::EPSILON,
+        "expected 100.0 (200.0 / 2 after clamp), got {result}",
+    );
+}
+
+// Behavior: MinWidth floors the shrunk width before halving
+#[test]
+fn effective_half_width_clamps_to_min() {
+    // 120.0 * 0.1 = 12.0, clamped up to min 60.0, halved = 30.0
+    let result = effective_half_width(
+        120.0,
+        1.0,
+        0.1,
+        ClampRange {
+            min: Some(60.0),
+            max: Some(600.0),
+        },
+    );
+    assert!(
+        (result - 30.0).abs() < f32::EPSILON,
+        "expected 30.0 (60.0 / 2 after min clamp), got {result}",
+    );
+}
+
+// Behavior: node_scaling_factor multiplies before clamp + halving
+#[test]
+fn effective_half_width_node_scale_multiplies() {
+    // 120.0 * 1.0 * 0.7 = 84.0, unclamped, halved = 42.0
+    let result = effective_half_width(120.0, 1.0, 0.7, ClampRange::NONE);
+    assert!(
+        (result - 42.0).abs() < 1e-3,
+        "expected 42.0 (120.0 * 0.7 / 2), got {result}",
+    );
+}
+
+// Behavior: matches effective_size().x / 2.0 for identical inputs
+#[test]
+fn effective_half_width_matches_effective_size_x_half() {
+    let width_range = ClampRange {
+        min: Some(60.0),
+        max: Some(200.0),
+    };
+    let size = effective_size(120.0, 20.0, 1.5, 0.8, width_range, ClampRange::NONE);
+    let half = effective_half_width(120.0, 1.5, 0.8, width_range);
+    let expected = size.x * 0.5;
+    assert!(
+        size.x.mul_add(-0.5, half).abs() < f32::EPSILON,
+        "expected {expected} (size.x/2), got {half}",
+    );
+}
+
+// ── Part C: effective_radius pure function tests ────────────────────
 
 // Behavior 1: No boosts, no node scale, no constraints returns base radius
 

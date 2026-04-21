@@ -98,7 +98,7 @@ pub enum ProtocolTuning {
     Greed { rarity_boost_per_skip: f32 },
     RecklessDash { risky_zone_start: f32, damage_multiplier: f32, double_penalty: bool },
     Burnout { fill_duration: f32, drain_duration: f32, still_threshold: f32, full_heat_damage_multiplier: f32, speed_boost_duration: f32 },
-    Conductor { primary_swap_window: f32 },
+    Conductor,
     Afterimage { phantom_duration: f32, phantom_bolt_duration: f32 },
     Fission { kills_per_split: u32 },
 }
@@ -118,7 +118,7 @@ impl ProtocolTuning {
             Self::Greed { .. } => ProtocolKind::Greed,
             Self::RecklessDash { .. } => ProtocolKind::RecklessDash,
             Self::Burnout { .. } => ProtocolKind::Burnout,
-            Self::Conductor { .. } => ProtocolKind::Conductor,
+            Self::Conductor => ProtocolKind::Conductor,
             Self::Afterimage { .. } => ProtocolKind::Afterimage,
             Self::Fission { .. } => ProtocolKind::Fission,
         }
@@ -140,7 +140,7 @@ impl ProtocolTuning {
             | Self::Greed { .. }
             | Self::RecklessDash { .. }
             | Self::Burnout { .. }
-            | Self::Conductor { .. }
+            | Self::Conductor
             | Self::Afterimage { .. }
             | Self::Fission { .. } => None,
         }
@@ -148,7 +148,7 @@ impl ProtocolTuning {
 }
 ```
 
-**Changes from draft**: `Conductor` now has a `primary_swap_window: f32` field (all protocols must have RON-tunable values per design rules). `effects()` uses exhaustive match — compiler catches missing variants.
+**Changes from draft**: `Conductor` simplified to a unit variant during v2 implementation (the planned `primary_swap_window` tuning proved vestigial — the swap mechanic unconditionally promotes on every Perfect bump on an `ExtraBolt`). `effects()` uses exhaustive match — compiler catches missing variants.
 
 ### `HazardTuning`
 

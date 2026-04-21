@@ -7,6 +7,7 @@ use crate::{
     effect_v3::{effects::*, stacking::EffectStack},
     input::resources::GameAction,
     prelude::*,
+    shared::size::{ClampRange, effective_half_width},
 };
 
 /// Reads input actions and moves the breaker horizontally.
@@ -62,16 +63,19 @@ pub(crate) fn move_breaker(
         data.position.0.x = data.velocity.0.x.mul_add(dt, data.position.0.x);
 
         // Clamp to playfield bounds (accounting for breaker effective half-width).
-        // MaxWidth caps the boosted width so stacked SizeBoost effects can't
-        // push effective_half_w past playfield.right() and invert the clamp —
-        // mirrors the cap sync_breaker_scale already applies for the visual.
-        let boosted_half_w = data.base_width.half_width()
-            * data
-                .size_boosts
-                .map_or(1.0, EffectStack::<SizeBoostConfig>::aggregate);
-        let effective_half_w = data
-            .max_w
-            .map_or(boosted_half_w, |mw| boosted_half_w.min(mw.0 * 0.5));
+        // Routed through the shared `effective_half_width` helper so this
+        // formula stays identical to `sync_breaker_scale` (visual) and the
+        // `breaker_position_clamped` invariant checker — all three must agree.
+        let effective_half_w = effective_half_width(
+            data.base_width.0,
+            data.size_boosts
+                .map_or(1.0, EffectStack::<SizeBoostConfig>::aggregate),
+            data.node_scale.map_or(1.0, |s| s.0),
+            ClampRange {
+                min: data.min_w.map(|m| m.0),
+                max: data.max_w.map(|m| m.0),
+            },
+        );
         let min_x = playfield.left() + effective_half_w;
         let max_x = playfield.right() - effective_half_w;
         data.position.0.x = data.position.0.x.clamp(min_x, max_x);

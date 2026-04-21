@@ -13,15 +13,14 @@ Perfect-bump an extra bolt to inherit the primary bolt's chip effects. Dropping 
 
 ## Config Resource
 ```rust
-#[derive(Resource, Debug, Clone, Copy, PartialEq)]
-pub(crate) struct ConductorConfig {
-    /// Vestigial field preserved for RON/tuning symmetry.
-    /// Not consulted by the swap system — retained to avoid RON/test churn.
-    pub(crate) primary_swap_window: f32,
-}
+#[derive(Resource, Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct ConductorConfig;
 ```
 
-Populated from `ProtocolTuning::Conductor { primary_swap_window }` at activation.
+Unit struct — used only as a presence marker for the
+`Option<Res<ConductorConfig>>` harness-safety gate in
+`conductor_swap_on_perfect_bump`. Inserted by `activate` on the
+`ProtocolTuning::Conductor` unit variant.
 
 ## Components
 Uses existing bolt-domain components — no Conductor-owned components:
