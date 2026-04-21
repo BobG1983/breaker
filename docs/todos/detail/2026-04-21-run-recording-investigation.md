@@ -6,7 +6,7 @@ Close the recording side of the recording-and-replay loop described in `docs/arc
 
 ## Status
 
-**Phase 1 complete.** Runner-side chaos auto-capture is implemented: `collect_and_evaluate` in `breaker-scenario-runner/src/runner/app/evaluate.rs` calls `write_chaos_regression` on any chaos scenario violation, writing a deterministic scripted replay to `scenarios/regressions/<timestamp>-chaos-<name>.scenario.ron`. Phase 2 (in-game dev-mode recorder) design questions remain open.
+**Investigation.** Design questions open — do not start implementation before answering them.
 
 ## Motivating scenarios
 
