@@ -165,6 +165,16 @@ move_breaker .after(update_bump)
                                                   .before(EffectV3Systems::Bridge)
                    [protocol domain — swaps PrimaryBolt/ExtraBolt + BoundEffects/StagedEffects on Perfect bump;
                     must precede Bridge so bridges walk the post-swap effect tree]
+                <- afterimage_check_phantom_bounce .after(BoltSystems::CellCollision)
+                                                   .before(BreakerSystems::GradeBump)
+                   [protocol domain — re-emits BoltImpactBreaker for phantom breaker contacts so
+                    grade_bump evaluates the phantom hit with normal bump logic;
+                    run_if(protocol_active(Afterimage)), run_if(in_state(NodeState::Playing))]
+                <- afterimage_spawn_phantom_bolt .after(BreakerSystems::GradeBump)
+                                                 .before(EffectV3Systems::Tick)
+                   [protocol domain — reads BumpPerformed; on Perfect grade against PhantomBreaker:
+                    spawns phantom bolt via Bolt::builder().extra().headless();
+                    run_if(protocol_active(Afterimage)), run_if(in_state(NodeState::Playing))]
                 <- bridge_bump .after(BreakerSystems::GradeBump)
                    .in_set(EffectV3Systems::Bridge)              [effect domain]
                 <- bridge_bump_whiff .after(BreakerSystems::GradeBump)
@@ -223,6 +233,57 @@ DeathPipelineSystems::ApplyDamage
                  (apply_heal::<Cell>, apply_heal::<Bolt>, apply_heal::<Wall>, apply_heal::<Breaker>, apply_heal::<Salvo>)
                  [shared/death_pipeline — runs last; Without<Dead> filter prevents same-tick revival]
 
+afterimage_tick_phantom_breaker → afterimage_spawn_phantom_breaker
+  [protocol domain — chained pair; tick decrements PhantomBreakerLifetime and despawns expired phantoms,
+   spawn creates a new phantom at pre-dash position on DashState::Active transition;
+   chained before afterimage_check_phantom_bounce;
+   run_if(protocol_active(Afterimage)), run_if(in_state(NodeState::Playing));
+   unordered relative to physics chain]
+
+burnout_tick_speed_boost .before(BreakerSystems::Move)
+burnout_update_heat .after(BreakerSystems::Move)
+                    .before(burnout_on_bump)
+burnout_on_bump .after(BreakerSystems::GradeBump)
+burnout_amplify_damage .after(BoltSystems::CellCollision)
+  [protocol domain — all four gated run_if(protocol_active(Burnout)) + run_if(in_state(NodeState::Playing));
+   burnout_update_heat → burnout_on_bump chained to prevent the scheduler from placing on_bump
+   before update_heat (GradeBump and Move have no relative ordering);
+   burnout_cleanup_node on OnExit(NodeState::Playing), unconditional]
+
+reckless_dash_on_bump .after(BreakerSystems::GradeBump)
+reckless_dash_amplify_damage .after(BoltSystems::CellCollision)
+reckless_dash_double_penalty .after(BoltSystems::BoltLost)
+  [protocol domain — all three gated run_if(protocol_active(RecklessDash)) + run_if(in_state(NodeState::Playing));
+   reckless_dash_double_penalty writes a synthetic duplicate BoltLost via deferred Commands
+   (world.resource_mut::<Messages<BoltLost>>()) to avoid a mutable borrow conflict with the reader;
+   reckless_dash_cleanup_node on OnExit(NodeState::Playing), unconditional]
+
+echo_strike_on_bump .after(BreakerSystems::GradeBump)
+echo_strike_on_impact .after(BoltSystems::CellCollision)
+echo_strike_cleanup_destroyed_echoes .after(DeathPipelineSystems::HandleKill)
+  [protocol domain — all three gated run_if(protocol_active(EchoStrike)) + run_if(in_state(NodeState::Playing));
+   echo_strike_cleanup_node on OnExit(NodeState::Playing), unconditional]
+
+iron_curtain_on_bolt_lost .after(BoltSystems::BoltLost)
+  [protocol domain — gated run_if(protocol_active(IronCurtain)) + run_if(in_state(NodeState::Playing));
+   no components, no cleanup system]
+
+debt_collector_on_bump .after(BreakerSystems::GradeBump)
+debt_collector_on_impact .after(BoltSystems::CellCollision)
+debt_collector_on_bolt_lost .after(BoltSystems::BoltLost)
+  [protocol domain — all three gated run_if(protocol_active(DebtCollector)) + run_if(in_state(NodeState::Playing))]
+debt_collector_attach_stack
+  [protocol domain — gated run_if(protocol_active(DebtCollector)) only; no NodeState gate so mid-node
+   bolt spawns (e.g. via Fission) get DebtStack immediately; unordered relative to physics chain;
+   debt_collector_cleanup_node on OnExit(NodeState::Playing), unconditional]
+
+siphon_tick_streak .before(siphon_on_cell_destroyed)
+siphon_on_cell_destroyed .before(NodeSystems::ApplyTimePenalty)
+  [protocol domain — both gated run_if(protocol_active(Siphon)) + run_if(in_state(NodeState::Playing));
+   tick decrements streak window before on_cell_destroyed so kill extension sees fresh delta;
+   on_cell_destroyed precedes ApplyTimePenalty so added time is factored into the same frame's timer tick;
+   siphon_cleanup_node on OnExit(NodeState::Playing), unconditional]
+
 tick_bolt_lifespan .before(BoltSystems::BoltLost)
                    .before(DeathPipelineSystems::HandleKill)  [bolt domain — writes KillYourself<Bolt> on timer expiry]
 
@@ -251,7 +312,7 @@ check_portal_entry .after(BoltSystems::CellCollision)
             [cells domain — reads PortalCompleted, writes KillYourself<Cell> for the portal entity]
 ```
 
-Reading: the quadtree is maintained first (incremental — only changed entities re-inserted). Consumers read `Active*` components directly via `.multiplier()` / `.total()` methods. Then breaker moves, speed is normalized post-constraint (`normalize_bolt_speed_after_constraints`), cell collisions run (tagged `BoltSystems::CellCollision`), wall collision (`BoltSystems::WallCollision`), breaker collision (`BoltSystems::BreakerCollision`), bump grading (`BreakerSystems::GradeBump`), distance constraints enforced (chain bolts), bolt-lost detection (`BoltSystems::BoltLost`). All collision systems run `.before(EffectV3Systems::Bridge)` so damage messages are present when bridges evaluate. Velocity is enforced by `apply_velocity_formula` at each collision/steering site — there is no separate velocity preparation step. All effect bridge systems run in `EffectV3Systems::Bridge`. After Bridge, the death pipeline runs: `DeathPipelineSystems::ApplyDamage` (reads `DamageDealt<T>`, reduces `Hp`) → `DetectDeaths` (reads `Hp`, writes `KillYourself<T>`) → `HandleKill` (marks `Dead`, writes `Destroyed<T>` + `DespawnEntity`) → `ApplyHeal` (reads `HealDealt<T>`, increments `Hp` bounded by `HealCap`; `Without<Dead>` filter prevents same-tick revival of entities killed in the same pipeline run). `update_cell_damage_visuals` runs after `ApplyDamage` and before `HandleKill` to update color feedback on still-living cells. Consumers of kill events (track_cells_destroyed, detect_mass_destruction, detect_combo_king, check_lock_release, track_node_completion) order `.after(DeathPipelineSystems::HandleKill)`. `process_despawn_requests` runs in `FixedPostUpdate` — sole despawn site. The full effect pipeline order within FixedUpdate is: `EffectV3Systems::Bridge` → `EffectV3Systems::Tick` → `EffectV3Systems::Conditions`. `EffectV3Systems::Reset` runs on `OnEnter(NodeState::Loading)` — not in the FixedUpdate chain. Survival turret systems: `tick_survival_timer` (self-destruct check) → `tick_salvo_fire_timer` (countdown) → `fire_survival_turret` (spawn salvos); all three run before `ApplyDamage`. Salvo collision systems: `salvo_cell_collision` (before `ApplyDamage`), `salvo_breaker_collision` (before `EffectV3Systems::Bridge`), `salvo_bolt_collision` and `salvo_wall_collision` (unordered). Portal systems: `check_portal_entry` (after `BoltSystems::CellCollision`) → `handle_portal_entered` → `handle_portal_completed` (before `DeathPipelineSystems::HandleKill`).
+Reading: the quadtree is maintained first (incremental — only changed entities re-inserted). Consumers read `Active*` components directly via `.multiplier()` / `.total()` methods. Then breaker moves, speed is normalized post-constraint (`normalize_bolt_speed_after_constraints`), cell collisions run (tagged `BoltSystems::CellCollision`), wall collision (`BoltSystems::WallCollision`), breaker collision (`BoltSystems::BreakerCollision`), bump grading (`BreakerSystems::GradeBump`), distance constraints enforced (chain bolts), bolt-lost detection (`BoltSystems::BoltLost`). All collision systems run `.before(EffectV3Systems::Bridge)` so damage messages are present when bridges evaluate. Velocity is enforced by `apply_velocity_formula` at each collision/steering site — there is no separate velocity preparation step. All effect bridge systems run in `EffectV3Systems::Bridge`. After Bridge, the death pipeline runs: `DeathPipelineSystems::ApplyDamage` (reads `DamageDealt<T>`, reduces `Hp`) → `DetectDeaths` (reads `Hp`, writes `KillYourself<T>`) → `HandleKill` (marks `Dead`, writes `Destroyed<T>` + `DespawnEntity`) → `ApplyHeal` (reads `HealDealt<T>`, increments `Hp` bounded by `HealCap`; `Without<Dead>` filter prevents same-tick revival of entities killed in the same pipeline run). `update_cell_damage_visuals` runs after `ApplyDamage` and before `HandleKill` to update color feedback on still-living cells. Consumers of kill events (track_cells_destroyed, detect_mass_destruction, detect_combo_king, check_lock_release, track_node_completion) order `.after(DeathPipelineSystems::HandleKill)`. `process_despawn_requests` runs in `FixedPostUpdate` — sole despawn site. The full effect pipeline order within FixedUpdate is: `EffectV3Systems::Bridge` → `EffectV3Systems::Tick` → `EffectV3Systems::Conditions`. `EffectV3Systems::Reset` runs on `OnEnter(NodeState::Loading)` — not in the FixedUpdate chain. Survival turret systems: `tick_survival_timer` (self-destruct check) → `tick_salvo_fire_timer` (countdown) → `fire_survival_turret` (spawn salvos); all three run before `ApplyDamage`. Salvo collision systems: `salvo_cell_collision` (before `ApplyDamage`), `salvo_breaker_collision` (before `EffectV3Systems::Bridge`), `salvo_bolt_collision` and `salvo_wall_collision` (unordered). Portal systems: `check_portal_entry` (after `BoltSystems::CellCollision`) → `handle_portal_entered` → `handle_portal_completed` (before `DeathPipelineSystems::HandleKill`). Afterimage protocol systems: `afterimage_tick_phantom_breaker` → `afterimage_spawn_phantom_breaker` (chained pair, unordered relative to physics) → `afterimage_check_phantom_bounce` (after `BoltSystems::CellCollision`, before `BreakerSystems::GradeBump`) → `afterimage_spawn_phantom_bolt` (after `BreakerSystems::GradeBump`, before `EffectV3Systems::Tick`). Burnout protocol systems: `burnout_tick_speed_boost` (before `BreakerSystems::Move`) → `burnout_update_heat` (after `BreakerSystems::Move`, before `burnout_on_bump`) → `burnout_on_bump` (after `BreakerSystems::GradeBump`); `burnout_amplify_damage` (after `BoltSystems::CellCollision`). Reckless Dash: `reckless_dash_on_bump` (after `GradeBump`), `reckless_dash_amplify_damage` (after `CellCollision`), `reckless_dash_double_penalty` (after `BoltLost` — writes duplicate via deferred Commands). Echo Strike: `echo_strike_on_bump` (after `GradeBump`), `echo_strike_on_impact` (after `CellCollision`), `echo_strike_cleanup_destroyed_echoes` (after `DeathPipelineSystems::HandleKill`). Iron Curtain: `iron_curtain_on_bolt_lost` (after `BoltLost`); no cleanup. Debt Collector: `debt_collector_on_bump` (after `GradeBump`), `debt_collector_on_impact` (after `CellCollision`), `debt_collector_on_bolt_lost` (after `BoltLost`); `debt_collector_attach_stack` (unordered, `protocol_active` gate only — no NodeState gate so mid-node bolt spawns get a stack immediately). All burnout/reckless_dash/echo_strike/iron_curtain/debt_collector systems except `_attach_stack` are gated `protocol_active(X)` + `in_state(NodeState::Playing)`; `_cleanup_node` systems run on `OnExit(NodeState::Playing)` with no run-if. Siphon protocol: `siphon_tick_streak` (before `siphon_on_cell_destroyed`) → `siphon_on_cell_destroyed` (before `NodeSystems::ApplyTimePenalty`) so added time is factored into the same frame's timer tick; `siphon_cleanup_node` on `OnExit(NodeState::Playing)`, unconditional.
 
 ```
 NodeSystems::TrackCompletion

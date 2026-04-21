@@ -1,0 +1,57 @@
+// Adversarial stress: RecklessDash protocol under sustained chaos input — Dense layout.
+//
+// RecklessDash applies a risky-zone damage boost when the bolt is bumped while
+// the breaker is in a dash, and doubles the bolt-lost penalty if the bolt is lost
+// during a dash. This stress scenario targets three failure paths:
+//
+//   1. Risky-zone boost pierce-guard: if the boost is applied to the BumpDealt
+//      message AND the BumpAmplification effect chain, a single bump can be
+//      double-boosted. Dense layout drives frequent cell contacts and the chaos
+//      input keeps the breaker in Dashing state as often as possible, maximising
+//      the window for double-application. RunStatsMonotonic would catch overflow;
+//      NoNaN catches NaN from a multiplier read against a despawned effect entity.
+//
+//   2. Bolt-lost double-penalty two-level guard: the double-damage-on-lost path
+//      fires a bolt-lost damage wave augmented by the risky modifier. If the
+//      guard that prevents applying the modifier twice is bypassed (e.g., checking
+//      DashState on the frame the bolt is already gone), the damage wave value
+//      becomes incorrect. NoNaN catches a NaN penalty value; BoltInBounds verifies
+//      the bolt respawn is within bounds after the penalty fires.
+//
+//   3. Amplification pierce-guard under rapid dashes: action_prob 0.8 on Dense
+//      layout means the breaker is frequently Dashing, Braking, and Settling in
+//      rapid succession. ValidDashState guards the state machine against illegal
+//      transitions caused by RecklessDash interrupt logic (e.g., dashing while
+//      already Braking if the protocol modifies dash gating).
+//
+//   4. Entity cleanup on rapid bolt-lost events: Dense layout and Aegis lives
+//      system allow repeated bolt-loss, each triggering the risky double-penalty
+//      pipeline. NoEntityLeaks catches any message entities left unconsumed if
+//      the penalty system fires but the cleanup reader doesn't drain.
+//
+// 3000 frames with allow_early_end: false sustains pressure across node restarts.
+// 16 runs explore diverse Dense cell arrangements and dash-timing interactions.
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Chaos((action_prob: 0.8)),
+    max_frames: 3000,
+    disallowed_failures: [
+        NoNaN,
+        BoltInBounds,
+        BreakerInBounds,
+        BoltSpeedAccurate,
+        ValidDashState,
+        BreakerCountReasonable,
+        NoEntityLeaks,
+        BoltCountReasonable,
+    ],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: false,
+    stress: (runs: 16, parallelism: 16),
+    seed: 4441,
+    frame_mutations: [
+        (frame: 10, mutation: InjectProtocol(kind_name: "RecklessDash")),
+    ],
+)

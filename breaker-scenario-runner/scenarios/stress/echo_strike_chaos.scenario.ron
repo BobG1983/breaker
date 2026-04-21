@@ -1,0 +1,61 @@
+// Adversarial stress: EchoStrike protocol with Prism multi-bolt under chaos — Scatter layout.
+//
+// EchoStrike builds an EchoNetwork: Perfect Bumps strengthen it and cell hits
+// damage it. Prism spawns multiple bolts, meaning EchoNetwork receives concurrent
+// cell-hit signals from independent bolt entities. This stress scenario targets:
+//
+//   1. Concurrent EchoNetwork write hazard: multiple Prism bolts can hit
+//      different cells within the same FixedUpdate frame, each independently
+//      decrementing EchoNetwork integrity. If the system processes both writes
+//      non-atomically (e.g., reading integrity, computing decrement, writing back),
+//      one decrement overwrites the other. The network can never go negative, so
+//      if it underflows to a wrapping value, NoNaN catches NaN propagation and
+//      BoltSpeedAccurate catches any reactive speed change from a corrupted network.
+//
+//   2. cleanup_destroyed_echoes cross-reference integrity: when a cell is destroyed
+//      that the EchoNetwork holds a component reference to, cleanup_destroyed_echoes
+//      must remove all references to that entity. Under Scatter layout, cells are
+//      destroyed in non-contiguous bursts — the multi-bolt Prism configuration
+//      can destroy two cells simultaneously, both referenced by the EchoNetwork.
+//      If only one is cleaned up, the stale reference causes a panic or NaN on next
+//      network read. NoEntityLeaks catches EchoNetwork components whose backing
+//      cell entities have been despawned.
+//
+//   3. Perfect Bump timing under chaos: action_prob 0.7 with Prism means some bolts
+//      produce PerfectBumped events and some don't — the EchoNetwork strength
+//      counter must only increment for confirmed Perfect Bumps, not all bumps.
+//      If the PerfectBumped filter is too broad and fires on any bump, network
+//      strength accumulates unboundedly, causing BoltSpeedAccurate violations
+//      when strength-derived speed modifiers overflow.
+//
+//   4. Bolt count management: Prism produces 2+ bolts by design; Scatter layout
+//      and chaos input keep both active. BoltCountReasonable (default cap 8) is
+//      sufficient for Prism's standard bolt count. NoEntityLeaks guards the echo
+//      component cleanup path when bolts are lost.
+//
+// 3000 frames with allow_early_end: false cycles through multiple Scatter layouts.
+// 16 runs explore diverse multi-bolt impact orderings and cell destruction patterns.
+(
+    breaker: "Prism",
+    layout: "Scatter",
+    input: Chaos((action_prob: 0.7)),
+    max_frames: 3000,
+    disallowed_failures: [
+        NoNaN,
+        BoltInBounds,
+        BreakerInBounds,
+        BoltSpeedAccurate,
+        ValidDashState,
+        BreakerCountReasonable,
+        NoEntityLeaks,
+        BoltCountReasonable,
+    ],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: false,
+    stress: (runs: 16, parallelism: 16),
+    seed: 5527,
+    frame_mutations: [
+        (frame: 10, mutation: InjectProtocol(kind_name: "EchoStrike")),
+    ],
+)

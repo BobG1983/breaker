@@ -51,7 +51,7 @@ fn debt_collector_ron_name_description_unlock_tier_pinned_exactly() {
     );
     assert_eq!(
         def.description,
-        "Each successful bump adds damage debt; cash it out on the next cell kill.",
+        "Early and Late bumps stack damage debt; a Perfect bump cashes it out on the next cell kill. Bolt loss resets the stack.",
         "debt_collector description drift guard"
     );
     assert_eq!(def.unlock_tier, 0, "debt_collector unlock_tier drift guard");

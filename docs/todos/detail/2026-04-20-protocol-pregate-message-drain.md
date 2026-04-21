@@ -6,7 +6,7 @@
 
 ## The bug class
 
-Protocols that consume messages (`BumpPerformed`, `BoltImpactCell`, `BoltLost`, `CellDestroyedAt`, `Dead`, etc.) register their reader systems inside `run_if(protocol_active(ProtocolKind::Foo).and(in_state(NodeState::Playing)))`. When the run-if returns false the whole system is skipped — which means its `MessageReader<T>` cursor never advances, so messages buffered in Bevy 0.18's two-frame double-buffer survive and are processed retroactively the tick the gate opens.
+Protocols that consume messages (`BumpPerformed`, `BoltImpactCell`, `BoltLost`, `Destroyed<Cell>`, `Dead`, etc.) register their reader systems inside `run_if(protocol_active(ProtocolKind::Foo).and(in_state(NodeState::Playing)))`. When the run-if returns false the whole system is skipped — which means its `MessageReader<T>` cursor never advances, so messages buffered in Bevy 0.18's two-frame double-buffer survive and are processed retroactively the tick the gate opens.
 
 The harness-safe `Option<Res<FooConfig>>` early-return path calls `reader.clear()`, but that path only runs when the system IS scheduled (gate true) and the config happens to be absent. The gate-off path does not.
 

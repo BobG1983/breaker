@@ -1,0 +1,67 @@
+// Adversarial stress: Fission protocol — cell-kill counter accumulation and split spawn — Dense layout.
+//
+// Fission splits the bolt into two on every Nth cell kill (configurable via the
+// per-protocol config resource). Dense layout drives the highest cell destruction
+// rate, maximising split frequency. This stress scenario targets:
+//
+//   1. Kill-counter accumulation under concurrent destructions: in a single
+//      FixedUpdate frame, the bolt can destroy multiple Dense-layout cells
+//      simultaneously (multiple DeathOccurred<Cell> messages). Each death
+//      should increment the counter by 1. If the accumulator processes messages
+//      in parallel or reads the counter twice in one frame, it may increment by
+//      2+ for a single frame. If N=3 and the counter jumps from 2 to 4, the split
+//      is never triggered; if it jumps from 2 to 3 and then the split fires but
+//      the counter is not reset atomically, the next frame it fires again immediately.
+//      BoltCountReasonable (default cap 8) catches runaway split accumulation.
+//
+//   2. Split spawn bolt-count bounds: each split spawns 1 additional bolt. If
+//      the split fires 4+ times before previous split bolts expire, BoltCountReasonable
+//      fires. Dense layout drives rapid destruction, so splits accumulate quickly
+//      if the counter reset is not atomic with the spawn. NoEntityLeaks catches
+//      split-bolt entities that are spawned but lack required physics components
+//      (e.g., missing BoltVelocity from an incomplete spawn).
+//
+//   3. Split bolt velocity derivation: the split bolt receives a reflected velocity
+//      derived from the primary bolt's current velocity and the last cell impact
+//      normal. If the split fires on the same frame a cell is destroyed (the cell's
+//      AABB is being cleaned up), the impact normal may be zero-length. NoNaN catches
+//      NaN velocity on the split bolt; BoltInBounds catches a split bolt spawned
+//      at the destroyed cell's position (outside the remaining play area) if the
+//      spawn position is not offset correctly.
+//
+//   4. Split bolt ExactlyOnePrimaryBolt invariant: the spawned split bolt must NOT
+//      be tagged PrimaryBolt — only the original bolt holds that marker. If the
+//      spawn path copies all components including PrimaryBolt, ExactlyOnePrimaryBolt
+//      fires immediately. ExactlyOnePrimaryBolt is listed to catch this class of bug.
+//
+//   5. Chaos input ValidDashState coverage: action_prob 0.7 keeps the breaker in
+//      active dash states, testing that Fission's split-spawn path does not corrupt
+//      the breaker state machine (e.g., by sending a spurious bump message).
+//
+// 3000 frames with allow_early_end: false ensures sustained Dense cell pressure.
+// 16 runs explore diverse kill-timing patterns and bolt trajectory orderings.
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Chaos((action_prob: 0.7)),
+    max_frames: 3000,
+    disallowed_failures: [
+        NoNaN,
+        BoltInBounds,
+        BreakerInBounds,
+        BoltSpeedAccurate,
+        ValidDashState,
+        BreakerCountReasonable,
+        NoEntityLeaks,
+        BoltCountReasonable,
+        ExactlyOnePrimaryBolt,
+    ],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: false,
+    stress: (runs: 16, parallelism: 16),
+    seed: 3719,
+    frame_mutations: [
+        (frame: 10, mutation: InjectProtocol(kind_name: "Fission")),
+    ],
+)

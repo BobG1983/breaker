@@ -1,6 +1,6 @@
 (
     name: "Iron Curtain",
-    description: "Cells farther from the breaker take fractional damage.",
+    description: "Losing a bolt triggers a damage wave — fractional damage with distance falloff toward farther cells.",
     unlock_tier: 0,
     tuning: IronCurtain(
         damage_fraction: 0.25,

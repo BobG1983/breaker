@@ -1,0 +1,61 @@
+// Adversarial stress: IronCurtain protocol with Aegis lives system — Dense layout.
+//
+// IronCurtain fires a distance-falloff damage wave when a bolt is lost, dealing
+// damage to all cells proportional to (1 - distance / max_range). Dense layout
+// packs cells tightly, maximising how many cells fall within the wave radius and
+// how many cells are near the bolt-loss point (lower-wall region). This stress
+// scenario targets:
+//
+//   1. Distance-falloff NaN on zero-distance: if the bolt is lost at a position
+//      exactly coincident with a cell centre, the distance is 0.0 and the
+//      falloff formula (1 - 0 / max_range) = 1.0 — safe. However, if max_range
+//      is 0.0 (misconfigured or corrupted resource), the division is 0/0 = NaN.
+//      NoNaN catches NaN propagation into BumpDealt message values.
+//
+//   2. Invulnerable-cell filter bypass: cells with Shield or similar invulnerability
+//      markers must be excluded from the damage wave. Dense layout has high cell
+//      density; if the filter is applied per-entity but the query accidentally
+//      includes already-dead cells (Dead marker not yet processed this frame),
+//      the wave applies damage to cells being destroyed concurrently, producing
+//      a double-despawn that triggers a Bevy panic. NoEntityLeaks catches
+//      lingering damage-wave message entities if the pipeline doesn't drain.
+//
+//   3. Repeated bolt-loss pressure: Aegis lives system allows multiple bolt-loss
+//      events per run. With chaos action_prob 0.6, the bolt frequently falls past
+//      the breaker, triggering repeated IronCurtain waves. If the wave system
+//      allocates per-wave state that is not cleaned up between waves, entity
+//      counts grow monotonically. NoEntityLeaks catches accumulation; BoltInBounds
+//      verifies bolt respawn positions after each loss event.
+//
+//   4. RunStatsMonotonic coverage: each IronCurtain wave that destroys cells
+//      should increment CellsDestroyed exactly once per cell. Dense layout
+//      maximises simultaneous destructions. RunStatsMonotonic is not listed as
+//      disallowed to keep the scenario focused, but NoNaN would catch any counter
+//      wrap that becomes NaN in a downstream calculation.
+//
+// 3000 frames with allow_early_end: false ensures multiple bolt-loss cycles.
+// 16 runs explore diverse Dense cell arrangements and bolt-loss positions.
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Chaos((action_prob: 0.6)),
+    max_frames: 3000,
+    disallowed_failures: [
+        NoNaN,
+        BoltInBounds,
+        BreakerInBounds,
+        BoltSpeedAccurate,
+        ValidDashState,
+        BreakerCountReasonable,
+        NoEntityLeaks,
+        BoltCountReasonable,
+    ],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: false,
+    stress: (runs: 16, parallelism: 16),
+    seed: 6173,
+    frame_mutations: [
+        (frame: 10, mutation: InjectProtocol(kind_name: "IronCurtain")),
+    ],
+)

@@ -30,21 +30,18 @@ Populated from `ProtocolTuning::Afterimage { phantom_duration, phantom_bolt_dura
 ```rust
 /// Marks an entity as a phantom breaker spawned by the Afterimage protocol.
 /// The phantom is a temporary collision body at the breaker's pre-dash position.
+/// Zero-field marker — presence alone distinguishes phantom from real breaker.
 #[derive(Component, Debug)]
-pub(crate) struct PhantomBreaker {
-    /// Remaining lifetime (seconds). Entity despawned when this reaches 0.
-    pub remaining: f32,
-}
+pub(crate) struct PhantomBreaker;
 
-/// Marks a bolt that is in Phantom state: passes through cells (damaging them)
-/// instead of bouncing, but still bounces off walls and real breaker.
+/// Tracks the remaining lifetime of a phantom breaker (seconds).
+/// Entity is despawned when this reaches 0. Separate from the marker so the
+/// marker can be queried without carrying a mutable float.
 #[derive(Component, Debug)]
-pub(crate) struct PhantomBolt {
-    /// Remaining duration of Phantom state (seconds). When this reaches 0,
-    /// the component is removed and the bolt returns to normal collision behavior.
-    pub remaining: f32,
-}
+pub(crate) struct PhantomBreakerLifetime(pub f32);
 ```
+
+**Note**: `PhantomBolt`, `PhantomLifetime`, and `PhantomOwner` are NOT defined locally. They are re-used from `crate::effect_v3::effects::phantom_bolt::components`. The `PhantomBolt` marker causes the bolt to bypass cell rebound (passing through cells). `PhantomLifetime` tracks remaining duration — lifetime tick-down is delegated to `tick_phantom_lifetime` registered by `EffectV3Plugin` via `SpawnPhantomConfig::register`. `PhantomOwner` links the phantom bolt back to the real bolt that spawned it (uniqueness guard: one phantom per real bolt at a time).
 
 ## Messages
 **Reads**: `BumpPerformed { grade, bolt }`, `BoltImpactCell { cell, bolt }`, `BoltImpactBreaker { bolt, breaker }`
@@ -52,44 +49,31 @@ pub(crate) struct PhantomBolt {
 
 ## Systems
 
-### `afterimage_spawn_phantom`
-- **Schedule**: `FixedUpdate`
-- **run_if**: `protocol_active(ProtocolKind::Afterimage)`, `in_state(NodeState::Playing)`
-- **Behavior**: Detects when the breaker begins a dash (transition to `DashState::Active`). At dash start: spawns a phantom breaker entity at the breaker's current position with `PhantomBreaker { remaining: config.phantom_duration }`. The phantom has collision geometry matching the breaker's size but no movement. Only one phantom may exist at a time — if a previous phantom is still alive, despawn it before spawning the new one.
-- **Entity components**: `PhantomBreaker`, `Transform` (at breaker's pre-dash position), collision AABB matching breaker size, visual sprite/mesh (semi-transparent breaker appearance).
-- **Ordering**: After breaker dash initiation systems.
+**Note**: 4 runtime systems are implemented (not 6). Phantom bolt lifetime tick-down is delegated to `tick_phantom_lifetime` in `EffectV3Plugin`. Cleanup is via `CleanupOnExit::<NodeState>::default()` on all spawned phantom entities — no custom cleanup system required.
 
-### `afterimage_tick_phantom`
+### `afterimage_tick_phantom_breaker`
 - **Schedule**: `FixedUpdate`
 - **run_if**: `protocol_active(ProtocolKind::Afterimage)`, `in_state(NodeState::Playing)`
-- **Behavior**: Decrements `PhantomBreaker.remaining` by `delta_secs`. When `remaining <= 0.0`: despawns the phantom breaker entity.
-- **Ordering**: After `afterimage_spawn_phantom`.
+- **Behavior**: Decrements `PhantomBreakerLifetime` by `delta_secs` for all phantom breaker entities. When `remaining <= 0.0`: despawns the phantom breaker entity.
+- **Ordering**: Chained before `afterimage_spawn_phantom_breaker`.
 
-### `afterimage_phantom_bounce`
+### `afterimage_spawn_phantom_breaker`
 - **Schedule**: `FixedUpdate`
 - **run_if**: `protocol_active(ProtocolKind::Afterimage)`, `in_state(NodeState::Playing)`
-- **Behavior**: Handles bolt collision with the phantom breaker entity. The phantom uses the same collision body as a real breaker, so the bolt bounces with normal rebound physics. On collision: generates a `BoltImpactBreaker`-equivalent event with the phantom entity. This allows the bump grading system to evaluate the impact.
-- **Implementation note**: The phantom needs to participate in the collision pipeline. Options: (a) give the phantom the same collision layer as the breaker, letting the existing bolt-breaker collision system handle it naturally; (b) run a separate collision check. Option (a) is preferred if the collision system can distinguish phantom from real breaker for bump grading purposes.
-- **Ordering**: Within bolt collision detection.
+- **Behavior**: Detects when the breaker begins a dash (transition to `DashState::Active`). At dash start: despawns any existing phantom breaker, then spawns a new phantom breaker entity at the breaker's pre-dash position with `PhantomBreaker` marker + `PhantomBreakerLifetime(config.phantom_duration)`. The phantom has collision geometry matching the breaker's size (same BREAKER_LAYER so bolt-breaker collision fires naturally) but does not move.
+- **Ordering**: Chained after `afterimage_tick_phantom_breaker`, chained before `afterimage_check_phantom_bounce`.
 
-### `afterimage_promote_to_phantom_bolt`
+### `afterimage_check_phantom_bounce`
 - **Schedule**: `FixedUpdate`
 - **run_if**: `protocol_active(ProtocolKind::Afterimage)`, `in_state(NodeState::Playing)`
-- **Behavior**: Reads `BumpPerformed` messages. If the bump grade is `Perfect` AND the bump was against a `PhantomBreaker` entity (not the real breaker): checks if the bolt already has `PhantomBolt`. If not: inserts `PhantomBolt { remaining: config.phantom_bolt_duration }` on the bolt. If the bolt already has `PhantomBolt` (duration has not expired): no-op (duration does not reset).
-- **Ordering**: After `grade_bump`, after `afterimage_phantom_bounce`.
+- **Behavior**: Reads `BoltImpactBreaker` messages. When the contacted breaker entity carries `PhantomBreaker`: re-emits a new `BoltImpactBreaker` message with `breaker = phantom_entity` so the bump grading system evaluates the phantom contact with normal bump logic.
+- **Ordering**: `.before(BreakerSystems::GradeBump)`, `.after(BoltSystems::CellCollision)` — must run after collision detection fires (to see `BoltImpactBreaker`) but before `grade_bump` consumes them.
 
-### `afterimage_tick_phantom_bolt`
+### `afterimage_spawn_phantom_bolt`
 - **Schedule**: `FixedUpdate`
 - **run_if**: `protocol_active(ProtocolKind::Afterimage)`, `in_state(NodeState::Playing)`
-- **Behavior**: Decrements `PhantomBolt.remaining` by `delta_secs` for all bolts with the component. When `remaining <= 0.0`: removes `PhantomBolt` component. Bolt returns to normal collision behavior.
-- **Ordering**: Before bolt collision detection (so phantom state is current for this frame).
-
-### `afterimage_phantom_bolt_pierce`
-- **Schedule**: `FixedUpdate`
-- **run_if**: `protocol_active(ProtocolKind::Afterimage)`, `in_state(NodeState::Playing)`
-- **Behavior**: When a bolt with `PhantomBolt` contacts a cell: deals damage (sends `DamageDealt<Cell>`) but does NOT bounce (velocity unchanged). The bolt passes through the cell. This overrides normal bolt-cell collision rebound for phantom bolts only. Bolt still bounces off walls and real/phantom breakers normally.
-- **Implementation note**: This likely requires the bolt-cell collision system to check for `PhantomBolt` and skip the rebound step while still sending the damage message. The protocol domain provides the marker; the bolt domain reads it.
-- **Ordering**: Within bolt-cell collision handling.
+- **Behavior**: Reads `BumpPerformed` messages. For each Perfect-graded bump whose `breaker` field references a `PhantomBreaker` entity: checks `PhantomOwner` components on existing phantom bolts — skips if any phantom already references the same real bolt (uniqueness guard, duration NOT reset). If no existing phantom: spawns a new phantom bolt via `Bolt::builder().extra().headless()` at the real bolt's position/velocity. Inserts `PhantomBolt`, `PhantomLifetime(config.phantom_bolt_duration)`, `PhantomOwner(real_bolt_entity)`. Phantom bolt receives `BOLT_LAYER` in its collision mask (so it hits other bolts in addition to cells/walls/breaker).
+- **Ordering**: `.after(BreakerSystems::GradeBump)`, `.before(EffectV3Systems::Tick)` — must run after grade_bump resolves the Perfect grade and before effect tick processes the new phantom bolt entity.
 
 ## Cross-Domain Dependencies
 - **breaker domain**: Reads `DashState` transitions (to detect dash start). Reads breaker `Transform` and collision size (to position and size the phantom). Reads `BumpPerformed`.

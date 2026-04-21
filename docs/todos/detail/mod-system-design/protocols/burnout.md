@@ -60,8 +60,8 @@ pub(crate) struct BurnoutDamageBoost {
 ```
 
 ## Messages
-**Reads**: `BumpPerformed { grade, bolt }`, `BoltImpactCell { cell, bolt }`
-**Sends**: `DamageDealt<Cell>` (amplified damage from mega-bump), shockwave spawn (via effect system or direct entity spawn)
+**Reads**: `BumpPerformed { grade, bolt, breaker }`, `BoltImpactCell { cell, bolt }`
+**Sends**: `DamageDealt<Cell>` (amplified damage from mega-bump, tagged `source_chip: Some("protocol:burnout")`), shockwave (via `commands.fire_effect` with `EffectType::Shockwave` dispatched from the breaker entity)
 
 ## Systems
 
@@ -88,6 +88,11 @@ pub(crate) struct BurnoutDamageBoost {
 - **run_if**: `protocol_active(ProtocolKind::Burnout)`, `in_state(NodeState::Playing)`
 - **Behavior**: Decrements `BurnoutSpeedBoost.remaining` by `delta_secs`. When `remaining <= 0.0`: removes the `BurnoutSpeedBoost` component. While `BurnoutSpeedBoost` is present, the breaker movement system should read it and apply a speed multiplier (cross-domain integration point).
 - **Ordering**: Before breaker movement systems (so speed boost is current for this frame).
+
+### `burnout_cleanup_node`
+- **Schedule**: `OnExit(NodeState::Playing)`
+- **run_if**: none (runs unconditionally)
+- **Behavior**: Removes `BurnoutHeat`, `BurnoutSpeedBoost` (from breaker entities) and `BurnoutDamageBoost` (from bolt entities) at node exit, preventing per-node state from leaking across nodes.
 
 ## Cross-Domain Dependencies
 - **breaker domain**: Reads breaker `Velocity2D` (to determine moving vs stationary). Writes `BurnoutHeat`, `BurnoutSpeedBoost` on breaker entity. Breaker movement system needs to check for `BurnoutSpeedBoost` component and apply speed multiplier.

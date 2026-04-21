@@ -29,10 +29,10 @@ pub(crate) struct IronCurtainConfig {
 No per-entity components needed. The damage wave is a one-shot event that scans all cells and sends `DamageDealt<Cell>` messages immediately. No persistent wave entity is required for the gameplay logic (visual FX may spawn a transient entity, but that is FX domain scope).
 
 ## Messages
-**Reads**: `BoltLost`, `BumpPerformed` (to get bolt base damage — or read from bolt component before destruction)
-**Sends**: `DamageDealt<Cell> { cell, damage, source_chip }` for each cell hit by the wave
+**Reads**: `BoltLost`
+**Sends**: `DamageDealt<Cell> { cell, damage, source_chip }` (tagged `source_chip: Some("protocol:iron_curtain")`) for each cell hit by the wave
 
-**Note on bolt entity lifetime**: `BoltLost` fires before the bolt entity is destroyed. The system must read the bolt's base damage from the bolt entity (or from a resource like `BoltConfig`) before the entity is cleaned up. If the bolt entity is already despawned by the time this system runs, fall back to `BoltConfig.base_damage`.
+**Note on bolt entity lifetime**: `BoltLost` carries the bolt entity. The system reads `BoltBaseDamage` from the bolt entity directly; if the bolt entity is already despawned, it falls back to `DEFAULT_BOLT_BASE_DAMAGE`. Does NOT read `BumpPerformed`.
 
 ## Systems
 

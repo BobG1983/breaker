@@ -3,14 +3,10 @@
 //! Pins that `assets/protocols/afterimage.protocol.ron` parses into a
 //! `ProtocolDefinition` with `ProtocolKind::Afterimage`, authored tuning
 //! `phantom_duration: 2.0, phantom_bolt_duration: 3.0`, name `"Afterimage"`,
-//! description `"Perfect-bump a phantom of yourself to split off a piercing
-//! bolt."`, and `unlock_tier: 0`.
-//!
-//! NOTE: The shipped RON file currently holds
-//! `phantom_duration: 1.5, phantom_bolt_duration: 0.75` with the old
-//! description. Writer-code updates the RON to the canonical values above.
-//! Until that change lands, L1 + L2 FAIL at assertion time — this is the
-//! correct RED signal.
+//! description `"Dash to leave a phantom of yourself; Perfect-bump the
+//! phantom to split off an extra bolt."`, and `unlock_tier: 0`. The
+//! earlier "piercing bolt" wording was factually wrong — the phantom
+//! bolt inherits base damage only, no piercing component is attached.
 
 use crate::protocol::definition::{ProtocolDefinition, ProtocolKind, ProtocolTuning};
 
@@ -56,8 +52,9 @@ fn afterimage_ron_name_description_unlock_tier_pinned_exactly() {
 
     assert_eq!(def.name, "Afterimage", "afterimage name drift guard");
     assert_eq!(
-        def.description, "Perfect-bump a phantom of yourself to split off a piercing bolt.",
-        "afterimage description drift guard — writer-code rewrites the old description"
+        def.description,
+        "Dash to leave a phantom of yourself; Perfect-bump the phantom to split off an extra bolt.",
+        "afterimage description drift guard"
     );
     assert_eq!(def.unlock_tier, 0, "afterimage unlock_tier drift guard");
 }

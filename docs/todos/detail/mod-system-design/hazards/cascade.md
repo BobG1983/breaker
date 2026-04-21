@@ -24,7 +24,7 @@ None. Cascade is a reactive system — it responds to cell death events and send
 
 ## Messages
 
-**Reads**: Cell death message — a notification that a cell was destroyed, including its grid position or entity ID so adjacency can be determined. (The exact message depends on the effect refactor — todo #2. Currently `DamageDealt<Cell>` is a placeholder; the actual name may be `CellDestroyedAt { position: IVec2 }` or similar.)
+**Reads**: `Destroyed<Cell>` — emitted by the death pipeline when a cell is destroyed, includes the victim entity (and position via that entity's `Transform` at time of death).
 **Sends**: `HealDealt<Cell>` — generic heal pipeline message defined in `shared::death_pipeline`. Fields: `healer: Option<Entity>`, `target: Entity`, `amount: f32`, `source: Option<String>`, `_marker: PhantomData<Cell>`. One message per adjacent cell per death event.
 
 ## Systems

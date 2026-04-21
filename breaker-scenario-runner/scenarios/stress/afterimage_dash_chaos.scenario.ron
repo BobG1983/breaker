@@ -1,0 +1,55 @@
+// Adversarial stress: Afterimage protocol under maximum chaos dash input — Scatter layout.
+//
+// The Afterimage protocol spawns phantom breaker images tied to dashing rising-edge
+// events: a phantom is created when Dashing begins and must be despawned after its
+// phantom_duration expires. This stress scenario hammers that lifecycle from three angles:
+//
+//   1. Dash-edge saturation: action_prob 0.8 drives near-every-frame dash attempts.
+//      The Dashing rising-edge detector must not double-fire on successive frames that
+//      both read DashState::Dashing — if it fires on edge AND sustained, phantom count
+//      accumulates unboundedly. NoEntityLeaks and BoltCountReasonable catch accumulation.
+//
+//   2. Phantom breaker uniqueness vs. multi-phantom overlap: if max_active is not
+//      enforced across rapid successive dashes, multiple phantom entities co-exist
+//      with shared component references, causing stale pointer reads on despawn.
+//      NoEntityLeaks catches lingering phantom components after the timer expires.
+//
+//   3. Perfect-bump phantom bounce grade: when the bolt contacts a phantom breaker,
+//      the grade derivation reads phantom_duration to determine timing. If the
+//      phantom entity is mid-despawn (timer at 0 but entity not yet removed), the
+//      grade read is NaN. NoNaN catches this propagation.
+//
+//   4. Scatter layout produces irregular bolt trajectories; varied angles mean phantom
+//      breakers occupy diverse screen regions. BreakerInBounds and BoltInBounds
+//      catch any position corruption from phantom-to-primary state confusion.
+//
+//   5. ValidDashState guards the primary breaker's state machine — phantom spawn/tick
+//      must not corrupt the primary breaker's DashState. BreakerCountReasonable
+//      verifies phantom entities are never tagged PrimaryBreaker.
+//
+// 3000 frames with allow_early_end: false ensures sustained dash pressure across multiple
+// node restarts. 16 runs explore diverse Scatter layouts and dash timing patterns.
+(
+    breaker: "Aegis",
+    layout: "Scatter",
+    input: Chaos((action_prob: 0.8)),
+    max_frames: 3000,
+    disallowed_failures: [
+        NoNaN,
+        BoltInBounds,
+        BreakerInBounds,
+        BoltSpeedAccurate,
+        ValidDashState,
+        BreakerCountReasonable,
+        NoEntityLeaks,
+        BoltCountReasonable,
+    ],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: false,
+    stress: (runs: 16, parallelism: 16),
+    seed: 7331,
+    frame_mutations: [
+        (frame: 10, mutation: InjectProtocol(kind_name: "Afterimage")),
+    ],
+)

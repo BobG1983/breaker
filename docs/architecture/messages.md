@@ -31,7 +31,7 @@ Messages are defined in the domain that **conceptually owns the event**. Usually
 | `HealDealt<Breaker> { healer, target, amount, source, cap }` | effect/effects (as applicable) | shared/death_pipeline (apply_heal::<Breaker>) |
 | `HealDealt<Salvo> { healer, target, amount, source, cap }` | (no current production sender — pipeline registered for completeness) | shared/death_pipeline (apply_heal::<Salvo>) |
 | `KillYourself<T> { entity }` | shared/death_pipeline (detect_deaths::<T>), bolt (bolt_lost for ExtraBolts, tick_bolt_lifespan on timer expiry), cells (handle_portal_completed for T=Cell) | shared/death_pipeline (handle_kill::<T>), run (handle_breaker_death for T=Breaker) |
-| `Destroyed<Cell> { position, was_required_to_clear }` | shared/death_pipeline (handle_kill::<Cell>) | run/node (track_node_completion), effect (on_cell_destroyed) |
+| `Destroyed<Cell> { position, was_required_to_clear }` | shared/death_pipeline (handle_kill::<Cell>) | run/node (track_node_completion), effect (on_cell_destroyed), protocol/protocols/fission (fission_on_cell_destroyed — increments FissionCounter, spawns bolt clone on every Nth kill), protocol/protocols/echo_strike (echo_strike_cleanup_destroyed_echoes — removes dead cells from EchoNetwork deques) |
 | `Destroyed<Bolt> { position }` | shared/death_pipeline (handle_kill::<Bolt>) | effect (on_bolt_destroyed) |
 | `Destroyed<Wall> { position }` | shared/death_pipeline (handle_kill::<Wall>) | effect (on_wall_destroyed) |
 | `Destroyed<Breaker> { position }` | shared/death_pipeline (handle_kill::<Breaker>) | effect (on_breaker_destroyed) |

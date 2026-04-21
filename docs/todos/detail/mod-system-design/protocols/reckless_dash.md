@@ -38,8 +38,8 @@ pub(crate) struct RiskyDamageBoost {
 ```
 
 ## Messages
-**Reads**: `BumpPerformed { grade, bolt }`, `BoltImpactBreaker { bolt, breaker }`, `BoltLost`, `DamageDealt<Cell> { cell, damage, source_chip }`
-**Sends**: `DamageDealt<Cell>` (modified damage), `BoltLost` (duplicate on dash bolt-lost)
+**Reads**: `BumpPerformed { grade, bolt, breaker }`, `BoltImpactCell { cell, bolt }`, `BoltLost`
+**Sends**: `DamageDealt<Cell>` (amplified damage, tagged `source_chip: Some("protocol:reckless_dash")`), `BoltLost` (synthetic duplicate emitted via `Commands` when bolt-lost during dash with `double_penalty = true`)
 
 ## Systems
 

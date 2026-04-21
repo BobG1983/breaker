@@ -52,7 +52,8 @@ fn iron_curtain_ron_name_description_unlock_tier_pinned_exactly() {
 
     assert_eq!(def.name, "Iron Curtain", "iron_curtain name drift guard");
     assert_eq!(
-        def.description, "Cells farther from the breaker take fractional damage.",
+        def.description,
+        "Losing a bolt triggers a damage wave — fractional damage with distance falloff toward farther cells.",
         "iron_curtain description drift guard"
     );
     assert_eq!(def.unlock_tier, 0, "iron_curtain unlock_tier drift guard");

@@ -36,28 +36,20 @@ pub(crate) struct FissionCounter {
 Note: `FissionCounter` is a `Resource`, not a `Component`, because it tracks a global kill count across all bolts and all nodes. It is NOT cleared between nodes (persists across the run).
 
 ## Messages
-**Reads**: `CellDestroyedAt { position, was_required_to_clear }`
-**Sends**: None directly — spawns a new bolt entity via `Commands` (or via `Bolt::builder()`)
+**Reads**: `Destroyed<Cell>`
+**Sends**: None directly — spawns a new bolt entity via `Commands` (via `Bolt::builder()`)
 
 ## Systems
 
-### `fission_count_kills`
+### `fission_on_cell_destroyed`
 - **Schedule**: `FixedUpdate`
 - **run_if**: `protocol_active(ProtocolKind::Fission)`, `in_state(NodeState::Playing)`
-- **Behavior**: Reads `CellDestroyedAt` messages. For each cell destroyed: increments `FissionCounter.kills` by 1. If `kills >= config.kills_per_split`: resets `kills` to 0, triggers a bolt split.
-- **Ordering**: After cells `cleanup_cell` (needs `CellDestroyedAt` populated).
-
-### `fission_split_bolt`
-- **Schedule**: `FixedUpdate`
-- **run_if**: `protocol_active(ProtocolKind::Fission)`, `in_state(NodeState::Playing)`
-- **Behavior**: When `fission_count_kills` determines a split is needed: selects a bolt to split (the bolt that last destroyed a cell, or if ambiguous, any active bolt). Spawns a new bolt entity at the same position as the parent bolt. The new bolt's velocity is the parent's velocity rotated by a small angle (e.g., 15-30 degrees) so the two bolts diverge. The new bolt inherits the parent bolt's `BoundEffects` / `StagedEffects` (chip effects). The new bolt is permanent — it does NOT despawn after a timer.
-- **Spawn method**: Must use `Bolt::builder()` per project conventions. Clone relevant effect components from parent bolt.
-- **Ordering**: Immediately after `fission_count_kills` (same system or chained).
-
-**Implementation note**: `fission_count_kills` and `fission_split_bolt` can be a single system if cleaner. The split needs deferred commands (spawning entity) so may need `Commands`. Alternatively, a single system reads messages, counts, and spawns when threshold is met.
+- **Behavior**: Reads `Destroyed<Cell>` messages. For each cell destroyed: increments `FissionCounter.kills` by 1. If `kills >= config.kills_per_split`: resets `kills` to 0, selects the bolt referenced by `msg.killer` (falls back to first bolt in query when killer is absent), spawns a new bolt via `Bolt::builder()` at the same position as the parent. The new bolt's velocity is the parent's velocity rotated by `FISSION_DIVERGENCE_ANGLE_RAD` (15° constant) so the two bolts diverge.
+- **Spawn method**: Uses `Bolt::builder()` per project conventions.
+- **Ordering**: `.after(DeathPipelineSystems::HandleKill)` — `Destroyed<Cell>` messages are written by `handle_kill::<Cell>` in the HandleKill phase.
 
 ## Cross-Domain Dependencies
-- **cells domain**: Reads `CellDestroyedAt` message (to count kills).
+- **cells domain**: Reads `Destroyed<Cell>` message (to count kills).
 - **bolt domain**: Spawns new bolt entities via `Bolt::builder()`. Reads parent bolt's `Transform`, `Velocity2D`, `BoundEffects`, `StagedEffects` (to clone into the new bolt).
 - **effect domain**: New bolt inherits parent's `BoundEffects` / `StagedEffects`. The effect system should treat the new bolt like any other bolt for future effect dispatch.
 - **run domain**: The new bolt is a permanent member of the bolt pool. It should be tracked by whatever system counts active bolts (for bolt-lost logic, node completion, etc.).
@@ -66,7 +58,7 @@ Note: `FissionCounter` is a `Resource`, not a `Component`, because it tracks a g
 
 1. **Kill counter increments on cell destruction**
    - Given: `FissionCounter { kills: 0 }`, `kills_per_split = 8`.
-   - When: A cell is destroyed (`CellDestroyedAt` received).
+   - When: A cell is destroyed (`Destroyed<Cell>` received).
    - Then: `FissionCounter.kills = 1`.
 
 2. **8th kill triggers a split**
@@ -101,11 +93,11 @@ Note: `FissionCounter` is a `Resource`, not a `Component`, because it tracks a g
 
 8. **Multiple splits in rapid succession**
    - Given: `FissionCounter { kills: 7 }`, `kills_per_split = 8`. 9 cells destroyed in quick succession (e.g., shockwave).
-   - When: `fission_count_kills` processes all 9 `CellDestroyedAt` messages.
+   - When: `fission_count_kills` processes all 9 `Destroyed<Cell>` messages.
    - Then: First split at kill 8 (counter resets to 0). Counter reaches 1 after processing the 9th kill. Only 1 split occurs (not 2).
 
 ## Edge Cases
-- All cell kill sources count: bolt impact, shockwave, explosion, chain lightning, piercing beam — any `CellDestroyedAt` message increments the counter.
+- All cell kill sources count: bolt impact, shockwave, explosion, chain lightning, piercing beam — any `Destroyed<Cell>` message increments the counter.
 - Which bolt to split: if the kill came from a specific bolt (traceable via `DamageDealt<Cell>.source_chip` or bolt entity), split that bolt. If kill source is ambiguous (AoE), split any active bolt (e.g., the first in the query).
 - New bolt divergence angle: should be consistent (always same direction offset) or alternating. Exact angle is a tuning value but not in RON config for now — hardcoded as a small constant (15-20 degrees). Can be promoted to config later if needed.
 - `FissionCounter` cleared on run end (not node end). Cleanup in protocol cleanup system alongside `FissionConfig`.

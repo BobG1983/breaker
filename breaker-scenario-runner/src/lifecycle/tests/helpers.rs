@@ -108,6 +108,18 @@ pub(super) fn debug_setup_app(definition: ScenarioDefinition) -> App {
 }
 
 pub(super) fn tick(app: &mut App) {
+    use std::time::Duration;
+
+    use bevy::time::TimeUpdateStrategy;
+
+    // Pin wall-clock delta to ZERO so only accumulate_overstep drives
+    // FixedUpdate. Without this, the default TimeUpdateStrategy::Automatic
+    // leaks real time between tick() calls, occasionally triggering an
+    // extra FixedUpdate step and flaking max_frame / counter assertions
+    // under parallel test load.
+    app.world_mut()
+        .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::ZERO));
+
     let timestep = app.world().resource::<Time<Fixed>>().timestep();
     app.world_mut()
         .resource_mut::<Time<Fixed>>()

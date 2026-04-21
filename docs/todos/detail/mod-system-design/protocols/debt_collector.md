@@ -26,6 +26,13 @@ pub(crate) struct DebtCollectorConfig {
 /// Per-bolt debt multiplier stack. Attached to each bolt entity when Debt Collector is active.
 #[derive(Component, Debug, Default, Clone)]
 pub(crate) struct DebtStack(pub f32);
+
+/// Single-shot cash-out marker. Inserted by `debt_collector_on_bump` on a Perfect bump,
+/// carrying the accumulated stack value. Consumed (and removed) by `debt_collector_on_impact`
+/// on the bolt's next cell impact. Does NOT implement Default — always inserted with an
+/// explicit value.
+#[derive(Component, Debug, Clone, Copy, PartialEq)]
+pub(crate) struct DebtCashOut(pub f32);
 ```
 
 ## Messages
@@ -53,13 +60,13 @@ pub(crate) struct DebtStack(pub f32);
 - **Ordering**: After bolt-lost detection.
 
 ### `debt_collector_attach_stack`
-- **Schedule**: `FixedUpdate` or `OnEnter(NodeState::Playing)`
-- **Run if**: `protocol_active(ProtocolKind::DebtCollector)`
+- **Schedule**: `FixedUpdate`
+- **Run if**: `protocol_active(ProtocolKind::DebtCollector)` (no `NodeState` gate — runs whenever protocol is active to catch mid-node bolt spawns)
 - **What it does**: Attaches `DebtStack::default()` to any bolt entity that doesn't already have one. Ensures new bolts (spawned mid-node via Fission or other mechanics) get tracked.
 - **Ordering**: After bolt spawning systems.
 
 ### `debt_collector_cleanup_node`
-- **Schedule**: `OnExit(NodeState::Playing)` or `OnEnter(NodeState::Transitioning)`
+- **Schedule**: `OnExit(NodeState::Playing)` (no run-if, runs unconditionally)
 - **What it does**: Removes all `DebtStack` and `DebtCashOut` components. Stack does not persist across nodes.
 
 ## Cross-Domain Dependencies

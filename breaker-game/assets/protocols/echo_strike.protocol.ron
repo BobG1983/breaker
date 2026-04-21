@@ -1,6 +1,6 @@
 (
     name: "Echo Strike",
-    description: "Cell hits echo to your last three targets, each for a fraction of the damage.",
+    description: "Perfect bumps prime a bolt; its next cell hits echo fractional damage to the three most recent targets.",
     unlock_tier: 0,
     tuning: EchoStrike(
         max_echoes: 3,

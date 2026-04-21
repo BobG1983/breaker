@@ -44,7 +44,7 @@ pub(crate) struct EchoPrimed;
 ```
 
 ## Messages
-**Reads**: `BumpPerformed { grade, bolt }`, `BoltImpactCell { cell, bolt }`, `CellDestroyedAt { position }`
+**Reads**: `BumpPerformed { grade, bolt }`, `BoltImpactCell { cell, bolt }`, `Destroyed<Cell>`
 **Sends**: `DamageDealt<Cell> { cell, damage, source_chip }` for each echo cell that takes echo damage
 
 ## Systems
@@ -70,11 +70,11 @@ pub(crate) struct EchoPrimed;
 ### `echo_strike_cleanup_destroyed_echoes`
 - **Schedule**: `FixedUpdate`
 - **Run if**: `protocol_active(ProtocolKind::EchoStrike)` + `in_state(NodeState::Playing)`
-- **What it does**: Reads `CellDestroyedAt` messages. Removes any destroyed cell entities from all `EchoNetwork` components. (A destroyed cell can't be an echo target.)
-- **Ordering**: After cell destruction.
+- **What it does**: Reads `Destroyed<Cell>` messages. Removes any destroyed cell entities from all `EchoNetwork` components. (A destroyed cell can't be an echo target.)
+- **Ordering**: After `DeathPipelineSystems::HandleKill`.
 
 ### `echo_strike_cleanup_node`
-- **Schedule**: `OnExit(NodeState::Playing)` or `OnEnter(NodeState::Transitioning)`
+- **Schedule**: `OnExit(NodeState::Playing)` (no run-if, runs unconditionally)
 - **What it does**: Removes all `EchoNetwork`, `EchoPrimed` components. Echoes do not persist across nodes.
 
 ### Echo Damage Calculation
@@ -88,7 +88,7 @@ Fraction assignment is by position in the deque, not by a fixed slot. When there
 ## Cross-Domain Dependencies
 - **breaker**: Reads `BumpPerformed` message (bump grade + bolt entity).
 - **bolt**: Reads `BoltImpactCell` message. Attaches `EchoNetwork` and `EchoPrimed` components to bolt entities.
-- **cells**: Sends `DamageDealt<Cell>` messages for echo damage. Reads `CellDestroyedAt` to clean up destroyed echoes.
+- **cells**: Sends `DamageDealt<Cell>` messages for echo damage. Reads `Destroyed<Cell>` to clean up destroyed echoes.
 
 ## Expected Behaviors (for test specs)
 
@@ -124,7 +124,7 @@ Fraction assignment is by position in the deque, not by a fixed slot. When there
 
 7. **Destroyed echo cell is removed from network**
    - Given: `EchoNetwork` contains [A, B], cell A is destroyed
-   - When: `CellDestroyedAt` for cell A is sent
+   - When: `Destroyed<Cell>` for cell A is sent
    - Then: Network becomes [B]. No crash or stale reference.
 
 8. **Echoes cleared on node end**

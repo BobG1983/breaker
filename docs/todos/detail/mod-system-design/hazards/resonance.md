@@ -48,7 +48,7 @@ pub(crate) struct ResonanceWave {
 
 ## Messages
 
-**Reads**: `CellDestroyedAt` (to track kill timestamps)
+**Reads**: `Destroyed<Cell>` (to track kill timestamps)
 **Sends**: Spawns wave entities (own domain). When a wave reaches the breaker, it may send a slow effect message (TBD -- depends on whether breaker slow is an effect or a direct component).
 
 ## Systems
@@ -58,7 +58,7 @@ pub(crate) struct ResonanceWave {
    - Run if: `hazard_active(HazardKind::Resonance)` AND `in_state(NodeState::Playing)`
    - Ordering: After cell death processing
    - Behavior:
-     1. Read `CellDestroyedAt` messages, record current game time for each
+     1. Read `Destroyed<Cell>` messages, record current game time for each
      2. Compute effective window: `base_window + window_per_level * (stack - 1)`
      3. Prune timestamps older than `current_time - effective_window`
      4. After pruning, if `kill_timestamps.len() > kills_to_trigger`, fire a wave for each kill beyond the threshold
@@ -95,7 +95,7 @@ The window expansion is the primary scaling mechanism. The slow effect's diminis
 
 | Domain | Interaction | Message |
 |--------|------------|---------|
-| `cells` | Reads cell destruction events | `CellDestroyedAt` message (read) |
+| `cells` | Reads cell destruction events | `Destroyed<Cell>` message (read) |
 | `breaker` | Applies slow effect when wave reaches breaker | Message TBD (slow effect or `ApplyBreakerSlow`) |
 
 **Wave entities**: Owned by the hazard domain. The `fx` domain reads `ResonanceWave` components for visual rendering (expanding ring, color pulse, etc.). FX details are out of scope.

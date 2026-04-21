@@ -29,7 +29,7 @@ pub(crate) struct OverchargeKillCount(pub u32);
 
 ## Messages
 
-**Reads**: `CellDestroyedAt` (to count kills), `BumpPerformed` (to reset kill count)
+**Reads**: `Destroyed<Cell>` (to count kills), `BumpPerformed` (to reset kill count)
 **Sends**: Speed modification -- either via effect system `SpeedBoost` or `ApplyBoltSpeedMultiplier` (implementation depends on whether the effect system supports ambient/persistent speed modifiers)
 
 **Speed application**: Two possible patterns:
@@ -50,7 +50,7 @@ Prefer option 1 if feasible after the effect refactor. Fall back to option 2.
    - Run if: `hazard_active(HazardKind::Overcharge)` AND `in_state(NodeState::Playing)`
    - Ordering: After cell death processing
    - Behavior:
-     1. Read `CellDestroyedAt` messages
+     1. Read `Destroyed<Cell>` messages
      2. For each kill, determine which bolt caused it (from the damage source tracking)
      3. Increment that bolt's `OverchargeKillCount`
      4. Compute `speed_per_kill = base_speed_per_kill + speed_per_level * (stack - 1)`
@@ -80,11 +80,11 @@ Speed is multiplicative per kill: `speed = base_speed * (1 + pct)^kills`. This c
 
 | Domain | Interaction | Message |
 |--------|------------|---------|
-| `cells` | Reads cell destruction events | `CellDestroyedAt` message (read) |
+| `cells` | Reads cell destruction events | `Destroyed<Cell>` message (read) |
 | `bolt`  | Modifies bolt speed | Effect system `SpeedBoost` or `ApplyBoltSpeedMultiplier` |
 | `breaker` | Reads bump events for reset | `BumpPerformed` message (read) |
 
-**Source tracking**: `CellDestroyedAt` (or `DamageDealt<Cell>`) must carry enough information to identify which bolt caused the kill. This is needed to attribute kills to specific bolts when multiple bolts are in play (from Fission protocol or multi-bolt chips).
+**Source tracking**: `Destroyed<Cell>` (or `DamageDealt<Cell>`) must carry enough information to identify which bolt caused the kill. This is needed to attribute kills to specific bolts when multiple bolts are in play (from Fission protocol or multi-bolt chips).
 
 ## Expected Behaviors (for test specs)
 
@@ -119,5 +119,5 @@ Speed is multiplicative per kill: `speed = base_speed * (1 + pct)^kills`. This c
 - **Multi-bolt scenarios**: Each bolt has its own `OverchargeKillCount`. Kills are attributed per-bolt. If bolt A destroys a cell, only bolt A's speed increases.
 - **Bolt lost (falls off screen)**: If the bolt is lost without bumping, the kill count is effectively reset (bolt is despawned). A new bolt starts fresh with `OverchargeKillCount(0)`.
 - **Speed reset mechanism**: When bump resets the kill count, the speed bonus must be cleanly removed. If using the effect system, this means removing the accumulated `SpeedBoost` effects. If using a direct multiplier, the bolt domain must track the Overcharge contribution separately from base speed.
-- **Zero kills in cycle**: No speed change. The system is a no-op if no `CellDestroyedAt` messages reference this bolt.
+- **Zero kills in cycle**: No speed change. The system is a no-op if no `Destroyed<Cell>` messages reference this bolt.
 - **Cleanup**: `OverchargeKillCount` is on bolt entities -- cleaned up when bolts despawn. `OverchargeConfig` removed at run end.

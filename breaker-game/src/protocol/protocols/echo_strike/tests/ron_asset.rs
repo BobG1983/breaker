@@ -64,7 +64,7 @@ fn echo_strike_ron_name_description_unlock_tier_pinned_exactly() {
     assert_eq!(def.name, "Echo Strike", "echo_strike name drift guard");
     assert_eq!(
         def.description,
-        "Cell hits echo to your last three targets, each for a fraction of the damage.",
+        "Perfect bumps prime a bolt; its next cell hits echo fractional damage to the three most recent targets.",
         "echo_strike description drift guard"
     );
     assert_eq!(def.unlock_tier, 0, "echo_strike unlock_tier drift guard");

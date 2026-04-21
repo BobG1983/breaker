@@ -1,0 +1,63 @@
+// Adversarial stress: DebtCollector protocol 5-system pipeline under chaos — Scatter layout.
+//
+// DebtCollector's 5-system pipeline: track_bump_timing (early/late classification),
+// accumulate_debt (add to damage debt on late bumps), build_debt (add to debt on
+// early bumps via separate path), cash_out (Perfect Bump converts debt to damage),
+// and cleanup_node (reset debt at node end). This stress scenario targets:
+//
+//   1. cashed_this_frame pierce-guard race: cash_out fires on PerfectBumped but
+//      must not fire twice in the same frame if two systems independently observe
+//      the same PerfectBumped message. Scatter layout + chaos input produces
+//      irregular bump timing, occasionally triggering a Perfect Bump at the exact
+//      frame debt is also accumulating. If the pierce-guard flag is checked before
+//      the message is consumed, cash_out fires twice and debt is double-applied.
+//      BoltSpeedAccurate catches any speed corruption from double damage application;
+//      NoNaN catches NaN from a debt value accumulated to overflow.
+//
+//   2. cleanup_node cross-node isolation: when a node ends and a new one begins
+//      (allow_early_end: false causes restarts), the debt accumulator must be
+//      reset to exactly zero. If cleanup_node fires on a frame where accumulate_debt
+//      also fires (both reading the same frame's bump events), the reset races the
+//      accumulation and the next node begins with residual debt. RunStatsMonotonic
+//      is not listed but NoNaN catches a NaN debt value carried across nodes.
+//
+//   3. Early/late classification boundary: track_bump_timing classifies bumps as
+//      early or late relative to a timing window. Chaos input drives bumps at all
+//      frame offsets — the boundary between early and late must be crisp. If the
+//      boundary is an open vs. closed interval mismatch, a bump exactly at the
+//      boundary is classified as both, triggering both accumulate_debt and
+//      build_debt, doubling the debt unexpectedly. NoNaN catches the downstream
+//      effect; NoEntityLeaks catches duplicate message entities from double-firing.
+//
+//   4. Entity lifecycle under rapid consecutive bumps: Scatter layout produces
+//      varied gap widths and irregular bounce angles, driving sequences of 3-5
+//      consecutive bumps with very short inter-bump intervals. Each bump produces
+//      a BumpDealt message; if debt messages are not consumed before the next bump
+//      fires, they accumulate. NoEntityLeaks catches unconsumed message entities.
+//
+// 3000 frames with allow_early_end: false ensures multiple node restart cycles.
+// 16 runs explore diverse Scatter cell arrangements and bump timing distributions.
+(
+    breaker: "Aegis",
+    layout: "Scatter",
+    input: Chaos((action_prob: 0.7)),
+    max_frames: 3000,
+    disallowed_failures: [
+        NoNaN,
+        BoltInBounds,
+        BreakerInBounds,
+        BoltSpeedAccurate,
+        ValidDashState,
+        BreakerCountReasonable,
+        NoEntityLeaks,
+        BoltCountReasonable,
+    ],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: false,
+    stress: (runs: 16, parallelism: 16),
+    seed: 2903,
+    frame_mutations: [
+        (frame: 10, mutation: InjectProtocol(kind_name: "DebtCollector")),
+    ],
+)
