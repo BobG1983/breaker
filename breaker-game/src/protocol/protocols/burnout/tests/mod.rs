@@ -6,6 +6,7 @@ mod cleanup_node;
 mod components;
 mod on_bump;
 mod plugin;
+mod pregate_drain;
 mod register;
 mod ron_asset;
 mod sentinel;

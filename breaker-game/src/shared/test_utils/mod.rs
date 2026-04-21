@@ -5,6 +5,7 @@
 
 pub(crate) mod builder;
 pub(crate) mod collector;
+pub(crate) mod pregate_drain;
 pub(crate) mod tick_helper;
 
 pub(crate) use builder::TestAppBuilder;

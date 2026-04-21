@@ -16,7 +16,7 @@ use crate::{
     prelude::*,
     protocol::{
         definition::{ProtocolKind, ProtocolTuning},
-        resources::protocol_active,
+        resources::{ActiveProtocols, protocol_active},
     },
 };
 
@@ -123,11 +123,19 @@ pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
 /// Registers Burnout's runtime systems with the correct schedules, run-ifs,
 /// and ordering.
 ///
-/// `FixedUpdate` systems gated by `protocol_active(ProtocolKind::Burnout)`
-/// AND `in_state(NodeState::Playing)`:
+/// `FixedUpdate` non-reader systems — gated by
+/// `protocol_active(ProtocolKind::Burnout)` AND `in_state(NodeState::Playing)`:
 /// - `burnout_tick_speed_boost` — before `BreakerSystems::Move`.
 /// - `burnout_update_heat` — after `BreakerSystems::Move`, before
 ///   `burnout_on_bump`.
+///
+/// `FixedUpdate` reader systems — intentionally ungated at the tuple level.
+/// A `.run_if(...)` gate suppresses the system's *execution* but does NOT
+/// advance its `MessageReader` cursor, so messages sent during gated-off
+/// frames remain in Bevy's two-frame message buffer and get retroactively
+/// consumed the tick the gate opens. Reader systems instead enforce the
+/// `ActiveProtocols` / `NodeState::Playing` gate in-body via an immediate
+/// `reader.clear()` + return when inactive, draining the buffer every tick:
 /// - `burnout_on_bump` — after `BreakerSystems::GradeBump`, after
 ///   `burnout_update_heat`.
 /// - `burnout_amplify_damage` — after `BoltSystems::CellCollision`.
@@ -153,11 +161,16 @@ pub(crate) fn register(app: &mut App) {
             burnout_update_heat
                 .after(BreakerSystems::Move)
                 .before(burnout_on_bump),
-            burnout_on_bump.after(BreakerSystems::GradeBump),
-            burnout_amplify_damage.after(BoltSystems::CellCollision),
         )
             .run_if(protocol_active(ProtocolKind::Burnout))
             .run_if(in_state(NodeState::Playing)),
+    )
+    .add_systems(
+        FixedUpdate,
+        (
+            burnout_on_bump.after(BreakerSystems::GradeBump),
+            burnout_amplify_damage.after(BoltSystems::CellCollision),
+        ),
     )
     .add_systems(OnExit(NodeState::Playing), burnout_cleanup_node);
 }
@@ -236,12 +249,30 @@ pub(crate) fn burnout_update_heat(
 /// Harness-safe: if `BurnoutConfig` is absent, clears the reader and returns
 /// so buffered messages do not leak into a later frame that does have the
 /// resource.
+///
+/// Gated in-body: this system now runs every `FixedUpdate` tick. When
+/// Burnout is not active or `NodeState` is not `Playing`, it drains the
+/// `MessageReader` via `reader.clear()` and returns so buffered
+/// `BumpPerformed` messages cannot leak retroactively when the protocol
+/// activates on a later frame.
 pub(crate) fn burnout_on_bump(
     mut reader: MessageReader<BumpPerformed>,
     config: Option<Res<BurnoutConfig>>,
+    active_protocols: Option<Res<ActiveProtocols>>,
+    node_state: Option<Res<State<NodeState>>>,
     mut breakers: Query<&mut BurnoutHeat, With<Breaker>>,
     mut commands: Commands,
 ) {
+    if active_protocols
+        .as_ref()
+        .is_none_or(|ap| !ap.contains(ProtocolKind::Burnout))
+        || node_state
+            .as_ref()
+            .is_none_or(|s| *s.get() != NodeState::Playing)
+    {
+        reader.clear();
+        return;
+    }
     let Some(config) = config else {
         reader.clear();
         return;
@@ -298,13 +329,31 @@ pub(crate) fn burnout_on_bump(
 /// Harness-safe: if `BurnoutConfig` is absent, clears the reader and returns
 /// so buffered messages do not leak into a later frame that does have the
 /// resource. Boost is NOT consumed in this path.
+///
+/// Gated in-body: this system now runs every `FixedUpdate` tick. When
+/// Burnout is not active or `NodeState` is not `Playing`, it drains the
+/// `MessageReader` via `reader.clear()` and returns so buffered
+/// `BoltImpactCell` messages cannot be retroactively amplified when the
+/// protocol activates on a later frame.
 pub(crate) fn burnout_amplify_damage(
     mut reader: MessageReader<BoltImpactCell>,
     config: Option<Res<BurnoutConfig>>,
+    active_protocols: Option<Res<ActiveProtocols>>,
+    node_state: Option<Res<State<NodeState>>>,
     bolts: Query<(&BurnoutDamageBoost, Option<&BoltBaseDamage>)>,
     mut commands: Commands,
     mut damage_writer: MessageWriter<DamageDealt<Cell>>,
 ) {
+    if active_protocols
+        .as_ref()
+        .is_none_or(|ap| !ap.contains(ProtocolKind::Burnout))
+        || node_state
+            .as_ref()
+            .is_none_or(|s| *s.get() != NodeState::Playing)
+    {
+        reader.clear();
+        return;
+    }
     if config.is_none() {
         reader.clear();
         return;
