@@ -1,17 +1,11 @@
 //! Tests for `collect_and_evaluate` — pass/fail and early-exit snapshot handling.
 
-use std::{
-    fs,
-    sync::{Arc, Mutex},
-};
+use std::sync::{Arc, Mutex};
 
 use crate::{
     invariants::{ScenarioStats, ViolationEntry},
-    runner::app::{EvalSnapshot, SharedEvalBuffer, collect_and_evaluate, write_chaos_regression},
-    types::{
-        ChaosParams, GameAction, InputStrategy, InvariantKind, ScenarioDefinition, ScriptedFrame,
-        ScriptedParams,
-    },
+    runner::app::{EvalSnapshot, SharedEvalBuffer, collect_and_evaluate},
+    types::{InputStrategy, InvariantKind, ScenarioDefinition, ScriptedParams},
 };
 
 // -------------------------------------------------------------------------
@@ -53,7 +47,6 @@ fn collect_and_evaluate_passes_with_clean_snapshot() {
         logs: vec![],
         stats,
         definition,
-        chaos_input_log: None,
     };
     let buffer = SharedEvalBuffer(Arc::new(Mutex::new(Some(snapshot))));
     let passed = collect_and_evaluate(&buffer, "test_scenario", false, None);
@@ -98,7 +91,6 @@ fn collect_and_evaluate_reports_failure_for_early_exit_snapshot_with_violations(
         logs: vec![],
         stats,
         definition,
-        chaos_input_log: None,
     };
     let buffer = SharedEvalBuffer(Arc::new(Mutex::new(Some(snapshot))));
 
@@ -108,85 +100,4 @@ fn collect_and_evaluate_reports_failure_for_early_exit_snapshot_with_violations(
         !passed,
         "collect_and_evaluate must report failure when snapshot contains violations from early exit"
     );
-}
-
-// -------------------------------------------------------------------------
-// write_chaos_regression — replayable scenario file is emitted on chaos fail
-// -------------------------------------------------------------------------
-
-#[test]
-fn write_chaos_regression_produces_replayable_scripted_scenario() {
-    let tmp_root = std::env::temp_dir().join(format!(
-        "breaker_write_chaos_regression_{}",
-        std::process::id()
-    ));
-    drop(fs::remove_dir_all(&tmp_root));
-    fs::create_dir_all(&tmp_root).expect("create tmp root");
-
-    let original = ScenarioDefinition {
-        breaker: "Aegis".into(),
-        layout: "Scatter".into(),
-        input: InputStrategy::Chaos(ChaosParams { action_prob: 0.7 }),
-        max_frames: 3000,
-        disallowed_failures: vec![InvariantKind::NoNaN],
-        seed: Some(9173),
-        ..Default::default()
-    };
-    let chaos_log = vec![
-        ScriptedFrame {
-            frame:   5,
-            actions: vec![GameAction::MoveLeft],
-        },
-        ScriptedFrame {
-            frame:   42,
-            actions: vec![GameAction::Bump],
-        },
-    ];
-
-    let written = write_chaos_regression(
-        &tmp_root,
-        "some_chaos_scenario",
-        &original,
-        chaos_log.clone(),
-    )
-    .expect("regression write must succeed");
-
-    assert!(written.exists(), "regression file must be created on disk");
-    let parent = written.parent().expect("written file has a parent");
-    assert_eq!(
-        parent.file_name().and_then(|s| s.to_str()),
-        Some("regressions"),
-        "regression file must live under scenarios/regressions/",
-    );
-    let stem = written.file_name().and_then(|s| s.to_str()).unwrap_or("");
-    assert!(
-        stem.contains("-chaos-some_chaos_scenario.scenario.ron"),
-        "filename must follow <timestamp>-chaos-<name>.scenario.ron pattern, got {stem}",
-    );
-
-    let contents = fs::read_to_string(&written).expect("regression file readable");
-    let replay: ScenarioDefinition =
-        ron::de::from_str(&contents).expect("regression file must parse as ScenarioDefinition");
-
-    assert!(
-        matches!(replay.input, InputStrategy::Scripted(_)),
-        "replay scenario input must be Scripted, got {:?}",
-        replay.input,
-    );
-    if let InputStrategy::Scripted(ref params) = replay.input {
-        assert_eq!(
-            params.actions, chaos_log,
-            "replay Scripted actions must match the recorded chaos log"
-        );
-    }
-    assert_eq!(
-        replay.seed, None,
-        "replay scenario must drop the seed (scripted input is deterministic by action list)",
-    );
-    assert_eq!(replay.breaker, original.breaker);
-    assert_eq!(replay.layout, original.layout);
-    assert_eq!(replay.max_frames, original.max_frames);
-    assert_eq!(replay.disallowed_failures, original.disallowed_failures);
-
-    drop(fs::remove_dir_all(&tmp_root));
 }

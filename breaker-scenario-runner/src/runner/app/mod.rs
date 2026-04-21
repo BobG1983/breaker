@@ -11,7 +11,6 @@ pub(crate) use run::run_scenario;
 pub(crate) use {
     evaluate::{
         collect_and_evaluate, drain_remaining_logs, guarded_update, is_timed_out, should_fail_fast,
-        write_chaos_regression,
     },
     types::{EvalSnapshot, SharedEvalBuffer, snapshot_eval_data},
     window::{apply_tile_layout, sync_ui_scale},

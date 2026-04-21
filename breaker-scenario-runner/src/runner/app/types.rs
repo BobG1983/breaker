@@ -6,22 +6,18 @@ use bevy::prelude::*;
 
 use crate::{
     invariants::{ScenarioStats, ViolationEntry, ViolationLog},
-    lifecycle::{ChaosInputLog, ScenarioConfig},
+    lifecycle::ScenarioConfig,
     log_capture::{CapturedLogs, LogEntry},
-    types::{ScenarioDefinition, ScriptedFrame},
+    types::ScenarioDefinition,
 };
 
 /// Cloned snapshot of evaluation data, captured by a `Last` system so results
 /// survive `App::run()` (which replaces self with `App::empty()`).
 pub(crate) struct EvalSnapshot {
-    pub(crate) violations:      Vec<ViolationEntry>,
-    pub(crate) logs:            Vec<LogEntry>,
-    pub(crate) stats:           ScenarioStats,
-    pub(crate) definition:      ScenarioDefinition,
-    /// Recorded per-frame actions when the active strategy is `Chaos` or
-    /// `Hybrid`. `None` for non-chaos strategies; `Some(vec![])` if chaos was
-    /// active but the driver emitted nothing.
-    pub(crate) chaos_input_log: Option<Vec<ScriptedFrame>>,
+    pub(crate) violations: Vec<ViolationEntry>,
+    pub(crate) logs:       Vec<LogEntry>,
+    pub(crate) stats:      ScenarioStats,
+    pub(crate) definition: ScenarioDefinition,
 }
 
 /// Shared buffer inserted as a resource so the snapshot system can write to it
@@ -37,7 +33,6 @@ pub(crate) fn snapshot_eval_data(
     cl: Option<Res<CapturedLogs>>,
     stats: Option<Res<ScenarioStats>>,
     config: Option<Res<ScenarioConfig>>,
-    chaos_log: Option<Res<ChaosInputLog>>,
     shared: Res<SharedEvalBuffer>,
 ) {
     let (Some(vl), Some(cl), Some(stats), Some(config)) = (vl, cl, stats, config) else {
@@ -45,11 +40,10 @@ pub(crate) fn snapshot_eval_data(
     };
     if let Ok(mut guard) = shared.0.lock() {
         *guard = Some(EvalSnapshot {
-            violations:      vl.0.clone(),
-            logs:            cl.0.clone(),
-            stats:           stats.clone(),
-            definition:      config.definition.clone(),
-            chaos_input_log: chaos_log.map(|log| log.0.clone()),
+            violations: vl.0.clone(),
+            logs:       cl.0.clone(),
+            stats:      stats.clone(),
+            definition: config.definition.clone(),
         });
     }
 }
@@ -67,16 +61,12 @@ pub(crate) fn snapshot_eval_data_from_world(world: &World, shared: &SharedEvalBu
     ) else {
         return;
     };
-    let chaos_log = world
-        .get_resource::<ChaosInputLog>()
-        .map(|log| log.0.clone());
     if let Ok(mut guard) = shared.0.lock() {
         *guard = Some(EvalSnapshot {
-            violations:      vl.0.clone(),
-            logs:            cl.0.clone(),
-            stats:           stats.clone(),
-            definition:      config.definition.clone(),
-            chaos_input_log: chaos_log,
+            violations: vl.0.clone(),
+            logs:       cl.0.clone(),
+            stats:      stats.clone(),
+            definition: config.definition.clone(),
         });
     }
 }

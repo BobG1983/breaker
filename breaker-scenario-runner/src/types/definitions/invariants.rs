@@ -1,9 +1,9 @@
 //! Invariant kinds the runner can check during a scenario run.
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 /// Invariant kinds the runner can check during a scenario run.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)]
 pub enum InvariantKind {
     /// Bolt position stays within playfield bounds.
     BoltInBounds,

@@ -1,13 +1,13 @@
 //! Input strategy types for scenario definitions.
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 /// All gameplay actions that can be injected by an input strategy.
 ///
 /// Mirrors `breaker::input::resources::GameAction` but lives here so it can
 /// derive [`Deserialize`] independently (the game crate does not expose that
 /// derive on the original type).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 pub enum GameAction {
     /// Continuous horizontal movement left.
     MoveLeft,
@@ -37,7 +37,7 @@ pub enum GameAction {
 ///
 /// Controls how the `PerfectDriver` times its bump actions relative to the
 /// bolt's proximity to the breaker.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 pub enum BumpMode {
     /// Always produces a perfectly-timed bump.
     AlwaysPerfect,
@@ -54,7 +54,7 @@ pub enum BumpMode {
 }
 
 /// A single scripted frame entry -- a frame index and the actions to inject.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct ScriptedFrame {
     /// The fixed-update frame on which these actions are injected.
     pub frame:   u32,
@@ -63,21 +63,21 @@ pub struct ScriptedFrame {
 }
 
 /// Parameters for the [`InputStrategy::Chaos`] variant.
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct ChaosParams {
     /// Probability (0.0--1.0) of injecting any action on a given frame.
     pub action_prob: f32,
 }
 
 /// Parameters for the [`InputStrategy::Scripted`] variant.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct ScriptedParams {
     /// Ordered list of frame-action pairs.
     pub actions: Vec<ScriptedFrame>,
 }
 
 /// Parameters for the [`InputStrategy::Hybrid`] variant.
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct HybridParams {
     /// Number of frames to play back scripted actions before switching to chaos.
     pub scripted_frames: u32,
@@ -88,7 +88,7 @@ pub struct HybridParams {
 /// Input injection strategy for a scenario run.
 ///
 /// RON newtype-variant syntax: `Chaos((action_prob: 0.3))`.
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 pub enum InputStrategy {
     /// Randomised action injection driven by an RNG seed and probability.
     Chaos(ChaosParams),
