@@ -9,9 +9,10 @@
 //! `debt_collector_cleanup_node`), the `DEBT_COLLECTOR_SENTINEL` source-chip
 //! tag, and the `activate` / `register` dispatch entry points.
 
-pub(crate) mod system;
+pub mod system;
 
 #[cfg(test)]
 mod tests;
 
+pub use system::{DebtCashOut, DebtStack};
 pub(crate) use system::{activate, register};

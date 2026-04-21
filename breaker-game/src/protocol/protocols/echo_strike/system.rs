@@ -70,9 +70,9 @@ pub(crate) struct EchoStrikeConfig {
 /// enforced against `EchoStrikeConfig.max_echoes` at push time by
 /// `echo_strike_on_impact`.
 #[derive(Component, Debug, Default, Clone)]
-pub(crate) struct EchoNetwork {
+pub struct EchoNetwork {
     /// Tracked echoes; front is oldest, back is newest.
-    pub(crate) echoes: VecDeque<Entity>,
+    pub echoes: VecDeque<Entity>,
 }
 
 // ── EchoPrimed ──────────────────────────────────────────────────────────────
@@ -80,7 +80,7 @@ pub(crate) struct EchoNetwork {
 /// Per-bolt single-shot marker inserted by a Perfect bump and consumed by
 /// the next `BoltImpactCell`. No fields.
 #[derive(Component, Debug)]
-pub(crate) struct EchoPrimed;
+pub struct EchoPrimed;
 
 // ── activate ────────────────────────────────────────────────────────────────
 

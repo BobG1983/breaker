@@ -9,9 +9,10 @@
 //! `ECHO_STRIKE_SENTINEL` source-chip tag, and the `activate` / `register`
 //! dispatch entry points.
 
-pub(crate) mod system;
+pub mod system;
 
 #[cfg(test)]
 mod tests;
 
+pub use system::{EchoNetwork, EchoPrimed};
 pub(crate) use system::{activate, register};

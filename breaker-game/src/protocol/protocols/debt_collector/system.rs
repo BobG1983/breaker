@@ -56,7 +56,7 @@ pub(crate) struct DebtCollectorConfig {
 /// Per-bolt debt multiplier accumulated from Early/Late bumps. Reset on
 /// Perfect cash-out or `BoltLost`.
 #[derive(Component, Debug, Default, Clone, Copy, PartialEq)]
-pub(crate) struct DebtStack(pub(crate) f32);
+pub struct DebtStack(pub f32);
 
 // ── DebtCashOut ─────────────────────────────────────────────────────────────
 
@@ -67,7 +67,7 @@ pub(crate) struct DebtStack(pub(crate) f32);
 /// Intentionally does NOT implement `Default` — this component is always
 /// inserted with an explicit stack value.
 #[derive(Component, Debug, Clone, Copy, PartialEq)]
-pub(crate) struct DebtCashOut(pub(crate) f32);
+pub struct DebtCashOut(pub f32);
 
 // ── activate ────────────────────────────────────────────────────────────────
 

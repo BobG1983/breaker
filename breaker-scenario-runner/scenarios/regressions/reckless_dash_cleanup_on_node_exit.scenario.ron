@@ -1,0 +1,45 @@
+// Regression: RiskyDamageBoost and RecklessDashDoubledBolts must be cleared when
+// RecklessDash is not in ActiveProtocols.
+//
+// Contract: the RecklessDash protocol owns RiskyDamageBoost (per-bolt component)
+// and RecklessDashDoubledBolts (per-node resource). Both must be absent when
+// RecklessDash is not active. Any code path that removes RecklessDash from
+// ActiveProtocols MUST remove the component from all bolts and clear the resource.
+//
+// This scenario exercises the normal RecklessDash lifecycle under chaos input:
+//   — RecklessDash is injected at frame 10 via InjectProtocol.
+//   — Chaos input drives dash bumps, populating RiskyDamageBoost on the bolt and
+//     RecklessDashDoubledBolts entries via the reckless_dash_on_bump and
+//     reckless_dash_double_penalty systems.
+//   — Node exits trigger reckless_dash_cleanup_node which must clear both.
+//   — RecklessDashOrphaned asserts both are absent whenever RecklessDash is absent
+//     from ActiveProtocols.
+//
+// Failure mode this protects against:
+//   If reckless_dash_cleanup_node misses bolt entities on node exit (e.g. query
+//   filtering issue) or RecklessDashDoubledBolts is not reset, the orphaned boost
+//   component persists and misattributes damage multipliers on future cell impacts.
+(
+    breaker: "Aegis",
+    layout: "Scatter",
+    input: Chaos((action_prob: 0.7)),
+    max_frames: 3000,
+    disallowed_failures: [
+        NoNaN,
+        BoltInBounds,
+        BreakerInBounds,
+        BoltSpeedAccurate,
+        ValidDashState,
+        BreakerCountReasonable,
+        NoEntityLeaks,
+        BoltCountReasonable,
+        RecklessDashOrphaned,
+    ],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: 7253,
+    frame_mutations: [
+        (frame: 10, mutation: InjectProtocol(kind_name: "RecklessDash")),
+    ],
+)

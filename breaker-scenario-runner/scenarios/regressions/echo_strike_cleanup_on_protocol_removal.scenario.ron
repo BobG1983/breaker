@@ -1,0 +1,45 @@
+// Regression: EchoNetwork and EchoPrimed must be absent when EchoStrike is not in
+// ActiveProtocols.
+//
+// Contract: the EchoStrike protocol owns EchoNetwork (per-bolt) and EchoPrimed
+// (per-bolt marker). Both must be absent when EchoStrike is not active. Any code
+// path that removes EchoStrike from ActiveProtocols MUST remove these components
+// from all bolts.
+//
+// This scenario exercises the normal EchoStrike lifecycle under chaos input:
+//   — EchoStrike is injected at frame 10 via InjectProtocol.
+//   — Chaos input drives Perfect Bumps and cell impacts, populating EchoNetwork
+//     echoes and triggering EchoPrimed inserts.
+//   — Node exits and run resets must clean up EchoNetwork and EchoPrimed.
+//   — EchoStrikeOrphaned asserts both components are absent whenever EchoStrike
+//     is absent from ActiveProtocols.
+//
+// Failure mode this protects against:
+//   If echo_strike_cleanup_node misses the EchoPrimed marker or fails to drain
+//   the EchoNetwork deque on node exit, stale echoes fire damage arcs during the
+//   next node against cells that were never part of the echo network, corrupting
+//   damage accounting and violating the protocol's ownership boundary.
+(
+    breaker: "Aegis",
+    layout: "Scatter",
+    input: Chaos((action_prob: 0.7)),
+    max_frames: 3000,
+    disallowed_failures: [
+        NoNaN,
+        BoltInBounds,
+        BreakerInBounds,
+        BoltSpeedAccurate,
+        ValidDashState,
+        BreakerCountReasonable,
+        NoEntityLeaks,
+        BoltCountReasonable,
+        EchoStrikeOrphaned,
+    ],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: 3317,
+    frame_mutations: [
+        (frame: 10, mutation: InjectProtocol(kind_name: "EchoStrike")),
+    ],
+)

@@ -1,0 +1,29 @@
+// Self-test: DebtCollectorOrphaned CONTRACT invariant fires when an entity carries
+// DebtStack with a non-zero value but DebtCollector is not in ActiveProtocols.
+//
+// Sequence:
+//   frame 10 — InjectDebtStack spawns an entity with DebtStack(1.5).
+//              No InjectProtocol — DebtCollector is never active.
+//   frame 11+ — check_debt_collector_orphaned sees DebtStack(1.5) with DebtCollector
+//               absent → VIOLATION.
+//
+// Physics disabled so the injected entity persists for the full run. The invariant
+// fires on every frame from 11 to max_frames. DebtStack(0.0) is a legal default so
+// the violation only fires because value=1.5 > 0.0.
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 120,
+    disallowed_failures: [DebtCollectorOrphaned],
+    allowed_failures: Some([DebtCollectorOrphaned]),
+    debug_setup: (
+        disable_physics: true,
+        node_timer_remaining: 9999.0,
+    ),
+    frame_mutations: [
+        (frame: 10, mutation: InjectDebtStack(value: 1.5)),
+    ],
+)

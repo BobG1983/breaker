@@ -212,6 +212,71 @@ pub enum MutationKind {
         /// variant name, e.g. `"Greed"`).
         kind_name: String,
     },
+    /// Directly write a value into `FissionCounter.kills`, bypassing normal
+    /// kill accumulation.
+    ///
+    /// Used by the `fission_counter_orphaned` self-test to seed a non-zero
+    /// kill count before removing Fission from `ActiveProtocols`, triggering
+    /// an [`InvariantKind::FissionCounterOrphaned`] violation.
+    SetFissionCounter {
+        /// Value to write into `FissionCounter.kills`.
+        kills: u32,
+    },
+    /// Spawn an entity carrying `RiskyDamageBoost` with the given multiplier.
+    ///
+    /// Used by the `reckless_dash_orphaned` self-test to inject the component
+    /// while Reckless Dash is absent from `ActiveProtocols`, triggering
+    /// an [`InvariantKind::RecklessDashOrphaned`] violation.
+    InjectRiskyDamageBoost {
+        /// Multiplier value to set on the spawned `RiskyDamageBoost`.
+        multiplier: f32,
+    },
+    /// Clear all entity entries from `RecklessDashDoubledBolts`, then insert
+    /// a dummy entity ID to make the set non-empty.
+    ///
+    /// Used by the `reckless_dash_orphaned` self-test to verify the resource
+    /// path fires a violation when the protocol is absent.
+    InjectRecklessDashDoubledBolts,
+    /// Spawn an entity carrying `EchoNetwork` (empty echoes deque).
+    ///
+    /// Used by the `echo_strike_orphaned` self-test to inject the component
+    /// while `EchoStrike` is absent from `ActiveProtocols`, triggering
+    /// an [`InvariantKind::EchoStrikeOrphaned`] violation.
+    InjectEchoNetwork,
+    /// Spawn an entity carrying `EchoPrimed`.
+    ///
+    /// Used by the `echo_strike_orphaned` self-test to inject the marker
+    /// while `EchoStrike` is absent from `ActiveProtocols`, triggering
+    /// an [`InvariantKind::EchoStrikeOrphaned`] violation.
+    InjectEchoPrimed,
+    /// Spawn an entity carrying `DebtStack` with the given value.
+    ///
+    /// Used by the `debt_collector_orphaned` self-test to inject a non-zero
+    /// stack while `DebtCollector` is absent from `ActiveProtocols`, triggering
+    /// an [`InvariantKind::DebtCollectorOrphaned`] violation.
+    InjectDebtStack {
+        /// Value to set in `DebtStack`. Must be > 0.0 to trigger violation.
+        value: f32,
+    },
+    /// Spawn an entity carrying `DebtCashOut` with the given value.
+    ///
+    /// Used by the `debt_collector_orphaned` self-test alongside
+    /// [`MutationKind::InjectDebtStack`] to inject a cash-out marker while
+    /// `DebtCollector` is absent, triggering
+    /// an [`InvariantKind::DebtCollectorOrphaned`] violation.
+    InjectDebtCashOut {
+        /// Value to set in `DebtCashOut`.
+        value: f32,
+    },
+    /// Spawn an entity carrying `BurnoutDamageBoost` with the given multiplier.
+    ///
+    /// Used by the `burnout_state_orphaned` self-test to inject the component
+    /// while Burnout is absent from `ActiveProtocols`, triggering
+    /// an [`InvariantKind::BurnoutStateOrphaned`] violation.
+    InjectBurnoutDamageBoost {
+        /// Multiplier value to set on the spawned `BurnoutDamageBoost`.
+        multiplier: f32,
+    },
 }
 
 /// Mirrors `DashState` for RON deserialization in the scenario runner crate.

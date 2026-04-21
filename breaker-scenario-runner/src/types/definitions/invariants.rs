@@ -80,6 +80,40 @@ pub enum InvariantKind {
     /// indicating orphaned streak state leaked from a prior run or protocol
     /// removal without cleanup.
     SiphonStreakOrphaned,
+    /// CONTRACT: `FissionCounter.kills > 0` is only legal when
+    /// `ActiveProtocols` contains `ProtocolKind::Fission`.
+    ///
+    /// Fires when Fission is NOT active but `FissionCounter.kills > 0`,
+    /// indicating orphaned kill-count state leaked from a prior run or
+    /// protocol removal without cleanup.
+    FissionCounterOrphaned,
+    /// CONTRACT: no bolt carries `RiskyDamageBoost` and
+    /// `RecklessDashDoubledBolts` is empty only when `ActiveProtocols`
+    /// contains `ProtocolKind::RecklessDash`.
+    ///
+    /// Fires when `RecklessDash` is NOT active but either a bolt has
+    /// `RiskyDamageBoost` or `RecklessDashDoubledBolts` is non-empty,
+    /// indicating orphaned boost/penalty state.
+    RecklessDashOrphaned,
+    /// CONTRACT: no bolt carries `EchoNetwork` or `EchoPrimed` when
+    /// `ActiveProtocols` does not contain `ProtocolKind::EchoStrike`.
+    ///
+    /// Fires when `EchoStrike` is NOT active but any bolt has `EchoNetwork`
+    /// or `EchoPrimed`, indicating orphaned echo state.
+    EchoStrikeOrphaned,
+    /// CONTRACT: no bolt carries `DebtStack` (value > 0.0) or `DebtCashOut`
+    /// when `ActiveProtocols` does not contain `ProtocolKind::DebtCollector`.
+    ///
+    /// Fires when `DebtCollector` is NOT active but any bolt has a non-zero
+    /// `DebtStack` or carries `DebtCashOut`, indicating orphaned debt state.
+    DebtCollectorOrphaned,
+    /// CONTRACT: no breaker carries `BurnoutHeat` with `heat > 0.0` and no
+    /// bolt carries `BurnoutDamageBoost` when `ActiveProtocols` does not
+    /// contain `ProtocolKind::Burnout`.
+    ///
+    /// Fires when Burnout is NOT active but any breaker has positive heat or
+    /// any bolt has `BurnoutDamageBoost`, indicating orphaned burnout state.
+    BurnoutStateOrphaned,
 }
 
 impl InvariantKind {
@@ -117,6 +151,11 @@ impl InvariantKind {
         Self::BurnoutHeatClamped,
         Self::GreedStacksOrphaned,
         Self::SiphonStreakOrphaned,
+        Self::FissionCounterOrphaned,
+        Self::RecklessDashOrphaned,
+        Self::EchoStrikeOrphaned,
+        Self::DebtCollectorOrphaned,
+        Self::BurnoutStateOrphaned,
     ];
 
     /// Standard human-readable fail reason for this invariant violation.
@@ -161,6 +200,21 @@ impl InvariantKind {
             }
             Self::SiphonStreakOrphaned => {
                 "SiphonStreak.kill_count > 0 while Siphon is not active in ActiveProtocols"
+            }
+            Self::FissionCounterOrphaned => {
+                "FissionCounter.kills > 0 while Fission is not active in ActiveProtocols"
+            }
+            Self::RecklessDashOrphaned => {
+                "RiskyDamageBoost or RecklessDashDoubledBolts non-empty while RecklessDash is not active"
+            }
+            Self::EchoStrikeOrphaned => {
+                "EchoNetwork or EchoPrimed on bolt while EchoStrike is not active in ActiveProtocols"
+            }
+            Self::DebtCollectorOrphaned => {
+                "DebtStack (>0) or DebtCashOut on bolt while DebtCollector is not active in ActiveProtocols"
+            }
+            Self::BurnoutStateOrphaned => {
+                "BurnoutHeat.heat > 0 on breaker or BurnoutDamageBoost on bolt while Burnout is not active"
             }
         }
     }

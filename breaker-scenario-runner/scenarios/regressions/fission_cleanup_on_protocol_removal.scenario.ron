@@ -1,0 +1,42 @@
+// Regression: FissionCounter.kills must be zero when Fission is not in ActiveProtocols.
+//
+// Contract: the Fission protocol owns FissionCounter. Any code path that removes Fission
+// from ActiveProtocols (run reset, explicit deactivation) MUST clear FissionCounter.kills
+// to zero. If kills remains > 0 after removal, the FissionCounterOrphaned invariant fires.
+//
+// This scenario exercises the normal Fission lifecycle under chaos input:
+//   — Fission is injected at frame 10 via InjectProtocol.
+//   — Chaos input drives cell destruction, incrementing FissionCounter.kills via the
+//     fission_on_cell_destroyed system.
+//   — Node restarts and run resets trigger cleanup paths that must clear FissionCounter.
+//   — FissionCounterOrphaned asserts kills == 0 whenever Fission is absent from
+//     ActiveProtocols.
+//
+// Failure mode this protects against:
+//   If fission_cleanup_run is removed or the OnExit(MenuState::Main) cleanup path is
+//   missed, FissionCounter.kills persists across run boundaries with Fission potentially
+//   absent from ActiveProtocols, orphaning the counter state permanently.
+(
+    breaker: "Aegis",
+    layout: "Scatter",
+    input: Chaos((action_prob: 0.7)),
+    max_frames: 3000,
+    disallowed_failures: [
+        NoNaN,
+        BoltInBounds,
+        BreakerInBounds,
+        BoltSpeedAccurate,
+        ValidDashState,
+        BreakerCountReasonable,
+        NoEntityLeaks,
+        BoltCountReasonable,
+        FissionCounterOrphaned,
+    ],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: 4821,
+    frame_mutations: [
+        (frame: 10, mutation: InjectProtocol(kind_name: "Fission")),
+    ],
+)

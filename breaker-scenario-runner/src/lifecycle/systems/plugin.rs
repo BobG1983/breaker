@@ -39,14 +39,15 @@ use crate::{
         check_aabb_matches_entity_dimensions, check_bolt_birthing_layers_zeroed,
         check_bolt_count_reasonable, check_bolt_in_bounds, check_bolt_speed_accurate,
         check_breaker_count_reasonable, check_breaker_in_bounds, check_breaker_position_clamped,
-        check_burnout_heat_clamped, check_chain_arc_count_reasonable, check_chip_offer_expected,
-        check_chip_stacks_consistent, check_exactly_one_primary_bolt,
+        check_burnout_heat_clamped, check_burnout_state_orphaned, check_chain_arc_count_reasonable,
+        check_chip_offer_expected, check_chip_stacks_consistent, check_debt_collector_orphaned,
+        check_echo_strike_orphaned, check_exactly_one_primary_bolt, check_fission_counter_orphaned,
         check_gravity_well_count_reasonable, check_greed_stacks_orphaned, check_hazard_stack_valid,
         check_maxed_chip_never_offered, check_no_entity_leaks, check_no_nan,
-        check_offering_no_duplicates, check_pulse_ring_accumulation, check_run_stats_monotonic,
-        check_second_wind_wall_at_most_one, check_shield_wall_at_most_one,
-        check_siphon_streak_orphaned, check_timer_monotonically_decreasing,
-        check_timer_non_negative, check_valid_breaker_state,
+        check_offering_no_duplicates, check_pulse_ring_accumulation, check_reckless_dash_orphaned,
+        check_run_stats_monotonic, check_second_wind_wall_at_most_one,
+        check_shield_wall_at_most_one, check_siphon_streak_orphaned,
+        check_timer_monotonically_decreasing, check_timer_non_negative, check_valid_breaker_state,
     },
     types::{InvariantKind, ScenarioDefinition},
 };
@@ -121,9 +122,19 @@ fn playing_gate(stats: Option<Res<ScenarioStats>>) -> bool {
 
 /// Registers each `FixedUpdate` invariant checker that is in the active set.
 ///
-/// Uses a macro to avoid repeating the identical ordering constraints
-/// (`.run_if(playing_gate).after(...).before(...)`) for all 27 checkers.
+/// Split into core (engine-level) and protocol-orphan helpers to keep each
+/// function under the 100-line clippy pedantic limit. The macro is defined
+/// in each helper because it captures `app` and `active` by name.
 fn register_active_checkers(app: &mut App, active: &HashSet<InvariantKind>) {
+    register_core_invariant_checkers(app, active);
+    register_protocol_orphan_checkers(app, active);
+}
+
+/// Registers the engine-level invariant checkers (bolt/breaker/chip/effect).
+///
+/// Uses a macro to avoid repeating the identical ordering constraints
+/// (`.run_if(playing_gate).after(...).before(...)`) for each checker.
+fn register_core_invariant_checkers(app: &mut App, active: &HashSet<InvariantKind>) {
     macro_rules! register_checker {
         ($kind:expr, $system:expr) => {
             if active.contains(&$kind) {
@@ -210,6 +221,32 @@ fn register_active_checkers(app: &mut App, active: &HashSet<InvariantKind>) {
         InvariantKind::ExactlyOnePrimaryBolt,
         check_exactly_one_primary_bolt
     );
+}
+
+/// Registers the protocol-owned invariant checkers (ownership/lifecycle).
+///
+/// Each checker pins a CONTRACT that per-protocol state is cleared when the
+/// protocol is removed from `ActiveProtocols`. See
+/// `docs/architecture/scenario-runner.md` for the contract-vs-clamp
+/// distinction.
+fn register_protocol_orphan_checkers(app: &mut App, active: &HashSet<InvariantKind>) {
+    macro_rules! register_checker {
+        ($kind:expr, $system:expr) => {
+            if active.contains(&$kind) {
+                app.add_systems(
+                    FixedUpdate,
+                    $system
+                        .run_if(playing_gate)
+                        .after(apply_debug_frame_mutations)
+                        .after(deferred_debug_setup)
+                        .after(tag_game_entities)
+                        .after(BreakerSystems::UpdateState)
+                        .before(BoltSystems::BoltLost),
+                );
+            }
+        };
+    }
+
     register_checker!(
         InvariantKind::BurnoutHeatClamped,
         check_burnout_heat_clamped
@@ -221,6 +258,26 @@ fn register_active_checkers(app: &mut App, active: &HashSet<InvariantKind>) {
     register_checker!(
         InvariantKind::SiphonStreakOrphaned,
         check_siphon_streak_orphaned
+    );
+    register_checker!(
+        InvariantKind::FissionCounterOrphaned,
+        check_fission_counter_orphaned
+    );
+    register_checker!(
+        InvariantKind::RecklessDashOrphaned,
+        check_reckless_dash_orphaned
+    );
+    register_checker!(
+        InvariantKind::EchoStrikeOrphaned,
+        check_echo_strike_orphaned
+    );
+    register_checker!(
+        InvariantKind::DebtCollectorOrphaned,
+        check_debt_collector_orphaned
+    );
+    register_checker!(
+        InvariantKind::BurnoutStateOrphaned,
+        check_burnout_state_orphaned
     );
 }
 
@@ -338,7 +395,12 @@ pub(crate) const fn is_fixed_update_checker(kind: InvariantKind) -> bool {
         | InvariantKind::ExactlyOnePrimaryBolt
         | InvariantKind::BurnoutHeatClamped
         | InvariantKind::GreedStacksOrphaned
-        | InvariantKind::SiphonStreakOrphaned => true,
+        | InvariantKind::SiphonStreakOrphaned
+        | InvariantKind::FissionCounterOrphaned
+        | InvariantKind::RecklessDashOrphaned
+        | InvariantKind::EchoStrikeOrphaned
+        | InvariantKind::DebtCollectorOrphaned
+        | InvariantKind::BurnoutStateOrphaned => true,
         InvariantKind::ChipOfferExpected => false,
     }
 }
@@ -349,7 +411,7 @@ pub(crate) const fn is_fixed_update_checker(kind: InvariantKind) -> bool {
 /// Takes the union of `disallowed_failures` and `allowed_failures` (if
 /// present), filtered to only kinds where `is_fixed_update_checker` returns
 /// `true`. When both lists are empty/None, or when the filtered set is empty,
-/// returns all 27 `FixedUpdate`-batch kinds as a fallback.
+/// returns all 32 `FixedUpdate`-batch kinds as a fallback.
 pub(crate) fn active_invariant_kinds(definition: &ScenarioDefinition) -> HashSet<InvariantKind> {
     let mut set: HashSet<InvariantKind> = definition
         .disallowed_failures
@@ -371,7 +433,7 @@ pub(crate) fn active_invariant_kinds(definition: &ScenarioDefinition) -> HashSet
         // AND the health check for scenarios like
         // chip_offer_expected_self_test.scenario.ron where only
         // ChipOfferExpected is in the lists (non-FixedUpdate kind
-        // filtered out -> empty set -> all 27 registered).
+        // filtered out -> empty set -> all 32 registered).
         InvariantKind::ALL
             .iter()
             .copied()
@@ -420,12 +482,12 @@ mod tests {
         );
     }
 
-    /// Behavior 3: Exhaustive coverage — exactly 27 variants return `true`,
-    /// exactly 1 returns `false` (`ChipOfferExpected`), total = 28 = `ALL.len()`.
+    /// Behavior 3: Exhaustive coverage — exactly 32 variants return `true`,
+    /// exactly 1 returns `false` (`ChipOfferExpected`), total = 33 = `ALL.len()`.
     #[test]
     fn is_fixed_update_checker_covers_every_invariant_kind_variant() {
         let total = InvariantKind::ALL.len();
-        assert_eq!(total, 28, "expected 28 InvariantKind variants in ALL");
+        assert_eq!(total, 33, "expected 33 InvariantKind variants in ALL");
 
         let fixed_update_count = InvariantKind::ALL
             .iter()
@@ -434,8 +496,8 @@ mod tests {
         let non_fixed_update_count = total - fixed_update_count;
 
         assert_eq!(
-            fixed_update_count, 27,
-            "expected exactly 27 FixedUpdate checker kinds, got {fixed_update_count}"
+            fixed_update_count, 32,
+            "expected exactly 32 FixedUpdate checker kinds, got {fixed_update_count}"
         );
         assert_eq!(
             non_fixed_update_count, 1,
@@ -459,9 +521,9 @@ mod tests {
     // -----------------------------------------------------------------
 
     /// Behavior 4: Empty `disallowed_failures` and None `allowed_failures` returns
-    /// all 27 `FixedUpdate` kinds.
+    /// all 32 `FixedUpdate` kinds.
     #[test]
-    fn active_invariant_kinds_returns_all_27_when_both_lists_empty() {
+    fn active_invariant_kinds_returns_all_32_when_both_lists_empty() {
         let def = ScenarioDefinition {
             disallowed_failures: vec![],
             allowed_failures: None,
@@ -470,8 +532,8 @@ mod tests {
         let active = active_invariant_kinds(&def);
         assert_eq!(
             active.len(),
-            27,
-            "expected 27 active kinds when both lists empty, got {}",
+            32,
+            "expected 32 active kinds when both lists empty, got {}",
             active.len()
         );
         assert!(
@@ -480,9 +542,9 @@ mod tests {
         );
     }
 
-    /// Behavior 4 edge case: Empty vec with Some(vec![]) also returns all 27.
+    /// Behavior 4 edge case: Empty vec with Some(vec![]) also returns all 32.
     #[test]
-    fn active_invariant_kinds_returns_all_27_when_allowed_is_empty_some() {
+    fn active_invariant_kinds_returns_all_32_when_allowed_is_empty_some() {
         let def = ScenarioDefinition {
             disallowed_failures: vec![],
             allowed_failures: Some(vec![]),
@@ -491,8 +553,8 @@ mod tests {
         let active = active_invariant_kinds(&def);
         assert_eq!(
             active.len(),
-            27,
-            "expected 27 active kinds when both lists effectively empty, got {}",
+            32,
+            "expected 32 active kinds when both lists effectively empty, got {}",
             active.len()
         );
         assert!(
@@ -611,7 +673,7 @@ mod tests {
     }
 
     /// Behavior 9 edge case: `ChipOfferExpected` as the only entry triggers
-    /// fallback to all 27 `FixedUpdate` kinds.
+    /// fallback to all 32 `FixedUpdate` kinds.
     #[test]
     fn active_invariant_kinds_chip_offer_expected_only_triggers_fallback() {
         let def = ScenarioDefinition {
@@ -622,8 +684,8 @@ mod tests {
         let active = active_invariant_kinds(&def);
         assert_eq!(
             active.len(),
-            27,
-            "expected 27 active kinds (fallback) when only ChipOfferExpected is listed, got {}",
+            32,
+            "expected 32 active kinds (fallback) when only ChipOfferExpected is listed, got {}",
             active.len()
         );
         assert!(

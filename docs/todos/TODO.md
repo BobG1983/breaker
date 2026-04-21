@@ -5,7 +5,6 @@
 1. **[investigation]** Run recording & replay — dev-mode recorder that writes a proposed scenario file on crash + runner-side chaos auto-capture on failure. Closes the recording leg of the loop described in `docs/architecture/scenario-runner.md`. Design questions open; Phase 1 (runner-side chaos capture) is likely the first deliverable — [detail](detail/2026-04-21-run-recording-investigation.md)
 6. **[in-progress]** Protocol & hazard system — 15 protocols, 16 hazards, interface design, 31 per-item implementation guides, 10-wave plan (branch 1/N: tier stub + Wave 1 infrastructure) — [detail](detail/mod-system-design/mod-system-design.md)
 7. **[ready]** Node sequencing refactor — per-tier batching, volatile nodes, portal cells, frame/block generation, RNG architecture — [detail](detail/node-sequencing-refactor/node-sequencing-refactor.md)
-8. **[ready]** Split spawn_cells_from_layout into separate concerns (grid geometry, lock resolution, entity spawning) — [detail](detail/split-spawn-cells-from-layout.md)
 9. **[ready]** Phase 5c: Crate setup + plugin separation — [detail](detail/phase-5c-render-plugin-separation.md)
 10. **[ready]** Phase 5d: Post-processing pipeline (transition shader done, remaining: bloom, CRT, etc.) — [detail](detail/phase-5d-post-processing-pipeline.md)
 11. **[ready]** Phase 5e: Particle system — [detail](detail/phase-5e-particle-system.md)

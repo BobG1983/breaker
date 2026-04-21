@@ -57,10 +57,10 @@ pub(crate) struct RecklessDashConfig {
 /// `reckless_dash_on_bump` on a risky catch and consumed by
 /// `reckless_dash_amplify_damage` on the bolt's next cell impact.
 #[derive(Component, Debug, Default, Clone, Copy)]
-pub(crate) struct RiskyDamageBoost {
+pub struct RiskyDamageBoost {
     /// Multiplier carried by this boost (copied from
     /// `RecklessDashConfig::damage_multiplier` at insert time).
-    pub(crate) multiplier: f32,
+    pub multiplier: f32,
 }
 
 // ── RecklessDashDoubledBolts ───────────────────────────────────────────────
@@ -73,7 +73,7 @@ pub(crate) struct RiskyDamageBoost {
 /// Initialised by the `ProtocolPlugin` (matches Greed / Siphon / Fission
 /// convention) — NOT by `register`.
 #[derive(Resource, Debug, Default)]
-pub(crate) struct RecklessDashDoubledBolts(pub HashSet<Entity>);
+pub struct RecklessDashDoubledBolts(pub HashSet<Entity>);
 
 // ── activate ───────────────────────────────────────────────────────────────
 

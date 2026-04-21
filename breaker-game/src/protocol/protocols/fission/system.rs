@@ -56,9 +56,9 @@ pub(crate) struct FissionConfig {
 /// by [`fission_cleanup_run`]. NOT reset on node exit — persists across nodes
 /// per design.
 #[derive(Resource, Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct FissionCounter {
+pub struct FissionCounter {
     /// Cell kills accumulated since the last split (or run start).
-    pub(crate) kills: u32,
+    pub kills: u32,
 }
 
 // ── activate ────────────────────────────────────────────────────────────────

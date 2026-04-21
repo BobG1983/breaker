@@ -86,10 +86,10 @@ pub(crate) struct BurnoutSpeedBoost {
 /// on a mega-bump consume and consumed by `burnout_amplify_damage` on the
 /// bolt's next cell impact.
 #[derive(Component, Debug, Default, Clone, Copy, PartialEq)]
-pub(crate) struct BurnoutDamageBoost {
+pub struct BurnoutDamageBoost {
     /// Multiplier carried by this boost (copied from
     /// `BurnoutConfig::full_heat_damage_multiplier` at insert time).
-    pub(crate) multiplier: f32,
+    pub multiplier: f32,
 }
 
 // ── activate ────────────────────────────────────────────────────────────────

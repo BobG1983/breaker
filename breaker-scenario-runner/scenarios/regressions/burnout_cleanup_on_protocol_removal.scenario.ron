@@ -1,0 +1,47 @@
+// Regression: BurnoutHeat (heat > 0.0) and BurnoutDamageBoost must be absent when
+// Burnout is not in ActiveProtocols.
+//
+// Contract: the Burnout protocol owns BurnoutHeat (per-breaker heat gauge) and
+// BurnoutDamageBoost (per-bolt, single-shot multiplier inserted at full heat).
+// When Burnout is not active, BurnoutHeat.heat must be 0.0 and no bolt may carry
+// BurnoutDamageBoost. Any code path that removes Burnout from ActiveProtocols MUST
+// drain heat to 0.0 and remove BurnoutDamageBoost from all bolts.
+//
+// This scenario exercises the normal Burnout lifecycle under chaos input:
+//   — Burnout is injected at frame 10 via InjectProtocol.
+//   — Chaos input drives bolt movement and bumps, advancing BurnoutHeat.heat via
+//     burnout_update_heat and triggering BurnoutDamageBoost inserts at full heat.
+//   — Node exits trigger burnout_cleanup_node which must reset heat and remove boosts.
+//   — BurnoutStateOrphaned asserts heat == 0.0 and BurnoutDamageBoost is absent
+//     whenever Burnout is absent from ActiveProtocols.
+//
+// Failure mode this protects against:
+//   If burnout_cleanup_node fails to remove BurnoutDamageBoost from bolt entities
+//   on node exit (e.g. because the bolt was mid-boost and BurnoutDamageBoost is
+//   consumed in the same frame), or if heat is not drained to exactly 0.0, the
+//   orphaned state silently boosts damage in subsequent nodes without the Burnout
+//   protocol being active.
+(
+    breaker: "Aegis",
+    layout: "Scatter",
+    input: Chaos((action_prob: 0.7)),
+    max_frames: 3000,
+    disallowed_failures: [
+        NoNaN,
+        BoltInBounds,
+        BreakerInBounds,
+        BoltSpeedAccurate,
+        ValidDashState,
+        BreakerCountReasonable,
+        NoEntityLeaks,
+        BoltCountReasonable,
+        BurnoutStateOrphaned,
+    ],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: 8819,
+    frame_mutations: [
+        (frame: 10, mutation: InjectProtocol(kind_name: "Burnout")),
+    ],
+)

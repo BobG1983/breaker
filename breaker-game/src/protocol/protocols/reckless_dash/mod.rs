@@ -11,9 +11,10 @@
 //! `RECKLESS_DASH_SENTINEL` source-chip tag, and the `activate` / `register`
 //! dispatch entry points.
 
-pub(crate) mod system;
+pub mod system;
 
 #[cfg(test)]
 mod tests;
 
-pub(crate) use system::{RecklessDashDoubledBolts, activate, register};
+pub use system::{RecklessDashDoubledBolts, RiskyDamageBoost};
+pub(crate) use system::{activate, register};

@@ -1,0 +1,30 @@
+// Self-test: BurnoutStateOrphaned CONTRACT invariant fires when an entity carries
+// BurnoutDamageBoost but Burnout is not in ActiveProtocols.
+//
+// Sequence:
+//   frame 10 — InjectBurnoutDamageBoost spawns an entity with BurnoutDamageBoost.
+//              No InjectProtocol — Burnout is never active.
+//   frame 11+ — check_burnout_state_orphaned sees BurnoutDamageBoost with Burnout
+//               absent → VIOLATION.
+//
+// Physics disabled so the injected entity persists for the full run. The invariant
+// fires on every frame from 11 to max_frames. This exercises the BurnoutDamageBoost
+// path (not the BurnoutHeat.heat path — that is already covered by the
+// burnout_heat_clamped self-test via the SetBurnoutHeat mutation).
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 120,
+    disallowed_failures: [BurnoutStateOrphaned],
+    allowed_failures: Some([BurnoutStateOrphaned]),
+    debug_setup: (
+        disable_physics: true,
+        node_timer_remaining: 9999.0,
+    ),
+    frame_mutations: [
+        (frame: 10, mutation: InjectBurnoutDamageBoost(multiplier: 3.0)),
+    ],
+)

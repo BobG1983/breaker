@@ -6,9 +6,10 @@
 //! kill tracker), `FISSION_DIVERGENCE_ANGLE_RAD`, `activate`, `register`, and the
 //! `fission_on_cell_destroyed` + `fission_cleanup_run` systems.
 
-pub(crate) mod system;
+pub mod system;
 
 #[cfg(test)]
 mod tests;
 
-pub(crate) use system::{FissionCounter, activate, register};
+pub use system::FissionCounter;
+pub(crate) use system::{activate, register};

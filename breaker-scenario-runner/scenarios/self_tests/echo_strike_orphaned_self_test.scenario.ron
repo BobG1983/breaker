@@ -1,0 +1,28 @@
+// Self-test: EchoStrikeOrphaned CONTRACT invariant fires when an entity carries
+// EchoPrimed but EchoStrike is not in ActiveProtocols.
+//
+// Sequence:
+//   frame 10 — InjectEchoPrimed spawns an entity with EchoPrimed.
+//              No InjectProtocol — EchoStrike is never active.
+//   frame 11+ — check_echo_strike_orphaned sees EchoPrimed with EchoStrike
+//               absent → VIOLATION.
+//
+// Physics disabled so the injected entity persists for the full run. The invariant
+// fires on every frame from 11 to max_frames.
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 120,
+    disallowed_failures: [EchoStrikeOrphaned],
+    allowed_failures: Some([EchoStrikeOrphaned]),
+    debug_setup: (
+        disable_physics: true,
+        node_timer_remaining: 9999.0,
+    ),
+    frame_mutations: [
+        (frame: 10, mutation: InjectEchoPrimed),
+    ],
+)

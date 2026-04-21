@@ -1,0 +1,47 @@
+// Regression: DebtStack and DebtCashOut must be absent when DebtCollector is not in
+// ActiveProtocols.
+//
+// Contract: the DebtCollector protocol owns DebtStack (per-bolt, accumulated debt
+// multiplier) and DebtCashOut (per-bolt, single-shot cash-out marker). Both must be
+// absent when DebtCollector is not active. Any code path that removes DebtCollector
+// from ActiveProtocols MUST remove these components from all bolts.
+//
+// This scenario exercises the normal DebtCollector lifecycle under chaos input:
+//   — DebtCollector is injected at frame 10 via InjectProtocol.
+//   — Chaos input drives bumps and cell impacts, accumulating DebtStack on the bolt
+//     and triggering DebtCashOut inserts on Perfect Bumps.
+//   — Node exits trigger debt_collector_cleanup_node which must remove both
+//     components from all bolts.
+//   — DebtCollectorOrphaned asserts both components are absent (with zero-value
+//     exemption for DebtStack(0.0)) whenever DebtCollector is absent from
+//     ActiveProtocols.
+//
+// Failure mode this protects against:
+//   If debt_collector_cleanup_node misses DebtCashOut or leaves DebtStack with a
+//   non-zero value on bolt entities at node exit, the orphaned state silently
+//   amplifies damage in subsequent nodes without the DebtCollector protocol being
+//   active, breaking the damage economy contract.
+(
+    breaker: "Aegis",
+    layout: "Scatter",
+    input: Chaos((action_prob: 0.7)),
+    max_frames: 3000,
+    disallowed_failures: [
+        NoNaN,
+        BoltInBounds,
+        BreakerInBounds,
+        BoltSpeedAccurate,
+        ValidDashState,
+        BreakerCountReasonable,
+        NoEntityLeaks,
+        BoltCountReasonable,
+        DebtCollectorOrphaned,
+    ],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: 6142,
+    frame_mutations: [
+        (frame: 10, mutation: InjectProtocol(kind_name: "DebtCollector")),
+    ],
+)

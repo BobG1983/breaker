@@ -1,0 +1,29 @@
+// Self-test: RecklessDashOrphaned CONTRACT invariant fires when a bolt carries
+// RiskyDamageBoost or RecklessDashDoubledBolts is non-empty but RecklessDash
+// is not in ActiveProtocols.
+//
+// Sequence:
+//   frame 10 — InjectRiskyDamageBoost spawns a bolt-like entity with RiskyDamageBoost.
+//              No InjectProtocol — RecklessDash is never active.
+//   frame 11+ — check_reckless_dash_orphaned sees RiskyDamageBoost with RecklessDash
+//               absent → VIOLATION.
+//
+// Physics disabled so the injected entity persists for the full run. The invariant
+// fires on every frame from 11 to max_frames.
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 120,
+    disallowed_failures: [RecklessDashOrphaned],
+    allowed_failures: Some([RecklessDashOrphaned]),
+    debug_setup: (
+        disable_physics: true,
+        node_timer_remaining: 9999.0,
+    ),
+    frame_mutations: [
+        (frame: 10, mutation: InjectRiskyDamageBoost(multiplier: 2.5)),
+    ],
+)

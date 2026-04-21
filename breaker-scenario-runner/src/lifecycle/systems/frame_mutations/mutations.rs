@@ -22,7 +22,15 @@ use breaker::{
     protocol::{
         self,
         definition::ProtocolKind,
-        protocols::{burnout::system::BurnoutHeat, greed::GreedStacks, siphon::SiphonStreak},
+        protocols::{
+            burnout::{BurnoutDamageBoost, BurnoutHeat},
+            debt_collector::{DebtCashOut, DebtStack},
+            echo_strike::{EchoNetwork, EchoPrimed},
+            fission::FissionCounter,
+            greed::GreedStacks,
+            reckless_dash::{RecklessDashDoubledBolts, RiskyDamageBoost},
+            siphon::SiphonStreak,
+        },
         resources::{ActiveProtocols, ProtocolRegistry},
     },
     shared::birthing::Birthing,
@@ -85,6 +93,14 @@ pub struct MutationTargets<'w, 's> {
     /// [`MutationKind::RemoveFromActiveProtocols`] to orphan siphon state
     /// for CONTRACT invariant self-tests.
     siphon_streak:        Option<ResMut<'w, SiphonStreak>>,
+    /// [`FissionCounter`] resource -- used by
+    /// [`MutationKind::SetFissionCounter`] to seed a non-zero kill count
+    /// for CONTRACT invariant self-tests.
+    fission_counter:      Option<ResMut<'w, FissionCounter>>,
+    /// [`RecklessDashDoubledBolts`] resource -- used by
+    /// [`MutationKind::InjectRecklessDashDoubledBolts`] to make the set
+    /// non-empty for CONTRACT invariant self-tests.
+    reckless_doubled:     Option<ResMut<'w, RecklessDashDoubledBolts>>,
     /// Tagged breaker entities -- used by
     /// [`MutationKind::InjectProtocol`] as the stamp target for
     /// effect-tree protocols.
@@ -270,6 +286,57 @@ fn apply_resource_mutation(mutation: &MutationKind, targets: &mut MutationTarget
                     window_remaining: *window_remaining,
                 });
             }
+        }
+        MutationKind::SetFissionCounter { kills } => {
+            if let Some(ref mut fc) = targets.fission_counter {
+                fc.kills = *kills;
+            } else {
+                targets
+                    .commands
+                    .insert_resource(FissionCounter { kills: *kills });
+            }
+        }
+        MutationKind::InjectRiskyDamageBoost { multiplier } => {
+            targets.commands.spawn(RiskyDamageBoost {
+                multiplier: *multiplier,
+            });
+        }
+        MutationKind::InjectRecklessDashDoubledBolts => {
+            // Insert a placeholder entity ID so the set is non-empty.
+            // The invariant checks `!set.is_empty()`, so any non-zero entity works.
+            // Use Entity::from_bits with a sentinel value (index=9999, gen=0).
+            // from_bits(9999u64) is a valid entity: low 32 bits = index, high 32 = gen.
+            let placeholder = Entity::from_bits(9999u64);
+            if let Some(ref mut rd) = targets.reckless_doubled {
+                rd.0.insert(placeholder);
+            } else {
+                let mut set = std::collections::HashSet::new();
+                set.insert(placeholder);
+                targets
+                    .commands
+                    .insert_resource(RecklessDashDoubledBolts(set));
+            }
+        }
+        MutationKind::InjectEchoNetwork => {
+            targets.commands.spawn(EchoNetwork {
+                echoes: std::collections::VecDeque::new(),
+            });
+        }
+        MutationKind::InjectEchoPrimed => {
+            targets.commands.spawn(EchoPrimed);
+        }
+        MutationKind::InjectDebtStack { value } => {
+            targets.commands.spawn(DebtStack(*value));
+        }
+        MutationKind::InjectDebtCashOut { value } => {
+            targets
+                .commands
+                .spawn((DebtStack(0.0), DebtCashOut(*value)));
+        }
+        MutationKind::InjectBurnoutDamageBoost { multiplier } => {
+            targets.commands.spawn(BurnoutDamageBoost {
+                multiplier: *multiplier,
+            });
         }
         _ => {} // handled by apply_single_mutation
     }
