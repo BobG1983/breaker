@@ -1,9 +1,8 @@
 //! Group A — `activate` lifecycle (Behaviors 20–23).
 //!
-//! Pins that matching `ProtocolTuning::Conductor` inserts `ConductorConfig`
-//! with the `primary_swap_window` value passed through verbatim; mismatched
-//! tuning is a no-op; repeat activates are last-write-wins; and mismatched
-//! activate after a matched activate preserves the earlier config.
+//! Pins that matching `ProtocolTuning::Conductor` inserts `ConductorConfig`;
+//! mismatched tuning is a no-op; repeat activates are last-write-wins; and
+//! mismatched activate after a matched activate preserves the earlier config.
 
 use super::{
     super::system::ConductorConfig,
@@ -11,50 +10,18 @@ use super::{
 };
 use crate::{prelude::*, protocol::definition::ProtocolTuning};
 
-// ── Behavior 20 — matching tuning inserts config with the field verbatim ────
+// ── Behavior 20 — matching tuning inserts the presence marker ───────────────
 
 #[test]
 fn activate_with_matching_tuning_inserts_conductor_config() {
     let mut app = TestAppBuilder::new().build();
-    activate_now(
-        &mut app,
-        &ProtocolTuning::Conductor {
-            primary_swap_window: 0.2,
-        },
-    );
+    activate_now(&mut app, &ProtocolTuning::Conductor);
 
     let cfg = app
         .world()
         .get_resource::<ConductorConfig>()
         .expect("ConductorConfig should be inserted after matching activate");
-    assert!(
-        (cfg.primary_swap_window - 0.2).abs() < f32::EPSILON,
-        "primary_swap_window verbatim expected 0.2, got {}",
-        cfg.primary_swap_window
-    );
-}
-
-// ── Behavior 20 (edge case) — non-trivial value passes through verbatim ─────
-
-#[test]
-fn activate_passes_non_trivial_primary_swap_window_through_verbatim() {
-    let mut app = TestAppBuilder::new().build();
-    activate_now(
-        &mut app,
-        &ProtocolTuning::Conductor {
-            primary_swap_window: 0.85,
-        },
-    );
-
-    let cfg = app
-        .world()
-        .get_resource::<ConductorConfig>()
-        .expect("ConductorConfig should be inserted after matching activate");
-    assert!(
-        (cfg.primary_swap_window - 0.85).abs() < f32::EPSILON,
-        "primary_swap_window verbatim expected 0.85, got {}",
-        cfg.primary_swap_window
-    );
+    assert_eq!(*cfg, ConductorConfig);
 }
 
 // ── Behavior 21 — mismatched tuning does nothing ────────────────────────────
@@ -104,22 +71,13 @@ fn second_activate_with_conductor_tuning_overwrites_prior_config() {
     let mut app = TestAppBuilder::new().build();
     install_conductor_config(&mut app, canonical_conductor_config());
 
-    activate_now(
-        &mut app,
-        &ProtocolTuning::Conductor {
-            primary_swap_window: 0.5,
-        },
-    );
+    activate_now(&mut app, &ProtocolTuning::Conductor);
 
     let cfg = app
         .world()
         .get_resource::<ConductorConfig>()
         .expect("ConductorConfig should still be present after re-activate");
-    assert!(
-        (cfg.primary_swap_window - 0.5).abs() < f32::EPSILON,
-        "last-write-wins: expected 0.5, got {}",
-        cfg.primary_swap_window
-    );
+    assert_eq!(*cfg, ConductorConfig);
 }
 
 // ── Behavior 23 — mismatched activate after matched activate preserves config
@@ -138,13 +96,8 @@ fn mismatched_activate_after_matched_activate_preserves_conductor_config() {
     );
     assert!(app.world().get_resource::<ConductorConfig>().is_none());
 
-    // Matched call — insert canonical (0.2).
-    activate_now(
-        &mut app,
-        &ProtocolTuning::Conductor {
-            primary_swap_window: 0.2,
-        },
-    );
+    // Matched call — insert canonical.
+    activate_now(&mut app, &ProtocolTuning::Conductor);
 
     // Second mismatched call — must preserve.
     activate_now(

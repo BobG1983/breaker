@@ -22,7 +22,7 @@ use crate::{breaker::messages::BumpGrade, prelude::*};
 #[test]
 fn on_exit_node_playing_does_not_disturb_post_swap_state() {
     let mut app = build_conductor_app();
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
     let breaker = spawn_dummy_breaker(&mut app);
     let primary = spawn_primary_bolt_with_bound(&mut app, make_distinct_bound("PRIMARY_BOUND"));
     let extra = spawn_extra_bolt_with_bound(&mut app, make_distinct_bound("EXTRA_BOUND"));
@@ -67,7 +67,7 @@ fn on_exit_node_playing_does_not_disturb_post_swap_state() {
 #[test]
 fn re_entering_node_playing_reopens_gate_without_leaked_state() {
     let mut app = build_conductor_app();
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
     let breaker = spawn_dummy_breaker(&mut app);
     let primary = spawn_primary_bolt_with_bound(&mut app, make_distinct_bound("PRIMARY_BOUND"));
     let extra = spawn_extra_bolt_with_bound(&mut app, make_distinct_bound("EXTRA_BOUND"));
@@ -110,7 +110,7 @@ fn re_entering_node_playing_reopens_gate_without_leaked_state() {
 #[test]
 fn on_exit_node_playing_without_prior_swap_leaves_bolts_and_config_unchanged() {
     let mut app = build_conductor_app();
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
     let primary = spawn_primary_bolt_with_bound(&mut app, make_distinct_bound("PRIMARY_BOUND"));
     let extra = spawn_extra_bolt_with_bound(&mut app, make_distinct_bound("EXTRA_BOUND"));
 

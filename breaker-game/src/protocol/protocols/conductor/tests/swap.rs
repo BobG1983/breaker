@@ -22,7 +22,7 @@ use crate::{breaker::messages::BumpGrade, effect_v3::types::Tree, prelude::*};
 #[test]
 fn perfect_bump_on_extra_bolt_swaps_primary_and_extra_markers() {
     let mut app = build_conductor_app();
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
     let breaker = spawn_dummy_breaker(&mut app);
     let primary = spawn_primary_bolt(&mut app);
     let extra = spawn_extra_bolt(&mut app);
@@ -53,7 +53,7 @@ fn perfect_bump_on_extra_bolt_swaps_primary_and_extra_markers() {
 #[test]
 fn perfect_bump_swaps_bound_effects_between_primary_and_bumped() {
     let mut app = build_conductor_app();
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
     let breaker = spawn_dummy_breaker(&mut app);
     let primary = spawn_primary_bolt_with_bound(&mut app, make_distinct_bound("PRIMARY_BOUND"));
     let extra = spawn_extra_bolt_with_bound(&mut app, make_distinct_bound("EXTRA_BOUND"));
@@ -78,7 +78,7 @@ fn perfect_bump_swaps_bound_effects_between_primary_and_bumped() {
 #[test]
 fn perfect_bump_preserves_multi_entry_bound_vec_order_on_swap() {
     let mut app = build_conductor_app();
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
     let breaker = spawn_dummy_breaker(&mut app);
 
     // Primary has a two-entry vec.
@@ -112,7 +112,7 @@ fn perfect_bump_preserves_multi_entry_bound_vec_order_on_swap() {
 #[test]
 fn perfect_bump_swaps_staged_effects_when_both_bolts_have_it() {
     let mut app = build_conductor_app();
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
     let breaker = spawn_dummy_breaker(&mut app);
     let primary = spawn_primary_bolt_with_bound_and_staged(
         &mut app,
@@ -156,7 +156,7 @@ fn perfect_bump_swaps_staged_effects_when_both_bolts_have_it() {
 #[test]
 fn perfect_bump_preserves_empty_staged_effects_as_present_component() {
     let mut app = build_conductor_app();
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
     let breaker = spawn_dummy_breaker(&mut app);
 
     // Primary has empty-but-present StagedEffects.
@@ -197,7 +197,7 @@ fn perfect_bump_preserves_empty_staged_effects_as_present_component() {
 #[test]
 fn perfect_bump_moves_staged_effects_from_primary_to_bumped_when_only_primary_has_it() {
     let mut app = build_conductor_app();
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
     let breaker = spawn_dummy_breaker(&mut app);
     let primary = spawn_primary_bolt_with_bound_and_staged(
         &mut app,
@@ -241,7 +241,7 @@ fn perfect_bump_moves_staged_effects_from_primary_to_bumped_when_only_primary_ha
 #[test]
 fn perfect_bump_moves_staged_effects_from_bumped_to_primary_when_only_bumped_has_it() {
     let mut app = build_conductor_app();
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
     let breaker = spawn_dummy_breaker(&mut app);
     let primary = spawn_primary_bolt_with_bound(&mut app, make_distinct_bound("PB"));
     let extra = spawn_extra_bolt_with_bound_and_staged(
@@ -273,7 +273,7 @@ fn perfect_bump_moves_staged_effects_from_bumped_to_primary_when_only_bumped_has
 #[test]
 fn perfect_bump_moves_bound_effects_from_primary_to_bumped_when_only_primary_has_it() {
     let mut app = build_conductor_app();
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
     let breaker = spawn_dummy_breaker(&mut app);
     let primary = spawn_primary_bolt_with_bound(&mut app, make_distinct_bound("PB"));
     let extra = spawn_extra_bolt(&mut app);
@@ -305,7 +305,7 @@ fn perfect_bump_moves_bound_effects_from_primary_to_bumped_when_only_primary_has
 #[test]
 fn perfect_bump_with_neither_bound_nor_staged_on_either_bolt_swaps_markers_only() {
     let mut app = build_conductor_app();
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
     let breaker = spawn_dummy_breaker(&mut app);
     let primary = spawn_primary_bolt(&mut app);
     let extra = spawn_extra_bolt(&mut app);

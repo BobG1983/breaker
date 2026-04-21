@@ -111,9 +111,7 @@ pub(crate) enum ProtocolTuning {
         full_heat_damage_multiplier: f32,
         speed_boost_duration:        f32,
     },
-    Conductor {
-        primary_swap_window: f32,
-    },
+    Conductor,
     Afterimage {
         phantom_duration:      f32,
         phantom_bolt_duration: f32,
@@ -142,7 +140,7 @@ impl ProtocolTuning {
             Self::Greed { .. } => ProtocolKind::Greed,
             Self::RecklessDash { .. } => ProtocolKind::RecklessDash,
             Self::Burnout { .. } => ProtocolKind::Burnout,
-            Self::Conductor { .. } => ProtocolKind::Conductor,
+            Self::Conductor => ProtocolKind::Conductor,
             Self::Afterimage { .. } => ProtocolKind::Afterimage,
             Self::Fission { .. } => ProtocolKind::Fission,
             Self::TierRegression { .. } => ProtocolKind::TierRegression,
@@ -316,12 +314,7 @@ mod tests {
                 },
                 ProtocolKind::Burnout,
             ),
-            (
-                ProtocolTuning::Conductor {
-                    primary_swap_window: 0.2,
-                },
-                ProtocolKind::Conductor,
-            ),
+            (ProtocolTuning::Conductor, ProtocolKind::Conductor),
             (
                 ProtocolTuning::Afterimage {
                     phantom_duration:      1.5,
@@ -414,9 +407,7 @@ mod tests {
                 full_heat_damage_multiplier: 4.0,
                 speed_boost_duration:        2.0,
             },
-            ProtocolTuning::Conductor {
-                primary_swap_window: 0.2,
-            },
+            ProtocolTuning::Conductor,
             ProtocolTuning::Afterimage {
                 phantom_duration:      1.5,
                 phantom_bolt_duration: 0.75,

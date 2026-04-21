@@ -13,10 +13,6 @@ pub enum StampTarget {
     ActiveBolts,
     /// All existing bolts + all bolts spawned in the future.
     EveryBolt,
-    /// All bolts with the `PrimaryBolt` marker.
-    PrimaryBolts,
-    /// All bolts with the `ExtraBolt` marker.
-    ExtraBolts,
     /// All cell entities that exist right now.
     ActiveCells,
     /// All existing cells + all cells spawned in the future.

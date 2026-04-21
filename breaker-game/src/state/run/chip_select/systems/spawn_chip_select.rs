@@ -279,9 +279,7 @@ mod tests {
                 full_heat_damage_multiplier: 4.0,
                 speed_boost_duration:        2.0,
             },
-            ProtocolKind::Conductor => ProtocolTuning::Conductor {
-                primary_swap_window: 0.2,
-            },
+            ProtocolKind::Conductor => ProtocolTuning::Conductor,
             ProtocolKind::Afterimage => ProtocolTuning::Afterimage {
                 phantom_duration:      1.5,
                 phantom_bolt_duration: 0.75,

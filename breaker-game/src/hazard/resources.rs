@@ -17,6 +17,10 @@ pub struct HazardRegistry {
 
 impl HazardRegistry {
     /// Insert or replace a definition keyed on its kind.
+    ///
+    /// Production seeding goes through [`SeedableRegistry::seed`]; this helper
+    /// only exists so tests can hand-construct a registry.
+    #[cfg(test)]
     pub(crate) fn insert(&mut self, def: HazardDefinition) {
         self.hazards.insert(def.kind(), def);
     }
@@ -27,18 +31,17 @@ impl HazardRegistry {
         self.hazards.get(&kind)
     }
 
-    /// Iterate all (kind, definition) pairs.
-    pub(crate) fn iter(&self) -> impl Iterator<Item = (&HazardKind, &HazardDefinition)> {
-        self.hazards.iter()
-    }
-
-    /// Number of stored hazard definitions.
+    /// Number of stored hazard definitions. Used by tests that assert on
+    /// default/insert behaviour.
+    #[cfg(test)]
     #[must_use]
     pub(crate) fn len(&self) -> usize {
         self.hazards.len()
     }
 
-    /// True when no definitions have been inserted.
+    /// True when no definitions have been inserted. Used by tests that assert
+    /// on default behaviour.
+    #[cfg(test)]
     #[must_use]
     pub(crate) fn is_empty(&self) -> bool {
         self.hazards.is_empty()

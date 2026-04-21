@@ -17,6 +17,10 @@ pub struct ProtocolRegistry {
 
 impl ProtocolRegistry {
     /// Insert or replace a definition keyed on its kind.
+    ///
+    /// Production seeding goes through [`SeedableRegistry::seed`]; this helper
+    /// only exists so tests can hand-construct a registry.
+    #[cfg(test)]
     pub(crate) fn insert(&mut self, def: ProtocolDefinition) {
         self.protocols.insert(def.kind(), def);
     }
@@ -35,18 +39,17 @@ impl ProtocolRegistry {
         self.protocols.get(&kind)
     }
 
-    /// Iterate all (kind, definition) pairs.
-    pub(crate) fn iter(&self) -> impl Iterator<Item = (&ProtocolKind, &ProtocolDefinition)> {
-        self.protocols.iter()
-    }
-
-    /// Number of stored protocol definitions.
+    /// Number of stored protocol definitions. Used by tests that assert on
+    /// default/insert behaviour.
+    #[cfg(test)]
     #[must_use]
     pub(crate) fn len(&self) -> usize {
         self.protocols.len()
     }
 
-    /// True when no definitions have been inserted.
+    /// True when no definitions have been inserted. Used by tests that assert
+    /// on default behaviour.
+    #[cfg(test)]
     #[must_use]
     pub(crate) fn is_empty(&self) -> bool {
         self.protocols.is_empty()
@@ -97,15 +100,12 @@ impl ActiveProtocols {
         self.protocols.contains_key(&kind)
     }
 
-    /// Look up the active definition for `kind`, if any.
+    /// Look up the active definition for `kind`, if any. Used by tests that
+    /// verify the definition stored for an active protocol.
+    #[cfg(test)]
     #[must_use]
     pub(crate) fn get(&self, kind: ProtocolKind) -> Option<&ProtocolDefinition> {
         self.protocols.get(&kind)
-    }
-
-    /// Iterate all (kind, definition) pairs of active protocols.
-    pub(crate) fn iter(&self) -> impl Iterator<Item = (&ProtocolKind, &ProtocolDefinition)> {
-        self.protocols.iter()
     }
 
     /// Iterate only the kinds of active protocols. Exposed for
@@ -154,6 +154,7 @@ impl UnlockedProtocols {
     /// Empty unlocked set — no protocols are unlocked. Used by tests that
     /// need to force `generate_protocol_offering` into the empty-pool path
     /// without touching the default list.
+    #[cfg(test)]
     #[must_use]
     pub(crate) fn empty() -> Self {
         Self {
@@ -167,12 +168,9 @@ impl UnlockedProtocols {
         self.unlocked.contains(&kind)
     }
 
-    /// Iterate every unlocked kind.
-    pub(crate) fn iter(&self) -> impl Iterator<Item = &ProtocolKind> {
-        self.unlocked.iter()
-    }
-
-    /// Number of unlocked protocols.
+    /// Number of unlocked protocols. Used by tests that assert the default
+    /// set contains every kind.
+    #[cfg(test)]
     #[must_use]
     pub(crate) fn len(&self) -> usize {
         self.unlocked.len()
@@ -244,9 +242,7 @@ mod tests {
                 full_heat_damage_multiplier: 4.0,
                 speed_boost_duration:        2.0,
             },
-            ProtocolKind::Conductor => ProtocolTuning::Conductor {
-                primary_swap_window: 0.2,
-            },
+            ProtocolKind::Conductor => ProtocolTuning::Conductor,
             ProtocolKind::Afterimage => ProtocolTuning::Afterimage {
                 phantom_duration:      1.5,
                 phantom_bolt_duration: 0.75,

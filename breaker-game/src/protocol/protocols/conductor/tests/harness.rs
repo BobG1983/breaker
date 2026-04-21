@@ -24,7 +24,7 @@ use crate::{breaker::messages::BumpGrade, prelude::*};
 #[test]
 fn config_absent_drains_reader_and_does_not_swap_then_goes_live_after_insert() {
     let mut app = build_conductor_app_no_config();
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
     let breaker = spawn_dummy_breaker(&mut app);
     let primary = spawn_primary_bolt_with_bound(&mut app, make_distinct_bound("PRIMARY_BOUND"));
     let extra = spawn_extra_bolt_with_bound(&mut app, make_distinct_bound("EXTRA_BOUND"));
@@ -97,7 +97,7 @@ fn config_absent_drains_reader_and_does_not_swap_then_goes_live_after_insert() {
 #[test]
 fn multiple_quiet_ticks_with_config_absent_do_not_panic() {
     let mut app = build_conductor_app_no_config();
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
 
     for _ in 0..3 {
         tick(&mut app);

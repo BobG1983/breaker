@@ -121,11 +121,9 @@ fn resolve_target_entities(target: StampTarget, targets: &DispatchTargets) -> Ve
         StampTarget::Breaker | StampTarget::ActiveBreakers | StampTarget::EveryBreaker => {
             targets.breakers.iter().collect()
         }
-        StampTarget::Bolt
-        | StampTarget::ActiveBolts
-        | StampTarget::EveryBolt
-        | StampTarget::PrimaryBolts
-        | StampTarget::ExtraBolts => targets.bolts.iter().collect(),
+        StampTarget::Bolt | StampTarget::ActiveBolts | StampTarget::EveryBolt => {
+            targets.bolts.iter().collect()
+        }
         StampTarget::ActiveCells | StampTarget::EveryCell => targets.cells.iter().collect(),
         StampTarget::ActiveWalls | StampTarget::EveryWall => targets.walls.iter().collect(),
     }

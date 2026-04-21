@@ -34,21 +34,12 @@ use crate::{
 
 // ── ConductorConfig ─────────────────────────────────────────────────────────
 
-/// Per-run Conductor tuning extracted from `ProtocolTuning::Conductor` at
-/// activation time.
-///
-/// The `primary_swap_window` field is **vestigial** — retained for symmetry
-/// with `ProtocolTuning::Conductor` and to avoid cross-cutting RON/test
-/// churn. The simplified swap mechanic does not consult a time window; every
-/// Perfect bump on an `ExtraBolt` swaps unconditionally. Kept so the config
-/// resource round-trips through `activate` without discarding data.
-#[derive(Resource, Debug, Clone, Copy, PartialEq)]
-pub(crate) struct ConductorConfig {
-    /// Vestigial field preserved for RON/tuning symmetry with
-    /// `ProtocolTuning::Conductor`. Not consulted by
-    /// `conductor_swap_on_perfect_bump`.
-    pub(crate) primary_swap_window: f32,
-}
+/// Presence marker for the `Option<Res<ConductorConfig>>` harness-safety gate
+/// in `conductor_swap_on_perfect_bump`. Inserted by `activate` when the
+/// matching `ProtocolTuning::Conductor` variant is selected; the system drains
+/// its reader and returns when this resource is absent.
+#[derive(Resource, Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct ConductorConfig;
 
 // ── activate ────────────────────────────────────────────────────────────────
 
@@ -56,16 +47,11 @@ pub(crate) struct ConductorConfig {
 /// no-ops on a non-`Conductor` tuning variant, leaving any existing
 /// `ConductorConfig` intact.
 pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
-    let ProtocolTuning::Conductor {
-        primary_swap_window,
-    } = *tuning
-    else {
+    let ProtocolTuning::Conductor = *tuning else {
         warn!("conductor::activate called with non-Conductor tuning");
         return;
     };
-    commands.insert_resource(ConductorConfig {
-        primary_swap_window,
-    });
+    commands.insert_resource(ConductorConfig);
 }
 
 // ── register ────────────────────────────────────────────────────────────────
@@ -116,7 +102,7 @@ pub(crate) fn conductor_swap_on_perfect_bump(
     config: Option<Res<ConductorConfig>>,
     primary: Query<Entity, (With<Bolt>, With<PrimaryBolt>)>,
     extras: Query<(), With<ExtraBolt>>,
-    effects: Query<(Option<&BoundEffects>, Option<&StagedEffects>), With<Bolt>>,
+    effects: Query<(Option<&BoundEffects>, Option<&StagedEffects>)>,
     mut commands: Commands,
 ) {
     if config.is_none() {

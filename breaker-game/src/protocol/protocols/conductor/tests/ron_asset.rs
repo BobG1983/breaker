@@ -3,7 +3,7 @@
 
 use crate::protocol::definition::{ProtocolDefinition, ProtocolKind, ProtocolTuning};
 
-// ── Behavior 27 — RON parses with exact tuning variant + pinned value ───────
+// ── Behavior 27 — RON parses to the exact tuning variant ────────────────────
 
 #[test]
 fn conductor_ron_asset_deserializes_to_protocol_definition() {
@@ -17,16 +17,10 @@ fn conductor_ron_asset_deserializes_to_protocol_definition() {
         "parsed definition must report ProtocolKind::Conductor"
     );
 
-    let ProtocolTuning::Conductor {
-        primary_swap_window,
-    } = &def.tuning
-    else {
-        panic!("expected ProtocolTuning::Conductor, got {:?}", def.tuning);
-    };
-
     assert!(
-        (primary_swap_window - 0.2).abs() < f32::EPSILON,
-        "primary_swap_window expected 0.2 (RON file literal), got {primary_swap_window}"
+        matches!(def.tuning, ProtocolTuning::Conductor),
+        "expected ProtocolTuning::Conductor, got {:?}",
+        def.tuning
     );
 }
 
@@ -40,7 +34,9 @@ fn conductor_ron_name_description_unlock_tier_pinned_exactly() {
 
     assert_eq!(def.name, "Conductor", "conductor name drift guard");
     assert_eq!(
-        def.description, "Perfect-bump an extra bolt to inherit the primary bolt's chip effects.",
+        def.description,
+        "Perfect-bump an extra bolt to swap primary with it — the bumped bolt becomes the new \
+         primary and inherits the old primary's chip effects.",
         "conductor description drift guard"
     );
     assert_eq!(def.unlock_tier, 0, "conductor unlock_tier drift guard");

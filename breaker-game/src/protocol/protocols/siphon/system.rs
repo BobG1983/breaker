@@ -7,8 +7,6 @@
 //!   from `ProtocolTuning::Siphon` — no percent translation).
 //! - [`SiphonStreak`] — per-run kill-streak tracker. Cleared by
 //!   [`siphon_cleanup_node`] on `OnExit(NodeState::Playing)`.
-//! - [`SIPHON_SENTINEL`] — reserved tag for future heal/debug plumbing; not
-//!   wired in v1.
 //! - [`activate`] — parses `ProtocolTuning::Siphon`, inserts `SiphonConfig`.
 //! - [`register`] — wires the three runtime systems with the design-doc
 //!   schedules, run-ifs, and ordering.
@@ -28,12 +26,6 @@ use crate::{
     },
     state::run::node::{messages::ReverseTimePenalty, sets::NodeSystems},
 };
-
-// ── Constants ───────────────────────────────────────────────────────────────
-
-/// Sentinel tag reserved for future Siphon heal/debug plumbing. Unused in v1.
-/// Parity with Momentum's `MOMENTUM_SENTINEL`.
-pub(crate) const SIPHON_SENTINEL: &str = "protocol:siphon";
 
 // ── SiphonConfig ────────────────────────────────────────────────────────────
 

@@ -22,7 +22,7 @@ use crate::{bolt::components::PrimaryBolt, breaker::messages::BumpGrade, prelude
 #[test]
 fn early_grade_bump_does_not_swap() {
     let mut app = build_conductor_app();
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
     let breaker = spawn_dummy_breaker(&mut app);
     let primary = spawn_primary_bolt_with_bound(&mut app, make_distinct_bound("PRIMARY_BOUND"));
     let extra = spawn_extra_bolt_with_bound(&mut app, make_distinct_bound("EXTRA_BOUND"));
@@ -52,7 +52,7 @@ fn early_grade_bump_does_not_swap() {
 #[test]
 fn late_grade_bump_does_not_swap() {
     let mut app = build_conductor_app();
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
     let breaker = spawn_dummy_breaker(&mut app);
     let primary = spawn_primary_bolt_with_bound(&mut app, make_distinct_bound("PRIMARY_BOUND"));
     let extra = spawn_extra_bolt_with_bound(&mut app, make_distinct_bound("EXTRA_BOUND"));
@@ -82,7 +82,7 @@ fn late_grade_bump_does_not_swap() {
 #[test]
 fn perfect_bump_on_existing_primary_is_a_no_op() {
     let mut app = build_conductor_app();
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
     let breaker = spawn_dummy_breaker(&mut app);
     let primary = spawn_primary_bolt_with_bound(&mut app, make_distinct_bound("PRIMARY_BOUND"));
     let extra = spawn_extra_bolt_with_bound(&mut app, make_distinct_bound("EXTRA_BOUND"));
@@ -114,7 +114,7 @@ fn perfect_bump_on_existing_primary_is_a_no_op() {
 #[test]
 fn perfect_bump_on_sole_primary_bolt_does_not_panic() {
     let mut app = build_conductor_app();
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
     let breaker = spawn_dummy_breaker(&mut app);
     let primary = spawn_primary_bolt(&mut app);
 
@@ -136,7 +136,7 @@ fn perfect_bump_on_sole_primary_bolt_does_not_panic() {
 #[test]
 fn perfect_bump_with_none_bolt_is_a_no_op() {
     let mut app = build_conductor_app();
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
     let breaker = spawn_dummy_breaker(&mut app);
     let primary = spawn_primary_bolt_with_bound(&mut app, make_distinct_bound("PRIMARY_BOUND"));
     let extra = spawn_extra_bolt_with_bound(&mut app, make_distinct_bound("EXTRA_BOUND"));
@@ -163,7 +163,7 @@ fn perfect_bump_with_none_bolt_is_a_no_op() {
 #[test]
 fn perfect_bump_with_none_bolt_and_zero_bolts_does_not_panic() {
     let mut app = build_conductor_app();
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
     let breaker = spawn_dummy_breaker(&mut app);
 
     write_bump_performed(&mut app, breaker, None, BumpGrade::Perfect);
@@ -175,7 +175,7 @@ fn perfect_bump_with_none_bolt_and_zero_bolts_does_not_panic() {
 #[test]
 fn perfect_bump_with_no_primary_bolt_is_a_no_op() {
     let mut app = build_conductor_app();
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
     let breaker = spawn_dummy_breaker(&mut app);
     let extra = spawn_extra_bolt_with_bound(&mut app, make_distinct_bound("EXTRA_BOUND"));
 
@@ -199,7 +199,7 @@ fn perfect_bump_with_no_primary_bolt_is_a_no_op() {
 #[test]
 fn perfect_bump_with_two_primary_bolts_is_a_no_op() {
     let mut app = build_conductor_app();
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
     let breaker = spawn_dummy_breaker(&mut app);
     // Two bolts both carrying PrimaryBolt.
     let p1 = app.world_mut().spawn((Bolt, PrimaryBolt)).id();
@@ -223,7 +223,7 @@ fn perfect_bump_with_two_primary_bolts_is_a_no_op() {
 #[test]
 fn perfect_bump_on_despawned_extra_bolt_does_not_panic_and_does_not_swap() {
     let mut app = build_conductor_app();
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
     let breaker = spawn_dummy_breaker(&mut app);
     let primary = spawn_primary_bolt_with_bound(&mut app, make_distinct_bound("PRIMARY_BOUND"));
     let extra = spawn_extra_bolt_with_bound(&mut app, make_distinct_bound("EXTRA_BOUND"));
@@ -246,7 +246,7 @@ fn perfect_bump_on_despawned_extra_bolt_does_not_panic_and_does_not_swap() {
 #[test]
 fn perfect_bump_when_primary_was_despawned_does_not_panic_and_does_not_swap() {
     let mut app = build_conductor_app();
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
     let breaker = spawn_dummy_breaker(&mut app);
     let primary = spawn_primary_bolt_with_bound(&mut app, make_distinct_bound("PRIMARY_BOUND"));
     let extra = spawn_extra_bolt_with_bound(&mut app, make_distinct_bound("EXTRA_BOUND"));
@@ -275,7 +275,7 @@ fn perfect_bump_when_primary_was_despawned_does_not_panic_and_does_not_swap() {
 #[test]
 fn perfect_bump_on_non_bolt_entity_does_not_swap() {
     let mut app = build_conductor_app();
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
     let breaker = spawn_dummy_breaker(&mut app);
     let primary = spawn_primary_bolt_with_bound(&mut app, make_distinct_bound("PRIMARY_BOUND"));
     let extra = spawn_extra_bolt_with_bound(&mut app, make_distinct_bound("EXTRA_BOUND"));
@@ -312,7 +312,7 @@ fn perfect_bump_on_non_bolt_entity_does_not_swap() {
 #[test]
 fn perfect_bump_on_bare_bolt_without_extra_marker_does_not_swap() {
     let mut app = build_conductor_app();
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
     let breaker = spawn_dummy_breaker(&mut app);
     let primary = spawn_primary_bolt_with_bound(&mut app, make_distinct_bound("P"));
     // Bare `(Bolt,)` — no ExtraBolt, no PrimaryBolt, no BoundEffects.

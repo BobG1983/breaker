@@ -1,8 +1,6 @@
 (
     name: "Conductor",
-    description: "Perfect-bump an extra bolt to inherit the primary bolt's chip effects.",
+    description: "Perfect-bump an extra bolt to swap primary with it — the bumped bolt becomes the new primary and inherits the old primary's chip effects.",
     unlock_tier: 0,
-    tuning: Conductor(
-        primary_swap_window: 0.2,
-    ),
+    tuning: Conductor,
 )

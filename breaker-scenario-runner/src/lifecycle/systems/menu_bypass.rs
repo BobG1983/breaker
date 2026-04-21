@@ -102,11 +102,7 @@ pub fn bypass_menu_to_playing(
         for root in effects {
             match root {
                 RootNode::Stamp(target, tree) => match target {
-                    StampTarget::Bolt
-                    | StampTarget::ActiveBolts
-                    | StampTarget::EveryBolt
-                    | StampTarget::PrimaryBolts
-                    | StampTarget::ExtraBolts => {
+                    StampTarget::Bolt | StampTarget::ActiveBolts | StampTarget::EveryBolt => {
                         bolt_entries.push((String::new(), tree.clone()));
                     }
                     StampTarget::Breaker

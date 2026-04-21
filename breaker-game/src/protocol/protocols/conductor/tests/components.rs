@@ -1,8 +1,8 @@
-//! Group B — `ConductorConfig` component/resource shape (Behavior 24).
+//! Group B — `ConductorConfig` resource shape (Behavior 24).
 //!
 //! Pins that `ConductorConfig` derives `Resource + Debug + Clone + Copy +
-//! PartialEq`. Mirror of `reckless_dash::tests::components::
-//! reckless_dash_config_is_copy_clone_partial_eq`.
+//! PartialEq + Eq`. The config is a unit-struct presence marker — no fields
+//! to compare, but the derive set is load-bearing for use as a resource gate.
 
 use super::super::system::ConductorConfig;
 
@@ -10,28 +10,16 @@ use super::super::system::ConductorConfig;
 
 #[test]
 fn conductor_config_is_copy_clone_partial_eq() {
-    fn takes_by_value(cfg: ConductorConfig) -> f32 {
-        cfg.primary_swap_window
-    }
+    fn takes_by_value(_cfg: ConductorConfig) {}
     fn require_clone<T: Clone>(value: &T) -> T {
         value.clone()
     }
 
-    let orig = ConductorConfig {
-        primary_swap_window: 0.2,
-    };
+    let orig = ConductorConfig;
 
     // PartialEq: two identical values compare equal.
-    let same = ConductorConfig {
-        primary_swap_window: 0.2,
-    };
+    let same = ConductorConfig;
     assert_eq!(orig, same, "identical configs must compare equal");
-
-    // PartialEq: different configs compare not-equal.
-    let different = ConductorConfig {
-        primary_swap_window: 0.5,
-    };
-    assert_ne!(orig, different, "different configs must compare not-equal");
 
     // Copy: two pass-by-value assignments both succeed (original not moved).
     let copy1 = orig;
@@ -40,14 +28,11 @@ fn conductor_config_is_copy_clone_partial_eq() {
     assert_eq!(copy1, copy2, "both copies must equal each other");
 
     // Copy: pass-by-value into a function compiles and original remains usable.
-    let returned = takes_by_value(orig);
-    assert!(
-        (returned - 0.2).abs() < f32::EPSILON,
-        "takes_by_value returned {returned}, expected 0.2"
-    );
-    assert!(
-        (orig.primary_swap_window - 0.2).abs() < f32::EPSILON,
-        "original remains usable after pass-by-value (Copy, not move)"
+    takes_by_value(orig);
+    let still_usable = orig;
+    assert_eq!(
+        still_usable, orig,
+        "orig must still be usable after Copy move"
     );
 
     // Clone: routed through a generic that requires `T: Clone` — proves the

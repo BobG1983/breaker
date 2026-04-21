@@ -75,26 +75,23 @@ pub(super) fn build_conductor_app_in_chip_selecting() -> App {
 
 // ── Config helpers ──────────────────────────────────────────────────────────
 
-/// Canonical Conductor config used across tests. Matches the design-doc value
-/// shipped in `assets/protocols/conductor.protocol.ron`.
+/// Canonical Conductor config used across tests. Matches the presence-marker
+/// unit struct installed by `activate` and referenced by the harness-safety
+/// gate in `conductor_swap_on_perfect_bump`.
 pub(super) const fn canonical_conductor_config() -> ConductorConfig {
-    ConductorConfig {
-        primary_swap_window: 0.2,
-    }
+    ConductorConfig
 }
 
 /// Inserts a Conductor `ProtocolDefinition` into `ActiveProtocols` so the
 /// `protocol_active(Conductor)` run-condition passes.
-pub(super) fn seed_active_protocols_with_conductor(app: &mut App, primary_swap_window: f32) {
+pub(super) fn seed_active_protocols_with_conductor(app: &mut App) {
     app.world_mut()
         .resource_mut::<ActiveProtocols>()
         .insert(ProtocolDefinition {
             name:        "Conductor".into(),
             description: String::new(),
             unlock_tier: 0,
-            tuning:      ProtocolTuning::Conductor {
-                primary_swap_window,
-            },
+            tuning:      ProtocolTuning::Conductor,
         });
 }
 

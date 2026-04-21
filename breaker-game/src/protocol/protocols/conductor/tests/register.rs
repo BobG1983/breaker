@@ -31,7 +31,7 @@ use crate::{
 #[test]
 fn register_wires_swap_gated_on_active_and_playing() {
     let mut app = build_conductor_app();
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
     let breaker = spawn_dummy_breaker(&mut app);
     let primary = spawn_primary_bolt_with_bound(&mut app, make_distinct_bound("PRIMARY_BOUND"));
     let extra = spawn_extra_bolt_with_bound(&mut app, make_distinct_bound("EXTRA_BOUND"));
@@ -116,7 +116,7 @@ fn swap_gated_off_when_only_another_protocol_is_active() {
 #[test]
 fn swap_gated_off_when_node_state_is_chip_selecting() {
     let mut app = build_conductor_app_in_chip_selecting();
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
     let breaker = spawn_dummy_breaker(&mut app);
     let primary = spawn_primary_bolt_with_bound(&mut app, make_distinct_bound("PRIMARY_BOUND"));
     let extra = spawn_extra_bolt_with_bound(&mut app, make_distinct_bound("EXTRA_BOUND"));
@@ -144,7 +144,7 @@ fn swap_gated_off_when_node_state_is_chip_selecting() {
 #[test]
 fn register_wires_swap_to_consume_bump_performed_same_tick() {
     let mut app = build_conductor_app();
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
     let breaker = spawn_dummy_breaker(&mut app);
     let primary = spawn_primary_bolt_with_bound(&mut app, make_distinct_bound("PRIMARY_BOUND"));
     let extra = spawn_extra_bolt_with_bound(&mut app, make_distinct_bound("EXTRA_BOUND"));
@@ -191,7 +191,7 @@ fn register_wires_swap_to_consume_bump_performed_same_tick() {
 #[test]
 fn register_schedule_ticks_cleanly_with_no_bolts_and_no_messages() {
     let mut app = build_conductor_app();
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
 
     for _ in 0..3 {
         tick(&mut app);
@@ -199,9 +199,7 @@ fn register_schedule_ticks_cleanly_with_no_bolts_and_no_messages() {
 
     assert_eq!(
         *app.world().resource::<ConductorConfig>(),
-        ConductorConfig {
-            primary_swap_window: 0.2,
-        },
+        ConductorConfig,
         "ConductorConfig must remain canonical across quiet ticks"
     );
 }
@@ -211,7 +209,7 @@ fn register_schedule_ticks_cleanly_with_no_bolts_and_no_messages() {
 #[test]
 fn register_schedule_ticks_cleanly_with_one_primary_and_no_messages() {
     let mut app = build_conductor_app();
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
     let primary = spawn_primary_bolt_with_bound(&mut app, make_distinct_bound("PRIMARY_BOUND"));
 
     for _ in 0..3 {
@@ -254,7 +252,7 @@ fn pregate_bump_performed_is_replayed_when_conductor_activates() {
     // Tick 2 — open the gate. The drain lives INSIDE the swap system, which
     // was gated off on tick 1, so the buffered message persists and is
     // replayed now — swap fires.
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
     tick(&mut app);
 
     assert!(
@@ -302,7 +300,7 @@ fn multiple_pregate_bump_performed_replay_first_swaps_rest_are_noops() {
     // Tick 2 — open the gate, no new messages. All three buffered messages
     // replay: the first swaps; the other two target `extra`, which is now
     // primary, so they are already-primary no-ops.
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
     tick(&mut app);
 
     assert!(

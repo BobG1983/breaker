@@ -21,7 +21,7 @@ use crate::{breaker::messages::BumpGrade, prelude::*};
 #[test]
 fn perfect_bump_on_one_of_two_extras_leaves_the_other_extra_untouched() {
     let mut app = build_conductor_app();
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
     let breaker = spawn_dummy_breaker(&mut app);
     let primary = spawn_primary_bolt_with_bound(&mut app, make_distinct_bound("PB"));
     let extra_a = spawn_extra_bolt_with_bound(&mut app, make_distinct_bound("AB"));
@@ -63,7 +63,7 @@ fn perfect_bump_on_one_of_two_extras_leaves_the_other_extra_untouched() {
 #[test]
 fn perfect_bump_on_one_of_two_extras_swaps_staged_only_between_involved_pair() {
     let mut app = build_conductor_app();
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
     let breaker = spawn_dummy_breaker(&mut app);
     let primary = spawn_primary_bolt_with_bound_and_staged(
         &mut app,
@@ -106,7 +106,7 @@ fn perfect_bump_on_one_of_two_extras_swaps_staged_only_between_involved_pair() {
 #[test]
 fn two_perfect_bumps_on_different_extras_chain_marker_and_bound_swaps() {
     let mut app = build_conductor_app();
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
     let breaker = spawn_dummy_breaker(&mut app);
     let primary = spawn_primary_bolt_with_bound(&mut app, make_distinct_bound("PB"));
     let extra_a = spawn_extra_bolt_with_bound(&mut app, make_distinct_bound("AB"));
@@ -159,7 +159,7 @@ fn two_perfect_bumps_on_different_extras_chain_marker_and_bound_swaps() {
 #[test]
 fn three_bumps_in_sequence_a_b_a_walk_through_deterministic_swaps() {
     let mut app = build_conductor_app();
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
     let breaker = spawn_dummy_breaker(&mut app);
     let primary = spawn_primary_bolt_with_bound(&mut app, make_distinct_bound("PB"));
     let extra_a = spawn_extra_bolt_with_bound(&mut app, make_distinct_bound("AB"));
@@ -209,7 +209,7 @@ fn three_bumps_in_sequence_a_b_a_walk_through_deterministic_swaps() {
 #[test]
 fn two_perfect_bumps_on_distinct_extras_same_tick_preserves_single_primary() {
     let mut app = build_conductor_app();
-    seed_active_protocols_with_conductor(&mut app, 0.2);
+    seed_active_protocols_with_conductor(&mut app);
     let breaker = spawn_dummy_breaker(&mut app);
     let primary = spawn_primary_bolt_with_bound(&mut app, make_distinct_bound("P"));
     let extra_a = spawn_extra_bolt_with_bound(&mut app, make_distinct_bound("A"));

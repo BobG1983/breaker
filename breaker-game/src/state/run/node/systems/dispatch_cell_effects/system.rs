@@ -56,11 +56,9 @@ pub(crate) fn dispatch_cell_effects(
             match root {
                 RootNode::Stamp(target, tree) => {
                     let target_entities: Vec<Entity> = match target {
-                        StampTarget::Bolt
-                        | StampTarget::ActiveBolts
-                        | StampTarget::EveryBolt
-                        | StampTarget::PrimaryBolts
-                        | StampTarget::ExtraBolts => bolt_query.iter().collect(),
+                        StampTarget::Bolt | StampTarget::ActiveBolts | StampTarget::EveryBolt => {
+                            bolt_query.iter().collect()
+                        }
                         StampTarget::Breaker
                         | StampTarget::ActiveBreakers
                         | StampTarget::EveryBreaker => breaker_query

@@ -7,6 +7,5 @@ mod ordering;
 mod plugin;
 mod register;
 mod ron_asset;
-mod sentinel;
 mod streak_state;
 mod tick_streak;
