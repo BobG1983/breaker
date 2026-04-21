@@ -25,12 +25,21 @@ use crate::{
     bolt::components::{ExtraBolt, PrimaryBolt},
     breaker::{messages::BumpGrade, sets::BreakerSystems},
     effect_v3::sets::EffectV3Systems,
+    fx::PunchScale,
     prelude::*,
     protocol::{
         definition::{ProtocolKind, ProtocolTuning},
         resources::protocol_active,
     },
 };
+
+/// Punch-scale overshoot applied to the newly-promoted `PrimaryBolt` on a
+/// Conductor swap. 1.25× scale settling to 1.0 over 0.15 s — visible but
+/// short enough not to disrupt the 60Hz gameplay loop. Picked to match the
+/// breaker-bump punch intensity at roughly half the duration.
+const CONDUCTOR_SWAP_PUNCH_OVERSHOOT: f32 = 1.25;
+/// Duration of [`CONDUCTOR_SWAP_PUNCH_OVERSHOOT`] in seconds.
+const CONDUCTOR_SWAP_PUNCH_DURATION: f32 = 0.15;
 
 // ── ConductorConfig ─────────────────────────────────────────────────────────
 
@@ -167,6 +176,17 @@ pub(crate) fn conductor_swap_on_perfect_bump(
             primary_staged,
             bumped_staged,
         );
+
+        // VFX: punch-scale the newly-promoted primary bolt so the swap reads
+        // visually. The `fx` domain's `animate_punch_scale` in `Update` ticks
+        // the component back to 1.0× and removes itself. SFX hook pending —
+        // `audio::AudioPlugin` is still a Phase-0 stub (breaker-game/src/audio/
+        // plugin.rs:12) with no message or resource surface to call into.
+        commands.entity(bumped).insert(PunchScale {
+            timer:     CONDUCTOR_SWAP_PUNCH_DURATION,
+            duration:  CONDUCTOR_SWAP_PUNCH_DURATION,
+            overshoot: CONDUCTOR_SWAP_PUNCH_OVERSHOOT,
+        });
 
         swap_done = true;
     }

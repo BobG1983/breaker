@@ -15,7 +15,7 @@ use super::helpers::{
     spawn_primary_bolt, spawn_primary_bolt_with_bound, spawn_primary_bolt_with_bound_and_staged,
     staged_fingerprints, write_bump_performed,
 };
-use crate::{breaker::messages::BumpGrade, effect_v3::types::Tree, prelude::*};
+use crate::{breaker::messages::BumpGrade, effect_v3::types::Tree, fx::PunchScale, prelude::*};
 
 // ── Behavior 1 — Perfect bump on an ExtraBolt swaps the marker pair ─────────
 
@@ -333,5 +333,62 @@ fn perfect_bump_with_neither_bound_nor_staged_on_either_bolt_swaps_markers_only(
     assert!(
         app.world().get::<StagedEffects>(primary).is_none(),
         "old primary still has no StagedEffects"
+    );
+}
+
+// ── Behavior 6 — Perfect swap inserts PunchScale VFX on newly-promoted bolt ──
+
+/// On Perfect swap, the bumped bolt (now the new primary) must gain a
+/// `PunchScale` component so the fx domain's `animate_punch_scale` can
+/// visualize the promotion. The old primary does NOT receive `PunchScale`
+/// (the demotion is silent). Pins the VFX hook required by guard-game-design
+/// for Conductor swap feedback.
+#[test]
+fn perfect_bump_on_extra_bolt_inserts_punch_scale_on_newly_promoted_bolt() {
+    let mut app = build_conductor_app();
+    seed_active_protocols_with_conductor(&mut app);
+    let breaker = spawn_dummy_breaker(&mut app);
+    let primary = spawn_primary_bolt(&mut app);
+    let extra = spawn_extra_bolt(&mut app);
+
+    write_bump_performed(&mut app, breaker, Some(extra), BumpGrade::Perfect);
+    tick(&mut app);
+
+    let punch = app
+        .world()
+        .get::<PunchScale>(extra)
+        .expect("newly-promoted bolt (formerly extra) must gain PunchScale on swap");
+    assert!(
+        (punch.duration - 0.15).abs() < 1e-5,
+        "PunchScale duration pinned at 0.15s, got {}",
+        punch.duration
+    );
+    assert!(
+        (punch.overshoot - 1.25).abs() < 1e-5,
+        "PunchScale overshoot pinned at 1.25×, got {}",
+        punch.overshoot
+    );
+    assert!(
+        app.world().get::<PunchScale>(primary).is_none(),
+        "demoted bolt (formerly primary) must NOT gain PunchScale — demotion is silent"
+    );
+}
+
+/// Non-Perfect bumps MUST NOT insert `PunchScale` even on an `ExtraBolt` — the
+/// VFX only fires on the actual swap path, not on every bump attempt.
+#[test]
+fn non_perfect_bump_does_not_insert_punch_scale() {
+    let mut app = build_conductor_app();
+    seed_active_protocols_with_conductor(&mut app);
+    let breaker = spawn_dummy_breaker(&mut app);
+    let _primary = spawn_primary_bolt(&mut app);
+    let extra = spawn_extra_bolt(&mut app);
+
+    write_bump_performed(&mut app, breaker, Some(extra), BumpGrade::Late);
+    tick(&mut app);
+
+    assert!(
+        app.world().get::<PunchScale>(extra).is_none(),
+        "Late-graded bump must NOT insert PunchScale — no swap, no VFX"
     );
 }
