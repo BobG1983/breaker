@@ -1,12 +1,12 @@
 //! Frame mutation types for self-test scenarios.
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 /// A mutation to apply at a specific frame during a scenario run.
 ///
 /// Used by self-test scenarios to intentionally trigger invariant violations
 /// at scripted points in the run.
-#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct FrameMutation {
     /// The fixed-update frame on which this mutation is applied.
     pub frame:    u32,
@@ -15,7 +15,7 @@ pub struct FrameMutation {
 }
 
 /// Which [`RunStats`] counter to target in a [`MutationKind::DecrementRunStat`] mutation.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 pub enum RunStatCounter {
     /// `RunStats::nodes_cleared`.
     NodesCleared,
@@ -30,7 +30,7 @@ pub enum RunStatCounter {
 }
 
 /// The kind of mutation to apply at a given frame.
-#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub enum MutationKind {
     /// Override the breaker's movement state.
     SetDashState(ScenarioDashState),
@@ -285,7 +285,7 @@ pub enum MutationKind {
 /// dependencies). This enum carries the same variants and is mapped to
 /// `DashState` at runtime by
 /// [`crate::lifecycle::map_scenario_dash_state`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 pub enum ScenarioDashState {
     /// Corresponds to `DashState::Idle`.
     Idle,

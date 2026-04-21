@@ -1,7 +1,7 @@
 //! Top-level scenario definition and supporting config types.
 
 use breaker::effect_v3::types::RootNode;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use super::{
     input::{InputStrategy, ScriptedParams},
@@ -18,7 +18,7 @@ use super::{
 /// names so existing `.scenario.ron` files keep working. Each variant is
 /// mapped to the new `GameState` at runtime by
 /// [`crate::lifecycle::map_forced_game_state`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 pub enum ForcedGameState {
     /// Maps to `GameState::Loading`.
     Loading,
@@ -41,7 +41,7 @@ pub enum ForcedGameState {
 }
 
 /// Optional debug overrides applied after entity spawn (used in self-test scenarios).
-#[derive(Debug, Clone, PartialEq, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Default)]
 pub struct DebugSetup {
     /// Place bolt at this `(x, y)` world-space position instead of the default spawn.
     pub bolt_position:        Option<(f32, f32)>,
@@ -66,7 +66,7 @@ pub struct DebugSetup {
 ///
 /// All fields have sensible defaults and can be overridden per-scenario
 /// in the RON file via `invariant_params: (max_bolt_count: 12)`.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct InvariantParams {
     /// Maximum bolt count before [`InvariantKind::BoltCountReasonable`] fires.
     #[serde(default = "InvariantParams::default_max_bolt_count")]
@@ -127,7 +127,7 @@ impl Default for InvariantParams {
 /// When present, the runner executes the scenario `runs` times with up to
 /// `parallelism` instances running concurrently. All fields default to 32 so
 /// that `stress: Some(())` in RON is a valid minimal stress config.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct StressConfig {
     /// Number of times to run the scenario. Defaults to 32.
     #[serde(default = "StressConfig::default_runs")]
@@ -157,7 +157,7 @@ impl Default for StressConfig {
 }
 
 /// Full scenario definition loaded from a `.scenario.ron` file.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ScenarioDefinition {
     /// Breaker name (e.g. `"Aegis"`, `"Prism"`, `"Chrono"`).
     pub breaker:             String,

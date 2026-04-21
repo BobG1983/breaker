@@ -25,9 +25,9 @@ pub(super) fn test_temp_dir(test_name: &str) -> PathBuf {
 /// Builds a clean `EvalSnapshot` with no violations and no logs.
 pub(super) fn clean_snapshot(_scenario_name: &str) -> EvalSnapshot {
     EvalSnapshot {
-        violations: vec![],
-        logs:       vec![],
-        stats:      ScenarioStats {
+        violations:      vec![],
+        logs:            vec![],
+        stats:           ScenarioStats {
             actions_injected: 0,
             invariant_checks: 10,
             max_frame: 50,
@@ -36,7 +36,7 @@ pub(super) fn clean_snapshot(_scenario_name: &str) -> EvalSnapshot {
             breakers_tagged: 1,
             ..Default::default()
         },
-        definition: ScenarioDefinition {
+        definition:      ScenarioDefinition {
             breaker: "test".into(),
             layout: "test".into(),
             input: InputStrategy::Scripted(ScriptedParams { actions: vec![] }),
@@ -44,6 +44,7 @@ pub(super) fn clean_snapshot(_scenario_name: &str) -> EvalSnapshot {
             disallowed_failures: vec![],
             ..Default::default()
         },
+        chaos_input_log: None,
     }
 }
 

@@ -31,7 +31,7 @@ use super::{
         apply_pending_wall_effects,
     },
     perfect_tracking::{apply_perfect_tracking, update_force_bump_grade},
-    types::{ChipSelectionIndex, ScenarioConfig},
+    types::{ChaosInputLog, ChipSelectionIndex, ScenarioConfig},
 };
 use crate::{
     invariants::{
@@ -107,6 +107,7 @@ fn register_scenario_resources(app: &mut App) {
         .init_resource::<EntityLeakBaseline>()
         .init_resource::<ScenarioStats>()
         .init_resource::<ChipSelectionIndex>()
+        .init_resource::<ChaosInputLog>()
         // Registered here (not just in game plugins) so isolated test apps work.
         .add_message::<SpawnNodeComplete>()
         .add_message::<ChipSelected>()

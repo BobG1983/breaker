@@ -8,7 +8,10 @@ use breaker::{
 };
 use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
-use crate::invariants::{ScenarioTagBolt, ScenarioTagBreaker};
+use crate::{
+    invariants::{ScenarioTagBolt, ScenarioTagBreaker},
+    types::ScriptedFrame,
+};
 
 /// Query alias for bolt entities in [`super::debug_setup::apply_debug_setup`] and
 /// [`super::debug_setup::deferred_debug_setup`].
@@ -49,6 +52,17 @@ pub struct ScenarioConfig {
 /// Queried each `FixedPreUpdate` tick by [`super::input::inject_scenario_input`].
 #[derive(Resource)]
 pub struct ScenarioInputDriver(pub crate::input::InputDriver);
+
+/// Captures the chaos driver's per-frame action output for the current run.
+///
+/// Only populated when the scenario's [`crate::types::InputStrategy`] is
+/// `Chaos` or `Hybrid` and the chaos driver emitted at least one action on a
+/// given frame. On scenario failure, the runner rewrites this log into a
+/// replayable scripted scenario under `scenarios/regressions/` so the failure
+/// reproduces deterministically. See
+/// [`crate::runner::app::write_chaos_regression`].
+#[derive(Resource, Default)]
+pub struct ChaosInputLog(pub Vec<ScriptedFrame>);
 
 /// Tracks which `chip_selections` entry to use next.
 ///

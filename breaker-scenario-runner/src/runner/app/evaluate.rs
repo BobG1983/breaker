@@ -5,7 +5,11 @@
 //! - [`is_timed_out`], [`drain_remaining_logs`], and [`guarded_update`] are the
 //!   building blocks of the headless run loop in [`super::run::run_scenario`].
 
-use std::time::{Duration, Instant};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
+};
 
 use bevy::prelude::*;
 use tracing::{info, warn};
@@ -15,10 +19,11 @@ use crate::{
     invariants::{ScenarioFrame, ScenarioStats, ViolationLog},
     log_capture::{CapturedLogs, LogBuffer, LogEntry},
     runner::{
+        execution::scenarios_dir,
         output::{format_verbose_failures, print_compact_failures, print_verbose_failures},
         run_log::RunLog,
     },
-    types::ScenarioDefinition,
+    types::{InputStrategy, ScenarioDefinition, ScriptedFrame, ScriptedParams},
     verdict::ScenarioVerdict,
 };
 
@@ -45,12 +50,13 @@ pub(crate) fn collect_and_evaluate(
         .unwrap_or_else(std::sync::PoisonError::into_inner)
         .take();
 
-    let (violations, logs, stats) = if let Some(snap) = snapshot {
+    let (violations, logs, stats, pin_data) = if let Some(snap) = snapshot {
         verdict.evaluate(&snap.violations, &snap.logs, &snap.stats, &snap.definition);
-        (snap.violations, snap.logs, snap.stats)
+        let pin = (snap.definition, snap.chaos_input_log);
+        (snap.violations, snap.logs, snap.stats, Some(pin))
     } else {
         verdict.add_fail_reason("No evaluation data captured during run".into());
-        (vec![], vec![], ScenarioStats::default())
+        (vec![], vec![], ScenarioStats::default(), None)
     };
 
     let stats_line = format!(
@@ -99,9 +105,91 @@ pub(crate) fn collect_and_evaluate(
         } else {
             print_compact_failures(&verdict, &violations, &logs);
         }
+
+        if let Some((definition, chaos_log)) = pin_data {
+            try_write_chaos_regression(&scenarios_dir(), scenario_name, &definition, chaos_log);
+        }
     }
 
     verdict.passed()
+}
+
+/// Attempts to write a replayable scripted scenario to
+/// `<scenarios_dir>/regressions/` when the failed scenario used a chaos
+/// strategy and the chaos driver emitted at least one action during the run.
+///
+/// Silently no-ops for non-chaos strategies or when no actions were recorded.
+/// Errors (filesystem, serialization) print a warning but do not panic — a
+/// failed write must never mask the underlying invariant violation.
+fn try_write_chaos_regression(
+    scenarios_root: &Path,
+    scenario_name: &str,
+    definition: &ScenarioDefinition,
+    chaos_log: Option<Vec<ScriptedFrame>>,
+) {
+    let uses_chaos = matches!(
+        definition.input,
+        InputStrategy::Chaos(_) | InputStrategy::Hybrid(_)
+    );
+    if !uses_chaos {
+        return;
+    }
+    let Some(log) = chaos_log else {
+        return;
+    };
+    if log.is_empty() {
+        return;
+    }
+
+    match write_chaos_regression(scenarios_root, scenario_name, definition, log) {
+        Ok(path) => {
+            if let Ok(rel) = path.strip_prefix(scenarios_root) {
+                println!("REGRESSION PINNED: scenarios/{}", rel.display());
+            } else {
+                println!("REGRESSION PINNED: {}", path.display());
+            }
+        }
+        Err(e) => {
+            warn!(
+                target: "breaker_scenario_runner",
+                "failed to write chaos regression for {scenario_name}: {e}"
+            );
+        }
+    }
+}
+
+/// Serializes a replacement [`ScenarioDefinition`] — scripted input cloned
+/// from the chaos log, with the original seed dropped — and writes it to
+/// `<scenarios_root>/regressions/<timestamp>-chaos-<scenario_name>.scenario.ron`.
+///
+/// Returns the absolute path of the written file. Creates the `regressions/`
+/// directory if needed.
+pub(crate) fn write_chaos_regression(
+    scenarios_root: &Path,
+    scenario_name: &str,
+    original: &ScenarioDefinition,
+    chaos_log: Vec<ScriptedFrame>,
+) -> Result<PathBuf, String> {
+    let mut replay = original.clone();
+    replay.input = InputStrategy::Scripted(ScriptedParams { actions: chaos_log });
+    replay.seed = None;
+
+    let pretty = ron::ser::PrettyConfig::new();
+    let serialized = ron::ser::to_string_pretty(&replay, pretty)
+        .map_err(|e| format!("serialize failed: {e}"))?;
+
+    let regressions_dir = scenarios_root.join("regressions");
+    fs::create_dir_all(&regressions_dir)
+        .map_err(|e| format!("create_dir_all {} failed: {e}", regressions_dir.display()))?;
+
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs());
+    let filename = format!("{timestamp}-chaos-{scenario_name}.scenario.ron");
+    let path = regressions_dir.join(filename);
+
+    fs::write(&path, serialized).map_err(|e| format!("write {} failed: {e}", path.display()))?;
+    Ok(path)
 }
 
 /// Returns `true` when the scenario should exit early due to `--fail-fast`.
