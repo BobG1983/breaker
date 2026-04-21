@@ -159,25 +159,25 @@ fn register_gate_off_zero_stacks_does_not_track() {
     assert_eq!(ghosts.iter(app.world()).count(), 0);
 }
 
-// Behavior 38 — pre-gate messages accumulate until the gate opens.
+// Behavior 38 — pre-gate messages drain cleanly before the gate opens.
 #[test]
-fn register_pregate_messages_accumulate_until_gate_opens() {
-    // Pin Bevy MessageReader semantics under a run_if gate: when the
-    // gate is closed, the system does not consume messages; the
-    // reader's cursor stays put. Opening the gate on a later tick lets
-    // the system read ALL unread messages — including the pre-gate
-    // ones. Shared pattern with fracture / overcharge / drift /
+fn register_pregate_messages_drain_cleanly_before_gate_opens() {
+    // Regression pin against accidental `.run_if` reintroduction on the
+    // reader system: `echo_cells_track_deaths` now enforces its gate
+    // in-body via `reader.clear()` so pre-gate `Destroyed<Cell>` messages
+    // drain cleanly instead of accumulating and replaying on gate open.
+    // Shared retrofit pattern with fracture / overcharge / drift /
     // gravity_surge.
     //
     // Setup: gate starts CLOSED (no Echo Cells stack). Write one
-    // Destroyed<Cell>. Tick (gate off → no-op). Toggle gate ON without
-    // writing a new message. Tick again. The pre-gate message must now
-    // be consumed → one PendingGhost at the death position.
+    // Destroyed<Cell>. Tick (gate off → drain). Toggle gate ON without
+    // writing a new message. Tick again. The pre-gate message must NOT
+    // be consumed → 0 PendingGhost.
     let mut app = test_app_playing();
     register(&mut app);
     install_echo_cells_config(&mut app, canonical_config());
 
-    // Tick 1 — gate off, pre-gate death written.
+    // Tick 1 — gate off, pre-gate death written. Retrofit drains reader.
     write_destroyed(&mut app, Entity::PLACEHOLDER, Vec2::new(5.0, 5.0));
     tick_with_dt(&mut app, Duration::from_secs_f32(0.016));
     {
@@ -189,19 +189,17 @@ fn register_pregate_messages_accumulate_until_gate_opens() {
         );
     }
 
-    // Tick 2 — open gate, write no new message. Pre-gate message
-    // retained by Bevy's double-buffered Messages<T> is consumed now.
+    // Tick 2 — open gate, write no new message. The pre-gate message
+    // was drained on tick 1; nothing remains to replay.
     add_echo_cells_stacks(&mut app, 1);
     tick_with_dt(&mut app, Duration::from_secs_f32(0.016));
 
     let mut query = app.world_mut().query::<&PendingGhost>();
-    let pendings: Vec<_> = query.iter(app.world()).collect();
     assert_eq!(
-        pendings.len(),
-        1,
-        "gate open → retained pre-gate message consumed → 1 pending"
+        query.iter(app.world()).count(),
+        0,
+        "gate open → pre-gate message already drained → 0 pending"
     );
-    assert!((pendings[0].position - Vec2::new(5.0, 5.0)).length() < 1e-4);
 }
 
 // Behavior 39 — gate reopens when a stack is added; new message processed.

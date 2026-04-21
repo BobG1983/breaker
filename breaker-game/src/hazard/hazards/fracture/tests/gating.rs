@@ -141,22 +141,22 @@ fn register_gate_reopens_when_stack_added_spawns_post_open_messages() {
 }
 
 #[test]
-fn register_pregate_messages_accumulate_until_gate_opens() {
-    // Pin Bevy MessageReader semantics under a run_if gate: when the
-    // gate is closed, the system does not consume messages; the
-    // reader's cursor stays put. Opening the gate on a later tick lets
-    // the system read ALL unread messages — including the pre-gate
-    // ones. Shared pattern with overcharge / drift / gravity_surge.
+fn register_pregate_messages_drain_cleanly_before_gate_opens() {
+    // Regression pin against accidental `.run_if` reintroduction on the
+    // reader system: `fracture_on_death` now enforces its gate in-body
+    // via `reader.clear()` so pre-gate `Destroyed<Cell>` messages drain
+    // cleanly instead of accumulating and replaying on gate open. Shared
+    // retrofit pattern with overcharge / drift / gravity_surge.
     //
     // Setup: gate starts CLOSED (no Fracture stack). Write one
-    // Destroyed<Cell>. Tick (gate off → no-op). Toggle gate ON
-    // without writing a new message. Tick again. The pre-gate
-    // message must now be consumed → 2 debris spawn.
+    // Destroyed<Cell>. Tick (gate off → drain). Toggle gate ON without
+    // writing a new message. Tick again. The pre-gate message must NOT
+    // be consumed → 0 debris spawn.
     let mut app = test_app_playing();
     register(&mut app);
     install_fracture_config(&mut app, canonical_config());
 
-    // Tick 1 — gate off, pre-gate death written.
+    // Tick 1 — gate off, pre-gate death written. Retrofit drains reader.
     write_cell_destroyed(&mut app, Vec2::ZERO);
     tick_with_dt(&mut app, Duration::from_secs_f32(0.016));
     let mut q = app.world_mut().query::<&FractureDebris>();
@@ -166,16 +166,16 @@ fn register_pregate_messages_accumulate_until_gate_opens() {
         "gate closed → no debris this tick"
     );
 
-    // Tick 2 — open gate, write no new message. Pre-gate message
-    // retained by Bevy's double-buffered Messages<T> is consumed now.
+    // Tick 2 — open gate, write no new message. The pre-gate message was
+    // drained on tick 1; nothing remains to replay.
     add_fracture_stacks(&mut app, 1);
     tick_with_dt(&mut app, Duration::from_secs_f32(0.016));
 
     let mut query = app.world_mut().query::<&FractureDebris>();
     assert_eq!(
         query.iter(app.world()).count(),
-        2,
-        "gate open → retained pre-gate message consumed → 2 debris"
+        0,
+        "gate open → pre-gate message already drained → 0 debris"
     );
 }
 

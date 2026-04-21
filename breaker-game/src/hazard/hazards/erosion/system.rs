@@ -78,21 +78,40 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
     commands.insert_resource(ErosionState::default());
 }
 
-/// Registers the Erosion `FixedUpdate` chain: `erosion_shrink` (ticks
-/// `width_fraction` down by `shrink_rate * stacks * dt`) → `erosion_restore`
-/// (restores width on `BumpPerformed` messages per bump grade) →
-/// `erosion_apply_width` (reconciles the Breaker's
-/// `EffectStack<SizeBoostConfig>` with a single source-"hazard:erosion"
-/// entry). No `DeathPipelineSystems` ordering — Erosion operates on the
-/// shared effect system, not the heal pipeline. Gated on
-/// `hazard_active(HazardKind::Erosion)` AND `in_state(NodeState::Playing)`.
+/// Registers the Erosion `FixedUpdate` systems.
+///
+/// Non-reader systems — gated on `hazard_active(HazardKind::Erosion)`
+/// AND `in_state(NodeState::Playing)`:
+/// - `erosion_shrink` — ticks `width_fraction` down by
+///   `shrink_rate * stacks * dt`, before `erosion_restore`.
+/// - `erosion_apply_width` — reconciles the Breaker's
+///   `EffectStack<SizeBoostConfig>` with a single
+///   source-"hazard:erosion" entry, after `erosion_restore`.
+///
+/// Reader system — intentionally ungated at the tuple level:
+/// - `erosion_restore` — restores width on `BumpPerformed` messages
+///   per bump grade. Holds `MessageReader<BumpPerformed>`. Enforces the
+///   gate in-body via `reader.clear()` + return when inactive, draining
+///   the buffer every tick. A `.run_if(...)` gate suppresses execution
+///   but does NOT advance the reader cursor, so messages buffered
+///   during gated-off frames would get retroactively consumed the tick
+///   the gate opens.
+///
+/// Ordering: `erosion_shrink` → `erosion_restore` → `erosion_apply_width`.
+/// No `DeathPipelineSystems` ordering — Erosion operates on the shared
+/// effect system, not the heal pipeline.
 pub(crate) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
-        (erosion_shrink, erosion_restore, erosion_apply_width)
-            .chain()
+        (erosion_shrink, erosion_apply_width)
             .run_if(hazard_active(HazardKind::Erosion))
             .run_if(in_state(NodeState::Playing)),
+    )
+    .add_systems(
+        FixedUpdate,
+        erosion_restore
+            .after(erosion_shrink)
+            .before(erosion_apply_width),
     );
 }
 
@@ -123,11 +142,29 @@ pub(crate) fn erosion_shrink(
 /// `restore_perfect × lost`; Early/Late bumps restore `restore_nonwhiff ×
 /// lost`. Width is clamped to 1.0. Whiffs (absence of `BumpPerformed`)
 /// contribute nothing.
+///
+/// Gated in-body: this system runs every `FixedUpdate` tick. When
+/// Erosion is not active or `NodeState` is not `Playing`, it drains the
+/// `MessageReader` via `reader.clear()` and returns so buffered
+/// `BumpPerformed` messages cannot leak retroactively when the hazard
+/// activates on a later frame.
 pub(crate) fn erosion_restore(
     mut reader: MessageReader<BumpPerformed>,
+    active_hazards: Option<Res<ActiveHazards>>,
+    node_state: Option<Res<State<NodeState>>>,
     config: Option<Res<ErosionConfig>>,
     state: Option<ResMut<ErosionState>>,
 ) {
+    if active_hazards
+        .as_ref()
+        .is_none_or(|ah| !ah.is_active(HazardKind::Erosion))
+        || node_state
+            .as_ref()
+            .is_none_or(|s| *s.get() != NodeState::Playing)
+    {
+        reader.clear();
+        return;
+    }
     let (Some(config), Some(mut state)) = (config, state) else {
         reader.clear();
         return;

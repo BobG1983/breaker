@@ -13,7 +13,7 @@ use crate::{
     cells::components::{ADJACENCY_RADIUS_SQ, Cell},
     hazard::{
         definition::{HazardKind, HazardTuning},
-        resources::{ActiveHazards, hazard_active},
+        resources::ActiveHazards,
     },
     prelude::*,
     shared::death_pipeline::{
@@ -64,15 +64,20 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
 /// Registers `cascade_heal_on_death` in `FixedUpdate` between
 /// `DeathPipelineSystems::HandleKill` (which emits `Destroyed<Cell>`) and
 /// `DeathPipelineSystems::ApplyHeal` (which consumes `HealDealt<Cell>`).
-/// Gated by `hazard_active(Cascade)` and `NodeState::Playing`.
+///
+/// Reader system — intentionally ungated. `cascade_heal_on_death` holds
+/// `MessageReader<Destroyed<Cell>>` and enforces the `ActiveHazards` /
+/// `NodeState::Playing` gate in-body via an immediate `reader.clear()` +
+/// return when inactive. A `.run_if(...)` gate suppresses execution but
+/// does NOT advance the reader cursor, so messages buffered during
+/// gated-off frames would get retroactively consumed the tick the gate
+/// opens.
 pub(crate) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         cascade_heal_on_death
             .after(DeathPipelineSystems::HandleKill)
-            .before(DeathPipelineSystems::ApplyHeal)
-            .run_if(hazard_active(HazardKind::Cascade))
-            .run_if(in_state(NodeState::Playing)),
+            .before(DeathPipelineSystems::ApplyHeal),
     );
 }
 
@@ -81,17 +86,42 @@ pub(crate) fn register(app: &mut App) {
 /// `amount = heal_per_neighbour(stacks)`, `cap = HealCap::Starting`, and
 /// `source = Some("hazard:cascade")`. The unified heal pipeline's
 /// `apply_heal::<Cell>` applies and clamps.
+///
+/// Gated in-body: this system runs every `FixedUpdate` tick. When
+/// Cascade is not active or `NodeState` is not `Playing`, it drains the
+/// `MessageReader` via `reader.clear()` and returns so buffered
+/// `Destroyed<Cell>` messages cannot leak retroactively when the hazard
+/// activates on a later frame.
 pub(crate) fn cascade_heal_on_death(
     mut reader: MessageReader<Destroyed<Cell>>,
-    active: Res<ActiveHazards>,
+    active_hazards: Option<Res<ActiveHazards>>,
+    node_state: Option<Res<State<NodeState>>>,
     config: Option<Res<CascadeConfig>>,
     cells: Query<(Entity, &Position2D, &Hp), With<Cell>>,
     mut writer: MessageWriter<HealDealt<Cell>>,
 ) {
-    let Some(config) = config else { return };
+    if active_hazards
+        .as_ref()
+        .is_none_or(|ah| !ah.is_active(HazardKind::Cascade))
+        || node_state
+            .as_ref()
+            .is_none_or(|s| *s.get() != NodeState::Playing)
+    {
+        reader.clear();
+        return;
+    }
+    let Some(config) = config else {
+        reader.clear();
+        return;
+    };
+    let Some(active) = active_hazards else {
+        reader.clear();
+        return;
+    };
     let stacks = active.stacks(HazardKind::Cascade);
     let heal = config.heal_per_neighbour(stacks);
     if heal <= 0.0 {
+        reader.clear();
         return;
     }
     let deaths: Vec<(Entity, Vec2)> = reader.read().map(|m| (m.victim, m.victim_pos)).collect();

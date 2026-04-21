@@ -22,7 +22,7 @@ use crate::{
     prelude::*,
     protocol::{
         definition::{ProtocolKind, ProtocolTuning},
-        resources::protocol_active,
+        systems::ProtocolGate,
     },
     shared::death_pipeline::sets::DeathPipelineSystems,
 };
@@ -83,8 +83,10 @@ pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
 /// Registers Fission's runtime systems.
 ///
 /// - `fission_on_cell_destroyed` → `FixedUpdate`, ordered
-///   `.after(DeathPipelineSystems::HandleKill)`, gated by
-///   `protocol_active(Fission)` + `in_state(NodeState::Playing)`.
+///   `.after(DeathPipelineSystems::HandleKill)`, intentionally ungated at
+///   the registration level. The system enforces the
+///   `ActiveProtocols` / `NodeState::Playing` gate in-body via an immediate
+///   `reader.clear()` + return when inactive.
 /// - `fission_cleanup_run` → `OnExit(MenuState::Main)` with NO run-if.
 ///
 /// NOTE: `FissionCounter` is NOT inserted here; `ProtocolPlugin::build` owns
@@ -92,10 +94,7 @@ pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
 pub(crate) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
-        fission_on_cell_destroyed
-            .after(DeathPipelineSystems::HandleKill)
-            .run_if(protocol_active(ProtocolKind::Fission))
-            .run_if(in_state(NodeState::Playing)),
+        fission_on_cell_destroyed.after(DeathPipelineSystems::HandleKill),
     );
     app.add_systems(OnExit(MenuState::Main), fission_cleanup_run);
 }
@@ -146,11 +145,16 @@ type FissionBoltQuery<'w, 's> = Query<
 pub(crate) fn fission_on_cell_destroyed(
     mut reader: MessageReader<Destroyed<Cell>>,
     config: Option<Res<FissionConfig>>,
+    gate: ProtocolGate,
     counter: Option<ResMut<FissionCounter>>,
     bolts: FissionBoltQuery,
     registry: Option<Res<BoltRegistry>>,
     mut commands: Commands,
 ) {
+    if gate.is_closed_for(ProtocolKind::Fission) {
+        reader.clear();
+        return;
+    }
     let Some(config) = config else {
         reader.clear();
         return;

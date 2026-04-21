@@ -101,6 +101,10 @@ fn late_bump_uses_nonwhiff_fraction() {
     app.world_mut().insert_resource(ErosionState {
         width_fraction: 0.60,
     });
+    // Retrofit: reader system enforces gate in-body via reader.clear().
+    app.world_mut()
+        .resource_mut::<ActiveHazards>()
+        .add_stack(HazardKind::Erosion);
 
     write_bump(&mut app, BumpGrade::Late);
     tick_with_dt(&mut app, Duration::from_secs_f32(0.016));
@@ -123,6 +127,10 @@ fn restore_clamps_to_full_width() {
     app.world_mut().insert_resource(ErosionState {
         width_fraction: 0.50,
     });
+    // Retrofit: reader system enforces gate in-body via reader.clear().
+    app.world_mut()
+        .resource_mut::<ActiveHazards>()
+        .add_stack(HazardKind::Erosion);
 
     write_bump(&mut app, BumpGrade::Perfect);
     tick_with_dt(&mut app, Duration::from_secs_f32(0.016));
@@ -145,6 +153,10 @@ fn no_restore_when_already_at_full_width() {
     app.world_mut().insert_resource(ErosionState {
         width_fraction: 1.0,
     });
+    // Retrofit: reader system enforces gate in-body via reader.clear().
+    app.world_mut()
+        .resource_mut::<ActiveHazards>()
+        .add_stack(HazardKind::Erosion);
 
     write_bump(&mut app, BumpGrade::Perfect);
     tick_with_dt(&mut app, Duration::from_secs_f32(0.016));

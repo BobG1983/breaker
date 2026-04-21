@@ -77,25 +77,41 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
     });
 }
 
-/// Registers the Overcharge `FixedUpdate` chain: `count_kills` →
-/// `reset_on_bump` → `apply_speed`, gated on `hazard_active(HazardKind::Overcharge)` AND
-/// `in_state(NodeState::Playing)`. `count_kills` reads `Destroyed<Cell>`
-/// and increments the killer bolt's `OverchargeKillCount`; `reset_on_bump`
-/// zeroes the count on `BumpPerformed`; `apply_speed` reconciles the Bolt's
-/// `EffectStack<SpeedBoostConfig>` with a single source-`"hazard:overcharge"`
-/// entry. No `DeathPipelineSystems` ordering — Overcharge operates on the
-/// shared effect system, not the heal / damage pipeline.
+/// Registers the Overcharge `FixedUpdate` systems.
+///
+/// Reader systems — intentionally ungated at the tuple level. They hold
+/// `MessageReader<...>` and enforce the `ActiveHazards` /
+/// `NodeState::Playing` gate in-body via an immediate `reader.clear()` +
+/// return when inactive. A `.run_if(...)` gate suppresses execution but
+/// does NOT advance the reader cursor, so messages buffered during
+/// gated-off frames would get retroactively consumed the tick the gate
+/// opens:
+/// - `overcharge_count_kills` — reads `Destroyed<Cell>` and increments
+///   the killer bolt's `OverchargeKillCount`.
+/// - `overcharge_reset_on_bump` — reads `BumpPerformed` and zeroes the
+///   count.
+///
+/// Non-reader system — gated on `hazard_active(HazardKind::Overcharge)`
+/// AND `in_state(NodeState::Playing)`:
+/// - `overcharge_apply_speed` — reconciles the Bolt's
+///   `EffectStack<SpeedBoostConfig>` with a single
+///   source-`"hazard:overcharge"` entry.
+///
+/// Ordering: `overcharge_count_kills` → `overcharge_reset_on_bump` →
+/// `overcharge_apply_speed`. No `DeathPipelineSystems` ordering —
+/// Overcharge operates on the shared effect system, not the heal /
+/// damage pipeline.
 pub(crate) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
-        (
-            overcharge_count_kills,
-            overcharge_reset_on_bump,
-            overcharge_apply_speed,
-        )
-            .chain()
+        overcharge_apply_speed
+            .after(overcharge_reset_on_bump)
             .run_if(hazard_active(HazardKind::Overcharge))
             .run_if(in_state(NodeState::Playing)),
+    )
+    .add_systems(
+        FixedUpdate,
+        (overcharge_count_kills, overcharge_reset_on_bump).chain(),
     );
 }
 
@@ -103,12 +119,30 @@ pub(crate) fn register(app: &mut App) {
 /// bolt's [`OverchargeKillCount`]. Inserts the component on first kill.
 /// Kills whose killer is `None` (environmental) or is not a Bolt are
 /// skipped silently.
+///
+/// Gated in-body: this system runs every `FixedUpdate` tick. When
+/// Overcharge is not active or `NodeState` is not `Playing`, it drains
+/// the `MessageReader` via `reader.clear()` and returns so buffered
+/// `Destroyed<Cell>` messages cannot leak retroactively when the hazard
+/// activates on a later frame.
 pub(crate) fn overcharge_count_kills(
     mut reader: MessageReader<Destroyed<Cell>>,
+    active_hazards: Option<Res<ActiveHazards>>,
+    node_state: Option<Res<State<NodeState>>>,
     bolts: Query<Entity, With<Bolt>>,
     mut counts: Query<&mut OverchargeKillCount>,
     mut commands: Commands,
 ) {
+    if active_hazards
+        .as_ref()
+        .is_none_or(|ah| !ah.is_active(HazardKind::Overcharge))
+        || node_state
+            .as_ref()
+            .is_none_or(|s| *s.get() != NodeState::Playing)
+    {
+        reader.clear();
+        return;
+    }
     // Tally kills per bolt first so multiple kills in one tick don't
     // race against pending Commands inserts.
     let mut batch: HashMap<Entity, u32> = HashMap::default();
@@ -134,10 +168,28 @@ pub(crate) fn overcharge_count_kills(
 /// Resets a bolt's kill count on every `BumpPerformed` for that bolt.
 /// Missing [`OverchargeKillCount`] is a no-op — zero is zero. Messages
 /// with `bolt: None` (no identified bumping bolt) are skipped.
+///
+/// Gated in-body: this system runs every `FixedUpdate` tick. When
+/// Overcharge is not active or `NodeState` is not `Playing`, it drains
+/// the `MessageReader` via `reader.clear()` and returns so buffered
+/// `BumpPerformed` messages cannot leak retroactively when the hazard
+/// activates on a later frame.
 pub(crate) fn overcharge_reset_on_bump(
     mut reader: MessageReader<BumpPerformed>,
+    active_hazards: Option<Res<ActiveHazards>>,
+    node_state: Option<Res<State<NodeState>>>,
     mut counts: Query<&mut OverchargeKillCount>,
 ) {
+    if active_hazards
+        .as_ref()
+        .is_none_or(|ah| !ah.is_active(HazardKind::Overcharge))
+        || node_state
+            .as_ref()
+            .is_none_or(|s| *s.get() != NodeState::Playing)
+    {
+        reader.clear();
+        return;
+    }
     for bump in reader.read() {
         let Some(bolt) = bump.bolt else { continue };
         if let Ok(mut count) = counts.get_mut(bolt) {

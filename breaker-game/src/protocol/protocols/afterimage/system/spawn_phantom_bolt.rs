@@ -10,6 +10,7 @@ use crate::{
     breaker::messages::BumpGrade,
     effect_v3::effects::phantom_bolt::components::{PhantomBolt, PhantomLifetime, PhantomOwner},
     prelude::*,
+    protocol::{definition::ProtocolKind, systems::ProtocolGate},
 };
 
 // ── System 4 — afterimage_spawn_phantom_bolt ────────────────────────────────
@@ -67,11 +68,16 @@ type SpawnPhantomBoltRealBoltQuery<'w, 's> = Query<
 pub(crate) fn afterimage_spawn_phantom_bolt(
     mut reader: MessageReader<BumpPerformed>,
     config: Option<Res<AfterimageConfig>>,
+    gate: ProtocolGate,
     phantom_breakers: Query<(), With<PhantomBreaker>>,
     real_bolts: SpawnPhantomBoltRealBoltQuery,
     existing_phantom_owners: Query<&PhantomOwner, With<PhantomBolt>>,
     mut commands: Commands,
 ) {
+    if gate.is_closed_for(ProtocolKind::Afterimage) {
+        reader.clear();
+        return;
+    }
     let Some(config) = config else {
         reader.clear();
         return;

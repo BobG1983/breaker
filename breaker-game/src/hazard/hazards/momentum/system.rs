@@ -110,13 +110,21 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
 
 // ── register ────────────────────────────────────────────────────────────────
 
-/// Registers Momentum's `FixedUpdate` systems with run-if gates.
+/// Registers Momentum's `FixedUpdate` systems.
 ///
-/// - `attach_momentum_ceiling` → `FixedUpdate`, before `momentum_heal_on_nonlethal`.
-/// - `momentum_heal_on_nonlethal` → `FixedUpdate`, in `ApplyHeal` set, before `apply_heal::<Cell>`.
-/// - `momentum_split_check` → `FixedUpdate`, after `ApplyHeal` set.
+/// Non-reader systems — gated by `hazard_active(HazardKind::Momentum)`
+/// AND `in_state(NodeState::Playing)`:
+/// - `attach_momentum_ceiling` — before `momentum_heal_on_nonlethal`.
+/// - `momentum_split_check` — after `DeathPipelineSystems::ApplyHeal`.
 ///
-/// All three systems gated by `hazard_active(Momentum)` AND `in_state(NodeState::Playing)`.
+/// Reader system — intentionally ungated at the tuple level:
+/// - `momentum_heal_on_nonlethal` — holds `MessageReader<DamageDealt<Cell>>`,
+///   enforces the `ActiveHazards` / `NodeState::Playing` gate in-body via
+///   an immediate `reader.clear()` + return when inactive. A `.run_if(...)`
+///   gate suppresses execution but does NOT advance the reader cursor, so
+///   messages buffered during gated-off frames would get retroactively
+///   consumed the tick the gate opens. Runs in
+///   `DeathPipelineSystems::ApplyHeal`, before `apply_heal::<Cell>`.
 pub(crate) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
@@ -129,9 +137,7 @@ pub(crate) fn register(app: &mut App) {
         FixedUpdate,
         momentum_heal_on_nonlethal
             .in_set(DeathPipelineSystems::ApplyHeal)
-            .before(crate::shared::death_pipeline::systems::apply_heal::<Cell>)
-            .run_if(hazard_active(HazardKind::Momentum))
-            .run_if(in_state(NodeState::Playing)),
+            .before(crate::shared::death_pipeline::systems::apply_heal::<Cell>),
     );
     app.add_systems(
         FixedUpdate,
@@ -194,14 +200,35 @@ pub(crate) fn attach_momentum_ceiling(config: Option<Res<MomentumConfig>>, mut c
 /// `HealCap::Max`, and the `MOMENTUM_SENTINEL` source tag.
 ///
 /// Does NOT mutate `hp.max` — that is `attach_momentum_ceiling`'s responsibility.
+///
+/// Gated in-body: this system runs every `FixedUpdate` tick. When
+/// Momentum is not active or `NodeState` is not `Playing`, it drains the
+/// `MessageReader` via `reader.clear()` and returns so buffered
+/// `DamageDealt<Cell>` messages cannot leak retroactively when the
+/// hazard activates on a later frame.
 pub(crate) fn momentum_heal_on_nonlethal(
     mut reader: MessageReader<DamageDealt<Cell>>,
-    active: Res<ActiveHazards>,
+    active_hazards: Option<Res<ActiveHazards>>,
+    node_state: Option<Res<State<NodeState>>>,
     config: Option<Res<MomentumConfig>>,
     targets: CellHpRead,
     mut writer: MessageWriter<HealDealt<Cell>>,
 ) {
+    if active_hazards
+        .as_ref()
+        .is_none_or(|ah| !ah.is_active(HazardKind::Momentum))
+        || node_state
+            .as_ref()
+            .is_none_or(|s| *s.get() != NodeState::Playing)
+    {
+        reader.clear();
+        return;
+    }
     let Some(config) = config else {
+        reader.clear();
+        return;
+    };
+    let Some(active) = active_hazards else {
         reader.clear();
         return;
     };

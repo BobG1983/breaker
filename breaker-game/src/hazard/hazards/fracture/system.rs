@@ -4,7 +4,7 @@ use crate::{
     cells::components::{Cell, CellHeight, CellWidth},
     hazard::{
         definition::{HazardKind, HazardTuning},
-        resources::{ActiveHazards, hazard_active},
+        resources::ActiveHazards,
     },
     prelude::*,
     shared::{
@@ -99,38 +99,60 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
     });
 }
 
-/// Registers the Fracture `FixedUpdate` system `fracture_on_death`,
-/// gated on `hazard_active(HazardKind::Fracture)` AND
-/// `in_state(NodeState::Playing)`. `fracture_on_death` reads
-/// `Destroyed<Cell>` and spawns `count` debris cells per destroyed
-/// cell at orthogonal offsets, where `count = FractureConfig::splits_for(stacks)`.
-/// No `DeathPipelineSystems` ordering — debris are spawned directly via
+/// Registers the Fracture `FixedUpdate` system `fracture_on_death`.
+///
+/// `fracture_on_death` is a reader system — it holds
+/// `MessageReader<Destroyed<Cell>>`. Registered WITHOUT `.run_if(...)`;
+/// it enforces the `ActiveHazards` / `NodeState::Playing` gate in-body
+/// via an immediate `reader.clear()` + return when inactive, draining
+/// the buffer every tick. A `.run_if(...)` gate suppresses execution
+/// but does NOT advance the reader cursor, so messages buffered during
+/// gated-off frames would get retroactively consumed the tick the gate
+/// opens. Reads `Destroyed<Cell>` and spawns `count` debris cells per
+/// destroyed cell at orthogonal offsets, where
+/// `count = FractureConfig::splits_for(stacks)`. No
+/// `DeathPipelineSystems` ordering — debris are spawned directly via
 /// `commands.spawn(...)`, not via a `SpawnDebrisCell` message
 /// (pending the message pipeline in Commit 5 / Wave 7).
 pub(crate) fn register(app: &mut App) {
-    app.add_systems(
-        FixedUpdate,
-        fracture_on_death
-            .run_if(hazard_active(HazardKind::Fracture))
-            .run_if(in_state(NodeState::Playing)),
-    );
+    app.add_systems(FixedUpdate, fracture_on_death);
 }
 
 /// Spawns `splits_for(stacks)` debris cells in orthogonal positions
 /// around each destroyed cell. Excludes the victim itself — debris
 /// cells are `FractureDebris`-marked with `CellWidth`/`CellHeight` and
-/// the same collision layers as regular cells. Early-returns (draining
-/// the message reader via `reader.clear()`) when `FractureConfig` is
-/// absent, or when `splits_for(stacks) == 0` (zero-stack inactive
-/// path) — the drain prevents stale `Destroyed<Cell>` messages from
-/// spawning debris on a later tick after the hazard activates.
+/// the same collision layers as regular cells.
+///
+/// Gated in-body: this system runs every `FixedUpdate` tick. When
+/// Fracture is not active or `NodeState` is not `Playing`, it drains the
+/// `MessageReader` via `reader.clear()` and returns so buffered
+/// `Destroyed<Cell>` messages cannot leak retroactively when the hazard
+/// activates on a later frame. Also early-returns (draining the reader
+/// via `reader.clear()`) when `FractureConfig` is absent, or when
+/// `splits_for(stacks) == 0` (zero-stack inactive path).
 pub(crate) fn fracture_on_death(
     mut reader: MessageReader<Destroyed<Cell>>,
-    active: Res<ActiveHazards>,
+    active_hazards: Option<Res<ActiveHazards>>,
+    node_state: Option<Res<State<NodeState>>>,
     config: Option<Res<FractureConfig>>,
     mut commands: Commands,
 ) {
+    if active_hazards
+        .as_ref()
+        .is_none_or(|ah| !ah.is_active(HazardKind::Fracture))
+        || node_state
+            .as_ref()
+            .is_none_or(|s| *s.get() != NodeState::Playing)
+    {
+        reader.clear();
+        return;
+    }
     let Some(config) = config else {
+        reader.clear();
+        return;
+    };
+    // Gate above guaranteed `active_hazards` is `Some`.
+    let Some(active) = active_hazards else {
         reader.clear();
         return;
     };

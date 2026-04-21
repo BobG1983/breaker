@@ -31,7 +31,7 @@ use crate::{
     prelude::*,
     protocol::{
         definition::{ProtocolKind, ProtocolTuning},
-        resources::protocol_active,
+        resources::{ActiveProtocols, protocol_active},
     },
 };
 
@@ -87,8 +87,9 @@ pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
 /// Registers Debt Collector's runtime systems with the correct schedules,
 /// run-ifs, and ordering.
 ///
-/// - Three reader systems share both run-ifs:
-///   `protocol_active(DebtCollector)` + `in_state(NodeState::Playing)`.
+/// - Three reader systems are intentionally ungated at the registration
+///   level. Each enforces the `ActiveProtocols` / `NodeState::Playing` gate
+///   in-body via an immediate `reader.clear()` + return when inactive.
 /// - `debt_collector_attach_stack` runs whenever the protocol is active
 ///   (no `NodeState` gate).
 /// - `debt_collector_cleanup_node` runs on `OnExit(NodeState::Playing)`
@@ -100,9 +101,7 @@ pub(crate) fn register(app: &mut App) {
             debt_collector_on_bump.after(BreakerSystems::GradeBump),
             debt_collector_on_impact.after(BoltSystems::CellCollision),
             debt_collector_on_bolt_lost.after(BoltSystems::BoltLost),
-        )
-            .run_if(protocol_active(ProtocolKind::DebtCollector))
-            .run_if(in_state(NodeState::Playing)),
+        ),
     );
     app.add_systems(
         FixedUpdate,
@@ -127,9 +126,21 @@ pub(crate) fn register(app: &mut App) {
 pub(crate) fn debt_collector_on_bump(
     mut reader: MessageReader<BumpPerformed>,
     config: Option<Res<DebtCollectorConfig>>,
+    active_protocols: Option<Res<ActiveProtocols>>,
+    node_state: Option<Res<State<NodeState>>>,
     mut commands: Commands,
     mut bolts: Query<&mut DebtStack>,
 ) {
+    if active_protocols
+        .as_ref()
+        .is_none_or(|ap| !ap.contains(ProtocolKind::DebtCollector))
+        || node_state
+            .as_ref()
+            .is_none_or(|s| *s.get() != NodeState::Playing)
+    {
+        reader.clear();
+        return;
+    }
     let Some(config) = config else {
         reader.clear();
         return;
@@ -165,10 +176,22 @@ pub(crate) fn debt_collector_on_bump(
 pub(crate) fn debt_collector_on_impact(
     mut reader: MessageReader<BoltImpactCell>,
     config: Option<Res<DebtCollectorConfig>>,
+    active_protocols: Option<Res<ActiveProtocols>>,
+    node_state: Option<Res<State<NodeState>>>,
     mut commands: Commands,
     bolts: Query<(&DebtCashOut, Option<&BoltBaseDamage>)>,
     mut damage_writer: MessageWriter<DamageDealt<Cell>>,
 ) {
+    if active_protocols
+        .as_ref()
+        .is_none_or(|ap| !ap.contains(ProtocolKind::DebtCollector))
+        || node_state
+            .as_ref()
+            .is_none_or(|s| *s.get() != NodeState::Playing)
+    {
+        reader.clear();
+        return;
+    }
     if config.is_none() {
         reader.clear();
         return;
@@ -209,9 +232,21 @@ pub(crate) fn debt_collector_on_impact(
 pub(crate) fn debt_collector_on_bolt_lost(
     mut reader: MessageReader<BoltLost>,
     config: Option<Res<DebtCollectorConfig>>,
+    active_protocols: Option<Res<ActiveProtocols>>,
+    node_state: Option<Res<State<NodeState>>>,
     mut commands: Commands,
     mut bolts: Query<&mut DebtStack>,
 ) {
+    if active_protocols
+        .as_ref()
+        .is_none_or(|ap| !ap.contains(ProtocolKind::DebtCollector))
+        || node_state
+            .as_ref()
+            .is_none_or(|s| *s.get() != NodeState::Playing)
+    {
+        reader.clear();
+        return;
+    }
     if config.is_none() {
         reader.clear();
         return;

@@ -109,9 +109,16 @@ pub(super) fn wire_shrink_only(app: &mut App) {
 
 /// Wires only `erosion_restore` in `FixedUpdate` + registers the
 /// `BumpPerformed` message. Used by Group B.
+///
+/// Also seeds 1 Erosion stack: the retrofit moved the `hazard_active`
+/// gate from a `.run_if(...)` into the reader body so buffered
+/// `BumpPerformed` messages drain cleanly when the hazard is off.
+/// Group B tests exercise the restore path under the happy path, so
+/// the hazard must be active when this helper wires the system.
 pub(super) fn wire_restore_only(app: &mut App) {
     app.add_message::<BumpPerformed>();
     app.add_systems(FixedUpdate, erosion_restore);
+    add_erosion_stacks(app, 1);
 }
 
 /// Wires only `erosion_apply_width` in `FixedUpdate` — bypasses

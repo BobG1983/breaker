@@ -16,7 +16,7 @@
 
 use std::marker::PhantomData;
 
-use bevy::prelude::*;
+use bevy::{ecs::system::SystemParam, prelude::*};
 
 use crate::{
     bolt::{
@@ -26,7 +26,7 @@ use crate::{
     prelude::*,
     protocol::{
         definition::{ProtocolKind, ProtocolTuning},
-        resources::protocol_active,
+        systems::ProtocolGate,
     },
 };
 
@@ -79,14 +79,16 @@ pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
 ///
 /// - [`iron_curtain_on_bolt_lost`] runs in `FixedUpdate` after
 ///   `BoltSystems::BoltLost`.
-/// - Gated by `protocol_active(IronCurtain)` AND `in_state(NodeState::Playing)`.
+/// - Intentionally ungated at the registration level — enforces the
+///   `ActiveProtocols` / `NodeState::Playing` gate in-body via an immediate
+///   `reader.clear()` + return when inactive. A `.run_if(...)` gate would
+///   suppress the system but not advance its `MessageReader` cursor, leaving
+///   buffered `BoltLost` messages available for retroactive consumption when
+///   the protocol activates on a later frame.
 pub(crate) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
-        iron_curtain_on_bolt_lost
-            .after(BoltSystems::BoltLost)
-            .run_if(protocol_active(ProtocolKind::IronCurtain))
-            .run_if(in_state(NodeState::Playing)),
+        iron_curtain_on_bolt_lost.after(BoltSystems::BoltLost),
     );
 }
 
@@ -100,6 +102,15 @@ type LiveCellQuery<'w, 's> = Query<
     (Entity, &'static Position2D),
     (With<Cell>, Without<Dead>, Without<Invulnerable>),
 >;
+
+/// Bundles Iron Curtain's harness-optional resource dependencies behind a
+/// single `SystemParam` so `iron_curtain_on_bolt_lost` stays below the
+/// `clippy::too_many_arguments` limit after the pre-gate-drain retrofit.
+#[derive(SystemParam)]
+pub(crate) struct IronCurtainDeps<'w> {
+    pub(crate) config:    Option<Res<'w, IronCurtainConfig>>,
+    pub(crate) playfield: Option<Res<'w, PlayfieldConfig>>,
+}
 
 /// Consumes `BoltLost` messages. For each message, fans out a single-frame
 /// damage wave from the breaker position across all alive, non-invulnerable
@@ -121,18 +132,22 @@ type LiveCellQuery<'w, 's> = Query<
 /// missing-component and bolt-despawned-before-this-system cases).
 pub(crate) fn iron_curtain_on_bolt_lost(
     mut reader: MessageReader<BoltLost>,
-    config: Option<Res<IronCurtainConfig>>,
-    playfield: Option<Res<PlayfieldConfig>>,
+    deps: IronCurtainDeps,
+    gate: ProtocolGate,
     breakers: Query<&Position2D, With<Breaker>>,
     bolts: Query<&BoltBaseDamage>,
     cells: LiveCellQuery,
     mut damage_writer: MessageWriter<DamageDealt<Cell>>,
 ) {
-    let Some(config) = config else {
+    if gate.is_closed_for(ProtocolKind::IronCurtain) {
+        reader.clear();
+        return;
+    }
+    let Some(config) = deps.config else {
         reader.clear();
         return;
     };
-    let Some(playfield) = playfield else {
+    let Some(playfield) = deps.playfield else {
         reader.clear();
         return;
     };

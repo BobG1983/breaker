@@ -94,42 +94,69 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
 }
 
 /// Registers the two Echo Cells `FixedUpdate` systems
-/// `echo_cells_track_deaths` and `echo_cells_spawn_ghosts`, chained in
-/// that order via `.chain()`, both gated on
-/// `hazard_active(HazardKind::EchoCells)` AND
-/// `in_state(NodeState::Playing)`. `echo_cells_track_deaths` reads
-/// `Destroyed<Cell>` and spawns `PendingGhost` markers for non-ghost
-/// victims. `echo_cells_spawn_ghosts` ticks those markers' timers and
-/// spawns ghost `Cell` entities (with `GhostCell` marker) directly via
-/// `commands.spawn(...)`, not via a `SpawnGhostCell` message — matching
-/// the shipped Fracture pattern of spawning debris directly. No
-/// `DeathPipelineSystems` ordering is applied, because ghost spawns are
-/// raw `commands.spawn` calls rather than death-pipeline emissions.
+/// `echo_cells_track_deaths` and `echo_cells_spawn_ghosts`.
+///
+/// `echo_cells_track_deaths` is a reader system — it holds
+/// `MessageReader<Destroyed<Cell>>`. Registered WITHOUT `.run_if(...)`;
+/// it enforces the `ActiveHazards` / `NodeState::Playing` gate in-body
+/// via an immediate `reader.clear()` + return when inactive, draining
+/// the buffer every tick. A `.run_if(...)` gate suppresses execution
+/// but does NOT advance the reader cursor, so messages buffered during
+/// gated-off frames would get retroactively consumed the tick the gate
+/// opens.
+///
+/// `echo_cells_spawn_ghosts` is a non-reader system (ticks
+/// `PendingGhost` timers and spawns ghost `Cell` entities). It remains
+/// gated on `hazard_active(HazardKind::EchoCells)` AND
+/// `in_state(NodeState::Playing)`.
+///
+/// Ghost spawns are raw `commands.spawn(...)` calls rather than
+/// death-pipeline emissions, so no `DeathPipelineSystems` ordering is
+/// applied. The two systems operate on disjoint entity sets (the
+/// tracker spawns new `PendingGhost` via deferred commands; the ghost
+/// spawner reads existing `PendingGhost` entities), so explicit
+/// `.chain()` ordering is no longer required.
 pub(crate) fn register(app: &mut App) {
-    app.add_systems(
-        FixedUpdate,
-        (echo_cells_track_deaths, echo_cells_spawn_ghosts)
-            .chain()
-            .run_if(hazard_active(HazardKind::EchoCells))
-            .run_if(in_state(NodeState::Playing)),
-    );
+    app.add_systems(FixedUpdate, echo_cells_track_deaths)
+        .add_systems(
+            FixedUpdate,
+            echo_cells_spawn_ghosts
+                .run_if(hazard_active(HazardKind::EchoCells))
+                .run_if(in_state(NodeState::Playing)),
+        );
 }
 
 /// Reads `Destroyed<Cell>`; for each destroyed non-`GhostCell` victim,
 /// spawns a `PendingGhost` marker carrying the victim's `victim_pos` and
 /// `config.delay_secs` as the countdown. Victims that carry `GhostCell`
 /// are skipped — ghost deaths must not recurse into new ghosts, so the
-/// marker is not emitted for them. Early-returns (draining the message
-/// reader via `reader.clear()`) when `EchoCellsConfig` is absent OR
-/// `config.delay_secs <= 0.0` — the drain prevents stale
-/// `Destroyed<Cell>` messages from spawning pending ghosts on a later
-/// tick after the hazard activates or raises its delay.
+/// marker is not emitted for them.
+///
+/// Gated in-body: this system runs every `FixedUpdate` tick. When
+/// `EchoCells` is not active or `NodeState` is not `Playing`, it drains
+/// the `MessageReader` via `reader.clear()` and returns so buffered
+/// `Destroyed<Cell>` messages cannot leak retroactively when the hazard
+/// activates on a later frame. Early-returns (draining the reader via
+/// `reader.clear()`) also when `EchoCellsConfig` is absent OR
+/// `config.delay_secs <= 0.0`.
 pub(crate) fn echo_cells_track_deaths(
     mut reader: MessageReader<Destroyed<Cell>>,
+    active_hazards: Option<Res<ActiveHazards>>,
+    node_state: Option<Res<State<NodeState>>>,
     config: Option<Res<EchoCellsConfig>>,
     ghosts: Query<(), With<GhostCell>>,
     mut commands: Commands,
 ) {
+    if active_hazards
+        .as_ref()
+        .is_none_or(|ah| !ah.is_active(HazardKind::EchoCells))
+        || node_state
+            .as_ref()
+            .is_none_or(|s| *s.get() != NodeState::Playing)
+    {
+        reader.clear();
+        return;
+    }
     let Some(config) = config else {
         reader.clear();
         return;

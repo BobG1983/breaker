@@ -210,12 +210,10 @@ fn hazard_inactive_gate_toggles_on_once_overcharge_stack_added() {
     // tick the bolt has count(1) and an Overcharge entry at 1.05.
     //
     // Note: we deliberately do NOT write a `Destroyed<Cell>` during the
-    // gated-off tick. Bevy's MessageReader retains unread messages
-    // across ticks — if the system is gated off, pre-gate messages
-    // accumulate and would be consumed once the gate opens. That
-    // behavior is pinned by
-    // `pregate_messages_accumulate_until_gate_opens` below; here we
-    // isolate the gate toggle with no pre-gate writes.
+    // gated-off tick. The retrofit drains the reader in-body when the
+    // gate is closed, so pre-gate messages do not accumulate — pinned
+    // by `pregate_messages_drain_cleanly_before_gate_opens` below.
+    // Here we isolate the gate toggle with no pre-gate writes.
     let mut app = test_app_playing();
     register(&mut app);
     install_overcharge_config(&mut app, canonical_config());
@@ -246,16 +244,18 @@ fn hazard_inactive_gate_toggles_on_once_overcharge_stack_added() {
 }
 
 #[test]
-fn pregate_messages_accumulate_until_gate_opens() {
-    // Pin Bevy MessageReader semantics under a run_if gate: when the gate
-    // is closed, the system does not consume messages; the reader's
-    // cursor stays put. Opening the gate on a later tick lets the system
-    // read ALL unread messages — including the pre-gate ones.
+fn pregate_messages_drain_cleanly_before_gate_opens() {
+    // Regression pin against accidental `.run_if` reintroduction on the
+    // reader systems: `overcharge_count_kills` / `overcharge_reset_on_bump`
+    // now enforce their gate in-body via `reader.clear()` so pre-gate
+    // messages drain cleanly instead of accumulating and replaying on
+    // gate open.
     //
     // Setup: gate starts CLOSED (Decay stacks only, no Overcharge stack).
-    // Write one Destroyed<Cell>. Tick (gate off → no-op). Toggle gate ON
+    // Write one Destroyed<Cell>. Tick (gate off → drain). Toggle gate ON
     // without writing a new message. Tick again. The pre-gate message
-    // must now be consumed → count == 1.
+    // must NOT be consumed → no OverchargeKillCount component inserted,
+    // and no Overcharge speed-stack entry appears.
     let mut app = test_app_playing();
     register(&mut app);
     install_overcharge_config(&mut app, canonical_config());
@@ -266,7 +266,7 @@ fn pregate_messages_accumulate_until_gate_opens() {
     }
     let bolt = spawn_bolt(&mut app);
 
-    // Tick 1 — gate off, pre-gate kill written.
+    // Tick 1 — gate off, pre-gate kill written. Retrofit drains reader.
     let cell = spawn_cell(&mut app);
     write_cell_destroyed(&mut app, cell, Some(bolt));
     run_fixed_update(&mut app);
@@ -275,18 +275,26 @@ fn pregate_messages_accumulate_until_gate_opens() {
         "gate closed → no component inserted this tick"
     );
 
-    // Tick 2 — gate opens; no new message written.
+    // Tick 2 — gate opens; no new message written. The pre-gate message
+    // was drained on tick 1; nothing remains to replay.
     add_overcharge_stacks(&mut app, 1);
     run_fixed_update(&mut app);
 
-    // The buffered pre-gate message was consumed when the gate opened.
-    let count = app.world().get::<OverchargeKillCount>(bolt).unwrap();
-    assert_eq!(count.0, 1);
-    let stack = app
-        .world()
-        .get::<EffectStack<SpeedBoostConfig>>(bolt)
-        .unwrap();
-    assert!((stack.aggregate() - 1.05).abs() < 1e-6);
+    assert!(
+        app.world().get::<OverchargeKillCount>(bolt).is_none(),
+        "pre-gate Destroyed<Cell> was drained on tick 1 — no \
+         OverchargeKillCount may be inserted retroactively"
+    );
+    // No speed-stack entry either — without kills, `overcharge_apply_speed`
+    // has nothing to push.
+    let stack = app.world().get::<EffectStack<SpeedBoostConfig>>(bolt);
+    if let Some(stack) = stack {
+        assert!(
+            stack.is_empty() || !stack.iter().any(|(s, _)| s == "hazard:overcharge"),
+            "no 'hazard:overcharge' speed-stack entry may appear from a \
+             pre-gate drained message"
+        );
+    }
 }
 
 // ── Behavior 43 — ActiveHazards totally empty → none of three run ────────

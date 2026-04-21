@@ -11,6 +11,7 @@ use crate::{
     },
     effect_v3::effects::phantom_bolt::components::PhantomBolt,
     prelude::*,
+    protocol::{definition::ProtocolKind, systems::ProtocolGate},
 };
 
 // ── System 3 — afterimage_check_phantom_bounce ──────────────────────────────
@@ -65,6 +66,7 @@ type PhantomBounceBoltQuery<'w, 's> = Query<
 /// breaker query cannot resolve to exactly one entity.
 pub(crate) fn afterimage_check_phantom_bounce(
     config: Option<Res<AfterimageConfig>>,
+    gate: ProtocolGate,
     phantoms: Query<(Entity, &Position2D, &BaseWidth, &BaseHeight), With<PhantomBreaker>>,
     mut bolts: PhantomBounceBoltQuery,
     real_breaker: PhantomBounceBreakerQuery,
@@ -72,6 +74,9 @@ pub(crate) fn afterimage_check_phantom_bounce(
     mut bounced_this_frame: Local<Vec<Entity>>,
 ) {
     bounced_this_frame.clear();
+    if gate.is_closed_for(ProtocolKind::Afterimage) {
+        return;
+    }
     let Some(_config) = config else {
         return;
     };

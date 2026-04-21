@@ -8,7 +8,10 @@
 //! - [`GreedStacks`] — per-run counter of chip-offer skips, cleared by
 //!   `reset_run_state`.
 //! - [`activate`] — parses `ProtocolTuning::Greed`, inserts `GreedConfig`.
-//! - [`register`] — wires [`greed_on_skip`] under `protocol_active(Greed)`.
+//! - [`register`] — wires [`greed_on_skip`] ungated; the system enforces the
+//!   `ActiveProtocols` gate in-body via `reader.clear()` + return when Greed
+//!   is inactive so buffered `ChipOfferSkipped` messages cannot leak across
+//!   runs.
 //! - [`greed_on_skip`] — increments `GreedStacks.skips` per `ChipOfferSkipped`.
 //! - [`apply_greed_boost`] — re-weights a rarity map in place (called by
 //!   `generate_chip_offerings`).
@@ -21,7 +24,7 @@ use crate::{
     chips::definition::Rarity,
     protocol::{
         definition::{ProtocolKind, ProtocolTuning},
-        resources::protocol_active,
+        resources::ActiveProtocols,
     },
     state::run::chip_select::messages::ChipOfferSkipped,
 };
@@ -83,17 +86,26 @@ pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
 /// Registers Greed's runtime systems and the per-run stacks resource.
 ///
 /// - `GreedStacks` initialised via `init_resource` (default = 0).
-/// - `greed_on_skip` → `Update`, `run_if(protocol_active(Greed))`.
+/// - `greed_on_skip` → `Update`, intentionally ungated. The system enforces
+///   the `ActiveProtocols` gate in-body via `reader.clear()` + return when
+///   Greed is inactive.
 pub(crate) fn register(app: &mut App) {
     // NOTE: `GreedStacks` is NOT inserted here. The plugin is responsible for
     // `init_resource::<GreedStacks>()`. `register` only wires the runtime system
     // so tests that exercise isolated harness configurations (without
     // `GreedStacks`) exercise the `Option<ResMut<_>>` guard path without the
     // resource being silently inserted by this function.
-    app.add_systems(
-        Update,
-        greed_on_skip.run_if(protocol_active(ProtocolKind::Greed)),
-    );
+    //
+    // Defensively register `ChipOfferSkipped`. The chip-select plugin owns
+    // canonical registration (see
+    // `breaker-game/src/state/run/chip_select/plugin.rs`), but since the
+    // retrofit removed the `.run_if(protocol_active(Greed))` gate from
+    // `greed_on_skip`, Bevy now validates `MessageReader<ChipOfferSkipped>`
+    // every tick — so any app that wires `ProtocolPlugin` without the
+    // chip-select plugin would panic with "Message not initialized".
+    // `add_message` is idempotent; calling twice is safe.
+    app.add_message::<ChipOfferSkipped>();
+    app.add_systems(Update, greed_on_skip);
 }
 
 /// Reads `ChipOfferSkipped` messages and increments `GreedStacks.skips` by
@@ -105,8 +117,16 @@ pub(crate) fn register(app: &mut App) {
 /// buildup) and returns.
 pub(crate) fn greed_on_skip(
     mut reader: MessageReader<ChipOfferSkipped>,
+    active_protocols: Option<Res<ActiveProtocols>>,
     stacks: Option<ResMut<GreedStacks>>,
 ) {
+    if active_protocols
+        .as_ref()
+        .is_none_or(|ap| !ap.contains(ProtocolKind::Greed))
+    {
+        reader.clear();
+        return;
+    }
     let Some(mut stacks) = stacks else {
         reader.clear();
         return;

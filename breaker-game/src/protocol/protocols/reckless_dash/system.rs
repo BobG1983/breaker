@@ -23,7 +23,7 @@ use crate::{
     prelude::*,
     protocol::{
         definition::{ProtocolKind, ProtocolTuning},
-        resources::protocol_active,
+        systems::ProtocolGate,
     },
 };
 
@@ -102,8 +102,11 @@ pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
 /// Registers Reckless Dash's runtime systems with the correct schedules,
 /// run-ifs, and ordering.
 ///
-/// `FixedUpdate` systems gated by `protocol_active(ProtocolKind::RecklessDash)`
-/// AND `in_state(NodeState::Playing)`:
+/// `FixedUpdate` reader systems — intentionally ungated at the registration
+/// level. Each system enforces the `ActiveProtocols` / `NodeState::Playing`
+/// gate in-body via an immediate `reader.clear()` + return when inactive,
+/// draining the buffer every tick so buffered messages cannot leak into a
+/// later frame where the protocol activates:
 /// - `reckless_dash_on_bump` — after `BreakerSystems::GradeBump`.
 /// - `reckless_dash_amplify_damage` — after `BoltSystems::CellCollision`.
 /// - `reckless_dash_double_penalty` — after `BoltSystems::BoltLost`.
@@ -123,9 +126,7 @@ pub(crate) fn register(app: &mut App) {
             reckless_dash_on_bump.after(BreakerSystems::GradeBump),
             reckless_dash_amplify_damage.after(BoltSystems::CellCollision),
             reckless_dash_double_penalty.after(BoltSystems::BoltLost),
-        )
-            .run_if(protocol_active(ProtocolKind::RecklessDash))
-            .run_if(in_state(NodeState::Playing)),
+        ),
     )
     .add_systems(OnExit(NodeState::Playing), reckless_dash_cleanup_node);
 }
@@ -150,9 +151,14 @@ pub(crate) fn register(app: &mut App) {
 pub(crate) fn reckless_dash_on_bump(
     mut reader: MessageReader<BumpPerformed>,
     config: Option<Res<RecklessDashConfig>>,
+    gate: ProtocolGate,
     breakers: Query<(&DashState, &DashStateTimer, &DashDuration), With<Breaker>>,
     mut commands: Commands,
 ) {
+    if gate.is_closed_for(ProtocolKind::RecklessDash) {
+        reader.clear();
+        return;
+    }
     let Some(config) = config else {
         reader.clear();
         return;
@@ -208,10 +214,15 @@ pub(crate) fn reckless_dash_on_bump(
 pub(crate) fn reckless_dash_amplify_damage(
     mut reader: MessageReader<BoltImpactCell>,
     config: Option<Res<RecklessDashConfig>>,
+    gate: ProtocolGate,
     bolts: Query<(&RiskyDamageBoost, Option<&BoltBaseDamage>)>,
     mut commands: Commands,
     mut damage_writer: MessageWriter<DamageDealt<Cell>>,
 ) {
+    if gate.is_closed_for(ProtocolKind::RecklessDash) {
+        reader.clear();
+        return;
+    }
     if config.is_none() {
         reader.clear();
         return;
@@ -266,11 +277,16 @@ pub(crate) fn reckless_dash_amplify_damage(
 pub(crate) fn reckless_dash_double_penalty(
     mut reader: MessageReader<BoltLost>,
     config: Option<Res<RecklessDashConfig>>,
+    gate: ProtocolGate,
     breakers: Query<&DashState, With<Breaker>>,
     mut doubled: ResMut<RecklessDashDoubledBolts>,
     mut already_doubled_ever: Local<HashSet<Entity>>,
     mut commands: Commands,
 ) {
+    if gate.is_closed_for(ProtocolKind::RecklessDash) {
+        reader.clear();
+        return;
+    }
     let Some(config) = config else {
         reader.clear();
         return;

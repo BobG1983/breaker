@@ -29,7 +29,7 @@ use crate::{
     prelude::*,
     protocol::{
         definition::{ProtocolKind, ProtocolTuning},
-        resources::protocol_active,
+        systems::ProtocolGate,
     },
 };
 
@@ -65,11 +65,16 @@ pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
 
 // ── register ────────────────────────────────────────────────────────────────
 
-/// Registers Conductor's single runtime system with the correct schedule,
-/// run-ifs, and ordering.
+/// Registers Conductor's single runtime system with the correct schedule
+/// and ordering.
 ///
-/// `FixedUpdate` gated by `protocol_active(ProtocolKind::Conductor)` AND
-/// `in_state(NodeState::Playing)`:
+/// `FixedUpdate` reader system — intentionally ungated at the registration
+/// level. A `.run_if(...)` gate suppresses the system's *execution* but does
+/// NOT advance its `MessageReader` cursor, so messages sent during gated-off
+/// frames remain in Bevy's two-frame message buffer and get retroactively
+/// consumed the tick the gate opens. The system instead enforces the
+/// `ActiveProtocols` / `NodeState::Playing` gate in-body via an immediate
+/// `reader.clear()` + return when inactive, draining the buffer every tick:
 /// - `conductor_swap_on_perfect_bump` — after `BreakerSystems::GradeBump`,
 ///   **before `EffectV3Systems::Bridge`**. The upper bound is mandatory:
 ///   `grade_bump` is itself registered `.before(EffectV3Systems::Bridge)`
@@ -93,9 +98,7 @@ pub(crate) fn register(app: &mut App) {
         FixedUpdate,
         conductor_swap_on_perfect_bump
             .after(BreakerSystems::GradeBump)
-            .before(EffectV3Systems::Bridge)
-            .run_if(protocol_active(ProtocolKind::Conductor))
-            .run_if(in_state(NodeState::Playing)),
+            .before(EffectV3Systems::Bridge),
     );
 }
 
@@ -109,11 +112,16 @@ pub(crate) fn register(app: &mut App) {
 pub(crate) fn conductor_swap_on_perfect_bump(
     mut reader: MessageReader<BumpPerformed>,
     config: Option<Res<ConductorConfig>>,
+    gate: ProtocolGate,
     primary: Query<Entity, (With<Bolt>, With<PrimaryBolt>)>,
     extras: Query<(), With<ExtraBolt>>,
     effects: Query<(Option<&BoundEffects>, Option<&StagedEffects>)>,
     mut commands: Commands,
 ) {
+    if gate.is_closed_for(ProtocolKind::Conductor) {
+        reader.clear();
+        return;
+    }
     if config.is_none() {
         reader.clear();
         return;

@@ -20,7 +20,7 @@ use crate::{
     cells::components::ADJACENCY_RADIUS_SQ,
     hazard::{
         definition::{HazardKind, HazardTuning},
-        resources::{ActiveHazards, hazard_active},
+        resources::ActiveHazards,
     },
     prelude::*,
     shared::death_pipeline::{HealCap, heal_dealt::HealDealt, sets::DeathPipelineSystems},
@@ -112,17 +112,21 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
 
 /// Registers Sympathy's runtime system.
 ///
-/// `sympathy_heal_adjacent` runs in `FixedUpdate`, in
-/// [`DeathPipelineSystems::ApplyHeal`], BEFORE `apply_heal::<Cell>`, gated by
-/// `hazard_active(HazardKind::Sympathy)` AND `in_state(NodeState::Playing)`.
+/// `sympathy_heal_adjacent` is a reader system — it holds
+/// `MessageReader<DamageDealt<Cell>>`. Runs in `FixedUpdate`, in
+/// [`DeathPipelineSystems::ApplyHeal`], BEFORE `apply_heal::<Cell>`.
+/// Registered WITHOUT `.run_if(...)`; it enforces the `ActiveHazards` /
+/// `NodeState::Playing` gate in-body via an immediate `reader.clear()` +
+/// return when inactive, draining the buffer every tick. A `.run_if(...)`
+/// gate suppresses execution but does NOT advance the reader cursor, so
+/// messages buffered during gated-off frames would get retroactively
+/// consumed the tick the gate opens.
 pub(crate) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         sympathy_heal_adjacent
             .in_set(DeathPipelineSystems::ApplyHeal)
-            .before(crate::shared::death_pipeline::systems::apply_heal::<Cell>)
-            .run_if(hazard_active(HazardKind::Sympathy))
-            .run_if(in_state(NodeState::Playing)),
+            .before(crate::shared::death_pipeline::systems::apply_heal::<Cell>),
     );
 }
 
@@ -148,6 +152,12 @@ type LiveCellPositions<'w, 's> = Query<
 /// Every emitted heal carries `cap: HealCap::Starting`,
 /// `source: Some(SYMPATHY_SENTINEL.to_string())`, and `healer: None`.
 ///
+/// Gated in-body: this system runs every `FixedUpdate` tick. When
+/// Sympathy is not active or `NodeState` is not `Playing`, it drains the
+/// `MessageReader` via `reader.clear()` and returns so buffered
+/// `DamageDealt<Cell>` messages cannot leak retroactively when the hazard
+/// activates on a later frame.
+///
 /// Harness-safe early returns:
 /// - No `SympathyConfig` resource → `reader.clear()`; return.
 /// - `heal_percent(stacks) <= 0.0` or `depth == 0` → `reader.clear()`; return.
@@ -159,12 +169,27 @@ type LiveCellPositions<'w, 's> = Query<
 /// can neither be healed nor act as BFS intermediaries.
 pub(crate) fn sympathy_heal_adjacent(
     mut reader: MessageReader<DamageDealt<Cell>>,
-    active: Res<ActiveHazards>,
+    active_hazards: Option<Res<ActiveHazards>>,
+    node_state: Option<Res<State<NodeState>>>,
     config: Option<Res<SympathyConfig>>,
     cells: LiveCellPositions,
     mut writer: MessageWriter<HealDealt<Cell>>,
 ) {
+    if active_hazards
+        .as_ref()
+        .is_none_or(|ah| !ah.is_active(HazardKind::Sympathy))
+        || node_state
+            .as_ref()
+            .is_none_or(|s| *s.get() != NodeState::Playing)
+    {
+        reader.clear();
+        return;
+    }
     let Some(config) = config else {
+        reader.clear();
+        return;
+    };
+    let Some(active) = active_hazards else {
         reader.clear();
         return;
     };

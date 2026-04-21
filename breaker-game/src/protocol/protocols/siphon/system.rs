@@ -22,7 +22,7 @@ use crate::{
     prelude::*,
     protocol::{
         definition::{ProtocolKind, ProtocolTuning},
-        resources::protocol_active,
+        resources::{ActiveProtocols, protocol_active},
     },
     state::run::node::{messages::ReverseTimePenalty, sets::NodeSystems},
 };
@@ -86,7 +86,11 @@ pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
 /// - `siphon_tick_streak` → `FixedUpdate`, before `siphon_on_cell_destroyed`,
 ///   under `protocol_active(Siphon)` + `in_state(NodeState::Playing)`.
 /// - `siphon_on_cell_destroyed` → `FixedUpdate`, before
-///   `NodeSystems::ApplyTimePenalty`, under the same run-ifs.
+///   `NodeSystems::ApplyTimePenalty`, intentionally ungated at the
+///   registration level. Enforces the `ActiveProtocols` /
+///   `NodeState::Playing` gate in-body via an immediate `reader.clear()` +
+///   return when inactive so buffered `Destroyed<Cell>` messages cannot
+///   leak retroactively when the protocol activates on a later frame.
 /// - `siphon_cleanup_node` → `OnExit(NodeState::Playing)` with NO run-if.
 ///
 /// NOTE: `SiphonStreak` is NOT inserted here; the plugin owns
@@ -95,12 +99,14 @@ pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
 pub(crate) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
-        (
-            siphon_tick_streak.before(siphon_on_cell_destroyed),
-            siphon_on_cell_destroyed.before(NodeSystems::ApplyTimePenalty),
-        )
+        siphon_tick_streak
+            .before(siphon_on_cell_destroyed)
             .run_if(protocol_active(ProtocolKind::Siphon))
             .run_if(in_state(NodeState::Playing)),
+    );
+    app.add_systems(
+        FixedUpdate,
+        siphon_on_cell_destroyed.before(NodeSystems::ApplyTimePenalty),
     );
     app.add_systems(OnExit(NodeState::Playing), siphon_cleanup_node);
 }
@@ -115,10 +121,22 @@ pub(crate) fn register(app: &mut App) {
 /// that does have the resources.
 pub(crate) fn siphon_on_cell_destroyed(
     mut reader: MessageReader<Destroyed<Cell>>,
+    active_protocols: Option<Res<ActiveProtocols>>,
+    node_state: Option<Res<State<NodeState>>>,
     streak: Option<ResMut<SiphonStreak>>,
     config: Option<Res<SiphonConfig>>,
     mut penalty_writer: MessageWriter<ReverseTimePenalty>,
 ) {
+    if active_protocols
+        .as_ref()
+        .is_none_or(|ap| !ap.contains(ProtocolKind::Siphon))
+        || node_state
+            .as_ref()
+            .is_none_or(|s| *s.get() != NodeState::Playing)
+    {
+        reader.clear();
+        return;
+    }
     let Some(mut streak) = streak else {
         reader.clear();
         return;

@@ -144,13 +144,23 @@ pub(super) fn overcharge_entries(
 
 /// Wires only `overcharge_count_kills` in `FixedUpdate` — bypasses the
 /// `hazard_active` / `in_state` gates `register` installs. Used by Group B.
+///
+/// Also seeds 1 Overcharge stack: the retrofit moved the `hazard_active`
+/// gate from a `.run_if(...)` into the reader body, so Group B tests
+/// (which exercise the count/reset happy paths) must open the gate.
 pub(super) fn wire_count_only(app: &mut App) {
     app.add_systems(FixedUpdate, overcharge_count_kills);
+    add_overcharge_stacks(app, 1);
 }
 
 /// Wires only `overcharge_reset_on_bump` — used by Group C.
+///
+/// Also seeds 1 Overcharge stack: the retrofit moved the `hazard_active`
+/// gate from a `.run_if(...)` into the reader body, so Group C tests
+/// (which exercise the reset happy path) must open the gate.
 pub(super) fn wire_reset_only(app: &mut App) {
     app.add_systems(FixedUpdate, overcharge_reset_on_bump);
+    add_overcharge_stacks(app, 1);
 }
 
 /// Wires only `overcharge_apply_speed` — used by Group D.

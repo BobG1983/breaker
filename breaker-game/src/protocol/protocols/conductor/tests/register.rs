@@ -224,19 +224,21 @@ fn register_schedule_ticks_cleanly_with_one_primary_and_no_messages() {
     );
 }
 
-// ── Behavior 19 — pre-gate BumpPerformed is replayed on activation
-//    (baseline Bevy retained-reader behavior; see todo
-//    docs/todos/detail/2026-04-20-protocol-pregate-message-drain.md)
+// ── Behavior 19 — pre-gate BumpPerformed drains cleanly before activation
+//    Regression pin against accidental `.run_if` reintroduction on the
+//    reader system: `conductor_swap_on_perfect_bump` now enforces its
+//    gate in-body via `reader.clear()` so pre-gate `BumpPerformed`
+//    messages drain cleanly instead of replaying on gate open.
 
 #[test]
-fn pregate_bump_performed_is_replayed_when_conductor_activates() {
+fn pregate_bump_performed_drains_cleanly_before_conductor_activates() {
     let mut app = build_conductor_app();
     // Gate closed — ActiveProtocols empty (Conductor not active).
     let breaker = spawn_dummy_breaker(&mut app);
     let primary = spawn_primary_bolt_with_bound(&mut app, make_distinct_bound("PRIMARY_BOUND"));
     let extra = spawn_extra_bolt_with_bound(&mut app, make_distinct_bound("EXTRA_BOUND"));
 
-    // Tick 1 — buffer a Perfect bump with gate closed.
+    // Tick 1 — buffer a Perfect bump with gate closed. Retrofit drains reader.
     write_bump_performed(&mut app, breaker, Some(extra), BumpGrade::Perfect);
     tick(&mut app);
     assert!(has_primary(&app, primary), "tick 1: no swap (gate closed)");
@@ -249,75 +251,68 @@ fn pregate_bump_performed_is_replayed_when_conductor_activates() {
         vec!["EXTRA_BOUND".to_string()]
     );
 
-    // Tick 2 — open the gate. The drain lives INSIDE the swap system, which
-    // was gated off on tick 1, so the buffered message persists and is
-    // replayed now — swap fires.
+    // Tick 2 — open the gate, no new messages. The pre-gate message was
+    // drained on tick 1; nothing remains to replay → no swap.
     seed_active_protocols_with_conductor(&mut app);
     tick(&mut app);
 
     assert!(
-        !has_primary(&app, primary),
-        "tick 2: buffered message replayed — old primary demoted"
-    );
-    assert!(has_extra(&app, primary), "tick 2: old primary is now extra");
-    assert!(
-        has_primary(&app, extra),
-        "tick 2: bumped bolt promoted to primary"
+        has_primary(&app, primary),
+        "tick 2: pre-gate message already drained → primary unchanged"
     );
     assert!(
-        !has_extra(&app, extra),
-        "tick 2: bumped bolt no longer extra"
+        has_extra(&app, extra),
+        "tick 2: pre-gate message already drained → extra unchanged"
     );
     assert_eq!(
         bound_fingerprints(&app, primary),
-        vec!["EXTRA_BOUND".to_string()],
-        "tick 2: primary received extra's bound via replay"
+        vec!["PRIMARY_BOUND".to_string()],
+        "tick 2: primary's bound unchanged — no retroactive swap"
     );
     assert_eq!(
         bound_fingerprints(&app, extra),
-        vec!["PRIMARY_BOUND".to_string()],
-        "tick 2: extra received primary's bound via replay"
+        vec!["EXTRA_BOUND".to_string()],
+        "tick 2: extra's bound unchanged — no retroactive swap"
     );
 }
 
-// ── Behavior 19 (edge case) — multiple pre-gate messages: first swaps, rest
-//    no-op because after swap, E is primary and subsequent bumps target it
-//    as already-primary.
+// ── Behavior 19 (edge case) — multiple pre-gate messages all drain cleanly.
+//    Regression pin against accidental `.run_if` reintroduction.
 
 #[test]
-fn multiple_pregate_bump_performed_replay_first_swaps_rest_are_noops() {
+fn multiple_pregate_bump_performed_drain_cleanly_no_swap_on_activation() {
     let mut app = build_conductor_app();
     let breaker = spawn_dummy_breaker(&mut app);
     let primary = spawn_primary_bolt_with_bound(&mut app, make_distinct_bound("PRIMARY_BOUND"));
     let extra = spawn_extra_bolt_with_bound(&mut app, make_distinct_bound("EXTRA_BOUND"));
 
-    // Tick 1 — three buffered Perfect bumps, gate closed.
+    // Tick 1 — three buffered Perfect bumps, gate closed. Retrofit drains reader.
     write_bump_performed(&mut app, breaker, Some(extra), BumpGrade::Perfect);
     write_bump_performed(&mut app, breaker, Some(extra), BumpGrade::Perfect);
     write_bump_performed(&mut app, breaker, Some(extra), BumpGrade::Perfect);
     tick(&mut app);
 
-    // Tick 2 — open the gate, no new messages. All three buffered messages
-    // replay: the first swaps; the other two target `extra`, which is now
-    // primary, so they are already-primary no-ops.
+    // Tick 2 — open the gate, no new messages. All three pre-gate messages
+    // were drained on tick 1; nothing remains to replay → no swap.
     seed_active_protocols_with_conductor(&mut app);
     tick(&mut app);
 
     assert!(
-        !has_primary(&app, primary),
-        "first replay demoted old primary"
+        has_primary(&app, primary),
+        "primary unchanged — pre-gate messages already drained"
     );
-    assert!(has_extra(&app, primary), "old primary is now extra");
-    assert!(has_primary(&app, extra), "bumped bolt promoted to primary");
-    assert!(!has_extra(&app, extra), "bumped bolt no longer extra");
+    assert!(
+        has_extra(&app, extra),
+        "extra unchanged — pre-gate messages already drained"
+    );
     assert_eq!(
         bound_fingerprints(&app, primary),
-        vec!["EXTRA_BOUND".to_string()],
-        "primary received extra's bound via first replay; subsequent replays are no-ops"
+        vec!["PRIMARY_BOUND".to_string()],
+        "primary's bound unchanged — no retroactive swap"
     );
     assert_eq!(
         bound_fingerprints(&app, extra),
-        vec!["PRIMARY_BOUND".to_string()],
-        "extra received primary's bound via first replay; subsequent replays are no-ops"
+        vec!["EXTRA_BOUND".to_string()],
+        "extra's bound unchanged — no retroactive swap"
     );
 }

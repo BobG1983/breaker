@@ -381,16 +381,20 @@ fn register_does_not_panic_when_config_absent() {
     );
 }
 
-// ── Behavior 55 — pregate BumpPerformed accumulates until activation ───────-
+// ── Behavior 55 — pregate BumpPerformed drains cleanly before activation ───
+//     Regression pin against accidental `.run_if` reintroduction on the
+//     reader system: `reckless_dash_on_bump` now enforces its gate
+//     in-body via `reader.clear()` so pre-gate `BumpPerformed` messages
+//     drain cleanly instead of replaying on gate open.
 
 #[test]
-fn pregate_bump_performed_accumulates_until_reckless_dash_activates() {
+fn pregate_bump_performed_drains_cleanly_before_reckless_dash_activates() {
     let mut app = build_reckless_dash_app();
     // Gate closed: Reckless Dash NOT in ActiveProtocols.
     let breaker = spawn_breaker_dashing(&mut app, 1.0, 0.2); // progress 0.8
     let bolt = spawn_bolt_with_base_damage(&mut app, 10.0);
 
-    // Tick 1 — write BumpPerformed with gate closed. No boost inserted.
+    // Tick 1 — write BumpPerformed with gate closed. Retrofit drains reader.
     write_bump_performed(&mut app, breaker, Some(bolt), BumpGrade::Perfect);
     tick(&mut app);
     assert_eq!(
@@ -399,16 +403,16 @@ fn pregate_bump_performed_accumulates_until_reckless_dash_activates() {
         "gate closed → no boost on tick 1"
     );
 
-    // Tick 2 — open the gate. Pre-gate BumpPerformed is still buffered and
-    // the system consumes it, firing a retroactive boost insert. This is
-    // expected Bevy semantics under `run_if` gating (retained-reader).
+    // Tick 2 — open the gate, no new message. The pre-gate message was
+    // drained on tick 1; nothing remains to replay → no boost.
     seed_canonical(&mut app);
     tick(&mut app);
 
     assert_eq!(
         risky_boost(&app, bolt),
-        Some(4.0),
-        "pre-gate BumpPerformed fires on first post-activate tick (systemic run_if behavior)"
+        None,
+        "pre-gate BumpPerformed was drained on tick 1 — no boost may be \
+         inserted retroactively"
     );
 }
 

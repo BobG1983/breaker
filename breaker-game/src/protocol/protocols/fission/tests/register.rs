@@ -171,15 +171,19 @@ fn schedule_ticks_cleanly_with_no_messages_no_bolts_no_cells() {
     );
 }
 
-// ── Behavior 34 — pregate Destroyed<Cell> accumulates until Fission active ──
+// ── Behavior 34 — pregate Destroyed<Cell> drains cleanly before Fission active
+//     Regression pin against accidental `.run_if` reintroduction on the
+//     reader system: `fission_on_cell_destroyed` now enforces its gate
+//     in-body via `reader.clear()` so pre-gate `Destroyed<Cell>` messages
+//     drain cleanly instead of accumulating and replaying on gate open.
 
 #[test]
-fn pregate_destroyed_cell_accumulates_until_fission_activates() {
+fn pregate_destroyed_cell_drains_cleanly_before_fission_activates() {
     let mut app = build_fission_app();
     // Gate closed: Fission NOT yet in ActiveProtocols.
     let _parent = spawn_bolt_at_with_velocity(&mut app, Vec2::ZERO, Vec2::new(0.0, 400.0));
 
-    // Tick 1 — write Destroyed<Cell> with gate closed.
+    // Tick 1 — write Destroyed<Cell> with gate closed. Retrofit drains reader.
     write_destroyed_cell(&mut app, None);
     tick(&mut app);
     assert_eq!(
@@ -188,16 +192,17 @@ fn pregate_destroyed_cell_accumulates_until_fission_activates() {
         "gate closed → counter unchanged on tick 1"
     );
 
-    // Tick 2 — open the gate. Pre-gate message is still buffered and the
-    // system should consume it, incrementing the counter.
+    // Tick 2 — open the gate, no new message. The pre-gate message was
+    // drained on tick 1; nothing remains to replay.
     seed_active_protocols_with_fission(&mut app, 8);
     tick(&mut app);
 
     let counter = *app.world().resource::<FissionCounter>();
     assert_eq!(
         counter,
-        FissionCounter { kills: 1 },
-        "pre-gate Destroyed<Cell> fires on first post-activate tick; got {counter:?}"
+        FissionCounter { kills: 0 },
+        "pre-gate Destroyed<Cell> was drained on tick 1 — counter stays 0 \
+         post-activation; got {counter:?}"
     );
 }
 

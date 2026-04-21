@@ -245,25 +245,22 @@ fn register_wires_iron_curtain_on_bolt_lost_to_consume_bolt_lost_same_tick() {
     );
 }
 
-// ── Pregate pin — protocol-inactive BoltLost accumulation ──────────────────-
+// ── Pregate pin — protocol-inactive BoltLost drains cleanly ────────────────-
 //
-// Bevy 0.18 `MessageReader` retains unread messages across ticks. When
-// `iron_curtain_on_bolt_lost` is gated off via `run_if(protocol_active(...))`,
-// its reader cursor does not advance, so a `BoltLost` written while the
-// protocol is inactive will be read (and fire a wave) on the first tick
-// after the protocol becomes active. This mirrors the `Overcharge` +
-// `Siphon` + `Debt Collector` precedent: pin as expected systemic behavior;
-// a unified gate-drain pass is tracked as a follow-up todo.
+// Regression pin against accidental `.run_if` reintroduction on the reader
+// system: `iron_curtain_on_bolt_lost` now enforces its gate in-body via
+// `reader.clear()` so pre-gate `BoltLost` messages drain cleanly instead of
+// replaying on gate open.
 
 #[test]
-fn pregate_bolt_lost_accumulates_until_iron_curtain_activates() {
+fn pregate_bolt_lost_drains_cleanly_before_iron_curtain_activates() {
     let mut app = build_iron_curtain_app();
     // Gate closed: Iron Curtain NOT yet in ActiveProtocols.
     spawn_breaker_at(&mut app, Vec2::new(0.0, -200.0));
     spawn_cell_at(&mut app, Vec2::new(0.0, -180.0));
     let bolt = spawn_bolt_with_base_damage(&mut app, 20.0);
 
-    // Tick 1 — write BoltLost with gate closed. No wave fires.
+    // Tick 1 — write BoltLost with gate closed. Retrofit drains reader. No wave fires.
     write_bolt_lost(&mut app, bolt);
     tick(&mut app);
     assert!(
@@ -271,17 +268,15 @@ fn pregate_bolt_lost_accumulates_until_iron_curtain_activates() {
         "gate closed → no wave on tick 1"
     );
 
-    // Tick 2 — open the gate. Pre-gate BoltLost is still buffered and the
-    // system consumes it, firing a retroactive wave. This is expected
-    // Bevy semantics under `run_if` gating.
+    // Tick 2 — open the gate, no new message. The pre-gate message was
+    // drained on tick 1; nothing remains to replay → no wave.
     seed_active_protocols_with_iron_curtain(&mut app, 0.5, 50.0);
     tick(&mut app);
 
-    let msgs = collected_iron_curtain_damage(&app);
-    assert_eq!(
-        msgs.len(),
-        1,
-        "pre-gate BoltLost fires on first post-activate tick (systemic run_if behavior)"
+    assert!(
+        collected_iron_curtain_damage(&app).is_empty(),
+        "pre-gate BoltLost was drained on tick 1 — no wave may fire \
+         post-activation"
     );
 }
 

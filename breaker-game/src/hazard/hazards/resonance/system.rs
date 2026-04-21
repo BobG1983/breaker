@@ -216,7 +216,6 @@ pub(crate) fn register(app: &mut App) {
             FixedUpdate,
             (
                 (
-                    resonance_track_kills.after(DeathPipelineSystems::HandleKill),
                     resonance_spawn_waves,
                     resonance_wave_travel,
                     resonance_wave_contact,
@@ -228,20 +227,50 @@ pub(crate) fn register(app: &mut App) {
                 .run_if(hazard_active(HazardKind::Resonance))
                 .run_if(in_state(NodeState::Playing)),
         )
+        // Reader system `resonance_track_kills` is intentionally ungated at
+        // the tuple level — it holds `MessageReader<Destroyed<Cell>>` and
+        // enforces the `ActiveHazards` / `NodeState::Playing` gate in-body
+        // via an immediate `reader.clear()` + return when inactive. A
+        // `.run_if(...)` gate suppresses execution but does NOT advance
+        // the reader cursor, so messages buffered during gated-off frames
+        // would get retroactively consumed the tick the gate opens.
+        .add_systems(
+            FixedUpdate,
+            resonance_track_kills
+                .after(DeathPipelineSystems::HandleKill)
+                .before(resonance_spawn_waves),
+        )
         .add_systems(OnEnter(NodeState::Teardown), resonance_cleanup_on_teardown);
 }
 
 // ── System A: resonance_track_kills ──────────────────────────────────────
 
 /// Pushes `(time.elapsed_secs(), victim_pos)` onto `tracker.kills` for each
-/// `Destroyed<Cell>` message. When the config is absent, drains the reader
-/// so it cannot accumulate cross-system starvation.
+/// `Destroyed<Cell>` message.
+///
+/// Gated in-body: this system runs every `FixedUpdate` tick. When
+/// Resonance is not active or `NodeState` is not `Playing`, it drains
+/// the `MessageReader` via `reader.clear()` and returns so buffered
+/// `Destroyed<Cell>` messages cannot leak retroactively when the hazard
+/// activates on a later frame. Also drains when the config is absent.
 pub(crate) fn resonance_track_kills(
     mut reader: MessageReader<Destroyed<Cell>>,
+    active_hazards: Option<Res<ActiveHazards>>,
+    node_state: Option<Res<State<NodeState>>>,
     config: Option<Res<ResonanceConfig>>,
     time: Res<Time<Fixed>>,
     mut tracker: ResMut<ResonanceTracker>,
 ) {
+    if active_hazards
+        .as_ref()
+        .is_none_or(|ah| !ah.is_active(HazardKind::Resonance))
+        || node_state
+            .as_ref()
+            .is_none_or(|s| *s.get() != NodeState::Playing)
+    {
+        reader.clear();
+        return;
+    }
     if config.is_none() {
         reader.clear();
         return;

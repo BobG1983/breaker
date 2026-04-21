@@ -11,6 +11,9 @@ use crate::prelude::*;
 fn death_creates_pending_ghost() {
     let mut app = test_app_playing();
     app.add_systems(FixedUpdate, echo_cells_track_deaths);
+    // Retrofit: reader system enforces gate in-body via reader.clear().
+    // Tests that exercise the happy-path need the EchoCells hazard active.
+    add_echo_cells_stacks(&mut app, 1);
     app.world_mut().insert_resource(EchoCellsConfig {
         delay_secs:           1.5,
         base_hp:              1.0,
@@ -32,6 +35,9 @@ fn death_creates_pending_ghost() {
 fn ghost_death_does_not_create_pending() {
     let mut app = test_app_playing();
     app.add_systems(FixedUpdate, echo_cells_track_deaths);
+    // Retrofit: reader system enforces gate in-body via reader.clear().
+    // Tests that exercise the happy-path need the EchoCells hazard active.
+    add_echo_cells_stacks(&mut app, 1);
     app.world_mut().insert_resource(EchoCellsConfig {
         delay_secs:           1.5,
         base_hp:              1.0,
@@ -50,6 +56,9 @@ fn ghost_death_does_not_create_pending() {
 fn multiple_deaths_create_multiple_pendings() {
     let mut app = test_app_playing();
     app.add_systems(FixedUpdate, echo_cells_track_deaths);
+    // Retrofit: reader system enforces gate in-body via reader.clear().
+    // Tests that exercise the happy-path need the EchoCells hazard active.
+    add_echo_cells_stacks(&mut app, 1);
     app.world_mut().insert_resource(EchoCellsConfig {
         delay_secs:           1.5,
         base_hp:              1.0,
@@ -72,6 +81,9 @@ fn multiple_deaths_create_multiple_pendings() {
 fn track_deaths_no_pending_when_config_absent() {
     let mut app = test_app_playing();
     app.add_systems(FixedUpdate, echo_cells_track_deaths);
+    // Retrofit: reader system enforces gate in-body via reader.clear().
+    // Tests that exercise the happy-path need the EchoCells hazard active.
+    add_echo_cells_stacks(&mut app, 1);
     // NO EchoCellsConfig inserted.
     let victim = app.world_mut().spawn(Cell).id();
     write_destroyed(&mut app, victim, Vec2::new(10.0, 20.0));
@@ -86,6 +98,9 @@ fn track_deaths_no_pending_when_config_absent() {
 fn track_deaths_reader_drained_when_config_absent_then_config_installed_no_new_message() {
     let mut app = test_app_playing();
     app.add_systems(FixedUpdate, echo_cells_track_deaths);
+    // Retrofit: reader system enforces gate in-body via reader.clear().
+    // Tests that exercise the happy-path need the EchoCells hazard active.
+    add_echo_cells_stacks(&mut app, 1);
     let victim = app.world_mut().spawn(Cell).id();
     write_destroyed(&mut app, victim, Vec2::new(10.0, 20.0));
 
@@ -105,6 +120,9 @@ fn track_deaths_reader_drained_when_config_absent_then_config_installed_no_new_m
 fn track_deaths_no_pending_when_delay_secs_is_zero() {
     let mut app = test_app_playing();
     app.add_systems(FixedUpdate, echo_cells_track_deaths);
+    // Retrofit: reader system enforces gate in-body via reader.clear().
+    // Tests that exercise the happy-path need the EchoCells hazard active.
+    add_echo_cells_stacks(&mut app, 1);
     install_echo_cells_config(
         &mut app,
         EchoCellsConfig {
@@ -126,6 +144,9 @@ fn track_deaths_no_pending_when_delay_secs_is_zero() {
 fn track_deaths_reader_drained_when_delay_zero_then_delay_raised_no_new_message() {
     let mut app = test_app_playing();
     app.add_systems(FixedUpdate, echo_cells_track_deaths);
+    // Retrofit: reader system enforces gate in-body via reader.clear().
+    // Tests that exercise the happy-path need the EchoCells hazard active.
+    add_echo_cells_stacks(&mut app, 1);
     install_echo_cells_config(
         &mut app,
         EchoCellsConfig {
@@ -153,6 +174,9 @@ fn track_deaths_reader_drained_when_delay_zero_then_delay_raised_no_new_message(
 fn track_deaths_no_pending_when_delay_secs_is_negative() {
     let mut app = test_app_playing();
     app.add_systems(FixedUpdate, echo_cells_track_deaths);
+    // Retrofit: reader system enforces gate in-body via reader.clear().
+    // Tests that exercise the happy-path need the EchoCells hazard active.
+    add_echo_cells_stacks(&mut app, 1);
     install_echo_cells_config(
         &mut app,
         EchoCellsConfig {
@@ -175,6 +199,9 @@ fn track_deaths_no_pending_when_delay_secs_is_negative() {
 fn track_deaths_pending_timer_equals_delay_secs_exactly() {
     let mut app = test_app_playing();
     app.add_systems(FixedUpdate, echo_cells_track_deaths);
+    // Retrofit: reader system enforces gate in-body via reader.clear().
+    // Tests that exercise the happy-path need the EchoCells hazard active.
+    add_echo_cells_stacks(&mut app, 1);
     install_echo_cells_config(
         &mut app,
         EchoCellsConfig {
@@ -199,6 +226,9 @@ fn track_deaths_pending_timer_equals_delay_secs_exactly() {
 fn track_deaths_pending_position_matches_victim_pos() {
     let mut app = test_app_playing();
     app.add_systems(FixedUpdate, echo_cells_track_deaths);
+    // Retrofit: reader system enforces gate in-body via reader.clear().
+    // Tests that exercise the happy-path need the EchoCells hazard active.
+    add_echo_cells_stacks(&mut app, 1);
     install_echo_cells_config(&mut app, canonical_config());
     let victim = app.world_mut().spawn(Cell).id();
     write_destroyed(&mut app, victim, Vec2::new(-123.5, 456.25));
@@ -215,6 +245,9 @@ fn track_deaths_pending_position_matches_victim_pos() {
 fn track_deaths_pending_position_stays_finite_at_boundary_magnitude() {
     let mut app = test_app_playing();
     app.add_systems(FixedUpdate, echo_cells_track_deaths);
+    // Retrofit: reader system enforces gate in-body via reader.clear().
+    // Tests that exercise the happy-path need the EchoCells hazard active.
+    add_echo_cells_stacks(&mut app, 1);
     install_echo_cells_config(&mut app, canonical_config());
     let victim = app.world_mut().spawn(Cell).id();
     let big = Vec2::new(1e6, -1e6);
@@ -235,6 +268,9 @@ fn track_deaths_pending_position_stays_finite_at_boundary_magnitude() {
 fn track_deaths_three_distinct_positions_yield_three_distinct_pendings() {
     let mut app = test_app_playing();
     app.add_systems(FixedUpdate, echo_cells_track_deaths);
+    // Retrofit: reader system enforces gate in-body via reader.clear().
+    // Tests that exercise the happy-path need the EchoCells hazard active.
+    add_echo_cells_stacks(&mut app, 1);
     install_echo_cells_config(&mut app, canonical_config());
     let expected = [
         Vec2::new(0.0, 0.0),
@@ -268,6 +304,9 @@ fn track_deaths_three_distinct_positions_yield_three_distinct_pendings() {
 fn track_deaths_does_not_panic_when_victim_entity_is_despawned() {
     let mut app = test_app_playing();
     app.add_systems(FixedUpdate, echo_cells_track_deaths);
+    // Retrofit: reader system enforces gate in-body via reader.clear().
+    // Tests that exercise the happy-path need the EchoCells hazard active.
+    add_echo_cells_stacks(&mut app, 1);
     install_echo_cells_config(&mut app, canonical_config());
     let victim = app.world_mut().spawn(Cell).id();
     write_destroyed(&mut app, victim, Vec2::ZERO);
@@ -288,6 +327,9 @@ fn track_deaths_does_not_panic_when_victim_entity_is_despawned() {
 fn track_deaths_pending_ghost_carries_no_ghost_cell_marker() {
     let mut app = test_app_playing();
     app.add_systems(FixedUpdate, echo_cells_track_deaths);
+    // Retrofit: reader system enforces gate in-body via reader.clear().
+    // Tests that exercise the happy-path need the EchoCells hazard active.
+    add_echo_cells_stacks(&mut app, 1);
     install_echo_cells_config(&mut app, canonical_config());
     let victim = app.world_mut().spawn(Cell).id();
     write_destroyed(&mut app, victim, Vec2::ZERO);
@@ -307,6 +349,9 @@ fn track_deaths_pending_ghost_carries_no_ghost_cell_marker() {
 fn track_deaths_mixed_ghost_and_plain_deaths_spawns_only_plain() {
     let mut app = test_app_playing();
     app.add_systems(FixedUpdate, echo_cells_track_deaths);
+    // Retrofit: reader system enforces gate in-body via reader.clear().
+    // Tests that exercise the happy-path need the EchoCells hazard active.
+    add_echo_cells_stacks(&mut app, 1);
     install_echo_cells_config(&mut app, canonical_config());
     let plain = app.world_mut().spawn(Cell).id();
     let ghost = app.world_mut().spawn((Cell, GhostCell)).id();
@@ -330,6 +375,9 @@ fn track_deaths_mixed_ghost_and_plain_deaths_spawns_only_plain() {
 fn track_deaths_despawned_ghost_entity_still_filtered_as_non_ghost() {
     let mut app = test_app_playing();
     app.add_systems(FixedUpdate, echo_cells_track_deaths);
+    // Retrofit: reader system enforces gate in-body via reader.clear().
+    // Tests that exercise the happy-path need the EchoCells hazard active.
+    add_echo_cells_stacks(&mut app, 1);
     install_echo_cells_config(&mut app, canonical_config());
     let ghost = app.world_mut().spawn((Cell, GhostCell)).id();
     write_destroyed(&mut app, ghost, Vec2::new(42.0, 0.0));

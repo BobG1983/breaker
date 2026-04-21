@@ -114,52 +114,80 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
     });
 }
 
-/// Registers the `GravitySurge` `FixedUpdate` chain: `spawn_gravity_wells`
-/// → `gravity_well_pull` → `despawn_expired_gravity_wells`, gated on
+/// Registers the `GravitySurge` `FixedUpdate` systems.
+///
+/// Reader system — intentionally ungated at the tuple level:
+/// - `spawn_gravity_wells` — holds `MessageReader<Destroyed<Cell>>`,
+///   enforces the `ActiveHazards` / `NodeState::Playing` gate in-body
+///   via an immediate `reader.clear()` + return when inactive. A
+///   `.run_if(...)` gate suppresses execution but does NOT advance the
+///   reader cursor, so messages buffered during gated-off frames would
+///   get retroactively consumed the tick the gate opens. Reads
+///   `Destroyed<Cell>` and spawns `(GravityWell, Position2D)` with
+///   snapshotted `duration`/`strength`.
+///
+/// Non-reader systems — gated on
 /// `hazard_active(HazardKind::GravitySurge)` AND
-/// `in_state(NodeState::Playing)`. `spawn_gravity_wells` reads
-/// `Destroyed<Cell>` and spawns `(GravityWell, Position2D)` with
-/// snapshotted `duration`/`strength`. `gravity_well_pull` ticks each
-/// well's `remaining`, sums inverse-linear pulls clamped at
-/// `MIN_PULL_DISTANCE`, and writes the accumulated impulse to every
-/// Bolt's `Velocity2D`. `despawn_expired_gravity_wells` removes wells
-/// whose `remaining` has dropped to or below zero. No
-/// `DeathPipelineSystems` ordering — `GravitySurge` operates on bolt
-/// `Velocity2D` directly as a **deferred architectural exception** not
-/// yet covered by `docs/architecture/plugins.md` § `Velocity2D`
-/// Cross-Domain Write Exception. Commit 5 / Wave 7 retrofits
-/// `gravity_well_pull` to publish `ApplyBoltForce` messages instead,
-/// at which point the bolt domain owns velocity integration and this
-/// exception resolves.
+/// `in_state(NodeState::Playing)`:
+/// - `gravity_well_pull` — ticks each well's `remaining`, sums
+///   inverse-linear pulls clamped at `MIN_PULL_DISTANCE`, and writes
+///   the accumulated impulse to every Bolt's `Velocity2D`.
+/// - `despawn_expired_gravity_wells` — removes wells whose `remaining`
+///   has dropped to or below zero.
+///
+/// Ordering: `spawn_gravity_wells` → `gravity_well_pull` →
+/// `despawn_expired_gravity_wells`. No `DeathPipelineSystems`
+/// ordering — `GravitySurge` operates on bolt `Velocity2D` directly as
+/// a **deferred architectural exception** not yet covered by
+/// `docs/architecture/plugins.md` § `Velocity2D` Cross-Domain Write
+/// Exception. Commit 5 / Wave 7 retrofits `gravity_well_pull` to publish
+/// `ApplyBoltForce` messages instead, at which point the bolt domain
+/// owns velocity integration and this exception resolves.
 pub(crate) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
-        (
-            spawn_gravity_wells,
-            gravity_well_pull,
-            despawn_expired_gravity_wells,
-        )
+        (gravity_well_pull, despawn_expired_gravity_wells)
             .chain()
             .run_if(hazard_active(HazardKind::GravitySurge))
             .run_if(in_state(NodeState::Playing)),
-    );
+    )
+    .add_systems(FixedUpdate, spawn_gravity_wells.before(gravity_well_pull));
 }
 
 /// Spawns a `GravityWell` at every `Destroyed<Cell>` position. Duration
 /// and strength are snapshotted at spawn time from current stack count —
 /// post-spawn stack changes do NOT retroactively alter older wells.
-/// Early-returns (draining the message reader via `reader.clear()`) when
-/// `GravitySurgeConfig` is absent, or when the computed `duration <= 0.0`
-/// or `strength <= 0.0` (zero-stack inactive path) — the drain prevents
-/// stale `Destroyed<Cell>` messages from spawning wells on a later tick
-/// after the hazard activates.
+///
+/// Gated in-body: this system runs every `FixedUpdate` tick. When
+/// `GravitySurge` is not active or `NodeState` is not `Playing`, it
+/// drains the `MessageReader` via `reader.clear()` and returns so
+/// buffered `Destroyed<Cell>` messages cannot leak retroactively when
+/// the hazard activates on a later frame. Also early-returns (draining
+/// the reader via `reader.clear()`) when `GravitySurgeConfig` is
+/// absent, or when the computed `duration <= 0.0` or `strength <= 0.0`
+/// (zero-stack inactive path).
 pub(crate) fn spawn_gravity_wells(
     mut reader: MessageReader<Destroyed<Cell>>,
-    active: Res<ActiveHazards>,
+    active_hazards: Option<Res<ActiveHazards>>,
+    node_state: Option<Res<State<NodeState>>>,
     config: Option<Res<GravitySurgeConfig>>,
     mut commands: Commands,
 ) {
+    if active_hazards
+        .as_ref()
+        .is_none_or(|ah| !ah.is_active(HazardKind::GravitySurge))
+        || node_state
+            .as_ref()
+            .is_none_or(|s| *s.get() != NodeState::Playing)
+    {
+        reader.clear();
+        return;
+    }
     let Some(config) = config else {
+        reader.clear();
+        return;
+    };
+    let Some(active) = active_hazards else {
         reader.clear();
         return;
     };
