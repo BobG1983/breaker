@@ -171,6 +171,11 @@ pub(crate) fn write_chaos_regression(
     chaos_log: Vec<ScriptedFrame>,
 ) -> Result<PathBuf, String> {
     let mut replay = original.clone();
+    // Both `Chaos` and `Hybrid` live-produce their actions — neither
+    // stores scripted frames on the definition (see `HybridParams`: it
+    // is `{ scripted_frames: u32, action_prob: f32 }` — a silent-warmup
+    // frame count, not a frame list). The chaos log is therefore the
+    // complete input stream for the replay.
     replay.input = InputStrategy::Scripted(ScriptedParams { actions: chaos_log });
     replay.seed = None;
 
@@ -185,7 +190,20 @@ pub(crate) fn write_chaos_regression(
     let timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(0, |d| d.as_secs());
-    let filename = format!("{timestamp}-chaos-{scenario_name}.scenario.ron");
+    // Sanitize `scenario_name` before using it as a filename component to
+    // prevent path traversal via `..`, embedded separators, or dotfile tricks.
+    // Replace anything that isn't `[A-Za-z0-9_-]` with `_`.
+    let safe_name: String = scenario_name
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '_' || c == '-' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect();
+    let filename = format!("{timestamp}-chaos-{safe_name}.scenario.ron");
     let path = regressions_dir.join(filename);
 
     fs::write(&path, serialized).map_err(|e| format!("write {} failed: {e}", path.display()))?;
