@@ -58,6 +58,10 @@ pub enum InvariantKind {
     /// contain an entry with 0 stacks — the map-insert path is `add_stack`
     /// which always increments to ≥1.
     HazardStackValid,
+    /// Exactly one `PrimaryBolt` entity should exist whenever any `Bolt`
+    /// entity exists. Catches Conductor-protocol swap bugs where the marker is
+    /// briefly absent or double-assigned.
+    ExactlyOnePrimaryBolt,
 }
 
 impl InvariantKind {
@@ -91,6 +95,7 @@ impl InvariantKind {
         Self::BreakerCountReasonable,
         Self::BoltBirthingLayersZeroed,
         Self::HazardStackValid,
+        Self::ExactlyOnePrimaryBolt,
     ];
 
     /// Standard human-readable fail reason for this invariant violation.
@@ -126,6 +131,7 @@ impl InvariantKind {
             Self::BreakerCountReasonable => "primary breaker count is not exactly 1",
             Self::BoltBirthingLayersZeroed => "birthing bolt has non-zero collision layers",
             Self::HazardStackValid => "hazard stack count is zero (should never happen)",
+            Self::ExactlyOnePrimaryBolt => "PrimaryBolt count is not exactly 1 while bolts exist",
         }
     }
 }

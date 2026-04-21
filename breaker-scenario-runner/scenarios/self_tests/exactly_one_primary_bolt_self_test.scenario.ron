@@ -1,0 +1,22 @@
+// Self-test: SpawnExtraPrimaryBolts { count: 2 } adds two bare (Bolt, PrimaryBolt)
+// entities at frame 5, pushing the PrimaryBolt count from 1 to 3 (or from 0 to 2
+// if the regular bolt is not yet present). Either way the count exceeds 1 and
+// ExactlyOnePrimaryBolt fires. Physics is frozen so the spawned entities remain
+// stable and no game events interfere with the violation window.
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 120,
+    disallowed_failures: [ExactlyOnePrimaryBolt],
+    allowed_failures: Some([ExactlyOnePrimaryBolt]),
+    debug_setup: (
+        disable_physics: true,
+        node_timer_remaining: 9999.0,
+    ),
+    frame_mutations: [
+        (frame: 5, mutation: SpawnExtraPrimaryBolts(count: 2)),
+    ],
+)

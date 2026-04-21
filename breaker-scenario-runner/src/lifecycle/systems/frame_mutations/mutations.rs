@@ -4,6 +4,7 @@ use std::collections::HashSet;
 
 use bevy::{ecs::system::SystemParam, prelude::*};
 use breaker::{
+    bolt::components::{Bolt, PrimaryBolt},
     breaker::components::{DashState, PrimaryBreaker},
     chips::inventory::ChipInventory,
     effect_v3::effects::{
@@ -186,6 +187,9 @@ pub fn apply_debug_frame_mutations(
             }
             MutationKind::SpawnExtraPrimaryBreakers(count) => {
                 apply_spawn_extra_primary_breakers(*count, &mut targets.commands);
+            }
+            MutationKind::SpawnExtraPrimaryBolts { count } => {
+                apply_spawn_extra_primary_bolts(*count, &mut targets.commands);
             }
             MutationKind::InjectNonZeroBirthingLayers => {
                 apply_inject_non_zero_birthing_layers(&mut targets.birthing_bolt_layers);
@@ -498,6 +502,20 @@ pub fn apply_spawn_extra_gravity_wells(count: usize, commands: &mut Commands) {
 fn apply_spawn_extra_primary_breakers(count: usize, commands: &mut Commands) {
     for _ in 0..count {
         commands.spawn(PrimaryBreaker);
+    }
+}
+
+/// Spawns `count` extra entities each carrying `(Bolt, PrimaryBolt,
+/// Position2D(Vec2::ZERO), BaseSpeed(400.0))`.
+///
+/// Each spawned entity satisfies the `With<Bolt>` query used by
+/// `check_exactly_one_primary_bolt`, so a count of 2+ pushes the
+/// `PrimaryBolt` total above 1 and triggers an
+/// [`InvariantKind::ExactlyOnePrimaryBolt`] violation.
+fn apply_spawn_extra_primary_bolts(count: u32, commands: &mut Commands) {
+    use rantzsoft_spatial2d::components::{BaseSpeed, Position2D};
+    for _ in 0..count {
+        commands.spawn((Bolt, PrimaryBolt, Position2D(Vec2::ZERO), BaseSpeed(400.0)));
     }
 }
 

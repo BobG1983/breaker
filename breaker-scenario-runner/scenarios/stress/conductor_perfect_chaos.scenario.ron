@@ -1,0 +1,32 @@
+// Adversarial: Conductor swaps PrimaryBolt <-> ExtraBolt markers between the bumped extra
+// and the current primary on every Perfect BumpPerformed. Prism breaker spawns ExtraBolt
+// entities on Perfect bumps, providing a live population of extras for Conductor to swap.
+// The adversarial risk: rapid Perfect bumps can fire Conductor multiple times in quick
+// succession — at-most-one-swap-per-tick logic must hold or stale pre-flush PrimaryBolt
+// observations produce duplicate markers. Chaos input at 0.7 drives frequent bumps including
+// Perfect grades, exercising the swap path under pressure. The ExactlyOnePrimaryBolt invariant
+// enforces the core Conductor invariant: exactly one PrimaryBolt must exist at all times
+// while bolts are present. BoltInBounds catches any bolt that escapes due to a corrupted
+// effect tree after a swap. NoNaN detects velocity corruption from a stale effect walk
+// on the wrong bolt post-swap. BoltSpeedAccurate detects speed drift from effect-tree
+// duplication if BoundEffects are incorrectly cloned rather than moved. NoEntityLeaks
+// verifies that swap-spawned ExtraBolt entities (via Prism) are properly cleaned up.
+// ValidDashState guards against breaker state machine corruption under the chaos pattern.
+// Scatter layout maximises the variety of bump geometries and Perfect-bump rates.
+// Stress: 32 parallel copies explore seed-varied paths through the swap trigger distribution.
+(
+    breaker: "Prism",
+    layout: "Scatter",
+    input: Chaos((action_prob: 0.7)),
+    max_frames: 2000,
+    disallowed_failures: [ExactlyOnePrimaryBolt, NoNaN, BoltInBounds, BoltSpeedAccurate, ValidDashState, BreakerInBounds, BreakerCountReasonable, NoEntityLeaks, BoltCountReasonable],
+    allowed_failures: None,
+    debug_setup: None,
+    invariant_params: (max_bolt_count: 16),
+    allow_early_end: false,
+    stress: (runs: 32, parallelism: 32),
+    seed: 42,
+    frame_mutations: [
+        (frame: 10, mutation: InjectProtocol(kind_name: "Conductor")),
+    ],
+)

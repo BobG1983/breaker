@@ -124,6 +124,16 @@ pub enum MutationKind {
     /// Used by the `bolt_birthing_layers_zeroed` self-test to trigger a
     /// [`InvariantKind::BoltBirthingLayersZeroed`] violation.
     InjectNonZeroBirthingLayers,
+    /// Spawn `count` extra entities each carrying `(Bolt, PrimaryBolt,
+    /// Position2D(Vec2::ZERO), BaseSpeed(400.0))`.
+    ///
+    /// Used by the `exactly_one_primary_bolt_self_test` self-test scenario to
+    /// deliberately push the `PrimaryBolt` count above 1, triggering an
+    /// [`InvariantKind::ExactlyOnePrimaryBolt`] violation.
+    SpawnExtraPrimaryBolts {
+        /// Number of extra `(Bolt, PrimaryBolt)` entities to spawn.
+        count: u32,
+    },
     /// Insert a 0-stack entry into [`ActiveHazards`] via the
     /// `force_insert_entry` backdoor, bypassing `add_stack`. Used by the
     /// `hazard_stack_valid` self-test to trigger a

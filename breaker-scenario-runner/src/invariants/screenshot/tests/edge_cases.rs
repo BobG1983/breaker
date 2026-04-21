@@ -199,10 +199,10 @@ fn capture_violation_screenshots_no_error_when_output_dir_already_exists() {
     drop(std::fs::remove_dir_all(&temp_base));
 }
 
-/// Concrete value for behavior 10: `detect_new_violations` returns exactly 24
+/// Concrete value for behavior 10: `detect_new_violations` returns exactly 25
 /// elements (not just `InvariantKind::ALL.len()`) when tracker is empty.
 #[test]
-fn detect_new_violations_returns_exactly_24_variants_from_empty_tracker() {
+fn detect_new_violations_returns_exactly_25_variants_from_empty_tracker() {
     let tracker = ScreenshotTracker::default();
     let log = ViolationLog(
         InvariantKind::ALL
@@ -221,8 +221,8 @@ fn detect_new_violations_returns_exactly_24_variants_from_empty_tracker() {
 
     assert_eq!(
         result.len(),
-        24,
-        "must return exactly 24 variants (concrete count), got {}",
+        25,
+        "must return exactly 25 variants (concrete count), got {}",
         result.len()
     );
 }
