@@ -1,0 +1,29 @@
+// Self-test: GreedStacksOrphaned CONTRACT invariant fires when GreedStacks.skips > 0
+// but Greed is not in ActiveProtocols.
+//
+// Sequence:
+//   frame 10 — InjectProtocol installs Greed in ActiveProtocols and inserts GreedStacks.
+//   frame 30 — SetGreedStacks seeds skips=5 (bypasses chip-skip accounting).
+//   frame 50 — RemoveFromActiveProtocols removes Greed without clearing GreedStacks.
+//   frame 51+ — check_greed_stacks_orphaned sees skips=5 with Greed absent → VIOLATION.
+//
+// Physics disabled so the bolt never moves and we stay in Playing without node end.
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 120,
+    disallowed_failures: [GreedStacksOrphaned],
+    allowed_failures: [GreedStacksOrphaned],
+    debug_setup: (
+        disable_physics: true,
+        node_timer_remaining: 9999.0,
+    ),
+    frame_mutations: [
+        (frame: 10, mutation: InjectProtocol(kind_name: "Greed")),
+        (frame: 30, mutation: SetGreedStacks(skips: 5)),
+        (frame: 50, mutation: RemoveFromActiveProtocols(kind_name: "Greed")),
+    ],
+)

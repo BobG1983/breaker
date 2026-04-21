@@ -22,6 +22,7 @@ use breaker::{
     protocol::{
         self,
         definition::ProtocolKind,
+        protocols::{burnout::system::BurnoutHeat, greed::GreedStacks, siphon::SiphonStreak},
         resources::{ActiveProtocols, ProtocolRegistry},
     },
     shared::birthing::Birthing,
@@ -76,10 +77,21 @@ pub struct MutationTargets<'w, 's> {
     /// [`ProtocolRegistry`] resource -- used by
     /// [`MutationKind::InjectProtocol`] to look up tuning + effect trees.
     protocol_registry:    Option<Res<'w, ProtocolRegistry>>,
+    /// [`GreedStacks`] resource -- used by
+    /// [`MutationKind::RemoveFromActiveProtocols`] to orphan greed state
+    /// for CONTRACT invariant self-tests.
+    greed_stacks:         Option<ResMut<'w, GreedStacks>>,
+    /// [`SiphonStreak`] resource -- used by
+    /// [`MutationKind::RemoveFromActiveProtocols`] to orphan siphon state
+    /// for CONTRACT invariant self-tests.
+    siphon_streak:        Option<ResMut<'w, SiphonStreak>>,
     /// Tagged breaker entities -- used by
     /// [`MutationKind::InjectProtocol`] as the stamp target for
     /// effect-tree protocols.
     breaker_entities:     Query<'w, 's, Entity, With<ScenarioTagBreaker>>,
+    /// Tagged breaker entities with `BurnoutHeat` -- for
+    /// [`MutationKind::SetBurnoutHeat`].
+    burnout_heats:        Query<'w, 's, &'static mut BurnoutHeat, With<ScenarioTagBreaker>>,
     /// [`Commands`] for inserting resources when the optional resource is absent.
     commands:             Commands<'w, 's>,
     /// Bolt entities with `Aabb2D` -- for [`MutationKind::InjectMismatchedBoltAabb`].
@@ -107,103 +119,150 @@ pub fn apply_debug_frame_mutations(
     let Some(ref mutations) = config.definition.frame_mutations else {
         return;
     };
-
     for mutation in mutations {
         if mutation.frame != frame.0 {
             continue;
         }
-        match &mutation.mutation {
-            MutationKind::SetDashState(scenario_state) => {
-                let target = map_scenario_dash_state(*scenario_state);
-                for mut state in &mut breakers {
-                    *state = target;
-                }
-            }
-            MutationKind::SetTimerRemaining(remaining) => {
-                apply_set_timer_remaining(*remaining, &mut node_timer);
-            }
-            MutationKind::SpawnExtraEntities(count) => {
-                apply_spawn_extra_entities(*count, &mut targets.commands);
-            }
-            MutationKind::MoveBolt(x, y) => {
-                apply_move_bolt(*x, *y, &mut bolts);
-            }
-            MutationKind::TogglePause => {
-                apply_toggle_pause(&mut pause);
-            }
-            MutationKind::SetRunStat(counter, value) => {
-                apply_set_run_stat_optional(*counter, *value, &mut targets.run_stats);
-            }
-            MutationKind::DecrementRunStat(counter) => {
-                apply_decrement_run_stat_optional(*counter, &mut targets.run_stats);
-            }
-            MutationKind::InjectOverStackedChip {
-                chip_name,
-                stacks,
-                max_stacks,
-            } => {
-                if let Some(ref mut inventory) = targets.chip_inventory {
-                    inventory.force_insert_entry(chip_name, *stacks, *max_stacks, None);
-                }
-            }
-            MutationKind::InjectDuplicateOffers { chip_name } => {
-                apply_inject_duplicate_offers(
-                    chip_name,
-                    &mut targets.chip_offers,
-                    &mut targets.commands,
-                );
-            }
-            MutationKind::InjectMaxedChipOffer { chip_name } => {
-                apply_inject_maxed_chip_offer(
-                    chip_name,
-                    &mut targets.chip_inventory,
-                    &mut targets.chip_offers,
-                    &mut targets.commands,
-                );
-            }
-            MutationKind::SpawnExtraSecondWindWalls(count) => {
-                for _ in 0..*count {
-                    targets.commands.spawn(SecondWindWall);
-                }
-            }
-            MutationKind::SpawnExtraShieldWalls(count) => {
-                for _ in 0..*count {
-                    targets.commands.spawn(ShieldWall);
-                }
-            }
-            MutationKind::SpawnExtraPulseRings(count) => {
-                for _ in 0..*count {
-                    targets.commands.spawn(PulseRing);
-                }
-            }
-            MutationKind::SpawnExtraChainArcs(count) => {
-                apply_spawn_extra_chain_arcs(*count, &mut targets.commands);
-            }
-            MutationKind::InjectMismatchedBoltAabb => {
-                apply_inject_mismatched_bolt_aabb(&mut targets.bolt_aabbs);
-            }
-            MutationKind::SpawnExtraGravityWells(count) => {
-                apply_spawn_extra_gravity_wells(*count, &mut targets.commands);
-            }
-            MutationKind::SpawnExtraPrimaryBreakers(count) => {
-                apply_spawn_extra_primary_breakers(*count, &mut targets.commands);
-            }
-            MutationKind::SpawnExtraPrimaryBolts { count } => {
-                apply_spawn_extra_primary_bolts(*count, &mut targets.commands);
-            }
-            MutationKind::InjectNonZeroBirthingLayers => {
-                apply_inject_non_zero_birthing_layers(&mut targets.birthing_bolt_layers);
-            }
-            MutationKind::InjectZeroStackHazard { kind_name } => {
-                apply_inject_zero_stack_hazard(kind_name, &mut targets.active_hazards);
-            }
-            MutationKind::InjectHazardStack { kind_name, stacks } => {
-                apply_hazard_injection(kind_name, *stacks, &mut targets);
-            }
-            MutationKind::InjectProtocol { kind_name } => {
-                apply_protocol_injection(kind_name, &mut targets);
+        apply_single_mutation(
+            &mutation.mutation,
+            &mut breakers,
+            &mut bolts,
+            &mut node_timer,
+            &mut pause,
+            &mut targets,
+        );
+    }
+}
+
+/// Dispatches a single [`MutationKind`] to its handler.
+fn apply_single_mutation(
+    mutation: &MutationKind,
+    breakers: &mut Query<&mut DashState, With<ScenarioTagBreaker>>,
+    bolts: &mut Query<&mut Position2D, With<ScenarioTagBolt>>,
+    node_timer: &mut Option<ResMut<NodeTimer>>,
+    pause: &mut PauseControl,
+    targets: &mut MutationTargets,
+) {
+    match mutation {
+        MutationKind::SetDashState(scenario_state) => {
+            let target = map_scenario_dash_state(*scenario_state);
+            for mut state in breakers.iter_mut() {
+                *state = target;
             }
         }
+        MutationKind::SetTimerRemaining(remaining) => {
+            apply_set_timer_remaining(*remaining, node_timer);
+        }
+        MutationKind::SpawnExtraEntities(count) => {
+            apply_spawn_extra_entities(*count, &mut targets.commands);
+        }
+        MutationKind::MoveBolt(x, y) => {
+            apply_move_bolt(*x, *y, bolts);
+        }
+        MutationKind::TogglePause => {
+            apply_toggle_pause(pause);
+        }
+        MutationKind::SetRunStat(counter, value) => {
+            apply_set_run_stat_optional(*counter, *value, &mut targets.run_stats);
+        }
+        MutationKind::DecrementRunStat(counter) => {
+            apply_decrement_run_stat_optional(*counter, &mut targets.run_stats);
+        }
+        MutationKind::InjectOverStackedChip {
+            chip_name,
+            stacks,
+            max_stacks,
+        } => {
+            if let Some(ref mut inventory) = targets.chip_inventory {
+                inventory.force_insert_entry(chip_name, *stacks, *max_stacks, None);
+            }
+        }
+        MutationKind::InjectDuplicateOffers { chip_name } => {
+            apply_inject_duplicate_offers(
+                chip_name,
+                &mut targets.chip_offers,
+                &mut targets.commands,
+            );
+        }
+        MutationKind::InjectMaxedChipOffer { chip_name } => {
+            apply_inject_maxed_chip_offer(
+                chip_name,
+                &mut targets.chip_inventory,
+                &mut targets.chip_offers,
+                &mut targets.commands,
+            );
+        }
+        MutationKind::SpawnExtraSecondWindWalls(count) => {
+            for _ in 0..*count {
+                targets.commands.spawn(SecondWindWall);
+            }
+        }
+        MutationKind::SpawnExtraShieldWalls(count) => {
+            for _ in 0..*count {
+                targets.commands.spawn(ShieldWall);
+            }
+        }
+        MutationKind::SpawnExtraPulseRings(count) => {
+            for _ in 0..*count {
+                targets.commands.spawn(PulseRing);
+            }
+        }
+        MutationKind::SpawnExtraChainArcs(count) => {
+            apply_spawn_extra_chain_arcs(*count, &mut targets.commands);
+        }
+        MutationKind::InjectMismatchedBoltAabb => {
+            apply_inject_mismatched_bolt_aabb(&mut targets.bolt_aabbs);
+        }
+        MutationKind::SpawnExtraGravityWells(count) => {
+            apply_spawn_extra_gravity_wells(*count, &mut targets.commands);
+        }
+        MutationKind::SpawnExtraPrimaryBreakers(count) => {
+            apply_spawn_extra_primary_breakers(*count, &mut targets.commands);
+        }
+        MutationKind::SpawnExtraPrimaryBolts { count } => {
+            apply_spawn_extra_primary_bolts(*count, &mut targets.commands);
+        }
+        MutationKind::InjectNonZeroBirthingLayers => {
+            apply_inject_non_zero_birthing_layers(&mut targets.birthing_bolt_layers);
+        }
+        MutationKind::SetBurnoutHeat { heat, still_timer } => {
+            apply_set_burnout_heat(*heat, *still_timer, &mut targets.burnout_heats);
+        }
+        other => apply_resource_mutation(other, targets),
+    }
+}
+
+/// Handles resource-level mutations: hazards, protocols, greed stacks, siphon
+/// streak. Extracted to keep [`apply_single_mutation`] under 100 lines.
+fn apply_resource_mutation(mutation: &MutationKind, targets: &mut MutationTargets) {
+    match mutation {
+        MutationKind::InjectZeroStackHazard { kind_name } => {
+            apply_inject_zero_stack_hazard(kind_name, &mut targets.active_hazards);
+        }
+        MutationKind::InjectHazardStack { kind_name, stacks } => {
+            apply_hazard_injection(kind_name, *stacks, targets);
+        }
+        MutationKind::InjectProtocol { kind_name } => {
+            apply_protocol_injection(kind_name, targets);
+        }
+        MutationKind::RemoveFromActiveProtocols { kind_name } => {
+            apply_remove_from_active_protocols(kind_name, targets);
+        }
+        MutationKind::SetGreedStacks { skips } => {
+            if let Some(ref mut gs) = targets.greed_stacks {
+                gs.skips = *skips;
+            }
+        }
+        MutationKind::SetSiphonStreak {
+            kill_count,
+            window_remaining,
+        } => {
+            if let Some(ref mut ss) = targets.siphon_streak {
+                ss.kill_count = *kill_count;
+                ss.window_remaining = *window_remaining;
+            }
+        }
+        _ => {} // handled by apply_single_mutation
     }
 }
 
@@ -232,6 +291,21 @@ fn apply_protocol_injection(kind_name: &str, targets: &mut MutationTargets) {
     let breakers: Vec<Entity> = targets.breaker_entities.iter().collect();
     if !protocol::activate_from_registry(registry, kind, &breakers, &mut targets.commands, active) {
         warn!("InjectProtocol: no definition for {kind_name}");
+    }
+}
+
+/// Removes a protocol from `ActiveProtocols` by kind, bypassing normal cleanup.
+///
+/// Does NOT clear per-protocol resources (`GreedStacks`, `SiphonStreak`), so
+/// the CONTRACT invariants will fire on the next frame if those resources still
+/// hold non-zero state. Used exclusively by self-test scenarios.
+fn apply_remove_from_active_protocols(kind_name: &str, targets: &mut MutationTargets) {
+    let Some(kind) = parse_protocol_kind(kind_name) else {
+        warn!("RemoveFromActiveProtocols: unknown kind {kind_name:?}");
+        return;
+    };
+    if let Some(ref mut active) = targets.active_protocols {
+        active.remove(kind);
     }
 }
 
@@ -516,6 +590,22 @@ fn apply_spawn_extra_primary_bolts(count: u32, commands: &mut Commands) {
     use rantzsoft_spatial2d::components::{BaseSpeed, Position2D};
     for _ in 0..count {
         commands.spawn((Bolt, PrimaryBolt, Position2D(Vec2::ZERO), BaseSpeed(400.0)));
+    }
+}
+
+/// Sets `BurnoutHeat.heat` and `BurnoutHeat.still_timer` on every tagged
+/// breaker that already carries the component.
+///
+/// No-op when no tagged breaker has `BurnoutHeat` (e.g. before `InjectProtocol`
+/// has run or before `burnout_update_heat` has lazy-inserted the component).
+fn apply_set_burnout_heat(
+    heat: f32,
+    still_timer: f32,
+    burnout_heats: &mut Query<&mut BurnoutHeat, With<ScenarioTagBreaker>>,
+) {
+    for mut bh in burnout_heats {
+        bh.heat = heat;
+        bh.still_timer = still_timer;
     }
 }
 

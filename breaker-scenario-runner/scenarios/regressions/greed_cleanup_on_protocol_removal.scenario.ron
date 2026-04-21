@@ -1,0 +1,44 @@
+// Regression: GreedStacks.skips must be zero when Greed is not in ActiveProtocols.
+//
+// Contract: the Greed protocol owns GreedStacks. Any code path that removes Greed from
+// ActiveProtocols (node exit, run reset, explicit deactivation) MUST clear GreedStacks.skips
+// to zero. If skips remains > 0 after removal, the GreedStacksOrphaned invariant fires.
+//
+// This scenario exercises the normal Greed lifecycle under chaos input:
+//   — Greed is injected at frame 10 via InjectProtocol.
+//   — Chaos input with allow_early_end: false drives chip-select screens and node restarts,
+//     accumulating skips in GreedStacks via the ChipOfferSkipped message path.
+//   — Node restarts trigger reset_run_state, which must clear GreedStacks.skips.
+//   — GreedStacksOrphaned asserts skips == 0 whenever Greed is absent from ActiveProtocols.
+//
+// Failure mode this protects against:
+//   If reset_run_state reinitialises GreedStacks via init_resource (re-inserts at default)
+//   rather than resetting the existing resource, a race with greed_on_skip on the same frame
+//   can leave a nonzero skip count in the resource that survives the reset. Alternatively,
+//   if a future refactor removes the GreedStacks clear from reset_run_state, skips compound
+//   across nodes, driving the rarity map to its floor with no observable per-frame signal —
+//   the only catch is the CONTRACT invariant.
+(
+    breaker: "Aegis",
+    layout: "Scatter",
+    input: Chaos((action_prob: 0.7)),
+    max_frames: 3000,
+    disallowed_failures: [
+        NoNaN,
+        BoltInBounds,
+        BreakerInBounds,
+        BoltSpeedAccurate,
+        ValidDashState,
+        BreakerCountReasonable,
+        NoEntityLeaks,
+        BoltCountReasonable,
+        GreedStacksOrphaned,
+    ],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: 9173,
+    frame_mutations: [
+        (frame: 10, mutation: InjectProtocol(kind_name: "Greed")),
+    ],
+)

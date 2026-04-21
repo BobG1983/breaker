@@ -48,14 +48,14 @@ pub(crate) struct SiphonConfig {
 /// `window_remaining == 0.0` AND `kill_count == 0` is the "no active streak"
 /// sentinel produced by [`Default`].
 #[derive(Resource, Debug, Default, Clone, Copy, PartialEq)]
-pub(crate) struct SiphonStreak {
+pub struct SiphonStreak {
     /// Seconds remaining in the current streak window. `0.0` = no active
     /// streak.
-    pub(crate) window_remaining: f32,
+    pub window_remaining: f32,
     /// Number of kills in the current streak.
     /// `0` = no active streak; `1` = first (silent) kill; `>=2` = each kill
     /// awarded time.
-    pub(crate) kill_count:       u32,
+    pub kill_count:       u32,
 }
 
 // ── activate ────────────────────────────────────────────────────────────────

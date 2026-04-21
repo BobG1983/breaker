@@ -1,0 +1,27 @@
+// Self-test: SetBurnoutHeat forces heat=2.0 at frame 30, which is outside [0.0, 1.0].
+//
+// Burnout is injected at frame 10 so burnout_update_heat lazy-inserts BurnoutHeat on
+// the breaker. By frame 30 the component is present. SetBurnoutHeat bypasses the
+// clamp enforced by burnout_update_heat, writing heat=2.0 directly into the component.
+// BurnoutHeatClamped fires on the same frame and every subsequent frame while the
+// out-of-bounds value persists (physics disabled, heat never updated back into range).
+// The expected_violations window means the scenario passes only if BurnoutHeatClamped
+// fires at least once.
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 120,
+    disallowed_failures: [BurnoutHeatClamped],
+    allowed_failures: Some([BurnoutHeatClamped]),
+    debug_setup: (
+        disable_physics: true,
+        node_timer_remaining: 9999.0,
+    ),
+    frame_mutations: [
+        (frame: 10, mutation: InjectProtocol(kind_name: "Burnout")),
+        (frame: 30, mutation: SetBurnoutHeat(heat: 2.0, still_timer: 0.0)),
+    ],
+)

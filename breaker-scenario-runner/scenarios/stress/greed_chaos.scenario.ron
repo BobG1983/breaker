@@ -1,0 +1,88 @@
+// Adversarial stress: Greed protocol under sustained chaos input — Scatter layout.
+//
+// Greed's 3-system pipeline: greed_on_skip (Update, ungated, reads
+// ChipOfferSkipped messages, increments GreedStacks.skips),
+// apply_greed_boost (called in-band from generate_chip_offerings, re-weights
+// the rarity map), and reset_run_state (clears GreedStacks at run end).
+// This stress scenario targets four failure paths:
+//
+//   1. In-body ActiveProtocols gate — reader leak path: greed_on_skip runs
+//      in Update every tick, gated in-body rather than via run_if. When Greed
+//      is NOT in ActiveProtocols (before InjectProtocol fires at frame 10 or
+//      after a node reset clears the resource), the system must call
+//      reader.clear() and return. If the early-return branch is missing or
+//      mis-gated, ChipOfferSkipped messages buffer for 10 frames (and again on
+//      each node restart), then all replay when Greed becomes active — each
+//      replay adding a spurious skip. Scatter layout with chaos input
+//      generates chip-select events probabilistically; NoEntityLeaks catches
+//      message entity accumulation if the reader drain is skipped.
+//
+//   2. GreedStacks::skips overflow under extreme chaos: saturating_add
+//      prevents wrapping, but chaos input with allow_early_end: false drives
+//      sustained chip-select screens across node restarts. If the stack is NOT
+//      cleared by reset_run_state (e.g., if GreedStacks is re-inserted rather
+//      than init_resource-restored), skips compound run-over-run. The rarity
+//      re-weight formula clamps at common_floor = common_original * 0.10, so
+//      an enormous skip count drives Common to its floor and concentrates all
+//      boost weight on Uncommon/Rare. apply_greed_boost guards boost <= 0.0
+//      and uses entry().and_modify (no spurious insert for missing tiers), but
+//      the resulting rarity map weights may hit 0.0 or negative if the floor
+//      calculation underflows. NoNaN catches NaN in rarity weight arithmetic.
+//
+//   3. Update vs FixedUpdate scheduling boundary: greed_on_skip runs in
+//      Update; the scenario runner's FixedUpdate chaos input fires in
+//      FixedUpdate. ChipOfferSkipped messages are written by chip-select
+//      systems (also Update). With allow_early_end: false and rapid node
+//      cycling, there is a window where a node ends mid-Update before
+//      greed_on_skip has processed the final batch of ChipOfferSkipped
+//      messages for that node. If reset_run_state (which clears GreedStacks)
+//      races with greed_on_skip on the same frame, either:
+//        a. greed_on_skip reads skips from the dying run and increments — then
+//           reset clears the increment (correct but fragile),
+//        b. reset runs first, greed_on_skip increments the fresh zero — the
+//           new run starts with skips > 0 (incorrect cross-node state leak).
+//      BreakerInBounds and BoltSpeedAccurate catch downstream corruption if
+//      rarity state drives invalid chip selection (which could trigger effects
+//      that mutate bolt physics in edge-case ways).
+//
+//   4. apply_greed_boost entry().and_modify semantic: the function only
+//      modifies Uncommon/Rare entries that already exist in the rarity map;
+//      missing tiers are silently skipped. In layouts where a node's chip
+//      offering omits Uncommon or Rare (possible under Scatter with very few
+//      cells), all removed weight from Common is added to non-existent entries
+//      and silently lost — the total weight sum shrinks. A shrunken weight sum
+//      doesn't cause a NaN (it drives selection toward whichever tiers remain)
+//      but it can drive the Common weight to exactly its floor with the removed
+//      weight vanishing, which is semantically wrong. NoNaN catches any case
+//      where weight arithmetic produces NaN; BoltCountReasonable catches
+//      downstream chip-effect corruption if a broken rarity selection triggers
+//      an effect that spawns or destroys bolts incorrectly.
+//
+// 3000 frames with allow_early_end: false sustains pressure across node
+// restarts and chip-select screens. 16 runs explore diverse Scatter cell
+// arrangements and chip-offer timing distributions.
+(
+    breaker: "Aegis",
+    layout: "Scatter",
+    input: Chaos((action_prob: 0.7)),
+    max_frames: 3000,
+    disallowed_failures: [
+        NoNaN,
+        BoltInBounds,
+        BreakerInBounds,
+        BoltSpeedAccurate,
+        ValidDashState,
+        BreakerCountReasonable,
+        NoEntityLeaks,
+        BoltCountReasonable,
+        GreedStacksOrphaned,
+    ],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: false,
+    stress: (runs: 16, parallelism: 16),
+    seed: 4491,
+    frame_mutations: [
+        (frame: 10, mutation: InjectProtocol(kind_name: "Greed")),
+    ],
+)

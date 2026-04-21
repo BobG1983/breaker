@@ -2,7 +2,7 @@
 //!
 //! Design doc: `docs/todos/detail/mod-system-design/protocols/burnout.md`.
 
-pub(crate) mod system;
+pub mod system;
 
 #[cfg(test)]
 mod tests;

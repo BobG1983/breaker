@@ -38,9 +38,9 @@ use crate::{
 /// cleared via `reset_run_state` (the run-if gate hides Greed's systems
 /// outside an active run).
 #[derive(Resource, Debug, Clone, Copy)]
-pub(crate) struct GreedConfig {
+pub struct GreedConfig {
     /// Rarity boost percent per skip. 5.0 means +5% weight shift per skip.
-    pub(crate) rarity_boost_per_skip: f32,
+    pub rarity_boost_per_skip: f32,
 }
 
 /// Per-run count of chip-offer skips. Inserted via `init_resource` in
@@ -48,10 +48,10 @@ pub(crate) struct GreedConfig {
 /// `ChipOfferSkipped` message; read by [`apply_greed_boost`] during chip
 /// offering generation. Cleared by `reset_run_state` as part of
 /// `RunInventories::clear_all`.
-#[derive(Resource, Debug, Default, Clone, Copy, PartialEq)]
-pub(crate) struct GreedStacks {
+#[derive(Resource, Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct GreedStacks {
     /// Number of chip offers the player has skipped this run.
-    pub(crate) skips: u32,
+    pub skips: u32,
 }
 
 impl GreedStacks {
@@ -60,7 +60,7 @@ impl GreedStacks {
     /// both are `Copy` and small (4 bytes each); clippy's
     /// `trivially_copy_pass_by_ref` prefers the by-value form.
     #[must_use]
-    pub(crate) fn rarity_boost(self, config: GreedConfig) -> f32 {
+    pub fn rarity_boost(self, config: GreedConfig) -> f32 {
         self.skips as f32 * config.rarity_boost_per_skip
     }
 }

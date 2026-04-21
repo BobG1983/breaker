@@ -7,9 +7,10 @@
 //! that reads `ChipOfferSkipped`, and the `apply_greed_boost` helper invoked
 //! by the chip-select domain's `generate_chip_offerings`.
 
-pub(crate) mod system;
+pub mod system;
 
 #[cfg(test)]
 mod tests;
 
-pub(crate) use system::{GreedConfig, GreedStacks, activate, apply_greed_boost, register};
+pub use system::{GreedConfig, GreedStacks};
+pub(crate) use system::{activate, apply_greed_boost, register};

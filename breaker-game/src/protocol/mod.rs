@@ -4,7 +4,7 @@
 pub mod definition;
 pub(crate) mod messages;
 pub(crate) mod plugin;
-pub(crate) mod protocols;
+pub mod protocols;
 pub mod resources;
 pub(crate) mod systems;
 

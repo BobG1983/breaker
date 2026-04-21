@@ -1,0 +1,69 @@
+// Adversarial stress: Siphon protocol under sustained chaos input — Dense layout.
+//
+// Siphon's 3-system pipeline: siphon_tick_streak (decrements window_remaining),
+// siphon_on_cell_destroyed (consumes Destroyed<Cell>, updates SiphonStreak, emits
+// ReverseTimePenalty on non-first kills), and siphon_cleanup_node (resets streak on
+// node exit). This stress scenario targets four failure paths:
+//
+//   1. siphon_tick_streak / siphon_on_cell_destroyed race: siphon_tick_streak runs
+//      before siphon_on_cell_destroyed in the same FixedUpdate tick. If both systems
+//      observe a streak at its exact expiry threshold (window_remaining drains to <= 0
+//      in tick N; siphon_on_cell_destroyed sees kill_count == 0 in the same tick), the
+//      very next kill is incorrectly treated as a streak-opener rather than a streak
+//      continuation. Dense layout maximises kill density, increasing the chance that
+//      a kill lands in the exact tick window_remaining crosses zero. NoNaN catches
+//      a NaN streak value if the subtraction underflows; RunStatsMonotonic is not
+//      listed (DebtCollector uses it) but BoltSpeedAccurate catches downstream speed
+//      corruption if ReverseTimePenalty fires with a malformed value.
+//
+//   2. Destroyed<Cell> reader accumulation on rapid kills: Dense layout drives rapid
+//      cell destruction, filling the Destroyed<Cell> message queue in a single tick.
+//      siphon_on_cell_destroyed iterates all messages per tick; if the reader is not
+//      drained correctly (e.g., a missed reader.clear() branch), messages accumulate
+//      and each subsequent tick replays them, applying ReverseTimePenalty multiple
+//      times. NoEntityLeaks catches unconsumed message entities; TimerNonNegative
+//      catches a node timer driven negative by repeated reverse-time applications.
+//
+//   3. siphon_cleanup_node cross-node isolation: allow_early_end false triggers node
+//      restarts. cleanup_node must fire on OnExit(NodeState::Playing) and reset
+//      SiphonStreak to default. If cleanup races with a Destroyed<Cell> message buffered
+//      from the final tick of the dying node, the new node begins with kill_count > 0
+//      and window_remaining > 0, causing the first kill of the new node to award time
+//      (via the continuation path) instead of starting a new streak silently. This is
+//      impossible to detect directly, but NoNaN and BoltSpeedAccurate catch downstream
+//      corruption if the awarded time drives the timer into an invalid state.
+//
+//   4. ReverseTimePenalty boundary: the penalty emitted by siphon_on_cell_destroyed
+//      is applied by NodeSystems::ApplyTimePenalty. Dense layout with chaos input
+//      can drive hundreds of ReverseTimePenalty events per run, each adding seconds
+//      back to the node timer. TimerMonotonicallyDecreasing is not listed (it would
+//      fire legitimately when Siphon is active), but BreakerInBounds and NoNaN
+//      guard that the timer value stays representable.
+//
+// 3000 frames with allow_early_end: false sustains pressure across node restarts.
+// 16 runs explore diverse Dense cell arrangements and kill-timing distributions.
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Chaos((action_prob: 0.7)),
+    max_frames: 3000,
+    disallowed_failures: [
+        NoNaN,
+        BoltInBounds,
+        BreakerInBounds,
+        BoltSpeedAccurate,
+        ValidDashState,
+        BreakerCountReasonable,
+        NoEntityLeaks,
+        BoltCountReasonable,
+        SiphonStreakOrphaned,
+    ],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: false,
+    stress: (runs: 16, parallelism: 16),
+    seed: 7712,
+    frame_mutations: [
+        (frame: 10, mutation: InjectProtocol(kind_name: "Siphon")),
+    ],
+)

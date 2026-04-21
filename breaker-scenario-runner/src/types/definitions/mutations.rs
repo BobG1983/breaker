@@ -134,6 +134,18 @@ pub enum MutationKind {
         /// Number of extra `(Bolt, PrimaryBolt)` entities to spawn.
         count: u32,
     },
+    /// Override the `heat` and `still_timer` fields of the first tagged
+    /// breaker's [`BurnoutHeat`] component.
+    ///
+    /// Used by the `burnout_heat_clamped` self-test to force `heat` outside
+    /// `[0.0, 1.0]`, intentionally triggering an
+    /// [`InvariantKind::BurnoutHeatClamped`] violation.
+    SetBurnoutHeat {
+        /// Value to write into `BurnoutHeat.heat`.
+        heat:        f32,
+        /// Value to write into `BurnoutHeat.still_timer`.
+        still_timer: f32,
+    },
     /// Insert a 0-stack entry into [`ActiveHazards`] via the
     /// `force_insert_entry` backdoor, bypassing `add_stack`. Used by the
     /// `hazard_stack_valid` self-test to trigger a
@@ -163,6 +175,41 @@ pub enum MutationKind {
     InjectProtocol {
         /// Which protocol kind to inject (matches the [`ProtocolKind`]
         /// variant name, e.g. `"Deadline"`).
+        kind_name: String,
+    },
+    /// Directly write a value into `GreedStacks.skips`, bypassing normal
+    /// chip-skip accounting.
+    ///
+    /// Used by the `greed_stacks_orphaned` self-test to seed a non-zero skip
+    /// count before removing Greed from `ActiveProtocols`, triggering an
+    /// [`InvariantKind::GreedStacksOrphaned`] violation.
+    SetGreedStacks {
+        /// Value to write into `GreedStacks.skips`.
+        skips: u32,
+    },
+    /// Directly write a value into `SiphonStreak.kill_count`, bypassing
+    /// normal kill-streak accumulation.
+    ///
+    /// Used by the `siphon_streak_orphaned` self-test to seed a non-zero
+    /// `kill_count` before removing Siphon from `ActiveProtocols`, triggering
+    /// an [`InvariantKind::SiphonStreakOrphaned`] violation.
+    SetSiphonStreak {
+        /// Value to write into `SiphonStreak.kill_count`.
+        kill_count:       u32,
+        /// Value to write into `SiphonStreak.window_remaining`.
+        window_remaining: f32,
+    },
+    /// Remove a protocol from `ActiveProtocols` by kind, bypassing any
+    /// normal deactivation/cleanup path.
+    ///
+    /// Used by contract self-test scenarios to deliberately orphan
+    /// per-protocol resources (e.g. `GreedStacks`, `SiphonStreak`) after
+    /// the protocol is active, triggering
+    /// [`InvariantKind::GreedStacksOrphaned`] or
+    /// [`InvariantKind::SiphonStreakOrphaned`] on the next frame.
+    RemoveFromActiveProtocols {
+        /// Which protocol kind to remove (matches the [`ProtocolKind`]
+        /// variant name, e.g. `"Greed"`).
         kind_name: String,
     },
 }

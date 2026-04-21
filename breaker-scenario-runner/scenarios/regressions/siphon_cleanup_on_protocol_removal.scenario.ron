@@ -1,0 +1,49 @@
+// Regression: SiphonStreak.kill_count must be zero when Siphon is not in ActiveProtocols.
+//
+// Contract: the Siphon protocol owns SiphonStreak. Any code path that removes Siphon from
+// ActiveProtocols (node exit, run reset, explicit deactivation) MUST clear SiphonStreak to
+// its default state. If kill_count remains > 0 after removal, the SiphonStreakOrphaned
+// invariant fires.
+//
+// This scenario exercises the normal Siphon lifecycle under chaos input:
+//   — Siphon is injected at frame 10 via InjectProtocol.
+//   — Chaos input with allow_early_end: false drives sustained cell destruction in Dense
+//     layout, accumulating kill_count in SiphonStreak via Destroyed<Cell> messages.
+//   — Node restarts trigger siphon_cleanup_node (OnExit NodeState::Playing) and
+//     reset_run_state, both of which must reset SiphonStreak.
+//   — SiphonStreakOrphaned asserts kill_count == 0 whenever Siphon is absent from
+//     ActiveProtocols.
+//
+// Failure mode this protects against:
+//   If siphon_cleanup_node races with a Destroyed<Cell> message buffered from the final
+//   tick of the dying node, the cleanup may fire before the message is processed, leaving
+//   kill_count == 0 — which is correct. But if the ordering is reversed (message processed
+//   after cleanup), kill_count > 0 survives into the new node. Separately, if a future
+//   refactor removes the SiphonStreak reset from siphon_cleanup_node or reset_run_state,
+//   kill_count compounds across nodes, causing the first kill of each new node to follow
+//   the continuation path (emitting ReverseTimePenalty) rather than starting a new streak.
+//   The SiphonStreakOrphaned invariant is the only catch for this class of state leak.
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Chaos((action_prob: 0.7)),
+    max_frames: 3000,
+    disallowed_failures: [
+        NoNaN,
+        BoltInBounds,
+        BreakerInBounds,
+        BoltSpeedAccurate,
+        ValidDashState,
+        BreakerCountReasonable,
+        NoEntityLeaks,
+        BoltCountReasonable,
+        SiphonStreakOrphaned,
+    ],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: 3381,
+    frame_mutations: [
+        (frame: 10, mutation: InjectProtocol(kind_name: "Siphon")),
+    ],
+)

@@ -7,9 +7,10 @@
 //! systems (`siphon_tick_streak`, `siphon_on_cell_destroyed`,
 //! `siphon_cleanup_node`).
 
-pub(crate) mod system;
+pub mod system;
 
 #[cfg(test)]
 mod tests;
 
-pub(crate) use system::{SiphonStreak, activate, register};
+pub use system::SiphonStreak;
+pub(crate) use system::{activate, register};

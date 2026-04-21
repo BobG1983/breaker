@@ -19,6 +19,7 @@
         BreakerInBounds,
         TimerNonNegative,
         BoltSpeedAccurate,
+        BurnoutHeatClamped,
     ],
     allowed_failures: None,
     debug_setup: (

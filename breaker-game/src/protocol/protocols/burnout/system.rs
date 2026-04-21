@@ -58,15 +58,15 @@ pub(crate) struct BurnoutConfig {
 /// breaker arms a mega-bump (`mega_bump_charged = true`) — the next
 /// `BumpPerformed` consumes the charge.
 #[derive(Component, Debug, Default, Clone, Copy, PartialEq)]
-pub(crate) struct BurnoutHeat {
+pub struct BurnoutHeat {
     /// Current heat — `[0.0, 1.0]`, clamped by the update system.
-    pub(crate) heat:              f32,
+    pub heat:              f32,
     /// Seconds accumulated while stationary — reset to 0.0 on any moving
     /// tick. When this crosses `config.still_threshold`, the instant-drain +
     /// speed-boost fires.
-    pub(crate) still_timer:       f32,
+    pub still_timer:       f32,
     /// `true` once `heat == 1.0`, consumed on the next bump.
-    pub(crate) mega_bump_charged: bool,
+    pub mega_bump_charged: bool,
 }
 
 // ── BurnoutSpeedBoost ───────────────────────────────────────────────────────

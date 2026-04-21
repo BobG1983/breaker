@@ -221,8 +221,8 @@ fn detect_new_violations_returns_exactly_25_variants_from_empty_tracker() {
 
     assert_eq!(
         result.len(),
-        25,
-        "must return exactly 25 variants (concrete count), got {}",
+        28,
+        "must return exactly 28 variants (concrete count), got {}",
         result.len()
     );
 }

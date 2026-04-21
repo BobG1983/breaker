@@ -1,0 +1,30 @@
+// Self-test: SiphonStreakOrphaned CONTRACT invariant fires when SiphonStreak.kill_count > 0
+// but Siphon is not in ActiveProtocols.
+//
+// Sequence:
+//   frame 10 — InjectProtocol installs Siphon in ActiveProtocols and inserts SiphonStreak.
+//   frame 30 — SetSiphonStreak seeds kill_count=3, window_remaining=5.0 (bypasses normal
+//              kill-streak accumulation via Destroyed<Cell> messages).
+//   frame 50 — RemoveFromActiveProtocols removes Siphon without clearing SiphonStreak.
+//   frame 51+ — check_siphon_streak_orphaned sees kill_count=3 with Siphon absent → VIOLATION.
+//
+// Physics disabled so no cells are destroyed and streak never expires during the test window.
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 120,
+    disallowed_failures: [SiphonStreakOrphaned],
+    allowed_failures: [SiphonStreakOrphaned],
+    debug_setup: (
+        disable_physics: true,
+        node_timer_remaining: 9999.0,
+    ),
+    frame_mutations: [
+        (frame: 10, mutation: InjectProtocol(kind_name: "Siphon")),
+        (frame: 30, mutation: SetSiphonStreak(kill_count: 3, window_remaining: 5.0)),
+        (frame: 50, mutation: RemoveFromActiveProtocols(kind_name: "Siphon")),
+    ],
+)

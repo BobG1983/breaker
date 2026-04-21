@@ -9,7 +9,7 @@ use crate::{
     hazard::resources::ActiveHazards,
     prelude::*,
     protocol::{
-        protocols::greed::GreedStacks,
+        protocols::{greed::GreedStacks, siphon::SiphonStreak},
         resources::{ActiveProtocols, ProtocolOffer},
     },
     shared::RunSeed,
@@ -23,11 +23,12 @@ use crate::{
 /// limit.
 #[derive(SystemParam)]
 pub(crate) struct RunInventories<'w> {
-    chips:        ResMut<'w, ChipInventory>,
-    protocols:    ResMut<'w, ActiveProtocols>,
-    hazards:      ResMut<'w, ActiveHazards>,
-    offer:        ResMut<'w, ProtocolOffer>,
-    greed_stacks: ResMut<'w, GreedStacks>,
+    chips:         ResMut<'w, ChipInventory>,
+    protocols:     ResMut<'w, ActiveProtocols>,
+    hazards:       ResMut<'w, ActiveHazards>,
+    offer:         ResMut<'w, ProtocolOffer>,
+    greed_stacks:  ResMut<'w, GreedStacks>,
+    siphon_streak: ResMut<'w, SiphonStreak>,
 }
 
 impl RunInventories<'_> {
@@ -37,6 +38,7 @@ impl RunInventories<'_> {
         self.hazards.clear();
         *self.offer = ProtocolOffer::default();
         *self.greed_stacks = GreedStacks::default();
+        *self.siphon_streak = SiphonStreak::default();
     }
 }
 
@@ -82,6 +84,7 @@ mod tests {
             .with_resource::<crate::protocol::resources::ProtocolOffer>()
             .with_resource::<crate::hazard::resources::ActiveHazards>()
             .with_resource::<crate::protocol::protocols::greed::GreedStacks>()
+            .with_resource::<crate::protocol::protocols::siphon::SiphonStreak>()
             .with_system(Update, reset_run_state)
             .build()
     }

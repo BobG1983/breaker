@@ -90,7 +90,7 @@ pub struct ActiveProtocols {
 
 impl ActiveProtocols {
     /// Insert or replace an active protocol keyed on its kind.
-    pub(crate) fn insert(&mut self, def: ProtocolDefinition) {
+    pub fn insert(&mut self, def: ProtocolDefinition) {
         self.protocols.insert(def.kind(), def);
     }
 
@@ -113,6 +113,14 @@ impl ActiveProtocols {
     /// definition payload.
     pub fn iter_kinds(&self) -> impl Iterator<Item = ProtocolKind> + '_ {
         self.protocols.keys().copied()
+    }
+
+    /// Remove a single protocol from the active set by kind. No-op when the
+    /// kind is not present. Exposed `pub` so the scenario runner's mutation
+    /// system can drive the cleanup-on-removal contract without reaching
+    /// into `breaker-game` internals.
+    pub fn remove(&mut self, kind: ProtocolKind) {
+        self.protocols.remove(&kind);
     }
 
     /// Remove every active protocol. Called by `reset_run_state` between runs.

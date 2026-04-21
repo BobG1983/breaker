@@ -10,15 +10,15 @@ use bevy::prelude::*;
 use super::definition::{ProtocolKind, ProtocolTuning};
 
 pub(crate) mod afterimage;
-pub(crate) mod burnout;
+pub mod burnout;
 pub(crate) mod conductor;
 pub(crate) mod debt_collector;
 pub(crate) mod echo_strike;
 pub(crate) mod fission;
-pub(crate) mod greed;
+pub mod greed;
 pub(crate) mod iron_curtain;
 pub(crate) mod reckless_dash;
-pub(crate) mod siphon;
+pub mod siphon;
 pub(crate) mod tier_regression;
 
 /// Entry point called by `dispatch_protocol_selection` when a custom-system

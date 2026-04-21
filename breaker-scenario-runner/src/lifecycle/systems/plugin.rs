@@ -39,12 +39,13 @@ use crate::{
         check_aabb_matches_entity_dimensions, check_bolt_birthing_layers_zeroed,
         check_bolt_count_reasonable, check_bolt_in_bounds, check_bolt_speed_accurate,
         check_breaker_count_reasonable, check_breaker_in_bounds, check_breaker_position_clamped,
-        check_chain_arc_count_reasonable, check_chip_offer_expected, check_chip_stacks_consistent,
-        check_exactly_one_primary_bolt, check_gravity_well_count_reasonable,
-        check_hazard_stack_valid, check_maxed_chip_never_offered, check_no_entity_leaks,
-        check_no_nan, check_offering_no_duplicates, check_pulse_ring_accumulation,
-        check_run_stats_monotonic, check_second_wind_wall_at_most_one,
-        check_shield_wall_at_most_one, check_timer_monotonically_decreasing,
+        check_burnout_heat_clamped, check_chain_arc_count_reasonable, check_chip_offer_expected,
+        check_chip_stacks_consistent, check_exactly_one_primary_bolt,
+        check_gravity_well_count_reasonable, check_greed_stacks_orphaned, check_hazard_stack_valid,
+        check_maxed_chip_never_offered, check_no_entity_leaks, check_no_nan,
+        check_offering_no_duplicates, check_pulse_ring_accumulation, check_run_stats_monotonic,
+        check_second_wind_wall_at_most_one, check_shield_wall_at_most_one,
+        check_siphon_streak_orphaned, check_timer_monotonically_decreasing,
         check_timer_non_negative, check_valid_breaker_state,
     },
     types::{InvariantKind, ScenarioDefinition},
@@ -121,7 +122,7 @@ fn playing_gate(stats: Option<Res<ScenarioStats>>) -> bool {
 /// Registers each `FixedUpdate` invariant checker that is in the active set.
 ///
 /// Uses a macro to avoid repeating the identical ordering constraints
-/// (`.run_if(playing_gate).after(...).before(...)`) for all 22 checkers.
+/// (`.run_if(playing_gate).after(...).before(...)`) for all 27 checkers.
 fn register_active_checkers(app: &mut App, active: &HashSet<InvariantKind>) {
     macro_rules! register_checker {
         ($kind:expr, $system:expr) => {
@@ -208,6 +209,18 @@ fn register_active_checkers(app: &mut App, active: &HashSet<InvariantKind>) {
     register_checker!(
         InvariantKind::ExactlyOnePrimaryBolt,
         check_exactly_one_primary_bolt
+    );
+    register_checker!(
+        InvariantKind::BurnoutHeatClamped,
+        check_burnout_heat_clamped
+    );
+    register_checker!(
+        InvariantKind::GreedStacksOrphaned,
+        check_greed_stacks_orphaned
+    );
+    register_checker!(
+        InvariantKind::SiphonStreakOrphaned,
+        check_siphon_streak_orphaned
     );
 }
 
@@ -322,7 +335,10 @@ pub(crate) const fn is_fixed_update_checker(kind: InvariantKind) -> bool {
         | InvariantKind::BreakerCountReasonable
         | InvariantKind::BoltBirthingLayersZeroed
         | InvariantKind::HazardStackValid
-        | InvariantKind::ExactlyOnePrimaryBolt => true,
+        | InvariantKind::ExactlyOnePrimaryBolt
+        | InvariantKind::BurnoutHeatClamped
+        | InvariantKind::GreedStacksOrphaned
+        | InvariantKind::SiphonStreakOrphaned => true,
         InvariantKind::ChipOfferExpected => false,
     }
 }
@@ -333,7 +349,7 @@ pub(crate) const fn is_fixed_update_checker(kind: InvariantKind) -> bool {
 /// Takes the union of `disallowed_failures` and `allowed_failures` (if
 /// present), filtered to only kinds where `is_fixed_update_checker` returns
 /// `true`. When both lists are empty/None, or when the filtered set is empty,
-/// returns all 22 `FixedUpdate`-batch kinds as a fallback.
+/// returns all 27 `FixedUpdate`-batch kinds as a fallback.
 pub(crate) fn active_invariant_kinds(definition: &ScenarioDefinition) -> HashSet<InvariantKind> {
     let mut set: HashSet<InvariantKind> = definition
         .disallowed_failures
@@ -355,7 +371,7 @@ pub(crate) fn active_invariant_kinds(definition: &ScenarioDefinition) -> HashSet
         // AND the health check for scenarios like
         // chip_offer_expected_self_test.scenario.ron where only
         // ChipOfferExpected is in the lists (non-FixedUpdate kind
-        // filtered out -> empty set -> all 21 registered).
+        // filtered out -> empty set -> all 27 registered).
         InvariantKind::ALL
             .iter()
             .copied()
@@ -404,12 +420,12 @@ mod tests {
         );
     }
 
-    /// Behavior 3: Exhaustive coverage — exactly 23 variants return `true`,
-    /// exactly 1 returns `false` (`ChipOfferExpected`), total = 24 = `ALL.len()`.
+    /// Behavior 3: Exhaustive coverage — exactly 27 variants return `true`,
+    /// exactly 1 returns `false` (`ChipOfferExpected`), total = 28 = `ALL.len()`.
     #[test]
     fn is_fixed_update_checker_covers_every_invariant_kind_variant() {
         let total = InvariantKind::ALL.len();
-        assert_eq!(total, 25, "expected 25 InvariantKind variants in ALL");
+        assert_eq!(total, 28, "expected 28 InvariantKind variants in ALL");
 
         let fixed_update_count = InvariantKind::ALL
             .iter()
@@ -418,8 +434,8 @@ mod tests {
         let non_fixed_update_count = total - fixed_update_count;
 
         assert_eq!(
-            fixed_update_count, 24,
-            "expected exactly 24 FixedUpdate checker kinds, got {fixed_update_count}"
+            fixed_update_count, 27,
+            "expected exactly 27 FixedUpdate checker kinds, got {fixed_update_count}"
         );
         assert_eq!(
             non_fixed_update_count, 1,
@@ -443,9 +459,9 @@ mod tests {
     // -----------------------------------------------------------------
 
     /// Behavior 4: Empty `disallowed_failures` and None `allowed_failures` returns
-    /// all 23 `FixedUpdate` kinds.
+    /// all 27 `FixedUpdate` kinds.
     #[test]
-    fn active_invariant_kinds_returns_all_24_when_both_lists_empty() {
+    fn active_invariant_kinds_returns_all_27_when_both_lists_empty() {
         let def = ScenarioDefinition {
             disallowed_failures: vec![],
             allowed_failures: None,
@@ -454,8 +470,8 @@ mod tests {
         let active = active_invariant_kinds(&def);
         assert_eq!(
             active.len(),
-            24,
-            "expected 24 active kinds when both lists empty, got {}",
+            27,
+            "expected 27 active kinds when both lists empty, got {}",
             active.len()
         );
         assert!(
@@ -464,9 +480,9 @@ mod tests {
         );
     }
 
-    /// Behavior 4 edge case: Empty vec with Some(vec![]) also returns all 24.
+    /// Behavior 4 edge case: Empty vec with Some(vec![]) also returns all 27.
     #[test]
-    fn active_invariant_kinds_returns_all_24_when_allowed_is_empty_some() {
+    fn active_invariant_kinds_returns_all_27_when_allowed_is_empty_some() {
         let def = ScenarioDefinition {
             disallowed_failures: vec![],
             allowed_failures: Some(vec![]),
@@ -475,8 +491,8 @@ mod tests {
         let active = active_invariant_kinds(&def);
         assert_eq!(
             active.len(),
-            24,
-            "expected 24 active kinds when both lists effectively empty, got {}",
+            27,
+            "expected 27 active kinds when both lists effectively empty, got {}",
             active.len()
         );
         assert!(
@@ -595,7 +611,7 @@ mod tests {
     }
 
     /// Behavior 9 edge case: `ChipOfferExpected` as the only entry triggers
-    /// fallback to all 23 `FixedUpdate` kinds.
+    /// fallback to all 27 `FixedUpdate` kinds.
     #[test]
     fn active_invariant_kinds_chip_offer_expected_only_triggers_fallback() {
         let def = ScenarioDefinition {
@@ -606,8 +622,8 @@ mod tests {
         let active = active_invariant_kinds(&def);
         assert_eq!(
             active.len(),
-            24,
-            "expected 24 active kinds (fallback) when only ChipOfferExpected is listed, got {}",
+            27,
+            "expected 27 active kinds (fallback) when only ChipOfferExpected is listed, got {}",
             active.len()
         );
         assert!(

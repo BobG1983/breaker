@@ -62,6 +62,24 @@ pub enum InvariantKind {
     /// entity exists. Catches Conductor-protocol swap bugs where the marker is
     /// briefly absent or double-assigned.
     ExactlyOnePrimaryBolt,
+    /// Every [`BurnoutHeat`](breaker::protocol::protocols::burnout::system::BurnoutHeat)
+    /// component in the world has `heat` within `[0.0, 1.0]` (inclusive) and
+    /// `still_timer >= 0.0` at every frame.
+    BurnoutHeatClamped,
+    /// CONTRACT: `GreedStacks.skips > 0` is only legal when
+    /// `ActiveProtocols` contains `ProtocolKind::Greed`.
+    ///
+    /// Fires when Greed is NOT active but `GreedStacks.skips > 0`, indicating
+    /// orphaned skip state leaked from a prior run or protocol removal without
+    /// cleanup.
+    GreedStacksOrphaned,
+    /// CONTRACT: `SiphonStreak.kill_count > 0` is only legal when
+    /// `ActiveProtocols` contains `ProtocolKind::Siphon`.
+    ///
+    /// Fires when Siphon is NOT active but `SiphonStreak.kill_count > 0`,
+    /// indicating orphaned streak state leaked from a prior run or protocol
+    /// removal without cleanup.
+    SiphonStreakOrphaned,
 }
 
 impl InvariantKind {
@@ -96,6 +114,9 @@ impl InvariantKind {
         Self::BoltBirthingLayersZeroed,
         Self::HazardStackValid,
         Self::ExactlyOnePrimaryBolt,
+        Self::BurnoutHeatClamped,
+        Self::GreedStacksOrphaned,
+        Self::SiphonStreakOrphaned,
     ];
 
     /// Standard human-readable fail reason for this invariant violation.
@@ -132,6 +153,15 @@ impl InvariantKind {
             Self::BoltBirthingLayersZeroed => "birthing bolt has non-zero collision layers",
             Self::HazardStackValid => "hazard stack count is zero (should never happen)",
             Self::ExactlyOnePrimaryBolt => "PrimaryBolt count is not exactly 1 while bolts exist",
+            Self::BurnoutHeatClamped => {
+                "BurnoutHeat.heat outside [0.0, 1.0] or still_timer negative"
+            }
+            Self::GreedStacksOrphaned => {
+                "GreedStacks.skips > 0 while Greed is not active in ActiveProtocols"
+            }
+            Self::SiphonStreakOrphaned => {
+                "SiphonStreak.kill_count > 0 while Siphon is not active in ActiveProtocols"
+            }
         }
     }
 }
