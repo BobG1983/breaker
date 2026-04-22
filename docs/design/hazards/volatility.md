@@ -51,7 +51,7 @@ Attached via `Added<Cell>` to every spawned cell while Volatility is active. Tim
 ### `attach_volatility_timer`
 - **Schedule**: `FixedUpdate`.
 - **run_if**: `hazard_active(HazardKind::Volatility)` + `in_state(NodeState::Playing)`.
-- **Query**: `Query<(Entity, &Hp), Added<Cell>>` — `Added<Cell>` fires once per entity on spawn. No every-tick `Without<VolatilityTimer>` scan (per TODO #9 attach-system-migration).
+- **Query**: `Query<(Entity, &Hp), Added<Cell>>` — `Added<Cell>` fires once per entity on spawn. No every-tick `Without<VolatilityTimer>` scan (per TODO #8 attach-system-migration).
 - **Behavior**: For each newly spawned cell:
   1. Insert `VolatilityTimer { elapsed: 0.0 }`.
   2. Lift `Hp.max = Some(hp.max.map_or(target, |m| m.max(target)))` where `target = hp.starting * max_multiplier`.

@@ -142,7 +142,7 @@ Gravity Surge tests update: same.
 
 ## Dependencies
 
-- **TODO #2 (mutators domain refactor)** — hazards live at `mutators/hazards/` post-refactor. Paths assume that. Must land after #2.
+- **TODO #1 (mutators domain refactor)** — hazards live at `mutators/hazards/` post-refactor. Paths assume that. Must land after #2.
 
 ## Ordering
 

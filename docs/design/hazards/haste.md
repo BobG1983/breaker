@@ -52,7 +52,7 @@ Multiplicative with OTHER speed modifiers (chip `SpeedBoost`, Overcharge, protoc
 
 ## Cross-Domain Dependencies
 - **bolt**: Consumes `EffectStack<SpeedBoostConfig>` aggregate during movement integration. Owns `Velocity2D` write.
-- **effect_v3 / rantzsoft_dmg**: Provides `EffectStack` + `SpeedBoostConfig` (survives post-TODO #1 — only `DamageBoostConfig` / `VulnerableConfig` retired).
+- **effect_v3 / rantzsoft_dmg**: Provides `EffectStack` + `SpeedBoostConfig` (survives post-TODO #0 — only `DamageBoostConfig` / `VulnerableConfig` retired).
 
 ## Expected Behaviors (for test specs)
 

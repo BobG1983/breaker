@@ -15,7 +15,7 @@ Prism adds zero design value — its `TimePenalty(7.0)` on bolt-lost is function
 
 ## Prerequisite
 
-Blocked on TODO #1–#3 landing first. Reasons:
+Blocked on TODO #0–#3 landing first. Reasons:
 - **#2 (mutators domain refactor)** moves Reckless Dash from `protocol/protocols/reckless_dash/` to `mutators/protocols/reckless_dash/`. Adding a transition-detection system to Reckless Dash before #2 means doing the work twice.
 - **#1 (death pipeline crate)** is conceptually adjacent; keeping this remediation after the crate settles avoids entangling bolt-lifecycle changes with damage-pipeline changes.
 - **#3 (Greed skip button)** is small and should land before this to keep the chip-select UI in a complete state during the rework.

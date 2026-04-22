@@ -108,7 +108,7 @@ This migration has a regression-test requirement: spawn a phantom, fire a bolt, 
 
 ### Lifespan-end dispatch via unified death pipeline
 
-Phantom breakers integrate with the death pipeline introduced in TODO #1 (`rantzsoft_dmg`). The pipeline defines `DespawnEntity { entity: Entity }` as the single despawn primitive consumed by `process_despawn_requests` in `FixedPostUpdate`. This is the one authorized despawn path.
+Phantom breakers integrate with the death pipeline introduced in TODO #0 (`rantzsoft_dmg`). The pipeline defines `DespawnEntity { entity: Entity }` as the single despawn primitive consumed by `process_despawn_requests` in `FixedPostUpdate`. This is the one authorized despawn path.
 
 **`KillYourself<Breaker>` cannot be used.** `handle_breaker_death` (the specialized Breaker kill handler) emits `RunLost` on every `KillYourself<Breaker>` — a phantom expiring would end the player's run. Phantom death is not a run-ending event.
 
@@ -224,12 +224,12 @@ Global-singleton enforcement (despawn existing phantoms before spawning a new on
 
 ## Dependencies
 
-- **TODO #1 (unified death pipeline crate)** — `DespawnEntity` message, `DeathPipelineSystems::ProcessDespawn` set, and `process_despawn_requests` system all move to the crate. `tick_phantom_breaker_lifespan` writes the crate's message. Must land after #1.
-- **TODO #2 (mutators domain refactor)** — afterimage moves to `mutators/protocols/afterimage/`. The phantom-builder migration touches files under the new path. Must land after #2.
+- **TODO #0 (unified death pipeline crate)** — `DespawnEntity` message, `DeathPipelineSystems::ProcessDespawn` set, and `process_despawn_requests` system all move to the crate. `tick_phantom_breaker_lifespan` writes the crate's message. Must land after #1.
+- **TODO #1 (mutators domain refactor)** — afterimage moves to `mutators/protocols/afterimage/`. The phantom-builder migration touches files under the new path. Must land after #2.
 
 ## Ordering
 
-Lands after TODO #1 and TODO #2. Independent of TODO #3 (greed skip) and TODO #4 (bolt-loss behavior) — can interleave with them.
+Lands after TODO #0 and TODO #1. Independent of TODO #2 (greed skip) and TODO #3 (bolt-loss behavior) — can interleave with them.
 
 Companion: `bolt-builder-phantom-transition.md` shares infra (`Lifespan`, `PhantomFlicker`, `tick_phantom_flicker`). Not bundled into this TODO per scope decision, but once this lands the bolt side is a smaller follow-up (builder method + bolt-specific lifespan tick; shared infra already in place).
 

@@ -69,7 +69,7 @@ Speed compounds multiplicatively per kill. Stack 3 with 10 kills = ~3× speed be
 - **bolt**: Consumes `EffectStack<SpeedBoostConfig>` aggregate. Owns `Velocity2D` write.
 - **damage crate (`rantzsoft_dmg`)**: Reads `Destroyed<Cell>` + `KilledBy` attribution.
 - **breaker/bolt**: Reads `BumpPerformed`.
-- **effect_v3**: Provides `EffectStack` + `SpeedBoostConfig` (survives post-TODO #1).
+- **effect_v3**: Provides `EffectStack` + `SpeedBoostConfig` (survives post-TODO #0).
 
 ## Expected Behaviors (for test specs)
 

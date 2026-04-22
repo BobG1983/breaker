@@ -31,7 +31,7 @@ Resource — one global wind affecting all bolts.
 
 ## Messages
 **Reads**: `Time` for delta; `Option<Res<ActiveHazards>>` for stack; `Option<ResMut<GameRng>>` for new direction selection.
-**Sends**: `ApplyBoltForce { bolt: Entity, force: Vec2 }` — one per active bolt per tick. Bolt-domain consumer aggregates forces in `FixedUpdate` before `BoltSystems::IntegrateMotion` (per TODO #8). Drift does NOT write `Velocity2D` directly.
+**Sends**: `ApplyBoltForce { bolt: Entity, force: Vec2 }` — one per active bolt per tick. Bolt-domain consumer aggregates forces in `FixedUpdate` before `BoltSystems::IntegrateMotion` (per TODO #7). Drift does NOT write `Velocity2D` directly.
 
 ## Systems
 

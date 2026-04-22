@@ -24,7 +24,7 @@ None owned by Conductor. Uses existing `PrimaryBolt` / `ExtraBolt` markers + `Bo
 
 ## Messages
 **Reads**: `BumpPerformed { grade, bolt }` (breaker domain).
-**Sends**: `SwapBoltRoles { old_primary: Entity, new_primary: Entity }` (new bolt-domain message introduced in TODO #9). Bolt domain's consumer performs the marker + effect swap in one transactional call — Conductor does NOT write `PrimaryBolt` / `ExtraBolt` markers directly from the protocol domain.
+**Sends**: `SwapBoltRoles { old_primary: Entity, new_primary: Entity }` (new bolt-domain message introduced in TODO #8). Bolt domain's consumer performs the marker + effect swap in one transactional call — Conductor does NOT write `PrimaryBolt` / `ExtraBolt` markers directly from the protocol domain.
 
 ## Systems
 

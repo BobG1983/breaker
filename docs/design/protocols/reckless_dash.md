@@ -23,7 +23,7 @@ pub(crate) struct RecklessDashConfig {
 ```
 
 ## Components
-None owned by Reckless Dash post-TODO #4 — the anti-feedback guard + `RiskyDamageBoost` component are retired. Damage amplification rides the shared `DamageBoostStack` (Pattern B, one-shot).
+None owned by Reckless Dash post-TODO #3 — the anti-feedback guard + `RiskyDamageBoost` component are retired. Damage amplification rides the shared `DamageBoostStack` (Pattern B, one-shot).
 
 ## Messages
 **Reads**: `BumpPerformed { grade, bolt, breaker }` (breaker domain), `BoltLost { bolt }` (bolt-lifecycle).
@@ -48,7 +48,7 @@ None owned by Reckless Dash post-TODO #4 — the anti-feedback guard + `RiskyDam
 - **Writes**: `DamageBoostStack::add_one_shot(multiplier)` on the bolt — Pattern B, consume-on-use.
 - **Consumed in**: `DeathPipelineSystems::ApplyDamageBoosts` — when the next `DamageDealt<Cell>` for that bolt aggregates, the one-shot multiplies in and is cleared.
 - **No damage emission** from Reckless Dash; no `VulnerableStack` interaction.
-- **Bolt loss double-penalty** invokes the `BoltLossBehavior` handler (TODO #4) twice; not part of the death pipeline.
+- **Bolt loss double-penalty** invokes the `BoltLossBehavior` handler (TODO #3) twice; not part of the death pipeline.
 
 ## Cross-Domain Dependencies
 - **breaker**: Reads `BumpPerformed`. Reads `DashState` (active state + progress).
@@ -73,4 +73,4 @@ None owned by Reckless Dash post-TODO #4 — the anti-feedback guard + `RiskyDam
 - **Dash ends between bump and cell impact**: one-shot persists on the bolt regardless of dash state change — it was earned at bump time.
 - **Bolt has one-shot but is lost before cell impact**: one-shot disappears with the bolt entity.
 - **No `RiskyDamageBoost` component**: retired. All damage amplification lives in `DamageBoostStack::one_shots` (crate-owned).
-- **No anti-feedback guard**: retired per TODO #4. `BoltLossBehavior` is idempotent-per-call; the second invocation is safe.
+- **No anti-feedback guard**: retired per TODO #3. `BoltLossBehavior` is idempotent-per-call; the second invocation is safe.

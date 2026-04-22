@@ -68,7 +68,7 @@ Marker on spawned ghost cells. Used to filter ghost-of-ghost recursion.
 
 ## Stacking Behavior
 
-Exponential: `ghost_hp = base_hp * 2^(stack - 1)` (uses `HpScaling::Doubles` shape post-TODO #9).
+Exponential: `ghost_hp = base_hp * 2^(stack - 1)` (uses `HpScaling::Doubles` shape post-TODO #8).
 
 | Stack | Ghost HP | Notes |
 |-------|----------|-------|

@@ -13,10 +13,10 @@ Phantom bolts today are broken across multiple axes:
 
 ## Scope
 
-**In scope: phantom bolts.** This TODO consolidates three remediation files and delivers the full bolt-side phantom refactor. Reuses shared infra (`Lifespan`, `PhantomFlicker`, `tick_phantom_flicker`) introduced by TODO #5.
+**In scope: phantom bolts.** This TODO consolidates three remediation files and delivers the full bolt-side phantom refactor. Reuses shared infra (`Lifespan`, `PhantomFlicker`, `tick_phantom_flicker`) introduced by TODO #4.
 
 Out of scope:
-- Phantom breakers (TODO #5).
+- Phantom breakers (TODO #4).
 - Phase 5 polished phantom visual (placeholder flicker only).
 - Cross-cutting placeholder VFX for non-phantom items (drift arrow, echo ghost tint, etc. — tracked separately in `placeholder-vfx-for-deferred-items.md`).
 
@@ -188,7 +188,7 @@ Default collision mask (`CELL_LAYER | WALL_LAYER | BREAKER_LAYER`) is correct fo
 
 **Real breakers (`bolt/systems/bolt_breaker_collision/system.rs`):** NO `With<PhantomBolt>` branch in the real-breaker-hit path. If one exists today, **delete it.** Phantoms bounce off real breakers identically to non-phantom bolts; `BoltImpactBreaker` still emits; bump grading runs; `LastImpact` and `PiercingRemaining` update.
 
-**Phantom breakers (same file):** The phantom-breaker-specific skip-tilt/skip-spread/skip-last-impact/skip-piercing branches from TODO #5 are per-phantom-*breaker* (gated `With<PhantomBreaker>` on the breaker side), NOT per-phantom-*bolt*. This TODO does not touch those branches.
+**Phantom breakers (same file):** The phantom-breaker-specific skip-tilt/skip-spread/skip-last-impact/skip-piercing branches from TODO #4 are per-phantom-*breaker* (gated `With<PhantomBreaker>` on the breaker side), NOT per-phantom-*bolt*. This TODO does not touch those branches.
 
 **Cells (`bolt/systems/bolt_cell_collision/system.rs`):** THE ONLY phantom-bolt-specific branch.
 
@@ -233,11 +233,11 @@ fn tick_bolt_lifespan(
 
 Non-phantom bolts with a lifespan and no `LifetimeEndBehavior` default to `Despawn` (existing behavior preserved via `.unwrap_or(Despawn)`).
 
-Runs in `FixedUpdate`, ordered before `DeathPipelineSystems::ProcessDespawn`. `DespawnEntity` is the unified death pipeline's single despawn primitive (TODO #1).
+Runs in `FixedUpdate`, ordered before `DeathPipelineSystems::ProcessDespawn`. `DespawnEntity` is the unified death pipeline's single despawn primitive (TODO #0).
 
 ### Migration: afterimage `spawn_phantom_bolt`
 
-Open `breaker-game/src/protocol/protocols/afterimage/system/spawn_phantom_bolt.rs` (under TODO #2, this path becomes `mutators/protocols/afterimage/system/spawn_phantom_bolt.rs`).
+Open `breaker-game/src/protocol/protocols/afterimage/system/spawn_phantom_bolt.rs` (under TODO #1, this path becomes `mutators/protocols/afterimage/system/spawn_phantom_bolt.rs`).
 
 **Delete the extra-bolt spawn entirely.** The current `.extra().headless().spawn(...)` + post-spawn marker insertion block comes out. Replace with the mutate-in-place call on the real bolt:
 
@@ -368,7 +368,7 @@ if existing_count >= config.max_active {
 | `bolt/components/phantom.rs` (same file) | `Bolt::become_phantom(commands, entity, dedup_key)` and `PhantomBolt::become_normal(commands, entity)` associated functions. |
 | `bolt/systems/tick_bolt_lifespan.rs` (or wherever the current tick lives) | Read `LifetimeEndBehavior`, branch `Despawn` → `DespawnEntity` message, `RevertToNormalBolt` → `PhantomBolt::become_normal`. Default to `Despawn` when component absent. |
 | `bolt/systems/bolt_wall_collision/system.rs` | AUDIT: delete any `With<PhantomBolt>` branch. Phantom bolts rebound off walls identically to normal. |
-| `bolt/systems/bolt_breaker_collision/system.rs` | AUDIT: delete any `With<PhantomBolt>` branch in the real-breaker path. Phantom-breaker-side branches (TODO #5) unchanged. |
+| `bolt/systems/bolt_breaker_collision/system.rs` | AUDIT: delete any `With<PhantomBolt>` branch in the real-breaker path. Phantom-breaker-side branches (TODO #4) unchanged. |
 | `bolt/systems/bolt_cell_collision/system.rs` | Keep phantom branch at `:41,89,101`: dedup via `PhantomDamagedCells`, emit `DamageDealt<Cell>` once, skip velocity flip. |
 | `bolt/systems/phantom_bolt_tests/` (new) | Generic phantom-bolt collision suite. |
 | `mutators/protocols/afterimage/system/spawn_phantom_bolt.rs` | Rewrite: mutate real bolt via `Bolt::become_phantom` instead of spawning new. Delete all `commands.spawn(...)` + `.extra().headless()` + post-spawn-marker-insertion code. |
@@ -382,13 +382,13 @@ if existing_count >= config.max_active {
 
 ## Dependencies
 
-- **TODO #1 (unified death pipeline crate)** — `DespawnEntity` message + `DeathPipelineSystems::ProcessDespawn` set + `process_despawn_requests`. The `LifetimeEndBehavior::Despawn` branch writes the crate's message. Must land after #1.
-- **TODO #2 (mutators domain refactor)** — afterimage moves to `mutators/protocols/afterimage/`. The afterimage migration touches files under the new path. Must land after #2.
-- **TODO #5 (phantom breaker)** — introduces shared `Lifespan`, `PhantomFlicker`, `tick_phantom_flicker` components/systems. Phantom bolts reuse them without re-introducing. `LifetimeEndBehavior` is NEW in this TODO (bolt-only enum; breakers unconditionally despawn).
+- **TODO #0 (unified death pipeline crate)** — `DespawnEntity` message + `DeathPipelineSystems::ProcessDespawn` set + `process_despawn_requests`. The `LifetimeEndBehavior::Despawn` branch writes the crate's message. Must land after #1.
+- **TODO #1 (mutators domain refactor)** — afterimage moves to `mutators/protocols/afterimage/`. The afterimage migration touches files under the new path. Must land after #2.
+- **TODO #4 (phantom breaker)** — introduces shared `Lifespan`, `PhantomFlicker`, `tick_phantom_flicker` components/systems. Phantom bolts reuse them without re-introducing. `LifetimeEndBehavior` is NEW in this TODO (bolt-only enum; breakers unconditionally despawn).
 
 ## Ordering
 
-Lands after TODO #1, #2, #5. Independent of #3 (greed skip) and #4 (bolt-loss behavior) — can interleave.
+Lands after TODO #0, #2, #5. Independent of #3 (greed skip) and #4 (bolt-loss behavior) — can interleave.
 
 ## Subsumes
 
@@ -418,7 +418,7 @@ Out of scope:
 - Phase 5 polished phantom visual (placeholder flicker only)
 - Changes to WHEN afterimage triggers phantom mode (Perfect bump on phantom breaker stays the trigger)
 - Changes to `SpawnPhantomConfig` chip behavior beyond spawn-path migration
-- Phantom breaker (TODO #5)
+- Phantom breaker (TODO #4)
 
 ## TODO entry
 

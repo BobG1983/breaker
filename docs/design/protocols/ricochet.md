@@ -1,7 +1,7 @@
 # Protocol: Ricochet
 
 ## Category
-`code-driven` (per TODO #7 — previously `effect-tree`; now dispatched from code).
+`code-driven` (per TODO #6 — previously `effect-tree`; now dispatched from code).
 
 ## Game Design
 You WANT to aim for walls, not cells.

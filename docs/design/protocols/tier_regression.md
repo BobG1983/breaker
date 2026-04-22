@@ -31,7 +31,7 @@ State/run consumer (owned by state/run, not TierRegression):
 - Reads `RegressTier` message.
 - Decrements `NodeOutcome.tier` by 1 (clamped to a minimum tier floor — TBD design: tier 0 or tier 1).
 - Resets `NodeOutcome.position_in_tier` to 0.
-- Regenerates or rewinds the active tier's nodes (exact mechanism depends on the TODO #16 node-sequencing refactor — generation is deterministic from the seed, so regenerating the previous tier's nodes uses the same inputs).
+- Regenerates or rewinds the active tier's nodes (exact mechanism depends on the TODO #15 node-sequencing refactor — generation is deterministic from the seed, so regenerating the previous tier's nodes uses the same inputs).
 
 Tier Regression does NOT write `NodeSequence` or `NodeOutcome` directly — state/run owns both.
 
@@ -59,9 +59,9 @@ Tier Regression does NOT write `NodeSequence` or `NodeOutcome` directly — stat
 
 ## Edge Cases
 - **Tier 0 / minimum tier regression**: state/run clamps. Ideally the protocol is not offered when regression has no effect; if it is and the player picks it, the regression is a no-op (wasted pick).
-- **Infinite mode tier calculation**: regression decrements and the state/run consumer handles regeneration deterministically from the seed. Depends on the node-sequencing refactor (TODO #16) providing tier-scoped regeneration.
+- **Infinite mode tier calculation**: regression decrements and the state/run consumer handles regeneration deterministically from the seed. Depends on the node-sequencing refactor (TODO #15) providing tier-scoped regeneration.
 - **Hazard selection interaction**: the player still gets hazard offerings post-regression if tier 9+ — the hazard stack grows regardless of tier regression.
 - **Protocol re-offering**: once in `ActiveProtocols`, not offered again. Rejection returns it to the eligible pool.
 - **Node-sequence integrity**: regression must not corrupt the sequence. The state/run consumer is authoritative.
-- **Return-to-normal after regression**: open design — does the player resume from the tier they were at, or advance from the regressed tier? TBD (tied to TODO #16).
+- **Return-to-normal after regression**: open design — does the player resume from the tier they were at, or advance from the regressed tier? TBD (tied to TODO #15).
 - **Run-seed determinism**: regenerated nodes are deterministic from the seed.

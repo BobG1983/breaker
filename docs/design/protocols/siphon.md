@@ -34,7 +34,7 @@ Resource, not a component — tracks the global kill streak regardless of which 
 
 ## Messages
 **Reads**: `Destroyed<Cell>` (from `rantzsoft_dmg`).
-**Sends**: `IncreaseNodeTimer { delta: f32 }` (renamed from `ReverseTimePenalty` per TODO #4). Clamped by the consumer to `NodeTimer::total`.
+**Sends**: `IncreaseNodeTimer { delta: f32 }` (renamed from `ReverseTimePenalty` per TODO #3). Clamped by the consumer to `NodeTimer::total`.
 
 ## Systems
 

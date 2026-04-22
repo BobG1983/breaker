@@ -1,7 +1,7 @@
 # Protocol: Deadline
 
 ## Category
-`code-driven` (per TODO #7 — previously `effect-tree`; now dispatched from code via the stamp dispatcher + fire/reverse commands).
+`code-driven` (per TODO #6 — previously `effect-tree`; now dispatched from code via the stamp dispatcher + fire/reverse commands).
 
 ## Game Design
 You WANT to slow-play 75% of the node, then explode in the danger zone.

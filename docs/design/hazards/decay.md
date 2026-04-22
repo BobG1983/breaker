@@ -20,8 +20,8 @@ Populated from `HazardTuning::Decay`.
 None.
 
 ## Messages
-**Reads**: `Time` for delta, `Option<Res<ActiveHazards>>` for stack count (harness-safety: `Option<Res>` so the system is usable in tests without the full `HazardPlugin` installed — per TODO #9).
-**Sends**: `ReduceNodeTimer { delta: f32 }` (renamed from `ApplyTimePenalty` per TODO #4 — field `seconds` renamed to `delta`). Owned by `state/run/node` domain.
+**Reads**: `Time` for delta, `Option<Res<ActiveHazards>>` for stack count (harness-safety: `Option<Res>` so the system is usable in tests without the full `HazardPlugin` installed — per TODO #8).
+**Sends**: `ReduceNodeTimer { delta: f32 }` (renamed from `ApplyTimePenalty` per TODO #3 — field `seconds` renamed to `delta`). Owned by `state/run/node` domain.
 
 ## Systems
 

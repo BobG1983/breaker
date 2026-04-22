@@ -8,7 +8,7 @@ This remediation consolidates both domains into a single `mutators/` domain with
 
 ## Prerequisite
 
-Depends on [TODO #1 — unified death pipeline crate](./unified-death-crate.md) landing first. The damage-mutator chain, `DamageBoostStack`/`VulnerableStack` components, and `SourceId` type all come from `rantzsoft_dmg`; this refactor assumes they're in place so `mutators/plugin.rs` can import them.
+Depends on [TODO #0 — unified death pipeline crate](./unified-death-crate.md) landing first. The damage-mutator chain, `DamageBoostStack`/`VulnerableStack` components, and `SourceId` type all come from `rantzsoft_dmg`; this refactor assumes they're in place so `mutators/plugin.rs` can import them.
 
 During the interim (crate landed, mutators refactor not yet done), the existing `hazard/` and `protocol/` plugins register chain members directly. Tests continue to pass; the architectural boundary is violated temporarily. Acceptable for the interim — this remediation closes it.
 
@@ -134,7 +134,7 @@ fn wire_damage_chain(app: &mut App) {
 
 ### Ordering rationale (game-side MutateDamage chain)
 
-The crate (TODO #1) already chains the broader pipeline:
+The crate (TODO #0) already chains the broader pipeline:
 
 ```
 EmitDamage → ApplyDamageBoosts → MutateDamage → ApplyVulnerable → ApplyDamage → ...
@@ -229,7 +229,7 @@ Fold into this remediation (stop tracking separately):
 
 Does NOT subsume (remain independent):
 
-- The unified death pipeline crate (TODO #1) — prerequisite, not subsumed.
+- The unified death pipeline crate (TODO #0) — prerequisite, not subsumed.
 - Per-protocol / per-hazard BEHAVIORAL remediations (anchor piercing, burnout speed boost via effect stack, fission spawn rewrite, etc.) — those are mechanic-internal and land independently.
 - Scenarios and invariant remediations — orthogonal.
 
@@ -319,9 +319,9 @@ Mostly existing tests move with their files. New tests required:
 - `docs/design/terminology/` — "mutator" becomes a domain term meaning "protocol or hazard." Keep "protocol" and "hazard" as kind-specific terms; add "mutator" as the umbrella.
 - Scenarios that spawn hazards or protocols for testing continue to work — the activation API is unchanged.
 
-## Ordering vs. TODO #1
+## Ordering vs. TODO #0
 
-TODO #1 (unified death pipeline crate) lands first. This refactor (TODO #2 — proposed) lands second. Rationale:
+TODO #0 (unified death pipeline crate) lands first. This refactor (TODO #1 — proposed) lands second. Rationale:
 
 - Crate move is smaller and unblocks more downstream remediations.
 - Mutators refactor is structural-only; it's valuable independent of when it lands.

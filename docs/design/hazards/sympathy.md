@@ -45,7 +45,7 @@ None. Sympathy is stateless — it reacts to damage events per-frame with no per
 ## Pipeline position (dmg crate)
 
 - **Post-apply reactor**: Sympathy reads `DamageDealt<Cell>` downstream of the damage-mutator chain and emits `HealDealt<Cell>`. Contrast with `MessageMutator<DamageDealt<Cell>>`-style hazards (Diffusion, Tether) that TRANSFORM the damage message inside `DeathPipelineSystems::MutateDamage` before apply.
-- Both classes live in `mutators/hazards/` post-TODO #2; the distinction is pipeline position, not domain.
+- Both classes live in `mutators/hazards/` post-TODO #1; the distinction is pipeline position, not domain.
 - **Ordering**: `sympathy_heal_adjacent` runs in `DeathPipelineSystems::EmitHeal`, ordered after the `MutateDamage` chain has run.
 - **No** `DamageBoostStack` / `VulnerableStack` / `Destroyed<T>` involvement.
 

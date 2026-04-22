@@ -2,12 +2,12 @@
 
 Per-mechanic remediation of every protocol and hazard that has broken or incorrect runtime behavior. Assumes all preceding TODOs have landed:
 
-- TODO #1 — `rantzsoft_dmg` crate (unified death pipeline, `DamageBoostStack`, `VulnerableStack`)
-- TODO #2 — `mutators/` domain (protocols + hazards consolidated, `wire_damage_chain`)
-- TODO #5 — Phantom breaker refactor
-- TODO #6 — Phantom bolt refactor
-- TODO #7 — Stamp dispatcher unification + code-driven Anchor/Deadline/Kickstart/Ricochet
-- TODO #8 — Bolt force message pipeline
+- TODO #0 — `rantzsoft_dmg` crate (unified death pipeline, `DamageBoostStack`, `VulnerableStack`)
+- TODO #1 — `mutators/` domain (protocols + hazards consolidated, `wire_damage_chain`)
+- TODO #4 — Phantom breaker refactor
+- TODO #5 — Phantom bolt refactor
+- TODO #6 — Stamp dispatcher unification + code-driven Anchor/Deadline/Kickstart/Ricochet
+- TODO #7 — Bolt force message pipeline
 
 ## Scope
 

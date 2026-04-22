@@ -80,7 +80,7 @@ Low-HP cells split easily on any non-lethal hit. High-HP cells resist — stack 
 ## Edge Cases
 - **Momentum + Diffusion**: Diffusion bleeds damage, preventing one-shot kills → non-lethal hits feed Momentum growth + splits. Feedback loop: trying to kill one cell strengthens neighbors.
 - **Momentum + Fracture**: Fracture creates 1-HP debris on death; Momentum splits create cells on survival. Triggers are disjoint — no conflict.
-- **Split cells inherit hazard attach**: new cells from splits go through the standard builder path and receive `Added<Cell>` attach hooks (Volatility timer, Renewal timer, etc. — per TODO #9 attach-system-migration).
+- **Split cells inherit hazard attach**: new cells from splits go through the standard builder path and receive `Added<Cell>` attach hooks (Volatility timer, Renewal timer, etc. — per TODO #8 attach-system-migration).
 - **Cascade chain**: a split-spawned cell adjacent to a dying cell gets Cascade-healed — combined with Momentum's HP growth, cells become very hard to kill. Intended trap.
 - **Overflow prevention**: a cell that accumulates massive HP (e.g., 100× starting) still only resets to 1× on split — self-regulating (more cells, each at base HP).
 - **Cleanup**: `Hp.starting` lives in the unified `Hp` component (cleaned up on despawn). `MomentumConfig` removed at run end.

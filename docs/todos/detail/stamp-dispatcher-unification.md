@@ -404,7 +404,7 @@ Sites B and C DELETED. No double-dispatch. No redundant watchers. Builders are t
 
 ### Code-driven migrations (parallel to dispatcher work)
 
-Four protocols peel off the dispatcher entirely — Anchor, Deadline, Kickstart, Ricochet. With all four code-driven, zero protocols use `stamp_root`. Each gets a module at `mutators/protocols/<name>/` (the `mutators/` relocation comes from TODO #2; Anchor's module already exists and needs finishing, the others are new).
+Four protocols peel off the dispatcher entirely — Anchor, Deadline, Kickstart, Ricochet. With all four code-driven, zero protocols use `stamp_root`. Each gets a module at `mutators/protocols/<name>/` (the `mutators/` relocation comes from TODO #1; Anchor's module already exists and needs finishing, the others are new).
 
 #### Anchor (`mutators/protocols/anchor/`)
 
@@ -641,8 +641,8 @@ Add §Dispatch Sites table naming the five sites (A–F excluding E which doesn'
 
 ## Dependencies
 
-- **TODO #1 (unified death pipeline crate)** — the reverse-effect path reacts to `DamageDealt<Cell>` via `damage-amplification-standardization.md` Pattern B, which rides the death pipeline's emit/mutate/apply chain. Must land after #1.
-- **TODO #2 (mutators domain refactor)** — new protocol modules `deadline/`, `kickstart/`, `ricochet/` land at `mutators/protocols/` (not `protocol/protocols/`). Must land after #2.
+- **TODO #0 (unified death pipeline crate)** — the reverse-effect path reacts to `DamageDealt<Cell>` via `damage-amplification-standardization.md` Pattern B, which rides the death pipeline's emit/mutate/apply chain. Must land after #1.
+- **TODO #1 (mutators domain refactor)** — new protocol modules `deadline/`, `kickstart/`, `ricochet/` land at `mutators/protocols/` (not `protocol/protocols/`). Must land after #2.
 
 ## Ordering
 

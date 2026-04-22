@@ -6,7 +6,7 @@
 
 ## Prerequisite
 
-Depends on TODO #1 (`rantzsoft_dmg` crate) landing. After that, Diffusion's BFS lives in `diffusion_mutate_damage` (a `MessageMutator<DamageDealt<Cell>>` chain member in `DeathPipelineSystems::MutateDamage`), not inside `apply_damage_to_cells` (deleted). This test seeds `DamageDealt<Cell>` and asserts on the mutated messages + emitted ring siblings.
+Depends on TODO #0 (`rantzsoft_dmg` crate) landing. After that, Diffusion's BFS lives in `diffusion_mutate_damage` (a `MessageMutator<DamageDealt<Cell>>` chain member in `DeathPipelineSystems::MutateDamage`), not inside `apply_damage_to_cells` (deleted). This test seeds `DamageDealt<Cell>` and asserts on the mutated messages + emitted ring siblings.
 
 Also depends on `fix-broken-protocols-and-hazards/grid.md` (orthogonal adjacency) if the test uses `CellGridPosition` — pick topology coordinates accordingly.
 

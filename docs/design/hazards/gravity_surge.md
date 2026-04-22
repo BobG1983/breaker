@@ -44,7 +44,7 @@ Gravity-well entity has a `Transform` at the destroyed cell's position and a `Gr
 
 ## Messages
 **Reads**: `Destroyed<Cell>` (from `rantzsoft_dmg`).
-**Sends**: `ApplyBoltForce { bolt: Entity, force: Vec2 }` per bolt per tick (bolt-domain consumer aggregates forces in `FixedUpdate` before `BoltSystems::IntegrateMotion` per TODO #8). Gravity Surge does NOT write `Velocity2D` directly.
+**Sends**: `ApplyBoltForce { bolt: Entity, force: Vec2 }` per bolt per tick (bolt-domain consumer aggregates forces in `FixedUpdate` before `BoltSystems::IntegrateMotion` per TODO #7). Gravity Surge does NOT write `Velocity2D` directly.
 
 ## Systems
 
@@ -78,7 +78,7 @@ The real danger at high stacks is well overlap. With 4+ second durations, destro
 
 ## Cross-Domain Dependencies
 - **cells / damage crate**: Reads `Destroyed<Cell>`.
-- **bolt**: Consumes `ApplyBoltForce`. Owns force-aggregation + `Velocity2D` write (per TODO #8). `ApplyBoltForce` is shared with Drift — the bolt consumer sums forces across sources.
+- **bolt**: Consumes `ApplyBoltForce`. Owns force-aggregation + `Velocity2D` write (per TODO #7). `ApplyBoltForce` is shared with Drift — the bolt consumer sums forces across sources.
 - **fx**: Reads `GravityWell` to render the telegraph.
 
 ## Expected Behaviors (for test specs)

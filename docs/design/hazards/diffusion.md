@@ -30,7 +30,7 @@ None.
 **Reads**: `DamageDealt<Cell>` (from `rantzsoft_dmg`).
 **Sends**: `DamageDealt<Cell>` — mutates the target's damage downward and emits additional messages for cells in the rings. All happens inside the `MutateDamage` chain.
 
-Post-TODO #2, Diffusion lives in `mutators/hazards/diffusion/` and participates in `DeathPipelineSystems::MutateDamage` as a `MessageMutator<DamageDealt<Cell>>`.
+Post-TODO #1, Diffusion lives in `mutators/hazards/diffusion/` and participates in `DeathPipelineSystems::MutateDamage` as a `MessageMutator<DamageDealt<Cell>>`.
 
 ## Systems
 
@@ -51,7 +51,7 @@ Post-TODO #2, Diffusion lives in `mutators/hazards/diffusion/` and participates 
 
 - **Pre-apply damage mutator** in `DeathPipelineSystems::MutateDamage`.
 - Reads `DamageDealt<Cell>`, transforms the original message's amount, emits additional `DamageDealt<Cell>` for cells in the rings. Result feeds `ApplyVulnerable` → `ApplyDamage`.
-- Lives in `mutators/hazards/diffusion/` (post-TODO #2 consolidated domain).
+- Lives in `mutators/hazards/diffusion/` (post-TODO #1 consolidated domain).
 - Uses the `MessageMutator<DamageDealt<Cell>>` pattern from `rantzsoft_dmg`.
 - **No** `HealDealt<T>` / `DamageBoostStack` interaction.
 
@@ -83,7 +83,7 @@ Post-TODO #2, Diffusion lives in `mutators/hazards/diffusion/` and participates 
 
 ## Edge Cases
 - **Diffusion + Sympathy**: Sympathy reads `DamageDealt<Cell>` AFTER Diffusion mutates (Sympathy runs in `EmitHeal`, downstream of `MutateDamage`). Sympathy heals based on post-split damage — intentional; makes Sympathy slightly less potent when Diffusion is active.
-- **Diffusion + Tether**: Both mutate damage. Tether also lives in `mutators/hazards/tether/` post-TODO #2. Ordering within `MutateDamage` chain is set by `wire_damage_chain` (TODO #2) — Diffusion first, then Tether; deterministic.
+- **Diffusion + Tether**: Both mutate damage. Tether also lives in `mutators/hazards/tether/` post-TODO #1. Ordering within `MutateDamage` chain is set by `wire_damage_chain` (TODO #1) — Diffusion first, then Tether; deterministic.
 - **Cascade depth overflow**: at very high stacks, rings can reach most of the level. Each ring's share attenuates naturally by count.
 - **Already-destroyed cells**: the range query is filtered by `Without<Dead>`, so shared damage doesn't target corpses.
 - **Self-referential**: the target entity is excluded from the ring queries.

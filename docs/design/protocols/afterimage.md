@@ -27,9 +27,9 @@ pub(crate) struct AfterimageConfig {
 Populated from `ProtocolTuning::Afterimage`.
 
 ## Components
-Afterimage owns no per-mechanic components. It spawns the phantom breaker via `Breaker::builder().phantom(BreakerPhantomParams { lifespan: config.phantom_breaker_lifespan })` (TODO #5 shared infra), which attaches `Lifespan` + `PhantomFlicker` + `PhantomBreaker` marker from the breaker domain.
+Afterimage owns no per-mechanic components. It spawns the phantom breaker via `Breaker::builder().phantom(BreakerPhantomParams { lifespan: config.phantom_breaker_lifespan })` (TODO #4 shared infra), which attaches `Lifespan` + `PhantomFlicker` + `PhantomBreaker` marker from the breaker domain.
 
-For the bolt mutation, it calls `Bolt::become_phantom(PhantomParams { lifespan, end_behavior: LifetimeEndBehavior::RevertToNormalBolt })` on the real bolt (TODO #6 builder API), attaching `PhantomBolt` + `Lifespan` + `LifetimeEndBehavior::RevertToNormalBolt`. On lifespan expiry, `PhantomBolt::become_normal` reverts the bolt in place.
+For the bolt mutation, it calls `Bolt::become_phantom(PhantomParams { lifespan, end_behavior: LifetimeEndBehavior::RevertToNormalBolt })` on the real bolt (TODO #5 builder API), attaching `PhantomBolt` + `Lifespan` + `LifetimeEndBehavior::RevertToNormalBolt`. On lifespan expiry, `PhantomBolt::become_normal` reverts the bolt in place.
 
 ## Messages
 **Reads**: `BumpPerformed { grade, bolt, breaker }` (breaker domain), `DashStateChanged` (breaker domain).
@@ -49,7 +49,7 @@ For the bolt mutation, it calls `Bolt::become_phantom(PhantomParams { lifespan, 
 - **Behavior**: Reads `BumpPerformed`. On `BumpGrade::Perfect` where `breaker` is a `PhantomBreaker` entity AND the real bolt does NOT already have `PhantomBolt`: calls `Bolt::become_phantom` on the bolt entity with `PhantomParams { lifespan: config.phantom_bolt_lifespan, end_behavior: LifetimeEndBehavior::RevertToNormalBolt }`. If the bolt IS already phantom, skip — uniqueness guard, duration NOT reset.
 - **Ordering**: `.after(BreakerSystems::GradeBump)`.
 
-Lifespan tick-down and revert-on-expiry are owned by the shared bolt/phantom infrastructure (TODO #6 `tick_lifespan` + `handle_lifetime_end_behavior`). Afterimage itself has no tick system.
+Lifespan tick-down and revert-on-expiry are owned by the shared bolt/phantom infrastructure (TODO #5 `tick_lifespan` + `handle_lifetime_end_behavior`). Afterimage itself has no tick system.
 
 ## Pipeline position (dmg crate)
 

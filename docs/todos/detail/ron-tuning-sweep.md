@@ -97,6 +97,6 @@ Rides with: the `HpScaling` enum introduction (in `echo-cells.md`). RON shape an
 
 ## Out of scope
 
-- Code-driven protocol migrations (Anchor/Deadline/Kickstart/Ricochet): their RONs strip effect trees per TODO #7 — that's a structural RON change, not a value tuning. Covered by #7.
+- Code-driven protocol migrations (Anchor/Deadline/Kickstart/Ricochet): their RONs strip effect trees per TODO #6 — that's a structural RON change, not a value tuning. Covered by #7.
 - Structural RON shape changes (field additions, enum migrations): covered by the per-mechanic files they ride with.
 - Design-doc alignment for any of the above: separate doc-alignment sweep.

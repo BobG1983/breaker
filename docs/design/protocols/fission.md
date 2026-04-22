@@ -32,7 +32,7 @@ pub(crate) struct FissionCounter {
 
 ## Messages
 **Reads**: `Destroyed<Cell>` (from `rantzsoft_dmg`).
-**Sends**: None directly. Spawns a new bolt via `Bolt::builder().replicate_of(primary).rendered().spawn(...)` (TODO #9 builder API). The `.replicate_of(primary)` method clones the primary bolt's relevant state (position, velocity, `BoundEffects`, `StagedEffects`). The `.rendered()` step attaches visuals.
+**Sends**: None directly. Spawns a new bolt via `Bolt::builder().replicate_of(primary).rendered().spawn(...)` (TODO #8 builder API). The `.replicate_of(primary)` method clones the primary bolt's relevant state (position, velocity, `BoundEffects`, `StagedEffects`). The `.rendered()` step attaches visuals.
 
 ## Systems
 

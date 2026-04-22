@@ -1,7 +1,7 @@
 # Protocol: Anchor
 
 ## Category
-`code-driven` (per TODO #7 — all protocols that were previously `effect-tree` are now code-driven; RON carries tuning only).
+`code-driven` (per TODO #6 — all protocols that were previously `effect-tree` are now code-driven; RON carries tuning only).
 
 ## Game Design
 You WANT to commit to a position and predict where the bolt will be, rather than chasing reactively.
@@ -30,7 +30,7 @@ pub(crate) struct AnchorConfig {
 Populated from `ProtocolTuning::Anchor` (RON carries tuning only, no effect tree).
 
 ## Components
-None owned by Anchor. The planted/unplanted state transition is managed by a `During` condition evaluated in code (TODO #7 dispatcher), which fires and reverses effects via `commands.fire_effect` / `commands.reverse_effect`.
+None owned by Anchor. The planted/unplanted state transition is managed by a `During` condition evaluated in code (TODO #6 dispatcher), which fires and reverses effects via `commands.fire_effect` / `commands.reverse_effect`.
 
 ## Messages
 **Reads**: Breaker `Velocity2D` (to detect "standing still for N seconds" and "started moving"). `BumpPerformed` is read indirectly through the already-fired effects (bump-force and perfect-window multipliers are applied by the existing bump-grading pipeline once the effects are on the breaker).
@@ -68,7 +68,7 @@ None owned by Anchor. The planted/unplanted state transition is managed by a `Du
 
 ## Edge Cases
 - **Multiple bolts**: all active bolts gain/lose piercing simultaneously on plant/unplant.
-- **Bolt spawned while planted** (e.g., from Fission): the code-driven dispatcher applies piercing to new bolts via `SpawnStampRegistry` (TODO #7) — `Every(Bolt, ...)` semantics.
+- **Bolt spawned while planted** (e.g., from Fission): the code-driven dispatcher applies piercing to new bolts via `SpawnStampRegistry` (TODO #6) — `Every(Bolt, ...)` semantics.
 - **Interaction with existing piercing**: Anchor's piercing stacks additively with chip-granted piercing (both live in the same stack).
 - **Dash while planted**: dashing counts as movement — unplants immediately.
 - **Node end while planted**: all `"protocol:anchor"` effects cleaned up at node end via `SourceId`-based removal.

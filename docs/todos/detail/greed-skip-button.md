@@ -147,11 +147,11 @@ Out of scope:
 - Changes to `greed_on_skip` or chip-decay behavior (already working)
 - Changes to Greed's `GreedConfig` or `GreedStacks` shape
 - Changes to `apply_greed_boost` or chip-offering generation
-- Protocol-domain relocation (handled by TODO #2 mutators-domain-refactor)
+- Protocol-domain relocation (handled by TODO #1 mutators-domain-refactor)
 
 ## Ordering
 
-Independent of TODO #1 and #2. Can land at any time. Doesn't block anything; nothing blocks it. Pure UI deliverable.
+Independent of TODO #0 and #2. Can land at any time. Doesn't block anything; nothing blocks it. Pure UI deliverable.
 
 ## TODO entry
 

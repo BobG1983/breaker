@@ -38,7 +38,7 @@ Each cell in a linked pair has a `TetherLink` pointing to the other. When one pa
 **Reads**: `DamageDealt<Cell>` (from `rantzsoft_dmg`) — mutated inside the chain via `MessageMutator<DamageDealt<Cell>>`.
 **Sends**: `DamageDealt<Cell>` — one additional entry per tethered pair hit. Source: `"hazard:tether"`. Original target's message passes through unmodified — Tether ADDS damage to the partner, does not reduce incoming.
 
-Post-TODO #2, Tether lives in `mutators/hazards/tether/` and participates in `DeathPipelineSystems::MutateDamage` as a `MessageMutator<DamageDealt<Cell>>`.
+Post-TODO #1, Tether lives in `mutators/hazards/tether/` and participates in `DeathPipelineSystems::MutateDamage` as a `MessageMutator<DamageDealt<Cell>>`.
 
 ## Systems
 
@@ -53,7 +53,7 @@ Post-TODO #2, Tether lives in `mutators/hazards/tether/` and participates in `De
   5. Insert `TetherLink { partner }` on both cells in each selected pair.
 
 ### `tether_mutate_damage`
-- **Schedule**: `FixedUpdate`, in `DeathPipelineSystems::MutateDamage`. Ordering within the chain is set by `wire_damage_chain` (TODO #2) — Diffusion first, then Tether; deterministic.
+- **Schedule**: `FixedUpdate`, in `DeathPipelineSystems::MutateDamage`. Ordering within the chain is set by `wire_damage_chain` (TODO #1) — Diffusion first, then Tether; deterministic.
 - **run_if**: `hazard_active(HazardKind::Tether)` + `in_state(NodeState::Playing)`.
 - **Behavior**: For each `DamageDealt<Cell>`:
   1. If the target has a `TetherLink` and the partner is alive: compute `redirect = damage * damage_percent / 100.0`.
@@ -71,7 +71,7 @@ Note: Tether's output `DamageDealt<Cell>` is NOT itself re-tethered — only ori
 
 - **Pre-apply damage mutator** in `DeathPipelineSystems::MutateDamage`.
 - Reads `DamageDealt<Cell>`, emits additional `DamageDealt<Cell>` for partners. Original passes through. Result feeds `ApplyVulnerable` → `ApplyDamage`.
-- Lives in `mutators/hazards/tether/` (post-TODO #2 consolidated domain).
+- Lives in `mutators/hazards/tether/` (post-TODO #1 consolidated domain).
 - Uses the `MessageMutator<DamageDealt<Cell>>` pattern from `rantzsoft_dmg`.
 - **Ordering within `MutateDamage`**: Diffusion first, then Tether (set by `wire_damage_chain`). Tether sees Diffusion-reduced damage and redirects a percentage of the reduced amount.
 - **No** `HealDealt<T>` / `DamageBoostStack` interaction.
