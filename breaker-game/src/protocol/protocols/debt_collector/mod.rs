@@ -1,6 +1,6 @@
 //! Debt Collector protocol — bump-stack damage multiplier.
 //!
-//! Design doc: `docs/todos/detail/mod-system-design/protocols/debt_collector.md`.
+//! Design doc: `docs/design/protocols/debt_collector.md`.
 //!
 //! Owns the `DebtCollectorConfig` resource (per-run tuning), the `DebtStack`
 //! and `DebtCashOut` per-bolt components, the five runtime systems

@@ -1,6 +1,6 @@
 //! Echo Strike protocol — Perfect-bump primed echo network.
 //!
-//! Design doc: `docs/todos/detail/mod-system-design/protocols/echo_strike.md`.
+//! Design doc: `docs/design/protocols/echo_strike.md`.
 //!
 //! Owns the `EchoStrikeConfig` resource (per-run tuning), the `EchoNetwork`
 //! and `EchoPrimed` per-bolt components, the four runtime systems

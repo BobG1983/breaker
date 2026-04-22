@@ -1,6 +1,6 @@
 //! Echo Strike protocol — production scaffold.
 //!
-//! Design doc: `docs/todos/detail/mod-system-design/protocols/echo_strike.md`.
+//! Design doc: `docs/design/protocols/echo_strike.md`.
 //!
 //! Owns:
 //! - [`ECHO_STRIKE_SENTINEL`] — `source_chip` tag stamped on echo-damage

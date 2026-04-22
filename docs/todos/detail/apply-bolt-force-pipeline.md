@@ -104,8 +104,8 @@ Exact per-bolt force computation preserved — only the write path changes.
 
 ### Design-doc updates
 
-- `docs/todos/detail/mod-system-design/hazards/drift.md` §Messages already specs `ApplyBoltForce`. Remove the "pending" hedge.
-- `docs/todos/detail/mod-system-design/hazards/gravity_surge.md` §Messages — update to match.
+- `docs/design/hazards/drift.md` §Messages already specs `ApplyBoltForce`. Remove the "pending" hedge.
+- `docs/design/hazards/gravity_surge.md` §Messages — update to match.
 - `docs/architecture/messages.md` (or equivalent) — add `ApplyBoltForce` to the catalog of shared messages; note it's the canonical way to apply forces to bolts from non-bolt domains.
 
 ## Tests
@@ -137,8 +137,8 @@ Gravity Surge tests update: same.
 | `mutators/hazards/gravity_surge/tests.rs` | Same. |
 | `docs/architecture/plugins.md` | Remove Drift + Gravity Surge entries from Velocity2D exception registry. |
 | `docs/architecture/messages.md` | Add `ApplyBoltForce` to shared-messages catalog. |
-| `docs/todos/detail/mod-system-design/hazards/drift.md` | Remove "pending" hedge on §Messages. |
-| `docs/todos/detail/mod-system-design/hazards/gravity_surge.md` | Align §Messages. |
+| `docs/design/hazards/drift.md` | Remove "pending" hedge on §Messages. |
+| `docs/design/hazards/gravity_surge.md` | Align §Messages. |
 
 ## Dependencies
 

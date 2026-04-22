@@ -118,7 +118,7 @@ Decided — full implementation plan in [rng-architecture.md](rng-architecture.m
 - Note: Waves 0-2 (RNG migration, data types, composition engine) can start before protocols/hazards are implemented
 
 ## Post-Landing: Fill Tier Regression Stub
-The Tier Regression protocol is scaffolded with a stub — config resource, activation, offering all work, but the system that actually modifies `NodeSequence` to replay a lower tier is a no-op. After this todo lands and `NodeSequence` supports runtime tier manipulation, fill in the stub at `protocol/protocols/tier_regression.rs`. See `docs/todos/detail/mod-system-design/protocols/tier_regression.md` for the full design.
+The Tier Regression protocol is scaffolded with a stub — config resource, activation, offering all work, but the system that actually modifies `NodeSequence` to replay a lower tier is a no-op. After this todo lands and `NodeSequence` supports runtime tier manipulation, fill in the stub at `protocol/protocols/tier_regression.rs`. See `docs/design/protocols/tier_regression.md` for the full design.
 
 ## Terminology Additions
 - **Volatile** — node type beyond active; high-danger, unpredictable late-game nodes

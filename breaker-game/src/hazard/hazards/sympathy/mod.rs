@@ -1,6 +1,6 @@
 //! Sympathy hazard — damage to a cell heals its neighbours.
 //!
-//! Design doc: `docs/todos/detail/mod-system-design/hazards/sympathy.md`.
+//! Design doc: `docs/design/hazards/sympathy.md`.
 //!
 //! Owns [`SympathyConfig`], the [`SYMPATHY_SENTINEL`] source-tag constant,
 //! the [`activate`] entry point called from `hazards::activate`, and the

@@ -1,6 +1,6 @@
 //! Greed protocol — skipping chip offers boosts rare-rarity chip weight next visit.
 //!
-//! Design doc: `docs/todos/detail/mod-system-design/protocols/greed.md`.
+//! Design doc: `docs/design/protocols/greed.md`.
 //!
 //! Owns the `GreedConfig` resource (per-run tuning), `GreedStacks` resource
 //! (per-run counter, cleared by `reset_run_state`), the `greed_on_skip` system

@@ -1,6 +1,6 @@
 //! Sympathy hazard — damage to a cell heals its neighbours.
 //!
-//! Design doc: `docs/todos/detail/mod-system-design/hazards/sympathy.md`.
+//! Design doc: `docs/design/hazards/sympathy.md`.
 //!
 //! Reads [`DamageDealt<Cell>`]. For every non-zero damage event, emits one
 //! [`HealDealt<Cell>`] per live neighbour reached by a BFS outward from the

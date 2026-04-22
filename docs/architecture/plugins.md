@@ -147,7 +147,7 @@ Cleanup is implicit: cell entities are despawned on node end, so the `Hp.max` li
 
 The hazard domain drains the buffer in `emit_tether_redirects` into `MessageWriter<DamageDealt<Cell>>` inside the same `DeathPipelineSystems::ApplyDamage` set, ordered `.after(apply_damage_to_cells)`. The push/drain split exists because Bevy 0.18 panics at schedule construction when a single system holds both `MessageReader<T>` and `MessageWriter<T>` for the same `T` — `apply_damage_to_cells` already holds the reader for `DamageDealt<Cell>`.
 
-Rationale: the design doc (`docs/todos/detail/mod-system-design/hazards/tether.md` §Edge Cases — Tether + Diffusion ordering) mandates that Tether redirect uses the Diffusion-reduced `primary_damage`, which is only available inside the `accumulate_message_deltas` call in the cells-domain system. Routing via a `TetherRedirectRequested` message would add a message type and a hazard-domain consumer for no decoupling win — the data flow already goes hazard-owned-config → cells-domain-read → hazard-owned-buffer → hazard-owned-emit.
+Rationale: the design doc (`docs/design/hazards/tether.md` §Edge Cases — Tether + Diffusion ordering) mandates that Tether redirect uses the Diffusion-reduced `primary_damage`, which is only available inside the `accumulate_message_deltas` call in the cells-domain system. Routing via a `TetherRedirectRequested` message would add a message type and a hazard-domain consumer for no decoupling win — the data flow already goes hazard-owned-config → cells-domain-read → hazard-owned-buffer → hazard-owned-emit.
 
 Cleanup is implicit: the buffer is drained every `ApplyDamage` set; if Tether is inactive, nothing is ever pushed.
 

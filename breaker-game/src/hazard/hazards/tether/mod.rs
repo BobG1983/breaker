@@ -1,6 +1,6 @@
 //! Tether hazard — pairs of cells share damage.
 //!
-//! Design doc: `docs/todos/detail/mod-system-design/hazards/tether.md`.
+//! Design doc: `docs/design/hazards/tether.md`.
 //!
 //! Owns the `TetherConfig` resource, `TetherLink` component, the
 //! `TetherRedirectBuffer` resource that the cells-domain

@@ -114,13 +114,13 @@ fracture_on_death
 
 ### Design-doc updates
 
-`docs/todos/detail/mod-system-design/hazards/fracture.md`:
+`docs/design/hazards/fracture.md`:
 - §Messages — delete any `SpawnDebrisCell` proposal. Fracture uses `Cell::builder()` directly.
 - §Edge Cases — "Empty-position check: if the target grid slot is occupied, skip it. Zero debris spawns if every offset is occupied."
 - §Edge Cases — add "Recursive fracture: debris cells DO NOT fracture on their own destruction."
 - §Ordering — add "Runs after `cascade_heal_on_death` so Cascade does not heal newly-spawned debris."
 
-`docs/todos/detail/mod-system-design/hazards/cascade.md` (ride with Fracture's TODO):
+`docs/design/hazards/cascade.md` (ride with Fracture's TODO):
 - §Ordering — add "Runs before `fracture_on_death` so Fracture-spawned cells are not included in the same-frame heal set."
 
 ## Tests
@@ -166,8 +166,8 @@ fracture_on_death
 | `mutators/hazards/fracture/tests/ordering_with_cascade.rs` | NEW — test 6 |
 | `mutators/hazards/cascade/tests/ordering_with_fracture.rs` | NEW — test 7 |
 | `mutators/hazards/fracture/tests/debris_visibility.rs` | NEW — test 8 |
-| `docs/todos/detail/mod-system-design/hazards/fracture.md` | Design-doc updates per Fix section |
-| `docs/todos/detail/mod-system-design/hazards/cascade.md` | §Ordering update |
+| `docs/design/hazards/fracture.md` | Design-doc updates per Fix section |
+| `docs/design/hazards/cascade.md` | §Ordering update |
 
 ## Out of scope
 

@@ -1,6 +1,6 @@
 //! Debt Collector protocol — production code.
 //!
-//! Design doc: `docs/todos/detail/mod-system-design/protocols/debt_collector.md`.
+//! Design doc: `docs/design/protocols/debt_collector.md`.
 //!
 //! Owns:
 //! - [`DebtCollectorConfig`] — per-run tuning inserted from

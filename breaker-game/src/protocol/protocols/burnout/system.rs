@@ -1,6 +1,6 @@
 //! Burnout protocol — heat-gauge rhythm mechanic.
 //!
-//! Design doc: `docs/todos/detail/mod-system-design/protocols/burnout.md`.
+//! Design doc: `docs/design/protocols/burnout.md`.
 
 use std::marker::PhantomData;
 

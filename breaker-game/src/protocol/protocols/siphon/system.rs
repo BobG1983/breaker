@@ -1,6 +1,6 @@
 //! Siphon protocol — production code.
 //!
-//! Design doc: `docs/todos/detail/mod-system-design/protocols/siphon.md`.
+//! Design doc: `docs/design/protocols/siphon.md`.
 //!
 //! Owns:
 //! - [`SiphonConfig`] — per-run tuning (fields in seconds, inserted verbatim

@@ -1,6 +1,6 @@
 //! Tether hazard — pairs of cells share damage.
 //!
-//! Design doc: `docs/todos/detail/mod-system-design/hazards/tether.md`.
+//! Design doc: `docs/design/hazards/tether.md`.
 //!
 //! The hazard domain owns:
 //! - [`TetherConfig`] — per-run tuning (stack-scaled damage + coverage percents).

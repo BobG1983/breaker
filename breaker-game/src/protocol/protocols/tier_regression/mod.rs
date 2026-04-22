@@ -1,7 +1,7 @@
 //! Tier Regression protocol — one-shot node-sequence splice that replays
 //! the previous tier's pre-generated nodes.
 //!
-//! Design doc: `docs/todos/detail/mod-system-design/protocols/tier_regression.md`.
+//! Design doc: `docs/design/protocols/tier_regression.md`.
 //!
 //! Owns the `TierRegressionConfig` / `TierRegressionPending` resources and
 //! two runtime systems registered on `OnEnter(RunState::Node)`:

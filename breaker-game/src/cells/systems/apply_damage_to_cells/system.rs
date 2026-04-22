@@ -5,7 +5,7 @@
 //! is active — BFS-propagates ring damage to adjacent cells in-memory without
 //! emitting additional `DamageDealt<Cell>` messages.
 //!
-//! See design doc `docs/todos/detail/mod-system-design/hazards/diffusion.md`
+//! See design doc `docs/design/hazards/diffusion.md`
 //! (§Systems, §Cross-Domain Dependencies, §Expected Behaviors) for the
 //! redistribution semantics this system implements. The hazard domain owns
 //! `DiffusionConfig` (populated via `diffusion::activate`) and `ActiveHazards`;
@@ -217,7 +217,7 @@ pub(crate) fn apply_damage_to_cells(
     let diffusion_active = share_frac > 0.0 && depth > 0;
 
     // ── Tether activation state (computed ONCE, before the accumulate loop) ──
-    // Per design doc `docs/todos/detail/mod-system-design/hazards/tether.md`
+    // Per design doc `docs/design/hazards/tether.md`
     // §Edge Cases line 121: "If both are active, Diffusion runs first (shares/
     // reduces damage), then Tether runs on the modified damage amounts." The
     // redirect's `partner_amount` is computed from the `f32` that

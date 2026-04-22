@@ -451,7 +451,7 @@ No `Root(...)`, `Stamp(...)`, effect tree of any kind. Description rewritten to 
 
 **Delete** from Anchor's runtime: any direct `EffectStack<PiercingConfig>` pushes in `tick_anchor` or elsewhere. Piercing mutation flows through `fire_effect` only.
 
-**Delete** the `During(StillFor, …)` reference from `docs/todos/detail/mod-system-design/protocols/anchor.md` — that primitive never existed; hand-rolled plant/unplant IS the canonical approach.
+**Delete** the `During(StillFor, …)` reference from `docs/design/protocols/anchor.md` — that primitive never existed; hand-rolled plant/unplant IS the canonical approach.
 
 **Tests** (`anchor/tests/`): `plant_grants_piercing_via_fire_effect`, `unplant_preserves_piercing`, `replant_is_idempotent_no_accumulation`, `piercing_consumed_by_cell_passthrough`, `bump_force_multiplier_applied_while_planted`, `bump_force_unmodified_when_unplanted`, `perfect_window_multiplier_applied_while_planted`, `late_spawned_bolt_gets_piercing_mid_plant`, `chip_piercing_survives_anchor_cycles`.
 
@@ -635,9 +635,9 @@ Add §Dispatch Sites table naming the five sites (A–F excluding E which doesn'
 | `assets/chips/standard/ricochet_protocol.chip.ron` | **DELETE** (legacy). Verify no load path references it. |
 | `protocol/systems/dispatch_protocol_selection/tests.rs:442-481` | **DELETE** regression-trap tests. Replace with `Stamp(EveryBolt, ...)` correctness tests. |
 | `docs/architecture/effects.md` | Add §Routing vs Stamping + §Dispatch Sites. |
-| `docs/todos/detail/mod-system-design/protocols/deadline.md` | Rewrite §Effect Tree → §Systems + §Config Resource. |
-| `docs/todos/detail/mod-system-design/protocols/kickstart.md` | Same. |
-| `docs/todos/detail/mod-system-design/protocols/ricochet_protocol.md` | Same. |
+| `docs/design/protocols/deadline.md` | Rewrite §Effect Tree → §Systems + §Config Resource. |
+| `docs/design/protocols/kickstart.md` | Same. |
+| `docs/design/protocols/ricochet.md` | Same. |
 
 ## Dependencies
 

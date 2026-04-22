@@ -115,7 +115,7 @@ Verify RON's tagged-enum deserialization pattern matches the project's existing 
 
 ### Design-doc updates
 
-`docs/todos/detail/mod-system-design/hazards/echo_cells.md`:
+`docs/design/hazards/echo_cells.md`:
 - §Config Resource — document `HpScaling` enum + the three variants' formulas.
 - §Expected Behaviors 2 — rename to "HP scales by `hp_scaling` mode"; worked examples for each variant.
 - §Messages — delete any `SpawnGhostCell` reference. Echo Cells spawns via the builder directly.
@@ -153,7 +153,7 @@ Verify RON's tagged-enum deserialization pattern matches the project's existing 
 | `assets/hazards/echo_cells.hazard.ron` | `per_level_multiplier: 2.0` → `hp_scaling: Doubles` |
 | `mutators/hazards/echo_cells/tests/hp_scaling.rs` | NEW — tests 3-6 |
 | `mutators/hazards/echo_cells/tests/ghost_spawn.rs` | NEW — test 7 |
-| `docs/todos/detail/mod-system-design/hazards/echo_cells.md` | Design-doc updates per Fix section |
+| `docs/design/hazards/echo_cells.md` | Design-doc updates per Fix section |
 
 ## Out of scope
 

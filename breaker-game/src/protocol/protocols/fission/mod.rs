@@ -1,6 +1,6 @@
 //! Fission protocol — kill-counter bolt-split.
 //!
-//! Design doc: `docs/todos/detail/mod-system-design/protocols/fission.md`.
+//! Design doc: `docs/design/protocols/fission.md`.
 //!
 //! Owns `FissionConfig` (per-run tuning), `FissionCounter` (persistent-across-nodes
 //! kill tracker), `FISSION_DIVERGENCE_ANGLE_RAD`, `activate`, `register`, and the

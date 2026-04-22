@@ -1,7 +1,7 @@
 //! Group G — Cross-hazard / chip synergy pinning.
 //!
 //! Pins the multiplicative semantics called out in the design doc
-//! `docs/todos/detail/mod-system-design/hazards/haste.md` §"Multiplicative
+//! `docs/design/hazards/haste.md` §"Multiplicative
 //! with other speed modifiers" and §"Edge Cases → Haste + Overcharge synergy".
 
 use ordered_float::OrderedFloat;

@@ -34,7 +34,7 @@ Within a tier, node design is modified based on tier difficulty. Higher tiers ma
 ## Infinite Scaling (Tier 9+)
 Three mechanisms stack for infinite difficulty:
 1. **Cell type escalation** — tougher cell types, more portal cells
-2. **Hazards** — player picks from 3 random hazards per tier. Hazards can stack. See [Protocol & Hazard system design](../mod-system-design/mod-system-design.md).
+2. **Hazards** — player picks from 3 random hazards per tier. Hazards can stack. See [Hazards catalog](../../../design/hazards/index.md).
 3. **Block tier escalation** — higher-tier blocks with harder compositions become available
 
 ## Tier Regression Protocol

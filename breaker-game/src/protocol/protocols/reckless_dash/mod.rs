@@ -1,7 +1,7 @@
 //! Reckless Dash protocol — risky-zone damage boost with double-penalty
 //! on bolt loss.
 //!
-//! Design doc: `docs/todos/detail/mod-system-design/protocols/reckless_dash.md`.
+//! Design doc: `docs/design/protocols/reckless_dash.md`.
 //!
 //! Owns the `RecklessDashConfig` resource (per-run tuning), the
 //! `RiskyDamageBoost` per-bolt component, the `RecklessDashDoubledBolts`

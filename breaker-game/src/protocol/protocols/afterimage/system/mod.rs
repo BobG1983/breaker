@@ -1,6 +1,6 @@
 //! Afterimage protocol — phantom-breaker + phantom-bounce + phantom-bolt.
 //!
-//! Design doc: `docs/todos/detail/mod-system-design/protocols/afterimage.md`.
+//! Design doc: `docs/design/protocols/afterimage.md`.
 //!
 //! Owns `AfterimageConfig`, `PhantomBreaker`, `PhantomBreakerLifetime`, the
 //! four runtime systems (`afterimage_spawn_phantom_breaker`,

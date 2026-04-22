@@ -35,7 +35,7 @@ scale.y = base_scale.y;               // Height is not affected by SizeBoost.
 
 ### Design-doc update
 
-`docs/todos/detail/mod-system-design/hazards/erosion.md`:
+`docs/design/hazards/erosion.md`:
 
 Replace any "bump window height shrinks proportionally" or "shrinks the breaker" language with:
 
@@ -71,7 +71,7 @@ Any existing Erosion test asserting the breaker's height shrinks — flip the as
 | `breaker/systems/sync_breaker_scale/system.rs` | `scale.y = base_scale.y * size_mult` → `scale.y = base_scale.y` |
 | `breaker/systems/sync_breaker_scale/tests/size_boost_width_only.rs` | NEW — tests 1-3 |
 | `bolt/systems/bolt_breaker_collision/tests/size_boost_affects_half_w_only.rs` | NEW — tests 4-5 |
-| `docs/todos/detail/mod-system-design/hazards/erosion.md` | Design-doc updates per Fix section |
+| `docs/design/hazards/erosion.md` | Design-doc updates per Fix section |
 
 ## Out of scope
 

@@ -80,7 +80,7 @@ Schedule: `OnEnter(RunState::Node)`, `.after(NodeSystems::AdvanceNode)`, `.after
 
 ### Design-doc updates
 
-`docs/todos/detail/mod-system-design/protocols/tier_regression.md`:
+`docs/design/protocols/tier_regression.md`:
 - §Config Resource — DELETE.
 - §Activation — "parameterless; just flags the protocol in `ActiveProtocols`. No resource insert."
 - §Game Design — "Drop back EXACTLY 1 tier of difficulty. This is not tunable."
@@ -133,7 +133,7 @@ Schedule: `OnEnter(RunState::Node)`, `.after(NodeSystems::AdvanceNode)`, `.after
 | `mutators/protocols/tier_regression/tests/reject_reoffers.rs` | NEW — tests 6-7 |
 | `assets/protocols/tier_regression.protocol.ron` | DELETE `tiers_back` field |
 | `docs/architecture/plugins.md` | DELETE lines 154-166 (TR cross-domain exception) |
-| `docs/todos/detail/mod-system-design/protocols/tier_regression.md` | Design-doc updates per Fix section |
+| `docs/design/protocols/tier_regression.md` | Design-doc updates per Fix section |
 
 ## Out of scope
 

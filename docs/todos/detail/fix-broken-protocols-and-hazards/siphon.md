@@ -47,7 +47,7 @@ The first-kill branch stays as-is: no message write, just `kill_count = 1`.
 
 ### Design-doc update
 
-`docs/todos/detail/mod-system-design/protocols/siphon.md`:
+`docs/design/protocols/siphon.md`:
 
 §Game Design — replace:
 
@@ -90,7 +90,7 @@ Also rename `ReverseTimePenalty` → `IncreaseNodeTimer` and `seconds` → `delt
 | `mutators/protocols/siphon/system.rs` | Change `seconds: config.time_per_kill` to `delta: config.time_per_kill * (streak.kill_count - 1) as f32`; rename `ReverseTimePenalty` → `IncreaseNodeTimer` (already renamed by #4 — just use the new name) |
 | `mutators/protocols/siphon/tests/escalating_reward.rs` | NEW — tests 1-4 |
 | `mutators/protocols/siphon/tests/on_cell_destroyed.rs` | REWRITE assertions to match scaled formula |
-| `docs/todos/detail/mod-system-design/protocols/siphon.md` | Design-doc updates per Fix section |
+| `docs/design/protocols/siphon.md` | Design-doc updates per Fix section |
 
 ## Out of scope
 

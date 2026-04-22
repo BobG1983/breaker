@@ -6,7 +6,7 @@
 //! Any `DamageDealt<Cell>` resets the cell's timer to zero — a cell "touched"
 //! within the interval stays at its current HP. Effective interval shrinks
 //! with hazard stacks (floored at 1.0s). Authoritative design doc:
-//! `docs/todos/detail/mod-system-design/hazards/volatility.md`.
+//! `docs/design/hazards/volatility.md`.
 
 pub(crate) mod system;
 

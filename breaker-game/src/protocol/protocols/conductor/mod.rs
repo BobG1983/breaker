@@ -1,6 +1,6 @@
 //! Conductor protocol — Perfect-bump-driven primary-bolt swap.
 //!
-//! Design doc: `docs/todos/detail/mod-system-design/protocols/conductor.md`.
+//! Design doc: `docs/design/protocols/conductor.md`.
 //!
 //! Owns the `ConductorConfig` resource (per-run tuning), the single runtime
 //! system `conductor_swap_on_perfect_bump`, and the `activate` / `register`

@@ -43,7 +43,7 @@ One-frame delay is acceptable: no hazard fires on the frame a cell spawns anyway
 
 ### Design-doc updates
 
-`docs/todos/detail/mod-system-design/hazards/momentum.md`:
+`docs/design/hazards/momentum.md`:
 
 §Messages / §Edge Cases — add:
 
@@ -69,7 +69,7 @@ One-frame delay is acceptable: no hazard fires on the frame a cell spawns anyway
 | `mutators/hazards/momentum/system.rs` | Replace `commands.spawn(...)` at the split path with `Cell::builder()...spawn()`; delete manual component inserts; delete `MOMENTUM_SPLIT_WIDTH` / `MOMENTUM_SPLIT_HEIGHT` constants if present |
 | `mutators/hazards/momentum/tests/split_cell_rendered.rs` | NEW — tests 1-3 |
 | `mutators/hazards/momentum/tests/split_cell_gets_volatility_within_one_tick.rs` | NEW — tests 4-5 |
-| `docs/todos/detail/mod-system-design/hazards/momentum.md` | §Messages / §Edge Cases update per Fix section |
+| `docs/design/hazards/momentum.md` | §Messages / §Edge Cases update per Fix section |
 
 ## Out of scope
 

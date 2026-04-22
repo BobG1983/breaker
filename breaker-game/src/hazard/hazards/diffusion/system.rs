@@ -95,7 +95,7 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
 
 /// No runtime system is registered by the HAZARD domain for Diffusion.
 ///
-/// Per the design doc (`docs/todos/detail/mod-system-design/hazards/diffusion.md`
+/// Per the design doc (`docs/design/hazards/diffusion.md`
 /// §Systems and §Cross-Domain Dependencies): damage redistribution is handled
 /// INSIDE `apply_damage_to_cells` in the **cells domain** by reading
 /// `Option<Res<DiffusionConfig>>` + `Option<Res<ActiveHazards>>`. The hazard

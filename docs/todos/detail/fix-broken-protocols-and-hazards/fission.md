@@ -101,7 +101,7 @@ Delete the existing `OnExit(MenuState::Main)` registration. `FissionConfig` (tun
 
 ### Design doc updates (ride with code)
 
-`docs/todos/detail/mod-system-design/protocols/fission.md`:
+`docs/design/protocols/fission.md`:
 - §Components: "`FissionCounter` resets at node exit; does NOT persist across nodes."
 - §Game Design: add "Splits replicate the primary bolt — the new bolt is functionally identical to the one you're already shooting with. Only velocity direction differs."
 - §Cross-Domain Dependencies: replace `BoltRegistry` language with "Spawns via `Bolt::builder().replicate_of(primary)` which copies tuning + effects from the current primary."
@@ -159,7 +159,7 @@ Delete the existing `OnExit(MenuState::Main)` registration. `FissionConfig` (tun
 | `mutators/protocols/fission/tests/counter_lifecycle.rs` | NEW — tests 9-10 |
 | `mutators/protocols/fission/tests/no_primary_no_split.rs` | NEW — test 11 |
 | `bolt/builder/tests/replicate_of.rs` | NEW — tests 1-3 |
-| `docs/todos/detail/mod-system-design/protocols/fission.md` | Design-doc updates per Fix section |
+| `docs/design/protocols/fission.md` | Design-doc updates per Fix section |
 
 ## Out of scope
 

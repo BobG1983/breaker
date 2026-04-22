@@ -1,6 +1,6 @@
 //! Afterimage protocol — phantom-breaker / phantom-bolt runtime.
 //!
-//! Design doc: `docs/todos/detail/mod-system-design/protocols/afterimage.md`.
+//! Design doc: `docs/design/protocols/afterimage.md`.
 //!
 //! Owns `AfterimageConfig` (per-run tuning), `PhantomBreaker` /
 //! `PhantomBreakerLifetime` components, the four runtime systems

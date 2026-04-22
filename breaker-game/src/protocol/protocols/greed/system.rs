@@ -1,6 +1,6 @@
 //! Greed protocol — production implementation.
 //!
-//! Design doc: `docs/todos/detail/mod-system-design/protocols/greed.md`.
+//! Design doc: `docs/design/protocols/greed.md`.
 //!
 //! Owns:
 //! - [`GreedConfig`] — per-run tuning (percent-unit `rarity_boost_per_skip`,

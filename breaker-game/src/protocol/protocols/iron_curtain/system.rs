@@ -1,6 +1,6 @@
 //! Iron Curtain protocol — production code.
 //!
-//! Design doc: `docs/todos/detail/mod-system-design/protocols/iron_curtain.md`.
+//! Design doc: `docs/design/protocols/iron_curtain.md`.
 //!
 //! Owns:
 //! - [`IronCurtainConfig`] — per-run tuning inserted from

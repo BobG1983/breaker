@@ -1,6 +1,6 @@
 //! Siphon protocol — kill-streak farms time back onto the node timer.
 //!
-//! Design doc: `docs/todos/detail/mod-system-design/protocols/siphon.md`.
+//! Design doc: `docs/design/protocols/siphon.md`.
 //!
 //! Owns the `SiphonConfig` resource (per-run tuning), `SiphonStreak` resource
 //! (per-run streak tracker, cleared on node exit), and the three runtime

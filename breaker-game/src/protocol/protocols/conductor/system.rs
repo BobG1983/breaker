@@ -1,6 +1,6 @@
 //! Conductor protocol — Perfect-bump-driven primary-bolt swap.
 //!
-//! Design doc: `docs/todos/detail/mod-system-design/protocols/conductor.md`.
+//! Design doc: `docs/design/protocols/conductor.md`.
 //!
 //! A Perfect `BumpPerformed` whose bolt carries `ExtraBolt` (verified via the
 //! `extras` query) and is not already the current `PrimaryBolt` swaps the
