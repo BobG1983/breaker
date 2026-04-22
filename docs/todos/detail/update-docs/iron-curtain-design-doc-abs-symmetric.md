@@ -1,15 +1,28 @@
-# Iron Curtain: design doc cleanup \u2014 keep abs-symmetric falloff, delete "upward only" prose
+# Iron Curtain — abs-symmetric falloff in the canonical design doc
 
-## Problems addressed
+## Target file
 
-- `audit/protocols/iron_curtain.md` Issue 2 \u2014 Design \u00a7Edge Cases prose says "wave spreads upward only" but the design's own \u00a7Damage Falloff Formula uses `(cell_position.y - breaker_position.y).abs()`, and the impl + tests pin the abs-symmetric behavior. The contradiction is within the design doc itself; the code and tests are consistent.
+`docs/design/protocols/iron_curtain.md` (promoted during this sweep).
 
-## Remediation
+## What the target doc must say
 
-The design's falloff formula wins. Abs-symmetric is the canonical behavior.
+Under § Edge Cases, the behaviour for cells below the breaker:
 
-Open `docs/todos/detail/mod-system-design/protocols/iron_curtain.md`. Under \u00a7Edge Cases, delete the line that reads "Cells behind the breaker (below it) are not damaged \u2014 wave spreads upward only." (or the equivalent wording \u2014 whichever line captures the upward-only claim). Replace with:
+> Cells at distance `|cell.y - breaker.y|` within the falloff radius are damaged symmetrically. In practice, cells rarely spawn below the breaker, but the wave does not explicitly mask them — if a cell exists below, it receives damage consistent with the symmetric falloff formula.
 
-> Cells at distance `|cell.y - breaker.y|` within the falloff radius are damaged symmetrically. In practice, cells rarely spawn below the breaker, but the wave does not explicitly mask them \u2014 if a cell exists below, it receives damage consistent with the symmetric falloff formula.
+The § Damage Falloff Formula must use `|cell.y - breaker.y|` (abs-symmetric).
 
-No code change. No test change. The `cells_below_breaker_are_damaged_by_abs_symmetric_falloff` test at `tests/on_bolt_lost.rs:294-313` already pins the intended behavior and stays as-is.
+## Pipeline position (dmg crate)
+
+- **Trigger**: reads `BoltLost` message (bolt-lifecycle — NOT a `DeathPipelineSystems` set).
+- **Emits**: `DamageDealt<Cell>` in `DeathPipelineSystems::EmitDamage` for each cell within falloff radius.
+- **Source**: `"protocol:iron_curtain"`.
+- **No** `DamageBoostStack`/`VulnerableStack` interaction — the emitted damage flows through the standard chain (`ApplyDamageBoosts` → `MutateDamage` → `ApplyVulnerable` → `ApplyDamage`) like any other damage source.
+
+## What the target doc must NOT say
+
+Do not describe the wave as "spreading upward only". The impl and the `cells_below_breaker_are_damaged_by_abs_symmetric_falloff` test (`tests/on_bolt_lost.rs:294-313`) pin abs-symmetric behaviour.
+
+## Why
+
+The falloff formula and the wording must agree. `|cell.y - breaker.y|` is abs-symmetric; "upward only" contradicts it.

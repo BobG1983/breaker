@@ -1,23 +1,31 @@
-# Haste: document EffectStack reconciliation as canonical (drop ApplyBoltSpeedMultiplier hedge)
+# Haste — `EffectStack<SpeedBoostConfig>` reconciliation in the canonical design doc
 
-## Problems addressed
+## Target file
 
-- `audit/hazards/haste.md` Issue 3 — Design doc hedges between an `ApplyBoltSpeedMultiplier` message and EffectStack reconciliation. Impl chose EffectStack. Design doc should commit.
+`docs/design/hazards/haste.md` (promoted during this sweep).
 
-## Context
+## What the target doc must say
 
-Split from the original `haste-ron-and-design-fix.md`. The RON portion (base_percent / per_level_percent value fixes + description copy-paste) is covered by `audit/remediations/ron-tuning-values.md`. This file retains only the design-doc alignment work.
-
-## Remediation
-
-Open `docs/todos/detail/mod-system-design/hazards/haste.md` §Messages and §Systems. Delete the `ApplyBoltSpeedMultiplier` fallback language. Document the EffectStack pattern as canonical:
+§ Messages:
 
 > **Writes**: Source-tagged `EffectStack<SpeedBoostConfig>` entry on every Bolt (source: `"hazard:haste"`). The entry's multiplier is reconciled each FixedUpdate. Idempotent via `EffectStack::retain_by_source`.
 >
-> Haste's reconciliation mirrors Erosion's SizeBoost pattern. This is the canonical way for hazards to apply continuous modulation to Bolt components.
+> Haste's reconciliation mirrors Erosion's `SizeBoost` pattern. This is the canonical way for hazards to apply continuous modulation to Bolt components.
 
-No code change. No test change.
+§ Systems — the reconciliation system pushes a single source-tagged entry per bolt per tick; the bolt's movement system aggregates the stack.
 
-## Scope note
+## What the target doc must NOT say
 
-This remediation is part of the broader design-doc-alignment sweep.
+- Do not reference an `ApplyBoltSpeedMultiplier` message — that hedge is dropped.
+- Do not describe Haste as emitting one-off speed-change messages.
+
+## Pipeline position (dmg crate)
+
+- **Not in the death pipeline.** Haste does not participate in any `DeathPipelineSystems` set.
+- **Trigger**: FixedUpdate tick (`run_if = hazard_active(Haste) + in_state(NodeState::Playing)`) — reconciliation runs every frame regardless of damage events.
+- **Writes**: `EffectStack<SpeedBoostConfig>` reconciled per-tick on every Bolt (source `"hazard:haste"`).
+- **No** `DamageDealt<T>` / `HealDealt<T>` / `Destroyed<T>` / `DamageBoostStack` involvement.
+
+## Why
+
+`EffectStack` reconciliation is the canonical pattern for continuous modulation. `SpeedBoostConfig` survives post-TODO #1 (only `DamageBoostConfig` and `VulnerableConfig` retired in favour of `DamageBoostStack` / `VulnerableStack` from `rantzsoft_dmg`).

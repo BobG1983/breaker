@@ -1,28 +1,29 @@
-# Sympathy: design doc says logic lives in hazard domain, not cells domain
+# Sympathy — canonical design doc system + pipeline position
 
-## Problems addressed
+## Target file
 
-- `audit/hazards/sympathy.md` Issue 1 \u2014 Design \u00a7Systems says "No hazard-domain runtime systems for the healing logic. The cells domain's `apply_damage::<Cell>` reads `SympathyConfig` and handles it." Impl correctly keeps Sympathy in the hazard domain (`sympathy_heal_adjacent` reads `DamageDealt<Cell>`). Design doc is wrong; update to match the cleaner architectural split.
+`docs/design/hazards/sympathy.md` (promoted during this sweep).
 
-Other Sympathy issues covered by existing remediations:
-- Issue 2 (branching-graph attenuation) \u2014 `diffusion-flat-share-per-ring.md` (same per-ring pattern).
-- Issue 3 (ADJACENCY_RADIUS_SQ) \u2014 `grid-orthogonal-adjacency.md`.
-- Issue 4 (cleanup) \u2014 `run-end-config-cleanup.md` (Sympathy in "no state resources" list).
+## What the target doc must say
 
-## Remediation
+§ Systems:
 
-Open `docs/todos/detail/mod-system-design/hazards/sympathy.md`.
-
-\u00a7Systems \u2014 replace the "no hazard-domain runtime systems" language with:
-
-> **`sympathy_heal_adjacent`** (runs in `FixedUpdate`, set `DeathPipelineSystems::ApplyHeal`, ordered `.before(apply_heal::<Cell>)`).
+> **`sympathy_heal_adjacent`** (schedule: `FixedUpdate`, set `DeathPipelineSystems::EmitHeal`, ordered after the `MutateDamage` chain has run).
 >
-> Reads `DamageDealt<Cell>` messages (post-damage-transformation \u2014 after Diffusion, if active, has modified the damage values). For each damaged cell, BFS outward through adjacent live cells and emit `HealDealt<Cell>` messages with geometric ring attenuation. The heal is applied same-tick via `apply_heal::<Cell>`.
+> Reads `DamageDealt<Cell>` messages AFTER the `MutateDamage` chain has transformed the damage (so Diffusion-reduced or Tether-redirected values, if any). For each damaged cell, BFS outward through adjacent live cells and emit `HealDealt<Cell>` messages with geometric ring attenuation. The heal is applied same-tick via `apply_heal::<Cell>`.
+
+§ Pipeline position:
+
+> Sympathy is a **post-apply reactor** — it reads `DamageDealt<Cell>` downstream of the damage-mutator chain and emits `HealDealt<Cell>`. Contrast with `MessageMutator<DamageDealt<Cell>>`-style hazards (Diffusion, Tether) that TRANSFORM the damage message inside `DeathPipelineSystems::MutateDamage` before apply.
 >
-> Architectural note: Sympathy's logic lives in the hazard domain rather than the cells domain because it REACTS to damage already applied (via messages), whereas Diffusion MODIFIES damage before application (and so must live in the cells domain's `apply_damage_to_cells`). The asymmetry reflects the distinct pipeline responsibilities.
+> Both classes live in `mutators/hazards/` post-TODO #2; the distinction is pipeline position, not domain.
 
-\u00a7Architecture \u2014 append:
+## What the target doc must NOT say
 
-> Sympathy reads `DamageDealt<Cell>` after Diffusion has transformed it. Cross-reference `sympathy-reads-post-diffusion-damage.md` for the ordering pin and the rationale ("Sympathy is slightly less potent when Diffusion is active").
+- Do not claim "the cells domain's `apply_damage::<Cell>` reads `SympathyConfig`" — Sympathy lives in `mutators/hazards/sympathy/` and consumes messages, not configs from another domain.
+- Do not describe Sympathy as a pre-apply damage mutator — it is a reactor.
+- Do not frame the mutator-vs-reactor distinction as a domain-split (`hazard/` vs `cells/`) — both classes now live in `mutators/` (post-TODO #2).
 
-No code change. No test change. Doc-only.
+## Why
+
+Sympathy's mechanical identity — heals neighbours in response to damage — is fundamentally a post-apply reaction, not a damage transformation. TODO #2 consolidates both mutator-style and reactor-style hazards into `mutators/`, eliminating the prior domain split but preserving the pipeline-position distinction.

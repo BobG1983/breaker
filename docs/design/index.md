@@ -19,6 +19,8 @@ This identity is non-negotiable. Every system, every visual, every sound, every 
 | [graphics/](graphics/index.md) | Visual identity, color palette, UI screens, feedback juice, effects particles |
 | [evolutions.md](evolutions.md) | Evolution design principles and categories |
 | [chip-catalog.md](chip-catalog.md) | Full chip catalog with all rarity variants |
+| [protocols/](protocols/index.md) | Protocol catalog — 15 entries, chip/protocol distinction, meta-progression |
+| [hazards/](hazards/index.md) | Hazard catalog — 16 entries, Hard Rules, trap synergies, flat-pool rationale |
 
 ## Pillars (quick reference)
 

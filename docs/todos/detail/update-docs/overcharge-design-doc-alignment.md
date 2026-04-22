@@ -1,19 +1,12 @@
-# Overcharge: align design doc with lazy-insertion + fractional field names
+# Overcharge — canonical design doc shape
 
-## Problems addressed
+## Target file
 
-- `audit/hazards/overcharge.md` Issue 2 — Design doc references `attach_overcharge_tracker` system that doesn't exist. Impl uses lazy insertion in `overcharge_count_kills`.
-- `audit/hazards/overcharge.md` Issue 3 — Design fields use percent (`base_speed_per_kill: 5.0`); impl uses fractional (`base_frac: 0.05`). Mismatch.
+`docs/design/hazards/overcharge.md` (promoted during this sweep).
 
-## Context
+## What the target doc must say
 
-Split from the original `overcharge-ron-and-design-alignment.md`. The RON portion (value fix `base_frac: 0.1 → 0.05`, `per_level_frac: 0.05 → 0.03`) plus the field rename in code (`base_speed_per_kill` → `base_frac`, `per_level_increase_per_kill` → `per_level_frac`) ride with `audit/remediations/ron-tuning-values.md`. This file retains only the design-doc alignment work.
-
-## Remediation
-
-Open `docs/todos/detail/mod-system-design/hazards/overcharge.md`.
-
-§Config Resource — replace the `base_speed_per_kill: f32` / `per_level_increase_per_kill: f32` fields with:
+§ Config Resource:
 
 ```rust
 pub(crate) struct OverchargeConfig {
@@ -24,19 +17,32 @@ pub(crate) struct OverchargeConfig {
 }
 ```
 
-The per-kill multiplier is `1.0 + base_frac + per_level_frac * (stacks - 1)`. Raised to the power of `kills`. Example: stack 3, 1 kill → `1.0 + 0.05 + 0.03 * 2 = 1.11`; 10 kills → `1.11^10 ≈ 2.84`.
+> Per-kill multiplier: `1.0 + base_frac + per_level_frac * (stacks - 1)`. Raised to the power of `kills`. Example: stack 3, 1 kill → `1.0 + 0.05 + 0.03 * 2 = 1.11`; 10 kills → `1.11^10 ≈ 2.84`.
 
-§Systems — delete the `attach_overcharge_tracker` entry. Replace with:
+§ Systems:
 
-> `OverchargeKillCount` is inserted LAZILY on each bolt's first kill (via `overcharge_count_kills`). No separate attach system; the count starts at zero and is created the moment a bolt first matters. When a bolt despawns, its count despawns with it — no cleanup needed.
+> `OverchargeKillCount` is inserted LAZILY on each bolt's first kill (inside `overcharge_count_kills`). This is distinct from the `Added<Cell>` / `Added<Bolt>` attach pattern used for timers that must exist from spawn — Overcharge's count only matters once a bolt has made a kill, and most bolts never do.
+>
+> When a bolt despawns, its count despawns with it — no cleanup system needed.
 
-§Expected Behaviors worked examples — update to use the fractional values:
+§ Expected Behaviors — worked examples:
 
-- Behavior 1: `base_frac: 0.05`, stack 1 (multiplier 1.05), 1 kill → `base_speed * 1.05`.
-- Behavior 4: `base_frac: 0.05`, `per_level_frac: 0.03`, stack 3 (multiplier 1.11), 1 kill → `base_speed * 1.11`.
+- Behaviour 1: `base_frac: 0.05`, stack 1 (multiplier 1.05), 1 kill → `base_speed * 1.05`.
+- Behaviour 4: `base_frac: 0.05`, `per_level_frac: 0.03`, stack 3 (multiplier 1.11), 1 kill → `base_speed * 1.11`.
 
-No code change in this remediation (code-side field rename is handled by the RON tuning remediation). No test change.
+## What the target doc must NOT say
 
-## Scope note
+- Do not describe fields as `base_speed_per_kill` / `per_level_increase_per_kill`.
+- Do not reference an `attach_overcharge_tracker` system — lazy insertion replaces it.
+- Do not use percent-valued (`5.0`) examples — fractional (`0.05`) is the canonical form.
 
-This remediation is part of the broader design-doc-alignment sweep.
+## Pipeline position (dmg crate)
+
+- **Trigger**: reads `Destroyed<Cell>` from the `rantzsoft_dmg` crate inside `overcharge_count_kills` — on each kill attributed to a bolt (via `KilledBy`), the bolt's `OverchargeKillCount` is incremented (lazily inserted on first kill).
+- **Not a damage emitter or mutator.** Overcharge does NOT participate in any `DeathPipelineSystems` set. After counting, it reconciles `EffectStack<SpeedBoostConfig>` on the bolt (source `"hazard:overcharge"`) — a speed multiplier, not a damage one. Reset on `BumpPerformed` clears the count.
+- **Ordering**: `overcharge_count_kills` runs `.after(DeathPipelineSystems::ApplyKill)` so kill attribution is resolved.
+- **No** `DamageDealt<T>` / `HealDealt<T>` / `DamageBoostStack` involvement.
+
+## Why
+
+Lazy insertion is the right trigger here: trackers only matter once a bolt has made a kill, and most bolts never do. This is distinct from cell-lifetime timers (Renewal / Volatility) which use `Added<Cell>` — those MUST exist from the moment the cell spawns, because their effect measures elapsed cell-time. Overcharge measures kills, not time, so spawn is the wrong trigger.

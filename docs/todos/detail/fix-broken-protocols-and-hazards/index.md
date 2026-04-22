@@ -37,7 +37,7 @@ fix-broken-protocols-and-hazards/
   echo-cells.md
   fracture.md
   erosion.md
-  grid.md             // cross-cutting: cells-domain adjacency API + Cascade/Diffusion migration
+  range-adjacency.md  // cross-cutting: range-based adjacency via quadtree + Cascade/Diffusion/Fracture migration
   decay.md
 ```
 
@@ -77,7 +77,7 @@ Status markers:
 | Echo Cells | SPEC'D | `HpScaling` enum + `.ghost()` builder transition |
 | Fracture | SPEC'D | `.debris()` builder + skip-occupied + recursion guard + Cascade ordering |
 | Erosion | SPEC'D | SizeBoost aggregate applies to X only |
-| Grid-orthogonal adjacency | SPEC'D | `CellGridPosition` + `orthogonal_neighbors` helper; Cascade/Diffusion migrate |
+| Range-based adjacency | SPEC'D | Quadtree `query_circle` adjacency via `rantzsoft_physics2d`; Cascade/Diffusion/Fracture migrate; works for boss cells off-grid |
 | Decay | SPEC'D | `Option<Res<ActiveHazards>>` harness-safety + paused test |
 
 ### Cross-cutting

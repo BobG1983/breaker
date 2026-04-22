@@ -1,24 +1,12 @@
-# Renewal: align design doc with cleaner impl
+# Renewal — canonical design doc shape
 
-## Problems addressed
+## Target file
 
-- `audit/hazards/renewal.md` Issues 1, 2, 3, 4 \u2014 Design doc diverges from the cleaner impl in several places: `duration` field unused, 3-system split collapsed to 2, field names verbose in design / descriptive in impl, death-pipeline ordering unpinned.
-- Issue 5 (cleanup) \u2014 Subsumed by `run-end-config-cleanup.md` (Renewal in "no state resources" list; per-cell RenewalTimer despawns with cells at node exit).
+`docs/design/hazards/renewal.md` (promoted during this sweep).
 
-## Remediation
+## What the target doc must say
 
-Open `docs/todos/detail/mod-system-design/hazards/renewal.md`.
-
-\u00a7Components \u2014 replace:
-
-```rust
-pub(crate) struct RenewalTimer {
-    pub remaining: f32,
-    pub duration: f32,
-}
-```
-
-with:
+§ Components:
 
 ```rust
 pub(crate) struct RenewalTimer {
@@ -28,35 +16,47 @@ pub(crate) struct RenewalTimer {
 }
 ```
 
-Note: duration is recomputed each reset from live `HazardActive.stacks` + `RenewalConfig`. Storing it on the component is redundant; the recompute guarantees the newest stack count applies to the next cycle.
+> Duration is recomputed each reset from live `HazardActive.stacks` + `RenewalConfig`. Storing it on the component is redundant; the recompute guarantees the newest stack count applies to the next cycle.
 
-\u00a7Config Resource \u2014 rename fields:
+§ Config Resource fields:
+- `base_period_secs: f32` (not `base_timer`)
+- `per_level_reduction_frac: f32` (fractional units, not percent)
 
-- `base_timer: f32` \u2192 `base_period_secs: f32`
-- `per_level_reduction_percent: f32` (percent units) \u2192 `per_level_reduction_frac: f32` (fractional units)
+Per-stack duration formula: `duration = base_period_secs * (1.0 - per_level_reduction_frac)^(stacks - 1)`.
 
-Update the per-stack duration formula description: `duration = base_period_secs * (1.0 - per_level_reduction_frac)^(stacks - 1)`.
+§ Systems — two systems:
 
-\u00a7Systems \u2014 replace the three-system description with two:
-
-> **`renewal_attach_timers`** (runs every tick, gated on `hazard_active(Renewal) + in_state(Playing)`)
+> **`attach_renewal_timer`** (schedule: `FixedUpdate`, `run_if = hazard_active(Renewal) + in_state(NodeState::Playing)`)
 >
-> Queries every `Cell` without a `RenewalTimer`. Attaches `RenewalTimer { remaining: duration_secs(current_stacks) }`. Idempotent: cells already with a timer are skipped. This subsumes both the "attach on activation" and "attach to newly spawned cells" concerns (Echo Cells ghosts, Fracture debris, Momentum splits).
+> ```rust
+> Query<Entity, Added<Cell>>
+> ```
 >
-> **`renewal_tick`** (runs every tick, ordered `.after(DeathPipelineSystems::HandleKill).before(DeathPipelineSystems::ApplyHeal)`)
+> On each newly spawned cell, inserts `RenewalTimer { remaining: duration_secs(current_stacks) }`. `Added<Cell>` fires exactly once per entity on spawn — no idempotency checks needed, no every-tick scan. Since hazards activate at node boundaries (not mid-node), every cell spawned during a Renewal-active node hits `Added<Cell>` and gets the timer.
+>
+> **`renewal_tick`** (schedule: `FixedUpdate`, ordered `.after(DeathPipelineSystems::ApplyKill).before(DeathPipelineSystems::ApplyHeal)`)
 >
 > Decrements `RenewalTimer.remaining` by `dt`. On expiry: if `hp.current < hp.starting`, emits `HealDealt<Cell> { target, amount: starting - current, cap: HealCap::Starting, source: "hazard:renewal" }`. Resets `remaining` to `duration_secs(current_stacks)`. If `hp.current >= hp.starting`, skips the heal emit but still resets the timer.
 
-Remove the `renewal_init_timers` and `renewal_reset_on_stack_change` entries. Both are subsumed by the two-system approach.
+§ Ordering rationale:
 
-\u00a7Ordering \u2014 pin the death-pipeline requirement:
+> `renewal_tick` must run after `ApplyKill` (so dead cells are removed from the query) and before `ApplyHeal` (so this tick's heals feed the same-tick apply).
 
-> `renewal_tick` MUST run `.after(DeathPipelineSystems::HandleKill).before(DeathPipelineSystems::ApplyHeal)`. After HandleKill: dead cells are removed from the query so Renewal doesn't heal them. Before ApplyHeal: this tick's heals feed the same tick's apply system.
+## What the target doc must NOT say
 
-### Code
+- Do not include a `duration` field on `RenewalTimer`.
+- Do not reference `base_timer` or percent-valued `per_level_reduction_percent`.
+- Do not describe a 3-system split (`attach` + `init` + `reset_on_stack_change`) — the 2-system shape supersedes it.
+- Do not describe `attach_renewal_timer` as an every-tick `Query<Entity, (With<Cell>, Without<RenewalTimer>)>` scan — `Added<Cell>` is the canonical trigger (per TODO #9 attach-system-migration).
 
-No code change. The impl is already correct per the new design doc.
+## Pipeline position (dmg crate)
 
-### Tests
+- **Trigger**: FixedUpdate tick (`renewal_tick` decrement), gated by `hazard_active(Renewal) + in_state(NodeState::Playing)`.
+- **Emits**: `HealDealt<Cell> { target, amount, cap: HealCap::Starting, source: "hazard:renewal" }` from `rantzsoft_dmg`.
+- **Ordering**: `renewal_tick` runs in `DeathPipelineSystems::EmitHeal`, `.after(DeathPipelineSystems::ApplyKill).before(DeathPipelineSystems::ApplyHeal)`.
+- **Attach**: `attach_renewal_timer` reads `Added<Cell>` — distinct system, runs in `FixedUpdate` outside the death-pipeline sets.
+- **No** `DamageDealt<T>` / `Destroyed<T>` / `DamageBoostStack` involvement.
 
-No test change. Existing tests pin the impl's behavior; the design doc update aligns docs with already-correct code.
+## Why
+
+`Added<Cell>` is the canonical attach trigger. The 2-system shape is cleaner and the ordering pin prevents both heal-dead-cells and cross-tick ordering drift. Field renames improve intuition (fraction vs percent units).

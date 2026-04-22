@@ -1,18 +1,12 @@
-# Resonance: align design doc with impl (richer Components, kills-beyond-threshold semantics)
+# Resonance — full component shapes + kills-beyond-threshold semantics in the canonical design doc
 
-## Problems addressed
+## Target file
 
-- `audit/hazards/resonance.md` Issue 3 \u2014 Design \u00a7Components for `ResonanceWave` incomplete; impl adds `target_pos`, `age`, `max_lifetime`, `contact_threshold`.
-- `audit/hazards/resonance.md` Issue 4 \u2014 Design \u00a7Components for `ResonanceTracker` says `Vec<f32>`; impl uses `Vec<(f32, Vec2)>` (needs position for wave spawn location).
-- `audit/hazards/resonance.md` Issue 5 \u2014 `ResonanceActiveSlows` and `ResonanceSlowEntry` not in design \u00a7Components.
-- `audit/hazards/resonance.md` Issue 6 \u2014 Resource-based slow tracking (not per-entity) is an architectural choice not mentioned in design.
-- `audit/hazards/resonance.md` Issue 7 \u2014 "Kills-beyond-threshold" drain semantics undocumented in design.
+`docs/design/hazards/resonance.md` (promoted during this sweep).
 
-## Remediation
+## What the target doc must say
 
-Open `docs/todos/detail/mod-system-design/hazards/resonance.md`.
-
-\u00a7Components \u2014 replace the Wave and Tracker definitions with full impl shapes:
+§ Components — full impl shapes (not abbreviated):
 
 ```rust
 #[derive(Component, Debug, Clone)]
@@ -46,12 +40,21 @@ pub(crate) struct ResonanceSlowEntry {
 }
 ```
 
-Add under \u00a7Components a new paragraph:
+Under § Components, add a paragraph:
 
-> Slow entries are tracked in a `Resource` HashMap (`ResonanceActiveSlows`) rather than as per-breaker components. Rationale: cleanup is centralized (one drain + reverse loop on node teardown), and per-wave archetype churn on the breaker is avoided. Each wave's slow is uniquely source-tagged (`"hazard:resonance:wave:<entity_bits>"`) so multiple waves can coexist.
+> Slow entries are tracked in a `Resource` HashMap (`ResonanceActiveSlows`) rather than as per-breaker components. Rationale: cleanup is centralised (one drain + reverse loop on node teardown), and per-wave archetype churn on the breaker is avoided. Each wave's slow is uniquely source-tagged (`"hazard:resonance:wave:<entity_bits>"`) so multiple waves can coexist.
 
-\u00a7Systems `resonance_spawn_waves` step \u2014 describe the kills-beyond-threshold drain:
+§ Systems — for `resonance_spawn_waves`, describe the drain:
 
-> The spawner drains ONLY the EXCESS tail of `tracker.kills` beyond `kills_to_trigger`. Leading entries remain as "prior kills" carryover so the NEXT kill (after a wave fires) doesn't need to rebuild from zero; it only needs to reach `kills_to_trigger + 1` again. Post-spawn, `tracker.kills.len() == kills_to_trigger` is invariant (add a debug_assert in the impl to pin this).
+> The spawner drains ONLY the EXCESS tail of `tracker.kills` beyond `kills_to_trigger`. Leading entries remain as "prior kills" carryover so the NEXT kill (after a wave fires) doesn't need to rebuild from zero; it only needs to reach `kills_to_trigger + 1` again. Post-spawn, `tracker.kills.len() == kills_to_trigger` is invariant (a `debug_assert!` in the impl pins it).
 
-No code change. No test change. Doc-only alignment.
+## Pipeline position (dmg crate)
+
+- **Trigger**: reads `Destroyed<Cell>` from the `rantzsoft_dmg` crate — each cell death appends `(timestamp, position)` to `ResonanceTracker.kills`.
+- **Not a damage emitter or mutator.** Resonance does NOT participate in any `DeathPipelineSystems` set. It spawns wave entities (its own `ResonanceWave` component, not related to the damage chain) and applies speed slows to the breaker via the centrally-tracked `ResonanceActiveSlows` resource.
+- **Ordering**: `resonance_track_kills` runs `.after(DeathPipelineSystems::ApplyKill)`; `resonance_spawn_waves` / `resonance_tick_waves` / `resonance_tick_slows` run in `FixedUpdate` without further chain dependencies.
+- **No** `DamageDealt<T>` / `HealDealt<T>` / `DamageBoostStack` involvement.
+
+## Why
+
+The component shapes and drain semantics are load-bearing for impl correctness and for reading the mechanic. The doc must match what the code does.
