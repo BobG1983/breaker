@@ -12,6 +12,53 @@ Depends on [TODO #0 — unified death pipeline crate](./unified-death-crate.md) 
 
 During the interim (crate landed, mutators refactor not yet done), the existing `hazard/` and `protocol/` plugins register chain members directly. Tests continue to pass; the architectural boundary is violated temporarily. Acceptable for the interim — this remediation closes it.
 
+## Deferrals from TODO #0 (MUST be addressed here)
+
+Two items intentionally deferred out of TODO #0's scope and INTO this remediation's scope. TODO #0 ships with the 11-variant chain configured but these sets EMPTY. Landing TODO #1 is what gives them content.
+
+### Deferral A — MutateDamage mechanism + Cell migration
+
+TODO #0's Phase 6 (per `unified-death-crate.md` §Remediation plan) was to delete `apply_damage_to_cells`, add `Cell` to `register_damage_type::<Cell>()`, and migrate Diffusion/Tether/Echo Strike's redistribution logic from `apply_damage_to_cells`'s inline loop into `MutateDamage` chain members. It was deferred because Bevy 0.18 messages are FIFO-read-only — you cannot mutate a `DamageDealt<Cell>`'s `amount` field in place after emission. The `MessageMutator<DamageDealt<T>>` pattern the detail spec assumes needs a concrete mechanism.
+
+**This remediation MUST design and implement that mechanism**, then complete the migration.
+
+Required design outputs:
+1. **Mutation mechanism.** Pick one and document rationale:
+   - **Option A (resource-based accumulator)**: a per-tick `Resource<DamageAdjustments<T>>` (HashMap<MessageId, f32> or Vec<(target_entity, delta)>) that `MutateDamage` members write to; `apply_damage::<T>` folds it into the final Hp write. Messages stay immutable; the adjustment side-channel carries the deltas.
+   - **Option B (emit-sibling-replace-primary)**: mutators emit new `DamageDealt<T>` messages that REPLACE the primary (distinguished by a sentinel flag or a `replaced_by: Option<MessageId>` field on the original); `apply_damage::<T>` filters out messages that have been replaced. Emitted siblings are separate positive-delta messages targeting neighbours.
+   - **Option C (pre-apply read-accumulate-write)**: `apply_damage::<T>` reads all `DamageDealt<T>` messages into a `HashMap<Entity, f32>`, then dispatches to `MutateDamage` callbacks (closures or a trait) that transform the per-entity amounts before the Hp write. Collapses the chain into a pre-apply transformer pass.
+   - Recommendation: **Option A**. Lowest disruption — existing emit sites keep emitting, applier keeps reading, chain members just write to a side resource. Chain ordering works via normal SystemSet chaining.
+2. **`apply_damage_boosts::<T>` + `apply_vulnerable::<T>` alignment.** TODO #0 will have implemented these two crate-owned systems using Option A semantics (they mutate the DamageAdjustments resource or equivalent). This remediation must verify the mechanism is reusable for Diffusion/Tether/Echo Strike without refactoring the two boost/vulnerable systems.
+3. **Diffusion migration**. Extract BFS + share-reduction logic from `breaker-game/src/cells/systems/apply_damage_to_cells/system.rs` into `mutators/hazards/diffusion/system.rs` as a `diffusion_mutate_damage` system in the `MutateDamage` set. Reduce the primary's amount (via the chosen mechanism). Emit ring-N sibling `DamageDealt<Cell>` messages with flat-share-per-ring semantics. Source: `"hazard:diffusion"`.
+4. **Tether migration**. Extract `TetherLink`-based partner redirect from `apply_damage_to_cells` into `mutators/hazards/tether/system.rs` as `tether_redirect` in `MutateDamage`. Emit partner-target siblings. Source: `"hazard:tether"`.
+5. **Echo Strike migration**. Move the existing Echo Strike emit system (today likely in `protocol/protocols/echo_strike/`) into the `MutateDamage` chain at the correct position (earliest — see the §Ordering rationale section above).
+6. **Delete `apply_damage_to_cells`**. Remove `breaker-game/src/cells/systems/apply_damage_to_cells/` entirely. Register `Cell` via `app.register_damage_type::<Cell>()` alongside Bolt/Wall/Breaker/Salvo. Move the cells-specific `Without<Invulnerable>` bolt-cell-collision filter into the crate-owned `invulnerable_filter::<T>` if not already centralised by TODO #0's W5.
+7. **Tests**. Pin the mutation mechanism's semantics with crate-level or game-level tests covering: (a) a primary diffuses into 3 neighbours, target takes reduced amount, neighbours take per-ring fraction; (b) a tethered pair redirects; (c) echoed primary → Diffusion → Tether chain ends with every emitted message's final Hp write matching expectation; (d) `Invulnerable` zeros every message in the chain regardless of origin.
+
+### Deferral B — Emitter sweep into `EmitDamage`
+
+TODO #0 configures the `EmitDamage` set but leaves today's damage emitters where they are (Iron Curtain in protocol/hazard domain, Burnout shockwave emit wherever it sits, chip damage emitters in effect_v3). These need a set-tag sweep — no behaviour change, but the pipeline isn't fully coherent until every system writing `DamageDealt<T>` lives in `EmitDamage`.
+
+Required:
+1. **Iron Curtain** — `iron_curtain_on_bolt_lost` moves to `EmitDamage`.
+2. **Burnout shockwave emit** — whichever system writes `DamageDealt<Cell>` for shockwave moves to `EmitDamage`.
+3. **Chip damage emitters** — every `effect_v3` chip effect that directly emits `DamageDealt<T>` (not via a DamageBoost-stack route) gets tagged `EmitDamage`. Inventory them during this remediation's planning.
+4. **Fracture debris-damage emit** (if any) — same treatment.
+5. **Heal emitters** (Renewal, Sympathy, Momentum) — already moved to `EmitHeal` by TODO #0's W5. Verify the move held; no new work here.
+
+Rule going forward: **any system that writes `DamageDealt<T>` MUST live in `EmitDamage`.** Add this constraint to `docs/architecture/creating-a-mutator.md` when it's authored (Step 8 of this remediation's migration plan).
+
+Effect-system ticks that MAY emit damage (depending on stack state) use `.before(DeathPipelineSystems::EmitDamage)` instead of `.in_set()` — they're upstream producers the pipeline treats as pre-Emit.
+
+### Integration with this remediation's existing steps
+
+The existing Migration plan (Steps 1–9 below) does NOT yet cover Deferrals A and B. Add:
+
+- **Step 3.5 (new) — Design and implement the mutation mechanism** before restructuring per-mechanic wire(app)s. Lands the chosen mechanism (Option A recommended) as a standalone commit with crate-level or game-level tests. This commit can be split: mechanism + `apply_damage_boosts`/`apply_vulnerable` alignment first, then the Diffusion/Tether/Echo Strike migrations + `apply_damage_to_cells` delete as separate sequential commits.
+- **Step 4.5 (new) — Emitter set-tag sweep** as a standalone commit after Step 4 (per-mechanic `wire(app)` refactor). Mechanical — tag every `DamageDealt<T>` writer into `EmitDamage`.
+
+These two steps are the critical-path work for this remediation, not afterthoughts. The directory consolidation and plugin unification (the "structural" work this remediation was originally scoped for) is the EASIER half of the job.
+
 ## Design
 
 ### File structure
