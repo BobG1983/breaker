@@ -13,9 +13,11 @@
 //! and the `RantzDmgPlugin` skeleton: the plugin registers the non-generic
 //! `DespawnEntity` message, configures all eleven damage-pipeline stages
 //! as a `.chain()` under `FixedUpdate`, and schedules a no-op
-//! `process_despawn_requests` stub in `FixedPostUpdate`. Per-`T` generic
-//! messages, stacks, and the `register_dmgable` ext trait arrive in
-//! P5/P6.
+//! `process_despawn_requests` stub in `FixedPostUpdate`. P5 adds the two
+//! damage-stack components — `DamageBoostStack` and `VulnerableStack` — as
+//! private-field, `Vec`-backed, append-semantic containers keyed by
+//! `SourceId`. Per-`T` systems, the `register_dmgable` ext trait, and
+//! `process_despawn_requests` wiring arrive in P6.
 
 #![cfg_attr(
     test,
@@ -35,7 +37,9 @@ mod source_id;
 mod systems;
 mod traits;
 
-pub use components::{Dead, HealCap, Hp, Invulnerable, KilledBy};
+pub use components::{
+    DamageBoostStack, Dead, HealCap, Hp, Invulnerable, KilledBy, VulnerableStack,
+};
 pub use messages::{DamageDealt, DespawnEntity, Destroyed, HealDealt, KillYourself};
 pub use plugin::RantzDmgPlugin;
 pub use sets::DmgSystems;
@@ -217,5 +221,25 @@ mod tests {
         app.add_plugins(MinimalPlugins);
         app.add_plugins(RantzDmgPlugin);
         app.update();
+    }
+
+    // ── Behavior 80: `DamageBoostStack` reachable via `use crate::*;` glob
+    //     import ──
+
+    #[test]
+    fn damage_boost_stack_reachable_via_crate_glob_import() {
+        use crate::*;
+        let stack = DamageBoostStack::default();
+        assert!(stack.is_empty());
+    }
+
+    // ── Behavior 81: `VulnerableStack` reachable via `use crate::*;` glob
+    //     import ──
+
+    #[test]
+    fn vulnerable_stack_reachable_via_crate_glob_import() {
+        use crate::*;
+        let stack = VulnerableStack::default();
+        assert!(stack.is_empty());
     }
 }
