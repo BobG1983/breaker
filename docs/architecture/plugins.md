@@ -35,6 +35,10 @@ brickbreaker/                 # Repository root (workspace)
 ├── rantzsoft_stateflow/      # Game-agnostic state routing, screen transitions, lifecycle messages
 │   ├── Cargo.toml            # Package: rantzsoft_stateflow
 │   └── src/                  # Route builder, dispatch, transition effects, cleanup
+├── rantzsoft_dmg/            # Game-agnostic damage/kill/heal pipeline (Hp, Dead, Invulnerable, DamageBoostStack, VulnerableStack, DmgSystems, RantzDmgPlugin, RantzDmgAppExt::register_dmgable)
+│   ├── Cargo.toml            # Package: rantzsoft_dmg
+│   ├── src/                  # Components, messages, systems, sets, traits, plugin, app_ext
+│   └── tests/                # Integration test suite (public API only)
 ├── breaker-scenario-runner/  # Automated gameplay testing tool (dev-only binary)
 │   ├── Cargo.toml            # Package: breaker_scenario_runner
 │   ├── src/                  # Runner source (types, lifecycle, invariants, input, log_capture)

@@ -4650,7 +4650,6 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "rantzsoft_spatial2d",
- "tracing",
 ]
 
 [[package]]

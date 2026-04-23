@@ -384,11 +384,13 @@ dmgtest   = "test   -p rantzsoft_dmg --features bevy/dynamic_linking"
 ## TODO entry
 
 ```
-0. **[ready]** Build `rantzsoft_dmg` crate (standalone) — 11-variant Emit/Mutate/Apply pipeline
+0. **[done]** Build `rantzsoft_dmg` crate (standalone) — 11-variant Emit/Mutate/Apply pipeline
    for Damage/Kill/Heal via `MessageMutator`-based mutation, `DamageBoostStack` /
    `VulnerableStack` components, `SourceId`, `Dmgable` marker trait, `register_dmgable::<T: Dmgable>`
    ext trait. No game changes. — [detail](detail/unified-death-crate.md)
 ```
+
+**Status: COMPLETE** — Shipped in commits 59932cf1, a0bc44e1, 7237da9a, d9af92c9, 47f1b555, b7f11a25, aefcdf94. Crate at `rantzsoft_dmg/`, all integration tests green. Zero `breaker-game` changes. Port is TODO #1.
 
 ## Followup
 
