@@ -295,3 +295,12 @@ After each split batch, the orchestrator must:
    rule in `.claude/rules/routing-failures.md`.
 3. Use `cargo all-dtest` and `cargo all-dclippy` (see `.claude/rules/cargo.md`) — these cover
    `rantzsoft_dmg` as a workspace member.
+
+---
+
+## Status: COMPLETE
+
+Executed 2026-04-22 in commit e612c4c9 on `feature/rantzsoft-dmg-crate`. All 8 files
+(handle_kill, apply_heal, apply_damage_boosts, apply_vulnerable, plugin, app_ext,
+vulnerable_stack, cross_t_isolation) split per the strategy above. 7921 tests pass,
+clippy clean. No behavior changes.
