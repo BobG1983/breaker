@@ -7,8 +7,10 @@
 //! `.claude/rules/rantzsoft-crates.md`: no game-specific vocabulary,
 //! entities, or assumptions leak into this crate.
 //!
-//! P2 ships the core value types. Messages, systems, stacks, and the plugin
-//! arrive in subsequent phases as a `Dmgable`-driven pipeline.
+//! P3 ships the generic damage-pipeline messages (`DamageDealt<T>`,
+//! `HealDealt<T>`, `KillYourself<T>`, `Destroyed<T>`, `DespawnEntity`)
+//! alongside the P2 core types. Systems, stacks, and the plugin arrive in
+//! later phases as a `Dmgable`-driven pipeline.
 
 #![cfg_attr(
     test,
@@ -21,10 +23,12 @@
 )]
 
 mod components;
+mod messages;
 mod source_id;
 mod traits;
 
 pub use components::{Dead, HealCap, Hp, Invulnerable, KilledBy};
+pub use messages::{DamageDealt, DespawnEntity, Destroyed, HealDealt, KillYourself};
 pub use source_id::SourceId;
 pub use traits::Dmgable;
 
@@ -66,5 +70,106 @@ mod tests {
         let source = SourceId::from("src:alpha");
         let source_again = SourceId::from("src:alpha");
         assert_eq!(source, source_again);
+    }
+
+    // ── Behavior 29: every new message is re-exported from the crate root
+    //     (named imports) ──
+
+    #[test]
+    fn all_message_types_re_exported_from_crate_root() {
+        use std::marker::PhantomData;
+
+        use bevy::prelude::Entity;
+
+        use crate::{
+            DamageDealt, DespawnEntity, Destroyed, Dmgable, HealCap, HealDealt, KillYourself,
+            SourceId,
+        };
+
+        #[derive(bevy::prelude::Component)]
+        struct TestT;
+        impl Dmgable for TestT {}
+
+        drop(DamageDealt::<TestT> {
+            dealer:  None,
+            target:  Entity::PLACEHOLDER,
+            amount:  1.0,
+            source:  Some(SourceId::from("module:action")),
+            _marker: PhantomData,
+        });
+        drop(HealDealt::<TestT> {
+            healer:  None,
+            target:  Entity::PLACEHOLDER,
+            amount:  1.0,
+            source:  None,
+            cap:     HealCap::Starting,
+            _marker: PhantomData,
+        });
+        let _ = KillYourself::<TestT> {
+            victim:  Entity::PLACEHOLDER,
+            killer:  None,
+            _marker: PhantomData,
+        };
+        let _ = Destroyed::<TestT> {
+            victim:     Entity::PLACEHOLDER,
+            killer:     None,
+            victim_pos: bevy::prelude::Vec2::ZERO,
+            killer_pos: None,
+            _marker:    PhantomData,
+        };
+        let _ = DespawnEntity {
+            entity: Entity::PLACEHOLDER,
+        };
+    }
+
+    #[test]
+    fn all_message_types_re_exported_from_crate_root_via_glob() {
+        // Edge case: glob import `use crate::*;` must also resolve all five
+        // names (covers both Behavior 29's edge case and Behavior 30's
+        // requirement that PhantomData<T> field is reachable from crate root
+        // via struct-literal construction).
+        use std::marker::PhantomData;
+
+        use bevy::prelude::{Entity, Vec2};
+
+        use crate::*;
+
+        #[derive(bevy::prelude::Component)]
+        struct TestT;
+        impl Dmgable for TestT {}
+
+        // Behavior 30: struct-literal construction of all four generic
+        // messages with `_marker: PhantomData` proves the marker field is
+        // reachable with `pub` visibility from the crate-root consumer site.
+        drop(DamageDealt::<TestT> {
+            dealer:  None,
+            target:  Entity::PLACEHOLDER,
+            amount:  1.0,
+            source:  None,
+            _marker: PhantomData,
+        });
+        drop(HealDealt::<TestT> {
+            healer:  None,
+            target:  Entity::PLACEHOLDER,
+            amount:  1.0,
+            source:  None,
+            cap:     HealCap::Max,
+            _marker: PhantomData,
+        });
+        let _ = KillYourself::<TestT> {
+            victim:  Entity::PLACEHOLDER,
+            killer:  None,
+            _marker: PhantomData,
+        };
+        let _ = Destroyed::<TestT> {
+            victim:     Entity::PLACEHOLDER,
+            killer:     None,
+            victim_pos: Vec2::ZERO,
+            killer_pos: None,
+            _marker:    PhantomData,
+        };
+        let _ = DespawnEntity {
+            entity: Entity::PLACEHOLDER,
+        };
     }
 }
