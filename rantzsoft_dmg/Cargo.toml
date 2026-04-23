@@ -1,0 +1,13 @@
+[package]
+name = "rantzsoft_dmg"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+bevy = { version = "0.18.1", default-features = false, features = ["2d"] }
+tracing = "0.1"
+rantzsoft_spatial2d = { path = "../rantzsoft_spatial2d" }
+
+[lints]
+workspace = true

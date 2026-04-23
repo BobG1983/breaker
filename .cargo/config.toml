@@ -26,6 +26,11 @@ stateflowtest = "test -p rantzsoft_stateflow --features bevy/dynamic_linking"
 stateflowclippy = "clippy -p rantzsoft_stateflow --all-targets --features bevy/dynamic_linking"
 stateflowcheck = "check -p rantzsoft_stateflow --features bevy/dynamic_linking"
 
+# rantzsoft_dmg (dynamic linking to avoid workspace artifact conflicts)
+dmgtest = "test -p rantzsoft_dmg --features bevy/dynamic_linking"
+dmgclippy = "clippy -p rantzsoft_dmg --all-targets --features bevy/dynamic_linking"
+dmgcheck = "check -p rantzsoft_dmg --features bevy/dynamic_linking"
+
 # scenario runner (dev — ONLY for debugging bugs in the runner itself)
 dscenario = "run -p breaker_scenario_runner"
 dstest = "test -p breaker_scenario_runner"

@@ -4645,6 +4645,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rantzsoft_dmg"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "rantzsoft_spatial2d",
+ "tracing",
+]
+
+[[package]]
 name = "rantzsoft_physics2d"
 version = "0.1.0"
 dependencies = [
