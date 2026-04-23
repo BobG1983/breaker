@@ -9,8 +9,13 @@
 //!
 //! P3 ships the generic damage-pipeline messages (`DamageDealt<T>`,
 //! `HealDealt<T>`, `KillYourself<T>`, `Destroyed<T>`, `DespawnEntity`)
-//! alongside the P2 core types. Systems, stacks, and the plugin arrive in
-//! later phases as a `Dmgable`-driven pipeline.
+//! alongside the P2 core types. P4 adds the `DmgSystems` `SystemSet` enum
+//! and the `RantzDmgPlugin` skeleton: the plugin registers the non-generic
+//! `DespawnEntity` message, configures all eleven damage-pipeline stages
+//! as a `.chain()` under `FixedUpdate`, and schedules a no-op
+//! `process_despawn_requests` stub in `FixedPostUpdate`. Per-`T` generic
+//! messages, stacks, and the `register_dmgable` ext trait arrive in
+//! P5/P6.
 
 #![cfg_attr(
     test,
@@ -24,11 +29,16 @@
 
 mod components;
 mod messages;
+mod plugin;
+mod sets;
 mod source_id;
+mod systems;
 mod traits;
 
 pub use components::{Dead, HealCap, Hp, Invulnerable, KilledBy};
 pub use messages::{DamageDealt, DespawnEntity, Destroyed, HealDealt, KillYourself};
+pub use plugin::RantzDmgPlugin;
+pub use sets::DmgSystems;
 pub use source_id::SourceId;
 pub use traits::Dmgable;
 
@@ -171,5 +181,41 @@ mod tests {
         let _ = DespawnEntity {
             entity: Entity::PLACEHOLDER,
         };
+    }
+
+    // ── Behavior 54: `DmgSystems` reachable through `use crate::*;` glob
+    //     import ──
+
+    #[test]
+    fn dmg_systems_reachable_via_crate_glob_import() {
+        use crate::*;
+
+        // First variant reachable through the glob path.
+        let first = DmgSystems::EmitDamage;
+        // Edge case: last variant too — proves the glob doesn't cut off
+        // midway.
+        let last = DmgSystems::ApplyHeal;
+
+        assert_ne!(first, last);
+    }
+
+    // ── Behavior 55: `RantzDmgPlugin` reachable through `use crate::*;`
+    //     glob import ──
+
+    #[test]
+    fn rantz_dmg_plugin_reachable_via_crate_glob_import() {
+        use bevy::prelude::*;
+
+        use crate::*;
+
+        let _ = RantzDmgPlugin;
+        let _ = <RantzDmgPlugin as Default>::default();
+
+        // Edge case: add it to a fresh App to prove Plugin trait resolves
+        // through the glob re-export.
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_plugins(RantzDmgPlugin);
+        app.update();
     }
 }
