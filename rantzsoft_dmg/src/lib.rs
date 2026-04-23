@@ -10,14 +10,15 @@
 //! P3 ships the generic damage-pipeline messages (`DamageDealt<T>`,
 //! `HealDealt<T>`, `KillYourself<T>`, `Destroyed<T>`, `DespawnEntity`)
 //! alongside the P2 core types. P4 adds the `DmgSystems` `SystemSet` enum
-//! and the `RantzDmgPlugin` skeleton: the plugin registers the non-generic
-//! `DespawnEntity` message, configures all eleven damage-pipeline stages
-//! as a `.chain()` under `FixedUpdate`, and schedules a no-op
-//! `process_despawn_requests` stub in `FixedPostUpdate`. P5 adds the two
-//! damage-stack components — `DamageBoostStack` and `VulnerableStack` — as
+//! and the `RantzDmgPlugin` skeleton. P5 adds the two damage-stack
+//! components — `DamageBoostStack` and `VulnerableStack` — as
 //! private-field, `Vec`-backed, append-semantic containers keyed by
-//! `SourceId`. Per-`T` systems, the `register_dmgable` ext trait, and
-//! `process_despawn_requests` wiring arrive in P6.
+//! `SourceId`. P6 adds the seven per-`T` pipeline systems
+//! (`apply_damage_boosts`, `apply_vulnerable`, `invulnerable_filter`,
+//! `apply_damage`, `detect_deaths`, `handle_kill`, `apply_heal`), the real
+//! `process_despawn_requests` body, and the public `RantzDmgAppExt`
+//! extension trait whose `register_dmgable::<T>()` method wires the
+//! per-`T` message queues and systems for a given `Dmgable` type.
 
 #![cfg_attr(
     test,
@@ -29,6 +30,7 @@
     )
 )]
 
+mod app_ext;
 mod components;
 mod messages;
 mod plugin;
@@ -37,6 +39,7 @@ mod source_id;
 mod systems;
 mod traits;
 
+pub use app_ext::RantzDmgAppExt;
 pub use components::{
     DamageBoostStack, Dead, HealCap, Hp, Invulnerable, KilledBy, VulnerableStack,
 };
@@ -241,5 +244,76 @@ mod tests {
         use crate::*;
         let stack = VulnerableStack::default();
         assert!(stack.is_empty());
+    }
+
+    // ── Behavior 151: `RantzDmgAppExt` is reachable at crate root ──
+
+    #[test]
+    fn rantz_dmg_app_ext_reachable_at_crate_root() {
+        use bevy::prelude::*;
+
+        use crate::RantzDmgAppExt;
+
+        #[derive(Component)]
+        struct TestT;
+        impl crate::Dmgable for TestT {}
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_plugins(crate::RantzDmgPlugin);
+        let _ = app.register_dmgable::<TestT>();
+    }
+
+    // ── Behavior 152: `RantzDmgAppExt` is reachable via glob import ──
+
+    #[test]
+    fn rantz_dmg_app_ext_reachable_via_crate_glob_import() {
+        use bevy::prelude::*;
+
+        use crate::*;
+
+        #[derive(Component)]
+        struct TestT;
+        impl Dmgable for TestT {}
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_plugins(RantzDmgPlugin);
+        let _ = app.register_dmgable::<TestT>();
+
+        assert!(
+            app.world()
+                .contains_resource::<Messages<DamageDealt<TestT>>>()
+        );
+    }
+
+    #[test]
+    fn rantz_dmg_app_ext_chains_multiple_types_via_glob_import() {
+        // Edge case 152a.
+        use bevy::prelude::*;
+
+        use crate::*;
+
+        #[derive(Component)]
+        struct A;
+        impl Dmgable for A {}
+
+        #[derive(Component)]
+        struct B;
+        impl Dmgable for B {}
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        app.add_plugins(RantzDmgPlugin);
+        let _ = app.register_dmgable::<A>().register_dmgable::<B>();
+
+        assert!(app.world().contains_resource::<Messages<DamageDealt<A>>>());
+        assert!(app.world().contains_resource::<Messages<HealDealt<A>>>());
+        assert!(app.world().contains_resource::<Messages<KillYourself<A>>>());
+        assert!(app.world().contains_resource::<Messages<Destroyed<A>>>());
+        assert!(app.world().contains_resource::<Messages<DamageDealt<B>>>());
+        assert!(app.world().contains_resource::<Messages<HealDealt<B>>>());
+        assert!(app.world().contains_resource::<Messages<KillYourself<B>>>());
+        assert!(app.world().contains_resource::<Messages<Destroyed<B>>>());
     }
 }
