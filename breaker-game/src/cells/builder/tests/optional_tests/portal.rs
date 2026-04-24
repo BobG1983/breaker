@@ -13,8 +13,7 @@ use crate::{
         components::VolatileCell,
         definition::CellBehavior,
     },
-    prelude::*,
-    shared::death_pipeline::invulnerable::Invulnerable,
+    prelude::{Invulnerable, *},
 };
 
 // ── Behavior 1: CellBehavior::Portal variant exists ────────────────────────

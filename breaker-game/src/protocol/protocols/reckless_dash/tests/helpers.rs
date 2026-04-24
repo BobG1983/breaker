@@ -243,7 +243,7 @@ pub(super) fn write_bolt_lost(app: &mut App, bolt: Entity, breaker: Entity) {
 
 // ── Assertion helpers ───────────────────────────────────────────────────────
 
-/// Returns every captured `DamageDealt<Cell>` whose `source_chip` matches the
+/// Returns every captured `DamageDealt<Cell>` whose `source` matches the
 /// Reckless Dash sentinel string. Uses the literal `"protocol:reckless_dash"`
 /// (not the const) so the sentinel drift guard remains independent.
 pub(super) fn collected_reckless_dash_damage(app: &App) -> Vec<DamageDealt<Cell>> {
@@ -251,11 +251,7 @@ pub(super) fn collected_reckless_dash_damage(app: &App) -> Vec<DamageDealt<Cell>
         .resource::<MessageCollector<DamageDealt<Cell>>>()
         .0
         .iter()
-        .filter(|msg| {
-            msg.source_chip
-                .as_deref()
-                .is_some_and(|s| s == "protocol:reckless_dash")
-        })
+        .filter(|msg| msg.source == Some(SourceId::from("protocol:reckless_dash")))
         .cloned()
         .collect()
 }

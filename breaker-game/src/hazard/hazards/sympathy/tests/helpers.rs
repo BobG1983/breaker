@@ -23,8 +23,7 @@ use crate::{
         definition::{HazardKind, HazardTuning},
         resources::ActiveHazards,
     },
-    prelude::*,
-    shared::death_pipeline::heal_dealt::HealDealt,
+    prelude::{HealDealt, *},
 };
 
 // ── App builders ────────────────────────────────────────────────────────────
@@ -109,7 +108,7 @@ pub(super) fn spawn_cell_at(app: &mut App, pos: Vec2, current: f32, starting: f3
                 starting,
                 max: None,
             },
-            KilledBy::default(),
+            KilledBy { killer: None },
         ))
         .id()
 }
@@ -136,7 +135,7 @@ pub(super) fn spawn_cell_at_with_max(
                 starting,
                 max,
             },
-            KilledBy::default(),
+            KilledBy { killer: None },
         ))
         .id()
 }
@@ -152,7 +151,7 @@ pub(super) fn spawn_cell_dead_at(app: &mut App, pos: Vec2) -> Entity {
                 starting: 50.0,
                 max:      None,
             },
-            KilledBy::default(),
+            KilledBy { killer: None },
             Dead,
         ))
         .id()
@@ -169,7 +168,7 @@ pub(super) fn spawn_cell_invulnerable_at(app: &mut App, pos: Vec2) -> Entity {
                 starting: 50.0,
                 max:      None,
             },
-            KilledBy::default(),
+            KilledBy { killer: None },
             Invulnerable,
         ))
         .id()
@@ -183,9 +182,10 @@ pub(super) fn write_cell_damage(app: &mut App, target: Entity, amount: f32) {
         .resource_mut::<Messages<DamageDealt<Cell>>>()
         .write(DamageDealt::<Cell> {
             dealer: None,
+            attributed_to: None,
             target,
             amount,
-            source_chip: None,
+            source: None,
             _marker: PhantomData,
         });
 }

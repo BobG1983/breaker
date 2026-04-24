@@ -7,7 +7,8 @@ use super::{
 use crate::{
     bolt::messages::BoltImpactCell,
     cells::{components::Cell, resources::CellTypeRegistry},
-    shared::{death_pipeline::damage_dealt::DamageDealt, playfield::PlayfieldConfig, rng::GameRng},
+    prelude::*,
+    shared::{playfield::PlayfieldConfig, rng::GameRng},
 };
 
 // ════════════════════════════════════════════════════════════════════

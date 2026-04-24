@@ -7,14 +7,17 @@ use crate::{prelude::*, state::run::resources::HighlightTracker};
 /// Reads [`DamageDealt<Cell>`] messages and accumulates damage per evolution chip name
 /// in [`HighlightTracker::evolution_damage`].
 ///
-/// Messages with `source_chip: None` are ignored.
+/// Messages with `source: None` are ignored.
 pub(crate) fn track_evolution_damage(
     mut reader: MessageReader<DamageDealt<Cell>>,
     mut tracker: ResMut<HighlightTracker>,
 ) {
     for msg in reader.read() {
-        if let Some(name) = &msg.source_chip {
-            *tracker.evolution_damage.entry(name.clone()).or_insert(0.0) += msg.amount;
+        if let Some(name) = &msg.source {
+            *tracker
+                .evolution_damage
+                .entry(name.0.as_ref().to_owned())
+                .or_insert(0.0) += msg.amount;
         }
     }
 }
@@ -46,12 +49,13 @@ mod tests {
             .build()
     }
 
-    fn make_damage(amount: f32, source_chip: Option<String>) -> DamageDealt<Cell> {
+    fn make_damage(amount: f32, source: Option<SourceId>) -> DamageDealt<Cell> {
         DamageDealt::<Cell> {
             dealer: None,
+            attributed_to: None,
             target: Entity::PLACEHOLDER,
             amount,
-            source_chip,
+            source,
             _marker: PhantomData,
         }
     }
@@ -63,7 +67,7 @@ mod tests {
         let mut app = test_app();
         app.insert_resource(TestMessages(vec![make_damage(
             25.0,
-            Some("Piercing Barrage".to_owned()),
+            Some(SourceId::from("Piercing Barrage")),
         )]));
         tick(&mut app);
 
@@ -86,9 +90,9 @@ mod tests {
     fn accumulates_across_multiple_messages_for_same_evolution() {
         let mut app = test_app();
         app.insert_resource(TestMessages(vec![
-            make_damage(10.0, Some("Piercing Barrage".to_owned())),
-            make_damage(15.0, Some("Piercing Barrage".to_owned())),
-            make_damage(5.0, Some("Piercing Barrage".to_owned())),
+            make_damage(10.0, Some(SourceId::from("Piercing Barrage"))),
+            make_damage(15.0, Some(SourceId::from("Piercing Barrage"))),
+            make_damage(5.0, Some(SourceId::from("Piercing Barrage"))),
         ]));
         tick(&mut app);
 
@@ -118,7 +122,7 @@ mod tests {
 
         app.insert_resource(TestMessages(vec![make_damage(
             10.0,
-            Some("Piercing Barrage".to_owned()),
+            Some(SourceId::from("Piercing Barrage")),
         )]));
         tick(&mut app);
 
@@ -141,8 +145,8 @@ mod tests {
     fn tracks_multiple_chips_independently() {
         let mut app = test_app();
         app.insert_resource(TestMessages(vec![
-            make_damage(25.0, Some("Piercing Barrage".to_owned())),
-            make_damage(40.0, Some("Chain Lightning".to_owned())),
+            make_damage(25.0, Some(SourceId::from("Piercing Barrage"))),
+            make_damage(40.0, Some(SourceId::from("Chain Lightning"))),
         ]));
         tick(&mut app);
 
@@ -170,7 +174,7 @@ mod tests {
         );
     }
 
-    // --- Behavior 14: Ignores source_chip: None ---
+    // --- Behavior 14: Ignores source: None ---
 
     #[test]
     fn ignores_damage_cell_with_no_source_chip() {

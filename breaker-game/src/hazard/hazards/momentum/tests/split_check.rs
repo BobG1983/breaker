@@ -20,10 +20,7 @@ use super::{
 use crate::{
     cells::components::{CellHeight, CellWidth},
     prelude::*,
-    shared::{
-        collision_layers::{BOLT_LAYER, CELL_LAYER},
-        death_pipeline::{Hp, KilledBy},
-    },
+    shared::collision_layers::{BOLT_LAYER, CELL_LAYER},
 };
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -181,8 +178,8 @@ fn dead_cell_at_threshold_does_not_split() {
                 starting: 10.0,
                 max:      Some(20.0),
             },
-            KilledBy::default(),
-            crate::shared::death_pipeline::Dead,
+            KilledBy { killer: None },
+            crate::prelude::Dead,
         ))
         .id();
 
@@ -213,8 +210,8 @@ fn invulnerable_cell_at_threshold_does_not_split() {
                 starting: 10.0,
                 max:      Some(20.0),
             },
-            KilledBy::default(),
-            crate::shared::death_pipeline::Invulnerable,
+            KilledBy { killer: None },
+            crate::prelude::Invulnerable,
         ))
         .id();
 
@@ -452,13 +449,7 @@ fn dead_cell_in_slot_counts_as_empty() {
     let cells = all_cells(&mut app);
     let live_new_positions: Vec<Vec2> = cells
         .iter()
-        .filter(|(e, ..)| {
-            *e != parent
-                && app
-                    .world()
-                    .get::<crate::shared::death_pipeline::Dead>(*e)
-                    .is_none()
-        })
+        .filter(|(e, ..)| *e != parent && app.world().get::<crate::prelude::Dead>(*e).is_none())
         .map(|(_, p, _)| *p)
         .collect();
     assert_eq!(live_new_positions.len(), 2);

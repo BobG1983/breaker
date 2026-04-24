@@ -50,7 +50,10 @@ fn register_wires_iron_curtain_on_bolt_lost_under_active_and_playing() {
         "amount expected 10.0, got {}",
         msgs[0].amount
     );
-    assert_eq!(msgs[0].source_chip.as_deref(), Some(IRON_CURTAIN_SENTINEL));
+    assert_eq!(
+        msgs[0].source.as_ref(),
+        Some(&SourceId::from(IRON_CURTAIN_SENTINEL))
+    );
 }
 
 // ── Behavior 20 — gated off when Iron Curtain NOT active ───────────────────-

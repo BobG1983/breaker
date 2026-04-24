@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use super::{super::system::*, helpers::*};
-use crate::shared::death_pipeline::HealCap;
+use crate::prelude::{HealCap, SourceId};
 
 // ════════════════════════════════════════════════════════════════════════════
 // Group D — Single-death / single-neighbour message shape
@@ -40,7 +40,7 @@ fn single_death_single_neighbour_emits_one_message_with_correct_fields() {
     );
     assert!(matches!(msg.cap, HealCap::Starting));
     assert_eq!(msg.healer, None);
-    assert_eq!(msg.source, Some("hazard:cascade".to_string()));
+    assert_eq!(msg.source, Some(SourceId::from("hazard:cascade")));
 }
 
 // Behavior 11 edge: neighbour at exactly the radius boundary (distance² == 4900)
@@ -101,7 +101,7 @@ fn stack_three_message_amount_is_base_plus_two_per_level() {
         msgs[0].amount
     );
     assert!(matches!(msgs[0].cap, HealCap::Starting));
-    assert_eq!(msgs[0].source, Some("hazard:cascade".to_string()));
+    assert_eq!(msgs[0].source, Some(SourceId::from("hazard:cascade")));
 }
 
 // Behavior 12 edge: stack 5 produces amount == 30.0 (design-doc pinned).

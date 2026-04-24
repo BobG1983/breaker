@@ -112,12 +112,25 @@ mod tests {
 
         let cell_a = app
             .world_mut()
-            .spawn((Cell, RequiredToClear, Hp::new(1.0), KilledBy::default()))
+            .spawn((
+                Cell,
+                RequiredToClear,
+                Hp::new(1.0),
+                KilledBy { killer: None },
+            ))
             .id();
-        app.world_mut()
-            .spawn((Cell, RequiredToClear, Hp::new(1.0), KilledBy::default()));
-        app.world_mut()
-            .spawn((Cell, RequiredToClear, Hp::new(1.0), KilledBy::default()));
+        app.world_mut().spawn((
+            Cell,
+            RequiredToClear,
+            Hp::new(1.0),
+            KilledBy { killer: None },
+        ));
+        app.world_mut().spawn((
+            Cell,
+            RequiredToClear,
+            Hp::new(1.0),
+            KilledBy { killer: None },
+        ));
 
         app.insert_resource(TestDestroyedMessages(vec![make_destroyed(cell_a)]));
         tick(&mut app);
@@ -135,15 +148,30 @@ mod tests {
 
         let cell_a = app
             .world_mut()
-            .spawn((Cell, RequiredToClear, Hp::new(1.0), KilledBy::default()))
+            .spawn((
+                Cell,
+                RequiredToClear,
+                Hp::new(1.0),
+                KilledBy { killer: None },
+            ))
             .id();
         let cell_b = app
             .world_mut()
-            .spawn((Cell, RequiredToClear, Hp::new(1.0), KilledBy::default()))
+            .spawn((
+                Cell,
+                RequiredToClear,
+                Hp::new(1.0),
+                KilledBy { killer: None },
+            ))
             .id();
         let cell_c = app
             .world_mut()
-            .spawn((Cell, RequiredToClear, Hp::new(1.0), KilledBy::default()))
+            .spawn((
+                Cell,
+                RequiredToClear,
+                Hp::new(1.0),
+                KilledBy { killer: None },
+            ))
             .id();
 
         app.insert_resource(TestDestroyedMessages(vec![
@@ -174,7 +202,7 @@ mod tests {
 
         let cell_decor = app
             .world_mut()
-            .spawn((Cell, Hp::new(1.0), KilledBy::default()))
+            .spawn((Cell, Hp::new(1.0), KilledBy { killer: None }))
             .id();
 
         app.insert_resource(TestDestroyedMessages(vec![make_destroyed(cell_decor)]));
@@ -193,11 +221,16 @@ mod tests {
 
         let cell_required = app
             .world_mut()
-            .spawn((Cell, RequiredToClear, Hp::new(1.0), KilledBy::default()))
+            .spawn((
+                Cell,
+                RequiredToClear,
+                Hp::new(1.0),
+                KilledBy { killer: None },
+            ))
             .id();
         let cell_decor = app
             .world_mut()
-            .spawn((Cell, Hp::new(1.0), KilledBy::default()))
+            .spawn((Cell, Hp::new(1.0), KilledBy { killer: None }))
             .id();
 
         app.insert_resource(TestDestroyedMessages(vec![
@@ -239,7 +272,12 @@ mod tests {
 
         let cell_last = app
             .world_mut()
-            .spawn((Cell, RequiredToClear, Hp::new(1.0), KilledBy::default()))
+            .spawn((
+                Cell,
+                RequiredToClear,
+                Hp::new(1.0),
+                KilledBy { killer: None },
+            ))
             .id();
 
         // Tick 1: one destroyed message, remaining hits 0.
@@ -267,7 +305,12 @@ mod tests {
         // Tick 3: another Destroyed<Cell> for a different RequiredToClear cell — still no re-fire.
         let cell_extra = app
             .world_mut()
-            .spawn((Cell, RequiredToClear, Hp::new(1.0), KilledBy::default()))
+            .spawn((
+                Cell,
+                RequiredToClear,
+                Hp::new(1.0),
+                KilledBy { killer: None },
+            ))
             .id();
         app.insert_resource(TestDestroyedMessages(vec![make_destroyed(cell_extra)]));
         tick(&mut app);

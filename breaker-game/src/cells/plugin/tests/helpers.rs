@@ -1,17 +1,15 @@
 use std::{marker::PhantomData, time::Duration};
 
 use bevy::{prelude::*, time::TimeUpdateStrategy};
+use rantzsoft_dmg::{RantzDmgAppExt, RantzDmgPlugin};
 use rantzsoft_physics2d::resources::CollisionQuadtree;
 
 use super::super::system::CellsPlugin;
 use crate::{
-    cells::test_utils::spawn_cell_in_world,
+    cells::{behaviors::survival::salvo::components::Salvo, test_utils::spawn_cell_in_world},
     effect_v3::EffectV3Plugin,
     prelude::*,
-    shared::death_pipeline::{
-        DeathPipelinePlugin, sets::DeathPipelineSystems,
-        systems::tests::helpers::register_effect_v3_test_infrastructure,
-    },
+    shared::test_utils::register_effect_v3_test_infrastructure,
 };
 
 pub(super) fn cells_plugin_app() -> App {
@@ -29,7 +27,13 @@ pub(super) fn cells_plugin_app() -> App {
         .insert_resource(CollisionQuadtree::default())
         .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::ZERO))
         .init_resource::<crate::shared::playfield::PlayfieldConfig>();
-    app.add_plugins(DeathPipelinePlugin);
+    app.add_plugins(RantzDmgPlugin);
+    let _ = app
+        .register_dmgable::<Bolt>()
+        .register_dmgable::<Wall>()
+        .register_dmgable::<Breaker>()
+        .register_dmgable::<Salvo>()
+        .register_dmgable::<Cell>();
     register_effect_v3_test_infrastructure(&mut app);
     app.add_plugins(EffectV3Plugin);
     app.add_plugins(CellsPlugin);
@@ -96,14 +100,20 @@ pub(super) fn sequence_plugin_app_loading() -> App {
         .insert_resource(CollisionQuadtree::default())
         .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::ZERO))
         .init_resource::<crate::shared::playfield::PlayfieldConfig>();
-    app.add_plugins(DeathPipelinePlugin);
+    app.add_plugins(RantzDmgPlugin);
+    let _ = app
+        .register_dmgable::<Bolt>()
+        .register_dmgable::<Wall>()
+        .register_dmgable::<Breaker>()
+        .register_dmgable::<Salvo>()
+        .register_dmgable::<Cell>();
     register_effect_v3_test_infrastructure(&mut app);
     app.add_plugins(EffectV3Plugin);
     app.add_plugins(CellsPlugin);
     app.init_resource::<PluginTestPendingCellDamage>();
     app.add_systems(
         FixedUpdate,
-        enqueue_cell_damage_plugin_test.before(DeathPipelineSystems::ApplyDamage),
+        enqueue_cell_damage_plugin_test.before(DmgSystems::ApplyDamage),
     );
     app
 }
@@ -152,9 +162,10 @@ pub(super) fn spawn_plugin_sequence_cell(
 pub(super) fn plugin_damage_msg(target: Entity, amount: f32) -> DamageDealt<Cell> {
     DamageDealt {
         dealer: None,
+        attributed_to: None,
         target,
         amount,
-        source_chip: None,
+        source: None,
         _marker: PhantomData,
     }
 }
@@ -166,9 +177,10 @@ pub(super) fn plugin_damage_msg_from(
 ) -> DamageDealt<Cell> {
     DamageDealt {
         dealer: Some(dealer),
+        attributed_to: None,
         target,
         amount,
-        source_chip: None,
+        source: None,
         _marker: PhantomData,
     }
 }

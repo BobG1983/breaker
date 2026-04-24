@@ -400,7 +400,7 @@ fn cell_collision_emits_damage_cell_for_locked_invulnerable_cell() {
             cw,
             ch,
             Hp::new(10.0),
-            KilledBy::default(),
+            KilledBy { killer: None },
             Locked,
             Invulnerable,
             Aabb2D::new(Vec2::ZERO, half_extents),

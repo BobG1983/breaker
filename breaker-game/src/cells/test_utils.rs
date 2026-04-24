@@ -47,7 +47,7 @@ pub(crate) fn test_cell_definition() -> CellTypeDefinition {
 ///
 /// Includes `Cell`, `CellWidth`, `CellHeight`, `Aabb2D`, `CollisionLayers`,
 /// `Position2D`, `GlobalPosition2D`, `Spatial2D`, `GameDrawLayer::Cell`,
-/// `Hp::new(10.0)`, and `KilledBy::default()`.
+/// `Hp::new(10.0)`, and `KilledBy { killer: None }`.
 /// Used by collision-oriented test suites (bolt-cell, cell-wall).
 pub(crate) fn spawn_cell(app: &mut App, x: f32, y: f32) -> Entity {
     let (cw, ch) = default_cell_dims();
@@ -59,7 +59,7 @@ pub(crate) fn spawn_cell(app: &mut App, x: f32, y: f32) -> Entity {
             cw,
             ch,
             Hp::new(10.0),
-            KilledBy::default(),
+            KilledBy { killer: None },
             Aabb2D::new(Vec2::ZERO, half_extents),
             CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
             Position2D(pos),

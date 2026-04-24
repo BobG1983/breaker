@@ -11,7 +11,6 @@ use crate::{
     cells::components::Cell,
     hazard::{definition::HazardKind, resources::ActiveHazards},
     prelude::*,
-    shared::death_pipeline::{Hp, heal_dealt::HealDealt},
 };
 
 /// Default builder: state hierarchy at `NodeState::Playing`, `ActiveHazards`,

@@ -32,11 +32,10 @@ use crate::{
         },
         messages::{CellImpactWall, PortalCompleted, PortalEntered, SalvoImpactBreaker},
         resources::CellConfig,
-        systems::{apply_damage_to_cells, cell_wall_collision, update_cell_damage_visuals},
+        systems::{cell_wall_collision, update_cell_damage_visuals},
     },
     effect_v3::sets::EffectV3Systems,
     prelude::*,
-    shared::death_pipeline::sets::DeathPipelineSystems,
     state::run::node::{sets::NodeSystems, systems::dispatch_cell_effects},
 };
 
@@ -57,18 +56,10 @@ impl Plugin for CellsPlugin {
                 dispatch_cell_effects.after(NodeSystems::Spawn),
             )
             .add_systems(OnEnter(NodeState::Playing), init_sequence_groups)
-            // `apply_damage_to_cells` owns Cell damage application (replaces
-            // the generic `apply_damage::<Cell>` formerly in `DeathPipelinePlugin`).
-            // NOT gated on `NodeState::Playing` — the death pipeline's message
-            // queue is global, matching the prior generic wiring.
-            .add_systems(
-                FixedUpdate,
-                apply_damage_to_cells.in_set(DeathPipelineSystems::ApplyDamage),
-            )
             .add_systems(
                 FixedUpdate,
                 (
-                    check_lock_release.after(DeathPipelineSystems::HandleKill),
+                    check_lock_release.after(DmgSystems::ApplyKill),
                     sync_lock_invulnerable.after(check_lock_release),
                     tick_cell_regen,
                     tick_phantom_phase,
@@ -76,28 +67,28 @@ impl Plugin for CellsPlugin {
                     apply_magnetic_fields,
                     cell_wall_collision,
                     update_cell_damage_visuals
-                        .after(DeathPipelineSystems::ApplyDamage)
-                        .before(DeathPipelineSystems::HandleKill),
+                        .after(DmgSystems::ApplyDamage)
+                        .before(DmgSystems::ApplyKill),
                     reset_inactive_sequence_hp
-                        .after(DeathPipelineSystems::ApplyDamage)
-                        .before(DeathPipelineSystems::DetectDeaths),
+                        .after(DmgSystems::ApplyDamage)
+                        .before(DmgSystems::EmitKill),
                     advance_sequence.after(EffectV3Systems::Death),
                     check_armor_direction
                         .after(BoltSystems::CellCollision)
-                        .before(DeathPipelineSystems::ApplyDamage),
+                        .before(DmgSystems::ApplyDamage),
                     suppress_bolt_immune_damage
                         .after(check_armor_direction)
-                        .before(DeathPipelineSystems::ApplyDamage),
+                        .before(DmgSystems::ApplyDamage),
                 )
                     .run_if(in_state(NodeState::Playing)),
             )
             .add_systems(
                 FixedUpdate,
                 (
-                    tick_survival_timer.before(DeathPipelineSystems::ApplyDamage),
+                    tick_survival_timer.before(DmgSystems::ApplyDamage),
                     tick_salvo_fire_timer.after(tick_survival_timer),
                     fire_survival_turret.after(tick_salvo_fire_timer),
-                    salvo_cell_collision.before(DeathPipelineSystems::ApplyDamage),
+                    salvo_cell_collision.before(DmgSystems::ApplyDamage),
                     salvo_bolt_collision,
                     salvo_breaker_collision.before(EffectV3Systems::Bridge),
                     salvo_wall_collision,
@@ -105,7 +96,7 @@ impl Plugin for CellsPlugin {
                     handle_portal_entered.after(check_portal_entry),
                     handle_portal_completed
                         .after(handle_portal_entered)
-                        .before(DeathPipelineSystems::HandleKill),
+                        .before(DmgSystems::ApplyKill),
                 )
                     .run_if(in_state(NodeState::Playing)),
             );

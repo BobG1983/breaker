@@ -28,8 +28,7 @@ use crate::{
         definition::{HazardKind, HazardTuning},
         resources::ActiveHazards,
     },
-    prelude::*,
-    shared::death_pipeline::Destroyed,
+    prelude::{Destroyed, *},
 };
 
 /// Default builder: state hierarchy driven into `NodeState::Playing`,

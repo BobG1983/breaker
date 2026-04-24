@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 
 use bevy::{ecs::message::Messages, prelude::*};
+use rantzsoft_dmg::{RantzDmgAppExt, RantzDmgPlugin};
 use rantzsoft_spatial2d::components::Position2D;
 
 use super::super::system::*;
@@ -8,9 +9,6 @@ use crate::{
     cells::components::Cell,
     hazard::{definition::HazardKind, resources::ActiveHazards},
     prelude::*,
-    shared::death_pipeline::{
-        Destroyed, Hp, heal_dealt::HealDealt, sets::DeathPipelineSystems, systems::apply_heal,
-    },
 };
 
 /// Default builder: state hierarchy at `NodeState::Playing`, `ActiveHazards`,
@@ -98,16 +96,17 @@ pub(super) fn install_cascade_config(app: &mut App, cfg: CascadeConfig) {
 }
 
 /// Builder for Group G: wires `cascade_heal_on_death` before
-/// `apply_heal::<Cell>` in `DeathPipelineSystems::ApplyHeal`.
+/// `apply_heal::<Cell>` in `DmgSystems::ApplyHeal`.
+///
+/// `register_dmgable::<Cell>()` wires the crate's generic `apply_heal::<Cell>`
+/// into `DmgSystems::ApplyHeal` automatically.
 pub(super) fn test_app_pipeline() -> App {
     let mut app = test_app_playing();
+    app.add_plugins(RantzDmgPlugin);
+    let _ = app.register_dmgable::<Cell>();
     app.add_systems(
         FixedUpdate,
-        cascade_heal_on_death.before(DeathPipelineSystems::ApplyHeal),
-    );
-    app.add_systems(
-        FixedUpdate,
-        apply_heal::<Cell>.in_set(DeathPipelineSystems::ApplyHeal),
+        cascade_heal_on_death.before(DmgSystems::ApplyHeal),
     );
     app
 }

@@ -9,9 +9,6 @@ use crate::{
         resources::{ActiveHazards, hazard_active},
     },
     prelude::*,
-    shared::death_pipeline::{
-        DamageDealt, HealCap, Hp, heal_dealt::HealDealt, sets::DeathPipelineSystems,
-    },
 };
 
 /// Tracks time since this cell was last damaged. Advanced by
@@ -72,8 +69,8 @@ pub(crate) fn register(app: &mut App) {
         FixedUpdate,
         (
             attach_volatility_timers,
-            reset_volatility_on_damage.after(DeathPipelineSystems::ApplyDamage),
-            volatility_grow_cells.before(DeathPipelineSystems::ApplyHeal),
+            reset_volatility_on_damage.after(DmgSystems::ApplyDamage),
+            volatility_grow_cells.before(DmgSystems::ApplyHeal),
         )
             .chain()
             .run_if(hazard_active(HazardKind::Volatility))
@@ -161,12 +158,13 @@ pub(crate) fn volatility_grow_cells(
         while timer.elapsed >= effective_interval {
             if hp.current < cell_cap {
                 writer.write(HealDealt::<Cell> {
-                    healer:  None,
-                    target:  entity,
-                    amount:  config.hp_per_interval,
-                    cap:     HealCap::Max,
-                    source:  Some("hazard:volatility".to_string()),
-                    _marker: PhantomData,
+                    healer:        None,
+                    attributed_to: None,
+                    target:        entity,
+                    amount:        config.hp_per_interval,
+                    cap:           HealCap::Max,
+                    source:        Some(SourceId::from("hazard:volatility")),
+                    _marker:       PhantomData,
                 });
             }
             timer.elapsed -= effective_interval;

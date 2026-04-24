@@ -64,7 +64,8 @@ mod tests {
             traits::Fireable,
             types::EffectType,
         },
-        shared::{death_pipeline::Dead, rng::GameRng},
+        prelude::*,
+        shared::rng::GameRng,
     };
 
     fn world_with_rng(seed: u64) -> World {

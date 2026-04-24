@@ -7,7 +7,6 @@ use crate::{
     cells::components::Cell,
     hazard::{definition::HazardKind, resources::ActiveHazards},
     prelude::*,
-    shared::death_pipeline::{DamageDealt, Hp, heal_dealt::HealDealt},
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────
@@ -26,26 +25,23 @@ pub(super) fn test_app_playing() -> App {
 }
 
 /// Variant for Group C tests. Adds `PendingCellDamage` + `enqueue_cell_damage`
-/// ordered `.before(DeathPipelineSystems::ApplyDamage)` and registers
-/// `apply_damage::<Cell>` in `DeathPipelineSystems::ApplyDamage` so the
+/// ordered `.before(DmgSystems::ApplyDamage)` and wires
+/// `apply_damage::<Cell>` via `register_dmgable::<Cell>` so the
 /// reset-ordering behaviours can be exercised end-to-end.
 pub(super) fn test_app_playing_with_damage() -> App {
-    use crate::shared::death_pipeline::{sets::DeathPipelineSystems, systems::apply_damage};
+    use rantzsoft_dmg::{RantzDmgAppExt, RantzDmgPlugin};
     let mut app = TestAppBuilder::new()
         .with_state_hierarchy()
         .in_state_node_playing()
         .with_resource::<ActiveHazards>()
-        .with_message::<DamageDealt<Cell>>()
         .with_message_capture::<HealDealt<Cell>>()
         .with_resource::<PendingCellDamage>()
         .build();
+    app.add_plugins(RantzDmgPlugin);
+    let _ = app.register_dmgable::<Cell>();
     app.add_systems(
         FixedUpdate,
-        enqueue_cell_damage.before(DeathPipelineSystems::ApplyDamage),
-    );
-    app.add_systems(
-        FixedUpdate,
-        apply_damage::<Cell>.in_set(DeathPipelineSystems::ApplyDamage),
+        enqueue_cell_damage.before(DmgSystems::ApplyDamage),
     );
     app
 }
@@ -67,7 +63,7 @@ pub(super) fn spawn_cell_with_timer(
                 starting,
                 max: Some(starting * 2.0),
             },
-            KilledBy::default(),
+            KilledBy { killer: None },
             VolatilityTimer { elapsed },
         ))
         .id()
@@ -90,7 +86,7 @@ pub(super) fn spawn_cell_with_timer_max(
                 starting,
                 max,
             },
-            KilledBy::default(),
+            KilledBy { killer: None },
             VolatilityTimer { elapsed },
         ))
         .id()
@@ -112,7 +108,7 @@ pub(super) fn spawn_cell_no_timer(
                 starting,
                 max,
             },
-            KilledBy::default(),
+            KilledBy { killer: None },
         ))
         .id()
 }
@@ -134,7 +130,7 @@ pub(super) struct PendingCellDamage(pub Vec<(Entity, f32)>);
 
 /// Enqueue system — drains `PendingCellDamage` and writes one
 /// `DamageDealt<Cell>` per entry. Registered
-/// `.before(DeathPipelineSystems::ApplyDamage)` by `test_app_playing_with_damage`.
+/// `.before(DmgSystems::ApplyDamage)` by `test_app_playing_with_damage`.
 pub(super) fn enqueue_cell_damage(
     mut pending: ResMut<PendingCellDamage>,
     mut writer: MessageWriter<DamageDealt<Cell>>,
@@ -142,9 +138,10 @@ pub(super) fn enqueue_cell_damage(
     for (target, amount) in pending.0.drain(..) {
         writer.write(DamageDealt {
             dealer: None,
+            attributed_to: None,
             target,
             amount,
-            source_chip: None,
+            source: None,
             _marker: PhantomData,
         });
     }

@@ -11,7 +11,7 @@
 //!
 //! - `init_sequence_groups` on `OnEnter(NodeState::Playing)`
 //! - `reset_inactive_sequence_hp` in `FixedUpdate`, ordered
-//!   `.after(DeathPipelineSystems::ApplyDamage).before(DeathPipelineSystems::DetectDeaths)`
+//!   `.after(DmgSystems::ApplyDamage).before(DmgSystems::EmitKill)`
 //! - `advance_sequence` in `FixedUpdate`, ordered `.after(EffectV3Systems::Death)`
 //!
 //! During the RED phase the three system bodies are empty stubs, so every
@@ -33,7 +33,6 @@ use crate::{
     },
     effect_v3::sets::EffectV3Systems,
     prelude::*,
-    shared::death_pipeline::sets::DeathPipelineSystems,
 };
 
 /// Default cell dimensions for test spawns. 10×10 is small and uniform so
@@ -147,21 +146,23 @@ pub(super) fn spawn_volatile_cell(
 pub(super) fn damage_msg(target: Entity, amount: f32) -> DamageDealt<Cell> {
     DamageDealt {
         dealer: None,
+        attributed_to: None,
         target,
         amount,
-        source_chip: None,
+        source: None,
         _marker: PhantomData,
     }
 }
 
 /// `DamageDealt<Cell>` with an explicit dealer entity. Used by Group C
-/// behavior 12's edge cases to verify `KilledBy.dealer` clearing.
+/// behavior 12's edge cases to verify `KilledBy.killer` clearing.
 pub(super) fn damage_msg_from(target: Entity, amount: f32, dealer: Entity) -> DamageDealt<Cell> {
     DamageDealt {
         dealer: Some(dealer),
+        attributed_to: None,
         target,
         amount,
-        source_chip: None,
+        source: None,
         _marker: PhantomData,
     }
 }
@@ -196,15 +197,15 @@ pub(super) fn build_sequence_test_app() -> App {
     app.init_resource::<PendingCellDamage>();
     app.add_systems(
         FixedUpdate,
-        enqueue_cell_damage.before(DeathPipelineSystems::ApplyDamage),
+        enqueue_cell_damage.before(DmgSystems::ApplyDamage),
     );
     app.add_systems(OnEnter(NodeState::Playing), init_sequence_groups);
     app.add_systems(
         FixedUpdate,
         (
             reset_inactive_sequence_hp
-                .after(DeathPipelineSystems::ApplyDamage)
-                .before(DeathPipelineSystems::DetectDeaths),
+                .after(DmgSystems::ApplyDamage)
+                .before(DmgSystems::EmitKill),
             advance_sequence.after(EffectV3Systems::Death),
         )
             .run_if(in_state(NodeState::Playing)),

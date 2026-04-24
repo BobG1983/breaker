@@ -1830,6 +1830,7 @@ dependencies = [
  "rand 0.9.2",
  "rand_chacha",
  "rantzsoft_defaults",
+ "rantzsoft_dmg",
  "rantzsoft_physics2d",
  "rantzsoft_spatial2d",
  "rantzsoft_stateflow",

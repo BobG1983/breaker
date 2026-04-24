@@ -278,7 +278,7 @@ pub(super) fn read_damage_boost_multiplier(app: &App, bolt: Entity) -> Option<f3
         .map(|b| b.multiplier)
 }
 
-/// Returns every `DamageDealt<Cell>` message whose `source_chip` matches
+/// Returns every `DamageDealt<Cell>` message whose `source` matches
 /// `BURNOUT_SENTINEL`, collected from the `MessageCollector` since the app
 /// was built. Used by amplification and sentinel tests to assert that only
 /// Burnout-attributed damage is emitted (and how much).
@@ -287,7 +287,7 @@ pub(super) fn collected_burnout_damage(app: &App) -> Vec<DamageDealt<Cell>> {
         .resource::<MessageCollector<DamageDealt<Cell>>>()
         .0
         .iter()
-        .filter(|msg| msg.source_chip.as_deref() == Some(BURNOUT_SENTINEL))
+        .filter(|msg| msg.source == Some(SourceId::from(BURNOUT_SENTINEL)))
         .cloned()
         .collect()
 }

@@ -1,12 +1,13 @@
 //! Registration for death trigger bridges.
 
 use bevy::prelude::*;
+use rantzsoft_dmg::DmgSystems;
 
 use super::bridges;
-use crate::{effect_v3::EffectV3Systems, shared::death_pipeline::sets::DeathPipelineSystems};
+use crate::effect_v3::EffectV3Systems;
 
 /// Registers all death trigger bridge systems in [`EffectV3Systems::Death`],
-/// which is ordered `.after(DeathPipelineSystems::HandleKill)` so the bridges
+/// which is ordered `.after(DmgSystems::ApplyKill)` so the bridges
 /// observe the `Destroyed<T>` messages on the same tick the victim entity is
 /// still alive in the world (despawn runs later in `FixedPostUpdate`).
 ///
@@ -16,7 +17,7 @@ use crate::{effect_v3::EffectV3Systems, shared::death_pipeline::sets::DeathPipel
 pub fn register(app: &mut App) {
     app.configure_sets(
         FixedUpdate,
-        EffectV3Systems::Death.after(DeathPipelineSystems::HandleKill),
+        EffectV3Systems::Death.after(DmgSystems::ApplyKill),
     );
     app.add_systems(
         FixedUpdate,

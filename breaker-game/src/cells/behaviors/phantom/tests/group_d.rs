@@ -198,7 +198,7 @@ fn non_phantom_cell_entity_is_not_ticked() {
             },
             CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
             Hp::new(20.0),
-            KilledBy::default(),
+            KilledBy { killer: None },
         ))
         .id();
 

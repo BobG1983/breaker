@@ -1,5 +1,7 @@
-//! Re-exports of cross-domain death pipeline types.
+//! Re-exports of cross-domain damage-pipeline types from `rantzsoft_dmg`.
 
-pub(crate) use crate::shared::death_pipeline::{
-    DamageDealt, Dead, Destroyed, Hp, Invulnerable, KilledBy,
+pub(crate) use rantzsoft_dmg::{
+    DamageBoostStack, DamageDealt, Dead, DespawnEntity, Destroyed, DmgSystems, Dmgable, HealCap,
+    HealDealt, Hp, Invulnerable, KillYourself, KilledBy, RantzDmgAppExt, RantzDmgPlugin, SourceId,
+    VulnerableStack,
 };

@@ -29,7 +29,7 @@ use crate::{
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
-/// Sentinel tag stamped into `DamageDealt<Cell>.source_chip` on every
+/// Sentinel tag stamped into `DamageDealt<Cell>.source` on every
 /// amplified-damage message so downstream stat tracking / FX can identify
 /// Reckless Dash damage.
 pub(crate) const RECKLESS_DASH_SENTINEL: &str = "protocol:reckless_dash";
@@ -192,7 +192,7 @@ pub(crate) fn reckless_dash_on_bump(
 
 /// Consumes `BoltImpactCell` messages. On a bolt carrying `RiskyDamageBoost`,
 /// emits an amplified `DamageDealt<Cell>` with
-/// `amount = base_damage * boost.multiplier` and `source_chip =
+/// `amount = base_damage * boost.multiplier` and `source =
 /// Some(RECKLESS_DASH_SENTINEL.into())` — gated on `amount > 0.0`. Removes
 /// the `RiskyDamageBoost` from the bolt unconditionally (single-shot, even
 /// when emission is gated off by the `amount > 0.0` guard).
@@ -244,9 +244,10 @@ pub(crate) fn reckless_dash_amplify_damage(
         if amount > 0.0 {
             damage_writer.write(DamageDealt::<Cell> {
                 dealer: Some(msg.bolt),
+                attributed_to: None,
                 target: msg.cell,
                 amount,
-                source_chip: Some(RECKLESS_DASH_SENTINEL.into()),
+                source: Some(SourceId::from(RECKLESS_DASH_SENTINEL)),
                 _marker: PhantomData,
             });
         }

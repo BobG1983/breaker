@@ -16,7 +16,7 @@ pub enum EffectV3Systems {
     Conditions,
     /// Death-trigger bridges (`on_cell_destroyed`, `on_bolt_destroyed`,
     /// `on_wall_destroyed`, `on_breaker_destroyed`). Scheduled
-    /// `.after(DeathPipelineSystems::HandleKill)` so the bridges observe
+    /// `.after(DmgSystems::ApplyKill)` so the bridges observe
     /// `Destroyed<T>` messages on the same tick they are written, while
     /// the victim entity still exists in the world (despawn happens later
     /// in `FixedPostUpdate`). This is the tagging surface cross-domain

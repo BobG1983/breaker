@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use super::{super::system::*, helpers::*};
-use crate::shared::death_pipeline::Hp;
+use crate::prelude::Hp;
 
 // ════════════════════════════════════════════════════════════════════════════
 // Group G — Full-pipeline integration with apply_heal::<Cell>
@@ -223,6 +223,13 @@ fn pipeline_cell_outside_radius_unchanged() {
 }
 
 // Behavior 29: dead cell is not self-healed end-to-end.
+//
+// Post-W2 semantics: with `register_dmgable::<Cell>()` wiring the full
+// crate pipeline, a spawn-time HP=0 cell is picked up by `detect_deaths`,
+// marked `Dead` by `handle_kill`, and despawned by
+// `process_despawn_requests` in `FixedPostUpdate` within the same tick.
+// The observable proof that cascade did NOT self-heal is that the entity
+// is gone — there is no `Hp` left to read, and so no heal landed.
 #[test]
 fn pipeline_dead_cell_is_not_self_healed() {
     let mut app = test_app_pipeline();
@@ -240,10 +247,9 @@ fn pipeline_dead_cell_is_not_self_healed() {
 
     run_fixed_update(&mut app);
 
-    let hp = app.world().get::<Hp>(dead_cell).unwrap();
     assert!(
-        hp.current.abs() < f32::EPSILON,
-        "dead cell must not self-heal end-to-end, got {}",
-        hp.current
+        app.world().get_entity(dead_cell).is_err(),
+        "dead cell must be despawned by the crate pipeline — cascade cannot \
+         self-heal a non-existent cell"
     );
 }

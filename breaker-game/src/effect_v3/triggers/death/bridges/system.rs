@@ -12,7 +12,6 @@ use crate::{
         walking::{walk_bound_effects, walk_staged_effects},
     },
     prelude::*,
-    shared::death_pipeline::GameEntity,
 };
 
 /// Generic death bridge — reads `Destroyed<T>` and dispatches death triggers.
@@ -21,7 +20,7 @@ use crate::{
 /// - `Died` on the victim entity (local)
 /// - `Killed(kind)` on the killer entity (local, if killer exists)
 /// - `DeathOccurred(kind)` on all entities (global)
-fn on_destroyed_inner<T: GameEntity>(
+fn on_destroyed_inner<T: Dmgable>(
     kind: EntityKind,
     reader: &mut MessageReader<Destroyed<T>>,
     bound_query: &Query<(&BoundEffects, Option<&StagedEffects>)>,

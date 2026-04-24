@@ -5,8 +5,7 @@ use bevy::prelude::*;
 use super::{super::system::*, helpers::*};
 use crate::{
     hazard::{definition::HazardKind, resources::ActiveHazards},
-    prelude::*,
-    shared::death_pipeline::Hp,
+    prelude::{Hp, *},
 };
 
 // ── fracture_on_death ────────────────────────────────────────────────

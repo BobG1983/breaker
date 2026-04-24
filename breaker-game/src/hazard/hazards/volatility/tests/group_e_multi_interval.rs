@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use super::{super::system::*, helpers::*};
-use crate::shared::death_pipeline::HealCap;
+use crate::prelude::HealCap;
 
 // ══════════════════════════════════════════════════════════════════════
 // Group E — multi-interval accumulation (pause/resume)

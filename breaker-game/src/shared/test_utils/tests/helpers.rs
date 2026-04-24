@@ -8,7 +8,7 @@ use crate::{
         components::Cell,
         definition::{CellTypeDefinition, Toughness},
     },
-    shared::death_pipeline::damage_dealt::DamageDealt,
+    prelude::DamageDealt,
 };
 
 // ── Test helper types ──────────────────────────────────────────────
@@ -28,11 +28,12 @@ pub(super) fn increment(mut counter: ResMut<Counter>) {
 
 pub(super) fn damage_sender_system(mut writer: MessageWriter<DamageDealt<Cell>>) {
     writer.write(DamageDealt::<Cell> {
-        dealer:      None,
-        target:      Entity::PLACEHOLDER,
-        amount:      25.0,
-        source_chip: None,
-        _marker:     PhantomData,
+        dealer:        None,
+        attributed_to: None,
+        target:        Entity::PLACEHOLDER,
+        amount:        25.0,
+        source:        None,
+        _marker:       PhantomData,
     });
 }
 
@@ -42,11 +43,12 @@ pub(super) fn conditional_damage_sender(
 ) {
     if flag.0 {
         writer.write(DamageDealt::<Cell> {
-            dealer:      None,
-            target:      Entity::PLACEHOLDER,
-            amount:      10.0,
-            source_chip: None,
-            _marker:     PhantomData,
+            dealer:        None,
+            attributed_to: None,
+            target:        Entity::PLACEHOLDER,
+            amount:        10.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     }
 }
@@ -54,11 +56,12 @@ pub(super) fn conditional_damage_sender(
 pub(super) fn triple_damage_sender(mut writer: MessageWriter<DamageDealt<Cell>>) {
     for i in 0_i16..3 {
         writer.write(DamageDealt::<Cell> {
-            dealer:      None,
-            target:      Entity::PLACEHOLDER,
-            amount:      f32::from(i + 1),
-            source_chip: None,
-            _marker:     PhantomData,
+            dealer:        None,
+            attributed_to: None,
+            target:        Entity::PLACEHOLDER,
+            amount:        f32::from(i + 1),
+            source:        None,
+            _marker:       PhantomData,
         });
     }
 }
@@ -68,11 +71,12 @@ pub(super) fn damage_and_bolt_lost_sender(
     mut bolt_lost_writer: MessageWriter<BoltLost>,
 ) {
     damage_writer.write(DamageDealt::<Cell> {
-        dealer:      None,
-        target:      Entity::PLACEHOLDER,
-        amount:      5.0,
-        source_chip: None,
-        _marker:     PhantomData,
+        dealer:        None,
+        attributed_to: None,
+        target:        Entity::PLACEHOLDER,
+        amount:        5.0,
+        source:        None,
+        _marker:       PhantomData,
     });
     bolt_lost_writer.write(BoltLost {
         bolt:    Entity::PLACEHOLDER,

@@ -16,11 +16,13 @@ During the interim (crate landed, mutators refactor not yet done), the existing 
 
 Two items intentionally deferred out of TODO #0's scope and INTO this remediation's scope. TODO #0 ships with the 11-variant chain configured but these sets EMPTY. Landing TODO #1 is what gives them content.
 
-### Deferral A — MutateDamage mechanism + Cell migration
+### Deferral A — Post* sets + Cell migration + Diffusion split [RESOLVED IN TODO #1 W2]
 
-TODO #0's Phase 6 (per `unified-death-crate.md` §Remediation plan) was to delete `apply_damage_to_cells`, add `Cell` to `register_damage_type::<Cell>()`, and migrate Diffusion/Tether/Echo Strike's redistribution logic from `apply_damage_to_cells`'s inline loop into `MutateDamage` chain members. It was deferred because Bevy 0.18 messages are FIFO-read-only — you cannot mutate a `DamageDealt<Cell>`'s `amount` field in place after emission. The `MessageMutator<DamageDealt<T>>` pattern the detail spec assumes needs a concrete mechanism.
+TODO #0's Phase 6 (per `unified-death-crate.md` §Remediation plan) was to delete `apply_damage_to_cells`, add `Cell` to `register_damage_type::<Cell>()`, and migrate Diffusion/Tether/Echo Strike's redistribution logic from `apply_damage_to_cells`'s inline loop. Originally scoped as `MessageMutator<DamageDealt<T>>` work in `MutateDamage`. **TODO #1 W2 resolved this with a different architecture** — instead of in-place mutation throughout, it adds 5 new crate-side empty sets (`PostEmit`, `PostMutate`, `PostApply`, `PostKill`, `PostHeal`), splits Diffusion into a same-frame primary-reducer (MutateDamage) + post-apply ring-emitter (PostApply), and moves Tether and Echo Strike to `PostApply` entirely. Partner/echo/ring siblings propagate through the **next frame's full pipeline** with visited-set tracking (for Diffusion).
 
-**This remediation MUST design and implement that mechanism**, then complete the migration.
+Rationale: emitting in `PostApply` reads source's actually-applied amount (post-boosts, post-vuln, post-invulnerable_filter), so partner/echo/ring amounts reflect source's full mutation stack. Partner's own mutations apply next frame when the sibling enters at EmitDamage. Tradeoff: 1-frame delay (OK for game feel; VFX will mask).
+
+**This deferral is now RESOLVED** — the design and implementation landed in TODO #1 W2.
 
 Required design outputs:
 1. **Mutation mechanism.** Pick one and document rationale:

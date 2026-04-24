@@ -3,7 +3,7 @@
 //!
 //! Pins that the `fission_on_cell_destroyed` system is gated by
 //! `protocol_active(Fission)` + `in_state(NodeState::Playing)`, ordered
-//! `.after(DeathPipelineSystems::HandleKill)`, wired into `FixedUpdate`, and
+//! `.after(DmgSystems::ApplyKill)`, wired into `FixedUpdate`, and
 //! that cleanup is wired into `OnExit(MenuState::Main)`.
 
 use bevy::prelude::*;
@@ -22,7 +22,6 @@ use crate::{
         definition::{ProtocolDefinition, ProtocolTuning},
         resources::ActiveProtocols,
     },
-    shared::death_pipeline::sets::DeathPipelineSystems,
 };
 
 // ── Behavior 28 — Fission NOT in ActiveProtocols: no increment, no split ───-
@@ -102,7 +101,7 @@ fn node_state_not_playing_does_not_increment_or_split() {
     );
 }
 
-// ── Behavior 32 — .after(DeathPipelineSystems::HandleKill) consumes same tick
+// ── Behavior 32 — .after(DmgSystems::ApplyKill) consumes same tick
 //
 // Edge case (per spec escape hatch): the adversarial before-HandleKill variant
 // (writer registered .before(HandleKill) producing a Destroyed<Cell> earlier in
@@ -133,7 +132,7 @@ fn destroyed_cell_written_in_handle_kill_is_consumed_same_tick() {
             });
             *done = true;
         })
-        .in_set(DeathPipelineSystems::HandleKill)
+        .in_set(DmgSystems::ApplyKill)
         .run_if(in_state(NodeState::Playing)),
     );
 

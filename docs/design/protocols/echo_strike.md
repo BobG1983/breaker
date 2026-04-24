@@ -57,17 +57,34 @@ Both `pub(crate)` — owned by EchoStrike.
 - **run_if**: `protocol_active(ProtocolKind::EchoStrike)` + `in_state(NodeState::Playing)`.
 - **Behavior**: Reads `BumpPerformed`. On `BumpGrade::Perfect`: inserts `EchoPrimed` on the bolt.
 
-### `echo_strike_on_impact`
-- **Schedule**: `FixedUpdate`, in `DeathPipelineSystems::EmitDamage`.
+### `echo_strike_emit_siblings`
+- **Schedule**: `FixedUpdate`, in `DmgSystems::PostApply`.
 - **run_if**: `protocol_active(ProtocolKind::EchoStrike)` + `in_state(NodeState::Playing)`.
-- **Behavior**: Reads `BoltImpactCell`. If the bolt has `EchoPrimed`:
-  1. For each existing entry in `EchoNetwork.echoes`, emits `DamageDealt<Cell> { cell: echo_cell, damage: impact_damage * fraction_for_position, source: "protocol:echo_strike" }`. Fraction selected by position: newest, middle (when 3 active), oldest.
-  2. Pushes `impact_cell` to the back of `EchoNetwork.echoes`; evicts front if length > `max_echoes`.
-  3. Removes `EchoPrimed` from the bolt.
-- **Ordering**: In `EmitDamage` set. Runs after bolt-cell collision (which already emits the base `DamageDealt<Cell>` for the impact cell).
+- **Behavior**: Reads current-frame `DamageDealt<Cell>` messages. For each
+  post-apply primary:
+  1. Skip if `source == "protocol:echo_strike"` (loop protection).
+  2. Skip if `msg.amount <= 0.0` — invulnerable filter zeroed the primary;
+     enforces the unified "invulnerable source → no ripple" rule shared
+     with Diffusion and Tether.
+  3. Resolve the candidate bolt via `msg.dealer.or(msg.attributed_to)`. This
+     lets echoes fire on BOTH primary bump-damage (`dealer = Some(bolt)`) AND
+     ripple damage from Diffusion / Tether (`dealer = None`,
+     `attributed_to = Some(bolt)`).
+  4. Skip if the bolt is not queryable or not `EchoPrimed`. A
+     `processed_this_frame` guard prevents same-tick pierce double-fires.
+  5. For each existing entry in `EchoNetwork.echoes`, emit
+     `DamageDealt<Cell> { target: echo, amount: msg.amount * fraction,
+     source: Some(SourceId::from("protocol:echo_strike")), dealer: None,
+     attributed_to: msg.attributed_to.or(msg.dealer), .. }`. Fractions
+     follow the deque-size rule (newest, middle for 3+, oldest). Siblings
+     traverse the full damage pipeline on the next `FixedUpdate` tick
+     (1-frame delay).
+  6. Mutate `EchoNetwork`: dedup then `push_back(msg.target)`; `pop_front`
+     if length exceeds `max_echoes`.
+  7. Remove `EchoPrimed` from the bolt.
 
 ### `echo_strike_cleanup_destroyed_echoes`
-- **Schedule**: `FixedUpdate`, `.after(DeathPipelineSystems::ApplyKill)`.
+- **Schedule**: `FixedUpdate`, `.after(DmgSystems::ApplyKill)`.
 - **Behavior**: Reads `Destroyed<Cell>`. Removes the destroyed cell from every bolt's `EchoNetwork.echoes`.
 
 ### `echo_strike_cleanup_node`
@@ -76,10 +93,19 @@ Both `pub(crate)` — owned by EchoStrike.
 
 ## Pipeline position (dmg crate)
 
-- **Trigger**: `BumpPerformed` (Perfect) → primes bolt. `BoltImpactCell` → emits echo damage.
-- **Emits**: `DamageDealt<Cell>` in `DeathPipelineSystems::EmitDamage` — one per echo cell still alive. Each emitted message flows through the full chain (boosts, mutate, vulnerable, apply).
+- **Trigger**: `BumpPerformed` (Perfect) → primes bolt via `echo_strike_on_bump`.
+- **Ripple emitter** in `DmgSystems::PostApply`. Reads the post-apply
+  `DamageDealt<Cell>` messages and emits one echo sibling per entry in the
+  bolt's `EchoNetwork.echoes`. Siblings traverse the FULL pipeline on the
+  next `FixedUpdate` tick (1-frame delay).
+- **Loop protection** via `source == "protocol:echo_strike"` — siblings
+  carry that source, so subsequent PostApply passes skip them.
+- **Invulnerable skip** via `msg.amount <= 0.0`.
+- **Kill attribution** travels via `attributed_to = msg.attributed_to.or(msg.dealer)`.
 - **Reads**: `Destroyed<Cell>` from `rantzsoft_dmg` for cleanup.
 - **No** `DamageBoostStack` / `VulnerableStack` writes.
+- The prior `ECHO_STRIKE_SENTINEL` constant is deleted — the source string
+  is now inline `SourceId::from("protocol:echo_strike")`.
 
 ## Cross-Domain Dependencies
 - **breaker**: Reads `BumpPerformed`.

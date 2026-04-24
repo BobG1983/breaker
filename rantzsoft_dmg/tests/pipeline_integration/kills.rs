@@ -59,20 +59,22 @@ fn first_kill_wins_when_later_hit_crosses_zero() {
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<TestT>>>()
         .write(DamageDealt::<TestT> {
-            dealer:  Some(dealer_a),
-            target:  victim,
-            amount:  3.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        Some(dealer_a),
+            attributed_to: None,
+            target:        victim,
+            amount:        3.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<TestT>>>()
         .write(DamageDealt::<TestT> {
-            dealer:  Some(dealer_b),
-            target:  victim,
-            amount:  10.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        Some(dealer_b),
+            attributed_to: None,
+            target:        victim,
+            amount:        10.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     tick(&mut app);
 
@@ -104,11 +106,12 @@ fn first_kill_wins_with_three_hits_third_crosses_zero() {
         app.world_mut()
             .resource_mut::<Messages<DamageDealt<TestT>>>()
             .write(DamageDealt::<TestT> {
-                dealer:  Some(dealer),
-                target:  victim,
-                amount:  4.0,
-                source:  None,
-                _marker: PhantomData,
+                dealer:        Some(dealer),
+                attributed_to: None,
+                target:        victim,
+                amount:        4.0,
+                source:        None,
+                _marker:       PhantomData,
             });
     }
     tick(&mut app);
@@ -244,11 +247,12 @@ fn many_hit_victim_dies_exactly_once_crediting_first_lethal_dealer() {
         app.world_mut()
             .resource_mut::<Messages<DamageDealt<TestT>>>()
             .write(DamageDealt::<TestT> {
-                dealer:  Some(dealer),
-                target:  victim,
-                amount:  10.0,
-                source:  None,
-                _marker: PhantomData,
+                dealer:        Some(dealer),
+                attributed_to: None,
+                target:        victim,
+                amount:        10.0,
+                source:        None,
+                _marker:       PhantomData,
             });
     }
     tick(&mut app);

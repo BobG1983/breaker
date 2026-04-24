@@ -84,6 +84,7 @@ mod tests {
     fn mk_msg(target: Entity, amount: f32) -> DamageDealt<TestT> {
         DamageDealt::<TestT> {
             dealer: None,
+            attributed_to: None,
             target,
             amount,
             source: None,

@@ -1,6 +1,7 @@
 //! Cells domain components.
 
 use bevy::prelude::*;
+use rantzsoft_dmg::Dmgable;
 use rantzsoft_spatial2d::components::Spatial2D;
 
 use crate::prelude::*;
@@ -9,6 +10,8 @@ use crate::prelude::*;
 #[derive(Component, Debug, Default)]
 #[require(Spatial2D, CleanupOnExit<NodeState>)]
 pub struct Cell;
+
+impl Dmgable for Cell {}
 
 /// Marker for cells that count toward node completion.
 #[derive(Component, Debug)]

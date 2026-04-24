@@ -4,7 +4,7 @@
 //! Pins the `BoltImpactCell` consumer:
 //! - Reads `BoltImpactCell`. On a primed bolt, emits
 //!   `DamageDealt<Cell>` with `amount = base * boost.multiplier` and
-//!   `source_chip = Some(RECKLESS_DASH_SENTINEL.into())` when `amount > 0.0`.
+//!   `source = Some(RECKLESS_DASH_SENTINEL.into())` when `amount > 0.0`.
 //! - Removes `RiskyDamageBoost` from the bolt (unconditional, single-shot).
 //! - Emission is gated on `amount > 0.0` (mirrors Iron Curtain / Echo
 //!   Strike).
@@ -68,9 +68,9 @@ fn primed_bolt_first_cell_impact_emits_amplified_damage() {
         msg.amount
     );
     assert_eq!(
-        msg.source_chip.as_deref(),
-        Some("protocol:reckless_dash"),
-        "source_chip must be the Reckless Dash sentinel"
+        msg.source.as_ref(),
+        Some(&SourceId::from("protocol:reckless_dash")),
+        "source must be the Reckless Dash sentinel"
     );
     assert!(
         app.world().get::<RiskyDamageBoost>(bolt).is_none(),
@@ -399,8 +399,8 @@ fn every_emitted_message_has_sentinel_and_respective_dealer() {
 
     for msg in &msgs {
         assert_eq!(
-            msg.source_chip.as_deref(),
-            Some("protocol:reckless_dash"),
+            msg.source.as_ref(),
+            Some(&SourceId::from("protocol:reckless_dash")),
             "every amplified message must carry the Reckless Dash sentinel"
         );
     }

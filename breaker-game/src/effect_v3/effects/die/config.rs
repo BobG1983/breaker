@@ -23,10 +23,7 @@ mod tests {
     use bevy::prelude::*;
 
     use super::*;
-    use crate::{
-        effect_v3::traits::Fireable,
-        shared::death_pipeline::{Dead, Hp},
-    };
+    use crate::effect_v3::traits::Fireable;
 
     #[test]
     fn fire_inserts_dead_on_living_entity() {

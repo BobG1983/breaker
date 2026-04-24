@@ -16,7 +16,6 @@ use crate::{
         resources::{ActiveHazards, hazard_active},
     },
     prelude::*,
-    shared::death_pipeline::Destroyed,
 };
 
 /// Distance floor (world units) below which the pull force magnitude is
@@ -136,7 +135,7 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
 ///   has dropped to or below zero.
 ///
 /// Ordering: `spawn_gravity_wells` → `gravity_well_pull` →
-/// `despawn_expired_gravity_wells`. No `DeathPipelineSystems`
+/// `despawn_expired_gravity_wells`. No `DmgSystems`
 /// ordering — `GravitySurge` operates on bolt `Velocity2D` directly as
 /// a **deferred architectural exception** not yet covered by
 /// `docs/architecture/plugins.md` § `Velocity2D` Cross-Domain Write

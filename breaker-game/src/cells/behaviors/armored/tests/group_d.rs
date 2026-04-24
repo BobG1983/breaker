@@ -38,7 +38,7 @@ fn armored_face_with_piercing_less_than_armor_value_blocks_damage() {
         hp.current
     );
     assert_eq!(
-        app.world().get::<KilledBy>(cell).unwrap().dealer,
+        app.world().get::<KilledBy>(cell).unwrap().killer,
         None,
         "KilledBy.dealer should be None — apply_damage never wrote a dealer"
     );
@@ -229,7 +229,7 @@ fn block_absorbs_would_be_lethal_hit_killed_by_dealer_unset() {
         hp.current
     );
     assert!(app.world().get::<Dead>(cell).is_none());
-    assert_eq!(app.world().get::<KilledBy>(cell).unwrap().dealer, None);
+    assert_eq!(app.world().get::<KilledBy>(cell).unwrap().killer, None);
     assert!(app.world().get_entity(cell).is_ok(), "cell still exists");
 }
 

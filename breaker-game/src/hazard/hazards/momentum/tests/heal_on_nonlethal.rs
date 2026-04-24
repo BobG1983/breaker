@@ -9,6 +9,7 @@
 //! `Dead`/`Invulnerable` → no heal, zero-amount damage → no heal.
 
 use bevy::prelude::*;
+use rantzsoft_dmg::{RantzDmgAppExt, RantzDmgPlugin};
 
 use super::{
     super::system::{momentum_heal_on_nonlethal, register},
@@ -20,11 +21,9 @@ use super::{
     },
 };
 use crate::{
+    cells::components::Cell,
     hazard::{definition::HazardKind, resources::ActiveHazards},
     prelude::*,
-    shared::death_pipeline::{
-        HealCap, Hp, heal_dealt::HealDealt, sets::DeathPipelineSystems, systems::apply_damage,
-    },
 };
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -146,22 +145,12 @@ fn gate_blocks_when_not_in_playing_state() {
 #[test]
 fn zero_damage_amount_emits_no_heal() {
     let mut app = test_app_playing();
-    app.configure_sets(
-        FixedUpdate,
-        (
-            DeathPipelineSystems::ApplyDamage,
-            DeathPipelineSystems::DetectDeaths.after(DeathPipelineSystems::ApplyDamage),
-            DeathPipelineSystems::HandleKill.after(DeathPipelineSystems::DetectDeaths),
-            DeathPipelineSystems::ApplyHeal.after(DeathPipelineSystems::HandleKill),
-        ),
-    );
+    app.add_plugins(RantzDmgPlugin);
+    let _ = app.register_dmgable::<Cell>();
     // Wire apply_damage first so the damage lands (at zero). Then Momentum observes.
     app.add_systems(
         FixedUpdate,
-        (
-            apply_damage::<Cell>.in_set(DeathPipelineSystems::ApplyDamage),
-            momentum_heal_on_nonlethal.after(DeathPipelineSystems::ApplyDamage),
-        ),
+        momentum_heal_on_nonlethal.after(DmgSystems::ApplyDamage),
     );
     install_momentum_config(&mut app, canonical_momentum_config());
     add_momentum_stacks(&mut app, 1);
@@ -206,21 +195,11 @@ fn damage_against_despawned_target_does_not_panic() {
 /// order so that heal observes post-damage `hp.current`.
 fn test_app_with_damage_and_heal_emit() -> App {
     let mut app = test_app_playing();
-    app.configure_sets(
-        FixedUpdate,
-        (
-            DeathPipelineSystems::ApplyDamage,
-            DeathPipelineSystems::DetectDeaths.after(DeathPipelineSystems::ApplyDamage),
-            DeathPipelineSystems::HandleKill.after(DeathPipelineSystems::DetectDeaths),
-            DeathPipelineSystems::ApplyHeal.after(DeathPipelineSystems::HandleKill),
-        ),
-    );
+    app.add_plugins(RantzDmgPlugin);
+    let _ = app.register_dmgable::<Cell>();
     app.add_systems(
         FixedUpdate,
-        (
-            apply_damage::<Cell>.in_set(DeathPipelineSystems::ApplyDamage),
-            momentum_heal_on_nonlethal.after(DeathPipelineSystems::ApplyDamage),
-        ),
+        momentum_heal_on_nonlethal.after(DmgSystems::ApplyDamage),
     );
     app
 }
@@ -257,7 +236,10 @@ fn nonlethal_hit_stack_one_emits_one_heal_with_correct_fields() {
     );
     assert!(matches!(msg.cap, HealCap::Max));
     assert_eq!(msg.healer, None);
-    assert_eq!(msg.source.as_deref(), Some("hazard:momentum"));
+    assert_eq!(
+        msg.source.as_ref(),
+        Some(&SourceId::from("hazard:momentum"))
+    );
 }
 
 // ── Behavior 19 — stack 3 scales amount to 30.0 ─────────────────────────────
@@ -282,7 +264,10 @@ fn nonlethal_hit_stack_three_scales_heal_to_thirty() {
         msgs[0].amount
     );
     assert!(matches!(msgs[0].cap, HealCap::Max));
-    assert_eq!(msgs[0].source.as_deref(), Some("hazard:momentum"));
+    assert_eq!(
+        msgs[0].source.as_ref(),
+        Some(&SourceId::from("hazard:momentum"))
+    );
 }
 
 // ── Behavior 20 — lethal hit emits no heal (post-hp <= 0) ───────────────────
@@ -481,7 +466,7 @@ fn every_emitted_message_has_momentum_sentinel_source() {
     assert_eq!(all.len(), 2);
     assert!(
         all.iter()
-            .all(|m| m.source.as_deref() == Some("hazard:momentum")),
+            .all(|m| m.source == Some(SourceId::from("hazard:momentum"))),
         "every message's source must be Some(\"hazard:momentum\")"
     );
 }

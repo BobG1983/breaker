@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use super::{super::system::*, helpers::*};
-use crate::{prelude::*, shared::death_pipeline::HealCap};
+use crate::prelude::{HealCap, *};
 
 // ══════════════════════════════════════════════════════════════════════
 // Group B — stacking and interval floor

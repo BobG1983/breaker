@@ -5,7 +5,10 @@ use std::marker::PhantomData;
 use bevy::prelude::*;
 
 use super::helpers::*;
-use crate::{cells::components::*, prelude::*, shared::death_pipeline::invulnerable::Invulnerable};
+use crate::{
+    cells::components::*,
+    prelude::{Invulnerable, *},
+};
 
 fn make_destroyed_msg() -> Destroyed<Cell> {
     Destroyed::<Cell> {
@@ -39,7 +42,7 @@ fn lock_releases_when_all_adjacents_destroyed() {
             Invulnerable,
             Locks(vec![adj_a, adj_b]),
             Hp::new(10.0),
-            KilledBy::default(),
+            KilledBy { killer: None },
         ))
         .id();
 
@@ -93,7 +96,7 @@ fn lock_stays_locked_when_only_some_adjacents_destroyed() {
             Invulnerable,
             Locks(vec![adj_a, adj_b]),
             Hp::new(10.0),
-            KilledBy::default(),
+            KilledBy { killer: None },
         ))
         .id();
 
@@ -134,11 +137,11 @@ fn lock_releases_when_all_adjacents_marked_dead_same_tick() {
     // Spawn two adjacent cells as real alive entities.
     let adj_a = app
         .world_mut()
-        .spawn((Cell, Hp::new(1.0), KilledBy::default()))
+        .spawn((Cell, Hp::new(1.0), KilledBy { killer: None }))
         .id();
     let adj_b = app
         .world_mut()
-        .spawn((Cell, Hp::new(1.0), KilledBy::default()))
+        .spawn((Cell, Hp::new(1.0), KilledBy { killer: None }))
         .id();
 
     // Mark both adjacents `Dead` synchronously (NOT via commands — the insert
@@ -157,7 +160,7 @@ fn lock_releases_when_all_adjacents_marked_dead_same_tick() {
             Invulnerable,
             Locks(vec![adj_a, adj_b]),
             Hp::new(10.0),
-            KilledBy::default(),
+            KilledBy { killer: None },
         ))
         .id();
 
@@ -210,7 +213,7 @@ fn lock_releases_when_one_adjacent_despawned_and_one_dead_marked() {
     let adj_a = app.world_mut().spawn_empty().id();
     let adj_b = app
         .world_mut()
-        .spawn((Cell, Hp::new(1.0), KilledBy::default()))
+        .spawn((Cell, Hp::new(1.0), KilledBy { killer: None }))
         .id();
 
     // adj_a despawned; adj_b Dead-marked.
@@ -226,7 +229,7 @@ fn lock_releases_when_one_adjacent_despawned_and_one_dead_marked() {
             Invulnerable,
             Locks(vec![adj_a, adj_b]),
             Hp::new(10.0),
-            KilledBy::default(),
+            KilledBy { killer: None },
         ))
         .id();
 
@@ -253,11 +256,11 @@ fn lock_stays_locked_when_one_adjacent_dead_marked_and_one_alive() {
 
     let adj_a = app
         .world_mut()
-        .spawn((Cell, Hp::new(1.0), KilledBy::default()))
+        .spawn((Cell, Hp::new(1.0), KilledBy { killer: None }))
         .id();
     let adj_b = app
         .world_mut()
-        .spawn((Cell, Hp::new(1.0), KilledBy::default()))
+        .spawn((Cell, Hp::new(1.0), KilledBy { killer: None }))
         .id();
 
     // Only adj_a marked Dead.
@@ -272,7 +275,7 @@ fn lock_stays_locked_when_one_adjacent_dead_marked_and_one_alive() {
             Invulnerable,
             Locks(vec![adj_a, adj_b]),
             Hp::new(10.0),
-            KilledBy::default(),
+            KilledBy { killer: None },
         ))
         .id();
 
@@ -313,7 +316,7 @@ fn lock_cell_with_empty_adjacents_unlocks_immediately() {
             Invulnerable,
             Locks(vec![]),
             Hp::new(10.0),
-            KilledBy::default(),
+            KilledBy { killer: None },
         ))
         .id();
 

@@ -24,7 +24,6 @@ use crate::{
         definition::{ProtocolKind, ProtocolTuning},
         systems::ProtocolGate,
     },
-    shared::death_pipeline::sets::DeathPipelineSystems,
 };
 
 // ── Constants ───────────────────────────────────────────────────────────────
@@ -83,7 +82,7 @@ pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
 /// Registers Fission's runtime systems.
 ///
 /// - `fission_on_cell_destroyed` → `FixedUpdate`, ordered
-///   `.after(DeathPipelineSystems::HandleKill)`, intentionally ungated at
+///   `.after(DmgSystems::ApplyKill)`, intentionally ungated at
 ///   the registration level. The system enforces the
 ///   `ActiveProtocols` / `NodeState::Playing` gate in-body via an immediate
 ///   `reader.clear()` + return when inactive.
@@ -94,7 +93,7 @@ pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
 pub(crate) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
-        fission_on_cell_destroyed.after(DeathPipelineSystems::HandleKill),
+        fission_on_cell_destroyed.after(DmgSystems::ApplyKill),
     );
     app.add_systems(OnExit(MenuState::Main), fission_cleanup_run);
 }

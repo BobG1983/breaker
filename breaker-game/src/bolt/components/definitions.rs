@@ -1,10 +1,13 @@
 use bevy::prelude::*;
+use rantzsoft_dmg::Dmgable;
 
 use crate::shared::size::BaseRadius;
 
 /// Marker component identifying the bolt entity.
 #[derive(Component, Debug, Default)]
 pub struct Bolt;
+
+impl Dmgable for Bolt {}
 
 /// Marker component identifying the single primary bolt entity.
 ///

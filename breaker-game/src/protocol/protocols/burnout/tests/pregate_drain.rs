@@ -200,8 +200,8 @@ fn burnout_amplify_damage_buffered_while_gate_off_is_not_retro_processed() {
         msgs[0].amount,
     );
     assert_eq!(
-        msgs[0].source_chip.as_deref(),
-        Some("protocol:burnout"),
+        msgs[0].source.as_ref(),
+        Some(&SourceId::from("protocol:burnout")),
         "emitted DamageDealt must carry the Burnout sentinel",
     );
     assert!(

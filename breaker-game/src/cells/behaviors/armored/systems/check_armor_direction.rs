@@ -8,7 +8,7 @@
 //! and hits on armored cells from weak-point faces, pass through unchanged.
 //!
 //! Scheduling: `FixedUpdate`,
-//! `.after(BoltSystems::CellCollision).before(DeathPipelineSystems::ApplyDamage)`,
+//! `.after(BoltSystems::CellCollision).before(DmgSystems::ApplyDamage)`,
 //! `.run_if(in_state(NodeState::Playing))`. Ordering is the entire
 //! correctness argument — the system mutates the `DamageDealt<Cell>` queue
 //! after `bolt_cell_collision` has populated it and before
@@ -30,6 +30,16 @@ type ArmorQuery<'w, 's> =
 /// Query for mutating bolt piercing charges on breakthrough.
 type BoltPiercingQuery<'w, 's> = Query<'w, 's, &'static mut PiercingRemaining>;
 
+/// Filters bolt-on-armor damage before `apply_damage::<Cell>` runs.
+///
+/// For every [`BoltImpactCell`] message this tick, checks whether the cell
+/// is an [`ArmoredCell`] whose [`ArmorFacing`] matches the impact normal.
+/// Matching hits are either blocked (the corresponding
+/// `DamageDealt<Cell>` entry is removed from the queue) or handled as a
+/// breakthrough (the bolt's [`PiercingRemaining`] is decremented by the
+/// cell's [`ArmorValue`] and the damage passes through). Non-armored hits
+/// and weak-face hits are left untouched. See the module doc comment for
+/// the scheduling contract.
 pub(crate) fn check_armor_direction(
     mut impacts: MessageReader<BoltImpactCell>,
     mut damage: ResMut<Messages<DamageDealt<Cell>>>,

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use super::{super::system::*, helpers::*};
-use crate::shared::death_pipeline::{HealCap, Hp};
+use crate::prelude::*;
 
 // ════════════════════════════════════════════════════════════════════════════
 // Group H — Retrofit-specific regression guards

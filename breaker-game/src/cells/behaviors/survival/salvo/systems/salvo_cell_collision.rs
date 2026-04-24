@@ -32,11 +32,12 @@ pub(crate) fn salvo_cell_collision(
 
             if salvo_world_aabb.overlaps(&cell_world_aabb) {
                 damage_writer.write(DamageDealt {
-                    dealer:      Some(salvo_entity),
-                    target:      cell_entity,
-                    amount:      salvo_damage.0,
-                    source_chip: None,
-                    _marker:     PhantomData,
+                    dealer:        Some(salvo_entity),
+                    attributed_to: None,
+                    target:        cell_entity,
+                    amount:        salvo_damage.0,
+                    source:        None,
+                    _marker:       PhantomData,
                 });
             }
         }

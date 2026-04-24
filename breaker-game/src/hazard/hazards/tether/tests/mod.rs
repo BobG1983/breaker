@@ -6,3 +6,9 @@ mod config_formulas;
 mod establish_links;
 mod register;
 mod ron_asset;
+
+// W2 test modules.
+mod cross_mechanic;
+mod emit_partner;
+mod kill_attribution;
+mod next_frame_pipeline;

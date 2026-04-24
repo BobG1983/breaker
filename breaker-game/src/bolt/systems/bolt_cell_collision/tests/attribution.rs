@@ -1,9 +1,11 @@
 use bevy::prelude::*;
 
 use super::helpers::*;
-use crate::{bolt::components::SpawnedByEvolution, cells::resources::CellConfig};
+use crate::{
+    bolt::components::SpawnedByEvolution, cells::resources::CellConfig, prelude::SourceId,
+};
 
-// ── SpawnedByEvolution → DamageDealt<Cell>.source_chip attribution tests ──
+// ── SpawnedByEvolution → DamageDealt<Cell>.source attribution tests ──
 
 #[test]
 fn damage_cell_carries_source_chip_from_bolt_spawned_by_evolution() {
@@ -33,9 +35,9 @@ fn damage_cell_carries_source_chip_from_bolt_spawned_by_evolution() {
         "DamageDealt<Cell>.target should match the hit cell entity"
     );
     assert_eq!(
-        msgs.0[0].source_chip,
-        Some("chain_lightning".to_owned()),
-        "DamageDealt<Cell>.source_chip should carry the bolt's SpawnedByEvolution name"
+        msgs.0[0].source,
+        Some(SourceId::from("chain_lightning")),
+        "DamageDealt<Cell>.source should carry the bolt's SpawnedByEvolution name"
     );
 }
 
@@ -60,8 +62,8 @@ fn damage_cell_carries_source_chip_none_when_bolt_has_no_spawned_by_evolution() 
         "should emit exactly one DamageDealt<Cell> message on cell hit"
     );
     assert_eq!(
-        msgs.0[0].source_chip, None,
-        "DamageDealt<Cell>.source_chip should be None when bolt has no SpawnedByEvolution"
+        msgs.0[0].source, None,
+        "DamageDealt<Cell>.source should be None when bolt has no SpawnedByEvolution"
     );
 }
 
@@ -99,12 +101,12 @@ fn multiple_bolts_with_different_attributions_produce_correctly_attributed_damag
     assert!(msg_a.is_some(), "DamageDealt<Cell> for cell A should exist");
     assert!(msg_b.is_some(), "DamageDealt<Cell> for cell B should exist");
     assert_eq!(
-        msg_a.unwrap().source_chip,
-        Some("alpha".to_owned()),
+        msg_a.unwrap().source,
+        Some(SourceId::from("alpha")),
         "DamageDealt<Cell> for cell A should have source_chip Some(\"alpha\") from bolt's SpawnedByEvolution"
     );
     assert_eq!(
-        msg_b.unwrap().source_chip,
+        msg_b.unwrap().source,
         None,
         "DamageDealt<Cell> for cell B should have source_chip None (bolt has no SpawnedByEvolution)"
     );

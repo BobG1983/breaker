@@ -12,7 +12,6 @@ use crate::{
         test_utils::spawn_cell_in_world,
     },
     prelude::*,
-    shared::death_pipeline::sets::DeathPipelineSystems,
 };
 
 /// Default cell dimensions for test spawns.
@@ -83,9 +82,10 @@ pub(super) fn bolt_impact(
 pub(super) fn damage_msg_from(target: Entity, amount: f32, dealer: Entity) -> DamageDealt<Cell> {
     DamageDealt {
         dealer: Some(dealer),
+        attributed_to: None,
         target,
         amount,
-        source_chip: None,
+        source: None,
         _marker: PhantomData,
     }
 }
@@ -94,9 +94,10 @@ pub(super) fn damage_msg_from(target: Entity, amount: f32, dealer: Entity) -> Da
 pub(super) fn damage_msg_dealerless(target: Entity, amount: f32) -> DamageDealt<Cell> {
     DamageDealt {
         dealer: None,
+        attributed_to: None,
         target,
         amount,
-        source_chip: None,
+        source: None,
         _marker: PhantomData,
     }
 }
@@ -151,13 +152,13 @@ pub(super) fn build_bolt_immune_test_app() -> App {
         FixedUpdate,
         enqueue_cell_damage
             .before(suppress_bolt_immune_damage)
-            .before(DeathPipelineSystems::ApplyDamage),
+            .before(DmgSystems::ApplyDamage),
     );
     app.add_systems(
         FixedUpdate,
         suppress_bolt_immune_damage
             .after(crate::bolt::sets::BoltSystems::CellCollision)
-            .before(DeathPipelineSystems::ApplyDamage)
+            .before(DmgSystems::ApplyDamage)
             .run_if(in_state(NodeState::Playing)),
     );
     app

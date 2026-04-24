@@ -18,8 +18,7 @@ use super::{
 };
 use crate::{
     hazard::{definition::HazardKind, resources::ActiveHazards},
-    prelude::*,
-    shared::death_pipeline::Hp,
+    prelude::{Hp, *},
 };
 
 // ── Behavior 61 — inserts hp.max = Some(2 * starting) on fresh cell ─────────
@@ -225,8 +224,8 @@ fn dead_marked_cell_with_existing_max_is_not_lifted() {
                 starting: 10.0,
                 max:      Some(5.0),
             },
-            KilledBy::default(),
-            crate::shared::death_pipeline::Dead,
+            KilledBy { killer: None },
+            crate::prelude::Dead,
         ))
         .id();
 
@@ -279,8 +278,8 @@ fn invulnerable_cell_with_existing_max_is_not_overwritten() {
                 starting: 10.0,
                 max:      Some(100.0),
             },
-            KilledBy::default(),
-            crate::shared::death_pipeline::Invulnerable,
+            KilledBy { killer: None },
+            crate::prelude::Invulnerable,
         ))
         .id();
 

@@ -1,6 +1,6 @@
 //! Section D — `cleanup_broken_tether_links` system (Behaviours 36–43).
 //!
-//! Runs in `FixedUpdate` after `DeathPipelineSystems::HandleKill`, gated by
+//! Runs in `FixedUpdate` after `DmgSystems::ApplyKill`, gated by
 //! `hazard_active(Tether)` AND `in_state(NodeState::Playing)`. Removes
 //! `TetherLink` from any surviving cell whose partner has been despawned or
 //! marked `Dead`.
@@ -123,7 +123,7 @@ fn multiple_broken_links_in_one_tick_each_unlinks_independently() {
     assert_eq!(link_right.partner, p3_left);
 }
 
-// ── Behavior 40 — Cleanup runs after DeathPipelineSystems::HandleKill ────────
+// ── Behavior 40 — Cleanup runs after DmgSystems::ApplyKill ────────
 
 #[test]
 fn cleanup_runs_after_dead_marker_inserted() {

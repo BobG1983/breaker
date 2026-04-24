@@ -43,11 +43,12 @@ fn plugin_first_then_register_dmgable_produces_working_pipeline() {
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<TestT>>>()
         .write(DamageDealt::<TestT> {
-            dealer:  Some(dealer),
-            target:  victim,
-            amount:  10.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        Some(dealer),
+            attributed_to: None,
+            target:        victim,
+            amount:        10.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     tick(&mut app);
 
@@ -80,20 +81,22 @@ fn plugin_first_then_register_two_types_fires_both_pipelines() {
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<TestT>>>()
         .write(DamageDealt::<TestT> {
-            dealer:  None,
-            target:  victim_t,
-            amount:  5.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        None,
+            attributed_to: None,
+            target:        victim_t,
+            amount:        5.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<TestU>>>()
         .write(DamageDealt::<TestU> {
-            dealer:  None,
-            target:  victim_u,
-            amount:  5.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        None,
+            attributed_to: None,
+            target:        victim_u,
+            amount:        5.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     tick(&mut app);
 

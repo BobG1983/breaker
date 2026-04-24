@@ -5,7 +5,7 @@
 
 use std::time::Duration;
 
-use bevy::prelude::*;
+use rantzsoft_dmg::{RantzDmgAppExt, RantzDmgPlugin};
 
 use super::{
     super::system::{RenewalTimer, register},
@@ -18,9 +18,6 @@ use crate::{
     cells::components::Cell,
     hazard::{definition::HazardKind, resources::ActiveHazards},
     prelude::*,
-    shared::death_pipeline::{
-        HealCap, Hp, heal_dealt::HealDealt, sets::DeathPipelineSystems, systems::apply_heal,
-    },
 };
 
 // ── Behavior 24 — register schedules tick in HandleKill → ApplyHeal window ─
@@ -41,19 +38,18 @@ fn register_schedules_tick_system_that_emits_heal_on_expiry() {
     assert_eq!(msgs.len(), 1);
     assert!((msgs[0].amount - 70.0).abs() < f32::EPSILON);
     assert!(matches!(msgs[0].cap, HealCap::Starting));
-    assert_eq!(msgs[0].source, Some("hazard:renewal".to_string()));
+    assert_eq!(msgs[0].source, Some(SourceId::from("hazard:renewal")));
 }
 
 #[test]
 fn register_ordering_fires_renewal_before_apply_heal_in_one_tick() {
-    // Edge: wire `apply_heal::<Cell>` in ApplyHeal set; the registered
-    // `renewal_tick` runs before it, so HP reaches 100.0 in a single tick.
+    // Edge: wire `apply_heal::<Cell>` via `register_dmgable::<Cell>`; the
+    // registered `renewal_tick` runs before it, so HP reaches 100.0 in a
+    // single tick.
     let mut app = test_app_playing();
     register(&mut app);
-    app.add_systems(
-        FixedUpdate,
-        apply_heal::<Cell>.in_set(DeathPipelineSystems::ApplyHeal),
-    );
+    app.add_plugins(RantzDmgPlugin);
+    let _ = app.register_dmgable::<Cell>();
     install_renewal_config(&mut app, canonical_config());
     add_renewal_stacks(&mut app, 1);
     let cell = spawn_cell(&mut app, 30.0, 100.0);

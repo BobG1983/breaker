@@ -13,10 +13,7 @@ use crate::{
         resources::{ActiveHazards, hazard_active},
     },
     prelude::*,
-    shared::{
-        collision_layers::{BOLT_LAYER, CELL_LAYER},
-        death_pipeline::{HealCap, heal_dealt::HealDealt, sets::DeathPipelineSystems},
-    },
+    shared::collision_layers::{BOLT_LAYER, CELL_LAYER},
 };
 
 // ── Constants ───────────────────────────────────────────────────────────────
@@ -115,7 +112,7 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
 /// Non-reader systems — gated by `hazard_active(HazardKind::Momentum)`
 /// AND `in_state(NodeState::Playing)`:
 /// - `attach_momentum_ceiling` — before `momentum_heal_on_nonlethal`.
-/// - `momentum_split_check` — after `DeathPipelineSystems::ApplyHeal`.
+/// - `momentum_split_check` — after `DmgSystems::ApplyHeal`.
 ///
 /// Reader system — intentionally ungated at the tuple level:
 /// - `momentum_heal_on_nonlethal` — holds `MessageReader<DamageDealt<Cell>>`,
@@ -124,7 +121,7 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
 ///   gate suppresses execution but does NOT advance the reader cursor, so
 ///   messages buffered during gated-off frames would get retroactively
 ///   consumed the tick the gate opens. Runs in
-///   `DeathPipelineSystems::ApplyHeal`, before `apply_heal::<Cell>`.
+///   `DmgSystems::ApplyHeal`.
 pub(crate) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
@@ -135,14 +132,12 @@ pub(crate) fn register(app: &mut App) {
     );
     app.add_systems(
         FixedUpdate,
-        momentum_heal_on_nonlethal
-            .in_set(DeathPipelineSystems::ApplyHeal)
-            .before(crate::shared::death_pipeline::systems::apply_heal::<Cell>),
+        momentum_heal_on_nonlethal.in_set(DmgSystems::PostApplyDamage),
     );
     app.add_systems(
         FixedUpdate,
         momentum_split_check
-            .after(DeathPipelineSystems::ApplyHeal)
+            .after(DmgSystems::ApplyHeal)
             .run_if(hazard_active(HazardKind::Momentum))
             .run_if(in_state(NodeState::Playing)),
     );
@@ -254,12 +249,13 @@ pub(crate) fn momentum_heal_on_nonlethal(
         }
 
         writer.write(HealDealt::<Cell> {
-            healer:  None,
-            target:  msg.target,
-            amount:  heal,
-            source:  Some(MOMENTUM_SENTINEL.to_string()),
-            cap:     HealCap::Max,
-            _marker: PhantomData,
+            healer:        None,
+            attributed_to: None,
+            target:        msg.target,
+            amount:        heal,
+            source:        Some(SourceId::from(MOMENTUM_SENTINEL)),
+            cap:           HealCap::Max,
+            _marker:       PhantomData,
         });
     }
 }
@@ -344,7 +340,7 @@ pub(crate) fn momentum_split_check(
                 CellWidth::new(MOMENTUM_CELL_WIDTH),
                 CellHeight::new(MOMENTUM_CELL_HEIGHT),
                 Hp::new(parent_starting),
-                KilledBy::default(),
+                KilledBy { killer: None },
             ));
             spawned += 1;
         }

@@ -6,6 +6,7 @@
 use std::marker::PhantomData;
 
 use bevy::prelude::*;
+use rantzsoft_dmg::{RantzDmgAppExt, RantzDmgPlugin};
 
 use crate::{
     cells::{
@@ -15,9 +16,6 @@ use crate::{
         components::Cell,
     },
     prelude::*,
-    shared::death_pipeline::{
-        damage_dealt::DamageDealt, invulnerable::Invulnerable, systems::apply_damage,
-    },
 };
 
 fn coupling_test_app() -> App {
@@ -34,7 +32,7 @@ fn inserting_locked_on_a_cell_inserts_invulnerable() {
 
     let cell = app
         .world_mut()
-        .spawn((Cell, Hp::new(10.0), KilledBy::default()))
+        .spawn((Cell, Hp::new(10.0), KilledBy { killer: None }))
         .id();
 
     app.world_mut().entity_mut(cell).insert(Locked);
@@ -59,7 +57,7 @@ fn spawning_cell_with_locked_at_spawn_inserts_invulnerable_after_tick() {
 
     let cell = app
         .world_mut()
-        .spawn((Cell, Hp::new(10.0), KilledBy::default(), Locked))
+        .spawn((Cell, Hp::new(10.0), KilledBy { killer: None }, Locked))
         .id();
 
     tick(&mut app);
@@ -78,7 +76,7 @@ fn inserting_locked_when_invulnerable_already_present_is_idempotent() {
 
     let cell = app
         .world_mut()
-        .spawn((Cell, Hp::new(10.0), KilledBy::default(), Invulnerable))
+        .spawn((Cell, Hp::new(10.0), KilledBy { killer: None }, Invulnerable))
         .id();
 
     app.world_mut().entity_mut(cell).insert(Locked);
@@ -102,7 +100,7 @@ fn removing_locked_from_a_cell_removes_invulnerable() {
         .spawn((
             Cell,
             Hp::new(10.0),
-            KilledBy::default(),
+            KilledBy { killer: None },
             Locked,
             Invulnerable,
         ))
@@ -133,7 +131,7 @@ fn removing_invulnerable_directly_does_not_reinsert() {
         .spawn((
             Cell,
             Hp::new(10.0),
-            KilledBy::default(),
+            KilledBy { killer: None },
             Locked,
             Invulnerable,
         ))
@@ -169,19 +167,19 @@ fn enqueue_cell_damage(
 #[test]
 fn locked_cell_absorbs_damage_and_unlocked_cell_takes_damage() {
     let mut app = TestAppBuilder::new()
-        .with_message::<DamageDealt<Cell>>()
         .with_resource::<PendingCellDamage>()
         .with_system(FixedUpdate, sync_lock_invulnerable)
         .with_system(
             FixedUpdate,
-            enqueue_cell_damage.before(apply_damage::<Cell>),
+            enqueue_cell_damage.before(DmgSystems::ApplyDamage),
         )
-        .with_system(FixedUpdate, apply_damage::<Cell>)
         .build();
+    app.add_plugins(RantzDmgPlugin);
+    let _ = app.register_dmgable::<Cell>();
 
     let cell = app
         .world_mut()
-        .spawn((Cell, Hp::new(3.0), KilledBy::default(), Locked))
+        .spawn((Cell, Hp::new(3.0), KilledBy { killer: None }, Locked))
         .id();
 
     // Run one tick to flush the coupling — Invulnerable should be present.
@@ -193,11 +191,12 @@ fn locked_cell_absorbs_damage_and_unlocked_cell_takes_damage() {
 
     // Phase A: enqueue damage — should be absorbed.
     app.insert_resource(PendingCellDamage(vec![DamageDealt::<Cell> {
-        dealer:      None,
-        target:      cell,
-        amount:      5.0,
-        source_chip: None,
-        _marker:     PhantomData,
+        dealer:        None,
+        attributed_to: None,
+        target:        cell,
+        amount:        5.0,
+        source:        None,
+        _marker:       PhantomData,
     }]));
     tick(&mut app);
 
@@ -227,19 +226,22 @@ fn locked_cell_absorbs_damage_and_unlocked_cell_takes_damage() {
     );
 
     // Phase B continued: enqueue the same damage — now it should apply.
+    // 5.0 damage on 3.0 HP is lethal; the crate-owned kill pipeline
+    // (detect_deaths → handle_kill → process_despawn_requests) will mark
+    // the cell Dead and despawn it within the same tick. The observable
+    // proof that damage actually landed is that the entity is gone.
     app.insert_resource(PendingCellDamage(vec![DamageDealt::<Cell> {
-        dealer:      None,
-        target:      cell,
-        amount:      5.0,
-        source_chip: None,
-        _marker:     PhantomData,
+        dealer:        None,
+        attributed_to: None,
+        target:        cell,
+        amount:        5.0,
+        source:        None,
+        _marker:       PhantomData,
     }]));
     tick(&mut app);
 
-    let hp = app.world().get::<Hp>(cell).unwrap();
     assert!(
-        (hp.current - (-2.0)).abs() < f32::EPSILON,
-        "Hp should be -2.0 (3.0 - 5.0 raw, not clamped), got {}",
-        hp.current
+        app.world().get_entity(cell).is_err(),
+        "lethal damage on an unlocked cell must kill and despawn it"
     );
 }

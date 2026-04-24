@@ -95,6 +95,7 @@ fn send_batch_messages(app: &mut App, victims: [Entity; 5]) {
             .resource_mut::<Messages<DamageDealt<TestT>>>()
             .write(DamageDealt::<TestT> {
                 dealer: None,
+                attributed_to: None,
                 target,
                 amount,
                 source: None,
@@ -104,22 +105,24 @@ fn send_batch_messages(app: &mut App, victims: [Entity; 5]) {
     app.world_mut()
         .resource_mut::<Messages<HealDealt<TestT>>>()
         .write(HealDealt::<TestT> {
-            healer:  None,
-            target:  v4,
-            amount:  3.0,
-            source:  None,
-            cap:     HealCap::Starting,
-            _marker: PhantomData,
+            healer:        None,
+            attributed_to: None,
+            target:        v4,
+            amount:        3.0,
+            source:        None,
+            cap:           HealCap::Starting,
+            _marker:       PhantomData,
         });
     app.world_mut()
         .resource_mut::<Messages<HealDealt<TestT>>>()
         .write(HealDealt::<TestT> {
-            healer:  None,
-            target:  v5,
-            amount:  100.0,
-            source:  None,
-            cap:     HealCap::Max,
-            _marker: PhantomData,
+            healer:        None,
+            attributed_to: None,
+            target:        v5,
+            amount:        100.0,
+            source:        None,
+            cap:           HealCap::Max,
+            _marker:       PhantomData,
         });
 }
 
@@ -146,11 +149,12 @@ fn invulnerable_victim_drains_boost_one_shot_in_same_tick() {
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<TestT>>>()
         .write(DamageDealt::<TestT> {
-            dealer:  Some(dealer),
-            target:  victim,
-            amount:  2.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        Some(dealer),
+            attributed_to: None,
+            target:        victim,
+            amount:        2.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     tick(&mut app);
     assert_f32_eq(app.world().get::<Hp>(victim).unwrap().current, 10.0);
@@ -162,11 +166,12 @@ fn invulnerable_victim_drains_boost_one_shot_in_same_tick() {
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<TestT>>>()
         .write(DamageDealt::<TestT> {
-            dealer:  Some(dealer),
-            target:  victim,
-            amount:  2.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        Some(dealer),
+            attributed_to: None,
+            target:        victim,
+            amount:        2.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     tick(&mut app);
 
@@ -189,11 +194,12 @@ fn nan_one_shot_produces_nan_hp_garbage_in_garbage_out() {
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<TestT>>>()
         .write(DamageDealt::<TestT> {
-            dealer:  Some(dealer),
-            target:  victim,
-            amount:  5.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        Some(dealer),
+            attributed_to: None,
+            target:        victim,
+            amount:        5.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     tick(&mut app);
 

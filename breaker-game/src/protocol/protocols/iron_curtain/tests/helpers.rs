@@ -230,7 +230,7 @@ pub(super) fn write_bolt_lost(app: &mut App, bolt: Entity) {
 
 // ── Assertion helpers ───────────────────────────────────────────────────────
 
-/// Returns every captured `DamageDealt<Cell>` whose `source_chip` matches the
+/// Returns every captured `DamageDealt<Cell>` whose `source` matches the
 /// Iron Curtain sentinel string. Isolates Iron Curtain's wave emissions from
 /// any other `DamageDealt<Cell>` messages.
 pub(super) fn collected_iron_curtain_damage(app: &App) -> Vec<DamageDealt<Cell>> {
@@ -238,11 +238,7 @@ pub(super) fn collected_iron_curtain_damage(app: &App) -> Vec<DamageDealt<Cell>>
         .resource::<MessageCollector<DamageDealt<Cell>>>()
         .0
         .iter()
-        .filter(|msg| {
-            msg.source_chip
-                .as_deref()
-                .is_some_and(|s| s == IRON_CURTAIN_SENTINEL)
-        })
+        .filter(|msg| msg.source == Some(SourceId::from(IRON_CURTAIN_SENTINEL)))
         .cloned()
         .collect()
 }

@@ -190,9 +190,9 @@ fn chain_reaction_between_two_volatiles_resets_non_active_sequence_twice() {
 
     let killed_by = app.world().get::<KilledBy>(e1).unwrap();
     assert!(
-        killed_by.dealer.is_none(),
+        killed_by.killer.is_none(),
         "the reset should have cleared KilledBy.dealer, got {:?}",
-        killed_by.dealer
+        killed_by.killer
     );
 }
 

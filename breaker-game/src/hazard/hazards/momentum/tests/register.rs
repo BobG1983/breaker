@@ -8,6 +8,7 @@
 //! attach → `apply_damage` → `heal_emit` → `apply_heal` → `split_check`.
 
 use bevy::prelude::*;
+use rantzsoft_dmg::{RantzDmgAppExt, RantzDmgPlugin};
 
 use super::{
     super::system::{momentum_heal_on_nonlethal, momentum_split_check, register},
@@ -19,36 +20,17 @@ use super::{
     },
 };
 use crate::{
+    cells::components::Cell,
     hazard::{definition::HazardKind, resources::ActiveHazards},
     prelude::*,
-    shared::death_pipeline::{
-        HealCap, Hp,
-        heal_dealt::HealDealt,
-        sets::DeathPipelineSystems,
-        systems::{apply_damage, apply_heal},
-    },
 };
 
 /// Builds a register-wired app that also wires `apply_damage::<Cell>` and
 /// `apply_heal::<Cell>` (so the full pipeline end-to-end goes through).
 fn register_app_full_pipeline() -> App {
     let mut app = test_app_playing();
-    app.configure_sets(
-        FixedUpdate,
-        (
-            DeathPipelineSystems::ApplyDamage,
-            DeathPipelineSystems::DetectDeaths.after(DeathPipelineSystems::ApplyDamage),
-            DeathPipelineSystems::HandleKill.after(DeathPipelineSystems::DetectDeaths),
-            DeathPipelineSystems::ApplyHeal.after(DeathPipelineSystems::HandleKill),
-        ),
-    );
-    app.add_systems(
-        FixedUpdate,
-        (
-            apply_damage::<Cell>.in_set(DeathPipelineSystems::ApplyDamage),
-            apply_heal::<Cell>.in_set(DeathPipelineSystems::ApplyHeal),
-        ),
-    );
+    app.add_plugins(RantzDmgPlugin);
+    let _ = app.register_dmgable::<Cell>();
     register(&mut app);
     app
 }
@@ -76,7 +58,10 @@ fn register_wires_heal_on_nonlethal() {
     assert_eq!(msgs.len(), 1);
     assert!((msgs[0].amount - 10.0).abs() < f32::EPSILON);
     assert!(matches!(msgs[0].cap, HealCap::Max));
-    assert_eq!(msgs[0].source.as_deref(), Some("hazard:momentum"));
+    assert_eq!(
+        msgs[0].source.as_ref(),
+        Some(&SourceId::from("hazard:momentum"))
+    );
 }
 
 #[test]
@@ -120,22 +105,8 @@ fn register_wires_split_check() {
 #[test]
 fn both_systems_gated_off_when_not_in_playing() {
     let mut app = test_app_not_playing();
-    app.configure_sets(
-        FixedUpdate,
-        (
-            DeathPipelineSystems::ApplyDamage,
-            DeathPipelineSystems::DetectDeaths.after(DeathPipelineSystems::ApplyDamage),
-            DeathPipelineSystems::HandleKill.after(DeathPipelineSystems::DetectDeaths),
-            DeathPipelineSystems::ApplyHeal.after(DeathPipelineSystems::HandleKill),
-        ),
-    );
-    app.add_systems(
-        FixedUpdate,
-        (
-            apply_damage::<Cell>.in_set(DeathPipelineSystems::ApplyDamage),
-            apply_heal::<Cell>.in_set(DeathPipelineSystems::ApplyHeal),
-        ),
-    );
+    app.add_plugins(RantzDmgPlugin);
+    let _ = app.register_dmgable::<Cell>();
     register(&mut app);
     install_momentum_config(&mut app, canonical_momentum_config());
     add_momentum_stacks(&mut app, 1);
@@ -369,12 +340,13 @@ fn register_wires_split_check_after_apply_heal_so_same_tick_heals_can_trigger_sp
     // schedule changes. Assign to a real-name binding so clippy doesn't
     // flag `let _touch` as a no-effect underscore binding.
     let touch = HealDealt::<Cell> {
-        healer:  None,
-        target:  cell,
-        amount:  0.0,
-        cap:     HealCap::Max,
-        source:  None,
-        _marker: std::marker::PhantomData,
+        healer:        None,
+        attributed_to: None,
+        target:        cell,
+        amount:        0.0,
+        cap:           HealCap::Max,
+        source:        None,
+        _marker:       std::marker::PhantomData,
     };
     drop(touch);
     let _ = momentum_heal_on_nonlethal;

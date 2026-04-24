@@ -57,6 +57,7 @@ fn enqueue(app: &mut App, msg: HealDealt<TestT>) {
 fn mk_heal(target: Entity, amount: f32, cap: HealCap) -> HealDealt<TestT> {
     HealDealt::<TestT> {
         healer: None,
+        attributed_to: None,
         target,
         amount,
         source: None,

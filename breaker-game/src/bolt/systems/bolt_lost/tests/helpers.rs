@@ -1,13 +1,9 @@
 use bevy::prelude::*;
+use rantzsoft_dmg::{RantzDmgAppExt, RantzDmgPlugin};
 
 use crate::{
     bolt::{definition::BoltDefinition, messages::BoltLost, systems::bolt_lost::system::bolt_lost},
     prelude::*,
-    shared::death_pipeline::{
-        despawn_entity::DespawnEntity,
-        kill_yourself::KillYourself,
-        systems::{handle_kill, process_despawn_requests},
-    },
 };
 
 pub(super) fn make_default_bolt_definition() -> BoltDefinition {
@@ -28,17 +24,15 @@ pub(super) fn make_default_bolt_definition() -> BoltDefinition {
 }
 
 pub(super) fn test_app() -> App {
-    TestAppBuilder::new()
+    let mut app = TestAppBuilder::new()
         .with_playfield()
         .with_resource::<GameRng>()
         .with_message::<BoltLost>()
-        .with_message::<KillYourself<Bolt>>()
-        .with_message::<Destroyed<Bolt>>()
-        .with_message::<DespawnEntity>()
         .with_system(FixedUpdate, bolt_lost)
-        .with_system(FixedUpdate, handle_kill::<Bolt>.after(bolt_lost))
-        .with_system(FixedPostUpdate, process_despawn_requests)
-        .build()
+        .build();
+    app.add_plugins(RantzDmgPlugin);
+    let _ = app.register_dmgable::<Bolt>();
+    app
 }
 
 /// Spawns a bolt at the given position with the given velocity using the builder

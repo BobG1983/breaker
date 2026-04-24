@@ -7,10 +7,8 @@ use crate::{
     bolt::{components::BoltBaseDamage, resources::DEFAULT_BOLT_BASE_DAMAGE},
     cells::components::Cell,
     effect_v3::traits::Fireable,
-    shared::{
-        death_pipeline::{DamageDealt, Dead},
-        test_utils::MessageCollector,
-    },
+    prelude::*,
+    shared::test_utils::MessageCollector,
 };
 
 // ── C8: PiercingBeam base damage reads BoltBaseDamage from source entity ──
@@ -204,8 +202,8 @@ fn non_empty_source_propagates_as_some_source_chip() {
         .resource::<MessageCollector<DamageDealt<Cell>>>();
     assert_eq!(msgs.0.len(), 1);
     assert_eq!(
-        msgs.0[0].source_chip,
-        Some("laser_chip".to_string()),
+        msgs.0[0].source,
+        Some(SourceId::from("laser_chip")),
         "non-empty source should propagate as Some(source_chip)",
     );
 }
@@ -234,7 +232,7 @@ fn empty_source_propagates_as_none_source_chip() {
         .resource::<MessageCollector<DamageDealt<Cell>>>();
     assert_eq!(msgs.0.len(), 1);
     assert_eq!(
-        msgs.0[0].source_chip, None,
+        msgs.0[0].source, None,
         "empty source string should propagate as None",
     );
 }

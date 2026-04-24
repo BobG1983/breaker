@@ -174,14 +174,6 @@ pub(super) fn spawn_bolt_with_echo_network(
         .id()
 }
 
-/// Spawns a `Bolt` entity with `BoltBaseDamage(base)` and `EchoPrimed`. No
-/// `EchoNetwork`.
-pub(super) fn spawn_bolt_primed(app: &mut App, base: f32) -> Entity {
-    app.world_mut()
-        .spawn((Bolt, BoltBaseDamage(base), EchoPrimed))
-        .id()
-}
-
 /// Spawns a `Bolt` entity with `BoltBaseDamage(base)`, `EchoPrimed`, and
 /// `EchoNetwork { echoes }`.
 pub(super) fn spawn_bolt_primed_with_network(
@@ -227,20 +219,6 @@ pub(super) fn write_bump_performed(app: &mut App, bolt: Option<Entity>, grade: B
         });
 }
 
-/// Writes a single `BoltImpactCell` message with placeholder
-/// `impact_normal` and zero `piercing_remaining` (Echo Strike does not
-/// inspect either).
-pub(super) fn write_bolt_impact_cell(app: &mut App, cell: Entity, bolt: Entity) {
-    app.world_mut()
-        .resource_mut::<Messages<BoltImpactCell>>()
-        .write(BoltImpactCell {
-            cell,
-            bolt,
-            impact_normal: Vec2::ZERO,
-            piercing_remaining: 0,
-        });
-}
-
 /// Writes a single `Destroyed<Cell>` message with placeholder payload. The
 /// cleanup reader only inspects `victim`; everything else is zero.
 pub(super) fn write_destroyed_cell(app: &mut App, victim: Entity) {
@@ -257,7 +235,7 @@ pub(super) fn write_destroyed_cell(app: &mut App, victim: Entity) {
 
 // ── Assertion helpers ───────────────────────────────────────────────────────
 
-/// Returns every captured `DamageDealt<Cell>` whose `source_chip` matches
+/// Returns every captured `DamageDealt<Cell>` whose `source` matches
 /// the Echo Strike sentinel string. Uses the literal `"protocol:echo_strike"`
 /// (not the const) so the sentinel drift guard remains independent.
 pub(super) fn collected_echo_strike_damage(app: &App) -> Vec<DamageDealt<Cell>> {
@@ -265,27 +243,9 @@ pub(super) fn collected_echo_strike_damage(app: &App) -> Vec<DamageDealt<Cell>> 
         .resource::<MessageCollector<DamageDealt<Cell>>>()
         .0
         .iter()
-        .filter(|msg| {
-            msg.source_chip
-                .as_deref()
-                .is_some_and(|s| s == "protocol:echo_strike")
-        })
+        .filter(|msg| msg.source == Some(SourceId::from("protocol:echo_strike")))
         .cloned()
         .collect()
-}
-
-/// Iterates `msgs` and returns `Some(msg.amount)` for the first message
-/// with `target == target`. Panics if more than one message shares the same
-/// target (guards against accidental duplicate emits). Returns `None` if
-/// no match.
-pub(super) fn find_amount_for(msgs: &[DamageDealt<Cell>], target: Entity) -> Option<f32> {
-    let matches: Vec<&DamageDealt<Cell>> = msgs.iter().filter(|m| m.target == target).collect();
-    assert!(
-        matches.len() <= 1,
-        "find_amount_for: expected at most one message for target {target:?}, got {}",
-        matches.len()
-    );
-    matches.first().map(|m| m.amount)
 }
 
 /// Returns the FIFO-ordered `echoes` deque for a bolt's `EchoNetwork`, or

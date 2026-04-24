@@ -6,6 +6,7 @@
 use std::time::Duration;
 
 use bevy::prelude::*;
+use rantzsoft_dmg::{RantzDmgAppExt, RantzDmgPlugin};
 
 use super::{
     super::system::{RenewalTimer, renewal_tick},
@@ -14,26 +15,18 @@ use super::{
         spawn_cell_with_max, test_app_playing, tick_with_dt,
     },
 };
-use crate::{
-    cells::components::Cell,
-    shared::death_pipeline::{Dead, Hp, sets::DeathPipelineSystems, systems::apply_heal},
-};
+use crate::{cells::components::Cell, prelude::*};
 
 /// Builder for Group G: wires `renewal_tick` before `apply_heal::<Cell>`
-/// in `DeathPipelineSystems::ApplyHeal`. Leaves out the production
-/// `.after(DeathPipelineSystems::HandleKill)` ordering to keep the focus
+/// in `DmgSystems::ApplyHeal`. Leaves out the production
+/// `.after(DmgSystems::ApplyKill)` ordering to keep the focus
 /// on the `renewal_tick` → `ApplyHeal` step; the full chained registration
 /// is covered by Group F.
 fn test_app_pipeline() -> App {
     let mut app = test_app_playing();
-    app.add_systems(
-        FixedUpdate,
-        renewal_tick.before(DeathPipelineSystems::ApplyHeal),
-    );
-    app.add_systems(
-        FixedUpdate,
-        apply_heal::<Cell>.in_set(DeathPipelineSystems::ApplyHeal),
-    );
+    app.add_plugins(RantzDmgPlugin);
+    let _ = app.register_dmgable::<Cell>();
+    app.add_systems(FixedUpdate, renewal_tick.before(DmgSystems::ApplyHeal));
     app
 }
 
@@ -194,6 +187,11 @@ fn pipeline_full_hp_cell_with_elevated_max_unchanged() {
 
 #[test]
 fn pipeline_dead_cell_is_not_revived() {
+    // Post-W2 semantics: a spawn-time HP=0 cell is picked up by the crate
+    // kill pipeline (`detect_deaths` → `handle_kill` →
+    // `process_despawn_requests` in `FixedPostUpdate`) and despawned in
+    // the same tick. Renewal cannot revive a non-existent entity — that's
+    // the invariant being pinned.
     let mut app = test_app_pipeline();
     install_renewal_config(&mut app, canonical_config());
     add_renewal_stacks(&mut app, 1);
@@ -202,11 +200,10 @@ fn pipeline_dead_cell_is_not_revived() {
 
     tick_with_dt(&mut app, Duration::from_secs_f32(0.1));
 
-    let hp = app.world().get::<Hp>(cell).unwrap();
     assert!(
-        hp.current.abs() < f32::EPSILON,
-        "dead cell must not revive; got {}",
-        hp.current
+        app.world().get_entity(cell).is_err(),
+        "spawn-time HP=0 cell must be despawned by the crate pipeline; \
+         Renewal cannot revive a despawned entity"
     );
 }
 

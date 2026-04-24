@@ -34,25 +34,78 @@ Post-TODO #1, Diffusion lives in `mutators/hazards/diffusion/` and participates 
 
 ## Systems
 
-### `diffusion_mutate_damage`
-- **Schedule**: `FixedUpdate`, in `DeathPipelineSystems::MutateDamage`.
+Diffusion is implemented as a two-system pipeline split across the
+`rantzsoft_dmg` `DmgSystems` chain:
+
+### `diffusion_reduce_primary`
+- **Schedule**: `FixedUpdate`, in `DmgSystems::MutateDamage`.
 - **run_if**: `hazard_active(HazardKind::Diffusion)` + `in_state(NodeState::Playing)`.
-- **Behavior**: Processes each `DamageDealt<Cell>`:
-  1. Look up the victim's world position via `Position2D` (or use the target position from the damage message if it carries one).
-  2. Computes `share = (base_share_percent + share_per_level_percent * (stack - 1)).min(max_share_percent)`.
-  3. Computes `depth = 1 + (stack - 1) / depth_increase_interval`.
-  4. Builds concentric range bands via `rantzsoft_physics2d::Quadtree::query_circle`: for ring N in 1..=depth, `cells_in_ring_N = query_circle(victim_pos, (N+1) * ring_radius) - query_circle(victim_pos, N * ring_radius)`. Target + dead cells filtered out.
-  5. **Flat share per ring, not per-path**: each ring gets a single uniform share of the previous ring's total; a cell in ring N takes damage ONCE at that ring's share, regardless of how many paths reach it. Formula: `per_cell_ring_N = previous_ring_total * share_frac / current_ring_size`. Flat-share-per-ring is correct for uniform layouts and boss clusters alike; if a "diamond" layout would have reached a cell via multiple paths in a grid-BFS version, range bands already handle that naturally (one ring, one share).
-  6. Reduces the target `DamageDealt<Cell>` amount to `original * (1 - share/100)`.
-  7. Emits additional `DamageDealt<Cell>` for each ring cell, with source `"hazard:diffusion"`.
-- **Ordering**: In `MutateDamage` set. Must run before `ApplyVulnerable` and `ApplyDamage` so the split damages flow through the rest of the chain.
+- **Behavior**: For each `DamageDealt<Cell>` message in the current frame:
+  1. Resolve the ring's `instance_id` — if the message `source` starts with
+     `"hazard:diffusion:"`, parse the suffix as `u64` and reuse that
+     instance's visited-set. Otherwise allocate a fresh id via
+     `DiffusionInstances.next_id` and seed the visited-set with `msg.target`.
+  2. Snapshot eligible neighbors: live cells in adjacency range
+     (`ADJACENCY_RADIUS_SQ`) of `msg.target`, excluding visited, dead, and
+     invulnerable cells.
+  3. If no candidates → pass-through (no reduction, no pending emission).
+  4. Otherwise: compute `shared = msg.amount * share_frac`,
+     `msg.amount *= 1 - share_frac`, and push a `PendingEmission` onto
+     `PendingDiffusionEmissions.queue` with
+     `attributed_to = msg.attributed_to.or(msg.dealer)` so kill
+     attribution travels to downstream ring emissions.
+- **Effect on pipeline**: The reduced primary message continues through
+  `ApplyVulnerable` → `ApplyDamage` this same frame; the share is queued for
+  next-frame emission in `PostApply`.
+
+### `diffusion_emit_rings`
+- **Schedule**: `FixedUpdate`, in `DmgSystems::PostApply`.
+- **run_if**: `hazard_active(HazardKind::Diffusion)` + `in_state(NodeState::Playing)`.
+- **Behavior**: Drains `PendingDiffusionEmissions.queue`:
+  1. Query `Invulnerable` on `pending.target` — if currently invulnerable,
+     skip the entire emission (unified ripple-source invulnerability rule
+     shared with Tether and Echo Strike).
+  2. Compute `per_neighbor = pending.shared / pending.candidate_neighbors.len()`.
+     If `per_neighbor < 1.0`, skip the whole ring (attenuation floor,
+     inclusive at 1.0).
+  3. Emit one `DamageDealt<Cell>` per neighbor with
+     `source = "hazard:diffusion:{instance_id}"`, `dealer = None`, and
+     `attributed_to = pending.attributed_to`. These sibling messages
+     traverse the full damage pipeline on the next `FixedUpdate` tick
+     (1-frame delay).
+  4. Insert each emitted neighbor into `instances.visited[instance_id]`
+     so subsequent BFS hops dedupe.
+
+### State resources
+
+- **`DiffusionInstances`** (`Resource`): `{ next_id: u64, visited: HashMap<u64,
+  HashSet<Entity>> }`. Tracks per-instance visited-sets. Reset on
+  `OnExit(NodeState::Playing)` via `reset_diffusion_state`.
+- **`PendingDiffusionEmissions`** (`Resource`): `{ queue: Vec<PendingEmission> }`.
+  Handoff queue between `diffusion_reduce_primary` (writer) and
+  `diffusion_emit_rings` (drainer). Drained on each tick + on
+  `OnExit(NodeState::Playing)`.
+
+### `reset_diffusion_state`
+- **Schedule**: `OnExit(NodeState::Playing)`.
+- **Behavior**: Resets both `DiffusionInstances` and
+  `PendingDiffusionEmissions` to `Default::default()` so no state leaks
+  across nodes.
 
 ## Pipeline position (dmg crate)
 
-- **Pre-apply damage mutator** in `DeathPipelineSystems::MutateDamage`.
-- Reads `DamageDealt<Cell>`, transforms the original message's amount, emits additional `DamageDealt<Cell>` for cells in the rings. Result feeds `ApplyVulnerable` → `ApplyDamage`.
-- Lives in `mutators/hazards/diffusion/` (post-TODO #1 consolidated domain).
-- Uses the `MessageMutator<DamageDealt<Cell>>` pattern from `rantzsoft_dmg`.
+- **Mutator** in `DmgSystems::MutateDamage` (`diffusion_reduce_primary`) →
+  primary message continues through `ApplyVulnerable` → `ApplyDamage` with
+  reduced amount.
+- **Ripple emitter** in `DmgSystems::PostApply` (`diffusion_emit_rings`) →
+  ring siblings emitted with 1-frame delay. They traverse the full
+  pipeline on Frame N+1.
+- **PostApply ordering**: `diffusion_emit_rings → tether_emit_partner →
+  echo_strike_emit_siblings`. Edges added by the game's
+  `DmgGameOrderingPlugin`.
+- **Kill attribution**: rings carry `attributed_to` from the original
+  primary (`msg.attributed_to.or(msg.dealer)`), so a kill caused by ring
+  damage is attributed to the original dealer via `KilledBy.killer`.
 - **No** `HealDealt<T>` / `DamageBoostStack` interaction.
 
 ## Stacking Behavior

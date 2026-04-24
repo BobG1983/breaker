@@ -3,10 +3,7 @@ use std::time::Duration;
 use bevy::prelude::*;
 
 use super::{super::system::*, helpers::*};
-use crate::{
-    prelude::*,
-    shared::death_pipeline::{HealCap, heal_dealt::HealDealt},
-};
+use crate::prelude::*;
 
 // ══════════════════════════════════════════════════════════════════════
 // Group A — volatility_grow_cells interval / heal semantics
@@ -34,7 +31,7 @@ fn emits_heal_dealt_after_one_interval_stack_1() {
     );
     assert!(matches!(msg.cap, HealCap::Max));
     assert_eq!(msg.healer, None);
-    assert_eq!(msg.source, Some("hazard:volatility".to_string()));
+    assert_eq!(msg.source, Some(SourceId::from("hazard:volatility")));
 
     let timer = app.world().get::<VolatilityTimer>(cell).unwrap();
     assert!(
@@ -120,7 +117,7 @@ fn heal_source_is_hazard_volatility() {
 
     let heals = heals_for(&app, cell);
     assert_eq!(heals.len(), 1);
-    assert_eq!(heals[0].source, Some("hazard:volatility".to_string()));
+    assert_eq!(heals[0].source, Some(SourceId::from("hazard:volatility")));
 }
 
 // Behavior 3 — no heal at cap; timer still rolls over

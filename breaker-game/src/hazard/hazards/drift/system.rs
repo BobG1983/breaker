@@ -100,7 +100,7 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
 /// `DriftWind.timer` down; on expiry rolls a new unit-vector direction via
 /// `GameRng` and resets the timer to `period_secs`. `drift_apply_force`
 /// adds `direction * force_magnitude(stacks) * dt` to every Bolt's
-/// `Velocity2D`. No `DeathPipelineSystems` ordering — Drift operates on
+/// `Velocity2D`. No `DmgSystems` ordering — Drift operates on
 /// bolt `Velocity2D` directly (pending the `ApplyBoltForce` pipeline in
 /// Commit 5).
 pub(crate) fn register(app: &mut App) {

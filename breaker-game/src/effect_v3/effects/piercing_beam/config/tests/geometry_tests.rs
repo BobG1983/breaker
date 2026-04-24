@@ -3,13 +3,8 @@ use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use super::helpers::*;
 use crate::{
-    bolt::components::BoltBaseDamage,
-    cells::components::Cell,
-    effect_v3::traits::Fireable,
-    shared::{
-        death_pipeline::{DamageDealt, Dead},
-        test_utils::MessageCollector,
-    },
+    bolt::components::BoltBaseDamage, cells::components::Cell, effect_v3::traits::Fireable,
+    prelude::*, shared::test_utils::MessageCollector,
 };
 
 // ── B1: Cell directly ahead is hit ────────────────────────────────

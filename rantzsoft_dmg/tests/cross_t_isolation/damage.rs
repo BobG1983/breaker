@@ -19,11 +19,12 @@ fn damage_dealt_t1_does_not_affect_t2_target() {
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<T1>>>()
         .write(DamageDealt::<T1> {
-            dealer:  None,
-            target:  victim_b,
-            amount:  5.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        None,
+            attributed_to: None,
+            target:        victim_b,
+            amount:        5.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     tick(&mut app);
 
@@ -55,11 +56,12 @@ fn damage_dealt_t2_affects_t2_target_and_leaves_t1_alone() {
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<T2>>>()
         .write(DamageDealt::<T2> {
-            dealer:  None,
-            target:  victim_b,
-            amount:  5.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        None,
+            attributed_to: None,
+            target:        victim_b,
+            amount:        5.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     tick(&mut app);
 

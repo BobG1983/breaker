@@ -18,7 +18,6 @@ use crate::{
         messages::{PortalCompleted, PortalEntered},
     },
     prelude::*,
-    shared::death_pipeline::sets::DeathPipelineSystems,
     state::run::node::{
         ClearRemainingCount, messages::NodeCleared, systems::track_node_completion,
     },
@@ -115,7 +114,7 @@ fn build_integration_app() -> App {
             handle_portal_completed,
         )
             .chain()
-            .before(DeathPipelineSystems::ApplyDamage),
+            .before(DmgSystems::ApplyDamage),
     );
 
     // Wire node completion tracking: reads Destroyed<Cell>, decrements count.
@@ -124,7 +123,7 @@ fn build_integration_app() -> App {
         FixedUpdate,
         (
             enqueue_cell_destroyed.before(track_node_completion),
-            track_node_completion.after(DeathPipelineSystems::HandleKill),
+            track_node_completion.after(DmgSystems::ApplyKill),
         ),
     );
 
@@ -140,7 +139,12 @@ fn portal_cell_with_required_to_clear_blocks_node_completion() {
     // Two RequiredToClear cells: one regular, one portal.
     let regular_cell = app
         .world_mut()
-        .spawn((Cell, RequiredToClear, Hp::new(20.0), KilledBy::default()))
+        .spawn((
+            Cell,
+            RequiredToClear,
+            Hp::new(20.0),
+            KilledBy { killer: None },
+        ))
         .id();
     let portal_cell = app
         .world_mut()
@@ -150,7 +154,7 @@ fn portal_cell_with_required_to_clear_blocks_node_completion() {
             PortalConfig { tier_offset: 1 },
             RequiredToClear,
             Hp::new(100.0),
-            KilledBy::default(),
+            KilledBy { killer: None },
             Position2D(Vec2::ZERO),
         ))
         .id();

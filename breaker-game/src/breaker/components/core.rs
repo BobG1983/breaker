@@ -1,12 +1,15 @@
 //! Breaker core components.
 
 use bevy::prelude::*;
+use rantzsoft_dmg::Dmgable;
 use rantzsoft_spatial2d::components::{InterpolateTransform2D, Spatial2D};
 
 /// Marker component identifying the breaker entity.
 #[derive(Component, Debug, Default)]
 #[require(Spatial2D, InterpolateTransform2D)]
 pub struct Breaker;
+
+impl Dmgable for Breaker {}
 
 /// Y position of the breaker at rest.
 #[derive(Component, Debug)]

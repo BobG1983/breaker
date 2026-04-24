@@ -90,7 +90,7 @@ mod tests {
             .spawn((
                 Cell,
                 hp,
-                KilledBy::default(),
+                KilledBy { killer: None },
                 visuals(),
                 MeshMaterial2d(material.clone()),
             ))
@@ -234,7 +234,7 @@ mod tests {
                 starting: 0.0,
                 max:      Some(1.0),
             },
-            KilledBy::default(),
+            KilledBy { killer: None },
             visuals(),
             MeshMaterial2d(material.clone()),
         ));

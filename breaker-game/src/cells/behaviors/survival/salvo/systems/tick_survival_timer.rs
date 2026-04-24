@@ -28,11 +28,12 @@ pub(crate) fn tick_survival_timer(
         timer.remaining -= dt;
         if timer.remaining <= 0.0 {
             damage_writer.write(DamageDealt {
-                dealer:      Some(entity),
-                target:      entity,
-                amount:      f32::MAX,
-                source_chip: None,
-                _marker:     PhantomData,
+                dealer:        Some(entity),
+                attributed_to: None,
+                target:        entity,
+                amount:        f32::MAX,
+                source:        None,
+                _marker:       PhantomData,
             });
         }
     }

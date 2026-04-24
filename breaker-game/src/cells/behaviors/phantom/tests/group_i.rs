@@ -13,7 +13,6 @@ use crate::{
         test_utils::spawn_cell_in_world,
     },
     prelude::*,
-    shared::death_pipeline::sets::DeathPipelineSystems,
 };
 
 /// Seeded `DamageDealt<Cell>` messages drained into the queue before
@@ -40,7 +39,7 @@ fn build_death_test_app() -> App {
     app.init_resource::<PendingCellDamage>();
     app.add_systems(
         FixedUpdate,
-        enqueue_cell_damage.before(DeathPipelineSystems::ApplyDamage),
+        enqueue_cell_damage.before(DmgSystems::ApplyDamage),
     );
     // Register tick_phantom_phase so phantom cycling works alongside death pipeline
     app.add_systems(
@@ -102,11 +101,12 @@ fn phantom_cell_in_solid_phase_dies_when_hp_reaches_zero() {
         .resource_mut::<PendingCellDamage>()
         .0
         .push(DamageDealt {
-            dealer:      None,
-            target:      entity,
-            amount:      15.0,
-            source_chip: None,
-            _marker:     PhantomData,
+            dealer:        None,
+            attributed_to: None,
+            target:        entity,
+            amount:        15.0,
+            source:        None,
+            _marker:       PhantomData,
         });
 
     // Run ticks, accumulating Destroyed<Cell> across all ticks (the collector
@@ -155,11 +155,12 @@ fn phantom_cell_in_telegraph_phase_dies_when_hp_reaches_zero() {
         .resource_mut::<PendingCellDamage>()
         .0
         .push(DamageDealt {
-            dealer:      None,
-            target:      entity,
-            amount:      15.0,
-            source_chip: None,
-            _marker:     PhantomData,
+            dealer:        None,
+            attributed_to: None,
+            target:        entity,
+            amount:        15.0,
+            source:        None,
+            _marker:       PhantomData,
         });
 
     for _ in 0..3 {
@@ -192,7 +193,7 @@ fn phantom_cell_in_ghost_phase_has_zeroed_collision_layers() {
             },
             CollisionLayers::new(0, 0),
             Hp::new(10.0),
-            KilledBy::default(),
+            KilledBy { killer: None },
         ))
         .id();
 

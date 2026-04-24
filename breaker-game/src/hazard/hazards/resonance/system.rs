@@ -33,7 +33,6 @@ use crate::{
         resources::{ActiveHazards, hazard_active},
     },
     prelude::*,
-    shared::death_pipeline::{Destroyed, sets::DeathPipelineSystems},
 };
 
 // ── ResonanceConfig ──────────────────────────────────────────────────────
@@ -237,7 +236,7 @@ pub(crate) fn register(app: &mut App) {
         .add_systems(
             FixedUpdate,
             resonance_track_kills
-                .after(DeathPipelineSystems::HandleKill)
+                .after(DmgSystems::ApplyKill)
                 .before(resonance_spawn_waves),
         )
         .add_systems(OnEnter(NodeState::Teardown), resonance_cleanup_on_teardown);

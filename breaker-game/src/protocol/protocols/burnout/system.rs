@@ -22,7 +22,7 @@ use crate::{
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
-/// Sentinel tag stamped into `DamageDealt<Cell>.source_chip` on every
+/// Sentinel tag stamped into `DamageDealt<Cell>.source` on every
 /// amplified-damage message emitted by `burnout_amplify_damage`. Downstream
 /// stat tracking / FX use this to identify Burnout damage.
 pub(crate) const BURNOUT_SENTINEL: &str = "protocol:burnout";
@@ -374,9 +374,10 @@ pub(crate) fn burnout_amplify_damage(
         if amount > 0.0 {
             damage_writer.write(DamageDealt::<Cell> {
                 dealer: Some(msg.bolt),
+                attributed_to: None,
                 target: msg.cell,
                 amount,
-                source_chip: Some(BURNOUT_SENTINEL.into()),
+                source: Some(SourceId::from(BURNOUT_SENTINEL)),
                 _marker: PhantomData,
             });
         }

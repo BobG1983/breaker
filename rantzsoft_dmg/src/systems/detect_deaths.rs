@@ -2,7 +2,7 @@
 //!
 //! Scans every non-`Dead` `T` entity; any whose `Hp::current <= 0.0`
 //! produces one `KillYourself<T>` with `victim = entity` and
-//! `killer = killed_by.and_then(|k| k.dealer)` (flattening optional
+//! `killer = killed_by.and_then(|k| k.killer)` (flattening optional
 //! `KilledBy`). Runs in `DmgSystems::EmitKill`, strictly after
 //! `apply_damage::<T>`.
 
@@ -21,7 +21,7 @@ type DeathQuery<'w, 's, T> =
 
 /// Emit `KillYourself<T>` for every non-`Dead` `T` entity whose
 /// `Hp::current` is `<= 0.0`. `killer` is derived from the (optional)
-/// `KilledBy` component — `Some(entity) -> Some(entity.dealer)`
+/// `KilledBy` component — `Some(entity) -> Some(entity.killer)`
 /// flattened, else `None`.
 pub(crate) fn detect_deaths<T: Dmgable>(
     query: DeathQuery<T>,
@@ -31,7 +31,7 @@ pub(crate) fn detect_deaths<T: Dmgable>(
         if hp.current <= 0.0 {
             writer.write(KillYourself {
                 victim:  entity,
-                killer:  killed_by.and_then(|k| k.dealer),
+                killer:  killed_by.and_then(|k| k.killer),
                 _marker: PhantomData,
             });
         }
@@ -97,7 +97,7 @@ mod tests {
                     max:      None,
                 },
                 KilledBy {
-                    dealer: Some(dealer),
+                    killer: Some(dealer),
                 },
             ))
             .id();
@@ -125,7 +125,7 @@ mod tests {
                     max:      None,
                 },
                 KilledBy {
-                    dealer: Some(dealer),
+                    killer: Some(dealer),
                 },
             ))
             .id();
@@ -144,7 +144,7 @@ mod tests {
     fn hp_positive_does_not_emit() {
         let mut app = test_app();
         app.world_mut()
-            .spawn((TestT, Hp::new(10.0), KilledBy { dealer: None }));
+            .spawn((TestT, Hp::new(10.0), KilledBy { killer: None }));
 
         tick(&mut app);
 
@@ -243,14 +243,14 @@ mod tests {
         assert!(drained[0].killer.is_none());
     }
 
-    // ── Behavior 108: KilledBy{dealer: None} → killer: None ──
+    // ── Behavior 108: KilledBy{killer: None} → killer: None ──
 
     #[test]
     fn killed_by_none_dealer_emits_none_killer() {
         let mut app = test_app();
         let victim = app
             .world_mut()
-            .spawn((TestT, Hp::new(0.0), KilledBy { dealer: None }))
+            .spawn((TestT, Hp::new(0.0), KilledBy { killer: None }))
             .id();
 
         tick(&mut app);
@@ -269,7 +269,7 @@ mod tests {
         let dealer = app.world_mut().spawn_empty().id();
         let v1 = app
             .world_mut()
-            .spawn((TestT, Hp::new(0.0), KilledBy { dealer: None }))
+            .spawn((TestT, Hp::new(0.0), KilledBy { killer: None }))
             .id();
         let v2 = app.world_mut().spawn((TestT, Hp::new(0.0))).id();
         let v3 = app
@@ -278,7 +278,7 @@ mod tests {
                 TestT,
                 Hp::new(0.0),
                 KilledBy {
-                    dealer: Some(dealer),
+                    killer: Some(dealer),
                 },
             ))
             .id();

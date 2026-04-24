@@ -7,8 +7,8 @@ use super::system::*;
 use crate::{
     cells::components::Cell,
     effect_v3::{components::EffectSourceChip, effects::chain_lightning::components::*},
+    prelude::*,
     shared::{
-        death_pipeline::DamageDealt,
         rng::GameRng,
         test_utils::{MessageCollector, TestAppBuilder, tick},
     },
@@ -275,10 +275,10 @@ fn chain_lightning_propagates_source_chip_in_damage_dealt() {
         .resource::<MessageCollector<DamageDealt<Cell>>>();
     assert_eq!(msgs.0.len(), 1, "expected 1 DamageDealt<Cell> message");
     assert_eq!(
-        msgs.0[0].source_chip,
-        Some("storm_chip".to_string()),
+        msgs.0[0].source,
+        Some(SourceId::from("storm_chip")),
         "DamageDealt should carry source_chip from EffectSourceChip, got {:?}",
-        msgs.0[0].source_chip,
+        msgs.0[0].source,
     );
 }
 
@@ -318,8 +318,8 @@ fn chain_lightning_propagates_none_source_chip() {
         .resource::<MessageCollector<DamageDealt<Cell>>>();
     assert_eq!(msgs.0.len(), 1, "expected 1 DamageDealt<Cell> message");
     assert_eq!(
-        msgs.0[0].source_chip, None,
+        msgs.0[0].source, None,
         "DamageDealt should carry None source_chip from EffectSourceChip(None), got {:?}",
-        msgs.0[0].source_chip,
+        msgs.0[0].source,
     );
 }

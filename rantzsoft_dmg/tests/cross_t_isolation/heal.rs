@@ -37,12 +37,13 @@ fn heal_dealt_t1_does_not_affect_t2_target() {
     app.world_mut()
         .resource_mut::<Messages<HealDealt<T1>>>()
         .write(HealDealt::<T1> {
-            healer:  None,
-            target:  victim_b,
-            amount:  5.0,
-            source:  None,
-            cap:     HealCap::Starting,
-            _marker: PhantomData,
+            healer:        None,
+            attributed_to: None,
+            target:        victim_b,
+            amount:        5.0,
+            source:        None,
+            cap:           HealCap::Starting,
+            _marker:       PhantomData,
         });
     tick(&mut app);
 
@@ -70,12 +71,13 @@ fn heal_dealt_t2_affects_t2_target() {
     app.world_mut()
         .resource_mut::<Messages<HealDealt<T2>>>()
         .write(HealDealt::<T2> {
-            healer:  None,
-            target:  victim_b,
-            amount:  5.0,
-            source:  None,
-            cap:     HealCap::Starting,
-            _marker: PhantomData,
+            healer:        None,
+            attributed_to: None,
+            target:        victim_b,
+            amount:        5.0,
+            source:        None,
+            cap:           HealCap::Starting,
+            _marker:       PhantomData,
         });
     tick(&mut app);
 

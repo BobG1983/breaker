@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use super::{super::system::*, helpers::*};
-use crate::shared::death_pipeline::HealCap;
+use crate::prelude::{HealCap, SourceId};
 
 // ════════════════════════════════════════════════════════════════════════════
 // Group E — Multiple deaths / multiple neighbours
@@ -36,7 +36,7 @@ fn multiple_neighbours_each_receive_one_message() {
         assert_eq!(msgs.len(), 1, "each neighbour gets exactly one message");
         assert!((msgs[0].amount - 1.0).abs() < f32::EPSILON);
         assert!(matches!(msgs[0].cap, HealCap::Starting));
-        assert_eq!(msgs[0].source, Some("hazard:cascade".to_string()));
+        assert_eq!(msgs[0].source, Some(SourceId::from("hazard:cascade")));
         assert_eq!(msgs[0].healer, None);
     }
 }
@@ -100,7 +100,7 @@ fn multiple_deaths_shared_neighbour_emit_two_messages() {
     for msg in &msgs {
         assert!((msg.amount - 1.0).abs() < f32::EPSILON);
         assert!(matches!(msg.cap, HealCap::Starting));
-        assert_eq!(msg.source, Some("hazard:cascade".to_string()));
+        assert_eq!(msg.source, Some(SourceId::from("hazard:cascade")));
     }
 }
 

@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use super::helpers::*;
 use crate::{
     effect_v3::{components::EffectSourceChip, effects::tether_beam::components::*},
+    prelude::SourceId,
     shared::test_utils::tick,
 };
 
@@ -671,10 +672,10 @@ fn tether_beam_propagates_source_chip_some_in_damage_dealt() {
     assert_eq!(msgs.len(), 2, "expected 2 DamageDealt<Cell> messages");
     for msg in &msgs {
         assert_eq!(
-            msg.source_chip,
-            Some("storm_coil".to_string()),
+            msg.source,
+            Some(SourceId::from("storm_coil")),
             "all messages must carry Some(\"storm_coil\") source_chip, got {:?}",
-            msg.source_chip,
+            msg.source,
         );
     }
 }
@@ -697,7 +698,7 @@ fn tether_beam_propagates_source_chip_none_in_damage_dealt() {
 
     let msgs = damage_msgs(&app);
     assert_eq!(msgs.len(), 1);
-    assert_eq!(msgs[0].source_chip, None);
+    assert_eq!(msgs[0].source, None);
 }
 
 #[test]
@@ -718,5 +719,5 @@ fn tether_beam_missing_source_chip_component_propagates_none() {
 
     let msgs = damage_msgs(&app);
     assert_eq!(msgs.len(), 1);
-    assert_eq!(msgs[0].source_chip, None);
+    assert_eq!(msgs[0].source, None);
 }

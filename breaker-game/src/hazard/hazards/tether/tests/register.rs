@@ -98,3 +98,63 @@ fn register_does_not_panic_when_tether_config_absent() {
     run_fixed_update(&mut app);
     // Assertion: no panic above. Reaching here is success.
 }
+
+// ════════════════════════════════════════════════════════════════════
+// W2 Behavior 54 — tether::register schedules tether_emit_partner in PostApplyDamage
+// ════════════════════════════════════════════════════════════════════
+
+use std::marker::PhantomData;
+
+use crate::hazard::definition::HazardKind;
+
+#[test]
+fn tether_register_schedules_emit_partner_in_post_apply() {
+    // After register(&mut app) + 1 tick with Tether active, a primary
+    // DamageDealt<Cell> targeting a linked cell must produce a sibling
+    // with source "hazard:tether". Proves `tether_emit_partner` was
+    // scheduled into DmgSystems::PostApplyDamage.
+    let mut app = TestAppBuilder::new()
+        .with_state_hierarchy()
+        .in_state_node_playing()
+        .with_effects_pipeline()
+        .with_resource::<ActiveHazards>()
+        .build();
+    install_tether_config(&mut app, canonical_tether_config());
+    add_tether_stacks(&mut app, 1);
+    register(&mut app);
+
+    let (a, b) = spawn_linked_pair(&mut app, Vec2::ZERO, Vec2::new(30.0, 0.0));
+    let _ = b;
+    let bolt = app.world_mut().spawn_empty().id();
+
+    app.world_mut()
+        .resource_mut::<Messages<DamageDealt<Cell>>>()
+        .write(DamageDealt::<Cell> {
+            dealer:        Some(bolt),
+            attributed_to: None,
+            target:        a,
+            amount:        100.0,
+            source:        None,
+            _marker:       PhantomData,
+        });
+
+    tick(&mut app);
+
+    let drained: Vec<DamageDealt<Cell>> = app
+        .world_mut()
+        .resource_mut::<Messages<DamageDealt<Cell>>>()
+        .drain()
+        .collect();
+    let tethered: Vec<_> = drained
+        .iter()
+        .filter(|m| m.source == Some(SourceId::from("hazard:tether")))
+        .collect();
+    assert_eq!(
+        tethered.len(),
+        1,
+        "register must wire tether_emit_partner in PostApplyDamage — got {} tether siblings",
+        tethered.len()
+    );
+    // Silence unused HazardKind import.
+    let _ = HazardKind::Tether;
+}

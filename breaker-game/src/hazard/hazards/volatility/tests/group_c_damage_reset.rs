@@ -6,7 +6,6 @@ use super::{super::system::*, helpers::*};
 use crate::{
     hazard::{definition::HazardKind, resources::hazard_active},
     prelude::*,
-    shared::death_pipeline::sets::DeathPipelineSystems,
 };
 
 // ══════════════════════════════════════════════════════════════════════
@@ -286,7 +285,7 @@ fn reset_silently_skips_cell_without_timer() {
     app.add_systems(
         FixedUpdate,
         reset_volatility_on_damage
-            .after(DeathPipelineSystems::ApplyDamage)
+            .after(DmgSystems::ApplyDamage)
             .run_if(hazard_active(HazardKind::Volatility))
             .run_if(in_state(NodeState::Playing)),
     );
@@ -299,7 +298,7 @@ fn reset_silently_skips_cell_without_timer() {
                 starting: 10.0,
                 max:      None,
             },
-            KilledBy::default(),
+            KilledBy { killer: None },
         ))
         .id();
 
@@ -323,7 +322,7 @@ fn reset_silently_skips_non_cell_target() {
     app.add_systems(
         FixedUpdate,
         reset_volatility_on_damage
-            .after(DeathPipelineSystems::ApplyDamage)
+            .after(DmgSystems::ApplyDamage)
             .run_if(hazard_active(HazardKind::Volatility))
             .run_if(in_state(NodeState::Playing)),
     );

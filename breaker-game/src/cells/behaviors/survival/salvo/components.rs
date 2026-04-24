@@ -1,10 +1,13 @@
 //! Salvo entity components and constants.
 
 use bevy::prelude::*;
+use rantzsoft_dmg::Dmgable;
 
 /// Marker identifying a salvo projectile entity.
 #[derive(Component, Debug)]
 pub(crate) struct Salvo;
+
+impl Dmgable for Salvo {}
 
 /// Damage dealt by a salvo to cells on contact.
 #[derive(Component, Debug, Clone, Copy)]

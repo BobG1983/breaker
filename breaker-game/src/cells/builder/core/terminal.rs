@@ -19,7 +19,7 @@ use crate::{
         types::{RootNode, Tree},
     },
     prelude::*,
-    shared::{GameDrawLayer, death_pipeline::invulnerable::Invulnerable},
+    shared::GameDrawLayer,
 };
 
 // ── Resolution helpers ────────────────────────────────────────────────────
@@ -119,7 +119,7 @@ fn build_core(params: &CoreParams, optional: &OptionalCellData) -> impl Bundle +
 
     let health_components = (
         Hp::new(hp),
-        KilledBy::default(),
+        KilledBy { killer: None },
         CellWidth::new(params.width),
         CellHeight::new(params.height),
     );
@@ -330,7 +330,7 @@ fn spawn_guardian_children(
                     step_y: config.step_y,
                 },
                 Hp::new(config.hp),
-                KilledBy::default(),
+                KilledBy { killer: None },
             ),
             (
                 CellWidth::new(guardian_dim),

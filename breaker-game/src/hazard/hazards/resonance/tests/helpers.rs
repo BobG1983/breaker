@@ -13,8 +13,7 @@ use crate::{
     cells::components::Cell,
     effect_v3::{effects::SpeedBoostConfig, stacking::EffectStack},
     hazard::{definition::HazardKind, resources::ActiveHazards},
-    prelude::*,
-    shared::death_pipeline::Destroyed,
+    prelude::{Destroyed, *},
 };
 
 /// Canonical `ResonanceConfig` used across the suite.

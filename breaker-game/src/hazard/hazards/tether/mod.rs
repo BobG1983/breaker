@@ -2,17 +2,17 @@
 //!
 //! Design doc: `docs/design/hazards/tether.md`.
 //!
-//! Owns the `TetherConfig` resource, `TetherLink` component, the
-//! `TetherRedirectBuffer` resource that the cells-domain
-//! `apply_damage_to_cells` pushes redirect messages onto, and the
+//! Owns the `TetherConfig` resource, `TetherLink` component, and the
 //! `establish_tether_links` / `cleanup_broken_tether_links` /
-//! `emit_tether_redirects` systems registered via [`register`].
+//! `tether_emit_partner` systems registered via [`register`]. The
+//! `tether_emit_partner` system runs in `DmgSystems::PostApplyDamage`, reading the
+//! current-frame `DamageDealt<Cell>` messages and emitting a partner sibling
+//! message that traverses the full damage pipeline on the next `FixedUpdate`
+//! tick (1-frame delay).
 
 pub(crate) mod system;
 
 #[cfg(test)]
 mod tests;
 
-pub(crate) use system::{
-    TETHER_SENTINEL, TetherConfig, TetherLink, TetherRedirectBuffer, activate, register,
-};
+pub(crate) use system::{activate, register};

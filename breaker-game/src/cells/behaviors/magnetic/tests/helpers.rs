@@ -67,7 +67,7 @@ pub(super) fn spawn_magnetic_cell(
             Position2D(pos),
             Aabb2D::new(Vec2::ZERO, Vec2::splat(half_width)),
             Hp::new(20.0),
-            KilledBy::default(),
+            KilledBy { killer: None },
         ))
         .id()
 }

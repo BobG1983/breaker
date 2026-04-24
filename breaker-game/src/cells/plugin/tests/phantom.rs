@@ -26,7 +26,7 @@ fn cells_plugin_registers_tick_phantom_phase_in_fixed_update() {
             },
             CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
             Hp::new(20.0),
-            KilledBy::default(),
+            KilledBy { killer: None },
         ))
         .id();
 
@@ -70,7 +70,7 @@ fn cells_plugin_phantom_does_not_tick_in_loading_state() {
             },
             CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
             Hp::new(20.0),
-            KilledBy::default(),
+            KilledBy { killer: None },
         ))
         .id();
 

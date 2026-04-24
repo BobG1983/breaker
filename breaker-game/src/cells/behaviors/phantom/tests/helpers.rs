@@ -58,7 +58,7 @@ pub(super) fn spawn_phantom_cell_raw(
             config,
             layers,
             Hp::new(20.0),
-            KilledBy::default(),
+            KilledBy { killer: None },
         ))
         .id()
 }

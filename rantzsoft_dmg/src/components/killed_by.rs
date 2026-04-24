@@ -5,13 +5,13 @@ use bevy::prelude::*;
 /// Post-mortem kill-attribution component.
 ///
 /// Never default-spawned on live entities. Construct explicitly with
-/// `KilledBy { dealer: Some(e) }` for attributed kills or
-/// `KilledBy { dealer: None }` for environmental deaths.
+/// `KilledBy { killer: Some(e) }` for attributed kills or
+/// `KilledBy { killer: None }` for environmental deaths.
 #[derive(Component, Debug)]
 pub struct KilledBy {
     /// The entity credited with the kill. `Some(entity)` for attributed
     /// kills, `None` for environmental deaths.
-    pub dealer: Option<Entity>,
+    pub killer: Option<Entity>,
 }
 
 #[cfg(test)]
@@ -21,18 +21,18 @@ mod tests {
     // ── Behavior 12: KilledBy constructs explicitly with Some(entity) ──
 
     #[test]
-    fn constructs_with_some_dealer() {
+    fn constructs_with_some_killer() {
         let e = Entity::PLACEHOLDER;
-        let k = KilledBy { dealer: Some(e) };
-        assert_eq!(k.dealer, Some(e));
+        let k = KilledBy { killer: Some(e) };
+        assert_eq!(k.killer, Some(e));
     }
 
     // ── Behavior 13: KilledBy constructs with None for environmental kills ──
 
     #[test]
-    fn constructs_with_none_dealer() {
-        let k = KilledBy { dealer: None };
-        assert!(k.dealer.is_none());
+    fn constructs_with_none_killer() {
+        let k = KilledBy { killer: None };
+        assert!(k.killer.is_none());
     }
 
     // ── Behavior 14: KilledBy has NO Default impl (negative compile contract) ──
@@ -48,16 +48,16 @@ mod tests {
 
     #[test]
     fn debug_format_contains_type_name_and_none() {
-        let k = KilledBy { dealer: None };
+        let k = KilledBy { killer: None };
         let s = format!("{k:?}");
         assert!(s.contains("KilledBy"));
         assert!(s.contains("None"));
     }
 
     #[test]
-    fn debug_format_with_some_dealer_is_non_empty() {
+    fn debug_format_with_some_killer_is_non_empty() {
         let k = KilledBy {
-            dealer: Some(Entity::PLACEHOLDER),
+            killer: Some(Entity::PLACEHOLDER),
         };
         let s = format!("{k:?}");
         assert!(!s.is_empty());
@@ -68,10 +68,10 @@ mod tests {
     #[test]
     fn spawns_as_component_in_bare_world() {
         let mut world = World::new();
-        let e = world.spawn(KilledBy { dealer: None }).id();
+        let e = world.spawn(KilledBy { killer: None }).id();
         let Some(k) = world.get::<KilledBy>(e) else {
             panic!("KilledBy component missing on spawned entity");
         };
-        assert!(k.dealer.is_none());
+        assert!(k.killer.is_none());
     }
 }

@@ -142,7 +142,7 @@ pub(super) fn spawn_cell_row(app: &mut App, count: usize, spacing: f32) -> Vec<E
                     Cell,
                     Position2D(Vec2::new(i as f32 * spacing, 0.0)),
                     Hp::new(100.0),
-                    KilledBy::default(),
+                    KilledBy { killer: None },
                 ))
                 .id()
         })
@@ -152,7 +152,12 @@ pub(super) fn spawn_cell_row(app: &mut App, count: usize, spacing: f32) -> Vec<E
 /// Spawns a single cell at a given position with 100 HP. Used by Section D.
 pub(super) fn spawn_cell_at(app: &mut App, pos: Vec2) -> Entity {
     app.world_mut()
-        .spawn((Cell, Position2D(pos), Hp::new(100.0), KilledBy::default()))
+        .spawn((
+            Cell,
+            Position2D(pos),
+            Hp::new(100.0),
+            KilledBy { killer: None },
+        ))
         .id()
 }
 
@@ -163,7 +168,7 @@ pub(super) fn spawn_cell_invulnerable_at(app: &mut App, pos: Vec2) -> Entity {
             Cell,
             Position2D(pos),
             Hp::new(100.0),
-            KilledBy::default(),
+            KilledBy { killer: None },
             Invulnerable,
         ))
         .id()
@@ -176,7 +181,7 @@ pub(super) fn spawn_cell_dead_at(app: &mut App, pos: Vec2) -> Entity {
             Cell,
             Position2D(pos),
             Hp::new(100.0),
-            KilledBy::default(),
+            KilledBy { killer: None },
             Dead,
         ))
         .id()

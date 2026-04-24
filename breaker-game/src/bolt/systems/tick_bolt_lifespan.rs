@@ -4,9 +4,7 @@ use std::marker::PhantomData;
 
 use bevy::prelude::*;
 
-use crate::{
-    bolt::components::BoltLifespan, prelude::*, shared::death_pipeline::kill_yourself::KillYourself,
-};
+use crate::{bolt::components::BoltLifespan, prelude::*};
 
 /// Query for active (non-birthing) bolts with lifespan timers.
 type BoltLifespanQuery<'w, 's> =
@@ -39,9 +37,6 @@ mod tests {
     use crate::{
         bolt::components::{BoltLifespan, ExtraBolt},
         prelude::*,
-        shared::death_pipeline::{
-            despawn_entity::DespawnEntity, kill_yourself::KillYourself, sets::DeathPipelineSystems,
-        },
     };
 
     #[derive(Resource, Default)]
@@ -68,14 +63,14 @@ mod tests {
     }
 
     /// Builds a plugin-integration app wiring `tick_bolt_lifespan` before
-    /// `DeathPipelineSystems::HandleKill` so the same-tick despawn assertion
+    /// `DmgSystems::ApplyKill` so the same-tick despawn assertion
     /// holds.
     fn build_lifespan_integration_app() -> App {
         let mut app = TestAppBuilder::new().with_effects_pipeline().build();
 
         app.add_systems(
             FixedUpdate,
-            tick_bolt_lifespan.before(DeathPipelineSystems::HandleKill),
+            tick_bolt_lifespan.before(DmgSystems::ApplyKill),
         );
 
         attach_message_capture::<Destroyed<Bolt>>(&mut app);
@@ -265,7 +260,7 @@ mod tests {
         );
     }
 
-    // ── Behavior 11: End-to-end lifespan death via DeathPipelinePlugin ──
+    // ── Behavior 11: End-to-end lifespan death via RantzDmgPlugin ──
 
     /// End-to-end integration test: a bolt with an expiring `BoltLifespan` timer
     /// produces `Destroyed<Bolt>` and `DespawnEntity` messages, and the bolt

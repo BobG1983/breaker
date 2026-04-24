@@ -18,9 +18,7 @@ use std::{collections::HashSet, marker::PhantomData};
 
 use bevy::prelude::*;
 
-use crate::{
-    prelude::*, shared::death_pipeline::kill_yourself::KillYourself, state::run::messages::RunLost,
-};
+use crate::{prelude::*, state::run::messages::RunLost};
 
 type BreakerVictimQuery<'w, 's> =
     Query<'w, 's, (Entity, Option<&'static Position2D>), (With<Breaker>, Without<Dead>)>;
@@ -87,7 +85,6 @@ mod tests {
     use std::marker::PhantomData;
 
     use super::*;
-    use crate::shared::death_pipeline::despawn_entity::DespawnEntity;
 
     // ── Test helpers ───────────────────────────────────────────────────────
 
@@ -135,7 +132,7 @@ mod tests {
         let mut app = build_app();
         let breaker = app
             .world_mut()
-            .spawn((Breaker, Hp::new(0.0), KilledBy::default()))
+            .spawn((Breaker, Hp::new(0.0), KilledBy { killer: None }))
             .id();
 
         app.insert_resource(PendingBreakerKills(vec![kill_msg(breaker)]));
@@ -154,7 +151,7 @@ mod tests {
         let mut app = build_app();
         let breaker = app
             .world_mut()
-            .spawn((Breaker, Hp::new(0.0), KilledBy::default()))
+            .spawn((Breaker, Hp::new(0.0), KilledBy { killer: None }))
             .id();
 
         app.insert_resource(PendingBreakerKills(vec![kill_msg(breaker)]));
@@ -175,7 +172,7 @@ mod tests {
         let mut app = build_app();
         let breaker = app
             .world_mut()
-            .spawn((Breaker, Hp::new(0.0), KilledBy::default()))
+            .spawn((Breaker, Hp::new(0.0), KilledBy { killer: None }))
             .id();
 
         app.insert_resource(PendingBreakerKills(vec![kill_msg(breaker)]));
@@ -206,7 +203,7 @@ mod tests {
         let mut app = build_app();
         let breaker = app
             .world_mut()
-            .spawn((Breaker, Hp::new(0.0), KilledBy::default(), Dead))
+            .spawn((Breaker, Hp::new(0.0), KilledBy { killer: None }, Dead))
             .id();
 
         app.insert_resource(PendingBreakerKills(vec![kill_msg(breaker)]));
@@ -228,7 +225,7 @@ mod tests {
         let mut app = build_app();
         let breaker = app
             .world_mut()
-            .spawn((Breaker, Hp::new(3.0), KilledBy::default()))
+            .spawn((Breaker, Hp::new(3.0), KilledBy { killer: None }))
             .id();
 
         // No PendingBreakerKills populated (default = empty).
@@ -254,7 +251,7 @@ mod tests {
         let mut app = build_app();
         let breaker = app
             .world_mut()
-            .spawn((Breaker, Hp::new(0.0), KilledBy::default()))
+            .spawn((Breaker, Hp::new(0.0), KilledBy { killer: None }))
             .id();
 
         app.insert_resource(PendingBreakerKills(vec![
@@ -286,7 +283,7 @@ mod tests {
             .spawn((
                 Breaker,
                 Hp::new(0.0),
-                KilledBy::default(),
+                KilledBy { killer: None },
                 Position2D(Vec2::new(15.0, 25.0)),
             ))
             .id();
@@ -332,7 +329,7 @@ mod tests {
             .spawn((
                 Breaker,
                 Hp::new(0.0),
-                KilledBy::default(),
+                KilledBy { killer: None },
                 Position2D(Vec2::new(15.0, 25.0)),
             ))
             .id();
@@ -376,7 +373,7 @@ mod tests {
         let mut app = build_app();
         let breaker = app
             .world_mut()
-            .spawn((Breaker, Hp::new(0.0), KilledBy::default()))
+            .spawn((Breaker, Hp::new(0.0), KilledBy { killer: None }))
             .id();
         // Killer exists but has no Position2D component.
         let killer = app.world_mut().spawn_empty().id();

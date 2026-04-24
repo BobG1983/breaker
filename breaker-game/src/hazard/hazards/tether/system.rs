@@ -5,23 +5,18 @@
 //! The hazard domain owns:
 //! - [`TetherConfig`] — per-run tuning (stack-scaled damage + coverage percents).
 //! - [`TetherLink`] — component marker on linked cells, pointing at the partner.
-//! - [`TetherRedirectBuffer`] — per-tick buffer of redirect `DamageDealt<Cell>`
-//!   pushed by `apply_damage_to_cells` and drained by [`emit_tether_redirects`].
 //! - [`establish_tether_links`] — `OnEnter`(`Playing`) pair selection via shared
 //!   `GameRng` with mutual-exclusion matching over adjacency pairs.
 //! - [`cleanup_broken_tether_links`] — `FixedUpdate`, removes dangling links
 //!   whose partner despawned or was `Dead`-marked.
-//! - [`emit_tether_redirects`] — `FixedUpdate`, drains `TetherRedirectBuffer`
-//!   into `MessageWriter<DamageDealt<Cell>>`.
-//!
-//! The redirect *computation* lives inside `cells::systems::apply_damage_to_cells`
-//! so it can read the Diffusion-reduced primary damage returned by
-//! `accumulate_message_deltas`. See design-doc §Edge Cases line 121 (Tether +
-//! Diffusion ordering).
+//! - [`tether_emit_partner`] — `FixedUpdate` in `DmgSystems::PostApplyDamage`, reads
+//!   post-apply `DamageDealt<Cell>` messages and emits a partner sibling
+//!   message when the primary target has a `TetherLink` and the primary
+//!   amount is positive.
 
-use std::collections::HashSet;
+use std::{collections::HashSet, marker::PhantomData};
 
-use bevy::prelude::*;
+use bevy::{ecs::message::MessageCursor, prelude::*};
 use rand::seq::SliceRandom;
 
 use crate::{
@@ -31,17 +26,11 @@ use crate::{
         resources::{ActiveHazards, hazard_active},
     },
     prelude::*,
-    shared::death_pipeline::sets::DeathPipelineSystems,
 };
 
 /// Module-level cap on Tether link coverage — 100% means every eligible pair
 /// may be linked (subject to mutual-exclusion matching).
 pub(crate) const TETHER_COVERAGE_CAP_PERCENT: f32 = 100.0;
-
-/// Sentinel `source_chip` value tagged on Tether redirect `DamageDealt<Cell>`
-/// messages. The cells-domain `apply_damage_to_cells` skips re-emission when a
-/// message carries this source, preventing infinite redirect loops.
-pub(crate) const TETHER_SENTINEL: &str = "hazard:tether";
 
 /// Per-run Tether tuning, in percentage units.
 ///
@@ -108,18 +97,6 @@ pub(crate) struct TetherLink {
     pub(crate) partner: Entity,
 }
 
-/// Buffer of Tether redirect messages produced by `apply_damage_to_cells`
-/// during the current tick. Drained by [`emit_tether_redirects`] immediately
-/// after the damage-apply system in the same
-/// [`DeathPipelineSystems::ApplyDamage`] set.
-///
-/// Lives in the hazard domain because Tether owns the buffering mechanism and
-/// the emit system; the cells-domain `apply_damage_to_cells` reads+mutates
-/// this resource via `Option<ResMut<TetherRedirectBuffer>>` under the
-/// harness-safe `Option`-wrapped-resource pattern.
-#[derive(Resource, Default, Debug)]
-pub(crate) struct TetherRedirectBuffer(pub(crate) Vec<DamageDealt<Cell>>);
-
 /// Inserts [`TetherConfig`] from [`HazardTuning::Tether`], translating the
 /// fractional authoring fields to percentage units (× 100). Called each time
 /// the player picks Tether; last write wins (overwrites any prior config).
@@ -144,17 +121,15 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
     });
 }
 
-/// Registers Tether's runtime systems and the redirect buffer resource.
+/// Registers Tether's runtime systems.
 ///
 /// - `establish_tether_links` → `OnEnter(NodeState::Playing)`,
 ///   `hazard_active(Tether)`.
-/// - `cleanup_broken_tether_links` → `FixedUpdate`, after `HandleKill`,
+/// - `cleanup_broken_tether_links` → `FixedUpdate`, after `ApplyKill`,
 ///   `hazard_active(Tether)` AND `in_state(Playing)`.
-/// - `emit_tether_redirects` → `FixedUpdate`, in `ApplyDamage`, after
-///   `apply_damage_to_cells`, `hazard_active(Tether)`.
+/// - `tether_emit_partner` → `FixedUpdate`, in `DmgSystems::PostApplyDamage`,
+///   `hazard_active(Tether)` AND `in_state(Playing)`.
 pub(crate) fn register(app: &mut App) {
-    app.init_resource::<TetherRedirectBuffer>();
-
     app.add_systems(
         OnEnter(NodeState::Playing),
         establish_tether_links.run_if(hazard_active(HazardKind::Tether)),
@@ -162,16 +137,17 @@ pub(crate) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         cleanup_broken_tether_links
-            .after(DeathPipelineSystems::HandleKill)
+            .after(DmgSystems::ApplyKill)
             .run_if(hazard_active(HazardKind::Tether))
             .run_if(in_state(NodeState::Playing)),
     );
     app.add_systems(
         FixedUpdate,
-        emit_tether_redirects
-            .in_set(DeathPipelineSystems::ApplyDamage)
-            .after(crate::cells::systems::apply_damage_to_cells)
-            .run_if(hazard_active(HazardKind::Tether)),
+        tether_emit_partner
+            .in_set(DmgSystems::PostApplyDamage)
+            .in_set(crate::game::PostApplyRipple::Tether)
+            .run_if(hazard_active(HazardKind::Tether))
+            .run_if(in_state(NodeState::Playing)),
     );
 }
 
@@ -251,7 +227,7 @@ pub(crate) fn establish_tether_links(
 
 /// Removes `TetherLink` from any surviving cell whose partner has been
 /// despawned or marked `Dead`. Runs in `FixedUpdate` after
-/// [`DeathPipelineSystems::HandleKill`] so `Dead` markers are visible.
+/// [`DmgSystems::ApplyKill`] so `Dead` markers are visible.
 pub(crate) fn cleanup_broken_tether_links(
     links: Query<(Entity, &TetherLink)>,
     partners: Query<(), (With<Cell>, Without<Dead>)>,
@@ -264,19 +240,75 @@ pub(crate) fn cleanup_broken_tether_links(
     }
 }
 
-/// Drains [`TetherRedirectBuffer`] into `MessageWriter<DamageDealt<Cell>>`.
+/// `DmgSystems::PostApplyDamage` — emits a partner sibling `DamageDealt<Cell>` for
+/// every post-apply message on a tethered primary cell.
 ///
-/// Holds ONLY the writer for `DamageDealt<Cell>` (no reader) to avoid the
-/// Bevy 0.18 scheduler panic when a single system holds both
-/// `MessageReader<T>` and `MessageWriter<T>` for the same `T`. The paired
-/// `apply_damage_to_cells` (cells domain) computes redirects and pushes them
-/// onto the buffer; this system runs immediately after it in the same
-/// [`DeathPipelineSystems::ApplyDamage`] set.
-pub(crate) fn emit_tether_redirects(
-    mut buffer: ResMut<TetherRedirectBuffer>,
-    mut writer: MessageWriter<DamageDealt<Cell>>,
+/// Rules:
+/// - Skip messages whose `source` already carries the `hazard:tether`
+///   source (loop protection).
+/// - Skip messages with `amount <= 0.0` — the invulnerable-filter has
+///   zeroed the primary; enforces the uniform "invulnerable source → no
+///   ripple" rule alongside diffusion and echo strike.
+/// - Skip messages whose target has no `TetherLink`.
+/// - Emit a new `DamageDealt<Cell>` to the partner with
+///   `amount = msg.amount * damage_pct / 100.0`, `dealer = None`, and
+///   `attributed_to = msg.attributed_to.or(msg.dealer)` so kill
+///   attribution travels. The partner sibling traverses the full damage
+///   pipeline on the next `FixedUpdate` tick (1-frame delay).
+///
+/// Does NOT gate on "is `link.partner` live" — the downstream
+/// `apply_damage::<Cell>` filters `Without<Dead>`, and Bevy's entity
+/// queries skip despawned entities gracefully. Adding a guard here would
+/// duplicate work for zero benefit.
+pub(crate) fn tether_emit_partner(
+    config: Option<Res<TetherConfig>>,
+    active: Option<Res<ActiveHazards>>,
+    mut cursor: Local<MessageCursor<DamageDealt<Cell>>>,
+    mut messages: ResMut<Messages<DamageDealt<Cell>>>,
+    tethered: Query<&TetherLink, (With<Cell>, Without<Dead>)>,
 ) {
-    for msg in buffer.0.drain(..) {
-        writer.write(msg);
+    let Some(config) = config else { return };
+    let Some(active) = active else { return };
+    let stacks = active.stacks(HazardKind::Tether);
+    if stacks == 0 {
+        return;
+    }
+    let damage_pct = config.damage_percent(stacks);
+    if damage_pct <= 0.0 {
+        return;
+    }
+
+    let tether_source = SourceId::from("hazard:tether");
+
+    // Snapshot every unread `DamageDealt<Cell>` message via a local cursor.
+    // Using `MessageCursor` gives us a standard `MessageReader`-style traversal
+    // that spans both internal message buffers (current + previous) without
+    // consuming the messages — downstream pipeline stages next frame still
+    // see the primaries. The cursor tracks position in `Local`, so each
+    // tick advances it past already-seen messages (no duplicate emits).
+    let snapshot: Vec<DamageDealt<Cell>> = cursor.read(&*messages).cloned().collect();
+
+    for msg in snapshot {
+        if msg.source.as_ref() == Some(&tether_source) {
+            continue;
+        }
+        if msg.amount <= 0.0 {
+            continue;
+        }
+        let Ok(link) = tethered.get(msg.target) else {
+            continue;
+        };
+        let partner_amount = msg.amount * damage_pct / 100.0;
+        if partner_amount <= 0.0 {
+            continue;
+        }
+        messages.write(DamageDealt::<Cell> {
+            dealer:        None,
+            attributed_to: msg.attributed_to.or(msg.dealer),
+            target:        link.partner,
+            amount:        partner_amount,
+            source:        Some(tether_source.clone()),
+            _marker:       PhantomData,
+        });
     }
 }

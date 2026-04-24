@@ -9,10 +9,7 @@ use super::{
         triple_damage_sender,
     },
 };
-use crate::{
-    bolt::messages::BoltLost, cells::components::Cell,
-    shared::death_pipeline::damage_dealt::DamageDealt,
-};
+use crate::{bolt::messages::BoltLost, cells::components::Cell, prelude::DamageDealt};
 
 // ════════════════════════════════════════════════════════════════════
 // Section H: with_message()
@@ -35,11 +32,12 @@ fn count_damage_messages(
 
 fn damage_sender_10(mut writer: MessageWriter<DamageDealt<Cell>>) {
     writer.write(DamageDealt::<Cell> {
-        dealer:      None,
-        target:      Entity::PLACEHOLDER,
-        amount:      10.0,
-        source_chip: None,
-        _marker:     PhantomData,
+        dealer:        None,
+        attributed_to: None,
+        target:        Entity::PLACEHOLDER,
+        amount:        10.0,
+        source:        None,
+        _marker:       PhantomData,
     });
 }
 

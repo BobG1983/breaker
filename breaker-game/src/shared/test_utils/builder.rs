@@ -7,25 +7,26 @@ use bevy::{
     prelude::*,
     time::TimeUpdateStrategy,
 };
+use rantzsoft_dmg::{Dmgable, RantzDmgAppExt, RantzDmgPlugin};
 use rantzsoft_physics2d::plugin::RantzPhysics2dPlugin;
 
-use super::collector::{MessageCollector, clear_messages, collect_messages};
+use super::{
+    collector::{MessageCollector, clear_messages, collect_messages},
+    effect_v3_infra::register_effect_v3_test_infrastructure,
+};
 use crate::{
-    bolt::{definition::BoltDefinition, registry::BoltRegistry},
-    breaker::{definition::BreakerDefinition, registry::BreakerRegistry},
+    bolt::{components::Bolt, definition::BoltDefinition, registry::BoltRegistry},
+    breaker::{components::Breaker, definition::BreakerDefinition, registry::BreakerRegistry},
     cells::{
+        behaviors::survival::salvo::components::Salvo,
+        components::Cell,
         definition::CellTypeDefinition,
         resources::{CellConfig, CellTypeRegistry},
-        systems::apply_damage_to_cells,
     },
     effect_v3::EffectV3Plugin,
-    shared::{
-        PlayfieldConfig,
-        death_pipeline::{
-            DeathPipelinePlugin, systems::tests::helpers::register_effect_v3_test_infrastructure,
-        },
-    },
+    shared::PlayfieldConfig,
     state::types::*,
+    walls::components::Wall,
 };
 
 // ── Typestate markers ──────────────────────────────────────────────────────
@@ -41,15 +42,50 @@ impl StateStatus for NoStates {}
 pub(crate) struct WithStates;
 impl StateStatus for WithStates {}
 
+// ── Damage-pipeline typestate markers (W2) ──────────────────────────────────
+
+/// Marker trait for the Damage pipeline dimension of `TestAppBuilder` typestate.
+///
+/// Mirrors [`StateStatus`]: `NoDmg` is the initial state, `WithDmg` is the state
+/// after `with_dmg_pipeline()` (or `with_effects_pipeline()`) runs. Methods that
+/// require a wired damage pipeline (e.g. `register_dmgable::<T>()`) live only on
+/// the `WithDmg` impl block.
+pub(crate) trait DmgStatus {}
+
+/// Initial Dmg typestate — no `RantzDmgPlugin` installed.
+pub(crate) struct NoDmg;
+impl DmgStatus for NoDmg {}
+
+/// After `with_dmg_pipeline()` or `with_effects_pipeline()` — damage pipeline
+/// methods (like `register_dmgable`) are available.
+pub(crate) struct WithDmg;
+impl DmgStatus for WithDmg {}
+
 // ── TestAppBuilder ─────────────────────────────────────────────────────────
 
 /// Typestate builder for test `App` instances.
-pub(crate) struct TestAppBuilder<S: StateStatus = NoStates> {
+///
+/// # W2 Behaviors 49/50 negative typestate contracts
+///
+/// The typestate enforces these at compile time via impl-block gating:
+///
+/// - `with_dmg_pipeline` lives on `impl<S> TestAppBuilder<S, NoDmg>` only.
+///   Double-call `TestAppBuilder::new().with_dmg_pipeline().with_dmg_pipeline()`
+///   fails to compile because the second call is on `<S, WithDmg>`, which has
+///   no `with_dmg_pipeline` method.
+/// - `register_dmgable` lives on `impl<S> TestAppBuilder<S, WithDmg>` only.
+///   `TestAppBuilder::new().register_dmgable::<T>()` fails to compile because
+///   the builder is `<NoStates, NoDmg>` there.
+///
+/// These negative contracts are exercised by the `structural_invariants`
+/// module which greps for the expected impl-block shape.
+pub(crate) struct TestAppBuilder<S: StateStatus = NoStates, D: DmgStatus = NoDmg> {
     app:    App,
     _state: PhantomData<S>,
+    _dmg:   PhantomData<D>,
 }
 
-impl TestAppBuilder<NoStates> {
+impl TestAppBuilder<NoStates, NoDmg> {
     /// Creates a new builder with `MinimalPlugins` registered and Bevy's
     /// `TimeUpdateStrategy` pinned to `ManualDuration(Duration::ZERO)`.
     ///
@@ -76,12 +112,15 @@ impl TestAppBuilder<NoStates> {
         Self {
             app,
             _state: PhantomData,
+            _dmg: PhantomData,
         }
     }
+}
 
+impl<D: DmgStatus> TestAppBuilder<NoStates, D> {
     /// Registers the full state hierarchy (`AppState` + all sub-states).
     #[must_use]
-    pub(crate) fn with_state_hierarchy(mut self) -> TestAppBuilder<WithStates> {
+    pub(crate) fn with_state_hierarchy(mut self) -> TestAppBuilder<WithStates, D> {
         self.app.add_plugins(bevy::state::app::StatesPlugin);
         self.app.init_state::<AppState>();
         self.app.add_sub_state::<GameState>();
@@ -94,11 +133,12 @@ impl TestAppBuilder<NoStates> {
         TestAppBuilder {
             app:    self.app,
             _state: PhantomData,
+            _dmg:   PhantomData,
         }
     }
 }
 
-impl TestAppBuilder<WithStates> {
+impl<D: DmgStatus> TestAppBuilder<WithStates, D> {
     /// Drives the app into `NodeState::Playing` via four transitions:
     /// `AppState::Game` → `GameState::Run` → `RunState::Node` → `NodeState::Playing`.
     /// Each step sets `NextState` and calls `app.update()`.
@@ -184,7 +224,7 @@ impl TestAppBuilder<WithStates> {
     }
 }
 
-impl<S: StateStatus> TestAppBuilder<S> {
+impl<S: StateStatus, D: DmgStatus> TestAppBuilder<S, D> {
     /// Adds the `RantzPhysics2dPlugin`.
     #[must_use]
     pub(crate) fn with_physics(mut self) -> Self {
@@ -298,31 +338,6 @@ impl<S: StateStatus> TestAppBuilder<S> {
         self
     }
 
-    /// Registers the full effects pipeline: `DeathPipelinePlugin`,
-    /// cross-domain messages + `GameRng`, and `EffectV3Plugin`.
-    ///
-    /// Order matters: `DeathPipelinePlugin` configures sets that
-    /// `EffectV3Plugin` references, and `register_effect_v3_test_infrastructure`
-    /// registers messages that both plugins' systems read.
-    #[must_use]
-    pub(crate) fn with_effects_pipeline(mut self) -> Self {
-        self.app.add_plugins(DeathPipelinePlugin);
-        // Register the cells-domain `apply_damage_to_cells` system in the
-        // `ApplyDamage` set — mirrors `CellsPlugin` wiring so tests that
-        // only opt into the effects pipeline still see Cell damage applied.
-        // Without this, `DamageDealt<Cell>` messages drain without effect
-        // because `DeathPipelinePlugin` no longer wires the generic
-        // `apply_damage::<Cell>` (moved to the cells domain).
-        self.app.add_systems(
-            FixedUpdate,
-            apply_damage_to_cells
-                .in_set(crate::shared::death_pipeline::sets::DeathPipelineSystems::ApplyDamage),
-        );
-        register_effect_v3_test_infrastructure(&mut self.app);
-        self.app.add_plugins(EffectV3Plugin);
-        self
-    }
-
     /// Adds a system to the specified schedule.
     #[must_use]
     pub(crate) fn with_system<M>(
@@ -337,5 +352,54 @@ impl<S: StateStatus> TestAppBuilder<S> {
     /// Finalizes the builder and returns the `App`.
     pub(crate) fn build(self) -> App {
         self.app
+    }
+}
+
+// ── W2 Dmg-pipeline impls ────────────────────────────────────────────────
+
+impl<S: StateStatus> TestAppBuilder<S, NoDmg> {
+    /// Installs `RantzDmgPlugin`, transitioning the typestate to `WithDmg`.
+    /// After this call, `register_dmgable::<T>()` is available.
+    #[must_use]
+    pub(crate) fn with_dmg_pipeline(mut self) -> TestAppBuilder<S, WithDmg> {
+        self.app.add_plugins(RantzDmgPlugin);
+        TestAppBuilder {
+            app:    self.app,
+            _state: PhantomData,
+            _dmg:   PhantomData,
+        }
+    }
+
+    /// Full effects pipeline: `RantzDmgPlugin`, per-`T` registrations
+    /// (`Bolt`, `Wall`, `Breaker`, `Salvo`, `Cell`), cross-domain
+    /// `GameRng`, and `EffectV3Plugin`. Transitions typestate to `WithDmg`.
+    #[must_use]
+    pub(crate) fn with_effects_pipeline(mut self) -> TestAppBuilder<S, WithDmg> {
+        self.app.add_plugins(RantzDmgPlugin);
+        let _ = self
+            .app
+            .register_dmgable::<Bolt>()
+            .register_dmgable::<Wall>()
+            .register_dmgable::<Breaker>()
+            .register_dmgable::<Salvo>()
+            .register_dmgable::<Cell>();
+        register_effect_v3_test_infrastructure(&mut self.app);
+        self.app.add_plugins(EffectV3Plugin);
+        TestAppBuilder {
+            app:    self.app,
+            _state: PhantomData,
+            _dmg:   PhantomData,
+        }
+    }
+}
+
+impl<S: StateStatus> TestAppBuilder<S, WithDmg> {
+    /// Registers a `Dmgable` type's per-`T` messages and systems via
+    /// `RantzDmgAppExt::register_dmgable::<T>()`. Only callable after
+    /// `.with_dmg_pipeline()` has installed `RantzDmgPlugin`.
+    #[must_use]
+    pub(crate) fn register_dmgable<T: Dmgable>(mut self) -> Self {
+        let _ = self.app.register_dmgable::<T>();
+        self
     }
 }

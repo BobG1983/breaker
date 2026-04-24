@@ -20,10 +20,7 @@ use super::{
         write_cell_damage,
     },
 };
-use crate::{
-    prelude::*,
-    shared::death_pipeline::{HealCap, heal_dealt::HealDealt},
-};
+use crate::prelude::*;
 
 // ── Behavior 34 — stack 1, 100 damage, two adjacent neighbours heal 25 each ─
 
@@ -57,7 +54,10 @@ fn stack_one_damage_100_two_neighbours_each_heal_25() {
         heals_b[0].amount
     );
     assert!(matches!(heals_b[0].cap, HealCap::Starting));
-    assert_eq!(heals_b[0].source.as_deref(), Some("hazard:sympathy"));
+    assert_eq!(
+        heals_b[0].source.as_ref(),
+        Some(&SourceId::from("hazard:sympathy"))
+    );
     assert_eq!(heals_b[0].healer, None);
     assert_eq!(heals_b[0].target, b);
 
@@ -69,7 +69,10 @@ fn stack_one_damage_100_two_neighbours_each_heal_25() {
         heals_c[0].amount
     );
     assert!(matches!(heals_c[0].cap, HealCap::Starting));
-    assert_eq!(heals_c[0].source.as_deref(), Some("hazard:sympathy"));
+    assert_eq!(
+        heals_c[0].source.as_ref(),
+        Some(&SourceId::from("hazard:sympathy"))
+    );
 
     let heals_a = heals_for_cell(&app, a);
     assert_eq!(heals_a.len(), 0, "A must never self-heal");
@@ -109,7 +112,10 @@ fn stack_three_damage_80_three_neighbours_each_heal_28() {
             msgs[0].amount
         );
         assert!(matches!(msgs[0].cap, HealCap::Starting));
-        assert_eq!(msgs[0].source.as_deref(), Some("hazard:sympathy"));
+        assert_eq!(
+            msgs[0].source.as_ref(),
+            Some(&SourceId::from("hazard:sympathy"))
+        );
         assert_eq!(msgs[0].healer, None);
     }
 }
@@ -164,7 +170,7 @@ fn stack_six_ring_two_through_intermediary_heals_attenuate() {
     assert!(all.iter().all(|m| matches!(m.cap, HealCap::Starting)));
     assert!(
         all.iter()
-            .all(|m| m.source.as_deref() == Some("hazard:sympathy"))
+            .all(|m| m.source == Some(SourceId::from("hazard:sympathy")))
     );
     assert!(all.iter().all(|m| m.healer.is_none()));
 }
@@ -293,7 +299,7 @@ fn every_emitted_message_has_sympathy_sentinel_source() {
     assert_eq!(all.len(), 3);
     assert!(
         all.iter()
-            .all(|m| m.source.as_deref() == Some("hazard:sympathy")),
+            .all(|m| m.source == Some(SourceId::from("hazard:sympathy"))),
         "every message's source must be Some(\"hazard:sympathy\")"
     );
 }

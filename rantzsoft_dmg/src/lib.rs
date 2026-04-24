@@ -19,6 +19,81 @@
 //! `process_despawn_requests` body, and the public `RantzDmgAppExt`
 //! extension trait whose `register_dmgable::<T>()` method wires the
 //! per-`T` message queues and systems for a given `Dmgable` type.
+//!
+//! # W2 Behavior 13: per-`T` system items are NOT reachable from outside
+//!
+//! External consumers must reach the damage pipeline through
+//! `RantzDmgAppExt::register_dmgable::<T>()`, never by importing individual
+//! per-`T` system functions.
+//!
+//! ```compile_fail
+//! use bevy::prelude::*;
+//! use rantzsoft_dmg::Dmgable;
+//! #[derive(Component)]
+//! struct TestT;
+//! impl Dmgable for TestT {}
+//! let _ = rantzsoft_dmg::apply_damage::<TestT>;
+//! ```
+//!
+//! ```compile_fail
+//! use bevy::prelude::*;
+//! use rantzsoft_dmg::Dmgable;
+//! #[derive(Component)]
+//! struct TestT;
+//! impl Dmgable for TestT {}
+//! let _ = rantzsoft_dmg::apply_damage_boosts::<TestT>;
+//! ```
+//!
+//! ```compile_fail
+//! use bevy::prelude::*;
+//! use rantzsoft_dmg::Dmgable;
+//! #[derive(Component)]
+//! struct TestT;
+//! impl Dmgable for TestT {}
+//! let _ = rantzsoft_dmg::apply_heal::<TestT>;
+//! ```
+//!
+//! ```compile_fail
+//! use bevy::prelude::*;
+//! use rantzsoft_dmg::Dmgable;
+//! #[derive(Component)]
+//! struct TestT;
+//! impl Dmgable for TestT {}
+//! let _ = rantzsoft_dmg::apply_vulnerable::<TestT>;
+//! ```
+//!
+//! ```compile_fail
+//! use bevy::prelude::*;
+//! use rantzsoft_dmg::Dmgable;
+//! #[derive(Component)]
+//! struct TestT;
+//! impl Dmgable for TestT {}
+//! let _ = rantzsoft_dmg::detect_deaths::<TestT>;
+//! ```
+//!
+//! ```compile_fail
+//! use bevy::prelude::*;
+//! use rantzsoft_dmg::Dmgable;
+//! #[derive(Component)]
+//! struct TestT;
+//! impl Dmgable for TestT {}
+//! let _ = rantzsoft_dmg::handle_kill::<TestT>;
+//! ```
+//!
+//! ```compile_fail
+//! use bevy::prelude::*;
+//! use rantzsoft_dmg::Dmgable;
+//! #[derive(Component)]
+//! struct TestT;
+//! impl Dmgable for TestT {}
+//! let _ = rantzsoft_dmg::invulnerable_filter::<TestT>;
+//! ```
+//!
+//! The positive-access contract for `register_dmgable::<T>()` is covered
+//! by `rantzsoft_dmg/src/app_ext/tests.rs` as an in-process behavioral
+//! test. A module-level doctest was considered but is incompatible with
+//! `bevy/dynamic_linking` (the ephemeral doctest binary can't locate
+//! `libstd` at the merged-doctest runtime stage, even with `no_run`).
 
 #![cfg_attr(
     test,
@@ -47,6 +122,9 @@ pub use messages::{DamageDealt, DespawnEntity, Destroyed, HealDealt, KillYoursel
 pub use plugin::RantzDmgPlugin;
 pub use sets::DmgSystems;
 pub use source_id::SourceId;
+// Per-`T` pipeline systems are NOT re-exported at the crate root. External
+// consumers must reach them via `RantzDmgAppExt::register_dmgable::<T>()`.
+// See the compile_fail doctests at the top of this file.
 pub use traits::Dmgable;
 
 #[cfg(test)]
@@ -79,8 +157,8 @@ mod tests {
         let _ = Dead;
         let _ = Invulnerable;
 
-        let kb = KilledBy { dealer: None };
-        assert!(kb.dealer.is_none());
+        let kb = KilledBy { killer: None };
+        assert!(kb.killer.is_none());
 
         assert_ne!(HealCap::Starting, HealCap::Max);
 
@@ -108,19 +186,21 @@ mod tests {
         impl Dmgable for TestT {}
 
         drop(DamageDealt::<TestT> {
-            dealer:  None,
-            target:  Entity::PLACEHOLDER,
-            amount:  1.0,
-            source:  Some(SourceId::from("module:action")),
-            _marker: PhantomData,
+            dealer:        None,
+            attributed_to: None,
+            target:        Entity::PLACEHOLDER,
+            amount:        1.0,
+            source:        Some(SourceId::from("module:action")),
+            _marker:       PhantomData,
         });
         drop(HealDealt::<TestT> {
-            healer:  None,
-            target:  Entity::PLACEHOLDER,
-            amount:  1.0,
-            source:  None,
-            cap:     HealCap::Starting,
-            _marker: PhantomData,
+            healer:        None,
+            attributed_to: None,
+            target:        Entity::PLACEHOLDER,
+            amount:        1.0,
+            source:        None,
+            cap:           HealCap::Starting,
+            _marker:       PhantomData,
         });
         let _ = KillYourself::<TestT> {
             victim:  Entity::PLACEHOLDER,
@@ -159,19 +239,21 @@ mod tests {
         // messages with `_marker: PhantomData` proves the marker field is
         // reachable with `pub` visibility from the crate-root consumer site.
         drop(DamageDealt::<TestT> {
-            dealer:  None,
-            target:  Entity::PLACEHOLDER,
-            amount:  1.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        None,
+            attributed_to: None,
+            target:        Entity::PLACEHOLDER,
+            amount:        1.0,
+            source:        None,
+            _marker:       PhantomData,
         });
         drop(HealDealt::<TestT> {
-            healer:  None,
-            target:  Entity::PLACEHOLDER,
-            amount:  1.0,
-            source:  None,
-            cap:     HealCap::Max,
-            _marker: PhantomData,
+            healer:        None,
+            attributed_to: None,
+            target:        Entity::PLACEHOLDER,
+            amount:        1.0,
+            source:        None,
+            cap:           HealCap::Max,
+            _marker:       PhantomData,
         });
         let _ = KillYourself::<TestT> {
             victim:  Entity::PLACEHOLDER,
@@ -201,7 +283,7 @@ mod tests {
         let first = DmgSystems::EmitDamage;
         // Edge case: last variant too — proves the glob doesn't cut off
         // midway.
-        let last = DmgSystems::ApplyHeal;
+        let last = DmgSystems::PostApplyHeal;
 
         assert_ne!(first, last);
     }
@@ -316,4 +398,10 @@ mod tests {
         assert!(app.world().contains_resource::<Messages<KillYourself<B>>>());
         assert!(app.world().contains_resource::<Messages<Destroyed<B>>>());
     }
+
+    // W2 include_str! structural-invariant tests removed per plan §M —
+    // compiler enforcement catches renamed fields / deleted pub uses / bad
+    // literals naturally; behavioral tests in `systems/apply_damage.rs`
+    // (the `killed_by_killer_*` family) already pin the `msg.attributed_to
+    // .or(msg.dealer)` semantic.
 }

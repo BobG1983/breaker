@@ -22,7 +22,7 @@ pub struct ExplodeConfig {
 impl Fireable for ExplodeConfig {
     fn fire(&self, entity: Entity, source: &str, world: &mut World) {
         let pos = world.get::<Position2D>(entity).map_or(Vec2::ZERO, |p| p.0);
-        let source_chip = EffectSourceChip::from_source(source).0;
+        let source_id = EffectSourceChip::from_source(source).0.map(SourceId::from);
 
         // Broad phase: quadtree circle query filtered to the CELL layer.
         let radius = self.range.0;
@@ -51,9 +51,10 @@ impl Fireable for ExplodeConfig {
         for target in targets {
             world.write_message(DamageDealt {
                 dealer: Some(entity),
+                attributed_to: None,
                 target,
                 amount: self.damage.0,
-                source_chip: source_chip.clone(),
+                source: source_id.clone(),
                 _marker: std::marker::PhantomData::<Cell>,
             });
         }
@@ -149,7 +150,7 @@ mod tests {
                 msg.amount,
             );
             assert_eq!(msg.dealer, Some(source));
-            assert_eq!(msg.source_chip, Some("boom_chip".to_string()));
+            assert_eq!(msg.source, Some(SourceId::from("boom_chip")));
         }
 
         let targets: HashSet<Entity> = msgs.0.iter().map(|m| m.target).collect();
@@ -280,7 +281,7 @@ mod tests {
             .resource::<MessageCollector<DamageDealt<Cell>>>();
         assert_eq!(msgs.0.len(), 1);
         assert_eq!(
-            msgs.0[0].source_chip, None,
+            msgs.0[0].source, None,
             "empty source string should produce None"
         );
     }
@@ -303,8 +304,8 @@ mod tests {
             .resource::<MessageCollector<DamageDealt<Cell>>>();
         assert_eq!(msgs.0.len(), 1);
         assert_eq!(
-            msgs.0[0].source_chip,
-            Some("bomb_chip".to_string()),
+            msgs.0[0].source,
+            Some(SourceId::from("bomb_chip")),
             "non-empty source should produce Some"
         );
     }

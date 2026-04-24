@@ -37,7 +37,7 @@ use crate::{
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
-/// Sentinel tag stamped into `DamageDealt<Cell>.source_chip` on cash-out so
+/// Sentinel tag stamped into `DamageDealt<Cell>.source` on cash-out so
 /// downstream stat tracking / FX can identify Debt Collector damage.
 pub(crate) const DEBT_COLLECTOR_SENTINEL: &str = "protocol:debt_collector";
 
@@ -213,9 +213,10 @@ pub(crate) fn debt_collector_on_impact(
         let amount = base_damage * cashout.0;
         damage_writer.write(DamageDealt::<Cell> {
             dealer: Some(msg.bolt),
+            attributed_to: None,
             target: msg.cell,
             amount,
-            source_chip: Some(DEBT_COLLECTOR_SENTINEL.into()),
+            source: Some(SourceId::from(DEBT_COLLECTOR_SENTINEL)),
             _marker: PhantomData,
         });
         commands.entity(msg.bolt).remove::<DebtCashOut>();

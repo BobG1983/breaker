@@ -2,7 +2,7 @@
 //! messages and systems.
 //!
 //! The root `RantzDmgPlugin` performs zero per-`T` work — it only
-//! registers `DespawnEntity`, configures the 11-set chain, and schedules
+//! registers `DespawnEntity`, configures the 16-set chain, and schedules
 //! `process_despawn_requests`. Per-`T` wiring (four message queues and
 //! six systems) is the consumer's job via `App::register_dmgable::<T>()`.
 //!

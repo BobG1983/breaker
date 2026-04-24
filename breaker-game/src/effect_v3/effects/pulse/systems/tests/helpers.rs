@@ -5,12 +5,8 @@ use rantzsoft_spatial2d::components::Position2D;
 
 use super::super::system::*;
 use crate::{
-    cells::components::Cell,
-    effect_v3::effects::pulse::components::*,
-    shared::{
-        death_pipeline::{DamageDealt, Dead},
-        test_utils::TestAppBuilder,
-    },
+    cells::components::Cell, effect_v3::effects::pulse::components::*, prelude::*,
+    shared::test_utils::TestAppBuilder,
 };
 
 pub(super) fn damage_test_app() -> App {

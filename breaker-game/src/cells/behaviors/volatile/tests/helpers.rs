@@ -11,10 +11,7 @@ use std::marker::PhantomData;
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::GlobalPosition2D;
 
-use crate::{
-    cells::test_utils::spawn_cell_in_world, prelude::*,
-    shared::death_pipeline::sets::DeathPipelineSystems,
-};
+use crate::{cells::test_utils::spawn_cell_in_world, prelude::*};
 
 /// Default cell dimensions for test spawns. Width/height are immaterial to the
 /// behaviors under test — only the center position and radius/distance math
@@ -138,9 +135,10 @@ pub(super) fn spawn_dead_volatile_cell(
 pub(super) fn damage_msg(target: Entity, amount: f32) -> DamageDealt<Cell> {
     DamageDealt {
         dealer: None,
+        attributed_to: None,
         target,
         amount,
-        source_chip: None,
+        source: None,
         _marker: PhantomData,
     }
 }
@@ -159,7 +157,7 @@ pub(super) fn build_volatile_test_app() -> App {
     app.init_resource::<PendingCellDamage>();
     app.add_systems(
         FixedUpdate,
-        enqueue_cell_damage.before(DeathPipelineSystems::ApplyDamage),
+        enqueue_cell_damage.before(DmgSystems::ApplyDamage),
     );
     app
 }

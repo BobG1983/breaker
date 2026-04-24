@@ -91,7 +91,7 @@ fn shockwave_damages_cell_strictly_inside_radius() {
         "expected amount == 10.0, got {}",
         msgs.0[0].amount,
     );
-    assert_eq!(msgs.0[0].source_chip, None);
+    assert_eq!(msgs.0[0].source, None);
 
     let damaged = app.world().get::<ShockwaveDamaged>(sw).unwrap();
     assert!(
@@ -355,10 +355,10 @@ fn shockwave_propagates_some_source_chip_in_damage_dealt() {
         .resource::<MessageCollector<DamageDealt<Cell>>>();
     assert_eq!(msgs.0.len(), 1, "expected 1 DamageDealt<Cell> message");
     assert_eq!(
-        msgs.0[0].source_chip,
-        Some("storm_chip".to_string()),
+        msgs.0[0].source,
+        Some(SourceId::from("storm_chip")),
         "DamageDealt should carry source_chip from EffectSourceChip, got {:?}",
-        msgs.0[0].source_chip,
+        msgs.0[0].source,
     );
 }
 
@@ -384,9 +384,9 @@ fn shockwave_propagates_none_source_chip() {
         .resource::<MessageCollector<DamageDealt<Cell>>>();
     assert_eq!(msgs.0.len(), 1, "expected 1 DamageDealt<Cell> message");
     assert_eq!(
-        msgs.0[0].source_chip, None,
+        msgs.0[0].source, None,
         "EffectSourceChip(None) must survive unchanged, got {:?}",
-        msgs.0[0].source_chip,
+        msgs.0[0].source,
     );
 }
 
@@ -409,7 +409,7 @@ fn shockwave_without_effect_source_chip_component_writes_none() {
         1,
         "missing-component shockwave must still match the query (Option<&EffectSourceChip>)",
     );
-    assert_eq!(msgs.0[0].source_chip, None);
+    assert_eq!(msgs.0[0].source, None);
 }
 
 // ── C. tick_shockwave — radius expansion ───────────────────────────────

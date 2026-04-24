@@ -27,10 +27,10 @@ impl Fireable for PiercingBeamConfig {
             .get::<Velocity2D>(entity)
             .map_or(Vec2::Y, |v| v.0.normalize_or(Vec2::Y));
 
-        let source_chip = if source.is_empty() {
+        let source_id = if source.is_empty() {
             None
         } else {
-            Some(source.to_owned())
+            Some(SourceId::from(source.to_owned()))
         };
 
         let half_width = self.width.0 / 2.0;
@@ -59,9 +59,10 @@ impl Fireable for PiercingBeamConfig {
         for target in targets {
             world.write_message(DamageDealt {
                 dealer: Some(entity),
+                attributed_to: None,
                 target,
                 amount: damage,
-                source_chip: source_chip.clone(),
+                source: source_id.clone(),
                 _marker: std::marker::PhantomData::<Cell>,
             });
         }

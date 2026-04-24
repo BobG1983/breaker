@@ -140,10 +140,10 @@ fn spawn_does_not_dispatch_effects_when_empty() {
     }
 }
 
-// ── Behavior 43: spawn() passes source_chip: None ──
+// ── Behavior 43: spawn() passes source: None ──
 
 #[test]
-fn spawn_passes_source_chip_none_to_dispatch() {
+fn spawn_passes_source_none_to_dispatch() {
     let mut def = test_breaker_definition();
     def.effects = vec![RootNode::Stamp(
         StampTarget::Breaker,
@@ -173,7 +173,7 @@ fn spawn_passes_source_chip_none_to_dispatch() {
     for (chip_name, _) in &bound.unwrap().0 {
         assert_eq!(
             chip_name, "",
-            "chip name should be empty string (source_chip: None)"
+            "chip name should be empty string (source: None)"
         );
     }
 }

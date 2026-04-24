@@ -32,7 +32,7 @@ use crate::{
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
-/// Sentinel tag stamped into `DamageDealt<Cell>.source_chip` on Iron Curtain
+/// Sentinel tag stamped into `DamageDealt<Cell>.source` on Iron Curtain
 /// wave damage so downstream stat tracking / FX can identify the source.
 pub(crate) const IRON_CURTAIN_SENTINEL: &str = "protocol:iron_curtain";
 
@@ -178,11 +178,12 @@ pub(crate) fn iron_curtain_on_bolt_lost(
                 continue;
             }
             damage_writer.write(DamageDealt::<Cell> {
-                dealer:      None,
-                target:      cell,
-                amount:      damage,
-                source_chip: Some(IRON_CURTAIN_SENTINEL.into()),
-                _marker:     PhantomData,
+                dealer:        None,
+                attributed_to: None,
+                target:        cell,
+                amount:        damage,
+                source:        Some(SourceId::from(IRON_CURTAIN_SENTINEL)),
+                _marker:       PhantomData,
             });
         }
     }

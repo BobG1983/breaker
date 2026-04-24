@@ -15,7 +15,7 @@ use super::{
         install_renewal_config, spawn_cell, test_app_playing, tick_with_dt,
     },
 };
-use crate::shared::death_pipeline::Hp;
+use crate::prelude::Hp;
 
 // ── Behavior 11 — Timer decrements by delta_secs, no heal while remaining > 0 ─
 

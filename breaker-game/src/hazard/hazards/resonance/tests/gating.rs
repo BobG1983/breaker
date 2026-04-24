@@ -80,7 +80,7 @@ fn h3_all_systems_gated_off_outside_playing() {
     let mut app = TestAppBuilder::new()
         .with_state_hierarchy()
         .with_resource::<ActiveHazards>()
-        .with_message::<crate::shared::death_pipeline::Destroyed<crate::cells::components::Cell>>()
+        .with_message::<crate::prelude::Destroyed<crate::cells::components::Cell>>()
         .build();
     app.insert_resource(super::helpers::canonical_config());
     app.init_resource::<ResonanceTracker>();

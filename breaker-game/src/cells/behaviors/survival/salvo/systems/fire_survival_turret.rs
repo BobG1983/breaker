@@ -101,7 +101,7 @@ fn spawn_salvo(commands: &mut Commands, source: Entity, position: Vec2, velocity
         ),
         ApplyVelocity,
         Hp::new(1.0),
-        KilledBy::default(),
+        KilledBy { killer: None },
         CleanupOnExit::<NodeState>::default(),
     ));
 }

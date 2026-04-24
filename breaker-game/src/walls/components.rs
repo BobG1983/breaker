@@ -1,6 +1,7 @@
 //! Wall domain components.
 
 use bevy::prelude::*;
+use rantzsoft_dmg::Dmgable;
 use rantzsoft_spatial2d::components::Spatial2D;
 
 use crate::prelude::*;
@@ -9,6 +10,8 @@ use crate::prelude::*;
 #[derive(Component, Debug, Default)]
 #[require(Spatial2D, CleanupOnExit<NodeState>)]
 pub struct Wall;
+
+impl Dmgable for Wall {}
 
 #[cfg(test)]
 mod tests {

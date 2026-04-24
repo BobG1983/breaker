@@ -98,7 +98,7 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
 ///   the gate opens.
 ///
 /// Ordering: `erosion_shrink` → `erosion_restore` → `erosion_apply_width`.
-/// No `DeathPipelineSystems` ordering — Erosion operates on the shared
+/// No `DmgSystems` ordering — Erosion operates on the shared
 /// effect system, not the heal pipeline.
 pub(crate) fn register(app: &mut App) {
     app.add_systems(

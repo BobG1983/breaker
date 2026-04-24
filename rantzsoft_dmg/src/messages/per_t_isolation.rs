@@ -53,11 +53,12 @@ fn damage_dealt_per_t_queue_isolation_test_a_write_test_b_empty() {
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<TestA>>>()
         .write(DamageDealt::<TestA> {
-            dealer:  None,
-            target:  Entity::PLACEHOLDER,
-            amount:  9.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        None,
+            attributed_to: None,
+            target:        Entity::PLACEHOLDER,
+            amount:        9.0,
+            source:        None,
+            _marker:       PhantomData,
         });
 
     app.update();
@@ -91,11 +92,12 @@ fn damage_dealt_per_t_queue_isolation_test_b_write_test_a_empty() {
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<TestB>>>()
         .write(DamageDealt::<TestB> {
-            dealer:  None,
-            target:  Entity::PLACEHOLDER,
-            amount:  9.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        None,
+            attributed_to: None,
+            target:        Entity::PLACEHOLDER,
+            amount:        9.0,
+            source:        None,
+            _marker:       PhantomData,
         });
 
     app.update();
@@ -129,12 +131,13 @@ fn heal_dealt_per_t_queue_isolation() {
     app.world_mut()
         .resource_mut::<Messages<HealDealt<TestA>>>()
         .write(HealDealt::<TestA> {
-            healer:  None,
-            target:  Entity::PLACEHOLDER,
-            amount:  3.0,
-            source:  None,
-            cap:     HealCap::Starting,
-            _marker: PhantomData,
+            healer:        None,
+            attributed_to: None,
+            target:        Entity::PLACEHOLDER,
+            amount:        3.0,
+            source:        None,
+            cap:           HealCap::Starting,
+            _marker:       PhantomData,
         });
 
     app.update();

@@ -14,7 +14,6 @@ use crate::{
         resources::{ActiveHazards, hazard_active},
     },
     prelude::*,
-    shared::death_pipeline::{HealCap, Hp, heal_dealt::HealDealt, sets::DeathPipelineSystems},
 };
 
 /// Per-run tuning extracted from [`HazardTuning::Renewal`].
@@ -73,8 +72,8 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
 /// runs first to stamp a `RenewalTimer` on every living cell that lacks
 /// one, then `renewal_tick` ticks every timer and emits one
 /// `HealDealt<Cell>` per damaged cell on expiry. `renewal_tick` is
-/// ordered `.after(DeathPipelineSystems::HandleKill)` (so it never acts
-/// on cells that died this tick) and `.before(DeathPipelineSystems::ApplyHeal)`
+/// ordered `.after(DmgSystems::ApplyKill)` (so it never acts
+/// on cells that died this tick) and `.before(DmgSystems::ApplyHeal)`
 /// (so the emitted heals feed `apply_heal::<Cell>` in the same tick).
 /// Both systems gated by `hazard_active(Renewal)` and
 /// `NodeState::Playing`.
@@ -84,8 +83,8 @@ pub(crate) fn register(app: &mut App) {
         (
             renewal_attach_timers,
             renewal_tick
-                .after(DeathPipelineSystems::HandleKill)
-                .before(DeathPipelineSystems::ApplyHeal),
+                .after(DmgSystems::ApplyKill)
+                .before(DmgSystems::ApplyHeal),
         )
             .chain()
             .run_if(hazard_active(HazardKind::Renewal))
@@ -147,12 +146,13 @@ pub(crate) fn renewal_tick(
         let missing = hp.starting - hp.current;
         if missing > 0.0 {
             writer.write(HealDealt::<Cell> {
-                healer:  None,
-                target:  entity,
-                amount:  missing,
-                cap:     HealCap::Starting,
-                source:  Some("hazard:renewal".to_string()),
-                _marker: PhantomData,
+                healer:        None,
+                attributed_to: None,
+                target:        entity,
+                amount:        missing,
+                cap:           HealCap::Starting,
+                source:        Some(SourceId::from("hazard:renewal")),
+                _marker:       PhantomData,
             });
         }
         timer.remaining = duration;

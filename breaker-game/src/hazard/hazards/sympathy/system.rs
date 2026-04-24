@@ -23,7 +23,6 @@ use crate::{
         resources::ActiveHazards,
     },
     prelude::*,
-    shared::death_pipeline::{HealCap, heal_dealt::HealDealt, sets::DeathPipelineSystems},
 };
 
 // ── Constants ───────────────────────────────────────────────────────────────
@@ -114,7 +113,13 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
 ///
 /// `sympathy_heal_adjacent` is a reader system — it holds
 /// `MessageReader<DamageDealt<Cell>>`. Runs in `FixedUpdate`, in
-/// [`DeathPipelineSystems::ApplyHeal`], BEFORE `apply_heal::<Cell>`.
+/// [`DmgSystems::PostApplyDamage`] — AFTER `ApplyDamage` (so `msg.amount`
+/// reflects the final applied value, including vuln/invulnerable-filter
+/// mutation), but BEFORE `EmitKill`/`ApplyKill` (so the damaged primary
+/// cell is still in the live snapshot to anchor the BFS). Heals emitted
+/// here reach `apply_heal::<Cell>` later in the same tick when the chain
+/// flows through `EmitHeal → ApplyHeal`.
+///
 /// Registered WITHOUT `.run_if(...)`; it enforces the `ActiveHazards` /
 /// `NodeState::Playing` gate in-body via an immediate `reader.clear()` +
 /// return when inactive, draining the buffer every tick. A `.run_if(...)`
@@ -124,9 +129,7 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
 pub(crate) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
-        sympathy_heal_adjacent
-            .in_set(DeathPipelineSystems::ApplyHeal)
-            .before(crate::shared::death_pipeline::systems::apply_heal::<Cell>),
+        sympathy_heal_adjacent.in_set(DmgSystems::PostApplyDamage),
     );
 }
 
@@ -255,12 +258,13 @@ pub(crate) fn sympathy_heal_adjacent(
             for (entity, _) in &next {
                 visited.insert(*entity);
                 writer.write(HealDealt::<Cell> {
-                    healer:  None,
-                    target:  *entity,
-                    amount:  ring_amount,
-                    cap:     HealCap::Starting,
-                    source:  Some(SYMPATHY_SENTINEL.to_string()),
-                    _marker: PhantomData,
+                    healer:        None,
+                    attributed_to: None,
+                    target:        *entity,
+                    amount:        ring_amount,
+                    cap:           HealCap::Starting,
+                    source:        Some(SourceId::from(SYMPATHY_SENTINEL)),
+                    _marker:       PhantomData,
                 });
             }
             frontier = next;

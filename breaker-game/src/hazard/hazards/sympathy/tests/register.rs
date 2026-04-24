@@ -1,13 +1,14 @@
 //! Group F — `register` wiring, ordering, and run-if gates (Behaviors 53–60).
 //!
 //! Pins that `register(&mut app)` places `sympathy_heal_adjacent` in
-//! `FixedUpdate` inside `DeathPipelineSystems::ApplyHeal`, BEFORE
+//! `FixedUpdate` inside `DmgSystems::ApplyHeal`, BEFORE
 //! `apply_heal::<Cell>`, with both `hazard_active(Sympathy)` and
 //! `in_state(NodeState::Playing)` run-if gates. Pins that the emitted
 //! `HealDealt<Cell>` reaches `apply_heal::<Cell>` and lands on the target
 //! within the same tick.
 
 use bevy::prelude::*;
+use rantzsoft_dmg::{RantzDmgAppExt, RantzDmgPlugin};
 
 use super::{
     super::system::register,
@@ -19,28 +20,19 @@ use super::{
     },
 };
 use crate::{
+    cells::components::Cell,
     hazard::{definition::HazardKind, hazards::momentum, resources::ActiveHazards},
     prelude::*,
-    shared::death_pipeline::{HealCap, sets::DeathPipelineSystems, systems::apply_heal},
 };
 
-/// Sets up death-pipeline set ordering + `apply_heal::<Cell>`, then calls
+/// Sets up the `RantzDmgPlugin` + `register_dmgable::<Cell>`, then calls
 /// `register(&mut app)` so the full Sympathy plumbing is in place.
+/// `register_dmgable::<Cell>` wires `apply_heal::<Cell>` into
+/// `DmgSystems::ApplyHeal`.
 fn register_app_with_apply_heal() -> App {
     let mut app = test_app_playing();
-    app.configure_sets(
-        FixedUpdate,
-        (
-            DeathPipelineSystems::ApplyDamage,
-            DeathPipelineSystems::DetectDeaths.after(DeathPipelineSystems::ApplyDamage),
-            DeathPipelineSystems::HandleKill.after(DeathPipelineSystems::DetectDeaths),
-            DeathPipelineSystems::ApplyHeal.after(DeathPipelineSystems::HandleKill),
-        ),
-    );
-    app.add_systems(
-        FixedUpdate,
-        apply_heal::<Cell>.in_set(DeathPipelineSystems::ApplyHeal),
-    );
+    app.add_plugins(RantzDmgPlugin);
+    let _ = app.register_dmgable::<Cell>();
     register(&mut app);
     app
 }
@@ -75,7 +67,10 @@ fn register_wires_sympathy_heal_adjacent_into_fixed_update() {
         msgs[0].amount
     );
     assert!(matches!(msgs[0].cap, HealCap::Starting));
-    assert_eq!(msgs[0].source.as_deref(), Some("hazard:sympathy"));
+    assert_eq!(
+        msgs[0].source.as_ref(),
+        Some(&SourceId::from("hazard:sympathy"))
+    );
 }
 
 // ── Behavior 54 — emitted heal reaches apply_heal::<Cell> and lands same tick
@@ -129,19 +124,8 @@ fn register_orders_sympathy_heal_adjacent_before_apply_heal_starting_clamp() {
 #[test]
 fn register_in_state_playing_gate_blocks_when_not_playing() {
     let mut app = test_app_not_playing();
-    app.configure_sets(
-        FixedUpdate,
-        (
-            DeathPipelineSystems::ApplyDamage,
-            DeathPipelineSystems::DetectDeaths.after(DeathPipelineSystems::ApplyDamage),
-            DeathPipelineSystems::HandleKill.after(DeathPipelineSystems::DetectDeaths),
-            DeathPipelineSystems::ApplyHeal.after(DeathPipelineSystems::HandleKill),
-        ),
-    );
-    app.add_systems(
-        FixedUpdate,
-        apply_heal::<Cell>.in_set(DeathPipelineSystems::ApplyHeal),
-    );
+    app.add_plugins(RantzDmgPlugin);
+    let _ = app.register_dmgable::<Cell>();
     register(&mut app);
     install_sympathy_config(&mut app, canonical_sympathy_config());
     add_sympathy_stacks(&mut app, 1);
@@ -244,5 +228,8 @@ fn schedule_does_not_panic_with_both_sympathy_and_momentum_stacked() {
          should appear; got {}",
         all.len()
     );
-    assert_eq!(all[0].source.as_deref(), Some("hazard:momentum"));
+    assert_eq!(
+        all[0].source.as_ref(),
+        Some(&SourceId::from("hazard:momentum"))
+    );
 }

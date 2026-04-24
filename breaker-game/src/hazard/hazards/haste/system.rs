@@ -65,7 +65,7 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
 
 /// Registers `haste_apply_speed` in `FixedUpdate`, gated on
 /// `hazard_active(HazardKind::Haste)` AND `in_state(NodeState::Playing)`.
-/// No `DeathPipelineSystems` ordering constraints — Haste does not
+/// No `DmgSystems` ordering constraints — Haste does not
 /// participate in the heal / damage pipeline; it operates on the shared
 /// effect system via `EffectStack<SpeedBoostConfig>`. The system
 /// reconciles each Bolt's `EffectStack<SpeedBoostConfig>` with a single

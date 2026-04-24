@@ -23,20 +23,22 @@ fn persistent_boost_on_single_dealer_multiplies_both_t_queues() {
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<T1>>>()
         .write(DamageDealt::<T1> {
-            dealer:  Some(dealer),
-            target:  victim_a,
-            amount:  5.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        Some(dealer),
+            attributed_to: None,
+            target:        victim_a,
+            amount:        5.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<T2>>>()
         .write(DamageDealt::<T2> {
-            dealer:  Some(dealer),
-            target:  victim_b,
-            amount:  5.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        Some(dealer),
+            attributed_to: None,
+            target:        victim_b,
+            amount:        5.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     tick(&mut app);
 
@@ -65,20 +67,22 @@ fn one_shot_on_single_dealer_drained_by_whichever_t_system_runs_first() {
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<T1>>>()
         .write(DamageDealt::<T1> {
-            dealer:  Some(dealer),
-            target:  victim_a,
-            amount:  5.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        Some(dealer),
+            attributed_to: None,
+            target:        victim_a,
+            amount:        5.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<T2>>>()
         .write(DamageDealt::<T2> {
-            dealer:  Some(dealer),
-            target:  victim_b,
-            amount:  5.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        Some(dealer),
+            attributed_to: None,
+            target:        victim_b,
+            amount:        5.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     tick(&mut app);
 

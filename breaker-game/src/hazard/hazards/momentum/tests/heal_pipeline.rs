@@ -7,6 +7,7 @@
 //! `attach_momentum_ceiling` is load-bearing.
 
 use bevy::prelude::*;
+use rantzsoft_dmg::{RantzDmgAppExt, RantzDmgPlugin};
 
 use super::{
     super::system::{MomentumConfig, attach_momentum_ceiling, momentum_heal_on_nonlethal},
@@ -16,37 +17,22 @@ use super::{
         write_cell_damage,
     },
 };
-use crate::{
-    prelude::*,
-    shared::death_pipeline::{
-        Dead, HealCap, Hp,
-        sets::DeathPipelineSystems,
-        systems::{apply_damage, apply_heal, detect_deaths, handle_kill},
-    },
-};
+use crate::{cells::components::Cell, prelude::*};
 
 /// Wires the full pipeline in the correct order:
 /// `attach_momentum_ceiling` → `apply_damage` → `momentum_heal_on_nonlethal` → `apply_heal`.
+///
+/// `register_dmgable::<Cell>` wires `apply_damage::<Cell>`, `apply_heal::<Cell>`,
+/// `detect_deaths::<Cell>`, `handle_kill::<Cell>` automatically.
 fn test_app_full_pipeline() -> App {
     let mut app = test_app_playing();
-    app.configure_sets(
-        FixedUpdate,
-        (
-            DeathPipelineSystems::ApplyDamage,
-            DeathPipelineSystems::DetectDeaths.after(DeathPipelineSystems::ApplyDamage),
-            DeathPipelineSystems::HandleKill.after(DeathPipelineSystems::DetectDeaths),
-            DeathPipelineSystems::ApplyHeal.after(DeathPipelineSystems::HandleKill),
-        ),
-    );
+    app.add_plugins(RantzDmgPlugin);
+    let _ = app.register_dmgable::<Cell>();
     app.add_systems(
         FixedUpdate,
         (
-            attach_momentum_ceiling.before(apply_damage::<Cell>),
-            apply_damage::<Cell>.in_set(DeathPipelineSystems::ApplyDamage),
-            momentum_heal_on_nonlethal
-                .in_set(DeathPipelineSystems::ApplyHeal)
-                .before(apply_heal::<Cell>),
-            apply_heal::<Cell>.in_set(DeathPipelineSystems::ApplyHeal),
+            attach_momentum_ceiling.before(DmgSystems::ApplyDamage),
+            momentum_heal_on_nonlethal.in_set(DmgSystems::PostApplyDamage),
         ),
     );
     app
@@ -114,24 +100,11 @@ fn without_attach_ceiling_heal_clamps_at_starting() {
     // Deliberately build a pipeline WITHOUT attach_momentum_ceiling — to prove
     // it is load-bearing for the "heal past pristine" semantic.
     let mut app = test_app_playing();
-    app.configure_sets(
-        FixedUpdate,
-        (
-            DeathPipelineSystems::ApplyDamage,
-            DeathPipelineSystems::DetectDeaths.after(DeathPipelineSystems::ApplyDamage),
-            DeathPipelineSystems::HandleKill.after(DeathPipelineSystems::DetectDeaths),
-            DeathPipelineSystems::ApplyHeal.after(DeathPipelineSystems::HandleKill),
-        ),
-    );
+    app.add_plugins(RantzDmgPlugin);
+    let _ = app.register_dmgable::<Cell>();
     app.add_systems(
         FixedUpdate,
-        (
-            apply_damage::<Cell>.in_set(DeathPipelineSystems::ApplyDamage),
-            momentum_heal_on_nonlethal
-                .in_set(DeathPipelineSystems::ApplyHeal)
-                .before(apply_heal::<Cell>),
-            apply_heal::<Cell>.in_set(DeathPipelineSystems::ApplyHeal),
-        ),
+        momentum_heal_on_nonlethal.in_set(DmgSystems::PostApplyDamage),
     );
     install_momentum_config(&mut app, canonical_momentum_config());
     add_momentum_stacks(&mut app, 1);
@@ -151,23 +124,16 @@ fn without_attach_ceiling_heal_clamps_at_starting() {
     );
 }
 
-// ── Behavior 31 — lethal hit: Dead-marked, no revival via Momentum ──────────
-
+// ── Behavior 31 — lethal hit: no revival via Momentum ───────────────────────
+//
+// Game-specific invariant: when a hit is lethal (`hp.current <= 0.0` post-
+// damage), `momentum_heal_on_nonlethal` MUST NOT emit a heal. The crate-owned
+// death chain (`detect_deaths` → `handle_kill` → `DespawnEntity` →
+// `process_despawn_requests`) is covered by the crate's own tests; this test
+// only pins the Momentum-specific "no revival" contract.
 #[test]
-fn lethal_hit_end_to_end_cell_stays_dead_no_revival() {
+fn lethal_hit_emits_no_momentum_heal() {
     let mut app = test_app_full_pipeline();
-    // Also wire death detection + handle_kill so the cell actually becomes Dead.
-    app.add_systems(
-        FixedUpdate,
-        (
-            detect_deaths::<Cell>.in_set(DeathPipelineSystems::DetectDeaths),
-            handle_kill::<Cell>.in_set(DeathPipelineSystems::HandleKill),
-        ),
-    );
-    // Need to also register the KillYourself<Cell> message so handle_kill can consume it.
-    app.add_message::<crate::shared::death_pipeline::kill_yourself::KillYourself<Cell>>();
-    app.add_message::<crate::shared::death_pipeline::destroyed::Destroyed<Cell>>();
-    app.add_message::<crate::shared::death_pipeline::despawn_entity::DespawnEntity>();
 
     install_momentum_config(&mut app, canonical_momentum_config());
     add_momentum_stacks(&mut app, 1);
@@ -177,32 +143,15 @@ fn lethal_hit_end_to_end_cell_stays_dead_no_revival() {
 
     run_fixed_update(&mut app);
 
-    // Cell should be Dead-marked after handle_kill runs.
-    assert!(
-        app.world().get::<Dead>(cell).is_some(),
-        "lethal hit must mark cell Dead via handle_kill"
-    );
-
-    let hp = app.world().get::<Hp>(cell).unwrap();
-    assert!(
-        (hp.current - (-5.0)).abs() < f32::EPSILON,
-        "hp.current must equal exactly -5.0 (10 starting - 15 damage, no revival); got {}",
-        hp.current
-    );
-
-    // Critical invariant for this behavior: ceiling MUST have been lifted
-    // before apply_damage so hp.max is Some(20.0). This is the positive signal
-    // that the Momentum pipeline ran end-to-end (attach_momentum_ceiling +
-    // momentum_heal_on_nonlethal both gated on Playing + stacks, both ran).
+    // The positive signal: zero Momentum heals were emitted this tick. The
+    // crate pipeline despawns the dead cell in FixedPostUpdate; querying the
+    // entity post-tick would return None for every component (entity gone).
     assert_eq!(
-        hp.max,
-        Some(20.0),
-        "attach_momentum_ceiling must have lifted hp.max to Some(20.0) \
-         on the same tick BEFORE apply_damage landed; got {:?}",
-        hp.max
+        heal_collector_len(&app),
+        0,
+        "lethal hit must NOT trigger a Momentum heal — no revival"
     );
-    let _ = heal_collector_len(&app);
-    // Use imports so clippy doesn't warn.
+    let _ = cell;
     let _ = HealCap::Max;
     let _ = MomentumConfig {
         base_hp_per_hit:      0.0,

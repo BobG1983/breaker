@@ -5,7 +5,7 @@ use bevy::{
     prelude::*,
 };
 
-use crate::shared::death_pipeline::Invulnerable;
+use crate::prelude::*;
 
 /// Permanent marker identifying a cell as a lock-type cell.
 ///

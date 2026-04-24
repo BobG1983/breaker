@@ -27,20 +27,22 @@ fn dual_t_kill_emits_one_destroyed_per_type_with_correct_killer() {
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<T1>>>()
         .write(DamageDealt::<T1> {
-            dealer:  Some(dealer_1),
-            target:  victim_a,
-            amount:  5.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        Some(dealer_1),
+            attributed_to: None,
+            target:        victim_a,
+            amount:        5.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<T2>>>()
         .write(DamageDealt::<T2> {
-            dealer:  Some(dealer_2),
-            target:  victim_b,
-            amount:  5.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        Some(dealer_2),
+            attributed_to: None,
+            target:        victim_b,
+            amount:        5.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     tick(&mut app);
 
@@ -88,11 +90,12 @@ fn single_t1_kill_leaves_t2_victim_alive_and_t2_destroyed_queue_empty() {
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<T1>>>()
         .write(DamageDealt::<T1> {
-            dealer:  Some(dealer_1),
-            target:  victim_a,
-            amount:  5.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        Some(dealer_1),
+            attributed_to: None,
+            target:        victim_a,
+            amount:        5.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     tick(&mut app);
 

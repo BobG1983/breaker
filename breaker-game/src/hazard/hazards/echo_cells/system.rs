@@ -7,10 +7,7 @@ use crate::{
         resources::{ActiveHazards, hazard_active},
     },
     prelude::*,
-    shared::{
-        collision_layers::{BOLT_LAYER, CELL_LAYER},
-        death_pipeline::{Destroyed, Hp, KilledBy},
-    },
+    shared::collision_layers::{BOLT_LAYER, CELL_LAYER},
 };
 
 /// Standard ghost dimensions — matches the default cell footprint used
@@ -111,7 +108,7 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
 /// `in_state(NodeState::Playing)`.
 ///
 /// Ghost spawns are raw `commands.spawn(...)` calls rather than
-/// death-pipeline emissions, so no `DeathPipelineSystems` ordering is
+/// death-pipeline emissions, so no `DmgSystems` ordering is
 /// applied. The two systems operate on disjoint entity sets (the
 /// tracker spawns new `PendingGhost` via deferred commands; the ghost
 /// spawner reads existing `PendingGhost` entities), so explicit
@@ -194,7 +191,7 @@ pub(crate) fn echo_cells_track_deaths(
 /// GHOST_HEIGHT / 2.0))`, `CollisionLayers::new(CELL_LAYER,
 /// BOLT_LAYER)`, `CellWidth::new(GHOST_WIDTH)`,
 /// `CellHeight::new(GHOST_HEIGHT)`, `Hp::new(hp)`, and
-/// `KilledBy::default()`. The `PendingGhost` marker is despawned in
+/// `KilledBy { killer: None }`. The `PendingGhost` marker is despawned in
 /// either branch (even when `hp == 0.0`) — the marker is always
 /// consumed on expiry so it does not retry on the next frame.
 /// Early-returns when `EchoCellsConfig` is absent; no reader drain is
@@ -234,7 +231,7 @@ pub(crate) fn echo_cells_spawn_ghosts(
                 CellWidth::new(GHOST_WIDTH),
                 CellHeight::new(GHOST_HEIGHT),
                 Hp::new(hp),
-                KilledBy::default(),
+                KilledBy { killer: None },
             ));
         }
         commands.entity(entity).despawn();

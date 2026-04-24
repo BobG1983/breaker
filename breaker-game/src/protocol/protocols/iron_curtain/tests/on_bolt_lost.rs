@@ -52,7 +52,10 @@ fn bolt_lost_triggers_wave_with_full_origin_damage_within_falloff_start() {
         "amount expected 10.0 (= 20.0 * 0.5), got {}",
         msg.amount
     );
-    assert_eq!(msg.source_chip.as_deref(), Some(IRON_CURTAIN_SENTINEL));
+    assert_eq!(
+        msg.source.as_ref(),
+        Some(&SourceId::from(IRON_CURTAIN_SENTINEL))
+    );
 }
 
 // ── Behavior 5 (edge case) — cell exactly at falloff_start boundary ────────-
@@ -102,7 +105,10 @@ fn cell_beyond_falloff_start_takes_linearly_reduced_damage() {
         "amount expected ≈5.714286, got {}",
         msgs[0].amount
     );
-    assert_eq!(msgs[0].source_chip.as_deref(), Some(IRON_CURTAIN_SENTINEL));
+    assert_eq!(
+        msgs[0].source.as_ref(),
+        Some(&SourceId::from(IRON_CURTAIN_SENTINEL))
+    );
 }
 
 // ── Behavior 6 (edge case) — cell one unit beyond falloff_start ────────────-

@@ -16,7 +16,6 @@ use crate::{
     breaker::BreakerSystems,
     effect_v3::EffectV3Systems,
     prelude::*,
-    shared::death_pipeline::sets::DeathPipelineSystems,
     state::run::node::{
         sets::NodeSystems,
         systems::{apply_node_scale_to_bolt, apply_node_scale_to_late_bolts, reset_bolt},
@@ -91,7 +90,7 @@ impl Plugin for BoltPlugin {
                     // Tick bolt lifespan timers and request destruction on expiry
                     tick_bolt_lifespan
                         .before(BoltSystems::BoltLost)
-                        .before(DeathPipelineSystems::HandleKill),
+                        .before(DmgSystems::ApplyKill),
                 )
                     .run_if(in_state(NodeState::Playing)),
             )

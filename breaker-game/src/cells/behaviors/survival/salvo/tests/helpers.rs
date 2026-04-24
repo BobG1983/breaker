@@ -27,7 +27,6 @@ use crate::{
         test_utils::spawn_cell_in_world,
     },
     prelude::*,
-    shared::death_pipeline::sets::DeathPipelineSystems,
 };
 
 // ── Test app builders ─────────────────────────────────────────────────────
@@ -43,7 +42,7 @@ pub(super) fn build_tick_survival_timer_app() -> App {
     app.add_systems(
         FixedUpdate,
         tick_survival_timer
-            .before(DeathPipelineSystems::ApplyDamage)
+            .before(DmgSystems::ApplyDamage)
             .run_if(in_state(NodeState::Playing)),
     );
     app
@@ -88,7 +87,7 @@ pub(super) fn build_salvo_cell_collision_app() -> App {
     app.add_systems(
         FixedUpdate,
         salvo_cell_collision
-            .before(DeathPipelineSystems::ApplyDamage)
+            .before(DmgSystems::ApplyDamage)
             .run_if(in_state(NodeState::Playing)),
     );
     app

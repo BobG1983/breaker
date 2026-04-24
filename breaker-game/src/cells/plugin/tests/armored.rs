@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use rantzsoft_dmg::{RantzDmgAppExt, RantzDmgPlugin};
 use rantzsoft_physics2d::resources::CollisionQuadtree;
 
 use super::{
@@ -10,12 +11,13 @@ use super::{
 };
 use crate::{
     bolt::components::PiercingRemaining,
-    cells::{behaviors::armored::components::ArmorDirection, test_utils::spawn_cell_in_world},
+    cells::{
+        behaviors::{armored::components::ArmorDirection, survival::salvo::components::Salvo},
+        test_utils::spawn_cell_in_world,
+    },
     effect_v3::EffectV3Plugin,
     prelude::*,
-    shared::death_pipeline::{
-        DeathPipelinePlugin, systems::tests::helpers::register_effect_v3_test_infrastructure,
-    },
+    shared::test_utils::register_effect_v3_test_infrastructure,
 };
 
 fn spawn_plugin_armored_cell(
@@ -60,7 +62,13 @@ fn armored_plugin_app_loading() -> App {
         .init_resource::<crate::shared::playfield::PlayfieldConfig>();
     // Configure BoltSystems::CellCollision so the set exists without BoltPlugin
     app.configure_sets(FixedUpdate, crate::bolt::sets::BoltSystems::CellCollision);
-    app.add_plugins(DeathPipelinePlugin);
+    app.add_plugins(RantzDmgPlugin);
+    let _ = app
+        .register_dmgable::<Bolt>()
+        .register_dmgable::<Wall>()
+        .register_dmgable::<Breaker>()
+        .register_dmgable::<Salvo>()
+        .register_dmgable::<Cell>();
     register_effect_v3_test_infrastructure(&mut app);
     app.add_plugins(EffectV3Plugin);
     app.add_plugins(CellsPlugin);
@@ -97,7 +105,7 @@ fn armored_plugin_advance_to_playing(app: &mut App) {
 }
 
 /// Behavior 27: `CellsPlugin` registers `check_armor_direction` ordered
-/// `.after(BoltSystems::CellCollision).before(DeathPipelineSystems::ApplyDamage)`.
+/// `.after(BoltSystems::CellCollision).before(DmgSystems::ApplyDamage)`.
 #[test]
 fn cells_plugin_registers_check_armor_direction_before_apply_damage() {
     let mut app = armored_plugin_app_loading();

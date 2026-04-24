@@ -16,9 +16,6 @@ use crate::{
         resources::ActiveHazards,
     },
     prelude::*,
-    shared::death_pipeline::{
-        Destroyed, HealCap, Hp, heal_dealt::HealDealt, sets::DeathPipelineSystems,
-    },
 };
 
 /// Per-run tuning extracted from [`HazardTuning::Cascade`] at activation.
@@ -62,8 +59,8 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
 }
 
 /// Registers `cascade_heal_on_death` in `FixedUpdate` between
-/// `DeathPipelineSystems::HandleKill` (which emits `Destroyed<Cell>`) and
-/// `DeathPipelineSystems::ApplyHeal` (which consumes `HealDealt<Cell>`).
+/// `DmgSystems::ApplyKill` (which emits `Destroyed<Cell>`) and
+/// `DmgSystems::ApplyHeal` (which consumes `HealDealt<Cell>`).
 ///
 /// Reader system — intentionally ungated. `cascade_heal_on_death` holds
 /// `MessageReader<Destroyed<Cell>>` and enforces the `ActiveHazards` /
@@ -76,8 +73,8 @@ pub(crate) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         cascade_heal_on_death
-            .after(DeathPipelineSystems::HandleKill)
-            .before(DeathPipelineSystems::ApplyHeal),
+            .after(DmgSystems::ApplyKill)
+            .before(DmgSystems::ApplyHeal),
     );
 }
 
@@ -140,12 +137,13 @@ pub(crate) fn cascade_heal_on_death(
                 continue;
             }
             writer.write(HealDealt::<Cell> {
-                healer:  None,
-                target:  entity,
-                amount:  heal,
-                cap:     HealCap::Starting,
-                source:  Some("hazard:cascade".to_string()),
-                _marker: PhantomData,
+                healer:        None,
+                attributed_to: None,
+                target:        entity,
+                amount:        heal,
+                cap:           HealCap::Starting,
+                source:        Some(SourceId::from("hazard:cascade")),
+                _marker:       PhantomData,
             });
         }
     }

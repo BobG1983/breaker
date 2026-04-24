@@ -28,10 +28,7 @@ use super::{
     run_end::systems::detect_most_powerful_evolution,
     systems::{advance_node, hide_gameplay_entities, setup_run, show_gameplay_entities},
 };
-use crate::{
-    prelude::*,
-    shared::{RunSeed, death_pipeline::sets::DeathPipelineSystems},
-};
+use crate::{prelude::*, shared::RunSeed};
 
 /// Plugin for the run domain.
 ///
@@ -50,13 +47,20 @@ impl Plugin for RunPlugin {
             .add_plugins(NodePlugin)
             .add_message::<RunLost>()
             .add_message::<HighlightTriggered>()
-            // Breaker death handler — runs in the death pipeline's HandleKill
-            // set, consuming `KillYourself<Breaker>` produced by
-            // `detect_deaths::<Breaker>`. Emits `RunLost` for the run state
-            // machine to turn into `NodeResult::LivesDepleted`.
+            // Breaker death handler — runs AFTER `EmitKill` and BEFORE
+            // `ApplyKill`. This ordering matters: handle_breaker_death
+            // inserts `Dead` on the breaker via Commands; the command flush
+            // point between sets commits the marker before the crate's
+            // generic `handle_kill::<Breaker>` (also in `ApplyKill`) runs.
+            // Its victim query `With<Breaker>, Without<Dead>` then skips the
+            // breaker, preventing the double `Destroyed<Breaker>` emit and
+            // avoiding the generic `DespawnEntity` that would otherwise
+            // despawn the breaker before the end-of-run animation plays.
             .add_systems(
                 FixedUpdate,
-                handle_breaker_death.in_set(DeathPipelineSystems::HandleKill),
+                handle_breaker_death
+                    .after(DmgSystems::EmitKill)
+                    .before(DmgSystems::ApplyKill),
             )
             .add_systems(
                 FixedUpdate,
@@ -69,16 +73,16 @@ impl Plugin for RunPlugin {
                         .after(handle_node_cleared)
                         .after(handle_timer_expired),
                     // Stats accumulation (passive message readers)
-                    track_cells_destroyed.after(DeathPipelineSystems::HandleKill),
+                    track_cells_destroyed.after(DmgSystems::ApplyKill),
                     track_bumps,
                     track_bolts_lost,
                     track_time_elapsed,
-                    track_evolution_damage.after(DeathPipelineSystems::ApplyDamage),
+                    track_evolution_damage.after(DmgSystems::ApplyDamage),
                     track_node_cleared_stats.after(NodeSystems::TrackCompletion),
                     // Highlight detection
-                    detect_mass_destruction.after(DeathPipelineSystems::HandleKill),
+                    detect_mass_destruction.after(DmgSystems::ApplyKill),
                     detect_close_save.after(crate::breaker::BreakerSystems::GradeBump),
-                    detect_combo_king.after(DeathPipelineSystems::HandleKill),
+                    detect_combo_king.after(DmgSystems::ApplyKill),
                     detect_pinball_wizard,
                     detect_nail_biter.after(NodeSystems::TrackCompletion),
                 )

@@ -20,20 +20,22 @@ fn invulnerable_on_t1_does_not_shield_t2_victim() {
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<T1>>>()
         .write(DamageDealt::<T1> {
-            dealer:  None,
-            target:  victim_a,
-            amount:  5.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        None,
+            attributed_to: None,
+            target:        victim_a,
+            amount:        5.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<T2>>>()
         .write(DamageDealt::<T2> {
-            dealer:  None,
-            target:  victim_b,
-            amount:  5.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        None,
+            attributed_to: None,
+            target:        victim_b,
+            amount:        5.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     tick(&mut app);
 
@@ -55,20 +57,22 @@ fn invulnerable_on_t2_does_not_shield_t1_victim() {
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<T1>>>()
         .write(DamageDealt::<T1> {
-            dealer:  None,
-            target:  victim_a,
-            amount:  5.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        None,
+            attributed_to: None,
+            target:        victim_a,
+            amount:        5.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<T2>>>()
         .write(DamageDealt::<T2> {
-            dealer:  None,
-            target:  victim_b,
-            amount:  5.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        None,
+            attributed_to: None,
+            target:        victim_b,
+            amount:        5.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     tick(&mut app);
 

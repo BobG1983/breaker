@@ -7,7 +7,6 @@ use crate::{
     cells::components::{Cell, CellHeight, CellWidth},
     hazard::{definition::HazardKind, resources::ActiveHazards},
     prelude::*,
-    shared::death_pipeline::{Hp, KilledBy},
 };
 
 // Behavior 14 — debris carries full collision suite.

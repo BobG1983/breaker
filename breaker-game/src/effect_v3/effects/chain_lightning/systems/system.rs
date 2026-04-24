@@ -85,9 +85,10 @@ pub(crate) fn tick_chain_lightning(
                     // Deal damage to the target cell.
                     damage_writer.write(DamageDealt {
                         dealer: Some(chain_entity),
+                        attributed_to: None,
                         target,
                         amount: chain.damage,
-                        source_chip: chip.and_then(|c| c.0.clone()),
+                        source: chip.and_then(|c| c.0.clone()).map(SourceId::from),
                         _marker: std::marker::PhantomData,
                     });
                 } else {

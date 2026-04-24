@@ -12,6 +12,7 @@ dev = ["dep:bevy_egui", "bevy/file_watcher", "rantzsoft_defaults/hot-reload"]
 bevy = { version = "0.18.1", default-features = false, features = ["2d", "serialize"] }
 bevy_egui = { version = "0.39", optional = true }
 rantzsoft_defaults = { path = "../rantzsoft_defaults" }
+rantzsoft_dmg = { path = "../rantzsoft_dmg" }
 rantzsoft_physics2d = { path = "../rantzsoft_physics2d" }
 rantzsoft_stateflow = { path = "../rantzsoft_stateflow" }
 rantzsoft_spatial2d = { path = "../rantzsoft_spatial2d" }

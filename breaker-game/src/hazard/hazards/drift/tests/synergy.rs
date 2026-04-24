@@ -34,7 +34,7 @@ use crate::{
         },
         resources::ActiveHazards,
     },
-    shared::death_pipeline::Destroyed,
+    prelude::Destroyed,
 };
 
 // ── Behavior 45 — Drift + Haste: direct velocity + stack coexist ─────────

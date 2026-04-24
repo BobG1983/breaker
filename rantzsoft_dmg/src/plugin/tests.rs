@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use super::system::*;
 use crate::{
-    Dmgable,
+    Dmgable, RantzDmgAppExt,
     messages::{DamageDealt, DespawnEntity, Destroyed, HealDealt, KillYourself},
     sets::DmgSystems,
     systems::process_despawn_requests,
@@ -193,34 +193,39 @@ fn plugin_does_not_register_per_t_messages() {
     );
 }
 
-// ── Behavior 47: Adding `RantzDmgPlugin` configures all 11 `DmgSystems`
+// ── Behavior 47: Adding `RantzDmgPlugin` configures all 16 `DmgSystems`
 //     variants as sets in `FixedUpdate` usable as `.before(...)` /
 //     `.after(...)` anchors ──
 
 #[test]
-fn all_eleven_sets_are_usable_as_before_and_after_anchors() {
+fn all_sixteen_sets_are_usable_as_before_and_after_anchors() {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
     app.add_plugins(RantzDmgPlugin);
 
     let variants = [
         DmgSystems::EmitDamage,
+        DmgSystems::PostEmitDamage,
         DmgSystems::ApplyDamageBoosts,
         DmgSystems::MutateDamage,
+        DmgSystems::PostMutateDamage,
         DmgSystems::ApplyVulnerable,
         DmgSystems::ApplyDamage,
+        DmgSystems::PostApplyDamage,
         DmgSystems::EmitKill,
         DmgSystems::MutateKill,
         DmgSystems::ApplyKill,
+        DmgSystems::PostApplyKill,
         DmgSystems::EmitHeal,
         DmgSystems::MutateHeal,
         DmgSystems::ApplyHeal,
+        DmgSystems::PostApplyHeal,
     ];
 
     for v in variants {
         app.add_systems(FixedUpdate, (|| {}).after(v));
     }
-    // Edge case: also add .before for each of the 11 — 22 no-op systems
+    // Edge case: also add .before for each of the 16 — 32 no-op systems
     // total.
     for v in variants {
         app.add_systems(FixedUpdate, (|| {}).before(v));
@@ -242,17 +247,26 @@ struct ExecutionLog(Vec<DmgSystems>);
 fn record_emit_damage(mut log: ResMut<ExecutionLog>) {
     log.0.push(DmgSystems::EmitDamage);
 }
+fn record_post_emit(mut log: ResMut<ExecutionLog>) {
+    log.0.push(DmgSystems::PostEmitDamage);
+}
 fn record_apply_damage_boosts(mut log: ResMut<ExecutionLog>) {
     log.0.push(DmgSystems::ApplyDamageBoosts);
 }
 fn record_mutate_damage(mut log: ResMut<ExecutionLog>) {
     log.0.push(DmgSystems::MutateDamage);
 }
+fn record_post_mutate(mut log: ResMut<ExecutionLog>) {
+    log.0.push(DmgSystems::PostMutateDamage);
+}
 fn record_apply_vulnerable(mut log: ResMut<ExecutionLog>) {
     log.0.push(DmgSystems::ApplyVulnerable);
 }
 fn record_apply_damage(mut log: ResMut<ExecutionLog>) {
     log.0.push(DmgSystems::ApplyDamage);
+}
+fn record_post_apply(mut log: ResMut<ExecutionLog>) {
+    log.0.push(DmgSystems::PostApplyDamage);
 }
 fn record_emit_kill(mut log: ResMut<ExecutionLog>) {
     log.0.push(DmgSystems::EmitKill);
@@ -263,6 +277,9 @@ fn record_mutate_kill(mut log: ResMut<ExecutionLog>) {
 fn record_apply_kill(mut log: ResMut<ExecutionLog>) {
     log.0.push(DmgSystems::ApplyKill);
 }
+fn record_post_kill(mut log: ResMut<ExecutionLog>) {
+    log.0.push(DmgSystems::PostApplyKill);
+}
 fn record_emit_heal(mut log: ResMut<ExecutionLog>) {
     log.0.push(DmgSystems::EmitHeal);
 }
@@ -271,6 +288,9 @@ fn record_mutate_heal(mut log: ResMut<ExecutionLog>) {
 }
 fn record_apply_heal(mut log: ResMut<ExecutionLog>) {
     log.0.push(DmgSystems::ApplyHeal);
+}
+fn record_post_heal(mut log: ResMut<ExecutionLog>) {
+    log.0.push(DmgSystems::PostApplyHeal);
 }
 
 fn build_app_with_recorders() -> App {
@@ -281,17 +301,26 @@ fn build_app_with_recorders() -> App {
     app.add_systems(
         FixedUpdate,
         (
-            record_emit_damage.in_set(DmgSystems::EmitDamage),
-            record_apply_damage_boosts.in_set(DmgSystems::ApplyDamageBoosts),
-            record_mutate_damage.in_set(DmgSystems::MutateDamage),
-            record_apply_vulnerable.in_set(DmgSystems::ApplyVulnerable),
-            record_apply_damage.in_set(DmgSystems::ApplyDamage),
-            record_emit_kill.in_set(DmgSystems::EmitKill),
-            record_mutate_kill.in_set(DmgSystems::MutateKill),
-            record_apply_kill.in_set(DmgSystems::ApplyKill),
-            record_emit_heal.in_set(DmgSystems::EmitHeal),
-            record_mutate_heal.in_set(DmgSystems::MutateHeal),
-            record_apply_heal.in_set(DmgSystems::ApplyHeal),
+            (
+                record_emit_damage.in_set(DmgSystems::EmitDamage),
+                record_post_emit.in_set(DmgSystems::PostEmitDamage),
+                record_apply_damage_boosts.in_set(DmgSystems::ApplyDamageBoosts),
+                record_mutate_damage.in_set(DmgSystems::MutateDamage),
+                record_post_mutate.in_set(DmgSystems::PostMutateDamage),
+                record_apply_vulnerable.in_set(DmgSystems::ApplyVulnerable),
+                record_apply_damage.in_set(DmgSystems::ApplyDamage),
+                record_post_apply.in_set(DmgSystems::PostApplyDamage),
+            ),
+            (
+                record_emit_kill.in_set(DmgSystems::EmitKill),
+                record_mutate_kill.in_set(DmgSystems::MutateKill),
+                record_apply_kill.in_set(DmgSystems::ApplyKill),
+                record_post_kill.in_set(DmgSystems::PostApplyKill),
+                record_emit_heal.in_set(DmgSystems::EmitHeal),
+                record_mutate_heal.in_set(DmgSystems::MutateHeal),
+                record_apply_heal.in_set(DmgSystems::ApplyHeal),
+                record_post_heal.in_set(DmgSystems::PostApplyHeal),
+            ),
         ),
     );
     app
@@ -309,30 +338,35 @@ fn chain_order_matches_plan_after_one_tick() {
 
     let expected = vec![
         DmgSystems::EmitDamage,
+        DmgSystems::PostEmitDamage,
         DmgSystems::ApplyDamageBoosts,
         DmgSystems::MutateDamage,
+        DmgSystems::PostMutateDamage,
         DmgSystems::ApplyVulnerable,
         DmgSystems::ApplyDamage,
+        DmgSystems::PostApplyDamage,
         DmgSystems::EmitKill,
         DmgSystems::MutateKill,
         DmgSystems::ApplyKill,
+        DmgSystems::PostApplyKill,
         DmgSystems::EmitHeal,
         DmgSystems::MutateHeal,
         DmgSystems::ApplyHeal,
+        DmgSystems::PostApplyHeal,
     ];
 
     assert_eq!(
         app.world().resource::<ExecutionLog>().0,
         expected,
         "DmgSystems chain ran in the wrong order — RantzDmgPlugin's \
-         `configure_sets(FixedUpdate, (...).chain())` must list the 11 \
+         `configure_sets(FixedUpdate, (...).chain())` must list the 16 \
          variants in the canonical Emit/Mutate/Apply plan order"
     );
 }
 
 #[test]
 fn chain_order_stable_across_two_ticks() {
-    // Edge case: a second tick produces another 11 push events in the
+    // Edge case: a second tick produces another 16 push events in the
     // same order. Clear the log after the first tick, run a second
     // tick, and assert the order is stable.
     let mut app = build_app_with_recorders();
@@ -354,16 +388,21 @@ fn chain_order_stable_across_two_ticks() {
 
     let expected = vec![
         DmgSystems::EmitDamage,
+        DmgSystems::PostEmitDamage,
         DmgSystems::ApplyDamageBoosts,
         DmgSystems::MutateDamage,
+        DmgSystems::PostMutateDamage,
         DmgSystems::ApplyVulnerable,
         DmgSystems::ApplyDamage,
+        DmgSystems::PostApplyDamage,
         DmgSystems::EmitKill,
         DmgSystems::MutateKill,
         DmgSystems::ApplyKill,
+        DmgSystems::PostApplyKill,
         DmgSystems::EmitHeal,
         DmgSystems::MutateHeal,
         DmgSystems::ApplyHeal,
+        DmgSystems::PostApplyHeal,
     ];
 
     assert_eq!(app.world().resource::<ExecutionLog>().0, expected);
@@ -388,7 +427,7 @@ fn chain_is_in_fixed_update_not_update() {
     );
 
     // Positive control companion assertion: accumulate overstep and tick
-    // once — now the 11 recorders should fire.
+    // once — now the 16 recorders should fire.
     let timestep = app.world().resource::<Time<Fixed>>().timestep();
     app.world_mut()
         .resource_mut::<Time<Fixed>>()
@@ -397,8 +436,8 @@ fn chain_is_in_fixed_update_not_update() {
 
     assert_eq!(
         app.world().resource::<ExecutionLog>().0.len(),
-        11,
-        "After one FixedUpdate tick, all 11 recorders should have fired"
+        16,
+        "After one FixedUpdate tick, all 16 recorders should have fired"
     );
 }
 
@@ -540,7 +579,7 @@ fn plugin_injects_no_systems_into_fixed_update_beyond_consumer_additions() {
     assert!(
         app.world().resource::<ExecutionLog>().0.is_empty(),
         "RantzDmgPlugin must not inject any recorder system that writes \
-         to ExecutionLog — the 11 DmgSystems sets are empty until \
+         to ExecutionLog — the 16 DmgSystems sets are empty until \
          consumers attach systems"
     );
 }
@@ -571,4 +610,108 @@ fn plugin_injects_no_systems_across_two_fixed_update_ticks() {
 
     assert_eq!(app.world().resource::<FixedTickCount>().0, 2);
     assert!(app.world().resource::<ExecutionLog>().0.is_empty());
+}
+
+// ── W2 Behavior 4: Post* sets ship empty — no crate-owned system is
+//     scheduled into any of them ──
+//
+// Each Post* set gets a single sentinel system that bumps a counter. After
+// one FixedUpdate tick, the counter must read exactly 1 (the sentinel
+// only). Any additional increment means the crate wired a system into the
+// Post* set, which violates "ships empty".
+
+#[derive(Resource, Default)]
+struct PostCounters {
+    emit:   u32,
+    mutate: u32,
+    apply:  u32,
+    kill:   u32,
+    heal:   u32,
+}
+
+fn bump_post_emit(mut c: ResMut<PostCounters>) {
+    c.emit += 1;
+}
+fn bump_post_mutate(mut c: ResMut<PostCounters>) {
+    c.mutate += 1;
+}
+fn bump_post_apply(mut c: ResMut<PostCounters>) {
+    c.apply += 1;
+}
+fn bump_post_kill(mut c: ResMut<PostCounters>) {
+    c.kill += 1;
+}
+fn bump_post_heal(mut c: ResMut<PostCounters>) {
+    c.heal += 1;
+}
+
+#[test]
+fn post_sets_ship_empty_sentinel_is_only_system() {
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins);
+    app.add_plugins(RantzDmgPlugin);
+    app.init_resource::<PostCounters>();
+    app.add_systems(
+        FixedUpdate,
+        (
+            bump_post_emit.in_set(DmgSystems::PostEmitDamage),
+            bump_post_mutate.in_set(DmgSystems::PostMutateDamage),
+            bump_post_apply.in_set(DmgSystems::PostApplyDamage),
+            bump_post_kill.in_set(DmgSystems::PostApplyKill),
+            bump_post_heal.in_set(DmgSystems::PostApplyHeal),
+        ),
+    );
+
+    let timestep = app.world().resource::<Time<Fixed>>().timestep();
+    app.world_mut()
+        .resource_mut::<Time<Fixed>>()
+        .accumulate_overstep(timestep);
+    app.update();
+
+    let counters = app.world().resource::<PostCounters>();
+    assert_eq!(
+        counters.emit, 1,
+        "RantzDmgPlugin must ship DmgSystems::PostEmitDamage empty — sentinel fired once, \
+         but count reads {} (extra consumer/crate system?)",
+        counters.emit
+    );
+    assert_eq!(counters.mutate, 1);
+    assert_eq!(counters.apply, 1);
+    assert_eq!(counters.kill, 1);
+    assert_eq!(counters.heal, 1);
+}
+
+#[test]
+fn post_sets_ship_empty_with_register_dmgable() {
+    // Edge case: calling register_dmgable::<T>() for a dummy T does NOT
+    // populate any Post* set. Confirms register_dmgable does not schedule
+    // per-T systems into Post* sets.
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins);
+    app.add_plugins(RantzDmgPlugin);
+    let _ = app.register_dmgable::<TestT>();
+    app.init_resource::<PostCounters>();
+    app.add_systems(
+        FixedUpdate,
+        (
+            bump_post_emit.in_set(DmgSystems::PostEmitDamage),
+            bump_post_mutate.in_set(DmgSystems::PostMutateDamage),
+            bump_post_apply.in_set(DmgSystems::PostApplyDamage),
+            bump_post_kill.in_set(DmgSystems::PostApplyKill),
+            bump_post_heal.in_set(DmgSystems::PostApplyHeal),
+        ),
+    );
+
+    let timestep = app.world().resource::<Time<Fixed>>().timestep();
+    app.world_mut()
+        .resource_mut::<Time<Fixed>>()
+        .accumulate_overstep(timestep);
+    app.update();
+
+    let counters = app.world().resource::<PostCounters>();
+    assert_eq!(counters.emit, 1);
+    assert_eq!(counters.mutate, 1);
+    assert_eq!(counters.apply, 1);
+    assert_eq!(counters.kill, 1);
+    assert_eq!(counters.heal, 1);
 }

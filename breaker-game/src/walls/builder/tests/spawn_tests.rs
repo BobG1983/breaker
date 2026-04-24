@@ -170,10 +170,10 @@ fn spawn_does_not_dispatch_effects_when_definition_has_empty_effects() {
     }
 }
 
-// ── Behavior 32: spawn() passes source_chip: None to dispatch_initial_effects ──
+// ── Behavior 32: spawn() passes source: None to dispatch_initial_effects ──
 
 #[test]
-fn spawn_passes_source_chip_none() {
+fn spawn_passes_source_none() {
     let pf = default_playfield();
     let def = custom_wall_definition(); // effects: [On { target: Wall, ... }]
     let mut app = test_app();
@@ -196,7 +196,7 @@ fn spawn_passes_source_chip_none() {
     for (chip_name, _) in &bound.unwrap().0 {
         assert_eq!(
             chip_name, "",
-            "chip name should be empty string (source_chip: None)"
+            "chip name should be empty string (source: None)"
         );
     }
 }

@@ -54,9 +54,9 @@ fn cash_out_bolt_emits_bonus_damage_dealt_on_impact() {
         msg.amount
     );
     assert_eq!(
-        msg.source_chip.as_deref(),
-        Some(DEBT_COLLECTOR_SENTINEL),
-        "source_chip drift guard: expected \"protocol:debt_collector\""
+        msg.source.as_ref(),
+        Some(&SourceId::from(DEBT_COLLECTOR_SENTINEL)),
+        "source drift guard: expected \"protocol:debt_collector\""
     );
 
     // DebtCashOut removed; DebtStack unaffected (it wasn't present anyway).
@@ -90,8 +90,8 @@ fn bonus_uses_default_base_damage_when_bolt_base_damage_absent() {
         bonuses[0].amount
     );
     assert_eq!(
-        bonuses[0].source_chip.as_deref(),
-        Some(DEBT_COLLECTOR_SENTINEL)
+        bonuses[0].source.as_ref(),
+        Some(&SourceId::from(DEBT_COLLECTOR_SENTINEL))
     );
 }
 
@@ -206,7 +206,10 @@ fn zero_stack_cash_out_emits_bonus_with_amount_zero() {
     );
     assert_eq!(msg.dealer, Some(bolt));
     assert_eq!(msg.target, cell);
-    assert_eq!(msg.source_chip.as_deref(), Some(DEBT_COLLECTOR_SENTINEL));
+    assert_eq!(
+        msg.source.as_ref(),
+        Some(&SourceId::from(DEBT_COLLECTOR_SENTINEL))
+    );
     assert!(
         app.world().get::<DebtCashOut>(bolt).is_none(),
         "DebtCashOut removed even when amount is zero"
@@ -246,7 +249,10 @@ fn multiple_bolts_each_emit_their_own_bonus() {
         "bolt A amount = 10.0 × 1.5 = 15.0, got {}",
         msg_a.amount
     );
-    assert_eq!(msg_a.source_chip.as_deref(), Some(DEBT_COLLECTOR_SENTINEL));
+    assert_eq!(
+        msg_a.source.as_ref(),
+        Some(&SourceId::from(DEBT_COLLECTOR_SENTINEL))
+    );
 
     let msg_b = bonuses
         .iter()
@@ -258,7 +264,10 @@ fn multiple_bolts_each_emit_their_own_bonus() {
         "bolt B amount = 25.0 × 0.4 = 10.0, got {}",
         msg_b.amount
     );
-    assert_eq!(msg_b.source_chip.as_deref(), Some(DEBT_COLLECTOR_SENTINEL));
+    assert_eq!(
+        msg_b.source.as_ref(),
+        Some(&SourceId::from(DEBT_COLLECTOR_SENTINEL))
+    );
 }
 
 // ── Behavior 22 — untracked bolt is tolerated ──────────────────────────────-

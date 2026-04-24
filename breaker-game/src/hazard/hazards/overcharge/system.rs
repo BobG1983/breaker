@@ -18,7 +18,6 @@ use crate::{
         resources::{ActiveHazards, hazard_active},
     },
     prelude::*,
-    shared::death_pipeline::Destroyed,
 };
 
 /// Source tag for Overcharge's entry on the Bolt's
@@ -98,7 +97,7 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
 ///   source-`"hazard:overcharge"` entry.
 ///
 /// Ordering: `overcharge_count_kills` → `overcharge_reset_on_bump` →
-/// `overcharge_apply_speed`. No `DeathPipelineSystems` ordering —
+/// `overcharge_apply_speed`. No `DmgSystems` ordering —
 /// Overcharge operates on the shared effect system, not the heal /
 /// damage pipeline.
 pub(crate) fn register(app: &mut App) {

@@ -11,7 +11,7 @@ use crate::{
         test_utils::speed_stack,
     },
     prelude::*,
-    shared::{GameDrawLayer, death_pipeline::kill_yourself::KillYourself},
+    shared::GameDrawLayer,
 };
 
 #[test]

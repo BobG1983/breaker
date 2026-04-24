@@ -381,10 +381,14 @@ fn apply_hit_outcome(
         piercing_remaining: piercing_at_impact,
     });
     damage_writer.write(DamageDealt {
-        dealer:      Some(bolt.entity),
-        target:      hit.entity,
-        amount:      cell_damage,
-        source_chip: bolt.collision.spawned_by_evolution.map(|s| s.0.clone()),
-        _marker:     PhantomData::<Cell>,
+        dealer:        Some(bolt.entity),
+        attributed_to: None,
+        target:        hit.entity,
+        amount:        cell_damage,
+        source:        bolt
+            .collision
+            .spawned_by_evolution
+            .map(|s| SourceId::from(s.0.clone())),
+        _marker:       PhantomData::<Cell>,
     });
 }

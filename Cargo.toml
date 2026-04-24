@@ -73,6 +73,7 @@ wildcard_imports        = "allow" # Project convention: globs for 4+ items from 
 cast_precision_loss       = "allow" # A lot of small f32 to u32 conversions
 cast_sign_loss            = "allow" # Piercing charges, HP — small non-negative f32→u32
 cast_possible_truncation  = "allow" # Piercing charges, HP — small non-negative f32→u32
+implicit_hasher           = "allow" # Bevy system fns take Local<HashSet<_>> — can't be generic over BuildHasher (trait can't infer S at registration)
 [profile.dev]
 opt-level = 1
 

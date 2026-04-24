@@ -111,11 +111,12 @@ pub(crate) fn apply_pulse_damage(
                 damaged.0.insert(cell_entity);
                 let damage = base_dmg.0 * dmg_mult.0;
                 damage_writer.write(DamageDealt {
-                    dealer:      Some(ring_entity),
-                    target:      cell_entity,
-                    amount:      damage,
-                    source_chip: chip.and_then(|c| c.0.clone()),
-                    _marker:     std::marker::PhantomData,
+                    dealer:        Some(ring_entity),
+                    attributed_to: None,
+                    target:        cell_entity,
+                    amount:        damage,
+                    source:        chip.and_then(|c| c.0.clone()).map(SourceId::from),
+                    _marker:       std::marker::PhantomData,
                 });
             }
         }

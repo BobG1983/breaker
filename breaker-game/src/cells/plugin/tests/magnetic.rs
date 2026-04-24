@@ -30,7 +30,7 @@ fn cells_plugin_registers_apply_magnetic_fields_in_playing() {
         Position2D(Vec2::ZERO),
         Aabb2D::new(Vec2::ZERO, Vec2::splat(5.0)),
         Hp::new(20.0),
-        KilledBy::default(),
+        KilledBy { killer: None },
     ));
 
     // Spawn bolt at (50, 0) with velocity (0, 400)
@@ -71,7 +71,7 @@ fn cells_plugin_magnetic_does_not_run_in_loading_state() {
         Position2D(Vec2::ZERO),
         Aabb2D::new(Vec2::ZERO, Vec2::splat(5.0)),
         Hp::new(20.0),
-        KilledBy::default(),
+        KilledBy { killer: None },
     ));
 
     // Spawn bolt

@@ -52,29 +52,48 @@ Post-TODO #1, Tether lives in `mutators/hazards/tether/` and participates in `De
   4. Using seeded `GameRng` (from run seed + node index), randomly select `coverage_percent` of eligible pairs.
   5. Insert `TetherLink { partner }` on both cells in each selected pair.
 
-### `tether_mutate_damage`
-- **Schedule**: `FixedUpdate`, in `DeathPipelineSystems::MutateDamage`. Ordering within the chain is set by `wire_damage_chain` (TODO #1) — Diffusion first, then Tether; deterministic.
+### `tether_emit_partner`
+- **Schedule**: `FixedUpdate`, in `DmgSystems::PostApply`.
 - **run_if**: `hazard_active(HazardKind::Tether)` + `in_state(NodeState::Playing)`.
-- **Behavior**: For each `DamageDealt<Cell>`:
-  1. If the target has a `TetherLink` and the partner is alive: compute `redirect = damage * damage_percent / 100.0`.
-  2. Emit an additional `DamageDealt<Cell> { target: partner, amount: redirect, source: Some("hazard:tether".into()), .. }`.
-  3. Original target's damage passes through unmodified.
+- **Behavior**: Reads current-frame `DamageDealt<Cell>` messages. For each primary:
+  1. Skip if the message `source` is `"hazard:tether"` (loop protection).
+  2. Skip if `msg.amount <= 0.0` — the invulnerable filter has zeroed the
+     primary; enforces the unified "invulnerable source → no ripple" rule
+     shared with Diffusion and Echo Strike.
+  3. Skip if the target has no `TetherLink`.
+  4. Compute `partner_amount = msg.amount * damage_pct / 100.0`.
+  5. Emit `DamageDealt<Cell> { target: partner, amount: partner_amount,
+     source: Some(SourceId::from("hazard:tether")), dealer: None,
+     attributed_to: msg.attributed_to.or(msg.dealer), .. }`. The partner
+     sibling traverses the full damage pipeline on the next `FixedUpdate`
+     tick (1-frame delay).
 
-Note: Tether's output `DamageDealt<Cell>` is NOT itself re-tethered — only original damage events from bolt/chip trigger Tether. Loop protection is enforced by a source check (`source != "hazard:tether"`) or by running the Tether mutator once per original message.
+Loop protection is via the `source == "hazard:tether"` check; the partner
+emission carries that source so a same-target feedback cycle never ignites.
 
 ### `cleanup_broken_tether_links`
-- **Schedule**: `FixedUpdate`, `.after(DeathPipelineSystems::ApplyKill)`.
+- **Schedule**: `FixedUpdate`, `.after(DmgSystems::ApplyKill)`.
 - **run_if**: `hazard_active(HazardKind::Tether)` + `in_state(NodeState::Playing)`.
 - **Behavior**: For each `TetherLink`, if the partner is dead or despawned, remove the `TetherLink` from the surviving cell.
 
 ## Pipeline position (dmg crate)
 
-- **Pre-apply damage mutator** in `DeathPipelineSystems::MutateDamage`.
-- Reads `DamageDealt<Cell>`, emits additional `DamageDealt<Cell>` for partners. Original passes through. Result feeds `ApplyVulnerable` → `ApplyDamage`.
-- Lives in `mutators/hazards/tether/` (post-TODO #1 consolidated domain).
-- Uses the `MessageMutator<DamageDealt<Cell>>` pattern from `rantzsoft_dmg`.
-- **Ordering within `MutateDamage`**: Diffusion first, then Tether (set by `wire_damage_chain`). Tether sees Diffusion-reduced damage and redirects a percentage of the reduced amount.
+- **Ripple emitter** in `DmgSystems::PostApply`. Reads the post-mutation,
+  post-invulnerable-filter, post-apply `DamageDealt<Cell>` message and emits
+  one partner sibling per tethered primary. The sibling is written into the
+  same `Messages<DamageDealt<Cell>>` buffer and traverses the FULL damage
+  pipeline on the next `FixedUpdate` tick (1-frame delay).
+- **Loop protection** via `source == "hazard:tether"` — the partner sibling
+  carries that source, so subsequent PostApply passes skip it.
+- **Invulnerable skip** via `msg.amount <= 0.0` — if the primary was
+  zeroed by `invulnerable_filter`, no partner emission happens.
+- **Kill attribution** travels via `attributed_to = msg.attributed_to.or(msg.dealer)`
+  on the partner emission, so a kill caused by partner damage attributes
+  to the original dealer via `KilledBy.killer`.
 - **No** `HealDealt<T>` / `DamageBoostStack` interaction.
+- `TETHER_SENTINEL` constant and `TetherRedirectBuffer` resource are
+  deleted — the partner emission now writes inline via
+  `ResMut<Messages<DamageDealt<Cell>>>`.
 
 ## Stacking Behavior
 

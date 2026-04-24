@@ -2,10 +2,7 @@ use bevy::prelude::*;
 use ordered_float::OrderedFloat;
 
 use super::super::config_impl::*;
-use crate::{
-    cells::components::Cell,
-    shared::{death_pipeline::DamageDealt, test_utils::TestAppBuilder},
-};
+use crate::{cells::components::Cell, prelude::*, shared::test_utils::TestAppBuilder};
 
 pub(super) fn piercing_test_app() -> App {
     TestAppBuilder::new()

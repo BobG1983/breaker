@@ -60,11 +60,12 @@ fn damage_only_pipeline_emits_destroyed_for_killing_blow() {
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<TestT>>>()
         .write(DamageDealt::<TestT> {
-            dealer:  Some(dealer),
-            target:  victim,
-            amount:  10.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        Some(dealer),
+            attributed_to: None,
+            target:        victim,
+            amount:        10.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     tick(&mut app);
 
@@ -97,11 +98,12 @@ fn damage_only_pipeline_overkill_still_emits_single_destroyed() {
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<TestT>>>()
         .write(DamageDealt::<TestT> {
-            dealer:  Some(dealer),
-            target:  victim,
-            amount:  15.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        Some(dealer),
+            attributed_to: None,
+            target:        victim,
+            amount:        15.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     tick(&mut app);
 
@@ -140,11 +142,12 @@ fn persistent_damage_boost_and_vulnerable_multiply_end_to_end() {
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<TestT>>>()
         .write(DamageDealt::<TestT> {
-            dealer:  Some(dealer),
-            target:  victim,
-            amount:  1.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        Some(dealer),
+            attributed_to: None,
+            target:        victim,
+            amount:        1.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     tick(&mut app);
 
@@ -181,11 +184,12 @@ fn persistent_boost_and_vulnerable_kill_when_amount_pushes_to_lethal() {
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<TestT>>>()
         .write(DamageDealt::<TestT> {
-            dealer:  Some(dealer),
-            target:  victim,
-            amount:  2.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        Some(dealer),
+            attributed_to: None,
+            target:        victim,
+            amount:        2.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     tick(&mut app);
 
@@ -219,11 +223,12 @@ fn damage_boost_one_shot_drains_persistent_survives_across_ticks() {
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<TestT>>>()
         .write(DamageDealt::<TestT> {
-            dealer:  Some(dealer),
-            target:  victim,
-            amount:  5.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        Some(dealer),
+            attributed_to: None,
+            target:        victim,
+            amount:        5.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     tick(&mut app);
     assert_f32_eq(app.world().get::<Hp>(victim).unwrap().current, 70.0);
@@ -232,11 +237,12 @@ fn damage_boost_one_shot_drains_persistent_survives_across_ticks() {
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<TestT>>>()
         .write(DamageDealt::<TestT> {
-            dealer:  Some(dealer),
-            target:  victim,
-            amount:  5.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        Some(dealer),
+            attributed_to: None,
+            target:        victim,
+            amount:        5.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     tick(&mut app);
     assert_f32_eq(app.world().get::<Hp>(victim).unwrap().current, 60.0);
@@ -267,11 +273,12 @@ fn damage_boost_persistent_is_not_drained_across_idle_tick() {
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<TestT>>>()
         .write(DamageDealt::<TestT> {
-            dealer:  Some(dealer),
-            target:  victim,
-            amount:  5.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        Some(dealer),
+            attributed_to: None,
+            target:        victim,
+            amount:        5.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     tick(&mut app);
     assert_f32_eq(app.world().get::<Hp>(victim).unwrap().current, 70.0);
@@ -279,11 +286,12 @@ fn damage_boost_persistent_is_not_drained_across_idle_tick() {
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<TestT>>>()
         .write(DamageDealt::<TestT> {
-            dealer:  Some(dealer),
-            target:  victim,
-            amount:  5.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        Some(dealer),
+            attributed_to: None,
+            target:        victim,
+            amount:        5.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     tick(&mut app);
     assert_f32_eq(app.world().get::<Hp>(victim).unwrap().current, 60.0);
@@ -313,11 +321,12 @@ fn vulnerable_one_shot_drains_persistent_survives_across_ticks() {
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<TestT>>>()
         .write(DamageDealt::<TestT> {
-            dealer:  Some(dealer),
-            target:  victim,
-            amount:  5.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        Some(dealer),
+            attributed_to: None,
+            target:        victim,
+            amount:        5.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     tick(&mut app);
     assert_f32_eq(app.world().get::<Hp>(victim).unwrap().current, 70.0);
@@ -326,11 +335,12 @@ fn vulnerable_one_shot_drains_persistent_survives_across_ticks() {
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<TestT>>>()
         .write(DamageDealt::<TestT> {
-            dealer:  Some(dealer),
-            target:  victim,
-            amount:  5.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        Some(dealer),
+            attributed_to: None,
+            target:        victim,
+            amount:        5.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     tick(&mut app);
     assert_f32_eq(app.world().get::<Hp>(victim).unwrap().current, 60.0);
@@ -353,22 +363,24 @@ fn vulnerable_persistent_is_not_drained_across_idle_tick() {
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<TestT>>>()
         .write(DamageDealt::<TestT> {
-            dealer:  Some(dealer),
-            target:  victim,
-            amount:  5.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        Some(dealer),
+            attributed_to: None,
+            target:        victim,
+            amount:        5.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     tick(&mut app);
 
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<TestT>>>()
         .write(DamageDealt::<TestT> {
-            dealer:  Some(dealer),
-            target:  victim,
-            amount:  5.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        Some(dealer),
+            attributed_to: None,
+            target:        victim,
+            amount:        5.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     tick(&mut app);
     assert_f32_eq(app.world().get::<Hp>(victim).unwrap().current, 60.0);
@@ -403,11 +415,12 @@ fn invulnerable_target_short_circuits_damage_end_to_end() {
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<TestT>>>()
         .write(DamageDealt::<TestT> {
-            dealer:  Some(dealer),
-            target:  victim,
-            amount:  5.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        Some(dealer),
+            attributed_to: None,
+            target:        victim,
+            amount:        5.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     tick(&mut app);
 

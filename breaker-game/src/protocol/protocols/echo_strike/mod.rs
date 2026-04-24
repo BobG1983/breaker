@@ -4,10 +4,9 @@
 //!
 //! Owns the `EchoStrikeConfig` resource (per-run tuning), the `EchoNetwork`
 //! and `EchoPrimed` per-bolt components, the four runtime systems
-//! (`echo_strike_on_bump`, `echo_strike_on_impact`,
-//! `echo_strike_cleanup_destroyed_echoes`, `echo_strike_cleanup_node`), the
-//! `ECHO_STRIKE_SENTINEL` source-chip tag, and the `activate` / `register`
-//! dispatch entry points.
+//! (`echo_strike_on_bump`, `echo_strike_emit_siblings`,
+//! `echo_strike_cleanup_destroyed_echoes`, `echo_strike_cleanup_node`), and
+//! the `activate` / `register` dispatch entry points.
 
 pub mod system;
 

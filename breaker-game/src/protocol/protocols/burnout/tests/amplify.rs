@@ -3,7 +3,7 @@
 //!
 //! Pins the `BoltImpactCell` consumer:
 //! - On a primed bolt (`BurnoutDamageBoost`), emits `DamageDealt<Cell>` with
-//!   `amount = base * boost.multiplier`, `source_chip =
+//!   `amount = base * boost.multiplier`, `source =
 //!   Some("protocol:burnout".into())`, gated on `amount > 0.0`.
 //! - Removes `BurnoutDamageBoost` unconditionally (single-shot).
 //! - Missing `BoltBaseDamage` falls back to `DEFAULT_BOLT_BASE_DAMAGE`.
@@ -55,9 +55,9 @@ fn boosted_bolt_first_cell_impact_emits_amplified_damage() {
         msg.amount
     );
     assert_eq!(
-        msg.source_chip.as_deref(),
-        Some("protocol:burnout"),
-        "source_chip must be the Burnout sentinel"
+        msg.source.as_ref(),
+        Some(&SourceId::from("protocol:burnout")),
+        "source must be the Burnout sentinel"
     );
     assert!(
         app.world().get::<BurnoutDamageBoost>(bolt).is_none(),
@@ -353,8 +353,8 @@ fn every_emitted_message_carries_burnout_sentinel_and_respective_dealer() {
     assert_eq!(msgs.len(), 2);
     for msg in &msgs {
         assert_eq!(
-            msg.source_chip.as_deref(),
-            Some("protocol:burnout"),
+            msg.source.as_ref(),
+            Some(&SourceId::from("protocol:burnout")),
             "every amplified message must carry the Burnout sentinel"
         );
     }

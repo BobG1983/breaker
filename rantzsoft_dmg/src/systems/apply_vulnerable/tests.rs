@@ -61,6 +61,7 @@ fn drain_messages(app: &mut App) -> Vec<DamageDealt<TestT>> {
 fn mk_msg(dealer: Option<Entity>, target: Entity, amount: f32) -> DamageDealt<TestT> {
     DamageDealt::<TestT> {
         dealer,
+        attributed_to: None,
         target,
         amount,
         source: None,

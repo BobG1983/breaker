@@ -9,8 +9,7 @@ use crate::{
         definition::{HazardKind, HazardTuning},
         resources::ActiveHazards,
     },
-    prelude::*,
-    shared::death_pipeline::Destroyed,
+    prelude::{Destroyed, *},
 };
 
 pub(super) fn test_app_playing() -> App {

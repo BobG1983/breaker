@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use rantzsoft_dmg::{RantzDmgAppExt, RantzDmgPlugin};
 use rantzsoft_physics2d::resources::CollisionQuadtree;
 
 use super::{
@@ -10,13 +11,10 @@ use super::{
     },
 };
 use crate::{
-    cells::test_utils::spawn_cell_in_world,
+    cells::{behaviors::survival::salvo::components::Salvo, test_utils::spawn_cell_in_world},
     effect_v3::EffectV3Plugin,
     prelude::*,
-    shared::death_pipeline::{
-        DeathPipelinePlugin, sets::DeathPipelineSystems,
-        systems::tests::helpers::register_effect_v3_test_infrastructure,
-    },
+    shared::test_utils::register_effect_v3_test_infrastructure,
 };
 
 /// Builds a plugin app that stays in Loading state.
@@ -36,7 +34,13 @@ fn survival_plugin_app_loading() -> App {
         .init_resource::<crate::shared::playfield::PlayfieldConfig>();
     // Configure BoltSystems::CellCollision so the set exists without BoltPlugin
     app.configure_sets(FixedUpdate, crate::bolt::sets::BoltSystems::CellCollision);
-    app.add_plugins(DeathPipelinePlugin);
+    app.add_plugins(RantzDmgPlugin);
+    let _ = app
+        .register_dmgable::<Bolt>()
+        .register_dmgable::<Wall>()
+        .register_dmgable::<Breaker>()
+        .register_dmgable::<Salvo>()
+        .register_dmgable::<Cell>();
     register_effect_v3_test_infrastructure(&mut app);
     app.add_plugins(EffectV3Plugin);
     app.add_plugins(CellsPlugin);
@@ -53,7 +57,7 @@ fn survival_plugin_app_loading() -> App {
     );
     app.add_systems(
         FixedUpdate,
-        enqueue_plugin_breaker_impact.before(DeathPipelineSystems::ApplyDamage),
+        enqueue_plugin_breaker_impact.before(DmgSystems::ApplyDamage),
     );
     app
 }

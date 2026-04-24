@@ -16,11 +16,7 @@ use super::{
         install_renewal_config, spawn_cell, spawn_cell_with_max, test_app_playing, tick_with_dt,
     },
 };
-use crate::{
-    cells::components::Cell,
-    prelude::*,
-    shared::death_pipeline::{HealCap, heal_dealt::HealDealt},
-};
+use crate::{cells::components::Cell, prelude::*};
 
 // ── Behavior 20 — Every emitted message has cap == HealCap::Starting ─────
 
@@ -89,7 +85,7 @@ fn every_message_source_is_hazard_renewal() {
     assert_eq!(all.len(), 2);
     assert!(
         all.iter()
-            .all(|m| m.source.as_deref() == Some("hazard:renewal")),
+            .all(|m| m.source == Some(SourceId::from("hazard:renewal"))),
         "every emitted message must have source == Some(\"hazard:renewal\")"
     );
 }
@@ -127,7 +123,7 @@ fn source_remains_hazard_renewal_after_second_expiry_cycle() {
     );
     assert!(
         all.iter()
-            .all(|m| m.source.as_deref() == Some("hazard:renewal")),
+            .all(|m| m.source == Some(SourceId::from("hazard:renewal"))),
         "every emitted message must have source hazard:renewal"
     );
 }

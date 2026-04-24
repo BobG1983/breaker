@@ -15,7 +15,6 @@ use crate::{
     },
     breaker::filters::CollisionFilterBreaker,
     prelude::*,
-    shared::death_pipeline::kill_yourself::KillYourself,
 };
 
 /// Bundled message writers for `bolt_lost` to satisfy clippy's
@@ -86,7 +85,7 @@ pub(crate) fn bolt_lost(
         });
         if entry.is_extra {
             // Unified death pipeline: write KillYourself<Bolt>. handle_kill<Bolt>
-            // (registered by DeathPipelinePlugin) will mark Dead, emit
+            // (registered by RantzDmgPlugin) will mark Dead, emit
             // Destroyed<Bolt> (read by the effect_v3 death bridge), and enqueue
             // DespawnEntity for FixedPostUpdate.
             writers.kill_yourself.write(KillYourself::<Bolt> {

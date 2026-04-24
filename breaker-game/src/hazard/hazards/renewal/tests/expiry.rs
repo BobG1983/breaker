@@ -19,7 +19,7 @@ use super::{
 };
 use crate::{
     hazard::{definition::HazardKind, resources::ActiveHazards},
-    shared::death_pipeline::{HealCap, Hp},
+    prelude::{HealCap, Hp, SourceId},
 };
 
 // ── Behavior 13 — Damaged cell: timer expiry emits one HealDealt<Cell> ────
@@ -47,7 +47,7 @@ fn damaged_cell_expiry_emits_one_heal_with_correct_fields() {
     );
     assert!(matches!(msg.cap, HealCap::Starting));
     assert_eq!(msg.healer, None);
-    assert_eq!(msg.source, Some("hazard:renewal".to_string()));
+    assert_eq!(msg.source, Some(SourceId::from("hazard:renewal")));
 }
 
 #[test]
@@ -354,7 +354,7 @@ fn three_damaged_cells_each_emit_their_own_heal() {
     assert_eq!(msgs_a.len(), 1);
     assert!((msgs_a[0].amount - 70.0).abs() < f32::EPSILON);
     assert!(matches!(msgs_a[0].cap, HealCap::Starting));
-    assert_eq!(msgs_a[0].source, Some("hazard:renewal".to_string()));
+    assert_eq!(msgs_a[0].source, Some(SourceId::from("hazard:renewal")));
 
     let msgs_b = heals_for_cell(&app, cell_b);
     assert_eq!(msgs_b.len(), 1);

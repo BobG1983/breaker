@@ -134,11 +134,12 @@ fn per_t_queues_are_isolated() {
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<TestT>>>()
         .write(DamageDealt::<TestT> {
-            dealer:  None,
-            target:  Entity::PLACEHOLDER,
-            amount:  1.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        None,
+            attributed_to: None,
+            target:        Entity::PLACEHOLDER,
+            amount:        1.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     tick(&mut app);
 
@@ -218,6 +219,7 @@ fn apply_damage_boosts_runs_in_pipeline() {
         .resource_mut::<Messages<DamageDealt<TestT>>>()
         .write(DamageDealt::<TestT> {
             dealer: Some(dealer),
+            attributed_to: None,
             target,
             amount: 5.0,
             source: None,
@@ -230,7 +232,7 @@ fn apply_damage_boosts_runs_in_pipeline() {
         .world()
         .get::<KilledBy>(target)
         .expect("KilledBy expected on killing blow");
-    assert_eq!(killed_by.dealer, Some(dealer));
+    assert_eq!(killed_by.killer, Some(dealer));
 }
 
 #[test]
@@ -256,6 +258,7 @@ fn invulnerable_filter_zeroes_damage_within_apply_damage_set() {
         .resource_mut::<Messages<DamageDealt<TestT>>>()
         .write(DamageDealt::<TestT> {
             dealer: Some(dealer),
+            attributed_to: None,
             target,
             amount: 5.0,
             source: None,
@@ -286,6 +289,7 @@ fn apply_vulnerable_runs_in_pipeline() {
         .resource_mut::<Messages<DamageDealt<TestT>>>()
         .write(DamageDealt::<TestT> {
             dealer: None,
+            attributed_to: None,
             target,
             amount: 5.0,
             source: None,
@@ -376,6 +380,7 @@ fn apply_heal_runs_in_pipeline() {
         .resource_mut::<Messages<HealDealt<TestT>>>()
         .write(HealDealt::<TestT> {
             healer: None,
+            attributed_to: None,
             target,
             amount: 3.0,
             source: None,
@@ -403,6 +408,7 @@ fn test_t_and_other_t_pipelines_are_independent() {
         .resource_mut::<Messages<DamageDealt<TestT>>>()
         .write(DamageDealt::<TestT> {
             dealer: None,
+            attributed_to: None,
             target,
             amount: 10.0,
             source: None,
@@ -413,6 +419,7 @@ fn test_t_and_other_t_pipelines_are_independent() {
         .resource_mut::<Messages<DamageDealt<OtherT>>>()
         .write(DamageDealt::<OtherT> {
             dealer: None,
+            attributed_to: None,
             target,
             amount: 10.0,
             source: None,
@@ -439,11 +446,12 @@ fn end_to_end_kill_and_despawn() {
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<TestT>>>()
         .write(DamageDealt::<TestT> {
-            dealer:  Some(dealer),
-            target:  victim,
-            amount:  5.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        Some(dealer),
+            attributed_to: None,
+            target:        victim,
+            amount:        5.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     tick(&mut app);
 
@@ -483,11 +491,12 @@ fn end_to_end_kill_with_positioned_dealer_records_killer_pos() {
     app.world_mut()
         .resource_mut::<Messages<DamageDealt<TestT>>>()
         .write(DamageDealt::<TestT> {
-            dealer:  Some(dealer),
-            target:  victim,
-            amount:  5.0,
-            source:  None,
-            _marker: PhantomData,
+            dealer:        Some(dealer),
+            attributed_to: None,
+            target:        victim,
+            amount:        5.0,
+            source:        None,
+            _marker:       PhantomData,
         });
     tick(&mut app);
 

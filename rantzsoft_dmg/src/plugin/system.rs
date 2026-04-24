@@ -1,7 +1,7 @@
 //! `RantzDmgPlugin` — the damage-pipeline plugin skeleton.
 //!
 //! The plugin registers the non-generic `DespawnEntity` message, configures
-//! the 11-variant `DmgSystems` chain under `FixedUpdate`, and schedules a
+//! the 16-variant `DmgSystems` chain under `FixedUpdate`, and schedules a
 //! no-op `process_despawn_requests` stub in `FixedPostUpdate`. Per-`T`
 //! generic messages (`DamageDealt<T>`, `HealDealt<T>`, `KillYourself<T>`,
 //! `Destroyed<T>`) and per-`T` generic systems are registered later by
@@ -24,16 +24,21 @@ impl Plugin for RantzDmgPlugin {
             FixedUpdate,
             (
                 DmgSystems::EmitDamage,
+                DmgSystems::PostEmitDamage,
                 DmgSystems::ApplyDamageBoosts,
                 DmgSystems::MutateDamage,
+                DmgSystems::PostMutateDamage,
                 DmgSystems::ApplyVulnerable,
                 DmgSystems::ApplyDamage,
+                DmgSystems::PostApplyDamage,
                 DmgSystems::EmitKill,
                 DmgSystems::MutateKill,
                 DmgSystems::ApplyKill,
+                DmgSystems::PostApplyKill,
                 DmgSystems::EmitHeal,
                 DmgSystems::MutateHeal,
                 DmgSystems::ApplyHeal,
+                DmgSystems::PostApplyHeal,
             )
                 .chain(),
         );

@@ -4,8 +4,8 @@ use bevy::prelude::*;
 
 use super::helpers::*;
 use crate::{
-    cells::components::SequenceActive, prelude::*,
-    shared::death_pipeline::kill_yourself::KillYourself,
+    cells::components::SequenceActive,
+    prelude::{KillYourself, *},
 };
 
 // Behavior 10
@@ -180,9 +180,9 @@ fn reset_clears_killed_by_dealer_on_non_active_cell() {
         .get::<KilledBy>(e1)
         .expect("e1 should still have KilledBy");
     assert!(
-        killed_by.dealer.is_none(),
+        killed_by.killer.is_none(),
         "reset must clear KilledBy.dealer back to None, got {:?}",
-        killed_by.dealer
+        killed_by.killer
     );
     assert!(app.world().get::<Dead>(e1).is_none());
 
@@ -206,12 +206,12 @@ fn legitimate_killing_blow_records_new_dealer_after_reset_clears_stale_dealer() 
     push_damage(&mut app, damage_msg_from(e1, 25.0, bolt_a));
     tick(&mut app);
 
-    // Sanity: reset restored HP and cleared the dealer.
+    // Sanity: reset restored HP and cleared the killer.
     let e1_hp = app.world().get::<Hp>(e1).expect("e1 should still have Hp");
     assert!((e1_hp.current - 20.0).abs() < f32::EPSILON);
     assert!(
-        app.world().get::<KilledBy>(e1).unwrap().dealer.is_none(),
-        "reset should have cleared KilledBy.dealer after tick 1"
+        app.world().get::<KilledBy>(e1).unwrap().killer.is_none(),
+        "reset should have cleared KilledBy.killer after tick 1"
     );
 
     // Promote e1 to active manually so a legitimate killing blow can land.
@@ -375,8 +375,8 @@ fn three_consecutive_lethal_ticks_all_reset_non_active_cell() {
 // behind `if hp.current < hp.starting`. To detect a buggy variant that removes
 // the guard and unconditionally writes `hp.current = ceiling`, the test uses
 // a non-active cell at full health (`current == starting == 20.0`) and
-// pre-seeds `killed_by.dealer` with a fake entity. An unguarded implementation
-// that unconditionally clears `killed_by.dealer = None` would observably clear
+// pre-seeds `killed_by.killer` with a fake entity. An unguarded implementation
+// that unconditionally clears `killed_by.killer = None` would observably clear
 // the seeded dealer; the guarded implementation short-circuits at
 // `if hp.current < hp.starting` and leaves both fields untouched.
 
@@ -390,7 +390,7 @@ fn reset_is_noop_on_idle_non_active_cell_at_ceiling() {
     // Pre-seed a fake dealer so an unguarded reset would observably clear it.
     let fake_dealer = app.world_mut().spawn_empty().id();
     app.world_mut().entity_mut(e1).insert(KilledBy {
-        dealer: Some(fake_dealer),
+        killer: Some(fake_dealer),
     });
     advance_to_playing(&mut app);
 
@@ -404,16 +404,16 @@ fn reset_is_noop_on_idle_non_active_cell_at_ceiling() {
     );
     let killed_by = app.world().get::<KilledBy>(e1).unwrap();
     assert_eq!(
-        killed_by.dealer,
+        killed_by.killer,
         Some(fake_dealer),
-        "guarded implementation must NOT clear killed_by.dealer on idle non-active cells — an unguarded impl would land None here",
+        "guarded implementation must NOT clear killed_by.killer on idle non-active cells — an unguarded impl would land None here",
     );
     assert!(app.world().get::<Dead>(e1).is_none());
 }
 
 // Behavior 15a edge: ten idle ticks in a row.
 //
-// Same regression guard as the single-tick case: seeds `killed_by.dealer` so
+// Same regression guard as the single-tick case: seeds `killed_by.killer` so
 // an unguarded implementation is observably detectable via dealer clearing.
 #[test]
 fn reset_is_noop_across_ten_idle_ticks() {
@@ -422,7 +422,7 @@ fn reset_is_noop_across_ten_idle_ticks() {
     let e1 = spawn_sequence_cell(&mut app, Vec2::new(0.0, 0.0), 1, 1, 20.0);
     let fake_dealer = app.world_mut().spawn_empty().id();
     app.world_mut().entity_mut(e1).insert(KilledBy {
-        dealer: Some(fake_dealer),
+        killer: Some(fake_dealer),
     });
     advance_to_playing(&mut app);
 
@@ -436,9 +436,9 @@ fn reset_is_noop_across_ten_idle_ticks() {
         );
         let killed_by = app.world().get::<KilledBy>(e1).unwrap();
         assert_eq!(
-            killed_by.dealer,
+            killed_by.killer,
             Some(fake_dealer),
-            "idle tick {i}: guarded impl must NOT clear killed_by.dealer",
+            "idle tick {i}: guarded impl must NOT clear killed_by.killer",
         );
     }
 }
@@ -451,7 +451,7 @@ fn reset_is_noop_across_ten_idle_ticks() {
 // exact predicate for "was hit this tick." A buggy variant that uses `ceiling`
 // as the guard would fire on an idle cell whose `max` exceeds `starting`,
 // giving the cell a free heal to ceiling every tick and clearing
-// `killed_by.dealer` spuriously.
+// `killed_by.killer` spuriously.
 #[test]
 fn reset_is_noop_on_idle_cell_with_max_above_starting() {
     let mut app = build_sequence_test_app();
@@ -462,7 +462,7 @@ fn reset_is_noop_on_idle_cell_with_max_above_starting() {
     let e1 = spawn_sequence_cell_with_max(&mut app, Vec2::new(0.0, 0.0), 1, 1, 20.0, 30.0);
     let fake_dealer = app.world_mut().spawn_empty().id();
     app.world_mut().entity_mut(e1).insert(KilledBy {
-        dealer: Some(fake_dealer),
+        killer: Some(fake_dealer),
     });
     advance_to_playing(&mut app);
 
@@ -481,9 +481,9 @@ fn reset_is_noop_on_idle_cell_with_max_above_starting() {
     );
     let killed_by = app.world().get::<KilledBy>(e1).unwrap();
     assert_eq!(
-        killed_by.dealer,
+        killed_by.killer,
         Some(fake_dealer),
-        "idle cell with max > starting must NOT have killed_by.dealer cleared",
+        "idle cell with max > starting must NOT have killed_by.killer cleared",
     );
 }
 

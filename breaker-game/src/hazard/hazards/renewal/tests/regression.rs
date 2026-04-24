@@ -15,7 +15,7 @@ use super::{
         install_renewal_config, spawn_cell, spawn_cell_with_max, test_app_playing, tick_with_dt,
     },
 };
-use crate::shared::death_pipeline::Hp;
+use crate::prelude::Hp;
 
 // ── Behavior 36 — renewal_tick must NOT mutate Hp.current directly ────────
 

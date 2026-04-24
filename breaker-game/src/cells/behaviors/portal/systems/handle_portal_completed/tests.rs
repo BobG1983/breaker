@@ -8,8 +8,7 @@ use bevy::prelude::*;
 use super::system::handle_portal_completed;
 use crate::{
     cells::{behaviors::portal::components::PortalCell, messages::PortalCompleted},
-    prelude::*,
-    shared::death_pipeline::kill_yourself::KillYourself,
+    prelude::{KillYourself, *},
 };
 
 // ── Pending message injection ─────────────────────────────────────────────
@@ -61,7 +60,7 @@ fn portal_completed_emits_kill_yourself_for_portal_cell() {
 
     let portal = app
         .world_mut()
-        .spawn((Cell, PortalCell, Hp::new(100.0), KilledBy::default()))
+        .spawn((Cell, PortalCell, Hp::new(100.0), KilledBy { killer: None }))
         .id();
 
     push_portal_completed(&mut app, PortalCompleted { portal });
@@ -97,11 +96,17 @@ fn portal_completed_for_dead_cell_does_not_panic() {
 
     let dead_portal = app
         .world_mut()
-        .spawn((Cell, PortalCell, Hp::new(100.0), KilledBy::default(), Dead))
+        .spawn((
+            Cell,
+            PortalCell,
+            Hp::new(100.0),
+            KilledBy { killer: None },
+            Dead,
+        ))
         .id();
     let live_portal = app
         .world_mut()
-        .spawn((Cell, PortalCell, Hp::new(100.0), KilledBy::default()))
+        .spawn((Cell, PortalCell, Hp::new(100.0), KilledBy { killer: None }))
         .id();
 
     push_portal_completed(
@@ -139,7 +144,7 @@ fn portal_completed_for_missing_entity_does_not_panic() {
 
     let real_portal = app
         .world_mut()
-        .spawn((Cell, PortalCell, Hp::new(100.0), KilledBy::default()))
+        .spawn((Cell, PortalCell, Hp::new(100.0), KilledBy { killer: None }))
         .id();
 
     push_portal_completed(

@@ -1,11 +1,7 @@
 use bevy::prelude::*;
 
 use super::{super::system::*, helpers::*};
-use crate::{
-    cells::components::Cell,
-    prelude::*,
-    shared::death_pipeline::{HealCap, heal_dealt::HealDealt},
-};
+use crate::{cells::components::Cell, prelude::*};
 
 // ════════════════════════════════════════════════════════════════════════════
 // Group F — Message-field invariants
@@ -98,7 +94,7 @@ fn every_message_source_is_hazard_cascade() {
     assert_eq!(all.len(), 2);
     assert!(
         all.iter()
-            .all(|m| m.source.as_deref() == Some("hazard:cascade"))
+            .all(|m| m.source == Some(SourceId::from("hazard:cascade")))
     );
     // Bind n so compiler doesn't warn on unused:
     let _ = n;

@@ -102,7 +102,10 @@ fn register_wires_on_impact_gated_on_active_and_playing() {
         "amount expected 10.0 (= 10.0 × 1.0), got {}",
         msg.amount
     );
-    assert_eq!(msg.source_chip.as_deref(), Some(DEBT_COLLECTOR_SENTINEL));
+    assert_eq!(
+        msg.source.as_ref(),
+        Some(&SourceId::from(DEBT_COLLECTOR_SENTINEL))
+    );
 }
 
 // ── Behavior 40 — on_impact gated off when NOT active ──────────────────────-

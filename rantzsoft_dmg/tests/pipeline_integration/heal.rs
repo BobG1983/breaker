@@ -64,12 +64,13 @@ fn heal_raises_current_below_starting_cap() {
     app.world_mut()
         .resource_mut::<Messages<HealDealt<TestT>>>()
         .write(HealDealt::<TestT> {
-            healer:  None,
-            target:  victim,
-            amount:  5.0,
-            source:  None,
-            cap:     HealCap::Starting,
-            _marker: PhantomData,
+            healer:        None,
+            attributed_to: None,
+            target:        victim,
+            amount:        5.0,
+            source:        None,
+            cap:           HealCap::Starting,
+            _marker:       PhantomData,
         });
     tick(&mut app);
 
@@ -97,12 +98,13 @@ fn heal_clamps_at_starting_when_cap_is_starting_even_if_max_is_higher() {
     app.world_mut()
         .resource_mut::<Messages<HealDealt<TestT>>>()
         .write(HealDealt::<TestT> {
-            healer:  None,
-            target:  victim,
-            amount:  100.0,
-            source:  None,
-            cap:     HealCap::Starting,
-            _marker: PhantomData,
+            healer:        None,
+            attributed_to: None,
+            target:        victim,
+            amount:        100.0,
+            source:        None,
+            cap:           HealCap::Starting,
+            _marker:       PhantomData,
         });
     tick(&mut app);
 
@@ -130,12 +132,13 @@ fn heal_clamps_at_max_when_cap_is_max() {
     app.world_mut()
         .resource_mut::<Messages<HealDealt<TestT>>>()
         .write(HealDealt::<TestT> {
-            healer:  None,
-            target:  victim,
-            amount:  100.0,
-            source:  None,
-            cap:     HealCap::Max,
-            _marker: PhantomData,
+            healer:        None,
+            attributed_to: None,
+            target:        victim,
+            amount:        100.0,
+            source:        None,
+            cap:           HealCap::Max,
+            _marker:       PhantomData,
         });
     tick(&mut app);
 
@@ -163,12 +166,13 @@ fn heal_over_cap_short_circuits_when_current_already_at_max() {
     app.world_mut()
         .resource_mut::<Messages<HealDealt<TestT>>>()
         .write(HealDealt::<TestT> {
-            healer:  None,
-            target:  victim,
-            amount:  1.0,
-            source:  None,
-            cap:     HealCap::Max,
-            _marker: PhantomData,
+            healer:        None,
+            attributed_to: None,
+            target:        victim,
+            amount:        1.0,
+            source:        None,
+            cap:           HealCap::Max,
+            _marker:       PhantomData,
         });
     tick(&mut app);
 
@@ -226,6 +230,7 @@ fn heal_on_dead_or_invulnerable_is_noop_and_live_victim_heals_same_tick() {
             .resource_mut::<Messages<HealDealt<TestT>>>()
             .write(HealDealt::<TestT> {
                 healer: None,
+                attributed_to: None,
                 target,
                 amount: 5.0,
                 source: None,

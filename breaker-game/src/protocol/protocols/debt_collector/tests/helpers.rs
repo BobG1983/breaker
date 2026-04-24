@@ -200,7 +200,7 @@ pub(super) fn write_bolt_impact_cell(app: &mut App, bolt: Entity, cell: Entity) 
 
 // ── Assertion helpers ───────────────────────────────────────────────────────
 
-/// Returns every captured `DamageDealt<Cell>` whose `source_chip` matches
+/// Returns every captured `DamageDealt<Cell>` whose `source` matches
 /// the Debt Collector sentinel string. Isolates Debt Collector's bonus
 /// emissions from any other `DamageDealt<Cell>` messages.
 pub(super) fn collected_bonus_damage(app: &App) -> Vec<DamageDealt<Cell>> {
@@ -208,11 +208,7 @@ pub(super) fn collected_bonus_damage(app: &App) -> Vec<DamageDealt<Cell>> {
         .resource::<MessageCollector<DamageDealt<Cell>>>()
         .0
         .iter()
-        .filter(|msg| {
-            msg.source_chip
-                .as_deref()
-                .is_some_and(|s| s == "protocol:debt_collector")
-        })
+        .filter(|msg| msg.source == Some(SourceId::from("protocol:debt_collector")))
         .cloned()
         .collect()
 }

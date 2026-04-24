@@ -45,11 +45,12 @@ pub(crate) fn tick_tether_beam(
 
             if along >= 0.0 && along <= beam_len && across <= beam_width {
                 damage_writer.write(DamageDealt {
-                    dealer:      Some(beam_entity),
-                    target:      cell_entity,
-                    amount:      beam_damage.0,
-                    source_chip: chip.and_then(|c| c.0.clone()),
-                    _marker:     std::marker::PhantomData,
+                    dealer:        Some(beam_entity),
+                    attributed_to: None,
+                    target:        cell_entity,
+                    amount:        beam_damage.0,
+                    source:        chip.and_then(|c| c.0.clone()).map(SourceId::from),
+                    _marker:       std::marker::PhantomData,
                 });
             }
         }
