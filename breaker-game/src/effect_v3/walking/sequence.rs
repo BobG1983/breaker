@@ -52,10 +52,13 @@ mod tests {
     use ordered_float::OrderedFloat;
 
     use super::*;
-    use crate::effect_v3::{
-        effects::{DamageBoostConfig, SpeedBoostConfig},
-        stacking::EffectStack,
-        types::EffectType,
+    use crate::{
+        effect_v3::{
+            effects::{DamageBoostConfig, SpeedBoostConfig},
+            stacking::EffectStack,
+            types::EffectType,
+        },
+        prelude::DamageBoostStack,
     };
 
     #[test]
@@ -82,7 +85,12 @@ mod tests {
         let speed_stack = world.get::<EffectStack<SpeedBoostConfig>>(entity).unwrap();
         assert_eq!(speed_stack.len(), 1);
 
-        let dmg_stack = world.get::<EffectStack<DamageBoostConfig>>(entity).unwrap();
-        assert_eq!(dmg_stack.len(), 1);
+        let dmg_stack = world.get::<DamageBoostStack>(entity).unwrap();
+        assert!(!dmg_stack.is_empty());
+        assert!(
+            (dmg_stack.aggregate_persistent() - 2.0).abs() < 1e-5,
+            "DamageBoostStack aggregate should be 2.0, got {}",
+            dmg_stack.aggregate_persistent()
+        );
     }
 }

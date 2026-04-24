@@ -10,7 +10,6 @@ use crate::{
     },
     effect_v3::{
         effects::DamageBoostConfig,
-        stacking::EffectStack,
         types::{EffectType, StampTarget, Tree},
     },
     prelude::*,
@@ -41,9 +40,14 @@ fn unknown_chip_name_does_not_panic() {
 
     let stack = app
         .world()
-        .get::<EffectStack<DamageBoostConfig>>(breaker)
-        .unwrap();
-    assert_eq!(stack.len(), 1, "Valid chip should have fired");
+        .get::<DamageBoostStack>(breaker)
+        .expect("Valid chip should have fired");
+    assert!(!stack.is_empty());
+    assert!(
+        (stack.aggregate_persistent() - 1.1).abs() < 1e-5,
+        "Valid chip should have fired a single 1.1 multiplier; got aggregate {}",
+        stack.aggregate_persistent()
+    );
 
     let bound = app.world().get::<BoundEffects>(breaker).unwrap();
     assert!(
@@ -68,9 +72,13 @@ fn missing_chip_catalog_resource_does_not_panic() {
 
     let stack = proof_app
         .world()
-        .get::<EffectStack<DamageBoostConfig>>(proof_breaker)
-        .unwrap();
-    assert_eq!(stack.len(), 1, "Proof: system works with catalog");
+        .get::<DamageBoostStack>(proof_breaker)
+        .expect("Proof: system works with catalog");
+    assert!(
+        !stack.is_empty() && (stack.aggregate_persistent() - 1.1).abs() < 1e-5,
+        "Proof: DamageBoostStack should hold a single 1.1 entry, got aggregate {}",
+        stack.aggregate_persistent()
+    );
 
     // --- Now test without catalog ---
     let mut app = TestAppBuilder::new()
@@ -119,9 +127,13 @@ fn missing_chip_inventory_resource_does_not_panic() {
 
     let stack = proof_app
         .world()
-        .get::<EffectStack<DamageBoostConfig>>(proof_breaker)
-        .unwrap();
-    assert_eq!(stack.len(), 1, "Proof: system works with inventory");
+        .get::<DamageBoostStack>(proof_breaker)
+        .expect("Proof: system works with inventory");
+    assert!(
+        !stack.is_empty() && (stack.aggregate_persistent() - 1.1).abs() < 1e-5,
+        "Proof: DamageBoostStack should hold a single 1.1 entry, got aggregate {}",
+        stack.aggregate_persistent()
+    );
 
     // --- Now test without inventory ---
     let mut app = TestAppBuilder::new()
@@ -157,12 +169,12 @@ fn missing_chip_inventory_resource_does_not_panic() {
 
     let stack = app
         .world()
-        .get::<EffectStack<DamageBoostConfig>>(breaker)
-        .unwrap();
-    assert_eq!(
-        stack.len(),
-        1,
-        "DamageBoost should fire even without inventory"
+        .get::<DamageBoostStack>(breaker)
+        .expect("DamageBoost should fire even without inventory");
+    assert!(
+        !stack.is_empty() && (stack.aggregate_persistent() - 1.5).abs() < 1e-5,
+        "DamageBoost should fire once with multiplier 1.5; got aggregate {}",
+        stack.aggregate_persistent()
     );
 }
 
@@ -182,9 +194,13 @@ fn no_messages_pending_no_entities_modified() {
 
     let stack = app
         .world()
-        .get::<EffectStack<DamageBoostConfig>>(breaker)
-        .unwrap();
-    assert_eq!(stack.len(), 1, "Proof: system dispatches on message");
+        .get::<DamageBoostStack>(breaker)
+        .expect("Proof: system dispatches on message");
+    assert!(
+        (stack.aggregate_persistent() - 1.5).abs() < 1e-5,
+        "Proof: single-fire aggregate should be 1.5, got {}",
+        stack.aggregate_persistent()
+    );
 
     app.world_mut()
         .resource_mut::<PendingChipSelections>()
@@ -195,12 +211,12 @@ fn no_messages_pending_no_entities_modified() {
 
     let stack_after = app
         .world()
-        .get::<EffectStack<DamageBoostConfig>>(breaker)
-        .unwrap();
-    assert_eq!(
-        stack_after.len(),
-        1,
-        "No new effects added without messages"
+        .get::<DamageBoostStack>(breaker)
+        .expect("DamageBoostStack should persist across the no-op update");
+    assert!(
+        (stack_after.aggregate_persistent() - 1.5).abs() < 1e-5,
+        "Empty pending selections must not mutate the stack; aggregate should remain 1.5, got {}",
+        stack_after.aggregate_persistent()
     );
 
     let bound = app.world().get::<BoundEffects>(breaker).unwrap();

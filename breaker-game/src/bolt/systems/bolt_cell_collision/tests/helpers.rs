@@ -12,7 +12,6 @@ use crate::{
         components::{CellHeight, CellWidth},
         test_utils as cell_test_utils,
     },
-    effect_v3::{effects::VulnerableConfig, stacking::EffectStack},
     prelude::*,
     shared::GameDrawLayer,
 };
@@ -97,7 +96,8 @@ pub(super) fn spawn_cell_with_custom_aabb(
         .id()
 }
 
-/// Spawns a cell with explicit [`Hp`] and [`EffectStack<VulnerableConfig>`].
+/// Spawns a cell with explicit [`Hp`] and a [`VulnerableStack`] carrying one
+/// persistent entry tagged `"test"`.
 pub(super) fn spawn_vulnerable_cell(
     app: &mut App,
     x: f32,
@@ -105,18 +105,11 @@ pub(super) fn spawn_vulnerable_cell(
     hp: f32,
     vulnerability: f32,
 ) -> Entity {
-    use ordered_float::OrderedFloat;
-
     let (cw, ch) = default_cell_dims();
     let half_extents = Vec2::new(cw.half_width(), ch.half_height());
     let pos = Vec2::new(x, y);
-    let mut vuln_stack = EffectStack::<VulnerableConfig>::default();
-    vuln_stack.push(
-        "test".into(),
-        VulnerableConfig {
-            multiplier: OrderedFloat(vulnerability),
-        },
-    );
+    let mut vuln_stack = VulnerableStack::default();
+    vuln_stack.add(SourceId::from("test"), vulnerability);
     app.world_mut()
         .spawn((
             Cell,

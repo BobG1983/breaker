@@ -12,6 +12,7 @@ use crate::{
             ScopedTerminal, ScopedTree, Tree, Trigger, TriggerContext,
         },
     },
+    prelude::DamageBoostStack,
     state::types::NodeState,
 };
 
@@ -176,7 +177,8 @@ fn shape_d_multiple_entries_track_participants_independently_by_source() {
         },
     );
 
-    // Preconditions: bolt has 1 SpeedBoost, impactee has 1 DamageBoost
+    // Preconditions: bolt has 1 SpeedBoost, impactee has DamageBoostStack
+    // aggregating 2.0 (single-entry product).
     assert_eq!(
         world
             .get::<EffectStack<SpeedBoostConfig>>(bolt)
@@ -184,12 +186,13 @@ fn shape_d_multiple_entries_track_participants_independently_by_source() {
             .len(),
         1
     );
-    assert_eq!(
-        world
-            .get::<EffectStack<DamageBoostConfig>>(impactee)
-            .unwrap()
-            .len(),
-        1
+    let impactee_dmg = world
+        .get::<DamageBoostStack>(impactee)
+        .expect("impactee should carry a DamageBoostStack");
+    assert!(
+        (impactee_dmg.aggregate_persistent() - 2.0).abs() < 1e-5,
+        "impactee DamageBoostStack aggregate should be 2.0, got {}",
+        impactee_dmg.aggregate_persistent()
     );
 
     // Disarm — both entries disarm
@@ -206,11 +209,15 @@ fn shape_d_multiple_entries_track_participants_independently_by_source() {
     );
 
     let impactee_stack = world
-        .get::<EffectStack<DamageBoostConfig>>(impactee)
+        .get::<DamageBoostStack>(impactee)
         .expect("impactee stack should still exist");
     assert!(
         impactee_stack.is_empty(),
         "impactee's DamageBoost stack should be empty after disarm"
+    );
+    assert!(
+        (impactee_stack.aggregate_persistent() - 1.0).abs() <= f32::EPSILON,
+        "impactee DamageBoostStack aggregate should collapse to 1.0 after disarm"
     );
 
     // BoundEffects has exactly 2 entries (the two Durings)

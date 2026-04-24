@@ -11,10 +11,8 @@ use serde::{Deserialize, Serialize};
 use super::super::components::*;
 use crate::{
     bolt::{components::BoltBaseDamage, resources::DEFAULT_BOLT_BASE_DAMAGE},
-    effect_v3::{
-        components::EffectSourceChip, effects::DamageBoostConfig, stacking::EffectStack,
-        traits::Fireable,
-    },
+    effect_v3::{components::EffectSourceChip, traits::Fireable},
+    prelude::*,
     state::types::NodeState,
 };
 
@@ -38,8 +36,8 @@ impl Fireable for ChainLightningConfig {
             .get::<BoltBaseDamage>(entity)
             .map_or(DEFAULT_BOLT_BASE_DAMAGE, |d| d.0);
         let damage_boost = world
-            .get::<EffectStack<DamageBoostConfig>>(entity)
-            .map_or(1.0, EffectStack::aggregate);
+            .get::<DamageBoostStack>(entity)
+            .map_or(1.0, DamageBoostStack::aggregate_persistent);
 
         let chip = EffectSourceChip::from_source(source);
 

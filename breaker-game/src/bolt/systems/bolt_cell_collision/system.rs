@@ -37,10 +37,7 @@ use crate::{
         queries::{BoltCollisionData, BoltCollisionDataItem, apply_velocity_formula},
         resources::DEFAULT_BOLT_BASE_DAMAGE,
     },
-    effect_v3::{
-        effects::{VulnerableConfig, phantom_bolt::components::PhantomBolt},
-        stacking::EffectStack,
-    },
+    effect_v3::{effects::phantom_bolt::components::PhantomBolt, stacking::EffectStack},
     prelude::*,
 };
 
@@ -70,18 +67,14 @@ type CandidateQuery<'w, 's> = Query<
     (
         Has<Cell>,
         Option<&'static Hp>,
-        Option<&'static EffectStack<VulnerableConfig>>,
+        Option<&'static VulnerableStack>,
     ),
     Without<Bolt>,
 >;
 
 /// Triple returned by `CandidateLookup::get`:
 /// `(is_cell_marker_present, optional_hp, optional_vulnerability_stack)`.
-type CandidateData<'a> = (
-    bool,
-    Option<&'a Hp>,
-    Option<&'a EffectStack<VulnerableConfig>>,
-);
+type CandidateData<'a> = (bool, Option<&'a Hp>, Option<&'a VulnerableStack>);
 
 #[derive(SystemParam)]
 pub(crate) struct CandidateLookup<'w, 's> {
@@ -158,7 +151,7 @@ pub(crate) fn bolt_cell_collision(
             * bolt
                 .collision
                 .active_damage_boosts
-                .map_or(1.0, EffectStack::aggregate);
+                .map_or(1.0, DamageBoostStack::aggregate_persistent);
 
         // Clear per-bolt pierce skip set
         pierced_this_frame.clear();
@@ -278,7 +271,8 @@ fn resolve_bolt_cell_hit(
         return None;
     }
 
-    let cell_damage = effective_damage * vulnerability.map_or(1.0, EffectStack::aggregate);
+    let cell_damage =
+        effective_damage * vulnerability.map_or(1.0, VulnerableStack::aggregate_persistent);
 
     let can_pierce = bolt
         .collision

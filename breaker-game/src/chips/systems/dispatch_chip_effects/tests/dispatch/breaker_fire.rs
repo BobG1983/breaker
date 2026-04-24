@@ -16,6 +16,9 @@ use crate::{
     prelude::*,
 };
 
+// DamageBoost now uses `DamageBoostStack` (re-exported by the prelude); the
+// `EffectStack<DamageBoostConfig>` type is gone from call sites.
+
 // ── Behavior 1: Bare `Fire` child targeting Breaker fires immediately ──
 
 #[test]
@@ -39,12 +42,16 @@ fn bare_fire_targeting_breaker_fires_damage_boost_immediately() {
 
     let stack = app
         .world()
-        .get::<EffectStack<DamageBoostConfig>>(breaker)
-        .unwrap();
-    assert_eq!(
-        stack.len(),
-        1,
+        .get::<DamageBoostStack>(breaker)
+        .expect("DamageBoostStack should have been inserted by the bare Fire");
+    assert!(
+        !stack.is_empty(),
         "DamageBoost should have been fired immediately on breaker"
+    );
+    assert!(
+        (stack.aggregate_persistent() - 1.1).abs() < 1e-5,
+        "single-entry aggregate should be 1.1, got {}",
+        stack.aggregate_persistent()
     );
 
     let bound = app.world().get::<BoundEffects>(breaker).unwrap();
@@ -103,12 +110,16 @@ fn multiple_stamps_with_fire_all_fire_immediately() {
 
     let damage = app
         .world()
-        .get::<EffectStack<DamageBoostConfig>>(breaker)
-        .unwrap();
-    assert_eq!(
-        damage.len(),
-        1,
+        .get::<DamageBoostStack>(breaker)
+        .expect("DamageBoostStack should have been inserted");
+    assert!(
+        !damage.is_empty(),
         "DamageBoost should have been fired immediately"
+    );
+    assert!(
+        (damage.aggregate_persistent() - 1.05).abs() < 1e-5,
+        "single-entry aggregate should be 1.05, got {}",
+        damage.aggregate_persistent()
     );
 }
 

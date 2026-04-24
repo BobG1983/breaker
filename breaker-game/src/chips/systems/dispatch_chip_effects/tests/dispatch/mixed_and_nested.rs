@@ -10,7 +10,6 @@ use crate::{
     chips::{definition::ChipDefinition, systems::dispatch_chip_effects::tests::helpers::*},
     effect_v3::{
         effects::{DamageBoostConfig, ShieldConfig, ShockwaveConfig},
-        stacking::EffectStack,
         types::{EffectType, EntityKind, RootNode, StampTarget, Tree, Trigger},
     },
     prelude::*,
@@ -59,12 +58,16 @@ fn mixed_fire_and_when_fire_fires_when_stamps() {
 
     let damage = app
         .world()
-        .get::<EffectStack<DamageBoostConfig>>(breaker)
-        .unwrap();
-    assert_eq!(
-        damage.len(),
-        1,
+        .get::<DamageBoostStack>(breaker)
+        .expect("DamageBoostStack should have been inserted");
+    assert!(
+        !damage.is_empty(),
         "DamageBoost should have been fired immediately"
+    );
+    assert!(
+        (damage.aggregate_persistent() - 1.2).abs() < 1e-5,
+        "single-entry aggregate should be 1.2, got {}",
+        damage.aggregate_persistent()
     );
 
     let bound = app.world().get::<BoundEffects>(breaker).unwrap();

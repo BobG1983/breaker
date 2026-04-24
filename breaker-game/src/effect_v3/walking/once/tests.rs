@@ -2,12 +2,15 @@ use bevy::{ecs::world::CommandQueue, prelude::*};
 use ordered_float::OrderedFloat;
 
 use super::system::*;
-use crate::effect_v3::{
-    effects::{DamageBoostConfig, SpeedBoostConfig},
-    stacking::EffectStack,
-    storage::{BoundEffects, StagedEffects},
-    types::{EffectType, Terminal, Tree, Trigger, TriggerContext},
-    walking::walk_effects::walk_bound_effects,
+use crate::{
+    effect_v3::{
+        effects::{DamageBoostConfig, SpeedBoostConfig},
+        stacking::EffectStack,
+        storage::{BoundEffects, StagedEffects},
+        types::{EffectType, Terminal, Tree, Trigger, TriggerContext},
+        walking::walk_effects::walk_bound_effects,
+    },
+    prelude::DamageBoostStack,
 };
 
 // ----- Behavior 1: Once fires inner tree on first matching trigger -----
@@ -299,9 +302,14 @@ fn once_with_nested_sequence_fires_all_terminals_before_removal() {
     assert_eq!(speed_stack.len(), 1);
 
     let dmg_stack = world
-        .get::<EffectStack<DamageBoostConfig>>(entity)
-        .expect("DamageBoost EffectStack should exist");
-    assert_eq!(dmg_stack.len(), 1);
+        .get::<DamageBoostStack>(entity)
+        .expect("DamageBoostStack should exist");
+    assert!(!dmg_stack.is_empty());
+    assert!(
+        (dmg_stack.aggregate_persistent() - 2.0).abs() < 1e-5,
+        "DamageBoostStack aggregate should be 2.0, got {}",
+        dmg_stack.aggregate_persistent()
+    );
 
     let remaining = &world.get::<BoundEffects>(entity).unwrap().0;
     assert!(

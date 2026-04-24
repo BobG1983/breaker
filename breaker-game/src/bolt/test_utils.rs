@@ -9,7 +9,7 @@ use ordered_float::OrderedFloat;
 use crate::{
     bolt::definition::BoltDefinition,
     effect_v3::{
-        effects::{DamageBoostConfig, PiercingConfig, SizeBoostConfig, SpeedBoostConfig},
+        effects::{PiercingConfig, SizeBoostConfig, SpeedBoostConfig},
         stacking::EffectStack,
     },
     prelude::*,
@@ -51,19 +51,28 @@ pub(crate) fn speed_stack(values: &[f32]) -> EffectStack<SpeedBoostConfig> {
     stack
 }
 
-/// Builds an `EffectStack<DamageBoostConfig>` from a slice of f32 multipliers.
-pub(crate) fn damage_stack(values: &[f32]) -> EffectStack<DamageBoostConfig> {
-    let mut stack = EffectStack::default();
+/// Builds a `DamageBoostStack` from a slice of f32 multipliers.
+///
+/// Each multiplier is tagged with `SourceId::from("test")` in the persistent
+/// lane. `damage_stack(&[])` returns an empty stack with
+/// `aggregate_persistent() == 1.0`.
+pub(crate) fn damage_stack(values: &[f32]) -> DamageBoostStack {
+    let mut stack = DamageBoostStack::default();
     for &v in values {
-        stack.push(
-            "test".into(),
-            DamageBoostConfig {
-                multiplier: OrderedFloat(v),
-            },
-        );
+        stack.add(SourceId::from("test"), v);
     }
     stack
 }
+
+// ── Behavior 56: NEW — `DamageBoostStack` does NOT derive `Clone` ──
+//
+// Commented-out negative compile-time contract. Uncommenting the line below
+// must cause the file to fail to compile — the crate's `DamageBoostStack`
+// has no `Clone` impl, and game code must never assume one. Mirror of the
+// pattern at `rantzsoft_dmg/src/components/damage_boost_stack.rs:11-16`.
+//
+// let _ = DamageBoostStack::default().clone();
+// let _ = VulnerableStack::default().clone();
 
 /// Builds an `EffectStack<SizeBoostConfig>` from a slice of f32 multipliers.
 pub(crate) fn size_stack(values: &[f32]) -> EffectStack<SizeBoostConfig> {

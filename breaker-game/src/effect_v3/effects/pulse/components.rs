@@ -50,6 +50,6 @@ pub struct PulseRingDamaged(pub HashSet<Entity>);
 #[derive(Component, Debug, Clone)]
 pub struct PulseRingBaseDamage(pub f32);
 
-/// Snapshot of `EffectStack<DamageBoostConfig>.aggregate()` at the tick this ring was spawned.
+/// Snapshot of `DamageBoostStack.aggregate_persistent()` at the tick this ring was spawned.
 #[derive(Component, Debug, Clone)]
 pub struct PulseRingDamageMultiplier(pub f32);

@@ -4,9 +4,9 @@ use bevy::prelude::*;
 use ordered_float::OrderedFloat;
 use serde::{Deserialize, Serialize};
 
-use crate::effect_v3::{
-    stacking::EffectStack,
-    traits::{Fireable, PassiveEffect, Reversible},
+use crate::{
+    effect_v3::traits::{Fireable, Reversible},
+    prelude::{DamageBoostStack, SourceId},
 };
 
 /// Multiplicative damage scaling factor applied to the entity's base damage.
@@ -18,40 +18,36 @@ pub struct DamageBoostConfig {
 
 impl Fireable for DamageBoostConfig {
     fn fire(&self, entity: Entity, source: &str, world: &mut World) {
-        let has_stack = world.get::<EffectStack<Self>>(entity).is_some();
-        if !has_stack {
-            world
-                .entity_mut(entity)
-                .insert(EffectStack::<Self>::default());
+        if world.get::<DamageBoostStack>(entity).is_none() {
+            world.entity_mut(entity).insert(DamageBoostStack::default());
         }
-        if let Some(mut stack) = world.get_mut::<EffectStack<Self>>(entity) {
-            stack.push(source.to_owned(), self.clone());
+        if let Some(mut stack) = world.get_mut::<DamageBoostStack>(entity) {
+            stack.add(
+                SourceId::from(source.to_owned()),
+                self.multiplier.into_inner(),
+            );
         }
     }
 }
 
 impl Reversible for DamageBoostConfig {
     fn reverse(&self, entity: Entity, source: &str, world: &mut World) {
-        if let Some(mut stack) = world.get_mut::<EffectStack<Self>>(entity) {
-            stack.remove(source, self);
+        if let Some(mut stack) = world.get_mut::<DamageBoostStack>(entity) {
+            stack.remove_by_source(&SourceId::from(source.to_owned()));
         }
     }
 
     fn reverse_all_by_source(&self, entity: Entity, source: &str, world: &mut World) {
-        if let Some(mut stack) = world.get_mut::<EffectStack<Self>>(entity) {
-            stack.retain_by_source(source);
+        if let Some(mut stack) = world.get_mut::<DamageBoostStack>(entity) {
+            stack.remove_by_source(&SourceId::from(source.to_owned()));
         }
     }
 }
 
-impl PassiveEffect for DamageBoostConfig {
-    fn aggregate(entries: &[(String, Self)]) -> f32 {
-        entries
-            .iter()
-            .map(|(_, c)| c.multiplier.into_inner())
-            .product::<f32>()
-    }
-}
+// `impl PassiveEffect for DamageBoostConfig` DELETED — `DamageBoostConfig` no
+// longer participates in the generic `EffectStack<T>` aggregate path. The
+// crate-owned `DamageBoostStack` handles aggregation in-place via
+// `aggregate_persistent()`.
 
 #[cfg(test)]
 mod tests {
@@ -59,10 +55,12 @@ mod tests {
     use ordered_float::OrderedFloat;
 
     use super::*;
-    use crate::effect_v3::{
-        stacking::EffectStack,
-        traits::{Fireable, Reversible},
+    use crate::{
+        effect_v3::traits::{Fireable, Reversible},
+        prelude::DamageBoostStack,
     };
+
+    // ── Behavior 1: `fire` inserts `DamageBoostStack` on a fresh entity ──
 
     #[test]
     fn fire_creates_stack_and_pushes_entry() {
@@ -72,11 +70,36 @@ mod tests {
             multiplier: OrderedFloat(2.0),
         };
 
-        config.fire(entity, "test_source", &mut world);
+        config.fire(entity, "amp", &mut world);
 
-        let stack = world.get::<EffectStack<DamageBoostConfig>>(entity).unwrap();
-        assert_eq!(stack.len(), 1);
+        let stack = world
+            .get::<DamageBoostStack>(entity)
+            .expect("DamageBoostStack should be inserted by fire");
+        assert!(!stack.is_empty());
+        assert!((stack.aggregate_persistent() - 2.0).abs() <= f32::EPSILON);
     }
+
+    #[test]
+    fn fire_twice_on_same_entity_does_not_insert_second_stack_component() {
+        // Edge case for Behavior 1: firing a second config with a different
+        // source must append to the existing stack, not insert a new component.
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        DamageBoostConfig {
+            multiplier: OrderedFloat(2.0),
+        }
+        .fire(entity, "amp", &mut world);
+        DamageBoostConfig {
+            multiplier: OrderedFloat(1.5),
+        }
+        .fire(entity, "loop", &mut world);
+
+        let stack = world.get::<DamageBoostStack>(entity).unwrap();
+        assert!((stack.aggregate_persistent() - 3.0).abs() <= f32::EPSILON);
+    }
+
+    // ── Behavior 2: `fire` twice same source multiplies aggregate ──
 
     #[test]
     fn fire_multiple_times_stacks_entries() {
@@ -89,10 +112,29 @@ mod tests {
         config.fire(entity, "test_source", &mut world);
         config.fire(entity, "test_source", &mut world);
 
-        let stack = world.get::<EffectStack<DamageBoostConfig>>(entity).unwrap();
-        assert_eq!(stack.len(), 2);
-        assert!((stack.aggregate() - 4.0).abs() < 1e-5);
+        let stack = world.get::<DamageBoostStack>(entity).unwrap();
+        assert!((stack.aggregate_persistent() - 4.0).abs() < 1e-5);
     }
+
+    #[test]
+    fn fire_five_times_same_source_pow_five() {
+        // Edge case for Behavior 2: five fires with multiplier 2.0 must
+        // produce 2^5 = 32.0 — confirms Vec-not-HashMap semantic.
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+        let config = DamageBoostConfig {
+            multiplier: OrderedFloat(2.0),
+        };
+
+        for _ in 0..5 {
+            config.fire(entity, "test_source", &mut world);
+        }
+
+        let stack = world.get::<DamageBoostStack>(entity).unwrap();
+        assert!((stack.aggregate_persistent() - 32.0).abs() < 1e-5);
+    }
+
+    // ── Behavior 3.a: `reverse(entity, source)` removes entries by source ──
 
     #[test]
     fn reverse_removes_matching_entry() {
@@ -102,12 +144,77 @@ mod tests {
             multiplier: OrderedFloat(2.0),
         };
 
-        config.fire(entity, "test_source", &mut world);
-        config.reverse(entity, "test_source", &mut world);
+        config.fire(entity, "amp", &mut world);
+        config.reverse(entity, "amp", &mut world);
 
-        let stack = world.get::<EffectStack<DamageBoostConfig>>(entity).unwrap();
-        assert_eq!(stack.len(), 0);
+        let stack = world.get::<DamageBoostStack>(entity).unwrap();
+        assert!(stack.is_empty());
+        assert!((stack.aggregate_persistent() - 1.0).abs() <= f32::EPSILON);
     }
+
+    // ── Behavior 3.b: NEW — `reverse` removes EVERY entry with that source ──
+
+    #[test]
+    fn reverse_removes_all_entries_sharing_source_not_just_one() {
+        // NEW regression-lock: pre-W3, `reverse` removed exactly ONE entry
+        // matching `(source, config)`. After W3, `reverse` collapses to
+        // `remove_by_source` — it removes EVERY entry with that source,
+        // regardless of multiplier.
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        DamageBoostConfig {
+            multiplier: OrderedFloat(2.0),
+        }
+        .fire(entity, "amp", &mut world);
+        DamageBoostConfig {
+            multiplier: OrderedFloat(3.0),
+        }
+        .fire(entity, "amp", &mut world);
+        DamageBoostConfig {
+            multiplier: OrderedFloat(4.0),
+        }
+        .fire(entity, "amp", &mut world);
+
+        // Reverse with a config whose multiplier (2.0) matches only one of
+        // the three entries by value — but because reverse is now
+        // by-source-only, all three must be removed.
+        DamageBoostConfig {
+            multiplier: OrderedFloat(2.0),
+        }
+        .reverse(entity, "amp", &mut world);
+
+        let stack = world.get::<DamageBoostStack>(entity).unwrap();
+        assert!(stack.is_empty());
+        assert!((stack.aggregate_persistent() - 1.0).abs() <= f32::EPSILON);
+    }
+
+    #[test]
+    fn reverse_leaves_entries_of_other_sources_intact() {
+        // Edge case for Behavior 3.b: mixed-source stack, reverse only one
+        // source, assert the other source's entry is untouched.
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        DamageBoostConfig {
+            multiplier: OrderedFloat(2.0),
+        }
+        .fire(entity, "amp", &mut world);
+        DamageBoostConfig {
+            multiplier: OrderedFloat(1.5),
+        }
+        .fire(entity, "loop", &mut world);
+
+        DamageBoostConfig {
+            multiplier: OrderedFloat(2.0),
+        }
+        .reverse(entity, "amp", &mut world);
+
+        let stack = world.get::<DamageBoostStack>(entity).unwrap();
+        assert!((stack.aggregate_persistent() - 1.5).abs() <= f32::EPSILON);
+    }
+
+    // ── Behavior 4: `reverse` on a stackless entity is a silent no-op ──
 
     #[test]
     fn reverse_on_entity_without_stack_is_noop() {
@@ -118,9 +225,29 @@ mod tests {
         };
 
         config.reverse(entity, "test_source", &mut world);
+
+        assert!(
+            world.get::<DamageBoostStack>(entity).is_none(),
+            "reverse must NOT insert the stack just to remove from it"
+        );
     }
 
-    // ── reverse_all_by_source ─────────────────────────────────────────
+    #[test]
+    fn reverse_twice_in_a_row_on_empty_entity_does_not_panic() {
+        // Edge case for Behavior 4.
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+        let config = DamageBoostConfig {
+            multiplier: OrderedFloat(2.0),
+        };
+
+        config.reverse(entity, "test_source", &mut world);
+        config.reverse(entity, "test_source", &mut world);
+
+        assert!(world.get::<DamageBoostStack>(entity).is_none());
+    }
+
+    // ── Behavior 5: `reverse_all_by_source` — same as reverse post-W3 ──
 
     #[test]
     fn reverse_all_by_source_removes_all_entries_from_matching_source_leaves_others() {
@@ -145,10 +272,32 @@ mod tests {
         }
         .reverse_all_by_source(entity, "amp", &mut world);
 
-        let stack = world.get::<EffectStack<DamageBoostConfig>>(entity).unwrap();
-        assert_eq!(stack.len(), 1);
-        assert!((stack.aggregate() - 1.5).abs() < 1e-5);
+        let stack = world.get::<DamageBoostStack>(entity).unwrap();
+        assert!((stack.aggregate_persistent() - 1.5).abs() < 1e-5);
     }
+
+    #[test]
+    fn reverse_all_by_source_for_unknown_source_is_noop() {
+        // Edge case for Behavior 5: reverse_all_by_source for a source that
+        // was never fired is a no-op — aggregate unchanged.
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+
+        DamageBoostConfig {
+            multiplier: OrderedFloat(2.0),
+        }
+        .fire(entity, "amp", &mut world);
+
+        DamageBoostConfig {
+            multiplier: OrderedFloat(2.0),
+        }
+        .reverse_all_by_source(entity, "nonexistent", &mut world);
+
+        let stack = world.get::<DamageBoostStack>(entity).unwrap();
+        assert!((stack.aggregate_persistent() - 2.0).abs() < 1e-5);
+    }
+
+    // ── Behavior 6: `reverse_all_by_source` on a stackless entity is noop ──
 
     #[test]
     fn reverse_all_by_source_on_entity_without_stack_is_noop() {
@@ -159,6 +308,76 @@ mod tests {
             multiplier: OrderedFloat(2.0),
         }
         .reverse_all_by_source(entity, "amp", &mut world);
-        // No panic.
+
+        assert!(world.get::<DamageBoostStack>(entity).is_none());
     }
+
+    // ── Behavior 7: NEW — `reverse` ≡ `reverse_all_by_source` after W3 ──
+
+    #[test]
+    fn reverse_equals_reverse_all_by_source_after_w3() {
+        // Regression-lock: both methods must produce identical state after
+        // W3. This blocks any future reviewer from "restoring" the old
+        // by-config-value semantic to `reverse`.
+        let mut world_a = World::new();
+        let entity_a = world_a.spawn_empty().id();
+        DamageBoostConfig {
+            multiplier: OrderedFloat(2.0),
+        }
+        .fire(entity_a, "amp", &mut world_a);
+        DamageBoostConfig {
+            multiplier: OrderedFloat(3.0),
+        }
+        .fire(entity_a, "amp", &mut world_a);
+        DamageBoostConfig {
+            multiplier: OrderedFloat(1.5),
+        }
+        .fire(entity_a, "feedback", &mut world_a);
+
+        let mut world_b = World::new();
+        let entity_b = world_b.spawn_empty().id();
+        DamageBoostConfig {
+            multiplier: OrderedFloat(2.0),
+        }
+        .fire(entity_b, "amp", &mut world_b);
+        DamageBoostConfig {
+            multiplier: OrderedFloat(3.0),
+        }
+        .fire(entity_b, "amp", &mut world_b);
+        DamageBoostConfig {
+            multiplier: OrderedFloat(1.5),
+        }
+        .fire(entity_b, "feedback", &mut world_b);
+
+        DamageBoostConfig {
+            multiplier: OrderedFloat(2.0),
+        }
+        .reverse(entity_a, "amp", &mut world_a);
+        DamageBoostConfig {
+            multiplier: OrderedFloat(2.0),
+        }
+        .reverse_all_by_source(entity_b, "amp", &mut world_b);
+
+        let stack_a = world_a.get::<DamageBoostStack>(entity_a).unwrap();
+        let stack_b = world_b.get::<DamageBoostStack>(entity_b).unwrap();
+        assert!((stack_a.aggregate_persistent() - 1.5).abs() < 1e-5);
+        assert!((stack_b.aggregate_persistent() - 1.5).abs() < 1e-5);
+        assert_eq!(stack_a.is_empty(), stack_b.is_empty());
+    }
+}
+
+#[cfg(test)]
+mod negative_contracts {
+    // ── Behavior 55: NEW — `DamageBoostConfig` no longer implements PassiveEffect ──
+    //
+    // Commented-out negative compile-time contract. Uncommenting the line
+    // below must cause the file to fail to compile after W3 — production
+    // code must NOT add back `impl PassiveEffect for DamageBoostConfig`.
+    // Mirror of the pattern at
+    // `rantzsoft_dmg/src/components/damage_boost_stack.rs:11-16`.
+    //
+    // #[test]
+    // fn damage_boost_config_must_not_impl_passive_effect() {
+    //     let _ = <super::DamageBoostConfig as crate::effect_v3::traits::PassiveEffect>::aggregate(&[]);
+    // }
 }

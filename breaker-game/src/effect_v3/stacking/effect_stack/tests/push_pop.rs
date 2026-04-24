@@ -1,7 +1,7 @@
 use ordered_float::OrderedFloat;
 
 use super::super::component::*;
-use crate::effect_v3::effects::{DamageBoostConfig, PiercingConfig, SpeedBoostConfig};
+use crate::effect_v3::effects::{PiercingConfig, SpeedBoostConfig};
 
 // ---------------------------------------------------------------
 // Push tests (behaviors 1-3)
@@ -34,22 +34,22 @@ fn push_succeeds_with_empty_source_name() {
 
 #[test]
 fn push_appends_multiple_entries_preserving_insertion_order() {
-    let mut stack = EffectStack::<DamageBoostConfig>::default();
+    let mut stack = EffectStack::<SpeedBoostConfig>::default();
     stack.push(
         "amp".into(),
-        DamageBoostConfig {
+        SpeedBoostConfig {
             multiplier: OrderedFloat(2.0),
         },
     );
     stack.push(
         "feedback_loop".into(),
-        DamageBoostConfig {
+        SpeedBoostConfig {
             multiplier: OrderedFloat(1.5),
         },
     );
     stack.push(
         "amp".into(),
-        DamageBoostConfig {
+        SpeedBoostConfig {
             multiplier: OrderedFloat(2.0),
         },
     );
@@ -66,8 +66,8 @@ fn push_appends_multiple_entries_preserving_insertion_order() {
 
 #[test]
 fn push_allows_duplicate_source_config_pairs() {
-    let mut stack = EffectStack::<DamageBoostConfig>::default();
-    let config = DamageBoostConfig {
+    let mut stack = EffectStack::<SpeedBoostConfig>::default();
+    let config = SpeedBoostConfig {
         multiplier: OrderedFloat(2.0),
     };
     stack.push("amp".into(), config.clone());
@@ -103,29 +103,29 @@ fn push_allows_same_source_with_different_configs() {
 
 #[test]
 fn remove_finds_and_removes_first_exact_match() {
-    let mut stack = EffectStack::<DamageBoostConfig>::default();
+    let mut stack = EffectStack::<SpeedBoostConfig>::default();
     stack.push(
         "amp".into(),
-        DamageBoostConfig {
+        SpeedBoostConfig {
             multiplier: OrderedFloat(2.0),
         },
     );
     stack.push(
         "feedback_loop".into(),
-        DamageBoostConfig {
+        SpeedBoostConfig {
             multiplier: OrderedFloat(1.5),
         },
     );
     stack.push(
         "amp".into(),
-        DamageBoostConfig {
+        SpeedBoostConfig {
             multiplier: OrderedFloat(2.0),
         },
     );
 
     stack.remove(
         "amp",
-        &DamageBoostConfig {
+        &SpeedBoostConfig {
             multiplier: OrderedFloat(2.0),
         },
     );
@@ -141,27 +141,27 @@ fn remove_finds_and_removes_first_exact_match() {
 
 #[test]
 fn remove_second_call_removes_remaining_match() {
-    let mut stack = EffectStack::<DamageBoostConfig>::default();
+    let mut stack = EffectStack::<SpeedBoostConfig>::default();
     stack.push(
         "amp".into(),
-        DamageBoostConfig {
+        SpeedBoostConfig {
             multiplier: OrderedFloat(2.0),
         },
     );
     stack.push(
         "feedback_loop".into(),
-        DamageBoostConfig {
+        SpeedBoostConfig {
             multiplier: OrderedFloat(1.5),
         },
     );
     stack.push(
         "amp".into(),
-        DamageBoostConfig {
+        SpeedBoostConfig {
             multiplier: OrderedFloat(2.0),
         },
     );
 
-    let target = DamageBoostConfig {
+    let target = SpeedBoostConfig {
         multiplier: OrderedFloat(2.0),
     };
     stack.remove("amp", &target);
@@ -174,17 +174,17 @@ fn remove_second_call_removes_remaining_match() {
 
 #[test]
 fn remove_does_nothing_when_source_matches_but_config_differs() {
-    let mut stack = EffectStack::<DamageBoostConfig>::default();
+    let mut stack = EffectStack::<SpeedBoostConfig>::default();
     stack.push(
         "amp".into(),
-        DamageBoostConfig {
+        SpeedBoostConfig {
             multiplier: OrderedFloat(2.0),
         },
     );
 
     stack.remove(
         "amp",
-        &DamageBoostConfig {
+        &SpeedBoostConfig {
             multiplier: OrderedFloat(3.0),
         },
     );
@@ -194,17 +194,17 @@ fn remove_does_nothing_when_source_matches_but_config_differs() {
 
 #[test]
 fn remove_does_nothing_when_config_matches_but_source_differs() {
-    let mut stack = EffectStack::<DamageBoostConfig>::default();
+    let mut stack = EffectStack::<SpeedBoostConfig>::default();
     stack.push(
         "amp".into(),
-        DamageBoostConfig {
+        SpeedBoostConfig {
             multiplier: OrderedFloat(2.0),
         },
     );
 
     stack.remove(
         "overclock",
-        &DamageBoostConfig {
+        &SpeedBoostConfig {
             multiplier: OrderedFloat(2.0),
         },
     );

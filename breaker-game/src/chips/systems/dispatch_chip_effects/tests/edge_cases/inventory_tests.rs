@@ -13,6 +13,7 @@ use crate::{
         stacking::EffectStack,
         types::{EffectType, EntityKind, StampTarget, Tree, Trigger},
     },
+    // DamageBoostStack comes in via prelude::*.
     prelude::*,
 };
 
@@ -74,11 +75,12 @@ fn chip_at_max_stacks_does_not_dispatch_effects() {
 
     app.update();
 
-    // Chip is at max stacks — effects should NOT be dispatched
-    let stack = app.world().get::<EffectStack<DamageBoostConfig>>(breaker);
+    // Chip is at max stacks — effects should NOT be dispatched. Since no
+    // fire() call ran, the stack component must NEVER have been inserted.
+    let stack = app.world().get::<DamageBoostStack>(breaker);
     assert!(
-        stack.is_none() || stack.unwrap().is_empty(),
-        "Effects should NOT be dispatched when chip is at max stacks"
+        stack.is_none(),
+        "DamageBoostStack must NOT be inserted when chip is at max stacks (no fire ran)"
     );
 }
 
@@ -115,12 +117,12 @@ fn multiple_chip_selections_in_same_frame_all_processed() {
 
     let damage = app
         .world()
-        .get::<EffectStack<DamageBoostConfig>>(breaker)
-        .unwrap();
-    assert_eq!(
-        damage.len(),
-        1,
-        "Chip A's DamageBoost should have been applied"
+        .get::<DamageBoostStack>(breaker)
+        .expect("Chip A's DamageBoost should have been applied");
+    assert!(
+        (damage.aggregate_persistent() - 1.1).abs() < 1e-5,
+        "Chip A's DamageBoost should produce aggregate 1.1, got {}",
+        damage.aggregate_persistent()
     );
 
     let speed = app
@@ -162,9 +164,15 @@ fn same_chip_selected_twice_in_one_frame_both_processed() {
 
     let damage = app
         .world()
-        .get::<EffectStack<DamageBoostConfig>>(breaker)
-        .unwrap();
-    assert_eq!(damage.len(), 2, "Both selections should fire DamageBoost");
+        .get::<DamageBoostStack>(breaker)
+        .expect("Both selections should fire DamageBoost");
+    // 1.1 * 1.1 = 1.21 — proxy for "two entries are stacked" in lieu of
+    // the removed `.len()` accessor.
+    assert!(
+        (damage.aggregate_persistent() - 1.21).abs() < 1e-5,
+        "Both selections should stack; aggregate should be 1.1 * 1.1 = 1.21, got {}",
+        damage.aggregate_persistent()
+    );
 
     let inventory = app.world().resource::<ChipInventory>();
     assert_eq!(inventory.stacks("Double Pick"), 2);

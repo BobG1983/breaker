@@ -1,7 +1,7 @@
 use ordered_float::OrderedFloat;
 
 use super::super::component::*;
-use crate::effect_v3::effects::{DamageBoostConfig, PiercingConfig, SpeedBoostConfig};
+use crate::effect_v3::effects::{PiercingConfig, SpeedBoostConfig};
 
 fn assert_f32_eq(actual: f32, expected: f32) {
     assert!(
@@ -74,16 +74,16 @@ fn retain_by_source_removes_all_entries_matching_source() {
 
 #[test]
 fn retain_by_source_with_no_matching_source_is_noop() {
-    let mut stack = EffectStack::<DamageBoostConfig>::default();
+    let mut stack = EffectStack::<SpeedBoostConfig>::default();
     stack.push(
         "amp".into(),
-        DamageBoostConfig {
+        SpeedBoostConfig {
             multiplier: OrderedFloat(2.0),
         },
     );
     stack.push(
         "feedback_loop".into(),
-        DamageBoostConfig {
+        SpeedBoostConfig {
             multiplier: OrderedFloat(1.5),
         },
     );
@@ -135,28 +135,28 @@ fn retain_by_source_removes_all_entries_when_all_share_same_source() {
 
 #[test]
 fn retain_by_source_preserves_insertion_order_of_surviving_entries() {
-    let mut stack = EffectStack::<DamageBoostConfig>::default();
+    let mut stack = EffectStack::<SpeedBoostConfig>::default();
     stack.push(
         "amp".into(),
-        DamageBoostConfig {
+        SpeedBoostConfig {
             multiplier: OrderedFloat(2.0),
         },
     );
     stack.push(
         "overclock".into(),
-        DamageBoostConfig {
+        SpeedBoostConfig {
             multiplier: OrderedFloat(1.5),
         },
     );
     stack.push(
         "amp".into(),
-        DamageBoostConfig {
+        SpeedBoostConfig {
             multiplier: OrderedFloat(3.0),
         },
     );
     stack.push(
         "feedback_loop".into(),
-        DamageBoostConfig {
+        SpeedBoostConfig {
             multiplier: OrderedFloat(1.2),
         },
     );

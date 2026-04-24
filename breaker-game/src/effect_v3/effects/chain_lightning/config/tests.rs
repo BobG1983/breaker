@@ -9,9 +9,9 @@ use crate::{
     effect_v3::{
         components::EffectSourceChip,
         effects::{DamageBoostConfig, chain_lightning::components::*},
-        stacking::EffectStack,
         traits::{Fireable, Reversible},
     },
+    prelude::DamageBoostStack,
     state::types::NodeState,
 };
 
@@ -451,9 +451,16 @@ fn chain_lightning_damage_boost_snapshot_frozen_at_fire_time() {
 
     // Verify the source entity's stack is now empty
     let stack = world
-        .get::<EffectStack<DamageBoostConfig>>(source)
+        .get::<DamageBoostStack>(source)
         .expect("stack component should still exist after reverse");
-    assert_eq!(stack.len(), 0, "source stack should be empty after reverse");
+    assert!(
+        stack.is_empty(),
+        "source DamageBoostStack should be empty after reverse"
+    );
+    assert!(
+        (stack.aggregate_persistent() - 1.0).abs() <= f32::EPSILON,
+        "source DamageBoostStack aggregate should be 1.0 after reverse"
+    );
 
     // Chain's damage should still reflect the snapshot taken at fire time
     let chains: Vec<&ChainLightningChain> =

@@ -15,7 +15,7 @@ use crate::{
         PiercingRemaining, SpawnedByEvolution,
     },
     effect_v3::{
-        effects::{DamageBoostConfig, PiercingConfig, SizeBoostConfig, SpeedBoostConfig},
+        effects::{PiercingConfig, SizeBoostConfig, SpeedBoostConfig},
         stacking::EffectStack,
     },
     prelude::*,
@@ -47,7 +47,7 @@ pub(crate) struct BoltCollisionParams {
     /// Active piercing effects (sum determines max charges).
     pub active_piercings:     Option<&'static EffectStack<PiercingConfig>>,
     /// Active damage boost multipliers.
-    pub active_damage_boosts: Option<&'static EffectStack<DamageBoostConfig>>,
+    pub active_damage_boosts: Option<&'static DamageBoostStack>,
     /// Active speed boost multipliers.
     pub active_speed_boosts:  Option<&'static EffectStack<SpeedBoostConfig>>,
     /// Node scaling factor for entity dimensions.

@@ -10,7 +10,7 @@ use super::super::components::{
 };
 use crate::{
     bolt::{components::BoltBaseDamage, resources::DEFAULT_BOLT_BASE_DAMAGE},
-    effect_v3::{components::EffectSourceChip, effects::DamageBoostConfig, stacking::EffectStack},
+    effect_v3::components::EffectSourceChip,
     prelude::*,
 };
 
@@ -33,9 +33,8 @@ type PulseRingQuery<'w, 's> = Query<
     ),
 >;
 
-/// Pulse emitter tick query — reads `BoltBaseDamage` and
-/// `EffectStack<DamageBoostConfig>` from the emitter entity for per-ring
-/// snapshot at spawn time.
+/// Pulse emitter tick query — reads `BoltBaseDamage` and `DamageBoostStack`
+/// from the emitter entity for per-ring snapshot at spawn time.
 type PulseEmitterQuery<'w, 's> = Query<
     'w,
     's,
@@ -43,14 +42,14 @@ type PulseEmitterQuery<'w, 's> = Query<
         &'static mut PulseEmitter,
         &'static Position2D,
         Option<&'static BoltBaseDamage>,
-        Option<&'static EffectStack<DamageBoostConfig>>,
+        Option<&'static DamageBoostStack>,
     ),
 >;
 
 /// Decrements pulse emitter timers each frame and spawns pulse rings when the
 /// timer reaches zero. Each spawned ring snapshots `BoltBaseDamage` and
-/// `EffectStack<DamageBoostConfig>` from the emitter entity at spawn time, and
-/// inherits the emitter's `source_chip` string via `EffectSourceChip`.
+/// `DamageBoostStack` from the emitter entity at spawn time, and inherits the
+/// emitter's `source_chip` string via `EffectSourceChip`.
 pub(crate) fn tick_pulse(mut query: PulseEmitterQuery, time: Res<Time>, mut commands: Commands) {
     let dt = time.delta_secs();
 
@@ -64,7 +63,7 @@ pub(crate) fn tick_pulse(mut query: PulseEmitterQuery, time: Res<Time>, mut comm
                 .range_per_level
                 .mul_add(stacks_f32, emitter.base_range);
             let base_damage = bolt_base_damage_opt.map_or(DEFAULT_BOLT_BASE_DAMAGE, |d| d.0);
-            let damage_mult = damage_stack_opt.map_or(1.0, EffectStack::aggregate);
+            let damage_mult = damage_stack_opt.map_or(1.0, DamageBoostStack::aggregate_persistent);
 
             commands.spawn((
                 PulseRing,

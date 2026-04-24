@@ -24,9 +24,9 @@ use crate::{
                 ShockwaveMaxRadius, ShockwaveRadius, ShockwaveSource, ShockwaveSpeed,
             },
         },
-        stacking::EffectStack,
         traits::{Fireable, Reversible},
     },
+    prelude::DamageBoostStack,
     shared::test_utils::{TestAppBuilder, tick},
 };
 
@@ -297,10 +297,10 @@ fn tick_pulse_snapshots_single_entry_damage_boost_stack() {
     // Snapshot must not consume the stack on the emitter.
     let stack = app
         .world()
-        .get::<EffectStack<DamageBoostConfig>>(emitter)
-        .expect("emitter should still carry an EffectStack<DamageBoostConfig>");
-    assert_eq!(stack.len(), 1);
-    assert!((stack.aggregate() - 2.0).abs() < 1e-5);
+        .get::<DamageBoostStack>(emitter)
+        .expect("emitter should still carry a DamageBoostStack");
+    assert!(!stack.is_empty());
+    assert!((stack.aggregate_persistent() - 2.0).abs() < 1e-5);
 }
 
 // #23
@@ -352,10 +352,11 @@ fn tick_pulse_snapshots_two_entry_damage_boost_stack_as_product() {
 
     let stack = app
         .world()
-        .get::<EffectStack<DamageBoostConfig>>(emitter)
-        .expect("emitter should still carry an EffectStack<DamageBoostConfig>");
-    assert_eq!(stack.len(), 2);
-    assert!((stack.aggregate() - 6.0).abs() < 1e-5);
+        .get::<DamageBoostStack>(emitter)
+        .expect("emitter should still carry a DamageBoostStack");
+    // Two-entry aggregate check — proxy for `len == 2` since the new stack
+    // has no `len()` accessor.
+    assert!((stack.aggregate_persistent() - 6.0).abs() < 1e-5);
 }
 
 // #24

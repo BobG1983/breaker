@@ -11,6 +11,7 @@ use crate::{
         types::{Condition, ReversibleEffectType, ScopedTree, Tree, Trigger, TriggerContext},
         walking::walk_effects::walk_bound_effects,
     },
+    prelude::DamageBoostStack,
     state::types::NodeState,
 };
 
@@ -221,11 +222,12 @@ fn until_with_during_sequence_inner_installs_correctly() {
     );
 
     let damage_stack = world
-        .get::<EffectStack<DamageBoostConfig>>(entity)
-        .expect("DamageBoost stack should exist");
-    assert_eq!(
-        damage_stack.len(),
-        1,
-        "DamageBoost should have 1 entry from Sequence inner"
+        .get::<DamageBoostStack>(entity)
+        .expect("DamageBoostStack should exist");
+    assert!(!damage_stack.is_empty());
+    assert!(
+        (damage_stack.aggregate_persistent() - 2.0).abs() < 1e-5,
+        "DamageBoostStack aggregate should be 2.0 from Sequence inner, got {}",
+        damage_stack.aggregate_persistent()
     );
 }

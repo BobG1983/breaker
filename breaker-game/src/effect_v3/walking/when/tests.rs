@@ -2,15 +2,18 @@ use bevy::{ecs::world::CommandQueue, prelude::*};
 use ordered_float::OrderedFloat;
 
 use super::system::*;
-use crate::effect_v3::{
-    effects::{DamageBoostConfig, SpeedBoostConfig},
-    stacking::EffectStack,
-    storage::{BoundEffects, StagedEffects},
-    types::{
-        BumpTarget, Condition, EffectType, ParticipantTarget, ReversibleEffectType, ScopedTree,
-        Terminal, Tree, Trigger, TriggerContext,
+use crate::{
+    effect_v3::{
+        effects::{DamageBoostConfig, SpeedBoostConfig},
+        stacking::EffectStack,
+        storage::{BoundEffects, StagedEffects},
+        types::{
+            BumpTarget, Condition, EffectType, ParticipantTarget, ReversibleEffectType, ScopedTree,
+            Terminal, Tree, Trigger, TriggerContext,
+        },
+        walking::UntilApplied,
     },
-    walking::UntilApplied,
+    prelude::DamageBoostStack,
 };
 
 #[test]
@@ -411,9 +414,14 @@ fn when_non_gate_sequence_inner_fires_immediately_not_armed() {
         .expect("SpeedBoost should have fired");
     assert_eq!(speed.len(), 1);
     let dmg = world
-        .get::<EffectStack<DamageBoostConfig>>(entity)
+        .get::<DamageBoostStack>(entity)
         .expect("DamageBoost should have fired");
-    assert_eq!(dmg.len(), 1);
+    assert!(!dmg.is_empty());
+    assert!(
+        (dmg.aggregate_persistent() - 2.0).abs() < 1e-5,
+        "DamageBoostStack aggregate should be 2.0, got {}",
+        dmg.aggregate_persistent()
+    );
     assert!(
         world.get::<StagedEffects>(entity).is_none(),
         "Sequence inner must not be staged"
@@ -619,9 +627,8 @@ fn when_arming_two_calls_append_independent_entries_in_order() {
     );
     assert!(world.get::<EffectStack<SpeedBoostConfig>>(entity).is_none());
     assert!(
-        world
-            .get::<EffectStack<DamageBoostConfig>>(entity)
-            .is_none()
+        world.get::<DamageBoostStack>(entity).is_none(),
+        "DamageBoostStack must not be inserted — inner When is staged, not fired"
     );
 }
 

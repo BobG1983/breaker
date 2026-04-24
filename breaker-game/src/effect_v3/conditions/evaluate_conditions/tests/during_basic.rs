@@ -9,6 +9,7 @@ use crate::{
         storage::BoundEffects,
         types::{Condition, EffectType, ReversibleEffectType, ScopedTree, Tree, Trigger},
     },
+    prelude::DamageBoostStack,
     state::types::NodeState,
 };
 
@@ -193,12 +194,13 @@ fn during_sequence_fires_all_effects_when_condition_true() {
     assert_eq!(speed_stack.len(), 1, "SpeedBoost stack should have 1 entry");
 
     let damage_stack = world
-        .get::<EffectStack<DamageBoostConfig>>(entity)
+        .get::<DamageBoostStack>(entity)
         .expect("DamageBoost stack should exist");
-    assert_eq!(
-        damage_stack.len(),
-        1,
-        "DamageBoost stack should have 1 entry"
+    assert!(!damage_stack.is_empty());
+    assert!(
+        (damage_stack.aggregate_persistent() - 2.0).abs() < 1e-5,
+        "DamageBoostStack aggregate should be 2.0, got {}",
+        damage_stack.aggregate_persistent()
     );
 }
 
@@ -239,12 +241,15 @@ fn during_sequence_reverses_all_effects_when_condition_becomes_false() {
             .len(),
         1
     );
-    assert_eq!(
-        world
-            .get::<EffectStack<DamageBoostConfig>>(entity)
+    assert!(
+        (world
+            .get::<DamageBoostStack>(entity)
             .unwrap()
-            .len(),
-        1
+            .aggregate_persistent()
+            - 2.0)
+            .abs()
+            < 1e-5,
+        "DamageBoostStack aggregate should be 2.0 after initial fire"
     );
 
     // Toggle condition off
@@ -260,11 +265,15 @@ fn during_sequence_reverses_all_effects_when_condition_becomes_false() {
     );
 
     let damage_stack = world
-        .get::<EffectStack<DamageBoostConfig>>(entity)
+        .get::<DamageBoostStack>(entity)
         .expect("DamageBoost stack should still exist as component");
     assert!(
         damage_stack.is_empty(),
         "DamageBoost stack should be empty after reversal"
+    );
+    assert!(
+        (damage_stack.aggregate_persistent() - 1.0).abs() <= f32::EPSILON,
+        "DamageBoostStack aggregate should be 1.0 (identity) after reversal"
     );
 }
 
@@ -359,11 +368,10 @@ fn multiple_during_entries_with_different_conditions_track_independently() {
         "SpeedBoost should have 1 entry (chip_a active)"
     );
 
-    // Shield condition is false → DamageBoost should NOT be active
+    // Shield condition is false → DamageBoost should NOT be active.
+    // Stack component must NEVER have been inserted.
     assert!(
-        world
-            .get::<EffectStack<DamageBoostConfig>>(entity)
-            .is_none(),
+        world.get::<DamageBoostStack>(entity).is_none(),
         "DamageBoost stack should not exist (Shield condition false)"
     );
 }
@@ -706,10 +714,8 @@ fn multiple_installed_durings_with_different_keys_track_independently() {
 
     // ShieldActive is false: chip_guard#installed[0] should NOT fire DamageBoost
     assert!(
-        world
-            .get::<EffectStack<DamageBoostConfig>>(entity)
-            .is_none(),
-        "DamageBoost stack should not exist (ShieldActive is false)"
+        world.get::<DamageBoostStack>(entity).is_none(),
+        "DamageBoostStack should not exist (ShieldActive is false)"
     );
 
     let da = world

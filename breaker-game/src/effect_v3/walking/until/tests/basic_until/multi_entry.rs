@@ -1,12 +1,15 @@
 use bevy::{ecs::world::CommandQueue, prelude::*};
 use ordered_float::OrderedFloat;
 
-use crate::effect_v3::{
-    effects::{DamageBoostConfig, SpeedBoostConfig},
-    stacking::EffectStack,
-    storage::BoundEffects,
-    types::{EffectType, ReversibleEffectType, ScopedTree, Tree, Trigger, TriggerContext},
-    walking::walk_effects::walk_bound_effects,
+use crate::{
+    effect_v3::{
+        effects::{DamageBoostConfig, SpeedBoostConfig},
+        stacking::EffectStack,
+        storage::BoundEffects,
+        types::{EffectType, ReversibleEffectType, ScopedTree, Tree, Trigger, TriggerContext},
+        walking::walk_effects::walk_bound_effects,
+    },
+    prelude::DamageBoostStack,
 };
 
 // ----------------------------------------------------------------
@@ -134,14 +137,15 @@ fn until_removal_does_not_affect_other_bound_effects_entries() {
         "SpeedBoost should be reversed after Until gate trigger match"
     );
 
-    // DamageBoost should have 1 entry from When firing
+    // DamageBoost should have fired once from the When tree
     let dmg_stack = world
-        .get::<EffectStack<DamageBoostConfig>>(entity)
-        .expect("DamageBoost EffectStack should exist from When firing");
-    assert_eq!(
-        dmg_stack.len(),
-        1,
-        "When tree should have fired DamageBoost"
+        .get::<DamageBoostStack>(entity)
+        .expect("DamageBoostStack should exist from When firing");
+    assert!(!dmg_stack.is_empty());
+    assert!(
+        (dmg_stack.aggregate_persistent() - 2.0).abs() < 1e-5,
+        "When tree should have fired DamageBoost with multiplier 2.0, got aggregate {}",
+        dmg_stack.aggregate_persistent()
     );
 
     // BoundEffects should only contain chip_b
@@ -212,9 +216,13 @@ fn multiple_until_entries_track_independently() {
         .expect("SpeedBoost should exist after both fire");
     assert_eq!(speed_stack.len(), 1);
     let dmg_stack = world
-        .get::<EffectStack<DamageBoostConfig>>(entity)
-        .expect("DamageBoost should exist after both fire");
-    assert_eq!(dmg_stack.len(), 1);
+        .get::<DamageBoostStack>(entity)
+        .expect("DamageBoostStack should exist after both fire");
+    assert!(
+        (dmg_stack.aggregate_persistent() - 2.0).abs() < 1e-5,
+        "DamageBoostStack aggregate should be 2.0 after fire, got {}",
+        dmg_stack.aggregate_persistent()
+    );
 
     // Second walk: Bumped — only chip_a reverses
     let trees_second = world.get::<BoundEffects>(entity).unwrap().0.clone();
@@ -240,12 +248,12 @@ fn multiple_until_entries_track_independently() {
     );
 
     let dmg_stack_after = world
-        .get::<EffectStack<DamageBoostConfig>>(entity)
+        .get::<DamageBoostStack>(entity)
         .expect("chip_b DamageBoost should still be active");
-    assert_eq!(
-        dmg_stack_after.len(),
-        1,
-        "chip_b DamageBoost should still have 1 entry (BoltLostOccurred is its gate)"
+    assert!(
+        (dmg_stack_after.aggregate_persistent() - 2.0).abs() < 1e-5,
+        "chip_b DamageBoost should still aggregate to 2.0 (BoltLostOccurred is its gate), got {}",
+        dmg_stack_after.aggregate_persistent()
     );
 
     let remaining = &world.get::<BoundEffects>(entity).unwrap().0;
@@ -340,8 +348,8 @@ fn multiple_until_entries_both_reverse_on_respective_gate_triggers() {
         .get::<EffectStack<SpeedBoostConfig>>(entity)
         .is_none_or(EffectStack::is_empty);
     let dmg_empty = world
-        .get::<EffectStack<DamageBoostConfig>>(entity)
-        .is_none_or(EffectStack::is_empty);
+        .get::<DamageBoostStack>(entity)
+        .is_none_or(DamageBoostStack::is_empty);
     assert!(speed_empty, "SpeedBoost should be reversed");
     assert!(dmg_empty, "DamageBoost should be reversed");
 

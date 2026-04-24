@@ -1,12 +1,15 @@
 use bevy::{ecs::world::CommandQueue, prelude::*};
 use ordered_float::OrderedFloat;
 
-use crate::effect_v3::{
-    effects::{DamageBoostConfig, SpeedBoostConfig},
-    stacking::EffectStack,
-    storage::BoundEffects,
-    types::{ReversibleEffectType, ScopedTree, Tree, Trigger, TriggerContext},
-    walking::walk_effects::walk_bound_effects,
+use crate::{
+    effect_v3::{
+        effects::{DamageBoostConfig, SpeedBoostConfig},
+        stacking::EffectStack,
+        storage::BoundEffects,
+        types::{ReversibleEffectType, ScopedTree, Tree, Trigger, TriggerContext},
+        walking::walk_effects::walk_bound_effects,
+    },
+    prelude::DamageBoostStack,
 };
 
 // ----------------------------------------------------------------
@@ -55,9 +58,14 @@ fn until_with_sequence_fires_all_reversible_effects_on_first_walk() {
     assert_eq!(speed_stack.len(), 1);
 
     let dmg_stack = world
-        .get::<EffectStack<DamageBoostConfig>>(entity)
-        .expect("DamageBoost EffectStack should exist");
-    assert_eq!(dmg_stack.len(), 1);
+        .get::<DamageBoostStack>(entity)
+        .expect("DamageBoostStack should exist");
+    assert!(!dmg_stack.is_empty());
+    assert!(
+        (dmg_stack.aggregate_persistent() - 2.0).abs() < 1e-5,
+        "DamageBoostStack aggregate should be 2.0, got {}",
+        dmg_stack.aggregate_persistent()
+    );
 }
 
 // ----------------------------------------------------------------
@@ -120,15 +128,15 @@ fn until_with_sequence_reverses_all_effects_on_gate_trigger_match() {
         .get::<EffectStack<SpeedBoostConfig>>(entity)
         .is_none_or(EffectStack::is_empty);
     let dmg_empty = world
-        .get::<EffectStack<DamageBoostConfig>>(entity)
-        .is_none_or(EffectStack::is_empty);
+        .get::<DamageBoostStack>(entity)
+        .is_none_or(DamageBoostStack::is_empty);
     assert!(
         speed_empty,
         "SpeedBoost EffectStack should be empty after Sequence reversal"
     );
     assert!(
         dmg_empty,
-        "DamageBoost EffectStack should be empty after Sequence reversal"
+        "DamageBoostStack should be empty after Sequence reversal"
     );
 
     let remaining = &world.get::<BoundEffects>(entity).unwrap().0;

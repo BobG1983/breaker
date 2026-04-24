@@ -9,6 +9,7 @@ use crate::{
         storage::BoundEffects,
         types::{Condition, EffectType, ScopedTree, Tree, Trigger, TriggerContext},
     },
+    prelude::DamageBoostStack,
     state::types::NodeState,
 };
 
@@ -729,9 +730,7 @@ fn shape_c_multiple_entries_with_different_triggers_are_independent() {
 
     // DamageBoost should not exist (BoltLostOccurred trigger not fired)
     assert!(
-        world
-            .get::<EffectStack<DamageBoostConfig>>(entity)
-            .is_none(),
-        "DamageBoost stack should not exist (BoltLostOccurred not fired)"
+        world.get::<DamageBoostStack>(entity).is_none(),
+        "DamageBoostStack should not exist (BoltLostOccurred not fired)"
     );
 }

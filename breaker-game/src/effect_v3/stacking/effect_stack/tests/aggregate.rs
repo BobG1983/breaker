@@ -3,8 +3,8 @@ use ordered_float::OrderedFloat;
 use super::super::component::*;
 use crate::effect_v3::{
     effects::{
-        BumpForceConfig, DamageBoostConfig, PiercingConfig, QuickStopConfig, RampingDamageConfig,
-        SizeBoostConfig, SpeedBoostConfig, VulnerableConfig,
+        BumpForceConfig, PiercingConfig, QuickStopConfig, RampingDamageConfig, SizeBoostConfig,
+        SpeedBoostConfig,
     },
     traits::PassiveEffect,
 };
@@ -60,22 +60,22 @@ fn aggregate_delegates_to_passive_effect_and_returns_sum() {
 
 #[test]
 fn removing_entry_from_multiplicative_stack_updates_aggregate() {
-    let mut stack = EffectStack::<DamageBoostConfig>::default();
+    let mut stack = EffectStack::<SpeedBoostConfig>::default();
     stack.push(
         "amp".into(),
-        DamageBoostConfig {
+        SpeedBoostConfig {
             multiplier: OrderedFloat(2.0),
         },
     );
     stack.push(
         "feedback_loop".into(),
-        DamageBoostConfig {
+        SpeedBoostConfig {
             multiplier: OrderedFloat(1.5),
         },
     );
     stack.push(
         "amp".into(),
-        DamageBoostConfig {
+        SpeedBoostConfig {
             multiplier: OrderedFloat(2.0),
         },
     );
@@ -84,7 +84,7 @@ fn removing_entry_from_multiplicative_stack_updates_aggregate() {
 
     stack.remove(
         "amp",
-        &DamageBoostConfig {
+        &SpeedBoostConfig {
             multiplier: OrderedFloat(2.0),
         },
     );
@@ -94,8 +94,8 @@ fn removing_entry_from_multiplicative_stack_updates_aggregate() {
 
 #[test]
 fn removing_all_multiplicative_entries_returns_aggregate_to_identity() {
-    let mut stack = EffectStack::<DamageBoostConfig>::default();
-    let config = DamageBoostConfig {
+    let mut stack = EffectStack::<SpeedBoostConfig>::default();
+    let config = SpeedBoostConfig {
         multiplier: OrderedFloat(2.0),
     };
     stack.push("amp".into(), config.clone());
@@ -244,41 +244,10 @@ fn size_boost_aggregate_identity_multiplier_unchanged() {
     assert_f32_eq(SizeBoostConfig::aggregate(&entries), 1.5);
 }
 
-#[test]
-fn damage_boost_aggregate_empty_returns_one() {
-    let entries: &[(String, DamageBoostConfig)] = &[];
-    assert_f32_eq(DamageBoostConfig::aggregate(entries), 1.0);
-}
-
-#[test]
-fn damage_boost_aggregate_two_entries_returns_product() {
-    let entries = [
-        (
-            "amp".into(),
-            DamageBoostConfig {
-                multiplier: OrderedFloat(2.0),
-            },
-        ),
-        (
-            "amp".into(),
-            DamageBoostConfig {
-                multiplier: OrderedFloat(2.0),
-            },
-        ),
-    ];
-    assert_f32_eq(DamageBoostConfig::aggregate(&entries), 4.0);
-}
-
-#[test]
-fn damage_boost_aggregate_single_half_multiplier() {
-    let entries = [(
-        "amp".into(),
-        DamageBoostConfig {
-            multiplier: OrderedFloat(0.5),
-        },
-    )];
-    assert_f32_eq(DamageBoostConfig::aggregate(&entries), 0.5);
-}
+// NOTE: `damage_boost_aggregate_*` tests were removed in W3 — `DamageBoostConfig`
+// no longer implements `PassiveEffect`. Its multiplier math moved to the crate-
+// owned `DamageBoostStack::aggregate_persistent()` (exercised by the
+// damage_boost config tests and the bolt_cell_collision integration tests).
 
 #[test]
 fn bump_force_aggregate_empty_returns_one() {
@@ -330,41 +299,10 @@ fn quick_stop_aggregate_two_entries_returns_product() {
     assert_f32_eq(QuickStopConfig::aggregate(&entries), 3.0);
 }
 
-#[test]
-fn vulnerable_aggregate_empty_returns_one() {
-    let entries: &[(String, VulnerableConfig)] = &[];
-    assert_f32_eq(VulnerableConfig::aggregate(entries), 1.0);
-}
-
-#[test]
-fn vulnerable_aggregate_two_entries_returns_product() {
-    let entries = [
-        (
-            "decay".into(),
-            VulnerableConfig {
-                multiplier: OrderedFloat(1.5),
-            },
-        ),
-        (
-            "decay".into(),
-            VulnerableConfig {
-                multiplier: OrderedFloat(2.0),
-            },
-        ),
-    ];
-    assert_f32_eq(VulnerableConfig::aggregate(&entries), 3.0);
-}
-
-#[test]
-fn vulnerable_aggregate_below_one_reduces() {
-    let entries = [(
-        "shield_effect".into(),
-        VulnerableConfig {
-            multiplier: OrderedFloat(0.5),
-        },
-    )];
-    assert_f32_eq(VulnerableConfig::aggregate(&entries), 0.5);
-}
+// NOTE: `vulnerable_aggregate_*` tests were removed in W3 — `VulnerableConfig`
+// no longer implements `PassiveEffect`. Its multiplier math moved to the crate-
+// owned `VulnerableStack::aggregate_persistent()` (exercised by the vulnerable
+// config tests and the bolt_cell_collision integration tests).
 
 // ---------------------------------------------------------------
 // Additive PassiveEffect::aggregate tests (behaviors 26-31)

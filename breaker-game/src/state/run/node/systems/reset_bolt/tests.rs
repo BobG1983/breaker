@@ -8,10 +8,7 @@ use crate::{
         definition::BoltDefinition,
         resources::{DEFAULT_BOLT_ANGLE_SPREAD, DEFAULT_BOLT_SPAWN_OFFSET_Y},
     },
-    effect_v3::{
-        effects::{DamageBoostConfig, SpeedBoostConfig},
-        stacking::EffectStack,
-    },
+    effect_v3::{effects::SpeedBoostConfig, stacking::EffectStack},
     prelude::*,
     shared::GameDrawLayer,
     state::run::NodeOutcome,
@@ -279,17 +276,16 @@ fn reset_bolt_preserves_effect_state() {
     let world = app.world();
 
     let active_dmg = world
-        .get::<EffectStack<DamageBoostConfig>>(bolt_id)
-        .expect("EffectStack<DamageBoostConfig> should be present");
-    assert_eq!(
-        active_dmg.len(),
-        1,
-        "EffectStack<DamageBoostConfig> should have 1 entry after reset"
+        .get::<DamageBoostStack>(bolt_id)
+        .expect("DamageBoostStack should be present");
+    assert!(
+        !active_dmg.is_empty(),
+        "DamageBoostStack should be non-empty after reset"
     );
     assert!(
-        (active_dmg.aggregate() - 1.5).abs() < f32::EPSILON,
-        "DamageBoostConfig aggregate should be 1.5 after reset, got {}",
-        active_dmg.aggregate()
+        (active_dmg.aggregate_persistent() - 1.5).abs() <= f32::EPSILON,
+        "DamageBoostStack aggregate should be 1.5 after reset, got {}",
+        active_dmg.aggregate_persistent()
     );
 
     let active_spd = world

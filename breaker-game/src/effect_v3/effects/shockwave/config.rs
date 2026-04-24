@@ -11,10 +11,8 @@ use serde::{Deserialize, Serialize};
 use super::components::*;
 use crate::{
     bolt::{components::BoltBaseDamage, resources::DEFAULT_BOLT_BASE_DAMAGE},
-    effect_v3::{
-        components::EffectSourceChip, effects::DamageBoostConfig, stacking::EffectStack,
-        traits::Fireable,
-    },
+    effect_v3::{components::EffectSourceChip, traits::Fireable},
+    prelude::*,
     state::types::NodeState,
 };
 
@@ -38,8 +36,8 @@ impl Fireable for ShockwaveConfig {
 
         // Snapshot damage multiplier from source entity's active boosts
         let damage_mult = world
-            .get::<EffectStack<DamageBoostConfig>>(entity)
-            .map_or(1.0, EffectStack::aggregate);
+            .get::<DamageBoostStack>(entity)
+            .map_or(1.0, DamageBoostStack::aggregate_persistent);
 
         // Calculate effective max radius from stacking
         let stacks_f32 = self.stacks.saturating_sub(1) as f32;
@@ -95,7 +93,8 @@ mod tests {
     use super::*;
     use crate::{
         bolt::{components::BoltBaseDamage, resources::DEFAULT_BOLT_BASE_DAMAGE},
-        effect_v3::{effects::DamageBoostConfig, stacking::EffectStack, traits::Fireable},
+        effect_v3::{effects::DamageBoostConfig, traits::Fireable},
+        prelude::DamageBoostStack,
     };
 
     fn make_config() -> ShockwaveConfig {
@@ -323,10 +322,10 @@ mod tests {
         );
 
         let stack = world
-            .get::<EffectStack<DamageBoostConfig>>(source)
-            .expect("source should carry an EffectStack<DamageBoostConfig>");
-        assert_eq!(stack.len(), 1);
-        assert!((stack.aggregate() - 2.0).abs() < 1e-5);
+            .get::<DamageBoostStack>(source)
+            .expect("source should carry a DamageBoostStack");
+        assert!(!stack.is_empty());
+        assert!((stack.aggregate_persistent() - 2.0).abs() < 1e-5);
     }
 
     // #23
@@ -363,10 +362,11 @@ mod tests {
         );
 
         let stack = world
-            .get::<EffectStack<DamageBoostConfig>>(source)
-            .expect("source should carry an EffectStack<DamageBoostConfig>");
-        assert_eq!(stack.len(), 2);
-        assert!((stack.aggregate() - 6.0).abs() < 1e-5);
+            .get::<DamageBoostStack>(source)
+            .expect("source should carry a DamageBoostStack");
+        // Two-entry aggregate check — proxy for len == 2 since the new
+        // stack has no `len()` accessor.
+        assert!((stack.aggregate_persistent() - 6.0).abs() < 1e-5);
     }
 
     // #24

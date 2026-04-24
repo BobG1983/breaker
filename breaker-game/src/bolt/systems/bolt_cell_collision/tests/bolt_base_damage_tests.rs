@@ -177,6 +177,35 @@ fn collision_high_base_damage_with_boost() {
     );
 }
 
+// ── W3 Behavior 16: bolt_cell_collision reads DamageBoostStack multi-entry aggregate ──
+
+#[test]
+fn collision_multi_entry_damage_boost_stack_aggregates_multiplicatively() {
+    // Default BoltBaseDamage(10.0) with damage_stack(&[2.0, 1.5]) = 30.0
+    // exercises DamageBoostStack.aggregate_persistent() with two persistent entries.
+    let mut app = test_app_with_damage_and_wall_messages();
+    let cc = CellConfig::default();
+
+    let cell_y = 100.0;
+    spawn_cell(&mut app, 0.0, cell_y);
+
+    let start_y = cell_y - cc.height / 2.0 - 14.0 - 2.0;
+    let bolt_entity = spawn_bolt_from_definition(&mut app, 0.0, start_y, 0.0, 400.0);
+    app.world_mut()
+        .entity_mut(bolt_entity)
+        .insert(damage_stack(&[2.0, 1.5]));
+
+    tick(&mut app);
+
+    let msgs = app.world().resource::<DamageDealtCellMessages>();
+    assert_eq!(msgs.0.len(), 1, "should emit one DamageDealt<Cell>");
+    assert!(
+        (msgs.0[0].amount - 30.0).abs() < f32::EPSILON,
+        "DamageDealt<Cell>.amount should be 10.0 * 2.0 * 1.5 = 30.0, got {}",
+        msgs.0[0].amount
+    );
+}
+
 // ── Behavior 22: bolt_cell_collision uses BoltBaseDamage for piercing lookahead ──
 
 #[test]
