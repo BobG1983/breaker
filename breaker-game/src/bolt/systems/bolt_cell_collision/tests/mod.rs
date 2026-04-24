@@ -11,3 +11,4 @@ mod piercing;
 mod reflection;
 mod scheduling;
 mod vulnerability;
+mod w6_raw_emit;

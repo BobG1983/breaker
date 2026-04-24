@@ -6,10 +6,11 @@
 //! `bolt_cell_collision` writes `DamageDealt<Cell>` before the damage pipeline
 //! begins flushing.
 //!
-//! These tests pin the functional consequence: the cell's `Hp.current` after
-//! one `tick(...)` matches the pre-W6 double-application formula
-//! `final_hp = hp − base × boost² × vuln²`. W6 will correct the formula; until
-//! then the buggy values are intentional.
+//! Post-W6, these tests pin the functional consequence: the cell's `Hp.current`
+//! after one `tick(...)` matches the single-application formula
+//! `final_hp = hp − base × boost × vuln`. `bolt_cell_collision` now emits RAW
+//! `base_damage` and the crate pipeline (`apply_damage_boosts::<Cell>` +
+//! `apply_vulnerable::<Cell>`) multiplies once.
 
 use bevy::prelude::*;
 
@@ -31,7 +32,7 @@ use crate::{
 
 // ── Shared helpers (local to scheduling tests) ──────────────────────────────
 
-/// Builds a `TestAppBuilder` wired for the W5 bolt-cell-collision scheduling
+/// Builds a `TestAppBuilder` wired for the W6 bolt-cell-collision scheduling
 /// tests: state hierarchy in Playing, physics, playfield, effects pipeline
 /// (which installs `RantzDmgPlugin` and registers every `Dmgable`), plus
 /// `BoltPlugin` so the PRODUCTION `bolt_cell_collision` scheduling is under
@@ -58,20 +59,11 @@ fn read_hp(app: &App, cell: Entity) -> Option<f32> {
     app.world().get::<Hp>(cell).map(|h| h.current)
 }
 
-/// Returns true iff the cell entity no longer exists in the world.
-/// Under the full damage pipeline, catastrophic damage flows
-/// `apply_damage → detect_deaths → handle_kill → DespawnEntity →
-/// process_despawn_requests` in a single `app.update()` — so a killed
-/// cell is despawned, not merely marked `Dead`.
-fn is_despawned(app: &App, cell: Entity) -> bool {
-    app.world().get_entity(cell).is_err()
-}
-
 // ── Behavior 1 — bolt_cell_collision damage boost applies same-tick ─────────
 
 /// With `DamageBoostStack(2.0)` on the bolt, the cell's HP after a single
-/// tick matches the pre-W6 double-application formula:
-/// `100.0 − 10.0 × 2.0² × 1.0² == 60.0`.
+/// tick matches the post-W6 single-application formula:
+/// `100.0 − 10.0 × 2.0 × 1.0 == 80.0`.
 #[test]
 fn bolt_cell_collision_applies_damage_boost_in_same_tick() {
     let mut app = scheduling_test_app();
@@ -91,13 +83,13 @@ fn bolt_cell_collision_applies_damage_boost_in_same_tick() {
 
     let hp = read_hp(&app, cell_entity).unwrap_or(f32::NAN);
     assert!(
-        (hp - 60.0).abs() < 1e-5,
-        "Pre-W6 double-application: final_hp = 100.0 − 10.0 × 2.0² × 1.0² == 60.0, got {hp}"
+        (hp - 80.0).abs() < 1e-5,
+        "Post-W6 single-application: final_hp = 100.0 − 10.0 × 2.0 × 1.0 == 80.0, got {hp}"
     );
 }
 
 /// Behavior 1 edge case: `DamageBoostStack(&[2.0, 1.5])` aggregates to 3.0.
-/// Pre-W6: `100.0 − 10.0 × 3.0² × 1.0² == 100.0 − 90.0 == 10.0`.
+/// Post-W6: `100.0 − 10.0 × 3.0 × 1.0 == 70.0`.
 #[test]
 fn bolt_cell_collision_applies_aggregated_damage_boost_in_same_tick() {
     let mut app = scheduling_test_app();
@@ -117,19 +109,29 @@ fn bolt_cell_collision_applies_aggregated_damage_boost_in_same_tick() {
 
     let hp = read_hp(&app, cell_entity).unwrap_or(f32::NAN);
     assert!(
-        (hp - 10.0).abs() < 1e-5,
-        "Pre-W6: final_hp = 100.0 − 10.0 × 3.0² × 1.0² == 10.0, got {hp}"
+        (hp - 70.0).abs() < 1e-5,
+        "Post-W6: final_hp = 100.0 − 10.0 × 3.0 × 1.0 == 70.0, got {hp}"
     );
 }
 
-/// Behavior 1 negative-assertion smoke test: `system_in_set` returns `false`
-/// when the system is NOT scheduled in the given schedule. Build an app
-/// WITHOUT `BoltPlugin` so `bolt_cell_collision` is not scheduled; assert the
-/// helper returns `false`. Without this smoke test, every Section A / B
-/// assertion would be vacuous if the helper silently returned `true` in all
-/// cases.
+/// `system_in_set` helper sanity check: returns `false` when the system is
+/// NOT scheduled in the given schedule. Post-W6, `bolt_cell_collision` does
+/// NOT tag `DmgSystems::EmitDamage` — it is ordered transitively via
+/// `BoltSystems::CellCollision → EffectV3Systems::Bridge →
+/// EffectV3Systems::Tick.before(DmgSystems::EmitDamage)`. This negative
+/// assertion is a smoke test for the `system_in_set` helper itself: without
+/// `BoltPlugin` the system isn't scheduled at all, so the helper must return
+/// false. (The helper's positive return is vacuously not tested here; this
+/// only pins that it doesn't silently return true for unscheduled systems.)
 #[test]
 fn system_in_set_returns_false_when_bolt_plugin_not_installed() {
+    // Post-W6, bolt_cell_collision does NOT tag DmgSystems::EmitDamage — it is
+    // ordered transitively via BoltSystems::CellCollision → EffectV3Systems::Bridge
+    // → EffectV3Systems::Tick.before(DmgSystems::EmitDamage). This negative assertion
+    // is a smoke test for the `system_in_set` helper itself: without BoltPlugin the
+    // system isn't scheduled at all, so the helper must return false. (The helper's
+    // positive return is vacuously not tested here; this only pins that it doesn't
+    // silently return true for unscheduled systems.)
     let mut app = TestAppBuilder::new()
         .with_state_hierarchy()
         .in_state_node_playing()
@@ -150,8 +152,8 @@ fn system_in_set_returns_false_when_bolt_plugin_not_installed() {
             DmgSystems::EmitDamage,
         ),
         "Without BoltPlugin, bolt_cell_collision is not scheduled at all. \
-         system_in_set must return false in this case — otherwise every \
-         Section A/B scheduling assertion is vacuous."
+         system_in_set must return false in this case — otherwise this \
+         helper sanity check is vacuous."
     );
 }
 
@@ -159,8 +161,8 @@ fn system_in_set_returns_false_when_bolt_plugin_not_installed() {
 
 /// Behavior 2 (HP delta): With `VulnerableStack(3.0)` on the cell and NO
 /// `DamageBoostStack` on the bolt, the cell's HP after a single tick matches
-/// the pre-W6 double-application formula:
-/// `100.0 − 10.0 × 1.0² × 3.0² == 10.0`.
+/// the post-W6 single-application formula:
+/// `100.0 − 10.0 × 1.0 × 3.0 == 70.0`.
 #[test]
 fn bolt_cell_collision_applies_vulnerable_stack_in_same_tick() {
     let mut app = scheduling_test_app();
@@ -177,20 +179,19 @@ fn bolt_cell_collision_applies_vulnerable_stack_in_same_tick() {
 
     let hp = read_hp(&app, cell_entity).unwrap_or(f32::NAN);
     assert!(
-        (hp - 10.0).abs() < 1e-5,
-        "Pre-W6: final_hp = 100.0 − 10.0 × 1.0² × 3.0² == 10.0, got {hp}"
+        (hp - 70.0).abs() < 1e-5,
+        "Post-W6: final_hp = 100.0 − 10.0 × 1.0 × 3.0 == 70.0, got {hp}"
     );
 }
 
 /// Behavior 2 edge case: BOTH `DamageBoostStack(2.0)` on bolt AND
-/// `VulnerableStack(3.0)` on cell. Pre-W6 raw formula:
-/// `100.0 − 10.0 × 2.0² × 3.0² = −260.0`. Under the full damage pipeline,
-/// a catastrophic hit flows `apply_damage → detect_deaths → handle_kill →
-/// DespawnEntity → process_despawn_requests` in a single `app.update()`,
-/// so the cell is DESPAWNED by tick end (not merely marked `Dead`). The
-/// observable assertion here is "cell entity no longer exists."
+/// `VulnerableStack(3.0)` on cell. Post-W6 single-application formula:
+/// `100.0 − 10.0 × 2.0 × 3.0 == 40.0` — the cell SURVIVES with reduced HP.
+/// (Pre-W6 double-application produced `−260.0`, catastrophically killing
+/// the cell. Post-W6 the pipeline multiplies boost and vulnerability once
+/// each and the cell stays alive.)
 #[test]
-fn bolt_cell_collision_applies_boost_and_vulnerability_same_tick_clamped() {
+fn bolt_cell_collision_applies_boost_and_vulnerability_same_tick_survives_with_reduced_hp() {
     let mut app = scheduling_test_app();
     let bc = default_bolt_definition();
     let cc = CellConfig::default();
@@ -206,10 +207,9 @@ fn bolt_cell_collision_applies_boost_and_vulnerability_same_tick_clamped() {
 
     tick(&mut app);
 
+    let hp = read_hp(&app, cell_entity).unwrap_or(f32::NAN);
     assert!(
-        is_despawned(&app, cell_entity),
-        "Pre-W6 catastrophic damage (100.0 − 10.0 × 2.0² × 3.0² = −260.0) \
-         must kill the cell. Under the full damage pipeline the cell is \
-         despawned in the same tick; expected cell entity to no longer exist"
+        (hp - 40.0).abs() < 1e-5,
+        "Post-W6: final_hp = 100.0 − 10.0 × 2.0 × 3.0 == 40.0 (cell SURVIVES); got {hp}"
     );
 }

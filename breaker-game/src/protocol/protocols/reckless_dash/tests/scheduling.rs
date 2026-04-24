@@ -10,11 +10,8 @@
 //! the same tick as the emission.
 //!
 //! These scenarios pair the protocol emission with `bolt_cell_collision`'s
-//! own emission in the same tick, so observed HP drops encode BOTH the
-//! protocol's single-apply amount AND `bolt_cell_collision`'s pre-W6
-//! double-apply contribution — i.e.
-//! `starting_hp − (base × boost²) − (base × reckless_dash_mul × boost)`.
-//! The double-apply term collapses to a single application once W6 lands.
+//! own emission in the same tick. Post-W6 both emissions are single-apply:
+//! `starting_hp − (base × boost) − (base × reckless_dash_mul × boost)`.
 
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::{GlobalPosition2D, Spatial2D};
@@ -116,14 +113,14 @@ fn reckless_dash_amplify_damage_applies_damage_boost_in_same_tick() {
     tick(&mut app);
 
     let hp = read_hp(&app, cell).unwrap_or(f32::NAN);
-    // Formula:
-    //   200.0 − (bolt_base × boost²) − (bolt_base × reckless_dash_mul × boost)
-    //     = 200.0 − (10.0 × 4.0) − (10.0 × 3.0 × 2.0)
-    //     = 200.0 − 40.0 − 60.0
-    //     = 100.0
+    // Post-W6 formula (single-apply on baseline):
+    //   200.0 − (bolt_base × boost) − (bolt_base × reckless_dash_mul × boost)
+    //     = 200.0 − (10.0 × 2.0) − (10.0 × 3.0 × 2.0)
+    //     = 200.0 − 20.0 − 60.0
+    //     = 120.0
     assert!(
-        (hp - 100.0).abs() < 1e-5,
-        "final_hp = 100.0 (baseline 40.0 + risky 60.0 dropped from 200.0), got {hp}"
+        (hp - 120.0).abs() < 1e-5,
+        "final_hp = 120.0 (baseline 20.0 + risky 60.0 dropped from 200.0), got {hp}"
     );
 }
 

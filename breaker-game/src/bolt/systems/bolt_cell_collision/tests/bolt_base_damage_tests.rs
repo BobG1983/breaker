@@ -126,13 +126,16 @@ fn collision_with_zero_base_damage() {
 
 // ── Behavior 21: bolt_cell_collision uses BoltBaseDamage with ActiveDamageBoosts ──
 
+/// Harness B migration: producer emits RAW 10.0; `apply_damage_boosts::<Cell>`
+/// multiplies to 15.0; cell HP decrements by 15.0.
 #[test]
-fn collision_uses_bolt_base_damage_with_damage_boost() {
-    let mut app = test_app_with_damage_and_wall_messages();
+fn collision_delivers_bolt_base_damage_with_boost_through_pipeline() {
+    let mut app = test_app_with_full_pipeline();
     let cc = CellConfig::default();
 
     let cell_y = 100.0;
-    spawn_cell(&mut app, 0.0, cell_y);
+    let starting_hp = 100.0;
+    let cell = spawn_cell_with_health(&mut app, 0.0, cell_y, starting_hp);
 
     let start_y = cell_y - cc.height / 2.0 - 14.0 - 2.0;
     let bolt_entity = spawn_bolt_from_definition(&mut app, 0.0, start_y, 0.0, 400.0);
@@ -146,19 +149,27 @@ fn collision_uses_bolt_base_damage_with_damage_boost() {
     assert_eq!(msgs.0.len(), 1, "should emit one DamageDealt<Cell>");
     assert!(
         (msgs.0[0].amount - 15.0).abs() < f32::EPSILON,
-        "DamageDealt<Cell>.amount should be 10.0 * 1.5 = 15.0, got {}",
+        "post-pipeline DamageDealt<Cell>.amount should be 10.0 * 1.5 = 15.0, got {}",
         msgs.0[0].amount
+    );
+
+    let hp = app.world().get::<Hp>(cell).map_or(f32::NAN, |h| h.current);
+    assert!(
+        (hp - (starting_hp - 15.0)).abs() < 1e-5,
+        "post-tick cell Hp.current should be {} (starting - 15.0), got {hp}",
+        starting_hp - 15.0
     );
 }
 
+/// Edge case: `BoltBaseDamage(25.0)` with `damage_stack(&[2.0])` => 50.0 end-to-end.
 #[test]
-fn collision_high_base_damage_with_boost() {
-    // Edge case: BoltBaseDamage(25.0) with damage_stack(&[2.0]) = 50.0
-    let mut app = test_app_with_damage_and_wall_messages();
+fn collision_delivers_high_base_damage_with_boost_through_pipeline() {
+    let mut app = test_app_with_full_pipeline();
     let cc = CellConfig::default();
 
     let cell_y = 100.0;
-    spawn_cell(&mut app, 0.0, cell_y);
+    let starting_hp = 100.0;
+    let cell = spawn_cell_with_health(&mut app, 0.0, cell_y, starting_hp);
 
     let start_y = cell_y - cc.height / 2.0 - 14.0 - 2.0;
     let bolt_entity = spawn_bolt_with_damage(&mut app, 0.0, start_y, 0.0, 400.0, 25.0);
@@ -172,22 +183,30 @@ fn collision_high_base_damage_with_boost() {
     assert_eq!(msgs.0.len(), 1, "should emit one DamageDealt<Cell>");
     assert!(
         (msgs.0[0].amount - 50.0).abs() < f32::EPSILON,
-        "DamageDealt<Cell>.amount should be 25.0 * 2.0 = 50.0, got {}",
+        "post-pipeline DamageDealt<Cell>.amount should be 25.0 * 2.0 = 50.0, got {}",
         msgs.0[0].amount
+    );
+
+    let hp = app.world().get::<Hp>(cell).map_or(f32::NAN, |h| h.current);
+    assert!(
+        (hp - (starting_hp - 50.0)).abs() < 1e-5,
+        "post-tick cell Hp.current should be {} (starting - 50.0), got {hp}",
+        starting_hp - 50.0
     );
 }
 
 // ── W3 Behavior 16: bolt_cell_collision reads DamageBoostStack multi-entry aggregate ──
 
+/// Harness B migration: producer emits RAW 10.0; pipeline aggregates
+/// multi-entry boost to 3.0, multiplies to 30.0; cell HP decrements by 30.0.
 #[test]
-fn collision_multi_entry_damage_boost_stack_aggregates_multiplicatively() {
-    // Default BoltBaseDamage(10.0) with damage_stack(&[2.0, 1.5]) = 30.0
-    // exercises DamageBoostStack.aggregate_persistent() with two persistent entries.
-    let mut app = test_app_with_damage_and_wall_messages();
+fn collision_delivers_multi_entry_boost_aggregated_through_pipeline() {
+    let mut app = test_app_with_full_pipeline();
     let cc = CellConfig::default();
 
     let cell_y = 100.0;
-    spawn_cell(&mut app, 0.0, cell_y);
+    let starting_hp = 100.0;
+    let cell = spawn_cell_with_health(&mut app, 0.0, cell_y, starting_hp);
 
     let start_y = cell_y - cc.height / 2.0 - 14.0 - 2.0;
     let bolt_entity = spawn_bolt_from_definition(&mut app, 0.0, start_y, 0.0, 400.0);
@@ -201,8 +220,15 @@ fn collision_multi_entry_damage_boost_stack_aggregates_multiplicatively() {
     assert_eq!(msgs.0.len(), 1, "should emit one DamageDealt<Cell>");
     assert!(
         (msgs.0[0].amount - 30.0).abs() < f32::EPSILON,
-        "DamageDealt<Cell>.amount should be 10.0 * 2.0 * 1.5 = 30.0, got {}",
+        "post-pipeline DamageDealt<Cell>.amount should be 10.0 * 2.0 * 1.5 = 30.0, got {}",
         msgs.0[0].amount
+    );
+
+    let hp = app.world().get::<Hp>(cell).map_or(f32::NAN, |h| h.current);
+    assert!(
+        (hp - (starting_hp - 30.0)).abs() < 1e-5,
+        "post-tick cell Hp.current should be {} (starting - 30.0), got {hp}",
+        starting_hp - 30.0
     );
 }
 
@@ -346,14 +372,16 @@ fn collision_two_bolts_different_base_damage() {
     );
 }
 
+/// Harness B migration — two bolts, two cells, per-bolt boosts apply
+/// independently through the pipeline (no cross-attribution).
 #[test]
-fn collision_two_bolts_different_damage_with_boosts() {
-    // Edge case: Both bolts with damage_stack(&[2.0])
-    let mut app = test_app_with_damage_and_wall_messages();
+fn collision_delivers_two_bolts_with_independent_boosts_end_to_end() {
+    let mut app = test_app_with_full_pipeline();
     let cc = CellConfig::default();
 
-    let cell_a = spawn_cell(&mut app, -100.0, 100.0);
-    let cell_b = spawn_cell(&mut app, 100.0, 100.0);
+    let starting_hp = 100.0;
+    let cell_a = spawn_cell_with_health(&mut app, -100.0, 100.0, starting_hp);
+    let cell_b = spawn_cell_with_health(&mut app, 100.0, 100.0, starting_hp);
 
     let start_y = 100.0 - cc.height / 2.0 - 14.0 - 2.0;
 
@@ -381,13 +409,32 @@ fn collision_two_bolts_different_damage_with_boosts() {
 
     assert!(
         (msg_a.amount - 20.0).abs() < f32::EPSILON,
-        "cell A damage should be 10.0 * 2.0 = 20.0, got {}",
+        "post-pipeline cell A amount should be 10.0 * 2.0 = 20.0, got {}",
         msg_a.amount
     );
     assert!(
         (msg_b.amount - 50.0).abs() < f32::EPSILON,
-        "cell B damage should be 25.0 * 2.0 = 50.0, got {}",
+        "post-pipeline cell B amount should be 25.0 * 2.0 = 50.0, got {}",
         msg_b.amount
+    );
+
+    let hp_a = app
+        .world()
+        .get::<Hp>(cell_a)
+        .map_or(f32::NAN, |h| h.current);
+    let hp_b = app
+        .world()
+        .get::<Hp>(cell_b)
+        .map_or(f32::NAN, |h| h.current);
+    assert!(
+        (hp_a - (starting_hp - 20.0)).abs() < 1e-5,
+        "cell A Hp.current should be {} (starting - 20.0), got {hp_a}",
+        starting_hp - 20.0
+    );
+    assert!(
+        (hp_b - (starting_hp - 50.0)).abs() < 1e-5,
+        "cell B Hp.current should be {} (starting - 50.0), got {hp_b}",
+        starting_hp - 50.0
     );
 }
 
@@ -419,15 +466,18 @@ fn collision_without_bolt_base_damage_falls_back_to_default() {
     );
 }
 
+/// Harness B migration: fallback `BoltBaseDamage(10.0)` + `damage_stack(&[2.0])`
+/// → producer emits RAW 10.0; `apply_damage_boosts::<Cell>` multiplies to 20.0;
+/// cell HP decrements by 20.0.
 #[test]
-fn collision_without_bolt_base_damage_with_boost_uses_fallback() {
-    // Edge case: BoltBaseDamage(10.0), ActiveDamageBoosts(2.0) -> 10.0 * 2.0 = 20.0
-    let mut app = test_app_with_damage_and_wall_messages();
+fn collision_delivers_fallback_base_damage_with_boost_through_pipeline() {
+    let mut app = test_app_with_full_pipeline();
     let cc = CellConfig::default();
     let bc = super::helpers::test_bolt_definition();
 
     let cell_y = 100.0;
-    spawn_cell(&mut app, 0.0, cell_y);
+    let starting_hp = 100.0;
+    let cell = spawn_cell_with_health(&mut app, 0.0, cell_y, starting_hp);
 
     let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
     let bolt_entity = spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
@@ -441,8 +491,15 @@ fn collision_without_bolt_base_damage_with_boost_uses_fallback() {
     assert_eq!(msgs.0.len(), 1, "should emit one DamageDealt<Cell>");
     assert!(
         (msgs.0[0].amount - 20.0).abs() < f32::EPSILON,
-        "DamageDealt<Cell>.amount should be DEFAULT_BOLT_BASE_DAMAGE * 2.0 = 20.0, got {}",
+        "post-pipeline DamageDealt<Cell>.amount should be DEFAULT_BOLT_BASE_DAMAGE * 2.0 = 20.0, got {}",
         msgs.0[0].amount
+    );
+
+    let hp = app.world().get::<Hp>(cell).map_or(f32::NAN, |h| h.current);
+    assert!(
+        (hp - (starting_hp - 20.0)).abs() < 1e-5,
+        "post-tick cell Hp.current should be {} (starting - 20.0), got {hp}",
+        starting_hp - 20.0
     );
 }
 

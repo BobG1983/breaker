@@ -7,7 +7,7 @@ pub(super) use crate::bolt::test_utils::{
     default_bolt_definition as test_bolt_definition, spawn_bolt,
 };
 use crate::{
-    bolt::systems::bolt_cell_collision::system::bolt_cell_collision,
+    bolt::{BoltPlugin, systems::bolt_cell_collision::system::bolt_cell_collision},
     cells::{
         components::{CellHeight, CellWidth},
         test_utils as cell_test_utils,
@@ -182,6 +182,11 @@ pub(super) fn collect_wall_hits(
 
 /// Creates a test app with `DamageDealt<Cell>` and `BoltImpactWall` message capture
 /// in addition to the standard `BoltImpactCell`.
+///
+/// Harness A (emission-only): does NOT install `RantzDmgPlugin`, so the
+/// captured `DamageDealt<Cell>.amount` is the RAW value `bolt_cell_collision`
+/// emitted — no boost/vulnerability multiplication has been applied. Use this
+/// helper when the test asserts on the producer's emission amount directly.
 pub(super) fn test_app_with_damage_and_wall_messages() -> App {
     TestAppBuilder::new()
         .with_physics()
@@ -201,4 +206,49 @@ pub(super) fn test_app_with_damage_and_wall_messages() -> App {
             (collect_damage_cells, collect_wall_hits, collect_full_hits).after(bolt_cell_collision),
         )
         .build()
+}
+
+/// Harness B (full pipeline): installs the production damage pipeline
+/// (`RantzDmgPlugin` + `register_dmgable::<Cell>()` via
+/// `with_effects_pipeline()`) and the real `BoltPlugin`, so
+/// `bolt_cell_collision` is scheduled with its production ordering
+/// (`BoltSystems::CellCollision.before(EffectV3Systems::Bridge)`).
+/// `EffectV3Plugin` configures `EffectV3Systems::Tick.before(DmgSystems::EmitDamage)`
+/// which transitively orders the bolt producer before the crate pipeline.
+///
+/// Message collectors are scheduled `.after(DmgSystems::ApplyVulnerable).before(DmgSystems::ApplyDamage)`
+/// so they observe `DamageDealt<Cell>.amount` AFTER `apply_damage_boosts::<Cell>`
+/// and `apply_vulnerable::<Cell>` have multiplied the message, but BEFORE
+/// `apply_damage_to_cells` consumes the message. Use this helper for tests
+/// that assert post-pipeline `amount` OR final `Hp.current` on the target
+/// cell after one `tick(...)`.
+///
+/// Does NOT add any test-only scheduling tag on `bolt_cell_collision` — the
+/// production wiring is preserved verbatim.
+pub(super) fn test_app_with_full_pipeline() -> App {
+    let mut app = TestAppBuilder::new()
+        .with_state_hierarchy()
+        .in_state_node_playing()
+        .with_physics()
+        .with_playfield()
+        .with_bolt_registry()
+        .with_breaker_registry()
+        .with_cell_registry()
+        .with_resource::<crate::input::resources::InputActions>()
+        .with_effects_pipeline()
+        .build();
+    // BoltPlugin owns `bolt_cell_collision`'s production scheduling. Install
+    // it UNMODIFIED — no DmgSystems::EmitDamage tag is added here.
+    app.add_plugins(BoltPlugin);
+
+    app.insert_resource(DamageDealtCellMessages::default());
+    app.insert_resource(WallHitMessages::default());
+    app.insert_resource(FullHitMessages::default());
+    app.add_systems(
+        FixedUpdate,
+        (collect_damage_cells, collect_wall_hits, collect_full_hits)
+            .after(DmgSystems::ApplyVulnerable)
+            .before(DmgSystems::ApplyDamage),
+    );
+    app
 }
