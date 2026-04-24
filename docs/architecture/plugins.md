@@ -81,7 +81,7 @@ src/
 
 **`App`** (`app.rs`) is responsible for constructing the Bevy `App`, adding `DefaultPlugins`, and adding the `Game` plugin group.
 
-**`Game`** (`game.rs`) is a `PluginGroup` responsible for wiring together all domain plugins in the correct order. This is the single place that knows about all plugins. Plugin registration order: `InputPlugin`, `StatePlugin`, `RantzSpatial2dPlugin::<GameDrawLayer>`, `RantzPhysics2dPlugin`, `WallPlugin`, `BreakerPlugin`, `EffectV3Plugin`, `BoltPlugin`, `CellsPlugin`, `ChipsPlugin`, `FxPlugin`, `AudioPlugin`, `DebugPlugin`.
+**`Game`** (`game.rs`) is a `PluginGroup` responsible for wiring together all domain plugins in the correct order. This is the single place that knows about all plugins. Plugin registration order: `InputPlugin`, `StatePlugin`, `RantzSpatial2dPlugin::<GameDrawLayer>`, `RantzPhysics2dPlugin`, `RantzDmgPlugin`, `WallPlugin`, `BreakerPlugin`, `EffectV3Plugin`, `BoltPlugin`, `CellsPlugin`, `ChipsPlugin`, `FxPlugin`, `AudioPlugin`, `DebugPlugin`.
 
 **Domain plugins** (breaker, bolt, cells, etc.) are self-contained:
 - Each defines its own `Plugin` struct implementing `bevy::app::Plugin`
@@ -92,7 +92,7 @@ src/
 
 **Nested sub-domain plugins** — a domain may contain child plugins for cohesive subsets of functionality (e.g., breaker archetypes). The parent plugin adds child plugins via `app.add_plugins()`. `game.rs` only knows about top-level plugins. See [layout.md](layout.md) for the full nesting rules and folder structure.
 
-**Cross-domain SystemSet exports** — domains that expose ordering anchors for other domains define a `pub enum {Domain}Systems` in `sets.rs`. Current exported sets: `BreakerSystems` (`breaker/sets.rs`), `BoltSystems` (`bolt/sets.rs`), `EffectV3Systems` (`effect_v3/sets.rs`, variants: `Bridge`, `Tick`, `Conditions`, `Reset`), `UiSystems` (`state/run/node/hud/sets.rs`), `NodeSystems` (`state/run/node/sets.rs`). The external crates also export ordering sets: `rantzsoft_physics2d::PhysicsSystems` (`MaintainQuadtree`, `EnforceDistanceConstraints`) for ordering against the quadtree; `rantzsoft_spatial2d::SpatialSystems` (`SavePrevious`, `ApplyVelocity`, `ComputeGlobals`, `DeriveTransform`) for ordering against the spatial pipeline stages; `rantzsoft_defaults::DefaultsSystems` (`Seed`, `PropagateDefaults`) for ordering config-seeding systems via `RantzDefaultsPlugin`. See [ordering.md](ordering.md) for the full table and usage rules.
+**Cross-domain SystemSet exports** — domains that expose ordering anchors for other domains define a `pub enum {Domain}Systems` in `sets.rs`. Current exported sets: `BreakerSystems` (`breaker/sets.rs`), `BoltSystems` (`bolt/sets.rs`), `EffectV3Systems` (`effect_v3/sets.rs`, variants: `Bridge`, `Tick`, `Conditions`, `Reset`), `UiSystems` (`state/run/node/hud/sets.rs`), `NodeSystems` (`state/run/node/sets.rs`). The external crates also export ordering sets: `rantzsoft_physics2d::PhysicsSystems` (`MaintainQuadtree`, `EnforceDistanceConstraints`) for ordering against the quadtree; `rantzsoft_spatial2d::SpatialSystems` (`SavePrevious`, `ApplyVelocity`, `ComputeGlobals`, `DeriveTransform`) for ordering against the spatial pipeline stages; `rantzsoft_defaults::DefaultsSystems` (`Seed`, `PropagateDefaults`) for ordering config-seeding systems via `RantzDefaultsPlugin`; `rantzsoft_dmg::DmgSystems` (16-variant chain: `EmitDamage → PostEmitDamage → ApplyDamageBoosts → MutateDamage → PostMutateDamage → ApplyVulnerable → ApplyDamage → PostApplyDamage → EmitKill → MutateKill → ApplyKill → PostApplyKill → EmitHeal → MutateHeal → ApplyHeal → PostApplyHeal`, configured `.chain()` by `RantzDmgPlugin`) for ordering against the damage/kill/heal pipeline. See [ordering.md](ordering.md) for the full table and usage rules.
 
 ## Cross-Domain Read Access
 
@@ -128,7 +128,7 @@ Structurally identical rationale to the Velocity2D exception: the writing domain
 
 ## Hp.max Cross-Domain Write Exception
 
-`Hp.max` (`shared/death_pipeline` component) on cell entities is written by the hazard domain as an accepted architectural exception. Two write paths exist:
+`Hp.max` (`rantzsoft_dmg` component) on cell entities is written by the hazard domain as an accepted architectural exception. Two write paths exist:
 
 - **hazard** (`attach_volatility_timers` in `hazard/hazards/volatility.rs`): lifts each cell's `Hp.max` to `max(existing_max, hp.starting * max_multiplier)` when the Volatility hazard is active. Runs each FixedUpdate tick, gated by `hazard_active(HazardKind::Volatility)`.
 - **hazard** (`attach_momentum_ceiling` in `hazard/hazards/momentum/system.rs`): lifts each cell's `Hp.max` to `max(existing_max, hp.starting * MOMENTUM_SPLIT_MULTIPLIER)` when the Momentum hazard is active. Enables `HealCap::Max` heals from `momentum_heal_on_nonlethal` to push `hp.current` past `hp.starting`, required for the cell-split mechanic. Runs each FixedUpdate tick before `momentum_heal_on_nonlethal`, gated by `hazard_active(HazardKind::Momentum) AND in_state(NodeState::Playing)`.
@@ -149,7 +149,7 @@ Cleanup is implicit: cell entities are despawned on node end, so the `Hp.max` li
 
 - **cells** (`try_buffer_tether_redirect` inside `apply_damage_to_cells`): pushes a `DamageDealt<Cell>` onto the buffer when a primary target has a `TetherLink` and is hit by a non-hazard source. Accessed via `Option<ResMut<TetherRedirectBuffer>>` for harness-safety.
 
-The hazard domain drains the buffer in `emit_tether_redirects` into `MessageWriter<DamageDealt<Cell>>` inside the same `DeathPipelineSystems::ApplyDamage` set, ordered `.after(apply_damage_to_cells)`. The push/drain split exists because Bevy 0.18 panics at schedule construction when a single system holds both `MessageReader<T>` and `MessageWriter<T>` for the same `T` — `apply_damage_to_cells` already holds the reader for `DamageDealt<Cell>`.
+The hazard domain drains the buffer in `emit_tether_redirects` into `MessageWriter<DamageDealt<Cell>>` inside the same `DmgSystems::ApplyDamage` set, ordered `.after(apply_damage_to_cells)`. The push/drain split exists because Bevy 0.18 panics at schedule construction when a single system holds both `MessageReader<T>` and `MessageWriter<T>` for the same `T` — `apply_damage_to_cells` already holds the reader for `DamageDealt<Cell>`.
 
 Rationale: the design doc (`docs/design/hazards/tether.md` §Edge Cases — Tether + Diffusion ordering) mandates that Tether redirect uses the Diffusion-reduced `primary_damage`, which is only available inside the `accumulate_message_deltas` call in the cells-domain system. Routing via a `TetherRedirectRequested` message would add a message type and a hazard-domain consumer for no decoupling win — the data flow already goes hazard-owned-config → cells-domain-read → hazard-owned-buffer → hazard-owned-emit.
 

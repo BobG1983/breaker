@@ -4,6 +4,7 @@ mod activate_tests;
 mod depth_math;
 mod register_tests;
 mod ron_asset;
+mod scheduling;
 mod share_math;
 
 // W2 test modules.

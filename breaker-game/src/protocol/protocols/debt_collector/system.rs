@@ -28,6 +28,7 @@ use crate::{
         messages::{BumpGrade, BumpPerformed},
         sets::BreakerSystems,
     },
+    effect_v3::EffectV3Systems,
     prelude::*,
     protocol::{
         definition::{ProtocolKind, ProtocolTuning},
@@ -99,7 +100,9 @@ pub(crate) fn register(app: &mut App) {
         FixedUpdate,
         (
             debt_collector_on_bump.after(BreakerSystems::GradeBump),
-            debt_collector_on_impact.after(BoltSystems::CellCollision),
+            debt_collector_on_impact
+                .after(BoltSystems::CellCollision)
+                .before(EffectV3Systems::Bridge),
             debt_collector_on_bolt_lost.after(BoltSystems::BoltLost),
         ),
     );
@@ -268,7 +271,7 @@ pub(crate) fn debt_collector_attach_stack(
     mut commands: Commands,
     new_bolts: Query<Entity, (With<Bolt>, Without<DebtStack>)>,
 ) {
-    for entity in new_bolts.iter() {
+    for entity in &new_bolts {
         commands.entity(entity).insert(DebtStack::default());
     }
 }
@@ -281,7 +284,7 @@ type TaggedBoltQuery<'w, 's> = Query<'w, 's, Entity, Or<(With<DebtStack>, With<D
 /// Runs on `OnExit(NodeState::Playing)`. Removes `DebtStack` and
 /// `DebtCashOut` from every bolt so stacks do not persist across nodes.
 pub(crate) fn debt_collector_cleanup_node(mut commands: Commands, bolts: TaggedBoltQuery) {
-    for entity in bolts.iter() {
+    for entity in &bolts {
         commands
             .entity(entity)
             .remove::<DebtStack>()

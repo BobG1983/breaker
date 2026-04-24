@@ -141,6 +141,10 @@ pub(crate) fn register(app: &mut App) {
             .run_if(hazard_active(HazardKind::Tether))
             .run_if(in_state(NodeState::Playing)),
     );
+    // Deliberate late emitter: reads DamageDealt<Cell> / Dead state from the
+    // current tick to cascade follow-up damage. MUST stay in
+    // DmgSystems::PostApplyDamage so it runs after the primary damage emitters
+    // in DmgSystems::EmitDamage and the applicators in DmgSystems::ApplyDamage.
     app.add_systems(
         FixedUpdate,
         tether_emit_partner

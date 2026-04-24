@@ -6,6 +6,7 @@ mod config_formulas;
 mod establish_links;
 mod register;
 mod ron_asset;
+mod scheduling;
 
 // W2 test modules.
 mod cross_mechanic;

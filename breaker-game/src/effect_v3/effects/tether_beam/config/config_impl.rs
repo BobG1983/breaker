@@ -46,9 +46,12 @@ impl Fireable for TetherBeamConfig {
 
         app.add_systems(
             FixedUpdate,
-            (tick_tether_beam, cleanup_tether_beams)
-                .chain()
-                .in_set(EffectV3Systems::Tick),
+            (
+                tick_tether_beam
+                    .in_set(EffectV3Systems::Tick)
+                    .before(cleanup_tether_beams),
+                cleanup_tether_beams.in_set(EffectV3Systems::Tick),
+            ),
         );
     }
 }

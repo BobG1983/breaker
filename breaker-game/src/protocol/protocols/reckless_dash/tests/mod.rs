@@ -9,4 +9,5 @@ mod on_bump;
 mod plugin;
 mod register;
 mod ron_asset;
+mod scheduling;
 mod sentinel;

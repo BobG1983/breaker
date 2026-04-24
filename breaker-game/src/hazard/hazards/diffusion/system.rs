@@ -184,6 +184,11 @@ pub(crate) fn register(app: &mut App) {
     app.init_resource::<DiffusionInstances>();
     app.init_resource::<PendingDiffusionEmissions>();
 
+    // Deliberate late emitter: reads the `PendingDiffusionEmissions` queue
+    // (populated in `DmgSystems::MutateDamage`) to cascade follow-up damage.
+    // MUST stay in DmgSystems::PostApplyDamage so it runs after the primary
+    // damage emitters in DmgSystems::EmitDamage and the applicators in
+    // DmgSystems::ApplyDamage.
     app.add_systems(
         FixedUpdate,
         (

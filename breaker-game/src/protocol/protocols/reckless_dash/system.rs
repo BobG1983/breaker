@@ -20,6 +20,7 @@ use crate::{
         components::{DashDuration, DashState, DashStateTimer},
         sets::BreakerSystems,
     },
+    effect_v3::EffectV3Systems,
     prelude::*,
     protocol::{
         definition::{ProtocolKind, ProtocolTuning},
@@ -124,7 +125,9 @@ pub(crate) fn register(app: &mut App) {
         FixedUpdate,
         (
             reckless_dash_on_bump.after(BreakerSystems::GradeBump),
-            reckless_dash_amplify_damage.after(BoltSystems::CellCollision),
+            reckless_dash_amplify_damage
+                .after(BoltSystems::CellCollision)
+                .before(EffectV3Systems::Bridge),
             reckless_dash_double_penalty.after(BoltSystems::BoltLost),
         ),
     )

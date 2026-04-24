@@ -2,7 +2,7 @@ use std::{collections::HashSet, time::Duration};
 
 use bevy::prelude::*;
 
-use super::system::*;
+use super::super::system::*;
 use crate::{
     effect_v3::{components::EffectSourceChip, effects::shockwave::components::*},
     prelude::*,

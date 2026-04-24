@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Position2D;
 
-use super::system::*;
+use super::super::system::*;
 use crate::{
     cells::components::Cell,
     effect_v3::{components::EffectSourceChip, effects::chain_lightning::components::*},

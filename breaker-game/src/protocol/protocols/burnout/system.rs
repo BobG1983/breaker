@@ -11,7 +11,8 @@ use crate::{
     bolt::{components::BoltBaseDamage, resources::DEFAULT_BOLT_BASE_DAMAGE, sets::BoltSystems},
     breaker::sets::BreakerSystems,
     effect_v3::{
-        commands::EffectCommandsExt, effects::shockwave::ShockwaveConfig, types::EffectType,
+        EffectV3Systems, commands::EffectCommandsExt, effects::shockwave::ShockwaveConfig,
+        types::EffectType,
     },
     prelude::*,
     protocol::{
@@ -169,7 +170,9 @@ pub(crate) fn register(app: &mut App) {
         FixedUpdate,
         (
             burnout_on_bump.after(BreakerSystems::GradeBump),
-            burnout_amplify_damage.after(BoltSystems::CellCollision),
+            burnout_amplify_damage
+                .after(BoltSystems::CellCollision)
+                .before(EffectV3Systems::Bridge),
         ),
     )
     .add_systems(OnExit(NodeState::Playing), burnout_cleanup_node);

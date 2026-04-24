@@ -9,4 +9,5 @@ mod last_impact;
 mod phantom;
 mod piercing;
 mod reflection;
+mod scheduling;
 mod vulnerability;

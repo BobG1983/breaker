@@ -110,6 +110,11 @@ pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
 /// because it drives off `ResMut<Messages<DamageDealt<Cell>>>` rather than a
 /// dedicated reader.
 pub(crate) fn register(app: &mut App) {
+    // Deliberate late emitter (`echo_strike_emit_siblings`): reads
+    // DamageDealt<Cell> / Dead state from the current tick to cascade
+    // follow-up damage. MUST stay in DmgSystems::PostApplyDamage so it runs
+    // after the primary damage emitters in DmgSystems::EmitDamage and the
+    // applicators in DmgSystems::ApplyDamage.
     app.add_systems(
         FixedUpdate,
         (
@@ -336,7 +341,7 @@ type EchoTaggedBoltQuery<'w, 's> = Query<'w, 's, Entity, Or<(With<EchoNetwork>, 
 /// Runs on `OnExit(NodeState::Playing)`. Removes `EchoNetwork` and
 /// `EchoPrimed` from every bolt so echoes do not persist across nodes.
 pub(crate) fn echo_strike_cleanup_node(mut commands: Commands, bolts: EchoTaggedBoltQuery) {
-    for entity in bolts.iter() {
+    for entity in &bolts {
         commands
             .entity(entity)
             .remove::<EchoNetwork>()

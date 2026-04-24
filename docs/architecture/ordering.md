@@ -16,7 +16,7 @@ Domains MAY define a `pub enum {Domain}Systems` with `#[derive(SystemSet)]` in `
 - **Never reference bare system function names across domain boundaries** — always use SystemSet enums. This keeps cross-domain ordering stable even if the underlying system is renamed or split.
 - Only create a SystemSet variant when another domain actually needs to order against it. Don't pre-create sets "just in case".
 - **Group systems sharing a constraint** with tuple syntax: `(sys_a, sys_b).after(Target)` rather than repeating `.after(Target)` on each system individually. Keeps the shared dependency visible in one place.
-- **Phase sets — exception to pivotal-system rule.** A SystemSet variant that represents a pipeline *phase* (not a single pivotal system) may be used as a tag target by other plugins. The owning plugin is still responsible for `configure_sets`; other plugins contribute systems via `.in_set(PhaseSet::Variant)`. Currently only `DeathPipelineSystems::{ApplyDamage, DetectDeaths, HandleKill, ApplyHeal}` qualify — each phase legitimately hosts multiple systems across plugins (e.g. `handle_kill::<Cell>` + `handle_kill::<Bolt>` + `handle_kill::<Wall>` from `DeathPipelinePlugin`, and `handle_breaker_death` from `RunPlugin`, all in `HandleKill`). Create a phase set only when multiple plugins legitimately need to contribute to the same pipeline stage — don't invent them speculatively.
+- **Phase sets — exception to pivotal-system rule.** A SystemSet variant that represents a pipeline *phase* (not a single pivotal system) may be used as a tag target by other plugins. The owning plugin is still responsible for `configure_sets`; other plugins contribute systems via `.in_set(PhaseSet::Variant)`. Currently `DmgSystems` (from `rantzsoft_dmg`) qualifies — each of its 16 variants is a pipeline phase that can host multiple systems (e.g. `DmgSystems::ApplyKill` hosts `handle_kill::<Bolt>`, `handle_kill::<Wall>`, `handle_kill::<Breaker>` from the crate plus `handle_breaker_death` from `RunPlugin`). Create a phase set only when multiple plugins legitimately need to contribute to the same pipeline stage — don't invent them speculatively.
 
 **Defined sets:**
 
@@ -40,12 +40,14 @@ Domains MAY define a `pub enum {Domain}Systems` with `#[derive(SystemSet)]` in `
 | `EffectV3Systems::Bridge` | `effect_v3/sets.rs` | `bridge_bump`, `bridge_bolt_lost`, `bridge_bump_whiff`, `bridge_no_bump`, `bridge_cell_impact`, `bridge_breaker_impact`, `bridge_wall_impact`, `bridge_timer_threshold`. (Note: death bridges are tagged `EffectV3Systems::Death`, not `Bridge` — see that row for why.) |
 | `EffectV3Systems::Tick` | `effect_v3/sets.rs` | tick systems for active effects (e.g. `tick_shockwave`, `tick_chain_lightning`) — runs after `Bridge` in FixedUpdate |
 | `EffectV3Systems::Conditions` | `effect_v3/sets.rs` | condition evaluation systems (e.g. `evaluate_conditions`) — runs after `Tick` in FixedUpdate |
-| `EffectV3Systems::Death` | `effect_v3/sets.rs` | `on_cell_destroyed`, `on_bolt_destroyed`, `on_wall_destroyed`, `on_breaker_destroyed` — phase set ordered `.after(DeathPipelineSystems::HandleKill)` so bridges observe `Destroyed<T>` messages on the same tick while victims are still alive (despawn runs later in `FixedPostUpdate`). Cross-domain consumers order against `EffectV3Systems::Death` instead of individual bridge systems. |
+| `EffectV3Systems::Death` | `effect_v3/sets.rs` | `on_cell_destroyed`, `on_bolt_destroyed`, `on_wall_destroyed`, `on_breaker_destroyed` — phase set ordered `.after(DmgSystems::ApplyKill)` so bridges observe `Destroyed<T>` messages on the same tick while victims are still alive (despawn runs later in `FixedPostUpdate`). Cross-domain consumers order against `EffectV3Systems::Death` instead of individual bridge systems. |
 | `EffectV3Systems::Reset` | `effect_v3/sets.rs` | effect state reset on `OnEnter(NodeState::Loading)` — not in FixedUpdate chain |
-| `DeathPipelineSystems::ApplyDamage` | `shared/death_pipeline/sets.rs` | `apply_damage_to_cells` (cells domain), `apply_damage::<Bolt>`, `apply_damage::<Wall>`, `apply_damage::<Breaker>` — phase set (see note). Cell damage moved out of the generic pipeline so cells can own diffusion redistribution. |
-| `DeathPipelineSystems::DetectDeaths` | `shared/death_pipeline/sets.rs` | `detect_deaths::<Cell>`, `detect_deaths::<Bolt>`, `detect_deaths::<Wall>`, `detect_deaths::<Breaker>` — phase set |
-| `DeathPipelineSystems::HandleKill` | `shared/death_pipeline/sets.rs` | `handle_kill::<Cell>`, `handle_kill::<Bolt>`, `handle_kill::<Wall>` from `DeathPipelinePlugin`; `handle_breaker_death` from `RunPlugin` — phase set |
-| `DeathPipelineSystems::ApplyHeal` | `shared/death_pipeline/sets.rs` | `apply_heal::<Cell>`, `apply_heal::<Bolt>`, `apply_heal::<Wall>`, `apply_heal::<Breaker>`, `apply_heal::<Salvo>` — phase set; runs after `HandleKill` so `Dead` is visible to `apply_heal<T>`'s `Without<Dead>` filter, preventing same-tick revival |
+| `DmgSystems::EmitDamage` | `rantzsoft_dmg/src/sets.rs` | phase set — damage emitters run here (chain: EmitDamage → PostEmitDamage → ApplyDamageBoosts → MutateDamage → PostMutateDamage → ApplyVulnerable → ApplyDamage → PostApplyDamage → EmitKill → MutateKill → ApplyKill → PostApplyKill → EmitHeal → MutateHeal → ApplyHeal → PostApplyHeal; configured `.chain()` by `RantzDmgPlugin`). `apply_damage_to_cells` (cells domain, Cell damage with Diffusion BFS redistribution) runs in `DmgSystems::ApplyDamage`. |
+| `DmgSystems::ApplyDamage` | `rantzsoft_dmg/src/sets.rs` | `apply_damage_to_cells` (cells domain), `apply_damage::<Bolt>`, `apply_damage::<Wall>`, `apply_damage::<Breaker>`, `apply_damage::<Salvo>` — phase set. Cell damage stays in cells domain to own Diffusion redistribution. |
+| `DmgSystems::EmitKill` | `rantzsoft_dmg/src/sets.rs` | `detect_deaths::<Bolt>`, `detect_deaths::<Wall>`, `detect_deaths::<Breaker>`, `detect_deaths::<Salvo>` (crate-internal) — phase set |
+| `DmgSystems::ApplyKill` | `rantzsoft_dmg/src/sets.rs` | `handle_kill::<Bolt>`, `handle_kill::<Wall>`, `handle_kill::<Breaker>`, `handle_kill::<Salvo>` (crate-internal); `handle_breaker_death` from `RunPlugin` — phase set |
+| `DmgSystems::ApplyHeal` | `rantzsoft_dmg/src/sets.rs` | `apply_heal::<Bolt>`, `apply_heal::<Wall>`, `apply_heal::<Breaker>`, `apply_heal::<Salvo>` (crate-internal); `apply_heal::<Cell>` also runs here — phase set; runs after `ApplyKill` so `Dead` is visible to `apply_heal::<T>`'s `Without<Dead>` filter, preventing same-tick revival |
+| `DmgSystems::EmitHeal` | `rantzsoft_dmg/src/sets.rs` | heal emitters: `volatility_grow_cells`, `cascade_heal_on_death`, `renewal_regrow` (hazard domain) run in this set; Sympathy + Momentum STAY in `PostApplyDamage` (read live cell state, must precede `ApplyKill`) |
 | `UiSystems::SpawnTimerHud` | `state/run/node/hud/sets.rs` | `spawn_timer_hud` |
 | `NodeSystems::TrackCompletion` | `state/run/node/sets.rs` | `track_node_completion` |
 | `NodeSystems::TickTimer` | `state/run/node/sets.rs` | `tick_node_timer` |
@@ -198,40 +200,40 @@ move_breaker .after(update_bump)
             <- bridge_timer_threshold .in_set(EffectV3Systems::Bridge)
                [effect domain, unordered relative to physics chain]
 
-DeathPipelineSystems::ApplyDamage
-  .after(EffectV3Systems::Tick)                              [shared/death_pipeline domain]
+DmgSystems::ApplyDamage
+  .after(EffectV3Systems::Tick)                              [rantzsoft_dmg pipeline — configured .chain() by RantzDmgPlugin]
   (apply_damage_to_cells [cells domain], apply_damage::<Bolt>, apply_damage::<Wall>, apply_damage::<Breaker>)
     <- check_armor_direction .after(BoltSystems::CellCollision)
-                              .before(DeathPipelineSystems::ApplyDamage)
+                              .before(DmgSystems::ApplyDamage)
                               .run_if(in_state(NodeState::Playing))
        [cells domain — drops DamageDealt<Cell> for hits on armored faces
         when piercing_remaining < armor_value; otherwise decrements bolt's
         PiercingRemaining by armor_value]
-    <- reset_inactive_sequence_hp .after(DeathPipelineSystems::ApplyDamage)
-                                  .before(DeathPipelineSystems::DetectDeaths)
+    <- reset_inactive_sequence_hp .after(DmgSystems::ApplyDamage)
+                                  .before(DmgSystems::EmitKill)
                                   .run_if(in_state(NodeState::Playing))
-       [cells domain — reverts damage on non-active Sequence cells before DetectDeaths observes it]
-    <- update_cell_damage_visuals .after(DeathPipelineSystems::ApplyDamage)
-                                  .before(DeathPipelineSystems::HandleKill) [cells domain]
-    <- track_evolution_damage .after(DeathPipelineSystems::ApplyDamage)     [run domain]
-    <- DeathPipelineSystems::DetectDeaths .after(DeathPipelineSystems::ApplyDamage)
-       (detect_deaths::<Cell>, detect_deaths::<Bolt>, detect_deaths::<Wall>, detect_deaths::<Breaker>)
-         <- DeathPipelineSystems::HandleKill .after(DeathPipelineSystems::DetectDeaths)
-            (handle_kill::<Cell>, handle_kill::<Bolt>, handle_kill::<Wall>, handle_breaker_death)
-              <- EffectV3Systems::Death .after(DeathPipelineSystems::HandleKill)  [effect_v3 death bridges]
+       [cells domain — reverts damage on non-active Sequence cells before EmitKill observes it]
+    <- update_cell_damage_visuals .after(DmgSystems::ApplyDamage)
+                                  .before(DmgSystems::ApplyKill) [cells domain]
+    <- track_evolution_damage .after(DmgSystems::ApplyDamage)     [run domain]
+    <- DmgSystems::EmitKill .after(DmgSystems::ApplyDamage)
+       (detect_deaths::<Bolt>, detect_deaths::<Wall>, detect_deaths::<Breaker> — crate-internal)
+         <- DmgSystems::ApplyKill .after(DmgSystems::EmitKill)
+            (handle_kill::<Bolt>, handle_kill::<Wall>, handle_kill::<Breaker>, handle_kill::<Salvo> — crate-internal; handle_breaker_death from RunPlugin)
+              <- EffectV3Systems::Death .after(DmgSystems::ApplyKill)  [effect_v3 death bridges]
                  (on_cell_destroyed, on_bolt_destroyed, on_wall_destroyed, on_breaker_destroyed)
                    <- advance_sequence .after(EffectV3Systems::Death)
                                        .run_if(in_state(NodeState::Playing))
                       [cells domain — promotes position+1 on destroyed SequenceActive cells]
-              <- track_cells_destroyed .after(DeathPipelineSystems::HandleKill)  [run domain]
-              <- detect_mass_destruction .after(DeathPipelineSystems::HandleKill) [run/node domain]
-              <- detect_combo_king .after(DeathPipelineSystems::HandleKill)       [run/node domain]
-              <- check_lock_release .after(DeathPipelineSystems::HandleKill)      [cells domain]
-              <- NodeSystems::TrackCompletion .after(DeathPipelineSystems::HandleKill)
+              <- track_cells_destroyed .after(DmgSystems::ApplyKill)  [run domain]
+              <- detect_mass_destruction .after(DmgSystems::ApplyKill) [run/node domain]
+              <- detect_combo_king .after(DmgSystems::ApplyKill)       [run/node domain]
+              <- check_lock_release .after(DmgSystems::ApplyKill)      [cells domain]
+              <- NodeSystems::TrackCompletion .after(DmgSystems::ApplyKill)
                  (track_node_completion)                                          [run/node domain]
-              <- DeathPipelineSystems::ApplyHeal .after(DeathPipelineSystems::HandleKill)
-                 (apply_heal::<Cell>, apply_heal::<Bolt>, apply_heal::<Wall>, apply_heal::<Breaker>, apply_heal::<Salvo>)
-                 [shared/death_pipeline — runs last; Without<Dead> filter prevents same-tick revival]
+              <- DmgSystems::ApplyHeal .after(DmgSystems::ApplyKill)
+                 (apply_heal::<Bolt>, apply_heal::<Wall>, apply_heal::<Breaker>, apply_heal::<Salvo> — crate-internal; apply_heal::<Cell> also runs here)
+                 [rantzsoft_dmg — runs last; Without<Dead> filter prevents same-tick revival]
 
 afterimage_tick_phantom_breaker → afterimage_spawn_phantom_breaker
   [protocol domain — chained pair; tick decrements PhantomBreakerLifetime and despawns expired phantoms,
@@ -260,7 +262,7 @@ reckless_dash_double_penalty .after(BoltSystems::BoltLost)
 
 echo_strike_on_bump .after(BreakerSystems::GradeBump)
 echo_strike_on_impact .after(BoltSystems::CellCollision)
-echo_strike_cleanup_destroyed_echoes .after(DeathPipelineSystems::HandleKill)
+echo_strike_cleanup_destroyed_echoes .after(DmgSystems::ApplyKill)
   [protocol domain — all three gated run_if(protocol_active(EchoStrike)) + run_if(in_state(NodeState::Playing));
    echo_strike_cleanup_node on OnExit(NodeState::Playing), unconditional]
 
@@ -285,16 +287,16 @@ siphon_on_cell_destroyed .before(NodeSystems::ApplyTimePenalty)
    siphon_cleanup_node on OnExit(NodeState::Playing), unconditional]
 
 tick_bolt_lifespan .before(BoltSystems::BoltLost)
-                   .before(DeathPipelineSystems::HandleKill)  [bolt domain — writes KillYourself<Bolt> on timer expiry]
+                   .before(DmgSystems::ApplyKill)  [bolt domain — writes KillYourself<Bolt> on timer expiry]
 
-tick_survival_timer .before(DeathPipelineSystems::ApplyDamage)
+tick_survival_timer .before(DmgSystems::ApplyDamage)
                     [cells domain — ticks SurvivalTimer; writes lethal DamageDealt<Cell> targeting the turret itself on expiry]
     <- tick_salvo_fire_timer .after(tick_survival_timer)
        [cells domain — ticks SalvoFireTimer countdown only; no firing logic]
          <- fire_survival_turret .after(tick_salvo_fire_timer)
             [cells domain — spawns Salvo entities per AttackPattern when SalvoFireTimer <= 0; skips Ghost-phase turrets]
 
-salvo_cell_collision .before(DeathPipelineSystems::ApplyDamage)
+salvo_cell_collision .before(DmgSystems::ApplyDamage)
   [cells domain — AABB overlap check; writes DamageDealt<Cell>; salvo passes through (not despawned)]
 salvo_bolt_collision
   [cells domain — AABB overlap check; despawns salvo on contact; bolt unaffected; no ordering constraint]
@@ -308,11 +310,11 @@ check_portal_entry .after(BoltSystems::CellCollision)
     <- handle_portal_entered .after(check_portal_entry)
        [cells domain — mock handler: converts PortalEntered to PortalCompleted immediately]
          <- handle_portal_completed .after(handle_portal_entered)
-                                    .before(DeathPipelineSystems::HandleKill)
+                                    .before(DmgSystems::ApplyKill)
             [cells domain — reads PortalCompleted, writes KillYourself<Cell> for the portal entity]
 ```
 
-Reading: the quadtree is maintained first (incremental — only changed entities re-inserted). Consumers read `Active*` components directly via `.multiplier()` / `.total()` methods. Then breaker moves, speed is normalized post-constraint (`normalize_bolt_speed_after_constraints`), cell collisions run (tagged `BoltSystems::CellCollision`), wall collision (`BoltSystems::WallCollision`), breaker collision (`BoltSystems::BreakerCollision`), bump grading (`BreakerSystems::GradeBump`), distance constraints enforced (chain bolts), bolt-lost detection (`BoltSystems::BoltLost`). All collision systems run `.before(EffectV3Systems::Bridge)` so damage messages are present when bridges evaluate. Velocity is enforced by `apply_velocity_formula` at each collision/steering site — there is no separate velocity preparation step. All effect bridge systems run in `EffectV3Systems::Bridge`. After Bridge, the death pipeline runs: `DeathPipelineSystems::ApplyDamage` (reads `DamageDealt<T>`, reduces `Hp`) → `DetectDeaths` (reads `Hp`, writes `KillYourself<T>`) → `HandleKill` (marks `Dead`, writes `Destroyed<T>` + `DespawnEntity`) → `ApplyHeal` (reads `HealDealt<T>`, increments `Hp` bounded by `HealCap`; `Without<Dead>` filter prevents same-tick revival of entities killed in the same pipeline run). `update_cell_damage_visuals` runs after `ApplyDamage` and before `HandleKill` to update color feedback on still-living cells. Consumers of kill events (track_cells_destroyed, detect_mass_destruction, detect_combo_king, check_lock_release, track_node_completion) order `.after(DeathPipelineSystems::HandleKill)`. `process_despawn_requests` runs in `FixedPostUpdate` — sole despawn site. The full effect pipeline order within FixedUpdate is: `EffectV3Systems::Bridge` → `EffectV3Systems::Tick` → `EffectV3Systems::Conditions`. `EffectV3Systems::Reset` runs on `OnEnter(NodeState::Loading)` — not in the FixedUpdate chain. Survival turret systems: `tick_survival_timer` (self-destruct check) → `tick_salvo_fire_timer` (countdown) → `fire_survival_turret` (spawn salvos); all three run before `ApplyDamage`. Salvo collision systems: `salvo_cell_collision` (before `ApplyDamage`), `salvo_breaker_collision` (before `EffectV3Systems::Bridge`), `salvo_bolt_collision` and `salvo_wall_collision` (unordered). Portal systems: `check_portal_entry` (after `BoltSystems::CellCollision`) → `handle_portal_entered` → `handle_portal_completed` (before `DeathPipelineSystems::HandleKill`). Afterimage protocol systems: `afterimage_tick_phantom_breaker` → `afterimage_spawn_phantom_breaker` (chained pair, unordered relative to physics) → `afterimage_check_phantom_bounce` (after `BoltSystems::CellCollision`, before `BreakerSystems::GradeBump`) → `afterimage_spawn_phantom_bolt` (after `BreakerSystems::GradeBump`, before `EffectV3Systems::Tick`). Burnout protocol systems: `burnout_tick_speed_boost` (before `BreakerSystems::Move`) → `burnout_update_heat` (after `BreakerSystems::Move`, before `burnout_on_bump`) → `burnout_on_bump` (after `BreakerSystems::GradeBump`); `burnout_amplify_damage` (after `BoltSystems::CellCollision`). Reckless Dash: `reckless_dash_on_bump` (after `GradeBump`), `reckless_dash_amplify_damage` (after `CellCollision`), `reckless_dash_double_penalty` (after `BoltLost` — writes duplicate via deferred Commands). Echo Strike: `echo_strike_on_bump` (after `GradeBump`), `echo_strike_on_impact` (after `CellCollision`), `echo_strike_cleanup_destroyed_echoes` (after `DeathPipelineSystems::HandleKill`). Iron Curtain: `iron_curtain_on_bolt_lost` (after `BoltLost`); no cleanup. Debt Collector: `debt_collector_on_bump` (after `GradeBump`), `debt_collector_on_impact` (after `CellCollision`), `debt_collector_on_bolt_lost` (after `BoltLost`); `debt_collector_attach_stack` (unordered, `protocol_active` gate only — no NodeState gate so mid-node bolt spawns get a stack immediately). All burnout/reckless_dash/echo_strike/iron_curtain/debt_collector systems except `_attach_stack` are gated `protocol_active(X)` + `in_state(NodeState::Playing)`; `_cleanup_node` systems run on `OnExit(NodeState::Playing)` with no run-if. Siphon protocol: `siphon_tick_streak` (before `siphon_on_cell_destroyed`) → `siphon_on_cell_destroyed` (before `NodeSystems::ApplyTimePenalty`) so added time is factored into the same frame's timer tick; `siphon_cleanup_node` on `OnExit(NodeState::Playing)`, unconditional.
+Reading: the quadtree is maintained first (incremental — only changed entities re-inserted). Consumers read `Active*` components directly via `.multiplier()` / `.total()` methods. Then breaker moves, speed is normalized post-constraint (`normalize_bolt_speed_after_constraints`), cell collisions run (tagged `BoltSystems::CellCollision`), wall collision (`BoltSystems::WallCollision`), breaker collision (`BoltSystems::BreakerCollision`), bump grading (`BreakerSystems::GradeBump`), distance constraints enforced (chain bolts), bolt-lost detection (`BoltSystems::BoltLost`). All collision systems run `.before(EffectV3Systems::Bridge)` so damage messages are present when bridges evaluate. Velocity is enforced by `apply_velocity_formula` at each collision/steering site — there is no separate velocity preparation step. All effect bridge systems run in `EffectV3Systems::Bridge`. After Bridge, the `rantzsoft_dmg` pipeline runs (configured `.chain()` by `RantzDmgPlugin`): `DmgSystems::ApplyDamage` (reads `DamageDealt<T>`, reduces `Hp`) → `DmgSystems::EmitKill` (reads `Hp`, writes `KillYourself<T>`) → `DmgSystems::ApplyKill` (marks `Dead`, writes `Destroyed<T>` + `DespawnEntity`) → `DmgSystems::ApplyHeal` (reads `HealDealt<T>`, increments `Hp` bounded by `HealCap`; `Without<Dead>` filter prevents same-tick revival of entities killed in the same pipeline run). `update_cell_damage_visuals` runs after `DmgSystems::ApplyDamage` and before `DmgSystems::ApplyKill` to update color feedback on still-living cells. Consumers of kill events (track_cells_destroyed, detect_mass_destruction, detect_combo_king, check_lock_release, track_node_completion) order `.after(DmgSystems::ApplyKill)`. `process_despawn_requests` runs in `FixedPostUpdate` — sole despawn site. The full effect pipeline order within FixedUpdate is: `EffectV3Systems::Bridge` → `EffectV3Systems::Tick` → `EffectV3Systems::Conditions`. `EffectV3Systems::Reset` runs on `OnEnter(NodeState::Loading)` — not in the FixedUpdate chain. Survival turret systems: `tick_survival_timer` (self-destruct check) → `tick_salvo_fire_timer` (countdown) → `fire_survival_turret` (spawn salvos); all three run before `DmgSystems::ApplyDamage`. Salvo collision systems: `salvo_cell_collision` (before `DmgSystems::ApplyDamage`), `salvo_breaker_collision` (before `EffectV3Systems::Bridge`), `salvo_bolt_collision` and `salvo_wall_collision` (unordered). Portal systems: `check_portal_entry` (after `BoltSystems::CellCollision`) → `handle_portal_entered` → `handle_portal_completed` (before `DmgSystems::ApplyKill`). Afterimage protocol systems: `afterimage_tick_phantom_breaker` → `afterimage_spawn_phantom_breaker` (chained pair, unordered relative to physics) → `afterimage_check_phantom_bounce` (after `BoltSystems::CellCollision`, before `BreakerSystems::GradeBump`) → `afterimage_spawn_phantom_bolt` (after `BreakerSystems::GradeBump`, before `EffectV3Systems::Tick`). Burnout protocol systems: `burnout_tick_speed_boost` (before `BreakerSystems::Move`) → `burnout_update_heat` (after `BreakerSystems::Move`, before `burnout_on_bump`) → `burnout_on_bump` (after `BreakerSystems::GradeBump`); `burnout_amplify_damage` (after `BoltSystems::CellCollision`). Reckless Dash: `reckless_dash_on_bump` (after `GradeBump`), `reckless_dash_amplify_damage` (after `CellCollision`), `reckless_dash_double_penalty` (after `BoltLost` — writes duplicate via deferred Commands). Echo Strike: `echo_strike_on_bump` (after `GradeBump`), `echo_strike_on_impact` (after `CellCollision`), `echo_strike_cleanup_destroyed_echoes` (after `DmgSystems::ApplyKill`). Iron Curtain: `iron_curtain_on_bolt_lost` (after `BoltLost`); no cleanup. Debt Collector: `debt_collector_on_bump` (after `GradeBump`), `debt_collector_on_impact` (after `CellCollision`), `debt_collector_on_bolt_lost` (after `BoltLost`); `debt_collector_attach_stack` (unordered, `protocol_active` gate only — no NodeState gate so mid-node bolt spawns get a stack immediately). All burnout/reckless_dash/echo_strike/iron_curtain/debt_collector systems except `_attach_stack` are gated `protocol_active(X)` + `in_state(NodeState::Playing)`; `_cleanup_node` systems run on `OnExit(NodeState::Playing)` with no run-if. Siphon protocol: `siphon_tick_streak` (before `siphon_on_cell_destroyed`) → `siphon_on_cell_destroyed` (before `NodeSystems::ApplyTimePenalty`) so added time is factored into the same frame's timer tick; `siphon_cleanup_node` on `OnExit(NodeState::Playing)`, unconditional.
 
 ```
 NodeSystems::TrackCompletion
@@ -334,10 +336,10 @@ Reading: completion tracking runs first (cells consumed → NodeCleared sent), t
 ### FixedPostUpdate
 
 ```
-process_despawn_requests   [shared/death_pipeline — sole despawn site; reads DespawnEntity messages written by handle_kill::<T> in FixedUpdate]
+process_despawn_requests   [rantzsoft_dmg crate-internal — sole despawn site; reads DespawnEntity messages written by handle_kill::<T> in FixedUpdate]
 ```
 
-Reading: `DespawnEntity` messages are written during `HandleKill` in `FixedUpdate`. Deferring despawn to `FixedPostUpdate` ensures all `FixedUpdate` consumers (kill-event readers, effect bridges, node tracking) see the entity before it is removed from the world.
+Reading: `DespawnEntity` messages are written during `DmgSystems::ApplyKill` in `FixedUpdate`. Deferring despawn to `FixedPostUpdate` ensures all `FixedUpdate` consumers (kill-event readers, effect bridges, node tracking) see the entity before it is removed from the world.
 
 ### FixedFirst
 

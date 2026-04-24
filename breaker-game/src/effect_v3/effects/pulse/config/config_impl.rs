@@ -50,13 +50,16 @@ impl Fireable for PulseConfig {
         app.add_systems(
             FixedUpdate,
             (
-                tick_pulse,
-                tick_pulse_ring,
-                apply_pulse_damage,
-                despawn_finished_pulse_ring,
-            )
-                .chain()
-                .in_set(EffectV3Systems::Tick),
+                tick_pulse.in_set(EffectV3Systems::Tick),
+                tick_pulse_ring
+                    .in_set(EffectV3Systems::Tick)
+                    .after(tick_pulse),
+                apply_pulse_damage
+                    .in_set(EffectV3Systems::Tick)
+                    .after(tick_pulse_ring)
+                    .before(despawn_finished_pulse_ring),
+                despawn_finished_pulse_ring.in_set(EffectV3Systems::Tick),
+            ),
         );
     }
 }

@@ -4,6 +4,7 @@
 //! `OnEnter(NodeState::Loading)`, outside the `FixedUpdate` ordering chain.
 
 use bevy::prelude::*;
+use rantzsoft_dmg::DmgSystems;
 
 use super::{
     conditions, effects,
@@ -24,12 +25,17 @@ pub struct EffectV3Plugin;
 
 impl Plugin for EffectV3Plugin {
     fn build(&self, app: &mut App) {
-        // System set ordering: Bridge → Tick → Conditions
+        // System set ordering: Bridge → Tick → Conditions.
+        // Tick runs BEFORE the damage pipeline so every effect-tick system that
+        // emits DamageDealt<T> writes its message before DmgSystems starts
+        // flushing — same-tick application is guaranteed by set-level ordering
+        // rather than per-system .in_set(EmitDamage) tags.
         app.configure_sets(
             FixedUpdate,
             (
                 EffectV3Systems::Bridge,
                 EffectV3Systems::Tick.after(EffectV3Systems::Bridge),
+                EffectV3Systems::Tick.before(DmgSystems::EmitDamage),
                 EffectV3Systems::Conditions.after(EffectV3Systems::Tick),
             ),
         );

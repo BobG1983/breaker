@@ -74,12 +74,13 @@ impl Fireable for ShockwaveConfig {
         app.add_systems(
             FixedUpdate,
             (
-                tick_shockwave,
-                apply_shockwave_damage,
-                despawn_finished_shockwave,
-            )
-                .chain()
-                .in_set(EffectV3Systems::Tick),
+                tick_shockwave.in_set(EffectV3Systems::Tick),
+                apply_shockwave_damage
+                    .in_set(EffectV3Systems::Tick)
+                    .after(tick_shockwave)
+                    .before(despawn_finished_shockwave),
+                despawn_finished_shockwave.in_set(EffectV3Systems::Tick),
+            ),
         );
     }
 }

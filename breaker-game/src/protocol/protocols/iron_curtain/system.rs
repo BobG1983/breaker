@@ -23,6 +23,7 @@ use crate::{
         components::BoltBaseDamage, messages::BoltLost, resources::DEFAULT_BOLT_BASE_DAMAGE,
         sets::BoltSystems,
     },
+    effect_v3::EffectV3Systems,
     prelude::*,
     protocol::{
         definition::{ProtocolKind, ProtocolTuning},
@@ -88,7 +89,9 @@ pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
 pub(crate) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
-        iron_curtain_on_bolt_lost.after(BoltSystems::BoltLost),
+        iron_curtain_on_bolt_lost
+            .after(BoltSystems::BoltLost)
+            .before(EffectV3Systems::Bridge),
     );
 }
 
