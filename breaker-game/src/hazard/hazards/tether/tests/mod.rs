@@ -11,5 +11,6 @@ mod scheduling;
 // W2 test modules.
 mod cross_mechanic;
 mod emit_partner;
+mod emit_partner_invulnerable;
 mod kill_attribution;
 mod next_frame_pipeline;

@@ -141,22 +141,16 @@ pub(crate) fn bolt_cell_collision(
         let mut velocity = bolt.spatial.velocity.0;
         let mut remaining_px = velocity.length() * dt;
 
-        // Pierce-lookahead damage (LOCAL only — NOT the emission amount).
+        // `base_damage` is emitted raw in `DamageDealt<Cell>.amount`; the
+        // `rantzsoft_dmg` pipeline applies `DamageBoostStack` and
+        // `VulnerableStack` downstream.
         //
-        // `base_damage` is the raw per-hit damage this bolt emits in
-        // `DamageDealt<Cell> { amount: base_damage, .. }`. The `rantzsoft_dmg`
-        // pipeline then multiplies the message exactly once: first by the
-        // bolt's `DamageBoostStack` (in `apply_damage_boosts::<Cell>`,
-        // `DmgSystems::ApplyDamageBoosts`), then by the cell's
-        // `VulnerableStack` (in `apply_vulnerable::<Cell>`,
-        // `DmgSystems::ApplyVulnerable`). The final consumer is
-        // `apply_damage_to_cells` (cells domain, `DmgSystems::ApplyDamage`),
-        // which decrements `Hp` and handles Diffusion BFS redistribution.
-        //
-        // `effective_damage` (and `cell_damage` in `resolve_bolt_cell_hit`)
-        // recompute the fully-multiplied value LOCALLY for one purpose only:
-        // driving the pierce/reflect decision (`would_destroy`). They are
-        // NEVER written into `DamageDealt<Cell>.amount`.
+        // The pierce/reflect decision needs a predicted post-pipeline damage
+        // to ask "would this hit kill the cell?". `effective_damage` here and
+        // `cell_damage` in `resolve_bolt_cell_hit` duplicate the pipeline's
+        // multiplier chain using `aggregate_persistent` (one-shots excluded).
+        // This is a known duplication with a subtle one-shot divergence —
+        // tracked as cleanup (see bolt_cell_collision pierce-decision task).
         let base_damage = bolt
             .collision
             .base_damage
@@ -382,7 +376,7 @@ fn apply_hit_outcome(
     // Emit RAW `base_damage`. The `rantzsoft_dmg` pipeline applies
     // `DamageBoostStack` (in `apply_damage_boosts::<Cell>`) and
     // `VulnerableStack` (in `apply_vulnerable::<Cell>`) exactly once before
-    // `apply_damage_to_cells` (cells domain) consumes the message.
+    // `apply_damage::<Cell>` (in `DmgSystems::ApplyDamage`) consumes it.
     damage_writer.write(DamageDealt {
         dealer:        Some(bolt.entity),
         attributed_to: None,

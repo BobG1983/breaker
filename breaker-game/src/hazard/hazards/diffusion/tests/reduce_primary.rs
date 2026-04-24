@@ -282,10 +282,15 @@ fn reduce_primary_excludes_dead_neighbors() {
 }
 
 #[test]
-fn reduce_primary_excludes_invulnerable_neighbors() {
+fn reduce_primary_includes_invulnerable_neighbors_in_candidate_list() {
+    // W7: `DiffusionAdjacencyQuery` drops `Without<Invulnerable>`. Invulnerable
+    // neighbors now enter the `candidate_neighbors` list. The pipeline's
+    // `invulnerable_filter::<Cell>` zeroes the eventual ring amount targeting
+    // the invulnerable cell; denominator dilution is the user-approved
+    // consequence. See `.claude/specs/w7-drop-invulnerable-filter-tests.md`.
     let mut app = build_diffusion_test_app(50.0);
     let c0 = spawn_cell_at(&mut app, Vec2::ZERO);
-    let _c1 = spawn_cell_at(&mut app, Vec2::new(30.0, 0.0));
+    let c1 = spawn_cell_at(&mut app, Vec2::new(30.0, 0.0));
     let c2 = spawn_cell_at(&mut app, Vec2::new(0.0, 30.0));
     app.world_mut().entity_mut(c2).insert(Invulnerable);
 
@@ -304,7 +309,19 @@ fn reduce_primary_excludes_invulnerable_neighbors() {
 
     let queue = &app.world().resource::<PendingDiffusionEmissions>().queue;
     assert_eq!(queue.len(), 1);
-    assert!(!queue[0].candidate_neighbors.contains(&c2));
+    assert_eq!(
+        queue[0].candidate_neighbors.len(),
+        2,
+        "both c1 and c2 must be in candidate_neighbors under W7 (c2 is invulnerable)"
+    );
+    assert!(
+        queue[0].candidate_neighbors.contains(&c1),
+        "vulnerable c1 in candidate_neighbors"
+    );
+    assert!(
+        queue[0].candidate_neighbors.contains(&c2),
+        "invulnerable c2 in candidate_neighbors (W7)"
+    );
 }
 
 // ── W2 Behavior 26: pass-through when no candidates exist ──

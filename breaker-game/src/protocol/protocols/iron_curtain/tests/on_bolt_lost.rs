@@ -4,10 +4,13 @@
 //! damage_fraction`; full damage inside `falloff_start`; linear falloff past
 //! `falloff_start` via `(1.0 - falloff_distance/max_distance).clamp(0.0, 1.0)`;
 //! zero-damage clamp emits NO message; per-bolt base-damage scaling via
-//! `BoltBaseDamage` with `DEFAULT_BOLT_BASE_DAMAGE` fallback; `Dead` and
-//! `Invulnerable` filter cells out; the missing-breaker case is
-//! harness-safe; multi-BoltLost in the same frame produce independent waves;
-//! and degenerate `max_distance <= 0.0` does not panic.
+//! `BoltBaseDamage` with `DEFAULT_BOLT_BASE_DAMAGE` fallback; `Dead` cells are
+//! filtered out by the query; `Invulnerable` cells DO receive wave messages at
+//! emit stage (post-W7) and are zeroed downstream by `invulnerable_filter::<Cell>`
+//! in `DmgSystems::ApplyDamage` — see the `w7_*` tests in `scheduling.rs` for
+//! the end-to-end contract. The missing-breaker case is harness-safe;
+//! multi-BoltLost in the same frame produce independent waves; and degenerate
+//! `max_distance <= 0.0` does not panic.
 
 use bevy::prelude::*;
 
@@ -494,10 +497,16 @@ fn all_cells_dead_produces_zero_damage_messages() {
     );
 }
 
-// ── Behavior 15 — Invulnerable cells are filtered out ──────────────────────-
+// ── Behavior 15 (W7) — Invulnerable cells DO receive a wave message at emit time.
+//    `LiveCellQuery` no longer filters invulnerable cells; the pipeline's
+//    `invulnerable_filter::<Cell>` (in DmgSystems::ApplyDamage) zeroes `amount`
+//    downstream. THIS harness is emitter-only (`build_iron_curtain_app` does
+//    NOT install the pipeline filter), so the captured amount is the raw emit
+//    amount — NOT zero. See scheduling.rs's `w7_*` tests for the end-to-end
+//    pipeline-zeroed contract.
 
 #[test]
-fn invulnerable_cells_receive_no_wave_damage() {
+fn invulnerable_cells_emit_wave_messages_at_emit_stage_pipeline_zeros_downstream() {
     let mut app = build_iron_curtain_app();
     seed_active_protocols_with_iron_curtain(&mut app, 0.5, 50.0);
     spawn_breaker_at(&mut app, Vec2::new(0.0, -200.0));
@@ -508,19 +517,41 @@ fn invulnerable_cells_receive_no_wave_damage() {
     write_bolt_lost(&mut app, bolt);
     tick(&mut app);
 
+    // Post-W7: both cells receive messages at emit stage. The invulnerable
+    // cell's message carries the RAW emitted amount (no filter runs in this
+    // harness — the filter lives in the full pipeline).
     let msgs = collected_iron_curtain_damage(&app);
-    assert_eq!(msgs.len(), 1, "only non-invulnerable cell takes damage");
-    assert_eq!(msgs[0].target, cell_open);
+    assert_eq!(
+        msgs.len(),
+        2,
+        "both cells receive an Iron Curtain message at emit stage, got {}",
+        msgs.len()
+    );
+
+    let a_open = amount_for_target(&msgs, cell_open)
+        .expect("non-invulnerable cell must have a damage message");
     assert!(
-        msgs.iter().all(|m| m.target != cell_locked),
-        "invulnerable cell must not receive a damage message"
+        (a_open - 10.0).abs() < 1e-4,
+        "non-invulnerable cell raw emit amount expected 10.0 (= 20.0 * 0.5), got {a_open}"
+    );
+
+    let a_locked = amount_for_target(&msgs, cell_locked)
+        .expect("invulnerable cell must also have a (raw, pre-pipeline) message");
+    assert!(
+        (a_locked - 10.0).abs() < 1e-4,
+        "invulnerable cell raw emit amount expected 10.0 (pipeline zeroes \
+         downstream in DmgSystems::ApplyDamage — not in this emitter-only harness), \
+         got {a_locked}"
     );
 }
 
-// ── Behavior 15 (edge case) — cell with both Dead and Invulnerable excluded -
+// ── Behavior 15 (W7 edge case) — cell with both Dead and Invulnerable is
+//    excluded by the `Dead` filter alone. Post-W7, `Invulnerable` no longer
+//    excludes — this test now pins `Dead` exclusion for the combined-marker
+//    case.
 
 #[test]
-fn cell_with_dead_and_invulnerable_is_excluded() {
+fn cell_with_dead_and_invulnerable_is_excluded_by_dead_filter() {
     let mut app = build_iron_curtain_app();
     seed_active_protocols_with_iron_curtain(&mut app, 0.5, 50.0);
     spawn_breaker_at(&mut app, Vec2::new(0.0, -200.0));
@@ -531,12 +562,14 @@ fn cell_with_dead_and_invulnerable_is_excluded() {
     write_bolt_lost(&mut app, bolt);
     tick(&mut app);
 
+    // Post-W7: `Without<Invulnerable>` no longer applies, but `Without<Dead>`
+    // still does. The Dead+Invulnerable cell is excluded by `Dead` alone.
     let msgs = collected_iron_curtain_damage(&app);
-    assert_eq!(msgs.len(), 1);
+    assert_eq!(msgs.len(), 1, "only the open cell receives a message");
     assert_eq!(msgs[0].target, cell_open);
     assert!(
         msgs.iter().all(|m| m.target != cell_both),
-        "Dead+Invulnerable cell must be excluded"
+        "Dead+Invulnerable cell must be excluded by the Dead filter"
     );
 }
 

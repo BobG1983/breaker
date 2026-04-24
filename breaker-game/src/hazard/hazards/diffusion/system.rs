@@ -147,7 +147,11 @@ pub(crate) struct PendingEmission {
     /// Total damage amount to split across `candidate_neighbors`. Equals
     /// `primary_amount * share_frac` computed at reduce-time.
     pub(crate) shared:              f32,
-    /// Non-visited, non-dead, non-invulnerable in-range cells.
+    /// Non-visited, non-dead in-range cells. Invulnerable neighbors ARE
+    /// included — they enter the `per_neighbor = shared / n` denominator
+    /// and receive a ring message that `invulnerable_filter::<Cell>`
+    /// zeroes before application. See `DiffusionAdjacencyQuery` for the
+    /// dilution trade-off.
     pub(crate) candidate_neighbors: Vec<Entity>,
     /// Forwarded `attributed_to` from the primary message — equals
     /// `msg.attributed_to.or(msg.dealer)` at reduce time. Ring emissions set
@@ -218,12 +222,26 @@ pub(crate) fn reset_diffusion_state(
     *pending = PendingDiffusionEmissions::default();
 }
 
-type DiffusionAdjacencyQuery<'w, 's> = Query<
-    'w,
-    's,
-    (Entity, &'static Position2D),
-    (With<Cell>, Without<Dead>, Without<Invulnerable>),
->;
+/// Query alias for the diffusion adjacency snapshot.
+///
+/// Invulnerability is intentionally NOT filtered here: invulnerable cells
+/// are valid neighbors that count toward the denominator when
+/// `diffusion_emit_rings` computes `per_neighbor = shared / n`. The
+/// invulnerable share of a ring is then zeroed by
+/// `invulnerable_filter::<Cell>` in `DmgSystems::ApplyDamage` (owned by
+/// `rantzsoft_dmg`) before `apply_damage::<Cell>` runs.
+///
+/// Game-feel consequence (user-approved): total delivered splash damage
+/// is DILUTED when invulnerable cells are adjacent — the invulnerable
+/// share is computed, then discarded by the pipeline, so the sum of
+/// applied damage across the ring is strictly less than the original
+/// `shared` amount. This is the accepted trade-off for aligning diffusion
+/// with the pipeline-owns-filtering principle used by every other damage
+/// emitter (iron curtain, tether, `effect_v3` emitters, bolt collisions).
+///
+/// Factored out to satisfy `clippy::type_complexity`.
+type DiffusionAdjacencyQuery<'w, 's> =
+    Query<'w, 's, (Entity, &'static Position2D), (With<Cell>, Without<Dead>)>;
 
 /// `DmgSystems::MutateDamage` pass. For each `DamageDealt<Cell>` message:
 ///
@@ -233,8 +251,12 @@ type DiffusionAdjacencyQuery<'w, 's> = Query<
 ///    - Else → allocate a fresh id from `instances.next_id`, seed visited
 ///      with `msg.target`.
 /// 2. Compute `candidate_neighbors`: live cells in the adjacency snapshot
-///    excluding visited, dead, invulnerable, within `ADJACENCY_RADIUS_SQ`
-///    of `msg.target`.
+///    excluding visited, within `ADJACENCY_RADIUS_SQ` of `msg.target`.
+///    Invulnerable neighbors ARE included — they count toward the
+///    denominator in `diffusion_emit_rings` and receive a ring message
+///    whose `amount` is zeroed by `invulnerable_filter::<Cell>` before
+///    application. This dilutes total delivered splash damage when
+///    invulnerable cells are adjacent (accepted game-feel trade-off).
 /// 3. If empty → pass-through (no reduction, no pending emission).
 /// 4. Else:
 ///    - `shared = msg.amount * share_frac`.

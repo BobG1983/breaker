@@ -155,16 +155,35 @@ pub(crate) fn register(app: &mut App) {
     );
 }
 
-type LiveCellPositions<'w, 's> = Query<
-    'w,
-    's,
-    (Entity, &'static Position2D),
-    (With<Cell>, Without<Dead>, Without<Invulnerable>),
->;
+/// Query alias for alive cells with their positions, used by
+/// `establish_tether_links` for pair selection. Invulnerability is
+/// intentionally NOT filtered here: invulnerable cells are eligible
+/// tether partners, and a tether pair where one or both endpoints
+/// are invulnerable is INERT — the `tether_emit_partner` `amount <= 0.0`
+/// guard (itself upheld by `invulnerable_filter::<Cell>` in
+/// `DmgSystems::ApplyDamage`) stops ripple emission when the primary
+/// is invulnerable, and the invulnerable partner's sibling message is
+/// zeroed by the same filter before `apply_damage::<Cell>` runs.
+///
+/// Game-feel trade-off (user-approved): inert tether pairs may appear
+/// on the board. Aligning with the pipeline-owns-filtering principle
+/// is preferred over the prior "invulnerable cells can never be
+/// partners" rule.
+type LiveCellPositions<'w, 's> =
+    Query<'w, 's, (Entity, &'static Position2D), (With<Cell>, Without<Dead>)>;
 
 /// Selects pairs of cells to link via mutual-exclusion matching over shuffled
 /// adjacency pairs. Runs once on `OnEnter(NodeState::Playing)` behind the
 /// `hazard_active(Tether)` run-if.
+///
+/// Invulnerability is NOT a pair-selection filter — invulnerable cells are
+/// eligible partners. A pair whose endpoint is invulnerable is inert:
+/// `tether_emit_partner` skips ripple emission when the primary's post-apply
+/// `amount` is `<= 0.0` (which the `invulnerable_filter::<Cell>` mutator
+/// guarantees for invulnerable primaries), and any partner sibling emitted
+/// against an invulnerable partner is zeroed by the same filter before
+/// `apply_damage::<Cell>` runs. Inert pairs are an accepted game-feel
+/// trade-off for uniform pipeline-owned filtering.
 ///
 /// Determinism comes from the shared [`GameRng`]: two identical runs with the
 /// same seed produce identical link sets. Harness-safe — early-returns if
@@ -184,7 +203,9 @@ pub(crate) fn establish_tether_links(
         return;
     }
 
-    // Collect eligible cells — filters already applied by the query.
+    // Collect eligible cells — `With<Cell>, Without<Dead>` applied by the query.
+    // Invulnerable cells are eligible partners by design; see the
+    // `LiveCellPositions` doc comment for the inert-pair trade-off.
     let cell_vec: Vec<(Entity, Vec2)> = cells.iter().map(|(e, pos)| (e, pos.0)).collect();
 
     // Compute all unordered eligible adjacent pairs.

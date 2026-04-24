@@ -97,14 +97,18 @@ pub(crate) fn register(app: &mut App) {
 
 // ── Systems ─────────────────────────────────────────────────────────────────
 
-/// Query alias for alive, non-invulnerable cells with their positions.
+/// Query alias for alive cells with their positions. Invulnerability is
+/// intentionally NOT filtered here: Iron Curtain emits raw damage amounts
+/// and `invulnerable_filter::<Cell>` (a `MessageMutator` in
+/// `DmgSystems::ApplyDamage` from `rantzsoft_dmg`) zeroes the `amount`
+/// field before `apply_damage::<Cell>` runs. This aligns Iron Curtain
+/// with the pipeline-owns-filtering principle shared by every other
+/// damage-emitting system (`effect_v3` pulse / shockwave / `chain_lightning` /
+/// `tether_beam`, and `bolt_cell_collision` post-W6).
+///
 /// Factored out to satisfy `clippy::type_complexity`.
-type LiveCellQuery<'w, 's> = Query<
-    'w,
-    's,
-    (Entity, &'static Position2D),
-    (With<Cell>, Without<Dead>, Without<Invulnerable>),
->;
+type LiveCellQuery<'w, 's> =
+    Query<'w, 's, (Entity, &'static Position2D), (With<Cell>, Without<Dead>)>;
 
 /// Bundles Iron Curtain's harness-optional resource dependencies behind a
 /// single `SystemParam` so `iron_curtain_on_bolt_lost` stays below the
@@ -116,9 +120,12 @@ pub(crate) struct IronCurtainDeps<'w> {
 }
 
 /// Consumes `BoltLost` messages. For each message, fans out a single-frame
-/// damage wave from the breaker position across all alive, non-invulnerable
-/// cells, emitting `DamageDealt<Cell>` messages per the design-doc's linear
-/// falloff formula.
+/// damage wave from the breaker position across all alive cells, emitting
+/// `DamageDealt<Cell>` messages per the design-doc's linear falloff
+/// formula. Invulnerability is enforced downstream by the
+/// `invulnerable_filter::<Cell>` mutator in `DmgSystems::ApplyDamage`
+/// (see `rantzsoft_dmg`); invulnerable cells receive a message but the
+/// pipeline zeroes `amount` before `apply_damage::<Cell>` runs.
 ///
 /// Harness-safe: if `IronCurtainConfig` or `PlayfieldConfig` is absent, clears
 /// the reader and returns so buffered messages do not leak into a later frame

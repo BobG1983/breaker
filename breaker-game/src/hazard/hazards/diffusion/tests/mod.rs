@@ -11,5 +11,6 @@ mod share_math;
 mod cleanup;
 mod emit_rings;
 mod integration_chain;
+mod integration_invulnerable;
 mod reduce_primary;
 mod visited_set;

@@ -86,7 +86,7 @@ fn cell_collision_emits_damage_cell_with_no_effective_damage_multiplier() {
 
 /// Boost-sensitive end-to-end: Harness B (full pipeline). The producer emits
 /// RAW `base_damage` (10.0); `apply_damage_boosts::<Cell>` multiplies to 15.0;
-/// `apply_damage_to_cells` decrements the cell's `Hp.current` by 15.0.
+/// `apply_damage::<Cell>` decrements the cell's `Hp.current` by 15.0.
 #[test]
 fn cell_collision_delivers_boosted_damage_end_to_end() {
     let mut app = test_app_with_full_pipeline();

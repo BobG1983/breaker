@@ -42,8 +42,8 @@ Domains MAY define a `pub enum {Domain}Systems` with `#[derive(SystemSet)]` in `
 | `EffectV3Systems::Conditions` | `effect_v3/sets.rs` | condition evaluation systems (e.g. `evaluate_conditions`) — runs after `Tick` in FixedUpdate |
 | `EffectV3Systems::Death` | `effect_v3/sets.rs` | `on_cell_destroyed`, `on_bolt_destroyed`, `on_wall_destroyed`, `on_breaker_destroyed` — phase set ordered `.after(DmgSystems::ApplyKill)` so bridges observe `Destroyed<T>` messages on the same tick while victims are still alive (despawn runs later in `FixedPostUpdate`). Cross-domain consumers order against `EffectV3Systems::Death` instead of individual bridge systems. |
 | `EffectV3Systems::Reset` | `effect_v3/sets.rs` | effect state reset on `OnEnter(NodeState::Loading)` — not in FixedUpdate chain |
-| `DmgSystems::EmitDamage` | `rantzsoft_dmg/src/sets.rs` | phase set — damage emitters run here (chain: EmitDamage → PostEmitDamage → ApplyDamageBoosts → MutateDamage → PostMutateDamage → ApplyVulnerable → ApplyDamage → PostApplyDamage → EmitKill → MutateKill → ApplyKill → PostApplyKill → EmitHeal → MutateHeal → ApplyHeal → PostApplyHeal; configured `.chain()` by `RantzDmgPlugin`). `apply_damage_to_cells` (cells domain, Cell damage with Diffusion BFS redistribution) runs in `DmgSystems::ApplyDamage`. |
-| `DmgSystems::ApplyDamage` | `rantzsoft_dmg/src/sets.rs` | `apply_damage_to_cells` (cells domain), `apply_damage::<Bolt>`, `apply_damage::<Wall>`, `apply_damage::<Breaker>`, `apply_damage::<Salvo>` — phase set. Cell damage stays in cells domain to own Diffusion redistribution. |
+| `DmgSystems::EmitDamage` | `rantzsoft_dmg/src/sets.rs` | phase set — damage emitters run here (chain: EmitDamage → PostEmitDamage → ApplyDamageBoosts → MutateDamage → PostMutateDamage → ApplyVulnerable → ApplyDamage → PostApplyDamage → EmitKill → MutateKill → ApplyKill → PostApplyKill → EmitHeal → MutateHeal → ApplyHeal → PostApplyHeal; configured `.chain()` by `RantzDmgPlugin`). |
+| `DmgSystems::ApplyDamage` | `rantzsoft_dmg/src/sets.rs` | Crate-owned applicators (`apply_damage::<T>`). Invulnerability is enforced by the crate's `invulnerable_filter::<T>` MessageMutator in this same set — emitters never pre-filter invulnerable targets. |
 | `DmgSystems::EmitKill` | `rantzsoft_dmg/src/sets.rs` | `detect_deaths::<Bolt>`, `detect_deaths::<Wall>`, `detect_deaths::<Breaker>`, `detect_deaths::<Salvo>` (crate-internal) — phase set |
 | `DmgSystems::ApplyKill` | `rantzsoft_dmg/src/sets.rs` | `handle_kill::<Bolt>`, `handle_kill::<Wall>`, `handle_kill::<Breaker>`, `handle_kill::<Salvo>` (crate-internal); `handle_breaker_death` from `RunPlugin` — phase set |
 | `DmgSystems::ApplyHeal` | `rantzsoft_dmg/src/sets.rs` | `apply_heal::<Bolt>`, `apply_heal::<Wall>`, `apply_heal::<Breaker>`, `apply_heal::<Salvo>` (crate-internal); `apply_heal::<Cell>` also runs here — phase set; runs after `ApplyKill` so `Dead` is visible to `apply_heal::<T>`'s `Without<Dead>` filter, preventing same-tick revival |
@@ -202,7 +202,7 @@ move_breaker .after(update_bump)
 
 DmgSystems::ApplyDamage
   .after(EffectV3Systems::Tick)                              [rantzsoft_dmg pipeline — configured .chain() by RantzDmgPlugin]
-  (apply_damage_to_cells [cells domain], apply_damage::<Bolt>, apply_damage::<Wall>, apply_damage::<Breaker>)
+  (crate-owned apply_damage::<T> applicators; invulnerable_filter::<T> zeroes `amount` for invulnerable targets before application)
     <- check_armor_direction .after(BoltSystems::CellCollision)
                               .before(DmgSystems::ApplyDamage)
                               .run_if(in_state(NodeState::Playing))

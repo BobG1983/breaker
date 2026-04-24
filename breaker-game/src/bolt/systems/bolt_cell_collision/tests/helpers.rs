@@ -219,7 +219,7 @@ pub(super) fn test_app_with_damage_and_wall_messages() -> App {
 /// Message collectors are scheduled `.after(DmgSystems::ApplyVulnerable).before(DmgSystems::ApplyDamage)`
 /// so they observe `DamageDealt<Cell>.amount` AFTER `apply_damage_boosts::<Cell>`
 /// and `apply_vulnerable::<Cell>` have multiplied the message, but BEFORE
-/// `apply_damage_to_cells` consumes the message. Use this helper for tests
+/// `apply_damage::<Cell>` consumes the message. Use this helper for tests
 /// that assert post-pipeline `amount` OR final `Hp.current` on the target
 /// cell after one `tick(...)`.
 ///

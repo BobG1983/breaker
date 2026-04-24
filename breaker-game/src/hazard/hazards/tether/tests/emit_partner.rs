@@ -28,7 +28,7 @@ fn assert_f32_eq(actual: f32, expected: f32) {
 }
 
 /// Build a Tether test app wired for the new `PostApplyDamage` system.
-fn build_tether_app(active: bool) -> App {
+pub(super) fn build_tether_app(active: bool) -> App {
     let mut app = TestAppBuilder::new()
         .with_state_hierarchy()
         .in_state_node_playing()

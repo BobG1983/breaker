@@ -102,7 +102,7 @@ The architectural boundary is about **writes** (mutations), not reads. Domains f
 - **cells** receives pre-computed damage via the `DamageDealt<Cell>` message (unified death pipeline) — it does not read `ActiveDamageBoosts` directly. The bolt domain's `bolt_cell_collision` applies the multiplier when writing the message.
 - **breaker** reads `ActiveSpeedBoosts`, `ActiveSizeBoosts` (effect domain) from its own entity.
 - **effect** reads `BumpPerformed`, `BumpWhiffed` (breaker domain), `BoltImpactCell`, `BoltImpactBreaker`, `BoltImpactWall`, `BreakerImpactCell`, `BreakerImpactWall`, `BoltLost` (bolt/breaker domains), and `Destroyed<Cell>` / `Destroyed<Bolt>` / `Destroyed<Breaker>` / `Destroyed<Wall>` (unified death pipeline) messages in bridge systems.
-- **cells** (`apply_damage_to_cells`) reads `DiffusionConfig` and `ActiveHazards` (hazard domain) as `Option<Res<_>>` to consult diffusion redistribution parameters without requiring `HazardPlugin` to be installed (harness-safe). Read-only; the cells domain does not mutate hazard state. This is the owning pattern for Cell damage application after it moved out of the generic `apply_damage::<Cell>` pipeline. The adjacency query uses `Without<Dead>, Without<Invulnerable>` so dead or invulnerable cells never appear in the BFS snapshot — redistributing damage around them requires explicit handling in the redistribution algorithm, which the current implementation treats as pass-through (invulnerable/dead primary) or exclusion (invulnerable/dead neighbor).
+- **hazard** (`diffusion_reduce_primary` / `diffusion_emit_rings` in `hazard/hazards/diffusion/system.rs`) reads `DiffusionConfig` and `ActiveHazards` (hazard-owned). Cell damage application is owned by the crate's generic `apply_damage::<Cell>` in `DmgSystems::ApplyDamage`; diffusion BFS runs alongside as `diffusion_reduce_primary` (in `DmgSystems::MutateDamage`, mutates the primary message) and `diffusion_emit_rings` (in `DmgSystems::PostApplyDamage`, emits ring messages). Post-W7 the adjacency query uses `With<Cell>, Without<Dead>` — invulnerable cells ARE included in the candidate list; their ring `amount` is zeroed downstream by `invulnerable_filter::<Cell>` in `DmgSystems::ApplyDamage`.
 
 **The rule**: any domain may `use crate::other_domain::*` for read-only queries and message consumption. No domain writes to another domain's canonical components or resources directly — that flows through messages. The `debug/` domain is the accepted exception (read AND write, compiled out of release builds).
 
@@ -142,18 +142,6 @@ Both writes are safe by three properties:
 - **Scoped**: the enclosing `.run_if(hazard_active(HazardKind::Volatility))` / `.run_if(hazard_active(HazardKind::Momentum))` gate ensures each path is unreachable when its hazard is inactive.
 
 Cleanup is implicit: cell entities are despawned on node end, so the `Hp.max` lift persists only for the lifetime of the current node.
-
-## TetherRedirectBuffer Cross-Domain Write Exception
-
-`TetherRedirectBuffer` (hazard domain resource at `hazard/hazards/tether/system.rs`) is written by the cells domain `apply_damage_to_cells` system as an accepted architectural exception. One write path exists:
-
-- **cells** (`try_buffer_tether_redirect` inside `apply_damage_to_cells`): pushes a `DamageDealt<Cell>` onto the buffer when a primary target has a `TetherLink` and is hit by a non-hazard source. Accessed via `Option<ResMut<TetherRedirectBuffer>>` for harness-safety.
-
-The hazard domain drains the buffer in `emit_tether_redirects` into `MessageWriter<DamageDealt<Cell>>` inside the same `DmgSystems::ApplyDamage` set, ordered `.after(apply_damage_to_cells)`. The push/drain split exists because Bevy 0.18 panics at schedule construction when a single system holds both `MessageReader<T>` and `MessageWriter<T>` for the same `T` — `apply_damage_to_cells` already holds the reader for `DamageDealt<Cell>`.
-
-Rationale: the design doc (`docs/design/hazards/tether.md` §Edge Cases — Tether + Diffusion ordering) mandates that Tether redirect uses the Diffusion-reduced `primary_damage`, which is only available inside the `accumulate_message_deltas` call in the cells-domain system. Routing via a `TetherRedirectRequested` message would add a message type and a hazard-domain consumer for no decoupling win — the data flow already goes hazard-owned-config → cells-domain-read → hazard-owned-buffer → hazard-owned-emit.
-
-Cleanup is implicit: the buffer is drained every `ApplyDamage` set; if Tether is inactive, nothing is ever pushed.
 
 ## NodeSequence / NodeOutcome Cross-Domain Write Exception
 
