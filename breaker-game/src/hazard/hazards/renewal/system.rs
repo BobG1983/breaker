@@ -84,7 +84,7 @@ pub(crate) fn register(app: &mut App) {
             renewal_attach_timers,
             renewal_tick
                 .after(DmgSystems::ApplyKill)
-                .before(DmgSystems::ApplyHeal),
+                .in_set(DmgSystems::EmitHeal),
         )
             .chain()
             .run_if(hazard_active(HazardKind::Renewal))

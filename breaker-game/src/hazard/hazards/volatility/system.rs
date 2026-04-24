@@ -70,7 +70,7 @@ pub(crate) fn register(app: &mut App) {
         (
             attach_volatility_timers,
             reset_volatility_on_damage.after(DmgSystems::ApplyDamage),
-            volatility_grow_cells.before(DmgSystems::ApplyHeal),
+            volatility_grow_cells.in_set(DmgSystems::EmitHeal),
         )
             .chain()
             .run_if(hazard_active(HazardKind::Volatility))

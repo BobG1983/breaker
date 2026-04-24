@@ -74,7 +74,7 @@ pub(crate) fn register(app: &mut App) {
         FixedUpdate,
         cascade_heal_on_death
             .after(DmgSystems::ApplyKill)
-            .before(DmgSystems::ApplyHeal),
+            .in_set(DmgSystems::EmitHeal),
     );
 }
 
