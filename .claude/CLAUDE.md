@@ -37,8 +37,14 @@ All code identifiers MUST use game vocabulary — see `.claude/rules/project-con
 **ALWAYS ask before**:
 - Creating new plugins, systems, or modules not in the architecture
 - Choosing between component vs resource vs message for new data
-- Any design decision not covered in `docs/design/` or `docs/architecture/`
+- Proposing a NEW **game design decision** — new mechanics, upgrade ideas, deliberate parameter tuning, UI/UX flows, node types, breaker abilities, or anything that changes how the game feels to play (see `.claude/agents/guard-game-design.md` for the authoritative scope)
 - Architectural changes or refactors affecting multiple systems
+
+**A design decision is NEW design work.** Fixing a bug so the runtime behavior matches what the RON configs / design docs already specify is NOT a design decision — it's a correctness fix. Execute it. Executing an approved plan wave is NOT a design decision — execute it. If a correctness fix changes runtime numbers, that is a consequence of fixing the bug, not a design choice to defer. Only net-new design work requires confirmation.
+
+**Right-size engineering, don't under-engineer.** The global system prompt's "don't add features, refactor, or introduce abstractions beyond what the task requires" can read as a license to skip mess cleanup, skip helpers, skip good structure. It is not. Senior engineers right-size: they clean up mess as they touch it, extract helpers when a pattern repeats, and maintain architecture boundaries — they do not over-engineer speculative abstractions, but they also do not shirk the structural work a task genuinely needs. The bar is "would a senior engineer reviewing this say the scope was right-sized?" — NOT "could I have written less code?" Missing cleanup, copy-pasted logic, and architectural drift are NOT acceptable outputs just because the minimal path technically satisfies the test. If a wave of an approved plan exists, every item in it is in scope — do not label items "cosmetic" or "low value" and skip them.
+
+**Bugs are not game design decisions.** If the runtime behavior disagrees with the RON configs or design docs, that is a bug — the designed numbers live in the configs, and a bug that silently amplifies or alters them corrupts the designed behavior. Fixing it RESTORES the design. Do NOT surface a correctness fix as a "game-feel decision" or "balance question" to avoid doing it. Symptoms that you may be mis-labeling a bug as a design decision: (1) you can point to a specific formula, double-application, or off-by-one producing a wrong number; (2) the "correct" value is knowable from the config or design doc without asking the user; (3) fixing it changes numbers that were never designed to be those values in the first place. In all three cases: fix the bug. The "ALWAYS ask before a NEW game design decision" rule applies to NEW mechanics and deliberate tuning, never to restoring specified behavior.
 
 **NEVER**:
 - Suppress lint errors with `#[allow(...)]` or modify `[workspace.lints]` in `Cargo.toml` — the lint config is intentional
