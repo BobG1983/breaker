@@ -8,7 +8,7 @@ mod damage_messages;
 mod last_impact;
 mod phantom;
 mod piercing;
+mod raw_emission;
 mod reflection;
 mod scheduling;
 mod vulnerability;
-mod w6_raw_emit;
