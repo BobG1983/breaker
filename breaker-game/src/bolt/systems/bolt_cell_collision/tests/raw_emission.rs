@@ -434,21 +434,6 @@ fn full_pipeline_one_shot_boost_drains_exactly_once() {
     );
 }
 
-// ── Behavior 16 — one-shot drain is message-scoped (full pipeline) ──
-//
-// Behavior 16 (one-shot drain is message-scoped across a multi-cell pierce)
-// is NOT implemented here. Constructing a deterministic multi-cell pierce
-// in Harness B is blocked by BoltPlugin's production speed-clamp (bolt
-// velocity clamped to `max_speed = 1440`): at 60 Hz fixed tick, that's 24
-// units/frame, not enough to sweep through two cells ≥30 units apart in a
-// single tick under CCD. The mechanic Behavior 16 intends to pin — that
-// `DamageBoostStack::aggregate_and_consume_one_shots()` drains the one-shot
-// lane exactly once per-message — is a direct property of the
-// `rantzsoft_dmg` pipeline and is covered by Behavior 15 (single-message
-// one-shot drain) combined with Behavior 10 (multi-message raw emission).
-// An explicit multi-cell regression here would duplicate that coverage
-// without adding a new failure mode.
-
 // ── Behavior 17 — Locked + Invulnerable cell unchanged despite boost ──
 
 /// Cell with `Locked` + `Invulnerable`, `Hp(50.0)`. Bolt has
