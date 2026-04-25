@@ -41,15 +41,18 @@ use crate::{
 
 /// Registers all protocol + hazard resources, messages, and systems.
 ///
-/// Internally splits into four `wire_*` functions for readability:
+/// Internally splits into three `wire_*` functions for readability:
 /// - `wire_protocols` — protocol registry/messages/dispatch + per-protocol fan-out
 /// - `wire_hazards` — hazard registry/messages/dispatch + per-hazard fan-out
 /// - `wire_damage_chain` — central `MutateDamage` / `PostApplyDamage`
-///   ordering (Wave 3 fills this in; today empty because chain participants
-///   wire from their own `wire()`s)
-/// - `wire_cleanup` — run-end cleanup driver (each mechanic still owns its
-///   own `OnExit(RunState::Finished)` registration; this fn stays a stub
-///   unless centralisation becomes worthwhile)
+///   ordering (the single source of truth for the cross-mechanic
+///   `diffusion → tether → echo_strike` ripple chain)
+///
+/// Per-mechanic run-end cleanup remains a per-mechanic responsibility:
+/// every `<mechanic>::wire(app)` registers its own
+/// `OnExit(NodeState::Playing)` (or equivalent) cleanup system. There
+/// is no central `wire_cleanup` driver — centralisation would only
+/// justify itself if cross-mechanic cleanup ordering became a concern.
 pub struct MutatorsPlugin;
 
 impl Plugin for MutatorsPlugin {
@@ -57,7 +60,6 @@ impl Plugin for MutatorsPlugin {
         wire_protocols(app);
         wire_hazards(app);
         wire_damage_chain(app);
-        wire_cleanup(app);
     }
 }
 
@@ -144,11 +146,4 @@ pub(crate) fn wire_damage_chain(app: &mut App) {
             .chain()
             .in_set(DmgSystems::PostApplyDamage),
     );
-}
-
-const fn wire_cleanup(_app: &mut App) {
-    // Each mechanic registers its own `OnExit(RunState::Finished)` cleanup
-    // system from its `wire(app)`. Centralised dispatch remains
-    // unimplemented; revisit only if a cross-mechanic cleanup ordering
-    // need surfaces.
 }
