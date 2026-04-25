@@ -59,6 +59,8 @@ mod tests {
                 RampingDamageConfig, RandomEffectConfig, SecondWindConfig, ShieldConfig,
                 ShockwaveConfig, SizeBoostConfig, SpawnBoltsConfig, SpawnPhantomConfig,
                 SpeedBoostConfig, TetherBeamConfig, TimePenaltyConfig, VulnerableConfig,
+                explode::messages::ExplodeEmissionRequested,
+                piercing_beam::messages::PiercingBeamEmissionRequested,
             },
             stacking::EffectStack,
             types::AttractionType,
@@ -205,10 +207,17 @@ mod tests {
 
     #[test]
     fn fire_dispatch_does_not_panic_for_any_effect_type_variant() {
-        let mut world = World::new();
-        world.insert_resource(GameRng::from_seed(42));
-        world.insert_resource(PlayfieldConfig::default());
-        world.init_resource::<rantzsoft_physics2d::resources::CollisionQuadtree>();
+        let mut app = App::new();
+        app.world_mut().insert_resource(GameRng::from_seed(42));
+        app.world_mut().insert_resource(PlayfieldConfig::default());
+        app.world_mut()
+            .init_resource::<rantzsoft_physics2d::resources::CollisionQuadtree>();
+        // W7 emitters write their request messages from `fire()`; those
+        // resources only exist after `add_message::<...>()`. The smoke test
+        // doesn't install `EffectV3Plugin` (which would normally register
+        // them), so register the W7 emitter messages explicitly here.
+        app.add_message::<ExplodeEmissionRequested>();
+        app.add_message::<PiercingBeamEmissionRequested>();
 
         let types = all_effect_types();
         assert_eq!(
@@ -217,14 +226,15 @@ mod tests {
             "update all_effect_types when EffectType gains variants"
         );
         for effect in types {
-            let entity = world
+            let entity = app
+                .world_mut()
                 .spawn((
                     Position2D(Vec2::new(100.0, 200.0)),
                     Velocity2D(Vec2::new(0.0, 300.0)),
                 ))
                 .id();
 
-            fire_dispatch(&effect, entity, "smoke_test", &mut world);
+            fire_dispatch(&effect, entity, "smoke_test", app.world_mut());
         }
         // If we reach here, no variant panicked.
     }

@@ -42,6 +42,9 @@ fn volatile_cell_already_dead_still_fires_explosion_exactly_once() {
         _marker:    PhantomData,
     }]));
 
+    // W7: tick 1 fires Explode (writes ExplodeEmissionRequested); tick 2 runs
+    // apply_explode_damage (emits DamageDealt<Cell>).
+    tick(&mut app);
     tick(&mut app);
 
     let damage = app
@@ -80,6 +83,9 @@ fn injecting_destroyed_twice_fires_explosion_twice() {
     };
     app.insert_resource(TestCellDestroyedMessages(vec![msg.clone(), msg]));
 
+    // W7: tick 1 fires Explode (writes ExplodeEmissionRequested); tick 2 runs
+    // apply_explode_damage (emits DamageDealt<Cell>).
+    tick(&mut app);
     tick(&mut app);
 
     let damage = app
