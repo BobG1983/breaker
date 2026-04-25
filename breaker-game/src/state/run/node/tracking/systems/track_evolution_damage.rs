@@ -27,7 +27,33 @@ mod tests {
     use std::marker::PhantomData;
 
     use super::*;
-    use crate::state::run::node::lifecycle::systems::reset_highlight_tracker;
+    use crate::{
+        chips::definition::Rarity, state::run::node::lifecycle::systems::reset_highlight_tracker,
+    };
+
+    /// Builder-format `SourceId` for the canonical "Piercing Barrage" evolution
+    /// chip used across these tests. The production tracker keys on the FULL
+    /// source string (e.g. `chip:Piercing Barrage:Evolution`), so the test
+    /// assertions look up that exact key.
+    fn piercing_barrage_source() -> SourceId {
+        SourceId::chip("Piercing Barrage")
+            .rarity(Rarity::Evolution)
+            .build()
+    }
+
+    /// Builder-format `SourceId` for an alternate evolution chip used by the
+    /// multi-chip independence test.
+    fn chain_lightning_source() -> SourceId {
+        SourceId::chip("Chain Lightning")
+            .rarity(Rarity::Evolution)
+            .build()
+    }
+
+    /// Returns the canonical map key used by `track_evolution_damage` —
+    /// the full source string content of the builder-built id.
+    fn key_of(source: &SourceId) -> String {
+        source.0.as_ref().to_owned()
+    }
 
     #[derive(Resource)]
     struct TestMessages(Vec<DamageDealt<Cell>>);
@@ -67,12 +93,14 @@ mod tests {
         let mut app = test_app();
         app.insert_resource(TestMessages(vec![make_damage(
             25.0,
-            Some(SourceId::from("Piercing Barrage")),
+            Some(piercing_barrage_source()),
         )]));
         tick(&mut app);
 
         let tracker = app.world().resource::<HighlightTracker>();
-        let damage = tracker.evolution_damage.get("Piercing Barrage");
+        let damage = tracker
+            .evolution_damage
+            .get(&key_of(&piercing_barrage_source()));
         assert!(
             damage.is_some(),
             "evolution_damage should have entry for 'Piercing Barrage'"
@@ -90,14 +118,16 @@ mod tests {
     fn accumulates_across_multiple_messages_for_same_evolution() {
         let mut app = test_app();
         app.insert_resource(TestMessages(vec![
-            make_damage(10.0, Some(SourceId::from("Piercing Barrage"))),
-            make_damage(15.0, Some(SourceId::from("Piercing Barrage"))),
-            make_damage(5.0, Some(SourceId::from("Piercing Barrage"))),
+            make_damage(10.0, Some(piercing_barrage_source())),
+            make_damage(15.0, Some(piercing_barrage_source())),
+            make_damage(5.0, Some(piercing_barrage_source())),
         ]));
         tick(&mut app);
 
         let tracker = app.world().resource::<HighlightTracker>();
-        let damage = tracker.evolution_damage.get("Piercing Barrage");
+        let damage = tracker
+            .evolution_damage
+            .get(&key_of(&piercing_barrage_source()));
         assert!(
             damage.is_some(),
             "evolution_damage should have entry for 'Piercing Barrage'"
@@ -118,16 +148,18 @@ mod tests {
         app.world_mut()
             .resource_mut::<HighlightTracker>()
             .evolution_damage
-            .insert("Piercing Barrage".to_owned(), 20.0);
+            .insert(key_of(&piercing_barrage_source()), 20.0);
 
         app.insert_resource(TestMessages(vec![make_damage(
             10.0,
-            Some(SourceId::from("Piercing Barrage")),
+            Some(piercing_barrage_source()),
         )]));
         tick(&mut app);
 
         let tracker = app.world().resource::<HighlightTracker>();
-        let damage = tracker.evolution_damage.get("Piercing Barrage");
+        let damage = tracker
+            .evolution_damage
+            .get(&key_of(&piercing_barrage_source()));
         assert!(
             damage.is_some(),
             "evolution_damage should have entry for 'Piercing Barrage'"
@@ -145,13 +177,15 @@ mod tests {
     fn tracks_multiple_chips_independently() {
         let mut app = test_app();
         app.insert_resource(TestMessages(vec![
-            make_damage(25.0, Some(SourceId::from("Piercing Barrage"))),
-            make_damage(40.0, Some(SourceId::from("Chain Lightning"))),
+            make_damage(25.0, Some(piercing_barrage_source())),
+            make_damage(40.0, Some(chain_lightning_source())),
         ]));
         tick(&mut app);
 
         let tracker = app.world().resource::<HighlightTracker>();
-        let piercing = tracker.evolution_damage.get("Piercing Barrage");
+        let piercing = tracker
+            .evolution_damage
+            .get(&key_of(&piercing_barrage_source()));
         assert!(
             piercing.is_some(),
             "should track 'Piercing Barrage' independently"
@@ -162,7 +196,9 @@ mod tests {
             piercing.unwrap()
         );
 
-        let chain = tracker.evolution_damage.get("Chain Lightning");
+        let chain = tracker
+            .evolution_damage
+            .get(&key_of(&chain_lightning_source()));
         assert!(
             chain.is_some(),
             "should track 'Chain Lightning' independently"
@@ -203,12 +239,14 @@ mod tests {
         app.world_mut()
             .resource_mut::<HighlightTracker>()
             .evolution_damage
-            .insert("Piercing Barrage".to_owned(), 100.0);
+            .insert(key_of(&piercing_barrage_source()), 100.0);
 
         app.update();
 
         let tracker = app.world().resource::<HighlightTracker>();
-        let damage = tracker.evolution_damage.get("Piercing Barrage");
+        let damage = tracker
+            .evolution_damage
+            .get(&key_of(&piercing_barrage_source()));
         assert!(
             damage.is_some(),
             "evolution_damage should persist across reset_highlight_tracker"

@@ -3,7 +3,7 @@ use std::time::Duration;
 use bevy::prelude::*;
 
 use super::{super::system::*, helpers::*};
-use crate::prelude::*;
+use crate::{hazard::definition::HazardKind, prelude::*};
 
 // ══════════════════════════════════════════════════════════════════════
 // Group A — volatility_grow_cells interval / heal semantics
@@ -31,7 +31,10 @@ fn emits_heal_dealt_after_one_interval_stack_1() {
     );
     assert!(matches!(msg.cap, HealCap::Max));
     assert_eq!(msg.healer, None);
-    assert_eq!(msg.source, Some(SourceId::from("hazard:volatility")));
+    assert_eq!(
+        msg.source,
+        Some(SourceId::hazard(HazardKind::Volatility).build())
+    );
 
     let timer = app.world().get::<VolatilityTimer>(cell).unwrap();
     assert!(
@@ -117,7 +120,10 @@ fn heal_source_is_hazard_volatility() {
 
     let heals = heals_for(&app, cell);
     assert_eq!(heals.len(), 1);
-    assert_eq!(heals[0].source, Some(SourceId::from("hazard:volatility")));
+    assert_eq!(
+        heals[0].source,
+        Some(SourceId::hazard(HazardKind::Volatility).build())
+    );
 }
 
 // Behavior 3 — no heal at cap; timer still rolls over
@@ -310,4 +316,26 @@ fn mixed_dead_and_living_only_living_gets_heal() {
     let living_heals = heals_for(&app, living);
     assert_eq!(living_heals.len(), 1);
     assert_eq!(living_heals[0].target, living);
+}
+
+// ── B36a: source matches builder-produced hazard:volatility ──
+
+#[test]
+fn volatility_heal_source_equals_builder() {
+    use crate::{hazard::definition::HazardKind, prelude::SourceIdExt};
+
+    let mut app = test_app_playing();
+    install_default_config(&mut app);
+    add_volatility_stacks(&mut app, 1);
+    register_volatility_systems(&mut app);
+    let cell = spawn_cell_with_timer(&mut app, 10.0, 10.0, 0.0);
+
+    tick_with_dt(&mut app, Duration::from_secs_f32(5.0));
+
+    let heals = heals_for(&app, cell);
+    assert!(!heals.is_empty());
+    let expected = SourceId::hazard(HazardKind::Volatility).build();
+    for h in &heals {
+        assert_eq!(h.source.as_ref(), Some(&expected));
+    }
 }

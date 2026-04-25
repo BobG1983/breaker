@@ -5,10 +5,7 @@ use ordered_float::OrderedFloat;
 use rantzsoft_physics2d::resources::CollisionQuadtree;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    effect_v3::{components::EffectSourceChip, traits::Fireable},
-    prelude::*,
-};
+use crate::{effect_v3::traits::Fireable, prelude::*};
 
 /// Area explosion dealing flat damage to all cells within range.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -22,7 +19,7 @@ pub struct ExplodeConfig {
 impl Fireable for ExplodeConfig {
     fn fire(&self, entity: Entity, source: &str, world: &mut World) {
         let pos = world.get::<Position2D>(entity).map_or(Vec2::ZERO, |p| p.0);
-        let source_id = EffectSourceChip::from_source(source).0.map(SourceId::from);
+        let source_id = (!source.is_empty()).then(|| SourceId::from(source.to_owned()));
 
         // Broad phase: quadtree circle query filtered to the CELL layer.
         let radius = self.range.0;
@@ -70,7 +67,21 @@ mod tests {
     use rantzsoft_spatial2d::components::{GlobalPosition2D, Spatial2D};
 
     use super::ExplodeConfig;
-    use crate::{effect_v3::traits::Fireable, prelude::*};
+    use crate::{chips::definition::Rarity, effect_v3::traits::Fireable, prelude::*};
+
+    // B43: explode tests use a builder-produced chip-namespaced source.
+    fn explode_chip_source_str() -> String {
+        SourceId::chip("Devastating Splinter")
+            .rarity(Rarity::Rare)
+            .build()
+            .0
+            .into_owned()
+    }
+    fn explode_chip_source() -> SourceId {
+        SourceId::chip("Devastating Splinter")
+            .rarity(Rarity::Rare)
+            .build()
+    }
 
     // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -135,7 +146,8 @@ mod tests {
             range:  OrderedFloat(50.0),
             damage: OrderedFloat(10.0),
         };
-        config.fire(source, "boom_chip", app.world_mut());
+        let source_str = explode_chip_source_str();
+        config.fire(source, &source_str, app.world_mut());
         app.update();
 
         let msgs = app
@@ -143,6 +155,7 @@ mod tests {
             .resource::<MessageCollector<DamageDealt<Cell>>>();
         assert_eq!(msgs.0.len(), 3, "expected 3 DamageDealt<Cell> messages");
 
+        let expected_source = explode_chip_source();
         for msg in &msgs.0 {
             assert!(
                 (msg.amount - 10.0).abs() < f32::EPSILON,
@@ -150,7 +163,7 @@ mod tests {
                 msg.amount,
             );
             assert_eq!(msg.dealer, Some(source));
-            assert_eq!(msg.source, Some(SourceId::from("boom_chip")));
+            assert_eq!(msg.source, Some(expected_source.clone()));
         }
 
         let targets: HashSet<Entity> = msgs.0.iter().map(|m| m.target).collect();
@@ -296,7 +309,10 @@ mod tests {
             range:  OrderedFloat(50.0),
             damage: OrderedFloat(10.0),
         };
-        config.fire(source, "bomb_chip", app.world_mut());
+        // B43: source must be a builder-produced chip-namespaced SourceId,
+        // not a free-text "bomb_chip".
+        let source_str = explode_chip_source_str();
+        config.fire(source, &source_str, app.world_mut());
         app.update();
 
         let msgs = app
@@ -305,8 +321,8 @@ mod tests {
         assert_eq!(msgs.0.len(), 1);
         assert_eq!(
             msgs.0[0].source,
-            Some(SourceId::from("bomb_chip")),
-            "non-empty source should produce Some"
+            Some(explode_chip_source()),
+            "non-empty source must equal the builder-produced chip source"
         );
     }
 }

@@ -14,12 +14,12 @@ use bevy::{
     prelude::*,
 };
 
-use super::super::system::{IRON_CURTAIN_SENTINEL, IronCurtainConfig, activate, register};
+use super::super::system::{IronCurtainConfig, activate, register};
 use crate::{
     bolt::components::BoltBaseDamage,
     prelude::*,
     protocol::{
-        definition::{ProtocolDefinition, ProtocolTuning},
+        definition::{ProtocolDefinition, ProtocolKind, ProtocolTuning},
         resources::ActiveProtocols,
     },
 };
@@ -231,14 +231,15 @@ pub(super) fn write_bolt_lost(app: &mut App, bolt: Entity) {
 // ── Assertion helpers ───────────────────────────────────────────────────────
 
 /// Returns every captured `DamageDealt<Cell>` whose `source` matches the
-/// Iron Curtain sentinel string. Isolates Iron Curtain's wave emissions from
-/// any other `DamageDealt<Cell>` messages.
+/// builder-produced `protocol:iron_curtain` source. Isolates Iron Curtain's
+/// wave emissions from any other `DamageDealt<Cell>` messages.
 pub(super) fn collected_iron_curtain_damage(app: &App) -> Vec<DamageDealt<Cell>> {
+    let ic_source = SourceId::protocol(ProtocolKind::IronCurtain).build();
     app.world()
         .resource::<MessageCollector<DamageDealt<Cell>>>()
         .0
         .iter()
-        .filter(|msg| msg.source == Some(SourceId::from(IRON_CURTAIN_SENTINEL)))
+        .filter(|msg| msg.source.as_ref() == Some(&ic_source))
         .cloned()
         .collect()
 }

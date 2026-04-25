@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use bevy::prelude::*;
 
 /// Tracks entities on which armed `On` entries have fired an effect,
-/// keyed by the armed source string (e.g. `"chip_redirect#armed[0]"`).
+/// keyed by the armed source string (e.g. `"chip_redirect:armed"`).
 ///
 /// Used by the Shape D disarm path to reverse effects on the exact
 /// participants they were fired on, not on the owner entity.

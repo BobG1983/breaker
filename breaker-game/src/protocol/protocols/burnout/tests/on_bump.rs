@@ -23,7 +23,7 @@ use super::{
         spawn_bolt_with_base_damage, spawn_breaker_stationary, write_bump_performed,
     },
 };
-use crate::{breaker::messages::BumpGrade, prelude::*};
+use crate::{breaker::messages::BumpGrade, prelude::*, protocol::definition::ProtocolKind};
 
 fn seed_canonical(app: &mut App) {
     seed_active_protocols_with_burnout(app, 4.0, 2.0, 1.5, 4.0, 2.0);
@@ -64,10 +64,16 @@ fn mega_bump_consume_inserts_boost_resets_heat_fires_shockwave() {
         (pos - Vec2::new(0.0, -400.0)).length() < f32::EPSILON,
         "shockwave must spawn at breaker's position, got {pos:?}",
     );
+    let expected = SourceId::protocol(ProtocolKind::Burnout)
+        .action("shockwave")
+        .build()
+        .0
+        .into_owned();
     assert_eq!(
         shockwave_source_chip(&app, entity),
-        Some("protocol:burnout:shockwave".into()),
-        "shockwave's EffectSourceChip must carry BURNOUT_SHOCKWAVE_SOURCE"
+        Some(expected),
+        "shockwave's EffectSourceChip must equal the builder-produced \
+         protocol:burnout:shockwave"
     );
 }
 

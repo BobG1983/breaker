@@ -20,10 +20,12 @@ use crate::{
     prelude::*,
 };
 
-/// Source tag for Erosion's entry on the Breaker's
+/// Builder-produced source key for Erosion's entry on the Breaker's
 /// [`EffectStack<SizeBoostConfig>`]. Keeps Erosion's scaling isolated
 /// from chip/protocol size boosts so each can be reconciled independently.
-const EROSION_SOURCE: &str = "hazard:erosion";
+fn erosion_source() -> SourceId {
+    SourceId::hazard(HazardKind::Erosion).build()
+}
 
 /// Per-run tuning extracted from [`HazardTuning::Erosion`] at activation.
 #[derive(Resource, Debug, Clone, Copy)]
@@ -189,7 +191,7 @@ pub(crate) fn erosion_restore(
 }
 
 /// Reconciles each Breaker's [`EffectStack<SizeBoostConfig>`] so that
-/// exactly one entry with source [`EROSION_SOURCE`] exists, carrying the
+/// exactly one entry with source `hazard:erosion` (built via [`erosion_source`]) exists, carrying the
 /// current `width_fraction` multiplier. Follows the Haste pattern: new
 /// stacks are inserted this tick. Idempotent across ticks.
 pub(crate) fn erosion_apply_width(
@@ -201,14 +203,15 @@ pub(crate) fn erosion_apply_width(
     let entry = SizeBoostConfig {
         multiplier: OrderedFloat(state.width_fraction),
     };
+    let source = erosion_source();
 
     for (entity, stack) in &mut breakers {
         if let Some(mut stack) = stack {
-            stack.retain_by_source(EROSION_SOURCE);
-            stack.push(EROSION_SOURCE.to_owned(), entry.clone());
+            stack.retain_by_source(&source);
+            stack.push(source.clone(), entry.clone());
         } else {
             let mut fresh = EffectStack::<SizeBoostConfig>::default();
-            fresh.push(EROSION_SOURCE.to_owned(), entry.clone());
+            fresh.push(source.clone(), entry.clone());
             commands.entity(entity).insert(fresh);
         }
     }

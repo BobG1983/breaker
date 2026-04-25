@@ -19,11 +19,41 @@ use super::{
 };
 use crate::{
     bolt::components::Bolt,
+    chips::definition::Rarity,
     effect_v3::{
         effects::{SizeBoostConfig, SpeedBoostConfig},
         stacking::EffectStack,
     },
+    hazard::definition::HazardKind,
+    prelude::*,
+    protocol::definition::ProtocolKind,
 };
+
+fn chip_heavy() -> SourceId {
+    SourceId::chip("heavy").rarity(Rarity::Common).build()
+}
+
+fn chip_aegis() -> SourceId {
+    SourceId::chip("aegis").rarity(Rarity::Common).build()
+}
+
+fn protocol_anchor() -> SourceId {
+    SourceId::protocol(ProtocolKind::Anchor).build()
+}
+
+fn hazard_haste() -> SourceId {
+    SourceId::hazard(HazardKind::Haste).build()
+}
+
+fn hazard_erosion() -> SourceId {
+    SourceId::hazard(HazardKind::Erosion).build()
+}
+
+fn misconfigured_source() -> SourceId {
+    SourceId::chip("Misconfigured")
+        .rarity(Rarity::Common)
+        .build()
+}
 
 // ── F36 — Erosion + chip aggregate multiplicatively, not additively ────
 
@@ -35,7 +65,7 @@ fn erosion_plus_chip_aggregates_multiplicatively() {
 
     let mut seed = EffectStack::<SizeBoostConfig>::default();
     seed.push(
-        "chip:heavy".to_owned(),
+        chip_heavy(),
         SizeBoostConfig {
             multiplier: OrderedFloat(1.25),
         },
@@ -60,7 +90,7 @@ fn erosion_plus_chip_aggregates_multiplicatively() {
     // Edge: change the chip multiplier to 2.0 via a fresh Breaker on the same app.
     let mut seed2 = EffectStack::<SizeBoostConfig>::default();
     seed2.push(
-        "chip:heavy".to_owned(),
+        chip_heavy(),
         SizeBoostConfig {
             multiplier: OrderedFloat(2.0),
         },
@@ -90,13 +120,13 @@ fn erosion_plus_chip_plus_protocol_triple_source_product_aggregation() {
 
     let mut seed = EffectStack::<SizeBoostConfig>::default();
     seed.push(
-        "chip:heavy".to_owned(),
+        chip_heavy(),
         SizeBoostConfig {
             multiplier: OrderedFloat(1.25),
         },
     );
     seed.push(
-        "protocol:anchor".to_owned(),
+        protocol_anchor(),
         SizeBoostConfig {
             multiplier: OrderedFloat(1.5),
         },
@@ -115,11 +145,11 @@ fn erosion_plus_chip_plus_protocol_triple_source_product_aggregation() {
 
         // Chip and protocol entries remain bitwise exact.
         let entries = erosion_entries(stack);
-        let chip = entries.iter().find(|(s, _)| s == "chip:heavy").unwrap();
+        let chip = entries.iter().find(|(s, _)| s == &chip_heavy()).unwrap();
         assert_eq!(chip.1.multiplier, OrderedFloat(1.25_f32));
         let protocol = entries
             .iter()
-            .find(|(s, _)| s == "protocol:anchor")
+            .find(|(s, _)| s == &protocol_anchor())
             .unwrap();
         assert_eq!(protocol.1.multiplier, OrderedFloat(1.5_f32));
     }
@@ -133,11 +163,11 @@ fn erosion_plus_chip_plus_protocol_triple_source_product_aggregation() {
     assert_eq!(stack.len(), 3);
     assert!((stack.aggregate() - 1.50).abs() < 1e-5);
     let entries = erosion_entries(stack);
-    let chip = entries.iter().find(|(s, _)| s == "chip:heavy").unwrap();
+    let chip = entries.iter().find(|(s, _)| s == &chip_heavy()).unwrap();
     assert_eq!(chip.1.multiplier, OrderedFloat(1.25_f32));
     let protocol = entries
         .iter()
-        .find(|(s, _)| s == "protocol:anchor")
+        .find(|(s, _)| s == &protocol_anchor())
         .unwrap();
     assert_eq!(protocol.1.multiplier, OrderedFloat(1.5_f32));
 }
@@ -152,7 +182,7 @@ fn mutating_erosion_state_between_ticks_updates_only_erosion_entry() {
 
     let mut seed = EffectStack::<SizeBoostConfig>::default();
     seed.push(
-        "chip:heavy".to_owned(),
+        chip_heavy(),
         SizeBoostConfig {
             multiplier: OrderedFloat(1.25),
         },
@@ -175,9 +205,12 @@ fn mutating_erosion_state_between_ticks_updates_only_erosion_entry() {
         assert!((stack.aggregate() - 0.625).abs() < 1e-5);
 
         let entries = erosion_entries(stack);
-        let chip = entries.iter().find(|(s, _)| s == "chip:heavy").unwrap();
+        let chip = entries.iter().find(|(s, _)| s == &chip_heavy()).unwrap();
         assert_eq!(chip.1.multiplier, OrderedFloat(1.25_f32));
-        let erosion = entries.iter().find(|(s, _)| s == "hazard:erosion").unwrap();
+        let erosion = entries
+            .iter()
+            .find(|(s, _)| s == &hazard_erosion())
+            .unwrap();
         let m = erosion.1.multiplier.into_inner();
         assert!((m - 0.50_f32).abs() < 1e-6, "got {m}");
     }
@@ -195,7 +228,7 @@ fn mutating_erosion_state_between_ticks_updates_only_erosion_entry() {
     assert_eq!(stack.len(), 2);
     assert!((stack.aggregate() - 1.25).abs() < 1e-5);
     let entries = erosion_entries(stack);
-    let chip = entries.iter().find(|(s, _)| s == "chip:heavy").unwrap();
+    let chip = entries.iter().find(|(s, _)| s == &chip_heavy()).unwrap();
     assert_eq!(chip.1.multiplier, OrderedFloat(1.25_f32));
 }
 
@@ -212,7 +245,7 @@ fn haste_bolt_and_erosion_breaker_do_not_interfere() {
     // Separate Bolt entity with its own Haste stack.
     let mut bolt_stack = EffectStack::<SpeedBoostConfig>::default();
     bolt_stack.push(
-        "hazard:haste".to_owned(),
+        hazard_haste(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.30),
         },
@@ -236,14 +269,14 @@ fn haste_bolt_and_erosion_breaker_do_not_interfere() {
             .unwrap();
         assert_eq!(s_stack.len(), 1);
         let entries: Vec<_> = s_stack.iter().collect();
-        assert_eq!(entries[0].0, "hazard:haste");
+        assert_eq!(entries[0].0, hazard_haste());
         assert_eq!(entries[0].1.multiplier, OrderedFloat(1.30_f32));
     }
 
     // Edge: a Bolt with a SizeBoostConfig stack is NOT modified (no Breaker marker).
     let mut bolt_size_stack = EffectStack::<SizeBoostConfig>::default();
     bolt_size_stack.push(
-        "misconfigured".to_owned(),
+        misconfigured_source(),
         SizeBoostConfig {
             multiplier: OrderedFloat(7.0),
         },
@@ -259,7 +292,7 @@ fn haste_bolt_and_erosion_breaker_do_not_interfere() {
     assert_eq!(stack.len(), 1);
     assert!((stack.aggregate() - 7.0).abs() < 1e-5);
     let entries: Vec<_> = stack.iter().collect();
-    assert_eq!(entries[0].0, "misconfigured");
+    assert_eq!(entries[0].0, misconfigured_source());
     assert_eq!(entries[0].1.multiplier, OrderedFloat(7.0_f32));
 }
 
@@ -273,19 +306,19 @@ fn multi_source_product_erosion_plus_two_chips_plus_one_protocol() {
 
     let mut seed = EffectStack::<SizeBoostConfig>::default();
     seed.push(
-        "chip:heavy".to_owned(),
+        chip_heavy(),
         SizeBoostConfig {
             multiplier: OrderedFloat(1.25),
         },
     );
     seed.push(
-        "chip:aegis".to_owned(),
+        chip_aegis(),
         SizeBoostConfig {
             multiplier: OrderedFloat(1.10),
         },
     );
     seed.push(
-        "protocol:anchor".to_owned(),
+        protocol_anchor(),
         SizeBoostConfig {
             multiplier: OrderedFloat(1.50),
         },
@@ -306,13 +339,13 @@ fn multi_source_product_erosion_plus_two_chips_plus_one_protocol() {
             stack.aggregate()
         );
         let entries = erosion_entries(stack);
-        let heavy = entries.iter().find(|(s, _)| s == "chip:heavy").unwrap();
+        let heavy = entries.iter().find(|(s, _)| s == &chip_heavy()).unwrap();
         assert_eq!(heavy.1.multiplier, OrderedFloat(1.25_f32));
-        let aegis = entries.iter().find(|(s, _)| s == "chip:aegis").unwrap();
+        let aegis = entries.iter().find(|(s, _)| s == &chip_aegis()).unwrap();
         assert_eq!(aegis.1.multiplier, OrderedFloat(1.10_f32));
         let protocol = entries
             .iter()
-            .find(|(s, _)| s == "protocol:anchor")
+            .find(|(s, _)| s == &protocol_anchor())
             .unwrap();
         assert_eq!(protocol.1.multiplier, OrderedFloat(1.50_f32));
     }
@@ -326,13 +359,13 @@ fn multi_source_product_erosion_plus_two_chips_plus_one_protocol() {
     assert_eq!(stack.len(), 4);
     assert!((stack.aggregate() - 1.03125).abs() < 1e-4);
     let entries = erosion_entries(stack);
-    let heavy = entries.iter().find(|(s, _)| s == "chip:heavy").unwrap();
+    let heavy = entries.iter().find(|(s, _)| s == &chip_heavy()).unwrap();
     assert_eq!(heavy.1.multiplier, OrderedFloat(1.25_f32));
-    let aegis = entries.iter().find(|(s, _)| s == "chip:aegis").unwrap();
+    let aegis = entries.iter().find(|(s, _)| s == &chip_aegis()).unwrap();
     assert_eq!(aegis.1.multiplier, OrderedFloat(1.10_f32));
     let protocol = entries
         .iter()
-        .find(|(s, _)| s == "protocol:anchor")
+        .find(|(s, _)| s == &protocol_anchor())
         .unwrap();
     assert_eq!(protocol.1.multiplier, OrderedFloat(1.50_f32));
 }
@@ -347,7 +380,7 @@ fn subunity_erosion_with_big_chip_multiplies_cleanly_at_main_and_min_floor() {
 
     let mut seed = EffectStack::<SizeBoostConfig>::default();
     seed.push(
-        "chip:heavy".to_owned(),
+        chip_heavy(),
         SizeBoostConfig {
             multiplier: OrderedFloat(2.0),
         },

@@ -2,21 +2,23 @@
 
 use bevy::prelude::*;
 
-use crate::effect_v3::{
-    commands::EffectCommandsExt,
-    conditions::is_armed_source,
-    types::{
-        BoltLostTarget, BumpTarget, DeathTarget, ImpactTarget, ParticipantTarget, Terminal,
-        TriggerContext,
+use crate::{
+    effect_v3::{
+        commands::EffectCommandsExt,
+        types::{
+            BoltLostTarget, BumpTarget, DeathTarget, ImpactTarget, ParticipantTarget, Terminal,
+            TriggerContext,
+        },
+        walking::sequence::evaluate_terminal,
     },
-    walking::sequence::evaluate_terminal,
+    prelude::*,
 };
 
 /// Evaluate a `Tree::On` node: redirect the terminal to the entity
 /// identified by the participant target in the trigger context.
 ///
-/// When the source string encodes an armed-entry key (see
-/// `is_armed_source`), this additionally queues a
+/// When the source string ends with the `:armed` suffix — detected via
+/// `SourceId::is_armed()` — this additionally queues a
 /// `TrackArmedFireCommand` on the owner so the Shape D disarm path can
 /// reverse effects on the exact participants they were fired on.
 pub fn evaluate_on(
@@ -29,7 +31,7 @@ pub fn evaluate_on(
 ) {
     if let Some(resolved) = resolve_participant(target, context) {
         evaluate_terminal(resolved, terminal, source, commands);
-        if is_armed_source(source) {
+        if SourceId::from(source.to_owned()).is_armed() {
             commands.track_armed_fire(owner, source.to_owned(), resolved);
         }
     }

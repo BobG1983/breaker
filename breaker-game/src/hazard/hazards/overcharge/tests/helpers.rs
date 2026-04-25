@@ -137,7 +137,7 @@ pub(super) const fn canonical_config() -> OverchargeConfig {
 /// Used to assert source membership / cardinality / multiplier values.
 pub(super) fn overcharge_entries(
     stack: &EffectStack<SpeedBoostConfig>,
-) -> Vec<(String, SpeedBoostConfig)> {
+) -> Vec<(SourceId, SpeedBoostConfig)> {
     stack.iter().map(|(s, c)| (s.clone(), c.clone())).collect()
 }
 

@@ -15,12 +15,19 @@ use super::{
     },
 };
 use crate::{
+    chips::definition::Rarity,
     hazard::{
         definition::HazardKind,
         resources::{ActiveHazards, hazard_active},
     },
     prelude::*,
 };
+
+/// Builder-format `SourceId` used as the canonical opaque tag for the
+/// `VulnerableStack` augmentation in this test.
+fn test_vuln_source() -> SourceId {
+    SourceId::chip("TestVuln").rarity(Rarity::Common).build()
+}
 
 #[track_caller]
 fn assert_f32_eq(actual: f32, expected: f32) {
@@ -83,7 +90,7 @@ fn tether_partner_sibling_runs_through_vulnerable_on_next_frame() {
     {
         let mut b_ent = app.world_mut().entity_mut(b);
         let mut stack = VulnerableStack::default();
-        stack.add(SourceId::from("test:vuln"), 1.5);
+        stack.add(test_vuln_source(), 1.5);
         b_ent.insert(stack);
     }
 

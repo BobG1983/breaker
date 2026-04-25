@@ -56,9 +56,32 @@ mod tests {
 
     use super::*;
     use crate::{
+        chips::definition::Rarity,
         effect_v3::traits::{Fireable, Reversible},
-        prelude::DamageBoostStack,
+        prelude::{DamageBoostStack, SourceIdExt},
     };
+
+    /// Builder-format `SourceId` used as the canonical opaque test fixture.
+    fn test_source() -> SourceId {
+        SourceId::chip("Test").rarity(Rarity::Common).build()
+    }
+
+    /// Builder-format `SourceId` representing an "Amp" damage-boost chip.
+    fn amp_source() -> SourceId {
+        SourceId::chip("Amp").rarity(Rarity::Common).build()
+    }
+
+    /// Builder-format `SourceId` representing a "Loop" damage-boost chip
+    /// (alternate source used for multi-source aggregation tests).
+    fn loop_source() -> SourceId {
+        SourceId::chip("Loop").rarity(Rarity::Common).build()
+    }
+
+    /// Builder-format `SourceId` representing a "Boom" chip used by tests
+    /// that need a third distinct source.
+    fn boom_source() -> SourceId {
+        SourceId::chip("Boom").rarity(Rarity::Common).build()
+    }
 
     // ── Behavior 1: `fire` inserts `DamageBoostStack` on a fresh entity ──
 
@@ -70,7 +93,7 @@ mod tests {
             multiplier: OrderedFloat(2.0),
         };
 
-        config.fire(entity, "amp", &mut world);
+        config.fire(entity, amp_source().0.as_ref(), &mut world);
 
         let stack = world
             .get::<DamageBoostStack>(entity)
@@ -89,11 +112,11 @@ mod tests {
         DamageBoostConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .fire(entity, "amp", &mut world);
+        .fire(entity, amp_source().0.as_ref(), &mut world);
         DamageBoostConfig {
             multiplier: OrderedFloat(1.5),
         }
-        .fire(entity, "loop", &mut world);
+        .fire(entity, loop_source().0.as_ref(), &mut world);
 
         let stack = world.get::<DamageBoostStack>(entity).unwrap();
         assert!((stack.aggregate_persistent() - 3.0).abs() <= f32::EPSILON);
@@ -109,8 +132,8 @@ mod tests {
             multiplier: OrderedFloat(2.0),
         };
 
-        config.fire(entity, "test_source", &mut world);
-        config.fire(entity, "test_source", &mut world);
+        config.fire(entity, test_source().0.as_ref(), &mut world);
+        config.fire(entity, test_source().0.as_ref(), &mut world);
 
         let stack = world.get::<DamageBoostStack>(entity).unwrap();
         assert!((stack.aggregate_persistent() - 4.0).abs() < 1e-5);
@@ -127,7 +150,7 @@ mod tests {
         };
 
         for _ in 0..5 {
-            config.fire(entity, "test_source", &mut world);
+            config.fire(entity, test_source().0.as_ref(), &mut world);
         }
 
         let stack = world.get::<DamageBoostStack>(entity).unwrap();
@@ -144,8 +167,8 @@ mod tests {
             multiplier: OrderedFloat(2.0),
         };
 
-        config.fire(entity, "amp", &mut world);
-        config.reverse(entity, "amp", &mut world);
+        config.fire(entity, amp_source().0.as_ref(), &mut world);
+        config.reverse(entity, amp_source().0.as_ref(), &mut world);
 
         let stack = world.get::<DamageBoostStack>(entity).unwrap();
         assert!(stack.is_empty());
@@ -166,15 +189,15 @@ mod tests {
         DamageBoostConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .fire(entity, "amp", &mut world);
+        .fire(entity, amp_source().0.as_ref(), &mut world);
         DamageBoostConfig {
             multiplier: OrderedFloat(3.0),
         }
-        .fire(entity, "amp", &mut world);
+        .fire(entity, amp_source().0.as_ref(), &mut world);
         DamageBoostConfig {
             multiplier: OrderedFloat(4.0),
         }
-        .fire(entity, "amp", &mut world);
+        .fire(entity, amp_source().0.as_ref(), &mut world);
 
         // Reverse with a config whose multiplier (2.0) matches only one of
         // the three entries by value — but because reverse is now
@@ -182,7 +205,7 @@ mod tests {
         DamageBoostConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .reverse(entity, "amp", &mut world);
+        .reverse(entity, amp_source().0.as_ref(), &mut world);
 
         let stack = world.get::<DamageBoostStack>(entity).unwrap();
         assert!(stack.is_empty());
@@ -199,16 +222,16 @@ mod tests {
         DamageBoostConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .fire(entity, "amp", &mut world);
+        .fire(entity, amp_source().0.as_ref(), &mut world);
         DamageBoostConfig {
             multiplier: OrderedFloat(1.5),
         }
-        .fire(entity, "loop", &mut world);
+        .fire(entity, loop_source().0.as_ref(), &mut world);
 
         DamageBoostConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .reverse(entity, "amp", &mut world);
+        .reverse(entity, amp_source().0.as_ref(), &mut world);
 
         let stack = world.get::<DamageBoostStack>(entity).unwrap();
         assert!((stack.aggregate_persistent() - 1.5).abs() <= f32::EPSILON);
@@ -224,7 +247,7 @@ mod tests {
             multiplier: OrderedFloat(2.0),
         };
 
-        config.reverse(entity, "test_source", &mut world);
+        config.reverse(entity, test_source().0.as_ref(), &mut world);
 
         assert!(
             world.get::<DamageBoostStack>(entity).is_none(),
@@ -241,8 +264,8 @@ mod tests {
             multiplier: OrderedFloat(2.0),
         };
 
-        config.reverse(entity, "test_source", &mut world);
-        config.reverse(entity, "test_source", &mut world);
+        config.reverse(entity, test_source().0.as_ref(), &mut world);
+        config.reverse(entity, test_source().0.as_ref(), &mut world);
 
         assert!(world.get::<DamageBoostStack>(entity).is_none());
     }
@@ -257,7 +280,7 @@ mod tests {
         DamageBoostConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .fire(entity, "amp", &mut world);
+        .fire(entity, amp_source().0.as_ref(), &mut world);
         DamageBoostConfig {
             multiplier: OrderedFloat(1.5),
         }
@@ -265,12 +288,12 @@ mod tests {
         DamageBoostConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .fire(entity, "amp", &mut world);
+        .fire(entity, amp_source().0.as_ref(), &mut world);
 
         DamageBoostConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .reverse_all_by_source(entity, "amp", &mut world);
+        .reverse_all_by_source(entity, amp_source().0.as_ref(), &mut world);
 
         let stack = world.get::<DamageBoostStack>(entity).unwrap();
         assert!((stack.aggregate_persistent() - 1.5).abs() < 1e-5);
@@ -286,7 +309,7 @@ mod tests {
         DamageBoostConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .fire(entity, "amp", &mut world);
+        .fire(entity, amp_source().0.as_ref(), &mut world);
 
         DamageBoostConfig {
             multiplier: OrderedFloat(2.0),
@@ -307,7 +330,7 @@ mod tests {
         DamageBoostConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .reverse_all_by_source(entity, "amp", &mut world);
+        .reverse_all_by_source(entity, amp_source().0.as_ref(), &mut world);
 
         assert!(world.get::<DamageBoostStack>(entity).is_none());
     }
@@ -324,39 +347,39 @@ mod tests {
         DamageBoostConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .fire(entity_a, "amp", &mut world_a);
+        .fire(entity_a, amp_source().0.as_ref(), &mut world_a);
         DamageBoostConfig {
             multiplier: OrderedFloat(3.0),
         }
-        .fire(entity_a, "amp", &mut world_a);
+        .fire(entity_a, amp_source().0.as_ref(), &mut world_a);
         DamageBoostConfig {
             multiplier: OrderedFloat(1.5),
         }
-        .fire(entity_a, "feedback", &mut world_a);
+        .fire(entity_a, boom_source().0.as_ref(), &mut world_a);
 
         let mut world_b = World::new();
         let entity_b = world_b.spawn_empty().id();
         DamageBoostConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .fire(entity_b, "amp", &mut world_b);
+        .fire(entity_b, amp_source().0.as_ref(), &mut world_b);
         DamageBoostConfig {
             multiplier: OrderedFloat(3.0),
         }
-        .fire(entity_b, "amp", &mut world_b);
+        .fire(entity_b, amp_source().0.as_ref(), &mut world_b);
         DamageBoostConfig {
             multiplier: OrderedFloat(1.5),
         }
-        .fire(entity_b, "feedback", &mut world_b);
+        .fire(entity_b, boom_source().0.as_ref(), &mut world_b);
 
         DamageBoostConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .reverse(entity_a, "amp", &mut world_a);
+        .reverse(entity_a, amp_source().0.as_ref(), &mut world_a);
         DamageBoostConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .reverse_all_by_source(entity_b, "amp", &mut world_b);
+        .reverse_all_by_source(entity_b, amp_source().0.as_ref(), &mut world_b);
 
         let stack_a = world_a.get::<DamageBoostStack>(entity_a).unwrap();
         let stack_b = world_b.get::<DamageBoostStack>(entity_b).unwrap();

@@ -244,7 +244,8 @@ fn planting_inserts_planted_and_piercing_stack() {
     // Check the entry has the correct source name
     let entry = stack.iter().next().unwrap();
     assert_eq!(
-        entry.0, "anchor_piercing",
+        entry.0,
+        SourceId::from("anchor_piercing"),
         "piercing source should be 'anchor_piercing', got '{}'",
         entry.0,
     );
@@ -261,7 +262,7 @@ fn planting_adds_to_existing_piercing_stack() {
 
     // Pre-existing piercing from another source
     let mut stack = EffectStack::<PiercingConfig>::default();
-    stack.push("drill_chip".to_owned(), PiercingConfig { charges: 2 });
+    stack.push(SourceId::from("drill_chip"), PiercingConfig { charges: 2 });
 
     let entity = app
         .world_mut()
@@ -300,8 +301,11 @@ fn reversal_removes_anchor_piercing_from_stack() {
 
     // Set up entity with anchor components and piercing stack
     let mut stack = EffectStack::<PiercingConfig>::default();
-    stack.push("anchor_piercing".to_owned(), PiercingConfig { charges: 1 });
-    stack.push("drill_chip".to_owned(), PiercingConfig { charges: 2 });
+    stack.push(
+        SourceId::from("anchor_piercing"),
+        PiercingConfig { charges: 1 },
+    );
+    stack.push(SourceId::from("drill_chip"), PiercingConfig { charges: 2 });
 
     let entity = world
         .spawn((
@@ -348,7 +352,8 @@ fn reversal_removes_anchor_piercing_from_stack() {
     );
     let entry = stack.iter().next().unwrap();
     assert_eq!(
-        entry.0, "drill_chip",
+        entry.0,
+        SourceId::from("drill_chip"),
         "remaining entry should be drill_chip, got '{}'",
         entry.0,
     );

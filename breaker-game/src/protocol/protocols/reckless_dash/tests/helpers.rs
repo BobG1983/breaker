@@ -27,7 +27,7 @@ use crate::{
     },
     prelude::*,
     protocol::{
-        definition::{ProtocolDefinition, ProtocolTuning},
+        definition::{ProtocolDefinition, ProtocolKind, ProtocolTuning},
         resources::ActiveProtocols,
     },
 };
@@ -244,14 +244,16 @@ pub(super) fn write_bolt_lost(app: &mut App, bolt: Entity, breaker: Entity) {
 // ── Assertion helpers ───────────────────────────────────────────────────────
 
 /// Returns every captured `DamageDealt<Cell>` whose `source` matches the
-/// Reckless Dash sentinel string. Uses the literal `"protocol:reckless_dash"`
-/// (not the const) so the sentinel drift guard remains independent.
+/// builder-produced `protocol:reckless_dash` source. Construction goes
+/// through the builder so the helper fails by construction if `kind_slug()`
+/// drifts.
 pub(super) fn collected_reckless_dash_damage(app: &App) -> Vec<DamageDealt<Cell>> {
+    let rd_source = SourceId::protocol(ProtocolKind::RecklessDash).build();
     app.world()
         .resource::<MessageCollector<DamageDealt<Cell>>>()
         .0
         .iter()
-        .filter(|msg| msg.source == Some(SourceId::from("protocol:reckless_dash")))
+        .filter(|msg| msg.source.as_ref() == Some(&rd_source))
         .cloned()
         .collect()
 }

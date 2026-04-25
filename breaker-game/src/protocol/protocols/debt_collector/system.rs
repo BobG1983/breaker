@@ -8,7 +8,7 @@
 //! - [`DebtStack`] — per-bolt accumulated debt multiplier.
 //! - [`DebtCashOut`] — per-bolt single-shot marker carrying the captured stack
 //!   value (consumed on the next cell impact).
-//! - [`DEBT_COLLECTOR_SENTINEL`] — `source_chip` tag stamped on bonus
+//! - The builder-produced `"protocol:debt_collector"` — `source` tag stamped on bonus
 //!   `DamageDealt<Cell>` messages.
 //! - [`activate`] — parses `ProtocolTuning::DebtCollector`, inserts
 //!   `DebtCollectorConfig`.
@@ -35,12 +35,6 @@ use crate::{
         resources::{ActiveProtocols, protocol_active},
     },
 };
-
-// ── Constants ───────────────────────────────────────────────────────────────
-
-/// Sentinel tag stamped into `DamageDealt<Cell>.source` on cash-out so
-/// downstream stat tracking / FX can identify Debt Collector damage.
-pub(crate) const DEBT_COLLECTOR_SENTINEL: &str = "protocol:debt_collector";
 
 // ── DebtCollectorConfig ─────────────────────────────────────────────────────
 
@@ -219,7 +213,7 @@ pub(crate) fn debt_collector_on_impact(
             attributed_to: None,
             target: msg.cell,
             amount,
-            source: Some(SourceId::from(DEBT_COLLECTOR_SENTINEL)),
+            source: Some(SourceId::protocol(ProtocolKind::DebtCollector).build()),
             _marker: PhantomData,
         });
         commands.entity(msg.bolt).remove::<DebtCashOut>();

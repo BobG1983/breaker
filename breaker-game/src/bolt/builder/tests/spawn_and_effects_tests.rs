@@ -188,7 +188,7 @@ fn spawn_with_spawned_by_inserts_evolution_marker() {
     let spawned_by = world
         .get::<SpawnedByEvolution>(entity)
         .expect("should have SpawnedByEvolution");
-    assert_eq!(spawned_by.0, "chain_bolt");
+    assert_eq!(spawned_by.0.0.as_ref(), "chip:chain_bolt:Evolution");
 }
 
 // Behavior 30: spawn() with .with_lifespan() inserts BoltLifespan

@@ -6,14 +6,39 @@ use rantzsoft_stateflow::CleanupOnExit;
 use super::config_impl::*;
 use crate::{
     bolt::{components::BoltBaseDamage, resources::DEFAULT_BOLT_BASE_DAMAGE},
+    chips::definition::Rarity,
     effect_v3::{
         components::EffectSourceChip,
         effects::{DamageBoostConfig, chain_lightning::components::*},
         traits::{Fireable, Reversible},
     },
-    prelude::DamageBoostStack,
+    prelude::{DamageBoostStack, SourceId, SourceIdExt},
     state::types::NodeState,
 };
+
+/// Builder-format `SourceId` for the canonical "`ChainLightning`" chip.
+/// Centralized so test fixtures demonstrate the canonical key shape.
+fn chain_lightning_source() -> SourceId {
+    SourceId::chip("ChainLightning")
+        .rarity(Rarity::Common)
+        .build()
+}
+
+/// Builder-format `SourceId` for the canonical "Amp" damage-boost chip
+/// used by multi-source tests in this module.
+fn amp_source() -> SourceId {
+    SourceId::chip("Amp").rarity(Rarity::Common).build()
+}
+
+/// Two distinct builder-format Amp sources with different rarities — used by
+/// tests that need two co-existing damage-boost stacks.
+fn amp_source_a() -> SourceId {
+    SourceId::chip("Amp").rarity(Rarity::Common).build()
+}
+
+fn amp_source_b() -> SourceId {
+    SourceId::chip("Amp").rarity(Rarity::Uncommon).build()
+}
 
 fn make_config() -> ChainLightningConfig {
     ChainLightningConfig {
@@ -33,7 +58,7 @@ fn chain_lightning_uses_bolt_base_damage_from_source_entity() {
         .spawn((BoltBaseDamage(20.0), Position2D(Vec2::new(50.0, 50.0))))
         .id();
 
-    make_config().fire(source, "zap", &mut world);
+    make_config().fire(source, chain_lightning_source().0.as_ref(), &mut world);
     world.flush();
 
     let chains: Vec<&ChainLightningChain> =
@@ -54,7 +79,7 @@ fn chain_lightning_zero_bolt_base_damage() {
         .spawn((BoltBaseDamage(0.0), Position2D(Vec2::new(50.0, 50.0))))
         .id();
 
-    make_config().fire(source, "zap", &mut world);
+    make_config().fire(source, chain_lightning_source().0.as_ref(), &mut world);
     world.flush();
 
     let chains: Vec<&ChainLightningChain> =
@@ -72,7 +97,7 @@ fn chain_lightning_falls_back_to_default_when_bolt_base_damage_absent() {
     let mut world = World::new();
     let source = world.spawn(Position2D(Vec2::new(50.0, 50.0))).id();
 
-    make_config().fire(source, "zap", &mut world);
+    make_config().fire(source, chain_lightning_source().0.as_ref(), &mut world);
     world.flush();
 
     let chains: Vec<&ChainLightningChain> =
@@ -97,7 +122,7 @@ fn chain_lightning_zero_damage_mult_produces_zero_damage() {
         damage_mult: OrderedFloat(0.0),
         arc_speed:   OrderedFloat(500.0),
     };
-    config.fire(source, "zap", &mut world);
+    config.fire(source, chain_lightning_source().0.as_ref(), &mut world);
     world.flush();
 
     let chains: Vec<&ChainLightningChain> =
@@ -119,7 +144,7 @@ fn chain_lightning_spawns_entity_with_cleanup_on_exit_node_state() {
         .spawn((BoltBaseDamage(10.0), Position2D(Vec2::new(50.0, 50.0))))
         .id();
 
-    make_config().fire(source, "zap", &mut world);
+    make_config().fire(source, chain_lightning_source().0.as_ref(), &mut world);
     world.flush();
 
     let cleanup_count = world
@@ -139,7 +164,7 @@ fn chain_lightning_spawns_with_idle_state() {
         .spawn((BoltBaseDamage(10.0), Position2D(Vec2::new(50.0, 50.0))))
         .id();
 
-    make_config().fire(source, "zap", &mut world);
+    make_config().fire(source, chain_lightning_source().0.as_ref(), &mut world);
     world.flush();
 
     let chains: Vec<&ChainLightningChain> =
@@ -159,7 +184,7 @@ fn chain_lightning_spawns_with_empty_hit_set() {
         .spawn((BoltBaseDamage(10.0), Position2D(Vec2::new(50.0, 50.0))))
         .id();
 
-    make_config().fire(source, "zap", &mut world);
+    make_config().fire(source, chain_lightning_source().0.as_ref(), &mut world);
     world.flush();
 
     let chains: Vec<&ChainLightningChain> =
@@ -186,7 +211,7 @@ fn chain_lightning_remaining_jumps_equals_config_arcs() {
         damage_mult: OrderedFloat(1.5),
         arc_speed:   OrderedFloat(500.0),
     };
-    config.fire(source, "zap", &mut world);
+    config.fire(source, chain_lightning_source().0.as_ref(), &mut world);
     world.flush();
 
     let chains: Vec<&ChainLightningChain> =
@@ -211,7 +236,7 @@ fn chain_lightning_zero_arcs_produces_zero_remaining_jumps() {
         damage_mult: OrderedFloat(1.5),
         arc_speed:   OrderedFloat(500.0),
     };
-    config.fire(source, "zap", &mut world);
+    config.fire(source, chain_lightning_source().0.as_ref(), &mut world);
     world.flush();
 
     let chains: Vec<&ChainLightningChain> =
@@ -238,7 +263,7 @@ fn chain_lightning_copies_range_and_arc_speed_from_config() {
         damage_mult: OrderedFloat(1.5),
         arc_speed:   OrderedFloat(750.0),
     };
-    config.fire(source, "zap", &mut world);
+    config.fire(source, chain_lightning_source().0.as_ref(), &mut world);
     world.flush();
 
     let chains: Vec<&ChainLightningChain> =
@@ -265,7 +290,7 @@ fn chain_lightning_snapshots_position_from_source_entity() {
         .spawn((BoltBaseDamage(10.0), Position2D(Vec2::new(123.0, 456.0))))
         .id();
 
-    make_config().fire(source, "zap", &mut world);
+    make_config().fire(source, chain_lightning_source().0.as_ref(), &mut world);
     world.flush();
 
     let chains: Vec<&ChainLightningChain> =
@@ -283,7 +308,7 @@ fn chain_lightning_source_pos_falls_back_to_zero_without_position() {
     let mut world = World::new();
     let source = world.spawn(BoltBaseDamage(10.0)).id();
 
-    make_config().fire(source, "zap", &mut world);
+    make_config().fire(source, chain_lightning_source().0.as_ref(), &mut world);
     world.flush();
 
     let chains: Vec<&ChainLightningChain> =
@@ -305,7 +330,8 @@ fn chain_lightning_stamps_effect_source_chip_from_source_name() {
         .spawn((BoltBaseDamage(10.0), Position2D(Vec2::new(50.0, 50.0))))
         .id();
 
-    make_config().fire(source, "lightning_chip", &mut world);
+    let lightning = chain_lightning_source();
+    make_config().fire(source, lightning.0.as_ref(), &mut world);
     world.flush();
 
     let chips: Vec<&EffectSourceChip> = world.query::<&EffectSourceChip>().iter(&world).collect();
@@ -313,8 +339,8 @@ fn chain_lightning_stamps_effect_source_chip_from_source_name() {
     assert_eq!(chips.len(), 1, "expected 1 EffectSourceChip on the chain");
     assert_eq!(
         chips[0].0,
-        Some("lightning_chip".to_string()),
-        "EffectSourceChip should carry the source name"
+        Some(lightning),
+        "EffectSourceChip should carry the chain-lightning source"
     );
 }
 
@@ -344,7 +370,7 @@ fn chain_lightning_fire_on_despawned_entity_spawns_with_fallbacks() {
     let source = world.spawn_empty().id();
     world.despawn(source);
 
-    make_config().fire(source, "zap", &mut world);
+    make_config().fire(source, chain_lightning_source().0.as_ref(), &mut world);
     world.flush();
 
     let chains: Vec<&ChainLightningChain> =
@@ -380,9 +406,9 @@ fn chain_lightning_includes_single_damage_boost_in_damage() {
     DamageBoostConfig {
         multiplier: OrderedFloat(2.0),
     }
-    .fire(source, "amp", &mut world);
+    .fire(source, amp_source().0.as_ref(), &mut world);
 
-    make_config().fire(source, "zap", &mut world);
+    make_config().fire(source, chain_lightning_source().0.as_ref(), &mut world);
     world.flush();
 
     let chains: Vec<&ChainLightningChain> =
@@ -407,13 +433,13 @@ fn chain_lightning_includes_two_damage_boosts_as_product() {
     DamageBoostConfig {
         multiplier: OrderedFloat(2.0),
     }
-    .fire(source, "amp_a", &mut world);
+    .fire(source, amp_source_a().0.as_ref(), &mut world);
     DamageBoostConfig {
         multiplier: OrderedFloat(3.0),
     }
-    .fire(source, "amp_b", &mut world);
+    .fire(source, amp_source_b().0.as_ref(), &mut world);
 
-    make_config().fire(source, "zap", &mut world);
+    make_config().fire(source, chain_lightning_source().0.as_ref(), &mut world);
     world.flush();
 
     let chains: Vec<&ChainLightningChain> =
@@ -438,16 +464,16 @@ fn chain_lightning_damage_boost_snapshot_frozen_at_fire_time() {
     DamageBoostConfig {
         multiplier: OrderedFloat(2.0),
     }
-    .fire(source, "amp", &mut world);
+    .fire(source, amp_source().0.as_ref(), &mut world);
 
-    make_config().fire(source, "zap", &mut world);
+    make_config().fire(source, chain_lightning_source().0.as_ref(), &mut world);
     world.flush();
 
     // Reverse the DamageBoost after chain lightning has already fired
     DamageBoostConfig {
         multiplier: OrderedFloat(2.0),
     }
-    .reverse(source, "amp", &mut world);
+    .reverse(source, amp_source().0.as_ref(), &mut world);
 
     // Verify the source entity's stack is now empty
     let stack = world
@@ -482,7 +508,7 @@ fn chain_lightning_no_damage_boost_stack_defaults_multiplier_to_one() {
         .id();
 
     // No DamageBoostConfig fired — no EffectStack<DamageBoostConfig> component
-    make_config().fire(source, "zap", &mut world);
+    make_config().fire(source, chain_lightning_source().0.as_ref(), &mut world);
     world.flush();
 
     let chains: Vec<&ChainLightningChain> =

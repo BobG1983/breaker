@@ -169,11 +169,14 @@ fn two_hazards_active_volatility_source_tag_preserved() {
 
     let heals: Vec<_> = heals_for(&app, cell)
         .into_iter()
-        .filter(|m| m.source == Some(SourceId::from("hazard:volatility")))
+        .filter(|m| m.source == Some(SourceId::hazard(HazardKind::Volatility).build()))
         .collect();
     assert_eq!(heals.len(), 1);
     assert_eq!(heals[0].cap, HealCap::Max);
-    assert_eq!(heals[0].source, Some(SourceId::from("hazard:volatility")));
+    assert_eq!(
+        heals[0].source,
+        Some(SourceId::hazard(HazardKind::Volatility).build())
+    );
 }
 
 // Behavior 27 — timer advances when at cap, pre-send gate blocks only emit

@@ -80,7 +80,7 @@ fn tether_emit_partner_inactive_emits_nothing() {
     assert!(
         !drained
             .iter()
-            .any(|m| m.source == Some(SourceId::from("hazard:tether")))
+            .any(|m| m.source == Some(SourceId::hazard(HazardKind::Tether).build()))
     );
 }
 
@@ -113,7 +113,7 @@ fn tether_emit_partner_emits_sibling_at_damage_pct() {
         .collect();
     let sibling = drained
         .iter()
-        .find(|m| m.source == Some(SourceId::from("hazard:tether")))
+        .find(|m| m.source == Some(SourceId::hazard(HazardKind::Tether).build()))
         .expect("exactly one tether sibling expected");
     assert_eq!(sibling.target, b);
     assert_f32_eq(sibling.amount, 25.0);
@@ -158,7 +158,7 @@ fn tether_emit_partner_with_higher_damage_pct() {
         .collect();
     let sibling = drained
         .iter()
-        .find(|m| m.source == Some(SourceId::from("hazard:tether")))
+        .find(|m| m.source == Some(SourceId::hazard(HazardKind::Tether).build()))
         .expect("sibling expected");
     assert_eq!(sibling.target, b);
     assert_f32_eq(sibling.amount, 30.0);
@@ -196,7 +196,7 @@ fn tether_emit_partner_skips_when_amount_zero() {
     assert!(
         !drained
             .iter()
-            .any(|m| m.source == Some(SourceId::from("hazard:tether"))),
+            .any(|m| m.source == Some(SourceId::hazard(HazardKind::Tether).build())),
         "no partner sibling when msg.amount == 0"
     );
 }
@@ -229,7 +229,7 @@ fn tether_no_link_no_emission() {
     assert!(
         !drained
             .iter()
-            .any(|m| m.source == Some(SourceId::from("hazard:tether")))
+            .any(|m| m.source == Some(SourceId::hazard(HazardKind::Tether).build()))
     );
 }
 
@@ -250,7 +250,7 @@ fn tether_loop_protection_skips_on_tether_source() {
             attributed_to: Some(bolt),
             target:        a,
             amount:        25.0,
-            source:        Some(SourceId::from("hazard:tether")),
+            source:        Some(SourceId::hazard(HazardKind::Tether).build()),
             _marker:       PhantomData,
         });
 
@@ -265,7 +265,7 @@ fn tether_loop_protection_skips_on_tether_source() {
     // tether-sourced sibling.
     let tethered: Vec<_> = drained
         .iter()
-        .filter(|m| m.source == Some(SourceId::from("hazard:tether")))
+        .filter(|m| m.source == Some(SourceId::hazard(HazardKind::Tether).build()))
         .collect();
     assert_eq!(tethered.len(), 1, "only the original msg — no re-emission");
     assert_eq!(tethered[0].target, a);
@@ -302,7 +302,7 @@ fn tether_cursor_does_not_re_emit_on_second_tick_without_new_primary() {
         .collect();
     let siblings_n: Vec<_> = after_tick_n
         .iter()
-        .filter(|m| m.source == Some(SourceId::from("hazard:tether")))
+        .filter(|m| m.source == Some(SourceId::hazard(HazardKind::Tether).build()))
         .collect();
     assert_eq!(
         siblings_n.len(),
@@ -323,10 +323,48 @@ fn tether_cursor_does_not_re_emit_on_second_tick_without_new_primary() {
         .collect();
     let tether_count = after_tick_n_plus_1
         .iter()
-        .filter(|m| m.source == Some(SourceId::from("hazard:tether")))
+        .filter(|m| m.source == Some(SourceId::hazard(HazardKind::Tether).build()))
         .count();
     assert_eq!(
         tether_count, 1,
         "only one tether sibling across both ticks — cursor must not re-emit"
     );
+}
+
+// ── B34: source matches builder-produced hazard:tether ──
+
+#[test]
+fn tether_partner_damage_source_equals_builder_format() {
+    let mut app = build_tether_app(true);
+    let (a, b) = spawn_linked_pair(&mut app, Vec2::new(-10.0, 0.0), Vec2::new(10.0, 0.0));
+    install_cell_hp(&mut app, a, 50.0);
+    install_cell_hp(&mut app, b, 50.0);
+
+    app.world_mut()
+        .resource_mut::<Messages<DamageDealt<Cell>>>()
+        .write(DamageDealt::<Cell> {
+            dealer:        None,
+            attributed_to: None,
+            target:        a,
+            amount:        10.0,
+            source:        None,
+            _marker:       PhantomData,
+        });
+
+    tick(&mut app);
+
+    let drained: Vec<DamageDealt<Cell>> = app
+        .world_mut()
+        .resource_mut::<Messages<DamageDealt<Cell>>>()
+        .drain()
+        .collect();
+    let expected = SourceId::hazard(HazardKind::Tether).build();
+    assert!(
+        drained.iter().any(|m| m.source.as_ref() == Some(&expected)),
+        "at least one tether-sourced sibling damage must use builder source"
+    );
+}
+
+fn install_cell_hp(app: &mut App, cell: Entity, hp: f32) {
+    app.world_mut().entity_mut(cell).insert(Hp::new(hp));
 }

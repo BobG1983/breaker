@@ -13,7 +13,20 @@ use super::{
         test_app_playing, wire_apply_only,
     },
 };
-use crate::effect_v3::{effects::SpeedBoostConfig, stacking::EffectStack};
+use crate::{
+    chips::definition::Rarity,
+    effect_v3::{effects::SpeedBoostConfig, stacking::EffectStack},
+    hazard::definition::HazardKind,
+    prelude::*,
+};
+
+fn chip_overclock() -> SourceId {
+    SourceId::chip("Overclock").rarity(Rarity::Common).build()
+}
+
+fn hazard_overcharge() -> SourceId {
+    SourceId::hazard(HazardKind::Overcharge).build()
+}
 
 // ── Behavior 26 — Haste 1.30x + chip 1.50x + Overcharge 1.15x ─────────
 
@@ -32,13 +45,13 @@ fn haste_chip_and_overcharge_aggregate_multiplicatively() {
 
     let mut seed = EffectStack::<SpeedBoostConfig>::default();
     seed.push(
-        "chip:overclock".to_owned(),
+        chip_overclock(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.5),
         },
     );
     seed.push(
-        "hazard:overcharge".to_owned(),
+        hazard_overcharge(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.15),
         },
@@ -74,13 +87,13 @@ fn bumping_haste_stack_updates_only_the_haste_entry_in_synergy() {
 
     let mut seed = EffectStack::<SpeedBoostConfig>::default();
     seed.push(
-        "chip:overclock".to_owned(),
+        chip_overclock(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.5),
         },
     );
     seed.push(
-        "hazard:overcharge".to_owned(),
+        hazard_overcharge(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.15),
         },
@@ -102,12 +115,12 @@ fn bumping_haste_stack_updates_only_the_haste_entry_in_synergy() {
     // Non-Haste entries retain their original multipliers.
     let chip_entry = stack
         .iter()
-        .find(|(s, _)| s == "chip:overclock")
+        .find(|(s, _)| s == &chip_overclock())
         .expect("chip entry must survive");
     assert_eq!(chip_entry.1.multiplier, OrderedFloat(1.5));
     let overcharge_entry = stack
         .iter()
-        .find(|(s, _)| s == "hazard:overcharge")
+        .find(|(s, _)| s == &hazard_overcharge())
         .expect("overcharge entry must survive");
     assert_eq!(overcharge_entry.1.multiplier, OrderedFloat(1.15));
 }
@@ -129,7 +142,7 @@ fn modifiers_multiply_not_add() {
 
     let mut seed = EffectStack::<SpeedBoostConfig>::default();
     seed.push(
-        "chip:overclock".to_owned(),
+        chip_overclock(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(2.0),
         },
@@ -164,7 +177,7 @@ fn sub_one_chip_entry_carries_through_product_aggregation() {
 
     let mut seed = EffectStack::<SpeedBoostConfig>::default();
     seed.push(
-        "chip:overclock".to_owned(),
+        chip_overclock(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(0.5),
         },

@@ -114,7 +114,7 @@ pub(crate) fn apply_pulse_damage(
                     attributed_to: None,
                     target:        cell_entity,
                     amount:        damage,
-                    source:        chip.and_then(|c| c.0.clone()).map(SourceId::from),
+                    source:        chip.and_then(|c| c.0.clone()),
                     _marker:       std::marker::PhantomData,
                 });
             }

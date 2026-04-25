@@ -2,11 +2,33 @@ use bevy::prelude::*;
 use ordered_float::OrderedFloat;
 
 use super::config_impl::*;
-use crate::effect_v3::{
-    effects::ramping_damage::components::RampingDamageAccumulator,
-    stacking::EffectStack,
-    traits::{Fireable, Reversible},
+use crate::{
+    chips::definition::Rarity,
+    effect_v3::{
+        effects::ramping_damage::components::RampingDamageAccumulator,
+        stacking::EffectStack,
+        traits::{Fireable, Reversible},
+    },
+    prelude::{SourceId, SourceIdExt},
 };
+
+// Builder-format `SourceId` fixtures — replace arbitrary string literals with
+// canonical `chip:<template>:<rarity>` keys so tests demonstrate the shape
+// production code uses.
+
+fn test_source() -> SourceId {
+    SourceId::chip("Test").rarity(Rarity::Common).build()
+}
+
+fn amp_source() -> SourceId {
+    SourceId::chip("Amp").rarity(Rarity::Common).build()
+}
+
+fn feedback_loop_source() -> SourceId {
+    SourceId::chip("FeedbackLoop")
+        .rarity(Rarity::Common)
+        .build()
+}
 
 #[test]
 fn fire_creates_stack_and_pushes_entry() {
@@ -16,12 +38,23 @@ fn fire_creates_stack_and_pushes_entry() {
         increment: OrderedFloat(0.5),
     };
 
-    config.fire(entity, "test_source", &mut world);
+    config.fire(entity, test_source().0.as_ref(), &mut world);
 
     let stack = world
         .get::<EffectStack<RampingDamageConfig>>(entity)
         .unwrap();
     assert_eq!(stack.len(), 1);
+
+    // B55 — the entry's key is a typed `SourceId`, NOT a String. The
+    // post-W5 EffectStack signature stores `(SourceId, T)`, and the source
+    // string passed into `Fireable::fire` is wrapped via `SourceId::from(_)`
+    // at the push boundary.
+    let entry = stack.iter().next().expect("stack must contain one entry");
+    assert_eq!(
+        entry.0,
+        test_source(),
+        "stack entry key must be a SourceId built from the source string"
+    );
 }
 
 #[test]
@@ -32,8 +65,8 @@ fn fire_multiple_times_stacks_entries() {
         increment: OrderedFloat(0.5),
     };
 
-    config.fire(entity, "test_source", &mut world);
-    config.fire(entity, "test_source", &mut world);
+    config.fire(entity, test_source().0.as_ref(), &mut world);
+    config.fire(entity, test_source().0.as_ref(), &mut world);
 
     let stack = world
         .get::<EffectStack<RampingDamageConfig>>(entity)
@@ -50,8 +83,8 @@ fn reverse_removes_matching_entry() {
         increment: OrderedFloat(0.5),
     };
 
-    config.fire(entity, "test_source", &mut world);
-    config.reverse(entity, "test_source", &mut world);
+    config.fire(entity, test_source().0.as_ref(), &mut world);
+    config.reverse(entity, test_source().0.as_ref(), &mut world);
 
     let stack = world
         .get::<EffectStack<RampingDamageConfig>>(entity)
@@ -67,7 +100,7 @@ fn reverse_on_entity_without_stack_is_noop() {
         increment: OrderedFloat(0.5),
     };
 
-    config.reverse(entity, "test_source", &mut world);
+    config.reverse(entity, test_source().0.as_ref(), &mut world);
 }
 
 // ── reverse_all_by_source ─────────────────────────────────────────
@@ -80,15 +113,15 @@ fn reverse_all_by_source_removes_all_entries_from_matching_source_leaves_others(
     RampingDamageConfig {
         increment: OrderedFloat(0.5),
     }
-    .fire(entity, "amp", &mut world);
+    .fire(entity, amp_source().0.as_ref(), &mut world);
     RampingDamageConfig {
         increment: OrderedFloat(0.25),
     }
-    .fire(entity, "feedback_loop", &mut world);
+    .fire(entity, feedback_loop_source().0.as_ref(), &mut world);
     RampingDamageConfig {
         increment: OrderedFloat(1.0),
     }
-    .fire(entity, "amp", &mut world);
+    .fire(entity, amp_source().0.as_ref(), &mut world);
 
     // Manually set accumulator to a non-zero value.
     world
@@ -98,13 +131,20 @@ fn reverse_all_by_source_removes_all_entries_from_matching_source_leaves_others(
     RampingDamageConfig {
         increment: OrderedFloat(0.5),
     }
-    .reverse_all_by_source(entity, "amp", &mut world);
+    .reverse_all_by_source(entity, amp_source().0.as_ref(), &mut world);
 
     let stack = world
         .get::<EffectStack<RampingDamageConfig>>(entity)
         .unwrap();
     assert_eq!(stack.len(), 1);
     assert!((stack.aggregate() - 0.25).abs() < 1e-5);
+    // B55 — surviving entry's key must be a typed `SourceId`.
+    let entry = stack.iter().next().expect("stack must contain one entry");
+    assert_eq!(
+        entry.0,
+        feedback_loop_source(),
+        "remaining entry's key must be the feedback-loop source"
+    );
     // Accumulator should still be present because the stack is non-empty.
     assert!(
         world.get::<RampingDamageAccumulator>(entity).is_some(),
@@ -120,11 +160,11 @@ fn reverse_all_by_source_removes_accumulator_when_stack_becomes_empty() {
     RampingDamageConfig {
         increment: OrderedFloat(0.5),
     }
-    .fire(entity, "amp", &mut world);
+    .fire(entity, amp_source().0.as_ref(), &mut world);
     RampingDamageConfig {
         increment: OrderedFloat(1.0),
     }
-    .fire(entity, "amp", &mut world);
+    .fire(entity, amp_source().0.as_ref(), &mut world);
 
     world
         .entity_mut(entity)
@@ -133,7 +173,7 @@ fn reverse_all_by_source_removes_accumulator_when_stack_becomes_empty() {
     RampingDamageConfig {
         increment: OrderedFloat(0.5),
     }
-    .reverse_all_by_source(entity, "amp", &mut world);
+    .reverse_all_by_source(entity, amp_source().0.as_ref(), &mut world);
 
     let stack = world
         .get::<EffectStack<RampingDamageConfig>>(entity)
@@ -153,7 +193,7 @@ fn reverse_all_by_source_on_entity_without_stack_is_noop() {
     RampingDamageConfig {
         increment: OrderedFloat(0.5),
     }
-    .reverse_all_by_source(entity, "amp", &mut world);
+    .reverse_all_by_source(entity, amp_source().0.as_ref(), &mut world);
     // No panic.
 }
 
@@ -167,7 +207,7 @@ fn fire_inserts_accumulator_if_absent() {
     RampingDamageConfig {
         increment: OrderedFloat(0.5),
     }
-    .fire(entity, "amp", &mut world);
+    .fire(entity, amp_source().0.as_ref(), &mut world);
 
     let acc = world.get::<RampingDamageAccumulator>(entity);
     assert!(acc.is_some(), "fire should insert RampingDamageAccumulator");
@@ -187,7 +227,7 @@ fn fire_does_not_overwrite_existing_accumulator() {
     RampingDamageConfig {
         increment: OrderedFloat(0.5),
     }
-    .fire(entity, "amp", &mut world);
+    .fire(entity, amp_source().0.as_ref(), &mut world);
 
     // Manually set accumulator to non-zero to simulate gameplay usage.
     world
@@ -198,7 +238,7 @@ fn fire_does_not_overwrite_existing_accumulator() {
     RampingDamageConfig {
         increment: OrderedFloat(0.5),
     }
-    .fire(entity, "feedback_loop", &mut world);
+    .fire(entity, feedback_loop_source().0.as_ref(), &mut world);
 
     let acc = world.get::<RampingDamageAccumulator>(entity).unwrap();
     assert_eq!(
@@ -227,7 +267,7 @@ fn reverse_with_single_entry_removes_accumulator() {
     RampingDamageConfig {
         increment: OrderedFloat(0.5),
     }
-    .fire(entity, "amp", &mut world);
+    .fire(entity, amp_source().0.as_ref(), &mut world);
 
     // Manually set accumulator to non-zero.
     world
@@ -237,7 +277,7 @@ fn reverse_with_single_entry_removes_accumulator() {
     RampingDamageConfig {
         increment: OrderedFloat(0.5),
     }
-    .reverse(entity, "amp", &mut world);
+    .reverse(entity, amp_source().0.as_ref(), &mut world);
 
     let stack = world
         .get::<EffectStack<RampingDamageConfig>>(entity)
@@ -262,7 +302,7 @@ fn reverse_on_entity_without_accumulator_does_not_panic() {
         .get_mut::<EffectStack<RampingDamageConfig>>(entity)
         .unwrap()
         .push(
-            "amp".to_owned(),
+            amp_source(),
             RampingDamageConfig {
                 increment: OrderedFloat(0.5),
             },
@@ -272,7 +312,7 @@ fn reverse_on_entity_without_accumulator_does_not_panic() {
     RampingDamageConfig {
         increment: OrderedFloat(0.5),
     }
-    .reverse(entity, "amp", &mut world);
+    .reverse(entity, amp_source().0.as_ref(), &mut world);
 }
 
 // ── reverse with non-empty stack keeps accumulator ────────────────
@@ -285,11 +325,11 @@ fn reverse_with_non_empty_stack_keeps_accumulator() {
     RampingDamageConfig {
         increment: OrderedFloat(0.5),
     }
-    .fire(entity, "amp", &mut world);
+    .fire(entity, amp_source().0.as_ref(), &mut world);
     RampingDamageConfig {
         increment: OrderedFloat(0.25),
     }
-    .fire(entity, "feedback_loop", &mut world);
+    .fire(entity, feedback_loop_source().0.as_ref(), &mut world);
 
     // Set accumulator to 1.5.
     world
@@ -299,7 +339,7 @@ fn reverse_with_non_empty_stack_keeps_accumulator() {
     RampingDamageConfig {
         increment: OrderedFloat(0.5),
     }
-    .reverse(entity, "amp", &mut world);
+    .reverse(entity, amp_source().0.as_ref(), &mut world);
 
     let stack = world
         .get::<EffectStack<RampingDamageConfig>>(entity)
@@ -327,17 +367,17 @@ fn reverse_with_non_empty_stack_keeps_zero_accumulator() {
     RampingDamageConfig {
         increment: OrderedFloat(0.5),
     }
-    .fire(entity, "amp", &mut world);
+    .fire(entity, amp_source().0.as_ref(), &mut world);
     RampingDamageConfig {
         increment: OrderedFloat(0.25),
     }
-    .fire(entity, "feedback_loop", &mut world);
+    .fire(entity, feedback_loop_source().0.as_ref(), &mut world);
 
     // Accumulator is already 0.0 from fire.
     RampingDamageConfig {
         increment: OrderedFloat(0.5),
     }
-    .reverse(entity, "amp", &mut world);
+    .reverse(entity, amp_source().0.as_ref(), &mut world);
 
     let acc = world.get::<RampingDamageAccumulator>(entity);
     assert!(

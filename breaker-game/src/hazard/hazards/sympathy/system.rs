@@ -25,12 +25,6 @@ use crate::{
     prelude::*,
 };
 
-// ── Constants ───────────────────────────────────────────────────────────────
-
-/// Sentinel `source` string tagged on every Sympathy-emitted `HealDealt<Cell>`.
-/// Downstream stats / UI can filter on this tag.
-pub(crate) const SYMPATHY_SENTINEL: &str = "hazard:sympathy";
-
 // ── SympathyConfig ──────────────────────────────────────────────────────────
 
 /// Per-run Sympathy tuning extracted from [`HazardTuning::Sympathy`] at
@@ -153,7 +147,7 @@ type LiveCellPositions<'w, 's> = Query<
 /// `msg.amount * (heal_percent / 100.0)^N`.
 ///
 /// Every emitted heal carries `cap: HealCap::Starting`,
-/// `source: Some(SYMPATHY_SENTINEL.to_string())`, and `healer: None`.
+/// `source: Some(SourceId::hazard(HazardKind::Sympathy).build())`, and `healer: None`.
 ///
 /// Gated in-body: this system runs every `FixedUpdate` tick. When
 /// Sympathy is not active or `NodeState` is not `Playing`, it drains the
@@ -220,6 +214,7 @@ pub(crate) fn sympathy_heal_adjacent(
     // Convert authored percent (e.g. 25.0 for "25%") into a dimensionless
     // multiplier (0.25) used both for ring 1 and geometric attenuation.
     let factor = heal_percent / 100.0;
+    let source = SourceId::hazard(HazardKind::Sympathy).build();
 
     for msg in reader.read() {
         if msg.amount <= 0.0 {
@@ -263,7 +258,7 @@ pub(crate) fn sympathy_heal_adjacent(
                     target:        *entity,
                     amount:        ring_amount,
                     cap:           HealCap::Starting,
-                    source:        Some(SourceId::from(SYMPATHY_SENTINEL)),
+                    source:        Some(source.clone()),
                     _marker:       PhantomData,
                 });
             }

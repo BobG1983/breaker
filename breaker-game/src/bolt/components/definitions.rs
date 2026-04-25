@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use rantzsoft_dmg::Dmgable;
+use rantzsoft_dmg::{Dmgable, SourceId};
 
 use crate::shared::size::BaseRadius;
 
@@ -43,7 +43,7 @@ pub struct ExtraBolt;
 /// Used for damage attribution — cell kills by this bolt count toward the
 /// named evolution's cumulative damage for the `MostPowerfulEvolution` highlight.
 #[derive(Component, Debug, Clone)]
-pub struct SpawnedByEvolution(pub String);
+pub struct SpawnedByEvolution(pub SourceId);
 
 /// Remaining pierces before exhaustion. Reset to `EffectStack<PiercingConfig>::aggregate()` on
 /// wall/breaker contact.

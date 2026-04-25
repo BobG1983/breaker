@@ -50,10 +50,7 @@ fn shape_c_cond_entering_true_installs_armed_when_entry() {
     );
 
     // Armed When entry installed
-    let armed = bound
-        .0
-        .iter()
-        .find(|(name, _)| name == "chip_siege#armed[0]");
+    let armed = bound.0.iter().find(|(name, _)| name == "chip_siege:armed");
     assert!(
         armed.is_some(),
         "Should find armed When with key 'chip_siege#armed[0]'"
@@ -153,7 +150,8 @@ fn shape_c_trigger_while_armed_dispatches_inner_fire() {
     // Verify source is the armed key
     let entry = stack.iter().next().unwrap();
     assert_eq!(
-        entry.0, "chip_siege#armed[0]",
+        entry.0.0.as_ref(),
+        "chip_siege:armed",
         "Stack entry source must be the armed key, not the original source"
     );
     assert_eq!(
@@ -197,8 +195,9 @@ fn shape_c_multiple_trigger_fires_stack_entries() {
 
     for entry in stack.iter() {
         assert_eq!(
-            entry.0, "chip_siege#armed[0]",
-            "All stack entries should have source 'chip_siege#armed[0]'"
+            entry.0.0.as_ref(),
+            "chip_siege:armed",
+            "All stack entries should have source 'chip_siege:armed'"
         );
     }
 }

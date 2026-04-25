@@ -5,13 +5,22 @@ use rantzsoft_spatial2d::components::{BaseSpeed, Position2D, Velocity2D};
 use super::config_impl::*;
 use crate::{
     bolt::components::{Bolt, ExtraBolt},
+    chips::definition::Rarity,
     effect_v3::{
         components::EffectSourceChip,
         effects::tether_beam::components::{TetherBeamDamage, TetherBeamSource, TetherBeamWidth},
         traits::Fireable,
     },
+    prelude::{SourceId, SourceIdExt},
     shared::{birthing::Birthing, rng::GameRng},
 };
+
+/// Builder-format `SourceId` for the canonical "Coil" chip used across these
+/// tether-beam tests. Centralized so the fixture demonstrates the canonical
+/// `chip:<template>:<rarity>` shape rather than an arbitrary string literal.
+fn coil_source() -> SourceId {
+    SourceId::chip("Coil").rarity(Rarity::Common).build()
+}
 
 fn spawn_source(world: &mut World, pos: Vec2, vel: Vec2) -> Entity {
     world
@@ -187,16 +196,16 @@ fn fire_spawn_with_non_empty_source_attaches_chip_some() {
         chain:       false,
         width:       OrderedFloat(10.0),
     };
-    config.fire(source, "coil_chip", &mut world);
+    config.fire(source, coil_source().0.as_ref(), &mut world);
     world.flush();
 
-    let chips: Vec<Option<String>> = world
+    let chips: Vec<Option<SourceId>> = world
         .query_filtered::<&EffectSourceChip, With<TetherBeamSource>>()
         .iter(&world)
         .map(|c| c.0.clone())
         .collect();
     assert_eq!(chips.len(), 1, "exactly 1 TetherBeamSource entity expected");
-    assert_eq!(chips[0], Some("coil_chip".to_string()));
+    assert_eq!(chips[0], Some(coil_source()));
 
     // The spawned ExtraBolt must NOT carry an EffectSourceChip.
     let extra_bolt_chip_count = world
@@ -223,7 +232,7 @@ fn fire_spawn_with_empty_source_attaches_chip_none() {
     config.fire(source, "", &mut world);
     world.flush();
 
-    let chips: Vec<Option<String>> = world
+    let chips: Vec<Option<SourceId>> = world
         .query_filtered::<&EffectSourceChip, With<TetherBeamSource>>()
         .iter(&world)
         .map(|c| c.0.clone())
@@ -247,16 +256,16 @@ fn fire_chain_with_non_empty_source_attaches_chip_some() {
         chain:       true,
         width:       OrderedFloat(10.0),
     };
-    config.fire(source, "coil_chip", &mut world);
+    config.fire(source, coil_source().0.as_ref(), &mut world);
     world.flush();
 
-    let chips: Vec<Option<String>> = world
+    let chips: Vec<Option<SourceId>> = world
         .query_filtered::<&EffectSourceChip, With<TetherBeamSource>>()
         .iter(&world)
         .map(|c| c.0.clone())
         .collect();
     assert_eq!(chips.len(), 1, "exactly 1 TetherBeamSource entity expected");
-    assert_eq!(chips[0], Some("coil_chip".to_string()));
+    assert_eq!(chips[0], Some(coil_source()));
 }
 
 #[test]
@@ -274,7 +283,7 @@ fn fire_chain_with_empty_source_attaches_chip_none() {
     config.fire(source, "", &mut world);
     world.flush();
 
-    let chips: Vec<Option<String>> = world
+    let chips: Vec<Option<SourceId>> = world
         .query_filtered::<&EffectSourceChip, With<TetherBeamSource>>()
         .iter(&world)
         .map(|c| c.0.clone())
@@ -299,7 +308,7 @@ fn fire_chain_picks_nearest_other_bolt_by_squared_distance() {
         chain:       true,
         width:       OrderedFloat(10.0),
     };
-    config.fire(source, "coil_chip", &mut world);
+    config.fire(source, coil_source().0.as_ref(), &mut world);
     world.flush();
 
     let beams: Vec<TetherBeamSource> = world
@@ -326,7 +335,7 @@ fn fire_chain_with_only_source_bolt_is_noop() {
         chain:       true,
         width:       OrderedFloat(10.0),
     };
-    config.fire(source, "coil_chip", &mut world);
+    config.fire(source, coil_source().0.as_ref(), &mut world);
     world.flush();
 
     let beam_count = world.query::<&TetherBeamSource>().iter(&world).count();
@@ -358,7 +367,7 @@ fn fire_chain_with_two_equidistant_bolts_spawns_exactly_one_beam() {
         chain:       true,
         width:       OrderedFloat(10.0),
     };
-    config.fire(source, "coil_chip", &mut world);
+    config.fire(source, coil_source().0.as_ref(), &mut world);
     world.flush();
 
     let beams: Vec<TetherBeamSource> = world
@@ -433,7 +442,7 @@ fn fire_chain_stamps_tether_beam_width_from_config() {
         chain:       true,
         width:       OrderedFloat(12.0),
     };
-    config.fire(source, "coil_chip", &mut world);
+    config.fire(source, coil_source().0.as_ref(), &mut world);
     world.flush();
 
     let widths: Vec<f32> = world
@@ -462,7 +471,7 @@ fn fire_chain_noop_does_not_spawn_tether_beam_width() {
         chain:       true,
         width:       OrderedFloat(12.0),
     };
-    config.fire(source, "coil_chip", &mut world);
+    config.fire(source, coil_source().0.as_ref(), &mut world);
     world.flush();
 
     let width_count = world

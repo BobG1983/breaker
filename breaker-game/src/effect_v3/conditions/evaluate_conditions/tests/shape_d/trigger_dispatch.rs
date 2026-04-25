@@ -49,7 +49,8 @@ fn shape_d_trigger_with_matching_context_redirects_to_participant() {
 
     let entry = bolt_stack.iter().next().unwrap();
     assert_eq!(
-        entry.0, "chip_redirect#armed[0]",
+        entry.0.0.as_ref(),
+        "chip_redirect:armed",
         "Source on bolt's stack must be the armed key"
     );
 
@@ -227,7 +228,7 @@ fn shape_d_multiple_fires_stack_on_participant() {
     );
 
     for entry in bolt_stack.iter() {
-        assert_eq!(entry.0, "chip_redirect#armed[0]");
+        assert_eq!(entry.0.0.as_ref(), "chip_redirect:armed");
     }
 }
 
@@ -437,7 +438,8 @@ fn shape_d_on_impact_impactee_redirects_to_impactee() {
 
     let entry = cell_stack.iter().next().unwrap();
     assert_eq!(
-        entry.0, "chip_reflect#armed[0]",
+        entry.0.0.as_ref(),
+        "chip_reflect:armed",
         "Source on impactee's stack must be the armed key"
     );
 }

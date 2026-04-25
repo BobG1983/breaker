@@ -48,7 +48,7 @@ fn active_bolts_target_stamps_to_breaker_bound_effects() {
         1,
         "Breaker should have 1 BoundEffects entry for ActiveBolts stamp"
     );
-    assert_eq!(bound.0[0].0, "Parry Shockwave");
+    assert_eq!(bound.0[0].0, "chip:Parry Shockwave:Common");
     assert!(
         matches!(&bound.0[0].1, Tree::When(Trigger::PerfectBumped, _)),
         "ActiveBolts should stamp tree directly to breaker"

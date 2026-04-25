@@ -70,8 +70,10 @@ fn spawned_by_stores_evolution_name() {
         .get::<SpawnedByEvolution>(entity)
         .expect("entity should have SpawnedByEvolution");
     assert_eq!(
-        spawned_by.0, "mirror_protocol",
-        "SpawnedByEvolution should be 'mirror_protocol'"
+        spawned_by.0.0.as_ref(),
+        "chip:mirror_protocol:Evolution",
+        "SpawnedByEvolution should be the builder-produced \
+         'chip:mirror_protocol:Evolution' form"
     );
 }
 
@@ -93,8 +95,10 @@ fn spawned_by_empty_string_accepted() {
         .get::<SpawnedByEvolution>(entity)
         .expect("entity should have SpawnedByEvolution");
     assert_eq!(
-        spawned_by.0, "",
-        "SpawnedByEvolution should be empty string"
+        spawned_by.0.0.as_ref(),
+        "chip::Evolution",
+        "SpawnedByEvolution with empty name yields 'chip::Evolution' (\
+         builder wraps verbatim)"
     );
 }
 

@@ -25,7 +25,7 @@ use std::marker::PhantomData;
 use bevy::prelude::*;
 
 use super::{emit_partner::build_tether_app, helpers::spawn_linked_pair};
-use crate::prelude::*;
+use crate::{hazard::definition::HazardKind, prelude::*};
 
 fn drain_damage_messages(app: &mut App) -> Vec<DamageDealt<Cell>> {
     app.world_mut()
@@ -36,7 +36,7 @@ fn drain_damage_messages(app: &mut App) -> Vec<DamageDealt<Cell>> {
 
 fn tether_sourced(msgs: &[DamageDealt<Cell>]) -> Vec<DamageDealt<Cell>> {
     msgs.iter()
-        .filter(|m| m.source == Some(SourceId::from("hazard:tether")))
+        .filter(|m| m.source == Some(SourceId::hazard(HazardKind::Tether).build()))
         .cloned()
         .collect()
 }
@@ -79,7 +79,7 @@ fn tether_ripple_to_invulnerable_partner_is_zeroed_by_pipeline() {
     let msgs = drain_damage_messages(&mut app);
     let tether_to_b: Vec<_> = msgs
         .iter()
-        .filter(|m| m.source == Some(SourceId::from("hazard:tether")) && m.target == b)
+        .filter(|m| m.source == Some(SourceId::hazard(HazardKind::Tether).build()) && m.target == b)
         .collect();
     assert_eq!(
         tether_to_b.len(),
@@ -122,7 +122,7 @@ fn tether_ripple_to_invulnerable_partner_zeroing_independent_of_emit_amount() {
     let msgs = drain_damage_messages(&mut app);
     let tether_to_b: Vec<_> = msgs
         .iter()
-        .filter(|m| m.source == Some(SourceId::from("hazard:tether")) && m.target == b)
+        .filter(|m| m.source == Some(SourceId::hazard(HazardKind::Tether).build()) && m.target == b)
         .collect();
     assert_eq!(tether_to_b.len(), 1);
     assert!(

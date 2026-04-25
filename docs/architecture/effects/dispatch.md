@@ -27,9 +27,16 @@ The chip's `effects` field is `Vec<RootNode>`. Each root is dispatched independe
 
 ## chip dispatch flow
 
-`dispatch_chip_effects` reads `ChipSelected` messages, resolves each chip in the catalog, optionally records it in `ChipInventory`, and walks the chip's `effects: Vec<RootNode>`:
+`dispatch_chip_effects` reads `ChipSelected` messages, resolves each chip in the catalog, optionally records it in `ChipInventory`, and walks the chip's `effects: Vec<RootNode>`. Before dispatching, it builds the canonical chip source string via `SourceId::chip(template).rarity(rarity).build()` — `chip:<template>:<rarity>` (e.g. `"chip:Pulse:Common"`). All rarity tiers of the same template share the template segment; evolution chips fall back to the chip's display name when `template_name` is `None`. This canonical form is what gets stored in `BoundEffects` / `StagedEffects` entries — NOT the chip's user-facing display name.
 
 ```rust
+let template_or_name = def.template_name.as_deref().unwrap_or(&def.name);
+let chip_source = SourceId::chip(template_or_name)
+    .rarity(def.rarity)
+    .build()
+    .0
+    .into_owned();
+
 for root in &effects {
     match root {
         RootNode::Stamp(target, tree) => {
@@ -37,13 +44,13 @@ for root in &effects {
                 // Direct dispatch — breaker exists at chip-select time.
                 let entities = resolve_target_entities(*target, &targets);
                 for entity in entities {
-                    dispatch_tree(entity, tree, &chip_name, &targets, &mut commands);
+                    dispatch_tree(entity, tree, &chip_source, &targets, &mut commands);
                 }
             } else {
                 // Deferred dispatch — non-Breaker entities don't exist now.
                 // Stamp the tree to every Breaker; trigger bridges handle walking later.
                 for breaker_entity in targets.breakers.iter() {
-                    commands.stamp_effect(breaker_entity, chip_name.clone(), tree.clone());
+                    commands.stamp_effect(breaker_entity, chip_source.clone(), tree.clone());
                 }
             }
         }
@@ -59,21 +66,23 @@ The branch on `StampTarget::Breaker` is the key behavior. Breakers exist at chip
 ## dispatch_tree helper
 
 ```rust
-fn dispatch_tree(entity: Entity, tree: &Tree, chip_name: &str, _targets: &DispatchTargets, commands: &mut Commands) {
+fn dispatch_tree(entity: Entity, tree: &Tree, chip_source: &str, _targets: &DispatchTargets, commands: &mut Commands) {
     // Ensure storage components exist before stamping
     commands.entity(entity).insert_if_new(BoundEffects::default());
     commands.entity(entity).insert_if_new(StagedEffects::default());
 
     match tree {
         Tree::Fire(effect) => {
-            commands.fire_effect(entity, effect.clone(), chip_name.to_owned());
+            commands.fire_effect(entity, effect.clone(), chip_source.to_owned());
         }
         other => {
-            commands.stamp_effect(entity, chip_name.to_owned(), other.clone());
+            commands.stamp_effect(entity, chip_source.to_owned(), other.clone());
         }
     }
 }
 ```
+
+`chip_source` is the canonical `SourceId` display string (`chip:<template>:<rarity>`), not the chip's display name.
 
 The two cases:
 

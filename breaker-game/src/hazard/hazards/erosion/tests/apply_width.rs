@@ -20,7 +20,10 @@ use super::{
 };
 use crate::{
     breaker::components::Breaker,
+    chips::definition::Rarity,
     effect_v3::{effects::SizeBoostConfig, stacking::EffectStack},
+    hazard::definition::HazardKind,
+    prelude::*,
 };
 
 // ── Preserved ──────────────────────────────────────────────────────────
@@ -75,7 +78,7 @@ fn apply_width_preserves_non_erosion_entries() {
 
     let mut seed = EffectStack::<SizeBoostConfig>::default();
     seed.push(
-        "chip:heavy".to_owned(),
+        SourceId::chip("heavy").rarity(Rarity::Common).build(),
         SizeBoostConfig {
             multiplier: OrderedFloat(1.25),
         },
@@ -138,7 +141,7 @@ fn stale_erosion_source_entry_is_replaced_not_duplicated() {
 
     let mut seed = EffectStack::<SizeBoostConfig>::default();
     seed.push(
-        "hazard:erosion".to_owned(),
+        SourceId::hazard(HazardKind::Erosion).build(),
         SizeBoostConfig {
             multiplier: OrderedFloat(9.99),
         },
@@ -154,7 +157,7 @@ fn stale_erosion_source_entry_is_replaced_not_duplicated() {
             .unwrap();
         assert_eq!(stack.len(), 1);
         let entries = erosion_entries(stack);
-        assert_eq!(entries[0].0, "hazard:erosion");
+        assert_eq!(entries[0].0, SourceId::hazard(HazardKind::Erosion).build());
         let m = entries[0].1.multiplier.into_inner();
         assert!(
             (m - 0.80_f32).abs() < 1e-6,
@@ -184,19 +187,19 @@ fn two_stale_erosion_entries_reduce_to_one_fresh_entry() {
 
     let mut seed = EffectStack::<SizeBoostConfig>::default();
     seed.push(
-        "hazard:erosion".to_owned(),
+        SourceId::hazard(HazardKind::Erosion).build(),
         SizeBoostConfig {
             multiplier: OrderedFloat(5.0),
         },
     );
     seed.push(
-        "hazard:erosion".to_owned(),
+        SourceId::hazard(HazardKind::Erosion).build(),
         SizeBoostConfig {
             multiplier: OrderedFloat(3.0),
         },
     );
     seed.push(
-        "chip:heavy".to_owned(),
+        SourceId::chip("heavy").rarity(Rarity::Common).build(),
         SizeBoostConfig {
             multiplier: OrderedFloat(1.25),
         },
@@ -215,17 +218,16 @@ fn two_stale_erosion_entries_reduce_to_one_fresh_entry() {
 
     // Edge: iterate entries — exactly one Erosion, exactly one chip with seeded multiplier.
     let entries = erosion_entries(stack);
+    let erosion_src = SourceId::hazard(HazardKind::Erosion).build();
+    let chip_src = SourceId::chip("heavy").rarity(Rarity::Common).build();
     let erosion_count = entries
         .iter()
-        .filter(|(src, _)| src == "hazard:erosion")
+        .filter(|(src, _)| src == &erosion_src)
         .count();
-    let chip_count = entries
-        .iter()
-        .filter(|(src, _)| src == "chip:heavy")
-        .count();
+    let chip_count = entries.iter().filter(|(src, _)| src == &chip_src).count();
     assert_eq!(erosion_count, 1);
     assert_eq!(chip_count, 1);
-    let chip = entries.iter().find(|(src, _)| src == "chip:heavy").unwrap();
+    let chip = entries.iter().find(|(src, _)| src == &chip_src).unwrap();
     assert_eq!(chip.1.multiplier, OrderedFloat(1.25_f32));
 }
 

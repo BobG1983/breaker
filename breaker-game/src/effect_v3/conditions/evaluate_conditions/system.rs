@@ -5,23 +5,40 @@ use std::collections::HashSet;
 use bevy::{ecs::world::CommandQueue, prelude::*};
 
 use super::super::{is_combo_active, is_node_active, is_shield_active};
-use crate::effect_v3::{
-    commands::EffectCommandsExt,
-    dispatch::{fire_reversible_dispatch, reverse_all_by_source_dispatch, reverse_dispatch},
-    storage::{ArmedFiredParticipants, BoundEffects},
-    types::{Condition, ReversibleEffectType, ScopedTerminal, ScopedTree, Terminal, Tree},
+use crate::{
+    effect_v3::{
+        commands::EffectCommandsExt,
+        dispatch::{fire_reversible_dispatch, reverse_all_by_source_dispatch, reverse_dispatch},
+        storage::{ArmedFiredParticipants, BoundEffects},
+        types::{Condition, ReversibleEffectType, ScopedTerminal, ScopedTree, Terminal, Tree},
+    },
+    prelude::*,
 };
+
+/// Builds the canonical armed-key `String` from a non-armed source string.
+/// Goes through `SourceId::armed(...).build()` so `ArmedBuilder` remains the
+/// single owner of the `<source>:armed` format. The `BoundEffects` /
+/// `ArmedFiredParticipants` storage is `String`-keyed per the W5 design,
+/// so we unwrap the inner `Cow`. The wrap+unwrap path adds no allocations
+/// over a plain `format!` (`SourceId::from(format!(...))` is the only
+/// alloc; `into_owned()` on a `Cow::Owned` is a free move).
+fn armed_key_for(source: &str) -> String {
+    SourceId::armed(SourceId::from(source.to_owned()))
+        .build()
+        .0
+        .into_owned()
+}
 
 /// Tracks which During sources have their effects currently applied
 /// on this entity. Each entry in the `HashSet` is a source name string.
 #[derive(Component, Default, Debug)]
-pub struct DuringActive(pub HashSet<String>);
+pub(crate) struct DuringActive(pub HashSet<String>);
 
 /// Poll all registered conditions each frame and fire/reverse During
 /// entries on state transitions.
 ///
 /// Runs in `EffectV3Systems::Conditions`.
-pub fn evaluate_conditions(world: &mut World) {
+pub(crate) fn evaluate_conditions(world: &mut World) {
     // Phase 1: Collect During entries (need immutable borrow first)
     let mut during_entries: Vec<(Entity, String, Condition, ScopedTree)> = Vec::new();
     let mut query = world.query::<(Entity, &BoundEffects)>();
@@ -76,12 +93,12 @@ fn fire_scoped_tree(inner: &ScopedTree, entity: Entity, source: &str, world: &mu
             }
         }
         ScopedTree::When(trigger, inner_tree) => {
-            let armed_key = format!("{source}#armed[0]");
+            let armed_key = armed_key_for(source);
             let armed_tree = Tree::When(trigger.clone(), inner_tree.clone());
             install_armed_entry(entity, armed_key, armed_tree, world);
         }
         ScopedTree::On(participant, scoped_terminal) => {
-            let armed_key = format!("{source}#armed[0]");
+            let armed_key = armed_key_for(source);
             let terminal = Terminal::from(scoped_terminal.clone());
             let armed_tree = Tree::On(*participant, terminal);
             install_armed_entry(entity, armed_key, armed_tree, world);
@@ -104,7 +121,7 @@ fn reverse_scoped_tree(inner: &ScopedTree, entity: Entity, source: &str, world: 
             }
         }
         ScopedTree::When(_trigger, inner_tree) => {
-            let armed_key = format!("{source}#armed[0]");
+            let armed_key = armed_key_for(source);
             // Remove armed entry from BoundEffects
             if let Some(mut bound) = world.get_mut::<BoundEffects>(entity) {
                 bound.0.retain(|(name, _)| name != &armed_key);
@@ -113,7 +130,7 @@ fn reverse_scoped_tree(inner: &ScopedTree, entity: Entity, source: &str, world: 
             reverse_armed_tree(inner_tree, entity, &armed_key, world);
         }
         ScopedTree::On(_participant, scoped_terminal) => {
-            let armed_key = format!("{source}#armed[0]");
+            let armed_key = armed_key_for(source);
 
             // Remove armed entry from BoundEffects.
             if let Some(mut bound) = world.get_mut::<BoundEffects>(entity) {
@@ -158,7 +175,7 @@ fn reverse_scoped_tree(inner: &ScopedTree, entity: Entity, source: &str, world: 
 ///
 /// Used by the During state machine to check condition transitions.
 #[must_use]
-pub fn evaluate_condition(condition: &Condition, world: &World) -> bool {
+fn evaluate_condition(condition: &Condition, world: &World) -> bool {
     match condition {
         Condition::NodeActive => is_node_active(world),
         Condition::ShieldActive => is_shield_active(world),

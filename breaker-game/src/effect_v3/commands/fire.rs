@@ -25,7 +25,25 @@ mod tests {
     use ordered_float::OrderedFloat;
 
     use super::*;
-    use crate::effect_v3::{effects::SpeedBoostConfig, stacking::EffectStack};
+    use crate::{
+        chips::definition::Rarity,
+        effect_v3::{effects::SpeedBoostConfig, stacking::EffectStack},
+        prelude::{SourceId, SourceIdExt},
+    };
+
+    /// Builder-format `SourceId` for a generic test chip — used as the
+    /// canonical fixture across `FireEffectCommand` tests.
+    fn test_chip_source() -> SourceId {
+        SourceId::chip("TestChip").rarity(Rarity::Common).build()
+    }
+
+    /// Distinct second builder-format `SourceId` for the
+    /// preserves-source-string test.
+    fn my_source_chip() -> SourceId {
+        SourceId::chip("MySourceChip")
+            .rarity(Rarity::Common)
+            .build()
+    }
 
     #[test]
     fn fire_effect_command_delegates_to_fire_dispatch() {
@@ -37,7 +55,7 @@ mod tests {
             effect: EffectType::SpeedBoost(SpeedBoostConfig {
                 multiplier: OrderedFloat(1.5),
             }),
-            source: "test_chip".to_owned(),
+            source: test_chip_source().0.into_owned(),
         }
         .apply(&mut world);
 
@@ -56,14 +74,14 @@ mod tests {
         FireEffectCommand {
             entity,
             effect: effect.clone(),
-            source: "test_chip".to_owned(),
+            source: test_chip_source().0.into_owned(),
         }
         .apply(&mut world);
 
         FireEffectCommand {
             entity,
             effect,
-            source: "test_chip".to_owned(),
+            source: test_chip_source().0.into_owned(),
         }
         .apply(&mut world);
 
@@ -75,19 +93,20 @@ mod tests {
     fn fire_effect_command_preserves_source_string() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
+        let expected = my_source_chip();
 
         FireEffectCommand {
             entity,
             effect: EffectType::SpeedBoost(SpeedBoostConfig {
                 multiplier: OrderedFloat(2.0),
             }),
-            source: "my_source_chip".to_owned(),
+            source: expected.0.clone().into_owned(),
         }
         .apply(&mut world);
 
         let stack = world.get::<EffectStack<SpeedBoostConfig>>(entity).unwrap();
         let (source, _config) = stack.iter().next().unwrap();
-        assert_eq!(source, "my_source_chip");
+        assert_eq!(source, &expected);
     }
 
     #[test]

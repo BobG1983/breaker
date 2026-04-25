@@ -17,7 +17,10 @@ use super::{
         spawn_cell_invulnerable_at, test_app_playing, write_cell_damage,
     },
 };
-use crate::prelude::SourceId;
+use crate::{
+    hazard::definition::HazardKind,
+    prelude::{SourceId, SourceIdExt},
+};
 
 // ── Behavior 44 — Dead neighbour is excluded from BFS adjacency set ─────────
 
@@ -165,7 +168,7 @@ fn cell_adjacent_to_two_primaries_gets_two_heal_messages() {
         assert!(matches!(msg.cap, crate::prelude::HealCap::Starting));
         assert_eq!(
             msg.source.as_ref(),
-            Some(&SourceId::from("hazard:sympathy"))
+            Some(&SourceId::hazard(HazardKind::Sympathy).build())
         );
     }
 }

@@ -54,7 +54,7 @@ fn shape_d_armed_fire_on_non_owner_participant_goes_to_participant_stack() {
         .expect("Bolt should have EffectStack<SpeedBoostConfig>");
     assert_eq!(bolt_stack.len(), 1, "Bolt should have exactly 1 entry");
     let entry = bolt_stack.iter().next().unwrap();
-    assert_eq!(entry.0, "chip_redirect#armed[0]");
+    assert_eq!(entry.0.0.as_ref(), "chip_redirect:armed");
 
     assert!(
         world.get::<EffectStack<SpeedBoostConfig>>(owner).is_none(),
@@ -72,7 +72,7 @@ fn shape_d_armed_fire_on_non_owner_participant_goes_to_participant_stack() {
         bound
             .0
             .iter()
-            .any(|(name, _)| name == "chip_redirect#armed[0]"),
+            .any(|(name, _)| name == "chip_redirect:armed"),
         "Armed entry must still be present after fire"
     );
 
@@ -176,7 +176,7 @@ fn shape_d_armed_fire_twice_on_same_participant_stacks_two_entries() {
         multiplier: OrderedFloat(1.5),
     };
     for entry in bolt_stack.iter() {
-        assert_eq!(entry.0, "chip_redirect#armed[0]");
+        assert_eq!(entry.0.0.as_ref(), "chip_redirect:armed");
         assert_eq!(entry.1, expected_cfg);
     }
 
@@ -230,13 +230,19 @@ fn shape_d_armed_fire_on_two_different_participants_records_both() {
         .get::<EffectStack<SpeedBoostConfig>>(bolt_a)
         .expect("bolt_a should have EffectStack");
     assert_eq!(a_stack.len(), 1);
-    assert_eq!(a_stack.iter().next().unwrap().0, "chip_redirect#armed[0]");
+    assert_eq!(
+        a_stack.iter().next().unwrap().0.0.as_ref(),
+        "chip_redirect:armed"
+    );
 
     let b_stack = world
         .get::<EffectStack<SpeedBoostConfig>>(bolt_b)
         .expect("bolt_b should have EffectStack");
     assert_eq!(b_stack.len(), 1);
-    assert_eq!(b_stack.iter().next().unwrap().0, "chip_redirect#armed[0]");
+    assert_eq!(
+        b_stack.iter().next().unwrap().0.0.as_ref(),
+        "chip_redirect:armed"
+    );
 
     assert!(
         world.get::<EffectStack<SpeedBoostConfig>>(owner).is_none(),

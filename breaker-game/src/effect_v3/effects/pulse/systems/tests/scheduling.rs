@@ -19,6 +19,7 @@ use bevy::prelude::*;
 use rantzsoft_spatial2d::components::{GlobalPosition2D, Spatial2D};
 
 use crate::{
+    chips::definition::Rarity,
     effect_v3::effects::pulse::components::{
         PulseRing, PulseRingBaseDamage, PulseRingDamageMultiplier, PulseRingDamaged,
         PulseRingMaxRadius, PulseRingRadius, PulseRingSpeed,
@@ -26,6 +27,12 @@ use crate::{
     prelude::*,
     shared::GameDrawLayer,
 };
+
+/// Builder-format `SourceId` used as the canonical opaque tag for the
+/// `DamageBoostStack` augmentation in scheduling tests.
+fn test_source() -> SourceId {
+    SourceId::chip("Test").rarity(Rarity::Common).build()
+}
 
 /// Shared app builder for behavior 3 — `with_effects_pipeline()` installs
 /// `RantzDmgPlugin`, registers all game `Dmgable`s, and adds `EffectV3Plugin`
@@ -85,7 +92,7 @@ fn apply_pulse_damage_applies_damage_boost_in_same_tick() {
     let ring = spawn_pulse_ring(&mut app, Vec2::ZERO, 10.0);
     app.world_mut().entity_mut(ring).insert({
         let mut stack = DamageBoostStack::default();
-        stack.add(SourceId::from("test"), 2.0);
+        stack.add(test_source(), 2.0);
         stack
     });
 

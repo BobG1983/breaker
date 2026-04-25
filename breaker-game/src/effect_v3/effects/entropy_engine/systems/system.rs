@@ -38,7 +38,9 @@ pub fn tick_entropy_engine(
     for (entity, mut counter, chip) in &mut counters {
         // Resolve the source string once per entity.
         // EffectSourceChip(None) and the absence of the component both map to "".
-        let source: String = chip.and_then(|c| c.0.clone()).unwrap_or_default();
+        let source: String = chip
+            .and_then(|c| c.0.as_ref().map(|s| s.0.to_string()))
+            .unwrap_or_default();
 
         for _ in 0..bump_count {
             // Increment count (capped at max_effects).

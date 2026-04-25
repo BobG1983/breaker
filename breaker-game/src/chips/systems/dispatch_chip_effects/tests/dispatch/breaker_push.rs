@@ -50,7 +50,10 @@ fn when_child_targeting_breaker_pushes_to_bound_effects() {
     );
 
     let (chip_name, tree) = &bound.0[0];
-    assert_eq!(chip_name, "Minor Cascade", "chip_name should match");
+    assert_eq!(
+        chip_name, "chip:Minor Cascade:Common",
+        "chip_name should match"
+    );
     assert!(
         matches!(tree, Tree::When(Trigger::DeathOccurred(_), _)),
         "should be When(DeathOccurred(...), ...), got {tree:?}"
@@ -138,7 +141,7 @@ fn when_with_nested_tree_pushes_to_bound_effects() {
     );
 
     let (chip_name, tree) = &bound.0[0];
-    assert_eq!(chip_name, "Basic Overclock");
+    assert_eq!(chip_name, "chip:Basic Overclock:Common");
     assert!(
         matches!(tree, Tree::When(Trigger::PerfectBumped, _)),
         "should be When(PerfectBumped, ...), got {tree:?}"
@@ -177,7 +180,7 @@ fn once_child_targeting_breaker_pushes_to_bound_effects() {
     );
 
     let (chip_name, tree) = &bound.0[0];
-    assert_eq!(chip_name, "Test Once");
+    assert_eq!(chip_name, "chip:Test Once:Common");
     assert!(
         matches!(tree, Tree::Once(Trigger::Bumped, _)),
         "should be Once(Bumped, ...), got {tree:?}"
@@ -214,11 +217,11 @@ fn when_child_targeting_breaker_stamps_to_bound_effects_with_shield() {
     let chip_entry = bound
         .0
         .iter()
-        .find(|(name, _)| name == "Parry")
-        .expect("BoundEffects should contain the chip's 'Parry' entry");
+        .find(|(name, _)| name == "chip:Parry:Common")
+        .expect("BoundEffects should contain the chip's 'chip:Parry:Common' entry");
 
     let (chip_name, tree) = chip_entry;
-    assert_eq!(chip_name, "Parry");
+    assert_eq!(chip_name, "chip:Parry:Common");
     assert!(
         matches!(tree, Tree::When(Trigger::PerfectBumped, _)),
         "should be When(PerfectBumped, ...), got {tree:?}"

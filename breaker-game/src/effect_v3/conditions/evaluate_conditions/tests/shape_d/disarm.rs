@@ -358,7 +358,7 @@ fn shape_d_disarm_does_not_reverse_owner_when_owner_is_not_participant() {
     SpeedBoostConfig {
         multiplier: OrderedFloat(1.5),
     }
-    .fire(owner, "chip_redirect#armed[0]", &mut world);
+    .fire(owner, "chip_redirect:armed", &mut world);
 
     // Precondition: owner has 1 entry, bolt has 1 entry
     assert_eq!(

@@ -10,7 +10,7 @@
 use bevy::prelude::NextState;
 
 use super::{
-    super::system::{DEBT_COLLECTOR_SENTINEL, DebtCashOut, DebtStack},
+    super::system::{DebtCashOut, DebtStack},
     helpers::{
         build_debt_collector_app, build_debt_collector_app_in_chip_selecting,
         build_debt_collector_app_no_config, collected_bonus_damage, install_debt_cash_out,
@@ -18,7 +18,7 @@ use super::{
         spawn_bolt_with_stack, write_bolt_impact_cell, write_bolt_lost, write_bump_performed,
     },
 };
-use crate::{breaker::messages::BumpGrade, prelude::*};
+use crate::{breaker::messages::BumpGrade, prelude::*, protocol::definition::ProtocolKind};
 
 // ── Behavior 36 — register wires on_bump gated on active + Playing ─────────-
 
@@ -104,7 +104,7 @@ fn register_wires_on_impact_gated_on_active_and_playing() {
     );
     assert_eq!(
         msg.source.as_ref(),
-        Some(&SourceId::from(DEBT_COLLECTOR_SENTINEL))
+        Some(&SourceId::protocol(ProtocolKind::DebtCollector).build())
     );
 }
 

@@ -60,7 +60,7 @@ fn register_wires_heal_on_nonlethal() {
     assert!(matches!(msgs[0].cap, HealCap::Max));
     assert_eq!(
         msgs[0].source.as_ref(),
-        Some(&SourceId::from("hazard:momentum"))
+        Some(&SourceId::hazard(HazardKind::Momentum).build())
     );
 }
 

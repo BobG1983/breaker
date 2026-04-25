@@ -46,7 +46,11 @@ impl Fireable for ShockwaveConfig {
             .0
             .mul_add(stacks_f32, self.base_range.0);
 
-        let chip = EffectSourceChip::from_source(source);
+        let chip = EffectSourceChip(if source.is_empty() {
+            None
+        } else {
+            Some(SourceId::from(source.to_owned()))
+        });
 
         // Spawn the shockwave entity
         world.spawn((

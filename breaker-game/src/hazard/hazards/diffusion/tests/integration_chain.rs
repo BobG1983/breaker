@@ -39,7 +39,6 @@ fn build_app(share_percent: f32) -> App {
     app.world_mut().insert_resource(DiffusionConfig {
         base_share_percent:      share_percent,
         share_per_level_percent: 0.0,
-        depth_increase_interval: 5,
     });
     app.world_mut()
         .resource_mut::<ActiveHazards>()

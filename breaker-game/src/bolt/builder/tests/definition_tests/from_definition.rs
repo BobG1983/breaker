@@ -551,7 +551,7 @@ fn from_definition_with_spawned_by_both_present() {
     let spawned_by = world
         .get::<SpawnedByEvolution>(entity)
         .expect("should have SpawnedByEvolution");
-    assert_eq!(spawned_by.0, "chain_bolt");
+    assert_eq!(spawned_by.0.0.as_ref(), "chip:chain_bolt:Evolution");
 }
 
 // ── Behavior 39: .definition() combined with .with_lifespan() ──

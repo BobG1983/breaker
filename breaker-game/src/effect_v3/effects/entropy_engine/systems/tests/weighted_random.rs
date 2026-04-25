@@ -4,6 +4,7 @@ use ordered_float::OrderedFloat;
 use super::{super::system::*, helpers::*};
 use crate::{
     breaker::messages::BumpPerformed,
+    chips::definition::Rarity,
     effect_v3::{
         components::EffectSourceChip,
         effects::{
@@ -13,11 +14,19 @@ use crate::{
         stacking::EffectStack,
         types::EffectType,
     },
+    prelude::{SourceId, SourceIdExt},
     shared::{
         rng::GameRng,
         test_utils::{TestAppBuilder, tick},
     },
 };
+
+/// Builder-format `SourceId` for the canonical "Entropy" engine chip used
+/// by these weighted-random tests. Centralized so the fixture demonstrates
+/// the canonical `chip:<template>:<rarity>` shape.
+fn entropy_source() -> SourceId {
+    SourceId::chip("Entropy").rarity(Rarity::Common).build()
+}
 
 // ── Behavior 10: Weighted pool with single entry (deterministic) ──
 
@@ -272,7 +281,7 @@ fn counter_entity_with_some_chip_propagates_name_to_spawned_effects() {
         0,
         3,
         vec![make_shockwave_effect()],
-        EffectSourceChip(Some("entropy_chip".to_owned())),
+        EffectSourceChip(Some(entropy_source())),
     );
     queue_bump(&mut app);
 
@@ -296,7 +305,7 @@ fn counter_entity_with_some_chip_propagates_name_to_spawned_effects() {
     // EffectSourceChip does not derive PartialEq — assert on .0 directly.
     assert_eq!(
         chips[0].0,
-        Some("entropy_chip".to_owned()),
+        Some(entropy_source()),
         "spawned shockwave should carry the counter entity's chip name, got {:?}",
         chips[0].0,
     );
@@ -309,7 +318,7 @@ fn counter_entity_with_some_chip_propagates_name_to_spawned_effects() {
         .expect("counter entity should still have its EffectSourceChip");
     assert_eq!(
         counter_chip.0,
-        Some("entropy_chip".to_owned()),
+        Some(entropy_source()),
         "counter entity's own EffectSourceChip must remain unchanged after tick, got {:?}",
         counter_chip.0,
     );

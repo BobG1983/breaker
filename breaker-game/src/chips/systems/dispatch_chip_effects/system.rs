@@ -44,8 +44,17 @@ pub(crate) fn dispatch_chip_effects(
             continue;
         };
 
-        // Clone what we need before mutable borrow of inventory
-        let chip_name = def.name.clone();
+        // Clone what we need before mutable borrow of inventory.
+        // For the chip key: use `template_name` when present (so all rarity
+        // tiers of the same template share the same segment in the source);
+        // evolution chips have `template_name = None` and fall back to their
+        // display name.
+        let template_or_name: &str = def.template_name.as_deref().unwrap_or(&def.name);
+        let chip_source = SourceId::chip(template_or_name)
+            .rarity(def.rarity)
+            .build()
+            .0
+            .into_owned();
         let effects = def.effects.clone();
 
         if let Some(ref mut inv) = inventory
@@ -62,7 +71,7 @@ pub(crate) fn dispatch_chip_effects(
                         // Direct dispatch: breaker exists during ChipSelect
                         let entities = resolve_target_entities(*target, &targets);
                         for entity in entities {
-                            dispatch_tree(entity, tree, &chip_name, &targets, &mut commands);
+                            dispatch_tree(entity, tree, &chip_source, &targets, &mut commands);
                         }
                     } else {
                         // Deferred dispatch: non-Breaker entities don't exist during ChipSelect.
@@ -74,7 +83,11 @@ pub(crate) fn dispatch_chip_effects(
                         // we stamp the tree directly since trigger bridges will handle
                         // the walking at event time.
                         for breaker_entity in targets.breakers.iter() {
-                            commands.stamp_effect(breaker_entity, chip_name.clone(), tree.clone());
+                            commands.stamp_effect(
+                                breaker_entity,
+                                chip_source.clone(),
+                                tree.clone(),
+                            );
                         }
                     }
                 }
@@ -88,12 +101,16 @@ pub(crate) fn dispatch_chip_effects(
 
 /// Dispatch a [`Tree`] to a single entity.
 ///
+/// `chip_source` is the canonical `SourceId` display string for this chip
+/// (e.g. `"chip:Pulse:Common"`), produced by `SourceId::chip(...).rarity(...).build()`
+/// in the caller — NOT the chip's user-facing display name.
+///
 /// - `Fire(effect)` children are fired immediately via `commands.fire_effect`.
 /// - All other tree variants are stamped onto the entity's [`BoundEffects`].
 fn dispatch_tree(
     entity: Entity,
     tree: &Tree,
-    chip_name: &str,
+    chip_source: &str,
     _targets: &DispatchTargets,
     commands: &mut Commands,
 ) {
@@ -107,10 +124,10 @@ fn dispatch_tree(
 
     match tree {
         Tree::Fire(effect) => {
-            commands.fire_effect(entity, effect.clone(), chip_name.to_owned());
+            commands.fire_effect(entity, effect.clone(), chip_source.to_owned());
         }
         other => {
-            commands.stamp_effect(entity, chip_name.to_owned(), other.clone());
+            commands.stamp_effect(entity, chip_source.to_owned(), other.clone());
         }
     }
 }

@@ -81,7 +81,7 @@ pub(crate) fn register(app: &mut App) {
 /// For every `Destroyed<Cell>` message, emit one `HealDealt<Cell>` per
 /// living cell within [`ADJACENCY_RADIUS_SQ`] of the victim, with
 /// `amount = heal_per_neighbour(stacks)`, `cap = HealCap::Starting`, and
-/// `source = Some("hazard:cascade")`. The unified heal pipeline's
+/// `source = Some(builder.hazard(Cascade).build())`. The unified heal pipeline's
 /// `apply_heal::<Cell>` applies and clamps.
 ///
 /// Gated in-body: this system runs every `FixedUpdate` tick. When
@@ -125,6 +125,7 @@ pub(crate) fn cascade_heal_on_death(
     if deaths.is_empty() {
         return;
     }
+    let source = SourceId::hazard(HazardKind::Cascade).build();
     for (entity, position, hp) in &cells {
         if hp.current <= 0.0 {
             continue;
@@ -142,7 +143,7 @@ pub(crate) fn cascade_heal_on_death(
                 target:        entity,
                 amount:        heal,
                 cap:           HealCap::Starting,
-                source:        Some(SourceId::from("hazard:cascade")),
+                source:        Some(source.clone()),
                 _marker:       PhantomData,
             });
         }

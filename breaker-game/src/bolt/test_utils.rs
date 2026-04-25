@@ -8,12 +8,21 @@ use ordered_float::OrderedFloat;
 
 use crate::{
     bolt::definition::BoltDefinition,
+    chips::definition::Rarity,
     effect_v3::{
         effects::{PiercingConfig, SizeBoostConfig, SpeedBoostConfig},
         stacking::EffectStack,
     },
     prelude::*,
 };
+
+/// Builder-format `SourceId` used as the canonical opaque tag across these
+/// test fixtures (`speed_stack`, `damage_stack`, `size_stack`, etc.). Wraps
+/// a `chip:Test:Common` key so test fixtures still demonstrate the canonical
+/// shape rather than a raw `SourceId::from("test")`.
+fn test_source() -> SourceId {
+    SourceId::chip("Test").rarity(Rarity::Common).build()
+}
 
 /// Standard bolt definition matching values previously provided by
 /// `BoltConfig::default()`, so existing position calculations remain valid.
@@ -42,7 +51,7 @@ pub(crate) fn speed_stack(values: &[f32]) -> EffectStack<SpeedBoostConfig> {
     let mut stack = EffectStack::default();
     for &v in values {
         stack.push(
-            "test".into(),
+            test_source(),
             SpeedBoostConfig {
                 multiplier: OrderedFloat(v),
             },
@@ -53,13 +62,13 @@ pub(crate) fn speed_stack(values: &[f32]) -> EffectStack<SpeedBoostConfig> {
 
 /// Builds a `DamageBoostStack` from a slice of f32 multipliers.
 ///
-/// Each multiplier is tagged with `SourceId::from("test")` in the persistent
-/// lane. `damage_stack(&[])` returns an empty stack with
-/// `aggregate_persistent() == 1.0`.
+/// Each multiplier is tagged with the builder-format `test_source()` (a
+/// `chip:Test:Common` key) in the persistent lane. `damage_stack(&[])`
+/// returns an empty stack with `aggregate_persistent() == 1.0`.
 pub(crate) fn damage_stack(values: &[f32]) -> DamageBoostStack {
     let mut stack = DamageBoostStack::default();
     for &v in values {
-        stack.add(SourceId::from("test"), v);
+        stack.add(test_source(), v);
     }
     stack
 }
@@ -79,7 +88,7 @@ pub(crate) fn size_stack(values: &[f32]) -> EffectStack<SizeBoostConfig> {
     let mut stack = EffectStack::default();
     for &v in values {
         stack.push(
-            "test".into(),
+            test_source(),
             SizeBoostConfig {
                 multiplier: OrderedFloat(v),
             },
@@ -92,7 +101,7 @@ pub(crate) fn size_stack(values: &[f32]) -> EffectStack<SizeBoostConfig> {
 pub(crate) fn piercing_stack(values: &[u32]) -> EffectStack<PiercingConfig> {
     let mut stack = EffectStack::default();
     for &v in values {
-        stack.push("test".into(), PiercingConfig { charges: v });
+        stack.push(test_source(), PiercingConfig { charges: v });
     }
     stack
 }

@@ -147,7 +147,7 @@ fn tether_register_schedules_emit_partner_in_post_apply() {
         .collect();
     let tethered: Vec<_> = drained
         .iter()
-        .filter(|m| m.source == Some(SourceId::from("hazard:tether")))
+        .filter(|m| m.source == Some(SourceId::hazard(HazardKind::Tether).build()))
         .collect();
     assert_eq!(
         tethered.len(),
@@ -155,6 +155,4 @@ fn tether_register_schedules_emit_partner_in_post_apply() {
         "register must wire tether_emit_partner in PostApplyDamage — got {} tether siblings",
         tethered.len()
     );
-    // Silence unused HazardKind import.
-    let _ = HazardKind::Tether;
 }

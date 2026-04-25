@@ -52,7 +52,7 @@ fn active_cells_target_stamps_tree_to_breaker() {
     );
 
     let (chip_name, tree) = &bound.0[0];
-    assert_eq!(chip_name, "Cell Fortify");
+    assert_eq!(chip_name, "chip:Cell Fortify:Common");
     assert!(
         matches!(tree, Tree::When(Trigger::Impacted(EntityKind::Bolt), _)),
         "Tree should be stamped directly, got {tree:?}"

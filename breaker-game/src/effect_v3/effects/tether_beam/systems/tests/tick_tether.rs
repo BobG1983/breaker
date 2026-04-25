@@ -2,10 +2,17 @@ use bevy::prelude::*;
 
 use super::helpers::*;
 use crate::{
+    chips::definition::Rarity,
     effect_v3::{components::EffectSourceChip, effects::tether_beam::components::*},
-    prelude::SourceId,
+    prelude::{SourceId, SourceIdExt},
     shared::test_utils::tick,
 };
+
+/// Builder-format `SourceId` for the canonical "`StormCoil`" chip used by
+/// these tether-beam tick tests.
+fn storm_coil_source() -> SourceId {
+    SourceId::chip("StormCoil").rarity(Rarity::Common).build()
+}
 
 // ── Group A — tick_tether_beam geometry ────────────────────────────────
 
@@ -663,7 +670,7 @@ fn tether_beam_propagates_source_chip_some_in_damage_dealt() {
         TetherBeamSource { bolt_a, bolt_b },
         TetherBeamDamage(12.5),
         TetherBeamWidth(10.0),
-        EffectSourceChip(Some("storm_coil".to_string())),
+        EffectSourceChip(Some(storm_coil_source())),
     ));
 
     tick(&mut app);
@@ -673,8 +680,8 @@ fn tether_beam_propagates_source_chip_some_in_damage_dealt() {
     for msg in &msgs {
         assert_eq!(
             msg.source,
-            Some(SourceId::from("storm_coil")),
-            "all messages must carry Some(\"storm_coil\") source_chip, got {:?}",
+            Some(storm_coil_source()),
+            "all messages must carry Some(storm coil source) source_chip, got {:?}",
             msg.source,
         );
     }

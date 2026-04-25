@@ -12,9 +12,33 @@ use super::{
     },
 };
 use crate::{
+    chips::definition::Rarity,
     effect_v3::{effects::SpeedBoostConfig, stacking::EffectStack},
     hazard::{definition::HazardKind, resources::ActiveHazards},
+    prelude::*,
 };
+
+fn hazard_haste() -> SourceId {
+    SourceId::hazard(HazardKind::Haste).build()
+}
+
+fn chip_overclock() -> SourceId {
+    SourceId::chip("Overclock").rarity(Rarity::Common).build()
+}
+
+fn chip_feedback_loop() -> SourceId {
+    SourceId::chip("FeedbackLoop")
+        .rarity(Rarity::Common)
+        .build()
+}
+
+fn protocol_velocity_bias() -> SourceId {
+    // `velocity_bias` isn't a real protocol; use a builder-produced chip with a
+    // distinct name for test isolation from real protocols.
+    SourceId::chip("VelocityBias")
+        .rarity(Rarity::Common)
+        .build()
+}
 
 // ── Behavior 11 — reconciles to a single Haste entry across three ticks ─
 
@@ -70,7 +94,7 @@ fn reconciles_three_ticks_leaves_single_haste_source_entry() {
         .unwrap();
     let entries = haste_entries(stack);
     assert_eq!(entries.len(), 1);
-    assert_eq!(entries[0].0, "hazard:haste");
+    assert_eq!(entries[0].0, hazard_haste());
 }
 
 // ── Behavior 12 — multiplier updates when stacks increase ───────────────
@@ -155,7 +179,7 @@ fn preserves_non_haste_entries_on_existing_stack() {
     // Seed with a chip-owned boost.
     let mut seed = EffectStack::<SpeedBoostConfig>::default();
     seed.push(
-        "chip:overclock".to_owned(),
+        chip_overclock(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.5),
         },
@@ -190,7 +214,7 @@ fn chip_entry_survives_second_tick_and_retains_multiplier() {
 
     let mut seed = EffectStack::<SpeedBoostConfig>::default();
     seed.push(
-        "chip:overclock".to_owned(),
+        chip_overclock(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.5),
         },
@@ -209,8 +233,8 @@ fn chip_entry_survives_second_tick_and_retains_multiplier() {
     let entries = haste_entries(stack);
     let chip = entries
         .iter()
-        .find(|(s, _)| s == "chip:overclock")
-        .expect("chip:overclock entry must survive reconciliation");
+        .find(|(s, _)| s == &chip_overclock())
+        .expect("chip:Overclock:Common entry must survive reconciliation");
     assert_eq!(chip.1.multiplier, OrderedFloat(1.5));
 }
 
@@ -231,19 +255,19 @@ fn three_non_haste_entries_survive_reconciliation() {
 
     let mut seed = EffectStack::<SpeedBoostConfig>::default();
     seed.push(
-        "chip:overclock".to_owned(),
+        chip_overclock(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.5),
         },
     );
     seed.push(
-        "chip:feedback_loop".to_owned(),
+        chip_feedback_loop(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.25),
         },
     );
     seed.push(
-        "protocol:velocity_bias".to_owned(),
+        protocol_velocity_bias(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.10),
         },
@@ -262,12 +286,12 @@ fn three_non_haste_entries_survive_reconciliation() {
 
     let entries = haste_entries(stack);
     for src in [
-        "chip:overclock",
-        "chip:feedback_loop",
-        "protocol:velocity_bias",
+        chip_overclock(),
+        chip_feedback_loop(),
+        protocol_velocity_bias(),
     ] {
-        let count = entries.iter().filter(|(s, _)| s == src).count();
-        assert_eq!(count, 1, "source {src} must appear exactly once");
+        let count = entries.iter().filter(|(s, _)| s == &src).count();
+        assert_eq!(count, 1, "source {src:?} must appear exactly once");
     }
 }
 
@@ -289,19 +313,19 @@ fn three_non_haste_entries_survive_second_tick_with_tolerance_check() {
 
     let mut seed = EffectStack::<SpeedBoostConfig>::default();
     seed.push(
-        "chip:overclock".to_owned(),
+        chip_overclock(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.5),
         },
     );
     seed.push(
-        "chip:feedback_loop".to_owned(),
+        chip_feedback_loop(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.25),
         },
     );
     seed.push(
-        "protocol:velocity_bias".to_owned(),
+        protocol_velocity_bias(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.10),
         },
@@ -320,7 +344,7 @@ fn three_non_haste_entries_survive_second_tick_with_tolerance_check() {
     let entries = haste_entries(stack);
     let haste_hits: Vec<_> = entries
         .iter()
-        .filter(|(s, _)| s == "hazard:haste")
+        .filter(|(s, _)| s == &hazard_haste())
         .collect();
     assert_eq!(haste_hits.len(), 1, "haste entry must not duplicate");
     let (_, cfg) = haste_hits[0];
@@ -347,7 +371,7 @@ fn replaces_stale_haste_source_entry_rather_than_duplicating() {
     // the current config would produce.
     let mut seed = EffectStack::<SpeedBoostConfig>::default();
     seed.push(
-        "hazard:haste".to_owned(),
+        hazard_haste(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(9.99),
         },
@@ -364,7 +388,7 @@ fn replaces_stale_haste_source_entry_rather_than_duplicating() {
     // would be 9.99 * 1.20 ≈ 11.988 — the tripwire value.
     assert_eq!(stack.len(), 1);
     let entries = haste_entries(stack);
-    assert_eq!(entries[0].0, "hazard:haste");
+    assert_eq!(entries[0].0, hazard_haste());
     assert!((entries[0].1.multiplier.into_inner() - 1.20_f32).abs() < 1e-6);
     assert!((stack.aggregate() - 1.20).abs() < 1e-6);
 }
@@ -387,19 +411,19 @@ fn two_stale_haste_entries_plus_chip_reconciles_to_one_haste_plus_chip() {
 
     let mut seed = EffectStack::<SpeedBoostConfig>::default();
     seed.push(
-        "hazard:haste".to_owned(),
+        hazard_haste(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(5.0),
         },
     );
     seed.push(
-        "hazard:haste".to_owned(),
+        hazard_haste(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(3.0),
         },
     );
     seed.push(
-        "chip:overclock".to_owned(),
+        chip_overclock(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.5),
         },
@@ -416,10 +440,10 @@ fn two_stale_haste_entries_plus_chip_reconciles_to_one_haste_plus_chip() {
     assert!((stack.aggregate() - 1.80).abs() < 1e-5);
 
     let entries = haste_entries(stack);
-    let haste_count = entries.iter().filter(|(s, _)| s == "hazard:haste").count();
+    let haste_count = entries.iter().filter(|(s, _)| s == &hazard_haste()).count();
     let chip_count = entries
         .iter()
-        .filter(|(s, _)| s == "chip:overclock")
+        .filter(|(s, _)| s == &chip_overclock())
         .count();
     assert_eq!(haste_count, 1, "exactly one haste entry must remain");
     assert_eq!(chip_count, 1, "chip entry must survive");

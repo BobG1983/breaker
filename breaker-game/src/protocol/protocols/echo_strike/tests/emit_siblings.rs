@@ -79,7 +79,7 @@ fn echo_strike_inactive_emits_nothing() {
     assert!(
         !drained
             .iter()
-            .any(|m| m.source == Some(SourceId::from("protocol:echo_strike")))
+            .any(|m| { m.source == Some(SourceId::protocol(ProtocolKind::EchoStrike).build(),) })
     );
 }
 
@@ -125,7 +125,7 @@ fn echo_strike_emits_siblings_for_3_echo_network() {
         .collect();
     let echoes: Vec<&DamageDealt<Cell>> = drained
         .iter()
-        .filter(|m| m.source == Some(SourceId::from("protocol:echo_strike")))
+        .filter(|m| m.source == Some(SourceId::protocol(ProtocolKind::EchoStrike).build()))
         .collect();
     assert_eq!(echoes.len(), 3);
 
@@ -172,7 +172,7 @@ fn echo_strike_empty_network_emits_nothing() {
     assert!(
         !drained
             .iter()
-            .any(|m| m.source == Some(SourceId::from("protocol:echo_strike")))
+            .any(|m| { m.source == Some(SourceId::protocol(ProtocolKind::EchoStrike).build(),) })
     );
 }
 
@@ -207,7 +207,7 @@ fn echo_strike_does_not_emit_when_bolt_lacks_echo_primed() {
     assert!(
         !drained
             .iter()
-            .any(|m| m.source == Some(SourceId::from("protocol:echo_strike"))),
+            .any(|m| { m.source == Some(SourceId::protocol(ProtocolKind::EchoStrike).build(),) }),
         "no echoes without EchoPrimed gate"
     );
 }
@@ -265,7 +265,7 @@ fn echo_strike_skips_when_amount_zero() {
     assert!(
         !drained
             .iter()
-            .any(|m| m.source == Some(SourceId::from("protocol:echo_strike")))
+            .any(|m| { m.source == Some(SourceId::protocol(ProtocolKind::EchoStrike).build(),) })
     );
 }
 
@@ -286,7 +286,7 @@ fn echo_strike_loop_protection_skips_on_own_source() {
             attributed_to: Some(bolt),
             target:        c_primary,
             amount:        50.0,
-            source:        Some(SourceId::from("protocol:echo_strike")),
+            source:        Some(SourceId::protocol(ProtocolKind::EchoStrike).build()),
             _marker:       PhantomData,
         });
 
@@ -300,9 +300,48 @@ fn echo_strike_loop_protection_skips_on_own_source() {
     assert_eq!(
         drained
             .iter()
-            .filter(|m| m.source == Some(SourceId::from("protocol:echo_strike")))
+            .filter(|m| { m.source == Some(SourceId::protocol(ProtocolKind::EchoStrike).build(),) })
             .count(),
         1,
         "only the original echo-sourced message; no re-emission"
+    );
+}
+
+// ── B29: sibling damage source equals builder-produced protocol:echo_strike ──
+
+#[test]
+fn echo_strike_sibling_damage_source_equals_builder() {
+    let mut app = build_app(true);
+    let c_newest = spawn_cell_empty(&mut app);
+    let bolt = spawn_bolt_primed_with_network(&mut app, 100.0, vec![c_newest]);
+    let c_primary = spawn_cell_empty(&mut app);
+
+    // Write the primary damage event that triggers echo emission.
+    app.world_mut()
+        .resource_mut::<Messages<DamageDealt<Cell>>>()
+        .write(DamageDealt::<Cell> {
+            dealer:        Some(bolt),
+            attributed_to: None,
+            target:        c_primary,
+            amount:        10.0,
+            source:        None,
+            _marker:       PhantomData,
+        });
+
+    tick(&mut app);
+
+    let drained: Vec<DamageDealt<Cell>> = app
+        .world_mut()
+        .resource_mut::<Messages<DamageDealt<Cell>>>()
+        .drain()
+        .collect();
+    let expected = SourceId::protocol(ProtocolKind::EchoStrike).build();
+    let echoes = drained
+        .iter()
+        .filter(|m| m.source.as_ref() == Some(&expected))
+        .count();
+    assert!(
+        echoes >= 1,
+        "at least one echo sibling must use builder-produced source"
     );
 }

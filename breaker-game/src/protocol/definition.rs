@@ -59,6 +59,29 @@ impl ProtocolKind {
         Self::Fission,
         Self::TierRegression,
     ];
+
+    /// Returns the lowercase, underscore-separated slug used in `SourceId`
+    /// construction (`"protocol:<slug>"`).
+    #[must_use]
+    pub const fn kind_slug(&self) -> &'static str {
+        match self {
+            Self::Deadline => "deadline",
+            Self::Ricochet => "ricochet",
+            Self::Anchor => "anchor",
+            Self::Kickstart => "kickstart",
+            Self::DebtCollector => "debt_collector",
+            Self::IronCurtain => "iron_curtain",
+            Self::EchoStrike => "echo_strike",
+            Self::Siphon => "siphon",
+            Self::Greed => "greed",
+            Self::RecklessDash => "reckless_dash",
+            Self::Burnout => "burnout",
+            Self::Conductor => "conductor",
+            Self::Afterimage => "afterimage",
+            Self::Fission => "fission",
+            Self::TierRegression => "tier_regression",
+        }
+    }
 }
 
 /// Per-protocol tuning data carried by [`ProtocolDefinition`].
@@ -500,6 +523,102 @@ mod tests {
             Some(1),
             "effects() must return the stored vec, not always-empty"
         );
+    }
+
+    // ── A2.1–A2.16: ProtocolKind::kind_slug() pins per variant ───────────
+
+    #[test]
+    fn kind_slug_deadline_is_deadline() {
+        assert_eq!(ProtocolKind::Deadline.kind_slug(), "deadline");
+    }
+
+    #[test]
+    fn kind_slug_ricochet_is_ricochet() {
+        assert_eq!(ProtocolKind::Ricochet.kind_slug(), "ricochet");
+    }
+
+    #[test]
+    fn kind_slug_anchor_is_anchor() {
+        assert_eq!(ProtocolKind::Anchor.kind_slug(), "anchor");
+    }
+
+    #[test]
+    fn kind_slug_kickstart_is_kickstart() {
+        assert_eq!(ProtocolKind::Kickstart.kind_slug(), "kickstart");
+    }
+
+    #[test]
+    fn kind_slug_debt_collector_is_debt_collector() {
+        assert_eq!(ProtocolKind::DebtCollector.kind_slug(), "debt_collector");
+    }
+
+    #[test]
+    fn kind_slug_iron_curtain_is_iron_curtain() {
+        assert_eq!(ProtocolKind::IronCurtain.kind_slug(), "iron_curtain");
+    }
+
+    #[test]
+    fn kind_slug_echo_strike_is_echo_strike() {
+        assert_eq!(ProtocolKind::EchoStrike.kind_slug(), "echo_strike");
+    }
+
+    #[test]
+    fn kind_slug_siphon_is_siphon() {
+        assert_eq!(ProtocolKind::Siphon.kind_slug(), "siphon");
+    }
+
+    #[test]
+    fn kind_slug_greed_is_greed() {
+        assert_eq!(ProtocolKind::Greed.kind_slug(), "greed");
+    }
+
+    #[test]
+    fn kind_slug_reckless_dash_is_reckless_dash() {
+        assert_eq!(ProtocolKind::RecklessDash.kind_slug(), "reckless_dash");
+    }
+
+    #[test]
+    fn kind_slug_burnout_is_burnout() {
+        assert_eq!(ProtocolKind::Burnout.kind_slug(), "burnout");
+    }
+
+    #[test]
+    fn kind_slug_conductor_is_conductor() {
+        assert_eq!(ProtocolKind::Conductor.kind_slug(), "conductor");
+    }
+
+    #[test]
+    fn kind_slug_afterimage_is_afterimage() {
+        assert_eq!(ProtocolKind::Afterimage.kind_slug(), "afterimage");
+    }
+
+    #[test]
+    fn kind_slug_fission_is_fission() {
+        assert_eq!(ProtocolKind::Fission.kind_slug(), "fission");
+    }
+
+    #[test]
+    fn kind_slug_tier_regression_is_tier_regression() {
+        assert_eq!(ProtocolKind::TierRegression.kind_slug(), "tier_regression");
+    }
+
+    #[test]
+    fn kind_slug_exhaustiveness_is_unique_and_nonempty() {
+        let slugs: HashSet<&'static str> = ProtocolKind::ALL
+            .iter()
+            .map(ProtocolKind::kind_slug)
+            .collect();
+        assert_eq!(
+            slugs.len(),
+            ProtocolKind::ALL.len(),
+            "every ProtocolKind variant must have a unique slug"
+        );
+        for kind in ProtocolKind::ALL {
+            assert!(
+                !kind.kind_slug().is_empty(),
+                "kind_slug for {kind:?} must be non-empty"
+            );
+        }
     }
 
     // ── Behavior 4: ProtocolDefinition::kind() delegates to tuning.kind() ─

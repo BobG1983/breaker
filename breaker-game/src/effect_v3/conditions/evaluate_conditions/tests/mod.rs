@@ -1,3 +1,4 @@
+mod armed_key;
 mod during_basic;
 mod helpers;
 mod shape_c;

@@ -6,15 +6,24 @@ use rantzsoft_stateflow::CleanupOnExit;
 
 use super::config_impl::*;
 use crate::{
+    chips::definition::Rarity,
     effect_v3::{
         components::EffectSourceChip,
         effects::shield::components::*,
         traits::{Fireable, Reversible},
     },
+    prelude::{SourceId, SourceIdExt},
     shared::{BOLT_LAYER, GameDrawLayer, PlayfieldConfig, WALL_LAYER},
     state::types::NodeState,
     walls::components::Wall,
 };
+
+/// Builder-format `SourceId` for the canonical "Aegis" shield chip used
+/// across these tests. Centralized here so test fixtures demonstrate the
+/// canonical key shape instead of arbitrary string literals.
+fn aegis_source() -> SourceId {
+    SourceId::chip("Aegis").rarity(Rarity::Common).build()
+}
 
 fn make_config() -> ShieldConfig {
     ShieldConfig {
@@ -39,7 +48,7 @@ fn shield_fire_resets_existing_shield_duration() {
         ShieldReflectionCost(0.5),
     ));
 
-    make_config().fire(owner, "aegis", &mut world);
+    make_config().fire(owner, aegis_source().0.as_ref(), &mut world);
     world.flush();
 
     // There should still be exactly 1 shield.
@@ -68,7 +77,7 @@ fn shield_fire_resets_nearly_expired_shield() {
         ShieldReflectionCost(0.5),
     ));
 
-    make_config().fire(owner, "aegis", &mut world);
+    make_config().fire(owner, aegis_source().0.as_ref(), &mut world);
     world.flush();
 
     let shields: Vec<&ShieldDuration> = world
@@ -89,7 +98,7 @@ fn shield_fire_spawns_new_when_none_exists() {
     world.insert_resource(PlayfieldConfig::default());
     let owner = world.spawn_empty().id();
 
-    make_config().fire(owner, "aegis", &mut world);
+    make_config().fire(owner, aegis_source().0.as_ref(), &mut world);
     world.flush();
 
     let shields: Vec<(&ShieldOwner, &ShieldDuration, &ShieldReflectionCost)> = world
@@ -126,7 +135,7 @@ fn shield_fire_does_not_reset_another_owners_shield() {
         ShieldReflectionCost(0.5),
     ));
 
-    make_config().fire(owner_a, "aegis", &mut world);
+    make_config().fire(owner_a, aegis_source().0.as_ref(), &mut world);
     world.flush();
 
     let shields: Vec<(&ShieldOwner, &ShieldDuration)> = world
@@ -166,7 +175,7 @@ fn shield_fire_spawns_wall_marker_and_bundle() {
     world.insert_resource(PlayfieldConfig::default());
     let owner = world.spawn_empty().id();
 
-    make_config().fire(owner, "aegis", &mut world);
+    make_config().fire(owner, aegis_source().0.as_ref(), &mut world);
     world.flush();
 
     let entity = world
@@ -208,7 +217,7 @@ fn shield_fire_places_markers_on_single_entity() {
     world.insert_resource(PlayfieldConfig::default());
     let owner = world.spawn_empty().id();
 
-    make_config().fire(owner, "aegis", &mut world);
+    make_config().fire(owner, aegis_source().0.as_ref(), &mut world);
     world.flush();
 
     let count: usize = world
@@ -229,7 +238,7 @@ fn shield_fire_carries_shield_specific_markers() {
     world.insert_resource(PlayfieldConfig::default());
     let owner = world.spawn_empty().id();
 
-    make_config().fire(owner, "aegis", &mut world);
+    make_config().fire(owner, aegis_source().0.as_ref(), &mut world);
     world.flush();
 
     let entity = world
@@ -263,7 +272,7 @@ fn shield_fire_carries_shield_specific_markers() {
     let chip = world
         .get::<EffectSourceChip>(entity)
         .expect("must have EffectSourceChip");
-    assert_eq!(chip.0, Some("aegis".to_owned()));
+    assert_eq!(chip.0, Some(aegis_source()));
 
     let cleanup_count: usize = world
         .query_filtered::<Entity, With<CleanupOnExit<NodeState>>>()
@@ -307,7 +316,7 @@ fn shield_fire_positions_entity_at_default_floor() {
     world.insert_resource(PlayfieldConfig::default());
     let owner = world.spawn_empty().id();
 
-    make_config().fire(owner, "aegis", &mut world);
+    make_config().fire(owner, aegis_source().0.as_ref(), &mut world);
     world.flush();
 
     let entity = world
@@ -364,7 +373,7 @@ fn shield_fire_positions_entity_at_custom_floor() {
     });
     let owner = world.spawn_empty().id();
 
-    make_config().fire(owner, "aegis", &mut world);
+    make_config().fire(owner, aegis_source().0.as_ref(), &mut world);
     world.flush();
 
     let entity = world
@@ -413,7 +422,7 @@ fn shield_fire_twice_resets_in_place_single_entity() {
         duration:        OrderedFloat(1.0),
         reflection_cost: OrderedFloat(0.5),
     }
-    .fire(owner, "aegis", &mut world);
+    .fire(owner, aegis_source().0.as_ref(), &mut world);
     world.flush();
 
     // Capture the entity after the first fire().
@@ -434,7 +443,7 @@ fn shield_fire_twice_resets_in_place_single_entity() {
         duration:        OrderedFloat(5.0),
         reflection_cost: OrderedFloat(0.5),
     }
-    .fire(owner, "aegis", &mut world);
+    .fire(owner, aegis_source().0.as_ref(), &mut world);
     world.flush();
 
     let shields: Vec<(Entity, &ShieldDuration)> = world
@@ -466,7 +475,7 @@ fn shield_fire_resets_zero_duration_shield() {
     world.insert_resource(PlayfieldConfig::default());
     let owner = world.spawn_empty().id();
 
-    make_config().fire(owner, "aegis", &mut world);
+    make_config().fire(owner, aegis_source().0.as_ref(), &mut world);
     world.flush();
 
     // Overwrite duration to exactly 0.0 to drive the edge case.
@@ -483,7 +492,7 @@ fn shield_fire_resets_zero_duration_shield() {
     world.get_mut::<ShieldDuration>(existing).unwrap().0 = 0.0;
 
     // Second fire() — should still reset in place.
-    make_config().fire(owner, "aegis", &mut world);
+    make_config().fire(owner, aegis_source().0.as_ref(), &mut world);
     world.flush();
 
     let shields: Vec<(Entity, &ShieldDuration)> = world
@@ -517,7 +526,7 @@ fn shield_multi_owner_produces_two_entities_both_with_wall_bundle() {
         duration:        OrderedFloat(2.0),
         reflection_cost: OrderedFloat(0.5),
     }
-    .fire(owner_b, "aegis", &mut world);
+    .fire(owner_b, aegis_source().0.as_ref(), &mut world);
     world.flush();
 
     // A fires.
@@ -525,7 +534,7 @@ fn shield_multi_owner_produces_two_entities_both_with_wall_bundle() {
         duration:        OrderedFloat(5.0),
         reflection_cost: OrderedFloat(0.5),
     }
-    .fire(owner_a, "aegis", &mut world);
+    .fire(owner_a, aegis_source().0.as_ref(), &mut world);
     world.flush();
 
     let shields: Vec<(Entity, &ShieldOwner, &ShieldDuration)> = world
@@ -580,7 +589,7 @@ fn shield_reverse_despawns_all_owned_walls() {
     world.insert_resource(PlayfieldConfig::default());
     let owner = world.spawn_empty().id();
 
-    make_config().fire(owner, "aegis", &mut world);
+    make_config().fire(owner, aegis_source().0.as_ref(), &mut world);
     world.flush();
 
     // Pre-condition: the spawned shield must be a real wall entity (part of
@@ -615,9 +624,9 @@ fn shield_reverse_does_not_affect_other_owner() {
     let owner_a = world.spawn_empty().id();
     let owner_b = world.spawn_empty().id();
 
-    make_config().fire(owner_a, "aegis", &mut world);
+    make_config().fire(owner_a, aegis_source().0.as_ref(), &mut world);
     world.flush();
-    make_config().fire(owner_b, "aegis", &mut world);
+    make_config().fire(owner_b, aegis_source().0.as_ref(), &mut world);
     world.flush();
 
     make_config().reverse(owner_a, "", &mut world);
@@ -659,7 +668,7 @@ fn reverse_all_by_source_despawns_shield_walls_via_default_delegation() {
     world.insert_resource(PlayfieldConfig::default());
     let owner = world.spawn_empty().id();
 
-    make_config().fire(owner, "aegis", &mut world);
+    make_config().fire(owner, aegis_source().0.as_ref(), &mut world);
     world.flush();
 
     let count_before = world
@@ -668,7 +677,7 @@ fn reverse_all_by_source_despawns_shield_walls_via_default_delegation() {
         .count();
     assert_eq!(count_before, 1, "should have 1 shield wall before reverse");
 
-    make_config().reverse_all_by_source(owner, "aegis", &mut world);
+    make_config().reverse_all_by_source(owner, aegis_source().0.as_ref(), &mut world);
 
     let count_after = world
         .query_filtered::<Entity, With<ShieldWall>>()
@@ -680,5 +689,5 @@ fn reverse_all_by_source_despawns_shield_walls_via_default_delegation() {
     );
 
     // Calling twice does not panic.
-    make_config().reverse_all_by_source(owner, "aegis", &mut world);
+    make_config().reverse_all_by_source(owner, aegis_source().0.as_ref(), &mut world);
 }

@@ -4,6 +4,7 @@ use bevy::prelude::*;
 
 use super::super::system::*;
 use crate::{
+    chips::definition::Rarity,
     effect_v3::{components::EffectSourceChip, effects::shockwave::components::*},
     prelude::*,
 };
@@ -338,6 +339,12 @@ fn two_independent_shockwaves_have_independent_damaged_sets() {
 fn shockwave_propagates_some_source_chip_in_damage_dealt() {
     let mut app = damage_test_app();
 
+    // B39: source MUST be a builder-produced chip-namespaced SourceId.
+    // Pre-W5 production wraps a free-text "storm_chip" string here; post-W5
+    // every chip-sourced shockwave MUST carry a `chip:<template>:<rarity>`
+    // shape identifier built via `SourceIdExt` builder entry points.
+    let chip_source = SourceId::chip("Pulse").rarity(Rarity::Common).build();
+
     let _cell = spawn_cell(&mut app, Vec2::new(20.0, 0.0));
     app.world_mut().spawn((
         Position2D(Vec2::ZERO),
@@ -345,7 +352,7 @@ fn shockwave_propagates_some_source_chip_in_damage_dealt() {
         ShockwaveBaseDamage(10.0),
         ShockwaveDamageMultiplier(1.0),
         ShockwaveDamaged(HashSet::new()),
-        EffectSourceChip(Some("storm_chip".to_string())),
+        EffectSourceChip(Some(chip_source.clone())),
     ));
 
     tick(&mut app);
@@ -356,8 +363,8 @@ fn shockwave_propagates_some_source_chip_in_damage_dealt() {
     assert_eq!(msgs.0.len(), 1, "expected 1 DamageDealt<Cell> message");
     assert_eq!(
         msgs.0[0].source,
-        Some(SourceId::from("storm_chip")),
-        "DamageDealt should carry source_chip from EffectSourceChip, got {:?}",
+        Some(chip_source),
+        "DamageDealt must carry the builder-produced chip:Pulse:Common source, got {:?}",
         msgs.0[0].source,
     );
 }

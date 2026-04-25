@@ -6,10 +6,17 @@ use rantzsoft_spatial2d::components::Position2D;
 use super::helpers::*;
 use crate::{
     cells::components::Cell,
+    chips::definition::Rarity,
     effect_v3::{components::EffectSourceChip, effects::pulse::components::*},
     prelude::*,
     shared::test_utils::{MessageCollector, tick},
 };
+
+/// Builder-format `SourceId` for the canonical "Storm" chip used by these
+/// pulse tick tests.
+fn storm_source() -> SourceId {
+    SourceId::chip("Storm").rarity(Rarity::Common).build()
+}
 
 // ── A. apply_pulse_damage — damage emission ────────────────────────────
 
@@ -293,7 +300,7 @@ fn pulse_ring_propagates_some_source_chip_in_damage_dealt() {
         PulseRingBaseDamage(10.0),
         PulseRingDamageMultiplier(1.0),
         PulseRingDamaged(HashSet::new()),
-        EffectSourceChip(Some("storm_chip".to_string())),
+        EffectSourceChip(Some(storm_source())),
     ));
 
     tick(&mut app);
@@ -304,7 +311,7 @@ fn pulse_ring_propagates_some_source_chip_in_damage_dealt() {
     assert_eq!(msgs.0.len(), 1, "expected 1 DamageDealt<Cell> message");
     assert_eq!(
         msgs.0[0].source,
-        Some(SourceId::from("storm_chip")),
+        Some(storm_source()),
         "DamageDealt should carry source_chip from EffectSourceChip, got {:?}",
         msgs.0[0].source,
     );

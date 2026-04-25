@@ -20,7 +20,7 @@ use crate::{
     breaker::messages::{BumpGrade, BumpPerformed},
     prelude::*,
     protocol::{
-        definition::{ProtocolDefinition, ProtocolTuning},
+        definition::{ProtocolDefinition, ProtocolKind, ProtocolTuning},
         resources::ActiveProtocols,
     },
 };
@@ -200,15 +200,16 @@ pub(super) fn write_bolt_impact_cell(app: &mut App, bolt: Entity, cell: Entity) 
 
 // ── Assertion helpers ───────────────────────────────────────────────────────
 
-/// Returns every captured `DamageDealt<Cell>` whose `source` matches
-/// the Debt Collector sentinel string. Isolates Debt Collector's bonus
-/// emissions from any other `DamageDealt<Cell>` messages.
+/// Returns every captured `DamageDealt<Cell>` whose `source` matches the
+/// builder-produced `protocol:debt_collector` source. Isolates Debt
+/// Collector's bonus emissions from any other `DamageDealt<Cell>` messages.
 pub(super) fn collected_bonus_damage(app: &App) -> Vec<DamageDealt<Cell>> {
+    let dc_source = SourceId::protocol(ProtocolKind::DebtCollector).build();
     app.world()
         .resource::<MessageCollector<DamageDealt<Cell>>>()
         .0
         .iter()
-        .filter(|msg| msg.source == Some(SourceId::from("protocol:debt_collector")))
+        .filter(|msg| msg.source.as_ref() == Some(&dc_source))
         .cloned()
         .collect()
 }

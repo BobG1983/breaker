@@ -4,4 +4,4 @@ pub(crate) mod system;
 #[cfg(test)]
 mod tests;
 
-pub use system::{DuringActive, evaluate_condition, evaluate_conditions};
+pub(crate) use system::{DuringActive, evaluate_conditions};

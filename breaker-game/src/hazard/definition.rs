@@ -60,6 +60,30 @@ impl HazardKind {
         Self::Momentum,
         Self::Sympathy,
     ];
+
+    /// Returns the lowercase, underscore-separated slug used in `SourceId`
+    /// construction (`"hazard:<slug>"`).
+    #[must_use]
+    pub const fn kind_slug(&self) -> &'static str {
+        match self {
+            Self::Decay => "decay",
+            Self::Drift => "drift",
+            Self::Haste => "haste",
+            Self::EchoCells => "echo_cells",
+            Self::Erosion => "erosion",
+            Self::Cascade => "cascade",
+            Self::Fracture => "fracture",
+            Self::Renewal => "renewal",
+            Self::Volatility => "volatility",
+            Self::GravitySurge => "gravity_surge",
+            Self::Overcharge => "overcharge",
+            Self::Resonance => "resonance",
+            Self::Diffusion => "diffusion",
+            Self::Tether => "tether",
+            Self::Momentum => "momentum",
+            Self::Sympathy => "sympathy",
+        }
+    }
 }
 
 /// Per-hazard tuning data carried by [`HazardDefinition`].
@@ -416,6 +440,105 @@ mod tests {
                 tuning.kind(),
                 expected,
                 "HazardTuning::{tuning:?}.kind() should be {expected:?}"
+            );
+        }
+    }
+
+    // ── A3.1–A3.17: HazardKind::kind_slug() pins per variant ─────────────
+
+    #[test]
+    fn kind_slug_decay_is_decay() {
+        assert_eq!(HazardKind::Decay.kind_slug(), "decay");
+    }
+
+    #[test]
+    fn kind_slug_drift_is_drift() {
+        assert_eq!(HazardKind::Drift.kind_slug(), "drift");
+    }
+
+    #[test]
+    fn kind_slug_haste_is_haste() {
+        assert_eq!(HazardKind::Haste.kind_slug(), "haste");
+    }
+
+    #[test]
+    fn kind_slug_echo_cells_is_echo_cells() {
+        assert_eq!(HazardKind::EchoCells.kind_slug(), "echo_cells");
+    }
+
+    #[test]
+    fn kind_slug_erosion_is_erosion() {
+        assert_eq!(HazardKind::Erosion.kind_slug(), "erosion");
+    }
+
+    #[test]
+    fn kind_slug_cascade_is_cascade() {
+        assert_eq!(HazardKind::Cascade.kind_slug(), "cascade");
+    }
+
+    #[test]
+    fn kind_slug_fracture_is_fracture() {
+        assert_eq!(HazardKind::Fracture.kind_slug(), "fracture");
+    }
+
+    #[test]
+    fn kind_slug_renewal_is_renewal() {
+        assert_eq!(HazardKind::Renewal.kind_slug(), "renewal");
+    }
+
+    #[test]
+    fn kind_slug_volatility_is_volatility() {
+        assert_eq!(HazardKind::Volatility.kind_slug(), "volatility");
+    }
+
+    #[test]
+    fn kind_slug_gravity_surge_is_gravity_surge() {
+        assert_eq!(HazardKind::GravitySurge.kind_slug(), "gravity_surge");
+    }
+
+    #[test]
+    fn kind_slug_overcharge_is_overcharge() {
+        assert_eq!(HazardKind::Overcharge.kind_slug(), "overcharge");
+    }
+
+    #[test]
+    fn kind_slug_resonance_is_resonance() {
+        assert_eq!(HazardKind::Resonance.kind_slug(), "resonance");
+    }
+
+    #[test]
+    fn kind_slug_diffusion_is_diffusion() {
+        assert_eq!(HazardKind::Diffusion.kind_slug(), "diffusion");
+    }
+
+    #[test]
+    fn kind_slug_tether_is_tether() {
+        assert_eq!(HazardKind::Tether.kind_slug(), "tether");
+    }
+
+    #[test]
+    fn kind_slug_momentum_is_momentum() {
+        assert_eq!(HazardKind::Momentum.kind_slug(), "momentum");
+    }
+
+    #[test]
+    fn kind_slug_sympathy_is_sympathy() {
+        assert_eq!(HazardKind::Sympathy.kind_slug(), "sympathy");
+    }
+
+    #[test]
+    fn kind_slug_exhaustiveness_is_unique_and_nonempty() {
+        let slugs: HashSet<&'static str> =
+            HazardKind::ALL.iter().map(HazardKind::kind_slug).collect();
+        assert_eq!(
+            slugs.len(),
+            HazardKind::ALL.len(),
+            "every HazardKind variant must have a unique slug"
+        );
+        for kind in HazardKind::ALL {
+            assert!(
+                !kind.kind_slug().is_empty(),
+                "kind_slug for {kind:?} must be non-empty"
             );
         }
     }

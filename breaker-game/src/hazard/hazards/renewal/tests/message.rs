@@ -16,7 +16,7 @@ use super::{
         install_renewal_config, spawn_cell, spawn_cell_with_max, test_app_playing, tick_with_dt,
     },
 };
-use crate::{cells::components::Cell, prelude::*};
+use crate::{cells::components::Cell, hazard::definition::HazardKind, prelude::*};
 
 // ── Behavior 20 — Every emitted message has cap == HealCap::Starting ─────
 
@@ -83,10 +83,11 @@ fn every_message_source_is_hazard_renewal() {
         .resource::<MessageCollector<HealDealt<Cell>>>()
         .0;
     assert_eq!(all.len(), 2);
+    let expected = SourceId::hazard(HazardKind::Renewal).build();
     assert!(
-        all.iter()
-            .all(|m| m.source == Some(SourceId::from("hazard:renewal"))),
-        "every emitted message must have source == Some(\"hazard:renewal\")"
+        all.iter().all(|m| m.source.as_ref() == Some(&expected)),
+        "every emitted message must have source == \
+         Some(SourceId::hazard(Renewal).build())"
     );
 }
 
@@ -121,10 +122,10 @@ fn source_remains_hazard_renewal_after_second_expiry_cycle() {
         "second expiry cycle must emit a HealDealt<Cell> message, got {}",
         all.len()
     );
+    let expected = SourceId::hazard(HazardKind::Renewal).build();
     assert!(
-        all.iter()
-            .all(|m| m.source == Some(SourceId::from("hazard:renewal"))),
-        "every emitted message must have source hazard:renewal"
+        all.iter().all(|m| m.source.as_ref() == Some(&expected)),
+        "every emitted message must have the builder-produced hazard:renewal source"
     );
 }
 
@@ -201,4 +202,25 @@ fn amount_ignores_max_even_when_max_below_starting() {
         "amount must be 5.0 (starting - current), not 2.0 (max - current); got {}",
         msgs[0].amount
     );
+}
+
+// ── B36b: source matches builder-produced hazard:renewal ──
+
+#[test]
+fn renewal_heal_source_equals_builder() {
+    let mut app = test_app_playing();
+    app.add_systems(FixedUpdate, renewal_tick);
+    install_renewal_config(&mut app, canonical_config());
+    add_renewal_stacks(&mut app, 1);
+    let cell = spawn_cell(&mut app, 10.0, 100.0);
+    attach_timer(&mut app, cell, 0.05);
+
+    tick_with_dt(&mut app, Duration::from_secs_f32(0.1));
+
+    let heals = heals_for_cell(&app, cell);
+    assert!(!heals.is_empty());
+    let expected = SourceId::hazard(HazardKind::Renewal).build();
+    for h in &heals {
+        assert_eq!(h.source.as_ref(), Some(&expected));
+    }
 }

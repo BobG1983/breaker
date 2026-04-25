@@ -20,10 +20,12 @@ use crate::{
     prelude::*,
 };
 
-/// Source tag for Overcharge's entry on the Bolt's
+/// Builder-produced source key for Overcharge's entry on the Bolt's
 /// [`EffectStack<SpeedBoostConfig>`]. Dedicated so Overcharge can swap
 /// its entry on kill/reset without disturbing other speed contributions.
-const OVERCHARGE_SOURCE: &str = "hazard:overcharge";
+fn overcharge_source() -> SourceId {
+    SourceId::hazard(HazardKind::Overcharge).build()
+}
 
 /// Per-run tuning extracted from [`HazardTuning::Overcharge`] at activation.
 #[derive(Resource, Debug, Clone, Copy)]
@@ -211,7 +213,7 @@ type BoltSpeedQuery<'w, 's> = Query<
 >;
 
 /// Reconciles each Bolt's [`EffectStack<SpeedBoostConfig>`] so that
-/// exactly one entry with source [`OVERCHARGE_SOURCE`] carries
+/// exactly one entry with source `hazard:overcharge` (built via [`overcharge_source`]) carries
 /// `per_kill_multiplier ^ kill_count`. Bolts with zero kills get no
 /// entry (the reconcile retains no stale entry either). Idempotent.
 /// Early-returns when `OverchargeConfig` is absent; does not require
@@ -226,16 +228,17 @@ pub(crate) fn overcharge_apply_speed(
     let Some(config) = config else { return };
     let stacks = active.stacks(HazardKind::Overcharge);
     let per_kill = config.per_kill_multiplier(stacks);
+    let source = overcharge_source();
 
     for (entity, count, stack) in &mut bolts {
         let kills = count.map_or(0, |c| c.0);
         let multiplier = per_kill.powi(kills.cast_signed());
 
         if let Some(mut stack) = stack {
-            stack.retain_by_source(OVERCHARGE_SOURCE);
+            stack.retain_by_source(&source);
             if kills > 0 {
                 stack.push(
-                    OVERCHARGE_SOURCE.to_owned(),
+                    source.clone(),
                     SpeedBoostConfig {
                         multiplier: OrderedFloat(multiplier),
                     },
@@ -244,7 +247,7 @@ pub(crate) fn overcharge_apply_speed(
         } else if kills > 0 {
             let mut fresh = EffectStack::<SpeedBoostConfig>::default();
             fresh.push(
-                OVERCHARGE_SOURCE.to_owned(),
+                source.clone(),
                 SpeedBoostConfig {
                     multiplier: OrderedFloat(multiplier),
                 },

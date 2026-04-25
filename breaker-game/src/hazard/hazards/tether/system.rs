@@ -303,7 +303,7 @@ pub(crate) fn tether_emit_partner(
         return;
     }
 
-    let tether_source = SourceId::from("hazard:tether");
+    let tether_source = SourceId::hazard(HazardKind::Tether).build();
 
     // Snapshot every unread `DamageDealt<Cell>` message via a local cursor.
     // Using `MessageCursor` gives us a standard `MessageReader`-style traversal

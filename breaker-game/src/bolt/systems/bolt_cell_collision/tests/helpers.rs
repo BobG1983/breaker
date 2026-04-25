@@ -12,9 +12,16 @@ use crate::{
         components::{CellHeight, CellWidth},
         test_utils as cell_test_utils,
     },
+    chips::definition::Rarity,
     prelude::*,
     shared::GameDrawLayer,
 };
+
+/// Builder-format `SourceId` used as the canonical opaque tag for the
+/// `VulnerableStack` test fixture in `spawn_vulnerable_cell`.
+fn test_source() -> SourceId {
+    SourceId::chip("Test").rarity(Rarity::Common).build()
+}
 
 /// Real grid vertical spacing: `cell_height` (24) + padding (4) = 28
 pub(super) const GRID_STEP_Y: f32 = 28.0;
@@ -109,7 +116,7 @@ pub(super) fn spawn_vulnerable_cell(
     let half_extents = Vec2::new(cw.half_width(), ch.half_height());
     let pos = Vec2::new(x, y);
     let mut vuln_stack = VulnerableStack::default();
-    vuln_stack.add(SourceId::from("test"), vulnerability);
+    vuln_stack.add(test_source(), vulnerability);
     app.world_mut()
         .spawn((
             Cell,

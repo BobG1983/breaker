@@ -31,3 +31,8 @@ pub(crate) use resources::*;
 pub(crate) use states::*;
 #[cfg(test)]
 pub(crate) use test_utils::*;
+
+// Game-side SourceId extension trait — co-located conceptually with SourceId
+// (which comes from death_pipeline) but kept out of death_pipeline.rs which is
+// reserved for rantzsoft_dmg re-exports.
+pub(crate) use crate::shared::SourceIdExt;

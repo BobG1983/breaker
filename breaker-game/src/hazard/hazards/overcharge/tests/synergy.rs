@@ -13,7 +13,20 @@ use super::{
         wire_apply_only, write_bump, write_cell_destroyed,
     },
 };
-use crate::effect_v3::{effects::SpeedBoostConfig, stacking::EffectStack};
+use crate::{
+    chips::definition::Rarity,
+    effect_v3::{effects::SpeedBoostConfig, stacking::EffectStack},
+    hazard::definition::HazardKind,
+    prelude::*,
+};
+
+fn hazard_haste() -> SourceId {
+    SourceId::hazard(HazardKind::Haste).build()
+}
+
+fn chip_overclock() -> SourceId {
+    SourceId::chip("Overclock").rarity(Rarity::Common).build()
+}
 
 // ── Behavior 45 — two bolts accumulate kills independently ──────────────
 
@@ -172,7 +185,7 @@ fn haste_and_overcharge_entries_multiply_via_distinct_sources() {
 
     let mut seed = EffectStack::<SpeedBoostConfig>::default();
     seed.push(
-        "hazard:haste".to_owned(),
+        hazard_haste(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.20),
         },
@@ -192,12 +205,12 @@ fn haste_and_overcharge_entries_multiply_via_distinct_sources() {
     let entries = overcharge_entries(stack);
     let haste = entries
         .iter()
-        .find(|(s, _)| s == "hazard:haste")
+        .find(|(s, _)| s == &hazard_haste())
         .expect("haste entry preserved");
     assert_eq!(haste.1.multiplier, OrderedFloat(1.20));
     let over = entries
         .iter()
-        .find(|(s, _)| s == "hazard:overcharge")
+        .find(|(s, _)| s == &SourceId::hazard(HazardKind::Overcharge).build())
         .expect("overcharge entry present");
     assert!((over.1.multiplier.into_inner() - 1.05_f32.powi(3)).abs() < 1e-6);
 }
@@ -213,7 +226,7 @@ fn bumping_overcharge_stacks_updates_only_overcharge_entry_in_synergy() {
 
     let mut seed = EffectStack::<SpeedBoostConfig>::default();
     seed.push(
-        "hazard:haste".to_owned(),
+        hazard_haste(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.20),
         },
@@ -237,7 +250,7 @@ fn bumping_overcharge_stacks_updates_only_overcharge_entry_in_synergy() {
     let entries = overcharge_entries(stack);
     let haste = entries
         .iter()
-        .find(|(s, _)| s == "hazard:haste")
+        .find(|(s, _)| s == &hazard_haste())
         .expect("haste entry persists");
     assert_eq!(haste.1.multiplier, OrderedFloat(1.20));
 }
@@ -322,13 +335,13 @@ fn full_chain_with_seeded_chip_and_haste_entries_aggregates_correctly() {
 
     let mut seed = EffectStack::<SpeedBoostConfig>::default();
     seed.push(
-        "chip:overclock".to_owned(),
+        chip_overclock(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.5),
         },
     );
     seed.push(
-        "hazard:haste".to_owned(),
+        hazard_haste(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.20),
         },
@@ -353,12 +366,12 @@ fn full_chain_with_seeded_chip_and_haste_entries_aggregates_correctly() {
     let entries = overcharge_entries(stack);
     let chip = entries
         .iter()
-        .find(|(s, _)| s == "chip:overclock")
+        .find(|(s, _)| s == &chip_overclock())
         .expect("chip preserved");
     assert_eq!(chip.1.multiplier, OrderedFloat(1.5));
     let haste = entries
         .iter()
-        .find(|(s, _)| s == "hazard:haste")
+        .find(|(s, _)| s == &hazard_haste())
         .expect("haste preserved");
     assert_eq!(haste.1.multiplier, OrderedFloat(1.20));
 }
@@ -374,13 +387,13 @@ fn full_chain_with_seeded_entries_updates_only_overcharge_across_ticks() {
 
     let mut seed = EffectStack::<SpeedBoostConfig>::default();
     seed.push(
-        "chip:overclock".to_owned(),
+        chip_overclock(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.5),
         },
     );
     seed.push(
-        "hazard:haste".to_owned(),
+        hazard_haste(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.20),
         },
@@ -407,8 +420,11 @@ fn full_chain_with_seeded_entries_updates_only_overcharge_across_ticks() {
     assert!((stack.aggregate() - expected).abs() < 1e-5);
 
     let entries = overcharge_entries(stack);
-    let chip = entries.iter().find(|(s, _)| s == "chip:overclock").unwrap();
+    let chip = entries
+        .iter()
+        .find(|(s, _)| s == &chip_overclock())
+        .unwrap();
     assert_eq!(chip.1.multiplier, OrderedFloat(1.5));
-    let haste = entries.iter().find(|(s, _)| s == "hazard:haste").unwrap();
+    let haste = entries.iter().find(|(s, _)| s == &hazard_haste()).unwrap();
     assert_eq!(haste.1.multiplier, OrderedFloat(1.20));
 }

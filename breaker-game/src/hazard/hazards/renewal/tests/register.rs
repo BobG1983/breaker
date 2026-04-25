@@ -38,7 +38,10 @@ fn register_schedules_tick_system_that_emits_heal_on_expiry() {
     assert_eq!(msgs.len(), 1);
     assert!((msgs[0].amount - 70.0).abs() < f32::EPSILON);
     assert!(matches!(msgs[0].cap, HealCap::Starting));
-    assert_eq!(msgs[0].source, Some(SourceId::from("hazard:renewal")));
+    assert_eq!(
+        msgs[0].source,
+        Some(SourceId::hazard(HazardKind::Renewal).build())
+    );
 }
 
 #[test]

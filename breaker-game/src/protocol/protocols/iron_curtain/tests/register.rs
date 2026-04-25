@@ -8,7 +8,7 @@
 use bevy::prelude::*;
 
 use super::{
-    super::system::{IRON_CURTAIN_SENTINEL, IronCurtainConfig},
+    super::system::IronCurtainConfig,
     helpers::{
         build_iron_curtain_app, build_iron_curtain_app_in_chip_selecting,
         build_iron_curtain_app_no_config, build_iron_curtain_app_no_playfield,
@@ -20,7 +20,7 @@ use super::{
 use crate::{
     prelude::*,
     protocol::{
-        definition::{ProtocolDefinition, ProtocolTuning},
+        definition::{ProtocolDefinition, ProtocolKind, ProtocolTuning},
         resources::ActiveProtocols,
     },
 };
@@ -52,7 +52,7 @@ fn register_wires_iron_curtain_on_bolt_lost_under_active_and_playing() {
     );
     assert_eq!(
         msgs[0].source.as_ref(),
-        Some(&SourceId::from(IRON_CURTAIN_SENTINEL))
+        Some(&SourceId::protocol(ProtocolKind::IronCurtain).build())
     );
 }
 

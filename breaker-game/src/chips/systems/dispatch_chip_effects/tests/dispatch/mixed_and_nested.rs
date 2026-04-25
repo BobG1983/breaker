@@ -76,7 +76,7 @@ fn mixed_fire_and_when_fire_fires_when_stamps() {
         1,
         "BoundEffects should have 1 entry for the When node"
     );
-    assert_eq!(bound.0[0].0, "Mixed");
+    assert_eq!(bound.0[0].0, "chip:Mixed:Common");
 }
 
 // ── Behavior 14: Chip with multiple `RootNode::Stamp` entries dispatches all ──
@@ -130,8 +130,8 @@ fn multiple_root_stamps_all_dispatched() {
         2,
         "Breaker should have 2 BoundEffects entries: 1 direct + 1 deferred"
     );
-    assert_eq!(breaker_bound.0[0].0, "Parry Multi");
-    assert_eq!(breaker_bound.0[1].0, "Parry Multi");
+    assert_eq!(breaker_bound.0[0].0, "chip:Parry Multi:Common");
+    assert_eq!(breaker_bound.0[1].0, "chip:Parry Multi:Common");
 }
 
 // ── Behavior 14 edge case: Three `Stamp` entries (Breaker + Bolt + ActiveCells) ──

@@ -10,7 +10,7 @@
 //! - Untracked bolts tolerated.
 
 use super::{
-    super::system::{DEBT_COLLECTOR_SENTINEL, DebtCashOut, DebtStack},
+    super::system::{DebtCashOut, DebtStack},
     helpers::{
         build_debt_collector_app, collected_bonus_damage, install_debt_cash_out,
         install_debt_stack, seed_active_protocols_with_debt_collector,
@@ -20,7 +20,12 @@ use super::{
 use crate::{
     bolt::{components::BoltBaseDamage, resources::DEFAULT_BOLT_BASE_DAMAGE},
     prelude::*,
+    protocol::definition::ProtocolKind,
 };
+
+fn debt_collector_source() -> SourceId {
+    SourceId::protocol(ProtocolKind::DebtCollector).build()
+}
 
 // ── Behavior 16 — cash-out bolt emits bonus on next impact ──────────────────
 
@@ -55,8 +60,8 @@ fn cash_out_bolt_emits_bonus_damage_dealt_on_impact() {
     );
     assert_eq!(
         msg.source.as_ref(),
-        Some(&SourceId::from(DEBT_COLLECTOR_SENTINEL)),
-        "source drift guard: expected \"protocol:debt_collector\""
+        Some(&debt_collector_source()),
+        "source must equal builder-produced \"protocol:debt_collector\""
     );
 
     // DebtCashOut removed; DebtStack unaffected (it wasn't present anyway).
@@ -89,10 +94,7 @@ fn bonus_uses_default_base_damage_when_bolt_base_damage_absent() {
         expected,
         bonuses[0].amount
     );
-    assert_eq!(
-        bonuses[0].source.as_ref(),
-        Some(&SourceId::from(DEBT_COLLECTOR_SENTINEL))
-    );
+    assert_eq!(bonuses[0].source.as_ref(), Some(&debt_collector_source()));
 }
 
 // ── Behavior 18 — cash-out is one-shot; second impact produces no bonus ────-
@@ -206,10 +208,7 @@ fn zero_stack_cash_out_emits_bonus_with_amount_zero() {
     );
     assert_eq!(msg.dealer, Some(bolt));
     assert_eq!(msg.target, cell);
-    assert_eq!(
-        msg.source.as_ref(),
-        Some(&SourceId::from(DEBT_COLLECTOR_SENTINEL))
-    );
+    assert_eq!(msg.source.as_ref(), Some(&debt_collector_source()));
     assert!(
         app.world().get::<DebtCashOut>(bolt).is_none(),
         "DebtCashOut removed even when amount is zero"
@@ -249,10 +248,7 @@ fn multiple_bolts_each_emit_their_own_bonus() {
         "bolt A amount = 10.0 × 1.5 = 15.0, got {}",
         msg_a.amount
     );
-    assert_eq!(
-        msg_a.source.as_ref(),
-        Some(&SourceId::from(DEBT_COLLECTOR_SENTINEL))
-    );
+    assert_eq!(msg_a.source.as_ref(), Some(&debt_collector_source()));
 
     let msg_b = bonuses
         .iter()
@@ -264,10 +260,7 @@ fn multiple_bolts_each_emit_their_own_bonus() {
         "bolt B amount = 25.0 × 0.4 = 10.0, got {}",
         msg_b.amount
     );
-    assert_eq!(
-        msg_b.source.as_ref(),
-        Some(&SourceId::from(DEBT_COLLECTOR_SENTINEL))
-    );
+    assert_eq!(msg_b.source.as_ref(), Some(&debt_collector_source()));
 }
 
 // ── Behavior 22 — untracked bolt is tolerated ──────────────────────────────-
@@ -326,4 +319,23 @@ fn on_impact_is_no_op_when_no_bolt_has_debt_cash_out() {
     // Edge case: second quiet frame — still no-op.
     tick(&mut app);
     assert!(collected_bonus_damage(&app).is_empty());
+}
+
+// ── B28: source matches builder-produced protocol:debt_collector ──
+
+#[test]
+fn debt_collector_bonus_source_equals_builder_protocol_debt_collector() {
+    use crate::{prelude::SourceIdExt, protocol::definition::ProtocolKind};
+    let mut app = build_debt_collector_app();
+    seed_active_protocols_with_debt_collector(&mut app, 0.5);
+    let bolt = spawn_bolt_with_base_damage_and_cashout(&mut app, 10.0, 1.5);
+    let cell = app.world_mut().spawn_empty().id();
+
+    write_bolt_impact_cell(&mut app, bolt, cell);
+    tick(&mut app);
+
+    let msgs = collected_bonus_damage(&app);
+    assert_eq!(msgs.len(), 1);
+    let expected = SourceId::protocol(ProtocolKind::DebtCollector).build();
+    assert_eq!(msgs[0].source.as_ref(), Some(&expected));
 }

@@ -37,7 +37,6 @@ fn build_emit_app(share_percent: f32) -> App {
     app.world_mut().insert_resource(DiffusionConfig {
         base_share_percent:      share_percent,
         share_per_level_percent: 0.0,
-        depth_increase_interval: 5,
     });
     app.world_mut()
         .resource_mut::<ActiveHazards>()
@@ -113,7 +112,7 @@ fn emit_rings_splits_shared_across_candidates() {
         .collect();
     let rings: Vec<&DamageDealt<Cell>> = drained
         .iter()
-        .filter(|m| m.source == Some(SourceId::from("hazard:diffusion:0")))
+        .filter(|m| m.source == Some(SourceId::hazard(HazardKind::Diffusion).instance(0).build()))
         .collect();
     assert_eq!(
         rings.len(),
@@ -162,7 +161,7 @@ fn emit_rings_single_neighbor_gets_full_shared() {
         .collect();
     let ring = drained
         .iter()
-        .find(|m| m.source == Some(SourceId::from("hazard:diffusion:0")))
+        .find(|m| m.source == Some(SourceId::hazard(HazardKind::Diffusion).instance(0).build()))
         .expect("exactly one ring message expected");
     assert_f32_eq(ring.amount, 50.0);
     assert_eq!(ring.target, c1);
@@ -195,7 +194,7 @@ fn emit_rings_none_attributed_to_passes_through_as_none() {
         .collect();
     let ring = drained
         .iter()
-        .find(|m| m.source == Some(SourceId::from("hazard:diffusion:0")))
+        .find(|m| m.source == Some(SourceId::hazard(HazardKind::Diffusion).instance(0).build()))
         .expect("ring message");
     assert!(ring.attributed_to.is_none());
     assert!(ring.dealer.is_none());
@@ -235,7 +234,7 @@ fn emit_rings_skips_when_target_invulnerable() {
     assert!(
         !drained
             .iter()
-            .any(|m| m.source == Some(SourceId::from("hazard:diffusion:0"))),
+            .any(|m| m.source == Some(SourceId::hazard(HazardKind::Diffusion).instance(0).build())),
         "no ring messages when PendingEmission.target has Invulnerable"
     );
     assert!(
@@ -282,7 +281,7 @@ fn emit_rings_attenuation_floor_skips_small_shares() {
     assert!(
         !drained
             .iter()
-            .any(|m| m.source == Some(SourceId::from("hazard:diffusion:0"))),
+            .any(|m| m.source == Some(SourceId::hazard(HazardKind::Diffusion).instance(0).build())),
         "below 1.0 per-neighbor floor, no rings emitted"
     );
     assert!(
@@ -322,7 +321,9 @@ fn emit_rings_attenuation_floor_inclusive_at_1_0() {
     assert_eq!(
         drained
             .iter()
-            .filter(|m| m.source == Some(SourceId::from("hazard:diffusion:0")))
+            .filter(
+                |m| m.source == Some(SourceId::hazard(HazardKind::Diffusion).instance(0).build())
+            )
             .count(),
         2,
         "exactly 1.0 per-neighbor is inclusive → both emitted"
@@ -358,7 +359,50 @@ fn emit_rings_attenuation_floor_excludes_just_under() {
     assert!(
         !drained
             .iter()
-            .any(|m| m.source == Some(SourceId::from("hazard:diffusion:0"))),
+            .any(|m| m.source == Some(SourceId::hazard(HazardKind::Diffusion).instance(0).build())),
         "0.99 per-neighbor is below floor → no rings"
     );
+}
+
+// ── B35: ring damage source equals builder-produced hazard:diffusion:<instance> ──
+
+#[test]
+fn diffusion_ring_damage_source_equals_builder_with_instance() {
+    use crate::prelude::SourceIdExt;
+
+    let mut app = build_emit_app(50.0);
+    app.world_mut().resource_mut::<DiffusionInstances>().next_id = 0;
+
+    let primary = app.world_mut().spawn_empty().id();
+    let neighbor = app.world_mut().spawn_empty().id();
+    install_cell_hp(&mut app, primary, 10.0);
+    install_cell_hp(&mut app, neighbor, 10.0);
+
+    app.world_mut()
+        .resource_mut::<PendingDiffusionEmissions>()
+        .queue
+        .push(PendingEmission {
+            target:              primary,
+            instance_id:         0,
+            shared:              5.0,
+            candidate_neighbors: vec![neighbor],
+            attributed_to:       None,
+        });
+
+    tick(&mut app);
+
+    let drained: Vec<DamageDealt<Cell>> = app
+        .world_mut()
+        .resource_mut::<Messages<DamageDealt<Cell>>>()
+        .drain()
+        .collect();
+    let expected = SourceId::hazard(HazardKind::Diffusion).instance(0).build();
+    assert!(
+        drained.iter().any(|m| m.source.as_ref() == Some(&expected)),
+        "diffusion ring damage must carry builder source with instance id"
+    );
+}
+
+fn install_cell_hp(app: &mut App, cell: Entity, hp: f32) {
+    app.world_mut().entity_mut(cell).insert(Hp::new(hp));
 }

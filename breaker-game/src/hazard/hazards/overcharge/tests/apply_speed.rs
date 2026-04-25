@@ -14,7 +14,30 @@ use super::{
         test_app_playing, wire_apply_only,
     },
 };
-use crate::effect_v3::{effects::SpeedBoostConfig, stacking::EffectStack};
+use crate::{
+    chips::definition::Rarity,
+    effect_v3::{effects::SpeedBoostConfig, stacking::EffectStack},
+    hazard::definition::HazardKind,
+    prelude::*,
+};
+
+fn hazard_overcharge() -> SourceId {
+    SourceId::hazard(HazardKind::Overcharge).build()
+}
+
+fn hazard_haste() -> SourceId {
+    SourceId::hazard(HazardKind::Haste).build()
+}
+
+fn chip_overclock() -> SourceId {
+    SourceId::chip("Overclock").rarity(Rarity::Common).build()
+}
+
+fn chip_feedback_loop() -> SourceId {
+    SourceId::chip("FeedbackLoop")
+        .rarity(Rarity::Common)
+        .build()
+}
 
 // ── Behavior 22 — zero kills / no pre-existing stack → no entry ─────────
 
@@ -80,7 +103,7 @@ fn apply_speed_pushes_compounding_multiplier() {
     // Source is the Overcharge tag.
     let entries = overcharge_entries(stack);
     assert_eq!(entries.len(), 1);
-    assert_eq!(entries[0].0, "hazard:overcharge");
+    assert_eq!(entries[0].0, hazard_overcharge());
 }
 
 #[test]
@@ -268,7 +291,7 @@ fn apply_speed_preserves_non_overcharge_entries() {
 
     let mut seed = EffectStack::<SpeedBoostConfig>::default();
     seed.push(
-        "chip:overclock".to_owned(),
+        chip_overclock(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.5),
         },
@@ -298,19 +321,19 @@ fn apply_speed_preserves_three_foreign_entries() {
 
     let mut seed = EffectStack::<SpeedBoostConfig>::default();
     seed.push(
-        "chip:overclock".to_owned(),
+        chip_overclock(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.5),
         },
     );
     seed.push(
-        "chip:feedback_loop".to_owned(),
+        chip_feedback_loop(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.25),
         },
     );
     seed.push(
-        "hazard:haste".to_owned(),
+        hazard_haste(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.20),
         },
@@ -331,17 +354,17 @@ fn apply_speed_preserves_three_foreign_entries() {
     let entries = overcharge_entries(stack);
     let chip = entries
         .iter()
-        .find(|(s, _)| s == "chip:overclock")
-        .expect("chip:overclock survives");
+        .find(|(s, _)| s == &chip_overclock())
+        .expect("chip:Overclock survives");
     assert_eq!(chip.1.multiplier, OrderedFloat(1.5));
     let feedback = entries
         .iter()
-        .find(|(s, _)| s == "chip:feedback_loop")
-        .expect("chip:feedback_loop survives");
+        .find(|(s, _)| s == &chip_feedback_loop())
+        .expect("chip:FeedbackLoop survives");
     assert_eq!(feedback.1.multiplier, OrderedFloat(1.25));
     let haste = entries
         .iter()
-        .find(|(s, _)| s == "hazard:haste")
+        .find(|(s, _)| s == &hazard_haste())
         .expect("hazard:haste survives");
     assert_eq!(haste.1.multiplier, OrderedFloat(1.20));
 }
@@ -357,7 +380,7 @@ fn apply_speed_replaces_stale_overcharge_entry_not_duplicate() {
 
     let mut seed = EffectStack::<SpeedBoostConfig>::default();
     seed.push(
-        "hazard:overcharge".to_owned(),
+        hazard_overcharge(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(9.99),
         },
@@ -388,19 +411,19 @@ fn apply_speed_multiple_stale_overcharge_entries_removed_chip_preserved() {
 
     let mut seed = EffectStack::<SpeedBoostConfig>::default();
     seed.push(
-        "hazard:overcharge".to_owned(),
+        hazard_overcharge(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(5.0),
         },
     );
     seed.push(
-        "hazard:overcharge".to_owned(),
+        hazard_overcharge(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(3.0),
         },
     );
     seed.push(
-        "chip:overclock".to_owned(),
+        chip_overclock(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.5),
         },
@@ -420,7 +443,7 @@ fn apply_speed_multiple_stale_overcharge_entries_removed_chip_preserved() {
     let entries = overcharge_entries(stack);
     let chip = entries
         .iter()
-        .find(|(s, _)| s == "chip:overclock")
+        .find(|(s, _)| s == &chip_overclock())
         .expect("chip survives");
     assert_eq!(chip.1.multiplier, OrderedFloat(1.5));
 }
@@ -567,7 +590,7 @@ fn apply_speed_without_config_preserves_seeded_chip_entries() {
 
     let mut seed = EffectStack::<SpeedBoostConfig>::default();
     seed.push(
-        "chip:overclock".to_owned(),
+        chip_overclock(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.5),
         },
@@ -582,7 +605,7 @@ fn apply_speed_without_config_preserves_seeded_chip_entries() {
         .unwrap();
     assert_eq!(stack.len(), 1, "chip entry untouched by early-return");
     let entries = overcharge_entries(stack);
-    assert_eq!(entries[0].0, "chip:overclock");
+    assert_eq!(entries[0].0, chip_overclock());
     assert_eq!(entries[0].1.multiplier, OrderedFloat(1.5));
 }
 
@@ -605,7 +628,7 @@ fn apply_speed_zero_stacks_collapses_multiplier_to_one() {
     assert_eq!(stack.len(), 1);
     assert!((stack.aggregate() - 1.0).abs() < 1e-6);
     let entries = overcharge_entries(stack);
-    assert_eq!(entries[0].0, "hazard:overcharge");
+    assert_eq!(entries[0].0, hazard_overcharge());
 }
 
 #[test]

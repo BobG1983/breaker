@@ -182,7 +182,7 @@ fn i3_teardown_reverses_active_slows_preserves_non_resonance() {
         stack.len()
     );
     let (src, cfg) = stack.iter().next().unwrap();
-    assert_eq!(src, "chip:overclock");
+    assert_eq!(src.0.as_ref(), "chip:overclock");
     assert_eq!(cfg.multiplier, OrderedFloat(1.2));
 }
 

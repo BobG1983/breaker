@@ -10,7 +10,11 @@ use super::{
         spawn_bolt_with_stack, test_app_playing, wire_apply_only,
     },
 };
-use crate::effect_v3::{effects::SpeedBoostConfig, stacking::EffectStack};
+use crate::{
+    effect_v3::{effects::SpeedBoostConfig, stacking::EffectStack},
+    hazard::definition::HazardKind,
+    prelude::*,
+};
 
 // ── Behavior 8 — bolt without stack gets one with Haste entry ────────────
 
@@ -64,7 +68,7 @@ fn bolt_fresh_insert_single_entry_has_haste_source_and_1_20x() {
     let entries = haste_entries(stack);
     assert_eq!(entries.len(), 1);
     let (source, config) = &entries[0];
-    assert_eq!(source, "hazard:haste");
+    assert_eq!(source, &SourceId::hazard(HazardKind::Haste).build());
     // Tolerance compare — OrderedFloat::eq is bitwise and f32 arithmetic
     // from the formula may produce slightly different bits than `1.20_f32`.
     assert!((config.multiplier.into_inner() - 1.20_f32).abs() < 1e-6);

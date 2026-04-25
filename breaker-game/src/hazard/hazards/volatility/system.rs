@@ -1,3 +1,9 @@
+//! Volatility hazard — cells regrow HP after a damage-free interval, capped
+//! at `Hp.starting * max_multiplier`. The reset-on-damage system runs
+//! ungated and clears its `MessageReader` cursor every tick to prevent
+//! buffered `DamageDealt<Cell>` messages from being retroactively consumed
+//! when the hazard activates on a later frame.
+
 use std::marker::PhantomData;
 
 use bevy::prelude::*;
@@ -47,6 +53,9 @@ impl VolatilityConfig {
     }
 }
 
+/// Reads `HazardTuning::Volatility` from the per-run RON tuning and inserts
+/// `VolatilityConfig` so the regrowth and reset systems can read it. Logs
+/// a warning and does nothing if the wrong tuning variant is supplied.
 pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
     let HazardTuning::Volatility {
         hp_per_interval,
@@ -64,17 +73,33 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
     });
 }
 
+/// Registers the Volatility systems. The `attach_volatility_timers` →
+/// `volatility_grow_cells` chain is gated on `hazard_active(Volatility)` and
+/// `NodeState::Playing`, with `volatility_grow_cells` placed in
+/// `DmgSystems::EmitHeal` so its `HealDealt<Cell>` writes reach
+/// `apply_heal` this tick. `reset_volatility_on_damage` is registered
+/// SEPARATELY without `.run_if(...)` and gates in-body via `reader.clear()`,
+/// preventing the 2-frame Bevy message buffer from leaking pre-activation
+/// `DamageDealt<Cell>` messages into the timer reset on later activation.
+/// Ordered `.after(DmgSystems::ApplyDamage)` so it observes this tick's
+/// completed damage messages.
 pub(crate) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         (
             attach_volatility_timers,
-            reset_volatility_on_damage.after(DmgSystems::ApplyDamage),
             volatility_grow_cells.in_set(DmgSystems::EmitHeal),
         )
             .chain()
             .run_if(hazard_active(HazardKind::Volatility))
             .run_if(in_state(NodeState::Playing)),
+    )
+    .add_systems(
+        FixedUpdate,
+        reset_volatility_on_damage
+            .after(attach_volatility_timers)
+            .before(volatility_grow_cells)
+            .after(DmgSystems::ApplyDamage),
     );
 }
 
@@ -110,10 +135,28 @@ pub(crate) fn attach_volatility_timers(
 /// `DamageDealt<Cell>` message. The damage amount is irrelevant — any hit
 /// (including 0.0 and NaN) resets the timer because the cell was touched.
 /// Silently skips targets that lack a `VolatilityTimer` or have been despawned.
+///
+/// Gated in-body: this system runs every `FixedUpdate` tick. When Volatility
+/// is not active or `NodeState` is not `Playing`, it drains the
+/// `MessageReader` via `reader.clear()` and returns so buffered
+/// `DamageDealt<Cell>` messages cannot leak retroactively when the hazard
+/// activates on a later frame.
 pub(crate) fn reset_volatility_on_damage(
     mut reader: MessageReader<DamageDealt<Cell>>,
+    active_hazards: Option<Res<ActiveHazards>>,
+    node_state: Option<Res<State<NodeState>>>,
     mut cells: Query<&mut VolatilityTimer, With<Cell>>,
 ) {
+    if active_hazards
+        .as_ref()
+        .is_none_or(|ah| !ah.is_active(HazardKind::Volatility))
+        || node_state
+            .as_ref()
+            .is_none_or(|s| *s.get() != NodeState::Playing)
+    {
+        reader.clear();
+        return;
+    }
     for msg in reader.read() {
         if let Ok(mut timer) = cells.get_mut(msg.target) {
             timer.elapsed = 0.0;
@@ -145,6 +188,7 @@ pub(crate) fn volatility_grow_cells(
         return;
     }
     let cap = config.max_multiplier;
+    let source = SourceId::hazard(HazardKind::Volatility).build();
 
     for (entity, hp, mut timer) in &mut cells {
         if hp.current <= 0.0 {
@@ -163,7 +207,7 @@ pub(crate) fn volatility_grow_cells(
                     target:        entity,
                     amount:        config.hp_per_interval,
                     cap:           HealCap::Max,
-                    source:        Some(SourceId::from("hazard:volatility")),
+                    source:        Some(source.clone()),
                     _marker:       PhantomData,
                 });
             }

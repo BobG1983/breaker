@@ -382,10 +382,7 @@ fn apply_hit_outcome(
         attributed_to: None,
         target:        hit.entity,
         amount:        state.base_damage,
-        source:        bolt
-            .collision
-            .spawned_by_evolution
-            .map(|s| SourceId::from(s.0.clone())),
+        source:        bolt.collision.spawned_by_evolution.map(|s| s.0.clone()),
         _marker:       PhantomData::<Cell>,
     });
 }

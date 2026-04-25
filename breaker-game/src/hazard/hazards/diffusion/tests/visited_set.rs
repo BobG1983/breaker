@@ -36,7 +36,6 @@ fn build_app(share_percent: f32) -> App {
     app.world_mut().insert_resource(DiffusionConfig {
         base_share_percent:      share_percent,
         share_per_level_percent: 0.0,
-        depth_increase_interval: 5,
     });
     app.world_mut()
         .resource_mut::<ActiveHazards>()
@@ -208,7 +207,11 @@ fn reduce_primary_orphan_instance_id_resurrects() {
             attributed_to: None,
             target:        c3,
             amount:        80.0,
-            source:        Some(SourceId::from("hazard:diffusion:999")),
+            source:        Some(
+                SourceId::hazard(HazardKind::Diffusion)
+                    .instance(999)
+                    .build(),
+            ),
             _marker:       PhantomData,
         });
 
@@ -237,7 +240,7 @@ fn reduce_primary_non_diffusion_source_gets_fresh_instance() {
             attributed_to: None,
             target:        c0,
             amount:        100.0,
-            source:        Some(SourceId::from("hazard:cascade")),
+            source:        Some(SourceId::hazard(HazardKind::Cascade).build()),
             _marker:       PhantomData,
         });
 
@@ -267,7 +270,11 @@ fn reduce_primary_orphan_resurrection_bumps_next_id() {
             attributed_to: None,
             target:        c3,
             amount:        80.0,
-            source:        Some(SourceId::from("hazard:diffusion:999")),
+            source:        Some(
+                SourceId::hazard(HazardKind::Diffusion)
+                    .instance(999)
+                    .build(),
+            ),
             _marker:       PhantomData,
         });
     tick(&mut app);

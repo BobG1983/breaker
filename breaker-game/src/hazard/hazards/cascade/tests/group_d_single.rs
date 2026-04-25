@@ -1,7 +1,10 @@
 use bevy::prelude::*;
 
 use super::{super::system::*, helpers::*};
-use crate::prelude::{HealCap, SourceId};
+use crate::{
+    hazard::definition::HazardKind,
+    prelude::{HealCap, SourceId, SourceIdExt},
+};
 
 // ════════════════════════════════════════════════════════════════════════════
 // Group D — Single-death / single-neighbour message shape
@@ -40,7 +43,10 @@ fn single_death_single_neighbour_emits_one_message_with_correct_fields() {
     );
     assert!(matches!(msg.cap, HealCap::Starting));
     assert_eq!(msg.healer, None);
-    assert_eq!(msg.source, Some(SourceId::from("hazard:cascade")));
+    assert_eq!(
+        msg.source,
+        Some(SourceId::hazard(HazardKind::Cascade).build())
+    );
 }
 
 // Behavior 11 edge: neighbour at exactly the radius boundary (distance² == 4900)
@@ -101,7 +107,10 @@ fn stack_three_message_amount_is_base_plus_two_per_level() {
         msgs[0].amount
     );
     assert!(matches!(msgs[0].cap, HealCap::Starting));
-    assert_eq!(msgs[0].source, Some(SourceId::from("hazard:cascade")));
+    assert_eq!(
+        msgs[0].source,
+        Some(SourceId::hazard(HazardKind::Cascade).build())
+    );
 }
 
 // Behavior 12 edge: stack 5 produces amount == 30.0 (design-doc pinned).
@@ -280,4 +289,34 @@ fn separately_dead_cell_is_not_a_heal_target() {
         corpse_msgs.is_empty(),
         "corpse with Hp.current = 0.0 must not receive a message"
     );
+}
+
+// ── B36c: source matches builder-produced hazard:cascade ──
+
+#[test]
+fn cascade_heal_source_equals_builder() {
+    use crate::{hazard::definition::HazardKind, prelude::SourceIdExt};
+    let mut app = test_app_playing();
+    app.add_systems(FixedUpdate, cascade_heal_on_death);
+    install_cascade_config(
+        &mut app,
+        CascadeConfig {
+            base_heal:      1.0,
+            per_level_heal: 0.5,
+        },
+    );
+    add_cascade_stacks(&mut app, 1);
+
+    let victim = spawn_cell_at(&mut app, Vec2::new(0.0, 0.0), 0.0, 10.0);
+    let neighbour = spawn_cell_at(&mut app, Vec2::new(50.0, 0.0), 5.0, 10.0);
+    send_cell_destroyed(&mut app, victim, Vec2::ZERO);
+
+    run_fixed_update(&mut app);
+
+    let msgs = heals_for_cell(&app, neighbour);
+    assert!(!msgs.is_empty());
+    let expected = SourceId::hazard(HazardKind::Cascade).build();
+    for m in &msgs {
+        assert_eq!(m.source.as_ref(), Some(&expected));
+    }
 }

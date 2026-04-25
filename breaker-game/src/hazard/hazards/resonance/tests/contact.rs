@@ -61,7 +61,7 @@ fn f1_wave_within_threshold_fires_slow_and_despawns() {
         .expect("breaker must have SpeedBoost stack");
     let entry_mult = stack
         .iter()
-        .find(|(s, _)| s == &source)
+        .find(|(s, _)| s.0.as_ref() == source)
         .map(|(_, c)| c.multiplier);
     assert_eq!(entry_mult, Some(OrderedFloat(0.5)));
 

@@ -13,6 +13,7 @@ pub mod playfield;
 pub mod resources;
 pub mod rng;
 pub mod size;
+pub(crate) mod source_id_ext;
 pub(crate) mod validation;
 
 pub use collision_layers::{BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, SALVO_LAYER, WALL_LAYER};
@@ -22,6 +23,7 @@ pub use draw_layer::GameDrawLayer;
 pub use playfield::{PlayfieldConfig, PlayfieldDefaults};
 pub use resources::RunSeed;
 pub use rng::GameRng;
+pub(crate) use source_id_ext::SourceIdExt;
 
 pub use crate::state::types::GameState;
 

@@ -15,10 +15,12 @@ use crate::{
     prelude::*,
 };
 
-/// Source tag used on the bolt's `EffectStack<SpeedBoostConfig>`. Shared
+/// Builder-produced source key used on the bolt's `EffectStack<SpeedBoostConfig>`. Shared
 /// between the apply system and teardown so Haste can reconcile its own
 /// entries without disturbing chip- or protocol-owned boosts.
-const HASTE_SOURCE: &str = "hazard:haste";
+fn haste_source() -> SourceId {
+    SourceId::hazard(HazardKind::Haste).build()
+}
 
 /// Per-run tuning extracted from [`HazardTuning::Haste`] at activation.
 #[derive(Resource, Debug, Clone, Copy)]
@@ -81,7 +83,7 @@ pub(crate) fn register(app: &mut App) {
 }
 
 /// Reconciles each Bolt's `EffectStack<SpeedBoostConfig>` so that exactly
-/// one entry with source [`HASTE_SOURCE`] exists, carrying the current
+/// one entry with source `hazard:haste` (built via [`haste_source`]) exists, carrying the current
 /// multiplier. Bolts without a stack yet are given one this tick; the
 /// entry is pushed on the same tick. Idempotent across ticks.
 pub(crate) fn haste_apply_speed(
@@ -96,14 +98,15 @@ pub(crate) fn haste_apply_speed(
     let entry = SpeedBoostConfig {
         multiplier: OrderedFloat(multiplier),
     };
+    let source = haste_source();
 
     for (entity, stack) in &mut bolts {
         if let Some(mut stack) = stack {
-            stack.retain_by_source(HASTE_SOURCE);
-            stack.push(HASTE_SOURCE.to_owned(), entry.clone());
+            stack.retain_by_source(&source);
+            stack.push(source.clone(), entry.clone());
         } else {
             let mut fresh = EffectStack::<SpeedBoostConfig>::default();
-            fresh.push(HASTE_SOURCE.to_owned(), entry.clone());
+            fresh.push(source.clone(), entry.clone());
             commands.entity(entity).insert(fresh);
         }
     }

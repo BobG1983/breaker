@@ -97,7 +97,7 @@ pub(super) const fn canonical_config() -> ErosionConfig {
 /// Collects `(source, config)` entries from an `EffectStack<SizeBoostConfig>`.
 pub(super) fn erosion_entries(
     stack: &EffectStack<SizeBoostConfig>,
-) -> Vec<(String, SizeBoostConfig)> {
+) -> Vec<(SourceId, SizeBoostConfig)> {
     stack.iter().map(|(s, c)| (s.clone(), c.clone())).collect()
 }
 

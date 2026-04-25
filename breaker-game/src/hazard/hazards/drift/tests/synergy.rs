@@ -34,7 +34,7 @@ use crate::{
         },
         resources::ActiveHazards,
     },
-    prelude::Destroyed,
+    prelude::{Destroyed, SourceId, SourceIdExt},
 };
 
 // ── Behavior 45 — Drift + Haste: direct velocity + stack coexist ─────────
@@ -81,7 +81,7 @@ fn drift_and_haste_coexist_on_same_bolt_in_one_tick() {
     assert_eq!(stack.len(), 1);
     let entry = stack
         .iter()
-        .find(|(s, _)| s == "hazard:haste")
+        .find(|(s, _)| s == &SourceId::hazard(HazardKind::Haste).build())
         .expect("hazard:haste entry expected");
     assert!((entry.1.multiplier.into_inner() - 1.20).abs() < 1e-6);
 }
@@ -126,7 +126,7 @@ fn drift_and_haste_independent_surfaces_across_two_ticks() {
     assert_eq!(stack.len(), 1, "Haste stack remains idempotent");
     let entry = stack
         .iter()
-        .find(|(s, _)| s == "hazard:haste")
+        .find(|(s, _)| s == &SourceId::hazard(HazardKind::Haste).build())
         .expect("hazard:haste entry");
     assert!((entry.1.multiplier.into_inner() - 1.20).abs() < 1e-6);
 }
@@ -181,7 +181,7 @@ fn drift_and_overcharge_coexist_on_same_bolt_in_one_tick() {
     assert_eq!(stack.len(), 1);
     let entry = stack
         .iter()
-        .find(|(s, _)| s == "hazard:overcharge")
+        .find(|(s, _)| s == &SourceId::hazard(HazardKind::Overcharge).build())
         .expect("hazard:overcharge entry");
     let expected = 1.05_f32.powi(3);
     assert!(
@@ -239,7 +239,9 @@ fn drift_applies_uniformly_across_bolts_independent_of_overcharge_kills() {
     // Bolt 2 has no Overcharge entry (zero kills).
     let stack_2 = app.world().get::<EffectStack<SpeedBoostConfig>>(bolt_2);
     if let Some(stack) = stack_2 {
-        let overcharge_entry = stack.iter().find(|(s, _)| s == "hazard:overcharge");
+        let overcharge_entry = stack
+            .iter()
+            .find(|(s, _)| s == &SourceId::hazard(HazardKind::Overcharge).build());
         assert!(
             overcharge_entry.is_none(),
             "zero-kill bolt should have no Overcharge entry"

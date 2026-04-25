@@ -2,14 +2,18 @@ use bevy::{ecs::world::CommandQueue, prelude::*};
 use ordered_float::OrderedFloat;
 
 use super::system::*;
-use crate::effect_v3::{
-    effects::SpeedBoostConfig,
-    stacking::EffectStack,
-    storage::ArmedFiredParticipants,
-    types::{
-        BoltLostTarget, BumpTarget, DeathTarget, EffectType, ImpactTarget, ParticipantTarget,
-        Terminal, TriggerContext,
+use crate::{
+    chips::definition::Rarity,
+    effect_v3::{
+        effects::SpeedBoostConfig,
+        stacking::EffectStack,
+        storage::ArmedFiredParticipants,
+        types::{
+            BoltLostTarget, BumpTarget, DeathTarget, EffectType, ImpactTarget, ParticipantTarget,
+            Terminal, TriggerContext,
+        },
     },
+    prelude::{SourceId, SourceIdExt},
 };
 
 // ----- Behavior 7: On resolves Bump(Bolt) from Bump context -----
@@ -550,6 +554,11 @@ fn evaluate_on_does_not_populate_armed_fired_participants_for_non_armed_source()
 
 // ----- Behavior 21: evaluate_on DOES populate ArmedFiredParticipants
 //                    for armed sources (spec behavior 19) -----
+//
+// POST-W5: armed sources are detected by `SourceId::is_armed()` — the
+// canonical form is the `<inner>:armed` builder output, NOT the legacy
+// `<inner>#armed[0]` string. The routing decision must be made through
+// `is_armed()`, not through substring matching.
 
 #[test]
 fn evaluate_on_populates_armed_fired_participants_for_armed_source() {
@@ -565,6 +574,19 @@ fn evaluate_on_populates_armed_fired_participants_for_armed_source() {
         multiplier: OrderedFloat(1.5),
     }));
 
+    // Build the canonical armed source via the builder. The inner source
+    // matches what `dispatch_chip_effects` produces post-W5
+    // (`chip:Piercing:Common`).
+    let armed_source =
+        SourceId::armed(SourceId::chip("Piercing").rarity(Rarity::Common).build()).build();
+    let armed_str: String = armed_source.0.clone().into_owned();
+
+    // Precondition: the source we route with must be armed.
+    assert!(
+        SourceId::from(armed_str.clone()).is_armed(),
+        "test fixture armed source must report is_armed() == true; got {armed_str:?}"
+    );
+
     let mut queue = CommandQueue::default();
     {
         let mut commands = Commands::new(&mut queue, &world);
@@ -573,19 +595,20 @@ fn evaluate_on_populates_armed_fired_participants_for_armed_source() {
             ParticipantTarget::Bump(BumpTarget::Bolt),
             &terminal,
             &context,
-            "chip_redirect#armed[0]",
+            &armed_str,
             &mut commands,
         );
     }
     queue.apply(&mut world);
 
-    let tracked = world
-        .get::<ArmedFiredParticipants>(owner)
-        .expect("ArmedFiredParticipants should exist on owner after armed fire");
+    let tracked = world.get::<ArmedFiredParticipants>(owner).expect(
+        "ArmedFiredParticipants should exist on owner after armed fire \
+             (routing must use SourceId::is_armed(), not substring match)",
+    );
     let vec = tracked
         .0
-        .get("chip_redirect#armed[0]")
-        .expect("tracked map should contain the armed source key");
+        .get(&armed_str)
+        .unwrap_or_else(|| panic!("tracked map should contain the armed source key {armed_str:?}"));
     assert_eq!(vec.len(), 1, "Vec should contain exactly 1 entry");
     assert_eq!(vec[0], bolt, "tracked participant should be the bolt");
 }
@@ -605,6 +628,10 @@ fn evaluate_on_armed_source_appends_without_deduplication() {
         multiplier: OrderedFloat(1.5),
     }));
 
+    let armed_source =
+        SourceId::armed(SourceId::chip("Piercing").rarity(Rarity::Common).build()).build();
+    let armed_str: String = armed_source.0.clone().into_owned();
+
     let mut queue = CommandQueue::default();
     {
         let mut commands = Commands::new(&mut queue, &world);
@@ -613,7 +640,7 @@ fn evaluate_on_armed_source_appends_without_deduplication() {
             ParticipantTarget::Bump(BumpTarget::Bolt),
             &terminal,
             &context,
-            "chip_redirect#armed[0]",
+            &armed_str,
             &mut commands,
         );
         evaluate_on(
@@ -621,7 +648,7 @@ fn evaluate_on_armed_source_appends_without_deduplication() {
             ParticipantTarget::Bump(BumpTarget::Bolt),
             &terminal,
             &context,
-            "chip_redirect#armed[0]",
+            &armed_str,
             &mut commands,
         );
     }
@@ -632,9 +659,63 @@ fn evaluate_on_armed_source_appends_without_deduplication() {
         .expect("ArmedFiredParticipants should exist on owner");
     let vec = tracked
         .0
-        .get("chip_redirect#armed[0]")
+        .get(&armed_str)
         .expect("tracked map should contain the armed source key");
     assert_eq!(vec.len(), 2, "Vec should have 2 entries (no dedup)");
     assert_eq!(vec[0], bolt);
     assert_eq!(vec[1], bolt);
+}
+
+// B63b — non-armed sources (no `:armed` suffix) MUST NOT route through
+// the armed-tracking branch even if they contain the substring "armed".
+#[test]
+fn evaluate_on_does_not_track_when_source_only_contains_armed_substring() {
+    let mut world = World::new();
+    let owner = world.spawn_empty().id();
+    let bolt = world.spawn_empty().id();
+
+    let context = TriggerContext::Bump {
+        bolt:    Some(bolt),
+        breaker: owner,
+    };
+    let terminal = Terminal::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+        multiplier: OrderedFloat(1.5),
+    }));
+
+    // "armed" appearing mid-string but NOT as the trailing `:armed` suffix.
+    // `is_armed()` must return false for this; the routing must skip the
+    // ArmedFiredParticipants insert.
+    let pseudo_source = "chip:armed:foo".to_owned();
+    assert!(
+        !SourceId::from(pseudo_source.clone()).is_armed(),
+        "precondition: pseudo source must NOT report is_armed()"
+    );
+
+    let mut queue = CommandQueue::default();
+    {
+        let mut commands = Commands::new(&mut queue, &world);
+        evaluate_on(
+            owner,
+            ParticipantTarget::Bump(BumpTarget::Bolt),
+            &terminal,
+            &context,
+            &pseudo_source,
+            &mut commands,
+        );
+    }
+    queue.apply(&mut world);
+
+    let tracked = world.get::<ArmedFiredParticipants>(owner);
+    match tracked {
+        None => {
+            // Expected: no component at all
+        }
+        Some(afp) => {
+            assert!(
+                !afp.0.contains_key(&pseudo_source),
+                "pseudo-armed source must NOT be tracked — routing must use \
+                 SourceId::is_armed() (suffix), not substring match on \"armed\""
+            );
+        }
+    }
 }

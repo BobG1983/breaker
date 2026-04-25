@@ -5,7 +5,7 @@
 //!
 //! Owns the `RecklessDashConfig` resource (per-run tuning), the
 //! `RiskyDamageBoost` per-bolt component, the `RecklessDashDoubledBolts`
-//! per-node tracking resource, the `RECKLESS_DASH_SENTINEL` source-chip tag,
+//! per-node tracking resource, the builder-produced `"protocol:reckless_dash"` source tag,
 //! the `activate` / `register` dispatch entry points, and the four runtime
 //! systems (`reckless_dash_on_bump`, `reckless_dash_amplify_damage`,
 //! `reckless_dash_double_penalty`, `reckless_dash_cleanup_node`).
@@ -27,13 +27,6 @@ use crate::{
         systems::ProtocolGate,
     },
 };
-
-// ── Constants ───────────────────────────────────────────────────────────────
-
-/// Sentinel tag stamped into `DamageDealt<Cell>.source` on every
-/// amplified-damage message so downstream stat tracking / FX can identify
-/// Reckless Dash damage.
-pub(crate) const RECKLESS_DASH_SENTINEL: &str = "protocol:reckless_dash";
 
 // ── RecklessDashConfig ─────────────────────────────────────────────────────
 
@@ -195,10 +188,10 @@ pub(crate) fn reckless_dash_on_bump(
 
 /// Consumes `BoltImpactCell` messages. On a bolt carrying `RiskyDamageBoost`,
 /// emits an amplified `DamageDealt<Cell>` with
-/// `amount = base_damage * boost.multiplier` and `source =
-/// Some(RECKLESS_DASH_SENTINEL.into())` — gated on `amount > 0.0`. Removes
-/// the `RiskyDamageBoost` from the bolt unconditionally (single-shot, even
-/// when emission is gated off by the `amount > 0.0` guard).
+/// `amount = base_damage * boost.multiplier` and
+/// `source = Some(SourceId::protocol(RecklessDash).build())` — gated on
+/// `amount > 0.0`. Removes the `RiskyDamageBoost` from the bolt unconditionally
+/// (single-shot, even when emission is gated off by the `amount > 0.0` guard).
 ///
 /// Non-boosted bolts are ignored entirely — this system does NOT emit
 /// baseline damage (that is `bolt_cell_collision`'s responsibility).
@@ -250,7 +243,7 @@ pub(crate) fn reckless_dash_amplify_damage(
                 attributed_to: None,
                 target: msg.cell,
                 amount,
-                source: Some(SourceId::from(RECKLESS_DASH_SENTINEL)),
+                source: Some(SourceId::protocol(ProtocolKind::RecklessDash).build()),
                 _marker: PhantomData,
             });
         }

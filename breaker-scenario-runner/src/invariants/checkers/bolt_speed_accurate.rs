@@ -85,7 +85,7 @@ mod tests {
         let mut stack = EffectStack::default();
         for &v in values {
             stack.push(
-                String::new(),
+                String::new().into(),
                 SpeedBoostConfig {
                     multiplier: OrderedFloat(v),
                 },

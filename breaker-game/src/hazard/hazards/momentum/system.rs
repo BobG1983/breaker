@@ -16,12 +16,6 @@ use crate::{
     shared::collision_layers::{BOLT_LAYER, CELL_LAYER},
 };
 
-// ── Constants ───────────────────────────────────────────────────────────────
-
-/// Sentinel `source` string tagged on every Momentum-emitted `HealDealt<Cell>`.
-/// Downstream stats / UI can filter on this tag.
-pub(crate) const MOMENTUM_SENTINEL: &str = "hazard:momentum";
-
 /// Split HP multiplier — a cell splits when
 /// `hp.current >= hp.starting * MOMENTUM_SPLIT_MULTIPLIER`.
 /// Design-doc authoritative: 2.0 (cells split at 2x their starting HP).
@@ -192,7 +186,7 @@ pub(crate) fn attach_momentum_ceiling(config: Option<Res<MomentumConfig>>, mut c
 /// Reads every `DamageDealt<Cell>` this tick and, for each message whose
 /// target is a live cell with `hp.current > 0.0` (the damage was non-lethal),
 /// emits one `HealDealt<Cell>` with the stack-scaled heal amount,
-/// `HealCap::Max`, and the `MOMENTUM_SENTINEL` source tag.
+/// `HealCap::Max`, and the builder-produced `"hazard:momentum"` source tag.
 ///
 /// Does NOT mutate `hp.max` — that is `attach_momentum_ceiling`'s responsibility.
 ///
@@ -233,6 +227,7 @@ pub(crate) fn momentum_heal_on_nonlethal(
         reader.clear();
         return;
     }
+    let source = SourceId::hazard(HazardKind::Momentum).build();
 
     for msg in reader.read() {
         // Zero- or negative-magnitude damage is a no-op — matches Cascade's
@@ -253,7 +248,7 @@ pub(crate) fn momentum_heal_on_nonlethal(
             attributed_to: None,
             target:        msg.target,
             amount:        heal,
-            source:        Some(SourceId::from(MOMENTUM_SENTINEL)),
+            source:        Some(source.clone()),
             cap:           HealCap::Max,
             _marker:       PhantomData,
         });

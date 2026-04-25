@@ -32,7 +32,7 @@ impl Fireable for GravityWellConfig {
         let chip = EffectSourceChip(if source.is_empty() {
             None
         } else {
-            Some(source.to_owned())
+            Some(crate::prelude::SourceId::from(source.to_owned()))
         });
 
         // Calculate next spawn order BEFORE eviction (so evicted well's order is included).

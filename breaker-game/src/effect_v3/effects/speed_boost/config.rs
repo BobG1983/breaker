@@ -4,9 +4,12 @@ use bevy::prelude::*;
 use ordered_float::OrderedFloat;
 use serde::{Deserialize, Serialize};
 
-use crate::effect_v3::{
-    stacking::EffectStack,
-    traits::{Fireable, PassiveEffect, Reversible},
+use crate::{
+    effect_v3::{
+        stacking::EffectStack,
+        traits::{Fireable, PassiveEffect, Reversible},
+    },
+    prelude::SourceId,
 };
 
 /// Multiplicative speed scaling factor applied to the entity's base speed.
@@ -25,7 +28,8 @@ impl Fireable for SpeedBoostConfig {
                 .insert(EffectStack::<Self>::default());
         }
         if let Some(mut stack) = world.get_mut::<EffectStack<Self>>(entity) {
-            stack.push(source.to_owned(), self.clone());
+            let source_id = SourceId::from(source.to_owned());
+            stack.push(source_id, self.clone());
         }
     }
 }
@@ -33,19 +37,21 @@ impl Fireable for SpeedBoostConfig {
 impl Reversible for SpeedBoostConfig {
     fn reverse(&self, entity: Entity, source: &str, world: &mut World) {
         if let Some(mut stack) = world.get_mut::<EffectStack<Self>>(entity) {
-            stack.remove(source, self);
+            let source_id = SourceId::from(source.to_owned());
+            stack.remove(&source_id, self);
         }
     }
 
     fn reverse_all_by_source(&self, entity: Entity, source: &str, world: &mut World) {
         if let Some(mut stack) = world.get_mut::<EffectStack<Self>>(entity) {
-            stack.retain_by_source(source);
+            let source_id = SourceId::from(source.to_owned());
+            stack.retain_by_source(&source_id);
         }
     }
 }
 
 impl PassiveEffect for SpeedBoostConfig {
-    fn aggregate(entries: &[(String, Self)]) -> f32 {
+    fn aggregate(entries: &[(SourceId, Self)]) -> f32 {
         entries
             .iter()
             .map(|(_, c)| c.multiplier.into_inner())
@@ -59,10 +65,33 @@ mod tests {
     use ordered_float::OrderedFloat;
 
     use super::*;
-    use crate::effect_v3::{
-        stacking::EffectStack,
-        traits::{Fireable, Reversible},
+    use crate::{
+        chips::definition::Rarity,
+        effect_v3::{
+            stacking::EffectStack,
+            traits::{Fireable, Reversible},
+        },
+        prelude::SourceIdExt,
     };
+
+    /// Builder-format `SourceId` used as the canonical opaque test fixture.
+    fn test_source() -> SourceId {
+        SourceId::chip("Test").rarity(Rarity::Common).build()
+    }
+
+    /// Builder-format `SourceId` representing an "Overclock" chip — used by
+    /// multi-source retain/remove tests in this module.
+    fn overclock_source() -> SourceId {
+        SourceId::chip("Overclock").rarity(Rarity::Common).build()
+    }
+
+    /// Builder-format `SourceId` representing a "`FeedbackLoop`" chip — used by
+    /// multi-source retain/remove tests in this module.
+    fn feedback_loop_source() -> SourceId {
+        SourceId::chip("FeedbackLoop")
+            .rarity(Rarity::Common)
+            .build()
+    }
 
     #[test]
     fn fire_creates_stack_and_pushes_entry() {
@@ -72,10 +101,29 @@ mod tests {
             multiplier: OrderedFloat(1.5),
         };
 
-        config.fire(entity, "test_source", &mut world);
+        config.fire(entity, test_source().0.as_ref(), &mut world);
 
         let stack = world.get::<EffectStack<SpeedBoostConfig>>(entity).unwrap();
         assert_eq!(stack.len(), 1);
+    }
+
+    // ── B49: fire pushes a (SourceId, SpeedBoostConfig) entry ──
+
+    #[test]
+    fn fire_stores_source_as_source_id_value() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+        let config = SpeedBoostConfig {
+            multiplier: OrderedFloat(1.5),
+        };
+
+        let piercing_common = SourceId::chip("Piercing").rarity(Rarity::Common).build();
+        config.fire(entity, piercing_common.0.as_ref(), &mut world);
+
+        let stack = world.get::<EffectStack<SpeedBoostConfig>>(entity).unwrap();
+        let entries: Vec<_> = stack.iter().collect();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].0, piercing_common);
     }
 
     #[test]
@@ -86,8 +134,8 @@ mod tests {
             multiplier: OrderedFloat(1.5),
         };
 
-        config.fire(entity, "test_source", &mut world);
-        config.fire(entity, "test_source", &mut world);
+        config.fire(entity, test_source().0.as_ref(), &mut world);
+        config.fire(entity, test_source().0.as_ref(), &mut world);
 
         let stack = world.get::<EffectStack<SpeedBoostConfig>>(entity).unwrap();
         assert_eq!(stack.len(), 2);
@@ -102,8 +150,8 @@ mod tests {
             multiplier: OrderedFloat(1.5),
         };
 
-        config.fire(entity, "test_source", &mut world);
-        config.reverse(entity, "test_source", &mut world);
+        config.fire(entity, test_source().0.as_ref(), &mut world);
+        config.reverse(entity, test_source().0.as_ref(), &mut world);
 
         let stack = world.get::<EffectStack<SpeedBoostConfig>>(entity).unwrap();
         assert_eq!(stack.len(), 0);
@@ -117,7 +165,7 @@ mod tests {
             multiplier: OrderedFloat(1.5),
         };
 
-        config.reverse(entity, "test_source", &mut world);
+        config.reverse(entity, test_source().0.as_ref(), &mut world);
         // No panic — operation is a no-op.
     }
 
@@ -131,20 +179,20 @@ mod tests {
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.5),
         }
-        .fire(entity, "overclock", &mut world);
+        .fire(entity, overclock_source().0.as_ref(), &mut world);
         SpeedBoostConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .fire(entity, "feedback_loop", &mut world);
+        .fire(entity, feedback_loop_source().0.as_ref(), &mut world);
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.3),
         }
-        .fire(entity, "overclock", &mut world);
+        .fire(entity, overclock_source().0.as_ref(), &mut world);
 
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.5),
         }
-        .reverse_all_by_source(entity, "overclock", &mut world);
+        .reverse_all_by_source(entity, overclock_source().0.as_ref(), &mut world);
 
         let stack = world.get::<EffectStack<SpeedBoostConfig>>(entity).unwrap();
         assert_eq!(stack.len(), 1);
@@ -159,7 +207,7 @@ mod tests {
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.5),
         }
-        .reverse_all_by_source(entity, "test_source", &mut world);
+        .reverse_all_by_source(entity, test_source().0.as_ref(), &mut world);
         // No panic.
         assert!(world.get::<EffectStack<SpeedBoostConfig>>(entity).is_none());
     }

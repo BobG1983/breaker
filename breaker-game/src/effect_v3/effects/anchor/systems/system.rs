@@ -51,10 +51,16 @@ pub fn tick_anchor(mut query: TickAnchorQuery, time: Res<Time>, mut commands: Co
         if timer.0 <= 0.0 {
             commands.entity(entity).insert(AnchorPlanted);
             if let Some(mut stack) = piercing_stack {
-                stack.push("anchor_piercing".to_owned(), PiercingConfig { charges: 1 });
+                stack.push(
+                    crate::prelude::SourceId::from("anchor_piercing"),
+                    PiercingConfig { charges: 1 },
+                );
             } else {
                 let mut stack = EffectStack::<PiercingConfig>::default();
-                stack.push("anchor_piercing".to_owned(), PiercingConfig { charges: 1 });
+                stack.push(
+                    crate::prelude::SourceId::from("anchor_piercing"),
+                    PiercingConfig { charges: 1 },
+                );
                 commands.entity(entity).insert(stack);
             }
         }

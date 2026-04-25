@@ -78,7 +78,7 @@ pub(super) fn wire_apply_only(app: &mut App) {
 /// Used to assert source membership / cardinality / multiplier values.
 pub(super) fn haste_entries(
     stack: &EffectStack<SpeedBoostConfig>,
-) -> Vec<(String, SpeedBoostConfig)> {
+) -> Vec<(SourceId, SpeedBoostConfig)> {
     stack.iter().map(|(s, c)| (s.clone(), c.clone())).collect()
 }
 

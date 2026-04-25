@@ -46,7 +46,6 @@ fn build_diffusion_test_app(share_percent: f32) -> App {
     app.world_mut().insert_resource(DiffusionConfig {
         base_share_percent:      share_percent,
         share_per_level_percent: 0.0,
-        depth_increase_interval: 5,
     });
     // Add Diffusion stack so hazard_active(Diffusion) run-condition passes.
     app.world_mut()

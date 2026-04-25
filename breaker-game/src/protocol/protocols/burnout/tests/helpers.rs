@@ -9,8 +9,7 @@ use bevy::{
 };
 
 use super::super::system::{
-    BURNOUT_SENTINEL, BurnoutConfig, BurnoutDamageBoost, BurnoutHeat, BurnoutSpeedBoost, activate,
-    register,
+    BurnoutConfig, BurnoutDamageBoost, BurnoutHeat, BurnoutSpeedBoost, activate, register,
 };
 use crate::{
     bolt::components::BoltBaseDamage,
@@ -18,7 +17,7 @@ use crate::{
     effect_v3::{components::EffectSourceChip, effects::shockwave::components::ShockwaveSource},
     prelude::*,
     protocol::{
-        definition::{ProtocolDefinition, ProtocolTuning},
+        definition::{ProtocolDefinition, ProtocolKind, ProtocolTuning},
         resources::ActiveProtocols,
     },
 };
@@ -278,16 +277,18 @@ pub(super) fn read_damage_boost_multiplier(app: &App, bolt: Entity) -> Option<f3
         .map(|b| b.multiplier)
 }
 
-/// Returns every `DamageDealt<Cell>` message whose `source` matches
-/// `BURNOUT_SENTINEL`, collected from the `MessageCollector` since the app
-/// was built. Used by amplification and sentinel tests to assert that only
-/// Burnout-attributed damage is emitted (and how much).
+/// Returns every `DamageDealt<Cell>` message whose `source` matches the
+/// builder-produced `protocol:burnout` source, collected from the
+/// `MessageCollector` since the app was built. Used by amplification and
+/// sentinel tests to assert that only Burnout-attributed damage is emitted
+/// (and how much).
 pub(super) fn collected_burnout_damage(app: &App) -> Vec<DamageDealt<Cell>> {
+    let burnout_source = SourceId::protocol(ProtocolKind::Burnout).build();
     app.world()
         .resource::<MessageCollector<DamageDealt<Cell>>>()
         .0
         .iter()
-        .filter(|msg| msg.source == Some(SourceId::from(BURNOUT_SENTINEL)))
+        .filter(|msg| msg.source.as_ref() == Some(&burnout_source))
         .cloned()
         .collect()
 }
@@ -315,12 +316,12 @@ pub(super) fn shockwave_position(app: &App, entity: Entity) -> Option<Vec2> {
     app.world().get::<Position2D>(entity).map(|p| p.0)
 }
 
-/// Returns the `EffectSourceChip` string on the given entity, or `None` if
-/// the component is absent (or carries an empty inner).
+/// Returns the `EffectSourceChip` inner string content on the given entity,
+/// or `None` if the component is absent (or carries an empty inner).
 pub(super) fn shockwave_source_chip(app: &App, entity: Entity) -> Option<String> {
     app.world()
         .get::<EffectSourceChip>(entity)
-        .and_then(|c| c.0.clone())
+        .and_then(|c| c.0.as_ref().map(|s| s.0.clone().into_owned()))
 }
 
 // ── Time-based helpers ──────────────────────────────────────────────────────

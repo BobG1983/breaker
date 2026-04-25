@@ -3,9 +3,12 @@
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::effect_v3::{
-    stacking::EffectStack,
-    traits::{Fireable, PassiveEffect, Reversible},
+use crate::{
+    effect_v3::{
+        stacking::EffectStack,
+        traits::{Fireable, PassiveEffect, Reversible},
+    },
+    prelude::SourceId,
 };
 
 /// Number of cells the bolt can pass through without bouncing.
@@ -24,7 +27,8 @@ impl Fireable for PiercingConfig {
                 .insert(EffectStack::<Self>::default());
         }
         if let Some(mut stack) = world.get_mut::<EffectStack<Self>>(entity) {
-            stack.push(source.to_owned(), self.clone());
+            let source_id = SourceId::from(source.to_owned());
+            stack.push(source_id, self.clone());
         }
     }
 }
@@ -32,19 +36,21 @@ impl Fireable for PiercingConfig {
 impl Reversible for PiercingConfig {
     fn reverse(&self, entity: Entity, source: &str, world: &mut World) {
         if let Some(mut stack) = world.get_mut::<EffectStack<Self>>(entity) {
-            stack.remove(source, self);
+            let source_id = SourceId::from(source.to_owned());
+            stack.remove(&source_id, self);
         }
     }
 
     fn reverse_all_by_source(&self, entity: Entity, source: &str, world: &mut World) {
         if let Some(mut stack) = world.get_mut::<EffectStack<Self>>(entity) {
-            stack.retain_by_source(source);
+            let source_id = SourceId::from(source.to_owned());
+            stack.retain_by_source(&source_id);
         }
     }
 }
 
 impl PassiveEffect for PiercingConfig {
-    fn aggregate(entries: &[(String, Self)]) -> f32 {
+    fn aggregate(entries: &[(SourceId, Self)]) -> f32 {
         entries.iter().map(|(_, c)| c.charges as f32).sum()
     }
 }
@@ -54,10 +60,33 @@ mod tests {
     use bevy::prelude::*;
 
     use super::*;
-    use crate::effect_v3::{
-        stacking::EffectStack,
-        traits::{Fireable, Reversible},
+    use crate::{
+        chips::definition::Rarity,
+        effect_v3::{
+            stacking::EffectStack,
+            traits::{Fireable, Reversible},
+        },
+        prelude::SourceIdExt,
     };
+
+    /// Builder-format `SourceId` used as the canonical opaque test fixture.
+    fn test_source() -> SourceId {
+        SourceId::chip("Test").rarity(Rarity::Common).build()
+    }
+
+    /// Builder-format `SourceId` representing a "Splinter" piercing chip —
+    /// used by multi-source retain/remove tests.
+    fn splinter_source() -> SourceId {
+        SourceId::chip("Splinter").rarity(Rarity::Common).build()
+    }
+
+    /// Builder-format `SourceId` representing a "`PiercingBolt`" chip — used
+    /// by multi-source retain/remove tests.
+    fn piercing_bolt_source() -> SourceId {
+        SourceId::chip("PiercingBolt")
+            .rarity(Rarity::Common)
+            .build()
+    }
 
     #[test]
     fn fire_creates_stack_and_pushes_entry() {
@@ -65,7 +94,7 @@ mod tests {
         let entity = world.spawn_empty().id();
         let config = PiercingConfig { charges: 3 };
 
-        config.fire(entity, "test_source", &mut world);
+        config.fire(entity, test_source().0.as_ref(), &mut world);
 
         let stack = world.get::<EffectStack<PiercingConfig>>(entity).unwrap();
         assert_eq!(stack.len(), 1);
@@ -77,8 +106,8 @@ mod tests {
         let entity = world.spawn_empty().id();
         let config = PiercingConfig { charges: 3 };
 
-        config.fire(entity, "test_source", &mut world);
-        config.fire(entity, "test_source", &mut world);
+        config.fire(entity, test_source().0.as_ref(), &mut world);
+        config.fire(entity, test_source().0.as_ref(), &mut world);
 
         let stack = world.get::<EffectStack<PiercingConfig>>(entity).unwrap();
         assert_eq!(stack.len(), 2);
@@ -91,8 +120,8 @@ mod tests {
         let entity = world.spawn_empty().id();
         let config = PiercingConfig { charges: 3 };
 
-        config.fire(entity, "test_source", &mut world);
-        config.reverse(entity, "test_source", &mut world);
+        config.fire(entity, test_source().0.as_ref(), &mut world);
+        config.reverse(entity, test_source().0.as_ref(), &mut world);
 
         let stack = world.get::<EffectStack<PiercingConfig>>(entity).unwrap();
         assert_eq!(stack.len(), 0);
@@ -104,7 +133,7 @@ mod tests {
         let entity = world.spawn_empty().id();
         let config = PiercingConfig { charges: 3 };
 
-        config.reverse(entity, "test_source", &mut world);
+        config.reverse(entity, test_source().0.as_ref(), &mut world);
     }
 
     // ── reverse_all_by_source ─────────────────────────────────────────
@@ -114,11 +143,15 @@ mod tests {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
 
-        PiercingConfig { charges: 2 }.fire(entity, "splinter", &mut world);
-        PiercingConfig { charges: 5 }.fire(entity, "piercing_bolt", &mut world);
-        PiercingConfig { charges: 3 }.fire(entity, "splinter", &mut world);
+        PiercingConfig { charges: 2 }.fire(entity, splinter_source().0.as_ref(), &mut world);
+        PiercingConfig { charges: 5 }.fire(entity, piercing_bolt_source().0.as_ref(), &mut world);
+        PiercingConfig { charges: 3 }.fire(entity, splinter_source().0.as_ref(), &mut world);
 
-        PiercingConfig { charges: 2 }.reverse_all_by_source(entity, "splinter", &mut world);
+        PiercingConfig { charges: 2 }.reverse_all_by_source(
+            entity,
+            splinter_source().0.as_ref(),
+            &mut world,
+        );
 
         let stack = world.get::<EffectStack<PiercingConfig>>(entity).unwrap();
         assert_eq!(stack.len(), 1);
@@ -130,7 +163,11 @@ mod tests {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
 
-        PiercingConfig { charges: 2 }.reverse_all_by_source(entity, "splinter", &mut world);
+        PiercingConfig { charges: 2 }.reverse_all_by_source(
+            entity,
+            splinter_source().0.as_ref(),
+            &mut world,
+        );
         // No panic.
     }
 
@@ -142,10 +179,10 @@ mod tests {
         let entity = world.spawn_empty().id();
 
         // Pre-populate with 1 entry from "splinter".
-        PiercingConfig { charges: 2 }.fire(entity, "splinter", &mut world);
+        PiercingConfig { charges: 2 }.fire(entity, splinter_source().0.as_ref(), &mut world);
 
         // Fire from a different source.
-        PiercingConfig { charges: 5 }.fire(entity, "piercing_bolt", &mut world);
+        PiercingConfig { charges: 5 }.fire(entity, piercing_bolt_source().0.as_ref(), &mut world);
 
         let stack = world.get::<EffectStack<PiercingConfig>>(entity).unwrap();
         assert_eq!(stack.len(), 2, "stack should have 2 entries, not replace");
@@ -157,9 +194,9 @@ mod tests {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
 
-        PiercingConfig { charges: 2 }.fire(entity, "splinter", &mut world);
-        PiercingConfig { charges: 5 }.fire(entity, "piercing_bolt", &mut world);
-        PiercingConfig { charges: 5 }.fire(entity, "piercing_bolt", &mut world);
+        PiercingConfig { charges: 2 }.fire(entity, splinter_source().0.as_ref(), &mut world);
+        PiercingConfig { charges: 5 }.fire(entity, piercing_bolt_source().0.as_ref(), &mut world);
+        PiercingConfig { charges: 5 }.fire(entity, piercing_bolt_source().0.as_ref(), &mut world);
 
         let stack = world.get::<EffectStack<PiercingConfig>>(entity).unwrap();
         assert_eq!(stack.len(), 3, "stack should have 3 entries (2+5+5)");

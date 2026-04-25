@@ -4,7 +4,10 @@ use bevy::prelude::*;
 use ordered_float::OrderedFloat;
 
 use crate::{
-    chips::{definition::ChipDefinition, systems::dispatch_chip_effects::tests::helpers::*},
+    chips::{
+        definition::{ChipDefinition, Rarity},
+        systems::dispatch_chip_effects::tests::helpers::*,
+    },
     effect_v3::{
         effects::{DamageBoostConfig, ShieldConfig, SpeedBoostConfig},
         stacking::EffectStack,
@@ -72,8 +75,8 @@ fn bound_effects_chip_name_is_display_name() {
     let bound = app.world().get::<BoundEffects>(breaker).unwrap();
     assert_eq!(bound.0.len(), 1);
     assert_eq!(
-        bound.0[0].0, "Chain Reaction",
-        "chip_name in BoundEffects should be the chip's display name verbatim"
+        bound.0[0].0, "chip:Chain Reaction:Common",
+        "chip_name in BoundEffects is the canonical SourceId form (`chip:<template-or-name>:<rarity>`) per W5"
     );
 }
 
@@ -108,8 +111,8 @@ fn bound_effects_inserted_on_entity_missing_it() {
     );
     let bound = bound.unwrap();
     assert!(
-        bound.0.iter().any(|(name, _)| name == "Test"),
-        "BoundEffects should contain the chip's 'Test' entry"
+        bound.0.iter().any(|(name, _)| name == "chip:Test:Common"),
+        "BoundEffects should contain the chip's 'Test' entry (canonical SourceId form)"
     );
 
     let staged = app.world().get::<StagedEffects>(breaker);
@@ -177,7 +180,10 @@ fn existing_bound_effects_preserved_new_entry_appended() {
     );
     assert_eq!(bound.0[0].0, "OldChip1", "first existing entry preserved");
     assert_eq!(bound.0[1].0, "OldChip2", "second existing entry preserved");
-    assert_eq!(bound.0[2].0, "Append", "new entry appended");
+    assert_eq!(
+        bound.0[2].0, "chip:Append:Common",
+        "new entry appended (canonical SourceId form)"
+    );
 }
 
 // ── Behavior 6 edge case: Breaker entity missing BoundEffects — inserted before push ──
@@ -212,8 +218,8 @@ fn breaker_missing_bound_effects_inserted_before_push() {
             .unwrap()
             .0
             .iter()
-            .any(|(name, _)| name == "Parry Bare"),
-        "BoundEffects should contain the chip's 'Parry Bare' entry"
+            .any(|(name, _)| name == "chip:Parry Bare:Common"),
+        "BoundEffects should contain the chip's 'Parry Bare' entry (canonical SourceId form)"
     );
 
     let staged = app.world().get::<StagedEffects>(breaker);
@@ -277,4 +283,131 @@ fn walls_target_stamps_to_breaker_bound_effects() {
     let bound = app.world().get::<BoundEffects>(breaker);
     assert!(bound.is_some(), "BoundEffects should be present on Breaker");
     assert_eq!(bound.unwrap().0.len(), 1, "Should have 1 stamped entry");
+}
+
+// ── B45: dispatch_chip_effects formats source as chip:<template>:<rarity> ──
+
+#[test]
+fn dispatch_chip_effects_uses_template_name_and_rarity_in_source() {
+    let mut app = test_app();
+
+    let mut def = ChipDefinition::test_on(
+        "Faint Pulse",
+        StampTarget::Breaker,
+        Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+            multiplier: OrderedFloat(1.5),
+        })),
+        5,
+    );
+    def.template_name = Some("Pulse".to_owned());
+    def.rarity = Rarity::Common;
+
+    insert_chip(&mut app, def);
+    let breaker = spawn_breaker(&mut app);
+    select_chip(&mut app, "Faint Pulse");
+    app.update();
+
+    let stack = app
+        .world()
+        .get::<EffectStack<SpeedBoostConfig>>(breaker)
+        .expect("SpeedBoost stack must be present");
+    let entries: Vec<_> = stack.iter().collect();
+    assert_eq!(entries.len(), 1);
+    assert_eq!(
+        entries[0].0,
+        SourceId::chip("Pulse").rarity(Rarity::Common).build(),
+        "dispatch must build source as chip:<template>:<rarity> per W5 spec"
+    );
+}
+
+// ── B45 edge: evolution chips fall back to display name ──
+
+#[test]
+fn dispatch_chip_effects_evolution_falls_back_to_display_name() {
+    let mut app = test_app();
+
+    let mut def = ChipDefinition::test_on(
+        "Overclock",
+        StampTarget::Breaker,
+        Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+            multiplier: OrderedFloat(1.5),
+        })),
+        1,
+    );
+    def.template_name = None;
+    def.rarity = Rarity::Evolution;
+
+    insert_chip(&mut app, def);
+    let breaker = spawn_breaker(&mut app);
+    select_chip(&mut app, "Overclock");
+    app.update();
+
+    let stack = app
+        .world()
+        .get::<EffectStack<SpeedBoostConfig>>(breaker)
+        .expect("SpeedBoost stack must be present");
+    let entries: Vec<_> = stack.iter().collect();
+    assert_eq!(
+        entries[0].0,
+        SourceId::chip("Overclock")
+            .rarity(Rarity::Evolution)
+            .build(),
+        "evolution chips use display name when template_name is None"
+    );
+}
+
+// ── B46: every dispatch_chip_effects emit MUST start with "chip:" ──
+
+#[test]
+fn dispatch_chip_effects_every_emit_source_starts_with_chip_prefix() {
+    let mut app = test_app();
+
+    let mut def = ChipDefinition::test_on(
+        "Faint Pulse",
+        StampTarget::Breaker,
+        Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+            multiplier: OrderedFloat(1.5),
+        })),
+        5,
+    );
+    def.template_name = Some("Pulse".to_owned());
+    def.rarity = Rarity::Common;
+    insert_chip(&mut app, def);
+
+    let mut def2 = ChipDefinition::test_on(
+        "Overclock",
+        StampTarget::Breaker,
+        Tree::Fire(EffectType::SpeedBoost(SpeedBoostConfig {
+            multiplier: OrderedFloat(1.5),
+        })),
+        1,
+    );
+    def2.template_name = None;
+    def2.rarity = Rarity::Evolution;
+    insert_chip(&mut app, def2);
+
+    let breaker = spawn_breaker(&mut app);
+    select_chip(&mut app, "Faint Pulse");
+    select_chip(&mut app, "Overclock");
+    app.update();
+
+    let stack = app
+        .world()
+        .get::<EffectStack<SpeedBoostConfig>>(breaker)
+        .expect("SpeedBoost stack must be present");
+    let entries: Vec<_> = stack.iter().collect();
+    assert_eq!(
+        entries.len(),
+        2,
+        "two chip selects must produce two entries"
+    );
+
+    for (source, _config) in &entries {
+        let s = source.0.as_ref();
+        assert!(
+            s.starts_with("chip:"),
+            "B46: every dispatch_chip_effects emit must produce a source \
+             starting with \"chip:\" — got {s:?}"
+        );
+    }
 }

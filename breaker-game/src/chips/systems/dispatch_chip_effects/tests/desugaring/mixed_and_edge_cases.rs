@@ -43,8 +43,8 @@ fn chip_name_preserved_in_bound_effects() {
     let bound = app.world().get::<BoundEffects>(breaker).unwrap();
     assert_eq!(bound.0.len(), 1);
     assert_eq!(
-        bound.0[0].0, "Surge Bolt",
-        "chip_name should be preserved in BoundEffects entries"
+        bound.0[0].0, "chip:Surge Bolt:Common",
+        "chip source should be preserved in BoundEffects entries"
     );
 }
 
@@ -95,8 +95,8 @@ fn multiple_stamps_preserve_chip_name() {
 
     let bound = app.world().get::<BoundEffects>(breaker).unwrap();
     assert_eq!(bound.0.len(), 2, "Should have 2 entries");
-    assert_eq!(bound.0[0].0, "Parry Multi");
-    assert_eq!(bound.0[1].0, "Parry Multi");
+    assert_eq!(bound.0[0].0, "chip:Parry Multi:Common");
+    assert_eq!(bound.0[1].0, "chip:Parry Multi:Common");
 }
 
 // ── Behavior 12: Missing breaker for non-Breaker target — no panic ──

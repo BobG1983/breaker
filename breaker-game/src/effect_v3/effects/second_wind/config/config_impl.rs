@@ -22,7 +22,7 @@ impl Fireable for SecondWindConfig {
         let chip = EffectSourceChip(if source.is_empty() {
             None
         } else {
-            Some(source.to_owned())
+            Some(crate::prelude::SourceId::from(source.to_owned()))
         });
         let playfield = world.resource::<PlayfieldConfig>().clone();
 

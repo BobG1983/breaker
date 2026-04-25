@@ -49,7 +49,7 @@ fn shape_d_cond_entering_true_installs_armed_on_entry() {
     let armed = bound
         .0
         .iter()
-        .find(|(name, _)| name == "chip_redirect#armed[0]");
+        .find(|(name, _)| name == "chip_redirect:armed");
     assert!(
         armed.is_some(),
         "Should find armed On with key 'chip_redirect#armed[0]'"

@@ -15,12 +15,19 @@ use bevy::prelude::*;
 use rantzsoft_spatial2d::components::{GlobalPosition2D, Spatial2D};
 
 use crate::{
+    chips::definition::Rarity,
     effect_v3::effects::tether_beam::components::{
         TetherBeamDamage, TetherBeamSource, TetherBeamWidth,
     },
     prelude::*,
     shared::GameDrawLayer,
 };
+
+/// Builder-format `SourceId` used as the canonical opaque tag for the
+/// `DamageBoost` / Vulnerable stack augmentation in scheduling tests.
+fn test_source() -> SourceId {
+    SourceId::chip("Test").rarity(Rarity::Common).build()
+}
 
 fn tether_scheduling_app() -> App {
     TestAppBuilder::new()
@@ -47,7 +54,7 @@ fn spawn_cell_with_hp(app: &mut App, x: f32, y: f32, hp: f32) -> Entity {
 fn spawn_cell_with_hp_and_vuln(app: &mut App, x: f32, y: f32, hp: f32, vuln: f32) -> Entity {
     let entity = spawn_cell_with_hp(app, x, y, hp);
     let mut stack = VulnerableStack::default();
-    stack.add(SourceId::from("test"), vuln);
+    stack.add(test_source(), vuln);
     app.world_mut().entity_mut(entity).insert(stack);
     entity
 }
@@ -82,7 +89,7 @@ fn tick_tether_beam_applies_damage_boost_in_same_tick() {
     let beam = spawn_tether_beam(&mut app, 10.0);
     app.world_mut().entity_mut(beam).insert({
         let mut stack = DamageBoostStack::default();
-        stack.add(SourceId::from("test"), 2.0);
+        stack.add(test_source(), 2.0);
         stack
     });
 
@@ -105,7 +112,7 @@ fn tick_tether_beam_applies_boost_and_vulnerability_in_same_tick() {
     let beam = spawn_tether_beam(&mut app, 10.0);
     app.world_mut().entity_mut(beam).insert({
         let mut stack = DamageBoostStack::default();
-        stack.add(SourceId::from("test"), 2.0);
+        stack.add(test_source(), 2.0);
         stack
     });
 

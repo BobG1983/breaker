@@ -4,7 +4,8 @@
 //! Pins the `BoltImpactCell` consumer:
 //! - Reads `BoltImpactCell`. On a primed bolt, emits
 //!   `DamageDealt<Cell>` with `amount = base * boost.multiplier` and
-//!   `source = Some(RECKLESS_DASH_SENTINEL.into())` when `amount > 0.0`.
+//!   `source = Some(SourceId::protocol(RecklessDash).build())`
+//!   when `amount > 0.0`.
 //! - Removes `RiskyDamageBoost` from the bolt (unconditional, single-shot).
 //! - Emission is gated on `amount > 0.0` (mirrors Iron Curtain / Echo
 //!   Strike).
@@ -26,7 +27,11 @@ use super::{
         spawn_bolt_with_base_damage, spawn_cell_empty, write_bolt_impact_cell,
     },
 };
-use crate::prelude::*;
+use crate::{prelude::*, protocol::definition::ProtocolKind};
+
+fn reckless_dash_source() -> SourceId {
+    SourceId::protocol(ProtocolKind::RecklessDash).build()
+}
 
 fn seed_canonical(app: &mut App) {
     seed_active_protocols_with_reckless_dash(app, 0.7, 4.0, true);
@@ -69,7 +74,7 @@ fn primed_bolt_first_cell_impact_emits_amplified_damage() {
     );
     assert_eq!(
         msg.source.as_ref(),
-        Some(&SourceId::from("protocol:reckless_dash")),
+        Some(&reckless_dash_source()),
         "source must be the Reckless Dash sentinel"
     );
     assert!(
@@ -400,7 +405,7 @@ fn every_emitted_message_has_sentinel_and_respective_dealer() {
     for msg in &msgs {
         assert_eq!(
             msg.source.as_ref(),
-            Some(&SourceId::from("protocol:reckless_dash")),
+            Some(&reckless_dash_source()),
             "every amplified message must carry the Reckless Dash sentinel"
         );
     }
@@ -424,4 +429,24 @@ fn every_emitted_message_has_sentinel_and_respective_dealer() {
         Some(bolt_b),
         "dealer for cell_b msg must be bolt_b"
     );
+}
+
+// ── B31: source matches builder-produced protocol:reckless_dash ──
+
+#[test]
+fn reckless_dash_amplified_damage_source_equals_builder() {
+    use crate::{prelude::SourceIdExt, protocol::definition::ProtocolKind};
+    let mut app = build_reckless_dash_app();
+    seed_canonical(&mut app);
+    let bolt = spawn_bolt_with_base_damage(&mut app, 10.0);
+    install_risky_boost(&mut app, bolt, 4.0);
+    let cell = spawn_cell_empty(&mut app);
+
+    write_bolt_impact_cell(&mut app, cell, bolt);
+    tick(&mut app);
+
+    let msgs = collected_reckless_dash_damage(&app);
+    assert_eq!(msgs.len(), 1);
+    let expected = SourceId::protocol(ProtocolKind::RecklessDash).build();
+    assert_eq!(msgs[0].source.as_ref(), Some(&expected));
 }

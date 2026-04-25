@@ -213,7 +213,7 @@ pub(crate) fn echo_strike_emit_siblings(
 ) {
     let Some(config) = config else { return };
 
-    let echo_source = SourceId::from("protocol:echo_strike");
+    let echo_source = SourceId::protocol(ProtocolKind::EchoStrike).build();
 
     // Snapshot every unread `DamageDealt<Cell>` message via a local cursor.
     // Mirrors `tether_emit_partner`'s pattern: `MessageCursor` spans both

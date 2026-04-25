@@ -49,7 +49,7 @@ pub(crate) fn tick_tether_beam(
                     attributed_to: None,
                     target:        cell_entity,
                     amount:        beam_damage.0,
-                    source:        chip.and_then(|c| c.0.clone()).map(SourceId::from),
+                    source:        chip.and_then(|c| c.0.clone()),
                     _marker:       std::marker::PhantomData,
                 });
             }

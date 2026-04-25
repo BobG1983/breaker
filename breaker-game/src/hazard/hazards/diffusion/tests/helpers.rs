@@ -24,7 +24,6 @@ pub(super) const fn canonical_config() -> DiffusionConfig {
     DiffusionConfig {
         base_share_percent:      20.0,
         share_per_level_percent: 10.0,
-        depth_increase_interval: 5,
     }
 }
 

@@ -134,6 +134,7 @@ pub(crate) fn renewal_tick(
         return;
     }
     let dt = time.delta_secs();
+    let source = SourceId::hazard(HazardKind::Renewal).build();
 
     for (entity, mut timer, hp) in &mut cells {
         if hp.current <= 0.0 {
@@ -151,7 +152,7 @@ pub(crate) fn renewal_tick(
                 target:        entity,
                 amount:        missing,
                 cap:           HealCap::Starting,
-                source:        Some(SourceId::from("hazard:renewal")),
+                source:        Some(source.clone()),
                 _marker:       PhantomData,
             });
         }

@@ -5,7 +5,7 @@
 //! Owns:
 //! - [`IronCurtainConfig`] — per-run tuning inserted from
 //!   `ProtocolTuning::IronCurtain` at activation time.
-//! - [`IRON_CURTAIN_SENTINEL`] — `source_chip` tag stamped on emitted
+//! - The builder-produced `"protocol:iron_curtain"` — `source` tag stamped on emitted
 //!   `DamageDealt<Cell>` messages so downstream stat tracking / FX can
 //!   identify Iron Curtain wave damage.
 //! - [`activate`] — parses `ProtocolTuning::IronCurtain`, inserts
@@ -30,12 +30,6 @@ use crate::{
         systems::ProtocolGate,
     },
 };
-
-// ── Constants ───────────────────────────────────────────────────────────────
-
-/// Sentinel tag stamped into `DamageDealt<Cell>.source` on Iron Curtain
-/// wave damage so downstream stat tracking / FX can identify the source.
-pub(crate) const IRON_CURTAIN_SENTINEL: &str = "protocol:iron_curtain";
 
 // ── IronCurtainConfig ───────────────────────────────────────────────────────
 
@@ -192,7 +186,7 @@ pub(crate) fn iron_curtain_on_bolt_lost(
                 attributed_to: None,
                 target:        cell,
                 amount:        damage,
-                source:        Some(SourceId::from(IRON_CURTAIN_SENTINEL)),
+                source:        Some(SourceId::protocol(ProtocolKind::IronCurtain).build()),
                 _marker:       PhantomData,
             });
         }

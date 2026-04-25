@@ -7,6 +7,7 @@ use rantzsoft_spatial2d::components::Position2D;
 use super::config_impl::*;
 use crate::{
     bolt::{components::BoltBaseDamage, resources::DEFAULT_BOLT_BASE_DAMAGE},
+    chips::definition::Rarity,
     effect_v3::{
         components::EffectSourceChip,
         effects::{
@@ -26,9 +27,16 @@ use crate::{
         },
         traits::{Fireable, Reversible},
     },
-    prelude::DamageBoostStack,
+    prelude::{DamageBoostStack, SourceId, SourceIdExt},
     shared::test_utils::{TestAppBuilder, tick},
 };
+
+/// Builder-format `SourceId` for the canonical "Storm" chip used across these
+/// pulse tests. Centralized so the fixture demonstrates the canonical
+/// `chip:<template>:<rarity>` shape rather than an arbitrary string literal.
+fn storm_source() -> SourceId {
+    SourceId::chip("Storm").rarity(Rarity::Common).build()
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -404,12 +412,12 @@ fn tick_pulse_propagates_some_source_chip_onto_spawned_ring() {
         .spawn((BoltBaseDamage(10.0), Position2D(Vec2::ZERO)))
         .id();
 
-    make_config().fire(emitter, "storm_chip", app.world_mut());
+    make_config().fire(emitter, storm_source().0.as_ref(), app.world_mut());
     force_fire_on_next_tick(&mut app, emitter);
 
     tick(&mut app);
 
-    let chips: Vec<Option<String>> = app
+    let chips: Vec<Option<SourceId>> = app
         .world_mut()
         .query_filtered::<&EffectSourceChip, With<PulseRing>>()
         .iter(app.world())
@@ -418,8 +426,8 @@ fn tick_pulse_propagates_some_source_chip_onto_spawned_ring() {
     assert_eq!(chips.len(), 1, "expected exactly one PulseRing with a chip");
     assert_eq!(
         chips[0],
-        Some("storm_chip".to_string()),
-        "spawned ring should carry EffectSourceChip(Some(\"storm_chip\")), got {:?}",
+        Some(storm_source()),
+        "spawned ring should carry EffectSourceChip(Some(storm chip source)), got {:?}",
         chips[0],
     );
 }
@@ -439,7 +447,7 @@ fn tick_pulse_propagates_none_source_chip_for_empty_fire_source() {
 
     tick(&mut app);
 
-    let chips: Vec<Option<String>> = app
+    let chips: Vec<Option<SourceId>> = app
         .world_mut()
         .query_filtered::<&EffectSourceChip, With<PulseRing>>()
         .iter(app.world())
@@ -467,7 +475,7 @@ fn tick_pulse_resnapshots_bolt_base_damage_between_ticks_when_it_changes() {
         .spawn((BoltBaseDamage(10.0), Position2D(Vec2::ZERO)))
         .id();
 
-    make_config().fire(emitter, "storm_chip", app.world_mut());
+    make_config().fire(emitter, storm_source().0.as_ref(), app.world_mut());
     force_fire_on_next_tick(&mut app, emitter);
 
     tick(&mut app);
@@ -512,7 +520,7 @@ fn tick_pulse_resnapshots_bolt_base_damage_between_ticks_when_it_changes() {
     );
 
     // Both rings should still carry the same chip string (it lives on the emitter).
-    let chips: Vec<Option<String>> = app
+    let chips: Vec<Option<SourceId>> = app
         .world_mut()
         .query_filtered::<&EffectSourceChip, With<PulseRing>>()
         .iter(app.world())
@@ -522,8 +530,8 @@ fn tick_pulse_resnapshots_bolt_base_damage_between_ticks_when_it_changes() {
     for chip in &chips {
         assert_eq!(
             chip,
-            &Some("storm_chip".to_string()),
-            "both rings should carry the storm_chip source",
+            &Some(storm_source()),
+            "both rings should carry the same storm chip source",
         );
     }
 }
@@ -654,14 +662,14 @@ fn reverse_all_by_source_removes_pulse_emitter_via_default_delegation() {
     let mut world = World::new();
     let entity = world.spawn_empty().id();
 
-    make_config().fire(entity, "storm_chip", &mut world);
+    make_config().fire(entity, storm_source().0.as_ref(), &mut world);
     assert!(
         world
             .get::<crate::effect_v3::effects::pulse::components::PulseEmitter>(entity)
             .is_some()
     );
 
-    make_config().reverse_all_by_source(entity, "storm_chip", &mut world);
+    make_config().reverse_all_by_source(entity, storm_source().0.as_ref(), &mut world);
     assert!(
         world
             .get::<crate::effect_v3::effects::pulse::components::PulseEmitter>(entity)
@@ -670,7 +678,7 @@ fn reverse_all_by_source_removes_pulse_emitter_via_default_delegation() {
     );
 
     // Calling twice does not panic.
-    make_config().reverse_all_by_source(entity, "storm_chip", &mut world);
+    make_config().reverse_all_by_source(entity, storm_source().0.as_ref(), &mut world);
 }
 
 // #37 — `tick_pulse` config-side cross-check (single-gate `if`, not `while`)
@@ -696,7 +704,7 @@ fn tick_pulse_via_fire_fires_exactly_one_ring_per_tick_when_dt_exceeds_interval(
         speed:           OrderedFloat(200.0),
         interval:        OrderedFloat(0.25),
     };
-    config.fire(emitter, "storm_chip", app.world_mut());
+    config.fire(emitter, storm_source().0.as_ref(), app.world_mut());
 
     // Force timer to 0.25 so dt = 1.0 (4*interval) tries to "burst".
     app.world_mut()

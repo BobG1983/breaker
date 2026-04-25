@@ -36,16 +36,6 @@ use crate::{
 /// it directly without going through the resource type.
 pub(crate) const DIFFUSION_SHARE_CAP_PERCENT: f32 = 95.0;
 
-/// Source-id prefix for diffusion-derived ring messages. Rings are tagged
-/// `"hazard:diffusion:{instance_id}"` so `diffusion_reduce_primary` can
-/// identify reentering messages and reuse their `instance_id`.
-pub(crate) const DIFFUSION_SOURCE_PREFIX: &str = "hazard:diffusion";
-
-/// Prefix with trailing `:` — matched against `DamageDealt<Cell>.source`
-/// to detect a ring re-entry (`"hazard:diffusion:{instance_id}"`). Avoids
-/// per-tick `format!` allocation.
-const DIFFUSION_SOURCE_PREFIX_COLON: &str = "hazard:diffusion:";
-
 /// Per-run Diffusion tuning, in percentage units.
 ///
 /// Translates from [`HazardTuning::Diffusion`]'s fractional authoring fields
@@ -57,9 +47,6 @@ pub(crate) struct DiffusionConfig {
     pub(crate) base_share_percent:      f32,
     /// Additional share percent per stack beyond the first.
     pub(crate) share_per_level_percent: f32,
-    /// Stacks required to escalate the BFS depth by one. Must be > 0 in config;
-    /// pathological `0` is clamped to `1` inside [`DiffusionConfig::depth`].
-    pub(crate) depth_increase_interval: u32,
 }
 
 impl DiffusionConfig {
@@ -84,27 +71,6 @@ impl DiffusionConfig {
         } else {
             raw
         }
-    }
-
-    /// BFS cascade depth for the given stack count.
-    ///
-    /// - `stacks == 0` → `0` (hazard inactive — short-circuits the BFS).
-    /// - `stacks >= 1` → `1 + (stacks - 1) / depth_increase_interval.max(1)`
-    ///   so a pathological `depth_increase_interval == 0` pins depth at 1
-    ///   rather than dividing by zero.
-    ///
-    /// `const fn` — integer arithmetic only (`saturating_sub`, `max`, integer
-    /// division).
-    #[must_use]
-    pub(crate) const fn depth(self, stacks: u32) -> u32 {
-        if stacks == 0 {
-            return 0;
-        }
-        if self.depth_increase_interval == 0 {
-            // Pathological config: pin depth at 1 regardless of stack.
-            return 1;
-        }
-        1 + stacks.saturating_sub(1) / self.depth_increase_interval
     }
 }
 
@@ -169,7 +135,7 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
     let HazardTuning::Diffusion {
         base_share_frac,
         per_level_share_frac,
-        depth_every_levels,
+        depth_every_levels: _,
     } = *tuning
     else {
         warn!("diffusion::activate called with non-Diffusion tuning");
@@ -178,7 +144,6 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
     commands.insert_resource(DiffusionConfig {
         base_share_percent:      base_share_frac * 100.0,
         share_per_level_percent: per_level_share_frac * 100.0,
-        depth_increase_interval: depth_every_levels,
     });
 }
 
@@ -288,8 +253,7 @@ pub(crate) fn diffusion_reduce_primary(
         let instance_id_opt = msg
             .source
             .as_ref()
-            .and_then(|s| s.0.as_ref().strip_prefix(DIFFUSION_SOURCE_PREFIX_COLON))
-            .and_then(|suffix| suffix.parse::<u64>().ok());
+            .and_then(|s| s.extract_hazard_instance(HazardKind::Diffusion));
 
         let instance_id = if let Some(id) = instance_id_opt {
             // Reuse / resurrect orphan instance.
@@ -386,7 +350,9 @@ pub(crate) fn diffusion_emit_rings(
         // Build the `SourceId` once per pending emission and clone the
         // (cheap `Cow<'static, str>`-backed) `SourceId` per neighbor
         // instead of allocating a new `String` every iteration.
-        let source = SourceId::from(format!("{DIFFUSION_SOURCE_PREFIX}:{}", p.instance_id));
+        let source = SourceId::hazard(HazardKind::Diffusion)
+            .instance(p.instance_id)
+            .build();
         for &neighbor in &p.candidate_neighbors {
             messages.write(DamageDealt::<Cell> {
                 dealer:        None,

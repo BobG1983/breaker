@@ -15,7 +15,7 @@
 use bevy::prelude::*;
 
 use super::{
-    super::system::{IRON_CURTAIN_SENTINEL, IronCurtainConfig},
+    super::system::IronCurtainConfig,
     helpers::{
         amount_for_target, build_iron_curtain_app, build_iron_curtain_app_with_playfield_height,
         collected_iron_curtain_damage, install_iron_curtain_config,
@@ -24,7 +24,11 @@ use super::{
         spawn_cell_at_with_markers, write_bolt_lost,
     },
 };
-use crate::prelude::*;
+use crate::{prelude::*, protocol::definition::ProtocolKind};
+
+fn iron_curtain_source() -> SourceId {
+    SourceId::protocol(ProtocolKind::IronCurtain).build()
+}
 
 // ── Behavior 5 — BoltLost triggers wave with full origin damage on a close cell
 
@@ -55,10 +59,7 @@ fn bolt_lost_triggers_wave_with_full_origin_damage_within_falloff_start() {
         "amount expected 10.0 (= 20.0 * 0.5), got {}",
         msg.amount
     );
-    assert_eq!(
-        msg.source.as_ref(),
-        Some(&SourceId::from(IRON_CURTAIN_SENTINEL))
-    );
+    assert_eq!(msg.source.as_ref(), Some(&iron_curtain_source()));
 }
 
 // ── Behavior 5 (edge case) — cell exactly at falloff_start boundary ────────-
@@ -108,10 +109,7 @@ fn cell_beyond_falloff_start_takes_linearly_reduced_damage() {
         "amount expected ≈5.714286, got {}",
         msgs[0].amount
     );
-    assert_eq!(
-        msgs[0].source.as_ref(),
-        Some(&SourceId::from(IRON_CURTAIN_SENTINEL))
-    );
+    assert_eq!(msgs[0].source.as_ref(), Some(&iron_curtain_source()));
 }
 
 // ── Behavior 6 (edge case) — cell one unit beyond falloff_start ────────────-
@@ -678,6 +676,34 @@ fn degenerate_max_distance_does_not_panic_or_emit_nan_or_negative() {
             m.amount.is_finite() && m.amount > 0.0,
             "amount must be finite positive, got {}",
             m.amount
+        );
+    }
+}
+
+// ── B30: source matches builder-produced protocol:iron_curtain ──
+
+#[test]
+fn iron_curtain_wave_damage_source_equals_builder() {
+    use crate::{prelude::SourceIdExt, protocol::definition::ProtocolKind};
+    let mut app = build_iron_curtain_app();
+    seed_active_protocols_with_iron_curtain(&mut app, 0.5, 50.0);
+    spawn_breaker_at(&mut app, Vec2::new(0.0, -200.0));
+    spawn_cell_at(&mut app, Vec2::new(30.0, -170.0));
+    let bolt = spawn_bolt_with_base_damage(&mut app, 20.0);
+    write_bolt_lost(&mut app, bolt);
+    tick(&mut app);
+
+    let msgs = collected_iron_curtain_damage(&app);
+    assert!(
+        !msgs.is_empty(),
+        "expected at least one wave damage message"
+    );
+    let expected = SourceId::protocol(ProtocolKind::IronCurtain).build();
+    for m in &msgs {
+        assert_eq!(
+            m.source.as_ref(),
+            Some(&expected),
+            "every emitted IronCurtain damage must use builder source"
         );
     }
 }

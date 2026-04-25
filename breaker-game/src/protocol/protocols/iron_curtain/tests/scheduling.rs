@@ -18,18 +18,25 @@ use bevy::{ecs::message::Messages, prelude::*};
 use rantzsoft_spatial2d::components::{GlobalPosition2D, Spatial2D};
 
 use super::{
-    super::system::{IRON_CURTAIN_SENTINEL, IronCurtainConfig, register},
+    super::system::{IronCurtainConfig, register},
     helpers::{amount_for_target, collected_iron_curtain_damage},
 };
 use crate::{
     bolt::components::BoltBaseDamage,
+    chips::definition::Rarity,
     prelude::*,
     protocol::{
-        definition::{ProtocolDefinition, ProtocolTuning},
+        definition::{ProtocolDefinition, ProtocolKind, ProtocolTuning},
         resources::ActiveProtocols,
     },
     shared::GameDrawLayer,
 };
+
+/// Builder-format `SourceId` used as the canonical opaque tag for the
+/// `VulnerableStack` augmentation in scheduling tests.
+fn test_source() -> SourceId {
+    SourceId::chip("Test").rarity(Rarity::Common).build()
+}
 
 fn iron_curtain_scheduling_app() -> App {
     let mut app = TestAppBuilder::new()
@@ -100,7 +107,7 @@ fn spawn_cell_with_hp(app: &mut App, x: f32, y: f32, hp: f32) -> Entity {
 fn spawn_cell_with_hp_and_vuln(app: &mut App, x: f32, y: f32, hp: f32, vuln: f32) -> Entity {
     let entity = spawn_cell_with_hp(app, x, y, hp);
     let mut stack = VulnerableStack::default();
-    stack.add(SourceId::from("test"), vuln);
+    stack.add(test_source(), vuln);
     app.world_mut().entity_mut(entity).insert(stack);
     entity
 }
@@ -212,7 +219,7 @@ fn invulnerable_cell_receives_iron_curtain_message_with_post_pipeline_zero_amoun
     );
     assert_eq!(
         msg.source.as_ref(),
-        Some(&SourceId::from(IRON_CURTAIN_SENTINEL))
+        Some(&SourceId::protocol(ProtocolKind::IronCurtain).build())
     );
     assert!(
         msg.amount.abs() < f32::EPSILON,

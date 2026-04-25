@@ -21,9 +21,16 @@ use crate::{
         test_utils::{damage_stack, piercing_stack},
     },
     cells::resources::CellConfig,
+    chips::definition::Rarity,
     prelude::*,
     shared::GameDrawLayer,
 };
+
+/// Builder-format `SourceId` used as the canonical opaque tag for the
+/// `VulnerableStack` augmentation in this test.
+fn test_source() -> SourceId {
+    SourceId::chip("Test").rarity(Rarity::Common).build()
+}
 
 // ── Behavior 1 — emission carries raw base damage even when boost present ──
 
@@ -132,7 +139,7 @@ fn emission_amount_ignores_stacked_vulnerability() {
         .entity_mut(cell)
         .get_mut::<VulnerableStack>()
         .unwrap()
-        .add(SourceId::from("test"), 2.0);
+        .add(test_source(), 2.0);
 
     let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
     spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);

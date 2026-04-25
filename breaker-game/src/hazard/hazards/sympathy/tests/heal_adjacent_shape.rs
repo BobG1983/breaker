@@ -20,7 +20,7 @@ use super::{
         write_cell_damage,
     },
 };
-use crate::prelude::*;
+use crate::{hazard::definition::HazardKind, prelude::*};
 
 // ── Behavior 34 — stack 1, 100 damage, two adjacent neighbours heal 25 each ─
 
@@ -56,7 +56,7 @@ fn stack_one_damage_100_two_neighbours_each_heal_25() {
     assert!(matches!(heals_b[0].cap, HealCap::Starting));
     assert_eq!(
         heals_b[0].source.as_ref(),
-        Some(&SourceId::from("hazard:sympathy"))
+        Some(&SourceId::hazard(HazardKind::Sympathy).build())
     );
     assert_eq!(heals_b[0].healer, None);
     assert_eq!(heals_b[0].target, b);
@@ -71,7 +71,7 @@ fn stack_one_damage_100_two_neighbours_each_heal_25() {
     assert!(matches!(heals_c[0].cap, HealCap::Starting));
     assert_eq!(
         heals_c[0].source.as_ref(),
-        Some(&SourceId::from("hazard:sympathy"))
+        Some(&SourceId::hazard(HazardKind::Sympathy).build())
     );
 
     let heals_a = heals_for_cell(&app, a);
@@ -114,7 +114,7 @@ fn stack_three_damage_80_three_neighbours_each_heal_28() {
         assert!(matches!(msgs[0].cap, HealCap::Starting));
         assert_eq!(
             msgs[0].source.as_ref(),
-            Some(&SourceId::from("hazard:sympathy"))
+            Some(&SourceId::hazard(HazardKind::Sympathy).build())
         );
         assert_eq!(msgs[0].healer, None);
     }
@@ -170,7 +170,7 @@ fn stack_six_ring_two_through_intermediary_heals_attenuate() {
     assert!(all.iter().all(|m| matches!(m.cap, HealCap::Starting)));
     assert!(
         all.iter()
-            .all(|m| m.source == Some(SourceId::from("hazard:sympathy")))
+            .all(|m| m.source == Some(SourceId::hazard(HazardKind::Sympathy).build()))
     );
     assert!(all.iter().all(|m| m.healer.is_none()));
 }
@@ -299,7 +299,7 @@ fn every_emitted_message_has_sympathy_sentinel_source() {
     assert_eq!(all.len(), 3);
     assert!(
         all.iter()
-            .all(|m| m.source == Some(SourceId::from("hazard:sympathy"))),
+            .all(|m| m.source == Some(SourceId::hazard(HazardKind::Sympathy).build())),
         "every message's source must be Some(\"hazard:sympathy\")"
     );
 }
@@ -359,5 +359,29 @@ fn every_message_target_matches_neighbour_entity() {
             matches_count, 1,
             "each of {{B, C, D}} must have exactly 1 message targeting it"
         );
+    }
+}
+
+// ── B33: source matches builder-produced hazard:sympathy ──
+
+#[test]
+fn sympathy_heal_source_equals_builder() {
+    use crate::{hazard::definition::HazardKind, prelude::SourceIdExt};
+    let mut app = test_app_playing();
+    app.add_systems(FixedUpdate, sympathy_heal_adjacent);
+    install_sympathy_config(&mut app, canonical_sympathy_config());
+    add_sympathy_stacks(&mut app, 1);
+
+    let a = spawn_cell_at_default(&mut app, Vec2::ZERO);
+    let b = spawn_cell_at_default(&mut app, Vec2::new(50.0, 0.0));
+
+    write_cell_damage(&mut app, a, 100.0);
+    run_fixed_update(&mut app);
+
+    let heals = heals_for_cell(&app, b);
+    assert!(!heals.is_empty(), "expected at least 1 sympathy heal");
+    let expected = SourceId::hazard(HazardKind::Sympathy).build();
+    for heal in &heals {
+        assert_eq!(heal.source.as_ref(), Some(&expected));
     }
 }

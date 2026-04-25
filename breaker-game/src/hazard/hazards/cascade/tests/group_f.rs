@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use super::{super::system::*, helpers::*};
-use crate::{cells::components::Cell, prelude::*};
+use crate::{cells::components::Cell, hazard::definition::HazardKind, prelude::*};
 
 // ════════════════════════════════════════════════════════════════════════════
 // Group F — Message-field invariants
@@ -94,7 +94,7 @@ fn every_message_source_is_hazard_cascade() {
     assert_eq!(all.len(), 2);
     assert!(
         all.iter()
-            .all(|m| m.source == Some(SourceId::from("hazard:cascade")))
+            .all(|m| m.source == Some(SourceId::hazard(HazardKind::Cascade).build()))
     );
     // Bind n so compiler doesn't warn on unused:
     let _ = n;

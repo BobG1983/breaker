@@ -5,15 +5,24 @@ use rantzsoft_stateflow::CleanupOnExit;
 
 use super::config_impl::*;
 use crate::{
+    chips::definition::Rarity,
     effect_v3::{
         components::EffectSourceChip,
         effects::second_wind::components::*,
         traits::{Fireable, Reversible},
     },
+    prelude::{SourceId, SourceIdExt},
     shared::{BOLT_LAYER, GameDrawLayer, PlayfieldConfig, WALL_LAYER},
     state::types::NodeState,
     walls::components::Wall,
 };
+
+/// Builder-format `SourceId` for the canonical "`LastStand`" second-wind chip
+/// used by these tests. Centralized so the fixture demonstrates the canonical
+/// `chip:<template>:<rarity>` shape rather than an arbitrary string literal.
+fn last_stand_source() -> SourceId {
+    SourceId::chip("LastStand").rarity(Rarity::Common).build()
+}
 
 // ── Behavior 8: SecondWind fire() spawns a wall-layer entity with the full wall bundle ──
 
@@ -23,7 +32,7 @@ fn second_wind_fire_spawns_wall_marker_and_bundle() {
     world.insert_resource(PlayfieldConfig::default());
     let owner = world.spawn_empty().id();
 
-    SecondWindConfig {}.fire(owner, "last_stand", &mut world);
+    SecondWindConfig {}.fire(owner, last_stand_source().0.as_ref(), &mut world);
     world.flush();
 
     let entity = world
@@ -65,7 +74,7 @@ fn second_wind_fire_places_markers_on_single_entity() {
     world.insert_resource(PlayfieldConfig::default());
     let owner = world.spawn_empty().id();
 
-    SecondWindConfig {}.fire(owner, "last_stand", &mut world);
+    SecondWindConfig {}.fire(owner, last_stand_source().0.as_ref(), &mut world);
     world.flush();
 
     // Exactly one entity should simultaneously carry Wall AND SecondWindWall.
@@ -87,7 +96,7 @@ fn second_wind_fire_carries_second_wind_markers() {
     world.insert_resource(PlayfieldConfig::default());
     let owner = world.spawn_empty().id();
 
-    SecondWindConfig {}.fire(owner, "last_stand", &mut world);
+    SecondWindConfig {}.fire(owner, last_stand_source().0.as_ref(), &mut world);
     world.flush();
 
     let entity = world
@@ -103,7 +112,7 @@ fn second_wind_fire_carries_second_wind_markers() {
     let chip = world
         .get::<EffectSourceChip>(entity)
         .expect("must have EffectSourceChip");
-    assert_eq!(chip.0, Some("last_stand".to_owned()));
+    assert_eq!(chip.0, Some(last_stand_source()));
 
     let cleanup_count: usize = world
         .query_filtered::<Entity, With<CleanupOnExit<NodeState>>>()
@@ -147,7 +156,7 @@ fn second_wind_fire_positions_entity_at_default_floor() {
     world.insert_resource(PlayfieldConfig::default());
     let owner = world.spawn_empty().id();
 
-    SecondWindConfig {}.fire(owner, "last_stand", &mut world);
+    SecondWindConfig {}.fire(owner, last_stand_source().0.as_ref(), &mut world);
     world.flush();
 
     let entity = world
@@ -204,7 +213,7 @@ fn second_wind_fire_positions_entity_at_custom_floor() {
     });
     let owner = world.spawn_empty().id();
 
-    SecondWindConfig {}.fire(owner, "last_stand", &mut world);
+    SecondWindConfig {}.fire(owner, last_stand_source().0.as_ref(), &mut world);
     world.flush();
 
     let entity = world
@@ -249,9 +258,9 @@ fn second_wind_fire_twice_spawns_two_walls() {
     world.insert_resource(PlayfieldConfig::default());
     let owner = world.spawn_empty().id();
 
-    SecondWindConfig {}.fire(owner, "last_stand", &mut world);
+    SecondWindConfig {}.fire(owner, last_stand_source().0.as_ref(), &mut world);
     world.flush();
-    SecondWindConfig {}.fire(owner, "last_stand", &mut world);
+    SecondWindConfig {}.fire(owner, last_stand_source().0.as_ref(), &mut world);
     world.flush();
 
     let walls: Vec<(Entity, &SecondWindOwner)> = world
@@ -284,9 +293,9 @@ fn second_wind_fire_twice_both_have_full_wall_bundle() {
     world.insert_resource(PlayfieldConfig::default());
     let owner = world.spawn_empty().id();
 
-    SecondWindConfig {}.fire(owner, "last_stand", &mut world);
+    SecondWindConfig {}.fire(owner, last_stand_source().0.as_ref(), &mut world);
     world.flush();
-    SecondWindConfig {}.fire(owner, "last_stand", &mut world);
+    SecondWindConfig {}.fire(owner, last_stand_source().0.as_ref(), &mut world);
     world.flush();
 
     let entities: Vec<Entity> = world
@@ -321,9 +330,9 @@ fn second_wind_reverse_despawns_owners_walls_only() {
     let owner_a = world.spawn_empty().id();
     let owner_b = world.spawn_empty().id();
 
-    SecondWindConfig {}.fire(owner_a, "last_stand", &mut world);
+    SecondWindConfig {}.fire(owner_a, last_stand_source().0.as_ref(), &mut world);
     world.flush();
-    SecondWindConfig {}.fire(owner_b, "last_stand", &mut world);
+    SecondWindConfig {}.fire(owner_b, last_stand_source().0.as_ref(), &mut world);
     world.flush();
 
     // Capture owner_a's wall entity ID so we can assert it is fully despawned
@@ -374,7 +383,7 @@ fn second_wind_reverse_on_owner_with_no_walls_is_noop() {
     let owner_a = world.spawn_empty().id();
     let owner_c = world.spawn_empty().id();
 
-    SecondWindConfig {}.fire(owner_a, "last_stand", &mut world);
+    SecondWindConfig {}.fire(owner_a, last_stand_source().0.as_ref(), &mut world);
     world.flush();
 
     // Must not panic.
@@ -403,7 +412,7 @@ fn reverse_all_by_source_despawns_walls_via_default_delegation() {
     world.insert_resource(PlayfieldConfig::default());
     let owner = world.spawn_empty().id();
 
-    SecondWindConfig {}.fire(owner, "last_stand", &mut world);
+    SecondWindConfig {}.fire(owner, last_stand_source().0.as_ref(), &mut world);
     world.flush();
 
     let count_before = world
@@ -415,7 +424,7 @@ fn reverse_all_by_source_despawns_walls_via_default_delegation() {
         "should have 1 second wind wall before reverse"
     );
 
-    SecondWindConfig {}.reverse_all_by_source(owner, "last_stand", &mut world);
+    SecondWindConfig {}.reverse_all_by_source(owner, last_stand_source().0.as_ref(), &mut world);
 
     let count_after = world
         .query_filtered::<Entity, With<SecondWindWall>>()
@@ -427,5 +436,5 @@ fn reverse_all_by_source_despawns_walls_via_default_delegation() {
     );
 
     // Calling twice does not panic.
-    SecondWindConfig {}.reverse_all_by_source(owner, "last_stand", &mut world);
+    SecondWindConfig {}.reverse_all_by_source(owner, last_stand_source().0.as_ref(), &mut world);
 }

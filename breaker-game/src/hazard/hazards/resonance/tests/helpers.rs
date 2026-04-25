@@ -177,8 +177,8 @@ pub(super) fn collect_sources_with_prefix(app: &App, breaker: Entity, prefix: &s
         .map(|stack| {
             stack
                 .iter()
-                .filter(|(s, _)| s.starts_with(prefix))
-                .map(|(s, _)| s.clone())
+                .filter(|(s, _)| s.0.starts_with(prefix))
+                .map(|(s, _)| s.0.clone().into_owned())
                 .collect()
         })
         .unwrap_or_default()
@@ -189,7 +189,9 @@ pub(super) fn collect_sources_with_prefix(app: &App, breaker: Entity, prefix: &s
 pub(super) fn count_stack_entries_with_source(app: &App, breaker: Entity, source: &str) -> usize {
     app.world()
         .get::<EffectStack<SpeedBoostConfig>>(breaker)
-        .map_or(0, |stack| stack.iter().filter(|(s, _)| s == source).count())
+        .map_or(0, |stack| {
+            stack.iter().filter(|(s, _)| s.0.as_ref() == source).count()
+        })
 }
 
 /// Fires a `SpeedBoostConfig { multiplier: OrderedFloat(0.5) }` onto the

@@ -4,9 +4,12 @@ use bevy::prelude::*;
 use ordered_float::OrderedFloat;
 use serde::{Deserialize, Serialize};
 
-use crate::effect_v3::{
-    stacking::EffectStack,
-    traits::{Fireable, PassiveEffect, Reversible},
+use crate::{
+    effect_v3::{
+        stacking::EffectStack,
+        traits::{Fireable, PassiveEffect, Reversible},
+    },
+    prelude::SourceId,
 };
 
 /// Breaker deceleration multiplier — higher values make the breaker stop faster.
@@ -25,7 +28,8 @@ impl Fireable for QuickStopConfig {
                 .insert(EffectStack::<Self>::default());
         }
         if let Some(mut stack) = world.get_mut::<EffectStack<Self>>(entity) {
-            stack.push(source.to_owned(), self.clone());
+            let source_id = SourceId::from(source.to_owned());
+            stack.push(source_id, self.clone());
         }
     }
 }
@@ -33,19 +37,21 @@ impl Fireable for QuickStopConfig {
 impl Reversible for QuickStopConfig {
     fn reverse(&self, entity: Entity, source: &str, world: &mut World) {
         if let Some(mut stack) = world.get_mut::<EffectStack<Self>>(entity) {
-            stack.remove(source, self);
+            let source_id = SourceId::from(source.to_owned());
+            stack.remove(&source_id, self);
         }
     }
 
     fn reverse_all_by_source(&self, entity: Entity, source: &str, world: &mut World) {
         if let Some(mut stack) = world.get_mut::<EffectStack<Self>>(entity) {
-            stack.retain_by_source(source);
+            let source_id = SourceId::from(source.to_owned());
+            stack.retain_by_source(&source_id);
         }
     }
 }
 
 impl PassiveEffect for QuickStopConfig {
-    fn aggregate(entries: &[(String, Self)]) -> f32 {
+    fn aggregate(entries: &[(SourceId, Self)]) -> f32 {
         entries
             .iter()
             .map(|(_, c)| c.multiplier.into_inner())
@@ -59,10 +65,27 @@ mod tests {
     use ordered_float::OrderedFloat;
 
     use super::*;
-    use crate::effect_v3::{
-        stacking::EffectStack,
-        traits::{Fireable, Reversible},
+    use crate::{
+        chips::definition::Rarity,
+        effect_v3::{
+            stacking::EffectStack,
+            traits::{Fireable, Reversible},
+        },
+        prelude::SourceIdExt,
     };
+
+    /// Builder-format `SourceId` used as the canonical opaque test fixture.
+    fn test_source() -> SourceId {
+        SourceId::chip("Test").rarity(Rarity::Common).build()
+    }
+
+    /// Builder-format `SourceId` representing a "`ChronoPassive`" chip — used
+    /// by multi-source retain/remove tests in this module.
+    fn chrono_passive_source() -> SourceId {
+        SourceId::chip("ChronoPassive")
+            .rarity(Rarity::Common)
+            .build()
+    }
 
     #[test]
     fn fire_creates_stack_and_pushes_entry() {
@@ -72,10 +95,29 @@ mod tests {
             multiplier: OrderedFloat(2.0),
         };
 
-        config.fire(entity, "test_source", &mut world);
+        config.fire(entity, test_source().0.as_ref(), &mut world);
 
         let stack = world.get::<EffectStack<QuickStopConfig>>(entity).unwrap();
         assert_eq!(stack.len(), 1);
+    }
+
+    // ── B53: fire stores SourceId-keyed entry ──
+
+    #[test]
+    fn fire_stores_source_as_source_id_value() {
+        let mut world = World::new();
+        let entity = world.spawn_empty().id();
+        let config = QuickStopConfig {
+            multiplier: OrderedFloat(2.0),
+        };
+
+        let quickstop = SourceId::chip("QuickStop").rarity(Rarity::Common).build();
+        config.fire(entity, quickstop.0.as_ref(), &mut world);
+
+        let stack = world.get::<EffectStack<QuickStopConfig>>(entity).unwrap();
+        let entries: Vec<_> = stack.iter().collect();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].0, quickstop);
     }
 
     #[test]
@@ -86,8 +128,8 @@ mod tests {
             multiplier: OrderedFloat(2.0),
         };
 
-        config.fire(entity, "test_source", &mut world);
-        config.fire(entity, "test_source", &mut world);
+        config.fire(entity, test_source().0.as_ref(), &mut world);
+        config.fire(entity, test_source().0.as_ref(), &mut world);
 
         let stack = world.get::<EffectStack<QuickStopConfig>>(entity).unwrap();
         assert_eq!(stack.len(), 2);
@@ -102,8 +144,8 @@ mod tests {
             multiplier: OrderedFloat(2.0),
         };
 
-        config.fire(entity, "test_source", &mut world);
-        config.reverse(entity, "test_source", &mut world);
+        config.fire(entity, test_source().0.as_ref(), &mut world);
+        config.reverse(entity, test_source().0.as_ref(), &mut world);
 
         let stack = world.get::<EffectStack<QuickStopConfig>>(entity).unwrap();
         assert_eq!(stack.len(), 0);
@@ -117,7 +159,7 @@ mod tests {
             multiplier: OrderedFloat(2.0),
         };
 
-        config.reverse(entity, "test_source", &mut world);
+        config.reverse(entity, test_source().0.as_ref(), &mut world);
     }
 
     // ── reverse_all_by_source ─────────────────────────────────────────
@@ -130,7 +172,7 @@ mod tests {
         QuickStopConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .fire(entity, "chrono_passive", &mut world);
+        .fire(entity, chrono_passive_source().0.as_ref(), &mut world);
         QuickStopConfig {
             multiplier: OrderedFloat(1.5),
         }
@@ -138,12 +180,12 @@ mod tests {
         QuickStopConfig {
             multiplier: OrderedFloat(3.0),
         }
-        .fire(entity, "chrono_passive", &mut world);
+        .fire(entity, chrono_passive_source().0.as_ref(), &mut world);
 
         QuickStopConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .reverse_all_by_source(entity, "chrono_passive", &mut world);
+        .reverse_all_by_source(entity, chrono_passive_source().0.as_ref(), &mut world);
 
         let stack = world.get::<EffectStack<QuickStopConfig>>(entity).unwrap();
         assert_eq!(stack.len(), 1);
@@ -158,7 +200,7 @@ mod tests {
         QuickStopConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .reverse_all_by_source(entity, "chrono_passive", &mut world);
+        .reverse_all_by_source(entity, chrono_passive_source().0.as_ref(), &mut world);
         // No panic.
     }
 }

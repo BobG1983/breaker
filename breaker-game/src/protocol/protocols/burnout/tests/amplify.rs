@@ -4,7 +4,8 @@
 //! Pins the `BoltImpactCell` consumer:
 //! - On a primed bolt (`BurnoutDamageBoost`), emits `DamageDealt<Cell>` with
 //!   `amount = base * boost.multiplier`, `source =
-//!   Some("protocol:burnout".into())`, gated on `amount > 0.0`.
+//!   Some(SourceId::protocol(Burnout).build())`, gated on
+//!   `amount > 0.0`.
 //! - Removes `BurnoutDamageBoost` unconditionally (single-shot).
 //! - Missing `BoltBaseDamage` falls back to `DEFAULT_BOLT_BASE_DAMAGE`.
 //! - Non-primed bolts emit nothing.
@@ -25,7 +26,7 @@ use super::{
         write_bolt_impact_cell,
     },
 };
-use crate::prelude::*;
+use crate::{prelude::*, protocol::definition::ProtocolKind};
 
 fn seed_canonical(app: &mut App) {
     seed_active_protocols_with_burnout(app, 4.0, 2.0, 1.5, 4.0, 2.0);
@@ -56,8 +57,8 @@ fn boosted_bolt_first_cell_impact_emits_amplified_damage() {
     );
     assert_eq!(
         msg.source.as_ref(),
-        Some(&SourceId::from("protocol:burnout")),
-        "source must be the Burnout sentinel"
+        Some(&SourceId::protocol(ProtocolKind::Burnout).build()),
+        "source must be the Burnout builder-produced source"
     );
     assert!(
         app.world().get::<BurnoutDamageBoost>(bolt).is_none(),
@@ -354,8 +355,8 @@ fn every_emitted_message_carries_burnout_sentinel_and_respective_dealer() {
     for msg in &msgs {
         assert_eq!(
             msg.source.as_ref(),
-            Some(&SourceId::from("protocol:burnout")),
-            "every amplified message must carry the Burnout sentinel"
+            Some(&SourceId::protocol(ProtocolKind::Burnout).build()),
+            "every amplified message must carry the Burnout builder-produced source"
         );
     }
     let msg_a = msgs
@@ -375,5 +376,28 @@ fn every_emitted_message_carries_burnout_sentinel_and_respective_dealer() {
         msg_b.dealer,
         Some(bolt_b),
         "dealer for cell_b msg must be bolt_b"
+    );
+}
+
+// ── B26: source matches builder-produced protocol:burnout ──
+
+#[test]
+fn amplified_damage_source_equals_builder_protocol_burnout() {
+    use crate::{prelude::SourceIdExt, protocol::definition::ProtocolKind};
+    let mut app = build_burnout_app();
+    seed_canonical(&mut app);
+    let bolt = spawn_bolt_with_base_damage(&mut app, 1.0);
+    install_burnout_damage_boost(&mut app, bolt, 4.0);
+    let cell = spawn_cell_empty(&mut app);
+    write_bolt_impact_cell(&mut app, cell, bolt);
+    tick(&mut app);
+
+    let msgs = collected_burnout_damage(&app);
+    assert_eq!(msgs.len(), 1);
+    let expected = SourceId::protocol(ProtocolKind::Burnout).build();
+    assert_eq!(
+        msgs[0].source.as_ref(),
+        Some(&expected),
+        "source must equal SourceId::protocol(Burnout).build()"
     );
 }

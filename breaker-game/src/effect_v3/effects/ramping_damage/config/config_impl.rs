@@ -5,9 +5,12 @@ use ordered_float::OrderedFloat;
 use serde::{Deserialize, Serialize};
 
 use super::super::components::RampingDamageAccumulator;
-use crate::effect_v3::{
-    stacking::EffectStack,
-    traits::{Fireable, PassiveEffect, Reversible},
+use crate::{
+    effect_v3::{
+        stacking::EffectStack,
+        traits::{Fireable, PassiveEffect, Reversible},
+    },
+    prelude::SourceId,
 };
 
 /// Flat damage bonus added per activation — accumulates each time the trigger fires.
@@ -26,7 +29,8 @@ impl Fireable for RampingDamageConfig {
                 .insert(EffectStack::<Self>::default());
         }
         if let Some(mut stack) = world.get_mut::<EffectStack<Self>>(entity) {
-            stack.push(source.to_owned(), self.clone());
+            let source_id = SourceId::from(source.to_owned());
+            stack.push(source_id, self.clone());
         }
         // Insert accumulator if not already present.
         if world.get::<RampingDamageAccumulator>(entity).is_none() {
@@ -50,7 +54,8 @@ impl Fireable for RampingDamageConfig {
 impl Reversible for RampingDamageConfig {
     fn reverse(&self, entity: Entity, source: &str, world: &mut World) {
         if let Some(mut stack) = world.get_mut::<EffectStack<Self>>(entity) {
-            stack.remove(source, self);
+            let source_id = SourceId::from(source.to_owned());
+            stack.remove(&source_id, self);
             // Remove accumulator when stack is empty.
             if stack.is_empty() {
                 world
@@ -62,7 +67,8 @@ impl Reversible for RampingDamageConfig {
 
     fn reverse_all_by_source(&self, entity: Entity, source: &str, world: &mut World) {
         if let Some(mut stack) = world.get_mut::<EffectStack<Self>>(entity) {
-            stack.retain_by_source(source);
+            let source_id = SourceId::from(source.to_owned());
+            stack.retain_by_source(&source_id);
             if stack.is_empty() {
                 world
                     .entity_mut(entity)
@@ -73,7 +79,7 @@ impl Reversible for RampingDamageConfig {
 }
 
 impl PassiveEffect for RampingDamageConfig {
-    fn aggregate(entries: &[(String, Self)]) -> f32 {
+    fn aggregate(entries: &[(SourceId, Self)]) -> f32 {
         entries.iter().map(|(_, c)| c.increment.into_inner()).sum()
     }
 }

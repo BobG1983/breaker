@@ -18,8 +18,10 @@ use super::{
 };
 use crate::{
     breaker::messages::{BumpGrade, BumpPerformed},
+    chips::definition::Rarity,
     effect_v3::{effects::SizeBoostConfig, stacking::EffectStack},
     hazard::{definition::HazardKind, resources::ActiveHazards},
+    prelude::*,
 };
 
 fn write_bump(app: &mut App, grade: BumpGrade) {
@@ -321,7 +323,7 @@ fn preexisting_erosion_source_entry_persists_at_stack_zero() {
 
     let mut seed = EffectStack::<SizeBoostConfig>::default();
     seed.push(
-        "hazard:erosion".to_owned(),
+        SourceId::hazard(HazardKind::Erosion).build(),
         SizeBoostConfig {
             multiplier: OrderedFloat(1.40),
         },
@@ -351,13 +353,13 @@ fn preexisting_erosion_source_entry_persists_at_stack_zero() {
 
     let mut seed = EffectStack::<SizeBoostConfig>::default();
     seed.push(
-        "hazard:erosion".to_owned(),
+        SourceId::hazard(HazardKind::Erosion).build(),
         SizeBoostConfig {
             multiplier: OrderedFloat(1.40),
         },
     );
     seed.push(
-        "chip:heavy".to_owned(),
+        SourceId::chip("heavy").rarity(Rarity::Common).build(),
         SizeBoostConfig {
             multiplier: OrderedFloat(1.25),
         },

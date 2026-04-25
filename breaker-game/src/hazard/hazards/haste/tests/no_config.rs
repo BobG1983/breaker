@@ -9,7 +9,11 @@ use super::helpers::{
     add_haste_stacks, run_fixed_update, spawn_bolt, spawn_bolt_with_stack, test_app_playing,
     wire_apply_only,
 };
-use crate::effect_v3::{effects::SpeedBoostConfig, stacking::EffectStack};
+use crate::{
+    chips::definition::Rarity,
+    effect_v3::{effects::SpeedBoostConfig, stacking::EffectStack},
+    prelude::*,
+};
 
 // ── Behavior 24 — no-op when HasteConfig resource is absent ────────────
 
@@ -42,7 +46,7 @@ fn pre_existing_chip_entry_untouched_when_config_absent() {
 
     let mut seed = EffectStack::<SpeedBoostConfig>::default();
     seed.push(
-        "chip:overclock".to_owned(),
+        SourceId::chip("Overclock").rarity(Rarity::Common).build(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.5),
         },

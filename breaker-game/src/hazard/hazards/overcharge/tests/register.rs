@@ -15,9 +15,19 @@ use super::{
     },
 };
 use crate::{
+    chips::definition::Rarity,
     effect_v3::{effects::SpeedBoostConfig, stacking::EffectStack},
     hazard::{definition::HazardKind, resources::ActiveHazards},
+    prelude::*,
 };
+
+fn hazard_overcharge() -> SourceId {
+    SourceId::hazard(HazardKind::Overcharge).build()
+}
+
+fn chip_overclock() -> SourceId {
+    SourceId::chip("Overclock").rarity(Rarity::Common).build()
+}
 
 // ── Behavior 39 — full chain: kill → count → apply speed in one tick ─────
 
@@ -42,7 +52,7 @@ fn full_chain_kill_counts_and_applies_speed_in_one_tick() {
     assert_eq!(stack.len(), 1);
     assert!((stack.aggregate() - 1.05).abs() < 1e-6);
     let entries = overcharge_entries(stack);
-    assert_eq!(entries[0].0, "hazard:overcharge");
+    assert_eq!(entries[0].0, hazard_overcharge());
 }
 
 #[test]
@@ -120,7 +130,7 @@ fn full_chain_intra_tick_ordering_kill_reset_apply() {
     if let Some(stack) = stack_opt {
         let entries = overcharge_entries(stack);
         assert!(
-            entries.iter().all(|(s, _)| s != "hazard:overcharge"),
+            entries.iter().all(|(s, _)| s != &hazard_overcharge()),
             "intra-tick: reset must fire before apply → no Overcharge entry"
         );
     }
@@ -290,7 +300,7 @@ fn pregate_messages_drain_cleanly_before_gate_opens() {
     let stack = app.world().get::<EffectStack<SpeedBoostConfig>>(bolt);
     if let Some(stack) = stack {
         assert!(
-            stack.is_empty() || !stack.iter().any(|(s, _)| s == "hazard:overcharge"),
+            stack.is_empty() || !stack.iter().any(|(s, _)| s == &hazard_overcharge()),
             "no 'hazard:overcharge' speed-stack entry may appear from a \
              pre-gate drained message"
         );
@@ -355,7 +365,7 @@ fn stack_zero_preserves_pre_existing_overcharge_entry() {
     // Zero Overcharge stacks.
     let mut seed = EffectStack::<SpeedBoostConfig>::default();
     seed.push(
-        "hazard:overcharge".to_owned(),
+        hazard_overcharge(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.40),
         },
@@ -384,13 +394,13 @@ fn stack_zero_preserves_chip_and_pre_existing_overcharge_entries() {
 
     let mut seed = EffectStack::<SpeedBoostConfig>::default();
     seed.push(
-        "hazard:overcharge".to_owned(),
+        hazard_overcharge(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.40),
         },
     );
     seed.push(
-        "chip:overclock".to_owned(),
+        chip_overclock(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.5),
         },

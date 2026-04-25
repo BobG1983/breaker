@@ -6,10 +6,19 @@ use super::{super::config_impl::*, helpers::*};
 use crate::{
     bolt::{components::BoltBaseDamage, resources::DEFAULT_BOLT_BASE_DAMAGE},
     cells::components::Cell,
+    chips::definition::Rarity,
     effect_v3::traits::Fireable,
     prelude::*,
     shared::test_utils::MessageCollector,
 };
+
+// B44: piercing_beam tests use a builder-produced chip-namespaced source.
+fn piercing_beam_chip_source() -> SourceId {
+    SourceId::chip("Piercing Beam").rarity(Rarity::Rare).build()
+}
+fn piercing_beam_chip_source_str() -> String {
+    piercing_beam_chip_source().0.into_owned()
+}
 
 // ── C8: PiercingBeam base damage reads BoltBaseDamage from source entity ──
 
@@ -194,7 +203,8 @@ fn non_empty_source_propagates_as_some_source_chip() {
     app.world_mut()
         .spawn((Cell, Position2D(Vec2::new(0.0, 50.0))));
 
-    geometry_config().fire(source, "laser_chip", app.world_mut());
+    let source_str = piercing_beam_chip_source_str();
+    geometry_config().fire(source, &source_str, app.world_mut());
     app.update();
 
     let msgs = app
@@ -203,8 +213,8 @@ fn non_empty_source_propagates_as_some_source_chip() {
     assert_eq!(msgs.0.len(), 1);
     assert_eq!(
         msgs.0[0].source,
-        Some(SourceId::from("laser_chip")),
-        "non-empty source should propagate as Some(source_chip)",
+        Some(piercing_beam_chip_source()),
+        "non-empty source must propagate as the builder-produced chip source",
     );
 }
 

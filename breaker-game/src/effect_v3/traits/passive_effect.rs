@@ -1,6 +1,7 @@
 //! `PassiveEffect` trait — aggregation contract for stackable passive effects.
 
 use super::{Fireable, Reversible};
+use crate::prelude::SourceId;
 
 /// Trait bound for types that can live in an `EffectStack`.
 ///
@@ -17,5 +18,5 @@ pub trait PassiveEffect:
     ///
     /// Multiplicative effects return the product. Additive effects return the sum.
     /// Empty stack returns the identity value (1.0 for multiplicative, 0 for additive).
-    fn aggregate(entries: &[(String, Self)]) -> f32;
+    fn aggregate(entries: &[(SourceId, Self)]) -> f32;
 }

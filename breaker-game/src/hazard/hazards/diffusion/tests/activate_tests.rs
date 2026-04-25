@@ -27,7 +27,6 @@ fn activate_inserts_config_with_percent_translated_fields() {
         "share_per_level_percent expected 10.0, got {}",
         cfg.share_per_level_percent
     );
-    assert_eq!(cfg.depth_increase_interval, 5);
 }
 
 // Behavior 16 — non-trivial fraction translations are preserved within epsilon.
@@ -54,7 +53,6 @@ fn activate_translates_nontrivial_fractions() {
         "share_per_level_percent expected 12.5, got {}",
         cfg.share_per_level_percent
     );
-    assert_eq!(cfg.depth_increase_interval, 7);
 }
 
 // Behavior 17 — Decay tuning does nothing.
@@ -110,7 +108,6 @@ fn second_activate_overwrites_prior_diffusion_config() {
     let cfg = app.world().resource::<DiffusionConfig>();
     assert!((cfg.base_share_percent - 50.0).abs() < f32::EPSILON);
     assert!((cfg.share_per_level_percent - 25.0).abs() < f32::EPSILON);
-    assert_eq!(cfg.depth_increase_interval, 3);
 }
 
 // Behavior 20 — mismatch after successful activate preserves existing config.
@@ -136,5 +133,4 @@ fn activate_mismatch_after_match_preserves_existing_config() {
     let cfg = app.world().resource::<DiffusionConfig>();
     assert!((cfg.base_share_percent - 20.0).abs() < f32::EPSILON);
     assert!((cfg.share_per_level_percent - 10.0).abs() < f32::EPSILON);
-    assert_eq!(cfg.depth_increase_interval, 5);
 }

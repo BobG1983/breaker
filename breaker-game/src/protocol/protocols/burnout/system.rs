@@ -21,19 +21,6 @@ use crate::{
     },
 };
 
-// ── Constants ───────────────────────────────────────────────────────────────
-
-/// Sentinel tag stamped into `DamageDealt<Cell>.source` on every
-/// amplified-damage message emitted by `burnout_amplify_damage`. Downstream
-/// stat tracking / FX use this to identify Burnout damage.
-pub(crate) const BURNOUT_SENTINEL: &str = "protocol:burnout";
-
-/// Source tag passed to `commands.fire_effect` when Burnout dispatches its
-/// mega-bump shockwave. Surfaces on the spawned shockwave entity's
-/// `EffectSourceChip`. Distinct from [`BURNOUT_SENTINEL`] (which tags
-/// amplified damage messages).
-pub(crate) const BURNOUT_SHOCKWAVE_SOURCE: &str = "protocol:burnout:shockwave";
-
 // ── BurnoutConfig ───────────────────────────────────────────────────────────
 
 /// Per-run Burnout tuning extracted from `ProtocolTuning::Burnout` at
@@ -308,7 +295,11 @@ pub(crate) fn burnout_on_bump(
                 stacks:          1,
                 speed:           OrderedFloat(200.0),
             }),
-            BURNOUT_SHOCKWAVE_SOURCE.to_owned(),
+            SourceId::protocol(ProtocolKind::Burnout)
+                .action("shockwave")
+                .build()
+                .0
+                .into_owned(),
         );
     }
 }
@@ -317,8 +308,9 @@ pub(crate) fn burnout_on_bump(
 
 /// Consumes `BoltImpactCell` messages. On a bolt carrying
 /// `BurnoutDamageBoost`, emits an amplified `DamageDealt<Cell>` with
-/// `amount = base_damage * boost.multiplier` and `source_chip =
-/// Some(BURNOUT_SENTINEL.into())` — gated on `amount > 0.0`. Removes the
+/// `amount = base_damage * boost.multiplier` and
+/// `source = Some(SourceId::protocol(Burnout).build())` — gated on
+/// `amount > 0.0`. Removes the
 /// `BurnoutDamageBoost` from the bolt unconditionally (single-shot, even when
 /// emission is gated off by the `amount > 0.0` guard).
 ///
@@ -380,7 +372,7 @@ pub(crate) fn burnout_amplify_damage(
                 attributed_to: None,
                 target: msg.cell,
                 amount,
-                source: Some(SourceId::from(BURNOUT_SENTINEL)),
+                source: Some(SourceId::protocol(ProtocolKind::Burnout).build()),
                 _marker: PhantomData,
             });
         }

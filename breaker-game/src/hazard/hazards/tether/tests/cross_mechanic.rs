@@ -39,7 +39,6 @@ fn tether_redirects_diffusion_ring_damage() {
     app.world_mut().insert_resource(DiffusionConfig {
         base_share_percent:      50.0,
         share_per_level_percent: 0.0,
-        depth_increase_interval: 5,
     });
     app.world_mut()
         .resource_mut::<ActiveHazards>()

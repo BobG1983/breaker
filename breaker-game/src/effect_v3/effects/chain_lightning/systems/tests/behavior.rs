@@ -6,6 +6,7 @@ use rantzsoft_spatial2d::components::Position2D;
 use super::super::system::*;
 use crate::{
     cells::components::Cell,
+    chips::definition::Rarity,
     effect_v3::{components::EffectSourceChip, effects::chain_lightning::components::*},
     prelude::*,
     shared::{
@@ -13,6 +14,12 @@ use crate::{
         test_utils::{MessageCollector, TestAppBuilder, tick},
     },
 };
+
+/// Builder-format `SourceId` for the canonical "Storm" chip used across
+/// chain-lightning behavior tests.
+fn storm_source() -> SourceId {
+    SourceId::chip("Storm").rarity(Rarity::Common).build()
+}
 
 fn chain_test_app() -> App {
     TestAppBuilder::new()
@@ -265,7 +272,7 @@ fn chain_lightning_propagates_source_chip_in_damage_dealt() {
             arc_speed:       5000.0,
             source_pos:      Vec2::ZERO,
         },
-        EffectSourceChip(Some("storm_chip".to_string())),
+        EffectSourceChip(Some(storm_source())),
     ));
 
     tick(&mut app);
@@ -276,7 +283,7 @@ fn chain_lightning_propagates_source_chip_in_damage_dealt() {
     assert_eq!(msgs.0.len(), 1, "expected 1 DamageDealt<Cell> message");
     assert_eq!(
         msgs.0[0].source,
-        Some(SourceId::from("storm_chip")),
+        Some(storm_source()),
         "DamageDealt should carry source_chip from EffectSourceChip, got {:?}",
         msgs.0[0].source,
     );

@@ -88,7 +88,7 @@ pub(crate) fn tick_chain_lightning(
                         attributed_to: None,
                         target,
                         amount: chain.damage,
-                        source: chip.and_then(|c| c.0.clone()).map(SourceId::from),
+                        source: chip.and_then(|c| c.0.clone()),
                         _marker: std::marker::PhantomData,
                     });
                 } else {

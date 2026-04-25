@@ -12,6 +12,7 @@ use super::{
     },
 };
 use crate::{
+    hazard::definition::HazardKind,
     prelude::*,
     protocol::{
         definition::ProtocolKind,
@@ -65,7 +66,7 @@ fn echo_strike_fires_on_tether_sourced_ripple() {
             attributed_to: Some(bolt),
             target:        c1,
             amount:        25.0,
-            source:        Some(SourceId::from("hazard:tether")),
+            source:        Some(SourceId::hazard(HazardKind::Tether).build()),
             _marker:       PhantomData,
         });
 
@@ -78,7 +79,7 @@ fn echo_strike_fires_on_tether_sourced_ripple() {
         .collect();
     let echoes: Vec<_> = drained
         .iter()
-        .filter(|m| m.source == Some(SourceId::from("protocol:echo_strike")))
+        .filter(|m| m.source == Some(SourceId::protocol(ProtocolKind::EchoStrike).build()))
         .collect();
     assert_eq!(echoes.len(), 1, "one echo sibling to c_newest expected");
     assert_eq!(echoes[0].target, c_newest);
@@ -101,7 +102,7 @@ fn echo_strike_fires_on_diffusion_sourced_ripple() {
             attributed_to: Some(bolt),
             target:        c1,
             amount:        50.0,
-            source:        Some(SourceId::from("hazard:diffusion:0")),
+            source:        Some(SourceId::hazard(HazardKind::Diffusion).instance(0).build()),
             _marker:       PhantomData,
         });
 
@@ -114,7 +115,7 @@ fn echo_strike_fires_on_diffusion_sourced_ripple() {
         .collect();
     let echoes: Vec<_> = drained
         .iter()
-        .filter(|m| m.source == Some(SourceId::from("protocol:echo_strike")))
+        .filter(|m| m.source == Some(SourceId::protocol(ProtocolKind::EchoStrike).build()))
         .collect();
     assert_eq!(echoes.len(), 1);
     assert_f32_eq(echoes[0].amount, 50.0 * 0.5);
@@ -144,7 +145,7 @@ fn echo_strike_does_not_fire_on_ripple_without_echo_primed() {
             attributed_to: Some(bolt),
             target:        c1,
             amount:        25.0,
-            source:        Some(SourceId::from("hazard:tether")),
+            source:        Some(SourceId::hazard(HazardKind::Tether).build()),
             _marker:       PhantomData,
         });
 
@@ -158,7 +159,7 @@ fn echo_strike_does_not_fire_on_ripple_without_echo_primed() {
     assert!(
         !drained
             .iter()
-            .any(|m| m.source == Some(SourceId::from("protocol:echo_strike"))),
+            .any(|m| { m.source == Some(SourceId::protocol(ProtocolKind::EchoStrike).build(),) }),
         "EchoPrimed gate must fail for ripples too"
     );
 }
@@ -190,6 +191,6 @@ fn echo_strike_does_not_fire_on_environmental_primary() {
     assert!(
         !drained
             .iter()
-            .any(|m| m.source == Some(SourceId::from("protocol:echo_strike")))
+            .any(|m| { m.source == Some(SourceId::protocol(ProtocolKind::EchoStrike).build(),) })
     );
 }

@@ -238,7 +238,7 @@ fn nonlethal_hit_stack_one_emits_one_heal_with_correct_fields() {
     assert_eq!(msg.healer, None);
     assert_eq!(
         msg.source.as_ref(),
-        Some(&SourceId::from("hazard:momentum"))
+        Some(&SourceId::hazard(HazardKind::Momentum).build())
     );
 }
 
@@ -266,7 +266,7 @@ fn nonlethal_hit_stack_three_scales_heal_to_thirty() {
     assert!(matches!(msgs[0].cap, HealCap::Max));
     assert_eq!(
         msgs[0].source.as_ref(),
-        Some(&SourceId::from("hazard:momentum"))
+        Some(&SourceId::hazard(HazardKind::Momentum).build())
     );
 }
 
@@ -466,7 +466,7 @@ fn every_emitted_message_has_momentum_sentinel_source() {
     assert_eq!(all.len(), 2);
     assert!(
         all.iter()
-            .all(|m| m.source == Some(SourceId::from("hazard:momentum"))),
+            .all(|m| m.source == Some(SourceId::hazard(HazardKind::Momentum).build())),
         "every message's source must be Some(\"hazard:momentum\")"
     );
 }
@@ -540,4 +540,26 @@ fn regression_heal_system_does_not_mutate_hp_directly() {
         "exactly 1 HealDealt<Cell> must be emitted for the non-lethal damage; got {}",
         heal_collector_len(&app)
     );
+}
+
+// ── B32: source matches builder-produced hazard:momentum ──
+
+#[test]
+fn momentum_heal_source_equals_builder_hazard_momentum() {
+    use crate::{hazard::definition::HazardKind, prelude::SourceIdExt};
+    let mut app = test_app_with_damage_and_heal_emit();
+    install_momentum_config(&mut app, canonical_momentum_config());
+    add_momentum_stacks(&mut app, 1);
+
+    let cell =
+        super::helpers::spawn_cell_at_with_max(&mut app, Vec2::ZERO, 50.0, 50.0, Some(100.0));
+    write_cell_damage(&mut app, cell, 10.0);
+    run_fixed_update(&mut app);
+
+    let msgs = heals_for_cell(&app, cell);
+    assert!(!msgs.is_empty());
+    let expected = SourceId::hazard(HazardKind::Momentum).build();
+    for m in &msgs {
+        assert_eq!(m.source.as_ref(), Some(&expected));
+    }
 }

@@ -14,9 +14,19 @@ use super::{
     },
 };
 use crate::{
+    chips::definition::Rarity,
     effect_v3::{effects::SpeedBoostConfig, stacking::EffectStack},
     hazard::{definition::HazardKind, resources::ActiveHazards},
+    prelude::*,
 };
+
+fn hazard_haste() -> SourceId {
+    SourceId::hazard(HazardKind::Haste).build()
+}
+
+fn chip_overclock() -> SourceId {
+    SourceId::chip("Overclock").rarity(Rarity::Common).build()
+}
 
 // ── Behavior 16 — register-wired system applies Haste in FixedUpdate ────
 
@@ -208,7 +218,7 @@ fn stack_zero_preserves_pre_existing_haste_source_entry() {
 
     let mut seed = EffectStack::<SpeedBoostConfig>::default();
     seed.push(
-        "hazard:haste".to_owned(),
+        hazard_haste(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.40),
         },
@@ -239,13 +249,13 @@ fn stack_zero_preserves_chip_and_pre_existing_haste_entries() {
 
     let mut seed = EffectStack::<SpeedBoostConfig>::default();
     seed.push(
-        "hazard:haste".to_owned(),
+        hazard_haste(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.40),
         },
     );
     seed.push(
-        "chip:overclock".to_owned(),
+        chip_overclock(),
         SpeedBoostConfig {
             multiplier: OrderedFloat(1.5),
         },

@@ -47,7 +47,7 @@ mod tests {
 
         TrackArmedFireCommand {
             owner,
-            armed_source: "chip_redirect#armed[0]".to_owned(),
+            armed_source: "chip_redirect:armed".to_owned(),
             participant: bolt,
         }
         .apply(&mut world);
@@ -57,7 +57,7 @@ mod tests {
             .expect("ArmedFiredParticipants should be inserted on first use");
         let vec = tracked
             .0
-            .get("chip_redirect#armed[0]")
+            .get("chip_redirect:armed")
             .expect("key should be present");
         assert_eq!(vec.len(), 1);
         assert_eq!(vec[0], bolt);
@@ -72,20 +72,20 @@ mod tests {
 
         TrackArmedFireCommand {
             owner,
-            armed_source: "chip_redirect#armed[0]".to_owned(),
+            armed_source: "chip_redirect:armed".to_owned(),
             participant: bolt_a,
         }
         .apply(&mut world);
 
         TrackArmedFireCommand {
             owner,
-            armed_source: "chip_redirect#armed[0]".to_owned(),
+            armed_source: "chip_redirect:armed".to_owned(),
             participant: bolt_b,
         }
         .apply(&mut world);
 
         let tracked = world.get::<ArmedFiredParticipants>(owner).unwrap();
-        let vec = tracked.0.get("chip_redirect#armed[0]").unwrap();
+        let vec = tracked.0.get("chip_redirect:armed").unwrap();
         assert_eq!(vec.len(), 2);
         assert_eq!(vec[0], bolt_a);
         assert_eq!(vec[1], bolt_b);
@@ -100,7 +100,7 @@ mod tests {
 
         TrackArmedFireCommand {
             owner,
-            armed_source: "chip_redirect#armed[0]".to_owned(),
+            armed_source: "chip_redirect:armed".to_owned(),
             participant: bolt,
         }
         .apply(&mut world);

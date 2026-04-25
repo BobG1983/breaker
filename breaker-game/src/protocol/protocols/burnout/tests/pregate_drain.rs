@@ -23,7 +23,7 @@ use super::{
         spawn_breaker_stationary, spawn_cell_empty, write_bolt_impact_cell, write_bump_performed,
     },
 };
-use crate::{breaker::messages::BumpGrade, prelude::*};
+use crate::{breaker::messages::BumpGrade, prelude::*, protocol::definition::ProtocolKind};
 
 fn seed_canonical(app: &mut App) {
     seed_active_protocols_with_burnout(app, 4.0, 2.0, 1.5, 4.0, 2.0);
@@ -201,8 +201,8 @@ fn burnout_amplify_damage_buffered_while_gate_off_is_not_retro_processed() {
     );
     assert_eq!(
         msgs[0].source.as_ref(),
-        Some(&SourceId::from("protocol:burnout")),
-        "emitted DamageDealt must carry the Burnout sentinel",
+        Some(&SourceId::protocol(ProtocolKind::Burnout).build()),
+        "emitted DamageDealt must carry the builder-produced Burnout source",
     );
     assert!(
         app.world().get::<BurnoutDamageBoost>(bolt).is_none(),

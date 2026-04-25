@@ -101,9 +101,13 @@ fn spawn_inner(
         entity.insert(BoltSpawnOffsetY(spawn_offset_y));
     }
 
-    // Optional: spawned_by
+    // Optional: spawned_by — wrap via the builder so the stored SourceId
+    // carries the canonical `chip:<name>:Evolution` shape.
     if let Some(name) = optional.spawned_by {
-        entity.insert(SpawnedByEvolution(name));
+        use crate::{chips::definition::Rarity, prelude::*};
+        entity.insert(SpawnedByEvolution(
+            SourceId::chip(name).rarity(Rarity::Evolution).build(),
+        ));
     }
 
     // Optional: lifespan

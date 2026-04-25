@@ -69,7 +69,7 @@ fn register_wires_sympathy_heal_adjacent_into_fixed_update() {
     assert!(matches!(msgs[0].cap, HealCap::Starting));
     assert_eq!(
         msgs[0].source.as_ref(),
-        Some(&SourceId::from("hazard:sympathy"))
+        Some(&SourceId::hazard(HazardKind::Sympathy).build())
     );
 }
 
@@ -230,6 +230,6 @@ fn schedule_does_not_panic_with_both_sympathy_and_momentum_stacked() {
     );
     assert_eq!(
         all[0].source.as_ref(),
-        Some(&SourceId::from("hazard:momentum"))
+        Some(&SourceId::hazard(HazardKind::Momentum).build())
     );
 }

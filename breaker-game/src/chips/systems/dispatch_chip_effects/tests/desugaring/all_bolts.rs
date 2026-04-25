@@ -48,7 +48,7 @@ fn active_bolts_target_stamps_tree_to_breaker() {
     );
 
     let (chip_name, tree) = &bound.0[0];
-    assert_eq!(chip_name, "Bolt Chain");
+    assert_eq!(chip_name, "chip:Bolt Chain:Common");
     assert!(
         matches!(tree, Tree::When(Trigger::PerfectBumped, _)),
         "Tree should be stamped directly as When(PerfectBumped, ...), got {tree:?}"

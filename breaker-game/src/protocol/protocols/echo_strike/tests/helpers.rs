@@ -23,7 +23,7 @@ use crate::{
     breaker::messages::BumpGrade,
     prelude::*,
     protocol::{
-        definition::{ProtocolDefinition, ProtocolTuning},
+        definition::{ProtocolDefinition, ProtocolKind, ProtocolTuning},
         resources::ActiveProtocols,
     },
 };
@@ -243,7 +243,7 @@ pub(super) fn collected_echo_strike_damage(app: &App) -> Vec<DamageDealt<Cell>> 
         .resource::<MessageCollector<DamageDealt<Cell>>>()
         .0
         .iter()
-        .filter(|msg| msg.source == Some(SourceId::from("protocol:echo_strike")))
+        .filter(|msg| msg.source == Some(SourceId::protocol(ProtocolKind::EchoStrike).build()))
         .cloned()
         .collect()
 }

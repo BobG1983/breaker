@@ -56,9 +56,29 @@ mod tests {
 
     use super::*;
     use crate::{
+        chips::definition::Rarity,
         effect_v3::traits::{Fireable, Reversible},
-        prelude::VulnerableStack,
+        prelude::{SourceIdExt, VulnerableStack},
     };
+
+    /// Builder-format `SourceId` used as the canonical opaque test fixture.
+    fn test_source() -> SourceId {
+        SourceId::chip("Test").rarity(Rarity::Common).build()
+    }
+
+    /// Builder-format `SourceId` representing a "Decay" hazard chip used by
+    /// these tests.
+    fn decay_source() -> SourceId {
+        SourceId::chip("Decay").rarity(Rarity::Common).build()
+    }
+
+    /// Builder-format `SourceId` representing an alternate "`VulnerableAgain`"
+    /// chip — used by the multi-source fire test.
+    fn vulnerable_again_source() -> SourceId {
+        SourceId::chip("VulnerableAgain")
+            .rarity(Rarity::Common)
+            .build()
+    }
 
     // ── Behavior 8: `fire` inserts `VulnerableStack` on a fresh entity ──
 
@@ -70,7 +90,7 @@ mod tests {
             multiplier: OrderedFloat(1.5),
         };
 
-        config.fire(entity, "decay", &mut world);
+        config.fire(entity, decay_source().0.as_ref(), &mut world);
 
         let stack = world
             .get::<VulnerableStack>(entity)
@@ -88,11 +108,11 @@ mod tests {
         VulnerableConfig {
             multiplier: OrderedFloat(1.5),
         }
-        .fire(entity, "decay", &mut world);
+        .fire(entity, decay_source().0.as_ref(), &mut world);
         VulnerableConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .fire(entity, "vulnerable_again", &mut world);
+        .fire(entity, vulnerable_again_source().0.as_ref(), &mut world);
 
         let stack = world.get::<VulnerableStack>(entity).unwrap();
         assert!((stack.aggregate_persistent() - 3.0).abs() <= f32::EPSILON);
@@ -108,8 +128,8 @@ mod tests {
             multiplier: OrderedFloat(1.5),
         };
 
-        config.fire(entity, "test_source", &mut world);
-        config.fire(entity, "test_source", &mut world);
+        config.fire(entity, test_source().0.as_ref(), &mut world);
+        config.fire(entity, test_source().0.as_ref(), &mut world);
 
         let stack = world.get::<VulnerableStack>(entity).unwrap();
         assert!((stack.aggregate_persistent() - 2.25).abs() < 1e-5);
@@ -125,8 +145,8 @@ mod tests {
             multiplier: OrderedFloat(1.5),
         };
 
-        config.fire(entity, "decay", &mut world);
-        config.reverse(entity, "decay", &mut world);
+        config.fire(entity, decay_source().0.as_ref(), &mut world);
+        config.reverse(entity, decay_source().0.as_ref(), &mut world);
 
         let stack = world.get::<VulnerableStack>(entity).unwrap();
         assert!(stack.is_empty());
@@ -144,20 +164,20 @@ mod tests {
         VulnerableConfig {
             multiplier: OrderedFloat(1.5),
         }
-        .fire(entity, "decay", &mut world);
+        .fire(entity, decay_source().0.as_ref(), &mut world);
         VulnerableConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .fire(entity, "decay", &mut world);
+        .fire(entity, decay_source().0.as_ref(), &mut world);
         VulnerableConfig {
             multiplier: OrderedFloat(3.0),
         }
-        .fire(entity, "decay", &mut world);
+        .fire(entity, decay_source().0.as_ref(), &mut world);
 
         VulnerableConfig {
             multiplier: OrderedFloat(1.5),
         }
-        .reverse(entity, "decay", &mut world);
+        .reverse(entity, decay_source().0.as_ref(), &mut world);
 
         let stack = world.get::<VulnerableStack>(entity).unwrap();
         assert!(stack.is_empty());
@@ -174,7 +194,7 @@ mod tests {
             multiplier: OrderedFloat(1.5),
         };
 
-        config.reverse(entity, "test_source", &mut world);
+        config.reverse(entity, test_source().0.as_ref(), &mut world);
 
         assert!(world.get::<VulnerableStack>(entity).is_none());
     }
@@ -189,7 +209,7 @@ mod tests {
         VulnerableConfig {
             multiplier: OrderedFloat(1.5),
         }
-        .fire(entity, "decay", &mut world);
+        .fire(entity, decay_source().0.as_ref(), &mut world);
         VulnerableConfig {
             multiplier: OrderedFloat(0.5),
         }
@@ -197,12 +217,12 @@ mod tests {
         VulnerableConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .fire(entity, "decay", &mut world);
+        .fire(entity, decay_source().0.as_ref(), &mut world);
 
         VulnerableConfig {
             multiplier: OrderedFloat(1.5),
         }
-        .reverse_all_by_source(entity, "decay", &mut world);
+        .reverse_all_by_source(entity, decay_source().0.as_ref(), &mut world);
 
         let stack = world.get::<VulnerableStack>(entity).unwrap();
         assert!((stack.aggregate_persistent() - 0.5).abs() < 1e-5);
@@ -218,7 +238,7 @@ mod tests {
         VulnerableConfig {
             multiplier: OrderedFloat(1.5),
         }
-        .reverse_all_by_source(entity, "decay", &mut world);
+        .reverse_all_by_source(entity, decay_source().0.as_ref(), &mut world);
 
         assert!(world.get::<VulnerableStack>(entity).is_none());
     }
@@ -232,11 +252,11 @@ mod tests {
         VulnerableConfig {
             multiplier: OrderedFloat(1.5),
         }
-        .fire(entity_a, "decay", &mut world_a);
+        .fire(entity_a, decay_source().0.as_ref(), &mut world_a);
         VulnerableConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .fire(entity_a, "decay", &mut world_a);
+        .fire(entity_a, decay_source().0.as_ref(), &mut world_a);
         VulnerableConfig {
             multiplier: OrderedFloat(0.5),
         }
@@ -247,11 +267,11 @@ mod tests {
         VulnerableConfig {
             multiplier: OrderedFloat(1.5),
         }
-        .fire(entity_b, "decay", &mut world_b);
+        .fire(entity_b, decay_source().0.as_ref(), &mut world_b);
         VulnerableConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .fire(entity_b, "decay", &mut world_b);
+        .fire(entity_b, decay_source().0.as_ref(), &mut world_b);
         VulnerableConfig {
             multiplier: OrderedFloat(0.5),
         }
@@ -260,11 +280,11 @@ mod tests {
         VulnerableConfig {
             multiplier: OrderedFloat(1.5),
         }
-        .reverse(entity_a, "decay", &mut world_a);
+        .reverse(entity_a, decay_source().0.as_ref(), &mut world_a);
         VulnerableConfig {
             multiplier: OrderedFloat(1.5),
         }
-        .reverse_all_by_source(entity_b, "decay", &mut world_b);
+        .reverse_all_by_source(entity_b, decay_source().0.as_ref(), &mut world_b);
 
         let stack_a = world_a.get::<VulnerableStack>(entity_a).unwrap();
         let stack_b = world_b.get::<VulnerableStack>(entity_b).unwrap();
