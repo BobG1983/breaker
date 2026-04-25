@@ -6,7 +6,7 @@
 //! not standing per-run defaults).
 
 use super::super::system::{TierRegressionConfig, TierRegressionPending};
-use crate::{mutators::protocols::plugin::ProtocolPlugin, prelude::*};
+use crate::{mutators::MutatorsPlugin, prelude::*};
 
 // ── 24 — ProtocolPlugin build does not insert tier-regression resources ────-
 
@@ -16,7 +16,7 @@ fn protocol_plugin_build_does_not_insert_tier_regression_resources() {
         .with_state_hierarchy()
         .in_state_node_playing()
         .build();
-    app.add_plugins(ProtocolPlugin);
+    app.add_plugins(MutatorsPlugin);
 
     for _ in 0..3 {
         app.update();
@@ -44,7 +44,7 @@ fn protocol_plugin_build_does_not_insert_tier_regression_resources_on_first_tick
         .with_state_hierarchy()
         .in_state_node_playing()
         .build();
-    app.add_plugins(ProtocolPlugin);
+    app.add_plugins(MutatorsPlugin);
     app.update();
 
     assert!(app.world().get_resource::<TierRegressionConfig>().is_none(),);

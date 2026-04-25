@@ -5,7 +5,7 @@
 //! `{ kills: 0 }`) while `FissionConfig` is NOT (only `activate` inserts it).
 
 use super::super::system::{FissionConfig, FissionCounter};
-use crate::{mutators::protocols::plugin::ProtocolPlugin, prelude::*};
+use crate::{mutators::MutatorsPlugin, prelude::*};
 
 // ── Behavior 38 — ProtocolPlugin builds with Fission additions ─────────────-
 
@@ -15,7 +15,7 @@ fn plugin_builds() {
         .with_state_hierarchy()
         .in_state_node_playing()
         .build();
-    app.add_plugins(ProtocolPlugin);
+    app.add_plugins(MutatorsPlugin);
 
     for _ in 0..3 {
         app.update();
@@ -47,7 +47,7 @@ fn plugin_builds_with_fission_counter_at_default() {
         .with_state_hierarchy()
         .in_state_node_playing()
         .build();
-    app.add_plugins(ProtocolPlugin);
+    app.add_plugins(MutatorsPlugin);
     app.update();
 
     let counter = *app.world().resource::<FissionCounter>();

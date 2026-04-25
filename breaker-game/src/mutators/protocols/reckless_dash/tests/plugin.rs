@@ -5,7 +5,7 @@
 //! time (only `activate` inserts it).
 
 use super::super::system::RecklessDashConfig;
-use crate::{mutators::protocols::plugin::ProtocolPlugin, prelude::*};
+use crate::{mutators::MutatorsPlugin, prelude::*};
 
 // ── Behavior 59 — ProtocolPlugin builds with Reckless Dash additions ───────-
 
@@ -15,7 +15,7 @@ fn protocol_plugin_build_does_not_crash_with_reckless_dash_additions() {
         .with_state_hierarchy()
         .in_state_node_playing()
         .build();
-    app.add_plugins(ProtocolPlugin);
+    app.add_plugins(MutatorsPlugin);
 
     for _ in 0..3 {
         app.update();

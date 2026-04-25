@@ -6,7 +6,7 @@
 
 use super::super::system::ConductorConfig;
 use crate::{
-    mutators::protocols::{plugin::ProtocolPlugin, resources::ActiveProtocols},
+    mutators::{MutatorsPlugin, protocols::resources::ActiveProtocols},
     prelude::*,
 };
 
@@ -18,7 +18,7 @@ fn protocol_plugin_build_does_not_crash_with_conductor_additions() {
         .with_state_hierarchy()
         .in_state_node_playing()
         .build();
-    app.add_plugins(ProtocolPlugin);
+    app.add_plugins(MutatorsPlugin);
 
     for _ in 0..3 {
         app.update();

@@ -5,7 +5,7 @@
 //! time (only `activate` inserts it).
 
 use super::super::system::DebtCollectorConfig;
-use crate::{mutators::protocols::plugin::ProtocolPlugin, prelude::*};
+use crate::{mutators::MutatorsPlugin, prelude::*};
 
 // ── Behavior 53 — ProtocolPlugin builds with Debt Collector additions ──────-
 
@@ -15,7 +15,7 @@ fn protocol_plugin_build_does_not_crash_with_debt_collector_additions() {
         .with_state_hierarchy()
         .in_state_node_playing()
         .build();
-    app.add_plugins(ProtocolPlugin);
+    app.add_plugins(MutatorsPlugin);
 
     for _ in 0..3 {
         app.update();

@@ -8,7 +8,6 @@
 
 pub mod definition;
 pub(crate) mod messages;
-pub(crate) mod plugin;
 pub mod resources;
 pub(crate) mod systems;
 

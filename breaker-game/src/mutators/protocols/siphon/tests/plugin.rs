@@ -5,7 +5,7 @@
 //! updates without crashing.
 
 use super::super::system::{SiphonConfig, SiphonStreak};
-use crate::{mutators::protocols::plugin::ProtocolPlugin, prelude::*};
+use crate::{mutators::MutatorsPlugin, prelude::*};
 
 // ── Behavior 43 — ProtocolPlugin::build initialises SiphonStreak ────────────
 
@@ -15,7 +15,7 @@ fn protocol_plugin_initialises_siphon_streak() {
         .with_state_hierarchy()
         .in_state_node_playing()
         .build();
-    app.add_plugins(ProtocolPlugin);
+    app.add_plugins(MutatorsPlugin);
     app.update();
 
     let streak = app
@@ -37,7 +37,7 @@ fn protocol_plugin_build_does_not_crash_with_siphon_additions() {
         .with_state_hierarchy()
         .in_state_node_playing()
         .build();
-    app.add_plugins(ProtocolPlugin);
+    app.add_plugins(MutatorsPlugin);
 
     for _ in 0..3 {
         app.update();

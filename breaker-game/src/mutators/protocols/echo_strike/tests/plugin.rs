@@ -5,7 +5,7 @@
 //! time (only `activate` inserts it).
 
 use super::super::system::EchoStrikeConfig;
-use crate::{mutators::protocols::plugin::ProtocolPlugin, prelude::*};
+use crate::{mutators::MutatorsPlugin, prelude::*};
 
 // ── Behavior 64 — ProtocolPlugin builds with Echo Strike additions ─────────-
 
@@ -15,7 +15,7 @@ fn protocol_plugin_build_does_not_crash_with_echo_strike_additions() {
         .with_state_hierarchy()
         .in_state_node_playing()
         .build();
-    app.add_plugins(ProtocolPlugin);
+    app.add_plugins(MutatorsPlugin);
 
     for _ in 0..3 {
         app.update();

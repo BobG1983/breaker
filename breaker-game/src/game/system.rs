@@ -18,7 +18,7 @@ use crate::{
     fx::FxPlugin,
     game::sets::PostApplyRipple,
     input::InputPlugin,
-    mutators::{hazards::plugin::HazardPlugin, protocols::plugin::ProtocolPlugin},
+    mutators::MutatorsPlugin,
     shared::{GameDrawLayer, PlayfieldConfig},
     state::StatePlugin,
     walls::{WallPlugin, components::Wall},
@@ -63,8 +63,7 @@ impl PluginGroup for Game {
             .add(BoltPlugin)
             .add(CellsPlugin)
             .add(ChipsPlugin)
-            .add(ProtocolPlugin)
-            .add(HazardPlugin)
+            .add(MutatorsPlugin)
             .add(FxPlugin)
             .add(AudioPlugin)
             .add(DebugPlugin);
