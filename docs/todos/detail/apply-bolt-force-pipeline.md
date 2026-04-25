@@ -4,7 +4,7 @@
 
 Drift and Gravity Surge hazards currently mutate bolt `Velocity2D` directly from hazard systems, bypassing the bolt domain. Per `audit/hazards/drift.md`:
 
-- Issue 1: `drift_apply_force` at `hazard/hazards/drift/system.rs:148-161` writes `Velocity2D` directly; code comment acknowledges "pending `ApplyBoltForce` pipeline."
+- Issue 1: `drift_apply_force` at `mutators/hazards/drift/system.rs:148-161` writes `Velocity2D` directly; code comment acknowledges "pending `ApplyBoltForce` pipeline."
 - Issue 2: Drift's cross-domain `Velocity2D` write is NOT listed in the `plugins.md` Velocity2D exception registry — undocumented violation.
 - Issue 5: Gravity Surge has the same root cause (shared concern).
 
@@ -57,7 +57,7 @@ Aggregation matters: multiple hazards can emit for the same bolt on the same fra
 
 ### Drift migration
 
-Open `breaker-game/src/hazard/hazards/drift/system.rs:148-161`. Replace:
+Open `breaker-game/src/mutators/hazards/drift/system.rs:148-161`. Replace:
 
 ```rust
 // BEFORE (pseudo — exact current shape)
@@ -90,7 +90,7 @@ Note: `drift_apply_force` no longer takes `&mut Query<Velocity2D>` or `Res<Time>
 
 ### Gravity Surge migration
 
-Locate `gravity_surge_apply_force` (likely `hazard/hazards/gravity_surge/system.rs`). Gravity Surge's force direction/magnitude computation stays in its own system; the final step becomes a message write. Same pattern as Drift.
+Locate `gravity_surge_apply_force` (likely `mutators/hazards/gravity_surge/system.rs`). Gravity Surge's force direction/magnitude computation stays in its own system; the final step becomes a message write. Same pattern as Drift.
 
 Exact per-bolt force computation preserved — only the write path changes.
 

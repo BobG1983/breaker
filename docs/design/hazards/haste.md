@@ -20,7 +20,7 @@ Populated from `HazardTuning::Haste`.
 None.
 
 ## Messages
-**Reads**: `Option<Res<ActiveHazards>>` for stack count (harness-safety — `Option<Res>` so the system is usable without `HazardPlugin`).
+**Reads**: `Option<Res<ActiveHazards>>` for stack count (harness-safety — `Option<Res>` so the system is usable without `MutatorsPlugin`).
 **Writes**: Source-tagged `EffectStack<SpeedBoostConfig>` entry on every Bolt (source: `"hazard:haste"`). The entry's multiplier is reconciled each FixedUpdate. Idempotent via `EffectStack::retain_by_source`. Haste's reconciliation mirrors Erosion's `SizeBoost` pattern — the canonical way for hazards to apply continuous modulation to Bolt components.
 
 ## Systems

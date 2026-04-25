@@ -8,7 +8,7 @@
 
 ## Remediation
 
-Create `breaker-game/src/protocol/protocols/deadline/tests/` (new module) with four test files exercising the code-driven Deadline pipeline defined in `deadline-code-driven-effects.md`.
+Create `breaker-game/src/mutators/protocols/deadline/tests/` (new module) with four test files exercising the code-driven Deadline pipeline defined in `deadline-code-driven-effects.md`.
 
 ### `threshold_cross_doubles_bolt_velocity.rs`
 

@@ -2,7 +2,7 @@
 
 ## Problem
 
-Greed is a protocol that rewards skipping chip offerings: each skip decays the offered chips (no chip that round) and stacks a rarity boost for future chip offers. The mechanic is live in code — `GreedConfig`, `GreedStacks`, `greed_on_skip`, and `apply_greed_boost` all exist in `breaker-game/src/protocol/protocols/greed/system.rs` — and the `ChipOfferSkipped` message is defined in `state/run/chip_select/messages.rs`. The chip-decay consequence of skipping is already wired in `handle_chip_input.rs:130`.
+Greed is a protocol that rewards skipping chip offerings: each skip decays the offered chips (no chip that round) and stacks a rarity boost for future chip offers. The mechanic is live in code — `GreedConfig`, `GreedStacks`, `greed_on_skip`, and `apply_greed_boost` all exist in `breaker-game/src/mutators/protocols/protocols/greed/system.rs` — and the `ChipOfferSkipped` message is defined in `state/run/chip_select/messages.rs`. The chip-decay consequence of skipping is already wired in `handle_chip_input.rs:130`.
 
 What's missing: the UI. There is no way for the player to actually trigger a skip. No button, no keybind, no indicator. The mechanic is unreachable from normal gameplay.
 

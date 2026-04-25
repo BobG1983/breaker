@@ -149,7 +149,7 @@ Introduced by this TODO, reused by phantom bolts later:
 
 ### Afterimage spawn path migration
 
-Open `breaker-game/src/protocol/protocols/afterimage/system/spawn_phantom_breaker.rs`. Replace the raw `commands.spawn((...))` with the builder, reading the real breaker's runtime components (width, height, movement, dash, spread, bump, color) so the phantom matches current state (post-SizeBoost, post-any-other-modifier):
+Open `breaker-game/src/mutators/protocols/afterimage/system/spawn_phantom_breaker.rs`. Replace the raw `commands.spawn((...))` with the builder, reading the real breaker's runtime components (width, height, movement, dash, spread, bump, color) so the phantom matches current state (post-SizeBoost, post-any-other-modifier):
 
 ```rust
 Breaker::builder()
@@ -215,11 +215,11 @@ Global-singleton enforcement (despawn existing phantoms before spawning a new on
 | `breaker/systems/tick_phantom_breaker_lifespan.rs` | New system. `FixedUpdate`, before `DeathPipelineSystems::ProcessDespawn`. Emits `DespawnEntity`. |
 | `shared::phantom` (or `shared::lifespan`) | New shared module: `Lifespan` + `PhantomFlicker` components. |
 | `fx::plugin` | Register `tick_phantom_flicker`. |
-| `protocol/protocols/afterimage/system/spawn_phantom_breaker.rs` | Migrate to builder; add mesh/material asset params; read real breaker's runtime components. |
-| `protocol/protocols/afterimage/system/check_phantom_bounce.rs` | **DELETED.** |
-| `protocol/protocols/afterimage/system/register.rs` | Remove `check_phantom_bounce` registration. |
-| `protocol/protocols/afterimage/system/components.rs` | Remove `PhantomBreakerLifetime`. |
-| `breaker-game/src/protocol/protocols/afterimage/tests/check_phantom_bounce.rs` | **DELETED** (880 lines). |
+| `mutators/protocols/afterimage/system/spawn_phantom_breaker.rs` | Migrate to builder; add mesh/material asset params; read real breaker's runtime components. |
+| `mutators/protocols/afterimage/system/check_phantom_bounce.rs` | **DELETED.** |
+| `mutators/protocols/afterimage/system/register.rs` | Remove `check_phantom_bounce` registration. |
+| `mutators/protocols/afterimage/system/components.rs` | Remove `PhantomBreakerLifetime`. |
+| `breaker-game/src/mutators/protocols/afterimage/tests/check_phantom_bounce.rs` | **DELETED** (880 lines). |
 | `docs/architecture/plugins.md` | Narrow/remove afterimage entry from Velocity2D exception registry. |
 
 ## Dependencies

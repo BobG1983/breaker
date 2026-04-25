@@ -20,7 +20,7 @@ Populated from `HazardTuning::Decay`.
 None.
 
 ## Messages
-**Reads**: `Time` for delta, `Option<Res<ActiveHazards>>` for stack count (harness-safety: `Option<Res>` so the system is usable in tests without the full `HazardPlugin` installed — per TODO #8).
+**Reads**: `Time` for delta, `Option<Res<ActiveHazards>>` for stack count (harness-safety: `Option<Res>` so the system is usable in tests without the full `MutatorsPlugin` installed — per TODO #8).
 **Sends**: `ReduceNodeTimer { delta: f32 }` (renamed from `ApplyTimePenalty` per TODO #3 — field `seconds` renamed to `delta`). Owned by `state/run/node` domain.
 
 ## Systems
@@ -29,7 +29,7 @@ None.
 - **Schedule**: `FixedUpdate`, `.after(NodeSystems::TickTimer)`.
 - **run_if**: `hazard_active(HazardKind::Decay)` + `in_state(NodeState::Playing)`.
 - **Behavior**: Computes extra drain: `extra = delta_secs * (base_percent + per_level_percent * (stack - 1)) / 100.0`. Emits `ReduceNodeTimer { delta: extra }`.
-- **Harness-safety**: Accepts `Option<Res<ActiveHazards>>`. If the resource is absent (e.g., in a unit-test harness without `HazardPlugin`), the system returns without emitting.
+- **Harness-safety**: Accepts `Option<Res<ActiveHazards>>`. If the resource is absent (e.g., in a unit-test harness without `MutatorsPlugin`), the system returns without emitting.
 
 ## Pipeline position (dmg crate)
 

@@ -20,20 +20,20 @@ Exact-value pinning lives in design-behavior tests \u2014 where the test constru
 
 Rewrite each of the following files to match the rule:
 
-- `breaker-game/src/protocol/protocols/fission/tests/ron_asset.rs`
-- `breaker-game/src/protocol/protocols/debt_collector/tests/ron_asset.rs`
-- `breaker-game/src/protocol/protocols/iron_curtain/tests/ron_asset.rs` (covered by `iron-curtain-falloff-ron-fix.md`)
-- `breaker-game/src/protocol/protocols/echo_strike/tests/ron_asset.rs`
-- `breaker-game/src/protocol/protocols/greed/tests/ron_asset.rs`
-- `breaker-game/src/protocol/protocols/conductor/tests/ron_asset.rs`
-- `breaker-game/src/protocol/protocols/burnout/tests/ron_asset.rs`
-- `breaker-game/src/protocol/protocols/afterimage/tests/ron_asset.rs`
-- `breaker-game/src/protocol/protocols/siphon/tests/ron_asset.rs`
-- `breaker-game/src/protocol/protocols/reckless_dash/tests/ron_asset.rs`
-- `breaker-game/src/hazard/hazards/momentum/tests/ron_asset.rs`
-- `breaker-game/src/hazard/hazards/sympathy/tests/ron_asset.rs`
-- `breaker-game/src/hazard/hazards/diffusion/tests/ron_asset.rs`
-- `breaker-game/src/hazard/hazards/tether/tests/ron_asset.rs`
+- `breaker-game/src/mutators/protocols/protocols/fission/tests/ron_asset.rs`
+- `breaker-game/src/mutators/protocols/protocols/debt_collector/tests/ron_asset.rs`
+- `breaker-game/src/mutators/protocols/protocols/iron_curtain/tests/ron_asset.rs` (covered by `iron-curtain-falloff-ron-fix.md`)
+- `breaker-game/src/mutators/protocols/protocols/echo_strike/tests/ron_asset.rs`
+- `breaker-game/src/mutators/protocols/protocols/greed/tests/ron_asset.rs`
+- `breaker-game/src/mutators/protocols/protocols/conductor/tests/ron_asset.rs`
+- `breaker-game/src/mutators/protocols/protocols/burnout/tests/ron_asset.rs`
+- `breaker-game/src/mutators/protocols/protocols/afterimage/tests/ron_asset.rs`
+- `breaker-game/src/mutators/protocols/protocols/siphon/tests/ron_asset.rs`
+- `breaker-game/src/mutators/protocols/protocols/reckless_dash/tests/ron_asset.rs`
+- `breaker-game/src/mutators/hazards/hazards/momentum/tests/ron_asset.rs`
+- `breaker-game/src/mutators/hazards/hazards/sympathy/tests/ron_asset.rs`
+- `breaker-game/src/mutators/hazards/hazards/diffusion/tests/ron_asset.rs`
+- `breaker-game/src/mutators/hazards/hazards/tether/tests/ron_asset.rs`
 
 For each file, the rewrite replaces any `assert_eq!(config.field, exact_value)` with structural validity checks. Example shape:
 

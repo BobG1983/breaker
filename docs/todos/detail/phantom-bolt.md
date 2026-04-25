@@ -237,7 +237,7 @@ Runs in `FixedUpdate`, ordered before `DeathPipelineSystems::ProcessDespawn`. `D
 
 ### Migration: afterimage `spawn_phantom_bolt`
 
-Open `breaker-game/src/protocol/protocols/afterimage/system/spawn_phantom_bolt.rs` (under TODO #1, this path becomes `mutators/protocols/afterimage/system/spawn_phantom_bolt.rs`).
+Open `breaker-game/src/mutators/protocols/afterimage/system/spawn_phantom_bolt.rs` (under TODO #1, this path becomes `mutators/protocols/afterimage/system/spawn_phantom_bolt.rs`).
 
 **Delete the extra-bolt spawn entirely.** The current `.extra().headless().spawn(...)` + post-spawn marker insertion block comes out. Replace with the mutate-in-place call on the real bolt:
 
