@@ -23,7 +23,9 @@ use super::super::system::wire_damage_chain;
 use crate::{
     mutators::{
         hazards::{
-            diffusion::system::{PendingDiffusionEmissions, diffusion_emit_rings},
+            diffusion::system::{
+                PendingDiffusionEmissions, diffusion_emit_rings, diffusion_reduce_primary,
+            },
             resources::ActiveHazards,
             tether::system::tether_emit_partner,
         },
@@ -65,6 +67,45 @@ fn build_chain_app() -> App {
     app.init_resource::<PostApplyOrder>();
     wire_damage_chain(&mut app);
     app
+}
+
+/// `diffusion_reduce_primary` is the sole `MutateDamage` participant.
+/// Pin its set membership centrally so a regression that drops the
+/// `.in_set(MutateDamage)` tag in `wire_damage_chain` is caught here
+/// even if no per-mechanic test exercises the central wiring.
+#[test]
+fn diffusion_reduce_primary_is_pinned_to_mutate_damage() {
+    let mut app = build_chain_app();
+
+    assert!(
+        system_in_set(
+            &mut app,
+            FixedUpdate,
+            diffusion_reduce_primary,
+            DmgSystems::MutateDamage,
+        ),
+        "wire_damage_chain must register diffusion_reduce_primary in DmgSystems::MutateDamage"
+    );
+}
+
+/// Negative: `diffusion_reduce_primary` must NOT live in any later
+/// `Dmg` set (`PostApplyDamage`, `ApplyDamage`, etc.) — running it
+/// after `MutateDamage` would let `apply_damage::<Cell>` see the
+/// pre-reduction primary.
+#[test]
+fn diffusion_reduce_primary_is_not_in_post_apply_damage() {
+    let mut app = build_chain_app();
+
+    assert!(
+        !system_in_set(
+            &mut app,
+            FixedUpdate,
+            diffusion_reduce_primary,
+            DmgSystems::PostApplyDamage,
+        ),
+        "diffusion_reduce_primary must NOT be in DmgSystems::PostApplyDamage \
+         — that would let apply_damage::<Cell> see the unreduced primary"
+    );
 }
 
 #[test]

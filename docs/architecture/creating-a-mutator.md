@@ -145,7 +145,11 @@ Tests live in `<mechanic>/tests/`. Group by behavior, not alphabetically. Common
 - `ron_asset.rs` — drift-guard test that the canonical config matches the RON file
 - `helpers.rs` — shared test fixtures with `pub(super)` visibility
 
-For chain-participating mechanics: tests that need the central chain wired must call both `<mechanic>::wire(&mut app)` AND `MutatorsPlugin::wire_damage_chain(&mut app)` (the `pub(crate)` re-export gated `#[cfg(test)]` in `mutators/plugin/mod.rs`).
+For chain-participating mechanics: tests that need the central chain wired must call both `<mechanic>::wire(&mut app)` AND `wire_damage_chain(&mut app)`. The fn lives at `mutators::plugin::wire_damage_chain` via a `pub(crate)` re-export gated `#[cfg(test)]` in `mutators/plugin/mod.rs`. Import it with:
+
+```rust
+use crate::mutators::plugin::wire_damage_chain;
+```
 
 The cross-mechanic ordering pins live centrally in `mutators/plugin/tests/damage_chain.rs` — don't duplicate them in per-mechanic test files.
 
