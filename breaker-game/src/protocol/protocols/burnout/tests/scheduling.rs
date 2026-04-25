@@ -26,7 +26,7 @@ use crate::{
     protocol::{
         definition::{ProtocolDefinition, ProtocolTuning},
         resources::ActiveProtocols,
-        test_utils::{read_hp, spawn_cell_with_hp},
+        test_utils::spawn_cell_with_hp,
     },
 };
 
@@ -34,14 +34,7 @@ fn burnout_scheduling_app() -> App {
     let mut app = TestAppBuilder::new()
         .with_state_hierarchy()
         .in_state_node_playing()
-        .with_physics()
-        .with_playfield()
-        .with_bolt_registry()
-        .with_breaker_registry()
-        .with_cell_registry()
-        .with_resource::<ActiveProtocols>()
-        .with_resource::<crate::input::resources::InputActions>()
-        .with_effects_pipeline()
+        .with_protocol_scaffolding()
         .insert_resource(BurnoutConfig {
             fill_duration:               1.0,
             drain_duration:              1.0,
@@ -91,7 +84,11 @@ fn burnout_amplify_damage_applies_damage_boost_in_same_tick() {
 
     tick(&mut app);
 
-    let hp = read_hp(&app, cell).unwrap_or(f32::NAN);
+    let hp = app
+        .world()
+        .get::<Hp>(cell)
+        .expect("cell should still have Hp")
+        .current;
     // Post-W6 formula (single-apply on baseline):
     //   200.0 − (bolt_base × boost) − (bolt_base × burnout × boost)
     //     = 200.0 − (10.0 × 2.0) − (10.0 × 3.0 × 2.0)
@@ -120,7 +117,11 @@ fn burnout_amplify_damage_without_boost_uses_identity() {
 
     tick(&mut app);
 
-    let hp = read_hp(&app, cell).unwrap_or(f32::NAN);
+    let hp = app
+        .world()
+        .get::<Hp>(cell)
+        .expect("cell should still have Hp")
+        .current;
     // Without DamageBoostStack: baseline 10.0 (no double-apply, boost is 1.0)
     // + burnout single-apply 30.0 = 40.0 damage; final_hp = 200.0 − 40.0 == 160.0.
     assert!(

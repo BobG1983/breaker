@@ -19,10 +19,7 @@ use super::{
     super::system::{EchoNetwork, EchoPrimed, echo_strike_emit_siblings, register},
     helpers::{canonical_echo_strike_config, seed_active_protocols_with_echo_strike},
 };
-use crate::{
-    prelude::*,
-    protocol::{resources::ActiveProtocols, test_utils::read_hp},
-};
+use crate::{prelude::*, protocol::resources::ActiveProtocols};
 
 fn echo_strike_scheduling_app() -> App {
     let mut app = TestAppBuilder::new()
@@ -143,7 +140,13 @@ fn echo_strike_sibling_applies_expected_hp_delta_end_to_end() {
     // Tick 1: primary applied; echo siblings emitted (post-apply).
     tick(&mut app);
     assert!(
-        (read_hp(&app, primary).unwrap_or(f32::NAN) - 80.0).abs() < 1e-5,
+        (app.world()
+            .get::<Hp>(primary)
+            .expect("cell should still have Hp")
+            .current
+            - 80.0)
+            .abs()
+            < 1e-5,
         "tick 1: primary.Hp = 100.0 − 20.0 == 80.0"
     );
 
@@ -151,9 +154,21 @@ fn echo_strike_sibling_applies_expected_hp_delta_end_to_end() {
     // decrements each echo cell's `Hp`.
     tick(&mut app);
 
-    let hp_oldest = read_hp(&app, echo_oldest).unwrap_or(f32::NAN);
-    let hp_newest = read_hp(&app, echo_newest).unwrap_or(f32::NAN);
-    let hp_primary = read_hp(&app, primary).unwrap_or(f32::NAN);
+    let hp_oldest = app
+        .world()
+        .get::<Hp>(echo_oldest)
+        .expect("cell should still have Hp")
+        .current;
+    let hp_newest = app
+        .world()
+        .get::<Hp>(echo_newest)
+        .expect("cell should still have Hp")
+        .current;
+    let hp_primary = app
+        .world()
+        .get::<Hp>(primary)
+        .expect("cell should still have Hp")
+        .current;
 
     // primary unchanged after tick 2 (no further damage targets it).
     assert!(

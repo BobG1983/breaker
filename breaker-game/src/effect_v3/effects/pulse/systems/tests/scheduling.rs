@@ -79,10 +79,6 @@ fn spawn_pulse_ring(app: &mut App, pos: Vec2, base_damage: f32) -> Entity {
         .id()
 }
 
-fn read_hp(app: &App, cell: Entity) -> Option<f32> {
-    app.world().get::<Hp>(cell).map(|h| h.current)
-}
-
 // ── Behavior 3 HP delta: dealer-side DamageBoostStack same-tick ────────────
 
 #[test]
@@ -100,7 +96,11 @@ fn apply_pulse_damage_applies_damage_boost_in_same_tick() {
 
     tick(&mut app);
 
-    let hp = read_hp(&app, cell).unwrap_or(f32::NAN);
+    let hp = app
+        .world()
+        .get::<Hp>(cell)
+        .expect("cell should still have Hp")
+        .current;
     assert!(
         (hp - 80.0).abs() < 1e-5,
         "final_hp = 100.0 − (10.0 × 1.0 × 2.0) == 80.0 (DamageBoostStack 2.0 \
@@ -119,7 +119,11 @@ fn apply_pulse_damage_without_damage_boost_uses_identity() {
 
     tick(&mut app);
 
-    let hp = read_hp(&app, cell).unwrap_or(f32::NAN);
+    let hp = app
+        .world()
+        .get::<Hp>(cell)
+        .expect("cell should still have Hp")
+        .current;
     assert!(
         (hp - 90.0).abs() < 1e-5,
         "final_hp = 100.0 − (10.0 × 1.0 × 1.0) == 90.0 (no DamageBoostStack = \

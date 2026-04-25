@@ -78,10 +78,6 @@ fn spawn_tether_beam(app: &mut App, base_damage: f32) -> Entity {
         .id()
 }
 
-fn read_hp(app: &App, cell: Entity) -> Option<f32> {
-    app.world().get::<Hp>(cell).map(|h| h.current)
-}
-
 #[test]
 fn tick_tether_beam_applies_damage_boost_in_same_tick() {
     let mut app = tether_scheduling_app();
@@ -97,7 +93,11 @@ fn tick_tether_beam_applies_damage_boost_in_same_tick() {
 
     tick(&mut app);
 
-    let hp = read_hp(&app, cell).unwrap_or(f32::NAN);
+    let hp = app
+        .world()
+        .get::<Hp>(cell)
+        .expect("cell should still have Hp")
+        .current;
     assert!(
         (hp - 80.0).abs() < 1e-5,
         "final_hp = 100.0 − (10.0 × 2.0) == 80.0 (DamageBoostStack 2.0 applied \
@@ -120,7 +120,11 @@ fn tick_tether_beam_applies_boost_and_vulnerability_in_same_tick() {
 
     tick(&mut app);
 
-    let hp = read_hp(&app, cell).unwrap_or(f32::NAN);
+    let hp = app
+        .world()
+        .get::<Hp>(cell)
+        .expect("cell should still have Hp")
+        .current;
     assert!(
         (hp - 60.0).abs() < 1e-5,
         "final_hp = 100.0 − (10.0 × 2.0 × 2.0) == 60.0, got {hp}"

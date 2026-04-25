@@ -58,8 +58,8 @@ mod tests {
                 MirrorConfig, PiercingBeamConfig, PiercingConfig, PulseConfig, QuickStopConfig,
                 RampingDamageConfig, RandomEffectConfig, SecondWindConfig, ShieldConfig,
                 ShockwaveConfig, SizeBoostConfig, SpawnBoltsConfig, SpawnPhantomConfig,
-                SpeedBoostConfig, TetherBeamConfig, TimePenaltyConfig, VulnerableConfig,
-                explode::messages::ExplodeEmissionRequested,
+                SpeedBoostConfig, TetherBeamConfig, TetherMode, TimePenaltyConfig,
+                VulnerableConfig, explode::messages::ExplodeEmissionRequested,
                 piercing_beam::messages::PiercingBeamEmissionRequested,
             },
             stacking::EffectStack,
@@ -169,7 +169,7 @@ mod tests {
             EffectType::MirrorProtocol(MirrorConfig { inherit: false }),
             EffectType::TetherBeam(TetherBeamConfig {
                 damage_mult: OrderedFloat(1.0),
-                chain:       false,
+                mode:        TetherMode::SpawnBolt,
                 width:       OrderedFloat(4.0),
             }),
             EffectType::GravityWell(GravityWellConfig {

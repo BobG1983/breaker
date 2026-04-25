@@ -37,10 +37,3 @@ pub(crate) fn spawn_cell_with_hp(app: &mut App, x: f32, y: f32, hp: f32) -> Enti
         ))
         .id()
 }
-
-/// Reads the current `Hp` value off `cell`. Returns `None` if the entity
-/// has no `Hp` component (e.g. despawned). Used across all protocol
-/// scheduling tests.
-pub(crate) fn read_hp(app: &App, cell: Entity) -> Option<f32> {
-    app.world().get::<Hp>(cell).map(|h| h.current)
-}

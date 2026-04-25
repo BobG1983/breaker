@@ -79,10 +79,6 @@ fn spawn_shockwave(app: &mut App, pos: Vec2, base_damage: f32) -> Entity {
         .id()
 }
 
-fn read_hp(app: &App, cell: Entity) -> Option<f32> {
-    app.world().get::<Hp>(cell).map(|h| h.current)
-}
-
 #[test]
 fn apply_shockwave_damage_applies_damage_boost_in_same_tick() {
     let mut app = shockwave_scheduling_app();
@@ -98,7 +94,11 @@ fn apply_shockwave_damage_applies_damage_boost_in_same_tick() {
 
     tick(&mut app);
 
-    let hp = read_hp(&app, cell).unwrap_or(f32::NAN);
+    let hp = app
+        .world()
+        .get::<Hp>(cell)
+        .expect("cell should still have Hp")
+        .current;
     assert!(
         (hp - 80.0).abs() < 1e-5,
         "final_hp = 100.0 − (10.0 × 1.0 × 2.0) == 80.0, got {hp}"
@@ -114,7 +114,11 @@ fn apply_shockwave_damage_applies_vulnerable_stack_in_same_tick() {
 
     tick(&mut app);
 
-    let hp = read_hp(&app, cell).unwrap_or(f32::NAN);
+    let hp = app
+        .world()
+        .get::<Hp>(cell)
+        .expect("cell should still have Hp")
+        .current;
     assert!(
         (hp - 85.0).abs() < 1e-5,
         "final_hp = 100.0 − (10.0 × 1.0 × 1.5) == 85.0 (VulnerableStack 1.5 \

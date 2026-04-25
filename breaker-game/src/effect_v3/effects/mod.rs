@@ -59,6 +59,6 @@ pub use shockwave::ShockwaveConfig;
 pub use size_boost::SizeBoostConfig;
 pub use spawn_bolts::SpawnBoltsConfig;
 pub use speed_boost::SpeedBoostConfig;
-pub use tether_beam::TetherBeamConfig;
+pub use tether_beam::{TetherBeamConfig, TetherMode};
 pub use time_penalty::TimePenaltyConfig;
 pub use vulnerable::VulnerableConfig;

@@ -391,6 +391,34 @@ impl<S: StateStatus> TestAppBuilder<S, NoDmg> {
             _dmg:   PhantomData,
         }
     }
+
+    /// Preset for protocol scheduling tests: bundles the standard physics +
+    /// playfield + registries + protocol/input resources + effects pipeline
+    /// chain that every protocol's `*_scheduling_app()` builds. Callers add
+    /// the protocol-specific config + `register(...)` themselves.
+    ///
+    /// Equivalent to:
+    /// ```ignore
+    /// .with_physics()
+    /// .with_playfield()
+    /// .with_bolt_registry()
+    /// .with_breaker_registry()
+    /// .with_cell_registry()
+    /// .with_resource::<ActiveProtocols>()
+    /// .with_resource::<InputActions>()
+    /// .with_effects_pipeline()
+    /// ```
+    #[must_use]
+    pub(crate) fn with_protocol_scaffolding(self) -> TestAppBuilder<S, WithDmg> {
+        self.with_physics()
+            .with_playfield()
+            .with_bolt_registry()
+            .with_breaker_registry()
+            .with_cell_registry()
+            .with_resource::<crate::protocol::resources::ActiveProtocols>()
+            .with_resource::<crate::input::resources::InputActions>()
+            .with_effects_pipeline()
+    }
 }
 
 impl<S: StateStatus> TestAppBuilder<S, WithDmg> {

@@ -36,7 +36,7 @@ fn fire_spawns_tether_beam_source_entity() {
 
     let config = TetherBeamConfig {
         damage_mult: OrderedFloat(1.5),
-        chain:       false,
+        mode:        TetherMode::SpawnBolt,
         width:       OrderedFloat(10.0),
     };
     config.fire(source, "tether_beam", &mut world);
@@ -60,7 +60,7 @@ fn tether_beam_source_references_source_as_bolt_a() {
 
     let config = TetherBeamConfig {
         damage_mult: OrderedFloat(1.5),
-        chain:       false,
+        mode:        TetherMode::SpawnBolt,
         width:       OrderedFloat(10.0),
     };
     config.fire(source, "tether_beam", &mut world);
@@ -82,7 +82,7 @@ fn chain_false_spawns_new_bolt_and_connects_beam() {
 
     let config = TetherBeamConfig {
         damage_mult: OrderedFloat(1.5),
-        chain:       false,
+        mode:        TetherMode::SpawnBolt,
         width:       OrderedFloat(10.0),
     };
     config.fire(source, "tether_beam", &mut world);
@@ -96,7 +96,7 @@ fn chain_false_spawns_new_bolt_and_connects_beam() {
     assert_eq!(
         extra_bolts.len(),
         1,
-        "chain: false should spawn a new ExtraBolt"
+        "mode: SpawnBolt should spawn a new ExtraBolt"
     );
 
     // The beam's bolt_b should point to the new bolt
@@ -116,7 +116,7 @@ fn tether_beam_damage_equals_damage_mult_directly() {
 
     let config = TetherBeamConfig {
         damage_mult: OrderedFloat(2.5),
-        chain:       false,
+        mode:        TetherMode::SpawnBolt,
         width:       OrderedFloat(10.0),
     };
     config.fire(source, "tether_beam", &mut world);
@@ -143,7 +143,7 @@ fn tether_beam_source_entity_is_not_a_bolt() {
 
     let config = TetherBeamConfig {
         damage_mult: OrderedFloat(1.5),
-        chain:       false,
+        mode:        TetherMode::SpawnBolt,
         width:       OrderedFloat(10.0),
     };
     config.fire(source, "tether_beam", &mut world);
@@ -167,7 +167,7 @@ fn chain_false_spawned_bolt_has_birthing_component() {
 
     let config = TetherBeamConfig {
         damage_mult: OrderedFloat(1.5),
-        chain:       false,
+        mode:        TetherMode::SpawnBolt,
         width:       OrderedFloat(10.0),
     };
     config.fire(source, "tether_beam", &mut world);
@@ -193,7 +193,7 @@ fn fire_spawn_with_non_empty_source_attaches_chip_some() {
 
     let config = TetherBeamConfig {
         damage_mult: OrderedFloat(1.5),
-        chain:       false,
+        mode:        TetherMode::SpawnBolt,
         width:       OrderedFloat(10.0),
     };
     config.fire(source, coil_source().0.as_ref(), &mut world);
@@ -226,7 +226,7 @@ fn fire_spawn_with_empty_source_attaches_chip_none() {
 
     let config = TetherBeamConfig {
         damage_mult: OrderedFloat(1.5),
-        chain:       false,
+        mode:        TetherMode::SpawnBolt,
         width:       OrderedFloat(10.0),
     };
     config.fire(source, "", &mut world);
@@ -253,7 +253,7 @@ fn fire_chain_with_non_empty_source_attaches_chip_some() {
 
     let config = TetherBeamConfig {
         damage_mult: OrderedFloat(1.5),
-        chain:       true,
+        mode:        TetherMode::Chain,
         width:       OrderedFloat(10.0),
     };
     config.fire(source, coil_source().0.as_ref(), &mut world);
@@ -277,7 +277,7 @@ fn fire_chain_with_empty_source_attaches_chip_none() {
 
     let config = TetherBeamConfig {
         damage_mult: OrderedFloat(1.5),
-        chain:       true,
+        mode:        TetherMode::Chain,
         width:       OrderedFloat(10.0),
     };
     config.fire(source, "", &mut world);
@@ -305,7 +305,7 @@ fn fire_chain_picks_nearest_other_bolt_by_squared_distance() {
 
     let config = TetherBeamConfig {
         damage_mult: OrderedFloat(1.5),
-        chain:       true,
+        mode:        TetherMode::Chain,
         width:       OrderedFloat(10.0),
     };
     config.fire(source, coil_source().0.as_ref(), &mut world);
@@ -332,7 +332,7 @@ fn fire_chain_with_only_source_bolt_is_noop() {
 
     let config = TetherBeamConfig {
         damage_mult: OrderedFloat(1.5),
-        chain:       true,
+        mode:        TetherMode::Chain,
         width:       OrderedFloat(10.0),
     };
     config.fire(source, coil_source().0.as_ref(), &mut world);
@@ -364,7 +364,7 @@ fn fire_chain_with_two_equidistant_bolts_spawns_exactly_one_beam() {
 
     let config = TetherBeamConfig {
         damage_mult: OrderedFloat(1.5),
-        chain:       true,
+        mode:        TetherMode::Chain,
         width:       OrderedFloat(10.0),
     };
     config.fire(source, coil_source().0.as_ref(), &mut world);
@@ -395,7 +395,7 @@ fn fire_spawn_stamps_tether_beam_width_from_config() {
 
     let config = TetherBeamConfig {
         damage_mult: OrderedFloat(1.5),
-        chain:       false,
+        mode:        TetherMode::SpawnBolt,
         width:       OrderedFloat(7.25),
     };
     config.fire(source, "tether_beam", &mut world);
@@ -439,7 +439,7 @@ fn fire_chain_stamps_tether_beam_width_from_config() {
 
     let config = TetherBeamConfig {
         damage_mult: OrderedFloat(1.5),
-        chain:       true,
+        mode:        TetherMode::Chain,
         width:       OrderedFloat(12.0),
     };
     config.fire(source, coil_source().0.as_ref(), &mut world);
@@ -468,7 +468,7 @@ fn fire_chain_noop_does_not_spawn_tether_beam_width() {
 
     let config = TetherBeamConfig {
         damage_mult: OrderedFloat(1.5),
-        chain:       true,
+        mode:        TetherMode::Chain,
         width:       OrderedFloat(12.0),
     };
     config.fire(source, coil_source().0.as_ref(), &mut world);
@@ -494,7 +494,7 @@ fn fire_spawn_with_width_zero_stamps_zero_verbatim() {
 
     let config = TetherBeamConfig {
         damage_mult: OrderedFloat(1.5),
-        chain:       false,
+        mode:        TetherMode::SpawnBolt,
         width:       OrderedFloat(0.0),
     };
     config.fire(source, "tether_beam", &mut world);
@@ -523,7 +523,7 @@ fn fire_spawn_with_width_large_stamps_verbatim() {
 
     let config = TetherBeamConfig {
         damage_mult: OrderedFloat(1.5),
-        chain:       false,
+        mode:        TetherMode::SpawnBolt,
         width:       OrderedFloat(1000.0),
     };
     config.fire(source, "tether_beam", &mut world);

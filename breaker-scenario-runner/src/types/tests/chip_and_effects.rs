@@ -159,10 +159,10 @@ fn tether_beam_stress_scenario_parses_with_tether_beam_config_width_field() {
         "parsed damage_mult must be 1.5, got {}",
         parsed_cfg.damage_mult.0,
     );
-    assert!(
-        !parsed_cfg.chain,
-        "parsed chain must be false (fire_spawn branch), got {}",
-        parsed_cfg.chain,
+    assert_eq!(
+        parsed_cfg.mode,
+        breaker::effect_v3::effects::TetherMode::SpawnBolt,
+        "parsed mode must be SpawnBolt (fire_spawn branch)",
     );
     assert!(
         (parsed_cfg.width.0 - 10.0).abs() < 1e-6,

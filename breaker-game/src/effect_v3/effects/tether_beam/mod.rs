@@ -5,4 +5,4 @@ pub mod config;
 pub mod systems;
 
 pub use components::*;
-pub use config::TetherBeamConfig;
+pub use config::{TetherBeamConfig, TetherMode};

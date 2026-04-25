@@ -53,12 +53,6 @@ fn scheduling_test_app() -> App {
     app
 }
 
-/// Reads the cell's `Hp.current`. Returns `None` if the entity or component
-/// is absent (e.g. despawned after death).
-fn read_hp(app: &App, cell: Entity) -> Option<f32> {
-    app.world().get::<Hp>(cell).map(|h| h.current)
-}
-
 // ── Behavior 1 — bolt_cell_collision damage boost applies same-tick ─────────
 
 /// With `DamageBoostStack(2.0)` on the bolt, the cell's HP after a single
@@ -81,7 +75,11 @@ fn bolt_cell_collision_applies_damage_boost_in_same_tick() {
 
     tick(&mut app);
 
-    let hp = read_hp(&app, cell_entity).unwrap_or(f32::NAN);
+    let hp = app
+        .world()
+        .get::<Hp>(cell_entity)
+        .expect("cell should still have Hp")
+        .current;
     assert!(
         (hp - 80.0).abs() < 1e-5,
         "Post-W6 single-application: final_hp = 100.0 − 10.0 × 2.0 × 1.0 == 80.0, got {hp}"
@@ -107,7 +105,11 @@ fn bolt_cell_collision_applies_aggregated_damage_boost_in_same_tick() {
 
     tick(&mut app);
 
-    let hp = read_hp(&app, cell_entity).unwrap_or(f32::NAN);
+    let hp = app
+        .world()
+        .get::<Hp>(cell_entity)
+        .expect("cell should still have Hp")
+        .current;
     assert!(
         (hp - 70.0).abs() < 1e-5,
         "Post-W6: final_hp = 100.0 − 10.0 × 3.0 × 1.0 == 70.0, got {hp}"
@@ -177,7 +179,11 @@ fn bolt_cell_collision_applies_vulnerable_stack_in_same_tick() {
 
     tick(&mut app);
 
-    let hp = read_hp(&app, cell_entity).unwrap_or(f32::NAN);
+    let hp = app
+        .world()
+        .get::<Hp>(cell_entity)
+        .expect("cell should still have Hp")
+        .current;
     assert!(
         (hp - 70.0).abs() < 1e-5,
         "Post-W6: final_hp = 100.0 − 10.0 × 1.0 × 3.0 == 70.0, got {hp}"
@@ -207,7 +213,11 @@ fn bolt_cell_collision_applies_boost_and_vulnerability_same_tick_survives_with_r
 
     tick(&mut app);
 
-    let hp = read_hp(&app, cell_entity).unwrap_or(f32::NAN);
+    let hp = app
+        .world()
+        .get::<Hp>(cell_entity)
+        .expect("cell should still have Hp")
+        .current;
     assert!(
         (hp - 40.0).abs() < 1e-5,
         "Post-W6: final_hp = 100.0 − 10.0 × 2.0 × 3.0 == 40.0 (cell SURVIVES); got {hp}"

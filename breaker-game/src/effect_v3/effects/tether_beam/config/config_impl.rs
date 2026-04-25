@@ -19,12 +19,25 @@ use crate::{
 };
 
 /// Configuration for a tether beam that links two bolts and damages cells crossing it.
+/// Selects which fire variant `TetherBeamConfig::fire` invokes.
+///
+/// Replaces a previous `chain: bool` field whose `false` value was the active
+/// "spawn" action — an inverted-predicate semantic trap.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum TetherMode {
+    /// Spawn a new bolt and connect it to the source with a tether beam.
+    SpawnBolt,
+    /// Connect the source bolt to the nearest existing bolt with a tether beam.
+    Chain,
+}
+
+/// Configuration for the tether beam effect.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct TetherBeamConfig {
     /// Multiplier applied to base damage for cells the beam crosses each tick.
     pub damage_mult: OrderedFloat<f32>,
-    /// false = spawn a new bolt and beam to it; true = connect existing bolts.
-    pub chain:       bool,
+    /// Selects whether `fire` spawns a new bolt or connects existing bolts.
+    pub mode:        TetherMode,
     /// Beam half-width in world units (perpendicular distance from the
     /// beam line). Stamped as `TetherBeamWidth` onto the spawned beam
     /// entity. Required — no serde default.
@@ -33,10 +46,9 @@ pub struct TetherBeamConfig {
 
 impl Fireable for TetherBeamConfig {
     fn fire(&self, entity: Entity, source: &str, world: &mut World) {
-        if self.chain {
-            self.fire_chain(entity, source, world);
-        } else {
-            self.fire_spawn(entity, source, world);
+        match self.mode {
+            TetherMode::SpawnBolt => self.fire_spawn(entity, source, world),
+            TetherMode::Chain => self.fire_chain(entity, source, world),
         }
     }
 

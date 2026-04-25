@@ -45,10 +45,6 @@ fn spawn_cell_with_hp(app: &mut App, x: f32, y: f32, hp: f32) -> Entity {
         .id()
 }
 
-fn read_hp(app: &App, cell: Entity) -> Option<f32> {
-    app.world().get::<Hp>(cell).map(|h| h.current)
-}
-
 #[test]
 fn tick_chain_lightning_applies_damage_boost_in_same_tick() {
     let mut app = chain_scheduling_app();
@@ -91,7 +87,11 @@ fn tick_chain_lightning_applies_damage_boost_in_same_tick() {
 
     tick(&mut app);
 
-    let hp = read_hp(&app, cell).unwrap_or(f32::NAN);
+    let hp = app
+        .world()
+        .get::<Hp>(cell)
+        .expect("cell should still have Hp")
+        .current;
     assert!(
         (hp - 80.0).abs() < 1e-5,
         "final_hp = 100.0 − (10.0 × 2.0) == 80.0 (chain damage 10.0 × \
@@ -129,7 +129,11 @@ fn tick_chain_lightning_without_damage_boost_uses_identity() {
 
     tick(&mut app);
 
-    let hp = read_hp(&app, cell).unwrap_or(f32::NAN);
+    let hp = app
+        .world()
+        .get::<Hp>(cell)
+        .expect("cell should still have Hp")
+        .current;
     assert!(
         (hp - 90.0).abs() < 1e-5,
         "final_hp = 100.0 − 10.0 == 90.0 (identity), got {hp}"

@@ -56,6 +56,10 @@ impl TetherConfig {
     ///
     /// - `stacks == 0` → `0.0` (short-circuits before any arithmetic).
     /// - `stacks >= 1` → `base_damage + damage_per_level * (stacks - 1)`.
+    ///
+    /// `const fn` is safe here — `f32::mul_add` is `const` on Bevy 0.18's
+    /// MSRV, unlike `f32::min` (which is why `diffusion::share_percent` is
+    /// not `const`).
     #[must_use]
     pub(crate) const fn damage_percent(self, stacks: u32) -> f32 {
         if stacks == 0 {
@@ -71,6 +75,10 @@ impl TetherConfig {
     /// - `stacks == 0` → `0.0` (short-circuits before cap logic).
     /// - `stacks >= 1` → `base_coverage + coverage_per_level * (stacks - 1)`,
     ///   clamped to the cap.
+    ///
+    /// `const fn` is safe here — both `f32::mul_add` and direct `>` comparison
+    /// are `const` on Bevy 0.18's MSRV. Note that `f32::min` is not, which is
+    /// why the cap is expressed as an `if`/`else` rather than `raw.min(cap)`.
     #[must_use]
     pub(crate) const fn coverage_percent(self, stacks: u32) -> f32 {
         if stacks == 0 {

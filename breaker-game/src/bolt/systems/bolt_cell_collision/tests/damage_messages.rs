@@ -117,7 +117,11 @@ fn cell_collision_delivers_boosted_damage_end_to_end() {
         msgs.0[0].amount
     );
 
-    let hp = app.world().get::<Hp>(cell).map_or(f32::NAN, |h| h.current);
+    let hp = app
+        .world()
+        .get::<Hp>(cell)
+        .expect("cell should still have Hp")
+        .current;
     assert!(
         (hp - (starting_hp - 15.0)).abs() < 1e-5,
         "post-tick cell Hp.current should be {} (starting - 15.0), got {hp}",
@@ -341,7 +345,11 @@ fn cell_collision_delivers_multi_entry_boosted_damage_end_to_end() {
         msgs.0[0].amount
     );
 
-    let hp = app.world().get::<Hp>(cell).map_or(f32::NAN, |h| h.current);
+    let hp = app
+        .world()
+        .get::<Hp>(cell)
+        .expect("cell should still have Hp")
+        .current;
     assert!(
         (hp - (starting_hp - 30.0)).abs() < 1e-5,
         "post-tick cell Hp.current should be {} (starting - 30.0), got {hp}",

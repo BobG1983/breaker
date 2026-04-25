@@ -420,7 +420,11 @@ fn full_pipeline_one_shot_boost_drains_exactly_once() {
 
     tick(&mut app);
 
-    let hp = app.world().get::<Hp>(cell).map_or(f32::NAN, |h| h.current);
+    let hp = app
+        .world()
+        .get::<Hp>(cell)
+        .expect("cell should still have Hp")
+        .current;
     assert!(
         (hp - 30.0).abs() < 1e-5,
         "post-tick cell Hp.current should be 30.0 (50 − 10 * 2.0 one-shot once), got {hp}"
@@ -485,7 +489,11 @@ fn full_pipeline_locked_invulnerable_cell_hp_unchanged_despite_boost() {
 
     tick(&mut app);
 
-    let hp = app.world().get::<Hp>(cell).map_or(f32::NAN, |h| h.current);
+    let hp = app
+        .world()
+        .get::<Hp>(cell)
+        .expect("cell should still have Hp")
+        .current;
     assert!(
         (hp - starting_hp).abs() < 1e-5,
         "Locked + Invulnerable cell Hp should remain {starting_hp} — \

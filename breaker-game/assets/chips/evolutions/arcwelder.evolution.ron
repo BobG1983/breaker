@@ -4,7 +4,7 @@
     effects: [
         Stamp(Bolt,
             When(Bumped,
-                Fire(TetherBeam(TetherBeamConfig(damage_mult: 1.5, chain: true, width: 10.0))),
+                Fire(TetherBeam(TetherBeamConfig(damage_mult: 1.5, mode: Chain, width: 10.0))),
             ),
         ),
     ],

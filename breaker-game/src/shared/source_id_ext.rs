@@ -5,8 +5,8 @@
 //! Readers (`is_armed`, `extract_hazard_instance`) live alongside
 //! construction so format strings remain in exactly one file.
 //!
-//! See `docs/architecture/source_id.md` (planned) and the W5 design doc for
-//! the rationale.
+//! See `docs/architecture/source_id.md` for the full namespace contract and
+//! reader-helper reference.
 
 use crate::{
     chips::definition::Rarity, hazard::definition::HazardKind, prelude::SourceId,

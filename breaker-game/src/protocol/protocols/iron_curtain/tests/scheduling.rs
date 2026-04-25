@@ -28,7 +28,6 @@ use crate::{
     protocol::{
         definition::{ProtocolDefinition, ProtocolKind, ProtocolTuning},
         resources::ActiveProtocols,
-        test_utils::read_hp,
     },
     shared::GameDrawLayer,
 };
@@ -43,13 +42,7 @@ fn iron_curtain_scheduling_app() -> App {
     let mut app = TestAppBuilder::new()
         .with_state_hierarchy()
         .in_state_node_playing()
-        .with_physics()
-        .with_playfield()
-        .with_bolt_registry()
-        .with_breaker_registry()
-        .with_cell_registry()
-        .with_resource::<ActiveProtocols>()
-        .with_effects_pipeline()
+        .with_protocol_scaffolding()
         .insert_resource(IronCurtainConfig {
             damage_fraction: 0.5,
             falloff_start:   1000.0,
@@ -129,7 +122,11 @@ fn iron_curtain_on_bolt_lost_applies_vulnerable_stack_in_same_tick() {
     write_bolt_lost(&mut app, bolt, breaker);
     tick(&mut app);
 
-    let hp = read_hp(&app, cell).unwrap_or(f32::NAN);
+    let hp = app
+        .world()
+        .get::<Hp>(cell)
+        .expect("cell should still have Hp")
+        .current;
     // Wave origin damage: base × damage_fraction = 10.0 × 0.5 = 5.0.
     // Vulnerability 2.0 multiplies: 5.0 × 2.0 = 10.0.
     // final_hp = 100.0 − 10.0 == 90.0.
@@ -149,7 +146,11 @@ fn iron_curtain_on_bolt_lost_without_vuln_uses_identity() {
     write_bolt_lost(&mut app, bolt, breaker);
     tick(&mut app);
 
-    let hp = read_hp(&app, cell).unwrap_or(f32::NAN);
+    let hp = app
+        .world()
+        .get::<Hp>(cell)
+        .expect("cell should still have Hp")
+        .current;
     // No vulnerability: final_hp = 100.0 − (10.0 × 0.5) == 95.0.
     assert!(
         (hp - 95.0).abs() < 1e-5,
@@ -194,7 +195,11 @@ fn invulnerable_cell_receives_iron_curtain_message_with_post_pipeline_zero_amoun
 
     // HP on invulnerable cell must be unchanged — pipeline zeroes amount
     // before `apply_damage::<Cell>` writes HP.
-    let hp = read_hp(&app, cell).unwrap_or(f32::NAN);
+    let hp = app
+        .world()
+        .get::<Hp>(cell)
+        .expect("cell should still have Hp")
+        .current;
     assert!(
         (hp - 100.0).abs() < 1e-5,
         "invulnerable cell Hp must stay at 100.0, got {hp}"
@@ -269,7 +274,11 @@ fn vulnerable_cell_still_takes_non_zero_damage_post_pipeline() {
 
     // base_damage × damage_fraction = 10.0 × 0.5 = 5.0; distance 100.0 ≤
     // falloff_start 1000.0 → full-damage zone. 100.0 − 5.0 == 95.0.
-    let hp = read_hp(&app, cell).unwrap_or(f32::NAN);
+    let hp = app
+        .world()
+        .get::<Hp>(cell)
+        .expect("cell should still have Hp")
+        .current;
     assert!(
         (hp - 95.0).abs() < 1e-5,
         "vulnerable cell Hp expected 95.0, got {hp}"
@@ -331,12 +340,20 @@ fn mixed_wave_invulnerable_and_vulnerable_amounts_differ_post_pipeline() {
         "vulnerable cell's post-pipeline amount expected 5.0 (pass-through), got {vuln_amount}"
     );
 
-    let hp_invuln = read_hp(&app, cell_invuln).unwrap_or(f32::NAN);
+    let hp_invuln = app
+        .world()
+        .get::<Hp>(cell_invuln)
+        .expect("cell should still have Hp")
+        .current;
     assert!(
         (hp_invuln - 100.0).abs() < 1e-5,
         "invulnerable cell Hp unchanged at 100.0, got {hp_invuln}"
     );
-    let hp_vuln = read_hp(&app, cell_vuln).unwrap_or(f32::NAN);
+    let hp_vuln = app
+        .world()
+        .get::<Hp>(cell_vuln)
+        .expect("cell should still have Hp")
+        .current;
     assert!(
         (hp_vuln - 95.0).abs() < 1e-5,
         "vulnerable cell Hp expected 95.0, got {hp_vuln}"
