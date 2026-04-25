@@ -208,6 +208,17 @@ pub(crate) fn debt_collector_on_impact(
         };
         let base_damage = base_opt.map_or(DEFAULT_BOLT_BASE_DAMAGE, |b| b.0);
         let amount = base_damage * cashout.0;
+        // Zero/negative-amount guard: a zero-stack cash-out (or a contrived
+        // negative `BoltBaseDamage`) would otherwise emit a spurious
+        // `DamageDealt<Cell>` that propagates through the full damage
+        // pipeline. Matches the `tether_emit_partner` guard in
+        // `hazard/hazards/tether/system.rs`. The `DebtCashOut` is intentionally
+        // NOT removed here — leaving it intact lets a future non-zero impact
+        // emit if conditions change, and aligns with the bare-`continue`
+        // pattern used by tether's pre-emission guard.
+        if amount <= 0.0 {
+            continue;
+        }
         damage_writer.write(DamageDealt::<Cell> {
             dealer: Some(msg.bolt),
             attributed_to: None,

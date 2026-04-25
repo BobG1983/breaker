@@ -182,12 +182,13 @@ fn bolt_without_debt_cash_out_produces_no_bonus() {
     );
 }
 
-// ── Behavior 20 — zero-stack cash-out emits bonus with amount 0.0 ──────────-
+// ── Behavior 20 — zero-amount cash-out skips emission (guard) ──────────────-
 
 #[test]
-fn zero_stack_cash_out_emits_bonus_with_amount_zero() {
+fn debt_collector_skips_emission_when_amount_is_zero() {
     let mut app = build_debt_collector_app();
     seed_active_protocols_with_debt_collector(&mut app, 0.5);
+    // base_damage * stack = 10.0 * 0.0 = 0.0 — guard must skip emission.
     let bolt = spawn_bolt_with_base_damage_and_cashout(&mut app, 10.0, 0.0);
     let cell = app.world_mut().spawn_empty().id();
 
@@ -195,23 +196,31 @@ fn zero_stack_cash_out_emits_bonus_with_amount_zero() {
     tick(&mut app);
 
     let bonuses = collected_bonus_damage(&app);
-    assert_eq!(
-        bonuses.len(),
-        1,
-        "zero-stack cash-out still emits one bonus"
-    );
-    let msg = &bonuses[0];
     assert!(
-        (msg.amount - 0.0).abs() < f32::EPSILON,
-        "amount should be 0.0 for zero-stack cash-out, got {}",
-        msg.amount
+        bonuses.is_empty(),
+        "zero-amount cash-out must NOT emit a DamageDealt<Cell> (guard); got {}",
+        bonuses.len()
     );
-    assert_eq!(msg.dealer, Some(bolt));
-    assert_eq!(msg.target, cell);
-    assert_eq!(msg.source.as_ref(), Some(&debt_collector_source()));
+}
+
+// ── Behavior 20b — negative-amount cash-out skips emission (guard) ─────────-
+
+#[test]
+fn debt_collector_skips_emission_when_amount_is_negative() {
+    let mut app = build_debt_collector_app();
+    seed_active_protocols_with_debt_collector(&mut app, 0.5);
+    // base_damage * stack = 10.0 * -0.5 = -5.0 — guard must skip emission.
+    let bolt = spawn_bolt_with_base_damage_and_cashout(&mut app, 10.0, -0.5);
+    let cell = app.world_mut().spawn_empty().id();
+
+    write_bolt_impact_cell(&mut app, bolt, cell);
+    tick(&mut app);
+
+    let bonuses = collected_bonus_damage(&app);
     assert!(
-        app.world().get::<DebtCashOut>(bolt).is_none(),
-        "DebtCashOut removed even when amount is zero"
+        bonuses.is_empty(),
+        "negative-amount cash-out must NOT emit a DamageDealt<Cell> (guard); got {}",
+        bonuses.len()
     );
 }
 
