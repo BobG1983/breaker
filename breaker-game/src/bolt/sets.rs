@@ -15,4 +15,9 @@ pub enum BoltSystems {
     BreakerCollision,
     /// The `bolt_lost` system — detects bolt below playfield and respawns.
     BoltLost,
+    /// The `sync_bolt_speed_to_stack` system — re-applies the velocity formula
+    /// after `EffectV3Systems::Death` so death-trigger speed boosts land on the
+    /// same tick the cell died. Exported for cross-domain ordering (e.g.,
+    /// scenario-runner invariant checkers must observe the post-sync velocity).
+    SyncSpeedToStack,
 }

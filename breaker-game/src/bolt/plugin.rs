@@ -1,6 +1,6 @@
 //! Bolt plugin registration.
 
-use bevy::prelude::*;
+use bevy::{ecs::schedule::ApplyDeferred, prelude::*};
 
 use crate::{
     bolt::{
@@ -10,7 +10,7 @@ use crate::{
             begin_node_birthing, bolt_breaker_collision, bolt_cell_collision, bolt_lost,
             bolt_wall_collision, clamp_bolt_to_playfield, dispatch_bolt_effects, hover_bolt,
             launch_bolt, normalize_bolt_speed_after_constraints, spawn_bolt_lost_text,
-            sync_bolt_scale, tick_birthing, tick_bolt_lifespan,
+            sync_bolt_scale, sync_bolt_speed_to_stack, tick_birthing, tick_bolt_lifespan,
         },
     },
     breaker::BreakerSystems,
@@ -92,6 +92,33 @@ impl Plugin for BoltPlugin {
                         .before(BoltSystems::BoltLost)
                         .before(DmgSystems::ApplyKill),
                 )
+                    .run_if(in_state(NodeState::Playing)),
+            )
+            // Re-sync bolt velocity to the speed-boost stack after
+            // death-trigger `FireEffectCommand`s have flushed.
+            //
+            // Closes the one-tick lag where `apply_velocity_formula`
+            // (called inside `bolt_cell_collision`) ran before the
+            // death-bridge command applied a new `SpeedBoost` entry.
+            //
+            // The death bridges queue `FireEffectCommand` via
+            // `commands.queue(...)`. Bevy does not auto-flush commands between
+            // system sets, so without an explicit `ApplyDeferred` barrier the
+            // deferred commands inserting `EffectStack<SpeedBoostConfig>`
+            // entries don't apply until the next implicit flush — which is
+            // after `sync_bolt_speed_to_stack` runs. The explicit barrier
+            // forces the flush before the sync system reads the stack.
+            .add_systems(
+                FixedUpdate,
+                ApplyDeferred
+                    .after(EffectV3Systems::Death)
+                    .before(BoltSystems::SyncSpeedToStack)
+                    .run_if(in_state(NodeState::Playing)),
+            )
+            .add_systems(
+                FixedUpdate,
+                sync_bolt_speed_to_stack
+                    .in_set(BoltSystems::SyncSpeedToStack)
                     .run_if(in_state(NodeState::Playing)),
             )
             .add_systems(Update, sync_bolt_scale.run_if(in_state(NodeState::Playing)));

@@ -153,7 +153,26 @@ fn register_core_invariant_checkers(app: &mut App, active: &HashSet<InvariantKin
     }
 
     register_checker!(InvariantKind::BoltInBounds, check_bolt_in_bounds);
-    register_checker!(InvariantKind::BoltSpeedAccurate, check_bolt_speed_accurate);
+    // BoltSpeedAccurate needs to run AFTER `BoltSystems::SyncSpeedToStack` so
+    // it observes the post-sync velocity. Note: it cannot also be
+    // `.before(BoltSystems::BoltLost)` because `bolt_lost` is ordered
+    // `.before(EffectV3Systems::Bridge)` which transitively runs before
+    // `EffectV3Systems::Death` (and thus before `SyncSpeedToStack`). Adding
+    // `.before(BoltLost)` would create a cycle. Without that edge, the
+    // checker simply runs once SyncSpeedToStack has flushed — sufficient for
+    // accurate observation (W8 §A regression).
+    if active.contains(&InvariantKind::BoltSpeedAccurate) {
+        app.add_systems(
+            FixedUpdate,
+            check_bolt_speed_accurate
+                .run_if(playing_gate)
+                .after(apply_debug_frame_mutations)
+                .after(deferred_debug_setup)
+                .after(tag_game_entities)
+                .after(BreakerSystems::UpdateState)
+                .after(BoltSystems::SyncSpeedToStack),
+        );
+    }
     register_checker!(
         InvariantKind::BoltCountReasonable,
         check_bolt_count_reasonable

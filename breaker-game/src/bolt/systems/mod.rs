@@ -12,6 +12,7 @@ mod hover_bolt;
 mod launch_bolt;
 mod normalize_speed_after_constraints;
 pub(crate) mod sync_bolt_scale;
+mod sync_bolt_speed_to_stack;
 pub(crate) mod tick_birthing;
 mod tick_bolt_lifespan;
 
@@ -27,5 +28,6 @@ pub use hover_bolt::hover_bolt;
 pub(crate) use launch_bolt::launch_bolt;
 pub(crate) use normalize_speed_after_constraints::normalize_bolt_speed_after_constraints;
 pub(crate) use sync_bolt_scale::sync_bolt_scale;
+pub(crate) use sync_bolt_speed_to_stack::sync_bolt_speed_to_stack;
 pub(crate) use tick_birthing::tick_birthing;
 pub(crate) use tick_bolt_lifespan::tick_bolt_lifespan;
