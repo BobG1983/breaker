@@ -23,7 +23,6 @@ use crate::{
         components::BoltBaseDamage, messages::BoltLost, resources::DEFAULT_BOLT_BASE_DAMAGE,
         sets::BoltSystems,
     },
-    effect_v3::EffectV3Systems,
     mutators::protocols::{
         definition::{ProtocolKind, ProtocolTuning},
         systems::ProtocolGate,
@@ -85,7 +84,7 @@ pub(crate) fn wire(app: &mut App) {
         FixedUpdate,
         iron_curtain_on_bolt_lost
             .after(BoltSystems::BoltLost)
-            .before(EffectV3Systems::Bridge),
+            .in_set(DmgSystems::EmitDamage),
     );
 }
 

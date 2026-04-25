@@ -20,7 +20,6 @@ use crate::{
         components::{DashDuration, DashState, DashStateTimer},
         sets::BreakerSystems,
     },
-    effect_v3::EffectV3Systems,
     mutators::protocols::{
         definition::{ProtocolKind, ProtocolTuning},
         systems::ProtocolGate,
@@ -120,7 +119,7 @@ pub(crate) fn wire(app: &mut App) {
             reckless_dash_on_bump.after(BreakerSystems::GradeBump),
             reckless_dash_amplify_damage
                 .after(BoltSystems::CellCollision)
-                .before(EffectV3Systems::Bridge),
+                .in_set(DmgSystems::EmitDamage),
             reckless_dash_double_penalty.after(BoltSystems::BoltLost),
         ),
     )

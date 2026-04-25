@@ -28,7 +28,6 @@ use crate::{
         messages::{BumpGrade, BumpPerformed},
         sets::BreakerSystems,
     },
-    effect_v3::EffectV3Systems,
     mutators::protocols::{
         definition::{ProtocolKind, ProtocolTuning},
         resources::{ActiveProtocols, protocol_active},
@@ -96,7 +95,7 @@ pub(crate) fn wire(app: &mut App) {
             debt_collector_on_bump.after(BreakerSystems::GradeBump),
             debt_collector_on_impact
                 .after(BoltSystems::CellCollision)
-                .before(EffectV3Systems::Bridge),
+                .in_set(DmgSystems::EmitDamage),
             debt_collector_on_bolt_lost.after(BoltSystems::BoltLost),
         ),
     );

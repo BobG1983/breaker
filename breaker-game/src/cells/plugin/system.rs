@@ -85,10 +85,10 @@ impl Plugin for CellsPlugin {
             .add_systems(
                 FixedUpdate,
                 (
-                    tick_survival_timer.before(DmgSystems::ApplyDamage),
+                    tick_survival_timer.in_set(DmgSystems::EmitDamage),
                     tick_salvo_fire_timer.after(tick_survival_timer),
                     fire_survival_turret.after(tick_salvo_fire_timer),
-                    salvo_cell_collision.before(DmgSystems::ApplyDamage),
+                    salvo_cell_collision.in_set(DmgSystems::EmitDamage),
                     salvo_bolt_collision,
                     salvo_breaker_collision.before(EffectV3Systems::Bridge),
                     salvo_wall_collision,

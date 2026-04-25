@@ -10,7 +10,6 @@ use super::{
 use crate::{
     bolt::sets::BoltSystems,
     breaker::sets::BreakerSystems,
-    effect_v3::EffectV3Systems,
     mutators::protocols::{definition::ProtocolKind, resources::protocol_active},
     prelude::*,
 };
@@ -68,7 +67,7 @@ pub(crate) fn wire(app: &mut App) {
             burnout_on_bump.after(BreakerSystems::GradeBump),
             burnout_amplify_damage
                 .after(BoltSystems::CellCollision)
-                .before(EffectV3Systems::Bridge),
+                .in_set(DmgSystems::EmitDamage),
         ),
     )
     .add_systems(OnExit(NodeState::Playing), burnout_cleanup_node);
