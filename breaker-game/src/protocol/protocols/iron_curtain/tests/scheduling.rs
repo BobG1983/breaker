@@ -28,6 +28,7 @@ use crate::{
     protocol::{
         definition::{ProtocolDefinition, ProtocolKind, ProtocolTuning},
         resources::ActiveProtocols,
+        test_utils::read_hp,
     },
     shared::GameDrawLayer,
 };
@@ -110,10 +111,6 @@ fn spawn_cell_with_hp_and_vuln(app: &mut App, x: f32, y: f32, hp: f32, vuln: f32
     stack.add(test_source(), vuln);
     app.world_mut().entity_mut(entity).insert(stack);
     entity
-}
-
-fn read_hp(app: &App, cell: Entity) -> Option<f32> {
-    app.world().get::<Hp>(cell).map(|h| h.current)
 }
 
 fn write_bolt_lost(app: &mut App, bolt: Entity, breaker: Entity) {

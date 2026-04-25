@@ -8,6 +8,9 @@ pub mod protocols;
 pub mod resources;
 pub(crate) mod systems;
 
+#[cfg(test)]
+pub(crate) mod test_utils;
+
 use bevy::prelude::*;
 
 use self::{

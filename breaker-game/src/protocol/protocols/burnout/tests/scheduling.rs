@@ -14,7 +14,6 @@
 //! `starting_hp − (base × boost) − (base × burnout_multiplier × boost)`.
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{GlobalPosition2D, Spatial2D};
 
 use super::super::system::{BurnoutConfig, BurnoutDamageBoost, register};
 use crate::{
@@ -27,8 +26,8 @@ use crate::{
     protocol::{
         definition::{ProtocolDefinition, ProtocolTuning},
         resources::ActiveProtocols,
+        test_utils::{read_hp, spawn_cell_with_hp},
     },
-    shared::GameDrawLayer,
 };
 
 fn burnout_scheduling_app() -> App {
@@ -69,31 +68,6 @@ fn burnout_scheduling_app() -> App {
     app.add_plugins(BoltPlugin);
     register(&mut app);
     app
-}
-
-fn spawn_cell_with_hp(app: &mut App, x: f32, y: f32, hp: f32) -> Entity {
-    let cc = CellConfig::default();
-    let half_extents = Vec2::new(cc.width / 2.0, cc.height / 2.0);
-    let pos = Vec2::new(x, y);
-    app.world_mut()
-        .spawn((
-            Cell,
-            crate::cells::components::CellWidth::new(cc.width),
-            crate::cells::components::CellHeight::new(cc.height),
-            Hp::new(hp),
-            KilledBy { killer: None },
-            Aabb2D::new(Vec2::ZERO, half_extents),
-            CollisionLayers::new(CELL_LAYER, BOLT_LAYER),
-            Position2D(pos),
-            GlobalPosition2D(pos),
-            Spatial2D,
-            GameDrawLayer::Cell,
-        ))
-        .id()
-}
-
-fn read_hp(app: &App, cell: Entity) -> Option<f32> {
-    app.world().get::<Hp>(cell).map(|h| h.current)
 }
 
 #[test]

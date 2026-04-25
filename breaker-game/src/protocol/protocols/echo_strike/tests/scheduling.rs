@@ -19,7 +19,10 @@ use super::{
     super::system::{EchoNetwork, EchoPrimed, echo_strike_emit_siblings, register},
     helpers::{canonical_echo_strike_config, seed_active_protocols_with_echo_strike},
 };
-use crate::{prelude::*, protocol::resources::ActiveProtocols};
+use crate::{
+    prelude::*,
+    protocol::{resources::ActiveProtocols, test_utils::read_hp},
+};
 
 fn echo_strike_scheduling_app() -> App {
     let mut app = TestAppBuilder::new()
@@ -72,10 +75,6 @@ fn echo_strike_emit_siblings_is_not_in_emit_damage() {
 /// involved).
 fn spawn_vuln_cell_with_hp(app: &mut App, _pos: Vec2, hp: f32) -> Entity {
     app.world_mut().spawn((Cell, Hp::new(hp))).id()
-}
-
-fn read_hp(app: &App, cell: Entity) -> Option<f32> {
-    app.world().get::<Hp>(cell).map(|h| h.current)
 }
 
 /// W8 §F — pairs the message-emission pin in `emit_siblings.rs` with an
