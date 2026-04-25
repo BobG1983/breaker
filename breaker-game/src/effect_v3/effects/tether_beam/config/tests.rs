@@ -541,3 +541,81 @@ fn fire_spawn_with_width_large_stamps_verbatim() {
         widths[0]
     );
 }
+
+// ── fire_spawn — fallback paths when source entity lacks components ──────
+
+/// `fire_spawn` reads `Position2D` via `map_or(Vec2::ZERO, ...)`. When the
+/// source entity has no `Position2D`, the spawned bolt and tether anchor
+/// fall back to the world origin rather than crashing or refusing to fire.
+#[test]
+fn fire_spawn_falls_back_to_origin_when_position2d_absent() {
+    let mut world = World::new();
+    world.insert_resource(GameRng::from_seed(42));
+    // Source has Bolt + BaseSpeed + Velocity2D but NO Position2D.
+    let source = world
+        .spawn((Bolt, Velocity2D(Vec2::new(0.0, 400.0)), BaseSpeed(400.0)))
+        .id();
+
+    let config = TetherBeamConfig {
+        damage_mult: OrderedFloat(1.5),
+        mode:        TetherMode::SpawnBolt,
+        width:       OrderedFloat(10.0),
+    };
+    config.fire(source, "tether_beam", &mut world);
+    world.flush();
+
+    // Spawned ExtraBolt should be at origin (Vec2::ZERO) because source
+    // had no Position2D to copy.
+    let positions: Vec<Vec2> = world
+        .query_filtered::<&Position2D, With<ExtraBolt>>()
+        .iter(&world)
+        .map(|p| p.0)
+        .collect();
+    assert_eq!(positions.len(), 1, "fire_spawn must spawn one ExtraBolt");
+    assert_eq!(
+        positions[0],
+        Vec2::ZERO,
+        "missing Position2D on source must fall back to Vec2::ZERO, got {:?}",
+        positions[0],
+    );
+}
+
+/// `fire_spawn` reads `BaseSpeed` via `map_or(400.0, ...)`. When the
+/// source entity has no `BaseSpeed`, the spawned bolt's velocity magnitude
+/// falls back to 400.0.
+#[test]
+fn fire_spawn_falls_back_to_default_speed_when_base_speed_absent() {
+    let mut world = World::new();
+    world.insert_resource(GameRng::from_seed(42));
+    // Source has Bolt + Position2D + Velocity2D but NO BaseSpeed.
+    let source = world
+        .spawn((
+            Bolt,
+            Position2D(Vec2::new(0.0, 0.0)),
+            Velocity2D(Vec2::new(0.0, 400.0)),
+        ))
+        .id();
+
+    let config = TetherBeamConfig {
+        damage_mult: OrderedFloat(1.5),
+        mode:        TetherMode::SpawnBolt,
+        width:       OrderedFloat(10.0),
+    };
+    config.fire(source, "tether_beam", &mut world);
+    world.flush();
+
+    // The spawned ExtraBolt's velocity magnitude should equal the default
+    // base_speed of 400.0 (independent of the random angle).
+    let velocities: Vec<Vec2> = world
+        .query_filtered::<&Velocity2D, With<ExtraBolt>>()
+        .iter(&world)
+        .map(|v| v.0)
+        .collect();
+    assert_eq!(velocities.len(), 1, "fire_spawn must spawn one ExtraBolt");
+    assert!(
+        (velocities[0].length() - 400.0).abs() < 1e-3,
+        "missing BaseSpeed on source must fall back to 400.0, got velocity {:?} (mag {})",
+        velocities[0],
+        velocities[0].length(),
+    );
+}

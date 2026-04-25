@@ -371,6 +371,88 @@ mod tests {
         );
     }
 
+    // ── Deterministic spread invariants ──────────────────────────────────
+
+    /// `count == 1` short-circuits the fan formula and fires straight up
+    /// (angle = 0). Pinning velocity == (0.0, `base_speed`) catches any
+    /// regression in the special-case branch of `spread_angles`.
+    #[test]
+    fn count_one_spawns_bolt_straight_up_with_zero_x_velocity() {
+        let mut world = World::new();
+        let source = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
+
+        let config = SpawnBoltsConfig {
+            count:    1,
+            lifespan: None,
+            inherit:  false,
+        };
+        config.fire(source, "splinter", &mut world);
+        world.flush();
+
+        let velocities: Vec<Vec2> = world
+            .query_filtered::<&Velocity2D, With<ExtraBolt>>()
+            .iter(&world)
+            .map(|v| v.0)
+            .collect();
+        assert_eq!(velocities.len(), 1);
+        // base_speed == 400.0 (set by spawn_source); angle == 0 means
+        // velocity == (sin(0)*400, cos(0)*400) == (0, 400).
+        assert!(
+            velocities[0].x.abs() < 1e-3,
+            "count==1 must fire straight up — x velocity should be 0.0, got {}",
+            velocities[0].x,
+        );
+        assert!(
+            (velocities[0].y - 400.0).abs() < 1e-3,
+            "count==1 must fire straight up — y velocity should be base_speed (400.0), got {}",
+            velocities[0].y,
+        );
+    }
+
+    /// `count == 2` fires symmetrically across the upper hemisphere
+    /// (angles ±π/6 → ±30°). Pins the determinism contract: x velocities
+    /// are equal-magnitude opposite signs, y velocities are equal positive.
+    #[test]
+    fn count_two_spawns_symmetric_pair_around_vertical() {
+        let mut world = World::new();
+        let source = spawn_source(&mut world, Vec2::new(0.0, 0.0), Vec2::new(0.0, 400.0));
+
+        let config = SpawnBoltsConfig {
+            count:    2,
+            lifespan: None,
+            inherit:  false,
+        };
+        config.fire(source, "splinter", &mut world);
+        world.flush();
+
+        let mut velocities: Vec<Vec2> = world
+            .query_filtered::<&Velocity2D, With<ExtraBolt>>()
+            .iter(&world)
+            .map(|v| v.0)
+            .collect();
+        assert_eq!(velocities.len(), 2);
+        // Sort by x so [left, right] order is deterministic.
+        velocities.sort_by(|a, b| a.x.partial_cmp(&b.x).unwrap());
+        assert!(
+            (velocities[0].x + velocities[1].x).abs() < 1e-3,
+            "count==2 must produce symmetric x velocities, got {:?} and {:?}",
+            velocities[0],
+            velocities[1],
+        );
+        assert!(
+            velocities[0].x < 0.0 && velocities[1].x > 0.0,
+            "count==2 leftmost must be negative x, rightmost positive, got {:?} and {:?}",
+            velocities[0],
+            velocities[1],
+        );
+        assert!(
+            (velocities[0].y - velocities[1].y).abs() < 1e-3,
+            "count==2 must produce equal y velocities, got {} vs {}",
+            velocities[0].y,
+            velocities[1].y,
+        );
+    }
+
     #[test]
     fn spawned_bolts_have_birthing_component() {
         let mut world = World::new();

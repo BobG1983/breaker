@@ -397,6 +397,11 @@ impl<S: StateStatus> TestAppBuilder<S, NoDmg> {
     /// chain that every protocol's `*_scheduling_app()` builds. Callers add
     /// the protocol-specific config + `register(...)` themselves.
     ///
+    /// Callers must establish state hierarchy first
+    /// (`.with_state_hierarchy().in_state_node_playing()`) — protocol
+    /// `register(...)` systems are gated on `NodeState::Playing` and require
+    /// the state graph to exist.
+    ///
     /// Equivalent to:
     /// ```ignore
     /// .with_physics()

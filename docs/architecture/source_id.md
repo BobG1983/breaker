@@ -25,10 +25,11 @@ namespaces.
 | Hazard | `SourceId::hazard(kind)[.instance(id)].build()` | `hazard:<name>[:<u64>]` |
 | Armed | `<inner>.armed()` | `<inner>:armed` (suffix on any other format) |
 
-`<rarity>` is the lowercase variant of `Rarity` (`common`, `rare`, `epic`,
-etc). `<action>` is a free-form discriminator chosen by the protocol (e.g.
-`burnout:amplify`). `<u64>` is the concrete hazard instance identifier so
-multiple instances of the same hazard kind do not alias.
+`<rarity>` is the `Display` form of `Rarity` — PascalCase (`Common`,
+`Uncommon`, `Rare`, `Evolution`). `<action>` is a free-form discriminator
+chosen by the protocol (e.g. `protocol:burnout:shockwave`). `<u64>` is the
+concrete hazard instance identifier so multiple instances of the same
+hazard kind do not alias.
 
 ## Reader helpers
 
@@ -36,10 +37,10 @@ Format-aware readers live alongside the builder so format strings appear in
 exactly one file:
 
 - `SourceId::is_armed(&self) -> bool` — true when the suffix is `:armed`
-- `SourceId::unwrap_armed(&self) -> Cow<'_, str>` — strip the armed suffix
-- `SourceId::starts_with(&self, ns: &str) -> bool` — namespace check
-- `SourceId::extract_hazard_instance(&self) -> Option<u64>` — parse the
-  instance id from a hazard-format SourceId
+- `SourceId::extract_hazard_instance(&self, kind: HazardKind) -> Option<u64>`
+  — if the source is `"hazard:<kind_slug>:<u64>"` for the given kind,
+  returns the parsed instance id; returns `None` for any mismatch (wrong
+  kind, no instance segment, unparsable suffix, armed-wrapped form)
 
 Anything that needs to inspect a `SourceId` must go through these helpers
 rather than parsing the string directly.

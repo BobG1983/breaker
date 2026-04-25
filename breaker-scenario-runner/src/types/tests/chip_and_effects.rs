@@ -107,7 +107,7 @@ fn initial_effects_defaults_to_none() {
 /// Behavior 17: `tether_beam_stress.scenario.ron` parses successfully, its
 /// `initial_effects` contains a `Fire(TetherBeam(TetherBeamConfig))` node
 /// with the expected shape, and `TetherBeamConfig` parses with
-/// `damage_mult = 1.5`, `chain = false`, and `width = 10.0`.
+/// `damage_mult = 1.5`, `mode = SpawnBolt`, and `width = 10.0`.
 #[test]
 fn tether_beam_stress_scenario_parses_with_tether_beam_config_width_field() {
     use std::path::PathBuf;

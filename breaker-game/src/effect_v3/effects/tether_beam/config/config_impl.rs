@@ -18,11 +18,7 @@ use crate::{
     state::types::NodeState,
 };
 
-/// Configuration for a tether beam that links two bolts and damages cells crossing it.
 /// Selects which fire variant `TetherBeamConfig::fire` invokes.
-///
-/// Replaces a previous `chain: bool` field whose `false` value was the active
-/// "spawn" action — an inverted-predicate semantic trap.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum TetherMode {
     /// Spawn a new bolt and connect it to the source with a tether beam.
