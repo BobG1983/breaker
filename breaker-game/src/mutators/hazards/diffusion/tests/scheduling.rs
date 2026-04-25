@@ -12,16 +12,24 @@
 use bevy::prelude::*;
 
 use super::super::system::{diffusion_emit_rings, wire};
-use crate::{mutators::hazards::resources::ActiveHazards, prelude::*};
+use crate::{
+    mutators::{
+        hazards::resources::ActiveHazards, plugin::wire_damage_chain,
+        protocols::resources::ActiveProtocols,
+    },
+    prelude::*,
+};
 
 fn diffusion_scheduling_app() -> App {
     let mut app = TestAppBuilder::new()
         .with_state_hierarchy()
         .in_state_node_playing()
         .with_resource::<ActiveHazards>()
+        .with_resource::<ActiveProtocols>()
         .with_effects_pipeline()
         .build();
     wire(&mut app);
+    wire_damage_chain(&mut app);
     app
 }
 

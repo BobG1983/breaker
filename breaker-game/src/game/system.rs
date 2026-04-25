@@ -16,7 +16,6 @@ use crate::{
     debug::DebugPlugin,
     effect_v3::{EffectV3Plugin, sets::EffectV3Systems},
     fx::FxPlugin,
-    game::sets::PostApplyRipple,
     input::InputPlugin,
     mutators::MutatorsPlugin,
     shared::{GameDrawLayer, PlayfieldConfig},
@@ -165,12 +164,16 @@ impl Plugin for DmgRegistrationsPlugin {
     }
 }
 
-/// Game-side ordering edges that bridge `DmgSystems` and `EffectV3Systems`,
-/// plus the `PostApplyRipple` sub-set chain (see `game/sets.rs`).
+/// Game-side ordering edges that bridge `DmgSystems` and `EffectV3Systems`.
 ///
 /// Effects that boost or modify damage must commit their changes before the
 /// damage pipeline reads HP. This plugin ensures `EffectV3Systems::Tick` runs
 /// before `DmgSystems::ApplyDamage` in `FixedUpdate`.
+///
+/// The `PostApplyDamage` ripple chain (`diffusion_emit_rings →
+/// tether_emit_partner → echo_strike_emit_siblings`) is owned by
+/// `MutatorsPlugin::wire_damage_chain` via a `.chain()` tuple — no sub-set
+/// configuration is needed here.
 struct DmgGameOrderingPlugin;
 
 impl Plugin for DmgGameOrderingPlugin {
@@ -178,21 +181,6 @@ impl Plugin for DmgGameOrderingPlugin {
         app.configure_sets(
             FixedUpdate,
             EffectV3Systems::Tick.before(DmgSystems::ApplyDamage),
-        );
-
-        // Ordering edges for PostApplyDamage ripple emitters. Each mechanic's
-        // `register` function tags its emitter with both `DmgSystems::PostApplyDamage`
-        // AND the matching `PostApplyRipple::*` set. Configuring the three
-        // sub-sets as a chain enforces `diffusion → tether → echo_strike`
-        // without re-registering the system bodies.
-        app.configure_sets(
-            FixedUpdate,
-            (
-                PostApplyRipple::Diffusion,
-                PostApplyRipple::Tether,
-                PostApplyRipple::EchoStrike,
-            )
-                .chain(),
         );
     }
 }

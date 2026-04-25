@@ -149,18 +149,9 @@ pub(crate) fn wire(app: &mut App) {
             .run_if(hazard_active(HazardKind::Tether))
             .run_if(in_state(NodeState::Playing)),
     );
-    // Deliberate late emitter: reads DamageDealt<Cell> / Dead state from the
-    // current tick to cascade follow-up damage. MUST stay in
-    // DmgSystems::PostApplyDamage so it runs after the primary damage emitters
-    // in DmgSystems::EmitDamage and the applicators in DmgSystems::ApplyDamage.
-    app.add_systems(
-        FixedUpdate,
-        tether_emit_partner
-            .in_set(DmgSystems::PostApplyDamage)
-            .in_set(crate::game::PostApplyRipple::Tether)
-            .run_if(hazard_active(HazardKind::Tether))
-            .run_if(in_state(NodeState::Playing)),
-    );
+    // `tether_emit_partner` is registered centrally by
+    // `MutatorsPlugin::wire_damage_chain` so the post-apply ripple
+    // ordering (diffusion → tether → echo_strike) lives in one place.
 }
 
 /// Query alias for alive cells with their positions, used by

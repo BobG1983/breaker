@@ -205,10 +205,15 @@ fn register_does_not_panic_when_config_absent() {
 fn echo_strike_register_schedules_emit_siblings_in_post_apply() {
     use std::marker::PhantomData;
 
-    // After wire + 1 tick with Echo Strike active, a primary
-    // DamageDealt<Cell> with a primed bolt must produce siblings tagged
-    // with the echo-strike sentinel source.
+    use crate::mutators::plugin::wire_damage_chain;
+
+    // After wire + wire_damage_chain + 1 tick with Echo Strike active, a
+    // primary DamageDealt<Cell> with a primed bolt must produce siblings
+    // tagged with the echo-strike sentinel source. Wave 3 moved
+    // `echo_strike_emit_siblings` registration out of `wire` into the
+    // central `MutatorsPlugin::wire_damage_chain`.
     let mut app = build_echo_strike_app();
+    wire_damage_chain(&mut app);
     seed_canonical(&mut app);
     let c_newest = spawn_cell_empty(&mut app);
     let bolt = spawn_bolt_primed_with_network(&mut app, 100.0, vec![c_newest]);

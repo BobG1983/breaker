@@ -77,20 +77,28 @@ fn register_does_not_panic_when_diffusion_inactive() {
 
 use std::marker::PhantomData;
 
-use crate::mutators::hazards::definition::HazardKind;
+use crate::mutators::{
+    hazards::definition::HazardKind, plugin::wire_damage_chain,
+    protocols::resources::ActiveProtocols,
+};
 
-// ── W2 Behavior 53: wire schedules reduce_primary in MutateDamage +
-//     emit_rings in PostApplyDamage ──
+// ── W2 Behavior 53: the central chain wires reduce_primary in MutateDamage
+//     + emit_rings in PostApplyDamage. After Wave 3, `wire(app)` no longer
+//     schedules chain participants — `MutatorsPlugin::wire_damage_chain`
+//     does. This test exercises both, exactly as `MutatorsPlugin::build`
+//     does in production. ──
 
 #[test]
 fn register_wires_systems_into_dmg_sets() {
-    // After wire(app) + 1 tick with Diffusion active + primary msg,
-    // msg.amount must be reduced (proves reduce_primary ran in MutateDamage).
+    // After wire(app) + wire_damage_chain(app) + 1 tick with Diffusion
+    // active + primary msg, msg.amount must be reduced (proves
+    // reduce_primary ran in MutateDamage).
     let mut app = TestAppBuilder::new()
         .with_state_hierarchy()
         .in_state_node_playing()
         .with_effects_pipeline()
         .with_resource::<ActiveHazards>()
+        .with_resource::<ActiveProtocols>()
         .with_resource::<PendingDiffusionEmissions>()
         .with_resource::<DiffusionInstances>()
         .build();
@@ -99,6 +107,7 @@ fn register_wires_systems_into_dmg_sets() {
         .resource_mut::<ActiveHazards>()
         .add_stack(HazardKind::Diffusion);
     wire(&mut app);
+    wire_damage_chain(&mut app);
 
     let c0 = app
         .world_mut()
@@ -141,208 +150,8 @@ fn register_wires_systems_into_dmg_sets() {
     );
 }
 
-// ── W2 Behavior 56: PostApplyDamage emitters run in order diffusion → tether → echo ──
-//
-// A dedicated ordering resource records each emitter's execution order.
-
-#[derive(Resource, Default)]
-struct PostApplyOrder(Vec<&'static str>);
-
-fn record_diffusion(mut log: ResMut<PostApplyOrder>) {
-    log.0.push("diffusion_emit_rings");
-}
-fn record_tether(mut log: ResMut<PostApplyOrder>) {
-    log.0.push("tether_emit_partner");
-}
-fn record_echo(mut log: ResMut<PostApplyOrder>) {
-    log.0.push("echo_strike_emit_siblings");
-}
-
-#[test]
-fn post_apply_emitters_run_in_order_diffusion_tether_echo() {
-    use super::super::system::diffusion_emit_rings;
-    use crate::mutators::{
-        hazards::tether::system::tether_emit_partner,
-        protocols::echo_strike::system::echo_strike_emit_siblings,
-    };
-
-    let mut app = TestAppBuilder::new()
-        .with_state_hierarchy()
-        .in_state_node_playing()
-        .with_effects_pipeline()
-        .with_resource::<PendingDiffusionEmissions>()
-        .with_resource::<DiffusionInstances>()
-        .build();
-    app.init_resource::<PostApplyOrder>();
-
-    // Attach recorders using .after(target_system) for each of the 3 emitters.
-    app.add_systems(
-        FixedUpdate,
-        (
-            record_diffusion
-                .in_set(DmgSystems::PostApplyDamage)
-                .after(diffusion_emit_rings),
-            record_tether
-                .in_set(DmgSystems::PostApplyDamage)
-                .after(tether_emit_partner),
-            record_echo
-                .in_set(DmgSystems::PostApplyDamage)
-                .after(echo_strike_emit_siblings),
-        ),
-    );
-    // Register all three emitters in PostApplyDamage with the expected chain order.
-    app.add_systems(
-        FixedUpdate,
-        (
-            diffusion_emit_rings,
-            tether_emit_partner,
-            echo_strike_emit_siblings,
-        )
-            .chain()
-            .in_set(DmgSystems::PostApplyDamage),
-    );
-
-    tick(&mut app);
-
-    let order = &app.world().resource::<PostApplyOrder>().0;
-    assert_eq!(
-        order,
-        &vec![
-            "diffusion_emit_rings",
-            "tether_emit_partner",
-            "echo_strike_emit_siblings",
-        ],
-    );
-}
-
-// ── W2 Behavior 56 (pairwise edge cases): each pair in the three-emitter
-// chain must run in the documented order independently of the third
-// emitter. These three tests isolate one pair at a time so a regression
-// that breaks only one pair (e.g. tether before diffusion under some
-// conditional registration) still surfaces. ──
-
-#[test]
-fn post_apply_order_diffusion_before_tether() {
-    use super::super::system::diffusion_emit_rings;
-    use crate::mutators::hazards::tether::system::tether_emit_partner;
-
-    let mut app = TestAppBuilder::new()
-        .with_state_hierarchy()
-        .in_state_node_playing()
-        .with_effects_pipeline()
-        .with_resource::<PendingDiffusionEmissions>()
-        .with_resource::<DiffusionInstances>()
-        .build();
-    app.init_resource::<PostApplyOrder>();
-
-    app.add_systems(
-        FixedUpdate,
-        (
-            record_diffusion
-                .in_set(DmgSystems::PostApplyDamage)
-                .after(diffusion_emit_rings),
-            record_tether
-                .in_set(DmgSystems::PostApplyDamage)
-                .after(tether_emit_partner),
-        ),
-    );
-    app.add_systems(
-        FixedUpdate,
-        (diffusion_emit_rings, tether_emit_partner)
-            .chain()
-            .in_set(DmgSystems::PostApplyDamage),
-    );
-
-    tick(&mut app);
-
-    let order = &app.world().resource::<PostApplyOrder>().0;
-    assert_eq!(
-        order,
-        &vec!["diffusion_emit_rings", "tether_emit_partner"],
-        "diffusion_emit_rings must run before tether_emit_partner in PostApplyDamage"
-    );
-}
-
-#[test]
-fn post_apply_order_tether_before_echo() {
-    use crate::mutators::{
-        hazards::tether::system::tether_emit_partner,
-        protocols::echo_strike::system::echo_strike_emit_siblings,
-    };
-
-    let mut app = TestAppBuilder::new()
-        .with_state_hierarchy()
-        .in_state_node_playing()
-        .with_effects_pipeline()
-        .build();
-    app.init_resource::<PostApplyOrder>();
-
-    app.add_systems(
-        FixedUpdate,
-        (
-            record_tether
-                .in_set(DmgSystems::PostApplyDamage)
-                .after(tether_emit_partner),
-            record_echo
-                .in_set(DmgSystems::PostApplyDamage)
-                .after(echo_strike_emit_siblings),
-        ),
-    );
-    app.add_systems(
-        FixedUpdate,
-        (tether_emit_partner, echo_strike_emit_siblings)
-            .chain()
-            .in_set(DmgSystems::PostApplyDamage),
-    );
-
-    tick(&mut app);
-
-    let order = &app.world().resource::<PostApplyOrder>().0;
-    assert_eq!(
-        order,
-        &vec!["tether_emit_partner", "echo_strike_emit_siblings"],
-        "tether_emit_partner must run before echo_strike_emit_siblings in PostApplyDamage"
-    );
-}
-
-#[test]
-fn post_apply_order_diffusion_before_echo() {
-    use super::super::system::diffusion_emit_rings;
-    use crate::mutators::protocols::echo_strike::system::echo_strike_emit_siblings;
-
-    let mut app = TestAppBuilder::new()
-        .with_state_hierarchy()
-        .in_state_node_playing()
-        .with_effects_pipeline()
-        .with_resource::<PendingDiffusionEmissions>()
-        .with_resource::<DiffusionInstances>()
-        .build();
-    app.init_resource::<PostApplyOrder>();
-
-    app.add_systems(
-        FixedUpdate,
-        (
-            record_diffusion
-                .in_set(DmgSystems::PostApplyDamage)
-                .after(diffusion_emit_rings),
-            record_echo
-                .in_set(DmgSystems::PostApplyDamage)
-                .after(echo_strike_emit_siblings),
-        ),
-    );
-    app.add_systems(
-        FixedUpdate,
-        (diffusion_emit_rings, echo_strike_emit_siblings)
-            .chain()
-            .in_set(DmgSystems::PostApplyDamage),
-    );
-
-    tick(&mut app);
-
-    let order = &app.world().resource::<PostApplyOrder>().0;
-    assert_eq!(
-        order,
-        &vec!["diffusion_emit_rings", "echo_strike_emit_siblings"],
-        "diffusion_emit_rings must run before echo_strike_emit_siblings in PostApplyDamage"
-    );
-}
+// W2 Behavior 56 — cross-mechanic PostApplyDamage emitter ordering — moved to
+// `mutators/plugin/tests/damage_chain.rs`. Those tests now exercise
+// `MutatorsPlugin::wire_damage_chain` directly (the central authority for the
+// `diffusion → tether → echo_strike` ripple chain) instead of constructing
+// the chain inline.

@@ -19,16 +19,24 @@ use super::{
     super::system::{EchoNetwork, EchoPrimed, echo_strike_emit_siblings, wire},
     helpers::{canonical_echo_strike_config, seed_active_protocols_with_echo_strike},
 };
-use crate::{mutators::protocols::resources::ActiveProtocols, prelude::*};
+use crate::{
+    mutators::{
+        hazards::resources::ActiveHazards, plugin::wire_damage_chain,
+        protocols::resources::ActiveProtocols,
+    },
+    prelude::*,
+};
 
 fn echo_strike_scheduling_app() -> App {
     let mut app = TestAppBuilder::new()
         .with_state_hierarchy()
         .in_state_node_playing()
         .with_resource::<ActiveProtocols>()
+        .with_resource::<ActiveHazards>()
         .with_effects_pipeline()
         .build();
     wire(&mut app);
+    wire_damage_chain(&mut app);
     app
 }
 

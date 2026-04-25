@@ -25,7 +25,7 @@ use crate::{
     cells::components::{ADJACENCY_RADIUS_SQ, Cell},
     mutators::hazards::{
         definition::{HazardKind, HazardTuning},
-        resources::{ActiveHazards, hazard_active},
+        resources::ActiveHazards,
     },
     prelude::*,
 };
@@ -153,25 +153,10 @@ pub(crate) fn wire(app: &mut App) {
     app.init_resource::<DiffusionInstances>();
     app.init_resource::<PendingDiffusionEmissions>();
 
-    // Deliberate late emitter: reads the `PendingDiffusionEmissions` queue
-    // (populated in `DmgSystems::MutateDamage`) to cascade follow-up damage.
-    // MUST stay in DmgSystems::PostApplyDamage so it runs after the primary
-    // damage emitters in DmgSystems::EmitDamage and the applicators in
-    // DmgSystems::ApplyDamage.
-    app.add_systems(
-        FixedUpdate,
-        (
-            diffusion_reduce_primary
-                .in_set(DmgSystems::MutateDamage)
-                .run_if(in_state(NodeState::Playing))
-                .run_if(hazard_active(HazardKind::Diffusion)),
-            diffusion_emit_rings
-                .in_set(DmgSystems::PostApplyDamage)
-                .in_set(crate::game::PostApplyRipple::Diffusion)
-                .run_if(in_state(NodeState::Playing))
-                .run_if(hazard_active(HazardKind::Diffusion)),
-        ),
-    );
+    // Chain participation (`diffusion_reduce_primary` in `MutateDamage` +
+    // `diffusion_emit_rings` in `PostApplyDamage`) is registered centrally
+    // by `MutatorsPlugin::wire_damage_chain` so the cross-mechanic
+    // ordering decision lives in one place.
 
     app.add_systems(OnExit(NodeState::Playing), reset_diffusion_state);
 }

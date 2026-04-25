@@ -105,23 +105,30 @@ fn register_does_not_panic_when_tether_config_absent() {
 
 use std::marker::PhantomData;
 
-use crate::mutators::hazards::definition::HazardKind;
+use crate::mutators::{
+    hazards::definition::HazardKind, plugin::wire_damage_chain,
+    protocols::resources::ActiveProtocols,
+};
 
 #[test]
 fn tether_register_schedules_emit_partner_in_post_apply() {
-    // After wire(&mut app) + 1 tick with Tether active, a primary
-    // DamageDealt<Cell> targeting a linked cell must produce a sibling
-    // with source "hazard:tether". Proves `tether_emit_partner` was
-    // scheduled into DmgSystems::PostApplyDamage.
+    // After wire(&mut app) + wire_damage_chain(&mut app) + 1 tick with
+    // Tether active, a primary DamageDealt<Cell> targeting a linked cell
+    // must produce a sibling with source "hazard:tether". Proves
+    // `tether_emit_partner` was scheduled into DmgSystems::PostApplyDamage
+    // by `MutatorsPlugin::wire_damage_chain` (Wave 3 moved it out of
+    // `tether::wire`).
     let mut app = TestAppBuilder::new()
         .with_state_hierarchy()
         .in_state_node_playing()
         .with_effects_pipeline()
         .with_resource::<ActiveHazards>()
+        .with_resource::<ActiveProtocols>()
         .build();
     install_tether_config(&mut app, canonical_tether_config());
     add_tether_stacks(&mut app, 1);
     wire(&mut app);
+    wire_damage_chain(&mut app);
 
     let (a, b) = spawn_linked_pair(&mut app, Vec2::ZERO, Vec2::new(30.0, 0.0));
     let _ = b;

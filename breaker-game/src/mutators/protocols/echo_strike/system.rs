@@ -35,7 +35,7 @@ use crate::{
     },
     mutators::protocols::{
         definition::{ProtocolKind, ProtocolTuning},
-        resources::{ActiveProtocols, protocol_active},
+        resources::ActiveProtocols,
     },
     prelude::*,
 };
@@ -110,20 +110,13 @@ pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
 /// because it drives off `ResMut<Messages<DamageDealt<Cell>>>` rather than a
 /// dedicated reader.
 pub(crate) fn wire(app: &mut App) {
-    // Deliberate late emitter (`echo_strike_emit_siblings`): reads
-    // DamageDealt<Cell> / Dead state from the current tick to cascade
-    // follow-up damage. MUST stay in DmgSystems::PostApplyDamage so it runs
-    // after the primary damage emitters in DmgSystems::EmitDamage and the
-    // applicators in DmgSystems::ApplyDamage.
+    // `echo_strike_emit_siblings` is registered centrally by
+    // `MutatorsPlugin::wire_damage_chain` so the post-apply ripple
+    // ordering (diffusion → tether → echo_strike) lives in one place.
     app.add_systems(
         FixedUpdate,
         (
             echo_strike_on_bump.after(BreakerSystems::GradeBump),
-            echo_strike_emit_siblings
-                .in_set(DmgSystems::PostApplyDamage)
-                .in_set(crate::game::PostApplyRipple::EchoStrike)
-                .run_if(protocol_active(ProtocolKind::EchoStrike))
-                .run_if(in_state(NodeState::Playing)),
             echo_strike_cleanup_destroyed_echoes.after(DmgSystems::ApplyKill),
         ),
     );

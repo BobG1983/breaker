@@ -21,9 +21,12 @@ use super::super::system::{EchoNetwork, EchoPrimed, EchoStrikeConfig, activate, 
 use crate::{
     bolt::components::BoltBaseDamage,
     breaker::messages::BumpGrade,
-    mutators::protocols::{
-        definition::{ProtocolDefinition, ProtocolKind, ProtocolTuning},
-        resources::ActiveProtocols,
+    mutators::{
+        hazards::resources::ActiveHazards,
+        protocols::{
+            definition::{ProtocolDefinition, ProtocolKind, ProtocolTuning},
+            resources::ActiveProtocols,
+        },
     },
     prelude::*,
 };
@@ -42,6 +45,7 @@ pub(super) fn build_echo_strike_app() -> App {
         .with_state_hierarchy()
         .in_state_node_playing()
         .with_resource::<ActiveProtocols>()
+        .with_resource::<ActiveHazards>()
         .with_message::<BumpPerformed>()
         .with_message::<BoltImpactCell>()
         .with_message::<Destroyed<Cell>>()
@@ -61,6 +65,7 @@ pub(super) fn build_echo_strike_app_no_config() -> App {
         .with_state_hierarchy()
         .in_state_node_playing()
         .with_resource::<ActiveProtocols>()
+        .with_resource::<ActiveHazards>()
         .with_message::<BumpPerformed>()
         .with_message::<BoltImpactCell>()
         .with_message::<Destroyed<Cell>>()

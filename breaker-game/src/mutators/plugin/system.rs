@@ -15,17 +15,22 @@ use crate::{
     mutators::{
         hazards::{
             self,
+            definition::HazardKind,
+            diffusion::system::{diffusion_emit_rings, diffusion_reduce_primary},
             messages::HazardSelected,
-            resources::{ActiveHazards, HazardOffers},
+            resources::{ActiveHazards, HazardOffers, hazard_active},
             systems::dispatch_hazard_selection,
+            tether::system::tether_emit_partner,
         },
         protocols::{
             self,
+            definition::ProtocolKind,
+            echo_strike::system::echo_strike_emit_siblings,
             fission::FissionCounter,
             greed::GreedStacks,
             messages::ProtocolSelected,
             reckless_dash::RecklessDashDoubledBolts,
-            resources::{ActiveProtocols, ProtocolOffer, UnlockedProtocols},
+            resources::{ActiveProtocols, ProtocolOffer, UnlockedProtocols, protocol_active},
             siphon::SiphonStreak,
             systems::{dispatch_protocol_selection, generate_protocol_offering},
         },
@@ -95,14 +100,50 @@ fn wire_hazards(app: &mut App) {
     hazards::wire(app);
 }
 
-const fn wire_damage_chain(_app: &mut App) {
-    // Wave 3: central MutateDamage / PostApplyDamage ordering goes here.
-    // Today, chain participants still wire from per-mechanic
-    // `wire()` functions — see `mutators::hazards::diffusion::wire`,
-    // `mutators::hazards::tether::wire`,
-    // `mutators::protocols::echo_strike::wire`. Game-side ordering is
-    // currently held by `DmgGameOrderingPlugin`'s `PostApplyRipple` chain
-    // in `breaker-game/src/game/system.rs`.
+/// Central damage-chain assembly — the single source of truth for game-side
+/// `MutateDamage` and `PostApplyDamage` ordering.
+///
+/// **Ordering rationale (`PostApplyDamage` ripple chain):**
+///
+/// 1. `diffusion_emit_rings` runs FIRST — drains the
+///    `PendingDiffusionEmissions` queue populated in `MutateDamage` and
+///    emits ring siblings. Running first means downstream emitters see
+///    the ring expansion as part of the post-apply state.
+/// 2. `tether_emit_partner` runs SECOND — reads `DamageDealt<Cell>`
+///    messages and emits partner-target siblings. Running after diffusion
+///    means tether sees diffusion's ring siblings as candidates for
+///    partner redirection.
+/// 3. `echo_strike_emit_siblings` runs LAST — emits echo siblings. Running
+///    last means echo picks up everything the chain has produced
+///    (primaries, diffusion rings, tether partners).
+///
+/// `diffusion_reduce_primary` is the only `MutateDamage` participant
+/// today; it sits ahead of the entire `PostApplyDamage` ripple chain via
+/// the crate's set ordering. Tests gain access via `pub(crate)`.
+pub(crate) fn wire_damage_chain(app: &mut App) {
+    app.add_systems(
+        FixedUpdate,
+        diffusion_reduce_primary
+            .in_set(DmgSystems::MutateDamage)
+            .run_if(in_state(NodeState::Playing))
+            .run_if(hazard_active(HazardKind::Diffusion)),
+    );
+    app.add_systems(
+        FixedUpdate,
+        (
+            diffusion_emit_rings
+                .run_if(hazard_active(HazardKind::Diffusion))
+                .run_if(in_state(NodeState::Playing)),
+            tether_emit_partner
+                .run_if(hazard_active(HazardKind::Tether))
+                .run_if(in_state(NodeState::Playing)),
+            echo_strike_emit_siblings
+                .run_if(protocol_active(ProtocolKind::EchoStrike))
+                .run_if(in_state(NodeState::Playing)),
+        )
+            .chain()
+            .in_set(DmgSystems::PostApplyDamage),
+    );
 }
 
 const fn wire_cleanup(_app: &mut App) {
