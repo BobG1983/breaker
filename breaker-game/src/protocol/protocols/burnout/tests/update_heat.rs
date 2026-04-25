@@ -16,7 +16,7 @@
 use bevy::prelude::*;
 
 use super::{
-    super::system::{BurnoutConfig, BurnoutHeat, BurnoutSpeedBoost},
+    super::system::{BurnoutHeat, config::BurnoutConfig, update_heat::BurnoutSpeedBoost},
     helpers::{
         build_burnout_app, build_burnout_app_in_chip_selecting, build_burnout_app_no_config,
         canonical_burnout_config, install_burnout_config, read_heat, read_speed_boost_remaining,

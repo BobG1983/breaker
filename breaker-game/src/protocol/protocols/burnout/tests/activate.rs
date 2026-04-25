@@ -6,7 +6,7 @@
 //! after a matched activate preserves the earlier config.
 
 use super::{
-    super::system::BurnoutConfig,
+    super::system::config::BurnoutConfig,
     helpers::{activate_now, canonical_burnout_config, install_burnout_config},
 };
 use crate::{prelude::*, protocol::definition::ProtocolTuning};

@@ -14,7 +14,9 @@
 
 use bevy::{ecs::world::CommandQueue, prelude::Commands};
 
-use super::super::system::{BurnoutConfig, BurnoutDamageBoost, BurnoutHeat, BurnoutSpeedBoost};
+use super::super::system::{
+    BurnoutDamageBoost, BurnoutHeat, config::BurnoutConfig, update_heat::BurnoutSpeedBoost,
+};
 use crate::prelude::*;
 
 // ── B1 — BurnoutConfig is Copy + Clone + PartialEq ─────────────────────────-

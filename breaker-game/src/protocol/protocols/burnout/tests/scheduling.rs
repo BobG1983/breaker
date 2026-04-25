@@ -15,7 +15,7 @@
 
 use bevy::prelude::*;
 
-use super::super::system::{BurnoutConfig, BurnoutDamageBoost, register};
+use super::super::system::{BurnoutDamageBoost, config::BurnoutConfig, register};
 use crate::{
     bolt::{
         BoltPlugin,

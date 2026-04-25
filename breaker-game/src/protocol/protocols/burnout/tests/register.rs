@@ -11,7 +11,10 @@
 use bevy::prelude::*;
 
 use super::{
-    super::system::{BurnoutConfig, BurnoutDamageBoost, BurnoutHeat, BurnoutSpeedBoost, register},
+    super::system::{
+        BurnoutDamageBoost, BurnoutHeat, config::BurnoutConfig, register,
+        update_heat::BurnoutSpeedBoost,
+    },
     helpers::{
         build_burnout_app, build_burnout_app_in_chip_selecting, build_burnout_app_no_config,
         canonical_burnout_config, collected_burnout_damage, count_shockwave_sources,

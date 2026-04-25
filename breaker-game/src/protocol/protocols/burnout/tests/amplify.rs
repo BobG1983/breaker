@@ -18,7 +18,7 @@
 use bevy::prelude::*;
 
 use super::{
-    super::system::{BurnoutConfig, BurnoutDamageBoost},
+    super::system::{BurnoutDamageBoost, config::BurnoutConfig},
     helpers::{
         build_burnout_app, build_burnout_app_no_config, canonical_burnout_config,
         collected_burnout_damage, install_burnout_config, install_burnout_damage_boost,

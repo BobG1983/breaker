@@ -9,7 +9,8 @@ use bevy::{
 };
 
 use super::super::system::{
-    BurnoutConfig, BurnoutDamageBoost, BurnoutHeat, BurnoutSpeedBoost, activate, register,
+    BurnoutDamageBoost, BurnoutHeat, activate, config::BurnoutConfig, register,
+    update_heat::BurnoutSpeedBoost,
 };
 use crate::{
     bolt::components::BoltBaseDamage,

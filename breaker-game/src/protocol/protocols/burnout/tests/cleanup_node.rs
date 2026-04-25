@@ -15,7 +15,7 @@
 use bevy::prelude::*;
 
 use super::{
-    super::system::{BurnoutDamageBoost, BurnoutHeat, BurnoutSpeedBoost},
+    super::system::{BurnoutDamageBoost, BurnoutHeat, update_heat::BurnoutSpeedBoost},
     helpers::{
         build_burnout_app, build_burnout_app_no_config, install_burnout_damage_boost,
         install_burnout_speed_boost, seed_active_protocols_with_burnout, set_heat_state,

@@ -4,7 +4,7 @@
 //! additions, and that `BurnoutConfig` is NOT inserted at plugin-build time
 //! (only `activate` inserts it).
 
-use super::super::system::BurnoutConfig;
+use super::super::system::config::BurnoutConfig;
 use crate::{prelude::*, protocol::plugin::ProtocolPlugin};
 
 // ── K1 — ProtocolPlugin builds with Burnout additions ──────────────────────-

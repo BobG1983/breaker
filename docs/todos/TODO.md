@@ -2,7 +2,7 @@
 
 ## Backlog
 
-> **PRIORITY**: Split oversized files (2 HIGH, 1 MEDIUM) — `rantzsoft_dmg/src/systems/apply_damage.rs` (573), `breaker-game/src/bolt/systems/bolt_lost/tests/lost_detection_tests.rs` (721), `rantzsoft_dmg/src/lib.rs` (408). Detail: [2026-04-23-file-splits.md](detail/2026-04-23-file-splits.md)
+> **PRIORITY**: Split oversized files (0 HIGH, 1 MEDIUM) — `breaker-game/src/protocol/protocols/burnout/system.rs` (440, Strategy B by sub-system). Detail: [2026-04-25-file-splits.md](detail/2026-04-25-file-splits.md)
 
 0. **[done]** Build `rantzsoft_dmg` crate (standalone) — 16-variant Emit/Mutate/Apply pipeline for Damage/Kill/Heal via `MessageMutator`-based mutation, `DamageBoostStack`/`VulnerableStack` components, `SourceId` newtype, `Dmgable` marker trait, `register_dmgable::<T: Dmgable>` ext trait on `App`. Crate ships end-to-end with its own integration tests; zero `breaker-game` changes in this todo. Subsumes `audit/remediations/damage-message-mutator-chain.md`. — [detail](detail/unified-death-crate.md)
 1. **[done]** Port `breaker-game` to `rantzsoft_dmg` — registered Bolt/Wall/Breaker/Salvo via `register_dmgable`, deleted `breaker-game/src/shared/death_pipeline/`, migrated `EffectStack<DamageBoostConfig>` / `EffectStack<VulnerableConfig>` callers to `DamageBoostStack` / `VulnerableStack`, moved Volatility/Renewal/Cascade to `EmitHeal`, renamed `source_chip` → `source: Option<SourceId>`, added `attributed_to` field, renamed `KilledBy.dealer` → `KilledBy.killer`. Cell stays on legacy `apply_damage_to_cells` path; TODO #2 migrates it. W5/W7/W8 intentionally skipped; W6 (bolt_cell_collision double-application fix) deferred pending user decision on damage number changes. — [detail](detail/port-to-rantzsoft-dmg.md)
