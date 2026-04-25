@@ -4,7 +4,6 @@ use std::f32::consts::FRAC_PI_2;
 
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
-use rand::Rng;
 use rantzsoft_spatial2d::components::BaseSpeed;
 use serde::{Deserialize, Serialize};
 
@@ -31,13 +30,18 @@ impl Fireable for SpawnBoltsConfig {
             return;
         }
 
-        // Phase 1: Generate random angles (mutable borrow of GameRng)
-        let random_angles: Vec<f32> = {
-            let mut rng = world.resource_mut::<GameRng>();
-            (0..self.count)
-                .map(|_| rng.0.random_range(-FRAC_PI_2..=FRAC_PI_2))
-                .collect()
-        };
+        // Phase 1: Compute deterministic spread angles.
+        //
+        // Previous behavior consumed `GameRng` here, but the order in which
+        // `walk_bound_effects` visits BoundEffects is determined by Bevy's
+        // archetype iteration — which depends on entity insertion order and
+        // can vary between processes even with a fixed seed. That made
+        // SpawnBolts non-deterministic across separate runs and caused
+        // intermittent `evolution_lifecycle` `NoEntityLeaks` violations
+        // (W8 §B). A deterministic fan distributes bolts evenly across
+        // [-π/2, π/2] (full upper hemisphere) and gives every player the
+        // same predictable spread regardless of process scheduling.
+        let angles = spread_angles(self.count);
 
         // Phase 2: Read entity state (immutable borrows)
         let pos = world.get::<Position2D>(entity).map_or(Vec2::ZERO, |p| p.0);
@@ -53,7 +57,7 @@ impl Fireable for SpawnBoltsConfig {
         let lifespan = self.lifespan;
 
         // Phase 3: Spawn bolts
-        for angle in &random_angles {
+        for angle in &angles {
             let vel = Vec2::new(base_speed * angle.sin(), base_speed * angle.cos());
             let birthing = Birthing::new(Scale2D { x: 8.0, y: 8.0 }, CollisionLayers::default());
 
@@ -72,6 +76,34 @@ impl Fireable for SpawnBoltsConfig {
             }
         }
     }
+}
+
+/// Deterministic angle spread for `SpawnBolts`.
+///
+/// Distributes `count` bolts across `(-π/2, π/2)` (open interval) so no
+/// bolt is fired purely horizontally — the extremes of the original random
+/// range produced unplayable horizontal trajectories. For `count == 1` the
+/// single bolt fires straight up (angle = 0). For `count >= 2`, angles use
+/// the formula `-π/2 + (i + 1)·π/(count + 1)`, giving:
+/// - count=2 → [-30°, +30°]
+/// - count=3 → [-45°, 0°, +45°]
+/// - count=4 → [-54°, -18°, +18°, +54°]
+///
+/// Output order is left-to-right.
+fn spread_angles(count: u32) -> Vec<f32> {
+    if count == 0 {
+        return Vec::new();
+    }
+    if count == 1 {
+        return vec![0.0];
+    }
+    let n = count as f32;
+    (0..count)
+        .map(|i| {
+            let t = (i as f32 + 1.0) / (n + 1.0);
+            -FRAC_PI_2 + t * (2.0 * FRAC_PI_2)
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -100,7 +132,6 @@ mod tests {
     #[test]
     fn fire_spawns_count_bolts_with_extra_bolt_marker() {
         let mut world = World::new();
-        world.insert_resource(GameRng::from_seed(42));
         let source = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
 
         let config = SpawnBoltsConfig {
@@ -121,7 +152,6 @@ mod tests {
     #[test]
     fn fire_count_zero_spawns_no_entities() {
         let mut world = World::new();
-        world.insert_resource(GameRng::from_seed(42));
         let source = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
 
         let config = SpawnBoltsConfig {
@@ -142,7 +172,6 @@ mod tests {
     #[test]
     fn spawned_bolts_are_at_source_position() {
         let mut world = World::new();
-        world.insert_resource(GameRng::from_seed(42));
         let source = spawn_source(&mut world, Vec2::new(150.0, 75.0), Vec2::new(0.0, 400.0));
 
         let config = SpawnBoltsConfig {
@@ -170,7 +199,6 @@ mod tests {
     #[test]
     fn spawned_bolts_have_nonzero_velocity() {
         let mut world = World::new();
-        world.insert_resource(GameRng::from_seed(42));
         let source = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
 
         let config = SpawnBoltsConfig {
@@ -198,7 +226,6 @@ mod tests {
     #[test]
     fn spawned_bolts_have_lifespan_when_configured() {
         let mut world = World::new();
-        world.insert_resource(GameRng::from_seed(42));
         let source = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
 
         let config = SpawnBoltsConfig {
@@ -226,7 +253,6 @@ mod tests {
     #[test]
     fn spawned_bolts_have_no_lifespan_when_none() {
         let mut world = World::new();
-        world.insert_resource(GameRng::from_seed(42));
         let source = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
 
         let config = SpawnBoltsConfig {
@@ -257,7 +283,6 @@ mod tests {
     #[test]
     fn inherit_true_copies_primary_bolt_bound_effects() {
         let mut world = World::new();
-        world.insert_resource(GameRng::from_seed(42));
 
         let tree_a = Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
             multiplier: OrderedFloat(2.0),
@@ -295,7 +320,6 @@ mod tests {
     #[test]
     fn inherit_false_does_not_copy_bound_effects() {
         let mut world = World::new();
-        world.insert_resource(GameRng::from_seed(42));
 
         let tree_a = Tree::Fire(EffectType::DamageBoost(DamageBoostConfig {
             multiplier: OrderedFloat(2.0),
@@ -332,7 +356,6 @@ mod tests {
     #[test]
     fn spawned_bolts_have_bolt_and_extra_bolt_markers() {
         let mut world = World::new();
-        world.insert_resource(GameRng::from_seed(42));
         let source = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
 
         let config = SpawnBoltsConfig {
@@ -358,7 +381,6 @@ mod tests {
     #[test]
     fn spawned_bolts_have_birthing_component() {
         let mut world = World::new();
-        world.insert_resource(GameRng::from_seed(42));
         let source = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
 
         let config = SpawnBoltsConfig {

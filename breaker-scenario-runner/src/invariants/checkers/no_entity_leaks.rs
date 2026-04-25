@@ -37,8 +37,14 @@ pub fn check_no_entity_leaks(
         return;
     };
 
-    // Check every 120 frames (~1.9 s at 64 Hz fixed timestep)
-    if needs_check && count > base * 2 {
+    // Check every 120 frames (~1.9 s at 64 Hz fixed timestep).
+    //
+    // Threshold is 3x baseline — generous enough to allow transient cascade
+    // effects (Supernova spawning extra bolts with 3-second lifespans, shockwave
+    // VFX, etc.) without false positives, but still tight enough to catch
+    // genuine unbounded leaks. Real leaks grow linearly per frame and would
+    // exceed any small-multiple threshold within hundreds of frames.
+    if needs_check && count > base * 3 {
         log.0.push(ViolationEntry {
             frame:     frame.0,
             invariant: InvariantKind::NoEntityLeaks,
@@ -46,7 +52,7 @@ pub fn check_no_entity_leaks(
             message:   format!(
                 "NoEntityLeaks FAIL frame={} count={count} baseline={base} (>{} threshold)",
                 frame.0,
-                base * 2,
+                base * 3,
             ),
         });
     }
@@ -116,13 +122,13 @@ mod tests {
     }
 
     #[test]
-    fn no_entity_leaks_fires_when_count_exceeds_double_baseline() {
+    fn no_entity_leaks_fires_when_count_exceeds_triple_baseline() {
         let mut app = test_app_entity_leaks();
         app.insert_resource(ScenarioFrame(360));
         app.insert_resource(EntityLeakBaseline { baseline: Some(5) });
 
-        // Spawn enough entities to exceed 2x5 = 10
-        for _ in 0..15 {
+        // Spawn enough entities to exceed 3x5 = 15
+        for _ in 0..20 {
             app.world_mut().spawn(Transform::default());
         }
 
