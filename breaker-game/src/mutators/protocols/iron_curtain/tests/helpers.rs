@@ -14,7 +14,7 @@ use bevy::{
     prelude::*,
 };
 
-use super::super::system::{IronCurtainConfig, activate, register};
+use super::super::system::{IronCurtainConfig, activate, wire};
 use crate::{
     bolt::components::BoltBaseDamage,
     mutators::protocols::{
@@ -29,7 +29,7 @@ use crate::{
 /// Default Iron Curtain test app. State hierarchy in `NodeState::Playing`,
 /// `ActiveProtocols` initialised, `BoltLost` registered, `DamageDealt<Cell>`
 /// capture installed, canonical `IronCurtainConfig` inserted,
-/// `PlayfieldConfig::default()` inserted (height `600.0`), and `register`
+/// `PlayfieldConfig::default()` inserted (height `600.0`), and `wire`
 /// called.
 ///
 /// Does NOT seed `ActiveProtocols` with Iron Curtain — tests that need the
@@ -45,7 +45,7 @@ pub(super) fn build_iron_curtain_app() -> App {
     app.world_mut()
         .insert_resource(canonical_iron_curtain_config());
     app.world_mut().insert_resource(PlayfieldConfig::default());
-    register(&mut app);
+    wire(&mut app);
     app
 }
 
@@ -60,7 +60,7 @@ pub(super) fn build_iron_curtain_app_no_config() -> App {
         .with_message_capture::<DamageDealt<Cell>>()
         .build();
     app.world_mut().insert_resource(PlayfieldConfig::default());
-    register(&mut app);
+    wire(&mut app);
     app
 }
 
@@ -76,7 +76,7 @@ pub(super) fn build_iron_curtain_app_no_playfield() -> App {
         .build();
     app.world_mut()
         .insert_resource(canonical_iron_curtain_config());
-    register(&mut app);
+    wire(&mut app);
     app
 }
 
@@ -94,7 +94,7 @@ pub(super) fn build_iron_curtain_app_in_chip_selecting() -> App {
     app.world_mut()
         .insert_resource(canonical_iron_curtain_config());
     app.world_mut().insert_resource(PlayfieldConfig::default());
-    register(&mut app);
+    wire(&mut app);
     app
 }
 
@@ -116,7 +116,7 @@ pub(super) fn build_iron_curtain_app_with_playfield_height(height: f32) -> App {
         height,
         ..Default::default()
     });
-    register(&mut app);
+    wire(&mut app);
     app
 }
 

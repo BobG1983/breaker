@@ -90,13 +90,13 @@ pub(super) fn add_drift_stacks(app: &mut App, count: u32) {
 }
 
 /// Wires only `drift_update_wind` in `FixedUpdate` — bypasses the
-/// `hazard_active` / `in_state` gates `register` installs. Used by Group B.
+/// `hazard_active` / `in_state` gates `wire` installs. Used by Group B.
 pub(super) fn wire_update_wind_only(app: &mut App) {
     app.add_systems(FixedUpdate, drift_update_wind);
 }
 
 /// Wires only `drift_apply_force` in `FixedUpdate` — bypasses the
-/// `hazard_active` / `in_state` gates `register` installs. Used by Group C.
+/// `hazard_active` / `in_state` gates `wire` installs. Used by Group C.
 pub(super) fn wire_apply_force_only(app: &mut App) {
     app.add_systems(FixedUpdate, drift_apply_force);
 }

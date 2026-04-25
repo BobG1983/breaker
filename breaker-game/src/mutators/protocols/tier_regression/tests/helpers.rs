@@ -7,7 +7,7 @@
 use bevy::{ecs::world::CommandQueue, prelude::*};
 
 use super::super::system::{
-    TierRegressionConfig, TierRegressionPending, activate, apply_tier_regression, register,
+    TierRegressionConfig, TierRegressionPending, activate, apply_tier_regression, wire,
 };
 use crate::{
     mutators::protocols::{
@@ -51,7 +51,7 @@ pub(super) fn build_register_app() -> App {
         OnEnter(RunState::Node),
         advance_node.in_set(NodeSystems::AdvanceNode),
     );
-    register(&mut app);
+    wire(&mut app);
     app
 }
 
@@ -70,7 +70,7 @@ fn drive_to_run(app: &mut App) {
 
 /// Drives `NextState<RunState>::set(RunState::Node)` and runs a single
 /// `app.update()`. Use this in Group C tests to trigger the
-/// `OnEnter(RunState::Node)` edge that `register` wires
+/// `OnEnter(RunState::Node)` edge that `wire` wires
 /// `apply_tier_regression` onto.
 pub(super) fn enter_run_state_node(app: &mut App) {
     app.world_mut()

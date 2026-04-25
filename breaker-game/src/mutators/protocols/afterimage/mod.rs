@@ -6,12 +6,12 @@
 //! `PhantomBreakerLifetime` components, the four runtime systems
 //! (`afterimage_spawn_phantom_breaker`, `afterimage_tick_phantom_breaker`,
 //! `afterimage_check_phantom_bounce`, `afterimage_spawn_phantom_bolt`),
-//! and the `activate` / `register` dispatch entry points. Re-uses
+//! and the `activate` / `wire` dispatch entry points. Re-uses
 //! `crate::effect_v3::effects::phantom_bolt::{PhantomBolt, PhantomLifetime,
 //! PhantomOwner}` for the spawned phantom-bolt entity bundle, and delegates
 //! phantom-bolt lifetime tick-down to the existing
 //! `tick_phantom_lifetime` (registered by `EffectV3Plugin` via
-//! `SpawnPhantomConfig::register`).
+//! `SpawnPhantomConfig::wire`).
 //!
 //! Node-exit cleanup for afterimage-spawned phantom breakers and phantom
 //! bolts is delegated to the stateflow `CleanupOnExit::<NodeState>`
@@ -23,4 +23,4 @@ pub(crate) mod system;
 #[cfg(test)]
 mod tests;
 
-pub(crate) use system::{activate, register};
+pub(crate) use system::{activate, wire};

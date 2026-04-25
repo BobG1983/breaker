@@ -149,7 +149,7 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
 
 /// Wires the two Diffusion pipeline systems, the instance-tracker resources,
 /// and the node-exit cleanup.
-pub(crate) fn register(app: &mut App) {
+pub(crate) fn wire(app: &mut App) {
     app.init_resource::<DiffusionInstances>();
     app.init_resource::<PendingDiffusionEmissions>();
 

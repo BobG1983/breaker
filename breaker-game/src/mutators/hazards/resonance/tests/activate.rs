@@ -1,10 +1,10 @@
-//! Group B — `activate` and `register` scaffold.
+//! Group B — `activate` and `wire` scaffold.
 
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
 
 use super::super::system::{
-    ResonanceActiveSlows, ResonanceConfig, ResonanceSlowEntry, ResonanceTracker, activate, register,
+    ResonanceActiveSlows, ResonanceConfig, ResonanceSlowEntry, ResonanceTracker, activate, wire,
 };
 use crate::{mutators::hazards::definition::HazardTuning, prelude::*};
 
@@ -161,17 +161,17 @@ fn b3_reactivation_overwrites_config_and_resets_tracker_and_slows() {
     );
 }
 
-// ── B4 — register initializes tracker + slows WITHOUT activate ─────────
+// ── B4 — wire initializes tracker + slows WITHOUT activate ─────────
 
 #[test]
 fn b4_register_initializes_resources_without_activate() {
     let mut app = TestAppBuilder::new().build();
-    register(&mut app);
+    wire(&mut app);
     app.update();
 
     assert!(
         app.world().get_resource::<ResonanceTracker>().is_some(),
-        "register must init_resource::<ResonanceTracker>()"
+        "wire must init_resource::<ResonanceTracker>()"
     );
     assert!(
         app.world().resource::<ResonanceTracker>().kills.is_empty(),
@@ -179,7 +179,7 @@ fn b4_register_initializes_resources_without_activate() {
     );
     assert!(
         app.world().get_resource::<ResonanceActiveSlows>().is_some(),
-        "register must init_resource::<ResonanceActiveSlows>()"
+        "wire must init_resource::<ResonanceActiveSlows>()"
     );
     assert!(
         app.world()

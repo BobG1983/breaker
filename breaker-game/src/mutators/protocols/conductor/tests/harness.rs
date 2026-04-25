@@ -5,7 +5,7 @@
 //!   swap.
 //! - The system is "live" after the config is inserted — subsequent fresh
 //!   messages fire a swap.
-//! - `register` alone (no config, no active protocol, no bolts) ticks
+//! - `wire` alone (no config, no active protocol, no bolts) ticks
 //!   cleanly without panics or side-effects.
 
 use super::{
@@ -105,11 +105,11 @@ fn multiple_quiet_ticks_with_config_absent_do_not_panic() {
 
     assert!(
         app.world().get_resource::<ConductorConfig>().is_none(),
-        "ConductorConfig must remain absent — register must not side-effect-insert"
+        "ConductorConfig must remain absent — wire must not side-effect-insert"
     );
 }
 
-// ── Behavior 31 — register does not panic when config absent ────────────────
+// ── Behavior 31 — wire does not panic when config absent ────────────────
 
 #[test]
 fn register_does_not_panic_when_config_absent_and_no_active_protocol() {
@@ -122,6 +122,6 @@ fn register_does_not_panic_when_config_absent_and_no_active_protocol() {
 
     assert!(
         app.world().get_resource::<ConductorConfig>().is_none(),
-        "register must not side-effect-insert ConductorConfig"
+        "wire must not side-effect-insert ConductorConfig"
     );
 }

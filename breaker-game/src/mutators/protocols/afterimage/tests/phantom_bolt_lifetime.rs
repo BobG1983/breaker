@@ -4,7 +4,7 @@
 //! Afterimage does NOT own a tick system for spawned phantom bolts — it
 //! reuses the existing
 //! `crate::effect_v3::effects::phantom_bolt::systems::tick_phantom_lifetime`
-//! registered by `EffectV3Plugin` via `SpawnPhantomConfig::register`. These
+//! registered by `EffectV3Plugin` via `SpawnPhantomConfig::wire`. These
 //! tests pin the OBSERVED behaviour under afterimage's test harness
 //! (`build_afterimage_app` brings up the full `effect_v3` wiring).
 

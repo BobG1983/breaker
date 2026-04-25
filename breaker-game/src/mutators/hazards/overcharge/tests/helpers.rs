@@ -142,7 +142,7 @@ pub(super) fn overcharge_entries(
 }
 
 /// Wires only `overcharge_count_kills` in `FixedUpdate` — bypasses the
-/// `hazard_active` / `in_state` gates `register` installs. Used by Group B.
+/// `hazard_active` / `in_state` gates `wire` installs. Used by Group B.
 ///
 /// Also seeds 1 Overcharge stack: the retrofit moved the `hazard_active`
 /// gate from a `.run_if(...)` into the reader body, so Group B tests

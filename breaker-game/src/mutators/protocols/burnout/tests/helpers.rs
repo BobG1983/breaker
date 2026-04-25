@@ -9,8 +9,8 @@ use bevy::{
 };
 
 use super::super::system::{
-    BurnoutDamageBoost, BurnoutHeat, activate, config::BurnoutConfig, register,
-    update_heat::BurnoutSpeedBoost,
+    BurnoutDamageBoost, BurnoutHeat, activate, config::BurnoutConfig,
+    update_heat::BurnoutSpeedBoost, wire,
 };
 use crate::{
     bolt::components::BoltBaseDamage,
@@ -41,7 +41,7 @@ pub(super) fn build_burnout_app() -> App {
     app.world_mut()
         .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::ZERO));
     app.world_mut().insert_resource(canonical_burnout_config());
-    register(&mut app);
+    wire(&mut app);
     app
 }
 
@@ -59,7 +59,7 @@ pub(super) fn build_burnout_app_no_config() -> App {
         .build();
     app.world_mut()
         .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::ZERO));
-    register(&mut app);
+    wire(&mut app);
     app
 }
 
@@ -78,7 +78,7 @@ pub(super) fn build_burnout_app_in_chip_selecting() -> App {
     app.world_mut()
         .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::ZERO));
     app.world_mut().insert_resource(canonical_burnout_config());
-    register(&mut app);
+    wire(&mut app);
     app
 }
 

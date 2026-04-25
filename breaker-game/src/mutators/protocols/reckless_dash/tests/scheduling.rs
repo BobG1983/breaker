@@ -15,9 +15,7 @@
 
 use bevy::prelude::*;
 
-use super::super::system::{
-    RecklessDashConfig, RecklessDashDoubledBolts, RiskyDamageBoost, register,
-};
+use super::super::system::{RecklessDashConfig, RecklessDashDoubledBolts, RiskyDamageBoost, wire};
 use crate::{
     bolt::{
         BoltPlugin,
@@ -57,7 +55,7 @@ fn reckless_dash_scheduling_app() -> App {
             },
         });
     app.add_plugins(BoltPlugin);
-    register(&mut app);
+    wire(&mut app);
     app
 }
 

@@ -16,7 +16,7 @@ use bevy::{
     prelude::*,
 };
 
-use super::super::system::{FissionConfig, FissionCounter, activate, register};
+use super::super::system::{FissionConfig, FissionCounter, activate, wire};
 use crate::{
     bolt::test_utils::default_bolt_definition,
     mutators::protocols::{
@@ -32,7 +32,7 @@ use crate::{
 /// `ActiveProtocols` initialised, `FissionCounter` initialised (to default
 /// `kills: 0`), `Destroyed<Cell>` message registered, canonical
 /// `FissionConfig { kills_per_split: 8 }` inserted, a `BoltRegistry` seeded
-/// with the canonical `default_bolt_definition()`, and `register` called.
+/// with the canonical `default_bolt_definition()`, and `wire` called.
 ///
 /// Does NOT seed `ActiveProtocols` with Fission — tests that need the
 /// protocol active call [`seed_active_protocols_with_fission`].
@@ -47,7 +47,7 @@ pub(super) fn build_fission_app() -> App {
         .with_bolt_registry_entry(&def.name, def.clone())
         .build();
     app.world_mut().insert_resource(canonical_fission_config());
-    register(&mut app);
+    wire(&mut app);
     app
 }
 
@@ -63,7 +63,7 @@ pub(super) fn build_fission_app_no_config() -> App {
         .with_message::<Destroyed<Cell>>()
         .with_bolt_registry_entry(&def.name, def.clone())
         .build();
-    register(&mut app);
+    wire(&mut app);
     app
 }
 
@@ -79,7 +79,7 @@ pub(super) fn build_fission_app_no_counter() -> App {
         .with_bolt_registry_entry(&def.name, def.clone())
         .build();
     app.world_mut().insert_resource(canonical_fission_config());
-    register(&mut app);
+    wire(&mut app);
     app
 }
 
@@ -94,7 +94,7 @@ pub(super) fn build_fission_app_no_registry() -> App {
         .with_message::<Destroyed<Cell>>()
         .build();
     app.world_mut().insert_resource(canonical_fission_config());
-    register(&mut app);
+    wire(&mut app);
     app
 }
 
@@ -112,7 +112,7 @@ pub(super) fn build_fission_app_in_chip_selecting() -> App {
         .with_bolt_registry_entry(&def.name, def.clone())
         .build();
     app.world_mut().insert_resource(canonical_fission_config());
-    register(&mut app);
+    wire(&mut app);
     app
 }
 

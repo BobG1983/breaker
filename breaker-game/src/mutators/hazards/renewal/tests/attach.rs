@@ -123,7 +123,7 @@ fn attach_does_nothing_without_config_resource() {
 fn attach_does_nothing_when_config_present_but_zero_stacks() {
     // Edge: config present, zero stacks → duration_secs(0) == 0.0 → early
     // return in the attach system body. This edge hand-wires only the
-    // attach system (not via `register`) so the outer run-condition gate
+    // attach system (not via `wire`) so the outer run-condition gate
     // is NOT in play; the guard being exercised is the internal
     // `duration <= 0.0` early return.
     let mut app = test_app_playing();

@@ -111,7 +111,7 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
 /// `DmgSystems` ordering — debris are spawned directly via
 /// `commands.spawn(...)`, not via a `SpawnDebrisCell` message
 /// (pending the message pipeline in Commit 5 / Wave 7).
-pub(crate) fn register(app: &mut App) {
+pub(crate) fn wire(app: &mut App) {
     app.add_systems(FixedUpdate, fracture_on_death);
 }
 

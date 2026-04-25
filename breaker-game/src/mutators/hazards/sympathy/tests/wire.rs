@@ -1,6 +1,6 @@
-//! Group F — `register` wiring, ordering, and run-if gates (Behaviors 53–60).
+//! Group F — `wire` wiring, ordering, and run-if gates (Behaviors 53–60).
 //!
-//! Pins that `register(&mut app)` places `sympathy_heal_adjacent` in
+//! Pins that `wire(&mut app)` places `sympathy_heal_adjacent` in
 //! `FixedUpdate` inside `DmgSystems::ApplyHeal`, BEFORE
 //! `apply_heal::<Cell>`, with both `hazard_active(Sympathy)` and
 //! `in_state(NodeState::Playing)` run-if gates. Pins that the emitted
@@ -11,7 +11,7 @@ use bevy::prelude::*;
 use rantzsoft_dmg::{RantzDmgAppExt, RantzDmgPlugin};
 
 use super::{
-    super::system::register,
+    super::system::wire,
     helpers::{
         add_hazard_stacks, add_sympathy_stacks, all_heals, canonical_sympathy_config,
         heal_collector_len, heals_for_cell, install_sympathy_config, run_fixed_update,
@@ -26,18 +26,18 @@ use crate::{
 };
 
 /// Sets up the `RantzDmgPlugin` + `register_dmgable::<Cell>`, then calls
-/// `register(&mut app)` so the full Sympathy plumbing is in place.
+/// `wire(&mut app)` so the full Sympathy plumbing is in place.
 /// `register_dmgable::<Cell>` wires `apply_heal::<Cell>` into
 /// `DmgSystems::ApplyHeal`.
 fn register_app_with_apply_heal() -> App {
     let mut app = test_app_playing();
     app.add_plugins(RantzDmgPlugin);
     let _ = app.register_dmgable::<Cell>();
-    register(&mut app);
+    wire(&mut app);
     app
 }
 
-// ── Behavior 53 — register wires sympathy_heal_adjacent in FixedUpdate ──────
+// ── Behavior 53 — wire wires sympathy_heal_adjacent in FixedUpdate ──────
 
 #[test]
 fn register_wires_sympathy_heal_adjacent_into_fixed_update() {
@@ -55,7 +55,7 @@ fn register_wires_sympathy_heal_adjacent_into_fixed_update() {
     assert_eq!(
         heal_collector_len(&app),
         1,
-        "register must wire sympathy_heal_adjacent; expected 1 heal, got {}",
+        "wire must wire sympathy_heal_adjacent; expected 1 heal, got {}",
         heal_collector_len(&app)
     );
 
@@ -119,14 +119,14 @@ fn register_orders_sympathy_heal_adjacent_before_apply_heal_starting_clamp() {
     );
 }
 
-// ── Behavior 56 — register's in_state(Playing) gate blocks when not Playing ─
+// ── Behavior 56 — wire's in_state(Playing) gate blocks when not Playing ─
 
 #[test]
 fn register_in_state_playing_gate_blocks_when_not_playing() {
     let mut app = test_app_not_playing();
     app.add_plugins(RantzDmgPlugin);
     let _ = app.register_dmgable::<Cell>();
-    register(&mut app);
+    wire(&mut app);
     install_sympathy_config(&mut app, canonical_sympathy_config());
     add_sympathy_stacks(&mut app, 1);
 
@@ -139,7 +139,7 @@ fn register_in_state_playing_gate_blocks_when_not_playing() {
     assert_eq!(heal_collector_len(&app), 0);
 }
 
-// ── Behavior 57 — register's hazard_active gate blocks under different hazard
+// ── Behavior 57 — wire's hazard_active gate blocks under different hazard
 
 #[test]
 fn register_hazard_active_gate_blocks_under_different_hazard() {
@@ -162,7 +162,7 @@ fn register_hazard_active_gate_blocks_under_different_hazard() {
     assert_eq!(heal_collector_len(&app), 0);
 }
 
-// ── Behavior 58 — register does not panic when SympathyConfig is absent ─────
+// ── Behavior 58 — wire does not panic when SympathyConfig is absent ─────
 
 #[test]
 fn register_does_not_panic_when_sympathy_config_absent() {
@@ -199,7 +199,7 @@ fn plugin_builds_sympathy_schedules_tick_with_no_messages() {
 fn schedule_does_not_panic_with_both_sympathy_and_momentum_stacked() {
     let mut app = register_app_with_apply_heal();
     // Register Momentum too — both systems read DamageDealt<Cell> + write HealDealt<Cell>.
-    momentum::register(&mut app);
+    momentum::wire(&mut app);
 
     // Both configs + 1 stack each.
     install_sympathy_config(&mut app, canonical_sympathy_config());

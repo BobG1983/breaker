@@ -8,7 +8,7 @@
 use bevy::prelude::*;
 
 use super::{
-    super::system::{TetherLink, register},
+    super::system::{TetherLink, wire},
     helpers::{
         add_hazard_stacks, add_tether_stacks, build_cleanup_tether_app,
         build_cleanup_tether_app_not_playing, canonical_tether_config, install_tether_config,
@@ -151,7 +151,7 @@ fn cleanup_does_not_run_when_tether_inactive() {
         .build();
     install_tether_config(&mut app, canonical_tether_config());
     add_hazard_stacks(&mut app, HazardKind::Volatility, 1);
-    register(&mut app);
+    wire(&mut app);
 
     let (a, b) = spawn_linked_pair(&mut app, Vec2::new(0.0, 0.0), Vec2::new(50.0, 0.0));
     app.world_mut().despawn(b);
@@ -192,7 +192,7 @@ fn cleanup_does_not_panic_without_tether_config() {
         .with_message::<DamageDealt<Cell>>()
         .build();
     add_tether_stacks(&mut app, 1);
-    register(&mut app);
+    wire(&mut app);
 
     let (a, b) = spawn_linked_pair(&mut app, Vec2::new(0.0, 0.0), Vec2::new(50.0, 0.0));
     app.world_mut().despawn(b);

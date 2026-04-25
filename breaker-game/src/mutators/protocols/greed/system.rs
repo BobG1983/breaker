@@ -8,7 +8,7 @@
 //! - [`GreedStacks`] — per-run counter of chip-offer skips, cleared by
 //!   `reset_run_state`.
 //! - [`activate`] — parses `ProtocolTuning::Greed`, inserts `GreedConfig`.
-//! - [`register`] — wires [`greed_on_skip`] ungated; the system enforces the
+//! - [`wire`] — wires [`greed_on_skip`] ungated; the system enforces the
 //!   `ActiveProtocols` gate in-body via `reader.clear()` + return when Greed
 //!   is inactive so buffered `ChipOfferSkipped` messages cannot leak across
 //!   runs.
@@ -44,7 +44,7 @@ pub struct GreedConfig {
 }
 
 /// Per-run count of chip-offer skips. Inserted via `init_resource` in
-/// [`register`] (default = 0); incremented by [`greed_on_skip`] on each
+/// [`wire`] (default = 0); incremented by [`greed_on_skip`] on each
 /// `ChipOfferSkipped` message; read by [`apply_greed_boost`] during chip
 /// offering generation. Cleared by `reset_run_state` as part of
 /// `RunInventories::clear_all`.
@@ -89,14 +89,14 @@ pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
 /// - `greed_on_skip` → `Update`, intentionally ungated. The system enforces
 ///   the `ActiveProtocols` gate in-body via `reader.clear()` + return when
 ///   Greed is inactive.
-pub(crate) fn register(app: &mut App) {
+pub(crate) fn wire(app: &mut App) {
     // NOTE: `GreedStacks` is NOT inserted here. The plugin is responsible for
-    // `init_resource::<GreedStacks>()`. `register` only wires the runtime system
+    // `init_resource::<GreedStacks>()`. `wire` only wires the runtime system
     // so tests that exercise isolated harness configurations (without
     // `GreedStacks`) exercise the `Option<ResMut<_>>` guard path without the
     // resource being silently inserted by this function.
     //
-    // Defensively register `ChipOfferSkipped`. The chip-select plugin owns
+    // Defensively wire `ChipOfferSkipped`. The chip-select plugin owns
     // canonical registration (see
     // `breaker-game/src/state/run/chip_select/plugin.rs`), but since the
     // retrofit removed the `.run_if(protocol_active(Greed))` gate from

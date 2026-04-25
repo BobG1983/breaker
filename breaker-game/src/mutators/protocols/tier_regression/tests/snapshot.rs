@@ -1,6 +1,6 @@
 //! Direct unit coverage for `snapshot_pre_advance_state` and for the
 //! "snapshot-populated" path in `apply_tier_regression`. Group C
-//! integration tests in `register.rs` exercise both systems together
+//! integration tests in `wire.rs` exercise both systems together
 //! on `OnEnter(RunState::Node)`; this file isolates the snapshot system
 //! and the snapshot-consumption path so regressions to either are
 //! caught directly rather than observed through a composite assertion.

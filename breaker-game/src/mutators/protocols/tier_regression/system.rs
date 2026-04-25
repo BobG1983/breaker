@@ -4,7 +4,7 @@
 //! Design doc: `docs/design/protocols/tier_regression.md`.
 //!
 //! Owns the `TierRegressionConfig` / `TierRegressionPending` resources, the
-//! `activate` / `register` dispatch entry points, and two runtime systems:
+//! `activate` / `wire` dispatch entry points, and two runtime systems:
 //! `snapshot_pre_advance_state` (runs `OnEnter(RunState::Node)` ordered
 //! `.before(NodeSystems::AdvanceNode)`) captures the pre-advance
 //! `NodeOutcome.tier` / `node_index` into `TierRegressionPending`, and
@@ -80,7 +80,7 @@ pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
     commands.insert_resource(TierRegressionPending::default());
 }
 
-// ── register ────────────────────────────────────────────────────────────────
+// ── wire ────────────────────────────────────────────────────────────────
 
 /// Registers `snapshot_pre_advance_state` on `OnEnter(RunState::Node)`
 /// ordered `.before(NodeSystems::AdvanceNode)` and `apply_tier_regression`
@@ -101,7 +101,7 @@ pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
 ///
 /// No `init_resource` — both resources are activation-driven, not standing
 /// per-run defaults.
-pub(crate) fn register(app: &mut App) {
+pub(crate) fn wire(app: &mut App) {
     app.add_systems(
         OnEnter(RunState::Node),
         (

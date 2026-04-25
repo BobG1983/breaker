@@ -6,7 +6,7 @@
 //! - C: `overcharge_reset_on_bump` system
 //! - D: `overcharge_apply_speed` reconcile
 //! - E: `activate` lifecycle
-//! - F: `register`-wired integration + gating
+//! - F: `wire`-wired integration + gating
 //! - G: Multi-bolt, Haste synergy, cleanup
 
 mod helpers;
@@ -15,6 +15,6 @@ mod activate;
 mod apply_speed;
 mod count_kills;
 mod formula;
-mod register;
 mod reset_on_bump;
 mod synergy;
+mod wire;

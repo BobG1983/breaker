@@ -12,7 +12,7 @@
 //!   `DamageDealt<Cell>` messages.
 //! - [`activate`] — parses `ProtocolTuning::DebtCollector`, inserts
 //!   `DebtCollectorConfig`.
-//! - [`register`] — wires the five runtime systems with schedules, run-ifs,
+//! - [`wire`] — wires the five runtime systems with schedules, run-ifs,
 //!   and ordering constraints.
 //! - Five runtime systems: [`debt_collector_on_bump`],
 //!   [`debt_collector_on_impact`], [`debt_collector_on_bolt_lost`],
@@ -77,7 +77,7 @@ pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
     commands.insert_resource(DebtCollectorConfig { stack_per_bump });
 }
 
-// ── register ────────────────────────────────────────────────────────────────
+// ── wire ────────────────────────────────────────────────────────────────
 
 /// Registers Debt Collector's runtime systems with the correct schedules,
 /// run-ifs, and ordering.
@@ -89,7 +89,7 @@ pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
 ///   (no `NodeState` gate).
 /// - `debt_collector_cleanup_node` runs on `OnExit(NodeState::Playing)`
 ///   unconditionally (no run-if).
-pub(crate) fn register(app: &mut App) {
+pub(crate) fn wire(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         (

@@ -8,4 +8,4 @@ pub mod system;
 mod tests;
 
 pub use system::{BurnoutDamageBoost, BurnoutHeat};
-pub(crate) use system::{activate, register};
+pub(crate) use system::{activate, wire};

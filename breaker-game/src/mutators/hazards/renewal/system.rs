@@ -77,7 +77,7 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
 /// (so the emitted heals feed `apply_heal::<Cell>` in the same tick).
 /// Both systems gated by `hazard_active(Renewal)` and
 /// `NodeState::Playing`.
-pub(crate) fn register(app: &mut App) {
+pub(crate) fn wire(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         (

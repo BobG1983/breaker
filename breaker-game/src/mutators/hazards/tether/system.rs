@@ -137,7 +137,7 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
 ///   `hazard_active(Tether)` AND `in_state(Playing)`.
 /// - `tether_emit_partner` → `FixedUpdate`, in `DmgSystems::PostApplyDamage`,
 ///   `hazard_active(Tether)` AND `in_state(Playing)`.
-pub(crate) fn register(app: &mut App) {
+pub(crate) fn wire(app: &mut App) {
     app.add_systems(
         OnEnter(NodeState::Playing),
         establish_tether_links.run_if(hazard_active(HazardKind::Tether)),

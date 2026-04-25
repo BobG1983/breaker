@@ -8,7 +8,7 @@
 //! per-node tracking resource, the four runtime systems
 //! (`reckless_dash_on_bump`, `reckless_dash_amplify_damage`,
 //! `reckless_dash_double_penalty`, `reckless_dash_cleanup_node`), the
-//! `RECKLESS_DASH_SENTINEL` source-chip tag, and the `activate` / `register`
+//! `RECKLESS_DASH_SENTINEL` source-chip tag, and the `activate` / `wire`
 //! dispatch entry points.
 
 pub mod system;
@@ -17,4 +17,4 @@ pub mod system;
 mod tests;
 
 pub use system::{RecklessDashDoubledBolts, RiskyDamageBoost};
-pub(crate) use system::{activate, register};
+pub(crate) use system::{activate, wire};

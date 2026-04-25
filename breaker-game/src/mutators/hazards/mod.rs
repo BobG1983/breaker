@@ -60,24 +60,24 @@ pub(crate) fn activate(kind: HazardKind, tuning: &HazardTuning, commands: &mut C
 }
 
 /// Fan-out registration — each hazard registers its runtime systems via its
-/// own `register(app)` function.
-pub(crate) fn register(app: &mut App) {
-    cascade::register(app);
-    decay::register(app);
-    diffusion::register(app);
-    drift::register(app);
-    echo_cells::register(app);
-    erosion::register(app);
-    fracture::register(app);
-    gravity_surge::register(app);
-    haste::register(app);
-    momentum::register(app);
-    overcharge::register(app);
-    renewal::register(app);
-    resonance::register(app);
-    sympathy::register(app);
-    tether::register(app);
-    volatility::register(app);
+/// own `wire(app)` function.
+pub(crate) fn wire(app: &mut App) {
+    cascade::wire(app);
+    decay::wire(app);
+    diffusion::wire(app);
+    drift::wire(app);
+    echo_cells::wire(app);
+    erosion::wire(app);
+    fracture::wire(app);
+    gravity_surge::wire(app);
+    haste::wire(app);
+    momentum::wire(app);
+    overcharge::wire(app);
+    renewal::wire(app);
+    resonance::wire(app);
+    sympathy::wire(app);
+    tether::wire(app);
+    volatility::wire(app);
 }
 
 /// Activate a hazard using the registry-held tuning. Inserts the per-kind

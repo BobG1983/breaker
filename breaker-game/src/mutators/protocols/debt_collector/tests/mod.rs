@@ -8,7 +8,7 @@ mod on_bolt_lost;
 mod on_bump;
 mod on_impact;
 mod plugin;
-mod register;
 mod ron_asset;
 mod scheduling;
 mod sentinel;
+mod wire;

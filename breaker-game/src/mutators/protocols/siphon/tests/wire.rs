@@ -1,6 +1,6 @@
-//! Group G — `register` wiring + run-condition gates (Behaviors 36–42).
+//! Group G — `wire` wiring + run-condition gates (Behaviors 36–42).
 //!
-//! Pins that `register`-wired systems run under the correct schedules, gated
+//! Pins that `wire`-wired systems run under the correct schedules, gated
 //! by `protocol_active(Siphon)` + `in_state(NodeState::Playing)` on the
 //! `FixedUpdate` systems, with `siphon_tick_streak` ordered BEFORE
 //! `siphon_on_cell_destroyed`, and `siphon_cleanup_node` wired into
@@ -9,7 +9,7 @@
 use bevy::prelude::*;
 
 use super::{
-    super::system::{SiphonConfig, SiphonStreak, register},
+    super::system::{SiphonConfig, SiphonStreak, wire},
     helpers::{
         build_siphon_app, collected_reverse_time_penalties, install_siphon_streak,
         seed_active_protocols_with_siphon, write_cell_destroyed,
@@ -17,7 +17,7 @@ use super::{
 };
 use crate::prelude::*;
 
-// ── Behavior 36 — register wires the reader under the right run-conditions ──
+// ── Behavior 36 — wire wires the reader under the right run-conditions ──
 
 #[test]
 fn register_wires_siphon_on_cell_destroyed_in_fixed_update() {
@@ -34,15 +34,15 @@ fn register_wires_siphon_on_cell_destroyed_in_fixed_update() {
             window_remaining: 2.0,
             kill_count:       1,
         },
-        "register-wired reader must process first kill to (2.0, 1); got {streak:?}"
+        "wire-wired reader must process first kill to (2.0, 1); got {streak:?}"
     );
     assert!(
         collected_reverse_time_penalties(&app).is_empty(),
-        "first kill emits zero penalties (register-wired path)"
+        "first kill emits zero penalties (wire-wired path)"
     );
 }
 
-// ── Behavior 37 — register-wired reader gated off when Siphon NOT active ────
+// ── Behavior 37 — wire-wired reader gated off when Siphon NOT active ────
 
 #[test]
 fn register_wired_reader_is_gated_off_when_siphon_not_active() {
@@ -56,15 +56,15 @@ fn register_wired_reader_is_gated_off_when_siphon_not_active() {
     assert_eq!(
         streak,
         SiphonStreak::default(),
-        "register-wired reader must not run when Siphon not active; got {streak:?}"
+        "wire-wired reader must not run when Siphon not active; got {streak:?}"
     );
     assert!(
         collected_reverse_time_penalties(&app).is_empty(),
-        "register-wired reader emits no penalties when Siphon not active"
+        "wire-wired reader emits no penalties when Siphon not active"
     );
 }
 
-// ── Behavior 38 — register-wired reader gated off when NodeState != Playing ─
+// ── Behavior 38 — wire-wired reader gated off when NodeState != Playing ─
 
 #[test]
 fn register_wired_reader_is_gated_off_when_node_state_not_playing() {
@@ -80,7 +80,7 @@ fn register_wired_reader_is_gated_off_when_node_state_not_playing() {
         streak_window: 2.0,
         time_per_kill: 0.5,
     });
-    register(&mut app);
+    wire(&mut app);
     seed_active_protocols_with_siphon(&mut app, 2.0, 0.5);
 
     write_cell_destroyed(&mut app);
@@ -90,15 +90,15 @@ fn register_wired_reader_is_gated_off_when_node_state_not_playing() {
     assert_eq!(
         streak,
         SiphonStreak::default(),
-        "register-wired reader must be gated off when NodeState != Playing; got {streak:?}"
+        "wire-wired reader must be gated off when NodeState != Playing; got {streak:?}"
     );
     assert!(
         collected_reverse_time_penalties(&app).is_empty(),
-        "register-wired reader emits no penalties when NodeState != Playing"
+        "wire-wired reader emits no penalties when NodeState != Playing"
     );
 }
 
-// ── Behavior 39 — register wires tick BEFORE reader ─────────────────────────
+// ── Behavior 39 — wire wires tick BEFORE reader ─────────────────────────
 
 #[test]
 fn register_wires_tick_before_reader() {
@@ -126,11 +126,11 @@ fn register_wires_tick_before_reader() {
     );
     assert!(
         collected_reverse_time_penalties(&app).is_empty(),
-        "fresh-streak first kill must emit zero penalties under register ordering"
+        "fresh-streak first kill must emit zero penalties under wire ordering"
     );
 }
 
-// ── Behavior 40 — register wires cleanup in OnExit(NodeState::Playing) ──────
+// ── Behavior 40 — wire wires cleanup in OnExit(NodeState::Playing) ──────
 
 #[test]
 fn register_wires_cleanup_on_exit_node_state_playing() {
@@ -146,11 +146,11 @@ fn register_wires_cleanup_on_exit_node_state_playing() {
     assert_eq!(
         streak,
         SiphonStreak::default(),
-        "register must wire cleanup in OnExit(NodeState::Playing); got {streak:?}"
+        "wire must wire cleanup in OnExit(NodeState::Playing); got {streak:?}"
     );
 }
 
-// ── Behavior 41 — register does not panic when resources are absent ─────────
+// ── Behavior 41 — wire does not panic when resources are absent ─────────
 
 #[test]
 fn register_does_not_panic_when_streak_and_config_absent() {
@@ -162,7 +162,7 @@ fn register_does_not_panic_when_streak_and_config_absent() {
         .with_message::<Destroyed<Cell>>()
         .with_message_capture::<crate::state::run::node::messages::ReverseTimePenalty>()
         .build();
-    register(&mut app);
+    wire(&mut app);
     seed_active_protocols_with_siphon(&mut app, 2.0, 0.5);
 
     for _ in 0..3 {
@@ -173,15 +173,15 @@ fn register_does_not_panic_when_streak_and_config_absent() {
     // appear spontaneously.
     assert!(
         app.world().get_resource::<SiphonStreak>().is_none(),
-        "register must not side-effect-insert SiphonStreak"
+        "wire must not side-effect-insert SiphonStreak"
     );
     assert!(
         app.world().get_resource::<SiphonConfig>().is_none(),
-        "register must not side-effect-insert SiphonConfig"
+        "wire must not side-effect-insert SiphonConfig"
     );
     assert!(
         collected_reverse_time_penalties(&app).is_empty(),
-        "register-wired systems emit no penalties when resources absent"
+        "wire-wired systems emit no penalties when resources absent"
     );
 }
 

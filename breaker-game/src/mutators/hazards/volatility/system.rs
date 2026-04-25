@@ -83,7 +83,7 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
 /// `DamageDealt<Cell>` messages into the timer reset on later activation.
 /// Ordered `.after(DmgSystems::ApplyDamage)` so it observes this tick's
 /// completed damage messages.
-pub(crate) fn register(app: &mut App) {
+pub(crate) fn wire(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         (

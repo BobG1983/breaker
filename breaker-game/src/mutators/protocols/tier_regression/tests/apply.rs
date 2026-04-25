@@ -1,7 +1,7 @@
 //! Groups B and B′ — `apply_tier_regression` core splice behavior and
 //! one-shot / no-op guards (Behaviors 6–20).
 //!
-//! All tests register `apply_tier_regression` on `Update` via
+//! All tests wire `apply_tier_regression` on `Update` via
 //! `build_apply_app()` (no state hierarchy, no run-if gate). Group C covers
 //! schedule wiring and ordering.
 

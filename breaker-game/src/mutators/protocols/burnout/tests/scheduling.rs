@@ -15,7 +15,7 @@
 
 use bevy::prelude::*;
 
-use super::super::system::{BurnoutDamageBoost, config::BurnoutConfig, register};
+use super::super::system::{BurnoutDamageBoost, config::BurnoutConfig, wire};
 use crate::{
     bolt::{
         BoltPlugin,
@@ -59,7 +59,7 @@ fn burnout_scheduling_app() -> App {
             },
         });
     app.add_plugins(BoltPlugin);
-    register(&mut app);
+    wire(&mut app);
     app
 }
 

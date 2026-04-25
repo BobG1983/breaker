@@ -6,7 +6,7 @@
 //! Owns the `RecklessDashConfig` resource (per-run tuning), the
 //! `RiskyDamageBoost` per-bolt component, the `RecklessDashDoubledBolts`
 //! per-node tracking resource, the builder-produced `"protocol:reckless_dash"` source tag,
-//! the `activate` / `register` dispatch entry points, and the four runtime
+//! the `activate` / `wire` dispatch entry points, and the four runtime
 //! systems (`reckless_dash_on_bump`, `reckless_dash_amplify_damage`,
 //! `reckless_dash_double_penalty`, `reckless_dash_cleanup_node`).
 
@@ -65,7 +65,7 @@ pub struct RiskyDamageBoost {
 /// `OnExit(NodeState::Playing)` by `reckless_dash_cleanup_node`.
 ///
 /// Initialised by the `ProtocolPlugin` (matches Greed / Siphon / Fission
-/// convention) — NOT by `register`.
+/// convention) — NOT by `wire`.
 #[derive(Resource, Debug, Default)]
 pub struct RecklessDashDoubledBolts(pub HashSet<Entity>);
 
@@ -91,7 +91,7 @@ pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
     });
 }
 
-// ── register ───────────────────────────────────────────────────────────────
+// ── wire ───────────────────────────────────────────────────────────────
 
 /// Registers Reckless Dash's runtime systems with the correct schedules,
 /// run-ifs, and ordering.
@@ -109,11 +109,11 @@ pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
 /// - `reckless_dash_cleanup_node` — clears the `RecklessDashDoubledBolts`
 ///   anti-feedback set.
 ///
-/// NOTE: `register` does NOT call
+/// NOTE: `wire` does NOT call
 /// `init_resource::<RecklessDashDoubledBolts>()`. The resource is initialised
 /// by `ProtocolPlugin::build`, mirroring the Greed / Siphon / Fission
 /// precedent where the plugin owns all protocol resource initialisation.
-pub(crate) fn register(app: &mut App) {
+pub(crate) fn wire(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         (

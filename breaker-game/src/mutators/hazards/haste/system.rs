@@ -73,7 +73,7 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
 /// reconciles each Bolt's `EffectStack<SpeedBoostConfig>` with a single
 /// source-`hazard:haste` entry reflecting the current stack count's
 /// multiplier.
-pub(crate) fn register(app: &mut App) {
+pub(crate) fn wire(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         haste_apply_speed

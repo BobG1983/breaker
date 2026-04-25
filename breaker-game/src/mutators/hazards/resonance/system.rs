@@ -6,7 +6,7 @@
 //! `kills_to_trigger`, spawn one wave per excess kill using the positions
 //! of the most-recent entries. Waves travel toward the Breaker's snapshot
 //! position at spawn; on live-distance contact they fire a
-//! `SpeedBoostConfig` onto the Breaker's stack and register a
+//! `SpeedBoostConfig` onto the Breaker's stack and wire a
 //! `ResonanceSlowEntry` in `ResonanceActiveSlows`. A separate tick system
 //! drains each entry's `remaining` and reverses the stack entry when the
 //! timer elapses. On node teardown, all tracker state + active slows are
@@ -173,7 +173,7 @@ pub(crate) struct ResonanceWave {
     pub(crate) contact_threshold: f32,
 }
 
-// ── activate + register ──────────────────────────────────────────────────
+// ── activate + wire ──────────────────────────────────────────────────
 
 pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
     let HazardTuning::Resonance {
@@ -208,7 +208,7 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
     commands.insert_resource(ResonanceActiveSlows::default());
 }
 
-pub(crate) fn register(app: &mut App) {
+pub(crate) fn wire(app: &mut App) {
     app.init_resource::<ResonanceTracker>()
         .init_resource::<ResonanceActiveSlows>()
         .add_systems(

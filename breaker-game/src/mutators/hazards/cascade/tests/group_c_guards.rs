@@ -121,8 +121,8 @@ fn no_message_when_no_destroyed_messages() {
 #[test]
 fn system_skipped_when_cascade_run_condition_false() {
     let mut app = test_app_playing();
-    // Use register(app) so the hazard_active + in_state run-conditions apply.
-    register(&mut app);
+    // Use wire(app) so the hazard_active + in_state run-conditions apply.
+    wire(&mut app);
     install_cascade_config(
         &mut app,
         CascadeConfig {
@@ -164,7 +164,7 @@ fn system_skipped_when_not_in_node_playing() {
         .with_message::<Destroyed<Cell>>()
         .with_message_capture::<HealDealt<Cell>>()
         .build();
-    register(&mut app);
+    wire(&mut app);
     install_cascade_config(
         &mut app,
         CascadeConfig {

@@ -173,7 +173,7 @@ fn freshly_spawned_phantom_breaker_keeps_full_lifetime_on_spawn_tick() {
         (rows[0] - 2.0).abs() < 1e-6,
         "PhantomBreakerLifetime on spawn tick must equal FULL phantom_duration \
          (2.0) — if this is ~{:.4} (= 2.0 - 1/64), the tick-BEFORE-spawn order \
-         in `register` was inverted. Got {}",
+         in `wire` was inverted. Got {}",
         2.0_f32 - 1.0 / 64.0,
         rows[0]
     );

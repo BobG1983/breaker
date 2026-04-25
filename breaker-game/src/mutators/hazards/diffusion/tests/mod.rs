@@ -1,10 +1,10 @@
 mod helpers;
 
 mod activate_tests;
-mod register_tests;
 mod ron_asset;
 mod scheduling;
 mod share_math;
+mod wire_tests;
 
 // W2 test modules.
 mod cleanup;

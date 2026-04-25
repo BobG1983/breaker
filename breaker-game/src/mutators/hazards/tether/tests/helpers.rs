@@ -11,7 +11,7 @@ use bevy::{ecs::world::CommandQueue, prelude::*};
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
-use super::super::system::{TetherConfig, TetherLink, activate, register};
+use super::super::system::{TetherConfig, TetherLink, activate, wire};
 use crate::{
     mutators::hazards::{
         definition::{HazardKind, HazardTuning},
@@ -23,7 +23,7 @@ use crate::{
 // ── App builders ────────────────────────────────────────────────────────────
 
 /// Default builder: state hierarchy NOT yet in `Playing`, `ActiveHazards`,
-/// `DamageDealt<Cell>` message registered, `register` wired.
+/// `DamageDealt<Cell>` message registered, `wire` wired.
 ///
 /// Tests seed `GameRng`, add Tether stacks, install `TetherConfig`, spawn
 /// cells, then drive the state into `NodeState::Playing` to fire `OnEnter`.
@@ -35,7 +35,7 @@ pub(super) fn build_establish_tether_app(seed: u64) -> App {
         .build();
     app.world_mut()
         .insert_resource(GameRng(ChaCha8Rng::seed_from_u64(seed)));
-    register(&mut app);
+    wire(&mut app);
     app
 }
 
@@ -46,12 +46,12 @@ pub(super) fn build_establish_tether_app_no_rng() -> App {
         .with_resource::<ActiveHazards>()
         .with_message::<DamageDealt<Cell>>()
         .build();
-    register(&mut app);
+    wire(&mut app);
     app
 }
 
 /// State-hierarchy app driven into `NodeState::Playing` with `ActiveHazards`,
-/// canonical `TetherConfig`, 1 Tether stack, seeded `GameRng`, `register`
+/// canonical `TetherConfig`, 1 Tether stack, seeded `GameRng`, `wire`
 /// wired, and `MessageCollector<DamageDealt<Cell>>` installed. Intended for
 /// cleanup-system tests that do not need the establish step.
 pub(super) fn build_cleanup_tether_app() -> App {
@@ -65,7 +65,7 @@ pub(super) fn build_cleanup_tether_app() -> App {
         .insert_resource(GameRng(ChaCha8Rng::seed_from_u64(42)));
     install_tether_config(&mut app, canonical_tether_config());
     add_tether_stacks(&mut app, 1);
-    register(&mut app);
+    wire(&mut app);
     app
 }
 
@@ -81,7 +81,7 @@ pub(super) fn build_cleanup_tether_app_not_playing() -> App {
         .insert_resource(GameRng(ChaCha8Rng::seed_from_u64(42)));
     install_tether_config(&mut app, canonical_tether_config());
     add_tether_stacks(&mut app, 1);
-    register(&mut app);
+    wire(&mut app);
     app
 }
 

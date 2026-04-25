@@ -161,7 +161,7 @@ fn greed_on_skip_does_not_transition_chip_select_state() {
         .with_message::<ChipOfferSkipped>()
         .in_state_chip_selecting()
         .build();
-    super::super::system::register(&mut app);
+    super::super::system::wire(&mut app);
     seed_active_protocols_with_greed(&mut app, 0.05);
 
     let before = *app.world().resource::<State<ChipSelectState>>().get();

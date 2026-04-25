@@ -9,7 +9,7 @@
 //! - [`EchoPrimed`] — per-bolt single-shot "next impact echoes" marker.
 //! - [`activate`] — parses `ProtocolTuning::EchoStrike`, inserts
 //!   `EchoStrikeConfig`.
-//! - [`register`] — wires the three runtime systems with schedules, run-ifs,
+//! - [`wire`] — wires the three runtime systems with schedules, run-ifs,
 //!   and ordering constraints.
 //!
 //! Systems:
@@ -98,7 +98,7 @@ pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
     });
 }
 
-// ── register ────────────────────────────────────────────────────────────────
+// ── wire ────────────────────────────────────────────────────────────────
 
 /// Registers Echo Strike's runtime systems with the correct schedules and
 /// ordering.
@@ -109,7 +109,7 @@ pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
 /// `.run_if(in_state(NodeState::Playing))` as first-class run-conditions
 /// because it drives off `ResMut<Messages<DamageDealt<Cell>>>` rather than a
 /// dedicated reader.
-pub(crate) fn register(app: &mut App) {
+pub(crate) fn wire(app: &mut App) {
     // Deliberate late emitter (`echo_strike_emit_siblings`): reads
     // DamageDealt<Cell> / Dead state from the current tick to cascade
     // follow-up damage. MUST stay in DmgSystems::PostApplyDamage so it runs

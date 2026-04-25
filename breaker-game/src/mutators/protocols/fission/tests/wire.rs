@@ -1,4 +1,4 @@
-//! Groups G + H + I — run-if gates, scheduling / ordering, and `register`
+//! Groups G + H + I — run-if gates, scheduling / ordering, and `wire`
 //! wiring (Behaviors 28, 29, 32-37).
 //!
 //! Pins that the `fission_on_cell_destroyed` system is gated by
@@ -205,7 +205,7 @@ fn pregate_destroyed_cell_drains_cleanly_before_fission_activates() {
     );
 }
 
-// ── Behavior 35 — register wires fission_on_cell_destroyed into FixedUpdate ─
+// ── Behavior 35 — wire wires fission_on_cell_destroyed into FixedUpdate ─
 
 #[test]
 fn register_wires_fission_on_cell_destroyed_in_fixed_update() {
@@ -220,7 +220,7 @@ fn register_wires_fission_on_cell_destroyed_in_fixed_update() {
     assert_eq!(
         counter,
         FissionCounter { kills: 1 },
-        "register-wired reader must process Destroyed<Cell> in one FixedUpdate; got {counter:?}"
+        "wire-wired reader must process Destroyed<Cell> in one FixedUpdate; got {counter:?}"
     );
 }
 
@@ -230,7 +230,7 @@ fn register_wires_fission_on_cell_destroyed_in_fixed_update() {
 // omits. The schedule placement is already pinned by the pregate / FixedUpdate-
 // only tests that pass via `tick()`.
 
-// ── Behavior 37 — register wires cleanup into OnExit(MenuState::Main) ──────-
+// ── Behavior 37 — wire wires cleanup into OnExit(MenuState::Main) ──────-
 
 #[test]
 fn register_wires_cleanup_on_exit_menu_state_main() {
@@ -256,7 +256,7 @@ fn register_wires_cleanup_on_exit_menu_state_main() {
     app.update();
 
     // Register Fission and install the config/counter.
-    super::super::system::register(&mut app);
+    super::super::system::wire(&mut app);
     app.world_mut()
         .insert_resource(FissionConfig { kills_per_split: 8 });
     app.world_mut().insert_resource(FissionCounter { kills: 5 });

@@ -26,7 +26,7 @@ pub(super) fn test_app_playing() -> App {
 
 /// State-hierarchy app that is NOT driven into `NodeState::Playing`.
 /// The default state is not `Playing` — mirrors the renewal pattern in
-/// `renewal/tests/register.rs::system_skipped_when_not_in_node_playing`.
+/// `renewal/tests/wire.rs::system_skipped_when_not_in_node_playing`.
 pub(super) fn test_app_not_playing() -> App {
     TestAppBuilder::new()
         .with_state_hierarchy()
@@ -69,7 +69,7 @@ pub(super) fn install_haste_config(app: &mut App, cfg: HasteConfig) {
 
 /// Wires only `haste_apply_speed` in `FixedUpdate` — bypasses run-conditions.
 /// Used by Groups B, C, F, G to exercise the system directly without the
-/// `hazard_active` / `in_state` gates `register` installs.
+/// `hazard_active` / `in_state` gates `wire` installs.
 pub(super) fn wire_apply_only(app: &mut App) {
     app.add_systems(FixedUpdate, haste_apply_speed);
 }

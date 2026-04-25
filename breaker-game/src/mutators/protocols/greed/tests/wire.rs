@@ -1,6 +1,6 @@
-//! Group F — `register` wiring + run-condition gate (Behaviors 30–32).
+//! Group F — `wire` wiring + run-condition gate (Behaviors 30–32).
 //!
-//! Pins that `register` actually wires `greed_on_skip` (not a stub/warn),
+//! Pins that `wire` actually wires `greed_on_skip` (not a stub/warn),
 //! that the run-condition holds it off when Greed isn't in `ActiveProtocols`,
 //! and that the system does not panic when `GreedStacks` is absent.
 
@@ -11,7 +11,7 @@ use super::{
     },
 };
 
-// ── Behavior 30 — register wires greed_on_skip under protocol_active(Greed) ──
+// ── Behavior 30 — wire wires greed_on_skip under protocol_active(Greed) ──
 
 #[test]
 fn register_wires_greed_on_skip_when_greed_is_active() {
@@ -24,13 +24,13 @@ fn register_wires_greed_on_skip_when_greed_is_active() {
     assert_eq!(
         app.world().resource::<GreedStacks>().skips,
         1,
-        "register must wire greed_on_skip such that it increments skips when \
+        "wire must wire greed_on_skip such that it increments skips when \
          Greed is active; got {}",
         app.world().resource::<GreedStacks>().skips
     );
 }
 
-// ── Behavior 31 — register-wired system is gated off when Greed NOT active ──
+// ── Behavior 31 — wire-wired system is gated off when Greed NOT active ──
 
 #[test]
 fn register_wired_system_does_not_run_when_greed_is_not_active() {
@@ -49,7 +49,7 @@ fn register_wired_system_does_not_run_when_greed_is_not_active() {
     );
 }
 
-// ── Behavior 32 — register does not panic when GreedStacks is absent ────────
+// ── Behavior 32 — wire does not panic when GreedStacks is absent ────────
 
 #[test]
 fn register_does_not_panic_when_greed_stacks_absent() {
@@ -63,7 +63,7 @@ fn register_does_not_panic_when_greed_stacks_absent() {
     // did not side-effect-insert the resource.
     assert!(
         app.world().get_resource::<GreedStacks>().is_none(),
-        "register-wired system must not insert GreedStacks as a side effect; \
+        "wire-wired system must not insert GreedStacks as a side effect; \
          the plugin is responsible for init_resource"
     );
 }

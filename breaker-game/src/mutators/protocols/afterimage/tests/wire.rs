@@ -1,6 +1,6 @@
-//! Group I — `register` wiring, schedule, gates (Behaviors I1–I14).
+//! Group I — `wire` wiring, schedule, gates (Behaviors I1–I14).
 //!
-//! Pins that `register`-wired systems run under the correct schedules,
+//! Pins that `wire`-wired systems run under the correct schedules,
 //! gated by `protocol_active(Afterimage)` + `in_state(NodeState::Playing)`,
 //! and that the full in-tick chain
 //! `spawn_phantom_breaker → check_phantom_bounce → GradeBump →
@@ -39,7 +39,7 @@ fn perfect_bump_state() -> BumpState {
     }
 }
 
-// ── I1 — register wires spawn_phantom_breaker in FixedUpdate ──────────────
+// ── I1 — wire wires spawn_phantom_breaker in FixedUpdate ──────────────
 
 #[test]
 fn register_wires_spawn_phantom_breaker_in_fixed_update() {
@@ -55,7 +55,7 @@ fn register_wires_spawn_phantom_breaker_in_fixed_update() {
     assert_eq!(
         phantom_breaker_count(&mut app),
         1,
-        "afterimage_spawn_phantom_breaker must run via register"
+        "afterimage_spawn_phantom_breaker must run via wire"
     );
 }
 
@@ -157,7 +157,7 @@ fn check_phantom_bounce_wired_and_gated_on_active_and_playing() {
     let velocity = app.world().get::<Velocity2D>(bolt).unwrap();
     assert!(
         velocity.0.y > 0.0,
-        "check_phantom_bounce must reflect the bolt via register, got y={}",
+        "check_phantom_bounce must reflect the bolt via wire, got y={}",
         velocity.0.y
     );
     let bumps = captured_bump_performed(&app);
@@ -417,7 +417,7 @@ fn quiet_tick_safety_under_full_schedule() {
     assert_eq!(phantom_bolt_count(&mut app), 0);
 }
 
-// ── I12 — register does not panic when AfterimageConfig absent ────────────
+// ── I12 — wire does not panic when AfterimageConfig absent ────────────
 
 #[test]
 fn register_does_not_panic_when_afterimage_config_absent() {
@@ -428,7 +428,7 @@ fn register_does_not_panic_when_afterimage_config_absent() {
 
     assert!(
         app.world().get_resource::<AfterimageConfig>().is_none(),
-        "register must not side-effect-insert AfterimageConfig"
+        "wire must not side-effect-insert AfterimageConfig"
     );
 }
 

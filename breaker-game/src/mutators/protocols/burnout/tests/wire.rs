@@ -1,19 +1,19 @@
-//! Group H — `register` wiring + run-condition gates (Behaviors H1–H14).
+//! Group H — `wire` wiring + run-condition gates (Behaviors H1–H14).
 //!
-//! Pins that `register`-wired systems run under the correct schedules,
+//! Pins that `wire`-wired systems run under the correct schedules,
 //! gated by `protocol_active(Burnout)` + `in_state(NodeState::Playing)` on
 //! the four `FixedUpdate` reader systems; that same-tick ordering anchors
 //! to `BreakerSystems::GradeBump` and `BoltSystems::CellCollision`; that
 //! the schedule is harness-safe under missing resources + quiet ticks; and
-//! that `register` does NOT init any Burnout-specific resources
+//! that `wire` does NOT init any Burnout-specific resources
 //! (Burnout has no plugin-owned resource — only components).
 
 use bevy::prelude::*;
 
 use super::{
     super::system::{
-        BurnoutDamageBoost, BurnoutHeat, config::BurnoutConfig, register,
-        update_heat::BurnoutSpeedBoost,
+        BurnoutDamageBoost, BurnoutHeat, config::BurnoutConfig, update_heat::BurnoutSpeedBoost,
+        wire,
     },
     helpers::{
         build_burnout_app, build_burnout_app_in_chip_selecting, build_burnout_app_no_config,
@@ -105,7 +105,7 @@ fn register_wires_on_bump_gated_on_active_and_playing() {
     assert_eq!(
         read_damage_boost_multiplier(&app, bolt),
         Some(4.0),
-        "on_bump must run via register → boost inserted"
+        "on_bump must run via wire → boost inserted"
     );
 }
 
@@ -200,7 +200,7 @@ fn register_wires_amplify_gated_on_active_and_playing() {
     tick(&mut app);
 
     let msgs = collected_burnout_damage(&app);
-    assert_eq!(msgs.len(), 1, "amplify must run via register");
+    assert_eq!(msgs.len(), 1, "amplify must run via wire");
 }
 
 // ── H7a — amplify gated OFF when Burnout NOT active ────────────────────────-
@@ -389,7 +389,7 @@ fn register_schedule_ticks_cleanly_with_no_messages_no_entities() {
     );
 }
 
-// ── H13 — register does not panic when BurnoutConfig absent ────────────────-
+// ── H13 — wire does not panic when BurnoutConfig absent ────────────────-
 
 #[test]
 fn register_does_not_panic_when_config_absent() {
@@ -402,7 +402,7 @@ fn register_does_not_panic_when_config_absent() {
 
     assert!(
         app.world().get_resource::<BurnoutConfig>().is_none(),
-        "register must not side-effect-insert BurnoutConfig"
+        "wire must not side-effect-insert BurnoutConfig"
     );
     assert!(
         collected_burnout_damage(&app).is_empty(),
@@ -415,7 +415,7 @@ fn register_does_not_panic_when_config_absent() {
     );
 }
 
-// ── H14 — register does NOT init any resources (plugin owns init) ──────────-
+// ── H14 — wire does NOT init any resources (plugin owns init) ──────────-
 
 #[test]
 fn register_does_not_init_any_burnout_resources() {
@@ -429,11 +429,11 @@ fn register_does_not_init_any_burnout_resources() {
         .with_message::<BoltImpactCell>()
         .build();
 
-    register(&mut app);
+    wire(&mut app);
 
     assert!(
         app.world().get_resource::<BurnoutConfig>().is_none(),
-        "register must NOT side-effect-insert BurnoutConfig — \
+        "wire must NOT side-effect-insert BurnoutConfig — \
          Burnout uses only components, not plugin-owned resources"
     );
 }

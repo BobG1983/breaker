@@ -1,7 +1,7 @@
 //! Group B — `drift_update_wind` system.
 //!
 //! Every test in this group wires ONLY `drift_update_wind` via
-//! `wire_update_wind_only(&mut app)`. This bypasses the `register`-installed
+//! `wire_update_wind_only(&mut app)`. This bypasses the `wire`-installed
 //! run conditions so the system runs unconditionally.
 
 use std::time::Duration;

@@ -12,7 +12,7 @@ use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Velocity2D;
 
 use super::{
-    super::system::{DriftWind, register as drift_register},
+    super::system::{DriftWind, wire as drift_register},
     helpers::{
         add_drift_stacks, canonical_config, install_drift_config, install_drift_wind, spawn_bolt,
         test_app_playing, tick_with_dt,
@@ -25,10 +25,10 @@ use crate::{
     effect_v3::{effects::SpeedBoostConfig, stacking::EffectStack},
     mutators::hazards::{
         definition::HazardKind,
-        haste::{register as haste_register, system::HasteConfig},
+        haste::{system::HasteConfig, wire as haste_register},
         overcharge::{
-            register as overcharge_register,
             system::{OverchargeConfig, OverchargeKillCount},
+            wire as overcharge_register,
         },
         resources::ActiveHazards,
     },

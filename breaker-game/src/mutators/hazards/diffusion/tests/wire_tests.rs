@@ -1,11 +1,11 @@
-//! Section C — register (no-op / inert).
+//! Section C — wire (no-op / inert).
 
 use bevy::prelude::*;
 
 use super::{super::system::*, helpers::*};
 use crate::{mutators::hazards::resources::ActiveHazards, prelude::*};
 
-// Behavior 21 — register does NOT emit any DamageDealt<Cell> messages.
+// Behavior 21 — wire does NOT emit any DamageDealt<Cell> messages.
 #[test]
 fn register_does_not_emit_damage_dealt_cell_messages() {
     let mut app = TestAppBuilder::new()
@@ -31,7 +31,7 @@ fn register_does_not_emit_damage_dealt_cell_messages() {
         KilledBy { killer: None },
     ));
 
-    register(&mut app);
+    wire(&mut app);
     tick(&mut app);
 
     let collector = app
@@ -40,20 +40,20 @@ fn register_does_not_emit_damage_dealt_cell_messages() {
     assert_eq!(
         collector.0.len(),
         0,
-        "register must not schedule any system that writes DamageDealt<Cell>, got {}",
+        "wire must not schedule any system that writes DamageDealt<Cell>, got {}",
         collector.0.len()
     );
 }
 
-// Behavior 22 — register does not panic when DiffusionConfig is absent.
+// Behavior 22 — wire does not panic when DiffusionConfig is absent.
 #[test]
 fn register_does_not_panic_without_diffusion_config() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     tick(&mut app);
 }
 
-// Behavior 23 — register does not panic when Diffusion is not active.
+// Behavior 23 — wire does not panic when Diffusion is not active.
 //
 // The diffusion systems are gated on `hazard_active(HazardKind::Diffusion)`,
 // which requires `ActiveHazards` to exist as a resource. With zero stacks,
@@ -67,24 +67,24 @@ fn register_does_not_panic_when_diffusion_inactive() {
         .with_message::<DamageDealt<Cell>>()
         .build();
 
-    register(&mut app);
+    wire(&mut app);
     tick(&mut app);
 }
 
 // ════════════════════════════════════════════════════════════════════
-// W2 Behaviors 53, 56 — diffusion register schedule placement + ordering
+// W2 Behaviors 53, 56 — diffusion wire schedule placement + ordering
 // ════════════════════════════════════════════════════════════════════
 
 use std::marker::PhantomData;
 
 use crate::mutators::hazards::definition::HazardKind;
 
-// ── W2 Behavior 53: register schedules reduce_primary in MutateDamage +
+// ── W2 Behavior 53: wire schedules reduce_primary in MutateDamage +
 //     emit_rings in PostApplyDamage ──
 
 #[test]
 fn register_wires_systems_into_dmg_sets() {
-    // After register(app) + 1 tick with Diffusion active + primary msg,
+    // After wire(app) + 1 tick with Diffusion active + primary msg,
     // msg.amount must be reduced (proves reduce_primary ran in MutateDamage).
     let mut app = TestAppBuilder::new()
         .with_state_hierarchy()
@@ -98,7 +98,7 @@ fn register_wires_systems_into_dmg_sets() {
     app.world_mut()
         .resource_mut::<ActiveHazards>()
         .add_stack(HazardKind::Diffusion);
-    register(&mut app);
+    wire(&mut app);
 
     let c0 = app
         .world_mut()
@@ -133,11 +133,11 @@ fn register_wires_systems_into_dmg_sets() {
 
     tick(&mut app);
 
-    // Primary reduced AND ring emitted — proves both register-wired systems ran.
+    // Primary reduced AND ring emitted — proves both wire-wired systems ran.
     let c0_hp = app.world().get::<Hp>(c0).expect("Hp").current;
     assert!(
         c0_hp < 100.0,
-        "C0 HP must be reduced: register must schedule reduce_primary in MutateDamage"
+        "C0 HP must be reduced: wire must schedule reduce_primary in MutateDamage"
     );
 }
 

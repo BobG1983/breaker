@@ -18,7 +18,7 @@ use bevy::{ecs::message::Messages, prelude::*};
 use rantzsoft_spatial2d::components::{GlobalPosition2D, Spatial2D};
 
 use super::{
-    super::system::{IronCurtainConfig, register},
+    super::system::{IronCurtainConfig, wire},
     helpers::{amount_for_target, collected_iron_curtain_damage},
 };
 use crate::{
@@ -59,7 +59,7 @@ fn iron_curtain_scheduling_app() -> App {
                 falloff_start:   1000.0,
             },
         });
-    register(&mut app);
+    wire(&mut app);
     app
 }
 

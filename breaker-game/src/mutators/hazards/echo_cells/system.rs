@@ -113,7 +113,7 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
 /// tracker spawns new `PendingGhost` via deferred commands; the ghost
 /// spawner reads existing `PendingGhost` entities), so explicit
 /// `.chain()` ordering is no longer required.
-pub(crate) fn register(app: &mut App) {
+pub(crate) fn wire(app: &mut App) {
     app.add_systems(FixedUpdate, echo_cells_track_deaths)
         .add_systems(
             FixedUpdate,

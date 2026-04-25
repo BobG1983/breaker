@@ -4,7 +4,7 @@
 //! - A: `HasteConfig::multiplier` formula (pure unit)
 //! - B: `haste_apply_speed` on bolts without an `EffectStack`
 //! - C: `haste_apply_speed` reconciliation on existing stacks
-//! - D: `register` — scheduling, run-condition gates
+//! - D: `wire` — scheduling, run-condition gates
 //! - E: `activate` lifecycle
 //! - F: No-config guard
 //! - G: Cross-hazard / chip synergy pinning
@@ -16,5 +16,5 @@ mod apply_fresh;
 mod formula;
 mod no_config;
 mod reconcile;
-mod register;
 mod synergy;
+mod wire;

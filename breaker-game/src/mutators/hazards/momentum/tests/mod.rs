@@ -5,6 +5,6 @@ mod attach_ceiling;
 mod config_formulas;
 mod heal_on_nonlethal;
 mod heal_pipeline;
-mod register;
 mod ron_asset;
 mod split_check;
+mod wire;

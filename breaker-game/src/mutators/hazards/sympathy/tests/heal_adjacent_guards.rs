@@ -2,12 +2,12 @@
 //!
 //! Pins that the heal-emit system is inert when the config, stacks, or damage
 //! input preconditions are not met. Run-if gates (`hazard_active(Sympathy)` +
-//! `in_state(NodeState::Playing)`) are covered via `register`.
+//! `in_state(NodeState::Playing)`) are covered via `wire`.
 
 use bevy::prelude::*;
 
 use super::{
-    super::system::{register, sympathy_heal_adjacent},
+    super::system::{sympathy_heal_adjacent, wire},
     helpers::{
         add_hazard_stacks, add_sympathy_stacks, canonical_sympathy_config, heal_collector_len,
         install_sympathy_config, run_fixed_update, spawn_cell_at_default, test_app_not_playing,
@@ -79,7 +79,7 @@ fn no_heal_when_no_damage_messages() {
 #[test]
 fn hazard_active_gate_blocks_when_different_hazard_stacked() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_sympathy_config(&mut app, canonical_sympathy_config());
     add_hazard_stacks(&mut app, HazardKind::Volatility, 1);
     assert_eq!(
@@ -108,7 +108,7 @@ fn hazard_active_gate_blocks_when_different_hazard_stacked() {
 #[test]
 fn in_state_playing_gate_blocks_when_not_playing() {
     let mut app = test_app_not_playing();
-    register(&mut app);
+    wire(&mut app);
     install_sympathy_config(&mut app, canonical_sympathy_config());
     add_sympathy_stacks(&mut app, 1);
 

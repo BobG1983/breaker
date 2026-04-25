@@ -22,7 +22,7 @@ use bevy::{
 use rantzsoft_stateflow::cleanup_on_exit;
 
 use super::super::system::{
-    AfterimageConfig, PhantomBreaker, PhantomBreakerLifetime, activate, register,
+    AfterimageConfig, PhantomBreaker, PhantomBreakerLifetime, activate, wire,
 };
 use crate::{
     bolt::components::BoltBaseDamage,
@@ -53,7 +53,7 @@ use crate::{
 ///
 /// State hierarchy in `NodeState::Playing`, `ActiveProtocols` initialised,
 /// reader messages registered, `BumpPerformed` / `BoltImpactCell` message
-/// capture installed, canonical `AfterimageConfig` inserted, and `register`
+/// capture installed, canonical `AfterimageConfig` inserted, and `wire`
 /// called. Also wires `cleanup_on_exit::<NodeState>` on `OnEnter(Teardown)`
 /// so Group J transition tests see the stateflow cleanup handler despawn
 /// afterimage-spawned entities.
@@ -78,7 +78,7 @@ pub(super) fn build_afterimage_app() -> App {
     // Wire the REUSED `tick_phantom_lifetime` directly — afterimage
     // delegates phantom-bolt lifetime tick-down to this system rather
     // than re-registering it. The production wiring is
-    // `SpawnPhantomConfig::register` (via `EffectV3Plugin`); the test
+    // `SpawnPhantomConfig::wire` (via `EffectV3Plugin`); the test
     // harness mirrors the OBSERVABLE behaviour by adding the system
     // straight into `FixedUpdate` — no sets, so the spec's
     // `spawn_phantom_bolt.before(EffectV3Systems::Tick)` edge (I14)
@@ -87,7 +87,7 @@ pub(super) fn build_afterimage_app() -> App {
         FixedUpdate,
         tick_phantom_lifetime.in_set(EffectV3Systems::Tick),
     );
-    register(&mut app);
+    wire(&mut app);
     app
 }
 
@@ -111,7 +111,7 @@ pub(super) fn build_afterimage_app_no_config() -> App {
         FixedUpdate,
         tick_phantom_lifetime.in_set(EffectV3Systems::Tick),
     );
-    register(&mut app);
+    wire(&mut app);
     app
 }
 
@@ -137,7 +137,7 @@ pub(super) fn build_afterimage_app_in_chip_selecting() -> App {
         FixedUpdate,
         tick_phantom_lifetime.in_set(EffectV3Systems::Tick),
     );
-    register(&mut app);
+    wire(&mut app);
     app
 }
 

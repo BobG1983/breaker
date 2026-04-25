@@ -1,6 +1,6 @@
-//! Group H — `register` wiring + run-condition gates (Behaviors 36–52).
+//! Group H — `wire` wiring + run-condition gates (Behaviors 36–52).
 //!
-//! Pins that `register`-wired systems run under the correct schedules, gated
+//! Pins that `wire`-wired systems run under the correct schedules, gated
 //! by `protocol_active(DebtCollector)` + `in_state(NodeState::Playing)` on the
 //! three reader systems, that `debt_collector_attach_stack` is wired with the
 //! `protocol_active` run-if ONLY (no `NodeState` gate), that cleanup runs on
@@ -22,7 +22,7 @@ use crate::{
     breaker::messages::BumpGrade, mutators::protocols::definition::ProtocolKind, prelude::*,
 };
 
-// ── Behavior 36 — register wires on_bump gated on active + Playing ─────────-
+// ── Behavior 36 — wire wires on_bump gated on active + Playing ─────────-
 
 #[test]
 fn register_wires_on_bump_gated_on_active_and_playing() {
@@ -36,7 +36,7 @@ fn register_wires_on_bump_gated_on_active_and_playing() {
     let stack = app.world().get::<DebtStack>(bolt).expect("stack retained");
     assert!(
         (stack.0 - 0.5).abs() < f32::EPSILON,
-        "on_bump must run via register; stack expected 0.5, got {}",
+        "on_bump must run via wire; stack expected 0.5, got {}",
         stack.0
     );
 }
@@ -79,7 +79,7 @@ fn on_bump_gated_off_when_node_state_not_playing() {
     );
 }
 
-// ── Behavior 39 — register wires on_impact gated on active + Playing ───────-
+// ── Behavior 39 — wire wires on_impact gated on active + Playing ───────-
 
 #[test]
 fn register_wires_on_impact_gated_on_active_and_playing() {
@@ -164,7 +164,7 @@ fn on_impact_gated_off_when_node_state_not_playing() {
     );
 }
 
-// ── Behavior 42 — register wires on_bolt_lost gated on active + Playing ────-
+// ── Behavior 42 — wire wires on_bolt_lost gated on active + Playing ────-
 
 #[test]
 fn register_wires_on_bolt_lost_gated_on_active_and_playing() {
@@ -179,7 +179,7 @@ fn register_wires_on_bolt_lost_gated_on_active_and_playing() {
     let stack = app.world().get::<DebtStack>(bolt).expect("stack retained");
     assert!(
         (stack.0 - 0.0).abs() < f32::EPSILON,
-        "on_bolt_lost must reset stack via register; got {}",
+        "on_bolt_lost must reset stack via wire; got {}",
         stack.0
     );
     assert!(
@@ -242,7 +242,7 @@ fn on_bolt_lost_gated_off_when_node_state_not_playing() {
     assert!((cashout.0 - 0.5).abs() < f32::EPSILON);
 }
 
-// ── Behavior 45 — register wires attach_stack gated on active only ─────────-
+// ── Behavior 45 — wire wires attach_stack gated on active only ─────────-
 
 #[test]
 fn register_wires_attach_stack_gated_on_active_only() {
@@ -280,7 +280,7 @@ fn attach_stack_gated_off_when_debt_collector_not_active() {
     );
 }
 
-// ── Behavior 47 — register wires cleanup_node unconditionally on OnExit ────-
+// ── Behavior 47 — wire wires cleanup_node unconditionally on OnExit ────-
 
 #[test]
 fn register_wires_cleanup_on_exit_node_state_playing() {
@@ -365,7 +365,7 @@ fn register_wires_on_bolt_lost_to_consume_bolt_lost_same_tick() {
     assert!(app.world().get::<DebtCashOut>(bolt).is_none());
 }
 
-// ── Behavior 51 — register does not panic when resources absent ────────────-
+// ── Behavior 51 — wire does not panic when resources absent ────────────-
 
 #[test]
 fn register_does_not_panic_when_config_absent() {
@@ -381,7 +381,7 @@ fn register_does_not_panic_when_config_absent() {
         app.world()
             .get_resource::<super::super::system::DebtCollectorConfig>()
             .is_none(),
-        "register must not side-effect-insert DebtCollectorConfig"
+        "wire must not side-effect-insert DebtCollectorConfig"
     );
     assert!(
         collected_bonus_damage(&app).is_empty(),

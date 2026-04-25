@@ -9,7 +9,7 @@ use bevy::prelude::*;
 
 use super::{
     super::system::{
-        MOMENTUM_CELL_HEIGHT, MOMENTUM_CELL_WIDTH, MomentumConfig, momentum_split_check, register,
+        MOMENTUM_CELL_HEIGHT, MOMENTUM_CELL_WIDTH, MomentumConfig, momentum_split_check, wire,
     },
     helpers::{
         add_momentum_stacks, all_cells, approx_eq_vec2, canonical_momentum_config, cell_count,
@@ -615,12 +615,12 @@ fn new_cells_do_not_split_on_same_tick() {
     assert_eq!(cell_count(&mut app), 3);
 }
 
-// ── Behavior 49 — register gate blocks split_check when 0 stacks ────────────
+// ── Behavior 49 — wire gate blocks split_check when 0 stacks ────────────
 
 #[test]
 fn register_gate_blocks_split_when_zero_stacks() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_momentum_config(&mut app, canonical_momentum_config());
     // 0 stacks.
 
@@ -640,7 +640,7 @@ fn register_gate_blocks_split_when_zero_stacks() {
 #[test]
 fn register_gate_positive_control_one_stack_does_split() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_momentum_config(&mut app, canonical_momentum_config());
     add_momentum_stacks(&mut app, 1);
 

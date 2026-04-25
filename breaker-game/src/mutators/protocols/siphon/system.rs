@@ -8,7 +8,7 @@
 //! - [`SiphonStreak`] — per-run kill-streak tracker. Cleared by
 //!   [`siphon_cleanup_node`] on `OnExit(NodeState::Playing)`.
 //! - [`activate`] — parses `ProtocolTuning::Siphon`, inserts `SiphonConfig`.
-//! - [`register`] — wires the three runtime systems with the design-doc
+//! - [`wire`] — wires the three runtime systems with the design-doc
 //!   schedules, run-ifs, and ordering.
 //! - [`siphon_on_cell_destroyed`] — consumes `Destroyed<Cell>`, updates
 //!   `SiphonStreak`, emits `ReverseTimePenalty` on non-first kills.
@@ -79,7 +79,7 @@ pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
     });
 }
 
-// ── register ────────────────────────────────────────────────────────────────
+// ── wire ────────────────────────────────────────────────────────────────
 
 /// Registers Siphon's runtime systems.
 ///
@@ -96,7 +96,7 @@ pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
 /// NOTE: `SiphonStreak` is NOT inserted here; the plugin owns
 /// `init_resource::<SiphonStreak>()`. This keeps the `Option<ResMut<...>>`
 /// guard path exercisable by isolated harness configurations.
-pub(crate) fn register(app: &mut App) {
+pub(crate) fn wire(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         siphon_tick_streak

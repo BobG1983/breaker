@@ -234,13 +234,13 @@ fn duplicate_victim_positions_produce_six_distinct_entities() {
     assert_eq!(entities.len(), 6);
 }
 
-// ── register integration ────────────────────────────────────────────
+// ── wire integration ────────────────────────────────────────────
 
-// Behavior 24 — full register path spawns debris under active gate.
+// Behavior 24 — full wire path spawns debris under active gate.
 #[test]
 fn register_with_config_and_stack_spawns_debris_on_death() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_fracture_config(&mut app, canonical_config());
     add_fracture_stacks(&mut app, 1);
 
@@ -263,7 +263,7 @@ fn register_with_config_and_stack_spawns_debris_on_death() {
 #[test]
 fn register_second_tick_without_message_spawns_no_new_debris() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_fracture_config(&mut app, canonical_config());
     add_fracture_stacks(&mut app, 1);
 

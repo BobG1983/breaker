@@ -102,7 +102,7 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
 /// `overcharge_apply_speed`. No `DmgSystems` ordering —
 /// Overcharge operates on the shared effect system, not the heal /
 /// damage pipeline.
-pub(crate) fn register(app: &mut App) {
+pub(crate) fn wire(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         overcharge_apply_speed

@@ -21,7 +21,7 @@ use bevy::{
     prelude::*,
 };
 
-use super::super::system::{SiphonConfig, SiphonStreak, activate, register};
+use super::super::system::{SiphonConfig, SiphonStreak, activate, wire};
 use crate::{
     mutators::protocols::{
         definition::{ProtocolDefinition, ProtocolKind, ProtocolTuning},
@@ -36,7 +36,7 @@ use crate::{
 /// Default Siphon test app. State hierarchy in `NodeState::Playing`,
 /// `ActiveProtocols` + `SiphonStreak` initialised, `Destroyed<Cell>`
 /// registered, `ReverseTimePenalty` capture installed, `SiphonConfig`
-/// inserted at the canonical values, and `register` called.
+/// inserted at the canonical values, and `wire` called.
 pub(super) fn build_siphon_app() -> App {
     let mut app = TestAppBuilder::new()
         .with_state_hierarchy()
@@ -47,7 +47,7 @@ pub(super) fn build_siphon_app() -> App {
         .with_message_capture::<ReverseTimePenalty>()
         .build();
     app.world_mut().insert_resource(canonical_siphon_config());
-    register(&mut app);
+    wire(&mut app);
     app
 }
 
@@ -62,7 +62,7 @@ pub(super) fn build_siphon_app_no_streak() -> App {
         .with_message_capture::<ReverseTimePenalty>()
         .build();
     app.world_mut().insert_resource(canonical_siphon_config());
-    register(&mut app);
+    wire(&mut app);
     app
 }
 
@@ -77,7 +77,7 @@ pub(super) fn build_siphon_app_no_config() -> App {
         .with_message::<Destroyed<Cell>>()
         .with_message_capture::<ReverseTimePenalty>()
         .build();
-    register(&mut app);
+    wire(&mut app);
     app
 }
 

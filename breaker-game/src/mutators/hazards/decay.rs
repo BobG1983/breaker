@@ -49,7 +49,7 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
     });
 }
 
-pub(crate) fn register(app: &mut App) {
+pub(crate) fn wire(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         decay_tick

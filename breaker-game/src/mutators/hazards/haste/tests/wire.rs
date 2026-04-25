@@ -1,13 +1,13 @@
-//! Group D — `register` wiring: scheduling, run-condition gating, state
+//! Group D — `wire` wiring: scheduling, run-condition gating, state
 //! gating, and the stack-0 persistence pin.
 //!
-//! These use `register(&mut app)` to test the wiring, NOT hand-wired
+//! These use `wire(&mut app)` to test the wiring, NOT hand-wired
 //! systems.
 
 use ordered_float::OrderedFloat;
 
 use super::{
-    super::system::{HasteConfig, register},
+    super::system::{HasteConfig, wire},
     helpers::{
         add_haste_stacks, canonical_config, install_haste_config, run_fixed_update, spawn_bolt,
         spawn_bolt_with_stack, test_app_not_playing, test_app_playing,
@@ -28,12 +28,12 @@ fn chip_overclock() -> SourceId {
     SourceId::chip("Overclock").rarity(Rarity::Common).build()
 }
 
-// ── Behavior 16 — register-wired system applies Haste in FixedUpdate ────
+// ── Behavior 16 — wire-wired system applies Haste in FixedUpdate ────
 
 #[test]
 fn register_wired_system_applies_haste_entry_when_both_gates_open() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_haste_config(
         &mut app,
         HasteConfig {
@@ -49,7 +49,7 @@ fn register_wired_system_applies_haste_entry_when_both_gates_open() {
     let stack = app
         .world()
         .get::<EffectStack<SpeedBoostConfig>>(bolt)
-        .expect("register-wired system must apply Haste in FixedUpdate");
+        .expect("wire-wired system must apply Haste in FixedUpdate");
     assert_eq!(stack.len(), 1);
     assert!((stack.aggregate() - 1.20).abs() < 1e-6);
 }
@@ -58,7 +58,7 @@ fn register_wired_system_applies_haste_entry_when_both_gates_open() {
 fn register_wired_system_is_idempotent_across_two_ticks() {
     // Edge: a second consecutive tick leaves len == 1 and aggregate == 1.20.
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_haste_config(&mut app, canonical_config());
     add_haste_stacks(&mut app, 1);
     let bolt = spawn_bolt(&mut app);
@@ -79,7 +79,7 @@ fn register_wired_system_is_idempotent_across_two_ticks() {
 #[test]
 fn system_skipped_when_haste_run_condition_false() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_haste_config(&mut app, canonical_config());
     // Stack a DIFFERENT hazard — Haste remains inactive.
     for _ in 0..3 {
@@ -110,7 +110,7 @@ fn system_runs_once_haste_stack_added_after_initial_skip() {
     // Edge: with 0 Haste stacks, no stack inserted. Add 1 Haste stack and
     // tick again — NOW the stack appears with aggregate == 1.20.
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_haste_config(&mut app, canonical_config());
     for _ in 0..3 {
         app.world_mut()
@@ -142,7 +142,7 @@ fn system_runs_once_haste_stack_added_after_initial_skip() {
 #[test]
 fn system_skipped_when_not_in_node_playing() {
     let mut app = test_app_not_playing();
-    register(&mut app);
+    wire(&mut app);
     install_haste_config(&mut app, canonical_config());
     add_haste_stacks(&mut app, 1);
     let bolt = spawn_bolt(&mut app);
@@ -165,7 +165,7 @@ fn register_wired_zero_stacks_empty_active_does_not_insert_stack() {
     // (no other hazard stacks either). Pins that empty ActiveHazards
     // gates the system off just like a zero-stack Haste entry does.
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_haste_config(&mut app, canonical_config());
     // Zero stacks of any hazard.
     let bolt = spawn_bolt(&mut app);
@@ -186,7 +186,7 @@ fn register_wired_zero_stacks_stays_off_across_five_ticks() {
     // Guards against a bug where accumulated empty-gate ticks eventually
     // produce a false stack insertion.
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_haste_config(&mut app, canonical_config());
     let bolt = spawn_bolt(&mut app);
 
@@ -212,7 +212,7 @@ fn register_wired_zero_stacks_stays_off_across_five_ticks() {
 #[test]
 fn stack_zero_preserves_pre_existing_haste_source_entry() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_haste_config(&mut app, canonical_config());
     // Zero current Haste stacks — no `add_haste_stacks` call.
 
@@ -244,7 +244,7 @@ fn stack_zero_preserves_chip_and_pre_existing_haste_entries() {
     // After the tick: len == 2, aggregate == 1.40 * 1.5 = 2.10. The
     // system simply doesn't run — both entries are preserved.
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_haste_config(&mut app, canonical_config());
 
     let mut seed = EffectStack::<SpeedBoostConfig>::default();

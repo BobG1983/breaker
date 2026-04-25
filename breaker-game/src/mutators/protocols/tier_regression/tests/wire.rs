@@ -1,6 +1,6 @@
-//! Group C — `register` wiring + run-condition gating (Behaviors 21–23, 23a).
+//! Group C — `wire` wiring + run-condition gating (Behaviors 21–23, 23a).
 //!
-//! Pins that `register` wires `apply_tier_regression` on
+//! Pins that `wire` wires `apply_tier_regression` on
 //! `OnEnter(RunState::Node)` with `.after(NodeSystems::AdvanceNode)` and both
 //! run-conditions (`protocol_active(ProtocolKind::TierRegression)` +
 //! `resource_exists::<TierRegressionPending>`), and verifies the ordering

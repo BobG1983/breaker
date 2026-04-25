@@ -11,6 +11,6 @@ mod activate;
 mod count;
 mod persistence;
 mod plugin;
-mod register;
 mod ron_asset;
 mod split;
+mod wire;

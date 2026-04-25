@@ -13,4 +13,4 @@ pub mod system;
 mod tests;
 
 pub use system::SiphonStreak;
-pub(crate) use system::{activate, register};
+pub(crate) use system::{activate, wire};

@@ -6,7 +6,7 @@
 
 use bevy::prelude::*;
 
-use super::super::system::{register, tether_emit_partner};
+use super::super::system::{tether_emit_partner, wire};
 use crate::{mutators::hazards::resources::ActiveHazards, prelude::*};
 
 fn tether_scheduling_app() -> App {
@@ -16,7 +16,7 @@ fn tether_scheduling_app() -> App {
         .with_resource::<ActiveHazards>()
         .with_effects_pipeline()
         .build();
-    register(&mut app);
+    wire(&mut app);
     app
 }
 

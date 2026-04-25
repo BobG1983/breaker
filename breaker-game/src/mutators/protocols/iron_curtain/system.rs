@@ -10,7 +10,7 @@
 //!   identify Iron Curtain wave damage.
 //! - [`activate`] — parses `ProtocolTuning::IronCurtain`, inserts
 //!   [`IronCurtainConfig`].
-//! - [`register`] — wires [`iron_curtain_on_bolt_lost`] with the correct
+//! - [`wire`] — wires [`iron_curtain_on_bolt_lost`] with the correct
 //!   schedule, run-ifs, and ordering.
 //! - One runtime system: [`iron_curtain_on_bolt_lost`].
 
@@ -67,7 +67,7 @@ pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
     });
 }
 
-// ── register ────────────────────────────────────────────────────────────────
+// ── wire ────────────────────────────────────────────────────────────────
 
 /// Registers Iron Curtain's runtime system with the correct schedule,
 /// run-ifs, and ordering.
@@ -80,7 +80,7 @@ pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
 ///   suppress the system but not advance its `MessageReader` cursor, leaving
 ///   buffered `BoltLost` messages available for retroactive consumption when
 ///   the protocol activates on a later frame.
-pub(crate) fn register(app: &mut App) {
+pub(crate) fn wire(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         iron_curtain_on_bolt_lost

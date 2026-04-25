@@ -1,13 +1,13 @@
-//! Group F — `register`-wired integration and gating.
+//! Group F — `wire`-wired integration and gating.
 //!
-//! These use `register(&mut app)` to test the wiring end-to-end, NOT
+//! These use `wire(&mut app)` to test the wiring end-to-end, NOT
 //! hand-wired systems. They exercise the full three-system chain
 //! (`count_kills → reset_on_bump → apply_speed`) in one `FixedUpdate` tick.
 
 use ordered_float::OrderedFloat;
 
 use super::{
-    super::system::{OverchargeKillCount, register},
+    super::system::{OverchargeKillCount, wire},
     helpers::{
         add_overcharge_stacks, canonical_config, install_overcharge_config, overcharge_entries,
         run_fixed_update, spawn_bolt, spawn_bolt_with_stack, spawn_cell, test_app_not_playing,
@@ -34,7 +34,7 @@ fn chip_overclock() -> SourceId {
 #[test]
 fn full_chain_kill_counts_and_applies_speed_in_one_tick() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_overcharge_config(&mut app, canonical_config());
     add_overcharge_stacks(&mut app, 1);
     let bolt = spawn_bolt(&mut app);
@@ -60,7 +60,7 @@ fn full_chain_is_idempotent_across_quiescent_tick() {
     // Edge: a second tick with NO new messages leaves count at 1,
     // stack len at 1, and aggregate at 1.05.
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_overcharge_config(&mut app, canonical_config());
     add_overcharge_stacks(&mut app, 1);
     let bolt = spawn_bolt(&mut app);
@@ -85,7 +85,7 @@ fn full_chain_is_idempotent_across_quiescent_tick() {
 #[test]
 fn full_chain_bump_after_kill_resets_count_and_removes_entry() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_overcharge_config(&mut app, canonical_config());
     add_overcharge_stacks(&mut app, 1);
     let bolt = spawn_bolt(&mut app);
@@ -109,11 +109,11 @@ fn full_chain_bump_after_kill_resets_count_and_removes_entry() {
 #[test]
 fn full_chain_intra_tick_ordering_kill_reset_apply() {
     // Edge: in one tick, a Destroyed<Cell> + a BumpPerformed queue up.
-    // Per `register` ordering count → reset → apply: count becomes 1,
+    // Per `wire` ordering count → reset → apply: count becomes 1,
     // reset sets to 0, apply sees zero kills and inserts no entry.
     // Final: count == 0, stack len == 0.
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_overcharge_config(&mut app, canonical_config());
     add_overcharge_stacks(&mut app, 1);
     let bolt = spawn_bolt(&mut app);
@@ -141,7 +141,7 @@ fn full_chain_intra_tick_ordering_kill_reset_apply() {
 #[test]
 fn state_gate_suppresses_all_three_systems() {
     let mut app = test_app_not_playing();
-    register(&mut app);
+    wire(&mut app);
     install_overcharge_config(&mut app, canonical_config());
     add_overcharge_stacks(&mut app, 1);
     let bolt = spawn_bolt(&mut app);
@@ -163,7 +163,7 @@ fn state_gate_also_suppresses_reset_on_bump() {
     // Edge: with a bump in the same suppressed tick, still no components
     // attached — the reset_on_bump system is also gated off.
     let mut app = test_app_not_playing();
-    register(&mut app);
+    wire(&mut app);
     install_overcharge_config(&mut app, canonical_config());
     add_overcharge_stacks(&mut app, 1);
     let bolt = spawn_bolt(&mut app);
@@ -186,7 +186,7 @@ fn state_gate_also_suppresses_reset_on_bump() {
 #[test]
 fn hazard_inactive_gate_suppresses_all_three_systems() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_overcharge_config(&mut app, canonical_config());
     // Stack Decay instead, to confirm it's the per-kind gate that fires.
     for _ in 0..3 {
@@ -225,7 +225,7 @@ fn hazard_inactive_gate_toggles_on_once_overcharge_stack_added() {
     // by `pregate_messages_drain_cleanly_before_gate_opens` below.
     // Here we isolate the gate toggle with no pre-gate writes.
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_overcharge_config(&mut app, canonical_config());
     for _ in 0..3 {
         app.world_mut()
@@ -267,7 +267,7 @@ fn pregate_messages_drain_cleanly_before_gate_opens() {
     // must NOT be consumed → no OverchargeKillCount component inserted,
     // and no Overcharge speed-stack entry appears.
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_overcharge_config(&mut app, canonical_config());
     for _ in 0..3 {
         app.world_mut()
@@ -312,7 +312,7 @@ fn pregate_messages_drain_cleanly_before_gate_opens() {
 #[test]
 fn empty_active_hazards_suppresses_all_three_systems() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_overcharge_config(&mut app, canonical_config());
     // ActiveHazards left untouched — no stacks of any kind.
     let bolt = spawn_bolt(&mut app);
@@ -334,7 +334,7 @@ fn empty_active_hazards_suppresses_all_three_systems() {
 fn empty_active_hazards_never_inserts_across_five_ticks() {
     // Edge: five consecutive empty-gate ticks still insert nothing.
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_overcharge_config(&mut app, canonical_config());
     let bolt = spawn_bolt(&mut app);
 
@@ -360,7 +360,7 @@ fn empty_active_hazards_never_inserts_across_five_ticks() {
 #[test]
 fn stack_zero_preserves_pre_existing_overcharge_entry() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_overcharge_config(&mut app, canonical_config());
     // Zero Overcharge stacks.
     let mut seed = EffectStack::<SpeedBoostConfig>::default();
@@ -389,7 +389,7 @@ fn stack_zero_preserves_pre_existing_overcharge_entry() {
 fn stack_zero_preserves_chip_and_pre_existing_overcharge_entries() {
     // Edge: chip entry + stale Overcharge entry both persist.
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_overcharge_config(&mut app, canonical_config());
 
     let mut seed = EffectStack::<SpeedBoostConfig>::default();

@@ -6,7 +6,7 @@ use bevy::prelude::*;
 /// activation time.
 ///
 /// NOTE: `PartialEq` is required by Group A5 (config equality comparisons in
-/// tests) and by the register-quiet-tick stability assertions.
+/// tests) and by the wire-quiet-tick stability assertions.
 #[derive(Resource, Debug, Clone, Copy, PartialEq)]
 pub(crate) struct AfterimageConfig {
     /// Seconds a `PhantomBreaker` entity exists before its lifetime tick

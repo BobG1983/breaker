@@ -69,7 +69,7 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
 /// does NOT advance the reader cursor, so messages buffered during
 /// gated-off frames would get retroactively consumed the tick the gate
 /// opens.
-pub(crate) fn register(app: &mut App) {
+pub(crate) fn wire(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         cascade_heal_on_death

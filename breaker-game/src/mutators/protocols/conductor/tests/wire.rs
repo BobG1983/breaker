@@ -1,4 +1,4 @@
-//! Group G — `register` wiring + run-condition gates (Behaviors 14–19).
+//! Group G — `wire` wiring + run-condition gates (Behaviors 14–19).
 //!
 //! Pins that the Conductor swap system runs only when Conductor is in
 //! `ActiveProtocols` AND the node state is `Playing`; that a `BumpPerformed`

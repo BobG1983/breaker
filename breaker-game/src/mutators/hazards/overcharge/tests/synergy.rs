@@ -6,7 +6,7 @@
 use ordered_float::OrderedFloat;
 
 use super::{
-    super::system::{OverchargeKillCount, register},
+    super::system::{OverchargeKillCount, wire},
     helpers::{
         add_overcharge_stacks, canonical_config, install_overcharge_config, overcharge_entries,
         run_fixed_update, spawn_bolt, spawn_bolt_with_stack, spawn_cell, test_app_playing,
@@ -33,7 +33,7 @@ fn chip_overclock() -> SourceId {
 #[test]
 fn two_bolts_accumulate_kills_independently() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_overcharge_config(&mut app, canonical_config());
     add_overcharge_stacks(&mut app, 1);
     let bolt_a = spawn_bolt(&mut app);
@@ -70,7 +70,7 @@ fn two_bolts_converge_to_same_multiplier_under_same_kill_count() {
     // Edge: after one more bolt_b kill in a later tick, both converge
     // to OverchargeKillCount(2) and aggregate ≈ 1.05^2.
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_overcharge_config(&mut app, canonical_config());
     add_overcharge_stacks(&mut app, 1);
     let bolt_a = spawn_bolt(&mut app);
@@ -107,7 +107,7 @@ fn two_bolts_converge_to_same_multiplier_under_same_kill_count() {
 #[test]
 fn bump_on_one_bolt_resets_only_that_bolt() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_overcharge_config(&mut app, canonical_config());
     add_overcharge_stacks(&mut app, 1);
     let bolt_a = spawn_bolt(&mut app);
@@ -143,7 +143,7 @@ fn bumps_on_both_bolts_in_same_tick_reset_both() {
     // Edge: both bolts bumped in the same tick; both drop to count 0 and
     // have zero-length stacks.
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_overcharge_config(&mut app, canonical_config());
     add_overcharge_stacks(&mut app, 1);
     let bolt_a = spawn_bolt(&mut app);
@@ -260,7 +260,7 @@ fn bumping_overcharge_stacks_updates_only_overcharge_entry_in_synergy() {
 #[test]
 fn bolt_despawn_cleans_up_without_affecting_other_bolt() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_overcharge_config(&mut app, canonical_config());
     add_overcharge_stacks(&mut app, 1);
     let bolt_a = spawn_bolt(&mut app);
@@ -294,7 +294,7 @@ fn despawned_bolt_killer_id_is_rejected_without_contamination() {
     // Edge: after despawning bolt_a, a bogus Destroyed<Cell> with the
     // stale id is filtered out; bolt_b state is unchanged.
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_overcharge_config(&mut app, canonical_config());
     add_overcharge_stacks(&mut app, 1);
     let bolt_a = spawn_bolt(&mut app);
@@ -329,7 +329,7 @@ fn despawned_bolt_killer_id_is_rejected_without_contamination() {
 #[test]
 fn full_chain_with_seeded_chip_and_haste_entries_aggregates_correctly() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_overcharge_config(&mut app, canonical_config());
     add_overcharge_stacks(&mut app, 2);
 
@@ -381,7 +381,7 @@ fn full_chain_with_seeded_entries_updates_only_overcharge_across_ticks() {
     // Edge: a second kill in a later tick updates the Overcharge entry to
     // 1.08^2; chip and haste entries keep their original multipliers.
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_overcharge_config(&mut app, canonical_config());
     add_overcharge_stacks(&mut app, 2);
 

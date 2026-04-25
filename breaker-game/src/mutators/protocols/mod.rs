@@ -59,19 +59,19 @@ pub(crate) fn activate(kind: ProtocolKind, tuning: &ProtocolTuning, commands: &m
 }
 
 /// Fan-out registration — each custom-system protocol registers its runtime
-/// systems via its own `register(app)` function.
-pub(crate) fn register(app: &mut App) {
-    debt_collector::register(app);
-    iron_curtain::register(app);
-    echo_strike::register(app);
-    siphon::register(app);
-    greed::register(app);
-    reckless_dash::register(app);
-    burnout::register(app);
-    conductor::register(app);
-    afterimage::register(app);
-    fission::register(app);
-    tier_regression::register(app);
+/// systems via its own `wire(app)` function.
+pub(crate) fn wire(app: &mut App) {
+    debt_collector::wire(app);
+    iron_curtain::wire(app);
+    echo_strike::wire(app);
+    siphon::wire(app);
+    greed::wire(app);
+    reckless_dash::wire(app);
+    burnout::wire(app);
+    conductor::wire(app);
+    afterimage::wire(app);
+    fission::wire(app);
+    tier_regression::wire(app);
 }
 
 /// Activate a protocol using the registry-held tuning. Inserts the

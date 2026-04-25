@@ -17,7 +17,7 @@ use bevy::{
 };
 
 use super::super::system::{
-    RecklessDashConfig, RecklessDashDoubledBolts, RiskyDamageBoost, activate, register,
+    RecklessDashConfig, RecklessDashDoubledBolts, RiskyDamageBoost, activate, wire,
 };
 use crate::{
     bolt::components::BoltBaseDamage,
@@ -38,7 +38,7 @@ use crate::{
 /// `ActiveProtocols` initialised, reader messages registered, `BoltLost` and
 /// `DamageDealt<Cell>` capture installed, canonical `RecklessDashConfig`
 /// inserted, `RecklessDashDoubledBolts` init'd (plugin owns init — helpers
-/// mirror the Greed / Siphon / Fission pattern), and `register` called.
+/// mirror the Greed / Siphon / Fission pattern), and `wire` called.
 ///
 /// Does NOT seed `ActiveProtocols` with Reckless Dash — tests that need the
 /// protocol active call [`seed_active_protocols_with_reckless_dash`].
@@ -56,7 +56,7 @@ pub(super) fn build_reckless_dash_app() -> App {
     app.world_mut()
         .insert_resource(canonical_reckless_dash_config());
     app.world_mut().init_resource::<RecklessDashDoubledBolts>();
-    register(&mut app);
+    wire(&mut app);
     app
 }
 
@@ -75,7 +75,7 @@ pub(super) fn build_reckless_dash_app_no_config() -> App {
         .with_message_capture::<DamageDealt<Cell>>()
         .build();
     app.world_mut().init_resource::<RecklessDashDoubledBolts>();
-    register(&mut app);
+    wire(&mut app);
     app
 }
 
@@ -96,7 +96,7 @@ pub(super) fn build_reckless_dash_app_in_chip_selecting() -> App {
     app.world_mut()
         .insert_resource(canonical_reckless_dash_config());
     app.world_mut().init_resource::<RecklessDashDoubledBolts>();
-    register(&mut app);
+    wire(&mut app);
     app
 }
 

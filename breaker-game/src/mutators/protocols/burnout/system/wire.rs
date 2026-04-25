@@ -15,7 +15,7 @@ use crate::{
     prelude::*,
 };
 
-// ── register ────────────────────────────────────────────────────────────────
+// ── wire ────────────────────────────────────────────────────────────────
 
 /// Registers Burnout's runtime systems with the correct schedules, run-ifs,
 /// and ordering.
@@ -50,7 +50,7 @@ use crate::{
 /// `OnExit(NodeState::Playing)` (no run-if):
 /// - `burnout_cleanup_node` — removes `BurnoutHeat`, `BurnoutSpeedBoost`, and
 ///   `BurnoutDamageBoost` from every entity that carries them.
-pub(crate) fn register(app: &mut App) {
+pub(crate) fn wire(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         (

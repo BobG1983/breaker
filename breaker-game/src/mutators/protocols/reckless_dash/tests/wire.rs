@@ -1,16 +1,16 @@
-//! Group F — `register` wiring + run-condition gates (Behaviors 41–55, 63).
+//! Group F — `wire` wiring + run-condition gates (Behaviors 41–55, 63).
 //!
-//! Pins that `register`-wired systems run under the correct schedules, gated
+//! Pins that `wire`-wired systems run under the correct schedules, gated
 //! by `protocol_active(RecklessDash)` + `in_state(NodeState::Playing)` on
 //! the three `FixedUpdate` reader systems, that same-tick ordering anchors
 //! work, that the schedule is harness-safe under missing resources + quiet
-//! ticks, and that `register` does NOT initialise `RecklessDashDoubledBolts`
+//! ticks, and that `wire` does NOT initialise `RecklessDashDoubledBolts`
 //! (plugin owns init).
 
 use bevy::prelude::*;
 
 use super::{
-    super::system::{RecklessDashConfig, RecklessDashDoubledBolts, RiskyDamageBoost, register},
+    super::system::{RecklessDashConfig, RecklessDashDoubledBolts, RiskyDamageBoost, wire},
     helpers::{
         build_reckless_dash_app, build_reckless_dash_app_in_chip_selecting,
         build_reckless_dash_app_no_config, captured_bolt_lost, collected_reckless_dash_damage,
@@ -45,7 +45,7 @@ fn register_wires_on_bump_gated_on_active_and_playing() {
     assert_eq!(
         risky_boost(&app, bolt),
         Some(4.0),
-        "on_bump must run via register → boost inserted"
+        "on_bump must run via wire → boost inserted"
     );
 }
 
@@ -140,7 +140,7 @@ fn register_wires_amplify_gated_on_active_and_playing() {
     tick(&mut app);
 
     let msgs = collected_reckless_dash_damage(&app);
-    assert_eq!(msgs.len(), 1, "amplify must run via register");
+    assert_eq!(msgs.len(), 1, "amplify must run via wire");
     assert!(
         (msgs[0].amount - 40.0).abs() < 1e-4,
         "amount expected 40.0, got {}",
@@ -255,7 +255,7 @@ fn register_wires_double_penalty_gated_on_active_and_playing() {
     assert_eq!(
         captured_bolt_lost(&app).len(),
         2,
-        "double_penalty must run via register → extra BoltLost emitted"
+        "double_penalty must run via wire → extra BoltLost emitted"
     );
 }
 
@@ -360,7 +360,7 @@ fn register_schedule_ticks_cleanly_with_no_messages_no_entities() {
     );
 }
 
-// ── Behavior 54 — register does not panic when config absent ───────────────-
+// ── Behavior 54 — wire does not panic when config absent ───────────────-
 
 #[test]
 fn register_does_not_panic_when_config_absent() {
@@ -373,7 +373,7 @@ fn register_does_not_panic_when_config_absent() {
 
     assert!(
         app.world().get_resource::<RecklessDashConfig>().is_none(),
-        "register must not side-effect-insert RecklessDashConfig"
+        "wire must not side-effect-insert RecklessDashConfig"
     );
     assert!(
         collected_reckless_dash_damage(&app).is_empty(),
@@ -416,7 +416,7 @@ fn pregate_bump_performed_drains_cleanly_before_reckless_dash_activates() {
     );
 }
 
-// ── Behavior 63 — register does NOT init RecklessDashDoubledBolts ──────────-
+// ── Behavior 63 — wire does NOT init RecklessDashDoubledBolts ──────────-
 
 #[test]
 fn register_does_not_init_reckless_dash_doubled_bolts_resource() {
@@ -432,13 +432,13 @@ fn register_does_not_init_reckless_dash_doubled_bolts_resource() {
         .with_message::<BoltLost>()
         .build();
 
-    register(&mut app);
+    wire(&mut app);
 
     assert!(
         app.world()
             .get_resource::<RecklessDashDoubledBolts>()
             .is_none(),
-        "register must NOT init_resource::<RecklessDashDoubledBolts>() — \
+        "wire must NOT init_resource::<RecklessDashDoubledBolts>() — \
          the plugin owns init (matches Greed / Siphon / Fission pattern)"
     );
 }

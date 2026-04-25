@@ -103,7 +103,7 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
 /// `Velocity2D`. No `DmgSystems` ordering — Drift operates on
 /// bolt `Velocity2D` directly (pending the `ApplyBoltForce` pipeline in
 /// Commit 5).
-pub(crate) fn register(app: &mut App) {
+pub(crate) fn wire(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         (drift_update_wind, drift_apply_force)
@@ -117,7 +117,7 @@ pub(crate) fn register(app: &mut App) {
 /// via `GameRng` (seeded for deterministic replay) and resets the timer
 /// to `period_secs`. Early-returns (no-op) when any of `DriftConfig`,
 /// `DriftWind`, or `GameRng` is absent from the world — the gate in
-/// `register` ensures they are present during normal play.
+/// `wire` ensures they are present during normal play.
 pub(crate) fn drift_update_wind(
     time: Res<Time<Fixed>>,
     config: Option<Res<DriftConfig>>,

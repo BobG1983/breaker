@@ -63,7 +63,7 @@ pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
     commands.insert_resource(ConductorConfig);
 }
 
-// ── register ────────────────────────────────────────────────────────────────
+// ── wire ────────────────────────────────────────────────────────────────
 
 /// Registers Conductor's single runtime system with the correct schedule
 /// and ordering.
@@ -91,9 +91,9 @@ pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
 /// `StagedEffects` lifecycle is managed by their respective domains; the
 /// swap is a transient component move that leaves invariants intact.
 ///
-/// `register` does NOT call `init_resource`. `ConductorConfig` is installed
+/// `wire` does NOT call `init_resource`. `ConductorConfig` is installed
 /// by `activate`; there is no per-node tracking resource.
-pub(crate) fn register(app: &mut App) {
+pub(crate) fn wire(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         conductor_swap_on_perfect_bump

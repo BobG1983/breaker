@@ -1,6 +1,6 @@
-//! Group G — `register` wiring + run-condition gates.
+//! Group G — `wire` wiring + run-condition gates.
 //!
-//! Pins that `register`-wired systems run under the correct schedules,
+//! Pins that `wire`-wired systems run under the correct schedules,
 //! that cleanup runs on `OnExit(NodeState::Playing)` unconditionally, that
 //! same-tick ordering anchors work, and that the schedule is harness-safe
 //! under missing resources + quiet ticks.
@@ -35,7 +35,7 @@ fn register_wires_on_bump_gated_on_active_and_playing() {
 
     assert!(
         app.world().get::<EchoPrimed>(bolt).is_some(),
-        "on_bump must run via register"
+        "on_bump must run via wire"
     );
 }
 
@@ -70,7 +70,7 @@ fn register_wires_cleanup_destroyed_gated_on_active_and_playing() {
 
     assert!(
         read_echo_network(&app, bolt).is_empty(),
-        "cleanup_destroyed must run via register"
+        "cleanup_destroyed must run via wire"
     );
 }
 
@@ -175,7 +175,7 @@ fn register_schedule_ticks_cleanly_with_no_bolts_and_no_messages() {
     assert!((cfg.oldest_fraction - 0.1).abs() < f32::EPSILON);
 }
 
-// ── register does not panic when EchoStrikeConfig absent ─────-
+// ── wire does not panic when EchoStrikeConfig absent ─────-
 
 #[test]
 fn register_does_not_panic_when_config_absent() {
@@ -188,7 +188,7 @@ fn register_does_not_panic_when_config_absent() {
 
     assert!(
         app.world().get_resource::<EchoStrikeConfig>().is_none(),
-        "register must not side-effect-insert EchoStrikeConfig"
+        "wire must not side-effect-insert EchoStrikeConfig"
     );
     assert!(
         collected_echo_strike_damage(&app).is_empty(),
@@ -197,7 +197,7 @@ fn register_does_not_panic_when_config_absent() {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// W2 Behavior 55 — echo_strike::register schedules echo_strike_emit_siblings
+// W2 Behavior 55 — echo_strike::wire schedules echo_strike_emit_siblings
 // in DmgSystems::PostApplyDamage
 // ════════════════════════════════════════════════════════════════════
 
@@ -205,7 +205,7 @@ fn register_does_not_panic_when_config_absent() {
 fn echo_strike_register_schedules_emit_siblings_in_post_apply() {
     use std::marker::PhantomData;
 
-    // After register + 1 tick with Echo Strike active, a primary
+    // After wire + 1 tick with Echo Strike active, a primary
     // DamageDealt<Cell> with a primed bolt must produce siblings tagged
     // with the echo-strike sentinel source.
     let mut app = build_echo_strike_app();
@@ -231,7 +231,7 @@ fn echo_strike_register_schedules_emit_siblings_in_post_apply() {
     assert_eq!(
         echoes.len(),
         1,
-        "register must wire echo_strike_emit_siblings in PostApplyDamage — got {} siblings",
+        "wire must wire echo_strike_emit_siblings in PostApplyDamage — got {} siblings",
         echoes.len()
     );
 }

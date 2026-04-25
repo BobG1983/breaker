@@ -1,6 +1,6 @@
-//! Group D — `register` integration: full chain, ordering, gating.
+//! Group D — `wire` integration: full chain, ordering, gating.
 //!
-//! These tests exercise the production wiring (`register(&mut app)`) so the
+//! These tests exercise the production wiring (`wire(&mut app)`) so the
 //! run conditions `hazard_active(Drift)` and `in_state(NodeState::Playing)`
 //! are active, and the chain ordering
 //! `(drift_update_wind, drift_apply_force).chain()` is enforced.
@@ -11,7 +11,7 @@ use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Velocity2D;
 
 use super::{
-    super::system::{DriftConfig, DriftWind, register},
+    super::system::{DriftConfig, DriftWind, wire},
     helpers::{
         add_drift_stacks, canonical_config, insert_rng, install_drift_config, install_drift_wind,
         spawn_bolt, test_app_not_playing, test_app_playing, tick_with_dt,
@@ -24,7 +24,7 @@ use crate::mutators::hazards::{definition::HazardKind, resources::ActiveHazards}
 #[test]
 fn full_chain_updates_wind_and_applies_force_single_tick() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     insert_rng(&mut app, 42);
     install_drift_config(&mut app, canonical_config());
     install_drift_wind(
@@ -57,7 +57,7 @@ fn full_chain_updates_wind_and_applies_force_single_tick() {
 fn full_chain_accumulates_across_two_ticks() {
     // Edge: 2 ticks of 1s — X should be ≈200, timer should be ≈6.0.
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     insert_rng(&mut app, 42);
     install_drift_config(&mut app, canonical_config());
     install_drift_wind(
@@ -87,7 +87,7 @@ fn first_tick_with_expired_timer_rolls_and_applies_new_direction() {
     // (chain order: update → apply). The force magnitude (100 * 1s) is
     // exactly 100 regardless of which direction was rolled.
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     insert_rng(&mut app, 42);
     install_drift_config(&mut app, canonical_config());
     install_drift_wind(
@@ -133,7 +133,7 @@ fn first_tick_rolled_direction_rules_out_reversed_ordering() {
     // bolt's velocity would normalize to Vec2::X — which seed 42 does
     // NOT produce. Assert length > 50 (guarding against zero velocity).
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     insert_rng(&mut app, 42);
     install_drift_config(&mut app, canonical_config());
     install_drift_wind(
@@ -160,7 +160,7 @@ fn first_tick_rolled_direction_rules_out_reversed_ordering() {
 #[test]
 fn multi_tick_direction_holds_while_timer_positive() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     insert_rng(&mut app, 42);
     install_drift_config(&mut app, canonical_config());
     install_drift_wind(
@@ -199,7 +199,7 @@ fn fifth_tick_crosses_threshold_and_rolls_new_direction() {
     // direction * 500 in some rolled direction. Magnitude should be
     // between |500 - 400| = 100 and 500 + 400 = 900.
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     insert_rng(&mut app, 42);
     install_drift_config(&mut app, canonical_config());
     install_drift_wind(
@@ -232,7 +232,7 @@ fn fifth_tick_crosses_threshold_and_rolls_new_direction() {
 #[test]
 fn hazard_inactive_gate_suppresses_both_systems() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     insert_rng(&mut app, 42);
     install_drift_config(&mut app, canonical_config());
     install_drift_wind(
@@ -259,7 +259,7 @@ fn hazard_inactive_gate_suppresses_both_systems() {
 fn hazard_gate_reopens_cleanly_after_adding_stack() {
     // Edge: add 1 stack mid-way → next tick opens the gate.
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     insert_rng(&mut app, 42);
     install_drift_config(&mut app, canonical_config());
     install_drift_wind(
@@ -297,7 +297,7 @@ fn hazard_gate_reopens_cleanly_after_adding_stack() {
 #[test]
 fn state_gate_not_playing_suppresses_both_systems() {
     let mut app = test_app_not_playing();
-    register(&mut app);
+    wire(&mut app);
     insert_rng(&mut app, 42);
     install_drift_config(&mut app, canonical_config());
     install_drift_wind(
@@ -324,7 +324,7 @@ fn state_gate_not_playing_suppresses_both_systems() {
 fn playing_state_with_same_setup_does_run_both_systems() {
     // Edge: mirror the state-gate test in Playing state — systems run.
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     insert_rng(&mut app, 42);
     install_drift_config(&mut app, canonical_config());
     install_drift_wind(
@@ -359,7 +359,7 @@ fn chain_ordering_update_runs_before_apply() {
     // direction is far from Vec2::X, so a reversed-chain bug would show
     // a normalized velocity ≈ Vec2::X.
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     insert_rng(&mut app, 42);
     install_drift_config(
         &mut app,
@@ -402,7 +402,7 @@ fn chain_ordering_rules_out_reversed_ordering_via_direction_mismatch() {
     // Edge: reversed-chain anti-guard. Velocity should NOT normalize to
     // Vec2::X. Seed 42 produces an angle sufficiently far from 0.
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     insert_rng(&mut app, 42);
     install_drift_config(
         &mut app,

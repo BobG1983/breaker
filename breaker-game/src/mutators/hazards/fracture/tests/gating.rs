@@ -112,7 +112,7 @@ fn boundary_magnitude_victim_position_sign_symmetric() {
 #[test]
 fn register_gate_off_stacks_zero_does_not_spawn() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_fracture_config(&mut app, canonical_config());
     // NO stacks added — gate off.
 
@@ -125,7 +125,7 @@ fn register_gate_off_stacks_zero_does_not_spawn() {
 #[test]
 fn register_gate_reopens_when_stack_added_spawns_post_open_messages() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_fracture_config(&mut app, canonical_config());
 
     // First tick: gate off, no message written.
@@ -153,7 +153,7 @@ fn register_pregate_messages_drain_cleanly_before_gate_opens() {
     // writing a new message. Tick again. The pre-gate message must NOT
     // be consumed → 0 debris spawn.
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_fracture_config(&mut app, canonical_config());
 
     // Tick 1 — gate off, pre-gate death written. Retrofit drains reader.
@@ -183,7 +183,7 @@ fn register_pregate_messages_drain_cleanly_before_gate_opens() {
 #[test]
 fn register_gate_off_state_not_playing_does_not_spawn() {
     let mut app = test_app_not_playing();
-    register(&mut app);
+    wire(&mut app);
     install_fracture_config(&mut app, canonical_config());
     add_fracture_stacks(&mut app, 1);
     // Do NOT write message — gate is off, reader won't drain.
@@ -200,7 +200,7 @@ fn register_positive_control_state_playing_does_spawn() {
     // test_app_playing() vs test_app_not_playing(). Divergence in this
     // pair proves the NodeState gate is the discriminator.
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_fracture_config(&mut app, canonical_config());
     add_fracture_stacks(&mut app, 1);
     write_cell_destroyed(&mut app, Vec2::ZERO);
@@ -215,7 +215,7 @@ fn register_positive_control_state_playing_does_spawn() {
 #[test]
 fn register_gate_toggles_open_mid_run_processes_fresh_stacks() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_fracture_config(&mut app, canonical_config());
     // Gate off initially (no stacks).
 
@@ -250,7 +250,7 @@ fn register_gate_toggles_open_mid_run_processes_fresh_stacks() {
 #[test]
 fn register_gate_open_third_tick_without_message_spawns_nothing_new() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_fracture_config(&mut app, canonical_config());
 
     tick_with_dt(&mut app, Duration::from_secs_f32(0.016));

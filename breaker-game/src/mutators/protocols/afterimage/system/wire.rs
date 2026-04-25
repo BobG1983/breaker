@@ -14,7 +14,7 @@ use crate::{
     prelude::*,
 };
 
-// ── register ────────────────────────────────────────────────────────────────
+// ── wire ────────────────────────────────────────────────────────────────
 
 /// Registers the afterimage runtime systems with the correct schedules,
 /// run-ifs, and ordering.
@@ -49,7 +49,7 @@ use crate::{
 /// No `OnExit(NodeState::Playing)` system is registered. Cleanup is handled
 /// by `CleanupOnExit::<NodeState>::default()` tags attached to every
 /// afterimage-spawned entity.
-pub(crate) fn register(app: &mut App) {
+pub(crate) fn wire(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         (

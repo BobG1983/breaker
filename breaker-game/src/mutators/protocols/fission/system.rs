@@ -7,7 +7,7 @@
 //!   [`fission_cleanup_run`] on `OnExit(MenuState::Main)`.
 //! - [`FISSION_DIVERGENCE_ANGLE_RAD`] — 15° in radians, pinned by drift guard.
 //! - [`activate`] — parses `ProtocolTuning::Fission`, inserts `FissionConfig`.
-//! - [`register`] — wires `fission_on_cell_destroyed` into `FixedUpdate` and
+//! - [`wire`] — wires `fission_on_cell_destroyed` into `FixedUpdate` and
 //!   `fission_cleanup_run` into `OnExit(MenuState::Main)`.
 //! - [`fission_on_cell_destroyed`] — counts `Destroyed<Cell>` messages and
 //!   spawns a new (`ExtraBolt`, headless) bolt at the parent's position with
@@ -51,7 +51,7 @@ pub(crate) struct FissionConfig {
 /// Persistent-across-nodes cell-kill tracker for the Fission protocol.
 ///
 /// Init'd by `ProtocolPlugin::build` (matches Siphon precedent — the plugin
-/// owns `init_resource`, not `register`). Removed on `OnExit(MenuState::Main)`
+/// owns `init_resource`, not `wire`). Removed on `OnExit(MenuState::Main)`
 /// by [`fission_cleanup_run`]. NOT reset on node exit — persists across nodes
 /// per design.
 #[derive(Resource, Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -77,7 +77,7 @@ pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
     commands.insert_resource(FissionConfig { kills_per_split });
 }
 
-// ── register ────────────────────────────────────────────────────────────────
+// ── wire ────────────────────────────────────────────────────────────────
 
 /// Registers Fission's runtime systems.
 ///
@@ -90,7 +90,7 @@ pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
 ///
 /// NOTE: `FissionCounter` is NOT inserted here; `ProtocolPlugin::build` owns
 /// `init_resource::<FissionCounter>()` (Siphon precedent).
-pub(crate) fn register(app: &mut App) {
+pub(crate) fn wire(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         fission_on_cell_destroyed.after(DmgSystems::ApplyKill),

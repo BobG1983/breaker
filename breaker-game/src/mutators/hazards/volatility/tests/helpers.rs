@@ -184,5 +184,5 @@ pub(super) fn install_default_config(app: &mut App) {
 }
 
 pub(super) fn register_volatility_systems(app: &mut App) {
-    super::super::system::register(app);
+    super::super::system::wire(app);
 }

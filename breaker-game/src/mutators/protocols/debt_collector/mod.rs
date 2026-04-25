@@ -7,7 +7,7 @@
 //! (`debt_collector_on_bump`, `debt_collector_on_impact`,
 //! `debt_collector_on_bolt_lost`, `debt_collector_attach_stack`,
 //! `debt_collector_cleanup_node`), the `DEBT_COLLECTOR_SENTINEL` source-chip
-//! tag, and the `activate` / `register` dispatch entry points.
+//! tag, and the `activate` / `wire` dispatch entry points.
 
 pub mod system;
 
@@ -15,4 +15,4 @@ pub mod system;
 mod tests;
 
 pub use system::{DebtCashOut, DebtStack};
-pub(crate) use system::{activate, register};
+pub(crate) use system::{activate, wire};

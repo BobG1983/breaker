@@ -13,4 +13,4 @@ pub mod system;
 mod tests;
 
 pub use system::{GreedConfig, GreedStacks};
-pub(crate) use system::{activate, apply_greed_boost, register};
+pub(crate) use system::{activate, apply_greed_boost, wire};

@@ -41,7 +41,7 @@ pub(crate) fn dispatch_protocol_selection(
         active.insert(def.clone());
 
         let Some(roots) = effects else {
-            // Custom-system protocol — register its per-kind config + runtime
+            // Custom-system protocol — wire its per-kind config + runtime
             // via the `protocols::` fan-in; runtime systems are gated by
             // `protocol_active(kind)`.
             activate(kind, &tuning, &mut commands);

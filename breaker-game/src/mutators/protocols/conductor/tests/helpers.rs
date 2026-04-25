@@ -10,7 +10,7 @@ use bevy::{
     prelude::*,
 };
 
-use super::super::system::{ConductorConfig, activate, register};
+use super::super::system::{ConductorConfig, activate, wire};
 use crate::{
     bolt::components::{ExtraBolt, PrimaryBolt},
     breaker::messages::BumpGrade,
@@ -26,7 +26,7 @@ use crate::{
 
 /// Default Conductor test app. State hierarchy in `NodeState::Playing`,
 /// `ActiveProtocols` initialised, `BumpPerformed` message registered,
-/// canonical `ConductorConfig` inserted, and `register` called.
+/// canonical `ConductorConfig` inserted, and `wire` called.
 ///
 /// Does NOT seed `ActiveProtocols` with Conductor — tests that need the
 /// protocol active call [`seed_active_protocols_with_conductor`].
@@ -39,7 +39,7 @@ pub(super) fn build_conductor_app() -> App {
         .build();
     app.world_mut()
         .insert_resource(canonical_conductor_config());
-    register(&mut app);
+    wire(&mut app);
     app
 }
 
@@ -53,7 +53,7 @@ pub(super) fn build_conductor_app_no_config() -> App {
         .with_resource::<ActiveProtocols>()
         .with_message::<BumpPerformed>()
         .build();
-    register(&mut app);
+    wire(&mut app);
     app
 }
 
@@ -69,7 +69,7 @@ pub(super) fn build_conductor_app_in_chip_selecting() -> App {
         .build();
     app.world_mut()
         .insert_resource(canonical_conductor_config());
-    register(&mut app);
+    wire(&mut app);
     app
 }
 

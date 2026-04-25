@@ -9,7 +9,7 @@
 use bevy::prelude::*;
 
 use super::{
-    super::system::{attach_momentum_ceiling, register},
+    super::system::{attach_momentum_ceiling, wire},
     helpers::{
         add_hazard_stacks, add_momentum_stacks, canonical_momentum_config, install_momentum_config,
         run_fixed_update, spawn_cell_at, spawn_cell_at_with_max, spawn_cell_dead_at,
@@ -299,7 +299,7 @@ fn invulnerable_cell_with_existing_max_is_not_overwritten() {
 #[test]
 fn gate_off_when_momentum_zero_stacks_does_not_mutate() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_momentum_config(&mut app, canonical_momentum_config());
     // Different hazard stacked — Momentum stays at 0.
     add_hazard_stacks(&mut app, HazardKind::Cascade, 1);
@@ -325,7 +325,7 @@ fn gate_off_when_momentum_zero_stacks_does_not_mutate() {
 #[test]
 fn gate_off_when_not_in_playing_does_not_mutate() {
     let mut app = test_app_not_playing();
-    register(&mut app);
+    wire(&mut app);
     install_momentum_config(&mut app, canonical_momentum_config());
     add_momentum_stacks(&mut app, 1);
 
@@ -346,7 +346,7 @@ fn gate_off_when_not_in_playing_does_not_mutate() {
 #[test]
 fn reacts_when_hazard_becomes_active_mid_run() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_momentum_config(&mut app, canonical_momentum_config());
     // No Momentum stacks initially.
 
@@ -376,7 +376,7 @@ fn reacts_when_hazard_becomes_active_mid_run() {
 #[test]
 fn mid_run_activation_lifts_newly_spawned_cell_ceiling_too() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_momentum_config(&mut app, canonical_momentum_config());
     add_momentum_stacks(&mut app, 1);
 

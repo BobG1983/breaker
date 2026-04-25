@@ -1,14 +1,14 @@
 //! Group F — System registration, scheduling, and gating.
 //!
-//! These use `register(&mut app)` to test the wiring, NOT hand-wired
-//! systems. Includes 26A — `register`-wired zero-stack gate.
+//! These use `wire(&mut app)` to test the wiring, NOT hand-wired
+//! systems. Includes 26A — `wire`-wired zero-stack gate.
 
 use std::time::Duration;
 
 use rantzsoft_dmg::{RantzDmgAppExt, RantzDmgPlugin};
 
 use super::{
-    super::system::{RenewalTimer, register},
+    super::system::{RenewalTimer, wire},
     helpers::{
         add_renewal_stacks, attach_timer, canonical_config, heal_collector_len, heals_for_cell,
         install_renewal_config, spawn_cell, test_app_playing, tick_with_dt,
@@ -20,12 +20,12 @@ use crate::{
     prelude::*,
 };
 
-// ── Behavior 24 — register schedules tick in HandleKill → ApplyHeal window ─
+// ── Behavior 24 — wire schedules tick in HandleKill → ApplyHeal window ─
 
 #[test]
 fn register_schedules_tick_system_that_emits_heal_on_expiry() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_renewal_config(&mut app, canonical_config());
     add_renewal_stacks(&mut app, 1);
     let cell = spawn_cell(&mut app, 30.0, 100.0);
@@ -50,7 +50,7 @@ fn register_ordering_fires_renewal_before_apply_heal_in_one_tick() {
     // registered `renewal_tick` runs before it, so HP reaches 100.0 in a
     // single tick.
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     app.add_plugins(RantzDmgPlugin);
     let _ = app.register_dmgable::<Cell>();
     install_renewal_config(&mut app, canonical_config());
@@ -78,7 +78,7 @@ fn register_ordering_fires_renewal_before_apply_heal_in_one_tick() {
 #[test]
 fn system_skipped_when_renewal_run_condition_false() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_renewal_config(&mut app, canonical_config());
     // Stack a DIFFERENT hazard — Renewal remains inactive.
     for _ in 0..3 {
@@ -111,7 +111,7 @@ fn system_runs_when_renewal_stack_added_after_initial_skip() {
     // Edge: with 0 Renewal stacks, no heal. Add 1 stack and tick again —
     // the timer expires and emits exactly 1 message.
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_renewal_config(&mut app, canonical_config());
     // No Renewal stacks yet; add a Volatility stack so `ActiveHazards` is
     // not totally empty (not required but mirrors a real run start).
@@ -141,7 +141,7 @@ fn system_skipped_when_not_in_node_playing() {
         .with_resource::<ActiveHazards>()
         .with_message_capture::<HealDealt<Cell>>()
         .build();
-    register(&mut app);
+    wire(&mut app);
     install_renewal_config(&mut app, canonical_config());
     add_renewal_stacks(&mut app, 3);
     let cell = spawn_cell(&mut app, 30.0, 100.0);
@@ -158,14 +158,14 @@ fn system_skipped_when_not_in_node_playing() {
     );
 }
 
-// ── Behavior 26A — register-wired zero-stack gate no-ops attach ──────────
+// ── Behavior 26A — wire-wired zero-stack gate no-ops attach ──────────
 
 #[test]
 fn register_wired_zero_stacks_attach_does_not_insert_timer() {
     // The ENTIRE system set (including renewal_attach_timers) is gated by
     // hazard_active(Renewal). With 0 stacks, attach does not run.
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_renewal_config(&mut app, canonical_config());
     // 0 Renewal stacks — do NOT call add_renewal_stacks.
     let cell = spawn_cell(&mut app, 50.0, 100.0);
@@ -182,7 +182,7 @@ fn register_wired_zero_stacks_attach_does_not_insert_timer() {
 fn register_wired_attach_runs_once_stack_added() {
     // Edge: add 1 stack, tick again — timer appears.
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_renewal_config(&mut app, canonical_config());
     let cell = spawn_cell(&mut app, 50.0, 100.0);
 

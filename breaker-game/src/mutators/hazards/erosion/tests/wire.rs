@@ -1,8 +1,8 @@
-//! Group D — `register` wiring: scheduling, run-condition gating, state
+//! Group D — `wire` wiring: scheduling, run-condition gating, state
 //! gating, intra-frame ordering.
 //!
-//! Uses `register(&mut app)` to test the wiring, NOT hand-wired systems.
-//! `BumpPerformed` must be registered separately because `register` does not.
+//! Uses `wire(&mut app)` to test the wiring, NOT hand-wired systems.
+//! `BumpPerformed` must be registered separately because `wire` does not.
 
 use std::time::Duration;
 
@@ -10,7 +10,7 @@ use bevy::prelude::*;
 use ordered_float::OrderedFloat;
 
 use super::{
-    super::system::{ErosionConfig, ErosionState, register},
+    super::system::{ErosionConfig, ErosionState, wire},
     helpers::{
         add_erosion_stacks, canonical_config, install_erosion_config, spawn_breaker,
         spawn_breaker_with_stack, test_app_not_playing, test_app_playing, tick_with_dt,
@@ -32,12 +32,12 @@ fn write_bump(app: &mut App, grade: BumpGrade) {
     });
 }
 
-// ── D25 — register-wired chain produces reconciled entry at stack 1 ────
+// ── D25 — wire-wired chain produces reconciled entry at stack 1 ────
 
 #[test]
 fn register_wired_chain_fires_and_accumulates_over_two_ticks() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     app.add_message::<BumpPerformed>();
     install_erosion_config(&mut app, canonical_config());
     app.world_mut().insert_resource(ErosionState::default());
@@ -52,7 +52,7 @@ fn register_wired_chain_fires_and_accumulates_over_two_ticks() {
         let stack = app
             .world()
             .get::<EffectStack<SizeBoostConfig>>(breaker)
-            .expect("register-wired chain must install EffectStack");
+            .expect("wire-wired chain must install EffectStack");
         assert_eq!(stack.len(), 1);
         assert!((stack.aggregate() - 0.95).abs() < 1e-5);
     }
@@ -69,12 +69,12 @@ fn register_wired_chain_fires_and_accumulates_over_two_ticks() {
     assert!((stack.aggregate() - 0.90).abs() < 1e-5);
 }
 
-// ── D26 — register-wired chain gated off when no Erosion stacks ───────
+// ── D26 — wire-wired chain gated off when no Erosion stacks ───────
 
 #[test]
 fn register_wired_chain_gated_off_when_no_erosion_stacks() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     app.add_message::<BumpPerformed>();
     install_erosion_config(&mut app, canonical_config());
     app.world_mut().insert_resource(ErosionState::default());
@@ -114,12 +114,12 @@ fn register_wired_chain_gated_off_when_no_erosion_stacks() {
     assert!((stack.aggregate() - 0.95).abs() < 1e-5);
 }
 
-// ── D27 — register-wired chain gated off outside NodeState::Playing ────
+// ── D27 — wire-wired chain gated off outside NodeState::Playing ────
 
 #[test]
 fn register_wired_chain_gated_off_when_not_in_node_playing() {
     let mut app = test_app_not_playing();
-    register(&mut app);
+    wire(&mut app);
     app.add_message::<BumpPerformed>();
     install_erosion_config(&mut app, canonical_config());
     app.world_mut().insert_resource(ErosionState::default());
@@ -162,7 +162,7 @@ fn register_wired_chain_gated_off_when_not_in_node_playing() {
 #[test]
 fn intra_frame_ordering_shrink_before_restore_with_perfect_bump() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     app.add_message::<BumpPerformed>();
     install_erosion_config(&mut app, canonical_config());
     app.world_mut().insert_resource(ErosionState {
@@ -192,7 +192,7 @@ fn intra_frame_ordering_shrink_before_restore_with_perfect_bump() {
 
     // Edge: on a fresh setup, a tick with NO bump → aggregate ≈ 0.95 (shrink only).
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     app.add_message::<BumpPerformed>();
     install_erosion_config(&mut app, canonical_config());
     app.world_mut().insert_resource(ErosionState {
@@ -218,7 +218,7 @@ fn intra_frame_ordering_shrink_before_restore_with_perfect_bump() {
 #[test]
 fn intra_frame_ordering_restore_before_apply_width_with_full_restore() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     app.add_message::<BumpPerformed>();
     install_erosion_config(
         &mut app,
@@ -255,7 +255,7 @@ fn intra_frame_ordering_restore_before_apply_width_with_full_restore() {
 
     // Edge: fresh setup, no bump — shrink still runs, aggregate ≈ 0.45.
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     app.add_message::<BumpPerformed>();
     install_erosion_config(
         &mut app,
@@ -288,7 +288,7 @@ fn intra_frame_ordering_restore_before_apply_width_with_full_restore() {
 #[test]
 fn zero_erosion_stacks_across_five_ticks_leaves_world_clean() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     app.add_message::<BumpPerformed>();
     install_erosion_config(&mut app, canonical_config());
     app.world_mut().insert_resource(ErosionState::default());
@@ -315,7 +315,7 @@ fn zero_erosion_stacks_across_five_ticks_leaves_world_clean() {
 #[test]
 fn preexisting_erosion_source_entry_persists_at_stack_zero() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     app.add_message::<BumpPerformed>();
     install_erosion_config(&mut app, canonical_config());
     app.world_mut().insert_resource(ErosionState::default());
@@ -346,7 +346,7 @@ fn preexisting_erosion_source_entry_persists_at_stack_zero() {
 
     // Edge: fresh app with seeded erosion + chip entries; both persist.
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     app.add_message::<BumpPerformed>();
     install_erosion_config(&mut app, canonical_config());
     app.world_mut().insert_resource(ErosionState::default());
@@ -382,7 +382,7 @@ fn preexisting_erosion_source_entry_persists_at_stack_zero() {
 #[test]
 fn active_to_zero_transition_lingering_stack_persists() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     app.add_message::<BumpPerformed>();
     install_erosion_config(&mut app, canonical_config());
     app.world_mut().insert_resource(ErosionState::default());

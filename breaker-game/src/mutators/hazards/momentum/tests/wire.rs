@@ -1,8 +1,8 @@
-//! Group H — `register` wiring + run-condition gates (Behaviors 51–57)
+//! Group H — `wire` wiring + run-condition gates (Behaviors 51–57)
 //! plus Behaviors 68, 69 (ordering pins for
 //! `attach_momentum_ceiling` and `momentum_split_check`).
 //!
-//! Pins that `register(app)` wires `attach_momentum_ceiling`,
+//! Pins that `wire(app)` wires `attach_momentum_ceiling`,
 //! `momentum_heal_on_nonlethal`, and `momentum_split_check` in `FixedUpdate`
 //! with both run-if gates, AND the ordering:
 //! attach → `apply_damage` → `heal_emit` → `apply_heal` → `split_check`.
@@ -11,7 +11,7 @@ use bevy::prelude::*;
 use rantzsoft_dmg::{RantzDmgAppExt, RantzDmgPlugin};
 
 use super::{
-    super::system::{momentum_heal_on_nonlethal, momentum_split_check, register},
+    super::system::{momentum_heal_on_nonlethal, momentum_split_check, wire},
     helpers::{
         add_hazard_stacks, add_momentum_stacks, canonical_momentum_config, cell_count,
         heal_collector_len, heals_for_cell, install_momentum_config, run_fixed_update,
@@ -25,17 +25,17 @@ use crate::{
     prelude::*,
 };
 
-/// Builds a register-wired app that also wires `apply_damage::<Cell>` and
+/// Builds a wire-wired app that also wires `apply_damage::<Cell>` and
 /// `apply_heal::<Cell>` (so the full pipeline end-to-end goes through).
 fn register_app_full_pipeline() -> App {
     let mut app = test_app_playing();
     app.add_plugins(RantzDmgPlugin);
     let _ = app.register_dmgable::<Cell>();
-    register(&mut app);
+    wire(&mut app);
     app
 }
 
-// ── Behavior 51 — register wires momentum_heal_on_nonlethal ─────────────────
+// ── Behavior 51 — wire wires momentum_heal_on_nonlethal ─────────────────
 
 #[test]
 fn register_wires_heal_on_nonlethal() {
@@ -51,7 +51,7 @@ fn register_wires_heal_on_nonlethal() {
     assert_eq!(
         heal_collector_len(&app),
         1,
-        "register must wire momentum_heal_on_nonlethal; expected 1 heal, got {}",
+        "wire must wire momentum_heal_on_nonlethal; expected 1 heal, got {}",
         heal_collector_len(&app)
     );
     let msgs = heals_for_cell(&app, cell);
@@ -78,7 +78,7 @@ fn register_gate_off_zero_stacks_emits_no_heal() {
     assert_eq!(heal_collector_len(&app), 0);
 }
 
-// ── Behavior 52 — register wires momentum_split_check ───────────────────────
+// ── Behavior 52 — wire wires momentum_split_check ───────────────────────
 
 #[test]
 fn register_wires_split_check() {
@@ -94,7 +94,7 @@ fn register_wires_split_check() {
     let hp = app.world().get::<Hp>(parent).unwrap();
     assert!(
         (hp.current - 10.0).abs() < f32::EPSILON,
-        "register must wire split_check; parent must reset; got {}",
+        "wire must wire split_check; parent must reset; got {}",
         hp.current
     );
     assert_eq!(cell_count(&mut app), 3);
@@ -107,7 +107,7 @@ fn both_systems_gated_off_when_not_in_playing() {
     let mut app = test_app_not_playing();
     app.add_plugins(RantzDmgPlugin);
     let _ = app.register_dmgable::<Cell>();
-    register(&mut app);
+    wire(&mut app);
     install_momentum_config(&mut app, canonical_momentum_config());
     add_momentum_stacks(&mut app, 1);
 
@@ -239,7 +239,7 @@ fn two_consecutive_nonlethal_hits_eventually_split() {
     assert_eq!(cell_count(&mut app), 3, "2 new cells spawn after split");
 }
 
-// ── Behavior 57 — register does not panic when MomentumConfig absent ────────
+// ── Behavior 57 — wire does not panic when MomentumConfig absent ────────
 
 #[test]
 fn register_does_not_panic_when_config_absent() {
@@ -259,7 +259,7 @@ fn register_does_not_panic_when_config_absent() {
 // Behaviors 68, 69 — ordering pins
 // ════════════════════════════════════════════════════════════════════════════
 
-// ── Behavior 68 — register places attach before heal (integration proof) ────
+// ── Behavior 68 — wire places attach before heal (integration proof) ────
 
 #[test]
 fn register_orders_attach_ceiling_before_heal_emit() {
@@ -279,12 +279,12 @@ fn register_orders_attach_ceiling_before_heal_emit() {
     assert_eq!(
         hp.max,
         Some(20.0),
-        "register must order attach_momentum_ceiling first; hp.max must be lifted; got {:?}",
+        "wire must order attach_momentum_ceiling first; hp.max must be lifted; got {:?}",
         hp.max
     );
     assert!(
         (hp.current - 15.0).abs() < f32::EPSILON,
-        "register ordering must allow current to exceed starting; got {}",
+        "wire ordering must allow current to exceed starting; got {}",
         hp.current
     );
     let msgs = heals_for_cell(&app, cell);
@@ -294,11 +294,11 @@ fn register_orders_attach_ceiling_before_heal_emit() {
 
 // ── Behavior 69 — split_check must run AFTER apply_heal (ordering pin) ─────
 //
-// Positive control of the ordering contract: using `register(app)` to wire
+// Positive control of the ordering contract: using `wire(app)` to wire
 // the production ordering, a pre-queued `HealDealt<Cell>` that pushes
 // `hp.current` to the threshold MUST trigger a split on the same tick.
 //
-// - With the stub (`register` = empty): nothing is wired; no split occurs;
+// - With the stub (`wire` = empty): nothing is wired; no split occurs;
 //   the assertion `cell_count == 3` fails → RED-phase failure.
 // - With correct production wiring (`split_check.after(ApplyHeal)`): heal
 //   lands → current = 20.0 >= threshold → split fires → 2 new cells spawn.
@@ -306,7 +306,7 @@ fn register_orders_attach_ceiling_before_heal_emit() {
 //   split_check would see `current = 15.0 < 20.0`, skip → assertion fails.
 //
 // This is the negative-control proof that misordering causes observable
-// divergence, reframed as a positive pin on the register-wiring contract.
+// divergence, reframed as a positive pin on the wire-wiring contract.
 
 #[test]
 fn register_wires_split_check_after_apply_heal_so_same_tick_heals_can_trigger_split() {
@@ -325,14 +325,14 @@ fn register_wires_split_check_after_apply_heal_so_same_tick_heals_can_trigger_sp
     let hp = app.world().get::<Hp>(cell).unwrap();
     assert!(
         (hp.current - 10.0).abs() < f32::EPSILON,
-        "split must fire (register must wire split_check AFTER apply_heal); \
+        "split must fire (wire must wire split_check AFTER apply_heal); \
          current should reset to 10.0 after split; got {}",
         hp.current
     );
     assert_eq!(
         cell_count(&mut app),
         3,
-        "register-wired ordering must produce 2 new split cells when \
+        "wire-wired ordering must produce 2 new split cells when \
          apply_heal pushes a cell across the threshold; got {}",
         cell_count(&mut app)
     );

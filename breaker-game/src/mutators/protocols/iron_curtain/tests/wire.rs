@@ -1,4 +1,4 @@
-//! Group C — `register` schedule wiring (Behaviors 19–25).
+//! Group C — `wire` schedule wiring (Behaviors 19–25).
 //!
 //! Pins that `iron_curtain_on_bolt_lost` is wired into `FixedUpdate`, gated
 //! by `protocol_active(IronCurtain)` + `in_state(NodeState::Playing)`, ordered

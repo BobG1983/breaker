@@ -13,7 +13,7 @@ use bevy::{
     prelude::*,
 };
 
-use super::super::system::{GreedConfig, GreedStacks, activate, register};
+use super::super::system::{GreedConfig, GreedStacks, activate, wire};
 use crate::{
     mutators::protocols::{
         definition::{ProtocolDefinition, ProtocolKind, ProtocolTuning},
@@ -26,14 +26,14 @@ use crate::{
 // ── App builders ────────────────────────────────────────────────────────────
 
 /// Default Greed test app. Registers `ActiveProtocols`, `GreedStacks`,
-/// `ChipOfferSkipped` message, then calls `greed::register`.
+/// `ChipOfferSkipped` message, then calls `greed::wire`.
 pub(super) fn build_greed_app() -> App {
     let mut app = TestAppBuilder::new()
         .with_resource::<ActiveProtocols>()
         .with_resource::<GreedStacks>()
         .with_message::<ChipOfferSkipped>()
         .build();
-    register(&mut app);
+    wire(&mut app);
     app
 }
 
@@ -45,7 +45,7 @@ pub(super) fn build_greed_app_no_stacks() -> App {
         .with_resource::<ActiveProtocols>()
         .with_message::<ChipOfferSkipped>()
         .build();
-    register(&mut app);
+    wire(&mut app);
     app
 }
 

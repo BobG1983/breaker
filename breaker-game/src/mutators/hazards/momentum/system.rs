@@ -99,7 +99,7 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
     });
 }
 
-// ── register ────────────────────────────────────────────────────────────────
+// ── wire ────────────────────────────────────────────────────────────────
 
 /// Registers Momentum's `FixedUpdate` systems.
 ///
@@ -116,7 +116,7 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
 ///   messages buffered during gated-off frames would get retroactively
 ///   consumed the tick the gate opens. Runs in
 ///   `DmgSystems::ApplyHeal`.
-pub(crate) fn register(app: &mut App) {
+pub(crate) fn wire(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         attach_momentum_ceiling

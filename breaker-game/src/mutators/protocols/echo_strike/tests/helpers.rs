@@ -17,7 +17,7 @@ use bevy::{
     prelude::*,
 };
 
-use super::super::system::{EchoNetwork, EchoPrimed, EchoStrikeConfig, activate, register};
+use super::super::system::{EchoNetwork, EchoPrimed, EchoStrikeConfig, activate, wire};
 use crate::{
     bolt::components::BoltBaseDamage,
     breaker::messages::BumpGrade,
@@ -33,7 +33,7 @@ use crate::{
 /// Default Echo Strike test app. State hierarchy in `NodeState::Playing`,
 /// `ActiveProtocols` initialised, reader messages registered,
 /// `DamageDealt<Cell>` capture installed, canonical `EchoStrikeConfig`
-/// inserted, and `register` called.
+/// inserted, and `wire` called.
 ///
 /// Does NOT seed `ActiveProtocols` with Echo Strike — tests that need the
 /// protocol active call [`seed_active_protocols_with_echo_strike`].
@@ -49,7 +49,7 @@ pub(super) fn build_echo_strike_app() -> App {
         .build();
     app.world_mut()
         .insert_resource(canonical_echo_strike_config());
-    register(&mut app);
+    wire(&mut app);
     app
 }
 
@@ -66,7 +66,7 @@ pub(super) fn build_echo_strike_app_no_config() -> App {
         .with_message::<Destroyed<Cell>>()
         .with_message_capture::<DamageDealt<Cell>>()
         .build();
-    register(&mut app);
+    wire(&mut app);
     app
 }
 
@@ -85,7 +85,7 @@ pub(super) fn build_echo_strike_app_in_chip_selecting() -> App {
         .build();
     app.world_mut()
         .insert_resource(canonical_echo_strike_config());
-    register(&mut app);
+    wire(&mut app);
     app
 }
 

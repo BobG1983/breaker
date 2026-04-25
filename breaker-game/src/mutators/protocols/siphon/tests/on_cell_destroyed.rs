@@ -327,7 +327,7 @@ fn reader_is_gated_off_when_node_state_is_not_playing() {
         streak_window: 2.0,
         time_per_kill: 0.5,
     });
-    super::super::system::register(&mut app);
+    super::super::system::wire(&mut app);
     seed_active_protocols_with_siphon(&mut app, 2.0, 0.5);
 
     write_cell_destroyed(&mut app);
@@ -415,7 +415,7 @@ fn reader_does_not_panic_when_siphon_streak_absent() {
 
 #[test]
 fn reader_with_no_messages_leaves_streak_unchanged() {
-    // Isolate the reader: do NOT call register() so only a standalone copy
+    // Isolate the reader: do NOT call wire() so only a standalone copy
     // of siphon_on_cell_destroyed runs. This keeps the behavior focused on
     // the reader's empty-queue path without siphon_tick_streak interfering.
     let mut app = TestAppBuilder::new()

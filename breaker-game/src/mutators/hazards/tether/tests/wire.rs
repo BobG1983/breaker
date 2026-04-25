@@ -1,9 +1,9 @@
-//! Section F — `register` wiring + run-condition gate (Behaviours 62–65).
+//! Section F — `wire` wiring + run-condition gate (Behaviours 62–65).
 
 use bevy::prelude::*;
 
 use super::{
-    super::system::{TetherLink, register},
+    super::system::{TetherLink, wire},
     helpers::{
         add_tether_stacks, build_cleanup_tether_app, build_establish_tether_app,
         canonical_tether_config, enter_playing, install_tether_config, run_fixed_update,
@@ -12,7 +12,7 @@ use super::{
 };
 use crate::{mutators::hazards::resources::ActiveHazards, prelude::*};
 
-// ── Behavior 62 — register wires establish_tether_links to OnEnter(Playing) ──
+// ── Behavior 62 — wire wires establish_tether_links to OnEnter(Playing) ──
 
 #[test]
 fn register_wires_establish_to_on_enter_playing() {
@@ -31,13 +31,13 @@ fn register_wires_establish_to_on_enter_playing() {
     assert_eq!(
         total / 2,
         4,
-        "register must wire establish_tether_links OnEnter(Playing); matches \
+        "wire must wire establish_tether_links OnEnter(Playing); matches \
          Behaviour 20 expectation — got {} links",
         total / 2
     );
 }
 
-// ── Behavior 63 — register wires cleanup to FixedUpdate with state+hazard gates ──
+// ── Behavior 63 — wire wires cleanup to FixedUpdate with state+hazard gates ──
 
 #[test]
 fn register_wires_cleanup_with_state_and_hazard_gates() {
@@ -49,7 +49,7 @@ fn register_wires_cleanup_with_state_and_hazard_gates() {
         .build();
     install_tether_config(&mut app, canonical_tether_config());
     add_tether_stacks(&mut app, 1);
-    register(&mut app);
+    wire(&mut app);
 
     let (a, b) = spawn_linked_pair(&mut app, Vec2::new(0.0, 0.0), Vec2::new(50.0, 0.0));
     app.world_mut().entity_mut(b).insert(Dead);
@@ -62,7 +62,7 @@ fn register_wires_cleanup_with_state_and_hazard_gates() {
     assert_eq!(link_a.partner, b);
 }
 
-// ── Behavior 64 — register does NOT emit DamageDealt<Cell> messages ──────────
+// ── Behavior 64 — wire does NOT emit DamageDealt<Cell> messages ──────────
 
 #[test]
 fn register_does_not_emit_damage_dealt_cell_messages() {
@@ -77,13 +77,13 @@ fn register_does_not_emit_damage_dealt_cell_messages() {
     assert_eq!(
         collector.0.len(),
         0,
-        "register must not schedule any system that writes DamageDealt<Cell>; \
+        "wire must not schedule any system that writes DamageDealt<Cell>; \
          got {} messages",
         collector.0.len()
     );
 }
 
-// ── Behavior 65 — register does not panic when TetherConfig absent ───────────
+// ── Behavior 65 — wire does not panic when TetherConfig absent ───────────
 
 #[test]
 fn register_does_not_panic_when_tether_config_absent() {
@@ -93,14 +93,14 @@ fn register_does_not_panic_when_tether_config_absent() {
         .with_message::<DamageDealt<Cell>>()
         .build();
     // Zero Tether stacks, no TetherConfig.
-    register(&mut app);
+    wire(&mut app);
 
     run_fixed_update(&mut app);
     // Assertion: no panic above. Reaching here is success.
 }
 
 // ════════════════════════════════════════════════════════════════════
-// W2 Behavior 54 — tether::register schedules tether_emit_partner in PostApplyDamage
+// W2 Behavior 54 — tether::wire schedules tether_emit_partner in PostApplyDamage
 // ════════════════════════════════════════════════════════════════════
 
 use std::marker::PhantomData;
@@ -109,7 +109,7 @@ use crate::mutators::hazards::definition::HazardKind;
 
 #[test]
 fn tether_register_schedules_emit_partner_in_post_apply() {
-    // After register(&mut app) + 1 tick with Tether active, a primary
+    // After wire(&mut app) + 1 tick with Tether active, a primary
     // DamageDealt<Cell> targeting a linked cell must produce a sibling
     // with source "hazard:tether". Proves `tether_emit_partner` was
     // scheduled into DmgSystems::PostApplyDamage.
@@ -121,7 +121,7 @@ fn tether_register_schedules_emit_partner_in_post_apply() {
         .build();
     install_tether_config(&mut app, canonical_tether_config());
     add_tether_stacks(&mut app, 1);
-    register(&mut app);
+    wire(&mut app);
 
     let (a, b) = spawn_linked_pair(&mut app, Vec2::ZERO, Vec2::new(30.0, 0.0));
     let _ = b;
@@ -152,7 +152,7 @@ fn tether_register_schedules_emit_partner_in_post_apply() {
     assert_eq!(
         tethered.len(),
         1,
-        "register must wire tether_emit_partner in PostApplyDamage — got {} tether siblings",
+        "wire must wire tether_emit_partner in PostApplyDamage — got {} tether siblings",
         tethered.len()
     );
 }

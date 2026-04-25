@@ -1,8 +1,8 @@
 //! Group B — `overcharge_count_kills` system.
 //!
 //! Every test wires ONLY `overcharge_count_kills` via `wire_count_only`,
-//! bypassing the `register`-installed run conditions. Install a canonical
-//! config + 1 Overcharge stack for parity with register-wired tests (the
+//! bypassing the `wire`-installed run conditions. Install a canonical
+//! config + 1 Overcharge stack for parity with wire-wired tests (the
 //! system itself reads neither).
 
 use super::{

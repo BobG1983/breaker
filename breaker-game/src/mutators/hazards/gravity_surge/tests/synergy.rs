@@ -12,7 +12,7 @@ use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Velocity2D;
 
 use super::{
-    super::system::register,
+    super::system::wire,
     helpers::{
         add_gravity_surge_stacks, canonical_config, insert_seeded_rng,
         install_gravity_surge_config, spawn_bolt, spawn_well, test_app_playing, tick_with_dt,
@@ -21,8 +21,8 @@ use super::{
 use crate::mutators::hazards::{
     definition::HazardKind,
     drift::{
-        register as drift_register,
         system::{DriftConfig, DriftWind},
+        wire as drift_register,
     },
     resources::ActiveHazards,
 };
@@ -34,7 +34,7 @@ fn gravity_surge_and_drift_forces_sum_on_same_tick() {
     let mut app = test_app_playing();
     // Register both hazards.
     drift_register(&mut app);
-    register(&mut app);
+    wire(&mut app);
 
     // Install both configs + Drift wind (+X, long timer so direction is stable).
     app.world_mut().insert_resource(DriftConfig {
@@ -87,7 +87,7 @@ fn gravity_and_drift_both_positive_x_when_bolt_at_minus_hundred() {
     // still pushes +X. Both add: 10 + 0.5 = 10.5.
     let mut app = test_app_playing();
     drift_register(&mut app);
-    register(&mut app);
+    wire(&mut app);
 
     app.world_mut().insert_resource(DriftConfig {
         force:           100.0,

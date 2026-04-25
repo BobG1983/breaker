@@ -3,7 +3,7 @@
 //! Design doc: `docs/design/protocols/conductor.md`.
 //!
 //! Owns the `ConductorConfig` resource (per-run tuning), the single runtime
-//! system `conductor_swap_on_perfect_bump`, and the `activate` / `register`
+//! system `conductor_swap_on_perfect_bump`, and the `activate` / `wire`
 //! dispatch entry points. No per-node state, no sentinel, no cleanup system.
 
 pub(crate) mod system;
@@ -11,4 +11,4 @@ pub(crate) mod system;
 #[cfg(test)]
 mod tests;
 
-pub(crate) use system::{activate, register};
+pub(crate) use system::{activate, wire};

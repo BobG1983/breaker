@@ -16,7 +16,7 @@ use std::marker::PhantomData;
 use bevy::prelude::*;
 
 use super::{
-    super::system::{EchoNetwork, EchoPrimed, echo_strike_emit_siblings, register},
+    super::system::{EchoNetwork, EchoPrimed, echo_strike_emit_siblings, wire},
     helpers::{canonical_echo_strike_config, seed_active_protocols_with_echo_strike},
 };
 use crate::{mutators::protocols::resources::ActiveProtocols, prelude::*};
@@ -28,7 +28,7 @@ fn echo_strike_scheduling_app() -> App {
         .with_resource::<ActiveProtocols>()
         .with_effects_pipeline()
         .build();
-    register(&mut app);
+    wire(&mut app);
     app
 }
 

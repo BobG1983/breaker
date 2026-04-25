@@ -12,7 +12,7 @@ use bevy::prelude::*;
 use rantzsoft_dmg::{RantzDmgAppExt, RantzDmgPlugin};
 
 use super::{
-    super::system::{momentum_heal_on_nonlethal, register},
+    super::system::{momentum_heal_on_nonlethal, wire},
     helpers::{
         add_hazard_stacks, add_momentum_stacks, canonical_momentum_config, heal_collector_len,
         heals_for_cell, install_momentum_config, run_fixed_update, spawn_cell_at,
@@ -97,7 +97,7 @@ fn no_heal_when_no_damage_messages() {
 #[test]
 fn gate_blocks_when_different_hazard_stacked() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_momentum_config(&mut app, canonical_momentum_config());
     add_hazard_stacks(&mut app, HazardKind::Volatility, 1);
     assert_eq!(
@@ -124,7 +124,7 @@ fn gate_blocks_when_different_hazard_stacked() {
 #[test]
 fn gate_blocks_when_not_in_playing_state() {
     let mut app = test_app_not_playing();
-    register(&mut app);
+    wire(&mut app);
     install_momentum_config(&mut app, canonical_momentum_config());
     add_momentum_stacks(&mut app, 1);
 

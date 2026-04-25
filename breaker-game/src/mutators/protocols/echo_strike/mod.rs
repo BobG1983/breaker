@@ -6,7 +6,7 @@
 //! and `EchoPrimed` per-bolt components, the four runtime systems
 //! (`echo_strike_on_bump`, `echo_strike_emit_siblings`,
 //! `echo_strike_cleanup_destroyed_echoes`, `echo_strike_cleanup_node`), and
-//! the `activate` / `register` dispatch entry points.
+//! the `activate` / `wire` dispatch entry points.
 
 pub mod system;
 
@@ -14,4 +14,4 @@ pub mod system;
 mod tests;
 
 pub use system::{EchoNetwork, EchoPrimed};
-pub(crate) use system::{activate, register};
+pub(crate) use system::{activate, wire};

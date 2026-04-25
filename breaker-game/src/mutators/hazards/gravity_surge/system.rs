@@ -142,7 +142,7 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
 /// Exception. Commit 5 / Wave 7 retrofits `gravity_well_pull` to publish
 /// `ApplyBoltForce` messages instead, at which point the bolt domain
 /// owns velocity integration and this exception resolves.
-pub(crate) fn register(app: &mut App) {
+pub(crate) fn wire(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         (gravity_well_pull, despawn_expired_gravity_wells)

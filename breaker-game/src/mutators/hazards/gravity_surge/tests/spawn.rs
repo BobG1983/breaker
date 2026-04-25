@@ -1,7 +1,7 @@
 //! Group C — `spawn_gravity_wells` system.
 //!
 //! Every test wires only `spawn_gravity_wells` via `wire_spawn_only`. This
-//! bypasses `register`-installed gates; gating is tested in Group F.
+//! bypasses `wire`-installed gates; gating is tested in Group F.
 
 use std::time::Duration;
 

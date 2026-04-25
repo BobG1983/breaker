@@ -318,7 +318,7 @@ fn tick_is_gated_off_when_siphon_not_active() {
         streak_window: 2.0,
         time_per_kill: 0.5,
     });
-    super::super::system::register(&mut app);
+    super::super::system::wire(&mut app);
     seed_active_protocols_with_siphon(&mut app, 2.0, 0.5);
     install_siphon_streak(&mut app, 2.0, 2);
 

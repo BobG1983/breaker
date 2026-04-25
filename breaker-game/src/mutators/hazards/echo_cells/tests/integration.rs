@@ -42,13 +42,13 @@ fn activate_with_mismatched_tuning_does_nothing() {
     assert!(app.world().get_resource::<EchoCellsConfig>().is_none());
 }
 
-// ── D. register(app) — full chained pipeline ──────────────────────────
+// ── D. wire(app) — full chained pipeline ──────────────────────────
 
 // Behavior 34 — chained pipeline: track phase → spawn phase across ticks.
 #[test]
 fn register_chains_track_then_spawn() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_echo_cells_config(&mut app, canonical_config());
     add_echo_cells_stacks(&mut app, 1);
     write_destroyed(&mut app, Entity::PLACEHOLDER, Vec2::new(50.0, 50.0));
@@ -74,7 +74,7 @@ fn register_chains_track_then_spawn() {
     assert!((positions[0] - Vec2::new(50.0, 50.0)).length() < 1e-4);
 }
 
-// Behavior 34a — strict > 0.0 boundary pin via full register() pipeline.
+// Behavior 34a — strict > 0.0 boundary pin via full wire() pipeline.
 // Pin strict > 0.0 boundary. timer arrives at exactly 0.0 in the second
 // tick's spawn system; 0.0 > 0.0 is false → ghost fires. If
 // echo_cells_spawn_ghosts ever changes the comparison to >= 0.0, this
@@ -82,7 +82,7 @@ fn register_chains_track_then_spawn() {
 #[test]
 fn register_ghost_fires_at_exactly_zero_timer_strict_gt_check() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_echo_cells_config(&mut app, canonical_config());
     add_echo_cells_stacks(&mut app, 1);
     write_destroyed(&mut app, Entity::PLACEHOLDER, Vec2::new(50.0, 50.0));
@@ -111,7 +111,7 @@ fn register_ghost_fires_at_exactly_zero_timer_strict_gt_check() {
 #[test]
 fn register_gate_off_not_playing_does_not_track() {
     let mut app = test_app_not_playing();
-    register(&mut app);
+    wire(&mut app);
     install_echo_cells_config(&mut app, canonical_config());
     add_echo_cells_stacks(&mut app, 1);
     write_destroyed(&mut app, Entity::PLACEHOLDER, Vec2::ZERO);
@@ -129,7 +129,7 @@ fn register_gate_off_not_playing_does_not_track() {
 #[test]
 fn register_positive_control_state_playing_tracks() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_echo_cells_config(&mut app, canonical_config());
     add_echo_cells_stacks(&mut app, 1);
     write_destroyed(&mut app, Entity::PLACEHOLDER, Vec2::ZERO);
@@ -146,7 +146,7 @@ fn register_positive_control_state_playing_tracks() {
 #[test]
 fn register_gate_off_zero_stacks_does_not_track() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_echo_cells_config(&mut app, canonical_config());
     // NO stacks added — hazard_active(EchoCells) returns false.
     write_destroyed(&mut app, Entity::PLACEHOLDER, Vec2::ZERO);
@@ -174,7 +174,7 @@ fn register_pregate_messages_drain_cleanly_before_gate_opens() {
     // writing a new message. Tick again. The pre-gate message must NOT
     // be consumed → 0 PendingGhost.
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_echo_cells_config(&mut app, canonical_config());
 
     // Tick 1 — gate off, pre-gate death written. Retrofit drains reader.
@@ -206,7 +206,7 @@ fn register_pregate_messages_drain_cleanly_before_gate_opens() {
 #[test]
 fn register_gate_reopens_when_stack_added_processes_new_messages() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_echo_cells_config(&mut app, canonical_config());
 
     // Tick 1 — gate off, no message written.
@@ -234,7 +234,7 @@ fn register_gate_reopens_when_stack_added_processes_new_messages() {
 #[test]
 fn register_second_tick_without_message_does_not_spawn_more() {
     let mut app = test_app_playing();
-    register(&mut app);
+    wire(&mut app);
     install_echo_cells_config(&mut app, canonical_config());
     add_echo_cells_stacks(&mut app, 1);
 

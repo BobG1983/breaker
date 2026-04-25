@@ -14,7 +14,7 @@ use bevy::{
     prelude::*,
 };
 
-use super::super::system::{DebtCashOut, DebtCollectorConfig, DebtStack, activate, register};
+use super::super::system::{DebtCashOut, DebtCollectorConfig, DebtStack, activate, wire};
 use crate::{
     bolt::components::BoltBaseDamage,
     breaker::messages::{BumpGrade, BumpPerformed},
@@ -30,7 +30,7 @@ use crate::{
 /// Default Debt Collector test app. State hierarchy in `NodeState::Playing`,
 /// `ActiveProtocols` initialised, reader messages registered,
 /// `DamageDealt<Cell>` capture installed, canonical `DebtCollectorConfig`
-/// inserted, and `register` called.
+/// inserted, and `wire` called.
 ///
 /// Does NOT seed `ActiveProtocols` with Debt Collector — tests that need the
 /// protocol active call [`seed_active_protocols_with_debt_collector`].
@@ -46,7 +46,7 @@ pub(super) fn build_debt_collector_app() -> App {
         .build();
     app.world_mut()
         .insert_resource(canonical_debt_collector_config());
-    register(&mut app);
+    wire(&mut app);
     app
 }
 
@@ -63,7 +63,7 @@ pub(super) fn build_debt_collector_app_no_config() -> App {
         .with_message::<BoltLost>()
         .with_message_capture::<DamageDealt<Cell>>()
         .build();
-    register(&mut app);
+    wire(&mut app);
     app
 }
 
@@ -82,7 +82,7 @@ pub(super) fn build_debt_collector_app_in_chip_selecting() -> App {
         .build();
     app.world_mut()
         .insert_resource(canonical_debt_collector_config());
-    register(&mut app);
+    wire(&mut app);
     app
 }
 

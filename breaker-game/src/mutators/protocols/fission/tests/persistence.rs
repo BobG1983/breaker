@@ -10,7 +10,7 @@
 use bevy::prelude::*;
 
 use super::{
-    super::system::{FissionConfig, FissionCounter, register},
+    super::system::{FissionConfig, FissionCounter, wire},
     helpers::{
         build_fission_app, install_fission_counter, seed_active_protocols_with_fission,
         spawn_bolt_at_with_velocity, write_destroyed_cell,
@@ -165,7 +165,7 @@ fn on_exit_menu_state_main_removes_fission_config_and_counter() {
         .set(MenuState::Main);
     app.update();
 
-    register(&mut app);
+    wire(&mut app);
     app.world_mut()
         .insert_resource(FissionConfig { kills_per_split: 8 });
     app.world_mut().insert_resource(FissionCounter { kills: 5 });
@@ -210,7 +210,7 @@ fn cleanup_runs_even_when_fission_not_in_active_protocols() {
         .set(MenuState::Main);
     app.update();
 
-    register(&mut app);
+    wire(&mut app);
     // Do NOT seed Fission in ActiveProtocols.
     app.world_mut()
         .insert_resource(FissionConfig { kills_per_split: 8 });
@@ -254,7 +254,7 @@ fn cleanup_is_idempotent_when_resources_already_absent() {
         .set(MenuState::Main);
     app.update();
 
-    register(&mut app);
+    wire(&mut app);
     // Resources intentionally NOT installed.
 
     // First OnExit(MenuState::Main) — resources already absent.

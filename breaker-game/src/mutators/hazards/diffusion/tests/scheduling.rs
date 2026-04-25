@@ -11,7 +11,7 @@
 
 use bevy::prelude::*;
 
-use super::super::system::{diffusion_emit_rings, register};
+use super::super::system::{diffusion_emit_rings, wire};
 use crate::{mutators::hazards::resources::ActiveHazards, prelude::*};
 
 fn diffusion_scheduling_app() -> App {
@@ -21,7 +21,7 @@ fn diffusion_scheduling_app() -> App {
         .with_resource::<ActiveHazards>()
         .with_effects_pipeline()
         .build();
-    register(&mut app);
+    wire(&mut app);
     app
 }
 
