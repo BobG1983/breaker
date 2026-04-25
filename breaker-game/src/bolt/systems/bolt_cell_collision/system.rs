@@ -2,16 +2,16 @@
 //!
 //! Instead of moving the bolt first and then checking for overlaps, this system
 //! traces the bolt's path forward using ray-vs-expanded-AABB intersection.
-//! On each hit, the bolt is placed just before the impact point, the velocity
+//! On each impact, the bolt is placed just before the impact point, the velocity
 //! is reflected, and the remaining movement continues. The bolt never overlaps
 //! any cell.
 //!
-//! A per-frame `MAX_BOUNCES` cap (4) prevents infinite bounce loops. Cell hits
-//! are naturally bounded: after reflection, the bolt travels away from the hit
+//! A per-frame `MAX_BOUNCES` cap (4) prevents infinite bounce loops. Cell impacts
+//! are naturally bounded: after reflection, the bolt travels away from the impact
 //! surface for the remainder of the frame budget.
 //!
 //! Piercing bolts (`PiercingRemaining > 0`) pass through cells without
-//! reflecting, decrementing `PiercingRemaining` on each hit.
+//! reflecting, decrementing `PiercingRemaining` on each impact.
 //!
 //! Cell damage and destruction are handled by the unified death pipeline via
 //! [`BoltImpactCell`] and [`DamageDealt<Cell>`] messages. Wall overlap
@@ -55,7 +55,7 @@ type CollisionWriters<'a> = (
 
 /// Bundled read-only queries consumed by `bolt_cell_collision`.
 ///
-/// Groups the hit-candidate lookup (cell marker, HP, vulnerability stack)
+/// Groups the impact-candidate lookup (cell marker, HP, vulnerability stack)
 /// alongside the phantom-bolt marker query so the outer system signature
 /// stays under the clippy argument-count threshold.
 ///
@@ -83,7 +83,7 @@ pub(crate) struct CandidateLookup<'w, 's> {
 }
 
 impl CandidateLookup<'_, '_> {
-    /// Looks up the hit-candidate data for `entity`.
+    /// Looks up the impact-candidate data for `entity`.
     ///
     /// Returns the same tuple the underlying candidate query produces:
     /// `(is_cell, optional Hp, optional vulnerability stack)`.
@@ -99,28 +99,28 @@ impl CandidateLookup<'_, '_> {
 
 /// Returns the first `SweepHit` whose entity is not a pierced cell.
 ///
-/// `cast_circle` returns hits sorted nearest-first. For each hit, check if the
+/// `cast_circle` returns hits sorted nearest-first. For each impact, check if the
 /// entity is a cell that has already been pierced this frame — if so, skip it.
 fn find_first_non_pierced<'a>(
     hits: &'a [SweepHit],
     candidate_lookup: &CandidateLookup,
     pierced_this_frame: &[Entity],
 ) -> Option<&'a SweepHit> {
-    hits.iter().find(|hit| {
-        let Ok((is_cell, ..)) = candidate_lookup.get(hit.entity) else {
+    hits.iter().find(|impact| {
+        let Ok((is_cell, ..)) = candidate_lookup.get(impact.entity) else {
             return false;
         };
-        !(is_cell && pierced_this_frame.contains(&hit.entity))
+        !(is_cell && pierced_this_frame.contains(&impact.entity))
     })
 }
 
 /// Advances bolts along their velocity, reflecting off cells via swept CCD.
 ///
 /// For each bolt, traces a ray from its current position in the velocity
-/// direction. If a cell is hit, the bolt is placed just before the
-/// impact point, the velocity is reflected off the hit face, and tracing
+/// direction. If a cell is impacted, the bolt is placed just before the
+/// impact point, the velocity is reflected off the impact face, and tracing
 /// continues with the remaining movement distance. Sends [`BoltImpactCell`]
-/// and [`DamageDealt<Cell>`] messages for each cell hit.
+/// and [`DamageDealt<Cell>`] messages for each cell impact.
 pub(crate) fn bolt_cell_collision(
     mut commands: Commands,
     time: Res<Time<Fixed>>,
@@ -130,7 +130,7 @@ pub(crate) fn bolt_cell_collision(
     mut writers: CollisionWriters,
     mut pierced_this_frame: Local<Vec<Entity>>,
 ) {
-    let (ref mut hit_writer, ref mut damage_writer) = writers;
+    let (ref mut impact_writer, ref mut damage_writer) = writers;
     let dt = time.delta_secs();
 
     for mut bolt in &mut bolt_query {
@@ -146,8 +146,8 @@ pub(crate) fn bolt_cell_collision(
         // `VulnerableStack` downstream.
         //
         // The pierce/reflect decision needs a predicted post-pipeline damage
-        // to ask "would this hit kill the cell?". `effective_damage` here and
-        // `cell_damage` in `resolve_bolt_cell_hit` duplicate the pipeline's
+        // to ask "would this impact kill the cell?". `effective_damage` here and
+        // `cell_damage` in `resolve_bolt_cell_impact` duplicate the pipeline's
         // multiplier chain using `aggregate_persistent` (one-shots excluded).
         // This is a known duplication with a subtle one-shot divergence —
         // tracked as cleanup (see bolt_cell_collision pierce-decision task).
@@ -186,37 +186,41 @@ pub(crate) fn bolt_cell_collision(
                 collision_layers,
             );
 
-            // Find the first hit that is not a pierced cell
+            // Find the first impact that is not a pierced cell
             let first_hit = find_first_non_pierced(&hits, &candidate_lookup, &pierced_this_frame);
 
-            let Some(hit) = first_hit else {
+            let Some(impact) = first_hit else {
                 // No target in path — move the full remaining distance
                 position += direction * remaining_px;
                 break;
             };
 
             // Advance to the safe position (epsilon already applied by cast_circle)
-            position = hit.position;
-            remaining_px = hit.remaining;
+            position = impact.position;
+            remaining_px = impact.remaining;
 
-            let Some(outcome) =
-                resolve_bolt_cell_hit(hit, &bolt, is_phantom, effective_damage, &candidate_lookup)
-            else {
+            let Some(outcome) = resolve_bolt_cell_impact(
+                impact,
+                &bolt,
+                is_phantom,
+                effective_damage,
+                &candidate_lookup,
+            ) else {
                 continue;
             };
 
-            let mut state = HitApplyState {
+            let mut state = ImpactApplyState {
                 velocity: &mut velocity,
                 pierced_this_frame: &mut pierced_this_frame,
                 base_damage,
             };
-            apply_hit_outcome(
+            apply_impact_outcome(
                 &outcome,
-                hit,
+                impact,
                 &mut bolt,
                 &mut state,
                 &mut commands,
-                (&mut *hit_writer, &mut *damage_writer),
+                (&mut *impact_writer, &mut *damage_writer),
             );
         }
 
@@ -233,12 +237,12 @@ pub(crate) fn bolt_cell_collision(
     }
 }
 
-/// Per-hit decision produced by `resolve_bolt_cell_hit`. Each variant carries a snapshot
+/// Per-impact decision produced by `resolve_bolt_cell_impact`. Each variant carries a snapshot
 /// of the bolt's piercing charge at the instant of impact. Pierce-decision computation
-/// (using fully-multiplied damage) remains in `resolve_bolt_cell_hit`; this enum carries
+/// (using fully-multiplied damage) remains in `resolve_bolt_cell_impact`; this enum carries
 /// no damage value — emission supplies raw `base_damage` and the `rantzsoft_dmg` pipeline
 /// applies boost/vulnerability.
-enum HitOutcome {
+enum ImpactOutcome {
     /// Phantom bolt passed through a cell — no reflect, no pierce
     /// decrement, no `LastImpact` stamp.
     PhantomPierce { piercing_at_impact: u32 },
@@ -253,20 +257,20 @@ enum HitOutcome {
 /// Decides how a confirmed `SweepHit` against a candidate entity should be
 /// resolved: phantom-pierce, pierce-through, or normal reflect.
 ///
-/// Returns `None` when the hit entity is absent from `candidate_lookup` or is
-/// not a cell — the CCD loop skips such hits.
+/// Returns `None` when the impact entity is absent from `candidate_lookup` or is
+/// not a cell — the CCD loop skips such impacts.
 ///
 /// Pure function: reads bolt, cell, and stack state but performs no
 /// mutations and emits no messages. Mutation and message emission live in
-/// [`apply_hit_outcome`].
-fn resolve_bolt_cell_hit(
-    hit: &SweepHit,
+/// [`apply_impact_outcome`].
+fn resolve_bolt_cell_impact(
+    impact: &SweepHit,
     bolt: &BoltCollisionDataItem<'_, '_>,
     is_phantom: bool,
     effective_damage: f32,
     candidate_lookup: &CandidateLookup,
-) -> Option<HitOutcome> {
-    let Ok((is_cell, cell_hp, vulnerability)) = candidate_lookup.get(hit.entity) else {
+) -> Option<ImpactOutcome> {
+    let Ok((is_cell, cell_hp, vulnerability)) = candidate_lookup.get(impact.entity) else {
         return None;
     };
     if !is_cell {
@@ -290,87 +294,87 @@ fn resolve_bolt_cell_hit(
         .map_or(0, |pr| pr.0);
 
     Some(if is_phantom {
-        HitOutcome::PhantomPierce { piercing_at_impact }
+        ImpactOutcome::PhantomPierce { piercing_at_impact }
     } else if can_pierce && would_destroy {
-        HitOutcome::Pierce { piercing_at_impact }
+        ImpactOutcome::Pierce { piercing_at_impact }
     } else {
-        HitOutcome::Reflect { piercing_at_impact }
+        ImpactOutcome::Reflect { piercing_at_impact }
     })
 }
 
-/// Bundled message writers for [`apply_hit_outcome`] — keeps the helper's
+/// Bundled message writers for [`apply_impact_outcome`] — keeps the helper's
 /// argument count under the `too_many_arguments` threshold without carrying
 /// `&mut Commands` in the same struct (which would cause lifetime
 /// invariance conflicts across independent `SystemParam` lifetimes).
-type HitWriters<'a, 'w> = (
+type ImpactWriters<'a, 'w> = (
     &'a mut MessageWriter<'w, BoltImpactCell>,
     &'a mut MessageWriter<'w, DamageDealt<Cell>>,
 );
 
-/// Per-bolt mutable state threaded through [`apply_hit_outcome`].
+/// Per-bolt mutable state threaded through [`apply_impact_outcome`].
 ///
 /// Bundles the per-bolt velocity, the frame-local pierce skip set, and the
 /// raw `base_damage` emitted on `DamageDealt<Cell>`. Keeps the helper
 /// signature under clippy's `too_many_arguments` threshold without adding
 /// `#[allow(...)]`.
-struct HitApplyState<'a> {
+struct ImpactApplyState<'a> {
     velocity:           &'a mut Vec2,
     pierced_this_frame: &'a mut Vec<Entity>,
-    /// RAW per-hit damage emitted in `DamageDealt<Cell>.amount`. The
+    /// RAW per-impact damage emitted in `DamageDealt<Cell>.amount`. The
     /// `rantzsoft_dmg` pipeline applies `DamageBoostStack` and
     /// `VulnerableStack` — this value is NEVER pre-multiplied here.
     base_damage:        f32,
 }
 
-/// Applies a resolved [`HitOutcome`] to bolt state and emits the associated
+/// Applies a resolved [`ImpactOutcome`] to bolt state and emits the associated
 /// `BoltImpactCell` + `DamageDealt<Cell>` messages.
 ///
 /// Mirrors the original resolve-helper's side-effects in order:
 /// 1. `PhantomPierce`: push to `pierced_this_frame`.
 /// 2. `Pierce`: decrement `piercing_remaining`, push to `pierced_this_frame`.
-/// 3. `Reflect`: reflect velocity off `hit.normal`, stamp `LastImpact`.
+/// 3. `Reflect`: reflect velocity off `impact.normal`, stamp `LastImpact`.
 ///    Then always: write `BoltImpactCell`, then `DamageDealt<Cell>` with
 ///    `amount = state.base_damage` (RAW — the pipeline multiplies).
-fn apply_hit_outcome(
-    outcome: &HitOutcome,
-    hit: &SweepHit,
+fn apply_impact_outcome(
+    outcome: &ImpactOutcome,
+    impact: &SweepHit,
     bolt: &mut BoltCollisionDataItem<'_, '_>,
-    state: &mut HitApplyState<'_>,
+    state: &mut ImpactApplyState<'_>,
     commands: &mut Commands,
-    writers: HitWriters<'_, '_>,
+    writers: ImpactWriters<'_, '_>,
 ) {
-    let (hit_writer, damage_writer) = writers;
+    let (impact_writer, damage_writer) = writers;
     let piercing_at_impact = match outcome {
-        HitOutcome::PhantomPierce { piercing_at_impact } => {
-            state.pierced_this_frame.push(hit.entity);
+        ImpactOutcome::PhantomPierce { piercing_at_impact } => {
+            state.pierced_this_frame.push(impact.entity);
             *piercing_at_impact
         }
-        HitOutcome::Pierce { piercing_at_impact } => {
+        ImpactOutcome::Pierce { piercing_at_impact } => {
             if let Some(ref mut pr) = bolt.collision.piercing_remaining {
                 pr.0 = pr.0.saturating_sub(1);
             }
-            state.pierced_this_frame.push(hit.entity);
+            state.pierced_this_frame.push(impact.entity);
             *piercing_at_impact
         }
-        HitOutcome::Reflect { piercing_at_impact } => {
-            *state.velocity = reflect(*state.velocity, hit.normal);
-            let side = ccd_normal_to_impact_side(hit.normal);
+        ImpactOutcome::Reflect { piercing_at_impact } => {
+            *state.velocity = reflect(*state.velocity, impact.normal);
+            let side = ccd_normal_to_impact_side(impact.normal);
             if let Some(li) = bolt.collision.last_impact.as_mut() {
-                li.position = hit.position;
+                li.position = impact.position;
                 li.side = side;
             } else {
                 commands.entity(bolt.entity).insert(LastImpact {
-                    position: hit.position,
+                    position: impact.position,
                     side,
                 });
             }
             *piercing_at_impact
         }
     };
-    hit_writer.write(BoltImpactCell {
-        cell:               hit.entity,
+    impact_writer.write(BoltImpactCell {
+        cell:               impact.entity,
         bolt:               bolt.entity,
-        impact_normal:      hit.normal,
+        impact_normal:      impact.normal,
         piercing_remaining: piercing_at_impact,
     });
     // Emit RAW `base_damage`. The `rantzsoft_dmg` pipeline applies
@@ -380,7 +384,7 @@ fn apply_hit_outcome(
     damage_writer.write(DamageDealt {
         dealer:        Some(bolt.entity),
         attributed_to: None,
-        target:        hit.entity,
+        target:        impact.entity,
         amount:        state.base_damage,
         source:        bolt.collision.spawned_by_evolution.map(|s| s.0.clone()),
         _marker:       PhantomData::<Cell>,
