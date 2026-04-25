@@ -1,14 +1,14 @@
-//! Groups A–F — unit and integration tests for the Armored cell modifier.
+//! Unit and integration tests for the Armored cell modifier.
 //!
-//! Split by group per `.claude/rules/file-splitting.md`. Shared helpers live
-//! in `helpers.rs`. Behavior 27 (cross-plugin registration) lives in
+//! Split by behavior per `.claude/rules/file-splitting.md`. Shared helpers
+//! live in `helpers.rs`. Behavior 27 (cross-plugin registration) lives in
 //! `cells/plugin.rs`, not here.
 
 mod helpers;
 
-mod group_a;
-mod group_b;
-mod group_c;
-mod group_d;
-mod group_e;
-mod group_f;
+mod builder_attachment;
+mod direction_block;
+mod direction_breakthrough;
+mod direction_pass_through;
+mod facings_and_multihit;
+mod validation;

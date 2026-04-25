@@ -1,8 +1,8 @@
 mod helpers;
 
-mod group_c;
-mod group_d;
-mod group_e;
-mod group_f;
-mod group_g;
-mod group_i;
+mod collision_layers;
+mod death_during_phases;
+mod full_cycle;
+mod phase_transitions;
+mod timer_decrement;
+mod validation;
