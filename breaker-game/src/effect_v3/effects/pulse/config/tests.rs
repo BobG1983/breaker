@@ -734,3 +734,31 @@ fn tick_pulse_via_fire_fires_exactly_one_ring_per_tick_when_dt_exceeds_interval(
         "single-decrement, single-fire, single-reload must yield timer == -0.5, got {timer}",
     );
 }
+
+// ── PulseConfig::fire — early-return on despawned entity ──────────────
+
+/// `PulseConfig::fire` early-returns when the target entity has been
+/// despawned. The early-return must be a true no-op — no `PulseEmitter`
+/// gets attached to a stale id, no panic from `entity_mut` on a missing
+/// entity, and no spurious entity is spawned.
+#[test]
+fn fire_on_despawned_entity_is_a_no_op() {
+    let mut world = World::new();
+    let entity = world.spawn_empty().id();
+    world.despawn(entity);
+
+    make_config().fire(entity, storm_source().0.as_ref(), &mut world);
+
+    assert!(
+        world.get_entity(entity).is_err(),
+        "despawned entity must not have been resurrected by fire()",
+    );
+    let emitter_count = world
+        .query::<&crate::effect_v3::effects::pulse::components::PulseEmitter>()
+        .iter(&world)
+        .count();
+    assert_eq!(
+        emitter_count, 0,
+        "fire() on despawned entity must not spawn or attach any PulseEmitter, got {emitter_count}",
+    );
+}
