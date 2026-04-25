@@ -4,10 +4,8 @@
 //! sub-domains keep their semantic distinction (protocols are positive
 //! upgrades, hazards are stacking challenges) but share one plugin so that
 //! cross-cutting wiring — most notably the `DmgSystems::MutateDamage` /
-//! `DmgSystems::PostApplyDamage` chain participation — can live in a
-//! single, central place. Wave 3 will fill in `wire_damage_chain`; until
-//! then chain participants wire from their per-mechanic `wire()`
-//! functions exactly as before.
+//! `DmgSystems::PostApplyDamage` chain participation — lives in a single,
+//! central place ([`wire_damage_chain`]).
 
 use bevy::{ecs::schedule::ApplyDeferred, prelude::*};
 
