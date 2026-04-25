@@ -24,6 +24,19 @@ impl EffectSourceChip {
     pub const fn new(source: Option<SourceId>) -> Self {
         Self(source)
     }
+
+    /// Constructs from the `&str` source passed into `Fireable::fire`.
+    /// Empty strings (the W7 "no source" sentinel) map to `None`; non-empty
+    /// strings are wrapped in a `SourceId`. Centralizes the construction
+    /// pattern previously copy-pasted across every `fire()` impl.
+    #[must_use]
+    pub fn from_source_str(source: &str) -> Self {
+        Self(if source.is_empty() {
+            None
+        } else {
+            Some(SourceId::from(source.to_owned()))
+        })
+    }
 }
 
 #[cfg(test)]

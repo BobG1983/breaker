@@ -5,12 +5,9 @@ use ordered_float::OrderedFloat;
 use serde::{Deserialize, Serialize};
 
 use super::super::components::PulseEmitter;
-use crate::{
-    effect_v3::{
-        components::EffectSourceChip,
-        traits::{Fireable, Reversible},
-    },
-    prelude::SourceId,
+use crate::effect_v3::{
+    components::EffectSourceChip,
+    traits::{Fireable, Reversible},
 };
 
 /// Configuration for periodic pulse shockwave emission.
@@ -40,11 +37,7 @@ impl Fireable for PulseConfig {
             speed:           self.speed.0,
             interval:        self.interval.0,
             timer:           self.interval.0,
-            source_chip:     EffectSourceChip(if source.is_empty() {
-                None
-            } else {
-                Some(SourceId::from(source.to_owned()))
-            }),
+            source_chip:     EffectSourceChip::from_source_str(source),
         });
     }
 

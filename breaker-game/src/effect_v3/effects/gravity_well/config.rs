@@ -29,11 +29,7 @@ impl Fireable for GravityWellConfig {
     fn fire(&self, entity: Entity, source: &str, world: &mut World) {
         let pos = world.get::<Position2D>(entity).map_or(Vec2::ZERO, |p| p.0);
 
-        let chip = EffectSourceChip(if source.is_empty() {
-            None
-        } else {
-            Some(crate::prelude::SourceId::from(source.to_owned()))
-        });
+        let chip = EffectSourceChip::from_source_str(source);
 
         // Calculate next spawn order BEFORE eviction (so evicted well's order is included).
         let next_order = world

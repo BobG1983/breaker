@@ -19,11 +19,7 @@ pub struct SecondWindConfig {}
 
 impl Fireable for SecondWindConfig {
     fn fire(&self, entity: Entity, source: &str, world: &mut World) {
-        let chip = EffectSourceChip(if source.is_empty() {
-            None
-        } else {
-            Some(crate::prelude::SourceId::from(source.to_owned()))
-        });
+        let chip = EffectSourceChip::from_source_str(source);
         let playfield = world.resource::<PlayfieldConfig>().clone();
 
         let mut commands = world.commands();

@@ -39,11 +39,7 @@ impl Fireable for ChainLightningConfig {
             .get::<DamageBoostStack>(entity)
             .map_or(1.0, DamageBoostStack::aggregate_persistent);
 
-        let chip = EffectSourceChip(if source.is_empty() {
-            None
-        } else {
-            Some(SourceId::from(source.to_owned()))
-        });
+        let chip = EffectSourceChip::from_source_str(source);
 
         world.spawn((
             ChainLightningChain {

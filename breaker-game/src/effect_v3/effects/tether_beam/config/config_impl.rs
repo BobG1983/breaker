@@ -14,7 +14,6 @@ use super::super::components::{TetherBeamDamage, TetherBeamSource, TetherBeamWid
 use crate::{
     bolt::components::{Bolt, ExtraBolt},
     effect_v3::{components::EffectSourceChip, traits::Fireable},
-    prelude::SourceId,
     shared::{birthing::Birthing, rng::GameRng},
     state::types::NodeState,
 };
@@ -78,11 +77,7 @@ impl TetherBeamConfig {
             .spawn((Bolt, ExtraBolt, Position2D(pos), Velocity2D(vel), birthing))
             .id();
 
-        let chip = EffectSourceChip(if source.is_empty() {
-            None
-        } else {
-            Some(SourceId::from(source.to_owned()))
-        });
+        let chip = EffectSourceChip::from_source_str(source);
 
         // Spawn tether beam source entity (NOT a bolt)
         world.spawn((
@@ -122,11 +117,7 @@ impl TetherBeamConfig {
             return;
         };
 
-        let chip = EffectSourceChip(if source.is_empty() {
-            None
-        } else {
-            Some(SourceId::from(source.to_owned()))
-        });
+        let chip = EffectSourceChip::from_source_str(source);
 
         // Spawn tether beam source entity
         world.spawn((

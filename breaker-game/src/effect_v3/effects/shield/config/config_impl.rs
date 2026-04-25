@@ -39,11 +39,7 @@ impl Fireable for ShieldConfig {
             return;
         }
 
-        let chip = EffectSourceChip(if source.is_empty() {
-            None
-        } else {
-            Some(crate::prelude::SourceId::from(source.to_owned()))
-        });
+        let chip = EffectSourceChip::from_source_str(source);
         let playfield = world.resource::<PlayfieldConfig>().clone();
 
         let mut commands = world.commands();
