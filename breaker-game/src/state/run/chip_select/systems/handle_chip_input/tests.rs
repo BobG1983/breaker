@@ -10,7 +10,7 @@ use crate::{
         effects::{DamageBoostConfig, PiercingConfig},
         types::{EffectType, Tree},
     },
-    protocol::{
+    mutators::protocols::{
         definition::{ProtocolDefinition, ProtocolKind, ProtocolTuning},
         messages::ProtocolSelected,
         resources::ProtocolOffer,

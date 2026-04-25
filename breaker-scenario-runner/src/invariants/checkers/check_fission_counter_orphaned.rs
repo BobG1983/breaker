@@ -1,6 +1,6 @@
 use bevy::prelude::*;
-use breaker::protocol::{
-    definition::ProtocolKind, protocols::fission::FissionCounter, resources::ActiveProtocols,
+use breaker::mutators::protocols::{
+    definition::ProtocolKind, fission::FissionCounter, resources::ActiveProtocols,
 };
 
 use crate::{invariants::*, types::InvariantKind};
@@ -62,9 +62,9 @@ pub fn check_fission_counter_orphaned(
 
 #[cfg(test)]
 mod tests {
-    use breaker::protocol::{
+    use breaker::mutators::protocols::{
         definition::{ProtocolDefinition, ProtocolTuning},
-        protocols::fission::FissionCounter,
+        fission::FissionCounter,
         resources::ActiveProtocols,
     };
 

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
-use breaker::protocol::{
+use breaker::mutators::protocols::{
     definition::ProtocolKind,
-    protocols::echo_strike::{EchoNetwork, EchoPrimed},
+    echo_strike::{EchoNetwork, EchoPrimed},
     resources::ActiveProtocols,
 };
 
@@ -74,9 +74,9 @@ pub fn check_echo_strike_orphaned(
 
 #[cfg(test)]
 mod tests {
-    use breaker::protocol::{
+    use breaker::mutators::protocols::{
         definition::{ProtocolDefinition, ProtocolTuning},
-        protocols::echo_strike::{EchoNetwork, EchoPrimed},
+        echo_strike::{EchoNetwork, EchoPrimed},
         resources::ActiveProtocols,
     };
 

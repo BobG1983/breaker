@@ -4,7 +4,7 @@ use bevy::{ecs::system::SystemParam, prelude::*};
 use rand::seq::SliceRandom;
 
 use crate::{
-    hazard::{
+    mutators::hazards::{
         definition::{HazardDefinition, HazardKind},
         resources::{HazardOffers, HazardRegistry},
     },

@@ -6,12 +6,12 @@ use rantzsoft_stateflow::ChangeState;
 
 use super::*;
 use crate::{
-    hazard::{
+    input::InputConfig,
+    mutators::hazards::{
         definition::{HazardDefinition, HazardKind, HazardTuning},
         messages::HazardSelected,
         resources::HazardOffers,
     },
-    input::InputConfig,
     state::run::hazard_select::resources::HazardSelectSelection,
 };
 

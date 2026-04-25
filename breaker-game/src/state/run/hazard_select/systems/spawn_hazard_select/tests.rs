@@ -6,7 +6,7 @@ use bevy::prelude::*;
 
 use super::*;
 use crate::{
-    hazard::{
+    mutators::hazards::{
         definition::{HazardDefinition, HazardKind, HazardTuning},
         resources::HazardOffers,
     },

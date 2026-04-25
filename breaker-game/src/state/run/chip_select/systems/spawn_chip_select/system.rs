@@ -1,7 +1,7 @@
 use bevy::{ecs::hierarchy::ChildSpawnerCommands, prelude::*};
 
 use crate::{
-    protocol::resources::ProtocolOffer,
+    mutators::protocols::resources::ProtocolOffer,
     shared::color_from_rgb,
     state::run::chip_select::{
         ChipOffering, ChipSelectConfig,

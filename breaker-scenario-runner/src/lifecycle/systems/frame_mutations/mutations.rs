@@ -14,24 +14,24 @@ use breaker::{
         second_wind::SecondWindWall,
         shield::ShieldWall,
     },
-    hazard::{
-        self,
-        definition::HazardKind,
-        resources::{ActiveHazards, HazardRegistry},
-    },
-    protocol::{
-        self,
-        definition::ProtocolKind,
+    mutators::{
+        hazards::{
+            self,
+            definition::HazardKind,
+            resources::{ActiveHazards, HazardRegistry},
+        },
         protocols::{
+            self,
             burnout::{BurnoutDamageBoost, BurnoutHeat},
             debt_collector::{DebtCashOut, DebtStack},
+            definition::ProtocolKind,
             echo_strike::{EchoNetwork, EchoPrimed},
             fission::FissionCounter,
             greed::GreedStacks,
             reckless_dash::{RecklessDashDoubledBolts, RiskyDamageBoost},
+            resources::{ActiveProtocols, ProtocolRegistry},
             siphon::SiphonStreak,
         },
-        resources::{ActiveProtocols, ProtocolRegistry},
     },
     shared::birthing::Birthing,
     state::{
@@ -365,7 +365,8 @@ fn apply_protocol_injection(kind_name: &str, targets: &mut MutationTargets) {
         return;
     };
     let breakers: Vec<Entity> = targets.breaker_entities.iter().collect();
-    if !protocol::activate_from_registry(registry, kind, &breakers, &mut targets.commands, active) {
+    if !protocols::activate_from_registry(registry, kind, &breakers, &mut targets.commands, active)
+    {
         warn!("InjectProtocol: no definition for {kind_name}");
     }
 }
@@ -417,7 +418,7 @@ fn apply_inject_hazard_stack(
         warn!("InjectHazardStack: HazardRegistry absent — cannot activate {kind_name}");
         return;
     };
-    if !hazard::activate_from_registry(registry, kind, commands) {
+    if !hazards::activate_from_registry(registry, kind, commands) {
         warn!("InjectHazardStack: no definition for {kind_name}");
         return;
     }

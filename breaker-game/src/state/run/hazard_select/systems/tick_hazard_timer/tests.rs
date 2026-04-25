@@ -10,7 +10,7 @@ use rantzsoft_stateflow::ChangeState;
 
 use super::*;
 use crate::{
-    hazard::{
+    mutators::hazards::{
         definition::{HazardDefinition, HazardKind, HazardTuning},
         messages::HazardSelected,
         resources::HazardOffers,

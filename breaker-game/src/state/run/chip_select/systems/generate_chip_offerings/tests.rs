@@ -540,8 +540,8 @@ mod greed_rarity_boost {
     };
     use crate::{
         chips::{ChipCatalog, definition::Rarity, inventory::ChipInventory},
+        mutators::protocols::greed::{GreedConfig, GreedStacks, apply_greed_boost},
         prelude::*,
-        protocol::protocols::greed::{GreedConfig, GreedStacks, apply_greed_boost},
         state::run::chip_select::{ChipOffers, ChipSelectConfig},
     };
 

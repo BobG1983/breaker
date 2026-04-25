@@ -3,11 +3,11 @@ use bevy::prelude::*;
 use super::system::*;
 use crate::{
     chips::ChipDefinition,
-    prelude::*,
-    protocol::{
+    mutators::protocols::{
         definition::{ProtocolDefinition, ProtocolKind, ProtocolTuning},
         resources::ProtocolOffer,
     },
+    prelude::*,
     state::run::chip_select::{
         ChipOffering, ChipSelectConfig,
         components::{ChipCard, ChipSelectScreen, ChipTimerText, ProtocolCard},

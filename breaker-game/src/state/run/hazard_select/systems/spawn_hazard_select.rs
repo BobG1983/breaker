@@ -3,7 +3,7 @@
 use bevy::{ecs::hierarchy::ChildSpawnerCommands, prelude::*};
 
 use crate::{
-    hazard::{definition::HazardDefinition, resources::HazardOffers},
+    mutators::hazards::{definition::HazardDefinition, resources::HazardOffers},
     shared::color_from_rgb,
     state::run::hazard_select::{
         HazardSelectConfig,

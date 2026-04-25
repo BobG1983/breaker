@@ -1,7 +1,7 @@
 use bevy::prelude::*;
-use breaker::protocol::{
+use breaker::mutators::protocols::{
     definition::ProtocolKind,
-    protocols::reckless_dash::{RecklessDashDoubledBolts, RiskyDamageBoost},
+    reckless_dash::{RecklessDashDoubledBolts, RiskyDamageBoost},
     resources::ActiveProtocols,
 };
 
@@ -82,9 +82,9 @@ pub fn check_reckless_dash_orphaned(
 mod tests {
     use std::collections::HashSet;
 
-    use breaker::protocol::{
+    use breaker::mutators::protocols::{
         definition::{ProtocolDefinition, ProtocolTuning},
-        protocols::reckless_dash::{RecklessDashDoubledBolts, RiskyDamageBoost},
+        reckless_dash::{RecklessDashDoubledBolts, RiskyDamageBoost},
         resources::ActiveProtocols,
     };
 

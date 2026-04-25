@@ -21,9 +21,9 @@ use rantzsoft_spatial2d::components::{GlobalPosition2D, Spatial2D};
 use crate::{
     chips::definition::Rarity,
     effect_v3::{effects::explode::config::ExplodeConfig, traits::Fireable},
-    hazard::{
+    mutators::hazards::{
         definition::HazardKind,
-        hazards::diffusion::system::{
+        diffusion::system::{
             DiffusionConfig, DiffusionInstances, PendingDiffusionEmissions, diffusion_emit_rings,
             diffusion_reduce_primary,
         },

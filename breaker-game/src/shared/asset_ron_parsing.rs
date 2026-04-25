@@ -22,8 +22,7 @@ use crate::{
     breaker::definition::BreakerDefinition,
     cells::definition::CellTypeDefinition,
     chips::definition::{ChipTemplate, EvolutionTemplate},
-    hazard::definition::HazardDefinition,
-    protocol::definition::ProtocolDefinition,
+    mutators::{hazards::definition::HazardDefinition, protocols::definition::ProtocolDefinition},
     walls::definition::WallDefinition,
 };
 

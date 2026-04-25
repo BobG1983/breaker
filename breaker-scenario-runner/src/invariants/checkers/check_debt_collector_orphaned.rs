@@ -1,7 +1,7 @@
 use bevy::prelude::*;
-use breaker::protocol::{
+use breaker::mutators::protocols::{
+    debt_collector::{DebtCashOut, DebtStack},
     definition::ProtocolKind,
-    protocols::debt_collector::{DebtCashOut, DebtStack},
     resources::ActiveProtocols,
 };
 
@@ -78,9 +78,9 @@ pub fn check_debt_collector_orphaned(
 
 #[cfg(test)]
 mod tests {
-    use breaker::protocol::{
+    use breaker::mutators::protocols::{
+        debt_collector::{DebtCashOut, DebtStack},
         definition::{ProtocolDefinition, ProtocolTuning},
-        protocols::debt_collector::{DebtCashOut, DebtStack},
         resources::ActiveProtocols,
     };
 

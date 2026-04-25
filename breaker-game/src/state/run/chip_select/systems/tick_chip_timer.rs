@@ -274,7 +274,7 @@ mod tests {
     // auto-picks a protocol.
     // ─────────────────────────────────────────────────────────────────
 
-    use crate::protocol::{
+    use crate::mutators::protocols::{
         definition::{ProtocolDefinition, ProtocolKind, ProtocolTuning},
         messages::ProtocolSelected,
         resources::{ActiveProtocols, ProtocolOffer},

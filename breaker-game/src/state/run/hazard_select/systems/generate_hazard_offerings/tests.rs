@@ -6,7 +6,7 @@ use std::collections::HashSet;
 use bevy::prelude::*;
 
 use super::*;
-use crate::hazard::{
+use crate::mutators::hazards::{
     definition::{HazardDefinition, HazardKind, HazardTuning},
     resources::{ActiveHazards, HazardOffers, HazardRegistry},
 };

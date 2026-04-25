@@ -2,9 +2,8 @@ use bevy::prelude::*;
 
 use super::system::*;
 use crate::{
-    hazard::resources::HazardRegistry,
+    mutators::{hazards::resources::HazardRegistry, protocols::resources::ProtocolRegistry},
     prelude::*,
-    protocol::resources::ProtocolRegistry,
     state::run::resources::{NodeOutcome, NodeResult},
 };
 

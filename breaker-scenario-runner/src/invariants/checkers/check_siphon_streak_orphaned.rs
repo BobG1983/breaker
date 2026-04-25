@@ -1,6 +1,6 @@
 use bevy::prelude::*;
-use breaker::protocol::{
-    definition::ProtocolKind, protocols::siphon::SiphonStreak, resources::ActiveProtocols,
+use breaker::mutators::protocols::{
+    definition::ProtocolKind, resources::ActiveProtocols, siphon::SiphonStreak,
 };
 
 use crate::{invariants::*, types::InvariantKind};
@@ -63,10 +63,10 @@ pub fn check_siphon_streak_orphaned(
 
 #[cfg(test)]
 mod tests {
-    use breaker::protocol::{
+    use breaker::mutators::protocols::{
         definition::{ProtocolDefinition, ProtocolTuning},
-        protocols::siphon::SiphonStreak,
         resources::ActiveProtocols,
+        siphon::SiphonStreak,
     };
 
     use super::*;

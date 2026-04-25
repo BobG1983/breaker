@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use breaker::hazard::resources::ActiveHazards;
+use breaker::mutators::hazards::resources::ActiveHazards;
 
 use crate::{invariants::*, types::InvariantKind};
 
@@ -43,7 +43,7 @@ pub fn check_hazard_stack_valid(
 
 #[cfg(test)]
 mod tests {
-    use breaker::hazard::definition::HazardKind;
+    use breaker::mutators::hazards::definition::HazardKind;
 
     use super::*;
 

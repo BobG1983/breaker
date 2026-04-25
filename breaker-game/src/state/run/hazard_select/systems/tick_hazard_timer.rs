@@ -9,7 +9,7 @@ use rand::Rng;
 use rantzsoft_stateflow::ChangeState;
 
 use crate::{
-    hazard::{messages::HazardSelected, resources::HazardOffers},
+    mutators::hazards::{messages::HazardSelected, resources::HazardOffers},
     prelude::*,
     state::run::hazard_select::resources::HazardSelectTimer,
 };

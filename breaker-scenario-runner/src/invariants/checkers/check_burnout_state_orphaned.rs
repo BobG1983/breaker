@@ -1,7 +1,7 @@
 use bevy::prelude::*;
-use breaker::protocol::{
+use breaker::mutators::protocols::{
+    burnout::{BurnoutDamageBoost, BurnoutHeat},
     definition::ProtocolKind,
-    protocols::burnout::{BurnoutDamageBoost, BurnoutHeat},
     resources::ActiveProtocols,
 };
 
@@ -81,9 +81,9 @@ pub fn check_burnout_state_orphaned(
 
 #[cfg(test)]
 mod tests {
-    use breaker::protocol::{
+    use breaker::mutators::protocols::{
+        burnout::{BurnoutDamageBoost, BurnoutHeat},
         definition::{ProtocolDefinition, ProtocolTuning},
-        protocols::burnout::{BurnoutDamageBoost, BurnoutHeat},
         resources::ActiveProtocols,
     };
 

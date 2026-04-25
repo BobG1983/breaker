@@ -27,7 +27,6 @@ pub(crate) mod debug;
 /// New effect domain (v3).
 pub mod effect_v3;
 pub(crate) mod fx;
-pub mod hazard;
 pub mod input;
-pub mod protocol;
+pub mod mutators;
 pub mod walls;

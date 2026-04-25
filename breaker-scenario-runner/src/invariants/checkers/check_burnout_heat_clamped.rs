@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use breaker::protocol::protocols::burnout::system::BurnoutHeat;
+use breaker::mutators::protocols::burnout::system::BurnoutHeat;
 
 use crate::{invariants::*, types::InvariantKind};
 
@@ -62,7 +62,7 @@ pub fn check_burnout_heat_clamped(
 
 #[cfg(test)]
 mod tests {
-    use breaker::protocol::protocols::burnout::system::BurnoutHeat;
+    use breaker::mutators::protocols::burnout::system::BurnoutHeat;
 
     use super::*;
 

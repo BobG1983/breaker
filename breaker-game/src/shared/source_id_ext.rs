@@ -9,8 +9,9 @@
 //! reader-helper reference.
 
 use crate::{
-    chips::definition::Rarity, hazard::definition::HazardKind, prelude::SourceId,
-    protocol::definition::ProtocolKind,
+    chips::definition::Rarity,
+    mutators::{hazards::definition::HazardKind, protocols::definition::ProtocolKind},
+    prelude::SourceId,
 };
 
 // ── Trait surface ───────────────────────────────────────────────────────────

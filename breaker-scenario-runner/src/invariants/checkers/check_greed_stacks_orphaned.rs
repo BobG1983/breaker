@@ -1,6 +1,6 @@
 use bevy::prelude::*;
-use breaker::protocol::{
-    definition::ProtocolKind, protocols::greed::GreedStacks, resources::ActiveProtocols,
+use breaker::mutators::protocols::{
+    definition::ProtocolKind, greed::GreedStacks, resources::ActiveProtocols,
 };
 
 use crate::{invariants::*, types::InvariantKind};
@@ -62,9 +62,9 @@ pub fn check_greed_stacks_orphaned(
 
 #[cfg(test)]
 mod tests {
-    use breaker::protocol::{
+    use breaker::mutators::protocols::{
         definition::{ProtocolDefinition, ProtocolTuning},
-        protocols::greed::GreedStacks,
+        greed::GreedStacks,
         resources::ActiveProtocols,
     };
 

@@ -420,7 +420,7 @@ impl<S: StateStatus> TestAppBuilder<S, NoDmg> {
             .with_bolt_registry()
             .with_breaker_registry()
             .with_cell_registry()
-            .with_resource::<crate::protocol::resources::ActiveProtocols>()
+            .with_resource::<crate::mutators::protocols::resources::ActiveProtocols>()
             .with_resource::<crate::input::resources::InputActions>()
             .with_effects_pipeline()
     }

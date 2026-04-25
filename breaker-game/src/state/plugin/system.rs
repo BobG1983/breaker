@@ -15,10 +15,9 @@ use crate::{
     breaker::BreakerRegistry,
     cells::{CellDefaults, CellTypeRegistry, ToughnessDefaults},
     chips::{ChipTemplateRegistry, EvolutionTemplateRegistry},
-    hazard::resources::HazardRegistry,
     input::InputDefaults,
+    mutators::{hazards::resources::HazardRegistry, protocols::resources::ProtocolRegistry},
     prelude::*,
-    protocol::resources::ProtocolRegistry,
     shared::PlayfieldDefaults,
     state::{
         app::loading::LoadingPlugin,

@@ -54,7 +54,7 @@ pub enum InvariantKind {
     BreakerCountReasonable,
     /// Bolts with `Birthing` component must have zeroed `CollisionLayers`.
     BoltBirthingLayersZeroed,
-    /// [`ActiveHazards`](breaker::hazard::resources::ActiveHazards) must never
+    /// [`ActiveHazards`](breaker::mutators::hazards::resources::ActiveHazards) must never
     /// contain an entry with 0 stacks — the map-insert path is `add_stack`
     /// which always increments to ≥1.
     HazardStackValid,
@@ -62,7 +62,7 @@ pub enum InvariantKind {
     /// entity exists. Catches Conductor-protocol swap bugs where the marker is
     /// briefly absent or double-assigned.
     ExactlyOnePrimaryBolt,
-    /// Every [`BurnoutHeat`](breaker::protocol::protocols::burnout::system::BurnoutHeat)
+    /// Every [`BurnoutHeat`](breaker::mutators::protocols::burnout::system::BurnoutHeat)
     /// component in the world has `heat` within `[0.0, 1.0]` (inclusive) and
     /// `still_timer >= 0.0` at every frame.
     BurnoutHeatClamped,

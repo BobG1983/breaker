@@ -6,8 +6,8 @@ use rantzsoft_stateflow::ChangeState;
 use crate::{
     chips::inventory::ChipInventory,
     input::InputConfig,
+    mutators::protocols::{messages::ProtocolSelected, resources::ProtocolOffer},
     prelude::*,
-    protocol::{messages::ProtocolSelected, resources::ProtocolOffer},
     state::run::chip_select::{
         ChipSelectConfig,
         resources::{ChipOffering, ChipOffers, ChipSelectSelection, SelectionRow},

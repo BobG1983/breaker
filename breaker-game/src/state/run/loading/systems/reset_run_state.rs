@@ -6,12 +6,15 @@ use rand_chacha::ChaCha8Rng;
 
 use crate::{
     chips::inventory::ChipInventory,
-    hazard::resources::ActiveHazards,
-    prelude::*,
-    protocol::{
-        protocols::{greed::GreedStacks, siphon::SiphonStreak},
-        resources::{ActiveProtocols, ProtocolOffer},
+    mutators::{
+        hazards::resources::ActiveHazards,
+        protocols::{
+            greed::GreedStacks,
+            resources::{ActiveProtocols, ProtocolOffer},
+            siphon::SiphonStreak,
+        },
     },
+    prelude::*,
     shared::RunSeed,
     state::run::resources::{HighlightTracker, NodeOutcome},
 };
@@ -80,11 +83,11 @@ mod tests {
             .with_resource::<ChipInventory>()
             .with_resource::<RunStats>()
             .with_resource::<HighlightTracker>()
-            .with_resource::<crate::protocol::resources::ActiveProtocols>()
-            .with_resource::<crate::protocol::resources::ProtocolOffer>()
-            .with_resource::<crate::hazard::resources::ActiveHazards>()
-            .with_resource::<crate::protocol::protocols::greed::GreedStacks>()
-            .with_resource::<crate::protocol::protocols::siphon::SiphonStreak>()
+            .with_resource::<crate::mutators::protocols::resources::ActiveProtocols>()
+            .with_resource::<crate::mutators::protocols::resources::ProtocolOffer>()
+            .with_resource::<crate::mutators::hazards::resources::ActiveHazards>()
+            .with_resource::<crate::mutators::protocols::greed::GreedStacks>()
+            .with_resource::<crate::mutators::protocols::siphon::SiphonStreak>()
             .with_system(Update, reset_run_state)
             .build()
     }
@@ -147,9 +150,9 @@ mod tests {
     /// then run the system once. Every per-run resource should be cleared.
     #[test]
     fn clears_active_protocols_and_active_hazards() {
-        use crate::{
-            hazard::{definition::HazardKind, resources::ActiveHazards},
-            protocol::{
+        use crate::mutators::{
+            hazards::{definition::HazardKind, resources::ActiveHazards},
+            protocols::{
                 definition::{ProtocolDefinition, ProtocolKind, ProtocolTuning},
                 resources::{ActiveProtocols, ProtocolOffer},
             },
@@ -224,7 +227,7 @@ mod tests {
     /// inventory).
     #[test]
     fn reset_run_state_clears_greed_stacks_and_preserves_greed_config() {
-        use crate::protocol::protocols::greed::{GreedConfig, GreedStacks};
+        use crate::mutators::protocols::greed::{GreedConfig, GreedStacks};
 
         let mut app = test_app();
 
@@ -258,7 +261,7 @@ mod tests {
     /// field is zero (default).
     #[test]
     fn test_app_initializes_greed_stacks_and_reset_leaves_it_at_default() {
-        use crate::protocol::protocols::greed::GreedStacks;
+        use crate::mutators::protocols::greed::GreedStacks;
 
         let mut app = test_app();
         assert!(
@@ -279,7 +282,7 @@ mod tests {
     /// subtraction).
     #[test]
     fn reset_run_state_clears_large_and_max_skip_counts_to_zero() {
-        use crate::protocol::protocols::greed::GreedStacks;
+        use crate::mutators::protocols::greed::GreedStacks;
 
         // Case A: 1000 skips.
         {

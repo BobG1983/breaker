@@ -26,7 +26,7 @@ type LiveCellQuery<'w, 's> =
 /// without inserting `CollisionQuadtree` (i.e. apps that don't run
 /// `RantzPhysics2dPlugin`) don't panic — the system simply drains the reader
 /// and returns. Mirrors the defensive pattern in
-/// `hazard::hazards::volatility::system::reset_volatility_on_damage`.
+/// `mutators::hazards::volatility::system::reset_volatility_on_damage`.
 pub(in crate::effect_v3) fn apply_explode_damage(
     mut reader: MessageReader<ExplodeEmissionRequested>,
     quadtree: Option<Res<CollisionQuadtree>>,

@@ -4,8 +4,8 @@ use bevy::{ecs::system::SystemParam, prelude::*};
 use rantzsoft_stateflow::ChangeState;
 
 use crate::{
-    hazard::{messages::HazardSelected, resources::HazardOffers},
     input::InputConfig,
+    mutators::hazards::{messages::HazardSelected, resources::HazardOffers},
     prelude::*,
     state::run::hazard_select::resources::HazardSelectSelection,
 };

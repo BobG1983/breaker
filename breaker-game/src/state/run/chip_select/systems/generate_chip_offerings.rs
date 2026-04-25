@@ -11,8 +11,8 @@ use crate::{
         inventory::ChipInventory,
         offering::{OfferingConfig, generate_offerings},
     },
+    mutators::protocols::greed::{GreedConfig, GreedStacks, apply_greed_boost},
     prelude::*,
-    protocol::protocols::greed::{GreedConfig, GreedStacks, apply_greed_boost},
     state::run::{
         chip_select::{
             ChipSelectConfig,
