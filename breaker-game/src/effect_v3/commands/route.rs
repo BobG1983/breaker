@@ -7,16 +7,17 @@ use crate::effect_v3::{
     types::{RouteType, Tree},
 };
 
-/// Deferred command that routes a tree to an entity.
-pub struct RouteEffectCommand {
+/// Deferred command that routes a tree to an entity. Constructed only
+/// inside `effect_v3` — call sites use `EffectCommandsExt::route_effect`.
+pub(in crate::effect_v3) struct RouteEffectCommand {
     /// The entity to install the tree on.
-    pub entity:     Entity,
+    pub(in crate::effect_v3) entity:     Entity,
     /// The name identifying the source of the tree.
-    pub name:       String,
+    pub(in crate::effect_v3) name:       String,
     /// The tree to install.
-    pub tree:       Tree,
+    pub(in crate::effect_v3) tree:       Tree,
     /// Whether the tree is permanent (Bound) or one-shot (Staged).
-    pub route_type: RouteType,
+    pub(in crate::effect_v3) route_type: RouteType,
 }
 
 impl Command for RouteEffectCommand {

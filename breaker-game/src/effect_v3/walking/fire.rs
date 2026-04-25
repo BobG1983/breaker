@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use crate::effect_v3::{
-    commands::FireEffectCommand,
+    commands::EffectCommandsExt,
     types::{EffectType, TriggerContext},
 };
 
@@ -16,11 +16,7 @@ pub fn evaluate_fire(
     _context: &TriggerContext,
     commands: &mut Commands,
 ) {
-    commands.queue(FireEffectCommand {
-        entity,
-        effect: effect.clone(),
-        source: source.to_owned(),
-    });
+    commands.fire_effect(entity, effect.clone(), source.to_owned());
 }
 
 #[cfg(test)]

@@ -5,12 +5,13 @@ use bevy::prelude::*;
 use crate::effect_v3::storage::{BoundEffects, StagedEffects};
 
 /// Deferred command that removes all effect trees matching a given name
-/// from an entity's `BoundEffects` and `StagedEffects`.
-pub struct RemoveEffectCommand {
+/// from an entity's `BoundEffects` and `StagedEffects`. Constructed only
+/// inside `effect_v3` — call sites use `EffectCommandsExt::remove_effect`.
+pub(in crate::effect_v3) struct RemoveEffectCommand {
     /// The entity to remove effect trees from.
-    pub entity: Entity,
+    pub(in crate::effect_v3) entity: Entity,
     /// The name to match against.
-    pub name:   String,
+    pub(in crate::effect_v3) name:   String,
 }
 
 impl Command for RemoveEffectCommand {

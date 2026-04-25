@@ -5,14 +5,15 @@ use bevy::prelude::*;
 use crate::effect_v3::{storage::BoundEffects, types::Tree};
 
 /// Deferred command that stamps (permanently installs) a tree on an entity.
-/// Sugar for `RouteEffectCommand` with `RouteType::Bound`.
-pub struct StampEffectCommand {
+/// Sugar for `RouteEffectCommand` with `RouteType::Bound`. Constructed only
+/// inside `effect_v3` — call sites use `EffectCommandsExt::stamp_effect`.
+pub(in crate::effect_v3) struct StampEffectCommand {
     /// The entity to install the tree on.
-    pub entity: Entity,
+    pub(in crate::effect_v3) entity: Entity,
     /// The name identifying the source of the tree.
-    pub name:   String,
+    pub(in crate::effect_v3) name:   String,
     /// The tree to install.
-    pub tree:   Tree,
+    pub(in crate::effect_v3) tree:   Tree,
 }
 
 impl Command for StampEffectCommand {

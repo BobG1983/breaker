@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use crate::effect_v3::{
-    commands::{FireEffectCommand, RouteEffectCommand},
+    commands::EffectCommandsExt,
     types::{Terminal, TriggerContext},
 };
 
@@ -29,19 +29,10 @@ pub fn evaluate_terminal(
 ) {
     match terminal {
         Terminal::Fire(effect_type) => {
-            commands.queue(FireEffectCommand {
-                entity,
-                effect: effect_type.clone(),
-                source: source.to_owned(),
-            });
+            commands.fire_effect(entity, effect_type.clone(), source.to_owned());
         }
         Terminal::Route(route_type, tree) => {
-            commands.queue(RouteEffectCommand {
-                entity,
-                name: source.to_owned(),
-                tree: (**tree).clone(),
-                route_type: *route_type,
-            });
+            commands.route_effect(entity, source.to_owned(), (**tree).clone(), *route_type);
         }
     }
 }

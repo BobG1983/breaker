@@ -4,4 +4,4 @@ pub(crate) mod system;
 #[cfg(test)]
 mod tests;
 
-pub use system::EffectCommandsExt;
+pub(crate) use system::EffectCommandsExt;

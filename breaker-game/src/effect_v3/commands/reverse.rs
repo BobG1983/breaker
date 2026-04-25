@@ -5,13 +5,15 @@ use bevy::prelude::*;
 use crate::effect_v3::{dispatch::reverse_dispatch, types::ReversibleEffectType};
 
 /// Deferred command that reverses a reversible effect on an entity.
-pub struct ReverseEffectCommand {
+/// Constructed only inside `effect_v3` — call sites use
+/// `EffectCommandsExt::reverse_effect`.
+pub(in crate::effect_v3) struct ReverseEffectCommand {
     /// The entity to reverse the effect on.
-    pub entity: Entity,
+    pub(in crate::effect_v3) entity: Entity,
     /// The reversible effect to reverse.
-    pub effect: ReversibleEffectType,
+    pub(in crate::effect_v3) effect: ReversibleEffectType,
     /// The chip or definition name that originated this effect.
-    pub source: String,
+    pub(in crate::effect_v3) source: String,
 }
 
 impl Command for ReverseEffectCommand {

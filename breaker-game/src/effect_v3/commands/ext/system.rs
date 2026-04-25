@@ -12,7 +12,7 @@ use crate::effect_v3::types::{EffectType, ReversibleEffectType, RouteType, Tree}
 ///
 /// All methods queue deferred commands that execute during the next
 /// command flush.
-pub trait EffectCommandsExt {
+pub(crate) trait EffectCommandsExt {
     /// Fire an effect on the given entity.
     fn fire_effect(&mut self, entity: Entity, effect: EffectType, source: String);
 

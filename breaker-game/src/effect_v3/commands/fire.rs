@@ -4,14 +4,15 @@ use bevy::prelude::*;
 
 use crate::effect_v3::{dispatch::fire_dispatch, types::EffectType};
 
-/// Deferred command that fires an effect on an entity.
-pub struct FireEffectCommand {
+/// Deferred command that fires an effect on an entity. Constructed only
+/// inside `effect_v3` — call sites use `EffectCommandsExt::fire_effect`.
+pub(in crate::effect_v3) struct FireEffectCommand {
     /// The entity to apply the effect to.
-    pub entity: Entity,
+    pub(in crate::effect_v3) entity: Entity,
     /// The effect to fire.
-    pub effect: EffectType,
+    pub(in crate::effect_v3) effect: EffectType,
     /// The chip or definition name that originated this effect.
-    pub source: String,
+    pub(in crate::effect_v3) source: String,
 }
 
 impl Command for FireEffectCommand {
